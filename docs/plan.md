@@ -168,6 +168,7 @@ GUI on wxDragon (with the `live-region` announcer), native word-boundary backend
 - `docs/plan.md`, `docs/star-parity.md`, `docs/keyboard.md` (generated), `docs/tasks.md`, `docs/docker.md`.
 - Rustdoc on every public item (`missing_docs` is a warning and CI denies warnings).
 - The Obsidian wiki: domain page `textweaver`, one session note per phase and wave under `meta/textweaver-releases/`, and concept notes for the designs worth keeping (OffsetMap, speech threading).
+- In `leavesofgrass/star`, `docs/textweaver.md` on branch `claude/textweaver-plan-m42jiy` pointing to the new repo and this plan (pushed in Phase 0, commit `06a5995`; not merged into star's `main`).
 
 ## 10. Verification (per wave, before reporting)
 
