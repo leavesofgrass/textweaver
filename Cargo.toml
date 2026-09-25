@@ -1,0 +1,109 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/textweaver-core",
+    "crates/textweaver-text",
+    "crates/textweaver-formats",
+    "crates/textweaver-speech",
+    "crates/textweaver-store",
+    "crates/textweaver-keymap",
+    "crates/textweaver-a11y",
+    "crates/textweaver-editor",
+    "crates/textweaver-app",
+    "crates/textweaver-tui",
+    "crates/textweaver-cli",
+    "xtask",
+]
+default-members = [
+    "crates/textweaver-core",
+    "crates/textweaver-text",
+    "crates/textweaver-formats",
+    "crates/textweaver-speech",
+    "crates/textweaver-store",
+    "crates/textweaver-keymap",
+    "crates/textweaver-a11y",
+    "crates/textweaver-editor",
+    "crates/textweaver-app",
+    "crates/textweaver-tui",
+    "crates/textweaver-cli",
+]
+
+[workspace.package]
+version = "0.1.0-alpha.0"
+edition = "2024"
+rust-version = "1.85"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/leavesofgrass/textweaver"
+authors = ["Jon Pielaet"]
+publish = false
+
+# Every dependency any crate may use is declared here (ADR-0001). Crates opt in
+# with `name.workspace = true` in their own Cargo.toml. Adding a crate to this
+# table is an orchestrator decision; agents request it in their report.
+[workspace.dependencies]
+# internal
+textweaver-core = { path = "crates/textweaver-core" }
+textweaver-text = { path = "crates/textweaver-text" }
+textweaver-formats = { path = "crates/textweaver-formats" }
+textweaver-speech = { path = "crates/textweaver-speech" }
+textweaver-store = { path = "crates/textweaver-store" }
+textweaver-keymap = { path = "crates/textweaver-keymap" }
+textweaver-a11y = { path = "crates/textweaver-a11y" }
+textweaver-editor = { path = "crates/textweaver-editor" }
+textweaver-app = { path = "crates/textweaver-app" }
+
+# text and formats
+ropey = "1.6"
+unicode-segmentation = "1.13"
+regex = "1.13"
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+scraper = "0.27"
+zip = { version = "8.6", default-features = false, features = ["deflate"] }
+roxmltree = "0.21"
+
+# persistence
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "1.1"
+directories = "6"
+
+# errors, flags, logging
+thiserror = "2"
+anyhow = "1"
+bitflags = { version = "2", features = ["serde"] }
+log = "0.4"
+
+# frontends
+clap = { version = "4.6", features = ["derive"] }
+ratatui = "0.30"
+crossterm = "0.29"
+
+# speech engines (all behind features in textweaver-speech)
+espeakng-sys = "0.3"
+speech-dispatcher = "0.16"
+tts = "0.26"
+rodio = { version = "0.22", default-features = false }
+
+# tests
+proptest = "1.11"
+insta = { version = "1.48", features = ["json", "yaml"] }
+tempfile = "3.27"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+print_stderr = "allow"
+
+[profile.dev.package."*"]
+opt-level = 1
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

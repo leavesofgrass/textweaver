@@ -1,0 +1,9 @@
+/target
+**/*.rs.bk
+*.pending-snap
+*.snap.new
+__pycache__/
+.venv/
+/.idea
+/.vscode
+.DS_Store

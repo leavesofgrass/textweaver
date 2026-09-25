@@ -1,0 +1,30 @@
+[package]
+name = "textweaver-cli"
+description = "tw: scripting CLI for textweaver (extract, search, speak, voices, backends, marks)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "tw"
+path = "src/main.rs"
+
+[features]
+default = []
+# Speech engines, passed through to textweaver-speech.
+espeak = ["textweaver-app/espeak"]
+omnivox = ["textweaver-app/omnivox"]
+
+[dependencies]
+textweaver-app.workspace = true
+clap.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

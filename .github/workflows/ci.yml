@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+  RUSTDOCFLAGS: -D warnings
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install
+      - run: cargo fmt --all --check
+
+  check:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux enables every feature, including those that link system
+          # libraries (espeak-ng); the same set the Docker image supports.
+          - os: ubuntu-latest
+            features: --all-features
+          - os: macos-latest
+            features: ""
+          - os: windows-latest
+            features: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: System libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libespeak-ng-dev espeak-ng-data libasound2-dev libspeechd-dev clang libclang-dev pkg-config
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets ${{ matrix.features }}
+      - name: Test
+        run: cargo test --workspace ${{ matrix.features }}
+      - name: Docs
+        run: cargo doc --workspace --no-deps ${{ matrix.features }}

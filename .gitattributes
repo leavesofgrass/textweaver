@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.png binary
+*.gif binary
+*.wav binary
+*.epub binary
+*.docx binary
+*.pdf binary
+*.snap text eol=lf

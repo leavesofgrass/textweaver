@@ -1,0 +1,21 @@
+[package]
+name = "textweaver-editor"
+description = "textweaver editing: undo/redo over a rope, Markdown commands, typing echo, autosave policy"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+textweaver-core.workspace = true
+ropey.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true

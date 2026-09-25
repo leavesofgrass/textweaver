@@ -1,0 +1,23 @@
+[package]
+name = "textweaver-a11y"
+description = "textweaver accessibility: announcer trait, verbosity, speech and status-line announcers"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[features]
+default = []
+# Wave 3: a live-region announcer for the wxDragon GUI (the `live-region`
+# crate depends on wxDragon, so it cannot be part of the terminal build).
+live-region = []
+
+[dependencies]
+textweaver-core.workspace = true
+serde.workspace = true
+
+[lints]
+workspace = true
