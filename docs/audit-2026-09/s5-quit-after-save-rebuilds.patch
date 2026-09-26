@@ -1,0 +1,52 @@
+diff --git a/crates/textweaver-app/src/edit.rs b/crates/textweaver-app/src/edit.rs
+index f12b0eb..354563c 100644
+--- a/crates/textweaver-app/src/edit.rs
++++ b/crates/textweaver-app/src/edit.rs
+@@ -1448,8 +1448,11 @@ impl App {
+         if self.is_dirty() {
+             return self.leave_edit(None, None, AfterLeave::Quit);
+         }
+-        if self.edit.is_some() {
+-            self.finish_leave(false, false);
++        // A save during this session changed the file: rebuild the reading
++        // view from it, so the positions saved on the way out match what
++        // will be loaded next time.
++        if let Some(rebuild) = self.edit.as_ref().map(|e| e.session.maps_stale()) {
++            self.finish_leave(rebuild, false);
+         }
+         self.shutdown();
+         vec![Effect::Quit]
+diff --git a/crates/textweaver-app/tests/edit.rs b/crates/textweaver-app/tests/edit.rs
+index 6cf0062..8dfd070 100644
+--- a/crates/textweaver-app/tests/edit.rs
++++ b/crates/textweaver-app/tests/edit.rs
+@@ -216,6 +216,29 @@ fn type_format_undo_save_and_reopen() {
+     assert_eq!(bookmark_pos(&r.app), at(&canon, "world"));
+ }
+ 
++#[test]
++fn quitting_in_edit_mode_after_a_save_keeps_positions_on_the_saved_text() {
++    // Quitting while still in edit mode (clean after a save) restored the
++    // reading text from before the edits and saved positions against it.
++    let mut r = rig();
++    let file = r.file("note.md", NOTE_MD);
++    r.app.open(&file).unwrap();
++    let canon = r.text();
++    r.go(at(&canon, "The end"));
++    r.act(ActionId::AddBookmark);
++    r.act(ActionId::ToggleEditMode);
++    r.go(CharPos(at(NOTE_MD, "Hello").0));
++    r.type_str("A much longer opening sentence goes here. ");
++    r.act(ActionId::Save);
++    assert!(!r.app.is_dirty());
++    assert_eq!(r.quit(), vec![Effect::Quit]);
++    r.relaunch();
++    r.app.open(&file).unwrap();
++    let canon = r.text();
++    assert!(canon.contains("A much longer opening"), "{canon}");
++    assert_eq!(bookmark_pos(&r.app), at(&canon, "The end"));
++}
++
+ #[test]
+ fn leaving_with_unsaved_changes_asks_and_discard_restores_everything() {
+     let mut r = rig();

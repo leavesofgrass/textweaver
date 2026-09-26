@@ -1,0 +1,199 @@
+diff --git a/crates/textweaver-app/src/app.rs b/crates/textweaver-app/src/app.rs
+index d0c0ccf..f50f275 100644
+--- a/crates/textweaver-app/src/app.rs
++++ b/crates/textweaver-app/src/app.rs
+@@ -258,6 +258,8 @@ pub struct App {
+     pub(crate) untitled: u32,
+     pub(crate) last_position_save: Option<(Instant, CharPos)>,
+     pub(crate) prompt_purpose: PromptPurpose,
++    /// Where continuous reading goes on when the planned window finishes.
++    pub(crate) continue_from: Option<CharPos>,
+ }
+ 
+ impl App {
+@@ -300,6 +302,7 @@ impl App {
+             untitled: 0,
+             last_position_save: None,
+             prompt_purpose: PromptPurpose::Find,
++            continue_from: None,
+         };
+         app.apply_voice_settings();
+         app
+diff --git a/crates/textweaver-app/src/playback.rs b/crates/textweaver-app/src/playback.rs
+index 737d1e2..0fc0ee4 100644
+--- a/crates/textweaver-app/src/playback.rs
++++ b/crates/textweaver-app/src/playback.rs
+@@ -2,7 +2,7 @@
+ //! speech service's status updates.
+ 
+ use textweaver_a11y::{Priority, Verbosity};
+-use textweaver_core::{CharPos, CharRange, Unit};
++use textweaver_core::{CharPos, CharRange, MarkerKind, Unit};
+ use textweaver_speech::{ReadingGeneration, SayMode, SpeechStatus};
+ use textweaver_text::narrate::NarrationPolicy;
+ use textweaver_text::units::unit_at;
+@@ -64,6 +64,31 @@ impl SpeechTrack {
+     }
+ }
+ 
++/// How much text continuous reading plans at a time, in chars (about ten
++/// minutes of speech). Planning the whole rest of a 10 MB document took
++/// seconds on every read and every jump while reading.
++pub(crate) const READ_WINDOW: usize = 32_768;
++
++/// The end of the reading window that starts at `start`: the end of the
++/// sentence `READ_WINDOW` chars on, pushed past a table or code block it
++/// falls in (they are narrated whole), or the end of the document.
++fn window_end(doc: &textweaver_text::Document, start: CharPos) -> CharPos {
++    let len = doc.len_chars();
++    let target = start.0.saturating_add(READ_WINDOW);
++    if target >= len {
++        return doc.end();
++    }
++    let mut end = unit_at(doc, CharPos(target), Unit::Sentence)
++        .map_or(CharPos(target), |r| r.end.max(CharPos(target)));
++    let index = doc.marker_index();
++    for kind in [MarkerKind::Table, MarkerKind::Code] {
++        if let Some(m) = index.enclosing(kind, end) {
++            end = end.max(m.range.end);
++        }
++    }
++    end.clamp_to(len)
++}
++
+ impl App {
+     /// Whether the app is reading, paused, or idle.
+     pub fn playback(&self) -> Playback {
+@@ -96,6 +121,7 @@ impl App {
+             self.track.clear();
+         }
+         self.playback = Playback::Idle;
++        self.continue_from = None;
+         if let Some(s) = self.session.as_mut() {
+             s.spoken = None;
+             s.spoken_sentence = None;
+@@ -110,6 +136,7 @@ impl App {
+             return false;
+         };
+         let utterances = textweaver_text::plan(&s.doc, range, &policy);
++        self.continue_from = None;
+         if utterances.is_empty() {
+             return false;
+         }
+@@ -129,8 +156,7 @@ impl App {
+             return;
+         };
+         let start = text_util::word_start(&s.doc, pos);
+-        let range = CharRange::new(start, s.doc.end());
+-        if self.read_range(range, ReadKind::Continuous) {
++        if self.read_window(start) {
+             let rate = self.settings.speech.rate.wpm();
+             self.show(&format!("Reading at {rate} words per minute."));
+         } else {
+@@ -138,6 +164,31 @@ impl App {
+         }
+     }
+ 
++    /// Reads the window starting at `start` continuously, noting where the
++    /// next window starts. False when there was nothing to read.
++    fn read_window(&mut self, start: CharPos) -> bool {
++        let Some(s) = self.session.as_ref() else {
++            return false;
++        };
++        let doc_end = s.doc.end();
++        let mut from = start;
++        loop {
++            let Some(s) = self.session.as_ref() else {
++                return false;
++            };
++            let end = window_end(&s.doc, from);
++            if self.read_range(CharRange::new(from, end), ReadKind::Continuous) {
++                self.continue_from = (end < doc_end).then_some(end);
++                return true;
++            }
++            // A window with nothing to say (blank, or skipped code only).
++            if end >= doc_end {
++                return false;
++            }
++            from = end;
++        }
++    }
++
+     /// Reads continuously from the cursor.
+     pub(crate) fn read_from_cursor(&mut self) {
+         if let Some(pos) = self.session.as_ref().map(|s| s.cursor) {
+@@ -363,6 +414,12 @@ impl App {
+             }
+             SpeechStatus::Finished { generation } => {
+                 if self.playback == Playback::Reading && self.track.ours(generation) {
++                    if self.reading == ReadKind::Continuous
++                        && let Some(next) = self.continue_from.take()
++                        && self.read_window(next)
++                    {
++                        return false;
++                    }
+                     self.track.clear();
+                     self.playback = Playback::Idle;
+                     if let Some(s) = self.session.as_mut() {
+diff --git a/crates/textweaver-app/tests/reading_generation.rs b/crates/textweaver-app/tests/reading_generation.rs
+index 0f79282..0eb4431 100644
+--- a/crates/textweaver-app/tests/reading_generation.rs
++++ b/crates/textweaver-app/tests/reading_generation.rs
+@@ -50,3 +50,57 @@ fn a_reading_that_starts_with_a_skipped_code_block_is_followed() {
+     assert!(!app.spoken_log().is_empty(), "the highlight never moved");
+     assert_eq!(app.playback(), Playback::Idle, "stuck in Reading");
+ }
++
++#[test]
++fn continuous_reading_plans_in_windows_and_reaches_the_end() {
++    // 200,000 chars: several reading windows.
++    let mut text = String::new();
++    let mut n = 0;
++    while text.len() < 200_000 {
++        text.push_str(&format!("Sentence number {n} is here. "));
++        n += 1;
++        if n % 7 == 0 {
++            text.push_str("\n\n");
++        }
++    }
++    let doc = markdown(&text);
++    let canonical = doc.text().to_string();
++    let (speech, log) = recording_service().unwrap();
++    let mut app = App::new(AppConfig {
++        speech,
++        ..AppConfig::for_tests()
++    });
++    app.open_document(doc, DocKey::untitled(1), "T".into());
++    let t = Instant::now();
++    app.dispatch(Command::Action(ActionId::ReadFromCursor));
++    let first_dispatch = t.elapsed();
++    let deadline = Instant::now() + Duration::from_secs(120);
++    while app.playback() != Playback::Idle && Instant::now() < deadline {
++        app.poll_speech();
++        std::thread::sleep(Duration::from_millis(1));
++    }
++    assert_eq!(app.playback(), Playback::Idle);
++    let ranges = log.spoken_ranges();
++    assert!(
++        ranges.windows(2).all(|w| w[0].end <= w[1].start),
++        "no sentence twice, none out of order"
++    );
++    // Numbers are spoken as words; count sentences and check the last
++    // highlight range reaches the end of the text.
++    let texts = log.texts();
++    assert_eq!(
++        texts
++            .iter()
++            .filter(|t| t.starts_with("Sentence number"))
++            .count(),
++        n,
++        "every sentence read once"
++    );
++    let end = canonical.trim_end().chars().count();
++    assert_eq!(
++        ranges.last().map(|r| r.end.0),
++        Some(end),
++        "the reading reached the end"
++    );
++    eprintln!("first Read from cursor dispatch: {first_dispatch:?}");
++}

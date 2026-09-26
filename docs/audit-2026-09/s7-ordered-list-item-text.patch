@@ -1,0 +1,46 @@
+diff --git a/crates/textweaver-app/src/nav.rs b/crates/textweaver-app/src/nav.rs
+index 6e42b1c..70276be 100644
+--- a/crates/textweaver-app/src/nav.rs
++++ b/crates/textweaver-app/src/nav.rs
+@@ -251,7 +251,14 @@ impl App {
+ 
+     fn marker_content(doc: &Document, kind: MarkerKind, range: CharRange) -> String {
+         let label = Self::marker_at(doc, kind, range).and_then(|m| m.label.clone());
+-        label.unwrap_or_else(|| preview(doc, range, PREVIEW_WORDS))
++        let text = preview(doc, range, PREVIEW_WORDS);
++        match label {
++            // An ordered item's label is its number: say it before the
++            // item's text ("3. Buy milk"), not instead of it.
++            Some(l) if kind == MarkerKind::ListItem => format!("{l} {text}"),
++            Some(l) => l,
++            None => text,
++        }
+     }
+ 
+     fn marker_label(doc: &Document, kind: MarkerKind, range: CharRange) -> String {
+diff --git a/crates/textweaver-app/tests/app.rs b/crates/textweaver-app/tests/app.rs
+index 4e52afb..57e9824 100644
+--- a/crates/textweaver-app/tests/app.rs
++++ b/crates/textweaver-app/tests/app.rs
+@@ -887,3 +887,21 @@ fn stop_leaves_speech_cursor() {
+     assert_eq!(r.app.playback(), Playback::Idle);
+     assert_eq!(r.said.last(), "Stopped. Speech Cursor off.");
+ }
++
++#[test]
++fn an_ordered_list_item_is_announced_with_its_text() {
++    use textweaver_app::formats::{LoadOptions, Registry, Source};
++    let doc = Registry::with_builtins()
++        .load(
++            &Source::Bytes {
++                data: b"Intro.\n\n1. Buy milk\n2. Walk the dog\n".to_vec(),
++                hint: "md".into(),
++            },
++            &LoadOptions::default(),
++        )
++        .unwrap();
++    let mut r = rig_with_doc(doc);
++    r.act(ActionId::NextListItem);
++    r.act(ActionId::NextListItem);
++    assert_eq!(r.said.last(), "List item: 2. Walk the dog");
++}

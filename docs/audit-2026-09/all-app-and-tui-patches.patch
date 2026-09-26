@@ -1,0 +1,809 @@
+diff --git a/crates/textweaver-app/src/app.rs b/crates/textweaver-app/src/app.rs
+index d0c0ccf..a68f2e4 100644
+--- a/crates/textweaver-app/src/app.rs
++++ b/crates/textweaver-app/src/app.rs
+@@ -258,6 +258,8 @@ pub struct App {
+     pub(crate) untitled: u32,
+     pub(crate) last_position_save: Option<(Instant, CharPos)>,
+     pub(crate) prompt_purpose: PromptPurpose,
++    /// Where continuous reading goes on when the planned window finishes.
++    pub(crate) continue_from: Option<CharPos>,
+ }
+ 
+ impl App {
+@@ -300,8 +302,12 @@ impl App {
+             untitled: 0,
+             last_position_save: None,
+             prompt_purpose: PromptPurpose::Find,
++            continue_from: None,
+         };
+         app.apply_voice_settings();
++        // WCAG 2.1.4: single-key shortcuts follow the setting.
++        let on = app.settings.keyboard.character_keys;
++        app.keymap.set_character_keys(on);
+         app
+     }
+ 
+@@ -906,6 +912,7 @@ impl App {
+             A::SayPosition => self.say_position(),
+             A::ReplaySentence => self.replay_sentence(),
+             A::ReplayParagraph => self.replay_paragraph(),
++            A::ReadParagraph => self.read_current_unit(textweaver_core::Unit::Paragraph),
+             // Navigation
+             A::NextSentence => self.next_sentence(),
+             A::PreviousSentence => self.previous_sentence(),
+@@ -962,6 +969,30 @@ impl App {
+             A::PageUp => self.page(textweaver_core::Direction::Backward),
+             A::ScrollDown => self.scroll_lines(1),
+             A::ScrollUp => self.scroll_lines(-1),
++            A::SelectNextWord => {
++                self.extend_selection(
++                    textweaver_core::Unit::Word,
++                    textweaver_core::Direction::Forward,
++                );
++            }
++            A::SelectPreviousWord => {
++                self.extend_selection(
++                    textweaver_core::Unit::Word,
++                    textweaver_core::Direction::Backward,
++                );
++            }
++            A::SelectNextLine => {
++                self.extend_selection(
++                    textweaver_core::Unit::Line,
++                    textweaver_core::Direction::Forward,
++                );
++            }
++            A::SelectPreviousLine => {
++                self.extend_selection(
++                    textweaver_core::Unit::Line,
++                    textweaver_core::Direction::Backward,
++                );
++            }
+             // Speech Cursor
+             A::SpeechCursorToggle => self.speech_cursor_toggle(),
+             A::SpeechCursorNextLine => self.speech_cursor_move(1),
+@@ -996,6 +1027,7 @@ impl App {
+             // View and help
+             A::NextTheme => self.next_theme(),
+             A::ToggleLineNumbers => self.toggle_line_numbers(),
++            A::ToggleCharacterKeys => self.toggle_character_keys(),
+             A::CommandPalette => return self.prompt(PromptPurpose::CommandPalette),
+             A::KeyboardHelp => return self.keyboard_help(),
+             A::Help => return self.help(),
+diff --git a/crates/textweaver-app/src/edit.rs b/crates/textweaver-app/src/edit.rs
+index f12b0eb..354563c 100644
+--- a/crates/textweaver-app/src/edit.rs
++++ b/crates/textweaver-app/src/edit.rs
+@@ -1448,8 +1448,11 @@ impl App {
+         if self.is_dirty() {
+             return self.leave_edit(None, None, AfterLeave::Quit);
+         }
+-        if self.edit.is_some() {
+-            self.finish_leave(false, false);
++        // A save during this session changed the file: rebuild the reading
++        // view from it, so the positions saved on the way out match what
++        // will be loaded next time.
++        if let Some(rebuild) = self.edit.as_ref().map(|e| e.session.maps_stale()) {
++            self.finish_leave(rebuild, false);
+         }
+         self.shutdown();
+         vec![Effect::Quit]
+diff --git a/crates/textweaver-app/src/nav.rs b/crates/textweaver-app/src/nav.rs
+index 6e42b1c..70276be 100644
+--- a/crates/textweaver-app/src/nav.rs
++++ b/crates/textweaver-app/src/nav.rs
+@@ -251,7 +251,14 @@ impl App {
+ 
+     fn marker_content(doc: &Document, kind: MarkerKind, range: CharRange) -> String {
+         let label = Self::marker_at(doc, kind, range).and_then(|m| m.label.clone());
+-        label.unwrap_or_else(|| preview(doc, range, PREVIEW_WORDS))
++        let text = preview(doc, range, PREVIEW_WORDS);
++        match label {
++            // An ordered item's label is its number: say it before the
++            // item's text ("3. Buy milk"), not instead of it.
++            Some(l) if kind == MarkerKind::ListItem => format!("{l} {text}"),
++            Some(l) => l,
++            None => text,
++        }
+     }
+ 
+     fn marker_label(doc: &Document, kind: MarkerKind, range: CharRange) -> String {
+diff --git a/crates/textweaver-app/src/playback.rs b/crates/textweaver-app/src/playback.rs
+index 4749684..78a73e6 100644
+--- a/crates/textweaver-app/src/playback.rs
++++ b/crates/textweaver-app/src/playback.rs
+@@ -2,8 +2,8 @@
+ //! speech service's status updates.
+ 
+ use textweaver_a11y::{Priority, Verbosity};
+-use textweaver_core::{CharPos, CharRange, Unit};
+-use textweaver_speech::{SayMode, SpeechStatus};
++use textweaver_core::{CharPos, CharRange, MarkerKind, Unit};
++use textweaver_speech::{ReadingGeneration, SayMode, SpeechStatus};
+ use textweaver_text::narrate::NarrationPolicy;
+ use textweaver_text::units::unit_at;
+ 
+@@ -36,118 +36,57 @@ pub(crate) enum ReadKind {
+     InPlace,
+ }
+ 
+-/// Tells the current reading's status from stale status still in the channel.
+-///
+-/// The service stamps utterances with a generation that grows with every
+-/// stop or restart, but the Phase 0 contract does not tell the app which
+-/// generation its own `read` got (see the contract change request in the
+-/// wave 1 report). So the app:
+-///
+-/// 1. drains the channel before every read or stop and treats every
+-///    generation seen so far as stale (`floor`);
+-/// 2. adopts a newer generation as its own only when that generation's
+-///    first located position touches the first utterance it asked for
+-///    (`head`); a stale reading started elsewhere is rejected whole;
+-/// 3. attributes `Finished` (which carries no generation) to the generation
+-///    of the latest position, since the speech thread emits in order.
+-///
+-/// A later generation that continues forward from the adopted one is
+-/// accepted too, so a service that restarts internally (for example to
+-/// apply a rate change) keeps the highlight moving.
++/// Which reading the app is following: the generation its latest
++/// [`SpeechService::read`](textweaver_speech::SpeechService::read)
++/// returned. Every `Position`, `Paused`, `Stopped`, and `Finished` status
++/// carries its reading's generation, so a status from any other reading is
++/// stale, with no guessing from positions.
+ #[derive(Clone, Copy, Debug, Default)]
+ pub(crate) struct SpeechTrack {
+-    floor: u64,
+-    max_seen: u64,
+-    head: Option<CharRange>,
+-    current: Option<u64>,
+-    rejected: Option<u64>,
+-    last: Option<(u64, Verdict)>,
+-    last_accepted: Option<CharPos>,
+-    active: bool,
+-}
+-
+-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+-enum Verdict {
+-    Ours,
+-    Stale,
+-    Undecided,
+-}
+-
+-fn touches(a: CharRange, b: CharRange) -> bool {
+-    a.start <= b.end && b.start <= a.end
++    current: Option<ReadingGeneration>,
+ }
+ 
+ impl SpeechTrack {
+-    fn restart(&mut self, head: Option<CharRange>, active: bool) {
+-        self.floor = self.max_seen + 1;
+-        self.head = head;
+-        self.current = None;
+-        self.rejected = None;
+-        self.last = None;
+-        self.last_accepted = None;
+-        self.active = active;
++    fn start(&mut self, generation: ReadingGeneration) {
++        self.current = Some(generation);
+     }
+ 
+-    fn saw(&mut self, g: u64) {
+-        self.max_seen = self.max_seen.max(g);
++    fn clear(&mut self) {
++        self.current = None;
+     }
+ 
+-    /// Whether a position belongs to the current reading.
+-    fn position(&mut self, g: u64, range: Option<CharRange>) -> bool {
+-        self.saw(g);
+-        let verdict = self.judge(g, range);
+-        self.last = Some((g, verdict));
+-        if verdict == Verdict::Ours
+-            && let Some(r) = range
+-        {
+-            self.last_accepted = Some(r.start);
+-        }
+-        verdict == Verdict::Ours && range.is_some()
++    fn active(&self) -> bool {
++        self.current.is_some()
+     }
+ 
+-    fn judge(&mut self, g: u64, range: Option<CharRange>) -> Verdict {
+-        if !self.active || g < self.floor || Some(g) == self.rejected {
+-            return Verdict::Stale;
+-        }
+-        match self.current {
+-            Some(c) if g == c => return Verdict::Ours,
+-            Some(c) if g < c => return Verdict::Stale,
+-            _ => {}
+-        }
+-        let Some(r) = range else {
+-            return Verdict::Undecided;
+-        };
+-        let ours = match (self.current, self.last_accepted) {
+-            // A newer generation continuing forward from ours.
+-            (Some(_), Some(at)) => r.start >= at,
+-            _ => self.head.is_none_or(|h| touches(h, r)),
+-        };
+-        if ours {
+-            self.current = Some(g);
+-            Verdict::Ours
+-        } else {
+-            self.rejected = Some(g);
+-            Verdict::Stale
+-        }
++    fn ours(&self, generation: ReadingGeneration) -> bool {
++        self.current == Some(generation)
+     }
++}
+ 
+-    /// Whether `Finished` ends the current reading. When it does, the
+-    /// finished generation becomes stale, and a newer reading is judged
+-    /// against the head again.
+-    fn finished(&mut self) -> bool {
+-        let done = self.active
+-            && matches!(
+-                self.last,
+-                Some((g, Verdict::Ours | Verdict::Undecided)) if g >= self.floor
+-            );
+-        if let (true, Some((g, _))) = (done, self.last) {
+-            self.floor = g + 1;
+-            self.current = None;
+-            self.rejected = None;
+-            self.last_accepted = None;
++/// How much text continuous reading plans at a time, in chars (about ten
++/// minutes of speech). Planning the whole rest of a 10 MB document took
++/// seconds on every read and every jump while reading.
++pub(crate) const READ_WINDOW: usize = 32_768;
++
++/// The end of the reading window that starts at `start`: the end of the
++/// sentence `READ_WINDOW` chars on, pushed past a table or code block it
++/// falls in (they are narrated whole), or the end of the document.
++fn window_end(doc: &textweaver_text::Document, start: CharPos) -> CharPos {
++    let len = doc.len_chars();
++    let target = start.0.saturating_add(READ_WINDOW);
++    if target >= len {
++        return doc.end();
++    }
++    let mut end = unit_at(doc, CharPos(target), Unit::Sentence)
++        .map_or(CharPos(target), |r| r.end.max(CharPos(target)));
++    let index = doc.marker_index();
++    for kind in [MarkerKind::Table, MarkerKind::Code] {
++        if let Some(m) = index.enclosing(kind, end) {
++            end = end.max(m.range.end);
+         }
+-        done
+     }
++    end.clamp_to(len)
+ }
+ 
+ impl App {
+@@ -157,33 +96,40 @@ impl App {
+     }
+ 
+     pub(crate) fn narration_policy(&self) -> NarrationPolicy {
++        use textweaver_store::TableMode;
++        use textweaver_text::narrate::TableNarration;
+         NarrationPolicy {
+             skip_code: self.settings.speech.skip_code,
+             verbosity: self.settings.speech.verbosity,
++            // `[normalization] table_mode` was stored but never used.
++            table_mode: match self.settings.normalization.table_mode {
++                TableMode::Structured => TableNarration::Structured,
++                TableMode::Flat => TableNarration::Flat,
++                TableMode::Skip => TableNarration::Skip,
++            },
+             ..NarrationPolicy::default()
+         }
+     }
+ 
+-    /// Takes stale status out of the channel before a restart, keeping only
+-    /// what the tracker needs (generations) and reporting backend errors.
++    /// Takes stale status out of the channel before a restart, reporting
++    /// backend errors.
+     fn drain_stale(&mut self) {
+         while let Some(status) = self.speech.try_status() {
+-            match status {
+-                SpeechStatus::Position { utterance, .. } => self.track.saw(utterance.generation),
+-                SpeechStatus::BackendError(e) => self.error(&format!("Speech error: {e}")),
+-                _ => {}
++            if let SpeechStatus::BackendError(e) = status {
++                self.error(&format!("Speech error: {e}"));
+             }
+         }
+     }
+ 
+     /// Stops speech and forgets the reading state, without announcing.
+     pub(crate) fn stop_speech(&mut self) {
+-        if self.playback != Playback::Idle || self.track.active {
++        if self.playback != Playback::Idle || self.track.active() {
+             self.drain_stale();
+             self.speech.stop();
+-            self.track.restart(None, false);
++            self.track.clear();
+         }
+         self.playback = Playback::Idle;
++        self.continue_from = None;
+         if let Some(s) = self.session.as_mut() {
+             s.spoken = None;
+             s.spoken_sentence = None;
+@@ -198,15 +144,15 @@ impl App {
+             return false;
+         };
+         let utterances = textweaver_text::plan(&s.doc, range, &policy);
++        self.continue_from = None;
+         if utterances.is_empty() {
+             return false;
+         }
+         s.spoken = None;
+         s.spoken_sentence = None;
+-        let head = utterances.iter().find_map(|u| u.source_range());
+         self.drain_stale();
+-        self.speech.read(utterances);
+-        self.track.restart(head, true);
++        let generation = self.speech.read(utterances);
++        self.track.start(generation);
+         self.playback = Playback::Reading;
+         self.reading = kind;
+         true
+@@ -218,8 +164,7 @@ impl App {
+             return;
+         };
+         let start = text_util::word_start(&s.doc, pos);
+-        let range = CharRange::new(start, s.doc.end());
+-        if self.read_range(range, ReadKind::Continuous) {
++        if self.read_window(start) {
+             let rate = self.settings.speech.rate.wpm();
+             self.show(&format!("Reading at {rate} words per minute."));
+         } else {
+@@ -227,6 +172,31 @@ impl App {
+         }
+     }
+ 
++    /// Reads the window starting at `start` continuously, noting where the
++    /// next window starts. False when there was nothing to read.
++    fn read_window(&mut self, start: CharPos) -> bool {
++        let Some(s) = self.session.as_ref() else {
++            return false;
++        };
++        let doc_end = s.doc.end();
++        let mut from = start;
++        loop {
++            let Some(s) = self.session.as_ref() else {
++                return false;
++            };
++            let end = window_end(&s.doc, from);
++            if self.read_range(CharRange::new(from, end), ReadKind::Continuous) {
++                self.continue_from = (end < doc_end).then_some(end);
++                return true;
++            }
++            // A window with nothing to say (blank, or skipped code only).
++            if end >= doc_end {
++                return false;
++            }
++            from = end;
++        }
++    }
++
+     /// Reads continuously from the cursor.
+     pub(crate) fn read_from_cursor(&mut self) {
+         if let Some(pos) = self.session.as_ref().map(|s| s.cursor) {
+@@ -256,21 +226,18 @@ impl App {
+                 // them is ignored: the user asked to pause.
+                 while let Some(status) = self.speech.try_status() {
+                     if let SpeechStatus::Position {
+-                        utterance,
++                        generation,
+                         source_range: Some(r),
+                         ..
+                     } = status
++                        && self.track.ours(generation)
+                     {
+-                        if self.track.position(utterance.generation, Some(r)) {
+-                            self.set_spoken(r);
+-                        }
+-                    } else if let SpeechStatus::Position { utterance, .. } = status {
+-                        self.track.saw(utterance.generation);
++                        self.set_spoken(r);
+                     }
+                 }
+                 let resume_at = self.reading_position();
+                 self.speech.pause();
+-                self.track.restart(None, false);
++                self.track.clear();
+                 self.playback = Playback::Paused { resume_at };
+                 self.pause_origin = resume_at;
+                 self.note("Paused.");
+@@ -429,18 +396,11 @@ impl App {
+     fn apply_status(&mut self, status: SpeechStatus) -> bool {
+         match status {
+             SpeechStatus::Position {
+-                utterance,
++                generation,
+                 source_range,
+                 ..
+             } => {
+-                if !self.track.position(utterance.generation, source_range) {
+-                    return false;
+-                }
+-                if self.playback == Playback::Idle {
+-                    // A newer reading of ours after an older one finished.
+-                    self.playback = Playback::Reading;
+-                }
+-                if self.playback != Playback::Reading {
++                if !self.track.ours(generation) || self.playback != Playback::Reading {
+                     return false;
+                 }
+                 let Some(r) = source_range else {
+@@ -460,8 +420,15 @@ impl App {
+                 }
+                 false
+             }
+-            SpeechStatus::Finished { .. } => {
+-                if self.playback == Playback::Reading && self.track.finished() {
++            SpeechStatus::Finished { generation } => {
++                if self.playback == Playback::Reading && self.track.ours(generation) {
++                    if self.reading == ReadKind::Continuous
++                        && let Some(next) = self.continue_from.take()
++                        && self.read_window(next)
++                    {
++                        return false;
++                    }
++                    self.track.clear();
+                     self.playback = Playback::Idle;
+                     if let Some(s) = self.session.as_mut() {
+                         s.spoken = None;
+diff --git a/crates/textweaver-app/src/voice.rs b/crates/textweaver-app/src/voice.rs
+index 8ed65d0..992c67e 100644
+--- a/crates/textweaver-app/src/voice.rs
++++ b/crates/textweaver-app/src/voice.rs
+@@ -117,6 +117,24 @@ impl App {
+         self.tell(&format!("Theme {}.", next.replace('-', " ")));
+     }
+ 
++    /// Turns single-key shortcuts on or off (WCAG 2.1.4); every command
++    /// stays reachable through a modifier chord or the command palette.
++    pub(crate) fn toggle_character_keys(&mut self) {
++        let on = !self.keymap.character_keys();
++        self.keymap.set_character_keys(on);
++        self.settings.keyboard.character_keys = on;
++        self.settings_dirty = true;
++        self.say_at(
++            if on {
++                "Single-key shortcuts on."
++            } else {
++                "Single-key shortcuts off."
++            },
++            textweaver_a11y::Verbosity::Low,
++            textweaver_a11y::Priority::Assertive,
++        );
++    }
++
+     pub(crate) fn toggle_line_numbers(&mut self) {
+         let on = !self.settings.display.show_line_numbers;
+         self.settings.display.show_line_numbers = on;
+diff --git a/crates/textweaver-app/tests/app.rs b/crates/textweaver-app/tests/app.rs
+index 4e52afb..ec5a3ff 100644
+--- a/crates/textweaver-app/tests/app.rs
++++ b/crates/textweaver-app/tests/app.rs
+@@ -5,6 +5,7 @@
+ //! agrees on (plain words, sentences ending in ". "), so these tests keep
+ //! passing when Agent A replaces the Phase 0 unit rules.
+ 
++use std::str::FromStr;
+ use std::sync::{Arc, Mutex};
+ use std::time::{Duration, Instant};
+ 
+@@ -887,3 +888,110 @@ fn stop_leaves_speech_cursor() {
+     assert_eq!(r.app.playback(), Playback::Idle);
+     assert_eq!(r.said.last(), "Stopped. Speech Cursor off.");
+ }
++
++#[test]
++fn an_ordered_list_item_is_announced_with_its_text() {
++    use textweaver_app::formats::{LoadOptions, Registry, Source};
++    let doc = Registry::with_builtins()
++        .load(
++            &Source::Bytes {
++                data: b"Intro.\n\n1. Buy milk\n2. Walk the dog\n".to_vec(),
++                hint: "md".into(),
++            },
++            &LoadOptions::default(),
++        )
++        .unwrap();
++    let mut r = rig_with_doc(doc);
++    r.act(ActionId::NextListItem);
++    r.act(ActionId::NextListItem);
++    assert_eq!(r.said.last(), "List item: 2. Walk the dog");
++}
++
++#[test]
++fn table_mode_setting_changes_how_tables_are_read() {
++    use textweaver_app::formats::{LoadOptions, Registry, Source};
++    use textweaver_app::store::TableMode;
++    let md = "Intro.\n\n| Name | Role |\n|---|---|\n| Ada | Engineer |\n\nAfter.\n";
++    let doc = Registry::with_builtins()
++        .load(
++            &Source::Bytes {
++                data: md.as_bytes().to_vec(),
++                hint: "md".into(),
++            },
++            &LoadOptions::default(),
++        )
++        .unwrap();
++    for (mode, expect) in [
++        (TableMode::Flat, "Ada, Engineer"),
++        (TableMode::Skip, "skipped"),
++    ] {
++        let said = Said::default();
++        let (mut config, log) = make_config(&said);
++        config.settings.normalization.table_mode = mode;
++        let mut app = App::new(config);
++        app.open_document(doc.clone(), DocKey::untitled(1), "T".into());
++        app.dispatch(Command::Action(ActionId::ReadFromCursor));
++        let deadline = Instant::now() + Duration::from_secs(10);
++        while app.playback() != Playback::Idle && Instant::now() < deadline {
++            app.poll_speech();
++            std::thread::sleep(Duration::from_millis(2));
++        }
++        let texts = log.texts().join(" | ");
++        assert!(texts.contains(expect), "{mode:?}: {texts}");
++    }
++}
++
++#[test]
++fn every_action_with_a_default_key_has_a_handler() {
++    // Shift+arrows (select), Shift+S (read paragraph), and F9 (single-key
++    // shortcuts) said "... is not available yet."
++    use textweaver_app::keymap::{Frontend, Keymap, Platform};
++    let keymap = Keymap::defaults(Platform::current(), Frontend::Terminal);
++    let pending = [ActionId::ChooseVoice, ActionId::OpenLibrary];
++    let mut r = rig(PROSE);
++    for &a in ActionId::ALL {
++        if pending.contains(&a) || a.confirmation_prompt().is_some() {
++            continue;
++        }
++        if keymap.chords_for(a).is_empty() {
++            continue;
++        }
++        let before = r.said.all().len();
++        r.act(a);
++        r.app.dispatch(Command::Cancel);
++        let new = &r.said.all()[before..];
++        assert!(
++            !new.iter().any(|m| m.contains("is not available yet")),
++            "{a:?} has a key but no handler: {new:?}"
++        );
++    }
++}
++
++#[test]
++fn single_key_shortcuts_follow_the_setting_and_f9() {
++    let mut r = rig(PROSE);
++    let t = textweaver_app::keymap::KeyChord::from_str("t").unwrap();
++    let layer = Mode::Browse.layer();
++    assert!(r.app.keymap().lookup(&t, layer).is_some());
++    r.act(ActionId::ToggleCharacterKeys);
++    assert!(r.said.any("Single-key shortcuts off"));
++    assert!(r.app.keymap().lookup(&t, layer).is_none());
++    assert!(!r.app.settings().keyboard.character_keys);
++    r.act(ActionId::ToggleCharacterKeys);
++    assert!(r.app.keymap().lookup(&t, layer).is_some());
++    // The setting applies at startup.
++    let said = Said::default();
++    let (mut config, _log) = make_config(&said);
++    config.settings.keyboard.character_keys = false;
++    let app = App::new(config);
++    assert!(app.keymap().lookup(&t, layer).is_none());
++}
++
++#[test]
++fn shift_arrows_select_in_browse_mode() {
++    let mut r = rig(PROSE);
++    r.act(ActionId::SelectNextWord);
++    r.act(ActionId::SelectNextWord);
++    let sel = r.app.session().unwrap().selection.expect("a selection");
++    assert_eq!(r.app.session().unwrap().doc.slice(sel).trim(), "Alpha beta");
++}
+diff --git a/crates/textweaver-app/tests/edit.rs b/crates/textweaver-app/tests/edit.rs
+index 6cf0062..8dfd070 100644
+--- a/crates/textweaver-app/tests/edit.rs
++++ b/crates/textweaver-app/tests/edit.rs
+@@ -216,6 +216,29 @@ fn type_format_undo_save_and_reopen() {
+     assert_eq!(bookmark_pos(&r.app), at(&canon, "world"));
+ }
+ 
++#[test]
++fn quitting_in_edit_mode_after_a_save_keeps_positions_on_the_saved_text() {
++    // Quitting while still in edit mode (clean after a save) restored the
++    // reading text from before the edits and saved positions against it.
++    let mut r = rig();
++    let file = r.file("note.md", NOTE_MD);
++    r.app.open(&file).unwrap();
++    let canon = r.text();
++    r.go(at(&canon, "The end"));
++    r.act(ActionId::AddBookmark);
++    r.act(ActionId::ToggleEditMode);
++    r.go(CharPos(at(NOTE_MD, "Hello").0));
++    r.type_str("A much longer opening sentence goes here. ");
++    r.act(ActionId::Save);
++    assert!(!r.app.is_dirty());
++    assert_eq!(r.quit(), vec![Effect::Quit]);
++    r.relaunch();
++    r.app.open(&file).unwrap();
++    let canon = r.text();
++    assert!(canon.contains("A much longer opening"), "{canon}");
++    assert_eq!(bookmark_pos(&r.app), at(&canon, "The end"));
++}
++
+ #[test]
+ fn leaving_with_unsaved_changes_asks_and_discard_restores_everything() {
+     let mut r = rig();
+diff --git a/crates/textweaver-app/tests/reading_generation.rs b/crates/textweaver-app/tests/reading_generation.rs
+new file mode 100644
+index 0000000..0eb4431
+--- /dev/null
++++ b/crates/textweaver-app/tests/reading_generation.rs
+@@ -0,0 +1,106 @@
++//! The app follows the reading generation `SpeechService::read` returns
++//! (docs/audit-2026-09.md, finding S1).
++
++use std::time::{Duration, Instant};
++
++use textweaver_app::core::CharPos;
++use textweaver_app::formats::{LoadOptions, Registry, Source};
++use textweaver_app::keymap::ActionId;
++use textweaver_app::store::DocKey;
++use textweaver_app::testing::recording_service;
++use textweaver_app::text::GoTo;
++use textweaver_app::{App, AppConfig, Command, Playback};
++
++fn markdown(text: &str) -> textweaver_app::text::Document {
++    Registry::with_builtins()
++        .load(
++            &Source::Bytes {
++                data: text.as_bytes().to_vec(),
++                hint: "md".into(),
++            },
++            &LoadOptions::default(),
++        )
++        .unwrap()
++}
++
++#[test]
++fn a_reading_that_starts_with_a_skipped_code_block_is_followed() {
++    // The first utterance is "code block skipped" (skip_code is on by
++    // default), anchored at the code block; the guess from positions
++    // rejected the whole reading, so the highlight never moved and the app
++    // stayed in Reading after speech ended.
++    let text = "Intro words here.\n\n```\ncode line\n```\n\nAfter the code we keep reading. And more words.\n";
++    let doc = markdown(text);
++    let canonical = doc.text().to_string();
++    let (speech, log) = recording_service().unwrap();
++    let mut app = App::new(AppConfig {
++        speech,
++        ..AppConfig::for_tests()
++    });
++    app.open_document(doc, DocKey::untitled(1), "T".into());
++    let blank = canonical.find("\n\n").unwrap() + 1;
++    app.dispatch(Command::GoTo(GoTo::Char(CharPos(blank))));
++    app.dispatch(Command::Action(ActionId::ReadFromCursor));
++    let deadline = Instant::now() + Duration::from_secs(10);
++    while app.playback() != Playback::Idle && Instant::now() < deadline {
++        app.poll_speech();
++        std::thread::sleep(Duration::from_millis(2));
++    }
++    assert!(log.texts().iter().any(|t| t == "code block skipped"));
++    assert!(!app.spoken_log().is_empty(), "the highlight never moved");
++    assert_eq!(app.playback(), Playback::Idle, "stuck in Reading");
++}
++
++#[test]
++fn continuous_reading_plans_in_windows_and_reaches_the_end() {
++    // 200,000 chars: several reading windows.
++    let mut text = String::new();
++    let mut n = 0;
++    while text.len() < 200_000 {
++        text.push_str(&format!("Sentence number {n} is here. "));
++        n += 1;
++        if n % 7 == 0 {
++            text.push_str("\n\n");
++        }
++    }
++    let doc = markdown(&text);
++    let canonical = doc.text().to_string();
++    let (speech, log) = recording_service().unwrap();
++    let mut app = App::new(AppConfig {
++        speech,
++        ..AppConfig::for_tests()
++    });
++    app.open_document(doc, DocKey::untitled(1), "T".into());
++    let t = Instant::now();
++    app.dispatch(Command::Action(ActionId::ReadFromCursor));
++    let first_dispatch = t.elapsed();
++    let deadline = Instant::now() + Duration::from_secs(120);
++    while app.playback() != Playback::Idle && Instant::now() < deadline {
++        app.poll_speech();
++        std::thread::sleep(Duration::from_millis(1));
++    }
++    assert_eq!(app.playback(), Playback::Idle);
++    let ranges = log.spoken_ranges();
++    assert!(
++        ranges.windows(2).all(|w| w[0].end <= w[1].start),
++        "no sentence twice, none out of order"
++    );
++    // Numbers are spoken as words; count sentences and check the last
++    // highlight range reaches the end of the text.
++    let texts = log.texts();
++    assert_eq!(
++        texts
++            .iter()
++            .filter(|t| t.starts_with("Sentence number"))
++            .count(),
++        n,
++        "every sentence read once"
++    );
++    let end = canonical.trim_end().chars().count();
++    assert_eq!(
++        ranges.last().map(|r| r.end.0),
++        Some(end),
++        "the reading reached the end"
++    );
++    eprintln!("first Read from cursor dispatch: {first_dispatch:?}");
++}
+diff --git a/crates/textweaver-tui/src/lib.rs b/crates/textweaver-tui/src/lib.rs
+index 86d22cc..1b7b0f7 100644
+--- a/crates/textweaver-tui/src/lib.rs
++++ b/crates/textweaver-tui/src/lib.rs
+@@ -43,16 +43,31 @@ pub use setup::{Options, build_app, build_app_with};
+ pub use theme::Theme;
+ pub use ui::{Tui, chord};
+ 
+-/// Runs the event loop until the user quits: draw, apply speech status and
+-/// housekeeping, wait briefly for input.
++/// How long the loop waits for a key while reading: the highlight is
++/// drawn at most this long after its word is heard.
++const READING_POLL: Duration = Duration::from_millis(10);
++
++/// How long the loop waits for a key otherwise.
++const IDLE_POLL: Duration = Duration::from_millis(40);
++
++/// Runs the event loop until the user quits: apply speech status and
++/// housekeeping, draw, wait briefly for input.
++///
++/// Status is applied before drawing, so a highlight step is on screen as
++/// soon as it arrives rather than after the next wait for input.
+ pub fn run(terminal: &mut DefaultTerminal, tui: &mut Tui) -> anyhow::Result<()> {
+     while !tui.should_quit() {
+-        terminal.draw(|f| tui.draw(f))?;
+         tui.tick();
+         // Apple's AVSpeechSynthesizer delivers audio and words through the
+         // main thread's run loop (ADR-0008); a no-op on other platforms.
+         textweaver_app::apple::pump_main_loop(Duration::ZERO);
+-        if event::poll(Duration::from_millis(40))? {
++        terminal.draw(|f| tui.draw(f))?;
++        let wait = if tui.app().playback() == textweaver_app::Playback::Reading {
++            READING_POLL
++        } else {
++            IDLE_POLL
++        };
++        if event::poll(wait)? {
+             let ev = event::read()?;
+             tui.handle_event(&ev);
+         }
+diff --git a/crates/textweaver-tui/src/ui.rs b/crates/textweaver-tui/src/ui.rs
+index c25d527..89b9901 100644
+--- a/crates/textweaver-tui/src/ui.rs
++++ b/crates/textweaver-tui/src/ui.rs
+@@ -280,7 +280,9 @@ impl Tui {
+             self.dispatch(Command::Action(action));
+             return;
+         }
+-        if let Some(cmd) = extra_lookup(&c, layer) {
++        if (self.app.keymap().character_keys() || !c.is_text_input())
++            && let Some(cmd) = extra_lookup(&c, layer)
++        {
+             self.dispatch(cmd);
+             return;
+         }

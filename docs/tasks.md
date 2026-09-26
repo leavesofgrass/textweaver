@@ -414,3 +414,9 @@ Jon wants several themes, as Star had. Star shipped 23 palettes in `star/themes.
 - ADR-0020 and `docs/themes.md` (how to pick, preview, and write a theme).
 
 **Acceptance:** contrast tests for every built-in theme; round-trip TOML tests; snapshot of the CSS output; the palette list and each adjustment in the report.
+
+### Agent T — Audit and quick fixes (added 2026-09-25 at Jon's request)
+
+**Owns:** `docs/audit-2026-09.md`, `docs/audit-2026-09/` (suggested patches for owned areas), `xtask/src/bench.rs`; small fixes in `textweaver-text`, `-speech`, `-core`, `-store`, `-editor`, and CI, each in its own commit with a test.
+
+**Status:** done on `wave2/t-audit` (Friday, September 25, 2026); awaiting integration. Findings ranked in `docs/audit-2026-09.md`, with a low-hanging-fruit list. Fixed here: quadratic sentence segmentation and marker lookups in narration (a 10 MB document went from 13 s to 1.2 s to first speech, 0.23 s with the app patches; next sentence in a 50,000-item list from 4.6 s to 0.03 ms), a failing engine flooding and looping errors, rate changes heard sentences late on Eloquence and SAPI, corrupt state files overwritten, saves replacing links and read-only or non-UTF-8 files, reversed ranges panicking, recent paths, CI triggers and Omnivox on Windows and macOS. `cargo xtask bench` measures the hot paths. Seven tested patches for `textweaver-app` and `textweaver-tui` (D3) in `docs/audit-2026-09/`, also as one file: reading generations (S1), windowed planning (S3), single-key shortcuts and missing actions (S2), highlight latency in the terminal loop (S4), quit after save (S5), table mode (S6), ordered list items (S7). Checks: native Windows fmt, clippy, and tests (916 passed); Docker Linux with all features (922 passed).

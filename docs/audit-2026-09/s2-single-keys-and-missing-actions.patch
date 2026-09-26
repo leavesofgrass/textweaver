@@ -1,0 +1,176 @@
+diff --git a/crates/textweaver-app/src/app.rs b/crates/textweaver-app/src/app.rs
+index d0c0ccf..827d158 100644
+--- a/crates/textweaver-app/src/app.rs
++++ b/crates/textweaver-app/src/app.rs
+@@ -302,6 +302,9 @@ impl App {
+             prompt_purpose: PromptPurpose::Find,
+         };
+         app.apply_voice_settings();
++        // WCAG 2.1.4: single-key shortcuts follow the setting.
++        let on = app.settings.keyboard.character_keys;
++        app.keymap.set_character_keys(on);
+         app
+     }
+ 
+@@ -906,6 +909,7 @@ impl App {
+             A::SayPosition => self.say_position(),
+             A::ReplaySentence => self.replay_sentence(),
+             A::ReplayParagraph => self.replay_paragraph(),
++            A::ReadParagraph => self.read_current_unit(textweaver_core::Unit::Paragraph),
+             // Navigation
+             A::NextSentence => self.next_sentence(),
+             A::PreviousSentence => self.previous_sentence(),
+@@ -962,6 +966,30 @@ impl App {
+             A::PageUp => self.page(textweaver_core::Direction::Backward),
+             A::ScrollDown => self.scroll_lines(1),
+             A::ScrollUp => self.scroll_lines(-1),
++            A::SelectNextWord => {
++                self.extend_selection(
++                    textweaver_core::Unit::Word,
++                    textweaver_core::Direction::Forward,
++                );
++            }
++            A::SelectPreviousWord => {
++                self.extend_selection(
++                    textweaver_core::Unit::Word,
++                    textweaver_core::Direction::Backward,
++                );
++            }
++            A::SelectNextLine => {
++                self.extend_selection(
++                    textweaver_core::Unit::Line,
++                    textweaver_core::Direction::Forward,
++                );
++            }
++            A::SelectPreviousLine => {
++                self.extend_selection(
++                    textweaver_core::Unit::Line,
++                    textweaver_core::Direction::Backward,
++                );
++            }
+             // Speech Cursor
+             A::SpeechCursorToggle => self.speech_cursor_toggle(),
+             A::SpeechCursorNextLine => self.speech_cursor_move(1),
+@@ -996,6 +1024,7 @@ impl App {
+             // View and help
+             A::NextTheme => self.next_theme(),
+             A::ToggleLineNumbers => self.toggle_line_numbers(),
++            A::ToggleCharacterKeys => self.toggle_character_keys(),
+             A::CommandPalette => return self.prompt(PromptPurpose::CommandPalette),
+             A::KeyboardHelp => return self.keyboard_help(),
+             A::Help => return self.help(),
+diff --git a/crates/textweaver-app/src/voice.rs b/crates/textweaver-app/src/voice.rs
+index 8ed65d0..992c67e 100644
+--- a/crates/textweaver-app/src/voice.rs
++++ b/crates/textweaver-app/src/voice.rs
+@@ -117,6 +117,24 @@ impl App {
+         self.tell(&format!("Theme {}.", next.replace('-', " ")));
+     }
+ 
++    /// Turns single-key shortcuts on or off (WCAG 2.1.4); every command
++    /// stays reachable through a modifier chord or the command palette.
++    pub(crate) fn toggle_character_keys(&mut self) {
++        let on = !self.keymap.character_keys();
++        self.keymap.set_character_keys(on);
++        self.settings.keyboard.character_keys = on;
++        self.settings_dirty = true;
++        self.say_at(
++            if on {
++                "Single-key shortcuts on."
++            } else {
++                "Single-key shortcuts off."
++            },
++            textweaver_a11y::Verbosity::Low,
++            textweaver_a11y::Priority::Assertive,
++        );
++    }
++
+     pub(crate) fn toggle_line_numbers(&mut self) {
+         let on = !self.settings.display.show_line_numbers;
+         self.settings.display.show_line_numbers = on;
+diff --git a/crates/textweaver-app/tests/app.rs b/crates/textweaver-app/tests/app.rs
+index 4e52afb..25b87dd 100644
+--- a/crates/textweaver-app/tests/app.rs
++++ b/crates/textweaver-app/tests/app.rs
+@@ -5,6 +5,7 @@
+ //! agrees on (plain words, sentences ending in ". "), so these tests keep
+ //! passing when Agent A replaces the Phase 0 unit rules.
+ 
++use std::str::FromStr;
+ use std::sync::{Arc, Mutex};
+ use std::time::{Duration, Instant};
+ 
+@@ -887,3 +888,58 @@ fn stop_leaves_speech_cursor() {
+     assert_eq!(r.app.playback(), Playback::Idle);
+     assert_eq!(r.said.last(), "Stopped. Speech Cursor off.");
+ }
++
++#[test]
++fn every_action_with_a_default_key_has_a_handler() {
++    // Shift+arrows (select), Shift+S (read paragraph), and F9 (single-key
++    // shortcuts) said "... is not available yet."
++    use textweaver_app::keymap::{Frontend, Keymap, Platform};
++    let keymap = Keymap::defaults(Platform::current(), Frontend::Terminal);
++    let pending = [ActionId::ChooseVoice, ActionId::OpenLibrary];
++    let mut r = rig(PROSE);
++    for &a in ActionId::ALL {
++        if pending.contains(&a) || a.confirmation_prompt().is_some() {
++            continue;
++        }
++        if keymap.chords_for(a).is_empty() {
++            continue;
++        }
++        let before = r.said.all().len();
++        r.act(a);
++        r.app.dispatch(Command::Cancel);
++        let new = &r.said.all()[before..];
++        assert!(
++            !new.iter().any(|m| m.contains("is not available yet")),
++            "{a:?} has a key but no handler: {new:?}"
++        );
++    }
++}
++
++#[test]
++fn single_key_shortcuts_follow_the_setting_and_f9() {
++    let mut r = rig(PROSE);
++    let t = textweaver_app::keymap::KeyChord::from_str("t").unwrap();
++    let layer = Mode::Browse.layer();
++    assert!(r.app.keymap().lookup(&t, layer).is_some());
++    r.act(ActionId::ToggleCharacterKeys);
++    assert!(r.said.any("Single-key shortcuts off"));
++    assert!(r.app.keymap().lookup(&t, layer).is_none());
++    assert!(!r.app.settings().keyboard.character_keys);
++    r.act(ActionId::ToggleCharacterKeys);
++    assert!(r.app.keymap().lookup(&t, layer).is_some());
++    // The setting applies at startup.
++    let said = Said::default();
++    let (mut config, _log) = make_config(&said);
++    config.settings.keyboard.character_keys = false;
++    let app = App::new(config);
++    assert!(app.keymap().lookup(&t, layer).is_none());
++}
++
++#[test]
++fn shift_arrows_select_in_browse_mode() {
++    let mut r = rig(PROSE);
++    r.act(ActionId::SelectNextWord);
++    r.act(ActionId::SelectNextWord);
++    let sel = r.app.session().unwrap().selection.expect("a selection");
++    assert_eq!(r.app.session().unwrap().doc.slice(sel).trim(), "Alpha beta");
++}
+diff --git a/crates/textweaver-tui/src/ui.rs b/crates/textweaver-tui/src/ui.rs
+index c25d527..89b9901 100644
+--- a/crates/textweaver-tui/src/ui.rs
++++ b/crates/textweaver-tui/src/ui.rs
+@@ -280,7 +280,9 @@ impl Tui {
+             self.dispatch(Command::Action(action));
+             return;
+         }
+-        if let Some(cmd) = extra_lookup(&c, layer) {
++        if (self.app.keymap().character_keys() || !c.is_text_input())
++            && let Some(cmd) = extra_lookup(&c, layer)
++        {
+             self.dispatch(cmd);
+             return;
+         }
