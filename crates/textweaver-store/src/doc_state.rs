@@ -1,5 +1,5 @@
-//! Per-document state: position, history, bookmarks (notes and highlights in
-//! wave 2), one JSON file per document, with debounced position saves.
+//! Per-document state: position, history, bookmarks, notes, and highlights,
+//! one JSON file per document, with debounced position saves.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -7,8 +7,9 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
-use textweaver_core::{Bias, CharPos, EditOutcome};
+use textweaver_core::{Bias, CharPos, CharRange, EditOutcome};
 
+use crate::notes::{self, Annotation, Highlight, Note};
 use crate::{StoreError, atomic_write};
 
 /// Identifies a document across sessions.
@@ -93,6 +94,12 @@ pub struct DocState {
     pub history: Vec<CharPos>,
     /// Bookmarks.
     pub bookmarks: Vec<Bookmark>,
+    /// Notes, in document order.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<Note>,
+    /// Highlights, in document order.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub highlights: Vec<Highlight>,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: serde_json::Map<String, serde_json::Value>,
@@ -208,10 +215,228 @@ impl DocState {
             .copied()
     }
 
+    /// Adds a note on `range`. `anchor_text` is the text of that range (or
+    /// of the word or paragraph at a point); it is kept, collapsed and
+    /// shortened, so the note still reads well if the text changes. Tags are
+    /// parsed from `tags` as Star did (`#a, b c`). Notes stay in document
+    /// order. Returns the new note.
+    pub fn add_note(
+        &mut self,
+        range: CharRange,
+        anchor_text: &str,
+        note: &str,
+        tags: &str,
+    ) -> Note {
+        let now = crate::now_ts();
+        let n = Note {
+            id: self.fresh_id(),
+            range,
+            anchor: notes::collapse(anchor_text, notes::ANCHOR_MAX_CHARS),
+            note: note.trim().to_owned(),
+            tags: notes::parse_tags(tags),
+            created: now,
+            ts: now,
+            ..Note::default()
+        };
+        self.insert_note(n.clone());
+        n
+    }
+
+    /// An id no note or highlight of this document uses.
+    fn fresh_id(&self) -> String {
+        let mut id = notes::new_id();
+        while self.note(&id).is_some() || self.highlight(&id).is_some() {
+            id = notes::new_id();
+        }
+        id
+    }
+
+    /// Inserts a prepared note in document order, replacing a note with the
+    /// same id (imports and merges).
+    pub fn insert_note(&mut self, note: Note) {
+        self.notes.retain(|n| n.id != note.id);
+        let key = (note.range.start, note.range.end);
+        let at = self
+            .notes
+            .partition_point(|n| (n.range.start, n.range.end) <= key);
+        self.notes.insert(at, note);
+    }
+
+    /// The note with `id`.
+    pub fn note(&self, id: &str) -> Option<&Note> {
+        self.notes.iter().find(|n| n.id == id)
+    }
+
+    /// Changes a note's text and tags. Empty text deletes the note (Star's
+    /// rule). Returns false when there is no such note.
+    pub fn edit_note(&mut self, id: &str, note: &str, tags: &str) -> bool {
+        if note.trim().is_empty() {
+            return self.remove_note(id);
+        }
+        let Some(n) = self.notes.iter_mut().find(|n| n.id == id) else {
+            return false;
+        };
+        n.note = note.trim().to_owned();
+        n.tags = notes::parse_tags(tags);
+        n.ts = crate::now_ts();
+        true
+    }
+
+    /// Removes the note with `id`. Returns whether it existed.
+    pub fn remove_note(&mut self, id: &str) -> bool {
+        let before = self.notes.len();
+        self.notes.retain(|n| n.id != id);
+        self.notes.len() != before
+    }
+
+    /// Notes at `pos`: those whose range contains it, and point notes at it.
+    pub fn notes_at(&self, pos: CharPos) -> Vec<&Note> {
+        self.notes
+            .iter()
+            .filter(|n| n.range.contains(pos) || n.range.start == pos)
+            .collect()
+    }
+
+    /// Notes matching a search query (Star's rules, [`Note::matches`]).
+    pub fn search_notes(&self, query: &str) -> Vec<&Note> {
+        self.notes.iter().filter(|n| n.matches(query)).collect()
+    }
+
+    /// Every distinct tag, sorted case-insensitively.
+    pub fn tags(&self) -> Vec<String> {
+        let mut tags: Vec<String> = self.notes.iter().flat_map(|n| n.tags.clone()).collect();
+        tags.sort_by_key(|t| t.to_lowercase());
+        tags.dedup_by(|a, b| a.to_lowercase() == b.to_lowercase());
+        tags
+    }
+
+    /// Highlights `range` in `color` (a name such as "yellow" or `#rrggbb`).
+    /// `text` is the highlighted text. A highlight on exactly the same range
+    /// is replaced, so highlighting again changes the color. An empty range
+    /// highlights nothing and returns `None`.
+    pub fn add_highlight(
+        &mut self,
+        range: CharRange,
+        color: &str,
+        text: &str,
+    ) -> Option<Highlight> {
+        if range.is_empty() {
+            return None;
+        }
+        let h = Highlight {
+            id: self.fresh_id(),
+            range,
+            color: notes::highlight_color(color),
+            text: notes::collapse(text, notes::HIGHLIGHT_TEXT_MAX_CHARS),
+            ts: crate::now_ts(),
+            extra: serde_json::Map::new(),
+        };
+        self.insert_highlight(h.clone());
+        Some(h)
+    }
+
+    /// Inserts a prepared highlight in document order, replacing one with
+    /// the same id or the same range.
+    pub fn insert_highlight(&mut self, h: Highlight) {
+        self.highlights
+            .retain(|x| x.id != h.id && x.range != h.range);
+        let key = (h.range.start, h.range.end);
+        let at = self
+            .highlights
+            .partition_point(|x| (x.range.start, x.range.end) <= key);
+        self.highlights.insert(at, h);
+    }
+
+    /// The highlight with `id`.
+    pub fn highlight(&self, id: &str) -> Option<&Highlight> {
+        self.highlights.iter().find(|h| h.id == id)
+    }
+
+    /// Highlights covering `pos`.
+    pub fn highlights_at(&self, pos: CharPos) -> Vec<&Highlight> {
+        self.highlights
+            .iter()
+            .filter(|h| h.range.contains(pos))
+            .collect()
+    }
+
+    /// Removes the highlight with `id`. Returns it if it existed.
+    pub fn remove_highlight(&mut self, id: &str) -> Option<Highlight> {
+        let i = self.highlights.iter().position(|h| h.id == id)?;
+        Some(self.highlights.remove(i))
+    }
+
+    /// Removes every highlight (Star's Clear All Highlights). Returns how
+    /// many there were.
+    pub fn clear_highlights(&mut self) -> usize {
+        std::mem::take(&mut self.highlights).len()
+    }
+
+    /// Removes the note or highlight at `pos`: the shortest note at `pos`
+    /// first, else the shortest highlight covering it. Returns what was
+    /// removed as it would be spoken, for the announcement.
+    pub fn remove_annotation_at(&mut self, pos: CharPos) -> Option<String> {
+        let note = self
+            .notes_at(pos)
+            .into_iter()
+            .min_by_key(|n| n.range.len())
+            .map(|n| (n.id.clone(), Annotation::Note(n).spoken()));
+        if let Some((id, spoken)) = note {
+            self.remove_note(&id);
+            return Some(spoken);
+        }
+        let (id, spoken) = self
+            .highlights_at(pos)
+            .into_iter()
+            .min_by_key(|h| h.range.len())
+            .map(|h| (h.id.clone(), Annotation::Highlight(h).spoken()))?;
+        self.remove_highlight(&id);
+        Some(spoken)
+    }
+
+    /// Notes and highlights together, in document order (a note before a
+    /// highlight at the same position).
+    pub fn annotations(&self) -> Vec<Annotation<'_>> {
+        let mut v: Vec<Annotation<'_>> = self
+            .notes
+            .iter()
+            .map(Annotation::Note)
+            .chain(self.highlights.iter().map(Annotation::Highlight))
+            .collect();
+        v.sort_by_key(|a| {
+            let r = a.range();
+            (r.start, matches!(a, Annotation::Highlight(_)), r.end)
+        });
+        v
+    }
+
+    /// The first note or highlight starting after `pos`, wrapping to the
+    /// first one when `wrap` is set.
+    pub fn next_annotation(&self, pos: CharPos, wrap: bool) -> Option<Annotation<'_>> {
+        notes::step(&self.annotations(), pos, true, wrap)
+    }
+
+    /// The last note or highlight starting before `pos`, wrapping to the
+    /// last one when `wrap` is set.
+    pub fn previous_annotation(&self, pos: CharPos, wrap: bool) -> Option<Annotation<'_>> {
+        notes::step(&self.annotations(), pos, false, wrap)
+    }
+
+    /// The notes (and, if asked, highlights) as Markdown
+    /// ([`notes::notes_markdown`]).
+    pub fn notes_markdown(&self, opts: &notes::NotesExport<'_>) -> String {
+        notes::notes_markdown(&self.notes, &self.highlights, opts)
+    }
+
     /// Moves every stored position across an edit, so the reading position,
-    /// history, and bookmarks keep pointing at the same text. Positions
-    /// inside deleted text move to the start of the replacement.
+    /// history, bookmarks, notes, and highlights keep pointing at the same
+    /// text. Positions inside deleted text move to the start of the
+    /// replacement; a highlight whose text is deleted is dropped, and a note
+    /// whose text is deleted stays as a point note (its anchor keeps the old
+    /// text).
     pub fn shift(&mut self, outcome: &EditOutcome) {
+        notes::shift(&mut self.notes, &mut self.highlights, outcome);
+
         self.position = outcome.map_pos(self.position, Bias::Before);
         for h in &mut self.history {
             *h = outcome.map_pos(*h, Bias::Before);
@@ -576,6 +801,141 @@ mod tests {
         st.shift(&Edit::delete(20..40).outcome());
         assert_eq!(st.position, CharPos(20));
         assert_eq!(st.bookmark("b").unwrap().pos, CharPos(20));
+    }
+
+    #[test]
+    fn notes_add_edit_search_and_remove() {
+        let mut st = DocState::default();
+        let a = st.add_note(CharRange::new(40, 50), "second  part\n", " later ", "#b");
+        let b = st.add_note(
+            CharRange::new(10, 20),
+            "first part",
+            "Check this",
+            "#exam, bio",
+        );
+        assert_eq!(a.anchor, "second part");
+        assert_eq!(a.note, "later");
+        assert_eq!(b.tags, vec!["exam", "bio"]);
+        assert!(a.created > 0 && a.id.len() == 8 && a.id != b.id);
+        let order: Vec<&str> = st.notes.iter().map(|n| n.note.as_str()).collect();
+        assert_eq!(order, vec!["Check this", "later"], "document order");
+        assert_eq!(st.search_notes("#exam").len(), 1);
+        assert_eq!(st.search_notes("").len(), 2);
+        assert_eq!(st.tags(), vec!["b", "bio", "exam"]);
+        assert_eq!(st.notes_at(CharPos(15)).len(), 1);
+        assert!(st.edit_note(&b.id, "Changed", "x"));
+        assert_eq!(st.note(&b.id).unwrap().tags, vec!["x"]);
+        assert!(st.edit_note(&b.id, "  ", ""), "empty text deletes");
+        assert!(st.note(&b.id).is_none());
+        assert!(!st.edit_note("nope", "x", ""));
+        assert!(st.remove_note(&a.id));
+        assert!(st.notes.is_empty());
+    }
+
+    #[test]
+    fn highlights_replace_by_range_and_step_with_notes() {
+        let mut st = DocState::default();
+        assert!(
+            st.add_highlight(CharRange::empty(5), "yellow", "")
+                .is_none()
+        );
+        let h = st
+            .add_highlight(CharRange::new(30, 40), "green", "key idea")
+            .unwrap();
+        assert_eq!(h.color, "#90ee90");
+        st.add_highlight(CharRange::new(30, 40), "pink", "key idea");
+        assert_eq!(st.highlights.len(), 1, "same range replaces");
+        assert_eq!(st.highlights[0].color, "#ffc0cb");
+        let n = st.add_note(CharRange::new(10, 12), "is", "why?", "");
+        st.add_highlight(CharRange::new(60, 70), "yellow", "later");
+        let next = st.next_annotation(CharPos(0), false).unwrap();
+        assert_eq!(next.id(), n.id);
+        let next = st.next_annotation(CharPos(10), false).unwrap();
+        assert_eq!(next.spoken(), "Pink highlight: key idea");
+        assert!(st.next_annotation(CharPos(60), false).is_none());
+        assert_eq!(st.next_annotation(CharPos(60), true).unwrap().id(), n.id);
+        assert_eq!(
+            st.previous_annotation(CharPos(10), true).unwrap().range(),
+            CharRange::new(60, 70)
+        );
+        assert_eq!(
+            st.remove_annotation_at(CharPos(11)).as_deref(),
+            Some("Note: why?, on \u{201c}is\u{201d}")
+        );
+        assert_eq!(
+            st.remove_annotation_at(CharPos(35)).as_deref(),
+            Some("Pink highlight: key idea")
+        );
+        assert!(st.remove_annotation_at(CharPos(35)).is_none());
+        assert_eq!(st.clear_highlights(), 1);
+    }
+
+    #[test]
+    fn notes_and_highlights_follow_edits() {
+        let mut st = DocState::default();
+        let n = st.add_note(CharRange::new(20, 30), "anchored", "n", "");
+        st.add_highlight(CharRange::new(40, 50), "yellow", "hl");
+        st.add_bookmark(Some("m"), CharPos(45), 100);
+        st.shift(&Edit::insert(0, "abc").outcome());
+        assert_eq!(st.note(&n.id).unwrap().range, CharRange::new(23, 33));
+        assert_eq!(st.highlights[0].range, CharRange::new(43, 53));
+        assert_eq!(st.bookmark("m").unwrap().pos, CharPos(48));
+        // Deleting the highlighted text drops the highlight; deleting the
+        // noted text leaves a point note that keeps its anchor.
+        st.shift(&Edit::delete(20..60).outcome());
+        assert!(st.highlights.is_empty());
+        let note = st.note(&n.id).unwrap();
+        assert_eq!(note.range, CharRange::empty(20));
+        assert_eq!(note.anchor, "anchored");
+    }
+
+    #[test]
+    fn notes_survive_a_save_and_old_files_still_load() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = StateStore::new(dir.path().to_owned());
+        let key = DocKey::untitled(9);
+        let mut st = DocState::default();
+        let n = st.add_note(CharRange::new(1, 4), "abc", "note", "t");
+        st.notes[0]
+            .extra
+            .insert("sr_state".into(), serde_json::json!({"interval": 3}));
+        st.add_highlight(CharRange::new(5, 9), "cyan", "text");
+        store.save(&key, &st).unwrap();
+        let back = store.load(&key).unwrap();
+        assert_eq!(back, st);
+        assert_eq!(back.note(&n.id).unwrap().extra["sr_state"]["interval"], 3);
+        // A wave 1 file without notes or highlights loads with none, and a
+        // state without them writes neither key.
+        std::fs::write(dir.path().join("untitled-8.json"), r#"{"position": 3}"#).unwrap();
+        let old = store.load(&DocKey::untitled(8)).unwrap();
+        assert!(old.notes.is_empty() && old.highlights.is_empty());
+        let text = serde_json::to_string(&old).unwrap();
+        assert!(!text.contains("notes") && !text.contains("highlights"));
+    }
+
+    #[test]
+    fn notes_export_as_markdown() {
+        let mut st = DocState::default();
+        st.add_note(
+            CharRange::new(50, 60),
+            "line one\nline two",
+            "Important.",
+            "#exam",
+        );
+        st.notes[0].ts = 1_790_344_987;
+        st.add_note(CharRange::empty(0), "", "Point note", "");
+        st.notes[0].ts = 0;
+        st.add_highlight(CharRange::new(80, 90), "yellow", "bright words");
+        let md = st.notes_markdown(&notes::NotesExport {
+            title: "Essay",
+            source: Some("essay.md"),
+            exported: Some(1_790_344_987),
+            doc_len: Some(100),
+            highlights: true,
+            ..notes::NotesExport::default()
+        });
+        let expected = "# Notes: Essay\n\n- Source: `essay.md`\n- Exported: 2026-09-25\n- Notes: 2\n- Highlights: 1\n\n## Note 1\n\nPoint note\n\n*At 0 percent*\n\n## Note 2\n\n> line one line two\n\nImportant.\n\n*At 50 percent, tags #exam, saved 2026-09-25 14:03 UTC*\n\n## Highlights\n\n- yellow, at 80 percent: bright words\n";
+        assert_eq!(md, expected);
     }
 
     /// Star's sidecar debounce test (`test_library.py:249`), applied to the

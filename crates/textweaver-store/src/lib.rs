@@ -4,8 +4,9 @@
 //!   written only on explicit change, atomically, preserving unknown keys,
 //!   storing only non-default values (Star rewrote `settings.json` on every
 //!   set, wrote every default, and dropped unknown keys).
-//! - Per-document [`DocState`] in `state/<doc-key>.json`, with position
-//!   saves coalesced by [`StateStore`] and flushed on demand and on drop.
+//! - Per-document [`DocState`] in `state/<doc-key>.json` (position,
+//!   history, bookmarks, [`notes`] and highlights), with position saves
+//!   coalesced by [`StateStore`] and flushed on demand and on drop.
 //! - [`Recent`] files.
 //! - Folder sidecars (`<folder>/.textweaver/progress.json`) and their merge
 //!   rules, ported from `star/sync.py`, in [`sync`].
@@ -20,6 +21,7 @@
 
 mod atomic;
 mod doc_state;
+pub mod notes;
 mod paths;
 mod recent;
 mod settings;
@@ -28,6 +30,7 @@ pub mod time;
 
 pub use atomic::atomic_write;
 pub use doc_state::{Bookmark, DEFAULT_DEBOUNCE, DocKey, DocState, StateStore, percent};
+pub use notes::{Annotation, Highlight, Note, NotesExport, Relation};
 pub use paths::Paths;
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
