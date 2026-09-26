@@ -473,7 +473,7 @@ impl App {
         };
         self.stop_speech();
         if !self.read_range(range, ReadKind::InPlace) {
-            self.speak_content(Channel::Reading, "blank");
+            self.speak_content(Channel::Caret, "blank");
         } else {
             self.show_read_text(range, false);
         }
@@ -564,7 +564,7 @@ impl App {
             Some(r) => {
                 self.stop_speech();
                 if !self.read_range(r, ReadKind::InPlace) {
-                    self.speak_content(Channel::Reading, "blank");
+                    self.speak_content(Channel::Caret, "blank");
                 } else {
                     self.show_read_text(r, false);
                 }
