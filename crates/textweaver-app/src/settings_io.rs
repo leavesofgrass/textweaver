@@ -1,5 +1,6 @@
-//! Palette commands `export_settings` and `import_settings`: settings and
-//! key overrides to and from a JSON (or TOML) file, through
+//! The `export_settings` and `import_settings` actions (in the command
+//! palette, and on Alt+Shift+E and Alt+Shift+I): settings and key
+//! overrides to and from a JSON (or TOML) file, through
 //! `textweaver_store::settings_io`. Both prompt for a path; import asks
 //! "Import N changed settings from FILE? y or n" and then applies the new
 //! settings and keys at once.
@@ -13,18 +14,6 @@ use textweaver_store::{
 
 use crate::app::App;
 use crate::command::{Confirm, Effect, PromptPurpose};
-
-/// The settings file commands: palette name and one-line help.
-pub const SETTINGS_COMMANDS: [(&str, &str); 2] = [
-    (
-        "export_settings",
-        "Export settings and key overrides to a JSON file",
-    ),
-    (
-        "import_settings",
-        "Import settings from a JSON or TOML file",
-    ),
-];
 
 /// The path typed at a prompt, without surrounding quotes; `None` if empty.
 fn answer_path(text: &str) -> Option<PathBuf> {
@@ -40,13 +29,13 @@ fn import_question(plan: &ImportPlan, name: &str) -> String {
 }
 
 impl App {
-    /// Runs `export_settings` or `import_settings` when `name` is one of them.
-    pub(crate) fn settings_file_command(&mut self, name: &str) -> Option<Vec<Effect>> {
-        match name.trim().to_lowercase().replace([' ', '-'], "_").as_str() {
-            "export_settings" => Some(self.prompt(PromptPurpose::ExportSettings)),
-            "import_settings" => Some(self.prompt(PromptPurpose::ImportSettings)),
-            _ => None,
-        }
+    /// `export_settings` or `import_settings`: asks for the file.
+    pub(crate) fn settings_file_prompt(&mut self, import: bool) -> Vec<Effect> {
+        self.prompt(if import {
+            PromptPurpose::ImportSettings
+        } else {
+            PromptPurpose::ExportSettings
+        })
     }
 
     /// The settings store, after saving any unsaved change so the files

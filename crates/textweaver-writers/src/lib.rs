@@ -1,6 +1,6 @@
 //! Native writers (ADR-0017): accessible EPUB 3, DOCX with real heading
 //! styles, BRF braille, and tagged PDF, written from a
-//! [`Document`](textweaver_text::Document) in pure Rust.
+//! [`Document`] in pure Rust.
 //!
 //! Every writer implements [`Writer`]: give it a document, [`WriteOptions`],
 //! and any byte sink; it returns a [`WriteReport`] with the warnings a user

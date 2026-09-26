@@ -336,6 +336,10 @@ actions! {
         gui ["g:Ctrl+S"], term ["g:Ctrl+S"], shared [];
     SaveAs = "save_as", File, "Save under a new name",
         gui ["g:Ctrl+Shift+S"], term ["g:Alt+S"], shared [];
+    ExportSettings = "export_settings", File, "Export settings and key overrides to a JSON or TOML file",
+        gui ["g:Alt+Shift+E"], term ["g:Alt+Shift+E"], shared [];
+    ImportSettings = "import_settings", File, "Import settings from a JSON or TOML file, after a yes or no",
+        gui ["g:Alt+Shift+I"], term ["g:Alt+Shift+I"], shared [];
     Quit = "quit", File, "Quit, saving the reading position",
         gui ["g:Ctrl+Q"], term ["g:Ctrl+Q"], shared ["b:q", "b:Shift+Q"];
 

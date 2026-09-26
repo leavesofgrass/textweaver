@@ -353,6 +353,29 @@ fn synthesize_to_file_writes_a_wav_with_volume_applied() {
 }
 
 #[test]
+fn synthesize_utterance_reports_word_timings_on_the_files_clock() {
+    let mut b = backend(8.0);
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("utt.wav");
+    let text = "one naïve three";
+    let fs = b.synthesize_utterance(&utt(text, 1, 0), &path).unwrap();
+    let wav = std::fs::read(&path).unwrap();
+    // Three words of 6,615 samples at 22,050 Hz: 300 ms each.
+    assert_eq!(wav.len(), 44 + 2 * 3 * 6615);
+    let got: Vec<(&str, u32)> = fs
+        .words
+        .iter()
+        .map(|w| {
+            (
+                &text[w.byte_range.start as usize..w.byte_range.end as usize],
+                w.audio_ms,
+            )
+        })
+        .collect();
+    assert_eq!(got, [("one", 0), ("naïve", 300), ("three", 600)]);
+}
+
+#[test]
 fn rate_maps_through_the_calibration_and_reaches_the_host() {
     let mut b = backend(8.0);
     assert!(

@@ -1111,6 +1111,8 @@ impl App {
             // File
             A::Open => return self.prompt(PromptPurpose::Open),
             A::OpenLibrary => return self.open_library(),
+            A::ExportSettings => return self.settings_file_prompt(false),
+            A::ImportSettings => return self.settings_file_prompt(true),
             // View and help
             A::NextTheme => self.next_theme(),
             A::ToggleLineNumbers => self.toggle_line_numbers(),

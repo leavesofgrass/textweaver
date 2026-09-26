@@ -177,6 +177,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Start a new document in edit mode | `Ctrl+N` | `Ctrl+N` | `new_document` |
 | Save (Markdown and text in place; other formats as Markdown) | `Ctrl+S` | `Ctrl+S` | `save` |
 | Save under a new name | `Alt+S` | `Ctrl+Shift+S` | `save_as` |
+| Export settings and key overrides to a JSON or TOML file | `Alt+Shift+E` | `Alt+Shift+E` | `export_settings` |
+| Import settings from a JSON or TOML file, after a yes or no | `Alt+Shift+I` | `Alt+Shift+I` | `import_settings` |
 | Quit, saving the reading position | `Ctrl+Q`, `q` (browse), `Shift+Q` (browse) | `Ctrl+Q`, `q` (browse), `Shift+Q` (browse) | `quit` |
 
 ## Editing

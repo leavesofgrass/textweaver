@@ -96,6 +96,36 @@ fn spike_sentence_to_wav_marks_every_word_with_rising_offsets() {
 
 #[test]
 #[ignore = "needs a licensed ETI-Eloquence engine; run with TEXTWEAVER_ECI=1"]
+fn export_word_timings_follow_the_index_marks_in_the_file() {
+    if !enabled() {
+        return;
+    }
+    let mut b = backend(1.0);
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("utterance.wav");
+    let mut u = Utterance::literal(SPIKE, CharPos(0));
+    u.id = UtteranceId {
+        generation: 1,
+        chunk: 0,
+    };
+    let fs = b.synthesize_utterance(&u, &path).unwrap();
+    let (rate, samples) = textweaver_eci::wav::read_wav(&std::fs::read(&path).unwrap()).unwrap();
+    let duration_ms = samples.len() as u64 * 1000 / u64::from(rate);
+    for w in &fs.words {
+        println!(
+            "{:>6} ms  {}",
+            w.audio_ms,
+            &SPIKE[w.byte_range.start as usize..w.byte_range.end as usize]
+        );
+    }
+    println!("file {duration_ms} ms");
+    assert_eq!(fs.words.len(), textweaver_eci::words::words(SPIKE).len());
+    assert!(fs.words.windows(2).all(|w| w[0].audio_ms < w[1].audio_ms));
+    assert!(fs.words.iter().all(|w| u64::from(w.audio_ms) < duration_ms));
+}
+
+#[test]
+#[ignore = "needs a licensed ETI-Eloquence engine; run with TEXTWEAVER_ECI=1"]
 fn speak_plays_on_the_clock_and_stop_cancels() {
     if !enabled() {
         return;

@@ -92,7 +92,7 @@ pub enum CiteCommand {
     Styles,
     /// List a document's citations whose keys are not in the library.
     Check {
-        /// A Markdown or text document with Pandoc citations ([@key]).
+        /// A Markdown or text document with Pandoc citations (`[@key]`).
         file: PathBuf,
     },
 }

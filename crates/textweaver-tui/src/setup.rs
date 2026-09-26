@@ -150,6 +150,25 @@ mod tests {
         assert_eq!(app.paths(), Some(&Paths::under(dir.path())));
     }
 
+    /// `[keyboard] character_keys = false` is in effect from the first key
+    /// press of a terminal session (App::new applies it).
+    #[test]
+    fn single_key_setting_applies_at_startup() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = SettingsStore::new(Paths::under(dir.path()));
+        let mut s = Settings::default();
+        s.keyboard.character_keys = false;
+        store.save(&s).unwrap();
+        let opts = Options {
+            no_speech: true,
+            home: Some(dir.path().to_owned()),
+            theme: Some("galaxy".into()),
+            ..Options::default()
+        };
+        let (app, _) = build_app(&opts);
+        assert!(!app.keymap().character_keys());
+    }
+
     #[test]
     fn unknown_backend_falls_back_to_auto() {
         let settings = Settings::default();

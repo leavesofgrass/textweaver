@@ -14,7 +14,7 @@
 //! ([`FontSettings::resolve`]). HTML views get a CSS font stack whose
 //! fallbacks do the same job in the browser ([`FontSettings::to_css`]).
 //!
-//! Line height lives in [`TextSpacing`](crate::TextSpacing); the two meet
+//! Line height lives in [`TextSpacing`]; the two meet
 //! in [`FontSettings::describe`] and [`FontSettings::to_css`].
 
 use std::fmt::Write as _;

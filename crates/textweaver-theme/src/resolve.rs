@@ -11,7 +11,7 @@
 //! Colors the file does not give are always nudged until they pass. Colors
 //! the file does give are only nudged when asked ([`Repair::Explicit`], used
 //! to port Star's palettes); a user's own colors are reported by
-//! [`crate::check`], never silently changed.
+//! [`crate::check()`], never silently changed.
 
 use toml::Table;
 

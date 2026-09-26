@@ -197,7 +197,7 @@ pub fn column(doc: &Document, row: &Row, pos: CharPos, tab: usize) -> usize {
     column_cells(doc, row, pos, Cells::tab(tab))
 }
 
-/// [`column`] measuring with `cells`.
+/// [`column()`] measuring with `cells`.
 pub fn column_cells(doc: &Document, row: &Row, pos: CharPos, cells: Cells) -> usize {
     let end = pos.clamp_to(row.range.end.0).max(row.range.start);
     doc.text()

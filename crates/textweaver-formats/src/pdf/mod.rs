@@ -3,16 +3,16 @@
 //!
 //! The pipeline, per page and then across the document:
 //!
-//! 1. **Glyphs** ([`interp`]): the content stream is interpreted (text
+//! 1. **Glyphs** (`interp`): the content stream is interpreted (text
 //!    state, fonts, form XObjects, marked content), giving each glyph's
 //!    position, size, and bold/italic/monospace style; images are located.
-//! 2. **Lines, tables, blocks** ([`layout`]): glyphs become lines split at
+//! 2. **Lines, tables, blocks** (`layout`): glyphs become lines split at
 //!    wide gaps; aligned rows of short cells become tables; lines stack into
 //!    blocks by spacing, overlap, size, and weight.
-//! 3. **Running heads and reading order** ([`layout`]): Star's algorithm
+//! 3. **Running heads and reading order** (`layout`): Star's algorithm
 //!    removes repeated margin text and page numbers and orders blocks column
 //!    by column within bands divided by full-width blocks.
-//! 4. **Structure** ([`structure`]): paragraphs with wrapped lines joined
+//! 4. **Structure** (`structure`): paragraphs with wrapped lines joined
 //!    and line-end hyphens removed, continued across column and page ends;
 //!    headings from the tag tree, size, weight, numbering, and the outline;
 //!    bulleted and numbered lists with nesting; monospaced blocks as code;

@@ -167,6 +167,42 @@ fn david_in_the_64_bit_host_reports_every_word() {
 
 #[test]
 #[ignore = "needs real SAPI voices: TEXTWEAVER_SAPI=1"]
+fn david_exports_word_timings_on_the_files_clock() {
+    if !enabled() {
+        return;
+    }
+    let mut b = SapiBackend::new(config()).unwrap();
+    let david = voice(&b, "Microsoft David Desktop");
+    select(&mut b, &david);
+    let dir = tempfile::tempdir().unwrap();
+    let wav = dir.path().join("david-utterance.wav");
+    let mut u = Utterance::literal(SENTENCE, CharPos(0));
+    u.id = UtteranceId {
+        generation: 1,
+        chunk: 0,
+    };
+    let fs = b.synthesize_utterance(&u, &wav).unwrap();
+    let bytes = std::fs::metadata(&wav).unwrap().len();
+    let duration_ms = (bytes - 44) / 2 * 1000 / 22050;
+    let shown: Vec<String> = fs
+        .words
+        .iter()
+        .map(|w| {
+            format!(
+                "{} {}ms",
+                &SENTENCE[w.byte_range.start as usize..w.byte_range.end as usize],
+                w.audio_ms
+            )
+        })
+        .collect();
+    println!("David export ({duration_ms} ms): {}", shown.join(" | "));
+    assert!(fs.words.len() >= 10, "{shown:?}");
+    assert!(fs.words.windows(2).all(|w| w[0].audio_ms < w[1].audio_ms));
+    assert!(fs.words.iter().all(|w| u64::from(w.audio_ms) < duration_ms));
+}
+
+#[test]
+#[ignore = "needs real SAPI voices: TEXTWEAVER_SAPI=1"]
 fn espeak_in_the_32_bit_host_reports_every_word() {
     if !enabled() {
         return;

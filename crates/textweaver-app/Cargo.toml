@@ -27,6 +27,7 @@ textweaver-a11y.workspace = true
 textweaver-editor.workspace = true
 textweaver-eci.workspace = true
 textweaver-sapi.workspace = true
+textweaver-dectalk.workspace = true
 textweaver-apple.workspace = true
 textweaver-theme.workspace = true
 textweaver-aids.workspace = true
