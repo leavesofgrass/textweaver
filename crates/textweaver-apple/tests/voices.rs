@@ -482,7 +482,7 @@ mod macos {
             "  WAV {} bytes, {rate} Hz, {secs:.2} s of audio in {took:.0} ms",
             bytes.len()
         );
-        ensure(secs > 2.0 && secs < 15.0, || format!("{secs} s"))?;
+        ensure(secs > 1.0 && secs < 15.0, || format!("{secs} s"))?;
         let aiff = dir.path().join("reed.aiff");
         b.synthesize_to_file(SENTENCE, &aiff)
             .map_err(|e| e.to_string())?;

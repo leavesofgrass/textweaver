@@ -1,17 +1,21 @@
 //! Rate calibration (ADR-0004): canonical words per minute to each engine's
 //! scale, and back.
 //!
-//! - `NSSpeechSynthesizer` takes a rate in words per minute, but voices do
-//!   not all speak at the rate they are given.
+//! - The classic engine (`nsspeech`) takes a rate property that is nominally
+//!   words per minute, but what a voice achieves differs, and differs by
+//!   macOS release: on macOS 26 it is close to the nominal value (Reed: 265
+//!   gives 264 wpm live), on macOS 15 it follows the same steep curve as
+//!   `AVSpeechSynthesizer` (Reed: 265 gives 498 wpm).
 //! - `AVSpeechSynthesizer` takes a rate in `0.0..=1.0` (default 0.5) whose
-//!   relation to words per minute is not linear and differs per voice.
+//!   relation to words per minute is not linear and differs per voice; it
+//!   is the same on macOS 15 and 26 within 8 wpm (below 130 wpm).
 //!
 //! Each [`RateTable`] holds measured points `(engine value, achieved wpm)`,
 //! sorted by engine value, and interpolates linearly between them. The
 //! points were measured on GitHub's macOS runners by synthesizing a
-//! 60-word passage to buffers at each engine value and timing the audio
-//! (the `calibrate_rates` test prints them); see the report in
-//! `tools/avspeech-spike/README.md`.
+//! 57-word passage at each engine value and timing the audio (the
+//! `*_rate_calibration` voice tests print them), and checked live at 265
+//! wpm.
 
 /// Measured `(engine value, achieved wpm)` points for one engine and voice
 /// family.
@@ -70,10 +74,8 @@ fn interpolate(points: impl Iterator<Item = (f32, f32)> + Clone, x: f32) -> f32 
     prev.map_or(0.0, |(_, py)| py)
 }
 
-/// The classic engine (`nsspeech`) with Eloquence voices (measured with
-/// Reed): `(rate property, wpm)`. The property is nominally words per
-/// minute, but Reed speaks faster than asked at low values and slower in
-/// the middle (265 gives 242 wpm).
+/// The classic engine (`nsspeech`) with Eloquence voices on macOS 26 and
+/// later (measured with Reed on 26.6): `(rate property, wpm)`.
 pub const NS_ELOQUENCE: RateTable = RateTable::new(&[
     (80.0, 114.0),
     (100.0, 123.0),
@@ -94,10 +96,16 @@ pub const NS_ELOQUENCE: RateTable = RateTable::new(&[
     (330.0, 306.0),
     (360.0, 345.0),
     (400.0, 412.0),
+    (450.0, 498.0),
+    (500.0, 601.0),
+    (550.0, 727.0),
+    (600.0, 873.0),
+    (650.0, 1075.0),
 ]);
 
-/// The classic engine (`nsspeech`) with other voices (measured with
-/// Samantha, whose rate moves in steps): `(rate property, wpm)`.
+/// The classic engine (`nsspeech`) with other voices on macOS 26 and later
+/// (measured with Samantha, whose rate moves in steps): `(rate property,
+/// wpm)`.
 pub const NS_OTHER: RateTable = RateTable::new(&[
     (80.0, 165.0),
     (120.0, 180.0),
@@ -111,6 +119,49 @@ pub const NS_OTHER: RateTable = RateTable::new(&[
     (400.0, 416.0),
     (450.0, 451.0),
     (500.0, 492.0),
+    (550.0, 554.0),
+    (600.0, 616.0),
+    (700.0, 696.0),
+    (800.0, 797.0),
+]);
+
+/// The classic engine (`nsspeech`) with Eloquence voices on macOS 15 and
+/// earlier (measured with Reed on 15.7): `(rate property, wpm)`.
+pub const NS_ELOQUENCE_15: RateTable = RateTable::new(&[
+    (80.0, 86.0),
+    (100.0, 97.0),
+    (120.0, 114.0),
+    (140.0, 128.0),
+    (160.0, 150.0),
+    (175.0, 169.0),
+    (190.0, 199.0),
+    (200.0, 223.0),
+    (210.0, 252.0),
+    (220.0, 287.0),
+    (230.0, 319.0),
+    (240.0, 359.0),
+    (250.0, 412.0),
+    (265.0, 498.0),
+    (280.0, 581.0),
+    (300.0, 727.0),
+    (330.0, 1028.0),
+]);
+
+/// The classic engine (`nsspeech`) with other voices on macOS 15 and
+/// earlier (measured with Samantha on 15.7): `(rate property, wpm)`.
+pub const NS_OTHER_15: RateTable = RateTable::new(&[
+    (80.0, 132.0),
+    (100.0, 141.0),
+    (120.0, 152.0),
+    (140.0, 180.0),
+    (175.0, 198.0),
+    (200.0, 268.0),
+    (225.0, 339.0),
+    (250.0, 416.0),
+    (265.0, 451.0),
+    (300.0, 554.0),
+    (350.0, 696.0),
+    (400.0, 797.0),
 ]);
 
 /// `AVSpeechSynthesizer` with Eloquence voices (measured with Reed):
@@ -159,12 +210,15 @@ pub const AV_OTHER: RateTable = RateTable::new(&[
     (1.00, 797.0),
 ]);
 
-/// The `nsspeech` table for a voice.
-pub fn ns_table(voice_id: Option<&str>) -> RateTable {
-    if voice_id.is_some_and(crate::voices::is_eloquence) {
-        NS_ELOQUENCE
-    } else {
-        NS_OTHER
+/// The `nsspeech` table for a voice on macOS `os_major` (26 and later use
+/// the newer tables; earlier releases the macOS 15 ones).
+pub fn ns_table(voice_id: Option<&str>, os_major: u32) -> RateTable {
+    let eloquence = voice_id.is_some_and(crate::voices::is_eloquence);
+    match (eloquence, os_major >= 26) {
+        (true, true) => NS_ELOQUENCE,
+        (false, true) => NS_OTHER,
+        (true, false) => NS_ELOQUENCE_15,
+        (false, false) => NS_OTHER_15,
     }
 }
 
@@ -187,7 +241,14 @@ pub fn pitch_multiplier(semitones: i8) -> f32 {
 mod tests {
     use super::*;
 
-    const ALL: [RateTable; 4] = [NS_ELOQUENCE, NS_OTHER, AV_ELOQUENCE, AV_OTHER];
+    const ALL: [RateTable; 6] = [
+        NS_ELOQUENCE,
+        NS_OTHER,
+        NS_ELOQUENCE_15,
+        NS_OTHER_15,
+        AV_ELOQUENCE,
+        AV_OTHER,
+    ];
 
     #[test]
     fn tables_are_sorted_on_both_axes() {
@@ -216,6 +277,17 @@ mod tests {
     }
 
     #[test]
+    fn default_rate_is_reachable_everywhere() {
+        for t in ALL {
+            let (lo, hi) = t.wpm_range();
+            assert!(lo <= 265.0 && hi >= 265.0, "{t:?}");
+        }
+        // Reed at the default 265 wpm: property 292 on macOS 26, 214 on 15.
+        assert!((NS_ELOQUENCE.engine_value(265) - 292.4).abs() < 1.0);
+        assert!((NS_ELOQUENCE_15.engine_value(265) - 214.5).abs() < 1.0);
+    }
+
+    #[test]
     fn requests_outside_the_range_clamp() {
         let t = RateTable::new(&[(0.0, 100.0), (1.0, 500.0)]);
         assert_eq!(t.engine_value(50), 0.0);
@@ -237,7 +309,10 @@ mod tests {
 
     #[test]
     fn eloquence_voices_use_their_own_tables() {
-        assert_eq!(ns_table(Some(crate::DEFAULT_VOICE)), NS_ELOQUENCE);
+        assert_eq!(ns_table(Some(crate::DEFAULT_VOICE), 26), NS_ELOQUENCE);
+        assert_eq!(ns_table(Some(crate::DEFAULT_VOICE), 15), NS_ELOQUENCE_15);
+        assert_eq!(ns_table(None, 14), NS_OTHER_15);
+        assert_eq!(ns_table(None, 27), NS_OTHER);
         assert_eq!(av_table(Some(crate::DEFAULT_VOICE)), AV_ELOQUENCE);
         assert_eq!(av_table(None), AV_OTHER);
     }

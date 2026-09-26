@@ -27,7 +27,7 @@ use std::time::{Duration, Instant};
 
 use objc2::rc::Retained;
 use objc2_app_kit::{NSSpeechSynthesizer, NSVoiceGender, NSVoiceLocaleIdentifier, NSVoiceName};
-use objc2_foundation::{NSNumber, NSString, NSURL};
+use objc2_foundation::{NSNumber, NSProcessInfo, NSString, NSURL};
 use textweaver_core::{Utterance, UtteranceId};
 use textweaver_speech::{
     BackendId, Caps, EventSink, RawEvent, SpeechBackend, SpeechError, Voice, VoiceParams,
@@ -82,6 +82,12 @@ fn unavailable(msg: impl Into<String>) -> SpeechError {
 
 fn engine(e: impl std::fmt::Display) -> SpeechError {
     SpeechError::Engine(e.to_string())
+}
+
+/// The running macOS major version (14, 15, 26, ...).
+fn os_major() -> u32 {
+    let v = NSProcessInfo::processInfo().operatingSystemVersion();
+    u32::try_from(v.majorVersion).unwrap_or(0)
 }
 
 /// Installed voice identifiers.
@@ -275,7 +281,7 @@ fn apply_params(
     pitch_base: f64,
     raw_rate: Option<f64>,
 ) {
-    let table = rate::ns_table(voice);
+    let table = rate::ns_table(voice, os_major());
     let engine_rate =
         raw_rate.unwrap_or_else(|| f64::from(table.engine_value(params.rate.clamped().wpm())));
     if let Err(e) = channel.set_rate(engine_rate) {
@@ -332,7 +338,8 @@ impl SpeechBackend for NsSpeechBackend {
     }
 
     fn effective_wpm(&self) -> u16 {
-        rate::ns_table(self.voice.as_deref()).effective_wpm(self.params.rate.clamped().wpm())
+        rate::ns_table(self.voice.as_deref(), os_major())
+            .effective_wpm(self.params.rate.clamped().wpm())
     }
 
     fn speak(
