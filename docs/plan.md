@@ -2,6 +2,8 @@
 
 > Approved by Jon on 2026-09-25 (Friday). Approval started Phase 0 only; each later wave is reported before the next begins. Phase 0 amendments are recorded at the end of this document ("Phase 0 amendments") and in the ADRs; where they differ, the amendments and ADRs win.
 
+> **Status update (Saturday, September 26, 2026).** This plan is kept as it was approved. Phase 0, Wave 1, and Wave 2 are done and merged on `main`; releases `v0.1.0-alpha.1` to `v0.1.0-alpha.3` are tagged. Wave 2 grew well beyond the four agents in section 7: formats and PDF, speech and audio export, state and library, app wiring, the shared engine host, the Obsidian vault and dictation, a GUI spike, rendering and bulk conversion, native writers, math, citations, themes, reading aids, DECtalk, settings import and export, scripts, bundled fonts, and an audit with its fixes. `docs/tasks.md` is the record of who did what. The `paperback` feature in section 6.2 is reserved and does nothing, because PDF is read natively ([ADR-0010](adr/0010-pdf-loader.md)). Wave 3 (the GUI) has not started. For the system as built, read [the architecture guide](architecture.md) and the [documentation index](README.md).
+
 ## 1. Context
 
 Star (`leavesofgrass/star`, 45K lines of Python, v0.1.31) is a GUI-first TTS document reader and Markdown authoring tool for students with print disabilities. It works, but carries the costs of its history: a Qt GUI and a curses TUI split into 40+ mixins, a speech layer whose word-highlight sync depends on difflib-aligning two separately generated text streams, a regex normalization chain that cannot preserve offsets, a settings file rewritten on every change, and a long tail of optional Python dependencies.
@@ -202,3 +204,11 @@ Decisions taken while writing the contract. Each is reflected in the code and th
 10. **Eloquence (added during Wave 1 at Jon's request).** A fifth Wave 1 agent (E) builds `textweaver-eci`: ETI-Eloquence through its ECI library in a separate host process (32-bit on Windows), with audio-clock word timing from index marks. SAPI5 was measured and rejected for highlighting: Eloquence reports one word event per sentence through it (ADR-0007).
 11. **Apple speech on macOS (added during Wave 1 at Jon's request).** A sixth Wave 1 agent (F) builds `textweaver-apple` with two selectable backends, `nsspeech` (NSSpeechSynthesizer, most responsive) and `avspeech` (AVSpeechSynthesizer into buffers with per-word sample offsets); Apple's bundled Eloquence voices, Reed by default. No Mac is available: testing runs on GitHub's macOS runners (ADR-0008).
 12. **SAPI5 voices (added during Wave 1 at Jon's request).** A seventh Wave 1 agent (G) builds `textweaver-sapi`: SAPI5 voices in x64 and x86 host processes (32-bit-only voices such as VW Paul, Kate, James and eSpeak), synthesized to memory with per-word audio offsets; every non-Eloquence voice on the development machine reports word timing (ADR-0009).
+
+## See also
+
+- [Architecture](architecture.md): the system as built, with links to every ADR.
+- [Tasks and ownership](tasks.md): the work log of every wave and agent.
+- [Star parity reference](star-parity.md) and [Star features not yet planned](star-gaps.md): what was carried over from Star, and what was not.
+- [CHANGELOG.md](../CHANGELOG.md): what each release contains.
+- [Documentation index](README.md)

@@ -1,0 +1,3237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keyboard shortcuts: textweaver guide</title>
+<meta name="description" content="Search and filter every textweaver keyboard shortcut, for the terminal and the GUI.">
+<!-- BEGIN generated: theme-init -->
+<script>(function () {
+  try {
+    var t = window.localStorage.getItem("tw-site-theme");
+    if (t === "dark" || t === "light") { document.documentElement.setAttribute("data-theme", t); }
+  } catch (e) { /* storage blocked: follow the system setting */ }
+})();</script>
+<!-- END generated: theme-init -->
+<!-- BEGIN generated: base-style -->
+<style>
+/* Galaxy (dark, the default) and Galaxy Light, from
+   crates/textweaver-theme/themes/galaxy.toml and galaxy-light.toml. */
+:root {
+  --bg: #1e1e1e;
+  --surface: #2a2a2a;
+  --text: #dadada;
+  --dim: #858585;
+  --accent: #a882ff;
+  --h1: #c9b6ff;
+  --h2: #a98eff;
+  --h3: #8aa2ff;
+  --ok: #7bd0c1;
+  --code: #e0a87a;
+  --error: #ff7b93;
+  --mark-fg: #1e1e1e;
+  --mark-bg: #c9b6ff;
+  --sel-bg: #483d6b;
+  --focus-fg: #1e1e1e;
+  --border: var(--dim);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #ffffff;
+    --surface: #f2f0f9;
+    --text: #2e3338;
+    --dim: #727780;
+    --accent: #7c3aed;
+    --h1: #6c3fd6;
+    --h2: #8257e5;
+    --h3: #3a6df0;
+    --ok: #008577;
+    --code: #a65a2c;
+    --error: #c0264b;
+    --mark-fg: #ffffff;
+    --mark-bg: #6c3fd6;
+    --sel-bg: #d8caff;
+    --focus-fg: #ffffff;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #ffffff;
+  --surface: #f2f0f9;
+  --text: #2e3338;
+  --dim: #727780;
+  --accent: #7c3aed;
+  --h1: #6c3fd6;
+  --h2: #8257e5;
+  --h3: #3a6df0;
+  --ok: #008577;
+  --code: #a65a2c;
+  --error: #c0264b;
+  --mark-fg: #ffffff;
+  --mark-bg: #6c3fd6;
+  --sel-bg: #d8caff;
+  --focus-fg: #ffffff;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); color: var(--text); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+.wrap { max-width: 72rem; margin: 0 auto; padding: 0 1rem; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.5em 0 0.5em; }
+h1 { color: var(--h1); font-size: 2.1rem; margin-top: 0.75em; }
+h2 { color: var(--h2); font-size: 1.6rem; }
+h3 { color: var(--text); font-size: 1.25rem; }
+p, ul, ol, dl { margin: 0 0 1em; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 0.15em; }
+a:hover { text-decoration-thickness: 0.15em; }
+code, kbd {
+  font-family: "Atkinson Hyperlegible Mono", ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+  font-size: 0.95em;
+  color: var(--code);
+}
+kbd { border: 1px solid var(--border); border-radius: 0.25em; padding: 0 0.25em; color: var(--text); white-space: nowrap; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.vh {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: absolute; left: 0.5rem; top: -100rem; z-index: 10;
+  background: var(--bg); color: var(--accent); padding: 0.5rem 1rem;
+  border: 2px solid var(--accent); font-weight: bold;
+}
+.skip-link:focus { top: 0.5rem; }
+.site-header { border-bottom: 2px solid var(--border); padding: 0.5rem 0 0.75rem; }
+.site-header .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem; }
+.site-name { margin: 0; font-weight: bold; font-size: 1.25rem; }
+.site-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; }
+.site-nav a { display: inline-block; padding: 0.4rem 0.5rem; min-height: 2.75rem; line-height: 1.9rem; }
+.site-nav a[aria-current="page"] { color: var(--text); font-weight: bold; text-decoration-thickness: 0.2em; border-bottom: 3px solid var(--accent); }
+.theme-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-left: auto; }
+main { display: block; padding-bottom: 2rem; }
+.site-footer { border-top: 2px solid var(--border); padding: 1rem 0 2rem; }
+.site-footer h2 { font-size: 1.25rem; margin-top: 0.5em; }
+button, select, input, textarea { font: inherit; color: var(--text); }
+button, select, input[type="search"], input[type="number"], input[type="text"] {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 0.3rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.75rem;
+}
+button { cursor: pointer; }
+button:hover { border-color: var(--accent); }
+input[type="range"] { accent-color: var(--accent); min-height: 2.75rem; min-width: 12rem; max-width: 100%; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); width: 1.5rem; height: 1.5rem; margin: 0 0.5rem 0 0; vertical-align: middle; }
+fieldset { border: 2px solid var(--border); border-radius: 0.3rem; margin: 0 0 1rem; padding: 0.5rem 1rem 0.75rem; min-width: 0; }
+legend { font-weight: bold; padding: 0 0.25rem; }
+label { cursor: pointer; }
+.check { display: flex; align-items: center; min-height: 2.75rem; }
+.row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 0 0 1rem; }
+.field { display: flex; flex-direction: column; gap: 0.25rem; margin: 0 0 1rem; max-width: 100%; }
+.panel { background: var(--surface); border: 2px solid var(--border); border-radius: 0.4rem; padding: 0.5rem 1rem 1rem; margin: 0 0 1.5rem; }
+.panel h2:first-child, .panel h3:first-child { margin-top: 0.5em; }
+.status-line { border-left: 6px solid var(--accent); padding: 0.25rem 0.75rem; margin: 0 0 1rem; min-height: 2.5rem; }
+.note { border-left: 6px double var(--border); padding: 0.25rem 0.75rem; }
+.table-wrap { max-width: 100%; overflow-x: auto; margin: 0 0 1.5rem; }
+table { border-collapse: collapse; width: 100%; }
+caption { text-align: left; font-weight: bold; padding: 0.5rem 0; color: var(--text); }
+th, td { border: 1px solid var(--border); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+thead th { background: var(--surface); }
+td code, th code { overflow-wrap: break-word; }
+mark { background: var(--mark-bg); color: var(--mark-fg); }
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (forced-colors: active) {
+  :focus-visible { outline: 3px solid Highlight; }
+  button, select, input, fieldset, th, td, .panel, kbd { border-color: CanvasText; }
+  .site-nav a[aria-current="page"] { border-bottom-color: Highlight; }
+  .status-line, .note { border-left-color: CanvasText; }
+}
+@media print {
+  .site-header, .skip-link, .theme-switch { display: none; }
+}
+</style>
+<!-- END generated: base-style -->
+<style>
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 0 1.5rem; align-items: start; }
+.filters .field select, .filters .field input { width: 100%; }
+.filters fieldset .check { min-height: 2.5rem; }
+.keys-cell ul { list-style: none; margin: 0; padding: 0; }
+.keys-cell li { margin: 0 0 0.25rem; }
+.keys-cell .fe { font-weight: bold; }
+.keys-cell .layer { color: var(--text); font-style: italic; }
+.palette-note { display: block; font-size: 0.95rem; margin-top: 0.25rem; }
+.results-table th[scope="row"] { font-weight: normal; }
+.results-table td:nth-child(4) { width: 1%; }
+.results-table code { overflow-wrap: anywhere; }
+.extra-note { font-size: 0.95rem; display: block; }
+</style>
+</head>
+<body>
+<!-- BEGIN generated: header -->
+<a class="skip-link" href="#main">Skip to main content</a>
+<header class="site-header">
+  <div class="wrap">
+    <p class="site-name">textweaver guide</p>
+    <nav class="site-nav" aria-label="Site">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="architecture.html">Crate map</a></li>
+        <li><a href="speech-pipeline.html">Speech pipeline</a></li>
+        <li><a href="keyboard.html" aria-current="page">Keyboard</a></li>
+        <li><a href="features.html">Features</a></li>
+        <li><a href="reading-aids.html">Reading aids</a></li>
+      </ul>
+    </nav>
+    <div class="theme-switch">
+      <label for="theme-select">Color theme</label>
+      <select id="theme-select">
+        <option value="system">System</option>
+        <option value="dark">Dark (Galaxy)</option>
+        <option value="light">Light (Galaxy Light)</option>
+      </select>
+    </div>
+  </div>
+</header>
+<!-- END generated: header -->
+<main id="main" tabindex="-1">
+  <div class="wrap">
+    <h1>Keyboard shortcuts</h1>
+    <p>Every textweaver command has a keyboard shortcut or runs from the command palette.
+    Type in the search box, or use the filters, to find a shortcut.
+    The same list is in the <a href="../keyboard.md">keyboard reference</a>, which is made from the keymap itself.</p>
+    <noscript><p class="note">Searching needs JavaScript.
+    The <a href="../keyboard.md">keyboard reference</a> has the full list as plain tables.</p></noscript>
+
+    <h2>Before you start</h2>
+    <ul>
+      <li>The command palette runs every command by name: press F2 (in the terminal also Alt+X or the colon key).</li>
+      <li>F9 turns single-key shortcuts off, so dictation or a switch keyboard never triggers a command by accident.
+      Chords with Ctrl or Alt, the arrow and function keys, and the palette keep working.</li>
+      <li>The GUI keys shown are for Windows and Linux.
+      On macOS the GUI uses Cmd wherever it shows Ctrl.
+      Choose macOS under Platform to see Cmd in the GUI keys.</li>
+      <li>You can change any key in <code>keymap.toml</code>; see the <a href="../keyboard.md">keyboard reference</a>.</li>
+    </ul>
+
+    <h3>Layers</h3>
+    <p>What a key does depends on the mode you are in.
+    Each shortcut belongs to a layer:</p>
+    <ul>
+      <li>Global: chords that work in every mode.</li>
+      <li>Browse: single keys for reading, like a screen reader's browse mode.</li>
+      <li>Speech Cursor: keys for line-by-line reading; they take over browse keys with the same name while Speech Cursor is on.</li>
+      <li>Edit: keys for editing; in edit mode other keys type text.</li>
+    </ul>
+    <p>The layers are explained in <a href="../adr/0006-keymap-and-actions.md">ADR-0006: Keymap, actions, and announcements</a>.</p>
+
+    <h2>Find a shortcut</h2>
+    <form class="filters" id="filters" role="search" aria-label="Filter shortcuts">
+      <div class="field">
+        <label for="q">Type to filter</label>
+        <input type="search" id="q" autocomplete="off" aria-describedby="q-help">
+        <span id="q-help">Matches actions, keys, and ids. Type a whole key, such as Ctrl+S, to see only what that key does.</span>
+      </div>
+      <div class="field">
+        <label for="category">Category</label>
+        <select id="category"><option value="">All categories</option></select>
+      </div>
+      <div class="field">
+        <label for="layer">Layer</label>
+        <select id="layer">
+          <option value="">Any layer</option>
+          <option value="global">Global</option>
+          <option value="browse">Browse</option>
+          <option value="speech_cursor">Speech Cursor</option>
+          <option value="edit">Edit</option>
+        </select>
+      </div>
+      <fieldset>
+        <legend>Frontend</legend>
+        <div class="check"><input type="radio" name="frontend" id="fe-both" value="both" checked><label for="fe-both">Terminal and GUI</label></div>
+        <div class="check"><input type="radio" name="frontend" id="fe-terminal" value="terminal"><label for="fe-terminal">Terminal only</label></div>
+        <div class="check"><input type="radio" name="frontend" id="fe-gui" value="gui"><label for="fe-gui">GUI only</label></div>
+      </fieldset>
+      <fieldset>
+        <legend>Platform</legend>
+        <div class="check"><input type="radio" name="platform" id="pf-win" value="win" checked><label for="pf-win">Windows and Linux</label></div>
+        <div class="check"><input type="radio" name="platform" id="pf-mac" value="mac"><label for="pf-mac">macOS (Cmd for Ctrl in the GUI)</label></div>
+      </fieldset>
+      <div class="field">
+        <span aria-hidden="true">&nbsp;</span>
+        <button type="button" id="clear">Clear filters</button>
+      </div>
+    </form>
+    <p id="status" role="status" class="status-line"></p>
+
+    <h2>Shortcuts</h2>
+    <div id="results"></div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <h2>Related documents</h2>
+    <ul>
+      <li><a href="../keyboard.md">Keyboard reference</a>: the generated tables, and how to change keys.</li>
+      <li><a href="../adr/0006-keymap-and-actions.md">ADR-0006: Keymap, actions, and announcements</a></li>
+      <li><a href="../reading.md">Reading and navigating guide</a></li>
+      <li><a href="../editing.md">Editing guide</a></li>
+      <li><a href="README.md">About these pages</a></li>
+      <li><a href="../README.md">Documentation index</a></li>
+    </ul>
+  </div>
+</footer>
+<!-- BEGIN generated: site-data -->
+<script type="application/json" id="site-data">
+{
+ "categories": [
+  "Reading",
+  "Navigation",
+  "Speech Cursor",
+  "Voice",
+  "Search",
+  "Bookmarks and notes",
+  "File",
+  "Editing",
+  "View and help"
+ ],
+ "generator": "tools/gen_site_data.py",
+ "keys": [
+  {
+   "action": "Play or pause reading from the current word",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+Space",
+     "layer": "global"
+    },
+    {
+     "key": "Space",
+     "layer": "browse"
+    }
+   ],
+   "id": "play_pause",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+P",
+     "layer": "global"
+    },
+    {
+     "key": "Space",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Stop reading",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Escape",
+     "layer": "global"
+    }
+   ],
+   "id": "stop",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Escape",
+     "layer": "global"
+    },
+    {
+     "key": "Ctrl+X",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Read continuously from the cursor",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Ctrl+Space",
+     "layer": "global"
+    },
+    {
+     "key": "Enter",
+     "layer": "browse"
+    }
+   ],
+   "id": "read_from_cursor",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+Space",
+     "layer": "global"
+    },
+    {
+     "key": "Enter",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Read the whole document from the start",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Shift+R",
+     "layer": "browse"
+    }
+   ],
+   "id": "read_document",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+R",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Say the character at the cursor",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+C",
+     "layer": "global"
+    },
+    {
+     "key": "c",
+     "layer": "browse"
+    }
+   ],
+   "id": "read_current_character",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+C",
+     "layer": "global"
+    },
+    {
+     "key": "c",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Say the word at the cursor",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+W",
+     "layer": "global"
+    },
+    {
+     "key": "w",
+     "layer": "browse"
+    }
+   ],
+   "id": "read_current_word",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+W",
+     "layer": "global"
+    },
+    {
+     "key": "w",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Say the sentence at the cursor without moving",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+E",
+     "layer": "global"
+    },
+    {
+     "key": "s",
+     "layer": "browse"
+    }
+   ],
+   "id": "read_current_sentence",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+S",
+     "layer": "global"
+    },
+    {
+     "key": "s",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Say the line at the cursor",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Ctrl+L",
+     "layer": "global"
+    },
+    {
+     "key": "l",
+     "layer": "browse"
+    }
+   ],
+   "id": "read_current_line",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+L",
+     "layer": "global"
+    },
+    {
+     "key": "l",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Say the paragraph at the cursor without moving",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Shift+S",
+     "layer": "browse"
+    }
+   ],
+   "id": "read_paragraph",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+S",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Read the selected text",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "v",
+     "layer": "browse"
+    }
+   ],
+   "id": "read_selection",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "v",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Say the position: line, percentage, and heading",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "%",
+     "layer": "browse"
+    }
+   ],
+   "id": "say_position",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "%",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Read again from the start of the current sentence",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Alt+;",
+     "layer": "global"
+    },
+    {
+     "key": ";",
+     "layer": "browse"
+    }
+   ],
+   "id": "replay_sentence",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+;",
+     "layer": "global"
+    },
+    {
+     "key": ";",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Read again from the start of the current paragraph",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Ctrl+R",
+     "layer": "global"
+    },
+    {
+     "key": "r",
+     "layer": "browse"
+    }
+   ],
+   "id": "replay_paragraph",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+R",
+     "layer": "global"
+    },
+    {
+     "key": "r",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Show or hide RSVP: one word at a time, from the cursor",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Alt+Shift+R",
+     "layer": "global"
+    }
+   ],
+   "id": "rsvp_toggle",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+R",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Start or pause RSVP",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Alt+Shift+P",
+     "layer": "global"
+    }
+   ],
+   "id": "rsvp_play_pause",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+P",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "RSVP faster",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Alt+Shift+Up",
+     "layer": "global"
+    }
+   ],
+   "id": "rsvp_faster",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+Up",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "RSVP slower",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Alt+Shift+Down",
+     "layer": "global"
+    }
+   ],
+   "id": "rsvp_slower",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+Down",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Move the RSVP word to the next place on the screen",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Alt+Shift+O",
+     "layer": "global"
+    }
+   ],
+   "id": "rsvp_position_next",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+O",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Say the reading level of the document or the selection",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Alt+Shift+G",
+     "layer": "global"
+    }
+   ],
+   "id": "reading_level",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+G",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next sentence",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Alt+.",
+     "layer": "global"
+    },
+    {
+     "key": ".",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_sentence",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+.",
+     "layer": "global"
+    },
+    {
+     "key": ".",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous sentence, or to the start of this one when more than three words in",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Alt+,",
+     "layer": "global"
+    },
+    {
+     "key": ",",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_sentence",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+,",
+     "layer": "global"
+    },
+    {
+     "key": ",",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next paragraph",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Ctrl+P",
+     "layer": "global"
+    },
+    {
+     "key": "p",
+     "layer": "browse"
+    },
+    {
+     "key": "]",
+     "layer": "browse"
+    },
+    {
+     "key": "PageDown",
+     "layer": "speech_cursor"
+    }
+   ],
+   "id": "next_paragraph",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+P",
+     "layer": "global"
+    },
+    {
+     "key": "p",
+     "layer": "browse"
+    },
+    {
+     "key": "]",
+     "layer": "browse"
+    },
+    {
+     "key": "PageDown",
+     "layer": "speech_cursor"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous paragraph",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+P",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+P",
+     "layer": "browse"
+    },
+    {
+     "key": "[",
+     "layer": "browse"
+    },
+    {
+     "key": "PageUp",
+     "layer": "speech_cursor"
+    }
+   ],
+   "id": "previous_paragraph",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+P",
+     "layer": "browse"
+    },
+    {
+     "key": "[",
+     "layer": "browse"
+    },
+    {
+     "key": "PageUp",
+     "layer": "speech_cursor"
+    }
+   ]
+  },
+  {
+   "action": "Read from the next heading",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Ctrl+H",
+     "layer": "global"
+    },
+    {
+     "key": ">",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_heading",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": ">",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Read from the previous heading",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+H",
+     "layer": "global"
+    },
+    {
+     "key": "<",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_heading",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "<",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next heading without reading",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "h",
+     "layer": "browse"
+    },
+    {
+     "key": "}",
+     "layer": "browse"
+    }
+   ],
+   "id": "skip_next_heading",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "h",
+     "layer": "browse"
+    },
+    {
+     "key": "}",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous heading without reading",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "{",
+     "layer": "browse"
+    }
+   ],
+   "id": "skip_previous_heading",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "{",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next table",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Ctrl+T",
+     "layer": "global"
+    },
+    {
+     "key": "t",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_table",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "t",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous table",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+T",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+T",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_table",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+T",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next list",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "o",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_list",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "o",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous list",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Shift+O",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_list",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+O",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next list item",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "i",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_list_item",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "i",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous list item",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Shift+I",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_list_item",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+I",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next link",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "u",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_link",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "u",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous link",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Shift+U",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_link",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+U",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next chapter or section",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Alt+PageDown",
+     "layer": "global"
+    }
+   ],
+   "id": "next_chapter",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "F11",
+     "layer": "global"
+    },
+    {
+     "key": "Alt+PageDown",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous chapter or section",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Alt+PageUp",
+     "layer": "global"
+    }
+   ],
+   "id": "previous_chapter",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "F10",
+     "layer": "global"
+    },
+    {
+     "key": "Alt+PageUp",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Go back to where you were before the last jump",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Alt+Left",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+H",
+     "layer": "browse"
+    }
+   ],
+   "id": "history_back",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Left",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+H",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Go forward again after going back",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Alt+Right",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+L",
+     "layer": "browse"
+    }
+   ],
+   "id": "history_forward",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Right",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+L",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Go to a line, percentage, or position",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Ctrl+G",
+     "layer": "global"
+    }
+   ],
+   "id": "go_to",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+G",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Move to the start of the document",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Ctrl+Home",
+     "layer": "global"
+    },
+    {
+     "key": "Home",
+     "layer": "browse"
+    }
+   ],
+   "id": "document_start",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+Home",
+     "layer": "global"
+    },
+    {
+     "key": "Home",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the end of the document",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Ctrl+End",
+     "layer": "global"
+    },
+    {
+     "key": "End",
+     "layer": "browse"
+    }
+   ],
+   "id": "document_end",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+End",
+     "layer": "global"
+    },
+    {
+     "key": "End",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move the cursor to the next word",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Right",
+     "layer": "browse"
+    }
+   ],
+   "id": "caret_next_word",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Right",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move the cursor to the previous word",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Left",
+     "layer": "browse"
+    }
+   ],
+   "id": "caret_previous_word",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Left",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move the cursor to the next line",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Down",
+     "layer": "browse"
+    }
+   ],
+   "id": "caret_next_line",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Down",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move the cursor to the previous line",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Up",
+     "layer": "browse"
+    }
+   ],
+   "id": "caret_previous_line",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Up",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Extend the selection to the next word",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Shift+Right",
+     "layer": "browse"
+    }
+   ],
+   "id": "select_next_word",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+Right",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Extend the selection to the previous word",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Shift+Left",
+     "layer": "browse"
+    }
+   ],
+   "id": "select_previous_word",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+Left",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Extend the selection to the next line",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Shift+Down",
+     "layer": "browse"
+    }
+   ],
+   "id": "select_next_line",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+Down",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Extend the selection to the previous line",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Shift+Up",
+     "layer": "browse"
+    }
+   ],
+   "id": "select_previous_line",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+Up",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move down one screen",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "PageDown",
+     "layer": "browse"
+    }
+   ],
+   "id": "page_down",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "PageDown",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move up one screen",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "PageUp",
+     "layer": "browse"
+    }
+   ],
+   "id": "page_up",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "PageUp",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Scroll down one line without moving the cursor",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "j",
+     "layer": "browse"
+    }
+   ],
+   "id": "scroll_down",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "j",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Scroll up one line without moving the cursor",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "k",
+     "layer": "browse"
+    }
+   ],
+   "id": "scroll_up",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "k",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Enter or leave Speech Cursor (line) mode",
+   "category": "Speech Cursor",
+   "gui": [
+    {
+     "key": "Tab",
+     "layer": "browse"
+    },
+    {
+     "key": "Tab",
+     "layer": "speech_cursor"
+    }
+   ],
+   "id": "speech_cursor_toggle",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Tab",
+     "layer": "browse"
+    },
+    {
+     "key": "Tab",
+     "layer": "speech_cursor"
+    }
+   ]
+  },
+  {
+   "action": "Speech Cursor: read the next line",
+   "category": "Speech Cursor",
+   "gui": [
+    {
+     "key": "Down",
+     "layer": "speech_cursor"
+    },
+    {
+     "key": "j",
+     "layer": "speech_cursor"
+    }
+   ],
+   "id": "speech_cursor_next_line",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Down",
+     "layer": "speech_cursor"
+    },
+    {
+     "key": "j",
+     "layer": "speech_cursor"
+    }
+   ]
+  },
+  {
+   "action": "Speech Cursor: read the previous line",
+   "category": "Speech Cursor",
+   "gui": [
+    {
+     "key": "Up",
+     "layer": "speech_cursor"
+    },
+    {
+     "key": "k",
+     "layer": "speech_cursor"
+    }
+   ],
+   "id": "speech_cursor_previous_line",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Up",
+     "layer": "speech_cursor"
+    },
+    {
+     "key": "k",
+     "layer": "speech_cursor"
+    }
+   ]
+  },
+  {
+   "action": "Speech Cursor: read the current line again",
+   "category": "Speech Cursor",
+   "gui": [
+    {
+     "key": "r",
+     "layer": "speech_cursor"
+    }
+   ],
+   "id": "speech_cursor_reread_line",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "r",
+     "layer": "speech_cursor"
+    }
+   ]
+  },
+  {
+   "action": "Speech Cursor: leave and read on from this line",
+   "category": "Speech Cursor",
+   "gui": [
+    {
+     "key": "Enter",
+     "layer": "speech_cursor"
+    }
+   ],
+   "id": "speech_cursor_exit_and_read",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Enter",
+     "layer": "speech_cursor"
+    }
+   ]
+  },
+  {
+   "action": "Speak faster",
+   "category": "Voice",
+   "gui": [
+    {
+     "key": "Ctrl+=",
+     "layer": "global"
+    },
+    {
+     "key": "+",
+     "layer": "browse"
+    },
+    {
+     "key": "=",
+     "layer": "browse"
+    }
+   ],
+   "id": "rate_up",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "+",
+     "layer": "browse"
+    },
+    {
+     "key": "=",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Speak slower",
+   "category": "Voice",
+   "gui": [
+    {
+     "key": "Ctrl+-",
+     "layer": "global"
+    },
+    {
+     "key": "-",
+     "layer": "browse"
+    }
+   ],
+   "id": "rate_down",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "-",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Raise the pitch",
+   "category": "Voice",
+   "gui": [
+    {
+     "key": "Alt+=",
+     "layer": "global"
+    },
+    {
+     "key": ")",
+     "layer": "browse"
+    }
+   ],
+   "id": "pitch_up",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+=",
+     "layer": "global"
+    },
+    {
+     "key": ")",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Lower the pitch",
+   "category": "Voice",
+   "gui": [
+    {
+     "key": "Alt+-",
+     "layer": "global"
+    },
+    {
+     "key": "(",
+     "layer": "browse"
+    }
+   ],
+   "id": "pitch_down",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+-",
+     "layer": "global"
+    },
+    {
+     "key": "(",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Louder",
+   "category": "Voice",
+   "gui": [
+    {
+     "key": "F7",
+     "layer": "global"
+    },
+    {
+     "key": "0",
+     "layer": "browse"
+    }
+   ],
+   "id": "volume_up",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "F7",
+     "layer": "global"
+    },
+    {
+     "key": "0",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Quieter",
+   "category": "Voice",
+   "gui": [
+    {
+     "key": "Shift+F7",
+     "layer": "global"
+    },
+    {
+     "key": "9",
+     "layer": "browse"
+    }
+   ],
+   "id": "volume_down",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+F7",
+     "layer": "global"
+    },
+    {
+     "key": "9",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Cycle the speed presets (skim, normal, study, slow)",
+   "category": "Voice",
+   "gui": [
+    {
+     "key": "F8",
+     "layer": "global"
+    }
+   ],
+   "id": "cycle_speed_preset",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "F8",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Choose a voice",
+   "category": "Voice",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+V",
+     "layer": "global"
+    }
+   ],
+   "id": "choose_voice",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+V",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Find text in the document",
+   "category": "Search",
+   "gui": [
+    {
+     "key": "Ctrl+F",
+     "layer": "global"
+    },
+    {
+     "key": "/",
+     "layer": "browse"
+    }
+   ],
+   "id": "find",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+F",
+     "layer": "global"
+    },
+    {
+     "key": "/",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Find the next match",
+   "category": "Search",
+   "gui": [
+    {
+     "key": "n",
+     "layer": "browse"
+    }
+   ],
+   "id": "find_next",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": false
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "F3",
+     "layer": "global"
+    },
+    {
+     "key": "n",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Find the previous match",
+   "category": "Search",
+   "gui": [
+    {
+     "key": "Shift+N",
+     "layer": "browse"
+    }
+   ],
+   "id": "find_previous",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": false
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "F4",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+N",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Add a bookmark at the cursor",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "Ctrl+M",
+     "layer": "global"
+    },
+    {
+     "key": "m",
+     "layer": "browse"
+    }
+   ],
+   "id": "add_bookmark",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "m",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "List bookmarks",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "Shift+M",
+     "layer": "browse"
+    }
+   ],
+   "id": "list_bookmarks",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+M",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next bookmark",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "b",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_bookmark",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "b",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous bookmark",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "Shift+B",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_bookmark",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+B",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Add a note to the selection or the word at the cursor",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "a",
+     "layer": "browse"
+    }
+   ],
+   "id": "add_note",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "a",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "List notes and highlights",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+N",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+A",
+     "layer": "browse"
+    }
+   ],
+   "id": "list_notes",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+A",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next note or highlight",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "Alt+Down",
+     "layer": "global"
+    },
+    {
+     "key": "e",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_note",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Down",
+     "layer": "global"
+    },
+    {
+     "key": "e",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous note or highlight",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "Alt+Up",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+E",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_note",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Up",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+E",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Delete the note or highlight at the cursor",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "Delete",
+     "layer": "browse"
+    }
+   ],
+   "id": "delete_note",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Delete",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Highlight the selection, or the sentence at the cursor",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "y",
+     "layer": "browse"
+    }
+   ],
+   "id": "highlight_selection",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "y",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Open a document",
+   "category": "File",
+   "gui": [
+    {
+     "key": "Ctrl+O",
+     "layer": "global"
+    }
+   ],
+   "id": "open",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+O",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Open the library: documents in your library folders and recent files",
+   "category": "File",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+B",
+     "layer": "global"
+    }
+   ],
+   "id": "open_library",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+L",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Start a new document in edit mode",
+   "category": "File",
+   "gui": [
+    {
+     "key": "Ctrl+N",
+     "layer": "global"
+    }
+   ],
+   "id": "new_document",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+N",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Save (Markdown and text in place; other formats as Markdown)",
+   "category": "File",
+   "gui": [
+    {
+     "key": "Ctrl+S",
+     "layer": "global"
+    }
+   ],
+   "id": "save",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+S",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Save under a new name",
+   "category": "File",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+S",
+     "layer": "global"
+    }
+   ],
+   "id": "save_as",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+S",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Export settings and key overrides to a JSON or TOML file",
+   "category": "File",
+   "gui": [
+    {
+     "key": "Alt+Shift+E",
+     "layer": "global"
+    }
+   ],
+   "id": "export_settings",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+E",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Import settings from a JSON or TOML file, after a yes or no",
+   "category": "File",
+   "gui": [
+    {
+     "key": "Alt+Shift+I",
+     "layer": "global"
+    }
+   ],
+   "id": "import_settings",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+I",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Quit, saving the reading position",
+   "category": "File",
+   "gui": [
+    {
+     "key": "Ctrl+Q",
+     "layer": "global"
+    },
+    {
+     "key": "q",
+     "layer": "browse"
+    },
+    {
+     "key": "Shift+Q",
+     "layer": "browse"
+    }
+   ],
+   "id": "quit",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+Q",
+     "layer": "global"
+    },
+    {
+     "key": "q",
+     "layer": "browse"
+    },
+    {
+     "key": "Shift+Q",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Switch between reading and editing",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+E",
+     "layer": "global"
+    }
+   ],
+   "id": "toggle_edit_mode",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+E",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Undo",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Z",
+     "layer": "edit"
+    }
+   ],
+   "id": "undo",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+Z",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Redo",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Y",
+     "layer": "edit"
+    },
+    {
+     "key": "Ctrl+Shift+Z",
+     "layer": "edit"
+    }
+   ],
+   "id": "redo",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+Y",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Make the selection bold",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+B",
+     "layer": "edit"
+    }
+   ],
+   "id": "bold",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+B",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Make the selection italic",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+I",
+     "layer": "edit"
+    }
+   ],
+   "id": "italic",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+I",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Underline the selection",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+U",
+     "layer": "edit"
+    }
+   ],
+   "id": "underline",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+U",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Strike through the selection",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+X",
+     "layer": "edit"
+    }
+   ],
+   "id": "strikethrough",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+D",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Mark the selection as code",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+`",
+     "layer": "edit"
+    }
+   ],
+   "id": "inline_code",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+`",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Make the selected lines a code block",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+K",
+     "layer": "edit"
+    }
+   ],
+   "id": "code_block",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+K",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Make the selection a link",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+K",
+     "layer": "edit"
+    }
+   ],
+   "id": "insert_link",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+K",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Make the current line a heading",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Alt+1",
+     "layer": "edit"
+    }
+   ],
+   "id": "heading",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+1",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Make the selected lines a bulleted list",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+L",
+     "layer": "edit"
+    }
+   ],
+   "id": "bullet_list",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+8",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Make the selected lines a numbered list",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+O",
+     "layer": "edit"
+    }
+   ],
+   "id": "numbered_list",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+7",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Make the selected lines a block quote",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+Q",
+     "layer": "edit"
+    }
+   ],
+   "id": "block_quote",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+9",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Insert a horizontal rule",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+R",
+     "layer": "edit"
+    }
+   ],
+   "id": "horizontal_rule",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+R",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Insert a table",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+A",
+     "layer": "edit"
+    }
+   ],
+   "id": "insert_table",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+T",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Add a row to the table at the cursor",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+Enter",
+     "layer": "edit"
+    }
+   ],
+   "id": "add_table_row",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+W",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Insert an image",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+I",
+     "layer": "edit"
+    }
+   ],
+   "id": "insert_image",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+G",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Find and replace",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+F",
+     "layer": "edit"
+    }
+   ],
+   "id": "replace",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+F",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Switch to the next color theme",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "F5",
+     "layer": "global"
+    }
+   ],
+   "id": "next_theme",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "F5",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Show or hide line numbers",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "F6",
+     "layer": "global"
+    }
+   ],
+   "id": "toggle_line_numbers",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "F6",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Turn single-key shortcuts on or off, so dictation and typing never trigger commands",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "F9",
+     "layer": "global"
+    }
+   ],
+   "id": "toggle_character_keys",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "F9",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Turn bionic reading on or off: the start of each word in bold",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Alt+Shift+B",
+     "layer": "global"
+    }
+   ],
+   "id": "bionic_toggle",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+B",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Cycle the reading ruler: off, current line, ruler",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Alt+Shift+U",
+     "layer": "global"
+    }
+   ],
+   "id": "ruler_cycle",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+U",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Run any command by name",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "F2",
+     "layer": "global"
+    },
+    {
+     "key": ":",
+     "layer": "browse"
+    }
+   ],
+   "id": "command_palette",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "F2",
+     "layer": "global"
+    },
+    {
+     "key": "Alt+X",
+     "layer": "global"
+    },
+    {
+     "key": ":",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "List keyboard shortcuts",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "F3",
+     "layer": "global"
+    },
+    {
+     "key": "?",
+     "layer": "browse"
+    }
+   ],
+   "id": "keyboard_help",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "?",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Open the help",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "F1",
+     "layer": "global"
+    }
+   ],
+   "id": "help",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "F1",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next note",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "'",
+     "layer": "browse"
+    }
+   ],
+   "id": "NoteCommand::Next",
+   "palette_when_off": null,
+   "source": "extra",
+   "terminal": [
+    {
+     "key": "'",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous note",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "\"",
+     "layer": "browse"
+    }
+   ],
+   "id": "NoteCommand::Previous",
+   "palette_when_off": null,
+   "source": "extra",
+   "terminal": [
+    {
+     "key": "\"",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "List highlights",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "Shift+Y",
+     "layer": "browse"
+    }
+   ],
+   "id": "NoteCommand::ListHighlights",
+   "palette_when_off": null,
+   "source": "extra",
+   "terminal": [
+    {
+     "key": "Shift+Y",
+     "layer": "browse"
+    }
+   ]
+  }
+ ],
+ "pages": [
+  {
+   "file": "index.html",
+   "title": "Home"
+  },
+  {
+   "file": "architecture.html",
+   "title": "Crate map"
+  },
+  {
+   "file": "speech-pipeline.html",
+   "title": "Speech pipeline"
+  },
+  {
+   "file": "keyboard.html",
+   "title": "Keyboard"
+  },
+  {
+   "file": "features.html",
+   "title": "Features"
+  },
+  {
+   "file": "reading-aids.html",
+   "title": "Reading aids"
+  }
+ ]
+}
+</script>
+<!-- END generated: site-data -->
+<!-- BEGIN generated: base-script -->
+<script>
+/* Shared by every page: data, announcements, theme switch. */
+window.TW = (function () {
+  "use strict";
+  var data = {};
+  try { data = JSON.parse(document.getElementById("site-data").textContent); } catch (e) { data = {}; }
+  var statusEl = document.getElementById("status");
+  var pending = null;
+  /* Replace the text of the page's one live region. Repeating the same text
+     clears it first, so screen readers announce it again. */
+  function announce(message) {
+    if (!statusEl) { return; }
+    window.clearTimeout(pending);
+    if (statusEl.textContent === message) {
+      statusEl.textContent = "";
+      pending = window.setTimeout(function () { statusEl.textContent = message; }, 100);
+    } else {
+      statusEl.textContent = message;
+    }
+  }
+  function debounce(fn, ms) {
+    var t = null;
+    return function () {
+      var args = arguments, self = this;
+      window.clearTimeout(t);
+      t = window.setTimeout(function () { fn.apply(self, args); }, ms);
+    };
+  }
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+  var KEY = "tw-site-theme";
+  var root = document.documentElement;
+  var select = document.getElementById("theme-select");
+  function currentTheme() {
+    var t = root.getAttribute("data-theme");
+    return (t === "dark" || t === "light") ? t : "system";
+  }
+  if (select) {
+    select.value = currentTheme();
+    select.addEventListener("change", function () {
+      var v = select.value;
+      if (v === "dark" || v === "light") { root.setAttribute("data-theme", v); } else { root.removeAttribute("data-theme"); }
+      try {
+        if (v === "dark" || v === "light") { window.localStorage.setItem(KEY, v); } else { window.localStorage.removeItem(KEY); }
+      } catch (e) { /* storage blocked: the choice lasts until the page closes */ }
+    });
+  }
+  /* A table wider than the screen scrolls inside its box. Only then is the
+     box a labelled region that Tab can reach, so the arrow keys can scroll
+     it; otherwise it is a plain box and adds no tab stop. */
+  function fitTables() {
+    Array.prototype.forEach.call(document.querySelectorAll(".table-wrap"), function (w) {
+      var label = w.getAttribute("aria-labelledby") || w.getAttribute("data-labelledby");
+      if (label) { w.setAttribute("data-labelledby", label); }
+      if (w.scrollWidth > w.clientWidth + 1) {
+        w.setAttribute("role", "region");
+        w.setAttribute("tabindex", "0");
+        if (label) { w.setAttribute("aria-labelledby", label); }
+      } else {
+        w.removeAttribute("role");
+        w.removeAttribute("tabindex");
+        w.removeAttribute("aria-labelledby");
+      }
+    });
+  }
+  window.addEventListener("resize", debounce(fitTables, 200));
+  window.addEventListener("load", fitTables);
+  return { data: data, announce: announce, debounce: debounce, plural: plural, fitTables: fitTables };
+})();
+</script>
+<!-- END generated: base-script -->
+<script>
+(function () {
+  "use strict";
+  var TW = window.TW, d = TW.data;
+  if (!d.keys) { return; }
+  var LAYER_NAMES = { global: "global", browse: "browse", speech_cursor: "Speech Cursor", edit: "edit" };
+  var q = document.getElementById("q");
+  var cat = document.getElementById("category");
+  var layerSel = document.getElementById("layer");
+  var results = document.getElementById("results");
+  d.categories.forEach(function (c) {
+    var o = document.createElement("option");
+    o.value = c; o.textContent = c;
+    cat.appendChild(o);
+  });
+
+  function el(tag, attrs, text) {
+    var e = document.createElement(tag);
+    if (attrs) { Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); }); }
+    if (text !== undefined && text !== null) { e.textContent = text; }
+    return e;
+  }
+  function radio(name) { return document.querySelector("input[name='" + name + "']:checked").value; }
+  function showKey(key, frontend, platform) {
+    if (frontend === "gui" && platform === "mac") { return key.replace(/\bCtrl\+/g, "Cmd+"); }
+    return key;
+  }
+  function slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+
+  function update(announce) {
+    var terms = q.value.toLowerCase().split(/\s+/).filter(Boolean);
+    var category = cat.value, layer = layerSel.value;
+    var fe = radio("frontend"), pf = radio("platform");
+    var fronts = fe === "both" ? ["terminal", "gui"] : [fe];
+    var groups = {}, count = 0;
+    /* When the whole search is exactly a key, such as "ctrl+s", show only the
+       actions on that key rather than every key that starts with it. */
+    var whole = q.value.trim().toLowerCase();
+    function keyIs(k) {
+      return fronts.some(function (f) {
+        return k[f].some(function (key) {
+          return (!layer || key.layer === layer) &&
+            (key.key.toLowerCase() === whole || showKey(key.key, f, pf).toLowerCase() === whole);
+        });
+      });
+    }
+    var exact = whole && d.keys.some(function (k) { return (!category || k.category === category) && keyIs(k); });
+    d.keys.forEach(function (k) {
+      if (exact && !keyIs(k)) { return; }
+      if (category && k.category !== category) { return; }
+      var shown = {};
+      var any = false;
+      fronts.forEach(function (f) {
+        shown[f] = k[f].filter(function (key) { return !layer || key.layer === layer; });
+        if (shown[f].length) { any = true; }
+      });
+      if (!any) { return; }
+      if (terms.length) {
+        var hay = [k.action, k.id].concat(fronts.map(function (f) {
+          return shown[f].map(function (key) { return showKey(key.key, f, pf) + " " + key.key; }).join(" ");
+        })).join(" ").toLowerCase();
+        for (var i = 0; i < terms.length; i++) { if (hay.indexOf(terms[i]) < 0) { return; } }
+      }
+      (groups[k.category] = groups[k.category] || []).push({ k: k, shown: shown });
+      count += 1;
+    });
+
+    results.textContent = "";
+    if (!count) {
+      results.appendChild(el("p", null, "No shortcuts match. Try fewer words, or press Clear filters."));
+    }
+    d.categories.forEach(function (c) {
+      var rows = groups[c];
+      if (!rows) { return; }
+      var hid = "cat-" + slug(c);
+      results.appendChild(el("h3", { id: hid }, c));
+      var wrap = el("div", { "class": "table-wrap", role: "region", "aria-labelledby": hid + "-cap", tabindex: "0" });
+      var table = el("table", { "class": "results-table" });
+      table.appendChild(el("caption", { id: hid + "-cap" }, c + ": " + TW.plural(rows.length, "shortcut", "shortcuts")));
+      var thead = el("thead"), hr = el("tr");
+      ["Action", "Keys", "Layer", "Id"].forEach(function (h) { hr.appendChild(el("th", { scope: "col" }, h)); });
+      thead.appendChild(hr);
+      table.appendChild(thead);
+      var tbody = el("tbody");
+      rows.forEach(function (r) {
+        var k = r.k, tr = el("tr");
+        var th = el("th", { scope: "row" }, k.action);
+        if (k.source === "extra") { th.appendChild(el("span", { "class": "extra-note" }, "An extra binding from the app, not from the keymap.")); }
+        tr.appendChild(th);
+        var td = el("td", { "class": "keys-cell" });
+        var ul = el("ul");
+        var layers = [];
+        fronts.forEach(function (f) {
+          if (!r.shown[f].length) { return; }
+          var li = el("li");
+          if (fronts.length > 1) { li.appendChild(el("span", { "class": "fe" }, (f === "gui" ? "GUI" : "Terminal") + ": ")); }
+          r.shown[f].forEach(function (key, i) {
+            if (i) { li.appendChild(document.createTextNode(", ")); }
+            li.appendChild(el("kbd", null, showKey(key.key, f, pf)));
+            li.appendChild(el("span", { "class": "layer" }, " (" + LAYER_NAMES[key.layer] + ")"));
+            if (layers.indexOf(key.layer) < 0) { layers.push(key.layer); }
+          });
+          ul.appendChild(li);
+        });
+        td.appendChild(ul);
+        if (k.palette_when_off) {
+          var off = fronts.filter(function (f) { return k.palette_when_off[f]; });
+          if (off.length) {
+            td.appendChild(el("span", { "class": "palette-note" },
+              "With single-key shortcuts off: command palette only" +
+              (fronts.length > 1 && off.length === 1 ? " (" + (off[0] === "gui" ? "GUI" : "terminal") + ")" : "") + "."));
+          }
+        }
+        tr.appendChild(td);
+        tr.appendChild(el("td", null, layers.map(function (l) { return LAYER_NAMES[l]; }).join(", ")));
+        var idCell = el("td");
+        idCell.appendChild(el("code", null, k.id));
+        tr.appendChild(idCell);
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      results.appendChild(wrap);
+    });
+    TW.fitTables();
+    var msg = count === 1 ? "1 shortcut matches." : count + " shortcuts match.";
+    if (announce) { TW.announce(msg); } else { document.getElementById("status").textContent = msg; }
+  }
+
+  var typed = TW.debounce(function () { update(true); }, 250);
+  q.addEventListener("input", typed);
+  [cat, layerSel].forEach(function (s) { s.addEventListener("change", function () { update(true); }); });
+  Array.prototype.forEach.call(document.querySelectorAll("#filters input[type=radio]"), function (r) {
+    r.addEventListener("change", function () { update(true); });
+  });
+  document.getElementById("filters").addEventListener("submit", function (e) { e.preventDefault(); update(true); });
+  document.getElementById("clear").addEventListener("click", function () {
+    q.value = ""; cat.value = ""; layerSel.value = "";
+    document.getElementById("fe-both").checked = true;
+    document.getElementById("pf-win").checked = true;
+    update(false);
+    TW.announce("Filters cleared. " + document.getElementById("status").textContent);
+  });
+  update(false);
+})();
+</script>
+</body>
+</html>

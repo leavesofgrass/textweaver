@@ -13,8 +13,12 @@
 //!   the clocks.
 //! - [`queue`]: generations, lookahead, and cancellation by id.
 //! - [`backends`]: `null`, `recording` (a test double, always compiled),
-//!   `espeak` (feature `espeak`), `omnivox` (feature `omnivox`), and the
-//!   extensible [`BackendRegistry`] with Star's selection rules.
+//!   `espeak` (feature `espeak`), `omnivox` (feature `omnivox`),
+//!   `speechd` (feature `speechd`: speech-dispatcher with an index mark
+//!   before every word), and the extensible [`BackendRegistry`] with Star's
+//!   selection rules. The out-of-process engines (Eloquence, SAPI5,
+//!   DECtalk) and Apple's voices live in their own crates and are
+//!   registered by the app.
 //!
 //! This crate depends only on `textweaver-core`: it takes
 //! [`Utterance`](textweaver_core::Utterance)s, never documents.

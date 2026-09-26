@@ -6,11 +6,11 @@ This guide is written to be read with a screen reader. Each section starts with 
 
 ## Convert one file
 
-```
+```bash
 tw convert notes.md --to html
 ```
 
-This writes `notes.html` next to `notes.md`. When it finishes, you hear one sentence, for example: "Converted 1 file to HTML in 12 milliseconds. No failures."
+This writes `notes.html` next to `notes.md`. When it finishes, you hear one sentence, for example: "Converted 1 file to HTML in 32 milliseconds, 31.6 files per second. No failures."
 
 The formats you can ask for with `--to`:
 
@@ -19,16 +19,16 @@ The formats you can ask for with `--to`:
 - `txt`: plain text, the same text textweaver reads aloud.
 - `epub`: an EPUB 3 book with a table of contents, real headings, and accessibility metadata.
 - `docx`: a Word document with Word's own heading styles, numbered lists, and tables whose header row repeats.
-- `brf`: a braille file for a braille display or embosser, in uncontracted Unified English Braille, 40 cells by 25 lines.
+- `brf`: a braille file for a braille display or embosser, in uncontracted (grade 1) Unified English Braille, 40 cells by 25 lines. Contracted (grade 2) braille needs a textweaver built with the `liblouis` feature and liblouis installed; without them, the file is grade 1 and the summary says so.
 - `pdf`: a tagged PDF that screen readers can move through by heading, list, and table.
 
 Some outputs come with warnings, for example "The image cat.png was not found, so its description was written instead." Each warning is read out with its file name, and the summary says how many files had warnings.
 
-PDF output needs a font on the computer. textweaver uses the first it finds of Atkinson Hyperlegible, Verdana, Segoe UI, Arial, DejaVu Sans, Liberation Sans, and Noto Sans. To choose one, give a TrueType or OpenType font file with `--pdf-font`, or set the `TEXTWEAVER_PDF_FONT` environment variable. When no font is found, `tw convert` says so once, before converting anything.
+PDF output uses fonts that come with textweaver, so it works on every computer with nothing installed. [PDF and EPUB layout](#pdf-and-epub-layout) explains how to choose another font.
 
 ## Convert a folder
 
-```
+```bash
 tw convert "Biology notes" --to html --out "Biology site"
 ```
 
@@ -44,7 +44,7 @@ When you run the same command again, a file is skipped when its output is newer 
 
 To convert everything anyway, for example after changing the template, add `--force`:
 
-```
+```bash
 tw convert "Biology notes" --to html --out "Biology site" --force
 ```
 
@@ -52,7 +52,7 @@ Outputs are written to a temporary file first and then renamed, so stopping a co
 
 ## Watch a folder
 
-```
+```bash
 tw convert Inbox --to txt --watch
 ```
 
@@ -74,18 +74,18 @@ Markdown comes in dialects. Choose yours with `--flavor`:
 
 - `gfm`, the default: GitHub Flavored Markdown. Tables, task lists, strikethrough, web addresses that become links by themselves, footnotes, and alerts such as `> [!NOTE]`.
 - `obsidian`: everything in GFM, plus Obsidian's own syntax. `[[Note]]` links to `Note.html`, `[[Note#Heading]]` links to that heading, and `[[Note|text]]` shows your own link text. `![[picture.png|description]]` shows a picture with that description as its alternative text. `![[Note]]` is a link to the note, or, with `--embeds inline`, the note's text itself. Callouts such as `> [!tip] Remember` become labelled notes; a callout with a minus sign after the type becomes a section you can expand and collapse. `#tags`, `==highlights==`, and block references (`^id`) work too.
-- `pandoc`: Pandoc's Markdown. Definition lists, fenced divs (`::: warning`), spans with classes (`[text]{.smallcaps}`), heading ids (`# Title {#intro}`), citations (`[@doe99, p. 33]`, shown as links to `#ref-doe99`), `H~2~O` and `2^10^`, and a title block (`% Title`, `% Author`, `% Date`).
+- `pandoc`: Pandoc's Markdown. Definition lists, fenced divs (`::: warning`), spans with classes (`[text]{.smallcaps}`), heading ids (`# Title {#intro}`), citations (`[@doe99, p. 33]`, shown as links to `#ref-doe99`), `H~2~O` and `2^10^`, and a title block (`% Title`, `% Author`, `% Date`). [Citations](citations.md) explains how to keep the references those citations point to.
 - `commonmark`: plain CommonMark, with no extensions.
 
 In every flavor except `commonmark`, a YAML block at the top of the file (between two lines of three dashes) sets the page's title, language, author, date, and description.
 
 ## Math
 
-Math written in LaTeX between dollar signs, `$x^2$` inside a sentence or `$$ … $$` on its own lines, becomes MathML. Screen readers that read math (NVDA with MathCAT, JAWS, VoiceOver) can then speak it and let you explore it term by term. The LaTeX source travels with it, as the formula's text alternative and as an annotation, so copying still gives you the LaTeX. A formula that cannot be read is shown as its LaTeX source. Add `--no-math` to keep all math as LaTeX. Prices such as "$5 and $10" are never taken for math.
+Math written in LaTeX between dollar signs, `$x^2$` inside a sentence or `$$ … $$` on its own lines, becomes MathML. Screen readers that read math (NVDA with MathCAT, JAWS, VoiceOver) can then speak it and let you explore it term by term. The LaTeX source travels with it, as the formula's text alternative and as an annotation, so copying still gives you the LaTeX. A formula that cannot be read is shown as its LaTeX source. Add `--no-math` to keep all math as LaTeX. Prices such as "$5 and $10" are not taken for math. The Markdown engine decides what is math, though, so a few forms, such as "$5-$10" with no spaces, can still become a formula; write `\$` for a dollar sign that must stay one.
 
-ASCIIMath works too. A code block that starts with three backticks and the word `asciimath` becomes one formula. Course material written for MathJax often puts ASCIIMath between single backticks, like `` `x^2/2` ``; add `--asciimath` to read those as math instead of code.
+ASCIIMath works too. A code block that starts with three backticks and the word `asciimath` (or `am`) becomes one formula. Course material written for MathJax often puts ASCIIMath between single backticks, like `` `x^2/2` ``; add `--asciimath` to read those as math instead of code.
 
-EPUB, Word, braille, and PDF output keep math as its LaTeX source for now.
+EPUB, Word, braille, and PDF output keep math as its LaTeX source for now. [Math](math.md) explains how math is read aloud and how to write it.
 
 ## Templates
 
@@ -101,11 +101,11 @@ You can write your own templates. They are HTML files with MiniJinja placeholder
 
 ## PDF and EPUB layout
 
-```
+```bash
 tw convert "Chapter 3.md" --to pdf --large-print --title-page --contents
 ```
 
-PDF output uses fonts that come with textweaver, so a PDF looks the same on every computer and never fails for lack of a font. The text is in Atkinson Hyperlegible Next and code is in Atkinson Hyperlegible Mono, both from the Braille Institute and made so that letters that look alike are easy to tell apart.
+PDF output uses fonts that come with textweaver, so a PDF looks the same on every computer and never fails for lack of a font. The text font is chosen in this order: `--pdf-font` (a font file), then `--font` (a name or a file), then the `TEXTWEAVER_PDF_FONT` environment variable (a font file), then the bundled Atkinson Hyperlegible Next. The text is in Atkinson Hyperlegible Next and code is in Atkinson Hyperlegible Mono, both from the Braille Institute and made so that letters that look alike are easy to tell apart.
 
 These options change how a PDF looks. None of them changes what a screen reader hears: every PDF is tagged, has a title and a language, and passes the PDF/UA check textweaver runs while writing.
 
@@ -132,13 +132,25 @@ For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the 
 - `--sanitize` removes scripts and other unsafe HTML, for Markdown you did not write yourself.
 - `--smart` turns straight quotes into curly quotes and double hyphens into dashes.
 - `--no-pandoc` never runs Pandoc (see below).
-- `--pdf-font FILE` chooses the font for PDF output.
+- `--pdf-font FILE` chooses a font file for the text of PDF output. `--font` does the same by name.
 - `--verbose` reads out every file, not only the failures and the summary.
 - `--json` prints the full result, every file with its status and timing, as JSON for scripts.
 
 ## Formats textweaver reads
 
-textweaver reads Markdown, HTML, and plain text itself, and EPUB, Word, and PDF as those readers arrive. For other formats, such as OpenDocument text, RTF, reStructuredText, Org, and LaTeX, it asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself.
+textweaver reads Markdown, HTML, plain text, EPUB, Word (DOCX), and PDF itself. For other formats, such as OpenDocument text, RTF, reStructuredText, Org, and LaTeX, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself. `--no-pandoc` turns it off.
+
+The reader, `textweaver`, does not use Pandoc. To read an OpenDocument or RTF file aloud, convert it to Markdown first, then open the Markdown:
+
+```bash
+tw convert essay.odt --to md
+```
+
+```bash
+textweaver essay.md
+```
+
+PDF files are read with column-aware reading order: running headers and page numbers are left out, and headings, lists, and tables are recovered. A scanned PDF with no text layer cannot be read; textweaver has no OCR yet. [ADR-0010](adr/0010-pdf-loader.md) explains how the PDF reader works.
 
 ## When something fails
 
@@ -148,3 +160,15 @@ Two cases are refused before converting:
 
 - An output that would replace its own source, such as Markdown to Markdown in the same folder. Choose an output folder with `--out`.
 - Two sources that would write the same output, such as `notes.md` and `notes.txt` both becoming `notes.html`. Rename one of them.
+
+## See also
+
+- [Math](math.md): how LaTeX and ASCIIMath are read aloud and turned into MathML.
+- [Citations](citations.md): the reference library behind Pandoc citations.
+- [Themes](themes.md): the colours HTML output uses.
+- [Audio export](audio-export.md): turning a document into an audiobook instead.
+- [scripts/README.md](../scripts/README.md#convert-foldersh-and-convert-folderps1): the convert-folder helper scripts.
+- [ADR-0016: Rendering and bulk conversion](adr/0016-rendering-and-conversion.md): how conversion works and how fast it is.
+- [ADR-0017: Native writers](adr/0017-writers.md): EPUB, Word, braille, and PDF output, and their accessibility checks.
+- [ADR-0010: PDF loader](adr/0010-pdf-loader.md): how PDFs are read.
+- [Documentation index](README.md)

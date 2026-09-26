@@ -10,7 +10,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds both packages, a
 
 ## Steps
 
-1. **Prepare.** On `main`, with a clean tree and CI green, first try the release without changing anything:
+1. **Prepare.** Before you start, run the checks CI runs, locally: `scripts/dev-check.sh` on Linux or macOS (`--docker` for the full Linux set), or `scripts\dev-check.ps1` on Windows. They include the link check and the site data check. Then, on `main`, with a clean tree and CI green, try the release without changing anything:
 
    ```bash
    cargo xtask release 0.1.0-alpha.3 --dry-run
@@ -62,9 +62,10 @@ The `Release` workflow (`.github/workflows/release.yml`) builds both packages, a
 `cargo xtask dist` builds with the `dist` profile (the release profile with fat LTO, and symbols stripped) and writes the package to `target/dist/`. The C runtime is linked statically on Windows, so the package does not need the Visual C++ redistributable. Each package holds:
 
 - `textweaver` and `tw`;
-- on Windows, the engine hosts for x64 and x86, and the IBMTTS community dictionaries;
-- the README, the licence, the changelog, the install guide, the quick start, and the user guides;
-- the platform's helper scripts (doctor, speech check, update);
+- on Windows, the engine hosts for Eloquence, SAPI5, and DECtalk, each for x64 and x86, and the IBMTTS community dictionaries;
+- `QUICKSTART.md`, `README.md`, `LICENSE`, `CHANGELOG.md`, and `INSTALL.md` at the top;
+- in `docs/`, every user guide listed under "For users" in the [documentation index](README.md), and the offline interactive pages in `docs/site/`;
+- the platform's helper scripts (doctor, speech check, update) and their README;
 - `THIRD-PARTY-NOTICES.md`, and under `licenses/`: each bundled font's `OFL.txt`, SCOWL's `Copyright`, and the IBMTTS dictionaries' licence. `cargo xtask dist` fails if any of these is missing.
 
 ## Building a package by hand (fallback)
@@ -95,4 +96,12 @@ To rerun the workflow for an existing tag, start `Release` from the Actions tab 
 
 - **macOS signing.** The macOS binaries are universal (built with `lipo`) and signed ad hoc (`codesign -s -`). They are not notarized. `docs/install.md` tells users how to get past Gatekeeper. Notarizing needs an Apple Developer ID. When there is one, add `codesign --options runtime` with that identity and `xcrun notarytool submit --wait` to the workflow.
 - **No engines are bundled.** No speech engines are in the packages: no Eloquence, no DECtalk, no voices. The packages hold only textweaver's own programs and hosts, and the CC0 IBMTTS dictionaries.
-- **Linux.** There is no Linux package yet. Linux users build from source, or use the Docker image.
+- **Linux.** There is no Linux package yet. Linux users build from source with `scripts/install-linux.sh`, or use the Docker image. `cargo xtask dist` on Linux builds a `.tar.gz` with the ECI host for Voxin, but it is not published.
+
+## See also
+
+- [Installing textweaver](install.md): what users do with the packages.
+- [CONTRIBUTING.md](../CONTRIBUTING.md): the checks and the commit style.
+- [CHANGELOG.md](../CHANGELOG.md): the release notes come from here.
+- [ADR-0012: The engine host](adr/0012-engine-host.md): `cargo xtask hosts` and host versioning.
+- [Documentation index](README.md)

@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Implemented with the amendment above. Of the two Consequences lines about fonts, the second is current: PDF output does not need an installed font. MathML in EPUB and DOCX, real Word footnotes, and native grade 2 braille are still to do.
 
 ## Context
 
@@ -71,3 +72,9 @@ Every PDF in the new tests passes krilla's PDF/UA-1 validator.
 - The HTML loader skips `aside` (Star's rule for web pages), so a future EPUB loader should read `aside epub:type="footnote"` as footnote bodies to round-trip textweaver's own EPUBs.
 - Grade 2 braille depends on liblouis until a native contraction table is written and tested against liblouis's UEB test corpus.
 - Not yet: BANA table formats beyond linear rows, typeform (bold, italic) braille indicators, the capitals passage indicator, SVG images in DOCX and PDF, MathML, real Word footnotes, and page labels in PDF from print page breaks.
+
+## See also
+
+- [Converting documents](../converting.md): choosing formats, fonts, and PDF layout.
+- [ADR-0016: Rendering and bulk conversion](0016-rendering-and-conversion.md): the converter that calls these writers.
+- [Documentation index](../README.md)

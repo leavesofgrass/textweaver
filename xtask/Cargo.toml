@@ -1,6 +1,6 @@
 [package]
 name = "xtask"
-description = "textweaver maintenance tasks: keyboard.md generation, Star parity report, release"
+description = "textweaver maintenance tasks: keyboard.md generation, Star parity report, engine hosts, benchmarks, release packages"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

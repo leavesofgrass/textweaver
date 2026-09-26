@@ -2,6 +2,8 @@
 
 In 30 seconds, you can hear a document read aloud and move around in it. To practise, open this guide itself: it is a Markdown file.
 
+textweaver opens text, Markdown, HTML, EPUB, Word (DOCX), and PDF files.
+
 ## Windows
 
 1. Download the Windows `.zip` from the [releases page](https://github.com/leavesofgrass/textweaver/releases). Right-click it, choose Extract All, and extract it to a folder such as `C:\textweaver`.
@@ -12,7 +14,7 @@ In 30 seconds, you can hear a document read aloud and move around in it. To prac
    textweaver QUICKSTART.md
    ```
 
-textweaver speaks with your Windows voices. It uses Eloquence if you have it; see `docs/eloquence.md`.
+textweaver speaks with your Windows voices. It uses Eloquence if you have it; see [the Eloquence guide](eloquence.md) (`docs/eloquence.md` in the package).
 
 Or install with a script, which also offers to add textweaver to your PATH and the Start menu. From a copy of the repository:
 
@@ -46,7 +48,13 @@ bash scripts/install-macos.sh
 
 ## Linux
 
-Install with the script in a copy of the repository (`git clone https://github.com/leavesofgrass/textweaver`). It works on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine: it installs what the build needs, builds textweaver, and installs it in `~/.local`. It asks before it uses sudo or changes your PATH.
+Install with the script in a copy of the repository. To get a copy:
+
+```bash
+git clone https://github.com/leavesofgrass/textweaver
+```
+
+The script works on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine. It installs what the build needs, builds textweaver, and installs it in `~/.local`. It asks before it uses sudo or changes your PATH. Run it from the copy's folder:
 
 ```bash
 bash scripts/install-linux.sh
@@ -67,6 +75,7 @@ Once the document is open:
 - **.** (period) and **,** (comma) move to the next or previous sentence.
 - **p** and **Shift+P** move by paragraph. **h** jumps to the next heading.
 - **+** and **-** make the voice faster or slower.
+- **Tab** turns Speech Cursor mode on and off. In it, the Up and Down arrows read one line at a time.
 - **%** says where you are.
 - **?** lists every key. **F1** opens the help.
 - **q** quits. textweaver asks "Quit textweaver? y or n". Press **y** to quit, or **n** to stay.
@@ -84,6 +93,19 @@ textweaver remembers your place. Open the same file again and it picks up where 
 - **Ctrl+O** opens another document.
 - **F2** opens the command palette: type part of a command's name, then press Enter.
 - **F9** turns single-key shortcuts off, so dictation or typing never triggers a command. Chords such as **Alt+P** (play or pause) still work.
-- If you use a screen reader and want it to do all the talking, start with `textweaver --no-speech FILE`.
+- If you use a screen reader and want it to do all the talking, start with `textweaver --no-speech FILE`. [Using textweaver with a screen reader](screen-readers.md) explains what your screen reader reads then.
 - `tw speak "Hello"` checks your voice. `tw voices` lists your voices, and `tw backends` lists the speech engines textweaver found. In the reader, **Alt+V** lists the voices; Enter chooses one and speaks a sample.
-- Something went wrong? Warnings and errors are written to `textweaver.log` in the state folder (next to your reading positions). Start with `textweaver --log debug FILE` to log more, or `--log off` to log nothing.
+- Something went wrong? Warnings and errors are written to `textweaver.log` in the state folder (next to your reading positions). Start with `textweaver --log debug FILE` to log more, or `--log off` to log nothing. [Troubleshooting](troubleshooting.md) covers the common problems.
+
+## Next steps
+
+- [Reading and moving around](reading.md): every way to read and move, Speech Cursor, find, and go to.
+- [Writing and editing](editing.md): edit mode, typing echo, and Markdown commands.
+- [Keyboard reference](keyboard.md): every key, in both frontends.
+- [Speech engines and voices](speech.md): choosing an engine and a voice.
+- [Settings](settings.md): where settings live, and how to export and import them.
+
+## See also
+
+- [Installing textweaver](install.md): the details of each package.
+- [Documentation index](README.md)

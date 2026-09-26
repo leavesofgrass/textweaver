@@ -25,6 +25,12 @@ Runs every check CI runs, so you can see CI's answer before you push:
   doc        cargo doc --workspace --exclude textweaver-gui --no-deps
              FEATURES, with RUSTDOCFLAGS="-D warnings"
   keyboard   cargo xtask keyboard --check (docs/keyboard.md is current)
+  links      python3 tools/check_links.py (relative links and anchors in the
+             docs resolve)
+  site       python3 tools/gen_site_data.py --check (the data in the
+             docs/site pages is current)
+  site-a11y  python3 tools/check_site_a11y.py (static accessibility checks
+             of the docs/site pages)
   scripts    shellcheck on scripts/*.sh, when shellcheck is installed
 
 FEATURES is --all-features on Linux when the espeak-ng development files are
@@ -194,6 +200,27 @@ step clippy "lints, warnings are errors" cargo clippy --workspace --exclude text
 step test "tests" cargo test --workspace --exclude textweaver-gui ${FEATURES[@]+"${FEATURES[@]}"}
 step doc "API documentation, warnings are errors" env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --exclude textweaver-gui --no-deps ${FEATURES[@]+"${FEATURES[@]}"}
 step keyboard "docs/keyboard.md is current" cargo xtask keyboard --check
+PYTHON=""
+if have python3; then
+  PYTHON=python3
+elif have python; then
+  PYTHON=python
+fi
+for py_step in links site site-a11y; do
+  wanted "$py_step" || continue
+  if [ -z "$PYTHON" ]; then
+    say ""
+    say "== $py_step: skipped =="
+    say "Python 3 is not installed, so the $py_step check cannot run."
+    SKIPPED="$SKIPPED $py_step"
+    continue
+  fi
+  case $py_step in
+    links) step links "links and anchors in the docs resolve" "$PYTHON" tools/check_links.py ;;
+    site) step site "the docs/site data is current" "$PYTHON" tools/gen_site_data.py --check ;;
+    site-a11y) step site-a11y "static accessibility checks of docs/site" "$PYTHON" tools/check_site_a11y.py ;;
+  esac
+done
 if wanted scripts; then
   if have shellcheck; then
     step scripts "shellcheck on the scripts" shellcheck scripts/*.sh
