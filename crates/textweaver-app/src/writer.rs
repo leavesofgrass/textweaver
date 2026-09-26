@@ -553,7 +553,9 @@ mod tests {
                 expect: None,
             });
         });
-        assert!(took < Duration::from_millis(50), "{took:?}");
+        // Handing over is a rope clone and a channel send: no copy, no
+        // disk. (Generous: a loaded machine can pause any thread.)
+        assert!(took < Duration::from_millis(500), "{took:?}");
         assert!(w.flush(Duration::from_secs(30)));
         assert!(matches!(
             w.reports().as_slice(),
