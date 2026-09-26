@@ -14,7 +14,21 @@ Sizes:
 - **M**: a few days.
 - **L**: one to two weeks.
 
-## Where we are
+## Status (Saturday, September 26, 2026)
+
+- **Phase 1 is done.** Agents P1a (speech stability), P1b (app safety and authoring quick wins), P1c (CI, releases, and notices), and P1d (loaders and command-line tools) are merged. Two housekeeping items are left: pruning merged branches, and merging through pull requests with required checks.
+- **Phase 2 is done, with a few items moved to Wave 3.** Agents P2a (reliability), P2b (authoring), P2c (screen reader modes), and P2d (releases, quality gates, and binary size) are merged. Agent P2e (the remaining gaps, and keys that follow NVDA and JAWS habits) is still running.
+- **Tests:** 1,854 pass natively on Windows and 1,861 in Docker with all features, at the end of P2a.
+- **Releases:** 0.1.0-alpha.3 (Friday, September 25, 2026) is the newest. The next release is the first with the Linux AppImage. Jon decides when it happens; there is no alpha.4 until he says so.
+- **Wave 3 is planned** in [tasks.md](tasks.md), with six agents: W3a (app core for the GUI), W3b (the Xilem GUI), W3c (architecture), W3d (formats for students), W3e (language and study aids), and W3f (voices and speech). It starts after P2e merges.
+- **The GUI is Xilem.** Jon chose Linebender's all-Rust toolkit on Saturday, September 26, 2026, to keep as much of textweaver in Rust as he can. The wxDragon spike stays as a fallback until the Xilem GUI passes the same accessibility checks.
+- **Wave 3 is pure Rust first.** textweaver is an experimental alpha, for Jon's own use first. Wave 3 prefers pure-Rust, in-process solutions over subprocesses and C or C++ libraries: `ocrs` for OCR, Piper voices through `tract` or `candle`, and Whisper through `candle`. It accepts alpha crates and API churn, keeps the tests and CI gates, and records each bold choice and its fallback in an ADR.
+
+Each phase below has its own dated status note. Items marked **done** are on `main`; items marked **left** say where they went.
+
+## Where we were before Phase 1
+
+This section describes `main` at `11f87d0`, when the roadmap was written.
 
 - **Reading speed is interactive on big files.**
   - 10 MB of Markdown: speech starts in about 0.2 s. A sentence, paragraph, or heading step while reading takes about 2 to 5 ms.
@@ -33,6 +47,12 @@ Sizes:
 ## Phase 1: quick wins and safety (this week)
 
 Each of these is under about half a day. Together they remove the known ways to lose work, go silent, or overwrite a file.
+
+**Status (Saturday, September 26, 2026): done.** Every item below is on `main`, each with a test, except two housekeeping items under "CI, releases, and notices":
+- **left:** pruning merged branches (the `agent/`, `wave2/`, `integration/`, and `phase1/` branches are still there);
+- **left:** merging through pull requests with required checks. Merges are still made locally, after the full checks natively and in Docker.
+
+Who did what: P1a the speech items; P1b saving, settings, authoring, prompts, and the TUI render tests; P1c CI, releases, notices, and dependencies; P1d the loaders and command-line tools. Their status lines in [tasks.md](tasks.md) have the details and test counts.
 
 ### Never lose work, never overwrite
 
@@ -125,7 +145,11 @@ Star's lesson: a stored setting must work.
 
 ## Phase 2: reliability and authoring depth (next two to three weeks)
 
+**Status (Saturday, September 26, 2026): done, a day after Phase 1, except the items marked left below.** P2a did the stability items, P2b the authoring items, P2c the screen reader items, and P2d CI, quality gates, binary size, and releases. The architecture items were not started in Phase 2; they are Agent W3c's brief in Wave 3. Agent P2e, running on this date, closes remaining gaps and moves the default keys toward NVDA and JAWS habits. Jon's decisions for it: citations are skipped in continuous reading by default, with a toggle, and spoken in words; and "preview in browser" says when it updates, with an optional automatic reload.
+
 ### Stability
+
+**Status: done (P2a; audio device recovery by P1a).** Left, for Agent W3a: an engine's first start still waits, where restarts no longer do. DECtalk now synthesizes a sentence at a time rather than streaming within a sentence.
 
 - **Nothing blocks the input or speech threads.**
   - Saves, autosave, position saves, and the disk-change check move to a writer thread.
@@ -140,6 +164,8 @@ Star's lesson: a stored setting must work.
 - **Positions that survive outside edits.** Find each position, bookmark, and note again from its stored context and content hash when the file changed in Obsidian, git, or elsewhere.
 
 ### Authoring
+
+**Status: done (P2b; the citations and math in output by P1d).** Entering edit mode on 10 MB went from 276 ms and 213 MB to 52 ms and 121 MB. Left, for Agent W3a: the misspelling count on save runs on the input thread, about 0.6 s on 10 MB. The editing guide and the citations guide describe the features.
 
 - **Structure while editing.**
   - Re-parse the buffer when typing pauses, and keep markers in source positions. Heading, list, link, and table navigation then work while writing.
@@ -173,6 +199,8 @@ Star's lesson: a stored setting must work.
 
 ### Screen reader coexistence
 
+**Status: done (P2c).** Screen reader detection covers NVDA, JAWS, and Narrator on Windows, VoiceOver, and Orca. Left: Jon's check by ear of the NVDA and JAWS settings in [the screen reader guide](screen-readers.md), each marked there to verify.
+
 - **An accessibility mode setting,** with three choices:
   - **self-voicing**: textweaver speaks everything;
   - **screen-reader**: textweaver is silent;
@@ -185,6 +213,8 @@ Star's lesson: a stored setting must work.
 - **The guide.** `docs/screen-readers.md` gives NVDA and JAWS settings for use with textweaver. Each setting is marked to verify on Jon's machine.
 
 ### CI and quality gates
+
+**Status: done (P2d; supply chain by P1c; loader property tests by P1d; TUI render tests by P1b).** The benchmark gate compares peak heap and allocation counts with main's own artifact (`bench.yml`); two runs differ by 4% at most. `nightly.yml` runs 9 fuzz targets, Miri, AddressSanitizer, release-mode tests, the MSRV check, the Docker job, and the soak test; `cargo hack` runs weekly. The MSRV job uses `--ignore-rust-version`, because krilla 0.8 declares Rust 1.92.
 
 - **Benchmark gate.** `cargo xtask bench --quick` on every pull request, compared with main's own numbers on the same runner. It fails above about twice the baseline, and it gates on peak memory and allocations, which do not vary run to run.
 - **Startup timings.** `tw --version`, `tw text`, `tw info`, and `tw backends`.
@@ -208,6 +238,8 @@ Star's lesson: a stored setting must work.
 
 ### Architecture
 
+**Status: mostly left, for Agent W3c in Wave 3.** Done: the xtask check (`cargo xtask deps --check`, in CI) and one html5ever version (P2d). Left: store off aids, one notes model, font resolution in one place, the `textweaver-engines` crate, and the docs layout.
+
 - **Dependency direction.**
   - Take `store` off `aids`: the settings types move into `store`. ADR-0001's rule is that store depends only on core.
   - Add an xtask check that fails on forbidden dependency edges.
@@ -220,6 +252,8 @@ Star's lesson: a stored setting must work.
 
 ### Binary size
 
+**Status: partly done (P2d).** html5ever is aligned (ammonia held on 4.1.4, which removed 10 duplicate crates) and comrak is a default feature of `textweaver-render`. `tw.exe` went from 32,625,152 to 32,299,008 bytes; `textweaver.exe` stayed at 11,185,664. Left: bundling only some CSL styles (hayagriva's archive is all or nothing, so it was not done), and the app feature for export and citations (Agent W3c).
+
 `tw.exe` grew from 9.4 MB in alpha.3 to 31.4 MB. `cargo bloat` shows code of 19.8 MB. The rest is data: the fonts, SCOWL, and the CSL styles.
 
 The biggest contributors are the citation stack (hayagriva and citationberg), the PDF stack (lopdf, krilla, and the font crates), minijinja, comrak and pulldown-cmark, two html5ever versions, rustls, and serde_path_to_error.
@@ -231,6 +265,8 @@ Steps:
 - The reader now offers export, preview, and citations (Phase 2 authoring), so it links the conversion and citation stack. Put those behind an app feature, on in releases, so a lean reader can still be built. `cargo xtask deps --check` reports the edges until then.
 
 ### Releases
+
+**Status: done (P1c and P2d), except the aarch64 AppImage.** `release.yml` builds Windows, macOS, and Linux, with one checksums job and provenance attestations. `cargo xtask appimage` builds `textweaver-VERSION-linux-x86_64.AppImage` (17.5 MB, with a `.zsync` file) and the tarball on Ubuntu 22.04; both pass on Debian stable, Fedora, and Arch, with and without espeak-ng. The AppImage is checked by its published checksum, not signed. No release has carried it yet: 0.1.0-alpha.3 came before it. Left: the aarch64 AppImage, on GitHub's arm64 runners, after Wave 3.
 
 - **Windows in CI.** Build the Windows package in `release.yml`, keeping the local build as a fallback.
 - **Checksums.** A final job that writes them once.
@@ -247,7 +283,11 @@ Steps:
 
 ## Phase 3: the GUI (Wave 3)
 
-**Update, 2026-09-26:** Jon chose Xilem, Linebender's all-Rust toolkit, for the GUI on every platform. The steps below were written for the wxDragon spike, which stays as a fallback until the Xilem GUI passes the same accessibility checks. The Xilem plan is Agent W3b's brief in `docs/tasks.md`.
+**Status (Saturday, September 26, 2026): planned for Wave 3.** Jon chose Xilem, Linebender's all-Rust toolkit, for the GUI on every platform: Xilem and Masonry for the widgets, Vello for drawing, Parley for text layout, AccessKit for accessibility, and winit for windows. The steps below were written for the wxDragon spike, which stays as a fallback until the Xilem GUI passes the same accessibility checks. In [tasks.md](tasks.md):
+
+- **Agent W3a** builds the app-core pieces listed first below: the document window model, list and prompt state in the app, the waker, `Command::ReplaceRange`, the settings schema (with a new terminal settings screen), and opening in the background. It also takes Phase 2's leftovers off the input thread.
+- **Agent W3b** builds the GUI in a new crate, `textweaver-xilem`, and writes ADR-0023, which supersedes ADR-0014: the main window, the dialogs, themes and fonts loaded straight into Parley, accessibility checks on every OS (UI Automation, AT-SPI under Xvfb, and a macOS smoke test), the large-document targets, and packaging with no GTK or wxWidgets.
+- **After Wave 3:** Jon's NVDA and JAWS listening session, the GUI's edit mode and reading aids, VoiceOver and Orca testing, and signing when funding allows.
 
 Many users will want a GUI, even though Jon works in the terminal. The wxDragon spike is accessible on Windows (ADR-0014). The app core still needs these pieces first:
 
@@ -276,6 +316,12 @@ Then the GUI steps, in order:
 ## Phase 4: Star features for students
 
 These are ranked for students with print disabilities, drawing on Star's history.
+
+**Status (Saturday, September 26, 2026): most of this phase is planned for Wave 3,** pure Rust first:
+- **Agent W3d:** OCR (the pure-Rust `ocrs` in process, only on pages with no text layer, with Tesseract as a fallback), DAISY 3 and DTBook, archives, opening a URL, PPTX, and spreadsheets.
+- **Agent W3e:** define word (glossary, WordNet, CMUdict), settings profiles, reading statistics (`tw stats`), and the groundwork for interface translations.
+- **Agent W3f:** Piper voices in process (`tract` or `candle`), a voice manager, Whisper dictation in process (`candle`), and rate and pitch remembered per voice. Favourites in the voice list were done in Phase 1.
+- **Not yet assigned:** syllable display and the math exploration mode in the reader, and the later items in point 8.
 
 1. **OCR for scanned PDFs** (Tesseract, only on pages with no text layer). PDFs are students' main format.
 2. **DAISY 3 and DTBook,** the Bookshare format.
@@ -322,7 +368,7 @@ These are ranked for students with print disabilities, drawing on Star's history
   - rustdoc with `-D warnings`;
   - the keyboard check;
   - the Docker all-features run.
-- **The wiki.** Progress and milestones go into the Obsidian wiki: `meta/textweaver-releases/textweaver release history.md` and `log.md`.
+- **The wiki.** Progress and milestones go into the Obsidian wiki: the hub `domains/textweaver.md`, `meta/textweaver-releases/textweaver release history.md`, and `log.md`.
 
 ## See also
 
