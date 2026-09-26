@@ -60,9 +60,13 @@ const FIRST_BUFFER_TIMEOUT: Duration = Duration::from_secs(5);
 /// empty buffer, the delegate's finish) has arrived.
 const FINISH_GRACE: Duration = Duration::from_millis(500);
 
-/// Synthesis whose synthesizer says it is no longer speaking, and which
-/// has delivered nothing for this long, is finished.
+/// Synthesis whose synthesizer says it is no longer speaking, which has
+/// reported the text's last word, and which has delivered nothing for this
+/// long, is finished.
 const IDLE_GRACE: Duration = Duration::from_millis(300);
+
+/// As `IDLE_GRACE`, when the last word has not been reported.
+const IDLE_FALLBACK: Duration = Duration::from_millis(1500);
 
 /// Synthesis that delivers nothing for this long after it started
 /// producing audio is treated as finished.
@@ -155,8 +159,11 @@ impl Shared {
     /// Whether synthesis of the job is over, and how that was recognized:
     /// both end signals arrived, or one did `FINISH_GRACE` ago, or (once
     /// audio has started) the synthesizer is no longer speaking and nothing
-    /// arrived for `IDLE_GRACE`, or nothing arrived for `STALL_TIMEOUT`.
-    fn complete(&self, now: Instant, speaking: bool) -> Option<SynthesisEnd> {
+    /// arrived for `IDLE_GRACE` after the last word (`IDLE_FALLBACK`
+    /// without it), or nothing arrived for `STALL_TIMEOUT`. macOS 14 sends
+    /// its word callbacks after the buffers and neither end signal, so the
+    /// last word matters there.
+    fn complete(&self, now: Instant, speaking: bool, last_word: bool) -> Option<SynthesisEnd> {
         let since = |t: Option<Instant>| t.map(|t| now.saturating_duration_since(t));
         let quiet = since(self.last_activity).unwrap_or_default();
         if self.buffers_done && self.delegate_done {
@@ -167,7 +174,7 @@ impl Shared {
             Some(SynthesisEnd::Delegate)
         } else if self.first_buffer.is_none() {
             None
-        } else if !speaking && quiet >= IDLE_GRACE {
+        } else if !speaking && quiet >= if last_word { IDLE_GRACE } else { IDLE_FALLBACK } {
             Some(SynthesisEnd::Idle)
         } else if quiet >= STALL_TIMEOUT {
             Some(SynthesisEnd::Stalled)
@@ -565,7 +572,7 @@ impl AvSpeechBackend {
         };
         let now = Instant::now();
         let speaking = self.synth.speaking();
-        let (audio, words, rate, complete, first, error) = {
+        let (audio, words, rate, first, error) = {
             let mut s = lock(&self.synth.shared);
             if s.job != job.token {
                 return;
@@ -574,7 +581,6 @@ impl AvSpeechBackend {
                 std::mem::take(&mut s.audio),
                 std::mem::take(&mut s.words),
                 s.rate,
-                s.complete(now, speaking),
                 s.first_buffer,
                 s.error.take(),
             )
@@ -598,6 +604,8 @@ impl AvSpeechBackend {
         if let Some(e) = error {
             sink.emit(job.id, RawEvent::Error(e));
         }
+        let last_word = job.tracker.reached_end(&job.text);
+        let complete = lock(&self.synth.shared).complete(now, speaking, last_word);
         if let Some(end) = complete {
             job.synth_done = true;
             self.last_end = end;
@@ -683,7 +691,7 @@ impl AvSpeechBackend {
             if let Some(e) = s.error.take() {
                 return Err(SpeechError::Engine(e));
             }
-            if let Some(end) = s.complete(Instant::now(), speaking) {
+            if let Some(end) = s.complete(Instant::now(), speaking, tracker.reached_end(text)) {
                 break (s.rate, s.buffers, end);
             } else if s.first_buffer.is_none() && started.elapsed() >= FIRST_BUFFER_TIMEOUT {
                 drop(s);

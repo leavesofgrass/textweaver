@@ -176,6 +176,20 @@ impl WordTracker {
         }
     }
 
+    /// True once the last written word of `text` has been reported (or when
+    /// `text` has no words): the engine has reached the end.
+    pub fn reached_end(&self, text: &str) -> bool {
+        let body = text
+            .trim_end()
+            .trim_end_matches(|c: char| is_edge_punctuation(c) || is_separator(c));
+        if body.trim().is_empty() {
+            return true;
+        }
+        self.last
+            .as_ref()
+            .is_some_and(|r| r.end as usize >= body.len())
+    }
+
     /// The word range to report for an engine range in UTF-16 units, or
     /// `None` when the range is empty, out of bounds, or the same word as the
     /// previous report.
@@ -305,6 +319,24 @@ mod tests {
         assert_eq!(word_extent(t2, 1..2), 1..2);
         // Out of bounds: unchanged.
         assert_eq!(word_extent("ab", 1..9), 1..9);
+    }
+
+    #[test]
+    fn tracker_knows_when_the_last_word_was_reported() {
+        let t = "Second sentence.";
+        let mut tracker = WordTracker::new(t);
+        assert!(!tracker.reached_end(t));
+        tracker.word(t, 0, 6);
+        assert!(!tracker.reached_end(t));
+        tracker.word(t, 7, 8);
+        assert!(tracker.reached_end(t));
+        // Trailing quotes and whitespace do not count as words.
+        let q = "He said \u{201C}yes.\u{201D}  ";
+        let mut tracker = WordTracker::new(q);
+        let (loc, len) = utf16_range(q, "yes", 0);
+        tracker.word(q, loc, len);
+        assert!(tracker.reached_end(q));
+        assert!(WordTracker::new("...").reached_end("..."));
     }
 
     #[test]

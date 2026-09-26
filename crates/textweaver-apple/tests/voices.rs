@@ -815,12 +815,13 @@ mod macos {
                 .map_or(-1.0, |w| ms(w.2.duration_since(started))),
             ms(finished.duration_since(started))
         );
-        // Playback runs in real time: the last word cannot arrive before its
-        // offset.
+        // Playback runs in real time: the last word cannot arrive much
+        // before its offset (the mixer reads ahead of the speaker by its
+        // buffer, which the service's latency offset covers).
         ensure(
             words
                 .last()
-                .is_some_and(|w| ms(w.2.duration_since(started)) + 60.0 >= f64::from(last)),
+                .is_some_and(|w| ms(w.2.duration_since(started)) + 150.0 >= f64::from(last)),
             || "words ran ahead of the device clock".into(),
         )
     }
