@@ -34,9 +34,10 @@ pub use notes::{Annotation, Highlight, Note, NotesExport, Relation};
 pub use paths::Paths;
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
-    DisplaySettings, EditingSettings, FootnoteMode, HighlightSettings, KeymapOverrides,
-    LibrarySettings, NormalizationSettings, ReadingSettings, Settings, SettingsLoad, SettingsStore,
-    SpeechSettings, TableMode,
+    AppleBackend, AppleSettings, DisplaySettings, EciDictionaries, EciSettings, EditingSettings,
+    FootnoteMode, HighlightSettings, KeymapOverrides, LibrarySettings, NormalizationSettings,
+    ReadingSettings, SapiSettings, Settings, SettingsLoad, SettingsStore, SpeechSettings,
+    TableMode,
 };
 pub use sync::{ConflictPolicy, SidecarStore};
 
