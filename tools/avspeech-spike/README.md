@@ -1,0 +1,7 @@
+# Apple speech probes
+
+Swift scripts run on GitHub's macOS 14 and 15 runners on 2026-09-25 to decide how textweaver drives Apple's voices (ADR-0008). They write no audio anywhere. Run one on a Mac with `swift tools/avspeech-spike/probe3.swift`.
+
+- `probe.swift`: lists voices and tries `AVSpeechSynthesizer.write(_:toBufferCallback:toMarkerCallback:)`. Result: the Eloquence voices ship with macOS (112 on macOS 15.7, 80 on macOS 14; Reed, Shelley, Rocko, Sandy, Flo, Eddy, Grandma, Grandpa per language); buffer synthesis works (Eloquence at 16 kHz); the marker callback delivered **no** word markers for any voice.
+- `probe2.swift`: word callbacks through the `AVSpeechSynthesizer` delegate (`willSpeakRangeOfSpeechString`) during `speak()` and during `write()`, and through `NSSpeechSynthesizer` (`willSpeakWord`). Result: every route reports every word for Eloquence Reed and Samantha. Eloquence reports sub-token pieces ("Dr", "9", "30", "a", "m"). First-word latency on macOS 15: NSSpeechSynthesizer 217 ms, AVSpeechSynthesizer `speak()` 865 ms (macOS 14: 213 ms).
+- `probe3.swift`: in `write()` mode, word callbacks interleave with buffer callbacks, so the sample count at each callback is the word's audio offset (macOS 15: Reed "Smith" at sample 6,611 = 413 ms, matching live speech; macOS 14 reports in coarser chunks). Creating and driving the synthesizer on a background thread with its own run loop behaves the same.
