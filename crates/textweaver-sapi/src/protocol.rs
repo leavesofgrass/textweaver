@@ -1,4 +1,4 @@
-//! The framed binary protocol between [`SapiBackend`](crate::SapiBackend)
+//! The framed binary protocol between `SapiBackend`
 //! and `textweaver-sapi-host`.
 //!
 //! It deliberately mirrors the ECI host protocol (`textweaver-eci`), so the

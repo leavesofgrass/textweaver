@@ -5,7 +5,7 @@
 //! the OneCore voices) and x86 for 32-bit-only voices (VW Paul, Kate,
 //! James; eSpeak SAPI). The host synthesizes into a stream it forwards as it
 //! is written, and reports each word boundary with its audio offset over a
-//! framed pipe protocol ([`protocol`]). [`SapiBackend`] plays the audio in
+//! framed pipe protocol ([`protocol`]). `SapiBackend` plays the audio in
 //! the main process and turns the offsets into audio-clock word events, so
 //! the highlight follows the word being heard.
 //!
@@ -13,7 +13,7 @@
 //! - [`backend_info`] describes the backend (id `"sapi"`, priority
 //!   [`PRIORITY`], available when the 64-bit host is found);
 //! - [`factory`] builds it on the speech thread;
-//! - [`SapiBackend::voice_details`] / [`list_voices`] give each voice's
+//! - `SapiBackend::voice_details` / [`list_voices`] give each voice's
 //!   architecture, family, vendor, and tags ([`voices::TAG_OPENEVV`] marks
 //!   OpenEVV's Eloquence voices, which the app can prefer for Eloquence
 //!   Reed; [`voices::TAG_NO_WORD_TIMING`] marks Code Factory's).
@@ -231,7 +231,7 @@ pub fn backend_info() -> BackendInfo {
     }
 }
 
-/// A factory that creates a [`SapiBackend`] (and its 64-bit host) on the
+/// A factory that creates a `SapiBackend` (and its 64-bit host) on the
 /// speech thread.
 pub fn factory(config: SapiConfig) -> BackendFactory {
     #[cfg(windows)]

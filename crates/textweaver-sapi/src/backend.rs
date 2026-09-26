@@ -1,4 +1,4 @@
-//! [`SapiBackend`]: the `sapi` speech backend.
+//! `SapiBackend`: the `sapi` speech backend.
 //!
 //! Timing (ADR-0003): `speak` sends the utterance to the host for the
 //! selected voice's architecture and returns at once. The host synthesizes
@@ -315,7 +315,7 @@ pub struct SapiBackend {
     /// The selected voice; `None` is the system default (x64 host).
     voice: Option<VoiceId>,
     family: Family,
-    /// A SAPI rate forced by [`SapiBackend::synthesize_at_rate`].
+    /// A SAPI rate forced by `SapiBackend::synthesize_at_rate`.
     rate_override: Option<i8>,
     next_token: u64,
     active: VecDeque<Active>,
