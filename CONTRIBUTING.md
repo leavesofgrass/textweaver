@@ -100,7 +100,7 @@ Useful options: `--only fmt,clippy` runs some steps, `--fail-fast` stops at the 
 
 CI also runs three checks that `dev-check` does not. Run them yourself when you change dependencies:
 
-- **deps**: `cargo xtask deps --check`. The dependency direction between the workspace crates ([docs/architecture.md](docs/architecture.md#dependency-direction)).
+- **deps**: `cargo xtask deps --check`. The dependency direction between the workspace crates ([docs/architecture.md](docs/architecture.md#dependency-direction)), with cargo features resolved: the reader built with `--no-default-features` must not reach the conversion and citation stack.
 - **notices**: `cargo xtask notices --check`. `THIRD-PARTY-NOTICES.md` is current. It needs `cargo-about`.
 - **deny**: `cargo deny check`. Licences, advisories, duplicate versions, and sources, from `deny.toml`.
 

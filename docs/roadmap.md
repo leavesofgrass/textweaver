@@ -238,7 +238,7 @@ Star's lesson: a stored setting must work.
 
 ### Architecture
 
-**Status: mostly left, for Agent W3c in Wave 3.** Done: the xtask check (`cargo xtask deps --check`, in CI) and one html5ever version (P2d). Left: store off aids, one notes model, font resolution in one place, the `textweaver-engines` crate, and the docs layout.
+**Status (Saturday, September 26, 2026): done (P2d and Agent W3c).** The xtask check (`cargo xtask deps --check`, in CI) and one html5ever version came in Phase 2. Wave 3 took store off aids, made one notes model, put font resolution in `textweaver-fonts`, added the `textweaver-engines` crate, and split `docs/` into guides, `dev/`, `adr/`, and `history/`.
 
 - **Dependency direction.**
   - Take `store` off `aids`: the settings types move into `store`. ADR-0001's rule is that store depends only on core.
@@ -252,7 +252,7 @@ Star's lesson: a stored setting must work.
 
 ### Binary size
 
-**Status: partly done (P2d).** html5ever is aligned (ammonia held on 4.1.4, which removed 10 duplicate crates) and comrak is a default feature of `textweaver-render`. `tw.exe` went from 32,625,152 to 32,299,008 bytes; `textweaver.exe` stayed at 11,185,664. Left: bundling only some CSL styles (hayagriva's archive is all or nothing, so it was not done), and the app feature for export and citations (Agent W3c).
+**Status: partly done (P2d).** html5ever is aligned (ammonia held on 4.1.4, which removed 10 duplicate crates) and comrak is a default feature of `textweaver-render`. `tw.exe` went from 32,625,152 to 32,299,008 bytes; `textweaver.exe` stayed at 11,185,664. Left: bundling only some CSL styles (hayagriva's archive is all or nothing, so it was not done). In-reader export, preview, and citations are now the app's `publish` feature (Agent W3c), on in releases; `cargo build -p textweaver-tui --no-default-features` builds a lean reader without them.
 
 `tw.exe` grew from 9.4 MB in alpha.3 to 31.4 MB. `cargo bloat` shows code of 19.8 MB. The rest is data: the fonts, SCOWL, and the CSL styles.
 
@@ -262,7 +262,7 @@ Steps:
 - Align html5ever.
 - Bundle only the CSL styles used.
 - Put comrak behind a feature.
-- The reader now offers export, preview, and citations (Phase 2 authoring), so it links the conversion and citation stack. Put those behind an app feature, on in releases, so a lean reader can still be built. `cargo xtask deps --check` reports the edges until then.
+- The reader offers export, preview, and citations (Phase 2 authoring), so it links the conversion and citation stack. Done in Wave 3: they are the app's `publish` feature, on in releases, so a lean reader can still be built, and `cargo xtask deps --check` refuses the edges when the feature is off.
 
 ### Releases
 

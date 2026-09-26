@@ -6,7 +6,7 @@ The [interactive architecture page](site/architecture.html) shows the same crate
 
 ## The big picture
 
-textweaver is one Cargo workspace with 28 crates and a maintenance crate, `xtask`. Two programs come out of it:
+textweaver is one Cargo workspace with 29 crates and a maintenance crate, `xtask`. Two programs come out of it:
 
 - `textweaver`, the terminal reader, built from `crates/textweaver-tui`;
 - `tw`, the command-line tool, built from `crates/textweaver-cli`.
@@ -27,7 +27,7 @@ The crates are grouped here by the part of the system they serve. For each crate
 
 ### Documents
 
-- **`textweaver-text`**: the document model. A `Document` is canonical text in a rope plus `Marker`s. Units (grapheme, word, sentence, line, paragraph), navigation, go to, history, search, and narration (`narrate::plan`) are pure functions of a document and a position. ADRs: [0002](adr/0002-text-model.md), [0005](adr/0005-narration-and-offset-map.md). Depends on core.
+- **`textweaver-text`**: the document model. A `Document` is canonical text in a rope plus `Marker`s. Units (grapheme, word, sentence, line, paragraph), navigation, go to, history, search, narration (`narrate::plan`), and the heading-anchor rule (`slug`) are pure functions of a document and a position. ADRs: [0002](adr/0002-text-model.md), [0005](adr/0005-narration-and-offset-map.md). Depends on core.
 - **`textweaver-formats`**: loaders. Text, Markdown, HTML, EPUB, DOCX, and PDF, a registry that picks the loader by extension, a document cache, and exports to Markdown, HTML, and text. The loaders refuse binary files and limit nesting depth and counters, so a hostile file cannot crash a batch. An optional `pandoc` feature adds the one Pandoc loader, sandboxed and with a timeout; only `tw convert` registers it. ADRs: [0002](adr/0002-text-model.md), [0010](adr/0010-pdf-loader.md). Depends on core and text.
 - **`textweaver-math`**: LaTeX and ASCIIMath parsed into one tree, written as MathML, spoken as English with an offset map, navigable part by part, and found in plain text without mistaking prices for math. ADR: [0018](adr/0018-math.md). Depends on core.
 - **`textweaver-cite`**: the reference library, DOI and ISBN lookup, BibTeX, RIS, and CSL-JSON, CSL formatting, and Pandoc citation keys. ADR: [0019](adr/0019-citations.md). Depends on core.
@@ -40,34 +40,35 @@ The crates are grouped here by the part of the system they serve. For each crate
 - **`textweaver-sapi`**: Windows SAPI5 and OneCore voices, in 64-bit and 32-bit host processes. ADRs: [0009](adr/0009-sapi5-voices.md), [0012](adr/0012-engine-host.md). Depends on core, speech, and enginehost.
 - **`textweaver-dectalk`**: a user-installed DECtalk, in a host process. ADRs: [0021](adr/0021-dectalk.md), [0012](adr/0012-engine-host.md). Depends on core, speech, and enginehost.
 - **`textweaver-apple`**: Apple's voices on macOS, as the `nsspeech` and `avspeech` backends. Empty on other systems. ADR: [0008](adr/0008-apple-speech.md). Depends on core and speech.
+- **`textweaver-engines`**: the one backend registry every frontend shares: the speech crate's built-ins plus Eloquence, SAPI5, Apple, and DECtalk, each configured from the settings, and the speech service configuration. It has the in-process engine features (`espeak`, `omnivox`, `speechd`) and re-exports the engine crates. ADRs: [0001](adr/0001-workspace-and-dependencies.md), [0012](adr/0012-engine-host.md). Depends on core, speech, store, eci, sapi, dectalk, and apple.
 - **`textweaver-export`**: reads a document into WAV, MP3, or M4B with chapters, and writes SRT or WebVTT subtitles. ADR: [0011](adr/0011-audio-export.md). Depends on core, speech, and text.
 
 ### State and input
 
-- **`textweaver-store`**: settings and key overrides, per-document state (position, history, bookmarks, notes, highlights), recent files, the library and its full-text index, folder sidecars and their merge rules, settings import and export, and the Star migration. ADR: [0001](adr/0001-workspace-and-dependencies.md). Depends on core and aids (for the `[reading_aids]` settings types).
+- **`textweaver-store`**: settings and key overrides, per-document state (position, history, bookmarks, notes, highlights), recent files, the library and its full-text index, folder sidecars and their merge rules, settings import and export, and the Star migration. It owns the one notes model (`Note`, `Highlight`, `Relation`, `RelationType`) and the saved form of the `[reading_aids]` settings (`reading_aids`). ADR: [0001](adr/0001-workspace-and-dependencies.md). Depends on core.
 - **`textweaver-keymap`**: every action, key chords, layers, the default keys for the terminal and the GUI, overrides, conflict checks, and the generated help. ADR: [0006](adr/0006-keymap-and-actions.md). Depends on core.
 - **`textweaver-a11y`**: the `Announcer` trait, the announcement catalogue, verbosity, the accessibility mode with `route` (which decides whether each message, echo, caret move, and piece of read text goes to the voice, the status line, or both), and screen reader detection (`detect`). ADR: [0006](adr/0006-keymap-and-actions.md). Depends on core.
 - **`textweaver-editor`**: undo and redo over a rope, Markdown commands, find and replace, typing echo, autosave and recovery, and saving. Designed in section 6.6 of [the plan](plan.md). Depends on core.
 
 ### Application
 
-- **`textweaver-app`**: the application core. `App` owns all mutable state. Frontends send `Command`s to `App::dispatch` and act on the `Effect`s it returns; `App::poll_speech` applies speech status. It also holds the backend registry wiring, reading aids, themes, notes, the library list, the writer thread (`writer`, `writes`), finding marks again after outside edits (`relocate`), the structure of Markdown source while editing (`structure`), the authoring features (outline, spelling, citations, export, preview, templates), and the JSON-RPC server (`rpc`). ADRs: [0003](adr/0003-speech-threading-and-event-timing.md), [0006](adr/0006-keymap-and-actions.md), [0015](adr/0015-json-rpc.md). Depends on core, text, formats, speech, store, keymap, a11y, editor, aids, theme, eci, sapi, apple, dectalk, and, for export and citations in the reader, render, convert, and cite.
+- **`textweaver-app`**: the application core. `App` owns all mutable state. Frontends send `Command`s to `App::dispatch` and act on the `Effect`s it returns; `App::poll_speech` applies speech status. It also holds reading aids, themes, notes, the library list, the writer thread (`writer`, `writes`), finding marks again after outside edits (`relocate`), the structure of Markdown source while editing (`structure`), the authoring features (outline, spelling, citations, export, preview, templates), and the JSON-RPC server (`rpc`). ADRs: [0003](adr/0003-speech-threading-and-event-timing.md), [0006](adr/0006-keymap-and-actions.md), [0015](adr/0015-json-rpc.md). Depends on core, text, formats, speech, engines, store, keymap, a11y, editor, aids, theme, and math, and, with its `publish` feature (on by default and in releases) for export, preview, and citations in the reader, on render, convert, and cite. Without `publish` those commands say they are not in this build.
 
 ### Frontends
 
-- **`textweaver-tui`**: the terminal reader, on ratatui and crossterm; builds the `textweaver` program. ADRs: [0006](adr/0006-keymap-and-actions.md), [0020](adr/0020-themes.md), [0022](adr/0022-reading-aids.md). Depends on app, theme, and aids.
-- **`textweaver-cli`**: the `tw` program. One module per subcommand. `tw open` and `tw serve` run the terminal reader and the JSON-RPC server in process. ADRs: [0015](adr/0015-json-rpc.md), [0016](adr/0016-rendering-and-conversion.md), [0011](adr/0011-audio-export.md). Depends on app, tui, convert, render, writers, export, cite, vault, and dictation.
+- **`textweaver-tui`**: the terminal reader, on ratatui and crossterm; builds the `textweaver` program. ADRs: [0006](adr/0006-keymap-and-actions.md), [0020](adr/0020-themes.md), [0022](adr/0022-reading-aids.md). Depends on app, engines, theme, and aids. Its default feature `publish` turns on the app's; `cargo build -p textweaver-tui --no-default-features` builds a lean reader without export, preview, and citations.
+- **`textweaver-cli`**: the `tw` program. One module per subcommand. `tw open` and `tw serve` run the terminal reader and the JSON-RPC server in process. ADRs: [0015](adr/0015-json-rpc.md), [0016](adr/0016-rendering-and-conversion.md), [0011](adr/0011-audio-export.md). Depends on app (with `publish`), engines, tui, convert, render, writers, export, cite, vault, and dictation.
 - **`textweaver-gui`**: the GUI spike on wxDragon, kept as a fallback while Wave 3 builds the Xilem GUI. ADR: [0014](adr/0014-gui-toolkit.md). Depends on app, aids, and fonts. Not a default member of the workspace.
 
 ### Output and study tools
 
-- **`textweaver-render`**: Markdown to accessible HTML, with two engines, four flavors, math as MathML, and MiniJinja templates. ADRs: [0016](adr/0016-rendering-and-conversion.md), [0018](adr/0018-math.md). Depends on math.
+- **`textweaver-render`**: Markdown to accessible HTML, with two engines, four flavors, math as MathML, and MiniJinja templates. ADRs: [0016](adr/0016-rendering-and-conversion.md), [0018](adr/0018-math.md). Depends on text (for the heading slug rule) and math.
 - **`textweaver-convert`**: converts files and folder trees on every core, skipping what is up to date, and watches folders. It formats citations with a References section. ADR: [0016](adr/0016-rendering-and-conversion.md). Depends on core, text, formats, render, writers, and cite.
 - **`textweaver-writers`**: EPUB 3, DOCX, BRF braille, and tagged PDF, written from a `Document`, with math typeset in each. ADR: [0017](adr/0017-writers.md). Depends on core, text, fonts, and math.
-- **`textweaver-fonts`**: the bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic) and a scan of installed fonts. ADRs: [0017](adr/0017-writers.md), [0022](adr/0022-reading-aids.md). Depends on nothing in the workspace.
+- **`textweaver-fonts`**: the bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic), a scan of installed fonts (once per process, `system::installed`), and the one place a font choice is resolved (`choice`: the family a reader picked, the reading fonts, platform fallbacks, and which family to use). The reading aids, the writers, and the GUIs all use it. ADRs: [0017](adr/0017-writers.md), [0022](adr/0022-reading-aids.md). Depends on nothing in the workspace.
 - **`textweaver-theme`**: the 23 themes, user themes, contrast checks, and output for the terminal, the GUI, and CSS. ADR: [0020](adr/0020-themes.md). Depends on nothing in the workspace.
-- **`textweaver-aids`**: RSVP, bionic reading, text spacing, fonts, the reading ruler, difficult words, reading level, and syllables, as pure data in and out. ADR: [0022](adr/0022-reading-aids.md). Depends on core, text, and fonts.
-- **`textweaver-vault`**: Obsidian vault export and import of notes and highlights. Ported from Star; no ADR. Depends on core and store.
+- **`textweaver-aids`**: RSVP, bionic reading, text spacing, fonts, the reading ruler, difficult words, reading level, and syllables, as pure data in and out. It converts between the saved `[reading_aids]` settings in store and its own working types (`settings`). ADR: [0022](adr/0022-reading-aids.md). Depends on core, text, store, and fonts.
+- **`textweaver-vault`**: Obsidian vault export and import of notes and highlights, on the store's own `Note` and `Highlight` (one notes model). Ported from Star; no ADR. Depends on core and store.
 - **`textweaver-dictation`**: the `Dictation` trait, the Whisper subprocess backend, and spoken commands. ADR: [0013](adr/0013-dictation.md). Depends on core.
 
 ### Tools
@@ -80,25 +81,26 @@ Dependencies point down, from the frontends to the foundation, and never back up
 
 - `textweaver-core` depends on no other workspace crate. Everything else may depend on it.
 - `textweaver-speech` never sees a `Document`. It receives `Utterance`s: text plus an offset map. It depends only on core and math, so it can be tested with no document, no frontend, and no audio.
-- Engine crates (eci, sapi, dectalk, apple) depend on speech, not the other way round. The app registers them with the speech registry.
+- Engine crates (eci, sapi, dectalk, apple) depend on speech, not the other way round. `textweaver-engines` registers them with the speech registry; the app and the frontends use that crate, not each engine crate.
 - The editor works on a rope and core's `Edit`. The app applies the same edit to the `Document` with `Document::apply`, so markers, bookmarks, and notes move with it.
 - `textweaver-app` is the only crate that knows about everything. Frontends depend on the app, never on each other, except that the CLI runs the TUI in process for `tw open`.
 - Output crates (render, convert, writers) do not depend on speech or the app, so conversion works with no speech at all.
 
-Three rules changed after ADR-0001 was written. Speech depends on math, because math is spoken inside the normalization pipeline. Store depends on aids, for the reading-aid settings types. And since Phase 2 the app depends on render, convert, and cite, because the reader exports, previews, and inserts citations. Documents still stay out of speech.
+Two rules changed after ADR-0001 was written. Speech depends on math, because math is spoken inside the normalization pipeline. And since Phase 2 the app can depend on render, convert, and cite, because the reader exports, previews, and inserts citations; since Wave 3 that is the app's `publish` feature, on by default and in releases. Documents still stay out of speech. Store depends only on core again (Wave 3, Agent W3c): the reading-aid settings types are store's own, and aids converts them.
 
-`cargo xtask deps --check` checks these rules and runs in CI. It refuses a forbidden edge: core depending on anything, speech reaching text or formats, store reaching more than core, or the reader reaching the conversion and citation stack. Two known exceptions are reported as "allowed for now" without failing: store on aids, and the reader reaching convert, render, writers, and cite through the app. Wave 3 plans to remove both: the settings types move into store (Agent W3c), and in-reader export and citations become an app feature, on by default and in releases, so a lean reader can still be built.
+`cargo xtask deps --check` checks these rules and runs in CI. It refuses a forbidden edge: core depending on anything, speech reaching text or formats, store reaching more than core, or the reader reaching the conversion and citation stack without its default features. It resolves cargo features as Cargo does, and reports what the reader reaches only through `publish` as allowed.
 
 The crates in levels, from the bottom up. Each crate depends only on crates in lower levels:
 
 1. core, fonts, and theme, which depend on no workspace crate;
-2. text, math, cite, keymap, a11y, editor, and dictation;
-3. formats, aids, speech, render, and writers;
-4. enginehost, apple, export, store, and convert;
-5. eci, sapi, dectalk, and vault;
-6. app;
-7. tui, gui, and xtask;
-8. cli.
+2. text, math, cite, store, keymap, a11y, editor, and dictation;
+3. formats, aids, speech, render, writers, and vault;
+4. enginehost, apple, export, and convert;
+5. eci, sapi, and dectalk;
+6. engines;
+7. app;
+8. tui, gui, and xtask;
+9. cli.
 
 ## Threads and processes
 
