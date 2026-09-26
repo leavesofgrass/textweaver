@@ -14,6 +14,21 @@ textweaver-core.workspace = true
 textweaver-text.workspace = true
 thiserror.workspace = true
 serde.workspace = true
+krilla.workspace = true
+zip.workspace = true
+
+[features]
+default = []
+# Contracted (grade 2) braille through liblouis's `lou_translate`, when it
+# is installed.
+liblouis = []
+
+[dev-dependencies]
+ropey.workspace = true
+roxmltree.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+textweaver-formats.workspace = true
 
 [lints]
 workspace = true
