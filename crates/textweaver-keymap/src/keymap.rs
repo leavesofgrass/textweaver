@@ -596,7 +596,10 @@ mod tests {
             for frontend in Frontend::ALL {
                 let map = Keymap::defaults(platform, frontend);
                 assert_eq!(map.preset(), Preset::Default);
-                assert_eq!(map, Keymap::with_preset(platform, frontend, Preset::Default));
+                assert_eq!(
+                    map,
+                    Keymap::with_preset(platform, frontend, Preset::Default)
+                );
                 for (chord, action) in [
                     ("h", ActionId::SkipNextHeading),
                     ("Shift+H", ActionId::SkipPreviousHeading),

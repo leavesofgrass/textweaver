@@ -225,6 +225,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `wrap_navigation`, default `false`: moving past the end of the document starts again at the beginning.
 - `cursor_follows_speech`, default `true`: the cursor moves with the spoken word.
 - `sync_conflict_policy`, default `"newest"`: when a library folder's sidecar and your own record of a position disagree, which one wins. `"newest"` (the newest time), `"highest_progress"` (the furthest position), or `"manual"` (keep both and ask). See [The library](library.md).
+- `citations`, default `"off"`: what continuous reading does with a citation such as `[@doe2020, p. 12]`. `"off"` skips it (an in-text citation keeps its authors); `"words"` says it in words from your library, "Doe and Roe, 2020, page 12". Alt+Shift+Q switches it. Word moves say citations in words either way. See [Citations while reading](reading.md#citations-while-reading).
 
 ### [display]
 
@@ -261,8 +262,9 @@ See [The library](library.md).
 
 ### [keyboard]
 
-- `character_keys`, default `true`: single-key shortcuts, such as `.` for the next sentence. Set it to `false`, or press F9, so dictation or typing never triggers a command. See [the keyboard reference](keyboard.md#single-key-shortcuts).
-- `preset`, default `"default"`: the set of keys to start from. `"screen-reader"` uses `h`, `l`, `k`, `t`, `i`, and `1` to `6` as a screen reader's browse mode does; `keymap.toml` applies on top. See [the keyboard reference](keyboard.md#the-screen-reader-preset).
+- `character_keys`, default `true`: single-key shortcuts, such as `h` for the next heading. Set it to `false`, or press F9, so dictation or typing never triggers a command. See [the keyboard reference](keyboard.md#single-key-shortcuts).
+- `preset`, default `"default"`: the set of keys to start from. `"default"` is the quick navigation of NVDA's and JAWS's browse mode (`h`, `1` to `6`, `l`, `i`, `t`, `k`, `q`, `s`, `g`, `d`); `"classic"` is textweaver's earlier keys. `"screen-reader"`, the old name of the default, still works. `keymap.toml` applies on top. See [the keyboard reference](keyboard.md#what-changed).
+- `digit_row`, default `"auto"`: how the terminal knows the digit keys `1` to `6` (heading levels) when it gets only the typed character. `"auto"` knows the shifted digits of the US, UK, German, Spanish, Nordic, and Italian layouts; `"azerty"` is for French keyboards, where the digits need Shift. On Windows textweaver reads the digit key itself, and this setting does not matter.
 
 ### [accessibility]
 
@@ -287,7 +289,8 @@ Audio export. See [Audio export](audio-export.md).
 See [Reading aids](reading-aids.md).
 
 - `bionic`, default `false`: bionic reading, the start of each word in bold. Alt+Shift+B turns it on and off.
-- `syllables`, default `false`: show long words split into syllables. Not used yet by the terminal reader.
+- `syllables`, default `false`: show long words split into syllables, `read·a·bil·i·ty`. Alt+Shift+Z turns it on and off. The terminal reader draws it; the GUI does not yet.
+- `difficult_words`, default `false`: underline rare words (SCOWL sizes above 50), and name them on word moves at high verbosity. Alt+Shift+J turns it on and off. The terminal reader draws it; the GUI does not yet.
 
 ### [reading_aids.bionic_options]
 
@@ -337,11 +340,18 @@ The reading ruler. Alt+Shift+U cycles it.
 
 ### [reading_aids.syllable_options]
 
-For the syllable display, which the terminal reader does not show yet.
+For the syllable display (`syllables` above).
 
 - `separator`, default `"·"`: the character placed between syllables.
 - `min_word_len`, default `4`, `left_min`, default `2`, and `right_min`, default `2`: the shortest word to split, and the fewest letters kept before the first break and after the last.
 - `skip_urls` and `skip_code`, default `true`.
+
+### [preview]
+
+The browser preview of the document you are editing (`preview in browser` in the palette). See [the editing guide](editing.md#preview-in-the-browser).
+
+- `auto_reload`, default `false`: reload the page by itself after each save, through a small server on this computer only (127.0.0.1, with a secret in the address), landing on the heading nearest the caret. Off, textweaver says "Preview updated. Press F5 in the browser." A reload moves your screen reader's place in the page, which is why it is off. The palette's `toggle preview auto reload` switches it.
+- `live`, default `false`: with `auto_reload`, also reload when typing pauses for a second. The palette's `toggle preview live` switches it.
 
 ## See also
 

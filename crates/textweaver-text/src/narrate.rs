@@ -388,7 +388,9 @@ impl Planner<'_> {
             };
             // Pieces the planner made itself (footnotes, links) win.
             let taken = pieces.iter().any(|p| match p {
-                Piece::Replace(r, _) | Piece::Elide(r) => r.intersection(part).is_some_and(|x| !x.is_empty()),
+                Piece::Replace(r, _) | Piece::Elide(r) => {
+                    r.intersection(part).is_some_and(|x| !x.is_empty())
+                }
                 Piece::Insert(at, _) => part.start < *at && *at < part.end,
             });
             if taken {
@@ -998,7 +1000,10 @@ mod tests {
         let mut out = Vec::new();
         let mut start = None;
         let text = &u.text;
-        for (i, c) in text.char_indices().chain(std::iter::once((text.len(), ' '))) {
+        for (i, c) in text
+            .char_indices()
+            .chain(std::iter::once((text.len(), ' ')))
+        {
             let word = c.is_alphanumeric() || c == ',';
             match (word, start) {
                 (true, None) => start = Some(i),
@@ -1030,8 +1035,11 @@ mod tests {
         check(&us);
         assert_eq!(texts(&us), ["Reading helps a lot.", "Next one."]);
         let map = &us[0].offset_map;
-        assert!(map.spans().iter().any(|sp| sp.kind == SpanKind::Elided
-            && sp.source == CharRange::new(13, 31)));
+        assert!(
+            map.spans()
+                .iter()
+                .any(|sp| sp.kind == SpanKind::Elided && sp.source == CharRange::new(13, 31))
+        );
         let words = word_sources(&us[0]);
         assert!(words.contains(&("lot".to_owned(), lot)), "{words:?}");
         assert!(words.contains(&("helps".to_owned(), CharRange::new(8, 13))));
@@ -1043,7 +1051,10 @@ mod tests {
         check(&us);
         assert_eq!(
             texts(&us),
-            ["Reading helps Doe and Roe, 2020, page 12 a lot.", "Next one."]
+            [
+                "Reading helps Doe and Roe, 2020, page 12 a lot.",
+                "Next one."
+            ]
         );
         let at = us[0].text.find("Roe").unwrap();
         assert_eq!(us[0].source_for(at as u32..at as u32 + 3), Some(cite));
@@ -1077,7 +1088,10 @@ mod tests {
             &d,
             d.full_range(),
             &NarrationPolicy::default(),
-            &[InlineSpeech::skip(r), InlineSpeech::say(CharRange::new(8, 10), "x")],
+            &[
+                InlineSpeech::skip(r),
+                InlineSpeech::say(CharRange::new(8, 10), "x"),
+            ],
         );
         check(&us);
         assert!(!texts(&us).join(" ").contains('x'));

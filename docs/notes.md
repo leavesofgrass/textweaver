@@ -50,8 +50,10 @@ The note also keeps a copy of the passage it was attached to, up to 120 characte
 
 ### Move between notes: e and Shift+E
 
-- **e**, **'** (apostrophe), or **Alt+Down**: the next note.
-- **Shift+E**, **"** (quotation mark), or **Alt+Up**: the previous note.
+- **e** or **F12**: the next note.
+- **Shift+E** or **Shift+F12**: the previous note.
+
+In the classic keys (`preset = "classic"` under `[keyboard]`), **Alt+Down** and **Alt+Up** step through notes as before. By default they move by sentence.
 
 You hear "Note 2 of 5:", the note, then "On:" and the passage. After the last note, textweaver wraps to the first and says "Wrapped." With no notes you hear "No notes."
 

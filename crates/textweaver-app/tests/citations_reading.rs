@@ -52,8 +52,7 @@ impl Rig {
     fn read_all(&mut self) {
         self.log.clear();
         self.app.set_cursor(CharPos(0));
-        self.app
-            .dispatch(Command::Action(ActionId::ReadFromCursor));
+        self.app.dispatch(Command::Action(ActionId::ReadFromCursor));
         let deadline = Instant::now() + Duration::from_secs(30);
         while self.app.playback() != Playback::Idle {
             assert!(Instant::now() < deadline, "reading never finished");
@@ -144,7 +143,8 @@ fn citations_on_are_said_in_words_over_the_whole_citation() {
 
 #[test]
 fn in_text_citations_and_unknown_keys() {
-    let text = "@doe2020 argues this. See [@doe2020; @nobody, p. 4] too. Mail jon@example.com now.\n";
+    let text =
+        "@doe2020 argues this. See [@doe2020; @nobody, p. 4] too. Mail jon@example.com now.\n";
     let mut r = rig(text, CitationReading::Off);
     r.read_all();
     let spoken = r.spoken();
@@ -155,7 +155,10 @@ fn in_text_citations_and_unknown_keys() {
     let mut r = rig(text, CitationReading::Words);
     r.read_all();
     let spoken = r.spoken();
-    assert!(spoken.contains("Doe and Roe, twenty twenty argues"), "{spoken}");
+    assert!(
+        spoken.contains("Doe and Roe, twenty twenty argues"),
+        "{spoken}"
+    );
     // An unknown key is read as the key.
     assert!(
         spoken.contains("See Doe and Roe, twenty twenty; nobody, page 4 too."),
@@ -174,20 +177,16 @@ fn in_text_citations_and_unknown_keys() {
 #[test]
 fn the_key_toggles_and_says_so() {
     let mut r = rig(TEXT, CitationReading::Off);
-    r.app
-        .dispatch(Command::Action(ActionId::ToggleCitations));
+    r.app.dispatch(Command::Action(ActionId::ToggleCitations));
     assert_eq!(r.app.status_text(), "Citations on.");
     assert_eq!(r.app.settings().reading.citations, CitationReading::Words);
-    r.app
-        .dispatch(Command::Action(ActionId::ToggleCitations));
+    r.app.dispatch(Command::Action(ActionId::ToggleCitations));
     assert_eq!(r.app.status_text(), "Citations off.");
     // During continuous reading it goes on from the word being read, after
     // saying the change.
     r.log.clear();
-    r.app
-        .dispatch(Command::Action(ActionId::ReadFromCursor));
-    r.app
-        .dispatch(Command::Action(ActionId::ToggleCitations));
+    r.app.dispatch(Command::Action(ActionId::ReadFromCursor));
+    r.app.dispatch(Command::Action(ActionId::ToggleCitations));
     let deadline = Instant::now() + Duration::from_secs(30);
     while r.app.playback() != Playback::Idle {
         assert!(Instant::now() < deadline);
@@ -198,7 +197,9 @@ fn the_key_toggles_and_says_so() {
     let texts = r.log.texts();
     assert!(texts.iter().any(|t| t == "Citations on."), "{texts:?}");
     assert!(
-        texts.iter().any(|t| t.contains("Doe and Roe, twenty twenty, page 12")),
+        texts
+            .iter()
+            .any(|t| t.contains("Doe and Roe, twenty twenty, page 12")),
         "{texts:?}"
     );
 }
@@ -207,10 +208,11 @@ fn the_key_toggles_and_says_so() {
 fn word_moves_say_citations_in_words_whatever_the_setting() {
     let mut r = rig(TEXT, CitationReading::Off);
     r.app.set_cursor(r.range_of("helps").start);
-    r.app
-        .dispatch(Command::Action(ActionId::CaretNextWord));
+    r.app.dispatch(Command::Action(ActionId::CaretNextWord));
     assert!(
-        r.app.status_text().starts_with("Citation: Doe and Roe, 2020"),
+        r.app
+            .status_text()
+            .starts_with("Citation: Doe and Roe, 2020"),
         "{}",
         r.app.status_text()
     );

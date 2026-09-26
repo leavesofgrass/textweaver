@@ -204,8 +204,8 @@ While they are off, printable keys and Space never trigger commands in any mode;
 Put overrides in `keymap.toml` in the configuration directory. Each line replaces all of an action's keys; an empty list removes them:
 
 ```toml
-next_sentence = [\"Alt+.\", \".\"]
-stop = [\"Escape\", \"b:x\"]
+next_sentence = [\"Alt+.\", \"x\"]
+stop = [\"Escape\", \"b:z\"]
 bold = []
 ```
 
@@ -336,12 +336,13 @@ pub fn preset_markdown(preset: Preset) -> String {
         }
     }
     for action in moved {
-        let _ = writeln!(
-            out,
-            "- {}: {}.",
-            action.help(),
-            cell(action, &changed.bindings_for(action))
-        );
+        let keys = changed.bindings_for(action);
+        let where_now = if keys.is_empty() {
+            "the command palette only".to_owned()
+        } else {
+            cell(action, &keys)
+        };
+        let _ = writeln!(out, "- {}: {where_now}.", action.help());
     }
     out
 }

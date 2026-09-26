@@ -175,8 +175,8 @@ mod writer;
 mod writes;
 
 pub use access::{
-    SENTENCE_GAP, STATUS_TEXT_LIMIT, access_mode_from_setting, access_mode_setting, digit_row, keymap_preset,
-    sentence_duration,
+    SENTENCE_GAP, STATUS_TEXT_LIMIT, access_mode_from_setting, access_mode_setting, digit_row,
+    keymap_preset, sentence_duration,
 };
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use authoring::osc52;
@@ -186,11 +186,11 @@ pub use backends::{
     speech_registry, speech_registry_for,
 };
 pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpose};
-pub use math_explore::MathMove;
 pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_lookup};
 pub use goto::parse_go_to;
 pub use help::{chords_text, help_entries, palette_matches, resolve_command};
+pub use math_explore::MathMove;
 pub use notes::{HIGHLIGHTS_KEY, NOTES_KEY, UserHighlight, migrate_legacy_notes, parse_tags};
 pub use playback::{Playback, load_options, narration_policy};
 pub use restart::SpeechStarter;

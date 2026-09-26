@@ -98,7 +98,11 @@ fn shifted_digits_of_other_layouts_reach_the_previous_heading() {
     for (c, heading) in [('§', "Three"), ('"', "Two"), ('&', "Six"), ('¤', "Four")] {
         h.press(key(KeyCode::End));
         h.press(ch(c));
-        assert!(h.line_of(h.cursor()).contains(heading), "{c}: {}", h.status());
+        assert!(
+            h.line_of(h.cursor()).contains(heading),
+            "{c}: {}",
+            h.status()
+        );
     }
     // US characters work as before.
     h.press(key(KeyCode::End));
@@ -187,10 +191,20 @@ fn syllables_draw_between_chars_and_highlights_stay_exact() {
     let col = row[..row.find("mat").unwrap()].chars().count();
     assert_eq!(usize::from(p.x), col);
     // Speech and positions are the text as it is.
-    assert_eq!(h.tui.app().session().unwrap().doc.slice(word), "Readability");
+    assert_eq!(
+        h.tui.app().session().unwrap().doc.slice(word),
+        "Readability"
+    );
     // Hidden again.
-    h.press(KeyEvent::new(KeyCode::Char('Z'), KeyModifiers::ALT | KeyModifiers::SHIFT));
-    assert!(h.status().starts_with("Syllables hidden."), "{}", h.status());
+    h.press(KeyEvent::new(
+        KeyCode::Char('Z'),
+        KeyModifiers::ALT | KeyModifiers::SHIFT,
+    ));
+    assert!(
+        h.status().starts_with("Syllables hidden."),
+        "{}",
+        h.status()
+    );
     assert!(h.row(y).starts_with("Readability matters"));
 }
 
@@ -200,8 +214,15 @@ fn difficult_words_are_underlined_and_named_at_high_verbosity() {
     s.speech.verbosity = textweaver_app::a11y::Verbosity::High;
     let text = "The cat saw obvious mitochondria today.\n";
     let mut h = launch(s, "d.txt", text);
-    h.press(KeyEvent::new(KeyCode::Char('J'), KeyModifiers::ALT | KeyModifiers::SHIFT));
-    assert!(h.status().starts_with("Difficult words underlined."), "{}", h.status());
+    h.press(KeyEvent::new(
+        KeyCode::Char('J'),
+        KeyModifiers::ALT | KeyModifiers::SHIFT,
+    ));
+    assert!(
+        h.status().starts_with("Difficult words underlined."),
+        "{}",
+        h.status()
+    );
     let y = h.body_row();
     let under = |h: &Harness, x: usize| {
         h.term.backend().buffer()[(x as u16, y)]
@@ -212,7 +233,9 @@ fn difficult_words_are_underlined_and_named_at_high_verbosity() {
     assert!(under(&h, hard), "{}", h.row(y));
     assert!(!under(&h, text.find("cat").unwrap()));
     // A word move onto it says so.
-    h.tui.app_mut().set_cursor(CharPos(text.find("obvious").unwrap()));
+    h.tui
+        .app_mut()
+        .set_cursor(CharPos(text.find("obvious").unwrap()));
     h.press(key(KeyCode::Right));
     assert_eq!(h.cursor(), CharPos(hard));
     assert!(
@@ -229,7 +252,10 @@ fn math_exploration_keys() {
     h.tui
         .app_mut()
         .set_cursor(CharPos(text.find("frac").unwrap() - 1));
-    h.press(KeyEvent::new(KeyCode::Char('X'), KeyModifiers::ALT | KeyModifiers::SHIFT));
+    h.press(KeyEvent::new(
+        KeyCode::Char('X'),
+        KeyModifiers::ALT | KeyModifiers::SHIFT,
+    ));
     assert!(h.tui.app().math_exploring(), "{}", h.status());
     h.press(key(KeyCode::Down));
     assert!(h.status().starts_with("numerator"), "{}", h.status());
@@ -242,7 +268,10 @@ fn math_exploration_keys() {
     assert!(!h.tui.app().math_exploring());
     assert!(h.status().starts_with("Left math."), "{}", h.status());
     // Another key leaves at once and does its own work.
-    h.press(KeyEvent::new(KeyCode::Char('X'), KeyModifiers::ALT | KeyModifiers::SHIFT));
+    h.press(KeyEvent::new(
+        KeyCode::Char('X'),
+        KeyModifiers::ALT | KeyModifiers::SHIFT,
+    ));
     assert!(h.tui.app().math_exploring());
     h.press(ch('j'));
     assert!(!h.tui.app().math_exploring());

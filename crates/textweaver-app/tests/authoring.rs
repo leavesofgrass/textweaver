@@ -618,7 +618,11 @@ fn preview_auto_reload_serves_the_page_and_reloads_after_saves() {
     );
     r.act(ActionId::TogglePreviewAutoReload);
     assert!(r.app.settings().preview.auto_reload);
-    assert!(r.status().starts_with("Automatic preview reloading on"), "{}", r.status());
+    assert!(
+        r.status().starts_with("Automatic preview reloading on"),
+        "{}",
+        r.status()
+    );
     r.act(ActionId::PreviewInBrowser);
     r.wait();
     let opened = r.opened();
@@ -671,7 +675,12 @@ fn preview_auto_reload_serves_the_page_and_reloads_after_saves() {
         }
         event.push_str(&line);
     }
-    assert_eq!(event, "event: reload\ndata: methods\n", "{:?}", r.said.all());
+    assert_eq!(
+        event,
+        "event: reload\ndata: methods\n",
+        "{:?}",
+        r.said.all()
+    );
     assert!(r.said.any("Preview updated."));
     assert!(!r.said.any("Press F5"), "{:?}", r.said.all());
     // Off: the server stops.

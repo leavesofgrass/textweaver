@@ -164,6 +164,28 @@ pub fn chosen(previous: &FontSettings, family: &str, size: i32, bold: bool) -> F
     .clamped()
 }
 
+/// macOS: what to say when the reading font is a built-in family that
+/// macOS cannot load, so it draws a system font instead. macOS loads an
+/// application's own fonts only from its `.app` package
+/// (`bundle_has_fonts`); elsewhere nothing is registered, and the family
+/// shows only if it is installed (`installed`; `None` while the scan runs,
+/// when nothing is said yet). `None` when there is nothing to say.
+pub fn mac_bundled_fallback(
+    face: Option<&str>,
+    bundle_has_fonts: bool,
+    installed: Option<bool>,
+) -> Option<String> {
+    let name = face?;
+    let bundled = textweaver_fonts::bundled::family(name)?;
+    if bundle_has_fonts || installed != Some(false) {
+        return None;
+    }
+    Some(format!(
+        "{} is built in, but macOS can load it only from the textweaver app package, so a system font is used.",
+        bundled.name
+    ))
+}
+
 /// The sentence announced when a font is applied: "Font: OpenDyslexic, 16
 /// points, bold."
 pub fn announcement(family: &str, size: i32, bold: bool) -> String {
@@ -174,6 +196,27 @@ pub fn announcement(family: &str, size: i32, bold: bool) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mac_fallback_is_said_for_a_missing_built_in_family() {
+        if BUNDLED.is_empty() {
+            return;
+        }
+        let name = BUNDLED[0].name;
+        let said = mac_bundled_fallback(Some(name), false, Some(false)).unwrap();
+        assert!(said.starts_with(name), "{said}");
+        assert!(said.ends_with("a system font is used."));
+        // Loaded from the package, installed, still scanning, or not built
+        // in: nothing to say.
+        assert_eq!(mac_bundled_fallback(Some(name), true, Some(false)), None);
+        assert_eq!(mac_bundled_fallback(Some(name), false, Some(true)), None);
+        assert_eq!(mac_bundled_fallback(Some(name), false, None), None);
+        assert_eq!(
+            mac_bundled_fallback(Some("Verdana"), false, Some(false)),
+            None
+        );
+        assert_eq!(mac_bundled_fallback(None, false, Some(false)), None);
+    }
 
     #[test]
     fn bundled_families_come_first_and_once() {

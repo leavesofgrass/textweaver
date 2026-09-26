@@ -106,7 +106,12 @@ pub(crate) fn citation_speech(
             }
             (CitationReading::Off, false) => {
                 // "shown [@doe2020]." reads "shown." without the space.
-                let before = c.chars.start.0.checked_sub(1).and_then(|i| text.chars().nth(i));
+                let before = c
+                    .chars
+                    .start
+                    .0
+                    .checked_sub(1)
+                    .and_then(|i| text.chars().nth(i));
                 let from = if before.is_some_and(|b| b == ' ' || b == '\t') {
                     range.start.saturating_sub(1)
                 } else {
@@ -157,9 +162,11 @@ impl App {
     /// most (and again after a reference is added or imported).
     fn reading_libraries(&mut self) -> (Option<Library>, Library) {
         let folder = self.doc_folder();
-        let fresh = self.authoring.cite_cache.as_ref().is_some_and(|c| {
-            c.folder == folder && c.loaded.elapsed() < LIBRARY_CACHE
-        });
+        let fresh = self
+            .authoring
+            .cite_cache
+            .as_ref()
+            .is_some_and(|c| c.folder == folder && c.loaded.elapsed() < LIBRARY_CACHE);
         if !fresh {
             let libraries = self.libraries();
             self.authoring.cite_cache = Some(CachedLibraries {
@@ -197,7 +204,11 @@ impl App {
 
     /// [`citation_speech_in`](Self::citation_speech_in) for another
     /// document (the rendered text while editing).
-    pub(crate) fn citation_speech_of(&mut self, doc: &Document, range: CharRange) -> Vec<InlineSpeech> {
+    pub(crate) fn citation_speech_of(
+        &mut self,
+        doc: &Document,
+        range: CharRange,
+    ) -> Vec<InlineSpeech> {
         let range = range.clamp_to(doc.len_chars());
         let text = doc.slice(range);
         if !text.contains('@') {

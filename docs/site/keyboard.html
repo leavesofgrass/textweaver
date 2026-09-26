@@ -473,7 +473,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "global"
     },
     {
-     "key": "s",
+     "key": ".",
      "layer": "browse"
     }
    ],
@@ -486,7 +486,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "global"
     },
     {
-     "key": "s",
+     "key": ".",
      "layer": "browse"
     }
    ]
@@ -498,10 +498,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "Ctrl+L",
      "layer": "global"
-    },
-    {
-     "key": "l",
-     "layer": "browse"
     }
    ],
    "id": "read_current_line",
@@ -511,10 +507,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "Alt+Shift+L",
      "layer": "global"
-    },
-    {
-     "key": "l",
-     "layer": "browse"
     }
    ]
   },
@@ -523,7 +515,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Reading",
    "gui": [
     {
-     "key": "Shift+S",
+     "key": ",",
      "layer": "browse"
     }
    ],
@@ -535,7 +527,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "source": "keymap",
    "terminal": [
     {
-     "key": "Shift+S",
+     "key": ",",
      "layer": "browse"
     }
    ]
@@ -615,10 +607,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "Alt+Shift+K",
      "layer": "global"
-    },
-    {
-     "key": "Shift+K",
-     "layer": "browse"
     }
    ],
    "id": "link_address",
@@ -628,10 +616,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "Alt+Shift+K",
      "layer": "global"
-    },
-    {
-     "key": "Shift+K",
-     "layer": "browse"
     }
    ]
   },
@@ -734,6 +718,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "Alt+Shift+Up",
      "layer": "global"
+    },
+    {
+     "key": "Alt+Shift+PageUp",
+     "layer": "global"
     }
    ],
    "id": "rsvp_faster",
@@ -742,6 +730,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "terminal": [
     {
      "key": "Alt+Shift+Up",
+     "layer": "global"
+    },
+    {
+     "key": "Alt+Shift+PageUp",
      "layer": "global"
     }
    ]
@@ -753,6 +745,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "Alt+Shift+Down",
      "layer": "global"
+    },
+    {
+     "key": "Alt+Shift+PageDown",
+     "layer": "global"
     }
    ],
    "id": "rsvp_slower",
@@ -761,6 +757,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "terminal": [
     {
      "key": "Alt+Shift+Down",
+     "layer": "global"
+    },
+    {
+     "key": "Alt+Shift+PageDown",
      "layer": "global"
     }
    ]
@@ -804,6 +804,44 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ]
   },
   {
+   "action": "Turn citations on or off in continuous reading: off skips them, on says them in words",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Alt+Shift+Q",
+     "layer": "global"
+    }
+   ],
+   "id": "toggle_citations",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+Q",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Explore the math at the cursor term by term: arrows move, Down goes into a part, Up comes out, Escape leaves",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Alt+Shift+X",
+     "layer": "global"
+    }
+   ],
+   "id": "explore_math",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+X",
+     "layer": "global"
+    }
+   ]
+  },
+  {
    "action": "Listen to the document as it will render, without leaving edit mode",
    "category": "Reading",
    "gui": [],
@@ -821,8 +859,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "global"
     },
     {
-     "key": ".",
-     "layer": "browse"
+     "key": "Alt+Down",
+     "layer": "global"
     }
    ],
    "id": "next_sentence",
@@ -834,8 +872,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "global"
     },
     {
-     "key": ".",
-     "layer": "browse"
+     "key": "Alt+Down",
+     "layer": "global"
     }
    ]
   },
@@ -848,8 +886,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "global"
     },
     {
-     "key": ",",
-     "layer": "browse"
+     "key": "Alt+Up",
+     "layer": "global"
     }
    ],
    "id": "previous_sentence",
@@ -861,8 +899,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "global"
     },
     {
-     "key": ",",
-     "layer": "browse"
+     "key": "Alt+Up",
+     "layer": "global"
     }
    ]
   },
@@ -880,6 +918,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     },
     {
      "key": "]",
+     "layer": "browse"
+    },
+    {
+     "key": "Ctrl+Down",
      "layer": "browse"
     },
     {
@@ -901,6 +943,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     },
     {
      "key": "]",
+     "layer": "browse"
+    },
+    {
+     "key": "Ctrl+Down",
      "layer": "browse"
     },
     {
@@ -926,6 +972,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "browse"
     },
     {
+     "key": "Ctrl+Up",
+     "layer": "browse"
+    },
+    {
      "key": "PageUp",
      "layer": "speech_cursor"
     }
@@ -940,6 +990,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     },
     {
      "key": "[",
+     "layer": "browse"
+    },
+    {
+     "key": "Ctrl+Up",
      "layer": "browse"
     },
     {
@@ -1039,6 +1093,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Navigation",
    "gui": [
     {
+     "key": "Shift+H",
+     "layer": "browse"
+    },
+    {
      "key": "{",
      "layer": "browse"
     }
@@ -1053,6 +1111,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "Alt+Shift+H",
      "layer": "global"
+    },
+    {
+     "key": "Shift+H",
+     "layer": "browse"
     },
     {
      "key": "{",
@@ -1400,7 +1462,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Navigation",
    "gui": [
     {
-     "key": "o",
+     "key": "l",
      "layer": "browse"
     }
    ],
@@ -1412,7 +1474,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "source": "keymap",
    "terminal": [
     {
-     "key": "o",
+     "key": "l",
      "layer": "browse"
     }
    ]
@@ -1422,7 +1484,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Navigation",
    "gui": [
     {
-     "key": "Shift+O",
+     "key": "Shift+L",
      "layer": "browse"
     }
    ],
@@ -1434,7 +1496,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "source": "keymap",
    "terminal": [
     {
-     "key": "Shift+O",
+     "key": "Shift+L",
      "layer": "browse"
     }
    ]
@@ -1488,6 +1550,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Navigation",
    "gui": [
     {
+     "key": "k",
+     "layer": "browse"
+    },
+    {
      "key": "u",
      "layer": "browse"
     }
@@ -1500,6 +1566,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "source": "keymap",
    "terminal": [
     {
+     "key": "k",
+     "layer": "browse"
+    },
+    {
      "key": "u",
      "layer": "browse"
     }
@@ -1509,6 +1579,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "action": "Move to the previous link",
    "category": "Navigation",
    "gui": [
+    {
+     "key": "Shift+K",
+     "layer": "browse"
+    },
     {
      "key": "Shift+U",
      "layer": "browse"
@@ -1522,7 +1596,143 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "source": "keymap",
    "terminal": [
     {
+     "key": "Shift+K",
+     "layer": "browse"
+    },
+    {
      "key": "Shift+U",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next block quote",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "q",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_block_quote",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "q",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous block quote",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Shift+Q",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_block_quote",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+Q",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next separator (horizontal rule)",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "s",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_separator",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "s",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous separator (horizontal rule)",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Shift+S",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_separator",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+S",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next graphic (image)",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "g",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_graphic",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "g",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous graphic (image)",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "Shift+G",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_graphic",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+G",
      "layer": "browse"
     }
    ]
@@ -1629,6 +1839,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "Alt+PageDown",
      "layer": "global"
+    },
+    {
+     "key": "d",
+     "layer": "browse"
     }
    ],
    "id": "next_chapter",
@@ -1642,6 +1856,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "Alt+PageDown",
      "layer": "global"
+    },
+    {
+     "key": "d",
+     "layer": "browse"
     }
    ]
   },
@@ -1652,6 +1870,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "Alt+PageUp",
      "layer": "global"
+    },
+    {
+     "key": "Shift+D",
+     "layer": "browse"
     }
    ],
    "id": "previous_chapter",
@@ -1665,6 +1887,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "Alt+PageUp",
      "layer": "global"
+    },
+    {
+     "key": "Shift+D",
+     "layer": "browse"
     }
    ]
   },
@@ -1677,7 +1903,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "global"
     },
     {
-     "key": "Shift+H",
+     "key": "Backspace",
      "layer": "browse"
     }
    ],
@@ -1690,7 +1916,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "global"
     },
     {
-     "key": "Shift+H",
+     "key": "Backspace",
      "layer": "browse"
     }
    ]
@@ -1704,7 +1930,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "global"
     },
     {
-     "key": "Shift+L",
+     "key": "\\",
      "layer": "browse"
     }
    ],
@@ -1717,7 +1943,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "global"
     },
     {
-     "key": "Shift+L",
+     "key": "\\",
      "layer": "browse"
     }
    ]
@@ -2012,7 +2238,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Navigation",
    "gui": [
     {
-     "key": "k",
+     "key": "Shift+J",
      "layer": "browse"
     }
    ],
@@ -2024,7 +2250,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "source": "keymap",
    "terminal": [
     {
-     "key": "k",
+     "key": "Shift+J",
      "layer": "browse"
     }
    ]
@@ -2700,7 +2926,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Bookmarks and notes",
    "gui": [
     {
-     "key": "Alt+Down",
+     "key": "F12",
      "layer": "global"
     },
     {
@@ -2713,7 +2939,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "source": "keymap",
    "terminal": [
     {
-     "key": "Alt+Down",
+     "key": "F12",
      "layer": "global"
     },
     {
@@ -2727,7 +2953,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Bookmarks and notes",
    "gui": [
     {
-     "key": "Alt+Up",
+     "key": "Shift+F12",
      "layer": "global"
     },
     {
@@ -2740,7 +2966,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "source": "keymap",
    "terminal": [
     {
-     "key": "Alt+Up",
+     "key": "Shift+F12",
      "layer": "global"
     },
     {
@@ -2996,20 +3222,30 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "terminal": []
   },
   {
+   "action": "Turn automatic reloading of the browser preview on or off",
+   "category": "File",
+   "gui": [],
+   "id": "toggle_preview_auto_reload",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses",
+   "category": "File",
+   "gui": [],
+   "id": "toggle_preview_live",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
    "action": "Quit, saving the reading position",
    "category": "File",
    "gui": [
     {
      "key": "Ctrl+Q",
      "layer": "global"
-    },
-    {
-     "key": "q",
-     "layer": "browse"
-    },
-    {
-     "key": "Shift+Q",
-     "layer": "browse"
     }
    ],
    "id": "quit",
@@ -3019,14 +3255,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "Ctrl+Q",
      "layer": "global"
-    },
-    {
-     "key": "q",
-     "layer": "browse"
-    },
-    {
-     "key": "Shift+Q",
-     "layer": "browse"
     }
    ]
   },
@@ -3599,7 +3827,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "source": "keymap",
    "terminal": [
     {
-     "key": "Alt+Shift+D",
+     "key": "Alt+B",
      "layer": "global"
     }
    ]
@@ -3746,6 +3974,44 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ]
   },
   {
+   "action": "Show or hide syllables: words split with a middle dot",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Alt+Shift+Z",
+     "layer": "global"
+    }
+   ],
+   "id": "syllables_toggle",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+Z",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Mark difficult words on or off: underlined, and named on word moves at high verbosity",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Alt+Shift+J",
+     "layer": "global"
+    }
+   ],
+   "id": "difficult_words_toggle",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+J",
+     "layer": "global"
+    }
+   ]
+  },
+  {
    "action": "Run any command by name",
    "category": "View and help",
    "gui": [
@@ -3818,44 +4084,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     {
      "key": "F1",
      "layer": "global"
-    }
-   ]
-  },
-  {
-   "action": "Move to the next note",
-   "category": "Bookmarks and notes",
-   "gui": [
-    {
-     "key": "'",
-     "layer": "browse"
-    }
-   ],
-   "id": "NoteCommand::Next",
-   "palette_when_off": null,
-   "source": "extra",
-   "terminal": [
-    {
-     "key": "'",
-     "layer": "browse"
-    }
-   ]
-  },
-  {
-   "action": "Move to the previous note",
-   "category": "Bookmarks and notes",
-   "gui": [
-    {
-     "key": "\"",
-     "layer": "browse"
-    }
-   ],
-   "id": "NoteCommand::Previous",
-   "palette_when_off": null,
-   "source": "extra",
-   "terminal": [
-    {
-     "key": "\"",
-     "layer": "browse"
     }
    ]
   },

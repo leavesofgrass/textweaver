@@ -231,7 +231,8 @@ impl Tui {
         }
         let row = textweaver_app::digit_row(self.app.settings().keyboard.digit_row);
         let layer = self.app.mode().layer();
-        let unbound = self.app.keymap().lookup(&c, layer).is_none() && extra_lookup(&c, layer).is_none();
+        let unbound =
+            self.app.keymap().lookup(&c, layer).is_none() && extra_lookup(&c, layer).is_none();
         match row {
             DigitRow::Azerty => from_typed(ch, row).or(Some(c)),
             DigitRow::Auto if unbound => from_typed(ch, row).or(Some(c)),
@@ -1053,9 +1054,9 @@ impl Tui {
         let mut breaks: HashMap<usize, Vec<CharPos>> = HashMap::new();
         if syllables {
             for r in &rows {
-                breaks
-                    .entry(r.line)
-                    .or_insert_with(|| line_breaks(textweaver_app::text_util::line_range(doc, r.line)));
+                breaks.entry(r.line).or_insert_with(|| {
+                    line_breaks(textweaver_app::text_util::line_range(doc, r.line))
+                });
             }
         }
         let sep = self.app.syllable_separator().to_owned();

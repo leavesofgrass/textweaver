@@ -188,7 +188,11 @@ fn accept_loop(listener: &TcpListener, shared: &Arc<Shared>, token: &str) {
         };
         // Only this computer: the socket is bound to 127.0.0.1, and a peer
         // elsewhere is refused all the same.
-        if stream.peer_addr().map(|a| !a.ip().is_loopback()).unwrap_or(true) {
+        if stream
+            .peer_addr()
+            .map(|a| !a.ip().is_loopback())
+            .unwrap_or(true)
+        {
             continue;
         }
         let (sh, tok) = (Arc::clone(shared), token.to_owned());
@@ -262,7 +266,12 @@ fn handle(stream: TcpStream, shared: &Shared, token: &str) -> io::Result<()> {
             match std::fs::read_to_string(&page) {
                 Ok(html) => {
                     let body = served_page(&html, token);
-                    respond(&stream, "200 OK", "text/html; charset=utf-8", body.as_bytes())
+                    respond(
+                        &stream,
+                        "200 OK",
+                        "text/html; charset=utf-8",
+                        body.as_bytes(),
+                    )
                 }
                 Err(_) => respond(
                     &stream,
@@ -462,7 +471,10 @@ mod tests {
         assert!(wrong.starts_with("HTTP/1.1 404"), "{wrong}");
         assert!(get(addr, "/").starts_with("HTTP/1.1 404"));
         let pic = get(addr, &format!("/{}/files/pic.png", server.token()));
-        assert!(pic.starts_with("HTTP/1.1 200 OK") && pic.ends_with("PNG"), "{pic}");
+        assert!(
+            pic.starts_with("HTTP/1.1 200 OK") && pic.ends_with("PNG"),
+            "{pic}"
+        );
         let escape = get(addr, &format!("/{}/files/../page.html", server.token()));
         assert!(escape.starts_with("HTTP/1.1 404"), "{escape}");
         let escape = get(addr, &format!("/{}/files/%2e%2e/page.html", server.token()));
@@ -508,20 +520,24 @@ mod tests {
         // The port is closed and the stream ended.
         let mut rest = String::new();
         let _ = reader.read_to_string(&mut rest);
-        assert!(TcpStream::connect_timeout(&addr, Duration::from_millis(300))
-            .and_then(|mut c| {
-                write!(c, "GET / HTTP/1.1\r\n\r\n")?;
-                let mut b = [0u8; 1];
-                c.set_read_timeout(Some(Duration::from_millis(300)))?;
-                c.read(&mut b)
-            })
-            .map_or(true, |n| n == 0));
+        assert!(
+            TcpStream::connect_timeout(&addr, Duration::from_millis(300))
+                .and_then(|mut c| {
+                    write!(c, "GET / HTTP/1.1\r\n\r\n")?;
+                    let mut b = [0u8; 1];
+                    c.set_read_timeout(Some(Duration::from_millis(300)))?;
+                    c.read(&mut b)
+                })
+                .map_or(true, |n| n == 0)
+        );
     }
 
     #[test]
     fn heading_ids_in_order() {
         assert_eq!(
-            heading_ids("<h1 id=\"a\">A</h1><p>x</p><h2 class=\"c\" id=\"b-1\">B</h2><hr><h3>C</h3>"),
+            heading_ids(
+                "<h1 id=\"a\">A</h1><p>x</p><h2 class=\"c\" id=\"b-1\">B</h2><hr><h3>C</h3>"
+            ),
             vec!["a".to_owned(), "b-1".to_owned(), String::new()]
         );
         assert_eq!(percent_decode("a%20b%2"), "a b%2");

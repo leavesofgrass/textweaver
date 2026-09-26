@@ -1983,7 +1983,9 @@ mod tests {
         let r: ReadingSettings = toml::from_str("citations = \"words\"").unwrap();
         assert_eq!(r.citations, CitationReading::Words);
         let (s, w) = Settings::from_table_unclamped(
-            "[preview]\nauto_reload = true\nlive = true\n".parse().unwrap(),
+            "[preview]\nauto_reload = true\nlive = true\n"
+                .parse()
+                .unwrap(),
         );
         assert!(w.is_empty(), "{w:?}");
         assert!(s.preview.auto_reload && s.preview.live);

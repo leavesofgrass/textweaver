@@ -441,9 +441,9 @@ In edit mode, press **Alt+C**. textweaver says how many references there are, fo
 
 The citation goes in at the caret, for example `[@doe2020, p. 12]`, with a space before it when it follows a word. You hear what went in: "Inserted citation of Doe and Roe, 2020, page 12." With the caret inside a citation already, the new reference joins it: `[@doe2020, p. 12; @roe2021]`. Each insertion is one undo step.
 
-### Add a reference by DOI or ISBN: Alt+Shift+D
+### Add a reference by DOI or ISBN: Alt+B
 
-Press **Alt+Shift+D** (or run `add reference` from the command palette: Windows Terminal keeps **Alt+Shift+D** for splitting its window unless you unbind it; see [the screen reader guide](screen-readers.md#windows-terminal-keys-that-clash)) and type a DOI (`10.1038/nature12373`, or its doi.org address) or an ISBN. You hear "Looking up" and the identifier; you can go on reading or writing. When the answer comes, you hear, for example, "Added reference kucsko2013. Kucsko, Maurer, and Yao, 2013. Nanometre-scale thermometry in a living cell." The reference goes into the folder's `references.json` when the document's folder has one, else into your own library. Lookups use the same cache as `tw cite add`, so an identifier looked up before works offline.
+Press **Alt+B** in the terminal, or **Alt+Shift+D** in the GUI (Windows Terminal keeps **Alt+Shift+D** for splitting its window, so the terminal key moved; see [the screen reader guide](screen-readers.md#windows-terminal-keys-that-clash)), or run `add reference` from the command palette, and type a DOI (`10.1038/nature12373`, or its doi.org address) or an ISBN. You hear "Looking up" and the identifier; you can go on reading or writing. When the answer comes, you hear, for example, "Added reference kucsko2013. Kucsko, Maurer, and Yao, 2013. Nanometre-scale thermometry in a living cell." The reference goes into the folder's `references.json` when the document's folder has one, else into your own library. Lookups use the same cache as `tw cite add`, so an identifier looked up before works offline.
 
 ### Commands from the palette
 
@@ -455,9 +455,27 @@ Press **F2** and type part of the name:
 
 ### Hear a citation in words
 
-When a word move (the Left and Right arrows in reading) lands on a citation, or you ask for the link address there (**Alt+Shift+K**), textweaver says it in words, for example "Citation: Doe and Roe, 2020, On reading, page 12." A key that no library has is named: "missing reference smith1999".
+When a word move (the Left and Right arrows in reading) lands on a citation, or you ask for the link address there (**Alt+Shift+K**), textweaver says it in words, for example "Citation: Doe and Roe, 2020, On reading, page 12." A key that no library has is named: "missing reference smith1999". This happens whatever the setting below says.
 
-Continuous reading still reads a citation as it is written: `[@doe2020, p. 12]` is spoken by your speech engine, which decides how it says the bracket and the key. To hear citations formatted while you write, use `listen rendered` from the palette; see [the editing guide](editing.md#listen-to-the-rendered-text).
+### Citations in continuous reading: Alt+Shift+Q
+
+By default, continuous reading skips citations: reading aloud, reading from the cursor, saying a sentence or paragraph, and `listen rendered` pass over `[@doe2020, p. 12]` as if it were not there. An in-text citation is part of your sentence, so for `@doe2020 argues` only the authors are said: "Doe and Roe argues".
+
+Press **Alt+Shift+Q** (or run `toggle citations` from the palette) to have them said in words instead, and again to skip them. You hear "Citations on." or "Citations off.", and the choice is saved. While textweaver is reading, it goes on from the word you were on with the new setting.
+
+With citations on, each is said from your library: "Doe and Roe, 2020, page 12" for `[@doe2020, p. 12]`, "see Doe and Roe, 2020; Roe, 2019" for `[see @doe2020; @roe2019]`, and "2020" for `[-@doe2020]`. A key that no library has is read as the key: "smith1999, page 4".
+
+- The same forms as in [Write citations in Markdown](#write-citations-in-markdown) are recognized.
+- Which `@` marks count follows `tw convert`'s rule for its default flavor: a bracketed citation counts when at least one of its keys is in a library, and an in-text `@key` only when every key is. So an email address or a mention of a person is read as written. Citations in code and math are never touched.
+- The highlight stays exact both ways: a skipped citation is never highlighted, and while a citation is said in words, the whole citation is highlighted.
+- The libraries are the document folder's `references.json`, then your own library. They are read again at most once a minute, and at once after you add or import a reference.
+
+In `settings.toml`:
+
+```toml
+[reading]
+citations = "off"    # or "words"
+```
 
 A note can name a source with a citation key. This comes from the `cite` field in a note's front matter when you import notes from an Obsidian vault. See [the vault guide](vault.md).
 
@@ -467,6 +485,7 @@ A note can name a source with a citation key. This comes from the `cite` field i
 - **"did not answer within 15 seconds."** The service is slow. Try again later, or wait longer with `--timeout 30`.
 - **"has no record for".** Check the DOI or ISBN for a typing mistake. Some books are not in Open Library. Then add the reference another way: export it from your library catalog as RIS or BibTeX and use `tw cite import`.
 - **"is not a valid ISBN".** A digit is mistyped. The last digit is a check digit, so textweaver can tell. Read the number again from the book.
+- **Continuous reading says the brackets and the `@`.** None of the citation's keys is in a library, so textweaver treats it as ordinary text, as `tw convert` does. Add the reference, or check the key's spelling.
 - **"The citation key doe2020 is not in the reference library."** Run `tw cite list` to find the right key. If you use a folder library, remember `--folder`.
 - **"the argument '--folder <FOLDER>' cannot be used with '--library <FILE>'".** Give only one of the two.
 - **"Could not read the BibTeX data on line 5:" and a reason.** The file has a mistake on or near that line. Open it and fix it, or export it again from the other program. Nothing was imported. One known case: a BibTeX file with more than one entry that has no key, such as `@book{,`, fails with "duplicate key". Give each entry a key, or import it as RIS or CSL-JSON.

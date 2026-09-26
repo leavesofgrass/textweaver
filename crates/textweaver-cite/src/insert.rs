@@ -152,7 +152,10 @@ pub fn spoken_citation(c: &Citation, source: &dyn ReferenceSource) -> String {
             }
             match source.get(&i.key) {
                 Some(r) if i.suppress_author => {
-                    s.push_str(&r.year().map_or_else(|| "no date".to_owned(), |y| y.to_string()));
+                    s.push_str(
+                        &r.year()
+                            .map_or_else(|| "no date".to_owned(), |y| y.to_string()),
+                    );
                 }
                 Some(_) => s.push_str(&short_description(&i.key, source)),
                 None => s.push_str(&i.key),
@@ -347,7 +350,10 @@ mod tests {
             "Doe and Roe, 2020, page 12"
         );
         assert_eq!(
-            spoken_citation(&find("[see @doe2020, pp. 33-35, emphasis added; @nobody]"), &lib),
+            spoken_citation(
+                &find("[see @doe2020, pp. 33-35, emphasis added; @nobody]"),
+                &lib
+            ),
             "see Doe and Roe, 2020, pages 33 to 35, emphasis added; nobody"
         );
         assert_eq!(spoken_citation(&find("[-@doe2020]"), &lib), "2020");
@@ -355,12 +361,18 @@ mod tests {
             spoken_citation(&find("@doe2020 [p. 3] shows"), &lib),
             "Doe and Roe, 2020, page 3"
         );
-        assert_eq!(spoken_citation(&find("[@nobody, p. 4]"), &lib), "nobody, page 4");
+        assert_eq!(
+            spoken_citation(&find("[@nobody, p. 4]"), &lib),
+            "nobody, page 4"
+        );
         assert_eq!(
             spoken_citation_authors(&find("@doe2020 argues"), &lib),
             "Doe and Roe"
         );
-        assert_eq!(spoken_citation_authors(&find("@nobody argues"), &lib), "nobody");
+        assert_eq!(
+            spoken_citation_authors(&find("@nobody argues"), &lib),
+            "nobody"
+        );
         assert_eq!(filter_picker(&rows, "roe 2020").len(), 1);
         assert!(filter_picker(&rows, "smith").is_empty());
     }

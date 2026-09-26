@@ -270,14 +270,22 @@ mod tests {
         app.set_cursor(CharPos(at));
         app.dispatch(Command::Action(textweaver_keymap::ActionId::ExploreMath));
         assert!(app.math_exploring());
-        assert!(app.status_text().starts_with("Exploring math:"), "{}", app.status_text());
+        assert!(
+            app.status_text().starts_with("Exploring math:"),
+            "{}",
+            app.status_text()
+        );
         let whole = app.math_explore_span().unwrap();
         let doc = app.session().unwrap().doc.slice(whole);
         assert_eq!(doc, "\\frac{a+b}{2} + c");
 
         let first = step(&mut app, MathMove::Enter);
         let span = app.math_explore_span().unwrap();
-        assert_eq!(app.session().unwrap().doc.slice(span), "\\frac{a+b}{2}", "{first}");
+        assert_eq!(
+            app.session().unwrap().doc.slice(span),
+            "\\frac{a+b}{2}",
+            "{first}"
+        );
         assert_eq!(app.session().unwrap().cursor, span.start);
         let inside = step(&mut app, MathMove::Enter);
         assert!(inside.starts_with("numerator"), "{inside}");
@@ -300,7 +308,10 @@ mod tests {
         assert!(up.starts_with("expression"), "{up}");
         // The highlight follows.
         let hl = app.highlights(app.session().unwrap().doc.full_range());
-        assert!(hl.iter().any(|h| h.range == app.math_explore_span().unwrap()));
+        assert!(
+            hl.iter()
+                .any(|h| h.range == app.math_explore_span().unwrap())
+        );
         let left = step(&mut app, MathMove::Leave);
         assert_eq!(left, "Left math.");
         assert!(!app.math_exploring());

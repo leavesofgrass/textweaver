@@ -152,7 +152,10 @@ mod tests {
         assert_eq!(k.take('q'), None, "not peeked");
         assert_eq!(k.take('!'), Some(Some((1, true))));
         assert!(k.is_empty());
-        k.set_pending([PeekedKey { ch: 'a', digit: None }]);
+        k.set_pending([PeekedKey {
+            ch: 'a',
+            digit: None,
+        }]);
         k.set_pending([]);
         assert_eq!(k.take('a'), None);
     }

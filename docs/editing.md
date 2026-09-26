@@ -237,7 +237,7 @@ Pasting into a prompt, such as Find, puts the text in the prompt.
 
 ## Citations
 
-In edit mode, **Alt+C** inserts a citation: pick a reference from a list you can filter by typing, then give a page or other locator. **Alt+Shift+D** adds a reference by DOI or ISBN. The command palette has `insert bibliography`, `check citations`, and `import references`. The [citations guide](citations.md#citations-while-reading-and-writing-in-textweaver) explains them.
+In edit mode, **Alt+C** inserts a citation: pick a reference from a list you can filter by typing, then give a page or other locator. **Alt+B** (GUI **Alt+Shift+D**) adds a reference by DOI or ISBN. The command palette has `insert bibliography`, `check citations`, and `import references`. The [citations guide](citations.md#citations-while-reading-and-writing-in-textweaver) explains them.
 
 ## Spelling
 
@@ -257,7 +257,26 @@ In edit mode, type `listen rendered` in the command palette. textweaver reads fr
 
 ## Export and preview
 
-Type `export pdf`, `export docx`, `export html`, `export epub`, or `export brf` in the command palette to write the document you are editing, saved or not, next to it in that format. `preview in browser` opens it as a web page, with math, and each save writes the preview again. The [converting guide](converting.md#export-from-inside-the-reader) explains both.
+Type `export pdf`, `export docx`, `export html`, `export epub`, or `export brf` in the command palette to write the document you are editing, saved or not, next to it in that format. You hear "Exporting to PDF.", then, for a long export, "Still exporting to PDF, 2 seconds." and every ten seconds after. The [converting guide](converting.md#export-from-inside-the-reader) explains exports.
+
+### Preview in the browser
+
+`preview in browser` opens the document as a web page, with math as MathML, in your default browser. Each save (**Ctrl+S**) writes the preview again, and you hear "Preview updated. Press F5 in the browser." By default the page does not reload by itself: a reload puts your screen reader back at the top of the page, so you choose when it happens.
+
+**Automatic reloading.** Run `toggle preview auto reload` from the palette, or set it in `settings.toml`:
+
+```toml
+[preview]
+auto_reload = true
+live = false
+```
+
+Then run `preview in browser` again. The page now comes from a small web server that textweaver runs on your own computer only (the address starts `http://127.0.0.1:`, with a random secret in it, so no other computer or program can read your document). After each save the page reloads by itself, then scrolls to the heading nearest your caret and puts the focus there, so your screen reader lands near the place you edited. You hear "Preview updated."
+
+- A reload still resets your screen reader's place in the page to that heading, which is why automatic reloading is off by default.
+- `toggle preview live` (or `live = true`) also reloads the page when you pause typing for a second, without saving. It needs automatic reloading on. Live reloads are shown on the status line and not spoken.
+- The server stops when you open another document or quit textweaver. Turning automatic reloading off stops it at once; the browser then shows the last page it had.
+- Images and other files beside your document are served too, but nothing outside the document's folder.
 
 ## Start from a template
 

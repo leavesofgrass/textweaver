@@ -186,10 +186,7 @@ mod tests {
                 "Shift+{digit}"
             );
         }
-        assert_eq!(
-            from_typed('à', DigitRow::Azerty),
-            digit_row_chord(0, false)
-        );
+        assert_eq!(from_typed('à', DigitRow::Azerty), digit_row_chord(0, false));
         assert_eq!(DigitRow::from_id(" AZERTY "), DigitRow::Azerty);
         assert_eq!(DigitRow::from_id("qwerty"), DigitRow::Auto);
     }

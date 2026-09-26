@@ -95,13 +95,13 @@ Once the document is open:
 
 - **Space** starts reading, and pauses. The highlight follows each word.
 - **Escape** stops.
-- **.** (period) and **,** (comma) move to the next or previous sentence.
-- **p** and **Shift+P** move by paragraph. **h** jumps to the next heading.
+- **Alt+Down** and **Alt+Up** move to the next or previous sentence.
+- **p** and **Shift+P** move by paragraph. **h** jumps to the next heading, and **1** to **6** to the next heading at that level, as in NVDA and JAWS.
 - **+** and **-** make the voice faster or slower.
 - **Tab** turns Speech Cursor mode on and off. In it, the Up and Down arrows read one line at a time.
-- **%** says where you are.
+- **Shift+W** says where you are.
 - **?** lists every key. **F1** opens the help.
-- **q** quits. textweaver asks "Quit textweaver? y or n". Press **y** to quit, or **n** to stay.
+- **Ctrl+Q** quits. textweaver asks "Quit textweaver? y or n". Press **y** to quit, or **n** to stay.
 
 textweaver remembers your place. Open the same file again and it picks up where you left off.
 

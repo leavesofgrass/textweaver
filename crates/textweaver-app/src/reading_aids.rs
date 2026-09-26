@@ -405,8 +405,12 @@ impl App {
     /// with difficult words marked.
     pub(crate) fn difficult_word_note(&self, word: CharRange) -> Option<&'static str> {
         let high = self.settings.speech.verbosity >= textweaver_a11y::Verbosity::High;
-        (high && self.difficult_ranges(word).iter().any(|r| r.start == word.start))
-            .then_some(", difficult word")
+        (high
+            && self
+                .difficult_ranges(word)
+                .iter()
+                .any(|r| r.start == word.start))
+        .then_some(", difficult word")
     }
 
     /// `ruler_cycle`: off, current line, ruler; saved.

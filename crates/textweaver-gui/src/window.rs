@@ -153,6 +153,8 @@ struct Gui {
     last_status: (String, String),
     /// Installed font families (scanned in the background).
     installed: Installed,
+    /// macOS: the fall back from a built-in font was announced (once).
+    mac_font_said: bool,
     /// Automated run: dialogs open off the screen.
     background: bool,
     closed: bool,
@@ -183,9 +185,10 @@ fn mac_bundle_fonts_dir(exe: &Path) -> Option<PathBuf> {
 /// event loop, and so the process, alive after the window closed: the GUI
 /// job's smoke test failed with "did not exit" from the fonts merge on.
 ///
-/// So on macOS nothing is registered here and nothing is announced: the
-/// system fonts are used until the `.app` package carries the fonts
-/// (roadmap, Phase 3, Packaging).
+/// So on macOS nothing is registered here: the system fonts are used until
+/// the `.app` package carries the fonts (roadmap, Phase 3, Packaging).
+/// When the reading font is a built-in family that falls back this way,
+/// the window says so once ([`fonts::mac_bundled_fallback`]).
 fn mac_font_note(log: bool) -> Vec<String> {
     if log {
         let exe = std::env::current_exe().ok();
@@ -335,6 +338,7 @@ pub fn build(opts: GuiOptions) {
         last_reading: false,
         last_status: (String::new(), String::new()),
         installed,
+        mac_font_said: false,
         background: opts.background,
         closed: false,
         _poll_timer: None,
@@ -772,6 +776,19 @@ impl Gui {
         });
         let font = font_dialog::make_font(a.face.as_deref(), a.size, a.bold)?;
         self.w.text.set_font(&font);
+        if cfg!(target_os = "macos") && !self.mac_font_said {
+            let in_bundle = std::env::current_exe()
+                .ok()
+                .as_deref()
+                .and_then(mac_bundle_fonts_dir)
+                .is_some_and(|d| d.is_dir());
+            let face = a.face.as_deref();
+            let installed = face.map(|f| self.installed.has_now(f).unwrap_or(false));
+            if let Some(note) = fonts::mac_bundled_fallback(face, in_bundle, installed) {
+                self.mac_font_said = true;
+                return Some(note);
+            }
+        }
         if self.log {
             crate::log::line(&format!(
                 "font applied: {} {} {}",

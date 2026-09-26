@@ -30,11 +30,11 @@ textweaver never speaks on its own. Everything goes to the status line, written 
 
 - Messages, moves, and questions, as in the other modes.
 - The word, line, or character a caret key or a "say" key reaches.
-- Text you ask to hear, such as the sentence (`s`) or the line (`l`), narrated as textweaver would say it: math in words, and tables with their headers.
+- Text you ask to hear, such as the sentence (`.`) or the line (**Alt+Shift+L**), narrated as textweaver would say it: math in words, and tables with their headers.
 
 Continuous reading still works. By default, **Space** moves through the text a sentence at a time. Each sentence goes to the status line for your screen reader, the cursor moves with it, and the next one follows after the time textweaver's rate allows. Press **+** or **-** to match the pace to your screen reader. **Space** pauses and resumes, and **Escape** stops. To have textweaver's own voice read instead, set `say_all = "voice"`; that is the only thing it then says.
 
-You can also move through the text yourself, by sentence (`.`), line (**Down**), or word (**Right**), and your screen reader reads each place from the status line.
+You can also move through the text yourself, by sentence (**Alt+Down**, or **Alt+.**), line (**Down**), or word (**Right**), and your screen reader reads each place from the status line.
 
 ### Choosing a mode
 
@@ -99,22 +99,30 @@ How much textweaver says is set by `[speech] verbosity`. See [Reading and moving
 
 ## Keys like a screen reader's browse mode
 
-The screen-reader keymap preset uses the single-letter keys of NVDA's and JAWS's browse mode:
+textweaver's default keys are the quick navigation keys of NVDA's and JAWS's browse mode (Jon's choice, Saturday, September 26, 2026):
 
 - **h** and **Shift+H**: next and previous heading.
-- **1** to **6**: next heading at that level (as in the default keys).
-- **l** and **Shift+L**: next and previous list.
-- **i**: next list item, and **t**: next table (as in the default keys).
-- **k** and **Shift+K**: next and previous link.
+- **1** to **6**: next heading at that level; **Shift** with the digit: the previous one. textweaver matches the digit key itself, on any keyboard layout (on Windows it reads the key from the console; elsewhere it knows the US, UK, German, Spanish, Nordic, and Italian layouts, and French with `digit_row = "azerty"`).
+- **l** and **Shift+L**: list. **i** and **Shift+I**: list item.
+- **t** and **Shift+T**: table.
+- **k** and **Shift+K**: link.
+- **q** and **Shift+Q**: block quote.
+- **s** and **Shift+S**: separator (a horizontal rule).
+- **g** and **Shift+G**: graphic (an image).
+- **d** and **Shift+D**: section or chapter, the nearest thing to a landmark.
+- **Backspace**: go back after a jump.
+- **Alt+Down** and **Alt+Up**: next and previous sentence, as in JAWS. **Ctrl+Down** and **Ctrl+Up**: next and previous paragraph.
 
-What those keys did by default moves: history back to **Backspace** and history forward to **\\** (**Alt+Left** and **Alt+Right** still work), "say the line" to **Alt+Shift+L**, "scroll up" to **Ctrl+Up**, and "link address" to **Alt+Shift+K**.
+These follow NVDA's letters; where JAWS differs (its `q`, `d`, `r`, and link keys), the [keyboard reference](keyboard.md#quick-navigation-as-in-nvda-and-jaws) says how. Quitting is **Ctrl+Q**, and it still asks first.
+
+The earlier keys are the classic preset. The Phase 2 `screen-reader` preset is now the default, and naming it still works:
 
 ```toml
 [keyboard]
-preset = "screen-reader"
+preset = "classic"    # the earlier keys; "default" (or "screen-reader") for these
 ```
 
-Your `keymap.toml` overrides apply on top. The [keyboard reference](keyboard.md#the-screen-reader-preset) lists every change.
+Your `keymap.toml` overrides apply on top. The [keyboard reference](keyboard.md#what-changed) lists every change and [the classic preset](keyboard.md#the-classic-preset).
 
 ## Screen reader settings
 
@@ -163,13 +171,14 @@ textweaver runs in Windows Terminal and in the classic console (conhost, the win
 
 Windows Terminal keeps some keys for itself, so textweaver never sees them. These come from Windows Terminal's defaults and the settings file a new installation writes (checked against Windows Terminal 1.24 on this machine):
 
-- **Alt+Left** and **Alt+Right** move between panes. In textweaver they are history back and forward. Use **Shift+H** and **Shift+L** instead (**Backspace** and **\\** with the screen-reader preset), or unbind them in Windows Terminal. With only one pane open, Windows Terminal may pass them on; **verify on Jon's machine**.
-- **Alt+Up** and **Alt+Down** move between panes. In textweaver they step through notes. Use **e** and **Shift+E** instead, or unbind them.
-- **Alt+Shift+Up** and **Alt+Shift+Down** resize panes. In textweaver they make RSVP faster and slower. Run "rsvp faster" and "rsvp slower" from the command palette (**F2**), or unbind them.
+- **Alt+Left** and **Alt+Right** move between panes. In textweaver they are history back and forward. Use **Backspace** and **\\** instead (**Shift+H** and **Shift+L** with the classic preset), or unbind them in Windows Terminal. With only one pane open, Windows Terminal may pass them on; **verify on Jon's machine**.
+- **Alt+Up** and **Alt+Down** move between panes. In textweaver they move by sentence (JAWS's keys). **Alt+.** and **Alt+,** do the same and never clash; or unbind them in Windows Terminal. (With the classic preset they step through notes; **e** and **Shift+E**, or **F12** and **Shift+F12**, do that too.)
+- **Alt+Shift+Up** and **Alt+Shift+Down** resize panes. In textweaver they make RSVP faster and slower; **Alt+Shift+PageUp** and **Alt+Shift+PageDown** do the same and reach textweaver.
 - **F11** and **Alt+Enter** switch full screen. In textweaver **F11** is the next chapter. Use **Alt+PageDown** and **Alt+PageUp** for chapters.
 - **Ctrl+C** copies when text is selected in Windows Terminal; otherwise textweaver gets it and copies. **Ctrl+V** pastes, which textweaver takes as pasted text.
-- **Alt+Shift+D**, **Alt+Shift+minus**, and **Alt+Shift+plus** split the window into panes. In textweaver **Alt+Shift+D** adds a reference by DOI or ISBN: run "add reference" from the command palette (**F2**) instead, or unbind it in Windows Terminal. Pitch is **Alt+=** and **Alt+-**: pressing Shift by mistake splits the window.
-- **Ctrl+Alt** with the arrow keys move by row and cell in a table. Windows Terminal leaves them alone, but some graphics drivers rotate the screen with them, and a screen reader may keep them for its own table commands. **Verify on Jon's machine**; the commands are `table_next_row`, `table_previous_row`, `table_next_column`, and `table_previous_column`, and can have other keys in `keymap.toml`.
+- **Alt+Shift+D**, **Alt+Shift+minus**, and **Alt+Shift+plus** split the window into panes. So the terminal adds a reference by DOI or ISBN with **Alt+B** (the GUI keeps **Alt+Shift+D**), and "add reference" is in the command palette (**F2**). Pitch is **Alt+=** and **Alt+-**: pressing Shift by mistake splits the window.
+- **Ctrl+Alt+Left** moves to the previous pane in Windows Terminal 1.24 (`Terminal.MoveFocusPrevious` in its defaults). In textweaver it is the previous cell in a table row; with one pane open Windows Terminal may pass it on, **verify on Jon's machine**, or run `table previous column` from the palette or give it another key in `keymap.toml`. The other **Ctrl+Alt** arrows are not bound by Windows Terminal, but some graphics drivers rotate the screen with them, and a screen reader may keep them for its own table commands.
+- textweaver's newer chords were checked against the same list and do not clash: **Alt+Shift+Q** (citations), **Alt+Shift+X** (explore math), **Alt+Shift+Z** (syllables), **Alt+Shift+J** (difficult words), **Alt+B** (add a reference), **F12** and **Shift+F12** (notes), **Ctrl+Down** and **Ctrl+Up** (paragraphs), and **Alt+Shift+PageUp** and **Alt+Shift+PageDown** (RSVP).
 - **Alt+Space** opens the window menu. textweaver does not use it.
 - **Ctrl+Shift** chords (new tab, close pane, find, scroll) and **Ctrl+Alt** with digits (switch tabs) do not clash: terminals cannot send textweaver Ctrl+Shift chords, and textweaver's terminal keys use no Ctrl+Alt digits.
 
@@ -218,41 +227,41 @@ Run through this once with NVDA and once with JAWS, in Windows Terminal and, if 
 
 1. Delete the folder `%TEMP%\tw-check` if it exists. With your screen reader running, start `textweaver --home %TEMP%\tw-check fixtures/sample.md`.
 2. Expected: the question "NVDA is running. Use hybrid mode ...? y or n" (JAWS: "JAWS is running."). Your screen reader reads it from the status line, and textweaver speaks it too.
-3. Press **y**. Expected: "Hybrid mode. ..." is read once, by your screen reader. Quit with **q**, then **y**, and start again: no question this time.
+3. Press **y**. Expected: "Hybrid mode. ..." is read once, by your screen reader. Quit with **Ctrl+Q**, then **y**, and start again: no question this time.
 
 ### Hybrid (`--mode hybrid`)
 
 Screen reader settings: dynamic content (NVDA) or screen echo "all" (JAWS) on; typing echo on.
 
-1. Press **.** (next sentence). Expected: your screen reader reads the sentence preview once; textweaver is silent.
-2. Press **s**. Expected: textweaver reads the sentence in its voice; your screen reader says nothing more.
+1. Press **Alt+.** (next sentence). Expected: your screen reader reads the sentence preview once; textweaver is silent.
+2. Press **.** (say the sentence). Expected: textweaver reads the sentence in its voice; your screen reader says nothing more.
 3. Press **Space**. Expected: textweaver reads on; the status line does not change while it reads. Press **Space** again: "Paused" from your screen reader.
 4. Press **Right**. Expected: your screen reader says the word; textweaver is silent.
 5. Press **Ctrl+F** and type `ada`. Expected: your screen reader echoes the typing; textweaver does not. Press **Escape**.
-6. Press **t** to reach the table, then **s**. Expected: textweaver narrates the row with its headers.
-7. Open `fixtures/o/math-sample.md` (**Ctrl+O**) and press **s** on a formula. Expected: textweaver says the math in words.
+6. Press **t** to reach the table, then **.**. Expected: textweaver narrates the row with its headers.
+7. Open `fixtures/o/math-sample.md` (**Ctrl+O**) and press **.** on a formula. Expected: textweaver says the math in words. Then press **Alt+Shift+X**, **Down**, and **Right**. Expected: each part of the formula is said and highlighted; **Escape** leaves.
 
 ### Screen reader (`--mode screen-reader`, or `--no-speech`)
 
-1. Press **.**, then **s**. Expected: your screen reader reads the preview, then the sentence; textweaver never speaks.
-2. In `fixtures/o/math-sample.md`, press **s** on a formula. Expected: your screen reader reads the math in words, not dollar signs and carets.
+1. Press **Alt+.**, then **.**. Expected: your screen reader reads the preview, then the sentence; textweaver never speaks.
+2. In `fixtures/o/math-sample.md`, press **.** on a formula. Expected: your screen reader reads the math in words, not dollar signs and carets.
 3. Press **Space**. Expected: your screen reader reads the document a sentence at a time, and the cursor moves along. Press **+** or **-** to change the pace, **Space** to pause and resume, **Escape** to stop.
 4. With `say_all = "voice"` under `[accessibility]`, press **Space** again. Expected: textweaver's voice reads instead.
 
 ### Self-voicing (`--mode self-voicing`)
 
 1. Turn your screen reader to speech on demand, or turn dynamic content (NVDA) or screen echo (JAWS) off.
-2. Press **.** and **Space**. Expected: textweaver speaks everything, once.
+2. Press **Alt+.** and **Space**. Expected: textweaver speaks everything, once.
 
 ### Quiet screen and the status-line cursor
 
 1. Add `quiet_screen = true` and `cursor = "status"` under `[accessibility]` in `%TEMP%\tw-check`'s `settings.toml`, and start in self-voicing mode with your screen reader's dynamic content or screen echo on.
 2. Press **Space**. Expected: the title line's "line ... of ..." stays still while textweaver reads, and your screen reader does not chatter.
-3. Press **Escape**, then **.**, then your screen reader's "read current line" (**NVDA+Up**, **Insert+Up**). Expected: it repeats the message on the status line.
+3. Press **Escape**, then **Alt+.**, then your screen reader's "read current line" (**NVDA+Up**, **Insert+Up**). Expected: it repeats the message on the status line.
 
 ### Keys
 
-1. Add `preset = "screen-reader"` under `[keyboard]`. Expected: **h** and **Shift+H** move by heading, **l** by list, **k** by link, **Backspace** goes back.
+1. With the default keys: **h** and **Shift+H** move by heading, **l** by list, **k** by link, **q** by block quote, **Backspace** goes back, and **1** to **6** with and without Shift move by heading level, also on a non-US keyboard layout. Add `preset = "classic"` under `[keyboard]` and start again: **.** moves by sentence and **q** asks to quit.
 2. In Windows Terminal, press **Alt+Left** after a jump. Expected: textweaver goes back, or Windows Terminal takes the key. Note which, and whether it changes with more than one pane.
 3. Press **Alt+Shift+A** three times. Expected: hybrid, screen reader, and self-voicing, each announced once.
 
@@ -270,7 +279,7 @@ Please note which steps did not behave as expected, with the screen reader, its 
 ## See also
 
 - [Reading and moving around](reading.md): every reading key, and the command line options.
-- [Keyboard reference](keyboard.md): every key, the screen-reader preset, and what terminals cannot send.
+- [Keyboard reference](keyboard.md): every key, what changed, the classic preset, and what terminals cannot send.
 - [Settings](settings.md): the `[accessibility]` settings and `[keyboard] preset`.
 - [Troubleshooting](troubleshooting.md): common problems and how to report a bug.
 - [ADR-0006: Keymap, actions, and announcements](adr/0006-keymap-and-actions.md): how announcements reach the status line.

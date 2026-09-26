@@ -68,7 +68,9 @@ fn page_headings(html: &str) -> Vec<(String, String)> {
         let Some(len) = lower[body_start..].find(&close) else {
             break;
         };
-        texts.push(heading_key(&strip_tags(&html[body_start..body_start + len])));
+        texts.push(heading_key(&strip_tags(
+            &html[body_start..body_start + len],
+        )));
         at = body_start + len;
     }
     ids.into_iter().zip(texts).collect()
@@ -498,7 +500,9 @@ impl App {
         }
         let st = &self.authoring.structure;
         let changed = st.version != self.authoring.preview_version;
-        let paused = st.last_edit.is_some_and(|t| now.saturating_duration_since(t) >= LIVE_PAUSE);
+        let paused = st
+            .last_edit
+            .is_some_and(|t| now.saturating_duration_since(t) >= LIVE_PAUSE);
         let busy = self.authoring.jobs.iter().any(|j| {
             matches!(
                 j,
@@ -760,7 +764,11 @@ mod tests {
             progress: Progress::new(t0),
         });
         app.authoring_tick(t0 + Duration::from_millis(1500));
-        assert!(!app.status_text().starts_with("Still"), "{}", app.status_text());
+        assert!(
+            !app.status_text().starts_with("Still"),
+            "{}",
+            app.status_text()
+        );
         app.authoring_tick(t0 + Duration::from_millis(2100));
         assert_eq!(app.status_text(), "Still exporting to PDF, 2 seconds.");
         app.tell("Something else.");
@@ -786,7 +794,8 @@ mod tests {
 
     #[test]
     fn page_headings_have_ids_and_texts() {
-        let html = "<h1 id=\"intro\">Intro <em>here</em></h1><p>x</p><h2 id=\"methods-1\">Methods</h2>";
+        let html =
+            "<h1 id=\"intro\">Intro <em>here</em></h1><p>x</p><h2 id=\"methods-1\">Methods</h2>";
         assert_eq!(
             page_headings(html),
             vec![

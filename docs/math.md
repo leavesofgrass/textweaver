@@ -355,9 +355,18 @@ sum_(i=1)^n i^3=((n(n+1))/2)^2
 
 ## Exploring a formula part by part
 
-This is not yet available in textweaver. Today, textweaver reads a formula from start to end, like a sentence. You cannot yet step into a fraction's top or bottom, or move from term to term with the arrow keys.
+Put the cursor on a formula and press **Alt+Shift+X** (or run `explore math` from the palette). You hear "Exploring math:" and the whole expression. Then:
 
-The part that understands a formula's structure is written and tested; the reader does not use it yet. Until it does, you can explore a formula part by part in your screen reader: convert the document to HTML and open it in a web browser (see "Read MathML with your screen reader" above).
+- **Right** and **Left**: the next or previous term at this level.
+- **Down**: into the part, such as a fraction's numerator, a superscript, or what is under a root. **Right** then moves to the denominator or the next part.
+- **Up**: back out to the part around it.
+- **Home** and **End**: the first and last term at this level.
+- **Space** or **Enter**: say the part again.
+- **Escape**: leave. Any other key leaves too.
+
+Each step says the part's role and the part, such as "numerator, a plus b" or "superscript, 2", and highlights it on screen; the cursor moves to it, so a magnifier or screen reader follows. At an edge nothing moves and you hear "Last term.", "First term.", "No parts inside.", or "Whole expression." The wording follows `math_verbosity`, as above. It works on `$…$`, `$$…$$`, `\(…\)`, `\[…\]`, and ASCIIMath in backticks, and on Word equations, which textweaver reads as LaTeX.
+
+You can also explore a formula in your screen reader: convert the document to HTML and open it in a web browser (see "Read MathML with your screen reader" above).
 
 ## If something goes wrong
 
