@@ -13,6 +13,12 @@ publish.workspace = true
 name = "textweaver-sapi-host"
 path = "src/bin/textweaver-sapi-host.rs"
 
+[features]
+default = ["playback"]
+# Audio output through rodio (Windows only). The host process does not need
+# it: `cargo xtask sapi-host` builds the hosts with `--no-default-features`.
+playback = ["dep:rodio"]
+
 [dependencies]
 textweaver-core.workspace = true
 textweaver-speech.workspace = true
@@ -20,7 +26,18 @@ thiserror.workspace = true
 log.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-windows.workspace = true
+rodio = { workspace = true, optional = true, features = ["playback"] }
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Media_Audio",
+    "Win32_Media_Speech",
+    "Win32_System_Com",
+    "Win32_System_Threading",
+] }
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

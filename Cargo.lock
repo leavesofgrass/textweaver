@@ -2548,6 +2548,7 @@ dependencies = [
  "textweaver-editor",
  "textweaver-formats",
  "textweaver-keymap",
+ "textweaver-sapi",
  "textweaver-speech",
  "textweaver-store",
  "textweaver-text",
@@ -2650,6 +2651,9 @@ name = "textweaver-sapi"
 version = "0.1.0-alpha.0"
 dependencies = [
  "log",
+ "proptest",
+ "rodio",
+ "tempfile",
  "textweaver-core",
  "textweaver-speech",
  "thiserror 2.0.21",
