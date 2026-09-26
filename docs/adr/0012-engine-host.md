@@ -54,7 +54,14 @@ Conversation: the host announces itself with `Ready` (ECI may precede it with `D
 - A backend starts its host on creation (ECI; SAPI's x64 host) or on first use (SAPI's x86 host) and waits up to 10 s for `Ready` (for ECI, up to 10 s after each dictionary report that precedes it, since loading dictionaries on a cold engine takes a while).
 - A host that exits, breaks its pipe, or sends an undecodable frame is dead. A host that stays silent while it owes audio is hung: after 10 s for ECI (configurable, `EciConfig::stall_timeout`; Eloquence hangs on some inputs) and 60 s for SAPI (whose host already gives up on a silent voice after 30 s and reports an error). A hung host is killed.
 - What a dead or hung host owed ends with `Error` then `Finished` (utterances) or an error (captures). The next request starts a new host: restart after a crash or a hang.
-- Shutdown sends `Quit`, waits 500 ms, then kills the process.
+- Shutdown sends `Quit`, waits 500 ms, then kills the process. A host that has already failed (its output closed, a bad frame, a broken input pipe) is killed at once, without the wait.
+- Hosts never outlive textweaver (Phase 1):
+  - When a host's input ends without `Quit` (textweaver exited or crashed), the host bumps its stop epoch, so synthesis in progress aborts and queued requests are skipped, and it exits within 1.5 s even if its engine is stuck (`serve::AtEnd::Exit`).
+  - On Windows every host joins one Job Object created with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`; only textweaver holds its handle, so the system ends the hosts when textweaver ends.
+  - On Linux each host asks for `SIGKILL` when its parent dies (`prctl(PR_SET_PDEATHSIG)`, set between `fork` and `exec`). The signal follows the thread that started the host, so a host must be started on the thread that keeps it (the speech thread does).
+- A host's stderr is always drained: lines that are not UTF-8 are logged with replacement characters. Hosts write to stderr only through `serve::log_line`, which ignores a closed stderr instead of panicking (a panic in a COM or C callback would abort the host).
+- A request over the 16 MiB frame limit is refused by the backend before it is written ("this text is too long to speak in one piece"), and a host that is sent one anyway reads past it and keeps working.
+- An audio output that stops taking samples while audio waits and nothing is paused is reopened after 1 s (backing off to 8 s), in or out of a reading.
 
 ### Capabilities
 

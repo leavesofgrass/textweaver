@@ -38,6 +38,10 @@ Star's playback layer (`star/tts/manager/_playback.py`, inventoried in `docs/sta
 
 **Queue.** The service keeps two chunks of lookahead so engines with per-utterance latency do not gap between sentences. `queue.rs` and `pacing.rs` are pure and tested with a fake `Clock`.
 
+**Failures (Phase 1).**
+- An engine that crashes or stalls in a reading is reset, and the reading goes on from the last confirmed word (`SpeechStatus::Restarted`). Another restart needs progress *past* that word: the repeated word itself does not count, or an engine that crashes on the same text would restart forever. A sentence gets at most three restarts; the next crash stops the reading with a message.
+- A panic on the speech thread is caught. The thread drops the backend, sends one last `BackendError` saying what happened, and ends. `SpeechService::is_alive()` turns false and `poll_status()` reports `ServiceStopped`, so a frontend can tell a dead thread from an empty queue, announce the failure without speech, and spawn a new service.
+
 **Omnivox.** The subprocess backend drives the Emacspeak speech-server protocol on stdin. It gets no events, so it uses the timer pacer; word-level highlighting with Omnivox is not promised. Later options: an upstream `--events` side channel, or in-process `omnivox-tts` crates where chunk durations are known.
 
 ## Consequences
