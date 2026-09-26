@@ -190,7 +190,8 @@ The highlight that follows the reading.
 - `granularity`, default `"word"`: `"word"`, `"sentence"`, or `"both"` (the sentence, and the word inside it).
 - `lead_words`, default `1`: move the drawn highlight ahead (a positive number) or behind (a negative number) by this many words, from -5 to 5. The default of 1 is the word being heard.
 - `speed`, default `1.0`: for engines without word events, a multiplier on the estimated speed of the highlight, from 0.5 to 1.5.
-- `color` (default `"cyan"`) and `sentence_color` (not set): not used yet. The theme sets the highlight colours; see [Themes](themes.md).
+- `color`, default `"theme"`: the colour of the band behind the word being read, laid over the theme's own. A name (`cyan`, `yellow`, `green`, `pink`, `orange`, `light blue`, and the common web colour names) or `#rrggbb`. `"theme"` keeps the theme's colour. The text in the band is the theme's text or page colour, whichever reads better, and the highlight keeps its bold or underline, so it never depends on colour alone. When the band leaves the text below 4.5 to 1 contrast (7 to 1 in high-contrast themes), textweaver says so at startup and when you change theme.
+- `sentence_color`, not set by default: the same for the band behind the sentence being read.
 
 ### [normalization]
 

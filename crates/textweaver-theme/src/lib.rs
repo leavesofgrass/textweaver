@@ -20,6 +20,8 @@
 //!   [`css`] (custom properties with `prefers-color-scheme` pairs), and
 //!   [`Theme::rgb_table`] for the GUI.
 //! - [`os`] follows the system's light, dark, or high-contrast setting.
+//! - [`reading`] lays the reader's `[highlight]` colours over a theme's
+//!   spoken-word and spoken-sentence styles, with a contrast warning.
 
 pub mod builtin;
 pub mod check;
@@ -29,6 +31,7 @@ mod error;
 pub mod file;
 mod model;
 pub mod os;
+pub mod reading;
 pub mod registry;
 pub mod resolve;
 pub mod star;

@@ -257,9 +257,12 @@ pub struct HighlightSettings {
     pub lead_words: i8,
     /// Timer pacing speed multiplier, 0.5..=1.5.
     pub speed: f32,
-    /// Word highlight color (name or `#rrggbb`).
+    /// Word highlight color laid over the theme's spoken-word style: a name
+    /// (`cyan`, `yellow`, ...) or `#rrggbb`; `"theme"` (the default) keeps
+    /// the theme's own.
     pub color: String,
-    /// Sentence highlight color; `None` uses the theme's selection color.
+    /// Sentence highlight color laid over the theme's spoken-sentence
+    /// style; `None` (or `"theme"`) keeps the theme's own.
     pub sentence_color: Option<String>,
     /// Unknown keys, preserved.
     #[serde(flatten)]
@@ -273,7 +276,7 @@ impl Default for HighlightSettings {
             granularity: HighlightGranularity::default(),
             lead_words: 1,
             speed: 1.0,
-            color: "cyan".into(),
+            color: "theme".into(),
             sentence_color: None,
             extra: toml::Table::new(),
         }

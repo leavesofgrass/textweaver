@@ -110,6 +110,8 @@ pub struct Tui {
     support: ColorSupport,
     /// The styles of the theme in effect, rebuilt only when it changes.
     theme: Theme,
+    /// The theme name and highlight colours `theme` was built for.
+    theme_key: (String, String, Option<String>),
     /// The status announcement last drawn: its sequence number and text.
     status_shown: (u64, String),
     /// While set, the status line is drawn blank until then (a repeated
@@ -140,7 +142,8 @@ impl Tui {
     /// [`ColorSupport::detect`] also honors `TEXTWEAVER_COLOR` and
     /// `NO_COLOR`).
     pub fn with_color_support(app: App, support: ColorSupport) -> Self {
-        let theme = Theme::from_theme(app.current_theme(), support);
+        let theme = Theme::from_theme(&app.reading_theme(), support);
+        let theme_key = app.reading_theme_key();
         Tui {
             app,
             minibuffer: None,
@@ -149,6 +152,7 @@ impl Tui {
             quit: false,
             support,
             theme,
+            theme_key,
             status_shown: (0, String::new()),
             status_blank_until: None,
         }
@@ -179,17 +183,19 @@ impl Tui {
         self.list.as_ref()
     }
 
-    /// The styles of the theme in effect, cached by theme name and rebuilt
-    /// only when the theme changes.
+    /// The styles of the theme in effect (with the reader's highlight
+    /// colours), cached and rebuilt only when the theme or those colours
+    /// change.
     pub fn theme(&self) -> &Theme {
         &self.theme
     }
 
     /// Rebuilds the cached styles when the app's theme changed.
     fn refresh_theme(&mut self) {
-        let current = self.app.current_theme();
-        if current.meta.name != self.theme.name {
-            self.theme = Theme::from_theme(current, self.support);
+        let key = self.app.reading_theme_key();
+        if key != self.theme_key {
+            self.theme = Theme::from_theme(&self.app.reading_theme(), self.support);
+            self.theme_key = key;
         }
     }
 
