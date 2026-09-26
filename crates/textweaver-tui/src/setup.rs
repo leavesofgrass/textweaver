@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use textweaver_app::a11y::LogAnnouncer;
+use textweaver_app::a11y::{Announcer, LogAnnouncer};
 use textweaver_app::keymap::{Frontend, Keymap, Platform};
 use textweaver_app::speech::pacing::PacingConfig;
 use textweaver_app::speech::{
@@ -105,6 +105,12 @@ pub fn start_speech(settings: &Settings, opts: &Options) -> (SpeechService, Stri
 /// Builds the app from the options: persistence paths, settings, keymap
 /// overrides, and speech. Returns messages to announce once it is running.
 pub fn build_app(opts: &Options) -> (App, Vec<String>) {
+    build_app_with(opts, Box::new(LogAnnouncer::default()))
+}
+
+/// [`build_app`] with a chosen announcer (the JSON-RPC server passes one
+/// that forwards announcements to its client).
+pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<String>) {
     let mut messages = Vec::new();
     let paths = match &opts.home {
         Some(home) => Some(Paths::under(home)),
@@ -146,7 +152,7 @@ pub fn build_app(opts: &Options) -> (App, Vec<String>) {
         keymap,
         speech,
         paths,
-        announcer: Box::new(LogAnnouncer::default()),
+        announcer,
         self_voicing,
         backend_name,
     });

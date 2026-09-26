@@ -315,6 +315,7 @@ impl App {
             effects.push(Effect::Redraw);
             return effects;
         }
+        self.list = None;
         vec![Effect::Redraw]
     }
 
@@ -448,6 +449,7 @@ impl App {
         self.tell(&format!("Highlight removed: {text}"));
         let items = self.highlight_items();
         if items.is_empty() {
+            self.list = None;
             return vec![Effect::Redraw];
         }
         self.list = Some(ListKind::Highlights);

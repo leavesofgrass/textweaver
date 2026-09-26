@@ -6,8 +6,8 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::Parser;
-use textweaver_app::a11y::Priority;
-use textweaver_tui::{Options, Tui, build_app, run};
+
+use textweaver_tui::{Options, launch};
 
 /// Read documents aloud in the terminal.
 #[derive(Parser, Debug)]
@@ -38,25 +38,5 @@ fn main() -> Result<()> {
         home: args.home,
         theme: args.theme,
     };
-    let (app, messages) = build_app(&opts);
-    let mut tui = Tui::new(app);
-    if let Some(file) = &args.file {
-        if let Err(e) = tui.app_mut().open(file) {
-            let msg = format!("Could not open {}: {e}", file.display());
-            tui.app_mut().announce(&msg, Priority::Assertive);
-        }
-    } else {
-        tui.app_mut().announce(
-            "No document is open. Press Control O to open one, or F1 for help.",
-            Priority::Polite,
-        );
-    }
-    for m in messages {
-        tui.app_mut().announce(&m, Priority::Assertive);
-    }
-    let mut terminal = ratatui::init();
-    let result = run(&mut terminal, &mut tui);
-    ratatui::restore();
-    tui.app_mut().shutdown();
-    result
+    launch(&opts, args.file.as_deref())
 }

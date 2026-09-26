@@ -1,5 +1,8 @@
 //! The terminal frontend: key handling and drawing over an [`App`].
 
+use std::collections::HashMap;
+use std::time::Instant;
+
 use ratatui::Frame;
 use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Position, Rect};
@@ -10,7 +13,9 @@ use textweaver_app::a11y::Priority;
 use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
 use textweaver_app::keymap::{ActionId, Key, KeyChord, Modifiers};
 use textweaver_app::text_util::line_count;
-use textweaver_app::{App, Command, Effect, Mode, Playback, PromptPurpose, chords_text};
+use textweaver_app::{
+    App, CaretMove, Command, Effect, Mode, Playback, PromptPurpose, chords_text, extra_lookup,
+};
 
 use crate::layout::{self, Row};
 use crate::theme::Theme;
@@ -55,15 +60,6 @@ pub fn chord(k: &KeyEvent) -> Option<KeyChord> {
     Some(KeyChord::new(key, mods))
 }
 
-fn purpose_slot(p: PromptPurpose) -> usize {
-    match p {
-        PromptPurpose::Find => 0,
-        PromptPurpose::GoTo => 1,
-        PromptPurpose::Open => 2,
-        PromptPurpose::CommandPalette => 3,
-    }
-}
-
 /// Most recalled answers kept per prompt.
 const PROMPT_HISTORY: usize = 50;
 
@@ -72,7 +68,7 @@ pub struct Tui {
     app: App,
     minibuffer: Option<Minibuffer>,
     list: Option<ListView>,
-    answers: [Vec<String>; 4],
+    answers: HashMap<PromptPurpose, Vec<String>>,
     quit: bool,
 }
 
@@ -131,9 +127,20 @@ impl Tui {
         Theme::named(&self.app.settings().display.theme)
     }
 
-    /// Applies speech status; true when a redraw is due.
+    /// Applies speech status and runs the app's housekeeping (autosave,
+    /// periodic position saves); true when a redraw is due.
     pub fn tick(&mut self) -> bool {
-        !self.app.poll_speech().is_empty()
+        let redraw = !self.app.poll_speech().is_empty();
+        let effects = self.app.tick(Instant::now());
+        let more = !effects.is_empty();
+        self.apply(effects);
+        redraw || more
+    }
+
+    /// Offers unsaved work from a previous run (call once at startup).
+    pub fn offer_recovery(&mut self) {
+        let effects = self.app.offer_recovery();
+        self.apply(effects);
     }
 
     /// Dispatches a command and acts on its effects.
@@ -153,7 +160,17 @@ impl Tui {
                 }
                 Effect::ShowList { title, items } => {
                     self.minibuffer = None;
-                    self.list = Some(ListView::new(title, items));
+                    // The same list again (after a delete): stay in place.
+                    let keep = self
+                        .list
+                        .as_ref()
+                        .filter(|l| l.title == title)
+                        .map(|l| l.selected);
+                    let mut view = ListView::new(title, items);
+                    if let Some(i) = keep {
+                        view.selected = i.min(view.items.len().saturating_sub(1));
+                    }
+                    self.list = Some(view);
                 }
             }
         }
@@ -161,10 +178,28 @@ impl Tui {
 
     /// Handles one terminal event.
     pub fn handle_event(&mut self, event: &Event) {
-        if let Event::Key(k) = event
-            && matches!(k.kind, KeyEventKind::Press | KeyEventKind::Repeat)
-        {
-            self.handle_key(*k);
+        match event {
+            Event::Key(k) if matches!(k.kind, KeyEventKind::Press | KeyEventKind::Repeat) => {
+                self.handle_key(*k);
+            }
+            Event::Paste(text) => self.paste(text),
+            _ => {}
+        }
+    }
+
+    /// Pasted text: into the prompt when one is open, else into the
+    /// document in edit mode.
+    pub fn paste(&mut self, text: &str) {
+        if let Some(mb) = self.minibuffer.as_mut() {
+            for c in text.chars().filter(|c| !c.is_control()) {
+                mb.insert(c);
+            }
+            self.app.echo(text);
+            return;
+        }
+        if self.list.is_none() {
+            let text = text.replace("\r\n", "\n").replace('\r', "\n");
+            self.dispatch(Command::Insert(text));
         }
     }
 
@@ -174,15 +209,61 @@ impl Tui {
             self.list_key(k);
         } else if self.minibuffer.is_some() {
             self.minibuffer_key(k);
+        } else if self.app.mode() == Mode::Edit {
+            self.edit_key(k);
         } else {
             self.browse_key(k);
         }
     }
 
+    /// Edit mode: bound chords (the Edit layer, then Global) run their
+    /// actions; everything else types, deletes, or moves the caret.
+    fn edit_key(&mut self, k: KeyEvent) {
+        let Some(c) = chord(&k) else { return };
+        if let Some(action) = self.app.keymap().lookup(&c, Mode::Edit.layer()) {
+            self.dispatch(Command::Action(action));
+            return;
+        }
+        let ctrl = k.modifiers.contains(KeyModifiers::CONTROL);
+        let alt = k.modifiers.contains(KeyModifiers::ALT);
+        let extend = k.modifiers.contains(KeyModifiers::SHIFT);
+        let caret = |by, direction| Command::MoveCaret {
+            by,
+            direction,
+            extend,
+        };
+        let cmd = match k.code {
+            KeyCode::Char(ch) if !ctrl && !alt => Command::Insert(ch.to_string()),
+            KeyCode::Enter if !ctrl && !alt => Command::Insert("\n".into()),
+            KeyCode::Tab if !ctrl && !alt => Command::Insert("\t".into()),
+            KeyCode::Backspace => Command::DeleteBack,
+            KeyCode::Delete => Command::DeleteForward,
+            KeyCode::Left if ctrl => caret(CaretMove::Word, Direction::Backward),
+            KeyCode::Right if ctrl => caret(CaretMove::Word, Direction::Forward),
+            KeyCode::Left => caret(CaretMove::Char, Direction::Backward),
+            KeyCode::Right => caret(CaretMove::Char, Direction::Forward),
+            KeyCode::Up => caret(CaretMove::Line, Direction::Backward),
+            KeyCode::Down => caret(CaretMove::Line, Direction::Forward),
+            KeyCode::Home if ctrl => caret(CaretMove::DocumentEdge, Direction::Backward),
+            KeyCode::End if ctrl => caret(CaretMove::DocumentEdge, Direction::Forward),
+            KeyCode::Home => caret(CaretMove::LineEdge, Direction::Backward),
+            KeyCode::End => caret(CaretMove::LineEdge, Direction::Forward),
+            KeyCode::PageUp => caret(CaretMove::Page, Direction::Backward),
+            KeyCode::PageDown => caret(CaretMove::Page, Direction::Forward),
+            _ => return,
+        };
+        self.dispatch(cmd);
+    }
+
     fn browse_key(&mut self, k: KeyEvent) {
         let Some(c) = chord(&k) else { return };
-        if let Some(action) = self.app.keymap().lookup(&c, self.app.mode().layer()) {
+        let layer = self.app.mode().layer();
+        if let Some(action) = self.app.keymap().lookup(&c, layer) {
             self.dispatch(Command::Action(action));
+            return;
+        }
+        if let Some(cmd) = extra_lookup(&c, layer) {
+            self.dispatch(cmd);
             return;
         }
         // Shift+arrows select when nothing else claims them.
@@ -223,6 +304,16 @@ impl Tui {
                 self.dispatch(Command::Cancel);
                 return;
             }
+            KeyCode::Delete => {
+                let n = list.selected;
+                self.list_action(Command::DeleteItem(n));
+                return;
+            }
+            KeyCode::F(2) => {
+                let n = list.selected;
+                self.list_action(Command::RenameItem(n));
+                return;
+            }
             _ => return,
         };
         let text = list.current().unwrap_or_default().to_owned();
@@ -241,6 +332,19 @@ impl Tui {
         }
     }
 
+    /// Runs a command on a list item; the list stays open only if the app
+    /// shows it again.
+    fn list_action(&mut self, cmd: Command) {
+        let effects = self.app.dispatch(cmd);
+        let reshown = effects
+            .iter()
+            .any(|e| matches!(e, Effect::ShowList { .. } | Effect::Prompt { .. }));
+        if !reshown {
+            self.list = None;
+        }
+        self.apply(effects);
+    }
+
     fn minibuffer_key(&mut self, k: KeyEvent) {
         let Some(mb) = self.minibuffer.as_mut() else {
             return;
@@ -251,9 +355,9 @@ impl Tui {
         match k.code {
             KeyCode::Enter => {
                 let answer = mb.text();
-                let slot = purpose_slot(mb.purpose);
+                let purpose = mb.purpose;
                 if !answer.trim().is_empty() {
-                    let hist = &mut self.answers[slot];
+                    let hist = self.answers.entry(purpose).or_default();
                     hist.retain(|a| a != &answer);
                     hist.push(answer.clone());
                     if hist.len() > PROMPT_HISTORY {
@@ -340,7 +444,8 @@ impl Tui {
             self.app.announce(&desc, Priority::Assertive);
             return;
         }
-        let hist = &self.answers[purpose_slot(mb.purpose)];
+        let empty = Vec::new();
+        let hist = self.answers.get(&mb.purpose).unwrap_or(&empty);
         if hist.is_empty() {
             self.app.announce("No earlier entries.", Priority::Polite);
             return;
@@ -470,6 +575,9 @@ impl Tui {
         let mut parts = Vec::new();
         if app.mode() != Mode::Browse {
             parts.push(app.mode().name().to_owned());
+        }
+        if app.is_dirty() {
+            parts.push("modified".to_owned());
         }
         parts.push(state.to_owned());
         if let Some(s) = app.session() {
@@ -620,6 +728,15 @@ impl Tui {
     /// Key hints for the current mode, from the keymap, fitted to `width`.
     pub fn hints(&self, width: u16) -> String {
         let hints: &[(ActionId, &str)] = match self.app.mode() {
+            Mode::Edit => &[
+                (ActionId::Save, "save"),
+                (ActionId::ToggleEditMode, "finish"),
+                (ActionId::Undo, "undo"),
+                (ActionId::Bold, "bold"),
+                (ActionId::Heading, "heading"),
+                (ActionId::KeyboardHelp, "keys"),
+                (ActionId::Quit, "quit"),
+            ],
             Mode::SpeechCursor => &[
                 (ActionId::SpeechCursorNextLine, "next line"),
                 (ActionId::SpeechCursorPreviousLine, "previous line"),
