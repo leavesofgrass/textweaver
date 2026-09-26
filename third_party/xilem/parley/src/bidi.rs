@@ -893,6 +893,9 @@ impl BracketStack {
     }
 }
 
+// textweaver: newer icu_properties deprecates `to_icu4c_value`; the value
+// is still correct, and this vendored copy is built with `-D warnings`.
+#[allow(deprecated)]
 const fn mask(t: BidiClass) -> u32 {
     1 << (t.to_icu4c_value() as u32)
 }
