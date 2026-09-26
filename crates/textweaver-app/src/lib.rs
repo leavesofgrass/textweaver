@@ -103,6 +103,7 @@ pub mod align;
 mod app;
 mod backends;
 mod command;
+pub mod disk;
 mod edit;
 mod export;
 mod extra;

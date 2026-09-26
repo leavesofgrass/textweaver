@@ -792,3 +792,125 @@ fn wait_until(done: impl Fn() -> bool) {
         std::thread::sleep(Duration::from_millis(5));
     }
 }
+
+/// Changes a file on disk the way another editor would: new contents,
+/// another size.
+fn change_on_disk(path: &Path, text: &str) {
+    std::fs::write(path, text).unwrap();
+}
+
+#[test]
+fn saving_over_a_file_changed_on_disk_asks_first() {
+    let mut r = rig();
+    let file = r.file("shared.md", NOTE_MD);
+    r.app.open(&file).unwrap();
+    r.act(ActionId::ToggleEditMode);
+    r.type_str("Mine. ");
+    let theirs = "# Title\n\nSomeone else wrote this.\n";
+    change_on_disk(&file, theirs);
+    r.act(ActionId::Save);
+    assert!(r.app.confirmation_pending());
+    assert_eq!(
+        r.said.last(),
+        "shared.md changed on disk since you opened it. Save over those changes? y or n."
+    );
+    // No keeps their version on disk and stays in edit mode.
+    r.app.dispatch(Command::Confirm(Confirm::No));
+    assert!(
+        r.said.last().starts_with("Not saved. Still editing."),
+        "{}",
+        r.said.last()
+    );
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), theirs);
+    assert!(r.app.is_dirty());
+    // Yes saves over them; the next save does not ask again.
+    r.act(ActionId::Save);
+    assert!(r.app.confirmation_pending());
+    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    assert!(!r.app.is_dirty());
+    assert!(std::fs::read_to_string(&file).unwrap().contains("Mine. "));
+    r.type_str("More. ");
+    r.act(ActionId::Save);
+    assert!(!r.app.confirmation_pending());
+    assert!(
+        r.said.last().starts_with("Saved shared.md"),
+        "{}",
+        r.said.last()
+    );
+}
+
+#[test]
+fn leaving_with_save_over_a_changed_file_asks_first() {
+    let mut r = rig();
+    let file = r.file("leave.md", NOTE_MD);
+    r.app.open(&file).unwrap();
+    r.act(ActionId::ToggleEditMode);
+    r.type_str("Mine. ");
+    change_on_disk(&file, "# Title\n\nChanged elsewhere, longer.\n");
+    r.act(ActionId::ToggleEditMode);
+    // Save, discard, or cancel: save.
+    r.app.dispatch(Command::Choose(0));
+    assert!(r.app.confirmation_pending());
+    assert!(r.app.is_editing());
+    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    assert!(!r.app.is_editing());
+    assert!(std::fs::read_to_string(&file).unwrap().contains("Mine. "));
+}
+
+#[test]
+fn a_file_changed_on_disk_while_open_offers_a_reload() {
+    let mut r = rig();
+    let file = r.file("watched.md", NOTE_MD);
+    r.app.open(&file).unwrap();
+    let t0 = Instant::now();
+    r.app.tick(t0);
+    assert!(!r.app.confirmation_pending());
+    change_on_disk(&file, "# Title\n\nFresh text from elsewhere.\n");
+    r.app.tick(t0 + Duration::from_secs(5));
+    assert!(r.app.confirmation_pending());
+    assert_eq!(
+        r.said.last(),
+        "watched.md changed on disk. Reload it? y or n."
+    );
+    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    assert!(
+        r.text().contains("Fresh text from elsewhere."),
+        "{}",
+        r.text()
+    );
+    // No: keep the open version, and do not ask again about it.
+    change_on_disk(&file, "# Title\n\nA third version, longer still.\n");
+    r.app.tick(t0 + Duration::from_secs(10));
+    assert!(r.app.confirmation_pending());
+    r.app.dispatch(Command::Confirm(Confirm::No));
+    assert_eq!(r.said.last(), "Kept the open version.");
+    r.app.tick(t0 + Duration::from_secs(15));
+    assert!(!r.app.confirmation_pending());
+    assert!(r.text().contains("Fresh text"));
+}
+
+#[test]
+fn a_reload_is_not_offered_over_unsaved_changes_but_is_in_clean_edit_mode() {
+    let mut r = rig();
+    let file = r.file("busy.md", NOTE_MD);
+    r.app.open(&file).unwrap();
+    r.act(ActionId::ToggleEditMode);
+    r.type_str("Unsaved. ");
+    let t0 = Instant::now();
+    change_on_disk(&file, "# Title\n\nOther words here.\n");
+    r.app.tick(t0 + Duration::from_secs(5));
+    assert!(!r.app.confirmation_pending(), "{}", r.said.last());
+    // Undo back to clean: the reload is offered and keeps edit mode on.
+    for _ in 0..20 {
+        if !r.app.is_dirty() {
+            break;
+        }
+        r.act(ActionId::Undo);
+    }
+    assert!(!r.app.is_dirty());
+    r.app.tick(t0 + Duration::from_secs(10));
+    assert!(r.app.confirmation_pending());
+    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    assert!(r.app.is_editing());
+    assert!(r.text().contains("Other words here."), "{}", r.text());
+}

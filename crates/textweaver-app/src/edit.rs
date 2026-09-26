@@ -378,6 +378,13 @@ impl App {
         save_as: Option<PathBuf>,
         after: AfterLeave,
     ) -> Vec<Effect> {
+        if self.is_dirty()
+            && choice == Some(Choice::Save)
+            && save_as.is_none()
+            && let Some(asked) = self.check_overwrite(Some(after.clone()))
+        {
+            return asked;
+        }
         let Some(edit) = self.edit.as_mut() else {
             return self.continue_after(after);
         };
@@ -387,6 +394,9 @@ impl App {
             Ok(LeaveOutcome::Left { rebuild }) => {
                 let discarded = dirty && choice == Some(Choice::Discard);
                 self.finish_leave(rebuild, discarded);
+                if rebuild {
+                    self.remember_disk_state();
+                }
                 self.continue_after(after)
             }
             Ok(LeaveOutcome::Stayed) => {
@@ -490,7 +500,7 @@ impl App {
     /// Tears edit mode down after the session left it: rebuilds the reading
     /// document from the saved file when a save happened, else restores it,
     /// and maps every position back.
-    fn finish_leave(&mut self, rebuild: bool, discarded: bool) {
+    pub(crate) fn finish_leave(&mut self, rebuild: bool, discarded: bool) {
         let Some(state) = self.edit.take() else {
             return;
         };
@@ -622,16 +632,25 @@ impl App {
     /// Ctrl+S: saves in place, or asks for a name (new and converted
     /// documents). Stays in edit mode.
     pub(crate) fn save(&mut self, save_as: Option<PathBuf>) -> Vec<Effect> {
-        let Some(edit) = self.edit.as_mut() else {
+        if self.edit.is_none() {
             let k = chords_text(&self.keymap, ActionId::ToggleEditMode);
             self.tell(&format!(
                 "Nothing to save. Turn on edit mode with {k} to make changes."
             ));
             return vec![Effect::Redraw];
+        }
+        if save_as.is_none()
+            && let Some(asked) = self.check_overwrite(None)
+        {
+            return asked;
+        }
+        let Some(edit) = self.edit.as_mut() else {
+            return vec![Effect::Redraw];
         };
         match edit.session.save(save_as.as_deref()) {
             Ok(SaveOutcome::Saved { path, adopted }) => {
                 self.after_save(&path, adopted);
+                self.remember_disk_state();
                 let name = path.file_name().map_or_else(
                     || path.display().to_string(),
                     |n| n.to_string_lossy().into(),
