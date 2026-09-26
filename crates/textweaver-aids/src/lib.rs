@@ -18,7 +18,8 @@
 //! - [`fonts`]: font family, size, and weight, with the reading fonts Star
 //!   offered (OpenDyslexic, Atkinson Hyperlegible, Lexend), fallbacks, and CSS.
 //! - [`ruler`]: the reading ruler and current-line band as row marks.
-//! - [`difficult`]: rare-word marking from a word-frequency list.
+//! - [`difficult`]: rare-word marking, with SCOWL's word levels built in
+//!   (no download) or any word-frequency list.
 //! - [`html`]: wraps ranges of text in HTML tags, escaping the rest.
 //!
 //! Positions are canonical [`CharPos`](textweaver_core::CharPos) values
@@ -38,7 +39,10 @@ pub mod syllables;
 mod util;
 
 pub use bionic::{BionicOptions, bionic_range, bionic_text, fixation_len};
-pub use difficult::{DifficultOptions, FrequencyList, difficult_range, difficult_text};
+pub use difficult::{
+    Commonness, DifficultOptions, FrequencyList, ScowlList, WordList, difficult_range,
+    difficult_text,
+};
 pub use fonts::{
     FontDescription, FontFamily, FontSettings, Platform, READING_FONTS, ReadingFont, ReadingFontId,
 };

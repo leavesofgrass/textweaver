@@ -3,14 +3,19 @@
 //! Star let the reader pick any family and offered three reading fonts it
 //! downloaded on first use (`star/fonts.py`, `gui/mixin_fontspacing.py`):
 //! OpenDyslexic, Atkinson Hyperlegible, and Lexend, all under the SIL Open
-//! Font License 1.1. textweaver keeps that list and that approach: font
-//! files are never bundled; [`READING_FONTS`] records each font's licence,
-//! home page, and the pinned download URLs Star used, and the GUI fetches
-//! a chosen font into its cache after asking (see `docs/reading-aids.md`).
+//! Font License 1.1. textweaver keeps that list, and bundles fonts where it
+//! can (`textweaver-fonts`, cargo feature `bundled-fonts`): OpenDyslexic,
+//! Atkinson Hyperlegible Next (which stands in for Atkinson Hyperlegible),
+//! and Atkinson Hyperlegible Mono ship with textweaver and resolve with no
+//! download. Only a reading font that is not bundled (Lexend) keeps Star's
+//! approach: [`READING_FONTS`] records its licence, home page, and the
+//! pinned download URLs Star used, and the GUI fetches it into its cache
+//! after asking (see `docs/reading-aids.md`).
 //!
 //! This module is pure: it never enumerates or loads fonts. The GUI passes
 //! a predicate that says whether a family is installed, and gets back the
-//! family to use, whether it fell back, and whether a download would help
+//! family to use, whether it fell back, whether it is a bundled font the
+//! GUI must register, and whether a download would help
 //! ([`FontSettings::resolve`]). HTML views get a CSS font stack whose
 //! fallbacks do the same job in the browser ([`FontSettings::to_css`]).
 //!
@@ -20,6 +25,7 @@
 use std::fmt::Write as _;
 
 use serde::{Deserialize, Serialize};
+use textweaver_fonts::{BundledFamily, bundled};
 
 use crate::spacing::TextSpacing;
 
@@ -65,9 +71,18 @@ pub struct ReadingFont {
     pub homepage: &'static str,
     /// Font files, pinned to immutable commits (Star's URLs).
     pub files: &'static [&'static str],
+    /// The bundled family that serves this choice with no download
+    /// (`textweaver-fonts`), when there is one.
+    pub bundled_as: Option<&'static str>,
 }
 
 impl ReadingFont {
+    /// The bundled family that serves this font, when this build bundles
+    /// fonts and the font has one.
+    pub fn bundled(&self) -> Option<&'static BundledFamily> {
+        self.bundled_as.and_then(bundled::family)
+    }
+
     /// The file whose presence in the font cache means "fetched" (the
     /// regular face).
     pub fn probe_file(&self) -> &'static str {
@@ -108,6 +123,7 @@ pub const READING_FONTS: [ReadingFont; 3] = [
                 "OpenDyslexic-BoldItalic.otf",
             ]
         ),
+        bundled_as: Some("OpenDyslexic"),
     },
     ReadingFont {
         id: ReadingFontId::AtkinsonHyperlegible,
@@ -126,6 +142,7 @@ pub const READING_FONTS: [ReadingFont; 3] = [
                 "AtkinsonHyperlegible-BoldItalic.ttf",
             ]
         ),
+        bundled_as: Some("Atkinson Hyperlegible Next"),
     },
     ReadingFont {
         id: ReadingFontId::Lexend,
@@ -139,6 +156,7 @@ pub const READING_FONTS: [ReadingFont; 3] = [
             "https://raw.githubusercontent.com/googlefonts/lexend/cd26b9c2538d758138c20c3d2f10362ed613854b/fonts/lexend/ttf",
             ["Lexend-Regular.ttf", "Lexend-Bold.ttf"]
         ),
+        bundled_as: None,
     },
 ];
 
@@ -285,9 +303,11 @@ impl FontFamily {
         }
     }
 
-    /// Family names to try, in order, ending with a platform sans-serif.
-    /// A reading font falls back to the other reading fonts first (Star's
-    /// order), then to sans-serif.
+    /// Family names to try, in order, ending with a platform sans-serif
+    /// and then, when fonts are bundled, Atkinson Hyperlegible Next (so a
+    /// font is always found). A reading font falls back to the other
+    /// reading fonts first (Star's order), then to sans-serif; monospace
+    /// tries the bundled Atkinson Hyperlegible Mono after the platform's.
     pub fn fallback_chain(&self, platform: Platform) -> Vec<String> {
         let mut out: Vec<String> = Vec::new();
         let mut add = |names: &[&str]| {
@@ -301,7 +321,12 @@ impl FontFamily {
             FontFamily::SystemUi => add(platform_ui(platform)),
             FontFamily::Sans => {}
             FontFamily::Serif => add(platform_serif(platform)),
-            FontFamily::Monospace => add(platform_mono(platform)),
+            FontFamily::Monospace => {
+                add(platform_mono(platform));
+                if let Some(m) = bundled::default_mono() {
+                    add(&[m.name]);
+                }
+            }
             FontFamily::Reading(id) => {
                 let f = id.font();
                 add(&[f.family]);
@@ -314,6 +339,9 @@ impl FontFamily {
             FontFamily::Named(n) => add(&[n.as_str()]),
         }
         add(platform_sans(platform));
+        if let Some(t) = bundled::default_text() {
+            add(&[t.name]);
+        }
         out
     }
 
@@ -381,8 +409,13 @@ pub struct FontResolution {
     pub family: Option<String>,
     /// True when the chosen family is missing and a fallback is used.
     pub fell_back: bool,
-    /// A reading font that is missing and can be downloaded.
+    /// A reading font that is missing and can be downloaded (never one
+    /// that is bundled).
     pub download: Option<&'static ReadingFont>,
+    /// The family is a bundled font not installed on the system: the GUI
+    /// registers its files for the process (`textweaver-fonts`) before
+    /// using it.
+    pub bundled: Option<&'static BundledFamily>,
 }
 
 impl FontResolution {
@@ -489,6 +522,9 @@ impl FontSettings {
 
     /// Picks the family to use. `installed` says whether a family is
     /// installed (the GUI asks its toolkit; matching should ignore case).
+    /// Bundled families count as installed, so they never need a
+    /// download; [`FontResolution::bundled`] says when the GUI must
+    /// register one.
     pub fn resolve(&self, platform: Platform, installed: impl Fn(&str) -> bool) -> FontResolution {
         let s = self.clamped();
         if s.family == FontFamily::SystemUi && platform == Platform::MacOs {
@@ -497,10 +533,11 @@ impl FontSettings {
                 family: None,
                 fell_back: false,
                 download: None,
+                bundled: None,
             };
         }
         let chain = s.family.fallback_chain(platform);
-        let wanted: Vec<&str> = match &s.family {
+        let mut wanted: Vec<&str> = match &s.family {
             FontFamily::Reading(id) => {
                 let f = id.font();
                 let mut w = vec![f.family];
@@ -513,12 +550,31 @@ impl FontSettings {
             FontFamily::Monospace => platform_mono(platform).to_vec(),
             FontFamily::Sans => platform_sans(platform).to_vec(),
         };
-        let found = chain.iter().find(|n| installed(n)).cloned();
+        // Any monospace or sans-serif serves those choices.
+        match &s.family {
+            FontFamily::Monospace => wanted.extend(bundled::default_mono().map(|f| f.name)),
+            FontFamily::Sans => wanted.extend(bundled::default_text().map(|f| f.name)),
+            _ => {}
+        }
+        // An installed family by its own name; a bundled one by the name
+        // it registers under (the chain may name it by an alias).
+        let found = chain.iter().find_map(|n| {
+            if installed(n) {
+                Some(n.clone())
+            } else {
+                bundled::family(n).map(|f| f.name.to_owned())
+            }
+        });
         let fell_back = found
             .as_deref()
             .is_none_or(|f| !wanted.iter().any(|w| w.eq_ignore_ascii_case(f)));
+        let bundled = found
+            .as_deref()
+            .filter(|f| !installed(f))
+            .and_then(bundled::family);
+        // Downloads only for a reading font nothing bundled can serve.
         let download = if fell_back && s.fetch_missing {
-            s.family.reading_font()
+            s.family.reading_font().filter(|f| f.bundled().is_none())
         } else {
             None
         };
@@ -526,6 +582,7 @@ impl FontSettings {
             family: found,
             fell_back,
             download,
+            bundled,
         }
     }
 
@@ -629,6 +686,14 @@ mod tests {
             assert_eq!(ReadingFont::by_key(f.key), Some(f));
             assert_eq!(f.id.font(), f);
         }
+        if cfg!(feature = "bundled-fonts") {
+            assert_eq!(READING_FONTS[0].bundled().unwrap().name, "OpenDyslexic");
+            assert_eq!(
+                READING_FONTS[1].bundled().unwrap().name,
+                "Atkinson Hyperlegible Next"
+            );
+        }
+        assert!(READING_FONTS[2].bundled().is_none());
         assert!(READING_FONTS[0].files[0].contains("/antijingoist/opendyslexic/"));
         assert!(READING_FONTS[1].files[0].contains("/googlefonts/atkinson-hyperlegible/"));
         assert!(READING_FONTS[2].files[0].contains("/googlefonts/lexend/"));
@@ -690,24 +755,57 @@ mod tests {
         // An alternate build counts as the same font.
         let r = s.resolve(Platform::Windows, |n| n == "OpenDyslexic3");
         assert!(!r.fell_back);
-        // Missing: falls back to Lexend, offers the download.
-        let r = s.resolve(Platform::Windows, |n| n == "Lexend" || n == "Segoe UI");
-        assert_eq!(r.family.as_deref(), Some("Lexend"));
+        // Lexend is not bundled: missing, it falls back to another reading
+        // font and offers the download.
+        let lexend = FontSettings {
+            family: FontFamily::Reading(ReadingFontId::Lexend),
+            ..FontSettings::default()
+        };
+        let r = lexend.resolve(Platform::Windows, |n| {
+            n == "OpenDyslexic" || n == "Segoe UI"
+        });
+        assert_eq!(r.family.as_deref(), Some("OpenDyslexic"));
         assert!(r.fell_back);
-        assert_eq!(r.download.map(|f| f.key), Some("opendyslexic"));
+        assert_eq!(r.bundled, None, "installed, so nothing to register");
+        assert_eq!(r.download.map(|f| f.key), Some("lexend"));
         assert_eq!(
-            r.message(&s.family),
-            "OpenDyslexic is not installed. Using Lexend. It can be downloaded, free, under the Open Font License."
+            r.message(&lexend.family),
+            "Lexend is not installed. Using OpenDyslexic. It can be downloaded, free, under the Open Font License."
         );
-        // Nothing installed at all.
-        let r = s.resolve(Platform::Linux, |_| false);
-        assert_eq!(r.family, None);
         // Downloads off: no offer.
         let off = FontSettings {
             fetch_missing: false,
-            ..s.clone()
+            ..lexend.clone()
         };
         assert_eq!(off.resolve(Platform::Linux, |_| false).download, None);
+        // Nothing installed at all.
+        let r = s.resolve(Platform::Linux, |_| false);
+        if cfg!(feature = "bundled-fonts") {
+            // OpenDyslexic is bundled: no fallback and no download.
+            assert_eq!(r.family.as_deref(), Some("OpenDyslexic"));
+            assert!(!r.fell_back && r.download.is_none());
+            assert_eq!(r.bundled.map(|f| f.name), Some("OpenDyslexic"));
+            assert_eq!(r.message(&s.family), "");
+            // Atkinson Hyperlegible is served by the bundled Next.
+            let a = FontSettings {
+                family: FontFamily::Reading(ReadingFontId::AtkinsonHyperlegible),
+                ..FontSettings::default()
+            }
+            .resolve(Platform::Windows, |_| false);
+            assert_eq!(a.family.as_deref(), Some("Atkinson Hyperlegible Next"));
+            assert!(!a.fell_back && a.download.is_none() && a.bundled.is_some());
+            // Monospace with no system monospace font: the bundled one.
+            let m = FontSettings {
+                family: FontFamily::Monospace,
+                ..FontSettings::default()
+            }
+            .resolve(Platform::Linux, |_| false);
+            assert_eq!(m.family.as_deref(), Some("Atkinson Hyperlegible Mono"));
+            assert!(!m.fell_back);
+        } else {
+            assert_eq!(r.family, None);
+            assert_eq!(r.download.map(|f| f.key), Some("opendyslexic"));
+        }
         // A named family that is missing.
         let named = FontSettings {
             family: FontFamily::Named("Comic Neue".into()),

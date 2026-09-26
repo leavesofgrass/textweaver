@@ -4360,11 +4360,13 @@ dependencies = [
  "serde",
  "serde_json",
  "textweaver-core",
+ "textweaver-fonts",
  "textweaver-text",
  "thiserror 2.0.21",
  "toml",
  "unicode-segmentation",
  "unicode-width",
+ "zip",
 ]
 
 [[package]]
