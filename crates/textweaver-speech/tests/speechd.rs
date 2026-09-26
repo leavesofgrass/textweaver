@@ -266,10 +266,11 @@ fn stop_does_not_wait_for_the_server() {
     // on the speech thread.
     let (release, gate) = mpsc::channel();
     let server = FakeServer::start_gated(true, Some(gate));
-    // Dropped before the server, so a failing assertion cannot leave the
-    // server's thread waiting on the gate forever.
-    let release = release;
     let mut b = SpeechdBackend::connect(&server.address()).unwrap();
+    // Dropped before the backend and the server, so a failing assertion
+    // cannot leave the server waiting on the gate while the backend waits
+    // for the server to hang up.
+    let release = release;
     let mut sink = Collect::default();
     let mut u = Utterance::literal("One two.", CharPos(0));
     u.id = UtteranceId {
