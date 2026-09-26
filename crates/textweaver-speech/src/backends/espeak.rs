@@ -197,14 +197,11 @@ impl EspeakBackend {
         let worker = std::thread::Builder::new()
             .name("textweaver-espeak".into())
             .spawn(move || {
-                let started = ensure(output.mode()).map(|rate| {
-                    let voices = ffi::list_voices();
-                    (rate, voices)
-                });
+                let started = ensure(output.mode()).map(|_| ffi::list_voices());
                 match started {
-                    Ok((rate, voices)) => {
+                    Ok(voices) => {
                         let _ = ready_tx.send(Ok(voices));
-                        work(output, rate, &job_rx, &ev_tx, &worker_epoch);
+                        work(output, &job_rx, &ev_tx, &worker_epoch);
                     }
                     Err(e) => {
                         let _ = ready_tx.send(Err(e));
@@ -261,7 +258,6 @@ impl EspeakBackend {
 /// The worker loop: one job at a time.
 fn work(
     output: EspeakOutput,
-    mut sample_rate: u32,
     jobs: &Receiver<Job>,
     events: &Sender<(UtteranceId, RawEvent)>,
     epoch: &Arc<AtomicU64>,
@@ -280,13 +276,13 @@ fn work(
                     let _ = events.send((id, RawEvent::Cancelled));
                     continue;
                 }
-                match ensure(output.mode()) {
-                    Ok(rate) => sample_rate = rate,
+                let sample_rate = match ensure(output.mode()) {
+                    Ok(rate) => rate,
                     Err(e) => {
                         let _ = events.send((id, RawEvent::Error(e)));
                         continue;
                     }
-                }
+                };
                 if applied.as_ref() != Some(&params) {
                     if let Err(e) = apply_params(&params) {
                         let _ = events.send((id, RawEvent::Error(e)));
@@ -452,6 +448,12 @@ impl SpeechBackend for EspeakBackend {
                 .iter()
                 .any(|x| &x.id == v || x.name.eq_ignore_ascii_case(v) || x.languages.contains(v));
             if !known {
+                // Keep the current voice, apply everything else.
+                let voice = self.params.voice.take();
+                self.params = VoiceParams {
+                    voice,
+                    ..params.clone()
+                };
                 return Err(SpeechError::UnknownVoice(v.clone()));
             }
         }

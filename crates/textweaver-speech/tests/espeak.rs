@@ -126,6 +126,7 @@ fn unknown_voices_are_rejected() {
     let err = b
         .set_params(&VoiceParams {
             voice: Some("no-such-voice".into()),
+            rate: textweaver_speech::core::Rate::Wpm(300),
             ..VoiceParams::default()
         })
         .unwrap_err();
@@ -133,11 +134,41 @@ fn unknown_voices_are_rejected() {
         err,
         textweaver_speech::SpeechError::UnknownVoice(_)
     ));
+    assert_eq!(b.effective_wpm(), 300, "the rest of the parameters apply");
     b.set_params(&VoiceParams {
         voice: Some("en-us".into()),
         ..VoiceParams::default()
     })
     .unwrap();
+}
+
+#[test]
+fn voices_listed_by_id_can_be_selected_and_speak() {
+    let _g = engine();
+    let mut b = EspeakBackend::new(EspeakOutput::Virtual).expect("espeak-ng initializes");
+    let voices = b.voices().unwrap();
+    for lang in ["en-gb", "fr-fr"] {
+        let v = voices
+            .iter()
+            .find(|v| v.languages.iter().any(|l| l == lang))
+            .unwrap_or_else(|| panic!("no {lang} voice in {voices:?}"));
+        b.set_params(&VoiceParams {
+            voice: Some(v.id.clone()),
+            ..VoiceParams::default()
+        })
+        .unwrap();
+        let u = utt("Bonjour hello.", 0);
+        let mut sink = Collect::default();
+        b.speak(&u, &mut sink).unwrap();
+        run_until_end(&mut b, &mut sink, u.id, Duration::from_secs(10));
+        assert!(
+            !sink.0.iter().any(|(_, e)| matches!(e, RawEvent::Error(_))),
+            "voice {} failed: {:?}",
+            v.id,
+            sink.0
+        );
+        assert_eq!(sink.0.last().map(|(_, e)| e), Some(&RawEvent::Finished));
+    }
 }
 
 #[test]
