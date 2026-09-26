@@ -1,11 +1,17 @@
 //! Editing for textweaver.
 //!
 //! - [`Editor`]: a rope, a selection, and an undo stack of grouped
-//!   [`Edit`](textweaver_core::Edit)s. Every Markdown command is one undo step.
-//! - [`markdown`]: formatting commands as pure `(text, selection) -> Edit`
-//!   functions, ported from `star/gui/mixin_authoring.py`.
+//!   [`Edit`](textweaver_core::Edit)s. Every Markdown command is one undo
+//!   step; typing and deleting coalesce into word-sized steps.
+//! - [`markdown`]: formatting commands as pure `(text, selection) -> edits`
+//!   functions, ported from `star/gui/mixin_authoring.py` with its bugs
+//!   fixed (the commands toggle; see the table in that module).
+//! - [`find`]: find and replace in edit mode, without Star's offset bugs.
 //! - [`echo`]: what to speak while typing and moving.
-//! - [`autosave`]: snapshot policy and the save-in-place rule.
+//! - [`autosave`]: snapshot policy and files, recovery scan, the save rule,
+//!   and format-preserving atomic saves.
+//! - [`session`]: read and edit mode for one document with Star's Save /
+//!   Discard / Cancel flow, Save As adoption, and autosave.
 //!
 //! The editor never touches a `Document`; the app applies the same edits to
 //! the document with `Document::apply` so markers and bookmarks shift.
@@ -14,7 +20,12 @@
 
 pub mod autosave;
 pub mod echo;
+pub mod find;
 pub mod markdown;
+pub mod session;
 mod undo;
 
+pub use find::FindOptions;
+pub use markdown::{FormatError, Formatted, MarkdownOp};
+pub use session::{Choice, DocInfo, EditSession, LeaveOutcome, SaveOutcome, SessionError};
 pub use undo::{Editor, Selection};
