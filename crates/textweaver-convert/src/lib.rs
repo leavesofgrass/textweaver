@@ -88,7 +88,12 @@ impl OutputFormat {
     /// Parses a name or extension (`md`, `markdown`, `html`, `htm`, `txt`,
     /// `text`, `epub`, `docx`, `brf`, `braille`, `pdf`).
     pub fn parse(s: &str) -> Option<Self> {
-        match s.trim().trim_start_matches('.').to_ascii_lowercase().as_str() {
+        match s
+            .trim()
+            .trim_start_matches('.')
+            .to_ascii_lowercase()
+            .as_str()
+        {
             "md" | "markdown" => Some(OutputFormat::Markdown),
             "html" | "htm" => Some(OutputFormat::Html),
             "txt" | "text" | "plain" => Some(OutputFormat::Text),
@@ -529,9 +534,8 @@ impl Converter {
     /// Converts and writes one file, whatever the output's age.
     fn convert_now(&self, job: &Job) -> FileResult {
         let start = Instant::now();
-        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            self.convert_bytes(job)
-        }));
+        let outcome =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.convert_bytes(job)));
         let result = match outcome {
             Ok(Ok((bytes_in, data))) => match write_atomic(&job.output, &data) {
                 Ok(()) => FileResult {
@@ -564,9 +568,14 @@ impl Converter {
         if is_markdown {
             let bytes = std::fs::read(&job.source).map_err(|e| format!("cannot read: {e}"))?;
             let text = decode(&bytes);
-            return Ok((bytes.len() as u64, self.from_markdown(job, &text)?));
+            return Ok((bytes.len() as u64, self.convert_markdown(job, &text)?));
         }
-        if !native && self.options.pandoc && pandoc::EXTENSIONS.contains(&ext.as_str()) {
+        if !native && pandoc::EXTENSIONS.contains(&ext.as_str()) {
+            if !self.options.pandoc {
+                return Err(format!(
+                    "no native reader for .{ext} files, and Pandoc is turned off"
+                ));
+            }
             if !pandoc::available() {
                 return Err(format!(
                     "no native reader for .{ext} files, and Pandoc is not installed"
@@ -574,18 +583,18 @@ impl Converter {
             }
             let size = std::fs::metadata(&job.source).map_or(0, |m| m.len());
             let md = pandoc::to_markdown(&job.source, self.options.render.flavor)?;
-            return Ok((size, self.from_markdown(job, &md)?));
+            return Ok((size, self.convert_markdown(job, &md)?));
         }
         let size = std::fs::metadata(&job.source).map_or(0, |m| m.len());
         let doc = self
             .registry
             .load(&Source::Path(job.source.clone()), &self.options.load)
             .map_err(|e| e.to_string())?;
-        Ok((size, self.from_document(job, &doc, None)?))
+        Ok((size, self.convert_document(job, &doc, None)?))
     }
 
     /// Output for Markdown text (a Markdown file, or Pandoc's output).
-    fn from_markdown(&self, job: &Job, text: &str) -> Result<Vec<u8>, String> {
+    fn convert_markdown(&self, job: &Job, text: &str) -> Result<Vec<u8>, String> {
         match self.options.to {
             OutputFormat::Markdown => Ok(text.as_bytes().to_vec()),
             OutputFormat::Html => {
@@ -606,13 +615,13 @@ impl Converter {
                     .load(&source, &self.options.load)
                     .map_err(|e| e.to_string())?;
                 doc.meta.path = Some(job.source.clone());
-                self.from_document(job, &doc, Some(text))
+                self.convert_document(job, &doc, Some(text))
             }
         }
     }
 
     /// Output for a loaded document.
-    fn from_document(
+    fn convert_document(
         &self,
         job: &Job,
         doc: &Document,
@@ -742,7 +751,8 @@ pub fn write_atomic(path: &Path, data: &[u8]) -> std::io::Result<()> {
         .map_or(0, |d| d.subsec_nanos());
     let tmp_name = format!(
         ".{}.{}-{}.tmp",
-        path.file_name().map_or_else(String::new, |n| n.to_string_lossy().into_owned()),
+        path.file_name()
+            .map_or_else(String::new, |n| n.to_string_lossy().into_owned()),
         std::process::id(),
         nanos
     );

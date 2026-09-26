@@ -43,8 +43,25 @@ const MATHML: &[&str] = &[
 ];
 
 const EXTRA_TAGS: &[&str] = &[
-    "details", "summary", "section", "nav", "aside", "figure", "figcaption", "mark", "input",
-    "span", "div", "dl", "dt", "dd", "sup", "sub", "del", "ins", "u",
+    "details",
+    "summary",
+    "section",
+    "nav",
+    "aside",
+    "figure",
+    "figcaption",
+    "mark",
+    "input",
+    "span",
+    "div",
+    "dl",
+    "dt",
+    "dd",
+    "sup",
+    "sub",
+    "del",
+    "ins",
+    "u",
 ];
 
 const MATH_ATTRS: &[&str] = &[
@@ -118,6 +135,9 @@ mod tests {
         assert!(!out.contains("onclick"), "{out}");
         assert!(!out.contains("javascript"), "{out}");
         assert!(out.contains("role=\"note\""), "{out}");
-        assert!(out.contains("<math display=\"block\"><mi>x</mi></math>"), "{out}");
+        assert!(
+            out.contains("<math display=\"block\"><mi>x</mi></math>"),
+            "{out}"
+        );
     }
 }

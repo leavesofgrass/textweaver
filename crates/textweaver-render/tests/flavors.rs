@@ -17,7 +17,10 @@ fn fixture(name: &str) -> String {
 }
 
 fn vault() -> FsResolver {
-    FsResolver::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/l/vault"))
+    FsResolver::new(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../fixtures/l/vault"
+    ))
 }
 
 fn render_both(src: &str, flavor: Flavor, embeds: EmbedMode) -> Rendered {
@@ -66,18 +69,30 @@ fn snapshot_text(r: &Rendered) -> String {
 fn gfm() {
     let r = render_both(&fixture("gfm.md"), Flavor::Gfm, EmbedMode::Link);
     assert!(r.html.contains("<del>wrong</del>"));
-    assert!(r.html.contains("<a href=\"http://www.example.com\">www.example.com</a>"));
+    assert!(
+        r.html
+            .contains("<a href=\"http://www.example.com\">www.example.com</a>")
+    );
     assert!(r.html.contains("type=\"checkbox\""));
     assert!(r.html.contains("role=\"doc-endnotes\""));
-    assert!(r.html.contains("class=\"callout callout-warning\" role=\"note\""));
+    assert!(
+        r.html
+            .contains("class=\"callout callout-warning\" role=\"note\"")
+    );
     insta::assert_snapshot!("gfm", snapshot_text(&r));
 }
 
 #[test]
 fn obsidian_with_links() {
     let r = render_both(&fixture("obsidian.md"), Flavor::Obsidian, EmbedMode::Link);
-    assert!(r.html.contains("href=\"Chapter%20One.html#key-ideas\">the key ideas</a>"));
-    assert!(r.html.contains("<p id=\"block-idea-1\">This idea matters.</p>"));
+    assert!(
+        r.html
+            .contains("href=\"Chapter%20One.html#key-ideas\">the key ideas</a>")
+    );
+    assert!(
+        r.html
+            .contains("<p id=\"block-idea-1\">This idea matters.</p>")
+    );
     assert!(r.html.contains("[[not a link]] #not-a-tag"));
     assert_eq!(r.tags, ["reading", "study/biology"]);
     insta::assert_snapshot!("obsidian", snapshot_text(&r));
@@ -97,7 +112,10 @@ fn pandoc() {
     assert_eq!(r.title().as_deref(), Some("Pandoc features"));
     assert!(r.html.contains("<dl>"));
     assert!(r.html.contains("<div id=\"careful\" class=\"warning\">"));
-    assert!(r.html.contains("<h1 id=\"intro\" class=\"lead\">Introduction</h1>"));
+    assert!(
+        r.html
+            .contains("<h1 id=\"intro\" class=\"lead\">Introduction</h1>")
+    );
     assert!(r.html.contains("<h1 id=\"introduction\">Introduction</h1>"));
     assert!(r.html.contains("<sub>2</sub>"));
     assert!(r.html.contains("<sup>10</sup>"));
@@ -124,11 +142,7 @@ fn default_template_is_an_accessible_page() {
 #[test]
 fn templates_from_a_folder_can_extend_builtins() {
     let dir = tempfile::tempdir().expect("tempdir");
-    std::fs::write(
-        dir.path().join("mine.html"),
-        "{% extends \"fragment\" %}",
-    )
-    .expect("write");
+    std::fs::write(dir.path().join("mine.html"), "{% extends \"fragment\" %}").expect("write");
     std::fs::write(
         dir.path().join("plain.html"),
         "<title>{{ title }}</title>{{ meta.aliases[0] }}|{{ content }}",
@@ -138,9 +152,13 @@ fn templates_from_a_folder_can_extend_builtins() {
     let names = t.load_dir(dir.path()).expect("load");
     assert_eq!(names, ["mine", "plain"]);
     let r = render_both(&fixture("obsidian.md"), Flavor::Obsidian, EmbedMode::Link);
-    let page = t.render("plain", &r, &PageOptions::default()).expect("render");
+    let page = t
+        .render("plain", &r, &PageOptions::default())
+        .expect("render");
     assert!(page.starts_with("<title>Reading notes</title>Obsidian sample|<h1"));
-    let frag = t.render("mine", &r, &PageOptions::default()).expect("render");
+    let frag = t
+        .render("mine", &r, &PageOptions::default())
+        .expect("render");
     assert!(frag.starts_with("<h1 id=\"reading-notes\">"));
 }
 
@@ -161,7 +179,9 @@ fn print_and_fragment_templates() {
     assert!(page.contains("<title>notes</title>"));
     assert!(page.contains("<h1>notes</h1>"));
     assert!(page.contains("@page"));
-    let frag = t.render("fragment", &r, &PageOptions::default()).expect("render");
+    let frag = t
+        .render("fragment", &r, &PageOptions::default())
+        .expect("render");
     assert_eq!(frag, "<p>Just text.</p>\n\n");
 }
 

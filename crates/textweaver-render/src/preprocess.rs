@@ -151,7 +151,11 @@ fn process(lines: &[&str], blocks: Blocks, out: &mut String, depth: usize) -> bo
             if !out.ends_with('\n') {
                 out.push('\n');
             }
-            let close = if head.fold.is_some() { "</details>" } else { "</div>" };
+            let close = if head.fold.is_some() {
+                "</details>"
+            } else {
+                "</div>"
+            };
             out.push_str(&format!("\n{pad}{close}\n\n"));
             changed = true;
             i = j;
@@ -205,7 +209,11 @@ fn callout_head(line: &str, blocks: Blocks) -> Option<CalloutHead> {
     let rest = t.strip_prefix('>')?.trim_start().strip_prefix("[!")?;
     let close = rest.find(']')?;
     let kind = rest[..close].trim();
-    if kind.is_empty() || !kind.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+    if kind.is_empty()
+        || !kind
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+    {
         return None;
     }
     let lower = kind.to_lowercase();

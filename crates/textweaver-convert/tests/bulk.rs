@@ -47,7 +47,11 @@ fn statuses(summary: &textweaver_convert::Summary) -> Vec<(String, Status)> {
         .iter()
         .map(|f| {
             (
-                f.source.file_name().unwrap_or_default().to_string_lossy().into_owned(),
+                f.source
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned(),
                 f.status.clone(),
             )
         })
@@ -95,7 +99,14 @@ fn mirrors_the_tree_and_skips_unchanged() {
     set_mtime(&input.join("sub/b.md"), later);
     let third = conv.run(std::slice::from_ref(&input)).expect("run");
     assert_eq!((third.converted, third.skipped), (1, 3));
-    assert_eq!(third.files.iter().find(|f| f.status == Status::Converted).map(|f| f.source.ends_with("b.md")), Some(true));
+    assert_eq!(
+        third
+            .files
+            .iter()
+            .find(|f| f.status == Status::Converted)
+            .map(|f| f.source.ends_with("b.md")),
+        Some(true)
+    );
 
     // Force converts everything.
     let forced = Converter::new(ConvertOptions {
@@ -106,7 +117,11 @@ fn mirrors_the_tree_and_skips_unchanged() {
     .run(std::slice::from_ref(&input))
     .expect("run");
     assert_eq!(forced.converted, 4);
-    assert!(forced.sentence().starts_with("Converted 4 files to HTML in "));
+    assert!(
+        forced
+            .sentence()
+            .starts_with("Converted 4 files to HTML in ")
+    );
 }
 
 #[test]
@@ -227,7 +242,10 @@ fn pandoc_fallback_when_installed() {
     assert_eq!(s.converted, 1, "{:?}", statuses(&s));
     let html = fs::read_to_string(out.join("doc.html")).expect("read");
     assert!(html.contains("<em>emphasis</em>"), "{html}");
-    assert!(html.contains("caf\u{e9}"), "non-ASCII text must survive: {html}");
+    assert!(
+        html.contains("caf\u{e9}"),
+        "non-ASCII text must survive: {html}"
+    );
 }
 
 #[test]
@@ -277,10 +295,22 @@ fn hot_folder_converts_and_moves_sources() {
     assert!(out.join("early.txt").is_file());
     assert!(input.join("processed/early.md").is_file());
     assert!(!input.join("late.md").exists());
-    assert!(input.join("photo.png").exists(), "unsupported files stay put");
-    assert!(events.first().is_some_and(|e| e.starts_with("Watching ")), "{events:?}");
-    assert!(events.iter().any(|e| e == "Converted late.md."), "{events:?}");
-    assert!(events.iter().any(|e| e.starts_with("Ignored photo.png")), "{events:?}");
+    assert!(
+        input.join("photo.png").exists(),
+        "unsupported files stay put"
+    );
+    assert!(
+        events.first().is_some_and(|e| e.starts_with("Watching ")),
+        "{events:?}"
+    );
+    assert!(
+        events.iter().any(|e| e == "Converted late.md."),
+        "{events:?}"
+    );
+    assert!(
+        events.iter().any(|e| e.starts_with("Ignored photo.png")),
+        "{events:?}"
+    );
     assert_eq!(events.last().map(String::as_str), Some("Stopped watching."));
     let log = fs::read_to_string(out.join("textweaver-watch.log")).expect("log");
     assert!(log.contains("Converted early.md."), "{log}");

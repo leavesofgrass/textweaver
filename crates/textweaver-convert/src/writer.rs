@@ -75,7 +75,9 @@ pub struct Writers {
 impl std::fmt::Debug for Writers {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let formats: Vec<OutputFormat> = self.writers.iter().map(|w| w.format()).collect();
-        f.debug_struct("Writers").field("formats", &formats).finish()
+        f.debug_struct("Writers")
+            .field("formats", &formats)
+            .finish()
     }
 }
 

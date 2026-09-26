@@ -94,8 +94,10 @@ impl WatchEvent {
     /// A line that reads well aloud.
     pub fn sentence(&self) -> String {
         let name = |p: &Path| {
-            p.file_name()
-                .map_or_else(|| p.display().to_string(), |n| n.to_string_lossy().into_owned())
+            p.file_name().map_or_else(
+                || p.display().to_string(),
+                |n| n.to_string_lossy().into_owned(),
+            )
         };
         match self {
             WatchEvent::Started { input, output, .. } => format!(
@@ -106,14 +108,18 @@ impl WatchEvent {
             WatchEvent::File(r) => match &r.status {
                 Status::Converted => format!("Converted {}.", name(&r.source)),
                 Status::Skipped => format!("{} is up to date.", name(&r.source)),
-                Status::Failed(reason) => format!("Could not convert {}: {reason}", name(&r.source)),
+                Status::Failed(reason) => {
+                    format!("Could not convert {}: {reason}", name(&r.source))
+                }
             },
             WatchEvent::Moved { from, to } => format!(
                 "Moved {} to {}.",
                 name(from),
-                to.parent().map_or_else(String::new, |p| name(p))
+                to.parent().map_or_else(String::new, &name)
             ),
-            WatchEvent::Ignored(p) => format!("Ignored {}: not a document type textweaver reads.", name(p)),
+            WatchEvent::Ignored(p) => {
+                format!("Ignored {}: not a document type textweaver reads.", name(p))
+            }
             WatchEvent::Error(e) => format!("Problem: {e}"),
             WatchEvent::Stopped => "Stopped watching.".to_owned(),
         }
@@ -316,7 +322,11 @@ fn move_aside(src: &Path, dir: &Path) -> std::io::Result<PathBuf> {
 
 fn log_line(path: &Path, e: &WatchEvent) {
     let line = format!("{}  {}\n", iso_utc(SystemTime::now()), e.sentence());
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
         let _ = f.write_all(line.as_bytes());
     }
 }

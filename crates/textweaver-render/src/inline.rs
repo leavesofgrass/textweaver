@@ -424,16 +424,16 @@ fn autolink(s: &str) -> Option<(usize, String)> {
     // of the link (GFM 6.9).
     loop {
         let candidate = &s[..end];
-        let Some(last) = candidate.chars().next_back() else {
-            return None;
-        };
+        let last = candidate.chars().next_back()?;
         if "?!.,:*_~'\"".contains(last) {
             end -= last.len_utf8();
         } else if last == ')' && candidate.matches(')').count() > candidate.matches('(').count() {
             end -= 1;
         } else if last == ';'
             && let Some(amp) = candidate.rfind('&')
-            && candidate[amp + 1..end - 1].chars().all(|c| c.is_ascii_alphanumeric())
+            && candidate[amp + 1..end - 1]
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric())
         {
             end = amp;
         } else {
@@ -473,7 +473,10 @@ pub fn attributes_html(inner: &str) -> String {
             classes.push(c);
         } else if let Some((k, v)) = token.split_once('=') {
             let v = v.trim_matches('"');
-            if k.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') && !k.is_empty() {
+            if k.chars()
+                .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+                && !k.is_empty()
+            {
                 pairs.push((k.to_owned(), v.to_owned()));
             }
         }
@@ -487,7 +490,8 @@ pub fn attributes_html(inner: &str) -> String {
     }
     for (k, v) in pairs {
         // Unknown keys become data- attributes, as Pandoc does for HTML.
-        let known = matches!(k.as_str(), "lang" | "dir" | "title" | "role") || k.starts_with("aria-");
+        let known =
+            matches!(k.as_str(), "lang" | "dir" | "title" | "role") || k.starts_with("aria-");
         let name = if known || k.starts_with("data-") {
             k
         } else {
@@ -607,12 +611,18 @@ mod tests {
             run("@doe99 says.", PANDOC),
             "<span class=\"citation\" data-cites=\"doe99\"><a href=\"#ref-doe99\">doe99</a></span> says."
         );
-        assert_eq!(run("mail me@example.org", PANDOC), "UNCHANGED:mail me@example.org");
+        assert_eq!(
+            run("mail me@example.org", PANDOC),
+            "UNCHANGED:mail me@example.org"
+        );
         assert_eq!(
             run("[small caps]{.smallcaps lang=fr}", PANDOC),
             "<span class=\"smallcaps\" lang=\"fr\">small caps</span>"
         );
-        assert_eq!(run("H~2~O, 2^10^, a ~ b", PANDOC), "H<sub>2</sub>O, 2<sup>10</sup>, a ~ b");
+        assert_eq!(
+            run("H~2~O, 2^10^, a ~ b", PANDOC),
+            "H<sub>2</sub>O, 2<sup>10</sup>, a ~ b"
+        );
     }
 
     #[test]

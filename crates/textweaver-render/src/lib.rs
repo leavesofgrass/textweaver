@@ -442,7 +442,12 @@ mod tests {
         for e in [Engine::PulldownCmark, Engine::Comrak] {
             assert_eq!(Engine::parse(e.name()), Some(e));
         }
-        for f in [Flavor::CommonMark, Flavor::Gfm, Flavor::Obsidian, Flavor::Pandoc] {
+        for f in [
+            Flavor::CommonMark,
+            Flavor::Gfm,
+            Flavor::Obsidian,
+            Flavor::Pandoc,
+        ] {
             assert_eq!(Flavor::parse(f.name()), Some(f));
         }
     }

@@ -14,9 +14,31 @@ use textweaver_render::Flavor;
 
 /// Extensions Pandoc reads that textweaver may lack a native loader for.
 pub const EXTENSIONS: &[&str] = &[
-    "docx", "odt", "rtf", "epub", "rst", "org", "tex", "latex", "ltx", "dbk", "docbook",
-    "textile", "mediawiki", "wiki", "ipynb", "opml", "fb2", "typ", "djot", "muse", "t2t",
-    "jira", "bib", "csv", "tsv",
+    "docx",
+    "odt",
+    "rtf",
+    "epub",
+    "rst",
+    "org",
+    "tex",
+    "latex",
+    "ltx",
+    "dbk",
+    "docbook",
+    "textile",
+    "mediawiki",
+    "wiki",
+    "ipynb",
+    "opml",
+    "fb2",
+    "typ",
+    "djot",
+    "muse",
+    "t2t",
+    "jira",
+    "bib",
+    "csv",
+    "tsv",
 ];
 
 /// True when a `pandoc` executable answers on PATH (checked once).

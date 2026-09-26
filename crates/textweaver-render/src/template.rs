@@ -122,7 +122,11 @@ impl Templates {
         let mut env = Environment::new();
         env.set_auto_escape_callback(|_| AutoEscape::Html);
         env.set_keep_trailing_newline(true);
-        for (name, src) in [("default", DEFAULT), ("print", PRINT), ("fragment", FRAGMENT)] {
+        for (name, src) in [
+            ("default", DEFAULT),
+            ("print", PRINT),
+            ("fragment", FRAGMENT),
+        ] {
             // The built-ins are tested; a failure here is a build defect.
             if let Err(e) = env.add_template(name, src) {
                 log::error!("built-in template {name}: {e}");
@@ -189,11 +193,7 @@ impl Templates {
 
     /// Names of the available templates, sorted.
     pub fn names(&self) -> Vec<String> {
-        let mut v: Vec<String> = self
-            .env
-            .templates()
-            .map(|(n, _)| n.to_owned())
-            .collect();
+        let mut v: Vec<String> = self.env.templates().map(|(n, _)| n.to_owned()).collect();
         v.sort();
         v
     }
@@ -217,7 +217,8 @@ impl Templates {
         let lang = text("lang")
             .or_else(|| text("language"))
             .unwrap_or_else(|| page.default_lang.clone());
-        let keywords = text("keywords").or_else(|| (!doc.tags.is_empty()).then(|| doc.tags.join(", ")));
+        let keywords =
+            text("keywords").or_else(|| (!doc.tags.is_empty()).then(|| doc.tags.join(", ")));
         let toc = if page.toc && doc.toc.len() >= 2 {
             doc.toc_html()
         } else {

@@ -182,9 +182,7 @@ impl Walker {
                 self.children(node, t)
             }
             NodeValue::DescriptionTerm => self.wrap(node, Tag::DefinitionListTitle, true),
-            NodeValue::DescriptionDetails => {
-                self.wrap(node, Tag::DefinitionListDefinition, tight)
-            }
+            NodeValue::DescriptionDetails => self.wrap(node, Tag::DefinitionListDefinition, tight),
             NodeValue::CodeBlock(cb) => {
                 let kind = if cb.fenced {
                     CodeBlockKind::Fenced(owned(&cb.info))
@@ -238,7 +236,11 @@ impl Walker {
                 self.out.push(Event::Start(Tag::Table(aligns)));
                 for row in node.children() {
                     let header = matches!(row.data().value, NodeValue::TableRow(true));
-                    let tag = if header { Tag::TableHead } else { Tag::TableRow };
+                    let tag = if header {
+                        Tag::TableHead
+                    } else {
+                        Tag::TableRow
+                    };
                     self.wrap(row, tag, false);
                 }
                 self.out.push(Event::End(TagEnd::Table));

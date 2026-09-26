@@ -179,7 +179,9 @@ impl<'a> Parser<'a> {
                 match child {
                     Some(c) if c.indent > indent => self.block(indent + 1),
                     // A sequence may sit at the same indent as its key.
-                    Some(c) if c.indent == indent && (c.text == "-" || c.text.starts_with("- ")) => {
+                    Some(c)
+                        if c.indent == indent && (c.text == "-" || c.text.starts_with("- ")) =>
+                    {
                         self.sequence(indent)
                     }
                     _ => Value::Null,
@@ -250,7 +252,9 @@ fn split_key(text: &str) -> Option<(String, &str)> {
     } else {
         let colon = text
             .char_indices()
-            .find(|&(i, c)| c == ':' && text[i + 1..].chars().next().is_none_or(char::is_whitespace))?
+            .find(|&(i, c)| {
+                c == ':' && text[i + 1..].chars().next().is_none_or(char::is_whitespace)
+            })?
             .0;
         (text[..colon].trim().to_owned(), &text[colon + 1..])
     };
@@ -302,7 +306,8 @@ fn scalar(v: &str) -> Value {
         "false" | "False" | "FALSE" | "no" | "No" => return Value::Bool(false),
         _ => {}
     }
-    if v.bytes().all(|b| b.is_ascii_digit() || b == b'-' || b == b'+')
+    if v.bytes()
+        .all(|b| b.is_ascii_digit() || b == b'-' || b == b'+')
         && let Ok(n) = v.parse::<i64>()
     {
         return Value::Number(n.into());

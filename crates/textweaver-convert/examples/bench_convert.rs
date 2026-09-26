@@ -75,11 +75,46 @@ impl Rng {
 }
 
 const WORDS: &[&str] = &[
-    "the", "reader", "speaks", "every", "sentence", "clearly", "while", "students", "follow",
-    "along", "with", "highlighted", "words", "accessible", "documents", "matter", "because",
-    "print", "disabilities", "are", "common", "chapter", "section", "table", "figure",
-    "equation", "notes", "library", "voice", "rate", "pitch", "braille", "structure",
-    "heading", "paragraph", "list", "link", "reference", "summary", "example",
+    "the",
+    "reader",
+    "speaks",
+    "every",
+    "sentence",
+    "clearly",
+    "while",
+    "students",
+    "follow",
+    "along",
+    "with",
+    "highlighted",
+    "words",
+    "accessible",
+    "documents",
+    "matter",
+    "because",
+    "print",
+    "disabilities",
+    "are",
+    "common",
+    "chapter",
+    "section",
+    "table",
+    "figure",
+    "equation",
+    "notes",
+    "library",
+    "voice",
+    "rate",
+    "pitch",
+    "braille",
+    "structure",
+    "heading",
+    "paragraph",
+    "list",
+    "link",
+    "reference",
+    "summary",
+    "example",
 ];
 
 fn sentence(r: &mut Rng) -> String {
@@ -137,7 +172,12 @@ fn document(r: &mut Rng, n: usize) -> String {
             0 => {
                 d.push_str("| Term | Count | Note |\n|:---|---:|---|\n");
                 for i in 0..(3 + r.below(6)) {
-                    d.push_str(&format!("| {} | {} | {} |\n", WORDS[r.below(WORDS.len())], i * 7, WORDS[r.below(WORDS.len())]));
+                    d.push_str(&format!(
+                        "| {} | {} | {} |\n",
+                        WORDS[r.below(WORDS.len())],
+                        i * 7,
+                        WORDS[r.below(WORDS.len())]
+                    ));
                 }
                 d.push('\n');
             }
@@ -149,12 +189,20 @@ fn document(r: &mut Rng, n: usize) -> String {
             }
             3 => {
                 for i in 0..(3 + r.below(5)) {
-                    d.push_str(&format!("- [{}] {}\n", if i % 2 == 0 { "x" } else { " " }, sentence(r)));
+                    d.push_str(&format!(
+                        "- [{}] {}\n",
+                        if i % 2 == 0 { "x" } else { " " },
+                        sentence(r)
+                    ));
                 }
                 d.push('\n');
             }
             _ => {
-                d.push_str(&format!("> {}\n\nA note.[^n{s}]\n\n[^n{s}]: {}\n\n", sentence(r), sentence(r)));
+                d.push_str(&format!(
+                    "> {}\n\nA note.[^n{s}]\n\n[^n{s}]: {}\n\n",
+                    sentence(r),
+                    sentence(r)
+                ));
             }
         }
     }
@@ -250,10 +298,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..conv.options().clone()
     })?;
     let s = incremental.run(std::slice::from_ref(&input))?;
-    println!(
-        "Unchanged run: {} skipped in {:.3} s",
-        s.skipped, s.seconds
-    );
+    println!("Unchanged run: {} skipped in {:.3} s", s.skipped, s.seconds);
 
     if args.profile {
         profile(&input, &output, &args)?;
@@ -331,16 +376,39 @@ fn profile(input: &Path, output: &Path, args: &Args) -> Result<(), Box<dyn std::
 
     let total = read + pipeline + template + write;
     let pct = |x: f64| 100.0 * x / total;
-    println!("Profile, one thread, {} files ({n} bytes of bare HTML):", texts.len());
-    println!("  read files            {:>8.1} ms  {:>5.1}%", read * 1e3, pct(read));
+    println!(
+        "Profile, one thread, {} files ({n} bytes of bare HTML):",
+        texts.len()
+    );
+    println!(
+        "  read files            {:>8.1} ms  {:>5.1}%",
+        read * 1e3,
+        pct(read)
+    );
     println!(
         "  parse + write only    {:>8.1} ms  (CommonMark, no extension pass; for comparison)",
         parse_write * 1e3
     );
-    println!("  render ({:>8})     {:>8.1} ms  {:>5.1}%", args.flavor.name(), pipeline * 1e3, pct(pipeline));
-    println!("  template              {:>8.1} ms  {:>5.1}%", template * 1e3, pct(template));
-    println!("  write (atomic)        {:>8.1} ms  {:>5.1}%", write * 1e3, pct(write));
+    println!(
+        "  render ({:>8})     {:>8.1} ms  {:>5.1}%",
+        args.flavor.name(),
+        pipeline * 1e3,
+        pct(pipeline)
+    );
+    println!(
+        "  template              {:>8.1} ms  {:>5.1}%",
+        template * 1e3,
+        pct(template)
+    );
+    println!(
+        "  write (atomic)        {:>8.1} ms  {:>5.1}%",
+        write * 1e3,
+        pct(write)
+    );
     println!("  write (plain, for comparison) {:>8.1} ms", plain * 1e3);
-    println!("  per file              {:>8.3} ms", total * 1e3 / texts.len().max(1) as f64);
+    println!(
+        "  per file              {:>8.3} ms",
+        total * 1e3 / texts.len().max(1) as f64
+    );
     Ok(())
 }

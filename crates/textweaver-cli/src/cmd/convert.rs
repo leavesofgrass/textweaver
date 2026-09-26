@@ -11,9 +11,7 @@ use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 use anyhow::{Context, bail};
-use textweaver_convert::{
-    ConvertOptions, Converter, OutputFormat, Status, WatchOptions, watch,
-};
+use textweaver_convert::{ConvertOptions, Converter, OutputFormat, Status, WatchOptions, watch};
 use textweaver_render::{EmbedMode, Engine, Flavor, RenderOptions, TemplateChoice};
 
 /// Arguments for `tw convert`.
@@ -158,11 +156,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         println!("{}", summary.sentence());
     }
     if summary.failed > 0 {
-        bail!(
-            "{} of {} files failed",
-            summary.failed,
-            summary.total()
-        );
+        bail!("{} of {} files failed", summary.failed, summary.total());
     }
     Ok(())
 }
@@ -188,10 +182,7 @@ fn run_watch(args: &Args, converter: &Converter) -> anyhow::Result<()> {
     std::thread::scope(|scope| -> anyhow::Result<()> {
         let mut handles = Vec::new();
         for input in &args.inputs {
-            let output = args
-                .out
-                .clone()
-                .unwrap_or_else(|| input.join("converted"));
+            let output = args.out.clone().unwrap_or_else(|| input.join("converted"));
             let (opts, stop) = (&opts, &stop);
             handles.push(scope.spawn(move || {
                 watch(converter, input, &output, opts, stop, &mut |e| {

@@ -339,7 +339,11 @@ impl<'a> Pass<'_, 'a> {
             let n = self.note_numbers.get(&name).copied().unwrap_or(0);
             let mut back = String::new();
             for k in 1..=refs {
-                let suffix = if k > 1 { format!("-{k}") } else { String::new() };
+                let suffix = if k > 1 {
+                    format!("-{k}")
+                } else {
+                    String::new()
+                };
                 let label = if refs > 1 {
                     format!("Back to reference {n}, occurrence {k}")
                 } else {
