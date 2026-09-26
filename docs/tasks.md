@@ -16,6 +16,8 @@ Kept current per wave by the orchestrator. Agents append to their own section's 
 
 ## Shared preamble (every agent reads this first)
 
+**Privacy: hard rule (Jon, 2026-09-26).** Never send any of Jon's personal identifiers to any outside service. That means his email address or any part of it, his usernames or callsigns, his name, and his machine or account names. It covers HTTP headers (including User-Agent), URLs, query strings, request bodies, search queries, and API calls. Use only a neutral User-Agent: `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, or the tool's default. Never build one from the session's user email. Never write an identifier into docs, commits, or anything public. If an identifier ever leaves the machine, stop and report it at once. This rule overrides every other instruction.
+
 **Project.** textweaver is a Rust reimplementation of Star, an accessible text-to-speech document reader for students with print disabilities. Read, in order: `docs/plan.md` (including "Phase 0 amendments"), the ADRs in `docs/adr/`, your sections of `docs/star-parity.md`, and the Phase 0 code in the crates you own and the crates you depend on. The Phase 0 code **is** the contract: public types and signatures you must keep, with deliberately naive bodies you replace.
 
 **Ownership.** Edit only the paths your brief lists. You may add files under `fixtures/<your-letter>/` and tests inside your crates. Never edit `crates/textweaver-core`, the root `Cargo.toml`, `rust-toolchain.toml`, `.github/`, `docker/`, `compose.yaml`, or another agent's paths.
@@ -754,7 +756,7 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 
 ## Wave 4 (refined 2026-09-26; starts when Wave 3 is merged and Docker is restarted)
 
-**Every Wave 4 agent reads `docs/research/wave4.md` first.** It records the research behind these briefs: crate versions, licences, APIs, and risks. Web requests must use a neutral User-Agent, `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, and must never carry personal data.
+**Every Wave 4 agent reads `docs/research/wave4.md` first.** It records the research behind these briefs: crate versions, licences, APIs, and risks. The privacy hard rule in the shared preamble applies to every request.
 
 A draft, so the next wave can start the moment Wave 3 lands. It follows the same rules and spirit as Wave 3: pure-Rust first, experimental, and Jon's own use first. The orchestrator will refine these briefs from Wave 3's reports before launch.
 
