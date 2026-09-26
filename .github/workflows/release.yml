@@ -1,8 +1,13 @@
 # Release: on a version tag, create the GitHub release (a pre-release before
-# 1.0, notes from CHANGELOG.md) and attach the macOS package: universal
-# binaries (Apple silicon and Intel), signed ad hoc, not notarized. The
-# Windows package is built on Jon's machine and uploaded with
-# tools/release-upload.sh (docs/releasing.md).
+# 1.0, notes from CHANGELOG.md), build the Windows and macOS packages with
+# `cargo xtask dist`, attest their build provenance, upload them, and write
+# SHA256SUMS.txt once at the end. docs/releasing.md has the steps, and the
+# local fallback (tools/release-upload.sh) for a package built by hand.
+#
+# - Windows: x86_64 zip with the x64 and x86 engine hosts; the C runtime is
+#   linked statically.
+# - macOS: universal binaries (Apple silicon and Intel), signed ad hoc, not
+#   notarized.
 name: Release
 
 on:
@@ -14,38 +19,117 @@ on:
         description: 'Existing tag to build and upload (for example v0.1.0-alpha.3)'
         required: true
 
+# Never two runs for one tag at once; never cancel a release half way.
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
+  # Build provenance attestations (actions/attest-build-provenance).
+  id-token: write
+  attestations: write
 
 env:
   CARGO_TERM_COLOR: always
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  GH_TOKEN: ${{ github.token }}
 
 jobs:
+  release:
+    name: Create the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - run: rustup toolchain install
+      - name: Version matches the tag
+        run: |
+          version=$(cargo metadata --locked --no-deps --format-version 1 | python3 -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="textweaver-tui"))')
+          test "v$version" = "$TAG" || { echo "Cargo.toml version $version does not match tag $TAG"; exit 1; }
+      - name: Create the release (notes from CHANGELOG.md)
+        run: tools/release-upload.sh --no-sums "$TAG"
+
+  windows:
+    name: Windows package
+    needs: release
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - run: rustup toolchain install
+      - run: rustup target add i686-pc-windows-msvc
+      - name: Build the package
+        run: cargo xtask dist
+      - name: Check the package
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem target/dist/textweaver-*-windows-x86_64.zip | Select-Object -First 1
+          if (-not $zip) { throw 'no package' }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $names = [IO.Compression.ZipFile]::OpenRead($zip.FullName).Entries.FullName
+          foreach ($want in 'tw.exe', 'textweaver.exe', 'THIRD-PARTY-NOTICES.md', 'licenses/scowl/Copyright', 'licenses/fonts/opendyslexic/OFL.txt') {
+            if (-not ($names | Where-Object { $_ -like "*/$want" })) { throw "the package lacks $want" }
+          }
+          $dir = Get-ChildItem -Directory target/dist/textweaver-*-windows-x86_64 | Select-Object -First 1
+          & "$($dir.FullName)/tw.exe" --version
+          if ($LASTEXITCODE -ne 0) { throw 'tw --version failed' }
+          "Windows package: $($zip.Name), $([math]::Round($zip.Length / 1MB, 1)) MB" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: target/dist/textweaver-*-windows-x86_64.zip
+      - name: Upload to the release
+        shell: bash
+        run: tools/release-upload.sh --no-sums "$TAG" target/dist/textweaver-*-windows-x86_64.zip
+
   macos:
     name: macOS package
+    needs: release
     runs-on: macos-14
-    timeout-minutes: 60
-    env:
-      TAG: ${{ github.event.inputs.tag || github.ref_name }}
-      GH_TOKEN: ${{ github.token }}
+    timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
       - run: rustup toolchain install
       - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
-      - uses: Swatinem/rust-cache@v2
-      - name: Version matches the tag
-        run: |
-          version=$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="textweaver-tui"))')
-          test "v$version" = "$TAG" || { echo "Cargo.toml version $version does not match tag $TAG"; exit 1; }
       - name: Build the package
         run: cargo xtask dist --universal
-      - name: Check the binaries
+      - name: Check the package
         run: |
           dir=$(ls -d target/dist/textweaver-*-macos-universal)
           lipo -info "$dir/tw" "$dir/textweaver"
           codesign --verify --verbose "$dir/tw" "$dir/textweaver"
           "$dir/tw" --version
+          listing=$(tar -tzf target/dist/textweaver-*-macos-universal.tar.gz)
+          for want in THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/fonts/opendyslexic/OFL.txt; do
+            grep -q "/$want\$" <<< "$listing" || { echo "the package lacks $want"; exit 1; }
+          done
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: target/dist/textweaver-*-macos-universal.tar.gz
       - name: Upload to the release
-        run: tools/release-upload.sh "$TAG" target/dist/textweaver-*-macos-universal.tar.gz
+        run: tools/release-upload.sh --no-sums "$TAG" target/dist/textweaver-*-macos-universal.tar.gz
+
+  checksums:
+    name: SHA256SUMS.txt
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      # With no files, the script only rebuilds the checksums of every
+      # package on the release, once, after all the packages are there.
+      - name: Write the checksums
+        run: tools/release-upload.sh "$TAG"
+      - name: Fetch the checksums file
+        run: gh release download "$TAG" --pattern SHA256SUMS.txt --dir sums
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: sums/SHA256SUMS.txt

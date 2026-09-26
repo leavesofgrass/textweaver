@@ -1,14 +1,30 @@
 # macOS-only voice tests and measurements for the Apple speech backends
-# (textweaver-apple, ADR-0008). Runs on Agent F's branch only, on both
-# macOS 14 and macOS 15 runners (ci.yml covers macos-latest). Nothing is
-# played aloud: live speech runs at volume 0 or into a silent output, and
-# files go to temporary directories. The Swift probes in
-# tools/avspeech-spike/ can be run by hand with `swift <file>`.
+# (textweaver-apple, ADR-0008), on an older and a newer macOS runner, when
+# the Apple crate changes. ci.yml already runs these tests on macos-latest
+# on every push; this workflow adds macOS 14 and the measurements printed
+# with --nocapture. Nothing is played aloud: live speech runs at volume 0 or
+# into a silent output, and files go to temporary directories. The Swift
+# probes in tools/avspeech-spike/ can be run by hand with `swift <file>`.
 name: Apple speech
 
 on:
   push:
-    branches: ['agent/f-apple']
+    branches: [main]
+    paths:
+      - 'crates/textweaver-apple/**'
+      - '.github/workflows/apple.yml'
+  pull_request:
+    paths:
+      - 'crates/textweaver-apple/**'
+      - '.github/workflows/apple.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -23,10 +39,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Voice tests and measurements
         env:
           TEXTWEAVER_APPLE: '1'
-        run: cargo test -p textweaver-apple -- --ignored --nocapture --test-threads=1
+        run: cargo test --locked -p textweaver-apple -- --ignored --nocapture --test-threads=1

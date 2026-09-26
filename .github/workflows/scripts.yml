@@ -31,11 +31,19 @@ on:
         type: boolean
         default: false
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   shellcheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: shellcheck
         run: |
           shellcheck --version
@@ -48,12 +56,16 @@ jobs:
 
   psscriptanalyzer:
     runs-on: windows-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: PSScriptAnalyzer (scripts and tools; warnings fail)
         shell: pwsh
         run: |
-          $findings = @(Invoke-ScriptAnalyzer -Path scripts, tools -Recurse -Severity Warning, Error)
+          # -Path takes one folder, so each is analysed in turn.
+          $findings = @(foreach ($dir in 'scripts', 'tools') {
+            Invoke-ScriptAnalyzer -Path $dir -Recurse -Severity Warning, Error
+          })
           $findings | Format-Table -AutoSize ScriptName, Line, Severity, RuleName, Message | Out-String -Width 300
           if ($findings.Count -gt 0) { throw "$($findings.Count) PSScriptAnalyzer findings" }
       - name: PSScriptAnalyzer (other .ps1 files; report only)
@@ -90,21 +102,22 @@ jobs:
     name: install-linux.sh on ${{ matrix.image }}
     runs-on: ubuntu-latest
     container: ${{ matrix.image }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         include:
           - image: debian:stable
             manager: 'Package manager: apt'
-            packages: 'apt-get install -y -q --no-install-recommends -o Dpkg::Progress-Fancy=0 build-essential clang libclang-dev pkg-config libasound2-dev espeak-ng libespeak-ng-dev speech-dispatcher speech-dispatcher-espeak-ng libspeechd-dev'
+            packages: 'apt-get install -y -q --no-install-recommends -o Dpkg::Progress-Fancy=0 build-essential pkg-config libasound2-dev espeak-ng libespeak-ng-dev speech-dispatcher speech-dispatcher-espeak-ng libspeechd-dev'
           - image: fedora:latest
             manager: 'Package manager: dnf'
-            packages: 'dnf install -y gcc gcc-c++ make clang clang-devel pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-utils speech-dispatcher-devel'
+            packages: 'dnf install -y gcc gcc-c++ make pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-utils speech-dispatcher-devel'
           - image: archlinux:latest
             manager: 'Package manager: pacman'
-            packages: 'pacman -Syu --needed --noconfirm --noprogressbar base-devel clang pkgconf alsa-lib espeak-ng speech-dispatcher'
+            packages: 'pacman -Syu --needed --noconfirm --noprogressbar base-devel pkgconf alsa-lib espeak-ng speech-dispatcher'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Dry run
         shell: bash
         run: |
@@ -125,8 +138,9 @@ jobs:
 
   macos-dry-run:
     runs-on: macos-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Dry runs under /bin/bash (3.2)
         run: |
           /bin/bash --version | head -n 1
@@ -146,7 +160,7 @@ jobs:
     container: debian:stable
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install
         shell: bash
         run: bash scripts/install-linux.sh --yes --no-optional
