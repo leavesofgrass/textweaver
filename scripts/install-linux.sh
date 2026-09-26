@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# install-linux.sh: build textweaver from source and install it, on any Linux
-# distribution (apt, dnf, pacman, zypper, or apk; other systems get the list
-# of packages to install by hand).
+# install-linux.sh: install textweaver on any Linux distribution, either a
+# published release (the AppImage, or the tarball where FUSE is missing),
+# checked against the release's SHA256SUMS.txt, or built from source (apt,
+# dnf, pacman, zypper, or apk; other systems get the list of packages to
+# install by hand).
 #
 # Shell: bash (3.2 or later). Safe to run twice. See scripts/README.md, or
 # run with --help.
@@ -10,6 +12,13 @@ set -eu
 set -o pipefail
 
 REPO_URL="${TEXTWEAVER_REPO_URL:-https://github.com/leavesofgrass/textweaver.git}"
+REPO="leavesofgrass/textweaver"
+# Where release files are downloaded from: the GitHub release for the tag
+# is appended. TEXTWEAVER_RELEASE_URL replaces the whole base (a mirror, or
+# file:///folder for a local test), and then no tag lookup is needed.
+RELEASE_BASE="https://github.com/$REPO/releases/download"
+RELEASE_URL="${TEXTWEAVER_RELEASE_URL:-}"
+PACKAGE="auto"
 MARKER="# added by the textweaver installer"
 
 DRY_RUN=0
@@ -29,11 +38,18 @@ usage() {
   cat <<'EOF'
 Usage: scripts/install-linux.sh [options]
 
-Builds textweaver from source and installs it for you, on any Linux
-distribution. It installs the build dependencies with your package manager,
-installs Rust with rustup if cargo is missing, builds textweaver and tw in
-release mode with the Linux speech engines (espeak-ng, speech-dispatcher, and
-Omnivox), builds the engine hosts, and installs everything under a prefix.
+Installs textweaver for you, on any Linux distribution, in one of two ways.
+
+With --release, it downloads a published release, checks it against the
+release's SHA256SUMS.txt, and installs it: the AppImage, one file that runs
+on most distributions, with textweaver and tw linked to it; or, where FUSE
+is missing (so AppImages cannot run), the plain tarball. Nothing is built.
+
+Without --release, it builds from source: it installs the build dependencies
+with your package manager, installs Rust with rustup if cargo is missing,
+builds textweaver and tw in release mode with the Linux speech engines
+(espeak-ng, speech-dispatcher, and Omnivox), builds the engine hosts, and
+installs everything under a prefix.
 
 Every step is announced before it runs. The script asks before it uses sudo,
 installs Rust, or changes your PATH. Running it again updates the install.
@@ -44,8 +60,14 @@ Options:
                          DIR/lib/textweaver, and the guides in
                          DIR/share/doc/textweaver.
   --from-source          Build from source (the default).
-  --release TAG          Install a published Linux package. None are
-                         published yet, so this only says so.
+  --release TAG          Install the published release TAG, such as
+                         v0.1.0-alpha.4, or "latest" for the newest one
+                         (pre-releases included). x86_64 only.
+  --tarball              With --release: install the tarball, not the
+                         AppImage (the default when FUSE is missing).
+  --appimage             With --release: install the AppImage even when
+                         FUSE seems to be missing. It then runs with
+                         APPIMAGE_EXTRACT_AND_RUN=1 set.
   --source DIR           Use the textweaver checkout in DIR. Without it, the
                          checkout this script sits in is used, or the
                          repository is cloned to ~/.local/src/textweaver.
@@ -66,6 +88,7 @@ Options:
   -h, --help             Show this help.
 
 Examples:
+  scripts/install-linux.sh --release latest
   scripts/install-linux.sh
   scripts/install-linux.sh --dry-run
   scripts/install-linux.sh --prefix /usr/local
@@ -170,6 +193,8 @@ while [ "$#" -gt 0 ]; do
       MODE="release"
       RELEASE_TAG="${1#*=}"
       ;;
+    --tarball) PACKAGE="tarball" ;;
+    --appimage) PACKAGE="appimage" ;;
     --source)
       [ "$#" -ge 2 ] || die "--source needs a folder."
       SOURCE_DIR="$2"
@@ -209,6 +234,7 @@ LIBDIR="$PREFIX/lib/textweaver"
 DOCDIR="$PREFIX/share/doc/textweaver"
 MANDIR="$PREFIX/share/man/man1"
 APPDIR="$PREFIX/share/applications"
+ICONDIR="$PREFIX/share/icons/hicolor/scalable/apps"
 DATADIR="$PREFIX/share/textweaver"
 MANIFEST="$DATADIR/install-manifest.txt"
 
@@ -397,7 +423,6 @@ print_generic_packages() {
   say "Optional: ffmpeg and pandoc."
 }
 
-DEPS_INSTALLED=0
 install_dependencies() {
   section "System packages"
   detect_os
@@ -428,7 +453,6 @@ install_dependencies() {
   if ask "Install the build dependencies now?"; then
     if need_root "Installing packages"; then
       pm_install "$pkgs"
-      DEPS_INSTALLED=1
     else
       say "Skipping system packages. If the build fails, install the packages listed above."
     fi
@@ -571,12 +595,10 @@ choose_features() {
   local engines="omnivox speechd"
   if [ "$ESPEAK" = 0 ]; then
     say "Leaving out the in-process espeak-ng engine, as asked. textweaver can still speak through speech-dispatcher."
-  elif [ "$DRY_RUN" = 1 ] || [ "$DEPS_INSTALLED" = 1 ] \
-    || { have pkg-config && pkg-config --exists espeak-ng; } \
-    || [ -f /usr/include/espeak-ng/speak_lib.h ]; then
-    engines="espeak $engines"
   else
-    say "The espeak-ng development files were not found, so textweaver is built without the in-process espeak-ng engine. It can still speak through speech-dispatcher."
+    # libespeak-ng is loaded when textweaver starts, so the build needs no
+    # espeak-ng files; without the library the engine is just unavailable.
+    engines="espeak $engines"
   fi
   ENGINES="$engines"
   set_features
@@ -615,8 +637,8 @@ build() {
       *) die "The build failed. The error is above. scripts/doctor.sh collects what a bug report needs." ;;
     esac
     say ""
-    say "The build failed. On new distributions the usual cause is the in-process espeak-ng engine: its generated bindings can disagree with the system headers. The error is above."
-    say "Building again without it. textweaver can still speak with espeak-ng through speech-dispatcher. Use --no-espeak to skip the first attempt next time."
+    say "The build failed. The error is above."
+    say "Building again without the in-process espeak-ng engine, in case it is the cause. textweaver can still speak with espeak-ng through speech-dispatcher. Use --no-espeak to skip the first attempt next time."
     ENGINES="$(printf '%s' "$ENGINES" | sed 's/espeak //')"
     set_features
     (cd "$SRC" && run cargo build --release --locked -p textweaver-tui -p textweaver-cli \
@@ -775,8 +797,14 @@ install_help() {
   man_page tw "read, convert, and speak documents from the command line" "$("$tw" --help)" | iw "$MANDIR/tw.1"
 }
 
+# Installs the menu entry and icon: from $1 and $2 when given (a release
+# package), else from scripts/linux beside this script.
 install_desktop() {
-  local template="$SCRIPT_DIR/linux/textweaver.desktop"
+  local template="${1:-$SCRIPT_DIR/linux/textweaver.desktop}"
+  if [ ! -f "$template" ] && [ "$DRY_RUN" = 1 ]; then
+    say "Would write $APPDIR/textweaver.desktop and $ICONDIR/textweaver.svg"
+    return 0
+  fi
   if [ ! -f "$template" ]; then
     warn "The menu entry template $template is missing, so no menu entry is installed."
     return 0
@@ -784,6 +812,11 @@ install_desktop() {
   local exe="$BINDIR/textweaver"
   sed -e "s|^Exec=textweaver|Exec=\"$exe\"|" -e "s|^TryExec=textweaver|TryExec=$exe|" "$template" \
     | iw "$APPDIR/textweaver.desktop"
+  local icon="${2:-$SCRIPT_DIR/linux/textweaver.svg}"
+  if [ -f "$icon" ] || [ "$DRY_RUN" = 1 ]; then
+    ir mkdir -p "$ICONDIR"
+    ir install -m 0644 "$icon" "$ICONDIR/textweaver.svg"
+  fi
   if have update-desktop-database && [ -z "$INSTALL_SUDO" ]; then
     run update-desktop-database "$APPDIR" || true
   fi
@@ -884,13 +917,20 @@ remove_path_line() {
 # ------------------------------------------------------------ uninstall --
 
 uninstall() {
-  say "This removes textweaver from $PREFIX: the programs, engine hosts, dictionaries, guides, manual pages, and menu entry."
+  say "This removes textweaver from $PREFIX: the programs (or the AppImage), engine hosts, dictionaries, guides, manual pages, menu entry, and icon."
   say "It keeps your settings, reading positions, and notes, and it does not remove system packages or Rust."
-  if [ -x "$LIBDIR/tw" ] && [ "$DRY_RUN" = 0 ]; then
-    say "Your settings stay here:"
-    "$LIBDIR/tw" settings path 2> /dev/null || true
+  local tw=""
+  if [ -x "$LIBDIR/tw" ]; then
+    tw="$LIBDIR/tw"
+  elif [ -x "$BINDIR/textweaver.AppImage" ]; then
+    tw="$BINDIR/tw"
   fi
-  if [ ! -e "$LIBDIR" ] && [ ! -e "$DOCDIR" ] && [ ! -e "$DATADIR" ] && [ ! -L "$BINDIR/tw" ] && [ "$DRY_RUN" = 0 ]; then
+  if [ -n "$tw" ] && [ "$DRY_RUN" = 0 ]; then
+    say "Your settings stay here:"
+    "$tw" settings path 2> /dev/null || true
+  fi
+  if [ ! -e "$LIBDIR" ] && [ ! -e "$DOCDIR" ] && [ ! -e "$DATADIR" ] && [ ! -L "$BINDIR/tw" ] \
+    && [ ! -e "$BINDIR/textweaver.AppImage" ] && [ "$DRY_RUN" = 0 ]; then
     say "textweaver is not installed in $PREFIX, so there is nothing to remove."
     remove_path_line
     return 0
@@ -911,7 +951,7 @@ uninstall() {
       ir rm -f "$BINDIR/$f"
     elif [ -L "$BINDIR/$f" ]; then
       case "$(readlink "$BINDIR/$f")" in
-        *lib/textweaver/*) ir rm -f "$BINDIR/$f" ;;
+        *lib/textweaver/* | textweaver.AppImage) ir rm -f "$BINDIR/$f" ;;
         *) say "Leaving $BINDIR/$f: it does not point into this install." ;;
       esac
     fi
@@ -919,12 +959,214 @@ uninstall() {
   for f in "$LIBDIR" "$DOCDIR" "$DATADIR"; do
     if [ -e "$f" ] || [ "$DRY_RUN" = 1 ]; then ir rm -rf "$f"; fi
   done
-  for f in "$MANDIR/textweaver.1" "$MANDIR/tw.1" "$APPDIR/textweaver.desktop"; do
+  for f in "$BINDIR/textweaver.AppImage" "$MANDIR/textweaver.1" "$MANDIR/tw.1" \
+    "$APPDIR/textweaver.desktop" "$ICONDIR/textweaver.svg"; do
     if [ -e "$f" ] || [ "$DRY_RUN" = 1 ]; then ir rm -f "$f"; fi
   done
   remove_path_line
   say ""
   say "textweaver is removed from $PREFIX."
+}
+
+# -------------------------------------------------------------- release --
+
+WORK=""
+cleanup() {
+  if [ -n "$WORK" ] && [ -d "$WORK" ]; then
+    rm -rf "$WORK"
+  fi
+}
+trap cleanup EXIT
+
+# Downloads $1 (a URL) to $2, with curl or wget.
+fetch() {
+  if have curl || [ "$DRY_RUN" = 1 ]; then
+    run curl --proto '=https,file' -fsSL --retry 2 -o "$2" "$1"
+  elif have wget; then
+    run wget -q -O "$2" "$1"
+  else
+    die "Neither curl nor wget is installed. Install one of them, then run this script again."
+  fi
+}
+
+# SHA-256 of a file.
+sha256_of() {
+  if have sha256sum; then
+    sha256sum "$1" | awk '{ print $1 }'
+  else
+    shasum -a 256 "$1" | awk '{ print $1 }'
+  fi
+}
+
+# True when AppImages can mount themselves: /dev/fuse and fusermount.
+fuse_works() {
+  [ -e /dev/fuse ] && { have fusermount3 || have fusermount; }
+}
+
+# Finds the newest release (pre-releases included) when the tag is "latest".
+resolve_tag() {
+  if [ -n "$RELEASE_TAG" ] && [ "$RELEASE_TAG" != latest ]; then
+    return 0
+  fi
+  local api="https://api.github.com/repos/$REPO/releases?per_page=1"
+  if [ "$DRY_RUN" = 1 ]; then
+    say "Would look up the newest release at $api"
+    RELEASE_TAG="vVERSION"
+    return 0
+  fi
+  have curl || die "curl is needed to look up the newest release. Install curl, or name a release, such as --release v0.1.0-alpha.4."
+  say "Looking up the newest release at $api"
+  RELEASE_TAG="$(curl -fsSL "$api" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n 1)" \
+    || die "Could not reach GitHub. Check your connection, or name a release with --release."
+  [ -n "$RELEASE_TAG" ] || die "No release was found on https://github.com/$REPO/releases."
+  say "The newest release is $RELEASE_TAG."
+}
+
+install_release() {
+  section "Release"
+  local arch
+  arch="$(uname -m)"
+  if [ "$arch" != x86_64 ] && [ "$DRY_RUN" = 0 ]; then
+    die "Release packages are built for x86_64, and this machine is $arch. Build from source instead: run this script without --release."
+  fi
+  if [ -z "$RELEASE_URL" ]; then
+    resolve_tag
+  fi
+  [ -n "$RELEASE_TAG" ] || RELEASE_TAG="local"
+  local version="${RELEASE_TAG#v}"
+  local base="${RELEASE_URL:-$RELEASE_BASE/$RELEASE_TAG}"
+  base="${base%/}"
+  local name="textweaver-$version-linux-x86_64"
+
+  local kind="$PACKAGE"
+  if [ "$kind" = auto ]; then
+    if fuse_works; then
+      kind=appimage
+    else
+      kind=tarball
+      say "FUSE is not available here (no /dev/fuse, or no fusermount), so AppImages cannot run directly. Installing the tarball instead, which works without FUSE."
+    fi
+  fi
+  local file
+  case $kind in
+    appimage) file="$name.AppImage" ;;
+    *) file="$name.tar.gz" ;;
+  esac
+
+  if [ "$DRY_RUN" = 1 ]; then
+    WORK="/tmp/textweaver-install"
+  else
+    WORK="$(mktemp -d)"
+  fi
+  say "Downloading $file and SHA256SUMS.txt from $base."
+  fetch "$base/$file" "$WORK/$file"
+  fetch "$base/SHA256SUMS.txt" "$WORK/SHA256SUMS.txt"
+
+  say "Checking the download against SHA256SUMS.txt."
+  if [ "$DRY_RUN" = 1 ]; then
+    say "Would compare the SHA-256 of $file with its line in SHA256SUMS.txt"
+  else
+    local want got
+    want="$(awk -v f="$file" '$2 == f || $2 == "*" f { print $1 }' "$WORK/SHA256SUMS.txt" | head -n 1)"
+    [ -n "$want" ] || die "SHA256SUMS.txt has no line for $file, so the download cannot be checked. Nothing was installed."
+    got="$(sha256_of "$WORK/$file")"
+    if [ "$want" != "$got" ]; then
+      die "The checksum does not match (expected $want, got $got). The download may be damaged. Nothing was installed."
+    fi
+    say "The checksum matches: $got."
+  fi
+
+  section "Install"
+  local parent="$PREFIX"
+  while [ ! -e "$parent" ]; do parent="$(dirname "$parent")"; done
+  if [ ! -w "$parent" ] || { [ -e "$BINDIR" ] && [ ! -w "$BINDIR" ]; }; then
+    if need_root "Writing to $PREFIX"; then
+      INSTALL_SUDO="$SUDO"
+    else
+      die "Cannot write to $PREFIX. Choose another folder with --prefix."
+    fi
+  fi
+  ir mkdir -p "$BINDIR" "$APPDIR" "$DATADIR"
+  local f
+  # An earlier install of the other kind is replaced.
+  for f in textweaver tw; do
+    if [ -e "$BINDIR/$f" ] && [ ! -L "$BINDIR/$f" ]; then
+      die "$BINDIR/$f is a file, not a link this script made. Move it away, then run this script again."
+    fi
+  done
+  local desktop icon
+  if [ "$kind" = appimage ]; then
+    say "Installing the AppImage as $BINDIR/textweaver.AppImage, with textweaver and tw linked to it."
+    ir rm -rf "$LIBDIR"
+    ir install -m 0755 "$WORK/$file" "$BINDIR/textweaver.AppImage"
+    for f in textweaver tw; do
+      ir ln -sfn textweaver.AppImage "$BINDIR/$f"
+    done
+    # The menu entry and icon come from inside the AppImage; extracting
+    # them needs no FUSE.
+    desktop="$WORK/squashfs-root/textweaver.desktop"
+    icon="$WORK/squashfs-root/textweaver.svg"
+    if [ "$DRY_RUN" = 1 ]; then
+      say "Would extract textweaver.desktop, textweaver.svg, and QUICKSTART.md from the AppImage"
+    else
+      chmod +x "$WORK/$file"
+      (cd "$WORK" && "./$file" --appimage-extract textweaver.desktop > /dev/null 2>&1 \
+        && "./$file" --appimage-extract textweaver.svg > /dev/null 2>&1) \
+        || warn "Could not read the menu entry from the AppImage, so none is installed."
+      if (cd "$WORK" && "./$file" --appimage-extract usr/lib/textweaver/QUICKSTART.md > /dev/null 2>&1); then
+        ir mkdir -p "$DOCDIR"
+        ir install -m 0644 "$WORK/squashfs-root/usr/lib/textweaver/QUICKSTART.md" "$DOCDIR/QUICKSTART.md"
+      fi
+    fi
+  else
+    say "Installing the tarball into $LIBDIR, with textweaver and tw linked from $BINDIR."
+    ir rm -f "$BINDIR/textweaver.AppImage"
+    ir rm -rf "$LIBDIR"
+    ir mkdir -p "$LIBDIR"
+    ir tar -xzf "$WORK/$file" -C "$LIBDIR" --strip-components=1
+    for f in textweaver tw; do
+      ir ln -sfn "../lib/textweaver/$f" "$BINDIR/$f"
+    done
+    desktop="$LIBDIR/share/applications/textweaver.desktop"
+    icon="$LIBDIR/share/icons/hicolor/scalable/apps/textweaver.svg"
+    ir mkdir -p "$DOCDIR"
+    ir install -m 0644 "$LIBDIR/QUICKSTART.md" "$DOCDIR/QUICKSTART.md"
+  fi
+  install_desktop "$desktop" "$icon"
+
+  {
+    say "# textweaver install manifest, written by scripts/install-linux.sh."
+    say "kind=release"
+    say "package=$kind"
+    say "tag=$RELEASE_TAG"
+    say "prefix=$PREFIX"
+    say "version=$version"
+  } | iw "$MANIFEST"
+  # The helper scripts, so update.sh and doctor.sh work after install.
+  ir mkdir -p "$DATADIR/scripts"
+  for f in install-linux.sh update.sh doctor.sh speech-check.sh; do
+    if [ -f "$SCRIPT_DIR/$f" ]; then
+      ir install -m 0755 "$SCRIPT_DIR/$f" "$DATADIR/scripts/$f"
+    fi
+  done
+
+  offer_path
+
+  section "Done"
+  if [ "$DRY_RUN" = 1 ]; then
+    say "Dry run finished. Nothing was changed."
+    return 0
+  fi
+  say "textweaver $version is installed in $PREFIX."
+  if [ "$kind" = appimage ] && ! fuse_works; then
+    say "FUSE seems to be missing, so set APPIMAGE_EXTRACT_AND_RUN=1 before running textweaver or tw, or install again with --tarball."
+  fi
+  say "Check your speech engines: $BINDIR/tw backends"
+  say "Read the quick start aloud: $BINDIR/textweaver $DOCDIR/QUICKSTART.md"
+  if [ "$kind" = tarball ]; then
+    say "The guides are in $LIBDIR/docs."
+  fi
+  say "To update later, run $DATADIR/scripts/update.sh. To remove textweaver, run this script with --uninstall."
 }
 
 # ----------------------------------------------------------------- main --
@@ -939,9 +1181,8 @@ if [ "$UNINSTALL" = 1 ]; then
 fi
 
 if [ "$MODE" = release ]; then
-  say "Linux packages are not published yet, so there is no release $RELEASE_TAG to install."
-  say "Build from source instead: run this script without --release."
-  exit 1
+  install_release
+  exit 0
 fi
 
 say "This script builds textweaver from source and installs it under $PREFIX."

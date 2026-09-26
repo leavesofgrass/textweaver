@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- textweaver's icon: a page of text with one highlighted word and sound
+     waves, for a reader that speaks and follows the spoken word.
+     Released under textweaver's licence (GPL-3.0-or-later). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+  <title id="title">textweaver</title>
+  <rect x="8" y="8" width="240" height="240" rx="40" fill="#1d2b53"/>
+  <rect x="40" y="44" width="128" height="168" rx="12" fill="#f4f1e8"/>
+  <rect x="58" y="70" width="92" height="10" rx="5" fill="#1d2b53"/>
+  <rect x="58" y="94" width="30" height="14" rx="4" fill="#ffcc33"/>
+  <rect x="94" y="96" width="56" height="10" rx="5" fill="#1d2b53"/>
+  <rect x="58" y="120" width="92" height="10" rx="5" fill="#1d2b53"/>
+  <rect x="58" y="144" width="72" height="10" rx="5" fill="#1d2b53"/>
+  <rect x="58" y="168" width="84" height="10" rx="5" fill="#1d2b53"/>
+  <g fill="none" stroke="#ffcc33" stroke-width="12" stroke-linecap="round">
+    <path d="M186 104 q16 24 0 48"/>
+    <path d="M204 86 q30 42 0 84"/>
+  </g>
+</svg>

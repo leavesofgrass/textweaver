@@ -9,13 +9,20 @@ repository.workspace = true
 authors.workspace = true
 publish.workspace = true
 
+[features]
+default = ["comrak"]
+# The comrak engine (`--engine comrak`). pulldown-cmark is the default
+# engine and always built; without this feature `comrak` falls back to it
+# with a warning. Release packages keep it on.
+comrak = ["dep:comrak"]
+
 [dependencies]
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 log.workspace = true
 pulldown-cmark.workspace = true
-comrak.workspace = true
+comrak = { workspace = true, optional = true }
 textweaver-math.workspace = true
 ammonia.workspace = true
 minijinja.workspace = true

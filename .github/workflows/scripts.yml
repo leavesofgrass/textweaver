@@ -17,12 +17,14 @@ on:
       - 'scripts/**'
       - 'tools/*.sh'
       - 'tools/*.ps1'
+      - 'docker/appimage/*.sh'
       - '.github/workflows/scripts.yml'
   pull_request:
     paths:
       - 'scripts/**'
       - 'tools/*.sh'
       - 'tools/*.ps1'
+      - 'docker/appimage/*.sh'
       - '.github/workflows/scripts.yml'
   workflow_dispatch:
     inputs:
@@ -47,7 +49,7 @@ jobs:
       - name: shellcheck
         run: |
           shellcheck --version
-          shellcheck scripts/*.sh tools/*.sh
+          shellcheck scripts/*.sh tools/*.sh scripts/linux/AppRun docker/appimage/*.sh
       - name: Menu entry
         run: |
           sudo apt-get update -q
@@ -130,7 +132,11 @@ jobs:
         shell: bash
         run: |
           bash scripts/install-linux.sh --dry-run --yes --uninstall
-          bash scripts/install-linux.sh --release v0.0.0 && exit 1 || true
+          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.3 | tee release.txt
+          grep -F 'textweaver-0.1.0-alpha.3-linux-x86_64' release.txt
+          grep -F 'SHA256SUMS.txt' release.txt
+          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.3 --appimage | grep -F 'linux-x86_64.AppImage'
+          bash scripts/install-linux.sh --dry-run --yes --release latest | grep -F 'api.github.com'
           bash scripts/doctor.sh --dry-run
           bash scripts/speech-check.sh --dry-run
           bash scripts/dev-check.sh --dry-run

@@ -194,7 +194,7 @@ Star's lesson: a stored setting must work.
   - AddressSanitizer for the FFI crates.
   - Miri for core, text, and the protocol code.
   - Release-mode tests.
-  - An MSRV (Rust 1.89) check.
+  - An MSRV (Rust 1.92) check.
   - A Docker job.
 - **Soak test.** Read the 10 MB corpus to the end with random navigation, edits, rate changes, and host kills. Memory must stay level and no host process may be left over.
 - **More coverage.**

@@ -134,6 +134,79 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           rustup target add i686-pc-windows-msvc
-          cargo build --locked -p textweaver-eci -p textweaver-sapi --bins --target i686-pc-windows-msvc
+          cargo build --locked -p textweaver-eci -p textweaver-sapi -p textweaver-dectalk --bins --target i686-pc-windows-msvc
+      # The fake-engine tests against the 32-bit hosts: the 64-bit ECI
+      # backend drives the 32-bit ECI host (as it does for Code Factory's
+      # eci.dll), and the SAPI and DECtalk tests run as 32-bit programs
+      # with their 32-bit hosts.
+      - name: Fake-host tests, 32-bit hosts (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          # An absolute Windows path: the tests run in the crate's folder.
+          TEXTWEAVER_ECI_TEST_HOST="$(pwd -W)/target/i686-pc-windows-msvc/debug/textweaver-eci-host.exe" \
+            cargo test --locked -p textweaver-eci --test fake_host
+          cargo test --locked --target i686-pc-windows-msvc -p textweaver-sapi -p textweaver-dectalk --test fake_host
       - name: Docs
         run: cargo doc --locked --workspace --exclude textweaver-gui --no-deps ${{ matrix.features }}
+
+  # Real engines, where a hosted runner has one. Nothing is ever heard:
+  # audio goes to WAV files in temporary folders or to a silent output that
+  # consumes samples on a timer.
+  real-espeak:
+    name: 'Real engine: espeak-ng (Linux, no audio)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      # Only the library and its data: textweaver loads libespeak-ng at run
+      # time, so no headers are needed.
+      - name: espeak-ng
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libespeak-ng1 espeak-ng-data libasound2-dev pkg-config
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: real-espeak
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: The espeak backend against libespeak-ng (virtual output)
+        env:
+          TEXTWEAVER_ESPEAK_OUTPUT: virtual
+        run: cargo test --locked -p textweaver-speech --features espeak --test espeak
+      - name: tw finds espeak-ng and writes a WAV file
+        run: |
+          cargo build --locked -p textweaver-cli --bin tw --features espeak
+          target/debug/tw backends | tee backends.txt
+          grep -q '^espeak: .*\. Available\.' backends.txt
+          target/debug/tw speak --backend espeak --out "$RUNNER_TEMP/espeak.wav" "Real engine check."
+          test -s "$RUNNER_TEMP/espeak.wav"
+
+  real-sapi:
+    name: 'Real engine: SAPI5 Microsoft voices (Windows, no audio)'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: real-sapi
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      # The runner image's voices decide which tests can run: without
+      # Microsoft David the job says so and stops, rather than fail.
+      - name: Installed SAPI5 voices
+        id: voices
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Speech
+          $names = (New-Object System.Speech.Synthesis.SpeechSynthesizer).GetInstalledVoices() | ForEach-Object { $_.VoiceInfo.Name }
+          $names | ForEach-Object { "Voice: $_" }
+          $david = [bool]($names | Where-Object { $_ -like 'Microsoft David*' })
+          "david=$($david.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          if (-not $david) { "::notice::Microsoft David is not installed on this runner image; the real SAPI tests were not run." }
+      - name: Microsoft voices in the 64-bit host
+        if: steps.voices.outputs.david == 'true'
+        env:
+          TEXTWEAVER_SAPI: '1'
+        run: cargo test --locked -p textweaver-sapi --test real_voices -- --ignored --nocapture david every_allowed_voice speaking_and_stopping

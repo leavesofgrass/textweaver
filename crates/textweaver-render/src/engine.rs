@@ -7,7 +7,10 @@
 //! source; comrak builds a full AST in an arena, which this module walks
 //! into the same events.
 
+#[cfg(feature = "comrak")]
 use comrak::nodes::{AstNode, ListType, NodeValue, TableAlignment};
+// Most of these are used only by the comrak walker.
+#[cfg_attr(not(feature = "comrak"), allow(unused_imports))]
 use pulldown_cmark::{
     Alignment, BlockQuoteKind, CodeBlockKind, CowStr, Event, HeadingLevel, LinkType, Options,
     Parser, Tag, TagEnd,
@@ -17,9 +20,19 @@ use crate::{Engine, Flavor};
 
 /// Parses `src` with `engine` under `flavor`.
 pub fn parse(src: &str, engine: Engine, flavor: Flavor, smart: bool) -> Vec<Event<'_>> {
-    match engine {
-        Engine::PulldownCmark => Parser::new_ext(src, pulldown_options(flavor, smart)).collect(),
+    // Built without comrak (cargo feature `comrak`, on by default and in
+    // every release), `comrak` falls back to pulldown-cmark; say so.
+    if engine.built() != engine {
+        log::warn!(
+            "this build has no {} engine; using {}",
+            engine.name(),
+            engine.built().name()
+        );
+    }
+    match engine.built() {
+        #[cfg(feature = "comrak")]
         Engine::Comrak => comrak_events(src, flavor, smart),
+        _ => Parser::new_ext(src, pulldown_options(flavor, smart)).collect(),
     }
 }
 
@@ -53,6 +66,7 @@ pub fn pulldown_options(flavor: Flavor, smart: bool) -> Options {
     o
 }
 
+#[cfg(feature = "comrak")]
 fn comrak_options(flavor: Flavor, smart: bool) -> comrak::Options<'static> {
     let mut o = comrak::Options::default();
     let e = &mut o.extension;
@@ -87,6 +101,7 @@ fn comrak_options(flavor: Flavor, smart: bool) -> comrak::Options<'static> {
     o
 }
 
+#[cfg(feature = "comrak")]
 fn comrak_events(src: &str, flavor: Flavor, smart: bool) -> Vec<Event<'static>> {
     let arena = comrak::Arena::new();
     let options = comrak_options(flavor, smart);
@@ -96,14 +111,17 @@ fn comrak_events(src: &str, flavor: Flavor, smart: bool) -> Vec<Event<'static>> 
     w.out
 }
 
+#[cfg(feature = "comrak")]
 struct Walker {
     out: Vec<Event<'static>>,
 }
 
+#[cfg(feature = "comrak")]
 fn owned(s: &str) -> CowStr<'static> {
     CowStr::from(s.to_owned())
 }
 
+#[cfg(feature = "comrak")]
 fn heading_level(level: u8) -> HeadingLevel {
     match level {
         1 => HeadingLevel::H1,
@@ -115,6 +133,7 @@ fn heading_level(level: u8) -> HeadingLevel {
     }
 }
 
+#[cfg(feature = "comrak")]
 impl Walker {
     fn children<'a>(&mut self, node: &'a AstNode<'a>, tight: bool) {
         for child in node.children() {

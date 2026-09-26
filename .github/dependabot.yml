@@ -19,6 +19,11 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    ignore:
+      # ammonia stays on 4.1 until scraper moves to html5ever 0.40, so one
+      # HTML parser is linked (root Cargo.toml). Lift this with scraper.
+      - dependency-name: ammonia
+        versions: ['>=4.2']
     groups:
       # Patch and minor updates of every crate together.
       cargo-minor:

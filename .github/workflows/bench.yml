@@ -1,0 +1,69 @@
+# Benchmark gate: `cargo xtask bench --quick` on every pull request and
+# every push to main, compared with main's own numbers from this same job
+# (the same runner type), kept as the `bench-ubuntu-latest` artifact of the
+# newest successful run on main.
+#
+# The gate fails when a peak heap or allocation count grows more than twice
+# its baseline: those barely vary from run to run. Times vary with the
+# runner and are reported in the log and the job summary for information
+# only. So are the startup timings (tw --version, text, info, backends).
+# xtask/src/bench.rs has the details.
+
+name: Bench
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  # Reading main's artifact from another run.
+  actions: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  bench:
+    name: bench --quick (ubuntu-latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: System libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: bench
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Main's numbers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow bench.yml --branch main \
+            --event push --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$id" ] && gh run download "$id" --repo "$GITHUB_REPOSITORY" \
+              --name bench-ubuntu-latest --dir baseline; then
+            echo "BASELINE_FILE=baseline/bench.json" >> "$GITHUB_ENV"
+            echo "Comparing with run $id on main."
+          else
+            echo "::notice::No numbers from main yet, so nothing to compare with; this run only measures."
+          fi
+      - name: Bench (quick) and gate
+        run: cargo xtask bench --quick --json bench.json --max-ratio 2 ${BASELINE_FILE:+--baseline "$BASELINE_FILE"}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: bench-ubuntu-latest
+          path: bench.json
+          retention-days: 90
+          if-no-files-found: ignore

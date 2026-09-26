@@ -10,13 +10,29 @@
 //! `archlinux:latest`). Nothing here needs `FILE`, and without bindgen the
 //! `espeak` feature no longer needs clang or libclang to build.
 //!
+//! libespeak-ng is loaded at run time with `libloading`, not linked, so one
+//! binary (the Linux AppImage, for instance) works with or without
+//! libespeak-ng installed: without it the backend reports itself
+//! unavailable and another engine speaks. [`LIBRARY_ENV`] names a file to
+//! try first, then the usual names for the platform
+//! ([`library_candidates`]). The library stays loaded for the life of the
+//! process. Building needs no espeak-ng headers or library.
+//!
 //! Names follow bindgen's, so the calling code reads as before. Layouts are
 //! checked by the tests below against the C definitions (`int`-sized enums;
 //! the event's `id` union is 8 bytes).
 
-#![allow(non_camel_case_types, non_upper_case_globals, unsafe_code)]
+#![allow(
+    non_camel_case_types,
+    non_upper_case_globals,
+    non_snake_case,
+    unsafe_code
+)]
 
-use std::ffi::{c_char, c_int, c_short, c_uchar, c_uint, c_void};
+use std::ffi::{OsString, c_char, c_int, c_short, c_uchar, c_uint, c_void};
+use std::sync::OnceLock;
+
+use libloading::Library;
 
 /// `espeak_EVENT_TYPE` (a C enum: `int`-sized).
 pub type espeak_EVENT_TYPE = c_uint;
@@ -43,6 +59,9 @@ pub const espeak_AUDIO_OUTPUT_AUDIO_OUTPUT_RETRIEVAL: espeak_AUDIO_OUTPUT = 1;
 pub type espeak_ERROR = c_int;
 /// Success.
 pub const espeak_ERROR_EE_OK: espeak_ERROR = 0;
+/// `EE_INTERNAL_ERROR`; also what the wrappers below return when the
+/// library is not loaded.
+pub const espeak_ERROR_EE_INTERNAL_ERROR: espeak_ERROR = -1;
 
 /// `espeak_PARAMETER`.
 pub type espeak_PARAMETER = c_uint;
@@ -129,47 +148,299 @@ pub type t_espeak_callback = Option<
     unsafe extern "C" fn(wav: *mut c_short, numsamples: c_int, events: *mut espeak_EVENT) -> c_int,
 >;
 
-#[link(name = "espeak-ng")]
-unsafe extern "C" {
-    /// Starts the engine; returns the sample rate, or -1.
-    pub fn espeak_Initialize(
-        output: espeak_AUDIO_OUTPUT,
-        buflength: c_int,
-        path: *const c_char,
-        options: c_int,
-    ) -> c_int;
-    /// Sets the synthesis callback.
-    pub fn espeak_SetSynthCallback(callback: t_espeak_callback);
-    /// Synthesizes text.
-    pub fn espeak_Synth(
-        text: *const c_void,
-        size: usize,
-        position: c_uint,
-        position_type: espeak_POSITION_TYPE,
-        end_position: c_uint,
-        flags: c_uint,
-        unique_identifier: *mut c_uint,
-        user_data: *mut c_void,
-    ) -> espeak_ERROR;
-    /// Speaks one character's name.
-    pub fn espeak_Char(character: wchar_t) -> espeak_ERROR;
-    /// Sets a parameter (absolute when `relative` is 0).
-    pub fn espeak_SetParameter(
-        parameter: espeak_PARAMETER,
-        value: c_int,
-        relative: c_int,
-    ) -> espeak_ERROR;
-    /// Selects a voice by name or file name.
-    pub fn espeak_SetVoiceByName(name: *const c_char) -> espeak_ERROR;
-    /// The installed voices matching `voice_spec` (null: all), as a
-    /// null-terminated array owned by the library.
-    pub fn espeak_ListVoices(voice_spec: *mut espeak_VOICE) -> *mut *const espeak_VOICE;
-    /// Stops speech at once.
-    pub fn espeak_Cancel() -> espeak_ERROR;
-    /// Waits until queued speech is done.
-    pub fn espeak_Synchronize() -> espeak_ERROR;
-    /// Shuts the engine down.
-    pub fn espeak_Terminate() -> espeak_ERROR;
+/// The environment variable that names a libespeak-ng file to load before
+/// the usual names are tried.
+pub const LIBRARY_ENV: &str = "TEXTWEAVER_ESPEAK_LIBRARY";
+
+/// The library names (and, on Windows and macOS, the usual install paths)
+/// tried in order after [`LIBRARY_ENV`].
+pub fn library_candidates() -> &'static [&'static str] {
+    if cfg!(windows) {
+        &[
+            "libespeak-ng.dll",
+            r"C:\Program Files\eSpeak NG\libespeak-ng.dll",
+            r"C:\Program Files (x86)\eSpeak NG\libespeak-ng.dll",
+        ]
+    } else if cfg!(target_os = "macos") {
+        &[
+            "libespeak-ng.1.dylib",
+            "/opt/homebrew/lib/libespeak-ng.1.dylib",
+            "/usr/local/lib/libespeak-ng.1.dylib",
+            "libespeak-ng.dylib",
+        ]
+    } else {
+        &["libespeak-ng.so.1", "libespeak-ng.so"]
+    }
+}
+
+type InitializeFn = unsafe extern "C" fn(espeak_AUDIO_OUTPUT, c_int, *const c_char, c_int) -> c_int;
+type SetSynthCallbackFn = unsafe extern "C" fn(t_espeak_callback);
+type SynthFn = unsafe extern "C" fn(
+    *const c_void,
+    usize,
+    c_uint,
+    espeak_POSITION_TYPE,
+    c_uint,
+    c_uint,
+    *mut c_uint,
+    *mut c_void,
+) -> espeak_ERROR;
+type CharFn = unsafe extern "C" fn(wchar_t) -> espeak_ERROR;
+type SetParameterFn = unsafe extern "C" fn(espeak_PARAMETER, c_int, c_int) -> espeak_ERROR;
+type SetVoiceByNameFn = unsafe extern "C" fn(*const c_char) -> espeak_ERROR;
+type ListVoicesFn = unsafe extern "C" fn(*mut espeak_VOICE) -> *mut *const espeak_VOICE;
+type NoArgFn = unsafe extern "C" fn() -> espeak_ERROR;
+
+/// The libespeak-ng functions the backend calls, resolved once.
+struct Api {
+    initialize: InitializeFn,
+    set_synth_callback: SetSynthCallbackFn,
+    synth: SynthFn,
+    char_: CharFn,
+    set_parameter: SetParameterFn,
+    set_voice_by_name: SetVoiceByNameFn,
+    list_voices: ListVoicesFn,
+    cancel: NoArgFn,
+    synchronize: NoArgFn,
+    terminate: NoArgFn,
+    /// Keeps the library mapped: the function pointers above point into
+    /// it. The `Api` lives in a static, so it is never unloaded.
+    _library: Library,
+}
+
+/// Copies one function pointer out of `lib`.
+///
+/// # Safety
+///
+/// `T` must be the function's C signature as `speak_lib.h` declares it,
+/// and the pointer must not be called after `lib` is dropped.
+unsafe fn symbol<T: Copy>(lib: &Library, name: &str) -> Result<T, String> {
+    // SAFETY: the caller guarantees `T` matches the symbol's type.
+    unsafe { lib.get::<T>(name) }
+        .map(|s| *s)
+        .map_err(|e| format!("libespeak-ng lacks {name}: {e}"))
+}
+
+impl Api {
+    fn open() -> Result<Self, String> {
+        let from_env = std::env::var_os(LIBRARY_ENV).filter(|v| !v.is_empty());
+        let mut tried = Vec::new();
+        let mut library = None;
+        for name in from_env
+            .into_iter()
+            .chain(library_candidates().iter().map(OsString::from))
+        {
+            // SAFETY: loading libespeak-ng runs its initializers, which set
+            // up only its own globals (it is a plain C library).
+            match unsafe { Library::new(&name) } {
+                Ok(lib) => {
+                    library = Some(lib);
+                    break;
+                }
+                Err(e) => tried.push(format!("{}: {e}", name.to_string_lossy())),
+            }
+        }
+        let Some(lib) = library else {
+            return Err(format!(
+                "libespeak-ng is not installed (tried {})",
+                tried.join("; ")
+            ));
+        };
+        // SAFETY: each type is the signature `speak_lib.h` declares for that
+        // function, and every pointer is stored with `lib`, which is kept
+        // for the life of the process.
+        unsafe {
+            Ok(Api {
+                initialize: symbol(&lib, "espeak_Initialize")?,
+                set_synth_callback: symbol(&lib, "espeak_SetSynthCallback")?,
+                synth: symbol(&lib, "espeak_Synth")?,
+                char_: symbol(&lib, "espeak_Char")?,
+                set_parameter: symbol(&lib, "espeak_SetParameter")?,
+                set_voice_by_name: symbol(&lib, "espeak_SetVoiceByName")?,
+                list_voices: symbol(&lib, "espeak_ListVoices")?,
+                cancel: symbol(&lib, "espeak_Cancel")?,
+                synchronize: symbol(&lib, "espeak_Synchronize")?,
+                terminate: symbol(&lib, "espeak_Terminate")?,
+                _library: lib,
+            })
+        }
+    }
+}
+
+static API: OnceLock<Result<Api, String>> = OnceLock::new();
+
+fn api() -> Result<&'static Api, &'static str> {
+    API.get_or_init(Api::open).as_ref().map_err(String::as_str)
+}
+
+/// Loads libespeak-ng (once). The error says which files were tried.
+pub fn load() -> Result<(), String> {
+    api().map(|_| ()).map_err(str::to_owned)
+}
+
+// The wrappers below keep the C names and signatures, so the calling code
+// in `ffi` reads as it did when libespeak-ng was linked. When the library
+// could not be loaded each returns an error value or does nothing;
+// `ffi::initialize` calls [`load`] first and reports why.
+
+/// Starts the engine; returns the sample rate, or -1.
+///
+/// # Safety
+///
+/// As `espeak_Initialize`: `path` is null or a valid C string.
+pub unsafe fn espeak_Initialize(
+    output: espeak_AUDIO_OUTPUT,
+    buflength: c_int,
+    path: *const c_char,
+    options: c_int,
+) -> c_int {
+    match api() {
+        // SAFETY: forwarded unchanged; the caller upholds the C contract.
+        Ok(a) => unsafe { (a.initialize)(output, buflength, path, options) },
+        Err(_) => -1,
+    }
+}
+
+/// Sets the synthesis callback.
+///
+/// # Safety
+///
+/// As `espeak_SetSynthCallback`: the callback lives for the whole program.
+pub unsafe fn espeak_SetSynthCallback(callback: t_espeak_callback) {
+    if let Ok(a) = api() {
+        // SAFETY: forwarded unchanged.
+        unsafe { (a.set_synth_callback)(callback) }
+    }
+}
+
+/// Synthesizes text.
+///
+/// # Safety
+///
+/// As `espeak_Synth`: `text` points to `size` readable bytes.
+#[allow(clippy::too_many_arguments)]
+pub unsafe fn espeak_Synth(
+    text: *const c_void,
+    size: usize,
+    position: c_uint,
+    position_type: espeak_POSITION_TYPE,
+    end_position: c_uint,
+    flags: c_uint,
+    unique_identifier: *mut c_uint,
+    user_data: *mut c_void,
+) -> espeak_ERROR {
+    match api() {
+        // SAFETY: forwarded unchanged.
+        Ok(a) => unsafe {
+            (a.synth)(
+                text,
+                size,
+                position,
+                position_type,
+                end_position,
+                flags,
+                unique_identifier,
+                user_data,
+            )
+        },
+        Err(_) => espeak_ERROR_EE_INTERNAL_ERROR,
+    }
+}
+
+/// Speaks one character's name.
+///
+/// # Safety
+///
+/// As `espeak_Char`: the engine is initialized.
+pub unsafe fn espeak_Char(character: wchar_t) -> espeak_ERROR {
+    match api() {
+        // SAFETY: forwarded unchanged.
+        Ok(a) => unsafe { (a.char_)(character) },
+        Err(_) => espeak_ERROR_EE_INTERNAL_ERROR,
+    }
+}
+
+/// Sets a parameter (absolute when `relative` is 0).
+///
+/// # Safety
+///
+/// As `espeak_SetParameter`: the engine is initialized.
+pub unsafe fn espeak_SetParameter(
+    parameter: espeak_PARAMETER,
+    value: c_int,
+    relative: c_int,
+) -> espeak_ERROR {
+    match api() {
+        // SAFETY: forwarded unchanged.
+        Ok(a) => unsafe { (a.set_parameter)(parameter, value, relative) },
+        Err(_) => espeak_ERROR_EE_INTERNAL_ERROR,
+    }
+}
+
+/// Selects a voice by name or file name.
+///
+/// # Safety
+///
+/// As `espeak_SetVoiceByName`: `name` is a valid C string.
+pub unsafe fn espeak_SetVoiceByName(name: *const c_char) -> espeak_ERROR {
+    match api() {
+        // SAFETY: forwarded unchanged.
+        Ok(a) => unsafe { (a.set_voice_by_name)(name) },
+        Err(_) => espeak_ERROR_EE_INTERNAL_ERROR,
+    }
+}
+
+/// The installed voices matching `voice_spec` (null: all), as a
+/// null-terminated array owned by the library; null when it is not loaded.
+///
+/// # Safety
+///
+/// As `espeak_ListVoices`: `voice_spec` is null or valid.
+pub unsafe fn espeak_ListVoices(voice_spec: *mut espeak_VOICE) -> *mut *const espeak_VOICE {
+    match api() {
+        // SAFETY: forwarded unchanged.
+        Ok(a) => unsafe { (a.list_voices)(voice_spec) },
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+/// Stops speech at once.
+///
+/// # Safety
+///
+/// As `espeak_Cancel`.
+pub unsafe fn espeak_Cancel() -> espeak_ERROR {
+    match api() {
+        // SAFETY: forwarded unchanged.
+        Ok(a) => unsafe { (a.cancel)() },
+        Err(_) => espeak_ERROR_EE_INTERNAL_ERROR,
+    }
+}
+
+/// Waits until queued speech is done.
+///
+/// # Safety
+///
+/// As `espeak_Synchronize`.
+pub unsafe fn espeak_Synchronize() -> espeak_ERROR {
+    match api() {
+        // SAFETY: forwarded unchanged.
+        Ok(a) => unsafe { (a.synchronize)() },
+        Err(_) => espeak_ERROR_EE_INTERNAL_ERROR,
+    }
+}
+
+/// Shuts the engine down.
+///
+/// # Safety
+///
+/// As `espeak_Terminate`.
+pub unsafe fn espeak_Terminate() -> espeak_ERROR {
+    match api() {
+        // SAFETY: forwarded unchanged.
+        Ok(a) => unsafe { (a.terminate)() },
+        Err(_) => espeak_ERROR_EE_INTERNAL_ERROR,
+    }
 }
 
 #[cfg(test)]
@@ -195,5 +466,29 @@ mod tests {
         assert_eq!(offset_of!(espeak_VOICE, spare), 3 * ptr + 8);
         assert_eq!(size_of::<espeak_VOICE>(), if ptr == 8 { 40 } else { 24 });
         assert_eq!(align_of::<espeak_VOICE>(), ptr);
+    }
+
+    /// Whatever this machine has installed, loading either works or says
+    /// which files it tried, and the wrappers never crash without it.
+    #[test]
+    fn a_missing_library_is_reported_not_fatal() {
+        assert!(!library_candidates().is_empty());
+        if let Err(e) = load() {
+            assert!(e.contains("libespeak-ng"), "{e}");
+            // SAFETY: without the library the wrappers call nothing.
+            unsafe {
+                assert_eq!(espeak_Cancel(), espeak_ERROR_EE_INTERNAL_ERROR);
+                assert!(espeak_ListVoices(std::ptr::null_mut()).is_null());
+                assert_eq!(
+                    espeak_Initialize(
+                        espeak_AUDIO_OUTPUT_AUDIO_OUTPUT_RETRIEVAL,
+                        0,
+                        std::ptr::null(),
+                        0
+                    ),
+                    -1
+                );
+            }
+        }
     }
 }

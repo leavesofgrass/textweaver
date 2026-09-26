@@ -22,7 +22,21 @@ powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1
 
 ### install-linux.sh
 
-Builds textweaver from source and installs it, on any Linux distribution.
+Installs textweaver on any Linux distribution: a published release, or a build from source.
+
+With `--release TAG` (a tag such as `v0.1.0-alpha.4`, or `latest` for the newest release or pre-release), nothing is built:
+
+- It downloads the AppImage and `SHA256SUMS.txt` from the release with curl (or wget), and checks the AppImage against its line there. A mismatch stops the install.
+- It installs the AppImage as `~/.local/bin/textweaver.AppImage` (or under `--prefix DIR`), links `textweaver` and `tw` to it, and adds a menu entry, an icon, and the quick start.
+- Where FUSE is missing, so AppImages cannot run, it installs the plain tarball instead, checked the same way, into `lib/textweaver/` with `textweaver` and `tw` linked from `bin/`. `--tarball` asks for the tarball anyway; `--appimage` asks for the AppImage anyway.
+- It is for x86_64 computers. Elsewhere, build from source.
+- `--uninstall` removes either kind of install; `scripts/update.sh` installs the newest release of the same kind.
+
+```bash
+scripts/install-linux.sh --release latest
+```
+
+Without `--release`, it builds textweaver from source:
 
 - It finds your package manager from `/etc/os-release` and what is on your PATH: apt (Debian, Ubuntu), dnf or yum (Fedora, Red Hat), pacman (Arch, Manjaro), zypper (openSUSE), or apk (Alpine). On other systems it prints the list of packages to install by hand.
 - It installs the build dependencies: a C toolchain, pkg-config, the ALSA headers, espeak-ng, and speech-dispatcher, with their development files.
@@ -50,7 +64,7 @@ To remove it again:
 scripts/install-linux.sh --uninstall
 ```
 
-`--deps-only` installs the system packages and stops. `--release TAG` is reserved for Linux packages, which are not published yet; for now it says so. Alpine has no bash by default: run `apk add bash` first.
+`--deps-only` installs the system packages and stops. Alpine has no bash by default: run `apk add bash` first.
 
 ### install-macos.sh
 

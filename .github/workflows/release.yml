@@ -8,6 +8,9 @@
 #   linked statically.
 # - macOS: universal binaries (Apple silicon and Intel), signed ad hoc, not
 #   notarized.
+# - Linux: an x86_64 AppImage (with a .zsync file for delta updates) and a
+#   plain tarball for systems without FUSE, built on Ubuntu 22.04's glibc
+#   and checked on Debian, Fedora, and Arch before upload.
 name: Release
 
 on:
@@ -115,9 +118,51 @@ jobs:
       - name: Upload to the release
         run: tools/release-upload.sh --no-sums "$TAG" target/dist/textweaver-*-macos-universal.tar.gz
 
+  linux:
+    name: Linux AppImage and tarball
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      # Built in docker/appimage (Ubuntu 22.04, glibc 2.35), so the
+      # packages run on older distributions too; the image downloads
+      # appimagetool and the AppImage runtime from their GitHub releases
+      # and checks their SHA-256 (docker/appimage/fetch-tools.sh).
+      - name: Build the AppImage and the tarball
+        run: |
+          docker build -t textweaver-appimage docker/appimage
+          docker run --rm -v "$PWD:/work" -w /work --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp -e CARGO_TARGET_DIR=/work/target/linux \
+            textweaver-appimage cargo xtask appimage --out /work/target/dist
+      # Debian stable, Fedora, and Arch: tw --version, tw backends (espeak
+      # unavailable without libespeak-ng, available with it), tw text,
+      # --install and --uninstall, the tarball, and install-linux.sh
+      # --release with each package.
+      - name: Check the packages on Debian, Fedora, and Arch
+        run: bash docker/appimage/test-distros.sh target/dist
+      - name: Package summary
+        run: |
+          for f in target/dist/textweaver-*-linux-x86_64.*; do
+            echo "Linux package: $(basename "$f"), $(du -m "$f" | cut -f1) MB" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            target/dist/textweaver-*-linux-x86_64.AppImage
+            target/dist/textweaver-*-linux-x86_64.tar.gz
+      - name: Upload to the release
+        run: |
+          tools/release-upload.sh --no-sums "$TAG" \
+            target/dist/textweaver-*-linux-x86_64.AppImage \
+            target/dist/textweaver-*-linux-x86_64.AppImage.zsync \
+            target/dist/textweaver-*-linux-x86_64.tar.gz
+
   checksums:
     name: SHA256SUMS.txt
-    needs: [windows, macos]
+    needs: [windows, macos, linux]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

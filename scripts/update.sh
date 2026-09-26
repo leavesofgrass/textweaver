@@ -180,14 +180,23 @@ case $KIND in
     bash "$installer" "${pass[@]}" "${extra[@]}"
     ;;
   release)
-    if [ "$OS" != Darwin ] && [ "$DRY_RUN" = 0 ]; then
-      die "Release installs are only made on macOS."
+    if [ "$OS" = Darwin ]; then
+      installer="$(find_installer install-macos.sh)" \
+        || die "install-macos.sh was not found. Download it from https://github.com/leavesofgrass/textweaver/tree/main/scripts and run it."
+      extra=()
+    else
+      installer="$(find_installer install-linux.sh)" \
+        || die "install-linux.sh was not found. Download it from https://github.com/leavesofgrass/textweaver/tree/main/scripts and run it."
+      # The same kind of package as before: the AppImage or the tarball.
+      extra=(--release latest)
+      case "$(manifest_value package)" in
+        tarball) extra+=(--tarball) ;;
+        appimage) extra+=(--appimage) ;;
+      esac
     fi
-    installer="$(find_installer install-macos.sh)" \
-      || die "install-macos.sh was not found. Download it from https://github.com/leavesofgrass/textweaver/tree/main/scripts and run it."
     say "Installing the newest release with $installer."
-    say "Running: $(show_cmd bash "$installer" "${pass[@]}")"
-    bash "$installer" "${pass[@]}"
+    say "Running: $(show_cmd bash "$installer" "${pass[@]}" ${extra[@]+"${extra[@]}"})"
+    bash "$installer" "${pass[@]}" ${extra[@]+"${extra[@]}"}
     ;;
   *)
     die "The manifest $MANIFEST names an unknown kind of install: $KIND."
