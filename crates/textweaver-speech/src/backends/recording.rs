@@ -439,7 +439,11 @@ impl SpeechBackend for RecordingBackend {
         {
             let mut s = lock(&self.state);
             s.calls.push(Call::Speak(utterance.clone()));
-            if let Some(msg) = s.fail_next_speak.take().or_else(|| s.fail_every_speak.clone()) {
+            if let Some(msg) = s
+                .fail_next_speak
+                .take()
+                .or_else(|| s.fail_every_speak.clone())
+            {
                 return Err(SpeechError::Engine(msg));
             }
             let words = spoken_words(&utterance.text);

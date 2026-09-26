@@ -1030,6 +1030,7 @@ impl ServiceCore {
     /// Sets the rate; the timer interval follows at once when the engine
     /// changes rate live (Star bug B9), otherwise from the next utterance.
     pub fn set_rate(&mut self, rate: Rate) {
+        let changed = self.params.rate != rate.clamped();
         self.params.rate = rate.clamped();
         self.apply_params();
         if self.caps.contains(Caps::LIVE_RATE) {
@@ -1037,19 +1038,49 @@ impl ServiceCore {
             if let Some(p) = &mut self.playing {
                 p.pacer.set_interval(interval);
             }
+        } else if changed {
+            self.respeak_with_new_params();
         }
     }
 
     /// Sets the pitch.
     pub fn set_pitch(&mut self, pitch: Pitch) {
+        let changed = self.params.pitch != pitch.clamped();
         self.params.pitch = pitch.clamped();
         self.apply_params();
+        if changed && !self.caps.contains(Caps::LIVE_RATE) {
+            self.respeak_with_new_params();
+        }
     }
 
     /// Sets the volume.
     pub fn set_volume(&mut self, volume: Volume) {
+        let changed = self.params.volume != volume;
         self.params.volume = volume;
         self.apply_params();
+        if changed && !self.caps.contains(Caps::LIVE_RATE) {
+            self.respeak_with_new_params();
+        }
+    }
+
+    /// Engines without [`Caps::LIVE_RATE`] (Eloquence, SAPI) have the
+    /// playing sentence and the lookahead synthesized already, so a new
+    /// rate, pitch, or volume used to be heard only two or three sentences
+    /// later. While a reading plays, restart it from the last confirmed
+    /// word (may repeat a word, never skips one), as an announcement does.
+    fn respeak_with_new_params(&mut self) {
+        let playing = self.paused.is_none()
+            && self.reading
+            && self.char_params.is_none()
+            && self.queue.iter().any(|u| u.kind == UtteranceKind::Text);
+        if !playing {
+            return;
+        }
+        let (byte, _) = self.resume_point();
+        let rest = self.remainder(byte);
+        let backlog = std::mem::take(&mut self.backlog);
+        self.clear_engine();
+        self.restart(rest, backlog, true);
     }
 
     /// Sets the voice.

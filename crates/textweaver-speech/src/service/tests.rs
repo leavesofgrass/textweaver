@@ -476,12 +476,18 @@ fn a_repeated_error_is_not_reported_again_within_the_window() {
     rig.rec.fail_every_speak(Some("no audio device".into()));
     rig.core.read(doc(0, &["One.", "Two.", "Three.", "Four."]));
     let first = rig.step();
-    assert!(first.iter().any(|s| matches!(s, SpeechStatus::BackendError(_))));
+    assert!(
+        first
+            .iter()
+            .any(|s| matches!(s, SpeechStatus::BackendError(_)))
+    );
     for _ in 0..5 {
-        rig.core.say("Speech error: no audio device", SayMode::Announce);
+        rig.core
+            .say("Speech error: no audio device", SayMode::Announce);
         let st = rig.step();
         assert!(
-            !st.iter().any(|s| matches!(s, SpeechStatus::BackendError(_))),
+            !st.iter()
+                .any(|s| matches!(s, SpeechStatus::BackendError(_))),
             "{st:?}"
         );
     }
@@ -510,7 +516,8 @@ fn a_host_crash_failing_queued_utterances_is_reported_once() {
     rig.core.read(doc(0, &["One.", "Two.", "Three."]));
     rig.step();
     for u in rig.spoken() {
-        rig.rec.emit(u.id, RawEvent::Error("engine host exited".into()));
+        rig.rec
+            .emit(u.id, RawEvent::Error("engine host exited".into()));
     }
     let st = rig.step();
     let errors = st
@@ -907,6 +914,54 @@ fn latency_offset_comes_from_the_pacing_config() {
     rig.core.read(doc(0, &["one two."]));
     rig.step();
     assert_eq!(positions(&rig.advance(ms(200))), [r(4, 7)]);
+}
+
+#[test]
+fn a_rate_change_while_reading_is_heard_from_the_current_word() {
+    // Engines without LIVE_RATE synthesize ahead: the new rate used to
+    // start two or three sentences later.
+    let mut rig = Rig::manual();
+    rig.core.read(doc(
+        10,
+        &["Alpha beta gamma delta.", "Next one.", "Last one."],
+    ));
+    rig.step();
+    let id = rig.spoken()[0].id;
+    rig.rec.start(id);
+    for w in 0..3 {
+        rig.rec.word(id, w, None);
+    }
+    rig.step();
+    let before = rig.spoken().len();
+    rig.core.set_rate(Rate::Wpm(400));
+    assert_eq!(rig.rec.params().rate, Rate::Wpm(400));
+    let again = &rig.spoken()[before..];
+    assert_eq!(again[0].text, "gamma delta.");
+    assert!(again[0].id.generation > id.generation);
+    assert_eq!(again[1].text, "Next one.");
+    // The reading goes on as one reading.
+    rig.rec.start(again[0].id);
+    rig.rec.word(again[0].id, 1, None);
+    assert_eq!(positions(&rig.step()), [r(21, 26), r(27, 32)]);
+    // Setting the same rate again restarts nothing.
+    let n = rig.spoken().len();
+    rig.core.set_rate(Rate::Wpm(400));
+    assert_eq!(rig.spoken().len(), n);
+}
+
+#[test]
+fn parameter_changes_while_idle_or_paused_restart_nothing() {
+    let mut rig = Rig::manual();
+    rig.core.set_pitch(Pitch::Semitones(2));
+    assert!(rig.spoken().is_empty());
+    rig.core.read(doc(0, &["One two.", "Three."]));
+    rig.step();
+    rig.core.pause();
+    let n = rig.spoken().len();
+    rig.core.set_volume(Volume::new(50));
+    rig.core.set_rate(Rate::Wpm(200));
+    assert_eq!(rig.spoken().len(), n);
+    assert!(rig.core.is_paused());
 }
 
 #[test]
