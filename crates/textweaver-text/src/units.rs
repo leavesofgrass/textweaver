@@ -57,8 +57,12 @@ pub const AMBIGUOUS_ABBREVIATIONS: &[&str] = &[
 /// How a unit's segments are grouped into blocks.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum BlockKind {
-    /// One line, including its line break.
-    LineWithBreak,
+    /// A window of a line (the whole line unless it is long), including
+    /// the line break after the last window when `with_break` is set.
+    Window {
+        /// Include the line break in the last window.
+        with_break: bool,
+    },
     /// One line, without its line break.
     Line,
     /// A run of non-blank lines.
@@ -77,25 +81,84 @@ struct Block {
 
 fn block_kind(unit: Unit) -> BlockKind {
     match unit {
-        Unit::Grapheme => BlockKind::LineWithBreak,
-        Unit::Word | Unit::Line => BlockKind::Line,
+        Unit::Grapheme => BlockKind::Window { with_break: true },
+        Unit::Word => BlockKind::Window { with_break: false },
+        Unit::Line => BlockKind::Line,
         Unit::Sentence | Unit::Paragraph => BlockKind::Paragraph,
         Unit::Document | Unit::Marker { .. } => BlockKind::Whole,
     }
 }
 
-fn line_block(doc: &Document, line: usize, with_break: bool) -> Block {
-    let mut range = doc.line_range(line);
-    if with_break {
-        let next = if line + 1 < doc.line_count() {
+fn line_block(doc: &Document, line: usize) -> Block {
+    Block {
+        range: doc.line_range(line),
+        first_line: line,
+        last_line: line,
+    }
+}
+
+/// Target window size, in chars, for segmenting words and graphemes of a
+/// long line: a caret move in a one-line, megabyte-long text file segments a
+/// few thousand chars, not the whole line.
+#[cfg(not(test))]
+const WINDOW: usize = 2048;
+#[cfg(test)]
+const WINDOW: usize = 8;
+
+/// Start of window `k` of the line `ls..le`: the first safe split at or after
+/// `ls + k * WINDOW`. A safe split is a whitespace char that follows a
+/// non-whitespace char other than a zero-width joiner; UAX #29 always has
+/// both a word and a grapheme boundary there.
+fn window_start(doc: &Document, ls: usize, le: usize, k: usize) -> usize {
+    if k == 0 {
+        return ls;
+    }
+    let p = ls.saturating_add(k.saturating_mul(WINDOW));
+    if p >= le {
+        return le;
+    }
+    let text = doc.text();
+    let mut prev = text.char(p - 1);
+    for (i, c) in text.chars_at(p).take(le - p).enumerate() {
+        if c.is_whitespace() && !prev.is_whitespace() && prev != '\u{200d}' {
+            return p + i;
+        }
+        prev = c;
+    }
+    le
+}
+
+/// The window of line `line` containing `pos` (clamped to the line).
+fn window_block(doc: &Document, line: usize, pos: usize, with_break: bool) -> Block {
+    let r = doc.line_range(line);
+    let (ls, le) = (r.start.0, r.end.0);
+    let (mut a, mut b) = (ls, le);
+    if le - ls > 2 * WINDOW {
+        let pos = pos.clamp(ls, le);
+        let mut k = (pos - ls) / WINDOW;
+        while k > 0 && window_start(doc, ls, le, k) > pos {
+            k -= 1;
+        }
+        loop {
+            let next = window_start(doc, ls, le, k + 1);
+            if next <= pos && next < le {
+                k += 1;
+            } else {
+                break;
+            }
+        }
+        a = window_start(doc, ls, le, k);
+        b = window_start(doc, ls, le, k + 1);
+    }
+    if with_break && b == le {
+        b = if line + 1 < doc.line_count() {
             doc.text().line_to_char(line + 1)
         } else {
             doc.len_chars()
         };
-        range = CharRange::new(range.start, next);
     }
     Block {
-        range,
+        range: CharRange::new(a, b),
         first_line: line,
         last_line: line,
     }
@@ -132,9 +195,15 @@ fn block_from_line(doc: &Document, kind: BlockKind, line: usize, dir: Direction)
             first_line: 0,
             last_line: n - 1,
         }),
-        BlockKind::Line | BlockKind::LineWithBreak => {
-            (line < n).then(|| line_block(doc, line, kind == BlockKind::LineWithBreak))
-        }
+        BlockKind::Line => (line < n).then(|| line_block(doc, line)),
+        BlockKind::Window { with_break } => (line < n).then(|| {
+            let r = doc.line_range(line);
+            let pos = match dir {
+                Direction::Forward => r.start.0,
+                Direction::Backward => r.end.0.saturating_sub(1).max(r.start.0),
+            };
+            window_block(doc, line, pos, with_break)
+        }),
         BlockKind::Paragraph => {
             if line >= n {
                 return None;
@@ -162,6 +231,19 @@ fn block_from_line(doc: &Document, kind: BlockKind, line: usize, dir: Direction)
 }
 
 fn next_block(doc: &Document, kind: BlockKind, b: &Block, dir: Direction) -> Option<Block> {
+    if let BlockKind::Window { with_break } = kind {
+        let line = doc.line_range(b.first_line);
+        match dir {
+            Direction::Forward if b.range.end < line.end => {
+                return Some(window_block(doc, b.first_line, b.range.end.0, with_break));
+            }
+            Direction::Backward if b.range.start > line.start => {
+                let pos = b.range.start.0 - 1;
+                return Some(window_block(doc, b.first_line, pos, with_break));
+            }
+            _ => {}
+        }
+    }
     match (kind, dir) {
         (BlockKind::Whole, _) => None,
         (_, Direction::Forward) => block_from_line(doc, kind, b.last_line + 1, dir),
@@ -483,8 +565,12 @@ impl<'a> Units<'a> {
     /// An iterator over `unit` starting at `from` in direction `dir`.
     pub fn new(doc: &'a Document, unit: Unit, from: CharPos, dir: Direction) -> Self {
         let kind = block_kind(unit);
-        let line = doc.line_of(from.clamp_to(doc.len_chars()));
-        let block = block_from_line(doc, kind, line, dir);
+        let at = from.clamp_to(doc.len_chars());
+        let line = doc.line_of(at);
+        let block = match kind {
+            BlockKind::Window { with_break } => Some(window_block(doc, line, at.0, with_break)),
+            _ => block_from_line(doc, kind, line, dir),
+        };
         let mut it = Units {
             doc,
             unit,
@@ -854,6 +940,27 @@ mod props {
                 let t = d.slice(*s);
                 prop_assert_eq!(t.trim(), t.as_str());
             }
+        }
+
+        #[test]
+        fn windows_segment_like_whole_lines(text in doc_text()) {
+            // WINDOW is 8 chars under test, so long lines are windowed.
+            let d = Document::from_plain_text(&text);
+            let mut words = Vec::new();
+            for l in 0..d.line_count() {
+                let r = d.line_range(l);
+                for (s, e) in words_in(&d.slice(r)) {
+                    words.push(CharRange::new(r.start.0 + s, r.start.0 + e));
+                }
+            }
+            prop_assert_eq!(segments(&d, Unit::Word), words);
+            let whole = d.text().to_string();
+            let map = ByteToChar::new(&whole);
+            let graphemes: Vec<CharRange> = whole
+                .grapheme_indices(true)
+                .map(|(b, g)| CharRange::new(map.char_of(b), map.char_of(b + g.len())))
+                .collect();
+            prop_assert_eq!(segments(&d, Unit::Grapheme), graphemes);
         }
 
         #[test]

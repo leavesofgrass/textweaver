@@ -116,6 +116,7 @@ pub fn plan(doc: &Document, range: CharRange, policy: &NarrationPolicy) -> Vec<U
         range,
         out: Vec::new(),
         done_until: CharPos::ZERO,
+        table: None,
     };
     let sentences: Vec<CharRange> =
         Units::new(doc, Unit::Sentence, range.start, Direction::Forward)
@@ -148,6 +149,33 @@ struct Planner<'a> {
     /// Everything before this position has been planned (tables and skipped
     /// code blocks are handled whole).
     done_until: CharPos,
+    /// Facts about the table being read, computed once per table.
+    table: Option<TableInfo>,
+}
+
+/// What row narration needs to know about a table.
+struct TableInfo {
+    start: CharPos,
+    /// Every row, in order.
+    rows: Vec<CharRange>,
+    /// Index of the header row in `rows`.
+    header: Option<usize>,
+    /// Header cell texts, by column.
+    names: Vec<String>,
+    /// Widest row, in cells.
+    columns: usize,
+}
+
+impl TableInfo {
+    fn body_rows(&self) -> usize {
+        self.rows.len() - usize::from(self.header.is_some())
+    }
+
+    /// 1-based number of `row` among the body rows.
+    fn row_number(&self, row: CharRange) -> usize {
+        let i = self.rows.partition_point(|r| r.start < row.start);
+        (i + 1).saturating_sub(usize::from(self.header.is_some_and(|h| h <= i)))
+    }
 }
 
 impl Planner<'_> {
@@ -311,17 +339,52 @@ impl Planner<'_> {
         self.out.extend(split_long(text, map, max));
     }
 
-    fn table_row(&mut self, table: &Marker, row: &Marker, from: CharPos) {
-        let p = self.policy;
+    fn table_info(&self, table: &Marker) -> TableInfo {
         let rows: Vec<&Marker> = self
             .index
-            .iter(MarkerKind::TableRow, None)
-            .filter(|r| table.range.contains_range(r.range))
+            .starting_in(table.range)
+            .iter()
+            .filter(|r| r.kind == MarkerKind::TableRow && table.range.contains_range(r.range))
             .collect();
-        let header = rows.iter().find(|r| r.is_header_row()).copied();
+        let header = rows.iter().position(|r| r.is_header_row());
+        let names = header
+            .map(|h| {
+                self.cells(rows[h])
+                    .into_iter()
+                    .map(|c| self.doc.slice(c).trim().to_owned())
+                    .collect()
+            })
+            .unwrap_or_default();
         let columns = rows.iter().map(|r| self.cells(r).len()).max().unwrap_or(0);
-        let body_rows = rows.iter().filter(|r| !r.is_header_row()).count();
-        let first_row = rows.first().is_some_and(|r| r.range == row.range);
+        TableInfo {
+            start: table.range.start,
+            rows: rows.iter().map(|r| r.range).collect(),
+            header,
+            names,
+            columns,
+        }
+    }
+
+    fn table_row(&mut self, table: &Marker, row: &Marker, from: CharPos) {
+        if self
+            .table
+            .as_ref()
+            .is_none_or(|t| t.start != table.range.start)
+        {
+            self.table = Some(self.table_info(table));
+        }
+        let Some(info) = self.table.take() else {
+            return;
+        };
+        self.table_row_with(&info, table, row, from);
+        self.table = Some(info);
+    }
+
+    fn table_row_with(&mut self, info: &TableInfo, table: &Marker, row: &Marker, from: CharPos) {
+        let p = self.policy;
+        let columns = info.columns;
+        let body_rows = info.body_rows();
+        let first_row = info.rows.first().is_some_and(|r| *r == row.range);
         let at_table_start = first_row && from <= row.range.start;
         let plural = |n: usize, word: &str| format!("{n} {word}{}", if n == 1 { "" } else { "s" });
 
@@ -359,16 +422,16 @@ impl Planner<'_> {
             }
             self.cells_flat(&mut b, &cells);
         } else {
-            if structured && at_table_start && header.is_none() && p.verbosity >= Verbosity::Normal
+            if structured
+                && at_table_start
+                && info.header.is_none()
+                && p.verbosity >= Verbosity::Normal
             {
                 let intro = format!("Table with {}. ", plural(columns, "column"));
                 b.push_inserted(&intro, anchor);
             }
             if structured && whole_row && p.verbosity >= Verbosity::Normal {
-                let n = rows
-                    .iter()
-                    .filter(|r| !r.is_header_row() && r.range.start <= row.range.start)
-                    .count();
+                let n = info.row_number(row.range);
                 let label = if p.verbosity >= Verbosity::High {
                     format!("Row {n} of {body_rows}: ")
                 } else {
@@ -377,17 +440,9 @@ impl Planner<'_> {
                 b.push_inserted(&label, anchor);
             }
             if structured {
-                let names: Vec<String> = header
-                    .map(|h| {
-                        self.cells(h)
-                            .into_iter()
-                            .map(|c| self.doc.slice(c).trim().to_owned())
-                            .collect()
-                    })
-                    .unwrap_or_default();
                 let all = self.cells(row);
                 let offset = all.len() - cells.len();
-                self.cells_structured(&mut b, &cells, &names, offset);
+                self.cells_structured(&mut b, &cells, &info.names, offset);
             } else {
                 self.cells_flat(&mut b, &cells);
             }
