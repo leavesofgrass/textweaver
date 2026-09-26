@@ -10,6 +10,7 @@ textweaver is a Rust reimplementation of the core of [Star](https://github.com/l
 
 - New to textweaver? Read the [quick start](docs/quickstart.md). It covers your first 30 seconds on Windows, macOS, and Linux.
 - Every guide is listed in the [documentation index](docs/README.md), grouped for users, contributors, and design decisions.
+- The [roadmap](docs/roadmap.md) says what comes next, quick wins first.
 - The [interactive pages](docs/site/index.html) explain the architecture, the speech pipeline, the keyboard, and the reading aids. Open `docs/site/index.html` in any browser. They work offline.
 
 ## Download
@@ -48,7 +49,7 @@ textweaver has two programs.
   - DECtalk, when you have a licensed copy;
   - Omnivox.
 
-Coming next:
+Coming next (the [roadmap](docs/roadmap.md) has the full list):
 
 - the native GUI (a working spike exists; see [ADR-0014](docs/adr/0014-gui-toolkit.md));
 - dictation from the microphone;
@@ -125,5 +126,6 @@ GPL-3.0-or-later, like Star. See [LICENSE](LICENSE).
 - [Documentation index](docs/README.md): every guide, grouped by audience.
 - [Quick start](docs/quickstart.md): your first 30 seconds.
 - [Architecture](docs/architecture.md): the crates and how speech and highlighting work.
+- [Roadmap](docs/roadmap.md): what comes next.
 - [CONTRIBUTING.md](CONTRIBUTING.md): how to build, check, and send changes.
 - [CHANGELOG.md](CHANGELOG.md): what changed in each release.
