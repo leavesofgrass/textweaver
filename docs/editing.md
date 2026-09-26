@@ -27,7 +27,7 @@ In edit mode every key that is not a command types. Single-key reading keys such
 ## Type and move
 
 - Letters, digits, and punctuation type as usual. **Enter** starts a new line. **Tab** types a tab.
-- **Backspace** deletes the character before the caret. **Delete** deletes the one after it.
+- **Backspace** deletes the character before the caret. **Delete** deletes the one after it. A character is what you see as one: an emoji with its skin tone, a flag, or a letter with its accent is deleted whole.
 - **Left** and **Right**: move by character. You hear the character.
 - **Ctrl+Left** and **Ctrl+Right**: move by word. You hear the word.
 - **Up** and **Down**: move by line. You hear the new line.
@@ -129,6 +129,8 @@ Writing citations and math has its own guides: [citations](citations.md) and [ma
 
 Typing and deleting are grouped into word-sized steps, so one undo removes about one word. Every formatting command, a paste, and a Replace All are each one step. You hear "Undo." or "Redo." and the current line. With nothing left, you hear "Nothing to undo." or "Nothing to redo."
 
+textweaver keeps the last 1,000 steps, or 50 MB of them, whichever comes first; the oldest are forgotten. `undo_steps` and `undo_memory_mb` in `[editing]` change the limits (see [Settings](settings.md#editing)).
+
 ## Find and replace: Alt+F
 
 Press **Alt+F** in edit mode. The GUI uses **Ctrl+Shift+F**.
@@ -155,6 +157,8 @@ To find without replacing, use **Ctrl+F**, as when reading.
 ### Save: Ctrl+S
 
 Press **Ctrl+S**. You stay in edit mode. You hear "Saved", the file name, and "Still editing."
+
+The file is written in the background, so a large file never holds up the keyboard: you can go on typing, and "Saved" comes as soon as the file is on disk. What you type while it is being written is not in that save. Quitting waits for every save to finish; if the disk is slow, you hear "Still saving. Please wait."
 
 - A Markdown or plain-text file is saved in place. Its byte-order mark and line endings are kept.
 - Any other format (HTML, EPUB, Word, PDF, and so on) is never overwritten. textweaver asks for a new file name ending in `.md`: "Save as, Enter for", then a suggested name. Press **Enter** to accept it, or type another. After that, **Ctrl+S** saves the new file in place.
@@ -185,8 +189,9 @@ The full message starts "Could not save:" and ends "Still editing."
 
 textweaver notices when another program changes the open file, for example Obsidian, a text editor, or `git pull`.
 
-- **Before saving.** If the file changed since you opened or last saved it, **Ctrl+S** asks first: the file name, then "changed on disk since you opened it. Save over those changes? y or n." Press **y** to save over them. Press **n** to keep editing without saving; you hear "Not saved. Still editing. Save As, Alt+S, keeps both versions."
-- **While reading or editing with no unsaved changes.** textweaver checks every two seconds. When the file changed, it asks: the file name, then "changed on disk. Reload it? y or n." Press **y** to load the new version, or **n** to keep the one you have ("Kept the open version."). It does not ask while it is reading aloud, while another question is open, or while you have unsaved changes.
+- **Before saving.** If the file changed since you opened or last saved it, nothing is written, and **Ctrl+S** asks first: the file name, then "changed on disk since you opened it. Save over those changes? y or n." Press **y** to save over them. Press **n** to keep editing without saving; you hear "Not saved. Still editing. Save As, Alt+S, keeps both versions."
+- **While reading or editing with no unsaved changes.** textweaver checks every two seconds, in the background. When the file changed, it asks: the file name, then "changed on disk. Reload it? y or n." Press **y** to load the new version, or **n** to keep the one you have ("Kept the open version."). It does not ask while it is reading aloud, while another question is open, or while you have unsaved changes.
+- **The next time you open it.** Your reading position, bookmarks, notes, and highlights are found again in the changed text. Each is looked for by the words it was on: first near where it was, then anywhere in the file (a paragraph that moved), then by the most similar words nearby (a word changed inside it). Anything that cannot be found is placed at the same share of the way through and marked. You hear it once when the file opens, for example "The file changed; 3 bookmarks were moved to match, 1 bookmark could not be found and is marked." The bookmark, note, and highlight lists say "not found after the file changed" for a marked one; setting it again clears the mark.
 
 ## Leaving with unsaved changes
 

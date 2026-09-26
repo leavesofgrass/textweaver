@@ -100,6 +100,8 @@ Press **Enter** on a voice. You hear "Voice", its name, then a sample: "The quic
 
 An engine with no voice list says "This speech engine has no voices to choose from."
 
+Each engine lists its voices once, when it starts, and keeps the list, so the list opens at once. The Windows voices are listed in the background (a helper program reads each registry); if you press **Alt+V** before that is done, you hear "The voices are still loading. The list opens when they are ready.", and it opens by itself when they arrive.
+
 When a voice changes what the engine can do, textweaver tells you. For example: "This voice does not report words, so the word highlight is estimated." or "Pitch cannot be changed with this voice."
 
 ### Voice names
@@ -319,6 +321,10 @@ If you copy only `textweaver` and `tw` somewhere else, those engines show as not
 If an engine crashes, or plays nothing for 12 seconds while reading, textweaver restarts it and reads on from the last word you heard. You hear "Speech restarted:", the reason, then "Reading on from the last word." For example: "Speech restarted: no speech for 12 seconds. Reading on from the last word."
 
 If it goes silent again right away, reading stops with "Speech error: no speech for 12 seconds, even after restarting the voice, so reading stopped. Check the audio device". After three failed sentences in a row, reading stops too, instead of failing through the whole document.
+
+A helper program that is starting again (after a crash, or the first time you use a 32-bit voice) does not hold anything up: Stop and Pause work at once, and the sentence is spoken when the engine is ready. The audio device is opened in the background too.
+
+If speech itself stops working (an internal error in textweaver's speech thread), textweaver goes silent at once and restarts speech by itself, once, with your current settings: "Speech stopped working", the reason, then "Restarting speech.", and a moment later "Speech restarted." After that, and at any time, **Shift+F8** (Restart speech) starts speech again with your current settings. The command palette (F2) has it as "Restart speech".
 
 ## Environment variables
 
