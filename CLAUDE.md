@@ -15,10 +15,10 @@ If an identifier ever leaves the machine, stop, and report it to the orchestrato
 
 ## Everything else
 
-Read `docs/tasks.md` before starting. Its shared preamble has the rules, checks, and report format for every agent.
+Read `docs/history/tasks.md` before starting. Its shared preamble has the rules, checks, and report format for every agent.
 
 ## See also
 
-- [Tasks and agent briefs](docs/tasks.md)
+- [Tasks and agent briefs](docs/history/tasks.md)
 - [Contributing](CONTRIBUTING.md)
 - [Documentation index](docs/README.md)
