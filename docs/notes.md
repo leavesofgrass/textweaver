@@ -57,6 +57,32 @@ You hear "Note 2 of 5:", the note, then "On:" and the passage. After the last no
 
 These keys step through notes only, not highlights.
 
+### Hear that a note is here
+
+While textweaver reads, it signals each note's passage once, as the reading reaches it: a short rising two-tone sound, when the voice can play tones. At normal verbosity and above, the status line also shows the note, for example "Note: Check this for the exam", without interrupting the reading.
+
+When a word move (Left or Right) takes you into a note's passage, you hear the word and then "Has a note:" and the start of the note, at normal verbosity and above.
+
+### Export a study sheet
+
+Press **F2** for the command palette and type `export study sheet`. textweaver writes your notes and highlights as a Markdown file next to the document, named after it: `essay.md` gives `essay-study-sheet.md`. You hear how many notes and highlights went in and where the file is, then "Open it? y or n."
+
+The study sheet is grouped by the headings of the document, in order, so it follows the structure of what you read. Each passage is quoted, with your note under it:
+
+```markdown
+# Study sheet: Essay
+
+Exported from textweaver on 2026-09-26.
+
+## Methods
+
+- > We measured things carefully.
+
+  Check the method (tags: exam)
+```
+
+Highlights are listed the same way, with their colour. A new document that was never saved has no folder yet; its study sheet goes to the folder textweaver was started in.
+
 ### List notes: Shift+A
 
 Press **Shift+A**. The GUI also has **Ctrl+Shift+N**. You hear "Notes", the count, then "Enter goes to a note, Delete deletes it, F2 edits it." Each item says the note, the line, and the passage.

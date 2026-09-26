@@ -258,9 +258,9 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
 <script type="application/json" id="site-data">
 {
  "counts": {
-  "done": 34,
+  "done": 39,
   "not yet": 4,
-  "partial": 7
+  "partial": 6
  },
  "generator": "tools/gen_site_data.py",
  "groups": [
@@ -413,8 +413,48 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
       "title": "Citations guide"
      },
      "name": "Citations in the editor",
-     "note": "tw cite works; the editor has no citation picker yet.",
-     "status": "partial"
+     "note": "Alt+C picks a reference; Alt+Shift+D adds one by DOI or ISBN.",
+     "status": "done"
+    },
+    {
+     "description": "Move by heading, list, link, and table in the text you are writing, and list the headings.",
+     "guide": {
+      "href": "../editing.md",
+      "title": "Editing guide"
+     },
+     "name": "Structure while writing and the outline",
+     "note": "Alt+O lists the headings; type to filter them.",
+     "status": "done"
+    },
+    {
+     "description": "Move to each misspelled word, hear it spelled, and choose a suggestion.",
+     "guide": {
+      "href": "../editing.md",
+      "title": "Editing guide"
+     },
+     "name": "Spell check",
+     "note": "Alt+M and Alt+Shift+M; Alt+J for suggestions.",
+     "status": "done"
+    },
+    {
+     "description": "Export the document you are writing to PDF, Word, EPUB, braille, or a web page, and preview it in the browser.",
+     "guide": {
+      "href": "../converting.md",
+      "title": "Converting documents guide"
+     },
+     "name": "Export and preview from the reader",
+     "note": "From the command palette: export pdf, preview in browser.",
+     "status": "done"
+    },
+    {
+     "description": "Start a new document with front matter, today's date, and a References heading.",
+     "guide": {
+      "href": "../editing.md",
+      "title": "Editing guide"
+     },
+     "name": "Templates",
+     "note": "From the command palette: new from template.",
+     "status": "done"
     }
    ],
    "name": "Writing"
@@ -786,7 +826,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "title": "Reading aids"
   }
  ],
- "total": 45
+ "total": 49
 }
 </script>
 <!-- END generated: site-data -->

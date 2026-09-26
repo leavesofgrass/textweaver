@@ -143,10 +143,20 @@ There are two kinds of heading keys. One reads from the heading. The other only 
 
 - **>**: read from the next heading. The GUI also has **Ctrl+H**.
 - **<**: read from the previous heading. The GUI also has **Ctrl+Shift+H**.
-- **h** or **}**: move to the next heading without reading.
-- **{**: move to the previous heading without reading.
+- **h**, **}**, or **Alt+H**: move to the next heading without reading.
+- **{** or **Alt+Shift+H**: move to the previous heading without reading.
 
-You hear the heading level and text, for example "Heading level 2: Methods".
+You hear the heading level and text, for example "Heading level 2: Methods". **Alt+H** and **Alt+Shift+H** are chords, so they also work in edit mode and with single-key shortcuts turned off. They are terminal keys; the GUI has **Ctrl+H** and **Ctrl+Shift+H**.
+
+### The outline: Alt+O
+
+Press **Alt+O** for a list of the document's headings, in order, each with its level: "Methods, level 2". You hear how many there are and which heading you are under: "Outline, 12 headings. Type to filter, Enter goes to a heading, Escape closes. You are under Methods."
+
+- Type part of a heading to filter the list. Only the headings that hold every word you type stay, and you hear how many match. **Backspace** removes a letter; Space is part of the filter.
+- **Up**, **Down**, **Home**, and **End** move through the list.
+- **Enter** goes to the heading. It is a jump, so **Alt+Left** comes back.
+
+The outline works while reading and while editing; in edit mode it lists the headings as you have written them so far.
 
 ### Tables, lists, and links
 
@@ -156,6 +166,29 @@ You hear the heading level and text, for example "Heading level 2: Methods".
 - **u**: next link. **Shift+U**: previous link.
 
 A table is announced with its row count ("Table, 3 rows"). A list is announced with its item count ("List, 5 items"). A numbered list item is read with its number ("3. Buy milk"). A nested item says its level ("List item, level 2").
+
+### Inside a table: Ctrl+Alt and the arrows
+
+In a table, move the way screen readers do:
+
+- **Ctrl+Alt+Down** and **Ctrl+Alt+Up**: the next or previous row, in the same column.
+- **Ctrl+Alt+Right** and **Ctrl+Alt+Left**: the next or previous cell in the row.
+
+Each move says the column's header with the cell, for example "Row 3, Age: 41" for a new row and "Age: 41" within a row. On the header row you hear "Header row" and the header. At the edges you hear "End of table.", "Start of table.", "End of row.", or "Start of row." At high verbosity each move also says "Row 3 of 5, column 2 of 4". Where am I (below) says the row and column too. Outside a table these keys say "Not in a table."
+
+Some desktops keep **Ctrl+Alt** with the arrows for switching workspaces; give the four commands other keys in `keymap.toml` if yours does (`table_next_row`, `table_previous_row`, `table_next_column`, `table_previous_column`).
+
+### Follow a link or a footnote: Alt+Shift+F
+
+Put the cursor on a link and press **Alt+Shift+F**:
+
+- A link to a heading in the same document, such as `[see Methods](#methods)`, goes to that heading.
+- A link to another file, such as `[chapter 2](chapter-2.md)` or `[part](notes/a.md#part-two)`, opens it (at the heading, when the link names one). An Obsidian wiki link such as `[[chapter 2]]` finds `chapter 2.md` in the folder or below it. You hear "Followed the link to chapter-2.md. Back: Alt+Left." Press **Alt+Left** before jumping anywhere else in the new file, and you are back at the link in the first file.
+- A web or mail link is said, with a question: "Web link: https://example.org. Open it? y or n." Press **y** to open it in your browser.
+
+On a footnote reference, **Alt+Shift+F** goes to the note; on the note, it goes back to the reference. When footnotes are read in place (the default, `[normalization] footnote_mode = "inline"`), it says the note instead.
+
+**Shift+K** or **Alt+Shift+K** says a link's address without following it.
 
 ### Chapters
 
@@ -272,9 +305,9 @@ There is one rule for what counts as a jump. Every move by a sentence or anythin
 
 The history keeps the last 50 places. Change that with `[reading] nav_history_size`. It is saved with the document, so it is still there when you open the document again.
 
-## Where am I: %
+## Where am I: Shift+W or Alt+Shift+Y
 
-Press **%**. You hear the line, the number of lines, and the percentage, for example "Line 12 of 300, 4 percent." At normal verbosity you also hear the heading above you: "Under heading Methods." At high verbosity you also hear the document's title and the mode, when it is not plain reading.
+Press **Shift+W**, or **Alt+Shift+Y** from any mode. You hear the line, the number of lines, and the percentage, for example "Line 12 of 300, 4 percent." In a table you also hear where in it: "Table, row 2 of 5, column 3 of 4." At normal verbosity you also hear the word number and the heading above you: "Under heading Methods." At high verbosity you also hear the document's title and the mode, when it is not plain reading. This works in edit mode too, on the headings as you have written them.
 
 ## Your place is remembered
 
@@ -336,6 +369,14 @@ There are three levels. Each one says everything the level below it says.
 - `"high"`: adds the line and percentage to every move, and the title and mode to Where am I. The same move says "Heading level 2, line 12, 4 percent: Methods". You also hear "Done reading." when the document ends.
 
 Announcements never interrupt reading, except errors. While reading, they go to the status line.
+
+Change the level while textweaver runs with **Alt+Shift+V**: low, normal, high, then low again. You hear the new level ("Verbosity: high."), and it is saved.
+
+**Alt+Shift+N** does the same for how much punctuation is spoken (`[speech] punctuation`): none, some, all. The change is heard at once and saved.
+
+## Spelling
+
+**Alt+M** moves to the next misspelled word and **Alt+Shift+M** to the previous one, while reading or editing. You hear the word, then its letters: "recieve. r e c i e v e." **Alt+J** lists suggestions. The [editing guide](editing.md#spelling) has the details.
 
 ## The command palette: F2
 

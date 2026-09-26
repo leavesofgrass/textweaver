@@ -246,6 +246,9 @@ Edit mode. See [Writing and editing](editing.md).
 - `echo_words`, default `true`: speak each word when you finish it.
 - `echo_deletions`, default `true`: speak what you delete.
 - `echo_lines_on_move`, default `true`: speak the line when the cursor moves to another line.
+- `author`, not set by default: the author a new document from a template gets (`author = "Jo Writer"`). See [Start from a template](editing.md#start-from-a-template).
+
+Your spelling word list is not a setting: it is `words.txt` in the data folder, one word per line. See [Spelling](editing.md#spelling).
 
 ### [library]
 

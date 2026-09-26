@@ -429,9 +429,35 @@ Pandoc can also format citations from the same library, because `references.json
 
 ## Citations while reading and writing in textweaver
 
-The terminal reader and editor have no citation picker yet. There is no key that inserts a citation or describes the citation under the cursor. Type citations by hand in the forms shown in [Write citations in Markdown](#write-citations-in-markdown), and use `tw cite list` in another terminal to look up keys.
+The reader uses the same libraries as `tw cite`: `references.json` in the document's folder first, then your own library.
 
-When you read a document, textweaver reads a citation as it is written. A real example: `[@doe2020, p. 12]` is spoken as "[ at doe2020, page 12]". Your speech engine decides how it says the bracket and the key.
+### Insert a citation: Alt+C
+
+In edit mode, press **Alt+C**. textweaver says how many references there are, for example "Insert citation, 12 references. Type to filter, Enter chooses, Escape cancels." A list appears; each item reads like "Doe and Roe, 2020. On reading. Key doe2020."
+
+1. Type part of an author, a year, a title word, or the key. The list keeps the references that have every word you type, and says how many match. Backspace removes a letter.
+2. Press **Enter** on the reference you want.
+3. textweaver asks "Page or other locator, for example 12 or chapter 2; Enter for none". Type a page (`12`), pages (`3-5` or `pp. 3-5`), or another division (`chapter 2`, `section 4.1`), or press **Enter** for none. If textweaver cannot read what you typed, it says so and asks again.
+
+The citation goes in at the caret, for example `[@doe2020, p. 12]`, with a space before it when it follows a word. You hear what went in: "Inserted citation of Doe and Roe, 2020, page 12." With the caret inside a citation already, the new reference joins it: `[@doe2020, p. 12; @roe2021]`. Each insertion is one undo step.
+
+### Add a reference by DOI or ISBN: Alt+Shift+D
+
+Press **Alt+Shift+D** and type a DOI (`10.1038/nature12373`, or its doi.org address) or an ISBN. You hear "Looking up" and the identifier; you can go on reading or writing. When the answer comes, you hear, for example, "Added reference kucsko2013. Kucsko, Maurer, and Yao, 2013. Nanometre-scale thermometry in a living cell." The reference goes into the folder's `references.json` when the document's folder has one, else into your own library. Lookups use the same cache as `tw cite add`, so an identifier looked up before works offline.
+
+### Commands from the palette
+
+Press **F2** and type part of the name:
+
+- `insert bibliography`: in edit mode, inserts at the caret the formatted entries of every work the document cites, in APA style, or in the style the front matter names with `csl: mla`. You hear how many entries went in and any keys that are not in a library. Put the caret under your References heading first.
+- `check citations`: the same check as `tw cite check`, on the text you are reading or writing, for example "3 citations found. Every key is in the library."
+- `import references`: asks for a BibTeX, BibLaTeX, RIS, or CSL-JSON file and imports it into your own library, as `tw cite import` does.
+
+### Hear a citation in words
+
+When a word move (the Left and Right arrows in reading) lands on a citation, or you ask for the link address there (**Alt+Shift+K**), textweaver says it in words, for example "Citation: Doe and Roe, 2020, On reading, page 12." A key that no library has is named: "missing reference smith1999".
+
+Continuous reading still reads a citation as it is written: `[@doe2020, p. 12]` is spoken by your speech engine, which decides how it says the bracket and the key. To hear citations formatted while you write, use `listen rendered` from the palette; see [the editing guide](editing.md#listen-to-the-rendered-text).
 
 A note can name a source with a citation key. This comes from the `cite` field in a note's front matter when you import notes from an Obsidian vault. See [the vault guide](vault.md).
 

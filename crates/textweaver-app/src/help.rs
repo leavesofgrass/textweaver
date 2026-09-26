@@ -26,7 +26,9 @@ pub fn chords_text(keymap: &Keymap, action: ActionId) -> String {
         .iter()
         .map(ToString::to_string)
         .collect();
-    if chords.is_empty() {
+    if chords.is_empty() && action.is_palette_command() {
+        "the command palette".into()
+    } else if chords.is_empty() {
         "not bound".into()
     } else {
         chords.join(" or ")
@@ -227,6 +229,32 @@ impl App {
                 k(ActionId::Undo),
                 k(ActionId::Redo),
                 k(ActionId::Bold)
+            ),
+            format!(
+                "Outline of the headings, type to filter: {}. Follow a link or footnote: {}.",
+                k(ActionId::Outline),
+                k(ActionId::FollowLink)
+            ),
+            format!(
+                "Tables: {} and {} move by row, {} and {} by cell.",
+                k(ActionId::TableNextRow),
+                k(ActionId::TablePreviousRow),
+                k(ActionId::TableNextColumn),
+                k(ActionId::TablePreviousColumn)
+            ),
+            format!(
+                "Citations while editing: insert {}, add a reference by DOI or ISBN {}. Spelling: next and previous misspelling {} and {}, suggestions {}.",
+                k(ActionId::InsertCitation),
+                k(ActionId::AddReference),
+                k(ActionId::NextMisspelling),
+                k(ActionId::PreviousMisspelling),
+                k(ActionId::SpellingSuggestions)
+            ),
+            "Export to HTML, PDF, Word, EPUB, or braille, preview in the browser, and start from a template: type export, preview, or template in the command palette.".to_owned(),
+            format!(
+                "How much is said: {}. How much punctuation: {}.",
+                k(ActionId::CycleVerbosity),
+                k(ActionId::CyclePunctuation)
             ),
             format!("All keyboard shortcuts: {}.", k(ActionId::KeyboardHelp)),
             format!("Run any command by name: {}.", k(ActionId::CommandPalette)),

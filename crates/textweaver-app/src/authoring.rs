@@ -150,12 +150,23 @@ impl App {
                 })
                 .and_then(|m| m.reference.clone().map(|url| (s.doc.slice(m.range), url)))
         };
+        let cite = if found.is_none() {
+            self.citation_description_at(pos)
+        } else {
+            None
+        };
         match found {
             Some((text, url)) if url.is_empty() => {
                 self.tell(&format!("The link {text} has no address."));
             }
             Some((text, url)) if text.trim() == url => self.tell(&format!("Link address: {url}")),
             Some((text, url)) => self.tell(&format!("Link {}, address: {url}", text.trim())),
+            // A citation is said in words instead ("Citation: Doe, 2020").
+            None if cite.is_some() => {
+                if let Some(d) = cite {
+                    self.tell(&d);
+                }
+            }
             None => {
                 self.speech.earcon(Earcon::Boundary);
                 self.tell("No link at the cursor.");
