@@ -901,7 +901,11 @@ impl Settings {
         );
         at_least(&mut self.library.recent_limit, 1, "library.recent_limit");
         at_least(&mut self.editing.undo_steps, 1, "editing.undo_steps");
-        at_least(&mut self.editing.undo_memory_mb, 1, "editing.undo_memory_mb");
+        at_least(
+            &mut self.editing.undo_memory_mb,
+            1,
+            "editing.undo_memory_mb",
+        );
         if self.display.tab_width == 0 {
             fix(
                 "display.tab_width".into(),

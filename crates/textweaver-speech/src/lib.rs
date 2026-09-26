@@ -37,7 +37,7 @@ pub use backend::{
 };
 pub use backends::{
     BackendRegistry, NullBackend, RecordingBackend, RecordingHandle, RecordingMode, Selection,
-    resolve_preferred_voice, resolve_voice,
+    forget_probes, resolve_preferred_voice, resolve_voice,
 };
 pub use normalize::{NormalizeConfig, Pipeline, TableMode};
 pub use pacing::{Clock, FakeClock, PacingConfig, SystemClock};

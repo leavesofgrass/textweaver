@@ -114,13 +114,28 @@ pub fn backend_info() -> BackendInfo {
 
 /// [`backend_info`] for a configuration (a library named in the settings).
 pub fn backend_info_for(config: &DectalkConfig) -> BackendInfo {
+    BackendInfo {
+        available: probe(config),
+        ..backend_description()
+    }
+}
+
+/// True when a DECtalk library and a host for its architecture are found
+/// for `config`: the probe behind [`backend_info_for`].
+pub fn probe(config: &DectalkConfig) -> bool {
     let d = discovery::diagnose(config);
+    d.library.is_ok() && !d.hosts.is_empty()
+}
+
+/// [`backend_info`] without the availability probe (`available` is false):
+/// what a registry needs at registration, before it probes once.
+pub fn backend_description() -> BackendInfo {
     BackendInfo {
         id: BACKEND_ID,
         name: "DECtalk",
         priority: PRIORITY,
         opt_in: false,
-        available: d.library.is_ok() && !d.hosts.is_empty(),
+        available: false,
         caps: CAPS | Caps::TONES,
     }
 }

@@ -133,13 +133,28 @@ pub fn host_candidates(config: &EciConfig) -> Vec<PathBuf> {
 /// [`SpeechError::Unavailable`](textweaver_speech::SpeechError) if it
 /// cannot.
 pub fn backend_info() -> BackendInfo {
-    let d = discovery::diagnose(&EciConfig::default());
+    BackendInfo {
+        available: probe(&EciConfig::default()),
+        ..backend_description()
+    }
+}
+
+/// True when a usable library and a matching host are found for `config`:
+/// the probe behind [`backend_info`].
+pub fn probe(config: &EciConfig) -> bool {
+    let d = discovery::diagnose(config);
+    d.library.is_ok() && !d.hosts.is_empty()
+}
+
+/// [`backend_info`] without the availability probe (`available` is false):
+/// what a registry needs at registration, before it probes once.
+pub fn backend_description() -> BackendInfo {
     BackendInfo {
         id: BACKEND_ID,
         name: "ETI-Eloquence",
         priority: PRIORITY,
         opt_in: false,
-        available: d.library.is_ok() && !d.hosts.is_empty(),
+        available: false,
         caps: Caps::WORD_EVENTS
             | Caps::AUDIO_CLOCK
             | Caps::PAUSE

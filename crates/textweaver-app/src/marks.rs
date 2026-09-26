@@ -13,8 +13,8 @@ use textweaver_store::Bookmark;
 use textweaver_text::{NavOptions, SearchQuery, navigate};
 
 use crate::app::{App, FindState, ListKind};
-use crate::find_scan;
 use crate::command::{Effect, PromptPurpose};
+use crate::find_scan;
 use crate::nav::ReadAfter;
 use crate::text_util::{self, preview};
 

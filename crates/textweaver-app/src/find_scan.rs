@@ -104,8 +104,7 @@ pub(crate) fn scan(
                         .checked_sub(1)
                         .map(|i| text.char(i))
                         .is_some_and(is_word_char);
-                    let after =
-                        chars_before + n < len && is_word_char(text.char(chars_before + n));
+                    let after = chars_before + n < len && is_word_char(text.char(chars_before + n));
                     if before || after {
                         // Retry one char further on, so a rejected match
                         // does not hide a valid one that overlaps it.
@@ -205,7 +204,13 @@ mod tests {
         let doc = Document::from_plain_text(text);
         let want = find_all(&doc, q).unwrap();
         let got = all(doc.text(), q);
-        assert_eq!(got.len(), want.len(), "{:?} in {} bytes", q.pattern, text.len());
+        assert_eq!(
+            got.len(),
+            want.len(),
+            "{:?} in {} bytes",
+            q.pattern,
+            text.len()
+        );
         assert_eq!(got, want, "{:?} in {} bytes", q.pattern, text.len());
     }
 
