@@ -230,6 +230,8 @@ pub(crate) enum ListKind {
     Recovery,
     /// The library: the documents listed, in order.
     Library(Vec<PathBuf>),
+    /// The speech engine's voices: id and name, in order.
+    Voices(Vec<(String, String)>),
 }
 
 /// The application: the only owner of mutable state.
@@ -963,6 +965,11 @@ impl App {
                     return self.open_command(path);
                 }
             }
+            Some(ListKind::Voices(voices)) => {
+                if let Some((id, name)) = voices.get(n).cloned() {
+                    self.select_voice(&id, &name);
+                }
+            }
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -1202,12 +1209,7 @@ impl App {
             | A::AddTableRow
             | A::InsertImage
             | A::Replace => return self.edit_action(a),
-            // Needs a voice list from the speech service, which it does not
-            // offer yet (see the Agent D3 report).
-            A::ChooseVoice => {
-                let msg = format!("{} is not available yet.", a.help());
-                self.tell(&msg);
-            }
+            A::ChooseVoice => return self.choose_voice(),
         }
         vec![Effect::Redraw]
     }

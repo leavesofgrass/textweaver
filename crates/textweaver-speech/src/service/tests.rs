@@ -1394,3 +1394,29 @@ fn null_service_reports_positions_then_finished() {
     }
     assert_eq!(positions(&got), [r(0, 3), r(5, 8)]);
 }
+
+#[test]
+fn the_voice_list_is_asked_on_the_speech_thread() {
+    let (b, rec) = RecordingBackend::with(RecordingMode::Instant, RecordingBackend::DEFAULT_CAPS);
+    rec.set_voices(vec![
+        Voice {
+            id: "a".into(),
+            name: "Alpha".into(),
+            ..Voice::default()
+        },
+        Voice {
+            id: "b".into(),
+            name: "Beta".into(),
+            ..Voice::default()
+        },
+    ]);
+    let service = SpeechService::spawn(b.into_factory(), plain()).unwrap();
+    let names: Vec<String> = service
+        .voices()
+        .unwrap()
+        .into_iter()
+        .map(|v| v.name)
+        .collect();
+    assert_eq!(names, ["Alpha", "Beta"]);
+    service.shutdown();
+}

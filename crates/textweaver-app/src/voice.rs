@@ -8,7 +8,75 @@ use textweaver_speech::Earcon;
 
 use crate::app::App;
 
+/// What a chosen voice says as its sample.
+pub const VOICE_SAMPLE: &str = "The quick brown fox jumps over the lazy dog.";
+
+/// A voice as listed: its name, then its languages and tags ("Microsoft
+/// Zira, en-US, OneCore"), and "current" for the one in use.
+fn voice_label(v: &textweaver_speech::Voice, current: bool) -> String {
+    let mut parts = vec![v.name.clone()];
+    if let Some(l) = v.languages.first() {
+        parts.push(l.clone());
+    }
+    parts.extend(v.tags.iter().cloned());
+    if current {
+        parts.push("current".into());
+    }
+    parts.join(", ")
+}
+
 impl App {
+    /// Choose voice (Alt+V): lists the engine's voices; Enter selects one
+    /// and speaks a sample. The list comes from the speech thread.
+    pub(crate) fn choose_voice(&mut self) -> Vec<crate::command::Effect> {
+        use crate::command::Effect;
+        let voices = match self.speech.voices() {
+            Ok(v) => v,
+            Err(e) => {
+                self.error(&format!("Could not list the voices: {e}."));
+                return vec![Effect::Redraw];
+            }
+        };
+        if voices.is_empty() {
+            self.tell("This speech engine has no voices to choose from.");
+            return vec![Effect::Redraw];
+        }
+        let current = self.settings.speech.voice.clone();
+        let is_current = |v: &textweaver_speech::Voice| {
+            current
+                .as_deref()
+                .is_some_and(|c| c == v.id || c.eq_ignore_ascii_case(&v.name))
+        };
+        let items: Vec<String> = voices
+            .iter()
+            .map(|v| voice_label(v, is_current(v)))
+            .collect();
+        let n = voices.len();
+        self.list = Some(crate::app::ListKind::Voices(
+            voices.into_iter().map(|v| (v.id, v.name)).collect(),
+        ));
+        self.tell(&format!(
+            "Voices, {n} {}. Enter chooses one and speaks a sample. Escape cancels.",
+            if n == 1 { "voice" } else { "voices" }
+        ));
+        vec![Effect::ShowList {
+            title: "Choose a voice".into(),
+            items,
+        }]
+    }
+
+    /// Uses voice `id` from now on (saved in the settings) and speaks a
+    /// sample with it.
+    pub(crate) fn select_voice(&mut self, id: &str, name: &str) {
+        self.stop_speech();
+        self.settings.speech.voice = Some(id.to_owned());
+        self.settings_dirty = true;
+        self.speech.set_voice(Some(id.to_owned()));
+        self.tell(&format!("Voice {name}."));
+        self.speech
+            .say(VOICE_SAMPLE, textweaver_speech::SayMode::Queue);
+    }
+
     /// Sends the voice settings to the speech service.
     pub(crate) fn apply_voice_settings(&mut self) {
         let sp = &self.settings.speech;

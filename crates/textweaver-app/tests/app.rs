@@ -902,9 +902,7 @@ fn every_action_with_a_default_key_has_a_handler() {
     let keymap = Keymap::defaults(Platform::current(), Frontend::Terminal);
     let mut r = rig(PROSE);
     for &a in ActionId::ALL {
-        // Choose voice waits for a voice list from the speech service.
-        let pending = a == ActionId::ChooseVoice;
-        if pending || a.confirmation_prompt().is_some() || keymap.chords_for(a).is_empty() {
+        if a.confirmation_prompt().is_some() || keymap.chords_for(a).is_empty() {
             continue;
         }
         let before = r.said.all().len();
@@ -1084,4 +1082,38 @@ fn binary_files_are_refused_and_utf16_files_are_read() {
             "{doc:?}"
         );
     }
+}
+
+#[test]
+fn choose_voice_lists_the_voices_and_enter_speaks_a_sample() {
+    let mut r = rig(PROSE);
+    let effects = r.act(ActionId::ChooseVoice);
+    let items = effects
+        .iter()
+        .find_map(|e| match e {
+            Effect::ShowList { title, items } if title == "Choose a voice" => Some(items.clone()),
+            _ => None,
+        })
+        .expect("a voice list");
+    assert_eq!(items, ["Test voice"]);
+    assert_eq!(
+        r.said.last(),
+        "Voices, 1 voice. Enter chooses one and speaks a sample. Escape cancels."
+    );
+    r.log.clear();
+    r.app.dispatch(Command::Choose(0));
+    assert_eq!(r.said.last(), "Voice Test voice.");
+    assert_eq!(r.app.settings().speech.voice.as_deref(), Some("test"));
+    r.wait_spoken(|u| u.text.contains("quick brown fox"));
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while r.log.params().and_then(|p| p.voice) != Some("test".into()) {
+        assert!(Instant::now() < deadline, "voice never set");
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    // The chosen voice is marked current the next time.
+    let effects = r.act(ActionId::ChooseVoice);
+    assert!(effects.iter().any(|e| matches!(
+        e,
+        Effect::ShowList { items, .. } if items == &["Test voice, current".to_owned()]
+    )));
 }

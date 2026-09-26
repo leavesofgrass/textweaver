@@ -57,7 +57,8 @@ use textweaver_core::{
 };
 
 use crate::backend::{
-    BackendFactory, BackendId, Caps, EventSink, RawEvent, SpeechBackend, SpeechError, VoiceParams,
+    BackendFactory, BackendId, Caps, EventSink, RawEvent, SpeechBackend, SpeechError, Voice,
+    VoiceParams,
 };
 use crate::backends::{NullBackend, resolve_preferred_voice, resolve_voice};
 use crate::normalize::{self, NormalizeConfig, Pipeline};
@@ -239,6 +240,9 @@ impl Default for ServiceConfig {
     }
 }
 
+/// How long [`SpeechService::voices`] waits for the speech thread.
+pub const VOICES_TIMEOUT: Duration = Duration::from_secs(10);
+
 /// How often the core polls the backend while speech is active.
 pub const POLL_INTERVAL: Duration = Duration::from_millis(10);
 
@@ -280,6 +284,7 @@ enum Command {
     SpeakChar(char, Option<CharPos>),
     Tone(f32, u32),
     Earcon(Earcon),
+    Voices(Sender<Result<Vec<Voice>, SpeechError>>),
     Shutdown,
 }
 
@@ -459,6 +464,23 @@ impl SpeechService {
     /// Plays an earcon (ignored when the backend has no [`Caps::TONES`]).
     pub fn earcon(&self, earcon: Earcon) {
         self.send(Command::Earcon(earcon));
+    }
+
+    /// The backend's voices, asked on the speech thread (backends are not
+    /// shared across threads). Waits up to [`VOICES_TIMEOUT`]; a backend
+    /// busy starting a host answers when it is done.
+    pub fn voices(&self) -> Result<Vec<Voice>, SpeechError> {
+        let (reply, answer) = mpsc::channel();
+        self.tx
+            .send(Command::Voices(reply))
+            .map_err(|_| SpeechError::ServiceStopped)?;
+        match answer.recv_timeout(VOICES_TIMEOUT) {
+            Ok(result) => result,
+            Err(RecvTimeoutError::Timeout) => Err(SpeechError::Engine(
+                "the voice list did not arrive in time".into(),
+            )),
+            Err(RecvTimeoutError::Disconnected) => Err(SpeechError::ServiceStopped),
+        }
     }
 
     /// The next status update, if one is waiting.
@@ -712,6 +734,11 @@ impl ServiceCore {
         self.reading_generation
     }
 
+    /// The backend's voices.
+    pub fn voices(&self) -> Result<Vec<Voice>, SpeechError> {
+        self.backend.voices()
+    }
+
     /// The voice parameters currently requested.
     pub fn params(&self) -> &VoiceParams {
         &self.params
@@ -779,6 +806,9 @@ impl ServiceCore {
             Command::SpeakChar(c, at) => self.speak_char(c, at),
             Command::Tone(hz, ms) => self.tone(hz, ms),
             Command::Earcon(e) => self.earcon(e),
+            Command::Voices(reply) => {
+                let _ = reply.send(self.voices());
+            }
             Command::Shutdown => self.stop_silently(),
         }
     }
