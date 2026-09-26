@@ -40,7 +40,7 @@ pub mod sync;
 pub mod time;
 
 pub use atomic::atomic_write;
-pub use doc_state::{Bookmark, DEFAULT_DEBOUNCE, DocKey, DocState, StateStore, percent};
+pub use doc_state::{Anchor, Bookmark, DEFAULT_DEBOUNCE, DocKey, DocState, StateStore, percent};
 pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
 pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, ScannedDoc};
 pub use notes::{Annotation, Highlight, Note, NotesExport, Relation};

@@ -905,6 +905,7 @@ fn import_bookmarks(
             pos: mapped.pos,
             pct: percent(mapped.pos, t.len()),
             ts: star::star_ts(v.get("ts")),
+            anchor: None,
         };
         items.push(item(
             Outcome::Imported,

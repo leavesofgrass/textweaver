@@ -709,8 +709,13 @@ impl App {
         state.position = pos;
         state.pct = text_util::percent(&s.doc, pos);
         state.ts = textweaver_store::now_ts();
+        state.anchor = Some(text_util::anchor_at(&s.doc, pos));
         state.history = s.history.entries().to_vec();
         state.bookmarks = s.bookmarks.clone();
+        // Bookmarks move with edits: their anchors follow the text now.
+        for b in &mut state.bookmarks {
+            b.anchor = Some(text_util::anchor_at(&s.doc, b.pos));
+        }
         state.notes = s.notes.clone();
         state.highlights = s.highlights.clone();
         store.save(&s.key, &state)?;

@@ -145,6 +145,7 @@ impl App {
             pos,
             pct,
             ts: textweaver_store::now_ts(),
+            anchor: Some(text_util::anchor_at(&s.doc, pos)),
         });
         s.bookmarks.sort_by_key(|b| b.pos);
         match self.save_position() {

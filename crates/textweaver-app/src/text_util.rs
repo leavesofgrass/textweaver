@@ -132,6 +132,16 @@ pub fn preview(doc: &Document, range: CharRange, words: usize) -> String {
     }
 }
 
+/// The anchor for a saved position: the text starting at `pos`
+/// ([`textweaver_store::Anchor`]), kept with positions and bookmarks so they
+/// can be found again after outside edits.
+pub fn anchor_at(doc: &Document, pos: CharPos) -> textweaver_store::Anchor {
+    let rope = doc.text();
+    let start = pos.0.min(rope.len_chars());
+    let end = (start + textweaver_store::Anchor::CONTEXT_CHARS).min(rope.len_chars());
+    textweaver_store::Anchor::from_text_at(rope.slice(start..end).chars())
+}
+
 /// A spoken name for a character read on its own.
 pub fn char_name(c: char) -> String {
     match c {

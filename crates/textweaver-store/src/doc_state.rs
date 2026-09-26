@@ -64,6 +64,52 @@ impl DocKey {
     }
 }
 
+/// The text at a saved position, kept so the position can be found again
+/// after the file was changed outside textweaver (Phase 2 relocation): the
+/// characters of [`Anchor::CONTEXT_CHARS`] starting at the position, and a
+/// hash of them. Old state files have none and still load.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Anchor {
+    /// About 40 characters of text starting at the position.
+    pub context: String,
+    /// 64-bit FNV-1a hash of `context`, as 16 hex digits (a JSON number
+    /// would lose bits in tools that read it as a double).
+    pub hash: String,
+}
+
+impl Anchor {
+    /// How many characters of context are kept.
+    pub const CONTEXT_CHARS: usize = 40;
+
+    /// An anchor for the text starting at a position: its first
+    /// [`CONTEXT_CHARS`](Self::CONTEXT_CHARS) characters are kept.
+    pub fn from_text_at(text_from_pos: impl IntoIterator<Item = char>) -> Self {
+        let context: String = text_from_pos
+            .into_iter()
+            .take(Self::CONTEXT_CHARS)
+            .collect();
+        let hash = format!("{:016x}", fnv1a(context.as_bytes()));
+        Anchor { context, hash }
+    }
+
+    /// True when `text_from_pos` still starts with this anchor's context
+    /// (its hash agrees): the saved position is where it was.
+    pub fn matches(&self, text_from_pos: impl IntoIterator<Item = char>) -> bool {
+        let here = Anchor::from_text_at(text_from_pos);
+        here.hash == self.hash && here.context == self.context
+    }
+}
+
+/// 64-bit FNV-1a, the hash [`DocKey`] also uses.
+fn fnv1a(bytes: &[u8]) -> u64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in bytes {
+        h ^= u64::from(*b);
+        h = h.wrapping_mul(0x0100_0000_01b3);
+    }
+    h
+}
+
 /// A named position.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Bookmark {
@@ -75,6 +121,9 @@ pub struct Bookmark {
     pub pct: u8,
     /// When it was set (Unix seconds, UTC).
     pub ts: i64,
+    /// The text at the bookmark, for finding it again after outside edits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub anchor: Option<Anchor>,
 }
 
 /// Percentage of `pos` through a document of `len` chars, floored, as Star
@@ -94,6 +143,10 @@ pub struct DocState {
     pub pct: u8,
     /// When the position was saved (Unix seconds, UTC).
     pub ts: i64,
+    /// The text at [`position`](Self::position), for finding it again after
+    /// outside edits.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub anchor: Option<Anchor>,
     /// Navigation history, oldest first.
     pub history: Vec<CharPos>,
     /// Bookmarks.
@@ -171,6 +224,7 @@ impl DocState {
             pos,
             pct: percent(pos, doc_len),
             ts: crate::now_ts(),
+            anchor: None,
         };
         let at = self.bookmarks.partition_point(|b| b.pos <= pos);
         self.bookmarks.insert(at, mark.clone());
@@ -716,6 +770,37 @@ mod tests {
         assert!(a.0.starts_with("some_doc.md-"));
         assert_ne!(a, DocKey::for_path(Path::new("/tmp/other/some doc.md")));
         assert_ne!(DocKey::untitled(1), DocKey::untitled(2));
+    }
+
+    /// Anchors keep about 40 characters and a hash; files written before
+    /// anchors existed still load, and files without anchors do not gain
+    /// empty ones.
+    #[test]
+    fn anchors_round_trip_and_old_files_still_load() {
+        let text = "The mitochondria is the powerhouse of the cell, they say.";
+        let a = Anchor::from_text_at(text.chars());
+        assert_eq!(a.context.chars().count(), Anchor::CONTEXT_CHARS);
+        assert!(text.starts_with(&a.context));
+        assert_eq!(a.hash.len(), 16);
+        assert!(a.matches(text.chars()));
+        assert!(!a.matches("The mitochondria was the powerhouse".chars()));
+        assert_eq!(Anchor::from_text_at("short".chars()).context, "short");
+
+        let old = r#"{"position":12,"pct":20,"ts":5,"history":[],
+            "bookmarks":[{"name":"mark1","pos":3,"pct":5,"ts":6}]}"#;
+        let st: DocState = serde_json::from_str(old).unwrap();
+        assert_eq!(st.position, CharPos(12));
+        assert_eq!(st.anchor, None);
+        assert_eq!(st.bookmarks[0].anchor, None);
+        let json = serde_json::to_string(&st).unwrap();
+        assert!(!json.contains("anchor"), "{json}");
+
+        let mut st = st;
+        st.anchor = Some(a.clone());
+        st.bookmarks[0].anchor = Some(a.clone());
+        let back: DocState = serde_json::from_str(&serde_json::to_string(&st).unwrap()).unwrap();
+        assert_eq!(back.anchor.as_ref(), Some(&a));
+        assert_eq!(back.bookmarks[0].anchor.as_ref(), Some(&a));
     }
 
     #[test]
