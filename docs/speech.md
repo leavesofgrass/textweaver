@@ -11,7 +11,7 @@ textweaver calls a speech engine a backend. Each has a short id, used by `--back
 - `dectalk`: DECtalk, from a copy you installed. See the [DECtalk guide](dectalk.md).
 - `nsspeech`: Apple's system voices through the classic engine. macOS only. It answers fastest.
 - `avspeech`: Apple's system voices through AVSpeechSynthesizer. macOS only. It highlights words most exactly. On macOS 13 and later the system voices include Eloquence (Reed, Shelley, and others).
-- `espeak`: eSpeak NG, inside textweaver itself. In builds made with it; the Linux install script includes it.
+- `espeak`: eSpeak NG, inside textweaver itself. In builds made with it: the Linux AppImage and tarball, and the Linux install script. textweaver loads libespeak-ng when it starts, so install the `espeak-ng` package to use it; without it, the backend is simply not available. `TEXTWEAVER_ESPEAK_LIBRARY` names the library file to load instead.
 - `speechd`: Speech Dispatcher, the speech service Orca uses on Linux. In builds made with it; the Linux install script includes it.
 - `omnivox`: an Omnivox speech server, a separate program found on your `PATH`. It supports rate and tones, but not pitch, volume, or voices.
 - `null`: silent. Used when nothing else works, and by `--no-speech`.

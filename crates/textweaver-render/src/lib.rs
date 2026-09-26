@@ -76,6 +76,17 @@ impl Engine {
         }
     }
 
+    /// The engine this build renders `self` with: comrak falls back to
+    /// pulldown-cmark in builds without the `comrak` cargo feature (on by
+    /// default).
+    pub fn built(self) -> Self {
+        if cfg!(feature = "comrak") {
+            self
+        } else {
+            Engine::PulldownCmark
+        }
+    }
+
     /// The name used on the command line.
     pub fn name(self) -> &'static str {
         match self {

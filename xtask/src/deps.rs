@@ -10,6 +10,11 @@
 //!   `textweaver-formats`, directly or through another workspace crate.
 //! - `textweaver-store` depends only on `textweaver-core` among the
 //!   workspace crates, and otherwise only on serde-level crates.
+//! - `textweaver-tui` (the reader, `textweaver`) never reaches the
+//!   conversion and citation stack: not the convert, render, writers, or
+//!   cite crates, and not their big dependencies (hayagriva, comrak,
+//!   minijinja, krilla, ammonia, ureq), so the reader stays small and
+//!   starts fast (docs/roadmap.md, "Binary size"). `tw` has them.
 //!
 //! Dev-dependencies are ignored except for core, since tests do not change
 //! what a crate links.
@@ -43,6 +48,29 @@ const STORE: &str = "textweaver-store";
 
 /// Crates speech must never reach.
 const SPEECH_FORBIDDEN: [&str; 2] = ["textweaver-text", "textweaver-formats"];
+
+/// The reader.
+const READER: &str = "textweaver-tui";
+
+/// Workspace crates the reader must never reach: conversion and citations.
+const READER_FORBIDDEN: [&str; 4] = [
+    "textweaver-convert",
+    "textweaver-render",
+    "textweaver-writers",
+    "textweaver-cite",
+];
+
+/// Outside crates of the conversion and citation stack, which no crate the
+/// reader reaches may depend on.
+const READER_FORBIDDEN_EXTERNAL: [&str; 7] = [
+    "hayagriva",
+    "biblatex",
+    "comrak",
+    "minijinja",
+    "krilla",
+    "ammonia",
+    "ureq",
+];
 
 /// Workspace crates store may use.
 const STORE_INTERNAL: [&str; 1] = [CORE];
@@ -199,6 +227,32 @@ fn violations(graph: &Graph) -> (Vec<String>, Vec<String>) {
         }
     }
 
+    if graph.contains_key(READER) {
+        let mut from_reader = reachable(graph, READER);
+        from_reader.insert(READER.to_owned(), vec![READER.to_owned()]);
+        for bad in READER_FORBIDDEN {
+            if let Some(path) = from_reader.get(bad) {
+                errors.push(format!(
+                    "{READER} reaches {bad} ({}); the reader stays without the conversion and citation stack",
+                    path.join(" -> ")
+                ));
+            }
+        }
+        for (name, path) in &from_reader {
+            let Some(c) = graph.get(name) else {
+                continue;
+            };
+            for bad in READER_FORBIDDEN_EXTERNAL {
+                if c.external.contains(bad) {
+                    errors.push(format!(
+                        "{READER} reaches {bad} through {} -> {bad}; the reader stays without the conversion and citation stack",
+                        path.join(" -> ")
+                    ));
+                }
+            }
+        }
+    }
+
     if let Some(store) = graph.get(STORE) {
         for dep in &store.internal {
             if STORE_INTERNAL.contains(&dep.as_str()) {
@@ -273,6 +327,25 @@ mod tests {
                 .iter()
                 .any(|e| e.contains("textweaver-speech -> textweaver-math -> textweaver-text"))
         );
+    }
+
+    #[test]
+    fn the_reader_never_reaches_conversion_or_citations() {
+        let mut g = good();
+        g.insert(READER.into(), krate(&["textweaver-app"], &["ratatui"]));
+        g.insert("textweaver-app".into(), krate(&[CORE], &[]));
+        assert!(violations(&g).0.is_empty());
+        g.insert("textweaver-cite".into(), krate(&[CORE], &["hayagriva"]));
+        g.get_mut("textweaver-app")
+            .unwrap()
+            .internal
+            .insert("textweaver-cite".into());
+        let (errors, _) = violations(&g);
+        assert_eq!(errors.len(), 2, "{errors:#?}");
+        assert!(errors.iter().any(|e| e.contains(
+            "textweaver-tui reaches textweaver-cite (textweaver-tui -> textweaver-app -> textweaver-cite)"
+        )));
+        assert!(errors.iter().any(|e| e.contains("hayagriva")));
     }
 
     #[test]

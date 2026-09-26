@@ -70,7 +70,7 @@ pub fn to_html(
 
 /// The inline extensions a flavor turns on.
 fn inline_for(opts: &RenderOptions) -> Inline {
-    let pulldown = opts.engine == crate::Engine::PulldownCmark;
+    let pulldown = opts.engine.built() == crate::Engine::PulldownCmark;
     match opts.flavor {
         Flavor::CommonMark => Inline::default(),
         Flavor::Gfm => Inline {

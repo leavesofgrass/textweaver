@@ -101,6 +101,10 @@ ALSA inside the image is routed to PulseAudio. Point `PULSE_SERVER` at a PulseAu
 
 `scripts/voxin-docker.sh` wraps the Voxin commands above; see [scripts/README.md](../scripts/README.md#voxin-dockersh).
 
+## The Linux release image
+
+`docker/appimage/` holds a second image, only for building the Linux release packages: Ubuntu 22.04 (an older glibc, so the packages run on older distributions), Rust, and the AppImage tools, checked against their published checksums. `cargo xtask appimage --docker` builds the image and the packages from any system with Docker, into `target/dist/`, and `bash docker/appimage/test-distros.sh target/dist` runs them on Debian, Fedora, and Arch. [Releasing](releasing.md#the-linux-packages) has the details.
+
 ## See also
 
 - [CONTRIBUTING.md](../CONTRIBUTING.md): setting up, the checks, and the agent workflow.

@@ -1,6 +1,6 @@
 # Fuzzing textweaver
 
-This folder holds [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html) targets for the document loaders and the settings files. It is its own Cargo workspace, so the main build, `cargo test`, and CI never build it.
+This folder holds [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html) targets for the document loaders, the settings and keyboard files, the saved state, and the engine-host protocol. It is its own Cargo workspace, so the main build, `cargo test`, and CI never build it.
 
 Each target feeds random input to one part of textweaver. A loader may refuse the input with an error, but it must never panic, and a document it returns must have every marker inside its text, in order. The checks are in `src/lib.rs`.
 
@@ -12,6 +12,11 @@ Each target feeds random input to one part of textweaver. A loader may refuse th
 - `docx`: the Word loader. A zip archive is loaded as it is. Anything else becomes `word/document.xml`, and, after a NUL byte, `word/numbering.xml`.
 - `pdf`: the PDF loader.
 - `settings`: `settings.toml` read into the settings, written back, and read again, and the same text planned as a settings import (JSON or TOML).
+- `keymap`: `keymap.toml`, the keyboard overrides, applied to every platform's and frontend's defaults; each line is also parsed as a key chord, which must print and parse back to itself.
+- `state`: a document's saved state (position, history, bookmarks), which must write back and read again, and a folder's sidecar (`.textweaver/progress.json`), merged with itself and with nothing under every policy.
+- `frame`: the engine-host frame decoder. The input is read as a stream of frames, as the app reads a host's output, and each frame is decoded as every engine's requests and replies. A message that decodes must encode to one that decodes the same.
+
+CI runs every target for 10 minutes each night (`.github/workflows/nightly.yml`) and keeps any crash as an artifact named `fuzz-crash-TARGET`. Download it from the run's page and replay it as below.
 
 ## Run a target
 

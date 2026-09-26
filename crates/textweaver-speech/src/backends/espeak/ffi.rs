@@ -107,6 +107,8 @@ pub(super) fn initialize(mode: Mode) -> Result<u32, String> {
         Mode::Playback => sys::espeak_AUDIO_OUTPUT_AUDIO_OUTPUT_PLAYBACK,
         Mode::Retrieval => sys::espeak_AUDIO_OUTPUT_AUDIO_OUTPUT_RETRIEVAL,
     };
+    // libespeak-ng is loaded at run time; say why when it is missing.
+    sys::load()?;
     // SAFETY: a null path selects the installed data directory; options 0
     // disables phoneme events. Callers serialize initialization.
     let rate = unsafe { sys::espeak_Initialize(output, 0, std::ptr::null(), 0) };

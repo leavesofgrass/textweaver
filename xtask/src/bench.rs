@@ -5,10 +5,23 @@
 //! feature and runs `bench-run`, so the numbers are optimized-build numbers.
 //! Options (passed through):
 //!
-//! - `--quick`: the 1 MB and 50k-line corpora and the fixtures only.
+//! - `--quick`: the 1 MB and 50k-line corpora and the fixtures only (a
+//!   couple of minutes; what CI runs).
 //! - `--file PATH` (repeatable): bench these files instead of the corpora.
 //! - `--json PATH`: also write every measurement as JSON.
 //! - `--only NAME`: run only the corpus whose name contains `NAME`.
+//! - `--baseline FILE`: compare with an earlier `--json` file, and fail
+//!   when a memory number grew more than `--max-ratio R` times (default
+//!   2). Only peak heap and allocation counts are gated: they barely vary
+//!   from run to run, while times depend on the machine and its load, so
+//!   times are reported for information only. Numbers too small to matter
+//!   (under 1 MB of peak heap, under 5,000 allocations) are not gated.
+//! - `--no-startup`: skip the startup timings.
+//!
+//! Startup timings (also `cargo xtask startup` on its own): the release
+//! `tw` is built and `tw --version`, `tw text`, `tw info` (both on the
+//! 1 MB corpus), and `tw backends` are each run five times after one
+//! warm-up run; the median, fastest, and slowest wall times are reported.
 //!
 //! What is measured, per document (each line of the report is one number):
 //!
@@ -34,14 +47,117 @@
 #![cfg_attr(not(feature = "bench"), allow(dead_code))]
 
 use std::path::{Path, PathBuf};
-use std::process::Command as Process;
+use std::process::{Command as Process, Stdio};
+use std::time::{Duration, Instant};
+
+use anyhow::{Context, bail};
+use serde_json::{Value, json};
+
+/// Parsed `bench` options.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Args {
+    pub quick: bool,
+    pub files: Vec<PathBuf>,
+    pub json: Option<PathBuf>,
+    pub only: Option<String>,
+    pub baseline: Option<PathBuf>,
+    pub max_ratio: f64,
+    pub startup: bool,
+    /// The `tw` binary for the startup timings (passed to `bench-run`).
+    pub tw: Option<PathBuf>,
+}
+
+impl Default for Args {
+    fn default() -> Self {
+        Args {
+            quick: false,
+            files: Vec::new(),
+            json: None,
+            only: None,
+            baseline: None,
+            max_ratio: DEFAULT_MAX_RATIO,
+            startup: true,
+            tw: None,
+        }
+    }
+}
+
+/// How much a gated number may grow before the gate fails.
+pub(crate) const DEFAULT_MAX_RATIO: f64 = 2.0;
+
+impl Args {
+    pub(crate) fn parse(args: &[String]) -> anyhow::Result<Args> {
+        let mut out = Args::default();
+        let mut it = args.iter();
+        let value = |it: &mut std::slice::Iter<'_, String>, name: &str| {
+            it.next()
+                .cloned()
+                .with_context(|| format!("{name} needs a value"))
+        };
+        while let Some(a) = it.next() {
+            match a.as_str() {
+                "--quick" => out.quick = true,
+                "--file" => out.files.push(value(&mut it, "--file")?.into()),
+                "--json" => out.json = Some(value(&mut it, "--json")?.into()),
+                "--only" => out.only = Some(value(&mut it, "--only")?),
+                "--baseline" => out.baseline = Some(value(&mut it, "--baseline")?.into()),
+                "--max-ratio" => {
+                    let v = value(&mut it, "--max-ratio")?;
+                    out.max_ratio = v
+                        .parse()
+                        .ok()
+                        .filter(|r: &f64| *r >= 1.0)
+                        .with_context(|| format!("--max-ratio {v}: give a number of 1 or more"))?;
+                }
+                "--no-startup" => out.startup = false,
+                "--tw" => out.tw = Some(value(&mut it, "--tw")?.into()),
+                other => bail!(
+                    "unknown option {other} (cargo xtask bench [--quick] [--file PATH] [--json PATH] [--only NAME] [--baseline FILE] [--max-ratio R] [--no-startup])"
+                ),
+            }
+        }
+        Ok(out)
+    }
+}
+
+fn cargo() -> Process {
+    Process::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()))
+}
+
+/// Builds the release `tw` (default features) and returns its path.
+fn build_tw() -> anyhow::Result<PathBuf> {
+    let status = cargo()
+        .current_dir(root())
+        .args([
+            "build",
+            "--quiet",
+            "--release",
+            "-p",
+            "textweaver-cli",
+            "--bin",
+            "tw",
+        ])
+        .status()
+        .context("running cargo")?;
+    if !status.success() {
+        bail!("building tw failed: {status}");
+    }
+    Ok(crate::eci::target_dir(&root())
+        .join("release")
+        .join(format!("tw{}", std::env::consts::EXE_SUFFIX)))
+}
 
 /// `cargo xtask bench`: re-runs xtask in release mode with the bench
 /// feature.
 pub fn run() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().skip(2).collect();
-    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
-    let status = Process::new(cargo)
+    let parsed = Args::parse(&args)?;
+    let mut extra = Vec::new();
+    if parsed.startup && parsed.tw.is_none() {
+        extra.push("--tw".to_owned());
+        extra.push(build_tw()?.display().to_string());
+    }
+    let status = cargo()
         .args([
             "run",
             "--quiet",
@@ -54,32 +170,269 @@ pub fn run() -> anyhow::Result<()> {
             "bench-run",
         ])
         .args(&args)
+        .args(&extra)
         .status()?;
     if !status.success() {
-        anyhow::bail!("bench failed: {status}");
+        bail!("bench failed: {status}");
     }
     Ok(())
 }
 
+/// The key of the startup timings in the JSON report.
+pub(crate) const STARTUP_KEY: &str = "startup";
+/// Timed runs of each startup command (after one warm-up run).
+pub(crate) const STARTUP_RUNS: usize = 5;
+
+/// The corpus the startup timings read (`md-1mb.md`), written if needed.
+pub(crate) fn startup_corpus() -> anyhow::Result<PathBuf> {
+    let dir = corpus_dir();
+    std::fs::create_dir_all(&dir)?;
+    let p = dir.join("md-1mb.md");
+    let text = markdown_corpus(1 << 20, 1);
+    if std::fs::read_to_string(&p).ok().as_deref() != Some(text.as_str()) {
+        std::fs::write(&p, &text)?;
+    }
+    Ok(p)
+}
+
+/// Median, fastest, and slowest of `samples`, in milliseconds.
+fn summary(samples: &[Duration]) -> Value {
+    let mut ms: Vec<f64> = samples.iter().map(|d| d.as_secs_f64() * 1000.0).collect();
+    ms.sort_by(f64::total_cmp);
+    let median = ms.get(ms.len() / 2).copied().unwrap_or(0.0);
+    json!({
+        "median_ms": median,
+        "min_ms": ms.first().copied().unwrap_or(0.0),
+        "max_ms": ms.last().copied().unwrap_or(0.0),
+        "n": ms.len(),
+    })
+}
+
+/// Times `tw --version`, `tw text`, `tw info`, and `tw backends` (the last
+/// three on `corpus`): one warm-up run, then `runs` timed runs each. A
+/// command that fails is an error.
+pub(crate) fn startup_timings(tw: &Path, corpus: &Path, runs: usize) -> anyhow::Result<Value> {
+    let corpus_arg = corpus.display().to_string();
+    let commands: [(&str, Vec<&str>); 4] = [
+        ("tw --version", vec!["--version"]),
+        ("tw text", vec!["text", &corpus_arg]),
+        ("tw info", vec!["info", &corpus_arg]),
+        ("tw backends", vec!["backends"]),
+    ];
+    println!("startup ({})", tw.display());
+    let mut out = serde_json::Map::new();
+    for (name, args) in commands {
+        let mut samples = Vec::new();
+        for i in 0..=runs {
+            let t = Instant::now();
+            let status = Process::new(tw)
+                .args(&args)
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status()
+                .with_context(|| format!("running {}", tw.display()))?;
+            let d = t.elapsed();
+            if !status.success() {
+                bail!("{name} failed ({status})");
+            }
+            if i > 0 {
+                samples.push(d);
+            }
+        }
+        let s = summary(&samples);
+        println!(
+            "  {name}: median {:.1} ms, fastest {:.1} ms, slowest {:.1} ms",
+            s["median_ms"].as_f64().unwrap_or(0.0),
+            s["min_ms"].as_f64().unwrap_or(0.0),
+            s["max_ms"].as_f64().unwrap_or(0.0)
+        );
+        out.insert(name.to_owned(), s);
+    }
+    println!();
+    Ok(Value::Object(out))
+}
+
+/// `cargo xtask startup [--tw PATH] [--json PATH]`: the startup timings on
+/// their own.
+pub fn startup() -> anyhow::Result<()> {
+    let args = Args::parse(&std::env::args().skip(2).collect::<Vec<_>>())?;
+    let tw = match args.tw {
+        Some(t) => t,
+        None => build_tw()?,
+    };
+    let v = startup_timings(&tw, &startup_corpus()?, STARTUP_RUNS)?;
+    let report = json!({ STARTUP_KEY: v });
+    if let Some(p) = args.json {
+        std::fs::write(&p, serde_json::to_string_pretty(&report)?)?;
+        println!("wrote {}", p.display());
+    }
+    if let Some(base) = &args.baseline {
+        gate(&report, base, args.max_ratio)?;
+    }
+    Ok(())
+}
+
+/// Numbers below these are not gated: too small to matter, and relatively
+/// noisy.
+const PEAK_FLOOR_MB: f64 = 1.0;
+const ALLOC_FLOOR: f64 = 5_000.0;
+
+/// What [`compare`] found.
+#[derive(Debug, Default)]
+pub(crate) struct Comparison {
+    /// Plain-sentence lines for the log and the job summary.
+    pub lines: Vec<String>,
+    /// The gated numbers over the limit.
+    pub failures: Vec<String>,
+}
+
+fn number(v: &Value) -> Option<f64> {
+    v.as_f64()
+        .or_else(|| v.get("mean_ms").and_then(Value::as_f64))
+        .or_else(|| v.get("median_ms").and_then(Value::as_f64))
+}
+
+/// Compares a bench report with a baseline report. Peak heap (`*_peak_mb`)
+/// and allocation counts (`*_allocs`) fail above `max_ratio` times the
+/// baseline; times are only reported.
+pub(crate) fn compare(current: &Value, baseline: &Value, max_ratio: f64) -> Comparison {
+    let mut c = Comparison::default();
+    let Some(docs) = current.as_object() else {
+        c.lines.push("The report is empty.".into());
+        return c;
+    };
+    for (doc, cur) in docs {
+        let Some(base) = baseline.get(doc) else {
+            c.lines
+                .push(format!("{doc}: no baseline, so nothing to compare."));
+            continue;
+        };
+        let Some(cur) = cur.as_object() else {
+            continue;
+        };
+        let mut gated = 0;
+        let mut worst: Option<(f64, String)> = None;
+        let mut slowest: Option<(f64, String)> = None;
+        for (key, v) in cur {
+            let (Some(now), Some(then)) = (number(v), base.get(key).and_then(number)) else {
+                continue;
+            };
+            let ratio = if then > 0.0 {
+                now / then
+            } else {
+                f64::INFINITY
+            };
+            let floor = if key.ends_with("_peak_mb") {
+                Some(PEAK_FLOOR_MB)
+            } else if key.ends_with("_allocs") {
+                Some(ALLOC_FLOOR)
+            } else {
+                None
+            };
+            match floor {
+                Some(floor) => {
+                    if now < floor {
+                        continue;
+                    }
+                    gated += 1;
+                    if worst.as_ref().is_none_or(|(r, _)| ratio > *r) {
+                        worst = Some((ratio, key.clone()));
+                    }
+                    if ratio > max_ratio {
+                        c.failures.push(format!(
+                            "{doc}: {key} grew from {then:.1} to {now:.1}, {ratio:.2} times the baseline (the limit is {max_ratio})."
+                        ));
+                    }
+                }
+                None if (key.ends_with("_ms") || v.is_object())
+                    && then >= 0.05
+                    && slowest.as_ref().is_none_or(|(r, _)| ratio > *r) =>
+                {
+                    slowest = Some((ratio, key.clone()));
+                }
+                None => {}
+            }
+        }
+        let mut line = format!("{doc}: {gated} memory numbers checked");
+        if let Some((r, k)) = worst {
+            line.push_str(&format!(", the largest change {r:.2} times ({k})"));
+        }
+        if let Some((r, k)) = slowest {
+            line.push_str(&format!(
+                "; for information, the largest time change {r:.2} times ({k})"
+            ));
+        }
+        line.push('.');
+        c.lines.push(line);
+    }
+    c
+}
+
+/// Compares `report` with the baseline file and fails when a gated number
+/// is over the limit. Writes the result to the GitHub job summary when
+/// there is one.
+pub(crate) fn gate(report: &Value, baseline: &Path, max_ratio: f64) -> anyhow::Result<()> {
+    let text = std::fs::read_to_string(baseline)
+        .with_context(|| format!("reading the baseline {}", baseline.display()))?;
+    let base: Value = serde_json::from_str(&text)
+        .with_context(|| format!("parsing the baseline {}", baseline.display()))?;
+    let c = compare(report, &base, max_ratio);
+    println!("Compared with {}:", baseline.display());
+    for l in &c.lines {
+        println!("  {l}");
+    }
+    for f in &c.failures {
+        println!("  Over the limit: {f}");
+    }
+    if let Some(summary) = std::env::var_os("GITHUB_STEP_SUMMARY") {
+        use std::io::Write as _;
+        if let Ok(mut f) = std::fs::OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(summary)
+        {
+            let _ = writeln!(f, "## Benchmark gate\n");
+            for l in c.lines.iter() {
+                let _ = writeln!(f, "- {l}");
+            }
+            for l in c.failures.iter() {
+                let _ = writeln!(f, "- Over the limit: {l}");
+            }
+            if c.failures.is_empty() {
+                let _ = writeln!(f, "\nNo memory number grew more than {max_ratio} times.");
+            }
+        }
+    }
+    if !c.failures.is_empty() {
+        bail!(
+            "{} memory numbers grew more than {max_ratio} times the baseline",
+            c.failures.len()
+        );
+    }
+    println!("No memory number grew more than {max_ratio} times.");
+    Ok(())
+}
+
 /// The workspace root (xtask's parent directory).
-fn root() -> PathBuf {
+pub(crate) fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .map_or_else(|| PathBuf::from("."), Path::to_path_buf)
 }
 
 /// Where generated corpora go: `<target>/bench-corpus`.
-fn corpus_dir() -> PathBuf {
+pub(crate) fn corpus_dir() -> PathBuf {
     let target =
         std::env::var_os("CARGO_TARGET_DIR").map_or_else(|| root().join("target"), PathBuf::from);
     target.join("bench-corpus")
 }
 
 /// A small deterministic random source (no dependency; reproducible corpora).
-struct Lcg(u64);
+pub(crate) struct Lcg(pub(crate) u64);
 
 impl Lcg {
-    fn next(&mut self) -> u64 {
+    pub(crate) fn next(&mut self) -> u64 {
         self.0 = self
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
@@ -87,7 +440,7 @@ impl Lcg {
         self.0 >> 33
     }
 
-    fn below(&mut self, n: usize) -> usize {
+    pub(crate) fn below(&mut self, n: usize) -> usize {
         usize::try_from(self.next()).unwrap_or(0) % n.max(1)
     }
 }
@@ -289,6 +642,10 @@ pub mod alloc {
 
     static CURRENT: AtomicUsize = AtomicUsize::new(0);
     static PEAK: AtomicUsize = AtomicUsize::new(0);
+    /// Allocation calls (alloc, alloc_zeroed, realloc) since the start.
+    static ALLOCS: AtomicUsize = AtomicUsize::new(0);
+    /// [`ALLOCS`] at the last [`reset_peak`].
+    static ALLOCS_AT_RESET: AtomicUsize = AtomicUsize::new(0);
 
     fn grew(by: usize) {
         let now = CURRENT.fetch_add(by, Relaxed) + by;
@@ -304,6 +661,7 @@ pub mod alloc {
             let p = unsafe { System.alloc(layout) };
             if !p.is_null() {
                 grew(layout.size());
+                ALLOCS.fetch_add(1, Relaxed);
             }
             p
         }
@@ -313,6 +671,7 @@ pub mod alloc {
             let p = unsafe { System.alloc_zeroed(layout) };
             if !p.is_null() {
                 grew(layout.size());
+                ALLOCS.fetch_add(1, Relaxed);
             }
             p
         }
@@ -327,6 +686,7 @@ pub mod alloc {
             // SAFETY: forwarded unchanged; `ptr` came from this allocator.
             let q = unsafe { System.realloc(ptr, layout, new_size) };
             if !q.is_null() {
+                ALLOCS.fetch_add(1, Relaxed);
                 if new_size >= layout.size() {
                     grew(new_size - layout.size());
                 } else {
@@ -342,14 +702,23 @@ pub mod alloc {
         CURRENT.load(Relaxed)
     }
 
-    /// Starts a new peak measurement at the current level.
+    /// Starts a new peak measurement at the current level, and a new count
+    /// of allocations.
     pub fn reset_peak() {
         PEAK.store(CURRENT.load(Relaxed), Relaxed);
+        ALLOCS_AT_RESET.store(ALLOCS.load(Relaxed), Relaxed);
     }
 
     /// The highest live heap since the last [`reset_peak`].
     pub fn peak() -> usize {
         PEAK.load(Relaxed)
+    }
+
+    /// Allocation calls since the last [`reset_peak`].
+    pub fn allocs() -> usize {
+        ALLOCS
+            .load(Relaxed)
+            .saturating_sub(ALLOCS_AT_RESET.load(Relaxed))
     }
 }
 
@@ -535,13 +904,19 @@ mod inner {
             );
         }
 
+        /// Records the peak heap (`key`, ending in `_peak_mb`) and the
+        /// allocation count (the same key ending in `_allocs`) since the
+        /// last `alloc::reset_peak`.
         fn peak(&mut self, key: &str, label: &str) {
             let p = alloc::peak();
+            let n = alloc::allocs();
+            let count_key = format!("{}_allocs", key.trim_end_matches("_peak_mb"));
             self.put(
                 key,
                 json!(mb(p)),
-                format!("{label}: {:.1} MB peak heap", mb(p)),
+                format!("{label}: {:.1} MB peak heap, {n} allocations", mb(p)),
             );
+            self.values.push((count_key, json!(n)));
         }
     }
 
@@ -877,27 +1252,16 @@ mod inner {
         app.shutdown();
     }
 
-    fn parse_args() -> (bool, Vec<PathBuf>, Option<PathBuf>, Option<String>) {
-        let mut quick = false;
-        let mut files = Vec::new();
-        let mut json = None;
-        let mut only = None;
-        let mut args = std::env::args().skip(2);
-        while let Some(a) = args.next() {
-            match a.as_str() {
-                "--quick" => quick = true,
-                "--file" => files.extend(args.next().map(PathBuf::from)),
-                "--json" => json = args.next().map(PathBuf::from),
-                "--only" => only = args.next(),
-                other => eprintln!("ignoring unknown option {other}"),
-            }
-        }
-        (quick, files, json, only)
-    }
-
     /// Runs the benchmarks (the `bench-run` task).
     pub fn run_inner() -> anyhow::Result<()> {
-        let (quick, files, json_out, only) = parse_args();
+        let args = super::Args::parse(&std::env::args().skip(2).collect::<Vec<_>>())?;
+        let super::Args {
+            quick,
+            files,
+            json: json_out,
+            only,
+            ..
+        } = args.clone();
         let dir = super::corpus_dir();
         std::fs::create_dir_all(&dir)?;
         let mut docs: Vec<(String, PathBuf)> = Vec::new();
@@ -946,9 +1310,20 @@ mod inner {
             );
         }
         let _ = std::fs::remove_dir_all(&home);
+        if let Some(tw) = &args.tw {
+            let corpus = super::startup_corpus()?;
+            all.insert(
+                super::STARTUP_KEY.to_owned(),
+                super::startup_timings(tw, &corpus, super::STARTUP_RUNS)?,
+            );
+        }
+        let all = Value::Object(all);
         if let Some(p) = json_out {
-            std::fs::write(&p, serde_json::to_string_pretty(&Value::Object(all))?)?;
+            std::fs::write(&p, serde_json::to_string_pretty(&all)?)?;
             println!("wrote {}", p.display());
+        }
+        if let Some(base) = &args.baseline {
+            super::gate(&all, base, args.max_ratio)?;
         }
         Ok(())
     }
@@ -970,5 +1345,93 @@ mod tests {
         assert!(!list.lines().skip(2).any(str::is_empty));
         let one = one_line_corpus(5_000, 3);
         assert_eq!(one.lines().count(), 1);
+    }
+
+    fn s(v: &[&str]) -> Vec<String> {
+        v.iter().map(|x| (*x).to_owned()).collect()
+    }
+
+    #[test]
+    fn options_parse() {
+        let a = Args::parse(&s(&[
+            "--quick",
+            "--json",
+            "b.json",
+            "--baseline",
+            "main.json",
+            "--max-ratio",
+            "2.5",
+            "--no-startup",
+        ]))
+        .unwrap();
+        assert!(a.quick && !a.startup);
+        assert_eq!(a.json, Some(PathBuf::from("b.json")));
+        assert_eq!(a.baseline, Some(PathBuf::from("main.json")));
+        assert!((a.max_ratio - 2.5).abs() < f64::EPSILON);
+        assert_eq!(Args::parse(&[]).unwrap(), Args::default());
+        assert!(Args::parse(&s(&["--max-ratio", "0.5"])).is_err());
+        assert!(Args::parse(&s(&["--max-ratio", "lots"])).is_err());
+        assert!(Args::parse(&s(&["--baseline"])).is_err());
+        assert!(Args::parse(&s(&["--bogus"])).is_err());
+    }
+
+    #[test]
+    fn the_gate_fails_on_memory_growth_only() {
+        let base = json!({
+            "md-1mb.md": {
+                "load_ms": 10.0,
+                "load_peak_mb": 20.0,
+                "load_allocs": 100000,
+                "plan_all_peak_mb": 0.2,
+                "nav_idle_word_dispatch": {"mean_ms": 0.1, "p50_ms": 0.1, "max_ms": 0.2, "n": 20},
+            },
+            "gone.md": {"load_peak_mb": 5.0},
+        });
+        // Twice as slow, a little more memory: passes.
+        let ok = json!({
+            "md-1mb.md": {
+                "load_ms": 25.0,
+                "load_peak_mb": 30.0,
+                "load_allocs": 160000,
+                "plan_all_peak_mb": 0.9,
+                "nav_idle_word_dispatch": {"mean_ms": 0.5, "p50_ms": 0.5, "max_ms": 0.9, "n": 20},
+            },
+            "new.md": {"load_peak_mb": 50.0},
+        });
+        let c = compare(&ok, &base, 2.0);
+        assert!(c.failures.is_empty(), "{:?}", c.failures);
+        assert!(c.lines.iter().any(|l| l.starts_with("new.md: no baseline")));
+        assert!(
+            c.lines
+                .iter()
+                .any(|l| l.contains("2 memory numbers checked") && l.contains("load_allocs")),
+            "{:?}",
+            c.lines
+        );
+        assert!(c.lines.iter().any(|l| l.contains("nav_idle_word_dispatch")));
+
+        // Allocation count more than doubled: fails, and says which.
+        let bad = json!({"md-1mb.md": {"load_peak_mb": 20.0, "load_allocs": 250000}});
+        let c = compare(&bad, &base, 2.0);
+        assert_eq!(c.failures.len(), 1, "{:?}", c.failures);
+        assert!(c.failures[0].contains("load_allocs"));
+        // A higher limit lets it through.
+        assert!(compare(&bad, &base, 3.0).failures.is_empty());
+        // Below the floor nothing is gated, however large the ratio.
+        let tiny = json!({"md-1mb.md": {"plan_all_peak_mb": 0.9}});
+        assert!(compare(&tiny, &base, 2.0).failures.is_empty());
+    }
+
+    #[test]
+    fn startup_summaries_take_the_median() {
+        let v = summary(&[
+            Duration::from_millis(30),
+            Duration::from_millis(10),
+            Duration::from_millis(20),
+        ]);
+        assert_eq!(v["median_ms"].as_f64(), Some(20.0));
+        assert_eq!(v["min_ms"].as_f64(), Some(10.0));
+        assert_eq!(v["max_ms"].as_f64(), Some(30.0));
+        assert_eq!(number(&v), Some(20.0));
     }
 }

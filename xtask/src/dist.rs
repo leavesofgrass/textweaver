@@ -27,9 +27,27 @@ use crate::eci::{self, HostBuild};
 
 /// The user binaries: (package, binary).
 const BINARIES: [(&str, &str); 2] = [("textweaver-tui", "textweaver"), ("textweaver-cli", "tw")];
-/// Features for the user binaries (subprocess backends only, so nothing
-/// extra is linked).
-const FEATURES: &str = "textweaver-tui/omnivox,textweaver-cli/omnivox";
+/// Speech engines built into the user binaries on this platform. Nothing
+/// extra is linked: Omnivox is a subprocess, speech-dispatcher a socket,
+/// and espeak-ng is loaded at run time when it is installed. Linux gets all
+/// three (the AppImage and the tarball); Windows and macOS keep Omnivox
+/// and their own engines.
+fn engines() -> &'static [&'static str] {
+    if cfg!(target_os = "linux") {
+        &["omnivox", "speechd", "espeak"]
+    } else {
+        &["omnivox"]
+    }
+}
+
+/// The `--features` value for the user binaries.
+pub(crate) fn features() -> String {
+    BINARIES
+        .iter()
+        .flat_map(|(package, _)| engines().iter().map(move |e| format!("{package}/{e}")))
+        .collect::<Vec<_>>()
+        .join(",")
+}
 /// The cargo profile for packages (root `Cargo.toml`, `[profile.dist]`).
 const PROFILE: &str = "dist";
 /// Where the licence files of bundled data go in the package: (source,
@@ -124,7 +142,7 @@ fn normalize(path: &str) -> String {
 }
 
 /// Copies every file under `src` into `dest`, keeping the layout.
-fn copy_tree(src: &Path, dest: &Path) -> anyhow::Result<()> {
+pub(crate) fn copy_tree(src: &Path, dest: &Path) -> anyhow::Result<()> {
     let mut files = Vec::new();
     collect(src, &mut files)?;
     for f in files {
@@ -177,6 +195,25 @@ fn package_name(version: &str, platform: &str) -> String {
 /// `cargo xtask dist`.
 pub fn run() -> anyhow::Result<()> {
     let args = parse(&std::env::args().skip(2).collect::<Vec<_>>())?;
+    let staged = stage(args.out.clone(), args.universal)?;
+    let archive = archive(&staged)?;
+    println!("package {}", archive.display());
+    Ok(())
+}
+
+/// A staged package folder.
+pub(crate) struct Staged {
+    /// The package name (`textweaver-VERSION-PLATFORM`).
+    pub name: String,
+    /// The staged folder, `out/name`.
+    pub dir: PathBuf,
+    /// The output folder.
+    pub out: PathBuf,
+}
+
+/// Builds the binaries and hosts and stages the package folder (everything
+/// but the archive). `out` defaults to `target/dist`.
+pub(crate) fn stage(out: Option<PathBuf>, universal: bool) -> anyhow::Result<Staged> {
     let root = eci::root();
     let version = env!("CARGO_PKG_VERSION");
     let build_dir = if cfg!(windows) {
@@ -184,18 +221,15 @@ pub fn run() -> anyhow::Result<()> {
     } else {
         eci::target_dir(&root)
     };
-    let out = args
-        .out
-        .clone()
-        .unwrap_or_else(|| eci::target_dir(&root).join("dist"));
-    let name = package_name(version, &platform(args.universal));
+    let out = out.unwrap_or_else(|| eci::target_dir(&root).join("dist"));
+    let name = package_name(version, &platform(universal));
     let stage = out.join(&name);
     if stage.exists() {
         fs::remove_dir_all(&stage).with_context(|| format!("clearing {}", stage.display()))?;
     }
     fs::create_dir_all(&stage)?;
 
-    if args.universal {
+    if universal {
         for t in MAC_TARGETS {
             build_binaries(&root, &build_dir, Some(t))?;
         }
@@ -269,12 +303,29 @@ pub fn run() -> anyhow::Result<()> {
         copy_tree(&site, &stage.join(SITE_DIR))?;
     }
 
-    check_notices(&stage)?;
+    // Linux: the menu entry and the icon, for the tarball's users and the
+    // AppImage (scripts/linux/).
+    if cfg!(target_os = "linux") {
+        for (src, dest) in LINUX_DESKTOP_FILES {
+            eci::copy(&root.join(src), &stage.join(dest))?;
+        }
+    }
 
-    let archive = if cfg!(windows) {
+    check_notices(&stage)?;
+    Ok(Staged {
+        name,
+        dir: stage,
+        out,
+    })
+}
+
+/// Archives a staged package: a `.zip` on Windows, a `.tar.gz` elsewhere.
+pub(crate) fn archive(staged: &Staged) -> anyhow::Result<PathBuf> {
+    let Staged { name, dir, out } = staged;
+    if cfg!(windows) {
         let zip = out.join(format!("{name}.zip"));
-        zip_dir(&stage, &name, &zip)?;
-        zip
+        zip_dir(dir, name, &zip)?;
+        Ok(zip)
     } else {
         let tgz = out.join(format!("{name}.tar.gz"));
         run_tool(
@@ -282,14 +333,24 @@ pub fn run() -> anyhow::Result<()> {
                 .arg("-czf")
                 .arg(&tgz)
                 .arg("-C")
-                .arg(&out)
-                .arg(&name),
+                .arg(out)
+                .arg(name),
         )?;
-        tgz
-    };
-    println!("package {}", archive.display());
-    Ok(())
+        Ok(tgz)
+    }
 }
+
+/// The Linux menu entry and icon: (source, path in the package).
+pub(crate) const LINUX_DESKTOP_FILES: [(&str, &str); 2] = [
+    (
+        "scripts/linux/textweaver.desktop",
+        "share/applications/textweaver.desktop",
+    ),
+    (
+        "scripts/linux/textweaver.svg",
+        "share/icons/hicolor/scalable/apps/textweaver.svg",
+    ),
+];
 
 /// Copies the third-party notices and the data licence files into `stage`.
 fn stage_notices(root: &Path, stage: &Path) -> anyhow::Result<()> {
@@ -333,14 +394,8 @@ fn cargo(root: &Path, build_dir: &Path) -> Command {
 
 fn build_binaries(root: &Path, build_dir: &Path, target: Option<&str>) -> anyhow::Result<()> {
     let mut cmd = cargo(root, build_dir);
-    cmd.args([
-        "build",
-        "--locked",
-        "--profile",
-        PROFILE,
-        "--features",
-        FEATURES,
-    ]);
+    cmd.args(["build", "--locked", "--profile", PROFILE, "--features"])
+        .arg(features());
     for (package, bin) in BINARIES {
         cmd.args(["-p", package, "--bin", bin]);
     }
@@ -448,6 +503,27 @@ mod tests {
             parse(&["--universal".into()]).is_ok(),
             cfg!(target_os = "macos")
         );
+    }
+
+    #[test]
+    fn engines_follow_the_platform() {
+        let f = features();
+        assert!(f.contains("textweaver-tui/omnivox"), "{f}");
+        assert!(f.contains("textweaver-cli/omnivox"), "{f}");
+        let linux = cfg!(target_os = "linux");
+        assert_eq!(f.contains("textweaver-cli/speechd"), linux, "{f}");
+        assert_eq!(f.contains("textweaver-tui/espeak"), linux, "{f}");
+    }
+
+    #[test]
+    fn linux_desktop_files_exist() {
+        let root = eci::root();
+        for (src, _) in LINUX_DESKTOP_FILES {
+            assert!(root.join(src).is_file(), "{src} is packaged but missing");
+        }
+        let desktop = fs::read_to_string(root.join(LINUX_DESKTOP_FILES[0].0)).unwrap();
+        assert!(desktop.lines().any(|l| l.trim_end() == "Terminal=true"));
+        assert!(desktop.lines().any(|l| l.trim_end() == "Icon=textweaver"));
     }
 
     #[test]
