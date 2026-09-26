@@ -1095,13 +1095,22 @@ fn choose_voice_lists_the_voices_and_enter_speaks_a_sample() {
             _ => None,
         })
         .expect("a voice list");
-    assert_eq!(items, ["Test voice", "Second voice"]);
+    // The voice manager: two filter rows, then the voices.
+    assert_eq!(
+        items,
+        [
+            "Language: all languages",
+            "Engine: all engines",
+            "Test voice",
+            "Second voice"
+        ]
+    );
     assert_eq!(
         r.said.last(),
-        "Voices, 2 voices, favourites first. Enter chooses one and speaks a sample, Space adds or removes a favourite, Escape cancels."
+        "Voice manager. 2 voices: all languages, all engines. Enter uses a voice and speaks a sample, or downloads one; Space marks a favourite; Delete removes a downloaded voice; Escape closes."
     );
     r.log.clear();
-    r.app.dispatch(Command::Choose(0));
+    r.app.dispatch(Command::Choose(2));
     assert_eq!(r.said.last(), "Voice Test voice.");
     assert_eq!(r.app.settings().speech.voice.as_deref(), Some("test"));
     r.wait_spoken(|u| u.text.contains("quick brown fox"));
@@ -1115,8 +1124,54 @@ fn choose_voice_lists_the_voices_and_enter_speaks_a_sample() {
     assert!(effects.iter().any(|e| matches!(
         e,
         Effect::ShowList { items, .. }
-            if items == &["Test voice, current".to_owned(), "Second voice".to_owned()]
+            if items[2..] == ["Test voice, current".to_owned(), "Second voice".to_owned()]
     )));
+}
+
+/// Each voice keeps its own rate, as screen readers do (Agent W3f).
+#[test]
+fn each_voice_keeps_its_own_rate() {
+    let mut r = rig(PROSE);
+    r.act(ActionId::ChooseVoice);
+    r.app.dispatch(Command::Choose(2)); // Test voice
+    let first = r.app.settings().speech.rate.wpm();
+    r.act(ActionId::RateUp);
+    let faster = r.app.settings().speech.rate.wpm();
+    assert!(faster > first);
+    r.act(ActionId::ChooseVoice);
+    r.app.dispatch(Command::Choose(3)); // Second voice: never tuned
+    assert_eq!(r.app.settings().speech.rate.wpm(), faster);
+    r.act(ActionId::RateUp);
+    r.act(ActionId::RateUp);
+    let second = r.app.settings().speech.rate.wpm();
+    r.act(ActionId::ChooseVoice);
+    r.app.dispatch(Command::Choose(2)); // back to Test voice
+    assert_eq!(r.app.settings().speech.rate.wpm(), faster);
+    assert!(
+        r.said
+            .last()
+            .ends_with(&format!("{faster} words per minute.")),
+        "{}",
+        r.said.last()
+    );
+    r.act(ActionId::ChooseVoice);
+    r.app.dispatch(Command::Choose(3));
+    assert_eq!(r.app.settings().speech.rate.wpm(), second);
+}
+
+/// The voice manager's filter rows cycle the languages and engines.
+#[test]
+fn voice_manager_filter_rows_cycle() {
+    let mut r = rig(PROSE);
+    r.act(ActionId::ChooseVoice);
+    let effects = r.app.dispatch(Command::Choose(1));
+    assert_eq!(r.said.last(), "2 voices: all languages, test-recording.");
+    let Some(Effect::ShowList { items, .. }) = effects.first() else {
+        panic!("{effects:?}");
+    };
+    assert_eq!(items[1], "Engine: test-recording");
+    r.app.dispatch(Command::Choose(1));
+    assert_eq!(r.said.last(), "2 voices: all languages, all engines.");
 }
 
 /// `speech.favorite_voices` puts favourites first in the voice list, and
@@ -1125,12 +1180,15 @@ fn choose_voice_lists_the_voices_and_enter_speaks_a_sample() {
 fn favourite_voices_come_first_and_space_marks_them() {
     let mut r = rig(PROSE);
     r.act(ActionId::ChooseVoice);
-    let effects = r.app.dispatch(Command::MarkItem(1));
+    let effects = r.app.dispatch(Command::MarkItem(3));
     assert_eq!(r.said.last(), "Second voice added to favourites.");
     let Some(Effect::ShowList { items, .. }) = effects.first() else {
         panic!("{effects:?}");
     };
-    assert_eq!(items, &["Test voice", "Second voice, favourite"]);
+    assert_eq!(&items[2..], &["Test voice", "Second voice, favourite"]);
+    // A filter row cannot be a favourite.
+    r.app.dispatch(Command::MarkItem(0));
+    assert_eq!(r.said.last(), "Only a voice can be a favourite.");
     assert_eq!(r.app.settings().speech.favorite_voices, ["second"]);
     // Next time the favourite is first, and choosing by position follows.
     r.app.dispatch(Command::Cancel);
@@ -1142,12 +1200,12 @@ fn favourite_voices_come_first_and_space_marks_them() {
             _ => None,
         })
         .unwrap();
-    assert_eq!(items, ["Second voice, favourite", "Test voice"]);
-    r.app.dispatch(Command::Choose(0));
+    assert_eq!(items[2..], ["Second voice, favourite", "Test voice"]);
+    r.app.dispatch(Command::Choose(2));
     assert_eq!(r.app.settings().speech.voice.as_deref(), Some("second"));
     // Space again removes it; other lists say there is nothing to mark.
     r.act(ActionId::ChooseVoice);
-    r.app.dispatch(Command::MarkItem(0));
+    r.app.dispatch(Command::MarkItem(2));
     assert_eq!(r.said.last(), "Second voice removed from favourites.");
     assert!(r.app.settings().speech.favorite_voices.is_empty());
     r.act(ActionId::KeyboardHelp);

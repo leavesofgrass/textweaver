@@ -118,12 +118,27 @@ fn list_other_engines(
 }
 
 /// The title of the voice list.
-const TITLE: &str = "Voices";
+const TITLE: &str = "Choose a voice";
 
 impl App {
-    /// The Piper voices folder and store, from the settings.
-    fn piper_store(&self) -> textweaver_piper::VoiceStore {
-        crate::backends::piper_config(&self.settings).store()
+    /// The Piper voices folder: `[speech.piper] voices` or
+    /// `TEXTWEAVER_PIPER_VOICES` when set, else `piper/voices` in this
+    /// session's data folder. `None` in a session that keeps no files.
+    fn piper_store(&self) -> Option<textweaver_piper::VoiceStore> {
+        let mut config = crate::backends::piper_config(&self.settings);
+        let overridden = std::env::var_os("TEXTWEAVER_PIPER_VOICES").is_some_and(|v| !v.is_empty())
+            || self
+                .settings
+                .speech
+                .extra
+                .get("piper")
+                .and_then(|t| t.get("voices"))
+                .and_then(|v| v.as_str())
+                .is_some_and(|v| !v.is_empty());
+        if !overridden {
+            config.voices_dir = self.paths.as_ref()?.data_dir.join("piper").join("voices");
+        }
+        Some(config.store())
     }
 
     /// The engine and voice in use.
@@ -140,14 +155,15 @@ impl App {
     fn gather_voices(&self, engine_voices: &[textweaver_speech::Voice]) -> Vec<VoiceEntry> {
         let engine = self.speech.backend_id();
         let mut entries = engine_entries(engine, &self.backend_name, engine_voices);
-        let store = self.piper_store();
-        let catalog = cached_catalog(store.dir());
-        let piper = piper_entries(&store, catalog.as_ref());
-        entries.extend(
-            piper
-                .into_iter()
-                .filter(|p| !(engine == PIPER && p.status == VoiceStatus::Ready)),
-        );
+        if let Some(store) = self.piper_store() {
+            let catalog = cached_catalog(store.dir());
+            let piper = piper_entries(&store, catalog.as_ref());
+            entries.extend(
+                piper
+                    .into_iter()
+                    .filter(|p| !(engine == PIPER && p.status == VoiceStatus::Ready)),
+            );
+        }
         entries
     }
 
@@ -179,7 +195,7 @@ impl App {
             None => {}
         }
         let favourites = self.settings.speech.favorite_voices.clone();
-        self.voices.manager.offer_catalog = true;
+        self.voices.manager.offer_catalog = self.piper_store().is_some();
         self.voices.manager.set_entries(entries, &favourites);
         let shown = self.voices.manager.shown_sentence();
         self.tell(&format!(
@@ -299,7 +315,10 @@ impl App {
             self.tell("A voice download is already in progress.");
             return vec![Effect::Redraw];
         }
-        let store = self.piper_store();
+        let Some(store) = self.piper_store() else {
+            self.error("There is no data folder to keep Piper voices in.");
+            return vec![Effect::Redraw];
+        };
         let Some(voice) = cached_catalog(store.dir()).and_then(|c| c.get(&e.voice.id).cloned())
         else {
             self.error("That voice is not in the Piper voice list any more.");
@@ -369,7 +388,11 @@ impl App {
                     ));
                     return vec![Effect::Redraw];
                 }
-                match self.piper_store().remove(&key) {
+                let removed = match self.piper_store() {
+                    Some(store) => store.remove(&key),
+                    None => Err(textweaver_piper::PiperError::NotInstalled(key.clone())),
+                };
+                match removed {
                     Ok(()) => {
                         textweaver_speech::forget_probes();
                         self.tell(&format!("{name} removed."));
@@ -379,8 +402,12 @@ impl App {
                 vec![Effect::Redraw]
             }
             (Confirm::Yes, VoiceQuestion::FetchCatalog) => {
+                let Some(store) = self.piper_store() else {
+                    self.error("There is no data folder to keep Piper voices in.");
+                    return vec![Effect::Redraw];
+                };
                 let (tx, rx) = std::sync::mpsc::channel();
-                let dir = self.piper_store().dir().to_owned();
+                let dir = store.dir().to_owned();
                 let spawned = std::thread::Builder::new()
                     .name("textweaver-voice-catalog".into())
                     .spawn(move || {
@@ -406,7 +433,10 @@ impl App {
     }
 
     fn start_download(&mut self, plan: DownloadPlan) -> Vec<Effect> {
-        let store = self.piper_store();
+        let Some(store) = self.piper_store() else {
+            self.error("There is no data folder to keep Piper voices in.");
+            return vec![Effect::Redraw];
+        };
         let name = plan.voice.describe();
         let short = textweaver_piper::catalog::display_name(&plan.voice.name);
         let total = plan.total_bytes();

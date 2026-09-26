@@ -349,6 +349,8 @@ impl VoiceManager {
     /// The row labels, to read and show. `current` is the engine and voice
     /// in use.
     pub fn labels(&self, favourites: &[String], current: (&str, Option<&str>)) -> Vec<String> {
+        // The engine is named only when the list holds more than one.
+        let several = self.engines().len() > 1;
         self.rows
             .iter()
             .map(|r| match r {
@@ -364,7 +366,7 @@ impl VoiceManager {
                         && current.1.is_some_and(|c| {
                             c == e.voice.id || c.eq_ignore_ascii_case(&e.voice.name)
                         });
-                    entry_label(e, fav, is_current)
+                    entry_label(e, several, fav, is_current)
                 }
             })
             .collect()
@@ -373,17 +375,19 @@ impl VoiceManager {
 
 /// "Joe (medium), en-US, Piper, medium, favourite, current", or for a
 /// download "Amy (low), en-US, Piper, download 63 MB, non-commercial".
-pub fn entry_label(e: &VoiceEntry, favourite: bool, current: bool) -> String {
+/// `engine` names the engine (when the list has several).
+pub fn entry_label(e: &VoiceEntry, engine: bool, favourite: bool, current: bool) -> String {
     let mut parts = vec![e.voice.name.clone()];
     if let Some(l) = e.voice.languages.first() {
         parts.push(l.clone());
     }
     let engine_tag = short_engine_name(&e.engine_name);
-    if !e
-        .voice
-        .tags
-        .iter()
-        .any(|t| t.eq_ignore_ascii_case(&engine_tag))
+    if engine
+        && !e
+            .voice
+            .tags
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case(&engine_tag))
     {
         parts.push(engine_tag);
     }

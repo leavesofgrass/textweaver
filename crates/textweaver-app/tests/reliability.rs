@@ -612,9 +612,9 @@ fn choose_voice_never_waits_and_opens_when_the_voices_arrive() {
     let Some(textweaver_app::Effect::ShowList { items, .. }) = effects.first() else {
         panic!("{effects:?}");
     };
-    assert!(items[0].starts_with("Vera"), "{items:?}");
+    assert!(items[2].starts_with("Vera"), "{items:?}");
     assert!(
-        said.last().starts_with("Voices, 1 voice"),
+        said.last().starts_with("Voice manager. 1 voice"),
         "{}",
         said.last()
     );
