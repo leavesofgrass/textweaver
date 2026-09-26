@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Implemented as decided. Math is now the first transform in the pipeline (`textweaver_math::speak_text`, ADR-0018), before Markdown residue, the lexicons, abbreviations, and numbers. Audio export maps word timings through the same offset maps, so subtitles show the document's text (ADR-0011), and the syllable display in `textweaver-aids` uses an `OffsetMap` too (ADR-0022).
 
 ## Context
 
@@ -37,3 +38,11 @@ Span { spoken: Range<u32>,   // bytes in the spoken text
 - The highlight is exact after any normalization, and pause/resume positions are exact.
 - Every transform must build its output with `SpokenBuilder` (or produce an equivalent map); a transform that returns a string without a map is not accepted.
 - Normalization test vectors from Star's `tests/test_ttstext.py` are ported as expected strings, and each also asserts the map's invariants.
+
+## See also
+
+- [Speech pipeline, step by step](../site/speech-pipeline.html): a worked example of an offset map, `$x^2$` read as "x squared".
+- [Math](../math.md): how math is spoken with exact highlighting.
+- [Speech engines and voices](../speech.md): normalization settings and engines that normalize natively.
+- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Documentation index](../README.md)

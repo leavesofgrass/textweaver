@@ -20,7 +20,8 @@
 //!    tree's `Figure` elements).
 //! 5. **Markers**: `PageBreak` per page (label = the printed page label
 //!    from `/PageLabels`, such as `iv` or `A-3`, else the page number;
-//!    range = that page's text, so reading can go to a page), `SectionBreak` per
+//!    range = that page's text, ready for page navigation, which the reader
+//!    does not offer yet), `SectionBreak` per
 //!    outline entry (label = its title, level = its depth), and the usual
 //!    heading, paragraph, list, table, code, and image markers.
 //!

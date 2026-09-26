@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-formats"
-description = "textweaver document loaders: loader trait, registry, text/Markdown/HTML (EPUB/DOCX in wave 2)"
+description = "textweaver document loaders: loader trait, registry, text, Markdown, HTML, EPUB, DOCX, PDF, and Pandoc for other formats"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

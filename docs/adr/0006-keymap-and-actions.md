@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Implemented, with additions. Single-key shortcuts can be turned off with F9 or `[keyboard] character_keys = false` (WCAG 2.1.4). Quitting and deleting a note ask first. Key overrides may name a layer with a prefix (`g:`, `b:`, `s:`, `e:`), and an override that would bind one key to two commands in a mode is not applied. In the terminal, F3 is Find next, so the keyboard list is on `?`, and F1 opens the help. The GUI's live-region announcer lives in the GUI spike (ADR-0014). Three note keys still come from the app's extra bindings rather than the keymap. The `Announcement` catalogue in `textweaver-a11y` is used for only a few events; most messages are worded in `textweaver-app`, and still pass through the announcer and its verbosity filter. Some help strings in the keymap are out of date: `add_note` attaches the note to the sentence at the cursor, and `list_notes`, `next_note`, and `previous_note` cover notes only (highlights are listed with Shift+Y).
 
 ## Context
 
@@ -35,3 +36,11 @@ Browse-layer single keys (Star's TUI keys: `.` `,` `;` `p` `P` `[` `]` `r` `h` `
 - One table drives bindings, help, the command palette, and documentation.
 - Users can rebind anything in either frontend, including the TUI.
 - Adding an action means adding one row to `action.rs`; the conflict and coverage tests keep the defaults sound.
+
+## See also
+
+- [Keyboard reference](../keyboard.md): the generated table of every action and key.
+- [Interactive keyboard reference](../site/keyboard.html): search and filter the keys.
+- [Reading and moving around](../reading.md): the keys in use.
+- [Using textweaver with a screen reader](../screen-readers.md): announcements, the status line, and `--no-speech`.
+- [Documentation index](../README.md)

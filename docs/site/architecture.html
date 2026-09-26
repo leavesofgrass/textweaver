@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crate map: textweaver guide</title>
+<meta name="description" content="An interactive map of the crates in the textweaver workspace and how they depend on each other.">
+<!-- BEGIN generated: theme-init -->
+<script>(function () {
+  try {
+    var t = window.localStorage.getItem("tw-site-theme");
+    if (t === "dark" || t === "light") { document.documentElement.setAttribute("data-theme", t); }
+  } catch (e) { /* storage blocked: follow the system setting */ }
+})();</script>
+<!-- END generated: theme-init -->
+<!-- BEGIN generated: base-style -->
+<style>
+/* Galaxy (dark, the default) and Galaxy Light, from
+   crates/textweaver-theme/themes/galaxy.toml and galaxy-light.toml. */
+:root {
+  --bg: #1e1e1e;
+  --surface: #2a2a2a;
+  --text: #dadada;
+  --dim: #858585;
+  --accent: #a882ff;
+  --h1: #c9b6ff;
+  --h2: #a98eff;
+  --h3: #8aa2ff;
+  --ok: #7bd0c1;
+  --code: #e0a87a;
+  --error: #ff7b93;
+  --mark-fg: #1e1e1e;
+  --mark-bg: #c9b6ff;
+  --sel-bg: #483d6b;
+  --focus-fg: #1e1e1e;
+  --border: var(--dim);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #ffffff;
+    --surface: #f2f0f9;
+    --text: #2e3338;
+    --dim: #727780;
+    --accent: #7c3aed;
+    --h1: #6c3fd6;
+    --h2: #8257e5;
+    --h3: #3a6df0;
+    --ok: #008577;
+    --code: #a65a2c;
+    --error: #c0264b;
+    --mark-fg: #ffffff;
+    --mark-bg: #6c3fd6;
+    --sel-bg: #d8caff;
+    --focus-fg: #ffffff;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #ffffff;
+  --surface: #f2f0f9;
+  --text: #2e3338;
+  --dim: #727780;
+  --accent: #7c3aed;
+  --h1: #6c3fd6;
+  --h2: #8257e5;
+  --h3: #3a6df0;
+  --ok: #008577;
+  --code: #a65a2c;
+  --error: #c0264b;
+  --mark-fg: #ffffff;
+  --mark-bg: #6c3fd6;
+  --sel-bg: #d8caff;
+  --focus-fg: #ffffff;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); color: var(--text); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+.wrap { max-width: 72rem; margin: 0 auto; padding: 0 1rem; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.5em 0 0.5em; }
+h1 { color: var(--h1); font-size: 2.1rem; margin-top: 0.75em; }
+h2 { color: var(--h2); font-size: 1.6rem; }
+h3 { color: var(--text); font-size: 1.25rem; }
+p, ul, ol, dl { margin: 0 0 1em; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 0.15em; }
+a:hover { text-decoration-thickness: 0.15em; }
+code, kbd {
+  font-family: "Atkinson Hyperlegible Mono", ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+  font-size: 0.95em;
+  color: var(--code);
+}
+kbd { border: 1px solid var(--border); border-radius: 0.25em; padding: 0 0.25em; color: var(--text); white-space: nowrap; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.vh {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: absolute; left: 0.5rem; top: -100rem; z-index: 10;
+  background: var(--bg); color: var(--accent); padding: 0.5rem 1rem;
+  border: 2px solid var(--accent); font-weight: bold;
+}
+.skip-link:focus { top: 0.5rem; }
+.site-header { border-bottom: 2px solid var(--border); padding: 0.5rem 0 0.75rem; }
+.site-header .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem; }
+.site-name { margin: 0; font-weight: bold; font-size: 1.25rem; }
+.site-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; }
+.site-nav a { display: inline-block; padding: 0.4rem 0.5rem; min-height: 2.75rem; line-height: 1.9rem; }
+.site-nav a[aria-current="page"] { color: var(--text); font-weight: bold; text-decoration-thickness: 0.2em; border-bottom: 3px solid var(--accent); }
+.theme-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-left: auto; }
+main { display: block; padding-bottom: 2rem; }
+.site-footer { border-top: 2px solid var(--border); padding: 1rem 0 2rem; }
+.site-footer h2 { font-size: 1.25rem; margin-top: 0.5em; }
+button, select, input, textarea { font: inherit; color: var(--text); }
+button, select, input[type="search"], input[type="number"], input[type="text"] {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 0.3rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.75rem;
+}
+button { cursor: pointer; }
+button:hover { border-color: var(--accent); }
+input[type="range"] { accent-color: var(--accent); min-height: 2.75rem; min-width: 12rem; max-width: 100%; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); width: 1.5rem; height: 1.5rem; margin: 0 0.5rem 0 0; vertical-align: middle; }
+fieldset { border: 2px solid var(--border); border-radius: 0.3rem; margin: 0 0 1rem; padding: 0.5rem 1rem 0.75rem; min-width: 0; }
+legend { font-weight: bold; padding: 0 0.25rem; }
+label { cursor: pointer; }
+.check { display: flex; align-items: center; min-height: 2.75rem; }
+.row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 0 0 1rem; }
+.field { display: flex; flex-direction: column; gap: 0.25rem; margin: 0 0 1rem; max-width: 100%; }
+.panel { background: var(--surface); border: 2px solid var(--border); border-radius: 0.4rem; padding: 0.5rem 1rem 1rem; margin: 0 0 1.5rem; }
+.panel h2:first-child, .panel h3:first-child { margin-top: 0.5em; }
+.status-line { border-left: 6px solid var(--accent); padding: 0.25rem 0.75rem; margin: 0 0 1rem; min-height: 2.5rem; }
+.note { border-left: 6px double var(--border); padding: 0.25rem 0.75rem; }
+.table-wrap { max-width: 100%; overflow-x: auto; margin: 0 0 1.5rem; }
+table { border-collapse: collapse; width: 100%; }
+caption { text-align: left; font-weight: bold; padding: 0.5rem 0; color: var(--text); }
+th, td { border: 1px solid var(--border); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+thead th { background: var(--surface); }
+td code, th code { overflow-wrap: break-word; }
+mark { background: var(--mark-bg); color: var(--mark-fg); }
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (forced-colors: active) {
+  :focus-visible { outline: 3px solid Highlight; }
+  button, select, input, fieldset, th, td, .panel, kbd { border-color: CanvasText; }
+  .site-nav a[aria-current="page"] { border-bottom-color: Highlight; }
+  .status-line, .note { border-left-color: CanvasText; }
+}
+@media print {
+  .site-header, .skip-link, .theme-switch { display: none; }
+}
+</style>
+<!-- END generated: base-style -->
+<style>
+.map { display: flex; flex-direction: column; gap: 0.75rem; margin: 0 0 1.5rem; }
+.layer { border: 2px solid var(--border); border-radius: 0.4rem; padding: 0 0.75rem 0.75rem; }
+.layer h3 { margin: 0.5em 0 0.1em; font-size: 1.1rem; }
+.layer p { margin: 0 0 0.5em; font-size: 1rem; }
+.layer ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.crate { min-width: 6.5rem; text-align: left; line-height: 1.3; padding: 0.35rem 0.6rem; border-width: 2px; }
+.crate .rel { display: block; font-size: 0.9rem; font-weight: bold; }
+.crate.is-chosen { border: 5px solid var(--accent); font-weight: bold; }
+.crate.is-dep { border: 3px dashed var(--text); }
+.crate.is-user { border: 5px double var(--text); }
+.legend { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.legend li { display: flex; align-items: center; gap: 0.5rem; }
+.swatch { display: inline-block; width: 2.5rem; height: 1.5rem; background: var(--surface); }
+.swatch.chosen { border: 5px solid var(--accent); }
+.swatch.dep { border: 3px dashed var(--text); }
+.swatch.user { border: 5px double var(--text); }
+.details dl { display: grid; grid-template-columns: minmax(8rem, max-content) 1fr; gap: 0.4rem 1rem; margin: 0; }
+.details dt { font-weight: bold; }
+.details dd { margin: 0; }
+.details ul { margin: 0; padding-left: 1.25rem; }
+.details .btn-list { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+@media (max-width: 36rem) {
+  .details dl { grid-template-columns: 1fr; }
+  .details dd { margin-bottom: 0.5rem; }
+}
+@media (forced-colors: active) {
+  .crate.is-chosen { border-color: Highlight; }
+  .crate.is-dep, .crate.is-user, .swatch { border-color: CanvasText; }
+}
+</style>
+</head>
+<body>
+<!-- BEGIN generated: header -->
+<a class="skip-link" href="#main">Skip to main content</a>
+<header class="site-header">
+  <div class="wrap">
+    <p class="site-name">textweaver guide</p>
+    <nav class="site-nav" aria-label="Site">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="architecture.html" aria-current="page">Crate map</a></li>
+        <li><a href="speech-pipeline.html">Speech pipeline</a></li>
+        <li><a href="keyboard.html">Keyboard</a></li>
+        <li><a href="features.html">Features</a></li>
+        <li><a href="reading-aids.html">Reading aids</a></li>
+      </ul>
+    </nav>
+    <div class="theme-switch">
+      <label for="theme-select">Color theme</label>
+      <select id="theme-select">
+        <option value="system">System</option>
+        <option value="dark">Dark (Galaxy)</option>
+        <option value="light">Light (Galaxy Light)</option>
+      </select>
+    </div>
+  </div>
+</header>
+<!-- END generated: header -->
+<main id="main" tabindex="-1">
+  <div class="wrap">
+    <h1>Crate map</h1>
+    <p>textweaver is one Cargo workspace made of many small crates.
+    Each crate has one job.
+    <span id="crate-summary">This page lists every crate, its job, and how it depends on the others.</span></p>
+    <noscript><p class="note">The interactive map needs JavaScript.
+    The <a href="../architecture.md">architecture guide</a> describes the same crates in text.</p></noscript>
+
+    <h2>The dependency rule</h2>
+    <p>Dependencies point one way: down.
+    The core crate is at the bottom and depends on no other crate in the workspace.
+    The speech crates receive utterances and never see a Document, so speech does not depend on the text model.
+    The frontends sit at the top: they turn keys into commands, and the app crate does the work.</p>
+    <p>Read more in the <a href="../architecture.md">architecture guide</a>
+    and in <a href="../adr/0001-workspace-and-dependencies.md">ADR-0001: Workspace layout and dependency policy</a>.</p>
+
+    <h2>Choose a crate</h2>
+    <div class="field">
+      <label for="crate-select">Crate</label>
+      <select id="crate-select"></select>
+    </div>
+    <section class="panel details" id="details" aria-labelledby="detail-heading">
+      <h3 id="detail-heading" tabindex="-1">No crate chosen</h3>
+      <div id="detail-body"><p>Choose a crate to see its job, its design decisions, and its dependencies.</p></div>
+    </section>
+    <p id="status" role="status" class="vh"></p>
+
+    <h2>Map of the crates</h2>
+    <p>The map shows the crates in layers, from the tools at the top to the foundation at the bottom.
+    Each crate is a button: press it to choose that crate.
+    Inside the map, the arrow keys move between crates, and Home and End go to the first and last crate.</p>
+    <p>The map marks the chosen crate and its neighbors with a border and a label:</p>
+    <ul class="legend">
+      <li><span class="swatch chosen" aria-hidden="true"></span> "chosen": a thick solid border.</li>
+      <li><span class="swatch dep" aria-hidden="true"></span> "depends on": the chosen crate uses this one; a dashed border.</li>
+      <li><span class="swatch user" aria-hidden="true"></span> "used by": this crate uses the chosen one; a double border.</li>
+    </ul>
+    <div class="map" id="map"></div>
+
+    <h2>All crates</h2>
+    <p>This table is the text version of the map.
+    Crate names start with <code>textweaver-</code>; the columns for dependencies use the short names.</p>
+    <div class="table-wrap" role="region" aria-labelledby="crate-table-caption" tabindex="0">
+      <table id="crate-table">
+        <caption id="crate-table-caption">Every crate in the workspace</caption>
+        <thead>
+          <tr>
+            <th scope="col">Crate</th>
+            <th scope="col">Layer</th>
+            <th scope="col">Job</th>
+            <th scope="col">Depends on</th>
+            <th scope="col">Used by</th>
+            <th scope="col">ADR</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <h2>Related documents</h2>
+    <ul>
+      <li><a href="../architecture.md">Architecture guide</a>: how the crates fit together, in text.</li>
+      <li><a href="../adr/0001-workspace-and-dependencies.md">ADR-0001: Workspace layout and dependency policy</a></li>
+      <li><a href="../plan.md">Implementation plan</a>: section 5 lists the crates and who owns them.</li>
+      <li><a href="README.md">About these pages</a></li>
+      <li><a href="../README.md">Documentation index</a></li>
+    </ul>
+  </div>
+</footer>
+<!-- BEGIN generated: site-data -->
+<script type="application/json" id="site-data">
+{
+ "crates": [
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0006-keymap-and-actions.md",
+     "number": "0006",
+     "title": "ADR-0006: Keymap, actions, and announcements"
+    },
+    {
+     "href": "../adr/0012-engine-host.md",
+     "number": "0012",
+     "title": "ADR-0012: One engine-host protocol and playback client"
+    }
+   ],
+   "bins": [
+    "xtask"
+   ],
+   "build_deps": [],
+   "default_member": false,
+   "dependents": [],
+   "deps": [
+    "textweaver-app",
+    "textweaver-formats",
+    "textweaver-keymap",
+    "textweaver-text"
+   ],
+   "description": "textweaver maintenance tasks: keyboard.md generation, Star parity report, engine hosts, benchmarks, release packages",
+   "dev_deps": [],
+   "job": "Maintenance tasks run with cargo xtask: keyboard.md, benchmarks, engine hosts, release packages, and the Star parity report.",
+   "layer": "tools",
+   "name": "xtask",
+   "path": "xtask",
+   "short": "xtask",
+   "tool": true,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0006-keymap-and-actions.md",
+     "number": "0006",
+     "title": "ADR-0006: Keymap, actions, and announcements"
+    },
+    {
+     "href": "../adr/0020-themes.md",
+     "number": "0020",
+     "title": "ADR-0020: Themes"
+    },
+    {
+     "href": "../adr/0022-reading-aids.md",
+     "number": "0022",
+     "title": "ADR-0022: Reading aids"
+    }
+   ],
+   "bins": [
+    "textweaver"
+   ],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-cli"
+   ],
+   "deps": [
+    "textweaver-aids",
+    "textweaver-app",
+    "textweaver-theme"
+   ],
+   "description": "textweaver terminal UI: self-voicing ratatui frontend",
+   "dev_deps": [],
+   "job": "The textweaver terminal frontend: a self-voicing ratatui reader.",
+   "layer": "frontends",
+   "name": "textweaver-tui",
+   "path": "crates/textweaver-tui",
+   "short": "tui",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0015-json-rpc.md",
+     "number": "0015",
+     "title": "ADR-0015: JSON-RPC server (tw serve --stdio)"
+    },
+    {
+     "href": "../adr/0016-rendering-and-conversion.md",
+     "number": "0016",
+     "title": "ADR-0016: Rendering and bulk conversion"
+    },
+    {
+     "href": "../adr/0011-audio-export.md",
+     "number": "0011",
+     "title": "ADR-0011: Audio export"
+    }
+   ],
+   "bins": [
+    "tw"
+   ],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [],
+   "deps": [
+    "textweaver-app",
+    "textweaver-cite",
+    "textweaver-convert",
+    "textweaver-dictation",
+    "textweaver-export",
+    "textweaver-render",
+    "textweaver-tui",
+    "textweaver-vault",
+    "textweaver-writers"
+   ],
+   "description": "tw: the textweaver command line (extract, search, speak, convert, export audio, cite, library, vault, dictate, settings, JSON-RPC)",
+   "dev_deps": [],
+   "job": "Builds tw, the scripting command-line tool: text, search, speak, convert, export audio, cite, serve, and more.",
+   "layer": "frontends",
+   "name": "textweaver-cli",
+   "path": "crates/textweaver-cli",
+   "short": "cli",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0014-gui-toolkit.md",
+     "number": "0014",
+     "title": "ADR-0014: GUI toolkit (wxDragon)"
+    }
+   ],
+   "bins": [
+    "textweaver-gui"
+   ],
+   "build_deps": [],
+   "default_member": false,
+   "dependents": [],
+   "deps": [
+    "textweaver-aids",
+    "textweaver-app",
+    "textweaver-fonts"
+   ],
+   "description": "textweaver native GUI on wxDragon: the Wave 2 feasibility spike (ADR-0014), not built by default",
+   "dev_deps": [],
+   "job": "The native GUI reader window on wxDragon; a feasibility spike, not built by default.",
+   "layer": "frontends",
+   "name": "textweaver-gui",
+   "path": "crates/textweaver-gui",
+   "short": "gui",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0003-speech-threading-and-event-timing.md",
+     "number": "0003",
+     "title": "ADR-0003: Speech threading and event timing"
+    },
+    {
+     "href": "../adr/0006-keymap-and-actions.md",
+     "number": "0006",
+     "title": "ADR-0006: Keymap, actions, and announcements"
+    },
+    {
+     "href": "../adr/0015-json-rpc.md",
+     "number": "0015",
+     "title": "ADR-0015: JSON-RPC server (tw serve --stdio)"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-cli",
+    "textweaver-gui",
+    "textweaver-tui",
+    "xtask"
+   ],
+   "deps": [
+    "textweaver-a11y",
+    "textweaver-aids",
+    "textweaver-apple",
+    "textweaver-core",
+    "textweaver-dectalk",
+    "textweaver-eci",
+    "textweaver-editor",
+    "textweaver-formats",
+    "textweaver-keymap",
+    "textweaver-sapi",
+    "textweaver-speech",
+    "textweaver-store",
+    "textweaver-text",
+    "textweaver-theme"
+   ],
+   "description": "textweaver application core: state, sessions, command dispatch, effects (UI-agnostic)",
+   "dev_deps": [],
+   "job": "The textweaver application core, independent of any UI.",
+   "layer": "application",
+   "name": "textweaver-app",
+   "path": "crates/textweaver-app",
+   "short": "app",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0016-rendering-and-conversion.md",
+     "number": "0016",
+     "title": "ADR-0016: Rendering and bulk conversion"
+    },
+    {
+     "href": "../adr/0018-math.md",
+     "number": "0018",
+     "title": "ADR-0018: Math"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-cli",
+    "textweaver-convert"
+   ],
+   "deps": [
+    "textweaver-math"
+   ],
+   "description": "Markdown to HTML with selectable engines and flavors (GFM, Obsidian, Pandoc), math as MathML, and MiniJinja templates",
+   "dev_deps": [],
+   "job": "Markdown rendering: Markdown to accessible HTML with a choice of engines, flavors, LaTeX math as MathML, and MiniJinja templates.",
+   "layer": "output",
+   "name": "textweaver-render",
+   "path": "crates/textweaver-render",
+   "short": "render",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0016-rendering-and-conversion.md",
+     "number": "0016",
+     "title": "ADR-0016: Rendering and bulk conversion"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-cli"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-formats",
+    "textweaver-render",
+    "textweaver-text",
+    "textweaver-writers"
+   ],
+   "description": "Fast bulk document conversion for textweaver: parallel, incremental, mirrored output trees",
+   "dev_deps": [],
+   "job": "Converts files and whole folder trees on all cores; the engine behind tw convert.",
+   "layer": "output",
+   "name": "textweaver-convert",
+   "path": "crates/textweaver-convert",
+   "short": "convert",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0017-writers.md",
+     "number": "0017",
+     "title": "ADR-0017: Native writers (EPUB 3, DOCX, BRF, tagged PDF)"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-cli",
+    "textweaver-convert"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-fonts",
+    "textweaver-text"
+   ],
+   "description": "Native document writers for textweaver: accessible EPUB 3, DOCX, BRF braille, tagged PDF",
+   "dev_deps": [
+    "textweaver-formats"
+   ],
+   "job": "Native writers: accessible EPUB 3, DOCX with real heading styles, BRF braille, and tagged PDF, written from a Document in pure Rust.",
+   "layer": "output",
+   "name": "textweaver-writers",
+   "path": "crates/textweaver-writers",
+   "short": "writers",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0017-writers.md",
+     "number": "0017",
+     "title": "ADR-0017: Native writers (EPUB 3, DOCX, BRF, tagged PDF)"
+    },
+    {
+     "href": "../adr/0022-reading-aids.md",
+     "number": "0022",
+     "title": "ADR-0022: Reading aids"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-aids",
+    "textweaver-gui",
+    "textweaver-writers"
+   ],
+   "deps": [],
+   "description": "Fonts for textweaver: bundled Atkinson Hyperlegible Next and Mono and OpenDyslexic (SIL OFL 1.1), and installed fonts found by family name",
+   "dev_deps": [],
+   "job": "Bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic) and installed fonts found by family name.",
+   "layer": "output",
+   "name": "textweaver-fonts",
+   "path": "crates/textweaver-fonts",
+   "short": "fonts",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0020-themes.md",
+     "number": "0020",
+     "title": "ADR-0020: Themes"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app",
+    "textweaver-tui"
+   ],
+   "deps": [],
+   "description": "Themes for textweaver: Star's palettes, custom themes, WCAG contrast checks, output for the TUI, GUI, and HTML",
+   "dev_deps": [],
+   "job": "Themes: one palette per theme, checked for WCAG contrast, and rendered for the terminal UI, the GUI, and HTML output.",
+   "layer": "output",
+   "name": "textweaver-theme",
+   "path": "crates/textweaver-theme",
+   "short": "theme",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0022-reading-aids.md",
+     "number": "0022",
+     "title": "ADR-0022: Reading aids"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app",
+    "textweaver-gui",
+    "textweaver-store",
+    "textweaver-tui"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-fonts",
+    "textweaver-text"
+   ],
+   "description": "Reading aids for textweaver: RSVP, bionic reading, syllable splitting, reading level, text spacing, reading ruler, difficult words",
+   "dev_deps": [],
+   "job": "Reading aids: RSVP, bionic reading, the reading ruler, text spacing, reading level, syllables, and difficult words.",
+   "layer": "output",
+   "name": "textweaver-aids",
+   "path": "crates/textweaver-aids",
+   "short": "aids",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-cli"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-store"
+   ],
+   "description": "Obsidian vault import and export for textweaver notes, highlights, and documents",
+   "dev_deps": [],
+   "job": "Obsidian vault import and export for notes, highlights, and documents.",
+   "layer": "output",
+   "name": "textweaver-vault",
+   "path": "crates/textweaver-vault",
+   "short": "vault",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0013-dictation.md",
+     "number": "0013",
+     "title": "ADR-0013: Dictation through a Whisper program"
+    }
+   ],
+   "bins": [
+    "tw-fake-whisper"
+   ],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-cli"
+   ],
+   "deps": [
+    "textweaver-core"
+   ],
+   "description": "Voice typing for textweaver: dictation trait and a whisper subprocess backend",
+   "dev_deps": [],
+   "job": "Voice typing: transcribes speech through a Whisper program and applies spoken commands.",
+   "layer": "output",
+   "name": "textweaver-dictation",
+   "path": "crates/textweaver-dictation",
+   "short": "dictation",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0001-workspace-and-dependencies.md",
+     "number": "0001",
+     "title": "ADR-0001: Workspace layout and dependency policy"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app",
+    "textweaver-vault"
+   ],
+   "deps": [
+    "textweaver-aids",
+    "textweaver-core"
+   ],
+   "description": "textweaver persistence: settings, keymap file, per-document state, notes, library, sidecar merge, recent files, settings import and export, Star migration",
+   "dev_deps": [],
+   "job": "Persistence: settings, key overrides, per-document state, recent files, and the library.",
+   "layer": "state",
+   "name": "textweaver-store",
+   "path": "crates/textweaver-store",
+   "short": "store",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0006-keymap-and-actions.md",
+     "number": "0006",
+     "title": "ADR-0006: Keymap, actions, and announcements"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app",
+    "xtask"
+   ],
+   "deps": [
+    "textweaver-core"
+   ],
+   "description": "textweaver keyboard: actions, key chords, layers, defaults, overrides, conflicts, help generation",
+   "dev_deps": [],
+   "job": "The keyboard vocabulary: every action, its default keys, layers, user overrides, and conflicts.",
+   "layer": "state",
+   "name": "textweaver-keymap",
+   "path": "crates/textweaver-keymap",
+   "short": "keymap",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0006-keymap-and-actions.md",
+     "number": "0006",
+     "title": "ADR-0006: Keymap, actions, and announcements"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app"
+   ],
+   "deps": [
+    "textweaver-core"
+   ],
+   "description": "textweaver accessibility: announcer trait, verbosity, speech and status-line announcers",
+   "dev_deps": [],
+   "job": "Announces every state change to the user, through speech, the terminal status line, or both.",
+   "layer": "state",
+   "name": "textweaver-a11y",
+   "path": "crates/textweaver-a11y",
+   "short": "a11y",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": {
+    "href": "../plan.md#66-editing-editor",
+    "text": "Plan section 6.6: Editing"
+   },
+   "adrs": [],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app"
+   ],
+   "deps": [
+    "textweaver-core"
+   ],
+   "description": "textweaver editing: undo/redo over a rope, Markdown commands, typing echo, autosave policy",
+   "dev_deps": [],
+   "job": "Editing: undo and redo over a rope, Markdown commands, typing echo, find and replace, and autosave.",
+   "layer": "state",
+   "name": "textweaver-editor",
+   "path": "crates/textweaver-editor",
+   "short": "editor",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0003-speech-threading-and-event-timing.md",
+     "number": "0003",
+     "title": "ADR-0003: Speech threading and event timing"
+    },
+    {
+     "href": "../adr/0004-rate-pitch-volume.md",
+     "number": "0004",
+     "title": "ADR-0004: Rate, pitch, and volume"
+    },
+    {
+     "href": "../adr/0005-narration-and-offset-map.md",
+     "number": "0005",
+     "title": "ADR-0005: Narration and the OffsetMap"
+    }
+   ],
+   "bins": [
+    "tw-fake-omnivox"
+   ],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app",
+    "textweaver-apple",
+    "textweaver-dectalk",
+    "textweaver-eci",
+    "textweaver-enginehost",
+    "textweaver-export",
+    "textweaver-sapi"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-math"
+   ],
+   "description": "textweaver speech: backend trait, speech service, pacing, queue, normalization, engines",
+   "dev_deps": [],
+   "job": "Speech backends and the speech service, with its own thread, queue, normalization, and word timing.",
+   "layer": "speech",
+   "name": "textweaver-speech",
+   "path": "crates/textweaver-speech",
+   "short": "speech",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0012-engine-host.md",
+     "number": "0012",
+     "title": "ADR-0012: One engine-host protocol and playback client"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-dectalk",
+    "textweaver-eci",
+    "textweaver-sapi"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-speech"
+   ],
+   "description": "Shared engine-host protocol and playback client for out-of-process speech engines (ECI, SAPI, DECtalk)",
+   "dev_deps": [],
+   "job": "The shared engine host: everything the out-of-process speech engines have in common, so each engine crate keeps only what is its own.",
+   "layer": "speech",
+   "name": "textweaver-enginehost",
+   "path": "crates/textweaver-enginehost",
+   "short": "enginehost",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0007-eloquence-via-eci-host.md",
+     "number": "0007",
+     "title": "ADR-0007: ETI-Eloquence through an ECI host process"
+    },
+    {
+     "href": "../adr/0012-engine-host.md",
+     "number": "0012",
+     "title": "ADR-0012: One engine-host protocol and playback client"
+    }
+   ],
+   "bins": [
+    "textweaver-eci-host"
+   ],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-enginehost",
+    "textweaver-speech"
+   ],
+   "description": "ETI-Eloquence for textweaver: ECI engine host process and speech backend",
+   "dev_deps": [],
+   "job": "Speaks with ETI-Eloquence through the ECI library the user installed, in a separate host process.",
+   "layer": "speech",
+   "name": "textweaver-eci",
+   "path": "crates/textweaver-eci",
+   "short": "eci",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0009-sapi5-voices.md",
+     "number": "0009",
+     "title": "ADR-0009: SAPI5 voices on Windows"
+    },
+    {
+     "href": "../adr/0012-engine-host.md",
+     "number": "0012",
+     "title": "ADR-0012: One engine-host protocol and playback client"
+    }
+   ],
+   "bins": [
+    "textweaver-sapi-host"
+   ],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-enginehost",
+    "textweaver-speech"
+   ],
+   "description": "Windows SAPI5 voices for textweaver: host process (x64 and x86) and speech backend",
+   "dev_deps": [],
+   "job": "Speaks with Windows SAPI5 voices, each in a host process built for the voice's architecture.",
+   "layer": "speech",
+   "name": "textweaver-sapi",
+   "path": "crates/textweaver-sapi",
+   "short": "sapi",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0008-apple-speech.md",
+     "number": "0008",
+     "title": "ADR-0008: Apple speech on macOS"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-speech"
+   ],
+   "description": "Apple speech for textweaver: NSSpeechSynthesizer and AVSpeechSynthesizer backends (macOS)",
+   "dev_deps": [],
+   "job": "Speaks with Apple's system voices on macOS, through the nsspeech and avspeech backends.",
+   "layer": "speech",
+   "name": "textweaver-apple",
+   "path": "crates/textweaver-apple",
+   "short": "apple",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0021-dectalk.md",
+     "number": "0021",
+     "title": "ADR-0021: DECtalk through a host process"
+    },
+    {
+     "href": "../adr/0012-engine-host.md",
+     "number": "0012",
+     "title": "ADR-0012: One engine-host protocol and playback client"
+    }
+   ],
+   "bins": [
+    "textweaver-dectalk-host"
+   ],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-enginehost",
+    "textweaver-speech"
+   ],
+   "description": "DECtalk for textweaver: engine host process and speech backend for a user-installed DECtalk",
+   "dev_deps": [],
+   "job": "Speaks with a DECtalk the user installed and licensed, through a separate host process.",
+   "layer": "speech",
+   "name": "textweaver-dectalk",
+   "path": "crates/textweaver-dectalk",
+   "short": "dectalk",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0011-audio-export.md",
+     "number": "0011",
+     "title": "ADR-0011: Audio export"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-cli"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-speech",
+    "textweaver-text"
+   ],
+   "description": "Audio and subtitle export for textweaver: WAV, MP3/M4B via ffmpeg, SRT/VTT cues, chapters",
+   "dev_deps": [],
+   "job": "Reads a document into audio and subtitle files: WAV, MP3, M4B with chapters, SRT, and WebVTT.",
+   "layer": "speech",
+   "name": "textweaver-export",
+   "path": "crates/textweaver-export",
+   "short": "export",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0002-text-model.md",
+     "number": "0002",
+     "title": "ADR-0002: Text model"
+    },
+    {
+     "href": "../adr/0005-narration-and-offset-map.md",
+     "number": "0005",
+     "title": "ADR-0005: Narration and the OffsetMap"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-aids",
+    "textweaver-app",
+    "textweaver-convert",
+    "textweaver-export",
+    "textweaver-formats",
+    "textweaver-writers",
+    "xtask"
+   ],
+   "deps": [
+    "textweaver-core"
+   ],
+   "description": "textweaver document model: rope text, markers, units, navigation, history, search, narration",
+   "dev_deps": [],
+   "job": "The textweaver document model and the pure operations on it.",
+   "layer": "document",
+   "name": "textweaver-text",
+   "path": "crates/textweaver-text",
+   "short": "text",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0010-pdf-loader.md",
+     "number": "0010",
+     "title": "ADR-0010: PDF loader"
+    },
+    {
+     "href": "../adr/0002-text-model.md",
+     "number": "0002",
+     "title": "ADR-0002: Text model"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app",
+    "textweaver-convert",
+    "xtask"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-text"
+   ],
+   "description": "textweaver document loaders: loader trait, registry, text, Markdown, HTML, EPUB, DOCX, PDF, and Pandoc for other formats",
+   "dev_deps": [],
+   "job": "Document loaders that turn text, Markdown, HTML, EPUB, DOCX, and PDF files into a document.",
+   "layer": "document",
+   "name": "textweaver-formats",
+   "path": "crates/textweaver-formats",
+   "short": "formats",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0018-math.md",
+     "number": "0018",
+     "title": "ADR-0018: Math"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-render",
+    "textweaver-speech"
+   ],
+   "deps": [
+    "textweaver-core"
+   ],
+   "description": "Math for textweaver: LaTeX and ASCIIMath parsing, MathML output, spoken math with offset maps, and math navigation",
+   "dev_deps": [],
+   "job": "Math: LaTeX and ASCIIMath parsed into one tree, written as MathML, and spoken as natural English.",
+   "layer": "document",
+   "name": "textweaver-math",
+   "path": "crates/textweaver-math",
+   "short": "math",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0019-citations.md",
+     "number": "0019",
+     "title": "ADR-0019: Citations"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-cli"
+   ],
+   "deps": [
+    "textweaver-core"
+   ],
+   "description": "Citations for textweaver: reference library, DOI and ISBN lookup, BibTeX/RIS/CSL-JSON, CSL styles",
+   "dev_deps": [],
+   "job": "Citations: a reference library, DOI and ISBN lookup, BibTeX, RIS, and CSL-JSON, and CSL styles.",
+   "layer": "document",
+   "name": "textweaver-cite",
+   "path": "crates/textweaver-cite",
+   "short": "cite",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0002-text-model.md",
+     "number": "0002",
+     "title": "ADR-0002: Text model"
+    },
+    {
+     "href": "../adr/0005-narration-and-offset-map.md",
+     "number": "0005",
+     "title": "ADR-0005: Narration and the OffsetMap"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-a11y",
+    "textweaver-aids",
+    "textweaver-app",
+    "textweaver-apple",
+    "textweaver-cite",
+    "textweaver-convert",
+    "textweaver-dectalk",
+    "textweaver-dictation",
+    "textweaver-eci",
+    "textweaver-editor",
+    "textweaver-enginehost",
+    "textweaver-export",
+    "textweaver-formats",
+    "textweaver-keymap",
+    "textweaver-math",
+    "textweaver-sapi",
+    "textweaver-speech",
+    "textweaver-store",
+    "textweaver-text",
+    "textweaver-vault",
+    "textweaver-writers"
+   ],
+   "deps": [],
+   "description": "Shared leaf types for textweaver: positions, units, offset maps, edits, voice parameters",
+   "dev_deps": [],
+   "job": "Shared leaf types: positions, units, offset maps, edits, and voice parameters.",
+   "layer": "foundation",
+   "name": "textweaver-core",
+   "path": "crates/textweaver-core",
+   "short": "core",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  }
+ ],
+ "generator": "tools/gen_site_data.py",
+ "layers": [
+  {
+   "about": "Maintenance tasks for developers; not part of the program.",
+   "crates": [
+    "xtask"
+   ],
+   "id": "tools",
+   "name": "Tools"
+  },
+  {
+   "about": "What you run: the terminal reader, the command-line tool, and the GUI.",
+   "crates": [
+    "textweaver-tui",
+    "textweaver-cli",
+    "textweaver-gui"
+   ],
+   "id": "frontends",
+   "name": "Frontends"
+  },
+  {
+   "about": "The application core that every frontend drives.",
+   "crates": [
+    "textweaver-app"
+   ],
+   "id": "application",
+   "name": "Application"
+  },
+  {
+   "about": "Writing other formats, and what changes how text looks.",
+   "crates": [
+    "textweaver-render",
+    "textweaver-convert",
+    "textweaver-writers",
+    "textweaver-fonts",
+    "textweaver-theme",
+    "textweaver-aids",
+    "textweaver-vault",
+    "textweaver-dictation"
+   ],
+   "id": "output",
+   "name": "Output and aids"
+  },
+  {
+   "about": "Settings, saved positions, keys, announcements, and editing.",
+   "crates": [
+    "textweaver-store",
+    "textweaver-keymap",
+    "textweaver-a11y",
+    "textweaver-editor"
+   ],
+   "id": "state",
+   "name": "State and input"
+  },
+  {
+   "about": "The speech service, its backends, and audio export.",
+   "crates": [
+    "textweaver-speech",
+    "textweaver-enginehost",
+    "textweaver-eci",
+    "textweaver-sapi",
+    "textweaver-apple",
+    "textweaver-dectalk",
+    "textweaver-export"
+   ],
+   "id": "speech",
+   "name": "Speech"
+  },
+  {
+   "about": "The document model and what loads, speaks, and cites it.",
+   "crates": [
+    "textweaver-text",
+    "textweaver-formats",
+    "textweaver-math",
+    "textweaver-cite"
+   ],
+   "id": "document",
+   "name": "Document"
+  },
+  {
+   "about": "Shared types that everything else builds on.",
+   "crates": [
+    "textweaver-core"
+   ],
+   "id": "foundation",
+   "name": "Foundation"
+  }
+ ],
+ "pages": [
+  {
+   "file": "index.html",
+   "title": "Home"
+  },
+  {
+   "file": "architecture.html",
+   "title": "Crate map"
+  },
+  {
+   "file": "speech-pipeline.html",
+   "title": "Speech pipeline"
+  },
+  {
+   "file": "keyboard.html",
+   "title": "Keyboard"
+  },
+  {
+   "file": "features.html",
+   "title": "Features"
+  },
+  {
+   "file": "reading-aids.html",
+   "title": "Reading aids"
+  }
+ ]
+}
+</script>
+<!-- END generated: site-data -->
+<!-- BEGIN generated: base-script -->
+<script>
+/* Shared by every page: data, announcements, theme switch. */
+window.TW = (function () {
+  "use strict";
+  var data = {};
+  try { data = JSON.parse(document.getElementById("site-data").textContent); } catch (e) { data = {}; }
+  var statusEl = document.getElementById("status");
+  var pending = null;
+  /* Replace the text of the page's one live region. Repeating the same text
+     clears it first, so screen readers announce it again. */
+  function announce(message) {
+    if (!statusEl) { return; }
+    window.clearTimeout(pending);
+    if (statusEl.textContent === message) {
+      statusEl.textContent = "";
+      pending = window.setTimeout(function () { statusEl.textContent = message; }, 100);
+    } else {
+      statusEl.textContent = message;
+    }
+  }
+  function debounce(fn, ms) {
+    var t = null;
+    return function () {
+      var args = arguments, self = this;
+      window.clearTimeout(t);
+      t = window.setTimeout(function () { fn.apply(self, args); }, ms);
+    };
+  }
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+  var KEY = "tw-site-theme";
+  var root = document.documentElement;
+  var select = document.getElementById("theme-select");
+  function currentTheme() {
+    var t = root.getAttribute("data-theme");
+    return (t === "dark" || t === "light") ? t : "system";
+  }
+  if (select) {
+    select.value = currentTheme();
+    select.addEventListener("change", function () {
+      var v = select.value;
+      if (v === "dark" || v === "light") { root.setAttribute("data-theme", v); } else { root.removeAttribute("data-theme"); }
+      try {
+        if (v === "dark" || v === "light") { window.localStorage.setItem(KEY, v); } else { window.localStorage.removeItem(KEY); }
+      } catch (e) { /* storage blocked: the choice lasts until the page closes */ }
+    });
+  }
+  /* A table wider than the screen scrolls inside its box. Only then is the
+     box a labelled region that Tab can reach, so the arrow keys can scroll
+     it; otherwise it is a plain box and adds no tab stop. */
+  function fitTables() {
+    Array.prototype.forEach.call(document.querySelectorAll(".table-wrap"), function (w) {
+      var label = w.getAttribute("aria-labelledby") || w.getAttribute("data-labelledby");
+      if (label) { w.setAttribute("data-labelledby", label); }
+      if (w.scrollWidth > w.clientWidth + 1) {
+        w.setAttribute("role", "region");
+        w.setAttribute("tabindex", "0");
+        if (label) { w.setAttribute("aria-labelledby", label); }
+      } else {
+        w.removeAttribute("role");
+        w.removeAttribute("tabindex");
+        w.removeAttribute("aria-labelledby");
+      }
+    });
+  }
+  window.addEventListener("resize", debounce(fitTables, 200));
+  window.addEventListener("load", fitTables);
+  return { data: data, announce: announce, debounce: debounce, plural: plural, fitTables: fitTables };
+})();
+</script>
+<!-- END generated: base-script -->
+<script>
+(function () {
+  "use strict";
+  var TW = window.TW, d = TW.data;
+  if (!d.crates) { return; }
+  var byName = {}, layerName = {};
+  d.crates.forEach(function (c) { byName[c.name] = c; });
+  d.layers.forEach(function (l) { layerName[l.id] = l.name; });
+  var select = document.getElementById("crate-select");
+  var map = document.getElementById("map");
+  var heading = document.getElementById("detail-heading");
+  var body = document.getElementById("detail-body");
+  var chosen = null;
+
+  function el(tag, attrs, text) {
+    var e = document.createElement(tag);
+    if (attrs) { Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); }); }
+    if (text !== undefined && text !== null) { e.textContent = text; }
+    return e;
+  }
+  function shortList(names) {
+    return names.length ? names.map(function (n) { return byName[n] ? byName[n].short : n; }).join(", ") : "none";
+  }
+
+  document.getElementById("crate-summary").textContent =
+    "It has " + TW.plural(d.crates.length, "crate", "crates") + " in " +
+    TW.plural(d.layers.length, "layer", "layers") + ".";
+
+  /* The select. */
+  select.appendChild(el("option", { value: "" }, "Choose a crate"));
+  d.layers.forEach(function (l) {
+    var group = el("optgroup", { label: l.name });
+    l.crates.forEach(function (n) { group.appendChild(el("option", { value: n }, n)); });
+    select.appendChild(group);
+  });
+
+  /* The map. */
+  var buttons = [];
+  d.layers.forEach(function (l) {
+    var box = el("div", { "class": "layer", role: "group", "aria-labelledby": "layer-" + l.id });
+    box.appendChild(el("h3", { id: "layer-" + l.id }, l.name));
+    box.appendChild(el("p", null, l.about));
+    var ul = el("ul");
+    l.crates.forEach(function (n) {
+      var li = el("li");
+      var b = el("button", { type: "button", "class": "crate", "data-name": n, "aria-pressed": "false" });
+      b.appendChild(el("span", { "class": "crate-name" }, byName[n].short));
+      b.appendChild(document.createTextNode(" "));
+      b.appendChild(el("span", { "class": "rel" }));
+      b.addEventListener("click", function () { choose(n, "map"); });
+      li.appendChild(b);
+      ul.appendChild(li);
+      buttons.push(b);
+    });
+    box.appendChild(ul);
+    map.appendChild(box);
+  });
+  map.addEventListener("keydown", function (e) {
+    var i = buttons.indexOf(document.activeElement);
+    if (i < 0) { return; }
+    var next = null;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") { next = Math.min(i + 1, buttons.length - 1); }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { next = Math.max(i - 1, 0); }
+    else if (e.key === "Home") { next = 0; }
+    else if (e.key === "End") { next = buttons.length - 1; }
+    if (next !== null) { e.preventDefault(); buttons[next].focus(); }
+  });
+
+  /* The table. */
+  var tbody = document.querySelector("#crate-table tbody");
+  document.getElementById("crate-table-caption").textContent =
+    "Every crate in the workspace: " + TW.plural(d.crates.length, "crate", "crates") + ", grouped by layer";
+  d.crates.forEach(function (c) {
+    var tr = el("tr");
+    var th = el("th", { scope: "row" });
+    th.appendChild(el("code", null, c.name));
+    tr.appendChild(th);
+    tr.appendChild(el("td", null, layerName[c.layer]));
+    tr.appendChild(el("td", null, c.job));
+    tr.appendChild(el("td", null, shortList(c.deps)));
+    tr.appendChild(el("td", null, shortList(c.dependents)));
+    var td = el("td");
+    if (c.adrs.length) {
+      c.adrs.forEach(function (a, i) {
+        if (i) { td.appendChild(document.createTextNode(", ")); }
+        td.appendChild(el("a", { href: a.href }, "ADR-" + a.number));
+      });
+    } else if (c.adr_note) {
+      td.appendChild(document.createTextNode("None; see "));
+      td.appendChild(el("a", { href: c.adr_note.href }, c.adr_note.text));
+    } else {
+      td.textContent = "None";
+    }
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  });
+
+  function crateButtons(names) {
+    if (!names.length) { return el("p", null, "None."); }
+    var ul = el("ul", { "class": "btn-list" });
+    names.forEach(function (n) {
+      var li = el("li");
+      var b = el("button", { type: "button" }, n);
+      b.addEventListener("click", function () { choose(n, "panel"); });
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+  function row(dl, term, content) {
+    dl.appendChild(el("dt", null, term));
+    var dd = el("dd");
+    if (typeof content === "string") { dd.textContent = content; } else { dd.appendChild(content); }
+    dl.appendChild(dd);
+  }
+
+  function render() {
+    var c = byName[chosen];
+    buttons.forEach(function (b) {
+      var n = b.getAttribute("data-name");
+      var isChosen = n === chosen;
+      var isDep = !!c && c.deps.indexOf(n) >= 0;
+      var isUser = !!c && c.dependents.indexOf(n) >= 0;
+      b.classList.toggle("is-chosen", isChosen);
+      b.classList.toggle("is-dep", isDep);
+      b.classList.toggle("is-user", isUser);
+      b.setAttribute("aria-pressed", isChosen ? "true" : "false");
+      var labels = [];
+      if (isChosen) { labels.push("chosen"); }
+      if (isDep) { labels.push("depends on"); }
+      if (isUser) { labels.push("used by"); }
+      b.querySelector(".rel").textContent = labels.join(", ");
+    });
+    body.textContent = "";
+    if (!c) {
+      heading.textContent = "No crate chosen";
+      body.appendChild(el("p", null, "Choose a crate to see its job, its design decisions, and its dependencies."));
+      return;
+    }
+    heading.textContent = c.name;
+    body.appendChild(el("p", null, c.job));
+    var dl = el("dl");
+    row(dl, "Layer", layerName[c.layer] + (c.tool ? " (a developer tool, not part of the program)" : ""));
+    row(dl, "Folder", c.path);
+    row(dl, "Version", c.version);
+    row(dl, "Programs it builds", c.bins.length ? c.bins.join(", ") : "None: it is a library.");
+    if (!c.default_member) {
+      row(dl, "Built by default", c.tool ? "No. Run it with cargo xtask." : "No. Build it on purpose with cargo build -p " + c.name + ".");
+    }
+    var adr;
+    if (c.adrs.length) {
+      adr = el("ul");
+      c.adrs.forEach(function (a) { var li = el("li"); li.appendChild(el("a", { href: a.href }, a.title)); adr.appendChild(li); });
+    } else if (c.adr_note) {
+      adr = el("p");
+      adr.appendChild(document.createTextNode("No ADR. See "));
+      adr.appendChild(el("a", { href: c.adr_note.href }, c.adr_note.text));
+      adr.appendChild(document.createTextNode("."));
+    } else {
+      adr = el("p", null, "No ADR.");
+    }
+    row(dl, "Design decisions", adr);
+    row(dl, "Depends on (" + c.deps.length + ")", crateButtons(c.deps));
+    row(dl, "Used by (" + c.dependents.length + ")", crateButtons(c.dependents));
+    if (c.dev_deps.length) { row(dl, "Used only in its tests", c.dev_deps.join(", ")); }
+    if (c.build_deps.length) { row(dl, "Used only to build it", c.build_deps.join(", ")); }
+    body.appendChild(dl);
+  }
+
+  function choose(name, from) {
+    if (!byName[name]) { name = null; }
+    chosen = name;
+    select.value = name || "";
+    render();
+    if (!name) { TW.announce("No crate chosen."); return; }
+    var c = byName[name];
+    TW.announce(c.name + ". " + c.job + " Depends on " + TW.plural(c.deps.length, "crate", "crates") +
+      ". Used by " + TW.plural(c.dependents.length, "crate", "crates") + ".");
+    /* A button in the panel is replaced when the panel redraws, so focus
+       moves to the panel heading instead of being lost. */
+    if (from === "panel") { heading.focus(); }
+  }
+  select.addEventListener("change", function () { choose(select.value, "select"); });
+
+  /* Start with one crate chosen, without an announcement. */
+  chosen = "textweaver-speech";
+  select.value = chosen;
+  render();
+})();
+</script>
+</body>
+</html>

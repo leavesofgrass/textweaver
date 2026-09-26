@@ -105,7 +105,8 @@ pub struct Args {
     #[arg(long)]
     pub asciimath: bool,
     /// PDF: a TrueType or OpenType font file for the text (default: the
-    /// TEXTWEAVER_PDF_FONT environment variable, then an installed font).
+    /// TEXTWEAVER_PDF_FONT environment variable, then the bundled Atkinson
+    /// Hyperlegible Next, then an installed font).
     #[arg(long, value_name = "FILE")]
     pub pdf_font: Option<PathBuf>,
     #[command(flatten)]

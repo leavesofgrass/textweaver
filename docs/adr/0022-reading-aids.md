@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Integrated in the terminal reader (Agent D3): RSVP, bionic reading, the reading ruler and current line, terminal text spacing, and the reading level, with keys and `[reading_aids]` settings. Difficult-word marking and the syllable display are in the library but not shown by the reader yet. The GUI has the Fonts dialog (Agent W).
 
 ## Context
 
@@ -42,3 +43,11 @@ Star's audits (the wiki's "star WCAG perceivable operable audit", "star TUI pale
 - Building a `WordTrack` costs about as much as segmenting the range into words and sentences with `textweaver-text` (about 250 to 400 ms per megabyte in a release build on the development machine, nearly all of it UAX #29 segmentation). Large documents should build off the input thread or a window at a time; `WordTrack::range()` says where a window ends.
 - Contrast is the theme's job (`textweaver-theme`): the aids never choose colours, and their guidance says which roles to use and that no state may be shown by colour alone.
 - Follow-ups: a frequency-based list to refine SCOWL's levels (12dicts' tiers are public domain); dictionary-quality syllables if wanted; a photometric check of RSVP at high rates against WCAG 2.3.1 (the frontends should change only the word's glyphs, never flash the panel).
+
+## See also
+
+- [Reading aids](../reading-aids.md): the user guide.
+- [Reading aids demo](../site/reading-aids.html): try RSVP, bionic reading, and the ruler in a browser.
+- [Settings](../settings.md#reading_aids): the `[reading_aids]` settings.
+- [ADR-0020: Themes](0020-themes.md): the colours the aids use.
+- [Documentation index](../README.md)

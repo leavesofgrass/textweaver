@@ -1,0 +1,113 @@
+# textweaver documentation
+
+This is the index of every textweaver document. It is grouped for three audiences:
+
+- [People who use textweaver](#for-users): reading, writing, speech, and the tools.
+- [People who work on textweaver](#for-contributors): how it is built, tested, and released.
+- [The design decisions](#decisions): the architecture decision records (ADRs).
+
+New here? Start with the [quick start](quickstart.md).
+
+There are also [interactive pages](#interactive-pages) that explain textweaver with diagrams you can explore by keyboard. They work offline in any browser.
+
+## For users
+
+### Getting started
+
+- [Quick start](quickstart.md): your first 30 seconds on Windows, macOS, and Linux.
+- [Installing textweaver](install.md): the packages, the install scripts, and checking a download.
+- [Using textweaver with a screen reader](screen-readers.md): JAWS, NVDA, VoiceOver, and Orca, self-voicing, and `--no-speech`.
+- [Troubleshooting](troubleshooting.md): the log file, diagnosing speech, and common problems.
+
+### Reading
+
+- [Reading and moving around](reading.md): opening files, reading aloud, moving by unit, Speech Cursor, find, go to, and history.
+- [Keyboard reference](keyboard.md): every key in the terminal and the GUI, generated from the keymap.
+- [Bookmarks, notes, and highlights](notes.md): marking your place and your thoughts.
+- [Reading aids](reading-aids.md): RSVP, bionic reading, the reading ruler, text spacing, fonts, and reading level.
+- [Themes](themes.md): the 23 built-in colour themes, following your system, and writing your own.
+- [Math](math.md): hearing math read aloud, and writing it in Markdown.
+
+### Writing
+
+- [Writing and editing](editing.md): edit mode, typing echo, Markdown commands, undo, and saving.
+- [Citations](citations.md): `tw cite`, the reference library, DOI and ISBN lookup, and citation styles.
+- [Dictation](dictation.md): `tw dictate`, turning speech in an audio file into text.
+
+### Speech
+
+- [Speech engines and voices](speech.md): the engines, choosing a voice, rate, pitch, and volume.
+- [Getting ETI-Eloquence](eloquence.md): Eloquence on macOS, Linux, and Windows.
+- [Using DECtalk](dectalk.md): a DECtalk you have installed and licensed.
+- [Audio export](audio-export.md): `tw export-audio`, audiobooks with chapters, and subtitles.
+
+### Files, the library, and settings
+
+- [Converting documents](converting.md): `tw convert` to HTML, EPUB, Word, braille, PDF, and more.
+- [The library](library.md): library folders, recent files, sync between computers, and importing from Star.
+- [The Obsidian vault](vault.md): exporting notes and highlights to a vault, and importing them back.
+- [Settings](settings.md): where settings live, every setting, and export, import, and reset.
+- [Scripts](../scripts/README.md): install, update, speech check, doctor, and folder conversion.
+
+## For contributors
+
+- [CONTRIBUTING.md](../CONTRIBUTING.md): setting up, the checks, tests, benchmarks, the agent and worktree workflow, and commit style.
+- [Architecture](architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.
+- [The crates](architecture.md#the-crates): what each of the 28 crates does, with its ADRs.
+- [Testing](../CONTRIBUTING.md#tests) and [benchmarks](../CONTRIBUTING.md#benchmarks).
+- [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
+- [Docker development container](docker.md): building and testing Linux features on any machine, and Voxin.
+- [Releasing](releasing.md): making a release and what the packages hold.
+- [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
+- [Roadmap](roadmap.md): what comes next, quick wins first.
+- [Tasks and ownership](tasks.md): the briefs and status of every agent, wave by wave.
+- [Implementation plan](plan.md): the original plan and the Phase 0 amendments.
+- [Audit, September 2026](audit-2026-09.md): findings, fixes, and benchmark numbers.
+- [Star parity reference](star-parity.md): what Star does, in detail.
+- [Star parity report](parity-report.md): the generated comparison of segmentation with Star.
+- [Star features not yet planned](star-gaps.md): Star features with their status in textweaver.
+- [CHANGELOG.md](../CHANGELOG.md): what changed in each release.
+
+## Decisions
+
+Each ADR records one decision: the context, the choice, and its consequences. A dated status update under the date says what changed later.
+
+- [ADR-0001: Workspace layout and dependency policy](adr/0001-workspace-and-dependencies.md): one crate per job, one table of approved dependencies, and no async runtime in speech.
+- [ADR-0002: Text model](adr/0002-text-model.md): canonical text in a rope plus markers, and character positions.
+- [ADR-0003: Speech threading and event timing](adr/0003-speech-threading-and-event-timing.md): the speech thread, generations, word timing, and pause.
+- [ADR-0004: Rate, pitch, and volume](adr/0004-rate-pitch-volume.md): engine-independent voice settings.
+- [ADR-0005: Narration and the OffsetMap](adr/0005-narration-and-offset-map.md): spoken text built together with its map back to the document.
+- [ADR-0006: Keymap, actions, and announcements](adr/0006-keymap-and-actions.md): actions, layers, overrides, and announcing every change.
+- [ADR-0007: ETI-Eloquence through an ECI host process](adr/0007-eloquence-via-eci-host.md): Eloquence with exact word timing, and its licensing.
+- [ADR-0008: Apple speech on macOS](adr/0008-apple-speech.md): the `nsspeech` and `avspeech` backends.
+- [ADR-0009: SAPI5 voices on Windows](adr/0009-sapi5-voices.md): 64-bit and 32-bit voices in host processes.
+- [ADR-0010: PDF loader](adr/0010-pdf-loader.md): a pure Rust PDF reader with column-aware reading order.
+- [ADR-0011: Audio export](adr/0011-audio-export.md): sentence-by-sentence synthesis, exact subtitles, and chapters.
+- [ADR-0012: One engine-host protocol and playback client](adr/0012-engine-host.md): the shared protocol for Eloquence, SAPI5, and DECtalk.
+- [ADR-0013: Dictation through a Whisper program](adr/0013-dictation.md): voice typing with a Whisper subprocess.
+- [ADR-0014: GUI toolkit (wxDragon)](adr/0014-gui-toolkit.md): the GUI spike's findings and the Wave 3 plan.
+- [ADR-0015: JSON-RPC server](adr/0015-json-rpc.md): `tw serve --stdio`, its methods, and notifications.
+- [ADR-0016: Rendering and bulk conversion](adr/0016-rendering-and-conversion.md): Markdown to accessible HTML, and fast, incremental conversion.
+- [ADR-0017: Native writers](adr/0017-writers.md): EPUB 3, DOCX, BRF braille, and tagged PDF, and their accessibility checks.
+- [ADR-0018: Math](adr/0018-math.md): LaTeX and ASCIIMath parsing, MathML, and spoken math.
+- [ADR-0019: Citations](adr/0019-citations.md): the reference library, lookup, and CSL formatting.
+- [ADR-0020: Themes](adr/0020-themes.md): Star's palettes, contrast rules, and output for every frontend.
+- [ADR-0021: DECtalk through a host process](adr/0021-dectalk.md): DECtalk with word timing, and its licensing.
+- [ADR-0022: Reading aids](adr/0022-reading-aids.md): RSVP, bionic reading, spacing, fonts, the ruler, and more, as pure data.
+
+## Interactive pages
+
+The pages in `docs/site/` explain textweaver with diagrams and demonstrations. Each diagram has a full text version next to it, every control works from the keyboard, and changes are announced to screen readers. Open `docs/site/index.html` in any browser; nothing is downloaded.
+
+- [Overview](site/index.html): what textweaver is, and a map of the other pages.
+- [Architecture](site/architecture.html): choose a crate to hear its job, its ADRs, and what it depends on.
+- [Speech pipeline](site/speech-pipeline.html): step from a key press to a highlighted word, with a worked offset map.
+- [Keyboard](site/keyboard.html): search and filter every key by category, layer, frontend, and platform.
+- [Features](site/features.html): everything textweaver does, with its status.
+- [Reading aids](site/reading-aids.html): try RSVP, bionic reading, and the reading ruler.
+- [About the pages](site/README.md): how they are made and regenerated.
+
+## See also
+
+- [README](../README.md): what textweaver is, and how to build it.
+- [Quick start](quickstart.md): the fastest way in.

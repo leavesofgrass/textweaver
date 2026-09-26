@@ -20,8 +20,9 @@
 //! Page keys, Shift to select), with echo through the app. Pasted text
 //! (bracketed paste) is one undo step. In lists, Enter chooses, Delete
 //! deletes the item (bookmarks, notes, highlights), and F2 renames or edits
-//! it. Keys for notes and highlights come from
-//! `textweaver_app::extra_bindings` until the keymap has actions for them.
+//! it. Most note and highlight keys are keymap
+//! actions; three more (`'` next note, `"` previous note, `Shift+Y` list
+//! highlights) come from `textweaver_app::extra_bindings`.
 //!
 //! Reading aids (ADR-0022): RSVP shows one word at a time in a box over the
 //! document (Alt+Shift+R; Alt+Shift+P plays), bionic reading bolds the

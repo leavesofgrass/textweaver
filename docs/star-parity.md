@@ -13,6 +13,8 @@ How to use this document:
 
 Each part ends with the bugs and quirks to fix rather than copy.
 
+> **Status update (Saturday, September 26, 2026).** This is a reference about Star, not about textweaver, so it is not changed as textweaver grows. The segmentation comparison with Star is regenerated in [the parity report](parity-report.md). What textweaver does today is in the [documentation index](README.md) and the [architecture guide](architecture.md); Star features not carried over yet are in [star-gaps.md](star-gaps.md).
+
 ## Contents
 
 - [Part 1 — Documents, canonical text, navigation, keys, search, position](#part-1--documents-canonical-text-navigation-keys-search-position)
@@ -2827,3 +2829,10 @@ Other shortcuts in this area: Ctrl+M adds a bookmark, Ctrl+N creates a new docum
     - `test_sync.py:492` says `sync_conflict_policy` is absent from DEFAULTS, but it is at `settings.py:94`.
     - The `_qt_check_spelling` docstring says F7, but F7 is Caret Browsing (`_editing.py:266-267`, `mixin_chrome.py:872-875`).
     - `Conflict.resolution` documents `"merged"`, but it is never produced.
+
+## See also
+
+- [Star parity report](parity-report.md): the generated comparison of word, sentence, and paragraph boundaries with Star.
+- [Star features not yet planned](star-gaps.md): what textweaver has not carried over yet.
+- [ADR-0002: Text model](adr/0002-text-model.md) and [ADR-0005: Narration and the OffsetMap](adr/0005-narration-and-offset-map.md): the deliberate differences from Star.
+- [Documentation index](README.md)
