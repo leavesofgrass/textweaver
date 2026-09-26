@@ -18,7 +18,7 @@
 #   docker run --rm -v "$PWD:/work" -e CARGO_TARGET_DIR=/target/appimage \
 #     -v textweaver_textweaver-target:/target textweaver-appimage cargo xtask appimage
 #
-# See docs/releasing.md.
+# See docs/dev/releasing.md.
 
 FROM ubuntu:22.04
 

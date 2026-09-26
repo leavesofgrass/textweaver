@@ -7,7 +7,7 @@
 //! then `aria-label`; an empty result is decorative and produces nothing; a
 //! `longdesc` URL is appended as "(long description: URL)").
 //!
-//! Star's bugs fixed (docs/star-parity.md, Part 1 §1.4 and §7):
+//! Star's bugs fixed (docs/history/star-parity.md, Part 1 §1.4 and §7):
 //!
 //! - void elements such as an unclosed `<meta charset>` no longer swallow the
 //!   rest of the document (html5ever knows they have no content);

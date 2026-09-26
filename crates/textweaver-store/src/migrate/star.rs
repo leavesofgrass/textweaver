@@ -1,6 +1,6 @@
 //! Reading a Star configuration directory: `settings.json`, the parse
 //! cache (for Star's `plain_text`), and the mapping of Star's settings keys
-//! onto textweaver's (docs/star-parity.md Part 3 §1).
+//! onto textweaver's (docs/history/star-parity.md Part 3 §1).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -478,7 +478,7 @@ pub fn apply_settings(
 }
 
 /// Star's GUI default shortcuts (the keys of its `keybindings` remaps)
-/// and the textweaver action each belongs to (docs/star-parity.md Part 1
+/// and the textweaver action each belongs to (docs/history/star-parity.md Part 1
 /// §6.1). Star's other shortcuts have no textweaver action.
 pub const STAR_SHORTCUTS: [(&str, &str); 43] = [
     ("Ctrl+N", "new_document"),

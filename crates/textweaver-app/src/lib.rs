@@ -115,7 +115,9 @@
 //! - **Lists** (`lists`): the outline (Alt+O) and the citation picker
 //!   filter as you type ([`Command::FilterList`], [`App::list_filter`]);
 //!   spelling, find-and-replace, and template lists.
-//! - **Citations** (`citations`), **export and preview** (`publish`),
+//! - **Citations** (`citations`), **export and preview** (`publish`;
+//!   both need the `publish` cargo feature, on by default; without it the
+//!   commands say they are not in this build),
 //!   **spelling** (`spell`), **tables** (`tables`), **links and
 //!   footnotes** (`links`), **find and replace one at a time**
 //!   (`replace`), **templates** (`templates`, [`local_date`]).
@@ -150,7 +152,12 @@ pub mod align;
 mod app;
 mod authoring;
 mod authoring_state;
-mod backends;
+// In-reader export, preview, and citations: the full modules with the
+// `publish` feature, stand-ins that say "not in this build" without it.
+#[cfg(feature = "publish")]
+mod citations;
+#[cfg(not(feature = "publish"))]
+#[path = "lean/citations.rs"]
 mod citations;
 mod command;
 pub mod disk;
@@ -173,7 +180,15 @@ mod notes;
 pub mod opening;
 pub mod path_complete;
 mod playback;
+#[cfg(feature = "publish")]
 pub mod preview_server;
+#[cfg(not(feature = "publish"))]
+#[path = "lean/preview_server.rs"]
+mod preview_server;
+#[cfg(feature = "publish")]
+mod publish;
+#[cfg(not(feature = "publish"))]
+#[path = "lean/publish.rs"]
 mod publish;
 mod reading_aids;
 mod relocate;
@@ -205,10 +220,6 @@ pub use access::{
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use authoring::osc52;
 pub use authoring_state::{ClientFactory, Launcher, open_with_system};
-pub use backends::{
-    CODE_FACTORY_LIBRARY, apple_preference, eci_config, sapi_config, service_config,
-    speech_registry, speech_registry_for,
-};
 pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpose};
 pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_lookup};
@@ -216,11 +227,15 @@ pub use goto::parse_go_to;
 pub use help::{chords_text, help_entries, palette_matches, resolve_command};
 pub use list_model::{ListKey, ListModel, PromptKey, PromptModel};
 pub use math_explore::MathMove;
-pub use notes::{HIGHLIGHTS_KEY, NOTES_KEY, UserHighlight, migrate_legacy_notes, parse_tags};
+pub use notes::{UserHighlight, parse_tags};
 pub use playback::{Playback, load_options, narration_policy};
 pub use restart::SpeechStarter;
 pub use settings_schema::{Setting, SettingKind, SettingsSchema};
 pub use templates::local_date;
+pub use textweaver_engines::{
+    CODE_FACTORY_LIBRARY, apple_preference, dectalk_config, eci_config, sapi_config,
+    service_config, speech_registry, speech_registry_for,
+};
 pub use textweaver_store::Note;
 pub use view::{Highlight, HighlightKind, Viewport};
 pub use wake::{Waker, channel_waker};
@@ -229,11 +244,13 @@ pub use window::{DocWindow, Units, WINDOW_UNITS, WindowChange};
 pub use reading_aids::{RSVP_STEP, RSVP_WINDOW};
 pub use textweaver_a11y as a11y;
 pub use textweaver_aids as aids;
-pub use textweaver_apple as apple;
+#[cfg(feature = "publish")]
 pub use textweaver_cite as cite;
 pub use textweaver_core as core;
-pub use textweaver_eci as eci;
 pub use textweaver_editor as editor;
+pub use textweaver_engines as engines;
+pub use textweaver_engines::apple;
+pub use textweaver_engines::eci;
 pub use textweaver_formats as formats;
 pub use textweaver_keymap as keymap;
 pub use textweaver_speech as speech;

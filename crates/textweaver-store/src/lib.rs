@@ -18,11 +18,16 @@
 //! - Folder sidecars (`<folder>/.textweaver/progress.json`) and their merge
 //!   rules, ported from `star/sync.py`, in [`sync`].
 //!
+//! - [`reading_aids`]: the saved form of the `[reading_aids]` settings,
+//!   which `textweaver-aids` converts into its working types.
+//!
 //! Timestamps are UTC: Unix seconds in textweaver's own files, RFC 3339
 //! strings in the sidecar ([`time`]).
 //!
-//! This crate depends only on `textweaver-core`; keymap overrides are stored
-//! as plain strings and interpreted by `textweaver-keymap`.
+//! This crate depends only on `textweaver-core` among the workspace crates
+//! (ADR-0001, checked by `cargo xtask deps --check`): keymap overrides are
+//! stored as plain strings and interpreted by `textweaver-keymap`, and the
+//! reading-aid settings are plain data that `textweaver-aids` converts.
 //!
 //! Owner: Agent C.
 
@@ -33,6 +38,7 @@ pub mod library;
 pub mod migrate;
 pub mod notes;
 mod paths;
+pub mod reading_aids;
 mod recent;
 mod settings;
 pub mod settings_io;
@@ -45,7 +51,7 @@ pub use doc_state::{
 };
 pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
 pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, ScannedDoc};
-pub use notes::{Annotation, Highlight, Note, NotesExport, Relation};
+pub use notes::{Annotation, Highlight, Note, NotesExport, Relation, RelationType};
 pub use paths::Paths;
 pub use recent::{Recent, RecentEntry};
 pub use settings::{

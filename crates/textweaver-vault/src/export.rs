@@ -280,7 +280,7 @@ fn note_base_name(note: &Note) -> String {
     if !anchor.is_empty() {
         return anchor.to_owned();
     }
-    let first = first_line(&note.text);
+    let first = first_line(&note.note);
     if first.is_empty() {
         note.id.clone()
     } else {
@@ -321,9 +321,12 @@ fn render_note(
     if let Some(name) = doc_link {
         fm.set_text("document", format!("[[{name}]]"));
     }
-    fm.set("position", FmValue::Int(to_i64(note.pos.0)));
+    fm.set("position", FmValue::Int(to_i64(note.range.start.0)));
     if let Some(len) = len {
-        fm.set("pct", FmValue::Int(i64::from(percent(note.pos, len))));
+        fm.set(
+            "pct",
+            FmValue::Int(i64::from(percent(note.range.start, len))),
+        );
     }
     let tags: Vec<String> = note
         .tags
@@ -341,7 +344,7 @@ fn render_note(
 
     let mut out = fm.render();
     out.push('\n');
-    let body = note.text.trim();
+    let body = note.note.trim();
     if !body.is_empty() {
         out.push_str(body);
         out.push_str("\n\n");
@@ -376,7 +379,7 @@ fn render_note(
 fn note_title(note: &Note) -> String {
     let anchor = note.anchor.trim();
     if anchor.is_empty() {
-        first_line(&note.text)
+        first_line(&note.note)
     } else {
         anchor.to_owned()
     }
@@ -450,9 +453,9 @@ fn render_document(doc: &ExportDocument<'_>, len: Option<usize>, plan: &Plan) ->
             };
             let mut line = format!("- [[{name}]]");
             if let Some(len) = len {
-                line.push_str(&format!(" ({}%)", percent(note.pos, len)));
+                line.push_str(&format!(" ({}%)", percent(note.range.start, len)));
             }
-            let summary = first_line(&note.text);
+            let summary = first_line(&note.note);
             if !summary.is_empty() && summary != *name {
                 line.push_str(": ");
                 line.push_str(&summary);
@@ -506,18 +509,26 @@ pub(crate) fn parse_highlights(body: &str) -> Vec<Highlight> {
 mod tests {
     use super::*;
     use crate::model::{Relation, RelationType};
+
+    fn rel(t: RelationType, doc: &str, id: &str, note: &str) -> Relation {
+        Relation {
+            rel_type: t.as_str().into(),
+            target_doc: doc.into(),
+            target_id: id.into(),
+            note: note.into(),
+        }
+    }
     use textweaver_core::CharRange;
 
     fn note(id: &str, pos: usize, anchor: &str, text: &str) -> Note {
         Note {
             id: id.into(),
-            pos: CharPos(pos),
+            range: CharRange::new(CharPos(pos), CharPos(pos)),
             anchor: anchor.into(),
-            text: text.into(),
+            note: text.into(),
             tags: vec!["exam".into()],
-            cite: String::new(),
             ts: 1_790_000_000,
-            relations: Vec::new(),
+            ..Note::default()
         }
     }
 
@@ -526,18 +537,14 @@ mod tests {
 
     fn sample() -> DocAnnotations {
         let mut a = note("n1", 4, "The cell", "Cells are the basic unit.");
-        a.relations.push(Relation {
-            rel_type: RelationType::Supports,
-            target_doc: PathBuf::from("/docs/bio.md"),
-            target_id: "n2".into(),
-            note: "same chapter".into(),
-        });
-        a.relations.push(Relation {
-            rel_type: RelationType::Cites,
-            target_doc: PathBuf::from("/docs/other.md"),
-            target_id: "missing".into(),
-            note: String::new(),
-        });
+        a.relations.push(rel(
+            RelationType::Supports,
+            "/docs/bio.md",
+            "n2",
+            "same chapter",
+        ));
+        a.relations
+            .push(rel(RelationType::Cites, "/docs/other.md", "missing", ""));
         let b = note("n2", 30, "Mitochondria: the powerhouse #1", "Energy.");
         DocAnnotations {
             notes: vec![b, a],
@@ -546,6 +553,7 @@ mod tests {
                 range: CharRange::new(CharPos(30), CharPos(55)),
                 color: "#ffff00".into(),
                 ts: 5,
+                ..Highlight::default()
             }],
         }
     }
@@ -648,12 +656,8 @@ mod tests {
             highlights: vec![],
         };
         let mut src = note("s1", 0, "Source", "s");
-        src.relations.push(Relation {
-            rel_type: RelationType::Defines,
-            target_doc: PathBuf::from("/a.md"),
-            target_id: "t1".into(),
-            note: String::new(),
-        });
+        src.relations
+            .push(rel(RelationType::Defines, "/a.md", "t1", ""));
         let second = DocAnnotations {
             notes: vec![src],
             highlights: vec![],
@@ -698,6 +702,7 @@ mod tests {
             range: CharRange::new(CharPos(0), CharPos(2000)),
             color: String::new(),
             ts: 0,
+            ..Highlight::default()
         };
         let q = quote(&text, &h).unwrap();
         assert!(q.ends_with('\u{2026}'));
@@ -711,6 +716,7 @@ mod tests {
             range: CharRange::new(CharPos(1), CharPos(3)),
             color: "#ffff00".into(),
             ts: 0,
+            ..Highlight::default()
         };
         assert_eq!(highlight_id(&h), highlight_id(&h.clone()));
         assert_eq!(highlight_id(&h).len(), 12);

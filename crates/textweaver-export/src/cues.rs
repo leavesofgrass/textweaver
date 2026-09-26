@@ -1,5 +1,5 @@
 //! Subtitle cues (SRT and WebVTT), ported from Star's `star/tts/subtitles.py`
-//! (`docs/star-parity.md` Part 2 §5.D).
+//! (`docs/history/star-parity.md` Part 2 §5.D).
 //!
 //! Star's rules, kept:
 //!

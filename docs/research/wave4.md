@@ -1,8 +1,8 @@
 # Research for Wave 4
 
-Researched on Saturday, September 26, 2026, by four research threads, for the Wave 4 agents (`docs/tasks.md`, "Wave 4"). It records the versions, licences, and dates that were live on that day. Each agent reads its own section before starting.
+Researched on Saturday, September 26, 2026, by four research threads, for the Wave 4 agents (`docs/history/tasks.md`, "Wave 4"). It records the versions, licences, and dates that were live on that day. Each agent reads its own section before starting.
 
-**Privacy.** During this research, two threads sent a personal identifier in their User-Agent on requests to crates.io. That was a serious error. It was stopped and reported. The privacy hard rule in `docs/tasks.md` now binds every agent: no personal identifiers in any request, header, URL, or public file, and a neutral User-Agent only.
+**Privacy.** During this research, two threads sent a personal identifier in their User-Agent on requests to crates.io. That was a serious error. It was stopped and reported. The privacy hard rule in `docs/history/tasks.md` now binds every agent: no personal identifiers in any request, header, URL, or public file, and a neutral User-Agent only.
 
 ## W4a: the Xilem GUI, part two
 

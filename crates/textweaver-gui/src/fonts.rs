@@ -9,8 +9,9 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
-use textweaver_aids::{FontFamily, FontSettings, Platform};
-use textweaver_fonts::{BUNDLED, system};
+use textweaver_aids::fonts::{from_store, to_store};
+use textweaver_app::store::reading_aids::FontSettings as SavedFont;
+use textweaver_fonts::{BUNDLED, FontFamily, FontSettings, Platform, system};
 
 /// Suffix for bundled families in the family list, so a listener knows
 /// they need nothing installed.
@@ -135,8 +136,8 @@ pub struct Applied {
 
 /// Resolves the saved choice against what is installed (bundled families
 /// count as installed) into what the reading control should use.
-pub fn applied(settings: &FontSettings, installed: impl Fn(&str) -> bool) -> Applied {
-    let s = settings.clamped();
+pub fn applied(settings: &SavedFont, installed: impl Fn(&str) -> bool) -> Applied {
+    let s = from_store(settings).clamped();
     let r = s.resolve(Platform::current(), installed);
     Applied {
         note: r.message(&s.family),
@@ -149,19 +150,21 @@ pub fn applied(settings: &FontSettings, installed: impl Fn(&str) -> bool) -> App
 /// The settings for a choice made in the chooser: `family` as listed, a
 /// size, and bold or not. A weight other than bold or regular is kept when
 /// bold is unchanged.
-pub fn chosen(previous: &FontSettings, family: &str, size: i32, bold: bool) -> FontSettings {
+pub fn chosen(previous: &SavedFont, family: &str, size: i32, bold: bool) -> SavedFont {
     let weight = match (bold, previous.weight >= 600) {
         (true, true) | (false, false) => previous.weight,
         (true, false) => 700,
         (false, true) => 400,
     };
-    FontSettings {
-        family: FontFamily::Named(family.to_owned()),
-        size_pt: size as f32,
-        weight,
-        fetch_missing: previous.fetch_missing,
-    }
-    .clamped()
+    to_store(
+        &FontSettings {
+            family: FontFamily::Named(family.to_owned()),
+            size_pt: size as f32,
+            weight,
+            fetch_missing: previous.fetch_missing,
+        }
+        .clamped(),
+    )
 }
 
 /// macOS: what to say when the reading font is a built-in family that
@@ -247,11 +250,11 @@ mod tests {
 
     #[test]
     fn saved_choices_resolve_to_a_face() {
-        let s = FontSettings {
-            family: FontFamily::Named("OpenDyslexic".into()),
+        let s = SavedFont {
+            family: "OpenDyslexic".into(),
             size_pt: 15.6,
             weight: 700,
-            ..FontSettings::default()
+            ..SavedFont::default()
         };
         let a = applied(&s, |_| false);
         assert_eq!(a.size, 16);
@@ -261,9 +264,9 @@ mod tests {
             assert_eq!(a.note, "");
         }
         // A family that is gone falls back and says so.
-        let gone = FontSettings {
-            family: FontFamily::Named("Gone Sans".into()),
-            ..FontSettings::default()
+        let gone = SavedFont {
+            family: "Gone Sans".into(),
+            ..SavedFont::default()
         };
         let a = applied(&gone, |n| n == "Arial");
         assert!(
@@ -275,17 +278,17 @@ mod tests {
 
     #[test]
     fn choices_become_settings() {
-        let prev = FontSettings {
+        let prev = SavedFont {
             weight: 300,
-            ..FontSettings::default()
+            ..SavedFont::default()
         };
         let s = chosen(&prev, "Verdana", 18, false);
-        assert_eq!(s.family, FontFamily::Named("Verdana".into()));
+        assert_eq!(s.family, "Verdana");
         assert_eq!((s.size_pt, s.weight), (18.0, 300));
         assert_eq!(chosen(&prev, "Verdana", 18, true).weight, 700);
-        let bold = FontSettings {
+        let bold = SavedFont {
             weight: 800,
-            ..FontSettings::default()
+            ..SavedFont::default()
         };
         assert_eq!(chosen(&bold, "Verdana", 18, true).weight, 800);
         assert_eq!(chosen(&bold, "Verdana", 18, false).weight, 400);

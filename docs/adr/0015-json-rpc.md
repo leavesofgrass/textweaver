@@ -68,5 +68,5 @@ The app core (`textweaver-app`) is already frontend-independent: frontends send 
 
 - [JSON-RPC](../json-rpc.md): the user guide to `tw serve --stdio`, with a worked session.
 - [Keyboard reference](../keyboard.md): the action ids the `action` and `navigate` methods take.
-- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Architecture](../dev/architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
 - [Documentation index](../README.md)

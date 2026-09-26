@@ -519,7 +519,7 @@ impl Tui {
     /// The status line for this frame. A message announced again with the
     /// same text is drawn blank for [`REPEAT_BLANK`] first: terminal screen
     /// readers speak the status line only when it changes, so the second
-    /// "No next heading." was silent (docs/audit-2026-09.md, finding A5).
+    /// "No next heading." was silent (docs/history/audit-2026-09.md, finding A5).
     fn status_to_draw(&mut self, now: Instant) -> String {
         let seq = self.app.status().seq;
         let text = self.status_line();

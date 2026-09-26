@@ -10,7 +10,7 @@
 
 Jon asked for conversion and bulk conversion that are lightning fast, native Rust, and memory safe, even at the cost of custom parsers, with Pandoc only as a fallback. His choices: Markdown flavors GFM, Obsidian, and Pandoc Markdown; LaTeX math as MathML; MiniJinja templates; outputs Markdown, HTML, text, EPUB, DOCX, BRF, and PDF; folders converted by mirroring the tree and skipping outputs newer than their source.
 
-Star converted one file at a time on one thread, preferred Pandoc when installed (inheriting its table and escaping problems, and decoding its output with the Windows ANSI code page), wrote flat output folders with `name (2).md` collisions, and had no HTML renderer of its own (`docs/star-parity.md` Part 1 §1.5, `star/convert.py`, `star/watch.py`).
+Star converted one file at a time on one thread, preferred Pandoc when installed (inheriting its table and escaping problems, and decoding its output with the Windows ANSI code page), wrote flat output folders with `name (2).md` collisions, and had no HTML renderer of its own (`docs/history/star-parity.md` Part 1 §1.5, `star/convert.py`, `star/watch.py`).
 
 ## Decision
 

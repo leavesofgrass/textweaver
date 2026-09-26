@@ -2,25 +2,9 @@
 
 use std::collections::HashMap;
 
-/// A GitHub-style slug: lowercase letters and digits kept (any script),
-/// spaces turned into `-`, `-` and `_` kept, everything else dropped.
-/// An empty result becomes `"section"`.
-pub fn slugify(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for c in text.trim().chars() {
-        if c.is_alphanumeric() {
-            out.extend(c.to_lowercase());
-        } else if c == ' ' || c == '-' {
-            out.push('-');
-        } else if c == '_' {
-            out.push('_');
-        }
-    }
-    if out.is_empty() {
-        out.push_str("section");
-    }
-    out
-}
+/// A GitHub-style slug (`textweaver_text::slug::slugify`, the one rule
+/// the reader also follows links by).
+pub use textweaver_text::slug::slugify;
 
 /// Hands out unique ids: a repeated slug gets `-1`, `-2`, and so on.
 #[derive(Debug, Default)]
@@ -62,13 +46,6 @@ impl Slugger {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn slugs_like_github() {
-        assert_eq!(slugify("Hello, World!"), "hello-world");
-        assert_eq!(slugify("  Ünïcode — ok_1 "), "ünïcode--ok_1");
-        assert_eq!(slugify("?!"), "section");
-    }
 
     #[test]
     fn duplicates_get_suffixes() {

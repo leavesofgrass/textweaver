@@ -1,5 +1,5 @@
 //! `cargo xtask dist [--universal] [--out DIR]`: a release package for
-//! this platform (docs/releasing.md).
+//! this platform (docs/dev/releasing.md).
 //!
 //! Builds `textweaver` and `tw` with the `dist` profile (the release
 //! profile with fat LTO), the engine hosts for the platform (Windows and
@@ -563,7 +563,7 @@ mod tests {
             );
         }
         assert!(guides.iter().any(|g| g == "docs/reading.md"));
-        assert!(!guides.iter().any(|g| g == "docs/architecture.md"));
+        assert!(!guides.iter().any(|g| g == "docs/dev/architecture.md"));
     }
 
     #[test]

@@ -20,7 +20,7 @@ Sizes:
 - **Phase 2 is done, with a few items moved to Wave 3.** Agents P2a (reliability), P2b (authoring), P2c (screen reader modes), and P2d (releases, quality gates, and binary size) are merged. Agent P2e (the remaining gaps, and keys that follow NVDA and JAWS habits) is still running.
 - **Tests:** 1,854 pass natively on Windows and 1,861 in Docker with all features, at the end of P2a.
 - **Releases:** 0.1.0-alpha.3 (Friday, September 25, 2026) is the newest. The next release is the first with the Linux AppImage. Jon decides when it happens; there is no alpha.4 until he says so.
-- **Wave 3 is planned** in [tasks.md](tasks.md), with six agents: W3a (app core for the GUI), W3b (the Xilem GUI), W3c (architecture), W3d (formats for students), W3e (language and study aids), and W3f (voices and speech). It starts after P2e merges.
+- **Wave 3 is planned** in [tasks.md](history/tasks.md), with six agents: W3a (app core for the GUI), W3b (the Xilem GUI), W3c (architecture), W3d (formats for students), W3e (language and study aids), and W3f (voices and speech). It starts after P2e merges.
 - **The GUI is Xilem.** Jon chose Linebender's all-Rust toolkit on Saturday, September 26, 2026, to keep as much of textweaver in Rust as he can. The wxDragon spike stays as a fallback until the Xilem GUI passes the same accessibility checks.
 - **Wave 3 is pure Rust first.** textweaver is an experimental alpha, for Jon's own use first. Wave 3 prefers pure-Rust, in-process solutions over subprocesses and C or C++ libraries: `ocrs` for OCR, Piper voices through `tract` or `candle`, and Whisper through `candle`. It accepts alpha crates and API churn, keeps the tests and CI gates, and records each bold choice and its fallback in an ADR.
 
@@ -52,7 +52,7 @@ Each of these is under about half a day. Together they remove the known ways to 
 - **left:** pruning merged branches (the `agent/`, `wave2/`, `integration/`, and `phase1/` branches are still there);
 - **left:** merging through pull requests with required checks. Merges are still made locally, after the full checks natively and in Docker.
 
-Who did what: P1a the speech items; P1b saving, settings, authoring, prompts, and the TUI render tests; P1c CI, releases, notices, and dependencies; P1d the loaders and command-line tools. Their status lines in [tasks.md](tasks.md) have the details and test counts.
+Who did what: P1a the speech items; P1b saving, settings, authoring, prompts, and the TUI render tests; P1c CI, releases, notices, and dependencies; P1d the loaders and command-line tools. Their status lines in [tasks.md](history/tasks.md) have the details and test counts.
 
 ### Never lose work, never overwrite
 
@@ -238,7 +238,7 @@ Star's lesson: a stored setting must work.
 
 ### Architecture
 
-**Status: mostly left, for Agent W3c in Wave 3.** Done: the xtask check (`cargo xtask deps --check`, in CI) and one html5ever version (P2d). Left: store off aids, one notes model, font resolution in one place, the `textweaver-engines` crate, and the docs layout.
+**Status (Saturday, September 26, 2026): done (P2d and Agent W3c).** The xtask check (`cargo xtask deps --check`, in CI) and one html5ever version came in Phase 2. Wave 3 took store off aids, made one notes model, put font resolution in `textweaver-fonts`, added the `textweaver-engines` crate, and split `docs/` into guides, `dev/`, `adr/`, and `history/`.
 
 - **Dependency direction.**
   - Take `store` off `aids`: the settings types move into `store`. ADR-0001's rule is that store depends only on core.
@@ -252,7 +252,7 @@ Star's lesson: a stored setting must work.
 
 ### Binary size
 
-**Status: partly done (P2d).** html5ever is aligned (ammonia held on 4.1.4, which removed 10 duplicate crates) and comrak is a default feature of `textweaver-render`. `tw.exe` went from 32,625,152 to 32,299,008 bytes; `textweaver.exe` stayed at 11,185,664. Left: bundling only some CSL styles (hayagriva's archive is all or nothing, so it was not done), and the app feature for export and citations (Agent W3c).
+**Status: partly done (P2d).** html5ever is aligned (ammonia held on 4.1.4, which removed 10 duplicate crates) and comrak is a default feature of `textweaver-render`. `tw.exe` went from 32,625,152 to 32,299,008 bytes; `textweaver.exe` stayed at 11,185,664. Left: bundling only some CSL styles (hayagriva's archive is all or nothing, so it was not done). In-reader export, preview, and citations are now the app's `publish` feature (Agent W3c), on in releases; `cargo build -p textweaver-tui --no-default-features` builds a lean reader without them.
 
 `tw.exe` grew from 9.4 MB in alpha.3 to 31.4 MB. `cargo bloat` shows code of 19.8 MB. The rest is data: the fonts, SCOWL, and the CSL styles.
 
@@ -262,7 +262,7 @@ Steps:
 - Align html5ever.
 - Bundle only the CSL styles used.
 - Put comrak behind a feature.
-- The reader now offers export, preview, and citations (Phase 2 authoring), so it links the conversion and citation stack. Put those behind an app feature, on in releases, so a lean reader can still be built. `cargo xtask deps --check` reports the edges until then.
+- The reader offers export, preview, and citations (Phase 2 authoring), so it links the conversion and citation stack. Done in Wave 3: they are the app's `publish` feature, on in releases, so a lean reader can still be built, and `cargo xtask deps --check` refuses the edges when the feature is off.
 
 ### Releases
 
@@ -283,7 +283,7 @@ Steps:
 
 ## Phase 3: the GUI (Wave 3)
 
-**Status (Saturday, September 26, 2026): planned for Wave 3.** Jon chose Xilem, Linebender's all-Rust toolkit, for the GUI on every platform: Xilem and Masonry for the widgets, Vello for drawing, Parley for text layout, AccessKit for accessibility, and winit for windows. The steps below were written for the wxDragon spike, which stays as a fallback until the Xilem GUI passes the same accessibility checks. In [tasks.md](tasks.md):
+**Status (Saturday, September 26, 2026): planned for Wave 3.** Jon chose Xilem, Linebender's all-Rust toolkit, for the GUI on every platform: Xilem and Masonry for the widgets, Vello for drawing, Parley for text layout, AccessKit for accessibility, and winit for windows. The steps below were written for the wxDragon spike, which stays as a fallback until the Xilem GUI passes the same accessibility checks. In [tasks.md](history/tasks.md):
 
 - **Agent W3a** builds the app-core pieces listed first below: the document window model, list and prompt state in the app, the waker, `Command::ReplaceRange`, the settings schema (with a new terminal settings screen), and opening in the background. It also takes Phase 2's leftovers off the input thread.
 - **Agent W3b** builds the GUI in a new crate, `textweaver-xilem`, and writes ADR-0023, which supersedes ADR-0014: the main window, the dialogs, themes and fonts loaded straight into Parley, accessibility checks on every OS (UI Automation, AT-SPI under Xvfb, and a macOS smoke test), the large-document targets, and packaging with no GTK or wxWidgets.
@@ -360,7 +360,7 @@ These are ranked for students with print disabilities, drawing on Star's history
 
 ## How the work is organised
 
-- **Agents.** Work runs in parallel agents, each in its own git worktree and branch, with briefs in `docs/tasks.md`. The orchestrator merges each branch.
+- **Agents.** Work runs in parallel agents, each in its own git worktree and branch, with briefs in `docs/history/tasks.md`. The orchestrator merges each branch.
 - **Checks before main.** Every merge runs the full checks on Windows and Linux before it reaches main:
   - fmt;
   - clippy with `-D warnings`;
@@ -372,11 +372,11 @@ These are ranked for students with print disabilities, drawing on Star's history
 
 ## See also
 
-- [Audit, September 2026](audit-2026-09.md)
+- [Audit, September 2026](history/audit-2026-09.md)
 - [Star features not yet planned](star-gaps.md)
-- [Star parity reference](star-parity.md)
-- [Implementation plan](plan.md)
-- [Tasks and agent briefs](tasks.md)
-- [Releasing](releasing.md)
-- [Architecture](architecture.md)
+- [Star parity reference](history/star-parity.md)
+- [Implementation plan](history/plan.md)
+- [Tasks and agent briefs](history/tasks.md)
+- [Releasing](dev/releasing.md)
+- [Architecture](dev/architecture.md)
 - [Documentation index](README.md)

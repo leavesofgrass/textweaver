@@ -2,7 +2,7 @@
 //!
 //! The app records the **departure** point of every jump (one consistent
 //! rule, unlike Star's TUI and GUI). The rules, each fixing a Star bug
-//! (docs/star-parity.md, Part 1 §4.4):
+//! (docs/history/star-parity.md, Part 1 §4.4):
 //!
 //! - Recording while browsing back discards the forward entries.
 //! - Going back from the live position remembers that position, so going

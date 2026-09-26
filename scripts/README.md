@@ -149,7 +149,7 @@ The two Python steps need Python 3; without it they are skipped and the summary 
 
 On Windows it uses `--features textweaver-speech/omnivox` instead of `--all-features`, and it also builds the 32-bit engine hosts. `--only fmt,clippy` runs some of the steps, and `--docker` runs everything in the development container.
 
-Three CI checks are not in dev-check: `cargo xtask deps --check`, `cargo xtask notices --check`, and cargo-deny. [CONTRIBUTING.md](../CONTRIBUTING.md#the-checks) shows how to run them.
+Three CI checks are not in dev-check: `cargo xtask deps --check`, `cargo xtask notices --check`, and cargo-deny. [Testing](../docs/dev/testing.md#the-checks) shows how to run them.
 
 ### convert-folder.sh and convert-folder.ps1
 

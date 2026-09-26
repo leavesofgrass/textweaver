@@ -12,7 +12,15 @@
 //! - **Installed fonts** ([`system`]): the font folders of Windows, macOS,
 //!   and Linux, scanned for family and style names by reading only each
 //!   file's table directory and its `name`, `OS/2`, `head`, and `post`
-//!   tables ([`sfnt`]), so a family can be chosen by name.
+//!   tables ([`sfnt`]), so a family can be chosen by name, and scanned once
+//!   per process ([`system::installed`]).
+//!
+//! Choosing and resolving a reading font is here too ([`choice`]): the
+//! family a reader picked, the reading fonts Star offered
+//! ([`READING_FONTS`]), each platform's fallbacks, and which family to use
+//! given what is bundled and installed ([`FontSettings::resolve`]). The
+//! reading aids, the writers, and the GUIs all resolve fonts through this
+//! crate.
 //!
 //! ```
 //! use textweaver_fonts::{Style, bundled};
@@ -26,10 +34,15 @@
 //! The terminal UI never uses these: a terminal shows text in its own font.
 
 pub mod bundled;
+pub mod choice;
 pub mod sfnt;
 pub mod system;
 
 pub use bundled::{BUNDLED, BundledFace, BundledFamily};
+pub use choice::{
+    FontError, FontFamily, FontResolution, FontSettings, MAX_SIZE_PT, MIN_SIZE_PT, Platform,
+    READING_FONTS, ReadingFont, ReadingFontId, SMALL_SIZE_PT, format_points,
+};
 pub use sfnt::FaceInfo;
 pub use system::{FaceRef, FamilyFaces, SystemFace};
 

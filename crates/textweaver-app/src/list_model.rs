@@ -366,7 +366,7 @@ impl App {
     /// same list shown again keeps its focus. The focused item is said
     /// after the list's introduction, without interrupting it (the first
     /// item was never heard unless the user pressed Up,
-    /// docs/audit-2026-09.md, finding A4).
+    /// docs/history/audit-2026-09.md, finding A4).
     pub(crate) fn adopt(&mut self, effects: &[Effect]) {
         for e in effects {
             match e {

@@ -9,15 +9,22 @@
 //! - `textweaver-speech` never depends on `textweaver-text` or
 //!   `textweaver-formats`, directly or through another workspace crate.
 //! - `textweaver-store` depends only on `textweaver-core` among the
-//!   workspace crates, and otherwise only on serde-level crates.
-//! - `textweaver-tui` (the reader, `textweaver`) never reaches the
-//!   conversion and citation stack: not the convert, render, writers, or
-//!   cite crates, and not their big dependencies (hayagriva, comrak,
-//!   minijinja, krilla, ammonia, ureq), so the reader stays small and
-//!   starts fast (docs/roadmap.md, "Binary size"). `tw` has them.
+//!   workspace crates, and otherwise only on serde-level crates. There are
+//!   no exceptions: the reading-aid settings types are store's own.
+//! - `textweaver-tui` (the reader, `textweaver`) built without its default
+//!   features never reaches the conversion and citation stack: not the
+//!   convert, render, writers, or cite crates, and not their big
+//!   dependencies (hayagriva, comrak, minijinja, krilla, ammonia, ureq), so
+//!   a lean reader stays small and starts fast (docs/roadmap.md, "Binary
+//!   size"). In-reader export, preview, and citations are the `publish`
+//!   feature (on by default and in releases); what the reader reaches only
+//!   through a feature is reported, not refused. `tw` has them all.
 //!
 //! Dev-dependencies are ignored except for core, since tests do not change
-//! what a crate links.
+//! what a crate links. Optional dependencies count only when a feature
+//! turns them on: the reader rule resolves features the way Cargo does
+//! (`dep:x`, `x/feature`, `x?/feature`, default features, and the features
+//! a dependency asks for).
 //!
 //! The rules read `cargo metadata --no-deps`, so the check needs no network
 //! and no build.
@@ -28,15 +35,59 @@ use std::process::Command;
 use anyhow::{Context, bail};
 use serde_json::Value;
 
-/// One workspace crate's dependencies.
+/// One dependency of a workspace crate, as `cargo metadata` lists it.
+#[derive(Debug, Clone)]
+struct Dep {
+    /// The package name.
+    name: String,
+    /// The name features use for it (its `rename`, else its name).
+    key: String,
+    /// A workspace crate.
+    internal: bool,
+    /// A dev-dependency.
+    dev: bool,
+    /// Turned on only by a feature.
+    optional: bool,
+    /// Its default features are on.
+    default_features: bool,
+    /// Features it asks for.
+    features: Vec<String>,
+}
+
+/// One workspace crate's dependencies and features.
 #[derive(Debug, Default, Clone)]
 struct Crate {
-    /// Workspace crates it depends on: normal and build dependencies.
-    internal: BTreeSet<String>,
+    deps: Vec<Dep>,
+    /// `[features]`: name to what it turns on.
+    features: BTreeMap<String, Vec<String>>,
+}
+
+impl Crate {
+    /// Workspace crates it depends on: normal and build dependencies,
+    /// optional ones included.
+    fn internal(&self) -> impl Iterator<Item = &str> {
+        self.deps
+            .iter()
+            .filter(|d| d.internal && !d.dev)
+            .map(|d| d.name.as_str())
+    }
+
     /// Workspace crates it depends on for tests only.
-    internal_dev: BTreeSet<String>,
-    /// Other crates it depends on: normal and build dependencies.
-    external: BTreeSet<String>,
+    fn internal_dev(&self) -> impl Iterator<Item = &str> {
+        self.deps
+            .iter()
+            .filter(|d| d.internal && d.dev)
+            .map(|d| d.name.as_str())
+    }
+
+    /// Other crates it depends on: normal and build dependencies, optional
+    /// ones included.
+    fn external(&self) -> impl Iterator<Item = &str> {
+        self.deps
+            .iter()
+            .filter(|d| !d.internal && !d.dev)
+            .map(|d| d.name.as_str())
+    }
 }
 
 /// The workspace graph: crate name to its dependencies.
@@ -52,8 +103,8 @@ const SPEECH_FORBIDDEN: [&str; 2] = ["textweaver-text", "textweaver-formats"];
 /// The reader.
 const READER: &str = "textweaver-tui";
 
-/// Workspace crates the reader reaches only for in-reader export and
-/// citations; reported until they become an app feature (roadmap).
+/// Workspace crates the reader reaches only through the `publish` feature
+/// (in-reader export, preview, and citations).
 const READER_FORBIDDEN: [&str; 4] = [
     "textweaver-convert",
     "textweaver-render",
@@ -62,7 +113,7 @@ const READER_FORBIDDEN: [&str; 4] = [
 ];
 
 /// Outside crates of the conversion and citation stack, which no crate the
-/// reader reaches may depend on.
+/// lean reader reaches may depend on.
 const READER_FORBIDDEN_EXTERNAL: [&str; 7] = [
     "hayagriva",
     "biblatex",
@@ -73,18 +124,10 @@ const READER_FORBIDDEN_EXTERNAL: [&str; 7] = [
     "ureq",
 ];
 
-/// Workspace crates store may use.
+/// Workspace crates store may use. No exceptions: the reading-aid
+/// settings types are store's own since Wave 3 (Agent W3c), and
+/// `textweaver-aids` converts them.
 const STORE_INTERNAL: [&str; 1] = [CORE];
-
-/// Workspace crates store may use for now, with the reason.
-///
-/// TODO(roadmap, Phase 2, Architecture, "Dependency direction"): the
-/// settings types move from `textweaver-aids` into `textweaver-store`; then
-/// remove this allowance.
-const STORE_INTERNAL_FOR_NOW: [(&str, &str); 1] = [(
-    "textweaver-aids",
-    "the settings types move into store (docs/roadmap.md, Phase 2, Dependency direction)",
-)];
 
 /// Serde-level crates store may use: serialization, formats, paths, errors,
 /// and logging.
@@ -108,14 +151,14 @@ pub fn run() -> anyhow::Result<()> {
     let graph = graph()?;
     if !check {
         for (name, c) in &graph {
-            let deps: Vec<&str> = c.internal.iter().map(String::as_str).collect();
+            let deps: Vec<&str> = c.internal().collect();
             println!("{name}: {}", deps.join(", "));
         }
         return Ok(());
     }
     let (errors, notes) = violations(&graph);
     for n in &notes {
-        println!("allowed for now: {n}");
+        println!("allowed: {n}");
     }
     if errors.is_empty() {
         println!("dependency direction: ok ({} crates)", graph.len());
@@ -155,6 +198,13 @@ fn graph_from_metadata(meta: &Value) -> anyhow::Result<Graph> {
         .iter()
         .filter_map(|p| p["name"].as_str().map(str::to_owned))
         .collect();
+    let strings = |v: &Value| -> Vec<String> {
+        v.as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|s| s.as_str().map(str::to_owned))
+            .collect()
+    };
     let mut graph = Graph::new();
     for p in packages {
         let name = p["name"].as_str().context("a package has no name")?;
@@ -163,13 +213,18 @@ fn graph_from_metadata(meta: &Value) -> anyhow::Result<Graph> {
             let Some(dep) = d["name"].as_str() else {
                 continue;
             };
-            let dev = d["kind"].as_str() == Some("dev");
-            match (members.contains(dep), dev) {
-                (true, false) => c.internal.insert(dep.to_owned()),
-                (true, true) => c.internal_dev.insert(dep.to_owned()),
-                (false, false) => c.external.insert(dep.to_owned()),
-                (false, true) => false,
-            };
+            c.deps.push(Dep {
+                name: dep.to_owned(),
+                key: d["rename"].as_str().unwrap_or(dep).to_owned(),
+                internal: members.contains(dep),
+                dev: d["kind"].as_str() == Some("dev"),
+                optional: d["optional"].as_bool().unwrap_or(false),
+                default_features: d["uses_default_features"].as_bool().unwrap_or(true),
+                features: strings(&d["features"]),
+            });
+        }
+        if let Some(f) = p["features"].as_object() {
+            c.features = f.iter().map(|(k, v)| (k.clone(), strings(v))).collect();
         }
         graph.insert(name.to_owned(), c);
     }
@@ -177,7 +232,8 @@ fn graph_from_metadata(meta: &Value) -> anyhow::Result<Graph> {
 }
 
 /// The workspace crates `name` reaches through normal and build
-/// dependencies, with the path to each (for the message).
+/// dependencies, optional ones included, with the path to each (for the
+/// message).
 fn reachable(graph: &Graph, name: &str) -> BTreeMap<String, Vec<String>> {
     let mut seen: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut stack = vec![(name.to_owned(), vec![name.to_owned()])];
@@ -185,19 +241,117 @@ fn reachable(graph: &Graph, name: &str) -> BTreeMap<String, Vec<String>> {
         let Some(c) = graph.get(&at) else {
             continue;
         };
-        for dep in &c.internal {
+        for dep in c.internal() {
             if !seen.contains_key(dep) {
                 let mut p = path.clone();
-                p.push(dep.clone());
-                seen.insert(dep.clone(), p.clone());
-                stack.push((dep.clone(), p));
+                p.push(dep.to_owned());
+                seen.insert(dep.to_owned(), p.clone());
+                stack.push((dep.to_owned(), p));
             }
         }
     }
     seen
 }
 
-/// The forbidden edges (errors) and the edges allowed for now (notes).
+/// What building `root` with `features` links, feature resolution
+/// included: each workspace crate reached, with the path to it, and each
+/// outside crate reached, with the path through the crate that depends on
+/// it.
+#[derive(Debug, Default)]
+struct Build {
+    internal: BTreeMap<String, Vec<String>>,
+    external: BTreeMap<String, Vec<String>>,
+}
+
+/// Resolves features from `root` with `features` on, the way Cargo does.
+fn build(graph: &Graph, root: &str, features: &[&str]) -> Build {
+    // Features on per workspace crate, and how each crate was reached.
+    let mut on: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    let mut paths: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    on.insert(
+        root.to_owned(),
+        features.iter().map(|f| (*f).to_owned()).collect(),
+    );
+    paths.insert(root.to_owned(), vec![root.to_owned()]);
+    let mut out = Build::default();
+    let mut visited: BTreeSet<String> = BTreeSet::from([root.to_owned()]);
+    let mut queue = vec![root.to_owned()];
+    while let Some(name) = queue.pop() {
+        let Some(c) = graph.get(&name) else {
+            continue;
+        };
+        // The crate's own features, closed over; the optional dependencies
+        // they turn on; and features they ask of dependencies.
+        let mut feats: BTreeSet<String> = on.get(&name).cloned().unwrap_or_default();
+        let mut optional_on: BTreeSet<String> = BTreeSet::new();
+        // (dependency key, feature): `x/f` and `x?/f` both ask `x` for `f`; only
+        // `x/f` also turns `x` on.
+        let mut asks: Vec<(String, String)> = Vec::new();
+        let mut todo: Vec<String> = feats.iter().cloned().collect();
+        while let Some(f) = todo.pop() {
+            let Some(items) = c.features.get(&f) else {
+                // An optional dependency's implicit feature.
+                if c.deps.iter().any(|d| d.optional && d.key == f) {
+                    optional_on.insert(f);
+                }
+                continue;
+            };
+            for item in items {
+                if let Some(dep) = item.strip_prefix("dep:") {
+                    optional_on.insert(dep.to_owned());
+                } else if let Some((dep, feat)) = item.split_once('/') {
+                    match dep.strip_suffix('?') {
+                        Some(weak) => asks.push((weak.to_owned(), feat.to_owned())),
+                        None => {
+                            optional_on.insert(dep.to_owned());
+                            asks.push((dep.to_owned(), feat.to_owned()));
+                        }
+                    }
+                } else if feats.insert(item.clone()) {
+                    todo.push(item.clone());
+                }
+            }
+        }
+        let active: Vec<&Dep> = c
+            .deps
+            .iter()
+            .filter(|d| !d.dev && (!d.optional || optional_on.contains(&d.key)))
+            .collect();
+        let path = paths.get(&name).cloned().unwrap_or_default();
+        for d in active {
+            let mut p = path.clone();
+            p.push(d.name.clone());
+            if !d.internal {
+                out.external.entry(d.name.clone()).or_insert(p);
+                continue;
+            }
+            let mut want: BTreeSet<String> = d.features.iter().cloned().collect();
+            if d.default_features {
+                want.insert("default".into());
+            }
+            for (key, feat) in &asks {
+                // Only dependencies that are on are here, so a weak request
+                // counts exactly when it should.
+                if *key == d.key {
+                    want.insert(feat.clone());
+                }
+            }
+            paths.entry(d.name.clone()).or_insert_with(|| p.clone());
+            out.internal.entry(d.name.clone()).or_insert(p);
+            let have = on.entry(d.name.clone()).or_default();
+            let before = have.len();
+            have.extend(want);
+            let changed = have.len() != before;
+            if visited.insert(d.name.clone()) || changed {
+                queue.push(d.name.clone());
+            }
+        }
+    }
+    out
+}
+
+/// The forbidden edges (errors) and the edges allowed through a feature
+/// (notes).
 fn violations(graph: &Graph) -> (Vec<String>, Vec<String>) {
     let mut errors = Vec::new();
     let mut notes = Vec::new();
@@ -211,7 +365,7 @@ fn violations(graph: &Graph) -> (Vec<String>, Vec<String>) {
     }
 
     if let Some(core) = graph.get(CORE) {
-        for dep in core.internal.iter().chain(&core.internal_dev) {
+        for dep in core.internal().chain(core.internal_dev()) {
             errors.push(format!(
                 "{CORE} -> {dep} (core depends on no workspace crate)"
             ));
@@ -229,45 +383,46 @@ fn violations(graph: &Graph) -> (Vec<String>, Vec<String>) {
     }
 
     if graph.contains_key(READER) {
-        let mut from_reader = reachable(graph, READER);
-        from_reader.insert(READER.to_owned(), vec![READER.to_owned()]);
+        let lean = build(graph, READER, &[]);
+        let full = build(graph, READER, &["default"]);
         for bad in READER_FORBIDDEN {
-            if let Some(path) = from_reader.get(bad) {
+            if let Some(path) = lean.internal.get(bad) {
+                errors.push(format!(
+                    "{READER} reaches {bad} without its default features ({}); in-reader export and citations belong behind the app's `publish` feature",
+                    path.join(" -> ")
+                ));
+            } else if let Some(path) = full.internal.get(bad) {
                 notes.push(format!(
-                    "allowed for now: {READER} reaches {bad} ({}); in-reader export and citations use it (docs/roadmap.md, Phase 2, Binary size: make it an app feature)",
+                    "{READER} reaches {bad} through the `publish` feature ({})",
                     path.join(" -> ")
                 ));
             }
         }
-        for (name, path) in &from_reader {
-            let Some(c) = graph.get(name) else {
-                continue;
-            };
-            for bad in READER_FORBIDDEN_EXTERNAL {
-                if c.external.contains(bad) {
-                    notes.push(format!(
-                        "allowed for now: {READER} reaches {bad} through {} -> {bad} (in-reader export and citations)",
-                        path.join(" -> ")
-                    ));
-                }
+        for bad in READER_FORBIDDEN_EXTERNAL {
+            if let Some(path) = lean.external.get(bad) {
+                errors.push(format!(
+                    "{READER} reaches {bad} without its default features ({})",
+                    path.join(" -> ")
+                ));
+            } else if let Some(path) = full.external.get(bad) {
+                notes.push(format!(
+                    "{READER} reaches {bad} through the `publish` feature ({})",
+                    path.join(" -> ")
+                ));
             }
         }
     }
 
     if let Some(store) = graph.get(STORE) {
-        for dep in &store.internal {
-            if STORE_INTERNAL.contains(&dep.as_str()) {
-                continue;
-            }
-            match STORE_INTERNAL_FOR_NOW.iter().find(|(n, _)| n == dep) {
-                Some((_, why)) => notes.push(format!("{STORE} -> {dep}: {why}")),
-                None => errors.push(format!(
+        for dep in store.internal() {
+            if !STORE_INTERNAL.contains(&dep) {
+                errors.push(format!(
                     "{STORE} -> {dep} (store depends only on {CORE} among workspace crates)"
-                )),
+                ));
             }
         }
-        for dep in &store.external {
-            if !STORE_EXTERNAL.contains(&dep.as_str()) {
+        for dep in store.external() {
+            if !STORE_EXTERNAL.contains(&dep) {
                 errors.push(format!(
                     "{STORE} -> {dep} (store uses only serde-level crates: {})",
                     STORE_EXTERNAL.join(", ")
@@ -282,12 +437,31 @@ fn violations(graph: &Graph) -> (Vec<String>, Vec<String>) {
 mod tests {
     use super::*;
 
+    fn dep(name: &str, internal: bool) -> Dep {
+        Dep {
+            name: name.to_owned(),
+            key: name.to_owned(),
+            internal,
+            dev: false,
+            optional: false,
+            default_features: true,
+            features: Vec::new(),
+        }
+    }
+
     fn krate(internal: &[&str], external: &[&str]) -> Crate {
         Crate {
-            internal: internal.iter().map(|s| (*s).to_owned()).collect(),
-            internal_dev: BTreeSet::new(),
-            external: external.iter().map(|s| (*s).to_owned()).collect(),
+            deps: internal
+                .iter()
+                .map(|n| dep(n, true))
+                .chain(external.iter().map(|n| dep(n, false)))
+                .collect(),
+            features: BTreeMap::new(),
         }
+    }
+
+    fn add(g: &mut Graph, from: &str, d: Dep) {
+        g.get_mut(from).unwrap().deps.push(d);
     }
 
     fn good() -> Graph {
@@ -310,17 +484,18 @@ mod tests {
     #[test]
     fn forbidden_edges_fail() {
         let mut g = good();
-        g.get_mut(CORE)
-            .unwrap()
-            .internal_dev
-            .insert("textweaver-text".into());
+        add(
+            &mut g,
+            CORE,
+            Dep {
+                dev: true,
+                ..dep("textweaver-text", true)
+            },
+        );
         // Through another crate: speech -> math -> text.
-        g.get_mut("textweaver-math")
-            .unwrap()
-            .internal
-            .insert("textweaver-text".into());
-        g.get_mut(STORE).unwrap().internal.insert(SPEECH.into());
-        g.get_mut(STORE).unwrap().external.insert("regex".into());
+        add(&mut g, "textweaver-math", dep("textweaver-text", true));
+        add(&mut g, STORE, dep(SPEECH, true));
+        add(&mut g, STORE, dep("regex", false));
         let (errors, _) = violations(&g);
         assert_eq!(errors.len(), 4, "{errors:#?}");
         assert!(
@@ -330,37 +505,93 @@ mod tests {
         );
     }
 
-    #[test]
-    fn the_reader_reaching_conversion_or_citations_is_reported() {
+    /// A reader over an app whose `publish` feature (on by default) turns
+    /// on the citation crate, as in the workspace.
+    fn reader_graph(reader_asks_default: bool) -> Graph {
         let mut g = good();
-        g.insert(READER.into(), krate(&["textweaver-app"], &["ratatui"]));
-        g.insert("textweaver-app".into(), krate(&[CORE], &[]));
-        assert!(violations(&g).0.is_empty());
         g.insert("textweaver-cite".into(), krate(&[CORE], &["hayagriva"]));
-        g.get_mut("textweaver-app")
-            .unwrap()
-            .internal
-            .insert("textweaver-cite".into());
-        // Reported, not refused, while the reader offers export and
-        // citations itself.
-        let (errors, notes) = violations(&g);
+        let mut app = krate(&[CORE], &[]);
+        app.deps.push(Dep {
+            optional: true,
+            ..dep("textweaver-cite", true)
+        });
+        app.features = BTreeMap::from([
+            ("default".into(), vec!["publish".into()]),
+            ("publish".into(), vec!["dep:textweaver-cite".into()]),
+        ]);
+        g.insert("textweaver-app".into(), app);
+        let mut reader = krate(&[], &["ratatui"]);
+        reader.deps.push(Dep {
+            default_features: reader_asks_default,
+            ..dep("textweaver-app", true)
+        });
+        reader.features = BTreeMap::from([
+            ("default".into(), vec!["publish".into()]),
+            ("publish".into(), vec!["textweaver-app/publish".into()]),
+        ]);
+        g.insert(READER.into(), reader);
+        g
+    }
+
+    #[test]
+    fn the_reader_reaching_conversion_or_citations_through_the_feature_is_reported() {
+        let (errors, notes) = violations(&reader_graph(false));
         assert!(errors.is_empty(), "{errors:#?}");
         assert!(notes.iter().any(|e| e.contains(
-            "textweaver-tui reaches textweaver-cite (textweaver-tui -> textweaver-app -> textweaver-cite)"
-        )));
+            "textweaver-tui reaches textweaver-cite through the `publish` feature (textweaver-tui -> textweaver-app -> textweaver-cite)"
+        )), "{notes:#?}");
         assert!(notes.iter().any(|e| e.contains("hayagriva")));
     }
 
     #[test]
-    fn store_on_aids_is_allowed_for_now() {
-        let mut g = good();
-        g.get_mut(STORE)
+    fn a_lean_reader_that_still_reaches_citations_is_refused() {
+        // The reader takes the app's default features, so it cannot turn
+        // `publish` off.
+        let (errors, _) = violations(&reader_graph(true));
+        assert!(
+            errors.iter().any(|e| e
+                .contains("textweaver-tui reaches textweaver-cite without its default features")),
+            "{errors:#?}"
+        );
+        assert!(errors.iter().any(|e| e.contains("hayagriva")));
+        // So is a plain dependency on a conversion crate.
+        let mut g = reader_graph(false);
+        add(&mut g, "textweaver-app", dep("textweaver-render", true));
+        g.insert("textweaver-render".into(), krate(&[CORE], &[]));
+        let (errors, _) = violations(&g);
+        assert_eq!(errors.len(), 1, "{errors:#?}");
+    }
+
+    #[test]
+    fn features_resolve_like_cargo() {
+        let mut g = reader_graph(false);
+        // A weak request does not turn a dependency on; a strong one does.
+        g.get_mut("textweaver-app")
             .unwrap()
-            .internal
-            .insert("textweaver-aids".into());
+            .features
+            .insert("weak".into(), vec!["textweaver-cite?/x".into()]);
+        let b = build(&g, "textweaver-app", &["weak"]);
+        assert!(!b.internal.contains_key("textweaver-cite"));
+        g.get_mut("textweaver-app")
+            .unwrap()
+            .features
+            .insert("strong".into(), vec!["textweaver-cite/x".into()]);
+        let b = build(&g, "textweaver-app", &["strong"]);
+        assert!(b.internal.contains_key("textweaver-cite"));
+        assert!(b.external.contains_key("hayagriva"));
+        // An optional dependency's implicit feature.
+        let b = build(&g, "textweaver-app", &["textweaver-cite"]);
+        assert!(b.internal.contains_key("textweaver-cite"));
+    }
+
+    #[test]
+    fn store_on_aids_is_refused() {
+        let mut g = good();
+        add(&mut g, STORE, dep("textweaver-aids", true));
         let (errors, notes) = violations(&g);
-        assert!(errors.is_empty(), "{errors:?}");
-        assert_eq!(notes.len(), 1);
+        assert_eq!(errors.len(), 1, "{errors:?}");
+        assert!(errors[0].contains("textweaver-store -> textweaver-aids"));
+        assert!(notes.is_empty());
     }
 
     #[test]

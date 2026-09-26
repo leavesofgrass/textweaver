@@ -10,7 +10,7 @@
 //! positions through that alignment.
 //!
 //! Every difference is classified by a rule that names its cause. The report
-//! is written to `docs/parity-report.md`; the task fails if any difference
+//! is written to `docs/history/parity-report.md`; the task fails if any difference
 //! is left unexplained, so a change in segmentation cannot slip by.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -64,11 +64,11 @@ pub fn run() -> Result<()> {
     out.push('\n');
     out.push_str(&report);
     out.push_str(FOOTER);
-    let path = root.join("docs").join("parity-report.md");
+    let path = root.join("docs").join("history").join("parity-report.md");
     std::fs::write(&path, out).with_context(|| format!("writing {}", path.display()))?;
     println!("wrote {}", path.display());
     if unexplained > 0 {
-        bail!("{unexplained} unexplained parity deltas; see docs/parity-report.md");
+        bail!("{unexplained} unexplained parity deltas; see docs/history/parity-report.md");
     }
     Ok(())
 }
