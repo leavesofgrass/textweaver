@@ -515,6 +515,11 @@ remove_path_line() {
 uninstall() {
   say "This removes textweaver from $PREFIX: the programs, the guides, and the helper scripts."
   say "It keeps your settings and reading positions, and it does not remove Rust or Homebrew packages."
+  if [ ! -e "$BINDIR/tw" ] && [ ! -e "$DOCDIR" ] && [ ! -e "$DATADIR" ] && [ "$DRY_RUN" = 0 ]; then
+    say "textweaver is not installed in $PREFIX, so there is nothing to remove."
+    remove_path_line
+    return 0
+  fi
   ask "Remove textweaver from $PREFIX?" || {
     say "Nothing removed."
     exit 0

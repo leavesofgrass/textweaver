@@ -20,6 +20,7 @@ RELEASE_TAG=""
 SOURCE_DIR=""
 PM=""
 INSTALL_DEPS=1
+ESPEAK=1
 OPTIONAL="ask"
 UNINSTALL=0
 
@@ -50,6 +51,10 @@ Options:
   --package-manager PM   Use PM (apt, dnf, yum, pacman, zypper, or apk)
                          instead of detecting it. "none" skips packages.
   --no-deps              Do not install system packages.
+  --no-espeak            Build without the in-process espeak-ng engine.
+                         speech-dispatcher still speaks with espeak-ng. The
+                         script also falls back to this when the espeak-ng
+                         build fails.
   --no-optional          Do not offer the optional tools (ffmpeg, pandoc).
   --optional             Install the optional tools without asking.
   --uninstall            Remove textweaver from the prefix. Your settings,
@@ -176,6 +181,7 @@ while [ "$#" -gt 0 ]; do
       ;;
     --package-manager=*) PM="${1#*=}" ;;
     --no-deps) INSTALL_DEPS=0 ;;
+    --no-espeak) ESPEAK=0 ;;
     --no-optional) OPTIONAL="no" ;;
     --optional) OPTIONAL="yes" ;;
     --uninstall) UNINSTALL=1 ;;
@@ -544,6 +550,7 @@ install_rustup() {
 # ---------------------------------------------------------------- build --
 
 FEATURES=""
+ENGINES=""
 check_build_tools() {
   local missing=""
   have cc || have gcc || have clang || missing="$missing a C compiler,"
@@ -559,21 +566,29 @@ check_build_tools() {
 
 choose_features() {
   local engines="omnivox speechd"
-  if [ "$DRY_RUN" = 1 ] || [ "$DEPS_INSTALLED" = 1 ] \
+  if [ "$ESPEAK" = 0 ]; then
+    say "Leaving out the in-process espeak-ng engine, as asked. textweaver can still speak through speech-dispatcher."
+  elif [ "$DRY_RUN" = 1 ] || [ "$DEPS_INSTALLED" = 1 ] \
     || { have pkg-config && pkg-config --exists espeak-ng; } \
     || [ -f /usr/include/espeak-ng/speak_lib.h ]; then
     engines="espeak $engines"
   else
     say "The espeak-ng development files were not found, so textweaver is built without the in-process espeak-ng engine. It can still speak through speech-dispatcher."
   fi
+  ENGINES="$engines"
+  set_features
+  say "Speech engines built in: $engines."
+}
+
+# FEATURES for the engines in ENGINES, for both programs.
+set_features() {
   local f pkg
   FEATURES=""
   for pkg in textweaver-cli textweaver-tui; do
-    for f in $engines; do
+    for f in $ENGINES; do
       FEATURES="$FEATURES${FEATURES:+,}$pkg/$f"
     done
   done
-  say "Speech engines built in: $engines."
 }
 
 TARGET_DIR=""
@@ -590,8 +605,22 @@ build() {
     say "Would run in $SRC: cargo xtask hosts"
     return 0
   fi
-  (cd "$SRC" && run cargo build --release --locked -p textweaver-tui -p textweaver-cli \
-    --bin textweaver --bin tw --features "$FEATURES")
+  if ! (cd "$SRC" && run cargo build --release --locked -p textweaver-tui -p textweaver-cli \
+    --bin textweaver --bin tw --features "$FEATURES"); then
+    case " $ENGINES " in
+      *" espeak "*) ;;
+      *) die "The build failed. The error is above. scripts/doctor.sh collects what a bug report needs." ;;
+    esac
+    say ""
+    say "The build failed. On new distributions the usual cause is the in-process espeak-ng engine: its generated bindings can disagree with the system headers. The error is above."
+    say "Building again without it. textweaver can still speak with espeak-ng through speech-dispatcher. Use --no-espeak to skip the first attempt next time."
+    ENGINES="$(printf '%s' "$ENGINES" | sed 's/espeak //')"
+    set_features
+    (cd "$SRC" && run cargo build --release --locked -p textweaver-tui -p textweaver-cli \
+      --bin textweaver --bin tw --features "$FEATURES") \
+      || die "The build failed again. The error is above. scripts/doctor.sh collects what a bug report needs."
+    say "Built without espeak-ng. Speech engines built in: $ENGINES."
+  fi
   say "Building the engine hosts: the helper programs that run Eloquence (Voxin) and DECtalk in their own processes."
   (cd "$SRC" && run cargo xtask hosts)
 }
@@ -854,6 +883,11 @@ uninstall() {
   if [ -x "$LIBDIR/tw" ] && [ "$DRY_RUN" = 0 ]; then
     say "Your settings stay here:"
     "$LIBDIR/tw" settings path 2> /dev/null || true
+  fi
+  if [ ! -e "$LIBDIR" ] && [ ! -e "$DOCDIR" ] && [ ! -e "$DATADIR" ] && [ ! -L "$BINDIR/tw" ] && [ "$DRY_RUN" = 0 ]; then
+    say "textweaver is not installed in $PREFIX, so there is nothing to remove."
+    remove_path_line
+    return 0
   fi
   ask "Remove textweaver from $PREFIX?" || {
     say "Nothing removed."

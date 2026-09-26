@@ -1,4 +1,4 @@
-param([string]$Out, [string]$Skip = 'Eloquence')
+﻿param([string]$Out, [string]$Skip = 'Eloquence')
 # Probe SAPI5 voices visible to this process (64- or 32-bit): word-boundary
 # events with character position and audio position. Output goes to WAV
 # files in $Out; nothing is played. Voices whose names match the regular

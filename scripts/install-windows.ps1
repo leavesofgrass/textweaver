@@ -221,7 +221,7 @@ function Add-ToUserPath {
     }
 }
 
-function Remove-FromUserPathEntry {
+function Undo-UserPathEntry {
     $current = Get-UserPath
     if (-not (Test-PathEntry $current $InstallDir)) { return }
     if (-not (Confirm-Choice "Remove $InstallDir from your user PATH?")) { return }
@@ -450,7 +450,7 @@ function Uninstall-Textweaver {
     } else {
         Write-Line "$InstallDir does not exist."
     }
-    Remove-FromUserPathEntry
+    Undo-UserPathEntry
     if ((Test-Path -LiteralPath $ShortcutPath) -or $DryRun) {
         Invoke-Step "remove the shortcut $ShortcutPath" { Remove-Item -LiteralPath $ShortcutPath -Force }
     }

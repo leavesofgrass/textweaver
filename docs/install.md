@@ -14,6 +14,16 @@ Both packages contain two programs:
 
 Download from the [releases page](https://github.com/leavesofgrass/textweaver/releases).
 
+## Install with a script
+
+The scripts in `scripts/` do the steps below for you. Each one says what it will do before it does it, asks before it changes your PATH or uses sudo, and has `--help` and `--dry-run`. See [scripts/README.md](../scripts/README.md).
+
+- **Windows:** `powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1` downloads the newest release, checks it, and installs it in `%LOCALAPPDATA%\Programs\textweaver`.
+- **macOS:** `bash scripts/install-macos.sh` downloads the newest release, checks it, and installs `textweaver` and `tw` in `~/.local/bin`.
+- **Linux:** `bash scripts/install-linux.sh` installs the build dependencies with apt, dnf, pacman, zypper, or apk, builds textweaver, and installs it in `~/.local`.
+
+Each script takes `--uninstall`. To update later, run `scripts/update.sh` or `scripts\update.ps1`. If something does not work, `scripts/doctor.sh` or `scripts\doctor.ps1` prints a report to paste into a bug report, and `scripts/speech-check.sh` or `scripts\speech-check.ps1` checks your voices.
+
 ## Windows
 
 1. Download the `.zip` and extract it to a folder of your own, for example `C:\Tools\textweaver`.
@@ -67,4 +77,4 @@ Compare the result with the line for that file in `SHA256SUMS.txt`.
 
 ## Building from source
 
-See the README. Linux users build from source for now. The Docker image in `docker/` has everything you need, including espeak-ng.
+See the README. Linux users build from source for now: `scripts/install-linux.sh` does it on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine. The Docker image in `docker/` has everything you need, including espeak-ng.
