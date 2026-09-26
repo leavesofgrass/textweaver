@@ -37,7 +37,10 @@ Kept current per wave by the orchestrator. Agents append to their own section's 
 cargo fmt --all --check
 cargo clippy -p <crate> --all-targets --all-features -- -D warnings
 cargo test -p <crate> --all-features
+RUSTDOCFLAGS="-D warnings" cargo doc -p <crate> --no-deps
 ```
+
+CI treats rustdoc warnings as errors. The usual failures are a redundant link target (`[`X`](crate::X)`: write `[`X`]`), a link to a private item from public docs, and square brackets in prose (`[mm:ss]`, `[@key]`): put those in backticks.
 
 and the same inside the Linux container, from your worktree's root, with your own target directory so parallel agents do not share build locks:
 
