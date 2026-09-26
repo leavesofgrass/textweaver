@@ -211,10 +211,19 @@ report() {
 
   say ""
   say "== Rust =="
-  say "rustc: $(first_line rustc --version)"
-  say "cargo: $(first_line cargo --version)"
+  local v
+  for v in rustc cargo; do
+    case "$(first_line "$v" --version)" in
+      error:*) say "$v: installed by rustup, with no default toolchain (a checkout picks its own from rust-toolchain.toml)" ;;
+      *) say "$v: $(first_line "$v" --version)" ;;
+    esac
+  done
   if have rustup; then
-    say "rustup toolchain: $(first_line rustup show active-toolchain)"
+    if [ "$DRY_RUN" = 1 ]; then
+      say "rustup toolchains: (would run: rustup toolchain list)"
+    else
+      say "rustup toolchains: $(rustup toolchain list 2> /dev/null | tr '\n' ' ')"
+    fi
   else
     say "rustup: not installed"
   fi
@@ -284,7 +293,9 @@ report() {
     say "speech-dispatcher: $(first_line speech-dispatcher --version)"
     say "spd-say: $(have spd-say && echo present || echo missing)"
     if have pactl && [ "$DRY_RUN" = 0 ]; then
-      say "Sound server: $(pactl info 2> /dev/null | sed -n 's/^Server Name: //p' | head -n 1)"
+      local server
+      server="$(pactl info 2> /dev/null | sed -n 's/^Server Name: //p' | head -n 1)"
+      say "Sound server: ${server:-none reachable (pactl could not connect)}"
     else
       say "Sound server: pactl not available"
     fi

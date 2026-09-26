@@ -322,7 +322,7 @@ packages_for() {
       echo "build-essential clang libclang-dev pkg-config libasound2-dev espeak-ng libespeak-ng-dev speech-dispatcher speech-dispatcher-espeak-ng libspeechd-dev git curl ca-certificates"
       ;;
     dnf | yum)
-      echo "gcc gcc-c++ make clang clang-devel pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-devel git curl ca-certificates"
+      echo "gcc gcc-c++ make clang clang-devel pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-utils speech-dispatcher-devel git curl ca-certificates"
       ;;
     pacman)
       echo "base-devel clang pkgconf alsa-lib espeak-ng speech-dispatcher git curl ca-certificates"

@@ -231,8 +231,11 @@ linux_checks() {
   fi
 
   section "speech-dispatcher"
-  if have spd-say || [ "$DRY_RUN" = 1 ]; then
-    probe speech-dispatcher --version || true
+  if ! have spd-say && have speech-dispatcher && [ "$DRY_RUN" = 0 ]; then
+    probe_head 1 speech-dispatcher --version || true
+    say "speech-dispatcher is installed, but its spd-say tool is not, so it cannot be checked further. On Fedora, install speech-dispatcher-utils."
+  elif have spd-say || [ "$DRY_RUN" = 1 ]; then
+    probe_head 1 speech-dispatcher --version || true
     if [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -S "$XDG_RUNTIME_DIR/speech-dispatcher/speechd.sock" ]; then
       say "The speech-dispatcher socket exists, so a speech-dispatcher is running for this session."
     else
