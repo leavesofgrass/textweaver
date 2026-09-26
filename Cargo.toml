@@ -13,6 +13,7 @@ members = [
     "crates/textweaver-tui",
     "crates/textweaver-cli",
     "crates/textweaver-eci",
+    "crates/textweaver-apple",
     "xtask",
 ]
 default-members = [
@@ -28,6 +29,7 @@ default-members = [
     "crates/textweaver-tui",
     "crates/textweaver-cli",
     "crates/textweaver-eci",
+    "crates/textweaver-apple",
 ]
 
 [workspace.package]
@@ -54,6 +56,7 @@ textweaver-a11y = { path = "crates/textweaver-a11y" }
 textweaver-editor = { path = "crates/textweaver-editor" }
 textweaver-app = { path = "crates/textweaver-app" }
 textweaver-eci = { path = "crates/textweaver-eci" }
+textweaver-apple = { path = "crates/textweaver-apple" }
 
 # text and formats
 ropey = "1.6"
@@ -89,6 +92,13 @@ rodio = { version = "0.22", default-features = false }
 
 # ETI-Eloquence host: runtime loading of the user-installed ECI library
 libloading = "0.9"
+
+# Apple speech (macOS only; used under cfg(target_os = "macos") in textweaver-apple)
+objc2 = "0.6"
+objc2-foundation = "0.3"
+objc2-app-kit = "0.3"
+objc2-avf-audio = "0.3"
+block2 = "0.6"
 
 # tests
 proptest = "1.11"

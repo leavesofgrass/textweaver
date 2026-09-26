@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'agent/**']
   pull_request:
 
 env:
@@ -47,5 +47,10 @@ jobs:
         run: cargo clippy --workspace --all-targets ${{ matrix.features }}
       - name: Test
         run: cargo test --workspace ${{ matrix.features }}
+      - name: Apple voice tests (macOS; synthesis only, no playback)
+        if: runner.os == 'macOS'
+        env:
+          TEXTWEAVER_APPLE: '1'
+        run: cargo test -p textweaver-apple -- --ignored
       - name: Docs
         run: cargo doc --workspace --no-deps ${{ matrix.features }}

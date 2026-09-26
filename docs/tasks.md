@@ -11,6 +11,7 @@ Kept current per wave by the orchestrator. Agents append to their own section's 
 | C — State, Keys, Editing | `agent/c-state-keys-editing` | not started |
 | D — App & TUI | `agent/d-app-tui` | not started |
 | E — Eloquence | `agent/e-eloquence` | not started |
+| F — Apple speech (macOS) | `agent/f-apple` | not started |
 
 ## Shared preamble (every agent reads this first)
 
@@ -146,13 +147,34 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 - Real-engine tests, `#[ignore]`d unless `TEXTWEAVER_ECI=1`, run against **licensed Voxin only**, in the container with `compose.voxin.yaml`: synthesize the spike's sentence to WAV and check every word's mark arrives with rising offsets; include the output. The Code Factory installation on this machine is not licensed: never load it. Windows real-engine tests wait for a licensed engine. Never play audio aloud in tests; use `synthesize_to_file` or a silent sink. Never commit engine audio; local samples go to the git-ignored `target-local/`.
 - clippy and tests green natively (fake host) and in the container, with and without the Voxin overlay.
 
+## Agent F — Apple speech on macOS (added 2026-09-25 at Jon's request)
+
+**Owns:** `crates/textweaver-apple/`, `tools/avspeech-spike/` (may extend), `.github/workflows/apple.yml` (create it if you need a macOS-only workflow beyond `ci.yml`).
+
+**Read:** ADR-0003, ADR-0004, ADR-0007, ADR-0008; `tools/avspeech-spike/` (probe scripts and their results); `docs/star-parity.md` Part 2 sections 1–4; the Phase 0 code in `crates/textweaver-core` and `crates/textweaver-speech`.
+
+**No Mac is available.** Develop on Windows (the crate must compile to an empty library there), and test on GitHub's macOS 14 and 15 runners: you may push **your own branch only**, `agent/f-apple`, which triggers `ci.yml`. The macOS runners have the Eloquence voices and can synthesize; tests must never play audio aloud.
+
+**Deliverables:**
+- `NsSpeechBackend` (`nsspeech`) implementing `SpeechBackend` over `NSSpeechSynthesizer`: voices (with Eloquence voices named clearly), rate in wpm, pitch, volume, `willSpeakWord` → `RawEvent::Word` (no `audio_ms`), native pause at a word boundary and resume, stop, `synthesize_to_file`; delegate callbacks pumped from `poll` on the speech thread's run loop (ADR-0003). First verify with a probe that `NSSpeechSynthesizer` works on a background thread with its own run loop; report the result.
+- `AvSpeechBackend` (`avspeech`) over `AVSpeechSynthesizer.write`: buffers plus interleaved `willSpeakRangeOfSpeechString` callbacks → word sample offsets; playback through rodio (`features = ["playback"]`); `Word { byte_range, audio_ms }`; native pause and resume; WAV export.
+- Range mapping from UTF-16 `NSRange` to UTF-8 byte ranges of `Utterance::text`, including Eloquence's sub-token ranges ("Dr" in "Dr.", "9" and "30" in "9:30").
+- Voice selection defaulting to Eloquence Reed (`DEFAULT_VOICE`) when present; both backends expose `backend_info()` and a factory for the app to register (the orchestrator wires them).
+- Declare native normalization for the Eloquence voices (Agent B is adding a way to declare it; describe your need in the report if you cannot see it).
+- Measurements, reported: first-word latency for both backends and Reed versus Samantha; highlight offset accuracy of `avspeech` on macOS 14 and 15; the wpm calibration of each backend.
+
+**Acceptance:**
+- Unit tests for range mapping (UTF-16 to UTF-8, multibyte, sub-token ranges) run on every OS.
+- macOS-only tests `#[ignore]`d unless `TEXTWEAVER_APPLE=1` (CI sets it on macOS): synthesize a sentence with Reed through each backend to a temporary file; check word events arrive in order and cover every word; `avspeech` offsets rise.
+- `ci.yml` green on your branch on all three OSes.
+
 ## Seams to watch at integration
 
 - `text::narrate::plan` (A) → `SpeechService::read` (B): utterance ids, offset maps, `Inserted` spans.
 - `Document::apply` (A) ↔ `Editor` (C) ↔ bookmarks and history (C, D): one `EditOutcome` shifts all of them.
 - `Keymap` (C) ↔ TUI key translation (D): chord normalization and layers.
 - `Settings` (C) ↔ `ServiceConfig` (B) ↔ `App` (D): rate, pitch, volume, pacing, verbosity.
-- `EciBackend` (E) ↔ backend registry (B) ↔ app backend selection (D): Eloquence first when installed; normalization skipped for engines that normalize natively.
+- `NsSpeechBackend`/`AvSpeechBackend` (F) and `EciBackend` (E) ↔ backend registry (B) ↔ app backend selection (D): Eloquence first when installed; normalization skipped for engines that normalize natively.
 
 ## Wave 2 (after Integration 1 and Jon's review)
 

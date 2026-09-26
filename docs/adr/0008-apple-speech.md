@@ -1,6 +1,6 @@
 # ADR-0008: Apple speech on macOS
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-09-25
 
 ## Context
