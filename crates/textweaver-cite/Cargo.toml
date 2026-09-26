@@ -15,6 +15,14 @@ thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 log.workspace = true
+hayagriva.workspace = true
+biblatex.workspace = true
+ureq.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+insta.workspace = true
+proptest.workspace = true
 
 [lints]
 workspace = true
