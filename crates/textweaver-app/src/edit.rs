@@ -40,12 +40,12 @@ use textweaver_core::{CharPos, CharRange, Direction, Edit, EditOutcome, Unit};
 use textweaver_editor::autosave::{self, AutosavePolicy, RecoverySnapshot};
 use textweaver_editor::echo::{self, EchoEvent, EchoPolicy};
 use textweaver_editor::{
-    Choice, DocInfo, EditSession, FindOptions, LeaveOutcome, MarkdownOp, SaveOutcome, Selection,
+    Choice, DocInfo, EditSession, FindOptions, LeaveOutcome, MarkdownOp, Selection,
 };
 use textweaver_formats::Source;
 use textweaver_keymap::ActionId;
 use textweaver_speech::{Earcon, SayMode};
-use textweaver_store::{Bookmark, DocKey, Recent};
+use textweaver_store::{Bookmark, DocKey};
 use textweaver_text::{Document, History, NavOptions, navigate};
 
 use crate::align::Aligner;
@@ -321,6 +321,15 @@ impl App {
         self.stop_speech();
         let policy = self.autosave_policy();
         let recovery_dir = self.paths.as_ref().map(|p| p.recovery_dir());
+        let undo_limits = textweaver_editor::UndoLimits {
+            steps: self.settings.editing.undo_steps.max(1),
+            bytes: self
+                .settings
+                .editing
+                .undo_memory_mb
+                .max(1)
+                .saturating_mul(1024 * 1024),
+        };
         // The structure parsed in the background when the file opened, if
         // the file is unchanged (large Markdown files only).
         let prefetched = if source.is_none() {
@@ -352,6 +361,9 @@ impl App {
             title: s.title.clone(),
         };
         let mut session = EditSession::new(info, text);
+        session.set_undo_limits(undo_limits);
+        // Snapshots are written and deleted by the background writer.
+        session.set_deferred_io(true);
         if let Some(dir) = recovery_dir {
             session = session.with_autosave(policy, dir);
         }
@@ -444,12 +456,11 @@ impl App {
         save_as: Option<PathBuf>,
         after: AfterLeave,
     ) -> Vec<Effect> {
-        if self.is_dirty()
-            && choice == Some(Choice::Save)
-            && save_as.is_none()
-            && let Some(asked) = self.check_overwrite(Some(after.clone()))
-        {
-            return asked;
+        if self.is_dirty() && choice == Some(Choice::Save) {
+            // Written on the writer; edit mode is left when it reports
+            // (crate::writes), or the question about a file changed on
+            // disk is asked then.
+            return self.start_save(save_as, SaveThen::Leave(after));
         }
         let Some(edit) = self.edit.as_mut() else {
             return self.continue_after(after);
@@ -459,10 +470,8 @@ impl App {
         match result {
             Ok(LeaveOutcome::Left { rebuild }) => {
                 let discarded = dirty && choice == Some(Choice::Discard);
+                // The file's stamp was kept when the writer saved it.
                 self.finish_leave(rebuild, discarded);
-                if rebuild {
-                    self.remember_disk_state();
-                }
                 self.continue_after(after)
             }
             Ok(LeaveOutcome::Stayed) => {
@@ -501,7 +510,7 @@ impl App {
             .unwrap_or_default()
     }
 
-    fn ask_save_path(&mut self, suggested: PathBuf, then: SaveThen) -> Vec<Effect> {
+    pub(crate) fn ask_save_path(&mut self, suggested: PathBuf, then: SaveThen) -> Vec<Effect> {
         let suggested = match (&suggested, self.edit.as_ref()) {
             // A new document: suggest a file in the working directory.
             (p, Some(e))
@@ -606,9 +615,13 @@ impl App {
         }
         let markdown = self.authoring.structure.markdown;
         self.authoring.structure = crate::authoring_state::Structure::default();
-        let Some(state) = self.edit.take() else {
+        let Some(mut state) = self.edit.take() else {
             return;
         };
+        // The snapshot's deletion, queued when the session left edit mode.
+        for op in state.session.take_snapshot_ops() {
+            self.writer.send(crate::writer::Job::Snapshot(op));
+        }
         self.stop_speech();
         let saved_text = state.session.document_text().to_owned();
         let path = state.session.doc().path.clone();
@@ -693,6 +706,7 @@ impl App {
         s.selection_anchor = None;
         s.find = None;
         s.goal_column = None;
+        s.text_stamp = Some(crate::relocate::text_stamp(&s.doc));
         self.mode = Mode::Browse;
         self.return_mode = Mode::Browse;
         self.scroll_to_cursor();
@@ -755,32 +769,8 @@ impl App {
             ));
             return vec![Effect::Redraw];
         }
-        if save_as.is_none()
-            && let Some(asked) = self.check_overwrite(None)
-        {
-            return asked;
-        }
-        let Some(edit) = self.edit.as_mut() else {
-            return vec![Effect::Redraw];
-        };
-        match edit.session.save(save_as.as_deref()) {
-            Ok(SaveOutcome::Saved { path, adopted }) => {
-                self.after_save(&path, adopted);
-                self.remember_disk_state();
-                let name = path.file_name().map_or_else(
-                    || path.display().to_string(),
-                    |n| n.to_string_lossy().into(),
-                );
-                self.tell(&format!("Saved {name}. Still editing."));
-                // The misspelling count and the preview (Agent P2b).
-                self.on_saved();
-            }
-            Ok(SaveOutcome::NeedsPath { suggested }) => {
-                return self.ask_save_path(suggested, SaveThen::Stay);
-            }
-            Err(e) => self.error(&format!("Could not save: {e}. Still editing.")),
-        }
-        vec![Effect::Redraw]
+        // Written on the writer; "Saved" is said when it reports.
+        self.start_save(save_as, SaveThen::Stay)
     }
 
     /// Save As (Alt+S): always asks for a name.
@@ -807,9 +797,7 @@ impl App {
 
     /// Bookkeeping after a successful save: positions of the saved text, and
     /// on Save As the new key, title, and recent entry.
-    fn after_save(&mut self, path: &Path, adopted: bool) {
-        let recent_limit = self.settings.library.recent_limit;
-        let recent_file = self.paths.as_ref().map(|p| p.recent_file());
+    pub(crate) fn after_save(&mut self, path: &Path, adopted: bool) {
         let Some(edit) = self.edit.as_mut() else {
             return;
         };
@@ -830,13 +818,9 @@ impl App {
             s.doc.meta.path = Some(path.to_owned());
             s.doc.meta.format = edit.session.doc().loader_id.clone();
             s.saved = textweaver_store::DocState::default();
-            if let Some(file) = recent_file {
-                let mut recent = Recent::load(&file);
-                recent.touch(path, Some(title), recent_limit);
-                if let Err(e) = recent.save(&file) {
-                    log::warn!("cannot save recent files: {e}");
-                }
-            }
+            let format = s.doc.meta.format.clone();
+            // The recent list and the bookshelf, on the writer.
+            self.record_library_open(path, &title, &format);
         }
     }
 
@@ -1610,7 +1594,7 @@ impl App {
                 .as_ref()
                 .and_then(|e| e.session.editor())
                 .map_or(0, |ed| {
-                    textweaver_editor::find::find_all(ed.text(), text, FindOptions::default()).len()
+                    textweaver_editor::find::count_matches(ed.text(), text, FindOptions::default())
                 });
             if n == 0 {
                 self.speech.earcon(Earcon::Error);

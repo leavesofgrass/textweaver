@@ -32,6 +32,9 @@ pub(crate) struct ReplaceSession {
     pub(crate) current: Option<CharRange>,
     pub(crate) replaced: usize,
     pub(crate) skipped: usize,
+    /// The current match's number and the total, from the one search each
+    /// step makes (Agent P2a: no search per announcement).
+    pub(crate) position: Option<(usize, usize)>,
 }
 
 fn on_off(b: bool) -> &'static str {
@@ -55,6 +58,7 @@ impl App {
             current: None,
             replaced: 0,
             skipped: 0,
+            position: None,
         });
         self.next_replace_match(origin)
     }
@@ -70,24 +74,58 @@ impl App {
         textweaver_editor::find::find_all(ed.text(), &r.query, r.options)
     }
 
+    /// How many matches there are, counted without keeping them.
+    fn replace_count(&self) -> usize {
+        let (Some(r), Some(ed)) = (
+            self.authoring.replace.as_ref(),
+            self.edit.as_ref().and_then(|e| e.session.editor()),
+        ) else {
+            return 0;
+        };
+        textweaver_editor::find::count_matches(ed.text(), &r.query, r.options)
+    }
+
     /// The next match at or after `from` (wrapping once, stopping at the
     /// origin), selected and asked about; the summary when none is left.
     fn next_replace_match(&mut self, from: CharPos) -> Vec<Effect> {
-        let hits = self.replace_hits();
+        // One streamed search: the match to ask about (and the first one
+        // before the origin, for wrapping), with its number and the total.
+        let (Some(r), Some(ed)) = (
+            self.authoring.replace.as_ref(),
+            self.edit.as_ref().and_then(|e| e.session.editor()),
+        ) else {
+            return vec![Effect::Redraw];
+        };
+        let (wrapped, origin) = (r.wrapped, r.origin);
+        let mut total = 0usize;
+        let mut ahead: Option<(CharRange, usize)> = None;
+        let mut wrap_to: Option<(CharRange, usize)> = None;
+        textweaver_editor::find::for_each_match(ed.text(), &r.query, r.options, |h| {
+            total += 1;
+            let next = if wrapped {
+                h.start >= from && h.start < origin
+            } else {
+                h.start >= from
+            };
+            if next && ahead.is_none() {
+                ahead = Some((h, total));
+            }
+            if h.start < origin && wrap_to.is_none() {
+                wrap_to = Some((h, total));
+            }
+            std::ops::ControlFlow::Continue(())
+        });
         let Some(r) = self.authoring.replace.as_mut() else {
             return vec![Effect::Redraw];
         };
-        let mut found = if r.wrapped {
-            hits.iter().find(|h| h.start >= from && h.start < r.origin)
-        } else {
-            hits.iter().find(|h| h.start >= from)
-        }
-        .copied();
+        let mut found = ahead;
         if found.is_none() && !r.wrapped {
             r.wrapped = true;
-            found = hits.iter().find(|h| h.start < r.origin).copied();
+            found = wrap_to;
         }
-        r.current = found;
+        r.current = found.map(|(h, _)| h);
+        r.position = found.map(|(_, n)| (n, total));
+        let found = found.map(|(h, _)| h);
         let Some(m) = found else {
             return self.replace_done();
         };
@@ -104,22 +142,21 @@ impl App {
 
     /// "Match 2 of 5, line 12: … the context …".
     pub(crate) fn replace_title(&self) -> String {
-        let hits = self.replace_hits();
         let (Some(r), Some(s)) = (self.authoring.replace.as_ref(), self.session.as_ref()) else {
             return "Replace".to_owned();
         };
         let Some(m) = r.current else {
             return "Replace".to_owned();
         };
-        let i = hits.iter().position(|h| *h == m).map_or(0, |i| i + 1);
+        let (i, total) = r.position.unwrap_or_else(|| {
+            let hits = self.replace_hits();
+            let i = hits.iter().position(|h| *h == m).map_or(0, |i| i + 1);
+            (i, hits.len())
+        });
         let line_no = text_util::line_of(&s.doc, m.start);
         let line = text_util::line_range(&s.doc, line_no);
         let context = crate::lists::one_line(&s.doc.slice(line), 80);
-        format!(
-            "Match {i} of {}, line {}: {context}",
-            hits.len(),
-            line_no + 1
-        )
+        format!("Match {i} of {total}, line {}: {context}", line_no + 1)
     }
 
     /// The choices, with the options' states.
@@ -181,7 +218,7 @@ impl App {
                         r.options.whole_word = !r.options.whole_word;
                     }
                 }
-                let hits = self.replace_hits().len();
+                let hits = self.replace_count();
                 let (case, whole) = self.authoring.replace.as_ref().map_or((false, false), |r| {
                     (r.options.case_sensitive, r.options.whole_word)
                 });

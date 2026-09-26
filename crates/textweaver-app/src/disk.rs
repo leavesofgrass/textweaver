@@ -48,8 +48,14 @@ pub(crate) enum DiskQuestion {
     /// Save over a file changed on disk; `leaving` saves on the way out of
     /// edit mode.
     Overwrite { leaving: Option<AfterLeave> },
-    /// Reload a file changed on disk while open and unmodified.
-    Reload(PathBuf),
+    /// Reload a file changed on disk while open and unmodified; `stamp` is
+    /// the version found, remembered when the answer is no.
+    Reload {
+        /// The file.
+        path: PathBuf,
+        /// Its stamp when the change was noticed.
+        stamp: Option<FileStamp>,
+    },
     /// Save As onto a file that already exists.
     SaveAsOver {
         /// The path the user typed.
@@ -72,38 +78,17 @@ impl App {
         self.edit.as_ref()?.session.doc().path.clone()
     }
 
-    /// Records the open file's stamp as the version the app knows.
-    pub(crate) fn remember_disk_state(&mut self) {
-        let path = self
-            .edited_path()
-            .or_else(|| self.session.as_ref()?.doc.meta.path.clone());
-        let stamp = path.as_deref().and_then(FileStamp::of);
-        if let Some(s) = self.session.as_mut() {
-            s.disk = stamp;
-        }
-    }
-
-    /// True when the file about to be saved over changed on disk since it
-    /// was opened or last saved.
-    fn changed_on_disk(&self) -> Option<PathBuf> {
-        let path = self.edited_path()?;
-        let known = self.session.as_ref()?.disk?;
-        let now = FileStamp::of(&path)?;
-        (now != known).then_some(path)
-    }
-
-    /// Before saving in place: when the file changed on disk, asks whether
-    /// to save over it and returns the effects of asking. `None` means go
-    /// ahead (or the user already said yes).
-    pub(crate) fn check_overwrite(&mut self, leaving: Option<AfterLeave>) -> Option<Vec<Effect>> {
-        if std::mem::take(&mut self.overwrite_confirmed) {
-            return None;
-        }
-        let path = self.changed_on_disk()?;
+    /// Asks whether to save over a file that changed on disk since it was
+    /// opened or last saved (the writer found it changed and wrote
+    /// nothing); `leaving` saves on the way out of edit mode.
+    pub(crate) fn ask_overwrite(&mut self, leaving: Option<AfterLeave>) -> Vec<Effect> {
+        let Some(path) = self.edited_path() else {
+            return vec![Effect::Redraw];
+        };
         self.pending_disk = Some(DiskQuestion::Overwrite { leaving });
         self.list = None;
         self.tell(&overwrite_question(&path));
-        Some(vec![Effect::Redraw])
+        vec![Effect::Redraw]
     }
 
     /// Answers a question about the file on disk.
@@ -118,7 +103,7 @@ impl App {
                 }
                 vec![Effect::Redraw]
             }
-            (Confirm::Repeat, DiskQuestion::Reload(p)) => {
+            (Confirm::Repeat, DiskQuestion::Reload { path: p, .. }) => {
                 self.tell(&reload_question(&p));
                 vec![Effect::Redraw]
             }
@@ -170,14 +155,16 @@ impl App {
                 ));
                 vec![Effect::Redraw]
             }
-            (Confirm::Yes, DiskQuestion::Reload(path)) => {
+            (Confirm::Yes, DiskQuestion::Reload { path, .. }) => {
                 self.pending_disk = None;
                 self.reload(&path)
             }
-            (Confirm::No, DiskQuestion::Reload(_)) => {
+            (Confirm::No, DiskQuestion::Reload { stamp, .. }) => {
                 self.pending_disk = None;
                 // Do not ask again about this version.
-                self.remember_disk_state();
+                if let (Some(s), Some(stamp)) = (self.session.as_mut(), stamp) {
+                    s.disk = Some(stamp);
+                }
                 self.tell("Kept the open version.");
                 vec![Effect::Redraw]
             }
@@ -203,9 +190,10 @@ impl App {
         effects
     }
 
-    /// Periodic check for a change on disk; offers a reload when the open
-    /// document has no unsaved changes, nothing is being read aloud, and
-    /// nothing else is being asked.
+    /// Periodic check for a change on disk: every
+    /// [`DISK_CHECK_INTERVAL`] the writer reads the open file's stamp
+    /// ([`disk_checked`](Self::disk_checked) acts on it), so a slow disk or
+    /// network drive never holds up a key press.
     pub(crate) fn disk_tick(&mut self, now: Instant) -> Vec<Effect> {
         if self
             .last_disk_check
@@ -214,23 +202,46 @@ impl App {
             return Vec::new();
         }
         self.last_disk_check = Some(now);
-        let busy = self.confirmation_pending()
-            || self.list.is_some()
-            || !self.may_offer_reload()
-            || self.playback == Playback::Reading
-            || self.is_dirty();
-        if busy {
+        if self.reload_busy() {
             return Vec::new();
         }
         let path = self
             .edited_path()
             .or_else(|| self.session.as_ref()?.doc.meta.path.clone());
-        let (Some(path), Some(known)) = (path, self.session.as_ref().and_then(|s| s.disk)) else {
+        if let (Some(path), Some(_)) = (path, self.session.as_ref().and_then(|s| s.disk)) {
+            self.request_disk_check(path);
+        }
+        Vec::new()
+    }
+
+    /// True when a reload may not be offered now: something is being asked
+    /// or listed, a prompt is open, reading is on, or there are unsaved
+    /// changes.
+    fn reload_busy(&self) -> bool {
+        self.confirmation_pending()
+            || self.list.is_some()
+            || !self.may_offer_reload()
+            || self.playback == Playback::Reading
+            || self.is_dirty()
+    }
+
+    /// The writer read the open file's stamp: offers a reload when it
+    /// changed, the open document has no unsaved changes, nothing is being
+    /// read aloud, and nothing else is being asked.
+    pub(crate) fn disk_checked(&mut self, path: PathBuf, stamp: Option<FileStamp>) -> Vec<Effect> {
+        if self.reload_busy() {
             return Vec::new();
-        };
-        match FileStamp::of(&path) {
-            Some(now) if now != known => {
-                self.pending_disk = Some(DiskQuestion::Reload(path.clone()));
+        }
+        let open = self
+            .edited_path()
+            .or_else(|| self.session.as_ref()?.doc.meta.path.clone());
+        let known = self.session.as_ref().and_then(|s| s.disk);
+        match (open, known, stamp) {
+            (Some(open), Some(known), Some(now)) if open == path && now != known => {
+                self.pending_disk = Some(DiskQuestion::Reload {
+                    path: path.clone(),
+                    stamp: Some(now),
+                });
                 self.error(&reload_question(&path));
                 vec![Effect::Redraw]
             }

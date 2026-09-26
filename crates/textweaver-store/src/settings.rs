@@ -562,6 +562,11 @@ pub struct EditingSettings {
     pub echo_deletions: bool,
     /// Speak the line when the cursor moves between lines.
     pub echo_lines_on_move: bool,
+    /// Most undo steps kept while editing; the oldest are forgotten first
+    /// (at least 1).
+    pub undo_steps: usize,
+    /// Most memory the undo history may use, in megabytes (at least 1).
+    pub undo_memory_mb: usize,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -576,6 +581,8 @@ impl Default for EditingSettings {
             echo_words: true,
             echo_deletions: true,
             echo_lines_on_move: true,
+            undo_steps: 1000,
+            undo_memory_mb: 50,
             extra: toml::Table::new(),
         }
     }
@@ -1048,6 +1055,12 @@ impl Settings {
             "reading.nav_history_size",
         );
         at_least(&mut self.library.recent_limit, 1, "library.recent_limit");
+        at_least(&mut self.editing.undo_steps, 1, "editing.undo_steps");
+        at_least(
+            &mut self.editing.undo_memory_mb,
+            1,
+            "editing.undo_memory_mb",
+        );
         if self.display.tab_width == 0 {
             fix(
                 "display.tab_width".into(),

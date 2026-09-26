@@ -614,12 +614,13 @@ impl App {
         self.speech_caps = self.speech.capabilities();
         let voiced = std::mem::replace(&mut self.self_voicing, false);
         self.backend_name = "silent".into();
-        let msg = if voiced {
-            format!(
-                "Speech stopped working ({reason}). textweaver is silent now; restart it to hear speech again."
-            )
-        } else {
+        // Restarted automatically once, when the frontend said how
+        // (crate::restart); the new service is swapped in on a tick.
+        let next = self.restart_after_death(voiced);
+        let msg = if next.is_empty() {
             format!("Speech stopped working ({reason}).")
+        } else {
+            format!("Speech stopped working ({reason}). {next}")
         };
         self.error(&msg);
     }
@@ -629,7 +630,7 @@ impl App {
     /// produced is already waiting for [`poll_speech`](Self::poll_speech).
     /// Tests use it instead of sleeping.
     pub fn wait_for_speech_thread(&self) {
-        let _ = self.speech.voices();
+        let _ = self.speech.sync();
     }
 
     /// Drains speech status updates and applies them (highlight, cursor).

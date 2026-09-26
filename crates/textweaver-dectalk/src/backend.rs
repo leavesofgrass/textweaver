@@ -24,7 +24,7 @@ use std::time::Duration;
 
 use textweaver_core::Utterance;
 use textweaver_enginehost::protocol::check_version;
-use textweaver_enginehost::{HostMsg, HostProcess, Playback};
+use textweaver_enginehost::{Class, HostMsg, HostProcess, HostStart, Playback, Start, Started};
 use textweaver_speech::{
     BackendId, Caps, EventSink, FileSynthesis, SpeechBackend, SpeechError, Voice, VoiceParams,
 };
@@ -84,41 +84,27 @@ fn mark(index: u32) -> impl FnOnce(&mut Marks) -> Option<Range<u32>> {
     move |marks| marks.get(index as usize).cloned()
 }
 
-/// Starts a host and waits for `Ready`.
-fn spawn_host(
-    path: &Path,
-    config: &DectalkConfig,
-    library: Option<&Path>,
-) -> Result<(HostProcess<Reply>, ReadyInfo), String> {
+/// The host's arguments for `config` and the chosen library.
+fn host_args(config: &DectalkConfig, library: Option<&Path>) -> Vec<std::ffi::OsString> {
     let mut args: Vec<std::ffi::OsString> = Vec::new();
     if config.fake_engine {
         args.extend(["--engine".into(), "fake".into()]);
     } else if let Some(lib) = library {
         args.extend(["--library".into(), lib.into()]);
     }
-    let mut host = HostProcess::spawn(path, &args, "dectalk")?;
-    let ready = match host.recv_timeout(READY_TIMEOUT) {
-        Some(HostMsg::Reply(Reply::Ready {
-            protocol,
-            sample_rate,
-            version,
-            engine,
-        })) => check_version(protocol).map(|()| ReadyInfo {
-            sample_rate,
-            version,
-            engine,
-        }),
-        Some(HostMsg::Reply(Reply::Error { message, .. })) => Err(message),
-        Some(HostMsg::Reply(other)) => Err(format!("host sent {other:?} before Ready")),
-        Some(HostMsg::Closed(why)) => Err(why),
-        None => Err("host did not start in time".into()),
-    };
-    match ready {
-        Ok(r) => Ok((host, r)),
-        Err(e) => {
-            host.shutdown();
-            Err(e)
-        }
+    args.extend(config.host_args.iter().cloned());
+    args
+}
+
+/// How a reply before `Ready` counts.
+fn classify(r: &Reply) -> Class {
+    match r {
+        Reply::Ready { protocol, .. } => match check_version(*protocol) {
+            Ok(()) => Class::Ready,
+            Err(e) => Class::Fail(e),
+        },
+        Reply::Error { message, .. } => Class::Fail(message.clone()),
+        other => Class::Fail(format!("host sent {other:?} before Ready")),
     }
 }
 
@@ -134,6 +120,11 @@ pub struct DectalkBackend {
     applied: Option<Applied>,
     /// The library the running host loaded (not set for the fake engine).
     library: Option<LibraryChoice>,
+    /// A host being started (after a crash or a hang), with the library
+    /// chosen for it: requests wait in `pending` until it is ready.
+    starting: Option<(HostStart<Reply>, Option<LibraryChoice>)>,
+    /// Speak requests for the host being started, in order.
+    pending: Vec<Request>,
 }
 
 impl std::fmt::Debug for DectalkBackend {
@@ -161,9 +152,18 @@ impl DectalkBackend {
             speaker: Speaker::Paul,
             applied: None,
             library: None,
+            starting: None,
+            pending: Vec::new(),
         };
+        // The first start waits, so a broken installation is reported here.
         b.ensure_host()?;
         Ok(b)
+    }
+
+    /// Changes the extra host arguments used from the next host start on
+    /// (see [`DectalkConfig::host_args`]; tests).
+    pub fn set_host_args(&mut self, args: Vec<std::ffi::OsString>) {
+        self.config.host_args = args;
     }
 
     /// The engine's version, as the host reported it.
@@ -196,8 +196,17 @@ impl DectalkBackend {
         self.speaker
     }
 
+    /// Starts the host, waiting until it is ready (the first start, and
+    /// synthesizing to a file).
     fn ensure_host(&mut self) -> Result<(), SpeechError> {
-        if self.host.is_some() {
+        self.begin_host()?;
+        self.poll_start(true)
+    }
+
+    /// Starts a host without waiting for it, unless one is running or
+    /// starting; `poll` finishes the start (Phase 2).
+    fn begin_host(&mut self) -> Result<(), SpeechError> {
+        if self.host.is_some() || self.starting.is_some() {
             return Ok(());
         }
         let (library, candidates) = if self.config.fake_engine {
@@ -220,29 +229,95 @@ impl DectalkBackend {
                 crate::HOST_ENV
             )));
         }
-        let lib_path = library.as_ref().map(|c| c.candidate.path.clone());
-        let mut errors = Vec::new();
-        for path in candidates {
-            match spawn_host(&path, &self.config, lib_path.as_deref()) {
-                Ok((host, ready)) => {
-                    log::info!(
-                        "dectalk: {} ({}, {} Hz)",
-                        path.display(),
-                        ready.version,
-                        ready.sample_rate
-                    );
-                    self.playback.set_sample_rate(ready.sample_rate);
-                    self.host = Some(host);
-                    self.ready = Some(ready);
-                    self.library = library;
-                    self.applied = None;
-                    self.apply_voice()?;
-                    return Ok(());
+        let args = host_args(
+            &self.config,
+            library.as_ref().map(|c| c.candidate.path.as_path()),
+        );
+        let start = HostStart::begin(
+            candidates,
+            READY_TIMEOUT,
+            Box::new(move |path: &Path| HostProcess::spawn(path, &args, "dectalk")),
+        );
+        self.starting = Some((start, library));
+        Ok(())
+    }
+
+    /// Moves a start on (waiting for the outcome with `wait`): queued
+    /// requests go out when the host is ready, and fail with the reason
+    /// when it could not start.
+    fn poll_start(&mut self, wait: bool) -> Result<(), SpeechError> {
+        let Some((start, _)) = self.starting.as_mut() else {
+            return Ok(());
+        };
+        let outcome = if wait {
+            start.wait(classify)
+        } else {
+            start.poll(classify)
+        };
+        match outcome {
+            Start::Pending => Ok(()),
+            Start::Ready(started) => {
+                let library = self.starting.take().and_then(|(_, l)| l);
+                self.finish_start(started, library)?;
+                for req in std::mem::take(&mut self.pending) {
+                    self.send(&req)?;
                 }
-                Err(e) => errors.push(format!("{}: {e}", path.display())),
+                if self.playback.owes(HOST)
+                    && let Some(h) = &mut self.host
+                {
+                    h.touch();
+                }
+                Ok(())
+            }
+            Start::Failed(why) => {
+                self.starting = None;
+                self.pending.clear();
+                log::warn!("dectalk: the host did not start: {why}");
+                self.playback
+                    .host_died(HOST, &format!("DECtalk could not start ({why})"));
+                Err(unavailable(why))
             }
         }
-        Err(unavailable(errors.join("; ")))
+    }
+
+    /// A host reported `Ready`: takes it into use.
+    fn finish_start(
+        &mut self,
+        started: Started<Reply>,
+        library: Option<LibraryChoice>,
+    ) -> Result<(), SpeechError> {
+        let Started {
+            path,
+            process,
+            ready,
+            ..
+        } = started;
+        let Reply::Ready {
+            sample_rate,
+            version,
+            engine,
+            ..
+        } = ready
+        else {
+            return Err(SpeechError::Engine("the host did not report Ready".into()));
+        };
+        let ready = ReadyInfo {
+            sample_rate,
+            version,
+            engine,
+        };
+        log::info!(
+            "dectalk: {} ({}, {} Hz)",
+            path.display(),
+            ready.version,
+            ready.sample_rate
+        );
+        self.playback.set_sample_rate(ready.sample_rate);
+        self.host = Some(process);
+        self.ready = Some(ready);
+        self.library = library;
+        self.applied = None;
+        self.apply_voice()
     }
 
     fn send(&mut self, req: &Request) -> Result<(), SpeechError> {
@@ -429,20 +504,28 @@ impl SpeechBackend for DectalkBackend {
     ) -> Result<(), SpeechError> {
         self.drain_host();
         self.playback.emit(sink);
-        self.ensure_host()?;
+        self.begin_host()?;
+        self.poll_start(false)?;
         self.playback.ensure_player()?;
-        self.apply_voice()?;
         let ws = words::words(&utterance.text);
         let token = self.playback.next_token();
-        self.send(&Request::Speak {
+        let req = Request::Speak {
             token,
             pieces: words::pieces(&utterance.text, &ws),
-        })?;
-        if !self.playback.owes(HOST)
-            && let Some(h) = &mut self.host
-        {
-            // The host starts owing audio now: its stall timer starts here.
-            h.touch();
+        };
+        if self.starting.is_some() {
+            // Sent when the host is ready (poll).
+            self.pending.push(req);
+        } else {
+            self.apply_voice()?;
+            self.send(&req)?;
+            if !self.playback.owes(HOST)
+                && let Some(h) = &mut self.host
+            {
+                // The host starts owing audio now: its stall timer starts
+                // here.
+                h.touch();
+            }
         }
         self.playback.enqueue(
             utterance.id,
@@ -454,11 +537,16 @@ impl SpeechBackend for DectalkBackend {
     }
 
     fn poll(&mut self, sink: &mut dyn EventSink) {
+        if let Err(e) = self.poll_start(false) {
+            log::warn!("dectalk: {e}");
+        }
         self.drain_host();
         self.playback.emit(sink);
     }
 
     fn stop(&mut self) {
+        // Utterances waiting for a starting host are simply not sent.
+        self.pending.clear();
         let hosts = self.playback.stop();
         if !hosts.is_empty()
             && self.host.is_some()
@@ -466,6 +554,20 @@ impl SpeechBackend for DectalkBackend {
         {
             log::warn!("dectalk: {e}");
         }
+    }
+
+    /// Kills the host and closes the audio output; the next `speak` starts
+    /// a new host (in `poll`) and reopens the device.
+    fn reset(&mut self) {
+        self.stop();
+        self.playback.close();
+        if let Some((mut s, _)) = self.starting.take() {
+            s.cancel();
+        }
+        if let Some(mut h) = self.host.take() {
+            h.kill();
+        }
+        self.applied = None;
     }
 
     fn pause(&mut self) -> Result<(), SpeechError> {

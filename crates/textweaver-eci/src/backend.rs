@@ -32,7 +32,7 @@ use std::time::Duration;
 
 use textweaver_core::Utterance;
 use textweaver_enginehost::protocol::check_version;
-use textweaver_enginehost::{HostMsg, HostProcess, Playback};
+use textweaver_enginehost::{Class, HostMsg, HostProcess, HostStart, Playback, Start, Started};
 use textweaver_speech::{
     BackendId, Caps, EventSink, FileSynthesis, SpeechBackend, SpeechError, Voice, VoiceParams,
 };
@@ -66,13 +66,8 @@ struct ReadyInfo {
     presets: Vec<PresetInfo>,
 }
 
-/// Starts a host and waits for `Ready`, collecting the dictionary reports
-/// that precede it.
-fn spawn_host(
-    path: &Path,
-    config: &EciConfig,
-    library: Option<&Path>,
-) -> Result<(HostProcess<Reply>, ReadyInfo, Vec<DictLoad>), String> {
+/// The host's arguments for `config` and the chosen library.
+fn host_args(config: &EciConfig, library: Option<&Path>, path: &Path) -> Vec<std::ffi::OsString> {
     let mut args: Vec<std::ffi::OsString> = Vec::new();
     if config.fake_engine {
         args.extend(["--engine".into(), "fake".into()]);
@@ -85,52 +80,22 @@ fn spawn_host(
     if let Some(dir) = crate::dictionaries::find_dir(&config.dictionaries, Some(path)) {
         args.extend(["--dictionaries".into(), dir.into()]);
     }
-    let mut host = HostProcess::spawn(path, &args, "eci")?;
-    let mut loads = Vec::new();
-    // Each report restarts the wait: loading dictionaries takes a while on
-    // a cold engine, and the host is making progress.
-    let first = loop {
-        match host.recv_timeout(READY_TIMEOUT) {
-            Some(HostMsg::Reply(Reply::Dictionary {
-                dialect,
-                volume,
-                status,
-                path,
-            })) => loads.push(DictLoad {
-                dialect,
-                volume,
-                status,
-                path,
-            }),
-            other => break other,
-        }
-    };
-    let ready = match first {
-        Some(HostMsg::Reply(Reply::Ready {
-            protocol,
-            sample_rate,
-            version,
-            dialects,
-            default_dialect,
-            presets,
-        })) => check_version(protocol).map(|()| ReadyInfo {
-            sample_rate,
-            version,
-            dialects,
-            default_dialect,
-            presets,
-        }),
-        Some(HostMsg::Reply(Reply::Error { message, .. })) => Err(message),
-        Some(HostMsg::Reply(other)) => Err(format!("host sent {other:?} before Ready")),
-        Some(HostMsg::Closed(why)) => Err(why),
-        None => Err("host did not start in time".into()),
-    };
-    match ready {
-        Ok(r) => Ok((host, r, loads)),
-        Err(e) => {
-            host.shutdown();
-            Err(e)
-        }
+    args.extend(config.host_args.iter().cloned());
+    args
+}
+
+/// How a reply before `Ready` counts: dictionary reports are progress
+/// (loading dictionaries on a cold engine takes a while, and each report
+/// restarts the wait).
+fn classify(r: &Reply) -> Class {
+    match r {
+        Reply::Ready { protocol, .. } => match check_version(*protocol) {
+            Ok(()) => Class::Ready,
+            Err(e) => Class::Fail(e),
+        },
+        Reply::Dictionary { .. } => Class::Progress,
+        Reply::Error { message, .. } => Class::Fail(message.clone()),
+        other => Class::Fail(format!("host sent {other:?} before Ready")),
     }
 }
 
@@ -179,6 +144,11 @@ pub struct EciBackend {
     /// `eci.ini` when the engine cannot list them), not on every rate
     /// change.
     installed: Vec<u32>,
+    /// A host being started (after a crash or a hang), with the library
+    /// chosen for it: requests wait in `pending` until it is ready.
+    starting: Option<(HostStart<Reply>, Option<LibraryChoice>)>,
+    /// Speak requests for the host being started, in order.
+    pending: Vec<Request>,
 }
 
 impl std::fmt::Debug for EciBackend {
@@ -232,7 +202,11 @@ impl EciBackend {
             dictionary_loads: Vec::new(),
             library: None,
             installed: Vec::new(),
+            starting: None,
+            pending: Vec::new(),
         };
+        // The first start waits for the engine, so a broken installation
+        // is reported here (and automatic selection can choose another).
         b.ensure_host()?;
         Ok(b)
     }
@@ -256,6 +230,7 @@ impl EciBackend {
     /// (after reading any pending reports from the host), with its
     /// `ECIDictError` status (0 = loaded).
     pub fn dictionary_loads(&mut self) -> &[DictLoad] {
+        let _ = self.poll_start(false);
         self.drain_host();
         &self.dictionary_loads
     }
@@ -270,14 +245,30 @@ impl EciBackend {
         calibration::speed_for_wpm(self.rate_table, self.params.rate.wpm())
     }
 
+    /// Changes the extra host arguments used from the next host start on
+    /// (see [`EciConfig::host_args`]; tests).
+    pub fn set_host_args(&mut self, args: Vec<std::ffi::OsString>) {
+        self.config.host_args = args;
+    }
+
     /// Changes how long the host may stay silent while it owes audio
     /// before it counts as hung (`None`: [`STALL_TIMEOUT`]).
     pub fn set_stall_timeout(&mut self, timeout: Option<Duration>) {
         self.config.stall_timeout = timeout;
     }
 
+    /// Starts the host, waiting until it is ready (the first start, and
+    /// synthesizing to a file).
     fn ensure_host(&mut self) -> Result<(), SpeechError> {
-        if self.host.is_some() {
+        self.begin_host()?;
+        self.poll_start(true)
+    }
+
+    /// Starts a host without waiting for it, unless one is running or
+    /// starting (Phase 2: a restart after a crash no longer holds the
+    /// speech thread; `poll` finishes it).
+    fn begin_host(&mut self) -> Result<(), SpeechError> {
+        if self.host.is_some() || self.starting.is_some() {
             return Ok(());
         }
         let (library, candidates) = if self.config.fake_engine {
@@ -294,37 +285,122 @@ impl EciBackend {
             ));
         }
         let lib_path = library.as_ref().map(|c| c.candidate.path.clone());
-        let mut errors = Vec::new();
-        for path in candidates {
-            match spawn_host(&path, &self.config, lib_path.as_deref()) {
-                Ok((host, ready, loads)) => {
-                    for l in &loads {
-                        log_dictionary(l);
-                    }
-                    self.dictionary_loads.extend(loads);
-                    log::info!(
-                        "eci: {} (ECI {}, {} Hz)",
-                        path.display(),
-                        ready.version,
-                        ready.sample_rate
-                    );
-                    self.rate_table = calibration::table_for(&ready.version);
-                    self.library = library.map(|mut c| {
-                        c.candidate.product = c.candidate.product.with_version(&ready.version);
-                        c
-                    });
-                    self.playback.set_sample_rate(ready.sample_rate);
-                    self.host = Some(host);
-                    self.ready = Some(ready);
-                    self.find_installed_dialects();
-                    self.applied = None;
-                    self.apply_voice()?;
-                    return Ok(());
+        let config = self.config.clone();
+        let start = HostStart::begin(
+            candidates,
+            READY_TIMEOUT,
+            Box::new(move |path: &Path| {
+                HostProcess::spawn(path, host_args(&config, lib_path.as_deref(), path), "eci")
+            }),
+        );
+        self.starting = Some((start, library));
+        Ok(())
+    }
+
+    /// Moves a start on: reads what the host sent (waiting for the outcome
+    /// with `wait`). When it is ready, the queued requests go out; when it
+    /// failed, what was queued fails with the reason.
+    fn poll_start(&mut self, wait: bool) -> Result<(), SpeechError> {
+        let Some((start, _)) = self.starting.as_mut() else {
+            return Ok(());
+        };
+        let outcome = if wait {
+            start.wait(classify)
+        } else {
+            start.poll(classify)
+        };
+        match outcome {
+            Start::Pending => Ok(()),
+            Start::Ready(started) => {
+                let library = self.starting.take().and_then(|(_, l)| l);
+                self.finish_start(started, library)?;
+                for req in std::mem::take(&mut self.pending) {
+                    self.send(&req)?;
                 }
-                Err(e) => errors.push(format!("{}: {e}", path.display())),
+                if self.playback.owes(HOST)
+                    && let Some(h) = &mut self.host
+                {
+                    // The host owes audio from now on.
+                    h.touch();
+                }
+                Ok(())
+            }
+            Start::Failed(why) => {
+                self.starting = None;
+                self.pending.clear();
+                log::warn!("eci: the host did not start: {why}");
+                self.playback
+                    .host_died(HOST, &format!("Eloquence could not start ({why})"));
+                Err(unavailable(why))
             }
         }
-        Err(unavailable(errors.join("; ")))
+    }
+
+    /// A host reported `Ready`: takes it into use.
+    fn finish_start(
+        &mut self,
+        started: Started<Reply>,
+        library: Option<LibraryChoice>,
+    ) -> Result<(), SpeechError> {
+        let Started {
+            path,
+            process,
+            ready,
+            early,
+        } = started;
+        let Reply::Ready {
+            sample_rate,
+            version,
+            dialects,
+            default_dialect,
+            presets,
+            ..
+        } = ready
+        else {
+            return Err(SpeechError::Engine("the host did not report Ready".into()));
+        };
+        let ready = ReadyInfo {
+            sample_rate,
+            version,
+            dialects,
+            default_dialect,
+            presets,
+        };
+        for r in early {
+            if let Reply::Dictionary {
+                dialect,
+                volume,
+                status,
+                path,
+            } = r
+            {
+                let load = DictLoad {
+                    dialect,
+                    volume,
+                    status,
+                    path,
+                };
+                log_dictionary(&load);
+                self.dictionary_loads.push(load);
+            }
+        }
+        log::info!(
+            "eci: {} (ECI {}, {} Hz)",
+            path.display(),
+            ready.version,
+            ready.sample_rate
+        );
+        self.rate_table = calibration::table_for(&ready.version);
+        self.library = library.map(|mut c| {
+            c.candidate.product = c.candidate.product.with_version(&ready.version);
+            c
+        });
+        self.playback.set_sample_rate(ready.sample_rate);
+        self.host = Some(process);
+        self.ready = Some(ready);
+        self.find_installed_dialects();
+        self.applied = None;
+        self.apply_voice()
     }
 
     fn send(&mut self, req: &Request) -> Result<(), SpeechError> {
@@ -623,20 +699,28 @@ impl SpeechBackend for EciBackend {
     ) -> Result<(), SpeechError> {
         self.drain_host();
         self.playback.emit(sink);
-        self.ensure_host()?;
+        self.begin_host()?;
+        self.poll_start(false)?;
         self.playback.ensure_player()?;
-        self.apply_voice()?;
         let ws = words::words(&utterance.text);
         let token = self.playback.next_token();
-        self.send(&Request::Speak {
+        let req = Request::Speak {
             token,
             pieces: words::pieces(&utterance.text, &ws),
-        })?;
-        if !self.playback.owes(HOST)
-            && let Some(h) = &mut self.host
-        {
-            // The host starts owing audio now: its stall timer starts here.
-            h.touch();
+        };
+        if self.starting.is_some() {
+            // Sent when the host is ready (poll).
+            self.pending.push(req);
+        } else {
+            self.apply_voice()?;
+            self.send(&req)?;
+            if !self.playback.owes(HOST)
+                && let Some(h) = &mut self.host
+            {
+                // The host starts owing audio now: its stall timer starts
+                // here.
+                h.touch();
+            }
         }
         self.playback.enqueue(
             utterance.id,
@@ -648,11 +732,16 @@ impl SpeechBackend for EciBackend {
     }
 
     fn poll(&mut self, sink: &mut dyn EventSink) {
+        if let Err(e) = self.poll_start(false) {
+            log::warn!("eci: {e}");
+        }
         self.drain_host();
         self.playback.emit(sink);
     }
 
     fn stop(&mut self) {
+        // Utterances waiting for a starting host are simply not sent.
+        self.pending.clear();
         let hosts = self.playback.stop();
         if !hosts.is_empty()
             && self.host.is_some()
@@ -668,6 +757,9 @@ impl SpeechBackend for EciBackend {
     fn reset(&mut self) {
         self.stop();
         self.playback.close();
+        if let Some((mut s, _)) = self.starting.take() {
+            s.cancel();
+        }
         if let Some(mut h) = self.host.take() {
             h.kill();
         }
@@ -768,6 +860,8 @@ mod tests {
                 reason: "test".into(),
             }),
             installed: Vec::new(),
+            starting: None,
+            pending: Vec::new(),
         };
         b.find_installed_dialects();
         b

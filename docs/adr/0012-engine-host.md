@@ -3,6 +3,7 @@
 - Status: accepted
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): Implemented. DECtalk (ADR-0021) is the third engine on this protocol, still at version 1. A crashed or stalled host is restarted, and the speech service resumes from the last word heard and says "Speech restarted" (Agent D4).
+- Status update (Saturday, September 26, 2026, Phase 2, Agent P2a): a restarted host, and SAPI's 32-bit host on first use, start inside `poll` (`start::HostStart`), so the speech thread never waits for `Ready` in `speak`; the audio device opens on its own thread; the DECtalk host synthesizes a long utterance a sentence at a time. The protocol is unchanged (version 1); the fake hosts take `--start-delay-ms` for tests.
 
 ## Context
 
@@ -52,7 +53,8 @@ Conversation: the host announces itself with `Ready` (ECI may precede it with `D
 
 ### Host lifecycle
 
-- A backend starts its host on creation (ECI; SAPI's x64 host) or on first use (SAPI's x86 host) and waits up to 10 s for `Ready` (for ECI, up to 10 s after each dictionary report that precedes it, since loading dictionaries on a cold engine takes a while).
+- A backend starts its host on creation (ECI, DECtalk; SAPI's x64 host) and waits up to 10 s for `Ready` (for ECI, up to 10 s after each dictionary report that precedes it, since loading dictionaries on a cold engine takes a while), so a broken installation is reported when the engine is chosen.
+- Every later start (after a crash or a hang, and SAPI's x86 host on the first use of a 32-bit voice) does not wait (Phase 2). `speak` spawns the host and queues its request; `poll`, which the speech service calls every few milliseconds, reads what the host sent through `start::HostStart`, enforces the same deadline (restarted by each progress report), tries the next candidate executable when one fails, and on `Ready` sends the voice settings and the queued requests. Stop and Pause work on waiting utterances as on playing ones: Stop drops the queued requests and cancels the utterances, Pause holds the clock. A start that fails fails what waited for it (`Error` then `Finished`). Synthesizing to a file still waits.
 - A host that exits, breaks its pipe, or sends an undecodable frame is dead. A host that stays silent while it owes audio is hung: after 10 s for ECI (configurable, `EciConfig::stall_timeout`; Eloquence hangs on some inputs) and 60 s for SAPI (whose host already gives up on a silent voice after 30 s and reports an error). A hung host is killed.
 - What a dead or hung host owed ends with `Error` then `Finished` (utterances) or an error (captures). The next request starts a new host: restart after a crash or a hang.
 - Shutdown sends `Quit`, waits 500 ms, then kills the process. A host that has already failed (its output closed, a bad frame, a broken input pipe) is killed at once, without the wait.
@@ -63,6 +65,7 @@ Conversation: the host announces itself with `Ready` (ECI may precede it with `D
 - A host's stderr is always drained: lines that are not UTF-8 are logged with replacement characters. Hosts write to stderr only through `serve::log_line`, which ignores a closed stderr instead of panicking (a panic in a COM or C callback would abort the host).
 - A request over the 16 MiB frame limit is refused by the backend before it is written ("this text is too long to speak in one piece"), and a host that is sent one anyway reads past it and keeps working.
 - An audio output that stops taking samples while audio waits and nothing is paused is reopened after 1 s (backing off to 8 s), in or out of a reading.
+- The audio device opens on its own thread, which keeps it open until the output is dropped (Phase 2): audio waits in the feed meanwhile, a device still opening is not taken for a stalled one, and a device that cannot open fails what is queued.
 
 ### Capabilities
 

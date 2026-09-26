@@ -1083,7 +1083,10 @@ mod inner {
         // Highlight updates: one word position applied at a time.
         highlight(&mut r, path, home);
 
-        // Search.
+        // Search. Background work (the structure parse, the writer) is
+        // finished first: the peak heap counts every thread.
+        app.wait_for_background(Duration::from_secs(60));
+        app.wait_for_writes();
         app.dispatch(Command::GoTo(parse_go_to("start").expect("start")));
         for (key, label, pattern) in [
             ("find_word", "find \"the\"", "the"),
@@ -1096,7 +1099,7 @@ mod inner {
             let hits = app
                 .session()
                 .and_then(|s| s.find.as_ref())
-                .map_or(0, |f| f.hits.len());
+                .map_or(0, |f| f.total);
             r.time(&format!("{key}_ms"), &format!("{label} ({hits} hits)"), d);
             r.peak(&format!("{key}_peak_mb"), label);
             let t = Instant::now();
@@ -1177,8 +1180,40 @@ mod inner {
                 "caret down one line, dispatch",
                 &line,
             );
+            // Edit-mode Replace: the prompt's count, then replacing every
+            // match (one undo step), then undoing it.
+            app.dispatch(Command::Action(ActionId::Replace));
+            alloc::reset_peak();
+            let t = Instant::now();
+            app.dispatch(Command::Answer("the".into()));
+            r.time("replace_count_ms", "replace: count \"the\"", t.elapsed());
+            let t = Instant::now();
+            app.dispatch(Command::Answer("THE".into()));
+            r.time(
+                "replace_first_ms",
+                "replace: the first match asked about",
+                t.elapsed(),
+            );
+            let t = Instant::now();
+            app.dispatch(Command::Choose(1));
+            r.time(
+                "replace_skip_ms",
+                "replace: skip to the next match",
+                t.elapsed(),
+            );
+            // "Replace all the rest" (one undo step).
+            let t = Instant::now();
+            app.dispatch(Command::Choose(2));
+            r.time(
+                "replace_all_ms",
+                "replace all the rest of \"the\" (one undo step)",
+                t.elapsed(),
+            );
+            r.peak("replace_peak_mb", "replace");
+            app.dispatch(Command::Action(ActionId::Undo));
             alloc::reset_peak();
             let mut autosaves = Vec::new();
+            let mut written = Vec::new();
             let mut now = Instant::now();
             for _ in 0..5 {
                 app.dispatch(Command::Insert("x".into()));
@@ -1187,11 +1222,20 @@ mod inner {
                 let t = Instant::now();
                 app.tick(now);
                 autosaves.push(t.elapsed());
+                // The snapshot is written on the writer thread; wait for
+                // it outside the measured tick.
+                app.wait_for_writes();
+                written.push(t.elapsed());
             }
             r.samples(
                 "autosave",
-                "autosave tick (writes the recovery snapshot)",
+                "autosave tick on the input thread (queues the recovery snapshot)",
                 &autosaves,
+            );
+            r.samples(
+                "autosave_written",
+                "autosave, snapshot written by the writer thread",
+                &written,
             );
             r.peak("autosave_peak_mb", "autosave");
             alloc::reset_peak();
@@ -1208,7 +1252,35 @@ mod inner {
             );
             r.peak("edit_leave_peak_mb", "leave edit mode");
         }
+        // Saving (Ctrl+S) a copy under the bench home, so the corpus and
+        // the fixtures are never written.
+        let copy = home.join(path.file_name().unwrap_or_default());
+        if std::fs::copy(path, &copy).is_ok() && app.open(&copy).is_ok() {
+            app.dispatch(Command::Action(ActionId::ToggleEditMode));
+            let mut dispatch = Vec::new();
+            let mut written = Vec::new();
+            for _ in 0..5 {
+                app.dispatch(Command::Insert("x".into()));
+                let t = Instant::now();
+                app.dispatch(Command::Action(ActionId::Save));
+                dispatch.push(t.elapsed());
+                app.wait_for_writes();
+                written.push(t.elapsed());
+            }
+            r.samples(
+                "save_dispatch",
+                "save (Ctrl+S) on the input thread",
+                &dispatch,
+            );
+            r.samples(
+                "save_written",
+                "save (Ctrl+S), file written by the writer thread",
+                &written,
+            );
+        }
+        let t = Instant::now();
         app.shutdown();
+        r.time("shutdown_ms", "quit (waits for the writer)", t.elapsed());
         r
     }
 

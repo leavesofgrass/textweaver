@@ -155,11 +155,43 @@ impl Feed {
     }
 }
 
+/// The audio device, opened on its own thread (Phase 2: opening a device
+/// can take a moment, and a Bluetooth headset longer; the speech thread
+/// never waits for it). The thread keeps the device open until the player
+/// is dropped.
+#[cfg(feature = "playback")]
+struct Device {
+    /// The device's mixer once it opened, or why it could not.
+    opened: Mutex<Option<Result<rodio::mixer::Mixer, String>>>,
+    /// Receives the outcome of opening.
+    answer: Mutex<std::sync::mpsc::Receiver<Result<rodio::mixer::Mixer, String>>>,
+    /// Dropped with the player: the device thread closes the device.
+    _close: std::sync::mpsc::Sender<()>,
+}
+
+#[cfg(feature = "playback")]
+impl Device {
+    /// The outcome of opening, if it has arrived.
+    fn state(&self) -> Option<Result<rodio::mixer::Mixer, String>> {
+        let mut opened = self.opened.lock().unwrap_or_else(|e| e.into_inner());
+        if opened.is_none()
+            && let Ok(r) = self
+                .answer
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .try_recv()
+        {
+            *opened = Some(r);
+        }
+        opened.clone()
+    }
+}
+
 /// A running output. Dropping it stops playback.
 pub struct Player {
-    // Field order: the device (if any) drops before the timer thread stops.
+    // Field order: the device (if any) closes before the timer thread stops.
     #[cfg(feature = "playback")]
-    device: Option<rodio::stream::MixerDeviceSink>,
+    device: Option<Device>,
     stop: Arc<AtomicBool>,
     thread: Option<JoinHandle<()>>,
 }
@@ -230,21 +262,44 @@ impl Player {
         }
     }
 
+    /// Opens the default device on its own thread and returns at once;
+    /// audio pushed meanwhile waits in the feed. A device that cannot be
+    /// opened is reported by [`failure`](Self::failure).
     #[cfg(feature = "playback")]
     fn device(backend: BackendId, feed: Arc<Feed>, sample_rate: u32) -> Result<Self, SpeechError> {
-        let mut sink = rodio::DeviceSinkBuilder::open_default_sink()
-            .map_err(|e| SpeechError::Unavailable(backend, format!("no audio output: {e}")))?;
-        sink.log_on_drop(false);
         let rate = std::num::NonZero::new(sample_rate)
             .ok_or_else(|| SpeechError::Engine("sample rate 0".into()))?;
-        sink.mixer().add(FeedSource {
-            feed,
-            rate,
-            buf: vec![0.0; 64],
-            pos: 64,
-        });
+        let (answer_tx, answer) = std::sync::mpsc::channel();
+        let (close, closed) = std::sync::mpsc::channel::<()>();
+        std::thread::Builder::new()
+            .name(format!("{backend}-audio-device"))
+            .spawn(move || {
+                let mut sink = match rodio::DeviceSinkBuilder::open_default_sink() {
+                    Ok(s) => s,
+                    Err(e) => {
+                        let _ = answer_tx.send(Err(format!("no audio output: {e}")));
+                        return;
+                    }
+                };
+                sink.log_on_drop(false);
+                sink.mixer().add(FeedSource {
+                    feed,
+                    rate,
+                    buf: vec![0.0; 64],
+                    pos: 64,
+                });
+                let _ = answer_tx.send(Ok(sink.mixer().clone()));
+                // Open until the player is dropped (its sender closes).
+                let _ = closed.recv();
+                drop(sink);
+            })
+            .map_err(|e| SpeechError::Io(format!("cannot start the audio thread: {e}")))?;
         Ok(Player {
-            device: Some(sink),
+            device: Some(Device {
+                opened: Mutex::new(None),
+                answer: Mutex::new(answer),
+                _close: close,
+            }),
             stop: Arc::new(AtomicBool::new(false)),
             thread: None,
         })
@@ -263,18 +318,39 @@ impl Player {
     }
 
     /// Plays a sine tone of `hz` for `ms` milliseconds at `gain`, mixed
-    /// over speech (device output only).
+    /// over speech (device output only, once it is open).
     pub fn tone(&self, hz: f32, ms: u32, gain: f32) {
         #[cfg(feature = "playback")]
-        if let Some(d) = &self.device {
+        if let Some(Some(Ok(mixer))) = self.device.as_ref().map(Device::state) {
             use rodio::Source;
             let tone = rodio::source::SineWave::new(hz)
                 .take_duration(Duration::from_millis(u64::from(ms)))
                 .amplify(0.25 * gain);
-            d.mixer().add(tone);
+            mixer.add(tone);
         }
         #[cfg(not(feature = "playback"))]
         let _ = (hz, ms, gain);
+    }
+
+    /// True once the output is taking samples (the device opened; the
+    /// silent output at once).
+    pub fn is_open(&self) -> bool {
+        #[cfg(feature = "playback")]
+        if let Some(d) = &self.device {
+            return matches!(d.state(), Some(Ok(_)));
+        }
+        true
+    }
+
+    /// Why the device could not be opened, once that is known.
+    pub fn failure(&self) -> Option<String> {
+        #[cfg(feature = "playback")]
+        if let Some(d) = &self.device
+            && let Some(Err(e)) = d.state()
+        {
+            return Some(e);
+        }
+        None
     }
 }
 

@@ -39,16 +39,17 @@
 //! finished end with `Error` then `Finished`, and the next `speak` starts a
 //! new host.
 
-use std::cell::RefCell;
 use std::ops::Range;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use textweaver_core::Utterance;
 use textweaver_enginehost::protocol::check_version;
-use textweaver_enginehost::{HostMsg, HostProcess, Playback};
+use textweaver_enginehost::{Class, HostMsg, HostProcess, HostStart, Playback, Start, Started};
 use textweaver_speech::{
-    BackendId, Caps, EventSink, FileSynthesis, SpeechBackend, SpeechError, Voice, VoiceParams,
+    BackendId, Caps, EventSink, FileSynthesis, SpeechBackend, SpeechError, Voice, VoiceCache,
+    VoiceParams,
 };
 
 use crate::audio::AudioOutput;
@@ -98,25 +99,40 @@ fn await_ready(host: &mut HostProcess<Reply>, arch: Arch) -> Result<u32, String>
     }
 }
 
-impl Host {
-    fn spawn(path: &Path, fake: bool, arch: Arch) -> Result<Host, String> {
-        let args: &[&str] = if fake {
-            &["--engine", "fake", "--report-arch", arch.as_str()]
-        } else {
-            &[]
-        };
-        let mut process = HostProcess::spawn(path, args, "sapi")?;
-        match await_ready(&mut process, arch) {
-            Ok(sample_rate) => Ok(Host {
-                process,
-                sample_rate,
-            }),
-            Err(e) => {
-                process.kill();
-                Err(e)
+/// How a reply before `Ready` counts, for a host that should run `arch`.
+fn classify(arch: Arch) -> impl FnMut(&Reply) -> Class {
+    move |r: &Reply| match r {
+        Reply::Ready {
+            protocol,
+            arch: got,
+            ..
+        } => {
+            if got != arch.as_str() {
+                return Class::Fail(format!("host is {got}, expected {arch}"));
+            }
+            match check_version(*protocol) {
+                Ok(()) => Class::Ready,
+                Err(e) => Class::Fail(e),
             }
         }
+        Reply::Error { message, .. } => Class::Fail(message.clone()),
+        other => Class::Fail(format!("host sent {other:?} before Ready")),
     }
+}
+
+/// The speaking host's arguments.
+fn host_args(config: &SapiConfig, arch: Arch) -> Vec<std::ffi::OsString> {
+    let mut args: Vec<std::ffi::OsString> = Vec::new();
+    if config.fake_engine {
+        args.extend([
+            "--engine".into(),
+            "fake".into(),
+            "--report-arch".into(),
+            arch.as_str().into(),
+        ]);
+    }
+    args.extend(config.host_args.iter().cloned());
+    args
 }
 
 /// Lists the voice tokens a host sees (`--list-voices`), without loading
@@ -198,6 +214,9 @@ struct Applied {
     rate: i8,
 }
 
+/// The voice details, once listed (the failure kept too).
+type Details = Arc<Mutex<Option<Result<Vec<SapiVoice>, SpeechError>>>>;
+
 /// The SAPI5 backend.
 pub struct SapiBackend {
     config: SapiConfig,
@@ -211,7 +230,20 @@ pub struct SapiBackend {
     family: Family,
     /// A SAPI rate forced by `SapiBackend::synthesize_at_rate`.
     rate_override: Option<i8>,
-    voices: RefCell<Option<Vec<SapiVoice>>>,
+    /// Every voice with its SAPI details, listed once in the background
+    /// when the backend starts (the failure kept too).
+    details: Details,
+    /// The same list as the speech service sees it.
+    voice_cache: VoiceCache,
+    /// Hosts being started, by architecture (a restart after a crash, or
+    /// the first 32-bit voice): requests wait in `pending` until each is
+    /// ready (Phase 2).
+    starting: [Option<HostStart<Reply>>; 2],
+    /// Speak requests for each starting host, in order.
+    pending: [Vec<Request>; 2],
+    /// The selected voice's family was guessed from its id while the list
+    /// was loading; the list settles it.
+    family_guessed: bool,
 }
 
 impl std::fmt::Debug for SapiBackend {
@@ -234,6 +266,19 @@ impl SapiBackend {
     /// opens on the first `speak`.
     pub fn new(config: SapiConfig) -> Result<Self, SpeechError> {
         let playback = Playback::new(BACKEND_ID, config.output, crate::host::SAMPLE_RATE);
+        // The voices are listed once, in the background: a helper process
+        // per registry reads the voice tokens, which must not hold up the
+        // speech thread (Phase 2).
+        let details: Details = Arc::new(Mutex::new(None));
+        let voice_cache = {
+            let details = Arc::clone(&details);
+            let config = config.clone();
+            VoiceCache::spawn("sapi-voices", move || {
+                let listed = crate::list_voices(&config);
+                *details.lock().unwrap_or_else(|e| e.into_inner()) = Some(listed.clone());
+                listed.map(|l| l.into_iter().map(|v| v.voice).collect())
+            })
+        };
         let mut b = SapiBackend {
             config,
             playback,
@@ -243,7 +288,11 @@ impl SapiBackend {
             voice: None,
             family: Family::Microsoft,
             rate_override: None,
-            voices: RefCell::new(None),
+            details,
+            voice_cache,
+            family_guessed: false,
+            starting: [None, None],
+            pending: [Vec::new(), Vec::new()],
         };
         b.ensure_host(Arch::X64)?;
         Ok(b)
@@ -251,14 +300,41 @@ impl SapiBackend {
 
     /// Every voice with its SAPI details (architecture, family, vendor, and
     /// tags such as [`TAG_OPENEVV`](crate::voices::TAG_OPENEVV)). Listed
-    /// once per backend and cached.
+    /// once per backend, in the background; this waits for the list (up to
+    /// the listing's own limit), so the speech service never calls it.
     pub fn voice_details(&self) -> Result<Vec<SapiVoice>, SpeechError> {
-        if let Some(v) = self.voices.borrow().as_ref() {
-            return Ok(v.clone());
+        self.voice_cache.wait(LIST_TIMEOUT * 2);
+        self.known_details().unwrap_or_else(|| {
+            Err(SpeechError::Engine(
+                "the voice list did not arrive in time".into(),
+            ))
+        })
+    }
+
+    /// The voice details if they have been listed; never waits.
+    fn known_details(&self) -> Option<Result<Vec<SapiVoice>, SpeechError>> {
+        self.details
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+    }
+
+    /// The selected voice's family: settled from the list once it is known
+    /// when it had to be guessed.
+    fn current_family(&self) -> Family {
+        if !self.family_guessed {
+            return self.family;
         }
-        let list = crate::list_voices(&self.config)?;
-        *self.voices.borrow_mut() = Some(list.clone());
-        Ok(list)
+        let Some(voice) = &self.voice else {
+            return self.family;
+        };
+        match self.known_details() {
+            Some(Ok(list)) => list
+                .into_iter()
+                .find(|v| v.voice.id.eq_ignore_ascii_case(&voice.to_string()))
+                .map_or(self.family, |v| v.family),
+            _ => self.family,
+        }
     }
 
     /// The host executable serving `arch`, if running.
@@ -268,7 +344,7 @@ impl SapiBackend {
 
     /// The selected voice's family.
     pub fn family(&self) -> Family {
-        self.family
+        self.current_family()
     }
 
     /// The SAPI rate the current parameters map to.
@@ -278,15 +354,25 @@ impl SapiBackend {
     }
 
     fn rate_table(&self) -> &'static RateTable {
-        calibration::table_for(self.family)
+        calibration::table_for(self.current_family())
     }
 
     fn arch(&self) -> Arch {
         self.voice.as_ref().map_or(Arch::X64, |v| v.arch)
     }
 
+    /// Starts the host for `arch`, waiting until it is ready (the first
+    /// start, and synthesizing to a file).
     fn ensure_host(&mut self, arch: Arch) -> Result<(), SpeechError> {
-        if self.hosts[arch.index()].is_some() {
+        self.begin_host(arch)?;
+        self.poll_start(arch, true)
+    }
+
+    /// Starts the host for `arch` without waiting, unless it is running or
+    /// starting; `poll` finishes the start.
+    fn begin_host(&mut self, arch: Arch) -> Result<(), SpeechError> {
+        let i = arch.index();
+        if self.hosts[i].is_some() || self.starting[i].is_some() {
             return Ok(());
         }
         let candidates = crate::host_candidates(&self.config, arch);
@@ -297,20 +383,68 @@ impl SapiBackend {
                 crate::host_env(arch)
             )));
         }
-        let mut errors = Vec::new();
-        for path in candidates {
-            match Host::spawn(&path, self.config.fake_engine, arch) {
-                Ok(host) => {
-                    log::info!("sapi: {} host {}", arch, path.display());
-                    self.hosts[arch.index()] = Some(host);
-                    self.applied[arch.index()] = None;
-                    self.sync_sample_rate();
+        let args = host_args(&self.config, arch);
+        self.starting[i] = Some(HostStart::begin(
+            candidates,
+            READY_TIMEOUT,
+            Box::new(move |path: &Path| HostProcess::spawn(path, &args, "sapi")),
+        ));
+        Ok(())
+    }
+
+    /// Moves the start of `arch`'s host on (waiting for the outcome with
+    /// `wait`): when it is ready, the voice and the queued requests go out;
+    /// when it could not start, what waited for it fails with the reason.
+    fn poll_start(&mut self, arch: Arch, wait: bool) -> Result<(), SpeechError> {
+        let i = arch.index();
+        let Some(start) = self.starting[i].as_mut() else {
+            return Ok(());
+        };
+        let outcome = if wait {
+            start.wait(classify(arch))
+        } else {
+            start.poll(classify(arch))
+        };
+        match outcome {
+            Start::Pending => Ok(()),
+            Start::Ready(Started {
+                path,
+                process,
+                ready,
+                ..
+            }) => {
+                self.starting[i] = None;
+                let Reply::Ready { sample_rate, .. } = ready else {
+                    return Err(SpeechError::Engine("the host did not report Ready".into()));
+                };
+                log::info!("sapi: {} host {}", arch, path.display());
+                self.hosts[i] = Some(Host {
+                    process,
+                    sample_rate,
+                });
+                self.applied[i] = None;
+                self.sync_sample_rate();
+                if self.pending[i].is_empty() {
                     return Ok(());
                 }
-                Err(e) => errors.push(format!("{}: {e}", path.display())),
+                self.apply_settings(arch)?;
+                for req in std::mem::take(&mut self.pending[i]) {
+                    self.send(arch, &req)?;
+                }
+                if let Some(h) = &mut self.hosts[i] {
+                    h.process.touch();
+                }
+                Ok(())
+            }
+            Start::Failed(why) => {
+                self.starting[i] = None;
+                self.pending[i].clear();
+                log::warn!("sapi: the {arch} host did not start: {why}");
+                self.playback
+                    .host_died(i, &format!("the voice could not start ({why})"));
+                Err(unavailable(why))
             }
         }
-        Err(unavailable(errors.join("; ")))
     }
 
     /// The running hosts' sample rate (the first one's), else the hosts'
@@ -329,6 +463,12 @@ impl SapiBackend {
         self.playback.set_sample_rate(rate);
     }
 
+    /// Changes the extra host arguments used from the next host start on
+    /// (see [`SapiConfig::host_args`]; tests).
+    pub fn set_host_args(&mut self, args: Vec<std::ffi::OsString>) {
+        self.config.host_args = args;
+    }
+
     fn send(&mut self, arch: Arch, req: &Request) -> Result<(), SpeechError> {
         let host = self.hosts[arch.index()]
             .as_mut()
@@ -336,11 +476,31 @@ impl SapiBackend {
         host.process.send(req).map_err(SpeechError::Engine)
     }
 
-    /// Starts the host for the selected voice and sends it the voice and
-    /// rate if they changed.
+    /// Starts the host for the selected voice (waiting for it) and sends it
+    /// the voice and rate if they changed.
     fn prepare(&mut self) -> Result<Arch, SpeechError> {
         let arch = self.arch();
         self.ensure_host(arch)?;
+        self.apply_settings(arch)?;
+        Ok(arch)
+    }
+
+    /// Like [`prepare`](Self::prepare) without waiting: the architecture,
+    /// and whether its host is ready (else it is starting, and requests
+    /// wait for it).
+    fn prepare_now(&mut self) -> Result<(Arch, bool), SpeechError> {
+        let arch = self.arch();
+        self.begin_host(arch)?;
+        self.poll_start(arch, false)?;
+        if self.starting[arch.index()].is_some() {
+            return Ok((arch, false));
+        }
+        self.apply_settings(arch)?;
+        Ok((arch, true))
+    }
+
+    /// Sends `arch`'s host the voice and rate if they changed.
+    fn apply_settings(&mut self, arch: Arch) -> Result<(), SpeechError> {
         let want = Applied {
             token_id: self
                 .voice
@@ -351,7 +511,7 @@ impl SapiBackend {
         };
         let prev = self.applied[arch.index()].clone();
         if prev.as_ref() == Some(&want) {
-            return Ok(arch);
+            return Ok(());
         }
         if prev.as_ref().is_none_or(|p| p.token_id != want.token_id) {
             self.send(
@@ -365,7 +525,7 @@ impl SapiBackend {
             self.send(arch, &Request::SetRate { rate: want.rate })?;
         }
         self.applied[arch.index()] = Some(want);
-        Ok(arch)
+        Ok(())
     }
 
     fn pitch(&self) -> i8 {
@@ -516,27 +676,38 @@ impl SapiBackend {
         let Some(id) = id.map(str::trim).filter(|s| !s.is_empty()) else {
             self.voice = None;
             self.family = Family::Microsoft;
+            self.family_guessed = false;
             return Ok(());
         };
         let parsed = VoiceId::parse(id).ok_or_else(|| SpeechError::UnknownVoice(id.into()))?;
         // A listed voice gives its family; an id missing from a successful
         // listing is unknown. If listing failed, the id is tried as is.
-        let family = match self.voice_details() {
-            Ok(list) => list
-                .into_iter()
-                .find(|v| v.voice.id.eq_ignore_ascii_case(&parsed.to_string()))
-                .map(|v| v.family)
-                .ok_or_else(|| SpeechError::UnknownVoice(id.into()))?,
-            Err(e) => {
+        // While the list is still loading (never waited for here, on the
+        // speech thread), the family is guessed from the id and settled
+        // when the list arrives.
+        let guess = || {
+            Family::of(&VoiceToken {
+                token_id: parsed.token_id.clone(),
+                ..VoiceToken::default()
+            })
+        };
+        let (family, guessed) = match self.known_details() {
+            Some(Ok(list)) => (
+                list.into_iter()
+                    .find(|v| v.voice.id.eq_ignore_ascii_case(&parsed.to_string()))
+                    .map(|v| v.family)
+                    .ok_or_else(|| SpeechError::UnknownVoice(id.into()))?,
+                false,
+            ),
+            Some(Err(e)) => {
                 log::warn!("sapi: cannot list voices ({e}); trying {id}");
-                Family::of(&VoiceToken {
-                    token_id: parsed.token_id.clone(),
-                    ..VoiceToken::default()
-                })
+                (guess(), false)
             }
+            None => (guess(), true),
         };
         self.voice = Some(parsed);
         self.family = family;
+        self.family_guessed = guessed;
         Ok(())
     }
 }
@@ -554,10 +725,11 @@ impl SpeechBackend for SapiBackend {
         if self.config.output == AudioOutput::Device {
             caps |= Caps::TONES;
         }
-        if self.family.has_word_timing() {
+        let family = self.current_family();
+        if family.has_word_timing() {
             caps |= Caps::WORD_EVENTS | Caps::AUDIO_CLOCK;
         }
-        if self.family.normalizes_natively() {
+        if family.normalizes_natively() {
             caps |= Caps::NATIVE_NORMALIZATION;
         }
         caps
@@ -587,39 +759,53 @@ impl SpeechBackend for SapiBackend {
     ) -> Result<(), SpeechError> {
         self.drain_hosts();
         self.playback.emit(sink);
-        let arch = self.prepare()?;
+        // A host that is not running (after a crash, or the first 32-bit
+        // voice) starts here without waiting; the request waits for it.
+        let (arch, ready) = self.prepare_now()?;
         self.playback.ensure_player()?;
         let token = self.playback.next_token();
         let pitch = self.pitch();
-        self.send(
-            arch,
-            &Request::Speak {
-                token,
-                text: utterance.text.clone(),
-                pitch,
-            },
-        )?;
-        if !self.playback.owes(arch.index())
-            && let Some(h) = &mut self.hosts[arch.index()]
-        {
-            // The host starts owing audio now: its stall timer starts here.
-            h.process.touch();
+        let req = Request::Speak {
+            token,
+            text: utterance.text.clone(),
+            pitch,
+        };
+        if ready {
+            self.send(arch, &req)?;
+            if !self.playback.owes(arch.index())
+                && let Some(h) = &mut self.hosts[arch.index()]
+            {
+                // The host starts owing audio now: its stall timer starts
+                // here.
+                h.process.touch();
+            }
+        } else {
+            self.pending[arch.index()].push(req);
         }
         self.playback.enqueue(
             utterance.id,
             token,
             arch.index(),
-            Words::new(&utterance.text, self.family.has_word_timing()),
+            Words::new(&utterance.text, self.current_family().has_word_timing()),
         );
         Ok(())
     }
 
     fn poll(&mut self, sink: &mut dyn EventSink) {
+        for arch in Arch::ALL {
+            if let Err(e) = self.poll_start(arch, false) {
+                log::warn!("sapi: {e}");
+            }
+        }
         self.drain_hosts();
         self.playback.emit(sink);
     }
 
     fn stop(&mut self) {
+        // Utterances waiting for a starting host are simply not sent.
+        for p in &mut self.pending {
+            p.clear();
+        }
         for arch in self
             .playback
             .stop()
@@ -637,6 +823,11 @@ impl SpeechBackend for SapiBackend {
     fn reset(&mut self) {
         self.stop();
         self.playback.close();
+        for s in &mut self.starting {
+            if let Some(mut s) = s.take() {
+                s.cancel();
+            }
+        }
         for i in 0..self.hosts.len() {
             if let Some(mut h) = self.hosts[i].take() {
                 h.process.kill();
@@ -671,7 +862,7 @@ impl SpeechBackend for SapiBackend {
         utterance: &Utterance,
         path: &Path,
     ) -> Result<FileSynthesis, SpeechError> {
-        let s = self.capture_text(&utterance.text, self.family.has_word_timing())?;
+        let s = self.capture_text(&utterance.text, self.current_family().has_word_timing())?;
         crate::wav::write(path, &s.samples, s.sample_rate)
             .map_err(|e| SpeechError::Io(format!("{}: {e}", path.display())))?;
         Ok(FileSynthesis {
@@ -681,5 +872,10 @@ impl SpeechBackend for SapiBackend {
 
     fn tone(&mut self, hz: f32, ms: u32) {
         self.playback.tone(hz, ms);
+    }
+
+    /// Listed in the background when the backend starts.
+    fn voice_cache(&self) -> Option<VoiceCache> {
+        Some(self.voice_cache.clone())
     }
 }

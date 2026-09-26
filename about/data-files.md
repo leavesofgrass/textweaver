@@ -34,7 +34,7 @@ Packages also carry the licence files themselves, under `licenses/`.
 
 - The PDF reader uses glyph widths of Helvetica, Helvetica-Bold, Times-Roman, Times-Bold, Times-Italic, and Times-BoldItalic, and the fixed Courier width, for PDFs that name one of the standard 14 fonts without widths (`crates/textweaver-formats/src/pdf/metrics.rs`).
 - The widths come from Adobe's Core 14 AFM files. **Modification notice:** the widths were extracted from the AFM files and re-keyed by Unicode character into a Rust table; nothing else from the AFM files is included.
-- The AFM files carry these notices:
+- The AFM files carry these notices (checked on Saturday, September 26, 2026 against `Core14_AFMs.tar` from Adobe's download server, download.macromedia.com/pub/developer/opentype/tech-notes/):
   - Helvetica and Helvetica-Bold: Copyright (c) 1985, 1987, 1989, 1990, 1997 Adobe Systems Incorporated. All Rights Reserved. Helvetica is a trademark of Linotype-Hell AG and/or its subsidiaries.
   - Times-Roman, Times-Bold, Times-Italic, and Times-BoldItalic: Copyright (c) 1985, 1987, 1989, 1990, 1993, 1997 Adobe Systems Incorporated. All Rights Reserved. Times is a trademark of Linotype-Hell AG and/or its subsidiaries.
   - Courier: Copyright (c) 1989, 1990, 1991, 1992, 1993, 1997 Adobe Systems Incorporated. All Rights Reserved.

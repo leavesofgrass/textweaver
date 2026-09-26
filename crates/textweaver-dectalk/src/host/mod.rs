@@ -11,6 +11,12 @@
 //! arrives while an utterance is being synthesized ends that utterance
 //! `Aborted` before its audio goes out. The main thread owns the engine
 //! and writes replies.
+//!
+//! DECtalk synthesizes a whole text before it returns any of it, and a
+//! `Stop` cannot interrupt that. So a long utterance is synthesized a
+//! sentence at a time ([`split_sentences`]; a very long sentence at a word
+//! boundary): each part's audio goes out as soon as it is made, and a
+//! `Stop` takes effect at the next part (Phase 2).
 
 pub mod fake;
 pub mod ffi;
@@ -200,7 +206,23 @@ fn speak<E: Engine>(
                 }
             }
         };
-        engine.synthesize(settings, &input, &mut out)
+        // One part at a time; the sample count runs on across parts, so
+        // every mark is placed from the utterance's first sample.
+        let mut result = Ok(true);
+        for part in split_sentences(&input, MAX_PART_BYTES) {
+            if !epoch.is_current(at) {
+                result = Ok(false);
+                break;
+            }
+            match engine.synthesize(settings, part, &mut out) {
+                Ok(true) => {}
+                other => {
+                    result = other;
+                    break;
+                }
+            }
+        }
+        result
     };
     if let Some(e) = io_error {
         return Err(e);
@@ -214,6 +236,48 @@ fn speak<E: Engine>(
         }
     };
     protocol::write_frame(output, &end(status, samples).encode())
+}
+
+/// Text bytes after which a sentence with no end in sight is split at the
+/// next word.
+pub const MAX_PART_BYTES: usize = 400;
+
+/// Splits an utterance's pieces into parts synthesized one at a time: after
+/// each sentence end (`.`, `!`, or `?`, then white space, before the next
+/// word), and before a word that would take a part past `max_bytes` of
+/// text. Index marks stay with the word they precede.
+pub fn split_sentences(pieces: &[EnginePiece], max_bytes: usize) -> Vec<&[EnginePiece]> {
+    let mut parts = Vec::new();
+    let mut start = 0;
+    let mut bytes = 0usize;
+    let mut sentence_ended = false;
+    for (i, p) in pieces.iter().enumerate() {
+        match p {
+            EnginePiece::Index(_) => {
+                if i > start && (sentence_ended || bytes > max_bytes) {
+                    parts.push(&pieces[start..i]);
+                    start = i;
+                    bytes = 0;
+                }
+                sentence_ended = false;
+            }
+            EnginePiece::Text(t) => {
+                bytes += t.len();
+                let trimmed = t.trim_ascii_end();
+                let spaced = trimmed.len() < t.len();
+                let end = trimmed
+                    .iter()
+                    .rev()
+                    .find(|b| !matches!(b, b'"' | b'\'' | b')' | b']'))
+                    .is_some_and(|b| matches!(b, b'.' | b'!' | b'?'));
+                sentence_ended = spaced && end;
+            }
+        }
+    }
+    if start < pieces.len() {
+        parts.push(&pieces[start..]);
+    }
+    parts
 }
 
 /// Sends synthesized audio and marks in order: the audio before each mark,
@@ -254,6 +318,46 @@ mod tests {
     use std::io::Cursor;
 
     use super::*;
+
+    #[test]
+    fn long_utterances_split_into_sentences_and_long_sentences_at_words() {
+        let t = |s: &str| EnginePiece::Text(s.as_bytes().to_vec());
+        let pieces = vec![
+            EnginePiece::Index(0),
+            t("One "),
+            EnginePiece::Index(1),
+            t("two. "),
+            EnginePiece::Index(2),
+            t("Three? "),
+            EnginePiece::Index(3),
+            t("\"Four.\" "),
+            EnginePiece::Index(4),
+            t("five"),
+        ];
+        let parts = split_sentences(&pieces, 400);
+        let starts: Vec<usize> = parts.iter().map(|p| p.len()).collect();
+        assert_eq!(starts, [4, 2, 2, 2], "a quoted sentence ends too");
+        assert!(matches!(parts[1][0], EnginePiece::Index(2)));
+        // "e.g." inside a sentence with no space after the dot stays whole.
+        let pieces = vec![
+            EnginePiece::Index(0),
+            t("e.g.x "),
+            EnginePiece::Index(1),
+            t("y"),
+        ];
+        assert_eq!(split_sentences(&pieces, 400).len(), 1);
+        // A sentence with no end: split at a word past the limit.
+        let mut long = Vec::new();
+        for i in 0..100 {
+            long.push(EnginePiece::Index(i));
+            long.push(t("word "));
+        }
+        let parts = split_sentences(&long, 50);
+        assert!(parts.len() > 5);
+        assert!(parts.iter().all(|p| matches!(p[0], EnginePiece::Index(_))));
+        assert_eq!(parts.iter().map(|p| p.len()).sum::<usize>(), 200);
+        assert!(split_sentences(&[], 10).is_empty());
+    }
     use crate::protocol::FrameDecoder;
 
     fn run_fake(requests: &[Request]) -> Vec<Reply> {

@@ -145,6 +145,14 @@ fn alt_l_lists_the_library_and_enter_opens() {
     h.tui.app_mut().open(&loose).unwrap();
     h.draw();
     h.press(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::ALT));
+    // The folders are scanned on a background thread; the list opens on a
+    // tick of the event loop.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+    while h.tui.app().library_scanning() && std::time::Instant::now() < deadline {
+        std::thread::sleep(std::time::Duration::from_millis(2));
+        h.tui.tick();
+    }
+    h.draw();
     let list = h.tui.list().expect("library list");
     assert_eq!(list.title, "Library");
     assert_eq!(list.items.len(), 2);

@@ -146,6 +146,18 @@ pub fn scan_folder(
     max_files: usize,
     supported: &dyn Fn(&str) -> bool,
 ) -> Vec<ScannedDoc> {
+    scan_folder_with(folder, recursive, max_files, supported, &|_| {})
+}
+
+/// [`scan_folder`], calling `found` with the number of documents found so
+/// far after each one (a progress count for a scan on another thread).
+pub fn scan_folder_with(
+    folder: &Path,
+    recursive: bool,
+    max_files: usize,
+    supported: &dyn Fn(&str) -> bool,
+    found: &dyn Fn(usize),
+) -> Vec<ScannedDoc> {
     let mut out = Vec::new();
     if !folder.is_dir() {
         return out;
@@ -207,6 +219,7 @@ pub fn scan_folder(
                 mtime: mtime_secs(&meta),
                 folder: folder.to_owned(),
             });
+            found(out.len());
             if out.len() >= max_files {
                 return out;
             }
@@ -221,10 +234,22 @@ pub fn scan_folder(
 /// another), and sorts by folder, then relative path, case-insensitively
 /// (Star's `scan_library`).
 pub fn scan_library(folders: &[PathBuf], supported: &dyn Fn(&str) -> bool) -> Vec<ScannedDoc> {
+    scan_library_with(folders, supported, &|_| {})
+}
+
+/// [`scan_library`], calling `found` with the number of documents found so
+/// far across the folders.
+pub fn scan_library_with(
+    folders: &[PathBuf],
+    supported: &dyn Fn(&str) -> bool,
+    found: &dyn Fn(usize),
+) -> Vec<ScannedDoc> {
     let mut seen = std::collections::HashSet::new();
     let mut out = Vec::new();
     for folder in folders {
-        for doc in scan_folder(folder, true, MAX_SCAN_FILES, supported) {
+        let before = out.len();
+        let counted = |n: usize| found(before + n);
+        for doc in scan_folder_with(folder, true, MAX_SCAN_FILES, supported, &counted) {
             if seen.insert(doc.path.clone()) {
                 out.push(doc);
             }

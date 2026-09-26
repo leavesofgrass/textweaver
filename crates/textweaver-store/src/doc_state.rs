@@ -100,6 +100,37 @@ impl Anchor {
     }
 }
 
+/// What a document's text was when its state was saved: its length in
+/// characters and a hash of it. On open, a different stamp means the file
+/// changed outside textweaver, and saved positions are found again from
+/// their anchors (Phase 2). Old state files have none.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TextStamp {
+    /// Length of the canonical text in characters.
+    pub chars: usize,
+    /// 64-bit FNV-1a hash of the canonical text's UTF-8, as 16 hex digits.
+    pub hash: String,
+}
+
+impl TextStamp {
+    /// The stamp of a text given as consecutive pieces (a rope's chunks).
+    pub fn of<'a>(chunks: impl IntoIterator<Item = &'a str>) -> Self {
+        let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+        let mut chars = 0usize;
+        for chunk in chunks {
+            chars += chunk.chars().count();
+            for b in chunk.bytes() {
+                h ^= u64::from(b);
+                h = h.wrapping_mul(0x0100_0000_01b3);
+            }
+        }
+        TextStamp {
+            chars,
+            hash: format!("{h:016x}"),
+        }
+    }
+}
+
 /// 64-bit FNV-1a, the hash [`DocKey`] also uses.
 fn fnv1a(bytes: &[u8]) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
@@ -124,6 +155,11 @@ pub struct Bookmark {
     /// The text at the bookmark, for finding it again after outside edits.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub anchor: Option<Anchor>,
+    /// The file changed outside textweaver and the bookmark's text could
+    /// not be found again: it was placed by percentage, and lists say so
+    /// until it is set again.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub not_found: bool,
 }
 
 /// Percentage of `pos` through a document of `len` chars, floored, as Star
@@ -147,6 +183,9 @@ pub struct DocState {
     /// outside edits.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub anchor: Option<Anchor>,
+    /// The text these positions belong to (see [`TextStamp`]).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<TextStamp>,
     /// Navigation history, oldest first.
     pub history: Vec<CharPos>,
     /// Bookmarks.
@@ -225,6 +264,7 @@ impl DocState {
             pct: percent(pos, doc_len),
             ts: crate::now_ts(),
             anchor: None,
+            not_found: false,
         };
         let at = self.bookmarks.partition_point(|b| b.pos <= pos);
         self.bookmarks.insert(at, mark.clone());

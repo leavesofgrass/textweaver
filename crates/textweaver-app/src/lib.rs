@@ -139,6 +139,7 @@ pub mod disk;
 mod edit;
 mod export;
 mod extra;
+mod find_scan;
 mod goto;
 mod help;
 mod library;
@@ -152,7 +153,9 @@ mod notes;
 mod playback;
 mod publish;
 mod reading_aids;
+mod relocate;
 mod replace;
+mod restart;
 pub mod rpc;
 pub mod settings_io;
 mod speech_cursor;
@@ -166,6 +169,8 @@ pub mod text_util;
 mod themes;
 mod view;
 mod voice;
+mod writer;
+mod writes;
 
 pub use access::{
     SENTENCE_GAP, STATUS_TEXT_LIMIT, access_mode_from_setting, access_mode_setting, digit_row, keymap_preset,
@@ -185,6 +190,7 @@ pub use goto::parse_go_to;
 pub use help::{chords_text, help_entries, palette_matches, resolve_command};
 pub use notes::{HIGHLIGHTS_KEY, NOTES_KEY, UserHighlight, migrate_legacy_notes, parse_tags};
 pub use playback::{Playback, load_options, narration_policy};
+pub use restart::SpeechStarter;
 pub use templates::local_date;
 pub use textweaver_store::Note;
 pub use view::{Highlight, HighlightKind, Viewport};

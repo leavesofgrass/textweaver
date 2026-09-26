@@ -217,6 +217,14 @@ pub trait SpeechBackend {
     fn tone(&mut self, hz: f32, ms: u32) {
         let _ = (hz, ms);
     }
+    /// The voice list, when this backend fills it in the background
+    /// because listing is slow (see [`crate::voices`]). Default: `None`,
+    /// and the service lists the voices once with
+    /// [`voices`](Self::voices) when the backend starts, keeping the
+    /// answer.
+    fn voice_cache(&self) -> Option<crate::voices::VoiceCache> {
+        None
+    }
 }
 
 /// When one word sounds in a synthesized file.

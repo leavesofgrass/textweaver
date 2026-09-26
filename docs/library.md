@@ -6,6 +6,8 @@ This guide covers textweaver's library: the folders of documents you read from, 
 
 Press **Alt+L** in the terminal reader. The GUI uses **Ctrl+Shift+B**. You hear "Library", the number of documents, then "Enter opens one."
 
+The folders are read in the background, so a large library (up to 20,000 files) never holds up the keyboard. While it is read you may hear "Scanning the library.", and the status line counts the documents found every second; the list opens when the scan is done. Pressing **Alt+L** again meanwhile says how many have been found so far.
+
 The list has every document in your library folders, then the files you opened recently that are not in those folders, newest first. Each item says:
 
 - the title;

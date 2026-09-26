@@ -99,6 +99,9 @@ pub struct SapiConfig {
     pub output: AudioOutput,
     /// Run the hosts with their fake engine (tests only).
     pub fake_engine: bool,
+    /// More arguments for the speaking hosts (tests: the fake engine's
+    /// `--start-delay-ms`); not passed to voice listing.
+    pub host_args: Vec<std::ffi::OsString>,
 }
 
 impl Default for SapiConfig {
@@ -110,6 +113,7 @@ impl Default for SapiConfig {
             #[cfg(windows)]
             output: AudioOutput::default(),
             fake_engine: false,
+            host_args: Vec::new(),
         }
     }
 }
@@ -225,11 +229,26 @@ pub fn list_voices(config: &SapiConfig) -> Result<Vec<SapiVoice>, SpeechError> {
 /// which reports [`SpeechError::Unavailable`] if they cannot.
 pub fn backend_info() -> BackendInfo {
     BackendInfo {
+        available: probe(&SapiConfig::default()),
+        ..backend_description()
+    }
+}
+
+/// True when this is Windows and the 64-bit host for `config` is found:
+/// the probe behind [`backend_info`].
+pub fn probe(config: &SapiConfig) -> bool {
+    available() && !host_candidates(config, Arch::X64).is_empty()
+}
+
+/// [`backend_info`] without the availability probe (`available` is false):
+/// what a registry needs at registration, before it probes once.
+pub fn backend_description() -> BackendInfo {
+    BackendInfo {
         id: BACKEND_ID,
         name: "Windows SAPI5 voices",
         priority: PRIORITY,
         opt_in: false,
-        available: available() && !host_candidates(&SapiConfig::default(), Arch::X64).is_empty(),
+        available: false,
         // The default voice's (Microsoft voices report every word); a
         // voice without word timing reports fewer once selected.
         caps: Caps::WORD_EVENTS

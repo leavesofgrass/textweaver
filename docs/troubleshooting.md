@@ -243,6 +243,8 @@ textweaver restarts an engine that crashes, or that plays nothing for 12 seconds
 2. Check the log for the reason.
 3. Try another engine with `--backend`, to see whether the problem is the engine or the device.
 
+If you hear "Speech stopped working", textweaver restarts speech once by itself. If it stops working again, press **Shift+F8** (Restart speech), or restart textweaver.
+
 ## Report a bug
 
 A good report lets someone else see the same problem. Include:

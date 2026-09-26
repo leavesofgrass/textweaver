@@ -3,7 +3,10 @@
 //!
 //! ```text
 //! textweaver-dectalk-host [--library PATH] [--convention cdecl|stdcall] [--engine dectalk|fake]
+//!                         [--start-delay-ms MS]
 //! ```
+//!
+//! `--start-delay-ms` (fake engine only, for tests) waits before starting.
 //!
 //! Speaks the framed protocol of `textweaver_dectalk::protocol` on stdin
 //! and stdout; logs go to stderr. The library defaults to
@@ -25,16 +28,19 @@ struct Args {
     library: Option<PathBuf>,
     convention: Option<ffi::Convention>,
     fake: bool,
+    start_delay_ms: u64,
 }
 
 const USAGE: &str = "usage: textweaver-dectalk-host [--library PATH] \
-                     [--convention cdecl|stdcall] [--engine dectalk|fake]";
+                     [--convention cdecl|stdcall] [--engine dectalk|fake] \
+                     [--start-delay-ms MS]";
 
 fn parse_args() -> Result<Args, String> {
     let mut args = Args {
         library: None,
         convention: None,
         fake: false,
+        start_delay_ms: 0,
     };
     let mut it = std::env::args().skip(1);
     while let Some(a) = it.next() {
@@ -47,6 +53,10 @@ fn parse_args() -> Result<Args, String> {
                 args.convention = Some(
                     ffi::Convention::parse(&v).ok_or_else(|| format!("unknown convention {v}"))?,
                 );
+            }
+            "--start-delay-ms" => {
+                let v = it.next().ok_or("--start-delay-ms needs a number")?;
+                args.start_delay_ms = v.parse().map_err(|_| format!("bad delay {v}"))?;
             }
             "--engine" => match it.next().as_deref() {
                 Some("dectalk") => args.fake = false,
@@ -76,6 +86,7 @@ fn main() -> ExitCode {
     let stdin = std::io::stdin();
     let mut stdout = std::io::BufWriter::with_capacity(64 * 1024, std::io::stdout().lock());
     let result = if args.fake {
+        std::thread::sleep(std::time::Duration::from_millis(args.start_delay_ms));
         host::run(&mut fake::FakeEngine, stdin, &mut stdout, AtEnd::host())
     } else {
         let path = match args.library {
