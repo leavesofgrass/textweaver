@@ -584,6 +584,7 @@ Areas are split to keep merges small.
    - Put `textweaver-gui.exe` in the Windows zip.
    - Build a macOS `.app` bundle with `Info.plist`, and the fonts in `Contents/Resources` so font registration works.
    - Add a Linux GTK build in CI (`libgtk-3-dev`), with an Xvfb smoke test and an AT-SPI tree dump (pyatspi).
+   - **Pending research (2026-09-26):** the Linux toolkit choice is on hold until the toolkit research reports: wxWidgets on GTK 3, GTK 4 through gtk4-rs, Qt 6, AccessKit toolkits, or web views. Build nothing Linux-GUI-specific until then.
    - The Linux GUI uses the system's GTK 3 and does not bundle it. Most desktops already have it (Jon, 2026-09-26: GTK is bulky, so keep the download small).
    - Ship the GUI as its own optional Linux download, separate from the terminal AppImage.
 6. **ADR-0014.**
