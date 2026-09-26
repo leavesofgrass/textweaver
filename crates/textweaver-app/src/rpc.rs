@@ -286,9 +286,20 @@ impl Server {
     /// Applies speech status and housekeeping, and returns the notifications
     /// due: announcements, playback changes, and the spoken position.
     pub fn poll(&mut self) -> Vec<Value> {
-        self.app.poll_speech();
-        self.app.tick(Instant::now());
         let mut out = Vec::new();
+        self.changes(&mut out);
+        // One status at a time, so every word spoken is reported even when
+        // several arrived since the last poll.
+        while self.app.poll_speech_step().is_some() {
+            self.changes(&mut out);
+        }
+        self.app.tick(Instant::now());
+        self.changes(&mut out);
+        out
+    }
+
+    /// Notifications for what changed since the last call.
+    fn changes(&mut self, out: &mut Vec<Value>) {
         for (text, p) in self.queue.take() {
             out.push(notification(
                 "announcement",
@@ -317,7 +328,6 @@ impl Server {
                 ));
             }
         }
-        out
     }
 
     fn call(&mut self, method: &str, params: &Value) -> RpcResult {
