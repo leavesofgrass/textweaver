@@ -10,7 +10,7 @@
 //!   [`Math`] tree. Parsing is total: it never fails or panics, and records
 //!   what it recovered from in [`Math::diagnostics`].
 //! - [`speak`]: a [`Math`] to [`Spoken`] text with an
-//!   [`OffsetMap`](textweaver_core::OffsetMap) (ADR-0005).
+//!   [`OffsetMap`] (ADR-0005).
 //! - [`speak_text`]: the normalization transform for the speech pipeline:
 //!   finds math in plain text and replaces each region with its spoken
 //!   form, leaving everything else literal.
