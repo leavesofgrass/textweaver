@@ -8,7 +8,9 @@
 //!   by [`Layer`] (global chords, browse-mode single keys, Speech Cursor,
 //!   edit mode), with conflict detection.
 //! - [`Preset`]: named sets of changes to the defaults (`[keyboard]
-//!   preset`), such as the screen-reader preset.
+//!   preset`): the default NVDA and JAWS layout and the classic keys.
+//! - [`digits`]: the digit row whatever the keyboard layout, so `1` to
+//!   `6` and Shift with them reach heading levels on every layout.
 //! - [`help`]: the in-app keyboard help and `docs/keyboard.md`, generated
 //!   from the same table by `cargo xtask keyboard`.
 //!
@@ -16,6 +18,7 @@
 
 mod action;
 mod chord;
+pub mod digits;
 pub mod help;
 mod keymap;
 mod preset;

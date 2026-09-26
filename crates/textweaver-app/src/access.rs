@@ -59,7 +59,15 @@ pub fn access_mode_setting(m: AccessMode) -> textweaver_store::AccessMode {
 pub fn keymap_preset(p: textweaver_store::KeymapPreset) -> textweaver_keymap::Preset {
     match p {
         textweaver_store::KeymapPreset::Default => textweaver_keymap::Preset::Default,
-        textweaver_store::KeymapPreset::ScreenReader => textweaver_keymap::Preset::ScreenReader,
+        textweaver_store::KeymapPreset::Classic => textweaver_keymap::Preset::Classic,
+    }
+}
+
+/// The digit row for the `[keyboard] digit_row` setting.
+pub fn digit_row(d: textweaver_store::DigitRow) -> textweaver_keymap::digits::DigitRow {
+    match d {
+        textweaver_store::DigitRow::Auto => textweaver_keymap::digits::DigitRow::Auto,
+        textweaver_store::DigitRow::Azerty => textweaver_keymap::digits::DigitRow::Azerty,
     }
 }
 

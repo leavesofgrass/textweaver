@@ -1207,6 +1207,8 @@ impl App {
             A::RsvpSlower => self.rsvp_rate(false),
             A::RsvpPositionNext => self.rsvp_position_next(),
             A::ReadingLevel => self.say_reading_level(),
+            A::ToggleCitations => self.toggle_citations(),
+            A::ExploreMath => self.explore_math(),
             // Navigation
             A::NextSentence => self.next_sentence(),
             A::PreviousSentence => self.previous_sentence(),
@@ -1267,6 +1269,30 @@ impl App {
             ),
             A::PreviousLink => self.marker_jump(
                 textweaver_core::MarkerKind::Link,
+                textweaver_core::Direction::Backward,
+            ),
+            A::NextBlockQuote => self.marker_jump(
+                textweaver_core::MarkerKind::Quote,
+                textweaver_core::Direction::Forward,
+            ),
+            A::PreviousBlockQuote => self.marker_jump(
+                textweaver_core::MarkerKind::Quote,
+                textweaver_core::Direction::Backward,
+            ),
+            A::NextSeparator => self.marker_jump(
+                textweaver_core::MarkerKind::Rule,
+                textweaver_core::Direction::Forward,
+            ),
+            A::PreviousSeparator => self.marker_jump(
+                textweaver_core::MarkerKind::Rule,
+                textweaver_core::Direction::Backward,
+            ),
+            A::NextGraphic => self.marker_jump(
+                textweaver_core::MarkerKind::Image,
+                textweaver_core::Direction::Forward,
+            ),
+            A::PreviousGraphic => self.marker_jump(
+                textweaver_core::MarkerKind::Image,
                 textweaver_core::Direction::Backward,
             ),
             A::NextChapter => self.chapter(textweaver_core::Direction::Forward),
@@ -1341,6 +1367,8 @@ impl App {
             A::CycleAccessMode => self.cycle_access_mode(),
             A::BionicToggle => self.bionic_toggle(),
             A::RulerCycle => self.ruler_cycle(),
+            A::SyllablesToggle => self.syllables_toggle(),
+            A::DifficultWordsToggle => self.difficult_words_toggle(),
             A::CommandPalette => return self.prompt(PromptPurpose::CommandPalette),
             A::KeyboardHelp => return self.keyboard_help(),
             A::Help => return self.help(),
@@ -1397,6 +1425,8 @@ impl App {
             | A::ExportEpub
             | A::ExportBrf
             | A::PreviewInBrowser
+            | A::TogglePreviewAutoReload
+            | A::TogglePreviewLive
             | A::SelectAll
             | A::DeleteWordBefore
             | A::DeleteWordAfter

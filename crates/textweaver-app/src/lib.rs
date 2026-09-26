@@ -168,7 +168,7 @@ mod view;
 mod voice;
 
 pub use access::{
-    SENTENCE_GAP, STATUS_TEXT_LIMIT, access_mode_from_setting, access_mode_setting, keymap_preset,
+    SENTENCE_GAP, STATUS_TEXT_LIMIT, access_mode_from_setting, access_mode_setting, digit_row, keymap_preset,
     sentence_duration,
 };
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
