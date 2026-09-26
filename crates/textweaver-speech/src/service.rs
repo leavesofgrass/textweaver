@@ -257,6 +257,12 @@ pub const MAX_CONSECUTIVE_FAILURES: u32 = 3;
 /// if it stalls again without progress, the reading stops with a message.
 pub const STALL_TIMEOUT: Duration = Duration::from_secs(12);
 
+/// Engine restarts (after a crash or a stall) allowed within one sentence,
+/// even when the reading made progress between them. One more crash in
+/// that sentence stops the reading with a message, so an engine that
+/// fails every few words cannot restart forever.
+pub const MAX_RESTARTS_PER_UTTERANCE: u32 = 3;
+
 /// A backend error identical to one reported this recently is not reported
 /// again. A frontend that announces errors through speech (which fails the
 /// same way) would otherwise loop forever, and a host crash that fails
@@ -644,8 +650,17 @@ pub struct ServiceCore {
     /// [`ERROR_REPEAT_WINDOW`].
     recent_errors: Vec<(String, Duration)>,
     /// Engine restarts (after a crash or a stall) since the reading last
-    /// made progress.
+    /// got past the point the latest restart resumed from.
     recoveries: u32,
+    /// Where the latest restart resumed (the document position of the
+    /// repeated word). Only a word reported beyond it, or the end of the
+    /// sentence holding it, is progress: the repeated word itself is not,
+    /// or an engine that crashes on the same word would restart forever.
+    recovery_mark: Option<CharPos>,
+    /// Restarts within one sentence, keyed by where the sentence ends in
+    /// the document (unchanged when a restart trims its start), for
+    /// [`MAX_RESTARTS_PER_UTTERANCE`].
+    sentence_restarts: Option<(Option<CharPos>, u32)>,
     /// Error events since the reading last made progress.
     event_failures: u32,
     /// When (wall clock) the reading last made progress or was handed to
@@ -700,6 +715,8 @@ impl ServiceCore {
             failures: 0,
             recent_errors: Vec::new(),
             recoveries: 0,
+            recovery_mark: None,
+            sentence_restarts: None,
             event_failures: 0,
             last_progress: Duration::ZERO,
         };
@@ -835,6 +852,8 @@ impl ServiceCore {
         self.last_position = None;
         self.reading_generation = generation;
         self.recoveries = 0;
+        self.recovery_mark = None;
+        self.sentence_restarts = None;
         self.event_failures = 0;
         self.last_progress = self.clock.wall();
         if self.backlog.is_empty() {
@@ -1508,10 +1527,22 @@ impl ServiceCore {
                     }
                     None => self.confirm(w),
                 }
-                self.progress();
+                let reached = self
+                    .queue
+                    .submitted(id)
+                    .filter(|u| u.kind == UtteranceKind::Text)
+                    .and_then(|u| u.source_for(byte_range))
+                    .map(|r| r.start);
+                self.progress(reached);
             }
             RawEvent::Finished => {
-                self.progress();
+                let reached = self
+                    .queue
+                    .submitted(id)
+                    .filter(|u| u.kind == UtteranceKind::Text)
+                    .and_then(Utterance::source_range)
+                    .map(|r| r.end);
+                self.progress(reached);
                 self.complete(id);
             }
             RawEvent::Cancelled => self.complete(id),
@@ -1538,19 +1569,67 @@ impl ServiceCore {
         }
     }
 
-    /// The reading moved on: a word was confirmed or an utterance finished.
-    fn progress(&mut self) {
-        self.recoveries = 0;
+    /// The reading moved on: a word was reported or an utterance finished.
+    /// `reached` is where in the document: the start of the word, or the
+    /// end of the finished sentence (`None` for inserted speech and
+    /// announcements).
+    ///
+    /// Any progress keeps the watchdog quiet. Only progress beyond the
+    /// point the latest restart resumed from allows another restart: the
+    /// resumed reading repeats the last confirmed word, and an engine that
+    /// crashes on the same text reports that word every time.
+    fn progress(&mut self, reached: Option<CharPos>) {
         self.event_failures = 0;
         self.last_progress = self.clock.wall();
+        if self.recoveries == 0 {
+            return;
+        }
+        let passed = match (self.recovery_mark, reached) {
+            (Some(mark), Some(at)) => at > mark,
+            (None, reached) => reached.is_some(),
+            (Some(_), None) => false,
+        };
+        if passed {
+            self.recoveries = 0;
+            self.recovery_mark = None;
+        }
     }
 
     /// Resets the engine and reads on from the last confirmed word, once
-    /// per stretch without progress; reports [`SpeechStatus::Restarted`].
+    /// per stretch without progress past the previous resume point, and at
+    /// most [`MAX_RESTARTS_PER_UTTERANCE`] times per sentence; reports
+    /// [`SpeechStatus::Restarted`].
     fn recover(&mut self, reason: &str) {
+        let sentence_end = self
+            .queue
+            .iter()
+            .find(|u| u.kind == UtteranceKind::Text)
+            .and_then(Utterance::source_range)
+            .map(|r| r.end);
+        let count = match self.sentence_restarts {
+            Some((end, n)) if end == sentence_end => n.saturating_add(1),
+            _ => 1,
+        };
+        if count > MAX_RESTARTS_PER_UTTERANCE {
+            log::warn!("speech: not restarting the engine again: {reason}");
+            let was_reading = self.reading;
+            self.stop_silently();
+            self.backend.reset();
+            self.backend_error(format!(
+                "the speech engine stopped {count} times in the same sentence ({reason}), so reading stopped"
+            ));
+            if was_reading {
+                self.out.push(SpeechStatus::Stopped {
+                    generation: self.reading_generation,
+                });
+            }
+            return;
+        }
+        self.sentence_restarts = Some((sentence_end, count));
         log::warn!("speech: restarting the engine: {reason}");
         self.recoveries = self.recoveries.saturating_add(1);
-        let (byte, _) = self.resume_point();
+        let (byte, resume_at) = self.resume_point();
+        self.recovery_mark = resume_at;
         let rest = self.remainder(byte);
         let backlog = std::mem::take(&mut self.backlog);
         self.clear_engine();

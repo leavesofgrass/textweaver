@@ -601,6 +601,166 @@ fn a_second_crash_without_progress_reports_and_moves_on() {
     assert_eq!(st.last(), Some(&FIN));
 }
 
+/// Crashes every utterance the engine holds (a host that died owes them
+/// all).
+fn crash_all(rig: &Rig, why: &str) {
+    for id in rig.rec.pending() {
+        rig.rec.emit(id, RawEvent::Error(why.into()));
+    }
+}
+
+/// The first utterance spoken after `before` calls: the restarted reading.
+fn restarted_front(rig: &Rig, before: usize) -> Utterance {
+    rig.spoken()[before..]
+        .first()
+        .cloned()
+        .expect("the reading was restarted")
+}
+
+#[test]
+fn an_engine_that_crashes_on_the_same_word_is_not_restarted_forever() {
+    // Before: the repeated resume word counted as progress, so an engine
+    // that crashed on the same text was restarted forever.
+    let mut rig = Rig::manual();
+    rig.core.read(doc(0, &["One two three four.", "Five six."]));
+    rig.step();
+    let first = rig.spoken()[0].id;
+    rig.rec.start(first);
+    rig.rec.word(first, 0, None);
+    rig.rec.word(first, 1, None);
+    rig.step();
+    let mut restarts = 0;
+    for _ in 0..10 {
+        let before = rig.spoken().len();
+        crash_all(&rig, "engine host exited");
+        let st = rig.step();
+        restarts += restarted(&st).len();
+        if !rig.core.is_active() || rig.spoken().len() == before {
+            break;
+        }
+        // The new engine says the resume word again, then crashes on the
+        // same word as before.
+        let again = restarted_front(&rig, before);
+        if again.text != "two three four." {
+            break;
+        }
+        rig.rec.start(again.id);
+        rig.rec.word(again.id, 0, None);
+        rig.step();
+    }
+    assert_eq!(restarts, 1, "restarted once, not in a loop");
+}
+
+#[test]
+fn progress_past_the_resume_point_allows_another_restart() {
+    let mut rig = Rig::manual();
+    rig.core.read(doc(0, &["One two three four five.", "Six."]));
+    rig.step();
+    let first = rig.spoken()[0].id;
+    rig.rec.start(first);
+    rig.rec.word(first, 0, None);
+    rig.rec.word(first, 1, None);
+    rig.step();
+    let before = rig.spoken().len();
+    crash_all(&rig, "engine host exited");
+    assert_eq!(restarted(&rig.step()), ["engine host exited"]);
+    // The new engine gets past "two": a later crash is a new one.
+    let again = restarted_front(&rig, before);
+    assert_eq!(again.text, "two three four five.");
+    rig.rec.start(again.id);
+    rig.rec.word(again.id, 0, None);
+    rig.rec.word(again.id, 1, None);
+    rig.step();
+    let before = rig.spoken().len();
+    crash_all(&rig, "engine host exited");
+    let st = rig.step();
+    assert_eq!(restarted(&st), ["engine host exited"], "{st:?}");
+    assert_eq!(
+        restarted_front(&rig, before).text,
+        "three four five.",
+        "reads on from the last confirmed word"
+    );
+}
+
+#[test]
+fn restarts_in_one_sentence_are_capped_then_the_reading_stops() {
+    let words: Vec<String> = (0..20).map(|i| format!("w{i}")).collect();
+    let sentence = format!("{}.", words.join(" "));
+    let mut rig = Rig::manual();
+    rig.core.read(doc(0, &[&sentence, "After."]));
+    rig.step();
+    let mut id = rig.spoken()[0].id;
+    let mut all = Vec::new();
+    for _ in 0..=MAX_RESTARTS_PER_UTTERANCE {
+        // Some progress each time, then a crash.
+        rig.rec.start(id);
+        rig.rec.word(id, 0, None);
+        rig.rec.word(id, 1, None);
+        rig.rec.word(id, 2, None);
+        all.extend(rig.step());
+        let before = rig.spoken().len();
+        crash_all(&rig, "engine host exited");
+        all.extend(rig.step());
+        if rig.spoken().len() == before {
+            break;
+        }
+        id = restarted_front(&rig, before).id;
+    }
+    assert_eq!(
+        restarted(&all).len(),
+        MAX_RESTARTS_PER_UTTERANCE as usize,
+        "{all:?}"
+    );
+    assert_eq!(
+        errors(&all),
+        [
+            "the speech engine stopped 4 times in the same sentence (engine host exited), so reading stopped"
+        ]
+    );
+    assert_eq!(all.last(), Some(&STOPPED));
+    assert!(!rig.core.is_active());
+    // The next reading starts with a fresh count.
+    rig.core.read(doc(0, &["New reading."]));
+    rig.step();
+    let id = rig.rec.pending()[0];
+    rig.rec.start(id);
+    rig.rec.word(id, 0, None);
+    rig.step();
+    crash_all(&rig, "engine host exited");
+    let st = rig.step();
+    assert_eq!(
+        st.iter()
+            .filter(|s| matches!(s, SpeechStatus::Restarted { .. }))
+            .count(),
+        1,
+        "{st:?}"
+    );
+}
+
+#[test]
+fn a_stall_after_only_the_resume_word_stops_the_reading() {
+    // Before: the resume word reset the count, so a device that played one
+    // word and stalled again was restarted every 12 seconds forever.
+    let mut rig = Rig::manual();
+    rig.core.read(doc(0, &["One two three.", "Four five."]));
+    rig.step();
+    let first = rig.spoken()[0].id;
+    rig.rec.start(first);
+    rig.rec.word(first, 0, None);
+    rig.rec.word(first, 1, None);
+    rig.step();
+    let before = rig.spoken().len();
+    let st = rig.advance(STALL_TIMEOUT + ms(10));
+    assert_eq!(restarted(&st), ["no speech for 12 seconds"]);
+    let again = restarted_front(&rig, before);
+    rig.rec.start(again.id);
+    rig.rec.word(again.id, 0, None);
+    rig.step();
+    let st = rig.advance(STALL_TIMEOUT + ms(10));
+    assert!(restarted(&st).is_empty(), "{st:?}");
+    assert_eq!(st.last(), Some(&STOPPED));
+}
+
 #[test]
 fn a_stalled_reading_is_restarted_once_then_stopped() {
     let mut rig = Rig::manual();
