@@ -34,12 +34,19 @@ pub fn to_html(
     resolver: Option<&dyn Resolver>,
     depth: usize,
 ) -> (String, Facts) {
-    let events = merge_text(events);
+    let inline = inline_for(opts);
+    // Merged runs matter only to the text extensions (and the block ids,
+    // embeds, and heading attributes that come with them).
+    let events = if inline.any() {
+        merge_text(events)
+    } else {
+        events
+    };
     let mut pass = Pass {
         opts,
         resolver,
         depth,
-        inline: inline_for(opts),
+        inline,
         slugger: Slugger::default(),
         facts: Facts::default(),
         out: Vec::with_capacity(events.len()),
@@ -86,20 +93,36 @@ fn inline_for(opts: &RenderOptions) -> Inline {
     }
 }
 
-/// Joins adjacent text events (parsers split text at special characters).
+/// Joins adjacent text events (parsers split text at special characters),
+/// in one pass: a run of k pieces is copied once, not k times.
 fn merge_text(events: Vec<Event<'_>>) -> Vec<Event<'_>> {
     let mut out: Vec<Event<'_>> = Vec::with_capacity(events.len());
+    let mut pending: Option<String> = None;
     for e in events {
-        if let Event::Text(t) = &e
-            && let Some(Event::Text(prev)) = out.last_mut()
-        {
-            let mut joined = String::with_capacity(prev.len() + t.len());
-            joined.push_str(prev);
-            joined.push_str(t);
-            *prev = CowStr::from(joined);
-            continue;
+        match e {
+            Event::Text(t) => {
+                if let Some(buf) = pending.as_mut() {
+                    buf.push_str(&t);
+                } else if let Some(Event::Text(prev)) = out.last() {
+                    let mut buf = String::with_capacity(prev.len() + t.len() + 32);
+                    buf.push_str(prev);
+                    buf.push_str(&t);
+                    out.pop();
+                    pending = Some(buf);
+                } else {
+                    out.push(Event::Text(t));
+                }
+            }
+            other => {
+                if let Some(buf) = pending.take() {
+                    out.push(Event::Text(CowStr::from(buf)));
+                }
+                out.push(other);
+            }
         }
-        out.push(e);
+    }
+    if let Some(buf) = pending {
+        out.push(Event::Text(CowStr::from(buf)));
     }
     out
 }

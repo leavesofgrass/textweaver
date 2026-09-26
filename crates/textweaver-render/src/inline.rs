@@ -32,7 +32,8 @@ pub struct Inline {
 }
 
 impl Inline {
-    fn any(self) -> bool {
+    /// True when any extension is on.
+    pub fn any(self) -> bool {
         self.autolinks
             || self.wikilinks
             || self.tags

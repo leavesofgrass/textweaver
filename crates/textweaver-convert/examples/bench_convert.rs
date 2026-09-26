@@ -352,6 +352,27 @@ fn profile(input: &Path, output: &Path, args: &Args) -> Result<(), Box<dyn std::
     let rendered: Vec<_> = texts.iter().map(|text| render(text, &full)).collect();
     let pipeline = t.elapsed().as_secs_f64();
 
+    // The same pass without math, and without math or heading ids, to
+    // attribute the pass's cost.
+    let no_math = RenderOptions {
+        math: false,
+        ..full.clone()
+    };
+    let t = Instant::now();
+    for text in &texts {
+        n += render(text, &no_math).html.len();
+    }
+    let without_math = t.elapsed().as_secs_f64();
+    let no_ids = RenderOptions {
+        heading_ids: false,
+        ..no_math.clone()
+    };
+    let t = Instant::now();
+    for text in &texts {
+        n += render(text, &no_ids).html.len();
+    }
+    let without_ids = t.elapsed().as_secs_f64();
+
     let templates = Templates::builtin();
     let t = Instant::now();
     let pages: Vec<String> = rendered
@@ -394,6 +415,16 @@ fn profile(input: &Path, output: &Path, args: &Args) -> Result<(), Box<dyn std::
         args.flavor.name(),
         pipeline * 1e3,
         pct(pipeline)
+    );
+    println!(
+        "    of which math        {:>8.1} ms  (render without math: {:.1} ms)",
+        (pipeline - without_math) * 1e3,
+        without_math * 1e3
+    );
+    println!(
+        "    of which heading ids {:>8.1} ms  (without math or ids: {:.1} ms)",
+        (without_math - without_ids) * 1e3,
+        without_ids * 1e3
     );
     println!(
         "  template              {:>8.1} ms  {:>5.1}%",
