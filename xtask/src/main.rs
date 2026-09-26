@@ -1,7 +1,10 @@
 //! `cargo xtask <task>`: maintenance tasks.
 //!
+//! - `appimage [--docker]`: the Linux AppImage and tarball (see
+//!   `appimage.rs`).
 //! - `bench`: time the reading and authoring hot paths on generated Markdown
-//!   corpora and the fixtures (release build; see `bench.rs`).
+//!   corpora and the fixtures (release build; see `bench.rs`), and compare
+//!   them with a baseline (`--baseline FILE --max-ratio R`).
 //! - `deps [--check]`: the dependency direction between workspace crates
 //!   (see `deps.rs`).
 //! - `hosts`: build every speech-engine host for this platform and install
@@ -16,7 +19,12 @@
 //!   in `fixtures/star-parity/` and write the report (Agent A).
 //! - `release X.Y.Z [--dry-run] [--no-checks]`: set the version, date the
 //!   changelog, run the checks, commit, and tag (see `release.rs`).
+//! - `soak [--minutes N]`: read the 10 MB corpus to the end with random
+//!   navigation, edits, rate changes, and engine-host kills (see `soak.rs`).
+//! - `startup [--baseline FILE --max-ratio R]`: time `tw --version`,
+//!   `tw text`, `tw info`, and `tw backends` (see `bench.rs`).
 
+mod appimage;
 mod bench;
 mod deps;
 mod dist;
@@ -26,6 +34,7 @@ mod notices;
 mod parity;
 mod release;
 mod sapi;
+mod soak;
 
 #[cfg(feature = "bench")]
 #[global_allocator]
@@ -34,6 +43,7 @@ static ALLOC: bench::alloc::Counting = bench::alloc::Counting;
 fn main() -> anyhow::Result<()> {
     let task = std::env::args().nth(1).unwrap_or_default();
     match task.as_str() {
+        "appimage" => appimage::run(),
         "bench" => bench::run(),
         #[cfg(feature = "bench")]
         "bench-run" => bench::run_inner(),
@@ -46,9 +56,13 @@ fn main() -> anyhow::Result<()> {
         "sapi-host" => sapi::run(),
         "parity" => parity::run(),
         "release" => release::run(),
+        "soak" => soak::run(),
+        #[cfg(feature = "bench")]
+        "soak-run" => soak::run_inner(),
+        "startup" => bench::startup(),
         _ => {
             eprintln!(
-                "usage: cargo xtask <bench|deps|dist|hosts|eci-host|keyboard|notices|parity|release|sapi-host>"
+                "usage: cargo xtask <appimage|bench|deps|dist|hosts|eci-host|keyboard|notices|parity|release|sapi-host|soak|startup>"
             );
             std::process::exit(2);
         }
