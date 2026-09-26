@@ -2543,6 +2543,7 @@ dependencies = [
  "serde",
  "tempfile",
  "textweaver-a11y",
+ "textweaver-apple",
  "textweaver-core",
  "textweaver-eci",
  "textweaver-editor",
@@ -2565,8 +2566,11 @@ dependencies = [
  "objc2-app-kit",
  "objc2-avf-audio",
  "objc2-foundation",
+ "rodio",
+ "tempfile",
  "textweaver-core",
  "textweaver-speech",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

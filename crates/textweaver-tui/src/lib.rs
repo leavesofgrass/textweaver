@@ -37,6 +37,9 @@ pub fn run(terminal: &mut DefaultTerminal, tui: &mut Tui) -> anyhow::Result<()> 
     while !tui.should_quit() {
         terminal.draw(|f| tui.draw(f))?;
         tui.tick();
+        // Apple's AVSpeechSynthesizer delivers audio and words through the
+        // main thread's run loop (ADR-0008); a no-op on other platforms.
+        textweaver_app::apple::pump_main_loop(Duration::ZERO);
         if event::poll(Duration::from_millis(40))? {
             let ev = event::read()?;
             tui.handle_event(&ev);

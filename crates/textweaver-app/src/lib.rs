@@ -91,6 +91,7 @@ pub use playback::Playback;
 pub use view::{Highlight, HighlightKind, Viewport};
 
 pub use textweaver_a11y as a11y;
+pub use textweaver_apple as apple;
 pub use textweaver_core as core;
 pub use textweaver_eci as eci;
 pub use textweaver_editor as editor;

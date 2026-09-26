@@ -13,13 +13,28 @@ publish.workspace = true
 textweaver-core.workspace = true
 textweaver-speech.workspace = true
 log.workspace = true
+thiserror.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
+# The objc2 framework crates enable every framework feature by default
+# (AppKit's NSSpeechSynthesizer, AVFAudio's AVSpeechSynthesis and
+# AVAudioBuffer, Foundation's NSRunLoop).
 objc2.workspace = true
 objc2-foundation.workspace = true
 objc2-app-kit.workspace = true
 objc2-avf-audio.workspace = true
 block2.workspace = true
+# Playback for the avspeech backend (textweaver owns the audio clock).
+rodio = { workspace = true, features = ["playback"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+# Real-voice tests (macOS, TEXTWEAVER_APPLE=1): their own main, so the main
+# thread can run its run loop while the backends run on a speech thread.
+[[test]]
+name = "voices"
+harness = false
 
 [lints]
 workspace = true

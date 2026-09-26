@@ -1,6 +1,7 @@
 //! The speech backends this build offers: the speech crate's built-ins plus
 //! the engines that live in their own crates: ETI-Eloquence through ECI
-//! (ADR-0007) and, on Windows, SAPI5 voices (ADR-0009). Every frontend selects from this one registry, so
+//! (ADR-0007), Apple's system voices on macOS (ADR-0008), and SAPI5 voices
+//! on Windows (ADR-0009). Every frontend selects from this one registry, so
 //! `tw backends`, `tw speak`, and the reader agree.
 
 use textweaver_eci::EciConfig;
@@ -9,7 +10,8 @@ use textweaver_speech::{BackendRegistry, SpeechBackend};
 /// The registry of every backend compiled into this build.
 ///
 /// Automatic selection order: `eci` (1000), then `sapi` (500, Windows),
-/// then the built-in engines. An installed ETI-Eloquence is the automatic
+/// then `nsspeech` (80) and `avspeech` (70) on macOS, then the built-in
+/// engines. An installed ETI-Eloquence is the automatic
 /// choice; it is available only when discovery finds a library the user
 /// installed (`textweaver_eci::discovery`).
 pub fn speech_registry() -> BackendRegistry {
@@ -22,6 +24,20 @@ pub fn speech_registry() -> BackendRegistry {
                 .map(|b| Box::new(b) as Box<dyn SpeechBackend>)
         },
     );
+    for info in textweaver_apple::backends() {
+        let id = info.id;
+        registry.register(
+            info,
+            textweaver_apple::available,
+            move || match textweaver_apple::factory(id) {
+                Some(make) => make(),
+                None => Err(textweaver_speech::SpeechError::Unavailable(
+                    id,
+                    "Apple speech is only available on macOS".into(),
+                )),
+            },
+        );
+    }
     #[cfg(windows)]
     registry.register(
         textweaver_sapi::backend_info(),
