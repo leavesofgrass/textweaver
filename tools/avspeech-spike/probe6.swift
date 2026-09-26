@@ -54,11 +54,28 @@ let doneCB: SpeechDoneProcPtr = { _, _ in note("done"); lock.lock(); done = true
 
 func wait(_ secs: Double) { let end = Date().addingTimeInterval(secs); while !isDone() && Date() < end { Thread.sleep(forTimeInterval: 0.005) } }
 
+// The voice attributes carry VoiceNumericID but no creator, so find the
+// VoiceSpec by walking GetIndVoice and matching the id.
 func spec(_ id: String) -> VoiceSpec? {
+    let started = Date()
     let attrs = NSSpeechSynthesizer.attributes(forVoice: NSSpeechSynthesizer.VoiceName(rawValue: id))
-    guard let creator = attrs[NSSpeechSynthesizer.VoiceAttributeKey(rawValue: "VoiceSynthesizerNumericID")] as? NSNumber,
-          let vid = attrs[NSSpeechSynthesizer.VoiceAttributeKey(rawValue: "VoiceNumericID")] as? NSNumber else { return nil }
-    return VoiceSpec(creator: OSType(truncatingIfNeeded: creator.int64Value), id: OSType(truncatingIfNeeded: vid.int64Value))
+    guard let vid = attrs[NSSpeechSynthesizer.VoiceAttributeKey(rawValue: "VoiceNumericID")] as? NSNumber else { return nil }
+    let want = OSType(truncatingIfNeeded: vid.int64Value)
+    var n: Int16 = 0
+    CountVoices(&n)
+    var i: Int16 = 1
+    while i <= n {
+        var s = VoiceSpec()
+        if GetIndVoice(i, &s) == 0 && s.id == want {
+            var desc = VoiceDescription()
+            let e = GetVoiceDescription(&s, &desc, MemoryLayout<VoiceDescription>.size)
+            let name = withUnsafeBytes(of: desc.name) { b in String(decoding: b.dropFirst().prefix(Int(b[0])), as: UTF8.self) }
+            note(String(format: "spec for %@: index %d creator %u id %u desc err %d name '%@' lookup %.1f ms", id, Int(i), s.creator, s.id, Int(e), name, Date().timeIntervalSince(started) * 1000))
+            return s
+        }
+        i += 1
+    }
+    return nil
 }
 
 func channel(_ id: String) -> SpeechChannel? {
