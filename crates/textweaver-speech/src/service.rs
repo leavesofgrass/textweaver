@@ -168,6 +168,16 @@ pub enum SpeechStatus {
     },
     /// The backend failed.
     BackendError(String),
+    /// The engine crashed or went silent in the middle of a reading, and
+    /// the service restarted it and goes on from the last confirmed word
+    /// (the reading keeps its generation). `reason` reads well aloud
+    /// ("Eloquence stopped unexpectedly", "no speech for 12 seconds").
+    Restarted {
+        /// The reading that goes on.
+        generation: ReadingGeneration,
+        /// What happened.
+        reason: String,
+    },
 }
 
 impl SpeechStatus {
@@ -177,7 +187,8 @@ impl SpeechStatus {
             SpeechStatus::Position { generation, .. }
             | SpeechStatus::Paused { generation, .. }
             | SpeechStatus::Stopped { generation }
-            | SpeechStatus::Finished { generation } => Some(*generation),
+            | SpeechStatus::Finished { generation }
+            | SpeechStatus::Restarted { generation, .. } => Some(*generation),
             SpeechStatus::Capabilities { .. } | SpeechStatus::BackendError(_) => None,
         }
     }
@@ -234,6 +245,13 @@ pub const POLL_INTERVAL: Duration = Duration::from_millis(10);
 /// After this many `speak` failures in a row the reading stops, instead of
 /// failing through every remaining sentence of the document in one go.
 pub const MAX_CONSECUTIVE_FAILURES: u32 = 3;
+
+/// A reading that is playing (not paused) and has made no progress (no
+/// word and no finished utterance) for this long has stalled: an audio
+/// device that stopped taking samples, a host that stopped answering. The
+/// service resets the engine and reads on from the last confirmed word;
+/// if it stalls again without progress, the reading stops with a message.
+pub const STALL_TIMEOUT: Duration = Duration::from_secs(12);
 
 /// A backend error identical to one reported this recently is not reported
 /// again. A frontend that announces errors through speech (which fails the
@@ -603,6 +621,14 @@ pub struct ServiceCore {
     /// Errors reported recently, with when (wall clock), for
     /// [`ERROR_REPEAT_WINDOW`].
     recent_errors: Vec<(String, Duration)>,
+    /// Engine restarts (after a crash or a stall) since the reading last
+    /// made progress.
+    recoveries: u32,
+    /// Error events since the reading last made progress.
+    event_failures: u32,
+    /// When (wall clock) the reading last made progress or was handed to
+    /// the engine, for [`STALL_TIMEOUT`].
+    last_progress: Duration,
 }
 
 impl std::fmt::Debug for ServiceCore {
@@ -651,6 +677,9 @@ impl ServiceCore {
             engine_busy: false,
             failures: 0,
             recent_errors: Vec::new(),
+            recoveries: 0,
+            event_failures: 0,
+            last_progress: Duration::ZERO,
         };
         if let Some(asked) = core.params.voice.clone() {
             core.params.voice = Some(core.resolve_voice_name(&asked));
@@ -775,6 +804,9 @@ impl ServiceCore {
         self.backlog = utterances.into();
         self.last_position = None;
         self.reading_generation = generation;
+        self.recoveries = 0;
+        self.event_failures = 0;
+        self.last_progress = self.clock.wall();
         if self.backlog.is_empty() {
             self.reading = false;
             self.out.push(SpeechStatus::Finished { generation });
@@ -1142,6 +1174,7 @@ impl ServiceCore {
         self.drain_events();
         self.pump();
         self.run_timers();
+        self.check_stall();
     }
 
     fn sink(&self) -> CollectSink {
@@ -1344,7 +1377,12 @@ impl ServiceCore {
                 let result = self.backend.speak(&u, &mut sink);
                 self.events.extend(sink.events);
                 match result {
-                    Ok(()) => self.failures = 0,
+                    Ok(()) => {
+                        self.failures = 0;
+                        // Handing the engine more counts for the watchdog:
+                        // starting a host can take seconds.
+                        self.last_progress = self.clock.wall();
+                    }
                     Err(e) => {
                         self.failures = self.failures.saturating_add(1);
                         self.backend_error(e.to_string());
@@ -1440,12 +1478,86 @@ impl ServiceCore {
                     }
                     None => self.confirm(w),
                 }
+                self.progress();
             }
-            RawEvent::Finished | RawEvent::Cancelled => self.complete(id),
-            RawEvent::Error(e) => {
-                self.backend_error(e);
+            RawEvent::Finished => {
+                self.progress();
                 self.complete(id);
             }
+            RawEvent::Cancelled => self.complete(id),
+            RawEvent::Error(e) => {
+                let text = self
+                    .queue
+                    .submitted(id)
+                    .is_some_and(|u| u.kind == UtteranceKind::Text);
+                if text && self.reading && self.paused.is_none() && self.recoveries == 0 {
+                    // A host crash fails everything it owed: read on from
+                    // the last confirmed word with a fresh engine instead
+                    // of skipping the rest of the sentence and the
+                    // lookahead (audit finding R4).
+                    self.recover(&e);
+                    return;
+                }
+                self.event_failures = self.event_failures.saturating_add(1);
+                self.backend_error(e);
+                self.complete(id);
+                if self.event_failures >= MAX_CONSECUTIVE_FAILURES {
+                    self.give_up();
+                }
+            }
+        }
+    }
+
+    /// The reading moved on: a word was confirmed or an utterance finished.
+    fn progress(&mut self) {
+        self.recoveries = 0;
+        self.event_failures = 0;
+        self.last_progress = self.clock.wall();
+    }
+
+    /// Resets the engine and reads on from the last confirmed word, once
+    /// per stretch without progress; reports [`SpeechStatus::Restarted`].
+    fn recover(&mut self, reason: &str) {
+        log::warn!("speech: restarting the engine: {reason}");
+        self.recoveries = self.recoveries.saturating_add(1);
+        let (byte, _) = self.resume_point();
+        let rest = self.remainder(byte);
+        let backlog = std::mem::take(&mut self.backlog);
+        self.clear_engine();
+        self.backend.reset();
+        self.out.push(SpeechStatus::Restarted {
+            generation: self.reading_generation,
+            reason: reason.to_owned(),
+        });
+        self.last_progress = self.clock.wall();
+        self.restart(rest, backlog, true);
+    }
+
+    /// The watchdog: a playing reading with no progress for
+    /// [`STALL_TIMEOUT`] is restarted once, then stopped with a message
+    /// (audit finding R5).
+    fn check_stall(&mut self) {
+        if !self.reading || self.paused.is_some() || self.queue.is_empty() || !self.engine_busy {
+            return;
+        }
+        let now = self.clock.wall();
+        if now.saturating_sub(self.last_progress) < STALL_TIMEOUT {
+            return;
+        }
+        let secs = STALL_TIMEOUT.as_secs();
+        if self.recoveries == 0 {
+            self.recover(&format!("no speech for {secs} seconds"));
+            return;
+        }
+        let was_reading = self.reading;
+        self.stop_silently();
+        self.backend_error(format!(
+            "no speech for {secs} seconds, even after restarting the voice, so reading stopped. Check the audio device"
+        ));
+        if was_reading {
+            self.out.push(SpeechStatus::Stopped {
+                generation: self.reading_generation,
+            });
         }
     }
 

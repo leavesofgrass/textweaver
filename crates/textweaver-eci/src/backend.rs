@@ -645,6 +645,18 @@ impl SpeechBackend for EciBackend {
         }
     }
 
+    /// Kills the host and closes the audio output; the next `speak` starts
+    /// a new host and reopens the device (a device that stopped taking
+    /// samples, a host that stopped answering).
+    fn reset(&mut self) {
+        self.stop();
+        self.playback.close();
+        if let Some(mut h) = self.host.take() {
+            h.kill();
+        }
+        self.applied = None;
+    }
+
     fn pause(&mut self) -> Result<(), SpeechError> {
         self.playback.pause();
         Ok(())

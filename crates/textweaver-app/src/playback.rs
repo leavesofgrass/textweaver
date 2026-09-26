@@ -547,6 +547,19 @@ impl App {
                 false
             }
             SpeechStatus::Stopped { .. } => false,
+            SpeechStatus::Restarted { generation, reason } => {
+                // The service restarted the engine and reads on from the
+                // last word; the reading (and the highlight) go on.
+                if self.track.is_current(generation) && self.playback == Playback::Reading {
+                    self.say_at(
+                        &format!("Speech restarted: {reason}. Reading on from the last word."),
+                        Verbosity::Low,
+                        Priority::Assertive,
+                    );
+                    return true;
+                }
+                false
+            }
             SpeechStatus::Capabilities { caps } => {
                 let old = std::mem::replace(&mut self.speech_caps, caps);
                 if let Some(msg) = capability_message(old, caps) {
