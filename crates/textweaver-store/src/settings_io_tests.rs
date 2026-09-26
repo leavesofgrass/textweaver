@@ -173,6 +173,10 @@ fn everything_changed() -> Settings {
     };
     s.preview.auto_reload = true;
     s.preview.live = true;
+    s.lexicon.glossary = Some("glossary.txt".into());
+    s.lexicon.data_file = Some("lexicon-en.twlex".into());
+    s.stats.enabled = false;
+    s.interface.language = "en-XA".into();
     s.extra.insert("future_key".into(), toml::Value::Integer(1));
     let future: toml::Table = "a = 1\nwhen = 2026-09-25T14:03:07Z\n".parse().unwrap();
     s.extra

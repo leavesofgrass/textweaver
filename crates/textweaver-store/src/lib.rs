@@ -52,9 +52,10 @@ pub use settings::{
     AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, CitationReading,
     CommunityLexiconSettings, CursorPlacement, DigitRow, DisplaySettings, EciDictionaries,
     EciSettings, EditingSettings, ExportSettings, FootnoteMode, HighlightSettings,
-    KeyboardSettings, KeymapOverrides, KeymapPreset, LibrarySettings, NormalizationSettings,
-    PreviewSettings, RESERVED_SETTINGS, ReadingSettings, SapiSettings, SayAll, Settings,
-    SettingsLoad, SettingsStore, SpeechSettings, SubtitleFormat, TableMode,
+    InterfaceSettings, KeyboardSettings, KeymapOverrides, KeymapPreset, LexiconSettings,
+    LibrarySettings, NormalizationSettings, PreviewSettings, RESERVED_SETTINGS, ReadingSettings,
+    SapiSettings, SayAll, Settings, SettingsLoad, SettingsStore, SpeechSettings, StatsSettings,
+    SubtitleFormat, TableMode,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,

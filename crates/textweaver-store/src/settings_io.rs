@@ -952,6 +952,9 @@ pub fn reset_sections(current: &Settings) -> Vec<String> {
         "reading_aids.ruler",
         "reading_aids.syllable_options",
         "preview",
+        "lexicon",
+        "stats",
+        "interface",
         "keymap",
     ]
     .iter()
