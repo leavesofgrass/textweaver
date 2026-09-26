@@ -98,11 +98,14 @@ pub enum CiteCommand {
 }
 
 fn parse_format(s: &str) -> Result<Format, String> {
-    Format::from_name(s).ok_or_else(|| format!("{s} is not a reference format; use bibtex, biblatex, ris, or csl-json"))
+    Format::from_name(s).ok_or_else(|| {
+        format!("{s} is not a reference format; use bibtex, biblatex, ris, or csl-json")
+    })
 }
 
 fn parse_output(s: &str) -> Result<OutputFormat, String> {
-    OutputFormat::from_name(s).ok_or_else(|| format!("{s} is not an output format; use plain, markdown, or html"))
+    OutputFormat::from_name(s)
+        .ok_or_else(|| format!("{s} is not an output format; use plain, markdown, or html"))
 }
 
 /// Runs `tw cite`.
@@ -132,8 +135,13 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             let text = commands::export(&ctx, to, &keys)?;
             match output {
                 Some(path) => {
-                    std::fs::write(&path, &text).with_context(|| format!("could not write {}", path.display()))?;
-                    format!("Exported the references as {} to {}.", to.display_name(), path.display())
+                    std::fs::write(&path, &text)
+                        .with_context(|| format!("could not write {}", path.display()))?;
+                    format!(
+                        "Exported the references as {} to {}.",
+                        to.display_name(),
+                        path.display()
+                    )
                 }
                 None => text.trim_end().to_owned(),
             }
@@ -158,7 +166,8 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         CiteCommand::Remove { key } => commands::remove(&ctx, &key)?,
         CiteCommand::Styles => commands::styles(),
         CiteCommand::Check { file } => {
-            let text = std::fs::read_to_string(&file).with_context(|| format!("could not read {}", file.display()))?;
+            let text = std::fs::read_to_string(&file)
+                .with_context(|| format!("could not read {}", file.display()))?;
             commands::check(&ctx, &text)?
         }
     };
