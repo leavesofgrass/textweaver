@@ -44,9 +44,10 @@
 
 use std::collections::VecDeque;
 use std::ops::Range;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
+use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender, TryRecvError};
+use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -168,6 +169,12 @@ pub enum SpeechStatus {
         caps: Caps,
     },
     /// The backend failed.
+    ///
+    /// Also the last status of a speech thread that panicked: the service
+    /// is dead after it ([`SpeechService::is_alive`] is false, and
+    /// [`SpeechService::failure`] holds the same message). Every later
+    /// command is ignored, so the frontend announces the message through
+    /// something other than speech and starts a new service.
     BackendError(String),
     /// The engine crashed or went silent in the middle of a reading, and
     /// the service restarted it and goes on from the last confirmed word
@@ -295,6 +302,26 @@ enum Command {
 }
 
 /// Handle to the speech thread. Cheap calls; all work happens on the thread.
+///
+/// **If the speech thread dies.** A panic on the speech thread (a bug in
+/// the service or in a backend) is caught: the thread drops the backend
+/// (which shuts its engine hosts down), sends one last
+/// [`SpeechStatus::BackendError`] saying what happened, and ends. From
+/// then on [`is_alive`](Self::is_alive) is false,
+/// [`failure`](Self::failure) holds the message, every command is
+/// ignored, and [`poll_status`](Self::poll_status) returns
+/// [`SpeechError::ServiceStopped`] once the last status has been read
+/// (where [`try_status`](Self::try_status) only returns `None`). A
+/// frontend should then:
+///
+/// 1. announce the message without speech (status line, screen reader),
+///    since this service can no longer speak;
+/// 2. drop this handle and [`spawn`](Self::spawn) a new service with a new
+///    factory and the current settings (rate, pitch, volume, voice,
+///    punctuation);
+/// 3. forget the reading in progress (its generation belongs to the dead
+///    service) and let the user start reading again, or start it again
+///    from the last reported position.
 pub struct SpeechService {
     tx: Sender<Command>,
     status_rx: Receiver<SpeechStatus>,
@@ -305,6 +332,10 @@ pub struct SpeechService {
     caps: Arc<AtomicU32>,
     /// The last reading generation handed out by `read`.
     last_reading: AtomicU64,
+    /// Cleared when the speech thread ends (a panic, or a lost handle).
+    alive: Arc<AtomicBool>,
+    /// Why the speech thread died, when it panicked.
+    failure: Arc<Mutex<Option<String>>>,
 }
 
 impl std::fmt::Debug for SpeechService {
@@ -332,25 +363,38 @@ impl SpeechService {
         let (status_tx, status_rx) = mpsc::channel();
         let (ready_tx, ready_rx) = mpsc::channel();
         let caps = Arc::new(AtomicU32::new(0));
-        let shared_caps = Arc::clone(&caps);
+        let alive = Arc::new(AtomicBool::new(true));
+        let failure = Arc::new(Mutex::new(None));
+        let thread_alive = Arc::clone(&alive);
+        let thread_failure = Arc::clone(&failure);
+        let link = StatusLink {
+            tx: status_tx,
+            caps: Arc::clone(&caps),
+        };
         let thread = thread::Builder::new()
             .name("textweaver-speech".into())
-            .spawn(move || match factory() {
-                Ok(backend) => {
-                    let mut core = ServiceCore::new(backend, config, clock);
-                    shared_caps.store(core.capabilities().bits(), Ordering::SeqCst);
-                    let _ = ready_tx.send(Ok(core.backend_id()));
-                    let link = StatusLink {
-                        tx: status_tx,
-                        caps: shared_caps,
-                    };
-                    if link.forward(core.take_statuses()) {
-                        run(&mut core, &rx, &link);
-                    }
+            .spawn(move || {
+                let fatal_tx = link.tx.clone();
+                let ready_fail = ready_tx.clone();
+                let outcome = catch_unwind(AssertUnwindSafe(move || {
+                    speech_thread(factory, config, clock, &rx, &ready_tx, &link);
+                }));
+                if let Err(payload) = outcome {
+                    let why = panic_message(payload.as_ref());
+                    log::error!("the speech thread panicked: {why}");
+                    let message = format!(
+                        "speech stopped after an internal error ({why}); restart speech to go on"
+                    );
+                    *thread_failure.lock().unwrap_or_else(|e| e.into_inner()) =
+                        Some(message.clone());
+                    thread_alive.store(false, Ordering::SeqCst);
+                    // Only one of these has a listener: `spawn` waits for
+                    // the first until the backend is ready, the handle
+                    // reads the second after that.
+                    let _ = ready_fail.send(Err(SpeechError::Engine(message.clone())));
+                    let _ = fatal_tx.send(SpeechStatus::BackendError(message));
                 }
-                Err(e) => {
-                    let _ = ready_tx.send(Err(e));
-                }
+                thread_alive.store(false, Ordering::SeqCst);
             })
             .map_err(|e| SpeechError::Io(e.to_string()))?;
         let backend_id = ready_rx.recv().map_err(|_| SpeechError::ServiceStopped)??;
@@ -361,6 +405,8 @@ impl SpeechService {
             backend_id,
             caps,
             last_reading: AtomicU64::new(0),
+            alive,
+            failure,
         })
     }
 
@@ -386,90 +432,120 @@ impl SpeechService {
         Caps::from_bits_retain(self.caps.load(Ordering::SeqCst))
     }
 
-    fn send(&self, cmd: Command) {
-        // A closed channel means the thread is gone; there is nobody to tell.
-        let _ = self.tx.send(cmd);
+    /// Sends a command to the speech thread. A closed channel means the
+    /// thread is gone: that is recorded (see [`is_alive`](Self::is_alive))
+    /// rather than mistaken for a command that is still to be carried out.
+    fn send(&self, cmd: Command) -> Result<(), SpeechError> {
+        if self.tx.send(cmd).is_err() {
+            if self.alive.swap(false, Ordering::SeqCst) {
+                log::warn!("speech command dropped: the speech thread has stopped");
+            }
+            return Err(SpeechError::ServiceStopped);
+        }
+        Ok(())
+    }
+
+    /// Sends a command whose failure the caller learns from
+    /// [`is_alive`](Self::is_alive) and the statuses.
+    fn post(&self, cmd: Command) {
+        let _ = self.send(cmd);
+    }
+
+    /// False once the speech thread has ended: it panicked (see the type's
+    /// docs for what the frontend should do), or it was shut down. Every
+    /// command is ignored from then on.
+    pub fn is_alive(&self) -> bool {
+        self.alive.load(Ordering::SeqCst) && self.thread.as_ref().is_some_and(|t| !t.is_finished())
+    }
+
+    /// Why the speech thread died, when it panicked: the message of its
+    /// last [`SpeechStatus::BackendError`].
+    pub fn failure(&self) -> Option<String> {
+        self.failure
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     /// Speaks `text` (not mapped to the document). See [`SayMode`].
     pub fn say(&self, text: impl Into<String>, mode: SayMode) {
-        self.send(Command::Say(text.into(), mode));
+        self.post(Command::Say(text.into(), mode));
     }
     /// Reads utterances in order, replacing any reading in progress.
     /// Returns the reading's generation, which every status about this
     /// reading carries (see [`ReadingGeneration`]).
     pub fn read(&self, utterances: Vec<Utterance>) -> ReadingGeneration {
         let generation = self.last_reading.fetch_add(1, Ordering::SeqCst) + 1;
-        self.send(Command::Read(utterances, generation));
+        self.post(Command::Read(utterances, generation));
         generation
     }
     /// Stops all speech.
     pub fn stop(&self) {
-        self.send(Command::Stop);
+        self.post(Command::Stop);
     }
     /// Pauses reading.
     pub fn pause(&self) {
-        self.send(Command::Pause);
+        self.post(Command::Pause);
     }
     /// Resumes reading.
     pub fn resume(&self) {
-        self.send(Command::Resume);
+        self.post(Command::Resume);
     }
     /// Resumes a paused reading from document position `pos` instead of the
     /// pause point (the cursor moved while paused). If `pos` is outside the
     /// paused reading, resumes at the pause point.
     pub fn resume_at(&self, pos: CharPos) {
-        self.send(Command::ResumeAt(pos));
+        self.post(Command::ResumeAt(pos));
     }
     /// Skips to the next queued utterance.
     pub fn skip(&self) {
-        self.send(Command::Skip);
+        self.post(Command::Skip);
     }
     /// Sets the rate.
     pub fn set_rate(&self, rate: Rate) {
-        self.send(Command::SetRate(rate));
+        self.post(Command::SetRate(rate));
     }
     /// Sets the pitch.
     pub fn set_pitch(&self, pitch: Pitch) {
-        self.send(Command::SetPitch(pitch));
+        self.post(Command::SetPitch(pitch));
     }
     /// Sets the volume.
     pub fn set_volume(&self, volume: Volume) {
-        self.send(Command::SetVolume(volume));
+        self.post(Command::SetVolume(volume));
     }
     /// Sets the voice (`None` for the engine default).
     pub fn set_voice(&self, voice: Option<String>) {
-        self.send(Command::SetVoice(voice));
+        self.post(Command::SetVoice(voice));
     }
     /// Sets punctuation verbosity.
     pub fn set_punctuation(&self, level: PunctuationLevel) {
-        self.send(Command::SetPunctuation(level));
+        self.post(Command::SetPunctuation(level));
     }
     /// Enables or disables split caps.
     pub fn set_split_caps(&self, on: bool) {
-        self.send(Command::SetSplitCaps(on));
+        self.post(Command::SetSplitCaps(on));
     }
     /// Replaces the normalization settings (applies to utterances read
     /// after this call).
     pub fn set_normalization(&self, config: NormalizeConfig) {
-        self.send(Command::SetNormalization(Box::new(config)));
+        self.post(Command::SetNormalization(Box::new(config)));
     }
     /// Replaces the pacing settings (highlight speed, latency offset).
     pub fn set_pacing(&self, pacing: PacingConfig) {
-        self.send(Command::SetPacing(pacing));
+        self.post(Command::SetPacing(pacing));
     }
     /// Speaks one character (scaled rate, caps indication), optionally
     /// mapped to a document position.
     pub fn speak_char(&self, c: char, at: Option<CharPos>) {
-        self.send(Command::SpeakChar(c, at));
+        self.post(Command::SpeakChar(c, at));
     }
     /// Plays a tone (ignored when the backend has no [`Caps::TONES`]).
     pub fn tone(&self, hz: f32, ms: u32) {
-        self.send(Command::Tone(hz, ms));
+        self.post(Command::Tone(hz, ms));
     }
     /// Plays an earcon (ignored when the backend has no [`Caps::TONES`]).
     pub fn earcon(&self, earcon: Earcon) {
-        self.send(Command::Earcon(earcon));
+        self.post(Command::Earcon(earcon));
     }
 
     /// The backend's voices, asked on the speech thread (backends are not
@@ -477,9 +553,7 @@ impl SpeechService {
     /// busy starting a host answers when it is done.
     pub fn voices(&self) -> Result<Vec<Voice>, SpeechError> {
         let (reply, answer) = mpsc::channel();
-        self.tx
-            .send(Command::Voices(reply))
-            .map_err(|_| SpeechError::ServiceStopped)?;
+        self.send(Command::Voices(reply))?;
         match answer.recv_timeout(VOICES_TIMEOUT) {
             Ok(result) => result,
             Err(RecvTimeoutError::Timeout) => Err(SpeechError::Engine(
@@ -489,9 +563,27 @@ impl SpeechService {
         }
     }
 
-    /// The next status update, if one is waiting.
+    /// The next status update, if one is waiting. `None` both when nothing
+    /// is waiting and when the speech thread has died; tell them apart with
+    /// [`poll_status`](Self::poll_status) or [`is_alive`](Self::is_alive).
     pub fn try_status(&self) -> Option<SpeechStatus> {
-        self.status_rx.try_recv().ok()
+        self.poll_status().ok().flatten()
+    }
+
+    /// The next status update: `Ok(Some(_))` when one is waiting, `Ok(None)`
+    /// when none is waiting and the speech thread is running, and
+    /// [`SpeechError::ServiceStopped`] when the thread has ended and every
+    /// status it sent has been read (after a panic, the last one is the
+    /// [`SpeechStatus::BackendError`] that says why).
+    pub fn poll_status(&self) -> Result<Option<SpeechStatus>, SpeechError> {
+        match self.status_rx.try_recv() {
+            Ok(s) => Ok(Some(s)),
+            Err(TryRecvError::Empty) => Ok(None),
+            Err(TryRecvError::Disconnected) => {
+                self.alive.store(false, Ordering::SeqCst);
+                Err(SpeechError::ServiceStopped)
+            }
+        }
     }
 
     /// The status channel, for frontends that block or select on it.
@@ -505,7 +597,7 @@ impl SpeechService {
     }
 
     fn shutdown_inner(&mut self) {
-        self.send(Command::Shutdown);
+        self.post(Command::Shutdown);
         if let Some(t) = self.thread.take() {
             let _ = t.join();
         }
@@ -538,6 +630,41 @@ impl StatusLink {
         }
         true
     }
+}
+
+/// The speech thread: creates the backend, reports readiness, and runs the
+/// command loop. A panic anywhere in here is caught by the caller.
+fn speech_thread(
+    factory: BackendFactory,
+    config: ServiceConfig,
+    clock: Box<dyn Clock>,
+    rx: &Receiver<Command>,
+    ready: &Sender<Result<BackendId, SpeechError>>,
+    link: &StatusLink,
+) {
+    match factory() {
+        Ok(backend) => {
+            let mut core = ServiceCore::new(backend, config, clock);
+            link.caps
+                .store(core.capabilities().bits(), Ordering::SeqCst);
+            let _ = ready.send(Ok(core.backend_id()));
+            if link.forward(core.take_statuses()) {
+                run(&mut core, rx, link);
+            }
+        }
+        Err(e) => {
+            let _ = ready.send(Err(e));
+        }
+    }
+}
+
+/// The text of a panic payload.
+fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
+    payload
+        .downcast_ref::<&str>()
+        .map(|s| (*s).to_owned())
+        .or_else(|| payload.downcast_ref::<String>().cloned())
+        .unwrap_or_else(|| "unknown panic".to_owned())
 }
 
 fn run(core: &mut ServiceCore, rx: &Receiver<Command>, status: &StatusLink) {

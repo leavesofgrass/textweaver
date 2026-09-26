@@ -1580,3 +1580,100 @@ fn the_voice_list_is_asked_on_the_speech_thread() {
     assert_eq!(names, ["Alpha", "Beta"]);
     service.shutdown();
 }
+
+// ---- a panic on the speech thread ---------------------------------------------
+
+/// A backend with a bug: `speak` panics on the text "boom".
+struct Buggy(RecordingBackend);
+
+impl SpeechBackend for Buggy {
+    fn id(&self) -> BackendId {
+        "buggy"
+    }
+    fn capabilities(&self) -> Caps {
+        self.0.capabilities()
+    }
+    fn voices(&self) -> Result<Vec<crate::Voice>, SpeechError> {
+        self.0.voices()
+    }
+    fn set_params(&mut self, params: &VoiceParams) -> Result<(), SpeechError> {
+        self.0.set_params(params)
+    }
+    fn effective_wpm(&self) -> u16 {
+        self.0.effective_wpm()
+    }
+    fn speak(&mut self, u: &Utterance, sink: &mut dyn EventSink) -> Result<(), SpeechError> {
+        assert!(!u.text.contains("boom"), "the buggy backend blew up");
+        self.0.speak(u, sink)
+    }
+    fn poll(&mut self, sink: &mut dyn EventSink) {
+        self.0.poll(sink);
+    }
+    fn stop(&mut self) {
+        self.0.stop();
+    }
+}
+
+fn buggy_service() -> SpeechService {
+    let (b, _rec) = RecordingBackend::with(RecordingMode::Instant, RecordingBackend::DEFAULT_CAPS);
+    SpeechService::spawn(
+        Box::new(move || Ok(Box::new(Buggy(b)) as Box<dyn SpeechBackend>)),
+        plain(),
+    )
+    .unwrap()
+}
+
+#[test]
+fn a_panic_on_the_speech_thread_is_reported_and_the_service_is_dead() {
+    // Before: the thread died silently; statuses just stopped coming, and
+    // every command vanished.
+    let s = buggy_service();
+    s.say("Fine.", SayMode::Interrupt);
+    assert!(s.is_alive());
+    s.say("boom", SayMode::Interrupt);
+    let mut last = None;
+    loop {
+        match s.statuses().recv_timeout(Duration::from_secs(10)) {
+            Ok(st) => last = Some(st),
+            Err(RecvTimeoutError::Disconnected) => break,
+            Err(RecvTimeoutError::Timeout) => panic!("the speech thread neither spoke nor ended"),
+        }
+    }
+    let Some(SpeechStatus::BackendError(message)) = last else {
+        panic!("the last status says what happened: {last:?}");
+    };
+    assert!(
+        message.starts_with("speech stopped after an internal error (the buggy backend blew up)"),
+        "{message}"
+    );
+    assert!(!s.is_alive());
+    assert_eq!(s.failure(), Some(message));
+    // A dead thread is not an empty queue.
+    assert_eq!(s.poll_status(), Err(SpeechError::ServiceStopped));
+    assert_eq!(s.try_status(), None);
+    assert_eq!(s.voices(), Err(SpeechError::ServiceStopped));
+    // Commands are ignored, not a crash of the caller; a new service works.
+    s.say("Anyone there?", SayMode::Interrupt);
+    s.stop();
+    drop(s);
+    let again = buggy_service();
+    assert!(again.is_alive());
+    assert_eq!(again.poll_status(), Ok(None), "alive, nothing waiting");
+    again.shutdown();
+}
+
+#[test]
+fn a_panic_while_the_backend_starts_is_an_error_from_spawn() {
+    let err = SpeechService::spawn(
+        Box::new(|| -> Result<Box<dyn SpeechBackend>, SpeechError> { panic!("no engine today") }),
+        plain(),
+    )
+    .unwrap_err();
+    assert_eq!(
+        err,
+        SpeechError::Engine(
+            "speech stopped after an internal error (no engine today); restart speech to go on"
+                .into()
+        )
+    );
+}
