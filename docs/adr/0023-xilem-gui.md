@@ -66,7 +66,7 @@ A live region (`widgets.rs`, `Announcer`): an invisible widget whose children ar
 - **Linux:** `tools/atspi-check.sh` runs the GUI under Xvfb with a private D-Bus session and the AT-SPI bus, and `tools/atspi-dump.py` (pyatspi) checks the tree, the Text interface, the attributes at the caret, and the caret-moved and announcement events. See "Results" for where it stands.
 - **macOS:** a smoke test in CI launches the GUI with the paced backend and checks that it reads and exits; VoiceOver needs a person.
 - **Unit and harness tests** (`tests/document_view.rs`) check the same tree through `accesskit_consumer`, the crate the platform adapters use.
-- **People:** Jon tests with NVDA and JAWS; his checklist is in the W3b report and in `docs/tasks.md`.
+- **People:** Jon tests with NVDA and JAWS; his checklist is in the W3b report and in `docs/history/tasks.md`.
 
 ## Measurements
 
