@@ -194,60 +194,8 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
     let focus = color(p.focus);
 
     // Buttons: the to_do_mvc shape, recoloured, with a 2 px focus ring.
-    props.insert::<Button, _>(Padding::from_vh(8.px(), 18.px()));
-    props.insert::<Button, _>(CornerRadius {
-        radius: Length::px(RADIUS),
-    });
-    props.insert::<Button, _>(BorderWidth { width: border_w });
-    props.insert::<Button, _>(Background::Color(color(p.raised)));
-    props.insert::<Button, _>(BorderColor {
-        color: color(p.border),
-    });
-    {
-        let mut stack = PropertyStack::new();
-        stack.push_layer(
-            Selector::new().with_hovered(true),
-            BorderColor {
-                color: color(p.border_hover),
-            },
-        );
-        stack.push_layer(
-            Selector::new().with_focused(true),
-            (
-                BorderColor { color: focus },
-                BorderWidth {
-                    width: Length::px(FOCUS_WIDTH),
-                },
-            ),
-        );
-        stack.push_layer(
-            Selector::new().with_active(true),
-            Background::Color(color(p.raised.mix(p.text, 0.08))),
-        );
-        stack.push_layer(
-            Selector::new().with_disabled(true),
-            Background::Color(color(p.surface)),
-        );
-        stack.push_layer(
-            Selector::classes(&["primary"]),
-            (
-                Background::Color(color(p.accent)),
-                BorderColor {
-                    color: color(p.accent),
-                },
-            ),
-        );
-        stack.push_layer(
-            Selector::classes(&["primary"]).with_focused(true),
-            (
-                BorderColor { color: focus },
-                BorderWidth {
-                    width: Length::px(FOCUS_WIDTH),
-                },
-            ),
-        );
-        props.insert_stack::<Button>(stack);
-    }
+    button_props::<Button>(&mut props, p);
+    button_props::<crate::widgets::ActionButton>(&mut props, p);
 
     // Checkboxes.
     props.insert::<Checkbox, _>(Background::Color(color(p.raised)));
@@ -305,12 +253,90 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
     props
 }
 
+/// The button look for widget type `W`: Masonry's `Button` shape with the
+/// palette's colours; the `primary` class fills with the accent.
+fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Palette) {
+    let hc = p.kind == ThemeKind::HighContrast;
+    let border_w = if hc { 2.px() } else { 1.px() };
+    let focus = color(p.focus);
+    props.insert::<W, _>(Padding::from_vh(8.px(), 18.px()));
+    props.insert::<W, _>(CornerRadius {
+        radius: Length::px(RADIUS),
+    });
+    props.insert::<W, _>(BorderWidth { width: border_w });
+    props.insert::<W, _>(Background::Color(color(p.raised)));
+    props.insert::<W, _>(BorderColor {
+        color: color(p.border),
+    });
+    let ring = (
+        BorderColor { color: focus },
+        BorderWidth {
+            width: Length::px(FOCUS_WIDTH),
+        },
+    );
+    let mut stack = PropertyStack::new();
+    stack.push_layer(
+        Selector::new().with_hovered(true),
+        BorderColor {
+            color: color(p.border_hover),
+        },
+    );
+    stack.push_layer(Selector::new().with_focused(true), ring);
+    stack.push_layer(
+        Selector::new().with_active(true),
+        Background::Color(color(p.raised.mix(p.text, 0.10))),
+    );
+    stack.push_layer(
+        Selector::new().with_disabled(true),
+        Background::Color(color(p.surface)),
+    );
+    stack.push_layer(
+        Selector::classes(&["primary"]),
+        (
+            Background::Color(color(p.accent)),
+            BorderColor {
+                color: color(p.accent),
+            },
+        ),
+    );
+    stack.push_layer(
+        Selector::classes(&["primary"]).with_hovered(true),
+        Background::Color(color(p.accent.mix(p.text, 0.15))),
+    );
+    // On the accent fill, the ring is drawn in the text colour, which
+    // stands out from both the fill and the panel.
+    stack.push_layer(
+        Selector::classes(&["primary"]).with_focused(true),
+        (
+            BorderColor {
+                color: color(p.text),
+            },
+            BorderWidth {
+                width: Length::px(FOCUS_WIDTH),
+            },
+        ),
+    );
+    props.insert_stack::<W>(stack);
+}
+
 /// A panel's look: the surface, a hairline border, rounded corners, and a
 /// soft shadow for elevation (none in high contrast, where a solid border
 /// shows the edge instead).
-pub fn panel_props(p: &Palette) -> (Background, BorderColor, BorderWidth, CornerRadius, BoxShadow) {
+pub fn panel_props(
+    p: &Palette,
+) -> (
+    Background,
+    BorderColor,
+    BorderWidth,
+    CornerRadius,
+    BoxShadow,
+) {
     let hc = p.kind == ThemeKind::HighContrast;
-    let shadow_alpha = if hc || !p.background.is_dark() { 0.0 } else { 0.35 };
+    let shadow_alpha = if hc || !p.background.is_dark() {
+        0.0
+    } else {
+        0.35
+    };
     (
         Background::Color(color(p.surface)),
         BorderColor {
@@ -337,7 +363,11 @@ mod tests {
         for name in REQUIRED {
             let p = Palette::named(name);
             assert_eq!(p.name, name);
-            let min = if p.kind == ThemeKind::HighContrast { 7.0 } else { 4.5 };
+            let min = if p.kind == ThemeKind::HighContrast {
+                7.0
+            } else {
+                4.5
+            };
             for (what, fg, bg) in [
                 ("text on page", p.text, p.background),
                 ("text on panel", p.text, p.surface),
@@ -347,11 +377,21 @@ mod tests {
                 let r = contrast_ratio(fg, bg);
                 assert!(r >= min - 0.01, "{name}: {what} is {r:.2} to 1");
             }
-            for (what, bg) in [("page", p.background), ("panel", p.surface), ("button", p.raised)] {
+            for (what, bg) in [
+                ("page", p.background),
+                ("panel", p.surface),
+                ("button", p.raised),
+            ] {
                 let r = contrast_ratio(p.focus, bg);
-                assert!(r >= 3.0 - 0.01, "{name}: focus ring on {what} is {r:.2} to 1");
+                assert!(
+                    r >= 3.0 - 0.01,
+                    "{name}: focus ring on {what} is {r:.2} to 1"
+                );
             }
-            assert!(contrast_ratio(p.on_accent, p.accent) >= 4.5 - 0.01, "{name}: primary button");
+            assert!(
+                contrast_ratio(p.on_accent, p.accent) >= 4.5 - 0.01,
+                "{name}: primary button"
+            );
             for l in 1..=6 {
                 let r = contrast_ratio(p.heading(l), p.background);
                 assert!(r >= min - 0.01, "{name}: heading {l} is {r:.2} to 1");

@@ -151,6 +151,8 @@ pub struct TestHarness<W: Widget> {
     mouse_state: PointerState,
     window_size: PhysicalSize<u32>,
     root_padding: u32,
+    /// The scale factor the scene is drawn at (textweaver patch).
+    scale_factor: f64,
     background_color: Color,
     panic_on_rewrite_saturation: bool,
     max_screenshot_size: u32,
@@ -406,6 +408,7 @@ impl<W: Widget> TestHarness<W> {
             window_size,
             background_color: params.background_color,
             root_padding: params.root_padding,
+            scale_factor: params.scale_factor,
             panic_on_rewrite_saturation: params.panic_on_rewrite_saturation,
             max_screenshot_size: params.max_screenshot_size,
             action_queue: VecDeque::new(),
@@ -549,8 +552,11 @@ impl<W: Widget> TestHarness<W> {
             let mut painter = Painter::new(&mut full_scene);
             painter.fill_rect(Rect::new(0.0, 0.0, width, height), self.background_color);
 
+            // textweaver patch: widgets lay out in logical pixels, so the
+            // scene is scaled to the physical window, as masonry_winit does.
             let padding_transform =
-                Affine::translate((f64::from(self.root_padding), f64::from(self.root_padding)));
+                Affine::translate((f64::from(self.root_padding), f64::from(self.root_padding)))
+                    * Affine::scale(self.scale_factor);
 
             for layer in &visual_layers.layers {
                 if let VisualLayerKind::Scene(scene) = &layer.kind {
@@ -580,6 +586,14 @@ impl<W: Widget> TestHarness<W> {
             .update_and_process_changes(tree_update.clone(), &mut NoOpTreeChangeHandler);
 
         (visual_layers, tree_update)
+    }
+
+    /// Registers the fonts in `data` (textweaver patch: screenshots and
+    /// layout tests with an app's own fonts rather than only Roboto).
+    pub fn register_fonts(&mut self, data: Blob<u8>) {
+        let _ = self.render_root.register_fonts(data);
+        // Registering fonts invalidates layout; run the passes now.
+        self.animate_ms(0);
     }
 
     /// Returns a reference to the current state of the accessibility tree.

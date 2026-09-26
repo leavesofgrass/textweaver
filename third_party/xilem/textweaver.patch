@@ -85,7 +85,16 @@
  use masonry_core::anymore::AnyDebug;
  use masonry_core::app::{
      RenderRoot, RenderRootOptions, RenderRootSignal, VisualLayerKind, VisualLayerPlan,
-@@ -379,7 +379,7 @@
+@@ -151,6 +151,8 @@
+     mouse_state: PointerState,
+     window_size: PhysicalSize<u32>,
+     root_padding: u32,
++    /// The scale factor the scene is drawn at (textweaver patch).
++    scale_factor: f64,
+     background_color: Color,
+     panic_on_rewrite_saturation: bool,
+     max_screenshot_size: u32,
+@@ -379,7 +381,7 @@
          let dummy_tree_update = TreeUpdate {
              tree_id: TreeId::ROOT,
              nodes: vec![(0.into(), Node::new(Role::Window))],
@@ -94,7 +103,42 @@
                  root: 0.into(),
                  toolkit_name: None,
                  toolkit_version: None,
-@@ -588,20 +588,14 @@
+@@ -406,6 +408,7 @@
+             window_size,
+             background_color: params.background_color,
+             root_padding: params.root_padding,
++            scale_factor: params.scale_factor,
+             panic_on_rewrite_saturation: params.panic_on_rewrite_saturation,
+             max_screenshot_size: params.max_screenshot_size,
+             action_queue: VecDeque::new(),
+@@ -549,8 +552,11 @@
+             let mut painter = Painter::new(&mut full_scene);
+             painter.fill_rect(Rect::new(0.0, 0.0, width, height), self.background_color);
+ 
++            // textweaver patch: widgets lay out in logical pixels, so the
++            // scene is scaled to the physical window, as masonry_winit does.
+             let padding_transform =
+-                Affine::translate((f64::from(self.root_padding), f64::from(self.root_padding)));
++                Affine::translate((f64::from(self.root_padding), f64::from(self.root_padding)))
++                    * Affine::scale(self.scale_factor);
+ 
+             for layer in &visual_layers.layers {
+                 if let VisualLayerKind::Scene(scene) = &layer.kind {
+@@ -582,26 +588,28 @@
+         (visual_layers, tree_update)
+     }
+ 
++    /// Registers the fonts in `data` (textweaver patch: screenshots and
++    /// layout tests with an app's own fonts rather than only Roboto).
++    pub fn register_fonts(&mut self, data: Blob<u8>) {
++        let _ = self.render_root.register_fonts(data);
++        // Registering fonts invalidates layout; run the passes now.
++        self.animate_ms(0);
++    }
++
+     /// Returns a reference to the current state of the accessibility tree.
+     pub fn access_tree(&self) -> &accesskit_consumer::Tree {
+         &self.access_tree
      }
  
      /// Returns a reference to the current value of a node of the accessibility tree.
@@ -123,7 +167,7 @@
      }
  
      // --- MARK: EVENT HELPERS
-@@ -1205,21 +1199,21 @@
+@@ -1205,21 +1213,21 @@
  struct NoOpTreeChangeHandler;
  
  impl accesskit_consumer::TreeChangeHandler for NoOpTreeChangeHandler {
@@ -313,6 +357,62 @@
 -# This actually enables scraping for all examples, not just this one.
 -# However it is possible to set doc-scrape-examples to false for other specific examples.
 -doc-scrape-examples = true
+--- a/masonry/src/widgets/text_area.rs
++++ b/masonry/src/widgets/text_area.rs
+@@ -49,6 +49,9 @@
+     editor: PlainEditor<BrushIndex>,
+     /// Placeholder text exposed to accessibility APIs by an editable text area.
+     placeholder: ArcStr,
++    /// The accessible name (textweaver patch: a field needs a name that is
++    /// not its placeholder, such as the prompt it answers).
++    accessible_label: ArcStr,
+     /// The generation of `editor` which we have rendered.
+     ///
+     /// TODO: Split into rendered and layout generation. This will make the `edited` mechanism in [`on_text_event`](Widget::on_text_event).
+@@ -120,6 +123,7 @@
+         Self {
+             editor,
+             placeholder: "".into(),
++            accessible_label: "".into(),
+             rendered_generation: Generation::default(),
+             word_wrap: true,
+             last_max_advance: None,
+@@ -129,6 +133,12 @@
+             anim_prev_interval: 0,
+             anim_elapsed: 0,
+         }
++    }
++
++    /// Sets the accessible name screen readers announce for the area.
++    pub fn with_accessible_label(mut self, label: impl Into<ArcStr>) -> Self {
++        self.accessible_label = label.into();
++        self
+     }
+ 
+     /// Sets a style property for the new text area.
+@@ -322,6 +332,12 @@
+ 
+         this.ctx.request_layout();
+         old
++    }
++
++    /// Changes the accessible name.
++    pub fn set_accessible_label(this: &mut WidgetMut<'_, Self>, label: impl Into<ArcStr>) {
++        this.widget.accessible_label = label.into();
++        this.ctx.request_accessibility_update();
+     }
+ 
+     /// Sets the text displayed in this widget.
+@@ -1072,6 +1088,9 @@
+         }
+         if !self.placeholder.is_empty() {
+             node.set_placeholder(self.placeholder.to_string());
++        }
++        if !self.accessible_label.is_empty() {
++            node.set_label(self.accessible_label.to_string());
+         }
+ 
+         let cache = ctx.property_cache();
 --- a/parley/Cargo.toml
 +++ b/parley/Cargo.toml
 @@ -63,7 +63,7 @@
@@ -324,3 +424,15 @@
  optional = true
  
  [dependencies.core_maths]
+--- a/parley/src/bidi.rs
++++ b/parley/src/bidi.rs
+@@ -893,6 +893,9 @@
+     }
+ }
+ 
++// textweaver: newer icu_properties deprecates `to_icu4c_value`; the value
++// is still correct, and this vendored copy is built with `-D warnings`.
++#[allow(deprecated)]
+ const fn mask(t: BidiClass) -> u32 {
+     1 << (t.to_icu4c_value() as u32)
+ }

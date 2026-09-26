@@ -49,6 +49,9 @@ pub struct TextArea<const USER_EDITABLE: bool> {
     editor: PlainEditor<BrushIndex>,
     /// Placeholder text exposed to accessibility APIs by an editable text area.
     placeholder: ArcStr,
+    /// The accessible name (textweaver patch: a field needs a name that is
+    /// not its placeholder, such as the prompt it answers).
+    accessible_label: ArcStr,
     /// The generation of `editor` which we have rendered.
     ///
     /// TODO: Split into rendered and layout generation. This will make the `edited` mechanism in [`on_text_event`](Widget::on_text_event).
@@ -120,6 +123,7 @@ impl<const EDITABLE: bool> TextArea<EDITABLE> {
         Self {
             editor,
             placeholder: "".into(),
+            accessible_label: "".into(),
             rendered_generation: Generation::default(),
             word_wrap: true,
             last_max_advance: None,
@@ -129,6 +133,12 @@ impl<const EDITABLE: bool> TextArea<EDITABLE> {
             anim_prev_interval: 0,
             anim_elapsed: 0,
         }
+    }
+
+    /// Sets the accessible name screen readers announce for the area.
+    pub fn with_accessible_label(mut self, label: impl Into<ArcStr>) -> Self {
+        self.accessible_label = label.into();
+        self
     }
 
     /// Sets a style property for the new text area.
@@ -322,6 +332,12 @@ impl<const EDITABLE: bool> TextArea<EDITABLE> {
 
         this.ctx.request_layout();
         old
+    }
+
+    /// Changes the accessible name.
+    pub fn set_accessible_label(this: &mut WidgetMut<'_, Self>, label: impl Into<ArcStr>) {
+        this.widget.accessible_label = label.into();
+        this.ctx.request_accessibility_update();
     }
 
     /// Sets the text displayed in this widget.
@@ -1072,6 +1088,9 @@ impl<const EDITABLE: bool> Widget for TextArea<EDITABLE> {
         }
         if !self.placeholder.is_empty() {
             node.set_placeholder(self.placeholder.to_string());
+        }
+        if !self.accessible_label.is_empty() {
+            node.set_label(self.accessible_label.to_string());
         }
 
         let cache = ctx.property_cache();

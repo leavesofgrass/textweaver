@@ -222,7 +222,10 @@ mod tests {
         let w = TextWindow::around(&doc, focus, 20_000);
         assert!(w.range.start.0 <= focus.0 && focus.0 < w.range.end.0);
         // Starts at a line start and ends after a break.
-        assert_eq!(doc.line_range(doc.line_of(w.range.start)).start, w.range.start);
+        assert_eq!(
+            doc.line_range(doc.line_of(w.range.start)).start,
+            w.range.start
+        );
         assert_eq!(doc.char_at(CharPos(w.range.end.0 - 1)), Some('\n'));
         let len = w.range.len();
         assert!((19_000..=21_000).contains(&len), "{len}");

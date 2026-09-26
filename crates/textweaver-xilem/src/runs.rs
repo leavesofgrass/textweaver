@@ -295,17 +295,17 @@ impl RunSet {
         // Walk the segments between cuts, splitting long ones at word
         // starts (else hard) so no run exceeds MAX_RUN_CHARS.
         let mut seg_start = 0usize;
-        let ends = cuts.iter().map(|c| (c.at, c.line)).chain([(cl.len(), true)]);
+        let ends = cuts
+            .iter()
+            .map(|c| (c.at, c.line))
+            .chain([(cl.len(), true)]);
         for (seg_end, next_is_line) in ends {
             let mut a = seg_start;
             while a < seg_end {
                 let mut b = seg_end.min(a + MAX_RUN_CHARS);
                 if b < seg_end {
                     // Prefer to end at a word start in the back half.
-                    if let Some(w) = (a + MAX_RUN_CHARS / 2..b)
-                        .rev()
-                        .find(|&i| cl[i].word_start)
-                    {
+                    if let Some(w) = (a + MAX_RUN_CHARS / 2..b).rev().find(|&i| cl[i].word_start) {
                         b = w;
                     }
                 }
@@ -422,7 +422,10 @@ impl RunSet {
             index += 1;
         }
         if index == run.len() && i + 1 < n {
-            return RunPos { run: i + 1, index: 0 };
+            return RunPos {
+                run: i + 1,
+                index: 0,
+            };
         }
         RunPos { run: i, index }
     }
@@ -433,7 +436,10 @@ impl RunSet {
             return self.range().end;
         };
         let index = at.index.min(run.len());
-        let off: usize = run.char_scalars[..index].iter().map(|&s| usize::from(s)).sum();
+        let off: usize = run.char_scalars[..index]
+            .iter()
+            .map(|&s| usize::from(s))
+            .sum();
         CharPos(run.start.0 + off)
     }
 
@@ -501,9 +507,18 @@ mod tests {
     fn paragraphs_split_at_breaks() {
         let p = paragraphs(CharPos(10), "ab\n\ncd");
         assert_eq!(p.len(), 3);
-        assert_eq!((p[0].start, p[0].text.as_str(), p[0].has_break), (CharPos(10), "ab", true));
-        assert_eq!((p[1].start, p[1].text.as_str(), p[1].has_break), (CharPos(13), "", true));
-        assert_eq!((p[2].start, p[2].text.as_str(), p[2].has_break), (CharPos(14), "cd", false));
+        assert_eq!(
+            (p[0].start, p[0].text.as_str(), p[0].has_break),
+            (CharPos(10), "ab", true)
+        );
+        assert_eq!(
+            (p[1].start, p[1].text.as_str(), p[1].has_break),
+            (CharPos(13), "", true)
+        );
+        assert_eq!(
+            (p[2].start, p[2].text.as_str(), p[2].has_break),
+            (CharPos(14), "cd", false)
+        );
         // A final break does not start an empty paragraph.
         assert_eq!(paragraphs(CharPos::ZERO, "ab\n").len(), 1);
         assert_eq!(paragraphs(CharPos::ZERO, "").len(), 1);

@@ -51,7 +51,11 @@ pub fn next_char(paras: &[Paragraph], pos: CharPos) -> CharPos {
     let len = p.len_chars();
     if off >= len {
         // On the break (or past it): the next paragraph's start.
-        return CharPos((p.start.0 + p.span_chars()).max(pos.0).min(window_end(paras).0));
+        return CharPos(
+            (p.start.0 + p.span_chars())
+                .max(pos.0)
+                .min(window_end(paras).0),
+        );
     }
     let b = byte_of(&p.text, off);
     let g = p.text[b..].graphemes(true).next().unwrap_or("");
@@ -93,7 +97,11 @@ fn word_starts(text: &str) -> impl Iterator<Item = usize> + '_ {
 pub fn next_word(paras: &[Paragraph], pos: CharPos) -> CharPos {
     let i = paragraph_at(paras, pos);
     for (j, p) in paras.iter().enumerate().skip(i) {
-        let b = if j == i { byte_of(&p.text, local(p, pos)) } else { 0 };
+        let b = if j == i {
+            byte_of(&p.text, local(p, pos))
+        } else {
+            0
+        };
         let found = word_starts(&p.text).find(|&w| if j == i { w > b } else { w >= b });
         if let Some(w) = found {
             return CharPos(p.start.0 + char_of(&p.text, w));
@@ -132,9 +140,7 @@ pub fn prev_word(paras: &[Paragraph], pos: CharPos) -> CharPos {
 /// The next paragraph's start (or the window's end).
 pub fn next_paragraph(paras: &[Paragraph], pos: CharPos) -> CharPos {
     let i = paragraph_at(paras, pos);
-    paras
-        .get(i + 1)
-        .map_or(window_end(paras), |p| p.start)
+    paras.get(i + 1).map_or(window_end(paras), |p| p.start)
 }
 
 /// The paragraph's start, or the previous paragraph's when already there.
