@@ -143,8 +143,8 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 **Acceptance:**
 - Unit tests for the protocol (round-trip framing, partial reads) and for index-to-byte-range mapping, including multibyte text.
 - An integration test with a fake host (a test binary speaking the protocol) covering speak, word events in order with rising `audio_ms`, stop mid-utterance (`Cancelled`, no late events), pause and resume.
-- Real-engine tests on this machine, `#[ignore]`d unless `TEXTWEAVER_ECI=1`: synthesize the spike's sentence to WAV and check that every word's mark arrives with rising offsets; run them with `TEXTWEAVER_ECI=1` before reporting and include the output. Never play audio aloud in tests; use `synthesize_to_file` or a silent sink.
-- clippy and tests green natively; `cargo build -p textweaver-eci` green in the container (no real engine there).
+- Real-engine tests, `#[ignore]`d unless `TEXTWEAVER_ECI=1`, run against **licensed Voxin only**, in the container with `compose.voxin.yaml`: synthesize the spike's sentence to WAV and check every word's mark arrives with rising offsets; include the output. The Code Factory installation on this machine is not licensed: never load it. Windows real-engine tests wait for a licensed engine. Never play audio aloud in tests; use `synthesize_to_file` or a silent sink. Never commit engine audio; local samples go to the git-ignored `target-local/`.
+- clippy and tests green natively (fake host) and in the container, with and without the Voxin overlay.
 
 ## Seams to watch at integration
 
