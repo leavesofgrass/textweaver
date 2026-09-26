@@ -2575,6 +2575,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-cite"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "textweaver-core",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "textweaver-cli"
 version = "0.1.0-alpha.0"
 dependencies = [
@@ -2703,6 +2714,15 @@ name = "textweaver-keymap"
 version = "0.1.0-alpha.0"
 dependencies = [
  "bitflags 2.13.2",
+ "serde",
+ "textweaver-core",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "textweaver-math"
+version = "0.1.0-alpha.0"
+dependencies = [
  "serde",
  "textweaver-core",
  "thiserror 2.0.21",

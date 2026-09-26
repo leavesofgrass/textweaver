@@ -1,0 +1,18 @@
+[package]
+name = "textweaver-math"
+description = "Math for textweaver: LaTeX and ASCIIMath parsing, MathML output, spoken math with offset maps, and math navigation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+textweaver-core.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+
+[lints]
+workspace = true

@@ -357,3 +357,39 @@ Jon's direction: conversion and bulk conversion must be **lightning fast, native
 ### Queued after Agent H: DECtalk
 
 A `dectalk` backend on the shared engine host (`textweaver-enginehost`), mirroring ECI: the DECtalk TTS API in memory mode with `[:index mark]` word marks, loaded from a user-supplied library (`TEXTWEAVER_DECTALK_LIBRARY`, and the install locations of a licensed DECtalk). The community DECtalk source's own licence file states it is proprietary to Fonix and usable only under a written licence, so textweaver never bundles, downloads, or tests against it; Jon may point textweaver at a build he has (his emacspeak-docker image compiles one) for his own testing.
+
+### Math and citations agents (added 2026-09-25 at Jon's request)
+
+Jon asked to carry Star's lessons forward: reading aids, math normalization, live previews, citation support, and ASCIIMath. Math and citations start now; reading aids and live previews follow the Star-lessons research (`docs/star-lessons.md`, being written) and Agent L's renderer and Agent K's GUI findings.
+
+| Agent | Branch | Status |
+|---|---|---|
+| O — Math | `wave2/o-math` | not started |
+| P — Citations | `wave2/p-cite` | not started |
+
+#### Agent O — Math
+
+**Owns:** `crates/textweaver-math/`, `fixtures/o/`, `docs/adr/0018-math.md`.
+
+**Deliverables:**
+- Parsers for **LaTeX math** (the common subset: fractions, roots, scripts, Greek, operators, big operators with limits, matrices and cases, `\text`, accents, delimiters) and **ASCIIMath** (the full published grammar, including its symbol table), both producing one math tree with source spans.
+- **MathML** output (presentation MathML with `alttext`), which Agent L's renderer can call instead of `pulldown-latex` (say in your report how to wire it).
+- **Spoken math**: natural English with ClearSpeak-style wording and three verbosity levels (for example "x squared", "the fraction a over b end fraction" at high verbosity, "a over b" at low), built with `SpokenBuilder` so the offset map points each spoken word back to its source span (ADR-0005). This replaces Star's math normalization (see `docs/star-parity.md` Part 2 §5 and Star's `star/ttstext/mathspeech.py` at D:\star for its wording and its bugs); Star's test vectors for math must pass or have a documented, better wording.
+- **Math navigation** model: a pure API to move through a math tree (next term, into a fraction's numerator and denominator, into scripts, out), returning the spoken text and source span at each step, for the app to use later.
+- Detection helpers: find `$…$`, `$$…$$`, `\(…\)`, `\[…\]`, and backtick-ASCIIMath (`` `…` `` with a configurable delimiter) in plain text without false positives on prices ("$5 and $10") — Star's bug list mentions currency and math collisions.
+
+**Acceptance:** parser tests including every ASCIIMath symbol-table entry; MathML snapshot tests; spoken-math tests at each verbosity with offset-map invariants; property tests that parsing never panics on arbitrary input.
+
+#### Agent P — Citations
+
+**Owns:** `crates/textweaver-cite/`, `crates/textweaver-cli/src/cmd/cite.rs` (create it; the orchestrator wires the subcommand), `fixtures/p/`, `docs/adr/0019-citations.md`.
+
+**Deliverables:**
+- A reference library stored as CSL-JSON (per user, and per document folder), with import and export of **BibTeX/BibLaTeX** (`biblatex`), **RIS**, and **CSL-JSON**, round-trip tested.
+- **DOI lookup** (doi.org content negotiation for CSL-JSON) and **ISBN lookup** (Open Library), over blocking HTTP (`ureq`, no async runtime), with timeouts, a small on-disk cache, and offline-friendly errors; tests against recorded responses (no network in tests; one `#[ignore]`d live test).
+- **Formatting with CSL styles** through `hayagriva` (APA, MLA, Chicago author-date, IEEE, Vancouver at least, plus loading a `.csl` file): in-text citations and bibliography entries as plain text and as Markdown/HTML, readable aloud (no visual-only formatting).
+- **Citation keys and insertion**: Pandoc-style `[@key]`, `[@key, p. 12]`, `[@a; @b]` parsing and resolution against the library, so Agent L's Pandoc-flavor renderer can render citations and a bibliography, and the editor can insert them (describe the API the app needs).
+- `tw cite add DOI|ISBN`, `tw cite import FILE`, `tw cite export --to bibtex|ris|csl-json`, `tw cite format KEY --style apa`, `tw cite list [--json]`.
+- Compare with Star's `star/citations.py` (D:\star) and list what you carried over and fixed.
+
+**Acceptance:** crate tests green; import/export round trips; formatting snapshots per style; the CLI commands tested with a temporary library.

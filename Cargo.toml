@@ -23,6 +23,8 @@ members = [
     "crates/textweaver-render",
     "crates/textweaver-convert",
     "crates/textweaver-writers",
+    "crates/textweaver-math",
+    "crates/textweaver-cite",
     "xtask",
 ]
 default-members = [
@@ -47,6 +49,8 @@ default-members = [
     "crates/textweaver-render",
     "crates/textweaver-convert",
     "crates/textweaver-writers",
+    "crates/textweaver-math",
+    "crates/textweaver-cite",
 ]
 
 [workspace.package]
@@ -83,6 +87,8 @@ textweaver-dictation = { path = "crates/textweaver-dictation" }
 textweaver-render = { path = "crates/textweaver-render" }
 textweaver-convert = { path = "crates/textweaver-convert" }
 textweaver-writers = { path = "crates/textweaver-writers" }
+textweaver-math = { path = "crates/textweaver-math" }
+textweaver-cite = { path = "crates/textweaver-cite" }
 
 # text and formats
 ropey = "1.6"
@@ -146,6 +152,10 @@ walkdir = "2.5"
 pulldown-latex = "0.8"
 ammonia = "4.2"
 krilla = "0.8"
+# Citations (Agent P): bibliography model and CSL styles, BibTeX, blocking HTTP
+hayagriva = "0.10"
+biblatex = "0.12"
+ureq = { version = "3.4", default-features = false, features = ["rustls"] }
 # GUI (wave 3 spike; the textweaver-gui crate only).
 wxdragon = "0.9"
 live-region = "0.3"
