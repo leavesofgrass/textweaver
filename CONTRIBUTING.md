@@ -92,6 +92,7 @@ The steps, in order:
 - **keyboard**: `cargo xtask keyboard --check`. It fails when [docs/keyboard.md](docs/keyboard.md) is out of date. Regenerate it with `cargo xtask keyboard`; never edit it by hand.
 - **links**: `python3 tools/check_links.py`. Every relative link and anchor in the Markdown docs and in `docs/site` must resolve.
 - **site**: `python3 tools/gen_site_data.py --check`. The data embedded in the `docs/site` pages must match `cargo metadata`, the keymap, and the theme files. Regenerate it with `python3 tools/gen_site_data.py`.
+- **site-a11y**: `python3 tools/check_site_a11y.py`. Static accessibility checks of the `docs/site` pages: language, title, one level-1 heading and no skipped levels, the skip link, landmarks, a label for every control, text alternatives, and references that resolve.
 - **hosts32** (Windows only): the 32-bit engine hosts build.
 - **scripts**: shellcheck on the shell scripts, or PSScriptAnalyzer on the PowerShell scripts, when installed.
 

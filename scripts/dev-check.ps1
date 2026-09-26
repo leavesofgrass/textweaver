@@ -88,7 +88,8 @@ if ($Help) {
     Write-Line 'Runs the checks CI runs: fmt, clippy, test, doc (rustdoc with -D warnings),'
     Write-Line 'keyboard (cargo xtask keyboard --check), hosts32 (the 32-bit engine hosts),'
     Write-Line 'links (tools\check_links.py: links and anchors in the docs resolve), site'
-    Write-Line '(tools\gen_site_data.py --check: the docs\site data is current), and'
+    Write-Line '(tools\gen_site_data.py --check: the docs\site data is current), site-a11y'
+    Write-Line '(tools\check_site_a11y.py: static accessibility checks of docs\site), and'
     Write-Line 'scripts (PSScriptAnalyzer, when installed). Windows uses'
     Write-Line '--features textweaver-speech/omnivox instead of --all-features.'
     Write-Line
@@ -186,7 +187,7 @@ $python = $null
 foreach ($candidate in @('python', 'python3')) {
     if (Get-Command $candidate -ErrorAction SilentlyContinue) { $python = $candidate; break }
 }
-foreach ($pyStep in @('links', 'site')) {
+foreach ($pyStep in @('links', 'site', 'site-a11y')) {
     if (-not (Test-Wanted $pyStep)) { continue }
     if (-not $python) {
         Write-Line
@@ -197,8 +198,10 @@ foreach ($pyStep in @('links', 'site')) {
     }
     if ($pyStep -eq 'links') {
         Invoke-CheckStep 'links' 'links and anchors in the docs resolve' @($python, 'tools\check_links.py')
-    } else {
+    } elseif ($pyStep -eq 'site') {
         Invoke-CheckStep 'site' 'the docs\site data is current' @($python, 'tools\gen_site_data.py', '--check')
+    } else {
+        Invoke-CheckStep 'site-a11y' 'static accessibility checks of docs\site' @($python, 'tools\check_site_a11y.py')
     }
 }
 Invoke-CheckStep 'hosts32' 'the 32-bit engine hosts build' @('cargo', 'build', '-p', 'textweaver-eci', '-p', 'textweaver-sapi', '--bins', '--target', 'i686-pc-windows-msvc')

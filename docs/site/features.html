@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Features: textweaver guide</title>
+<meta name="description" content="What textweaver can do today, what is partly done, and what is not there yet.">
+<!-- BEGIN generated: theme-init -->
+<script>(function () {
+  try {
+    var t = window.localStorage.getItem("tw-site-theme");
+    if (t === "dark" || t === "light") { document.documentElement.setAttribute("data-theme", t); }
+  } catch (e) { /* storage blocked: follow the system setting */ }
+})();</script>
+<!-- END generated: theme-init -->
+<!-- BEGIN generated: base-style -->
+<style>
+/* Galaxy (dark, the default) and Galaxy Light, from
+   crates/textweaver-theme/themes/galaxy.toml and galaxy-light.toml. */
+:root {
+  --bg: #1e1e1e;
+  --surface: #2a2a2a;
+  --text: #dadada;
+  --dim: #858585;
+  --accent: #a882ff;
+  --h1: #c9b6ff;
+  --h2: #a98eff;
+  --h3: #8aa2ff;
+  --ok: #7bd0c1;
+  --code: #e0a87a;
+  --error: #ff7b93;
+  --mark-fg: #1e1e1e;
+  --mark-bg: #c9b6ff;
+  --sel-bg: #483d6b;
+  --focus-fg: #1e1e1e;
+  --border: var(--dim);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #ffffff;
+    --surface: #f2f0f9;
+    --text: #2e3338;
+    --dim: #727780;
+    --accent: #7c3aed;
+    --h1: #6c3fd6;
+    --h2: #8257e5;
+    --h3: #3a6df0;
+    --ok: #008577;
+    --code: #a65a2c;
+    --error: #c0264b;
+    --mark-fg: #ffffff;
+    --mark-bg: #6c3fd6;
+    --sel-bg: #d8caff;
+    --focus-fg: #ffffff;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #ffffff;
+  --surface: #f2f0f9;
+  --text: #2e3338;
+  --dim: #727780;
+  --accent: #7c3aed;
+  --h1: #6c3fd6;
+  --h2: #8257e5;
+  --h3: #3a6df0;
+  --ok: #008577;
+  --code: #a65a2c;
+  --error: #c0264b;
+  --mark-fg: #ffffff;
+  --mark-bg: #6c3fd6;
+  --sel-bg: #d8caff;
+  --focus-fg: #ffffff;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); color: var(--text); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+.wrap { max-width: 72rem; margin: 0 auto; padding: 0 1rem; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.5em 0 0.5em; }
+h1 { color: var(--h1); font-size: 2.1rem; margin-top: 0.75em; }
+h2 { color: var(--h2); font-size: 1.6rem; }
+h3 { color: var(--text); font-size: 1.25rem; }
+p, ul, ol, dl { margin: 0 0 1em; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 0.15em; }
+a:hover { text-decoration-thickness: 0.15em; }
+code, kbd {
+  font-family: "Atkinson Hyperlegible Mono", ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+  font-size: 0.95em;
+  color: var(--code);
+}
+kbd { border: 1px solid var(--border); border-radius: 0.25em; padding: 0 0.25em; color: var(--text); white-space: nowrap; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.vh {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: absolute; left: 0.5rem; top: -100rem; z-index: 10;
+  background: var(--bg); color: var(--accent); padding: 0.5rem 1rem;
+  border: 2px solid var(--accent); font-weight: bold;
+}
+.skip-link:focus { top: 0.5rem; }
+.site-header { border-bottom: 2px solid var(--border); padding: 0.5rem 0 0.75rem; }
+.site-header .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem; }
+.site-name { margin: 0; font-weight: bold; font-size: 1.25rem; }
+.site-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; }
+.site-nav a { display: inline-block; padding: 0.4rem 0.5rem; min-height: 2.75rem; line-height: 1.9rem; }
+.site-nav a[aria-current="page"] { color: var(--text); font-weight: bold; text-decoration-thickness: 0.2em; border-bottom: 3px solid var(--accent); }
+.theme-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-left: auto; }
+main { display: block; padding-bottom: 2rem; }
+.site-footer { border-top: 2px solid var(--border); padding: 1rem 0 2rem; }
+.site-footer h2 { font-size: 1.25rem; margin-top: 0.5em; }
+button, select, input, textarea { font: inherit; color: var(--text); }
+button, select, input[type="search"], input[type="number"], input[type="text"] {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 0.3rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.75rem;
+}
+button { cursor: pointer; }
+button:hover { border-color: var(--accent); }
+input[type="range"] { accent-color: var(--accent); min-height: 2.75rem; min-width: 12rem; max-width: 100%; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); width: 1.5rem; height: 1.5rem; margin: 0 0.5rem 0 0; vertical-align: middle; }
+fieldset { border: 2px solid var(--border); border-radius: 0.3rem; margin: 0 0 1rem; padding: 0.5rem 1rem 0.75rem; min-width: 0; }
+legend { font-weight: bold; padding: 0 0.25rem; }
+label { cursor: pointer; }
+.check { display: flex; align-items: center; min-height: 2.75rem; }
+.row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 0 0 1rem; }
+.field { display: flex; flex-direction: column; gap: 0.25rem; margin: 0 0 1rem; max-width: 100%; }
+.panel { background: var(--surface); border: 2px solid var(--border); border-radius: 0.4rem; padding: 0.5rem 1rem 1rem; margin: 0 0 1.5rem; }
+.panel h2:first-child, .panel h3:first-child { margin-top: 0.5em; }
+.status-line { border-left: 6px solid var(--accent); padding: 0.25rem 0.75rem; margin: 0 0 1rem; min-height: 2.5rem; }
+.note { border-left: 6px double var(--border); padding: 0.25rem 0.75rem; }
+.table-wrap { max-width: 100%; overflow-x: auto; margin: 0 0 1.5rem; }
+table { border-collapse: collapse; width: 100%; }
+caption { text-align: left; font-weight: bold; padding: 0.5rem 0; color: var(--text); }
+th, td { border: 1px solid var(--border); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+thead th { background: var(--surface); }
+td code, th code { overflow-wrap: break-word; }
+mark { background: var(--mark-bg); color: var(--mark-fg); }
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (forced-colors: active) {
+  :focus-visible { outline: 3px solid Highlight; }
+  button, select, input, fieldset, th, td, .panel, kbd { border-color: CanvasText; }
+  .site-nav a[aria-current="page"] { border-bottom-color: Highlight; }
+  .status-line, .note { border-left-color: CanvasText; }
+}
+@media print {
+  .site-header, .skip-link, .theme-switch { display: none; }
+}
+</style>
+<!-- END generated: base-style -->
+<style>
+.feature-list { list-style: none; margin: 0 0 1rem; padding: 0; }
+.feature-list > li { border: 2px solid var(--border); border-radius: 0.4rem; padding: 0.25rem 1rem 0.75rem; margin: 0 0 0.75rem; }
+.feature-list h3 { margin: 0.5em 0 0.25em; }
+.feature-list p { margin: 0 0 0.4em; }
+.status { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: bold; }
+.status svg { width: 1.25rem; height: 1.25rem; flex: none; }
+.status svg * { stroke: currentColor; fill: none; stroke-width: 2.5; }
+.status svg .fill { fill: currentColor; }
+.status.done { border-left: 6px solid var(--text); padding-left: 0.5rem; }
+.status.partial { border-left: 6px double var(--text); padding-left: 0.5rem; }
+.status.not-yet { border-left: 6px dotted var(--text); padding-left: 0.5rem; }
+.summary { font-size: 1.2rem; font-weight: bold; }
+.filter-row { display: flex; flex-wrap: wrap; gap: 0 1.5rem; }
+@media (forced-colors: active) {
+  .status svg * { stroke: CanvasText; }
+  .status svg .fill { fill: CanvasText; }
+}
+</style>
+</head>
+<body>
+<!-- BEGIN generated: header -->
+<a class="skip-link" href="#main">Skip to main content</a>
+<header class="site-header">
+  <div class="wrap">
+    <p class="site-name">textweaver guide</p>
+    <nav class="site-nav" aria-label="Site">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="architecture.html">Crate map</a></li>
+        <li><a href="speech-pipeline.html">Speech pipeline</a></li>
+        <li><a href="keyboard.html">Keyboard</a></li>
+        <li><a href="features.html" aria-current="page">Features</a></li>
+        <li><a href="reading-aids.html">Reading aids</a></li>
+      </ul>
+    </nav>
+    <div class="theme-switch">
+      <label for="theme-select">Color theme</label>
+      <select id="theme-select">
+        <option value="system">System</option>
+        <option value="dark">Dark (Galaxy)</option>
+        <option value="light">Light (Galaxy Light)</option>
+      </select>
+    </div>
+  </div>
+</header>
+<!-- END generated: header -->
+<main id="main" tabindex="-1">
+  <div class="wrap">
+    <h1>Features</h1>
+    <p>This page lists what textweaver can do, grouped by topic.
+    Each feature says whether it is done, partly done, or not there yet, and links to its guide.</p>
+    <p class="summary" id="summary">The feature list needs JavaScript.</p>
+    <noscript><p class="note">The <a href="../README.md">documentation index</a> links to every guide.</p></noscript>
+
+    <h2>How the status is shown</h2>
+    <p>Each status is written out in words, with its own shape and border style:</p>
+    <ul>
+      <li>Done: a filled circle with a check mark, and a solid border.</li>
+      <li>Partial: a half-filled circle, and a double border.</li>
+      <li>Not yet: an empty dashed circle, and a dotted border.</li>
+    </ul>
+
+    <h2>Filter</h2>
+    <fieldset>
+      <legend>Show features that are</legend>
+      <div class="filter-row" id="filter-row">
+        <div class="check"><input type="radio" name="status" id="st-all" value="all" checked><label for="st-all">Any status</label></div>
+      </div>
+    </fieldset>
+    <p id="status" role="status" class="status-line"></p>
+
+    <div id="groups"></div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <h2>Related documents</h2>
+    <ul>
+      <li><a href="../star-parity.md">Star parity</a>: what textweaver keeps from Star.</li>
+      <li><a href="../star-gaps.md">Star gaps</a>: what Star did that textweaver does not do yet.</li>
+      <li><a href="../quickstart.md">Quick start</a></li>
+      <li><a href="../../CHANGELOG.md">Changelog</a></li>
+      <li><a href="README.md">About these pages</a></li>
+      <li><a href="../README.md">Documentation index</a></li>
+    </ul>
+  </div>
+</footer>
+<!-- BEGIN generated: site-data -->
+<script type="application/json" id="site-data">
+{
+ "counts": {
+  "done": 34,
+  "not yet": 4,
+  "partial": 7
+ },
+ "generator": "tools/gen_site_data.py",
+ "groups": [
+  {
+   "features": [
+    {
+     "description": "textweaver reads the document aloud and highlights each word as you hear it.",
+     "guide": {
+      "href": "../reading.md",
+      "title": "Reading and navigating guide"
+     },
+     "name": "Read aloud with exact word highlighting",
+     "note": "Works with every speech engine that reports word positions.",
+     "status": "done"
+    },
+    {
+     "description": "Move by character, word, sentence, line, paragraph, heading, table, list, list item, link, or chapter.",
+     "guide": {
+      "href": "../reading.md",
+      "title": "Reading and navigating guide"
+     },
+     "name": "Move by any unit",
+     "note": "Browse keys and chords in both frontends.",
+     "status": "done"
+    },
+    {
+     "description": "Read line by line with the arrow keys, like a screen reader's line review.",
+     "guide": {
+      "href": "../reading.md",
+      "title": "Reading and navigating guide"
+     },
+     "name": "Speech Cursor line mode",
+     "note": "Press Tab in browse mode to turn it on or off.",
+     "status": "done"
+    },
+    {
+     "description": "Find text, go to a line or percentage, and go back to where you were before a jump.",
+     "guide": {
+      "href": "../reading.md",
+      "title": "Reading and navigating guide"
+     },
+     "name": "Find, go to, and navigation history",
+     "note": "Alt+Left goes back; Alt+Right goes forward again.",
+     "status": "done"
+    },
+    {
+     "description": "Reopening a document puts you back where you stopped reading.",
+     "guide": {
+      "href": "../reading.md",
+      "title": "Reading and navigating guide"
+     },
+     "name": "Position restored on reopen",
+     "note": "The position is saved when you quit.",
+     "status": "done"
+    },
+    {
+     "description": "Mark places, attach notes to words, and highlight passages, then list and step through them.",
+     "guide": {
+      "href": "../notes.md",
+      "title": "Bookmarks, notes, and highlights guide"
+     },
+     "name": "Bookmarks, notes, and highlights",
+     "note": "Saved per document.",
+     "status": "done"
+    },
+    {
+     "description": "Run any command by name, and list every shortcut with your own changes applied.",
+     "guide": {
+      "href": "../keyboard.md",
+      "title": "Keyboard reference"
+     },
+     "name": "Command palette and keyboard help",
+     "note": "F2 opens the palette; question mark lists the keys.",
+     "status": "done"
+    },
+    {
+     "description": "Press F9 so that dictation or a switch keyboard never triggers a command by accident.",
+     "guide": {
+      "href": "../keyboard.md",
+      "title": "Keyboard reference"
+     },
+     "name": "Single-key shortcuts can be turned off",
+     "note": "Chords, arrow keys, and the palette keep working.",
+     "status": "done"
+    }
+   ],
+   "name": "Reading"
+  },
+  {
+   "features": [
+    {
+     "description": "Open these formats directly; Markdown includes GFM task lists, and PDF reading order follows columns.",
+     "guide": {
+      "href": "../converting.md",
+      "title": "Converting documents guide"
+     },
+     "name": "Text, Markdown, HTML, EPUB, DOCX, and PDF",
+     "note": "Built in; nothing else to install.",
+     "status": "done"
+    },
+    {
+     "description": "OpenDocument, RTF, reStructuredText, Org, and LaTeX convert through Pandoc in tw convert when Pandoc is installed.",
+     "guide": {
+      "href": "../converting.md",
+      "title": "Converting documents guide"
+     },
+     "name": "Other formats through Pandoc",
+     "note": "The reader itself does not use Pandoc: convert the file first.",
+     "status": "partial"
+    },
+    {
+     "description": "Reading DAISY books, scanned pages, archives, and PowerPoint files.",
+     "guide": {
+      "href": "../star-gaps.md",
+      "title": "What Star did that textweaver does not do yet"
+     },
+     "name": "DAISY, OCR of scans, archives, and PPTX",
+     "note": "Planned; see the list of gaps.",
+     "status": "not yet"
+    }
+   ],
+   "name": "Formats read"
+  },
+  {
+   "features": [
+    {
+     "description": "Write with typing echo, Markdown commands, undo, and find and replace.",
+     "guide": {
+      "href": "../editing.md",
+      "title": "Editing guide"
+     },
+     "name": "Edit mode",
+     "note": "Ctrl+E switches between reading and editing.",
+     "status": "done"
+    },
+    {
+     "description": "Unsaved work is recovered after a crash, and you are warned when a file changed on disk.",
+     "guide": {
+      "href": "../editing.md",
+      "title": "Editing guide"
+     },
+     "name": "Autosave recovery and changed-file warning",
+     "note": "Recovery is offered when you reopen the file.",
+     "status": "done"
+    },
+    {
+     "description": "Insert and format citations while writing.",
+     "guide": {
+      "href": "../citations.md",
+      "title": "Citations guide"
+     },
+     "name": "Citations in the editor",
+     "note": "tw cite works; the editor has no citation picker yet.",
+     "status": "partial"
+    }
+   ],
+   "name": "Writing"
+  },
+  {
+   "features": [
+    {
+     "description": "Use the ETI-Eloquence voices through the ECI library you installed.",
+     "guide": {
+      "href": "../eloquence.md",
+      "title": "ETI-Eloquence guide"
+     },
+     "name": "ETI-Eloquence",
+     "note": "Runs in its own host process.",
+     "status": "done"
+    },
+    {
+     "description": "Use the Windows voices, including 32-bit SAPI5 voices.",
+     "guide": {
+      "href": "../speech.md",
+      "title": "Speech engines and voices guide"
+     },
+     "name": "SAPI5 and OneCore voices on Windows",
+     "note": "Each voice runs in a host process of the right architecture.",
+     "status": "done"
+    },
+    {
+     "description": "Use the macOS system voices through the nsspeech and avspeech backends.",
+     "guide": {
+      "href": "../speech.md",
+      "title": "Speech engines and voices guide"
+     },
+     "name": "Apple voices on macOS",
+     "note": "Both backends report word positions.",
+     "status": "done"
+    },
+    {
+     "description": "Use espeak-ng directly, or any voice speech-dispatcher offers.",
+     "guide": {
+      "href": "../speech.md",
+      "title": "Speech engines and voices guide"
+     },
+     "name": "espeak-ng and speech-dispatcher on Linux",
+     "note": "Available when installed.",
+     "status": "done"
+    },
+    {
+     "description": "Use the Omnivox speech server.",
+     "guide": {
+      "href": "../speech.md",
+      "title": "Speech engines and voices guide"
+     },
+     "name": "Omnivox",
+     "note": "Highlighting is timer-paced, because Omnivox sends no word events.",
+     "status": "done"
+    },
+    {
+     "description": "Use a DECtalk you installed and licensed.",
+     "guide": {
+      "href": "../dectalk.md",
+      "title": "DECtalk guide"
+     },
+     "name": "DECtalk",
+     "note": "Built and tested against a stand-in library, not yet against a licensed DECtalk.",
+     "status": "partial"
+    },
+    {
+     "description": "Pick a voice from a list while reading.",
+     "guide": {
+      "href": "../speech.md",
+      "title": "Speech engines and voices guide"
+     },
+     "name": "Choose a voice",
+     "note": "Alt+V in the terminal; Ctrl+Shift+V in the GUI.",
+     "status": "done"
+    },
+    {
+     "description": "When a speech engine crashes or stops responding, textweaver restarts it and keeps your place.",
+     "guide": {
+      "href": "../troubleshooting.md",
+      "title": "Troubleshooting guide"
+     },
+     "name": "Crash and stall recovery",
+     "note": "The log file records what happened.",
+     "status": "done"
+    }
+   ],
+   "name": "Speech"
+  },
+  {
+   "features": [
+    {
+     "description": "Math is read in natural English, with the exact part highlighted as you hear it.",
+     "guide": {
+      "href": "../math.md",
+      "title": "Math guide"
+     },
+     "name": "Math read aloud",
+     "note": "LaTeX and ASCIIMath in Markdown.",
+     "status": "done"
+    },
+    {
+     "description": "LaTeX and ASCIIMath become MathML in converted HTML.",
+     "guide": {
+      "href": "../math.md",
+      "title": "Math guide"
+     },
+     "name": "Math in HTML output",
+     "note": "Screen readers read MathML directly.",
+     "status": "done"
+    },
+    {
+     "description": "Step through a formula term by term, into fractions and scripts.",
+     "guide": {
+      "href": "../math.md",
+      "title": "Math guide"
+     },
+     "name": "Explore math term by term in the reader",
+     "note": "The math library can do it; the reader has no keys for it yet.",
+     "status": "not yet"
+    },
+    {
+     "description": "Look up references by DOI and ISBN, import and export BibTeX, RIS, and CSL-JSON, and format with CSL styles.",
+     "guide": {
+      "href": "../citations.md",
+      "title": "Citations guide"
+     },
+     "name": "Citations",
+     "note": "Through tw cite.",
+     "status": "done"
+    }
+   ],
+   "name": "Math and citations"
+  },
+  {
+   "features": [
+    {
+     "description": "tw convert writes Markdown, HTML, text, EPUB 3, DOCX, grade 1 braille (BRF), and tagged PDF.",
+     "guide": {
+      "href": "../converting.md",
+      "title": "Converting documents guide"
+     },
+     "name": "Convert documents",
+     "note": "Whole folders convert in parallel.",
+     "status": "done"
+    },
+    {
+     "description": "Contracted braille output in BRF files.",
+     "guide": {
+      "href": "../converting.md",
+      "title": "Converting documents guide"
+     },
+     "name": "Grade 2 braille",
+     "note": "Needs the liblouis build feature and liblouis installed.",
+     "status": "partial"
+    },
+    {
+     "description": "Read a document into WAV, MP3, or M4B with chapters, plus SRT or WebVTT subtitles.",
+     "guide": {
+      "href": "../audio-export.md",
+      "title": "Audio export guide"
+     },
+     "name": "Audio export",
+     "note": "MP3 and M4B need ffmpeg.",
+     "status": "done"
+    }
+   ],
+   "name": "Output"
+  },
+  {
+   "features": [
+    {
+     "description": "23 color themes with contrast checks, and your own themes.",
+     "guide": {
+      "href": "../themes.md",
+      "title": "Themes guide"
+     },
+     "name": "Themes",
+     "note": "F5 switches to the next theme.",
+     "status": "done"
+    },
+    {
+     "description": "Change how text looks: one word at a time, bold word starts, a reading ruler, wider spacing, and a reading level.",
+     "guide": {
+      "href": "../reading-aids.md",
+      "title": "Reading aids guide"
+     },
+     "name": "RSVP, bionic reading, ruler, spacing, and reading level",
+     "note": "Try them on the reading aids page.",
+     "status": "done"
+    },
+    {
+     "description": "Mark difficult words and show words split into syllables.",
+     "guide": {
+      "href": "../reading-aids.md",
+      "title": "Reading aids guide"
+     },
+     "name": "Difficult words and syllables",
+     "note": "In the textweaver-aids library; not shown in the terminal reader yet.",
+     "status": "partial"
+    },
+    {
+     "description": "Choose a reading font such as Atkinson Hyperlegible or OpenDyslexic.",
+     "guide": {
+      "href": "../reading-aids.md",
+      "title": "Reading aids guide"
+     },
+     "name": "Font choice",
+     "note": "GUI spike only; a terminal uses its own font.",
+     "status": "partial"
+    }
+   ],
+   "name": "Seeing the text"
+  },
+  {
+   "features": [
+    {
+     "description": "Library folders, recent files, sidecar sync, and full-text search.",
+     "guide": {
+      "href": "../library.md",
+      "title": "Library guide"
+     },
+     "name": "Library",
+     "note": "Alt+L opens the library in the terminal.",
+     "status": "done"
+    },
+    {
+     "description": "tw migrate-star brings over settings and reading positions from Star.",
+     "guide": {
+      "href": "../library.md",
+      "title": "Library guide"
+     },
+     "name": "Import from Star",
+     "note": "Run it once after installing.",
+     "status": "done"
+    },
+    {
+     "description": "Export notes and highlights to an Obsidian vault, and bring them back.",
+     "guide": {
+      "href": "../vault.md",
+      "title": "Obsidian vault guide"
+     },
+     "name": "Obsidian vault export and import",
+     "note": "Through tw vault.",
+     "status": "done"
+    },
+    {
+     "description": "Transcribe a recording through a Whisper program.",
+     "guide": {
+      "href": "../dictation.md",
+      "title": "Dictation guide"
+     },
+     "name": "Dictation from an audio file",
+     "note": "Through tw dictate.",
+     "status": "done"
+    },
+    {
+     "description": "Speak and have your words typed.",
+     "guide": {
+      "href": "../dictation.md",
+      "title": "Dictation guide"
+     },
+     "name": "Dictation from the microphone",
+     "note": "Only audio files for now.",
+     "status": "not yet"
+    },
+    {
+     "description": "Save your settings and key changes as JSON, and load them on another computer.",
+     "guide": {
+      "href": "../settings.md",
+      "title": "Settings guide"
+     },
+     "name": "Settings export and import",
+     "note": "Alt+Shift+E exports; Alt+Shift+I imports.",
+     "status": "done"
+    },
+    {
+     "description": "tw serve --stdio lets other programs drive textweaver.",
+     "guide": {
+      "href": "../json-rpc.md",
+      "title": "JSON-RPC server guide"
+     },
+     "name": "JSON-RPC server",
+     "note": "For scripting and add-ons.",
+     "status": "done"
+    },
+    {
+     "description": "A log file records what went wrong, for troubleshooting.",
+     "guide": {
+      "href": "../troubleshooting.md",
+      "title": "Troubleshooting guide"
+     },
+     "name": "Log file",
+     "note": "The troubleshooting guide says where it is.",
+     "status": "done"
+    }
+   ],
+   "name": "Library and tools"
+  },
+  {
+   "features": [
+    {
+     "description": "Download a package and run it.",
+     "guide": {
+      "href": "../install.md",
+      "title": "Installation guide"
+     },
+     "name": "Windows and macOS release packages",
+     "note": "Built by the release workflow.",
+     "status": "done"
+    },
+    {
+     "description": "Build and install from source with one script.",
+     "guide": {
+      "href": "../install.md",
+      "title": "Installation guide"
+     },
+     "name": "Linux install script",
+     "note": "Needs Rust.",
+     "status": "done"
+    },
+    {
+     "description": "Ready-made packages for Linux distributions.",
+     "guide": {
+      "href": "../install.md",
+      "title": "Installation guide"
+     },
+     "name": "Linux packages",
+     "note": "Use the install script for now.",
+     "status": "not yet"
+    },
+    {
+     "description": "A native window with menus, for people who prefer a GUI.",
+     "guide": {
+      "href": "../adr/0014-gui-toolkit.md",
+      "title": "ADR-0014: GUI toolkit (wxDragon)"
+     },
+     "name": "Native GUI on wxDragon",
+     "note": "A feasibility spike, not built by default.",
+     "status": "partial"
+    }
+   ],
+   "name": "Platforms"
+  }
+ ],
+ "pages": [
+  {
+   "file": "index.html",
+   "title": "Home"
+  },
+  {
+   "file": "architecture.html",
+   "title": "Crate map"
+  },
+  {
+   "file": "speech-pipeline.html",
+   "title": "Speech pipeline"
+  },
+  {
+   "file": "keyboard.html",
+   "title": "Keyboard"
+  },
+  {
+   "file": "features.html",
+   "title": "Features"
+  },
+  {
+   "file": "reading-aids.html",
+   "title": "Reading aids"
+  }
+ ],
+ "total": 45
+}
+</script>
+<!-- END generated: site-data -->
+<!-- BEGIN generated: base-script -->
+<script>
+/* Shared by every page: data, announcements, theme switch. */
+window.TW = (function () {
+  "use strict";
+  var data = {};
+  try { data = JSON.parse(document.getElementById("site-data").textContent); } catch (e) { data = {}; }
+  var statusEl = document.getElementById("status");
+  var pending = null;
+  /* Replace the text of the page's one live region. Repeating the same text
+     clears it first, so screen readers announce it again. */
+  function announce(message) {
+    if (!statusEl) { return; }
+    window.clearTimeout(pending);
+    if (statusEl.textContent === message) {
+      statusEl.textContent = "";
+      pending = window.setTimeout(function () { statusEl.textContent = message; }, 100);
+    } else {
+      statusEl.textContent = message;
+    }
+  }
+  function debounce(fn, ms) {
+    var t = null;
+    return function () {
+      var args = arguments, self = this;
+      window.clearTimeout(t);
+      t = window.setTimeout(function () { fn.apply(self, args); }, ms);
+    };
+  }
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+  var KEY = "tw-site-theme";
+  var root = document.documentElement;
+  var select = document.getElementById("theme-select");
+  function currentTheme() {
+    var t = root.getAttribute("data-theme");
+    return (t === "dark" || t === "light") ? t : "system";
+  }
+  if (select) {
+    select.value = currentTheme();
+    select.addEventListener("change", function () {
+      var v = select.value;
+      if (v === "dark" || v === "light") { root.setAttribute("data-theme", v); } else { root.removeAttribute("data-theme"); }
+      try {
+        if (v === "dark" || v === "light") { window.localStorage.setItem(KEY, v); } else { window.localStorage.removeItem(KEY); }
+      } catch (e) { /* storage blocked: the choice lasts until the page closes */ }
+    });
+  }
+  /* A table wider than the screen scrolls inside its box. Only then is the
+     box a labelled region that Tab can reach, so the arrow keys can scroll
+     it; otherwise it is a plain box and adds no tab stop. */
+  function fitTables() {
+    Array.prototype.forEach.call(document.querySelectorAll(".table-wrap"), function (w) {
+      var label = w.getAttribute("aria-labelledby") || w.getAttribute("data-labelledby");
+      if (label) { w.setAttribute("data-labelledby", label); }
+      if (w.scrollWidth > w.clientWidth + 1) {
+        w.setAttribute("role", "region");
+        w.setAttribute("tabindex", "0");
+        if (label) { w.setAttribute("aria-labelledby", label); }
+      } else {
+        w.removeAttribute("role");
+        w.removeAttribute("tabindex");
+        w.removeAttribute("aria-labelledby");
+      }
+    });
+  }
+  window.addEventListener("resize", debounce(fitTables, 200));
+  window.addEventListener("load", fitTables);
+  return { data: data, announce: announce, debounce: debounce, plural: plural, fitTables: fitTables };
+})();
+</script>
+<!-- END generated: base-script -->
+<script>
+(function () {
+  "use strict";
+  var TW = window.TW, d = TW.data;
+  if (!d.groups) { return; }
+  var LABEL = { "done": "Done", "partial": "Partial", "not yet": "Not yet" };
+  var CLS = { "done": "done", "partial": "partial", "not yet": "not-yet" };
+  var SVG = {
+    "done": '<circle class="fill" cx="12" cy="12" r="10"/><path d="M7 12.5l3.2 3.2L17 9" style="stroke: var(--bg)"/>',
+    "partial": '<circle cx="12" cy="12" r="10"/><path class="fill" d="M12 2a10 10 0 0 1 0 20z"/>',
+    "not yet": '<circle cx="12" cy="12" r="10" stroke-dasharray="4 3"/>'
+  };
+  var svgNS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, text) {
+    var e = document.createElement(tag);
+    if (attrs) { Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); }); }
+    if (text !== undefined && text !== null) { e.textContent = text; }
+    return e;
+  }
+  function icon(status) {
+    var s = document.createElementNS(svgNS, "svg");
+    s.setAttribute("viewBox", "0 0 24 24");
+    s.setAttribute("aria-hidden", "true");
+    s.setAttribute("focusable", "false");
+    s.innerHTML = SVG[status];
+    return s;
+  }
+  function slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+
+  var c = d.counts;
+  document.getElementById("summary").textContent = d.total + " features: " + c["done"] + " done, " +
+    c["partial"] + " partial, " + c["not yet"] + " not yet.";
+  document.getElementById("st-all").nextElementSibling.textContent = "Any status (" + d.total + ")";
+  var row = document.getElementById("filter-row");
+  ["done", "partial", "not yet"].forEach(function (s) {
+    var id = "st-" + CLS[s];
+    var div = el("div", { "class": "check" });
+    div.appendChild(el("input", { type: "radio", name: "status", id: id, value: s }));
+    div.appendChild(el("label", { "for": id }, LABEL[s] + " (" + c[s] + ")"));
+    row.appendChild(div);
+  });
+
+  var container = document.getElementById("groups");
+  var sections = [];
+  d.groups.forEach(function (g) {
+    var sec = el("section", { "aria-labelledby": "g-" + slug(g.name) });
+    sec.appendChild(el("h2", { id: "g-" + slug(g.name) }, g.name));
+    var ul = el("ul", { "class": "feature-list" });
+    var items = [];
+    g.features.forEach(function (f) {
+      var li = el("li");
+      li.setAttribute("data-status", f.status);
+      li.appendChild(el("h3", null, f.name));
+      var st = el("p", { "class": "status " + CLS[f.status] });
+      st.appendChild(icon(f.status));
+      st.appendChild(el("span", null, "Status: " + LABEL[f.status]));
+      li.appendChild(st);
+      li.appendChild(el("p", null, f.description));
+      li.appendChild(el("p", null, f.note));
+      var p = el("p");
+      p.appendChild(el("a", { href: f.guide.href }, f.guide.title));
+      li.appendChild(p);
+      ul.appendChild(li);
+      items.push(li);
+    });
+    sec.appendChild(ul);
+    container.appendChild(sec);
+    sections.push({ sec: sec, items: items });
+  });
+
+  function apply(announce) {
+    var want = document.querySelector("input[name=status]:checked").value;
+    var shown = 0;
+    sections.forEach(function (s) {
+      var n = 0;
+      s.items.forEach(function (li) {
+        var ok = want === "all" || li.getAttribute("data-status") === want;
+        li.hidden = !ok;
+        if (ok) { n += 1; }
+      });
+      s.sec.hidden = n === 0;
+      shown += n;
+    });
+    var msg = (want === "all" ? "Showing all " + TW.plural(shown, "feature", "features") :
+      "Showing " + TW.plural(shown, "feature", "features") + " with status " + LABEL[want]) + ".";
+    if (announce) { TW.announce(msg); } else { document.getElementById("status").textContent = msg; }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("input[name=status]"), function (r) {
+    r.addEventListener("change", function () { apply(true); });
+  });
+  apply(false);
+})();
+</script>
+</body>
+</html>

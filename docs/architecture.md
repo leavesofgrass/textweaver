@@ -162,19 +162,21 @@ Pausing records the last word that was confirmed as heard. Resuming starts from 
 An `OffsetMap` ([ADR-0005](adr/0005-narration-and-offset-map.md), `crates/textweaver-core`) connects the spoken text to the document. It is a sorted list of spans. Each span pairs a byte range of spoken text with a character range of source text, and has one of four kinds:
 
 - **Literal**: the same text, character for character. A word inside maps to exactly its source characters.
-- **Expanded**: spoken words that stand for a whole source token, such as "Doctor" for "Dr." or "x squared" for `x^2`. Any word inside highlights the whole token.
+- **Expanded**: spoken words that stand for a whole source token, such as "Doctor" for "Dr." or "squared" for `^2`. Any word inside highlights the whole token.
 - **Inserted**: spoken words with no source, such as "heading level 2". They highlight nothing. If you pause inside one, reading resumes at its anchor.
 - **Elided**: source that is not spoken, such as Markdown's `**` or the dollar signs around math. It has no spoken text.
 
-A small example, the Markdown `The area is $x^2$ today.`, is spoken as "The area is x squared today.":
+A small example, the Markdown `The area is $x^2$ today.`, is spoken as "The area is x squared today.". This is the real map, from `tw speak --backend null --json`:
 
-- "The area is " is literal, characters 0 to 12.
-- The first `$` is elided, character 12.
-- "x squared" is expanded from `x^2`, characters 13 to 16.
-- The second `$` is elided, character 16.
-- " today." is literal, characters 17 to 24.
+- "The area is " is literal: spoken bytes 0 to 12, source characters 0 to 12.
+- The first `$` is elided: source character 12.
+- "x" is literal: spoken byte 12, source character 13.
+- The space after it is inserted: spoken byte 13, anchored at source character 14.
+- "squared" is expanded from `^2`: spoken bytes 14 to 21, source characters 14 to 16.
+- The second `$` is elided: source character 16.
+- " today." is literal: spoken bytes 21 to 28, source characters 17 to 24.
 
-When the engine reports the word "squared" (spoken bytes 14 to 21), the map finds the expanded span and highlights `x^2`, characters 13 to 16.
+When the engine reports the word "squared" (spoken bytes 14 to 21), the map finds the expanded span and highlights `^2`, characters 14 to 16. The word "x" highlights character 13, so the two words together cover the whole `x^2`.
 
 The map answers three questions: which source range a spoken word came from (for the highlight), where in the spoken text to start for a cursor position (for reading from the cursor), and where to resume after a pause. Every map is checked by `OffsetMap::check_invariants`, and property tests generate random maps and compositions.
 

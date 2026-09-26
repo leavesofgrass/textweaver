@@ -127,6 +127,7 @@ Run every check CI runs, so contributors see CI's answer before they push:
 - `cargo xtask keyboard --check`;
 - `tools/check_links.py`: every relative link and anchor in the docs resolves;
 - `tools/gen_site_data.py --check`: the data in the `docs/site` pages is current;
+- `tools/check_site_a11y.py`: static accessibility checks of the `docs/site` pages;
 - shellcheck or PSScriptAnalyzer on these scripts, when installed.
 
 The two Python steps need Python 3; without it they are skipped and the summary says so.

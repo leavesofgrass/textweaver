@@ -29,6 +29,8 @@ Runs every check CI runs, so you can see CI's answer before you push:
              docs resolve)
   site       python3 tools/gen_site_data.py --check (the data in the
              docs/site pages is current)
+  site-a11y  python3 tools/check_site_a11y.py (static accessibility checks
+             of the docs/site pages)
   scripts    shellcheck on scripts/*.sh, when shellcheck is installed
 
 FEATURES is --all-features on Linux when the espeak-ng development files are
@@ -204,7 +206,7 @@ if have python3; then
 elif have python; then
   PYTHON=python
 fi
-for py_step in links site; do
+for py_step in links site site-a11y; do
   wanted "$py_step" || continue
   if [ -z "$PYTHON" ]; then
     say ""
@@ -216,6 +218,7 @@ for py_step in links site; do
   case $py_step in
     links) step links "links and anchors in the docs resolve" "$PYTHON" tools/check_links.py ;;
     site) step site "the docs/site data is current" "$PYTHON" tools/gen_site_data.py --check ;;
+    site-a11y) step site-a11y "static accessibility checks of docs/site" "$PYTHON" tools/check_site_a11y.py ;;
   esac
 done
 if wanted scripts; then
