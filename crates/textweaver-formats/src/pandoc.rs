@@ -430,6 +430,12 @@ mod tests {
     }
 
     #[test]
+    fn only_registered_on_request() {
+        assert!(!Registry::with_builtins().ids().contains(&"pandoc"));
+        assert!(Registry::with_pandoc(None).ids().contains(&"pandoc"));
+    }
+
+    #[test]
     fn claims_the_long_tail_below_native_loaders() {
         let l = PandocLoader::default();
         for (e, _) in FORMATS {
@@ -446,7 +452,7 @@ mod tests {
             return;
         }
         let src = "=====\nTitle\n=====\n\nSome *emphasis* and caf\u{e9}.\n\n- one\n- two\n\n=====  =====\nA      B\n=====  =====\n1      2\n=====  =====\n";
-        let doc = Registry::with_builtins()
+        let doc = Registry::with_pandoc(None)
             .load(
                 &Source::Bytes {
                     data: src.as_bytes().to_vec(),

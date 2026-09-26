@@ -47,7 +47,6 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime};
 
 use serde::Serialize;
-use textweaver_formats::pandoc::PandocLoader;
 use textweaver_formats::{LoadOptions, Loader, MarkdownLoader, Registry, Source};
 use textweaver_render::{
     EmbedMode, FsResolver, PageOptions, RenderOptions, Resolver, TemplateChoice, Templates,
@@ -493,14 +492,11 @@ impl Converter {
         let template = templates.resolve(&options.template)?;
         let citations =
             citations::Citations::new(options.citations.clone()).map_err(ConvertError::Output)?;
-        let mut registry = Registry::with_builtins();
-        registry.remove("pandoc");
-        if options.pandoc {
-            let loader = options
-                .pandoc_timeout
-                .map_or_else(PandocLoader::default, PandocLoader::with_timeout);
-            registry.register(Box::new(loader));
-        }
+        let registry = if options.pandoc {
+            Registry::with_pandoc(options.pandoc_timeout)
+        } else {
+            Registry::with_builtins()
+        };
         Ok(Converter {
             options,
             registry,

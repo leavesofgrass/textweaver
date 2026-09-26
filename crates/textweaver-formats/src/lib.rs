@@ -15,12 +15,16 @@
 //! | [`EpubLoader`] | `epub` | [`NATIVE_PRIORITY`] (10) |
 //! | [`DocxLoader`] | `docx`, `docm` | [`NATIVE_PRIORITY`] (10) |
 //! | `PdfLoader` (feature `pdf`, on by default; ADR-0010) | `pdf` | [`NATIVE_PRIORITY`] (10) |
-//! | `PandocLoader` (feature `pandoc`, when `pandoc` runs) | `odt`, `rtf`, `rst`, `org`, `tex`, `dbk`, `textile`, `mediawiki`, `fb2`, `opml`, `ipynb`, and more | 5 |
 //! | [`TextLoader`] | `txt`, `text`, `log` (and the fallback for everything else) | 0 |
 //!
-//! Every built-in loader is native Rust. Optional loaders rank below them,
-//! so they never displace a native loader (Star preferred Pandoc for HTML
-//! and DOCX and inherited its bugs).
+//! Every built-in loader is native Rust. The Pandoc loader (feature
+//! `pandoc`; `odt`, `rtf`, `rst`, `org`, `tex`, `dbk`, `textile`,
+//! `mediawiki`, `fb2`, `opml`, `ipynb`, and more; priority 5) is not among
+//! the built-ins: a caller that wants Pandoc registers it
+//! ([`Registry::with_pandoc`]), as `tw convert` does, so the reader never
+//! runs a subprocess to open a file. It ranks below the native loaders, so
+//! it never displaces one (Star preferred Pandoc for HTML and DOCX and
+//! inherited its bugs).
 //!
 //! Owner: Agent A.
 
@@ -262,8 +266,19 @@ impl Registry {
         r.register(Box::new(DocxLoader));
         #[cfg(feature = "pdf")]
         r.register(Box::new(PdfLoader));
-        #[cfg(feature = "pandoc")]
-        r.register(Box::new(PandocLoader::default()));
+        r
+    }
+
+    /// The built-in loaders plus Pandoc for the formats textweaver has no
+    /// reader for (used when Pandoc is installed), stopped after `timeout`
+    /// on one document (`None`: `TEXTWEAVER_PANDOC_TIMEOUT`, else two
+    /// minutes).
+    #[cfg(feature = "pandoc")]
+    pub fn with_pandoc(timeout: Option<std::time::Duration>) -> Self {
+        let mut r = Registry::with_builtins();
+        r.register(Box::new(
+            timeout.map_or_else(PandocLoader::default, PandocLoader::with_timeout),
+        ));
         r
     }
 
