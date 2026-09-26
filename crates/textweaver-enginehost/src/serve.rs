@@ -6,17 +6,59 @@
 //! engine checks [`StopEpoch::is_current`] as it goes); every other request
 //! is stamped with the epoch current when it was read, and a `Speak`
 //! stamped before the latest `Stop` ends as `Aborted` without synthesis.
-//! `Quit` and end of input end the stream.
+//! `Quit` ends the stream after what was read before it; end of input does
+//! what [`AtEnd`] says (a host process uses [`AtEnd::Exit`]: textweaver is
+//! gone, so the host stops and exits even if its engine is stuck).
 //!
 //! [`SharedOut`] lets several threads (a host's main thread and an engine's
-//! audio thread) write whole frames to one output.
+//! audio thread) write whole frames to one output, and [`log_line`] writes
+//! to stderr without ever failing.
 
 use std::io::{self, Read, Write};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
-use crate::protocol::{self, Message};
+use crate::protocol::{self, Message, ReadFrame};
+
+/// How long a host process may take to finish on its own after its input
+/// ends ([`AtEnd::Exit`]) before it exits regardless.
+pub const END_OF_INPUT_GRACE: Duration = Duration::from_millis(1500);
+
+/// What the [`RequestReader`] does when its input ends (or breaks) without
+/// a `Quit`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AtEnd {
+    /// End the stream after the requests already read, which are still
+    /// carried out (in-process tests that feed a finished buffer).
+    Finish,
+    /// Bump the stop epoch, so synthesis in progress aborts and every
+    /// request already read is skipped, then end the stream.
+    Stop,
+    /// As [`Stop`](Self::Stop), then exit the whole process after the
+    /// grace period if it is still running (an engine stuck in synthesis
+    /// that never checks the epoch). What host processes use: their input
+    /// ends when textweaver exits or dies, and nobody is listening any
+    /// more.
+    Exit(Duration),
+}
+
+impl AtEnd {
+    /// [`AtEnd::Exit`] with [`END_OF_INPUT_GRACE`]: for host processes.
+    pub fn host() -> Self {
+        AtEnd::Exit(END_OF_INPUT_GRACE)
+    }
+}
+
+/// Writes one line to stderr, ignoring every error. Hosts log with this
+/// instead of `eprintln!`, which panics when stderr is closed; a panic in
+/// an engine callback called from C aborts the host.
+pub fn log_line(line: &str) {
+    let mut err = io::stderr().lock();
+    let _ = writeln!(err, "{line}");
+    let _ = err.flush();
+}
 
 /// The stop epoch: how many `Stop` requests the host has read.
 #[derive(Clone, Debug, Default)]
@@ -62,8 +104,22 @@ pub struct RequestReader<R> {
 }
 
 impl<R: Message + Send + 'static> RequestReader<R> {
-    /// Starts reading frames from `input` on a thread named `name`.
+    /// Starts reading frames from `input` on a thread named `name`, with
+    /// [`AtEnd::Finish`].
     pub fn spawn(input: impl Read + Send + 'static, name: &str) -> io::Result<Self> {
+        Self::spawn_with(input, name, AtEnd::Finish)
+    }
+
+    /// Starts reading frames from `input` on a thread named `name`; `at_end`
+    /// says what happens when the input ends without a `Quit`.
+    ///
+    /// A request over the protocol's frame limit is read past and reported
+    /// as [`Incoming::Bad`]; the host keeps working.
+    pub fn spawn_with(
+        input: impl Read + Send + 'static,
+        name: &str,
+        at_end: AtEnd,
+    ) -> io::Result<Self> {
         let epoch = StopEpoch::new();
         let (tx, rx) = mpsc::channel();
         let e = epoch.clone();
@@ -71,29 +127,60 @@ impl<R: Message + Send + 'static> RequestReader<R> {
         std::thread::Builder::new()
             .name(name.to_owned())
             .spawn(move || {
-                loop {
-                    let item = match protocol::read_body(&mut input) {
-                        Ok(None) => break,
-                        Ok(Some(body)) if protocol::is_stop(&body) => {
-                            e.bump();
-                            continue;
-                        }
-                        Ok(Some(body)) if protocol::is_quit(&body) => break,
-                        Ok(Some(body)) => match R::decode(&body) {
-                            Ok(r) => Incoming::Request(r, e.current()),
-                            Err(err) => Incoming::Bad(err.to_string()),
-                        },
-                        Err(err) => {
-                            let _ = tx.send(Incoming::Bad(err.to_string()));
-                            break;
-                        }
-                    };
-                    if tx.send(item).is_err() {
-                        break;
+                let quit = read_requests(&mut input, &tx, &e);
+                // The main thread sees the end of the stream now.
+                drop(tx);
+                if quit {
+                    return;
+                }
+                match at_end {
+                    AtEnd::Finish => {}
+                    AtEnd::Stop => {
+                        e.bump();
+                    }
+                    AtEnd::Exit(grace) => {
+                        e.bump();
+                        std::thread::sleep(grace);
+                        log_line("engine host: input closed and the engine did not stop; exiting");
+                        std::process::exit(0);
                     }
                 }
             })?;
         Ok(RequestReader { rx, epoch })
+    }
+}
+
+/// Reads and forwards requests until the input ends or breaks (false) or
+/// a `Quit` arrives, or nobody listens any more (true).
+fn read_requests<R: Message>(
+    input: &mut impl Read,
+    tx: &mpsc::Sender<Incoming<R>>,
+    epoch: &StopEpoch,
+) -> bool {
+    loop {
+        let item = match protocol::read_body_or_skip(input) {
+            Ok(None) => return false,
+            Ok(Some(ReadFrame::Skipped(len))) => Incoming::Bad(format!(
+                "request of {len} bytes is over the {} byte limit; skipped",
+                protocol::MAX_FRAME
+            )),
+            Ok(Some(ReadFrame::Body(body))) if protocol::is_stop(&body) => {
+                epoch.bump();
+                continue;
+            }
+            Ok(Some(ReadFrame::Body(body))) if protocol::is_quit(&body) => return true,
+            Ok(Some(ReadFrame::Body(body))) => match R::decode(&body) {
+                Ok(r) => Incoming::Request(r, epoch.current()),
+                Err(err) => Incoming::Bad(err.to_string()),
+            },
+            Err(err) => {
+                let _ = tx.send(Incoming::Bad(err.to_string()));
+                return false;
+            }
+        };
+        if tx.send(item).is_err() {
+            return true;
+        }
     }
 }
 
@@ -223,6 +310,54 @@ mod tests {
         let got = read_all(input);
         assert_eq!(got.len(), 2);
         assert!(matches!(&got[1], Incoming::Bad(m) if m.contains("ended inside")));
+    }
+
+    #[test]
+    fn a_request_over_the_frame_limit_is_skipped_and_reading_goes_on() {
+        // Before: the reader stopped at the oversized length, so the host
+        // ended and textweaver had to start a new one.
+        let len = protocol::MAX_FRAME + 10;
+        let mut input = u32::try_from(len).unwrap().to_le_bytes().to_vec();
+        input.resize(4 + len, 0x01);
+        input.extend(Req::Speak(7).encode());
+        let got = read_all(input);
+        assert_eq!(got.len(), 2, "{:?}", got.first());
+        assert!(
+            matches!(&got[0], Incoming::Bad(m) if m.contains("skipped")),
+            "{:?}",
+            got[0]
+        );
+        assert_eq!(got[1], Incoming::Request(Req::Speak(7), 0));
+    }
+
+    fn read_all_with(input: Vec<u8>, at_end: AtEnd) -> (Vec<Incoming<Req>>, u64) {
+        let reader =
+            RequestReader::<Req>::spawn_with(Cursor::new(input), "test-reader", at_end).unwrap();
+        let items: Vec<_> = std::iter::from_fn(|| reader.next()).collect();
+        // The reader thread bumps the epoch after closing the stream.
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while at_end != AtEnd::Finish
+            && reader.epoch().current() == 0
+            && std::time::Instant::now() < deadline
+        {
+            std::thread::yield_now();
+        }
+        (items, reader.epoch().current())
+    }
+
+    #[test]
+    fn end_of_input_stops_what_was_read_unless_asked_to_finish() {
+        let input = Req::Speak(1).encode();
+        let (items, epoch) = read_all_with(input.clone(), AtEnd::Stop);
+        assert_eq!(items, [Incoming::Request(Req::Speak(1), 0)]);
+        assert_eq!(epoch, 1, "the Speak read before the end is now stale");
+        let (_, epoch) = read_all_with(input.clone(), AtEnd::Finish);
+        assert_eq!(epoch, 0);
+        // Quit is a clean end: what was read is still carried out.
+        let quit = [input, encode_quit()].concat();
+        let (items, epoch) = read_all_with(quit, AtEnd::Finish);
+        assert_eq!(items.len(), 1);
+        assert_eq!(epoch, 0);
     }
 
     #[test]

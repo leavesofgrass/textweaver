@@ -8,20 +8,40 @@
 //! timeout ([`HostProcess::stalled`]), the backend drops it, fails what it
 //! owed ([`crate::Playback::host_died`]), and starts a new one on the next
 //! request: restart after a crash or a hang.
+//!
+//! Hosts never outlive textweaver: on Windows they run in a kill-on-close
+//! Job Object, on Linux they get `SIGKILL` when the thread that started
+//! them ends (so start a host on the thread that keeps it), and every
+//! host exits by itself soon after its input closes
+//! ([`crate::serve::AtEnd::Exit`]).
 
 use std::ffi::OsStr;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, ErrorKind, Read};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, TryRecvError};
 use std::time::{Duration, Instant};
 
-use crate::protocol::{self, Message};
+use crate::orphan;
+use crate::protocol::{self, MAX_FRAME, Message};
 
 /// How long [`HostProcess::shutdown`] waits for a clean exit after `Quit`
 /// before killing the process.
 pub const QUIT_GRACE: Duration = Duration::from_millis(500);
+
+/// How [`HostProcess::shutdown`] ended a host.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Ended {
+    /// It exited by itself: after `Quit`, or it was gone already.
+    Exited,
+    /// It was killed at once, without asking: it had already failed (its
+    /// output closed, it sent a bad frame, or its input broke), so there
+    /// was no point waiting.
+    Killed,
+    /// It ignored `Quit` for [`QUIT_GRACE`] and was killed.
+    KilledAfterGrace,
+}
 
 /// Something from a host's stdout.
 #[derive(Debug)]
@@ -41,6 +61,9 @@ pub struct HostProcess<R> {
     path: PathBuf,
     label: &'static str,
     last_activity: Instant,
+    /// The host already failed ([`HostMsg::Closed`] was reported, or a
+    /// request could not be written): shutting it down kills it at once.
+    failed: bool,
     _reply: PhantomData<fn() -> R>,
 }
 
@@ -73,9 +96,11 @@ impl<R: Message + Send + 'static> HostProcess<R> {
             // CREATE_NO_WINDOW: no console window flashes up for the host.
             cmd.creation_flags(0x0800_0000);
         }
+        orphan::configure(&mut cmd);
         let mut child = cmd
             .spawn()
             .map_err(|e| format!("cannot start {}: {e}", path.display()))?;
+        orphan::adopt(&child);
         let Some(stdout) = child.stdout.take() else {
             let _ = child.kill();
             let _ = child.wait();
@@ -84,11 +109,7 @@ impl<R: Message + Send + 'static> HostProcess<R> {
         if let Some(stderr) = child.stderr.take() {
             let _ = std::thread::Builder::new()
                 .name(format!("{label}-host-stderr"))
-                .spawn(move || {
-                    for line in BufReader::new(stderr).lines().map_while(Result::ok) {
-                        log::debug!("{label} host: {line}");
-                    }
-                });
+                .spawn(move || drain_stderr(stderr, label));
         }
         let (tx, rx) = mpsc::channel();
         let reader = std::thread::Builder::new()
@@ -123,8 +144,34 @@ impl<R: Message + Send + 'static> HostProcess<R> {
             path: path.to_path_buf(),
             label,
             last_activity: Instant::now(),
+            failed: false,
             _reply: PhantomData,
         })
+    }
+}
+
+/// Logs a host's stderr line by line until the pipe closes. A line that is
+/// not UTF-8 is logged with replacement characters, never a reason to stop
+/// reading: a host whose stderr nobody drains blocks once the pipe fills.
+/// Very long lines are logged in pieces.
+fn drain_stderr(stderr: impl Read, label: &str) {
+    const MAX_LINE: u64 = 16 * 1024;
+    let mut r = BufReader::new(stderr);
+    let mut line = Vec::new();
+    loop {
+        line.clear();
+        match r.by_ref().take(MAX_LINE).read_until(b'\n', &mut line) {
+            Ok(0) => return,
+            Ok(_) => {
+                let text = String::from_utf8_lossy(&line);
+                log::debug!("{label} host: {}", text.trim_end());
+            }
+            Err(e) if e.kind() == ErrorKind::Interrupted => {}
+            Err(e) => {
+                log::debug!("{label} host: stderr closed: {e}");
+                return;
+            }
+        }
     }
 }
 
@@ -134,10 +181,37 @@ impl<R> HostProcess<R> {
         &self.path
     }
 
+    /// The host's process id.
+    pub fn id(&self) -> u32 {
+        self.child.id()
+    }
+
     /// Writes one encoded frame to the host's stdin.
+    ///
+    /// A frame over the protocol's [`MAX_FRAME`] limit (an utterance of
+    /// more than 16 MiB of text) is refused without writing anything, so
+    /// the host never sees it and keeps working; the error reads well
+    /// aloud.
     pub fn send_frame(&mut self, frame: &[u8]) -> Result<(), String> {
+        if frame.len().saturating_sub(4) > MAX_FRAME {
+            let mb = frame.len().div_ceil(1024 * 1024);
+            return Err(format!(
+                "this text is too long to speak in one piece ({mb} MB; the limit is {} MB)",
+                MAX_FRAME / (1024 * 1024)
+            ));
+        }
         let stdin = self.stdin.as_mut().ok_or("host input closed")?;
-        protocol::write_frame(stdin, frame).map_err(|e| format!("host pipe: {e}"))
+        protocol::write_frame(stdin, frame).map_err(|e| {
+            self.failed = true;
+            format!("host pipe: {e}")
+        })
+    }
+
+    /// Closes the host's input without asking it to quit, as happens when
+    /// textweaver ends: the host stops what it is doing and exits
+    /// ([`crate::serve::AtEnd::Exit`]).
+    pub fn close_input(&mut self) {
+        self.stdin = None;
     }
 
     /// Sends one request.
@@ -153,8 +227,15 @@ impl<R> HostProcess<R> {
             Err(TryRecvError::Empty) => return None,
             Err(TryRecvError::Disconnected) => HostMsg::Closed("host exited".into()),
         };
+        Some(self.received(msg))
+    }
+
+    fn received(&mut self, msg: HostMsg<R>) -> HostMsg<R> {
+        if matches!(msg, HostMsg::Closed(_)) {
+            self.failed = true;
+        }
         self.touch();
-        Some(msg)
+        msg
     }
 
     /// Waits up to `timeout` for the next message; `None` when none came.
@@ -164,8 +245,7 @@ impl<R> HostProcess<R> {
             Err(RecvTimeoutError::Timeout) => return None,
             Err(RecvTimeoutError::Disconnected) => HostMsg::Closed("host exited".into()),
         };
-        self.touch();
-        Some(msg)
+        Some(self.received(msg))
     }
 
     /// Waits until `deadline` for the next message; `None` when none came.
@@ -191,15 +271,26 @@ impl<R> HostProcess<R> {
     }
 
     /// Asks the host to quit, waits up to [`QUIT_GRACE`] for it to exit,
-    /// then kills it.
-    pub fn shutdown(&mut self) {
-        if let Some(mut stdin) = self.stdin.take() {
-            let _ = protocol::write_frame(&mut stdin, &protocol::encode_quit());
+    /// then kills it. A host that already failed (its output closed, a bad
+    /// frame, a broken input pipe) is killed at once: waiting for it to
+    /// quit would only hold up whoever is starting its replacement.
+    pub fn shutdown(&mut self) -> Ended {
+        if let Ok(Some(_)) = self.child.try_wait() {
+            self.stdin = None;
+            return Ended::Exited;
+        }
+        let quit_sent = !self.failed
+            && self.stdin.take().is_some_and(|mut stdin| {
+                protocol::write_frame(&mut stdin, &protocol::encode_quit()).is_ok()
+            });
+        if !quit_sent {
+            self.kill();
+            return Ended::Killed;
         }
         let deadline = Instant::now() + QUIT_GRACE;
         loop {
             match self.child.try_wait() {
-                Ok(Some(_)) => return,
+                Ok(Some(_)) => return Ended::Exited,
                 Ok(None) if Instant::now() < deadline => {
                     std::thread::sleep(Duration::from_millis(5));
                 }
@@ -207,6 +298,7 @@ impl<R> HostProcess<R> {
             }
         }
         self.kill();
+        Ended::KilledAfterGrace
     }
 
     /// Kills the host at once (a hung engine, or a one-shot listing run).
@@ -219,6 +311,6 @@ impl<R> HostProcess<R> {
 
 impl<R> Drop for HostProcess<R> {
     fn drop(&mut self) {
-        self.shutdown();
+        let _ = self.shutdown();
     }
 }

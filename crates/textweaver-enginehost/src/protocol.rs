@@ -418,9 +418,13 @@ impl FrameDecoder {
     }
 }
 
-/// Reads one frame body from a blocking reader. `Ok(None)` on a clean end
-/// of stream (no byte of a new frame read).
-pub fn read_body(r: &mut impl Read) -> Result<Option<Vec<u8>>, ProtocolError> {
+/// Frames longer than [`MAX_FRAME`] but at most this long are skipped by
+/// [`read_body_or_skip`] (a peer that sent something too big); longer ones
+/// mean a corrupt stream.
+pub const MAX_SKIP: usize = 256 * 1024 * 1024;
+
+/// Reads a frame's length prefix. `Ok(None)` on a clean end of stream.
+fn read_len(r: &mut impl Read) -> Result<Option<usize>, ProtocolError> {
     let mut len = [0u8; 4];
     let mut got = 0;
     while got < 4 {
@@ -432,10 +436,52 @@ pub fn read_body(r: &mut impl Read) -> Result<Option<Vec<u8>>, ProtocolError> {
             Err(e) => return Err(e.into()),
         }
     }
-    let len = u32::from_le_bytes(len) as usize;
+    Ok(Some(u32::from_le_bytes(len) as usize))
+}
+
+/// Reads one frame body from a blocking reader. `Ok(None)` on a clean end
+/// of stream (no byte of a new frame read).
+pub fn read_body(r: &mut impl Read) -> Result<Option<Vec<u8>>, ProtocolError> {
+    let Some(len) = read_len(r)? else {
+        return Ok(None);
+    };
     if len == 0 || len > MAX_FRAME {
         return Err(ProtocolError::BadLength(len));
     }
+    read_exactly(r, len).map(Some)
+}
+
+/// One frame read by [`read_body_or_skip`].
+#[derive(Debug, PartialEq, Eq)]
+pub enum ReadFrame {
+    /// A frame body (tag and payload).
+    Body(Vec<u8>),
+    /// A frame over [`MAX_FRAME`] (and at most [`MAX_SKIP`]) was read and
+    /// thrown away; the stream is still in step. The value is its length.
+    Skipped(usize),
+}
+
+/// Like [`read_body`], but a frame over [`MAX_FRAME`] is read past and
+/// reported as [`ReadFrame::Skipped`] instead of ending the stream, so a
+/// host that is sent something too big stays in step and keeps working.
+pub fn read_body_or_skip(r: &mut impl Read) -> Result<Option<ReadFrame>, ProtocolError> {
+    let Some(len) = read_len(r)? else {
+        return Ok(None);
+    };
+    if len > MAX_FRAME && len <= MAX_SKIP {
+        let skipped = io::copy(&mut r.take(len as u64), &mut io::sink())?;
+        if skipped != len as u64 {
+            return Err(ProtocolError::Truncated);
+        }
+        return Ok(Some(ReadFrame::Skipped(len)));
+    }
+    if len == 0 || len > MAX_FRAME {
+        return Err(ProtocolError::BadLength(len));
+    }
+    read_exactly(r, len).map(|b| Some(ReadFrame::Body(b)))
+}
+
+fn read_exactly(r: &mut impl Read, len: usize) -> Result<Vec<u8>, ProtocolError> {
     let mut body = vec![0; len];
     r.read_exact(&mut body).map_err(|e| {
         if e.kind() == io::ErrorKind::UnexpectedEof {
@@ -444,7 +490,7 @@ pub fn read_body(r: &mut impl Read) -> Result<Option<Vec<u8>>, ProtocolError> {
             ProtocolError::Io(e)
         }
     })?;
-    Ok(Some(body))
+    Ok(body)
 }
 
 /// Writes one pre-encoded frame and flushes.

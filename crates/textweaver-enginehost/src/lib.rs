@@ -30,6 +30,7 @@
 //! [`Playback`].
 
 pub mod audio;
+mod orphan;
 pub mod playback;
 pub mod process;
 pub mod protocol;
@@ -38,5 +39,5 @@ pub mod wav;
 
 pub use audio::{AudioOutput, Feed, Player};
 pub use playback::{Captured, Playback, word_timings};
-pub use process::{HostMsg, HostProcess};
+pub use process::{Ended, HostMsg, HostProcess};
 pub use protocol::{EndStatus, Message, PROTOCOL_VERSION, ProtocolError};
