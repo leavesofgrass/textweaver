@@ -697,6 +697,23 @@ mod tests {
     }
 
     #[test]
+    fn documented_differences_from_star() {
+        // Trailing hyphen and apostrophe are not part of the word.
+        let d = Document::from_plain_text("rock- and roll, the students' books");
+        assert_eq!(
+            texts(&d, Unit::Word),
+            ["rock", "and", "roll", "the", "students", "books"]
+        );
+        // Non-ASCII capitals start sentences; three periods before a capital
+        // end one.
+        let d = Document::from_plain_text("Il est parti. Élan revint... Puis rien.");
+        assert_eq!(
+            texts(&d, Unit::Sentence),
+            ["Il est parti.", "Élan revint...", "Puis rien."]
+        );
+    }
+
+    #[test]
     fn code_block_sentences_are_lines() {
         let text = "Run it.\n\nfn main() {\n    println!(\"hi\"); x();\n}";
         let markers = vec![
