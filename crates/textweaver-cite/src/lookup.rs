@@ -730,6 +730,16 @@ pub fn reference_from_doi_csl(doi: &str, body: &str) -> Result<Reference, Lookup
     let mut r: Reference = serde_json::from_value(value).map_err(|e| bad(e.to_string()))?;
     r.id = String::new();
     r.kind = csl_type_for(&r.kind).to_owned();
+    // Crossref's per-name `sequence`, `affiliation`, and `ORCID` are not
+    // citation data.
+    for n in r
+        .author
+        .iter_mut()
+        .chain(&mut r.editor)
+        .chain(&mut r.translator)
+    {
+        n.extra.clear();
+    }
     r.doi = Some(normalize_doi(doi).unwrap_or_else(|| doi.to_owned()));
     if r.url.as_deref().and_then(normalize_doi).is_some() {
         r.url = None;

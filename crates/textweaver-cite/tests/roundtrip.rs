@@ -98,6 +98,9 @@ fn csl_json_is_lossless_including_unknown_fields() {
         .extra
         .insert("custom-field".into(), serde_json::json!({"nested": [1, 2]}));
     refs[1].translator = vec![Name::new("Translator", "Tina")];
+    refs[1].author[0]
+        .extra
+        .insert("static-ordering".into(), serde_json::json!(true));
     let text = formats::write(&refs, Format::CslJson).unwrap();
     let back = formats::parse(&text, Format::CslJson).unwrap();
     assert_eq!(back, refs);

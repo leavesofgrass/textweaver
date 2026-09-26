@@ -268,6 +268,10 @@ pub struct Name {
         deserialize_with = "de_opt_string"
     )]
     pub suffix: Option<String>,
+    /// Other name fields (`comma-suffix`, `static-ordering`, ...), kept as
+    /// read.
+    #[serde(flatten)]
+    pub extra: Map<String, Value>,
 }
 
 /// A CSL date: `date-parts`, or a literal or raw string.
