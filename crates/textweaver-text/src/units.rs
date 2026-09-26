@@ -7,9 +7,16 @@
 //! |---|---|---|
 //! | Grapheme | a line with its line break (in windows when long) | UAX #29 extended grapheme clusters; graphemes tile the text |
 //! | Word | a line (in windows when long) | UAX #29 word segments that contain an alphanumeric char, with hyphenated compounds (`well-known`, `12-14`) joined into one word as Star's `\b\w[\w'-]*` does |
-//! | Sentence | a paragraph | UAX #29 sentence boundaries, refined (see below) |
+//! | Sentence | a sentence run: the lines of a paragraph between hard breaks | UAX #29 sentence boundaries, refined (see below) |
 //! | Line | a line | the line without its line break; blank lines are empty ranges |
 //! | Paragraph | a run of non-blank lines | blank (whitespace-only) lines separate paragraphs |
+//!
+//! Sentences never cross a hard line break (a list item, table row, or code
+//! line starting on the next line; refinement 1 below), and UAX #29 always
+//! breaks after a line break, so a paragraph is segmented one *run* of lines
+//! between hard breaks at a time: a sentence step in a tight list of 50,000
+//! items segments one item, not the whole list (property-tested against
+//! segmenting whole paragraphs).
 //!
 //! Lines longer than a few thousand chars are segmented into words and
 //! graphemes in windows split where UAX #29 always has a boundary (before a
@@ -75,6 +82,9 @@ enum BlockKind {
     Line,
     /// A run of non-blank lines.
     Paragraph,
+    /// The lines of a paragraph between hard line breaks (see
+    /// [`hard_break_after`]).
+    SentenceRun,
     /// The whole document.
     Whole,
 }
@@ -92,7 +102,8 @@ fn block_kind(unit: Unit) -> BlockKind {
         Unit::Grapheme => BlockKind::Window { with_break: true },
         Unit::Word => BlockKind::Window { with_break: false },
         Unit::Line => BlockKind::Line,
-        Unit::Sentence | Unit::Paragraph => BlockKind::Paragraph,
+        Unit::Sentence => BlockKind::SentenceRun,
+        Unit::Paragraph => BlockKind::Paragraph,
         Unit::Document | Unit::Marker { .. } => BlockKind::Whole,
     }
 }
@@ -194,6 +205,37 @@ fn paragraph_around(doc: &Document, line: usize) -> Block {
     paragraph_block(doc, first, last)
 }
 
+/// True when the line break ending `line` separates sentences: the next
+/// line starts a block marker (a list item, a table row), or the break is
+/// inside a code block.
+fn hard_break_after(doc: &Document, line: usize) -> bool {
+    if doc.markers().is_empty() || line + 1 >= doc.line_count() {
+        return false;
+    }
+    let index = doc.marker_index();
+    let brk = doc.line_range(line).end;
+    let next_start = doc.line_range(line + 1).start;
+    index.starting_at(next_start).iter().any(|m| m.is_block())
+        || index
+            .enclosing(MarkerKind::Code, brk)
+            .is_some_and(|m| m.level == 1)
+}
+
+/// The sentence run containing non-blank line `line`: its paragraph's lines
+/// between the nearest hard breaks.
+fn run_around(doc: &Document, line: usize) -> Block {
+    let mut first = line;
+    while first > 0 && !doc.line_is_blank(first - 1) && !hard_break_after(doc, first - 1) {
+        first -= 1;
+    }
+    let mut last = line;
+    let n = doc.line_count();
+    while last + 1 < n && !doc.line_is_blank(last + 1) && !hard_break_after(doc, last) {
+        last += 1;
+    }
+    paragraph_block(doc, first, last)
+}
+
 /// The first block at or after `line` (forward) or at or before it (backward).
 fn block_from_line(doc: &Document, kind: BlockKind, line: usize, dir: Direction) -> Option<Block> {
     let n = doc.line_count();
@@ -212,21 +254,28 @@ fn block_from_line(doc: &Document, kind: BlockKind, line: usize, dir: Direction)
             };
             window_block(doc, line, pos, with_break)
         }),
-        BlockKind::Paragraph => {
+        BlockKind::Paragraph | BlockKind::SentenceRun => {
             if line >= n {
                 return None;
             }
+            let around = |l| {
+                if kind == BlockKind::SentenceRun {
+                    run_around(doc, l)
+                } else {
+                    paragraph_around(doc, l)
+                }
+            };
             let mut l = line;
             match dir {
                 Direction::Forward => {
                     while l < n && doc.line_is_blank(l) {
                         l += 1;
                     }
-                    (l < n).then(|| paragraph_around(doc, l))
+                    (l < n).then(|| around(l))
                 }
                 Direction::Backward => loop {
                     if !doc.line_is_blank(l) {
-                        return Some(paragraph_around(doc, l));
+                        return Some(around(l));
                     }
                     if l == 0 {
                         return None;
@@ -470,20 +519,10 @@ fn hard_breaks(doc: &Document, block: &Block) -> Vec<CharPos> {
     if doc.markers().is_empty() {
         return Vec::new();
     }
-    let index = doc.marker_index();
-    let mut out = Vec::new();
-    for line in block.first_line..block.last_line {
-        let brk = doc.line_range(line).end;
-        let next_start = doc.line_range(line + 1).start;
-        let starts_block = index.starting_at(next_start).iter().any(|m| m.is_block());
-        let in_code = index
-            .enclosing(MarkerKind::Code, brk)
-            .is_some_and(|m| m.level == 1);
-        if starts_block || in_code {
-            out.push(brk);
-        }
-    }
-    out
+    (block.first_line..block.last_line)
+        .filter(|&line| hard_break_after(doc, line))
+        .map(|line| doc.line_range(line).end)
+        .collect()
 }
 
 /// True when the whole block lies in a code block: its sentences are its
@@ -908,8 +947,10 @@ mod tests {
 #[cfg(test)]
 mod props {
     use proptest::prelude::*;
+    use ropey::Rope;
 
     use super::*;
+    use crate::{DocumentMeta, Marker};
 
     fn doc_text() -> impl Strategy<Value = String> {
         proptest::collection::vec(
@@ -998,6 +1039,36 @@ mod props {
                 .map(|(b, g)| CharRange::new(map.char_of(b), map.char_of(b + g.len())))
                 .collect();
             prop_assert_eq!(segments(&d, Unit::Grapheme), graphemes);
+        }
+
+        #[test]
+        fn sentence_runs_agree_with_whole_paragraphs(
+            text in doc_text(),
+            items in proptest::collection::vec((0usize..12, any::<bool>()), 0..6),
+        ) {
+            // Mark some lines as list items or table rows, then compare
+            // run-by-run segmentation with segmenting each whole paragraph
+            // (the rule before runs). Code lines differ on purpose: a code
+            // block inside a paragraph now reads one line per sentence, as
+            // the module documents.
+            let plain = Document::from_plain_text(&text);
+            let n = plain.line_count();
+            let mut markers = Vec::new();
+            for (l, row) in items {
+                if l < n {
+                    let kind = if row { MarkerKind::TableRow } else { MarkerKind::ListItem };
+                    markers.push(Marker::new(kind, plain.line_range(l)).with_level(1));
+                }
+            }
+            let d = Document::new(DocumentMeta::default(), Rope::from_str(&text), markers);
+            let runs = segments(&d, Unit::Sentence);
+            let mut whole = Vec::new();
+            let mut para = block_from_line(&d, BlockKind::Paragraph, 0, Direction::Forward);
+            while let Some(b) = para {
+                whole.extend(segment_block(&d, Unit::Sentence, &b));
+                para = next_block(&d, BlockKind::Paragraph, &b, Direction::Forward);
+            }
+            prop_assert_eq!(runs, whole);
         }
 
         #[test]
