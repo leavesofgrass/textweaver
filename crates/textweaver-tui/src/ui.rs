@@ -14,7 +14,8 @@ use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
 use textweaver_app::keymap::{ActionId, Key, KeyChord, Modifiers};
 use textweaver_app::text_util::line_count;
 use textweaver_app::{
-    App, CaretMove, Command, Effect, Mode, Playback, PromptPurpose, chords_text, extra_lookup,
+    App, CaretMove, Command, Confirm, Effect, Mode, Playback, PromptPurpose, chords_text,
+    extra_lookup,
 };
 
 use crate::layout::{self, Row};
@@ -205,6 +206,23 @@ impl Tui {
 
     /// Handles one key press.
     pub fn handle_key(&mut self, k: KeyEvent) {
+        if self.app.pending_confirmation().is_some() {
+            let answer = match k.code {
+                KeyCode::Esc => Confirm::No,
+                KeyCode::Char(c)
+                    if !k
+                        .modifiers
+                        .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) =>
+                {
+                    Confirm::from_char(c)
+                }
+                // Modifier keys alone are not answers.
+                KeyCode::Modifier(_) => return,
+                _ => Confirm::Repeat,
+            };
+            self.dispatch(Command::Confirm(answer));
+            return;
+        }
         if self.list.is_some() {
             self.list_key(k);
         } else if self.minibuffer.is_some() {

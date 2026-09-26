@@ -319,6 +319,32 @@ impl App {
         vec![Effect::Redraw]
     }
 
+    /// Deletes the note at the reading position, else the highlight there
+    /// (the `delete_note` action, after its confirmation).
+    pub(crate) fn delete_note_here(&mut self) -> Vec<Effect> {
+        let Some(pos) = self.reading_position() else {
+            return vec![Effect::Redraw];
+        };
+        let Some(s) = self.session.as_ref() else {
+            return vec![Effect::Redraw];
+        };
+        let at = |r: CharRange| r.contains(pos) || r.start == pos;
+        if let Some(i) = s.notes.iter().position(|n| at(n.range)) {
+            let mut effects = self.delete_note(i);
+            self.list = None;
+            effects.retain(|e| !matches!(e, Effect::ShowList { .. }));
+            return effects;
+        }
+        if let Some(i) = s.highlights.iter().position(|h| at(h.range)) {
+            let mut effects = self.delete_highlight(i);
+            self.list = None;
+            effects.retain(|e| !matches!(e, Effect::ShowList { .. }));
+            return effects;
+        }
+        self.tell("No note or highlight here.");
+        vec![Effect::Redraw]
+    }
+
     fn list_notes_quiet(&mut self) -> Vec<Effect> {
         let n = self.session.as_ref().map_or(0, |s| s.notes.len());
         let items: Vec<String> = (0..n).filter_map(|i| self.note_item(i)).collect();

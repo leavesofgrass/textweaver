@@ -1,10 +1,12 @@
 //! Default keys for the commands the keymap has no actions for yet (notes,
 //! highlights, bookmark management), shared by every frontend.
 //!
-//! These are a stopgap until Agent C2 adds the actions to `ActionId` (see
-//! the wave 2 report's contract change requests); frontends consult them
-//! only after the keymap found nothing, and a test keeps them free of
-//! conflicts with the default keymap.
+//! The keymap now has actions for adding, listing, stepping through, and
+//! deleting notes and for highlighting (`a`, `Shift+A`, `e`, `Shift+E`,
+//! `Delete`, `y`); these extras keep the older `'` and `"` note steps and
+//! list highlights on `Shift+Y`. Frontends consult them only after the
+//! keymap found nothing, and a test keeps them free of conflicts with the
+//! default keymap.
 
 use std::str::FromStr;
 
@@ -15,12 +17,9 @@ use crate::command::{Command, NoteCommand};
 /// The default extra bindings: `(chord, layer, command)`. Browse-layer keys
 /// also work in Speech Cursor mode (the same lookup order as the keymap).
 pub fn extra_bindings() -> Vec<(KeyChord, Layer, Command)> {
-    const TABLE: [(&str, NoteCommand); 6] = [
-        ("a", NoteCommand::Add),
-        ("Shift+A", NoteCommand::List),
+    const TABLE: [(&str, NoteCommand); 3] = [
         ("'", NoteCommand::Next),
         ("\"", NoteCommand::Previous),
-        ("y", NoteCommand::ToggleHighlight),
         ("Shift+Y", NoteCommand::ListHighlights),
     ];
     TABLE
@@ -60,7 +59,7 @@ mod tests {
     #[test]
     fn extra_keys_parse_and_do_not_clash_with_the_keymap() {
         let extra = extra_bindings();
-        assert_eq!(extra.len(), 6);
+        assert_eq!(extra.len(), 3);
         for platform in [Platform::Windows, Platform::MacOs, Platform::Linux] {
             for frontend in [Frontend::Terminal, Frontend::Gui] {
                 let km = Keymap::defaults(platform, frontend);
@@ -78,12 +77,12 @@ mod tests {
 
     #[test]
     fn lookup_follows_layer_order() {
-        let a = KeyChord::from_str("a").unwrap();
+        let a = KeyChord::from_str("'").unwrap();
         assert_eq!(
             extra_lookup(&a, Layer::SpeechCursor),
-            Some(Command::Notes(NoteCommand::Add))
+            Some(Command::Notes(NoteCommand::Next))
         );
         assert_eq!(extra_lookup(&a, Layer::Edit), None);
-        assert_eq!(extra_chords(NoteCommand::List).len(), 1);
+        assert_eq!(extra_chords(NoteCommand::ListHighlights).len(), 1);
     }
 }

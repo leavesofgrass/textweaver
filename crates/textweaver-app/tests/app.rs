@@ -15,7 +15,7 @@ use textweaver_app::keymap::ActionId;
 use textweaver_app::store::{DocKey, Paths};
 use textweaver_app::testing::{SpeechLog, recording_service};
 use textweaver_app::text::{Document, DocumentMeta, GoTo, Marker};
-use textweaver_app::{App, AppConfig, Command, Effect, Mode, Playback, PromptPurpose};
+use textweaver_app::{App, AppConfig, Command, Confirm, Effect, Mode, Playback, PromptPurpose};
 
 /// Collects announcements for assertions.
 #[derive(Clone, Default)]
@@ -72,6 +72,12 @@ impl Rig {
     fn act(&mut self, a: ActionId) -> Vec<Effect> {
         self.app.dispatch(Command::Action(a))
     }
+    /// Quit, answering yes to "Quit textweaver? y or n".
+    fn quit(&mut self) -> Vec<Effect> {
+        assert_eq!(self.act(ActionId::Quit), vec![Effect::Redraw]);
+        assert_eq!(self.app.pending_confirmation(), Some(ActionId::Quit));
+        self.app.dispatch(Command::Confirm(Confirm::Yes))
+    }
     fn cursor(&self) -> CharPos {
         self.app.session().unwrap().cursor
     }
@@ -112,7 +118,7 @@ fn open_navigate_quit() {
     r.act(ActionId::NextSentence);
     assert_eq!(r.cursor(), CharPos(9));
     assert!(r.said.any("Opened Test"));
-    assert_eq!(r.act(ActionId::Quit), vec![Effect::Quit]);
+    assert_eq!(r.quit(), vec![Effect::Quit]);
 }
 
 #[test]
@@ -742,8 +748,9 @@ fn position_bookmarks_and_settings_persist() {
     app.dispatch(Command::Action(ActionId::AddBookmark));
     app.dispatch(Command::GoTo(GoTo::Char(at(PROSE, "rho"))));
     app.dispatch(Command::Action(ActionId::RateUp));
+    app.dispatch(Command::Action(ActionId::Quit));
     assert_eq!(
-        app.dispatch(Command::Action(ActionId::Quit)),
+        app.dispatch(Command::Confirm(Confirm::Yes)),
         vec![Effect::Quit]
     );
     drop(app);

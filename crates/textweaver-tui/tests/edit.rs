@@ -225,6 +225,8 @@ fn type_format_undo_save_and_reopen_through_keys() {
 
     // Quit and relaunch: the saved text is what opens.
     h.press(ctrl('q'));
+    assert!(!h.tui.should_quit());
+    h.press(key(KeyCode::Char('y')));
     assert!(h.tui.should_quit());
     let mut h = launch(&home);
     h.tui.app_mut().open(&file).unwrap();
@@ -241,6 +243,7 @@ fn quitting_with_unsaved_edits_asks_in_a_list() {
     h.press(ctrl('e'));
     h.typed("x");
     h.press(ctrl('q'));
+    h.press(key(KeyCode::Char('y')));
     assert!(!h.tui.should_quit());
     let list = h.tui.list().expect("save choice list");
     assert_eq!(list.items.len(), 3);

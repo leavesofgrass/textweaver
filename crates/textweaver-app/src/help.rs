@@ -202,15 +202,16 @@ impl App {
             ),
             format!("Where am I: {}.", k(ActionId::SayPosition)),
             format!(
-                "Notes: add {}, list {}, next and previous {} and {}. In the list, Delete deletes and F2 edits.",
-                x(NoteCommand::Add),
-                x(NoteCommand::List),
-                x(NoteCommand::Next),
-                x(NoteCommand::Previous)
+                "Notes: add {}, list {}, next and previous {} and {}, delete the one at the cursor {}. In the list, Delete deletes and F2 edits.",
+                k(ActionId::AddNote),
+                k(ActionId::ListNotes),
+                k(ActionId::NextNote),
+                k(ActionId::PreviousNote),
+                k(ActionId::DeleteNote)
             ),
             format!(
                 "Highlight the selection or sentence, or remove a highlight: {}. List highlights: {}.",
-                x(NoteCommand::ToggleHighlight),
+                k(ActionId::HighlightSelection),
                 x(NoteCommand::ListHighlights)
             ),
             "Bookmarks list: Delete deletes a bookmark, F2 renames it.".to_owned(),
@@ -229,7 +230,10 @@ impl App {
             ),
             format!("All keyboard shortcuts: {}.", k(ActionId::KeyboardHelp)),
             format!("Run any command by name: {}.", k(ActionId::CommandPalette)),
-            format!("Quit, saving your place: {}.", k(ActionId::Quit)),
+            format!(
+                "Quit, saving your place: {}, then y to confirm; n, a, or Escape cancels.",
+                k(ActionId::Quit)
+            ),
         ];
         self.list = Some(ListKind::Info);
         self.tell("Help. Up and Down move, Escape closes.");

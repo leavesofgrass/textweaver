@@ -58,6 +58,12 @@ pub enum Command {
     /// Notes, highlights, and bookmark management (until the keymap has
     /// actions for them; see [`NoteCommand`]).
     Notes(NoteCommand),
+    /// The answer to a pending confirmation ([`App::pending_confirmation`]):
+    /// the frontend sends it for `y` ([`Confirm::Yes`]), for `n`, `a`, or
+    /// Escape ([`Confirm::No`]), and for any other key ([`Confirm::Repeat`]).
+    ///
+    /// [`App::pending_confirmation`]: crate::App::pending_confirmation
+    Confirm(Confirm),
     /// Delete item `n` (0-based) of the list shown by the last
     /// [`Effect::ShowList`] (bookmarks, notes, highlights). Other lists
     /// ignore it and say so.
@@ -237,6 +243,29 @@ impl PromptPurpose {
             PromptPurpose::NoteText => "Note",
             PromptPurpose::EditNote => "Edit note, Enter keeps it",
             PromptPurpose::RenameBookmark => "New bookmark name, Enter keeps it",
+        }
+    }
+}
+
+/// An answer to a confirmation question such as "Quit textweaver? y or n".
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Confirm {
+    /// Go ahead.
+    Yes,
+    /// Abort; nothing happens.
+    No,
+    /// Say the question again (any key other than yes or no).
+    Repeat,
+}
+
+impl Confirm {
+    /// The answer a typed character gives: `y` is yes; `n` and `a` (abort)
+    /// are no; anything else repeats the question.
+    pub fn from_char(c: char) -> Confirm {
+        match c.to_ascii_lowercase() {
+            'y' => Confirm::Yes,
+            'n' | 'a' => Confirm::No,
+            _ => Confirm::Repeat,
         }
     }
 }

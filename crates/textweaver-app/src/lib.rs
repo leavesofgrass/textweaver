@@ -105,7 +105,7 @@ mod voice;
 
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use backends::speech_registry;
-pub use command::{CaretMove, Command, Effect, NoteCommand, PromptPurpose};
+pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpose};
 pub use extra::{extra_bindings, extra_chords, extra_lookup};
 pub use goto::parse_go_to;
 pub use help::{chords_text, help_entries, palette_matches, resolve_command};

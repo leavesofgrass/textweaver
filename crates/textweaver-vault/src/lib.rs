@@ -41,7 +41,7 @@ pub use model::{
     Note, Relation, RelationType, color_name, derive_id,
 };
 pub use names::{MAX_NAME_CHARS, NameAllocator, sanitize as sanitize_name};
-pub use state::{HIGHLIGHTS_KEY, NOTES_KEY, StateStoreAnnotations};
+pub use state::StateStoreAnnotations;
 pub use walk::note_files;
 
 /// The tag on a vault note's node note (Star's `_NODE_TAG`).

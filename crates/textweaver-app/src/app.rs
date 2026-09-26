@@ -12,7 +12,7 @@ use textweaver_store::{
 };
 use textweaver_text::{Document, History, SearchQuery};
 
-use crate::command::{Command, Effect, PromptPurpose};
+use crate::command::{Command, Effect, NoteCommand, PromptPurpose};
 use crate::edit::{AfterLeave, EditState, SaveThen};
 use crate::notes::{Note, UserHighlight, load_notes, store_notes};
 use crate::playback::{Playback, ReadKind, SpeechTrack};
@@ -252,6 +252,8 @@ pub struct App {
     pub(crate) suggested_path: Option<PathBuf>,
     pub(crate) replace_query: Option<String>,
     pub(crate) pending_item: Option<usize>,
+    /// An action waiting for a yes or no ([`ActionId::needs_confirmation`]).
+    pub(crate) pending_confirm: Option<ActionId>,
     pub(crate) recovery: Vec<(PathBuf, RecoverySnapshot)>,
     pub(crate) untitled: u32,
     pub(crate) last_position_save: Option<(Instant, CharPos)>,
@@ -293,6 +295,7 @@ impl App {
             suggested_path: None,
             replace_query: None,
             pending_item: None,
+            pending_confirm: None,
             recovery: Vec::new(),
             untitled: 0,
             last_position_save: None,
@@ -310,6 +313,35 @@ impl App {
     /// The current mode.
     pub fn mode(&self) -> Mode {
         self.mode
+    }
+
+    /// The action waiting for a yes or no, if any. While one is pending the
+    /// frontend sends every key press as a [`Command::Confirm`].
+    pub fn pending_confirmation(&self) -> Option<ActionId> {
+        self.pending_confirm
+    }
+
+    /// Answers a pending confirmation.
+    fn confirm(&mut self, answer: crate::command::Confirm) -> Vec<Effect> {
+        use crate::command::Confirm;
+        let Some(a) = self.pending_confirm else {
+            return vec![Effect::Redraw];
+        };
+        match answer {
+            Confirm::Yes => {
+                self.pending_confirm = None;
+                self.run_action(a)
+            }
+            Confirm::No => {
+                self.pending_confirm = None;
+                self.tell("Cancelled.");
+                vec![Effect::Redraw]
+            }
+            Confirm::Repeat => {
+                self.tell(a.confirmation_prompt().unwrap_or("Press y or n."));
+                vec![Effect::Redraw]
+            }
+        }
     }
 
     /// The key bindings.
@@ -605,6 +637,7 @@ impl App {
                 self.open_command(path)
             }
             Command::Action(a) => self.action(a),
+            Command::Confirm(answer) => self.confirm(answer),
             Command::Insert(text) => self.insert(&text),
             Command::DeleteBack => self.delete(false),
             Command::DeleteForward => self.delete(true),
@@ -832,6 +865,19 @@ impl App {
     }
 
     pub(crate) fn action(&mut self, a: ActionId) -> Vec<Effect> {
+        if let Some(question) = a.confirmation_prompt() {
+            if self.mode.is_prompt() {
+                self.leave_prompt();
+            }
+            self.pending_confirm = Some(a);
+            self.tell(question);
+            return vec![Effect::Redraw];
+        }
+        self.run_action(a)
+    }
+
+    /// Runs an action (after its confirmation, if it needs one).
+    fn run_action(&mut self, a: ActionId) -> Vec<Effect> {
         if self.session.is_none() && needs_document(a) {
             self.tell("No document is open. Press Control O to open one.");
             return vec![Effect::Redraw];
@@ -935,6 +981,12 @@ impl App {
             A::FindNext => return self.find_step(textweaver_core::Direction::Forward),
             A::FindPrevious => return self.find_step(textweaver_core::Direction::Backward),
             // Bookmarks
+            A::AddNote => return self.notes_command(NoteCommand::Add),
+            A::ListNotes => return self.notes_command(NoteCommand::List),
+            A::NextNote => return self.notes_command(NoteCommand::Next),
+            A::PreviousNote => return self.notes_command(NoteCommand::Previous),
+            A::HighlightSelection => return self.notes_command(NoteCommand::ToggleHighlight),
+            A::DeleteNote => return self.delete_note_here(),
             A::AddBookmark => self.add_bookmark(),
             A::ListBookmarks => return self.list_bookmarks(),
             A::NextBookmark => self.bookmark_step(textweaver_core::Direction::Forward),

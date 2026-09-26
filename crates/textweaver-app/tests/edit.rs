@@ -13,7 +13,7 @@ use textweaver_app::store::{DocKey, Paths, SettingsStore, StateStore};
 use textweaver_app::testing::{SpeechLog, recording_service};
 use textweaver_app::text::{Document, GoTo};
 use textweaver_app::{
-    App, AppConfig, CaretMove, Command, Effect, Mode, NoteCommand, Playback, PromptPurpose,
+    App, AppConfig, CaretMove, Command, Confirm, Effect, Mode, NoteCommand, Playback, PromptPurpose,
 };
 
 #[derive(Clone, Default)]
@@ -89,6 +89,12 @@ impl Rig {
     }
     fn act(&mut self, a: ActionId) -> Vec<Effect> {
         self.app.dispatch(Command::Action(a))
+    }
+    /// Quit, answering yes to "Quit textweaver? y or n".
+    fn quit(&mut self) -> Vec<Effect> {
+        assert_eq!(self.act(ActionId::Quit), vec![Effect::Redraw]);
+        assert_eq!(self.app.pending_confirmation(), Some(ActionId::Quit));
+        self.app.dispatch(Command::Confirm(Confirm::Yes))
     }
     fn text(&self) -> String {
         self.app.session().unwrap().doc.text().to_string()
@@ -202,7 +208,7 @@ fn type_format_undo_save_and_reopen() {
     assert!(r.said.any("Edit mode off."));
 
     // Quit and reopen: the saved text and the bookmark come back.
-    assert_eq!(r.act(ActionId::Quit), vec![Effect::Quit]);
+    assert_eq!(r.quit(), vec![Effect::Quit]);
     r.relaunch();
     r.app.open(&file).unwrap();
     let canon = r.text();
@@ -320,7 +326,7 @@ fn quitting_with_changes_saves_on_request() {
         extend: false,
     });
     r.type_str("More.");
-    let effects = r.act(ActionId::Quit);
+    let effects = r.quit();
     assert!(matches!(effects.first(), Some(Effect::ShowList { .. })));
     let effects = r.app.dispatch(Command::Choose(0));
     assert_eq!(effects, vec![Effect::Quit]);
@@ -336,7 +342,12 @@ fn autosave_snapshot_is_offered_after_a_crash() {
     r.type_str("Lost? ");
     // The first tick while dirty writes a snapshot.
     r.app.tick(Instant::now());
-    let snaps: Vec<_> = std::fs::read_dir(r.paths.recovery_dir()).unwrap().collect();
+    // One snapshot (the lock file beside it guards it; see autosave).
+    let snaps: Vec<_> = std::fs::read_dir(r.paths.recovery_dir())
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|e| e.path().extension().is_none_or(|x| x != "lock"))
+        .collect();
     assert_eq!(snaps.len(), 1);
     // "Crash": no shutdown, no leaving edit mode.
     r.relaunch();
@@ -530,7 +541,7 @@ fn notes_add_list_jump_edit_delete_and_persist() {
     );
 
     // Both survive a relaunch.
-    r.act(ActionId::Quit);
+    r.quit();
     r.relaunch();
     r.app.open(&file).unwrap();
     let s = r.app.session().unwrap();

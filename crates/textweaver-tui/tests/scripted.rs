@@ -389,6 +389,19 @@ fn scripted_session_with_restore() {
     // Quit saves the position.
     let saved = h.cursor();
     h.press(ch('q'));
+    assert!(!h.tui.should_quit());
+    assert!(h.status().contains("Quit textweaver? y or n"));
+    // n and a abort; y quits.
+    h.press(ch('n'));
+    assert!(!h.tui.should_quit());
+    assert!(h.status().contains("Cancelled."));
+    h.press(ch('q'));
+    h.press(ch('a'));
+    assert!(!h.tui.should_quit());
+    h.press(ch('q'));
+    h.press(ch('x'));
+    assert!(h.status().contains("Quit textweaver? y or n"));
+    h.press(ch('y'));
     assert!(h.tui.should_quit());
     drop(h);
 
