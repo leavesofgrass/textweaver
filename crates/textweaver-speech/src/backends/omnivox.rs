@@ -69,16 +69,8 @@ impl OmnivoxCommand {
                 .is_file()
                 .then_some(OmnivoxCommand { program, args });
         }
-        find_on_path("omnivox").map(|program| OmnivoxCommand { program, args })
+        crate::backends::on_path("omnivox").map(|program| OmnivoxCommand { program, args })
     }
-}
-
-fn find_on_path(name: &str) -> Option<PathBuf> {
-    let path = std::env::var_os("PATH")?;
-    let exe = format!("{name}{}", std::env::consts::EXE_SUFFIX);
-    std::env::split_paths(&path)
-        .map(|dir| dir.join(&exe))
-        .find(|p| p.is_file())
 }
 
 /// Makes `text` safe for one protocol line inside braces.
