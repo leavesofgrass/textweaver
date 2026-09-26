@@ -237,14 +237,17 @@ impl Citations {
         // Replace the citations, back to front so ranges stay valid.
         let mut out = body.to_owned();
         let mut notes: Vec<String> = Vec::new();
+        // Citation notes are numbered 1, 2, ... unless the document has
+        // footnotes of its own, which keep their labels.
+        let prefix = if body.contains("[^") { "cite-" } else { "" };
         for (n, (c, formatted)) in cites.iter().zip(&rendered.citations).enumerate().rev() {
             let replacement = if rendered.note_style {
                 notes.push(format!(
-                    "[^cite-{}]: {}",
+                    "[^{prefix}{}]: {}",
                     n + 1,
                     inline_markdown(formatted, html)
                 ));
-                format!("[^cite-{}]", n + 1)
+                format!("[^{prefix}{}]", n + 1)
             } else if html {
                 let first = c.items.first().map(|i| i.key.as_str()).unwrap_or("");
                 let keys: Vec<&str> = c.items.iter().map(|i| i.key.as_str()).collect();
