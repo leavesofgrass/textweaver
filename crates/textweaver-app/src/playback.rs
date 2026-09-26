@@ -251,8 +251,23 @@ impl App {
     pub(crate) fn play_pause(&mut self) {
         match self.playback {
             Playback::Reading => {
+                // Take in every position already reported, so the resume
+                // point is the latest confirmed word. A `Finished` among
+                // them is ignored: the user asked to pause.
+                while let Some(status) = self.speech.try_status() {
+                    if let SpeechStatus::Position {
+                        utterance,
+                        source_range: Some(r),
+                    } = status
+                    {
+                        if self.track.position(utterance.generation, Some(r)) {
+                            self.set_spoken(r);
+                        }
+                    } else if let SpeechStatus::Position { utterance, .. } = status {
+                        self.track.saw(utterance.generation);
+                    }
+                }
                 let resume_at = self.reading_position();
-                self.drain_stale();
                 self.speech.pause();
                 self.track.restart(None, false);
                 self.playback = Playback::Paused { resume_at };

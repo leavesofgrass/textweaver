@@ -128,6 +128,8 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 - `App` tests without a terminal.
 - A ratatui `TestBackend` scripted test: open a fixture, navigate by each unit, read with a recording speech backend (use B's once merged; until then a local test double that implements `SpeechBackend`), check that highlight ranges equal the spoken source ranges, quit, relaunch with the same state directory, and verify the restored position.
 
+**Status:** Wave 1 done on `agent/d-app-tui` (Friday, September 25, 2026). Integration tests live in `crates/textweaver-app/tests/app.rs` and `crates/textweaver-tui/tests/scripted.rs` (no workspace-root `tests/`); the recording test double is `textweaver_app::testing::RecordingBackend`; fixture `fixtures/d/reading.txt`.
+
 ## Seams to watch at integration
 
 - `text::narrate::plan` (A) → `SpeechService::read` (B): utterance ids, offset maps, `Inserted` spans.
