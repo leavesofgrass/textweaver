@@ -381,6 +381,38 @@ fn real_speech_dispatcher_reports_every_word() {
     );
 }
 
+/// Where `spd-say` finds speech-dispatcher when there is no
+/// `XDG_RUNTIME_DIR` (a container, a session without logind): the socket in
+/// `~/.cache`, spawning the server there if it is not running. The backend
+/// counted as not available there while `spd-say` worked. Run in the dev
+/// container with `TEXTWEAVER_SPEECHD=1`, `speech-dispatcher-espeak-ng`,
+/// and a user configuration that sends audio to ALSA's null device (see
+/// the Agent D4 notes in `docs/tasks.md`).
+#[test]
+#[ignore = "needs speech-dispatcher with sd_espeak-ng and no XDG_RUNTIME_DIR; run with TEXTWEAVER_SPEECHD=1"]
+fn the_server_is_found_or_spawned_without_a_runtime_dir() {
+    if std::env::var("TEXTWEAVER_SPEECHD").as_deref() != Ok("1")
+        || std::env::var_os("XDG_RUNTIME_DIR").is_some()
+    {
+        eprintln!("TEXTWEAVER_SPEECHD is not 1, or XDG_RUNTIME_DIR is set; skipping");
+        return;
+    }
+    assert!(
+        textweaver_speech::backends::speechd::available(),
+        "speech-dispatcher counted as not available"
+    );
+    let b = SpeechdBackend::connect_default().expect("connected, spawning the server");
+    assert!(!b.voices().unwrap().is_empty(), "no voices");
+    let home = std::path::PathBuf::from(std::env::var_os("HOME").unwrap());
+    let socket = std::env::var_os("XDG_CACHE_HOME")
+        .map_or_else(|| home.join(".cache"), std::path::PathBuf::from)
+        .join("speech-dispatcher/speechd.sock");
+    assert!(socket.exists(), "{}", socket.display());
+    drop(b);
+    // Connecting again reaches the running server.
+    assert!(SpeechdBackend::connect_default().is_ok());
+}
+
 struct RealServer {
     socket: std::path::PathBuf,
     child: std::process::Child,
