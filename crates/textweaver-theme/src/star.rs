@@ -12,9 +12,13 @@
 //! tables used (magenta, avoiding red and green, for `dark`, `light` and
 //! `contrast`; green for the monochrome `phosphor`) or the scheme's own red.
 //!
-//! The port keeps every value that already meets the contrast floor and
-//! nudges only the ones that fail, by the smallest lightness change that
-//! passes ([`crate::color::adjust_lightness`]); [`port`] returns each change.
+//! Jon's policy (2026-09-26): not every theme has to meet WCAG AA, as long
+//! as some do. The themes in [`MUST_MEET_AA`] (Galaxy, Galaxy Light, and the
+//! two high-contrast themes) keep every value that already meets the
+//! contrast floor and nudge only the ones that fail, by the smallest
+//! lightness change that passes ([`crate::color::adjust_lightness`]). Every
+//! other palette keeps Star's colors exactly; its file says whether it meets
+//! AA. [`port`] returns each change.
 
 use crate::color::Rgb;
 use crate::error::ThemeError;
@@ -239,10 +243,25 @@ pub fn to_file(p: &StarPalette) -> ThemeFile {
     f
 }
 
+/// The built-in themes that must meet WCAG AA (the two high-contrast ones
+/// at 7:1). The contrast test gates only these; the rest are labelled.
+pub const MUST_MEET_AA: [&str; 4] = ["galaxy", "galaxy-light", "contrast", "high-contrast"];
+
+/// True for a theme in [`MUST_MEET_AA`].
+pub fn must_meet_aa(name: &str) -> bool {
+    MUST_MEET_AA.contains(&name)
+}
+
 /// Ports one palette: the complete theme and every color changed to meet
-/// the contrast floor.
+/// the contrast floor. Only the themes in [`MUST_MEET_AA`] have Star's own
+/// colors changed; the others keep them exactly.
 pub fn port(p: &StarPalette) -> Result<(Theme, Vec<Adjustment>), ThemeError> {
-    resolve(&to_file(p), None, None, Repair::Explicit)
+    let repair = if must_meet_aa(p.name) {
+        Repair::Explicit
+    } else {
+        Repair::DerivedOnly
+    };
+    resolve(&to_file(p), None, None, repair)
 }
 
 /// The palette with this name.
@@ -262,7 +281,18 @@ pub fn generated_file(p: &StarPalette) -> Result<String, ThemeError> {
     if let Some(m) = meta(p.name) {
         s.push_str(&format!("# Error color: {}.\n", m.error.describe()));
     }
-    if adjustments.is_empty() {
+    if !must_meet_aa(p.name) {
+        let report = crate::check::check(&theme);
+        let failing = report.checks.iter().filter(|c| !c.passed).count();
+        if failing == 0 {
+            s.push_str("# Star's colors, unchanged. Meets WCAG AA.\n");
+        } else {
+            s.push_str(&format!(
+                "# Star's colors, unchanged. Does not meet WCAG AA: {failing} of {} contrast checks fall short.\n",
+                report.checks.len()
+            ));
+        }
+    } else if adjustments.is_empty() {
         s.push_str("# Every Star color meets the contrast floor unchanged.\n");
     } else {
         s.push_str(

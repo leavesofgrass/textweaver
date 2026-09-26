@@ -39,7 +39,16 @@ Names ignore case. Star's older names still work (`obsidian` means Galaxy). If a
 
 ## The built-in themes
 
-They are grouped here by kind. Each is one of Star's palettes. Where a Star color missed the contrast minimum, it was moved by the smallest change that passes; the theme file lists every change.
+They are grouped here by kind. Each is one of Star's palettes.
+
+Not every theme has to meet the WCAG AA contrast level, as long as some do (Jon's decision, September 26, 2026).
+
+- **Must meet AA.** Galaxy, Galaxy Light, Contrast, and High Contrast. The two high-contrast themes reach 7 to 1. Where one of Star's colors fell short in these four, it was moved by the smallest change that passes, and the theme file lists every change.
+- **Every other theme** keeps Star's colors exactly. Its theme file says whether it meets AA.
+  - Meets AA: Amber, Catppuccin Mocha, Dracula, Gruvbox Dark, Gruvbox Light, Kanagawa, Rose Pine, Sepia, and Tokyo Night.
+  - Falls short on some colors, often the dim text: Dark, Everforest Dark, Light, Monokai, Nord, One Dark, One Light, Phosphor, Solarized Dark, and Solarized Light.
+
+If you read by sight and need strong contrast, choose one of the themes that meets AA.
 
 F5 goes through them in a different order: Galaxy, Galaxy Light, One Dark, One Light, Dark, Light, Contrast, High Contrast, Phosphor, Dracula, Nord, Solarized Dark, Solarized Light, Gruvbox Dark, Tokyo Night, Catppuccin Mocha, Monokai, Sepia, Amber, Everforest Dark, Rose Pine, Kanagawa, and Gruvbox Light. Your own themes come after them.
 
@@ -211,6 +220,6 @@ Add `--swatch` to also print sample lines in color, for sighted checking.
 - [Reading aids](reading-aids.md): the ruler, RSVP, and bionic reading, which use the theme's colours.
 - [Settings](settings.md#display): the `[display]` settings.
 - [Converting documents](converting.md): HTML output uses these themes.
-- [ADR-0020: Themes](adr/0020-themes.md): the design, the contrast rules, and every palette adjustment.
+- [ADR-0020: Themes](adr/0020-themes.md): the design and the contrast rules. Its status update records which themes must meet AA.
 - [Interactive pages](site/index.html): the pages in `docs/site/` use Galaxy and Galaxy Light.
 - [Documentation index](README.md)
