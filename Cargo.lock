@@ -3036,6 +3036,8 @@ dependencies = [
  "serde",
  "serde_json",
  "textweaver-app",
+ "textweaver-convert",
+ "textweaver-render",
 ]
 
 [[package]]

@@ -187,7 +187,7 @@ pub enum ConvertError {
     #[error("{0} does not exist")]
     Missing(PathBuf),
     /// The output format has no writer in this build.
-    #[error("{0} output is not available in this build yet")]
+    #[error("{0} output is not available in this build yet; choose md, html, or txt")]
     Unavailable(&'static str),
     /// A template could not be loaded.
     #[error(transparent)]
@@ -296,6 +296,16 @@ impl Summary {
     /// files. No failures."
     pub fn sentence(&self) -> String {
         let label = self.format.map_or("the output format", OutputFormat::label);
+        if self.converted == 0 && self.failed == 0 && self.skipped > 0 {
+            return format!(
+                "Nothing to convert: {} already up to date. Use --force to convert again.",
+                if self.skipped == 1 {
+                    "1 file is".to_owned()
+                } else {
+                    format!("all {} files are", self.skipped)
+                }
+            );
+        }
         let mut s = format!(
             "Converted {} to {} in {}",
             count(self.converted, "file"),
@@ -334,7 +344,7 @@ fn count(n: usize, noun: &str) -> String {
 
 fn seconds(s: f64) -> String {
     if s < 0.1 {
-        format!("{} milliseconds", (s * 1000.0).round() as u64)
+        count((s * 1000.0).round() as usize, "millisecond")
     } else if (s - 1.0).abs() < 0.05 {
         "1 second".to_owned()
     } else {
@@ -771,6 +781,18 @@ mod tests {
             ..ConvertOptions::default()
         })
         .unwrap_err();
-        assert_eq!(err.to_string(), "EPUB output is not available in this build yet");
+        assert_eq!(
+            err.to_string(),
+            "EPUB output is not available in this build yet; choose md, html, or txt"
+        );
+        let skipped = Summary {
+            format: Some(OutputFormat::Html),
+            skipped: 3,
+            ..Summary::default()
+        };
+        assert_eq!(
+            skipped.sentence(),
+            "Nothing to convert: all 3 files are already up to date. Use --force to convert again."
+        );
     }
 }

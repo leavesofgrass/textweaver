@@ -21,6 +21,9 @@ omnivox = ["textweaver-app/omnivox"]
 
 [dependencies]
 textweaver-app.workspace = true
+# Agent L: `tw convert`.
+textweaver-convert.workspace = true
+textweaver-render.workspace = true
 clap.workspace = true
 anyhow.workspace = true
 serde.workspace = true
