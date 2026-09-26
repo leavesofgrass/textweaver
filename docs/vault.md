@@ -26,7 +26,7 @@ The command has this shape: `tw vault`, then `import` or `export`, then the vaul
 - `--document FILE` (export only): a document whose notes and highlights to export. Export needs at least one. Repeat the option for several documents.
 - `--folder FOLDER` (export only): a folder inside the vault for new notes, such as `textweaver`. Without it, new notes go in the vault's top folder.
 - `--no-document-notes` (export only): do not write the document note that each document otherwise gets. Its highlights are then not exported either.
-- `--mode graph` or `--mode library` (import only): what to import. `graph`, the default, brings in notes and their links. `library` is meant to add the vault's notes to the library as documents only; see [Library mode](#library-mode-is-not-working-yet).
+- `--mode graph` or `--mode library` (import only): what to import. `graph`, the default, brings in notes and their links. `library` adds the vault's notes to the library as documents and does nothing else; see [Library mode](#library-mode).
 - `--link-relation NAME` (import only): the kind of link a plain `[[link]]` becomes, such as `SUPPORTS`. Without it, plain links become `SEE_ALSO`.
 - `--dry-run` (import only): read the vault and report what an import would do, without storing anything.
 - `--json` (both): print the full result as JSON, for scripts.
@@ -268,15 +268,15 @@ tw vault import "D:\Notes\Biology" --dry-run --json
 
 For each note, the JSON gives its path, title, aliases, tags, id, summary (its first line), text, citation, time, kind (`plain`, `annotation`, or `document`), and the links found in it, each with its kind and target. At the end come the counts of links found, links not found, and files that could not be read.
 
-### Library mode is not working yet
+### Library mode
 
 ```powershell
 tw vault import "D:\Notes\Biology" --mode library
 ```
 
-Library mode is meant to add every vault note to textweaver's library as a document, and do nothing else. In this version it reports "3 documents added to the library" but stores nothing at all. Graph mode has the same gap: its notes and links are stored, but the documents are not added to the library either.
+Library mode adds every vault note to textweaver's library as a document, and does nothing else: no notes, links, or highlights are stored. The notes then appear on your bookshelf (`tw library`, Alt+L in the reader). Graph mode, the default, adds the vault's own notes to the library in the same way, as well as storing their notes and links. Documents already in the library keep their place; a damaged library file is never overwritten, and the import says so.
 
-To put a vault's notes in your library, add the vault as a library folder instead:
+To keep a vault's notes in your library as it changes, with new notes found and searchable, add the vault as a library folder instead:
 
 ```powershell
 tw library --add "D:\Notes\Biology"
@@ -351,7 +351,7 @@ See [the converting guide](converting.md#markdown-flavors) for every option.
 - **"Name the documents to export with --document FILE".** Export needs at least one `--document`. Add the document whose notes you want.
 - **"... has no notes or highlights."** The document has nothing to export, or its path is wrong. Check it with `tw marks` and the same path.
 - **"... could not be opened, so highlights are exported without their text."** The document has moved, been deleted, or is in a format textweaver cannot read. The export still works, but quotes and percentages are missing. Put the document back where it was, or open it once in textweaver to check it reads.
-- **"... links left out because the linked note is not in the vault."** A note links to a note on a document you did not export this time or before. Export that document too, in the same command or into the same vault. This matters: if you import the vault again before you do, the note's links are replaced by the ones in its file, and the left-out links are lost.
+- **"... links left out because the linked note is not in the vault."** A note links to a note on a document you did not export this time or before. Export that document too, in the same command or into the same vault, to see the link in Obsidian. The link is not lost in the meantime: importing the vault keeps a note's links to notes that are not in the vault, and only a link you delete in Obsidian, to a note that is in the vault, is removed.
 - **"... linked notes could not be found."** A `[[link]]` names a note that is not in the vault, or is misspelled, or points to a document note. Run a dry run with `--json` and look at each note's links to find which.
 - **"... is not a folder".** The vault path is wrong or the folder does not exist. Import needs an existing folder. Export creates one.
 - **"Could not read ...".** A note file could not be opened, for example because another program has it locked. The reason follows the file name. The rest of the vault is still imported.

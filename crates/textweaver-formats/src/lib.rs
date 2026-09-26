@@ -477,9 +477,7 @@ mod tests {
         if cfg!(feature = "pdf") {
             ids.push("pdf");
         }
-        if cfg!(feature = "pandoc") {
-            ids.push("pandoc");
-        }
+        // Pandoc is never a built-in (see `Registry::with_pandoc`).
         ids.extend(["low", "high"]);
         assert_eq!(r.ids(), ids);
     }
