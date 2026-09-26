@@ -630,7 +630,12 @@ impl Engine for SapiEngine {
         stopped: &dyn Fn() -> bool,
     ) -> Result<(EndStatus, u64), String> {
         let prepared = SpeakText::new(text, pitch);
-        let flags = SPF_ASYNC.0 | if prepared.xml() { SPF_IS_XML.0 } else { SPF_IS_NOT_XML.0 };
+        let flags = SPF_ASYNC.0
+            | if prepared.xml() {
+                SPF_IS_XML.0
+            } else {
+                SPF_IS_NOT_XML.0
+            };
         self.state.begin(token);
         // SAFETY: `prepared.wide` is nul-terminated and stays alive until
         // this function returns, after synthesis ended or was purged.

@@ -668,10 +668,7 @@ mod tests {
             Err(ProtocolError::BadValue("end status", 9))
         ));
         let bad = [tag::SET_VOICE, 2, 0, 0, 0, 0xff, 0xfe];
-        assert!(matches!(
-            Request::decode(&bad),
-            Err(ProtocolError::BadUtf8)
-        ));
+        assert!(matches!(Request::decode(&bad), Err(ProtocolError::BadUtf8)));
         // A count larger than the frame is truncation, not a huge allocation.
         let huge = [tag::AUDIO, 1, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0x0f];
         assert!(matches!(

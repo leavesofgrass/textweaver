@@ -6,12 +6,16 @@
 //!
 //! ```text
 //! textweaver-sapi-host [--engine sapi|fake] [--list-voices] [--category sapi|onecore|<registry path>]
+//!                      [--report-arch x64|x86]
 //! ```
 //!
 //! - `--engine fake`: a deterministic test engine (no SAPI): each
 //!   whitespace-separated word becomes a word event and a short tone, with
 //!   a little synthesis time per word so stop can land mid-utterance. The
-//!   text `__crash__` makes it exit abruptly (tests of host death).
+//!   text `__crash__` makes it exit abruptly and `__fail__` fails the
+//!   utterance (tests of host death and engine errors). `--report-arch`
+//!   makes it claim an architecture, so one test binary can stand in for
+//!   both hosts.
 //! - `--list-voices`: write `Ready`, one `Voice` per token of the category,
 //!   and exit. Tokens are read from the registry; no engine is loaded.
 //! - `--category`: the token category to list (`sapi`, the default, is
@@ -95,6 +99,7 @@ struct Args {
     fake: bool,
     list: bool,
     category: String,
+    arch: Arch,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -102,6 +107,7 @@ fn parse_args() -> Result<Args, String> {
         fake: false,
         list: false,
         category: CATEGORY_SAPI.to_owned(),
+        arch: Arch::native(),
     };
     let mut it = std::env::args().skip(1);
     while let Some(arg) = it.next() {
@@ -112,6 +118,13 @@ fn parse_args() -> Result<Args, String> {
                 other => return Err(format!("unknown engine {other:?}")),
             },
             "--list-voices" => a.list = true,
+            "--report-arch" => {
+                a.arch = it
+                    .next()
+                    .as_deref()
+                    .and_then(Arch::parse)
+                    .ok_or("--report-arch needs x64 or x86")?;
+            }
             "--category" => {
                 a.category = match it.next() {
                     Some(c) if c == "sapi" => CATEGORY_SAPI.to_owned(),
@@ -140,7 +153,10 @@ pub fn main() -> ExitCode {
         }
     };
     let engine: Result<Box<dyn Engine>, String> = if args.fake {
-        Ok(Box::new(FakeEngine::default()))
+        Ok(Box::new(FakeEngine {
+            arch: args.arch,
+            ..FakeEngine::default()
+        }))
     } else {
         sapi_engine(Arc::clone(&out))
     };
@@ -157,7 +173,9 @@ pub fn main() -> ExitCode {
     out.send(&Reply::Ready {
         protocol: PROTOCOL_VERSION,
         sample_rate: SAMPLE_RATE,
-        arch: Arch::native().as_str().to_owned(),
+        arch: if args.fake { args.arch } else { Arch::native() }
+            .as_str()
+            .to_owned(),
         engine: if args.fake { "fake" } else { "sapi" }.to_owned(),
     });
     if args.list {
@@ -372,6 +390,7 @@ fn utf16_words(text: &str) -> Vec<(u32, u32)> {
 struct FakeEngine {
     rate: i8,
     voice: String,
+    arch: Arch,
 }
 
 /// The fake engine's rate at SAPI rate 0.
@@ -439,7 +458,7 @@ impl Engine for FakeEngine {
     }
 
     fn voices(&self, category: &str) -> Result<Vec<VoiceToken>, String> {
-        let arch = Arch::native();
+        let arch = self.arch;
         let voice = |key: &str, name: &str, gender: &str| VoiceToken {
             token_id: format!("{category}\\Tokens\\{key}"),
             name: name.to_owned(),
@@ -497,13 +516,21 @@ mod tests {
             wide_str(&t),
             "<pitch absmiddle=\"4\">Tom &amp; Jerry &lt;said&gt; x&lt;y fine.</pitch>"
         );
-        let words: Vec<&str> = [(21, 3), (25, 1), (27, 5), (34, 4), (40, 1), (42, 1), (44, 4)]
-            .iter()
-            .map(|&(p, l)| {
-                let (s, l) = t.to_plain(p, l);
-                &text[s as usize..(s + l) as usize]
-            })
-            .collect();
+        let words: Vec<&str> = [
+            (21, 3),
+            (25, 1),
+            (27, 5),
+            (34, 4),
+            (40, 1),
+            (42, 1),
+            (44, 4),
+        ]
+        .iter()
+        .map(|&(p, l)| {
+            let (s, l) = t.to_plain(p, l);
+            &text[s as usize..(s + l) as usize]
+        })
+        .collect();
         assert_eq!(words, ["Tom", "&", "Jerry", "said", "x", "y", "fine"]);
         assert_eq!(SpeakText::new("x", 99).wide, SpeakText::new("x", 10).wide);
     }

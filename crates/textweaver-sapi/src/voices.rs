@@ -15,9 +15,10 @@ use textweaver_speech::Voice;
 use crate::protocol::VoiceToken;
 
 /// The host architecture a voice runs in.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Arch {
     /// 64-bit host (`x86_64-pc-windows-msvc`).
+    #[default]
     X64,
     /// 32-bit host (`i686-pc-windows-msvc`).
     X86,
@@ -85,7 +86,10 @@ impl VoiceId {
         if id.is_empty() {
             return None;
         }
-        match id.split_once(':').and_then(|(a, t)| Some((Arch::parse(a)?, t))) {
+        match id
+            .split_once(':')
+            .and_then(|(a, t)| Some((Arch::parse(a)?, t)))
+        {
             Some((arch, token)) if !token.is_empty() => Some(VoiceId {
                 arch,
                 token_id: token.to_owned(),
@@ -428,7 +432,9 @@ mod tests {
     #[test]
     fn code_factory_eloquence_stays_flagged() {
         let cf = VoiceToken {
-            token_id: r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\ETI-Eloquence-US".into(),
+            token_id:
+                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\ETI-Eloquence-US"
+                    .into(),
             name: "Eloquence US English".into(),
             language: "409".into(),
             gender: "Male".into(),
