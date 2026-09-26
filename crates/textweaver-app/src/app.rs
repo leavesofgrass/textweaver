@@ -720,6 +720,10 @@ impl App {
                 self.select(range);
                 vec![Effect::Redraw]
             }
+            Command::SetCursor(pos) => {
+                self.set_cursor(pos);
+                vec![Effect::Redraw]
+            }
             Command::ExtendSelection(unit, dir) => {
                 self.extend_selection(unit, dir);
                 vec![Effect::Redraw]

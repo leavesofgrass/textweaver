@@ -195,6 +195,16 @@ impl App {
 
     pub(crate) fn play_pause(&mut self) {
         match self.playback {
+            Playback::Reading
+                if self.reading == ReadKind::InPlace && self.mode != Mode::SpeechCursor =>
+            {
+                // Saying one unit (the word, the sentence) is not a reading
+                // to pause: Play means read on from the cursor (Agent K's
+                // GUI finding: Play/Pause right after "read current word"
+                // paused instead of playing).
+                self.stop_speech();
+                self.read_from_cursor();
+            }
             Playback::Reading => {
                 // Take in every position already reported, so the resume
                 // point is the latest confirmed word. A `Finished` among
@@ -241,6 +251,26 @@ impl App {
                 }
             }
         }
+    }
+
+    /// Moves the cursor to `pos` quietly: no history entry, no
+    /// announcement, no reading (a GUI caret click or a screen reader
+    /// moving the caret). While paused, reading resumes from there. While
+    /// reading, speech goes on (and the cursor follows it again when
+    /// `cursor_follows_speech` is on).
+    pub fn set_cursor(&mut self, pos: CharPos) {
+        let Some(s) = self.session.as_mut() else {
+            return;
+        };
+        let pos = pos.clamp_to(s.doc.len_chars());
+        s.cursor = pos;
+        s.goal_column = None;
+        if let Playback::Paused { .. } = self.playback {
+            self.playback = Playback::Paused {
+                resume_at: Some(pos),
+            };
+        }
+        self.scroll_to_cursor();
     }
 
     pub(crate) fn stop_action(&mut self) {

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use textweaver_core::{CharRange, Direction, Unit};
+use textweaver_core::{CharPos, CharRange, Direction, Unit};
 use textweaver_keymap::ActionId;
 use textweaver_text::GoTo;
 
@@ -20,6 +20,10 @@ pub enum Command {
     GoTo(GoTo),
     /// Set the selection (mouse, shift-arrows in the frontend).
     Select(CharRange),
+    /// Move the cursor quietly (a GUI caret click): no history entry, no
+    /// announcement, no reading; while paused, reading resumes from there.
+    /// See [`App::set_cursor`](crate::App::set_cursor).
+    SetCursor(CharPos),
     /// Grow or shrink the selection by one unit from its moving end
     /// (Shift+arrows). Only `Grapheme`, `Word`, and `Line` are meaningful.
     ExtendSelection(Unit, Direction),
