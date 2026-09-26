@@ -743,9 +743,17 @@ mod macos {
         })?;
         b.resume().map_err(|e| e.to_string())?;
         drive(&mut b, &mut rec, Duration::from_secs(60), |r| r.ended(u.id))?;
-        let n = rec.words(u.id, PASSAGE).len();
+        let got = rec.words(u.id, PASSAGE);
+        let n = got.len();
         let expected = PASSAGE.split_whitespace().count();
-        println!("  paused after {before} words; {n} of {expected} words reported");
+        println!(
+            "  paused after {before} words; {n} of {expected} words reported; synthesis end recognized by {:?}",
+            b.last_synthesis_end()
+        );
+        if n != expected {
+            let words: Vec<&str> = got.iter().map(|w| w.0.as_str()).collect();
+            println!("  reported: {words:?}");
+        }
         ensure(n == expected, || format!("{n} words"))
     }
 

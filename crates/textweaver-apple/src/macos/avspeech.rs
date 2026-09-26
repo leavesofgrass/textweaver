@@ -565,9 +565,12 @@ impl AvSpeechBackend {
         }
     }
 
-    /// Moves what the callbacks delivered into the synthesizing job.
+    /// Moves what the callbacks delivered into the job written last, which
+    /// keeps collecting after its synthesis is recognized as finished, until
+    /// the next job's write starts (late word callbacks on macOS 14).
     fn collect(&mut self, sink: &mut dyn EventSink) {
-        let Some(job) = self.jobs.iter_mut().find(|j| !j.synth_done) else {
+        let token = lock(&self.synth.shared).job;
+        let Some(job) = self.jobs.iter_mut().find(|j| j.token == token) else {
             return;
         };
         let now = Instant::now();
@@ -603,6 +606,9 @@ impl AvSpeechBackend {
         }
         if let Some(e) = error {
             sink.emit(job.id, RawEvent::Error(e));
+        }
+        if job.synth_done {
+            return;
         }
         let last_word = job.tracker.reached_end(&job.text);
         let complete = lock(&self.synth.shared).complete(now, speaking, last_word);
