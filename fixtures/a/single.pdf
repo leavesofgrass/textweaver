@@ -1,0 +1,115 @@
+%PDF-1.4
+%ту╧╙
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Italic /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Pages /Kids [8 0 R] /Count 1 >>
+endobj
+7 0 obj
+<< /Length 3115 >>
+stream
+BT 72.00 700.00 Td /HB 20 Tf (A Guide to Accessible Reading) Tj ET
+BT 72.00 685.00 Td /TI 11 Tf (Test Author) Tj ET
+BT 72.00 646.00 Td /HB 14 Tf (1 Introduction) Tj ET
+BT 90.00 629.00 Td /T 11 Tf (Reading aloud helps students who find print hard to follow. A reader that) Tj ET
+BT 72.00 615.00 Td /T 11 Tf (highlights each word as it is spoken keeps the eyes and ears together, and a) Tj ET
+BT 72.00 601.00 Td /T 11 Tf (reader that remembers where the student stopped makes long assignments) Tj ET
+BT 72.00 587.00 Td /T 11 Tf (manageable.) Tj ET
+BT 90.00 567.00 Td /T 11 Tf (Every page carries informa-) Tj ET
+BT 72.00 553.00 Td /T 11 Tf (tion that a student may need, and the reader should say the words) Tj ET
+BT 72.00 539.00 Td /T 11 Tf (exactly as they are printed, with well-known compounds intact.) Tj ET
+BT 72.00 508.00 Td /HB 12 Tf (1.1 Background) Tj ET
+BT 90.00 491.00 Td /T 11 Tf (The loader rebuilds structure from the page: it finds the body text size,) Tj ET
+BT 72.00 477.00 Td /T 11 Tf (treats larger or bolder short lines as headings, joins wrapped lines into) Tj ET
+BT 72.00 463.00 Td /T 11 Tf (paragraphs, and removes the hyphens that typesetting adds at line ends.) Tj ET
+BT 72.00 443.00 Td /T 11 Tf (The reader offers three kinds of help:) Tj ET
+BT 76.00 425.00 Td /T 11 Tf (Х) Tj ET
+BT 90.00 425.00 Td /T 11 Tf (highlighting each word as it is spoken, so the eyes can follow;) Tj ET
+BT 76.00 409.00 Td /T 11 Tf (Х) Tj ET
+BT 90.00 409.00 Td /T 11 Tf (moving by sentence, paragraph, or heading with single keys;) Tj ET
+BT 76.00 393.00 Td /T 11 Tf (Х) Tj ET
+BT 90.00 393.00 Td /T 11 Tf (remembering the place in every document.) Tj ET
+BT 72.00 371.00 Td /T 11 Tf (To start reading:) Tj ET
+BT 76.00 353.00 Td /T 11 Tf (1.) Tj ET
+BT 90.00 353.00 Td /T 11 Tf (Open the document.) Tj ET
+BT 76.00 337.00 Td /T 11 Tf (2.) Tj ET
+BT 90.00 337.00 Td /T 11 Tf (Press the space bar to start and stop.) Tj ET
+BT 76.00 321.00 Td /T 11 Tf (3.) Tj ET
+BT 90.00 321.00 Td /T 11 Tf (Use the arrow keys to move by word.) Tj ET
+BT 72.00 289.00 Td /HB 11 Tf (Summary) Tj ET
+BT 90.00 272.00 Td /T 11 Tf (Columns are read one after another, top to bottom, so a sentence is never) Tj ET
+BT 72.00 258.00 Td /T 11 Tf (interrupted by the text beside it. Running headers and page numbers repeat on) Tj ET
+BT 72.00 244.00 Td /T 11 Tf (every page and are left out of the reading.) Tj ET
+BT 72.00 211.00 Td /HB 14 Tf (2 Results) Tj ET
+BT 72.00 194.00 Td /T 11 Tf (The table lists three readers and their scores.) Tj ET
+BT 72.00 172.00 Td /TB 11 Tf (Name) Tj ET
+BT 222.00 172.00 Td /TB 11 Tf (Role) Tj ET
+BT 372.00 172.00 Td /TB 11 Tf (Score) Tj ET
+BT 72.00 157.00 Td /T 11 Tf (Ada) Tj ET
+BT 222.00 157.00 Td /T 11 Tf (Engineer) Tj ET
+BT 372.00 157.00 Td /T 11 Tf (98) Tj ET
+BT 72.00 142.00 Td /T 11 Tf (Grace) Tj ET
+BT 222.00 142.00 Td /T 11 Tf (Admiral) Tj ET
+BT 372.00 142.00 Td /T 11 Tf (100) Tj ET
+BT 72.00 127.00 Td /T 11 Tf (Alan) Tj ET
+BT 222.00 127.00 Td /T 11 Tf (Mathematician) Tj ET
+BT 372.00 127.00 Td /T 11 Tf (95) Tj ET
+BT 72.00 102.00 Td /T 11 Tf (The scores are close, and every reader finished the test.) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 6 0 R /MediaBox [0 0 612 792] /Resources << /Font << /H 1 0 R /HB 2 0 R /T 3 0 R /TI 4 0 R /TB 5 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Type /Outlines /First 10 0 R /Last 12 0 R /Count 2 >>
+endobj
+10 0 obj
+<< /Title (1 Introduction) /Parent 9 0 R /Dest [8 0 R /XYZ 0 660 0] /Next 12 0 R /First 11 0 R /Last 11 0 R /Count 1 >>
+endobj
+11 0 obj
+<< /Title (1.1 Background) /Parent 10 0 R /Dest [8 0 R /XYZ 0 520 0] >>
+endobj
+12 0 obj
+<< /Title (2 Results) /Parent 9 0 R /Dest [8 0 R /XYZ 0 225 0] /Prev 10 0 R >>
+endobj
+13 0 obj
+<< /Type /Catalog /Pages 6 0 R /Lang (en-US) /Outlines 9 0 R /PageMode /UseOutlines >>
+endobj
+14 0 obj
+<< /Title (A Guide to Accessible Reading) /Author (Test Author) /Producer (textweaver fixtures) >>
+endobj
+xref
+0 15
+0000000000 65535 f 
+0000000015 00000 n 
+0000000112 00000 n 
+0000000214 00000 n 
+0000000313 00000 n 
+0000000413 00000 n 
+0000000511 00000 n 
+0000000568 00000 n 
+0000003734 00000 n 
+0000003898 00000 n 
+0000003971 00000 n 
+0000004107 00000 n 
+0000004195 00000 n 
+0000004290 00000 n 
+0000004393 00000 n 
+trailer
+<< /Size 15 /Root 13 0 R /Info 14 0 R >>
+startxref
+4508
+%%EOF

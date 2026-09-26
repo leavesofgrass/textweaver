@@ -36,6 +36,8 @@ pub mod export;
 pub mod html;
 pub mod markdown;
 mod package;
+#[cfg(feature = "pdf")]
+pub mod pdf;
 mod text;
 
 pub use cache::{CacheKey, DocumentCache};
@@ -44,6 +46,8 @@ pub use epub::EpubLoader;
 pub use export::to_markdown;
 pub use html::HtmlLoader;
 pub use markdown::MarkdownLoader;
+#[cfg(feature = "pdf")]
+pub use pdf::PdfLoader;
 pub use text::TextLoader;
 
 /// Priority of the built-in native loaders for their formats.
@@ -175,6 +179,8 @@ impl Registry {
         r.register(Box::new(HtmlLoader));
         r.register(Box::new(EpubLoader));
         r.register(Box::new(DocxLoader));
+        #[cfg(feature = "pdf")]
+        r.register(Box::new(PdfLoader));
         r
     }
 
