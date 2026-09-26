@@ -39,7 +39,7 @@ A note is your own text attached to a passage: the selection, or the sentence at
 ### Add a note: a
 
 1. To attach the note to more or less than one sentence, select the text first with **Shift** and the arrow keys. Otherwise the note goes on the sentence being read, or the sentence at the cursor.
-2. Press **a**. The prompt says "Note".
+2. Press **a**, or **Alt+N**, which also works in edit mode and with single-key shortcuts off. The prompt says "Note".
 3. Type the note and press **Enter**.
 
 You hear "Note added on:", then the start of the passage.
@@ -136,7 +136,16 @@ Bookmarks, notes, and highlights are tied to the text, not to a line number. Whe
 - A highlight whose whole passage is deleted is removed.
 - A bookmark whose word is deleted moves to the place of the deletion.
 
-When the document is opened again after changing outside textweaver, marks past the new end of the document are moved to the end.
+### When the file changes in another program
+
+Your document may change while textweaver is closed: you edit it in Obsidian, `git pull` brings a new version, or another program rewrites it. textweaver keeps the text each mark was on: about 40 characters for your reading position and each bookmark, and the passage for each note and highlight. When you open the changed document, it finds each mark again:
+
+1. its text near where it was;
+2. its text anywhere else in the document, the nearest place winning, for a paragraph that moved;
+3. the most similar text nearby, for a small edit inside the passage itself;
+4. failing all three, the same share of the way through the document. Such a mark is marked as not found.
+
+Marks still on their text are left alone. textweaver says once what moved and what it could not find, for example: "The file changed; 3 bookmarks were moved to match, 1 bookmark could not be found and is marked."
 
 ## Where they are stored
 
@@ -144,7 +153,7 @@ Everything about one document is kept in one file in the state folder: the readi
 
 The file is named after the document's file name plus a code made from its full path, for example `essay.md-9f3c01a2b4d5e6f7.json`. So two files with the same name in different folders keep separate marks. Moving or renaming a document starts it with no marks.
 
-Bookmarks, notes, and highlights are saved as soon as you change them. The reading position is saved when you quit, when you open another document, and every 30 seconds while it changes.
+Bookmarks, notes, and highlights are saved as soon as you change them. The reading position is saved when you quit, when you open another document, and every 30 seconds while it changes. The saving happens in the background, so a slow disk never holds up a key; quitting waits for it, and says "Still saving" if it takes more than a moment.
 
 While you are in edit mode, marks are saved when you leave edit mode.
 
@@ -184,7 +193,7 @@ When a document is in a library folder, its reading position is copied to a smal
 
 - **"Nothing here to attach a note to."** The cursor is on an empty line. Move to text, or select some.
 - **A mark is missing after reopening.** The document may have moved or been renamed; marks follow the full path. Check with `tw marks` on the old path.
-- **A note is in the wrong place after an edit outside textweaver.** textweaver stores positions, not text, so a large change made in another program can shift them. The note's anchor still shows the passage it was made on.
+- **A note is in the wrong place after an edit outside textweaver.** textweaver looks for the note's passage again when the file changed (see [When the file changes in another program](#when-the-file-changes-in-another-program)). If the passage was rewritten or deleted, the note could not be found: it is marked, and put at the same share of the way through the document. The note's anchor still shows the passage it was made on.
 - **The keys do nothing.** Single-key shortcuts may be off. Press **F9**, or use the command palette names: `add_bookmark`, `list_bookmarks`, `next_bookmark`, `previous_bookmark`, `add_note`, `list_notes`, `next_note`, `previous_note`, `highlight_selection`, `list_highlights`, and `delete_note`.
 
 ## See also

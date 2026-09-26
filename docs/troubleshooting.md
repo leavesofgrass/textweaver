@@ -52,7 +52,7 @@ To hear a test sentence:
 tw speak "Testing one two three."
 ```
 
-These three commands use the default settings, not your `settings.toml`. The [speech guide](speech.md) explains what they print.
+These three commands read your `settings.toml`, as the reader does, so they use your engine and voice. To see what they do with the default settings, point them at an empty folder with `--home`. The [speech guide](speech.md) explains what they print.
 
 ### The doctor and speech-check scripts
 
@@ -92,6 +92,16 @@ scripts/speech-check.sh
 4. Check the volume: press **F7** a few times. "Full volume." means it is at the top. Check your system's volume too.
 5. Run `tw speak "Hello"`. If that speaks but the reader does not, check `[speech] backend` in `settings.toml`, or start with `--backend` and an engine id.
 6. Start with `--log debug`, try again, and read `textweaver.log`.
+
+### textweaver and your screen reader talk at once
+
+textweaver speaks for itself by default. With a screen reader running, choose who speaks:
+
+1. Press **Alt+Shift+A** to cycle the accessibility mode: self-voicing, hybrid, and screen reader. You hear the new mode, and it is saved.
+2. **Hybrid** leaves messages, typing echo, and caret moves to your screen reader, and textweaver reads documents aloud. **Screen reader** mode makes textweaver silent.
+3. To try a mode for one run, start with `--mode hybrid` or `--mode screen-reader`. `--no-speech` is screen reader mode.
+
+On its first run with a screen reader, textweaver offers hybrid mode once. [Using textweaver with a screen reader](screen-readers.md) explains the modes and the screen reader settings that help.
 
 ### The wrong voice speaks
 
@@ -175,7 +185,7 @@ The [themes guide](themes.md) explains themes and how to make your own.
 
 ### A PDF reads in the wrong order, or says it has no text
 
-1. A scanned PDF is a picture of the pages. It reads as one sentence: "This PDF has no text layer. It is probably a scanned image, so its text must be recognized (OCR) before it can be read aloud." textweaver has no text recognition. Run the PDF through an OCR program first, then open the result.
+1. A scanned PDF is a picture of the pages. It reads as one sentence: "This PDF has no text layer. It is probably a scanned image, so its text must be recognized (OCR) before it can be read aloud." textweaver has no text recognition yet; it is planned for Wave 3 (see the [roadmap](roadmap.md)). Run the PDF through an OCR program first, then open the result.
 2. textweaver rebuilds each page's reading order: columns left to right, and each column top to bottom, without running heads and page numbers. Unusual layouts can confuse it, such as three-column magazines, tables without aligned columns, or lists whose bullets are pictures. Tagged PDFs, such as those saved from Word with accessibility tags, read most reliably.
 3. To look at the text textweaver got, print it:
 
@@ -207,6 +217,19 @@ When a document's state file cannot be read, for example after a sync conflict o
 3. Close textweaver. Fix the file, and rename it back to `<key>.json`: the same name, with `.corrupt-`, the time, and `.bak` replaced by `.json`. If textweaver already wrote a new `<key>.json` for that document, move that one away first.
 
 A corrupt `settings.toml` is handled the same way. textweaver uses the default settings and says so: "Settings file was unreadable and has been reset to defaults", the reason, and where the backup was saved (`settings.toml.corrupt-<date>-<time>.bak`). One invalid value costs only that value: textweaver says "Some settings were invalid and use their defaults:" and names each one.
+
+### Your place moved after the file changed elsewhere
+
+When a document changes in another program (Obsidian, `git pull`, another editor), textweaver finds your place, bookmarks, notes, and highlights again from the text they were on, and says once what moved: "The file changed;" then what was moved to match, and what could not be found.
+
+1. A mark that could not be found is marked as not found and put at the same share of the way through the document. Its passage was rewritten or deleted.
+2. Check the mark's list (**Shift+M** for bookmarks, **Shift+A** for notes) and move or delete it.
+
+[Bookmarks, notes, and highlights](notes.md#when-the-file-changes-in-another-program) explains how marks are found again.
+
+### Quitting says "Still saving"
+
+Saving, positions, and notes are written in the background. If the disk is slow, a network drive for example, quitting waits for the writing to finish, at most ten seconds, and says "Still saving. Please wait." Wait for it; your work is being written.
 
 ### Importing settings fails
 

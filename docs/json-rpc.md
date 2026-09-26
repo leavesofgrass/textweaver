@@ -115,6 +115,8 @@ Every announcement is also sent to the client as an `announcement` notification,
 - Let textweaver talk. The client shows the announcements, or ignores them.
 - Start the server with `--no-speech`. The client gets the announcements and passes them to its own voice or to the user's screen reader. Use this for screen reader users, so they do not hear two voices at once.
 
+The server does not follow the reader's accessibility mode (`[accessibility] mode`, see [Using textweaver with a screen reader](screen-readers.md)). It always speaks for itself, unless you start it with `--no-speech`, so a client that chose one way of working gets it whatever mode the terminal reader was left in.
+
 With `--no-speech`, reading does not take any time. When you ask the server to read, you get "reading", one `position` notification, and "stopped" almost at once.
 
 ## Methods
@@ -264,12 +266,14 @@ The result is an object with:
 
 - `status`: the status message after the action, the same text as its announcement.
 - `effects`: what the action asked the client to show. Each effect is `{type, params}`:
-  - `prompt`, with `params` `{label, purpose}`: a question that needs typed text, such as a Find or Go to box. `label` is what to show or say. `purpose` says what the answer is for, in lowercase with underscores: `find`, `go_to`, `open`, `command_palette`, `save_as`, `table_size`, `image_path`, `replace_find`, `replace_with`, `note_text`, `edit_note`, `rename_bookmark`, `export_settings`, or `import_settings`. Answer it with `answer`.
+  - `prompt`, with `params` `{label, purpose}`: a question that needs typed text, such as a Find or Go to box. `label` is what to show or say. `purpose` says what the answer is for, in lowercase with underscores: `find`, `go_to`, `open`, `command_palette`, `save_as`, `table_size`, `image_path`, `replace_find`, `replace_with`, `note_text`, `edit_note`, `rename_bookmark`, `export_settings`, `import_settings`, `citation_locator` (the page for a citation being inserted), `reference_identifier` (a DOI or ISBN to add), `import_references` (a file of references), or `template_title` (the title of a new document from a template). Answer it with `answer`.
   - `list`, with `params` `{title, items}`: a list to choose from, such as bookmarks or notes. `items` is a list of strings. Pick one with `choose`.
   - `quit`, with empty `params`: the app quit. The server stops after sending this answer.
 - `pending`: when the action asked a yes-or-no question and you did not give `confirm`, this is `{action, question}`, for example `{"action": "quit", "question": "Quit textweaver? y or n"}`. Otherwise it is null. Answer later with another `action` call that has `confirm`, or with `cancel` for no.
 
 The notes commands return `status` and `effects` but no `pending`.
+
+The reader writes files in the background (saves, bookmarks, notes, positions). The server waits for those writes before it answers, so when an `action` such as `save` or `add_bookmark` returns, the file is on disk.
 
 Errors: `-32602` "No action" and the id, for an id that does not exist, and "confirm must be true or false".
 

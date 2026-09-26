@@ -348,7 +348,7 @@ Without `--file`, `tw dictate` does not open the microphone. It says:
 Error: Dictating from the microphone is not available in tw yet. Transcribe a recording with --file AUDIO.
 ```
 
-Recording from a microphone is not available yet. It needs an audio input library that textweaver does not use yet (see [ADR-0013](adr/0013-dictation.md)). The textweaver reader has no dictation command yet either.
+Recording from a microphone is not available yet. It needs an audio input library that textweaver does not use yet (see [ADR-0013](adr/0013-dictation.md)). The textweaver reader has no dictation command yet either. Wave 3 plans to run Whisper inside textweaver itself, so no Whisper program is needed, keeping today's Whisper programs as a fallback; see the [roadmap](roadmap.md).
 
 Until then, record with any program you like, such as the Voice Recorder or Sound Recorder app on Windows, Voice Memos on a Mac, or your phone, and then transcribe the file with `tw dictate --file`.
 

@@ -326,7 +326,9 @@ tw open "D:\Notes\Biology\Cell.md"
 
 A vault note is a Markdown file, so textweaver opens and reads it like any other. The front matter is not read aloud as text; its `title` becomes the document's title.
 
-Following `[[wikilinks]]` from the reader is not yet available. textweaver reads a wikilink as plain text, brackets included; `tw text` shows `[[Mitochondria]]` exactly as written. The next link and previous link commands move only between ordinary Markdown links such as `[text](page.md)`, so they skip wikilinks. After an import, your notes' links are stored with their textweaver notes, and an export writes them out again. But textweaver does not show them yet: the notes list and `tw marks` show each note's text and tags, not its links, and jumping to a linked note is not yet available. To see which links an import finds, use a dry run with `--json`.
+A wikilink is a link in the reader, as in Obsidian. `[[Mitochondria]]` is read as "Mitochondria", and `[[Other|the cell]]` as "the cell", without the brackets. The next link and previous link commands stop on wikilinks as on ordinary Markdown links. **Alt+Shift+F** follows the link at the cursor: textweaver opens the note it names, looking for `Mitochondria.md` beside the note, then for a file of that name in the folders below it. `[[Note#Heading]]` opens the note at that heading. **Alt+Left** comes back.
+
+The links an import stores with your textweaver notes are another matter. An export writes them out again, but textweaver does not show them yet: the notes list and `tw marks` show each note's text and tags, not its links. To see which links an import finds, use a dry run with `--json`.
 
 ## Turn vault notes into web pages
 
@@ -358,7 +360,7 @@ See [the converting guide](converting.md#markdown-flavors) for every option.
 - **"Unknown relation ...".** The name given to `--link-relation` is not one of the ten kinds. Use a name from the list in the message.
 - **A note appears as `Name 2`.** A note with that name was already in the folder, often a note of your own. textweaver never overwrites it, so it picks a new name. Rename either note in Obsidian if you like; the next export finds textweaver's note by its id.
 - **Changes made in Obsidian disappeared.** The notes were exported again before the vault was imported. Export replaces the files it wrote. Always import first.
-- **Imported notes do not appear in the library.** Import does not add documents to the library yet, whatever the sentence says. Use `tw library --add` with the vault folder.
+- **Imported notes do not appear in the library.** Check that the import was not a dry run, and that the sentence says "documents added to the library". A vault note already in the library keeps its place and is not counted again. To have new notes found as the vault grows, add the vault as a library folder with `tw library --add`.
 - **A dry run reports more than the real import did.** A dry run compares against an empty textweaver, so it counts notes and highlights you already have as new.
 - **Links stored by an import point to the wrong place.** The vault was given as a relative path, such as `Biology`. Import again with the full path.
 - **An option seems to do nothing.** Options for export are ignored by import, and the other way round. Check the list in [Options for tw vault](#options-for-tw-vault).
