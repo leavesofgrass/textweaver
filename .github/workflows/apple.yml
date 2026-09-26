@@ -1,0 +1,33 @@
+# macOS-only probes and measurements for the Apple speech backends
+# (textweaver-apple, ADR-0008). Runs on Agent F's branch only, on both
+# macOS 14 and macOS 15 runners. Nothing is played aloud: live speech in the
+# probes runs at volume 0, and the Rust tests synthesize to files or through
+# a silent audio clock.
+name: Apple speech
+
+on:
+  push:
+    branches: ['agent/f-apple']
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  apple:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift probe 4 (NSSpeechSynthesizer on a background thread)
+        run: swift tools/avspeech-spike/probe4.swift
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Voice tests and measurements
+        env:
+          TEXTWEAVER_APPLE: '1'
+        run: cargo test -p textweaver-apple -- --ignored --nocapture --test-threads=1
