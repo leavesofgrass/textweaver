@@ -67,12 +67,30 @@ impl fmt::Display for CharPos {
 ///
 /// Unlike `std::ops::Range` this type is `Copy`, which keeps markers,
 /// selections, and highlight ranges cheap to pass around.
+///
+/// Deserializing orders the endpoints as [`CharRange::new`] does, so a
+/// reversed range in a hand-edited or synced state file cannot reach code
+/// that slices text with it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(from = "RangeData")]
 pub struct CharRange {
     /// First char in the range.
     pub start: CharPos,
     /// One past the last char in the range.
     pub end: CharPos,
+}
+
+/// The serialized shape of a [`CharRange`], before its ends are ordered.
+#[derive(Deserialize)]
+struct RangeData {
+    start: CharPos,
+    end: CharPos,
+}
+
+impl From<RangeData> for CharRange {
+    fn from(d: RangeData) -> Self {
+        CharRange::new(d.start, d.end)
+    }
 }
 
 impl CharRange {
@@ -94,7 +112,7 @@ impl CharRange {
 
     /// Number of chars in the range.
     pub fn len(&self) -> usize {
-        self.end.0 - self.start.0
+        self.end.0.saturating_sub(self.start.0)
     }
 
     /// True when the range covers no chars.
@@ -199,6 +217,19 @@ pub enum Bias {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn deserializing_orders_endpoints() {
+        // A reversed range in a state file used to survive loading, and
+        // `len` underflowed (and ropey's slice panicked) on it.
+        let r: CharRange = serde_json::from_str(r#"{"start":9,"end":4}"#).unwrap();
+        assert_eq!(r, CharRange::new(4, 9));
+        assert_eq!(r.len(), 5);
+        let json = serde_json::to_string(&r).unwrap();
+        assert_eq!(json, r#"{"start":4,"end":9}"#);
+        let back: CharRange = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, r);
+    }
 
     #[test]
     fn range_orders_endpoints() {

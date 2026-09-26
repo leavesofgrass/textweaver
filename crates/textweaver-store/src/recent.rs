@@ -25,12 +25,20 @@ pub struct Recent {
 impl Recent {
     /// Records an open: moves the path to the front (Star did not move
     /// existing entries; fixed) and trims to `limit`.
+    ///
+    /// The path is stored resolved, as document keys and library entries
+    /// are ([`resolve_path`](crate::library::resolve_path)), so an entry
+    /// recorded from `textweaver notes.md` still opens from another working
+    /// directory, and the same file opened by a relative and an absolute
+    /// path is listed once.
     pub fn touch(&mut self, path: &Path, title: Option<String>, limit: usize) {
-        self.entries.retain(|e| e.path != path);
+        let path = crate::library::resolve_path(path);
+        self.entries
+            .retain(|e| e.path != path && crate::library::resolve_path(&e.path) != path);
         self.entries.insert(
             0,
             RecentEntry {
-                path: path.to_owned(),
+                path,
                 title,
                 opened: crate::now_ts(),
             },
@@ -38,12 +46,20 @@ impl Recent {
         self.entries.truncate(limit.max(1));
     }
 
-    /// Loads from `file` (empty when missing or unreadable).
+    /// Loads from `file` (empty when missing or unreadable). A file that
+    /// does not parse is set aside as `recent.corrupt-<time>.bak` first, so
+    /// the next open does not overwrite the list.
     pub fn load(file: &Path) -> Self {
-        std::fs::read_to_string(file)
-            .ok()
-            .and_then(|t| serde_json::from_str(&t).ok())
-            .unwrap_or_default()
+        let Ok(text) = std::fs::read_to_string(file) else {
+            return Recent::default();
+        };
+        match serde_json::from_str(&text) {
+            Ok(r) => r,
+            Err(e) => {
+                crate::atomic::set_aside(file, &e);
+                Recent::default()
+            }
+        }
     }
 
     /// Saves to `file` atomically.
@@ -66,9 +82,56 @@ mod tests {
         r.touch(Path::new("a"), None, 2);
         r.touch(Path::new("b"), None, 2);
         r.touch(Path::new("a"), None, 2);
-        let names: Vec<_> = r.entries.iter().map(|e| e.path.clone()).collect();
+        let names: Vec<_> = r
+            .entries
+            .iter()
+            .map(|e| e.path.file_name().unwrap().to_owned())
+            .collect();
         assert_eq!(names, vec![PathBuf::from("a"), PathBuf::from("b")]);
         r.touch(Path::new("c"), None, 2);
         assert_eq!(r.entries.len(), 2);
+    }
+
+    #[test]
+    fn a_corrupt_recent_list_is_set_aside() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("recent.json");
+        std::fs::write(&file, "{ not json").unwrap();
+        assert!(Recent::load(&file).entries.is_empty());
+        assert!(!file.exists());
+        let backups: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .starts_with("recent.corrupt-")
+            })
+            .collect();
+        assert_eq!(backups.len(), 1);
+    }
+
+    #[test]
+    fn relative_and_absolute_paths_are_one_resolved_entry() {
+        // Before: the path was stored as typed, so `textweaver notes.md`
+        // left an entry that did not open from another directory.
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("notes.md");
+        std::fs::write(&file, "# Notes").unwrap();
+        let mut r = Recent::default();
+        // An older entry stored as typed (relative, with `..`).
+        let sub = dir.path().join("sub");
+        std::fs::create_dir(&sub).unwrap();
+        r.entries.push(RecentEntry {
+            path: sub.join("..").join("notes.md"),
+            title: None,
+            opened: 0,
+        });
+        r.touch(&file, Some("Notes".into()), 10);
+        assert_eq!(r.entries.len(), 1);
+        let stored = &r.entries[0].path;
+        assert!(stored.is_absolute());
+        assert_eq!(stored, &crate::library::resolve_path(&file));
+        assert!(!stored.to_string_lossy().starts_with(r"\\?\"));
     }
 }

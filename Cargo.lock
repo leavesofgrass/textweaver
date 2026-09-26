@@ -4655,6 +4655,7 @@ name = "textweaver-store"
 version = "0.1.0-alpha.3"
 dependencies = [
  "directories",
+ "log",
  "serde",
  "serde_json",
  "tempfile",
@@ -5922,6 +5923,7 @@ version = "0.1.0-alpha.3"
 dependencies = [
  "anyhow",
  "serde_json",
+ "textweaver-app",
  "textweaver-formats",
  "textweaver-keymap",
  "textweaver-text",

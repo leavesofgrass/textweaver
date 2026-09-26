@@ -7,7 +7,12 @@ rust-version.workspace = true
 license.workspace = true
 publish = false
 
+[features]
+# `cargo xtask bench` builds xtask again with this feature, in release mode.
+bench = ["dep:textweaver-app"]
+
 [dependencies]
+textweaver-app = { workspace = true, optional = true }
 textweaver-keymap.workspace = true
 textweaver-text.workspace = true
 textweaver-formats.workspace = true

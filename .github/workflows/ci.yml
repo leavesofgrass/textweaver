@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, 'agent/**']
+    branches: [main, 'agent/**', 'wave*/**', 'integration/**']
   pull_request:
 
 env:
@@ -28,10 +28,12 @@ jobs:
           # libraries (espeak-ng); the same set the Docker image supports.
           - os: ubuntu-latest
             features: --all-features
+          # Omnivox is a pure-Rust subprocess backend: build and test it
+          # everywhere (docs/tasks.md uses it for native Windows checks).
           - os: macos-latest
-            features: ""
+            features: --features textweaver-speech/omnivox
           - os: windows-latest
-            features: ""
+            features: --features textweaver-speech/omnivox
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
