@@ -46,12 +46,20 @@ impl Recent {
         self.entries.truncate(limit.max(1));
     }
 
-    /// Loads from `file` (empty when missing or unreadable).
+    /// Loads from `file` (empty when missing or unreadable). A file that
+    /// does not parse is set aside as `recent.corrupt-<time>.bak` first, so
+    /// the next open does not overwrite the list.
     pub fn load(file: &Path) -> Self {
-        std::fs::read_to_string(file)
-            .ok()
-            .and_then(|t| serde_json::from_str(&t).ok())
-            .unwrap_or_default()
+        let Ok(text) = std::fs::read_to_string(file) else {
+            return Recent::default();
+        };
+        match serde_json::from_str(&text) {
+            Ok(r) => r,
+            Err(e) => {
+                crate::atomic::set_aside(file, &e);
+                Recent::default()
+            }
+        }
     }
 
     /// Saves to `file` atomically.
@@ -82,6 +90,25 @@ mod tests {
         assert_eq!(names, vec![PathBuf::from("a"), PathBuf::from("b")]);
         r.touch(Path::new("c"), None, 2);
         assert_eq!(r.entries.len(), 2);
+    }
+
+    #[test]
+    fn a_corrupt_recent_list_is_set_aside() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("recent.json");
+        std::fs::write(&file, "{ not json").unwrap();
+        assert!(Recent::load(&file).entries.is_empty());
+        assert!(!file.exists());
+        let backups: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .starts_with("recent.corrupt-")
+            })
+            .collect();
+        assert_eq!(backups.len(), 1);
     }
 
     #[test]

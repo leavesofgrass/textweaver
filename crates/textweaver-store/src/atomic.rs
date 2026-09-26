@@ -35,6 +35,30 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), StoreError> {
     result.map_err(io)
 }
 
+/// Renames a file that exists but cannot be parsed to
+/// `<name>.corrupt-<unix time>.bak` beside it, so the next save cannot
+/// overwrite what it holds, and logs why. Returns the backup's path.
+pub(crate) fn set_aside(path: &Path, why: &dyn std::fmt::Display) -> Option<std::path::PathBuf> {
+    let backup = path.with_extension(format!("corrupt-{}.bak", crate::now_ts()));
+    match std::fs::rename(path, &backup) {
+        Ok(()) => {
+            log::warn!(
+                "{} could not be read ({why}); kept as {}",
+                path.display(),
+                backup.display()
+            );
+            Some(backup)
+        }
+        Err(e) => {
+            log::warn!(
+                "{} could not be read ({why}) or set aside ({e})",
+                path.display()
+            );
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

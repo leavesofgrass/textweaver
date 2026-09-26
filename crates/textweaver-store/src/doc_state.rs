@@ -583,18 +583,7 @@ impl StateStore {
         match serde_json::from_str(&text) {
             Ok(state) => Some(state),
             Err(e) => {
-                let backup = path.with_extension(format!("corrupt-{}.bak", crate::now_ts()));
-                match std::fs::rename(&path, &backup) {
-                    Ok(()) => log::warn!(
-                        "{} could not be read ({e}); kept as {}",
-                        path.display(),
-                        backup.display()
-                    ),
-                    Err(re) => log::warn!(
-                        "{} could not be read ({e}) or set aside ({re})",
-                        path.display()
-                    ),
-                }
+                crate::atomic::set_aside(&path, &e);
                 None
             }
         }
