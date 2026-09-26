@@ -489,6 +489,42 @@ impl App {
         }
     }
 
+    /// What the app does when its speech thread has died: reading stops,
+    /// the error is shown on the status line (and through the announcer,
+    /// which a screen reader or the JSON-RPC client hears; self-voicing
+    /// cannot say it), and the silent service takes over so every other
+    /// command keeps working. Frontends may call it; the app will once the
+    /// speech service reports a dead thread.
+    ///
+    /// TODO(P1a speech thread death): Agent P1a is making a dead speech
+    /// thread detectable in `textweaver-speech` (an `is_alive()` check or a
+    /// fatal status). Its API was not on `main` when this was written, so
+    /// nothing calls this yet: once it lands, check it in
+    /// [`poll_speech`](Self::poll_speech) (or match the fatal status in
+    /// `apply_status`) and call this, then offer a restart.
+    pub fn speech_thread_died(&mut self, reason: &str) {
+        self.track = SpeechTrack::default();
+        self.playback = Playback::Idle;
+        self.continue_from = None;
+        self.planned_end = None;
+        if let Some(s) = self.session.as_mut() {
+            s.spoken = None;
+            s.spoken_sentence = None;
+        }
+        self.speech = textweaver_speech::SpeechService::null();
+        self.speech_caps = self.speech.capabilities();
+        let voiced = std::mem::replace(&mut self.self_voicing, false);
+        self.backend_name = "silent".into();
+        let msg = if voiced {
+            format!(
+                "Speech stopped working ({reason}). textweaver is silent now; restart it to hear speech again."
+            )
+        } else {
+            format!("Speech stopped working ({reason}).")
+        };
+        self.error(&msg);
+    }
+
     /// Drains speech status updates and applies them (highlight, cursor).
     pub fn poll_speech(&mut self) -> Vec<Effect> {
         let mut changed = false;

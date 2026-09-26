@@ -129,6 +129,26 @@ fn positions_and_bookmarks_are_saved_with_anchors() {
     assert!(b.context.starts_with("Delta epsilon"), "{b:?}");
 }
 
+/// The hook for a dead speech thread (wired once Agent P1a's detection is
+/// on main): reading stops, the error is shown, and the app keeps working
+/// silently.
+#[test]
+fn a_dead_speech_thread_is_reported_and_the_app_goes_on() {
+    let (mut app, _log) = voiced_app("One. Two. Three.\n");
+    act(&mut app, ActionId::ReadFromCursor);
+    app.speech_thread_died("the engine crashed");
+    assert_eq!(app.playback(), textweaver_app::Playback::Idle);
+    assert!(
+        app.status_text()
+            .starts_with("Speech stopped working (the engine crashed)."),
+        "{}",
+        app.status_text()
+    );
+    assert_eq!(app.backend_name(), "silent");
+    act(&mut app, ActionId::NextSentence);
+    assert!(app.status_text().contains("Two."), "{}", app.status_text());
+}
+
 /// With `--no-speech` a screen reader reads the status line, so every
 /// line the Speech Cursor reads is put there.
 #[test]
