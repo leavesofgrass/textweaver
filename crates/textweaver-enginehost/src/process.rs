@@ -194,9 +194,9 @@ impl<R> HostProcess<R> {
     /// aloud.
     pub fn send_frame(&mut self, frame: &[u8]) -> Result<(), String> {
         if frame.len().saturating_sub(4) > MAX_FRAME {
-            let mb = frame.len().div_ceil(1024 * 1024);
+            let mb = frame.len() / (1024 * 1024);
             return Err(format!(
-                "this text is too long to speak in one piece ({mb} MB; the limit is {} MB)",
+                "this text is too long to speak in one piece (more than {mb} MB; the limit is {} MB)",
                 MAX_FRAME / (1024 * 1024)
             ));
         }

@@ -561,6 +561,34 @@ fn dictionaries_load_per_language_and_can_be_turned_off() {
 }
 
 #[test]
+fn an_utterance_over_the_frame_limit_is_refused_and_the_host_keeps_working() {
+    // Before: the 17 MB request reached the host, whose reader failed on
+    // its length, so the host exited and the reading restarted it.
+    let mut b = backend(8.0);
+    let mut rec = Rec::default();
+    let huge = utt(&"a".repeat(17 * 1024 * 1024), 6, 0);
+    let e = b.speak(&huge, &mut rec).unwrap_err();
+    assert_eq!(
+        e,
+        SpeechError::Engine(
+            "this text is too long to speak in one piece (more than 17 MB; the limit is 16 MB)"
+                .into()
+        )
+    );
+    let path = b.host_path().map(std::path::Path::to_path_buf);
+    let next = utt("Still here.", 6, 1);
+    b.speak(&next, &mut rec).unwrap();
+    assert!(pump(
+        &mut b,
+        &mut rec,
+        Duration::from_secs(10),
+        finished(next.id)
+    ));
+    assert_eq!(rec.of(next.id).last(), Some(&RawEvent::Finished));
+    assert_eq!(b.host_path().map(std::path::Path::to_path_buf), path);
+}
+
+#[test]
 fn a_host_stuck_in_synthesis_exits_when_its_input_closes() {
     // Before: the host of an engine stuck in synthesis lived on after
     // textweaver closed its input (textweaver exited or crashed).

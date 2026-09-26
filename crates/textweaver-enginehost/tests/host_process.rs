@@ -388,7 +388,7 @@ fn an_utterance_over_the_frame_limit_is_refused_and_the_host_lives() {
     let e = h.send_frame(&big.finish()).unwrap_err();
     assert_eq!(
         e,
-        "this text is too long to speak in one piece (17 MB; the limit is 16 MB)"
+        "this text is too long to speak in one piece (more than 16 MB; the limit is 16 MB)"
     );
     h.send(&Speak {
         token: 2,
