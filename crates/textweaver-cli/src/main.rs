@@ -51,6 +51,8 @@ enum Cmd {
     /// Import settings and reading positions from Star.
     #[command(name = "migrate-star")]
     MigrateStar(cmd::migrate::Args),
+    /// Manage references: add by DOI or ISBN, import, export, format, list.
+    Cite(cmd::cite::Args),
     /// Serve the app over JSON-RPC on stdio (wave 2).
     Serve(cmd::serve::Args),
 }
@@ -72,6 +74,7 @@ fn main() -> Result<()> {
         Cmd::Dictate(a) => cmd::dictate::run(a),
         Cmd::Marks(a) => cmd::marks::run(a),
         Cmd::MigrateStar(a) => cmd::migrate::run(a),
+        Cmd::Cite(a) => cmd::cite::run(a),
         Cmd::Serve(a) => cmd::serve::run(a),
     }
 }

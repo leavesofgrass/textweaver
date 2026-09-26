@@ -30,6 +30,8 @@ textweaver-export.workspace = true
 # Agent L: `tw convert`.
 textweaver-convert.workspace = true
 textweaver-render.workspace = true
+# Agent P: `tw cite`.
+textweaver-cite.workspace = true
 clap.workspace = true
 anyhow.workspace = true
 serde.workspace = true
