@@ -50,6 +50,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted, with 2 status updates.
 - [ADR-0022: Reading aids](0022-reading-aids.md): RSVP, bionic reading, spacing, fonts, the ruler, and more, as pure data.
   - Status: accepted, with 2 status updates.
+- [ADR-0024: App core for the GUI](0024-app-core-for-the-gui.md): the document window, shared list and prompt state, the waker, the replace-range edit, the settings schema, and work moved off the input thread.
+  - Status: accepted.
 
 ## Writing a new ADR
 
