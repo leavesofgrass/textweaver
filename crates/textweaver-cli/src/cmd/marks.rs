@@ -1,9 +1,12 @@
-//! `tw marks`: a document's saved reading position, bookmarks, and synced
-//! sidecar position. Reads only; never writes state. Owner: Agent C.
+//! `tw marks`: a document's saved reading position, bookmarks, notes,
+//! highlights, and synced sidecar position. Reads only; never writes state.
+//! Owner: Agent C.
 
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
+use textweaver_app::core::CharPos;
+use textweaver_app::store::notes::{Annotation, color_name};
 use textweaver_app::store::sync::{self, ProgressEntry, SidecarStore};
 use textweaver_app::store::{DocKey, Paths, SettingsStore, StateStore, time};
 
@@ -47,6 +50,35 @@ struct SidecarMark {
     mark: Mark,
 }
 
+/// A note with where it falls.
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct NoteMark {
+    id: String,
+    note: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    anchor: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    tags: Vec<String>,
+    /// End of the noted text (the start is the mark's offset).
+    end: usize,
+    /// The note as it is spoken.
+    spoken: String,
+    #[serde(flatten)]
+    mark: Mark,
+}
+
+/// A highlight with where it falls.
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct HighlightMark {
+    id: String,
+    color: String,
+    text: String,
+    end: usize,
+    spoken: String,
+    #[serde(flatten)]
+    mark: Mark,
+}
+
 /// Everything `tw marks` reports.
 #[derive(Debug, Serialize)]
 struct Report {
@@ -54,6 +86,8 @@ struct Report {
     key: String,
     position: Option<Mark>,
     bookmarks: Vec<Mark>,
+    notes: Vec<NoteMark>,
+    highlights: Vec<HighlightMark>,
     history: Vec<usize>,
     sidecar: Option<SidecarMark>,
 }
@@ -114,6 +148,33 @@ fn build(file: &Path, paths: &Paths) -> Report {
         .into_iter()
         .map(|b| mark(Some(b.name.clone()), b.pos.0, b.pct, b.ts))
         .collect();
+    let len = text.as_ref().map(|t| t.0.len_chars());
+    let pct_of = |pos: usize| len.map_or(0, |l| textweaver_app::store::percent(CharPos(pos), l));
+    let notes = state
+        .notes
+        .iter()
+        .map(|n| NoteMark {
+            id: n.id.clone(),
+            note: n.note.clone(),
+            anchor: n.anchor.clone(),
+            tags: n.tags.clone(),
+            end: n.range.end.0,
+            spoken: Annotation::Note(n).spoken(),
+            mark: mark(None, n.range.start.0, pct_of(n.range.start.0), n.ts),
+        })
+        .collect();
+    let highlights = state
+        .highlights
+        .iter()
+        .map(|h| HighlightMark {
+            id: h.id.clone(),
+            color: color_name(&h.color),
+            text: h.text.clone(),
+            end: h.range.end.0,
+            spoken: Annotation::Highlight(h).spoken(),
+            mark: mark(None, h.range.start.0, pct_of(h.range.start.0), h.ts),
+        })
+        .collect();
     let sidecar = sync::folder_for(&settings.library.folders, file).and_then(|(folder, rel)| {
         let side = SidecarStore::new(settings.reading.sync_conflict_policy);
         let entry = ProgressEntry::from_value(&side.progress_for(&folder, &rel)?)?;
@@ -136,6 +197,8 @@ fn build(file: &Path, paths: &Paths) -> Report {
         key: key.0,
         position,
         bookmarks,
+        notes,
+        highlights,
         history: state.history.iter().map(|p| p.0).collect(),
         sidecar,
     }
@@ -192,6 +255,23 @@ fn render(r: &Report) -> String {
             ));
         }
     }
+    let count =
+        |n: usize, one: &str, many: &str| format!("{n} {}", if n == 1 { one } else { many });
+    if !r.notes.is_empty() {
+        out.push_str(&format!("  {}:\n", count(r.notes.len(), "note", "notes")));
+        for n in &r.notes {
+            out.push_str(&format!("    {}; {}\n", n.spoken, describe(&n.mark)));
+        }
+    }
+    if !r.highlights.is_empty() {
+        out.push_str(&format!(
+            "  {}:\n",
+            count(r.highlights.len(), "highlight", "highlights")
+        ));
+        for h in &r.highlights {
+            out.push_str(&format!("    {}; {}\n", h.spoken, describe(&h.mark)));
+        }
+    }
     out
 }
 
@@ -209,7 +289,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use textweaver_app::core::CharPos;
+    use textweaver_app::core::CharRange;
     use textweaver_app::store::DocState;
 
     use super::*;
@@ -244,6 +324,8 @@ mod tests {
         st.set_position(CharPos(11), 34);
         st.add_bookmark(Some("intro"), CharPos(0), 34);
         st.add_bookmark(None, CharPos(29), 34);
+        st.add_note(CharRange::new(11, 17), "second", "Look here", "#exam");
+        st.add_highlight(CharRange::new(28, 33), "yellow", "third");
         StateStore::new(paths.state_dir())
             .save(&DocKey::for_path(&doc), &st)
             .unwrap();
@@ -271,9 +353,22 @@ mod tests {
         );
         assert!(text.contains("2 bookmarks:"), "{text}");
         assert!(text.contains("    intro: 0% (character 0"), "{text}");
+        assert!(
+            text.contains(
+                "  1 note:\n    Note: Look here, on \u{201c}second\u{201d}, tagged exam; "
+            ),
+            "{text}"
+        );
+        assert!(
+            text.contains("  1 highlight:\n    Yellow highlight: third; "),
+            "{text}"
+        );
         let json: serde_json::Value = serde_json::to_value(&r).unwrap();
         assert_eq!(json["position"]["offset"], 11);
         assert_eq!(json["bookmarks"][1]["name"], "mark1");
+        assert_eq!(json["notes"][0]["offset"], 11);
+        assert_eq!(json["notes"][0]["end"], 17);
+        assert_eq!(json["highlights"][0]["color"], "yellow");
         assert!(json["sidecar"].is_null());
     }
 
