@@ -2,8 +2,11 @@
 //!
 //! ```text
 //! textweaver-eci-host [--library PATH] [--sample-rate HZ] [--dictionaries DIR]
-//!                     [--engine eci|fake]
+//!                     [--engine eci|fake] [--start-delay-ms MS]
 //! ```
+//!
+//! `--start-delay-ms` (fake engine only, for tests) waits before starting,
+//! like a cold engine loading its dictionaries.
 //!
 //! `--dictionaries` loads the pronunciation dictionaries in `DIR` (see
 //! `textweaver_eci::dictionaries`); without it none are loaded.
@@ -27,6 +30,7 @@ struct Args {
     sample_rate: Option<u32>,
     dictionaries: Option<PathBuf>,
     fake: bool,
+    start_delay_ms: u64,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -35,6 +39,7 @@ fn parse_args() -> Result<Args, String> {
         sample_rate: None,
         dictionaries: None,
         fake: false,
+        start_delay_ms: 0,
     };
     let mut it = std::env::args().skip(1);
     while let Some(a) = it.next() {
@@ -50,6 +55,10 @@ fn parse_args() -> Result<Args, String> {
                 args.dictionaries =
                     Some(it.next().ok_or("--dictionaries needs a directory")?.into());
             }
+            "--start-delay-ms" => {
+                let v = it.next().ok_or("--start-delay-ms needs a number")?;
+                args.start_delay_ms = v.parse().map_err(|_| format!("bad delay {v}"))?;
+            }
             "--engine" => match it.next().as_deref() {
                 Some("eci") => args.fake = false,
                 Some("fake") => args.fake = true,
@@ -58,7 +67,7 @@ fn parse_args() -> Result<Args, String> {
             "--help" | "-h" => {
                 return Err(
                     "usage: textweaver-eci-host [--library PATH] [--sample-rate HZ] \
-                     [--dictionaries DIR] [--engine eci|fake]"
+                     [--dictionaries DIR] [--engine eci|fake] [--start-delay-ms MS]"
                         .into(),
                 );
             }
@@ -84,6 +93,7 @@ fn main() -> ExitCode {
     let stdin = std::io::stdin();
     let mut stdout = std::io::BufWriter::with_capacity(64 * 1024, std::io::stdout().lock());
     let result = if args.fake {
+        std::thread::sleep(std::time::Duration::from_millis(args.start_delay_ms));
         let mut engine = fake::FakeEngine::new(fake::FakeConfig {
             dictionaries: args.dictionaries,
             ..fake::FakeConfig::default()

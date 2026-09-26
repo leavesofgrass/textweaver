@@ -640,3 +640,98 @@ fn a_host_stuck_in_synthesis_exits_when_its_input_closes() {
         }
     }
 }
+
+/// Crashes the backend's host, so the next request starts a new one.
+fn crash(b: &mut EciBackend, rec: &mut Rec) {
+    let bad = utt("__crash__", 90, 0);
+    b.speak(&bad, rec).unwrap();
+    assert!(pump(b, rec, Duration::from_secs(10), finished(bad.id)));
+}
+
+#[test]
+fn a_restart_starts_in_poll_and_stop_and_pause_work_meanwhile() {
+    // Every start of this host takes two seconds, like a cold engine
+    // loading its dictionaries. The first start waits (in `new`).
+    let slow = || EciConfig {
+        host_args: vec!["--start-delay-ms".into(), "2000".into()],
+        ..config(8.0)
+    };
+    let mut b = EciBackend::new(slow()).unwrap();
+    let mut rec = Rec::default();
+    crash(&mut b, &mut rec);
+
+    // Before: `speak` waited for the new host (up to 10 s). Now it returns
+    // at once, and the request waits for the host in `poll`.
+    let u = utt("stopped while starting", 91, 0);
+    let t = Instant::now();
+    b.speak(&u, &mut rec).unwrap();
+    assert!(
+        t.elapsed() < Duration::from_millis(1000),
+        "{:?}",
+        t.elapsed()
+    );
+    // Stop reaches it at once: cancelled, nothing else for it later.
+    let t = Instant::now();
+    b.stop();
+    b.poll(&mut rec);
+    assert!(t.elapsed() < Duration::from_millis(500));
+    assert_eq!(rec.of(u.id), [RawEvent::Cancelled]);
+
+    // Pause while starting: the utterance waits, silent, until resumed.
+    let p = utt("paused while starting", 92, 0);
+    b.speak(&p, &mut rec).unwrap();
+    b.pause().unwrap();
+    // The host becomes ready and synthesizes, but the clock holds.
+    assert!(!pump(&mut b, &mut rec, Duration::from_millis(3500), |r| r
+        .has(p.id, |e| *e == RawEvent::Started)));
+    b.resume().unwrap();
+    assert!(pump(
+        &mut b,
+        &mut rec,
+        Duration::from_secs(10),
+        finished(p.id)
+    ));
+    assert_eq!(rec.of(p.id).last(), Some(&RawEvent::Finished));
+    assert_eq!(rec.words(p.id).len(), 3);
+    assert!(rec.of(u.id).len() == 1, "the stopped one said nothing more");
+}
+
+#[test]
+fn a_host_that_cannot_start_fails_what_waited_for_it() {
+    let mut b = backend(8.0);
+    let mut rec = Rec::default();
+    crash(&mut b, &mut rec);
+    // Point the backend at a host that exits at once.
+    b.set_host_args(vec!["--engine".into(), "nonsense".into()]);
+    let u = utt("nobody home", 93, 0);
+    match b.speak(&u, &mut rec) {
+        // The host failed before `speak` returned.
+        Err(e) => assert!(matches!(e, SpeechError::Unavailable(..)), "{e:?}"),
+        // The usual case: it fails in `poll`, and so does the utterance.
+        Ok(()) => {
+            assert!(pump(
+                &mut b,
+                &mut rec,
+                Duration::from_secs(10),
+                finished(u.id)
+            ));
+            assert!(rec.has(
+                u.id,
+                |e| matches!(e, RawEvent::Error(m) if m.contains("could not start"))
+            ));
+            assert_eq!(rec.of(u.id).last(), Some(&RawEvent::Finished));
+        }
+    }
+    // With a working host again, speech goes on.
+    b.set_host_args(Vec::new());
+    let ok = utt("back again", 94, 0);
+    b.speak(&ok, &mut rec).unwrap();
+    assert!(pump(
+        &mut b,
+        &mut rec,
+        Duration::from_secs(10),
+        finished(ok.id)
+    ));
+    assert_eq!(rec.of(ok.id).last(), Some(&RawEvent::Finished));
+    assert_eq!(rec.words(ok.id).len(), 2);
+}

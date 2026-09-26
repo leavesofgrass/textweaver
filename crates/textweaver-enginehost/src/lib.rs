@@ -35,9 +35,11 @@ pub mod playback;
 pub mod process;
 pub mod protocol;
 pub mod serve;
+pub mod start;
 pub mod wav;
 
 pub use audio::{AudioOutput, Feed, Player};
 pub use playback::{Captured, Playback, word_timings};
 pub use process::{Ended, HostMsg, HostProcess};
 pub use protocol::{EndStatus, Message, PROTOCOL_VERSION, ProtocolError};
+pub use start::{Class, HostStart, Spawner, Start, Started};
