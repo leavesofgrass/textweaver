@@ -174,7 +174,7 @@ actions! {
     ReadSelection = "read_selection", Reading, "Read the selected text",
         gui [], term [], shared ["b:v"];
     SayPosition = "say_position", Reading,
-        "Say the position: line, percentage, heading, and the words before and after",
+        "Say the position: line, percentage, word number, and heading",
         gui ["g:Alt+Shift+Y"], term ["g:Alt+Shift+Y"], shared ["b:Shift+W"];
     WordCount = "word_count", Reading, "Say how many words are in the document, or in the selection",
         gui ["g:Alt+Shift+T"], term ["g:Alt+Shift+T"], shared [];

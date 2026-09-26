@@ -57,6 +57,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 - Some terminal programs keep F10 (menu) or F11 (full screen) for themselves. Chapters also move with `Alt+PageDown` and `Alt+PageUp`.
 - `Shift` with the arrow keys extends the selection in browse mode; most terminals send these keys, but some terminal programs keep `Shift+Up` and `Shift+Down` for scrolling their own window.
 - `Alt` chords work in the terminal. Star's terminal reader lost them to the Escape key; textweaver reads them directly.
+- The keys `1` to `6` move to the next heading of that level, as in a screen reader's browse mode. Terminals send the character a shifted digit types, so the previous heading of a level is on `!` `@` `#` `$` `%` `^` (Shift with 1 to 6 on a US keyboard); on other layouts, use the command palette or bind other keys in `keymap.toml`.
 
 ## Reading
 
@@ -72,7 +73,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Say the line at the cursor | `Alt+Shift+L`, `l` (browse) | `Ctrl+L`, `l` (browse) | `read_current_line` |
 | Say the paragraph at the cursor without moving | `Shift+S` (browse) | `Shift+S` (browse) | `read_paragraph` |
 | Read the selected text | `v` (browse) | `v` (browse) | `read_selection` |
-| Say the position: line, percentage, heading, and the words before and after | `Alt+Shift+Y`, `Shift+W` (browse) | `Alt+Shift+Y`, `Shift+W` (browse) | `say_position` |
+| Say the position: line, percentage, word number, and heading | `Alt+Shift+Y`, `Shift+W` (browse) | `Alt+Shift+Y`, `Shift+W` (browse) | `say_position` |
 | Say how many words are in the document, or in the selection | `Alt+Shift+T` | `Alt+Shift+T` | `word_count` |
 | Say the address of the link at the cursor | `Alt+Shift+K`, `Shift+K` (browse) | `Alt+Shift+K`, `Shift+K` (browse) | `link_address` |
 | Read again from the start of the current sentence | `Alt+;`, `;` (browse) | `Alt+;`, `;` (browse) | `replay_sentence` |
