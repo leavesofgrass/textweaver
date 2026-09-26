@@ -286,6 +286,14 @@ Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech la
 
 **Status:** Wave 2 done on `wave2/d-app-edit-rpc` (Friday, September 25, 2026). Tests: `crates/textweaver-app/tests/{edit,rpc}.rs`, `crates/textweaver-tui/tests/edit.rs`. The CLI depends on `textweaver-tui` by path (move it to the workspace table). Notes, highlights, and bookmark management use app-level `NoteCommand`s with stopgap keys (`extra_bindings`) until C2 adds keymap actions; notes persist in `DocState` extra keys `app_notes`/`app_highlights` until C2's typed notes are wired.
 
+### Agent D3 — App and TUI wiring of B2, C2, and J
+
+**Owns:** `crates/textweaver-app/`, `crates/textweaver-tui/`, the app-facing parts of `crates/textweaver-cli/` (not `cmd/cite.rs`, `cmd/export_audio.rs`). Branch `wave2/d3-app-wiring`.
+
+**Deliverables:** speech followed by `ReadingGeneration` with capability changes announced; notes and highlights on `DocState`'s typed fields (legacy `app_notes`/`app_highlights` migrated once) and moved with `DocState::shift`; `[keyboard] character_keys` applied and F9 wired; `confirm` for JSON-RPC actions that ask first and the pending question on the TUI status line; the library list (Alt+L) with bookshelf, recent files, and sidecar sync; `read_paragraph` and the select actions; `[speech.eci]`, `[speech.sapi]`, `[speech.apple]`, `[normalization.community_lexicon]`, and `[export]` mapped; modifier chords for the most used palette-only actions.
+
+**Status:** done on `wave2/d3-app-wiring` (Friday, September 25, 2026); awaiting integration. Only `choose_voice` still says "not available yet" (the speech service offers no voice list). `tw export-audio` does not read `[export]` yet: `textweaver_app::subtitle_plan` is ready for B2's `export_audio.rs` (patch in the D3 report). New tests: `crates/textweaver-app/tests/wiring.rs`, `crates/textweaver-tui/tests/wiring.rs`.
+
 ### Agent H — Shared engine host
 
 **Owns:** `crates/textweaver-enginehost/`, `crates/textweaver-eci/`, `crates/textweaver-sapi/`, `xtask/src/{eci,sapi}.rs`, `docs/adr/0012-engine-host.md`.

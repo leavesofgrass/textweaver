@@ -80,7 +80,22 @@
 //!   [`UserHighlight`]): add, list, jump, edit, delete, all announced; with
 //!   bookmark rename and delete from the bookmark list.
 //! - **[`rpc`]**: JSON-RPC 2.0 over any reader and writer, which
-//!   `tw serve --stdio` runs (ADR-0015).
+//!   `tw serve --stdio` runs (ADR-0015). Actions that ask first (quit,
+//!   delete note) take `confirm`.
+//!
+//! # Wave 2 wiring (Agent D3)
+//!
+//! - **Speech status** is matched by the `ReadingGeneration` each `read`
+//!   returns; anything from another reading is dropped. Capability changes
+//!   (a voice without word events, pitch, or volume) are announced.
+//! - **Notes and highlights** are the store's typed `DocState::notes` and
+//!   `DocState::highlights`, moved across edits by `DocState::shift`.
+//! - **Library** (`open_library`): folder documents and recent files;
+//!   opening records the bookshelf, and positions sync through library
+//!   folders' sidecars under `reading.sync_conflict_policy`.
+//! - **Settings** reach the engines and the speech service
+//!   ([`speech_registry_for`], [`service_config`]); `[keyboard]
+//!   character_keys` is applied at startup and toggled with F9.
 //!
 //! Owner: Agent D.
 
