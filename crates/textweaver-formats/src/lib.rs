@@ -12,11 +12,13 @@
 //! |---|---|---|
 //! | [`MarkdownLoader`] | `md`, `markdown`, `mdown`, `mkd`, `mkdn`, `mdwn`, `mdtxt`, `rmd` | [`NATIVE_PRIORITY`] (10) |
 //! | [`HtmlLoader`] | `html`, `htm`, `xhtml`, `xht` | [`NATIVE_PRIORITY`] (10) |
+//! | [`EpubLoader`] | `epub` | [`NATIVE_PRIORITY`] (10) |
+//! | [`DocxLoader`] | `docx`, `docm` | [`NATIVE_PRIORITY`] (10) |
 //! | [`TextLoader`] | `txt`, `text`, `log` (and the fallback for everything else) | 0 |
 //!
-//! Wave 2 adds EPUB and DOCX natively (priority 10) and the optional
-//! `pandoc` (5) and `paperback` (1) loaders, which therefore never displace
-//! a native loader (Star preferred Pandoc for HTML and inherited its bugs).
+//! Every built-in loader is native Rust. Optional loaders rank below them,
+//! so they never displace a native loader (Star preferred Pandoc for HTML
+//! and DOCX and inherited its bugs).
 //!
 //! Owner: Agent A.
 
@@ -27,13 +29,18 @@ use textweaver_text::{Document, DocumentMeta};
 
 mod builder;
 pub mod cache;
+pub mod docx;
 pub mod encoding;
+pub mod epub;
 pub mod export;
 pub mod html;
 pub mod markdown;
+mod package;
 mod text;
 
 pub use cache::{CacheKey, DocumentCache};
+pub use docx::DocxLoader;
+pub use epub::EpubLoader;
 pub use export::to_markdown;
 pub use html::HtmlLoader;
 pub use markdown::MarkdownLoader;
@@ -166,6 +173,8 @@ impl Registry {
         r.register(Box::new(TextLoader));
         r.register(Box::new(MarkdownLoader));
         r.register(Box::new(HtmlLoader));
+        r.register(Box::new(EpubLoader));
+        r.register(Box::new(DocxLoader));
         r
     }
 
@@ -341,6 +350,9 @@ mod tests {
         };
         assert_eq!(r.resolve(&unknown).id(), "text");
         assert!(r.extensions().contains(&"html"));
-        assert_eq!(r.ids(), ["text", "markdown", "html", "low", "high"]);
+        assert_eq!(
+            r.ids(),
+            ["text", "markdown", "html", "epub", "docx", "low", "high"]
+        );
     }
 }

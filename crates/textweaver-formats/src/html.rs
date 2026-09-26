@@ -97,6 +97,25 @@ pub fn convert(
     options: &LoadOptions,
     meta: &mut DocumentMeta,
 ) -> (String, Vec<Marker>) {
+    let mut b = Builder::new();
+    walk_into(&mut b, source, options, meta, None);
+    b.finish()
+}
+
+/// Called with each element `id` (and `<a name>`) as the walker reaches it,
+/// before the element's content, so a caller can open markers there (EPUB
+/// table-of-contents targets).
+pub(crate) type AnchorHook<'a> = &'a mut dyn FnMut(&str, &mut Builder);
+
+/// Converts an HTML document into an existing builder (EPUB chapters share
+/// one), filling `meta` from its head.
+pub(crate) fn walk_into<'a>(
+    b: &'a mut Builder,
+    source: &str,
+    options: &'a LoadOptions,
+    meta: &mut DocumentMeta,
+    on_anchor: Option<AnchorHook<'a>>,
+) {
     let html = Html::parse_document(source);
     let root = html.root_element();
     if let Some(lang) = root.attr("lang").or_else(|| root.attr("xml:lang"))
@@ -105,10 +124,11 @@ pub fn convert(
         meta.language = Some(lang.trim().to_owned());
     }
     let mut w = Walker {
-        b: Builder::new(),
+        b,
         options,
         lists: Vec::new(),
         in_cell: 0,
+        on_anchor,
     };
     for child in root.child_elements() {
         if child.value().name() == "head" {
@@ -117,7 +137,23 @@ pub fn convert(
             w.element(child);
         }
     }
-    w.b.finish()
+}
+
+/// The ids (and `<a name>` anchors) present in an HTML document.
+pub(crate) fn anchor_ids(source: &str) -> std::collections::HashSet<String> {
+    let html = Html::parse_document(source);
+    let mut out = std::collections::HashSet::new();
+    for el in html.root_element().descendent_elements() {
+        if let Some(id) = el.attr("id") {
+            out.insert(id.to_owned());
+        }
+        if el.value().name() == "a"
+            && let Some(n) = el.attr("name")
+        {
+            out.insert(n.to_owned());
+        }
+    }
+    out
 }
 
 fn collapse(s: &str) -> String {
@@ -155,12 +191,13 @@ fn read_head(head: ElementRef<'_>, meta: &mut DocumentMeta) {
 }
 
 struct Walker<'a> {
-    b: Builder,
+    b: &'a mut Builder,
     options: &'a LoadOptions,
     /// Next number of each open list (`None` for unordered lists).
     lists: Vec<Option<i64>>,
     /// Inside a table cell: blocks become spaces.
     in_cell: usize,
+    on_anchor: Option<AnchorHook<'a>>,
 }
 
 fn marker(kind: MarkerKind) -> Marker {
@@ -215,6 +252,16 @@ impl Walker<'_> {
 
     fn element(&mut self, el: ElementRef<'_>) {
         let name = el.value().name();
+        if let Some(hook) = &mut self.on_anchor {
+            if let Some(id) = el.attr("id") {
+                hook(id, self.b);
+            }
+            if name == "a"
+                && let Some(n) = el.attr("name")
+            {
+                hook(n, self.b);
+            }
+        }
         if SKIP.contains(&name) || is_hidden(&el) {
             return;
         }
@@ -422,7 +469,7 @@ impl Walker<'_> {
             let row_id = self.b.open(rm);
             for (i, cell) in cells.into_iter().enumerate() {
                 if i > 0 {
-                    self.b.literal(crate::CELL_SEPARATOR);
+                    self.b.separator(crate::CELL_SEPARATOR);
                 }
                 let id = self.b.open_here(marker(MarkerKind::TableCell));
                 self.in_cell += 1;

@@ -116,3 +116,49 @@ fn headings_list_items_and_rows_are_lines() {
         );
     }
 }
+
+#[test]
+fn sample_epub() {
+    let doc = load("a/sample.epub", &LoadOptions::default());
+    insta::assert_json_snapshot!("a_sample_epub_document", view(&doc));
+    insta::assert_json_snapshot!("a_sample_epub_narration", narration(&doc));
+}
+
+#[test]
+fn pandoc_epub() {
+    let doc = load("a/pandoc.epub", &LoadOptions::default());
+    insta::assert_json_snapshot!("a_pandoc_epub_document", view(&doc));
+}
+
+#[test]
+fn sample_docx() {
+    let doc = load("a/sample.docx", &LoadOptions::default());
+    insta::assert_json_snapshot!("a_sample_docx_document", view(&doc));
+    insta::assert_json_snapshot!("a_sample_docx_narration", narration(&doc));
+    let inline = load(
+        "a/sample.docx",
+        &LoadOptions {
+            skip_code: false,
+            footnotes: FootnoteMode::Inline,
+        },
+    );
+    let text = inline.text().to_string();
+    assert!(text.contains("p.m. (footnote: The footnote text lives here.) It ends"));
+    assert!(!text.contains("Footnotes"));
+}
+
+#[test]
+fn pandoc_docx() {
+    let doc = load("a/pandoc.docx", &LoadOptions::default());
+    insta::assert_json_snapshot!("a_pandoc_docx_document", view(&doc));
+    let skipped = load(
+        "a/pandoc.docx",
+        &LoadOptions {
+            skip_code: true,
+            footnotes: FootnoteMode::Skip,
+        },
+    );
+    let text = skipped.text().to_string();
+    assert!(!text.contains("println"));
+    assert!(!text.contains("[1]"));
+}

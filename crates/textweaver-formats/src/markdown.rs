@@ -348,7 +348,7 @@ impl Converter<'_> {
             }
             Tag::TableCell => {
                 if self.cell_index > 0 {
-                    self.b.literal(crate::CELL_SEPARATOR);
+                    self.b.separator(crate::CELL_SEPARATOR);
                 }
                 self.cell_index += 1;
                 let id = self.b.open_here(Self::marker(MarkerKind::TableCell));
@@ -447,20 +447,10 @@ impl Converter<'_> {
         if self.options.footnotes == FootnoteMode::Inline
             && let Some(def) = self.definition(label).map(str::to_owned)
         {
-            self.b.space();
-            let m = Self::marker(MarkerKind::Footnote)
-                .with_level(1)
-                .with_reference(label);
-            let id = self.b.open(m);
-            self.b.text(&format!("(footnote: {def})"));
-            self.b.close(id);
+            self.b.inline_footnote(label, &def);
             return;
         }
-        let id = self
-            .b
-            .open(Self::marker(MarkerKind::Footnote).with_reference(label));
-        self.b.literal(&format!("[{label}]"));
-        self.b.close(id);
+        self.b.footnote_reference(label);
     }
 
     /// With deferred footnotes, the definitions after the text under a
@@ -469,27 +459,7 @@ impl Converter<'_> {
         if self.options.footnotes != FootnoteMode::Deferred || self.footnotes.is_empty() {
             return;
         }
-        self.b.paragraph_break();
-        let h = self.b.open(Self::marker(MarkerKind::Heading).with_level(2));
-        self.b.text("Footnotes");
-        self.b.close(h);
-        self.b.paragraph_break();
-        for (label, text) in self.footnotes {
-            self.b.line_break();
-            let body = self.b.open(
-                Self::marker(MarkerKind::Footnote)
-                    .with_level(1)
-                    .with_reference(label.as_str()),
-            );
-            let r = self
-                .b
-                .open(Self::marker(MarkerKind::Footnote).with_reference(label.as_str()));
-            self.b.literal(&format!("[{label}]"));
-            self.b.close(r);
-            self.b.space();
-            self.b.text(text);
-            self.b.close(body);
-        }
+        self.b.footnotes_section(self.footnotes);
     }
 }
 
