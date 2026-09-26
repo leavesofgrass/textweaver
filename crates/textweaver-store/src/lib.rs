@@ -33,6 +33,7 @@ pub mod library;
 pub mod migrate;
 pub mod notes;
 mod paths;
+pub mod profiles;
 mod recent;
 mod settings;
 pub mod settings_io;
@@ -47,6 +48,7 @@ pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
 pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, ScannedDoc};
 pub use notes::{Annotation, Highlight, Note, NotesExport, Relation};
 pub use paths::Paths;
+pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
     AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, CitationReading,
