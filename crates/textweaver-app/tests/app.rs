@@ -1169,13 +1169,16 @@ fn voice_manager_filter_rows_cycle() {
     let mut r = rig(PROSE);
     r.act(ActionId::ChooseVoice);
     let effects = r.app.dispatch(Command::Choose(1));
-    assert_eq!(r.said.last(), "2 voices: all languages, test-recording.");
+    assert!(r.said.any("2 voices: all languages, test-recording."));
+    // The focus stays on the filter row, and is said again.
+    assert_eq!(r.said.last(), "Engine: test-recording, 2 of 4");
+    assert_eq!(r.app.list_model().map(|l| l.selected), Some(1));
     let Some(Effect::ShowList { items, .. }) = effects.first() else {
         panic!("{effects:?}");
     };
     assert_eq!(items[1], "Engine: test-recording");
     r.app.dispatch(Command::Choose(1));
-    assert_eq!(r.said.last(), "2 voices: all languages, all engines.");
+    assert!(r.said.any("2 voices: all languages, all engines."));
 }
 
 /// `speech.favorite_voices` puts favourites first in the voice list, and
