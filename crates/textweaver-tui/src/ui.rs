@@ -754,6 +754,12 @@ impl Tui {
 
     /// Draws the whole screen and parks the hardware cursor.
     pub fn draw(&mut self, f: &mut Frame<'_>) {
+        self.draw_at(f, Instant::now());
+    }
+
+    /// [`draw`](Self::draw) as of `now`, which decides whether a repeated
+    /// status message is still blanked (tests pass their own times).
+    pub fn draw_at(&mut self, f: &mut Frame<'_>, now: Instant) {
         self.refresh_theme();
         let theme = self.theme.clone();
         let areas = self.areas(f.area());
@@ -769,7 +775,7 @@ impl Tui {
         self.draw_title(f, areas.title, &theme);
         let cursor = self.draw_body(f, areas.body, &theme);
         self.draw_rsvp(f, areas.body, &theme, cursor.map(|p| p.y));
-        let status = self.status_to_draw(Instant::now());
+        let status = self.status_to_draw(now);
         f.render_widget(
             Paragraph::new(status)
                 .wrap(ratatui::widgets::Wrap { trim: false })

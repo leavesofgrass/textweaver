@@ -562,6 +562,14 @@ impl App {
         self.error(&msg);
     }
 
+    /// Waits until the speech thread has handled every command sent before
+    /// this call (a round trip to it), so every status those commands
+    /// produced is already waiting for [`poll_speech`](Self::poll_speech).
+    /// Tests use it instead of sleeping.
+    pub fn wait_for_speech_thread(&self) {
+        let _ = self.speech.voices();
+    }
+
     /// Drains speech status updates and applies them (highlight, cursor).
     pub fn poll_speech(&mut self) -> Vec<Effect> {
         let mut changed = false;
