@@ -10,7 +10,7 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
@@ -163,10 +163,54 @@ struct Gui {
 
 type Shared = Rc<RefCell<Gui>>;
 
+/// Where macOS looks for an application's own fonts: `Contents/Resources/Fonts`
+/// in the `.app` bundle holding `exe` (`Contents/MacOS/<exe>`). `None` when
+/// `exe` is not inside a bundle, as with `cargo build` output.
+fn mac_bundle_fonts_dir(exe: &Path) -> Option<PathBuf> {
+    let macos = exe.parent()?;
+    let contents = macos.parent()?;
+    (macos.file_name()? == "MacOS" && contents.file_name()? == "Contents")
+        .then(|| contents.join("Resources").join("Fonts"))
+}
+
+/// macOS: fonts cannot be registered from the cache folder.
+///
+/// wxWidgets' `AddPrivateFont` on macOS registers nothing. It only accepts
+/// files already in the bundle's `Resources/Fonts` folder, which macOS loads
+/// itself when `Info.plist` names the folder (`ATSApplicationFontsPath`).
+/// For any other file it calls `wxLogError`, and wxWidgets shows the logged
+/// errors in a modal message box at the next idle time. That box kept the
+/// event loop, and so the process, alive after the window closed: the GUI
+/// job's smoke test failed with "did not exit" from the fonts merge on.
+///
+/// So on macOS nothing is registered here and nothing is announced: the
+/// system fonts are used until the `.app` package carries the fonts
+/// (roadmap, Phase 3, Packaging).
+fn mac_font_note(log: bool) -> Vec<String> {
+    if log {
+        let exe = std::env::current_exe().ok();
+        let note = match exe.as_deref().and_then(mac_bundle_fonts_dir) {
+            Some(dir) if dir.is_dir() => {
+                format!("built-in fonts: loaded by macOS from {}", dir.display())
+            }
+            Some(dir) => format!(
+                "built-in fonts: skipped on macOS ({} does not exist)",
+                dir.display()
+            ),
+            None => "built-in fonts: skipped on macOS (not running from an app bundle)".to_owned(),
+        };
+        crate::log::line(&note);
+    }
+    Vec::new()
+}
+
 /// Registers the bundled fonts for this process, from files written under
 /// the cache folder (nothing is installed on the system). Returns messages
 /// for the user.
 fn register_bundled_fonts(opts: &Options, log: bool) -> Vec<String> {
+    if cfg!(target_os = "macos") {
+        return mac_font_note(log);
+    }
     let cache = match &opts.home {
         Some(home) => textweaver_app::store::Paths::under(home).cache_dir,
         None => textweaver_app::store::Paths::platform()
@@ -541,11 +585,35 @@ fn start_timers(gui: &Shared, frame: Frame, exit_after: Option<Duration>) {
         let t = Timer::new(&frame);
         t.on_tick(move |_| frame.close(true));
         t.start(i32::try_from(d.as_millis()).unwrap_or(i32::MAX), true);
+        exit_watchdog(d);
         t
     });
     let mut g = gui.borrow_mut();
     g._poll_timer = Some(poll);
     g._exit_timer = exit;
+}
+
+/// How long `--exit-after` waits for the window to close before it ends the
+/// process itself.
+const EXIT_GRACE: Duration = Duration::from_secs(15);
+
+/// Exit code when `--exit-after` had to end the process itself.
+const EXIT_STUCK: i32 = 3;
+
+/// For `--exit-after` (automated checks): if the process is still running
+/// [`EXIT_GRACE`] after the window should have closed, something is holding
+/// the event loop (a modal dialog, a stuck handler). Say so in the log and
+/// exit with [`EXIT_STUCK`], so the check fails at once and says why instead
+/// of timing out.
+fn exit_watchdog(after: Duration) {
+    std::thread::spawn(move || {
+        std::thread::sleep(after + EXIT_GRACE);
+        crate::log::line(&format!(
+            "exit-after: the window did not close within {} s; a modal dialog or a stuck handler is holding the event loop",
+            EXIT_GRACE.as_secs()
+        ));
+        std::process::exit(EXIT_STUCK);
+    });
 }
 
 /// Dispatches `cmd` (after moving the app's cursor to the native caret) and
@@ -853,6 +921,23 @@ mod tests {
         }
         assert_eq!(action_for_menu_id(MENU_BASE - 1), None);
         assert_eq!(action_for_menu_id(MENU_BASE + all.len() as i32), None);
+    }
+
+    #[test]
+    fn mac_fonts_folder_is_inside_the_bundle() {
+        let exe = Path::new("/Applications/textweaver.app/Contents/MacOS/textweaver-gui");
+        assert_eq!(
+            mac_bundle_fonts_dir(exe),
+            Some(PathBuf::from(
+                "/Applications/textweaver.app/Contents/Resources/Fonts"
+            ))
+        );
+        // `cargo build` output is not in a bundle.
+        assert_eq!(
+            mac_bundle_fonts_dir(Path::new("/work/target/debug/textweaver-gui")),
+            None
+        );
+        assert_eq!(mac_bundle_fonts_dir(Path::new("textweaver-gui")), None);
     }
 
     #[test]
