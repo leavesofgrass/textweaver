@@ -184,13 +184,16 @@ fn text_of(node: roxmltree::Node<'_, '_>) -> String {
     )
 }
 
+/// Reads one of a book's files by path (relative to the book's root):
+/// `None` when it is missing.
+pub(crate) type ReadFile<'a> = dyn FnMut(&str) -> Result<Option<Vec<u8>>, LoadError> + 'a;
+
 /// Loads a DAISY 3 book from its package file. `opf_path` is the package's
-/// path among the book's files, and `read` reads another of them by path
-/// (relative to the same root), returning `None` when it is missing.
+/// path among the book's files, and `read` reads another of them.
 pub(crate) fn load_package(
     opf_path: &str,
     opf_bytes: &[u8],
-    read: &mut dyn FnMut(&str) -> Result<Option<Vec<u8>>, LoadError>,
+    read: &mut ReadFile<'_>,
     options: &LoadOptions,
 ) -> Result<Document, LoadError> {
     let mut meta = DocumentMeta {

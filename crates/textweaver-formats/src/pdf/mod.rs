@@ -26,8 +26,13 @@
 //!    heading, paragraph, list, table, code, and image markers.
 //!
 //! A page whose content cannot be parsed is skipped, never fatal; a
-//! password-protected PDF is refused with a clear message; a PDF with no
-//! text layer (a scan) loads as one sentence saying so.
+//! password-protected PDF is refused with a clear message.
+//!
+//! Pages with no text but a picture (scans) are recognized by OCR (feature
+//! `ocr`, ADR-0023; see `ocr`): the recognized words are placed on the page
+//! as glyphs and go through the same layout. Without OCR, or when no
+//! engine can run, a PDF with no text layer loads as one sentence saying
+//! so and what is missing.
 
 mod fonts;
 #[cfg(feature = "ocr")]

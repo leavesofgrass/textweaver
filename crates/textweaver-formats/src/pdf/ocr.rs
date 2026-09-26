@@ -246,7 +246,7 @@ pub(super) fn recognize_cached(
     options: &LoadOptions,
 ) -> Result<OcrPage, textweaver_ocr::OcrError> {
     let key = cache_file(image, plan);
-    if let Some(page) = key.as_ref().and_then(|p| read_cached(p)) {
+    if let Some(page) = key.as_ref().and_then(read_cached) {
         return Ok(page);
     }
     let page = textweaver_ocr::recognize(plan, image, options.progress.cancel_flag())?;

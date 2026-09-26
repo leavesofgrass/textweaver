@@ -10,6 +10,7 @@
 //! `TEXTWEAVER_OCR_MODELS` (which holds every set's files directly; tests
 //! use it).
 
+#[cfg(feature = "download")]
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};

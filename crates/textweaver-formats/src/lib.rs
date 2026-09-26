@@ -496,6 +496,7 @@ pub fn set_cache_dir(dir: Option<PathBuf>) {
 /// textweaver's cache folder, as the store places it (`TEXTWEAVER_HOME`'s
 /// `cache/` when that is set): downloaded web files and OCR results live
 /// under it.
+#[cfg_attr(not(any(feature = "ocr", feature = "url")), allow(dead_code))]
 pub(crate) fn cache_dir() -> Option<PathBuf> {
     if let Some(dir) = CACHE_DIR.read().unwrap_or_else(|p| p.into_inner()).clone() {
         return Some(dir);

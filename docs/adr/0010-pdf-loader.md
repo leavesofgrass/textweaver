@@ -4,6 +4,7 @@
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): Implemented as decided and on by default. The `PageBreak` markers exist, but the reader has no page navigation yet: go to does not take a page number. `pdf-extract` and `pdfium-render` remain in the workspace table although no crate uses them; removing them is still open. OCR is still out of scope.
 - Status update (Saturday, September 26, 2026, Phase 1): `pdf-extract` and `pdfium-render` are gone from the workspace table (Agent P1c), and hostile page labels and list counters are clamped (Agent P1d). OCR of pages with no text layer is planned for Wave 3 (Agent W3d): the pure-Rust `ocrs` engine in process first, with a Tesseract subprocess as a fallback.
+- Status update (Saturday, September 26, 2026, Wave 3): Pages with no text layer are now recognized by OCR (Agent W3d, [ADR-0023](0023-ocr-and-student-formats.md)): ocrs in process for English, Tesseract for other languages, and the words laid out by this loader's layout engine.
 
 ## Context
 

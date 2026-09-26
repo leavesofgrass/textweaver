@@ -411,6 +411,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-convert",
     "textweaver-dictation",
     "textweaver-export",
+    "textweaver-formats",
+    "textweaver-ocr",
     "textweaver-render",
     "textweaver-tui",
     "textweaver-vault",
@@ -1174,6 +1176,11 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "href": "../adr/0002-text-model.md",
      "number": "0002",
      "title": "ADR-0002: Text model"
+    },
+    {
+     "href": "../adr/0023-ocr-and-student-formats.md",
+     "number": "0023",
+     "title": "ADR-0023: OCR, and formats for students"
     }
    ],
    "bins": [],
@@ -1181,20 +1188,49 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "default_member": true,
    "dependents": [
     "textweaver-app",
+    "textweaver-cli",
     "textweaver-convert",
     "xtask"
    ],
    "deps": [
     "textweaver-core",
+    "textweaver-ocr",
     "textweaver-text"
    ],
-   "description": "textweaver document loaders: loader trait, registry, text, Markdown, HTML, EPUB, DOCX, PDF, and Pandoc for other formats",
+   "description": "textweaver document loaders: loader trait, registry, text, Markdown, HTML, EPUB, DOCX, PDF with OCR, DAISY, PowerPoint, spreadsheets, archives, web pages, and Pandoc for other formats",
    "dev_deps": [],
-   "job": "Document loaders that turn text, Markdown, HTML, EPUB, DOCX, and PDF files into a document.",
+   "job": "Document loaders that turn text, Markdown, HTML, EPUB, DOCX, PDF (with OCR of scans), DAISY, PowerPoint, spreadsheets, archives, and web pages into a document.",
    "layer": "document",
    "name": "textweaver-formats",
    "path": "crates/textweaver-formats",
    "short": "formats",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0023-ocr-and-student-formats.md",
+     "number": "0023",
+     "title": "ADR-0023: OCR, and formats for students"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-cli",
+    "textweaver-formats"
+   ],
+   "deps": [],
+   "description": "textweaver OCR: the pure-Rust ocrs engine in process, a Tesseract fallback, model downloads checked by SHA-256, and PDF page images",
+   "dev_deps": [],
+   "job": "Text recognition for scanned pages: the ocrs engine in process, Tesseract as a separate program, model downloads checked by SHA-256, and page images.",
+   "layer": "document",
+   "name": "textweaver-ocr",
+   "path": "crates/textweaver-ocr",
+   "short": "ocr",
    "tool": false,
    "version": "0.1.0-alpha.3"
   },
@@ -1384,6 +1420,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "crates": [
     "textweaver-text",
     "textweaver-formats",
+    "textweaver-ocr",
     "textweaver-math",
     "textweaver-cite"
    ],

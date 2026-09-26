@@ -138,8 +138,32 @@ pub fn load_options(settings: &textweaver_store::Settings) -> textweaver_formats
             FootnoteMode::Deferred => Load::Deferred,
             FootnoteMode::Skip => Load::Skip,
         },
+        ocr: ocr_options(&settings.reading),
         ..textweaver_formats::LoadOptions::default()
     }
+}
+
+/// OCR from `[reading]`: `ocr` (true or false), `ocr_lang` (Tesseract
+/// codes or language tags, such as `fra` or `fr`), and `ocr_engine`
+/// (`auto`, `ocrs`, `tesseract`, or `paddle`). They are read from the
+/// section's unknown keys until the settings types gain them (ADR-0023).
+fn ocr_options(reading: &textweaver_store::ReadingSettings) -> textweaver_formats::OcrOptions {
+    let reading = &reading.extra;
+    let mut o = textweaver_formats::OcrOptions::default();
+    if let Some(on) = reading.get("ocr").and_then(|v| v.as_bool()) {
+        o.enabled = on;
+    }
+    if let Some(lang) = reading.get("ocr_lang").and_then(|v| v.as_str()) {
+        lang.trim().clone_into(&mut o.lang);
+    }
+    if let Some(engine) = reading
+        .get("ocr_engine")
+        .and_then(|v| v.as_str())
+        .and_then(textweaver_formats::OcrEngineChoice::parse)
+    {
+        o.engine = engine;
+    }
+    o
 }
 
 /// What a capability change means for the listener, or `None` when nothing
@@ -812,6 +836,23 @@ impl App {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn ocr_settings_come_from_the_reading_section() {
+        let mut settings = textweaver_store::Settings::default();
+        assert_eq!(
+            super::load_options(&settings).ocr,
+            textweaver_formats::OcrOptions::default()
+        );
+        let extra = &mut settings.reading.extra;
+        extra.insert("ocr".into(), false.into());
+        extra.insert("ocr_lang".into(), " fra+eng ".into());
+        extra.insert("ocr_engine".into(), "Tesseract".into());
+        let o = super::load_options(&settings).ocr;
+        assert!(!o.enabled);
+        assert_eq!(o.lang, "fra+eng");
+        assert_eq!(o.engine, textweaver_formats::OcrEngineChoice::Tesseract);
+    }
+
     use super::*;
 
     #[test]

@@ -4,7 +4,6 @@
 //! exhausting memory.
 
 use std::io::{Cursor, Write};
-use std::time::Instant;
 
 use textweaver_core::MarkerKind;
 use textweaver_formats::{
@@ -80,12 +79,18 @@ fn huge_archive_listings_are_cut() {
 fn broken_archives_fail_clearly() {
     for (bytes, hint) in [
         (b"PK\x03\x04garbage".to_vec(), "zip"),
-        (vec![0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, 0, 4, 1, 2, 3], "7z"),
+        (
+            vec![0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, 0, 4, 1, 2, 3],
+            "7z",
+        ),
         (vec![0x1F, 0x8B, 8, 0, 0, 0, 0, 0, 0, 3, 1, 2, 3], "gz"),
         (b"not an archive at all".to_vec(), "tar"),
     ] {
         let err = load(bytes, hint).unwrap_err();
-        assert!(matches!(err, LoadError::Parse(_) | LoadError::Io(..)), "{hint}: {err}");
+        assert!(
+            matches!(err, LoadError::Parse(_) | LoadError::Io(..)),
+            "{hint}: {err}"
+        );
     }
 }
 
@@ -143,10 +148,16 @@ fn broken_powerpoint_fails_clearly_and_missing_slides_are_skipped() {
 }
 
 /// A minimal workbook whose one sheet holds `cells` (`r="A1"` and so on).
+#[cfg(feature = "spreadsheets")]
 fn xlsx(cells: &[(&str, &str)]) -> Vec<u8> {
     let sheet: String = cells
         .iter()
-        .map(|(r, v)| format!(r#"<row r="{}"><c r="{r}" t="inlineStr"><is><t>{v}</t></is></c></row>"#, r.trim_start_matches(char::is_alphabetic)))
+        .map(|(r, v)| {
+            format!(
+                r#"<row r="{}"><c r="{r}" t="inlineStr"><is><t>{v}</t></is></c></row>"#,
+                r.trim_start_matches(char::is_alphabetic)
+            )
+        })
         .collect();
     let sheet = format!(
         r#"<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:XFD1048576"/><sheetData>{sheet}</sheetData></worksheet>"#
@@ -175,8 +186,12 @@ fn xlsx(cells: &[(&str, &str)]) -> Vec<u8> {
 #[cfg(feature = "spreadsheets")]
 #[test]
 fn a_workbook_claiming_every_cell_is_read_cell_by_cell() {
-    let started = Instant::now();
-    let doc = load(xlsx(&[("A1", "Name"), ("B2", "Ann"), ("XFD1048576", "far")]), "xlsx").unwrap();
+    let started = std::time::Instant::now();
+    let doc = load(
+        xlsx(&[("A1", "Name"), ("B2", "Ann"), ("XFD1048576", "far")]),
+        "xlsx",
+    )
+    .unwrap();
     assert!(started.elapsed().as_secs() < 30);
     let text = doc.text().to_string();
     assert!(text.starts_with("Data\n\nName | \n | Ann"), "{text}");
@@ -190,16 +205,24 @@ fn unterminated_csv_quotes_load() {
     let mut data = b"a,\"".to_vec();
     data.extend(std::iter::repeat_n(b'x', 2_000_000));
     let doc = load(data, "csv").unwrap();
-    assert_eq!(doc.marker_index().iter(MarkerKind::TableCell, None).count(), 2);
+    assert_eq!(
+        doc.marker_index().iter(MarkerKind::TableCell, None).count(),
+        2
+    );
 }
 
 /// CRC-32 (IEEE), for hand-made PNG chunks.
+#[cfg(feature = "ocr")]
 fn crc32(bytes: &[u8]) -> u32 {
     let mut crc = 0xFFFF_FFFFu32;
     for &b in bytes {
         crc ^= u32::from(b);
         for _ in 0..8 {
-            crc = if crc & 1 != 0 { (crc >> 1) ^ 0xEDB8_8320 } else { crc >> 1 };
+            crc = if crc & 1 != 0 {
+                (crc >> 1) ^ 0xEDB8_8320
+            } else {
+                crc >> 1
+            };
         }
     }
     !crc
@@ -217,7 +240,12 @@ fn pictures_claiming_huge_sizes_are_refused() {
     png.extend(&ihdr);
     png.extend(crc32(&ihdr).to_be_bytes());
     let err = load(png, "png").unwrap_err().to_string();
-    assert!(err.contains("too large") || err.contains("not a readable"), "{err}");
-    let err = load(b"\xff\xd8\xff\xe0 broken".to_vec(), "jpg").unwrap_err().to_string();
+    assert!(
+        err.contains("too large") || err.contains("not a readable"),
+        "{err}"
+    );
+    let err = load(b"\xff\xd8\xff\xe0 broken".to_vec(), "jpg")
+        .unwrap_err()
+        .to_string();
     assert!(err.contains("JPEG"), "{err}");
 }

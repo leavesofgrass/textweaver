@@ -179,7 +179,17 @@ For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the 
 
 ## Formats textweaver reads
 
-textweaver reads Markdown, HTML, plain text, EPUB, Word (DOCX), and PDF itself. For other formats, such as OpenDocument text, RTF, reStructuredText, Org, and LaTeX, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself. `--no-pandoc` turns it off.
+textweaver reads these formats itself:
+
+- Markdown, HTML, plain text, EPUB, Word (DOCX), and PDF.
+- Scanned PDFs and pictures (PNG, JPEG), by recognizing their text. See [Scanned pages](#scanned-pages-ocr).
+- DAISY 3 books and DTBook files, including Bookshare zips.
+- PowerPoint (PPTX): slides in order, each with its speaker notes.
+- Spreadsheets: CSV, TSV, OpenDocument (ODS), and Excel (XLSX, XLSM, XLSB), as tables. Old binary Excel files (XLS) are not read.
+- Archives (ZIP, TAR, TAR.GZ, and 7Z): opening one lists the files inside that textweaver can read, each a link. To open a file inside an archive directly, write its name after a `!`, as in `tw text course.zip!week1/notes.md`.
+- Web pages: `tw open https://example.org/page` and `tw text https://...` fetch the page and read it. A PDF or other file at the address is saved in the cache and opened from there.
+
+For other formats, such as OpenDocument text, RTF, reStructuredText, Org, and LaTeX, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself. `--no-pandoc` turns it off.
 
 Equations in a Word document are read as math. textweaver turns them into LaTeX between dollar signs, as in Markdown, so they are spoken as formulas.
 
@@ -197,7 +207,20 @@ tw convert essay.odt --to md
 textweaver essay.md
 ```
 
-PDF files are read with column-aware reading order: running headers and page numbers are left out, and headings, lists, and tables are recovered. A scanned PDF with no text layer cannot be read; textweaver has no OCR yet. [ADR-0010](adr/0010-pdf-loader.md) explains how the PDF reader works.
+PDF files are read with column-aware reading order: running headers and page numbers are left out, and headings, lists, and tables are recovered. [ADR-0010](adr/0010-pdf-loader.md) explains how the PDF reader works.
+
+### Scanned pages (OCR)
+
+A scanned PDF has pictures of pages instead of text. textweaver recognizes the text in them (optical character recognition, OCR), and then reads the pages like any other PDF, with headings, paragraphs, and page numbers. Pictures (PNG and JPEG) are read the same way. Recognized text can contain mistakes, so textweaver says when a document was recognized.
+
+- **English** is read inside textweaver, by the ocrs engine. Its models are a one-time download of 12.2 MB, under the CC BY-SA 4.0 licence. Run `tw ocr download`; it says what it will download and asks first. `tw ocr status` says what is ready.
+- **Other languages** are read by Tesseract, a free program you install yourself, with the data for your language. Set the language with `ocr_lang` in the `[reading]` section of the settings, for example `ocr_lang = "fra"` for French, or `"deu+eng"` for German and English. When a PDF names its own language, that is used.
+- `ocr_engine` chooses the engine: `auto` (the default), `ocrs`, `tesseract`, or `paddle` (an experimental in-process engine for accented Latin-script languages; download it with `tw ocr download paddle-latin`). `ocr = false` turns recognition off.
+- `tw ocr read scan.pdf` recognizes a file and prints its text, with progress. Press Control C to stop it.
+- Recognized pages are remembered, so a book opens instantly the second time.
+- In the reader, a long scanned book takes a while to open the first time: about one second a page.
+
+[ADR-0023](adr/0023-ocr-and-student-formats.md) explains the choices and gives measurements.
 
 ## Export from inside the reader
 

@@ -269,6 +269,7 @@ fn csv(text: &str, sep: char, budget: &mut Budget) -> Sheet {
 
 /// A day count since 1970-01-01 as a civil date (Howard Hinnant's
 /// algorithm).
+#[cfg_attr(not(feature = "spreadsheets"), allow(dead_code))]
 fn civil(days: i64) -> (i64, u32, u32) {
     let z = days + 719_468;
     let era = z.div_euclid(146_097);
@@ -284,6 +285,7 @@ fn civil(days: i64) -> (i64, u32, u32) {
 
 /// An Excel date serial (1900 system) as `2026-09-26` or
 /// `2026-09-26 14:30`; a time alone as `14:30`.
+#[cfg_attr(not(feature = "spreadsheets"), allow(dead_code))]
 fn excel_date(serial: f64) -> String {
     if !serial.is_finite() || !(0.0..3_000_000.0).contains(&serial) {
         return format_number(serial);
@@ -310,6 +312,7 @@ fn excel_date(serial: f64) -> String {
 
 /// A number as a person would write it: no trailing zeros, no binary
 /// rounding noise (`0.30000000000000004` reads `0.3`).
+#[cfg_attr(not(feature = "spreadsheets"), allow(dead_code))]
 fn format_number(v: f64) -> String {
     if v.fract() == 0.0 && v.abs() < 1e15 {
         return format!("{v:.0}");
@@ -515,8 +518,8 @@ mod tests {
         assert_eq!(format_number(3.0), "3");
         assert_eq!(format_number(0.1 + 0.2), "0.3");
         assert_eq!(format_number(-2.5), "-2.5");
-        assert_eq!(excel_date(46291.0), "2026-09-26");
-        assert_eq!(excel_date(46291.604_166_666_7), "2026-09-26 14:30");
+        assert_eq!(excel_date(46_291.0), "2026-09-26");
+        assert_eq!(excel_date(46_291.604_166_666_7), "2026-09-26 14:30");
         assert_eq!(excel_date(0.5), "12:00");
         assert_eq!(excel_date(1.0), "1900-01-01");
         assert_eq!(civil(0), (1970, 1, 1));

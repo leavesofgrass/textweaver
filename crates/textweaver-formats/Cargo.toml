@@ -10,7 +10,7 @@ authors.workspace = true
 publish.workspace = true
 
 [features]
-default = ["pdf", "ocr", "archives", "spreadsheets", "url"]
+default = ["pdf", "ocr", "archives", "spreadsheets"]
 # PDF loader (pure Rust, on lopdf; ADR-0010). On by default.
 pdf = ["dep:lopdf"]
 # OCR for scanned PDF pages and image files (ADR-0023): the pure-Rust ocrs
@@ -18,9 +18,12 @@ pdf = ["dep:lopdf"]
 ocr = ["pdf", "dep:textweaver-ocr"]
 # Tar, tar.gz, and 7z archives (zip is always read).
 archives = ["dep:tar", "dep:sevenz-rust2", "dep:flate2"]
-# XLSX, XLS, XLSB, and ODS spreadsheets (CSV and TSV need nothing).
+# Excel workbooks (XLSX, XLSM, XLSB) through calamine; CSV, TSV, and ODS
+# need nothing.
 spreadsheets = ["dep:calamine"]
-# Opening a web page or file by its http or https address.
+# Opening a web page or file by its http or https address. Off by default:
+# it brings an HTTP client (ureq with rustls), which the reader keeps out
+# (`cargo xtask deps`); `tw` turns it on.
 url = ["dep:ureq"]
 # Reserved: paperback-core (pdfium, mathcat) is not on crates.io, so this
 # feature enables nothing (ADR-0010).

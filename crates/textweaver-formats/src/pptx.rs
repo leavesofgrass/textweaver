@@ -103,7 +103,7 @@ fn read_core(pkg: &mut Package, meta: &mut textweaver_text::DocumentMeta) -> Res
         return Ok(());
     };
     for n in xml.descendants().filter(|n| n.is_element()) {
-        let t = collapse(&n.text().unwrap_or_default());
+        let t = collapse(n.text().unwrap_or_default());
         if t.is_empty() {
             continue;
         }
@@ -327,9 +327,11 @@ fn shapes(b: &mut Builder, tree: roxmltree::Node<'_, '_>, depth: usize) {
         match shape.tag_name().name() {
             "sp" => {
                 let ph = placeholder(shape);
-                match ph.as_deref() {
-                    Some("title" | "ctrTitle" | "sldNum" | "dt" | "ftr" | "hdr") => continue,
-                    _ => {}
+                if matches!(
+                    ph.as_deref(),
+                    Some("title" | "ctrTitle" | "sldNum" | "dt" | "ftr" | "hdr")
+                ) {
+                    continue;
                 }
                 let bulleted = matches!(ph.as_deref(), Some("body" | "obj" | ""));
                 if let Some(body) = child(shape, "txBody") {

@@ -11,7 +11,8 @@ use anyhow::bail;
 /// Arguments for `tw open`.
 #[derive(clap::Args, Debug)]
 pub struct Args {
-    /// Document to open.
+    /// Document to open: a file, a file inside an archive
+    /// (`book.zip!chapter.pdf`), or a web address.
     pub file: PathBuf,
     /// Do not speak (use with a screen reader).
     #[arg(long)]
@@ -50,7 +51,8 @@ fn options(args: &Args) -> textweaver_tui::Options {
 
 /// Runs `tw open`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    if !args.file.exists() {
+    let source = textweaver_app::formats::Source::Path(args.file.clone());
+    if source.url().is_none() && !textweaver_app::formats::archive::exists(&args.file) {
         bail!("{}: no such file", args.file.display());
     }
     textweaver_tui::launch(&options(&args), Some(&args.file))
