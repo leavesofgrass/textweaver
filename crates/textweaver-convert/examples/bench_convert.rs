@@ -342,6 +342,7 @@ fn profile(input: &Path, output: &Path, args: &Args) -> Result<(), Box<dyn std::
         n += render(text, &bare).html.len();
     }
     let parse_write = t.elapsed().as_secs_f64();
+    let bare_bytes = n;
 
     let full = RenderOptions {
         engine: args.engine,
@@ -360,7 +361,7 @@ fn profile(input: &Path, output: &Path, args: &Args) -> Result<(), Box<dyn std::
     };
     let t = Instant::now();
     for text in &texts {
-        n += render(text, &no_math).html.len();
+        std::hint::black_box(render(text, &no_math));
     }
     let without_math = t.elapsed().as_secs_f64();
     let no_ids = RenderOptions {
@@ -369,7 +370,7 @@ fn profile(input: &Path, output: &Path, args: &Args) -> Result<(), Box<dyn std::
     };
     let t = Instant::now();
     for text in &texts {
-        n += render(text, &no_ids).html.len();
+        std::hint::black_box(render(text, &no_ids));
     }
     let without_ids = t.elapsed().as_secs_f64();
 
@@ -398,7 +399,7 @@ fn profile(input: &Path, output: &Path, args: &Args) -> Result<(), Box<dyn std::
     let total = read + pipeline + template + write;
     let pct = |x: f64| 100.0 * x / total;
     println!(
-        "Profile, one thread, {} files ({n} bytes of bare HTML):",
+        "Profile, one thread, {} files ({bare_bytes} bytes of bare HTML):",
         texts.len()
     );
     println!(
