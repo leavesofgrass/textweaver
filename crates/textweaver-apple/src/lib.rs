@@ -51,6 +51,35 @@ pub use macos::nsspeech::NsSpeechBackend;
 #[cfg(target_os = "macos")]
 pub use macos::runloop::{is_main_thread, pump_main_loop, run_main_loop_until};
 
+/// Main run-loop helpers for platforms other than macOS, where there is no
+/// run loop to service: they do nothing and return false, so applications
+/// can call them without `cfg`.
+#[cfg(not(target_os = "macos"))]
+mod no_runloop {
+    use std::time::Duration;
+
+    /// Always false: there is no Cocoa main thread off macOS.
+    pub fn is_main_thread() -> bool {
+        false
+    }
+
+    /// Does nothing off macOS; returns false.
+    pub fn pump_main_loop(max: Duration) -> bool {
+        let _ = max;
+        false
+    }
+
+    /// Does nothing off macOS; returns false at once without calling
+    /// `done`.
+    pub fn run_main_loop_until(done: impl FnMut() -> bool) -> bool {
+        let _ = done;
+        false
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+pub use no_runloop::{is_main_thread, pump_main_loop, run_main_loop_until};
+
 use textweaver_speech::{BackendFactory, BackendInfo};
 
 pub use voices::normalizes_natively;
@@ -141,6 +170,11 @@ mod tests {
             assert!(factory(AVSPEECH_ID).is_none());
         }
         assert!(factory("espeak").is_none());
+        if !cfg!(target_os = "macos") {
+            assert!(!pump_main_loop(std::time::Duration::ZERO));
+            assert!(!run_main_loop_until(|| true));
+            assert!(!is_main_thread());
+        }
         assert_eq!(nsspeech_info().id, "nsspeech");
         assert_eq!(avspeech_info().id, "avspeech");
     }
