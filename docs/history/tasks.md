@@ -837,6 +837,7 @@ Wave 4 starts only after this pass is done. It has four steps.
 - **Disk and memory.**
   - Use one target directory, and build through the shared cache: `RUSTC_WRAPPER=sccache` is set for everyone.
   - Avoid extra release builds. Drive D: once filled up because of per-worktree build folders.
+  - Always prefix Docker commands in Git Bash with `MSYS_NO_PATHCONV=1`. Without it, `-e CARGO_TARGET_DIR=/target/<agent>` becomes a Windows path, and build files were committed under a junk `C:/Program Files/Git/target` folder.
   - Run the Docker check once, at the end. Never restart Docker yourself: force-quitting it crashed Docker Desktop, and the orchestrator restarts it between waves.
 - **Research sub-agents.** Don't spawn nested research agents: their reports went to the orchestrator, not to the agent that asked. Do the research yourself, or ask the orchestrator.
 - **Reports.** Keep reports plain and short: headings and lists, no tables. Name what could not be verified. Add your status line in `docs/history/tasks.md`.
