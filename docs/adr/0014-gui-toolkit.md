@@ -32,7 +32,7 @@ Wave 2 built a spike, `textweaver-gui`, over the current `textweaver-app` API (n
 
 Space: the wxWidgets CMake tree is 2.2 GB and the source 177 MB, per profile (release builds wxWidgets again). The debug executable is 17.8 MB.
 
-On GitHub's runners (first run, nothing cached; CMake 4.4.3): `cargo build -p textweaver-gui` took 753 s on `windows-latest` and 459 s on `macos-latest`. The workflow caches the wxWidgets trees outside `target/` for later runs.
+On GitHub's runners (first run, nothing cached; CMake 4.4.3): `cargo build -p textweaver-gui` took 753 s on `windows-latest` and 459 s on `macos-latest`. With the caches warm (the wxWidgets trees kept outside `target/` by `actions/cache`, the rest by `rust-cache`), the next run built in 27.6 s on Windows and 9 s on macOS.
 
 How the build finds its tools (`tools/build-windows.ps1`, which changes nothing on the system):
 
