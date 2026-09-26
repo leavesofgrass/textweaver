@@ -496,6 +496,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-editor",
     "textweaver-formats",
     "textweaver-keymap",
+    "textweaver-lexicon",
     "textweaver-math",
     "textweaver-render",
     "textweaver-sapi",
@@ -707,6 +708,32 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "name": "textweaver-aids",
    "path": "crates/textweaver-aids",
    "short": "aids",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0024-lexicon-and-message-catalog.md",
+     "number": "0024",
+     "title": "ADR-0024: Define word offline, and the interface's message catalog"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app"
+   ],
+   "deps": [],
+   "description": "Language and study aids for textweaver: define word offline (glossary, Open English WordNet, CMUdict) and the interface message catalog",
+   "dev_deps": [],
+   "job": "Define word offline (your glossary, Open English WordNet, CMUdict pronunciations), and the message catalog for interface translations.",
+   "layer": "output",
+   "name": "textweaver-lexicon",
+   "path": "crates/textweaver-lexicon",
+   "short": "lexicon",
    "tool": false,
    "version": "0.1.0-alpha.3"
   },
@@ -1348,6 +1375,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-fonts",
     "textweaver-theme",
     "textweaver-aids",
+    "textweaver-lexicon",
     "textweaver-vault",
     "textweaver-dictation"
    ],

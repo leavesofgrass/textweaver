@@ -690,6 +690,8 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 
 ### Agent W3e — Language and study aids (Phase 4)
 
+**Status (Saturday, September 26, 2026): done, on `wave3/e-lexicon-study`.** New crate `textweaver-lexicon`: define word offline (glossary, then Open English WordNet 2025 through morphy, with CMUdict pronunciations respelled), from `third_party/lexicon/lexicon-en.twlex` (9,988,663 bytes, fst plus ruzstd, built by `tools/build_lexicon.py`); and a Fluent-subset message catalog with English complete, `en-XA`, and `ar-XB` (ADR-0024). Store: `[lexicon]`, `[stats]`, `[interface]`, `profiles.toml`, `stats.json`, and Star's reading statistics imported. App: define word (Ctrl+Shift+D, Alt+E), profiles (Ctrl+Shift+U, Alt+U), statistics (Ctrl+Shift+Y, Alt+Y) on the existing list model. CLI: `tw define`, `tw stats`, `tw settings profile`. Left: the rest of the interface's strings into the catalog (W4d), the study lists into W3a's list model, loading the dictionary off the input thread, and Star's profiles import.
+
 **Owns:** a new `textweaver-lexicon` crate, plus the app wiring for its actions and store settings.
 
 1. **Define word, offline.**
