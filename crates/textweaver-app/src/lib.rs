@@ -33,7 +33,38 @@
 //!   ([`App::status`], which doubles as the TUI's `StatusLineAnnouncer`) and
 //!   the configured announcer, filtered by verbosity; with self-voicing they
 //!   are also spoken, but never over document reading unless they are
-//!   errors.
+//!   errors. While reading, navigation feedback goes to the status line
+//!   only: the reading itself is what the user hears.
+//!
+//! # Verbosity
+//!
+//! | Level | What is announced |
+//! |---|---|
+//! | Low | Errors; boundaries ("No next heading.", "End of document."); the content reached by a navigation (a preview of the sentence, the heading text); explicit requests (position, rate, pitch, volume, theme, bookmarks, find results, prompts) |
+//! | Normal | Low, plus structure labels in navigation ("Heading level 2: ..."), state changes ("Paused.", "Stopped.", "Cancelled.", "Speech Cursor off."), and search clearing |
+//! | High | Normal, plus line and percentage in every navigation message, the document title and mode in "where am I", scrolling, and "Done reading." |
+//!
+//! # Deliberate differences from Star
+//!
+//! - One history rule for every frontend (Star's TUI and GUI recorded
+//!   different events, and the TUI recorded bookmark and chapter jumps
+//!   twice); the live position is remembered on the first Back so Forward
+//!   returns to it.
+//! - Paragraph and heading navigation start from the reading position, not
+//!   the top of the viewport; next paragraph at the end says so instead of
+//!   clamping silently.
+//! - Bookmarks go to the first word at or after their position (Star's GUI
+//!   rule, not the TUI's closest word); bookmark and find navigation wrap
+//!   and announce it.
+//! - Caret moves by word and line stop reading and speak the new word or
+//!   line (Star kept reading and paused caret-following for three seconds).
+//! - Resume re-reads from the last confirmed word on every backend.
+//! - Speech Cursor lines are canonical-text lines (ADR-0002), not wrapped
+//!   display lines.
+//! - Chapters are section breaks, else level-1 headings (Star's chapter
+//!   indices were always 0).
+//! - Not yet: the highlight lead/lag setting (`highlight.lead_words`) is
+//!   not applied; highlights follow the speech service's positions exactly.
 //!
 //! Owner: Agent D.
 

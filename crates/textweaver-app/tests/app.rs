@@ -813,3 +813,70 @@ fn say_position_reports_line_and_percent() {
     );
     assert!(r.said.last().contains("Under heading Section A."));
 }
+
+#[test]
+fn highlight_granularity_word_sentence_both() {
+    use textweaver_app::HighlightKind;
+    use textweaver_app::core::HighlightGranularity;
+    for g in [
+        HighlightGranularity::Word,
+        HighlightGranularity::Sentence,
+        HighlightGranularity::Both,
+    ] {
+        let said = Said::default();
+        let (mut config, _log) = make_config(&said);
+        config.settings.highlight.granularity = g;
+        let mut app = App::new(config);
+        app.open_document(
+            Document::from_plain_text(PROSE),
+            DocKey::untitled(3),
+            "G".into(),
+        );
+        app.dispatch(Command::Action(ActionId::ReadFromCursor));
+        // Step until the first highlight arrives, then inspect it.
+        let deadline = Instant::now() + Duration::from_secs(10);
+        let spoken = loop {
+            app.poll_speech_step();
+            if let Some(r) = app.session().unwrap().spoken {
+                break r;
+            }
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(1));
+        };
+        let all = CharRange::new(0, PROSE.len());
+        let kinds: Vec<(HighlightKind, CharRange)> = app
+            .highlights(all)
+            .into_iter()
+            .map(|h| (h.kind, h.range))
+            .collect();
+        let word = (HighlightKind::SpokenWord, spoken);
+        let sentence = kinds
+            .iter()
+            .find(|(k, _)| *k == HighlightKind::SpokenSentence)
+            .map(|(_, r)| *r);
+        match g {
+            HighlightGranularity::Word => assert_eq!(kinds, vec![word]),
+            HighlightGranularity::Sentence => {
+                assert!(!kinds.contains(&word));
+                let first = CharRange::new(0, at(PROSE, " Eta").0);
+                assert!(sentence.unwrap().contains_range(first));
+            }
+            HighlightGranularity::Both => {
+                assert!(kinds.contains(&word));
+                assert!(sentence.unwrap().contains_range(spoken));
+            }
+        }
+        app.dispatch(Command::Action(ActionId::Stop));
+    }
+}
+
+#[test]
+fn stop_leaves_speech_cursor() {
+    let mut r = rig(PROSE);
+    r.act(ActionId::SpeechCursorToggle);
+    assert_eq!(r.app.mode(), Mode::SpeechCursor);
+    r.act(ActionId::Stop);
+    assert_eq!(r.app.mode(), Mode::Browse);
+    assert_eq!(r.app.playback(), Playback::Idle);
+    assert_eq!(r.said.last(), "Stopped. Speech Cursor off.");
+}
