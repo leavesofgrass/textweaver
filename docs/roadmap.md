@@ -234,11 +234,14 @@ Steps:
 
 - **Windows in CI.** Build the Windows package in `release.yml`, keeping the local build as a fallback.
 - **Checksums.** A final job that writes them once.
-- **Linux packages.**
-  - A tarball built on Ubuntu 22.04, so it runs on older systems, for x86_64 and aarch64.
-  - Then `.deb` and `.rpm` from one nfpm config.
-  - Build with speechd, and load espeak-ng at run time with `libloading`, so one binary works with or without it.
-  - `install-linux.sh --release TAG` installs the tarball.
+- **Linux: an AppImage** (Jon's choice, 2026-09-26).
+  - One file that runs on Debian, Fedora, Arch, and most other distributions without installing anything.
+  - Built on an older base (Ubuntu 22.04 era glibc) for x86_64, and aarch64 when practical.
+  - It bundles `textweaver`, `tw`, the engine hosts, and the dictionaries. `tw` and `textweaver` are reached through the AppImage's own name, or through symlinks that `--install` creates in `~/.local/bin`.
+  - It builds with speechd, and loads espeak-ng at run time with `libloading`, so one binary works with or without libespeak-ng installed.
+  - It is signed with the AppImage's own signature support, or its checksum is published, and it is zsync-updatable.
+  - `install-linux.sh --release TAG` downloads the AppImage and checks it.
+  - A plain tarball stays as a fallback for systems without FUSE.
 - **`cargo xtask release X.Y.Z`.** Sets the version, dates the changelog from the machine, updates the version examples, runs the checks, and tags.
 - **Release checklist.** A person listens on real hardware with Eloquence and one other engine before each release. Date the release from the tag, in local time, with the weekday computed.
 
