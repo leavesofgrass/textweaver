@@ -242,11 +242,11 @@ pub fn source_text(source: &Source) -> Result<String, LoadError> {
     Ok(text.replace("\r\n", "\n").replace('\r', "\n"))
 }
 
-/// A title from the file name (without extension), for sources with a path.
+/// A title from the file name (with its extension), for sources with a path.
 pub fn title_from_path(source: &Source) -> Option<String> {
     match source {
         Source::Path(p) => p
-            .file_stem()
+            .file_name()
             .map(|s| s.to_string_lossy().into_owned())
             .filter(|s| !s.is_empty()),
         _ => None,
