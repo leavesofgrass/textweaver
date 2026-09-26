@@ -539,10 +539,17 @@ fn segment_block(doc: &Document, unit: Unit, block: &Block) -> Vec<CharRange> {
                     .collect()
             };
             let text = doc.slice(block.range);
-            sentences_in(&text, |i| breaks.contains(&CharPos(base + i)), &atomic)
-                .into_iter()
-                .map(abs)
-                .collect()
+            // `breaks` is sorted (lines in order): a binary search keeps a
+            // paragraph of many lines (a long tight list) linear, where
+            // `contains` made it quadratic.
+            sentences_in(
+                &text,
+                |i| breaks.binary_search(&CharPos(base + i)).is_ok(),
+                &atomic,
+            )
+            .into_iter()
+            .map(abs)
+            .collect()
         }
         Unit::Marker { kind, level } => doc
             .marker_index()
@@ -786,6 +793,30 @@ mod tests {
             texts(&plain, Unit::Sentence),
             ["Intro", "First item\nSecond item\nthird item"]
         );
+    }
+
+    #[test]
+    fn a_long_tight_list_is_one_sentence_per_item() {
+        // One paragraph of 20,000 lines: every line break is a hard break.
+        // Looking breaks up with `Vec::contains` made this quadratic (a
+        // 50,000-line list took 6 s to plan in `cargo xtask bench`).
+        let n = 20_000;
+        let mut text = String::new();
+        let mut markers = Vec::new();
+        for i in 0..n {
+            let start = text.chars().count();
+            text.push_str(&format!("Item {i} is here"));
+            let end = text.chars().count();
+            markers
+                .push(Marker::new(MarkerKind::ListItem, CharRange::new(start, end)).with_level(1));
+            text.push('\n');
+        }
+        let len = text.chars().count() - 1;
+        markers.push(Marker::new(MarkerKind::List, CharRange::new(0, len)).with_level(1));
+        let d = Document::new(DocumentMeta::default(), Rope::from_str(&text), markers);
+        let sentences = segments(&d, Unit::Sentence);
+        assert_eq!(sentences.len(), n);
+        assert_eq!(d.slice(sentences[n - 1]), format!("Item {} is here", n - 1));
     }
 
     #[test]
