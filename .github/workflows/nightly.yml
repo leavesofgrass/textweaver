@@ -178,7 +178,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
       - run: rustup toolchain install 1.89 --profile minimal
-      - run: cargo +1.89 check --locked --workspace --exclude textweaver-gui
+      # krilla 0.8 (the PDF writer) declares rust-version 1.92, so cargo
+      # refuses 1.89 before compiling anything; the code itself compiles
+      # with 1.89 (checked 2026-09-26). --ignore-rust-version keeps the
+      # check meaningful until the workspace's rust-version is raised or
+      # krilla really needs a newer compiler.
+      - run: cargo +1.89 check --locked --workspace --exclude textweaver-gui --ignore-rust-version
 
   docker:
     name: Docker image and tests
