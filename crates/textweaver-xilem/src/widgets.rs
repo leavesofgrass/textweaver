@@ -296,6 +296,12 @@ impl ActionButton {
         self
     }
 
+    /// Changes the text colour (a new theme).
+    pub fn set_text_color(this: &mut WidgetMut<'_, Self>, color: masonry::peniko::Color) {
+        let mut child = this.ctx.get_mut(&mut this.widget.child);
+        child.insert_prop(masonry::properties::ContentColor::new(color));
+    }
+
     /// Adds the keyboard shortcut screen readers read after the name.
     pub fn with_shortcut(mut self, shortcut: impl Into<String>) -> Self {
         self.shortcut = shortcut.into();

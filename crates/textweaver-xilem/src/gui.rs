@@ -66,6 +66,12 @@ pub const STATUS_BAR: WidgetTag<Region> = WidgetTag::named("tw-status-bar");
 pub const POSITION: WidgetTag<Label> = WidgetTag::named("tw-position");
 /// The document's title in the header.
 pub const TITLE: WidgetTag<Label> = WidgetTag::named("tw-title");
+/// The header panel.
+pub const HEADER: WidgetTag<Region> = WidgetTag::named("tw-header");
+/// The toolbar panel.
+pub const TOOLBAR: WidgetTag<Region> = WidgetTag::named("tw-toolbar");
+/// The page behind the panels.
+pub const MAIN: WidgetTag<Region> = WidgetTag::named("tw-main");
 /// The field of an open prompt.
 pub const PROMPT_FIELD: WidgetTag<TextArea<true>> = WidgetTag::named("tw-prompt-field");
 /// The list of an open list dialog.
@@ -167,6 +173,10 @@ pub struct Gui {
     startup: Option<(Option<PathBuf>, bool, Vec<String>)>,
     exit_at: Option<Instant>,
     reading_flag: Arc<AtomicBool>,
+    /// `--theme` was given: the saved theme is not followed.
+    fixed_theme: bool,
+    /// The window title last set.
+    window_title: String,
     /// The ticker starts once the window exists (in `on_start`).
     ticker: Option<EventLoopProxy>,
     closed: bool,
@@ -269,6 +279,7 @@ pub fn build_tree(
         .with_fixed(button("Open…", ActionId::Open, app, &mut ids))
         .with_fixed(button("Commands…", ActionId::CommandPalette, app, &mut ids));
     let header = NewWidget::new(Region::new(NewWidget::new(header), Role::Banner, ""))
+        .with_tag(HEADER)
         .with_props(panel(p, 10.0, 16.0));
 
     // The document.
@@ -312,6 +323,7 @@ pub fn build_tree(
         Role::Toolbar,
         "Reading",
     ))
+    .with_tag(TOOLBAR)
     .with_props(panel(p, 10.0, 12.0));
 
     // Status bar: the latest message and the position.
@@ -341,6 +353,7 @@ pub fn build_tree(
         Role::GenericContainer,
         "",
     ))
+    .with_tag(MAIN)
     .with_props(Background::Color(theme::color(p.background)));
     let root = NewWidget::new(Root::new(main, full_passes)).with_tag(ROOT);
     Tree {
@@ -373,6 +386,28 @@ pub fn list_dialog(
     let card = NewWidget::new(card).with_props(dialog::card_props(p));
     let modal = NewWidget::new(Modal::new(card, title, p.clone())).erased();
     (modal, list_id)
+}
+
+/// Recolours the window's own panels and the document for `p` (the
+/// default properties are replaced separately).
+pub fn apply_palette(host: &mut impl Host, p: &Palette) {
+    for tag in [HEADER, TOOLBAR, STATUS_BAR] {
+        host.edit(tag, |mut r| {
+            let (bg, border, bw, radius, shadow) = theme::panel_props(p);
+            r.insert_prop(bg);
+            r.insert_prop(border);
+            r.insert_prop(bw);
+            r.insert_prop(radius);
+            r.insert_prop(shadow);
+        });
+    }
+    host.edit(MAIN, |mut r| {
+        r.insert_prop(Background::Color(theme::color(p.background)));
+    });
+    host.edit(PLAY, |mut b| {
+        ActionButton::set_text_color(&mut b, theme::color(p.on_accent));
+    });
+    host.edit(DOC, |mut d| DocumentView::set_palette(&mut d, p.clone()));
 }
 
 /// Where the driver edits widgets: the live window or the test harness.
@@ -549,11 +584,24 @@ impl Gui {
         if !messages.is_empty() {
             root.edit_widget_with_tag(ANNOUNCER, |mut a| Announcer::say(&mut a, messages));
         }
+        // The theme changed (a key, the palette, or the settings).
+        if !self.fixed_theme && self.app.current_theme().name() != self.palette.name {
+            self.palette = Palette::from_theme(self.app.current_theme());
+            let root = ctx.render_root(self.window_id);
+            root.set_default_properties(Arc::new(theme::default_properties(&self.palette)));
+            apply_palette(root, &self.palette);
+            if self.log {
+                crate::log::line(&format!("theme: {}", self.palette.name));
+            }
+        }
         let title = self.app.session().map_or_else(
             || "textweaver".to_owned(),
             |s| format!("{} - textweaver", s.title),
         );
-        ctx.window(self.window_id).handle().set_title(&title);
+        if title != self.window_title {
+            ctx.window(self.window_id).handle().set_title(&title);
+            self.window_title = title;
+        }
     }
 
     fn dispatch(&mut self, ctx: &mut DriverCtx<'_>, cmd: Command) {
@@ -904,7 +952,12 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         muted: Rc::clone(&muted),
         log: opts.log,
     };
-    let (app, messages) = setup::build_app(&opts.app, Box::new(announcer));
+    let (mut app, messages) = setup::build_app(&opts.app, Box::new(announcer));
+    if opts.theme.is_none() {
+        // The system's light, dark, or high-contrast setting, when the
+        // settings ask to follow it (`display.follow_os_theme`).
+        let _ = app.apply_startup_theme(textweaver_app::theme::os::probe());
+    }
     let palette = match &opts.theme {
         Some(name) => Palette::named(name),
         None => Palette::from_theme(app.current_theme()),
@@ -958,6 +1011,8 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         exit_at: opts.exit_after.map(|d| Instant::now() + d),
         reading_flag,
         ticker: Some(proxy),
+        fixed_theme: opts.theme.is_some(),
+        window_title: String::new(),
         closed: false,
         timings: Timings::default(),
     };

@@ -156,3 +156,22 @@ fn screenshots_are_written_at_both_scales() {
     let b = std::fs::metadata(dir.path().join("b.png")).unwrap().len();
     assert!(b > a, "the 200% screenshot is larger");
 }
+
+#[test]
+fn themes_switch_in_place() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let light = Palette::named("galaxy-light");
+    h.set_default_properties(std::sync::Arc::new(theme::default_properties(&light)));
+    gui::apply_palette(&mut h, &light);
+    let _ = h.redraw();
+    // Still the same controls, now drawn light.
+    assert_eq!(names_of(&h, Role::Document), vec!["Document".to_owned()]);
+    let img = h.render();
+    let px = img.get_pixel(4, 4);
+    assert!(
+        px[0] > 200 && px[1] > 200 && px[2] > 200,
+        "a light page: {px:?}"
+    );
+}
