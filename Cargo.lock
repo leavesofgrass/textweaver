@@ -3175,6 +3175,7 @@ dependencies = [
  "insta",
  "log",
  "minijinja",
+ "proptest",
  "pulldown-cmark",
  "pulldown-latex",
  "serde",
