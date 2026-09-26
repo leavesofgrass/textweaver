@@ -175,6 +175,10 @@ pub struct EciBackend {
     dictionary_loads: Vec<DictLoad>,
     /// The library the running host loaded (not set for the fake engine).
     library: Option<LibraryChoice>,
+    /// The installed dialects, worked out once per host start (reading
+    /// `eci.ini` when the engine cannot list them), not on every rate
+    /// change.
+    installed: Vec<u32>,
 }
 
 impl std::fmt::Debug for EciBackend {
@@ -227,6 +231,7 @@ impl EciBackend {
             rate_table: calibration::VOXIN,
             dictionary_loads: Vec::new(),
             library: None,
+            installed: Vec::new(),
         };
         b.ensure_host()?;
         Ok(b)
@@ -311,6 +316,7 @@ impl EciBackend {
                     self.playback.set_sample_rate(ready.sample_rate);
                     self.host = Some(host);
                     self.ready = Some(ready);
+                    self.find_installed_dialects();
                     self.applied = None;
                     self.apply_voice()?;
                     return Ok(());
@@ -327,6 +333,16 @@ impl EciBackend {
             .as_mut()
             .ok_or_else(|| SpeechError::Engine("Eloquence host is not running".into()))?;
         host.send(req).map_err(SpeechError::Engine)
+    }
+
+    /// Works out the installed dialects for the host that just started.
+    fn find_installed_dialects(&mut self) {
+        let library = self.library.as_ref().map(|c| c.candidate.path.as_path());
+        self.installed = self
+            .ready
+            .as_ref()
+            .map(|ready| Self::installed_dialects(ready, library))
+            .unwrap_or_default();
     }
 
     /// The installed dialects: the engine's list, else the `eci.ini` next to
@@ -555,9 +571,7 @@ impl SpeechBackend for EciBackend {
             .ready
             .as_ref()
             .ok_or_else(|| unavailable("the engine has not started"))?;
-        let library = self.library.as_ref().map(|c| c.candidate.path.as_path());
-        let dialects = Self::installed_dialects(ready, library);
-        Ok(voices::voice_list(&dialects, &ready.presets))
+        Ok(voices::voice_list(&self.installed, &ready.presets))
     }
 
     fn set_params(&mut self, params: &VoiceParams) -> Result<(), SpeechError> {
@@ -576,9 +590,8 @@ impl SpeechBackend for EciBackend {
                 .ok_or_else(|| {
                     SpeechError::UnknownVoice(params.voice.clone().unwrap_or_default())
                 })?;
-            if let Some(ready) = &self.ready {
-                let library = self.library.as_ref().map(|c| c.candidate.path.as_path());
-                if !Self::installed_dialects(ready, library).contains(&d.code) {
+            if self.ready.is_some() {
+                if !self.installed.contains(&d.code) {
                     return Err(SpeechError::UnknownVoice(format!(
                         "{} ({} is not installed)",
                         params.voice.clone().unwrap_or_default(),
@@ -707,5 +720,92 @@ impl Drop for EciBackend {
         if let Some(mut h) = self.host.take() {
             h.shutdown();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::discovery::{LibraryCandidate, Product, Source};
+
+    /// A backend whose engine lists no dialects (as some ECI builds), with
+    /// an `eci.ini` next to its library, and no host.
+    fn without_host(dir: &Path) -> EciBackend {
+        let syn = |name: &str| {
+            let p = dir.join(name);
+            std::fs::write(&p, b"").unwrap();
+            p.display().to_string()
+        };
+        let ini = format!(
+            "[1.0]\nPath={}\n[1.1]\nPath={}\n",
+            syn("enu.syn"),
+            syn("eng.syn")
+        );
+        std::fs::write(dir.join("eci.ini"), ini).unwrap();
+        let mut b = EciBackend {
+            config: EciConfig::default(),
+            playback: Playback::new(BACKEND_ID, crate::AudioOutput::Null { speed: 1.0 }, 8000),
+            host: None,
+            ready: Some(ReadyInfo {
+                sample_rate: 8000,
+                version: "6.1".into(),
+                dialects: Vec::new(),
+                default_dialect: 0x0001_0000,
+                presets: Vec::new(),
+            }),
+            params: VoiceParams::default(),
+            dialect: None,
+            preset: 1,
+            applied: None,
+            rate_table: calibration::VOXIN,
+            dictionary_loads: Vec::new(),
+            library: Some(LibraryChoice {
+                candidate: LibraryCandidate {
+                    path: dir.join("eci.dll"),
+                    product: Product::Unknown,
+                    source: Source::Option,
+                    exists: true,
+                },
+                arch: None,
+                reason: "test".into(),
+            }),
+            installed: Vec::new(),
+        };
+        b.find_installed_dialects();
+        b
+    }
+
+    #[test]
+    fn installed_dialects_are_read_once_per_host_start_not_per_rate_change() {
+        if std::env::var_os("ECIINI").is_some() {
+            // The machine points ECI elsewhere; this test builds its own.
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let mut b = without_host(dir.path());
+        let british = VoiceParams {
+            voice: Some("en-GB".into()),
+            ..VoiceParams::default()
+        };
+        b.set_params(&british).unwrap();
+        // Before: every rate change read eci.ini and checked every language
+        // file again. Now the list from the host start is used, so a
+        // missing file changes nothing until the host restarts.
+        std::fs::remove_file(dir.path().join("eci.ini")).unwrap();
+        for wpm in [150, 200, 250] {
+            let p = VoiceParams {
+                rate: textweaver_core::Rate::Wpm(wpm),
+                ..british.clone()
+            };
+            b.set_params(&p).unwrap();
+        }
+        assert_eq!(
+            b.voices().unwrap().len(),
+            2 * 8,
+            "two dialects, eight presets"
+        );
+        // A new host start works it out again.
+        b.find_installed_dialects();
+        assert!(b.set_params(&british).is_err(), "only the default is left");
     }
 }
