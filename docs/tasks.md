@@ -76,6 +76,8 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 - `docs/parity-report.md` exists with every delta explained.
 - `tw text fixtures/sample.md` prints the canonical text with headings, list items, and table rows on their own lines.
 
+**Status:** Wave 1 deliverables done on `agent/a-text-formats` (Friday, September 25, 2026); awaiting integration. Parity report: `docs/parity-report.md` (0 unexplained deltas).
+
 ## Agent B — Speech
 
 **Owns:** `crates/textweaver-speech/`, `crates/textweaver-cli/src/cmd/{speak,voices,backends}.rs`.

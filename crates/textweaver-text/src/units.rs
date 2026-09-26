@@ -5,11 +5,17 @@
 //!
 //! | Unit | Block segmented | Rule |
 //! |---|---|---|
-//! | Grapheme | a line with its line break | UAX #29 extended grapheme clusters; graphemes tile the text |
-//! | Word | a line | UAX #29 word segments that contain an alphanumeric char, with hyphenated compounds (`well-known`, `12-14`) joined into one word as Star's `\b\w[\w'-]*` does |
+//! | Grapheme | a line with its line break (in windows when long) | UAX #29 extended grapheme clusters; graphemes tile the text |
+//! | Word | a line (in windows when long) | UAX #29 word segments that contain an alphanumeric char, with hyphenated compounds (`well-known`, `12-14`) joined into one word as Star's `\b\w[\w'-]*` does |
 //! | Sentence | a paragraph | UAX #29 sentence boundaries, refined (see below) |
 //! | Line | a line | the line without its line break; blank lines are empty ranges |
 //! | Paragraph | a run of non-blank lines | blank (whitespace-only) lines separate paragraphs |
+//!
+//! Lines longer than a few thousand chars are segmented into words and
+//! graphemes in windows split where UAX #29 always has a boundary (before a
+//! whitespace char that follows a non-whitespace char), so a word step in a
+//! one-line, megabyte-long file stays fast; the result is the same as
+//! segmenting the whole line (property-tested).
 //!
 //! Sentence refinements, in order:
 //!
@@ -24,6 +30,8 @@
 //!    the next one does not start with a capital letter.
 //! 3. An ellipsis (`…`) followed by whitespace and a capital letter ends a
 //!    sentence, as in Star.
+//! 4. A footnote reference (`footnote.[1] It`) stays with the sentence it
+//!    ends; inside a code block every line is one sentence.
 //!
 //! Sentences and words exclude surrounding whitespace. Differences from Star
 //! are measured by `cargo xtask parity` (docs/parity-report.md).

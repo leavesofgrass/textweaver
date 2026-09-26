@@ -2,7 +2,7 @@
 //!
 //! An entry is keyed by the source's absolute path, its modification time
 //! and size, and a fingerprint of the loader id, the [`LoadOptions`], and
-//! [`CANONICAL_VERSION`](crate::CANONICAL_VERSION). Any change to the file,
+//! [`CANONICAL_VERSION`]. Any change to the file,
 //! the options, or the loaders' output format misses the cache. Entries are
 //! JSON files named by a hash of the path, written atomically (temporary
 //! file, then rename), under a directory the caller chooses (the store's
