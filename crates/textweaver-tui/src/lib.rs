@@ -14,6 +14,15 @@
 //! never rely on color alone; speech is self-voiced through the speech
 //! service unless `--no-speech` is given.
 //!
+//! Edit mode (Ctrl+E) shows the document's source: bound chords (the Edit
+//! layer, then Global) run their actions, and every other key types,
+//! deletes, or moves the caret (arrows, Ctrl+arrows by word, Home, End,
+//! Page keys, Shift to select), with echo through the app. Pasted text
+//! (bracketed paste) is one undo step. In lists, Enter chooses, Delete
+//! deletes the item (bookmarks, notes, highlights), and F2 renames or edits
+//! it. Keys for notes and highlights come from
+//! `textweaver_app::extra_bindings` until the keymap has actions for them.
+//!
 //! Owner: Agent D.
 
 pub mod layout;
@@ -22,17 +31,20 @@ pub mod theme;
 pub mod ui;
 pub mod widgets;
 
+use std::path::Path;
 use std::time::Duration;
 
 use ratatui::DefaultTerminal;
-use ratatui::crossterm::event;
+use ratatui::crossterm::event::{self, DisableBracketedPaste, EnableBracketedPaste};
+use ratatui::crossterm::execute;
+use textweaver_app::a11y::Priority;
 
-pub use setup::{Options, build_app};
+pub use setup::{Options, build_app, build_app_with};
 pub use theme::Theme;
 pub use ui::{Tui, chord};
 
-/// Runs the event loop until the user quits: draw, apply speech status,
-/// wait briefly for input.
+/// Runs the event loop until the user quits: draw, apply speech status and
+/// housekeeping, wait briefly for input.
 pub fn run(terminal: &mut DefaultTerminal, tui: &mut Tui) -> anyhow::Result<()> {
     while !tui.should_quit() {
         terminal.draw(|f| tui.draw(f))?;
@@ -46,4 +58,36 @@ pub fn run(terminal: &mut DefaultTerminal, tui: &mut Tui) -> anyhow::Result<()> 
         }
     }
     Ok(())
+}
+
+/// The whole terminal reader: builds the app from `opts`, opens `file`,
+/// offers unsaved work from a previous run, runs until the user quits, and
+/// saves on the way out. Used by the `textweaver` binary and `tw open`.
+pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
+    let (app, messages) = build_app(opts);
+    let mut tui = Tui::new(app);
+    match file {
+        Some(file) => {
+            if let Err(e) = tui.app_mut().open(file) {
+                let msg = format!("Could not open {}: {e}", file.display());
+                tui.app_mut().announce(&msg, Priority::Assertive);
+            }
+        }
+        None => tui.app_mut().announce(
+            "No document is open. Press Control O to open one, Control N for a new one, or F1 for help.",
+            Priority::Polite,
+        ),
+    }
+    for m in messages {
+        tui.app_mut().announce(&m, Priority::Assertive);
+    }
+    tui.offer_recovery();
+    let mut terminal = ratatui::init();
+    // Pasted text arrives as one event (one undo step), not as keystrokes.
+    let _ = execute!(std::io::stdout(), EnableBracketedPaste);
+    let result = run(&mut terminal, &mut tui);
+    let _ = execute!(std::io::stdout(), DisableBracketedPaste);
+    ratatui::restore();
+    tui.app_mut().shutdown();
+    result
 }

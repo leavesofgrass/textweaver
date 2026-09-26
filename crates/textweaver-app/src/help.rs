@@ -4,7 +4,7 @@
 use textweaver_keymap::{ActionId, Category, Keymap};
 
 use crate::app::{App, ListKind};
-use crate::command::Effect;
+use crate::command::{Effect, NoteCommand};
 
 /// Category order in help (the order `Category` declares).
 const CATEGORIES: [Category; 9] = [
@@ -124,6 +124,9 @@ impl App {
             self.note("Cancelled.");
             return vec![Effect::Redraw];
         }
+        if let Some(c) = crate::command::NoteCommand::from_name(text) {
+            return self.notes_command(c);
+        }
         match resolve_command(text) {
             Some(ActionId::CommandPalette) => vec![Effect::Redraw],
             Some(a) => self.action(a),
@@ -150,6 +153,17 @@ impl App {
 
     pub(crate) fn help(&mut self) -> Vec<Effect> {
         let k = |a| chords_text(&self.keymap, a);
+        let x = |c: NoteCommand| {
+            let chords: Vec<String> = crate::extra::extra_chords(c)
+                .iter()
+                .map(ToString::to_string)
+                .collect();
+            if chords.is_empty() {
+                format!("the command {}", c.name().replace('_', " "))
+            } else {
+                chords.join(" or ")
+            }
+        };
         let items = vec![
             "textweaver reads documents aloud. Keys below are the current bindings.".to_owned(),
             format!("Play or pause: {}.", k(ActionId::PlayPause)),
@@ -187,6 +201,32 @@ impl App {
                 k(ActionId::RateDown)
             ),
             format!("Where am I: {}.", k(ActionId::SayPosition)),
+            format!(
+                "Notes: add {}, list {}, next and previous {} and {}. In the list, Delete deletes and F2 edits.",
+                x(NoteCommand::Add),
+                x(NoteCommand::List),
+                x(NoteCommand::Next),
+                x(NoteCommand::Previous)
+            ),
+            format!(
+                "Highlight the selection or sentence, or remove a highlight: {}. List highlights: {}.",
+                x(NoteCommand::ToggleHighlight),
+                x(NoteCommand::ListHighlights)
+            ),
+            "Bookmarks list: Delete deletes a bookmark, F2 renames it.".to_owned(),
+            format!(
+                "Edit the document: {}. Save: {}. Save as: {}. New document: {}.",
+                k(ActionId::ToggleEditMode),
+                k(ActionId::Save),
+                k(ActionId::SaveAs),
+                k(ActionId::NewDocument)
+            ),
+            format!(
+                "While editing: undo {}, redo {}, bold {}. Every formatting command is in the keyboard shortcuts.",
+                k(ActionId::Undo),
+                k(ActionId::Redo),
+                k(ActionId::Bold)
+            ),
             format!("All keyboard shortcuts: {}.", k(ActionId::KeyboardHelp)),
             format!("Run any command by name: {}.", k(ActionId::CommandPalette)),
             format!("Quit, saving your place: {}.", k(ActionId::Quit)),

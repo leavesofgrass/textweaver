@@ -2541,6 +2541,7 @@ dependencies = [
  "log",
  "ropey",
  "serde",
+ "serde_json",
  "tempfile",
  "textweaver-a11y",
  "textweaver-apple",
@@ -2582,6 +2583,7 @@ dependencies = [
  "serde",
  "serde_json",
  "textweaver-app",
+ "textweaver-tui",
 ]
 
 [[package]]

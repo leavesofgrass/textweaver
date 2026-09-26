@@ -33,6 +33,10 @@ pub struct Theme {
     pub bookmark: Style,
     /// The selection.
     pub selection: Style,
+    /// Ranges the user highlighted.
+    pub user_highlight: Style,
+    /// Ranges with notes.
+    pub note: Style,
     /// List overlay body.
     pub list: Style,
     /// The focused list item.
@@ -42,6 +46,7 @@ pub struct Theme {
 const BOLD: Modifier = Modifier::BOLD;
 const UNDERLINED: Modifier = Modifier::UNDERLINED;
 const REVERSED: Modifier = Modifier::REVERSED;
+const ITALIC: Modifier = Modifier::ITALIC;
 
 impl Theme {
     /// The default dark theme.
@@ -84,6 +89,13 @@ impl Theme {
             selection: Style::new()
                 .bg(Color::Rgb(0x44, 0x55, 0x99))
                 .add_modifier(REVERSED),
+            user_highlight: Style::new()
+                .fg(Color::Black)
+                .bg(Color::Rgb(0xe8, 0xd8, 0x5a))
+                .add_modifier(ITALIC),
+            note: Style::new()
+                .fg(Color::Rgb(0x8c, 0xf0, 0xa8))
+                .add_modifier(ITALIC | UNDERLINED),
             list: Style::new().fg(fg).bg(Color::Rgb(0x22, 0x1f, 0x4a)),
             list_selected: Style::new()
                 .fg(Color::Black)
@@ -120,6 +132,13 @@ impl Theme {
                 .add_modifier(BOLD | UNDERLINED),
             bookmark: Style::new().fg(Color::Magenta).add_modifier(UNDERLINED),
             selection: Style::new().add_modifier(REVERSED),
+            user_highlight: Style::new()
+                .fg(Color::Black)
+                .bg(Color::LightYellow)
+                .add_modifier(ITALIC),
+            note: Style::new()
+                .fg(Color::Green)
+                .add_modifier(ITALIC | UNDERLINED),
             list: Style::new().fg(Color::Black).bg(Color::Gray),
             list_selected: Style::new()
                 .fg(Color::White)
@@ -164,6 +183,13 @@ impl Theme {
                 .fg(Color::Yellow)
                 .add_modifier(BOLD | UNDERLINED),
             selection: Style::new().add_modifier(REVERSED),
+            user_highlight: Style::new()
+                .fg(Color::Black)
+                .bg(Color::White)
+                .add_modifier(ITALIC),
+            note: Style::new()
+                .fg(Color::Cyan)
+                .add_modifier(ITALIC | UNDERLINED),
             list: Style::new().fg(Color::White).bg(Color::Black),
             list_selected: Style::new()
                 .fg(Color::Black)
@@ -184,6 +210,8 @@ impl Theme {
     /// The style patched onto text for a highlight.
     pub fn highlight(&self, kind: HighlightKind) -> Style {
         match kind {
+            HighlightKind::UserHighlight => self.user_highlight,
+            HighlightKind::Note => self.note,
             HighlightKind::Bookmark => self.bookmark,
             HighlightKind::FindHit => self.find_hit,
             HighlightKind::Selection => self.selection,
@@ -209,6 +237,8 @@ mod tests {
                 HighlightKind::SpokenWord,
                 HighlightKind::CurrentFindHit,
                 HighlightKind::Bookmark,
+                HighlightKind::UserHighlight,
+                HighlightKind::Note,
             ] {
                 assert!(!t.highlight(k).add_modifier.is_empty(), "{} {k:?}", t.name);
             }

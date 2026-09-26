@@ -28,12 +28,13 @@ textweaver-eci.workspace = true
 textweaver-sapi.workspace = true
 textweaver-apple.workspace = true
 serde.workspace = true
+serde_json.workspace = true
+ropey.workspace = true
 thiserror.workspace = true
 log.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
-ropey.workspace = true
 
 [lints]
 workspace = true

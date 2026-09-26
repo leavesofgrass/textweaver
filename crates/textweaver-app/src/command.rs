@@ -39,6 +39,131 @@ pub enum Command {
     },
     /// Cancel the current prompt, list, or mode.
     Cancel,
+    /// Edit mode: delete the selection or the character before the caret
+    /// (Backspace).
+    DeleteBack,
+    /// Edit mode: delete the selection or the character after the caret
+    /// (Delete).
+    DeleteForward,
+    /// Edit mode: move the caret, extending the selection when `extend` is
+    /// set (Shift). The new character, word, or line is echoed.
+    MoveCaret {
+        /// How far.
+        by: CaretMove,
+        /// Which way.
+        direction: Direction,
+        /// Extend the selection instead of collapsing it.
+        extend: bool,
+    },
+    /// Notes, highlights, and bookmark management (until the keymap has
+    /// actions for them; see [`NoteCommand`]).
+    Notes(NoteCommand),
+    /// Delete item `n` (0-based) of the list shown by the last
+    /// [`Effect::ShowList`] (bookmarks, notes, highlights). Other lists
+    /// ignore it and say so.
+    DeleteItem(usize),
+    /// Rename or edit item `n` of the shown list: opens a prompt for the new
+    /// bookmark name or note text.
+    RenameItem(usize),
+    /// Periodic housekeeping from the frontend's event loop: autosave
+    /// snapshots while editing and periodic position saves. The same as
+    /// [`App::tick`](crate::App::tick) with the current time.
+    Tick,
+}
+
+/// How far a [`Command::MoveCaret`] moves.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CaretMove {
+    /// One character.
+    Char,
+    /// One word.
+    Word,
+    /// One line, keeping the column.
+    Line,
+    /// To the start or end of the line.
+    LineEdge,
+    /// One screen of lines.
+    Page,
+    /// To the start or end of the document.
+    DocumentEdge,
+}
+
+/// Notes, highlights, and bookmark management commands.
+///
+/// The keymap (Agent C) has no actions for these yet; frontends bind them
+/// through [`extra_bindings`](crate::extra_bindings), and the command
+/// palette accepts their [`name`](NoteCommand::name)s.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum NoteCommand {
+    /// Add a note to the selection, or to the sentence at the cursor
+    /// (prompts for the text).
+    Add,
+    /// List the notes; Enter jumps, Delete deletes, F2 edits.
+    List,
+    /// Move to the next note.
+    Next,
+    /// Move to the previous note.
+    Previous,
+    /// Highlight the selection, or the sentence at the cursor; on an
+    /// existing highlight, remove it.
+    ToggleHighlight,
+    /// List the highlights; Enter jumps, Delete removes.
+    ListHighlights,
+    /// Rename a bookmark: the bookmark at the cursor, else one chosen from
+    /// the list.
+    RenameBookmark,
+    /// Delete the bookmark at the cursor, else one chosen from the list.
+    DeleteBookmark,
+}
+
+impl NoteCommand {
+    /// Every command, in help order.
+    pub const ALL: [NoteCommand; 8] = [
+        NoteCommand::Add,
+        NoteCommand::List,
+        NoteCommand::Next,
+        NoteCommand::Previous,
+        NoteCommand::ToggleHighlight,
+        NoteCommand::ListHighlights,
+        NoteCommand::RenameBookmark,
+        NoteCommand::DeleteBookmark,
+    ];
+
+    /// The command palette name (snake_case, like action ids).
+    pub fn name(self) -> &'static str {
+        match self {
+            NoteCommand::Add => "add_note",
+            NoteCommand::List => "list_notes",
+            NoteCommand::Next => "next_note",
+            NoteCommand::Previous => "previous_note",
+            NoteCommand::ToggleHighlight => "toggle_highlight",
+            NoteCommand::ListHighlights => "list_highlights",
+            NoteCommand::RenameBookmark => "rename_bookmark",
+            NoteCommand::DeleteBookmark => "delete_bookmark",
+        }
+    }
+
+    /// One-line help.
+    pub fn help(self) -> &'static str {
+        match self {
+            NoteCommand::Add => "Add a note to the selection or the current sentence",
+            NoteCommand::List => "List notes",
+            NoteCommand::Next => "Move to the next note",
+            NoteCommand::Previous => "Move to the previous note",
+            NoteCommand::ToggleHighlight => {
+                "Highlight the selection or the current sentence, or remove a highlight"
+            }
+            NoteCommand::ListHighlights => "List highlights",
+            NoteCommand::RenameBookmark => "Rename a bookmark",
+            NoteCommand::DeleteBookmark => "Delete a bookmark",
+        }
+    }
+
+    /// The command for a palette name (`add_note` or `add note`).
+    pub fn from_name(name: &str) -> Option<Self> {
+        let n = name.trim().to_lowercase().replace([' ', '-'], "_");
+        NoteCommand::ALL.into_iter().find(|c| c.name() == n)
+    }
 }
 
 /// What the frontend must do after a dispatch.
@@ -66,7 +191,7 @@ pub enum Effect {
 }
 
 /// Why a prompt was opened.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum PromptPurpose {
     /// Answer becomes `Command::Find`.
     Find,
@@ -76,6 +201,24 @@ pub enum PromptPurpose {
     Open,
     /// Answer runs a command by id.
     CommandPalette,
+    /// Answer is the file to save to; empty accepts the suggestion in the
+    /// label.
+    SaveAs,
+    /// Answer is a table size such as `3 by 2` (columns by rows); empty is
+    /// 2 by 2.
+    TableSize,
+    /// Answer is the path of an image to insert.
+    ImagePath,
+    /// Answer is the text to find (the replacement is asked next).
+    ReplaceFind,
+    /// Answer replaces every match.
+    ReplaceWith,
+    /// Answer is the text of a new note.
+    NoteText,
+    /// Answer is the new text of a note; empty keeps it.
+    EditNote,
+    /// Answer is the new name of a bookmark; empty keeps it.
+    RenameBookmark,
 }
 
 impl PromptPurpose {
@@ -86,6 +229,14 @@ impl PromptPurpose {
             PromptPurpose::GoTo => "Go to line, percent, start, or end",
             PromptPurpose::Open => "Open file",
             PromptPurpose::CommandPalette => "Command",
+            PromptPurpose::SaveAs => "Save as",
+            PromptPurpose::TableSize => "Table size, columns by rows, for example 3 by 2",
+            PromptPurpose::ImagePath => "Image file",
+            PromptPurpose::ReplaceFind => "Replace, find what",
+            PromptPurpose::ReplaceWith => "Replace with",
+            PromptPurpose::NoteText => "Note",
+            PromptPurpose::EditNote => "Edit note, Enter keeps it",
+            PromptPurpose::RenameBookmark => "New bookmark name, Enter keeps it",
         }
     }
 }

@@ -280,6 +280,8 @@ Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech la
 
 **Acceptance:** app and TUI tests green, including a scripted edit-mode test (type, format, undo, save, reopen) and a JSON-RPC session test.
 
+**Status:** Wave 2 done on `wave2/d-app-edit-rpc` (Friday, September 25, 2026). Tests: `crates/textweaver-app/tests/{edit,rpc}.rs`, `crates/textweaver-tui/tests/edit.rs`. The CLI depends on `textweaver-tui` by path (move it to the workspace table). Notes, highlights, and bookmark management use app-level `NoteCommand`s with stopgap keys (`extra_bindings`) until C2 adds keymap actions; notes persist in `DocState` extra keys `app_notes`/`app_highlights` until C2's typed notes are wired.
+
 ### Agent H — Shared engine host
 
 **Owns:** `crates/textweaver-enginehost/`, `crates/textweaver-eci/`, `crates/textweaver-sapi/`, `xtask/src/{eci,sapi}.rs`, `docs/adr/0012-engine-host.md`.
