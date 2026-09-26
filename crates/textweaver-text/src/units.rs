@@ -17,6 +17,17 @@
 //! one-line, megabyte-long file stays fast; the result is the same as
 //! segmenting the whole line (property-tested).
 //!
+//! Paragraphs longer than [`SENTENCE_WINDOW`] × 2 chars (a PDF or text file
+//! without blank lines) are segmented into sentences in windows too. Window
+//! `k` starts at the first true sentence start at or after
+//! `paragraph start + k × SENTENCE_WINDOW`, found by segmenting a short stretch
+//! around that point and trusting only the sentences whose context lies
+//! wholly inside it. The result equals segmenting the whole paragraph as long
+//! as no sentence (with the space after it) is longer than half of
+//! [`SENTENCE_LOOKAROUND`] (property-tested); a single "sentence" longer than
+//! [`MAX_SENTENCE`] chars, which only machine-made text has, is split at a
+//! space.
+//!
 //! Sentence refinements, in order:
 //!
 //! 1. A single line break inside a paragraph is a soft wrap (plain-text files
@@ -62,6 +73,33 @@ pub const AMBIGUOUS_ABBREVIATIONS: &[&str] = &[
     "min.", "hr.", "hrs.", "est.", "approx.",
 ];
 
+/// Paragraphs longer than twice this many chars are segmented into
+/// sentences one window of about this size at a time.
+#[cfg(not(test))]
+pub const SENTENCE_WINDOW: usize = 8192;
+/// Paragraphs longer than twice this many chars are segmented into
+/// sentences one window of about this size at a time.
+#[cfg(test)]
+pub const SENTENCE_WINDOW: usize = 48;
+
+/// How far (in chars) sentence windowing looks back and ahead of a window
+/// edge to find a true sentence start.
+#[cfg(not(test))]
+pub const SENTENCE_LOOKAROUND: usize = 1024;
+/// How far (in chars) sentence windowing looks back and ahead of a window
+/// edge to find a true sentence start.
+#[cfg(test)]
+pub const SENTENCE_LOOKAROUND: usize = 64;
+
+/// In a windowed paragraph, a run this long without a sentence boundary is
+/// split at a space.
+#[cfg(not(test))]
+pub const MAX_SENTENCE: usize = 65536;
+/// In a windowed paragraph, a run this long without a sentence boundary is
+/// split at a space.
+#[cfg(test)]
+pub const MAX_SENTENCE: usize = 256;
+
 /// How a unit's segments are grouped into blocks.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum BlockKind {
@@ -75,6 +113,8 @@ enum BlockKind {
     Line,
     /// A run of non-blank lines.
     Paragraph,
+    /// A run of non-blank lines, or a window of one when it is long.
+    Sentences,
     /// The whole document.
     Whole,
 }
@@ -85,6 +125,27 @@ struct Block {
     range: CharRange,
     first_line: usize,
     last_line: usize,
+    /// For a sentence window, the paragraph it is part of.
+    para: Option<Para>,
+}
+
+/// The paragraph a sentence window belongs to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Para {
+    range: CharRange,
+    first_line: usize,
+    last_line: usize,
+}
+
+impl Para {
+    fn block(self) -> Block {
+        Block {
+            range: self.range,
+            first_line: self.first_line,
+            last_line: self.last_line,
+            para: None,
+        }
+    }
 }
 
 fn block_kind(unit: Unit) -> BlockKind {
@@ -92,7 +153,8 @@ fn block_kind(unit: Unit) -> BlockKind {
         Unit::Grapheme => BlockKind::Window { with_break: true },
         Unit::Word => BlockKind::Window { with_break: false },
         Unit::Line => BlockKind::Line,
-        Unit::Sentence | Unit::Paragraph => BlockKind::Paragraph,
+        Unit::Sentence => BlockKind::Sentences,
+        Unit::Paragraph => BlockKind::Paragraph,
         Unit::Document | Unit::Marker { .. } => BlockKind::Whole,
     }
 }
@@ -102,6 +164,7 @@ fn line_block(doc: &Document, line: usize) -> Block {
         range: doc.line_range(line),
         first_line: line,
         last_line: line,
+        para: None,
     }
 }
 
@@ -169,6 +232,7 @@ fn window_block(doc: &Document, line: usize, pos: usize, with_break: bool) -> Bl
         range: CharRange::new(a, b),
         first_line: line,
         last_line: line,
+        para: None,
     }
 }
 
@@ -177,20 +241,13 @@ fn paragraph_block(doc: &Document, first: usize, last: usize) -> Block {
         range: CharRange::new(doc.line_range(first).start, doc.line_range(last).end),
         first_line: first,
         last_line: last,
+        para: None,
     }
 }
 
 /// The paragraph containing non-blank line `line`.
 fn paragraph_around(doc: &Document, line: usize) -> Block {
-    let mut first = line;
-    while first > 0 && !doc.line_is_blank(first - 1) {
-        first -= 1;
-    }
-    let mut last = line;
-    let n = doc.line_count();
-    while last + 1 < n && !doc.line_is_blank(last + 1) {
-        last += 1;
-    }
+    let (first, last) = doc.paragraph_lines(line).unwrap_or((line, line));
     paragraph_block(doc, first, last)
 }
 
@@ -202,7 +259,16 @@ fn block_from_line(doc: &Document, kind: BlockKind, line: usize, dir: Direction)
             range: doc.full_range(),
             first_line: 0,
             last_line: n - 1,
+            para: None,
         }),
+        BlockKind::Sentences => {
+            let p = block_from_line(doc, BlockKind::Paragraph, line, dir)?;
+            let pos = match dir {
+                Direction::Forward => p.range.start.0,
+                Direction::Backward => p.range.end.0.saturating_sub(1),
+            };
+            Some(sentence_window(doc, &p, pos))
+        }
         BlockKind::Line => (line < n).then(|| line_block(doc, line)),
         BlockKind::Window { with_break } => (line < n).then(|| {
             let r = doc.line_range(line);
@@ -239,6 +305,17 @@ fn block_from_line(doc: &Document, kind: BlockKind, line: usize, dir: Direction)
 }
 
 fn next_block(doc: &Document, kind: BlockKind, b: &Block, dir: Direction) -> Option<Block> {
+    if let Some(p) = b.para {
+        match dir {
+            Direction::Forward if b.range.end < p.range.end => {
+                return Some(sentence_window(doc, &p.block(), b.range.end.0));
+            }
+            Direction::Backward if b.range.start > p.range.start => {
+                return Some(sentence_window(doc, &p.block(), b.range.start.0 - 1));
+            }
+            _ => return next_block(doc, kind, &p.block(), dir),
+        }
+    }
     if let BlockKind::Window { with_break } = kind {
         let line = doc.line_range(b.first_line);
         match dir {
@@ -263,6 +340,136 @@ fn next_block(doc: &Document, kind: BlockKind, b: &Block, dir: Direction) -> Opt
             }
         }
     }
+}
+
+/// True when a window may start at `i`: a whitespace char right after a
+/// non-whitespace char other than a zero-width joiner (UAX #29 has a word
+/// and a grapheme boundary there, and no token continues across it).
+fn is_safe_split(doc: &Document, i: usize) -> bool {
+    if i == 0 || i >= doc.len_chars() {
+        return false;
+    }
+    let text = doc.text();
+    let (prev, c) = (text.char(i - 1), text.char(i));
+    c.is_whitespace() && !prev.is_whitespace() && prev != '\u{200d}'
+}
+
+/// The last safe split at or before `x` and not before `lo`, looking back at
+/// most [`SENTENCE_LOOKAROUND`] chars; `lo` when the scan reaches it, else `x`.
+fn split_at_or_before(doc: &Document, x: usize, lo: usize) -> usize {
+    let stop = x.saturating_sub(SENTENCE_LOOKAROUND).max(lo);
+    let mut i = x;
+    while i > stop {
+        if is_safe_split(doc, i) {
+            return i;
+        }
+        i -= 1;
+    }
+    if stop == lo { lo } else { x }
+}
+
+/// The first safe split at or after `x`, or `hi`.
+fn split_at_or_after(doc: &Document, x: usize, hi: usize) -> usize {
+    if x >= hi {
+        return hi;
+    }
+    let text = doc.text();
+    let mut prev = if x == 0 { ' ' } else { text.char(x - 1) };
+    for (i, c) in text.chars_at(x).take(hi - x).enumerate() {
+        if c.is_whitespace() && !prev.is_whitespace() && prev != '\u{200d}' {
+            return x + i;
+        }
+        prev = c;
+    }
+    hi
+}
+
+/// A block over `range` (inside one paragraph) with the lines it spans.
+fn sub_block(doc: &Document, range: CharRange, para: Option<Para>) -> Block {
+    let last = range.end.0.saturating_sub(1).max(range.start.0);
+    Block {
+        range,
+        first_line: doc.line_of(range.start),
+        last_line: doc.line_of(CharPos(last)),
+        para,
+    }
+}
+
+/// The first true sentence start at or after `q` in paragraph `p` (or the
+/// paragraph end): the start of a sentence found by segmenting a stretch
+/// around `q` whose context lies inside the stretch (neither the first
+/// sentence, which may have lost its beginning, nor the last, which may have
+/// lost its end, unless they touch the paragraph's edges).
+fn sentence_start_at_or_after(doc: &Document, p: &Block, q: usize) -> usize {
+    let (ps, pe) = (p.range.start.0, p.range.end.0);
+    let a = split_at_or_before(doc, q.saturating_sub(SENTENCE_LOOKAROUND).max(ps), ps);
+    let mut ahead = SENTENCE_LOOKAROUND;
+    loop {
+        let z = split_at_or_after(doc, q.saturating_add(ahead), pe);
+        let local = sub_block(doc, CharRange::new(a, z), None);
+        let segs = segment_block(doc, Unit::Sentence, &local);
+        let lo = usize::from(a > ps);
+        let hi = if z == pe {
+            segs.len()
+        } else {
+            segs.len().saturating_sub(1)
+        };
+        if let Some(r) = segs
+            .get(lo..hi.max(lo))
+            .and_then(|s| s.iter().find(|r| r.start.0 >= q))
+        {
+            return r.start.0;
+        }
+        if z == pe {
+            return pe;
+        }
+        if ahead >= MAX_SENTENCE {
+            // No boundary in a very long run: split it at a space.
+            return split_at_or_after(doc, q, pe);
+        }
+        ahead = ahead.saturating_mul(2);
+    }
+}
+
+/// Start of sentence window `k` of paragraph `p`.
+fn sentence_boundary(doc: &Document, p: &Block, k: usize) -> usize {
+    let (ps, pe) = (p.range.start.0, p.range.end.0);
+    if k == 0 {
+        return ps;
+    }
+    let q = ps.saturating_add(k.saturating_mul(SENTENCE_WINDOW));
+    if q >= pe {
+        return pe;
+    }
+    sentence_start_at_or_after(doc, p, q)
+}
+
+/// The sentence window of paragraph `p` containing `pos`: the paragraph
+/// itself unless it is long.
+fn sentence_window(doc: &Document, p: &Block, pos: usize) -> Block {
+    let (ps, pe) = (p.range.start.0, p.range.end.0);
+    if pe - ps <= 2 * SENTENCE_WINDOW {
+        return *p;
+    }
+    let pos = pos.clamp(ps, pe - 1);
+    let mut k = (pos - ps) / SENTENCE_WINDOW;
+    let mut start = sentence_boundary(doc, p, k);
+    while k > 0 && start > pos {
+        k -= 1;
+        start = sentence_boundary(doc, p, k);
+    }
+    let mut end = sentence_boundary(doc, p, k + 1).max(start);
+    while end <= pos && end < pe {
+        k += 1;
+        start = end;
+        end = sentence_boundary(doc, p, k + 1).max(start);
+    }
+    let para = Para {
+        range: p.range,
+        first_line: p.first_line,
+        last_line: p.last_line,
+    };
+    sub_block(doc, CharRange::new(start, end), Some(para))
 }
 
 /// Char offset of every byte boundary in `s`, as a lookup from byte to char.
@@ -474,6 +681,9 @@ fn hard_breaks(doc: &Document, block: &Block) -> Vec<CharPos> {
     let mut out = Vec::new();
     for line in block.first_line..block.last_line {
         let brk = doc.line_range(line).end;
+        if brk < block.range.start || brk >= block.range.end {
+            continue;
+        }
         let next_start = doc.line_range(line + 1).start;
         let starts_block = index.starting_at(next_start).iter().any(|m| m.is_block());
         let in_code = index
@@ -575,6 +785,12 @@ impl<'a> Units<'a> {
         let line = doc.line_of(at);
         let block = match kind {
             BlockKind::Window { with_break } => Some(window_block(doc, line, at.0, with_break)),
+            BlockKind::Sentences => {
+                block_from_line(doc, BlockKind::Paragraph, line, dir).map(|p| {
+                    let last = p.range.end.0.saturating_sub(1).max(p.range.start.0);
+                    sentence_window(doc, &p, at.0.clamp(p.range.start.0, last))
+                })
+            }
             _ => block_from_line(doc, kind, line, dir),
         };
         let mut it = Units {
@@ -984,5 +1200,72 @@ mod props {
                 prop_assert_eq!(last_unit(&d, unit), all.last().copied());
             }
         }
+
+        #[test]
+        fn windowed_sentences_match_whole_paragraphs(text in short_sentences(), p in 0usize..600) {
+            // SENTENCE_WINDOW is 48 chars under test, so most paragraphs here
+            // are windowed.
+            let d = Document::from_plain_text(&text);
+            let whole = unwindowed_sentences(&d);
+            let short = SENTENCE_LOOKAROUND / 2;
+            prop_assume!(whole.iter().all(|r| r.len() < short));
+            prop_assume!(whole.windows(2).all(|w| w[1].start.0 - w[0].start.0 < short));
+            let all = segments(&d, Unit::Sentence);
+            prop_assert_eq!(&all, &whole);
+            let pos = CharPos(p.min(d.len_chars()));
+            let next = all.iter().find(|r| r.start > pos).copied();
+            prop_assert_eq!(next_unit(&d, pos, Unit::Sentence), next);
+            let prev = all.iter().rev().find(|r| r.start < pos).copied();
+            prop_assert_eq!(prev_unit(&d, pos, Unit::Sentence), prev);
+            let at = all.iter().find(|r| r.end > pos || r.start >= pos).copied();
+            prop_assert_eq!(unit_at(&d, pos, Unit::Sentence), at);
+        }
+
+        #[test]
+        fn windowed_sentences_are_ordered_even_when_long(text in doc_text(), reps in 1usize..8) {
+            // Long runs without boundaries are split, never overlapped.
+            let d = Document::from_plain_text(&text.repeat(reps));
+            let sents = segments(&d, Unit::Sentence);
+            prop_assert!(ordered_in_bounds(&sents, d.len_chars()));
+            let mut back: Vec<CharRange> =
+                Units::new(&d, Unit::Sentence, d.end(), Direction::Backward).collect();
+            back.reverse();
+            let before_end: Vec<CharRange> =
+                sents.iter().copied().filter(|r| r.start < d.end()).collect();
+            prop_assert_eq!(back, before_end);
+        }
+    }
+
+    fn short_sentences() -> impl Strategy<Value = String> {
+        proptest::collection::vec(
+            prop_oneof![
+                Just("Hi. "),
+                Just("Dr. X. "),
+                Just("go! "),
+                Just("e.g. "),
+                Just("A b? "),
+                Just("\n"),
+                Just("\n\n"),
+                Just("é. "),
+                Just("Wait\u{2026} "),
+                Just("1,250. "),
+                Just("well-known. "),
+                Just("a.m. "),
+                Just("Yes.[1] "),
+            ],
+            0..150,
+        )
+        .prop_map(|v| v.concat())
+    }
+
+    /// Sentences found by segmenting every paragraph whole.
+    fn unwindowed_sentences(d: &Document) -> Vec<CharRange> {
+        let mut out = Vec::new();
+        let mut line = 0;
+        while let Some(p) = block_from_line(d, BlockKind::Paragraph, line, Direction::Forward) {
+            out.extend(segment_block(d, Unit::Sentence, &p));
+            line = p.last_line + 1;
+        }
+        out
     }
 }
