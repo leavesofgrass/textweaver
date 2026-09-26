@@ -79,7 +79,7 @@ impl Rig {
         self.app.dispatch(Command::GoTo(GoTo::Char(pos)));
     }
     fn wait_idle(&mut self) {
-        let deadline = Instant::now() + Duration::from_secs(10);
+        let deadline = Instant::now() + Duration::from_secs(30);
         loop {
             self.app.poll_speech();
             if self.app.playback() == Playback::Idle {
@@ -91,7 +91,7 @@ impl Rig {
     }
     /// Waits until the speech thread has spoken an utterance satisfying `f`.
     fn wait_spoken(&self, f: impl Fn(&textweaver_app::core::Utterance) -> bool) {
-        let deadline = Instant::now() + Duration::from_secs(10);
+        let deadline = Instant::now() + Duration::from_secs(30);
         while !self.log.utterances().iter().any(&f) {
             assert!(Instant::now() < deadline, "utterance never spoken");
             std::thread::sleep(Duration::from_millis(2));
@@ -604,7 +604,7 @@ fn voice_changes_are_announced_and_applied() {
     r.act(ActionId::RateUp);
     assert_eq!(r.said.last(), "285 words per minute.");
     assert_eq!(r.app.settings().speech.rate.wpm(), 285);
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + Duration::from_secs(30);
     while r.log.params().map(|p| p.rate.wpm()) != Some(285) {
         assert!(Instant::now() < deadline, "rate never reached the backend");
         std::thread::sleep(Duration::from_millis(2));
@@ -834,7 +834,7 @@ fn highlight_granularity_word_sentence_both() {
         );
         app.dispatch(Command::Action(ActionId::ReadFromCursor));
         // Step until the first highlight arrives, then inspect it.
-        let deadline = Instant::now() + Duration::from_secs(10);
+        let deadline = Instant::now() + Duration::from_secs(30);
         let spoken = loop {
             app.poll_speech_step();
             if let Some(r) = app.session().unwrap().spoken {

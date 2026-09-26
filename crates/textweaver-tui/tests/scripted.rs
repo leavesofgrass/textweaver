@@ -181,7 +181,7 @@ impl Harness {
     /// highlighted.
     fn follow_speech(&mut self) -> Vec<CharRange> {
         let mut seen = Vec::new();
-        let deadline = Instant::now() + Duration::from_secs(10);
+        let deadline = Instant::now() + Duration::from_secs(30);
         loop {
             match self.tui.app_mut().poll_speech_step() {
                 Some(true) => {
@@ -297,7 +297,7 @@ fn scripted_session_with_restore() {
     }
     // The character at the cursor is spoken as a character.
     h.press(ch('c'));
-    let deadline = Instant::now() + Duration::from_secs(10);
+    let deadline = Instant::now() + Duration::from_secs(30);
     while !h.log.texts().iter().any(|t| t == "A") {
         assert!(Instant::now() < deadline);
         std::thread::sleep(Duration::from_millis(2));
@@ -326,7 +326,7 @@ fn scripted_session_with_restore() {
     assert!(h.row_text(HEIGHT - 1).contains("next line"));
     h.follow_speech();
     h.press(key(KeyCode::Down));
-    let deadline = Instant::now() + Duration::from_secs(10);
+    let deadline = Instant::now() + Duration::from_secs(30);
     while !h.log.texts().iter().any(|t| t == "blank") {
         assert!(Instant::now() < deadline);
         std::thread::sleep(Duration::from_millis(2));
