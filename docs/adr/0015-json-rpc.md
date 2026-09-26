@@ -23,17 +23,17 @@ The app core (`textweaver-app`) is already frontend-independent: frontends send 
 |---|---|---|
 | `initialize` | none | `{server, version, protocol, methods, notifications}` |
 | `open` | `{path}` | `{document: {title, path, format, length, lines, editing, dirty}, position}` |
-| `status` | none | `{mode, playback, document, position, rate, backend, status}` |
+| `status` | none | `{mode, playback, document, position, rate, backend, status, pending}` |
 | `position` | none | `{char, line, column, percent, word: {start, end, text}}` (1-based line and column; char offsets are Unicode scalar values, ADR-0002) |
 | `navigate` | `{action}`, a navigation, Speech Cursor, bookmark, or search action id (`next_sentence`, `skip_next_heading`, `next_bookmark`, ...); or `{goto}`: `"12"`, `"line 12"`, `"50%"`, `"start"`, `"end"`, `"char 120"` | `position` |
 | `read` | `{what}`: `cursor` (default; continuous from the cursor), `document` (continuous from the start), `paragraph` (continuous from the current paragraph's start), or one unit in place: `sentence`, `line`, `word`, `character`, `selection`; optional `{from}` char offset to move to first | `{playback}` |
 | `pause`, `resume`, `stop` | none | `{playback}` |
 | `search` | `{pattern, regex?}` | `{matches: [{start, end, line}], current}`; the cursor moves to the first match at or after it, wrapping |
 | `text` | `{start?, end?}` | `{text, start, end}` (canonical text) |
-| `action` | `{id}`: any keymap action id, or a notes command name (`add_note`, `list_notes`, `toggle_highlight`, ...) | `{status, effects}` |
+| `action` | `{id}`: any keymap action id, or a notes command name (`add_note`, `list_notes`, `toggle_highlight`, ...); optional `{confirm}` for an action that asks first (`quit`, `delete_note`): `true` answers yes, `false` no | `{status, effects, pending}`; without `confirm` such an action only asks, and `pending` is `{action, question}` (for example `"Quit textweaver? y or n"`) until answered by another `action` call with `confirm`, or by `cancel`; otherwise `pending` is null |
 | `answer` | `{text}` | answers the open prompt; `{status, effects}` |
 | `choose` | `{index}` | picks item `index` of the shown list; `{status, effects}` |
-| `cancel` | none | closes the prompt or list; `{status, effects}` |
+| `cancel` | none | closes the prompt or list, or answers no to a pending question; `{status, effects}` |
 | `shutdown` | none | `null`; saves the position and settings; later requests fail with `-32003` |
 | `exit` | none (normally a notification) | the server stops |
 

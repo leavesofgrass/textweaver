@@ -280,7 +280,9 @@ impl Tui {
             self.dispatch(Command::Action(action));
             return;
         }
-        if let Some(cmd) = extra_lookup(&c, layer) {
+        // The extra single keys obey the single-key switch like the keymap.
+        let allowed = self.app.keymap().character_keys() || !c.is_text_input();
+        if allowed && let Some(cmd) = extra_lookup(&c, layer) {
             self.dispatch(cmd);
             return;
         }
@@ -517,11 +519,29 @@ impl Tui {
         }
     }
 
+    /// What the status line shows: the pending question while one waits for
+    /// a yes or no (so it stays in view whatever else is announced), else
+    /// the latest announcement.
+    pub fn status_line(&self) -> String {
+        match self
+            .app
+            .pending_confirmation()
+            .and_then(ActionId::confirmation_prompt)
+        {
+            Some(question) if self.app.status_text() != question => {
+                format!("{question}  {}", self.app.status_text())
+                    .trim_end()
+                    .to_owned()
+            }
+            _ => self.app.status_text().to_owned(),
+        }
+    }
+
     /// Screen areas for a frame of `area`.
     pub fn areas(&self, area: Rect) -> Areas {
         let status_rows = {
             let w = usize::from(area.width.max(1));
-            let len = Span::raw(self.app.status_text()).width();
+            let len = Span::raw(self.status_line()).width();
             u16::try_from(len.div_ceil(w).clamp(1, 3)).unwrap_or(1)
         };
         let [title, body, status, bottom] = Layout::vertical([
@@ -570,7 +590,7 @@ impl Tui {
         self.draw_title(f, areas.title, &theme);
         let cursor = self.draw_body(f, areas.body, &theme);
         f.render_widget(
-            Paragraph::new(self.app.status_text().to_owned())
+            Paragraph::new(self.status_line())
                 .wrap(ratatui::widgets::Wrap { trim: false })
                 .style(theme.status),
             areas.status,
@@ -745,6 +765,9 @@ impl Tui {
 
     /// Key hints for the current mode, from the keymap, fitted to `width`.
     pub fn hints(&self, width: u16) -> String {
+        if self.app.pending_confirmation().is_some() {
+            return " y yes  n or a no  Escape no".to_owned();
+        }
         let hints: &[(ActionId, &str)] = match self.app.mode() {
             Mode::Edit => &[
                 (ActionId::Save, "save"),

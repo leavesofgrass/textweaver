@@ -209,6 +209,67 @@ fn scripted_json_rpc_session() {
 }
 
 #[test]
+fn actions_that_ask_first_take_a_confirm_param() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("doc.txt");
+    std::fs::write(&file, TEXT).unwrap();
+    let mut s = Session {
+        server: server(&dir.path().join("home")),
+        next_id: 0,
+        notes: Vec::new(),
+    };
+    s.result("open", json!({"path": file.display().to_string()}));
+    assert_eq!(s.result("status", json!({}))["pending"], Value::Null);
+
+    // Without `confirm`, quit only asks; the result and status say what.
+    let r = s.result("action", json!({"id": "quit"}));
+    assert_eq!(r["pending"]["action"], "quit");
+    assert_eq!(r["pending"]["question"], "Quit textweaver? y or n");
+    assert_eq!(r["status"], "Quit textweaver? y or n");
+    assert!(!s.server.is_done());
+    assert_eq!(
+        s.result("status", json!({}))["pending"]["question"],
+        "Quit textweaver? y or n"
+    );
+    // `cancel` answers no.
+    let r = s.result("cancel", json!({}));
+    assert_eq!(r["status"], "Cancelled.");
+    assert_eq!(s.result("status", json!({}))["pending"], Value::Null);
+    // `confirm: false` answers no at once.
+    let r = s.result("action", json!({"id": "quit", "confirm": false}));
+    assert_eq!(r["pending"], Value::Null);
+    assert!(!s.server.is_done());
+    assert_eq!(
+        s.error_code("action", json!({"id": "quit", "confirm": "yes"})),
+        codes::INVALID_PARAMS
+    );
+
+    // Deleting a note: asked, then confirmed.
+    s.result("action", json!({"id": "add_note"}));
+    s.result("answer", json!({"text": "a note"}));
+    let r = s.result("action", json!({"id": "delete_note"}));
+    assert_eq!(r["pending"]["action"], "delete_note");
+    let r = s.result("action", json!({"id": "delete_note", "confirm": true}));
+    assert_eq!(r["pending"], Value::Null);
+    assert!(
+        r["status"].as_str().unwrap().starts_with("Note deleted"),
+        "{r}"
+    );
+
+    // `confirm: true` quits in one call.
+    let r = s.result("action", json!({"id": "quit", "confirm": true}));
+    assert!(
+        r["effects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["type"] == "quit"),
+        "{r}"
+    );
+    assert!(s.server.is_done());
+}
+
+#[test]
 fn stdio_transport_handles_both_framings() {
     let dir = tempfile::tempdir().unwrap();
     let body = r#"{"jsonrpc":"2.0","id":2,"method":"status"}"#;

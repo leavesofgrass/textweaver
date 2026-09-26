@@ -2,6 +2,7 @@
 //! announced (Star showed rate changes only visually) and marks the settings
 //! for saving on quit.
 
+use textweaver_a11y::{Announcement, Verbosity};
 use textweaver_core::{Pitch, Rate, Volume};
 use textweaver_speech::Earcon;
 
@@ -126,6 +127,20 @@ impl App {
         } else {
             "Line numbers off."
         });
+    }
+
+    /// F9: single-key shortcuts on or off (`[keyboard] character_keys`), so
+    /// dictation and typing never trigger commands. Saved at once.
+    pub(crate) fn toggle_character_keys(&mut self) {
+        let on = !self.settings.keyboard.character_keys;
+        self.settings.keyboard.character_keys = on;
+        self.keymap.set_character_keys(on);
+        self.settings_dirty = true;
+        let a = Announcement::CharacterKeys { on };
+        let verbosity = self.settings.speech.verbosity;
+        if let Some(text) = a.text(verbosity) {
+            self.say_at(&format!("{text}."), Verbosity::Low, a.priority());
+        }
     }
 }
 

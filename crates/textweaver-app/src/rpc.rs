@@ -19,17 +19,17 @@
 //! |---|---|---|
 //! | `initialize` | none | server name, version, protocol, methods, notifications |
 //! | `open` | `{path}` | the document (`title`, `path`, `format`, `length`, `lines`) and `position` |
-//! | `status` | none | mode, playback, document, position, rate, backend, status line |
+//! | `status` | none | mode, playback, document, position, rate, backend, status line, pending question |
 //! | `position` | none | `{char, line, column, percent, word}` |
 //! | `navigate` | `{action}` (a navigation action id, e.g. `next_sentence`) or `{goto}` (`"12"`, `"50%"`, `"end"`) | `position` |
 //! | `read` | `{what}`: `cursor` (default), `document`, `sentence`, `paragraph`, `line`, `word`, `selection`; optional `from` (a char offset) | `{playback}` |
 //! | `pause`, `resume`, `stop` | none | `{playback}` |
 //! | `search` | `{pattern, regex?}` | `{matches: [{start, end, line}], current}`; moves to the first match at or after the cursor |
 //! | `text` | `{start?, end?}` (char offsets) | `{text, start, end}` |
-//! | `action` | `{id}`: any keymap action id or notes command name | `{status, effects}` |
+//! | `action` | `{id}`: any keymap action id or notes command name; optional `confirm` (`true` answers yes, `false` no) for an action that asks first (quit, delete note) | `{status, effects, pending}`; `pending` is `{action, question}` while a question waits, else null |
 //! | `answer` | `{text}`: answers the open prompt | `{status, effects}` |
 //! | `choose` | `{index}`: picks from the shown list | `{status, effects}` |
-//! | `cancel` | none | `{status, effects}` |
+//! | `cancel` | none | `{status, effects}`; also answers no to a pending question |
 //! | `shutdown` | none | `null`; saves the position and settings |
 //! | `exit` | none (a notification) | the server stops |
 //!
@@ -50,7 +50,7 @@ use textweaver_core::{CharPos, CharRange};
 use textweaver_keymap::ActionId;
 
 use crate::app::App;
-use crate::command::{Command, Effect, NoteCommand, PromptPurpose};
+use crate::command::{Command, Confirm, Effect, NoteCommand, PromptPurpose};
 use crate::playback::Playback;
 use crate::text_util;
 
@@ -504,6 +504,7 @@ impl Server {
             "rate": settings.speech.rate.wpm(),
             "backend": self.app.backend_name(),
             "status": self.app.status_text(),
+            "pending": self.pending(),
         })
     }
 
@@ -648,7 +649,39 @@ impl Server {
         }
         let action =
             ActionId::from_id(id).ok_or_else(|| RpcError::params(format!("No action {id}")))?;
-        Ok(self.run(Command::Action(action)))
+        let confirm = match params.get("confirm") {
+            None | Some(Value::Null) => None,
+            Some(Value::Bool(b)) => Some(*b),
+            Some(_) => return Err(RpcError::params("confirm must be true or false")),
+        };
+        let mut result = self.run(Command::Action(action));
+        if self.app.pending_confirmation() == Some(action)
+            && let Some(yes) = confirm
+        {
+            // Answer the question the action just asked, as `y` or `n` would.
+            let answer = if yes { Confirm::Yes } else { Confirm::No };
+            let first = result["effects"].as_array().cloned().unwrap_or_default();
+            result = self.run(Command::Confirm(answer));
+            if let Some(effects) = result["effects"].as_array_mut() {
+                let mut all = first;
+                all.append(effects);
+                *effects = all;
+            }
+        }
+        result["pending"] = self.pending();
+        Ok(result)
+    }
+
+    /// The question waiting for a yes or no, as `{action, question}`, or
+    /// null.
+    fn pending(&self) -> Value {
+        match self.app.pending_confirmation() {
+            Some(a) => json!({
+                "action": a.id(),
+                "question": a.confirmation_prompt(),
+            }),
+            None => Value::Null,
+        }
     }
 }
 

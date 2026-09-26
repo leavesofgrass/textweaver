@@ -224,6 +224,8 @@ pub(crate) enum ListKind {
     Highlights,
     SaveChoice(AfterLeave),
     Recovery,
+    /// The library: the documents listed, in order.
+    Library(Vec<PathBuf>),
 }
 
 /// The application: the only owner of mutable state.
@@ -261,6 +263,8 @@ pub struct App {
     pub(crate) untitled: u32,
     pub(crate) last_position_save: Option<(Instant, CharPos)>,
     pub(crate) prompt_purpose: PromptPurpose,
+    /// Reading positions synced through the library folders' sidecars.
+    pub(crate) library_sync: textweaver_store::LibrarySync,
 }
 
 impl App {
@@ -273,12 +277,15 @@ impl App {
     /// Creates the application.
     pub fn new(config: AppConfig) -> Self {
         let speech_caps = config.speech.capabilities();
+        let library_sync = Self::make_library_sync(&config.settings);
+        let mut keymap = config.keymap;
+        keymap.set_character_keys(config.settings.keyboard.character_keys);
         let mut app = App {
             session: None,
             speech: config.speech,
             announcer: config.announcer,
             status: StatusLineAnnouncer::default(),
-            keymap: config.keymap,
+            keymap,
             settings: config.settings,
             settings_dirty: false,
             paths: config.paths,
@@ -305,6 +312,7 @@ impl App {
             untitled: 0,
             last_position_save: None,
             prompt_purpose: PromptPurpose::Find,
+            library_sync,
         };
         app.apply_voice_settings();
         app
@@ -441,9 +449,12 @@ impl App {
     /// Opens a document and makes it current. The previous document's
     /// position is saved first.
     pub fn open(&mut self, path: &Path) -> Result<Vec<Effect>, AppError> {
-        let doc = self
+        let mut doc = self
             .registry
             .load(&Source::Path(path.to_owned()), &LoadOptions::default())?;
+        if doc.meta.path.is_none() {
+            doc.meta.path = Some(path.to_owned());
+        }
         let title = doc.meta.title.clone().unwrap_or_else(|| {
             path.file_name()
                 .map(|n| n.to_string_lossy().into_owned())
@@ -462,6 +473,7 @@ impl App {
                 log::warn!("cannot save recent files: {e}");
             }
         }
+        self.record_library_open(path, &title, &doc.meta.format);
         Ok(self.open_document(doc, key, title))
     }
 
@@ -475,10 +487,11 @@ impl App {
         if self.edit.take().is_some() {
             log::warn!("a document was opened over unsaved edit mode");
         }
-        if self.session.is_some()
-            && let Err(e) = self.save_position()
-        {
-            log::warn!("cannot save position: {e}");
+        if self.session.is_some() {
+            if let Err(e) = self.save_position() {
+                log::warn!("cannot save position: {e}");
+            }
+            self.flush_library_sync();
         }
         self.stop_speech();
         self.mode = Mode::Browse;
@@ -487,9 +500,21 @@ impl App {
         self.list = None;
         self.spoken_log.clear();
         let mut s = Session::new(doc, key, title, self.settings.reading.nav_history_size);
-        let mut resumed = None;
+        let loaded = self.state_store().and_then(|store| store.load(&s.key));
+        let resume = match s.doc.meta.path.clone() {
+            Some(path) => self.resume_point(&path, loaded.as_ref()),
+            None => loaded
+                .as_ref()
+                .map(|st| st.position)
+                .filter(|p| *p > CharPos::ZERO)
+                .map(|pos| crate::library::ResumePoint {
+                    pos,
+                    synced: false,
+                    unresolved: false,
+                }),
+        };
         if let Some(store) = self.state_store()
-            && let Some(mut state) = store.load(&s.key)
+            && let Some(mut state) = loaded
         {
             if migrate_legacy_notes(&mut state, &s.doc)
                 && let Err(e) = store.save(&s.key, &state)
@@ -516,18 +541,27 @@ impl App {
             }
             s.highlights.retain(|h| !h.range.is_empty());
             s.highlights.sort_by_key(|h| (h.range.start, h.range.end));
-            if self.settings.reading.auto_resume && state.position > CharPos::ZERO {
-                s.cursor = text_util::first_word_at_or_after(&s.doc, state.position);
-                resumed = Some(text_util::percent(&s.doc, s.cursor));
-            }
             s.saved = state;
+        }
+        let mut resumed = None;
+        if let Some(r) =
+            resume.filter(|r| self.settings.reading.auto_resume && r.pos > CharPos::ZERO)
+        {
+            s.cursor = text_util::first_word_at_or_after(&s.doc, r.pos.clamp_to(s.doc.len_chars()));
+            resumed = Some((text_util::percent(&s.doc, s.cursor), r));
         }
         let title = s.title.clone();
         self.session = Some(s);
         self.view.top_line = 0;
         self.scroll_to_cursor();
         let msg = match resumed {
-            Some(p) => format!("Opened {title}. Resumed at {p} percent."),
+            Some((p, r)) if r.synced => {
+                format!("Opened {title}. Resumed at {p} percent, from another device.")
+            }
+            Some((p, r)) if r.unresolved => format!(
+                "Opened {title}. Resumed at {p} percent. Another device is at a different place; kept this device's."
+            ),
+            Some((p, _)) => format!("Opened {title}. Resumed at {p} percent."),
             None => format!("Opened {title}."),
         };
         self.tell(&msg);
@@ -578,8 +612,12 @@ impl App {
         state.notes = s.notes.clone();
         state.highlights = s.highlights.clone();
         store.save(&s.key, &state)?;
+        let path = s.doc.meta.path.clone();
         s.saved = state;
         self.last_position_save = Some((Instant::now(), pos));
+        if let (Some(path), Some(s)) = (path, self.session.as_ref()) {
+            self.sync_position(&path, &s.saved);
+        }
         Ok(())
     }
 
@@ -604,6 +642,7 @@ impl App {
         if let Err(e) = self.save_settings() {
             log::warn!("cannot save settings: {e}");
         }
+        self.flush_library_sync();
         self.stop_speech();
     }
 
@@ -693,6 +732,10 @@ impl App {
                 vec![Effect::Redraw]
             }
             Command::Cancel => {
+                if self.pending_confirm.is_some() {
+                    // Cancelling a question answers no.
+                    return self.confirm(crate::command::Confirm::No);
+                }
                 if self.mode.is_prompt() || self.list.is_some() {
                     let list = self.list.take();
                     self.leave_prompt();
@@ -832,6 +875,11 @@ impl App {
             Some(ListKind::Highlights) => self.go_to_highlight(n),
             Some(ListKind::SaveChoice(after)) => return self.answer_save_choice(n, after),
             Some(ListKind::Recovery) => return self.answer_recovery(n),
+            Some(ListKind::Library(paths)) => {
+                if let Some(path) = paths.get(n).cloned() {
+                    return self.open_command(path);
+                }
+            }
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -915,6 +963,7 @@ impl App {
             A::ReadCurrentWord => self.read_current_unit(textweaver_core::Unit::Word),
             A::ReadCurrentSentence => self.read_current_unit(textweaver_core::Unit::Sentence),
             A::ReadCurrentLine => self.read_current_line(),
+            A::ReadParagraph => self.read_current_unit(textweaver_core::Unit::Paragraph),
             A::ReadSelection => self.read_selection(),
             A::SayPosition => self.say_position(),
             A::ReplaySentence => self.replay_sentence(),
@@ -971,6 +1020,22 @@ impl App {
             A::CaretPreviousWord => self.caret_word(textweaver_core::Direction::Backward),
             A::CaretNextLine => self.caret_line(textweaver_core::Direction::Forward),
             A::CaretPreviousLine => self.caret_line(textweaver_core::Direction::Backward),
+            A::SelectNextWord => self.extend_selection(
+                textweaver_core::Unit::Word,
+                textweaver_core::Direction::Forward,
+            ),
+            A::SelectPreviousWord => self.extend_selection(
+                textweaver_core::Unit::Word,
+                textweaver_core::Direction::Backward,
+            ),
+            A::SelectNextLine => self.extend_selection(
+                textweaver_core::Unit::Line,
+                textweaver_core::Direction::Forward,
+            ),
+            A::SelectPreviousLine => self.extend_selection(
+                textweaver_core::Unit::Line,
+                textweaver_core::Direction::Backward,
+            ),
             A::PageDown => self.page(textweaver_core::Direction::Forward),
             A::PageUp => self.page(textweaver_core::Direction::Backward),
             A::ScrollDown => self.scroll_lines(1),
@@ -1006,9 +1071,11 @@ impl App {
             A::PreviousBookmark => self.bookmark_step(textweaver_core::Direction::Backward),
             // File
             A::Open => return self.prompt(PromptPurpose::Open),
+            A::OpenLibrary => return self.open_library(),
             // View and help
             A::NextTheme => self.next_theme(),
             A::ToggleLineNumbers => self.toggle_line_numbers(),
+            A::ToggleCharacterKeys => self.toggle_character_keys(),
             A::CommandPalette => return self.prompt(PromptPurpose::CommandPalette),
             A::KeyboardHelp => return self.keyboard_help(),
             A::Help => return self.help(),
@@ -1039,8 +1106,10 @@ impl App {
             | A::AddTableRow
             | A::InsertImage
             | A::Replace => return self.edit_action(a),
-            other => {
-                let msg = format!("{} is not available yet.", other.help());
+            // Needs a voice list from the speech service, which it does not
+            // offer yet (see the Agent D3 report).
+            A::ChooseVoice => {
+                let msg = format!("{} is not available yet.", a.help());
                 self.tell(&msg);
             }
         }

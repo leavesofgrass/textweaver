@@ -92,6 +92,7 @@ mod edit;
 mod extra;
 mod goto;
 mod help;
+mod library;
 mod marks;
 mod nav;
 mod notes;
