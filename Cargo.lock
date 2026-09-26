@@ -2837,6 +2837,7 @@ name = "textweaver-store"
 version = "0.1.0-alpha.3"
 dependencies = [
  "directories",
+ "log",
  "serde",
  "serde_json",
  "tempfile",

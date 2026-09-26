@@ -569,12 +569,35 @@ impl StateStore {
 
     /// The saved state, if any: the pending (not yet written) state when
     /// there is one, else the file. Unreadable files count as no state.
+    ///
+    /// A file that exists but does not parse (a hand edit, a sync conflict,
+    /// a newer version's format) is renamed to
+    /// `<key>.corrupt-<unix time>.bak` first, so the next save cannot
+    /// overwrite the notes, bookmarks, and highlights it holds.
     pub fn load(&self, key: &DocKey) -> Option<DocState> {
         if let Some((state, _)) = self.inner.lock().pending.get(key) {
             return Some(state.clone());
         }
-        let text = std::fs::read_to_string(self.inner.file(key)).ok()?;
-        serde_json::from_str(&text).ok()
+        let path = self.inner.file(key);
+        let text = std::fs::read_to_string(&path).ok()?;
+        match serde_json::from_str(&text) {
+            Ok(state) => Some(state),
+            Err(e) => {
+                let backup = path.with_extension(format!("corrupt-{}.bak", crate::now_ts()));
+                match std::fs::rename(&path, &backup) {
+                    Ok(()) => log::warn!(
+                        "{} could not be read ({e}); kept as {}",
+                        path.display(),
+                        backup.display()
+                    ),
+                    Err(re) => log::warn!(
+                        "{} could not be read ({e}) or set aside ({re})",
+                        path.display()
+                    ),
+                }
+                None
+            }
+        }
     }
 
     /// Saves state atomically now, replacing anything pending for `key`.
@@ -666,12 +689,14 @@ impl StateStore {
             .filter_map(Result::ok)
             .map(|e| e.path())
             .filter(|p| p.extension().is_some_and(|x| x == "json"))
-            .map(|p| {
+            // A file that does not parse is kept, not pruned first: it may
+            // hold notes (`load` sets it aside when its document opens).
+            .filter_map(|p| {
                 let ts = std::fs::read_to_string(&p)
                     .ok()
-                    .and_then(|t| serde_json::from_str::<DocState>(&t).ok())
-                    .map_or(0, |s| s.ts);
-                (ts, p)
+                    .and_then(|t| serde_json::from_str::<DocState>(&t).ok())?
+                    .ts;
+                Some((ts, p))
             })
             .collect();
         if files.len() <= keep {
@@ -1038,5 +1063,37 @@ mod tests {
         assert!(store.load(&DocKey::untitled(5)).is_some());
         assert!(store.load(&DocKey::untitled(4)).is_some());
         assert!(store.load(&DocKey::untitled(1)).is_none());
+    }
+
+    #[test]
+    fn a_corrupt_state_file_is_set_aside_not_overwritten() {
+        // Before: load returned None, and the next position save replaced
+        // the file, losing its notes and bookmarks.
+        let dir = tempfile::tempdir().unwrap();
+        let store = StateStore::new(dir.path().to_owned());
+        let key = DocKey::untitled(1);
+        let file = dir.path().join(format!("{}.json", key.0));
+        let damaged = r#"{"position": 12, "bookmarks": [ {"pos": 3, "name": "kept"#;
+        std::fs::write(&file, damaged).unwrap();
+        // Unparseable files are not pruned first either.
+        for n in 2..=4 {
+            store
+                .save(&DocKey::untitled(n), &DocState::default())
+                .unwrap();
+        }
+        assert_eq!(store.prune(1).unwrap(), 2);
+        assert!(file.exists());
+        assert!(store.load(&key).is_none());
+        store.save(&key, &DocState::default()).unwrap();
+        let backups: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.to_string_lossy().contains(".corrupt-"))
+            .collect();
+        assert_eq!(backups.len(), 1, "{backups:?}");
+        assert_eq!(std::fs::read_to_string(&backups[0]).unwrap(), damaged);
+        assert!(backups[0].extension().is_some_and(|x| x == "bak"));
+        assert!(store.load(&key).is_some());
     }
 }
