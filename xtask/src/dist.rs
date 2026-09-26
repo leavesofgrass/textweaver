@@ -64,17 +64,74 @@ const DOCS: [(&str, &str); 6] = [
     ("docs/install.md", "INSTALL.md"),
     ("docs/eloquence.md", "docs/eloquence.md"),
 ];
-/// More guides copied when present.
-const OPTIONAL_DOCS: [&str; 8] = [
-    "docs/keyboard.md",
-    "docs/themes.md",
-    "docs/settings.md",
-    "docs/converting.md",
-    "docs/reading-aids.md",
-    "docs/dectalk.md",
-    "docs/quickstart.md",
-    "scripts/README.md",
-];
+/// More guides copied when present, besides the user guides listed in the
+/// documentation index (see [`user_guides`]).
+const OPTIONAL_DOCS: [&str; 3] = ["docs/README.md", "docs/quickstart.md", "scripts/README.md"];
+/// The documentation index; the guides linked under its [`USER_SECTION`]
+/// are packaged.
+const DOCS_INDEX: &str = "docs/README.md";
+/// The heading of the user section in [`DOCS_INDEX`].
+const USER_SECTION: &str = "## For users";
+/// The offline interactive pages, packaged whole.
+const SITE_DIR: &str = "docs/site";
+
+/// The user guides linked under "For users" in the documentation index,
+/// as paths relative to the root (`docs/reading.md`, `scripts/README.md`).
+/// Only local Markdown links count; anchors are dropped.
+fn user_guides(index: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut in_section = false;
+    for line in index.lines() {
+        if line.starts_with("## ") {
+            in_section = line.trim_end() == USER_SECTION;
+            continue;
+        }
+        if !in_section {
+            continue;
+        }
+        let mut rest = line;
+        while let Some(start) = rest.find("](") {
+            let after = &rest[start + 2..];
+            let Some(end) = after.find(')') else {
+                break;
+            };
+            let target = after[..end].split('#').next().unwrap_or("");
+            if target.ends_with(".md") && !target.contains("://") {
+                let path = normalize(&format!("docs/{target}"));
+                if !out.contains(&path) {
+                    out.push(path);
+                }
+            }
+            rest = &after[end..];
+        }
+    }
+    out
+}
+
+/// Resolves `.` and `..` in a relative path with forward slashes.
+fn normalize(path: &str) -> String {
+    let mut parts: Vec<&str> = Vec::new();
+    for p in path.split('/') {
+        match p {
+            "" | "." => {}
+            ".." => {
+                parts.pop();
+            }
+            p => parts.push(p),
+        }
+    }
+    parts.join("/")
+}
+
+/// Copies every file under `src` into `dest`, keeping the layout.
+fn copy_tree(src: &Path, dest: &Path) -> anyhow::Result<()> {
+    let mut files = Vec::new();
+    collect(src, &mut files)?;
+    for f in files {
+        eci::copy(&f, &dest.join(f.strip_prefix(src)?))?;
+    }
+    Ok(())
+}
 
 /// Parsed arguments.
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -198,11 +255,18 @@ pub fn run() -> anyhow::Result<()> {
             }
         }
     }
-    for src in OPTIONAL_DOCS {
-        let path = root.join(src);
+    // The user guides from the documentation index, and the offline pages.
+    let index = fs::read_to_string(root.join(DOCS_INDEX)).unwrap_or_default();
+    let guides = user_guides(&index);
+    for src in OPTIONAL_DOCS.iter().map(|s| (*s).to_owned()).chain(guides) {
+        let path = root.join(&src);
         if path.is_file() {
-            eci::copy(&path, &stage.join(src))?;
+            eci::copy(&path, &stage.join(&src))?;
         }
+    }
+    let site = root.join(SITE_DIR);
+    if site.is_dir() {
+        copy_tree(&site, &stage.join(SITE_DIR))?;
     }
 
     check_notices(&stage)?;
@@ -396,6 +460,34 @@ mod tests {
         for (src, _) in LICENCE_FILES {
             assert!(root.join(src).is_file(), "{src} is packaged but missing");
         }
+    }
+
+    #[test]
+    fn user_guides_come_from_the_index() {
+        let index = "# Docs\n\n- [Quick start](quickstart.md)\n\n## For users\n\n### Reading\n\n- [Reading](reading.md): moving around; see [keys](keyboard.md#browse).\n- [Scripts](../scripts/README.md): install.\n- [Site](https://example.org/x.md)\n- [Reading again](reading.md)\n\n## For contributors\n\n- [Architecture](architecture.md)\n";
+        assert_eq!(
+            user_guides(index),
+            ["docs/reading.md", "docs/keyboard.md", "scripts/README.md"]
+        );
+        assert_eq!(normalize("docs/./a/../b.md"), "docs/b.md");
+    }
+
+    #[test]
+    fn the_real_index_lists_existing_guides() {
+        let root = eci::root();
+        let Ok(index) = fs::read_to_string(root.join(DOCS_INDEX)) else {
+            return;
+        };
+        let guides = user_guides(&index);
+        assert!(guides.len() >= 10, "{guides:?}");
+        for g in &guides {
+            assert!(
+                root.join(g).is_file(),
+                "{g} is linked from {DOCS_INDEX} but missing"
+            );
+        }
+        assert!(guides.iter().any(|g| g == "docs/reading.md"));
+        assert!(!guides.iter().any(|g| g == "docs/architecture.md"));
     }
 
     #[test]
