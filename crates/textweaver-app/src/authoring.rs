@@ -1,6 +1,8 @@
 //! Authoring and reading quick wins (roadmap Phase 1, Agent P1b): word
 //! count, the link address at the cursor, table cells in edit mode, the
-//! typing echo switch, and copying to the clipboard.
+//! typing echo switch, and copying to the clipboard; and from Phase 2
+//! (Agent P2b) select all, deleting a word, paste, and cycling verbosity
+//! and punctuation while running.
 //!
 //! # Clipboard
 //!

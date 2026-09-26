@@ -105,6 +105,25 @@
 //! reader that reads the status line does not repeat textweaver's voice.
 //! See the `access` module and `docs/screen-readers.md`.
 //!
+//! # Authoring and navigation (Agent P2b)
+//!
+//! - **Structure while editing** (`structure`): the Markdown source is
+//!   parsed with pulldown-cmark's source offsets, so markers sit on the
+//!   text being written and are parsed again when typing pauses; the same
+//!   markers carry positions between the source and the canonical text.
+//!   [`App::wait_for_structure`] waits for a background parse.
+//! - **Lists** (`lists`): the outline (Alt+O) and the citation picker
+//!   filter as you type ([`Command::FilterList`], [`App::list_filter`]);
+//!   spelling, find-and-replace, and template lists.
+//! - **Citations** (`citations`), **export and preview** (`publish`),
+//!   **spelling** (`spell`), **tables** (`tables`), **links and
+//!   footnotes** (`links`), **find and replace one at a time**
+//!   (`replace`), **templates** (`templates`, [`local_date`]).
+//! - Exports and reference lookups run on other threads and finish in
+//!   [`App::tick`]; [`App::wait_for_background`] waits for them in tests.
+//!   Files and addresses open through [`App::set_launcher`] (the system's
+//!   default program otherwise, only in a session that keeps files).
+//!
 //! Owner: Agent D.
 
 mod access;
