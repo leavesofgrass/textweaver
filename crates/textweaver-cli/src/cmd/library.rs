@@ -201,12 +201,21 @@ fn render_listing(l: &Listing) -> String {
     if l.items.is_empty() {
         out.push_str("No documents yet.\n");
     } else {
-        out.push_str(&format!("{} documents:\n", l.items.len()));
+        out.push_str(&format!("{}:\n", documents(l.items.len())));
         for i in &l.items {
             out.push_str(&format!("  {}\n    {}\n", i.describe(), i.path.display()));
         }
     }
     out
+}
+
+/// "1 document", "2 documents".
+fn documents(n: usize) -> String {
+    if n == 1 {
+        "1 document".to_owned()
+    } else {
+        format!("{n} documents")
+    }
 }
 
 fn render_search(r: &SearchReport) -> String {
@@ -221,14 +230,15 @@ fn render_search(r: &SearchReport) -> String {
     }
     if r.text.is_empty() {
         out.push_str(&format!(
-            "No text matches for {} in {} documents.\n",
-            r.query, r.indexed
+            "No text matches for {} in {}.\n",
+            r.query,
+            documents(r.indexed)
         ));
     } else {
         out.push_str(&format!(
-            "Text matches in {} of {} documents:\n",
+            "Text matches in {} of {}:\n",
             r.text.len(),
-            r.indexed
+            documents(r.indexed)
         ));
         for h in &r.text {
             out.push_str(&format!("  {}\n    {}\n", h.describe(), h.path.display()));
@@ -236,8 +246,8 @@ fn render_search(r: &SearchReport) -> String {
     }
     if !r.unreadable.is_empty() {
         out.push_str(&format!(
-            "{} documents could not be read for searching.\n",
-            r.unreadable.len()
+            "{} could not be read for searching.\n",
+            documents(r.unreadable.len())
         ));
     }
     out
@@ -315,6 +325,13 @@ mod tests {
             remove: None,
             json: false,
         }
+    }
+
+    #[test]
+    fn one_document_is_singular() {
+        assert_eq!(documents(1), "1 document");
+        assert_eq!(documents(0), "0 documents");
+        assert_eq!(documents(2), "2 documents");
     }
 
     #[test]

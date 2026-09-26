@@ -289,6 +289,9 @@ pub struct App {
     pub(crate) last_disk_check: Option<Instant>,
     /// Writing the recovery snapshot failed and has not worked since.
     pub(crate) snapshot_trouble: bool,
+    /// A note or highlight chosen for deletion in its list, waiting for y
+    /// or n (deleting one at the cursor asks too).
+    pub(crate) pending_list_delete: Option<(ListKind, usize)>,
 }
 
 impl App {
@@ -343,6 +346,7 @@ impl App {
             overwrite_confirmed: false,
             last_disk_check: None,
             snapshot_trouble: false,
+            pending_list_delete: None,
         };
         app.apply_voice_settings();
         app.load_themes();
@@ -373,6 +377,7 @@ impl App {
         self.pending_confirm.is_some()
             || self.pending_import.is_some()
             || self.pending_disk.is_some()
+            || self.pending_list_delete.is_some()
     }
 
     /// Answers a pending confirmation.
@@ -383,6 +388,30 @@ impl App {
         }
         if self.pending_import.is_some() {
             return self.confirm_import(answer);
+        }
+        if let Some((kind, n)) = self.pending_list_delete.clone() {
+            return match answer {
+                Confirm::Yes => {
+                    self.pending_list_delete = None;
+                    self.list = Some(kind.clone());
+                    match kind {
+                        ListKind::Highlights => self.delete_highlight(n),
+                        _ => self.delete_note(n),
+                    }
+                }
+                Confirm::No => {
+                    self.pending_list_delete = None;
+                    self.tell("Kept.");
+                    match kind {
+                        ListKind::Highlights => self.list_highlights(),
+                        _ => self.notes_command(NoteCommand::List),
+                    }
+                }
+                Confirm::Repeat => {
+                    self.tell(list_delete_question(&kind));
+                    vec![Effect::Redraw]
+                }
+            };
         }
         let Some(a) = self.pending_confirm else {
             return vec![Effect::Redraw];
@@ -992,8 +1021,15 @@ impl App {
     fn delete_item(&mut self, n: usize) -> Vec<Effect> {
         match self.list.clone() {
             Some(ListKind::Bookmarks) => self.delete_bookmark(n),
-            Some(ListKind::Notes) => self.delete_note(n),
-            Some(ListKind::Highlights) => self.delete_highlight(n),
+            // Deleting a note or highlight asks first, as the delete_note
+            // action does: a stray Delete in the list cannot lose one.
+            Some(kind @ (ListKind::Notes | ListKind::Highlights)) => {
+                let question = list_delete_question(&kind);
+                self.list = None;
+                self.pending_list_delete = Some((kind, n));
+                self.tell(question);
+                vec![Effect::Redraw]
+            }
             _ => {
                 self.tell("Nothing to delete in this list.");
                 vec![Effect::Redraw]
@@ -1225,6 +1261,14 @@ impl App {
             A::ChooseVoice => return self.choose_voice(),
         }
         vec![Effect::Redraw]
+    }
+}
+
+/// The question asked before deleting from the notes or highlights list.
+fn list_delete_question(kind: &ListKind) -> &'static str {
+    match kind {
+        ListKind::Highlights => "Remove this highlight? y or n",
+        _ => "Delete this note? y or n",
     }
 }
 

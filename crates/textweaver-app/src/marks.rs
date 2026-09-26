@@ -147,10 +147,18 @@ impl App {
             ts: textweaver_store::now_ts(),
         });
         s.bookmarks.sort_by_key(|b| b.pos);
-        if let Err(e) = self.save_position() {
-            log::warn!("cannot save bookmarks: {e}");
+        match self.save_position() {
+            Ok(()) => self.tell(&format!("Bookmark {name} set at {pct} percent.")),
+            Err(e) => {
+                // Kept for this session and saved again with the position;
+                // the user must not believe it is safe on disk.
+                log::warn!("cannot save bookmarks: {e}");
+                self.speech.earcon(Earcon::Error);
+                self.error(&format!(
+                    "Bookmark {name} is set for now, but could not be saved: {e}."
+                ));
+            }
         }
-        self.tell(&format!("Bookmark {name} set at {pct} percent."));
     }
 
     pub(crate) fn list_bookmarks(&mut self) -> Vec<Effect> {

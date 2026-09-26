@@ -995,7 +995,7 @@ impl Tui {
 
     /// Key hints for the current mode, from the keymap, fitted to `width`.
     pub fn hints(&self, width: u16) -> String {
-        if self.app.pending_confirmation().is_some() {
+        if self.app.confirmation_pending() {
             return " y yes  n or a no  Escape no".to_owned();
         }
         let rsvp_hints: &[(ActionId, &str)] = &[

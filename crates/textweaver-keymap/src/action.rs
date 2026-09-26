@@ -312,13 +312,13 @@ actions! {
         gui [], term [], shared ["b:b"];
     PreviousBookmark = "previous_bookmark", Bookmarks, "Move to the previous bookmark",
         gui [], term [], shared ["b:Shift+B"];
-    AddNote = "add_note", Bookmarks, "Add a note to the selection or the word at the cursor",
+    AddNote = "add_note", Bookmarks, "Add a note to the selection or the sentence at the cursor",
         gui [], term [], shared ["b:a"];
-    ListNotes = "list_notes", Bookmarks, "List notes and highlights",
+    ListNotes = "list_notes", Bookmarks, "List notes",
         gui ["g:Ctrl+Shift+N"], term [], shared ["b:Shift+A"];
-    NextNote = "next_note", Bookmarks, "Move to the next note or highlight",
+    NextNote = "next_note", Bookmarks, "Move to the next note",
         gui ["g:Alt+Down"], term ["g:Alt+Down"], shared ["b:e"];
-    PreviousNote = "previous_note", Bookmarks, "Move to the previous note or highlight",
+    PreviousNote = "previous_note", Bookmarks, "Move to the previous note",
         gui ["g:Alt+Up"], term ["g:Alt+Up"], shared ["b:Shift+E"];
     DeleteNote = "delete_note", Bookmarks, "Delete the note or highlight at the cursor",
         gui [], term [], shared ["b:Delete"];

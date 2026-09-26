@@ -161,10 +161,10 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | List bookmarks | `Shift+M` (browse) | `Shift+M` (browse) | `list_bookmarks` |
 | Move to the next bookmark | `b` (browse) | `b` (browse) | `next_bookmark` |
 | Move to the previous bookmark | `Shift+B` (browse) | `Shift+B` (browse) | `previous_bookmark` |
-| Add a note to the selection or the word at the cursor | `a` (browse) | `a` (browse) | `add_note` |
-| List notes and highlights | `Shift+A` (browse) | `Ctrl+Shift+N`, `Shift+A` (browse) | `list_notes` |
-| Move to the next note or highlight | `Alt+Down`, `e` (browse) | `Alt+Down`, `e` (browse) | `next_note` |
-| Move to the previous note or highlight | `Alt+Up`, `Shift+E` (browse) | `Alt+Up`, `Shift+E` (browse) | `previous_note` |
+| Add a note to the selection or the sentence at the cursor | `a` (browse) | `a` (browse) | `add_note` |
+| List notes | `Shift+A` (browse) | `Ctrl+Shift+N`, `Shift+A` (browse) | `list_notes` |
+| Move to the next note | `Alt+Down`, `e` (browse) | `Alt+Down`, `e` (browse) | `next_note` |
+| Move to the previous note | `Alt+Up`, `Shift+E` (browse) | `Alt+Up`, `Shift+E` (browse) | `previous_note` |
 | Delete the note or highlight at the cursor | `Delete` (browse) | `Delete` (browse) | `delete_note` |
 | Highlight the selection, or the sentence at the cursor | `y` (browse) | `y` (browse) | `highlight_selection` |
 
@@ -251,7 +251,7 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | List bookmarks | palette | palette | `list_bookmarks` |
 | Move to the next bookmark | palette | palette | `next_bookmark` |
 | Move to the previous bookmark | palette | palette | `previous_bookmark` |
-| Add a note to the selection or the word at the cursor | palette | palette | `add_note` |
-| List notes and highlights | palette | has a chord | `list_notes` |
+| Add a note to the selection or the sentence at the cursor | palette | palette | `add_note` |
+| List notes | palette | has a chord | `list_notes` |
 | Highlight the selection, or the sentence at the cursor | palette | palette | `highlight_selection` |
 | List keyboard shortcuts | palette | has a chord | `keyboard_help` |

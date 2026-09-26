@@ -423,7 +423,29 @@ impl App {
         self.stop_speech();
         if !self.read_range(range, ReadKind::InPlace) {
             self.speak_content("blank");
+        } else {
+            self.show_read_text(range, false);
         }
+    }
+
+    /// Puts text read in place on the status line: always for lines (the
+    /// Speech Cursor), otherwise only without self-voicing, where a screen
+    /// reader reads the status line and would hear nothing else
+    /// (`--no-speech`).
+    pub(crate) fn show_read_text(&mut self, range: CharRange, always: bool) {
+        if !always && self.self_voicing {
+            return;
+        }
+        let Some(s) = self.session.as_ref() else {
+            return;
+        };
+        let text = text_util::preview(&s.doc, range, 80);
+        let text = if text.is_empty() {
+            "blank".to_owned()
+        } else {
+            text
+        };
+        self.show(&text);
     }
 
     pub(crate) fn read_current_line(&mut self) {
@@ -443,6 +465,8 @@ impl App {
         self.stop_speech();
         if blank || !self.read_range(range, ReadKind::InPlace) {
             self.speak_content("blank");
+        } else {
+            self.show_read_text(range, true);
         }
     }
 
@@ -457,6 +481,8 @@ impl App {
                 self.stop_speech();
                 if !self.read_range(r, ReadKind::InPlace) {
                     self.speak_content("blank");
+                } else {
+                    self.show_read_text(r, false);
                 }
             }
             None => self.tell("No selection."),

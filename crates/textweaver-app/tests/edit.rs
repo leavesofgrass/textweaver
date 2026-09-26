@@ -413,6 +413,35 @@ fn emergency_save_writes_the_snapshot_at_once() {
     );
 }
 
+/// "Bookmark set" is said only when the bookmark reached the disk.
+#[test]
+fn a_bookmark_that_cannot_be_saved_is_not_announced_as_set() {
+    let mut r = rig();
+    let file = r.file(
+        "b.md",
+        "One two three.
+",
+    );
+    r.app.open(&file).unwrap();
+    // A file where the state folder should be: saving fails.
+    let state = r.paths.state_dir();
+    let _ = std::fs::remove_dir_all(&state);
+    std::fs::create_dir_all(state.parent().unwrap()).unwrap();
+    std::fs::write(&state, "blocked").unwrap();
+    r.said.clear();
+    r.act(ActionId::AddBookmark);
+    assert!(!r.said.any("set at"), "{:?}", r.said.all());
+    assert!(r.said.any("could not be saved"), "{:?}", r.said.all());
+    // It still works for this session.
+    assert!(r.app.bookmark_position(0).is_some());
+    // Once saving works again, so does the announcement.
+    std::fs::remove_file(&state).unwrap();
+    r.act(ActionId::CaretNextWord);
+    r.said.clear();
+    r.act(ActionId::AddBookmark);
+    assert!(r.said.any("Bookmark mark2 set at"), "{:?}", r.said.all());
+}
+
 #[test]
 fn quitting_with_changes_saves_on_request() {
     let mut r = rig();
@@ -661,7 +690,17 @@ fn notes_add_list_jump_edit_delete_and_persist() {
     r.app.dispatch(Command::Notes(NoteCommand::ToggleHighlight));
     assert!(r.said.last().starts_with("Highlight removed"));
     r.app.dispatch(Command::Notes(NoteCommand::List));
+    // Delete in the list asks first; n keeps the note and shows the list
+    // again, y deletes it.
+    r.app.dispatch(Command::DeleteItem(0));
+    assert!(r.app.confirmation_pending());
+    assert_eq!(r.said.last(), "Delete this note? y or n");
+    let effects = r.app.dispatch(Command::Confirm(Confirm::No));
+    assert!(effects.iter().any(|e| matches!(e, Effect::ShowList { .. })));
+    assert_eq!(r.app.session().unwrap().notes.len(), 1);
     let effects = r.app.dispatch(Command::DeleteItem(0));
+    assert!(!effects.iter().any(|e| matches!(e, Effect::ShowList { .. })));
+    let effects = r.app.dispatch(Command::Confirm(Confirm::Yes));
     assert!(!effects.iter().any(|e| matches!(e, Effect::ShowList { .. })));
     assert!(r.said.last().starts_with("Note deleted"));
     let store = StateStore::new(r.paths.state_dir());

@@ -196,12 +196,21 @@ impl MigrationReport {
         } else if self.written.is_empty() {
             out.push_str("Nothing new to write.\n");
         } else {
-            out.push_str(&format!("Wrote {} files.\n", self.written.len()));
+            let n = self.written.len();
+            out.push_str(&format!(
+                "Wrote {n} {}.\n",
+                if n == 1 { "file" } else { "files" }
+            ));
         }
         if self.star_cache_documents > 0 {
             out.push_str(&format!(
-                "Star's cached text was available for {} documents.\n",
-                self.star_cache_documents
+                "Star's cached text was available for {} {}.\n",
+                self.star_cache_documents,
+                if self.star_cache_documents == 1 {
+                    "document"
+                } else {
+                    "documents"
+                }
             ));
         }
         out.push_str("\nSummary:\n");
@@ -1135,8 +1144,12 @@ pub fn migrate_star(
             "reading statistics",
             Outcome::Skipped,
             format!(
-                "{} documents' reading time and progress; textweaver does not keep reading statistics yet",
-                stats.len()
+                "{} reading time and progress; textweaver does not keep reading statistics yet",
+                if stats.len() == 1 {
+                    "1 document's".to_owned()
+                } else {
+                    format!("{} documents'", stats.len())
+                }
             ),
         );
     }
