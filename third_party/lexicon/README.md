@@ -1,6 +1,6 @@
 # Define word: Open English WordNet and CMUdict
 
-textweaver's offline dictionary for define word (`textweaver-lexicon`), derived from two sources. Jon approved downloading both, from their official GitHub locations only, on Saturday, September 26, 2026, and they were downloaded that day.
+textweaver's offline dictionary for define word (`textweaver-lexicon`), derived from two sources. Downloading both, from their official GitHub locations only, was approved on Saturday, September 26, 2026, and they were downloaded that day.
 
 ## Sources
 

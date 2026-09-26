@@ -74,6 +74,10 @@ CMUDICT_LICENSE_URL = (
 CMUDICT_LICENSE_SHA256 = "bd4ce8e44170a5f9f481310ca85c51de3c4f851a65e679b40e603b143bd3542a"
 CMUDICT_LICENCE = "BSD-2-Clause-style (Carnegie Mellon University)"
 
+# A neutral User-Agent: nothing about the person running the build leaves
+# the machine.
+USER_AGENT = "textweaver-research (+https://github.com/leavesofgrass/textweaver)"
+
 
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
@@ -90,7 +94,8 @@ def fetch(url: str, dest: Path, expect: str) -> None:
         return
     print(f"downloading {url}")
     tmp = dest.with_suffix(dest.suffix + ".part")
-    with urllib.request.urlopen(url, timeout=120) as r, tmp.open("wb") as f:
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=120) as r, tmp.open("wb") as f:
         shutil.copyfileobj(r, f)
     got = sha256(tmp)
     if got != expect:

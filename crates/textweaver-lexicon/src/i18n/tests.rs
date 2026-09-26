@@ -24,8 +24,8 @@ fn formats_values_and_plurals() {
     )
     .unwrap();
     assert_eq!(
-        c.fmt("hello", &args!["name" => "Jon"]),
-        "Hello, Jon, from textweaver."
+        c.fmt("hello", &args!["name" => "Ada"]),
+        "Hello, Ada, from textweaver."
     );
     assert_eq!(c.fmt("count", &args!["n" => 0, "what" => "cat"]), "none");
     assert_eq!(c.fmt("count", &args!["n" => 1, "what" => "cat"]), "one cat");
@@ -149,7 +149,10 @@ fn english_is_complete() {
         regex::Regex::new(r#"\b(?:tr|fmt|msg|msg_args)\(\s*"([a-z][a-z0-9]*(?:-[a-z0-9]+)+)""#)
             .unwrap();
     let dynamic = regex::Regex::new(r#""([a-z][a-z0-9]*(?:-[a-z0-9]+)*-)\{"#).unwrap();
+    // Ids chosen before the call (`let id = if .. { "a" } else { "b" }`).
+    let literal = regex::Regex::new(r#""([a-z][a-z0-9]*(?:-[a-z0-9]+)+)""#).unwrap();
     let mut used = BTreeSet::new();
+    let mut literals = BTreeSet::new();
     let mut prefixes = BTreeSet::new();
     for f in &files {
         let Ok(text) = std::fs::read_to_string(f) else {
@@ -161,6 +164,9 @@ fn english_is_complete() {
         for c in dynamic.captures_iter(&text) {
             prefixes.insert(c[1].to_owned());
         }
+        for c in literal.captures_iter(&text) {
+            literals.insert(c[1].to_owned());
+        }
     }
     let en = Catalog::english();
     let missing: Vec<&String> = used.iter().filter(|id| !en.has(id)).collect();
@@ -171,7 +177,11 @@ fn english_is_complete() {
     let unused: Vec<&str> = en
         .ids()
         .into_iter()
-        .filter(|id| !used.contains(*id) && !prefixes.iter().any(|p| id.starts_with(p.as_str())))
+        .filter(|id| {
+            !used.contains(*id)
+                && !literals.contains(*id)
+                && !prefixes.iter().any(|p| id.starts_with(p.as_str()))
+        })
         .collect();
     assert!(
         unused.is_empty(),
