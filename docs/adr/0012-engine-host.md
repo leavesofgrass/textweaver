@@ -88,5 +88,5 @@ Both backends own playback, so both declare `PLAYBACK_EVENTS`: their word events
 - [Speech engines and voices](../speech.md): the engines that run in hosts.
 - [Installing textweaver](../install.md#windows): the hosts must stay next to the programs.
 - [Speech pipeline, step by step](../site/speech-pipeline.html): where the host sits in the path from text to speech.
-- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Architecture](../dev/architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
 - [Documentation index](../README.md)

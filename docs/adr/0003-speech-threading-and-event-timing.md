@@ -10,7 +10,7 @@
 
 Speech engines disagree about threads and timing. AVSpeechSynthesizer wants the main thread; WinRT speech is apartment-affine; espeak-ng is a process-wide singleton. Some engines report word boundaries with an audio-clock timestamp (espeak-ng `audio_position`), some report them as they happen, some (the Omnivox subprocess protocol, which is write-only) report nothing.
 
-Star's playback layer (`star/tts/manager/_playback.py`, inventoried in `docs/star-parity.md`) has hard-won rules, and some bugs: the `on_done` handler has no generation check, all timers share one stop event, and a late "done" from the previous sentence can kill the current highlight.
+Star's playback layer (`star/tts/manager/_playback.py`, inventoried in `docs/history/star-parity.md`) has hard-won rules, and some bugs: the `on_done` handler has no generation check, all timers share one stop event, and a late "done" from the previous sentence can kill the current highlight.
 
 ## Decision
 
@@ -58,5 +58,5 @@ Star's playback layer (`star/tts/manager/_playback.py`, inventoried in `docs/sta
 - [Speech engines and voices](../speech.md): the engines and how highlighting works with each.
 - [Speech pipeline, step by step](../site/speech-pipeline.html): an interactive walk from a key press to a highlighted word.
 - [ADR-0012: The engine host](0012-engine-host.md): the playback client for out-of-process engines.
-- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Architecture](../dev/architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
 - [Documentation index](../README.md)

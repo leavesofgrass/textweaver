@@ -2,8 +2,9 @@
 
 - Status: accepted
 - Date: 2026-09-25
-- Status update (Saturday, September 26, 2026): The workspace now has 28 crates and `xtask`; [the architecture guide](../architecture.md) maps them. Two dependency rules changed: `textweaver-speech` also depends on `textweaver-math`, because math is spoken inside the normalization pipeline (ADR-0018), and `textweaver-store` depends on `textweaver-aids` (and through it on `textweaver-text` and `textweaver-fonts`) for the `[reading_aids]` settings types. Speech still never receives a `Document`. `espeakng-sys` was replaced by hand-written declarations, so the espeak feature needs no clang. `live-region` is used by the GUI spike (ADR-0014), not yet by `textweaver-a11y`. `ureq` serves citation lookups (ADR-0019) and `rayon` bulk conversion (ADR-0016). `pdf-extract` and `pdfium-render` are still listed in the workspace table but no crate uses them (ADR-0010).
+- Status update (Saturday, September 26, 2026): The workspace now has 28 crates and `xtask`; [the architecture guide](../dev/architecture.md) maps them. Two dependency rules changed: `textweaver-speech` also depends on `textweaver-math`, because math is spoken inside the normalization pipeline (ADR-0018), and `textweaver-store` depends on `textweaver-aids` (and through it on `textweaver-text` and `textweaver-fonts`) for the `[reading_aids]` settings types. Speech still never receives a `Document`. `espeakng-sys` was replaced by hand-written declarations, so the espeak feature needs no clang. `live-region` is used by the GUI spike (ADR-0014), not yet by `textweaver-a11y`. `ureq` serves citation lookups (ADR-0019) and `rayon` bulk conversion (ADR-0016). `pdf-extract` and `pdfium-render` are still listed in the workspace table but no crate uses them (ADR-0010).
 - Status update (Saturday, September 26, 2026, Phases 1 and 2): seven unused workspace dependencies were removed, among them `pdf-extract` and `pdfium-render` (Agent P1c). `rust-version` is 1.92, because krilla needs it; the toolchain stays pinned to 1.96. `cargo xtask deps --check` checks the dependency direction in CI: it refuses forbidden edges, and reports two as allowed for now, store on aids and the reader reaching the conversion and citation crates through the app, which exports and inserts citations since Agent P2b. espeak-ng is loaded at run time with `libloading`, not linked (Agent P2d). Wave 3 plans to remove both exceptions (Agent W3c), and prefers pure-Rust, in-process crates over subprocesses and C or C++ libraries, recording each bold choice and its fallback in an ADR.
+- Status update (Saturday, September 26, 2026, Wave 3, Agent W3c): both exceptions are gone. Store depends only on core again: the `[reading_aids]` settings types are store's own plain data (`textweaver_store::reading_aids`), and `textweaver-aids` converts them. In-reader export, preview, and citations are `textweaver-app`'s `publish` feature, on by default and in releases; the workspace table declares the app with default features off, and the reader forwards `publish` as its own default. `cargo xtask deps --check` resolves features and refuses any edge the reader reaches without its default features. A new crate, `textweaver-engines`, holds the backend registry, so the app no longer depends on each engine crate. There is one notes model (the store's), and font resolution lives in `textweaver-fonts`. The workspace has 29 crates and `xtask`.
 
 ## Context
 
@@ -35,7 +36,7 @@ all of the above ← app ← tui, cli
 - Workspace lints: `unsafe_code = "deny"` (the espeak backend's FFI module opts out with `#[allow(unsafe_code)]` and a `// SAFETY:` comment on every block), `missing_docs = "warn"`, clippy `all = "warn"`. CI and `-D warnings` make all of them errors.
 - Edition 2024. Toolchain pinned in `rust-toolchain.toml` to 1.96 so Windows, CI, and the Docker image agree; `rust-version = "1.92"` states the true minimum (raised from 1.85 at Integration 1: `libloading` needs 1.88, `File::try_lock` 1.89; raised to 1.92 on 2026-09-26 because krilla 0.8, the PDF writer, declares 1.92).
 
-**Environments.** Native Windows (Jon's machine) and Linux in Docker (`docker/Dockerfile`, `compose.yaml`, see `docs/docker.md`). CI runs fmt, clippy, tests, and rustdoc on Ubuntu, macOS, and Windows; only Ubuntu enables the features that link system libraries.
+**Environments.** Native Windows (Jon's machine) and Linux in Docker (`docker/Dockerfile`, `compose.yaml`, see `docs/dev/docker.md`). CI runs fmt, clippy, tests, and rustdoc on Ubuntu, macOS, and Windows; only Ubuntu enables the features that link system libraries.
 
 **`live-region` is not approved for the terminal build.** Version 0.3.2 depends on wxDragon, which would pull wxWidgets into every build. It returns with the GUI in wave 3 behind `textweaver-a11y/live-region`.
 
@@ -48,6 +49,6 @@ all of the above ← app ← tui, cli
 ## See also
 
 - [CONTRIBUTING.md](../../CONTRIBUTING.md): how to build, check, and add a dependency.
-- [Docker development container](../docker.md): where Linux-only features are built and tested.
-- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Docker development container](../dev/docker.md): where Linux-only features are built and tested.
+- [Architecture](../dev/architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
 - [Documentation index](../README.md)

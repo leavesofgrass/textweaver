@@ -1,6 +1,6 @@
 #!/bin/sh
 # Runs the Linux release packages on several distributions, in Docker:
-# Debian stable, Fedora, and Arch (docs/releasing.md).
+# Debian stable, Fedora, and Arch (docs/dev/releasing.md).
 #
 #   docker/appimage/test-distros.sh DIST_DIR [IMAGE...]
 #

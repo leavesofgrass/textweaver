@@ -121,7 +121,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     if let Some(m) = message {
         eprintln!("{m}");
     }
-    let registry = textweaver_app::speech_registry_for(&settings);
+    let registry = textweaver_engines::speech_registry_for(&settings);
     let r = report(&registry, Some(settings.speech.backend.as_str()));
     if args.json {
         println!("{}", serde_json::to_string_pretty(&r)?);

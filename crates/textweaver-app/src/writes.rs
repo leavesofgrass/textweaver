@@ -29,18 +29,25 @@ impl App {
     /// and offers to reload one. [`tick`](Self::tick) calls this; frontends
     /// that do not tick call it from their loop.
     pub fn poll_writes(&mut self) -> Vec<Effect> {
-        self.send_snapshot_ops();
-        let mut effects = Vec::new();
-        for report in self.writer.reports() {
-            effects.extend(self.apply_report(report));
-        }
-        effects
+        self.entry(|app| {
+            app.send_snapshot_ops();
+            let mut effects = Vec::new();
+            for report in app.writer.reports() {
+                effects.extend(app.apply_report(report));
+            }
+            effects
+        })
     }
 
     /// Waits until every file queued so far is written (at most ten
     /// seconds), then applies the results as [`poll_writes`](Self::poll_writes)
     /// does. For tests, and for callers that need the disk to be current.
     pub fn wait_for_writes(&mut self) -> Vec<Effect> {
+        self.entry(Self::settle_writes)
+    }
+
+    /// [`wait_for_writes`](Self::wait_for_writes)'s work.
+    fn settle_writes(&mut self) -> Vec<Effect> {
         let mut effects = Vec::new();
         // A result can queue more work (a save that leaves edit mode saves
         // the position): a few rounds settle it.
@@ -213,6 +220,12 @@ impl App {
                 );
                 self.error(&m);
                 Vec::new()
+            }
+            Report::Settings { result } => {
+                if let Err(e) = result {
+                    self.error(&format!("Could not save settings: {e}"));
+                }
+                vec![Effect::Redraw]
             }
         }
     }

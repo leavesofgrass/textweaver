@@ -1,4 +1,4 @@
-# ADR-0024: Define word offline, and the interface's message catalog
+# ADR-0025: Define word offline, and the interface's message catalog
 
 - Status: accepted
 - Date: 2026-09-26

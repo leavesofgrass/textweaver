@@ -1,5 +1,5 @@
 //! The app follows the reading generation `SpeechService::read` returns,
-//! and plans continuous reading in windows (docs/audit-2026-09.md, findings
+//! and plans continuous reading in windows (docs/history/audit-2026-09.md, findings
 //! R1 and P1, patches S1 and S3; ported by Agent D4).
 
 use std::time::{Duration, Instant};

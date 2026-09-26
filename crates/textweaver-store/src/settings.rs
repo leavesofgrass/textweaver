@@ -1,7 +1,7 @@
 //! `settings.toml` and `keymap.toml`.
 //!
 //! The settings surface mirrors Star's reading-relevant keys
-//! (docs/star-parity.md, "Settings surface") grouped into TOML tables. Every
+//! (docs/history/star-parity.md, "Settings surface") grouped into TOML tables. Every
 //! table keeps unknown keys in `extra`, so a newer or older textweaver never
 //! loses a user's settings.
 //!
@@ -755,26 +755,26 @@ impl Default for AccessibilitySettings {
 }
 
 /// `[reading_aids]`: RSVP, bionic reading, text spacing, fonts, the
-/// reading ruler, and syllable splitting (`textweaver-aids`, ADR-0022).
-/// The option types are the aids crate's own, so every frontend reads the
-/// same values.
+/// reading ruler, and syllable splitting (ADR-0022). The option types are
+/// the saved forms in [`crate::reading_aids`]; `textweaver-aids` converts
+/// them into its working types, so every frontend reads the same values.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ReadingAidsSettings {
     /// `[reading_aids.rsvp]`: rate, pauses, context words, position.
-    pub rsvp: textweaver_aids::RsvpSettings,
+    pub rsvp: crate::reading_aids::RsvpSettings,
     /// Bionic reading on (off by default).
     pub bionic: bool,
     /// `[reading_aids.bionic_options]`: ratio and what to skip.
-    pub bionic_options: textweaver_aids::BionicOptions,
+    pub bionic_options: crate::reading_aids::BionicOptions,
     /// `[reading_aids.spacing]`: line height, paragraph, letter, and word
     /// spacing in multiples of the font size (the terminal shows the
     /// nearest whole rows and spaces).
-    pub spacing: textweaver_aids::TextSpacing,
+    pub spacing: crate::reading_aids::TextSpacing,
     /// `[reading_aids.font]`: family, size, and weight (the GUI's).
-    pub font: textweaver_aids::FontSettings,
+    pub font: crate::reading_aids::FontSettings,
     /// `[reading_aids.ruler]`: off, current line, or ruler.
-    pub ruler: textweaver_aids::RulerSettings,
+    pub ruler: crate::reading_aids::RulerSettings,
     /// Syllable splitting on (off by default): words are drawn split with
     /// a middle dot; speech and positions use the text as it is.
     pub syllables: bool,
@@ -782,7 +782,7 @@ pub struct ReadingAidsSettings {
     /// them on word moves at high verbosity (off by default).
     pub difficult_words: bool,
     /// `[reading_aids.syllable_options]`.
-    pub syllable_options: textweaver_aids::SyllableOptions,
+    pub syllable_options: crate::reading_aids::SyllableOptions,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1015,7 +1015,7 @@ impl Settings {
 
     /// Clamps values to their supported ranges. Returns a message for each
     /// value changed. Star validated nothing, so a bad value failed later
-    /// (docs/star-parity.md Part 3 §7 items 4 and 7).
+    /// (docs/history/star-parity.md Part 3 §7 items 4 and 7).
     pub fn validate(&mut self) -> Vec<String> {
         self.fix_ranges()
             .into_iter()
@@ -1141,12 +1141,15 @@ impl Settings {
             );
             self.display.tab_width = 4;
         }
-        if let Err(e) = self.reading_aids.font.validate() {
+        if let Some(problem) = self.reading_aids.font.range_problem() {
             let fixed = self.reading_aids.font.clamped();
             fix(
                 "reading_aids.font".into(),
-                e.to_string(),
-                fixed.summary().trim_end_matches('.').to_owned(),
+                problem,
+                format!(
+                    "{}, {} points, weight {}",
+                    fixed.family, fixed.size_pt, fixed.weight
+                ),
             );
             self.reading_aids.font = fixed;
         }
@@ -1555,7 +1558,10 @@ mod tests {
         let s = Settings::default();
         assert!(!s.reading_aids.bionic && !s.reading_aids.syllables);
         assert_eq!(s.reading_aids.rsvp.wpm, 300);
-        assert_eq!(s.reading_aids.ruler.mode, textweaver_aids::RulerMode::Off);
+        assert_eq!(
+            s.reading_aids.ruler.mode,
+            crate::reading_aids::RulerMode::Off
+        );
         let text = s.to_minimal_toml().unwrap();
         assert!(!text.contains("reading_aids"), "{text}");
         let (_d, store) = store();
@@ -1568,8 +1574,8 @@ mod tests {
         let a = &s.reading_aids;
         assert!(a.bionic);
         assert_eq!(a.rsvp.wpm, 450);
-        assert_eq!(a.rsvp.position, textweaver_aids::RsvpPosition::Center);
-        assert_eq!(a.ruler.mode, textweaver_aids::RulerMode::Ruler);
+        assert_eq!(a.rsvp.position, crate::reading_aids::RsvpPosition::Center);
+        assert_eq!(a.ruler.mode, crate::reading_aids::RulerMode::Ruler);
         assert!((a.spacing.line_height - 2.0).abs() < 1e-6);
         store.save(&s).unwrap();
         assert_eq!(store.load().0, s);
@@ -1628,7 +1634,7 @@ mod tests {
         assert_eq!(store.load().0.speech.prefer_voice.as_deref(), Some("david"));
     }
 
-    // ---- tests/test_settings.py, ported (docs/star-parity.md Part 3 §1.3) ----
+    // ---- tests/test_settings.py, ported (docs/history/star-parity.md Part 3 §1.3) ----
 
     /// Star test 1, `test_save_writes_valid_json`
     #[test]
@@ -2000,7 +2006,7 @@ mod tests {
     fn display_font_round_trips_and_is_clamped() {
         let (_d, store) = store();
         let mut s = Settings::default();
-        s.reading_aids.font.family = textweaver_aids::FontFamily::Named("OpenDyslexic".into());
+        s.reading_aids.font.family = "OpenDyslexic".into();
         s.reading_aids.font.size_pt = 20.0;
         s.reading_aids.font.weight = 700;
         store.save(&s).unwrap();

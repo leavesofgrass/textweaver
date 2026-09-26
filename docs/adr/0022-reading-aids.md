@@ -3,6 +3,7 @@
 - Status: accepted
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): Integrated in the terminal reader (Agent D3): RSVP, bionic reading, the reading ruler and current line, terminal text spacing, and the reading level, with keys and `[reading_aids]` settings. Difficult-word marking and the syllable display are in the library but not shown by the reader yet. The GUI has the Fonts dialog (Agent W).
+- Status update (Saturday, September 26, 2026, Wave 3, Agent W3c): the saved `[reading_aids]` settings are plain data in `textweaver_store::reading_aids`; this crate keeps its working types and converts with `From` both ways (`settings`). Font choice and resolution (`FontFamily`, `FontSettings`, the reading fonts, `resolve`) moved to `textweaver-fonts`, which this crate re-exports; `describe` and `to_css` stay here as functions, because they need `TextSpacing`.
 
 ## Context
 

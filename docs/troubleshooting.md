@@ -255,7 +255,7 @@ The `speechd` engine talks to the Speech Dispatcher server through a socket.
 
 1. textweaver looks for the socket where Speech Dispatcher's own programs do: `SPEECHD_ADDRESS` if set, else in `XDG_RUNTIME_DIR`, else, where there is none (a container, or a session without a login manager), in `~/.cache/speech-dispatcher/`.
 2. If nothing answers, textweaver starts the server itself and tries for five seconds. Check that `speech-dispatcher` is installed and that `spd-say hello` works in the same shell.
-3. A container has no sound device of its own. Route its sound to the host, as the [Docker guide](docker.md) describes, or check speech without a device: `TEXTWEAVER_ESPEAK_OUTPUT=virtual` makes eSpeak NG keep real timing without playing anything.
+3. A container has no sound device of its own. Route its sound to the host, as the [Docker guide](dev/docker.md) describes, or check speech without a device: `TEXTWEAVER_ESPEAK_OUTPUT=virtual` makes eSpeak NG keep real timing without playing anything.
 4. Run `scripts/speech-check.sh`. On Linux it reports on Speech Dispatcher, the sound server, and the session.
 
 ### Speech stops in the middle, or you hear "Speech restarted"

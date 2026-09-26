@@ -428,13 +428,12 @@ impl App {
             }
         };
         self.store_profiles(p);
-        self.settings = settings;
+        let old = std::mem::replace(&mut self.settings, settings);
         self.settings_dirty = true;
-        self.apply_voice_settings();
-        self.speech.set_voice(self.settings.speech.voice.clone());
-        self.access_mode =
-            crate::access::access_mode_from_setting(self.settings.accessibility.mode);
-        self.check_theme_name();
+        // What the settings screen does after a change: speech, keys,
+        // access mode, theme, and highlight colours.
+        self.settings_changed(&old, "speech");
+        self.settings_changed(&old, "highlight");
         let id = if self.settings.speech.backend == backend_before {
             "profile-switched"
         } else {

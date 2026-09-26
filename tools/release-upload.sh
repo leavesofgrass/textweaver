@@ -3,7 +3,7 @@
 # release (a pre-release, notes from CHANGELOG.md) when it does not exist
 # yet, then rebuild SHA256SUMS.txt from every package on the release.
 # Used by .github/workflows/release.yml and by hand as the fallback when
-# a package is built locally (docs/releasing.md).
+# a package is built locally (docs/dev/releasing.md).
 #
 #   tools/release-upload.sh [--no-sums] TAG [FILE...]
 #

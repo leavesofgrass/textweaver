@@ -10,7 +10,7 @@
 //! layout displaced keep chords, and the whole earlier layout is the
 //! `classic` preset ([`Preset::Classic`](crate::Preset::Classic)).
 //!
-//! GUI chords follow Star (docs/star-parity.md Part 1 §6), and new keys
+//! GUI chords follow Star (docs/history/star-parity.md Part 1 §6), and new keys
 //! cover what Star lacked (pitch, volume, read the current unit, list and
 //! link navigation, bookmark stepping).
 //!
@@ -561,6 +561,9 @@ actions! {
         gui ["g:Alt+Shift+J"], term ["g:Alt+Shift+J"], shared [];
     CommandPalette = "command_palette", View, "Run any command by name",
         gui ["g:F2"], term ["g:F2", "g:Alt+X"], shared ["b::"];
+    Settings = "settings", View,
+        "Open the settings: every option with its help, filtered as you type; Left and Right change a value",
+        gui ["g:Ctrl+,"], term ["g:Shift+F10"], shared [];
     KeyboardHelp = "keyboard_help", View, "List keyboard shortcuts",
         gui ["g:F3"], term [], shared ["b:?"];
     Help = "help", View, "Open the help",

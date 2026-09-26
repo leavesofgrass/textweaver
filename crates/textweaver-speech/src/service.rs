@@ -342,6 +342,8 @@ pub struct SpeechService {
     failure: Arc<Mutex<Option<String>>>,
     /// The backend's voices, listed once when it started.
     voices: VoiceCache,
+    /// Called after the speech thread sends statuses ([`Waker`]).
+    waker: WakerSlot,
 }
 
 impl std::fmt::Debug for SpeechService {
@@ -373,9 +375,12 @@ impl SpeechService {
         let failure = Arc::new(Mutex::new(None));
         let thread_alive = Arc::clone(&alive);
         let thread_failure = Arc::clone(&failure);
+        let waker: WakerSlot = Arc::new(Mutex::new(None));
+        let fatal_waker = Arc::clone(&waker);
         let link = StatusLink {
             tx: status_tx,
             caps: Arc::clone(&caps),
+            waker: Arc::clone(&waker),
         };
         // The voice list's arrival reaches the speech thread as a command.
         let voices_tx = tx.clone();
@@ -402,6 +407,9 @@ impl SpeechService {
                     let _ = fatal_tx.send(SpeechStatus::BackendError(message));
                 }
                 thread_alive.store(false, Ordering::SeqCst);
+                // The frontend learns the thread ended (a panic, or a
+                // shutdown) without waiting for its next poll.
+                wake(&fatal_waker);
             })
             .map_err(|e| SpeechError::Io(e.to_string()))?;
         let (backend_id, voices) = ready_rx.recv().map_err(|_| SpeechError::ServiceStopped)??;
@@ -415,7 +423,17 @@ impl SpeechService {
             alive,
             failure,
             voices,
+            waker,
         })
+    }
+
+    /// Sets (or, with `None`, clears) the callback the speech thread calls
+    /// after it sends statuses: a word heard, reading finished, an error.
+    /// A frontend's event loop can then wait for input and for this instead
+    /// of polling [`try_status`](Self::try_status) on a timer. See
+    /// [`Waker`].
+    pub fn set_waker(&self, waker: Option<Waker>) {
+        *self.waker.lock().unwrap_or_else(|e| e.into_inner()) = waker;
     }
 
     /// A service with the silent backend.
@@ -641,16 +659,38 @@ impl Drop for SpeechService {
     }
 }
 
+/// A callback the speech thread calls after it sends statuses, so a
+/// frontend's event loop can sleep until there is something to apply
+/// instead of polling (Wave 3). It runs on the speech thread: it must be
+/// quick and must not block (post an event to the GUI's event loop, send on
+/// a channel).
+pub type Waker = Arc<dyn Fn() + Send + Sync>;
+
+/// Where the waker is kept: shared by the handle, which sets it, and the
+/// speech thread, which calls it.
+type WakerSlot = Arc<Mutex<Option<Waker>>>;
+
+/// Calls the waker in `slot`, if one is set.
+fn wake(slot: &WakerSlot) {
+    let waker = slot.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    if let Some(w) = waker {
+        w();
+    }
+}
+
 /// The speech thread's side of the status channel; it also keeps the
 /// handle's copy of the capabilities current.
 struct StatusLink {
     tx: Sender<SpeechStatus>,
     caps: Arc<AtomicU32>,
+    waker: WakerSlot,
 }
 
 impl StatusLink {
-    /// Sends `statuses`; false when the handle is gone.
+    /// Sends `statuses`, then wakes the frontend if any were sent; false
+    /// when the handle is gone.
     fn forward(&self, statuses: Vec<SpeechStatus>) -> bool {
+        let any = !statuses.is_empty();
         for s in statuses {
             if let SpeechStatus::Capabilities { caps } = &s {
                 self.caps.store(caps.bits(), Ordering::SeqCst);
@@ -658,6 +698,9 @@ impl StatusLink {
             if self.tx.send(s).is_err() {
                 return false;
             }
+        }
+        if any {
+            wake(&self.waker);
         }
         true
     }

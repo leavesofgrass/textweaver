@@ -1,7 +1,7 @@
 //! The authoring session: read mode and edit mode for one document, the
 //! Save / Discard / Cancel decisions, the save rule, Save As adoption,
 //! stale-load protection, and autosave snapshots. It is Star's GUI edit
-//! mode (docs/star-parity.md Part 3 §4.1, §4.2, §5) without a GUI, so the
+//! mode (docs/history/star-parity.md Part 3 §4.1, §4.2, §5) without a GUI, so the
 //! app can drive it from any frontend and the tests can exercise it.
 //!
 //! Decisions are two-phase so a frontend can ask asynchronously: a call
