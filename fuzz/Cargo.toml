@@ -13,6 +13,8 @@ cargo-fuzz = true
 libfuzzer-sys = "0.4"
 textweaver-core = { path = "../crates/textweaver-core" }
 textweaver-formats = { path = "../crates/textweaver-formats" }
+# The picture decoders only; no OCR engine.
+textweaver-ocr = { path = "../crates/textweaver-ocr", default-features = false }
 textweaver-store = { path = "../crates/textweaver-store" }
 textweaver-keymap = { path = "../crates/textweaver-keymap" }
 textweaver-enginehost = { path = "../crates/textweaver-enginehost" }
@@ -90,6 +92,41 @@ bench = false
 [[bin]]
 name = "frame"
 path = "fuzz_targets/frame.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "daisy"
+path = "fuzz_targets/daisy.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pptx"
+path = "fuzz_targets/pptx.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sheet"
+path = "fuzz_targets/sheet.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "archive"
+path = "fuzz_targets/archive.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "image"
+path = "fuzz_targets/image.rs"
 test = false
 doc = false
 bench = false

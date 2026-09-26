@@ -734,6 +734,31 @@ mod tests {
     }
 
     #[test]
+    fn a_daisy_zip_opens_as_the_book() {
+        use std::io::Write;
+        let opf = r#"<package><manifest><item id="d" href="book.xml" media-type="application/x-dtbook+xml"/></manifest><spine/></package>"#;
+        let mut z = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        for (name, body) in [("Book/package.opf", opf), ("Book/book.xml", DTBOOK)] {
+            z.start_file(name, zip::write::SimpleFileOptions::default())
+                .unwrap();
+            z.write_all(body.as_bytes()).unwrap();
+        }
+        let data = z.finish().unwrap().into_inner();
+        let d = crate::ArchiveLoader
+            .load(
+                &Source::Bytes {
+                    data,
+                    hint: "zip".into(),
+                },
+                &LoadOptions::default(),
+            )
+            .unwrap();
+        assert_eq!(d.meta.format, "daisy");
+        assert_eq!(d.meta.title.as_deref(), Some("A Small Book"));
+        assert!(d.text().to_string().contains("The first paragraph."));
+    }
+
+    #[test]
     fn other_xml_reads_as_text() {
         let d = load("<notes><n>hello</n></notes>", "xml");
         assert_eq!(d.meta.format, "text");

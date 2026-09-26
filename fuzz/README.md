@@ -11,6 +11,11 @@ Each target feeds random input to one part of textweaver. A loader may refuse th
 - `epub`: the EPUB loader. A zip archive is loaded as it is. Anything else becomes the book's one chapter, and, after a NUL byte, its navigation document.
 - `docx`: the Word loader. A zip archive is loaded as it is. Anything else becomes `word/document.xml`, and, after a NUL byte, `word/numbering.xml`.
 - `pdf`: the PDF loader.
+- `daisy`: the DAISY loader. A zip archive is loaded as it is. Anything else becomes a book's DTBook file, and, after a NUL byte, its NCX; the bytes are also loaded as a DTBook file on their own.
+- `pptx`: the PowerPoint loader. A zip archive is loaded as it is. Anything else becomes the one slide, and, after a NUL byte, its speaker notes.
+- `sheet`: the spreadsheet loader. The first byte picks CSV, TSV, OpenDocument, or Excel; the rest is the file, or the sheet's XML in a minimal package.
+- `archive`: the archive loader. The bytes are listed as a zip, tar, tar.gz, and 7z archive in turn.
+- `image`: the PNG and JPEG decoders that OCR reads, with their size limits, and the picture loader with OCR off.
 - `settings`: `settings.toml` read into the settings, written back, and read again, and the same text planned as a settings import (JSON or TOML).
 - `keymap`: `keymap.toml`, the keyboard overrides, applied to every platform's and frontend's defaults; each line is also parsed as a key chord, which must print and parse back to itself.
 - `state`: a document's saved state (position, history, bookmarks), which must write back and read again, and a folder's sidecar (`.textweaver/progress.json`), merged with itself and with nothing under every policy.
@@ -62,6 +67,9 @@ cp fixtures/sample.html fuzz/corpus/html/
 cp fixtures/a/*.pdf fuzz/corpus/pdf/
 cp fixtures/a/*.docx fuzz/corpus/docx/
 cp fixtures/a/*.epub fuzz/corpus/epub/
+mkdir -p fuzz/corpus/archive fuzz/corpus/image
+cp fixtures/w3d/course.7z fuzz/corpus/archive/
+cp fixtures/w3d/*.png fuzz/corpus/image/
 ```
 
 The `corpus`, `artifacts`, and `target` folders are not committed.
@@ -74,4 +82,4 @@ cargo-fuzz saves the input under `fuzz/artifacts/TARGET/` and prints the command
 cargo +nightly fuzz run markdown fuzz/artifacts/markdown/crash-1234abcd
 ```
 
-Fix the bug, then add the input as a regular test in the crate it came from, so it stays fixed. The loaders' property tests (`crates/textweaver-formats/tests/positions.rs`) and hostile-input tests (`crates/textweaver-formats/tests/hostile.rs`) are the place for loader cases.
+Fix the bug, then add the input as a regular test in the crate it came from, so it stays fixed. The loaders' property tests (`crates/textweaver-formats/tests/positions.rs`) and hostile-input tests (`crates/textweaver-formats/tests/hostile.rs`, and `hostile_w3d.rs` for DAISY, PowerPoint, spreadsheets, archives, and pictures) are the place for loader cases.

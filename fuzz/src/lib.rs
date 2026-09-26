@@ -4,17 +4,28 @@
 
 use std::io::{Cursor, Write};
 
-use textweaver_formats::{FootnoteMode, HtmlOptions, LoadOptions, Registry, Source};
+use textweaver_formats::{
+    FootnoteMode, HtmlOptions, LoadOptions, OcrOptions, Registry, Source,
+};
 use zip::write::SimpleFileOptions;
 
 /// Loads `data` as a file with extension `hint` and checks the result,
-/// with the default options and with code skipped and notes inline.
+/// with the default options and with code skipped and notes inline. OCR is
+/// off: the fuzzer tests the loaders, not the recognition engines.
 pub fn load_checked(data: &[u8], hint: &str) {
+    let no_ocr = OcrOptions {
+        enabled: false,
+        ..OcrOptions::default()
+    };
     for options in [
-        LoadOptions::default(),
+        LoadOptions {
+            ocr: no_ocr.clone(),
+            ..LoadOptions::default()
+        },
         LoadOptions {
             skip_code: true,
             footnotes: FootnoteMode::Inline,
+            ocr: no_ocr.clone(),
             ..LoadOptions::default()
         },
     ] {
@@ -82,6 +93,79 @@ pub fn epub(data: &[u8]) -> Vec<u8> {
         ("c.xhtml", chapter),
         ("nav.xhtml", nav),
     ])
+}
+
+/// Fuzz input as a PowerPoint file: raw bytes when they are a zip
+/// archive, else the bytes as the one slide, with the second half (after a
+/// NUL) as its speaker notes.
+pub fn pptx(data: &[u8]) -> Vec<u8> {
+    if data.starts_with(b"PK") {
+        return data.to_vec();
+    }
+    let (slide, notes) = split(data);
+    let rels = |target: &str, ty: &str| {
+        format!(
+            r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/{ty}" Target="{target}"/></Relationships>"#
+        )
+    };
+    let pres = br#"<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst></p:presentation>"#;
+    let pres_rels = rels("slides/slide1.xml", "slide");
+    let slide_rels = rels("../notesSlides/notesSlide1.xml", "notesSlide");
+    zip(&[
+        ("ppt/presentation.xml", pres),
+        ("ppt/_rels/presentation.xml.rels", pres_rels.as_bytes()),
+        ("ppt/slides/slide1.xml", slide),
+        ("ppt/slides/_rels/slide1.xml.rels", slide_rels.as_bytes()),
+        ("ppt/notesSlides/notesSlide1.xml", notes),
+    ])
+}
+
+/// Fuzz input as a DAISY book in a zip: raw bytes when they are a zip
+/// archive, else the bytes as the DTBook, with the second half (after a
+/// NUL) as the NCX.
+pub fn daisy(data: &[u8]) -> Vec<u8> {
+    if data.starts_with(b"PK") {
+        return data.to_vec();
+    }
+    let (book, ncx) = split(data);
+    let opf = br#"<package><manifest><item id="n" href="nav.ncx" media-type="application/x-dtbncx+xml"/><item id="s" href="a.smil" media-type="application/smil"/><item id="d" href="book.xml" media-type="application/x-dtbook+xml"/></manifest><spine><itemref idref="s"/></spine></package>"#;
+    let smil = br#"<smil><body><seq><par id="p1"><text src="book.xml#x1"/></par></seq></body></smil>"#;
+    zip(&[
+        ("b/package.opf", opf),
+        ("b/a.smil", smil),
+        ("b/book.xml", book),
+        ("b/nav.ncx", ncx),
+    ])
+}
+
+/// Fuzz input as a spreadsheet: the first byte picks CSV, TSV, OpenDocument,
+/// or Excel; the rest is the file, or (for the zip-based two, when it is not
+/// a zip) the sheet's XML.
+pub fn sheet(data: &[u8]) -> (Vec<u8>, &'static str) {
+    let Some((&pick, rest)) = data.split_first() else {
+        return (Vec::new(), "csv");
+    };
+    match pick % 4 {
+        0 => (rest.to_vec(), "csv"),
+        1 => (rest.to_vec(), "tsv"),
+        2 if rest.starts_with(b"PK") => (rest.to_vec(), "ods"),
+        2 => (zip(&[("content.xml", rest)]), "ods"),
+        _ if rest.starts_with(b"PK") => (rest.to_vec(), "xlsx"),
+        _ => {
+            let root = br#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>"#;
+            let wb = br#"<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="S" sheetId="1" r:id="rId1"/></sheets></workbook>"#;
+            let wb_rels = br#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>"#;
+            (
+                zip(&[
+                    ("_rels/.rels", root),
+                    ("xl/workbook.xml", wb),
+                    ("xl/_rels/workbook.xml.rels", wb_rels),
+                    ("xl/worksheets/sheet1.xml", rest),
+                ]),
+                "xlsx",
+            )
+        }
+    }
 }
 
 fn split(data: &[u8]) -> (&[u8], &[u8]) {
