@@ -469,6 +469,47 @@ impl textweaver_app::speech::SpeechBackend for SlowVoices {
 }
 
 #[test]
+fn edit_mode_deletes_graphemes_and_keeps_the_undo_steps_set() {
+    let mut settings = textweaver_app::store::Settings::default();
+    settings.editing.undo_steps = 3;
+    let said = Said::default();
+    let mut app = App::new(AppConfig {
+        settings,
+        announcer: Box::new(said.clone()),
+        ..AppConfig::for_tests()
+    });
+    let flag = "\u{1F1E8}\u{1F1E6}";
+    app.open_document(
+        Document::from_plain_text(&format!("a{flag}b")),
+        DocKey::untitled(1),
+        "Test".into(),
+    );
+    app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    app.dispatch(Command::SetCursor(CharPos(3)));
+    // Backspace removes the whole flag (two code points), and so does
+    // Delete from before it.
+    app.dispatch(Command::DeleteBack);
+    assert_eq!(app.session().unwrap().doc.text().to_string(), "ab");
+    app.dispatch(Command::Action(ActionId::Undo));
+    app.dispatch(Command::SetCursor(CharPos(1)));
+    app.dispatch(Command::DeleteForward);
+    assert_eq!(app.session().unwrap().doc.text().to_string(), "ab");
+    // Only three undo steps are kept.
+    app.dispatch(Command::SetCursor(CharPos(2)));
+    for w in [" one", " two", " three", " four", " five"] {
+        app.dispatch(Command::Insert(w.into()));
+        app.dispatch(Command::SetCursor(CharPos(
+            app.session().unwrap().doc.len_chars(),
+        )));
+    }
+    for _ in 0..10 {
+        app.dispatch(Command::Action(ActionId::Undo));
+    }
+    let text = app.session().unwrap().doc.text().to_string();
+    assert!(text.starts_with("ab one two"), "{text}");
+}
+
+#[test]
 fn the_library_is_scanned_off_the_input_thread() {
     let dir = tempfile::tempdir().unwrap();
     let folder = dir.path().join("Readings");
