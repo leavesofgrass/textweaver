@@ -10,7 +10,7 @@ Releases before 1.0 are marked as pre-releases.
 
 ## Steps
 
-1. **Version.** Set `version` in `[workspace.package]` in the root `Cargo.toml`, then add a section to `CHANGELOG.md`. Commit both on `main` and push. Wait until CI is green.
+1. **Version.** Set `version` in `[workspace.package]` in the root `Cargo.toml`, then add a section to `CHANGELOG.md`. Before you push, run the checks CI runs, locally: `scripts/dev-check.sh` on Linux or macOS (`--docker` for the full Linux set), or `scripts\dev-check.ps1` on Windows. Commit both files on `main` and push. Wait until CI is green.
 2. **Tag.** Tag the commit and push the tag:
 
    ```bash

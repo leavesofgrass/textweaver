@@ -14,6 +14,12 @@ In 30 seconds, you can hear a document read aloud and move around in it. To prac
 
 textweaver speaks with your Windows voices. It uses Eloquence if you have it; see `docs/eloquence.md`.
 
+Or install with a script, which also offers to add textweaver to your PATH and the Start menu. From a copy of the repository:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1
+```
+
 ## macOS
 
 1. Download the macOS `.tar.gz` from the [releases page](https://github.com/leavesofgrass/textweaver/releases) and double-click it to extract it.
@@ -32,12 +38,24 @@ textweaver speaks with your Windows voices. It uses Eloquence if you have it; se
 
 textweaver speaks with Apple's voices. It uses Reed if it is installed.
 
-## Linux
-
-Build from source, as the README explains. Then run:
+Or install with a script, from a copy of the repository. It downloads, checks, and installs the newest release in `~/.local/bin`:
 
 ```bash
-textweaver docs/quickstart.md
+bash scripts/install-macos.sh
+```
+
+## Linux
+
+Install with the script in a copy of the repository (`git clone https://github.com/leavesofgrass/textweaver`). It works on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine: it installs what the build needs, builds textweaver, and installs it in `~/.local`. It asks before it uses sudo or changes your PATH.
+
+```bash
+bash scripts/install-linux.sh
+```
+
+Then run:
+
+```bash
+textweaver ~/.local/share/doc/textweaver/QUICKSTART.md
 ```
 
 ## Your first 30 seconds
