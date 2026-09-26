@@ -151,11 +151,17 @@ enum OpenDialog {
     List,
     /// The command palette: the actions its list shows, in order.
     Palette(Vec<ActionId>),
+    /// The font chooser's family list.
+    FontFamily(Vec<crate::font_chooser::Choice>),
+    /// The font chooser's size list, for this family.
+    FontSize(String),
 }
 
 /// The widget tree's toolbar buttons and what they do.
 struct Buttons {
     by_id: HashMap<WidgetId, ActionId>,
+    /// View, Fonts: the font chooser (not a keymap action).
+    fonts: Option<WidgetId>,
 }
 
 /// The driver: the app and the window's state.
@@ -173,6 +179,8 @@ pub struct Gui {
     startup: Option<(Option<PathBuf>, bool, Vec<String>)>,
     exit_at: Option<Instant>,
     reading_flag: Arc<AtomicBool>,
+    /// Installed font families, for the font chooser.
+    installed: crate::font_chooser::Installed,
     /// `--theme` was given: the saved theme is not followed.
     fixed_theme: bool,
     /// The window title last set.
@@ -273,10 +281,16 @@ pub fn build_tree(
 
     // Header: the document's title and the commands.
     let title = NewWidget::new(label("textweaver", 18.0, true)).with_tag(TITLE);
+    let fonts_button = NewWidget::new(
+        ActionButton::new("Fonts…")
+            .with_description("Choose the font and size of the document text"),
+    );
+    let fonts_id = fonts_button.id();
     let header = Flex::row()
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .with(title, 1.0)
         .with_fixed(button("Open…", ActionId::Open, app, &mut ids))
+        .with_fixed(fonts_button)
         .with_fixed(button("Commands…", ActionId::CommandPalette, app, &mut ids));
     let header = NewWidget::new(Region::new(NewWidget::new(header), Role::Banner, ""))
         .with_tag(HEADER)
@@ -358,7 +372,10 @@ pub fn build_tree(
     let root = NewWidget::new(Root::new(main, full_passes)).with_tag(ROOT);
     Tree {
         root,
-        buttons: Buttons { by_id: ids },
+        buttons: Buttons {
+            by_id: ids,
+            fonts: Some(fonts_id),
+        },
     }
 }
 
@@ -723,6 +740,86 @@ impl Gui {
         }
     }
 
+    /// View, Fonts: the family list (bundled first).
+    fn open_fonts(&mut self, ctx: &mut DriverCtx<'_>) {
+        let choices = crate::font_chooser::choices(self.installed.names());
+        let current = crate::fonts::doc_font(&self.app.settings().reading_aids.font);
+        let items: Vec<String> = choices.iter().map(|c| c.label.clone()).collect();
+        let selected = choices
+            .iter()
+            .position(|c| current.family.starts_with(&format!("\"{}\"", c.family)))
+            .unwrap_or(0);
+        let (modal, list_id) = list_dialog(&self.palette, "Font family", items, selected);
+        let root = ctx.render_root(self.window_id);
+        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+        root.focus_on(Some(list_id));
+        self.dialog = Some(OpenDialog::FontFamily(choices));
+        if self.log {
+            crate::log::line("dialog: font family");
+        }
+    }
+
+    /// The font chooser's answers. Returns false when the open dialog is
+    /// not the font chooser.
+    fn font_answer(&mut self, ctx: &mut DriverCtx<'_>, d: &DialogAction) -> bool {
+        match (&self.dialog, d) {
+            (Some(OpenDialog::FontFamily(_) | OpenDialog::FontSize(_)), DialogAction::Cancel) => {
+                self.close_dialog(ctx);
+                self.app.announce("Font unchanged.", Priority::Polite);
+                self.refresh(ctx);
+                true
+            }
+            (Some(OpenDialog::FontFamily(choices)), DialogAction::Choose(i)) => {
+                let Some(family) = choices.get(*i).map(|c| c.family.clone()) else {
+                    return true;
+                };
+                self.close_dialog(ctx);
+                let size = self.app.settings().reading_aids.font.size_pt;
+                let (items, selected) = crate::font_chooser::sizes(size);
+                let title = format!("Size for {family}");
+                let (modal, list_id) = list_dialog(&self.palette, &title, items, selected);
+                let root = ctx.render_root(self.window_id);
+                root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+                root.focus_on(Some(list_id));
+                self.dialog = Some(OpenDialog::FontSize(family));
+                true
+            }
+            (Some(OpenDialog::FontSize(family)), DialogAction::Choose(i)) => {
+                let family = family.clone();
+                let size = crate::font_chooser::SIZES
+                    .get(*i)
+                    .copied()
+                    .unwrap_or(crate::font_chooser::SIZES[4]);
+                self.close_dialog(ctx);
+                let new = crate::font_chooser::chosen(
+                    &self.app.settings().reading_aids.font,
+                    &family,
+                    size,
+                );
+                let bold = new.weight >= 600;
+                if let Err(e) = self
+                    .app
+                    .update_settings(|s| s.reading_aids.font = new.clone())
+                {
+                    self.app.announce(
+                        &format!("The font was applied but could not be saved: {e}."),
+                        Priority::Assertive,
+                    );
+                }
+                let font = crate::fonts::doc_font(&new);
+                ctx.render_root(self.window_id)
+                    .edit_widget_with_tag(DOC, |mut d| DocumentView::set_font(&mut d, font));
+                self.app.announce(
+                    &crate::font_chooser::announcement(&family, size, bold),
+                    Priority::Polite,
+                );
+                self.refresh(ctx);
+                true
+            }
+            _ => false,
+        }
+    }
+
     /// The palette's filter changed: show the matches and say how many.
     fn filter_palette(&mut self, ctx: &mut DriverCtx<'_>, query: &str) {
         let (ids, items): (Vec<ActionId>, Vec<String>) =
@@ -858,10 +955,15 @@ impl AppDriver for Gui {
                 self.refresh(ctx);
             }
         } else if action.downcast_ref::<Pressed>().is_some() {
-            if let Some(a) = self.buttons.by_id.get(&widget_id).copied() {
+            if self.buttons.fonts == Some(widget_id) {
+                self.open_fonts(ctx);
+            } else if let Some(a) = self.buttons.by_id.get(&widget_id).copied() {
                 self.dispatch(ctx, Command::Action(a));
             }
         } else if let Some(d) = action.downcast_ref::<DialogAction>() {
+            if self.font_answer(ctx, d) {
+                return;
+            }
             let cmd = match (d, &self.dialog) {
                 (DialogAction::Choose(i), Some(OpenDialog::Palette(ids))) => match ids.get(*i) {
                     Some(a) => Command::Answer(a.id().to_owned()),
@@ -1012,6 +1114,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         reading_flag,
         ticker: Some(proxy),
         fixed_theme: opts.theme.is_some(),
+        installed: crate::font_chooser::Installed::scan_in_background(),
         window_title: String::new(),
         closed: false,
         timings: Timings::default(),
