@@ -130,12 +130,52 @@ fn write_atomic_with(
         if let Some(p) = permissions {
             std::fs::set_permissions(&tmp, p)?;
         }
-        std::fs::rename(&tmp, path)
+        rename_with_retry(&tmp, path)
     })();
     if result.is_err() {
         let _ = std::fs::remove_file(&tmp);
     }
     result
+}
+
+/// Waits between attempts to rename a saved file into place while another
+/// program has the target open (Windows only): four retries, about 0.4 s
+/// in all.
+pub const RENAME_RETRY_DELAYS_MS: [u64; 4] = [25, 50, 100, 200];
+
+/// True for the errors Windows gives while another program (Obsidian,
+/// OneDrive, an antivirus scanner, a search indexer) holds the file:
+/// access denied (5), sharing violation (32), and lock violation (33).
+fn is_transient_lock(e: &std::io::Error) -> bool {
+    cfg!(windows) && matches!(e.raw_os_error(), Some(5 | 32 | 33))
+}
+
+/// Runs `op` on `path`, retrying with a short backoff
+/// ([`RENAME_RETRY_DELAYS_MS`]) while Windows reports the file as in use.
+/// Other errors, and every error elsewhere, are returned at once.
+fn retry_while_in_use<T>(
+    path: &Path,
+    mut op: impl FnMut() -> std::io::Result<T>,
+) -> std::io::Result<T> {
+    let mut delays = RENAME_RETRY_DELAYS_MS.iter();
+    loop {
+        match op() {
+            Err(e) if is_transient_lock(&e) => match delays.next() {
+                Some(&ms) => {
+                    log::debug!("{} is in use; trying again in {ms} ms", path.display());
+                    std::thread::sleep(Duration::from_millis(ms));
+                }
+                None => return Err(e),
+            },
+            other => return other,
+        }
+    }
+}
+
+/// Renames `from` over `to`, retrying while Windows reports the target as
+/// in use (see [`RENAME_RETRY_DELAYS_MS`]).
+pub fn rename_with_retry(from: &Path, to: &Path) -> std::io::Result<()> {
+    retry_while_in_use(to, || std::fs::rename(from, to))
 }
 
 /// `<dir>/<doc_key>.json`.
@@ -507,7 +547,7 @@ pub fn save_text(path: &Path, text: &str) -> std::io::Result<()> {
                 "the file is read-only; use Save As to write a copy",
             ));
         }
-        let bytes = std::fs::read(&target)?;
+        let bytes = retry_while_in_use(&target, || std::fs::read(&target))?;
         format = TextFormat::detect(&bytes);
         let body = if format.bom { &bytes[3..] } else { &bytes[..] };
         if std::str::from_utf8(body).is_err() {
@@ -648,6 +688,58 @@ mod tests {
         #[allow(clippy::permissions_set_readonly_false)]
         perm.set_readonly(false);
         std::fs::set_permissions(&ro, perm).unwrap();
+    }
+
+    /// Another program holding the file without sharing (as an antivirus
+    /// scanner or OneDrive may for a moment) makes the rename fail with a
+    /// sharing violation; the save retries and succeeds once it lets go,
+    /// and gives up with the error, leaving no temporary file, when it
+    /// does not.
+    #[cfg(windows)]
+    #[test]
+    fn save_retries_while_another_program_holds_the_file() {
+        use std::os::windows::fs::OpenOptionsExt;
+        use std::sync::mpsc;
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("held.md");
+        std::fs::write(&p, "old").unwrap();
+        let hold = |path: std::path::PathBuf| {
+            std::fs::OpenOptions::new()
+                .read(true)
+                .share_mode(0)
+                .open(path)
+                .unwrap()
+        };
+        // Released while the save is retrying: it succeeds.
+        let (tx, rx) = mpsc::channel();
+        let path = p.clone();
+        let holder = std::thread::spawn(move || {
+            let f = hold(path);
+            tx.send(()).unwrap();
+            std::thread::sleep(Duration::from_millis(60));
+            drop(f);
+        });
+        rx.recv().unwrap();
+        save_text(&p, "new").unwrap();
+        holder.join().unwrap();
+        assert_eq!(std::fs::read_to_string(&p).unwrap(), "new");
+        // Held for longer than every retry: the error comes back.
+        let f = hold(p.clone());
+        let e = write_atomic(&p, b"newer").unwrap_err();
+        drop(f);
+        assert!(matches!(e.raw_os_error(), Some(5 | 32 | 33)), "{e:?}");
+        assert_eq!(std::fs::read_to_string(&p).unwrap(), "new");
+        let left: Vec<_> = std::fs::read_dir(dir.path()).unwrap().collect();
+        assert_eq!(left.len(), 1, "no temporary file left behind");
+    }
+
+    #[test]
+    fn other_rename_errors_are_not_retried() {
+        let dir = tempfile::tempdir().unwrap();
+        let started = std::time::Instant::now();
+        let e = rename_with_retry(&dir.path().join("missing"), &dir.path().join("x")).unwrap_err();
+        assert_eq!(e.kind(), std::io::ErrorKind::NotFound);
+        assert!(started.elapsed() < Duration::from_millis(20));
     }
 
     #[cfg(unix)]
