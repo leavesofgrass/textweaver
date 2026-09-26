@@ -443,7 +443,7 @@ The citation goes in at the caret, for example `[@doe2020, p. 12]`, with a space
 
 ### Add a reference by DOI or ISBN: Alt+Shift+D
 
-Press **Alt+Shift+D** and type a DOI (`10.1038/nature12373`, or its doi.org address) or an ISBN. You hear "Looking up" and the identifier; you can go on reading or writing. When the answer comes, you hear, for example, "Added reference kucsko2013. Kucsko, Maurer, and Yao, 2013. Nanometre-scale thermometry in a living cell." The reference goes into the folder's `references.json` when the document's folder has one, else into your own library. Lookups use the same cache as `tw cite add`, so an identifier looked up before works offline.
+Press **Alt+Shift+D** (or run `add reference` from the command palette: Windows Terminal keeps **Alt+Shift+D** for splitting its window unless you unbind it; see [the screen reader guide](screen-readers.md#windows-terminal-keys-that-clash)) and type a DOI (`10.1038/nature12373`, or its doi.org address) or an ISBN. You hear "Looking up" and the identifier; you can go on reading or writing. When the answer comes, you hear, for example, "Added reference kucsko2013. Kucsko, Maurer, and Yao, 2013. Nanometre-scale thermometry in a living cell." The reference goes into the folder's `references.json` when the document's folder has one, else into your own library. Lookups use the same cache as `tw cite add`, so an identifier looked up before works offline.
 
 ### Commands from the palette
 

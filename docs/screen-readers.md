@@ -168,7 +168,8 @@ Windows Terminal keeps some keys for itself, so textweaver never sees them. Thes
 - **Alt+Shift+Up** and **Alt+Shift+Down** resize panes. In textweaver they make RSVP faster and slower. Run "rsvp faster" and "rsvp slower" from the command palette (**F2**), or unbind them.
 - **F11** and **Alt+Enter** switch full screen. In textweaver **F11** is the next chapter. Use **Alt+PageDown** and **Alt+PageUp** for chapters.
 - **Ctrl+C** copies when text is selected in Windows Terminal; otherwise textweaver gets it and copies. **Ctrl+V** pastes, which textweaver takes as pasted text.
-- **Alt+Shift+D**, **Alt+Shift+minus**, and **Alt+Shift+plus** split the window into panes. textweaver does not use them, but pitch is **Alt+=** and **Alt+-**: pressing Shift by mistake splits the window.
+- **Alt+Shift+D**, **Alt+Shift+minus**, and **Alt+Shift+plus** split the window into panes. In textweaver **Alt+Shift+D** adds a reference by DOI or ISBN: run "add reference" from the command palette (**F2**) instead, or unbind it in Windows Terminal. Pitch is **Alt+=** and **Alt+-**: pressing Shift by mistake splits the window.
+- **Ctrl+Alt** with the arrow keys move by row and cell in a table. Windows Terminal leaves them alone, but some graphics drivers rotate the screen with them, and a screen reader may keep them for its own table commands. **Verify on Jon's machine**; the commands are `table_next_row`, `table_previous_row`, `table_next_column`, and `table_previous_column`, and can have other keys in `keymap.toml`.
 - **Alt+Space** opens the window menu. textweaver does not use it.
 - **Ctrl+Shift** chords (new tab, close pane, find, scroll) and **Ctrl+Alt** with digits (switch tabs) do not clash: terminals cannot send textweaver Ctrl+Shift chords, and textweaver's terminal keys use no Ctrl+Alt digits.
 

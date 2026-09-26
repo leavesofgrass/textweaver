@@ -429,6 +429,7 @@ impl App {
     /// items, DOCX sections), otherwise level-1 headings. Previous rewinds to
     /// the chapter start when more than five words in (Star's rule).
     pub(crate) fn chapter(&mut self, dir: Direction) {
+        self.refresh_structure(false);
         let Some((pos, doc)) = self.here() else {
             return;
         };
@@ -720,6 +721,8 @@ impl App {
 
     /// Says where the reader is: line, percentage, and the heading above.
     pub(crate) fn say_position(&mut self) {
+        // The heading above, as written so far (edit mode).
+        self.refresh_structure(false);
         let Some(pos) = self.reading_position() else {
             return;
         };

@@ -1062,3 +1062,44 @@ fn a_new_document_from_a_template_has_front_matter_and_references() {
     );
     let _ = Path::new("");
 }
+
+// Large documents: the structure comes from a background parse at open,
+// typing drops the markers, and commands that need them parse again.
+
+#[test]
+fn large_markdown_is_parsed_in_the_background_and_after_typing() {
+    let mut r = Rig::new();
+    let mut text = String::new();
+    let mut n = 0;
+    while text.len() < 400 * 1024 {
+        n += 1;
+        text.push_str(&format!(
+            "## Section {n}\n\nSome *words* here and [a link](x{n}.md) in paragraph {n}.\n\n"
+        ));
+    }
+    r.open("big.md", &text);
+    r.go("Section 500\n");
+    r.act(ActionId::ToggleEditMode);
+    assert_eq!(r.at_cursor(11), "Section 500");
+    r.act(ActionId::SkipNextHeading);
+    assert_eq!(r.at_cursor(11), "Section 501");
+    // Typing a heading: found at once by the next heading command.
+    r.app.dispatch(Command::MoveCaret {
+        by: textweaver_app::CaretMove::DocumentEdge,
+        direction: textweaver_app::core::Direction::Backward,
+        extend: false,
+    });
+    r.type_text("## Preface\n\n");
+    r.act(ActionId::DocumentStart);
+    r.act(ActionId::SkipNextHeading);
+    assert_eq!(r.at_cursor(7), "Preface");
+    r.act(ActionId::SkipNextHeading);
+    assert_eq!(r.at_cursor(9), "Section 1");
+    // After a pause the background parse lands; the outline has the edit.
+    r.type_text("New ");
+    r.pause();
+    assert!(r.app.wait_for_structure(Duration::from_secs(30)));
+    let effects = r.act(ActionId::Outline);
+    let items = list_items(&effects);
+    assert_eq!(items[..2], ["Preface, level 2", "New Section 1, level 2"]);
+}
