@@ -43,10 +43,10 @@ pub use notes::{Annotation, Highlight, Note, NotesExport, Relation};
 pub use paths::Paths;
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
-    AppleBackend, AppleSettings, DisplaySettings, EciDictionaries, EciSettings, EditingSettings,
-    FootnoteMode, HighlightSettings, KeyboardSettings, KeymapOverrides, LibrarySettings,
-    NormalizationSettings, ReadingSettings, SapiSettings, Settings, SettingsLoad, SettingsStore,
-    SpeechSettings, TableMode,
+    AppleBackend, AppleSettings, CommunityLexiconSettings, DisplaySettings, EciDictionaries,
+    EciSettings, EditingSettings, ExportSettings, FootnoteMode, HighlightSettings,
+    KeyboardSettings, KeymapOverrides, LibrarySettings, NormalizationSettings, ReadingSettings,
+    SapiSettings, Settings, SettingsLoad, SettingsStore, SpeechSettings, SubtitleFormat, TableMode,
 };
 pub use sync::{ConflictPolicy, SidecarStore};
 

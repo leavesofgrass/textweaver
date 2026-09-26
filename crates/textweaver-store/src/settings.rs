@@ -326,6 +326,78 @@ pub struct NormalizationSettings {
     pub table_mode: TableMode,
     /// Footnote narration.
     pub footnote_mode: FootnoteMode,
+    /// `[normalization.community_lexicon]`: the IBMTTS community
+    /// pronunciation dictionaries applied as a lexicon, for engines that do
+    /// not normalize natively (Eloquence loads them itself).
+    pub community_lexicon: CommunityLexiconSettings,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+/// `[normalization.community_lexicon]`. The app maps it onto the speech
+/// service's `CommunityLexiconConfig`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CommunityLexiconSettings {
+    /// Apply the lexicon (off by default).
+    pub enabled: bool,
+    /// Directory holding the `.dic` files; unset searches beside the
+    /// program and `TEXTWEAVER_ECI_DICTIONARIES`.
+    pub dir: Option<PathBuf>,
+    /// ECI's three-letter language code in the file names: `ENU` (US
+    /// English, the default) or `DEU` (German).
+    pub language: String,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+impl Default for CommunityLexiconSettings {
+    fn default() -> Self {
+        CommunityLexiconSettings {
+            enabled: false,
+            dir: None,
+            language: "ENU".to_owned(),
+            extra: toml::Table::new(),
+        }
+    }
+}
+
+/// Subtitle file format for audio export.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SubtitleFormat {
+    /// SubRip (`.srt`), Star's default.
+    #[default]
+    Srt,
+    /// WebVTT (`.vtt`).
+    Vtt,
+}
+
+impl SubtitleFormat {
+    /// The file extension, without the dot.
+    pub fn extension(self) -> &'static str {
+        match self {
+            SubtitleFormat::Srt => "srt",
+            SubtitleFormat::Vtt => "vtt",
+        }
+    }
+}
+
+/// `[export]`: audio export (`tw export-audio`), Star's `subtitle_format`,
+/// `subtitle_word_level`, and `export_subtitles_with_audio`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ExportSettings {
+    /// Subtitle format when subtitles are written without a file name.
+    pub subtitle_format: SubtitleFormat,
+    /// One subtitle cue per word instead of caption lines.
+    pub subtitle_word_level: bool,
+    /// Always write subtitles beside exported audio (Star's
+    /// `export_subtitles_with_audio`), named like the audio file with the
+    /// subtitle format's extension.
+    pub subtitles_with_audio: bool,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -342,6 +414,7 @@ impl Default for NormalizationSettings {
             pronunciations: BTreeMap::new(),
             table_mode: TableMode::default(),
             footnote_mode: FootnoteMode::default(),
+            community_lexicon: CommunityLexiconSettings::default(),
             extra: toml::Table::new(),
         }
     }
@@ -513,6 +586,8 @@ pub struct Settings {
     pub library: LibrarySettings,
     /// `[keyboard]`
     pub keyboard: KeyboardSettings,
+    /// `[export]`
+    pub export: ExportSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -603,15 +678,25 @@ impl Settings {
         speech.eci = lenient_section("speech.eci", eci, &mut w);
         speech.sapi = lenient_section("speech.sapi", sapi, &mut w);
         speech.apple = lenient_section("speech.apple", apple, &mut w);
+        let mut normalization_table = table.remove("normalization");
+        let lexicon = match &mut normalization_table {
+            Some(toml::Value::Table(t)) => t.remove("community_lexicon"),
+            _ => None,
+        };
+        let mut normalization: NormalizationSettings =
+            lenient_section("normalization", normalization_table, &mut w);
+        normalization.community_lexicon =
+            lenient_section("normalization.community_lexicon", lexicon, &mut w);
         let mut s = Settings {
             speech,
             highlight: lenient_section("highlight", table.remove("highlight"), &mut w),
-            normalization: lenient_section("normalization", table.remove("normalization"), &mut w),
+            normalization,
             reading: lenient_section("reading", table.remove("reading"), &mut w),
             display: lenient_section("display", table.remove("display"), &mut w),
             editing: lenient_section("editing", table.remove("editing"), &mut w),
             library: lenient_section("library", table.remove("library"), &mut w),
             keyboard: lenient_section("keyboard", table.remove("keyboard"), &mut w),
+            export: lenient_section("export", table.remove("export"), &mut w),
             extra: table,
         };
         w.extend(s.validate());
@@ -716,8 +801,10 @@ impl Settings {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-const STRUCT_TABLES: [&str; 11] = [
+const STRUCT_TABLES: [&str; 13] = [
     "keyboard",
+    "export",
+    "normalization.community_lexicon",
     "speech",
     "speech.eci",
     "speech.sapi",
@@ -948,6 +1035,56 @@ mod tests {
         assert!(text.contains("new_engine_option"));
         assert!(text.contains("[future_table]"));
         assert_eq!(store.load().0, s);
+    }
+
+    /// Wave 2 additions for the app (Agent D3): the community lexicon and
+    /// audio export options, with Star's defaults, read leniently, and
+    /// stored only when changed.
+    #[test]
+    fn lexicon_and_export_settings_default_round_trip_and_stay_minimal() {
+        let s = Settings::default();
+        assert!(!s.normalization.community_lexicon.enabled);
+        assert_eq!(s.normalization.community_lexicon.dir, None);
+        assert_eq!(s.normalization.community_lexicon.language, "ENU");
+        assert_eq!(s.export.subtitle_format, SubtitleFormat::Srt);
+        assert!(!s.export.subtitle_word_level);
+        assert!(!s.export.subtitles_with_audio);
+        let text = s.to_minimal_toml().unwrap();
+        assert!(!text.contains("community_lexicon") && !text.contains("[export]"));
+
+        let (_d, store) = store();
+        write(
+            &store,
+            "[normalization]\nnumbers = false\n[normalization.community_lexicon]\nenabled = true\nlanguage = \"DEU\"\nfuture = 1\n[export]\nsubtitle_format = \"vtt\"\nsubtitle_word_level = true\nsubtitles_with_audio = true\n",
+        );
+        let (s, err) = store.load();
+        assert!(err.is_none(), "{err:?}");
+        assert!(!s.normalization.numbers);
+        let lex = &s.normalization.community_lexicon;
+        assert!(lex.enabled);
+        assert_eq!(lex.language, "DEU");
+        assert_eq!(lex.extra["future"].as_integer(), Some(1));
+        assert_eq!(s.export.subtitle_format, SubtitleFormat::Vtt);
+        assert_eq!(s.export.subtitle_format.extension(), "vtt");
+        assert!(s.export.subtitle_word_level && s.export.subtitles_with_audio);
+        store.save(&s).unwrap();
+        assert_eq!(store.load().0, s);
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(
+            !text.contains("dir"),
+            "unchanged values are not written: {text}"
+        );
+
+        // A bad value costs only itself.
+        write(
+            &store,
+            "[normalization.community_lexicon]\nenabled = \"yes\"\nlanguage = \"DEU\"\n[export]\nsubtitle_format = \"ass\"\nsubtitle_word_level = true\n",
+        );
+        let (s, _) = store.load();
+        assert!(!s.normalization.community_lexicon.enabled);
+        assert_eq!(s.normalization.community_lexicon.language, "DEU");
+        assert_eq!(s.export.subtitle_format, SubtitleFormat::Srt);
+        assert!(s.export.subtitle_word_level);
     }
 
     #[test]
