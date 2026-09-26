@@ -228,7 +228,7 @@ Steps:
 - Align html5ever.
 - Bundle only the CSL styles used.
 - Put comrak behind a feature.
-- Consider building `textweaver` (the reader) without the conversion and citation stack, so the reader stays small and starts fast.
+- The reader now offers export, preview, and citations (Phase 2 authoring), so it links the conversion and citation stack. Put those behind an app feature, on in releases, so a lean reader can still be built. `cargo xtask deps --check` reports the edges until then.
 
 ### Releases
 

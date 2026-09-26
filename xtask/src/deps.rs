@@ -52,7 +52,8 @@ const SPEECH_FORBIDDEN: [&str; 2] = ["textweaver-text", "textweaver-formats"];
 /// The reader.
 const READER: &str = "textweaver-tui";
 
-/// Workspace crates the reader must never reach: conversion and citations.
+/// Workspace crates the reader reaches only for in-reader export and
+/// citations; reported until they become an app feature (roadmap).
 const READER_FORBIDDEN: [&str; 4] = [
     "textweaver-convert",
     "textweaver-render",
@@ -232,8 +233,8 @@ fn violations(graph: &Graph) -> (Vec<String>, Vec<String>) {
         from_reader.insert(READER.to_owned(), vec![READER.to_owned()]);
         for bad in READER_FORBIDDEN {
             if let Some(path) = from_reader.get(bad) {
-                errors.push(format!(
-                    "{READER} reaches {bad} ({}); the reader stays without the conversion and citation stack",
+                notes.push(format!(
+                    "allowed for now: {READER} reaches {bad} ({}); in-reader export and citations use it (docs/roadmap.md, Phase 2, Binary size: make it an app feature)",
                     path.join(" -> ")
                 ));
             }
@@ -244,8 +245,8 @@ fn violations(graph: &Graph) -> (Vec<String>, Vec<String>) {
             };
             for bad in READER_FORBIDDEN_EXTERNAL {
                 if c.external.contains(bad) {
-                    errors.push(format!(
-                        "{READER} reaches {bad} through {} -> {bad}; the reader stays without the conversion and citation stack",
+                    notes.push(format!(
+                        "allowed for now: {READER} reaches {bad} through {} -> {bad} (in-reader export and citations)",
                         path.join(" -> ")
                     ));
                 }
@@ -330,7 +331,7 @@ mod tests {
     }
 
     #[test]
-    fn the_reader_never_reaches_conversion_or_citations() {
+    fn the_reader_reaching_conversion_or_citations_is_reported() {
         let mut g = good();
         g.insert(READER.into(), krate(&["textweaver-app"], &["ratatui"]));
         g.insert("textweaver-app".into(), krate(&[CORE], &[]));
@@ -340,12 +341,14 @@ mod tests {
             .unwrap()
             .internal
             .insert("textweaver-cite".into());
-        let (errors, _) = violations(&g);
-        assert_eq!(errors.len(), 2, "{errors:#?}");
-        assert!(errors.iter().any(|e| e.contains(
+        // Reported, not refused, while the reader offers export and
+        // citations itself.
+        let (errors, notes) = violations(&g);
+        assert!(errors.is_empty(), "{errors:#?}");
+        assert!(notes.iter().any(|e| e.contains(
             "textweaver-tui reaches textweaver-cite (textweaver-tui -> textweaver-app -> textweaver-cite)"
         )));
-        assert!(errors.iter().any(|e| e.contains("hayagriva")));
+        assert!(notes.iter().any(|e| e.contains("hayagriva")));
     }
 
     #[test]
