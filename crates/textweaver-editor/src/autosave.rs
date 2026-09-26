@@ -10,7 +10,11 @@
 //!   item 29);
 //! - Save never writes Markdown over a converted source (`.rst`, `.org`,
 //!   `.adoc`, `.html`, ...): only Markdown and plain-text sources are saved
-//!   in place (item 28), and Save As turns such an extension into `.md`.
+//!   in place (item 28), and Save As turns such an extension into `.md`;
+//! - an instance editing a document holds a lock on its snapshot
+//!   ([`SnapshotLock`], `File::try_lock`), so a second instance neither
+//!   offers to recover a snapshot that is still being written nor
+//!   overwrites it (item 39).
 
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
@@ -134,6 +138,80 @@ pub fn write_snapshot(dir: &Path, snapshot: &RecoverySnapshot) -> std::io::Resul
     Ok(path)
 }
 
+/// `<dir>/<doc_key>.lock`, the lock file guarding a snapshot.
+pub fn lock_file(dir: &Path, doc_key: &str) -> PathBuf {
+    dir.join(format!("{doc_key}.lock"))
+}
+
+/// An exclusive lock on one document's snapshot, held by the instance
+/// editing it for as long as it edits (Star had no lock, so a second
+/// instance offered to "recover" the first one's live work, item 39).
+///
+/// The lock is an operating-system file lock (`File::try_lock`), so it
+/// ends when the holder exits, even after a crash: a crashed instance's
+/// snapshot is offered again, a running instance's is not. Dropping the
+/// lock releases it and removes the lock file.
+#[derive(Debug)]
+pub struct SnapshotLock {
+    file: std::fs::File,
+    path: PathBuf,
+}
+
+impl SnapshotLock {
+    /// Takes the lock for `doc_key`'s snapshot in `dir`. `Ok(None)` when
+    /// another instance (or another session in this one) holds it.
+    pub fn acquire(dir: &Path, doc_key: &str) -> std::io::Result<Option<SnapshotLock>> {
+        std::fs::create_dir_all(dir)?;
+        let path = lock_file(dir, doc_key);
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(&path)?;
+        match file.try_lock() {
+            Ok(()) => {
+                let mut f = &file;
+                let _ = f.set_len(0);
+                let _ = write!(f, "{}", std::process::id());
+                Ok(Some(SnapshotLock { file, path }))
+            }
+            Err(std::fs::TryLockError::WouldBlock) => Ok(None),
+            Err(std::fs::TryLockError::Error(e)) => Err(e),
+        }
+    }
+
+    /// The lock file.
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+impl Drop for SnapshotLock {
+    fn drop(&mut self) {
+        let _ = self.file.unlock();
+        let _ = std::fs::remove_file(&self.path);
+    }
+}
+
+/// True when a running instance holds the lock on `doc_key`'s snapshot.
+/// A missing lock file means nobody does; a lock file that cannot be
+/// opened counts as held, to be safe.
+pub fn snapshot_in_use(dir: &Path, doc_key: &str) -> bool {
+    let path = lock_file(dir, doc_key);
+    let file = match std::fs::OpenOptions::new().write(true).open(&path) {
+        Ok(f) => f,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return false,
+        Err(_) => return true,
+    };
+    match file.try_lock() {
+        Ok(()) => {
+            let _ = file.unlock();
+            false
+        }
+        Err(_) => true,
+    }
+}
+
 /// Deletes a snapshot file; a missing file is not an error.
 pub fn delete_snapshot(path: &Path) -> std::io::Result<()> {
     match std::fs::remove_file(path) {
@@ -143,9 +221,11 @@ pub fn delete_snapshot(path: &Path) -> std::io::Result<()> {
 }
 
 /// Snapshots worth offering at startup, in file-name order (Star's
-/// `_scan_snapshots`). Unreadable and malformed files are skipped. A
-/// snapshot whose file already holds exactly its text was saved after all:
-/// it is deleted and skipped. A snapshot whose file is missing is offered.
+/// `_scan_snapshots`). Unreadable and malformed files are skipped, and so
+/// are snapshots another running instance is still writing (it holds their
+/// [`SnapshotLock`]). A snapshot whose file already holds exactly its text
+/// was saved after all: it is deleted and skipped. A snapshot whose file is
+/// missing is offered.
 pub fn scan_snapshots(dir: &Path) -> Vec<(PathBuf, RecoverySnapshot)> {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return Vec::new();
@@ -164,6 +244,9 @@ pub fn scan_snapshots(dir: &Path) -> Vec<(PathBuf, RecoverySnapshot)> {
         else {
             continue;
         };
+        if snapshot_in_use(dir, &snap.doc_key) {
+            continue;
+        }
         let saved = snap
             .path
             .as_ref()
@@ -365,6 +448,44 @@ mod tests {
         assert_eq!(std::fs::read(&fresh).unwrap(), b"a\nb");
         let names: Vec<_> = std::fs::read_dir(dir.path()).unwrap().collect();
         assert_eq!(names.len(), 2, "no temp files left behind");
+    }
+
+    #[test]
+    fn snapshot_lock_is_exclusive_and_hides_live_snapshots() {
+        let dir = tempfile::tempdir().unwrap();
+        let snap = RecoverySnapshot {
+            doc_key: "doc-1".into(),
+            path: None,
+            text: "unsaved".into(),
+            ts: 1,
+            title: None,
+        };
+        write_snapshot(dir.path(), &snap).unwrap();
+        assert!(!snapshot_in_use(dir.path(), "doc-1"));
+        let lock = SnapshotLock::acquire(dir.path(), "doc-1").unwrap().unwrap();
+        assert!(lock.path().exists());
+        assert!(snapshot_in_use(dir.path(), "doc-1"));
+        assert!(
+            SnapshotLock::acquire(dir.path(), "doc-1")
+                .unwrap()
+                .is_none(),
+            "a second holder is refused"
+        );
+        assert!(
+            scan_snapshots(dir.path()).is_empty(),
+            "a snapshot still being written is not offered"
+        );
+        let lock_path = lock.path().to_owned();
+        drop(lock);
+        assert!(!lock_path.exists());
+        assert!(!snapshot_in_use(dir.path(), "doc-1"));
+        let offered = scan_snapshots(dir.path());
+        assert_eq!(offered.len(), 1, "after the holder exits it is offered");
+        assert!(
+            SnapshotLock::acquire(dir.path(), "doc-1")
+                .unwrap()
+                .is_some()
+        );
     }
 
     #[test]

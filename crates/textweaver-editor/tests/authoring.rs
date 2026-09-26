@@ -875,3 +875,26 @@ fn formatting_is_one_undo_step_each() {
     s.undo().unwrap();
     assert_eq!(text(&s), "a\nb\nc");
 }
+
+/// Star bug 39: a second instance editing the same document neither
+/// overwrites the first one's snapshot nor is offered it while the first
+/// is running; once the first stops, the snapshot is offered.
+#[test]
+fn d39_second_instance_leaves_a_live_snapshot_alone() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut first = EditSession::new(DocInfo::untitled("untitled-7"), "")
+        .with_autosave(AutosavePolicy::default(), dir.path());
+    first.enter_edit();
+    first.editor_mut().unwrap().type_text("first").unwrap();
+    assert!(first.autosave_tick(Instant::now()).unwrap());
+    let mut second = EditSession::new(DocInfo::untitled("untitled-7"), "")
+        .with_autosave(AutosavePolicy::default(), dir.path());
+    second.enter_edit();
+    second.editor_mut().unwrap().type_text("second").unwrap();
+    assert!(!second.autosave_tick(Instant::now()).unwrap());
+    assert!(autosave::scan_snapshots(dir.path()).is_empty());
+    drop(first);
+    let offers = autosave::scan_snapshots(dir.path());
+    assert_eq!(offers.len(), 1);
+    assert_eq!(offers[0].1.text, "first");
+}
