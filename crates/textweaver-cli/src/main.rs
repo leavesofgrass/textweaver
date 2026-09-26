@@ -35,7 +35,7 @@ enum Cmd {
     Backends(cmd::backends::Args),
     /// Find ETI-Eloquence on this computer and explain how to get it.
     Eloquence(cmd::eloquence::Args),
-    /// Convert documents to Markdown, HTML, or text (batch, or watch a folder).
+    /// Convert documents and folders (Markdown, HTML, text, EPUB, Word, braille, PDF), or watch a folder.
     Convert(cmd::convert::Args),
     /// Read a document aloud into an audio file, with optional subtitles.
     #[command(name = "export-audio")]

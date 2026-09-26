@@ -27,6 +27,9 @@ textweaver-tui.workspace = true
 textweaver-vault.workspace = true
 textweaver-dictation.workspace = true
 textweaver-export.workspace = true
+# Agent L: `tw convert`.
+textweaver-convert.workspace = true
+textweaver-render.workspace = true
 clap.workspace = true
 anyhow.workspace = true
 serde.workspace = true

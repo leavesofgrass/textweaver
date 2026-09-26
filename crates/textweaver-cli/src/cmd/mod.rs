@@ -16,8 +16,3 @@ pub mod speak;
 pub mod text;
 pub mod vault;
 pub mod voices;
-
-/// The error every Phase 0 subcommand returns.
-pub fn not_implemented(name: &str) -> anyhow::Result<()> {
-    anyhow::bail!("`tw {name}` is not implemented yet")
-}
