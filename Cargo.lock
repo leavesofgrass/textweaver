@@ -1726,6 +1726,7 @@ name = "textweaver-app"
 version = "0.1.0-alpha.0"
 dependencies = [
  "log",
+ "ropey",
  "serde",
  "tempfile",
  "textweaver-a11y",
@@ -1838,6 +1839,7 @@ dependencies = [
  "anyhow",
  "clap",
  "ratatui",
+ "tempfile",
  "textweaver-app",
 ]
 
