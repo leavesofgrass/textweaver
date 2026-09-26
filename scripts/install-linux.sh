@@ -423,7 +423,6 @@ print_generic_packages() {
   say "Optional: ffmpeg and pandoc."
 }
 
-DEPS_INSTALLED=0
 install_dependencies() {
   section "System packages"
   detect_os
@@ -454,7 +453,6 @@ install_dependencies() {
   if ask "Install the build dependencies now?"; then
     if need_root "Installing packages"; then
       pm_install "$pkgs"
-      DEPS_INSTALLED=1
     else
       say "Skipping system packages. If the build fails, install the packages listed above."
     fi
@@ -597,12 +595,10 @@ choose_features() {
   local engines="omnivox speechd"
   if [ "$ESPEAK" = 0 ]; then
     say "Leaving out the in-process espeak-ng engine, as asked. textweaver can still speak through speech-dispatcher."
-  elif [ "$DRY_RUN" = 1 ] || [ "$DEPS_INSTALLED" = 1 ] \
-    || { have pkg-config && pkg-config --exists espeak-ng; } \
-    || [ -f /usr/include/espeak-ng/speak_lib.h ]; then
-    engines="espeak $engines"
   else
-    say "The espeak-ng development files were not found, so textweaver is built without the in-process espeak-ng engine. It can still speak through speech-dispatcher."
+    # libespeak-ng is loaded when textweaver starts, so the build needs no
+    # espeak-ng files; without the library the engine is just unavailable.
+    engines="espeak $engines"
   fi
   ENGINES="$engines"
   set_features
@@ -641,8 +637,8 @@ build() {
       *) die "The build failed. The error is above. scripts/doctor.sh collects what a bug report needs." ;;
     esac
     say ""
-    say "The build failed. On new distributions the usual cause is the in-process espeak-ng engine: its generated bindings can disagree with the system headers. The error is above."
-    say "Building again without it. textweaver can still speak with espeak-ng through speech-dispatcher. Use --no-espeak to skip the first attempt next time."
+    say "The build failed. The error is above."
+    say "Building again without the in-process espeak-ng engine, in case it is the cause. textweaver can still speak with espeak-ng through speech-dispatcher. Use --no-espeak to skip the first attempt next time."
     ENGINES="$(printf '%s' "$ENGINES" | sed 's/espeak //')"
     set_features
     (cd "$SRC" && run cargo build --release --locked -p textweaver-tui -p textweaver-cli \
