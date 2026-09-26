@@ -82,6 +82,9 @@ pub struct DectalkConfig {
     /// How long the engine may go silent while it owes audio before it is
     /// treated as hung; `None` uses [`STALL_TIMEOUT`] (10 s).
     pub stall_timeout: Option<Duration>,
+    /// More arguments for the host (tests: the fake engine's
+    /// `--start-delay-ms`).
+    pub host_args: Vec<std::ffi::OsString>,
 }
 
 /// The DECtalk library to load: the first DECtalk among the candidates,
