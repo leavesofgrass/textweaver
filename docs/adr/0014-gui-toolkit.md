@@ -30,7 +30,9 @@ Wave 2 built a spike, `textweaver-gui`, over the current `textweaver-app` API (n
 | No-op build | 0.4 s |
 | First `cargo clippy` after a build | 142 s; then 1.4 to 2.1 s |
 
-Space: the wxWidgets CMake tree is 2.2 GB and the source 177 MB, per profile (release builds wxWidgets again). The debug executable is 17.8 MB. CI timings are in the workflow summary.
+Space: the wxWidgets CMake tree is 2.2 GB and the source 177 MB, per profile (release builds wxWidgets again). The debug executable is 17.8 MB.
+
+On GitHub's runners (first run, nothing cached; CMake 4.4.3): `cargo build -p textweaver-gui` took 753 s on `windows-latest` and 459 s on `macos-latest`. The workflow caches the wxWidgets trees outside `target/` for later runs.
 
 How the build finds its tools (`tools/build-windows.ps1`, which changes nothing on the system):
 
@@ -70,7 +72,7 @@ How the build finds its tools (`tools/build-windows.ps1`, which changes nothing 
 
 ### macOS and Linux
 
-The GUI workflow builds, lints, and tests on the macOS runner and launches the GUI there with the silent backend; results are in the workflow run. VoiceOver behaviour needs a real Mac. Linux (GTK) was not built; wxDragon supports it and the character-unit position mapping is in place.
+On the macOS runner the GUI builds, passes clippy and its unit tests, and launches: it opened `fixtures/sample.md` (671 characters, 671 `NSTextView` units, loaded in 72 ms), announced "Opened Sample Markdown Document." and "Reading at 265 words per minute.", read with the silent backend, and closed itself. The Windows runner produced the same UI Automation report as the development machine (text exposed, caret following, 14 notifications, the window never activated). VoiceOver behaviour needs a real Mac. Linux (GTK) was not built; wxDragon supports it and the character-unit position mapping is in place.
 
 ## Decision
 
