@@ -1,0 +1,37 @@
+name: Feature request
+description: Something textweaver could do, or do better.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you want to do
+      description: The task or situation, in your own words. For example, "read a scanned PDF from my course".
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How textweaver could help
+      description: A command, a key, a setting, a file format. Say how it should sound or read with your screen reader, if that matters.
+  - type: textarea
+    id: now
+    attributes:
+      label: What you do today
+      description: Another program, a workaround, or Star (textweaver's Python predecessor), if it had this.
+  - type: dropdown
+    id: frontend
+    attributes:
+      label: Where
+      multiple: true
+      options:
+        - The terminal reader (textweaver)
+        - The command line (tw)
+        - The GUI (textweaver-gui)
+        - Speech engines and voices
+        - File formats and export
+  - type: input
+    id: setup
+    attributes:
+      label: Your setup (optional)
+      description: Operating system, screen reader, and speech engine.

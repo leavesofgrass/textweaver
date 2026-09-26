@@ -1,0 +1,65 @@
+name: Speech engine problem
+description: textweaver goes silent, stalls, speaks the wrong words, loses its place, or cannot find or use an engine or voice.
+labels: [speech]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please run the speech check first: `scripts/speech-check.sh` on Linux or macOS, or `scripts\speech-check.ps1` on Windows. It tries each engine and says what it finds.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happens
+      description: For example, "reading stops after the first sentence", "the highlight runs ahead of the voice", or "Eloquence is not listed".
+    validations:
+      required: true
+  - type: input
+    id: engine
+    attributes:
+      label: Engine and voice
+      placeholder: Eloquence (ECI) Reed, SAPI5 Zira, Apple Samantha, espeak-ng en-us, speech-dispatcher, DECtalk, Omnivox
+    validations:
+      required: true
+  - type: input
+    id: engine-version
+    attributes:
+      label: Where the engine comes from, and its version
+      description: For Eloquence, which library (OpenEVV, Code Factory, Voxin); for others, the package or installer version.
+  - type: textarea
+    id: text
+    attributes:
+      label: Text that shows the problem
+      description: A sentence or two, or attach a small file. Mention the rate if it matters.
+  - type: textarea
+    id: speech-check
+    attributes:
+      label: Output of the speech check
+      render: text
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of the doctor script
+      description: "`scripts/doctor.sh` or `scripts\\doctor.ps1`."
+      render: text
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and version
+    validations:
+      required: true
+  - type: input
+    id: screen-reader
+    attributes:
+      label: Screen reader and its version
+      description: Or "none". Some engines are shared with the screen reader.
+  - type: input
+    id: version
+    attributes:
+      label: textweaver version
+      description: The output of `tw --version`.
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Run with `--log debug` and paste the end of `textweaver.log` (the doctor script prints where it is).
+      render: text

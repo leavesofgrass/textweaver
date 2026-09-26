@@ -1,0 +1,30 @@
+# Dependency updates, once a week, grouped so each ecosystem opens at most a
+# few pull requests. CI (and cargo-deny) must pass before any is merged.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Patch and minor updates of every crate together.
+      cargo-minor:
+        patterns: ['*']
+        update-types: [minor, patch]
+      # Major updates one pull request each (the default), so a breaking
+      # change is reviewed on its own.
+    commit-message:
+      prefix: deps
