@@ -77,8 +77,6 @@ public static class TwUia
     [DllImport("user32.dll")]
     static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
     [DllImport("user32.dll")]
-    static extern bool SetForegroundWindow(IntPtr hwnd);
-    [DllImport("user32.dll")]
     static extern IntPtr GetMenu(IntPtr hwnd);
     [DllImport("user32.dll")]
     static extern int GetMenuItemCount(IntPtr menu);
