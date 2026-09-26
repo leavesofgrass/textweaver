@@ -1,0 +1,51 @@
+# Release: on a version tag, create the GitHub release (a pre-release before
+# 1.0, notes from CHANGELOG.md) and attach the macOS package: universal
+# binaries (Apple silicon and Intel), signed ad hoc, not notarized. The
+# Windows package is built on Jon's machine and uploaded with
+# tools/release-upload.sh (docs/releasing.md).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and upload (for example v0.1.0-alpha.3)'
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  macos:
+    name: macOS package
+    runs-on: macos-14
+    timeout-minutes: 60
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - run: rustup toolchain install
+      - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - name: Version matches the tag
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="textweaver-tui"))')
+          test "v$version" = "$TAG" || { echo "Cargo.toml version $version does not match tag $TAG"; exit 1; }
+      - name: Build the package
+        run: cargo xtask dist --universal
+      - name: Check the binaries
+        run: |
+          dir=$(ls -d target/dist/textweaver-*-macos-universal)
+          lipo -info "$dir/tw" "$dir/textweaver"
+          codesign --verify --verbose "$dir/tw" "$dir/textweaver"
+          "$dir/tw" --version
+      - name: Upload to the release
+        run: tools/release-upload.sh "$TAG" target/dist/textweaver-*-macos-universal.tar.gz
