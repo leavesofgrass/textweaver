@@ -1,0 +1,41 @@
+[package]
+name = "textweaver-xilem"
+description = "textweaver's all-Rust GUI on Masonry (Xilem's widget layer), Vello, Parley, AccessKit, and winit (ADR-0023)"
+version.workspace = true
+edition.workspace = true
+rust-version = "1.96"
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# Not a default member yet: Vello and wgpu add a few minutes to a cold build.
+# Build with `cargo build -p textweaver-xilem`. It becomes `textweaver-gui`
+# once it passes the UI Automation report (ADR-0023).
+
+[[bin]]
+name = "textweaver-xilem"
+path = "src/main.rs"
+
+[features]
+default = ["screenshot"]
+# `--screenshot PATH`: render the window with the Vello CPU renderer, with no
+# window on screen (masonry_testing's harness).
+screenshot = ["dep:masonry_testing"]
+
+[dependencies]
+textweaver-app.workspace = true
+textweaver-theme.workspace = true
+textweaver-fonts = { workspace = true, features = ["bundled-fonts"] }
+masonry.workspace = true
+masonry_winit = { workspace = true, features = ["imaging_vello"] }
+masonry_testing = { workspace = true, optional = true }
+unicode-segmentation.workspace = true
+clap.workspace = true
+
+[dev-dependencies]
+masonry_testing.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true
