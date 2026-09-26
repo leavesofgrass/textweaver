@@ -56,7 +56,7 @@ impl DigitKeys {
     /// dropped.
     pub fn take(&mut self, ch: char) -> Option<Option<(u8, bool)>> {
         let i = self.pending.iter().position(|k| k.ch == ch)?;
-        let key = self.pending.drain(..=i).last()?;
+        let key = self.pending.drain(..=i).next_back()?;
         Some(key.digit)
     }
 

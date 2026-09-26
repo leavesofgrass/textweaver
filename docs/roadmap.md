@@ -181,7 +181,7 @@ Star's lesson: a stored setting must work.
 - **Quieter screen.**
   - A "quiet screen while reading" option.
   - A cursor setting: follow focus, or park on the status line so "read current line" repeats the last message.
-- **Keymap preset.** An optional preset matching screen reader habits: h for heading, 1 to 6 for heading levels, l for list.
+- **Keymap preset.** An optional preset matching screen reader habits: h for heading, 1 to 6 for heading levels, l for list. Since 2026-09-26 this is the default keymap (Agent P2e), and the earlier keys are the `classic` preset.
 - **The guide.** `docs/screen-readers.md` gives NVDA and JAWS settings for use with textweaver. Each setting is marked to verify on Jon's machine.
 
 ### CI and quality gates
@@ -278,11 +278,11 @@ These are ranked for students with print disabilities, drawing on Star's history
 1. **OCR for scanned PDFs** (Tesseract, only on pages with no text layer). PDFs are students' main format.
 2. **DAISY 3 and DTBook,** the Bookshare format.
 3. **Define word:** an offline glossary, then WordNet, then CMUdict, as in Star 0.1.15.
-4. **In the reader:** syllable display, and the math exploration mode. Both crates are ready.
+4. **In the reader:** syllable display, and the math exploration mode. Done in the terminal reader (Agent P2e, 2026-09-26); the GUI does not draw syllables yet.
 5. **Voices.** Piper neural voices and a voice manager with favourites.
 6. **More formats.** Archives (`book.zip!inner.pdf`), opening a URL, PPTX, and spreadsheets as tables.
 7. **Settings profiles,** reading statistics, and interface translations.
-8. **Later:** the difficult-word overlay in the reader, summaries, translation, and karaoke video export.
+8. **Later:** summaries, translation, and karaoke video export. (The difficult-word overlay is done in the terminal reader, Agent P2e.)
 9. **Deliberately dropped for now:** study tools (spaced repetition, Anki), the knowledge graph, cloud voices, and plugins.
 
 ## Star lessons to keep honouring

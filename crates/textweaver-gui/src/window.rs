@@ -514,6 +514,7 @@ fn bind_events(gui: &Shared, frame: Frame, text: TextCtrl, play: Button, stop: B
                 return;
             };
             if let Some(chord) = keys::chord_from_char(unicode, mods(k), platform) {
+                let chord = digit_row(&st, unicode, chord);
                 handle_chord(&st, &chord, &ev);
             }
         }
@@ -545,6 +546,31 @@ fn mods(k: &wxdragon::event::window_events::KeyboardEvent) -> Mods {
 
 /// Runs the action bound to `chord` in the current mode, consuming the key;
 /// leaves caret keys and unbound keys to the control.
+/// The digit row on other keyboard layouts: a shifted digit the keymap
+/// does not know (`§` is Shift+3 on a German keyboard) becomes the chord
+/// the keymap stores (`#`), so Shift with 1 to 6 reaches the previous
+/// heading of that level (`textweaver_keymap::digits`).
+fn digit_row(st: &Shared, unicode: i32, chord: KeyChord) -> KeyChord {
+    use textweaver_app::keymap::digits::{DigitRow, from_typed};
+    let Ok(g) = st.try_borrow() else {
+        return chord;
+    };
+    let Some(c) = u32::try_from(unicode).ok().and_then(char::from_u32) else {
+        return chord;
+    };
+    let row = textweaver_app::digit_row(g.app.settings().keyboard.digit_row);
+    let bound = g
+        .app
+        .keymap()
+        .lookup(&chord, g.app.mode().layer())
+        .is_some();
+    match row {
+        DigitRow::Azerty => from_typed(c, row).unwrap_or(chord),
+        DigitRow::Auto if !bound => from_typed(c, row).unwrap_or(chord),
+        DigitRow::Auto => chord,
+    }
+}
+
 fn handle_chord(st: &Shared, chord: &KeyChord, ev: &WindowEventData) {
     let native = keys::is_native(chord);
     let action = {
