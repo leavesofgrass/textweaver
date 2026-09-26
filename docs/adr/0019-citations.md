@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
-- Status update (Saturday, September 26, 2026): `tw cite` is wired into the CLI as described. The editor has no citation picker yet; the `insert` API is ready for it. hayagriva's `csl-json` feature is still not enabled.
+- Status update (Saturday, September 26, 2026): `tw cite` is wired into the CLI as described. Two parts of this design are not connected yet. The editor has no citation picker: the `insert` API is ready, but no app code calls it. And the Pandoc-flavor renderer does not use this crate: `tw convert --flavor pandoc` shows each citation's keys as a link to a `#ref-` anchor, formats nothing, and adds no bibliography. The offline message quoted under Lookup also ends with the error's details. hayagriva's `csl-json` feature is still not enabled.
 
 ## Context
 

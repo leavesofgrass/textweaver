@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
-- Status update (Saturday, September 26, 2026): Implemented. DECtalk also gives exact word timings (ADR-0021). `tw export-audio` now reads the voice, rate, pitch, volume, preferred engine, table and footnote modes, and the `[export]` settings from `settings.toml` (Agent D4).
+- Status update (Saturday, September 26, 2026): Implemented. DECtalk also gives exact word timings (ADR-0021). `tw export-audio` now reads the voice, rate, pitch, volume, preferred engine, table and footnote modes, and the `[export]` settings from `settings.toml` (Agent D4), and takes `--home`. As built: without `--backend`, the `[speech] backend` setting is used first when that engine can write files, then the best one that can; the result sentence names the engine and adds "Subtitles in FILE." when subtitles are written; and the per-sentence pieces go in the system's temporary folder.
 
 ## Context
 

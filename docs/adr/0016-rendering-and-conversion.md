@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
-- Status update (Saturday, September 26, 2026): Implemented. PDF output no longer needs an installed font: fonts are bundled (ADR-0017, amendment), so the one-sentence "no font" stop happens only in a build without the `bundled-fonts` feature. The Pandoc fallback is `tw convert`'s own; the reader does not use Pandoc.
+- Status update (Saturday, September 26, 2026): Implemented. `pulldown-latex` is gone; math goes through `textweaver-math` (ADR-0018). Citations in the Pandoc flavor are shown as keys, not formatted with `textweaver-cite` (see ADR-0019's update). PDF output no longer needs an installed font: fonts are bundled (ADR-0017, amendment), so the one-sentence "no font" stop happens only in a build without the `bundled-fonts` feature. The Pandoc fallback is `tw convert`'s own; the reader does not use Pandoc.
 
 ## Context
 

@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
-- Status update (Saturday, September 26, 2026): Implemented as described. The serve loop pumps the macOS main run loop for `avspeech`, as the terminal reader does.
+- Status update (Saturday, September 26, 2026): Implemented, with these differences. Logs go to `textweaver.log` in the state folder, not to stderr. The `prompt`, `list`, and `quit` notifications are never sent on their own; they arrive only inside the `effects` of a result. In edit mode, `open` returns `{document, effects}` without `position`. The serve loop pumps the macOS main run loop for `avspeech`, as the terminal reader does.
 
 ## Context
 
