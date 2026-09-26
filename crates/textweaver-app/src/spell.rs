@@ -252,28 +252,14 @@ impl App {
 
     /// True when `word` is spelled correctly as far as the lists know.
     fn known(&mut self, list: &ScowlList, word: &str) -> bool {
-        if list.level(word).is_some() {
-            return true;
-        }
-        let lower = word.to_lowercase().replace('\u{2019}', "'");
         let personal = self.personal_words();
-        personal.contains(&lower)
-            || lower
-                .strip_suffix("'s")
-                .is_some_and(|w| personal.contains(w))
+        known_in(list, personal, word)
     }
 
-    /// The prose of the open document, as char ranges.
-    fn prose_ranges(&mut self) -> Vec<CharRange> {
-        let markdown = self.edit.is_some() && self.authoring.structure.markdown;
-        let Some(s) = self.session.as_ref() else {
-            return Vec::new();
-        };
-        if markdown {
-            prose_ranges_markdown(&s.doc.text().to_string())
-        } else {
-            prose_ranges_canonical(&s.doc)
-        }
+    /// True when the document's prose is its Markdown source (edit mode on
+    /// a Markdown file).
+    fn prose_is_markdown(&self) -> bool {
+        self.edit.is_some() && self.authoring.structure.markdown
     }
 
     /// Every misspelled word of the document, in order.
@@ -281,20 +267,12 @@ impl App {
         let Some(list) = ScowlList::builtin() else {
             return Vec::new();
         };
-        let ranges = self.prose_ranges();
-        let words: Vec<Word> = {
-            let Some(s) = self.session.as_ref() else {
-                return Vec::new();
-            };
-            ranges
-                .iter()
-                .flat_map(|r| words_in(&s.doc.slice(*r), r.start.0))
-                .collect()
+        let markdown = self.prose_is_markdown();
+        let personal = self.personal_words().clone();
+        let Some(s) = self.session.as_ref() else {
+            return Vec::new();
         };
-        words
-            .into_iter()
-            .filter(|w| !self.known(list, &w.text))
-            .collect()
+        misspelled_words(&s.doc, markdown, list, &personal)
     }
 
     /// Alt+M and Alt+Shift+M: the next or previous misspelled word.
@@ -466,28 +444,111 @@ impl App {
         }
     }
 
-    /// After a save: says how many possible misspellings the document has
-    /// ("No misspellings." only at high verbosity: silence means none).
-    pub(crate) fn announce_misspellings(&mut self) {
-        if let Some(summary) = self.misspelling_summary() {
-            let quiet = summary.starts_with("No ")
-                && self.settings.speech.verbosity < textweaver_a11y::Verbosity::High;
-            if !quiet {
-                self.announce_queued(&summary, textweaver_a11y::Priority::Polite);
-            }
+    /// After a save: counts the possible misspellings on a helper thread
+    /// (Wave 3: 0.6 s on 10 MB, which the keyboard used to wait for) and
+    /// says the count when it is ready ([`spell_count_tick`]). Nothing when
+    /// the check is not available.
+    ///
+    /// [`spell_count_tick`]: Self::spell_count_tick
+    pub(crate) fn count_misspellings_in_background(&mut self) {
+        let Some(list) = ScowlList::builtin() else {
+            return;
+        };
+        let markdown = self.prose_is_markdown();
+        let personal = self.personal_words().clone();
+        let Some(doc) = self.session.as_ref().map(|s| s.doc.clone()) else {
+            return;
+        };
+        let (tx, rx) = std::sync::mpsc::channel();
+        let wake = self.waker_slot();
+        let spawned = std::thread::Builder::new()
+            .name("textweaver-spell-count".into())
+            .spawn(move || {
+                let n = misspelled_words(&doc, markdown, list, &personal).len();
+                let _ = tx.send(n);
+                wake.wake();
+            });
+        match spawned {
+            Ok(_) => self.spell_count = Some(rx),
+            Err(e) => log::warn!("cannot count misspellings in the background: {e}"),
         }
     }
 
-    /// "3 possible misspellings." for the save message; nothing when the
-    /// check is not available.
-    pub(crate) fn misspelling_summary(&mut self) -> Option<String> {
-        ScowlList::builtin()?;
-        let n = self.misspellings().len();
-        Some(match n {
+    /// From [`App::tick`](crate::App::tick): says the misspelling count
+    /// once it is ready ("3 possible misspellings."; "No misspellings."
+    /// only at high verbosity, since silence means none).
+    pub(crate) fn spell_count_tick(&mut self) -> Vec<Effect> {
+        let Some(rx) = &self.spell_count else {
+            return Vec::new();
+        };
+        let n = match rx.try_recv() {
+            Ok(n) => n,
+            Err(std::sync::mpsc::TryRecvError::Empty) => return Vec::new(),
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                self.spell_count = None;
+                return Vec::new();
+            }
+        };
+        self.spell_count = None;
+        if n == 0 && self.settings.speech.verbosity < textweaver_a11y::Verbosity::High {
+            return Vec::new();
+        }
+        let summary = match n {
             0 => "No misspellings.".to_owned(),
             n => format!("{}.", count_phrase(n)),
-        })
+        };
+        self.announce_queued(&summary, textweaver_a11y::Priority::Polite);
+        vec![Effect::Redraw]
     }
+
+    /// Waits until the misspelling count after a save is said (or
+    /// `timeout` passes); for tests. True when none is left.
+    pub fn wait_for_spell_count(&mut self, timeout: std::time::Duration) -> bool {
+        let deadline = std::time::Instant::now() + timeout;
+        while self.spell_count.is_some() {
+            if std::time::Instant::now() >= deadline {
+                return false;
+            }
+            let _ = self.spell_count_tick();
+            if self.spell_count.is_some() {
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+        }
+        true
+    }
+}
+
+/// True when `word` is in the word list or the personal list (a
+/// possessive of a personal word counts).
+fn known_in(list: &ScowlList, personal: &BTreeSet<String>, word: &str) -> bool {
+    if list.level(word).is_some() {
+        return true;
+    }
+    let lower = word.to_lowercase().replace('\u{2019}', "'");
+    personal.contains(&lower)
+        || lower
+            .strip_suffix("'s")
+            .is_some_and(|w| personal.contains(w))
+}
+
+/// Every misspelled word of `doc`'s prose, in order: its Markdown source's
+/// prose when `markdown`, else everything but code and math.
+fn misspelled_words(
+    doc: &Document,
+    markdown: bool,
+    list: &ScowlList,
+    personal: &BTreeSet<String>,
+) -> Vec<Word> {
+    let ranges = if markdown {
+        prose_ranges_markdown(&doc.text().to_string())
+    } else {
+        prose_ranges_canonical(doc)
+    };
+    ranges
+        .iter()
+        .flat_map(|r| words_in(&doc.slice(*r), r.start.0))
+        .filter(|w| !known_in(list, personal, &w.text))
+        .collect()
 }
 
 /// "1 possible misspelling", "3 possible misspellings".

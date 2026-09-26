@@ -311,7 +311,8 @@ fn f9_turns_single_keys_off_and_on_and_saves() {
         Some(ActionId::NextSentence),
         "modifier chords keep working"
     );
-    // Saved at once, and applied at the next start.
+    // Saved at once (by the writer thread), and applied at the next start.
+    r.app.wait_for_writes();
     let (saved, _) = SettingsStore::new(paths.clone()).load();
     assert!(!saved.keyboard.character_keys);
     let r2 = launch(saved, Some(paths.clone()));
@@ -323,6 +324,7 @@ fn f9_turns_single_keys_off_and_on_and_saves() {
         r.app.keymap().lookup(&period, Layer::Browse),
         Some(ActionId::ReadCurrentSentence)
     );
+    r.app.wait_for_writes();
     assert!(SettingsStore::new(paths).load().0.keyboard.character_keys);
 }
 
@@ -401,7 +403,9 @@ fn the_library_lists_folder_documents_and_recent_files_and_opens_them() {
     assert!(items[0].starts_with("alpha, in Readings"), "{items:?}");
     assert!(items[1].starts_with("beta, in Readings"), "{items:?}");
     assert!(items[2].starts_with("loose.txt, recent"), "{items:?}");
-    assert_eq!(r.said.last(), "Library, 3 documents. Enter opens one.");
+    assert!(r.said.any("Library, 3 documents. Enter opens one."));
+    // Then the focused item (the app's list model, Wave 3).
+    assert!(r.said.last().ends_with("1 of 3"), "{}", r.said.last());
 
     // Enter on the first opens it and puts it on the bookshelf.
     r.app.dispatch(Command::Choose(0));

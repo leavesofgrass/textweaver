@@ -9,12 +9,12 @@ use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph};
-use textweaver_app::a11y::{AccessMode, CursorPlacement, Priority};
+use textweaver_app::a11y::{AccessMode, CursorPlacement};
 use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
 use textweaver_app::keymap::{ActionId, Key, KeyChord, Modifiers};
 use textweaver_app::text_util::line_count;
 use textweaver_app::{
-    App, CaretMove, Command, Confirm, Effect, Mode, Playback, PromptPurpose, chords_text,
+    App, CaretMove, Command, Confirm, Effect, ListKey, Mode, Playback, PromptKey, chords_text,
     extra_lookup,
 };
 
@@ -125,9 +125,6 @@ fn math_move(k: &KeyEvent) -> Option<textweaver_app::MathMove> {
     })
 }
 
-/// Most recalled answers kept per prompt.
-const PROMPT_HISTORY: usize = 50;
-
 /// How long the status line stays blank before a repeated message comes
 /// back, so a screen reader that speaks the status line when it changes
 /// hears the message again ("No next heading." twice in a row).
@@ -136,9 +133,6 @@ pub const REPEAT_BLANK: std::time::Duration = std::time::Duration::from_millis(1
 /// The terminal frontend's state around the app.
 pub struct Tui {
     app: App,
-    minibuffer: Option<Minibuffer>,
-    list: Option<ListView>,
-    answers: HashMap<PromptPurpose, Vec<String>>,
     quit: bool,
     /// The terminal's color level, detected once.
     support: ColorSupport,
@@ -188,9 +182,6 @@ impl Tui {
         let theme_key = app.reading_theme_key();
         Tui {
             app,
-            minibuffer: None,
-            list: None,
-            answers: Default::default(),
             quit: false,
             support,
             theme,
@@ -255,14 +246,16 @@ impl Tui {
         self.quit
     }
 
-    /// The open prompt, if any.
+    /// The open prompt, if any: the app's prompt model (Wave 3), shared
+    /// with the GUI and JSON-RPC.
     pub fn minibuffer(&self) -> Option<&Minibuffer> {
-        self.minibuffer.as_ref()
+        self.app.prompt_model()
     }
 
-    /// The open list, if any.
+    /// The open list, if any: the app's list model (Wave 3), shared with
+    /// the GUI and JSON-RPC.
     pub fn list(&self) -> Option<&ListView> {
-        self.list.as_ref()
+        self.app.list_model()
     }
 
     /// The styles of the theme in effect (with the reader's highlight
@@ -314,36 +307,11 @@ impl Tui {
         if let Some(text) = self.app.take_clipboard() {
             self.clipboard_out = Some(textweaver_app::osc52(&text));
         }
-        for e in effects {
-            match e {
-                Effect::Redraw => {}
-                Effect::Quit => self.quit = true,
-                Effect::Prompt { label, purpose } => {
-                    self.list = None;
-                    self.minibuffer = Some(Minibuffer::new(label, purpose));
-                }
-                Effect::ShowList { title, items } => {
-                    self.minibuffer = None;
-                    // The same list again (after a delete): stay in place.
-                    let keep = self
-                        .list
-                        .as_ref()
-                        .filter(|l| l.title == title)
-                        .map(|l| l.selected);
-                    let mut view = ListView::new(title, items);
-                    if let Some(i) = keep {
-                        view.selected = i.min(view.items.len().saturating_sub(1));
-                    }
-                    // Say the focused item after the app's introduction
-                    // ("Bookmarks, 3 items. ..."), without interrupting
-                    // it: the first item was never heard unless the user
-                    // pressed Up (docs/history/audit-2026-09.md, finding A4).
-                    if let Some(item) = view.spoken_item() {
-                        self.app.announce_queued(&item, Priority::Polite);
-                    }
-                    self.list = Some(view);
-                }
-            }
+        // Prompts and lists are the app's own models (Wave 3): the app
+        // adopted them, and said a list's focused item, before returning
+        // these effects.
+        if effects.contains(&Effect::Quit) {
+            self.quit = true;
         }
     }
 
@@ -361,14 +329,11 @@ impl Tui {
     /// Pasted text: into the prompt when one is open, else into the
     /// document in edit mode.
     pub fn paste(&mut self, text: &str) {
-        if let Some(mb) = self.minibuffer.as_mut() {
-            for c in text.chars().filter(|c| !c.is_control()) {
-                mb.insert(c);
-            }
-            self.app.echo(text);
+        if self.app.prompt_model().is_some() {
+            self.dispatch(Command::PromptKey(PromptKey::Paste(text.to_owned())));
             return;
         }
-        if self.list.is_none() {
+        if self.app.list_model().is_none() {
             let text = text.replace("\r\n", "\n").replace('\r', "\n");
             self.dispatch(Command::Insert(text));
         }
@@ -404,9 +369,9 @@ impl Tui {
             self.dispatch(Command::Confirm(answer));
             return;
         }
-        if self.list.is_some() {
+        if self.app.list_model().is_some() {
             self.list_key(k);
-        } else if self.minibuffer.is_some() {
+        } else if self.app.prompt_model().is_some() {
             self.minibuffer_key(k);
         } else if self.app.mode() == Mode::Edit {
             self.edit_key(k);
@@ -484,293 +449,57 @@ impl Tui {
         }
     }
 
+    /// A key in a list: the app's list model handles it (Wave 3), so the
+    /// terminal, the GUI, and JSON-RPC behave the same.
     fn list_key(&mut self, k: KeyEvent) {
-        if self.list.is_none() {
-            return;
-        }
-        let page = 10;
         let plain = !k
             .modifiers
             .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT);
-        // Lists that filter as you type (the outline, the citation picker):
-        // characters and Space add to the filter, Backspace removes one.
-        if let Some(filter) = self.app.list_filter().map(str::to_owned) {
-            match k.code {
-                KeyCode::Char(c) if plain && !c.is_control() => {
-                    self.dispatch(Command::FilterList(format!("{filter}{c}")));
-                    return;
-                }
-                KeyCode::Backspace if !filter.is_empty() => {
-                    let mut q = filter;
-                    q.pop();
-                    self.dispatch(Command::FilterList(q));
-                    return;
-                }
-                _ => {}
-            }
-        }
-        let Some(list) = self.list.as_mut() else {
-            return;
-        };
-        // Letter keys: an accelerator (s, d, c in the Save, Discard,
-        // Cancel list), else the next item starting with that letter.
-        if let KeyCode::Char(c) = k.code
-            && plain
-            && c.is_alphanumeric()
-        {
-            if let Some(n) = self.app.list_accelerator(c) {
-                self.list = None;
-                self.dispatch(Command::Choose(n));
-                return;
-            }
-            let Some(list) = self.list.as_mut() else {
-                return;
-            };
-            if list.jump_to_letter(c) {
-                let text = list.spoken_item().unwrap_or_default();
-                self.app.announce(&text, Priority::Assertive);
-            } else {
-                self.app
-                    .announce(&format!("No item starts with {c}."), Priority::Polite);
-            }
-            return;
-        }
-        let moved = match k.code {
-            KeyCode::Up => list.step(-1),
-            KeyCode::Down => list.step(1),
-            KeyCode::PageUp => list.step(-page),
-            KeyCode::PageDown => list.step(page),
-            KeyCode::Home => list.step(isize::MIN / 2),
-            KeyCode::End => list.step(isize::MAX / 2),
-            KeyCode::Enter => {
-                let n = list.selected;
-                self.list = None;
-                self.dispatch(Command::Choose(n));
-                return;
-            }
-            KeyCode::Esc | KeyCode::Backspace => {
-                self.list = None;
-                self.dispatch(Command::Cancel);
-                return;
-            }
-            KeyCode::Delete => {
-                let n = list.selected;
-                self.list_action(Command::DeleteItem(n));
-                return;
-            }
-            KeyCode::F(2) => {
-                let n = list.selected;
-                self.list_action(Command::RenameItem(n));
-                return;
-            }
-            KeyCode::Char(' ') => {
-                let n = list.selected;
-                self.list_action(Command::MarkItem(n));
-                return;
-            }
+        let key = match k.code {
+            KeyCode::Char(c) if plain && !c.is_control() => ListKey::Char(c),
+            KeyCode::Up => ListKey::Up,
+            KeyCode::Down => ListKey::Down,
+            KeyCode::PageUp => ListKey::PageUp,
+            KeyCode::PageDown => ListKey::PageDown,
+            KeyCode::Home => ListKey::Home,
+            KeyCode::End => ListKey::End,
+            KeyCode::Left => ListKey::Left,
+            KeyCode::Right => ListKey::Right,
+            KeyCode::Enter => ListKey::Enter,
+            KeyCode::Esc => ListKey::Escape,
+            KeyCode::Backspace => ListKey::Backspace,
+            KeyCode::Delete => ListKey::Delete,
+            KeyCode::F(2) => ListKey::Rename,
             _ => return,
         };
-        let text = list.spoken_item().unwrap_or_default();
-        if moved {
-            self.app.announce(&text, Priority::Assertive);
-        } else {
-            let edge = if matches!(k.code, KeyCode::Up | KeyCode::PageUp | KeyCode::Home) {
-                "Top of list."
-            } else {
-                "End of list."
-            };
-            self.app.announce(edge, Priority::Polite);
-        }
+        self.dispatch(Command::ListKey(key));
     }
 
-    /// Runs a command on a list item; the list stays open only if the app
-    /// shows it again.
-    fn list_action(&mut self, cmd: Command) {
-        let effects = self.app.dispatch(cmd);
-        let reshown = effects
-            .iter()
-            .any(|e| matches!(e, Effect::ShowList { .. } | Effect::Prompt { .. }));
-        if !reshown {
-            self.list = None;
-        }
-        self.apply(effects);
-    }
-
+    /// A key in the prompt: the app's prompt model handles it (Wave 3).
     fn minibuffer_key(&mut self, k: KeyEvent) {
-        let Some(mb) = self.minibuffer.as_mut() else {
-            return;
-        };
         let ctrl = k.modifiers.contains(KeyModifiers::CONTROL);
-        let mut echo: Option<String> = None;
-        match k.code {
-            KeyCode::Enter => {
-                let answer = mb.text();
-                let purpose = mb.purpose;
-                if !answer.trim().is_empty() {
-                    let hist = self.answers.entry(purpose).or_default();
-                    hist.retain(|a| a != &answer);
-                    hist.push(answer.clone());
-                    if hist.len() > PROMPT_HISTORY {
-                        hist.remove(0);
-                    }
-                }
-                self.minibuffer = None;
-                self.dispatch(Command::Answer(answer));
-                return;
-            }
-            KeyCode::Esc => {
-                self.minibuffer = None;
-                self.dispatch(Command::Cancel);
-                return;
-            }
-            KeyCode::Char('g') if ctrl => {
-                self.minibuffer = None;
-                self.dispatch(Command::Cancel);
-                return;
-            }
-            KeyCode::Char('a') if ctrl => mb.home(),
-            KeyCode::Char('e') if ctrl => mb.end(),
-            KeyCode::Char('u') if ctrl => echo = Some(mb.kill_to_start()),
-            KeyCode::Char('k') if ctrl => echo = Some(mb.kill_to_end()),
-            KeyCode::Char('w') if ctrl => echo = Some(mb.delete_word_back()),
-            KeyCode::Char(c) if typed_char(&k).is_some() => {
-                mb.insert(c);
-                mb.candidate = None;
-                echo = Some(c.to_string());
-            }
-            KeyCode::Backspace => echo = mb.backspace().map(|c| c.to_string()),
-            KeyCode::Delete => echo = mb.delete().map(|c| c.to_string()),
-            KeyCode::Left => {
-                mb.left();
-                echo = mb.char_at_caret().map(|c| c.to_string());
-            }
-            KeyCode::Right => {
-                mb.right();
-                echo = mb.char_at_caret().map(|c| c.to_string());
-            }
-            KeyCode::Home => mb.home(),
-            KeyCode::End => mb.end(),
-            KeyCode::Tab => {
-                self.complete();
-                return;
-            }
-            KeyCode::Up => {
-                self.recall(-1);
-                return;
-            }
-            KeyCode::Down => {
-                self.recall(1);
-                return;
-            }
+        let key = match k.code {
+            KeyCode::Enter => PromptKey::Enter,
+            KeyCode::Esc => PromptKey::Escape,
+            KeyCode::Char('g') if ctrl => PromptKey::Escape,
+            KeyCode::Char('a') if ctrl => PromptKey::Home,
+            KeyCode::Char('e') if ctrl => PromptKey::End,
+            KeyCode::Char('u') if ctrl => PromptKey::KillToStart,
+            KeyCode::Char('k') if ctrl => PromptKey::KillToEnd,
+            KeyCode::Char('w') if ctrl => PromptKey::DeleteWordBack,
+            KeyCode::Char(c) if typed_char(&k).is_some() => PromptKey::Char(c),
+            KeyCode::Backspace => PromptKey::Backspace,
+            KeyCode::Delete => PromptKey::Delete,
+            KeyCode::Left => PromptKey::Left,
+            KeyCode::Right => PromptKey::Right,
+            KeyCode::Home => PromptKey::Home,
+            KeyCode::End => PromptKey::End,
+            KeyCode::Tab => PromptKey::Tab,
+            KeyCode::Up => PromptKey::Up,
+            KeyCode::Down => PromptKey::Down,
             _ => return,
-        }
-        if let Some(e) = echo.filter(|e| !e.is_empty()) {
-            self.app.echo(&e);
-        }
-    }
-
-    /// Up and Down: palette candidates, or earlier answers to this prompt.
-    fn recall(&mut self, delta: isize) {
-        let Some(mb) = self.minibuffer.as_mut() else {
-            return;
         };
-        if mb.purpose == PromptPurpose::CommandPalette {
-            if mb.candidate.is_none() {
-                mb.candidates = self.app.palette_candidates(&mb.text());
-            }
-            if mb.candidates.is_empty() {
-                self.app.announce("No matching commands.", Priority::Polite);
-                return;
-            }
-            let n = mb.candidates.len();
-            let i = match mb.candidate {
-                None if delta > 0 => 0,
-                None => n - 1,
-                Some(i) => (i as isize + delta).rem_euclid(n as isize) as usize,
-            };
-            mb.candidate = Some(i);
-            let (action, desc) = mb.candidates[i].clone();
-            mb.set_text(action.id());
-            self.app.announce(&desc, Priority::Assertive);
-            return;
-        }
-        let empty = Vec::new();
-        let hist = self.answers.get(&mb.purpose).unwrap_or(&empty);
-        if hist.is_empty() {
-            self.app.announce("No earlier entries.", Priority::Polite);
-            return;
-        }
-        let n = hist.len();
-        let i = match (mb.history_index, delta < 0) {
-            (None, true) => Some(n - 1),
-            (None, false) => None,
-            (Some(i), true) => Some(i.saturating_sub(1)),
-            (Some(i), false) if i + 1 < n => Some(i + 1),
-            (Some(_), false) => None,
-        };
-        mb.history_index = i;
-        let text = i.map_or_else(String::new, |i| hist[i].clone());
-        mb.set_text(&text);
-        let spoken = if text.is_empty() {
-            "blank".to_owned()
-        } else {
-            text
-        };
-        self.app.announce(&spoken, Priority::Assertive);
-    }
-
-    /// Tab in a file prompt (Open, Save As, Insert image): completes the
-    /// file or folder name typed so far, to the longest common part of the
-    /// names that match, and says what matches.
-    fn complete_path(&mut self) {
-        let Some(mb) = self.minibuffer.as_mut() else {
-            return;
-        };
-        let typed = mb.text();
-        let (done, spoken) =
-            crate::paths::complete(&typed, &std::env::current_dir().unwrap_or_default());
-        if let Some(text) = done {
-            mb.set_text(&text);
-        }
-        self.app.announce(&spoken, Priority::Assertive);
-    }
-
-    /// Tab in the command palette: complete to the longest common prefix of
-    /// the matching command ids, and say what matches. Tab in a file prompt
-    /// completes the path.
-    fn complete(&mut self) {
-        let Some(mb) = self.minibuffer.as_mut() else {
-            return;
-        };
-        if matches!(
-            mb.purpose,
-            PromptPurpose::Open | PromptPurpose::SaveAs | PromptPurpose::ImagePath
-        ) {
-            self.complete_path();
-            return;
-        }
-        if mb.purpose != PromptPurpose::CommandPalette {
-            return;
-        }
-        let cands = self.app.palette_candidates(&mb.text());
-        match cands.as_slice() {
-            [] => self.app.announce("No matching commands.", Priority::Polite),
-            [(a, desc)] => {
-                mb.set_text(a.id());
-                let desc = desc.clone();
-                self.app.announce(&desc, Priority::Assertive);
-            }
-            many => {
-                let ids: Vec<&str> = many.iter().map(|(a, _)| a.id()).collect();
-                let prefix = common_prefix(&ids);
-                if prefix.len() > mb.text().len() && ids.iter().all(|i| i.starts_with(&prefix)) {
-                    mb.set_text(&prefix);
-                }
-                let first: Vec<String> = ids.iter().take(5).map(|i| i.replace('_', " ")).collect();
-                let msg = format!("{} matches: {}.", many.len(), first.join(", "));
-                self.app.announce(&msg, Priority::Assertive);
-            }
-        }
+        self.dispatch(Command::PromptKey(key));
     }
 
     /// What the status line shows: the pending question while one waits for
@@ -1237,7 +966,7 @@ impl Tui {
     /// The minibuffer or the key hints; returns the caret position when a
     /// prompt is open.
     fn draw_bottom(&self, f: &mut Frame<'_>, area: Rect, theme: &Theme) -> Option<Position> {
-        if let Some(mb) = &self.minibuffer {
+        if let Some(mb) = self.minibuffer() {
             let label = format!("{}: ", mb.label);
             let text = mb.text();
             let before: String = text.chars().take(mb.caret()).collect();
@@ -1342,7 +1071,7 @@ impl Tui {
 
     /// Draws the list overlay; returns the focused item's position.
     fn draw_list(&self, f: &mut Frame<'_>, body: Rect, theme: &Theme) -> Option<Position> {
-        let list = self.list.as_ref()?;
+        let list = self.list()?;
         let area = if body.width > 10 && body.height > 4 {
             Rect::new(body.x + 2, body.y + 1, body.width - 4, body.height - 2)
         } else {
@@ -1396,22 +1125,6 @@ impl Tui {
     }
 }
 
-fn common_prefix(ids: &[&str]) -> String {
-    let Some(first) = ids.first() else {
-        return String::new();
-    };
-    let mut len = first.len();
-    for id in &ids[1..] {
-        len = first
-            .bytes()
-            .zip(id.bytes())
-            .take(len)
-            .take_while(|(a, b)| a == b)
-            .count();
-    }
-    first[..len].to_owned()
-}
-
 /// The text attributes a reading-ruler mark adds (colours stay the
 /// theme's; the mark never relies on colour).
 fn ruler_modifier(m: RulerStyle) -> Modifier {
@@ -1444,11 +1157,5 @@ mod tests {
         assert_eq!(k(KeyCode::Null, KeyModifiers::NONE), "Ctrl+Space");
         assert_eq!(k(KeyCode::BackTab, KeyModifiers::SHIFT), "Shift+Tab");
         assert_eq!(k(KeyCode::F(2), KeyModifiers::NONE), "F2");
-    }
-
-    #[test]
-    fn prefix() {
-        assert_eq!(common_prefix(&["next_list", "next_link"]), "next_li");
-        assert_eq!(common_prefix(&["a"]), "a");
     }
 }

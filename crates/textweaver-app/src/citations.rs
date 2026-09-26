@@ -420,6 +420,7 @@ impl App {
         let cache = self.paths.as_ref().map(|p| p.cache_dir.join("cite"));
         let (tx, rx) = std::sync::mpsc::channel();
         let what = id.describe();
+        let wake = self.waker_slot();
         let spawned = std::thread::Builder::new()
             .name("tw-cite-lookup".into())
             .spawn(move || {
@@ -432,6 +433,7 @@ impl App {
                     lookup = lookup.with_cache(textweaver_cite::Cache::new(dir));
                 }
                 let _ = tx.send(lookup.identifier(&id).map_err(|e| e.to_string()));
+                wake.wake();
             });
         match spawned {
             Ok(_) => {

@@ -77,6 +77,7 @@ impl App {
     pub fn list_filter(&self) -> Option<&str> {
         match &self.list {
             Some(ListKind::Authoring(l)) if l.filterable() => Some(&self.authoring.filter),
+            Some(ListKind::Settings) => self.settings_filter(),
             _ => None,
         }
     }
@@ -135,6 +136,9 @@ impl App {
 
     /// The filter of the shown list changed to `query`.
     pub(crate) fn filter_list(&mut self, query: String) -> Vec<Effect> {
+        if self.list == Some(ListKind::Settings) {
+            return self.filter_settings(query);
+        }
         let Some(ListKind::Authoring(mut list)) = self.list.clone() else {
             self.tell("This list does not filter.");
             return vec![Effect::Redraw];

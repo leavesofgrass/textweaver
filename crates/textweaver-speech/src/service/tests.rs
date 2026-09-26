@@ -1555,6 +1555,40 @@ fn null_service_reports_positions_then_finished() {
     assert_eq!(positions(&got), [r(0, 3), r(5, 8)]);
 }
 
+/// The waker is called after statuses are sent, so a frontend can sleep
+/// until then; a cleared waker is not called again.
+#[test]
+fn the_waker_rings_after_statuses_arrive() {
+    let s = SpeechService::null();
+    let (tx, rx) = std::sync::mpsc::channel::<()>();
+    let tx = std::sync::Mutex::new(tx);
+    s.set_waker(Some(Arc::new(move || {
+        let _ = tx.lock().map(|t| t.send(()));
+    })));
+    s.read(vec![Utterance::literal("One.", CharPos(0))]);
+    // Woken, and the status is there to take by then.
+    rx.recv_timeout(Duration::from_secs(5)).expect("woken");
+    assert!(s.try_status().is_some());
+    while s
+        .statuses()
+        .recv_timeout(Duration::from_millis(200))
+        .is_ok()
+    {}
+    while rx.try_recv().is_ok() {}
+    s.set_waker(None);
+    s.read(vec![Utterance::literal("Two.", CharPos(0))]);
+    let mut got = Vec::new();
+    while let Ok(st) = s.statuses().recv_timeout(Duration::from_secs(2)) {
+        let done = st == FIN;
+        got.push(st);
+        if done {
+            break;
+        }
+    }
+    assert!(!got.is_empty());
+    assert!(rx.try_recv().is_err(), "a cleared waker stays quiet");
+}
+
 #[test]
 fn the_voice_list_is_asked_on_the_speech_thread() {
     let (b, rec) = RecordingBackend::with(RecordingMode::Instant, RecordingBackend::DEFAULT_CAPS);

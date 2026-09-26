@@ -1096,10 +1096,13 @@ fn choose_voice_lists_the_voices_and_enter_speaks_a_sample() {
         })
         .expect("a voice list");
     assert_eq!(items, ["Test voice", "Second voice"]);
-    assert_eq!(
-        r.said.last(),
+    assert!(r.said.any(
         "Voices, 2 voices, favourites first. Enter chooses one and speaks a sample, Space adds or removes a favourite, Escape cancels."
-    );
+    ));
+    // The app says the focused item after the introduction (Wave 3: the
+    // list model is the app's, for every frontend).
+    assert_eq!(r.said.last(), "Test voice, 1 of 2");
+    assert_eq!(r.app.list_model().map(|l| l.selected), Some(0));
     r.log.clear();
     r.app.dispatch(Command::Choose(0));
     assert_eq!(r.said.last(), "Voice Test voice.");
@@ -1126,7 +1129,7 @@ fn favourite_voices_come_first_and_space_marks_them() {
     let mut r = rig(PROSE);
     r.act(ActionId::ChooseVoice);
     let effects = r.app.dispatch(Command::MarkItem(1));
-    assert_eq!(r.said.last(), "Second voice added to favourites.");
+    assert!(r.said.any("Second voice added to favourites."));
     let Some(Effect::ShowList { items, .. }) = effects.first() else {
         panic!("{effects:?}");
     };
@@ -1148,7 +1151,7 @@ fn favourite_voices_come_first_and_space_marks_them() {
     // Space again removes it; other lists say there is nothing to mark.
     r.act(ActionId::ChooseVoice);
     r.app.dispatch(Command::MarkItem(0));
-    assert_eq!(r.said.last(), "Second voice removed from favourites.");
+    assert!(r.said.any("Second voice removed from favourites."));
     assert!(r.app.settings().speech.favorite_voices.is_empty());
     r.act(ActionId::KeyboardHelp);
     r.app.dispatch(Command::MarkItem(0));

@@ -16,6 +16,8 @@ Kept current per wave by the orchestrator. Agents append to their own section's 
 
 ## Shared preamble (every agent reads this first)
 
+**Privacy: hard rule (Jon, 2026-09-26).** Never send any of Jon's personal identifiers to any outside service. That means his email address or any part of it, his usernames or callsigns, his name, and his machine or account names. It covers HTTP headers (including User-Agent), URLs, query strings, request bodies, search queries, and API calls. Use only a neutral User-Agent: `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, or the tool's default. Never build one from the session's user email. Never write an identifier into docs, commits, or anything public. If an identifier ever leaves the machine, stop and report it at once. This rule overrides every other instruction.
+
 **Project.** textweaver is a Rust reimplementation of Star, an accessible text-to-speech document reader for students with print disabilities. Read, in order: `docs/history/plan.md` (including "Phase 0 amendments"), the ADRs in `docs/adr/`, your sections of `docs/history/star-parity.md`, and the Phase 0 code in the crates you own and the crates you depend on. The Phase 0 code **is** the contract: public types and signatures you must keep, with deliberately naive bodies you replace.
 
 **Ownership.** Edit only the paths your brief lists. You may add files under `fixtures/<your-letter>/` and tests inside your crates. Never edit `crates/textweaver-core`, the root `Cargo.toml`, `rust-toolchain.toml`, `.github/`, `docker/`, `compose.yaml`, or another agent's paths.
@@ -562,6 +564,8 @@ Areas are split to keep merges small.
 
 ### Agent W3a — App core for the GUI (Phase 3, first half)
 
+**Status (Saturday, September 26, 2026): done, on `wave3/a-app-core`.** All six items, with ADR-0024. `DocWindow` (paragraph-aligned, slides and recentres, UTF-16, UTF-8, and char offsets; `DisplayIndex` is now the rope, 29 µs instead of 1.1 s and 40 MB on 10 million characters); `ListModel` and `PromptModel` in the app, which the TUI now only maps keys to and draws; `App::set_waker` and `SpeechService::set_waker`; `Command::ReplaceRange`; `SettingsSchema` from the store's keys, a settings screen (`Shift+F10`, GUI `Ctrl+,`), and JSON-RPC `settings_schema`, `get_setting`, `set_setting`, `list_state`, `list_key`, `prompt_state`, `prompt_key`; large files open in the background with progress and cancel (the key returns in 0.3 ms instead of 2.7 s on 10 MB, debug build), settings saves on the writer, the misspelling count after a save on a helper thread, and the speech engine's first start in the background. Small edits outside the app: `SpeechService::set_waker` (speech), `DisplayIndex` (text), the Settings action (keymap). Tests: 1,923 pass natively on Windows and 1,936 in Docker with all features; clippy clean in both.
+
 **Owns:** `crates/textweaver-app` (new modules), and the list and prompt code moved out of `crates/textweaver-tui`.
 
 1. **Document window model.**
@@ -752,7 +756,9 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 - Signing, when funding allows.
 - Release `0.1.0-alpha.4` or `beta.1` when Jon says so.
 
-## Wave 4 (draft, 2026-09-26; starts when Wave 3 is merged and Docker is restarted)
+## Wave 4 (refined 2026-09-26; starts when Wave 3 is merged and Docker is restarted)
+
+**Every Wave 4 agent reads `docs/research/wave4.md` first.** It records the research behind these briefs: crate versions, licences, APIs, and risks. The privacy hard rule in the shared preamble applies to every request.
 
 A draft, so the next wave can start the moment Wave 3 lands. It follows the same rules and spirit as Wave 3: pure-Rust first, experimental, and Jon's own use first. The orchestrator will refine these briefs from Wave 3's reports before launch.
 
@@ -775,6 +781,14 @@ A draft, so the next wave can start the moment Wave 3 lands. It follows the same
   - the access modes.
 - **Fixes from Jon's NVDA and JAWS listening session.** Where AccessKit falls short, write the changes and send them upstream.
 - **Remove the wxDragon spike** once the Xilem GUI passes the UI Automation report and Jon's session.
+- **From the research.**
+  - Base the editable text on Parley's `examples/editor`, which uses accesskit 0.25 and accesskit_winit 0.34. Parley main removed its AccessKit feature.
+  - Use `MultilineTextInput` in edit mode, and handle `SetTextSelection`, `SetValue`, and `ReplaceSelectedText`.
+  - Draw backgrounds yourself; Parley has no background style.
+  - Undo comes from textweaver's editor crate.
+  - For the RSVP overlay, hide the flashing word node, and expose a quiet labelled status node with `Live::Off`.
+  - Offer a direct `UiaRaiseNotificationEvent` on Windows as an announcement option, for Jon to compare with the live regions.
+  - Use Slint's AccessKit integration as a reference.
 
 ### Agent W4b: Speed, round two
 
@@ -785,23 +799,40 @@ A draft, so the next wave can start the moment Wave 3 lands. It follows the same
 - **Pure-Rust compression.** Turn on the zip crate's pure-Rust features: zlib-rs, lzma, xz, bzip2, and ppmd.
 - **Allocation and memory.** Cut allocations and peak memory, using the benchmark gate's numbers.
 - **Startup time** of `textweaver` and `tw`.
-- **Ropey 2.** Evaluate it (byte indexing), and whether `crop` or `jumprope` helps where the writer thread does not need a cheap clone.
+- **Ropey 2.** Evaluate it (byte indexing, still beta) and `crop` (byte-indexed, O(1) Arc clone, and 3 to 4 times faster on edit traces). `jumprope` deep-copies on clone, so it does not suit the writer thread.
+- **Tools.**
+  - Allocations: dhat and divan.
+  - Startup: hyperfine `-N --warmup`, plus a first-frame-exit flag.
+  - Binary size: cargo-bloat and cargo-llvm-lines. twiggy and bloaty do not handle Windows binaries.
+  - `icu_segmenter` has no abbreviation handling, so keep ours.
+  - For zip, use `default-features = false`. Note that the feature named `bzip2-rs` is C, and the one named `bzip2` is pure Rust.
 - **Binary size.** Reduce it now that the reader's export and citations are a feature.
 - **Optional TLS change.** Consider `rustls-graviola` in place of ring's C code, with ring as the fallback.
 
 ### Agent W4c: Formats, round two
 
-- **Math from EPUB 3.** Read EPUB 3 MathML as math.
+- **MathCAT** (DAISY, MIT; the math engine NVDA and JAWS use). Adopt it behind a feature for math speech (ClearSpeak and SimpleSpeak, in about 15 languages), for navigation within formulas, and for **Nemeth and UEB math braille** in the BRF writer.
+  - Pin 0.7.6 once it is stable. 0.7.5 pulls in zip 6 and yaml-rust.
+  - Run it on one dedicated thread, because its state is thread-local.
+  - Keep textweaver's own math speech as the fallback.
+- **Math from EPUB 3.** Read EPUB 3 MathML as math: MathCAT first, then `alttext`, then the alt text of `altimg`.
 - **More from DOCX.** Read Word comments, tracked changes, and footnotes into notes.
 - **RTF and ODT natively,** so neither needs Pandoc.
+  - RTF: write our own iterative parser with an explicit group stack and caps, decoding with encoding_rs for `\ansicpg` and `\fcharset`. rtf-parser is too shallow.
+  - ODT: roxmltree plus zip (ODF 1.4).
+- **DOCX comments and tracked changes** extend our own roxmltree reader: `w:comment*`, `w15:commentEx` (replies and resolved state), `w:ins`, `w:del`, and `w:moveFrom`/`w:moveTo`. Footnotes already load.
 - **A native LaTeX subset.** Sections, lists, math, citations, and tables are enough for course notes.
-- **Emails and web archives.** EML and MHTML.
+- **Emails and web archives.** EML and MHTML through `mail-parser` 0.11.9 with its encoding_rs feature (RFC 2557 for MHTML).
 - **Fuzz targets and hostile-input limits** for each new loader.
 
 ### Agent W4d: Interface translations
 
 - **Catalogs.** Fill the message catalogs from W3e for Spanish, French, German, Portuguese, and Arabic, the languages Star had. Take Star's catalogs where they apply.
-- **Right-to-left layout** in the terminal reader and the GUI.
+  - Use **Fluent**: fluent-bundle with fluent-templates `static_loader!`, or i18n-embed with `fl!`. It gives CLDR plurals, bidi isolation, and fluent-pseudo.
+  - Star's catalogs (`D:\star\star\locale`) are flat JSON, mapping English to the translation, with no plurals and `{name}` placeholders. There are 664 strings each for es, fr, de, and pt, and 129 for ar. Many are Qt or Star specific.
+  - Script-convert the strings that overlap with textweaver's.
+  - Extract textweaver's strings: about 60 `Announcement` kinds and about 364 `format!` messages in the app and TUI.
+- **Right-to-left layout** in the terminal reader and the GUI. Keep text in logical order in the model, in AccessKit, and in speech. Reorder it for display only, with `unicode-bidi`, behind a setting that is off where the terminal does its own BiDi (VTE, Konsole, mlterm, and macOS terminals). Windows Terminal has no RTL support. Parley handles bidi in the GUI.
 - **A first-run language choice.**
 - **Speech in the same language.** Each language gets a default voice for that language.
 - **A pseudo-locale in CI,** to catch strings that were never translated.
@@ -809,17 +840,34 @@ A draft, so the next wave can start the moment Wave 3 lands. It follows the same
 ### Agent W4e: Offline intelligence on rten (experimental)
 
 - **Offline translation of a document or selection.** OPUS-MT or Marian models in ONNX, run on rten. The user confirms any model download, and sees its licence.
-- **Extractive summaries.** LexRank on sentence embeddings from a small ONNX embedding model, or no model at all. Star used LexRank.
+  - Use the Xenova quantized ports (about 110 MB per language pair; show the licence as CC-BY 4.0), with rten-generate's merged-decoder KV cache on the Whisper example's pattern.
+  - Mask the pad token (65000).
+  - Tokenize with `kitoken` (pure Rust, Unigram), checking for an exact token-ID match against a reference. Fall back to `tokenizers` with `default-features = false, features = ["fancy-regex"]`.
+- **Extractive summaries.** Star used sumy's LexRank on word counts with no model, so make the no-model version the default. That is in-house LexRank: TF-IDF cosine, damping 0.85, and power iteration. Offer embeddings (all-MiniLM-L6-v2, 23 MB quantized, WordPiece through rten-text) as an option.
 - **The difficult-word overlay** gets definitions from W3e's lexicon.
 - **Every model** is optional, downloaded only on request, and checked by SHA-256.
 
 ### Agent W4f: Platforms and releases
 
-- **An aarch64 AppImage,** built on GitHub's arm64 runners.
+- **An aarch64 AppImage,** built on GitHub's arm64 runners (`ubuntu-22.04-arm`, free for public repositories) with appimagetool and the type2-runtime for aarch64.
 - **VoiceOver on macOS and Orca on Linux.** Fix what the accessibility dumps and tester reports show.
 - **Release automation.**
   - `cargo xtask release` checks that the listening checklist is done.
   - Changelog grouping.
 - **The pull-request merge gate.** Integrations go through pull requests with required checks.
-- **Prune merged branches.** Keep only `main` and active work.
+  - Merge queue is for organisations only. Use rulesets instead: require a pull request with 0 approvals, require status checks, and block force pushes.
+  - Turn on auto-merge, then use `gh pr merge --auto --squash --delete-branch`.
+  - Changing repository settings needs Jon's approval.
+- **Automated screen-reader tests** complement Jon's manual testing. Guidepup drives NVDA and VoiceOver in CI; use `npx @guidepup/setup setup --ci`, because the action was archived. Also try DioxusLabs accessibility-cli for tree dumps.
+- **Prune merged branches.** 85 of the 91 are merged. Use git-delete-merged-branches with `--effort=3` to catch squash merges, run a dry run first, back up refs, and ask Jon before deleting remote branches.
 - **Release notes.** Prepare `0.1.0-beta.1` notes, for when Jon asks for a release.
+
+### Also for Wave 4, for the first free agent or for Wave 5
+
+These are high-value items for terminal-first Markdown work, found by the research:
+- **Grammar checking** in edit mode with `harper-core` 2.11.0 (Apache-2.0, pure Rust, offline).
+- **Markdown lint and format** with `rumdl` 0.2.77 (MIT).
+- **A native clipboard** fallback with `arboard` 3.6.1, for terminals without OSC 52.
+- **Code highlighting** in the terminal with syntect 5.3 and two-face 0.5.2.
+- **Math as Unicode in the plain reading view**, as Star's `mathrender.py` did (x², √2).
+- **Notes export** as BibTeX, RIS, and JSON, as Star did.

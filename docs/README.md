@@ -103,6 +103,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0020: Themes](adr/0020-themes.md): Star's palettes, contrast rules, and output for every frontend.
 - [ADR-0021: DECtalk through a host process](adr/0021-dectalk.md): DECtalk with word timing, and its licensing.
 - [ADR-0022: Reading aids](adr/0022-reading-aids.md): RSVP, bionic reading, spacing, fonts, the ruler, and more, as pure data.
+- [ADR-0024: App core for the GUI](adr/0024-app-core-for-the-gui.md): the document window, shared list and prompt state, the waker, the replace-range edit, the settings schema, and work moved off the input thread.
 
 ## Interactive pages
 
@@ -120,6 +121,7 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 
 - [A Xilem GUI for textweaver](research/xilem-gui.md): findings on Xilem, Masonry, and AccessKit accessibility (September 2026).
 - [Pure-Rust choices for Wave 3](research/pure-rust-wave3.md): OCR, Piper voices, Whisper, define word, and other swaps (September 2026).
+- [Research for Wave 4](research/wave4.md): the GUI part two, speed, formats (MathCAT), translations, offline models, and releases (September 2026).
 
 ## See also
 

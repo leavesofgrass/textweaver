@@ -389,6 +389,7 @@ impl App {
             carry_marks(&entry, &s.doc, &edit_doc, true)
         };
         let reading = std::mem::replace(&mut s.doc, edit_doc);
+        s.revision = crate::app::next_revision();
         mapped.put(s);
         s.selection = None;
         s.selection_anchor = None;
@@ -707,6 +708,7 @@ impl App {
         s.find = None;
         s.goal_column = None;
         s.text_stamp = Some(crate::relocate::text_stamp(&s.doc));
+        s.revision = crate::app::next_revision();
         self.mode = Mode::Browse;
         self.return_mode = Mode::Browse;
         self.scroll_to_cursor();
@@ -864,6 +866,7 @@ impl App {
         let changed = !outcomes.is_empty();
         if changed {
             edit.changed = true;
+            s.revision = crate::app::next_revision();
             s.find = None;
             s.spoken = None;
             s.spoken_sentence = None;
@@ -988,6 +991,48 @@ impl App {
                 }
             }
             Err(e) => self.error(&format!("Could not insert: {e}")),
+        }
+        vec![Effect::Redraw]
+    }
+
+    /// [`Command::ReplaceRange`](crate::Command::ReplaceRange): an edit a
+    /// native text control made. Quiet: the control and the screen reader
+    /// echo it. One character typed at the caret joins the typing undo
+    /// step; anything else is one step.
+    pub(crate) fn replace_range(&mut self, range: CharRange, text: &str) -> Vec<Effect> {
+        let Some(len) = self
+            .edit
+            .as_ref()
+            .and_then(|e| e.session.editor())
+            .map(|ed| ed.text().len_chars())
+        else {
+            return self.not_editing("change the text");
+        };
+        if range.start.0 > len || range.end.0 > len || range.start > range.end {
+            let msg = format!(
+                "Cannot change characters {} to {}: the text has {len}.",
+                range.start.0, range.end.0
+            );
+            self.error(&msg);
+            return vec![Effect::Redraw];
+        }
+        if range.is_empty() && text.is_empty() {
+            return vec![Effect::Redraw];
+        }
+        self.stop_speech();
+        let Some(ed) = self.edit.as_mut().and_then(|e| e.session.editor_mut()) else {
+            return vec![Effect::Redraw];
+        };
+        let before = ed.text().clone();
+        ed.set_selection(Selection::new(range.start, range.end));
+        let mut chars = text.chars();
+        let result = match (chars.next(), chars.next()) {
+            (Some(c), None) if range.is_empty() => ed.type_char(c),
+            _ => ed.insert_text(text),
+        };
+        match result {
+            Ok(o) => self.after_edit(&before, &[o]),
+            Err(e) => self.error(&format!("Could not change the text: {e}")),
         }
         vec![Effect::Redraw]
     }
@@ -1663,14 +1708,16 @@ impl App {
     /// snapshot at a time. Returns the list effect, or nothing when there is
     /// none or recovery is off.
     pub fn offer_recovery(&mut self) -> Vec<Effect> {
-        if !self.settings.editing.autosave_recovery {
-            return Vec::new();
-        }
-        let Some(paths) = &self.paths else {
-            return Vec::new();
-        };
-        self.recovery = autosave::scan_snapshots(&paths.recovery_dir());
-        self.show_recovery_offer()
+        self.entry(|app| {
+            if !app.settings.editing.autosave_recovery {
+                return Vec::new();
+            }
+            let Some(paths) = &app.paths else {
+                return Vec::new();
+            };
+            app.recovery = autosave::scan_snapshots(&paths.recovery_dir());
+            app.show_recovery_offer()
+        })
     }
 
     fn show_recovery_offer(&mut self) -> Vec<Effect> {

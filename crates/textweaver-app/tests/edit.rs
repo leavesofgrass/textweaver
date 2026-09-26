@@ -248,7 +248,7 @@ fn leaving_with_unsaved_changes_asks_and_discard_restores_everything() {
         panic!("{effects:?}");
     };
     assert_eq!(items.len(), 3);
-    assert!(r.said.last().contains("unsaved changes"));
+    assert!(r.said.any("unsaved changes"));
     // Cancel keeps editing.
     r.send(Command::Choose(2));
     assert!(r.app.is_editing());
@@ -497,7 +497,7 @@ fn autosave_snapshot_is_offered_after_a_crash() {
     };
     assert!(title.contains("crash.md"), "{title}");
     assert_eq!(items.len(), 2);
-    assert!(r.said.last().contains("unsaved changes"));
+    assert!(r.said.any("unsaved changes"));
     r.send(Command::Choose(0));
     assert!(r.app.is_editing());
     assert!(r.app.is_dirty());
@@ -781,7 +781,7 @@ fn bookmarks_rename_and_delete() {
     };
     assert_eq!(items.len(), 1);
     assert!(items[0].starts_with("chapter"));
-    assert_eq!(r.said.last(), "Bookmark mark1 deleted.");
+    assert!(r.said.any("Bookmark mark1 deleted."));
     // Persisted at once.
     let state = StateStore::new(r.paths.state_dir())
         .load(&DocKey::for_path(&file))

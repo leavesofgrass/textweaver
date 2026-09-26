@@ -769,11 +769,13 @@ impl App {
         let rope = s.doc.text().clone();
         let version = st.version;
         let (tx, rx) = std::sync::mpsc::channel();
+        let wake = self.waker_slot();
         let spawned = std::thread::Builder::new()
             .name("tw-structure".into())
             .spawn(move || {
                 let text = rope.to_string();
                 let _ = tx.send(source_markers(&text));
+                wake.wake();
             });
         match spawned {
             Ok(_) => self.authoring.structure.pending = Some((version, rx)),

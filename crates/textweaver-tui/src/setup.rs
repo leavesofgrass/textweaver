@@ -149,9 +149,23 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
     if let Some(t) = &opts.theme {
         settings.display.theme = t.clone();
     }
-    let (speech, backend_name, speech_messages) = start_speech(&settings, opts);
+    // The engine starts on a helper thread (Wave 3): the reader is usable at
+    // once, silent until the engine is ready, and `App::tick` swaps it in.
+    // Messages about the engine (one that is not available) come then.
+    // `--no-speech` and the silent backend start at once.
+    let wanted = opts
+        .backend
+        .clone()
+        .unwrap_or_else(|| settings.speech.backend.clone());
+    let in_background = !opts.no_speech && wanted != "null";
+    let (speech, backend_name, speech_messages) = if in_background {
+        (SpeechService::null(), "starting".to_owned(), Vec::new())
+    } else {
+        start_speech(&settings, opts)
+    };
     messages.extend(speech_messages);
-    let self_voicing = !opts.no_speech && backend_name != "null" && backend_name != "silent";
+    let self_voicing =
+        in_background || (!opts.no_speech && backend_name != "null" && backend_name != "silent");
     let mut app = App::new(AppConfig {
         settings,
         keymap,
@@ -168,7 +182,13 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
     // after the speech thread dies) starts it as above, with the settings
     // current then.
     let run = opts.clone();
-    app.set_speech_starter(std::sync::Arc::new(move |s| start_speech(s, &run)));
+    let starter: textweaver_app::SpeechStarter =
+        std::sync::Arc::new(move |s| start_speech(s, &run));
+    if in_background {
+        app.start_speech_in_background(starter);
+    } else {
+        app.set_speech_starter(starter);
+    }
     if opts.theme.is_none() {
         // Follow the system's light, dark, or high-contrast setting unless
         // the user picked a theme (display.follow_os_theme and

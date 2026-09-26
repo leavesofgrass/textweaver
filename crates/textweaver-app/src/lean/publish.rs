@@ -78,7 +78,7 @@ impl App {
     /// After a successful save in edit mode: says how many possible
     /// misspellings the document has.
     pub(crate) fn on_saved(&mut self) {
-        self.announce_misspellings();
+        self.count_misspellings_in_background();
     }
 
     /// `listen_rendered`.
