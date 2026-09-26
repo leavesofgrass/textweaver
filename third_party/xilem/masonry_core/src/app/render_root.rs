@@ -173,6 +173,9 @@ pub(crate) struct RenderRootState {
 
     /// Whether to paint widget's bounding boxes and other visual helpers.
     pub(crate) debug_paint: bool,
+    /// The window's accessible name (textweaver patch): AT-SPI and macOS
+    /// read it from the root node, not from the platform window.
+    pub(crate) window_label: Option<String>,
 }
 
 pub(crate) struct MutateCallback {
@@ -377,6 +380,7 @@ impl RenderRoot {
                 access_tree_active: false,
                 scale_factor,
                 debug_paint,
+                window_label: None,
             },
             property_arena: PropertyArena::new(default_properties),
             widget_arena: WidgetArena {
@@ -605,6 +609,18 @@ impl RenderRoot {
             .register_fonts(data, None);
         run_update_fonts_pass(self);
         ret
+    }
+
+    /// Sets the accessible name of the window node (textweaver patch).
+    /// Screen readers on Linux and macOS read the window's title from it;
+    /// on Windows the platform window's title is used as well.
+    pub fn set_window_label(&mut self, label: impl Into<String>) {
+        let label = label.into();
+        if self.global_state.window_label.as_deref() != Some(label.as_str()) {
+            self.global_state.window_label = Some(label);
+            self.global_state
+                .emit_signal(RenderRootSignal::RequestRedraw);
+        }
     }
 
     /// Redraws the window.

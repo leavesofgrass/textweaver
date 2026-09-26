@@ -65,21 +65,36 @@ def walk(acc, depth, out, docs):
 
 
 def find_app():
+    """The application with our process id, and its first window."""
     desktop = pyatspi.Registry.getDesktop(0)
     for i in range(desktop.childCount):
         app = desktop.getChildAtIndex(i)
         if app is None:
             continue
         try:
-            if PID and app.get_process_id() != PID:
+            if app.get_process_id() != PID:
                 continue
         except Exception:
             continue
         for j in range(app.childCount):
             w = app.getChildAtIndex(j)
-            if w is not None and "textweaver" in (w.name or ""):
+            if w is not None:
                 return app, w
+        return app, None
     return None, None
+
+
+def bus_listing():
+    """What is on the bus, for a failure message."""
+    desktop = pyatspi.Registry.getDesktop(0)
+    out = []
+    for i in range(desktop.childCount):
+        app = desktop.getChildAtIndex(i)
+        try:
+            out.append(f"{app.name!r} pid {app.get_process_id()} windows {app.childCount}")
+        except Exception as e:
+            out.append(f"(unreadable: {e})")
+    return out
 
 
 def main():
@@ -103,7 +118,10 @@ def main():
         time.sleep(0.2)
     if window is None:
         print("FAIL: no textweaver window on the AT-SPI bus (is accessibility on?)")
+        print("On the bus: " + "; ".join(bus_listing()))
         return 1
+    if "textweaver" not in (window.name or ""):
+        failures.append(f"the window is named {window.name!r}, not after the document")
     print(f"# textweaver-xilem AT-SPI report\n\n- Application: {app.name!r} (toolkit {app.get_toolkit_name()!r})")
     print(f"- Window: {window.getRoleName()} {window.name!r}\n")
 

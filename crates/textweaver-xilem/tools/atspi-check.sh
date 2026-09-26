@@ -25,6 +25,12 @@ exe="${EXE:-$target/debug/textweaver-xilem}"
 doc="${DOC:-$repo/fixtures/sample.md}"
 seconds="${SECONDS_TO_READ:-6}"
 
+if [[ "${1:-}" == "--inner" ]]; then
+  inner=1
+else
+  inner=0
+fi
+
 if [[ "${1:-}" == "--install" ]]; then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
@@ -34,12 +40,16 @@ if [[ "${1:-}" == "--install" ]]; then
     libxkbcommon-x11-0 libxcursor1 libxrandr2 libxi6 libx11-xcb1 >/dev/null
 fi
 
-if [[ ! -x "$exe" ]]; then
-  (cd "$repo" && cargo build -p textweaver-xilem)
+# Vello's compute shaders take a minute to compile on Mesa's software
+# GPU; the hybrid renderer (CPU strips, simple shaders) starts at once.
+if [[ $inner == 0 && -z "${EXE:-}" ]]; then
+  (cd "$repo" && cargo build -p textweaver-xilem --no-default-features \
+    --features screenshot,renderer-hybrid)
 fi
 
 run() {
   export NO_AT_BRIDGE=0
+  export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-$(mktemp -d)}"
   # Start the AT-SPI bus for this session.
   /usr/libexec/at-spi-bus-launcher --launch-immediately >/dev/null 2>&1 &
   sleep 1
@@ -60,6 +70,9 @@ run() {
   return $status
 }
 
-export -f run
-export exe doc seconds here
-xvfb-run -a -s "-screen 0 1280x900x24" dbus-run-session -- bash -c run
+if [[ $inner == 1 ]]; then
+  run
+else
+  export EXE="$exe" DOC="$doc" SECONDS_TO_READ="$seconds"
+  xvfb-run -a -s "-screen 0 1280x900x24" dbus-run-session -- bash "$here/atspi-check.sh" --inner
+fi

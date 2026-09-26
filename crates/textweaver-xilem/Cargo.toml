@@ -18,7 +18,12 @@ name = "textweaver-xilem"
 path = "src/main.rs"
 
 [features]
-default = ["screenshot"]
+default = ["screenshot", "renderer-vello"]
+# The renderer: Vello's GPU compute renderer (the default), or Vello's
+# hybrid renderer (CPU strips, simple GPU shaders), which suits software
+# GPUs such as Mesa's llvmpipe under Xvfb in CI. With both, Vello wins.
+renderer-vello = ["masonry_winit/imaging_vello"]
+renderer-hybrid = ["masonry_winit/imaging_vello_hybrid"]
 # `--screenshot PATH`: render the window with the Vello CPU renderer, with no
 # window on screen (masonry_testing's harness).
 screenshot = ["dep:masonry_testing"]
@@ -28,7 +33,7 @@ textweaver-app.workspace = true
 textweaver-theme.workspace = true
 textweaver-fonts = { workspace = true, features = ["bundled-fonts"] }
 masonry.workspace = true
-masonry_winit = { workspace = true, features = ["imaging_vello"] }
+masonry_winit.workspace = true
 masonry_testing = { workspace = true, optional = true }
 unicode-segmentation.workspace = true
 clap.workspace = true

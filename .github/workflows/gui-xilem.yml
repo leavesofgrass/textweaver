@@ -109,7 +109,7 @@ jobs:
       - run: cargo build --locked -p textweaver-xilem
       - run: cargo clippy --locked -p textweaver-xilem --all-targets -- -D warnings
       - run: cargo test --locked -p textweaver-xilem
-      - name: AT-SPI check
+      - name: AT-SPI check (hybrid renderer, which suits Mesa's software GPU)
         run: bash crates/textweaver-xilem/tools/atspi-check.sh | tee atspi-xilem.md
       - name: Review screenshots (100% and 200%)
         run: ./target/debug/textweaver-xilem --review-screenshots screenshots fixtures/sample.md

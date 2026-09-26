@@ -649,6 +649,9 @@ impl Gui {
         );
         if title != self.window_title {
             ctx.window(self.window_id).handle().set_title(&title);
+            // AT-SPI and macOS read the title from the window's node.
+            ctx.render_root(self.window_id)
+                .set_window_label(title.as_str());
             self.window_title = title;
         }
     }
@@ -1089,6 +1092,9 @@ impl AppDriver for Gui {
         self.wake_pending.store(false, Ordering::Release);
         if !self.started {
             self.started = true;
+            if self.log {
+                crate::log::line("first tick");
+            }
             self.start(ctx);
             return;
         }
@@ -1114,6 +1120,9 @@ impl AppDriver for Gui {
     }
 
     fn on_start(&mut self, state: &mut MasonryState) {
+        if self.log {
+            crate::log::line("window created; starting");
+        }
         if let Some(proxy) = self.ticker.take() {
             // The app rings from other threads; post one tick per burst.
             let pending = Arc::clone(&self.wake_pending);
