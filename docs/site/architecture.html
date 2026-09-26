@@ -497,6 +497,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-formats",
     "textweaver-keymap",
     "textweaver-math",
+    "textweaver-piper",
     "textweaver-render",
     "textweaver-sapi",
     "textweaver-speech",
@@ -740,6 +741,11 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "href": "../adr/0013-dictation.md",
      "number": "0013",
      "title": "ADR-0013: Dictation through a Whisper program"
+    },
+    {
+     "href": "../adr/0023-in-process-neural-speech.md",
+     "number": "0023",
+     "title": "ADR-0023: Piper voices and Whisper dictation in-process on RTen"
     }
    ],
    "bins": [
@@ -753,7 +759,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "deps": [
     "textweaver-core"
    ],
-   "description": "Voice typing for textweaver: dictation trait and a whisper subprocess backend",
+   "description": "Voice typing for textweaver: dictation trait, Whisper in-process on RTen, and a whisper subprocess fallback",
    "dev_deps": [],
    "job": "Voice typing: transcribes speech through a Whisper program and applies spoken commands.",
    "layer": "output",
@@ -906,6 +912,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-eci",
     "textweaver-enginehost",
     "textweaver-export",
+    "textweaver-piper",
     "textweaver-sapi"
    ],
    "deps": [
@@ -937,6 +944,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "dependents": [
     "textweaver-dectalk",
     "textweaver-eci",
+    "textweaver-piper",
     "textweaver-sapi"
    ],
    "deps": [
@@ -1090,6 +1098,41 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "name": "textweaver-dectalk",
    "path": "crates/textweaver-dectalk",
    "short": "dectalk",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0023-in-process-neural-speech.md",
+     "number": "0023",
+     "title": "ADR-0023: Piper voices and Whisper dictation in-process on RTen"
+    },
+    {
+     "href": "../adr/0012-engine-host.md",
+     "number": "0012",
+     "title": "ADR-0012: One engine-host protocol and playback client"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-enginehost",
+    "textweaver-speech"
+   ],
+   "description": "Piper neural voices for textweaver, run in-process on RTen (pure-Rust ONNX), with word timing from the model",
+   "dev_deps": [],
+   "job": "Speaks with Piper neural voices inside textweaver, on the pure-Rust RTen runtime, and finds, downloads, and checks the voices.",
+   "layer": "speech",
+   "name": "textweaver-piper",
+   "path": "crates/textweaver-piper",
+   "short": "piper",
    "tool": false,
    "version": "0.1.0-alpha.3"
   },
@@ -1292,6 +1335,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-formats",
     "textweaver-keymap",
     "textweaver-math",
+    "textweaver-piper",
     "textweaver-sapi",
     "textweaver-speech",
     "textweaver-store",
@@ -1374,6 +1418,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-sapi",
     "textweaver-apple",
     "textweaver-dectalk",
+    "textweaver-piper",
     "textweaver-export"
    ],
    "id": "speech",
