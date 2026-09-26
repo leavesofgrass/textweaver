@@ -14,6 +14,15 @@
 //! never rely on color alone; speech is self-voiced through the speech
 //! service unless `--no-speech` is given.
 //!
+//! Edit mode (Ctrl+E) shows the document's source: bound chords (the Edit
+//! layer, then Global) run their actions, and every other key types,
+//! deletes, or moves the caret (arrows, Ctrl+arrows by word, Home, End,
+//! Page keys, Shift to select), with echo through the app. Pasted text
+//! (bracketed paste) is one undo step. In lists, Enter chooses, Delete
+//! deletes the item (bookmarks, notes, highlights), and F2 renames or edits
+//! it. Keys for notes and highlights come from
+//! `textweaver_app::extra_bindings` until the keymap has actions for them.
+//!
 //! Owner: Agent D.
 
 pub mod layout;
