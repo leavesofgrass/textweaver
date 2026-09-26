@@ -1,10 +1,13 @@
 //! Voices: ECI's eight presets in each installed language.
 //!
-//! A voice id is `"<language>:<preset>"`, for example `en-US:reed` or
-//! `de-DE:shelley`. Parsing is forgiving: the language is any BCP 47 tag or
-//! bare language ECI knows (`en`, `en_gb`), the preset is a name or its
-//! number 1..=8, and either part may be given alone (`shelley` keeps the
-//! current language; `de-DE` uses preset 1, Reed).
+//! A voice id is `"eci:<language>:<preset>"`, for example `eci:enu:reed`
+//! (Reed in American English, the default) or `eci:deu:shelley`. The
+//! language is the engine's three-letter code (`enu`, `eng`, `deu`, `fra`,
+//! ...). Parsing is forgiving: the `eci:` prefix is optional, the language
+//! may also be any BCP 47 tag or bare language ECI knows (`en-US`, `en`,
+//! `en_gb`), the preset is a name or its number 1..=8, and either part may
+//! be given alone (`shelley` keeps the current language; `deu` uses preset
+//! 1, Reed). With no voice configured the backend uses Reed.
 //!
 //! Preset names are the ones Eloquence users know (NVDA, JAWS, and Code
 //! Factory use them); the engine's own names ("Adult Male 1" and so on)
@@ -70,7 +73,10 @@ fn parse_preset(s: &str) -> Option<u8> {
 /// Parses a voice id (see the module docs). `None` for unknown ids.
 pub fn parse_voice_id(id: &str) -> Option<VoiceSel> {
     let id = id.trim();
-    let id = id.strip_prefix("eloquence:").unwrap_or(id);
+    let id = id
+        .strip_prefix("eci:")
+        .or_else(|| id.strip_prefix("eloquence:"))
+        .unwrap_or(id);
     if id.is_empty() {
         return None;
     }
@@ -101,7 +107,7 @@ pub fn voice_id(dialect: &Dialect, preset: u8) -> String {
         .get(usize::from(preset.saturating_sub(1)))
         .copied()
         .unwrap_or("reed");
-    format!("{}:{slug}", dialect.tag)
+    format!("eci:{}:{slug}", dialect.short)
 }
 
 /// The voice list for the given installed dialects and presets.
@@ -220,14 +226,14 @@ mod tests {
             .collect();
         let v = voice_list(&[0x0001_0000, 0x0008_0000, 0x0004_0000], &presets);
         assert_eq!(v.len(), 16, "Japanese is not offered");
-        assert_eq!(v[0].id, "en-US:reed");
+        assert_eq!(v[0].id, "eci:enu:reed");
         assert_eq!(
             v[0].name,
             "Eloquence Reed (Adult Male 1), English (United States)"
         );
         assert_eq!(v[1].name, "Eloquence Shelley, English (United States)");
         assert_eq!(v[1].gender.as_deref(), Some("female"));
-        assert_eq!(v[8].id, "de-DE:reed");
+        assert_eq!(v[8].id, "eci:deu:reed");
         assert_eq!(v[8].languages, ["de-DE"]);
         for voice in &v {
             let sel = parse_voice_id(&voice.id).unwrap();

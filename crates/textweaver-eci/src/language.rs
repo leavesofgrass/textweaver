@@ -29,16 +29,26 @@ pub struct Dialect {
     pub code: u32,
     /// BCP 47 tag.
     pub tag: &'static str,
+    /// The engine's three-letter language code, as in its language file
+    /// names (`enu.syn`) and textweaver's voice ids (`eci:enu:reed`).
+    pub short: &'static str,
     /// Human-readable name.
     pub name: &'static str,
     /// Whether textweaver can encode text for it (Windows-1252 languages).
     pub supported: bool,
 }
 
-const fn d(code: u32, tag: &'static str, name: &'static str, supported: bool) -> Dialect {
+const fn d(
+    code: u32,
+    tag: &'static str,
+    short: &'static str,
+    name: &'static str,
+    supported: bool,
+) -> Dialect {
     Dialect {
         code,
         tag,
+        short,
         name,
         supported,
     }
@@ -46,28 +56,40 @@ const fn d(code: u32, tag: &'static str, name: &'static str, supported: bool) ->
 
 /// Every dialect ECI defines that textweaver knows about.
 pub const DIALECTS: &[Dialect] = &[
-    d(0x0001_0000, "en-US", "English (United States)", true),
-    d(0x0001_0001, "en-GB", "English (United Kingdom)", true),
-    d(0x0002_0000, "es-ES", "Spanish (Spain)", true),
-    d(0x0002_0001, "es-MX", "Spanish (Mexico)", true),
-    d(0x0003_0000, "fr-FR", "French (France)", true),
-    d(0x0003_0001, "fr-CA", "French (Canada)", true),
-    d(0x0004_0000, "de-DE", "German", true),
-    d(0x0005_0000, "it-IT", "Italian", true),
-    d(0x0006_0000, "zh-CN", "Chinese (Mandarin)", false),
-    d(0x0006_0001, "zh-TW", "Chinese (Taiwan Mandarin)", false),
-    d(0x0007_0000, "pt-BR", "Portuguese (Brazil)", true),
-    d(0x0007_0001, "pt-PT", "Portuguese (Portugal)", true),
-    d(0x0008_0000, "ja-JP", "Japanese", false),
-    d(0x0009_0000, "fi-FI", "Finnish", true),
-    d(0x000A_0000, "ko-KR", "Korean", false),
-    d(0x000B_0000, "yue-CN", "Cantonese", false),
-    d(0x000B_0001, "yue-HK", "Cantonese (Hong Kong)", false),
-    d(0x000C_0000, "nl-NL", "Dutch", true),
-    d(0x000D_0000, "nb-NO", "Norwegian", true),
-    d(0x000E_0000, "sv-SE", "Swedish", true),
-    d(0x000F_0000, "da-DK", "Danish", true),
-    d(0x0011_0000, "th-TH", "Thai", false),
+    d(0x0001_0000, "en-US", "enu", "English (United States)", true),
+    d(
+        0x0001_0001,
+        "en-GB",
+        "eng",
+        "English (United Kingdom)",
+        true,
+    ),
+    d(0x0002_0000, "es-ES", "esp", "Spanish (Spain)", true),
+    d(0x0002_0001, "es-MX", "esm", "Spanish (Mexico)", true),
+    d(0x0003_0000, "fr-FR", "fra", "French (France)", true),
+    d(0x0003_0001, "fr-CA", "frc", "French (Canada)", true),
+    d(0x0004_0000, "de-DE", "deu", "German", true),
+    d(0x0005_0000, "it-IT", "ita", "Italian", true),
+    d(0x0006_0000, "zh-CN", "chs", "Chinese (Mandarin)", false),
+    d(
+        0x0006_0001,
+        "zh-TW",
+        "cht",
+        "Chinese (Taiwan Mandarin)",
+        false,
+    ),
+    d(0x0007_0000, "pt-BR", "ptb", "Portuguese (Brazil)", true),
+    d(0x0007_0001, "pt-PT", "ptp", "Portuguese (Portugal)", true),
+    d(0x0008_0000, "ja-JP", "jpn", "Japanese", false),
+    d(0x0009_0000, "fi-FI", "fin", "Finnish", true),
+    d(0x000A_0000, "ko-KR", "kor", "Korean", false),
+    d(0x000B_0000, "yue-CN", "yue", "Cantonese", false),
+    d(0x000B_0001, "yue-HK", "yuh", "Cantonese (Hong Kong)", false),
+    d(0x000C_0000, "nl-NL", "nld", "Dutch", true),
+    d(0x000D_0000, "nb-NO", "nor", "Norwegian", true),
+    d(0x000E_0000, "sv-SE", "swe", "Swedish", true),
+    d(0x000F_0000, "da-DK", "dan", "Danish", true),
+    d(0x0011_0000, "th-TH", "tha", "Thai", false),
 ];
 
 /// American English, ECI's default.
@@ -78,13 +100,14 @@ pub fn dialect_by_code(code: u32) -> Option<&'static Dialect> {
     DIALECTS.iter().find(|d| d.code == code)
 }
 
-/// The dialect for a BCP 47 tag, matched case-insensitively; a bare
-/// language ("en", "de") picks that language's first dialect.
+/// The dialect for a BCP 47 tag or three-letter engine code ("enu"),
+/// matched case-insensitively; a bare language ("en", "de") picks that
+/// language's first dialect.
 pub fn dialect_by_tag(tag: &str) -> Option<&'static Dialect> {
     let tag = tag.trim().replace('_', "-");
     DIALECTS
         .iter()
-        .find(|d| d.tag.eq_ignore_ascii_case(&tag))
+        .find(|d| d.tag.eq_ignore_ascii_case(&tag) || d.short.eq_ignore_ascii_case(&tag))
         .or_else(|| {
             DIALECTS.iter().find(|d| {
                 d.tag
@@ -251,6 +274,8 @@ mod tests {
         assert_eq!(dialect_by_tag("en_GB").unwrap().code, 0x0001_0001);
         assert_eq!(dialect_by_tag("de").unwrap().tag, "de-DE");
         assert_eq!(dialect_by_code(0x0009_0000).unwrap().tag, "fi-FI");
+        assert_eq!(dialect_by_tag("ENU").unwrap().tag, "en-US");
+        assert_eq!(dialect_by_tag("deu").unwrap().code, 0x0004_0000);
         assert!(dialect_by_tag("xx").is_none());
         assert!(!dialect_by_tag("ja").unwrap().supported);
     }
