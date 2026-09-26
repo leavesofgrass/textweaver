@@ -1,0 +1,66 @@
+[package]
+name = "textweaver-fuzz"
+version = "0.0.0"
+description = "cargo-fuzz targets for textweaver's loaders and settings files (not part of the workspace build)"
+edition = "2024"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+textweaver-formats = { path = "../crates/textweaver-formats" }
+textweaver-store = { path = "../crates/textweaver-store" }
+toml = "1.1"
+zip = { version = "8.6", default-features = false, features = ["deflate"] }
+
+# Its own workspace, so the root workspace never builds it.
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "markdown"
+path = "fuzz_targets/markdown.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "html"
+path = "fuzz_targets/html.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "epub"
+path = "fuzz_targets/epub.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "docx"
+path = "fuzz_targets/docx.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pdf"
+path = "fuzz_targets/pdf.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "settings"
+path = "fuzz_targets/settings.rs"
+test = false
+doc = false
+bench = false
