@@ -593,6 +593,18 @@ impl App {
             .map(|n| format!("Has a note: {}", collapse(&n.note, 60)))
     }
 
+    /// Where files made from a document that has no file yet go (exports,
+    /// study sheets): the folder textweaver was started in, as Save As
+    /// suggests; in a session that keeps no files (tests), the system's
+    /// temporary folder.
+    pub(crate) fn loose_folder(&self) -> std::path::PathBuf {
+        if self.paths.is_some() {
+            std::env::current_dir().unwrap_or_else(|_| std::env::temp_dir())
+        } else {
+            std::env::temp_dir()
+        }
+    }
+
     /// The palette's `export_study_sheet`: the notes and highlights as
     /// Markdown, grouped under the headings they fall under, written next
     /// to the document as `NAME-study-sheet.md`.
@@ -617,7 +629,7 @@ impl App {
             .and_then(|p| p.file_stem().map(|x| x.to_string_lossy().into_owned()))
             .unwrap_or_else(|| "notes".to_owned());
         let out = folder.join(format!("{stem}-study-sheet.md"));
-        match textweaver_convert::write_atomic(&out, sheet.as_bytes()) {
+        match textweaver_store::atomic_write(&out, sheet.as_bytes()) {
             Ok(()) => {
                 let (n, h) = (s_count(&self.session, true), s_count(&self.session, false));
                 let what = match (n, h) {
@@ -638,7 +650,7 @@ impl App {
                     ),
                 );
             }
-            Err(e) => self.error(&format!("Could not write {}: {e}", out.display())),
+            Err(e) => self.error(&format!("Could not write the study sheet: {e}")),
         }
         vec![Effect::Redraw]
     }

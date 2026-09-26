@@ -16,6 +16,7 @@ pub mod marker;
 pub mod narrate;
 pub mod navigate;
 pub mod search;
+pub mod slug;
 pub mod units;
 
 pub use document::{DisplayIndex, Document, DocumentData, DocumentMeta};

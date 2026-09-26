@@ -459,13 +459,22 @@ impl App {
             .flatten()
             .map(|w| format!("{w}\n"))
             .collect();
-        let written = file
-            .parent()
-            .map_or(Ok(()), std::fs::create_dir_all)
-            .and_then(|()| textweaver_convert::write_atomic(&file, text.as_bytes()));
+        let written = textweaver_store::atomic_write(&file, text.as_bytes());
         match written {
             Ok(()) => self.tell(&format!("Added {word} to your word list.")),
             Err(e) => self.error(&format!("Could not save your word list: {e}")),
+        }
+    }
+
+    /// After a save: says how many possible misspellings the document has
+    /// ("No misspellings." only at high verbosity: silence means none).
+    pub(crate) fn announce_misspellings(&mut self) {
+        if let Some(summary) = self.misspelling_summary() {
+            let quiet = summary.starts_with("No ")
+                && self.settings.speech.verbosity < textweaver_a11y::Verbosity::High;
+            if !quiet {
+                self.announce_queued(&summary, textweaver_a11y::Priority::Polite);
+            }
         }
     }
 

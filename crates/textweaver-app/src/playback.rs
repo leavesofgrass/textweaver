@@ -260,6 +260,7 @@ impl App {
     /// the rendered text while editing) in place: the cursor does not
     /// follow, and Stop and Pause work as for any reading. Returns the
     /// reading's generation, or `None` when there is nothing to read.
+    #[cfg_attr(not(feature = "publish"), allow(dead_code))]
     pub(crate) fn read_planned(
         &mut self,
         utterances: Vec<textweaver_core::Utterance>,

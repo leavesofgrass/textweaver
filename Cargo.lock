@@ -4510,6 +4510,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "textweaver-math",
+ "textweaver-text",
  "thiserror 2.0.21",
 ]
 

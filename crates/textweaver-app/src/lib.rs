@@ -115,7 +115,9 @@
 //! - **Lists** (`lists`): the outline (Alt+O) and the citation picker
 //!   filter as you type ([`Command::FilterList`], [`App::list_filter`]);
 //!   spelling, find-and-replace, and template lists.
-//! - **Citations** (`citations`), **export and preview** (`publish`),
+//! - **Citations** (`citations`), **export and preview** (`publish`;
+//!   both need the `publish` cargo feature, on by default; without it the
+//!   commands say they are not in this build),
 //!   **spelling** (`spell`), **tables** (`tables`), **links and
 //!   footnotes** (`links`), **find and replace one at a time**
 //!   (`replace`), **templates** (`templates`, [`local_date`]).
@@ -132,6 +134,12 @@ pub mod align;
 mod app;
 mod authoring;
 mod authoring_state;
+// In-reader export, preview, and citations: the full modules with the
+// `publish` feature, stand-ins that say "not in this build" without it.
+#[cfg(feature = "publish")]
+mod citations;
+#[cfg(not(feature = "publish"))]
+#[path = "lean/citations.rs"]
 mod citations;
 mod command;
 pub mod disk;
@@ -151,7 +159,15 @@ mod mdline;
 mod nav;
 mod notes;
 mod playback;
+#[cfg(feature = "publish")]
 pub mod preview_server;
+#[cfg(not(feature = "publish"))]
+#[path = "lean/preview_server.rs"]
+mod preview_server;
+#[cfg(feature = "publish")]
+mod publish;
+#[cfg(not(feature = "publish"))]
+#[path = "lean/publish.rs"]
 mod publish;
 mod reading_aids;
 mod relocate;
@@ -200,6 +216,7 @@ pub use view::{Highlight, HighlightKind, Viewport};
 pub use reading_aids::{RSVP_STEP, RSVP_WINDOW};
 pub use textweaver_a11y as a11y;
 pub use textweaver_aids as aids;
+#[cfg(feature = "publish")]
 pub use textweaver_cite as cite;
 pub use textweaver_core as core;
 pub use textweaver_editor as editor;

@@ -21,7 +21,7 @@ omnivox = ["textweaver-app/omnivox", "textweaver-engines/omnivox"]
 speechd = ["textweaver-app/speechd", "textweaver-engines/speechd"]
 
 [dependencies]
-textweaver-app.workspace = true
+textweaver-app = { workspace = true, features = ["publish"] }
 # The speech backend registry (`tw backends`, `speak`, `voices`, `export-audio`).
 textweaver-engines.workspace = true
 # In-process `tw open` and `tw serve`.

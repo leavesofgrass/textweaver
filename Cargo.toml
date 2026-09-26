@@ -85,7 +85,9 @@ textweaver-store = { path = "crates/textweaver-store" }
 textweaver-keymap = { path = "crates/textweaver-keymap" }
 textweaver-a11y = { path = "crates/textweaver-a11y" }
 textweaver-editor = { path = "crates/textweaver-editor" }
-textweaver-app = { path = "crates/textweaver-app" }
+# Default features off, so a crate can build the app without `publish`
+# (the lean reader); crates that want it say `features = ["publish"]`.
+textweaver-app = { path = "crates/textweaver-app", default-features = false }
 textweaver-tui = { path = "crates/textweaver-tui" }
 textweaver-eci = { path = "crates/textweaver-eci" }
 textweaver-apple = { path = "crates/textweaver-apple" }
