@@ -93,6 +93,16 @@ impl Harness {
         }
     }
 
+    /// Redraws until a repeated status message is shown again.
+    fn wait_status_back(&mut self) {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while self.tui.status_blanked() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(10));
+            self.draw();
+        }
+        assert!(!self.tui.status_blanked());
+    }
+
     fn app(&self) -> &App {
         self.tui.app()
     }
@@ -410,6 +420,9 @@ fn scripted_session_with_restore() {
     assert!(!h.tui.should_quit());
     h.press(ch('q'));
     h.press(ch('x'));
+    // The question is asked again: the status line blanks for a moment so
+    // a screen reader hears it again, then shows it.
+    h.wait_status_back();
     assert!(h.status().contains("Quit textweaver? y or n"));
     h.press(ch('y'));
     assert!(h.tui.should_quit());

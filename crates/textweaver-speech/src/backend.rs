@@ -176,6 +176,14 @@ pub trait SpeechBackend {
     }
     /// Stops all speech immediately; pending utterances end with `Cancelled`.
     fn stop(&mut self);
+    /// Stops everything and starts the engine afresh. The service calls
+    /// this when a reading crashed or stalled (no words and no finished
+    /// utterance for a while) before it reads on from the last word.
+    /// Engines behind a host process restart the host and reopen the audio
+    /// device. Default: [`stop`](Self::stop).
+    fn reset(&mut self) {
+        self.stop();
+    }
     /// Pauses (requires `PAUSE`).
     fn pause(&mut self) -> Result<(), SpeechError> {
         Err(SpeechError::Unsupported("pause"))

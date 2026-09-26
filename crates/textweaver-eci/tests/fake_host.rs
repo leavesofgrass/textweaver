@@ -503,7 +503,11 @@ fn a_hung_engine_is_killed_and_the_utterance_fails() {
         b.synthesize("again __hang__"),
         Err(SpeechError::Engine(m)) if m.contains("stopped responding")
     ));
-    // A fresh host serves the next request.
+    // A fresh host serves the next request. It gets the normal stall
+    // timeout: under 500 ms, a new host on a busy machine (a virus scan of
+    // the new process, parallel builds) could be taken for a hung one, which
+    // made this test flaky.
+    b.set_stall_timeout(None);
     assert_eq!(b.synthesize("fine now").unwrap().words.len(), 2);
 }
 

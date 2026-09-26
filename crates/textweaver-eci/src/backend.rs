@@ -265,6 +265,12 @@ impl EciBackend {
         calibration::speed_for_wpm(self.rate_table, self.params.rate.wpm())
     }
 
+    /// Changes how long the host may stay silent while it owes audio
+    /// before it counts as hung (`None`: [`STALL_TIMEOUT`]).
+    pub fn set_stall_timeout(&mut self, timeout: Option<Duration>) {
+        self.config.stall_timeout = timeout;
+    }
+
     fn ensure_host(&mut self) -> Result<(), SpeechError> {
         if self.host.is_some() {
             return Ok(());
@@ -643,6 +649,18 @@ impl SpeechBackend for EciBackend {
         {
             log::warn!("eci: {e}");
         }
+    }
+
+    /// Kills the host and closes the audio output; the next `speak` starts
+    /// a new host and reopens the device (a device that stopped taking
+    /// samples, a host that stopped answering).
+    fn reset(&mut self) {
+        self.stop();
+        self.playback.close();
+        if let Some(mut h) = self.host.take() {
+            h.kill();
+        }
+        self.applied = None;
     }
 
     fn pause(&mut self) -> Result<(), SpeechError> {

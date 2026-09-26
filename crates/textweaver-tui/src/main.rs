@@ -28,6 +28,11 @@ struct Args {
     /// Color theme for this run; the help lists every theme.
     #[arg(long, help = textweaver_tui::theme_help())]
     theme: Option<String>,
+    /// Write a log to textweaver.log in the state folder at this level:
+    /// off, error, warn (the default), info, debug, or trace. --log alone
+    /// means debug.
+    #[arg(long, value_name = "LEVEL", num_args = 0..=1, default_missing_value = "debug")]
+    log: Option<String>,
 }
 
 fn main() -> Result<()> {
@@ -37,6 +42,7 @@ fn main() -> Result<()> {
         backend: args.backend,
         home: args.home,
         theme: args.theme,
+        log: args.log,
     };
     launch(&opts, args.file.as_deref())
 }

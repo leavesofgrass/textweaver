@@ -65,8 +65,39 @@ pub fn chord(k: &KeyEvent) -> Option<KeyChord> {
     Some(KeyChord::new(key, mods))
 }
 
+/// The character a key press types, if it types one: a character key
+/// without Control or Alt, or with both when the character is not an ASCII
+/// letter or digit.
+///
+/// On Windows, AltGr (the right Alt key on German, French, Nordic, Polish,
+/// and many other layouts) arrives from crossterm as Control plus Alt, so
+/// `@ [ ] { } | ~` and characters such as `€` and `ą` came with both
+/// modifiers and could not be typed. Such a key reaches this only when no
+/// binding claims its chord, and a real Control+Alt shortcut is an ASCII
+/// letter or digit.
+pub fn typed_char(k: &KeyEvent) -> Option<char> {
+    let KeyCode::Char(c) = k.code else {
+        return None;
+    };
+    if c.is_control() {
+        return None;
+    }
+    let ctrl = k.modifiers.contains(KeyModifiers::CONTROL);
+    let alt = k.modifiers.contains(KeyModifiers::ALT);
+    match (ctrl, alt) {
+        (false, false) => Some(c),
+        (true, true) if !c.is_ascii_alphanumeric() => Some(c),
+        _ => None,
+    }
+}
+
 /// Most recalled answers kept per prompt.
 const PROMPT_HISTORY: usize = 50;
+
+/// How long the status line stays blank before a repeated message comes
+/// back, so a screen reader that speaks the status line when it changes
+/// hears the message again ("No next heading." twice in a row).
+pub const REPEAT_BLANK: std::time::Duration = std::time::Duration::from_millis(150);
 
 /// The terminal frontend's state around the app.
 pub struct Tui {
@@ -79,6 +110,11 @@ pub struct Tui {
     support: ColorSupport,
     /// The styles of the theme in effect, rebuilt only when it changes.
     theme: Theme,
+    /// The status announcement last drawn: its sequence number and text.
+    status_shown: (u64, String),
+    /// While set, the status line is drawn blank until then (a repeated
+    /// message).
+    status_blank_until: Option<Instant>,
 }
 
 /// Screen areas of the last draw.
@@ -113,6 +149,8 @@ impl Tui {
             quit: false,
             support,
             theme,
+            status_shown: (0, String::new()),
+            status_blank_until: None,
         }
     }
 
@@ -198,6 +236,13 @@ impl Tui {
                     if let Some(i) = keep {
                         view.selected = i.min(view.items.len().saturating_sub(1));
                     }
+                    // Say the focused item after the app's introduction
+                    // ("Bookmarks, 3 items. ..."), without interrupting
+                    // it: the first item was never heard unless the user
+                    // pressed Up (docs/audit-2026-09.md, finding A4).
+                    if let Some(item) = view.spoken_item() {
+                        self.app.announce_queued(&item, Priority::Polite);
+                    }
                     self.list = Some(view);
                 }
             }
@@ -278,7 +323,7 @@ impl Tui {
             extend,
         };
         let cmd = match k.code {
-            KeyCode::Char(ch) if !ctrl && !alt => Command::Insert(ch.to_string()),
+            KeyCode::Char(ch) if typed_char(&k).is_some() => Command::Insert(ch.to_string()),
             KeyCode::Enter if !ctrl && !alt => Command::Insert("\n".into()),
             KeyCode::Tab if !ctrl && !alt => Command::Insert("\t".into()),
             KeyCode::Backspace => Command::DeleteBack,
@@ -363,7 +408,7 @@ impl Tui {
             }
             _ => return,
         };
-        let text = list.current().unwrap_or_default().to_owned();
+        let text = list.spoken_item().unwrap_or_default();
         if moved {
             self.app.announce(&text, Priority::Assertive);
         } else {
@@ -397,7 +442,6 @@ impl Tui {
             return;
         };
         let ctrl = k.modifiers.contains(KeyModifiers::CONTROL);
-        let alt = k.modifiers.contains(KeyModifiers::ALT);
         let mut echo: Option<String> = None;
         match k.code {
             KeyCode::Enter => {
@@ -430,7 +474,7 @@ impl Tui {
             KeyCode::Char('u') if ctrl => echo = Some(mb.kill_to_start()),
             KeyCode::Char('k') if ctrl => echo = Some(mb.kill_to_end()),
             KeyCode::Char('w') if ctrl => echo = Some(mb.delete_word_back()),
-            KeyCode::Char(c) if !ctrl && !alt => {
+            KeyCode::Char(c) if typed_char(&k).is_some() => {
                 mb.insert(c);
                 mb.candidate = None;
                 echo = Some(c.to_string());
@@ -564,6 +608,33 @@ impl Tui {
         }
     }
 
+    /// The status line for this frame. A message announced again with the
+    /// same text is drawn blank for [`REPEAT_BLANK`] first: terminal screen
+    /// readers speak the status line only when it changes, so the second
+    /// "No next heading." was silent (docs/audit-2026-09.md, finding A5).
+    fn status_to_draw(&mut self, now: Instant) -> String {
+        let seq = self.app.status().seq;
+        let text = self.status_line();
+        if let Some(until) = self.status_blank_until {
+            if now < until {
+                return String::new();
+            }
+            self.status_blank_until = None;
+        } else if seq != self.status_shown.0 && text == self.status_shown.1 && !text.is_empty() {
+            self.status_blank_until = Some(now + REPEAT_BLANK);
+            self.status_shown.0 = seq;
+            return String::new();
+        }
+        self.status_shown = (seq, text.clone());
+        text
+    }
+
+    /// True while a repeated status message is blanked (the loop should
+    /// draw again soon).
+    pub fn status_blanked(&self) -> bool {
+        self.status_blank_until.is_some()
+    }
+
     /// Screen areas for a frame of `area`.
     pub fn areas(&self, area: Rect) -> Areas {
         let status_rows = {
@@ -626,8 +697,9 @@ impl Tui {
         self.draw_title(f, areas.title, &theme);
         let cursor = self.draw_body(f, areas.body, &theme);
         self.draw_rsvp(f, areas.body, &theme, cursor.map(|p| p.y));
+        let status = self.status_to_draw(Instant::now());
         f.render_widget(
-            Paragraph::new(self.status_line())
+            Paragraph::new(status)
                 .wrap(ratatui::widgets::Wrap { trim: false })
                 .style(theme.status),
             areas.status,

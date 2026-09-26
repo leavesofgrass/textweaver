@@ -129,7 +129,6 @@ ratatui = "0.30"
 crossterm = "0.29"
 
 # speech engines (all behind features in textweaver-speech)
-espeakng-sys = "0.3"
 speech-dispatcher = "0.16"
 tts = "0.26"
 rodio = { version = "0.22", default-features = false }

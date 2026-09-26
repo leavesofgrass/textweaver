@@ -185,6 +185,16 @@ impl Builder {
         OpenId(id)
     }
 
+    /// The innermost open marker of `kind`, to add to its label (a task
+    /// list item's "checked").
+    pub(crate) fn innermost_open_mut(&mut self, kind: MarkerKind) -> Option<&mut Marker> {
+        self.open
+            .iter_mut()
+            .rev()
+            .map(|o| &mut o.marker)
+            .find(|m| m.kind == kind)
+    }
+
     /// Closes a marker. Markers that received no content are dropped unless
     /// opened with [`open_here`](Self::open_here).
     pub(crate) fn close(&mut self, id: OpenId) {

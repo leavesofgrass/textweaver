@@ -267,7 +267,7 @@ fn select_actions_extend_the_selection() {
 }
 
 #[test]
-fn every_action_is_wired_except_choose_voice() {
+fn every_action_is_wired() {
     // One app for all: Cancel closes whatever an action opened (a prompt, a
     // list) and answers no to a question, so the next action runs cleanly.
     let mut r = rig(PROSE);
@@ -276,12 +276,8 @@ fn every_action_is_wired_except_choose_voice() {
         r.act(a);
         let unwired = r.said.any("is not available yet");
         r.app.dispatch(Command::Cancel);
-        assert_eq!(
-            unwired,
-            a == ActionId::ChooseVoice,
-            "{a:?}: {:?}",
-            r.said.all()
-        );
+        // Choose voice was the last one (Agent D4 wired it).
+        assert!(!unwired, "{a:?}: {:?}", r.said.all());
         assert!(r.app.pending_confirmation().is_none(), "{a:?}");
     }
 }

@@ -44,9 +44,14 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         backend: args.backend,
         home: args.home,
         theme: None,
+        log: None,
     };
+    // The log file, at the level TEXTWEAVER_LOG asks for (stdout is the
+    // protocol, so nothing is printed).
+    let log_message = textweaver_tui::setup::start_log(&opts);
     let (announcer, queue) = rpc::announcer();
-    let (mut app, messages) = textweaver_tui::build_app_with(&opts, announcer);
+    let (mut app, mut messages) = textweaver_tui::build_app_with(&opts, announcer);
+    messages.extend(log_message);
     for m in messages {
         app.announce(&m, Priority::Polite);
     }

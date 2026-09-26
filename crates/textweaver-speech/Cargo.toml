@@ -21,8 +21,10 @@ doc = false
 
 [features]
 default = []
-# In-process espeak-ng (links libespeak-ng; see docker/Dockerfile).
-espeak = ["dep:espeakng-sys"]
+# In-process espeak-ng (links libespeak-ng through hand-written declarations
+# in src/backends/espeak/sys.rs; no bindgen or clang needed). See
+# docker/Dockerfile.
+espeak = []
 # Omnivox subprocess backend (Emacspeak speech-server protocol on stdin).
 omnivox = []
 # speech-dispatcher through its SSIP socket, with SSML index marks for word
@@ -40,7 +42,6 @@ thiserror.workspace = true
 log.workspace = true
 regex.workspace = true
 encoding_rs.workspace = true
-espeakng-sys = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true

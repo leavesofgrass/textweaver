@@ -19,6 +19,29 @@ pub struct Options {
     pub home: Option<PathBuf>,
     /// Theme name for this run (not saved).
     pub theme: Option<String>,
+    /// Log level from `--log` (`off`, `error`, `warn`, `info`, `debug`,
+    /// `trace`); `None` uses `TEXTWEAVER_LOG`, else warnings and errors.
+    pub log: Option<String>,
+}
+
+/// Starts the log file (`textweaver.log` in the state directory) at the
+/// level `--log` or `TEXTWEAVER_LOG` asks for. Returns a message for the
+/// user when the level name is unknown.
+pub fn start_log(opts: &Options) -> Option<String> {
+    let env = std::env::var("TEXTWEAVER_LOG").ok();
+    let (level, message) =
+        match textweaver_app::logfile::choose_level(opts.log.as_deref(), env.as_deref()) {
+            Ok(level) => (level, None),
+            Err(msg) => (textweaver_app::logfile::DEFAULT_LEVEL, Some(msg)),
+        };
+    let paths = match &opts.home {
+        Some(home) => Some(Paths::under(home)),
+        None => Paths::platform().ok(),
+    };
+    if let Some(paths) = paths {
+        textweaver_app::logfile::init(&paths, level);
+    }
+    message
 }
 
 /// The speech configuration the settings describe (the app's
@@ -167,6 +190,27 @@ mod tests {
         };
         let (app, _) = build_app(&opts);
         assert!(!app.keymap().character_keys());
+    }
+
+    /// The only test in this binary that installs the global logger.
+    #[test]
+    fn the_log_goes_to_the_state_folder_and_a_bad_level_is_reported() {
+        let dir = tempfile::tempdir().unwrap();
+        let opts = Options {
+            no_speech: true,
+            home: Some(dir.path().to_owned()),
+            log: Some("loud".into()),
+            ..Options::default()
+        };
+        let msg = start_log(&opts).expect("an unknown level is reported");
+        assert!(msg.contains("Unknown log level loud"), "{msg}");
+        log::warn!("cannot save position: test");
+        log::info!("below the default level");
+        log::logger().flush();
+        let path = textweaver_app::logfile::log_path(&Paths::under(dir.path()));
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains("cannot save position: test"), "{text}");
+        assert!(!text.contains("below the default level"), "{text}");
     }
 
     #[test]

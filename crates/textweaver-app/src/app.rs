@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use textweaver_a11y::{Announcer, LogAnnouncer, Priority, StatusLineAnnouncer, Verbosity};
 use textweaver_core::{CharPos, CharRange};
 use textweaver_editor::autosave::RecoverySnapshot;
-use textweaver_formats::{LoadError, LoadOptions, Registry, Source};
+use textweaver_formats::{LoadError, Registry, Source};
 use textweaver_keymap::{ActionId, Frontend, Keymap, Layer, Platform};
 use textweaver_speech::{SayMode, SpeechService};
 use textweaver_store::{
@@ -132,6 +132,9 @@ pub struct Session {
     pub notes: Vec<Note>,
     /// User highlights, sorted by position.
     pub highlights: Vec<UserHighlight>,
+    /// The open file's modification time and size when it was opened or
+    /// last saved (`None` for documents not read from a file).
+    pub disk: Option<crate::disk::FileStamp>,
 }
 
 impl Session {
@@ -154,6 +157,7 @@ impl Session {
             saved: DocState::default(),
             notes: Vec::new(),
             highlights: Vec::new(),
+            disk: None,
         }
     }
 
@@ -226,6 +230,8 @@ pub(crate) enum ListKind {
     Recovery,
     /// The library: the documents listed, in order.
     Library(Vec<PathBuf>),
+    /// The speech engine's voices: id and name, in order.
+    Voices(Vec<(String, String)>),
 }
 
 /// The application: the only owner of mutable state.
@@ -246,6 +252,10 @@ pub struct App {
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
     pub(crate) track: SpeechTrack,
+    /// Where continuous reading goes on when the planned window finishes.
+    pub(crate) continue_from: Option<CharPos>,
+    /// Where the text handed to the speech service ends.
+    pub(crate) planned_end: Option<CharPos>,
     /// The backend's capabilities as last reported.
     pub(crate) speech_caps: textweaver_speech::Caps,
     pub(crate) view: Viewport,
@@ -271,6 +281,12 @@ pub struct App {
     pub(crate) themes: textweaver_theme::Registry,
     /// RSVP while it is showing.
     pub(crate) rsvp: Option<crate::reading_aids::RsvpState>,
+    /// A question about the open file changing on disk, waiting for y or n.
+    pub(crate) pending_disk: Option<crate::disk::DiskQuestion>,
+    /// The user said yes to saving over a file changed on disk.
+    pub(crate) overwrite_confirmed: bool,
+    /// When the open file was last checked for changes on disk.
+    pub(crate) last_disk_check: Option<Instant>,
 }
 
 impl App {
@@ -300,6 +316,8 @@ impl App {
             pause_origin: None,
             reading: ReadKind::Continuous,
             track: SpeechTrack::default(),
+            continue_from: None,
+            planned_end: None,
             speech_caps,
             view: Viewport::default(),
             self_voicing: config.self_voicing,
@@ -319,6 +337,9 @@ impl App {
             library_sync,
             themes: textweaver_theme::Registry::builtin(),
             rsvp: None,
+            pending_disk: None,
+            overwrite_confirmed: false,
+            last_disk_check: None,
         };
         app.apply_voice_settings();
         app.load_themes();
@@ -346,12 +367,17 @@ impl App {
     /// import's. The frontend then sends every key press as a
     /// [`Command::Confirm`].
     pub fn confirmation_pending(&self) -> bool {
-        self.pending_confirm.is_some() || self.pending_import.is_some()
+        self.pending_confirm.is_some()
+            || self.pending_import.is_some()
+            || self.pending_disk.is_some()
     }
 
     /// Answers a pending confirmation.
     fn confirm(&mut self, answer: crate::command::Confirm) -> Vec<Effect> {
         use crate::command::Confirm;
+        if self.pending_disk.is_some() {
+            return self.confirm_disk(answer);
+        }
         if self.pending_import.is_some() {
             return self.confirm_import(answer);
         }
@@ -427,6 +453,25 @@ impl App {
         self.say_at(text, Verbosity::Low, priority);
     }
 
+    /// Announces `text` after whatever is being announced, without
+    /// interrupting it: the first item of a list after the list's
+    /// introduction. The status line shows both.
+    pub fn announce_queued(&mut self, text: &str, priority: Priority) {
+        if text.is_empty() {
+            return;
+        }
+        let shown = match self.status.current.as_deref() {
+            Some(before) if !before.is_empty() => format!("{before} {text}"),
+            _ => text.to_owned(),
+        };
+        self.status.announce(&shown, priority);
+        self.announcer.announce(text, priority);
+        let reading = matches!(self.playback, Playback::Reading);
+        if self.self_voicing && (!reading || priority == Priority::Assertive) {
+            self.speech.say(text, SayMode::Queue);
+        }
+    }
+
     /// Announces at a minimum verbosity. Spoken announcements never
     /// interrupt reading unless assertive; the status line always updates.
     pub(crate) fn say_at(&mut self, text: &str, min: Verbosity, priority: Priority) {
@@ -467,9 +512,11 @@ impl App {
     /// Opens a document and makes it current. The previous document's
     /// position is saved first.
     pub fn open(&mut self, path: &Path) -> Result<Vec<Effect>, AppError> {
+        // Taken before reading, so a change made while loading is noticed.
+        let stamp = crate::disk::FileStamp::of(path);
         let mut doc = self
             .registry
-            .load(&Source::Path(path.to_owned()), &LoadOptions::default())?;
+            .load(&Source::Path(path.to_owned()), &self.load_options())?;
         if doc.meta.path.is_none() {
             doc.meta.path = Some(path.to_owned());
         }
@@ -492,7 +539,11 @@ impl App {
             }
         }
         self.record_library_open(path, &title, &doc.meta.format);
-        Ok(self.open_document(doc, key, title))
+        let effects = self.open_document(doc, key, title);
+        if let Some(s) = self.session.as_mut() {
+            s.disk = stamp;
+        }
+        Ok(effects)
     }
 
     /// Makes an already loaded document current (tests, in-memory sources).
@@ -797,6 +848,10 @@ impl App {
     /// moved, so a crash loses little.
     pub fn tick(&mut self, now: Instant) -> Vec<Effect> {
         let rsvp_moved = self.rsvp_tick(now);
+        let asked = self.disk_tick(now);
+        if !asked.is_empty() {
+            return asked;
+        }
         if self.edit.is_some() {
             self.autosave_tick(now);
             return Vec::new();
@@ -918,6 +973,11 @@ impl App {
             Some(ListKind::Library(paths)) => {
                 if let Some(path) = paths.get(n).cloned() {
                     return self.open_command(path);
+                }
+            }
+            Some(ListKind::Voices(voices)) => {
+                if let Some((id, name)) = voices.get(n).cloned() {
+                    self.select_voice(&id, &name);
                 }
             }
             Some(ListKind::Info) | None => {}
@@ -1159,12 +1219,7 @@ impl App {
             | A::AddTableRow
             | A::InsertImage
             | A::Replace => return self.edit_action(a),
-            // Needs a voice list from the speech service, which it does not
-            // offer yet (see the Agent D3 report).
-            A::ChooseVoice => {
-                let msg = format!("{} is not available yet.", a.help());
-                self.tell(&msg);
-            }
+            A::ChooseVoice => return self.choose_voice(),
         }
         vec![Effect::Redraw]
     }

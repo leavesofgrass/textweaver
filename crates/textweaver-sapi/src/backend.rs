@@ -632,6 +632,20 @@ impl SpeechBackend for SapiBackend {
         }
     }
 
+    /// Kills the hosts and closes the audio output; the next `speak` starts
+    /// a new host and reopens the device.
+    fn reset(&mut self) {
+        self.stop();
+        self.playback.close();
+        for i in 0..self.hosts.len() {
+            if let Some(mut h) = self.hosts[i].take() {
+                h.process.kill();
+            }
+            self.applied[i] = None;
+        }
+        self.sync_sample_rate();
+    }
+
     fn pause(&mut self) -> Result<(), SpeechError> {
         self.playback.pause();
         Ok(())

@@ -33,10 +33,16 @@
 //!
 //! **Where the server is** ([`SpeechdAddress::from_env`]): `SPEECHD_ADDRESS`
 //! (`unix_socket:/path` or `inet_socket:host:port`, as libspeechd reads it),
-//! else the default socket `$XDG_RUNTIME_DIR/speech-dispatcher/speechd.sock`.
-//! When the default socket does not answer, the backend starts the server
-//! with `speech-dispatcher --spawn` (which honors the user's autospawn
-//! setting), as libspeechd does, and retries for two seconds.
+//! else the default socket `speech-dispatcher/speechd.sock` in the user's
+//! runtime directory: `$XDG_RUNTIME_DIR`, or where there is none (a
+//! container, a session without systemd-logind) the cache directory
+//! (`$XDG_CACHE_HOME`, else `~/.cache`), as GLib and so libspeechd and the
+//! server decide. When the default socket does not answer, the backend
+//! starts the server with `speech-dispatcher --spawn --communication-method
+//! unix_socket --socket-path ...` (which honors the user's autospawn
+//! setting), as libspeechd does, and retries for five seconds. (Without the
+//! cache fallback, speech-dispatcher counted as not available in
+//! containers where `spd-say` worked.)
 
 use std::collections::VecDeque;
 use std::io::{BufRead, BufReader, Read, Write};
@@ -125,14 +131,35 @@ impl SpeechdAddress {
     }
 }
 
-/// `$XDG_RUNTIME_DIR/speech-dispatcher/speechd.sock` (Unix only).
+/// `speech-dispatcher/speechd.sock` in the user's runtime directory (Unix
+/// only; see [`runtime_dir`]).
 fn default_socket() -> Option<PathBuf> {
     if !cfg!(unix) {
         return None;
     }
-    let dir = std::env::var_os("XDG_RUNTIME_DIR")?;
-    Some(PathBuf::from(dir).join("speech-dispatcher/speechd.sock"))
+    let var = |name: &str| std::env::var_os(name).map(PathBuf::from);
+    runtime_dir(var("XDG_RUNTIME_DIR"), var("XDG_CACHE_HOME"), var("HOME"))
+        .map(|d| d.join("speech-dispatcher/speechd.sock"))
 }
+
+/// The runtime directory as GLib's `g_get_user_runtime_dir` finds it:
+/// `$XDG_RUNTIME_DIR`, else the cache directory (`$XDG_CACHE_HOME`, else
+/// `$HOME/.cache`). Empty and relative values are ignored, as GLib does.
+pub fn runtime_dir(
+    runtime: Option<PathBuf>,
+    cache: Option<PathBuf>,
+    home: Option<PathBuf>,
+) -> Option<PathBuf> {
+    let usable = |p: &PathBuf| p.is_absolute();
+    runtime
+        .filter(usable)
+        .or_else(|| cache.filter(usable))
+        .or_else(|| home.filter(usable).map(|h| h.join(".cache")))
+}
+
+/// How long to wait for a spawned server to answer (it loads its output
+/// modules first).
+const SPAWN_WAIT: Duration = Duration::from_secs(5);
 
 /// True when speech-dispatcher can probably be reached: its socket exists,
 /// an inet address is configured, or the server is installed to be
@@ -610,14 +637,20 @@ impl SpeechdBackend {
 /// Starts speech-dispatcher (`--spawn`) and retries the connection for two
 /// seconds.
 fn spawn_and_connect(addr: &SpeechdAddress) -> std::io::Result<Stream> {
-    let status = std::process::Command::new("speech-dispatcher")
-        .arg("--spawn")
+    let mut cmd = std::process::Command::new("speech-dispatcher");
+    cmd.arg("--spawn");
+    if let SpeechdAddress::Unix(path) = addr {
+        // As libspeechd's autospawn: the server listens where we look.
+        cmd.args(["--communication-method", "unix_socket", "--socket-path"])
+            .arg(path);
+    }
+    let status = cmd
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()?;
     log::debug!("speech-dispatcher --spawn: {status}");
-    let until = Instant::now() + Duration::from_secs(2);
+    let until = Instant::now() + SPAWN_WAIT;
     loop {
         match Stream::connect(addr) {
             Ok(s) => return Ok(s),
@@ -843,5 +876,20 @@ mod tests {
         assert_eq!(volume_for_percent(100), 100);
         assert_eq!(volume_for_percent(50), 0);
         assert_eq!(volume_for_percent(0), -100);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_runtime_directory_falls_back_to_the_cache_as_glib_does() {
+        let p = |s: &str| Some(PathBuf::from(s));
+        assert_eq!(
+            runtime_dir(p("/run/user/1000"), p("/c"), p("/home/u")),
+            p("/run/user/1000")
+        );
+        // A container or a session without logind: no XDG_RUNTIME_DIR.
+        assert_eq!(runtime_dir(None, p("/c"), p("/home/u")), p("/c"));
+        assert_eq!(runtime_dir(None, None, p("/root")), p("/root/.cache"));
+        assert_eq!(runtime_dir(p(""), p("rel"), p("/root")), p("/root/.cache"));
+        assert_eq!(runtime_dir(None, None, None), None);
     }
 }

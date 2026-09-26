@@ -35,6 +35,7 @@
 //! (the service emulates it) and no tones.
 
 mod ffi;
+mod sys;
 
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};

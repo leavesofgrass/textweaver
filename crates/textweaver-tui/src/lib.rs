@@ -38,32 +38,58 @@ pub mod ui;
 pub mod widgets;
 
 use std::path::Path;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-use ratatui::DefaultTerminal;
+use ratatui::backend::Backend;
 use ratatui::crossterm::event::{self, DisableBracketedPaste, EnableBracketedPaste};
 use ratatui::crossterm::execute;
+use ratatui::{DefaultTerminal, Terminal};
 use textweaver_app::a11y::Priority;
 
 pub use setup::{Options, build_app, build_app_with};
 pub use theme::{Theme, theme_help};
 pub use ui::{Tui, chord};
 
-/// Runs the event loop until the user quits: draw, apply speech status and
-/// housekeeping, wait briefly for input.
+/// How long the loop waits for a key while reading: a highlight step is
+/// drawn at most this long after its word is heard.
+pub const READING_POLL: Duration = Duration::from_millis(10);
+
+/// How long the loop waits for a key otherwise.
+pub const IDLE_POLL: Duration = Duration::from_millis(40);
+
+/// How long the event loop may wait for input before it must apply speech
+/// status and draw again: [`READING_POLL`] while reading, else
+/// [`IDLE_POLL`], and never past the next RSVP word.
+pub fn input_wait(app: &textweaver_app::App, now: Instant) -> Duration {
+    let base = if app.playback() == textweaver_app::Playback::Reading {
+        READING_POLL
+    } else {
+        IDLE_POLL
+    };
+    app.rsvp_wait(now).map_or(base, |w| w.min(base))
+}
+
+/// One pass of the event loop without the input: apply speech status and
+/// housekeeping, then draw. Returns how long to wait for input next.
+///
+/// Status is applied before drawing, so a highlight step is on screen (and
+/// the hardware cursor, which screen readers and magnifiers follow, is on
+/// its word) as soon as it arrives, not after the next wait for a key
+/// (docs/audit-2026-09.md, finding R3).
+pub fn frame<B: Backend>(terminal: &mut Terminal<B>, tui: &mut Tui) -> Result<Duration, B::Error> {
+    tui.tick();
+    // Apple's AVSpeechSynthesizer delivers audio and words through the
+    // main thread's run loop (ADR-0008); a no-op on other platforms.
+    textweaver_app::apple::pump_main_loop(Duration::ZERO);
+    terminal.draw(|f| tui.draw(f))?;
+    Ok(input_wait(tui.app(), Instant::now()))
+}
+
+/// Runs the event loop until the user quits: apply speech status and
+/// housekeeping, draw, wait briefly for input.
 pub fn run(terminal: &mut DefaultTerminal, tui: &mut Tui) -> anyhow::Result<()> {
     while !tui.should_quit() {
-        terminal.draw(|f| tui.draw(f))?;
-        tui.tick();
-        // Apple's AVSpeechSynthesizer delivers audio and words through the
-        // main thread's run loop (ADR-0008); a no-op on other platforms.
-        textweaver_app::apple::pump_main_loop(Duration::ZERO);
-        // Wake in time for the next RSVP word, else every 40 ms.
-        let idle = Duration::from_millis(40);
-        let wait = tui
-            .app()
-            .rsvp_wait(std::time::Instant::now())
-            .map_or(idle, |w| w.min(idle));
+        let wait = frame(terminal, tui)?;
         if event::poll(wait)? {
             let ev = event::read()?;
             tui.handle_event(&ev);
@@ -76,7 +102,9 @@ pub fn run(terminal: &mut DefaultTerminal, tui: &mut Tui) -> anyhow::Result<()> 
 /// offers unsaved work from a previous run, runs until the user quits, and
 /// saves on the way out. Used by the `textweaver` binary and `tw open`.
 pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
-    let (app, messages) = build_app(opts);
+    let log_message = setup::start_log(opts);
+    let (app, mut messages) = build_app(opts);
+    messages.extend(log_message);
     let mut tui = Tui::new(app);
     match file {
         Some(file) => {

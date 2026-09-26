@@ -251,7 +251,20 @@ impl App {
 
     fn marker_content(doc: &Document, kind: MarkerKind, range: CharRange) -> String {
         let label = Self::marker_at(doc, kind, range).and_then(|m| m.label.clone());
-        label.unwrap_or_else(|| preview(doc, range, PREVIEW_WORDS))
+        match label {
+            // An ordered item's label is its number: say it before the
+            // item's text ("3. Buy milk"), not instead of it.
+            Some(l) if kind == MarkerKind::ListItem => {
+                let text = preview(doc, range, PREVIEW_WORDS);
+                if text.starts_with(l.as_str()) {
+                    text
+                } else {
+                    format!("{l} {text}")
+                }
+            }
+            Some(l) => l,
+            None => preview(doc, range, PREVIEW_WORDS),
+        }
     }
 
     fn marker_label(doc: &Document, kind: MarkerKind, range: CharRange) -> String {

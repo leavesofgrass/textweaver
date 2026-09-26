@@ -2,7 +2,7 @@
 //! speech service's status updates.
 
 use textweaver_a11y::{Priority, Verbosity};
-use textweaver_core::{CharPos, CharRange, Unit};
+use textweaver_core::{CharPos, CharRange, MarkerKind, Unit};
 use textweaver_speech::{Caps, ReadingGeneration, SayMode, SpeechStatus};
 use textweaver_text::narrate::NarrationPolicy;
 use textweaver_text::units::unit_at;
@@ -82,6 +82,66 @@ impl SpeechTrack {
     }
 }
 
+/// How much text continuous reading plans at a time, in chars (about ten
+/// minutes of speech). Planning the whole rest of a 10 MB document on the
+/// UI thread took a quarter of a second on every Read, every jump while
+/// reading, and every resume (docs/audit-2026-09.md, finding P1).
+pub(crate) const READ_WINDOW: usize = 32_768;
+
+/// The end of the reading window that starts at `start`: the end of the
+/// sentence [`READ_WINDOW`] chars on, pushed past a table or code block it
+/// falls in (they are narrated whole), or the end of the document.
+pub(crate) fn window_end(doc: &textweaver_text::Document, start: CharPos) -> CharPos {
+    let len = doc.len_chars();
+    let target = start.0.saturating_add(READ_WINDOW);
+    if target >= len {
+        return doc.end();
+    }
+    let mut end = unit_at(doc, CharPos(target), Unit::Sentence)
+        .map_or(CharPos(target), |r| r.end.max(CharPos(target)));
+    let index = doc.marker_index();
+    for kind in [MarkerKind::Table, MarkerKind::Code] {
+        if let Some(m) = index.enclosing(kind, end) {
+            end = end.max(m.range.end);
+        }
+    }
+    end.clamp_to(len)
+}
+
+/// How documents are narrated with `settings`: code skipped or not, the
+/// verbosity, and `[normalization] table_mode` (which was stored but never
+/// used). Reading aloud and audio export use the same policy.
+pub fn narration_policy(settings: &textweaver_store::Settings) -> NarrationPolicy {
+    use textweaver_store::TableMode;
+    use textweaver_text::narrate::TableNarration;
+    NarrationPolicy {
+        skip_code: settings.speech.skip_code,
+        verbosity: settings.speech.verbosity,
+        table_mode: match settings.normalization.table_mode {
+            TableMode::Structured => TableNarration::Structured,
+            TableMode::Flat => TableNarration::Flat,
+            TableMode::Skip => TableNarration::Skip,
+        },
+        ..NarrationPolicy::default()
+    }
+}
+
+/// How documents are loaded with `settings`: `[normalization]
+/// footnote_mode` decides where footnotes are read (it was stored but never
+/// used).
+pub fn load_options(settings: &textweaver_store::Settings) -> textweaver_formats::LoadOptions {
+    use textweaver_formats::FootnoteMode as Load;
+    use textweaver_store::FootnoteMode;
+    textweaver_formats::LoadOptions {
+        footnotes: match settings.normalization.footnote_mode {
+            FootnoteMode::Inline => Load::Inline,
+            FootnoteMode::Deferred => Load::Deferred,
+            FootnoteMode::Skip => Load::Skip,
+        },
+        ..textweaver_formats::LoadOptions::default()
+    }
+}
+
 /// What a capability change means for the listener, or `None` when nothing
 /// they would notice changed.
 pub(crate) fn capability_message(old: Caps, new: Caps) -> Option<String> {
@@ -115,11 +175,11 @@ impl App {
     }
 
     pub(crate) fn narration_policy(&self) -> NarrationPolicy {
-        NarrationPolicy {
-            skip_code: self.settings.speech.skip_code,
-            verbosity: self.settings.speech.verbosity,
-            ..NarrationPolicy::default()
-        }
+        narration_policy(&self.settings)
+    }
+
+    pub(crate) fn load_options(&self) -> textweaver_formats::LoadOptions {
+        load_options(&self.settings)
     }
 
     /// Stops speech and forgets the reading state, without announcing.
@@ -131,10 +191,22 @@ impl App {
         }
         self.track.clear();
         self.playback = Playback::Idle;
+        self.continue_from = None;
+        self.planned_end = None;
         if let Some(s) = self.session.as_mut() {
             s.spoken = None;
             s.spoken_sentence = None;
         }
+    }
+
+    /// Where the text handed to the speech service for the current reading
+    /// ends, while reading. Continuous reading is planned in windows of
+    /// about ten minutes of speech, so this is usually well before the end
+    /// of a long document; the next window is planned when this one ends.
+    pub fn planned_reading_end(&self) -> Option<CharPos> {
+        (self.playback == Playback::Reading)
+            .then_some(self.planned_end)
+            .flatten()
     }
 
     /// Reads `range` aloud. `kind` decides whether the cursor follows.
@@ -144,7 +216,9 @@ impl App {
         let Some(s) = self.session.as_mut() else {
             return false;
         };
+        let range = range.clamp_to(s.doc.len_chars());
         let utterances = textweaver_text::plan(&s.doc, range, &policy);
+        self.continue_from = None;
         if utterances.is_empty() {
             return false;
         }
@@ -154,17 +228,40 @@ impl App {
         self.track.follow(generation);
         self.playback = Playback::Reading;
         self.reading = kind;
+        self.planned_end = Some(range.end);
         true
     }
 
-    /// Reads continuously from `pos` to the end of the document.
+    /// Reads the window starting at `start` continuously and notes where
+    /// the next one starts. False when there was nothing left to read.
+    fn read_window(&mut self, start: CharPos) -> bool {
+        let mut from = start;
+        loop {
+            let Some(s) = self.session.as_ref() else {
+                return false;
+            };
+            let doc_end = s.doc.end();
+            let end = window_end(&s.doc, from);
+            if self.read_range(CharRange::new(from, end), ReadKind::Continuous) {
+                self.continue_from = (end < doc_end).then_some(end);
+                return true;
+            }
+            // A window with nothing to say (blank, or skipped code only).
+            if end >= doc_end {
+                return false;
+            }
+            from = end;
+        }
+    }
+
+    /// Reads continuously from `pos` to the end of the document, a window
+    /// at a time.
     pub(crate) fn read_from(&mut self, pos: CharPos) {
         let Some(s) = self.session.as_ref() else {
             return;
         };
         let start = text_util::word_start(&s.doc, pos);
-        let range = CharRange::new(start, s.doc.end());
-        if self.read_range(range, ReadKind::Continuous) {
+        if self.read_window(start) {
             let rate = self.settings.speech.rate.wpm();
             self.show(&format!("Reading at {rate} words per minute."));
         } else {
@@ -440,7 +537,16 @@ impl App {
             }
             SpeechStatus::Finished { generation } => {
                 if self.playback == Playback::Reading && self.track.is_current(generation) {
+                    // The window is done: continuous reading goes on with
+                    // the next one.
+                    if self.reading == ReadKind::Continuous
+                        && let Some(next) = self.continue_from.take()
+                        && self.read_window(next)
+                    {
+                        return false;
+                    }
                     self.track.clear();
+                    self.planned_end = None;
                     self.playback = Playback::Idle;
                     if let Some(s) = self.session.as_mut() {
                         s.spoken = None;
@@ -452,6 +558,19 @@ impl App {
                 false
             }
             SpeechStatus::Stopped { .. } => false,
+            SpeechStatus::Restarted { generation, reason } => {
+                // The service restarted the engine and reads on from the
+                // last word; the reading (and the highlight) go on.
+                if self.track.is_current(generation) && self.playback == Playback::Reading {
+                    self.say_at(
+                        &format!("Speech restarted: {reason}. Reading on from the last word."),
+                        Verbosity::Low,
+                        Priority::Assertive,
+                    );
+                    return true;
+                }
+                false
+            }
             SpeechStatus::Capabilities { caps } => {
                 let old = std::mem::replace(&mut self.speech_caps, caps);
                 if let Some(msg) = capability_message(old, caps) {

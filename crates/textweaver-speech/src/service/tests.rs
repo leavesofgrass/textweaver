@@ -510,32 +510,145 @@ fn a_repeated_error_is_not_reported_again_within_the_window() {
     assert_eq!(st.last(), Some(&SpeechStatus::Finished { generation: 2 }));
 }
 
+fn restarted(statuses: &[SpeechStatus]) -> Vec<String> {
+    statuses
+        .iter()
+        .filter_map(|s| match s {
+            SpeechStatus::Restarted { generation, reason } => {
+                assert_eq!(*generation, 1);
+                Some(reason.clone())
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+fn errors(statuses: &[SpeechStatus]) -> Vec<String> {
+    statuses
+        .iter()
+        .filter_map(|s| match s {
+            SpeechStatus::BackendError(e) => Some(e.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
 #[test]
-fn a_host_crash_failing_queued_utterances_is_reported_once() {
+fn a_host_crash_resumes_from_the_last_confirmed_word() {
+    // Before: every utterance the dead host owed failed, and the reading
+    // skipped the rest of the sentence and the two lookahead sentences
+    // (audit finding R4).
     let mut rig = Rig::manual();
-    rig.core.read(doc(0, &["One.", "Two.", "Three."]));
+    rig.core.read(doc(
+        0,
+        &["One two three four.", "Five six.", "Seven eight."],
+    ));
     rig.step();
+    let first = rig.spoken()[0].id;
+    rig.rec.start(first);
+    rig.rec.word(first, 0, None);
+    rig.rec.word(first, 1, None);
+    rig.step();
+    let before = rig.spoken().len();
     for u in rig.spoken() {
         rig.rec
             .emit(u.id, RawEvent::Error("engine host exited".into()));
     }
     let st = rig.step();
-    let errors = st
+    assert_eq!(restarted(&st), ["engine host exited"], "{st:?}");
+    assert!(errors(&st).is_empty(), "{st:?}");
+    assert!(!st.contains(&FIN));
+    // The engine was reset and read on from "two".
+    assert!(rig.rec.calls().contains(&Call::Stop));
+    let again: Vec<String> = rig.spoken()[before..]
         .iter()
-        .filter(|s| matches!(s, SpeechStatus::BackendError(_)))
-        .count();
-    assert_eq!(errors, 1, "{st:?}");
+        .map(|u| u.text.clone())
+        .collect();
+    assert_eq!(again, ["two three four.", "Five six.", "Seven eight."]);
+    // The highlight goes on in the same reading, in document order.
+    let id = rig.spoken()[before].id;
+    rig.rec.start(id);
+    rig.rec.word(id, 0, None);
+    let st = rig.step();
+    assert_eq!(positions(&st), [r(4, 7)]);
+    assert!(st.iter().all(|s| s.generation().is_none_or(|g| g == 1)));
 }
 
 #[test]
-fn engine_error_event_is_reported() {
+fn a_second_crash_without_progress_reports_and_moves_on() {
     let mut rig = Rig::manual();
-    rig.core.read(doc(0, &["Only one."]));
+    rig.core.read(doc(0, &["Only one.", "Then two."]));
     rig.step();
     let id = rig.spoken()[0].id;
     rig.rec.emit(id, RawEvent::Error("device lost".into()));
     let st = rig.step();
-    assert_eq!(st, [SpeechStatus::BackendError("device lost".into()), FIN]);
+    assert_eq!(restarted(&st), ["device lost"]);
+    // It fails again at once: reported, and the reading goes on without it.
+    let id = rig.spoken()[2].id;
+    assert_eq!(rig.spoken()[2].text, "Only one.");
+    rig.rec.emit(id, RawEvent::Error("device lost".into()));
+    let st = rig.step();
+    assert_eq!(errors(&st), ["device lost"]);
+    assert!(restarted(&st).is_empty());
+    let next = rig.rec.pending();
+    assert!(!next.is_empty());
+    for id in next {
+        rig.rec.start(id);
+        rig.rec.word(id, 0, None);
+        rig.rec.finish(id);
+    }
+    let st = rig.step();
+    assert_eq!(st.last(), Some(&FIN));
+}
+
+#[test]
+fn a_stalled_reading_is_restarted_once_then_stopped() {
+    let mut rig = Rig::manual();
+    rig.core.read(doc(0, &["One two.", "Three four."]));
+    rig.step();
+    let first = rig.spoken()[0].id;
+    rig.rec.start(first);
+    rig.rec.word(first, 0, None);
+    rig.step();
+    // Not yet stalled.
+    let st = rig.advance(STALL_TIMEOUT - ms(100));
+    assert!(restarted(&st).is_empty(), "{st:?}");
+    // No word for STALL_TIMEOUT: reset and read on from "One".
+    let before = rig.spoken().len();
+    let st = rig.advance(ms(200));
+    assert_eq!(restarted(&st), ["no speech for 12 seconds"], "{st:?}");
+    assert_eq!(rig.spoken()[before].text, "One two.");
+    // Still nothing: the reading stops with a message.
+    let st = rig.advance(STALL_TIMEOUT + ms(10));
+    assert!(restarted(&st).is_empty());
+    assert_eq!(
+        errors(&st),
+        [
+            "no speech for 12 seconds, even after restarting the voice, so reading stopped. Check the audio device"
+        ]
+    );
+    assert_eq!(st.last(), Some(&STOPPED));
+    assert!(!rig.core.is_active());
+}
+
+#[test]
+fn progress_keeps_the_watchdog_quiet_and_paused_readings_never_stall() {
+    let mut rig = Rig::manual();
+    rig.core.read(doc(0, &["One two three.", "Four five."]));
+    rig.step();
+    let first = rig.spoken()[0].id;
+    rig.rec.start(first);
+    // A word every few seconds: never a stall.
+    for n in 0..3 {
+        rig.rec.word(first, n, None);
+        let st = rig.advance(STALL_TIMEOUT / 2);
+        assert!(restarted(&st).is_empty(), "{st:?}");
+    }
+    // Paused for a long time: not a stall.
+    rig.core.pause();
+    let st = rig.advance(STALL_TIMEOUT * 3);
+    assert!(restarted(&st).is_empty(), "{st:?}");
+    assert!(errors(&st).is_empty(), "{st:?}");
 }
 
 // ---- normalization and mapping ----------------------------------------------
@@ -1280,4 +1393,30 @@ fn null_service_reports_positions_then_finished() {
         }
     }
     assert_eq!(positions(&got), [r(0, 3), r(5, 8)]);
+}
+
+#[test]
+fn the_voice_list_is_asked_on_the_speech_thread() {
+    let (b, rec) = RecordingBackend::with(RecordingMode::Instant, RecordingBackend::DEFAULT_CAPS);
+    rec.set_voices(vec![
+        Voice {
+            id: "a".into(),
+            name: "Alpha".into(),
+            ..Voice::default()
+        },
+        Voice {
+            id: "b".into(),
+            name: "Beta".into(),
+            ..Voice::default()
+        },
+    ]);
+    let service = SpeechService::spawn(b.into_factory(), plain()).unwrap();
+    let names: Vec<String> = service
+        .voices()
+        .unwrap()
+        .into_iter()
+        .map(|v| v.name)
+        .collect();
+    assert_eq!(names, ["Alpha", "Beta"]);
+    service.shutdown();
 }

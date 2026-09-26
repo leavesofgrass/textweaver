@@ -12,34 +12,59 @@
 use ropey::Rope;
 use textweaver_core::CharPos;
 
-/// One word: its lowercase text and char range.
-#[derive(Clone, Debug)]
+/// One word: a hash of its lowercase text, and its char range.
+///
+/// Words are compared by a 64-bit hash of their lowercase letters rather
+/// than by an owned lowercase `String` each: a 5 MB document has about a
+/// million words, and allocating a string for every word of both texts
+/// made entering and leaving edit mode take up to two seconds
+/// (docs/audit-2026-09.md, finding P3). A collision can only mis-pair two
+/// different words, which moves a carried position by a word at worst.
+#[derive(Clone, Copy, Debug)]
 struct Word {
-    text: String,
+    text: u64,
     start: usize,
     end: usize,
 }
 
+/// FNV-1a over the chars of a word, lowercased.
+const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+
+fn hash_char(h: u64, c: char) -> u64 {
+    let mut h = h;
+    for l in c.to_lowercase() {
+        h ^= u64::from(u32::from(l));
+        h = h.wrapping_mul(FNV_PRIME);
+    }
+    h
+}
+
 fn words(text: &Rope) -> Vec<Word> {
-    let mut out = Vec::new();
+    // About one word in six chars in prose.
+    let mut out = Vec::with_capacity(text.len_chars() / 6);
     let mut current: Option<Word> = None;
-    for (i, c) in text.chars().enumerate() {
-        if c.is_alphanumeric() {
-            match current.as_mut() {
-                Some(w) => {
-                    w.text.extend(c.to_lowercase());
-                    w.end = i + 1;
+    let mut i = 0usize;
+    for chunk in text.chunks() {
+        for c in chunk.chars() {
+            if c.is_alphanumeric() {
+                match current.as_mut() {
+                    Some(w) => {
+                        w.text = hash_char(w.text, c);
+                        w.end = i + 1;
+                    }
+                    None => {
+                        current = Some(Word {
+                            text: hash_char(FNV_OFFSET, c),
+                            start: i,
+                            end: i + 1,
+                        });
+                    }
                 }
-                None => {
-                    current = Some(Word {
-                        text: c.to_lowercase().collect(),
-                        start: i,
-                        end: i + 1,
-                    });
-                }
+            } else if let Some(w) = current.take() {
+                out.push(w);
             }
-        } else if let Some(w) = current.take() {
-            out.push(w);
+            i += 1;
         }
     }
     out.extend(current);
@@ -194,6 +219,19 @@ mod tests {
         let after = "one two NEW WORDS HERE three four five";
         assert_eq!(map(before, after, 8), after.find("three").unwrap());
         assert_eq!(map(before, after, 19), after.find("five").unwrap());
+    }
+
+    #[test]
+    fn words_match_whatever_their_case() {
+        // Hashing lowercase letters keeps the case-insensitive match.
+        let src = "ÉCOLE Straße and MORE words";
+        let canon = "école straße and more words";
+        assert_eq!(map(src, canon, src.chars().count() - 5), 22);
+        assert_eq!(map(canon, src, 6), 6);
+        let w = words(&Rope::from_str("Ab ab AB aB x"));
+        assert!(w[..4].iter().all(|x| x.text == w[0].text));
+        assert_ne!(w[0].text, w[4].text);
+        assert_eq!((w[4].start, w[4].end), (12, 13));
     }
 
     #[test]
