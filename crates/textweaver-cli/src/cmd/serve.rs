@@ -1,7 +1,18 @@
 //! `tw serve`. Owner: Agent D.
 //!
-//! Wave 2 serves the app over JSON-RPC on stdin and stdout. The argument
-//! surface is fixed now; running it reports that it is not available yet.
+//! Serves the app over JSON-RPC 2.0 on stdin and stdout
+//! (`textweaver_app::rpc`, ADR-0015): one JSON message per line, or
+//! `Content-Length` framed. Speech is self-voiced like the terminal reader
+//! unless `--no-speech` is given; every announcement is also sent to the
+//! client as an `announcement` notification. Nothing but protocol messages
+//! is written to stdout; startup messages go to the client as
+//! announcements.
+
+use std::io::BufReader;
+use std::path::PathBuf;
+
+use textweaver_app::a11y::Priority;
+use textweaver_app::rpc;
 
 /// Arguments for `tw serve`.
 #[derive(clap::Args, Debug)]
@@ -9,12 +20,63 @@ pub struct Args {
     /// Serve JSON-RPC over stdin and stdout.
     #[arg(long)]
     pub stdio: bool,
+    /// Do not speak; the client gets announcements and positions only.
+    #[arg(long)]
+    pub no_speech: bool,
+    /// Speech backend id (see `tw backends`).
+    #[arg(long)]
+    pub backend: Option<String>,
+    /// Keep settings and reading positions under this directory.
+    #[arg(long)]
+    pub home: Option<PathBuf>,
+    /// Open this document before serving.
+    #[arg(long)]
+    pub open: Option<PathBuf>,
 }
 
 /// Runs `tw serve`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     if !args.stdio {
-        anyhow::bail!("`tw serve` needs a transport; the only one planned is --stdio");
+        anyhow::bail!("`tw serve` needs a transport; use --stdio");
     }
-    anyhow::bail!("`tw serve --stdio` (JSON-RPC over stdio) arrives in wave 2")
+    let opts = textweaver_tui::Options {
+        no_speech: args.no_speech,
+        backend: args.backend,
+        home: args.home,
+        theme: None,
+    };
+    let (announcer, queue) = rpc::announcer();
+    let (mut app, messages) = textweaver_tui::build_app_with(&opts, announcer);
+    for m in messages {
+        app.announce(&m, Priority::Polite);
+    }
+    if let Some(file) = &args.open
+        && let Err(e) = app.open(file)
+    {
+        app.announce(
+            &format!("Could not open {}: {e}", file.display()),
+            Priority::Assertive,
+        );
+    }
+    let server = rpc::Server::new(app, queue);
+    let stdin = BufReader::new(std::io::stdin());
+    rpc::serve(server, stdin, std::io::stdout().lock())?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn needs_a_transport() {
+        let args = Args {
+            stdio: false,
+            no_speech: true,
+            backend: None,
+            home: None,
+            open: None,
+        };
+        assert!(run(args).unwrap_err().to_string().contains("--stdio"));
+    }
 }
