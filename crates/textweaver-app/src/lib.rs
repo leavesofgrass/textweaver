@@ -124,6 +124,24 @@
 //!   Files and addresses open through [`App::set_launcher`] (the system's
 //!   default program otherwise, only in a session that keeps files).
 //!
+//! # The app core for the GUI (Wave 3, Agent W3a; ADR-0024)
+//!
+//! - **[`window`]**: [`DocWindow`], about [`WINDOW_UNITS`] UTF-16 units of
+//!   text around the focus, paragraph-aligned, which slides while reading
+//!   and recentres on jumps, with control offsets in [`Units`];
+//!   [`Session::revision`] says when the text changed.
+//! - **[`list_model`]**: the list shown ([`App::list_model`]) and the prompt
+//!   open ([`App::prompt_model`]), driven by [`Command::ListKey`],
+//!   [`Command::ListFocus`], and [`Command::PromptKey`], for every frontend.
+//! - **[`wake`]**: [`App::set_waker`], rung by the speech thread, the writer,
+//!   and background jobs; [`App::tick_interval`].
+//! - **[`Command::ReplaceRange`]**: edits made in a native text control.
+//! - **[`settings_schema`]**: [`SettingsSchema`] from the store's own keys,
+//!   [`App::set_setting`], and the settings screen (the Settings action).
+//! - **Off the input thread**: [`opening`] (large files open in the
+//!   background), settings saves on the writer, the misspelling count after
+//!   a save, and [`App::start_speech_in_background`].
+//!
 //! Owner: Agent D.
 
 mod access;
@@ -144,6 +162,7 @@ mod goto;
 mod help;
 mod library;
 mod links;
+pub mod list_model;
 mod lists;
 pub mod logfile;
 mod marks;
@@ -151,6 +170,8 @@ mod math_explore;
 mod mdline;
 mod nav;
 mod notes;
+pub mod opening;
+pub mod path_complete;
 mod playback;
 pub mod preview_server;
 mod publish;
@@ -160,6 +181,7 @@ mod replace;
 mod restart;
 pub mod rpc;
 pub mod settings_io;
+pub mod settings_schema;
 mod speech_cursor;
 mod spell;
 mod structure;
@@ -171,6 +193,8 @@ pub mod text_util;
 mod themes;
 mod view;
 mod voice;
+pub mod wake;
+pub mod window;
 mod writer;
 mod writes;
 
@@ -190,13 +214,17 @@ pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_lookup};
 pub use goto::parse_go_to;
 pub use help::{chords_text, help_entries, palette_matches, resolve_command};
+pub use list_model::{ListKey, ListModel, PromptKey, PromptModel};
 pub use math_explore::MathMove;
 pub use notes::{HIGHLIGHTS_KEY, NOTES_KEY, UserHighlight, migrate_legacy_notes, parse_tags};
 pub use playback::{Playback, load_options, narration_policy};
 pub use restart::SpeechStarter;
+pub use settings_schema::{Setting, SettingKind, SettingsSchema};
 pub use templates::local_date;
 pub use textweaver_store::Note;
 pub use view::{Highlight, HighlightKind, Viewport};
+pub use wake::{Waker, channel_waker};
+pub use window::{DocWindow, Units, WINDOW_UNITS, WindowChange};
 
 pub use reading_aids::{RSVP_STEP, RSVP_WINDOW};
 pub use textweaver_a11y as a11y;

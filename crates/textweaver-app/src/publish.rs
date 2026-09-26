@@ -295,6 +295,7 @@ impl App {
             root: src.folder.clone(),
         };
         let temp = src.temp.clone();
+        let wake = self.waker_slot();
         let spawned = std::thread::Builder::new()
             .name("tw-export".into())
             .spawn(move || {
@@ -330,6 +331,7 @@ impl App {
                     let _ = std::fs::remove_dir_all(dir);
                 }
                 let _ = tx.send(result);
+                wake.wake();
             });
         match spawned {
             Ok(_) => self.authoring.jobs.push(Job::Export {
@@ -627,14 +629,8 @@ impl App {
         if self.authoring.preview.is_some() {
             self.write_preview(ExportKind::PreviewRefresh);
         }
-        if let Some(summary) = self.misspelling_summary() {
-            // "No misspellings." only at high verbosity: silence means none.
-            let quiet = summary.starts_with("No ")
-                && self.settings.speech.verbosity < textweaver_a11y::Verbosity::High;
-            if !quiet {
-                self.announce_queued(&summary, textweaver_a11y::Priority::Polite);
-            }
-        }
+        // The count follows on a helper thread (Wave 3).
+        self.count_misspellings_in_background();
     }
 
     /// Reads the document as it will render, from the caret, without

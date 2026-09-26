@@ -29,9 +29,12 @@ use std::time::Duration;
 
 use textweaver_editor::autosave::{self, SnapshotLock};
 use textweaver_editor::{SaveRequest, SnapshotOp};
-use textweaver_store::{DocKey, DocState, Library, LibrarySync, Recent, StateStore};
+use textweaver_store::{
+    DocKey, DocState, Library, LibrarySync, Recent, Settings, SettingsStore, StateStore,
+};
 
 use crate::disk::FileStamp;
+use crate::wake::WakeSlot;
 
 /// What a state save was for, so its result can be announced.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -80,6 +83,12 @@ pub(crate) enum Job {
     },
     /// Write the library sidecars' pending entries.
     SyncFlush(LibrarySync),
+    /// Save the settings (`settings.toml`); queued saves collapse into the
+    /// newest.
+    Settings {
+        store: SettingsStore,
+        settings: Box<Settings>,
+    },
     /// Answer when everything sent before has been done.
     Barrier(Sender<()>),
     /// A disk that takes this long (tests of waiting).
@@ -121,6 +130,22 @@ pub(crate) enum Report {
         path: PathBuf,
         stamp: Option<FileStamp>,
     },
+    /// A settings save finished.
+    Settings { result: Result<(), String> },
+}
+
+impl Job {
+    /// True for jobs whose result comes back as a [`Report`].
+    fn reports(&self) -> bool {
+        matches!(
+            self,
+            Job::State { .. }
+                | Job::Snapshot(SnapshotOp::Write { .. })
+                | Job::Save { .. }
+                | Job::DiskCheck { .. }
+                | Job::Settings { .. }
+        )
+    }
 }
 
 /// The handle to the writer thread.
@@ -143,13 +168,14 @@ impl Writer {
     /// How long quitting waits for the writer before giving up.
     pub(crate) const QUIT_WAIT: Duration = Duration::from_secs(10);
 
-    /// Starts the writer thread.
-    pub(crate) fn spawn() -> Writer {
+    /// Starts the writer thread. It rings `wake` after each batch of jobs
+    /// that produced reports (crate::wake).
+    pub(crate) fn spawn(wake: WakeSlot) -> Writer {
         let (tx, jobs) = mpsc::channel::<Job>();
         let (report_tx, rx) = mpsc::channel::<Report>();
         let thread = std::thread::Builder::new()
             .name("textweaver-writer".into())
-            .spawn(move || run(&jobs, &report_tx))
+            .spawn(move || run(&jobs, &report_tx, &wake))
             .map_err(|e| log::error!("cannot start the writer thread: {e}"))
             .ok();
         Writer {
@@ -240,11 +266,16 @@ impl Drop for Writer {
 
 /// The writer thread: takes every job waiting, collapses state saves of the
 /// same document into the newest, and does the rest in order.
-fn run(jobs: &Receiver<Job>, reports: &Sender<Report>) {
+fn run(jobs: &Receiver<Job>, reports: &Sender<Report>, wake: &WakeSlot) {
     let mut state = WriterState::default();
     while let Ok(first) = jobs.recv() {
         let mut batch = vec![first];
         batch.extend(jobs.try_iter());
+        let reported = batch.iter().any(Job::reports);
+        // Settings saves queued together: only the newest is written.
+        let last_settings = batch
+            .iter()
+            .rposition(|j| matches!(j, Job::Settings { .. }));
         // A state save followed by a newer one for the same file is
         // skipped (its report still goes out, with the newer result's
         // file on disk).
@@ -259,6 +290,7 @@ fn run(jobs: &Receiver<Job>, reports: &Sender<Report>) {
                 Job::State { store, key, .. } => later
                     .get(&(store.dir().to_owned(), key.0.clone()))
                     .is_some_and(|&last| last != i),
+                Job::Settings { .. } => last_settings != Some(i),
                 _ => false,
             };
             let outcome = catch_unwind(AssertUnwindSafe(|| {
@@ -267,6 +299,9 @@ fn run(jobs: &Receiver<Job>, reports: &Sender<Report>) {
             if outcome.is_err() {
                 log::error!("a write failed with an internal error; the writer goes on");
             }
+        }
+        if reported {
+            wake.wake();
         }
     }
 }
@@ -357,6 +392,14 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
                 Err(e) => log::warn!("cannot write the library sidecar: {e}"),
             }
             None
+        }
+        Job::Settings { store, settings } => {
+            let result = if superseded {
+                Ok(())
+            } else {
+                store.save(&settings).map_err(|e| e.to_string())
+            };
+            Some(Report::Settings { result })
         }
         Job::Barrier(done) => {
             let _ = done.send(());
@@ -457,7 +500,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = StateStore::new(dir.path().to_owned());
         let key = DocKey("doc".into());
-        let mut w = Writer::spawn();
+        let mut w = Writer::spawn(WakeSlot::default());
         for pos in 0..50 {
             let state = DocState {
                 position: textweaver_core::CharPos(pos),
@@ -531,7 +574,7 @@ mod tests {
     #[test]
     fn sending_is_quick_whatever_the_size() {
         let dir = tempfile::tempdir().unwrap();
-        let mut w = Writer::spawn();
+        let mut w = Writer::spawn(WakeSlot::default());
         let text = ropey::Rope::from_str(&"word ".repeat(2_000_000));
         let mut s = textweaver_editor::EditSession::new(
             textweaver_editor::DocInfo {
