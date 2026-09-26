@@ -11,3 +11,4 @@ __pycache__/
 /target-local/
 /target-*/
 *.wav
+/.cache/

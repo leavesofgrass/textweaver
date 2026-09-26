@@ -1,0 +1,39 @@
+[package]
+name = "textweaver-ocr"
+description = "textweaver OCR: the pure-Rust ocrs engine in process, a Tesseract fallback, model downloads checked by SHA-256, and PDF page images"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[features]
+default = ["ocrs", "download"]
+# The ocrs engine on RTen, in process.
+ocrs = ["dep:ocrs", "dep:rten", "dep:rten-tensor", "dep:rten-imageproc"]
+# Model downloads over HTTPS (ureq with rustls).
+download = ["dep:ureq"]
+
+[dependencies]
+thiserror.workspace = true
+log.workspace = true
+directories.workspace = true
+sha2.workspace = true
+lopdf.workspace = true
+hayro.workspace = true
+kurbo.workspace = true
+png.workspace = true
+zune-jpeg.workspace = true
+rten = { workspace = true, optional = true }
+rten-tensor = { workspace = true, optional = true }
+rten-imageproc = { workspace = true, optional = true }
+ocrs = { workspace = true, optional = true }
+ureq = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

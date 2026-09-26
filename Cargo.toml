@@ -29,6 +29,7 @@ members = [
     "crates/textweaver-aids",
     "crates/textweaver-dectalk",
     "crates/textweaver-fonts",
+    "crates/textweaver-ocr",
     "xtask",
 ]
 default-members = [
@@ -59,6 +60,7 @@ default-members = [
     "crates/textweaver-aids",
     "crates/textweaver-dectalk",
     "crates/textweaver-fonts",
+    "crates/textweaver-ocr",
 ]
 
 [workspace.package]
@@ -101,6 +103,7 @@ textweaver-theme = { path = "crates/textweaver-theme" }
 textweaver-aids = { path = "crates/textweaver-aids" }
 textweaver-dectalk = { path = "crates/textweaver-dectalk" }
 textweaver-fonts = { path = "crates/textweaver-fonts", default-features = false }
+textweaver-ocr = { path = "crates/textweaver-ocr" }
 
 # text and formats
 ropey = "1.6"
@@ -180,6 +183,30 @@ unicode-width = "0.2"
 # (the terminal reader saves and restores the terminal on each).
 ctrlc = { version = "3.4", features = ["termination"] }
 
+# Wave 3 formats and OCR (Agent W3d; docs/research/pure-rust-wave3.md, ADR-0023).
+# OCR in process: the ocrs engine on the RTen runtime (both pure Rust), with
+# PDF pages rendered by hayro. Models download at run time, after the user
+# confirms, and are checked by SHA-256 (sha2 was already in the tree).
+rten = { version = "0.26.0", default-features = false, features = ["onnx_format"] }
+rten-tensor = "0.26.0"
+rten-imageproc = "0.26.0"
+ocrs = { version = "0.13.1", default-features = false, features = ["onnx"] }
+# Embedded fonts and CMaps are off: OCR renders pages that have no text.
+hayro = { version = "0.7.1", default-features = false }
+# hayro's geometry types, for the device that finds a scanned page's single
+# image (already in the tree through hayro).
+kurbo = "0.13"
+sha2 = "0.10"
+# Image files for OCR (both were already in the tree through krilla).
+png = "0.18"
+zune-jpeg = "0.5"
+# Spreadsheets (XLSX, XLS, ODS) and archives (tar, tar.gz, 7z). flate2 was
+# in the tree already (zip, png); its default back end is pure Rust.
+calamine = "0.36.1"
+flate2 = "1.1"
+tar = { version = "0.4.46", default-features = false }
+sevenz-rust2 = { version = "0.23.0", default-features = false }
+
 # tests
 proptest = "1.11"
 insta = { version = "1.48", features = ["json", "yaml"] }
@@ -199,6 +226,28 @@ print_stderr = "allow"
 
 [profile.dev.package."*"]
 opt-level = 1
+
+# OCR models run 40 times slower unoptimized (4.8 s against 0.11 s to
+# detect text on one page), so the runtime and the engine are optimized in
+# debug builds too (docs/research/pure-rust-wave3.md).
+[profile.dev.package.rten]
+opt-level = 3
+[profile.dev.package.rten-base]
+opt-level = 3
+[profile.dev.package.rten-gemm]
+opt-level = 3
+[profile.dev.package.rten-simd]
+opt-level = 3
+[profile.dev.package.rten-vecmath]
+opt-level = 3
+[profile.dev.package.rten-tensor]
+opt-level = 3
+[profile.dev.package.rten-imageproc]
+opt-level = 3
+[profile.dev.package.rten-parallel]
+opt-level = 3
+[profile.dev.package.ocrs]
+opt-level = 3
 
 [profile.release]
 lto = "thin"
