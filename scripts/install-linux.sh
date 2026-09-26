@@ -711,7 +711,10 @@ install_files() {
   # Helper scripts, so doctor, speech-check, and update work after install.
   for f in install-linux.sh update.sh doctor.sh speech-check.sh convert-folder.sh README.md; do
     if [ -f "$SCRIPT_DIR/$f" ]; then
-      ir install -m 0755 "$SCRIPT_DIR/$f" "$DATADIR/scripts/$f"
+      case $f in
+        *.md) ir install -m 0644 "$SCRIPT_DIR/$f" "$DATADIR/scripts/$f" ;;
+        *) ir install -m 0755 "$SCRIPT_DIR/$f" "$DATADIR/scripts/$f" ;;
+      esac
     fi
   done
 

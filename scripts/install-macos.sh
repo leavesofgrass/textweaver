@@ -394,7 +394,10 @@ install_stage() {
   if [ -n "$SCRIPT_DIR" ]; then
     for f in install-macos.sh update.sh doctor.sh speech-check.sh convert-folder.sh README.md; do
       if [ -f "$SCRIPT_DIR/$f" ]; then
-        run install -m 0755 "$SCRIPT_DIR/$f" "$DATADIR/scripts/$f"
+        case $f in
+          *.md) run install -m 0644 "$SCRIPT_DIR/$f" "$DATADIR/scripts/$f" ;;
+          *) run install -m 0755 "$SCRIPT_DIR/$f" "$DATADIR/scripts/$f" ;;
+        esac
       fi
     done
   fi
