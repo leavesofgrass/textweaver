@@ -56,7 +56,7 @@ pub struct Args {
     /// Print a line for every file.
     #[arg(long, short = 'v')]
     pub verbose: bool,
-    /// Obsidian embeds of notes: link (default) or inline.
+    /// Obsidian embeds of notes: link or inline.
     #[arg(long, default_value = "link", value_parser = parse_embeds)]
     pub embeds: EmbedMode,
     /// Remove scripts and unsafe HTML from the output (for Markdown from

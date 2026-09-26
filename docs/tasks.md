@@ -339,6 +339,8 @@ Jon's direction: conversion and bulk conversion must be **lightning fast, native
 
 **Acceptance:** CommonMark conformance for the pulldown path through its test suite; flavor features covered by snapshot tests; a bulk-conversion test on a temporary tree checking mirrored paths and skip-unchanged; the benchmark numbers in the report.
 
+**Status:** done on `wave2/l-render-convert` (Friday, September 25, 2026); awaiting integration. Both engines pass all 652 CommonMark 0.31.2 examples; EPUB, DOCX, BRF, and PDF output wait for Agent M's writers behind `textweaver_convert::DocumentWriter` (ADR-0016).
+
 #### Agent M — Native writers
 
 **Owns:** `crates/textweaver-writers/`, `fixtures/m/`, `docs/adr/0017-writers.md`.
