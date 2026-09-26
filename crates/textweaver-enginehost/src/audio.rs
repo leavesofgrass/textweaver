@@ -25,6 +25,8 @@ pub enum AudioOutput {
     /// The default audio device (requires the `playback` feature).
     Device,
     /// Nowhere: samples are consumed at `speed` times real time, silently.
+    /// A speed of 0 (or less) consumes nothing: a device that has stopped
+    /// taking samples, for tests.
     Null {
         /// Playback speed factor (1.0 is real time).
         speed: f32,
@@ -199,7 +201,11 @@ impl Player {
             std::thread::Builder::new()
                 .name(format!("{backend}-null-output"))
                 .spawn(move || {
-                    let rate = f64::from(sample_rate) * f64::from(speed.max(0.01));
+                    let rate = if speed > 0.0 {
+                        f64::from(sample_rate) * f64::from(speed.max(0.01))
+                    } else {
+                        0.0
+                    };
                     let mut last = Instant::now();
                     let mut owed = 0.0f64;
                     while !stop.load(Ordering::Relaxed) {

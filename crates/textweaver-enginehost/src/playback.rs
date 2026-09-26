@@ -24,6 +24,11 @@
 //!
 //! Pause and resume are native: the clock stops with the audio.
 //!
+//! An output that stops taking samples while audio waits and nothing is
+//! paused (a Bluetooth headset that went away, a device that was switched)
+//! is reopened after [`DEVICE_STALL`], whether or not a reading is in
+//! progress, so an announcement is not stuck behind a dead device.
+//!
 //! [`Playback::capture`] collects a text's audio and word offsets instead
 //! of playing them (`synthesize_to_file`).
 //!
@@ -35,6 +40,7 @@
 use std::collections::{HashMap, VecDeque};
 use std::ops::Range;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use textweaver_core::UtteranceId;
 use textweaver_speech::{BackendId, EventSink, RawEvent, SpeechError, WordTiming};
@@ -42,6 +48,26 @@ use textweaver_speech::{BackendId, EventSink, RawEvent, SpeechError, WordTiming}
 use crate::audio::{AudioOutput, Feed, Player};
 use crate::protocol::EndStatus;
 use crate::wav;
+
+/// Audio waiting, nothing paused, and the playback clock still for this
+/// long: the output is reopened. Later reopens of the same stall wait
+/// twice as long each time, up to [`DEVICE_STALL_MAX`], so a device that
+/// is slow to wake is not reopened over and over.
+pub const DEVICE_STALL: Duration = Duration::from_secs(1);
+
+/// The longest wait between two reopens of one stalled output.
+pub const DEVICE_STALL_MAX: Duration = Duration::from_secs(8);
+
+/// Watches the playback clock for a stalled output.
+#[derive(Debug, Default)]
+struct StallWatch {
+    /// The clock position last seen, and when it was first seen.
+    seen: Option<(u64, Instant)>,
+    /// How long the clock may stand still before the next reopen.
+    wait: Option<Duration>,
+    /// Reopens so far.
+    reopens: u32,
+}
 
 /// One utterance in flight.
 #[derive(Debug)]
@@ -123,6 +149,7 @@ pub struct Playback<W> {
     active: VecDeque<Active<W>>,
     captures: HashMap<u64, Capture<W>>,
     cancelled: Vec<UtteranceId>,
+    stall: StallWatch,
 }
 
 impl<W> std::fmt::Debug for Playback<W> {
@@ -152,6 +179,7 @@ impl<W> Playback<W> {
             active: VecDeque::new(),
             captures: HashMap::new(),
             cancelled: Vec::new(),
+            stall: StallWatch::default(),
         }
     }
 
@@ -416,8 +444,55 @@ impl<W> Playback<W> {
         hosts
     }
 
-    /// Emits cancellations and every event the playback clock has reached.
+    /// How many times a stalled output was reopened ([`DEVICE_STALL`]).
+    pub fn device_reopens(&self) -> u32 {
+        self.stall.reopens
+    }
+
+    /// Reopens an open output whose clock has not moved for the stall
+    /// wait while audio waits and nothing is paused.
+    fn watch_output(&mut self) {
+        let consumed = self.feed.consumed();
+        let waiting =
+            self.player.is_some() && self.feed.pushed() > consumed && !self.feed.is_paused();
+        if !waiting {
+            self.stall.seen = None;
+            self.stall.wait = None;
+            return;
+        }
+        let now = Instant::now();
+        let since = match self.stall.seen {
+            Some((at, since)) if at == consumed => since,
+            _ => {
+                // The clock moved (or just started waiting): all is well.
+                if self.stall.seen.is_some_and(|(at, _)| at != consumed) {
+                    self.stall.wait = None;
+                }
+                self.stall.seen = Some((consumed, now));
+                return;
+            }
+        };
+        let wait = self.stall.wait.unwrap_or(DEVICE_STALL);
+        if now.duration_since(since) < wait {
+            return;
+        }
+        log::warn!(
+            "{}: the audio output took no samples for {wait:?}; reopening it",
+            self.backend
+        );
+        self.player = None;
+        if let Err(e) = self.ensure_player() {
+            log::warn!("{}: cannot reopen the audio output: {e}", self.backend);
+        }
+        self.stall.reopens = self.stall.reopens.saturating_add(1);
+        self.stall.seen = Some((consumed, now));
+        self.stall.wait = Some((wait * 2).min(DEVICE_STALL_MAX));
+    }
+
+    /// Emits cancellations and every event the playback clock has reached,
+    /// after reopening an output that stopped taking samples.
     pub fn emit(&mut self, sink: &mut dyn EventSink) {
+        self.watch_output();
         for id in self.cancelled.drain(..) {
             sink.emit(id, RawEvent::Cancelled);
         }
@@ -605,6 +680,64 @@ mod tests {
         );
         assert_eq!(p.feed().pushed(), 50);
         assert!(p.stop().is_empty());
+    }
+
+    /// Polls `p` until `done` holds, or panics after ten seconds.
+    fn poll_until(
+        p: &mut Playback<Vec<Range<u32>>>,
+        done: impl Fn(&Playback<Vec<Range<u32>>>) -> bool,
+    ) {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        let mut rec = Rec::default();
+        while !done(p) {
+            assert!(Instant::now() < deadline, "timed out");
+            p.emit(&mut rec);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+
+    #[test]
+    fn an_output_that_stops_taking_samples_is_reopened() {
+        // Before: an announcement queued behind a dead device (outside a
+        // reading, where the service's watchdog does not look) waited
+        // forever.
+        let mut p = Playback::new("test", AudioOutput::Null { speed: 0.0 }, 1000);
+        p.ensure_player().unwrap();
+        p.enqueue(id(1, 0), 1, 0, vec![]);
+        p.on_audio(1, &[1; 100]);
+        p.on_end(1, EndStatus::Done);
+        let t0 = Instant::now();
+        poll_until(&mut p, |p| p.device_reopens() == 1);
+        assert!(t0.elapsed() >= DEVICE_STALL, "not before the stall wait");
+        // Still stalled: the next reopen waits twice as long.
+        poll_until(&mut p, |p| p.device_reopens() == 2);
+        assert!(t0.elapsed() >= DEVICE_STALL * 3);
+        assert_eq!(p.feed().pushed(), 100, "the audio waits in the feed");
+    }
+
+    #[test]
+    fn a_paused_or_idle_output_is_not_reopened() {
+        let mut p: Playback<Vec<Range<u32>>> =
+            Playback::new("test", AudioOutput::Null { speed: 0.0 }, 1000);
+        p.ensure_player().unwrap();
+        let mut rec = Rec::default();
+        // Idle: nothing waits.
+        let t0 = Instant::now();
+        while t0.elapsed() < DEVICE_STALL * 2 {
+            p.emit(&mut rec);
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        assert_eq!(p.device_reopens(), 0);
+        // Paused with audio waiting.
+        p.enqueue(id(1, 0), 1, 0, vec![]);
+        p.on_audio(1, &[1; 100]);
+        p.pause();
+        let t0 = Instant::now();
+        while t0.elapsed() < DEVICE_STALL * 2 {
+            p.emit(&mut rec);
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        assert_eq!(p.device_reopens(), 0);
     }
 
     #[test]
