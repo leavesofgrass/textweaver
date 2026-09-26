@@ -163,6 +163,17 @@ impl ListView {
     pub fn current(&self) -> Option<&str> {
         self.items.get(self.selected).map(String::as_str)
     }
+
+    /// The focused item as spoken: its text and where it is in the list
+    /// ("Chapter two, 2 of 5").
+    pub fn spoken_item(&self) -> Option<String> {
+        let item = self.current()?;
+        Some(format!(
+            "{item}, {} of {}",
+            self.selected + 1,
+            self.items.len()
+        ))
+    }
 }
 
 #[cfg(test)]
@@ -194,5 +205,7 @@ mod tests {
         assert!(!l.step(-1));
         assert!(l.step(5));
         assert_eq!(l.current(), Some("b"));
+        assert_eq!(l.spoken_item().as_deref(), Some("b, 2 of 2"));
+        assert_eq!(ListView::new("t", Vec::new()).spoken_item(), None);
     }
 }

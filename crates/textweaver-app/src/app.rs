@@ -433,6 +433,25 @@ impl App {
         self.say_at(text, Verbosity::Low, priority);
     }
 
+    /// Announces `text` after whatever is being announced, without
+    /// interrupting it: the first item of a list after the list's
+    /// introduction. The status line shows both.
+    pub fn announce_queued(&mut self, text: &str, priority: Priority) {
+        if text.is_empty() {
+            return;
+        }
+        let shown = match self.status.current.as_deref() {
+            Some(before) if !before.is_empty() => format!("{before} {text}"),
+            _ => text.to_owned(),
+        };
+        self.status.announce(&shown, priority);
+        self.announcer.announce(text, priority);
+        let reading = matches!(self.playback, Playback::Reading);
+        if self.self_voicing && (!reading || priority == Priority::Assertive) {
+            self.speech.say(text, SayMode::Queue);
+        }
+    }
+
     /// Announces at a minimum verbosity. Spoken announcements never
     /// interrupt reading unless assertive; the status line always updates.
     pub(crate) fn say_at(&mut self, text: &str, min: Verbosity, priority: Priority) {
