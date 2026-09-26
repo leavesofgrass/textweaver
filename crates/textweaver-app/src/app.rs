@@ -149,8 +149,9 @@ pub struct Session {
     /// made outside textweaver is noticed on the next open.
     pub(crate) text_stamp: Option<textweaver_store::TextStamp>,
     /// The text's revision: a number, unique in this process, that changes
-    /// whenever [`doc`](Self::doc) is replaced or edited (typing, a
-    /// [`Command::ReplaceRange`], leaving edit mode, a structure re-parse).
+    /// whenever [`doc`](Self::doc)'s text is replaced or edited (typing, a
+    /// [`Command::ReplaceRange`], entering or leaving edit mode). Markers
+    /// parsed again while editing keep the revision: the text is the same.
     /// A frontend that keeps a copy of the text, such as a GUI's
     /// [`DocWindow`](crate::DocWindow), reloads it when this changes.
     pub revision: u64,
@@ -380,6 +381,8 @@ pub struct App {
     /// The item the next list shown is focused on (the setting a value
     /// prompt was for).
     pub(crate) pending_list_focus: Option<usize>,
+    /// Say a list's focused item when the list is shown (crate::list_model).
+    pub(crate) announce_list_focus: bool,
 }
 
 impl App {
@@ -463,6 +466,7 @@ impl App {
             settings_screen: None,
             pending_prompt_text: None,
             pending_list_focus: None,
+            announce_list_focus: true,
         };
         app.apply_voice_settings();
         app.load_themes();

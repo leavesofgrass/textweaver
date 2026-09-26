@@ -346,6 +346,15 @@ impl App {
         self.prompt_model.as_ref()
     }
 
+    /// Whether the app says a list's focused item when the list is shown,
+    /// after the list's introduction ("Chapter one, 1 of 5"). On by
+    /// default. A GUI whose native list the screen reader announces when
+    /// it opens turns this off, so the item is not heard twice. Moves made
+    /// with [`Command::ListKey`] are always said.
+    pub fn set_announce_list_focus(&mut self, on: bool) {
+        self.announce_list_focus = on;
+    }
+
     /// Earlier answers to prompts for `purpose`, oldest first (at most
     /// [`PROMPT_HISTORY`]).
     pub fn prompt_history(&self, purpose: PromptPurpose) -> &[String] {
@@ -380,7 +389,9 @@ impl App {
                     if let Some(i) = keep.or(self.pending_list_focus.take()) {
                         view.selected = i.min(view.items.len().saturating_sub(1));
                     }
-                    if let Some(item) = view.spoken_item() {
+                    if self.announce_list_focus
+                        && let Some(item) = view.spoken_item()
+                    {
                         self.announce_queued(&item, Priority::Polite);
                     }
                     self.list_model = Some(view);

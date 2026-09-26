@@ -296,6 +296,31 @@ impl DocWindow {
     }
 }
 
+impl crate::App {
+    /// The highlights inside `window` (the spoken word and sentence, the
+    /// selection, search matches, notes, bookmarks, user highlights), as
+    /// control offsets in `units` from the window's start, in drawing
+    /// order: later entries win where they overlap. Empty without a
+    /// document.
+    pub fn window_highlights(
+        &self,
+        window: &DocWindow,
+        units: Units,
+    ) -> Vec<(Range<usize>, crate::HighlightKind)> {
+        let Some(s) = self.session() else {
+            return Vec::new();
+        };
+        self.highlights(window.range())
+            .into_iter()
+            .filter_map(|h| {
+                window
+                    .ctrl_range(&s.doc, h.range, units)
+                    .map(|r| (r, h.kind))
+            })
+            .collect()
+    }
+}
+
 /// True for a line holding only spaces and tabs.
 fn blank(line: &[char]) -> bool {
     line.iter().all(|c| *c == ' ' || *c == '\t' || *c == '\r')

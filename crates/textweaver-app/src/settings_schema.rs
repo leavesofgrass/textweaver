@@ -1675,13 +1675,22 @@ impl App {
             return vec![Effect::Redraw];
         };
         let now = self.setting_value(&s.path).unwrap_or(Value::Null);
+        // The list is shown again on the same item (a `Choose` from a GUI
+        // or JSON-RPC closed it).
+        let keep_focus = matches!(
+            s.kind,
+            SettingKind::Toggle | SettingKind::Table | SettingKind::Choice { open: false, .. }
+        );
+        if keep_focus {
+            self.pending_list_focus = Some(n);
+        }
         match &s.kind {
             SettingKind::Toggle => {
                 self.set_setting_command(&s.path, Value::Bool(!now.as_bool().unwrap_or(false)))
             }
             SettingKind::Choice { open: false, .. } => match s.stepped(&now, true) {
                 Some(v) => self.set_setting_command(&s.path, v),
-                None => vec![Effect::Redraw],
+                None => self.show_settings_list(),
             },
             SettingKind::Table => {
                 self.tell(&format!(
@@ -1689,7 +1698,7 @@ impl App {
                     s.label,
                     s.describe(&now)
                 ));
-                vec![Effect::Redraw]
+                self.show_settings_list()
             }
             _ => {
                 if let Some(screen) = self.settings_screen.as_mut() {

@@ -110,6 +110,19 @@ fn lists_keep_their_focus_and_say_k_of_n() {
     assert!(app.list_model().is_none());
 }
 
+/// A GUI whose native list is announced by the screen reader turns the
+/// app's own announcement of the first item off.
+#[test]
+fn the_first_item_can_be_left_to_the_screen_reader() {
+    let (mut app, said) = app("Text.");
+    app.set_announce_list_focus(false);
+    app.dispatch(Command::Action(ActionId::KeyboardHelp));
+    assert!(app.list_model().is_some());
+    assert!(!said.last().contains(" of "), "{}", said.last());
+    list_key(&mut app, ListKey::Down);
+    assert!(said.last().contains(", 2 of "), "{}", said.last());
+}
+
 #[test]
 fn escape_and_backspace_close_a_list() {
     let (mut app, said) = app("Text.");
@@ -368,6 +381,31 @@ fn the_settings_screen_changes_values_with_the_arrows() {
     assert_eq!(said.last(), "Settings closed.");
 }
 
+/// A GUI or JSON-RPC picks a setting with `Choose`: the list comes back
+/// on the same item.
+#[test]
+fn choosing_a_setting_keeps_the_list_in_place() {
+    let (mut app, _said) = app("Text.");
+    app.dispatch(Command::Action(ActionId::Settings));
+    let items = app.list_model().unwrap().items.clone();
+    let i = items
+        .iter()
+        .position(|x| x.starts_with("Line numbers: "))
+        .unwrap();
+    app.dispatch(Command::Choose(i));
+    assert!(app.settings().display.show_line_numbers);
+    let list = app.list_model().expect("shown again");
+    assert_eq!(list.selected, i);
+    assert_eq!(list.items[i], "Line numbers: on");
+    // A table says where to edit it, and the list stays.
+    let t = items
+        .iter()
+        .position(|x| x.starts_with("Pronunciations: "))
+        .unwrap();
+    app.dispatch(Command::Choose(t));
+    assert_eq!(app.list_model().unwrap().selected, t);
+}
+
 // The waker.
 
 #[test]
@@ -513,6 +551,13 @@ fn the_window_follows_reading_and_reloads_after_edits() {
     let s = app.session().unwrap();
     let mut w = DocWindow::with_budget(&s.doc, s.cursor, 20_000).for_revision(s.revision);
     assert_eq!(w.to_ctrl(&s.doc, s.cursor, Units::Utf16), Some(0));
+    // Highlights in window offsets: select the first word.
+    app.dispatch(Command::Select(CharRange::new(0, 9)));
+    let marks = app.window_highlights(&w, Units::Utf8);
+    assert!(
+        marks.contains(&(0..9, textweaver_app::HighlightKind::Selection)),
+        "{marks:?}"
+    );
     // A jump far away recentres.
     app.dispatch(Command::Action(ActionId::DocumentEnd));
     let s = app.session().unwrap();
