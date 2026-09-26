@@ -267,6 +267,8 @@ pub struct App {
     pub(crate) library_sync: textweaver_store::LibrarySync,
     /// Built-in and user themes (ADR-0020).
     pub(crate) themes: textweaver_theme::Registry,
+    /// RSVP while it is showing.
+    pub(crate) rsvp: Option<crate::reading_aids::RsvpState>,
 }
 
 impl App {
@@ -313,6 +315,7 @@ impl App {
             prompt_purpose: PromptPurpose::Find,
             library_sync,
             themes: textweaver_theme::Registry::builtin(),
+            rsvp: None,
         };
         app.apply_voice_settings();
         app.load_themes();
@@ -495,6 +498,7 @@ impl App {
             self.flush_library_sync();
         }
         self.stop_speech();
+        self.rsvp = None;
         self.mode = Mode::Browse;
         self.return_mode = Mode::Browse;
         self.last_position_save = None;
@@ -768,6 +772,7 @@ impl App {
     /// [`POSITION_SAVE_INTERVAL`](Self::POSITION_SAVE_INTERVAL) when it
     /// moved, so a crash loses little.
     pub fn tick(&mut self, now: Instant) -> Vec<Effect> {
+        let rsvp_moved = self.rsvp_tick(now);
         if self.edit.is_some() {
             self.autosave_tick(now);
             return Vec::new();
@@ -791,7 +796,11 @@ impl App {
             }
             self.last_position_save = Some((now, pos));
         }
-        Vec::new()
+        if rsvp_moved {
+            vec![Effect::Redraw]
+        } else {
+            Vec::new()
+        }
     }
 
     /// Opens a prompt: switches mode and returns the effect that shows it.
@@ -951,6 +960,9 @@ impl App {
         if self.mode.is_prompt() {
             self.leave_prompt();
         }
+        if self.rsvp_action(a, Instant::now()) {
+            return vec![Effect::Redraw];
+        }
         use ActionId as A;
         match a {
             A::Quit => return self.quit(),
@@ -973,6 +985,12 @@ impl App {
             A::SayPosition => self.say_position(),
             A::ReplaySentence => self.replay_sentence(),
             A::ReplayParagraph => self.replay_paragraph(),
+            A::RsvpToggle => self.rsvp_toggle(Instant::now()),
+            A::RsvpPlayPause => self.rsvp_play_pause(Instant::now()),
+            A::RsvpFaster => self.rsvp_rate(true),
+            A::RsvpSlower => self.rsvp_rate(false),
+            A::RsvpPositionNext => self.rsvp_position_next(),
+            A::ReadingLevel => self.say_reading_level(),
             // Navigation
             A::NextSentence => self.next_sentence(),
             A::PreviousSentence => self.previous_sentence(),
@@ -1081,6 +1099,8 @@ impl App {
             A::NextTheme => self.next_theme(),
             A::ToggleLineNumbers => self.toggle_line_numbers(),
             A::ToggleCharacterKeys => self.toggle_character_keys(),
+            A::BionicToggle => self.bionic_toggle(),
+            A::RulerCycle => self.ruler_cycle(),
             A::CommandPalette => return self.prompt(PromptPurpose::CommandPalette),
             A::KeyboardHelp => return self.keyboard_help(),
             A::Help => return self.help(),

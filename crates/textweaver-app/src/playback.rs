@@ -487,6 +487,9 @@ impl App {
         if follow {
             s.cursor = r.start;
         }
+        if self.rsvp.is_some() {
+            self.rsvp_follow(r.start);
+        }
         if self.spoken_log.len() < Self::SPOKEN_LOG_LIMIT {
             self.spoken_log.push(r);
         }

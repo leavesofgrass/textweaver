@@ -3835,7 +3835,7 @@ dependencies = [
 
 [[package]]
 name = "textweaver-aids"
-version = "0.1.0-alpha.0"
+version = "0.1.0-alpha.3"
 dependencies = [
  "proptest",
  "serde",
@@ -3858,6 +3858,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "textweaver-a11y",
+ "textweaver-aids",
  "textweaver-apple",
  "textweaver-core",
  "textweaver-eci",
@@ -4121,6 +4122,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "textweaver-aids",
  "textweaver-core",
  "thiserror 2.0.21",
  "toml",
@@ -4160,6 +4162,7 @@ dependencies = [
  "clap",
  "ratatui",
  "tempfile",
+ "textweaver-aids",
  "textweaver-app",
  "textweaver-theme",
 ]

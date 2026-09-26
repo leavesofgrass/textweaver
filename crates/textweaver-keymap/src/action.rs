@@ -179,6 +179,18 @@ actions! {
         gui ["g:Alt+;"], term ["g:Alt+;"], shared ["b:;"];
     ReplayParagraph = "replay_paragraph", Reading, "Read again from the start of the current paragraph",
         gui ["g:Ctrl+R"], term ["g:Ctrl+R"], shared ["b:r"];
+    RsvpToggle = "rsvp_toggle", Reading, "Show or hide RSVP: one word at a time, from the cursor",
+        gui ["g:Alt+Shift+R"], term ["g:Alt+Shift+R"], shared [];
+    RsvpPlayPause = "rsvp_play_pause", Reading, "Start or pause RSVP",
+        gui ["g:Alt+Shift+P"], term ["g:Alt+Shift+P"], shared [];
+    RsvpFaster = "rsvp_faster", Reading, "RSVP faster",
+        gui ["g:Alt+Shift+Up"], term ["g:Alt+Shift+Up"], shared [];
+    RsvpSlower = "rsvp_slower", Reading, "RSVP slower",
+        gui ["g:Alt+Shift+Down"], term ["g:Alt+Shift+Down"], shared [];
+    RsvpPositionNext = "rsvp_position_next", Reading, "Move the RSVP word to the next place on the screen",
+        gui ["g:Alt+Shift+O"], term ["g:Alt+Shift+O"], shared [];
+    ReadingLevel = "reading_level", Reading, "Say the reading level of the document or the selection",
+        gui ["g:Alt+Shift+G"], term ["g:Alt+Shift+G"], shared [];
 
     // Navigation
     NextSentence = "next_sentence", Navigation, "Move to the next sentence",
@@ -375,6 +387,10 @@ actions! {
     ToggleCharacterKeys = "toggle_character_keys", View,
         "Turn single-key shortcuts on or off, so dictation and typing never trigger commands",
         gui ["g:F9"], term ["g:F9"], shared [];
+    BionicToggle = "bionic_toggle", View, "Turn bionic reading on or off: the start of each word in bold",
+        gui ["g:Alt+Shift+B"], term ["g:Alt+Shift+B"], shared [];
+    RulerCycle = "ruler_cycle", View, "Cycle the reading ruler: off, current line, ruler",
+        gui ["g:Alt+Shift+U"], term ["g:Alt+Shift+U"], shared [];
     CommandPalette = "command_palette", View, "Run any command by name",
         gui ["g:F2"], term ["g:F2", "g:Alt+X"], shared ["b::"];
     KeyboardHelp = "keyboard_help", View, "List keyboard shortcuts",

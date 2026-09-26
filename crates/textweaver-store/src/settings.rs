@@ -573,6 +573,36 @@ impl Default for KeyboardSettings {
     }
 }
 
+/// `[reading_aids]`: RSVP, bionic reading, text spacing, fonts, the
+/// reading ruler, and syllable splitting (`textweaver-aids`, ADR-0022).
+/// The option types are the aids crate's own, so every frontend reads the
+/// same values.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ReadingAidsSettings {
+    /// `[reading_aids.rsvp]`: rate, pauses, context words, position.
+    pub rsvp: textweaver_aids::RsvpSettings,
+    /// Bionic reading on (off by default).
+    pub bionic: bool,
+    /// `[reading_aids.bionic_options]`: ratio and what to skip.
+    pub bionic_options: textweaver_aids::BionicOptions,
+    /// `[reading_aids.spacing]`: line height, paragraph, letter, and word
+    /// spacing in multiples of the font size (the terminal shows the
+    /// nearest whole rows and spaces).
+    pub spacing: textweaver_aids::TextSpacing,
+    /// `[reading_aids.font]`: family, size, and weight (the GUI's).
+    pub font: textweaver_aids::FontSettings,
+    /// `[reading_aids.ruler]`: off, current line, or ruler.
+    pub ruler: textweaver_aids::RulerSettings,
+    /// Syllable splitting on (off by default).
+    pub syllables: bool,
+    /// `[reading_aids.syllable_options]`.
+    pub syllable_options: textweaver_aids::SyllableOptions,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
 /// All settings, one TOML table per group.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -595,6 +625,8 @@ pub struct Settings {
     pub keyboard: KeyboardSettings,
     /// `[export]`
     pub export: ExportSettings,
+    /// `[reading_aids]`
+    pub reading_aids: ReadingAidsSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -704,6 +736,7 @@ impl Settings {
             library: lenient_section("library", table.remove("library"), &mut w),
             keyboard: lenient_section("keyboard", table.remove("keyboard"), &mut w),
             export: lenient_section("export", table.remove("export"), &mut w),
+            reading_aids: lenient_section("reading_aids", table.remove("reading_aids"), &mut w),
             extra: table,
         };
         w.extend(s.validate());
@@ -808,8 +841,15 @@ impl Settings {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-const STRUCT_TABLES: [&str; 13] = [
+const STRUCT_TABLES: [&str; 20] = [
     "keyboard",
+    "reading_aids",
+    "reading_aids.rsvp",
+    "reading_aids.bionic_options",
+    "reading_aids.spacing",
+    "reading_aids.font",
+    "reading_aids.ruler",
+    "reading_aids.syllable_options",
     "export",
     "normalization.community_lexicon",
     "speech",
@@ -1110,6 +1150,36 @@ mod tests {
         assert_eq!(
             store.paths().themes_dir(),
             store.paths().config_dir.join("themes")
+        );
+    }
+
+    #[test]
+    fn reading_aids_default_round_trip_and_stay_minimal() {
+        let s = Settings::default();
+        assert!(!s.reading_aids.bionic && !s.reading_aids.syllables);
+        assert_eq!(s.reading_aids.rsvp.wpm, 300);
+        assert_eq!(s.reading_aids.ruler.mode, textweaver_aids::RulerMode::Off);
+        let text = s.to_minimal_toml().unwrap();
+        assert!(!text.contains("reading_aids"), "{text}");
+        let (_d, store) = store();
+        write(
+            &store,
+            "[reading_aids]\nbionic = true\n[reading_aids.rsvp]\nwpm = 450\nposition = \"center\"\n[reading_aids.ruler]\nmode = \"ruler\"\n[reading_aids.spacing]\nline_height = 2.0\n",
+        );
+        let (s, err) = store.load();
+        assert!(err.is_none(), "{err:?}");
+        let a = &s.reading_aids;
+        assert!(a.bionic);
+        assert_eq!(a.rsvp.wpm, 450);
+        assert_eq!(a.rsvp.position, textweaver_aids::RsvpPosition::Center);
+        assert_eq!(a.ruler.mode, textweaver_aids::RulerMode::Ruler);
+        assert!((a.spacing.line_height - 2.0).abs() < 1e-6);
+        store.save(&s).unwrap();
+        assert_eq!(store.load().0, s);
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(
+            text.contains("wpm = 450") && !text.contains("clause_pause"),
+            "{text}"
         );
     }
 

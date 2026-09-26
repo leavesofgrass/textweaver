@@ -23,6 +23,7 @@ speechd = ["textweaver-app/speechd"]
 [dependencies]
 textweaver-app.workspace = true
 textweaver-theme.workspace = true
+textweaver-aids.workspace = true
 ratatui.workspace = true
 anyhow.workspace = true
 clap.workspace = true

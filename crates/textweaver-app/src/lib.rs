@@ -113,6 +113,7 @@ mod marks;
 mod nav;
 mod notes;
 mod playback;
+mod reading_aids;
 pub mod rpc;
 mod speech_cursor;
 pub mod testing;
@@ -136,7 +137,9 @@ pub use playback::Playback;
 pub use textweaver_store::Note;
 pub use view::{Highlight, HighlightKind, Viewport};
 
+pub use reading_aids::{RSVP_STEP, RSVP_WINDOW};
 pub use textweaver_a11y as a11y;
+pub use textweaver_aids as aids;
 pub use textweaver_apple as apple;
 pub use textweaver_core as core;
 pub use textweaver_eci as eci;
