@@ -101,10 +101,16 @@ if [ "$DOCKER" = 1 ]; then
   args=()
   [ -n "$ONLY" ] && args+=(--only "$ONLY")
   [ "$FAIL_FAST" = 1 ] && args+=(--fail-fast)
-  [ "$DRY_RUN" = 1 ] && args+=(--dry-run)
-  cmd=(docker compose -p textweaver run --rm -T -e CARGO_TARGET_DIR=/target/dev-check -e NO_COLOR dev bash scripts/dev-check.sh)
+  # The image sets CARGO_TERM_COLOR=always; ask for plain output instead.
+  color=auto
+  [ -n "${NO_COLOR:-}" ] && color=never
+  cmd=(docker compose -p textweaver run --rm -T -e CARGO_TARGET_DIR=/target/dev-check -e NO_COLOR -e "CARGO_TERM_COLOR=$color" dev bash scripts/dev-check.sh)
   say "Running the checks in the development container (docker compose run dev)."
-  say "Running: ${cmd[*]} ${args[*]:-}"
+  if [ "$DRY_RUN" = 1 ]; then
+    say "Would run: $(show_cmd "${cmd[@]}" ${args[@]+"${args[@]}"})"
+    exit 0
+  fi
+  say "Running: $(show_cmd "${cmd[@]}" ${args[@]+"${args[@]}"})"
   exec "${cmd[@]}" ${args[@]+"${args[@]}"}
 fi
 

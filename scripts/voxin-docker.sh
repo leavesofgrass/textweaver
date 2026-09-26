@@ -121,7 +121,12 @@ if [ "$DRY_RUN" = 0 ]; then
   fi
 fi
 
-compose=(docker compose -p textweaver -f compose.yaml -f compose.voxin.yaml run --rm)
+# The image sets CARGO_TERM_COLOR=always; plain output reads better, and
+# NO_COLOR turns colour off entirely.
+color=auto
+[ -n "${NO_COLOR:-}" ] && color=never
+compose=(docker compose -p textweaver -f compose.yaml -f compose.voxin.yaml run --rm
+  -e "CARGO_TERM_COLOR=$color" -e CARGO_TERM_PROGRESS_WHEN=never)
 env_target=(-e CARGO_TARGET_DIR=/target/voxin)
 
 case $ACTION in

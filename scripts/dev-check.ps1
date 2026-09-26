@@ -109,9 +109,12 @@ if ($Docker) {
     $shArgs = @()
     if ($Only.Count -gt 0) { $shArgs += @('--only', ($Only -join ',')) }
     if ($FailFast) { $shArgs += '--fail-fast' }
-    if ($DryRun) { $shArgs += '--dry-run' }
-    $cmd = @('compose', '-p', 'textweaver', 'run', '--rm', '-T', '-e', 'CARGO_TARGET_DIR=/target/dev-check', '-e', 'NO_COLOR', 'dev', 'bash', 'scripts/dev-check.sh') + $shArgs
+    # The image sets CARGO_TERM_COLOR=always; ask for plain output instead.
+    $color = 'auto'
+    if ($env:NO_COLOR) { $color = 'never' }
+    $cmd = @('compose', '-p', 'textweaver', 'run', '--rm', '-T', '-e', 'CARGO_TARGET_DIR=/target/dev-check', '-e', 'NO_COLOR', '-e', "CARGO_TERM_COLOR=$color", 'dev', 'bash', 'scripts/dev-check.sh') + $shArgs
     Write-Line 'Running the checks in the development container (docker compose run dev).'
+    if ($DryRun) { Write-Line "Would run: docker $($cmd -join ' ')"; exit 0 }
     Write-Line "Running: docker $($cmd -join ' ')"
     & docker @cmd
     exit $LASTEXITCODE
