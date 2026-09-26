@@ -16,9 +16,13 @@
 //! walking the canonical chars through the source, where every canonical
 //! char appears in order and the markup is what gets skipped. That is local
 //! work, proportional to one block, where the word alignment it replaces
-//! ([`crate::align`]) allocated for every word of both texts: entering edit
-//! mode on 10 MB went from about 280 ms and 213 MB of peak heap to a
-//! fraction of that (`cargo xtask bench`).
+//! ([`crate::align`]) allocated for every word of both texts. Files of
+//! 256 KB and more are parsed in the background when they open, and while
+//! typing in them the markers are dropped rather than shifted on every
+//! keystroke. With `cargo xtask bench` on a 10 MB file, entering edit mode
+//! went from 276 ms and 213 MB of peak heap to 52 ms and 121 MB (on a
+//! busier machine), and typing stays at a few hundredths of a
+//! millisecond per key.
 //!
 //! Differences from the canonical markers, all deliberate:
 //!
