@@ -29,6 +29,10 @@ textweaver-eci.workspace = true
 textweaver-sapi.workspace = true
 textweaver-dectalk.workspace = true
 textweaver-apple.workspace = true
+# Piper neural voices in-process on RTen (ADR-0023): phonemes from an
+# installed libespeak-ng, else the built-in pure-Rust port; downloads
+# checked by hash.
+textweaver-piper = { workspace = true, features = ["playback", "espeak-lib", "espeak-rs", "download"] }
 textweaver-theme.workspace = true
 textweaver-aids.workspace = true
 textweaver-math.workspace = true

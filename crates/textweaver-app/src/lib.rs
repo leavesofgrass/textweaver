@@ -171,6 +171,7 @@ pub mod text_util;
 mod themes;
 mod view;
 mod voice;
+pub mod voice_manager;
 mod writer;
 mod writes;
 
@@ -182,7 +183,7 @@ pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use authoring::osc52;
 pub use authoring_state::{ClientFactory, Launcher, open_with_system};
 pub use backends::{
-    CODE_FACTORY_LIBRARY, apple_preference, eci_config, sapi_config, service_config,
+    CODE_FACTORY_LIBRARY, apple_preference, eci_config, piper_config, sapi_config, service_config,
     speech_registry, speech_registry_for,
 };
 pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpose};
@@ -208,6 +209,7 @@ pub use textweaver_eci as eci;
 pub use textweaver_editor as editor;
 pub use textweaver_formats as formats;
 pub use textweaver_keymap as keymap;
+pub use textweaver_piper as piper;
 pub use textweaver_speech as speech;
 pub use textweaver_store as store;
 pub use textweaver_text as text;
