@@ -114,8 +114,14 @@ if ($kind -eq 'source') {
             Write-Line "Would run: git -C $src pull --ff-only"
         } else {
             Write-Line "Running: git -C $src pull --ff-only"
-            & git -C $src pull --ff-only
-            if ($LASTEXITCODE -ne 0) {
+            # Piped, so git prints plain lines instead of a progress meter.
+            # Windows PowerShell treats git's messages on stderr as errors
+            # under 'Stop', so relax it for this command.
+            $ErrorActionPreference = 'Continue'
+            & git -C $src pull --ff-only 2>&1 | ForEach-Object { Write-Line "$_" }
+            $code = $LASTEXITCODE
+            $ErrorActionPreference = 'Stop'
+            if ($code -ne 0) {
                 Write-Line "Error: git pull could not fast-forward $src. It may have local changes; look with: git -C $src status"
                 exit 1
             }

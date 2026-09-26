@@ -178,7 +178,8 @@ $ShortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'textweaver
 $Manifest = Join-Path $InstallDir 'install-manifest.txt'
 $RepoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $env:CARGO_TERM_PROGRESS_WHEN = 'never'
-if ($env:NO_COLOR) { $env:CARGO_TERM_COLOR = 'never' }
+$env:RUSTUP_TERM_PROGRESS_WHEN = 'never'
+if ($env:NO_COLOR) { $env:CARGO_TERM_COLOR = 'never'; $env:RUSTUP_TERM_COLOR = 'never' }
 
 # ---------------------------------------------------------------- PATH --
 

@@ -159,7 +159,8 @@ case $KIND in
     is_checkout "$SRC" || die "The source folder $SRC is missing or is not a textweaver checkout. Run the installer again."
     if [ -d "$SRC/.git" ] || [ -f "$SRC/.git" ]; then
       say "Pulling the newest code into $SRC."
-      if ! run git -C "$SRC" pull --ff-only; then
+      # Piped, so git prints plain lines instead of a progress meter.
+      if ! run git -C "$SRC" pull --ff-only 2>&1 | cat; then
         die "git pull could not fast-forward $SRC. It may have local changes; look with: git -C $SRC status"
       fi
     else

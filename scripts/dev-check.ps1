@@ -102,7 +102,8 @@ if ($Help) {
 $Root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 Set-Location -LiteralPath $Root
 $env:CARGO_TERM_PROGRESS_WHEN = 'never'
-if ($env:NO_COLOR) { $env:CARGO_TERM_COLOR = 'never' }
+$env:RUSTUP_TERM_PROGRESS_WHEN = 'never'
+if ($env:NO_COLOR) { $env:CARGO_TERM_COLOR = 'never'; $env:RUSTUP_TERM_COLOR = 'never' }
 
 if ($Docker) {
     $shArgs = @()

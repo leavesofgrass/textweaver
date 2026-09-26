@@ -182,9 +182,9 @@ DOCDIR="$PREFIX/share/doc/textweaver"
 DATADIR="$PREFIX/share/textweaver"
 MANIFEST="$DATADIR/install-manifest.txt"
 
-export CARGO_TERM_PROGRESS_WHEN=never
+export CARGO_TERM_PROGRESS_WHEN=never RUSTUP_TERM_PROGRESS_WHEN=never
 if [ -n "${NO_COLOR:-}" ]; then
-  export CARGO_TERM_COLOR=never
+  export CARGO_TERM_COLOR=never RUSTUP_TERM_COLOR=never
 fi
 
 SCRIPT_DIR=""
@@ -318,7 +318,7 @@ build_from_source() {
     say "No textweaver source was found, so the script can clone it into $SRC."
     ask "Clone https://github.com/$REPO now?" || die "The source is needed. Clone it yourself, then use --source."
     run mkdir -p "$(dirname "$SRC")"
-    run git clone --depth 1 "https://github.com/$REPO.git" "$SRC"
+    run_plain git clone --depth 1 "https://github.com/$REPO.git" "$SRC"
   fi
 
   if ! have cargo && [ -x "$HOME/.cargo/bin/cargo" ]; then

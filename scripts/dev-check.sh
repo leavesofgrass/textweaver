@@ -90,9 +90,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || die "Cannot enter $ROOT."
 [ -f Cargo.toml ] || die "$ROOT is not the textweaver checkout."
 
-export CARGO_TERM_PROGRESS_WHEN=never
+export CARGO_TERM_PROGRESS_WHEN=never RUSTUP_TERM_PROGRESS_WHEN=never
 if [ -n "${NO_COLOR:-}" ]; then
-  export CARGO_TERM_COLOR=never
+  export CARGO_TERM_COLOR=never RUSTUP_TERM_COLOR=never
 fi
 
 if [ "$DOCKER" = 1 ]; then

@@ -213,9 +213,9 @@ DATADIR="$PREFIX/share/textweaver"
 MANIFEST="$DATADIR/install-manifest.txt"
 
 # The build honours NO_COLOR and never draws a progress bar.
-export CARGO_TERM_PROGRESS_WHEN=never
+export CARGO_TERM_PROGRESS_WHEN=never RUSTUP_TERM_PROGRESS_WHEN=never
 if [ -n "${NO_COLOR:-}" ]; then
-  export CARGO_TERM_COLOR=never
+  export CARGO_TERM_COLOR=never RUSTUP_TERM_COLOR=never
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -491,7 +491,7 @@ find_source() {
   ask "Clone the repository now?" || die "The source is needed to build. Clone it yourself, then use --source."
   have git || [ "$DRY_RUN" = 1 ] || die "git is not installed. Install git, then run this script again."
   run mkdir -p "$(dirname "$SRC")"
-  run git clone --depth 1 "$REPO_URL" "$SRC"
+  run_plain git clone --depth 1 "$REPO_URL" "$SRC"
 }
 
 # ----------------------------------------------------------------- rust --
