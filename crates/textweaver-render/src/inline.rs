@@ -26,6 +26,9 @@ pub struct Inline {
     pub citations: bool,
     /// Pandoc bracketed spans.
     pub spans: bool,
+    /// Pandoc `H~2~O` and `2^10^` inside words (engines only handle them at
+    /// word boundaries).
+    pub subsup: bool,
 }
 
 impl Inline {
@@ -36,6 +39,7 @@ impl Inline {
             || self.highlights
             || self.citations
             || self.spans
+            || self.subsup
     }
 }
 
@@ -83,6 +87,8 @@ pub fn transform(text: &str, on: Inline, ctx: &mut Ctx<'_>) -> Option<Vec<Seg>> 
             b'#' if on.tags && boundary_before(text, i) => tag(&text[i..], ctx),
             b'=' if on.highlights && text[i..].starts_with("==") => highlight(&text[i..]),
             b'@' if on.citations && boundary_before(text, i) => bare_citation(&text[i..]),
+            b'~' if on.subsup && !text[i..].starts_with("~~") => sub_sup(&text[i..], '~'),
+            b'^' if on.subsup => sub_sup(&text[i..], '^'),
             b'h' | b'w' | b'H' | b'W' if on.autolinks && autolink_boundary(text, i) => {
                 autolink(&text[i..])
             }
@@ -118,6 +124,7 @@ fn has_trigger(text: &str, on: Inline) -> bool {
         b'=' => on.highlights,
         b'@' => on.citations,
         b':' | b'w' | b'W' => on.autolinks,
+        b'~' | b'^' => on.subsup,
         _ => false,
     })
 }
@@ -379,6 +386,17 @@ fn tag(s: &str, ctx: &mut Ctx<'_>) -> Option<(usize, String)> {
     ))
 }
 
+/// `~sub~` or `^sup^`: no whitespace inside, not empty.
+fn sub_sup(s: &str, delim: char) -> Option<(usize, String)> {
+    let end = s[1..].find(delim)? + 1;
+    let inner = &s[1..end];
+    if inner.is_empty() || inner.chars().any(char::is_whitespace) {
+        return None;
+    }
+    let tag = if delim == '~' { "sub" } else { "sup" };
+    Some((end + 1, format!("<{tag}>{}</{tag}>", escape_html(inner))))
+}
+
 fn highlight(s: &str) -> Option<(usize, String)> {
     let end = s[2..].find("==")? + 2;
     let inner = &s[2..end];
@@ -522,6 +540,7 @@ mod tests {
         highlights: true,
         citations: false,
         spans: false,
+        subsup: false,
     };
     const PANDOC: Inline = Inline {
         autolinks: false,
@@ -530,6 +549,7 @@ mod tests {
         highlights: false,
         citations: true,
         spans: true,
+        subsup: true,
     };
 
     #[test]
@@ -592,6 +612,7 @@ mod tests {
             run("[small caps]{.smallcaps lang=fr}", PANDOC),
             "<span class=\"smallcaps\" lang=\"fr\">small caps</span>"
         );
+        assert_eq!(run("H~2~O, 2^10^, a ~ b", PANDOC), "H<sub>2</sub>O, 2<sup>10</sup>, a ~ b");
     }
 
     #[test]

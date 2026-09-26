@@ -51,6 +51,8 @@ pub fn to_html(
         code_depth: 0,
         para_html: Vec::new(),
     };
+    // The endnotes heading's id; a heading with the same text gets a suffix.
+    pass.slugger.reserve("footnote-label");
     pass.run(events);
     let mut html = String::with_capacity(pass.out.len() * 16);
     let out = std::mem::take(&mut pass.out);
@@ -78,6 +80,7 @@ fn inline_for(opts: &RenderOptions) -> Inline {
         Flavor::Pandoc => Inline {
             citations: true,
             spans: true,
+            subsup: true,
             ..Inline::default()
         },
     }
