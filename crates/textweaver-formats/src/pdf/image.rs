@@ -28,6 +28,10 @@ impl Loader for ImageLoader {
         &["png", "jpg", "jpeg"]
     }
 
+    fn scan_extensions(&self) -> &'static [&'static str] {
+        &[]
+    }
+
     fn priority(&self) -> i32 {
         crate::NATIVE_PRIORITY
     }

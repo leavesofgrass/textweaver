@@ -28,7 +28,7 @@ bash scripts/install-linux.sh
 textweaver has two programs.
 
 - `textweaver FILE` is a self-voicing terminal reader.
-  - It opens text, Markdown, HTML, EPUB, Word (DOCX), and PDF. Other formats, such as OpenDocument or RTF, can be converted to Markdown first with `tw convert`, which uses Pandoc for them when it is installed.
+  - It opens text, Markdown, HTML, EPUB, Word (DOCX), PDF, DAISY books, PowerPoint slides, spreadsheets, and archives. Scanned PDFs and pictures are read by recognizing their text (OCR). Other formats, such as OpenDocument or RTF, can be converted to Markdown first with `tw convert`, which uses Pandoc for them when it is installed.
   - The highlight follows the spoken word exactly, even when numbers, abbreviations, or math are read in words.
   - You move by character, word, sentence, line, paragraph, heading, table, list, list item, link, and chapter.
   - It has Speech Cursor mode, bookmarks, notes and highlights, find, go to, and navigation history.
@@ -43,6 +43,7 @@ textweaver has two programs.
   - It is designed to work alongside a screen reader such as JAWS, NVDA, VoiceOver, or Orca. Three modes set who speaks: self-voicing (textweaver speaks everything), hybrid (textweaver reads documents aloud and your screen reader speaks the rest), and screen reader (textweaver is silent). Alt+Shift+A switches between them. [Using textweaver with a screen reader](docs/screen-readers.md) explains them and what has been tested so far.
 - `tw` is a command-line tool.
   - `tw text`, `tw info`, and `tw search` extract, describe, and search a document.
+  - `tw ocr` downloads the text recognition models (after asking) and reads scanned PDFs and pictures. Scans also open directly in `textweaver` and `tw text`.
   - `tw convert` converts files and whole folders to Markdown, HTML, text, EPUB, Word, braille (BRF), and tagged PDF. It uses every processor core, and it can watch a folder. With Pandoc installed, it also reads formats textweaver has no reader for.
   - `tw speak` and `tw export-audio` speak a document, or write it to WAV, MP3, or an M4B audiobook with chapters and subtitles. Both use your settings.
   - `tw voices`, `tw backends`, and `tw eloquence` list voices and speech engines.

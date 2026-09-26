@@ -54,6 +54,10 @@ impl Loader for DaisyLoader {
         &["opf", "xml", "dtbook"]
     }
 
+    fn scan_extensions(&self) -> &'static [&'static str] {
+        &["opf", "dtbook"]
+    }
+
     fn priority(&self) -> i32 {
         crate::NATIVE_PRIORITY
     }

@@ -341,6 +341,15 @@ pub trait Loader: Send + Sync {
     fn id(&self) -> &'static str;
     /// Lowercase extensions this loader claims, without dots.
     fn extensions(&self) -> &'static [&'static str];
+    /// The extensions a folder scan (the library, `tw convert` on a
+    /// folder, a hot folder) treats as documents: by default all of
+    /// [`extensions`](Self::extensions). Loaders for files that are usually
+    /// not documents (pictures, archives, any XML) claim fewer, so a folder
+    /// of photos or zips does not fill the library; they still open when
+    /// asked for by name.
+    fn scan_extensions(&self) -> &'static [&'static str] {
+        self.extensions()
+    }
     /// False when a runtime requirement (a subprocess, a library) is missing.
     fn available(&self) -> bool {
         true
@@ -413,13 +422,16 @@ impl Registry {
         self.loaders.iter().map(|l| l.id()).collect()
     }
 
-    /// Every extension some available loader claims, sorted.
+    /// Every extension a folder scan treats as a document, sorted: those
+    /// some available loader lists in its
+    /// [`scan_extensions`](Loader::scan_extensions). Pictures, archives,
+    /// and XML other than DAISY are left out, though they open by name.
     pub fn extensions(&self) -> Vec<&'static str> {
         let mut v: Vec<&'static str> = self
             .loaders
             .iter()
             .filter(|l| l.available())
-            .flat_map(|l| l.extensions().iter().copied())
+            .flat_map(|l| l.scan_extensions().iter().copied())
             .collect();
         v.sort_unstable();
         v.dedup();
@@ -634,6 +646,12 @@ mod tests {
         };
         assert_eq!(r.resolve(&unknown).id(), "text");
         assert!(r.extensions().contains(&"html"));
+        // Pictures, archives, and plain XML open by name but are not
+        // documents to a folder scan.
+        for not in ["png", "zip", "xml"] {
+            assert!(!r.extensions().contains(&not), "{not}");
+        }
+        assert!(r.extensions().contains(&"opf"));
         let mut ids = vec!["text", "markdown", "html", "epub", "docx"];
         if cfg!(feature = "pdf") {
             ids.push("pdf");
