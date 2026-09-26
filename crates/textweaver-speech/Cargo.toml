@@ -8,11 +8,21 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 publish.workspace = true
+autobins = false
+
+# A fake Omnivox server for the omnivox integration tests (records the
+# protocol lines it receives). Built only with the `omnivox` feature.
+[[bin]]
+name = "tw-fake-omnivox"
+path = "src/bin/fake_omnivox.rs"
+required-features = ["omnivox"]
+test = false
+doc = false
 
 [features]
 default = []
 # In-process espeak-ng (links libespeak-ng; see docker/Dockerfile).
-espeak = []
+espeak = ["dep:espeakng-sys"]
 # Omnivox subprocess backend (Emacspeak speech-server protocol on stdin).
 omnivox = []
 # Wave 2: speech-dispatcher with index marks.
@@ -26,9 +36,12 @@ bitflags.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 log.workspace = true
+regex.workspace = true
+espeakng-sys = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

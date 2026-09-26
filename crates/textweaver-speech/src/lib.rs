@@ -1,20 +1,23 @@
-//! Speech for textweaver (ADR-0003, ADR-0004).
+//! Speech for textweaver (ADR-0003, ADR-0004, ADR-0005).
 //!
 //! - [`SpeechBackend`]: one engine. Not `Send`: engines such as AVSpeech,
 //!   WinRT, and espeak-ng have thread affinity, so the service builds the
 //!   backend on its own thread from a `Send` [`BackendFactory`].
 //! - [`SpeechService`]: owns the speech thread, the queue, the generation
 //!   counter, and the playback clock; turns engine events into
-//!   [`SpeechStatus`] updates with document positions.
+//!   [`SpeechStatus`] updates with document positions. Its logic is the
+//!   thread-free [`ServiceCore`], which tests drive with a fake clock.
 //! - [`normalize`]: the transform chain that turns source text into spoken
 //!   text while composing [`OffsetMap`](textweaver_core::OffsetMap)s.
-//! - [`pacing`]: highlight timing when an engine has no word events.
+//! - [`pacing`]: highlight timing when an engine has no word events, and
+//!   the clocks.
+//! - [`queue`]: generations, lookahead, and cancellation by id.
+//! - [`backends`]: `null`, `recording` (a test double, always compiled),
+//!   `espeak` (feature `espeak`), `omnivox` (feature `omnivox`), and the
+//!   extensible [`BackendRegistry`] with Star's selection rules.
 //!
 //! This crate depends only on `textweaver-core`: it takes
 //! [`Utterance`](textweaver_core::Utterance)s, never documents.
-//!
-//! Owner: Agent B. Phase 0 provides the contract, a null backend, and a
-//! minimal service that reports sentence-level positions.
 
 pub mod backend;
 pub mod backends;
@@ -27,6 +30,12 @@ pub use backend::{
     BackendFactory, BackendId, BackendInfo, Caps, EventSink, RawEvent, SpeechBackend, SpeechError,
     Voice, VoiceParams,
 };
-pub use service::{Earcon, SayMode, ServiceConfig, SpeechService, SpeechStatus};
+pub use backends::{
+    BackendRegistry, NullBackend, RecordingBackend, RecordingHandle, RecordingMode, Selection,
+    resolve_preferred_voice,
+};
+pub use normalize::{NormalizeConfig, Pipeline, TableMode};
+pub use pacing::{Clock, FakeClock, PacingConfig, SystemClock};
+pub use service::{Earcon, SayMode, ServiceConfig, ServiceCore, SpeechService, SpeechStatus};
 
 pub use textweaver_core as core;
