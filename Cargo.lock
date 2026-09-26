@@ -2723,7 +2723,10 @@ dependencies = [
 name = "textweaver-math"
 version = "0.1.0-alpha.0"
 dependencies = [
+ "insta",
+ "proptest",
  "serde",
+ "serde_json",
  "textweaver-core",
  "thiserror 2.0.21",
 ]
