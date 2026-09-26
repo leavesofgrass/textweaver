@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Implemented. DECtalk (ADR-0021) is the third engine on this protocol, still at version 1. A crashed or stalled host is restarted, and the speech service resumes from the last word heard and says "Speech restarted" (Agent D4).
 
 ## Context
 
@@ -70,3 +71,11 @@ Both backends own playback, so both declare `PLAYBACK_EVENTS`: their word events
 - The engine crates' public APIs are unchanged: `audio`, `wav`, and the framing items in `protocol` are re-exported from this crate.
 - The fake-host suites of both engines now exercise the shared client, and the shared crate has its own tests: framing, the playback queue against a hand-driven clock, and a test binary that runs itself as a toy host to check spawning, crashes, hangs, bad frames, version refusal, and shutdown.
 - Changing a frame now means bumping one version and rebuilding every host (`cargo xtask hosts`).
+
+## See also
+
+- [Speech engines and voices](../speech.md): the engines that run in hosts.
+- [Installing textweaver](../install.md#windows): the hosts must stay next to the programs.
+- [Speech pipeline, step by step](../site/speech-pipeline.html): where the host sits in the path from text to speech.
+- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Documentation index](../README.md)

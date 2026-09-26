@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Implemented as decided. Rate, pitch, volume, and the speed presets are the `[speech]` settings `rate`, `pitch`, `volume`, and `speed_presets`; each engine crate documents its own mapping. DECtalk takes words per minute natively, from 75 to 600 (ADR-0021).
 
 ## Context
 
@@ -20,3 +21,10 @@ Every engine has its own scale: espeak-ng takes words per minute, SAPI and WinRT
 
 - Settings files are engine-independent; switching backends keeps the user's speed.
 - Backends own their mapping tables and document them in their module docs.
+
+## See also
+
+- [Speech engines and voices](../speech.md): changing rate, pitch, and volume.
+- [Settings](../settings.md#speech): the `[speech]` settings.
+- [Keyboard reference](../keyboard.md#voice): the voice keys.
+- [Documentation index](../README.md)

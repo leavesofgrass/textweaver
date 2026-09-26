@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): `tw cite` is wired into the CLI as described. The editor has no citation picker yet; the `insert` API is ready for it. hayagriva's `csl-json` feature is still not enabled.
 
 ## Context
 
@@ -78,3 +79,9 @@ Kept on purpose: none of Star's quirks.
   - Chicago author-date prints a web page's site name after the author; IEEE prints a stray period after a series title. Both come from the styles as hayagriva applies them.
 - Enabling hayagriva's `csl-json` feature (and citationberg's `json`) would let CSL-JSON items be formatted directly, without the conversion; requested at integration.
 - BibTeX export drops translators (BibTeX has no field for them; BibLaTeX export keeps them).
+
+## See also
+
+- [Citations](../citations.md): the user guide to `tw cite`.
+- [Converting documents](../converting.md#markdown-flavors): Pandoc citations in HTML output.
+- [Documentation index](../README.md)

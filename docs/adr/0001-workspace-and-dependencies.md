@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): The workspace now has 27 crates and `xtask`; [the architecture guide](../architecture.md) maps them. Two dependency rules changed: `textweaver-speech` also depends on `textweaver-math`, because math is spoken inside the normalization pipeline (ADR-0018), and `textweaver-store` depends on `textweaver-aids` (and through it on `textweaver-text` and `textweaver-fonts`) for the `[reading_aids]` settings types. Speech still never receives a `Document`. `espeakng-sys` was replaced by hand-written declarations, so the espeak feature needs no clang. `live-region` is used by the GUI spike (ADR-0014), not yet by `textweaver-a11y`. `ureq` serves citation lookups (ADR-0019) and `rayon` bulk conversion (ADR-0016). `pdf-extract` and `pdfium-render` are still listed in the workspace table but no crate uses them (ADR-0010).
 
 ## Context
 
@@ -42,3 +43,10 @@ all of the above ← app ← tui, cli
 - Each agent can run `cargo test -p <crate>` without the other agents' work.
 - Moving a type into `core` is the standard fix for a would-be cycle; it is cheap but centralizes change requests on the orchestrator.
 - Features that link system libraries (espeak-ng) are exercised only on Linux in CI and Docker; Windows and macOS rely on native backends from wave 3.
+
+## See also
+
+- [CONTRIBUTING.md](../../CONTRIBUTING.md): how to build, check, and add a dependency.
+- [Docker development container](../docker.md): where Linux-only features are built and tested.
+- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Documentation index](../README.md)

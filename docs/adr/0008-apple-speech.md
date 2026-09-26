@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Integrated in 0.1.0-alpha.2. As built, `nsspeech` drives Apple's classic engine through its C API (the Speech Synthesis Manager), because `NSSpeechSynthesizer` delivers its callbacks only on the main run loop; `avspeech`'s callbacks arrive through the main dispatch queue, so it works only while the application pumps the main run loop, which the terminal reader and `tw serve` do. The `[speech.apple] backend` setting chooses between them. Neither has been tested with VoiceOver on a real Mac.
 
 ## Context
 
@@ -28,3 +29,10 @@ Probes on GitHub's macOS 14 and 15 runners (`tools/avspeech-spike/`) found:
 
 - Speech tests run on the CI macOS runners, which have the Eloquence voices and can synthesize (no audio is played in tests).
 - The VoiceOver experience of the terminal UI in Terminal.app needs testing on a real Mac.
+
+## See also
+
+- [Speech engines and voices](../speech.md): choosing `nsspeech` or `avspeech`.
+- [Getting ETI-Eloquence](../eloquence.md#mac): Eloquence voices on macOS.
+- [Using textweaver with a screen reader](../screen-readers.md): VoiceOver notes.
+- [Documentation index](../README.md)

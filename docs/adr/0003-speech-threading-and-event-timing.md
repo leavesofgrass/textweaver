@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Later work kept these rules and added to them. Statuses carry a reading generation, and the app follows the `ReadingGeneration` that each `read` returns, so a status from an earlier reading can never move the highlight (Agents B2 and D3). Continuous reading is planned in windows of about ten minutes, not to the end of the document (Agent D4). Engines that own playback declare `PLAYBACK_EVENTS`, so their word events fire on arrival (ADR-0012). An engine that keeps failing stops the reading after three failures in a row; a crashed or stalled engine host is restarted and reading goes on from the last word heard. The Apple `avspeech` backend needs the application's main run loop, which the terminal reader and `tw serve` pump (ADR-0008).
 
 ## Context
 
@@ -45,3 +46,11 @@ Star's playback layer (`star/tts/manager/_playback.py`, inventoried in `docs/sta
 - One thread per service; frontends poll or select on a channel. No async runtime.
 - Tests use the `recording` backend and a fake clock to check ordering, cancellation, pause edge cases, and pacing without audio.
 - A backend that blocks in `speak` until audio ends violates the contract: it must move playback to a helper thread and report through `poll`.
+
+## See also
+
+- [Speech engines and voices](../speech.md): the engines and how highlighting works with each.
+- [Speech pipeline, step by step](../site/speech-pipeline.html): an interactive walk from a key press to a highlighted word.
+- [ADR-0012: The engine host](0012-engine-host.md): the playback client for out-of-process engines.
+- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Documentation index](../README.md)

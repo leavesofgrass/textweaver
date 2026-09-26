@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Implemented for audio files. Microphone dictation is still not available: `cpal` is not in the workspace yet.
 
 ## Context
 
@@ -26,3 +27,9 @@ textweaver is a Rust program. Linking a speech recognizer is heavy (whisper.cpp 
 - Start-up cost is the program's: on this machine openai-whisper with the `tiny` model took 8.3 s for 5 s of synthesized speech with a warm cache, and 127 s on the first cold run (Python and PyTorch loading). whisper.cpp should start in well under a second; that is to be measured when it is installed. Partial events arrive per segment, not per word, so live feedback during a long file is coarse.
 - Tests use a fake Whisper program (`tw-fake-whisper`) that speaks each engine's command line; a real-program test is ignored unless `TEXTWEAVER_WHISPER_REAL=1` (it passed here against openai-whisper `tiny`).
 - True streaming dictation (words appearing while the student speaks) would need a streaming recognizer or chunked re-transcription; it is left for a later wave.
+
+## See also
+
+- [Dictation](../dictation.md): the user guide to `tw dictate`.
+- [Writing and editing](../editing.md): writing with speech feedback.
+- [Documentation index](../README.md)

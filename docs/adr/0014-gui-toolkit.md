@@ -2,6 +2,7 @@
 
 - Status: proposed (Wave 2 feasibility spike; decided at Integration 2)
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): The spike is merged on `main` and stays out of `default-members` and CI's workspace commands. Agent W added the View, Fonts dialog. Of the contract requests, `Command::SetCursor` now exists in the app. The keymap still binds the caret keys in the Browse layer for both frontends; the GUI passes them to the native control itself (`crates/textweaver-gui/src/keys.rs`). Self-voicing is off by default in the GUI and on with `--self-voicing`. The Wave 3 plan in this ADR has not started.
 
 ## Context
 
@@ -108,3 +109,10 @@ Adopt wxDragon with `live-region` for the Wave 3 GUI, with these rules:
 - One toolkit gives native controls on Windows, macOS, and Linux; screen readers read them without custom accessibility code.
 - Contributors on Windows need Visual Studio with the C++ and CMake components and libclang; the build script finds them. The first build takes minutes; CI caches it.
 - The GUI crate stays out of `default-members` and out of `ci.yml`'s workspace commands until Wave 3 promotes it.
+
+## See also
+
+- [Using textweaver with a screen reader](../screen-readers.md): the terminal reader with NVDA and JAWS today.
+- [Reading aids](../reading-aids.md#the-fonts-dialog-in-the-gui): the Fonts dialog.
+- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Documentation index](../README.md)

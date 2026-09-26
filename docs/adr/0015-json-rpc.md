@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Implemented as described. The serve loop pumps the macOS main run loop for `avspeech`, as the terminal reader does.
 
 ## Context
 
@@ -61,3 +62,10 @@ The app core (`textweaver-app`) is already frontend-independent: frontends send 
 - Char offsets are the one position unit; clients that address UTF-16 (VS Code, LSP) convert, as the GUI does with `DisplayIndex`.
 - Edit mode is reachable (`action` with `toggle_edit_mode`, `save`, ...), but typing over RPC is not in version 1: editors edit their own buffers. A later version may add `insert`.
 - On macOS, the serve loop must pump the main run loop for AVSpeechSynthesizer (ADR-0008), as the TUI loop does after the Apple integration.
+
+## See also
+
+- [JSON-RPC](../json-rpc.md): the user guide to `tw serve --stdio`, with a worked session.
+- [Keyboard reference](../keyboard.md): the action ids the `action` and `navigate` methods take.
+- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Documentation index](../README.md)

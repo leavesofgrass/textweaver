@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Implemented. PDF output no longer needs an installed font: fonts are bundled (ADR-0017, amendment), so the one-sentence "no font" stop happens only in a build without the `bundled-fonts` feature. The Pandoc fallback is `tw convert`'s own; the reader does not use Pandoc.
 
 ## Context
 
@@ -73,3 +74,10 @@ Hot-path changes from profiling: text runs are merged in one linear pass and onl
 - Embeds inline a note's text only when the embed stands alone in its paragraph and the note is found under the input folder; otherwise they are links.
 - The `tw convert` command depends on `textweaver-convert` and `textweaver-render`; the CLI's manifest gains both.
 - EPUB, DOCX, BRF, and PDF output are available through `Writers::builtin()` (Agent V). The writers read math as its LaTeX source text; MathML in EPUB and DOCX is future work (ADR-0017).
+
+## See also
+
+- [Converting documents](../converting.md): the user guide to `tw convert`.
+- [Math](../math.md): math in HTML output.
+- [scripts/README.md](../../scripts/README.md#convert-foldersh-and-convert-folderps1): the convert-folder helpers.
+- [Documentation index](../README.md)

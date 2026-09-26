@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Integrated. The backend is registered by the app, and `[speech.dectalk] library` is read from the settings. It has still not been tested against a licensed DECtalk.
 
 ## Context
 
@@ -35,3 +36,10 @@ Jon asked for DECtalk "like we did in star". textweaver already runs two proprie
 - Tests never touch DECtalk. The backend's suite runs the real host with an in-host fake engine. The FFI code runs against a stand-in library (`examples/fake_dectalk.rs`, a `cdylib` that exports the `TextToSpeech*` functions and speaks a square wave), covering start-up fallbacks, the buffer callback across many buffers, both sample-numbering conventions, and the text DECtalk receives; the same suite passed with a 32-bit host and 32-bit `cdecl` and `stdcall` builds of the stand-in (2026-09-25). Live tests are `#[ignore]`d unless `TEXTWEAVER_DECTALK=1`.
 - Not yet verified against a licensed DECtalk: the structure layouts, the callback's signature and thread, and the index sample numbering follow DECtalk's published API reference; no licensed DECtalk is installed on the development machine. The live tests are the check when one is.
 - Export (ADR-0011) gets exact word cues from DECtalk through `synthesize_utterance`.
+
+## See also
+
+- [Using DECtalk](../dectalk.md): the user guide.
+- [Speech engines and voices](../speech.md): how DECtalk is chosen.
+- [ADR-0012: The engine host](0012-engine-host.md): the shared host protocol.
+- [Documentation index](../README.md)

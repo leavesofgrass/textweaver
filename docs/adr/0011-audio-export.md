@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Implemented. DECtalk also gives exact word timings (ADR-0021). `tw export-audio` now reads the voice, rate, pitch, volume, preferred engine, table and footnote modes, and the `[export]` settings from `settings.toml` (Agent D4).
 
 ## Context
 
@@ -25,3 +26,9 @@ Three problems follow. Apportioning one duration over a whole document drifts: a
 - Engines that cannot write files (Omnivox's write-only protocol, speech-dispatcher) cannot export; `tw backends` lists which can ("audio files").
 - Measured on 2026-09-25 on Windows with Microsoft David through SAPI: a two-heading sample exported to M4B, and `ffprobe -show_chapters` listed both chapters at the times of their headings.
 - Not done here: cover art (Star read it from document metadata), OGG and MP4 targets, and video export with burned-in subtitles (Star's `video.subtitles = "burn"`, never implemented there either).
+
+## See also
+
+- [Audio export](../audio-export.md): the user guide to `tw export-audio`.
+- [Settings](../settings.md#export): the `[export]` settings.
+- [Documentation index](../README.md)
