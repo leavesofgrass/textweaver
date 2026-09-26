@@ -41,6 +41,7 @@ use textweaver_speech::{
 
 use crate::audio::{Feed, Player};
 use crate::calibration::{self, RatePoint};
+use crate::host::DictLoad;
 use crate::language;
 use crate::protocol::{self, EndStatus, PresetInfo, Reply, Request};
 use crate::voices::{self, VoiceParam};
@@ -77,7 +78,7 @@ struct Host {
 }
 
 impl Host {
-    fn spawn(path: &Path, config: &EciConfig) -> Result<(Host, ReadyInfo), String> {
+    fn spawn(path: &Path, config: &EciConfig) -> Result<(Host, ReadyInfo, Vec<DictLoad>), String> {
         let mut cmd = Command::new(path);
         if config.fake_engine {
             cmd.args(["--engine", "fake"]);
@@ -86,6 +87,9 @@ impl Host {
         }
         if let Some(hz) = config.sample_rate {
             cmd.arg("--sample-rate").arg(hz.to_string());
+        }
+        if let Some(dir) = crate::dictionaries::find_dir(&config.dictionaries, Some(path)) {
+            cmd.arg("--dictionaries").arg(dir);
         }
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -137,7 +141,24 @@ impl Host {
             rx,
             path: path.to_path_buf(),
         };
-        match host.rx.recv_timeout(READY_TIMEOUT) {
+        let mut loads = Vec::new();
+        let first = loop {
+            match host.rx.recv_timeout(READY_TIMEOUT) {
+                Ok(HostMsg::Reply(Reply::Dictionary {
+                    dialect,
+                    volume,
+                    status,
+                    path,
+                })) => loads.push(DictLoad {
+                    dialect,
+                    volume,
+                    status,
+                    path,
+                }),
+                other => break other,
+            }
+        };
+        match first {
             Ok(HostMsg::Reply(Reply::Ready {
                 sample_rate,
                 version,
@@ -154,6 +175,7 @@ impl Host {
                     default_dialect,
                     presets,
                 },
+                loads,
             )),
             Ok(HostMsg::Reply(Reply::Error { message, .. })) => {
                 host.shutdown();
@@ -273,6 +295,8 @@ pub struct EciBackend {
     cancelled: Vec<UtteranceId>,
     /// When the host last sent anything (or was last given work).
     last_activity: Instant,
+    /// Every dictionary file the engine has loaded, with its status.
+    dictionary_loads: Vec<DictLoad>,
 }
 
 impl std::fmt::Debug for EciBackend {
@@ -282,6 +306,20 @@ impl std::fmt::Debug for EciBackend {
             .field("host", &self.host.as_ref().map(|h| h.path.clone()))
             .field("active", &self.active.len())
             .finish_non_exhaustive()
+    }
+}
+
+fn log_dictionary(l: &DictLoad) {
+    let text = crate::dictionaries::status_text(l.status);
+    if l.status == 0 {
+        log::info!("eci: dictionary {} (volume {}): {text}", l.path, l.volume);
+    } else {
+        log::warn!(
+            "eci: dictionary {} (volume {}): {text} ({})",
+            l.path,
+            l.volume,
+            l.status
+        );
     }
 }
 
@@ -309,6 +347,7 @@ impl EciBackend {
             captures: HashMap::new(),
             cancelled: Vec::new(),
             last_activity: Instant::now(),
+            dictionary_loads: Vec::new(),
         };
         b.ensure_host()?;
         Ok(b)
@@ -329,6 +368,14 @@ impl EciBackend {
         self.host.as_ref().map(|h| h.path.as_path())
     }
 
+    /// Every pronunciation dictionary file the engine has loaded so far
+    /// (after reading any pending reports from the host), with its
+    /// `ECIDictError` status (0 = loaded).
+    pub fn dictionary_loads(&mut self) -> &[DictLoad] {
+        self.drain_host();
+        &self.dictionary_loads
+    }
+
     /// The ECI speed the current rate maps to.
     pub fn eci_speed(&self) -> i32 {
         calibration::speed_for_wpm(self.rate_table, self.params.rate.wpm())
@@ -347,7 +394,11 @@ impl EciBackend {
         let mut errors = Vec::new();
         for path in candidates {
             match Host::spawn(&path, &self.config) {
-                Ok((host, ready)) => {
+                Ok((host, ready, loads)) => {
+                    for l in &loads {
+                        log_dictionary(l);
+                    }
+                    self.dictionary_loads.extend(loads);
                     log::info!(
                         "eci: {} (ECI {}, {} Hz)",
                         path.display(),
@@ -557,6 +608,21 @@ impl EciBackend {
                 } else {
                     log::warn!("eci: {message}");
                 }
+            }
+            Reply::Dictionary {
+                dialect,
+                volume,
+                status,
+                path,
+            } => {
+                let load = DictLoad {
+                    dialect,
+                    volume,
+                    status,
+                    path,
+                };
+                log_dictionary(&load);
+                self.dictionary_loads.push(load);
             }
             Reply::Ready { .. } => log::warn!("eci: unexpected Ready from host"),
         }

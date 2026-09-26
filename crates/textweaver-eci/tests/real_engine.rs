@@ -15,7 +15,7 @@
 use std::time::{Duration, Instant};
 
 use textweaver_core::{CharPos, Rate, Utterance, UtteranceId};
-use textweaver_eci::{AudioOutput, EciBackend, EciConfig};
+use textweaver_eci::{AudioOutput, Dictionaries, EciBackend, EciConfig};
 use textweaver_speech::{EventSink, RawEvent, SpeechBackend, VoiceParams};
 
 /// The feasibility spike's sentence.
@@ -227,4 +227,75 @@ fn text_ending_in_an_accented_letter_finishes() {
             assert!(!s.samples.is_empty(), "{text}");
         }
     }
+}
+
+#[test]
+#[ignore = "needs a licensed ETI-Eloquence engine; run with TEXTWEAVER_ECI=1"]
+fn community_dictionaries_load_and_change_pronunciation() {
+    if !enabled() {
+        return;
+    }
+    let dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../third_party/ibmtts-dictionaries");
+    let make = |dictionaries| {
+        EciBackend::new(EciConfig {
+            output: AudioOutput::Null { speed: 1.0 },
+            dictionaries,
+            ..EciConfig::default()
+        })
+        .expect("engine starts")
+    };
+    let mut with = make(Dictionaries::Dir(dir));
+    let mut without = make(Dictionaries::Off);
+    for l in with.dictionary_loads() {
+        println!(
+            "load volume {} {} -> {} ({})",
+            l.volume,
+            l.path,
+            l.status,
+            textweaver_eci::dictionaries::status_text(l.status)
+        );
+    }
+    let loads = with.dictionary_loads().to_vec();
+    assert_eq!(loads.len(), 3, "main, root, and abbreviation for ENU");
+    assert!(loads.iter().all(|l| l.status == 0), "{loads:?}");
+    assert!(without.dictionary_loads().is_empty());
+
+    let text = "omg tabindex LOL, a tête-à-tête.";
+    let rate = 11025;
+    let show = |name: &str, s: &textweaver_eci::Synthesis| {
+        let marks: Vec<String> = s
+            .words
+            .iter()
+            .map(|(r, at)| {
+                format!(
+                    "{}@{}ms",
+                    &text[r.start as usize..r.end as usize],
+                    at * 1000 / rate
+                )
+            })
+            .collect();
+        println!(
+            "{name}: {} ms; {}",
+            s.samples.len() as u64 * 1000 / rate,
+            marks.join(" ")
+        );
+    };
+    let a = with.synthesize(text).unwrap();
+    let b = without.synthesize(text).unwrap();
+    show("with dictionaries   ", &a);
+    show("without dictionaries", &b);
+    assert_eq!(a.words.len(), b.words.len());
+    assert_ne!(
+        a.samples.len(),
+        b.samples.len(),
+        "the dictionary changed nothing"
+    );
+    // "omg" becomes "oh em gee": the second word starts later.
+    assert!(
+        a.words[1].1 > b.words[1].1,
+        "{:?} vs {:?}",
+        a.words,
+        b.words
+    );
 }

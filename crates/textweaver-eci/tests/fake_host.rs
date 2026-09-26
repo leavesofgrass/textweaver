@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use textweaver_core::{CharPos, Pitch, Rate, Utterance, UtteranceId, Volume};
-use textweaver_eci::{AudioOutput, EciBackend, EciConfig};
+use textweaver_eci::{AudioOutput, Dictionaries, EciBackend, EciConfig};
 use textweaver_speech::{Caps, EventSink, RawEvent, SpeechBackend, SpeechError, VoiceParams};
 
 #[derive(Default)]
@@ -460,4 +460,53 @@ fn a_hung_engine_is_killed_and_the_utterance_fails() {
     ));
     // A fresh host serves the next request.
     assert_eq!(b.synthesize("fine now").unwrap().words.len(), 2);
+}
+
+fn repo_dictionaries() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../third_party/ibmtts-dictionaries")
+}
+
+#[test]
+fn dictionaries_load_per_language_and_can_be_turned_off() {
+    let mut b = EciBackend::new(EciConfig {
+        dictionaries: Dictionaries::Dir(repo_dictionaries()),
+        ..config(8.0)
+    })
+    .unwrap();
+    let loads: Vec<(u32, u8, i32)> = b
+        .dictionary_loads()
+        .iter()
+        .map(|l| (l.dialect, l.volume, l.status))
+        .collect();
+    assert_eq!(
+        loads,
+        [
+            (0x0001_0000, 0, 0),
+            (0x0001_0000, 1, 0),
+            (0x0001_0000, 2, 0)
+        ]
+    );
+    assert!(b.dictionary_loads()[1].path.ends_with("ENURoot.dic"));
+
+    // Switching to German loads its dictionaries once.
+    let p = VoiceParams {
+        voice: Some("eci:deu:reed".into()),
+        ..VoiceParams::default()
+    };
+    b.set_params(&p).unwrap();
+    b.synthesize("Guten Tag").unwrap();
+    let deu = b
+        .dictionary_loads()
+        .iter()
+        .filter(|l| l.dialect == 0x0004_0000)
+        .count();
+    assert_eq!(deu, 3);
+
+    let mut off = EciBackend::new(EciConfig {
+        dictionaries: Dictionaries::Off,
+        ..config(8.0)
+    })
+    .unwrap();
+    off.synthesize("x").unwrap();
+    assert!(off.dictionary_loads().is_empty());
 }

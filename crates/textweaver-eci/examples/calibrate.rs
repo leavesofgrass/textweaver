@@ -99,7 +99,7 @@ impl Host {
                 Reply::Mark { index, sample, .. } => marks.push((index, sample)),
                 Reply::End { .. } => return (samples, marks),
                 Reply::Error { message, .. } => panic!("engine error: {message}"),
-                Reply::Ready { .. } => {}
+                Reply::Ready { .. } | Reply::Dictionary { .. } => {}
             }
         }
     }

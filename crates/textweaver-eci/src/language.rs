@@ -129,7 +129,7 @@ SsTtTtTtUuUuUuUu\
 UuUuWwYyYZzZzZzs";
 
 /// The Windows-1252 byte for `c`, when it has one.
-fn cp1252_byte(c: char) -> Option<u8> {
+pub fn cp1252_byte(c: char) -> Option<u8> {
     let u = u32::from(c);
     if u < 0x80 || (0xA0..=0xFF).contains(&u) {
         return u8::try_from(u).ok();

@@ -29,6 +29,7 @@
 pub mod audio;
 mod backend;
 pub mod calibration;
+pub mod dictionaries;
 pub mod host;
 pub mod language;
 pub mod protocol;
@@ -40,6 +41,7 @@ use std::path::PathBuf;
 
 pub use audio::AudioOutput;
 pub use backend::{EciBackend, STALL_TIMEOUT, Synthesis};
+pub use dictionaries::Dictionaries;
 use textweaver_speech::{BackendFactory, BackendId, BackendInfo};
 pub use voices::VoiceParam;
 
@@ -101,6 +103,9 @@ pub struct EciConfig {
     pub output: AudioOutput,
     /// Run the host with its fake engine (tests only).
     pub fake_engine: bool,
+    /// Community pronunciation dictionaries: on by default
+    /// ([`Dictionaries::Auto`]), off, or from a directory.
+    pub dictionaries: Dictionaries,
     /// How long the engine may go silent while it owes audio before it is
     /// treated as hung; `None` uses [`STALL_TIMEOUT`] (10 s).
     pub stall_timeout: Option<std::time::Duration>,

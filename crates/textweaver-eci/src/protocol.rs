@@ -7,7 +7,9 @@
 //!
 //! The backend writes [`Request`]s to the host's stdin; the host writes
 //! [`Reply`]s to its stdout. The host announces itself with
-//! [`Reply::Ready`] before anything else. Each [`Request::Speak`] is answered
+//! [`Reply::Ready`], preceded only by [`Reply::Dictionary`] reports for the
+//! start-up language (and by one [`Reply::Error`] if the engine cannot
+//! start). A language change may report more dictionaries later. Each [`Request::Speak`] is answered
 //! by any number of [`Reply::Audio`] and [`Reply::Mark`] frames followed by
 //! exactly one [`Reply::End`] (preceded by [`Reply::Error`] when synthesis
 //! failed). The host exits cleanly on [`Request::Quit`] or end of input.
@@ -146,6 +148,19 @@ pub enum Reply {
         /// Total samples delivered for the utterance.
         samples: u64,
     },
+    /// A pronunciation dictionary file was loaded (or failed to load) for
+    /// a language.
+    Dictionary {
+        /// `ECILanguageDialect` code.
+        dialect: u32,
+        /// ECI dictionary volume (0 main, 1 root, 2 abbreviation).
+        volume: u8,
+        /// `ECIDictError` from `eciLoadDict` (0 = loaded), or -1 when the
+        /// library lacks the dictionary calls.
+        status: i32,
+        /// The file.
+        path: String,
+    },
     /// Something failed. `token` is 0 when no utterance is involved.
     Error {
         /// The utterance, or 0.
@@ -192,6 +207,7 @@ mod tag {
     pub const MARK: u8 = 0x83;
     pub const END: u8 = 0x84;
     pub const ERROR: u8 = 0x85;
+    pub const DICTIONARY: u8 = 0x86;
 }
 
 /// Payload writer.
@@ -413,6 +429,19 @@ impl Reply {
                 e.u64(*samples);
                 e.finish()
             }
+            Reply::Dictionary {
+                dialect,
+                volume,
+                status,
+                path,
+            } => {
+                let mut e = Enc::new(tag::DICTIONARY);
+                e.u32(*dialect);
+                e.u8(*volume);
+                e.i32(*status);
+                e.str(path);
+                e.finish()
+            }
             Reply::Error { token, message } => {
                 let mut e = Enc::new(tag::ERROR);
                 e.u64(*token);
@@ -476,6 +505,12 @@ impl Reply {
             tag::ERROR => Reply::Error {
                 token: d.u64()?,
                 message: d.str()?,
+            },
+            tag::DICTIONARY => Reply::Dictionary {
+                dialect: d.u32()?,
+                volume: d.u8()?,
+                status: d.i32()?,
+                path: d.str()?,
             },
             other => return Err(ProtocolError::BadTag(other)),
         };
@@ -649,6 +684,12 @@ mod tests {
             Reply::Error {
                 token: 0,
                 message: "no engine".into(),
+            },
+            Reply::Dictionary {
+                dialect: 0x0001_0000,
+                volume: 1,
+                status: 0,
+                path: "/x/ENURoot.dic".into(),
             },
         ]
     }

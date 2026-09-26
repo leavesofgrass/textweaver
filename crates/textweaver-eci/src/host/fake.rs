@@ -24,6 +24,8 @@ pub struct FakeConfig {
     pub samples_per_byte: usize,
     /// Samples per audio callback.
     pub block: usize,
+    /// Dictionary directory; files found there are reported as loaded.
+    pub dictionaries: Option<std::path::PathBuf>,
 }
 
 impl Default for FakeConfig {
@@ -31,6 +33,7 @@ impl Default for FakeConfig {
         FakeConfig {
             samples_per_byte: 400,
             block: 1024,
+            dictionaries: None,
         }
     }
 }
@@ -41,6 +44,7 @@ pub struct FakeEngine {
     config: FakeConfig,
     dialect: u32,
     params: [i32; 8],
+    loaded: Vec<u32>,
 }
 
 const PRESET_NAMES: [&str; 8] = [
@@ -67,6 +71,7 @@ impl FakeEngine {
             config,
             dialect: DEFAULT_DIALECT,
             params: preset_params(0),
+            loaded: Vec::new(),
         }
     }
 }
@@ -109,6 +114,25 @@ impl Engine for FakeEngine {
             .ok_or_else(|| format!("no voice parameter {param}"))?;
         *slot = value;
         Ok(())
+    }
+
+    fn activate_dictionaries(&mut self) -> Vec<super::DictLoad> {
+        let Some(dir) = &self.config.dictionaries else {
+            return Vec::new();
+        };
+        if self.loaded.contains(&self.dialect) {
+            return Vec::new();
+        }
+        self.loaded.push(self.dialect);
+        crate::dictionaries::files_for(dir, self.dialect)
+            .into_iter()
+            .map(|(v, p)| super::DictLoad {
+                dialect: self.dialect,
+                volume: v as u8,
+                status: 0,
+                path: p.display().to_string(),
+            })
+            .collect()
     }
 
     fn synthesize(

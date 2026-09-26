@@ -1,8 +1,12 @@
 //! `textweaver-eci-host`: runs the ECI engine in its own process (ADR-0007).
 //!
 //! ```text
-//! textweaver-eci-host [--library PATH] [--sample-rate HZ] [--engine eci|fake]
+//! textweaver-eci-host [--library PATH] [--sample-rate HZ] [--dictionaries DIR]
+//!                     [--engine eci|fake]
 //! ```
+//!
+//! `--dictionaries` loads the pronunciation dictionaries in `DIR` (see
+//! `textweaver_eci::dictionaries`); without it none are loaded.
 //!
 //! Speaks the framed protocol of `textweaver_eci::protocol` on stdin and
 //! stdout; logs go to stderr. The library path defaults to
@@ -20,6 +24,7 @@ use textweaver_eci::protocol::{self, Reply};
 struct Args {
     library: Option<PathBuf>,
     sample_rate: Option<u32>,
+    dictionaries: Option<PathBuf>,
     fake: bool,
 }
 
@@ -27,6 +32,7 @@ fn parse_args() -> Result<Args, String> {
     let mut args = Args {
         library: None,
         sample_rate: None,
+        dictionaries: None,
         fake: false,
     };
     let mut it = std::env::args().skip(1);
@@ -39,6 +45,10 @@ fn parse_args() -> Result<Args, String> {
                 let v = it.next().ok_or("--sample-rate needs a number")?;
                 args.sample_rate = Some(v.parse().map_err(|_| format!("bad sample rate {v}"))?);
             }
+            "--dictionaries" => {
+                args.dictionaries =
+                    Some(it.next().ok_or("--dictionaries needs a directory")?.into());
+            }
             "--engine" => match it.next().as_deref() {
                 Some("eci") => args.fake = false,
                 Some("fake") => args.fake = true,
@@ -46,7 +56,8 @@ fn parse_args() -> Result<Args, String> {
             },
             "--help" | "-h" => {
                 return Err(
-                    "usage: textweaver-eci-host [--library PATH] [--sample-rate HZ] [--engine eci|fake]"
+                    "usage: textweaver-eci-host [--library PATH] [--sample-rate HZ] \
+                     [--dictionaries DIR] [--engine eci|fake]"
                         .into(),
                 );
             }
@@ -72,7 +83,10 @@ fn main() -> ExitCode {
     let stdin = std::io::stdin();
     let mut stdout = std::io::BufWriter::with_capacity(64 * 1024, std::io::stdout().lock());
     let result = if args.fake {
-        let mut engine = fake::FakeEngine::new(fake::FakeConfig::default());
+        let mut engine = fake::FakeEngine::new(fake::FakeConfig {
+            dictionaries: args.dictionaries,
+            ..fake::FakeConfig::default()
+        });
         host::run(&mut engine, stdin, &mut stdout)
     } else {
         let Some(path) = args.library.or_else(textweaver_eci::library_path) else {
@@ -80,7 +94,7 @@ fn main() -> ExitCode {
                 "no ECI library found (install Eloquence, or set TEXTWEAVER_ECI_LIBRARY)".into(),
             );
         };
-        let mut engine = match ffi::EciEngine::load(&path, args.sample_rate) {
+        let mut engine = match ffi::EciEngine::load(&path, args.sample_rate, args.dictionaries) {
             Ok(e) => e,
             Err(e) => return fail(e),
         };

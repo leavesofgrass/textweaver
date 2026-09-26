@@ -13,14 +13,29 @@
 //! on; the text encoder turns backquotes into apostrophes so text cannot
 //! inject annotations) and `eciSampleRate` as requested (0 = 8000 Hz,
 //! 1 = 11025 Hz, 2 = 22050 Hz).
+//!
+//! Dictionaries (ECI 6 `eci.h`; all take the engine handle):
+//! - `ECIDictHand eciNewDict(ECIHand)` creates an empty dictionary;
+//! - `ECIDictError eciLoadDict(ECIHand, ECIDictHand, ECIDictVolume, const
+//!   char *filename)` loads one volume from a file (`eciMainDict` 0,
+//!   `eciRootDict` 1, `eciAbbvDict` 2; `eciMainDictExt` 3 is unused);
+//! - `ECIDictError eciSetDict(ECIHand, ECIDictHand)` makes it active;
+//! - `ECIDictHand eciDeleteDict(ECIHand, ECIDictHand)` frees it.
+//!
+//! `ECIDictError` is 0 on success (`DictNoError`), then `DictFileNotFound`,
+//! `DictOutOfMemory`, `DictInternalError`, `DictNoEntry`,
+//! `DictErrLookUpKey`, `DictAccessError`, `DictInvalidVolume`. Each language
+//! gets its own dictionary, created and loaded the first time the language
+//! is selected and made active whenever it is; a language without files
+//! gets an empty one, so English entries never apply to German.
 #![allow(unsafe_code)]
 
 use std::ffi::{c_char, c_int, c_long, c_void};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use libloading::Library;
 
-use super::{Engine, EngineInfo, EnginePiece, SynthEvent};
+use super::{DictLoad, Engine, EngineInfo, EnginePiece, SynthEvent};
 use crate::protocol::PresetInfo;
 
 type Hand = *mut c_void;
@@ -63,6 +78,10 @@ struct Api {
     available_languages: Option<unsafe extern "system" fn(*mut c_int, *mut c_int) -> c_int>,
     error_message: Option<unsafe extern "system" fn(Hand, *mut c_void)>,
     clear_input: Option<unsafe extern "system" fn(Hand) -> c_int>,
+    new_dict: Option<unsafe extern "system" fn(Hand) -> Hand>,
+    set_dict: Option<unsafe extern "system" fn(Hand, Hand) -> c_int>,
+    load_dict: Option<unsafe extern "system" fn(Hand, Hand, c_int, *const c_char) -> c_int>,
+    delete_dict: Option<unsafe extern "system" fn(Hand, Hand) -> Hand>,
     // Declared last so the function pointers above are never used after
     // the library is unloaded (fields drop in order; `EciEngine::drop`
     // deletes the engine first).
@@ -116,6 +135,10 @@ impl Api {
             available_languages: optional!(lib, "eciGetAvailableLanguages"),
             error_message: optional!(lib, "eciErrorMessage"),
             clear_input: optional!(lib, "eciClearInput"),
+            new_dict: optional!(lib, "eciNewDict"),
+            set_dict: optional!(lib, "eciSetDict"),
+            load_dict: optional!(lib, "eciLoadDict"),
+            delete_dict: optional!(lib, "eciDeleteDict"),
             _lib: lib,
         })
     }
@@ -128,6 +151,39 @@ fn c_buf_to_string(buf: &[u8]) -> String {
     buf[..end].iter().map(|&b| char::from(b)).collect()
 }
 
+/// A file path as the engine's `const char *`: the OS bytes on Unix, and
+/// Windows-1252 on Windows (the engine's ANSI code page). `None` if the path
+/// cannot be represented or contains NUL.
+fn path_c_string(p: &Path) -> Option<Vec<u8>> {
+    #[cfg(unix)]
+    let mut bytes = {
+        use std::os::unix::ffi::OsStrExt;
+        p.as_os_str().as_bytes().to_vec()
+    };
+    #[cfg(not(unix))]
+    let mut bytes = p
+        .to_str()?
+        .chars()
+        .map(crate::language::cp1252_byte)
+        .collect::<Option<Vec<u8>>>()?;
+    if bytes.contains(&0) {
+        return None;
+    }
+    bytes.push(0);
+    Some(bytes)
+}
+
+/// `DictAccessError`.
+const DICT_ACCESS_ERROR: c_int = 6;
+
+/// Copies `file` to a fresh name in the temporary directory.
+fn temp_copy(file: &Path) -> Option<PathBuf> {
+    let name = file.file_name()?.to_string_lossy().into_owned();
+    let dest = std::env::temp_dir().join(format!("textweaver-eci-{}-{name}", std::process::id()));
+    std::fs::copy(file, &dest).ok()?;
+    Some(dest)
+}
+
 /// The real engine.
 pub struct EciEngine {
     api: Api,
@@ -136,6 +192,10 @@ pub struct EciEngine {
     buf: Vec<i16>,
     sample_rate: u32,
     dialect: u32,
+    /// Where the pronunciation dictionaries are, if they are wanted.
+    dict_dir: Option<PathBuf>,
+    /// One dictionary per dialect used so far.
+    dicts: Vec<(u32, Hand)>,
 }
 
 impl std::fmt::Debug for EciEngine {
@@ -196,8 +256,14 @@ unsafe extern "system" fn callback(
 
 impl EciEngine {
     /// Loads the library at `path` and creates an engine at `sample_rate`
-    /// Hz (8000, 11025, or 22050; `None` keeps the engine's default).
-    pub fn load(path: &Path, sample_rate: Option<u32>) -> Result<Self, String> {
+    /// Hz (8000, 11025, or 22050; `None` keeps the engine's default), with
+    /// pronunciation dictionaries from `dictionaries` (see
+    /// [`crate::dictionaries`]).
+    pub fn load(
+        path: &Path,
+        sample_rate: Option<u32>,
+        dictionaries: Option<PathBuf>,
+    ) -> Result<Self, String> {
         let api = Api::load(path)?;
         // SAFETY: `eciNew` takes no arguments and returns a handle or null.
         let h = unsafe { (api.new)() };
@@ -210,6 +276,8 @@ impl EciEngine {
             buf: vec![0; BUFFER_SAMPLES],
             sample_rate: 11025,
             dialect: 0,
+            dict_dir: dictionaries,
+            dicts: Vec::new(),
         };
         // Voxin rejects an output buffer until a callback is registered.
         // SAFETY: `callback` matches ECI's callback signature and ignores
@@ -353,6 +421,71 @@ impl Engine for EciEngine {
         Ok(())
     }
 
+    fn activate_dictionaries(&mut self) -> Vec<DictLoad> {
+        let Some(dir) = self.dict_dir.clone() else {
+            return Vec::new();
+        };
+        let dialect = self.dialect;
+        let (Some(new_dict), Some(set_dict), Some(load_dict)) =
+            (self.api.new_dict, self.api.set_dict, self.api.load_dict)
+        else {
+            self.dict_dir = None;
+            return vec![DictLoad {
+                dialect,
+                volume: 0,
+                status: -1,
+                path: dir.display().to_string(),
+            }];
+        };
+        let mut loads = Vec::new();
+        let dict = match self.dicts.iter().find(|(d, _)| *d == dialect) {
+            Some((_, hd)) => *hd,
+            None => {
+                // SAFETY: creates a dictionary for a live engine handle;
+                // null means failure and is handled below.
+                let hd = unsafe { new_dict(self.h) };
+                if hd.is_null() {
+                    return loads;
+                }
+                for (volume, file) in crate::dictionaries::files_for(&dir, dialect) {
+                    let load = |path: &Path| match path_c_string(path) {
+                        // SAFETY: `hd` is this engine's dictionary, the
+                        // volume is 0..=2, and `name` is NUL-terminated and
+                        // outlives the call (ECI reads the file during it).
+                        Some(name) => unsafe {
+                            load_dict(self.h, hd, c_int::from(volume as u8), name.as_ptr().cast())
+                        },
+                        None => DICT_ACCESS_ERROR,
+                    };
+                    let mut status = load(&file);
+                    if status == DICT_ACCESS_ERROR && file.is_file() {
+                        // The engine cannot open a file we can: Voxin's
+                        // 32-bit engine fails on some file systems (large
+                        // inode numbers, such as Docker bind mounts), and
+                        // Windows engines take only ANSI paths. Load a copy
+                        // from the temporary directory instead.
+                        if let Some(copy) = temp_copy(&file) {
+                            status = load(&copy);
+                            let _ = std::fs::remove_file(&copy);
+                        }
+                    }
+                    loads.push(DictLoad {
+                        dialect,
+                        volume: volume as u8,
+                        status,
+                        path: file.display().to_string(),
+                    });
+                }
+                self.dicts.push((dialect, hd));
+                hd
+            }
+        };
+        // SAFETY: `dict` was created by `eciNewDict` on this engine and has
+        // not been deleted.
+        unsafe { set_dict(self.h, dict) };
+        loads
+    }
+
     fn synthesize(
         &mut self,
         pieces: &[EnginePiece],
@@ -425,6 +558,13 @@ impl Engine for EciEngine {
 
 impl Drop for EciEngine {
     fn drop(&mut self) {
+        if let Some(delete_dict) = self.api.delete_dict {
+            for (_, hd) in self.dicts.drain(..) {
+                // SAFETY: each handle came from `eciNewDict` on this live
+                // engine and is deleted exactly once, before the engine.
+                unsafe { delete_dict(self.h, hd) };
+            }
+        }
         // SAFETY: `h` came from `eciNew` and is deleted exactly once; the
         // library (in `api`) is unloaded only after this, when fields drop.
         unsafe { (self.api.delete)(self.h) };

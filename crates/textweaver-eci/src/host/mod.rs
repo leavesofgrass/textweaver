@@ -46,6 +46,19 @@ pub enum EnginePiece {
     Index(u32),
 }
 
+/// One dictionary file the engine loaded (or failed to load).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DictLoad {
+    /// The dialect the dictionary serves.
+    pub dialect: u32,
+    /// ECI volume (0 main, 1 root, 2 abbreviation).
+    pub volume: u8,
+    /// `ECIDictError` (0 = loaded), or -1 when unsupported.
+    pub status: i32,
+    /// The file.
+    pub path: String,
+}
+
 /// Something the engine produced during synthesis.
 #[derive(Debug)]
 pub enum SynthEvent<'a> {
@@ -66,6 +79,12 @@ pub trait Engine {
     fn set_voice(&mut self, dialect: u32, preset: u8) -> Result<(), String>;
     /// Sets one active-voice parameter.
     fn set_voice_param(&mut self, param: u8, value: i32) -> Result<(), String>;
+    /// Activates the pronunciation dictionaries for the current dialect,
+    /// loading them the first time that dialect is used, and returns the
+    /// files loaded by this call. Default: no dictionaries.
+    fn activate_dictionaries(&mut self) -> Vec<DictLoad> {
+        Vec::new()
+    }
     /// Synthesizes `pieces`, calling `out` for every event in order. `out`
     /// returns false to abort. Returns `Ok(true)` when synthesis completed,
     /// `Ok(false)` when it was aborted.
@@ -90,6 +109,9 @@ pub fn run<E: Engine>(
     output: &mut impl Write,
 ) -> std::io::Result<()> {
     let info = engine.info();
+    // Dictionary reports for the start-up language come first, so the
+    // backend has them all when `Ready` arrives.
+    report_dictionaries(engine, output)?;
     protocol::write_frame(
         output,
         &Reply::Ready {
@@ -143,8 +165,14 @@ pub fn run<E: Engine>(
             }
             Cmd::Req(Request::Stop, _) => {}
             Cmd::Req(Request::SetVoice { dialect, preset }, _) => {
-                if let Err(message) = engine.set_voice(dialect, preset) {
-                    protocol::write_frame(output, &Reply::Error { token: 0, message }.encode())?;
+                match engine.set_voice(dialect, preset) {
+                    Ok(()) => report_dictionaries(engine, output)?,
+                    Err(message) => {
+                        protocol::write_frame(
+                            output,
+                            &Reply::Error { token: 0, message }.encode(),
+                        )?;
+                    }
                 }
             }
             Cmd::Req(Request::SetVoiceParam { param, value }, _) => {
@@ -156,6 +184,22 @@ pub fn run<E: Engine>(
                 speak(engine, output, &epoch, token, &pieces, at)?;
             }
         }
+    }
+    Ok(())
+}
+
+fn report_dictionaries<E: Engine>(engine: &mut E, output: &mut impl Write) -> std::io::Result<()> {
+    for load in engine.activate_dictionaries() {
+        protocol::write_frame(
+            output,
+            &Reply::Dictionary {
+                dialect: load.dialect,
+                volume: load.volume,
+                status: load.status,
+                path: load.path,
+            }
+            .encode(),
+        )?;
     }
     Ok(())
 }
