@@ -4,6 +4,11 @@
 //! (docs/star-parity.md, "Settings surface") grouped into TOML tables. Every
 //! table keeps unknown keys in `extra`, so a newer or older textweaver never
 //! loses a user's settings.
+//!
+//! Loading is lenient: one invalid value falls back to its default and is
+//! reported, instead of resetting the whole file. Saving is atomic, happens
+//! only when the app asks, and stores only values that differ from the
+//! defaults.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -31,6 +36,10 @@ pub struct SpeechSettings {
     /// Voice id; `None` resolves automatically.
     pub voice: Option<String>,
     /// Substring used to pick a default voice when `voice` is unset.
+    /// Defaults to `"eloquence"` (ETI-Eloquence), Star's default
+    /// `tts_prefer_voice`; `None` means no preference and is stored as
+    /// `prefer_voice = ""` so it survives a reload.
+    #[serde(with = "empty_is_none")]
     pub prefer_voice: Option<String>,
     /// Starred voices.
     pub favorite_voices: Vec<String>,
@@ -63,7 +72,7 @@ impl Default for SpeechSettings {
             volume: Volume::default(),
             pitch: Pitch::default(),
             voice: None,
-            prefer_voice: None,
+            prefer_voice: Some("eloquence".to_owned()),
             favorite_voices: Vec::new(),
             punctuation: PunctuationLevel::default(),
             split_caps: false,
@@ -83,6 +92,22 @@ impl Default for SpeechSettings {
             verbosity: Verbosity::default(),
             extra: toml::Table::new(),
         }
+    }
+}
+
+/// `Option<String>` stored as a string, with `""` for `None`. Used where the
+/// default is `Some`, since TOML has no null and an omitted key would bring
+/// the default back.
+mod empty_is_none {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub(super) fn serialize<S: Serializer>(v: &Option<String>, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(v.as_deref().unwrap_or(""))
+    }
+
+    pub(super) fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
+        let s = String::deserialize(d)?;
+        Ok((!s.is_empty()).then_some(s))
     }
 }
 
@@ -334,10 +359,215 @@ pub struct Settings {
 }
 
 /// Keymap overrides as stored: action id to chord strings, for example
-/// `read_next_sentence = ["Alt+.", "."]`. An empty list unbinds the action.
+/// `next_sentence = ["Alt+.", "."]`. An empty list unbinds the action.
 pub type KeymapOverrides = BTreeMap<String, Vec<String>>;
 
+/// The result of loading `settings.toml`.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct SettingsLoad {
+    /// The settings to use.
+    pub settings: Settings,
+    /// Set when the file could not be used at all: it was unreadable or not
+    /// TOML, so defaults are in effect. The message says where the backup
+    /// is. Show and announce it once.
+    pub error: Option<String>,
+    /// Individual values that were invalid or out of range and were replaced
+    /// by defaults or clamped. The rest of the file was used.
+    pub warnings: Vec<String>,
+}
+
+impl SettingsLoad {
+    /// The error and warnings as one message for the user, if there is
+    /// anything to say.
+    pub fn message(&self) -> Option<String> {
+        let mut parts: Vec<String> = self.error.iter().cloned().collect();
+        if !self.warnings.is_empty() {
+            parts.push(format!(
+                "Some settings were invalid and use their defaults: {}",
+                self.warnings.join("; ")
+            ));
+        }
+        (!parts.is_empty()).then(|| parts.join(". "))
+    }
+}
+
+/// Deserializes one settings table leniently: the whole table when it is
+/// valid, otherwise key by key, dropping (and reporting) the keys whose
+/// values do not fit. Unknown keys always survive in the table's `extra`.
+fn lenient_section<T>(name: &str, value: Option<toml::Value>, warnings: &mut Vec<String>) -> T
+where
+    T: serde::de::DeserializeOwned + Default,
+{
+    let Some(value) = value else {
+        return T::default();
+    };
+    let toml::Value::Table(table) = value else {
+        warnings.push(format!("[{name}] is not a table"));
+        return T::default();
+    };
+    if let Ok(v) = toml::Value::Table(table.clone()).try_into::<T>() {
+        return v;
+    }
+    let mut good = toml::Table::new();
+    for (key, v) in table {
+        let mut candidate = good.clone();
+        candidate.insert(key.clone(), v);
+        if toml::Value::Table(candidate.clone())
+            .try_into::<T>()
+            .is_ok()
+        {
+            good = candidate;
+        } else {
+            warnings.push(format!("{name}.{key} has an invalid value"));
+        }
+    }
+    toml::Value::Table(good).try_into().unwrap_or_default()
+}
+
+impl Settings {
+    /// Builds settings from a parsed TOML table, keeping every valid value,
+    /// replacing invalid ones with defaults, and preserving unknown keys.
+    /// Returns the warnings for the replaced values, then applies
+    /// [`validate`](Self::validate).
+    pub fn from_table(mut table: toml::Table) -> (Settings, Vec<String>) {
+        let mut w = Vec::new();
+        let mut s = Settings {
+            speech: lenient_section("speech", table.remove("speech"), &mut w),
+            highlight: lenient_section("highlight", table.remove("highlight"), &mut w),
+            normalization: lenient_section("normalization", table.remove("normalization"), &mut w),
+            reading: lenient_section("reading", table.remove("reading"), &mut w),
+            display: lenient_section("display", table.remove("display"), &mut w),
+            editing: lenient_section("editing", table.remove("editing"), &mut w),
+            library: lenient_section("library", table.remove("library"), &mut w),
+            extra: table,
+        };
+        w.extend(s.validate());
+        (s, w)
+    }
+
+    /// Clamps values to their supported ranges. Returns a message for each
+    /// value changed. Star validated nothing, so a bad value failed later
+    /// (docs/star-parity.md Part 3 §7 items 4 and 7).
+    pub fn validate(&mut self) -> Vec<String> {
+        let mut w = Vec::new();
+        let rate = self.speech.rate.clamped();
+        if rate != self.speech.rate {
+            w.push(format!(
+                "speech.rate {} is outside {}..={} words per minute; using {}",
+                self.speech.rate.wpm(),
+                Rate::MIN_WPM,
+                Rate::MAX_WPM,
+                rate.wpm()
+            ));
+            self.speech.rate = rate;
+        }
+        let pitch = self.speech.pitch.clamped();
+        if pitch != self.speech.pitch {
+            w.push(format!(
+                "speech.pitch {} is outside {}..={} semitones; using {}",
+                self.speech.pitch.semitones(),
+                Pitch::MIN_SEMITONES,
+                Pitch::MAX_SEMITONES,
+                pitch.semitones()
+            ));
+            self.speech.pitch = pitch;
+        }
+        for (name, wpm) in &mut self.speech.speed_presets {
+            let c = (*wpm).clamp(Rate::MIN_WPM, Rate::MAX_WPM);
+            if c != *wpm {
+                w.push(format!(
+                    "speech.speed_presets.{name} {wpm} is out of range; using {c}"
+                ));
+                *wpm = c;
+            }
+        }
+        let lead = self.highlight.lead_words.clamp(-5, 5);
+        if lead != self.highlight.lead_words {
+            w.push(format!(
+                "highlight.lead_words {} is outside -5..=5; using {lead}",
+                self.highlight.lead_words
+            ));
+            self.highlight.lead_words = lead;
+        }
+        let speed = self.highlight.speed;
+        let fixed = if speed.is_finite() {
+            speed.clamp(0.5, 1.5)
+        } else {
+            1.0
+        };
+        if !speed.is_finite() || (fixed - speed).abs() > f32::EPSILON {
+            w.push(format!(
+                "highlight.speed {speed} is outside 0.5..=1.5; using {fixed}"
+            ));
+            self.highlight.speed = fixed;
+        }
+        let mut at_least = |value: &mut usize, min: usize, name: &str| {
+            if *value < min {
+                w.push(format!("{name} {value} is below {min}; using {min}"));
+                *value = min;
+            }
+        };
+        at_least(
+            &mut self.reading.nav_history_size,
+            1,
+            "reading.nav_history_size",
+        );
+        at_least(&mut self.library.recent_limit, 1, "library.recent_limit");
+        if self.display.tab_width == 0 {
+            w.push("display.tab_width 0 is below 1; using 4".to_owned());
+            self.display.tab_width = 4;
+        }
+        if self.editing.autosave_interval_secs < 5 {
+            w.push(format!(
+                "editing.autosave_interval_secs {} is below 5; using 5",
+                self.editing.autosave_interval_secs
+            ));
+            self.editing.autosave_interval_secs = 5;
+        }
+        w
+    }
+
+    /// The settings as TOML, keeping only values that differ from the
+    /// defaults, plus every unknown key. A default that changes in a later
+    /// release therefore reaches users who never changed it (Star wrote every
+    /// default and needed migrations to fix old ones, Part 3 §7 item 2).
+    pub fn to_minimal_toml(&self) -> Result<String, toml::ser::Error> {
+        let full = toml::Table::try_from(self)?;
+        let defaults = toml::Table::try_from(Settings::default())?;
+        let mut out = toml::Table::new();
+        for (key, value) in full {
+            match (value, defaults.get(&key)) {
+                (toml::Value::Table(section), Some(toml::Value::Table(dsection))) => {
+                    let kept: toml::Table = section
+                        .into_iter()
+                        .filter(|(k, v)| dsection.get(k) != Some(v))
+                        .collect();
+                    if !kept.is_empty() {
+                        out.insert(key, toml::Value::Table(kept));
+                    }
+                }
+                (value, Some(d)) if *d == value => {}
+                (value, _) => {
+                    out.insert(key, value);
+                }
+            }
+        }
+        let body = toml::to_string_pretty(&out)?;
+        Ok(format!("{SETTINGS_HEADER}{body}"))
+    }
+}
+
+const SETTINGS_HEADER: &str = "\
+# textweaver settings. Only values that differ from the defaults are stored;
+# remove a line to return to the default. Unknown keys are kept.
+
+";
+
 /// Loads and saves `settings.toml` and `keymap.toml`.
+///
+/// Nothing is written unless the caller saves: textweaver writes settings
+/// only on an explicit change (Star rewrote the whole file on every `set`,
+/// Part 3 §7 item 1).
 #[derive(Clone, Debug)]
 pub struct SettingsStore {
     paths: Paths,
@@ -356,35 +586,83 @@ impl SettingsStore {
 
     /// Loads settings. A missing file gives defaults. A corrupt file is
     /// copied aside and defaults are returned with a message for the user
-    /// (Star's behavior, kept).
+    /// (Star's behavior, kept). Invalid individual values are replaced by
+    /// their defaults and reported in the message too. Never panics.
     pub fn load(&self) -> (Settings, Option<String>) {
+        let loaded = self.load_detailed();
+        let message = loaded.message();
+        (loaded.settings, message)
+    }
+
+    /// Loads settings, reporting the file-level error and per-value warnings
+    /// separately.
+    pub fn load_detailed(&self) -> SettingsLoad {
         let path = self.paths.settings_file();
-        let Ok(text) = std::fs::read_to_string(&path) else {
-            return (Settings::default(), None);
-        };
-        match toml::from_str(&text) {
-            Ok(s) => (s, None),
+        let bytes = match std::fs::read(&path) {
+            Ok(b) => b,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return SettingsLoad::default(),
             Err(e) => {
-                let backup = path.with_extension(format!("toml.corrupt-{}.bak", crate::now_ts()));
-                let _ = std::fs::copy(&path, &backup);
-                let msg = format!(
-                    "Settings file was unreadable and has been reset to defaults ({}); backup saved to {}",
-                    e.message(),
-                    backup.display()
+                return SettingsLoad {
+                    error: Some(format!(
+                        "Settings file could not be read ({e}); using defaults for this session"
+                    )),
+                    ..SettingsLoad::default()
+                };
+            }
+        };
+        let parsed = std::str::from_utf8(&bytes)
+            .map_err(|e| e.to_string())
+            .and_then(|t| t.parse::<toml::Table>().map_err(|e| e.message().to_owned()));
+        match parsed {
+            Ok(table) => {
+                let (settings, warnings) = Settings::from_table(table);
+                SettingsLoad {
+                    settings,
+                    error: None,
+                    warnings,
+                }
+            }
+            Err(reason) => {
+                let backup = backup_path(&path);
+                let saved = std::fs::copy(&path, &backup).is_ok();
+                let mut msg = format!(
+                    "Settings file was unreadable and has been reset to defaults ({})",
+                    reason.trim()
                 );
-                (Settings::default(), Some(msg))
+                if saved {
+                    msg.push_str(&format!("; backup saved to {}", backup.display()));
+                }
+                SettingsLoad {
+                    settings: Settings::default(),
+                    error: Some(msg),
+                    warnings: Vec::new(),
+                }
             }
         }
     }
 
-    /// Saves settings atomically. Call only on an explicit change.
+    /// Saves settings atomically, storing only non-default values. Call only
+    /// on an explicit change.
     pub fn save(&self, settings: &Settings) -> Result<(), StoreError> {
         let path = self.paths.settings_file();
-        let text = toml::to_string_pretty(settings).map_err(|e| StoreError::Parse {
+        let text = settings.to_minimal_toml().map_err(|e| StoreError::Parse {
             path: path.clone(),
             message: e.to_string(),
         })?;
         atomic_write(&path, text.as_bytes())
+    }
+
+    /// Saves `settings` only when they differ from `previous` (the settings
+    /// as last loaded or saved). Returns whether a write happened.
+    pub fn save_if_changed(
+        &self,
+        settings: &Settings,
+        previous: &Settings,
+    ) -> Result<bool, StoreError> {
+        if settings == previous {
+            return Ok(false);
+        }
+        self.save(settings).map(|()| true)
     }
 
     /// Loads keymap overrides (empty when the file is missing).
@@ -411,20 +689,54 @@ impl SettingsStore {
     }
 }
 
+/// `settings.toml.corrupt-YYYYmmdd-HHMMSS.bak` (UTC), with a counter when
+/// that name is taken.
+fn backup_path(path: &std::path::Path) -> PathBuf {
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "settings.toml".to_owned());
+    let stamp = crate::time::file_stamp(crate::now_ts());
+    let mut candidate = path.with_file_name(format!("{name}.corrupt-{stamp}.bak"));
+    let mut n = 2;
+    while candidate.exists() {
+        candidate = path.with_file_name(format!("{name}.corrupt-{stamp}-{n}.bak"));
+        n += 1;
+    }
+    candidate
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn round_trip_preserves_unknown_keys() {
+    fn store() -> (tempfile::TempDir, SettingsStore) {
         let dir = tempfile::tempdir().unwrap();
         let store = SettingsStore::new(Paths::under(dir.path()));
         std::fs::create_dir_all(&store.paths().config_dir).unwrap();
-        std::fs::write(
-            store.paths().settings_file(),
-            "future_key = 1\n[speech]\nrate = 300\nnew_engine_option = \"x\"\n",
-        )
-        .unwrap();
+        (dir, store)
+    }
+
+    fn write(store: &SettingsStore, text: &str) {
+        std::fs::write(store.paths().settings_file(), text).unwrap();
+    }
+
+    fn config_files(store: &SettingsStore) -> Vec<String> {
+        let mut v: Vec<String> = std::fs::read_dir(&store.paths().config_dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        v.sort();
+        v
+    }
+
+    #[test]
+    fn round_trip_preserves_unknown_keys() {
+        let (_d, store) = store();
+        write(
+            &store,
+            "future_key = 1\n[speech]\nrate = 300\nnew_engine_option = \"x\"\n[future_table]\na = 1\n",
+        );
         let (s, err) = store.load();
         assert!(err.is_none());
         assert_eq!(s.speech.rate, Rate::Wpm(300));
@@ -433,14 +745,14 @@ mod tests {
         let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
         assert!(text.contains("future_key"));
         assert!(text.contains("new_engine_option"));
+        assert!(text.contains("[future_table]"));
+        assert_eq!(store.load().0, s);
     }
 
     #[test]
     fn corrupt_file_resets_with_message() {
-        let dir = tempfile::tempdir().unwrap();
-        let store = SettingsStore::new(Paths::under(dir.path()));
-        std::fs::create_dir_all(&store.paths().config_dir).unwrap();
-        std::fs::write(store.paths().settings_file(), "{ not toml").unwrap();
+        let (_d, store) = store();
+        write(&store, "{ not toml");
         let (s, err) = store.load();
         assert_eq!(s, Settings::default());
         assert!(err.unwrap().contains("reset"));
@@ -453,5 +765,274 @@ mod tests {
         assert_eq!(s.reading.nav_history_size, 50);
         assert_eq!(s.display.tab_width, 4);
         assert_eq!(s.speech.speed_presets["skim"], 350);
+        assert_eq!(s.speech.speed_presets["normal"], 265);
+        assert_eq!(s.speech.speed_presets["study"], 200);
+        assert_eq!(s.speech.speed_presets["slow"], 150);
+        assert_eq!(s.display.theme, "galaxy");
+        assert!(s.reading.auto_resume);
+        assert!(s.speech.skip_code);
+        assert_eq!(s.library.recent_limit, 20);
+        assert_eq!(s.editing.autosave_interval_secs, 20);
+    }
+
+    /// Star's `tts_prefer_voice` default is `"eloquence"` (ETI-Eloquence).
+    #[test]
+    fn prefer_voice_defaults_to_eloquence_like_star() {
+        let s = Settings::default();
+        assert_eq!(s.speech.prefer_voice.as_deref(), Some("eloquence"));
+        assert_eq!(s.speech.voice, None);
+    }
+
+    #[test]
+    fn no_voice_preference_survives_a_reload() {
+        let (_d, store) = store();
+        let mut s = Settings::default();
+        s.speech.prefer_voice = None;
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("prefer_voice = \"\""), "{text}");
+        assert_eq!(store.load().0.speech.prefer_voice, None);
+        s.speech.prefer_voice = Some("david".into());
+        store.save(&s).unwrap();
+        assert_eq!(store.load().0.speech.prefer_voice.as_deref(), Some("david"));
+    }
+
+    // ---- tests/test_settings.py, ported (docs/star-parity.md Part 3 §1.3) ----
+
+    /// Star test 1, `test_save_writes_valid_json`
+    #[test]
+    fn star_01_save_writes_valid_toml() {
+        let (_d, store) = store();
+        let mut s = Settings::default();
+        s.display.theme = "contrast".into();
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        let table: toml::Table = text.parse().unwrap();
+        assert_eq!(table["display"]["theme"].as_str(), Some("contrast"));
+    }
+
+    /// Star test 2, `test_save_leaves_no_temp_file_behind`
+    #[test]
+    fn star_02_save_leaves_no_temp_file_behind() {
+        let (_d, store) = store();
+        store.save(&Settings::default()).unwrap();
+        assert_eq!(config_files(&store), vec!["settings.toml".to_owned()]);
+    }
+
+    /// Star test 3, `test_save_is_atomic_never_truncates_existing`
+    #[test]
+    fn star_03_save_is_atomic_never_truncates_existing() {
+        let (_d, store) = store();
+        let mut s = Settings::default();
+        for width in [111, 222] {
+            s.display.wrap_width = width;
+            store.save(&s).unwrap();
+            let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+            assert!(text.parse::<toml::Table>().is_ok());
+        }
+        assert_eq!(store.load().0.display.wrap_width, 222);
+        assert_eq!(config_files(&store), vec!["settings.toml".to_owned()]);
+    }
+
+    /// Star test 4, `test_save_never_raises_on_unwritable_target`: the parent path is a
+    /// regular file. textweaver returns the error instead of swallowing it,
+    /// but never panics, and the target does not exist.
+    #[test]
+    fn star_04_save_on_unwritable_target_errors_without_panicking() {
+        let dir = tempfile::tempdir().unwrap();
+        let blocker = dir.path().join("config");
+        std::fs::write(&blocker, "a file, not a directory").unwrap();
+        let store = SettingsStore::new(Paths::under(dir.path()));
+        assert!(store.save(&Settings::default()).is_err());
+        assert!(!store.paths().settings_file().exists());
+    }
+
+    /// Star test 5, `test_load_reads_preexisting_file`
+    #[test]
+    fn star_05_load_reads_preexisting_file() {
+        let (_d, store) = store();
+        write(
+            &store,
+            "[display]\ntheme = \"solarized\"\nwrap_width = 1234\n[speech]\nrate = 300\n",
+        );
+        let s = store.load().0;
+        assert_eq!(s.display.theme, "solarized");
+        assert_eq!(s.speech.rate, Rate::Wpm(300));
+        assert_eq!(s.display.wrap_width, 1234);
+        assert_eq!(s.speech.volume, Volume::default());
+    }
+
+    /// Star test 6, `test_load_merges_nested_dict_with_defaults`. Deliberate change:
+    /// Star merged `speed_presets` one level deep with the defaults, so a
+    /// default preset could never be removed (Part 3 §7 item 6). A stored
+    /// table replaces the default table; other settings keep their defaults.
+    #[test]
+    fn star_06_nested_table_replaces_default_table() {
+        let (_d, store) = store();
+        write(&store, "[speech.speed_presets]\nskim = 999\n");
+        let s = store.load().0;
+        assert_eq!(s.speech.speed_presets.get("skim"), Some(&900), "clamped");
+        assert_eq!(s.speech.speed_presets.get("normal"), None);
+        assert_eq!(s.speech.rate.wpm(), 265);
+    }
+
+    /// Star test 7, `test_load_missing_file_uses_defaults`
+    #[test]
+    fn star_07_load_missing_file_uses_defaults() {
+        let (_d, store) = store();
+        let (s, err) = store.load();
+        assert_eq!(s.display.theme, "galaxy");
+        assert!(err.is_none());
+    }
+
+    /// Star test 8, `test_load_corrupt_file_falls_back_to_defaults`
+    #[test]
+    fn star_08_load_corrupt_file_falls_back_to_defaults() {
+        let (_d, store) = store();
+        write(&store, "{ this is not valid json ");
+        assert_eq!(store.load().0.display.theme, "galaxy");
+    }
+
+    /// Star test 9, `test_save_load_round_trip`
+    #[test]
+    fn star_09_save_load_round_trip() {
+        let (_d, store) = store();
+        let mut s = Settings::default();
+        s.speech.rate = Rate::Wpm(275);
+        s.library.folders = vec![PathBuf::from("/a"), PathBuf::from("/b")];
+        store.save(&s).unwrap();
+        let fresh = SettingsStore::new(store.paths().clone()).load().0;
+        assert_eq!(fresh.speech.rate, Rate::Wpm(275));
+        assert_eq!(fresh.library.folders, s.library.folders);
+    }
+
+    /// Star test 10, `test_corrupt_settings_backed_up_and_reported`
+    #[test]
+    fn star_10_corrupt_settings_backed_up_and_reported() {
+        let (_d, store) = store();
+        let garbage = "{ this is not toml";
+        write(&store, garbage);
+        let loaded = store.load_detailed();
+        assert_eq!(loaded.settings, Settings::default());
+        let err = loaded.error.unwrap();
+        assert!(err.to_lowercase().contains("reset"));
+        let backups: Vec<String> = config_files(&store)
+            .into_iter()
+            .filter(|n| n.starts_with("settings.toml.corrupt-") && n.ends_with(".bak"))
+            .collect();
+        assert_eq!(backups.len(), 1);
+        let bak = store.paths().config_dir.join(&backups[0]);
+        assert_eq!(std::fs::read_to_string(bak).unwrap(), garbage);
+        assert!(err.contains(&backups[0]));
+    }
+
+    /// Star test 11, `test_clean_settings_have_no_load_error`
+    #[test]
+    fn star_11_clean_settings_have_no_load_error() {
+        let (_d, store) = store();
+        let loaded = store.load_detailed();
+        assert!(loaded.error.is_none());
+        assert!(loaded.warnings.is_empty());
+        assert!(loaded.message().is_none());
+    }
+
+    // 12. `test_every_default_key_documented` checks Star's
+    // docs/configuration.md. Here every settings field carries rustdoc
+    // (`missing_docs` is denied in CI), the equivalent guarantee.
+
+    // ---- Fixes for Star's settings bugs (Part 3 §7) ----
+
+    #[test]
+    fn one_bad_value_does_not_reset_the_rest() {
+        let (_d, store) = store();
+        write(
+            &store,
+            "[speech]\nrate = \"fast\"\nvolume = 40\n[display]\ntheme = \"nord\"\n",
+        );
+        let loaded = store.load_detailed();
+        assert!(loaded.error.is_none());
+        assert_eq!(loaded.settings.speech.rate, Rate::default());
+        assert_eq!(loaded.settings.speech.volume, Volume::new(40));
+        assert_eq!(loaded.settings.display.theme, "nord");
+        assert_eq!(loaded.warnings, vec!["speech.rate has an invalid value"]);
+        assert!(loaded.message().unwrap().contains("speech.rate"));
+    }
+
+    #[test]
+    fn out_of_range_values_are_clamped_and_reported() {
+        let (_d, store) = store();
+        write(
+            &store,
+            "[speech]\nrate = 5000\npitch = 40\n[highlight]\nspeed = 9.0\nlead_words = -9\n",
+        );
+        let loaded = store.load_detailed();
+        let s = &loaded.settings;
+        assert_eq!(s.speech.rate.wpm(), Rate::MAX_WPM);
+        assert_eq!(s.speech.pitch.semitones(), Pitch::MAX_SEMITONES);
+        assert!((s.highlight.speed - 1.5).abs() < f32::EPSILON);
+        assert_eq!(s.highlight.lead_words, -5);
+        assert_eq!(loaded.warnings.len(), 4, "{:?}", loaded.warnings);
+    }
+
+    #[test]
+    fn non_table_section_and_non_utf8_file() {
+        let (_d, store) = store();
+        write(&store, "speech = 5\n");
+        let loaded = store.load_detailed();
+        assert!(loaded.error.is_none());
+        assert_eq!(loaded.warnings, vec!["[speech] is not a table"]);
+
+        std::fs::write(store.paths().settings_file(), [0xff, 0xfe, 0x00, 0x41]).unwrap();
+        let loaded = store.load_detailed();
+        assert!(loaded.error.unwrap().contains("reset"));
+    }
+
+    #[test]
+    fn only_changed_values_are_written() {
+        let (_d, store) = store();
+        store.save(&Settings::default()).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        let table: toml::Table = text.parse().unwrap();
+        assert!(table.is_empty(), "defaults are not persisted: {text}");
+
+        let mut s = Settings::default();
+        s.speech.pitch = Pitch::Semitones(-2);
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        let table: toml::Table = text.parse().unwrap();
+        assert_eq!(table.len(), 1);
+        assert_eq!(table["speech"].as_table().unwrap().len(), 1);
+        assert_eq!(table["speech"]["pitch"].as_integer(), Some(-2));
+        assert_eq!(store.load().0, s);
+    }
+
+    #[test]
+    fn save_if_changed_skips_identical_settings() {
+        let (_d, store) = store();
+        let before = Settings::default();
+        assert!(!store.save_if_changed(&before, &before).unwrap());
+        assert!(!store.paths().settings_file().exists());
+        let mut after = before.clone();
+        after.speech.rate = Rate::Wpm(300);
+        assert!(store.save_if_changed(&after, &before).unwrap());
+        assert!(store.paths().settings_file().exists());
+    }
+
+    #[test]
+    fn loading_never_writes() {
+        let (_d, store) = store();
+        let _ = store.load();
+        assert!(config_files(&store).is_empty());
+    }
+
+    #[test]
+    fn keymap_overrides_round_trip() {
+        let (_d, store) = store();
+        assert!(store.load_keymap().unwrap().is_empty());
+        let mut o = KeymapOverrides::new();
+        o.insert("next_sentence".into(), vec!["Alt+.".into(), ".".into()]);
+        o.insert("stop".into(), vec![]);
+        store.save_keymap(&o).unwrap();
+        assert_eq!(store.load_keymap().unwrap(), o);
     }
 }

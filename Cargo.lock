@@ -2170,6 +2170,7 @@ name = "textweaver-a11y"
 version = "0.1.0-alpha.0"
 dependencies = [
  "serde",
+ "serde_json",
  "textweaver-core",
 ]
 
@@ -2244,7 +2245,10 @@ dependencies = [
  "proptest",
  "ropey",
  "serde",
+ "serde_json",
+ "tempfile",
  "textweaver-core",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

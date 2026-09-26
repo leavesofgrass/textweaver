@@ -131,6 +131,147 @@ impl KeyChord {
         }
         self
     }
+
+    /// Why a terminal cannot deliver this chord, or `None` when it can.
+    ///
+    /// Terminals send bytes, not key events: `Ctrl+H` is the Backspace byte,
+    /// `Ctrl+I` is Tab, `Ctrl+M` and `Ctrl+J` are Enter, `Ctrl+Shift+P` is
+    /// the same byte as `Ctrl+P`, Ctrl with digits or punctuation sends
+    /// nothing useful, and the Command or Windows key never arrives. Use it
+    /// to warn about user overrides; the terminal defaults pass it (a test).
+    pub fn terminal_limitation(&self) -> Option<&'static str> {
+        let m = self.mods;
+        let ctrl = m.contains(Modifiers::CTRL);
+        let alt = m.contains(Modifiers::ALT);
+        let shift = m.contains(Modifiers::SHIFT);
+        if m.contains(Modifiers::META) {
+            return Some("terminals do not pass the Command or Windows key");
+        }
+        match self.key {
+            Key::Char(c) if ctrl => match c {
+                'A'..='Z' => Some("terminals cannot tell Ctrl+Shift+letter from Ctrl+letter"),
+                'h' => Some("Ctrl+H is Backspace in a terminal"),
+                'i' => Some("Ctrl+I is Tab in a terminal"),
+                'm' | 'j' => Some("Ctrl+M and Ctrl+J are Enter in a terminal"),
+                'a'..='z' => None,
+                _ => Some("terminals cannot send Ctrl with this key"),
+            },
+            Key::Space if ctrl && (shift || alt) => {
+                Some("terminals send Ctrl+Space without Shift or Alt")
+            }
+            Key::Enter | Key::Tab | Key::Backspace | Key::Escape if ctrl => {
+                Some("terminals cannot send Ctrl with this key")
+            }
+            Key::Enter | Key::Backspace | Key::Space if shift => {
+                Some("terminals cannot tell this key with Shift from without")
+            }
+            Key::Enter if alt => Some("Alt+Enter toggles full screen in many terminals"),
+            Key::Tab if alt => Some("Alt+Tab switches windows"),
+            _ => None,
+        }
+    }
+
+    /// True when the chord means the same key on every keyboard layout:
+    /// unmodified keys always do; modified ones must use a letter, a digit,
+    /// an unshifted US punctuation key (`` ` - = [ ] \ ; ' , . / ``), or a
+    /// named key. `Ctrl+*` is `Ctrl+Shift+8` on a US layout and something
+    /// else elsewhere, so defaults avoid it.
+    pub fn is_layout_independent(&self) -> bool {
+        match self.key {
+            Key::Char(c) if !self.mods.is_empty() => {
+                c.is_ascii_alphanumeric() || "`-=[]\\;',./".contains(c)
+            }
+            _ => true,
+        }
+    }
+
+    /// The chord as it should be spoken: `Control Shift P`, `Alt period`,
+    /// `question mark`. Punctuation is named, so speech with punctuation
+    /// turned off still says it.
+    pub fn spoken(&self) -> String {
+        let mut parts: Vec<&str> = Vec::new();
+        if self.mods.contains(Modifiers::CTRL) {
+            parts.push("Control");
+        }
+        if self.mods.contains(Modifiers::META) {
+            parts.push("Command");
+        }
+        if self.mods.contains(Modifiers::ALT) {
+            parts.push("Alt");
+        }
+        let key = match self.key {
+            Key::Char(c) if c.is_ascii_uppercase() => {
+                parts.push("Shift");
+                c.to_string()
+            }
+            Key::Char(c) if c.is_ascii_lowercase() => c.to_ascii_uppercase().to_string(),
+            Key::Char(c) => char_name(c).map_or_else(|| c.to_string(), str::to_owned),
+            k => {
+                if self.mods.contains(Modifiers::SHIFT) {
+                    parts.push("Shift");
+                }
+                spoken_key_name(k)
+            }
+        };
+        let mut out = parts.join(" ");
+        if !out.is_empty() {
+            out.push(' ');
+        }
+        out.push_str(&key);
+        out
+    }
+}
+
+/// Spoken names for punctuation keys.
+fn char_name(c: char) -> Option<&'static str> {
+    Some(match c {
+        '.' => "period",
+        ',' => "comma",
+        ';' => "semicolon",
+        ':' => "colon",
+        '\'' => "apostrophe",
+        '"' => "quote",
+        '`' => "grave accent",
+        '~' => "tilde",
+        '!' => "exclamation mark",
+        '?' => "question mark",
+        '@' => "at sign",
+        '#' => "number sign",
+        '$' => "dollar sign",
+        '%' => "percent",
+        '^' => "caret",
+        '&' => "ampersand",
+        '*' => "asterisk",
+        '(' => "left parenthesis",
+        ')' => "right parenthesis",
+        '[' => "left bracket",
+        ']' => "right bracket",
+        '{' => "left brace",
+        '}' => "right brace",
+        '<' => "less than",
+        '>' => "greater than",
+        '+' => "plus",
+        '-' => "minus",
+        '=' => "equals",
+        '_' => "underscore",
+        '/' => "slash",
+        '\\' => "backslash",
+        '|' => "vertical bar",
+        _ => return None,
+    })
+}
+
+fn spoken_key_name(k: Key) -> String {
+    match k {
+        Key::PageUp => "Page Up".into(),
+        Key::PageDown => "Page Down".into(),
+        Key::Up => "Up Arrow".into(),
+        Key::Down => "Down Arrow".into(),
+        Key::Left => "Left Arrow".into(),
+        Key::Right => "Right Arrow".into(),
+        Key::Escape => "Escape".into(),
+        other => key_name(other),
+    }
 }
 
 fn key_name(k: Key) -> String {
@@ -306,6 +447,66 @@ mod tests {
         assert_eq!(KeyChord::new(Key::Char('%'), Modifiers::SHIFT), p("%"));
         assert!(p("t").is_text_input());
         assert!(!p("Ctrl+T").is_text_input());
+    }
+
+    #[test]
+    fn terminal_limitations() {
+        for bad in [
+            "Ctrl+H",
+            "Ctrl+I",
+            "Ctrl+M",
+            "Ctrl+J",
+            "Ctrl+Shift+P",
+            "Ctrl+1",
+            "Ctrl+=",
+            "Ctrl+`",
+            "Cmd+O",
+            "Ctrl+Enter",
+            "Shift+Enter",
+            "Alt+Enter",
+            "Ctrl+Shift+Space",
+        ] {
+            assert!(p(bad).terminal_limitation().is_some(), "{bad}");
+        }
+        for good in [
+            "Ctrl+P",
+            "Ctrl+Space",
+            "Alt+.",
+            "Alt+Shift+P",
+            "Ctrl+Home",
+            "Alt+Left",
+            "F3",
+            "Shift+Tab",
+            "T",
+            "Escape",
+        ] {
+            assert_eq!(p(good).terminal_limitation(), None, "{good}");
+        }
+    }
+
+    #[test]
+    fn layout_independence() {
+        assert!(p("Ctrl+Shift+P").is_layout_independent());
+        assert!(p("Alt+.").is_layout_independent());
+        assert!(p("%").is_layout_independent());
+        assert!(!p("Ctrl+*").is_layout_independent());
+        assert!(!p("Alt+(").is_layout_independent());
+        // Shift+digit normalizes to the digit, which is why defaults never
+        // spell chords that way.
+        assert_eq!(p("Ctrl+Shift+8"), p("Ctrl+8"));
+    }
+
+    #[test]
+    fn spoken_names() {
+        assert_eq!(p("Ctrl+Shift+P").spoken(), "Control Shift P");
+        assert_eq!(p("Alt+.").spoken(), "Alt period");
+        assert_eq!(p("?").spoken(), "question mark");
+        assert_eq!(p("t").spoken(), "T");
+        assert_eq!(p("T").spoken(), "Shift T");
+        assert_eq!(p("PageDown").spoken(), "Page Down");
+        assert_eq!(p("Ctrl++").spoken(), "Control plus");
+        assert_eq!(p("Shift+Tab").spoken(), "Shift Tab");
+        assert_eq!(p("Space").spoken(), "Space");
     }
 
     #[test]

@@ -8,7 +8,7 @@ Kept current per wave by the orchestrator. Agents append to their own section's 
 |---|---|---|
 | A — Text & Formats | `agent/a-text-formats` | not started (waits for Jon's go-ahead after the Phase 0 report) |
 | B — Speech | `agent/b-speech` | not started |
-| C — State, Keys, Editing | `agent/c-state-keys-editing` | not started |
+| C — State, Keys, Editing | `agent/c-state-keys-editing` | done, ready for integration (Friday, September 25, 2026) |
 | D — App & TUI | `agent/d-app-tui` | not started |
 | E — Eloquence | `agent/e-eloquence` | not started |
 | F — Apple speech (macOS) | `agent/f-apple` | not started |
