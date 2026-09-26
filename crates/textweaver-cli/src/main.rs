@@ -35,6 +35,17 @@ enum Cmd {
     Backends(cmd::backends::Args),
     /// Find ETI-Eloquence on this computer and explain how to get it.
     Eloquence(cmd::eloquence::Args),
+    /// Convert documents to Markdown, HTML, or text (batch, or watch a folder).
+    Convert(cmd::convert::Args),
+    /// Read a document aloud into an audio file, with optional subtitles.
+    #[command(name = "export-audio")]
+    ExportAudio(cmd::export_audio::Args),
+    /// Manage the library: folders, recent documents, full-text search.
+    Library(cmd::library::Args),
+    /// Import from or export to an Obsidian vault.
+    Vault(cmd::vault::Args),
+    /// Voice typing: transcribe speech to text.
+    Dictate(cmd::dictate::Args),
     /// List a document's saved position and bookmarks.
     Marks(cmd::marks::Args),
     /// Import settings and reading positions from Star.
@@ -54,6 +65,11 @@ fn main() -> Result<()> {
         Cmd::Voices(a) => cmd::voices::run(a),
         Cmd::Backends(a) => cmd::backends::run(a),
         Cmd::Eloquence(a) => cmd::eloquence::run(a),
+        Cmd::Convert(a) => cmd::convert::run(a),
+        Cmd::ExportAudio(a) => cmd::export_audio::run(a),
+        Cmd::Library(a) => cmd::library::run(a),
+        Cmd::Vault(a) => cmd::vault::run(a),
+        Cmd::Dictate(a) => cmd::dictate::run(a),
         Cmd::Marks(a) => cmd::marks::run(a),
         Cmd::MigrateStar(a) => cmd::migrate::run(a),
         Cmd::Serve(a) => cmd::serve::run(a),

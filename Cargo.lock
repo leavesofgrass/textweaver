@@ -2592,6 +2592,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-dictation"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "textweaver-core",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "textweaver-eci"
 version = "0.1.0-alpha.0"
 dependencies = [
@@ -2619,6 +2630,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-enginehost"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "log",
+ "textweaver-core",
+ "textweaver-speech",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "textweaver-export"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "textweaver-core",
+ "textweaver-speech",
+ "textweaver-text",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "textweaver-formats"
 version = "0.1.0-alpha.0"
 dependencies = [
@@ -2634,6 +2668,13 @@ dependencies = [
  "textweaver-text",
  "thiserror 2.0.21",
  "toml",
+]
+
+[[package]]
+name = "textweaver-gui"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "textweaver-app",
 ]
 
 [[package]]
@@ -2711,6 +2752,17 @@ dependencies = [
  "ratatui",
  "tempfile",
  "textweaver-app",
+]
+
+[[package]]
+name = "textweaver-vault"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "textweaver-core",
+ "textweaver-store",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

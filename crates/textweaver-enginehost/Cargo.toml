@@ -1,0 +1,19 @@
+[package]
+name = "textweaver-enginehost"
+description = "Shared engine-host protocol and playback client for out-of-process speech engines (ECI, SAPI)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+textweaver-core.workspace = true
+textweaver-speech.workspace = true
+thiserror.workspace = true
+log.workspace = true
+
+[lints]
+workspace = true

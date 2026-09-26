@@ -15,6 +15,11 @@ members = [
     "crates/textweaver-eci",
     "crates/textweaver-apple",
     "crates/textweaver-sapi",
+    "crates/textweaver-enginehost",
+    "crates/textweaver-export",
+    "crates/textweaver-vault",
+    "crates/textweaver-dictation",
+    "crates/textweaver-gui",
     "xtask",
 ]
 default-members = [
@@ -32,6 +37,10 @@ default-members = [
     "crates/textweaver-eci",
     "crates/textweaver-apple",
     "crates/textweaver-sapi",
+    "crates/textweaver-enginehost",
+    "crates/textweaver-export",
+    "crates/textweaver-vault",
+    "crates/textweaver-dictation",
 ]
 
 [workspace.package]
@@ -60,6 +69,10 @@ textweaver-app = { path = "crates/textweaver-app" }
 textweaver-eci = { path = "crates/textweaver-eci" }
 textweaver-apple = { path = "crates/textweaver-apple" }
 textweaver-sapi = { path = "crates/textweaver-sapi" }
+textweaver-enginehost = { path = "crates/textweaver-enginehost" }
+textweaver-export = { path = "crates/textweaver-export" }
+textweaver-vault = { path = "crates/textweaver-vault" }
+textweaver-dictation = { path = "crates/textweaver-dictation" }
 
 # text and formats
 ropey = "1.6"
@@ -105,6 +118,19 @@ block2 = "0.6"
 
 # Windows SAPI5 (Windows only; used under cfg(windows) in textweaver-sapi)
 windows = "0.62"
+
+# Wave 2
+# PDF: candidates for Agent A's loader choice (ADR-0010); only the chosen one stays.
+lopdf = "0.45"
+pdf-extract = "0.12"
+pdfium-render = "0.9"
+# Character encodings (legacy HTML, Windows-1252 text).
+encoding_rs = "0.8"
+# Hot-folder watch for batch conversion.
+notify = "8"
+# GUI (wave 3 spike; the textweaver-gui crate only).
+wxdragon = "0.9"
+live-region = "0.3"
 
 # tests
 proptest = "1.11"

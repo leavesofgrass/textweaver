@@ -6,13 +6,13 @@ Kept current per wave by the orchestrator. Agents append to their own section's 
 
 | Agent | Branch | Status |
 |---|---|---|
-| A — Text & Formats | `agent/a-text-formats` | not started (waits for Jon's go-ahead after the Phase 0 report) |
-| B — Speech | `agent/b-speech` | not started |
-| C — State, Keys, Editing | `agent/c-state-keys-editing` | done, ready for integration (Friday, September 25, 2026) |
-| D — App & TUI | `agent/d-app-tui` | not started |
-| E — Eloquence | `agent/e-eloquence` | not started |
-| F — Apple speech (macOS) | `agent/f-apple` | not started |
-| G — SAPI5 voices (Windows) | `agent/g-sapi` | not started |
+| A — Text & Formats | `agent/a-text-formats` | done, integrated |
+| B — Speech | `agent/b-speech` | done, integrated |
+| C — State, Keys, Editing | `agent/c-state-keys-editing` | done, integrated |
+| D — App & TUI | `agent/d-app-tui` | done, integrated |
+| E — Eloquence | `agent/e-eloquence` | done, integrated |
+| F — Apple speech (macOS) | `agent/f-apple` | running |
+| G — SAPI5 voices (Windows) | `agent/g-sapi` | done, integrated |
 
 ## Shared preamble (every agent reads this first)
 
@@ -203,12 +203,115 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 - `Settings` (C) ↔ `ServiceConfig` (B) ↔ `App` (D): rate, pitch, volume, pacing, verbosity.
 - `SapiBackend` (G), `NsSpeechBackend`/`AvSpeechBackend` (F) and `EciBackend` (E) ↔ backend registry (B) ↔ app backend selection (D): Eloquence first when installed; normalization skipped for engines that normalize natively.
 
-## Wave 2 (after Integration 1 and Jon's review)
+## Wave 2 (started 2026-09-25; Jon asked to keep going through the waves without pausing)
 
-| Agent | Scope |
-|---|---|
-| A | EPUB and DOCX loaders; `paperback` feature; `pandoc` feature; exports to Markdown / HTML / text; full-text index |
-| B | `speech-dispatcher` backend with index marks; `tts`-crate backend; `synthesize_to_file` and a capture wrapper; audio export (WAV, ffmpeg, SRT / VTT, M4B chapters); omnivox in-process option |
-| C | Notes and highlights with remapping across edits; library folders and recent; `tw migrate-star`; dictation trait with a whisper subprocess backend; Obsidian vault import / export |
-| B (idea) | Reuse the plain-text entries of the IBMTTS community dictionary (word to respelling, not the phoneme entries) as a shared pronunciation lexicon for non-ECI engines |
-| D | Edit mode in the TUI; notes and highlights UI; `tw serve --stdio` JSON-RPC; expanded scripted tests |
+Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech lands separately. Wave 2 agents branch from `main` and follow the shared preamble above, with these updates:
+
+- **Branches:** `wave2/<letter>-<topic>`. Do not push (except Agent K, below); the orchestrator integrates.
+- **Toolchain:** `rust-version` is 1.89; let-chains are expected (clippy's `collapsible_if`).
+- **Native checks on Windows** use `--features textweaver-speech/omnivox` instead of `--all-features` (the `espeak` feature needs libespeak-ng, Linux only) and `--exclude textweaver-gui` on workspace commands. The container runs `--all-features`.
+- **Docker from Git Bash:** prefix with `MSYS_NO_PATHCONV=1`, or Git Bash rewrites `/target/...` into a Windows path.
+- **Engines:** never load Code Factory's Eloquence (unlicensed on this machine) or OpenEVV in tests; real Eloquence tests use Voxin in the container (`compose.voxin.yaml`); real SAPI tests use Microsoft voices and eSpeak only. Never play audio aloud; never commit engine audio.
+- **New ADRs:** each agent below owns the ADR number given in its brief.
+- **Wave 1 contract requests** are assigned below; resolve the ones in your crates.
+
+| Agent | Branch | Status |
+|---|---|---|
+| A2 — Formats and conversion | `wave2/a-formats` | not started |
+| B2 — Speech service and audio export | `wave2/b-speech-export` | not started |
+| C2 — State, notes, library, migration | `wave2/c-state-library` | not started |
+| D2 — App, TUI editing, JSON-RPC | `wave2/d-app-edit-rpc` | not started |
+| H — Shared engine host | `wave2/h-enginehost` | not started |
+| J — Obsidian vault and dictation | `wave2/j-vault-dictation` | not started |
+| K — GUI feasibility spike | `wave2/k-gui-spike` | not started |
+
+### Agent A2 — Formats and conversion
+
+**Owns:** `crates/textweaver-text/`, `crates/textweaver-formats/`, `crates/textweaver-cli/src/cmd/{text,info,search,convert}.rs`, `fixtures/a/`, `xtask/src/parity.rs`, `docs/adr/0010-pdf-loader.md`, `docs/parity-report.md`.
+
+**Deliverables:**
+- EPUB loader (zip, OPF spine, NAV or NCX table of contents to `SectionBreak` markers with chapter titles, images as alt text) and DOCX loader (`word/document.xml`: heading styles, lists with levels, bold/italic/underline runs, `docPr` alt text, tables in place, footnotes), both on the shared builder, with `insta` snapshots on new fixtures you create (keep fixture files small and your own).
+- PDF: choose between `lopdf`, `pdf-extract`, and `pdfium-render` (all in the workspace table; the unchosen ones are removed at integration), write ADR-0010 with the measured trade-offs (text quality on a multi-column fixture, reading order, speed, native dependencies), and implement the loader behind a `pdf` feature. Star's column-aware reading order (`docs/star-parity.md`) is the quality bar. The `paperback` feature stays a stub unless `paperback-core` is on crates.io and suits; report either way.
+- `pandoc` feature: a subprocess loader for the long tail (odt, rtf, rst, org, latex, docbook), available when `pandoc` is on PATH.
+- Exports in `formats`: Markdown, HTML, and plain text, with Markdown escaping fixed.
+- `tw convert FILES/FOLDERS --to markdown|html|text [--out DIR] [--watch]` (batch conversion and hot-folder watch with `notify`; Star's `watch_*` settings semantics).
+- Wave 1 requests: `History::restore(entries, capacity)` (Agent D); `LoadOptions::footnotes: {Deferred, Inline, Skip}` replacing the bool; sentence windowing so sentence steps in multi-megabyte paragraphs stay fast; `encoding_rs` for non-UTF-8 text and HTML charset declarations.
+- Full-text index over loaded documents (index side of `star/fulltext.py`): a small on-disk inverted index API that C2's library search calls.
+
+**Acceptance:** crate tests and snapshots green; `tw text` works on every new format's fixture; `tw convert --watch` has a test with a temporary folder; the parity report still has zero unexplained deltas.
+
+### Agent B2 — Speech service and audio export
+
+**Owns:** `crates/textweaver-speech/`, `crates/textweaver-export/`, `crates/textweaver-cli/src/cmd/{speak,voices,backends,export_audio}.rs`, `docs/adr/0011-audio-export.md`.
+
+**Deliverables:**
+- Wave 1 requests: generation-tagged statuses (`read` returns its generation; `Finished`, `Stopped`, `Paused` carry it) so the app can drop stale status without heuristics (Agent D); `BackendInfo` gains the backend's `Caps` (Agent D); the service re-reads `capabilities()` after `set_params` (Agent G: some voices have no word timing); `Voice` gains `tags: Vec<String>` (Agent G: "OpenEVV", "Eloquence", "OneCore", "32-bit").
+- `speechd` feature: a speech-dispatcher backend with SSML index marks for word events, tested in the container (start `speech-dispatcher` with its espeak-ng module in the test).
+- `textweaver-export`: read a document to WAV through any backend with `SYNTH_TO_FILE` (utterance by utterance, recording each sentence's start and end), then optionally convert with `ffmpeg` if on PATH (MP3; M4B with chapters from `Heading`/`SectionBreak` markers); SRT and WebVTT cues per sentence (Star's `star/tts/subtitles.py` semantics, with optional word-level cues where word timings exist). Write ADR-0011.
+- `tw export-audio FILE --out out.wav|mp3|m4b [--subtitles out.srt|vtt] [--backend --voice --rate]`.
+- Pronunciation lexicon from the plain-text entries of the IBMTTS community dictionary (`third_party/ibmtts-dictionaries/`; `word<TAB>respelling`, skipping phoneme entries starting with a backquote), applied for engines without native normalization, off by default, as a normalization option.
+
+**Acceptance:** service tests for the new status generations and the caps re-read; export tests with the `recording` backend (deterministic timings) checking cue files byte for byte; an espeak export in the container producing a WAV and an SRT; ffmpeg conversion tested when available (Windows has ffmpeg on PATH; skip cleanly where absent).
+
+### Agent C2 — State, notes, library, migration
+
+**Owns:** `crates/textweaver-store/`, `crates/textweaver-keymap/`, `crates/textweaver-a11y/`, `crates/textweaver-editor/`, `crates/textweaver-cli/src/cmd/{marks,migrate,library}.rs`, `xtask/src/keyboard.rs`, `docs/keyboard.md`.
+
+**Deliverables:**
+- Notes and highlights in `DocState` (Star's annotation fields, colors, tags), remapped across edits with the same `EditOutcome` as bookmarks; export of notes as Markdown for Agent J's vault export to reuse.
+- Library: folders, `library.json`, recent documents, sidecar sync wired to library folders (Star's `star/library.py`), and library search calling Agent A2's full-text index API (build against a trait if A2's API is not visible; the orchestrator wires them).
+- `tw migrate-star [--from DIR] [--dry-run]`: settings, reading positions (mapped by word-sequence alignment, ADR-0002), bookmarks, notes, highlights, recent files, library folders, keybindings, and `.star/progress.json` sidecars converted to `.textweaver`; a report of everything imported or skipped.
+- `tw library [--search TEXT] [--add DIR] [--json]`.
+- Settings: `[speech.eci]` (`dictionaries` on/off/path, `library`, `code_factory`), `[speech.sapi]` (`onecore`), `[speech.apple]` (backend preference), all mapped for the app at integration.
+- Wave 1 requests: keymap actions `select_next_word`, `select_previous_word`, `select_next_line`, `select_previous_line` (Shift+arrows in Browse), `read_paragraph`; keep terminal F3 as find next and document `?`/F1 for help; the recovery-snapshot lock with `File::try_lock` (Star bug 39) now that the MSRV is 1.89.
+
+**Acceptance:** crate tests green; migration tested against a synthetic Star configuration directory built in the test (no real Star data); `docs/keyboard.md` regenerated.
+
+### Agent D2 — App, TUI editing, JSON-RPC
+
+**Owns:** `crates/textweaver-app/`, `crates/textweaver-tui/`, `crates/textweaver-cli/src/cmd/{open,serve}.rs`, `docs/adr/0015-json-rpc.md`.
+
+**Deliverables:**
+- Edit mode in the TUI on C's `EditSession`: typing with echo (characters, words, deletions, lines on move, caps indication) spoken through the speech service; Markdown formatting commands; undo and redo; Save (in place for text and Markdown), Save As, New; the autosave recovery prompt at startup; edits applied to the `Document` with `Document::apply` so markers, bookmarks, and notes move.
+- Notes and highlights in the TUI: add, list, jump, delete, with announcements.
+- `tw serve --stdio`: JSON-RPC 2.0 over stdin and stdout exposing open, navigate, read, stop, position, search, and status notifications, so editors and other frontends can drive textweaver; write ADR-0015 with the method list; a scripted test.
+- Wave 1 follow-ups: `tw open` in-process (add `textweaver-tui` as a dependency of the CLI; the orchestrator adds it to the workspace table at integration, so depend on it by path in the meantime); `highlight.lead_words`; periodic position saves; bookmark rename and delete; settings saved when changed, not only at quit.
+- Build against the current APIs; adopt B2's generation-tagged statuses and C2's notes and library at integration (or earlier if merged into `main` before you finish; watch `git log origin/main`).
+
+**Acceptance:** app and TUI tests green, including a scripted edit-mode test (type, format, undo, save, reopen) and a JSON-RPC session test.
+
+### Agent H — Shared engine host
+
+**Owns:** `crates/textweaver-enginehost/`, `crates/textweaver-eci/`, `crates/textweaver-sapi/`, `xtask/src/{eci,sapi}.rs`, `docs/adr/0012-engine-host.md`.
+
+**Deliverables:**
+- Move the duplicated framed protocol, host process management (spawn, restart after a crash or hang), PCM playback with the audio clock, native pause and resume, and WAV writing from `textweaver-eci` and `textweaver-sapi` into `textweaver-enginehost`; make both crates use it without changing their behavior or public API; all existing tests stay green (fake hosts, Voxin real-engine tests in the container, SAPI real-voice tests with Microsoft voices and eSpeak).
+- Resolve the capability questions on this side: both backends declare `PLAYBACK_EVENTS` where they own playback; SAPI reports caps per selected voice.
+- Release packaging for hosts: `cargo xtask hosts` builds every host for the current platform (x64 and x86 on Windows) with the dictionaries, for both debug and release, and is what CI and the release job call.
+- Write ADR-0012 (the protocol, message list, versioning).
+
+**Acceptance:** no behavior change visible to users; test counts at least as high as before; both backends' fake-host suites run against the shared client.
+
+### Agent J — Obsidian vault and dictation
+
+**Owns:** `crates/textweaver-vault/`, `crates/textweaver-dictation/`, `crates/textweaver-cli/src/cmd/{vault,dictate}.rs`, `docs/adr/0013-dictation.md`.
+
+**Deliverables:**
+- `textweaver-vault`: export a document's notes and highlights to an Obsidian vault as Markdown notes with front matter and wikilinks, and import vault notes as documents with their links, ported from `star/obsidian.py` (see `docs/star-parity.md` Part 3 §4.8); build against C's Phase 0 store types and request what you need from C2.
+- `textweaver-dictation`: a `Dictation` trait (start, stop, partial and final text events), a whisper subprocess backend (whisper.cpp's `whisper-cli` or `faster-whisper`, detected on PATH; model choice as Star's `WHISPER_MODELS`), file transcription (`tw dictate --file`), and microphone capture through `cpal` if it is in the workspace (request it otherwise; file transcription first). Spoken commands while dictating ("new line", "period") as a pure, tested transform. Write ADR-0013.
+- `tw vault import|export` and `tw dictate`.
+
+**Acceptance:** vault round-trip tests on a temporary vault; dictation tests with a fake whisper process; real whisper tested only if installed (report whether it is).
+
+### Agent K — GUI feasibility spike (wxDragon)
+
+**Owns:** `crates/textweaver-gui/`, `.github/workflows/gui.yml` (create it), `docs/adr/0014-gui-toolkit.md`. You may push your branch `wave2/k-gui-spike` to run CI on Windows and macOS runners (CI triggers on `agent/**`; add `wave2/k-*` to your own `gui.yml` trigger).
+
+**Deliverables:**
+- Build wxDragon (`wxdragon`, `live-region` are in the workspace table) on this Windows machine: CMake is bundled with Visual Studio 2022 and Visual Studio 18 under `C:\Program Files\Microsoft Visual Studio\`; find it and document how the build locates it. Record the first and incremental build times.
+- A minimal accessible reader window over `textweaver-app`: a menu bar with keyboard accelerators, a read-only multi-line text control showing a document, the caret following the spoken word through `App::poll_speech`, Play/Pause and Stop, a status bar, and announcements through `live-region`. Every control has an accessible name.
+- Verify accessibility programmatically: use Windows UI Automation (PowerShell `System.Windows.Automation` or `UIAutomationClient`) to list the window's elements, names, and roles, and check that the text control exposes its text and caret. Report what NVDA would read; Jon tests with NVDA by ear afterwards.
+- `gui.yml`: build the GUI on Windows and macOS runners.
+- ADR-0014: whether wxDragon meets the bar (build cost, accessibility tree, text control behavior with large documents, live-region behavior), and the recommended Wave 3 plan.
+
+**Acceptance:** `cargo build -p textweaver-gui` succeeds on Windows; the UIA report is included; the GUI workflow is green or its failures are explained.

@@ -1,0 +1,23 @@
+[package]
+name = "textweaver-gui"
+description = "textweaver native GUI on wxDragon (wave 3; feasibility spike in wave 2)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# Not a default member: wxDragon builds wxWidgets from source (CMake and a C++
+# toolchain). Build with `cargo build -p textweaver-gui`.
+
+[[bin]]
+name = "textweaver-gui"
+path = "src/main.rs"
+
+[dependencies]
+textweaver-app.workspace = true
+
+[lints]
+workspace = true
