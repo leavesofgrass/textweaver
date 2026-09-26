@@ -3853,6 +3853,7 @@ dependencies = [
  "textweaver-speech",
  "textweaver-store",
  "textweaver-text",
+ "textweaver-theme",
  "thiserror 2.0.21",
 ]
 
@@ -4145,6 +4146,7 @@ dependencies = [
  "ratatui",
  "tempfile",
  "textweaver-app",
+ "textweaver-theme",
 ]
 
 [[package]]

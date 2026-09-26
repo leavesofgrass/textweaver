@@ -23,6 +23,7 @@ use textweaver_app::testing::{SpeechLog, recording_service};
 use textweaver_app::text::units::unit_at;
 use textweaver_app::text::{NavOptions, navigate};
 use textweaver_app::text_util::first_word_at_or_after;
+use textweaver_app::theme::{ColorSupport, Registry};
 use textweaver_app::{App, AppConfig, Mode, Playback};
 use textweaver_tui::{Theme, Tui};
 
@@ -53,7 +54,7 @@ fn launch(home: &Path) -> Harness {
         ..AppConfig::for_tests()
     });
     let mut h = Harness {
-        tui: Tui::new(app),
+        tui: Tui::with_color_support(app, ColorSupport::TrueColor),
         term: Terminal::new(TestBackend::new(WIDTH, HEIGHT)).unwrap(),
         log,
     };
@@ -382,9 +383,18 @@ fn scripted_session_with_restore() {
 
     // Themes change the drawing.
     h.press(key(KeyCode::F(5)));
-    assert_eq!(h.app().settings().display.theme, "light");
+    assert_eq!(h.app().settings().display.theme, "galaxy-light");
     let title_bg = h.term.backend().buffer()[(0, 0)].bg;
-    assert_eq!(Some(title_bg), Theme::light().title.bg);
+    let light = Theme::from_theme(
+        Registry::builtin().resolve("galaxy-light").0,
+        ColorSupport::TrueColor,
+    );
+    assert_eq!(Some(title_bg), light.title.bg);
+    assert!(
+        h.status().starts_with("Theme Galaxy Light."),
+        "{}",
+        h.status()
+    );
 
     // Quit saves the position.
     let saved = h.cursor();
@@ -411,7 +421,11 @@ fn scripted_session_with_restore() {
     assert_eq!(h.cursor(), expected);
     h.assert_cursor_on(expected);
     assert!(h.status().contains("Resumed at"), "{}", h.status());
-    assert_eq!(h.app().settings().display.theme, "light", "settings saved");
+    assert_eq!(
+        h.app().settings().display.theme,
+        "galaxy-light",
+        "settings saved"
+    );
     assert_eq!(h.app().session().unwrap().bookmarks.len(), 1);
     // The bookmark is drawn.
     h.press(ch('B'));

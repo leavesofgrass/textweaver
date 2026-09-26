@@ -629,8 +629,10 @@ fn voice_changes_are_announced_and_applied() {
     r.act(ActionId::CycleSpeedPreset);
     assert_eq!(r.said.last(), "Skim speed, 350 words per minute.");
     r.act(ActionId::NextTheme);
-    assert_eq!(r.said.last(), "Theme light.");
-    assert_eq!(r.app.settings().display.theme, "light");
+    // Galaxy is the default; the cycle follows the theme registry.
+    assert_eq!(r.said.last(), "Theme Galaxy Light.");
+    assert_eq!(r.app.settings().display.theme, "galaxy-light");
+    assert!(r.app.settings().display.theme_explicit);
     r.act(ActionId::ToggleLineNumbers);
     assert_eq!(r.said.last(), "Line numbers on.");
 }

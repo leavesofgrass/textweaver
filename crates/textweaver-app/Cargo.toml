@@ -28,6 +28,7 @@ textweaver-editor.workspace = true
 textweaver-eci.workspace = true
 textweaver-sapi.workspace = true
 textweaver-apple.workspace = true
+textweaver-theme.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 ropey.workspace = true

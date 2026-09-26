@@ -13,6 +13,7 @@ use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use textweaver_app::core::CharPos;
 use textweaver_app::store::{Paths, SettingsStore};
 use textweaver_app::testing::{SpeechLog, recording_service};
+use textweaver_app::theme::ColorSupport;
 use textweaver_app::{App, AppConfig, Mode};
 use textweaver_tui::Tui;
 
@@ -39,7 +40,7 @@ fn launch(home: &Path) -> Harness {
         ..AppConfig::for_tests()
     });
     let mut h = Harness {
-        tui: Tui::new(app),
+        tui: Tui::with_color_support(app, ColorSupport::TrueColor),
         term: Terminal::new(TestBackend::new(WIDTH, HEIGHT)).unwrap(),
         log,
     };

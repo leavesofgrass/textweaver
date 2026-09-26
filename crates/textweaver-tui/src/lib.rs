@@ -40,7 +40,7 @@ use ratatui::crossterm::execute;
 use textweaver_app::a11y::Priority;
 
 pub use setup::{Options, build_app, build_app_with};
-pub use theme::Theme;
+pub use theme::{Theme, theme_help};
 pub use ui::{Tui, chord};
 
 /// Runs the event loop until the user quits: draw, apply speech status and

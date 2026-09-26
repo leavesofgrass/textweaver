@@ -12,6 +12,7 @@ use textweaver_app::a11y::Priority;
 use textweaver_app::core::CharPos;
 use textweaver_app::store::{Paths, Settings};
 use textweaver_app::testing::recording_service;
+use textweaver_app::theme::ColorSupport;
 use textweaver_app::{App, AppConfig};
 use textweaver_tui::Tui;
 
@@ -34,7 +35,7 @@ fn launch(settings: Settings, home: &Path) -> Harness {
         ..AppConfig::for_tests()
     });
     let mut h = Harness {
-        tui: Tui::new(app),
+        tui: Tui::with_color_support(app, ColorSupport::TrueColor),
         term: Terminal::new(TestBackend::new(WIDTH, HEIGHT)).unwrap(),
     };
     h.draw();

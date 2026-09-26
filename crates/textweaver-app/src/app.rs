@@ -265,12 +265,11 @@ pub struct App {
     pub(crate) prompt_purpose: PromptPurpose,
     /// Reading positions synced through the library folders' sidecars.
     pub(crate) library_sync: textweaver_store::LibrarySync,
+    /// Built-in and user themes (ADR-0020).
+    pub(crate) themes: textweaver_theme::Registry,
 }
 
 impl App {
-    /// Themes the `next_theme` action cycles through.
-    pub const THEMES: [&'static str; 3] = ["galaxy", "light", "high-contrast"];
-
     /// Most highlight ranges kept by [`App::spoken_log`].
     pub const SPOKEN_LOG_LIMIT: usize = 4096;
 
@@ -313,8 +312,10 @@ impl App {
             last_position_save: None,
             prompt_purpose: PromptPurpose::Find,
             library_sync,
+            themes: textweaver_theme::Registry::builtin(),
         };
         app.apply_voice_settings();
+        app.load_themes();
         app
     }
 

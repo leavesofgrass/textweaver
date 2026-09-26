@@ -117,6 +117,7 @@ pub mod rpc;
 mod speech_cursor;
 pub mod testing;
 pub mod text_util;
+mod themes;
 mod view;
 mod voice;
 
@@ -145,3 +146,4 @@ pub use textweaver_keymap as keymap;
 pub use textweaver_speech as speech;
 pub use textweaver_store as store;
 pub use textweaver_text as text;
+pub use textweaver_theme as theme;

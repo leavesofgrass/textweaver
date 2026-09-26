@@ -456,8 +456,13 @@ impl Default for ReadingSettings {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct DisplaySettings {
-    /// Theme name.
+    /// Theme name (Galaxy by default; see `docs/themes.md`).
     pub theme: String,
+    /// Follow the system's light, dark, or high-contrast setting at startup
+    /// (Star's `follow_os_theme`), unless a theme was chosen explicitly.
+    pub follow_os_theme: bool,
+    /// Set when the user picked a theme; stops following the system.
+    pub theme_explicit: bool,
     /// Wrap width in columns; 0 is the terminal width.
     pub wrap_width: u16,
     /// Tab width.
@@ -475,6 +480,8 @@ impl Default for DisplaySettings {
     fn default() -> Self {
         DisplaySettings {
             theme: "galaxy".into(),
+            follow_os_theme: true,
+            theme_explicit: false,
             wrap_width: 0,
             tab_width: 4,
             show_line_numbers: false,
@@ -1085,6 +1092,25 @@ mod tests {
         assert_eq!(s.normalization.community_lexicon.language, "DEU");
         assert_eq!(s.export.subtitle_format, SubtitleFormat::Srt);
         assert!(s.export.subtitle_word_level);
+    }
+
+    #[test]
+    fn theme_following_defaults_and_round_trip() {
+        let s = Settings::default();
+        assert_eq!(s.display.theme, "galaxy");
+        assert!(s.display.follow_os_theme);
+        assert!(!s.display.theme_explicit);
+        let (_d, store) = store();
+        let mut s = Settings::default();
+        s.display.theme = "nord".into();
+        s.display.theme_explicit = true;
+        s.display.follow_os_theme = false;
+        store.save(&s).unwrap();
+        assert_eq!(store.load().0, s);
+        assert_eq!(
+            store.paths().themes_dir(),
+            store.paths().config_dir.join("themes")
+        );
     }
 
     #[test]

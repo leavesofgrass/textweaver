@@ -25,8 +25,8 @@ struct Args {
     /// Keep settings and reading positions under this directory.
     #[arg(long)]
     home: Option<PathBuf>,
-    /// Color theme for this run: galaxy, light, or high-contrast.
-    #[arg(long)]
+    /// Color theme for this run; the help lists every theme.
+    #[arg(long, help = textweaver_tui::theme_help())]
     theme: Option<String>,
 }
 

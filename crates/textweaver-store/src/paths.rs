@@ -60,6 +60,12 @@ impl Paths {
         self.data_dir.join("recovery")
     }
 
+    /// The user themes folder, `themes/` in the configuration directory
+    /// (ADR-0020).
+    pub fn themes_dir(&self) -> PathBuf {
+        self.config_dir.join("themes")
+    }
+
     /// `recent.json`.
     pub fn recent_file(&self) -> PathBuf {
         self.data_dir.join("recent.json")

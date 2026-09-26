@@ -112,7 +112,7 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
     let (speech, backend_name, speech_messages) = start_speech(&settings, opts);
     messages.extend(speech_messages);
     let self_voicing = !opts.no_speech && backend_name != "null" && backend_name != "silent";
-    let app = App::new(AppConfig {
+    let mut app = App::new(AppConfig {
         settings,
         keymap,
         speech,
@@ -121,6 +121,12 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
         self_voicing,
         backend_name,
     });
+    if opts.theme.is_none() {
+        // Follow the system's light, dark, or high-contrast setting unless
+        // the user picked a theme (display.follow_os_theme and
+        // display.theme_explicit); the probe gives up after 500 ms.
+        app.apply_startup_theme(textweaver_app::theme::os::probe());
+    }
     (app, messages)
 }
 

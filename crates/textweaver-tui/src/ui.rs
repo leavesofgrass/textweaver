@@ -21,6 +21,7 @@ use textweaver_app::{
 use crate::layout::{self, Row};
 use crate::theme::Theme;
 use crate::widgets::{ListView, Minibuffer};
+use textweaver_theme::ColorSupport;
 
 /// Converts a crossterm key event into a keymap chord.
 pub fn chord(k: &KeyEvent) -> Option<KeyChord> {
@@ -71,6 +72,10 @@ pub struct Tui {
     list: Option<ListView>,
     answers: HashMap<PromptPurpose, Vec<String>>,
     quit: bool,
+    /// The terminal's color level, detected once.
+    support: ColorSupport,
+    /// The styles of the theme in effect, rebuilt only when it changes.
+    theme: Theme,
 }
 
 /// Screen areas of the last draw.
@@ -89,12 +94,22 @@ pub struct Areas {
 impl Tui {
     /// Wraps an app.
     pub fn new(app: App) -> Self {
+        Self::with_color_support(app, ColorSupport::detect())
+    }
+
+    /// Wraps an app, drawing at a given color level (tests; at run time
+    /// [`ColorSupport::detect`] also honors `TEXTWEAVER_COLOR` and
+    /// `NO_COLOR`).
+    pub fn with_color_support(app: App, support: ColorSupport) -> Self {
+        let theme = Theme::from_theme(app.current_theme(), support);
         Tui {
             app,
             minibuffer: None,
             list: None,
             answers: Default::default(),
             quit: false,
+            support,
+            theme,
         }
     }
 
@@ -123,9 +138,18 @@ impl Tui {
         self.list.as_ref()
     }
 
-    /// The theme in effect.
-    pub fn theme(&self) -> Theme {
-        Theme::named(&self.app.settings().display.theme)
+    /// The styles of the theme in effect, cached by theme name and rebuilt
+    /// only when the theme changes.
+    pub fn theme(&self) -> &Theme {
+        &self.theme
+    }
+
+    /// Rebuilds the cached styles when the app's theme changed.
+    fn refresh_theme(&mut self) {
+        let current = self.app.current_theme();
+        if current.meta.name != self.theme.name {
+            self.theme = Theme::from_theme(current, self.support);
+        }
     }
 
     /// Applies speech status and runs the app's housekeeping (autosave,
@@ -577,7 +601,8 @@ impl Tui {
 
     /// Draws the whole screen and parks the hardware cursor.
     pub fn draw(&mut self, f: &mut Frame<'_>) {
-        let theme = self.theme();
+        self.refresh_theme();
+        let theme = self.theme.clone();
         let areas = self.areas(f.area());
         let text_width = self.text_width(areas.body);
         let vp = self.app.viewport();
