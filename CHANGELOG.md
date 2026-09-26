@@ -30,7 +30,7 @@ See [docs/keyboard.md](docs/keyboard.md#what-changed).
 
 ### Added
 
-- **Scanned pages (OCR).** Scanned PDFs and pictures (PNG, JPEG) are read by recognizing their text: English in process with the pure-Rust ocrs engine (models downloaded once with `tw ocr download`, 12.2 MB, after you agree), other languages with Tesseract when it is installed (`[reading] ocr_lang`). The recognized pages keep their headings, paragraphs, and page numbers. `tw ocr status` and `tw ocr read FILE`. See [ADR-0023](docs/adr/0023-ocr-and-student-formats.md).
+- **Scanned pages (OCR).** Scanned PDFs and pictures (PNG, JPEG) are read by recognizing their text: English in process with the pure-Rust ocrs engine (models downloaded once with `tw ocr download`, 12.2 MB, after you agree), other languages with Tesseract when it is installed (`[reading] ocr_lang`). The recognized pages keep their headings, paragraphs, and page numbers. `tw ocr status` and `tw ocr read FILE`. See [ADR-0025](docs/adr/0025-ocr-and-student-formats.md).
 - **More formats for students.** DAISY 3 books and DTBook (Bookshare zips too), PowerPoint slides with speaker notes, spreadsheets (CSV, TSV, ODS, XLSX) as tables, archives (ZIP, TAR, TAR.GZ, 7Z) with `book.zip!chapter.pdf` paths, and web pages (`tw open https://...`).
 - **EPUB, Word, and PDF reading.** `textweaver` and `tw text` open EPUB (chapters from the table of contents), DOCX (headings, lists, tables, footnotes, alt text), and PDF. The PDF reader is pure Rust and on by default. It finds columns, removes running headers and page numbers, and recovers headings, lists, and tables. See [ADR-0010](docs/adr/0010-pdf-loader.md).
 - **Conversion.** `tw convert` converts files and whole folders to Markdown, HTML, text, EPUB 3, Word, braille (BRF, UEB grade 1), and tagged PDF, on every core, skipping files already converted. It reads GFM, Obsidian, and Pandoc Markdown, turns LaTeX and ASCIIMath into MathML, uses MiniJinja templates, and can watch a folder. Pandoc is used only for formats with no native reader. See [docs/converting.md](docs/converting.md).
@@ -79,9 +79,14 @@ See [docs/keyboard.md](docs/keyboard.md#what-changed).
 - **Export progress.** A long export says "Still exporting to PDF, 2 seconds." and then every ten seconds.
 - **Writers.** PDF output draws strikethrough; Word equations (OMML) read back from DOCX as LaTeX math.
 - **GUI on macOS** says once when a built-in font falls back to a system font.
+- **A settings screen** (Shift+F10, or "settings" in the palette): every setting with its value, filtered as you type; Left and Right change a value, Enter types one, Delete puts the default back. Each change is said and saved. See [docs/settings.md](docs/settings.md#the-settings-screen).
+- **Large files open in the background.** A file of 512 KB or more opens on a helper thread: "Opening report.pdf. Escape cancels.", then "Still opening report.pdf, 3 seconds." The keys keep working, and Escape stops waiting.
+- **JSON-RPC: lists, prompts, and settings.** `list_state`, `list_key`, `prompt_state`, `prompt_key`, `settings_schema`, `get_setting`, and `set_setting`. The server is woken as each word is heard instead of polling. See [docs/json-rpc.md](docs/json-rpc.md).
+- **The app core for the GUI** (Wave 3): a document window of about 500,000 characters around the reading, a waker, an edit command for native text controls, and the settings schema. See [ADR-0024](docs/adr/0024-app-core-for-the-gui.md).
 
 ### Changed
 
+- **Nothing slow waits on the keyboard.** The speech engine starts in the background, so the reader is ready at once and speaks when the engine is; `settings.toml` is written by the writer thread; and the misspelling count after a save follows a moment later instead of holding up the keys (0.6 s on 10 MB).
 - **Say position moved** from `%` to Shift+W and Alt+Shift+Y.
 - `tw speak`, `tw voices`, and `tw backends` read your settings, and take `--home`.
 - Save As suggests a name from the first heading or the title, and asks before replacing a file. A crash, a closed terminal, Ctrl+C, or a stop signal saves your place and your unsaved work, and restores the terminal.

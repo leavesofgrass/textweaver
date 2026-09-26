@@ -121,7 +121,7 @@ With `--no-speech`, reading does not take any time. When you ask the server to r
 
 ## Methods
 
-The server has 17 methods. `initialize` lists them all, so a client can check. Parameters marked optional may be left out.
+The server has 24 methods. `initialize` lists them all, so a client can check. Parameters marked optional may be left out.
 
 ### initialize: say hello and learn the version
 
@@ -285,12 +285,42 @@ Errors: `-32602` "No action" and the id, for an id that does not exist, and "con
 
 Each returns `{status, effects}`, the same as `action` without `pending`.
 
+### list_state and list_key: move through a list as the reader does
+
+Since Wave 3 the list shown and its focused item are kept by textweaver itself, the same for the terminal reader, the GUI, and a client. These methods let a client move through a list with the reader's own keys and hear the same "item, 2 of 5" announcements.
+
+- `list_state` takes no parameters. It returns the list shown as `{title, items, selected, filter}`, or null when no list is shown. `selected` counts from 0; `filter` is the text typed so far in a list that filters as you type (the outline, the citation picker, the settings), else null.
+- `list_key` takes `key` (string, required): `up`, `down`, `page_up`, `page_down`, `home`, `end`, `left`, `right`, `enter`, `escape`, `backspace`, `delete`, `rename`, or one character. A character filters a list that filters, chooses by a list's own letter (`s`, `d`, `c` in Save, Discard, Cancel), or moves to the next item starting with it; a space marks an item (a favourite voice). `left` and `right` change a value in the settings list. It returns `{status, effects, list}`, where `list` is the list after the key, as `list_state` gives it.
+
+### prompt_state and prompt_key: type into a prompt
+
+- `prompt_state` takes no parameters. It returns the prompt open as `{label, purpose, text, caret}`, or null. `caret` counts characters from the start of `text`.
+- `prompt_key` takes either `key` (string): one character, or `backspace`, `delete`, `left`, `right`, `home`, `end`, `up` and `down` (earlier answers to the same prompt, or command palette matches), `tab` (completes a command name or a file path), `kill_to_start`, `kill_to_end`, `delete_word_back`, `enter`, or `escape`; or `text` (string): the whole text of the prompt at once. It returns `{status, effects, prompt}`.
+
+`answer` still works: it answers the open prompt with the text you give.
+
+### settings_schema, get_setting, and set_setting: change settings
+
+- `settings_schema` takes no parameters. It returns every setting in `settings.toml`, in order, as an array of objects with `path` (such as `"speech.rate"`), `section`, `label`, `help`, `kind`, `default`, and `internal` (true for the few that textweaver keeps for itself). By `kind`:
+  - `"toggle"`: on or off.
+  - `"number"`: with `min`, `max`, `step`, and `unit` (such as `"words per minute"`).
+  - `"choice"`: with `choices`, a list of `{value, label}`, and `open` (true when other values may be typed, such as a theme of your own).
+  - `"text"`: with `optional` (true when it may be unset, with null).
+  - `"list"`: a list of texts, such as library folders.
+  - `"table"`: names and values, such as pronunciations; edit these in `settings.toml`.
+- `get_setting` takes `path` (string, required). It returns `{path, value, spoken}`: the value as JSON, and as it reads aloud ("265 words per minute").
+- `set_setting` takes `path` (string, required) and `value` (any JSON; null puts the default back). The value is checked against the setting's type; a number outside its range is set to the nearest value in range. The change takes effect at once (the voice, the theme, the keys) and is saved before the answer. It returns `{path, value, spoken}`.
+
+Errors: `-32602` "There is no setting" and the path, or a sentence saying why the value does not fit.
+
 ### shutdown and exit: finish
 
 - `shutdown` takes no parameters and returns null. It saves the reading position and settings. After it, every request except `exit` fails with error `-32003`.
 - `exit` takes no parameters. Send it as a notification (with no `id`). The server stops and closes its output. If you did not call `shutdown` first, `exit` saves anyway. If you send `exit` with an `id`, you get a null result first.
 
 Closing the server's standard input also stops it, and saves the position too. So a client that is killed or crashes does not lose the reader's place.
+
+The server does not poll on a timer. The speech engine wakes it as each word is heard, so `position` notifications go out at once; otherwise it looks for work about four times a second.
 
 ## Notifications from the server
 
@@ -366,7 +396,7 @@ The server answers with its name, version, protocol, and the lists of methods an
   "id": 1,
   "jsonrpc": "2.0",
   "result": {
-    "methods": ["initialize", "open", "status", "position", "navigate", "read", "pause", "resume", "stop", "search", "text", "action", "answer", "choose", "cancel", "shutdown", "exit"],
+    "methods": ["initialize", "open", "status", "position", "navigate", "read", "pause", "resume", "stop", "search", "text", "action", "answer", "choose", "cancel", "list_state", "list_key", "prompt_state", "prompt_key", "settings_schema", "get_setting", "set_setting", "shutdown", "exit"],
     "notifications": ["position", "playback", "announcement", "prompt", "list", "quit"],
     "protocol": 1,
     "server": "textweaver",
@@ -681,7 +711,7 @@ This client only reads while it waits for an answer. A real client, such as an e
 ## See also
 
 - [ADR-0015: JSON-RPC server](adr/0015-json-rpc.md): the design decision behind `tw serve`.
-- [Architecture](architecture.md): how the server shares the app core with the terminal reader and the GUI.
+- [Architecture](dev/architecture.md): how the server shares the app core with the terminal reader and the GUI.
 - [Keyboard reference](keyboard.md): every action id you can pass to `action` and `navigate`.
 - [Using textweaver with a screen reader](screen-readers.md): `--no-speech` and working with JAWS, NVDA, VoiceOver, and Orca.
 - [Troubleshooting](troubleshooting.md): the log file and common problems.

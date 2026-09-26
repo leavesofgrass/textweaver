@@ -13,7 +13,7 @@ publish.workspace = true
 default = ["pdf", "ocr", "archives", "spreadsheets"]
 # PDF loader (pure Rust, on lopdf; ADR-0010). On by default.
 pdf = ["dep:lopdf"]
-# OCR for scanned PDF pages and image files (ADR-0023): the pure-Rust ocrs
+# OCR for scanned PDF pages and image files (ADR-0025): the pure-Rust ocrs
 # engine in process, Tesseract as a separate program for other languages.
 ocr = ["pdf", "dep:textweaver-ocr"]
 # Tar, tar.gz, and 7z archives (zip is always read).

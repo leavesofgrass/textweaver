@@ -1,4 +1,4 @@
-# ADR-0023: OCR, and formats for students
+# ADR-0025: OCR, and formats for students
 
 - Status: accepted
 - Date: 2026-09-26 (Saturday, September 26, 2026; Agent W3d, Wave 3)
@@ -118,8 +118,8 @@ ocrs is fast and good enough to listen to on clean English scans, and it needs n
 - Scanned PDFs and pictures read aloud with no setup beyond one 12.2 MB download, in process and pure Rust, for English.
 - Other languages need Tesseract installed.
 - **Binary size.** The reader and `tw` link RTen, ocrs, and hayro. The reader does not link an HTTP client: downloads and web addresses are in `tw`.
-- **The reader has no progress or cancel yet.** It loads documents on the same thread that runs its interface, so a long scanned book blocks the reader until it is recognized, and nothing is announced meanwhile. The API is ready (`LoadOptions::progress`). The app core, W3a's area, must load documents off the interface thread to use it. The result cache makes the second opening instant. `tw ocr read FILE` shows progress, and Ctrl+C stops it.
-- **Settings.** `ocr`, `ocr_lang`, and `ocr_engine` are read from `[reading]` through the settings' unknown keys (`playback::load_options`), until the settings types gain real fields (W3c's area).
+- **Progress and cancel in the reader.** PDFs, pictures, archives, and web addresses always open on the app's helper thread (ADR-0024's background open), whatever their size. Its "Still opening" message names the page being recognized ("Still opening scan.pdf: recognizing text on page 3 (3 of 40)."), and Escape cancels the recognition before its next page. The result cache makes the second opening instant. `tw ocr read FILE` shows progress on standard error, and Ctrl+C stops it.
+- **Settings.** `[reading] ocr`, `ocr_lang`, and `ocr_engine` are store settings with settings-schema entries, so the settings screen offers them.
 - **Fuzz targets:** `daisy`, `pptx`, `sheet`, `archive`, and `image`.
 - **Hostile-input tests:** `crates/textweaver-formats/tests/hostile_w3d.rs`.
 - **Not done:**
@@ -133,5 +133,6 @@ ocrs is fast and good enough to listen to on clean English scans, and it needs n
 ## See also
 
 - [ADR-0010: PDF loader](0010-pdf-loader.md)
+- [ADR-0024: App core for the GUI](0024-app-core-for-the-gui.md): the background open this uses.
 - [Research: pure-Rust choices for Wave 3](../research/pure-rust-wave3.md)
 - [Converting documents](../converting.md#formats-textweaver-reads)

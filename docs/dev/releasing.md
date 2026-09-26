@@ -68,7 +68,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 - on Windows, the engine hosts for Eloquence, SAPI5, and DECtalk, each for x64 and x86, and the IBMTTS community dictionaries;
 - on Linux, the engine hosts for Eloquence (Voxin) and DECtalk, the IBMTTS community dictionaries, and the menu entry and icon under `share/`. `textweaver` and `tw` are built with Omnivox, speech-dispatcher, and espeak-ng; espeak-ng is loaded when the program starts, if it is installed, so the same binaries work without it;
 - `QUICKSTART.md`, `README.md`, `LICENSE`, `CHANGELOG.md`, and `INSTALL.md` at the top;
-- in `docs/`, every user guide listed under "For users" in the [documentation index](README.md), and the offline interactive pages in `docs/site/`;
+- in `docs/`, every user guide listed under "For users" in the [documentation index](../README.md), and the offline interactive pages in `docs/site/`;
 - the platform's helper scripts (doctor, speech check, update) and their README;
 - `THIRD-PARTY-NOTICES.md`, and under `licenses/`: each bundled font's `OFL.txt`, SCOWL's `Copyright`, and the IBMTTS dictionaries' licence. `cargo xtask dist` fails if any of these is missing.
 
@@ -122,8 +122,8 @@ To rerun the workflow for an existing tag, start `Release` from the Actions tab 
 
 ## See also
 
-- [Installing textweaver](install.md): what users do with the packages.
-- [CONTRIBUTING.md](../CONTRIBUTING.md): the checks and the commit style.
-- [CHANGELOG.md](../CHANGELOG.md): the release notes come from here.
-- [ADR-0012: The engine host](adr/0012-engine-host.md): `cargo xtask hosts` and host versioning.
-- [Documentation index](README.md)
+- [Installing textweaver](../install.md): what users do with the packages.
+- [CONTRIBUTING.md](../../CONTRIBUTING.md): the checks and the commit style.
+- [CHANGELOG.md](../../CHANGELOG.md): the release notes come from here.
+- [ADR-0012: The engine host](../adr/0012-engine-host.md): `cargo xtask hosts` and host versioning.
+- [Documentation index](../README.md)

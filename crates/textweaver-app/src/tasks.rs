@@ -74,14 +74,15 @@ impl App {
         done
     }
 
-    /// Waits until every background export and lookup has finished (or
-    /// `timeout` passes) and applies the results; for tests. True when none
-    /// is left.
+    /// Waits until every background export, lookup, and misspelling count
+    /// has finished (or `timeout` passes) and applies the results; for
+    /// tests. True when none is left.
     pub fn wait_for_background(&mut self, timeout: Duration) -> bool {
         let deadline = Instant::now() + timeout;
         loop {
             self.poll_jobs(Instant::now());
-            if self.authoring.jobs.is_empty() {
+            let _ = self.spell_count_tick();
+            if self.authoring.jobs.is_empty() && self.spell_count.is_none() {
                 return true;
             }
             if Instant::now() >= deadline {

@@ -1,14 +1,28 @@
-//! The speech backends this build offers: the speech crate's built-ins plus
-//! the engines that live in their own crates: ETI-Eloquence through ECI
-//! (ADR-0007), Apple's system voices on macOS (ADR-0008), and SAPI5 voices
-//! on Windows (ADR-0009). Every frontend selects from this one registry, so
-//! `tw backends`, `tw speak`, and the reader agree.
+//! The speech engines textweaver offers, in one registry: the speech
+//! crate's built-ins plus the engines that live in their own crates:
+//! ETI-Eloquence through ECI (ADR-0007), Apple's system voices on macOS
+//! (ADR-0008), SAPI5 voices on Windows (ADR-0009), and DECtalk (ADR-0021).
+//! Every frontend selects from this one registry, so `tw backends`,
+//! `tw speak`, audio export, the terminal reader, and the GUIs agree.
+//!
+//! The in-process engines are cargo features here, passed through to
+//! `textweaver-speech`: `espeak`, `omnivox`, and `speechd`. The app, the
+//! reader, and `tw` forward their own features of the same names.
+//!
+//! The app core (`textweaver-app`) depends on this crate, not on each
+//! engine crate, and re-exports what it offers; so does every frontend
+//! that needs the registry without the app.
 //!
 //! The engines' options come from the settings (`[speech.eci]`,
 //! `[speech.sapi]`, `[speech.apple]`, [`speech_registry_for`]), and so does
 //! the speech service's configuration ([`service_config`]): voice, rate,
 //! pitch, volume, pacing, punctuation, normalization, and the community
 //! lexicon (`[normalization.community_lexicon]`).
+
+pub use textweaver_apple as apple;
+pub use textweaver_dectalk as dectalk;
+pub use textweaver_eci as eci;
+pub use textweaver_sapi as sapi;
 
 use std::path::PathBuf;
 

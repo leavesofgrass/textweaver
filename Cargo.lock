@@ -4636,6 +4636,7 @@ dependencies = [
  "serde_json",
  "textweaver-core",
  "textweaver-fonts",
+ "textweaver-store",
  "textweaver-text",
  "thiserror 2.0.21",
  "toml",
@@ -4656,18 +4657,15 @@ dependencies = [
  "tempfile",
  "textweaver-a11y",
  "textweaver-aids",
- "textweaver-apple",
  "textweaver-cite",
  "textweaver-convert",
  "textweaver-core",
- "textweaver-dectalk",
- "textweaver-eci",
  "textweaver-editor",
+ "textweaver-engines",
  "textweaver-formats",
  "textweaver-keymap",
  "textweaver-math",
  "textweaver-render",
- "textweaver-sapi",
  "textweaver-speech",
  "textweaver-store",
  "textweaver-text",
@@ -4722,6 +4720,7 @@ dependencies = [
  "textweaver-cite",
  "textweaver-convert",
  "textweaver-dictation",
+ "textweaver-engines",
  "textweaver-export",
  "textweaver-formats",
  "textweaver-ocr",
@@ -4833,6 +4832,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-engines"
+version = "0.1.0-alpha.3"
+dependencies = [
+ "textweaver-apple",
+ "textweaver-core",
+ "textweaver-dectalk",
+ "textweaver-eci",
+ "textweaver-sapi",
+ "textweaver-speech",
+ "textweaver-store",
+]
+
+[[package]]
 name = "textweaver-export"
 version = "0.1.0-alpha.3"
 dependencies = [
@@ -4851,6 +4863,7 @@ name = "textweaver-fonts"
 version = "0.1.0-alpha.3"
 dependencies = [
  "tempfile",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -4952,6 +4965,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "textweaver-math",
+ "textweaver-text",
  "thiserror 2.0.21",
 ]
 
@@ -4997,7 +5011,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
- "textweaver-aids",
  "textweaver-core",
  "thiserror 2.0.21",
  "toml",
@@ -5041,6 +5054,7 @@ dependencies = [
  "tempfile",
  "textweaver-aids",
  "textweaver-app",
+ "textweaver-engines",
  "textweaver-theme",
  "windows",
 ]

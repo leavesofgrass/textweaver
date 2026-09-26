@@ -15,7 +15,7 @@ The app core (`textweaver-app`) is already frontend-independent: frontends send 
 
 **Transport.** `tw serve --stdio` speaks **JSON-RPC 2.0** on stdin and stdout. Messages are newline-delimited JSON by default; a client may instead frame messages with LSP-style `Content-Length` headers, and the server answers in the framing of the last message it received. Nothing else is written to stdout (startup messages become `announcement` notifications); logs go to stderr. No sockets: a client that wants a daemon starts `tw serve` as a child process.
 
-**Core and loop.** `textweaver_app::rpc::Server` is transport-free: `handle(message) -> [messages]` and `poll() -> [notifications]`, so tests drive it directly. `rpc::serve(server, reader, writer)` reads messages on a thread and runs the app on the calling thread, polling speech every 20 ms while waiting (ADR-0003: nothing blocks the app thread; engines that need the main thread get it, because `serve` runs there). Requests are answered in order. A closed stdin ends the server, saving the position.
+**Core and loop.** `textweaver_app::rpc::Server` is transport-free: `handle(message) -> [messages]` and `poll() -> [notifications]`, so tests drive it directly. `rpc::serve(server, reader, writer)` reads messages on a thread and runs the app on the calling thread, polling speech every 20 ms while waiting (ADR-0003: nothing blocks the app thread; engines that need the main thread get it, because `serve` runs there). Since Wave 3 (ADR-0024) the app's waker wakes the loop instead, and it waits up to 250 ms when nothing does. Requests are answered in order. A closed stdin ends the server, saving the position.
 
 **Speech.** The server voices speech itself exactly like the terminal reader (same settings, backend selection, and self-voicing; `--no-speech` for silence). Clients never receive audio. What a screen reader user would hear is also sent as `announcement` notifications, so a client can show or voice it in its own way.
 
@@ -68,5 +68,5 @@ The app core (`textweaver-app`) is already frontend-independent: frontends send 
 
 - [JSON-RPC](../json-rpc.md): the user guide to `tw serve --stdio`, with a worked session.
 - [Keyboard reference](../keyboard.md): the action ids the `action` and `navigate` methods take.
-- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Architecture](../dev/architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
 - [Documentation index](../README.md)

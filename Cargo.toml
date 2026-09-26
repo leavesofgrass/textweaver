@@ -29,6 +29,7 @@ members = [
     "crates/textweaver-aids",
     "crates/textweaver-dectalk",
     "crates/textweaver-fonts",
+    "crates/textweaver-engines",
     "crates/textweaver-ocr",
     "xtask",
 ]
@@ -60,6 +61,7 @@ default-members = [
     "crates/textweaver-aids",
     "crates/textweaver-dectalk",
     "crates/textweaver-fonts",
+    "crates/textweaver-engines",
     "crates/textweaver-ocr",
 ]
 
@@ -85,7 +87,9 @@ textweaver-store = { path = "crates/textweaver-store" }
 textweaver-keymap = { path = "crates/textweaver-keymap" }
 textweaver-a11y = { path = "crates/textweaver-a11y" }
 textweaver-editor = { path = "crates/textweaver-editor" }
-textweaver-app = { path = "crates/textweaver-app" }
+# Default features off, so a crate can build the app without `publish`
+# (the lean reader); crates that want it say `features = ["publish"]`.
+textweaver-app = { path = "crates/textweaver-app", default-features = false }
 textweaver-tui = { path = "crates/textweaver-tui" }
 textweaver-eci = { path = "crates/textweaver-eci" }
 textweaver-apple = { path = "crates/textweaver-apple" }
@@ -103,6 +107,7 @@ textweaver-theme = { path = "crates/textweaver-theme" }
 textweaver-aids = { path = "crates/textweaver-aids" }
 textweaver-dectalk = { path = "crates/textweaver-dectalk" }
 textweaver-fonts = { path = "crates/textweaver-fonts", default-features = false }
+textweaver-engines = { path = "crates/textweaver-engines" }
 textweaver-ocr = { path = "crates/textweaver-ocr" }
 
 # text and formats
@@ -183,7 +188,7 @@ unicode-width = "0.2"
 # (the terminal reader saves and restores the terminal on each).
 ctrlc = { version = "3.4", features = ["termination"] }
 
-# Wave 3 formats and OCR (Agent W3d; docs/research/pure-rust-wave3.md, ADR-0023).
+# Wave 3 formats and OCR (Agent W3d; docs/research/pure-rust-wave3.md, ADR-0025).
 # OCR in process: the ocrs engine on the RTen runtime (both pure Rust), with
 # PDF pages rendered by hayro. Models download at run time, after the user
 # confirms, and are checked by SHA-256 (sha2 was already in the tree).

@@ -4,7 +4,8 @@
 //! [`scan`] reads only the table directory and a few small tables of each
 //! file (see [`crate::sfnt`]), so scanning a Windows font folder of several
 //! hundred files takes a fraction of a second. Callers that scan more than
-//! once should keep the result.
+//! once should keep the result, or use [`installed`], which scans once per
+//! process.
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -153,6 +154,14 @@ pub fn scan_dirs(dirs: &[PathBuf]) -> Vec<SystemFace> {
 /// Reads every installed face ([`font_dirs`]).
 pub fn scan() -> Vec<SystemFace> {
     scan_dirs(&font_dirs())
+}
+
+/// Every installed face, scanned once per process on first use and kept:
+/// the writers, a batch conversion that asks for the same family for every
+/// file, and a GUI's font chooser share the one scan.
+pub fn installed() -> &'static [SystemFace] {
+    static FACES: std::sync::OnceLock<Vec<SystemFace>> = std::sync::OnceLock::new();
+    FACES.get_or_init(scan)
 }
 
 fn usable(name: &str) -> bool {

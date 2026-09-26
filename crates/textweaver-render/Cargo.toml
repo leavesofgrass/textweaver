@@ -24,6 +24,8 @@ log.workspace = true
 pulldown-cmark.workspace = true
 comrak = { workspace = true, optional = true }
 textweaver-math.workspace = true
+# Heading slugs, shared with the reader's link following.
+textweaver-text.workspace = true
 ammonia.workspace = true
 minijinja.workspace = true
 

@@ -84,7 +84,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     if let Some(m) = message {
         eprintln!("{m}");
     }
-    let registry = textweaver_app::speech_registry_for(&settings);
+    let registry = textweaver_engines::speech_registry_for(&settings);
     let report = voices(&args, &settings, &registry)?;
     if let Some(msg) = report.backend.fallback_message() {
         eprintln!("{msg}");

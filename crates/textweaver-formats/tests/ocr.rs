@@ -1,4 +1,4 @@
-//! OCR of scanned PDFs and pictures (ADR-0023), on the scans in
+//! OCR of scanned PDFs and pictures (ADR-0025), on the scans in
 //! `fixtures/w3d` (made by `make_scans.py`).
 //!
 //! The ocrs tests need the models in `.cache/models` at the workspace root

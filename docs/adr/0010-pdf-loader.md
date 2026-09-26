@@ -4,11 +4,11 @@
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): Implemented as decided and on by default. The `PageBreak` markers exist, but the reader has no page navigation yet: go to does not take a page number. `pdf-extract` and `pdfium-render` remain in the workspace table although no crate uses them; removing them is still open. OCR is still out of scope.
 - Status update (Saturday, September 26, 2026, Phase 1): `pdf-extract` and `pdfium-render` are gone from the workspace table (Agent P1c), and hostile page labels and list counters are clamped (Agent P1d). OCR of pages with no text layer is planned for Wave 3 (Agent W3d): the pure-Rust `ocrs` engine in process first, with a Tesseract subprocess as a fallback.
-- Status update (Saturday, September 26, 2026, Wave 3): Pages with no text layer are now recognized by OCR (Agent W3d, [ADR-0023](0023-ocr-and-student-formats.md)): ocrs in process for English, Tesseract for other languages, and the words laid out by this loader's layout engine.
+- Status update (Saturday, September 26, 2026, Wave 3): Pages with no text layer are now recognized by OCR (Agent W3d, [ADR-0025](0025-ocr-and-student-formats.md)): ocrs in process for English, Tesseract for other languages, and the words laid out by this loader's layout engine.
 
 ## Context
 
-Jon reads most course material as PDF, and wants to read PDFs as Markdown with text-to-speech. So PDF support must be on by default in `tw` and `textweaver` on Windows, macOS, and Linux, and the loader must recover Markdown-quality structure (headings, paragraphs, lists, tables, reading order in columns, no running headers or page numbers, page navigation), not just a stream of text. Star's column-aware reconstruction (`star/documents/pdf.py`, on pdfminer.six's layout boxes; `docs/star-parity.md`) is the quality bar.
+Jon reads most course material as PDF, and wants to read PDFs as Markdown with text-to-speech. So PDF support must be on by default in `tw` and `textweaver` on Windows, macOS, and Linux, and the loader must recover Markdown-quality structure (headings, paragraphs, lists, tables, reading order in columns, no running headers or page numbers, page navigation), not just a stream of text. Star's column-aware reconstruction (`star/documents/pdf.py`, on pdfminer.six's layout boxes; `docs/history/star-parity.md`) is the quality bar.
 
 The workspace table offered three crates: `lopdf` (a PDF object model and content-stream parser), `pdf-extract` (text extraction on lopdf), and `pdfium-render` (bindings to Google's PDFium, loaded as a shared library at run time).
 

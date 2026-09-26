@@ -71,8 +71,8 @@ PAGES = [
 CRATE_ADRS = {
     "core": ["0002", "0005"],
     "text": ["0002", "0005"],
-    "formats": ["0010", "0002", "0023"],
-    "ocr": ["0023"],
+    "formats": ["0010", "0002", "0025"],
+    "ocr": ["0025"],
     "speech": ["0003", "0004", "0005"],
     "store": ["0001"],
     "keymap": ["0006"],
@@ -98,12 +98,13 @@ CRATE_ADRS = {
     "aids": ["0022"],
     "dectalk": ["0021", "0012"],
     "fonts": ["0017", "0022"],
+    "engines": ["0001", "0012"],
     "xtask": ["0006", "0012"],
 }
 
 # Where to read about a crate that has no ADR: (link text, path from docs/site).
 CRATE_NO_ADR_NOTE = {
-    "editor": ("Plan section 6.6: Editing", "../plan.md#66-editing-editor"),
+    "editor": ("Plan section 6.6: Editing", "../history/plan.md#66-editing-editor"),
 }
 
 # ---------------------------------------------------------------------------
@@ -123,7 +124,7 @@ LAYERS = [
     ("state", "State and input", "Settings, saved positions, keys, announcements, and editing.",
      ["store", "keymap", "a11y", "editor"]),
     ("speech", "Speech", "The speech service, its backends, and audio export.",
-     ["speech", "enginehost", "eci", "sapi", "apple", "dectalk", "export"]),
+     ["speech", "engines", "enginehost", "eci", "sapi", "apple", "dectalk", "export"]),
     ("document", "Document", "The document model and what loads, speaks, and cites it.",
      ["text", "formats", "ocr", "math", "cite"]),
     ("foundation", "Foundation", "Shared types that everything else builds on.", ["core"]),
@@ -147,7 +148,8 @@ JOB_OVERRIDES = {
     "eci": "Speaks with ETI-Eloquence through the ECI library the user installed, in a separate host process.",
     "editor": "Editing: undo and redo over a rope, Markdown commands, typing echo, find and replace, and autosave.",
     "export": "Reads a document into audio and subtitle files: WAV, MP3, M4B with chapters, SRT, and WebVTT.",
-    "fonts": "Bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic) and installed fonts found by family name.",
+    "fonts": "Bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic), installed fonts found by family name, and the one place a font choice is resolved.",
+    "engines": "The one speech engine registry every frontend shares: the built-in engines, Eloquence, SAPI5, Apple, and DECtalk, configured from the settings.",
     "formats": "Document loaders that turn text, Markdown, HTML, EPUB, DOCX, PDF (with OCR of scans), DAISY, PowerPoint, spreadsheets, archives, and web pages into a document.",
     "ocr": "Text recognition for scanned pages: the ocrs engine in process, Tesseract as a separate program, model downloads checked by SHA-256, and page images.",
     "gui": "The native GUI reader window on wxDragon; a feasibility spike, not built by default, kept as a fallback while Wave 3 builds the GUI on Xilem.",
@@ -155,7 +157,7 @@ JOB_OVERRIDES = {
     "math": "Math: LaTeX and ASCIIMath parsed into one tree, written as MathML, and spoken as natural English.",
     "sapi": "Speaks with Windows SAPI5 voices, each in a host process built for the voice's architecture.",
     "speech": "Speech backends and the speech service, with its own thread, queue, normalization, and word timing.",
-    "store": "Persistence: settings, key overrides, per-document state, recent files, and the library.",
+    "store": "Persistence: settings (the reading-aid settings included), key overrides, per-document state with notes and highlights, recent files, and the library.",
     "vault": "Obsidian vault import and export for notes, highlights, and documents.",
     "xtask": "Maintenance tasks run with cargo xtask: keyboard.md, benchmarks and the soak test, engine hosts, release packages and the AppImage, the dependency check, licence notices, and the Star parity report.",
 }

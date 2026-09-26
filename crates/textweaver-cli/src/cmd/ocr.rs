@@ -1,4 +1,4 @@
-//! `tw ocr`: text recognition for scanned pages (ADR-0023). Owner: Agent
+//! `tw ocr`: text recognition for scanned pages (ADR-0025). Owner: Agent
 //! W3d.
 //!
 //! - `tw ocr status` says which engines can run: the ocrs models (and the

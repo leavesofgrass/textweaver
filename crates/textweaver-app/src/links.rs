@@ -64,13 +64,13 @@ pub(crate) fn heading_for_anchor(doc: &Document, anchor: &str) -> Option<CharPos
     if want.is_empty() {
         return None;
     }
-    let want_slug = textweaver_render::slug::slugify(want);
+    let want_slug = textweaver_text::slug::slugify(want);
     doc.marker_index()
         .iter(MarkerKind::Heading, None)
         .find(|m| {
             let text = doc.slice(m.range);
             let text = text.trim();
-            text.eq_ignore_ascii_case(want) || textweaver_render::slug::slugify(text) == want_slug
+            text.eq_ignore_ascii_case(want) || textweaver_text::slug::slugify(text) == want_slug
         })
         .map(|m| m.range.start)
 }

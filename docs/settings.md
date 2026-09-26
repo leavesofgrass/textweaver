@@ -6,6 +6,20 @@ textweaver can copy all of your settings and key changes into one JSON file. You
 
 You can also edit `settings.toml` yourself in any text editor. Close textweaver first, because it saves its settings when they change. Key changes go in `keymap.toml`; the [keyboard reference](keyboard.md#changing-keys) explains how to write them.
 
+## The settings screen
+
+Change settings without leaving textweaver: press `Shift+F10` in the terminal reader (`Ctrl+comma` in the GUI), or type `settings` in the command palette (`F2`).
+
+- Every setting is listed as its name and value, such as "Rate: 265 words per minute", speech first.
+- Type to filter: "rate" leaves the settings with "rate" in their name, section, or help. Backspace removes a letter.
+- Up and Down move from setting to setting.
+- Left and Right change the value: a smaller or larger number, the previous or next choice, or off and on.
+- Enter turns a switch on or off, takes the next choice, or asks you to type a value, starting from the current one. Enter with the value unchanged, or empty, keeps it, and so does Escape; for a setting that may be left unset, such as the voice, an empty answer unsets it.
+- Delete puts the default back.
+- Escape closes the screen.
+
+Every change is said, such as "Rate, 285 words per minute.", takes effect at once, and is saved. A number outside its range is set to the nearest value that fits, and textweaver says so. A few settings (the speech engine and the keys preset) are used from the next start, or after Restart Speech (`Shift+F8`), and textweaver says which. Tables of names and values, such as pronunciations, are edited in `settings.toml`.
+
 ## Where settings live
 
 textweaver keeps two files in its settings folder:

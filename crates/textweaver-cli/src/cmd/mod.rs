@@ -1,4 +1,4 @@
-//! Subcommands. Each file is owned by one agent (docs/tasks.md).
+//! Subcommands. Each file is owned by one agent (docs/history/tasks.md).
 
 pub mod backends;
 pub mod cite;

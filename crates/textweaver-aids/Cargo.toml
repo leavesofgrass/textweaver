@@ -12,6 +12,7 @@ publish.workspace = true
 [dependencies]
 textweaver-core.workspace = true
 textweaver-text.workspace = true
+textweaver-store.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 unicode-segmentation.workspace = true
@@ -24,7 +25,8 @@ default = ["scowl", "bundled-fonts"]
 # The built-in SCOWL word levels (third_party/scowl/, 692 KB compressed)
 # for difficult-word marking with no download.
 scowl = ["dep:zip"]
-# Bundled reading fonts count as installed when resolving a font choice.
+# Bundled reading fonts count as installed when resolving a font choice
+# (resolution is textweaver-fonts' job).
 bundled-fonts = ["textweaver-fonts/bundled-fonts"]
 
 [dev-dependencies]

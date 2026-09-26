@@ -80,7 +80,7 @@ cargo build --workspace
 cargo test --workspace
 ```
 
-On Linux, the build needs pkg-config and the ALSA development files (`libasound2-dev` on Debian and Ubuntu). espeak-ng is loaded when textweaver starts, so building needs no espeak-ng files; install the `espeak-ng` package to hear it. The Docker development image has everything; see [docs/docker.md](docs/docker.md).
+On Linux, the build needs pkg-config and the ALSA development files (`libasound2-dev` on Debian and Ubuntu). espeak-ng is loaded when textweaver starts, so building needs no espeak-ng files; install the `espeak-ng` package to hear it. The Docker development image has everything; see [docs/dev/docker.md](docs/dev/docker.md).
 
 ```bash
 docker compose build dev
@@ -112,7 +112,7 @@ The `scripts/` folder has installers and helpers for every system. Each script h
 
 ## Repository layout
 
-- `crates/`: the Rust crates, one per job. [docs/architecture.md](docs/architecture.md) describes each one, how they depend on each other, and how a document becomes speech.
+- `crates/`: the Rust crates, one per job. [docs/dev/architecture.md](docs/dev/architecture.md) describes each one, how they depend on each other, and how a document becomes speech.
 - `xtask/`: maintenance tasks, run as `cargo xtask bench`, `startup`, `soak`, `dist`, `appimage`, `release`, `hosts`, `eci-host`, `sapi-host`, `keyboard`, `deps`, `notices`, and `parity`.
 - `scripts/`: installers, update, speech check, doctor, dev-check, and folder conversion.
 - `tools/`: helper programs, among them the link checker (`check_links.py`), the site data generator (`gen_site_data.py`), and the engine spikes.
@@ -137,7 +137,7 @@ GPL-3.0-or-later, like Star. See [LICENSE](LICENSE).
 
 - [Documentation index](docs/README.md): every guide, grouped by audience.
 - [Quick start](docs/quickstart.md): your first 30 seconds.
-- [Architecture](docs/architecture.md): the crates and how speech and highlighting work.
+- [Architecture](docs/dev/architecture.md): the crates and how speech and highlighting work.
 - [Roadmap](docs/roadmap.md): what comes next.
 - [CONTRIBUTING.md](CONTRIBUTING.md): how to build, check, and send changes.
 - [CHANGELOG.md](CHANGELOG.md): what changed in each release.

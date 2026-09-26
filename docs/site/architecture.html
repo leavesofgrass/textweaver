@@ -232,14 +232,14 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     Each crate has one job.
     <span id="crate-summary">This page lists every crate, its job, and how it depends on the others.</span></p>
     <noscript><p class="note">The interactive map needs JavaScript.
-    The <a href="../architecture.md">architecture guide</a> describes the same crates in text.</p></noscript>
+    The <a href="../dev/architecture.md">architecture guide</a> describes the same crates in text.</p></noscript>
 
     <h2>The dependency rule</h2>
     <p>Dependencies point one way: down.
     The core crate is at the bottom and depends on no other crate in the workspace.
     The speech crates receive utterances and never see a Document, so speech does not depend on the text model.
     The frontends sit at the top: they turn keys into commands, and the app crate does the work.</p>
-    <p>Read more in the <a href="../architecture.md">architecture guide</a>
+    <p>Read more in the <a href="../dev/architecture.md">architecture guide</a>
     and in <a href="../adr/0001-workspace-and-dependencies.md">ADR-0001: Workspace layout and dependency policy</a>.</p>
 
     <h2>Choose a crate</h2>
@@ -290,9 +290,9 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
   <div class="wrap">
     <h2>Related documents</h2>
     <ul>
-      <li><a href="../architecture.md">Architecture guide</a>: how the crates fit together, in text.</li>
+      <li><a href="../dev/architecture.md">Architecture guide</a>: how the crates fit together, in text.</li>
       <li><a href="../adr/0001-workspace-and-dependencies.md">ADR-0001: Workspace layout and dependency policy</a></li>
-      <li><a href="../plan.md">Implementation plan</a>: section 5 lists the crates and who owns them.</li>
+      <li><a href="../history/plan.md">Implementation plan</a>: section 5 lists the crates and who owns them.</li>
       <li><a href="README.md">About these pages</a></li>
       <li><a href="../README.md">Documentation index</a></li>
     </ul>
@@ -368,6 +368,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "deps": [
     "textweaver-aids",
     "textweaver-app",
+    "textweaver-engines",
     "textweaver-theme"
    ],
    "description": "textweaver terminal UI: self-voicing ratatui frontend",
@@ -410,6 +411,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-cite",
     "textweaver-convert",
     "textweaver-dictation",
+    "textweaver-engines",
     "textweaver-export",
     "textweaver-formats",
     "textweaver-ocr",
@@ -489,18 +491,15 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "deps": [
     "textweaver-a11y",
     "textweaver-aids",
-    "textweaver-apple",
     "textweaver-cite",
     "textweaver-convert",
     "textweaver-core",
-    "textweaver-dectalk",
-    "textweaver-eci",
     "textweaver-editor",
+    "textweaver-engines",
     "textweaver-formats",
     "textweaver-keymap",
     "textweaver-math",
     "textweaver-render",
-    "textweaver-sapi",
     "textweaver-speech",
     "textweaver-store",
     "textweaver-text",
@@ -539,7 +538,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-convert"
    ],
    "deps": [
-    "textweaver-math"
+    "textweaver-math",
+    "textweaver-text"
    ],
    "description": "Markdown to HTML with selectable engines and flavors (GFM, Obsidian, Pandoc), math as MathML, and MiniJinja templates",
    "dev_deps": [],
@@ -642,9 +642,9 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-writers"
    ],
    "deps": [],
-   "description": "Fonts for textweaver: bundled Atkinson Hyperlegible Next and Mono and OpenDyslexic (SIL OFL 1.1), and installed fonts found by family name",
+   "description": "Fonts for textweaver: bundled Atkinson Hyperlegible Next and Mono and OpenDyslexic (SIL OFL 1.1), installed fonts found by family name, and font choice and resolution",
    "dev_deps": [],
-   "job": "Bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic) and installed fonts found by family name.",
+   "job": "Bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic), installed fonts found by family name, and the one place a font choice is resolved.",
    "layer": "output",
    "name": "textweaver-fonts",
    "path": "crates/textweaver-fonts",
@@ -694,12 +694,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "dependents": [
     "textweaver-app",
     "textweaver-gui",
-    "textweaver-store",
     "textweaver-tui"
    ],
    "deps": [
     "textweaver-core",
     "textweaver-fonts",
+    "textweaver-store",
     "textweaver-text"
    ],
    "description": "Reading aids for textweaver: RSVP, bionic reading, syllable splitting, reading level, text spacing, reading ruler, difficult words",
@@ -778,16 +778,17 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
+    "textweaver-aids",
     "textweaver-app",
+    "textweaver-engines",
     "textweaver-vault"
    ],
    "deps": [
-    "textweaver-aids",
     "textweaver-core"
    ],
    "description": "textweaver persistence: settings, keymap file, per-document state, notes, library, sidecar merge, recent files, settings import and export, Star migration",
    "dev_deps": [],
-   "job": "Persistence: settings, key overrides, per-document state, recent files, and the library.",
+   "job": "Persistence: settings (the reading-aid settings included), key overrides, per-document state with notes and highlights, recent files, and the library.",
    "layer": "state",
    "name": "textweaver-store",
    "path": "crates/textweaver-store",
@@ -854,7 +855,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
   },
   {
    "adr_note": {
-    "href": "../plan.md#66-editing-editor",
+    "href": "../history/plan.md#66-editing-editor",
     "text": "Plan section 6.6: Editing"
    },
    "adrs": [],
@@ -907,6 +908,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-dectalk",
     "textweaver-eci",
     "textweaver-enginehost",
+    "textweaver-engines",
     "textweaver-export",
     "textweaver-sapi"
    ],
@@ -921,6 +923,47 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "name": "textweaver-speech",
    "path": "crates/textweaver-speech",
    "short": "speech",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0001-workspace-and-dependencies.md",
+     "number": "0001",
+     "title": "ADR-0001: Workspace layout and dependency policy"
+    },
+    {
+     "href": "../adr/0012-engine-host.md",
+     "number": "0012",
+     "title": "ADR-0012: One engine-host protocol and playback client"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app",
+    "textweaver-cli",
+    "textweaver-tui"
+   ],
+   "deps": [
+    "textweaver-apple",
+    "textweaver-core",
+    "textweaver-dectalk",
+    "textweaver-eci",
+    "textweaver-sapi",
+    "textweaver-speech",
+    "textweaver-store"
+   ],
+   "description": "textweaver speech engines: the backend registry every frontend shares (built-ins, Eloquence, SAPI5, Apple, DECtalk), engine options from the settings, and the speech service configuration",
+   "dev_deps": [],
+   "job": "The one speech engine registry every frontend shares: the built-in engines, Eloquence, SAPI5, Apple, and DECtalk, configured from the settings.",
+   "layer": "speech",
+   "name": "textweaver-engines",
+   "path": "crates/textweaver-engines",
+   "short": "engines",
    "tool": false,
    "version": "0.1.0-alpha.3"
   },
@@ -975,7 +1018,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
-    "textweaver-app"
+    "textweaver-engines"
    ],
    "deps": [
     "textweaver-core",
@@ -1012,7 +1055,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
-    "textweaver-app"
+    "textweaver-engines"
    ],
    "deps": [
     "textweaver-core",
@@ -1042,7 +1085,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
-    "textweaver-app"
+    "textweaver-engines"
    ],
    "deps": [
     "textweaver-core",
@@ -1078,7 +1121,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
-    "textweaver-app"
+    "textweaver-engines"
    ],
    "deps": [
     "textweaver-core",
@@ -1148,6 +1191,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-convert",
     "textweaver-export",
     "textweaver-formats",
+    "textweaver-render",
     "textweaver-writers",
     "xtask"
    ],
@@ -1178,9 +1222,9 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "title": "ADR-0002: Text model"
     },
     {
-     "href": "../adr/0023-ocr-and-student-formats.md",
-     "number": "0023",
-     "title": "ADR-0023: OCR, and formats for students"
+     "href": "../adr/0025-ocr-and-student-formats.md",
+     "number": "0025",
+     "title": "ADR-0025: OCR, and formats for students"
     }
    ],
    "bins": [],
@@ -1211,9 +1255,9 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "adr_note": null,
    "adrs": [
     {
-     "href": "../adr/0023-ocr-and-student-formats.md",
-     "number": "0023",
-     "title": "ADR-0023: OCR, and formats for students"
+     "href": "../adr/0025-ocr-and-student-formats.md",
+     "number": "0025",
+     "title": "ADR-0025: OCR, and formats for students"
     }
    ],
    "bins": [],
@@ -1324,6 +1368,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-eci",
     "textweaver-editor",
     "textweaver-enginehost",
+    "textweaver-engines",
     "textweaver-export",
     "textweaver-formats",
     "textweaver-keymap",
@@ -1405,6 +1450,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "about": "The speech service, its backends, and audio export.",
    "crates": [
     "textweaver-speech",
+    "textweaver-engines",
     "textweaver-enginehost",
     "textweaver-eci",
     "textweaver-sapi",

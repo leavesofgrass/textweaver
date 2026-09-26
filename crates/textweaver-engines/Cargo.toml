@@ -1,0 +1,29 @@
+[package]
+name = "textweaver-engines"
+description = "textweaver speech engines: the backend registry every frontend shares (built-ins, Eloquence, SAPI5, Apple, DECtalk), engine options from the settings, and the speech service configuration"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[features]
+default = []
+# In-process engines, passed through to textweaver-speech.
+espeak = ["textweaver-speech/espeak"]
+omnivox = ["textweaver-speech/omnivox"]
+speechd = ["textweaver-speech/speechd"]
+
+[dependencies]
+textweaver-core.workspace = true
+textweaver-speech.workspace = true
+textweaver-store.workspace = true
+textweaver-eci.workspace = true
+textweaver-sapi.workspace = true
+textweaver-dectalk.workspace = true
+textweaver-apple.workspace = true
+
+[lints]
+workspace = true

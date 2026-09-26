@@ -6,7 +6,7 @@
 
 ## Context
 
-Star builds the spoken text and the displayed text separately and aligns them with Python's `difflib` to find which displayed word is being spoken. Its normalization is a chain of regex substitutions that cannot report where anything came from. The inventory (`docs/star-parity.md`, speech section) found the consequences: the TUI expands abbreviations and numbers but maps engine word positions against the unexpanded text, so the highlight and the saved pause position point at the wrong word after the first expansion; the GUI avoids that by never normalizing during playback at all.
+Star builds the spoken text and the displayed text separately and aligns them with Python's `difflib` to find which displayed word is being spoken. Its normalization is a chain of regex substitutions that cannot report where anything came from. The inventory (`docs/history/star-parity.md`, speech section) found the consequences: the TUI expands abbreviations and numbers but maps engine word positions against the unexpanded text, so the highlight and the saved pause position point at the wrong word after the first expansion; the GUI avoids that by never normalizing during playback at all.
 
 ## Decision
 
@@ -44,5 +44,5 @@ Span { spoken: Range<u32>,   // bytes in the spoken text
 - [Speech pipeline, step by step](../site/speech-pipeline.html): a worked example of an offset map, `$x^2$` read as "x squared".
 - [Math](../math.md): how math is spoken with exact highlighting.
 - [Speech engines and voices](../speech.md): normalization settings and engines that normalize natively.
-- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Architecture](../dev/architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
 - [Documentation index](../README.md)

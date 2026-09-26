@@ -271,7 +271,7 @@ proptest! {
         let _ = s.to_css("body");
         let f = FontSettings { family: FontFamily::from(name), size_pt: size, weight, fetch_missing: true };
         prop_assert!(f.clamped().validate().is_ok());
-        let css = f.to_css(&s, "body");
+        let css = textweaver_aids::font_css(&f, &s, "body");
         prop_assert!(!css.contains(";;"));
     }
 

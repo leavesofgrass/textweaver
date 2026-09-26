@@ -85,7 +85,7 @@ impl SpeechTrack {
 /// How much text continuous reading plans at a time, in chars (about ten
 /// minutes of speech). Planning the whole rest of a 10 MB document on the
 /// UI thread took a quarter of a second on every Read, every jump while
-/// reading, and every resume (docs/audit-2026-09.md, finding P1).
+/// reading, and every resume (docs/history/audit-2026-09.md, finding P1).
 pub(crate) const READ_WINDOW: usize = 32_768;
 
 /// The end of the reading window that starts at `start`: the end of the
@@ -143,27 +143,20 @@ pub fn load_options(settings: &textweaver_store::Settings) -> textweaver_formats
     }
 }
 
-/// OCR from `[reading]`: `ocr` (true or false), `ocr_lang` (Tesseract
-/// codes or language tags, such as `fra` or `fr`), and `ocr_engine`
-/// (`auto`, `ocrs`, `tesseract`, or `paddle`). They are read from the
-/// section's unknown keys until the settings types gain them (ADR-0023).
+/// OCR from `[reading]`: `ocr`, `ocr_lang`, and `ocr_engine` (ADR-0025).
 fn ocr_options(reading: &textweaver_store::ReadingSettings) -> textweaver_formats::OcrOptions {
-    let reading = &reading.extra;
-    let mut o = textweaver_formats::OcrOptions::default();
-    if let Some(on) = reading.get("ocr").and_then(|v| v.as_bool()) {
-        o.enabled = on;
+    use textweaver_formats::OcrEngineChoice as Choice;
+    use textweaver_store::OcrEngine;
+    textweaver_formats::OcrOptions {
+        enabled: reading.ocr,
+        lang: reading.ocr_lang.trim().to_owned(),
+        engine: match reading.ocr_engine {
+            OcrEngine::Auto => Choice::Auto,
+            OcrEngine::Ocrs => Choice::Ocrs,
+            OcrEngine::Tesseract => Choice::Tesseract,
+            OcrEngine::Paddle => Choice::Paddle,
+        },
     }
-    if let Some(lang) = reading.get("ocr_lang").and_then(|v| v.as_str()) {
-        lang.trim().clone_into(&mut o.lang);
-    }
-    if let Some(engine) = reading
-        .get("ocr_engine")
-        .and_then(|v| v.as_str())
-        .and_then(textweaver_formats::OcrEngineChoice::parse)
-    {
-        o.engine = engine;
-    }
-    o
 }
 
 /// What a capability change means for the listener, or `None` when nothing
@@ -284,6 +277,7 @@ impl App {
     /// the rendered text while editing) in place: the cursor does not
     /// follow, and Stop and Pause work as for any reading. Returns the
     /// reading's generation, or `None` when there is nothing to read.
+    #[cfg_attr(not(feature = "publish"), allow(dead_code))]
     pub(crate) fn read_planned(
         &mut self,
         utterances: Vec<textweaver_core::Utterance>,
@@ -843,10 +837,9 @@ mod tests {
             super::load_options(&settings).ocr,
             textweaver_formats::OcrOptions::default()
         );
-        let extra = &mut settings.reading.extra;
-        extra.insert("ocr".into(), false.into());
-        extra.insert("ocr_lang".into(), " fra+eng ".into());
-        extra.insert("ocr_engine".into(), "Tesseract".into());
+        settings.reading.ocr = false;
+        settings.reading.ocr_lang = " fra+eng ".into();
+        settings.reading.ocr_engine = textweaver_store::OcrEngine::Tesseract;
         let o = super::load_options(&settings).ocr;
         assert!(!o.enabled);
         assert_eq!(o.lang, "fra+eng");

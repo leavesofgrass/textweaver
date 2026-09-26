@@ -79,6 +79,9 @@ fn everything_changed() -> Settings {
     r.cursor_follows_speech = false;
     r.sync_conflict_policy = ConflictPolicy::Manual;
     r.citations = crate::CitationReading::Words;
+    r.ocr = false;
+    r.ocr_lang = "fra+eng".into();
+    r.ocr_engine = crate::OcrEngine::Tesseract;
     let d = &mut s.display;
     d.theme = "nord".into();
     d.wrap_width = 100;
@@ -119,9 +122,9 @@ fn everything_changed() -> Settings {
     s.export.subtitle_word_level = true;
     s.export.subtitles_with_audio = true;
     let a = &mut s.reading_aids;
-    a.rsvp = textweaver_aids::RsvpSettings {
+    a.rsvp = crate::reading_aids::RsvpSettings {
         wpm: 450,
-        pacing: textweaver_aids::Pacing::External,
+        pacing: crate::reading_aids::Pacing::External,
         clause_pause: 40,
         sentence_pause: 90,
         paragraph_pause: 120,
@@ -130,40 +133,40 @@ fn everything_changed() -> Settings {
         long_word_max: 60,
         show_previous: false,
         show_next: false,
-        position: textweaver_aids::RsvpPosition::Center,
+        position: crate::reading_aids::RsvpPosition::Center,
         font_size_pt: 60,
         lead_words: 1,
     };
     a.bionic = true;
-    a.bionic_options = textweaver_aids::BionicOptions {
+    a.bionic_options = crate::reading_aids::BionicOptions {
         ratio: 0.5,
         min_word_len: 3,
         skip_numbers: false,
         skip_urls: false,
         skip_code: false,
     };
-    a.spacing = textweaver_aids::TextSpacing {
+    a.spacing = crate::reading_aids::TextSpacing {
         line_height: 2.0,
         paragraph_spacing: 2.0,
         letter_spacing: 0.12,
         word_spacing: 0.16,
     };
-    a.font = textweaver_aids::FontSettings {
-        family: textweaver_aids::FontFamily::Serif,
+    a.font = crate::reading_aids::FontSettings {
+        family: "serif".into(),
         size_pt: 18.0,
         weight: 700,
         fetch_missing: false,
     };
-    a.ruler = textweaver_aids::RulerSettings {
-        mode: textweaver_aids::RulerMode::Ruler,
-        scope: textweaver_aids::RulerScope::Row,
+    a.ruler = crate::reading_aids::RulerSettings {
+        mode: crate::reading_aids::RulerMode::Ruler,
+        scope: crate::reading_aids::RulerScope::Row,
         rows_above: 2,
         rows_below: 2,
         mask_outside: true,
     };
     a.syllables = true;
     a.difficult_words = true;
-    a.syllable_options = textweaver_aids::SyllableOptions {
+    a.syllable_options = crate::reading_aids::SyllableOptions {
         separator: "-".into(),
         left_min: 1,
         right_min: 3,

@@ -220,6 +220,6 @@ fn main() {
         ruler_rows(&rows, CharPos(1234), &RulerSettings::default())
     });
     time("font + spacing CSS", || {
-        FontSettings::default().to_css(&TextSpacing::wcag(), "main")
+        textweaver_aids::font_css(&FontSettings::default(), &TextSpacing::wcag(), "main")
     });
 }

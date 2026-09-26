@@ -99,7 +99,7 @@ The overlay sets `ECIINI`, `LD_LIBRARY_PATH`, and `TEXTWEAVER_ECI_LIBRARY` (`/op
 
 ALSA inside the image is routed to PulseAudio. Point `PULSE_SERVER` at a PulseAudio server on the host (the Voxin overlay defaults to `tcp:host.docker.internal:4713`, the address emacspeak-docker's `scripts/setup-audio.ps1` sets up on Windows) and anything textweaver plays in the container is heard on the host. Tests never open an audio device.
 
-`scripts/voxin-docker.sh` wraps the Voxin commands above; see [scripts/README.md](../scripts/README.md#voxin-dockersh).
+`scripts/voxin-docker.sh` wraps the Voxin commands above; see [scripts/README.md](../../scripts/README.md#voxin-dockersh).
 
 ## The Linux release image
 
@@ -107,8 +107,8 @@ ALSA inside the image is routed to PulseAudio. Point `PULSE_SERVER` at a PulseAu
 
 ## See also
 
-- [CONTRIBUTING.md](../CONTRIBUTING.md): setting up, the checks, and the agent workflow.
-- [The Eloquence guide](eloquence.md): Voxin for users.
-- [ADR-0001: Workspace and dependencies](adr/0001-workspace-and-dependencies.md): why Linux-only features are tested in the container.
-- [ADR-0007: Eloquence through an ECI host](adr/0007-eloquence-via-eci-host.md): the Voxin measurements.
-- [Documentation index](README.md)
+- [CONTRIBUTING.md](../../CONTRIBUTING.md): setting up, the checks, and the agent workflow.
+- [The Eloquence guide](../eloquence.md): Voxin for users.
+- [ADR-0001: Workspace and dependencies](../adr/0001-workspace-and-dependencies.md): why Linux-only features are tested in the container.
+- [ADR-0007: Eloquence through an ECI host](../adr/0007-eloquence-via-eci-host.md): the Voxin measurements.
+- [Documentation index](../README.md)

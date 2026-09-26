@@ -34,6 +34,8 @@
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+// The authoring state names these through this module in every build.
+pub(crate) use textweaver_cite::insert::PickerEntry;
 use textweaver_cite::insert::{
     add_to_citation, announce_inserted, describe_citation, insertion_text, parse_locator,
     picker_entries,
@@ -43,9 +45,10 @@ use textweaver_cite::pandoc::{
     Citation, CiteItem, citation_at, counts_as_citation, find_citations, write_citation,
 };
 use textweaver_cite::{
-    CitationStyle, Formatter, Layered, Library, OutputFormat as CiteFormat, Reference,
-    folder_library_path, user_library_path,
+    CitationStyle, Formatter, Layered, Library, OutputFormat as CiteFormat, folder_library_path,
+    user_library_path,
 };
+pub(crate) use textweaver_cite::{HttpClient, Reference};
 use textweaver_core::{CharPos, CharRange, MarkerKind};
 use textweaver_editor::Selection;
 use textweaver_store::CitationReading;
@@ -417,6 +420,7 @@ impl App {
         let cache = self.paths.as_ref().map(|p| p.cache_dir.join("cite"));
         let (tx, rx) = std::sync::mpsc::channel();
         let what = id.describe();
+        let wake = self.waker_slot();
         let spawned = std::thread::Builder::new()
             .name("tw-cite-lookup".into())
             .spawn(move || {
@@ -429,6 +433,7 @@ impl App {
                     lookup = lookup.with_cache(textweaver_cite::Cache::new(dir));
                 }
                 let _ = tx.send(lookup.identifier(&id).map_err(|e| e.to_string()));
+                wake.wake();
             });
         match spawned {
             Ok(_) => {

@@ -1,5 +1,5 @@
 //! `cargo xtask release X.Y.Z [--dry-run] [--no-checks]`: prepare a release
-//! commit and tag (docs/releasing.md).
+//! commit and tag (docs/dev/releasing.md).
 //!
 //! 1. Checks that the working tree is clean and on `main`.
 //! 2. Sets `version` in `[workspace.package]` and runs `cargo update -w`.
@@ -27,7 +27,7 @@ use anyhow::{Context, bail};
 
 /// Files whose version examples follow the release, relative to the root.
 const EXAMPLE_FILES: [&str; 4] = [
-    "docs/releasing.md",
+    "docs/dev/releasing.md",
     "docs/install.md",
     ".github/workflows/scripts.yml",
     ".github/workflows/release.yml",

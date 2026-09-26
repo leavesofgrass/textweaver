@@ -218,9 +218,9 @@ A scanned PDF has pictures of pages instead of text. textweaver recognizes the t
 - `ocr_engine` chooses the engine: `auto` (the default), `ocrs`, `tesseract`, or `paddle` (an experimental in-process engine for accented Latin-script languages; download it with `tw ocr download paddle-latin`). `ocr = false` turns recognition off.
 - `tw ocr read scan.pdf` recognizes a file and prints its text, with progress. Press Control C to stop it.
 - Recognized pages are remembered, so a book opens instantly the second time.
-- In the reader, a long scanned book takes a while to open the first time: about one second a page.
+- In the reader, a scanned book takes about a second a page to open the first time. Every three seconds you hear which page it is on, such as "Still opening scan.pdf: recognizing text on page 3 (3 of 40)." Escape stops it.
 
-[ADR-0023](adr/0023-ocr-and-student-formats.md) explains the choices and gives measurements.
+[ADR-0025](adr/0025-ocr-and-student-formats.md) explains the choices and gives measurements.
 
 ## Export from inside the reader
 

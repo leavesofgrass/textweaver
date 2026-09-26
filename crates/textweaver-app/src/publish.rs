@@ -30,7 +30,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use textweaver_convert::{ConvertOptions, Converter, Job as ConvertJob, OutputFormat, Status};
+pub(crate) use textweaver_convert::OutputFormat;
+use textweaver_convert::{ConvertOptions, Converter, Job as ConvertJob, Status};
 use textweaver_core::{CharRange, Utterance};
 use textweaver_formats::{Loader, MarkdownLoader, Source};
 use textweaver_speech::ReadingGeneration;
@@ -170,18 +171,6 @@ fn front_matter_bibliography(text: &str, folder: &Path) -> Option<PathBuf> {
 }
 
 impl App {
-    /// Where files made from a document that has no file yet go (exports,
-    /// study sheets): the folder textweaver was started in, as Save As
-    /// suggests; in a session that keeps no files (tests), the system's
-    /// temporary folder.
-    pub(crate) fn loose_folder(&self) -> PathBuf {
-        if self.paths.is_some() {
-            std::env::current_dir().unwrap_or_else(|_| std::env::temp_dir())
-        } else {
-            std::env::temp_dir()
-        }
-    }
-
     /// The document's folder and base name.
     fn doc_place(&self) -> (Option<PathBuf>, PathBuf, String) {
         let path = self
@@ -295,6 +284,7 @@ impl App {
             root: src.folder.clone(),
         };
         let temp = src.temp.clone();
+        let wake = self.waker_slot();
         let spawned = std::thread::Builder::new()
             .name("tw-export".into())
             .spawn(move || {
@@ -330,6 +320,7 @@ impl App {
                     let _ = std::fs::remove_dir_all(dir);
                 }
                 let _ = tx.send(result);
+                wake.wake();
             });
         match spawned {
             Ok(_) => self.authoring.jobs.push(Job::Export {
@@ -627,14 +618,8 @@ impl App {
         if self.authoring.preview.is_some() {
             self.write_preview(ExportKind::PreviewRefresh);
         }
-        if let Some(summary) = self.misspelling_summary() {
-            // "No misspellings." only at high verbosity: silence means none.
-            let quiet = summary.starts_with("No ")
-                && self.settings.speech.verbosity < textweaver_a11y::Verbosity::High;
-            if !quiet {
-                self.announce_queued(&summary, textweaver_a11y::Priority::Polite);
-            }
-        }
+        // The count follows on a helper thread (Wave 3).
+        self.count_misspellings_in_background();
     }
 
     /// Reads the document as it will render, from the caret, without
