@@ -1,11 +1,13 @@
 //! `cargo xtask dist [--universal] [--out DIR]`: a release package for
 //! this platform (docs/releasing.md).
 //!
-//! Builds `textweaver` and `tw` in release, the engine hosts for the
-//! platform (Windows and Linux), and stages them with the pronunciation
-//! dictionaries, the licence, and the user guides in
-//! `target/dist/textweaver-VERSION-PLATFORM/`, then archives the folder:
-//! a `.zip` on Windows, a `.tar.gz` elsewhere.
+//! Builds `textweaver` and `tw` with the `dist` profile (the release
+//! profile with fat LTO), the engine hosts for the platform (Windows and
+//! Linux), and stages them with the pronunciation dictionaries, the
+//! licence, the third-party notices and licence files, and the user guides
+//! in `target/dist/textweaver-VERSION-PLATFORM/`, then archives the folder:
+//! a `.zip` on Windows, a `.tar.gz` elsewhere. It fails if a notice is
+//! missing from the staged folder.
 //!
 //! - Windows builds link the C runtime statically (`+crt-static`), so the
 //!   package runs without the Visual C++ redistributable. The static build
@@ -28,6 +30,29 @@ const BINARIES: [(&str, &str); 2] = [("textweaver-tui", "textweaver"), ("textwea
 /// Features for the user binaries (subprocess backends only, so nothing
 /// extra is linked).
 const FEATURES: &str = "textweaver-tui/omnivox,textweaver-cli/omnivox";
+/// The cargo profile for packages (root `Cargo.toml`, `[profile.dist]`).
+const PROFILE: &str = "dist";
+/// Where the licence files of bundled data go in the package: (source,
+/// path in the package). The notices file itself goes at the top.
+const LICENCE_FILES: [(&str, &str); 5] = [
+    (
+        "third_party/fonts/atkinson-hyperlegible-next/OFL.txt",
+        "licenses/fonts/atkinson-hyperlegible-next/OFL.txt",
+    ),
+    (
+        "third_party/fonts/atkinson-hyperlegible-mono/OFL.txt",
+        "licenses/fonts/atkinson-hyperlegible-mono/OFL.txt",
+    ),
+    (
+        "third_party/fonts/opendyslexic/OFL.txt",
+        "licenses/fonts/opendyslexic/OFL.txt",
+    ),
+    ("third_party/scowl/Copyright", "licenses/scowl/Copyright"),
+    (
+        "third_party/ibmtts-dictionaries/LICENSE.md",
+        "licenses/ibmtts-dictionaries/LICENSE.md",
+    ),
+];
 /// The two macOS targets joined by `--universal`.
 const MAC_TARGETS: [&str; 2] = ["aarch64-apple-darwin", "x86_64-apple-darwin"];
 /// Documents copied into the package: (source, name in the package).
@@ -120,7 +145,7 @@ pub fn run() -> anyhow::Result<()> {
         for (_, bin) in BINARIES {
             let parts: Vec<PathBuf> = MAC_TARGETS
                 .iter()
-                .map(|t| build_dir.join(t).join("release").join(bin))
+                .map(|t| build_dir.join(t).join(PROFILE).join(bin))
                 .collect();
             let dest = stage.join(bin);
             run_tool(
@@ -141,7 +166,7 @@ pub fn run() -> anyhow::Result<()> {
         build_binaries(&root, &build_dir, None)?;
         for (_, bin) in BINARIES {
             let file = format!("{bin}{}", std::env::consts::EXE_SUFFIX);
-            eci::copy(&build_dir.join("release").join(&file), &stage.join(&file))?;
+            eci::copy(&build_dir.join(PROFILE).join(&file), &stage.join(&file))?;
         }
     }
 
@@ -152,7 +177,7 @@ pub fn run() -> anyhow::Result<()> {
         build_hosts(&root, &build_dir, &hosts)?;
         for h in &hosts {
             eci::copy(
-                &h.built(&build_dir, "release"),
+                &h.built(&build_dir, PROFILE),
                 &stage.join(h.installed_name()),
             )?;
         }
@@ -162,6 +187,7 @@ pub fn run() -> anyhow::Result<()> {
     for (src, dest) in DOCS {
         eci::copy(&root.join(src), &stage.join(dest))?;
     }
+    stage_notices(&root, &stage)?;
     // The helper scripts for this platform (doctor, speech check, update).
     let ext = if cfg!(windows) { "ps1" } else { "sh" };
     if let Ok(entries) = fs::read_dir(root.join("scripts")) {
@@ -178,6 +204,8 @@ pub fn run() -> anyhow::Result<()> {
             eci::copy(&path, &stage.join(src))?;
         }
     }
+
+    check_notices(&stage)?;
 
     let archive = if cfg!(windows) {
         let zip = out.join(format!("{name}.zip"));
@@ -199,6 +227,31 @@ pub fn run() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Copies the third-party notices and the data licence files into `stage`.
+fn stage_notices(root: &Path, stage: &Path) -> anyhow::Result<()> {
+    eci::copy(
+        &root.join(crate::notices::NOTICES),
+        &stage.join(crate::notices::NOTICES),
+    )?;
+    for (src, dest) in LICENCE_FILES {
+        eci::copy(&root.join(src), &stage.join(dest))?;
+    }
+    Ok(())
+}
+
+/// Fails unless `stage` holds the licence, the notices, and every data
+/// licence file: a package must never ship without them.
+fn check_notices(stage: &Path) -> anyhow::Result<()> {
+    let required = ["LICENSE", crate::notices::NOTICES]
+        .into_iter()
+        .chain(LICENCE_FILES.iter().map(|(_, dest)| *dest));
+    let missing: Vec<&str> = required.filter(|f| !stage.join(f).is_file()).collect();
+    if !missing.is_empty() {
+        bail!("the package lacks {}", missing.join(", "));
+    }
+    Ok(())
+}
+
 /// A cargo command for release builds into `build_dir`, with the static C
 /// runtime on Windows.
 fn cargo(root: &Path, build_dir: &Path) -> Command {
@@ -216,7 +269,14 @@ fn cargo(root: &Path, build_dir: &Path) -> Command {
 
 fn build_binaries(root: &Path, build_dir: &Path, target: Option<&str>) -> anyhow::Result<()> {
     let mut cmd = cargo(root, build_dir);
-    cmd.args(["build", "--release", "--features", FEATURES]);
+    cmd.args([
+        "build",
+        "--locked",
+        "--profile",
+        PROFILE,
+        "--features",
+        FEATURES,
+    ]);
     for (package, bin) in BINARIES {
         cmd.args(["-p", package, "--bin", bin]);
     }
@@ -235,7 +295,13 @@ fn build_hosts(root: &Path, build_dir: &Path, hosts: &[HostBuild]) -> anyhow::Re
     }
     for target in targets {
         let mut cmd = cargo(root, build_dir);
-        cmd.args(["build", "--release", "--no-default-features"]);
+        cmd.args([
+            "build",
+            "--locked",
+            "--profile",
+            PROFILE,
+            "--no-default-features",
+        ]);
         for h in hosts.iter().filter(|h| h.target == target) {
             cmd.args(["-p", h.package, "--bin", h.bin]);
         }
@@ -326,5 +392,41 @@ mod tests {
         for (src, _) in DOCS {
             assert!(root.join(src).is_file(), "{src} is packaged but missing");
         }
+        assert!(root.join(crate::notices::NOTICES).is_file());
+        for (src, _) in LICENCE_FILES {
+            assert!(root.join(src).is_file(), "{src} is packaged but missing");
+        }
+    }
+
+    #[test]
+    fn every_font_licence_is_packaged() {
+        let fonts = eci::root().join("third_party").join("fonts");
+        for entry in fs::read_dir(&fonts).unwrap().flatten() {
+            if entry.path().join("OFL.txt").is_file() {
+                let src = format!(
+                    "third_party/fonts/{}/OFL.txt",
+                    entry.file_name().to_string_lossy()
+                );
+                assert!(
+                    LICENCE_FILES.iter().any(|(s, _)| *s == src),
+                    "{src} is not packaged"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn staged_packages_carry_the_notices() {
+        let stage = std::env::temp_dir().join(format!("tw-dist-notices-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&stage);
+        fs::create_dir_all(&stage).unwrap();
+        assert!(check_notices(&stage).is_err());
+        let root = eci::root();
+        eci::copy(&root.join("LICENSE"), &stage.join("LICENSE")).unwrap();
+        stage_notices(&root, &stage).unwrap();
+        check_notices(&stage).unwrap();
+        assert!(stage.join("licenses/scowl/Copyright").is_file());
+        assert!(stage.join("licenses/fonts/opendyslexic/OFL.txt").is_file());
+        let _ = fs::remove_dir_all(&stage);
     }
 }

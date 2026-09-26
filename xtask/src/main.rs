@@ -2,20 +2,29 @@
 //!
 //! - `bench`: time the reading and authoring hot paths on generated Markdown
 //!   corpora and the fixtures (release build; see `bench.rs`).
+//! - `deps [--check]`: the dependency direction between workspace crates
+//!   (see `deps.rs`).
 //! - `hosts`: build every speech-engine host for this platform and install
 //!   them with the dictionaries (`--dest DIR` for a package directory).
 //! - `dist`: build a release package for this platform (`--universal` on
 //!   macOS); see `docs/releasing.md`.
 //! - `eci-host`, `sapi-host`: build one engine's hosts.
 //! - `keyboard`: regenerate `docs/keyboard.md` from the keymap (Agent C).
+//! - `notices [--check]`: regenerate `THIRD-PARTY-NOTICES.md` with
+//!   `cargo about` (see `notices.rs`).
 //! - `parity`: compare word and sentence segmentation with the Star corpus
 //!   in `fixtures/star-parity/` and write the report (Agent A).
+//! - `release X.Y.Z [--dry-run] [--no-checks]`: set the version, date the
+//!   changelog, run the checks, commit, and tag (see `release.rs`).
 
 mod bench;
+mod deps;
 mod dist;
 mod eci;
 mod keyboard;
+mod notices;
 mod parity;
+mod release;
 mod sapi;
 
 #[cfg(feature = "bench")]
@@ -28,14 +37,19 @@ fn main() -> anyhow::Result<()> {
         "bench" => bench::run(),
         #[cfg(feature = "bench")]
         "bench-run" => bench::run_inner(),
+        "deps" => deps::run(),
         "dist" => dist::run(),
         "hosts" => eci::hosts(),
         "eci-host" => eci::run(),
         "keyboard" => keyboard::run(),
+        "notices" => notices::run(),
         "sapi-host" => sapi::run(),
         "parity" => parity::run(),
+        "release" => release::run(),
         _ => {
-            eprintln!("usage: cargo xtask <bench|dist|hosts|eci-host|keyboard|parity|sapi-host>");
+            eprintln!(
+                "usage: cargo xtask <bench|deps|dist|hosts|eci-host|keyboard|notices|parity|release|sapi-host>"
+            );
             std::process::exit(2);
         }
     }
