@@ -42,7 +42,7 @@ The GUI is written against Masonry and `masonry_winit` directly, as the research
 
 ### Windowing
 
-The view holds a window of about 120,000 characters around the focus, aligned to lines, and cut at a space inside a very long line (`window.rs`). Positions stay document-absolute. The window is rebuilt when the focus comes within 8,000 characters of an inner edge. This is smaller than the wx plan's 500,000 UTF-16 units: the size was chosen by measurement (below), so a rebuild and its accessibility update stay well inside a frame.
+The view holds the app's `DocWindow` (Agent W3a, [ADR-0024](0024-app-core-for-the-gui.md)): about 120,000 UTF-16 units around the focus, aligned to paragraphs, sliding while reading and recentring on jumps, and reloaded when `Session::revision` says the text changed. Positions stay document-absolute. The budget is smaller than the app's default of 500,000: it was chosen by measurement (below), so a rebuild of the view and its accessibility tree stays well inside a frame. `window.rs` turns the window into paragraphs with heading levels and styles.
 
 ### Announcements
 
@@ -50,8 +50,8 @@ A live region (`widgets.rs`, `Announcer`): an invisible widget whose children ar
 
 ### Windows, dialogs, and focus
 
-- The window: a header (document title, Open and Commands buttons), the document, a "Reading" toolbar (Play or Pause as the primary button, Stop, Previous and Next sentence, Slower, Faster), and a status bar whose name is its text. Each is a named region with a role (`Banner`, `Toolbar`, `Status`). Buttons are our own `ActionButton`, because Masonry's `Button` cannot carry an accessible name, a keyboard shortcut, or a description.
-- **Dialogs are in the window**, not separate windows: a modal card with the `Dialog` role over a dimmed page; while one is open, the window behind it is disabled and hidden from screen readers. An in-window dialog never takes the foreground, so `--background` runs can open them. Prompts use Masonry's text field with an accessible label (a small Masonry patch); lists use our `ChoiceList`, one focusable `ListBox` whose options are AccessKit nodes, with arrows, Home, End, paging, first-letter search, Enter, and Escape. The command palette filters as you type and says how many commands match; it stands in for a menu bar.
+- The window: a header (document title, Open, Fonts, and Commands buttons), the document, a "Reading" toolbar (Play or Pause as the primary button, Stop, Previous and Next sentence, Slower, Faster), and a status bar whose name is its text. Each is a named region with a role (`Banner`, `Toolbar`, `Status`). Buttons are our own `ActionButton`, because Masonry's `Button` cannot carry an accessible name, a keyboard shortcut, or a description.
+- **Dialogs are in the window**, not separate windows: a modal card with the `Dialog` role over a dimmed page; while one is open, the window behind it is disabled and hidden from screen readers. An in-window dialog never takes the foreground, so `--background` runs can open them. Prompts use Masonry's text field with an accessible label (a small Masonry patch); lists use our `ChoiceList`, one focusable `ListBox` whose options are AccessKit nodes, with arrows, Home, End, paging, first-letter search, Enter, and Escape. The app's lists (bookmarks, help, voices, the library, and the settings screen) are the app's `ListModel`: the list sends its keys as `Command::ListKey` and shows the model's items and focus in place, so Left and Right change a setting (Settings: `Ctrl+Comma`). The app does not announce each item (`App::set_announce_list_focus(false)`), because the options are AccessKit nodes and the list's active descendant is the screen reader's focus; `--app-list-announcements` turns them back on for comparison. The command palette filters as you type and says how many commands match; it stands in for a menu bar. The font chooser (Fonts) is ported from the spike: the families, bundled first, then a size.
 - `--background` opens the window without activating it, off screen, and with no taskbar button on Windows; the report checks that the foreground window never changes.
 
 ### Themes and fonts
@@ -94,15 +94,15 @@ Measured on Saturday, September 26, 2026, on the development machine (Windows 11
 
 The wxDragon spike (`crates/textweaver-gui`, ADR-0014) keeps building and passing its own UI Automation report on Windows until this GUI passes the same report and Jon's NVDA and JAWS session. Only then is it removed (Wave 4, Agent W4a). If Xilem development stops or a screen reader cannot be served, the plan in the research page stands: wxDragon, and on Linux wxWidgets on GTK 3 with the `live-region` crate.
 
-## Waiting on W3a
+## Built on W3a's app core
 
-Agent W3a is building, at the same time, the app pieces this GUI should use. Until they land, thin local adapters stand in:
+The GUI started with thin local adapters while Agent W3a built the app pieces, and switched once W3a's branch was merged in (Saturday, September 26, 2026):
 
-- **Window model:** `window.rs` (`TextWindow`); switch to the app's shared window model.
-- **Waker:** a ticker thread wakes the event loop every 30 ms while reading and every 250 ms otherwise; switch to the app's waker, sending an async action on each speech event.
-- **List and prompt state:** `ChoiceList` keeps its own selection and first-letter search, and the palette filters with `App::palette_candidates`; switch to the app's list and prompt model ("k of n", type-to-filter) so the TUI, the GUI, and JSON-RPC share one implementation.
-- **Settings schema:** needed for the settings dialog, not built yet.
-- **`Command::ReplaceRange`:** needed for edit mode (Wave 4).
+- **Window:** the app's `DocWindow` and `follow_session` (the local `TextWindow` is gone).
+- **Waker:** `App::set_waker` posts a tick to the event loop whenever speech or background work rings, one per burst; a ticker thread covers the app's own timers, sleeping for `App::tick_interval`. The 30 ms polling is gone.
+- **Lists:** the app's `ListModel` through `Command::ListKey` and `Command::ListFocus`; the settings screen works in the GUI through it.
+- **Still local:** prompts send their answer with `Command::Answer` rather than `PromptKey::SetText`, and the command palette filters with `App::palette_candidates`; both could move to the app's `PromptModel`. The font chooser's lists are the GUI's own.
+- **Not used yet:** `Command::ReplaceRange` (edit mode, Wave 4) and a dedicated settings dialog built from `SettingsSchema` (the settings screen's list serves meanwhile).
 
 ## Consequences
 
