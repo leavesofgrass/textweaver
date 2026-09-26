@@ -294,6 +294,9 @@ pub struct App {
     pub(crate) pending_list_delete: Option<(ListKind, usize)>,
     /// The voices shown by the last voice list, in list order.
     pub(crate) voice_list: Vec<textweaver_speech::Voice>,
+    /// Text copied or cut, waiting for the frontend
+    /// ([`App::take_clipboard`]).
+    pub(crate) clipboard: Option<String>,
 }
 
 impl App {
@@ -350,6 +353,7 @@ impl App {
             snapshot_trouble: false,
             pending_list_delete: None,
             voice_list: Vec::new(),
+            clipboard: None,
         };
         app.apply_voice_settings();
         app.load_themes();
@@ -1046,6 +1050,19 @@ impl App {
         }
     }
 
+    /// The item a letter chooses at once in the list shown, if the list has
+    /// such keys: in the Save, Discard, Cancel list, `s`, `d`, and `c`.
+    /// Other letters (and other lists) jump to the next item starting with
+    /// the letter instead, which the frontend does.
+    pub fn list_accelerator(&self, c: char) -> Option<usize> {
+        match (&self.list, c.to_ascii_lowercase()) {
+            (Some(ListKind::SaveChoice(_)), 's') => Some(0),
+            (Some(ListKind::SaveChoice(_)), 'd') => Some(1),
+            (Some(ListKind::SaveChoice(_)), 'c') => Some(2),
+            _ => None,
+        }
+    }
+
     /// Space on a list item: in the voice list, adds the voice to the
     /// favourites or removes it.
     fn mark_item(&mut self, n: usize) -> Vec<Effect> {
@@ -1129,6 +1146,8 @@ impl App {
             A::ReadParagraph => self.read_current_unit(textweaver_core::Unit::Paragraph),
             A::ReadSelection => self.read_selection(),
             A::SayPosition => self.say_position(),
+            A::WordCount => self.word_count(),
+            A::LinkAddress => self.link_address(),
             A::ReplaySentence => self.replay_sentence(),
             A::ReplayParagraph => self.replay_paragraph(),
             A::RsvpToggle => self.rsvp_toggle(Instant::now()),
@@ -1146,6 +1165,27 @@ impl App {
             A::PreviousHeading => self.heading(textweaver_core::Direction::Backward, true),
             A::SkipNextHeading => self.heading(textweaver_core::Direction::Forward, false),
             A::SkipPreviousHeading => self.heading(textweaver_core::Direction::Backward, false),
+            A::NextHeadingLevel1
+            | A::NextHeadingLevel2
+            | A::NextHeadingLevel3
+            | A::NextHeadingLevel4
+            | A::NextHeadingLevel5
+            | A::NextHeadingLevel6
+            | A::PreviousHeadingLevel1
+            | A::PreviousHeadingLevel2
+            | A::PreviousHeadingLevel3
+            | A::PreviousHeadingLevel4
+            | A::PreviousHeadingLevel5
+            | A::PreviousHeadingLevel6 => {
+                if let Some((level, next)) = a.heading_level_jump() {
+                    let dir = if next {
+                        textweaver_core::Direction::Forward
+                    } else {
+                        textweaver_core::Direction::Backward
+                    };
+                    self.heading_level_jump(level, dir);
+                }
+            }
             A::NextTable => self.marker_jump(
                 textweaver_core::MarkerKind::Table,
                 textweaver_core::Direction::Forward,
@@ -1280,6 +1320,11 @@ impl App {
             | A::InsertImage
             | A::Replace => return self.edit_action(a),
             A::ChooseVoice => return self.choose_voice(),
+            A::Copy => return self.copy(),
+            A::Cut => return self.cut(),
+            A::NextTableCell => return self.table_cell(textweaver_core::Direction::Forward),
+            A::PreviousTableCell => return self.table_cell(textweaver_core::Direction::Backward),
+            A::CycleTypingEcho => self.cycle_typing_echo(),
         }
         vec![Effect::Redraw]
     }

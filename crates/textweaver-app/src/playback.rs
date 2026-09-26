@@ -212,12 +212,26 @@ impl App {
     /// Reads `range` aloud. `kind` decides whether the cursor follows.
     /// Returns false when there was nothing to read.
     pub(crate) fn read_range(&mut self, range: CharRange, kind: ReadKind) -> bool {
+        self.read_range_led(range, kind, None)
+    }
+
+    /// [`read_range`](Self::read_range), saying `lead` first (structure the
+    /// narration does not say, such as "list item").
+    pub(crate) fn read_range_led(
+        &mut self,
+        range: CharRange,
+        kind: ReadKind,
+        lead: Option<&str>,
+    ) -> bool {
         let policy = self.narration_policy();
         let Some(s) = self.session.as_mut() else {
             return false;
         };
         let range = range.clamp_to(s.doc.len_chars());
-        let utterances = textweaver_text::plan(&s.doc, range, &policy);
+        let mut utterances = textweaver_text::plan(&s.doc, range, &policy);
+        if let Some(lead) = lead.filter(|_| !utterances.is_empty()) {
+            utterances.insert(0, textweaver_core::Utterance::announcement(lead));
+        }
         self.continue_from = None;
         if utterances.is_empty() {
             return false;
@@ -456,17 +470,40 @@ impl App {
         self.read_line_range(range);
     }
 
-    /// Reads one line in place, saying "blank" for an empty line.
+    /// Reads one line in place, saying "blank" for an empty line, and its
+    /// structure first ("list item", "heading level 2", "row 3"). The
+    /// narration already says headings and table rows, so only the rest
+    /// is added to what is spoken; the status line shows all of it.
     pub(crate) fn read_line_range(&mut self, range: CharRange) {
-        let blank = self
-            .session
-            .as_ref()
-            .is_none_or(|s| text_util::is_blank(&s.doc, range));
+        let Some(s) = self.session.as_ref() else {
+            return;
+        };
+        let blank = text_util::is_blank(&s.doc, range);
+        let structure = if self.settings.speech.verbosity >= textweaver_a11y::Verbosity::Normal {
+            crate::app::App::line_structure(&s.doc, text_util::line_of(&s.doc, range.start))
+        } else {
+            None
+        };
+        // The first item of a list is introduced by the narration ("list
+        // with 3 items").
+        let first_item = s
+            .doc
+            .marker_index()
+            .enclosing(MarkerKind::List, range.start)
+            .is_some_and(|l| l.range.start == range.start);
+        let lead = structure
+            .as_deref()
+            .filter(|k| !k.starts_with("heading") && !k.starts_with("row") && !first_item);
+        let lead = lead.map(str::to_owned);
         self.stop_speech();
-        if blank || !self.read_range(range, ReadKind::InPlace) {
+        if blank || !self.read_range_led(range, ReadKind::InPlace, lead.as_deref()) {
             self.speak_content("blank");
         } else {
             self.show_read_text(range, true);
+            if let Some(kind) = structure {
+                let shown = format!("{kind}, {}", self.status_text());
+                self.show(&shown);
+            }
         }
     }
 

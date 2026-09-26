@@ -208,6 +208,14 @@ fn parse_table_size(s: &str) -> Option<(u16, u16)> {
     }
 }
 
+/// `s` with its first letter capitalized.
+fn capitalize_first(s: &str) -> String {
+    let mut c = s.chars();
+    c.next()
+        .map(|f| f.to_uppercase().chain(c).collect())
+        .unwrap_or_default()
+}
+
 /// True when `a` and `b` name the same file (compared resolved when both
 /// exist, else as written).
 fn same_path(a: &Path, b: &Path) -> bool {
@@ -416,7 +424,7 @@ impl App {
                 let title = self.edit_title();
                 self.list = Some(ListKind::SaveChoice(after));
                 self.tell(&format!(
-                    "{title} has unsaved changes. Save, discard, or cancel? Up and Down choose, Enter confirms, Escape cancels."
+                    "{title} has unsaved changes. Save, discard, or cancel? Press s, d, or c, or Up and Down and Enter. Escape cancels."
                 ));
                 vec![Effect::ShowList {
                     title: format!("Save changes to {title}?"),
@@ -765,7 +773,7 @@ impl App {
 
     /// Applies what an editor operation did: the document, every position,
     /// the cursor and selection, and the view.
-    fn after_edit(&mut self, before: &Rope, outcomes: &[EditOutcome]) {
+    pub(crate) fn after_edit(&mut self, before: &Rope, outcomes: &[EditOutcome]) {
         let Some(edit) = self.edit.as_mut() else {
             return;
         };
@@ -840,7 +848,7 @@ impl App {
         }
     }
 
-    fn not_editing(&mut self, what: &str) -> Vec<Effect> {
+    pub(crate) fn not_editing(&mut self, what: &str) -> Vec<Effect> {
         let k = chords_text(&self.keymap, ActionId::ToggleEditMode);
         self.tell(&format!("Turn on edit mode with {k} to {what}."));
         vec![Effect::Redraw]
@@ -856,6 +864,11 @@ impl App {
             return vec![Effect::Redraw];
         }
         self.stop_speech();
+        if text == "\n"
+            && let Some(effects) = self.continue_list()
+        {
+            return effects;
+        }
         let policy = self.echo_policy();
         let Some(ed) = self.edit.as_mut().and_then(|e| e.session.editor_mut()) else {
             return vec![Effect::Redraw];
@@ -877,21 +890,203 @@ impl App {
                 match single {
                     Some(_) => {
                         let ev = echo::for_edit(&policy, &before, &edit);
-                        self.speak_echo(ev);
+                        let echoing = policy.characters || policy.words;
+                        match self.markdown_echo().filter(|_| echoing) {
+                            // Markup just typed is said as what it means.
+                            Some(said) => {
+                                self.show(&said);
+                                self.speak_edit_feedback(&said);
+                            }
+                            None => {
+                                let ev = self.heading_word_echo(ev);
+                                self.speak_echo(ev);
+                            }
+                        }
                     }
                     None => {
+                        // A paste: how much, and how it starts.
                         let n = text.chars().count();
-                        self.show(&format!("Inserted {}.", count_words(n, "character")));
-                        self.speak_edit_feedback(&format!(
-                            "Inserted {}.",
-                            count_words(n, "character")
-                        ));
+                        let words: Vec<&str> = text.split_whitespace().take(6).collect();
+                        let more = text.split_whitespace().nth(6).is_some();
+                        let start = format!("{}{}", words.join(" "), if more { "…" } else { "" });
+                        let msg = if start.is_empty() {
+                            format!("Pasted {}.", count_words(n, "character"))
+                        } else {
+                            format!("Pasted {}: {start}", count_words(n, "character"))
+                        };
+                        self.show(&msg);
+                        self.speak_edit_feedback(&msg);
                     }
                 }
             }
             Err(e) => self.error(&format!("Could not insert: {e}")),
         }
         vec![Effect::Redraw]
+    }
+
+    /// The source line holding the editor's caret and the caret's char
+    /// offset in it.
+    fn editor_caret_line(&self) -> Option<(String, usize, CharRange)> {
+        let ed = self.edit.as_ref()?.session.editor()?;
+        let rope = ed.text();
+        let head = ed.selection().head.0.min(rope.len_chars());
+        // The rope's own lines: the empty line after a final newline is a
+        // line here (the caret can be on it).
+        let line = rope.char_to_line(head);
+        let start = rope.line_to_char(line);
+        let text = rope.line(line).to_string();
+        let text = text.trim_end_matches(['\n', '\r']).to_owned();
+        let r = CharRange::new(start, start + text.chars().count());
+        Some((text, head - start, r))
+    }
+
+    /// What Markdown typed just before the caret means ("heading level 2",
+    /// "bullet", "numbered item 3"), when a character completed it.
+    fn markdown_echo(&self) -> Option<String> {
+        let (text, col, _) = self.editor_caret_line()?;
+        let before: String = text.chars().take(col).collect();
+        let said = crate::mdline::markdown_echo(&before)?;
+        let mut c = said.chars();
+        c.next()
+            .map(|f| f.to_uppercase().chain(c).collect::<String>())
+    }
+
+    /// The first word completed on a heading line is said with the heading:
+    /// `## Methods` as "Heading level 2, Methods".
+    fn heading_word_echo(&self, mut events: Vec<EchoEvent>) -> Vec<EchoEvent> {
+        let Some((text, col, _)) = self.editor_caret_line() else {
+            return events;
+        };
+        let level = crate::mdline::heading_level(&text);
+        if level == 0 {
+            return events;
+        }
+        let before: String = text.chars().take(col).collect();
+        let content = before.trim_start().trim_start_matches('#');
+        for e in &mut events {
+            if let EchoEvent::WordCompleted(w) = e {
+                let first = content
+                    .split_whitespace()
+                    .next()
+                    .is_some_and(|f| f.trim_matches(|c: char| !c.is_alphanumeric()) == w.as_str());
+                if first {
+                    *w = format!("Heading level {level}, {w}");
+                }
+            }
+        }
+        events
+    }
+
+    /// Enter in a list item (edit mode): continues the list with the next
+    /// bullet or number (a task item gets an empty box); Enter on an empty
+    /// item removes its marker, ending the list. `None` when the caret is
+    /// not after a list item's marker, so Enter types a plain line break.
+    fn continue_list(&mut self) -> Option<Vec<Effect>> {
+        let (text, col, range) = self.editor_caret_line()?;
+        let ed = self.edit.as_ref()?.session.editor()?;
+        if !ed.selection().is_caret() {
+            return None;
+        }
+        let m = crate::mdline::list_marker(&text)?;
+        let byte_col = text.char_indices().nth(col).map_or(text.len(), |(b, _)| b);
+        if byte_col < m.content_start.min(text.len()) {
+            return None;
+        }
+        let content_empty = text[m.content_start.min(text.len())..].trim().is_empty();
+        let ed = self.edit.as_mut()?.session.editor_mut()?;
+        let before = ed.text().clone();
+        let (result, said) = if content_empty {
+            ed.set_selection(Selection::new(range.start, range.end));
+            (
+                ed.backspace().map(|o| o.into_iter().collect::<Vec<_>>()),
+                "List ended.".to_owned(),
+            )
+        } else {
+            let prefix = m.next_prefix();
+            let next = crate::mdline::list_marker(prefix.trim_end())
+                .or_else(|| crate::mdline::list_marker(&prefix))
+                .map_or_else(|| "bullet".to_owned(), |n| n.spoken());
+            (
+                ed.insert_text(&format!("\n{prefix}")).map(|o| vec![o]),
+                capitalize_first(&next),
+            )
+        };
+        match result {
+            Ok(outcomes) => {
+                self.after_edit(&before, &outcomes);
+                self.show(&said);
+                self.speak_edit_feedback(&said);
+            }
+            Err(e) => self.error(&format!("Could not insert: {e}")),
+        }
+        Some(vec![Effect::Redraw])
+    }
+
+    /// Deletes the editor's selection without echo (Cut says what it took).
+    pub(crate) fn delete_quietly(&mut self) {
+        let Some(ed) = self.edit.as_mut().and_then(|e| e.session.editor_mut()) else {
+            return;
+        };
+        let before = ed.text().clone();
+        match ed.backspace() {
+            Ok(Some(o)) => self.after_edit(&before, &[o]),
+            Ok(None) => {}
+            Err(e) => self.error(&format!("Could not delete: {e}")),
+        }
+    }
+
+    /// A source line as said on a caret move in edit mode: its structure
+    /// first, then its text without the markup ("heading level 2,
+    /// Methods", "bullet, milk", "row 2, Ada | 36").
+    pub(crate) fn spoken_source_line(&self, line: usize) -> Option<String> {
+        let s = self.session.as_ref()?;
+        let text = text_util::line_text(&s.doc, line);
+        if text.trim().is_empty() {
+            return Some(echo::BLANK.to_owned());
+        }
+        let level = crate::mdline::heading_level(&text);
+        if level > 0 {
+            let body = text.trim_start().trim_start_matches('#').trim();
+            let body = body.trim_end_matches('#').trim_end();
+            return Some(format!("heading level {level}, {body}"));
+        }
+        if let Some(m) = crate::mdline::list_marker(&text) {
+            let body = text[m.content_start.min(text.len())..].trim();
+            let body = if body.is_empty() { echo::BLANK } else { body };
+            return Some(format!("{}, {body}", m.spoken()));
+        }
+        if crate::mdline::is_table_row(&text) {
+            if crate::mdline::is_table_delimiter(&text) {
+                return Some("table header divider".to_owned());
+            }
+            let mut first = line;
+            while first > 0 && crate::mdline::is_table_row(&text_util::line_text(&s.doc, first - 1))
+            {
+                first -= 1;
+            }
+            let row = (first..=line)
+                .filter(|&l| !crate::mdline::is_table_delimiter(&text_util::line_text(&s.doc, l)))
+                .count();
+            let cells: Vec<String> = crate::mdline::table_cells(&text)
+                .into_iter()
+                .map(|r| {
+                    let c = &text[r];
+                    if c.is_empty() {
+                        echo::BLANK.to_owned()
+                    } else {
+                        c.to_owned()
+                    }
+                })
+                .collect();
+            return Some(format!("row {row}, {}", cells.join(", ")));
+        }
+        match crate::mdline::structure_of(&text) {
+            Some(kind) => {
+                let body = text.trim_start().trim_start_matches(['>', ' ']);
+                Some(format!("{kind}, {body}"))
+            }
+            None => Some(text),
+        }
     }
 
     /// Backspace and Delete.
@@ -1083,7 +1278,10 @@ impl App {
                 CaretMove::Line | CaretMove::Page | CaretMove::DocumentEdge => {
                     let ev = echo::for_move(&policy, doc.text(), head, target);
                     match ev.into_iter().next() {
-                        Some(EchoEvent::CursorMoved(l)) => Some(l),
+                        // Structure first: "heading level 2, Methods".
+                        Some(EchoEvent::CursorMoved(l)) => self
+                            .spoken_source_line(text_util::line_of(doc, target))
+                            .or(Some(l)),
                         _ => None,
                     }
                 }

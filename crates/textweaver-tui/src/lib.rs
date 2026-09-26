@@ -33,6 +33,7 @@
 //! Owner: Agent D.
 
 pub mod layout;
+pub mod paths;
 pub mod setup;
 pub mod signals;
 pub mod theme;
@@ -96,6 +97,12 @@ pub fn run(terminal: &mut DefaultTerminal, tui: &mut Tui) -> anyhow::Result<()> 
         if event::poll(wait)? {
             let ev = event::read()?;
             tui.handle_event(&ev);
+            if let Some(seq) = tui.take_clipboard_sequence() {
+                use std::io::Write as _;
+                let mut out = std::io::stdout();
+                let _ = out.write_all(seq.as_bytes());
+                let _ = out.flush();
+            }
         }
     }
     Ok(())

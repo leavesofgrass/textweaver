@@ -117,6 +117,9 @@ pub struct Tui {
     /// While set, the status line is drawn blank until then (a repeated
     /// message).
     status_blank_until: Option<Instant>,
+    /// Copied text as an OSC 52 sequence, waiting to be written to the
+    /// terminal ([`Tui::take_clipboard_sequence`]).
+    clipboard_out: Option<String>,
 }
 
 /// Screen areas of the last draw.
@@ -155,6 +158,7 @@ impl Tui {
             theme_key,
             status_shown: (0, String::new()),
             status_blank_until: None,
+            clipboard_out: None,
         }
     }
 
@@ -221,7 +225,17 @@ impl Tui {
         self.apply(effects);
     }
 
+    /// The OSC 52 sequence for text copied or cut since the last call; the
+    /// event loop writes it to the terminal, which puts the text on the
+    /// system clipboard (over SSH too).
+    pub fn take_clipboard_sequence(&mut self) -> Option<String> {
+        self.clipboard_out.take()
+    }
+
     fn apply(&mut self, effects: Vec<Effect>) {
+        if let Some(text) = self.app.take_clipboard() {
+            self.clipboard_out = Some(textweaver_app::osc52(&text));
+        }
         for e in effects {
             match e {
                 Effect::Redraw => {}
@@ -384,9 +398,35 @@ impl Tui {
             return;
         };
         let page = 10;
+        let plain = !k
+            .modifiers
+            .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT);
+        // Letter keys: an accelerator (s, d, c in the Save, Discard,
+        // Cancel list), else the next item starting with that letter.
+        if let KeyCode::Char(c) = k.code
+            && plain
+            && c.is_alphanumeric()
+        {
+            if let Some(n) = self.app.list_accelerator(c) {
+                self.list = None;
+                self.dispatch(Command::Choose(n));
+                return;
+            }
+            let Some(list) = self.list.as_mut() else {
+                return;
+            };
+            if list.jump_to_letter(c) {
+                let text = list.spoken_item().unwrap_or_default();
+                self.app.announce(&text, Priority::Assertive);
+            } else {
+                self.app
+                    .announce(&format!("No item starts with {c}."), Priority::Polite);
+            }
+            return;
+        }
         let moved = match k.code {
-            KeyCode::Up | KeyCode::Char('k') => list.step(-1),
-            KeyCode::Down | KeyCode::Char('j') => list.step(1),
+            KeyCode::Up => list.step(-1),
+            KeyCode::Down => list.step(1),
             KeyCode::PageUp => list.step(-page),
             KeyCode::PageDown => list.step(page),
             KeyCode::Home => list.step(isize::MIN / 2),
@@ -397,7 +437,7 @@ impl Tui {
                 self.dispatch(Command::Choose(n));
                 return;
             }
-            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Backspace => {
+            KeyCode::Esc | KeyCode::Backspace => {
                 self.list = None;
                 self.dispatch(Command::Cancel);
                 return;
@@ -423,10 +463,7 @@ impl Tui {
         if moved {
             self.app.announce(&text, Priority::Assertive);
         } else {
-            let edge = if matches!(
-                k.code,
-                KeyCode::Up | KeyCode::Char('k') | KeyCode::PageUp | KeyCode::Home
-            ) {
+            let edge = if matches!(k.code, KeyCode::Up | KeyCode::PageUp | KeyCode::Home) {
                 "Top of list."
             } else {
                 "End of list."
@@ -571,12 +608,36 @@ impl Tui {
         self.app.announce(&spoken, Priority::Assertive);
     }
 
+    /// Tab in a file prompt (Open, Save As, Insert image): completes the
+    /// file or folder name typed so far, to the longest common part of the
+    /// names that match, and says what matches.
+    fn complete_path(&mut self) {
+        let Some(mb) = self.minibuffer.as_mut() else {
+            return;
+        };
+        let typed = mb.text();
+        let (done, spoken) =
+            crate::paths::complete(&typed, &std::env::current_dir().unwrap_or_default());
+        if let Some(text) = done {
+            mb.set_text(&text);
+        }
+        self.app.announce(&spoken, Priority::Assertive);
+    }
+
     /// Tab in the command palette: complete to the longest common prefix of
-    /// the matching command ids, and say what matches.
+    /// the matching command ids, and say what matches. Tab in a file prompt
+    /// completes the path.
     fn complete(&mut self) {
         let Some(mb) = self.minibuffer.as_mut() else {
             return;
         };
+        if matches!(
+            mb.purpose,
+            PromptPurpose::Open | PromptPurpose::SaveAs | PromptPurpose::ImagePath
+        ) {
+            self.complete_path();
+            return;
+        }
         if mb.purpose != PromptPurpose::CommandPalette {
             return;
         }
@@ -1025,7 +1086,7 @@ impl Tui {
                 (ActionId::Undo, "undo"),
                 (ActionId::Bold, "bold"),
                 (ActionId::Heading, "heading"),
-                (ActionId::KeyboardHelp, "keys"),
+                (ActionId::CommandPalette, "commands"),
                 (ActionId::Quit, "quit"),
             ],
             Mode::SpeechCursor => &[
@@ -1048,10 +1109,14 @@ impl Tui {
             ],
         };
         let keymap = self.app.keymap();
+        // Only keys that work here: in this mode's layers, and with
+        // single-key shortcuts as F9 left them (a hint for a key that does
+        // nothing misleads).
+        let layer = self.app.mode().layer();
         let parts: Vec<String> = hints
             .iter()
             .filter_map(|(a, label)| {
-                let chords = keymap.chords_for(*a);
+                let chords = keymap.chords_in_mode(*a, layer);
                 let best = chords
                     .iter()
                     .find(|c| c.is_text_input() || c.mods.is_empty())
