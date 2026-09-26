@@ -113,9 +113,14 @@ impl Default for RsvpSettings {
 }
 
 impl RsvpSettings {
+    /// The word size in points, clamped to Star's range, 12 to 200.
+    pub fn clamped_font_pt(&self) -> u16 {
+        self.font_size_pt.clamp(12, 200)
+    }
+
     /// The word size in pixels at `dpi` dots per inch (96 on most screens).
     pub fn font_px(&self, dpi: f32) -> f32 {
-        f32::from(self.font_size_pt) * dpi / 72.0
+        f32::from(self.clamped_font_pt()) * dpi / 72.0
     }
 
     /// The rate clamped to [`MIN_WPM`]..=[`MAX_WPM`].
