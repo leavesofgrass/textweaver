@@ -50,6 +50,19 @@ impl History {
         }
     }
 
+    /// A history rebuilt from saved `entries` (oldest first), at the live
+    /// position. Duplicates keep their newest occurrence and, beyond
+    /// `capacity`, the oldest entries are dropped, so the result obeys the
+    /// same invariants as one built by [`record`](Self::record). Used to
+    /// restore a document's history from persisted state.
+    pub fn restore(entries: impl IntoIterator<Item = CharPos>, capacity: usize) -> Self {
+        let mut h = History::with_capacity(capacity);
+        for e in entries {
+            h.record(e);
+        }
+        h
+    }
+
     /// The maximum number of entries.
     pub fn capacity(&self) -> usize {
         self.capacity
@@ -257,6 +270,20 @@ mod tests {
             h.record(CharPos(p));
         }
         assert_eq!(h.entries(), &[CharPos(2), CharPos(3)]);
+    }
+
+    #[test]
+    fn restore_dedupes_caps_and_starts_live() {
+        let saved = [1, 2, 1, 3, 4, 5].map(CharPos);
+        let mut h = History::restore(saved, 3);
+        assert_eq!(h.entries(), &[CharPos(3), CharPos(4), CharPos(5)]);
+        assert_eq!(h.capacity(), 3);
+        assert!(!h.is_browsing());
+        assert_eq!(h.back(CharPos(9)), Some(CharPos(5)));
+        assert_eq!(h.forward(), Some(CharPos(9)));
+        let round = History::restore(h.entries().to_vec(), h.capacity());
+        assert_eq!(round.entries(), h.entries());
+        assert!(History::restore([], 0).is_empty());
     }
 
     #[test]

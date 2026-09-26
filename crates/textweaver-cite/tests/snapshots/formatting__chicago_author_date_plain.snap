@@ -1,0 +1,29 @@
+---
+source: crates/textweaver-cite/tests/formatting.rs
+expression: "render(\"chicago\", OutputFormat :: Plain)"
+---
+style: Chicago Manual of Style 18th edition (author-date)
+citations:
+  [@kucsko2013] => (Kucsko et al. 2013)
+  [@dahl1988, p. 12] => (Dahl 1988, 12)
+  [see @smyth2007, pp. 5-6; also @vangogh2020] => (see Smyth 2007, 5–6; also van Gogh and The Accessible Reading Group 2020)
+  @muller2019 [chap. 3] => Müller (2019, chap. 3)
+  [@who2021; -@access2024] => (World Health Organization 2021; 2024)
+  [@nobody2000] => (missing reference nobody2000)
+missing: nobody2000
+bibliography of cited works:
+  [dahl1988] Dahl, Roald. 1988. Fantastic Mr. Fox. Puffin.
+  [access2024] Doe, Jane (Accessibility Notes). 2024. “Designing for Keyboard and Screen Reader Users.” January 15. https://example.org/notes/keyboard.
+  [vangogh2020] Gogh, Vincent van, and The Accessible Reading Group. 2020. “Screen Readers and the Reading of Mathematics.” In Proceedings of the Conference on Accessible Reading. Accessible Press.
+  [kucsko2013] Kucsko, G., P. C. Maurer, and N. Y. Yao. 2013. “Nanometre-Scale Thermometry in a Living Cell.” Nature 500 (7460): 54–58. https://doi.org/10.1038/nature12373.
+  [muller2019] Müller, Jörg. 2019. “Hörbücher und Sprachsynthese.” PhD thesis, Universität Wien.
+  [smyth2007] Smyth, Barry. 2007. “Adventures in Personalized Information Access.” In User Modeling 2007, edited by Cristina Conati and Kathleen McCoy. Lecture Notes in Computer Science. Springer. https://doi.org/10.1007/978-3-540-74958-5_4.
+  [who2021] World Health Organization. 2021. World Report on Vision & Print Disability. WHO/2021.1. World Health Organization. https://example.org/who_report?id=1&lang=en.
+whole library:
+  [dahl1988] Dahl, Roald. 1988. Fantastic Mr. Fox. Puffin.
+  [access2024] Doe, Jane (Accessibility Notes). 2024. “Designing for Keyboard and Screen Reader Users.” January 15. https://example.org/notes/keyboard.
+  [vangogh2020] Gogh, Vincent van, and The Accessible Reading Group. 2020. “Screen Readers and the Reading of Mathematics.” In Proceedings of the Conference on Accessible Reading. Accessible Press.
+  [kucsko2013] Kucsko, G., P. C. Maurer, and N. Y. Yao. 2013. “Nanometre-Scale Thermometry in a Living Cell.” Nature 500 (7460): 54–58. https://doi.org/10.1038/nature12373.
+  [muller2019] Müller, Jörg. 2019. “Hörbücher und Sprachsynthese.” PhD thesis, Universität Wien.
+  [smyth2007] Smyth, Barry. 2007. “Adventures in Personalized Information Access.” In User Modeling 2007, edited by Cristina Conati and Kathleen McCoy. Lecture Notes in Computer Science. Springer. https://doi.org/10.1007/978-3-540-74958-5_4.
+  [who2021] World Health Organization. 2021. World Report on Vision & Print Disability. WHO/2021.1. World Health Organization. https://example.org/who_report?id=1&lang=en.

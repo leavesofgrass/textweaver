@@ -86,6 +86,7 @@ docker compose run --rm -T dev cargo test --workspace --all-features
 - [Implementation plan](docs/plan.md)
 - Architecture decisions: [workspace](docs/adr/0001-workspace-and-dependencies.md), [text model](docs/adr/0002-text-model.md), [speech threading](docs/adr/0003-speech-threading-and-event-timing.md), [rate, pitch, volume](docs/adr/0004-rate-pitch-volume.md), [narration and offset maps](docs/adr/0005-narration-and-offset-map.md), [keymap](docs/adr/0006-keymap-and-actions.md), [Eloquence](docs/adr/0007-eloquence-via-eci-host.md), [Apple speech](docs/adr/0008-apple-speech.md), [SAPI5](docs/adr/0009-sapi5-voices.md)
 - [Installing a release](docs/install.md) and [making one](docs/releasing.md)
+- [Settings: export, share, and import](docs/settings.md) (or run `tw settings --help`)
 - [Getting ETI-Eloquence](docs/eloquence.md) (or run `tw eloquence`)
 - [Star parity reference](docs/star-parity.md)
 - [Tasks and ownership](docs/tasks.md)

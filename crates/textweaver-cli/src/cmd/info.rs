@@ -1,8 +1,9 @@
 //! `tw info`. Owner: Agent A.
 //!
 //! Facts about a document: format, title, author, language, size in chars,
-//! words, sentences, lines, and paragraphs, structure counts, and an
-//! estimated reading time at Star's default rate of 265 words per minute.
+//! words, sentences, lines, and paragraphs, structure counts (pages and
+//! sections of paginated and chaptered sources included), and an estimated
+//! reading time at Star's default rate of 265 words per minute.
 
 use std::path::PathBuf;
 
@@ -49,6 +50,8 @@ const COUNTS: &[(&str, MarkerKind, Option<u8>)] = &[
     ("code_blocks", MarkerKind::Code, Some(1)),
     ("block_quotes", MarkerKind::Quote, None),
     ("footnotes", MarkerKind::Footnote, Some(1)),
+    ("pages", MarkerKind::PageBreak, None),
+    ("sections", MarkerKind::SectionBreak, None),
 ];
 
 /// Everything `tw info` reports, as JSON.
@@ -131,6 +134,8 @@ pub(crate) fn describe(f: &Value) -> String {
         ("code_blocks", "code block", "code blocks"),
         ("block_quotes", "block quote", "block quotes"),
         ("footnotes", "footnote", "footnotes"),
+        ("pages", "page", "pages"),
+        ("sections", "section", "sections"),
     ];
     let parts: Vec<String> = names
         .iter()
@@ -176,5 +181,22 @@ mod tests {
         assert!(text.contains("Format: markdown\n"));
         assert!(text.contains("1 table,"));
         assert!(text.contains("Reading time: about 1 minute at 265 words per minute\n"));
+    }
+
+    #[test]
+    fn describes_every_new_format() {
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/a");
+        for (name, format, expect) in [
+            ("sample.epub", "epub", "3 sections"),
+            ("sample.docx", "docx", "1 table"),
+            ("running.pdf", "pdf", "3 pages"),
+        ] {
+            let path = dir.join(name);
+            let doc = load_document(&path).unwrap();
+            let f = facts(&doc, &path);
+            assert_eq!(f["format"], format);
+            let text = describe(&f);
+            assert!(text.contains(expect), "{name}: {text}");
+        }
     }
 }

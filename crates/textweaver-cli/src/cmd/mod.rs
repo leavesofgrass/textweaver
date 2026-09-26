@@ -1,6 +1,7 @@
 //! Subcommands. Each file is owned by one agent (docs/tasks.md).
 
 pub mod backends;
+pub mod cite;
 pub mod convert;
 pub mod dictate;
 pub mod eloquence;
@@ -12,6 +13,7 @@ pub mod migrate;
 pub mod open;
 pub mod search;
 pub mod serve;
+pub mod settings;
 pub mod speak;
 pub mod text;
 pub mod vault;

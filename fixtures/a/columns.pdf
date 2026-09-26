@@ -1,0 +1,83 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Italic /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Pages /Kids [8 0 R] /Count 1 >>
+endobj
+7 0 obj
+<< /Length 2127 >>
+stream
+BT 72.00 720.00 Td /HB 18 Tf (Two Column Layout) Tj ET
+BT 72.00 688.00 Td /HB 12 Tf (Left Column) Tj ET
+BT 72.00 671.00 Td /T 11 Tf (The left column begins the article.) Tj ET
+BT 72.00 657.00 Td /T 11 Tf (Reading aloud helps students who find) Tj ET
+BT 72.00 643.00 Td /T 11 Tf (print hard to follow. A reader that) Tj ET
+BT 72.00 629.00 Td /T 11 Tf (highlights each word as it is spoken) Tj ET
+BT 72.00 615.00 Td /T 11 Tf (keeps the eyes and ears together, and) Tj ET
+BT 72.00 601.00 Td /T 11 Tf (a reader that remembers where the) Tj ET
+BT 72.00 587.00 Td /T 11 Tf (student stopped makes long assignments) Tj ET
+BT 72.00 573.00 Td /T 11 Tf (manageable.) Tj ET
+BT 72.00 553.00 Td /T 11 Tf (It ends with this sentence in the left) Tj ET
+BT 72.00 539.00 Td /T 11 Tf (column.) Tj ET
+BT 318.00 688.00 Td /HB 12 Tf (Right Column) Tj ET
+BT 318.00 671.00 Td /T 11 Tf (The right column continues the) Tj ET
+BT 318.00 657.00 Td /T 11 Tf (article. The loader rebuilds structure) Tj ET
+BT 318.00 643.00 Td /T 11 Tf (from the page: it finds the body text) Tj ET
+BT 318.00 629.00 Td /T 11 Tf (size, treats larger or bolder short) Tj ET
+BT 318.00 615.00 Td /T 11 Tf (lines as headings, joins wrapped lines) Tj ET
+BT 318.00 601.00 Td /T 11 Tf (into paragraphs, and removes the) Tj ET
+BT 318.00 587.00 Td /T 11 Tf (hyphens that typesetting adds at line) Tj ET
+BT 318.00 573.00 Td /T 11 Tf (ends.) Tj ET
+BT 318.00 553.00 Td /T 11 Tf (It ends with this sentence in the) Tj ET
+BT 318.00 539.00 Td /T 11 Tf (right column.) Tj ET
+BT 72.00 514.00 Td /TI 10 Tf (Figure 1. A caption that runs across both columns of the page, below the first section.) Tj ET
+BT 72.00 483.00 Td /T 11 Tf (Below the band, the left column) Tj ET
+BT 72.00 469.00 Td /T 11 Tf (resumes. Columns are read one after) Tj ET
+BT 72.00 455.00 Td /T 11 Tf (another, top to bottom, so a sentence) Tj ET
+BT 72.00 441.00 Td /T 11 Tf (is never interrupted by the text) Tj ET
+BT 72.00 427.00 Td /T 11 Tf (beside it. Running hea.) Tj ET
+BT 318.00 483.00 Td /T 11 Tf (Below the band, the right column ends) Tj ET
+BT 318.00 469.00 Td /T 11 Tf (the page. This is the last sentence.) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 6 0 R /MediaBox [0 0 612 792] /Resources << /Font << /H 1 0 R /HB 2 0 R /T 3 0 R /TI 4 0 R /TB 5 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Type /Catalog /Pages 6 0 R /Lang (en-US) >>
+endobj
+10 0 obj
+<< /Title (Two Column Layout) /Author (Test Author) /Producer (textweaver fixtures) >>
+endobj
+xref
+0 11
+0000000000 65535 f 
+0000000015 00000 n 
+0000000112 00000 n 
+0000000214 00000 n 
+0000000313 00000 n 
+0000000413 00000 n 
+0000000511 00000 n 
+0000000568 00000 n 
+0000002746 00000 n 
+0000002910 00000 n 
+0000002973 00000 n 
+trailer
+<< /Size 11 /Root 9 0 R /Info 10 0 R >>
+startxref
+3076
+%%EOF

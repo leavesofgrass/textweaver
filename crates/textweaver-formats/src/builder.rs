@@ -7,7 +7,7 @@
 //! or doubled whitespace around blocks, and markers never include the
 //! separators around them (ADR-0002 canonical shape).
 
-use textweaver_core::CharRange;
+use textweaver_core::{CharRange, MarkerKind};
 use textweaver_text::Marker;
 
 /// A pending separator, weakest first.
@@ -120,6 +120,17 @@ impl Builder {
         self.push_raw(s);
     }
 
+    /// A separator that brings its own spacing (the `" | "` between table
+    /// cells): a pending space before it is dropped, and a space requested
+    /// right after it (leading whitespace in the next cell) is not written.
+    pub(crate) fn separator(&mut self, s: &str) {
+        if self.pending == Some(Break::Space) {
+            self.pending = None;
+        }
+        self.literal(s);
+        self.line_has_text = false;
+    }
+
     /// Verbatim text (code): spaces and line breaks kept, leading and
     /// trailing blank lines dropped, `\r\n` normalized.
     pub(crate) fn verbatim(&mut self, s: &str) {
@@ -191,6 +202,54 @@ impl Builder {
         self.markers.push(marker);
     }
 
+    /// A footnote reference: `[label]` under a `Footnote` marker (level 0,
+    /// reference = label).
+    pub(crate) fn footnote_reference(&mut self, label: &str) {
+        let id =
+            self.open(Marker::new(MarkerKind::Footnote, CharRange::empty(0)).with_reference(label));
+        self.literal(&format!("[{label}]"));
+        self.close(id);
+    }
+
+    /// A footnote read in place: ` (footnote: text)` under a level-1
+    /// `Footnote` marker.
+    pub(crate) fn inline_footnote(&mut self, label: &str, text: &str) {
+        self.space();
+        let id = self.open(
+            Marker::new(MarkerKind::Footnote, CharRange::empty(0))
+                .with_level(1)
+                .with_reference(label),
+        );
+        self.text(&format!("(footnote: {text})"));
+        self.close(id);
+    }
+
+    /// The deferred footnotes after the text: a level-2 "Footnotes" heading,
+    /// then one line per note, `[label] text`, each a level-1 `Footnote`
+    /// marker holding a reference marker for its label.
+    pub(crate) fn footnotes_section(&mut self, notes: &[(String, String)]) {
+        if notes.is_empty() {
+            return;
+        }
+        self.paragraph_break();
+        let h = self.open(Marker::new(MarkerKind::Heading, CharRange::empty(0)).with_level(2));
+        self.text("Footnotes");
+        self.close(h);
+        self.paragraph_break();
+        for (label, text) in notes {
+            self.line_break();
+            let body = self.open(
+                Marker::new(MarkerKind::Footnote, CharRange::empty(0))
+                    .with_level(1)
+                    .with_reference(label.as_str()),
+            );
+            self.footnote_reference(label);
+            self.space();
+            self.text(text);
+            self.close(body);
+        }
+    }
+
     /// The canonical text and its markers; open markers are closed.
     pub(crate) fn finish(mut self) -> (String, Vec<Marker>) {
         while let Some(o) = self.open.last() {
@@ -203,8 +262,6 @@ impl Builder {
 
 #[cfg(test)]
 mod tests {
-    use textweaver_core::MarkerKind;
-
     use super::*;
 
     #[test]

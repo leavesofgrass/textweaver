@@ -703,7 +703,15 @@ impl Settings {
     /// replacing invalid ones with defaults, and preserving unknown keys.
     /// Returns the warnings for the replaced values, then applies
     /// [`validate`](Self::validate).
-    pub fn from_table(mut table: toml::Table) -> (Settings, Vec<String>) {
+    pub fn from_table(table: toml::Table) -> (Settings, Vec<String>) {
+        let (mut s, mut w) = Settings::from_table_unclamped(table);
+        w.extend(s.validate());
+        (s, w)
+    }
+
+    /// [`from_table`](Self::from_table) without clamping out-of-range
+    /// values, so an import can report them as errors instead.
+    pub(crate) fn from_table_unclamped(mut table: toml::Table) -> (Settings, Vec<String>) {
         let mut w = Vec::new();
         // Engine sub-tables are read on their own, so one bad value in
         // `[speech.eci]` does not throw away the rest of `[speech]`.
@@ -726,7 +734,7 @@ impl Settings {
             lenient_section("normalization", normalization_table, &mut w);
         normalization.community_lexicon =
             lenient_section("normalization.community_lexicon", lexicon, &mut w);
-        let mut s = Settings {
+        let s = Settings {
             speech,
             highlight: lenient_section("highlight", table.remove("highlight"), &mut w),
             normalization,
@@ -739,7 +747,6 @@ impl Settings {
             reading_aids: lenient_section("reading_aids", table.remove("reading_aids"), &mut w),
             extra: table,
         };
-        w.extend(s.validate());
         (s, w)
     }
 
@@ -747,44 +754,84 @@ impl Settings {
     /// value changed. Star validated nothing, so a bad value failed later
     /// (docs/star-parity.md Part 3 §7 items 4 and 7).
     pub fn validate(&mut self) -> Vec<String> {
+        self.fix_ranges()
+            .into_iter()
+            .map(|f| format!("{} {}; using {}", f.path, f.problem, f.using))
+            .collect()
+    }
+
+    /// Clamps values to their supported ranges, describing each change.
+    pub(crate) fn fix_ranges(&mut self) -> Vec<RangeFix> {
         let mut w = Vec::new();
+        let mut fix = |path: String, problem: String, using: String| {
+            w.push(RangeFix {
+                path,
+                problem,
+                using,
+            });
+        };
         let rate = self.speech.rate.clamped();
         if rate != self.speech.rate {
-            w.push(format!(
-                "speech.rate {} is outside {}..={} words per minute; using {}",
-                self.speech.rate.wpm(),
-                Rate::MIN_WPM,
-                Rate::MAX_WPM,
-                rate.wpm()
-            ));
+            fix(
+                "speech.rate".into(),
+                format!(
+                    "{} is outside {} to {} words per minute",
+                    self.speech.rate.wpm(),
+                    Rate::MIN_WPM,
+                    Rate::MAX_WPM
+                ),
+                rate.wpm().to_string(),
+            );
             self.speech.rate = rate;
+        }
+        let volume = Volume::new(self.speech.volume.percent());
+        if volume != self.speech.volume {
+            fix(
+                "speech.volume".into(),
+                format!(
+                    "{} is outside 0 to 100 percent",
+                    self.speech.volume.percent()
+                ),
+                volume.percent().to_string(),
+            );
+            self.speech.volume = volume;
         }
         let pitch = self.speech.pitch.clamped();
         if pitch != self.speech.pitch {
-            w.push(format!(
-                "speech.pitch {} is outside {}..={} semitones; using {}",
-                self.speech.pitch.semitones(),
-                Pitch::MIN_SEMITONES,
-                Pitch::MAX_SEMITONES,
-                pitch.semitones()
-            ));
+            fix(
+                "speech.pitch".into(),
+                format!(
+                    "{} is outside {} to {} semitones",
+                    self.speech.pitch.semitones(),
+                    Pitch::MIN_SEMITONES,
+                    Pitch::MAX_SEMITONES
+                ),
+                pitch.semitones().to_string(),
+            );
             self.speech.pitch = pitch;
         }
         for (name, wpm) in &mut self.speech.speed_presets {
             let c = (*wpm).clamp(Rate::MIN_WPM, Rate::MAX_WPM);
             if c != *wpm {
-                w.push(format!(
-                    "speech.speed_presets.{name} {wpm} is out of range; using {c}"
-                ));
+                fix(
+                    format!("speech.speed_presets.{name}"),
+                    format!(
+                        "{wpm} is outside {} to {} words per minute",
+                        Rate::MIN_WPM,
+                        Rate::MAX_WPM
+                    ),
+                    c.to_string(),
+                );
                 *wpm = c;
             }
         }
         let lead = self.highlight.lead_words.clamp(-5, 5);
         if lead != self.highlight.lead_words {
-            w.push(format!(
-                "highlight.lead_words {} is outside -5..=5; using {lead}",
-                self.highlight.lead_words
-            ));
+            fix(
+                "highlight.lead_words".into(),
+                format!("{} is outside -5 to 5", self.highlight.lead_words),
+                lead.to_string(),
+            );
             self.highlight.lead_words = lead;
         }
         let speed = self.highlight.speed;
@@ -794,14 +841,20 @@ impl Settings {
             1.0
         };
         if !speed.is_finite() || (fixed - speed).abs() > f32::EPSILON {
-            w.push(format!(
-                "highlight.speed {speed} is outside 0.5..=1.5; using {fixed}"
-            ));
+            fix(
+                "highlight.speed".into(),
+                format!("{speed} is outside 0.5 to 1.5"),
+                fixed.to_string(),
+            );
             self.highlight.speed = fixed;
         }
         let mut at_least = |value: &mut usize, min: usize, name: &str| {
             if *value < min {
-                w.push(format!("{name} {value} is below {min}; using {min}"));
+                fix(
+                    name.to_owned(),
+                    format!("{value} is below {min}"),
+                    min.to_string(),
+                );
                 *value = min;
             }
         };
@@ -812,14 +865,19 @@ impl Settings {
         );
         at_least(&mut self.library.recent_limit, 1, "library.recent_limit");
         if self.display.tab_width == 0 {
-            w.push("display.tab_width 0 is below 1; using 4".to_owned());
+            fix(
+                "display.tab_width".into(),
+                "0 is below 1".into(),
+                "4".into(),
+            );
             self.display.tab_width = 4;
         }
         if self.editing.autosave_interval_secs < 5 {
-            w.push(format!(
-                "editing.autosave_interval_secs {} is below 5; using 5",
-                self.editing.autosave_interval_secs
-            ));
+            fix(
+                "editing.autosave_interval_secs".into(),
+                format!("{} is below 5", self.editing.autosave_interval_secs),
+                "5".into(),
+            );
             self.editing.autosave_interval_secs = 5;
         }
         w
@@ -838,10 +896,22 @@ impl Settings {
     }
 }
 
+/// A value outside its supported range, clamped by
+/// [`Settings::fix_ranges`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct RangeFix {
+    /// Dotted path, such as `speech.rate`.
+    pub(crate) path: String,
+    /// What is wrong, such as `5000 is outside 50 to 900 words per minute`.
+    pub(crate) problem: String,
+    /// The value used instead.
+    pub(crate) using: String,
+}
+
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-const STRUCT_TABLES: [&str; 20] = [
+pub(crate) const STRUCT_TABLES: [&str; 20] = [
     "keyboard",
     "reading_aids",
     "reading_aids.rsvp",
@@ -1406,6 +1476,19 @@ mod tests {
         assert!((s.highlight.speed - 1.5).abs() < f32::EPSILON);
         assert_eq!(s.highlight.lead_words, -5);
         assert_eq!(loaded.warnings.len(), 4, "{:?}", loaded.warnings);
+    }
+
+    /// `Volume` deserializes as a bare number, so 150 got through before.
+    #[test]
+    fn volume_above_100_is_clamped_and_reported() {
+        let (_d, store) = store();
+        write(&store, "[speech]\nvolume = 150\n");
+        let loaded = store.load_detailed();
+        assert_eq!(loaded.settings.speech.volume, Volume::new(100));
+        assert_eq!(
+            loaded.warnings,
+            vec!["speech.volume 150 is outside 0 to 100 percent; using 100"]
+        );
     }
 
     #[test]

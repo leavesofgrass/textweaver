@@ -10,9 +10,10 @@
 //! - YAML (`---`) or TOML (`+++`) front matter fills [`DocumentMeta`] and is
 //!   not part of the text;
 //! - footnote references read `[label]` under a `Footnote` marker; their
-//!   definitions go after the text under a "Footnotes" heading, or, with
-//!   [`LoadOptions::footnotes_inline`], replace the reference as
-//!   `(footnote: text)`;
+//!   definitions go after the text under a "Footnotes" heading
+//!   ([`FootnoteMode::Deferred`]), replace the reference as
+//!   `(footnote: text)` ([`FootnoteMode::Inline`]), or are left out
+//!   ([`FootnoteMode::Skip`]);
 //! - code blocks are text under a `Code` marker (level 1, label = language),
 //!   dropped entirely with [`LoadOptions::skip_code`]; inline code is kept;
 //! - raw HTML is dropped, except `<br>`, which breaks the line.
@@ -25,7 +26,10 @@ use textweaver_core::{CharRange, MarkerKind};
 use textweaver_text::{Document, DocumentMeta, HEADER_ROW_LABEL, Marker};
 
 use crate::builder::{Builder, OpenId};
-use crate::{LoadError, LoadOptions, Loader, Source, meta_for, source_text, title_from_path};
+use crate::{
+    FootnoteMode, LoadError, LoadOptions, Loader, Source, decode_source, meta_for, note_encoding,
+    title_from_path,
+};
 
 /// Loads Markdown.
 #[derive(Clone, Copy, Debug, Default)]
@@ -47,9 +51,10 @@ impl Loader for MarkdownLoader {
     }
 
     fn load(&self, source: &Source, options: &LoadOptions) -> Result<Document, LoadError> {
-        let text = source_text(source)?;
+        let decoded = decode_source(source, None)?;
         let mut meta = meta_for(source, self.id());
-        let (canonical, markers) = convert(&text, options, &mut meta);
+        note_encoding(&mut meta, &decoded);
+        let (canonical, markers) = convert(&decoded.text, options, &mut meta);
         if meta.title.is_none() {
             meta.title = title_from_path(source);
         }
@@ -343,7 +348,7 @@ impl Converter<'_> {
             }
             Tag::TableCell => {
                 if self.cell_index > 0 {
-                    self.b.literal(crate::CELL_SEPARATOR);
+                    self.b.separator(crate::CELL_SEPARATOR);
                 }
                 self.cell_index += 1;
                 let id = self.b.open_here(Self::marker(MarkerKind::TableCell));
@@ -436,52 +441,25 @@ impl Converter<'_> {
     }
 
     fn footnote_reference(&mut self, label: &str) {
-        if self.options.footnotes_inline
-            && let Some(def) = self.definition(label).map(str::to_owned)
-        {
-            self.b.space();
-            let m = Self::marker(MarkerKind::Footnote)
-                .with_level(1)
-                .with_reference(label);
-            let id = self.b.open(m);
-            self.b.text(&format!("(footnote: {def})"));
-            self.b.close(id);
+        if self.options.footnotes == FootnoteMode::Skip {
             return;
         }
-        let id = self
-            .b
-            .open(Self::marker(MarkerKind::Footnote).with_reference(label));
-        self.b.literal(&format!("[{label}]"));
-        self.b.close(id);
+        if self.options.footnotes == FootnoteMode::Inline
+            && let Some(def) = self.definition(label).map(str::to_owned)
+        {
+            self.b.inline_footnote(label, &def);
+            return;
+        }
+        self.b.footnote_reference(label);
     }
 
     /// With deferred footnotes, the definitions after the text under a
     /// "Footnotes" heading, one per line.
     fn deferred_footnotes(&mut self) {
-        if self.options.footnotes_inline || self.footnotes.is_empty() {
+        if self.options.footnotes != FootnoteMode::Deferred || self.footnotes.is_empty() {
             return;
         }
-        self.b.paragraph_break();
-        let h = self.b.open(Self::marker(MarkerKind::Heading).with_level(2));
-        self.b.text("Footnotes");
-        self.b.close(h);
-        self.b.paragraph_break();
-        for (label, text) in self.footnotes {
-            self.b.line_break();
-            let body = self.b.open(
-                Self::marker(MarkerKind::Footnote)
-                    .with_level(1)
-                    .with_reference(label.as_str()),
-            );
-            let r = self
-                .b
-                .open(Self::marker(MarkerKind::Footnote).with_reference(label.as_str()));
-            self.b.literal(&format!("[{label}]"));
-            self.b.close(r);
-            self.b.space();
-            self.b.text(text);
-            self.b.close(body);
-        }
+        self.b.footnotes_section(self.footnotes);
     }
 }
 
@@ -658,7 +636,7 @@ mod tests {
         let inline = load(
             src,
             &LoadOptions {
-                footnotes_inline: true,
+                footnotes: FootnoteMode::Inline,
                 ..LoadOptions::default()
             },
         );
@@ -666,6 +644,15 @@ mod tests {
             inline.text().to_string(),
             "Text. (footnote: The note.) More."
         );
+        let skip = load(
+            src,
+            &LoadOptions {
+                footnotes: FootnoteMode::Skip,
+                ..LoadOptions::default()
+            },
+        );
+        assert_eq!(skip.text().to_string(), "Text. More.");
+        assert_eq!(skip.marker_index().count(MarkerKind::Footnote, None), 0);
     }
 
     #[test]
