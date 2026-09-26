@@ -28,6 +28,7 @@ members = [
     "crates/textweaver-theme",
     "crates/textweaver-aids",
     "crates/textweaver-dectalk",
+    "crates/textweaver-fonts",
     "xtask",
 ]
 default-members = [
@@ -57,6 +58,7 @@ default-members = [
     "crates/textweaver-theme",
     "crates/textweaver-aids",
     "crates/textweaver-dectalk",
+    "crates/textweaver-fonts",
 ]
 
 [workspace.package]
@@ -98,6 +100,7 @@ textweaver-cite = { path = "crates/textweaver-cite" }
 textweaver-theme = { path = "crates/textweaver-theme" }
 textweaver-aids = { path = "crates/textweaver-aids" }
 textweaver-dectalk = { path = "crates/textweaver-dectalk" }
+textweaver-fonts = { path = "crates/textweaver-fonts", default-features = false }
 
 # text and formats
 ropey = "1.6"

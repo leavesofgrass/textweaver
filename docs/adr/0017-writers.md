@@ -48,11 +48,26 @@ The workspace offers `zip`, `krilla` (PDF with tagging and PDF/UA validation), a
 
 What krilla's validator does not check, and textweaver does not yet do: a veraPDF or PAC run (neither is installed), `Lang` on spans in another language, `ActualText` for hyphenation (textweaver does not hyphenate), and table header association beyond column scope.
 
+## Amendment: bundled fonts and PDF options (2026-09-25, Agent W)
+
+Jon asked for bundled fonts and quick wins for PDF export.
+
+- **Fonts.** The new `textweaver-fonts` crate embeds Atkinson Hyperlegible Next and Mono and OpenDyslexic (SIL OFL 1.1, `third_party/fonts/`, 1.35 MB) behind the cargo feature `bundled-fonts`, on by default here. PDF text defaults to Atkinson Hyperlegible Next and code to Atkinson Hyperlegible Mono, so PDFs look the same everywhere and never fail for lack of a font. `PdfOptions::font_family` and `code_font_family` choose a bundled or installed family by name (installed fonts are found by scanning the font folders for `name`-table family names), or a font file; a name that is neither is an error, reported once before a batch through `pdf::check_fonts`. Installed fonts still serve as per-character fallbacks for other scripts.
+- **Layout.** `PageSize::parse` (letter, a4, a5, legal, `6x9in`) and `parse_length` (`1in`, `20mm`); margin and line spacing as before; `large_print` (18 points or more, 1.5 or more line spacing, more paragraph space, heading sizes 1.5 to 1 times the text, code at full size), and `PdfOptions::large_print()` as a preset (with 1.6 spacing and three-quarter-inch margins).
+- **Structure.** Page numbers stay footer artifacts and can be turned off. `title_page` adds a title, author, and date page (the date only when given or in the document's front matter: the writer does not know the reader's time zone, and a wrong date is worse than none). `toc` adds a "Contents" heading and a `TOC` of `TOCI` entries, each a `Link` with a link annotation to its heading's destination and the heading's page number, to `toc_depth` levels.
+- **Links.** Links to `#heading` anchors (slugs as Markdown renderers make them, or the heading text) and footnote references now jump to their target (XYZ destinations); a footnote body's own label is not a link. Anchors that point nowhere become text and are reported.
+- **Reports.** Images without a description are artifacts, as before, and are now reported so the author can add alt text.
+- **EPUB.** `EpubOptions::font` and `code_font` embed a bundled family (four files and its `OFL.txt`, `font/ttf` or `font/otf` in the manifest) with `@font-face` rules. Installed fonts are never embedded: their licences may not allow it.
+- `tw convert` gains `--font`, `--code-font`, `--font-size`, `--page-size`, `--margin`, `--line-spacing`, `--large-print`, `--no-page-numbers`, `--title-page`, `--date`, `--contents`, `--contents-depth`, and `--lang` (`crates/textweaver-cli/src/cmd/convert_layout.rs`).
+
+Every PDF in the new tests passes krilla's PDF/UA-1 validator.
+
 ## Consequences
 
 - Agent L's converter calls `writer_for(format).write(...)` or `write_to_vec`; `WriteOptions` deserializes from the converter's settings with defaults for anything missing.
 - The converter uses `Writer` itself (Agent V removed its separate `DocumentWriter`), and calls `pdf::check_fonts(&WriteOptions)` once before a PDF batch so a missing font is one message, not one failure per file.
 - PDF output needs a font on the system. Bundling Atkinson Hyperlegible (SIL Open Font License) in the repository would make PDF output identical everywhere; that is a request to the orchestrator.
+- PDF output no longer needs a font on the system (see the amendment). Built without `bundled-fonts`, it falls back to the installed families listed above.
 - The HTML loader skips `aside` (Star's rule for web pages), so a future EPUB loader should read `aside epub:type="footnote"` as footnote bodies to round-trip textweaver's own EPUBs.
 - Grade 2 braille depends on liblouis until a native contraction table is written and tested against liblouis's UEB test corpus.
 - Not yet: BANA table formats beyond linear rows, typeform (bold, italic) braille indicators, the capitals passage indicator, SVG images in DOCX and PDF, MathML, real Word footnotes, and page labels in PDF from print page breaks.

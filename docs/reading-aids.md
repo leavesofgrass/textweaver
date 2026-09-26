@@ -50,7 +50,42 @@ In the terminal, textweaver cannot change letter spacing or line height exactly.
 
 In the GUI and in HTML views, you can choose the font, its size, and how bold it is.
 
-The choices are:
+The terminal version always uses the terminal's own font. A terminal program cannot change the font, so to read in a different font there, change it in your terminal's settings. Everything else on this page works in the terminal.
+
+### The Fonts dialog in the GUI
+
+Choose View, then Fonts (Alt, V, F). The dialog has, in this order:
+
+1. **Font family** (Alt+F): a list. The fonts that come with textweaver are first, marked "built in". After them come the fonts installed on your computer, in alphabetical order.
+2. **Size in points** (Alt+S): from 6 to 144.
+3. **Bold** (Alt+B): a check box.
+4. **Preview** (Alt+P): a sample sentence in the font you chose. It changes as you move through the list. The sentence has the letters that are easy to mix up, such as capital I, small l, and the digit 1.
+5. **OK** and **Cancel**. Enter is OK. Escape is Cancel.
+
+When you choose OK, the document text changes to the new font, textweaver remembers it, and you hear, for example, "Font: OpenDyslexic, 16 points, bold." When you cancel, you hear "Font unchanged."
+
+The font is saved in `settings.toml` under `[reading_aids.font]`:
+
+```toml
+[reading_aids.font]
+family = "OpenDyslexic"
+size_pt = 16.0
+weight = 700
+```
+
+### Fonts that come with textweaver
+
+Three fonts are built in. They work with no download and nothing installed on your computer:
+
+- **Atkinson Hyperlegible Next**: from the Braille Institute, for readers with low vision. Letters that look alike are made different. It is also the font of PDF files textweaver makes.
+- **Atkinson Hyperlegible Mono**: the same design with every letter the same width, for code.
+- **OpenDyslexic**: for readers with dyslexia. The letters are heavier at the bottom and hard to mix up.
+
+All three are free, under the SIL Open Font License. Their licences are in `third_party/fonts/`.
+
+### All the choices
+
+The choices in settings (and in HTML views) are:
 
 - **System font**: the font your computer uses for menus.
 - **Sans serif**: a plain font without small strokes on the letters. This is the default.
@@ -62,11 +97,11 @@ The choices are:
   - **Lexend**: wide letter spacing, made to reduce visual stress. Home page: https://www.lexend.com/
 - **Any other font** installed on your computer.
 
-All three reading fonts are free, under the SIL Open Font License. textweaver does not include them. If you choose one that is not installed, textweaver:
+All three reading fonts are free, under the SIL Open Font License. OpenDyslexic comes with textweaver. For Atkinson Hyperlegible, textweaver uses the newer Atkinson Hyperlegible Next that comes with it, unless you have the original installed. Lexend does not come with textweaver. If you choose it and it is not installed, textweaver:
 
-1. uses another reading font you have, or a plain font, so you can keep reading;
+1. uses another reading font, or a plain font, so you can keep reading;
 2. tells you which font it is using;
-3. offers to download the one you chose. It asks first, and says how big the download is. The files come from each font's own project on GitHub, and are kept in textweaver's cache folder. Nothing is installed on your system.
+3. offers to download Lexend. It asks first, and says how big the download is. The files come from the font's own project on GitHub, and are kept in textweaver's cache folder. Nothing is installed on your system.
 
 You can also install a reading font yourself, from its home page. textweaver finds it the next time it starts.
 
@@ -85,7 +120,19 @@ In the terminal, the current line is underlined with a bar in the left margin. L
 
 textweaver can mark rare words, so you can look them up before you read. A word is rare when it is uncommon in everyday English.
 
-This needs a word list, and textweaver does not include one yet. The lists we looked at have licences that need a decision first. You can load your own list: one word per line, most common first, or a word, a tab, and its Zipf frequency (the format `wordfreq` exports).
+textweaver has a word list built in, so this works with no download. The list comes from SCOWL (Spell Checker Oriented Word Lists), which sorts English words into sizes by the smallest dictionary they appear in:
+
+- **35**: a small dictionary. Common words.
+- **40** and **50**: a medium dictionary.
+- **60**: the size spell checkers use.
+- **65** and **70**: a large dictionary.
+- **80**: valid words that are unusual, the kind used in word games.
+
+By default, a word is difficult when it first appears in a size above 50. A word that is not in the list at all counts as rarer than 80, so it is marked too. You can choose the size: 35 marks the most words, 80 marks only the rarest.
+
+SCOWL was made for spell checking, not for reading level. It says how many dictionaries include a word, not how often people use it. So it is a rough guide: "ubiquitous" is in the small dictionary, and "serendipity" first appears at 50.
+
+You can also load your own list: one word per line, most common first, or a word, a tab, and its Zipf frequency (the format `wordfreq` exports).
 
 Short words (under four letters), names, web addresses, and code are never marked.
 

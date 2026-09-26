@@ -85,6 +85,8 @@ pub struct Args {
     /// TEXTWEAVER_PDF_FONT environment variable, then an installed font).
     #[arg(long, value_name = "FILE")]
     pub pdf_font: Option<PathBuf>,
+    #[command(flatten)]
+    pub layout: super::convert_layout::LayoutArgs,
     /// Watch: seconds a file's size must hold still before converting.
     #[arg(long, default_value_t = 2.0)]
     pub stable_seconds: f64,
@@ -136,13 +138,13 @@ fn options(args: &Args) -> ConvertOptions {
         jobs: args.jobs,
         force: args.force,
         pandoc: !args.no_pandoc,
-        write: WriteOptions {
+        write: args.layout.apply(WriteOptions {
             pdf: PdfOptions {
                 font: args.pdf_font.clone(),
                 ..PdfOptions::default()
             },
             ..WriteOptions::default()
-        },
+        }),
         ..ConvertOptions::default()
     }
 }

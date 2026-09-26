@@ -640,6 +640,16 @@ impl App {
         Ok(())
     }
 
+    /// Changes settings from outside the command loop (a frontend's own
+    /// dialog, such as the GUI's font chooser) and saves them at once, so
+    /// the app's copy and the file agree and a later save cannot undo the
+    /// change.
+    pub fn update_settings(&mut self, change: impl FnOnce(&mut Settings)) -> Result<(), AppError> {
+        change(&mut self.settings);
+        self.settings_dirty = true;
+        self.save_settings()
+    }
+
     /// Saves settings if they changed since loading (explicit changes only).
     pub fn save_settings(&mut self) -> Result<(), AppError> {
         if !self.settings_dirty {

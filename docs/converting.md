@@ -99,6 +99,32 @@ Use `--no-toc` to leave out the table of contents.
 
 You can write your own templates. They are HTML files with MiniJinja placeholders such as `{{ title }}` and `{{ content }}`. Put them in a folder and pass `--templates FOLDER --template NAME`, where the name is the file name without its extension, or give a file directly with `--template my-page.html`. Your template can start with `{% extends "default" %}` to reuse the built-in page. The placeholders are listed in the rustdoc of `textweaver_render::template`.
 
+## PDF and EPUB layout
+
+```
+tw convert "Chapter 3.md" --to pdf --large-print --title-page --contents
+```
+
+PDF output uses fonts that come with textweaver, so a PDF looks the same on every computer and never fails for lack of a font. The text is in Atkinson Hyperlegible Next and code is in Atkinson Hyperlegible Mono, both from the Braille Institute and made so that letters that look alike are easy to tell apart.
+
+These options change how a PDF looks. None of them changes what a screen reader hears: every PDF is tagged, has a title and a language, and passes the PDF/UA check textweaver runs while writing.
+
+- `--font NAME`: the text font. The fonts that come with textweaver are "Atkinson Hyperlegible Next", "Atkinson Hyperlegible Mono", and "OpenDyslexic". You can also name any font installed on your computer, such as "Verdana", or give a font file. If the name is not found, textweaver says so and converts nothing, so a typing mistake is never silently replaced.
+- `--code-font NAME`: the font for code, in the same way.
+- `--font-size 14`: the text size in points. The default is 12.
+- `--large-print`: text of 18 points or more, more space between lines and paragraphs, headings that are not much larger than the text, and three-quarter-inch margins so more words fit on a line. The other options still apply on top, for example `--large-print --font-size 20`.
+- `--page-size a4`: `letter` (the default), `a4`, `a5`, `legal`, or your own size, such as `6x9in` or `148x210mm`.
+- `--margin 20mm`: the margin on every side. You can write it in `in`, `mm`, `cm`, or `pt`. The default is one inch.
+- `--line-spacing 1.8`: the space from one line to the next, as a multiple of the text size. The default is 1.5.
+- `--no-page-numbers`: leave out "Page 3 of 12" at the bottom of each page. Page numbers are marked so screen readers skip them.
+- `--title-page`: start with a page holding the title and the author. Add `--date "September 2026"` to print a date as well; textweaver never guesses today's date.
+- `--contents`: a table of contents after the title page. Each entry is a link to its heading and shows its page number. `--contents-depth 2` lists only headings of levels 1 and 2 (the default is 3).
+- `--lang fr`: the document language, for the document and its screen reader voice, when the source does not say or says it wrongly.
+
+Links in a PDF work: web and email links open, and links to a heading in the same document, such as `[see the summary](#summary)` in Markdown, jump to that heading. Footnote numbers jump to their footnote. textweaver tells you about a link to a heading that does not exist, and about any image that has no description, since screen readers skip such images.
+
+For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the book, with its licence, and make it the book's font. Reading apps may still let you choose another. Fonts installed on your computer cannot be put into a book, because their licences may not allow it.
+
 ## Other options
 
 - `--engine comrak` uses the comrak Markdown parser instead of the default, pulldown-cmark. comrak implements every detail of GitHub's specification; pulldown-cmark is faster. Both give the same page structure.

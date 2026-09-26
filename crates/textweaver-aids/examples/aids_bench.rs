@@ -9,8 +9,8 @@ use std::time::{Duration, Instant};
 use textweaver_aids::rsvp::{Area, TuiBoxOptions, tui_box};
 use textweaver_aids::{
     BionicOptions, DifficultOptions, FontSettings, FrequencyList, Rsvp, RsvpSettings,
-    RulerSettings, SyllableOptions, TextSpacing, ViewRow, WordTrack, bionic_range, difficult_range,
-    reading_level, ruler_rows, split_range,
+    RulerSettings, ScowlList, SyllableOptions, TextSpacing, ViewRow, WordTrack, bionic_range,
+    difficult_range, reading_level, ruler_rows, split_range,
 };
 use textweaver_core::{CharPos, CharRange};
 use textweaver_text::Document;
@@ -164,6 +164,51 @@ fn main() {
     time("difficult words, whole document", || {
         difficult_range(&doc, all, &list, &DifficultOptions::default())
     });
+
+    // SCOWL, built in: unpacking and indexing happens once, on first use.
+    let (scowl, _) = time("SCOWL list: unpack and index (first use)", || {
+        ScowlList::builtin().expect("built-in SCOWL list")
+    });
+    println!("  words: {}", scowl.len());
+    let (marked, _) = time("difficult words (SCOWL), whole document", || {
+        difficult_range(&doc, all, scowl, &DifficultOptions::default())
+    });
+    println!("  marked: {}", marked.len());
+    // A varied 1 MB text: words drawn from the whole list, most of them
+    // common, a few made up (a fixed seed, so every run is the same).
+    let vocab: Vec<(&str, u8)> = scowl.words().filter(|(w, _)| w.len() > 1).collect();
+    let common: Vec<&str> = vocab
+        .iter()
+        .filter(|(_, l)| *l <= 40)
+        .map(|(w, _)| *w)
+        .collect();
+    let mut seed = 0x9E37_79B9_7F4A_7C15u64;
+    let mut next = move || {
+        seed ^= seed << 13;
+        seed ^= seed >> 7;
+        seed ^= seed << 17;
+        seed
+    };
+    let mut varied = String::with_capacity(1_050_000);
+    let mut n = 0usize;
+    while varied.len() < 1_000_000 {
+        let r = next();
+        let w = match r % 100 {
+            0..=84 => common[(r >> 8) as usize % common.len()],
+            85..=97 => vocab[(r >> 8) as usize % vocab.len()].0,
+            _ => "zorblaxity",
+        };
+        varied.push_str(w);
+        n += 1;
+        varied.push_str(if n.is_multiple_of(15) { ".\n\n" } else { " " });
+    }
+    let varied_doc = Document::from_plain_text(&varied);
+    let varied_all = varied_doc.full_range();
+    println!("  varied text: {} bytes, {} words", varied.len(), n);
+    let (marked, _) = time("difficult words (SCOWL), varied 1 MB", || {
+        difficult_range(&varied_doc, varied_all, scowl, &DifficultOptions::default())
+    });
+    println!("  marked: {}", marked.len());
 
     time("ruler marks, 40 rows", || {
         let rows: Vec<ViewRow> = (0..40)

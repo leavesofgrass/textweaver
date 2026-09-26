@@ -18,6 +18,8 @@ path = "src/main.rs"
 
 [dependencies]
 textweaver-app.workspace = true
+textweaver-aids.workspace = true
+textweaver-fonts = { workspace = true, features = ["bundled-fonts"] }
 wxdragon.workspace = true
 live-region.workspace = true
 clap.workspace = true

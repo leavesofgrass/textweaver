@@ -883,6 +883,15 @@ impl Settings {
             );
             self.display.tab_width = 4;
         }
+        if let Err(e) = self.reading_aids.font.validate() {
+            let fixed = self.reading_aids.font.clamped();
+            fix(
+                "reading_aids.font".into(),
+                e.to_string(),
+                fixed.summary().trim_end_matches('.').to_owned(),
+            );
+            self.reading_aids.font = fixed;
+        }
         if self.editing.autosave_interval_secs < 5 {
             fix(
                 "editing.autosave_interval_secs".into(),
@@ -1687,6 +1696,39 @@ mod tests {
         s.speech.speed_presets.insert("skim".into(), 400);
         store.save(&s).unwrap();
         assert_eq!(store.load().0.speech.speed_presets.len(), 4);
+    }
+
+    #[test]
+    fn display_font_round_trips_and_is_clamped() {
+        let (_d, store) = store();
+        let mut s = Settings::default();
+        s.reading_aids.font.family = textweaver_aids::FontFamily::Named("OpenDyslexic".into());
+        s.reading_aids.font.size_pt = 20.0;
+        s.reading_aids.font.weight = 700;
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(
+            text.contains(
+                "[reading_aids.font]\nfamily = \"OpenDyslexic\"\nsize_pt = 20.0\nweight = 700"
+            ),
+            "{text}"
+        );
+        assert_eq!(store.load().0.reading_aids.font, s.reading_aids.font);
+        // Out of range: clamped, with a warning naming the setting.
+        std::fs::write(
+            store.paths().settings_file(),
+            "[reading_aids.font]\nfamily = \"Verdana\"\nsize_pt = 500.0\n",
+        )
+        .unwrap();
+        let load = store.load_detailed();
+        assert_eq!(load.settings.reading_aids.font.size_pt, 144.0);
+        assert!(
+            load.warnings
+                .iter()
+                .any(|w| w.starts_with("reading_aids.font")),
+            "{:?}",
+            load.warnings
+        );
     }
 
     #[test]

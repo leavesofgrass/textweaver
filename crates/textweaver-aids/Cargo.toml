@@ -16,6 +16,16 @@ serde.workspace = true
 thiserror.workspace = true
 unicode-segmentation.workspace = true
 unicode-width.workspace = true
+textweaver-fonts.workspace = true
+zip = { workspace = true, optional = true }
+
+[features]
+default = ["scowl", "bundled-fonts"]
+# The built-in SCOWL word levels (third_party/scowl/, 692 KB compressed)
+# for difficult-word marking with no download.
+scowl = ["dep:zip"]
+# Bundled reading fonts count as installed when resolving a font choice.
+bundled-fonts = ["textweaver-fonts/bundled-fonts"]
 
 [dev-dependencies]
 proptest.workspace = true

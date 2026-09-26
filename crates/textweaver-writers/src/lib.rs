@@ -193,12 +193,22 @@ pub struct EpubOptions {
     /// breaks when the document has them, otherwise before each level 1
     /// heading. Off writes one content document.
     pub split_chapters: bool,
+    /// Embed a bundled font (by name or key, such as `"Atkinson
+    /// Hyperlegible Next"` or `"opendyslexic"`) and use it for the text,
+    /// with its licence in the book beside the font files. Only bundled
+    /// fonts can be embedded: their licence (SIL OFL 1.1) allows it.
+    /// Reading systems may let the reader override it.
+    pub font: Option<String>,
+    /// Embed a bundled font for code, as for [`EpubOptions::font`].
+    pub code_font: Option<String>,
 }
 
 impl Default for EpubOptions {
     fn default() -> Self {
         EpubOptions {
             split_chapters: true,
+            font: None,
+            code_font: None,
         }
     }
 }
@@ -271,6 +281,82 @@ impl PageSize {
             PageSize::Custom { width, height } => (width.max(144.0), height.max(144.0)),
         }
     }
+
+    /// Reads a page size: `letter`, `a4`, `a5`, `legal`, or
+    /// `WIDTHxHEIGHT` with a unit on either number or after both (`6x9in`,
+    /// `148mmx210mm`, `432x648pt`; no unit means points). Sizes under two
+    /// inches or over 200 inches are refused.
+    pub fn parse(s: &str) -> Result<PageSize, String> {
+        let t = s.trim().to_ascii_lowercase();
+        match t.as_str() {
+            "letter" | "us-letter" | "usletter" => return Ok(PageSize::Letter),
+            "a4" => return Ok(PageSize::A4),
+            "a5" => {
+                return Ok(PageSize::Custom {
+                    width: 419.53,
+                    height: 595.28,
+                });
+            }
+            "legal" | "us-legal" => {
+                return Ok(PageSize::Custom {
+                    width: 612.0,
+                    height: 1008.0,
+                });
+            }
+            _ => {}
+        }
+        let bad = || {
+            format!(
+                "{s:?} is not a page size; use letter, a4, a5, legal, or WIDTHxHEIGHT with in, mm, cm, or pt"
+            )
+        };
+        let (w, h) = t.split_once('x').ok_or_else(bad)?;
+        // A unit written once at the end applies to both numbers.
+        let unit = ["in", "mm", "cm", "pt"]
+            .into_iter()
+            .find(|u| h.trim().ends_with(u))
+            .unwrap_or("pt");
+        let w = if w.trim().ends_with(|c: char| c.is_ascii_alphabetic()) {
+            w.to_owned()
+        } else {
+            format!("{}{unit}", w.trim())
+        };
+        let (width, height) = (
+            parse_length(&w).map_err(|_| bad())?,
+            parse_length(h).map_err(|_| bad())?,
+        );
+        if !(144.0..=14_400.0).contains(&width) || !(144.0..=14_400.0).contains(&height) {
+            return Err(format!(
+                "{s:?} is too small or too large for a page; use 2 to 200 inches"
+            ));
+        }
+        Ok(PageSize::Custom { width, height })
+    }
+}
+
+/// Reads a length and returns points: `1in`, `2.54cm`, `25mm`, `72pt`, or a
+/// bare number of points.
+pub fn parse_length(s: &str) -> Result<f32, String> {
+    let t = s.trim().to_ascii_lowercase();
+    let (num, scale) = if let Some(n) = t.strip_suffix("in") {
+        (n, 72.0)
+    } else if let Some(n) = t.strip_suffix("mm") {
+        (n, 72.0 / 25.4)
+    } else if let Some(n) = t.strip_suffix("cm") {
+        (n, 72.0 / 2.54)
+    } else if let Some(n) = t.strip_suffix("pt") {
+        (n, 1.0)
+    } else {
+        (t.as_str(), 1.0)
+    };
+    let v: f32 = num
+        .trim()
+        .parse()
+        .map_err(|_| format!("{s:?} is not a length; use a number with in, mm, cm, or pt"))?;
+    if !v.is_finite() || v < 0.0 {
+        return Err(format!("{s:?} is not a length"));
+    }
+    Ok(v * scale)
 }
 
 /// PDF options.
@@ -279,15 +365,47 @@ impl PageSize {
 pub struct PdfOptions {
     /// Page size.
     pub page_size: PageSize,
-    /// Body font size in points (default 12).
+    /// Body font size in points (default 12; at least 18 with
+    /// [`PdfOptions::large_print`]).
     pub font_size: f32,
     /// Line height as a multiple of the font size (default 1.5, WCAG 1.4.12).
     pub line_spacing: f32,
-    /// Page margin in points (default 72, one inch).
+    /// Page margin in points on every side (default 72, one inch).
     pub margin: f32,
-    /// A TrueType or OpenType font file for body text; otherwise
-    /// `TEXTWEAVER_PDF_FONT`, then a system font (see [`pdf`]).
+    /// The text font family, by name: a bundled family (`"Atkinson
+    /// Hyperlegible Next"`, the default; `"OpenDyslexic"`; `"Atkinson
+    /// Hyperlegible Mono"`) or an installed one (`"Verdana"`), or a font
+    /// file path. A name that is neither bundled nor installed is an error.
+    pub font_family: Option<String>,
+    /// The code font family, by name or file, as for
+    /// [`PdfOptions::font_family`] (default: the bundled Atkinson
+    /// Hyperlegible Mono).
+    pub code_font_family: Option<String>,
+    /// A TrueType or OpenType font file for body text, used for every
+    /// style; overrides [`PdfOptions::font_family`]. Without either,
+    /// `TEXTWEAVER_PDF_FONT` names a file, else the bundled font is used
+    /// (see [`pdf`]).
     pub font: Option<PathBuf>,
+    /// Large print: text of at least 18 points, line spacing of at least
+    /// 1.5, more space between paragraphs, gentler heading sizes, and code
+    /// at full size.
+    pub large_print: bool,
+    /// "Page N of M" in each page's footer, marked as an artifact so
+    /// screen readers skip it.
+    pub page_numbers: bool,
+    /// Start with a title page: the title, the author, and the date.
+    pub title_page: bool,
+    /// The date on the title page, as written (`"September 25, 2026"`);
+    /// otherwise the document's `date` property (front matter), else no
+    /// date. textweaver does not print today's date itself: it cannot know
+    /// the reader's time zone, and a wrong date is worse than none.
+    pub date: Option<String>,
+    /// A table of contents after the title page, from the headings, each
+    /// entry a link to its heading with its page number.
+    pub toc: bool,
+    /// Heading levels the table of contents lists (default 3: levels 1 to
+    /// 3).
+    pub toc_depth: u8,
     /// Compress content streams (off only for inspecting the output).
     pub compress: bool,
     /// Validate against PDF/UA-1 while writing; validation failures are
@@ -302,9 +420,35 @@ impl Default for PdfOptions {
             font_size: 12.0,
             line_spacing: 1.5,
             margin: 72.0,
+            font_family: None,
+            code_font_family: None,
             font: None,
+            large_print: false,
+            page_numbers: true,
+            title_page: false,
+            date: None,
+            toc: false,
+            toc_depth: 3,
             compress: true,
             pdf_ua: true,
+        }
+    }
+}
+
+/// Smallest text size in large print, in points.
+pub const LARGE_PRINT_MIN_SIZE: f32 = 18.0;
+
+impl PdfOptions {
+    /// The large-print preset: 18-point text, 1.6 line spacing, and
+    /// three-quarter-inch margins, so more words fit on a line at the
+    /// larger size.
+    pub fn large_print() -> PdfOptions {
+        PdfOptions {
+            font_size: LARGE_PRINT_MIN_SIZE,
+            line_spacing: 1.6,
+            margin: 54.0,
+            large_print: true,
+            ..PdfOptions::default()
         }
     }
 }
@@ -336,7 +480,7 @@ pub enum WriteError {
     Zip(String),
     /// No usable font was found for PDF output.
     #[error(
-        "no font for PDF output: set the PDF font option or TEXTWEAVER_PDF_FONT to a TrueType font file"
+        "no font for PDF output: this build has no bundled fonts and none of the usual fonts is installed; name a font family or file with the PDF font option, or set TEXTWEAVER_PDF_FONT to a font file"
     )]
     NoFont,
     /// A font file could not be read or parsed.
@@ -412,6 +556,46 @@ mod tests {
             assert_eq!(Format::from_name(f.extension()), Some(f));
             assert_eq!(writer_for(f).format(), f);
         }
+    }
+
+    #[test]
+    fn page_sizes_and_lengths() {
+        assert_eq!(PageSize::parse("A4"), Ok(PageSize::A4));
+        assert_eq!(PageSize::parse(" letter "), Ok(PageSize::Letter));
+        assert_eq!(
+            PageSize::parse("6x9in"),
+            Ok(PageSize::Custom {
+                width: 432.0,
+                height: 648.0
+            })
+        );
+        assert_eq!(
+            PageSize::parse("432x648"),
+            Ok(PageSize::Custom {
+                width: 432.0,
+                height: 648.0
+            })
+        );
+        let PageSize::Custom { width, height } = PageSize::parse("148mmx210mm").unwrap() else {
+            panic!("custom");
+        };
+        assert!((width - 419.53).abs() < 0.1 && (height - 595.28).abs() < 0.1);
+        assert!(PageSize::parse("1x1in").is_err());
+        assert!(PageSize::parse("huge").is_err());
+        assert_eq!(parse_length("1in"), Ok(72.0));
+        assert_eq!(parse_length("36"), Ok(36.0));
+        assert!((parse_length("2.54cm").unwrap() - 72.0).abs() < 1e-3);
+        assert!(parse_length("-1in").is_err());
+        assert!(parse_length("wide").is_err());
+    }
+
+    #[test]
+    fn large_print_preset() {
+        let p = PdfOptions::large_print();
+        assert!(p.large_print && p.font_size >= LARGE_PRINT_MIN_SIZE && p.line_spacing >= 1.5);
+        let from_json: PdfOptions =
+            serde_json::from_str(r#"{"large_print":true,"toc":true}"#).unwrap();
+        assert!(from_json.large_print && from_json.toc && from_json.page_numbers);
     }
 
     #[test]

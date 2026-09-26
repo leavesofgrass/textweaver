@@ -7,3 +7,7 @@
 *.pdf binary
 *.snap text eol=lf
 third_party/ibmtts-dictionaries/*.dic binary
+*.ttf binary
+*.otf binary
+third_party/fonts/*/OFL.txt -text
+third_party/scowl/*.zip binary

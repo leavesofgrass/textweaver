@@ -4351,11 +4351,13 @@ dependencies = [
  "serde",
  "serde_json",
  "textweaver-core",
+ "textweaver-fonts",
  "textweaver-text",
  "thiserror 2.0.21",
  "toml",
  "unicode-segmentation",
  "unicode-width",
+ "zip",
 ]
 
 [[package]]
@@ -4434,6 +4436,7 @@ dependencies = [
  "textweaver-render",
  "textweaver-tui",
  "textweaver-vault",
+ "textweaver-writers",
 ]
 
 [[package]]
@@ -4547,6 +4550,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-fonts"
+version = "0.1.0-alpha.3"
+dependencies = [
+ "tempfile",
+]
+
+[[package]]
 name = "textweaver-formats"
 version = "0.1.0-alpha.3"
 dependencies = [
@@ -4574,7 +4584,9 @@ version = "0.1.0-alpha.3"
 dependencies = [
  "clap",
  "live-region",
+ "textweaver-aids",
  "textweaver-app",
+ "textweaver-fonts",
  "wxdragon",
 ]
 
@@ -4728,6 +4740,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "textweaver-core",
+ "textweaver-fonts",
  "textweaver-formats",
  "textweaver-text",
  "thiserror 2.0.21",

@@ -29,6 +29,7 @@ textweaver-dictation.workspace = true
 textweaver-export.workspace = true
 # Agent L: `tw convert`.
 textweaver-convert.workspace = true
+textweaver-writers.workspace = true
 textweaver-render.workspace = true
 # Agent P: `tw cite`.
 textweaver-cite.workspace = true

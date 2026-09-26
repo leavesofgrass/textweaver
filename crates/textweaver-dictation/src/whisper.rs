@@ -524,6 +524,9 @@ fn run_job(job: Job) {
         let _ = job.tx.send((job.generation, event));
     };
     let result = transcribe(&job, &send);
+    // Clean up before the final event, so whoever sees it sees no session
+    // folder left behind.
+    let _ = std::fs::remove_dir_all(&job.work_dir);
     if job.cancel.load(Ordering::SeqCst) {
         // cancel() already reported it.
     } else {
@@ -532,7 +535,6 @@ fn run_job(job: Job) {
             Err(message) => send(DictationEvent::Failed { message }),
         }
     }
-    let _ = std::fs::remove_dir_all(&job.work_dir);
 }
 
 fn transcribe(job: &Job, send: &dyn Fn(DictationEvent)) -> Result<Transcript, String> {

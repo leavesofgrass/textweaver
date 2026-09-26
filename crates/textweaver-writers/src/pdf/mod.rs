@@ -12,12 +12,23 @@
 //! language, an outline (bookmarks) built from the headings, and embedded,
 //! subset fonts.
 //!
-//! Fonts: [`PdfOptions::font`](crate::PdfOptions), then the
-//! `TEXTWEAVER_PDF_FONT` environment variable, then the first installed
-//! family of Atkinson Hyperlegible, Verdana, Segoe UI, Arial, DejaVu Sans,
-//! Liberation Sans, and Noto Sans (bold and italic from the same family), a
-//! monospaced font for code, and fallback fonts for characters the body
-//! font lacks. Characters no font can show become `?` and are reported.
+//! Links work: web and mail links open, and links to a heading in the
+//! document (`#section-title`, as Markdown writes them) and footnote
+//! references jump to their target. Options add a title page, a table of
+//! contents whose entries are links (`TOC`/`TOCI`, with page numbers),
+//! large print, and the page size, margins, and line spacing
+//! ([`PdfOptions`](crate::PdfOptions)). Images without a description are
+//! marked decorative and reported.
+//!
+//! Fonts: by default the bundled Atkinson Hyperlegible Next for text and
+//! Atkinson Hyperlegible Mono for code, so a PDF looks the same everywhere
+//! and never fails for lack of an installed font. Another bundled or
+//! installed family, or a font file, can be chosen by name
+//! ([`PdfOptions::font_family`](crate::PdfOptions),
+//! [`PdfOptions::code_font_family`](crate::PdfOptions),
+//! [`PdfOptions::font`](crate::PdfOptions), or `TEXTWEAVER_PDF_FONT`).
+//! Installed fallback fonts cover characters the chosen fonts lack;
+//! characters no font can show become `?` and are reported.
 //!
 //! With [`PdfOptions::pdf_ua`](crate::PdfOptions) on (the default), krilla
 //! checks the PDF/UA-1 rules it can check while writing (title, language,
@@ -26,7 +37,7 @@
 
 mod font;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::num::NonZeroU16;
 use std::rc::Rc;
@@ -34,7 +45,7 @@ use std::rc::Rc;
 use krilla::action::{Action, LinkAction};
 use krilla::annotation::{Annotation, LinkAnnotation, Target};
 use krilla::configure::{Accessibility, ConfigurationBuilder, ValidationError};
-use krilla::destination::XyzDestination;
+use krilla::destination::{Destination, XyzDestination};
 use krilla::geom::{PathBuilder, Point, Rect, Size, Transform};
 use krilla::image::Image as KrillaImage;
 use krilla::metadata::{DateTime, Metadata};
@@ -52,16 +63,19 @@ use textweaver_text::Document;
 
 use crate::model::{self, Block, Facts, Image, Inline, List, Style, Table};
 use crate::resource::{ImageKind, Resource, Resources};
-use crate::{Format, WriteError, WriteOptions, WriteReport, Writer, civil, timestamp};
+use crate::{
+    Format, LARGE_PRINT_MIN_SIZE, WriteError, WriteOptions, WriteReport, Writer, civil, timestamp,
+};
 use font::Fonts;
 
 /// Checks, without writing anything, that the fonts PDF output needs can be
 /// found and read with these options: [`WriteError::NoFont`] when no font
-/// is installed or named, [`WriteError::Font`] when the named one cannot be
-/// used. A batch converter calls this once before converting many files,
-/// so a missing font is one clear message rather than one failure per file.
+/// is bundled, installed, or named, [`WriteError::Font`] when the named one
+/// cannot be found or used. A batch converter calls this once before
+/// converting many files, so a missing font is one clear message rather
+/// than one failure per file.
 pub fn check_fonts(options: &WriteOptions) -> Result<(), WriteError> {
-    Fonts::discover(options.pdf.font.as_deref()).map(|_| ())
+    Fonts::discover(&options.pdf).map(|_| ())
 }
 
 /// Writes tagged PDF.
@@ -82,9 +96,23 @@ impl Writer for PdfWriter {
         let mut report = WriteReport::default();
         let blocks = model::blocks(doc);
         let facts = Facts::of(doc, options, &blocks);
-        let fonts = Fonts::discover(options.pdf.font.as_deref())?;
+        let fonts = Fonts::discover(&options.pdf)?;
+        let anchors = Anchors::of(&blocks);
         let mut resources = Resources::new(doc, options);
-        let mut layout = Layout::new(&fonts, options, &mut report, &mut resources);
+        let mut layout = Layout::new(&fonts, options, &anchors, &mut report, &mut resources);
+        if options.pdf.title_page {
+            let date = options
+                .pdf
+                .date
+                .clone()
+                .or_else(|| doc.meta.properties.get("date").cloned())
+                .map(|d| model::collapse_ws(&d))
+                .filter(|d| !d.is_empty());
+            layout.title_page(&facts, date.as_deref());
+        }
+        if options.pdf.toc && !anchors.headings.is_empty() {
+            layout.contents(options.pdf.toc_depth.clamp(1, 6));
+        }
         layout.blocks(&blocks, ROOT, 0.0, false);
         let laid = layout.finish();
         let bytes = render(laid, &fonts, &facts, options)?;
@@ -104,6 +132,97 @@ struct Look {
     mono: bool,
 }
 
+/// Where a link goes.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum LinkTarget {
+    /// A web, mail, or other external address.
+    Uri(String),
+    /// The `n`th heading of the document.
+    Heading(usize),
+    /// The body of footnote `id`.
+    Note(String),
+}
+
+/// Headings and footnotes, found before layout so links (and the table of
+/// contents) can point at them before they are laid out.
+#[derive(Default)]
+struct Anchors {
+    /// (level, title) of every heading, in layout order.
+    headings: Vec<(u8, String)>,
+    /// Heading slugs (`#introduction`) to heading index.
+    slugs: HashMap<String, usize>,
+    /// Footnote ids with a body.
+    notes: HashSet<String>,
+}
+
+impl Anchors {
+    fn of(blocks: &[Block]) -> Anchors {
+        let mut a = Anchors::default();
+        a.walk(blocks);
+        a
+    }
+
+    fn walk(&mut self, blocks: &[Block]) {
+        for b in blocks {
+            match b {
+                Block::Heading { level, content } => {
+                    let title = model::collapse_ws(&Inline::plain(content));
+                    let n = self.headings.len();
+                    // GitHub's rule: a repeated slug gets -1, -2, ...
+                    let base = slug(&title);
+                    let mut s = base.clone();
+                    let mut k = 1;
+                    while self.slugs.contains_key(&s) {
+                        s = format!("{base}-{k}");
+                        k += 1;
+                    }
+                    self.slugs.insert(s, n);
+                    self.headings.push((*level, title));
+                }
+                Block::Footnote { id, .. } => {
+                    self.notes.insert(id.clone());
+                }
+                Block::Quote(inner) => self.walk(inner),
+                Block::List(list) => {
+                    for item in &list.items {
+                        self.walk(&item.blocks);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// The heading a `#fragment` link points at: its slug, or its title.
+    fn fragment(&self, fragment: &str) -> Option<usize> {
+        let f = fragment.trim();
+        self.slugs
+            .get(f)
+            .or_else(|| self.slugs.get(&slug(f)))
+            .copied()
+    }
+}
+
+/// A heading's anchor as Markdown renderers make it: lowercase, letters,
+/// digits, hyphens, and underscores kept, spaces turned into hyphens, other
+/// punctuation dropped.
+fn slug(title: &str) -> String {
+    title
+        .trim()
+        .chars()
+        .flat_map(char::to_lowercase)
+        .filter_map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                Some(c)
+            } else if c.is_whitespace() {
+                Some('-')
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 /// A drawing operation on a page. `slot` places the content in the tag
 /// tree; `None` makes it an artifact.
 enum Op {
@@ -115,6 +234,16 @@ enum Op {
         text: String,
         slot: Option<usize>,
         artifact: ArtifactType,
+    },
+    /// The page number of heading `heading`, right-aligned at `right` (the
+    /// table of contents; known only once the body is laid out).
+    PageRef {
+        right: f32,
+        y: f32,
+        face: usize,
+        size: f32,
+        heading: usize,
+        slot: usize,
     },
     Image {
         x: f32,
@@ -132,7 +261,7 @@ enum Op {
     },
     Link {
         rect: (f32, f32, f32, f32),
-        uri: String,
+        target: LinkTarget,
         alt: String,
         slot: usize,
     },
@@ -225,20 +354,44 @@ struct Line {
     parts: Vec<(f32, Part)>,
 }
 
+impl Line {
+    fn width(&self, layout: &Layout<'_>, size: f32) -> f32 {
+        self.parts.last().map_or(0.0, |(x, p)| {
+            x + layout.measure(&p.text, p.look, size * layout.look_scale(p.look))
+        })
+    }
+}
+
 /// A table cell laid out: its lines and its link targets.
-type CellLines = (Vec<Line>, Vec<String>);
+type CellLines = (Vec<Line>, Vec<LinkTarget>);
 
 /// Inline content flattened for layout.
-#[derive(Default)]
-struct Flow {
+struct Flow<'a> {
+    anchors: &'a Anchors,
     words: Vec<Word>,
     /// Link targets.
-    links: Vec<String>,
+    links: Vec<LinkTarget>,
+    /// `#fragment` links with no heading to go to.
+    dangling: usize,
+    /// The footnote whose body this is (its own label is not a link).
+    in_note: Option<String>,
     pending_space: bool,
     pending_break: bool,
 }
 
-impl Flow {
+impl<'a> Flow<'a> {
+    fn new(anchors: &'a Anchors, in_note: Option<String>) -> Self {
+        Flow {
+            anchors,
+            words: Vec::new(),
+            links: Vec::new(),
+            dangling: 0,
+            in_note,
+            pending_space: false,
+            pending_break: false,
+        }
+    }
+
     fn push_text(&mut self, text: &str, look: Look, link: Option<usize>) {
         for (n, chunk) in text.split(' ').enumerate() {
             if n > 0 {
@@ -267,6 +420,12 @@ impl Flow {
         }
     }
 
+    fn linked(&mut self, target: LinkTarget, children: &[Inline], look: Look) {
+        self.links.push(target);
+        let l = self.links.len() - 1;
+        self.inlines(children, look, Some(l));
+    }
+
     fn inlines(&mut self, inlines: &[Inline], look: Look, link: Option<usize>) {
         for i in inlines {
             match i {
@@ -290,12 +449,26 @@ impl Flow {
                     ),
                     Style::Code => self.inlines(children, Look { mono: true, ..look }, link),
                     Style::Link(uri) if link.is_none() && is_external(uri) => {
-                        self.links.push(uri.trim().to_owned());
-                        let l = self.links.len() - 1;
-                        self.inlines(children, look, Some(l));
+                        self.linked(LinkTarget::Uri(uri.trim().to_owned()), children, look);
                     }
-                    // Underline, footnote references, local links, and
-                    // images (as their alt text) are plain text here.
+                    Style::Link(uri) if link.is_none() && uri.trim().starts_with('#') => {
+                        match self.anchors.fragment(&uri.trim()[1..]) {
+                            Some(h) => self.linked(LinkTarget::Heading(h), children, look),
+                            None => {
+                                self.dangling += 1;
+                                self.inlines(children, look, link);
+                            }
+                        }
+                    }
+                    Style::FootnoteRef(id)
+                        if link.is_none()
+                            && self.anchors.notes.contains(id)
+                            && self.in_note.as_deref() != Some(id.as_str()) =>
+                    {
+                        self.linked(LinkTarget::Note(id.clone()), children, look);
+                    }
+                    // Underline, links to other files, and images (as
+                    // their alt text) are plain text here.
                     _ => self.inlines(children, look, link),
                 },
             }
@@ -316,17 +489,26 @@ struct Laid {
     tree: Tree,
     /// (level, title, page, y) of every heading.
     headings: Vec<(u8, String, usize, f32)>,
+    /// Footnote id → (page, y) of its body.
+    notes: HashMap<String, (usize, f32)>,
+    /// (page, y) of the table of contents, when there is one.
+    contents: Option<(usize, f32)>,
+    /// Pages without a footer (the title page).
+    no_footer: usize,
     page_w: f32,
     page_h: f32,
     margin: f32,
+    base: f32,
 }
 
 struct Layout<'a> {
     fonts: &'a Fonts,
+    anchors: &'a Anchors,
     report: &'a mut WriteReport,
     resources: &'a mut Resources,
     base: f32,
     spacing: f32,
+    large: bool,
     page_w: f32,
     page_h: f32,
     margin: f32,
@@ -336,25 +518,54 @@ struct Layout<'a> {
     y: f32,
     tree: Tree,
     headings: Vec<(u8, String, usize, f32)>,
+    notes: HashMap<String, (usize, f32)>,
+    contents: Option<(usize, f32)>,
+    no_footer: usize,
     missing: Vec<char>,
+    /// Images with no description, written as decorative.
+    undescribed: usize,
+    /// `#fragment` links that point nowhere.
+    dangling: usize,
 }
 
 impl<'a> Layout<'a> {
     fn new(
         fonts: &'a Fonts,
         options: &WriteOptions,
+        anchors: &'a Anchors,
         report: &'a mut WriteReport,
         resources: &'a mut Resources,
     ) -> Self {
-        let (page_w, page_h) = options.pdf.page_size.points();
-        let base = options.pdf.font_size.clamp(6.0, 72.0);
-        let margin = options.pdf.margin.clamp(18.0, page_w / 4.0);
+        let pdf = &options.pdf;
+        let (page_w, page_h) = pdf.page_size.points();
+        let large = pdf.large_print;
+        let mut base = if pdf.font_size.is_finite() {
+            pdf.font_size.clamp(6.0, 72.0)
+        } else {
+            12.0
+        };
+        let mut spacing = if pdf.line_spacing.is_finite() {
+            pdf.line_spacing.clamp(1.0, 3.0)
+        } else {
+            1.5
+        };
+        if large {
+            base = base.max(LARGE_PRINT_MIN_SIZE);
+            spacing = spacing.max(1.5);
+        }
+        let margin = if pdf.margin.is_finite() {
+            pdf.margin.clamp(18.0, page_w / 4.0)
+        } else {
+            72.0
+        };
         Layout {
             fonts,
+            anchors,
             report,
             resources,
             base,
-            spacing: options.pdf.line_spacing.clamp(1.0, 3.0),
+            spacing,
+            large,
             page_w,
             page_h,
             margin,
@@ -363,7 +574,12 @@ impl<'a> Layout<'a> {
             y: margin,
             tree: Tree::new(),
             headings: Vec::new(),
+            notes: HashMap::new(),
+            contents: None,
+            no_footer: 0,
             missing: Vec::new(),
+            undescribed: 0,
+            dangling: 0,
         }
     }
 
@@ -396,10 +612,21 @@ impl<'a> Layout<'a> {
         }
     }
 
+    /// Space after a paragraph.
+    fn paragraph_gap(&self, size: f32) -> f32 {
+        if self.large { size * 0.9 } else { size * 0.6 }
+    }
+
+    /// Monospaced text is set slightly smaller, except in large print.
+    fn look_scale(&self, look: Look) -> f32 {
+        if look.mono && !self.large { 0.9 } else { 1.0 }
+    }
+
     fn face_for(&self, look: Look) -> usize {
         let f = &self.fonts.family;
         match (look.mono, look.bold, look.italic) {
-            (true, _, _) => f.mono,
+            (true, true, _) => f.mono_bold,
+            (true, false, _) => f.mono,
             (false, true, true) => f.bold_italic,
             (false, true, false) => f.bold,
             (false, false, true) => f.italic,
@@ -452,7 +679,7 @@ impl<'a> Layout<'a> {
     fn word_width(&self, w: &Word, size: f32) -> f32 {
         w.parts
             .iter()
-            .map(|p| self.measure(&p.text, p.look, size * look_scale(p.look)))
+            .map(|p| self.measure(&p.text, p.look, size * self.look_scale(p.look)))
             .sum()
     }
 
@@ -483,7 +710,7 @@ impl<'a> Layout<'a> {
                 for p in &w.parts {
                     let mut chunk = String::new();
                     let mut cw = 0.0;
-                    let psize = size * look_scale(p.look);
+                    let psize = size * self.look_scale(p.look);
                     for c in p.text.chars() {
                         let adv = self.measure(&c.to_string(), p.look, psize);
                         if x + cw + adv > avail && (x + cw) > 0.0 {
@@ -530,7 +757,7 @@ impl<'a> Layout<'a> {
                     }
                 }
                 first = false;
-                let pw = self.measure(&p.text, p.look, size * look_scale(p.look));
+                let pw = self.measure(&p.text, p.look, size * self.look_scale(p.look));
                 line.parts.push((x, part));
                 x += pw;
             }
@@ -550,7 +777,7 @@ impl<'a> Layout<'a> {
     fn emit_lines(
         &mut self,
         lines: &[Line],
-        links: &[String],
+        links: &[LinkTarget],
         group: usize,
         indent: f32,
         size: f32,
@@ -574,7 +801,7 @@ impl<'a> Layout<'a> {
                 }
             }
             for (x, p) in merged {
-                let psize = size * look_scale(p.look);
+                let psize = size * self.look_scale(p.look);
                 let parent = match p.link {
                     Some(l) if slots => *link_groups
                         .entry(l)
@@ -602,7 +829,7 @@ impl<'a> Layout<'a> {
                     let top = self.y;
                     self.op(Op::Link {
                         rect: (start_x, top, rx.max(start_x + 1.0), top + lh),
-                        uri: links[l].clone(),
+                        target: links[l].clone(),
                         alt: format!("Link: {}", p.text.trim()),
                         slot,
                     });
@@ -618,9 +845,15 @@ impl<'a> Layout<'a> {
         self.y + (lh - size) / 2.0 + ascent * size
     }
 
-    fn flow(&self, inlines: &[Inline], look: Look) -> Flow {
-        let mut f = Flow::default();
+    fn flow(&mut self, inlines: &[Inline], look: Look) -> Flow<'a> {
+        self.flow_in(inlines, look, None)
+    }
+
+    /// A flow inside footnote `in_note`, whose own label is not a link.
+    fn flow_in(&mut self, inlines: &[Inline], look: Look, in_note: Option<String>) -> Flow<'a> {
+        let mut f = Flow::new(self.anchors, in_note);
         f.inlines(inlines, look, None);
+        self.dangling += f.dangling;
         f
     }
 
@@ -630,12 +863,26 @@ impl<'a> Layout<'a> {
         let lines = self.lines(&flow.words, self.width() - indent, size);
         let group = self.tree.group(parent, Tag::P);
         self.emit_lines(&lines, &flow.links, group, indent, size, true);
-        self.y += if tight { size * 0.25 } else { size * 0.6 };
+        self.y += if tight {
+            size * 0.25
+        } else {
+            self.paragraph_gap(size)
+        };
+    }
+
+    /// Heading sizes as multiples of the body size; large print keeps them
+    /// closer to the (already large) body text.
+    fn heading_scale(&self, level: u8) -> f32 {
+        let i = usize::from(level.clamp(1, 6) - 1);
+        if self.large {
+            [1.5, 1.33, 1.2, 1.1, 1.0, 1.0][i]
+        } else {
+            [2.0, 1.667, 1.417, 1.25, 1.083, 1.0][i]
+        }
     }
 
     fn heading(&mut self, level: u8, content: &[Inline], parent: usize, indent: f32) {
-        let scale = [2.0, 1.667, 1.417, 1.25, 1.083, 1.0][usize::from(level.clamp(1, 6) - 1)];
-        let size = self.base * scale;
+        let size = self.base * self.heading_scale(level);
         let flow = self.flow(
             content,
             Look {
@@ -669,6 +916,127 @@ impl<'a> Layout<'a> {
         self.y += size * 0.3;
     }
 
+    /// Lines of `text` centred on the page, tagged as one paragraph.
+    fn centred(&mut self, text: &str, look: Look, size: f32) {
+        let flow = self.flow(&[Inline::Text(text.to_owned())], look);
+        let lines = self.lines(&flow.words, self.width(), size);
+        let group = self.tree.group(ROOT, Tag::P);
+        for line in &lines {
+            let indent = ((self.width() - line.width(self, size)) / 2.0).max(0.0);
+            self.emit_lines(std::slice::from_ref(line), &[], group, indent, size, true);
+        }
+    }
+
+    /// A title page: the title a third of the way down, then the author and
+    /// the date when known. It has no page number in its footer.
+    fn title_page(&mut self, facts: &Facts, date: Option<&str>) {
+        self.y = self.top() + (self.bottom - self.top()) * 0.3;
+        let bold = Look {
+            bold: true,
+            ..Look::default()
+        };
+        let title_size = self.base * if self.large { 1.8 } else { 2.4 };
+        self.centred(&facts.title, bold, title_size);
+        self.y += self.base * 1.5;
+        if let Some(author) = &facts.author {
+            self.centred(author, Look::default(), self.base * 1.25);
+            self.y += self.base * 0.5;
+        }
+        if let Some(date) = date {
+            self.centred(date, Look::default(), self.base);
+        }
+        self.no_footer = 1;
+        self.new_page();
+    }
+
+    /// The table of contents: a "Contents" heading, then one entry per
+    /// heading down to `depth`, indented by level, each a link to its
+    /// heading with the page number at the right (`TOC`, `TOCI`, `Link`).
+    fn contents(&mut self, depth: u8) {
+        let size = self.base * self.heading_scale(1);
+        self.contents = Some((self.pages.len() - 1, self.y));
+        let h = self
+            .tree
+            .group(ROOT, Tag::Hn(NonZeroU16::MIN, Some("Contents".to_owned())));
+        let bold = Look {
+            bold: true,
+            ..Look::default()
+        };
+        let flow = self.flow(&[Inline::Text("Contents".to_owned())], bold);
+        let lines = self.lines(&flow.words, self.width(), size);
+        self.emit_lines(&lines, &[], h, 0.0, size, true);
+        self.y += size * 0.5;
+        let toc = self.tree.group(ROOT, Tag::TOC);
+        let size = self.base;
+        let lh = self.line_height(size);
+        let number_w = self.measure("0000", Look::default(), size);
+        let entries: Vec<(usize, u8, String)> = self
+            .anchors
+            .headings
+            .iter()
+            .enumerate()
+            .filter(|(_, (level, _))| *level <= depth)
+            .map(|(n, (level, title))| (n, *level, title.clone()))
+            .collect();
+        let min_level = entries.iter().map(|e| e.1).min().unwrap_or(1);
+        for (n, level, title) in entries {
+            let indent = f32::from(level - min_level) * size * 1.5;
+            let title = if title.is_empty() {
+                "Untitled heading".to_owned()
+            } else {
+                title
+            };
+            let flow = self.flow(&[Inline::Text(title.clone())], Look::default());
+            let avail = self.width() - indent - number_w - size;
+            let lines = self.lines(&flow.words, avail, size);
+            self.ensure(lines.len() as f32 * lh);
+            let item = self.tree.group(toc, Tag::TOCI);
+            let link = self.tree.group(item, Tag::Link);
+            let top = self.y;
+            let start_page = self.pages.len() - 1;
+            self.emit_lines(&lines, &[], link, indent, size, true);
+            // The page number sits on the entry's last line.
+            let y = self.y - lh;
+            let baseline = {
+                let saved = self.y;
+                self.y = y;
+                let b = self.baseline(size);
+                self.y = saved;
+                b
+            };
+            let slot = self.tree.slot(link);
+            let face = self.fonts.family.regular;
+            self.op(Op::PageRef {
+                right: self.margin + self.width(),
+                y: baseline,
+                face,
+                size,
+                heading: n,
+                slot,
+            });
+            // The link area: the entry's lines on its (last) page.
+            let area_top = if self.pages.len() - 1 == start_page {
+                top
+            } else {
+                self.top()
+            };
+            let slot = self.tree.slot(link);
+            self.op(Op::Link {
+                rect: (
+                    self.margin + indent,
+                    area_top,
+                    self.margin + self.width(),
+                    self.y,
+                ),
+                target: LinkTarget::Heading(n),
+                alt: format!("Go to {title}"),
+                slot,
+            });
+            self.y += size * 0.2;
+        }
+        self.new_page();
+    }
+
     fn blocks(&mut self, blocks: &[Block], parent: usize, indent: f32, tight: bool) {
         for b in blocks {
             self.block(b, parent, indent, tight);
@@ -687,11 +1055,17 @@ impl<'a> Layout<'a> {
                 self.blocks(inner, g, indent + 24.0, tight);
             }
             Block::Figure(img) => self.figure(img, parent, indent, tight),
-            Block::Footnote { content, .. } => {
+            Block::Footnote { id, content } => {
                 let g = self.tree.group(parent, Tag::Note);
-                let flow = self.flow(content, Look::default());
+                let flow = self.flow_in(content, Look::default(), Some(id.clone()));
                 let size = self.base;
                 let lines = self.lines(&flow.words, self.width() - indent, size);
+                if self.y + self.line_height(size) > self.bottom && !self.at_top() {
+                    self.new_page();
+                }
+                self.notes
+                    .entry(id.clone())
+                    .or_insert((self.pages.len() - 1, self.y));
                 self.emit_lines(&lines, &flow.links, g, indent, size, true);
                 self.y += size * 0.4;
             }
@@ -906,11 +1280,11 @@ impl<'a> Layout<'a> {
     }
 
     fn code(&mut self, text: &str, parent: usize, indent: f32) {
-        let size = self.base * 0.9;
         let look = Look {
             mono: true,
             ..Look::default()
         };
+        let size = self.base * self.look_scale(look);
         let p = self.tree.group(parent, Tag::P);
         let g = self.tree.group(p, Tag::Code);
         let avail = self.width() - indent - 12.0;
@@ -931,6 +1305,7 @@ impl<'a> Layout<'a> {
             }
             lines.push(chunk);
         }
+        // Parts carry the base size; emit_lines applies the mono scale.
         let lines: Vec<Line> = lines
             .into_iter()
             .map(|text| Line {
@@ -948,8 +1323,8 @@ impl<'a> Layout<'a> {
                 },
             })
             .collect();
-        self.emit_lines(&lines, &[], g, indent + 12.0, size, true);
-        self.y += self.base * 0.6;
+        self.emit_lines(&lines, &[], g, indent + 12.0, self.base, true);
+        self.y += self.paragraph_gap(self.base);
     }
 
     fn figure(&mut self, img: &Image, parent: usize, indent: f32, tight: bool) {
@@ -991,7 +1366,9 @@ impl<'a> Layout<'a> {
         let (w, h) = (pw * scale, ph * scale);
         self.ensure(h);
         let slot = if img.alt.is_empty() {
-            // A decorative image is an artifact.
+            // An image with no description is an artifact: screen readers
+            // skip it. Say so, since it may carry meaning.
+            self.undescribed += 1;
             None
         } else {
             let g = self.tree.group(parent, Tag::Figure(Some(img.alt.clone())));
@@ -1005,7 +1382,7 @@ impl<'a> Layout<'a> {
             image: res,
             slot,
         });
-        self.y += h + self.base * 0.6;
+        self.y += h + self.paragraph_gap(self.base);
     }
 
     fn finish(self) -> Laid {
@@ -1022,20 +1399,37 @@ impl<'a> Layout<'a> {
                 list.join(", ")
             ));
         }
+        match self.undescribed {
+            0 => {}
+            1 => self.report.warn(
+                "An image has no description, so it was marked as decorative and screen readers will skip it. Give it alt text if it carries meaning.",
+            ),
+            n => self.report.warn(format!(
+                "{n} images have no description, so they were marked as decorative and screen readers will skip them. Give them alt text if they carry meaning."
+            )),
+        }
+        match self.dangling {
+            0 => {}
+            1 => self.report.warn(
+                "A link points to a heading that is not in this document, so it was written as plain text.",
+            ),
+            n => self.report.warn(format!(
+                "{n} links point to headings that are not in this document, so they were written as plain text."
+            )),
+        }
         Laid {
             pages: self.pages,
             tree: self.tree,
             headings: self.headings,
+            notes: self.notes,
+            contents: self.contents,
+            no_footer: self.no_footer,
             page_w: self.page_w,
             page_h: self.page_h,
             margin: self.margin,
+            base: self.base,
         }
     }
-}
-
-/// Monospaced text is set slightly smaller.
-fn look_scale(look: Look) -> f32 {
-    if look.mono { 0.9 } else { 1.0 }
 }
 
 fn decode(res: &Resource) -> Option<KrillaImage> {
@@ -1049,7 +1443,7 @@ fn decode(res: &Resource) -> Option<KrillaImage> {
     }
 }
 
-fn outline(headings: &[(u8, String, usize, f32)], margin: f32, title: &str) -> Outline {
+fn outline(laid: &Laid, title: &str) -> Outline {
     fn build(
         h: &[(u8, String, usize, f32)],
         i: &mut usize,
@@ -1076,19 +1470,41 @@ fn outline(headings: &[(u8, String, usize, f32)], margin: f32, title: &str) -> O
         }
         nodes
     }
+    let margin = laid.margin;
     let mut outline = Outline::new();
-    if headings.is_empty() {
+    if let Some((page, y)) = laid.contents {
+        outline.push_child(OutlineNode::new(
+            "Contents".to_owned(),
+            XyzDestination::new(page, Point::from_xy(margin, y)),
+        ));
+    }
+    if laid.headings.is_empty() {
         outline.push_child(OutlineNode::new(
             title.to_owned(),
             XyzDestination::new(0, Point::from_xy(margin, margin)),
         ));
     } else {
         let mut i = 0;
-        for node in build(headings, &mut i, 0, margin) {
+        for node in build(&laid.headings, &mut i, 0, margin) {
             outline.push_child(node);
         }
     }
     outline
+}
+
+/// Where a link lands: a place in this document, or an action.
+fn link_target(laid: &Laid, target: &LinkTarget) -> Option<Target> {
+    let place = |page: usize, y: f32| {
+        Target::Destination(Destination::Xyz(XyzDestination::new(
+            page,
+            Point::from_xy(laid.margin, y),
+        )))
+    };
+    match target {
+        LinkTarget::Uri(uri) => Some(Target::Action(Action::Link(LinkAction::new(uri.clone())))),
+        LinkTarget::Heading(n) => laid.headings.get(*n).map(|h| place(h.2, h.3)),
+        LinkTarget::Note(id) => laid.notes.get(id).map(|&(p, y)| place(p, y)),
+    }
 }
 
 fn render(
@@ -1117,7 +1533,6 @@ fn render(
     let size = Size::from_wh(laid.page_w, laid.page_h)
         .ok_or_else(|| WriteError::Pdf("invalid page size".to_owned()))?;
     let footer_face = fonts.family.regular;
-    let base = options.pdf.font_size.clamp(6.0, 72.0);
     let mut images: HashMap<*const Resource, KrillaImage> = HashMap::new();
     for (n, ops) in laid.pages.iter().enumerate() {
         let mut page = document.start_page_with(PageSettings::new(size));
@@ -1125,40 +1540,40 @@ fn render(
             let mut surface = page.surface();
             surface.set_fill(Some(Fill::default()));
             for op in ops {
-                draw(&mut surface, op, fonts, &mut ids, &mut images);
+                draw(&mut surface, op, fonts, &laid, &mut ids, &mut images);
             }
             // Page numbers are artifacts.
-            let label = format!("Page {} of {total}", n + 1);
-            let fsize = (base * 0.8).max(6.0);
-            let face = &fonts.faces[footer_face];
-            let w = face.width(&label, fsize);
-            surface.start_tagged(ContentTag::Artifact(Artifact::with_kind(
-                ArtifactType::Footer,
-            )));
-            surface.draw_text(
-                Point::from_xy((laid.page_w - w) / 2.0, laid.page_h - laid.margin / 2.0),
-                face.krilla.clone(),
-                fsize,
-                &label,
-                false,
-                TextDirection::Auto,
-            );
-            surface.end_tagged();
+            if options.pdf.page_numbers && n >= laid.no_footer {
+                let label = format!("Page {} of {total}", n + 1);
+                let fsize = (laid.base * 0.8).max(6.0);
+                let face = &fonts.faces[footer_face];
+                let w = face.width(&label, fsize);
+                surface.start_tagged(ContentTag::Artifact(Artifact::with_kind(
+                    ArtifactType::Footer,
+                )));
+                surface.draw_text(
+                    Point::from_xy((laid.page_w - w) / 2.0, laid.page_h - laid.margin / 2.0),
+                    face.krilla.clone(),
+                    fsize,
+                    &label,
+                    false,
+                    TextDirection::Auto,
+                );
+                surface.end_tagged();
+            }
             surface.finish();
         }
         for op in ops {
             if let Op::Link {
                 rect: (l, t, r, b),
-                uri,
+                target,
                 alt,
                 slot,
             } = op
                 && let Some(rect) = Rect::from_ltrb(*l, *t, *r, *b)
+                && let Some(target) = link_target(&laid, target)
             {
-                let link = LinkAnnotation::new(
-                    rect,
-                    Target::Action(Action::Link(LinkAction::new(uri.clone()))),
-                );
+                let link = LinkAnnotation::new(rect, target);
                 let id = page.add_tagged_annotation(Annotation::new_link(link, Some(alt.clone())));
                 ids[*slot] = Some(id);
             }
@@ -1171,7 +1586,7 @@ fn render(
         tree.push(c);
     }
     document.set_tag_tree(tree);
-    document.set_outline(outline(&laid.headings, laid.margin, &facts.title));
+    document.set_outline(outline(&laid, &facts.title));
     let (y, mo, d, h, mi, s) = civil(timestamp(options));
     let date = DateTime::new(u16::try_from(y).unwrap_or(1970))
         .month(mo as u8)
@@ -1198,6 +1613,7 @@ fn draw(
     surface: &mut Surface<'_>,
     op: &Op,
     fonts: &Fonts,
+    laid: &Laid,
     ids: &mut [Option<Identifier>],
     images: &mut HashMap<*const Resource, KrillaImage>,
 ) {
@@ -1227,6 +1643,33 @@ fn draw(
             if let Some(s) = slot {
                 ids[*s] = Some(id);
             }
+        }
+        Op::PageRef {
+            right,
+            y,
+            face,
+            size,
+            heading,
+            slot,
+        } => {
+            let Some(page) = laid.headings.get(*heading).map(|h| h.2) else {
+                return;
+            };
+            // A leading space keeps the number a separate word when the
+            // entry is read as text.
+            let text = format!(" {}", page + 1);
+            let w = fonts.faces[*face].width(&text, *size);
+            let id = surface.start_tagged(ContentTag::Span(SpanTag::empty()));
+            surface.draw_text(
+                Point::from_xy(right - w, *y),
+                fonts.faces[*face].krilla.clone(),
+                *size,
+                &text,
+                false,
+                TextDirection::Auto,
+            );
+            surface.end_tagged();
+            ids[*slot] = Some(id);
         }
         Op::Image {
             x,
@@ -1305,5 +1748,37 @@ fn describe(e: &krilla::error::KrillaError) -> String {
         }
         KrillaError::Font(_, why) => format!("a font could not be embedded: {why}"),
         other => format!("{other:?}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn slugs_follow_markdown_renderers() {
+        assert_eq!(slug("Getting Started"), "getting-started");
+        assert_eq!(slug("What's new in 2.0?"), "whats-new-in-20");
+        assert_eq!(slug("  Über  Café "), "über--café");
+        let blocks = vec![
+            Block::Heading {
+                level: 1,
+                content: vec![Inline::Text("Intro".into())],
+            },
+            Block::Heading {
+                level: 2,
+                content: vec![Inline::Text("Intro".into())],
+            },
+            Block::Footnote {
+                id: "1".into(),
+                content: vec![Inline::Text("Note.".into())],
+            },
+        ];
+        let a = Anchors::of(&blocks);
+        assert_eq!(a.fragment("intro"), Some(0));
+        assert_eq!(a.fragment("intro-1"), Some(1));
+        assert_eq!(a.fragment("Intro"), Some(0));
+        assert_eq!(a.fragment("missing"), None);
+        assert!(a.notes.contains("1"));
     }
 }
