@@ -2,7 +2,8 @@
 
 use textweaver_core::{CharPos, CharRange, Unit};
 use textweaver_text::{Document, segments_in};
-use unicode_segmentation::UnicodeSegmentation;
+
+use crate::util::{grapheme_len, nth_grapheme};
 
 /// Most punctuation chars shown with a word on either side ("(see)," not
 /// a run of dashes).
@@ -61,11 +62,15 @@ impl TrackWord {
 /// The words of a document or range, with their display text, recognition
 /// points, and sentence and paragraph boundaries.
 ///
-/// Built once (about 20 ms per megabyte in a release build) and then
-/// independent of the document, so an [`Rsvp`](super::Rsvp) session can
-/// live in app state. Rebuild it after the document is edited.
+/// Built once and then independent of the document, so an
+/// [`Rsvp`](super::Rsvp) session can live in app state. Rebuild it after
+/// the document is edited. Building costs about the same as segmenting the
+/// range into words and sentences (a few hundred milliseconds per megabyte
+/// in a release build), so build large documents off the input thread or a
+/// window at a time.
 #[derive(Clone, Debug, Default)]
 pub struct WordTrack {
+    range: CharRange,
     arena: String,
     words: Vec<TrackWord>,
     sentence_starts: Vec<u32>,
@@ -86,19 +91,53 @@ impl WordTrack {
     }
 
     /// The words of `doc` that intersect `range`.
+    ///
+    /// For very large documents a frontend can build a window at a time
+    /// (for example 64 KB from the caret's paragraph) and continue with the
+    /// next window when the session finishes before [`WordTrack::range`]
+    /// reaches the end of the document.
     pub fn from_range(doc: &Document, range: CharRange) -> Self {
         let range = range.clamp_to(doc.len_chars());
         let words: Vec<CharRange> = segments_in(doc, Unit::Word, range)
             .into_iter()
             .filter(|w| !w.is_empty())
             .collect();
+        let (Some(first), Some(last)) = (words.first(), words.last()) else {
+            return WordTrack {
+                range,
+                ..WordTrack::default()
+            };
+        };
         let sentences = segments_in(doc, Unit::Sentence, range);
-        let paragraphs = segments_in(doc, Unit::Paragraph, range);
-        let rope = doc.text();
+        let paragraphs = paragraph_ranges(doc, CharRange::new(first.start, last.end));
         let len = doc.len_chars();
 
+        // The text the words and their punctuation come from, once, with a
+        // cursor that turns increasing char positions into byte offsets.
+        let lo = first.start.0.saturating_sub(MAX_ATTACHED);
+        let hi = (last.end.0 + MAX_ATTACHED).min(len);
+        let text = doc.slice(CharRange::new(lo, hi));
+        let (mut cur_char, mut cur_byte) = (lo, 0usize);
+        let advance = |from: usize, n: usize| -> usize {
+            let rest = &text[from..];
+            let ascii = rest
+                .as_bytes()
+                .iter()
+                .take(n)
+                .take_while(|b| b.is_ascii())
+                .count();
+            if ascii == n {
+                from + n
+            } else {
+                rest.char_indices()
+                    .nth(n)
+                    .map_or(text.len(), |(i, _)| from + i)
+            }
+        };
+
         let mut track = WordTrack {
-            arena: String::new(),
+            range,
+            arena: String::with_capacity(text.len()),
             words: Vec::with_capacity(words.len()),
             sentence_starts: Vec::new(),
             paragraph_starts: Vec::new(),
@@ -108,59 +147,51 @@ impl WordTrack {
         let mut last_sentence: Option<usize> = None;
         let mut last_paragraph: Option<usize> = None;
         for (i, w) in words.iter().enumerate() {
+            let ws = advance(cur_byte, w.start.0 - cur_char);
+            let we = advance(ws, w.len());
+            cur_char = w.start.0;
+            cur_byte = ws;
+
             // Attach leading punctuation back to whitespace or the previous
             // word's display, and trailing punctuation up to whitespace or
             // the next word.
-            let mut a = w.start.0;
-            while a > prev_display_end
-                && w.start.0 - a < MAX_ATTACHED
-                && !rope.char(a - 1).is_whitespace()
-            {
+            let (mut a, mut ab) = (w.start.0, ws);
+            for c in text[..ws].chars().rev() {
+                if a <= prev_display_end || w.start.0 - a >= MAX_ATTACHED || c.is_whitespace() {
+                    break;
+                }
                 a -= 1;
+                ab -= c.len_utf8();
             }
             let next_start = words.get(i + 1).map_or(len, |n| n.start.0);
-            let mut b = w.end.0;
-            while b < next_start && b - w.end.0 < MAX_ATTACHED && !rope.char(b).is_whitespace() {
+            let (mut b, mut bb) = (w.end.0, we);
+            for c in text[we..].chars() {
+                if b >= next_start || b - w.end.0 >= MAX_ATTACHED || c.is_whitespace() {
+                    break;
+                }
                 b += 1;
+                bb += c.len_utf8();
             }
             prev_display_end = b;
 
             let text_start = track.arena.len();
-            for chunk in rope.slice(a..b).chunks() {
-                track.arena.push_str(chunk);
-            }
+            track.arena.push_str(&text[ab..bb]);
             let text_end = track.arena.len();
-            let display = &track.arena[text_start..text_end];
 
             // The pivot is found in the word unit, after any leading
             // punctuation.
-            let lead_bytes: usize = display
-                .chars()
-                .take(w.start.0 - a)
-                .map(char::len_utf8)
-                .sum();
-            let word_bytes: usize = display[lead_bytes..]
-                .chars()
-                .take(w.len())
-                .map(char::len_utf8)
-                .sum();
-            let core = &display[lead_bytes..lead_bytes + word_bytes];
-            let graphemes = core.graphemes(true).count();
-            let orp = optimal_recognition_point(graphemes);
-            let (pivot_start, pivot_len) = core
-                .grapheme_indices(true)
-                .nth(orp)
-                .map_or((0, 0), |(i, g)| (i, g.len()));
+            let lead_bytes = ws - ab;
+            let core = &text[ws..we];
+            let graphemes = grapheme_len(core);
+            let (pivot_start, pivot_len) =
+                nth_grapheme(core, optimal_recognition_point(graphemes)).unwrap_or((0, 0));
             let pivot = (
                 to_u32(lead_bytes + pivot_start),
                 to_u32(lead_bytes + pivot_start + pivot_len),
             );
 
             let mut flags = 0u8;
-            if display[lead_bytes + word_bytes..]
-                .chars()
-                .any(is_clause_punct)
-            {
+            if text[we..bb].chars().any(is_clause_punct) {
                 flags |= CLAUSE_END;
             }
 
@@ -212,6 +243,11 @@ impl WordTrack {
     /// A track over plain text.
     pub fn from_text(text: &str) -> Self {
         Self::from_document(&Document::from_plain_text(text))
+    }
+
+    /// The document range this track was built from.
+    pub fn range(&self) -> CharRange {
+        self.range
     }
 
     /// Number of words.
@@ -281,6 +317,27 @@ impl WordTrack {
         let i = self.words.partition_point(|w| w.word.end <= pos);
         Some(i.min(self.words.len() - 1))
     }
+}
+
+/// Paragraphs (runs of non-blank lines, as `textweaver-text` defines them)
+/// that intersect `range`, found by walking lines instead of segmenting.
+fn paragraph_ranges(doc: &Document, range: CharRange) -> Vec<CharRange> {
+    let mut out = Vec::new();
+    let first = doc.line_of(range.start);
+    let last = doc.line_of(range.end);
+    let mut open: Option<CharRange> = None;
+    for line in first..=last {
+        if doc.line_is_blank(line) {
+            if let Some(p) = open.take() {
+                out.push(p);
+            }
+        } else {
+            let r = doc.line_range(line);
+            open = Some(open.map_or(r, |p| p.cover(r)));
+        }
+    }
+    out.extend(open);
+    out
 }
 
 fn to_u32(n: usize) -> u32 {
@@ -368,6 +425,19 @@ mod tests {
         let t = WordTrack::from_range(&doc, CharRange::new(6, 16));
         assert_eq!(t.len(), 2);
         assert_eq!(t.text(0), Some("beta"));
+        assert_eq!(t.range(), CharRange::new(6, 16));
         assert!(WordTrack::from_text("  ...  ").is_empty());
+    }
+
+    #[test]
+    fn paragraphs_match_the_text_crate() {
+        let doc = Document::from_plain_text(
+            "one two\nthree\n  \n\nfour\n\t\nfive six\nseven\n\n\neight\n",
+        );
+        let ours = paragraph_ranges(&doc, doc.full_range());
+        let theirs = segments_in(&doc, Unit::Paragraph, doc.full_range());
+        assert_eq!(ours, theirs);
+        let t = WordTrack::from_document(&doc);
+        assert_eq!(t.paragraph_count(), 4);
     }
 }

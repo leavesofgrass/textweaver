@@ -188,6 +188,33 @@ pub(crate) fn code_marker_ranges(doc: &Document, range: CharRange) -> Vec<CharRa
         .collect()
 }
 
+/// Number of extended grapheme clusters in `s`, with an ASCII fast path.
+pub(crate) fn grapheme_len(s: &str) -> usize {
+    if s.is_ascii() && !s.contains('\r') {
+        s.len()
+    } else {
+        s.graphemes(true).count()
+    }
+}
+
+/// Byte offset and length of grapheme `n` of `s`, with an ASCII fast path.
+pub(crate) fn nth_grapheme(s: &str, n: usize) -> Option<(usize, usize)> {
+    if s.is_ascii() && !s.contains('\r') {
+        (n < s.len()).then_some((n, 1))
+    } else {
+        s.grapheme_indices(true).nth(n).map(|(i, g)| (i, g.len()))
+    }
+}
+
+/// Bytes taken by the first `n` graphemes of `s`.
+pub(crate) fn grapheme_prefix_bytes(s: &str, n: usize) -> usize {
+    if s.is_ascii() && !s.contains('\r') {
+        n.min(s.len())
+    } else {
+        s.grapheme_indices(true).nth(n).map_or(s.len(), |(i, _)| i)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -230,6 +257,17 @@ mod tests {
     fn backtick_spans_are_code() {
         let r = text_skip_ranges("run `cargo test` now", CharPos(10), false, true);
         assert_eq!(r, vec![CharRange::new(14, 26)]);
+    }
+
+    #[test]
+    fn grapheme_helpers() {
+        assert_eq!(grapheme_len("word"), 4);
+        assert_eq!(grapheme_len("cafe\u{301}"), 4);
+        assert_eq!(nth_grapheme("word", 2), Some((2, 1)));
+        assert_eq!(nth_grapheme("word", 4), None);
+        assert_eq!(nth_grapheme("e\u{301}x", 1), Some((3, 1)));
+        assert_eq!(grapheme_prefix_bytes("word", 9), 4);
+        assert_eq!(grapheme_prefix_bytes("e\u{301}x", 1), 3);
     }
 
     #[test]

@@ -21,12 +21,13 @@
 //! The output is a list of canonical char ranges to embolden. It never
 //! changes the text, so speech and highlighting are unaffected.
 
+use crate::util::{
+    ByteToPos, SkipSet, code_marker_ranges, grapheme_len, grapheme_prefix_bytes, text_skip_ranges,
+    word_segments,
+};
 use serde::{Deserialize, Serialize};
 use textweaver_core::{CharPos, CharRange};
 use textweaver_text::Document;
-use unicode_segmentation::UnicodeSegmentation;
-
-use crate::util::{ByteToPos, SkipSet, code_marker_ranges, text_skip_ranges, word_segments};
 
 /// Options for [`bionic_text`] and [`bionic_range`].
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -128,8 +129,8 @@ fn bionic_with_skip(
         if opts.skip_numbers && word.chars().any(|c| c.is_numeric()) {
             continue;
         }
-        let graphemes: Vec<&str> = word.graphemes(true).collect();
-        if graphemes.len() < min {
+        let graphemes = grapheme_len(word);
+        if graphemes < min {
             continue;
         }
         let start = conv.pos(b);
@@ -137,8 +138,8 @@ fn bionic_with_skip(
         if skip.overlaps(word_range) {
             continue;
         }
-        let n = fixation_len(graphemes.len(), ratio);
-        let chars: usize = graphemes[..n].iter().map(|g| g.chars().count()).sum();
+        let n = fixation_len(graphemes, ratio);
+        let chars = word[..grapheme_prefix_bytes(word, n)].chars().count();
         out.push(CharRange::new(start, start.saturating_add(chars)));
     }
     out
