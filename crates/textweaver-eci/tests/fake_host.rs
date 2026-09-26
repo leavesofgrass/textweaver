@@ -282,6 +282,41 @@ fn synthesize_to_file_writes_a_wav_and_marks_rise() {
 }
 
 #[test]
+fn synthesize_utterance_reports_word_timings_on_the_files_clock() {
+    let mut b = backend(1.0);
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("utt.wav");
+    let text = "Dr. Smith opened the café.";
+    let u = utt(text, 1, 0);
+    let fs = b.synthesize_utterance(&u, &path).unwrap();
+    let (rate, samples) = textweaver_eci::wav::read_wav(&std::fs::read(&path).unwrap()).unwrap();
+    assert_eq!(rate, 8000);
+    let spoken: Vec<&str> = fs
+        .words
+        .iter()
+        .map(|w| &text[w.byte_range.start as usize..w.byte_range.end as usize])
+        .collect();
+    assert_eq!(spoken, ["Dr", "Smith", "opened", "the", "café"]);
+    // Each time is its index mark's sample offset in this very file.
+    let s = b.synthesize(text).unwrap();
+    assert_eq!(s.samples.len(), samples.len());
+    for (w, (range, sample)) in fs.words.iter().zip(&s.words) {
+        assert_eq!(&w.byte_range, range);
+        assert_eq!(u64::from(w.audio_ms), sample * 1000 / 8000);
+    }
+    assert_eq!(fs.words[0].audio_ms, 0);
+    for pair in fs.words.windows(2) {
+        assert!(pair[0].audio_ms < pair[1].audio_ms);
+    }
+    let duration_ms = samples.len() as u64 * 1000 / 8000;
+    assert!(u64::from(fs.words[4].audio_ms) < duration_ms);
+    // The fake engine gives every byte the same length: "Smith" starts
+    // after the 4 bytes of "Dr. ", "opened" after 10.
+    let per_byte = f64::from(fs.words[1].audio_ms) / 4.0;
+    assert!((f64::from(fs.words[2].audio_ms) - per_byte * 10.0).abs() <= 1.0);
+}
+
+#[test]
 fn rate_and_volume_change_the_audio() {
     let mut b = backend(1.0);
     let text = "The quick brown fox.";

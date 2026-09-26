@@ -34,7 +34,7 @@ use textweaver_core::Utterance;
 use textweaver_enginehost::protocol::check_version;
 use textweaver_enginehost::{HostMsg, HostProcess, Playback};
 use textweaver_speech::{
-    BackendId, Caps, EventSink, SpeechBackend, SpeechError, Voice, VoiceParams,
+    BackendId, Caps, EventSink, FileSynthesis, SpeechBackend, SpeechError, Voice, VoiceParams,
 };
 
 use crate::calibration::{self, RatePoint};
@@ -659,6 +659,22 @@ impl SpeechBackend for EciBackend {
         let s = self.synthesize(text)?;
         textweaver_enginehost::wav::write(path, &s.samples, s.sample_rate)
             .map_err(|e| SpeechError::Io(e.to_string()))
+    }
+
+    /// Writes the utterance as a WAV and reports each word at its index
+    /// mark's sample offset in that file (ADR-0011): the word timings are
+    /// exact on the file's own clock.
+    fn synthesize_utterance(
+        &mut self,
+        utterance: &Utterance,
+        path: &Path,
+    ) -> Result<FileSynthesis, SpeechError> {
+        let s = self.synthesize(&utterance.text)?;
+        textweaver_enginehost::wav::write(path, &s.samples, s.sample_rate)
+            .map_err(|e| SpeechError::Io(format!("{}: {e}", path.display())))?;
+        Ok(FileSynthesis {
+            words: textweaver_enginehost::word_timings(&s.words, s.sample_rate),
+        })
     }
 
     fn tone(&mut self, hz: f32, ms: u32) {
