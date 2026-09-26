@@ -1,0 +1,61 @@
+//! Dispatch for the Phase 2 authoring and navigation actions (Agent P2b),
+//! so the app's core dispatch stays one arm long for them.
+
+use textweaver_convert::OutputFormat;
+use textweaver_core::Direction;
+use textweaver_keymap::ActionId;
+
+use crate::app::App;
+use crate::command::{Effect, PromptPurpose};
+use crate::tables::TableStep;
+
+impl App {
+    /// Runs one of the authoring and navigation actions.
+    pub(crate) fn authoring_action(&mut self, a: ActionId) -> Vec<Effect> {
+        use ActionId as A;
+        match a {
+            A::Outline => return self.outline(),
+            A::ListenRendered => return self.listen_rendered(),
+            A::FollowLink => return self.follow_link(),
+            A::TableNextRow => self.table_move(TableStep::Row, Direction::Forward),
+            A::TablePreviousRow => self.table_move(TableStep::Row, Direction::Backward),
+            A::TableNextColumn => self.table_move(TableStep::Column, Direction::Forward),
+            A::TablePreviousColumn => self.table_move(TableStep::Column, Direction::Backward),
+            A::CycleVerbosity => self.cycle_verbosity(),
+            A::CyclePunctuation => self.cycle_punctuation(),
+            A::NextMisspelling => self.misspelling_step(Direction::Forward),
+            A::PreviousMisspelling => self.misspelling_step(Direction::Backward),
+            A::SpellingSuggestions => return self.spelling_suggestions(),
+            A::ExportStudySheet => return self.export_study_sheet(),
+            A::NewFromTemplate => return self.new_from_template(),
+            A::ExportHtml => return self.export_to(OutputFormat::Html),
+            A::ExportPdf => return self.export_to(OutputFormat::Pdf),
+            A::ExportDocx => return self.export_to(OutputFormat::Docx),
+            A::ExportEpub => return self.export_to(OutputFormat::Epub),
+            A::ExportBrf => return self.export_to(OutputFormat::Brf),
+            A::PreviewInBrowser => return self.preview_in_browser(),
+            A::SelectAll => self.select_all(),
+            A::DeleteWordBefore => return self.delete_word(Direction::Backward),
+            A::DeleteWordAfter => return self.delete_word(Direction::Forward),
+            A::Paste => return self.paste(),
+            A::InsertCitation => return self.insert_citation(),
+            A::AddReference => return self.prompt(PromptPurpose::ReferenceIdentifier),
+            A::InsertBibliography => return self.insert_bibliography(),
+            A::CheckCitations => self.check_citations(),
+            A::ImportReferences => return self.prompt(PromptPurpose::ImportReferences),
+            _ => {}
+        }
+        vec![Effect::Redraw]
+    }
+
+    /// The answers of the authoring prompts.
+    pub(crate) fn answer_authoring(&mut self, purpose: PromptPurpose, text: &str) -> Vec<Effect> {
+        match purpose {
+            PromptPurpose::CitationLocator => self.answer_locator(text),
+            PromptPurpose::ReferenceIdentifier => self.answer_identifier(text),
+            PromptPurpose::ImportReferences => self.answer_import_references(text),
+            PromptPurpose::TemplateTitle => self.answer_template_title(text),
+            _ => vec![Effect::Redraw],
+        }
+    }
+}

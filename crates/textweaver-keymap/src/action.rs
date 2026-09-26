@@ -196,6 +196,9 @@ actions! {
         gui ["g:Alt+Shift+O"], term ["g:Alt+Shift+O"], shared [];
     ReadingLevel = "reading_level", Reading, "Say the reading level of the document or the selection",
         gui ["g:Alt+Shift+G"], term ["g:Alt+Shift+G"], shared [];
+    ListenRendered = "listen_rendered", Reading,
+        "Listen to the document as it will render, without leaving edit mode",
+        gui [], term [], shared [];
 
     // Navigation
     NextSentence = "next_sentence", Navigation, "Move to the next sentence",
@@ -212,9 +215,11 @@ actions! {
     PreviousHeading = "previous_heading", Navigation, "Read from the previous heading",
         gui ["g:Ctrl+Shift+H"], term [], shared ["b:<"];
     SkipNextHeading = "skip_next_heading", Navigation, "Move to the next heading without reading",
-        gui [], term [], shared ["b:h", "b:}"];
+        gui [], term ["g:Alt+H"], shared ["b:h", "b:}"];
     SkipPreviousHeading = "skip_previous_heading", Navigation, "Move to the previous heading without reading",
-        gui [], term [], shared ["b:{"];
+        gui [], term ["g:Alt+Shift+H"], shared ["b:{"];
+    Outline = "outline", Navigation, "List the headings: type to filter, Enter jumps to one",
+        gui ["g:Alt+O"], term ["g:Alt+O"], shared [];
     NextHeadingLevel1 = "next_heading_level_1", Navigation, "Move to the next heading at level 1",
         gui [], term [], shared ["b:1"];
     NextHeadingLevel2 = "next_heading_level_2", Navigation, "Move to the next heading at level 2",
@@ -255,6 +260,17 @@ actions! {
         gui [], term [], shared ["b:u"];
     PreviousLink = "previous_link", Navigation, "Move to the previous link",
         gui [], term [], shared ["b:Shift+U"];
+    FollowLink = "follow_link", Navigation,
+        "Follow the link at the cursor, or go between a footnote and its note",
+        gui ["g:Alt+Shift+F"], term ["g:Alt+Shift+F"], shared [];
+    TableNextRow = "table_next_row", Navigation, "In a table, move down a row in the same column",
+        gui ["g:Ctrl+Alt+Down"], term ["g:Ctrl+Alt+Down"], shared [];
+    TablePreviousRow = "table_previous_row", Navigation, "In a table, move up a row in the same column",
+        gui ["g:Ctrl+Alt+Up"], term ["g:Ctrl+Alt+Up"], shared [];
+    TableNextColumn = "table_next_column", Navigation, "In a table, move to the next cell in the row",
+        gui ["g:Ctrl+Alt+Right"], term ["g:Ctrl+Alt+Right"], shared [];
+    TablePreviousColumn = "table_previous_column", Navigation, "In a table, move to the previous cell in the row",
+        gui ["g:Ctrl+Alt+Left"], term ["g:Ctrl+Alt+Left"], shared [];
     NextChapter = "next_chapter", Navigation, "Move to the next chapter or section",
         gui ["g:Alt+PageDown"], term ["g:F11", "g:Alt+PageDown"], shared [];
     PreviousChapter = "previous_chapter", Navigation, "Move to the previous chapter or section",
@@ -323,6 +339,10 @@ actions! {
         gui ["g:F8"], term ["g:F8"], shared [];
     ChooseVoice = "choose_voice", Voice, "Choose a voice",
         gui ["g:Ctrl+Shift+V"], term ["g:Alt+V"], shared [];
+    CycleVerbosity = "cycle_verbosity", Voice, "Cycle how much textweaver says: low, normal, high",
+        gui ["g:Alt+Shift+V"], term ["g:Alt+Shift+V"], shared [];
+    CyclePunctuation = "cycle_punctuation", Voice, "Cycle how much punctuation is spoken: none, some, all",
+        gui ["g:Alt+Shift+N"], term ["g:Alt+Shift+N"], shared [];
 
     // Search
     Find = "find", Search, "Find text in the document",
@@ -331,6 +351,13 @@ actions! {
         gui [], term ["g:F3"], shared ["b:n"];
     FindPrevious = "find_previous", Search, "Find the previous match",
         gui [], term ["g:F4"], shared ["b:Shift+N"];
+    NextMisspelling = "next_misspelling", Search, "Move to the next misspelled word, and spell it",
+        gui ["g:Alt+M"], term ["g:Alt+M"], shared [];
+    PreviousMisspelling = "previous_misspelling", Search, "Move to the previous misspelled word, and spell it",
+        gui ["g:Alt+Shift+M"], term ["g:Alt+Shift+M"], shared [];
+    SpellingSuggestions = "spelling_suggestions", Search,
+        "List suggestions for the misspelled word at the cursor, or add it to your word list",
+        gui ["g:Alt+J"], term ["g:Alt+J"], shared [];
 
     // Bookmarks
     AddBookmark = "add_bookmark", Bookmarks, "Add a bookmark at the cursor",
@@ -353,6 +380,9 @@ actions! {
         gui [], term [], shared ["b:Delete"];
     HighlightSelection = "highlight_selection", Bookmarks, "Highlight the selection, or the sentence at the cursor",
         gui [], term [], shared ["b:y"];
+    ExportStudySheet = "export_study_sheet", Bookmarks,
+        "Export the notes and highlights as a Markdown study sheet, grouped by heading",
+        gui [], term [], shared [];
 
     // File
     Open = "open", File, "Open a document",
@@ -369,6 +399,22 @@ actions! {
         gui ["g:Alt+Shift+E"], term ["g:Alt+Shift+E"], shared [];
     ImportSettings = "import_settings", File, "Import settings from a JSON or TOML file, after a yes or no",
         gui ["g:Alt+Shift+I"], term ["g:Alt+Shift+I"], shared [];
+    NewFromTemplate = "new_from_template", File,
+        "Start a new document from a template, with a title, author, date, and References heading",
+        gui [], term [], shared [];
+    ExportHtml = "export_html", File, "Export the document as a web page (HTML) next to it",
+        gui [], term [], shared [];
+    ExportPdf = "export_pdf", File, "Export the document as a tagged PDF next to it",
+        gui [], term [], shared [];
+    ExportDocx = "export_docx", File, "Export the document as a Word file (DOCX) next to it",
+        gui [], term [], shared [];
+    ExportEpub = "export_epub", File, "Export the document as an EPUB book next to it",
+        gui [], term [], shared [];
+    ExportBrf = "export_brf", File, "Export the document as braille (BRF) next to it",
+        gui [], term [], shared [];
+    PreviewInBrowser = "preview_in_browser", File,
+        "Preview the document in the web browser, with math; each save rewrites the preview",
+        gui [], term [], shared [];
     Quit = "quit", File, "Quit, saving the reading position",
         gui ["g:Ctrl+Q"], term ["g:Ctrl+Q"], shared ["b:q", "b:Shift+Q"];
 
@@ -424,6 +470,29 @@ actions! {
     CycleTypingEcho = "cycle_typing_echo", Editing,
         "Cycle typing echo: characters and words, characters, words, or none",
         gui ["g:Shift+F9"], term ["g:Shift+F9"], shared [];
+    SelectAll = "select_all", Editing, "Select all the text",
+        gui ["e:Ctrl+A"], term ["e:Ctrl+A"], shared [];
+    DeleteWordBefore = "delete_word_before", Editing, "Delete the word before the cursor",
+        gui ["e:Ctrl+Backspace"], term ["e:Alt+Backspace"], shared [];
+    DeleteWordAfter = "delete_word_after", Editing, "Delete the word after the cursor",
+        gui ["e:Ctrl+Delete"], term ["e:Ctrl+Delete"], shared [];
+    Paste = "paste", Editing,
+        "Paste the text last copied or cut in textweaver; the terminal paste works too",
+        gui ["e:Ctrl+V"], term ["e:Ctrl+V"], shared [];
+    InsertCitation = "insert_citation", Editing,
+        "Insert a citation: pick a reference, then give a page or other locator",
+        gui ["e:Alt+C"], term ["e:Alt+C"], shared [];
+    AddReference = "add_reference", Editing, "Add a reference to your library by DOI or ISBN",
+        gui ["g:Alt+Shift+D"], term ["g:Alt+Shift+D"], shared [];
+    InsertBibliography = "insert_bibliography", Editing,
+        "Insert the bibliography of the works cited, at the cursor",
+        gui [], term [], shared [];
+    CheckCitations = "check_citations", Editing,
+        "Check the citations: how many there are, and which keys are not in your library",
+        gui [], term [], shared [];
+    ImportReferences = "import_references", Editing,
+        "Import references from a BibTeX, RIS, or CSL-JSON file into your library",
+        gui [], term [], shared [];
 
     // View and help
     NextTheme = "next_theme", View, "Switch to the next color theme",
@@ -509,6 +578,14 @@ impl ActionId {
             ActionId::DeleteNote => Some("Delete this note or highlight? y or n"),
             _ => None,
         }
+    }
+
+    /// True for commands with no default keys, run from the command
+    /// palette (exports, templates, citation checks). Users may still bind
+    /// keys to them in `keymap.toml`.
+    pub fn is_palette_command(self) -> bool {
+        let d = self.defaults();
+        d.gui.is_empty() && d.terminal.is_empty() && d.shared.is_empty()
     }
 
     /// The command palette name: the id with spaces, e.g. `next sentence`.

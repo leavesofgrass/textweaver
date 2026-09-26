@@ -34,6 +34,12 @@ pub enum Command {
     /// The user chose item `n` (0-based) of the list shown by the last
     /// [`Effect::ShowList`].
     Choose(usize),
+    /// The filter typed into a list that filters as you type (the outline,
+    /// the citation picker; see [`App::list_filter`]): the whole filter
+    /// text so far. The app shows the matching items again.
+    ///
+    /// [`App::list_filter`]: crate::App::list_filter
+    FilterList(String),
     /// The viewport changed size, in columns and rows of document text.
     Resize {
         /// Columns.
@@ -236,6 +242,15 @@ pub enum PromptPurpose {
     ExportSettings,
     /// Answer is the settings file to import (JSON or TOML).
     ImportSettings,
+    /// Answer is a page or other locator for the citation being inserted;
+    /// empty inserts none.
+    CitationLocator,
+    /// Answer is a DOI or ISBN to look up and add to the library.
+    ReferenceIdentifier,
+    /// Answer is a BibTeX, RIS, or CSL-JSON file to import.
+    ImportReferences,
+    /// Answer is the title of a new document from a template.
+    TemplateTitle,
 }
 
 impl PromptPurpose {
@@ -258,6 +273,12 @@ impl PromptPurpose {
                 "Export settings to file, for example textweaver-settings.json"
             }
             PromptPurpose::ImportSettings => "Import settings from file",
+            PromptPurpose::CitationLocator => {
+                "Page or other locator, for example 12 or chapter 2; Enter for none"
+            }
+            PromptPurpose::ReferenceIdentifier => "DOI or ISBN to add",
+            PromptPurpose::ImportReferences => "Import references from file",
+            PromptPurpose::TemplateTitle => "Title of the new document",
         }
     }
 }

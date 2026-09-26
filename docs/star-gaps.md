@@ -15,7 +15,7 @@ These areas were being built when the list was made. All are now on `main`:
 
 - Themes (Agent Q). Status: done. See [themes.md](themes.md).
 - Math (Agent O). Status: done. Math is spoken with exact highlighting and becomes MathML in HTML. See [math.md](math.md).
-- Citations (Agent P). Status: partly. `tw cite` does lookup, import, export, and formatting; the editor has no citation picker, and `tw convert` does not format citations yet. See [citations.md](citations.md).
+- Citations (Agent P). Status: done in the reader since Phase 2 (Agent P2b): Alt+C inserts from a filtered picker with a locator, Alt+Shift+D adds by DOI or ISBN, and the palette inserts a bibliography and checks citations. Continuous reading still reads a citation as written. See [citations.md](citations.md).
 - Batch conversion and folder watching (Agents A2 and L). Status: done. See [converting.md](converting.md).
 - Braille output (Agent M). Status: done for grade 1; grade 2 needs the `liblouis` feature and liblouis installed. See [converting.md](converting.md).
 - Large-document paging, which plan §6.1 handles by design. Status: done for the terminal reader, which plans reading in windows; the GUI still needs window slicing ([ADR-0014](adr/0014-gui-toolkit.md)).
@@ -37,7 +37,7 @@ These areas were being built when the list was made. All are now on `main`:
 - **Opening a web page by URL.** Code: `documents/misc.py:24-56`. Status: missing.
 - **PPTX:** slide titles become headings, speaker notes follow each slide, and images get descriptions. Code: `documents/office.py:266-367`. Status: missing.
 - **Offline dictionary:** WordNet definitions, synonyms, and pronunciation, plus a custom glossary. Code: `dictionary.py`. Tests: `test_dictionary.py` (17). Status: missing.
-- **Spell check in edit mode.** Code: `spellcheck.py`. Status: missing.
+- **Spell check in edit mode.** Code: `spellcheck.py`. Status: done (Phase 2, Agent P2b) on SCOWL with a personal word list: next and previous misspelling, spelled aloud, suggestions, and a count on save. See [editing.md](editing.md#spelling).
 - **Accessible publishing templates:**
   - Large Print, Dyslexia-friendly, High Contrast, and academic-manuscript stylesheets;
   - Word templates for APA student papers and AMA manuscripts;
@@ -45,7 +45,7 @@ These areas were being built when the list was made. All are now on `main`:
   - single-file HTML.
   - Code: `publish.py`, `publish_styles/`. Tests: `test_publish.py` (28).
   - Status: partly. `tw convert` writes single-file accessible HTML (following the system's dark, light, and high-contrast settings), large-print PDF, PDF in OpenDyslexic, and a PDF table of contents with a depth option. The Word templates, the EPUB cover, and Star's stylesheets are missing.
-- **GUI Contents and Notes panels.** Code: `gui/mixin_toc.py`, `gui/mixin_annotations.py:51-110`. Status: missing. The terminal reader lists notes (Shift+A) and moves by heading.
+- **GUI Contents and Notes panels.** Code: `gui/mixin_toc.py`, `gui/mixin_annotations.py:51-110`. Status: missing in the GUI. The terminal reader lists notes (Shift+A), moves by heading, and lists the headings with type-to-filter (the outline, Alt+O).
 - **Math as Unicode in the plain reading view** (`x²`, `√2`). Code: `mathrender.py`. Status: missing. The reader shows the LaTeX source and speaks it as English; HTML output has MathML.
 
 ## Medium

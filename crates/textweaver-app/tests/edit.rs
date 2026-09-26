@@ -567,7 +567,14 @@ fn replace_all_heading_cycle_and_caret_echo() {
     ));
     r.send(Command::Answer("cat".into()));
     assert!(r.said.last().contains("2 matches"), "{}", r.said.last());
-    r.send(Command::Answer("bird".into()));
+    // One match at a time: the list asks; "a" replaces all the rest.
+    let effects = r.send(Command::Answer("bird".into()));
+    assert!(
+        effects.iter().any(|e| matches!(e, Effect::ShowList { .. })),
+        "{effects:?}"
+    );
+    assert_eq!(r.app.list_accelerator('a'), Some(2));
+    r.send(Command::Choose(2));
     assert_eq!(r.text(), "bird bird dog\n");
     assert_eq!(r.said.last(), "Replaced 2 matches.");
     r.act(ActionId::Undo);

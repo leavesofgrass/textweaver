@@ -320,6 +320,9 @@ impl App {
         read: ReadAfter,
         missing: &str,
     ) {
+        // Structure typed a moment ago counts (edit mode re-parses after a
+        // pause; small texts are parsed now).
+        self.refresh_structure(false);
         let opts = self.nav_opts();
         let Some((pos, doc)) = self.here() else {
             return;
@@ -426,6 +429,7 @@ impl App {
     /// items, DOCX sections), otherwise level-1 headings. Previous rewinds to
     /// the chapter start when more than five words in (Star's rule).
     pub(crate) fn chapter(&mut self, dir: Direction) {
+        self.refresh_structure(false);
         let Some((pos, doc)) = self.here() else {
             return;
         };
@@ -479,6 +483,11 @@ impl App {
     }
 
     pub(crate) fn history_back(&mut self) {
+        // Back across a followed link first, when nothing was jumped to
+        // since arriving.
+        if self.link_history_back() {
+            return;
+        }
         let Some(current) = self.reading_position() else {
             return;
         };
@@ -568,8 +577,16 @@ impl App {
         match navigate(&s.doc, cursor, Unit::Word, dir, NavOptions::default()) {
             Some(t) => {
                 let word = s.doc.slice(t.range);
+                // A citation is said in words; a note's passage says so.
+                let said = self.citation_description_at(t.range.start).unwrap_or(word);
+                let said = match self.note_here_suffix(t.range.start) {
+                    Some(n) if cursor_left_note(self, cursor, t.range.start) => {
+                        format!("{said}. {n}")
+                    }
+                    _ => said,
+                };
                 self.caret_to(t.range.start);
-                self.speak_content(Channel::Caret, &word);
+                self.speak_content(Channel::Caret, &said);
             }
             None => {
                 self.speech.earcon(Earcon::Boundary);
@@ -704,6 +721,8 @@ impl App {
 
     /// Says where the reader is: line, percentage, and the heading above.
     pub(crate) fn say_position(&mut self) {
+        // The heading above, as written so far (edit mode).
+        self.refresh_structure(false);
         let Some(pos) = self.reading_position() else {
             return;
         };
@@ -723,6 +742,10 @@ impl App {
                 textweaver_editor::echo::thousands(word),
                 textweaver_editor::echo::thousands(words)
             ));
+        }
+        if let Some(t) = self.table_position(pos) {
+            msg.push(' ');
+            msg.push_str(&t);
         }
         if self.settings.speech.verbosity >= Verbosity::Normal {
             let heading = navigate(
@@ -745,6 +768,15 @@ impl App {
         }
         self.tell(&msg);
     }
+}
+
+/// True when a caret move from `from` to `to` enters a note's passage (so
+/// "has a note" is said once, not on every word inside it).
+fn cursor_left_note(app: &App, from: CharPos, to: CharPos) -> bool {
+    let (Some(a), Some(b)) = (app.note_here_suffix(from), app.note_here_suffix(to)) else {
+        return true;
+    };
+    a != b
 }
 
 fn capitalize(s: &str) -> String {

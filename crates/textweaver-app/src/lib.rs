@@ -105,13 +105,35 @@
 //! reader that reads the status line does not repeat textweaver's voice.
 //! See the `access` module and `docs/screen-readers.md`.
 //!
+//! # Authoring and navigation (Agent P2b)
+//!
+//! - **Structure while editing** (`structure`): the Markdown source is
+//!   parsed with pulldown-cmark's source offsets, so markers sit on the
+//!   text being written and are parsed again when typing pauses; the same
+//!   markers carry positions between the source and the canonical text.
+//!   [`App::wait_for_structure`] waits for a background parse.
+//! - **Lists** (`lists`): the outline (Alt+O) and the citation picker
+//!   filter as you type ([`Command::FilterList`], [`App::list_filter`]);
+//!   spelling, find-and-replace, and template lists.
+//! - **Citations** (`citations`), **export and preview** (`publish`),
+//!   **spelling** (`spell`), **tables** (`tables`), **links and
+//!   footnotes** (`links`), **find and replace one at a time**
+//!   (`replace`), **templates** (`templates`, [`local_date`]).
+//! - Exports and reference lookups run on other threads and finish in
+//!   [`App::tick`]; [`App::wait_for_background`] waits for them in tests.
+//!   Files and addresses open through [`App::set_launcher`] (the system's
+//!   default program otherwise, only in a session that keeps files).
+//!
 //! Owner: Agent D.
 
 mod access;
+mod actions;
 pub mod align;
 mod app;
 mod authoring;
+mod authoring_state;
 mod backends;
+mod citations;
 mod command;
 pub mod disk;
 mod edit;
@@ -121,17 +143,26 @@ mod find_scan;
 mod goto;
 mod help;
 mod library;
+mod links;
+mod lists;
 pub mod logfile;
 mod marks;
 mod mdline;
 mod nav;
 mod notes;
 mod playback;
+mod publish;
 mod reading_aids;
 mod relocate;
+mod replace;
 pub mod rpc;
 pub mod settings_io;
 mod speech_cursor;
+mod spell;
+mod structure;
+mod tables;
+mod tasks;
+mod templates;
 pub mod testing;
 pub mod text_util;
 mod themes;
@@ -146,6 +177,7 @@ pub use access::{
 };
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use authoring::osc52;
+pub use authoring_state::{ClientFactory, Launcher, open_with_system};
 pub use backends::{
     CODE_FACTORY_LIBRARY, apple_preference, eci_config, sapi_config, service_config,
     speech_registry, speech_registry_for,
@@ -157,6 +189,7 @@ pub use goto::parse_go_to;
 pub use help::{chords_text, help_entries, palette_matches, resolve_command};
 pub use notes::{HIGHLIGHTS_KEY, NOTES_KEY, UserHighlight, migrate_legacy_notes, parse_tags};
 pub use playback::{Playback, load_options, narration_policy};
+pub use templates::local_date;
 pub use textweaver_store::Note;
 pub use view::{Highlight, HighlightKind, Viewport};
 
@@ -164,6 +197,7 @@ pub use reading_aids::{RSVP_STEP, RSVP_WINDOW};
 pub use textweaver_a11y as a11y;
 pub use textweaver_aids as aids;
 pub use textweaver_apple as apple;
+pub use textweaver_cite as cite;
 pub use textweaver_core as core;
 pub use textweaver_eci as eci;
 pub use textweaver_editor as editor;

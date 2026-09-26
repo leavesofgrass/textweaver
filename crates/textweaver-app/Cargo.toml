@@ -31,11 +31,19 @@ textweaver-dectalk.workspace = true
 textweaver-apple.workspace = true
 textweaver-theme.workspace = true
 textweaver-aids.workspace = true
+textweaver-cite.workspace = true
+textweaver-convert.workspace = true
+textweaver-render.workspace = true
+pulldown-cmark.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 ropey.workspace = true
 thiserror.workspace = true
 log.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+# GetLocalTime, for the local date in new documents from templates.
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_System_SystemInformation"] }
 
 [dev-dependencies]
 tempfile.workspace = true

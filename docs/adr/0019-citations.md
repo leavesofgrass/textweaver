@@ -3,6 +3,7 @@
 - Status: accepted
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): `tw cite` is wired into the CLI as described. Two parts of this design are not connected yet. The editor has no citation picker: the `insert` API is ready, but no app code calls it. And the Pandoc-flavor renderer does not use this crate: `tw convert --flavor pandoc` shows each citation's keys as a link to a `#ref-` anchor, formats nothing, and adds no bibliography. The offline message quoted under Lookup also ends with the error's details. hayagriva's `csl-json` feature is still not enabled.
+- Status update (Saturday, September 26, 2026, Agent P2b): the reader now calls the `insert` API. In edit mode Alt+C opens a filtered picker (`picker_entries`, `filter_picker`), asks for a locator (`parse_locator`), inserts `insertion_text` or extends the citation at the caret (`add_to_citation`), and speaks `announce_inserted`. Alt+Shift+D looks a DOI or ISBN up on a background thread with the lookup cache. The palette has insert bibliography, check citations (`commands::check`), and import references (`commands::import`). Word moves onto a citation, and Alt+Shift+K, say `describe_citation`. Continuous reading still reads the citation as written. See `docs/citations.md`.
 
 ## Context
 

@@ -1,6 +1,8 @@
 //! Authoring and reading quick wins (roadmap Phase 1, Agent P1b): word
 //! count, the link address at the cursor, table cells in edit mode, the
-//! typing echo switch, and copying to the clipboard.
+//! typing echo switch, and copying to the clipboard; and from Phase 2
+//! (Agent P2b) select all, deleting a word, paste, and cycling verbosity
+//! and punctuation while running.
 //!
 //! # Clipboard
 //!
@@ -13,7 +15,8 @@
 //! already provides, so terminals without OSC 52 (the old Windows console
 //! host, macOS Terminal.app) cannot copy yet.
 
-use textweaver_core::{CharPos, CharRange, Direction, MarkerKind, Unit};
+use textweaver_a11y::Verbosity;
+use textweaver_core::{CharPos, CharRange, Direction, MarkerKind, PunctuationLevel, Unit};
 use textweaver_editor::Selection;
 use textweaver_editor::echo::thousands;
 use textweaver_speech::Earcon;
@@ -149,12 +152,23 @@ impl App {
                 })
                 .and_then(|m| m.reference.clone().map(|url| (s.doc.slice(m.range), url)))
         };
+        let cite = if found.is_none() {
+            self.citation_description_at(pos)
+        } else {
+            None
+        };
         match found {
             Some((text, url)) if url.is_empty() => {
                 self.tell(&format!("The link {text} has no address."));
             }
             Some((text, url)) if text.trim() == url => self.tell(&format!("Link address: {url}")),
             Some((text, url)) => self.tell(&format!("Link {}, address: {url}", text.trim())),
+            // A citation is said in words instead ("Citation: Doe, 2020").
+            None if cite.is_some() => {
+                if let Some(d) = cite {
+                    self.tell(&d);
+                }
+            }
             None => {
                 self.speech.earcon(Earcon::Boundary);
                 self.tell("No link at the cursor.");
@@ -207,6 +221,7 @@ impl App {
         let what = if selected { "" } else { " the sentence" };
         let spoken = textweaver_editor::echo::summarize(&text, "copied")
             .unwrap_or_else(|| format!("Copied{what}: {}", text_util::preview(&s.doc, range, 8)));
+        self.authoring.copied = Some(text.clone());
         self.clipboard = Some(text);
         self.tell(&spoken);
         vec![Effect::Redraw]
@@ -233,6 +248,7 @@ impl App {
         let text = s.doc.slice(range);
         let spoken = textweaver_editor::echo::summarize(&text, "cut")
             .unwrap_or_else(|| format!("Cut: {}", text_util::preview(&s.doc, range, 8)));
+        self.authoring.copied = Some(text.clone());
         self.clipboard = Some(text);
         self.delete_quietly();
         self.tell(&spoken);
@@ -352,6 +368,170 @@ impl App {
         self.after_edit(&ropey::Rope::new(), &[]);
         self.tell(&msg);
         vec![Effect::Redraw]
+    }
+}
+
+/// Verbosity levels in cycle order.
+const VERBOSITY_CYCLE: [(Verbosity, &str); 3] = [
+    (Verbosity::Low, "low"),
+    (Verbosity::Normal, "normal"),
+    (Verbosity::High, "high"),
+];
+
+/// Punctuation levels in cycle order.
+const PUNCTUATION_CYCLE: [(PunctuationLevel, &str); 3] = [
+    (PunctuationLevel::None, "none"),
+    (PunctuationLevel::Some, "some"),
+    (PunctuationLevel::All, "all"),
+];
+
+impl App {
+    /// Select all (Ctrl+A in edit mode; from the palette while reading).
+    pub(crate) fn select_all(&mut self) {
+        let Some(len) = self.session.as_ref().map(|s| s.doc.len_chars()) else {
+            return;
+        };
+        if len == 0 {
+            self.tell("Nothing to select.");
+            return;
+        }
+        let words = self
+            .session
+            .as_ref()
+            .map_or(0, |s| count_words(s.doc.text().chars()));
+        if let Some(ed) = self.edit.as_mut().and_then(|e| e.session.editor_mut()) {
+            ed.set_selection(Selection::new(0, len));
+            self.after_edit(&ropey::Rope::new(), &[]);
+        } else {
+            self.select(CharRange::new(0, len));
+        }
+        self.tell(&format!("Selected all, {}.", words_phrase(words)));
+    }
+
+    /// Deletes the word before or after the caret (edit mode), or the
+    /// selection when there is one; says what went.
+    pub(crate) fn delete_word(&mut self, dir: Direction) -> Vec<Effect> {
+        if self.edit.is_none() {
+            return self.not_editing("delete words");
+        }
+        self.stop_speech();
+        let Some(s) = self.session.as_ref() else {
+            return vec![Effect::Redraw];
+        };
+        let Some(ed) = self.edit.as_ref().and_then(|e| e.session.editor()) else {
+            return vec![Effect::Redraw];
+        };
+        let doc = &s.doc;
+        let sel = ed.selection();
+        let head = sel.head;
+        let range = if !sel.is_caret() {
+            sel.range()
+        } else {
+            match dir {
+                Direction::Backward => {
+                    let start = text_util::word_containing(doc, head)
+                        .filter(|w| w.start < head)
+                        .map(|w| w.start)
+                        .or_else(|| {
+                            textweaver_text::navigate(
+                                doc,
+                                head,
+                                Unit::Word,
+                                Direction::Backward,
+                                textweaver_text::NavOptions::default(),
+                            )
+                            .map(|t| t.range.start)
+                        })
+                        .unwrap_or(CharPos::ZERO);
+                    CharRange::new(start, head)
+                }
+                Direction::Forward => {
+                    let end = textweaver_text::navigate(
+                        doc,
+                        head,
+                        Unit::Word,
+                        Direction::Forward,
+                        textweaver_text::NavOptions::default(),
+                    )
+                    .map_or(doc.end(), |t| t.range.start);
+                    CharRange::new(head, end.max(head))
+                }
+            }
+        };
+        if range.is_empty() {
+            self.speech.earcon(Earcon::Boundary);
+            self.tell(match dir {
+                Direction::Forward => "End of document.",
+                Direction::Backward => "Top of document.",
+            });
+            return vec![Effect::Redraw];
+        }
+        let removed = doc.slice(range);
+        if let Some(ed) = self.edit.as_mut().and_then(|e| e.session.editor_mut()) {
+            ed.set_selection(Selection::new(range.start, range.end));
+        }
+        self.delete_quietly();
+        let said = textweaver_editor::echo::summarize(&removed, "deleted").unwrap_or_else(|| {
+            let t = removed.trim();
+            if t.is_empty() {
+                "Space deleted.".to_owned()
+            } else {
+                format!("{t} deleted.")
+            }
+        });
+        self.show(&said);
+        if self.settings.editing.echo_deletions && self.route(textweaver_a11y::Channel::Echo).speak
+        {
+            self.speech.say(said, textweaver_speech::SayMode::Interrupt);
+        }
+        vec![Effect::Redraw]
+    }
+
+    /// Paste (Ctrl+V in edit mode): the text last copied or cut in
+    /// textweaver. Most terminals paste the system clipboard themselves
+    /// when Ctrl+V or Ctrl+Shift+V is pressed; this is for the times they
+    /// pass the key on instead.
+    pub(crate) fn paste(&mut self) -> Vec<Effect> {
+        if self.edit.is_none() {
+            return self.not_editing("paste");
+        }
+        match self.authoring.copied.clone() {
+            Some(text) if !text.is_empty() => self.insert(&text),
+            _ => {
+                self.tell(
+                    "Nothing copied in textweaver yet. Use your terminal's paste, for example Control Shift V.",
+                );
+                vec![Effect::Redraw]
+            }
+        }
+    }
+
+    /// Cycles how much is announced (low, normal, high) and saves it.
+    pub(crate) fn cycle_verbosity(&mut self) {
+        let now = self.settings.speech.verbosity;
+        let i = VERBOSITY_CYCLE
+            .iter()
+            .position(|(v, _)| *v == now)
+            .unwrap_or(1);
+        let (next, name) = VERBOSITY_CYCLE[(i + 1) % VERBOSITY_CYCLE.len()];
+        self.settings.speech.verbosity = next;
+        self.settings_dirty = true;
+        self.tell(&format!("Verbosity: {name}."));
+    }
+
+    /// Cycles how much punctuation is spoken (none, some, all), applies it
+    /// to the voice at once, and saves it.
+    pub(crate) fn cycle_punctuation(&mut self) {
+        let now = self.settings.speech.punctuation;
+        let i = PUNCTUATION_CYCLE
+            .iter()
+            .position(|(p, _)| *p == now)
+            .unwrap_or(1);
+        let (next, name) = PUNCTUATION_CYCLE[(i + 1) % PUNCTUATION_CYCLE.len()];
+        self.settings.speech.punctuation = next;
+        self.settings_dirty = true;
+        self.speech.set_punctuation(next);
+        self.tell(&format!("Punctuation: {name}."));
     }
 }
 

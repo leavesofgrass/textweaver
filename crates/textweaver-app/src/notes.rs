@@ -645,6 +645,183 @@ impl App {
     pub fn note_position(&self, i: usize) -> Option<CharPos> {
         self.session.as_ref()?.notes.get(i).map(|n| n.range.start)
     }
+
+    /// The note whose passage holds `pos`, if any.
+    fn note_at(&self, pos: CharPos) -> Option<&Note> {
+        let notes = &self.session.as_ref()?.notes;
+        // Sorted by start: the last one starting at or before `pos` that
+        // still covers it.
+        let upto = notes.partition_point(|n| n.range.start <= pos);
+        notes[..upto].iter().rev().find(|n| {
+            n.range.start <= pos && pos < n.range.end.max(n.range.start.saturating_add(1))
+        })
+    }
+
+    /// While reading, signals the passage of a note once as speech reaches
+    /// it: a short two-tone earcon, and at normal verbosity and above the
+    /// note on the status line ("Note: check this for the exam"). The
+    /// reading itself is never interrupted.
+    pub(crate) fn note_signal(&mut self, spoken: CharRange) {
+        let Some(n) = self.note_at(spoken.start) else {
+            self.authoring.note_signalled = None;
+            return;
+        };
+        if self.authoring.note_signalled.as_deref() == Some(n.id.as_str()) {
+            return;
+        }
+        let (id, text) = (n.id.clone(), collapse(&n.note, 80));
+        self.authoring.note_signalled = Some(id);
+        // The earcon only where textweaver's voice is reading.
+        if self.route(textweaver_a11y::Channel::Reading).speak {
+            self.speech.tone(880.0, 40);
+            self.speech.tone(1320.0, 60);
+        }
+        if self.settings.speech.verbosity >= Verbosity::Normal {
+            self.show(&format!("Note: {text}"));
+        }
+    }
+
+    /// "Has a note: …", said after a caret move onto a note's passage (at
+    /// normal verbosity and above), when there is one there.
+    pub(crate) fn note_here_suffix(&self, pos: CharPos) -> Option<String> {
+        if self.settings.speech.verbosity < Verbosity::Normal {
+            return None;
+        }
+        self.note_at(pos)
+            .map(|n| format!("Has a note: {}", collapse(&n.note, 60)))
+    }
+
+    /// The palette's `export_study_sheet`: the notes and highlights as
+    /// Markdown, grouped under the headings they fall under, written next
+    /// to the document as `NAME-study-sheet.md`.
+    pub(crate) fn export_study_sheet(&mut self) -> Vec<Effect> {
+        let Some(s) = self.session.as_ref() else {
+            return vec![Effect::Redraw];
+        };
+        if s.notes.is_empty() && s.highlights.is_empty() {
+            self.tell("No notes or highlights to export.");
+            return vec![Effect::Redraw];
+        }
+        let date = crate::templates::local_date();
+        let sheet = study_sheet(&s.doc, &s.title, &s.notes, &s.highlights, &date);
+        let path = s.doc.meta.path.clone();
+        let folder = path
+            .as_ref()
+            .and_then(|p| p.parent().map(std::path::Path::to_owned))
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or_else(|| self.loose_folder());
+        let stem = path
+            .as_ref()
+            .and_then(|p| p.file_stem().map(|x| x.to_string_lossy().into_owned()))
+            .unwrap_or_else(|| "notes".to_owned());
+        let out = folder.join(format!("{stem}-study-sheet.md"));
+        match textweaver_convert::write_atomic(&out, sheet.as_bytes()) {
+            Ok(()) => {
+                let (n, h) = (s_count(&self.session, true), s_count(&self.session, false));
+                let what = match (n, h) {
+                    (n, 0) => format!("{n} {}", plural_word(n, "note")),
+                    (0, h) => format!("{h} {}", plural_word(h, "highlight")),
+                    (n, h) => format!(
+                        "{n} {} and {h} {}",
+                        plural_word(n, "note"),
+                        plural_word(h, "highlight")
+                    ),
+                };
+                self.offer_open(
+                    out.display().to_string(),
+                    &format!(
+                        "Study sheet with {what} saved as {} in {}. Open it? y or n.",
+                        crate::authoring_state::file_name(&out),
+                        folder.display()
+                    ),
+                );
+            }
+            Err(e) => self.error(&format!("Could not write {}: {e}", out.display())),
+        }
+        vec![Effect::Redraw]
+    }
+}
+
+fn s_count(s: &Option<crate::app::Session>, notes: bool) -> usize {
+    s.as_ref().map_or(0, |s| {
+        if notes {
+            s.notes.len()
+        } else {
+            s.highlights.len()
+        }
+    })
+}
+
+fn plural_word(n: usize, one: &str) -> String {
+    if n == 1 {
+        one.to_owned()
+    } else {
+        format!("{one}s")
+    }
+}
+
+/// The study sheet: a title, then one section per heading that has notes
+/// or highlights under it (in document order, at the heading's level less
+/// one, so the sheet's own title stays level 1), each passage quoted with
+/// its note after it.
+pub(crate) fn study_sheet(
+    doc: &Document,
+    title: &str,
+    notes: &[Note],
+    highlights: &[Highlight],
+    date: &str,
+) -> String {
+    use textweaver_core::MarkerKind;
+    let headings: Vec<(CharPos, u8, String)> = doc
+        .marker_index()
+        .iter(MarkerKind::Heading, None)
+        .map(|m| (m.range.start, m.level, collapse(&doc.slice(m.range), 120)))
+        .collect();
+    // Every item with the heading it falls under (None before the first).
+    let mut items: Vec<(CharPos, Option<usize>, String)> = Vec::new();
+    let under = |p: CharPos| headings.iter().rposition(|h| h.0 <= p);
+    for n in notes {
+        let passage = collapse(&doc.slice(n.range), 400);
+        let passage = if passage.is_empty() {
+            collapse(&n.anchor, 400)
+        } else {
+            passage
+        };
+        let mut entry = format!("- > {passage}\n\n  {}", n.note.trim());
+        if !n.tags.is_empty() {
+            entry.push_str(&format!(" (tags: {})", n.tags.join(", ")));
+        }
+        items.push((n.range.start, under(n.range.start), entry));
+    }
+    for h in highlights {
+        let passage = collapse(&doc.slice(h.range), 400);
+        let color = color_name(&h.color);
+        items.push((
+            h.range.start,
+            under(h.range.start),
+            format!("- > {passage}\n\n  Highlighted, {color}."),
+        ));
+    }
+    items.sort_by_key(|i| i.0);
+    let mut out = format!("# Study sheet: {title}\n\nExported from textweaver on {date}.\n");
+    let mut current: Option<Option<usize>> = None;
+    for (_, h, entry) in items {
+        if current != Some(h) {
+            current = Some(h);
+            match h {
+                Some(i) => {
+                    let (_, level, text) = &headings[i];
+                    let hashes = "#".repeat(usize::from((*level).clamp(1, 5)) + 1);
+                    out.push_str(&format!("\n{hashes} {text}\n"));
+                }
+                None => out.push_str("\n## Before the first heading\n"),
+            }
+        }
+        out.push('\n');
+        out.push_str(&entry);
+        out.push('\n');
+    }
+    out
 }
 
 #[cfg(test)]

@@ -135,6 +135,8 @@ pub(crate) enum AfterLeave {
     Quit,
     /// Recover the first offered snapshot.
     Recover,
+    /// Offer the templates for a new document.
+    Templates,
 }
 
 /// What the Save As prompt's answer is for.
@@ -180,6 +182,25 @@ fn span_edit(before_len: usize, outcomes: &[EditOutcome], after: &Rope) -> Optio
     let end_after = after_len.saturating_sub(suffix).max(prefix).min(after_len);
     let text = after.slice(prefix.min(end_after)..end_after).to_string();
     Some(Edit::replace(CharRange::new(prefix, end_before), text))
+}
+
+/// Carries `marks` from `from` to `to`, where one is canonical text and the
+/// other the Markdown source it was built from: into the source when
+/// `into_source`, else out of it. Paired blocks carry them
+/// ([`crate::structure::SourceMap`]); without any structure on one side,
+/// the word alignment of the two texts does.
+fn carry_marks(marks: &Marks, from: &Document, to: &Document, into_source: bool) -> Marks {
+    let (canonical, source) = if into_source { (from, to) } else { (to, from) };
+    let map = crate::structure::SourceMap::build(canonical, source);
+    if map.is_empty() {
+        let aligner = Aligner::new(from.text(), to.text());
+        return marks.map(|p| aligner.map(p));
+    }
+    if into_source {
+        marks.map(|p| map.to_source(canonical, source, p))
+    } else {
+        marks.map(|p| map.to_canonical(canonical, source, p))
+    }
 }
 
 fn count_words(n: usize, one: &str) -> String {
@@ -309,6 +330,13 @@ impl App {
                 .max(1)
                 .saturating_mul(1024 * 1024),
         };
+        // The structure parsed in the background when the file opened, if
+        // the file is unchanged (large Markdown files only).
+        let prefetched = if source.is_none() {
+            self.prefetched_markers()
+        } else {
+            None
+        };
         let Some(s) = self.session.as_mut() else {
             self.tell("No document to edit. Press Control N for a new one.");
             return;
@@ -318,26 +346,14 @@ impl App {
             Some(t) => (t, false),
             None => Self::editable_source(&s.doc),
         };
-        let edit_doc = if identity {
-            s.doc.clone()
+        // Line breaks are `\n` in the editor, as in the canonical text.
+        let text = if identity {
+            text
+        } else if text.contains('\r') {
+            text.replace("\r\n", "\n").replace('\r', "\n")
         } else {
-            let mut d = Document::from_plain_text(&text);
-            d.meta = s.doc.meta.clone();
-            d
+            text
         };
-        let text = edit_doc.text().to_string();
-        let entry = Marks::of(s);
-        let aligner = Aligner::new(s.doc.text(), edit_doc.text());
-        let mapped = entry.map(|p| aligner.map(p));
-        let reading = std::mem::replace(&mut s.doc, edit_doc);
-        mapped.put(s);
-        s.selection = None;
-        s.selection_anchor = None;
-        s.find = None;
-        s.spoken = None;
-        s.spoken_sentence = None;
-        s.speech_cursor_line = None;
-        s.goal_column = None;
         let info = DocInfo {
             key: s.key.0.clone(),
             path: s.doc.meta.path.clone(),
@@ -352,6 +368,39 @@ impl App {
             session = session.with_autosave(policy, dir);
         }
         session.enter_edit();
+        // The edited document shares the editor's rope, and a Markdown
+        // source gets its structure at source positions, which also carry
+        // the reading positions across (`structure`).
+        let edit_doc = if identity {
+            s.doc.clone()
+        } else {
+            let rope = session
+                .editor()
+                .map(|e| e.text().clone())
+                .unwrap_or_else(|| Rope::from_str(session.document_text()));
+            let markers = prefetched
+                .unwrap_or_else(|| crate::structure::source_markers(session.document_text()));
+            Document::new(s.doc.meta.clone(), rope, markers)
+        };
+        let entry = Marks::of(s);
+        let mapped = if identity {
+            entry.clone()
+        } else {
+            carry_marks(&entry, &s.doc, &edit_doc, true)
+        };
+        let reading = std::mem::replace(&mut s.doc, edit_doc);
+        mapped.put(s);
+        s.selection = None;
+        s.selection_anchor = None;
+        s.find = None;
+        s.spoken = None;
+        s.spoken_sentence = None;
+        s.speech_cursor_line = None;
+        s.goal_column = None;
+        self.authoring.structure = crate::authoring_state::Structure {
+            markdown: !identity,
+            ..Default::default()
+        };
         let cursor = s.cursor;
         if let Some(ed) = session.editor_mut() {
             ed.set_selection(Selection::caret(cursor));
@@ -559,6 +608,13 @@ impl App {
     /// document from the saved file when a save happened, else restores it,
     /// and maps every position back.
     pub(crate) fn finish_leave(&mut self, rebuild: bool, discarded: bool) {
+        // The structure must match the text before positions are carried
+        // from it; discarding goes back to positions that need none.
+        if !discarded {
+            self.refresh_structure(true);
+        }
+        let markdown = self.authoring.structure.markdown;
+        self.authoring.structure = crate::authoring_state::Structure::default();
         let Some(mut state) = self.edit.take() else {
             return;
         };
@@ -611,8 +667,18 @@ impl App {
                 if let Some(p) = &path {
                     doc.meta.path = Some(p.clone());
                 }
-                let aligner = Aligner::new(&Rope::from_str(&saved_text), doc.text());
-                let mapped = marks.map(|p| aligner.map(p));
+                // `marks` are positions in the saved text: the edited
+                // document itself when nothing was changed after the save.
+                let saved_doc = (s.doc.text() != saved_text.as_str()).then(|| {
+                    let markers = if markdown {
+                        crate::structure::source_markers(&saved_text)
+                    } else {
+                        Vec::new()
+                    };
+                    Document::new(s.doc.meta.clone(), Rope::from_str(&saved_text), markers)
+                });
+                let source = saved_doc.as_ref().unwrap_or(&s.doc);
+                let mapped = carry_marks(&marks, source, &doc, false);
                 s.doc = doc;
                 mapped.put(s);
             }
@@ -626,12 +692,10 @@ impl App {
                 state.entry.clone().put(s);
             }
             (None, marks) => {
-                let edited = s.doc.text().clone();
-                s.doc = state.reading;
+                let edited = std::mem::replace(&mut s.doc, state.reading);
                 match marks {
                     Some(m) if state.changed && !discarded => {
-                        let aligner = Aligner::new(&edited, s.doc.text());
-                        m.map(|p| aligner.map(p)).put(s);
+                        carry_marks(&m, &edited, &s.doc, false).put(s);
                     }
                     _ => state.entry.put(s),
                 }
@@ -655,6 +719,8 @@ impl App {
             "Edit mode off."
         };
         self.tell(msg);
+        // Ready for the next Ctrl+E on a large Markdown file.
+        self.prefetch_structure();
     }
 
     fn continue_after(&mut self, after: AfterLeave) -> Vec<Effect> {
@@ -667,6 +733,7 @@ impl App {
                 vec![Effect::Quit]
             }
             AfterLeave::Recover => self.recover_first(),
+            AfterLeave::Templates => self.new_from_template(),
         }
     }
 
@@ -771,6 +838,17 @@ impl App {
         let Some(s) = self.session.as_mut() else {
             return;
         };
+        // In a large Markdown text, shifting (and sorting) every marker on
+        // each keystroke would cost milliseconds: the markers are dropped
+        // at the first edit and parsed again when typing pauses, or at once
+        // when a command needs them (`structure`).
+        if span.is_some()
+            && self.authoring.structure.markdown
+            && s.doc.len_chars() > crate::structure::INLINE_PARSE_LIMIT
+            && !s.doc.markers().is_empty()
+        {
+            s.doc = Document::new(s.doc.meta.clone(), s.doc.text().clone(), Vec::new());
+        }
         if let Some(e) = span
             && let Err(err) = s.doc.apply(&e)
         {
@@ -783,7 +861,8 @@ impl App {
         for o in outcomes {
             s.history.shift(o);
         }
-        if !outcomes.is_empty() {
+        let changed = !outcomes.is_empty();
+        if changed {
             edit.changed = true;
             s.find = None;
             s.spoken = None;
@@ -795,6 +874,9 @@ impl App {
         s.selection = (!r.is_empty()).then_some(r);
         s.selection_anchor = s.selection.map(|_| sel.anchor);
         self.scroll_to_cursor();
+        if changed {
+            self.structure_edited();
+        }
     }
 
     /// Speaks echo events when self-voicing (a screen reader echoes typing
@@ -1531,33 +1613,9 @@ impl App {
         let Some(query) = self.replace_query.take() else {
             return vec![Effect::Redraw];
         };
-        let Some(ed) = self.edit.as_mut().and_then(|e| e.session.editor_mut()) else {
-            return vec![Effect::Redraw];
-        };
-        let before = ed.text().clone();
-        // One search: the ranges replaced also shift the reading marks.
-        match textweaver_editor::find::replace_all_ranges(ed, &query, text, FindOptions::default())
-        {
-            Ok(hits) if hits.is_empty() => self.tell(&format!("No matches for {query}.")),
-            Ok(hits) => {
-                let n = hits.len();
-                // Replace All applies the edits back to front.
-                let outcomes: Vec<EditOutcome> = hits
-                    .iter()
-                    .rev()
-                    .map(|r| Edit::replace(*r, text).outcome())
-                    .collect();
-                self.after_edit(&before, &outcomes);
-                let what = if n == 1 {
-                    "1 match".to_owned()
-                } else {
-                    format!("{n} matches")
-                };
-                self.tell(&format!("Replaced {what}."));
-            }
-            Err(e) => self.error(&format!("Could not replace: {e}")),
-        }
-        vec![Effect::Redraw]
+        // One match at a time: replace, skip, or replace all the rest
+        // (`crate::replace`).
+        self.start_replace(query, text.to_owned())
     }
 
     /// Autosave while editing (from [`App::tick`]).

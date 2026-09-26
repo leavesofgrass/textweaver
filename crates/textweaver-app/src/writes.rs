@@ -293,6 +293,8 @@ impl App {
                             |n| n.to_string_lossy().into(),
                         );
                         self.tell(&format!("Saved {name}. Still editing."));
+                        // The misspelling count and the preview (Agent P2b).
+                        self.on_saved();
                         vec![Effect::Redraw]
                     }
                     // Saved on the way out: leave now (asking again if

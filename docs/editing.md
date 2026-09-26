@@ -38,7 +38,27 @@ In edit mode every key that is not a command types. Single-key reading keys such
 
 At the edges you hear "Start of line.", "End of line.", "Top of document.", or "End of document."
 
-textweaver has no copy or cut command yet. To paste, use your terminal's own paste command. See [Pasting](#pasting).
+More editing keys:
+
+- **Ctrl+A**: select all the text. You hear "Selected all" and the number of words.
+- **Alt+Backspace**: delete the word before the caret. The GUI uses **Ctrl+Backspace**.
+- **Ctrl+Delete**: delete the word after the caret.
+- **Ctrl+C**: copy the selection. **Ctrl+X**: cut it. Both go to your computer's clipboard through the terminal; see [Copy, cut, and paste](#copy-cut-and-paste).
+- **Ctrl+V**: paste. See [Copy, cut, and paste](#copy-cut-and-paste).
+
+You hear what the word keys deleted, for example "three deleted."
+
+## Structure while you write
+
+The reading keys that move by structure work in edit mode too, on the Markdown as you have written it so far:
+
+- **Alt+H** and **Alt+Shift+H**: the next and previous heading. The caret lands on the heading's text, after the `#` marks.
+- **Alt+O**: the outline, a list of the headings you can filter by typing; see [the reading guide](reading.md#the-outline-alto).
+- **Alt+Shift+Y**: where am I, with the heading you are under.
+- The table keys, **Ctrl+Alt** with the arrows, move by row and cell in a Markdown table and say the column header.
+- From the command palette (**F2**), the list, list item, and link moves work too: type `next list item` or `next link`.
+
+After you stop typing for a moment (about a third of a second), textweaver reads the structure again, so a heading you just typed can be reached at once. In a very long document this happens in the background and takes a little longer.
 
 ### Keyboard layouts with AltGr
 
@@ -113,10 +133,20 @@ Typing and deleting are grouped into word-sized steps, so one undo removes about
 
 Press **Alt+F** in edit mode. The GUI uses **Ctrl+Shift+F**.
 
-1. The prompt says "Replace, find what". Type the text to find and press **Enter**. Matching ignores case. You hear how many matches there are, then "Replace with?"
-2. Type the new text and press **Enter**. Every match is replaced at once. You hear "Replaced", then the count.
+1. The prompt says "Replace, find what". Type the text to find and press **Enter**. You hear how many matches there are, then "Replace with?"
+2. Type the new text and press **Enter**.
 
-The whole replacement is one undo step, so **Ctrl+Z** puts everything back. Press **Escape** at either prompt to cancel.
+textweaver then goes through the matches one at a time, starting at the caret. Each match is selected, and you hear where it is and its line, for example "Match 2 of 5, line 12: the cat sat on the mat." A short list asks what to do. Press a letter, or move with Up and Down and press Enter:
+
+- **r**, "Replace this one": replaces it and goes to the next match.
+- **s**, "Skip this one": leaves it and goes to the next match.
+- **a**, "Replace all the rest": replaces this match and every one after it.
+- **c**, "Match case": on or off. Off (the default), `cat` also finds `Cat`. You hear the new setting and how many matches there are now.
+- **w**, "Whole words only": on or off. On, `cat` does not find `catalog`.
+
+After the last match, the search goes on from the top of the document and stops where it started. At the end you hear what was done, for example "Replaced 3, skipped 1." Press **Escape** to stop early: "Stopped. Replaced 1, skipped 0."
+
+Each replacement is one undo step, and "Replace all the rest" is one step for all of them, so **Ctrl+Z** takes back the last thing you chose.
 
 To find without replacing, use **Ctrl+F**, as when reading.
 
@@ -186,20 +216,76 @@ The settings are in `[editing]`:
 
 The copies are in the `recovery` folder of the data folder. The [library guide](library.md) says where that is.
 
-## Pasting
+## Copy, cut, and paste
 
-Paste with your terminal's paste command, such as **Ctrl+V** or **Ctrl+Shift+V** in Windows Terminal, or right-click. textweaver turns on bracketed paste, so the terminal sends pasted text as one piece, not as separate key presses. That means:
+- **Ctrl+C** copies the selection. **Ctrl+X** cuts it; the cut is one undo step. textweaver sends the text to the terminal, which puts it on your computer's clipboard (the OSC 52 sequence; it works over SSH too). Windows Terminal, iTerm2, kitty, WezTerm, foot, Alacritty, and xterm pass it on. The old Windows console window and macOS Terminal do not.
+- To paste from your computer's clipboard, use your terminal's paste command, such as **Ctrl+V** or **Ctrl+Shift+V** in Windows Terminal, or right-click.
+- When the terminal passes **Ctrl+V** to textweaver instead of pasting, textweaver pastes the text you last copied or cut in textweaver. When there is none, it says "Nothing copied in textweaver yet. Use your terminal's paste, for example Control Shift V."
+
+textweaver turns on bracketed paste, so the terminal sends pasted text as one piece, not as separate key presses. That means:
 
 - the paste is one undo step;
 - keys in the pasted text never run commands;
-- you hear "Inserted", then the number of characters.
+- you hear "Pasted", the number of characters, and the first words.
 
 Pasting into a prompt, such as Find, puts the text in the prompt.
+
+## Citations
+
+In edit mode, **Alt+C** inserts a citation: pick a reference from a list you can filter by typing, then give a page or other locator. **Alt+Shift+D** adds a reference by DOI or ISBN. The command palette has `insert bibliography`, `check citations`, and `import references`. The [citations guide](citations.md#citations-while-reading-and-writing-in-textweaver) explains them.
+
+## Spelling
+
+textweaver checks spelling against a list of 225,038 English words (SCOWL, sizes 35 to 80, which includes American, British, Canadian, and Australian spellings) and your own word list.
+
+- **Alt+M**: the next misspelled word. **Alt+Shift+M**: the previous one. You hear the word, then its letters: "recieve. r e c i e v e." In edit mode the word is selected, so typing replaces it. These keys work while reading too.
+- **Alt+J**: suggestions for the misspelled word at the cursor, closest first, then "Add recieve to your word list" and "Leave it as it is". In edit mode, **Enter** on a suggestion replaces the word; that is one undo step.
+- When you save, textweaver says how many possible misspellings are left, for example "3 possible misspellings." At high verbosity it also says "No misspellings."
+
+These are never checked: code, math, link addresses, web and e-mail addresses, citation keys such as `[@doe2020]`, raw HTML, front matter, words with digits, words in capitals (acronyms such as NASA), words with capitals inside (such as iPhone), and single letters.
+
+Your word list is `words.txt` in the data folder, one word per line; you can edit it in any text editor. The [library guide](library.md) says where the data folder is.
+
+## Listen to the rendered text
+
+In edit mode, type `listen rendered` in the command palette. textweaver reads from the caret what a reader of your finished document hears: no `#`, `*`, or link addresses, and citations formatted, such as "(Doe & Roe, 2020, p. 12)". You stay in edit mode, and the highlight follows in your Markdown. **Escape** stops. Outside edit mode it reads from the cursor, as **Enter** does.
+
+## Export and preview
+
+Type `export pdf`, `export docx`, `export html`, `export epub`, or `export brf` in the command palette to write the document you are editing, saved or not, next to it in that format. `preview in browser` opens it as a web page, with math, and each save writes the preview again. The [converting guide](converting.md#export-from-inside-the-reader) explains both.
+
+## Start from a template
+
+Type `new from template` in the command palette. The list has three templates, Essay, Report, and Notes, and your own after them. Choose one, then type the title. textweaver starts a new document in edit mode with front matter, headings, and a References heading, for example:
+
+```markdown
+---
+title: "On Bees"
+author: "Jo Writer"
+date: 2026-09-26
+---
+
+# On Bees
+
+## Introduction
+```
+
+The date is today's date on your computer, in your time zone. The author comes from this setting, when you set it:
+
+```toml
+[editing]
+author = "Jo Writer"
+```
+
+The caret starts under the first section heading, and the document is new and unsaved: save it with **Ctrl+S**.
+
+Your own templates are Markdown files in the `templates` folder of the configuration folder (the folder that holds `settings.toml`; the [settings guide](settings.md) says where). Write `{{title}}`, `{{author}}`, and `{{date}}` where those should go. The file name, without `.md`, is the template's name in the list.
 
 ## If something goes wrong
 
 - **"Could not save: the file is read-only".** Use Save As (**Alt+S**) with a new name, or make the file writable.
 - **A key types instead of running a command.** In edit mode only chords run commands. Press **Ctrl+E** to go back to reading.
+- **A key such as Ctrl+Alt+Down does nothing, or switches your desktop.** Some desktops keep those keys. Give the command other keys in `keymap.toml`; see the [keyboard reference](keyboard.md).
 - **A formatting key does nothing.** Your terminal may keep that chord. Run the command from the command palette (**F2**), for example `bold`, or give it another key in `keymap.toml`; see the [keyboard reference](keyboard.md).
 - **"Could not write the recovery copy".** The data folder may be full or read-only. Your editing goes on; save soon.
 

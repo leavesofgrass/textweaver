@@ -195,6 +195,28 @@ textweaver essay.md
 
 PDF files are read with column-aware reading order: running headers and page numbers are left out, and headings, lists, and tables are recovered. A scanned PDF with no text layer cannot be read; textweaver has no OCR yet. [ADR-0010](adr/0010-pdf-loader.md) explains how the PDF reader works.
 
+## Export from inside the reader
+
+You can also convert the document you have open without leaving textweaver. Press **F2** for the command palette and type part of one of these names:
+
+- `export html`: a web page.
+- `export pdf`: a tagged PDF.
+- `export docx`: a Word document.
+- `export epub`: an EPUB book.
+- `export brf`: braille.
+
+The file goes next to the document, with the same name: exporting `essay.md` to PDF writes `essay.pdf` in the same folder, replacing an older export. In edit mode the text you are editing is exported, saved or not. Citations are formatted and a References section added, as with `tw convert`: from the bibliography your front matter names, the folder's `references.json`, and your own library.
+
+You hear "Exporting to PDF." and can go on reading or writing while it works. When it is done you hear where the file went and a question, for example "Exported to PDF: essay.pdf in C:\Users\jon\Essays. Open it? y or n." Press **y** to open it with your computer's program for that kind of file, or **n** to leave it. A warning, such as an image that was not found, is read out before the question.
+
+A new document that was never saved has no folder yet; its export goes to the folder textweaver was started in, like Save As suggests.
+
+### Preview in the browser
+
+Type `preview in browser` in the palette. textweaver writes the document as a web page, with math as MathML so screen readers can read it, and opens it in your default web browser. The page is kept in the `preview` folder of textweaver's cache folder, and images and links in it still point beside your document.
+
+While you edit, each save (**Ctrl+S**) writes the preview again and you hear "Preview updated." at normal verbosity. The browser does not reload by itself, so it never moves your screen reader's place; press **F5** in the browser to see the change.
+
 ## When something fails
 
 A file that cannot be converted never stops the others. After the summary, each failure is read out with its reason, for example "Failed: old.rtf: no native reader for .rtf files, and Pandoc is not installed". When any file fails, `tw convert` ends with exit status 1, so scripts can tell.
@@ -208,6 +230,7 @@ Two cases are refused before converting:
 
 - [Math](math.md): how LaTeX and ASCIIMath are read aloud and turned into MathML.
 - [Citations](citations.md): the reference library behind Pandoc citations.
+- [Writing and editing](editing.md): listening to the rendered text while you write.
 - [Themes](themes.md): the colours HTML output uses.
 - [Audio export](audio-export.md): turning a document into an audiobook instead.
 - [scripts/README.md](../scripts/README.md#convert-foldersh-and-convert-folderps1): the convert-folder helper scripts.

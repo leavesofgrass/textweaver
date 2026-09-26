@@ -812,8 +812,23 @@ mod inner {
             let t = Instant::now();
             app.dispatch(Command::Answer("THE".into()));
             r.time(
+                "replace_first_ms",
+                "replace: the first match asked about",
+                t.elapsed(),
+            );
+            let t = Instant::now();
+            app.dispatch(Command::Choose(1));
+            r.time(
+                "replace_skip_ms",
+                "replace: skip to the next match",
+                t.elapsed(),
+            );
+            // "Replace all the rest" (one undo step).
+            let t = Instant::now();
+            app.dispatch(Command::Choose(2));
+            r.time(
                 "replace_all_ms",
-                "replace every \"the\" (one undo step)",
+                "replace all the rest of \"the\" (one undo step)",
                 t.elapsed(),
             );
             r.peak("replace_peak_mb", "replace");
