@@ -115,6 +115,7 @@ mod macos {
 
         // Phase 1: the main thread only waits.
         let started = Instant::now();
+        start_watchdog();
         let mut failed = std::thread::Builder::new()
             .name("speech".into())
             .spawn(move || run(&p1))
@@ -152,11 +153,32 @@ mod macos {
         }
     }
 
+    /// The test running now, for the watchdog.
+    static CURRENT: std::sync::Mutex<(&str, Option<Instant>)> = std::sync::Mutex::new(("", None));
+
+    /// Fails the whole run when one test takes longer than two minutes (a
+    /// hang would otherwise hold the CI job until its timeout).
+    fn start_watchdog() {
+        let _ = std::thread::Builder::new()
+            .name("watchdog".into())
+            .spawn(|| {
+                loop {
+                    std::thread::sleep(Duration::from_secs(1));
+                    let (name, since) = *CURRENT.lock().unwrap_or_else(|e| e.into_inner());
+                    if since.is_some_and(|t| t.elapsed() > Duration::from_secs(120)) {
+                        println!("test {name} ... FAILED: still running after 120 s");
+                        std::process::exit(1);
+                    }
+                }
+            });
+    }
+
     fn run(tests: &[Test]) -> usize {
         let mut failed = 0;
         for (name, f) in tests {
             println!("test {name} ...");
             let t0 = Instant::now();
+            *CURRENT.lock().unwrap_or_else(|e| e.into_inner()) = (name, Some(t0));
             let outcome = std::panic::catch_unwind(f);
             let secs = t0.elapsed().as_secs_f64();
             match outcome {

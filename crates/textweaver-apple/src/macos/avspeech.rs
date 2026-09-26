@@ -56,8 +56,34 @@ const ID: BackendId = crate::AVSPEECH_ID;
 /// run loop is not running.
 const FIRST_BUFFER_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// How long to wait for the delegate's finish after the last buffer.
+/// How long to wait for the other end signal once one of the two (the
+/// empty buffer, the delegate's finish) has arrived.
 const FINISH_GRACE: Duration = Duration::from_millis(500);
+
+/// Synthesis whose synthesizer says it is no longer speaking, and which
+/// has delivered nothing for this long, is finished.
+const IDLE_GRACE: Duration = Duration::from_millis(300);
+
+/// Synthesis that delivers nothing for this long after it started
+/// producing audio is treated as finished.
+const STALL_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// How the end of a synthesis was recognized. On macOS 15 and 26 both end
+/// signals arrive; on macOS 14 the backend may have to rely on the others.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SynthesisEnd {
+    /// The empty final buffer and the delegate's finish both arrived.
+    #[default]
+    Both,
+    /// Only the empty final buffer arrived.
+    EmptyBuffer,
+    /// Only the delegate's finish arrived.
+    Delegate,
+    /// The synthesizer stopped speaking and delivered nothing more.
+    Idle,
+    /// Nothing arrived for three seconds.
+    Stalled,
+}
 
 /// The error reported when the synthesizer's callbacks never arrive.
 const NO_MAIN_LOOP: &str = "AVSpeechSynthesizer produced no audio: its callbacks need the main \
@@ -74,6 +100,8 @@ pub struct Synthesis {
     /// How many buffers the synthesizer delivered (its reporting
     /// granularity: a word's offset is exact to within one buffer).
     pub buffers: usize,
+    /// How the end of synthesis was recognized.
+    pub end: SynthesisEnd,
 }
 
 /// Where the `avspeech` backend's audio goes.
@@ -107,14 +135,51 @@ struct Shared {
     words: Vec<(u64, usize, usize)>,
     /// The empty buffer that ends synthesis has arrived.
     buffers_done: bool,
+    /// When it arrived.
+    buffers_done_at: Option<Instant>,
     /// The delegate reported the utterance finished.
     delegate_done: bool,
+    /// When it did.
+    delegate_done_at: Option<Instant>,
     /// When the first buffer arrived.
     first_buffer: Option<Instant>,
+    /// When the last buffer or word callback arrived.
+    last_activity: Option<Instant>,
     /// Non-empty buffers received.
     buffers: usize,
     /// Buffer formats this backend cannot read.
     error: Option<String>,
+}
+
+impl Shared {
+    /// Whether synthesis of the job is over, and how that was recognized:
+    /// both end signals arrived, or one did `FINISH_GRACE` ago, or (once
+    /// audio has started) the synthesizer is no longer speaking and nothing
+    /// arrived for `IDLE_GRACE`, or nothing arrived for `STALL_TIMEOUT`.
+    fn complete(&self, now: Instant, speaking: bool) -> Option<SynthesisEnd> {
+        let since = |t: Option<Instant>| t.map(|t| now.saturating_duration_since(t));
+        let quiet = since(self.last_activity).unwrap_or_default();
+        if self.buffers_done && self.delegate_done {
+            Some(SynthesisEnd::Both)
+        } else if since(self.buffers_done_at).is_some_and(|d| d >= FINISH_GRACE) {
+            Some(SynthesisEnd::EmptyBuffer)
+        } else if since(self.delegate_done_at).is_some_and(|d| d >= FINISH_GRACE) {
+            Some(SynthesisEnd::Delegate)
+        } else if self.first_buffer.is_none() {
+            None
+        } else if !speaking && quiet >= IDLE_GRACE {
+            Some(SynthesisEnd::Idle)
+        } else if quiet >= STALL_TIMEOUT {
+            Some(SynthesisEnd::Stalled)
+        } else {
+            None
+        }
+    }
+
+    fn end_buffers(&mut self) {
+        self.buffers_done = true;
+        self.buffers_done_at.get_or_insert_with(Instant::now);
+    }
 }
 
 fn lock(shared: &Mutex<Shared>) -> MutexGuard<'_, Shared> {
@@ -199,6 +264,7 @@ define_class!(
             if s.job != 0 && s.utterance == utterance as *const AVSpeechUtterance as usize {
                 let at = s.samples;
                 s.words.push((at, range.location, range.length));
+                s.last_activity = Some(Instant::now());
             }
         }
 
@@ -208,6 +274,7 @@ define_class!(
             let mut s = lock(&self.ivars().shared);
             if s.job != 0 && s.utterance == utterance as *const AVSpeechUtterance as usize {
                 s.delegate_done = true;
+                s.delegate_done_at.get_or_insert_with(Instant::now);
             }
         }
     }
@@ -273,9 +340,11 @@ impl Synth {
                 return;
             };
             match read_samples(pcm) {
-                Ok((samples, _)) if samples.is_empty() => s.buffers_done = true,
+                Ok((samples, _)) if samples.is_empty() => s.end_buffers(),
                 Ok((samples, rate)) => {
-                    s.first_buffer.get_or_insert_with(Instant::now);
+                    let now = Instant::now();
+                    s.first_buffer.get_or_insert(now);
+                    s.last_activity = Some(now);
                     s.buffers += 1;
                     s.rate = rate;
                     s.samples += samples.len() as u64;
@@ -283,7 +352,7 @@ impl Synth {
                 }
                 Err(e) => {
                     s.error = Some(e);
-                    s.buffers_done = true;
+                    s.end_buffers();
                 }
             }
         });
@@ -293,6 +362,11 @@ impl Synth {
             self.synth
                 .writeUtterance_toBufferCallback(utt, RcBlock::as_ptr(&block));
         }
+    }
+
+    fn speaking(&self) -> bool {
+        // SAFETY: a property read.
+        unsafe { self.synth.isSpeaking() }
     }
 
     fn stop(&self) {
@@ -319,7 +393,6 @@ struct Job {
     appended: u64,
     rate: u32,
     synth_done: bool,
-    buffers_done_at: Option<Instant>,
     /// Words not yet reported: (sample offset, byte range).
     words: VecDeque<(u64, Range<u32>)>,
     started: bool,
@@ -341,6 +414,7 @@ pub struct AvSpeechBackend {
     first_audio_latency: Option<Duration>,
     word_offsets: Vec<u32>,
     raw_rate: Option<f32>,
+    last_end: SynthesisEnd,
 }
 
 fn find_voice(id: &str) -> Option<Retained<AVSpeechSynthesisVoice>> {
@@ -386,6 +460,7 @@ impl AvSpeechBackend {
             first_audio_latency: None,
             word_offsets: Vec::new(),
             raw_rate: None,
+            last_end: SynthesisEnd::Both,
         })
     }
 
@@ -399,6 +474,11 @@ impl AvSpeechBackend {
     /// first audio buffer.
     pub fn first_audio_latency(&self) -> Option<Duration> {
         self.first_audio_latency
+    }
+
+    /// How the end of the most recent synthesis was recognized.
+    pub fn last_synthesis_end(&self) -> SynthesisEnd {
+        self.last_end
     }
 
     /// Bypasses the rate table and sets `AVSpeechUtterance.rate` directly
@@ -471,7 +551,6 @@ impl AvSpeechBackend {
                 appended: 0,
                 rate: 0,
                 synth_done: empty,
-                buffers_done_at: None,
                 words: VecDeque::new(),
                 started: false,
                 write_started: Instant::now(),
@@ -484,7 +563,9 @@ impl AvSpeechBackend {
         let Some(job) = self.jobs.iter_mut().find(|j| !j.synth_done) else {
             return;
         };
-        let (audio, words, rate, buffers_done, delegate_done, first, error) = {
+        let now = Instant::now();
+        let speaking = self.synth.speaking();
+        let (audio, words, rate, complete, first, error) = {
             let mut s = lock(&self.synth.shared);
             if s.job != job.token {
                 return;
@@ -493,8 +574,7 @@ impl AvSpeechBackend {
                 std::mem::take(&mut s.audio),
                 std::mem::take(&mut s.words),
                 s.rate,
-                s.buffers_done,
-                s.delegate_done,
+                s.complete(now, speaking),
                 s.first_buffer,
                 s.error.take(),
             )
@@ -518,12 +598,9 @@ impl AvSpeechBackend {
         if let Some(e) = error {
             sink.emit(job.id, RawEvent::Error(e));
         }
-        let now = Instant::now();
-        if buffers_done {
-            let at = *job.buffers_done_at.get_or_insert(now);
-            if delegate_done || now.duration_since(at) >= FINISH_GRACE {
-                job.synth_done = true;
-            }
+        if let Some(end) = complete {
+            job.synth_done = true;
+            self.last_end = end;
         } else if first.is_none() && now.duration_since(job.write_started) >= FIRST_BUFFER_TIMEOUT {
             sink.emit(job.id, RawEvent::Error(NO_MAIN_LOOP.into()));
             job.synth_done = true;
@@ -587,13 +664,13 @@ impl AvSpeechBackend {
         let mut tracker = WordTracker::new(text);
         let mut samples = Vec::new();
         let mut words = Vec::new();
-        let mut buffers_done_at: Option<Instant> = None;
-        let (rate, buffers) = loop {
+        let (rate, buffers, end) = loop {
             if runloop::is_main_thread() {
                 runloop::run_current_once(Duration::from_millis(5));
             } else {
                 std::thread::sleep(Duration::from_millis(5));
             }
+            let speaking = synth.speaking();
             let mut s = lock(&synth.shared);
             for chunk in s.audio.drain(..) {
                 samples.extend_from_slice(&chunk);
@@ -606,11 +683,8 @@ impl AvSpeechBackend {
             if let Some(e) = s.error.take() {
                 return Err(SpeechError::Engine(e));
             }
-            if s.buffers_done {
-                let at = *buffers_done_at.get_or_insert_with(Instant::now);
-                if s.delegate_done || at.elapsed() >= FINISH_GRACE {
-                    break (s.rate, s.buffers);
-                }
+            if let Some(end) = s.complete(Instant::now(), speaking) {
+                break (s.rate, s.buffers, end);
             } else if s.first_buffer.is_none() && started.elapsed() >= FIRST_BUFFER_TIMEOUT {
                 drop(s);
                 synth.stop();
@@ -640,6 +714,7 @@ impl AvSpeechBackend {
             },
             words,
             buffers,
+            end,
         })
     }
 }

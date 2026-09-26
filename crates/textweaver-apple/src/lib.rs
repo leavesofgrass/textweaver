@@ -45,7 +45,7 @@ pub mod voices;
 mod macos;
 
 #[cfg(target_os = "macos")]
-pub use macos::avspeech::{AvSpeechBackend, Output, Synthesis};
+pub use macos::avspeech::{AvSpeechBackend, Output, Synthesis, SynthesisEnd};
 #[cfg(target_os = "macos")]
 pub use macos::nsspeech::NsSpeechBackend;
 #[cfg(target_os = "macos")]
