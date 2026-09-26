@@ -148,12 +148,27 @@ pub struct Session {
     /// The document text's stamp, saved with its positions so a change
     /// made outside textweaver is noticed on the next open.
     pub(crate) text_stamp: Option<textweaver_store::TextStamp>,
+    /// The text's revision: a number, unique in this process, that changes
+    /// whenever [`doc`](Self::doc)'s text is replaced or edited (typing, a
+    /// [`Command::ReplaceRange`], entering or leaving edit mode). Markers
+    /// parsed again while editing keep the revision: the text is the same.
+    /// A frontend that keeps a copy of the text, such as a GUI's
+    /// [`DocWindow`](crate::DocWindow), reloads it when this changes.
+    pub revision: u64,
+}
+
+/// A fresh text revision (see [`Session::revision`]).
+pub(crate) fn next_revision() -> u64 {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static NEXT: AtomicU64 = AtomicU64::new(1);
+    NEXT.fetch_add(1, Ordering::Relaxed)
 }
 
 impl Session {
     /// A session at the start of `doc`.
     pub fn new(doc: Document, key: DocKey, title: impl Into<String>, history_size: usize) -> Self {
         Session {
+            revision: next_revision(),
             doc,
             key,
             cursor: CharPos::ZERO,
@@ -249,6 +264,8 @@ pub(crate) enum ListKind {
     /// An outline, citation picker, spelling, replace, or template list
     /// (Agent P2b's `lists` module).
     Authoring(crate::authoring_state::AuthoringList),
+    /// The settings screen (crate::settings_schema).
+    Settings,
 }
 
 /// The application: the only owner of mutable state.
@@ -341,6 +358,31 @@ pub struct App {
     pub(crate) math_explore: Option<crate::math_explore::MathExplore>,
     /// The browser preview's reload server, while one runs.
     pub(crate) preview_server: Option<crate::preview_server::PreviewServer>,
+    /// The frontend's waker, rung from other threads (crate::wake).
+    pub(crate) wake: crate::wake::WakeSlot,
+    /// How deep in public entry points the app is (`App::entry`).
+    pub(crate) depth: u32,
+    /// Files this large open in the background (crate::opening).
+    pub(crate) background_open_bytes: u64,
+    /// The misspelling count after a save, on a helper thread.
+    pub(crate) spell_count: Option<std::sync::mpsc::Receiver<usize>>,
+    /// The list shown, with its focus and filter (crate::list_model).
+    pub(crate) list_model: Option<crate::list_model::ListModel>,
+    /// The prompt open, with its text and caret (crate::list_model).
+    pub(crate) prompt_model: Option<crate::list_model::PromptModel>,
+    /// Earlier answers to each kind of prompt, oldest first.
+    pub(crate) answers: std::collections::HashMap<PromptPurpose, Vec<String>>,
+    /// A document opening in the background (crate::opening).
+    pub(crate) opening: Option<crate::opening::Opening>,
+    /// The settings screen's state, while it is open (crate::settings_schema).
+    pub(crate) settings_screen: Option<crate::settings_schema::SettingsScreen>,
+    /// Text the next prompt starts with (a setting's current value).
+    pub(crate) pending_prompt_text: Option<String>,
+    /// The item the next list shown is focused on (the setting a value
+    /// prompt was for).
+    pub(crate) pending_list_focus: Option<usize>,
+    /// Say a list's focused item when the list is shown (crate::list_model).
+    pub(crate) announce_list_focus: bool,
 }
 
 impl App {
@@ -355,6 +397,7 @@ impl App {
             crate::access::access_mode_from_setting(config.settings.accessibility.mode);
         let mut keymap = config.keymap;
         keymap.set_character_keys(config.settings.keyboard.character_keys);
+        let wake = crate::wake::WakeSlot::default();
         let mut app = App {
             session: None,
             speech: config.speech,
@@ -400,7 +443,7 @@ impl App {
             pending_list_delete: None,
             voice_list: Vec::new(),
             clipboard: None,
-            writer: crate::writer::Writer::spawn(),
+            writer: crate::writer::Writer::spawn(wake.clone()),
             pending_saves: Vec::new(),
             disk_check_pending: false,
             voices_pending: false,
@@ -412,6 +455,18 @@ impl App {
             authoring: crate::authoring_state::Authoring::default(),
             math_explore: None,
             preview_server: None,
+            wake,
+            depth: 0,
+            background_open_bytes: crate::opening::BACKGROUND_OPEN_BYTES,
+            spell_count: None,
+            list_model: None,
+            prompt_model: None,
+            answers: std::collections::HashMap::new(),
+            opening: None,
+            settings_screen: None,
+            pending_prompt_text: None,
+            pending_list_focus: None,
+            announce_list_focus: true,
         };
         app.apply_voice_settings();
         app.load_themes();
@@ -630,9 +685,20 @@ impl App {
     pub fn open(&mut self, path: &Path) -> Result<Vec<Effect>, AppError> {
         // Taken before reading, so a change made while loading is noticed.
         let stamp = crate::disk::FileStamp::of(path);
-        let mut doc = self
+        let doc = self
             .registry
             .load(&Source::Path(path.to_owned()), &self.load_options())?;
+        Ok(self.adopt_loaded(path, doc, stamp))
+    }
+
+    /// Makes a document loaded from `path` current: the second half of
+    /// [`open`](Self::open), shared with opening in the background.
+    pub(crate) fn adopt_loaded(
+        &mut self,
+        path: &Path,
+        mut doc: Document,
+        stamp: Option<crate::disk::FileStamp>,
+    ) -> Vec<Effect> {
         if doc.meta.path.is_none() {
             doc.meta.path = Some(path.to_owned());
         }
@@ -648,7 +714,7 @@ impl App {
         if let Some(s) = self.session.as_mut() {
             s.disk = stamp;
         }
-        Ok(effects)
+        effects
     }
 
     /// Makes an already loaded document current (tests, in-memory sources).
@@ -806,22 +872,32 @@ impl App {
     }
 
     /// Changes settings from outside the command loop (a frontend's own
-    /// dialog, such as the GUI's font chooser) and saves them at once, so
-    /// the app's copy and the file agree and a later save cannot undo the
-    /// change.
+    /// dialog, such as the GUI's font chooser) and queues their save at
+    /// once, so the app's copy and the file agree and a later save cannot
+    /// undo the change. The writer thread writes the file (Wave 3); a
+    /// failure is announced on a later tick, so the `Result` is always
+    /// `Ok`.
     pub fn update_settings(&mut self, change: impl FnOnce(&mut Settings)) -> Result<(), AppError> {
         change(&mut self.settings);
         self.settings_dirty = true;
         self.save_settings()
     }
 
-    /// Saves settings if they changed since loading (explicit changes only).
+    /// Queues a save of the settings if they changed since loading
+    /// (explicit changes only). The writer thread writes `settings.toml`
+    /// (Wave 3: a key press never waits for it), newer saves queued
+    /// together collapse into one, and a failure is announced on a later
+    /// [`tick`](Self::tick). Always `Ok`; the `Result` is kept for callers
+    /// written before.
     pub fn save_settings(&mut self) -> Result<(), AppError> {
         if !self.settings_dirty {
             return Ok(());
         }
         if let Some(paths) = &self.paths {
-            SettingsStore::new(paths.clone()).save(&self.settings)?;
+            self.writer.send(crate::writer::Job::Settings {
+                store: SettingsStore::new(paths.clone()),
+                settings: Box::new(self.settings.clone()),
+            });
         }
         self.settings_dirty = false;
         Ok(())
@@ -843,7 +919,9 @@ impl App {
         self.finish_writes();
     }
 
-    /// Handles one command. Settings changed by it are saved at once.
+    /// Handles one command. Settings changed by it are saved (on the writer
+    /// thread). The list and prompt models ([`App::list_model`],
+    /// [`App::prompt_model`]) follow the effects returned.
     pub fn dispatch(&mut self, cmd: Command) -> Vec<Effect> {
         let edits_text = matches!(
             cmd,
@@ -851,37 +929,59 @@ impl App {
                 | Command::DeleteBack
                 | Command::DeleteForward
                 | Command::MoveCaret { .. }
+                | Command::ReplaceRange { .. }
                 | Command::Tick
                 | Command::Resize { .. }
         );
-        let effects = self.dispatch_inner(cmd);
-        if self.edit.is_some() && !edits_text {
-            // A navigation or search moved the cursor: the caret follows.
-            self.sync_editor_caret();
+        let item_command = matches!(
+            cmd,
+            Command::DeleteItem(_) | Command::RenameItem(_) | Command::MarkItem(_)
+        );
+        self.entry(|app| {
+            app.close_models_for(&cmd);
+            let effects = app.dispatch_inner(cmd);
+            if item_command {
+                app.close_list_unless_reshown(&effects);
+            }
+            if app.edit.is_some() && !edits_text {
+                // A navigation or search moved the cursor: the caret follows.
+                app.sync_editor_caret();
+            }
+            if app.settings_dirty
+                && let Err(e) = app.save_settings()
+            {
+                app.error(&format!("Could not save settings: {e}"));
+            }
+            app.send_snapshot_ops();
+            effects
+        })
+    }
+
+    /// Runs a public entry point: the list and prompt models adopt the
+    /// effects once, at the outermost call (entry points call each other).
+    pub(crate) fn entry(&mut self, f: impl FnOnce(&mut Self) -> Vec<Effect>) -> Vec<Effect> {
+        self.depth += 1;
+        let effects = f(self);
+        self.depth -= 1;
+        if self.depth == 0 {
+            self.adopt(&effects);
         }
-        if self.settings_dirty
-            && let Err(e) = self.save_settings()
-        {
-            self.error(&format!("Could not save settings: {e}"));
-        }
-        self.send_snapshot_ops();
         effects
     }
 
-    /// Opens `path` (after edit mode was resolved), announcing failures.
+    /// Opens `path` (after edit mode was resolved), announcing failures: a
+    /// large file in the background (crate::opening).
     pub(crate) fn dispatch_open(&mut self, path: &Path) -> Vec<Effect> {
-        match self.open(path) {
-            Ok(e) => e,
-            Err(e) => {
-                let name = path.display();
-                self.error(&format!("Could not open {name}: {e}"));
-                vec![Effect::Redraw]
-            }
-        }
+        self.open_maybe_in_background(path)
     }
 
-    fn dispatch_inner(&mut self, cmd: Command) -> Vec<Effect> {
+    pub(crate) fn dispatch_inner(&mut self, cmd: Command) -> Vec<Effect> {
         match cmd {
+            Command::ListKey(key) => self.list_key(key),
+            Command::ListFocus(n) => self.list_focus(n),
+            Command::PromptKey(key) => self.prompt_key(key),
+            Command::ReplaceRange { range, text } => self.replace_range(range, &text),
+            Command::SetSetting { path, value } => self.set_setting_command(&path, value),
             Command::Open(path) => {
                 self.leave_prompt();
                 self.open_command(path)
@@ -903,7 +1003,7 @@ impl App {
             Command::DeleteItem(n) => self.delete_item(n),
             Command::MarkItem(n) => self.mark_item(n),
             Command::RenameItem(n) => self.rename_item(n),
-            Command::Tick => self.tick(Instant::now()),
+            Command::Tick => self.tick_effects(Instant::now()),
             Command::MathStep(mv) => self.math_step(mv),
             Command::Find(pattern) => {
                 self.leave_prompt();
@@ -941,6 +1041,13 @@ impl App {
                     // Cancelling a question answers no.
                     return self.confirm(crate::command::Confirm::No);
                 }
+                if self.opening.is_some() && !self.mode.is_prompt() && self.list.is_none() {
+                    return self.cancel_opening();
+                }
+                if self.mode.is_prompt() && self.prompt_purpose == PromptPurpose::SettingValue {
+                    self.leave_prompt();
+                    return self.cancel_setting_value();
+                }
                 if self.mode.is_prompt() || self.list.is_some() {
                     let list = self.list.take();
                     self.leave_prompt();
@@ -949,6 +1056,7 @@ impl App {
                     self.replace_query = None;
                     self.pending_item = None;
                     match list {
+                        Some(ListKind::Settings) => self.close_settings_screen(),
                         Some(ListKind::Recovery) => self.postpone_recovery(),
                         Some(ListKind::SaveChoice(_)) => self.tell("Still editing."),
                         Some(ListKind::Authoring(l)) => self.cancel_authoring_list(l),
@@ -970,7 +1078,14 @@ impl App {
     /// every [`POSITION_SAVE_INTERVAL`](Self::POSITION_SAVE_INTERVAL) when
     /// it moved, so a crash loses little. Nothing here waits on the disk.
     pub fn tick(&mut self, now: Instant) -> Vec<Effect> {
+        self.entry(|app| app.tick_effects(now))
+    }
+
+    /// [`tick`](Self::tick)'s work.
+    pub(crate) fn tick_effects(&mut self, now: Instant) -> Vec<Effect> {
         let mut effects = self.poll_writes();
+        effects.extend(self.opening_tick(now));
+        effects.extend(self.spell_count_tick());
         effects.extend(self.restart_tick());
         effects.extend(self.library_tick());
         effects.extend(self.voices_tick());
@@ -1072,6 +1187,7 @@ impl App {
             | PromptPurpose::ReferenceIdentifier
             | PromptPurpose::ImportReferences
             | PromptPurpose::TemplateTitle => return self.answer_authoring(purpose, text),
+            PromptPurpose::SettingValue => return self.answer_setting_value(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
                 if let Some(i) = self.pending_item.take() {
@@ -1114,6 +1230,7 @@ impl App {
                 }
             }
             Some(ListKind::Authoring(l)) => return self.choose_authoring(l, n),
+            Some(ListKind::Settings) => return self.choose_setting(n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -1413,6 +1530,7 @@ impl App {
             A::SyllablesToggle => self.syllables_toggle(),
             A::DifficultWordsToggle => self.difficult_words_toggle(),
             A::CommandPalette => return self.prompt(PromptPurpose::CommandPalette),
+            A::Settings => return self.open_settings_screen(),
             A::KeyboardHelp => return self.keyboard_help(),
             A::Help => return self.help(),
             A::ReadDocument => {

@@ -29,40 +29,54 @@ pub struct DocumentMeta {
     pub properties: BTreeMap<String, String>,
 }
 
-/// Lazily built char to UTF-16 index, for GUI toolkits that address text in
-/// UTF-16 code units (ADR-0002).
+/// Char positions to and from the offsets GUI toolkits use: UTF-16 code
+/// units (Windows and macOS text controls, ADR-0002) and UTF-8 bytes
+/// (Parley and AccessKit).
+///
+/// Since Wave 3 the index is the document's rope itself: ropey keeps UTF-16
+/// and byte counts in its tree, so every lookup is `O(log n)` and building
+/// the index is a rope clone (shared, no copy). The earlier index was a
+/// `Vec<u32>` of every char's UTF-16 offset: 40 MB and a full scan for a
+/// 10-million-character document.
 #[derive(Clone, Debug, Default)]
 pub struct DisplayIndex {
-    /// UTF-16 offset of every char, plus the end offset.
-    utf16: Vec<u32>,
+    text: Rope,
 }
 
 impl DisplayIndex {
-    /// Builds the index for `text`.
+    /// The index for `text` (a rope clone: no copy, no scan).
     pub fn build(text: &Rope) -> Self {
-        let mut utf16 = Vec::with_capacity(text.len_chars() + 1);
-        let mut at: u32 = 0;
-        for c in text.chars() {
-            utf16.push(at);
-            // A char is at most two UTF-16 units.
-            at += c.len_utf16() as u32;
-        }
-        utf16.push(at);
-        DisplayIndex { utf16 }
+        DisplayIndex { text: text.clone() }
     }
 
     /// UTF-16 offset of `pos` (clamped to the end).
     pub fn to_utf16(&self, pos: CharPos) -> u32 {
-        self.utf16[pos.0.min(self.utf16.len() - 1)]
+        let pos = pos.0.min(self.text.len_chars());
+        u32::try_from(self.text.char_to_utf16_cu(pos)).unwrap_or(u32::MAX)
     }
 
-    /// Char position of a UTF-16 offset (rounded down to a char start).
+    /// Char position of a UTF-16 offset: rounded down to a char start (an
+    /// offset inside a surrogate pair maps to its char), clamped to the end.
     pub fn to_char(&self, utf16: u32) -> CharPos {
-        CharPos(
-            self.utf16
-                .partition_point(|&u| u <= utf16)
-                .saturating_sub(1),
-        )
+        let end = self.text.len_utf16_cu();
+        let u = usize::try_from(utf16).map_or(end, |u| u.min(end));
+        CharPos(self.text.utf16_cu_to_char(u))
+    }
+
+    /// UTF-8 byte offset of `pos` (clamped to the end).
+    pub fn to_byte(&self, pos: CharPos) -> usize {
+        self.text.char_to_byte(pos.0.min(self.text.len_chars()))
+    }
+
+    /// Char position of a UTF-8 byte offset: rounded down to a char start,
+    /// clamped to the end.
+    pub fn byte_to_char(&self, byte: usize) -> CharPos {
+        CharPos(self.text.byte_to_char(byte.min(self.text.len_bytes())))
+    }
+
+    /// The text's length in UTF-16 code units.
+    pub fn len_utf16(&self) -> usize {
+        self.text.len_utf16_cu()
     }
 }
 
@@ -357,6 +371,16 @@ mod tests {
         let d = Document::from_plain_text("a😀b");
         assert_eq!(d.display().to_utf16(CharPos(2)), 3);
         assert_eq!(d.display().to_char(3), CharPos(2));
+        // Inside the surrogate pair: the emoji itself.
+        assert_eq!(d.display().to_char(2), CharPos(1));
+        // Past the end: the end.
+        assert_eq!(d.display().to_char(99), CharPos(3));
+        assert_eq!(d.display().to_utf16(CharPos(99)), 4);
+        assert_eq!(d.display().len_utf16(), 4);
+        // UTF-8: the emoji is four bytes.
+        assert_eq!(d.display().to_byte(CharPos(2)), 5);
+        assert_eq!(d.display().byte_to_char(3), CharPos(1));
+        assert_eq!(d.display().byte_to_char(99), CharPos(3));
     }
 
     #[test]

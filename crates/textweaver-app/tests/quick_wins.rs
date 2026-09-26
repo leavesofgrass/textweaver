@@ -518,6 +518,8 @@ fn typing_echo_cycles_and_is_saved() {
         ]
     );
     act(&mut app, ActionId::CycleTypingEcho);
+    // Settings are written by the writer thread (Wave 3).
+    app.wait_for_writes();
     let saved = textweaver_app::store::SettingsStore::new(paths).load().0;
     assert!(saved.editing.echo_characters && !saved.editing.echo_words);
 }

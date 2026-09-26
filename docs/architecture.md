@@ -15,7 +15,7 @@ A third program, `textweaver-gui`, is a feasibility spike for the native GUI on 
 
 Three helper programs run speech engines in their own processes: `textweaver-eci-host` (Eloquence), `textweaver-sapi-host` (SAPI5 voices), and `textweaver-dectalk-host` (DECtalk), each in a 64-bit build and, on Windows, a 32-bit `-x86` build. `cargo xtask hosts` builds them.
 
-Everything a user does goes through one application core, `textweaver-app`. The terminal reader, the GUI spike, and the JSON-RPC server (`tw serve`) are thin frontends over it. They turn keys or messages into commands, and draw or send what the core returns.
+Everything a user does goes through one application core, `textweaver-app`. The terminal reader, the GUI spike, and the JSON-RPC server (`tw serve`) are thin frontends over it. They turn keys or messages into commands, and draw or send what the core returns. Lists and prompts are the core's too (Wave 3): a frontend sends list and prompt keys, and the core moves the focus, filters, completes, and says "item, 3 of 12", the same everywhere.
 
 ## The crates
 
@@ -51,7 +51,7 @@ The crates are grouped here by the part of the system they serve. For each crate
 
 ### Application
 
-- **`textweaver-app`**: the application core. `App` owns all mutable state. Frontends send `Command`s to `App::dispatch` and act on the `Effect`s it returns; `App::poll_speech` applies speech status. It also holds the backend registry wiring, reading aids, themes, notes, the library list, the writer thread (`writer`, `writes`), finding marks again after outside edits (`relocate`), the structure of Markdown source while editing (`structure`), the authoring features (outline, spelling, citations, export, preview, templates), and the JSON-RPC server (`rpc`). ADRs: [0003](adr/0003-speech-threading-and-event-timing.md), [0006](adr/0006-keymap-and-actions.md), [0015](adr/0015-json-rpc.md). Depends on core, text, formats, speech, store, keymap, a11y, editor, aids, theme, eci, sapi, apple, dectalk, and, for export and citations in the reader, render, convert, and cite.
+- **`textweaver-app`**: the application core. `App` owns all mutable state. Frontends send `Command`s to `App::dispatch` and act on the `Effect`s it returns; `App::poll_speech` applies speech status. It also holds the backend registry wiring, reading aids, themes, notes, the library list, the writer thread (`writer`, `writes`), finding marks again after outside edits (`relocate`), the structure of Markdown source while editing (`structure`), the authoring features (outline, spelling, citations, export, preview, templates), and the JSON-RPC server (`rpc`). Since Wave 3 it also holds what a GUI needs: the document window (`window`), the list and prompt state every frontend shares (`list_model`), the waker (`wake`), the settings schema and settings screen (`settings_schema`), opening in the background (`opening`), and `Command::ReplaceRange` for native text controls. ADRs: [0003](adr/0003-speech-threading-and-event-timing.md), [0006](adr/0006-keymap-and-actions.md), [0015](adr/0015-json-rpc.md), [0024](adr/0024-app-core-for-the-gui.md). Depends on core, text, formats, speech, store, keymap, a11y, editor, aids, theme, eci, sapi, apple, dectalk, and, for export and citations in the reader, render, convert, and cite.
 
 ### Frontends
 
@@ -114,9 +114,11 @@ In the terminal reader, the main thread runs the event loop in `crates/textweave
 3. draws the screen, and parks the terminal's hardware cursor where attention is (the prompt, the list item, the Speech Cursor line, the spoken word, or the caret), so screen readers and magnifiers follow it;
 4. waits briefly for a key, then turns the key into a `Command` through the keymap and dispatches it.
 
-Nothing on this thread blocks on audio or on the disk. A key press is handled in milliseconds even while a long document is being read or saved. Other slow work goes to short-lived background threads too: exporting from the reader, looking up a DOI or ISBN, and parsing the Markdown source of a file of 256 KB or more when edit mode opens it.
+Nothing on this thread blocks on audio or on the disk. A key press is handled in milliseconds even while a long document is being read or saved. Other slow work goes to short-lived background threads too: exporting from the reader, looking up a DOI or ISBN, parsing the Markdown source of a file of 256 KB or more when edit mode opens it, and, since Wave 3, opening a file of 512 KB or more (with progress, and Escape to stop waiting), counting misspellings after a save, and starting the speech engine the first time.
 
-`tw serve --stdio` runs the same core on its calling thread and reads JSON-RPC messages on a second thread, polling speech every 20 milliseconds while it waits ([ADR-0015](adr/0015-json-rpc.md)).
+A frontend does not have to poll for this work. `App::set_waker` takes a callback that the speech thread, the writer thread, and every background job call when they have something to apply; the frontend then calls `App::poll_speech` and `App::tick` on its own thread. A GUI posts an event to its event loop from the callback. `App::tick_interval` says how long it may sleep when nothing calls it ([ADR-0024](adr/0024-app-core-for-the-gui.md)). The terminal reader still waits on the keyboard with a short timeout.
+
+`tw serve --stdio` runs the same core on its calling thread and reads JSON-RPC messages on a second thread ([ADR-0015](adr/0015-json-rpc.md)). The app's waker wakes it as each word is heard; otherwise it looks for work every 250 milliseconds at most.
 
 ### The speech thread
 
@@ -138,7 +140,7 @@ A host that crashes or stalls is killed and started again, and reading resumes f
 
 ### The writer thread
 
-Every file the app writes while it runs goes through one writer thread (`crates/textweaver-app/src/writer.rs`): saves, autosave snapshots and their deletion, reading positions, bookmarks, notes, and highlights, the library sidecars, the bookshelf and recent list, and the two-second check for a change on disk. The interface thread hands it a copy of the text (a rope clone, which costs nothing) and reads the result on its next tick: "Saved", an error, or a question about a file that changed on disk. Saves of the same document's state that queue up are collapsed into the newest. Quitting waits for the writer, at most ten seconds, saying so when it takes more than a moment.
+Every file the app writes while it runs goes through one writer thread (`crates/textweaver-app/src/writer.rs`): saves, autosave snapshots and their deletion, reading positions, bookmarks, notes, and highlights, the library sidecars, the bookshelf and recent list, `settings.toml` (since Wave 3), and the two-second check for a change on disk. The interface thread hands it a copy of the text (a rope clone, which costs nothing) and reads the result on its next tick: "Saved", an error, or a question about a file that changed on disk. Saves of the same document's state that queue up are collapsed into the newest. Quitting waits for the writer, at most ten seconds, saying so when it takes more than a moment.
 
 ### Other workers
 
@@ -213,9 +215,13 @@ Before anything is spoken or written to the status line, the app asks `textweave
 
 The GUI spike sends announcements to the screen reader as UI Automation notifications through the `live-region` crate.
 
+## The GUI's view of a document
+
+A GUI does not lay out a whole document. It shows a `DocWindow` (`crates/textweaver-app/src/window.rs`): about 500,000 UTF-16 units around the focus, starting and ending on paragraph boundaries. The window slides forward while reading, saying what left its front and what joined its end, and recentres after a jump. Positions in the window are converted to and from the text control's own units (UTF-16 for Windows and macOS controls, UTF-8 bytes for Parley and AccessKit, chars for GTK) through the document's `DisplayIndex`, which is the rope itself and answers in `O(log n)`. `Session::revision` changes whenever the text changes, so the GUI knows to reload. Edits made in a native text control come back as `Command::ReplaceRange`. The terminal reader keeps its own slicing: a screenful of wrapped rows from the viewport's top line ([ADR-0024](adr/0024-app-core-for-the-gui.md)).
+
 ## Persistence
 
-`textweaver-store` keeps settings in `settings.toml` and key overrides in `keymap.toml`, written only when they change, atomically, keeping keys it does not know. Each document's position, history, bookmarks, notes, and highlights are in a state file named after the document; positions are saved every 30 seconds while they move, on quit, and on switching documents, by the writer thread. The state file also keeps the text's length and hash and, with each position and bookmark, the 40 characters it was on: when the file changed outside textweaver, positions, bookmarks, notes, and highlights are found again from their text on the next open (`crates/textweaver-app/src/relocate.rs`). Library folders can hold a sidecar, `.textweaver/progress.json`, so positions follow a folder between computers. [Settings](settings.md) and [the library](library.md) describe the files and folders.
+`textweaver-store` keeps settings in `settings.toml` and key overrides in `keymap.toml`, written only when they change, atomically, keeping keys it does not know. The app's settings schema (`crates/textweaver-app/src/settings_schema.rs`) is generated from the store's own keys, with a label, help, and range or choices for each; it drives the settings screen, the GUI's settings dialog, and JSON-RPC. Each document's position, history, bookmarks, notes, and highlights are in a state file named after the document; positions are saved every 30 seconds while they move, on quit, and on switching documents, by the writer thread. The state file also keeps the text's length and hash and, with each position and bookmark, the 40 characters it was on: when the file changed outside textweaver, positions, bookmarks, notes, and highlights are found again from their text on the next open (`crates/textweaver-app/src/relocate.rs`). Library folders can hold a sidecar, `.textweaver/progress.json`, so positions follow a folder between computers. [Settings](settings.md) and [the library](library.md) describe the files and folders.
 
 ## See also
 

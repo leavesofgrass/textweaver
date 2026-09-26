@@ -137,11 +137,13 @@ impl App {
         let found = Arc::new(AtomicUsize::new(0));
         let counter = Arc::clone(&found);
         let (tx, rx) = mpsc::channel();
+        let wake = self.waker_slot();
         let spawned = std::thread::Builder::new()
             .name("textweaver-library-scan".into())
             .spawn(move || {
                 let items = inputs.items(&|n| counter.store(n, Ordering::Relaxed));
                 let _ = tx.send(items);
+                wake.wake();
             });
         if let Err(e) = spawned {
             self.error(&format!("Could not scan the library: {e}."));

@@ -96,6 +96,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0021: DECtalk through a host process](adr/0021-dectalk.md): DECtalk with word timing, and its licensing.
 - [ADR-0022: Reading aids](adr/0022-reading-aids.md): RSVP, bionic reading, spacing, fonts, the ruler, and more, as pure data.
 - [ADR-0023: Xilem GUI](adr/0023-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, and the accessibility checks.
+- [ADR-0024: App core for the GUI](adr/0024-app-core-for-the-gui.md): the document window, shared list and prompt state, the waker, the replace-range edit, the settings schema, and work moved off the input thread.
 
 ## Interactive pages
 
