@@ -14,6 +14,7 @@
 //! | [`HtmlLoader`] | `html`, `htm`, `xhtml`, `xht` | [`NATIVE_PRIORITY`] (10) |
 //! | [`EpubLoader`] | `epub` | [`NATIVE_PRIORITY`] (10) |
 //! | [`DocxLoader`] | `docx`, `docm` | [`NATIVE_PRIORITY`] (10) |
+//! | `PdfLoader` (feature `pdf`, on by default; ADR-0010) | `pdf` | [`NATIVE_PRIORITY`] (10) |
 //! | [`TextLoader`] | `txt`, `text`, `log` (and the fallback for everything else) | 0 |
 //!
 //! Every built-in loader is native Rust. Optional loaders rank below them,

@@ -215,6 +215,69 @@ fn browser_printed_two_columns() {
     round_trip(&doc);
 }
 
+/// A minimal PDF with one page and the given content stream.
+fn one_page_pdf(content: &str) -> Vec<u8> {
+    let objs = [
+        "<< /Type /Catalog /Pages 2 0 R >>".to_owned(),
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_owned(),
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>".to_owned(),
+        format!("<< /Length {} >>\nstream\n{content}\nendstream", content.len() + 1),
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>".to_owned(),
+    ];
+    let mut out = b"%PDF-1.4\n".to_vec();
+    let mut offsets = Vec::new();
+    for (i, o) in objs.iter().enumerate() {
+        offsets.push(out.len());
+        out.extend(format!("{} 0 obj\n{o}\nendobj\n", i + 1).bytes());
+    }
+    let xref = out.len();
+    out.extend(format!("xref\n0 {}\n0000000000 65535 f \n", objs.len() + 1).bytes());
+    for off in offsets {
+        out.extend(format!("{off:010} 00000 n \n").bytes());
+    }
+    out.extend(
+        format!(
+            "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n",
+            objs.len() + 1
+        )
+        .bytes(),
+    );
+    out
+}
+
+#[test]
+fn scans_and_odd_streams_load_gracefully() {
+    let load = |content: &str| {
+        textweaver_formats::PdfLoader
+            .load(
+                &Source::Bytes {
+                    data: one_page_pdf(content),
+                    hint: "pdf".into(),
+                },
+                &LoadOptions::default(),
+            )
+            .unwrap()
+    };
+    // No text layer: one sentence saying so.
+    let scan = load("q 100 0 0 100 0 0 cm Q");
+    assert_eq!(
+        scan.text().to_string(),
+        textweaver_formats::pdf::NO_TEXT_LAYER
+    );
+    // Odd operands, unknown fonts and operators, unbalanced Q: no panic.
+    let odd = load("Q Q BT /Nope 12 Tf 10 10 Td (Hello) Tj [(wor) -250 (ld)] TJ 5 Tj ET EMC xyz");
+    assert!(
+        odd.text().to_string().starts_with("Hello"),
+        "{:?}",
+        odd.text().to_string()
+    );
+    // Text in an Artifact is not read; ActualText replaces what it covers.
+    let tagged = load(
+        "/Artifact BMC BT /F1 10 Tf 10 190 Td (Header) Tj ET EMC /Span << /ActualText (fifty) >> BDC BT /F1 10 Tf 10 100 Td (50) Tj ET EMC",
+    );
+    assert_eq!(tagged.text().to_string(), "fifty");
+}
+
 #[test]
 fn broken_and_protected_pdfs_fail_clearly() {
     let err = Registry::with_builtins()
