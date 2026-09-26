@@ -27,7 +27,7 @@ impl App {
     }
 
     /// Says so when the configured theme does not exist (Galaxy is used).
-    fn check_theme_name(&mut self) {
+    pub(crate) fn check_theme_name(&mut self) {
         let name = self.settings.display.theme.clone();
         let (theme, fell_back) = self.themes.resolve(&name);
         if fell_back {

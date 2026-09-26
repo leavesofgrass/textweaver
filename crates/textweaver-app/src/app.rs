@@ -259,6 +259,8 @@ pub struct App {
     pub(crate) pending_item: Option<usize>,
     /// An action waiting for a yes or no ([`ActionId::needs_confirmation`]).
     pub(crate) pending_confirm: Option<ActionId>,
+    /// A checked settings import and its file name, waiting for a yes or no.
+    pub(crate) pending_import: Option<(textweaver_store::ImportPlan, String)>,
     pub(crate) recovery: Vec<(PathBuf, RecoverySnapshot)>,
     pub(crate) untitled: u32,
     pub(crate) last_position_save: Option<(Instant, CharPos)>,
@@ -309,6 +311,7 @@ impl App {
             replace_query: None,
             pending_item: None,
             pending_confirm: None,
+            pending_import: None,
             recovery: Vec::new(),
             untitled: 0,
             last_position_save: None,
@@ -338,9 +341,20 @@ impl App {
         self.pending_confirm
     }
 
+    /// True while a yes-or-no question is open: an action's
+    /// ([`pending_confirmation`](Self::pending_confirmation)) or a settings
+    /// import's. The frontend then sends every key press as a
+    /// [`Command::Confirm`].
+    pub fn confirmation_pending(&self) -> bool {
+        self.pending_confirm.is_some() || self.pending_import.is_some()
+    }
+
     /// Answers a pending confirmation.
     fn confirm(&mut self, answer: crate::command::Confirm) -> Vec<Effect> {
         use crate::command::Confirm;
+        if self.pending_import.is_some() {
+            return self.confirm_import(answer);
+        }
         let Some(a) = self.pending_confirm else {
             return vec![Effect::Redraw];
         };
@@ -741,7 +755,7 @@ impl App {
                 vec![Effect::Redraw]
             }
             Command::Cancel => {
-                if self.pending_confirm.is_some() {
+                if self.confirmation_pending() {
                     // Cancelling a question answers no.
                     return self.confirm(crate::command::Confirm::No);
                 }
@@ -856,6 +870,8 @@ impl App {
             PromptPurpose::SaveAs => return self.answer_save_as(text),
             PromptPurpose::TableSize => return self.answer_table(text),
             PromptPurpose::ImagePath => return self.answer_image(text),
+            PromptPurpose::ExportSettings => return self.answer_export_settings(text),
+            PromptPurpose::ImportSettings => return self.answer_import_settings(text),
             PromptPurpose::ReplaceFind => return self.answer_replace(text, false),
             PromptPurpose::ReplaceWith => return self.answer_replace(text, true),
             PromptPurpose::NoteText => self.add_note(text),

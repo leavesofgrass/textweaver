@@ -233,7 +233,7 @@ impl Tui {
 
     /// Handles one key press.
     pub fn handle_key(&mut self, k: KeyEvent) {
-        if self.app.pending_confirmation().is_some() {
+        if self.app.confirmation_pending() {
             let answer = match k.code {
                 KeyCode::Esc => Confirm::No,
                 KeyCode::Char(c)

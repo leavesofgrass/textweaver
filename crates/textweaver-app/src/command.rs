@@ -229,6 +229,10 @@ pub enum PromptPurpose {
     EditNote,
     /// Answer is the new name of a bookmark; empty keeps it.
     RenameBookmark,
+    /// Answer is the file to export settings to (`.toml` for TOML).
+    ExportSettings,
+    /// Answer is the settings file to import (JSON or TOML).
+    ImportSettings,
 }
 
 impl PromptPurpose {
@@ -247,6 +251,10 @@ impl PromptPurpose {
             PromptPurpose::NoteText => "Note",
             PromptPurpose::EditNote => "Edit note, Enter keeps it",
             PromptPurpose::RenameBookmark => "New bookmark name, Enter keeps it",
+            PromptPurpose::ExportSettings => {
+                "Export settings to file, for example textweaver-settings.json"
+            }
+            PromptPurpose::ImportSettings => "Import settings from file",
         }
     }
 }

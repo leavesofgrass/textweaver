@@ -127,6 +127,9 @@ impl App {
         if let Some(c) = crate::command::NoteCommand::from_name(text) {
             return self.notes_command(c);
         }
+        if let Some(effects) = self.settings_file_command(text) {
+            return effects;
+        }
         match resolve_command(text) {
             Some(ActionId::CommandPalette) => vec![Effect::Redraw],
             Some(a) => self.action(a),

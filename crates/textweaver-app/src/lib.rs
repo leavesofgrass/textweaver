@@ -115,6 +115,7 @@ mod notes;
 mod playback;
 mod reading_aids;
 pub mod rpc;
+pub mod settings_io;
 mod speech_cursor;
 pub mod testing;
 pub mod text_util;
