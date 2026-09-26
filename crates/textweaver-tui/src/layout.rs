@@ -350,11 +350,12 @@ mod tests {
         };
         let rows = window_decor(&doc, 0, 40, 1, Cells::tab(4), Some(&decor), None, 0);
         assert_eq!(rows[0].range, CharRange::new(0, 16));
-        // "read·a·bil|ity": the cursor on "i" (8) is after three separators.
+        // "read·a·bil·ity": the cursor on "i" (8) is after 8 chars and
+        // three separators.
         let b = breaks(rows[0].range);
         assert_eq!(
             column_decor(&doc, &rows[0], CharPos(8), Cells::tab(4), &b, 1),
-            10
+            11
         );
         assert_eq!(
             column_decor(&doc, &rows[0], CharPos(3), Cells::tab(4), &b, 1),
