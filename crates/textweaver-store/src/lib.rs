@@ -1,12 +1,17 @@
 //! Persistence for textweaver.
 //!
 //! - [`Settings`] in `settings.toml` and keymap overrides in `keymap.toml`,
-//!   written only on explicit change, atomically, preserving unknown keys
-//!   (Star rewrote `settings.json` on every set and dropped unknown keys).
-//! - Per-document [`DocState`] in `state/<doc-key>.json`.
+//!   written only on explicit change, atomically, preserving unknown keys,
+//!   storing only non-default values (Star rewrote `settings.json` on every
+//!   set, wrote every default, and dropped unknown keys).
+//! - Per-document [`DocState`] in `state/<doc-key>.json`, with position
+//!   saves coalesced by [`StateStore`] and flushed on demand and on drop.
 //! - [`Recent`] files.
-//! - Wave 1: sidecar merge (`.textweaver/progress.json`, ported from
-//!   `star/sync.py`) in [`sync`].
+//! - Folder sidecars (`<folder>/.textweaver/progress.json`) and their merge
+//!   rules, ported from `star/sync.py`, in [`sync`].
+//!
+//! Timestamps are UTC: Unix seconds in textweaver's own files, RFC 3339
+//! strings in the sidecar ([`time`]).
 //!
 //! This crate depends only on `textweaver-core`; keymap overrides are stored
 //! as plain strings and interpreted by `textweaver-keymap`.
@@ -19,16 +24,18 @@ mod paths;
 mod recent;
 mod settings;
 pub mod sync;
+pub mod time;
 
 pub use atomic::atomic_write;
-pub use doc_state::{Bookmark, DocKey, DocState, StateStore};
+pub use doc_state::{Bookmark, DEFAULT_DEBOUNCE, DocKey, DocState, StateStore, percent};
 pub use paths::Paths;
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
     DisplaySettings, EditingSettings, FootnoteMode, HighlightSettings, KeymapOverrides,
-    LibrarySettings, NormalizationSettings, ReadingSettings, Settings, SettingsStore,
+    LibrarySettings, NormalizationSettings, ReadingSettings, Settings, SettingsLoad, SettingsStore,
     SpeechSettings, TableMode,
 };
+pub use sync::{ConflictPolicy, SidecarStore};
 
 /// Persistence failures.
 #[derive(Debug, thiserror::Error)]
