@@ -1,0 +1,122 @@
+# The Xilem GUI (textweaver-xilem, ADR-0023) on Windows, macOS, and Linux:
+# build, clippy, tests, and the accessibility checks, which never take the
+# foreground and play no audio:
+# - Windows: the UI Automation report (tools/uia-report.ps1);
+# - Linux: the AT-SPI check under Xvfb (tools/atspi-check.sh);
+# - macOS: a smoke run that reads with the silent paced backend and exits.
+# Review screenshots at 100% and 200% are uploaded from Linux.
+# Kept apart from ci.yml because Vello and wgpu add minutes to a cold build.
+
+name: GUI (Xilem)
+
+on:
+  push:
+    branches: [main, 'wave3/b-*']
+    paths:
+      - 'crates/**'
+      - 'third_party/xilem/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/gui-xilem.yml'
+  pull_request:
+    paths:
+      - 'crates/**'
+      - 'third_party/xilem/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/gui-xilem.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: gui-xilem
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo build --locked -p textweaver-xilem
+      - run: cargo clippy --locked -p textweaver-xilem --all-targets -- -D warnings
+      - run: cargo test --locked -p textweaver-xilem
+      - name: UI Automation report
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File crates/textweaver-xilem/tools/uia-report.ps1 -Out uia-xilem.md
+          Get-Content uia-xilem.md | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: uia-xilem-report
+          path: uia-xilem.md
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: gui-xilem
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo build --locked -p textweaver-xilem
+      - run: cargo clippy --locked -p textweaver-xilem --all-targets -- -D warnings
+      - run: cargo test --locked -p textweaver-xilem
+      - name: Smoke run (reads with the paced backend, then exits)
+        run: |
+          home=$(mktemp -d)
+          status=0
+          ./target/debug/textweaver-xilem fixtures/sample.md --backend paced --read --background \
+            --exit-after 6 --home "$home" --log-file gui.log || status=$?
+          cat gui.log
+          test "$status" -eq 0
+          grep -q "Reading at" gui.log
+          grep -q "closed" gui.log
+
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: gui-xilem
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Libraries (X11, the AT-SPI bus, Mesa's software Vulkan)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            libasound2-dev libespeak-ng-dev libspeechd-dev \
+            xvfb xauth dbus dbus-x11 at-spi2-core python3-pyatspi python3-gi gir1.2-atspi-2.0 \
+            mesa-vulkan-drivers libvulkan1 libgl1-mesa-dri libegl1 \
+            libxkbcommon-x11-0 libxcursor1 libxrandr2 libxi6 libx11-xcb1
+      - run: cargo build --locked -p textweaver-xilem
+      - run: cargo clippy --locked -p textweaver-xilem --all-targets -- -D warnings
+      - run: cargo test --locked -p textweaver-xilem
+      - name: AT-SPI check
+        run: bash crates/textweaver-xilem/tools/atspi-check.sh | tee atspi-xilem.md
+      - name: Review screenshots (100% and 200%)
+        run: ./target/debug/textweaver-xilem --review-screenshots screenshots fixtures/sample.md
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: gui-xilem-linux
+          path: |
+            atspi-xilem.md
+            screenshots/*.png

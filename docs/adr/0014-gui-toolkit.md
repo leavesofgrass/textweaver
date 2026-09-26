@@ -3,6 +3,7 @@
 - Status: proposed (Wave 2 feasibility spike; decided at Integration 2)
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): The spike is merged on `main` and stays out of `default-members` and CI's workspace commands. Agent W added the View, Fonts dialog. Of the contract requests, `Command::SetCursor` now exists in the app. The keymap still binds the caret keys in the Browse layer for both frontends; the GUI passes them to the native control itself (`crates/textweaver-gui/src/keys.rs`). Self-voicing is off by default in the GUI and on with `--self-voicing`. The Wave 3 plan in this ADR has not started.
+- Status: superseded by [ADR-0023](0023-xilem-gui.md) (Saturday, September 26, 2026). The spike stays as the fallback until the Xilem GUI passes the same checks and Jon's NVDA and JAWS session.
 - Status update (Saturday, September 26, 2026): Jon chose Xilem, Linebender's all-Rust toolkit (Xilem and Masonry, Vello, Parley, AccessKit, and winit), for the GUI on every platform. Agent W3b's ADR-0023 is to supersede this record. The wxDragon spike stays as a fallback until the Xilem GUI passes the same accessibility checks. Phase 1 addressed the macOS GUI hang in CI: wx's private-font registration opened a modal error box, so macOS skips it, and `--exit-after` has a watchdog (Agent P1c).
 
 ## Context

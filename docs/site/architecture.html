@@ -460,6 +460,36 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "adr_note": null,
    "adrs": [
     {
+     "href": "../adr/0023-xilem-gui.md",
+     "number": "0023",
+     "title": "ADR-0023: Xilem GUI"
+    }
+   ],
+   "bins": [
+    "textweaver-xilem"
+   ],
+   "build_deps": [],
+   "default_member": false,
+   "dependents": [],
+   "deps": [
+    "textweaver-app",
+    "textweaver-fonts",
+    "textweaver-theme"
+   ],
+   "description": "textweaver's all-Rust GUI on Masonry (Xilem's widget layer), Vello, Parley, AccessKit, and winit (ADR-0023)",
+   "dev_deps": [],
+   "job": "The all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit, with its own screen-reader document view; not built by default yet.",
+   "layer": "frontends",
+   "name": "textweaver-xilem",
+   "path": "crates/textweaver-xilem",
+   "short": "xilem",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
      "href": "../adr/0003-speech-threading-and-event-timing.md",
      "number": "0003",
      "title": "ADR-0003: Speech threading and event timing"
@@ -482,6 +512,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-cli",
     "textweaver-gui",
     "textweaver-tui",
+    "textweaver-xilem",
     "xtask"
    ],
    "deps": [
@@ -637,7 +668,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "dependents": [
     "textweaver-aids",
     "textweaver-gui",
-    "textweaver-writers"
+    "textweaver-writers",
+    "textweaver-xilem"
    ],
    "deps": [],
    "description": "Fonts for textweaver: bundled Atkinson Hyperlegible Next and Mono and OpenDyslexic (SIL OFL 1.1), and installed fonts found by family name",
@@ -664,7 +696,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "default_member": true,
    "dependents": [
     "textweaver-app",
-    "textweaver-tui"
+    "textweaver-tui",
+    "textweaver-xilem"
    ],
    "deps": [],
    "description": "Themes for textweaver: Star's palettes, custom themes, WCAG contrast checks, output for the TUI, GUI, and HTML",
@@ -1326,7 +1359,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "crates": [
     "textweaver-tui",
     "textweaver-cli",
-    "textweaver-gui"
+    "textweaver-gui",
+    "textweaver-xilem"
    ],
    "id": "frontends",
    "name": "Frontends"

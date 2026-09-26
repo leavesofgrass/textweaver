@@ -143,6 +143,8 @@ struct Shown {
 enum OpenDialog {
     Prompt,
     List,
+    /// The command palette: the actions its list shows, in order.
+    Palette(Vec<ActionId>),
 }
 
 /// The widget tree's toolbar buttons and what they do.
@@ -572,6 +574,10 @@ impl Gui {
                     self.close(ctx);
                     return;
                 }
+                Effect::Prompt {
+                    label,
+                    purpose: PromptPurpose::CommandPalette,
+                } => self.open_palette(ctx, &label),
                 Effect::Prompt { label, purpose } => self.open_prompt(ctx, &label, purpose),
                 Effect::ShowList { title, items } => self.open_list(ctx, &title, items),
             }
@@ -624,6 +630,68 @@ impl Gui {
         }
     }
 
+    /// The command palette, the GUI's menu: a filter field over the list of
+    /// every command with its keys. Typing filters (and says how many
+    /// match); Tab reaches the list; Enter runs the selected command.
+    fn open_palette(&mut self, ctx: &mut DriverCtx<'_>, label_text: &str) {
+        let p = &self.palette;
+        let (ids, items): (Vec<ActionId>, Vec<String>) =
+            self.app.palette_candidates("").into_iter().unzip();
+        let count = items.len();
+        let field = NewWidget::new(
+            TextArea::new_editable("")
+                .with_accessible_label(label_text.to_owned())
+                .with_style(StyleProperty::FontSize(theme::UI_TEXT + 2.0)),
+        )
+        .with_tag(PROMPT_FIELD);
+        let field_id = field.id();
+        let input = NewWidget::new(
+            TextInput::from_text_area(field).with_placeholder("Type to filter the commands"),
+        );
+        let list = NewWidget::new(ChoiceList::new("Commands", items, p.clone())).with_tag(LIST);
+        let card = Flex::column()
+            .cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .with_fixed(NewWidget::new(
+                label(label_text, 18.0, true).accessibility_hidden(true),
+            ))
+            .with_fixed(input)
+            .with_fixed(list)
+            .with_fixed(NewWidget::new(
+                label(
+                    "Enter runs the first match; Tab moves to the list.",
+                    theme::UI_TEXT,
+                    false,
+                )
+                .accessibility_hidden(true),
+            ));
+        let card = NewWidget::new(card).with_props(dialog::card_props(p));
+        let modal = NewWidget::new(Modal::new(card, label_text, p.clone())).erased();
+        let root = ctx.render_root(self.window_id);
+        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+        root.focus_on(Some(field_id));
+        self.dialog = Some(OpenDialog::Palette(ids));
+        if self.log {
+            crate::log::line(&format!("dialog: command palette with {count} commands"));
+        }
+    }
+
+    /// The palette's filter changed: show the matches and say how many.
+    fn filter_palette(&mut self, ctx: &mut DriverCtx<'_>, query: &str) {
+        let (ids, items): (Vec<ActionId>, Vec<String>) =
+            self.app.palette_candidates(query).into_iter().unzip();
+        let n = items.len();
+        ctx.render_root(self.window_id)
+            .edit_widget_with_tag(LIST, |mut l| ChoiceList::set_items(&mut l, items));
+        self.dialog = Some(OpenDialog::Palette(ids));
+        let said = match n {
+            0 => "No commands match.".to_owned(),
+            1 => "1 command.".to_owned(),
+            n => format!("{n} commands."),
+        };
+        self.app.announce(&said, Priority::Polite);
+        self.refresh(ctx);
+    }
+
     fn close_dialog(&mut self, ctx: &mut DriverCtx<'_>) {
         self.dialog = None;
         let root = ctx.render_root(self.window_id);
@@ -633,6 +701,11 @@ impl Gui {
     }
 
     fn answer(&mut self, ctx: &mut DriverCtx<'_>, cmd: Command) {
+        // One answer per dialog: Escape reaches both the field and the
+        // dialog, and only the first counts.
+        if self.dialog.is_none() {
+            return;
+        }
         self.close_dialog(ctx);
         self.dispatch(ctx, cmd);
     }
@@ -741,19 +814,34 @@ impl AppDriver for Gui {
                 self.dispatch(ctx, Command::Action(a));
             }
         } else if let Some(d) = action.downcast_ref::<DialogAction>() {
-            let cmd = match d {
-                DialogAction::Choose(i) => Command::Choose(*i),
-                DialogAction::Cancel => Command::Cancel,
+            let cmd = match (d, &self.dialog) {
+                (DialogAction::Choose(i), Some(OpenDialog::Palette(ids))) => match ids.get(*i) {
+                    Some(a) => Command::Answer(a.id().to_owned()),
+                    None => Command::Cancel,
+                },
+                (DialogAction::Choose(i), _) => Command::Choose(*i),
+                (DialogAction::Cancel, _) => Command::Cancel,
             };
             self.answer(ctx, cmd);
         } else if let Some(t) = action.downcast_ref::<masonry::widgets::TextAction>() {
             match t {
                 masonry::widgets::TextAction::Entered(text) => {
-                    let text = text.clone();
-                    self.answer(ctx, Command::Answer(text));
+                    // In the palette, Enter runs the first match.
+                    let answer = match &self.dialog {
+                        Some(OpenDialog::Palette(ids)) => ids
+                            .first()
+                            .map_or_else(|| text.clone(), |a| a.id().to_owned()),
+                        _ => text.clone(),
+                    };
+                    self.answer(ctx, Command::Answer(answer));
                 }
                 masonry::widgets::TextAction::Cancelled => self.answer(ctx, Command::Cancel),
-                masonry::widgets::TextAction::Changed(_) => {}
+                masonry::widgets::TextAction::Changed(q) => {
+                    if matches!(self.dialog, Some(OpenDialog::Palette(_))) {
+                        let q = q.clone();
+                        self.filter_palette(ctx, &q);
+                    }
+                }
             }
         }
     }

@@ -95,6 +95,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0020: Themes](adr/0020-themes.md): Star's palettes, contrast rules, and output for every frontend.
 - [ADR-0021: DECtalk through a host process](adr/0021-dectalk.md): DECtalk with word timing, and its licensing.
 - [ADR-0022: Reading aids](adr/0022-reading-aids.md): RSVP, bionic reading, spacing, fonts, the ruler, and more, as pure data.
+- [ADR-0023: Xilem GUI](adr/0023-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, and the accessibility checks.
 
 ## Interactive pages
 

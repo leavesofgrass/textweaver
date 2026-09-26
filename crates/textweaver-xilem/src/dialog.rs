@@ -220,6 +220,17 @@ impl ChoiceList {
         self.selected
     }
 
+    /// Replaces the items (a filtered list), selecting the first.
+    pub fn set_items(this: &mut WidgetMut<'_, Self>, items: Vec<String>) {
+        let w = &mut *this.widget;
+        w.layouts = (0..items.len()).map(|_| None).collect();
+        w.items = items;
+        w.selected = 0;
+        w.top = 0;
+        this.ctx.request_layout();
+        this.ctx.request_render();
+    }
+
     /// Moves the selection (for the driver and tests).
     pub fn select(this: &mut WidgetMut<'_, Self>, i: usize) {
         this.widget.set_selected(i);
