@@ -363,7 +363,7 @@ You can dictate into textweaver with speech recognition software that types for 
 
 To stop that, turn single-key shortcuts off. Press **F9**, in the window or in the terminal version. You hear "Single-key shortcuts off." Press **F9** again to turn them back on, and you hear "Single-key shortcuts on." You can also run `toggle character keys` from the command palette (**F2**), or put the setting above in `settings.toml`. textweaver remembers the choice.
 
-While single-key shortcuts are off, letters, punctuation, and Space never trigger commands in any mode. Shortcuts with Ctrl or Alt, the arrow keys, the function keys, and the command palette still work. Quitting always asks first, so a stray `q` cannot close your document.
+While single-key shortcuts are off, letters, punctuation, and Space never trigger commands in any mode. Shortcuts with Ctrl or Alt, the arrow keys, the function keys, and the command palette still work. Quitting always asks first, so a stray keystroke cannot close your document.
 
 To write text by dictation, switch to edit mode first; see [the editing guide](editing.md).
 

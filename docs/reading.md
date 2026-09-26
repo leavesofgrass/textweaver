@@ -57,7 +57,7 @@ tw convert essay.odt --to md
 
 The [converting guide](converting.md) explains `tw convert`.
 
-A PDF must have a text layer. A scanned PDF is a picture of the pages, and textweaver has no text recognition (OCR). Such a PDF reads as one sentence: "This PDF has no text layer. It is probably a scanned image, so its text must be recognized (OCR) before it can be read aloud."
+A PDF must have a text layer. A scanned PDF is a picture of the pages, and textweaver has no text recognition (OCR) yet; it is planned for Wave 3. Such a PDF reads as one sentence: "This PDF has no text layer. It is probably a scanned image, so its text must be recognized (OCR) before it can be read aloud."
 
 ## What the screen shows
 
@@ -360,6 +360,8 @@ auto_resume = false
 
 If the document is in a library folder that another computer also uses, the place may come from that computer. The [library guide](library.md) explains how.
 
+If the file changed outside textweaver, in Obsidian, git, or another editor, your place, bookmarks, notes, and highlights are found again from the text they were on, and textweaver says once what moved and what it could not find. See [How marks move when you edit](notes.md#how-marks-move-when-you-edit).
+
 `tw marks` shows the saved place of a document without opening it:
 
 ```bash
@@ -377,7 +379,7 @@ These settings are in the `[highlight]` section of `settings.toml`:
 - `lead_words` (default `1`): where the highlight sits, from -5 to 5. At 1 it is on the word you hear. At 2 it runs one word ahead; at 0, one word behind. It moves only the drawn highlight, never your saved place.
 - `speed` (default `1.0`): from 0.5 to 1.5. It speeds up or slows down the highlight for engines that do not report words, where textweaver estimates the timing.
 
-`color` and `sentence_color` are stored but the terminal reader does not use them yet; the [colour theme](themes.md) decides the highlight's look.
+- `color` and `sentence_color`: the colours of the word and sentence highlight, such as `"#ff8800"` or `"yellow"`. The terminal reader draws them over the [colour theme](themes.md) and warns when one does not stand out from the text.
 
 If the highlight runs ahead of or behind the voice with an engine that does report words, change `[speech] latency_offset_ms`. The [speech guide](speech.md) explains it.
 

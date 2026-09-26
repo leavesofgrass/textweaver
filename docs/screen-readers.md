@@ -210,7 +210,7 @@ textweaver draws no braille of its own. A braille display shows what your screen
 
 ## The GUI preview
 
-textweaver also has an early native window, the GUI. It is a preview, not yet part of the release packages, and a plain `cargo build` does not build it.
+textweaver also has an early native window, the GUI. It is a preview, not yet part of the release packages, and a plain `cargo build` does not build it. It is built on wxDragon today; Wave 3 moves the GUI to Xilem (see [the Xilem research](research/xilem-gui.md)), so what follows describes the preview as it is now.
 
 - It uses native controls: the document is in a read-only text box whose caret follows the spoken word, so your screen reader reads it with its usual keys.
 - Self-voicing is off by default in the GUI: your screen reader speaks the announcements. Start it with `--self-voicing` to have textweaver speak them too, for use without a screen reader. Reading aloud works either way; `--no-speech` turns that off too.
