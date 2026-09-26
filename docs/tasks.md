@@ -653,7 +653,11 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 **Owns:** `crates/textweaver-formats`, and a new `textweaver-ocr` crate if needed.
 
 1. **OCR for scanned PDFs and images.**
-   - Use the pure-Rust `ocrs` engine in-process first, running only on pages with no text layer.
+   - **Read `docs/research/pure-rust-wave3.md` first.**
+   - Use the pure-Rust `ocrs` engine (0.13.1, on rten 0.26) in-process first, running only on pages with no text layer.
+     - Render pages with `hayro` 0.7.1. Before rendering, try pulling the page's single scanned image out with lopdf.
+     - ocrs reads only ASCII plus the euro sign, so route accented or non-English text to the fallback. Also evaluate the PaddleOCR PP-OCRv5 Latin models through rten.
+     - The model files download only after the user confirms (12.2 MB, CC BY-SA 4.0, checked by SHA-256). Credit them in the notices.
    - Keep a Tesseract subprocess as a fallback for languages ocrs lacks, selected with the `ocr_lang` setting.
    - Detect Tesseract on PATH (the installers offer it). Measure the quality of both engines on a few test pages.
    - Show progress and allow cancel.
@@ -673,7 +677,8 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 **Owns:** a new `textweaver-lexicon` crate, plus the app wiring for its actions and store settings.
 
 1. **Define word, offline.**
-   - Look up the user's own glossary first, then WordNet (Princeton licence), then CMUdict pronunciations (BSD).
+   - Look up the user's own glossary first, then **Open English WordNet 2025** (CC BY 4.0; Princeton WordNet 3.1 is the alternative), then CMUdict pronunciations (BSD). See `docs/research/pure-rust-wave3.md`.
+   - Use `fst` plus `ruzstd` for the compact data file, and add a "morphy" step that reduces inflected forms.
    - Build a compact derived data file with a script in `tools/`.
    - Record licences and SHA-256 sums in `third_party/`, and add them to the notices.
    - Ask the orchestrator before downloading the source data.
@@ -696,7 +701,12 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 **Owns:** `crates/textweaver-speech` (new backends), a new `textweaver-piper` crate, and the voice manager in the app.
 
 1. **Piper neural voices.**
-   - Run the Piper voice models (VITS in ONNX) in-process with a pure-Rust inference engine, `tract` or `candle`. Choose one and justify it with measurements of real-time factor and first-audio latency.
+   - **Read `docs/research/pure-rust-wave3.md` first.**
+   - Run the Piper voice models in-process with **rten** 0.26, the pure-Rust ONNX runtime, following `rten-examples/src/piper.rs`. tract and candle cannot run the VITS voice graphs yet.
+   - Phonemize with our libespeak-ng loader, falling back to the pure-Rust `espeak-ng` crate when the library is missing.
+   - Get word timing from the `w_ceil` duration tensor.
+   - Measure the real-time factor and the time to first audio.
+   - Show each voice's licence (from its `MODEL_CARD`) before downloading it, and never bundle non-commercial voices.
    - Keep a `piper` subprocess only as a fallback.
    - Word timing comes from Piper if it reports it, otherwise it is estimated. `tw backends` says which.
    - A voice catalog lists language, quality, size, and licence.
@@ -705,7 +715,11 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
    - Every voice from every engine, filterable by language and engine.
    - Preview, favourites, download (Piper), and remove.
    - Build it in the terminal on the app's list model (W3a), and in the GUI later.
-3. **In-process dictation.** Move Whisper dictation into the process with `candle`, replacing today's whisper subprocess, and keep the subprocess as a fallback. Measure its latency on the CPU.
+3. **In-process dictation.** Move Whisper dictation into the process with **rten** (the ONNX int8 models from onnx-community, following `rten-examples/src/whisper.rs`). The research found rten purer than candle, which builds a C library.
+   - Record the switch from candle in an ADR.
+   - Capture audio with rodio's `recording` feature, resample with `rubato`, and detect speech with `earshot`.
+   - Keep candle behind a feature, and the whisper.cpp subprocess as the fallback.
+   - Measure latency on the CPU with `base.en`.
 4. **Rate and pitch per voice.** Remember them for each voice, as screen readers do.
 5. **Real-engine listening checklist.**
    - Add steps to `docs/releasing.md` for Jon to hear Eloquence, SAPI, and Piper before each release.
