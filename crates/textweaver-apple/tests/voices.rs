@@ -692,7 +692,7 @@ mod macos {
             .iter()
             .map(|(_, a, _)| a.unwrap_or(u32::MAX))
             .collect();
-        ensure(offsets.windows(2).all(|w| w[0] < w[1]), || {
+        ensure(offsets.windows(2).all(|w| w[0] <= w[1]), || {
             format!("offsets {offsets:?}")
         })?;
         ensure(offsets.iter().all(|&o| o < 20_000), || {

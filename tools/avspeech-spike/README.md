@@ -20,6 +20,7 @@ Added by Agent F (Wave 1):
   - `StopSpeech` **does** fire the done callback, so a stopped channel's late "done" could end the next utterance; the backend closes the channel on stop instead.
   - `kSpeechOutputToFileURLProperty` writes AIFF-C much faster than real time and still reports every word.
   - Pitch base is a note number: 32, 44, 56 gave 122, 179, 339 zero crossings per voiced second (an octave per 12).
+- `probe7.swift`: the timeline of `write()` callbacks for a 57-word passage (Reed), main thread pumping its run loop. macOS 14.8: 633 buffers of 512 frames, all 57 words interleaved with them, `didFinish` at the end, but **no** empty final buffer; the whole 20 s of audio is synthesized in about 80 ms. Because synthesis runs some 250 times faster than real time, any delay in delivering a word callback moves its sample offset a long way; in the Rust backend on macOS 14 several words sometimes share one offset, which `range::spread_ties` spreads over the time to the next word.
 
 ## What textweaver does with this
 

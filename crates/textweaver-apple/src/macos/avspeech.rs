@@ -591,10 +591,14 @@ impl AvSpeechBackend {
         if rate > 0 {
             job.rate = rate;
         }
+        let new_words = !words.is_empty();
         for (at, loc, len) in words {
             if let Some(range) = job.tracker.word(&job.text, loc, len) {
                 job.words.push_back((at, range));
             }
+        }
+        if new_words {
+            crate::range::spread_ties(job.words.make_contiguous());
         }
         let had_audio = job.appended > 0;
         for chunk in audio {
@@ -709,9 +713,12 @@ impl AvSpeechBackend {
         if volume < 1.0 {
             samples.iter_mut().for_each(|s| *s *= volume);
         }
-        let words = words
+        let mut timed: Vec<(u64, Range<u32>)> =
+            words.into_iter().map(|(range, at)| (at, range)).collect();
+        crate::range::spread_ties(&mut timed);
+        let words = timed
             .into_iter()
-            .map(|(range, at)| {
+            .map(|(at, range)| {
                 let ms = if rate > 0 {
                     at * 1000 / u64::from(rate)
                 } else {

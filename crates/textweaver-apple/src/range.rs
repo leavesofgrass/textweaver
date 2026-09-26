@@ -204,6 +204,39 @@ impl WordTracker {
     }
 }
 
+/// Spreads runs of words that share one audio offset across the time up to
+/// the next word's offset, in proportion to their lengths.
+///
+/// `AVSpeechSynthesizer` on macOS 14 sometimes delivers several word
+/// callbacks after the same buffer, so they share a sample offset; without
+/// this the highlight would jump across them at once. `words` holds
+/// `(offset, byte range)` in order; a run at the end, with no later offset,
+/// is left as it is. Offsets never decrease.
+pub fn spread_ties(words: &mut [(u64, Range<u32>)]) {
+    let mut i = 0;
+    while i < words.len() {
+        let at = words[i].0;
+        let mut j = i + 1;
+        while j < words.len() && words[j].0 == at {
+            j += 1;
+        }
+        if j - i > 1 && j < words.len() && words[j].0 > at {
+            let span = words[j].0 - at;
+            let lens: Vec<u64> = words[i..j]
+                .iter()
+                .map(|(_, r)| u64::from(r.end.saturating_sub(r.start)).max(1))
+                .collect();
+            let total: u64 = lens.iter().sum();
+            let mut before = 0;
+            for (k, len) in lens.iter().enumerate() {
+                words[i + k].0 = at + span * before / total;
+                before += len;
+            }
+        }
+        i = j;
+    }
+}
+
 fn to_u32(n: usize) -> u32 {
     u32::try_from(n).unwrap_or(u32::MAX)
 }
@@ -319,6 +352,29 @@ mod tests {
         assert_eq!(word_extent(t2, 1..2), 1..2);
         // Out of bounds: unchanged.
         assert_eq!(word_extent("ab", 1..9), 1..9);
+    }
+
+    #[test]
+    fn ties_spread_up_to_the_next_offset() {
+        let mut w = vec![
+            (0u64, 0u32..3u32),
+            (100, 4..7),
+            (100, 8..11),
+            (100, 12..18),
+            (400, 19..22),
+            (500, 23..25),
+            (500, 26..28),
+        ];
+        spread_ties(&mut w);
+        let at: Vec<u64> = w.iter().map(|x| x.0).collect();
+        // The run 4..7, 8..11, 12..18 (3 + 3 + 6 bytes) shares 100..400.
+        assert_eq!(at, [0, 100, 175, 250, 400, 500, 500]);
+        assert!(at.windows(2).all(|p| p[0] <= p[1]));
+        let mut none: Vec<(u64, Range<u32>)> = Vec::new();
+        spread_ties(&mut none);
+        let mut one = vec![(7u64, 0u32..1u32)];
+        spread_ties(&mut one);
+        assert_eq!(one[0].0, 7);
     }
 
     #[test]
