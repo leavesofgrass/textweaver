@@ -27,5 +27,8 @@ mod undo;
 
 pub use find::FindOptions;
 pub use markdown::{FormatError, Formatted, MarkdownOp};
-pub use session::{Choice, DocInfo, EditSession, LeaveOutcome, SaveOutcome, SessionError};
-pub use undo::{Editor, Selection, UndoLimits};
+pub use session::{
+    Choice, DocInfo, EditSession, LeaveOutcome, PendingSnapshot, SaveOutcome, SaveRequest,
+    SaveStart, SessionError, SnapshotOp,
+};
+pub use undo::{Editor, SavePoint, Selection, UndoLimits};

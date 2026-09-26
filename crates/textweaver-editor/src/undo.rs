@@ -129,6 +129,11 @@ fn edit_bytes(e: &Edit, inv: &Edit) -> usize {
     e.text.len() + inv.text.len() + EDIT_OVERHEAD
 }
 
+/// A point in an [`Editor`]'s undo history: the text as it was when
+/// [`Editor::save_point`] was called.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SavePoint(u64);
+
 /// One undo step: edits applied in order, with their inverses.
 #[derive(Clone, Debug, Default)]
 struct Group {
@@ -306,8 +311,24 @@ impl Editor {
 
     /// Marks the text as saved.
     pub fn mark_saved(&mut self) {
+        let p = self.save_point();
+        self.mark_saved_at(p);
+    }
+
+    /// The text as it is now, as a point in the undo history, for a save
+    /// that finishes later (on a background writer): typing goes on in a
+    /// new undo step, and [`mark_saved_at`](Self::mark_saved_at) marks this
+    /// point saved once the file is written. Edits made in between keep
+    /// the editor dirty.
+    pub fn save_point(&mut self) -> SavePoint {
         self.break_undo_group();
-        self.saved_id = self.top_id();
+        SavePoint(self.top_id())
+    }
+
+    /// Marks the text at `point` as the saved text (see
+    /// [`save_point`](Self::save_point)).
+    pub fn mark_saved_at(&mut self, point: SavePoint) {
+        self.saved_id = point.0;
         self.modified = false;
     }
 

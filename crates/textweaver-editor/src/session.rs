@@ -25,7 +25,7 @@ use crate::autosave::{
 };
 use crate::find::{self, FindOptions};
 use crate::markdown::{self, FormatError, MarkdownOp};
-use crate::{Editor, Selection};
+use crate::{Editor, SavePoint, Selection};
 
 /// The document being read or edited.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -106,6 +106,88 @@ pub enum SaveOutcome {
     },
 }
 
+/// A snapshot file operation for a caller that does the session's snapshot
+/// I/O itself (see [`EditSession::set_deferred_io`]): the app hands these
+/// to its background writer, in order, so typing never waits on the disk.
+#[derive(Clone, Debug)]
+pub enum SnapshotOp {
+    /// Write this snapshot into `dir`, taking the snapshot's
+    /// [`SnapshotLock`](autosave::SnapshotLock) first and keeping it until
+    /// the matching [`SnapshotOp::Delete`]; write nothing when another
+    /// instance holds the lock.
+    Write {
+        /// The recovery directory.
+        dir: PathBuf,
+        /// What to write.
+        snapshot: PendingSnapshot,
+    },
+    /// Delete `doc_key`'s snapshot in `dir` and release its lock.
+    Delete {
+        /// The recovery directory.
+        dir: PathBuf,
+        /// The document's key.
+        doc_key: String,
+    },
+}
+
+/// A recovery snapshot whose text is still a rope: taking it costs the UI
+/// nothing, and the writer turns it into a [`RecoverySnapshot`].
+#[derive(Clone, Debug)]
+pub struct PendingSnapshot {
+    /// The document's key.
+    pub doc_key: String,
+    /// The file being edited, if any.
+    pub path: Option<PathBuf>,
+    /// The document's title.
+    pub title: Option<String>,
+    /// When it was taken (Unix seconds).
+    pub ts: i64,
+    /// The text, unsaved edits included.
+    pub text: ropey::Rope,
+}
+
+impl PendingSnapshot {
+    /// The snapshot as written to disk.
+    pub fn to_snapshot(&self) -> RecoverySnapshot {
+        RecoverySnapshot {
+            doc_key: self.doc_key.clone(),
+            path: self.path.clone(),
+            text: self.text.to_string(),
+            ts: self.ts,
+            title: self.title.clone(),
+        }
+    }
+}
+
+/// A save begun with [`EditSession::begin_save`]: the file and text to
+/// write (on any thread), then handed back to
+/// [`EditSession::finish_save`].
+#[derive(Clone, Debug)]
+pub struct SaveRequest {
+    /// The file to write (a converted-format extension already became
+    /// `.md`).
+    pub dest: PathBuf,
+    /// The text to write: the editor's text when the save began.
+    pub text: ropey::Rope,
+    /// A Save As: the session adopts `dest` when the save finishes.
+    pub adopted: bool,
+    point: SavePoint,
+    generation: u64,
+}
+
+/// What [`EditSession::begin_save`] needs next.
+#[derive(Clone, Debug)]
+pub enum SaveStart {
+    /// Write the request's text to its file, then call
+    /// [`EditSession::finish_save`].
+    Write(SaveRequest),
+    /// A file name is needed: ask and begin again with it.
+    NeedsPath {
+        /// The suggested path.
+        suggested: PathBuf,
+    },
+}
+
 /// Why a session operation failed.
 #[derive(Debug, thiserror::Error)]
 pub enum SessionError {
@@ -152,6 +234,12 @@ pub struct EditSession {
     snapshot_lock: Option<std::sync::Arc<autosave::SnapshotLock>>,
     /// Undo history limits for the editor.
     undo_limits: crate::UndoLimits,
+    /// Snapshot I/O is left to the caller ([`SnapshotOp`]s).
+    deferred_io: bool,
+    /// Snapshot operations waiting for the caller.
+    ops: Vec<SnapshotOp>,
+    /// A deferred snapshot write whose result has not come back.
+    snapshot_in_flight: bool,
 }
 
 impl EditSession {
@@ -172,6 +260,9 @@ impl EditSession {
             snapshot_failures: 0,
             snapshot_lock: None,
             undo_limits: crate::UndoLimits::DEFAULT,
+            deferred_io: false,
+            ops: Vec::new(),
+            snapshot_in_flight: false,
         }
     }
 
@@ -180,6 +271,34 @@ impl EditSession {
         self.autosave = policy;
         self.recovery_dir = Some(dir.into());
         self
+    }
+
+    /// Leaves snapshot I/O to the caller: writing and deleting recovery
+    /// snapshots queue [`SnapshotOp`]s ([`take_snapshot_ops`](Self::take_snapshot_ops))
+    /// instead of touching the disk, and the caller reports each write's
+    /// result with [`snapshot_written`](Self::snapshot_written). The app
+    /// uses this to keep autosave off its input thread.
+    pub fn set_deferred_io(&mut self, on: bool) {
+        self.deferred_io = on;
+    }
+
+    /// The snapshot operations queued since the last call, in order.
+    pub fn take_snapshot_ops(&mut self) -> Vec<SnapshotOp> {
+        std::mem::take(&mut self.ops)
+    }
+
+    /// The result of a deferred snapshot write: `Ok(true)` written,
+    /// `Ok(false)` not written (another instance holds the snapshot), or
+    /// the error. A failure counts toward the back-off
+    /// ([`snapshot_failures`](Self::snapshot_failures)); a success resets
+    /// it.
+    pub fn snapshot_written(&mut self, result: &std::io::Result<bool>) {
+        self.snapshot_in_flight = false;
+        match result {
+            Ok(true) => self.snapshot_failures = 0,
+            Ok(false) => {}
+            Err(_) => self.snapshot_failures = self.snapshot_failures.saturating_add(1),
+        }
     }
 
     /// Sets how much undo history the editor keeps, now and in later edit
@@ -260,7 +379,15 @@ impl EditSession {
     }
 
     fn clear_snapshot(&mut self) {
-        if let Some(p) = self.snapshot_path() {
+        if self.deferred_io {
+            if let Some(dir) = self.recovery_dir.clone() {
+                self.ops.push(SnapshotOp::Delete {
+                    dir,
+                    doc_key: self.doc.key.clone(),
+                });
+            }
+            self.snapshot_in_flight = false;
+        } else if let Some(p) = self.snapshot_path() {
             let _ = autosave::delete_snapshot(&p);
         }
         self.last_snapshot = None;
@@ -299,14 +426,33 @@ impl EditSession {
     /// converted-format extension becomes `.md`) and the session adopts it,
     /// so the next save writes in place without asking.
     pub fn save(&mut self, save_as: Option<&Path>) -> Result<SaveOutcome, SessionError> {
-        let Some(editor) = &self.editor else {
+        match self.begin_save(save_as)? {
+            SaveStart::NeedsPath { suggested } => Ok(SaveOutcome::NeedsPath { suggested }),
+            SaveStart::Write(req) => {
+                let text = req.text.to_string();
+                autosave::save_text(&req.dest, &text).map_err(|source| SessionError::Io {
+                    path: req.dest.clone(),
+                    source,
+                })?;
+                Ok(self.finish_save(req, text))
+            }
+        }
+    }
+
+    /// The first half of [`save`](Self::save), for a caller that writes the
+    /// file elsewhere (a background writer, with
+    /// [`autosave::save_text`]): works out the file and takes the text,
+    /// without touching the disk. Typing may go on; call
+    /// [`finish_save`](Self::finish_save) once the file is written.
+    pub fn begin_save(&mut self, save_as: Option<&Path>) -> Result<SaveStart, SessionError> {
+        let generation = self.generation;
+        let Some(editor) = &mut self.editor else {
             return Err(SessionError::NotEditing { action: "save" });
         };
-        let text = editor.text().to_string();
         let target = match &self.doc.path {
             Some(p) => save_target(p, &self.doc.loader_id),
             None => SaveTarget::SaveAsMarkdown {
-                suggested: PathBuf::from(autosave::suggest_file_name(&text)),
+                suggested: PathBuf::from(autosave::suggest_file_name(&editor.text().to_string())),
             },
         };
         let (dest, adopted) = match (target, save_as) {
@@ -314,16 +460,41 @@ impl EditSession {
             (SaveTarget::InPlace(_), Some(chosen))
             | (SaveTarget::SaveAsMarkdown { .. }, Some(chosen)) => (save_as_path(chosen), true),
             (SaveTarget::SaveAsMarkdown { suggested }, None) => {
-                return Ok(SaveOutcome::NeedsPath { suggested });
+                return Ok(SaveStart::NeedsPath { suggested });
             }
         };
-        autosave::save_text(&dest, &text).map_err(|source| SessionError::Io {
-            path: dest.clone(),
-            source,
-        })?;
+        let point = editor.save_point();
+        Ok(SaveStart::Write(SaveRequest {
+            dest,
+            text: editor.text().clone(),
+            adopted,
+            point,
+            generation,
+        }))
+    }
+
+    /// The second half of a save: the request's `text` (the rope, as a
+    /// string) was written to its file. The text as it was when the save
+    /// began is now the saved text (edits made since stay unsaved), the
+    /// snapshot is cleared, and a Save As adopts the file. A save that
+    /// began before the document was replaced changes nothing.
+    pub fn finish_save(&mut self, req: SaveRequest, text: String) -> SaveOutcome {
+        let SaveRequest {
+            dest,
+            adopted,
+            point,
+            generation,
+            ..
+        } = req;
+        if generation != self.generation || self.editor.is_none() {
+            return SaveOutcome::Saved {
+                path: dest,
+                adopted: false,
+            };
+        }
         self.doc_text = text;
         if let Some(ed) = &mut self.editor {
-            ed.mark_saved();
+            ed.mark_saved_at(point);
         }
         self.maps_stale = true;
         self.clear_snapshot();
@@ -338,10 +509,10 @@ impl EditSession {
                 .unwrap_or_else(|| self.doc.title.clone());
             self.doc.path = Some(dest.clone());
         }
-        Ok(SaveOutcome::Saved {
+        SaveOutcome::Saved {
             path: dest,
             adopted,
-        })
+        }
     }
 
     /// Leaves edit mode (Ctrl+E while editing, Star's
@@ -548,6 +719,18 @@ impl EditSession {
         if !policy.due(self.is_dirty(), since) {
             return Ok(false);
         }
+        if self.deferred_io {
+            // One write at a time; its result comes back through
+            // `snapshot_written`.
+            if !self.snapshot_in_flight
+                && let Some(snapshot) = self.pending_snapshot()
+            {
+                self.snapshot_in_flight = true;
+                self.last_snapshot = Some(now);
+                self.ops.push(snapshot);
+            }
+            return Ok(false);
+        }
         match self.write_snapshot_now() {
             Ok(written) => {
                 // Also when another instance holds the snapshot: ask again
@@ -576,10 +759,38 @@ impl EditSession {
         self.write_snapshot_now()
     }
 
+    /// A write of the current text, for the caller's writer.
+    fn pending_snapshot(&self) -> Option<SnapshotOp> {
+        let dir = self.recovery_dir.clone()?;
+        Some(SnapshotOp::Write {
+            dir,
+            snapshot: PendingSnapshot {
+                doc_key: self.doc.key.clone(),
+                path: self.doc.path.clone(),
+                title: Some(self.doc.title.clone()),
+                ts: autosave::now_ts(),
+                text: self.editor.as_ref()?.text().clone(),
+            },
+        })
+    }
+
     fn write_snapshot_now(&mut self) -> std::io::Result<bool> {
         let Some(dir) = self.recovery_dir.clone() else {
             return Ok(false);
         };
+        if self.deferred_io {
+            // The caller's writer holds the snapshot lock; this is the
+            // emergency path (a crash, a closing terminal): write at once.
+            let snap = RecoverySnapshot {
+                doc_key: self.doc.key.clone(),
+                path: self.doc.path.clone(),
+                text: self.live_text(),
+                ts: autosave::now_ts(),
+                title: Some(self.doc.title.clone()),
+            };
+            autosave::write_snapshot(&dir, &snap)?;
+            return Ok(true);
+        }
         if self.snapshot_lock.is_none() {
             match autosave::SnapshotLock::acquire(&dir, &self.doc.key)? {
                 Some(lock) => self.snapshot_lock = Some(std::sync::Arc::new(lock)),
