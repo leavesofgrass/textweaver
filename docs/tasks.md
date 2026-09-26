@@ -454,3 +454,9 @@ Jon asked for an easy way to import and export settings, preferring JSON. TOML s
 **Owns:** `crates/textweaver-store/src/settings_io.rs` (and its tests), the settings validation hooks in `settings.rs`, `crates/textweaver-cli/src/cmd/settings.rs`, `docs/settings.md`, `fixtures/u/`.
 
 **Status:** done on `wave2/u-settings-io`, not yet integrated. `tw settings export|import|path|reset` work; import validates, merges or replaces, backs up, and writes atomically; export then import changes nothing (tested with every setting non-default). The app's palette actions `export_settings` and `import_settings` are a verified patch for Agent D3 in `fixtures/u/d3-settings-palette.patch`.
+
+### Agent W — Bundled fonts, PDF options, GUI font chooser, SCOWL (added 2026-09-25 at Jon's request)
+
+**Owns:** `crates/textweaver-fonts/` (new), `third_party/fonts/`, `third_party/scowl/`, `tools/scowl_levels.py`, the fonts and PDF-option parts of `crates/textweaver-writers/`, `crates/textweaver-aids/src/{fonts,difficult}.rs`, `crates/textweaver-cli/src/cmd/convert_layout.rs`, the Fonts dialog in `crates/textweaver-gui/` (`fonts.rs`, `font_dialog.rs`, `tools/font-dialog-report.ps1`).
+
+**Status:** done on `wave2/w-fonts-pdf` (Friday, September 25, 2026); awaiting integration. Atkinson Hyperlegible Next and Mono and OpenDyslexic are bundled (SIL OFL 1.1, 1.35 MB) and are the PDF default; PDF gains font choice by name, page size, margins, spacing, large print, page numbers on or off, a title page, a linked table of contents, working internal links, and alt-text warnings, all through `tw convert`; EPUB can embed a bundled font. The GUI has View, Fonts (checked through UI Automation in background mode; settings in a new `[display.font]`, since D3's `[reading_aids.font]` is not on main yet). SCOWL word levels are built into difficult-word marking. Agent V's commit 06f029f (writers wired into `tw convert`) is cherry-picked on this branch without its `--asciimath` line.
