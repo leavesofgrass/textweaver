@@ -1432,7 +1432,7 @@ mod tests {
             vec!["Alt+.".to_owned(), ".".to_owned()],
         );
         o.insert("speech_cursor_next_line".to_owned(), vec!["n".to_owned()]);
-        o.insert("bold".to_owned(), vec!["Alt+U".to_owned()]);
+        o.insert("bold".to_owned(), vec!["Alt+Z".to_owned()]);
         o.insert("stop".to_owned(), vec![]);
         let (map, warnings) = Keymap::with_preset_and_overrides(
             Platform::Linux,
@@ -1455,8 +1455,8 @@ mod tests {
             Some(ActionId::SpeechCursorNextLine)
         );
         assert_eq!(map.lookup(&k("n"), Layer::Browse), Some(ActionId::FindNext));
-        assert_eq!(map.lookup(&k("Alt+U"), Layer::Edit), Some(ActionId::Bold));
-        assert_eq!(map.lookup(&k("Alt+U"), Layer::Browse), None);
+        assert_eq!(map.lookup(&k("Alt+Z"), Layer::Edit), Some(ActionId::Bold));
+        assert_eq!(map.lookup(&k("Alt+Z"), Layer::Browse), None);
         assert!(map.chords_for(ActionId::Stop).is_empty());
     }
 

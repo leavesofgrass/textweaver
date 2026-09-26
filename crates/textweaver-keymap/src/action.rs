@@ -205,6 +205,9 @@ actions! {
         gui ["g:Alt+Shift+O"], term ["g:Alt+Shift+O"], shared [];
     ReadingLevel = "reading_level", Reading, "Say the reading level of the document or the selection",
         gui ["g:Alt+Shift+G"], term ["g:Alt+Shift+G"], shared [];
+    DefineWord = "define_word", Reading,
+        "Define the word at the cursor, or the selected words: senses, examples, synonyms, and pronunciation",
+        gui ["g:Ctrl+Shift+D"], term ["g:Alt+E"], shared [];
     ToggleCitations = "toggle_citations", Reading,
         "Turn citations on or off in continuous reading: off skips them, on says them in words",
         gui ["g:Alt+Shift+Q"], term ["g:Alt+Shift+Q"], shared [];
@@ -429,6 +432,9 @@ actions! {
         gui ["g:Alt+Shift+E"], term ["g:Alt+Shift+E"], shared [];
     ImportSettings = "import_settings", File, "Import settings from a JSON or TOML file, after a yes or no",
         gui ["g:Alt+Shift+I"], term ["g:Alt+Shift+I"], shared [];
+    ReadingStatistics = "reading_statistics", File,
+        "List reading statistics: time read, the furthest point, sessions, and the most read documents",
+        gui ["g:Ctrl+Shift+Y"], term ["g:Alt+Y"], shared [];
     NewFromTemplate = "new_from_template", File,
         "Start a new document from a template, with a title, author, date, and References heading",
         gui [], term [], shared [];
@@ -541,6 +547,9 @@ actions! {
     CycleAccessMode = "cycle_access_mode", View,
         "Cycle the accessibility mode: self-voicing, hybrid, or screen reader",
         gui ["g:Alt+Shift+A"], term ["g:Alt+Shift+A"], shared [];
+    SettingsProfiles = "settings_profiles", View,
+        "List settings profiles: switch to one, save the current settings as one, rename, delete, import, or export",
+        gui ["g:Ctrl+Shift+U"], term ["g:Alt+U"], shared [];
     BionicToggle = "bionic_toggle", View, "Turn bionic reading on or off: the start of each word in bold",
         gui ["g:Alt+Shift+B"], term ["g:Alt+Shift+B"], shared [];
     RulerCycle = "ruler_cycle", View, "Cycle the reading ruler: off, current line, ruler",
