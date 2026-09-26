@@ -126,11 +126,9 @@ log = "0.4"
 # frontends
 clap = { version = "4.6", features = ["derive"] }
 ratatui = "0.30"
-crossterm = "0.29"
 
-# speech engines (all behind features in textweaver-speech)
-speech-dispatcher = "0.16"
-tts = "0.26"
+# Audio playback and export. speech-dispatcher (SSIP over its socket) and
+# espeak-ng (hand-written declarations) need no crates here.
 rodio = { version = "0.22", default-features = false }
 
 # ETI-Eloquence host: runtime loading of the user-installed ECI library
@@ -147,10 +145,10 @@ block2 = "0.6"
 windows = "0.62"
 
 # Wave 2
-# PDF: candidates for Agent A's loader choice (ADR-0010); only the chosen one stays.
-lopdf = "0.45"
-pdf-extract = "0.12"
-pdfium-render = "0.9"
+# PDF loader (ADR-0010). Default features off: `chrono-clock` is unused.
+# `rayon` stays for lopdf's parallel object parsing of large files; rayon is
+# in the tree already through textweaver-convert.
+lopdf = { version = "0.45", default-features = false, features = ["rayon"] }
 # Character encodings (legacy HTML, Windows-1252 text).
 encoding_rs = "0.8"
 # Hot-folder watch for batch conversion.
@@ -166,11 +164,9 @@ krilla = "0.8"
 hayagriva = "0.10"
 biblatex = "0.12"
 ureq = { version = "3.4", default-features = false, features = ["rustls"] }
-# Performance (ADR-0001): async I/O outside speech, memory-mapped reading
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util", "sync", "time"] }
-memmap2 = "0.9"
-# GUI (wave 3 spike; the textweaver-gui crate only).
-wxdragon = "0.9"
+# GUI (wave 3 spike; the textweaver-gui crate only). wxdragon has no default
+# features today; they are off so none arrive unnoticed in an update.
+wxdragon = { version = "0.9", default-features = false }
 live-region = "0.3"
 
 # Reading aids (Agent S): terminal cell widths for the RSVP box (already in
@@ -200,3 +196,10 @@ opt-level = 1
 [profile.release]
 lto = "thin"
 codegen-units = 1
+strip = "symbols"
+
+# Release packages (`cargo xtask dist`): the release profile with fat LTO,
+# slower to build and a little smaller and faster to run.
+[profile.dist]
+inherits = "release"
+lto = "fat"
