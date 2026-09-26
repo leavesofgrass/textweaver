@@ -679,6 +679,7 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 1. **Define word, offline.**
    - Look up the user's own glossary first, then **Open English WordNet 2025** (CC BY 4.0; Princeton WordNet 3.1 is the alternative), then CMUdict pronunciations (BSD). See `docs/research/pure-rust-wave3.md`.
    - Use `fst` plus `ruzstd` for the compact data file, and add a "morphy" step that reduces inflected forms.
+   - **Jon approved on 2026-09-26** downloading Open English WordNet 2025 (the WNDB zip) and CMUdict, from their official GitHub releases only, for the one-time data build. Record the SHA-256 sums and add the licences to the notices.
    - Build a compact derived data file with a script in `tools/`.
    - Record licences and SHA-256 sums in `third_party/`, and add them to the notices.
    - Ask the orchestrator before downloading the source data.
@@ -716,7 +717,7 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
    - Preview, favourites, download (Piper), and remove.
    - Build it in the terminal on the app's list model (W3a), and in the GUI later.
 3. **In-process dictation.** Move Whisper dictation into the process with **rten** (the ONNX int8 models from onnx-community, following `rten-examples/src/whisper.rs`). The research found rten purer than candle, which builds a C library.
-   - Record the switch from candle in an ADR.
+   - Jon approved rten over candle on 2026-09-26. Record the switch from candle in an ADR.
    - Capture audio with rodio's `recording` feature, resample with `rubato`, and detect speech with `earshot`.
    - Keep candle behind a feature, and the whisper.cpp subprocess as the fallback.
    - Measure latency on the CPU with `base.en`.
