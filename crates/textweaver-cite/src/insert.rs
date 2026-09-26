@@ -17,7 +17,7 @@
 //! into a spoken description: "Citation: Doe and Roe, 2020, On X, page 12."
 
 use crate::library::ReferenceSource;
-use crate::pandoc::{Citation, CiteItem, Locator, LocatorLabel, write_citation};
+use crate::pandoc::{Citation, CiteItem, Locator, write_citation};
 use crate::reference::Reference;
 
 /// One row of the citation picker.
@@ -68,20 +68,18 @@ pub fn filter_picker<'a>(entries: &'a [PickerEntry], query: &str) -> Vec<&'a Pic
 }
 
 /// Parses a locator as typed in a prompt: "12" (a page), "12-15",
-/// "p. 12", "pp. 3-5", "page 4", "chapter 2", "sec. 3.1". Empty input is
-/// no locator.
+/// "p. 12", "pp. 3-5", "page 4", "chapter 2", "sec. 3.1". Empty input, or
+/// input that is not a locator ("introduction"), is `None`; the app should
+/// then say it could not read the locator rather than insert it.
 pub fn parse_locator(input: &str) -> Option<Locator> {
     let t = input.trim();
-    if t.is_empty() {
+    if t.is_empty() || t.contains([']', ';', '[']) {
         return None;
     }
     let probe = format!("[@k, {t}]");
     let cites = crate::pandoc::find_citations(&probe);
     let item = cites.into_iter().next()?.items.into_iter().next()?;
-    item.locator.or(Some(Locator {
-        label: LocatorLabel::Page,
-        value: t.to_owned(),
-    }))
+    item.locator.filter(|_| item.suffix.is_empty())
 }
 
 /// The text to insert for citing `keys` (Pandoc syntax), with an optional
@@ -243,6 +241,12 @@ mod tests {
             Some("chap. 2")
         );
         assert_eq!(parse_locator(" "), None);
+        assert_eq!(parse_locator("introduction"), None);
+        assert_eq!(parse_locator("12, emphasis added"), None);
+        assert_eq!(
+            parse_locator("iv").map(|l| l.written()).as_deref(),
+            Some("p. iv")
+        );
     }
 
     #[test]
