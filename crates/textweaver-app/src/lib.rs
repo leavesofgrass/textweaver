@@ -191,7 +191,7 @@ pub use extra::{extra_bindings, extra_chords, extra_lookup};
 pub use goto::parse_go_to;
 pub use help::{chords_text, help_entries, palette_matches, resolve_command};
 pub use math_explore::MathMove;
-pub use notes::{HIGHLIGHTS_KEY, NOTES_KEY, UserHighlight, migrate_legacy_notes, parse_tags};
+pub use notes::{UserHighlight, parse_tags};
 pub use playback::{Playback, load_options, narration_policy};
 pub use restart::SpeechStarter;
 pub use templates::local_date;

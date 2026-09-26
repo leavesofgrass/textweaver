@@ -51,7 +51,7 @@ pub use doc_state::{
 };
 pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
 pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, ScannedDoc};
-pub use notes::{Annotation, Highlight, Note, NotesExport, Relation};
+pub use notes::{Annotation, Highlight, Note, NotesExport, Relation, RelationType};
 pub use paths::Paths;
 pub use recent::{Recent, RecentEntry};
 pub use settings::{

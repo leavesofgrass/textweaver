@@ -9,12 +9,8 @@
 //!
 //! They are the store's typed [`Note`] and [`Highlight`]
 //! (`DocState::notes` and `DocState::highlights`), the one model the vault
-//! export, `tw marks`, and sidecar sync use too. Wave 2's first app build
-//! kept its own notes in `DocState::extra` under `app_notes` and
-//! `app_highlights`; those are moved onto the typed fields the first time
-//! the document opens, and the old keys removed.
+//! (`textweaver-vault`), `tw marks`, and sidecar sync use too.
 
-use serde::Deserialize;
 use textweaver_a11y::Verbosity;
 use textweaver_core::{CharPos, CharRange, Direction, EditOutcome, Unit};
 use textweaver_speech::Earcon;
@@ -32,102 +28,8 @@ use crate::text_util::{self, preview};
 /// does not clash with [`crate::Highlight`], a range drawn on screen).
 pub type UserHighlight = Highlight;
 
-/// The `DocState` extra key where the first wave 2 build kept notes; read
-/// once on open, moved to `DocState::notes`, and removed.
-pub const NOTES_KEY: &str = "app_notes";
-/// The `DocState` extra key where the first wave 2 build kept highlights;
-/// read once on open, moved to `DocState::highlights`, and removed.
-pub const HIGHLIGHTS_KEY: &str = "app_highlights";
-
 /// Longest anchor kept, in characters (Star's limit).
 const ANCHOR_CHARS: usize = store_notes::ANCHOR_MAX_CHARS;
-
-/// A note as the first wave 2 build stored it.
-#[derive(Deserialize)]
-struct LegacyNote {
-    id: String,
-    range: CharRange,
-    #[serde(default)]
-    anchor: String,
-    text: String,
-    #[serde(default)]
-    tags: Vec<String>,
-    #[serde(default)]
-    ts: i64,
-}
-
-/// A highlight as the first wave 2 build stored it.
-#[derive(Deserialize)]
-struct LegacyHighlight {
-    range: CharRange,
-    #[serde(default)]
-    color: String,
-    #[serde(default)]
-    ts: i64,
-}
-
-/// Moves notes and highlights kept under the legacy extra keys onto the
-/// typed fields, clamped to `doc` (highlights take their text from it), and
-/// removes the keys. A note whose id is already typed is not duplicated.
-/// Returns whether anything changed, so the caller saves the state once.
-pub fn migrate_legacy_notes(state: &mut DocState, doc: &Document) -> bool {
-    let len = doc.len_chars();
-    let mut changed = false;
-    if let Some(v) = state.extra.remove(NOTES_KEY) {
-        changed = true;
-        match serde_json::from_value::<Vec<LegacyNote>>(v) {
-            Ok(notes) => {
-                for n in notes {
-                    if state.note(&n.id).is_some() {
-                        continue;
-                    }
-                    state.insert_note(Note {
-                        id: n.id,
-                        range: n.range.clamp_to(len),
-                        anchor: n.anchor,
-                        note: n.text,
-                        tags: n.tags,
-                        created: n.ts,
-                        ts: n.ts,
-                        ..Note::default()
-                    });
-                }
-            }
-            Err(e) => log::warn!("ignoring stored {NOTES_KEY}: {e}"),
-        }
-    }
-    if let Some(v) = state.extra.remove(HIGHLIGHTS_KEY) {
-        changed = true;
-        match serde_json::from_value::<Vec<LegacyHighlight>>(v) {
-            Ok(highlights) => {
-                for h in highlights {
-                    let range = h.range.clamp_to(len);
-                    if range.is_empty() || state.highlights.iter().any(|x| x.range == range) {
-                        continue;
-                    }
-                    let text = doc.slice(range);
-                    let color = if h.color.is_empty() {
-                        store_notes::DEFAULT_HIGHLIGHT_COLOR.to_owned()
-                    } else {
-                        highlight_color(&h.color)
-                    };
-                    let start = range.start.0.to_string();
-                    let end = range.end.0.to_string();
-                    state.insert_highlight(Highlight {
-                        id: store_notes::stable_id("h", &[&start, &end, &color]),
-                        range,
-                        color,
-                        text: store_notes::collapse(&text, store_notes::HIGHLIGHT_TEXT_MAX_CHARS),
-                        ts: h.ts,
-                        extra: serde_json::Map::new(),
-                    });
-                }
-            }
-            Err(e) => log::warn!("ignoring stored {HIGHLIGHTS_KEY}: {e}"),
-        }
-    }
-    changed
-}
 
 /// Tags in a note: words starting with `#`, without the `#`, lowercase,
 /// deduplicated.
@@ -837,46 +739,6 @@ mod tests {
             vec!["exam", "todo"]
         );
         assert!(parse_tags("no tags # here").is_empty());
-    }
-
-    #[test]
-    fn legacy_extra_keys_move_to_the_typed_fields_once() {
-        let doc = Document::from_plain_text("Alpha beta. Gamma delta.");
-        let mut st = DocState::default();
-        st.extra.insert(
-            NOTES_KEY.into(),
-            serde_json::json!([{
-                "id": "0000abcd", "range": {"start": 12, "end": 24},
-                "anchor": "Gamma delta.", "text": "Check #exam", "tags": ["exam"], "ts": 7
-            }]),
-        );
-        st.extra.insert(
-            HIGHLIGHTS_KEY.into(),
-            serde_json::json!([{ "range": {"start": 0, "end": 5}, "color": "yellow", "ts": 8 }]),
-        );
-        st.extra.insert("other".into(), serde_json::json!(1));
-        assert!(migrate_legacy_notes(&mut st, &doc));
-        assert_eq!(st.notes.len(), 1);
-        let n = &st.notes[0];
-        assert_eq!(
-            (n.id.as_str(), n.note.as_str()),
-            ("0000abcd", "Check #exam")
-        );
-        assert_eq!(
-            (n.range, n.tags.clone(), n.ts),
-            (CharRange::new(12, 24), vec!["exam".to_owned()], 7)
-        );
-        assert_eq!(st.highlights.len(), 1);
-        let h = &st.highlights[0];
-        assert_eq!(
-            (h.color.as_str(), h.text.as_str(), h.ts),
-            ("#ffff00", "Alpha", 8)
-        );
-        assert!(!h.id.is_empty());
-        assert!(!st.extra.contains_key(NOTES_KEY) && !st.extra.contains_key(HIGHLIGHTS_KEY));
-        assert_eq!(st.extra["other"], 1, "other keys stay");
-        // Once moved, nothing more to do.
-        assert!(!migrate_legacy_notes(&mut st, &doc));
     }
 
     #[test]

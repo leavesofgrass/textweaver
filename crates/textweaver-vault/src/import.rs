@@ -32,7 +32,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
-use textweaver_core::CharPos;
+use textweaver_core::{CharPos, CharRange};
 
 use crate::export::{parse_highlights, plural};
 use crate::frontmatter::{self, FrontMatter};
@@ -353,8 +353,8 @@ fn resolve(read: &mut VaultRead, default_rel: RelationType) {
                 continue;
             }
             out.push(Relation {
-                rel_type,
-                target_doc: doc.clone(),
+                rel_type: rel_type.as_str().to_owned(),
+                target_doc: doc.to_string_lossy().into_owned(),
                 target_id: id.clone(),
                 note: link.note.clone(),
             });
@@ -492,13 +492,13 @@ pub fn apply(
                     Some(existing) => {
                         let relations =
                             merged_relations(&note.relations, &existing.relations, &in_vault);
-                        let changed = existing.text != note.text
+                        let changed = existing.note != note.text
                             || existing.tags != tags
                             || existing.cite != note.cite
                             || existing.relations != relations
                             || existing.anchor != note.title;
                         if changed {
-                            existing.text = note.text.clone();
+                            existing.note = note.text.clone();
                             existing.tags = tags;
                             existing.cite = note.cite.clone();
                             existing.relations = relations;
@@ -508,15 +508,18 @@ pub fn apply(
                         }
                     }
                     None => {
+                        let ts = if note.ts > 0 { note.ts } else { now };
                         ann.notes.push(Note {
                             id: note.id.clone(),
-                            pos: *position,
+                            range: CharRange::new(*position, *position),
                             anchor: note.title.clone(),
-                            text: note.text.clone(),
+                            note: note.text.clone(),
                             tags,
                             cite: note.cite.clone(),
-                            ts: if note.ts > 0 { note.ts } else { now },
+                            created: ts,
+                            ts,
                             relations: note.relations.clone(),
+                            ..Note::default()
                         });
                         report.notes_added += 1;
                     }
@@ -592,6 +595,7 @@ fn apply_node(
         Some(i) => &mut ann.notes[i],
         None => {
             ann.notes.push(Note {
+                created: now,
                 ts: now,
                 ..Note::default()
             });
@@ -601,7 +605,7 @@ fn apply_node(
     };
     node.id = note.id.clone();
     node.anchor = note.title.clone();
-    node.text = text;
+    node.note = text;
     node.tags = tags;
     node.relations = note.relations.clone();
     if node.ts == 0 {
@@ -679,15 +683,15 @@ mod tests {
         let node = &alpha.notes[0];
         assert_eq!(node.id, "aaaa1111");
         assert_eq!(node.anchor, "Alpha Note");
-        assert_eq!(node.text, "Alpha");
+        assert_eq!(node.note, "Alpha");
         assert_eq!(node.tags, vec!["intro", "exam", NODE_TAG]);
         let rels: Vec<(RelationType, String)> = node
             .relations
             .iter()
             .map(|r| {
                 (
-                    r.rel_type,
-                    r.target_doc
+                    r.relation_type().unwrap(),
+                    Path::new(&r.target_doc)
                         .file_name()
                         .unwrap()
                         .to_string_lossy()
@@ -706,7 +710,7 @@ mod tests {
         assert_eq!(beta.notes[0].relations[0].target_id, "aaaa1111");
         let gamma = store.load(&root.join("Gamma.md")).unwrap();
         // An empty note's node text falls back to its title (the stem).
-        assert_eq!(gamma.notes[0].text, "Gamma");
+        assert_eq!(gamma.notes[0].note, "Gamma");
         assert_eq!(gamma.notes[0].tags, vec!["solo", NODE_TAG]);
         assert_eq!(store.library.len(), 3);
         assert_eq!(store.library[0].title, "Alpha Note");
@@ -733,7 +737,7 @@ mod tests {
         };
         import_vault(&root, &opts, &mut store).unwrap();
         let beta = store.load(&root.join("sub/Beta.md")).unwrap();
-        assert_eq!(beta.notes[0].relations[0].rel_type, RelationType::Cites);
+        assert_eq!(beta.notes[0].relations[0].rel_type, "CITES");
     }
 
     #[test]

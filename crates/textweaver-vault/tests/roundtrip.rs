@@ -24,13 +24,22 @@ fn chem_path() -> PathBuf {
 fn note(id: &str, pos: usize, anchor: &str, text: &str, tags: &[&str]) -> Note {
     Note {
         id: id.into(),
-        pos: CharPos(pos),
+        range: CharRange::new(CharPos(pos), CharPos(pos)),
         anchor: anchor.into(),
-        text: text.into(),
+        note: text.into(),
         tags: tags.iter().map(|t| (*t).to_owned()).collect(),
-        cite: String::new(),
+        created: 1_790_000_000,
         ts: 1_790_000_000,
-        relations: Vec::new(),
+        ..Note::default()
+    }
+}
+
+fn rel(t: RelationType, doc: &Path, id: &str, note: &str) -> Relation {
+    Relation {
+        rel_type: t.as_str().into(),
+        target_doc: doc.to_string_lossy().into_owned(),
+        target_id: id.into(),
+        note: note.into(),
     }
 }
 
@@ -52,18 +61,14 @@ fn store() -> MemoryStore {
         "Translation happens here.",
         &[],
     );
-    ribo.relations.push(Relation {
-        rel_type: RelationType::Supports,
-        target_doc: chem_path(),
-        target_id: "chem-1".into(),
-        note: "proteins are molecules".into(),
-    });
-    ribo.relations.push(Relation {
-        rel_type: RelationType::SeeAlso,
-        target_doc: bio_path(),
-        target_id: "bio-1".into(),
-        note: String::new(),
-    });
+    ribo.relations.push(rel(
+        RelationType::Supports,
+        &chem_path(),
+        "chem-1",
+        "proteins are molecules",
+    ));
+    ribo.relations
+        .push(rel(RelationType::SeeAlso, &bio_path(), "bio-1", ""));
     s.save(
         &bio_path(),
         &DocAnnotations {
@@ -74,12 +79,14 @@ fn store() -> MemoryStore {
                     range: CharRange::new(CharPos(0), CharPos(27)),
                     color: "#ffff00".into(),
                     ts: 1_790_000_100,
+                    ..Highlight::default()
                 },
                 Highlight {
                     id: "hl-b".into(),
                     range: CharRange::new(CharPos(67), CharPos(90)),
                     color: "#90ee90".into(),
                     ts: 1_790_000_200,
+                    ..Highlight::default()
                 },
             ],
         },
@@ -257,15 +264,21 @@ fn edits_made_in_obsidian_come_back_and_re_export_is_stable() {
     let bio = s.load(&bio_path()).unwrap();
     let energy = bio.note("bio-1").unwrap();
     assert_eq!(
-        energy.text,
+        energy.note,
         // The typed link became a relation; its line leaves the text.
         "Powerhouse of the cell. #review"
     );
     assert_eq!(energy.tags, vec!["exam", "cells", "review"]);
     assert_eq!(energy.cite, "Campbell, Biology, p. 112");
     assert_eq!(energy.relations.len(), 1);
-    assert_eq!(energy.relations[0].rel_type, RelationType::Defines);
-    assert_eq!(energy.relations[0].target_doc, chem_path());
+    assert_eq!(
+        energy.relations[0].relation_type(),
+        Some(RelationType::Defines)
+    );
+    assert_eq!(
+        energy.relations[0].target_doc,
+        chem_path().to_string_lossy()
+    );
     assert_eq!(energy.relations[0].target_id, "chem-1");
     // The untouched notes keep their relations, comments included.
     let ribo = bio.note("bio-2").unwrap();
@@ -355,7 +368,7 @@ fn star_exported_vault_imports_as_a_graph() {
     assert_eq!(report.nodes, 2);
     let cell = s.load(&vault.join("Cell theory.md")).unwrap();
     assert_eq!(cell.notes[0].id, "1a2b3c4d");
-    assert_eq!(cell.notes[0].text, "All living things are made of cells.");
+    assert_eq!(cell.notes[0].note, "All living things are made of cells.");
     assert_eq!(cell.notes[0].relations[0].target_id, "5e6f7a8b");
-    assert_eq!(cell.notes[0].relations[0].rel_type, RelationType::Supports);
+    assert_eq!(cell.notes[0].relations[0].rel_type, "SUPPORTS");
 }
