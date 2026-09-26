@@ -228,3 +228,26 @@ fn broken_and_protected_pdfs_fail_clearly() {
         .unwrap_err();
     assert!(err.to_string().contains("not a readable PDF"), "{err}");
 }
+
+/// Load time of a large PDF named by `TW_PDF_BENCH` (for example one made
+/// with `python fixtures/a/make_pdfs.py big big.pdf 300`); run with
+/// `cargo test --release -p textweaver-formats --test pdf -- --ignored --nocapture`.
+#[test]
+#[ignore = "benchmark; needs TW_PDF_BENCH"]
+fn large_pdf_load_time() {
+    let Some(path) = std::env::var_os("TW_PDF_BENCH") else {
+        return;
+    };
+    for _ in 0..3 {
+        let started = Instant::now();
+        let doc = Registry::with_builtins()
+            .load(&Source::Path(path.clone().into()), &LoadOptions::default())
+            .expect("loads");
+        eprintln!(
+            "{} pages, {} chars: {:?}",
+            doc.meta.properties.get("pages").map_or("?", String::as_str),
+            doc.len_chars(),
+            started.elapsed()
+        );
+    }
+}
