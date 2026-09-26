@@ -7,18 +7,22 @@
 //! positions (ADR-0005), so a highlight on the display text lands on the
 //! right chars and a click or caret in it maps back exactly.
 //!
-//! Splitting uses the `hypher` crate: Knuth-Liang hyphenation with the TeX
-//! en-US patterns embedded as a compact automaton (27 KiB, no load time, no
-//! dependencies, no unsafe code). Hyphenation points are where a word may be
-//! broken at a line end, which for English is close to, but not exactly, the
-//! spoken syllables; that is the same trade-off Star made with Pyphen.
+//! Splitting is rule-based, with no dictionary and no dependency: vowel
+//! groups are syllable centres (a silent final `e` is not one; a final
+//! consonant plus `le` is), consonants between them split by the usual
+//! English spelling rules (one consonant goes with the next syllable, two
+//! are split unless they are a digraph such as `th` or `ph`, longer runs keep
+//! a blend such as `str` or `dr` together), and a few suffixes (`-ing`,
+//! `-able`, `-ability`, `-ness`, `-ment`, `-ful`, `-less`, `-ly`) split off
+//! whole. It is an approximation: good enough to help decode long words,
+//! not a dictionary. TeX-pattern hyphenation (for example the `hypher`
+//! crate) is a follow-up if Jon wants dictionary-quality splits.
 //!
 //! In the map, every original char is a `Literal` span and every inserted
 //! separator an `Inserted` span anchored at the syllable that follows it.
 
 use std::ops::Range;
 
-use hypher::{Lang, hyphenate_bounded};
 use serde::{Deserialize, Serialize};
 use textweaver_core::{CharPos, CharRange, OffsetMap, SpanKind, SpokenBuilder};
 use textweaver_text::Document;
@@ -35,10 +39,9 @@ pub struct SyllableOptions {
     /// Shown between syllables. Star's default is a middle dot; a hyphen or
     /// a thin space also work.
     pub separator: String,
-    /// Fewest chars before the first break. Pyphen's default, 2.
+    /// Fewest letters before the first break (Pyphen's default, 2).
     pub left_min: usize,
-    /// Fewest chars after the last break. Pyphen's default, 2 (TeX uses 3
-    /// for English line breaking, which hides syllables like `i·ty`).
+    /// Fewest letters after the last break (Pyphen's default, 2).
     pub right_min: usize,
     /// Words shorter than this (in chars) are never split.
     pub min_word_len: usize,
@@ -61,49 +64,231 @@ impl Default for SyllableOptions {
     }
 }
 
-/// The syllables of one word, as slices of it. A word that cannot or need
-/// not be split comes back whole. Words containing digits are never split.
-pub fn split_word<'a>(word: &'a str, opts: &SyllableOptions) -> Vec<&'a str> {
-    if word.chars().count() < opts.min_word_len.max(1)
-        || word.chars().any(|c| c.is_numeric())
-        || !word.chars().all(char::is_alphabetic)
-    {
-        return split_compound(word, opts);
-    }
-    hyphenate_bounded(
-        word,
-        Lang::English,
-        opts.left_min.max(1),
-        opts.right_min.max(1),
+/// Two consonants that spell one sound and start a syllable together.
+const DIGRAPHS: &[&str] = &["th", "ch", "sh", "ph", "wh", "gh"];
+/// Consonant pairs that can start a syllable (kept together in longer runs).
+const ONSETS: &[&str] = &[
+    "bl", "br", "cl", "cr", "dr", "fl", "fr", "gl", "gr", "pl", "pr", "sc", "sk", "sl", "sm", "sn",
+    "sp", "st", "sw", "tr", "tw", "wr", "th", "ch", "sh", "ph", "wh",
+];
+/// Three-consonant onsets.
+const ONSETS3: &[&str] = &["str", "spr", "scr", "spl", "thr", "chr", "shr", "squ"];
+/// Suffixes split off whole, with their own internal breaks (char offsets).
+const SUFFIXES: &[(&str, &[usize])] = &[
+    ("ability", &[1, 4, 5]),
+    ("ibility", &[1, 4, 5]),
+    ("able", &[1]),
+    ("ible", &[1]),
+    ("ing", &[]),
+    ("ness", &[]),
+    ("ment", &[]),
+    ("ful", &[]),
+    ("less", &[]),
+];
+
+fn is_vowel_letter(c: char) -> bool {
+    matches!(
+        c,
+        'a' | 'e'
+            | 'i'
+            | 'o'
+            | 'u'
+            | 'à'
+            | 'á'
+            | 'â'
+            | 'ä'
+            | 'è'
+            | 'é'
+            | 'ê'
+            | 'ë'
+            | 'ì'
+            | 'í'
+            | 'î'
+            | 'ï'
+            | 'ò'
+            | 'ó'
+            | 'ô'
+            | 'ö'
+            | 'ù'
+            | 'ú'
+            | 'û'
+            | 'ü'
     )
-    .collect()
 }
 
-/// A word with apostrophes or other joiners (`don't`, `o'clock`): split each
-/// alphabetic run on its own and keep the joiners with the run before them.
-fn split_compound<'a>(word: &'a str, opts: &SyllableOptions) -> Vec<&'a str> {
-    if word.chars().any(|c| c.is_numeric())
-        || word.chars().count() < opts.min_word_len.max(1)
-        || word.chars().all(char::is_alphabetic)
+/// Break points (char offsets) inside an all-letter word, by the rules
+/// above, before applying the minimum lengths.
+fn rule_breaks(w: &[char]) -> Vec<usize> {
+    let n = w.len();
+    if n < 2 {
+        return Vec::new();
+    }
+    // Which letters are vowels here.
+    let mut v: Vec<bool> = (0..n)
+        .map(|i| {
+            let c = w[i];
+            if c == 'y' {
+                // "y" is a vowel except at the start or before a vowel.
+                i > 0 && !w.get(i + 1).copied().is_some_and(is_vowel_letter)
+            } else if c == 'u' && i > 0 && w[i - 1] == 'q' {
+                false // "qu" is a consonant sound
+            } else {
+                is_vowel_letter(c)
+            }
+        })
+        .collect();
+    let cons = |i: usize| i < n && !v[i];
+    // A final consonant + "le" (+ "s" or "d") is a syllable: ta-ble, bub-bles.
+    let le_at = if n >= 4 && w[n - 2..] == ['l', 'e'] && cons(n - 3) {
+        Some(n - 3)
+    } else if n >= 5
+        && w[n - 3..n - 1] == ['l', 'e']
+        && matches!(w[n - 1], 's' | 'd')
+        && cons(n - 4)
     {
+        Some(n - 4)
+    } else {
+        None
+    };
+    if le_at.is_none() && n >= 3 {
+        // Silent final e ("make"), and silent e in "-es" and "-ed" endings
+        // ("makes", "jumped") unless the ending is sounded ("horses", "wanted").
+        if w[n - 1] == 'e' && cons(n - 2) && v[..n - 2].iter().any(|&x| x) {
+            v[n - 1] = false;
+        } else if n >= 4 && w[n - 2] == 'e' && cons(n - 3) && v[..n - 3].iter().any(|&x| x) {
+            let silent = match w[n - 1] {
+                's' => !matches!(w[n - 3], 's' | 'x' | 'z' | 'c' | 'g' | 'h'),
+                'd' => !matches!(w[n - 3], 't' | 'd'),
+                _ => false,
+            };
+            if silent {
+                v[n - 2] = false;
+            }
+        }
+    }
+    // Vowel groups: (start, end) of each run of vowels.
+    let mut nuclei: Vec<(usize, usize)> = Vec::new();
+    let mut i = 0;
+    while i < n {
+        if v[i] {
+            let s = i;
+            while i < n && v[i] {
+                i += 1;
+            }
+            nuclei.push((s, i));
+        } else {
+            i += 1;
+        }
+    }
+    let mut breaks = Vec::new();
+    for pair in nuclei.windows(2) {
+        let (e, s) = (pair[0].1, pair[1].0);
+        let cluster: String = w[e..s].iter().collect();
+        let k = s - e;
+        let b = if le_at.is_some_and(|l| l >= e && l < s) {
+            le_at.unwrap_or(e) // break before the consonant of "-le"
+        } else {
+            match k {
+                0 => e,
+                1 if w[e] == 'x' => e + 1, // ex-am
+                1 => e,                    // V-CV: pa-per
+                2 if DIGRAPHS.contains(&cluster.as_str()) => e,
+                2 if cluster == "ck" || cluster == "ng" => e + 2,
+                2 => e + 1, // VC-CV: hap-py
+                _ => {
+                    let tail3: String = w[s - 3..s].iter().collect();
+                    let tail2: String = w[s - 2..s].iter().collect();
+                    if ONSETS3.contains(&tail3.as_str()) && k > 3 {
+                        s - 3
+                    } else if ONSETS.contains(&tail2.as_str()) {
+                        s - 2
+                    } else {
+                        s - 1
+                    }
+                }
+            }
+        };
+        if b > 0 && b < n {
+            breaks.push(b);
+        }
+    }
+    breaks
+}
+
+/// Break points (char offsets) in an all-letter word, suffixes first.
+fn letter_breaks(word: &str, left_min: usize, right_min: usize) -> Vec<usize> {
+    let lower: Vec<char> = word.chars().flat_map(char::to_lowercase).collect();
+    if lower.len() != word.chars().count() {
+        return Vec::new(); // a letter that lowercases to several; leave it
+    }
+    let n = lower.len();
+    let mut breaks: Vec<usize> = Vec::new();
+    let mut stem_len = n;
+    for (suffix, inner) in SUFFIXES {
+        let sl = suffix.chars().count();
+        if n < sl + 3 {
+            continue;
+        }
+        let tail: String = lower[n - sl..].iter().collect();
+        if tail != *suffix {
+            continue;
+        }
+        let stem = &lower[..n - sl];
+        if !stem.iter().any(|&c| is_vowel_letter(c) || c == 'y') {
+            continue;
+        }
+        // A doubled consonant before a vowel suffix splits: run-ning.
+        let doubled = stem.len() >= 2
+            && stem[stem.len() - 1] == stem[stem.len() - 2]
+            && !is_vowel_letter(stem[stem.len() - 1])
+            && is_vowel_letter(lower[n - sl]);
+        stem_len = if doubled { n - sl - 1 } else { n - sl };
+        breaks.extend(rule_breaks(&lower[..stem_len]));
+        breaks.push(stem_len);
+        breaks.extend(inner.iter().map(|&i| n - sl + i));
+        break;
+    }
+    if stem_len == n {
+        breaks = rule_breaks(&lower);
+        // A sounded "-ed" after a consonant cluster keeps the cluster:
+        // want-ed, start-ed (the rules alone give wan-ted).
+        if n >= 5
+            && lower[n - 2..] == ['e', 'd']
+            && matches!(lower[n - 3], 't' | 'd')
+            && !is_vowel_letter(lower[n - 4])
+        {
+            for b in &mut breaks {
+                if *b == n - 3 {
+                    *b = n - 2;
+                }
+            }
+        }
+    }
+    breaks.sort_unstable();
+    breaks.dedup();
+    breaks.retain(|&b| b >= left_min.max(1) && b + right_min.max(1) <= n);
+    breaks
+}
+
+/// The syllables of one word, as slices of it. A word that cannot or need
+/// not be split comes back whole. Words containing digits are never split;
+/// in a word with an apostrophe or other joiner (`wouldn't`), each run of
+/// letters is split on its own.
+pub fn split_word<'a>(word: &'a str, opts: &SyllableOptions) -> Vec<&'a str> {
+    if word.chars().count() < opts.min_word_len.max(1) || word.chars().any(|c| c.is_numeric()) {
         return vec![word];
     }
-    let mut breaks: Vec<usize> = Vec::new();
+    let mut cuts: Vec<usize> = Vec::new(); // byte offsets in `word`
     let mut run_start: Option<usize> = None;
-    let push_run = |a: usize, b: usize, breaks: &mut Vec<usize>| {
+    let mut push_run = |a: usize, b: usize| {
         let run = &word[a..b];
-        if run.chars().count() >= opts.min_word_len.max(1) {
-            let mut at = a;
-            let parts: Vec<&str> = hyphenate_bounded(
-                run,
-                Lang::English,
-                opts.left_min.max(1),
-                opts.right_min.max(1),
-            )
-            .collect();
-            for p in &parts[..parts.len().saturating_sub(1)] {
-                at += p.len();
-                breaks.push(at);
+        if run.chars().count() < opts.min_word_len.max(1) {
+            return;
+        }
+        let offsets: Vec<usize> = run.char_indices().map(|(i, _)| i).collect();
+        for c in letter_breaks(run, opts.left_min, opts.right_min) {
+            if let Some(&o) = offsets.get(c) {
+                cuts.push(a + o);
             }
         }
     };
@@ -111,17 +296,19 @@ fn split_compound<'a>(word: &'a str, opts: &SyllableOptions) -> Vec<&'a str> {
         if c.is_alphabetic() {
             run_start.get_or_insert(i);
         } else if let Some(a) = run_start.take() {
-            push_run(a, i, &mut breaks);
+            push_run(a, i);
         }
     }
     if let Some(a) = run_start {
-        push_run(a, word.len(), &mut breaks);
+        push_run(a, word.len());
     }
-    let mut out = Vec::with_capacity(breaks.len() + 1);
+    let mut out = Vec::with_capacity(cuts.len() + 1);
     let mut prev = 0;
-    for b in breaks {
-        out.push(&word[prev..b]);
-        prev = b;
+    for b in cuts {
+        if b > prev {
+            out.push(&word[prev..b]);
+            prev = b;
+        }
     }
     out.push(&word[prev..]);
     out
@@ -247,6 +434,43 @@ mod tests {
 
     fn opts() -> SyllableOptions {
         SyllableOptions::default()
+    }
+
+    fn show(w: &str) -> String {
+        split_word(w, &opts()).join("\u{b7}")
+    }
+
+    #[test]
+    fn rule_based_splits() {
+        let cases = [
+            ("readability", "read\u{b7}a\u{b7}bil\u{b7}i\u{b7}ty"),
+            ("reading", "read\u{b7}ing"),
+            ("running", "run\u{b7}ning"),
+            ("hello", "hel\u{b7}lo"),
+            ("syllables", "syl\u{b7}la\u{b7}bles"),
+            ("table", "ta\u{b7}ble"),
+            ("understanding", "un\u{b7}der\u{b7}stand\u{b7}ing"),
+            ("hyphenation", "hy\u{b7}phe\u{b7}na\u{b7}tion"),
+            ("children", "chil\u{b7}dren"),
+            ("instruct", "in\u{b7}struct"),
+            ("paper", "pa\u{b7}per"),
+            ("happy", "hap\u{b7}py"),
+            ("make", "make"),
+            ("jumped", "jumped"),
+            ("wanted", "want\u{b7}ed"),
+            ("hopeful", "hope\u{b7}ful"),
+            ("question", "ques\u{b7}tion"),
+            ("beyond", "be\u{b7}yond"),
+            // left_min 2 keeps a lone first letter attached.
+            ("Education", "Edu\u{b7}ca\u{b7}tion"),
+        ];
+        let mut wrong = Vec::new();
+        for (w, want) in cases {
+            if show(w) != want {
+                wrong.push((w, show(w), want));
+            }
+        }
+        assert!(wrong.is_empty(), "(word, got, want): {wrong:#?}");
     }
 
     #[test]

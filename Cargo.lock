@@ -875,12 +875,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hypher"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45f2b4f6b5da34d400d4c112eadcc14512cc5d04307a8eee182586d9bebd7ce6"
-
-[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2576,7 +2570,6 @@ dependencies = [
 name = "textweaver-aids"
 version = "0.1.0-alpha.0"
 dependencies = [
- "hypher",
  "proptest",
  "serde",
  "serde_json",

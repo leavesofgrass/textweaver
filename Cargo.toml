@@ -169,9 +169,8 @@ memmap2 = "0.9"
 wxdragon = "0.9"
 live-region = "0.3"
 
-# Reading aids (Agent S): syllable splitting with embedded en-US TeX patterns
-# (no dependencies, no unsafe), and terminal cell widths for the RSVP box.
-hypher = { version = "0.1.8", default-features = false, features = ["alloc", "english"] }
+# Reading aids (Agent S): terminal cell widths for the RSVP box (already in
+# the tree through ratatui).
 unicode-width = "0.2"
 
 # tests

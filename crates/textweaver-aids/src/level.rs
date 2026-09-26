@@ -8,16 +8,14 @@
 //! abbreviations do not end sentences and list items and headings are
 //! sentences of their own.
 //!
-//! Syllables are estimated per word: the larger of a vowel-group count
-//! (with the usual English corrections for silent `e`, `-es`, `-ed`, and
-//! `-le`) and the number of pieces the en-US hyphenation patterns give.
+//! Syllables are estimated per word by counting vowel groups, with the
+//! usual English corrections for silent `e`, `-es`, `-ed`, and `-le`.
 //! Tools differ in this estimate, so grades differ between tools by a few
 //! tenths; the formulas are the standard ones:
 //!
 //! - grade = 0.39 × (words / sentences) + 11.8 × (syllables / words) − 15.59
 //! - ease = 206.835 − 1.015 × (words / sentences) − 84.6 × (syllables / words)
 
-use hypher::{Lang, hyphenate_bounded};
 use serde::{Deserialize, Serialize};
 use textweaver_core::{CharRange, Unit};
 use textweaver_text::{Document, segments_in};
@@ -157,13 +155,7 @@ pub fn count_syllables(word: &str) -> usize {
     if lower.is_empty() {
         return 1;
     }
-    let heuristic = vowel_groups(&lower);
-    let pieces = if lower.chars().count() >= 4 {
-        hyphenate_bounded(&lower, Lang::English, 2, 2).count()
-    } else {
-        1
-    };
-    heuristic.max(pieces).max(1)
+    vowel_groups(&lower).max(1)
 }
 
 fn is_vowel(c: char) -> bool {
