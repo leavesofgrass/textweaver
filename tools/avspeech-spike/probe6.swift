@@ -69,15 +69,15 @@ func channel(_ id: String) -> SpeechChannel? {
     guard let c = chan else { return nil }
     SetSpeechProperty(c, kSpeechWordCFCallBack, NSNumber(value: Int(bitPattern: unsafeBitCast(wordCB, to: UnsafeRawPointer.self))))
     SetSpeechProperty(c, kSpeechSpeechDoneCallBack, NSNumber(value: Int(bitPattern: unsafeBitCast(doneCB, to: UnsafeRawPointer.self))))
-    var cur: Unmanaged<CFTypeRef>?
-    if CopySpeechProperty(c, kSpeechCurrentVoiceProperty, &cur) == 0, let v = cur?.takeRetainedValue() { note("current voice \(v)") }
+    var cur: CFTypeRef?
+    if CopySpeechProperty(c, kSpeechCurrentVoiceProperty, &cur) == 0, let v = cur { note("current voice \(v)") }
     return c
 }
 
 func prop(_ c: SpeechChannel, _ key: CFString) -> String {
-    var out: Unmanaged<CFTypeRef>?
+    var out: CFTypeRef?
     let err = CopySpeechProperty(c, key, &out)
-    return err == 0 ? "\(out!.takeRetainedValue())" : "error \(err)"
+    return err == 0 ? "\(out.map { "\($0)" } ?? "nil")" : "error \(err)"
 }
 
 func fileDuration(_ url: URL) -> Double {
