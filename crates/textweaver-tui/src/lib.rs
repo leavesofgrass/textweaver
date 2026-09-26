@@ -7,12 +7,18 @@
 //! minibuffer when a prompt is open. Lists (keyboard help, bookmarks, help)
 //! appear over the document.
 //!
-//! Accessibility: the hardware cursor always sits where attention is (the
-//! prompt caret, the focused list item, the Speech Cursor line, the spoken
-//! word while reading, else the caret), so screen readers and magnifiers
-//! follow it; every state change is announced through the app; highlights
-//! never rely on color alone; speech is self-voiced through the speech
-//! service unless `--no-speech` is given.
+//! Accessibility: the hardware cursor sits where attention is (the prompt
+//! caret, the focused list item, the Speech Cursor line, the spoken word
+//! while reading, else the caret), so screen readers and magnifiers follow
+//! it, or on the status line with `[accessibility] cursor = "status"`;
+//! every state change is announced through the app; highlights never rely
+//! on color alone. The accessibility mode (`[accessibility] mode`,
+//! `--mode`, Alt+Shift+A) decides what textweaver speaks and what it
+//! leaves to a screen reader through the status line; `--no-speech` is
+//! screen-reader mode without a voice. With `quiet_screen`, the title
+//! line's position stays still while reading continuously. On the first
+//! run with a screen reader, textweaver asks once whether to use hybrid
+//! mode.
 //!
 //! Edit mode (Ctrl+E) shows the document's source: bound chords (the Edit
 //! layer, then Global) run their actions, and every other key types,
@@ -50,6 +56,7 @@ use ratatui::{DefaultTerminal, Terminal};
 use textweaver_app::a11y::Priority;
 
 pub use setup::{Options, build_app, build_app_with};
+pub use textweaver_app::a11y::AccessMode;
 pub use theme::{Theme, theme_help};
 pub use ui::{Tui, chord};
 
@@ -131,6 +138,8 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
     for m in messages {
         tui.app_mut().announce(&m, Priority::Assertive);
     }
+    // First run with a screen reader: offer hybrid mode (once).
+    setup::offer_hybrid_if_screen_reader(tui.app_mut(), opts);
     tui.offer_recovery();
     if let Some(msg) = signals::install() {
         log::warn!("{msg}");

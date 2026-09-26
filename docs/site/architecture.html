@@ -560,6 +560,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-cli"
    ],
    "deps": [
+    "textweaver-cite",
     "textweaver-core",
     "textweaver-formats",
     "textweaver-render",
@@ -595,6 +596,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "deps": [
     "textweaver-core",
     "textweaver-fonts",
+    "textweaver-math",
     "textweaver-text"
    ],
    "description": "Native document writers for textweaver: accessible EPUB 3, DOCX, BRF braille, tagged PDF",
@@ -832,7 +834,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "deps": [
     "textweaver-core"
    ],
-   "description": "textweaver accessibility: announcer trait, verbosity, speech and status-line announcers",
+   "description": "textweaver accessibility: announcer trait, verbosity, speech and status-line announcers, accessibility modes, screen reader detection",
    "dev_deps": [],
    "job": "Announces every state change to the user, through speech, the terminal status line, or both.",
    "layer": "state",
@@ -1204,7 +1206,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "default_member": true,
    "dependents": [
     "textweaver-render",
-    "textweaver-speech"
+    "textweaver-speech",
+    "textweaver-writers"
    ],
    "deps": [
     "textweaver-core"
@@ -1232,7 +1235,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
-    "textweaver-cli"
+    "textweaver-cli",
+    "textweaver-convert"
    ],
    "deps": [
     "textweaver-core"

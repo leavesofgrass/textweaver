@@ -97,8 +97,17 @@
 //!   ([`speech_registry_for`], [`service_config`]); `[keyboard]
 //!   character_keys` is applied at startup and toggled with F9.
 //!
+//! # Screen readers (Agent P2c)
+//!
+//! `[accessibility] mode` (self-voicing, screen-reader, hybrid; cycled with
+//! Alt+Shift+A) decides whether each message, echo, caret move, and piece
+//! of read text is spoken, shown on the status line, or both, so a screen
+//! reader that reads the status line does not repeat textweaver's voice.
+//! See the `access` module and `docs/screen-readers.md`.
+//!
 //! Owner: Agent D.
 
+mod access;
 pub mod align;
 mod app;
 mod authoring;
@@ -131,6 +140,10 @@ mod voice;
 mod writer;
 mod writes;
 
+pub use access::{
+    SENTENCE_GAP, STATUS_TEXT_LIMIT, access_mode_from_setting, access_mode_setting, keymap_preset,
+    sentence_duration,
+};
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use authoring::osc52;
 pub use backends::{

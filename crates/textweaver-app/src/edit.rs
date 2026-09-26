@@ -798,9 +798,9 @@ impl App {
     }
 
     /// Speaks echo events when self-voicing (a screen reader echoes typing
-    /// itself otherwise).
+    /// itself otherwise, and in the screen-reader and hybrid modes).
     fn speak_echo(&mut self, events: Vec<EchoEvent>) {
-        if !self.self_voicing {
+        if !self.route(textweaver_a11y::Channel::Echo).speak {
             return;
         }
         for (i, e) in events.into_iter().enumerate() {
@@ -829,7 +829,7 @@ impl App {
     /// Speaks what the user asked to hear while editing (the character or
     /// word reached), when self-voicing.
     fn speak_edit_feedback(&mut self, text: &str) {
-        if self.self_voicing && !text.is_empty() {
+        if self.route(textweaver_a11y::Channel::Echo).speak && !text.is_empty() {
             self.speech.say(text, SayMode::Interrupt);
         }
     }

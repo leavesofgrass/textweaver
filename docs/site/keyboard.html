@@ -563,23 +563,74 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ]
   },
   {
-   "action": "Say the position: line, percentage, and heading",
+   "action": "Say the position: line, percentage, word number, and heading",
    "category": "Reading",
    "gui": [
     {
-     "key": "%",
+     "key": "Alt+Shift+Y",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+W",
      "layer": "browse"
     }
    ],
    "id": "say_position",
-   "palette_when_off": {
-    "gui": true,
-    "terminal": true
-   },
+   "palette_when_off": null,
    "source": "keymap",
    "terminal": [
     {
-     "key": "%",
+     "key": "Alt+Shift+Y",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+W",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Say how many words are in the document, or in the selection",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Alt+Shift+T",
+     "layer": "global"
+    }
+   ],
+   "id": "word_count",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+T",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Say the address of the link at the cursor",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Alt+Shift+K",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+K",
+     "layer": "browse"
+    }
+   ],
+   "id": "link_address",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+K",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+K",
      "layer": "browse"
     }
    ]
@@ -988,6 +1039,270 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "terminal": [
     {
      "key": "{",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next heading at level 1",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "1",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_heading_level_1",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "1",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next heading at level 2",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "2",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_heading_level_2",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "2",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next heading at level 3",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "3",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_heading_level_3",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "3",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next heading at level 4",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "4",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_heading_level_4",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "4",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next heading at level 5",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "5",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_heading_level_5",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "5",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the next heading at level 6",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "6",
+     "layer": "browse"
+    }
+   ],
+   "id": "next_heading_level_6",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "6",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous heading at level 1",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "!",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_heading_level_1",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "!",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous heading at level 2",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "@",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_heading_level_2",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "@",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous heading at level 3",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "#",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_heading_level_3",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "#",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous heading at level 4",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "$",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_heading_level_4",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "$",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous heading at level 5",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "%",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_heading_level_5",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "%",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
+   "action": "Move to the previous heading at level 6",
+   "category": "Navigation",
+   "gui": [
+    {
+     "key": "^",
+     "layer": "browse"
+    }
+   ],
+   "id": "previous_heading_level_6",
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "^",
      "layer": "browse"
     }
    ]
@@ -2083,21 +2398,26 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ]
   },
   {
-   "action": "Add a note to the selection or the word at the cursor",
+   "action": "Add a note to the selection or the sentence at the cursor",
    "category": "Bookmarks and notes",
    "gui": [
+    {
+     "key": "Alt+N",
+     "layer": "global"
+    },
     {
      "key": "a",
      "layer": "browse"
     }
    ],
    "id": "add_note",
-   "palette_when_off": {
-    "gui": true,
-    "terminal": true
-   },
+   "palette_when_off": null,
    "source": "keymap",
    "terminal": [
+    {
+     "key": "Alt+N",
+     "layer": "global"
+    },
     {
      "key": "a",
      "layer": "browse"
@@ -2105,7 +2425,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ]
   },
   {
-   "action": "List notes and highlights",
+   "action": "List notes",
    "category": "Bookmarks and notes",
    "gui": [
     {
@@ -2131,7 +2451,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ]
   },
   {
-   "action": "Move to the next note or highlight",
+   "action": "Move to the next note",
    "category": "Bookmarks and notes",
    "gui": [
     {
@@ -2158,7 +2478,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ]
   },
   {
-   "action": "Move to the previous note or highlight",
+   "action": "Move to the previous note",
    "category": "Bookmarks and notes",
    "gui": [
     {
@@ -2759,6 +3079,101 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ]
   },
   {
+   "action": "Copy the selection, or the sentence at the cursor, to the clipboard",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+C",
+     "layer": "global"
+    }
+   ],
+   "id": "copy",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+C",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Cut the selection to the clipboard",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+X",
+     "layer": "edit"
+    }
+   ],
+   "id": "cut",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+X",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "In a table, move to the next cell and say its column; elsewhere, type a tab",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Tab",
+     "layer": "edit"
+    }
+   ],
+   "id": "next_table_cell",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Tab",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "In a table, move to the previous cell and say its column",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Shift+Tab",
+     "layer": "edit"
+    }
+   ],
+   "id": "previous_table_cell",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+Tab",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Cycle typing echo: characters and words, characters, words, or none",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Shift+F9",
+     "layer": "global"
+    }
+   ],
+   "id": "cycle_typing_echo",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+F9",
+     "layer": "global"
+    }
+   ]
+  },
+  {
    "action": "Switch to the next color theme",
    "category": "View and help",
    "gui": [
@@ -2811,6 +3226,25 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "terminal": [
     {
      "key": "F9",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Cycle the accessibility mode: self-voicing, hybrid, or screen reader",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Alt+Shift+A",
+     "layer": "global"
+    }
+   ],
+   "id": "cycle_access_mode",
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+A",
      "layer": "global"
     }
    ]

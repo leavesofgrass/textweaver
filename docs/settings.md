@@ -257,6 +257,17 @@ See [The library](library.md).
 ### [keyboard]
 
 - `character_keys`, default `true`: single-key shortcuts, such as `.` for the next sentence. Set it to `false`, or press F9, so dictation or typing never triggers a command. See [the keyboard reference](keyboard.md#single-key-shortcuts).
+- `preset`, default `"default"`: the set of keys to start from. `"screen-reader"` uses `h`, `l`, `k`, `t`, `i`, and `1` to `6` as a screen reader's browse mode does; `keymap.toml` applies on top. See [the keyboard reference](keyboard.md#the-screen-reader-preset).
+
+### [accessibility]
+
+How textweaver shares the work with a screen reader. See [Using textweaver with a screen reader](screen-readers.md).
+
+- `mode`, default `"self-voicing"`: `"self-voicing"` (textweaver speaks everything), `"hybrid"` (textweaver reads documents aloud; your screen reader speaks messages, typing, and caret moves from the status line), or `"screen-reader"` (textweaver is silent). Alt+Shift+A cycles and saves it; `--mode` sets it for one run; `--no-speech` is screen-reader mode.
+- `say_all`, default `"screen"`: continuous reading in screen-reader mode. `"screen"` moves a sentence at a time and puts each sentence on the status line at textweaver's rate; `"voice"` reads with textweaver's voice.
+- `quiet_screen`, default `false`: while textweaver reads aloud, the title line's position stays still and the text being read is not copied to the status line.
+- `cursor`, default `"follow"`: where the terminal's cursor waits. `"follow"` puts it on the spoken word, the caret, or the chosen item; `"status"` puts it on the status line, so your screen reader's "read current line" repeats the last message.
+- `hybrid_offered`, default `false`: set after textweaver has asked, on its first run with a screen reader, whether to use hybrid mode. Set it back to `false` to be asked again.
 
 ### [export]
 

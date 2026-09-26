@@ -4294,6 +4294,7 @@ dependencies = [
  "serde",
  "serde_json",
  "textweaver-core",
+ "windows",
 ]
 
 [[package]]

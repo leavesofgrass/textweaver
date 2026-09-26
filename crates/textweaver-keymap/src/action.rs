@@ -433,6 +433,9 @@ actions! {
     ToggleCharacterKeys = "toggle_character_keys", View,
         "Turn single-key shortcuts on or off, so dictation and typing never trigger commands",
         gui ["g:F9"], term ["g:F9"], shared [];
+    CycleAccessMode = "cycle_access_mode", View,
+        "Cycle the accessibility mode: self-voicing, hybrid, or screen reader",
+        gui ["g:Alt+Shift+A"], term ["g:Alt+Shift+A"], shared [];
     BionicToggle = "bionic_toggle", View, "Turn bionic reading on or off: the start of each word in bold",
         gui ["g:Alt+Shift+B"], term ["g:Alt+Shift+B"], shared [];
     RulerCycle = "ruler_cycle", View, "Cycle the reading ruler: off, current line, ruler",

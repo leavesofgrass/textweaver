@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use textweaver_app::a11y::{Announcer, RingAnnouncer};
+use textweaver_app::a11y::{AccessMode, Announcer, RingAnnouncer};
 use textweaver_app::keymap::{Frontend, Keymap, Platform};
 use textweaver_app::speech::{ServiceConfig, SpeechService};
 use textweaver_app::store::{Paths, Settings, SettingsStore};
@@ -11,8 +11,12 @@ use textweaver_app::{App, AppConfig};
 /// Startup options (from the command line).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Options {
-    /// Run silently: no self-voicing, the null speech backend.
+    /// Run silently: no self-voicing, the null speech backend, and
+    /// screen-reader mode for this run.
     pub no_speech: bool,
+    /// Accessibility mode for this run (`--mode`), not saved; `None` uses
+    /// `[accessibility] mode`, or screen-reader mode with `no_speech`.
+    pub mode: Option<AccessMode>,
     /// Speech backend id; overrides the settings.
     pub backend: Option<String>,
     /// Keep all state under this directory (like `TEXTWEAVER_HOME`).
@@ -123,15 +127,24 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
                 messages.push(format!("Keymap file ignored: {e}."));
                 Default::default()
             });
-            let (keymap, warnings) =
-                Keymap::with_overrides(Platform::current(), Frontend::Terminal, &overrides);
+            let (keymap, warnings) = Keymap::with_preset_and_overrides(
+                Platform::current(),
+                Frontend::Terminal,
+                textweaver_app::keymap_preset(settings.keyboard.preset),
+                &overrides,
+            );
             messages.extend(warnings);
             (settings, keymap)
         }
-        None => (
-            Settings::default(),
-            Keymap::defaults(Platform::current(), Frontend::Terminal),
-        ),
+        None => {
+            let settings = Settings::default();
+            let keymap = Keymap::with_preset(
+                Platform::current(),
+                Frontend::Terminal,
+                textweaver_app::keymap_preset(settings.keyboard.preset),
+            );
+            (settings, keymap)
+        }
     };
     if let Some(t) = &opts.theme {
         settings.display.theme = t.clone();
@@ -148,6 +161,9 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
         self_voicing,
         backend_name,
     });
+    if let Some(mode) = run_mode(opts) {
+        app.set_access_mode_for_run(mode);
+    }
     if opts.theme.is_none() {
         // Follow the system's light, dark, or high-contrast setting unless
         // the user picked a theme (display.follow_os_theme and
@@ -157,9 +173,30 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
     (app, messages)
 }
 
+/// The accessibility mode the command line asks for: `--mode`, else
+/// screen-reader mode for `--no-speech` (textweaver has no voice).
+pub fn run_mode(opts: &Options) -> Option<AccessMode> {
+    opts.mode
+        .or_else(|| opts.no_speech.then_some(AccessMode::ScreenReader))
+}
+
+/// On a run where the mode was never chosen, checks for a screen reader
+/// and, when one is running, asks once whether to use hybrid mode
+/// ([`App::offer_hybrid`]). Returns true when it asked.
+pub fn offer_hybrid_if_screen_reader(app: &mut App, opts: &Options) -> bool {
+    if run_mode(opts).is_some() || !app.hybrid_offer_due() {
+        return false;
+    }
+    match textweaver_app::a11y::detect::detect() {
+        Some(found) => app.offer_hybrid(&found),
+        None => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use textweaver_app::keymap::{ActionId, Layer, Preset};
 
     #[test]
     fn no_speech_is_silent_and_uses_home() {
@@ -194,6 +231,48 @@ mod tests {
         };
         let (app, _) = build_app(&opts);
         assert!(!app.keymap().character_keys());
+    }
+
+    /// `--no-speech` means screen-reader mode, `--mode` any mode; neither
+    /// is saved, and the keyboard preset comes from the settings.
+    #[test]
+    fn modes_from_the_command_line_and_the_keyboard_preset() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = SettingsStore::new(Paths::under(dir.path()));
+        let mut s = Settings::default();
+        s.keyboard.preset = textweaver_app::store::KeymapPreset::ScreenReader;
+        store.save(&s).unwrap();
+        let opts = Options {
+            no_speech: true,
+            home: Some(dir.path().to_owned()),
+            theme: Some("galaxy".into()),
+            ..Options::default()
+        };
+        let (mut app, _) = build_app(&opts);
+        assert_eq!(app.access_mode(), AccessMode::ScreenReader);
+        assert_eq!(app.keymap().preset(), Preset::ScreenReader);
+        let k: textweaver_app::keymap::KeyChord = "k".parse().unwrap();
+        assert_eq!(
+            app.keymap().lookup(&k, Layer::Browse),
+            Some(ActionId::NextLink)
+        );
+        // A mode given on the command line asks nothing at startup.
+        assert!(!offer_hybrid_if_screen_reader(&mut app, &opts));
+        app.shutdown();
+        assert_eq!(
+            store.load().0.accessibility.mode,
+            textweaver_app::store::AccessMode::SelfVoicing,
+            "a mode for this run is not saved"
+        );
+        let opts = Options {
+            no_speech: false,
+            backend: Some("null".into()),
+            mode: Some(AccessMode::Hybrid),
+            ..opts
+        };
+        let (app, _) = build_app(&opts);
+        assert_eq!(app.access_mode(), AccessMode::Hybrid);
+        assert_eq!(run_mode(&Options::default()), None);
     }
 
     /// The only test in this binary that installs the global logger.

@@ -1,7 +1,7 @@
 //! Reading aloud: starting, pausing, resuming, stopping, and following the
 //! speech service's status updates.
 
-use textweaver_a11y::{Priority, Verbosity};
+use textweaver_a11y::{AccessMode, Channel, Priority, Verbosity};
 use textweaver_core::{CharPos, CharRange, MarkerKind, Unit};
 use textweaver_speech::{Caps, ReadingGeneration, SayMode, SpeechStatus};
 use textweaver_text::narrate::NarrationPolicy;
@@ -191,6 +191,7 @@ impl App {
         }
         self.track.clear();
         self.playback = Playback::Idle;
+        self.screen_say_all = None;
         self.continue_from = None;
         self.planned_end = None;
         if let Some(s) = self.session.as_mut() {
@@ -236,6 +237,14 @@ impl App {
         if utterances.is_empty() {
             return false;
         }
+        // Read in place without a voice for it (screen-reader mode, or
+        // hybrid without an engine): the caller shows the text instead.
+        if kind == ReadKind::InPlace && !self.route(Channel::Reading).speak {
+            return true;
+        }
+        let Some(s) = self.session.as_mut() else {
+            return false;
+        };
         s.spoken = None;
         s.spoken_sentence = None;
         let generation = self.speech.read(utterances);
@@ -275,9 +284,22 @@ impl App {
             return;
         };
         let start = text_util::word_start(&s.doc, pos);
+        if self.screen_say_all_wanted() {
+            // Screen-reader mode: a sentence at a time on the status line.
+            if !self.start_screen_say_all(start, std::time::Instant::now()) {
+                self.tell("End of document.");
+            }
+            return;
+        }
         if self.read_window(start) {
-            let rate = self.settings.speech.rate.wpm();
-            self.show(&format!("Reading at {rate} words per minute."));
+            // The voice starting is the feedback; with a screen reader, or
+            // a quiet screen, nothing is added to the status line.
+            if self.access_mode == AccessMode::SelfVoicing
+                && !self.settings.accessibility.quiet_screen
+            {
+                let rate = self.settings.speech.rate.wpm();
+                self.show(&format!("Reading at {rate} words per minute."));
+            }
         } else {
             self.tell("End of document.");
         }
@@ -305,6 +327,9 @@ impl App {
     }
 
     pub(crate) fn play_pause(&mut self) {
+        if self.pause_screen_say_all() {
+            return;
+        }
         match self.playback {
             Playback::Reading
                 if self.reading == ReadKind::InPlace && self.mode != Mode::SpeechCursor =>
@@ -410,20 +435,32 @@ impl App {
         match s.doc.char_at(pos) {
             Some(c) if !c.is_whitespace() => {
                 self.stop_speech();
-                self.speech.speak_char(c, Some(pos));
-                self.show(&text_util::char_name(c));
+                let route = self.route(Channel::Caret);
+                if route.speak {
+                    self.speech.speak_char(c, Some(pos));
+                }
+                if route.status {
+                    self.show(&text_util::char_name(c));
+                }
             }
-            Some(c) => self.speak_content(&text_util::char_name(c)),
-            None => self.speak_content("end of document"),
+            Some(c) => self.speak_content(Channel::Caret, &text_util::char_name(c)),
+            None => self.speak_content(Channel::Caret, "end of document"),
         }
     }
 
-    /// Speaks text that is document content rather than an announcement
-    /// ("blank", a character name): always spoken, whatever the voicing.
-    pub(crate) fn speak_content(&mut self, text: &str) {
+    /// Says text that is document content rather than an announcement
+    /// ("blank", a character name, the word a caret move reached): spoken
+    /// and shown as `channel` goes in the accessibility mode (in
+    /// self-voicing mode always spoken, whatever the voicing).
+    pub(crate) fn speak_content(&mut self, channel: Channel, text: &str) {
         self.stop_speech();
-        self.speech.say(text, SayMode::Interrupt);
-        self.show(text);
+        let route = self.route(channel);
+        if route.speak {
+            self.speech.say(text, SayMode::Interrupt);
+        }
+        if route.status {
+            self.show(text);
+        }
     }
 
     pub(crate) fn read_current_unit(&mut self, unit: Unit) {
@@ -436,24 +473,34 @@ impl App {
         };
         self.stop_speech();
         if !self.read_range(range, ReadKind::InPlace) {
-            self.speak_content("blank");
+            self.speak_content(Channel::Caret, "blank");
         } else {
             self.show_read_text(range, false);
         }
     }
 
-    /// Puts text read in place on the status line: always for lines (the
-    /// Speech Cursor), otherwise only without self-voicing, where a screen
-    /// reader reads the status line and would hear nothing else
-    /// (`--no-speech`).
+    /// Puts text read in place on the status line when the accessibility
+    /// mode sends it there: in self-voicing mode always for lines (the
+    /// Speech Cursor) and otherwise only without a voice; with a screen
+    /// reader whenever textweaver does not read it aloud, narrated as
+    /// textweaver would say it (tables, math in words).
     pub(crate) fn show_read_text(&mut self, range: CharRange, always: bool) {
-        if !always && self.self_voicing {
+        let channel = if always {
+            Channel::Line
+        } else {
+            Channel::Reading
+        };
+        if !self.route(channel).status {
             return;
         }
         let Some(s) = self.session.as_ref() else {
             return;
         };
-        let text = text_util::preview(&s.doc, range, 80);
+        let text = if self.access_mode.uses_screen_reader() {
+            self.narrated(range)
+        } else {
+            text_util::preview(&s.doc, range, 80)
+        };
         let text = if text.is_empty() {
             "blank".to_owned()
         } else {
@@ -497,10 +544,10 @@ impl App {
         let lead = lead.map(str::to_owned);
         self.stop_speech();
         if blank || !self.read_range_led(range, ReadKind::InPlace, lead.as_deref()) {
-            self.speak_content("blank");
+            self.speak_content(Channel::Line, "blank");
         } else {
             self.show_read_text(range, true);
-            if let Some(kind) = structure {
+            if let Some(kind) = structure.filter(|_| self.route(Channel::Line).status) {
                 let shown = format!("{kind}, {}", self.status_text());
                 self.show(&shown);
             }
@@ -517,7 +564,7 @@ impl App {
             Some(r) => {
                 self.stop_speech();
                 if !self.read_range(r, ReadKind::InPlace) {
-                    self.speak_content("blank");
+                    self.speak_content(Channel::Caret, "blank");
                 } else {
                     self.show_read_text(r, false);
                 }
@@ -609,7 +656,7 @@ impl App {
     /// reader echoes it otherwise): one character spoken as a character,
     /// longer text as a word.
     pub fn echo(&mut self, text: &str) {
-        if !self.self_voicing || self.playback == Playback::Reading {
+        if !self.route(Channel::Echo).speak || self.playback == Playback::Reading {
             return;
         }
         let mut chars = text.chars();

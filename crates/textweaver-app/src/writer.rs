@@ -218,14 +218,22 @@ impl Writer {
 impl Drop for Writer {
     fn drop(&mut self) {
         // Finish what was queued (bounded), then let the thread end.
-        if !self.flush(Self::QUIT_WAIT) {
+        let finished = self.flush(Self::QUIT_WAIT);
+        if !finished {
             log::error!("the writer did not finish within {:?}", Self::QUIT_WAIT);
         }
+        // With the queue empty, closing the channel ends the thread at
+        // once; wait for it (briefly), so the snapshot locks it holds are
+        // released before this returns.
         self.tx = None;
-        if let Some(t) = self.thread.take()
-            && t.is_finished()
-        {
-            let _ = t.join();
+        if let Some(t) = self.thread.take() {
+            let deadline = std::time::Instant::now() + Duration::from_secs(2);
+            while finished && !t.is_finished() && std::time::Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            if t.is_finished() {
+                let _ = t.join();
+            }
         }
     }
 }
