@@ -73,18 +73,10 @@ const READER_FORBIDDEN_EXTERNAL: [&str; 7] = [
     "ureq",
 ];
 
-/// Workspace crates store may use.
+/// Workspace crates store may use. No exceptions: the reading-aid
+/// settings types are store's own since Wave 3 (Agent W3c), and
+/// `textweaver-aids` converts them.
 const STORE_INTERNAL: [&str; 1] = [CORE];
-
-/// Workspace crates store may use for now, with the reason.
-///
-/// TODO(roadmap, Phase 2, Architecture, "Dependency direction"): the
-/// settings types move from `textweaver-aids` into `textweaver-store`; then
-/// remove this allowance.
-const STORE_INTERNAL_FOR_NOW: [(&str, &str); 1] = [(
-    "textweaver-aids",
-    "the settings types move into store (docs/roadmap.md, Phase 2, Dependency direction)",
-)];
 
 /// Serde-level crates store may use: serialization, formats, paths, errors,
 /// and logging.
@@ -256,14 +248,10 @@ fn violations(graph: &Graph) -> (Vec<String>, Vec<String>) {
 
     if let Some(store) = graph.get(STORE) {
         for dep in &store.internal {
-            if STORE_INTERNAL.contains(&dep.as_str()) {
-                continue;
-            }
-            match STORE_INTERNAL_FOR_NOW.iter().find(|(n, _)| n == dep) {
-                Some((_, why)) => notes.push(format!("{STORE} -> {dep}: {why}")),
-                None => errors.push(format!(
+            if !STORE_INTERNAL.contains(&dep.as_str()) {
+                errors.push(format!(
                     "{STORE} -> {dep} (store depends only on {CORE} among workspace crates)"
-                )),
+                ));
             }
         }
         for dep in &store.external {
@@ -352,15 +340,16 @@ mod tests {
     }
 
     #[test]
-    fn store_on_aids_is_allowed_for_now() {
+    fn store_on_aids_is_refused() {
         let mut g = good();
         g.get_mut(STORE)
             .unwrap()
             .internal
             .insert("textweaver-aids".into());
         let (errors, notes) = violations(&g);
-        assert!(errors.is_empty(), "{errors:?}");
-        assert_eq!(notes.len(), 1);
+        assert_eq!(errors.len(), 1, "{errors:?}");
+        assert!(errors[0].contains("textweaver-store -> textweaver-aids"));
+        assert!(notes.is_empty());
     }
 
     #[test]

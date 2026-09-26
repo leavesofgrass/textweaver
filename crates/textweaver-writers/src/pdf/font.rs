@@ -6,10 +6,10 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use krilla::text::Font as KrillaFont;
-use textweaver_fonts::{FamilySource, Style, SystemFace, bundled, system};
+use textweaver_fonts::{FamilySource, Style, bundled, system};
 
 use crate::{PdfOptions, WriteError};
 
@@ -396,13 +396,6 @@ fn find(dirs: &[PathBuf], name: &str) -> Option<PathBuf> {
     dirs.iter().map(|d| d.join(name)).find(|p| p.is_file())
 }
 
-/// Installed faces, scanned once per process (a batch conversion asks for
-/// the same family for every file).
-fn installed() -> &'static [SystemFace] {
-    static FACES: OnceLock<Vec<SystemFace>> = OnceLock::new();
-    FACES.get_or_init(system::scan)
-}
-
 /// The four styles of a family, loaded.
 struct Loaded {
     name: String,
@@ -426,7 +419,7 @@ fn load_family(name: &str) -> Result<Loaded, WriteError> {
     let source = if bundled::is_bundled(name) {
         textweaver_fonts::resolve_family(name, &[])
     } else {
-        textweaver_fonts::resolve_family(name, installed())
+        textweaver_fonts::resolve_family(name, system::installed())
     };
     match source.ok_or_else(not_found)? {
         FamilySource::Bundled(f) => {
