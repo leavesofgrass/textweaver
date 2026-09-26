@@ -22,24 +22,26 @@
 //!   `HKLM\SOFTWARE\Microsoft\Speech\Voices`; `onecore` is
 //!   `HKLM\SOFTWARE\Microsoft\Speech_OneCore\Voices`).
 //!
-//! Threads: the main thread owns the engine (COM is initialized on it). A
-//! reader thread decodes requests from stdin; a `Stop` bumps a shared stop
-//! generation at once (so it reaches an utterance mid-synthesis), and every
-//! other request is queued, stamped with the stop generation current when it
-//! arrived. A `Speak` whose stamp is older than the current generation was
-//! received before a `Stop` and ends as `Aborted` without synthesis.
+//! Threads: the main thread owns the engine (COM is initialized on it). The
+//! shared engine host's reader thread
+//! ([`RequestReader`]) decodes
+//! requests from stdin; a `Stop` bumps a shared stop epoch at once (so it
+//! reaches an utterance mid-synthesis), and every other request is queued,
+//! stamped with the stop epoch current when it arrived. A `Speak` whose
+//! stamp is older than the current epoch was received before a `Stop` and
+//! ends as `Aborted` without synthesis.
 
 #[cfg(windows)]
 mod com;
 
 use std::io::{self, BufReader, BufWriter};
 use std::process::ExitCode;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
-use crate::protocol::{self, EndStatus, PROTOCOL_VERSION, Reply, Request, VoiceToken};
+use textweaver_enginehost::serve::{Incoming, RequestReader, SharedOut};
+
+use crate::protocol::{EndStatus, PROTOCOL_VERSION, Reply, Request, VoiceToken};
 use crate::voices::Arch;
 
 /// Sample rate of every host's output (16-bit mono PCM). SAPI converts each
@@ -55,22 +57,20 @@ pub const CATEGORY_ONECORE: &str = r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speec
 /// thread. Each frame is written whole and flushed.
 #[derive(Debug)]
 pub struct Out {
-    w: Mutex<BufWriter<io::Stdout>>,
+    w: SharedOut<BufWriter<io::Stdout>>,
 }
 
 impl Out {
     fn new() -> Self {
         Out {
-            w: Mutex::new(BufWriter::with_capacity(64 * 1024, io::stdout())),
+            w: SharedOut::new(BufWriter::with_capacity(64 * 1024, io::stdout())),
         }
     }
 
     /// Sends one reply. Write failures (the backend went away) are logged;
     /// the reader thread notices the closed pipe and ends the host.
     pub fn send(&self, reply: &Reply) {
-        let frame = reply.encode();
-        let mut w = self.w.lock().unwrap_or_else(|e| e.into_inner());
-        if let Err(e) = protocol::write_frame(&mut *w, &frame) {
+        if let Err(e) = self.w.send_frame(&reply.encode()) {
             eprintln!("sapi host: cannot write reply: {e}");
         }
     }
@@ -211,51 +211,29 @@ fn sapi_engine(_out: Arc<Out>) -> Result<Box<dyn Engine>, String> {
 
 /// Reads requests until `Quit` or end of input.
 fn serve(engine: &mut dyn Engine, out: &Out) {
-    let stop_gen = Arc::new(AtomicU64::new(0));
-    let (tx, rx) = mpsc::channel::<(u64, Request)>();
-    {
-        let stop_gen = Arc::clone(&stop_gen);
-        let spawned = std::thread::Builder::new()
-            .name("sapi-host-stdin".into())
-            .spawn(move || {
-                let mut r = BufReader::new(io::stdin());
-                loop {
-                    let req = match protocol::read_body(&mut r) {
-                        Ok(Some(body)) => match Request::decode(&body) {
-                            Ok(req) => req,
-                            Err(e) => {
-                                eprintln!("sapi host: bad request: {e}");
-                                continue;
-                            }
-                        },
-                        Ok(None) => Request::Quit,
-                        Err(e) => {
-                            eprintln!("sapi host: input failed: {e}");
-                            Request::Quit
-                        }
-                    };
-                    if req == Request::Stop {
-                        stop_gen.fetch_add(1, Ordering::SeqCst);
-                        continue;
-                    }
-                    let quit = req == Request::Quit;
-                    if tx.send((stop_gen.load(Ordering::SeqCst), req)).is_err() || quit {
-                        return;
-                    }
-                }
-            });
-        if let Err(e) = spawned {
-            out.send(&Reply::Error {
-                token: 0,
-                message: format!("cannot start the input thread: {e}"),
-            });
-            return;
-        }
-    }
-    while let Ok((stamp, req)) = rx.recv() {
+    let reader =
+        match RequestReader::<Request>::spawn(BufReader::new(io::stdin()), "sapi-host-stdin") {
+            Ok(r) => r,
+            Err(e) => {
+                out.send(&Reply::Error {
+                    token: 0,
+                    message: format!("cannot start the input thread: {e}"),
+                });
+                return;
+            }
+        };
+    let stop_gen = reader.epoch().clone();
+    while let Some(item) = reader.next() {
+        let (req, stamp) = match item {
+            Incoming::Request(req, stamp) => (req, stamp),
+            Incoming::Bad(e) => {
+                eprintln!("sapi host: bad request: {e}");
+                continue;
+            }
+        };
         match req {
             Request::Speak { token, text, pitch } => {
-                if stop_gen.load(Ordering::SeqCst) != stamp {
+                if !stop_gen.is_current(stamp) {
                     out.send(&Reply::End {
                         token,
                         status: EndStatus::Aborted,
@@ -263,7 +241,7 @@ fn serve(engine: &mut dyn Engine, out: &Out) {
                     });
                     continue;
                 }
-                let stopped = || stop_gen.load(Ordering::SeqCst) != stamp;
+                let stopped = || !stop_gen.is_current(stamp);
                 let (status, samples) = match engine.speak(token, &text, pitch, out, &stopped) {
                     Ok(r) => r,
                     Err(message) => {

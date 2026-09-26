@@ -8,7 +8,9 @@
 //! index mark with its sample offset over a framed pipe protocol
 //! ([`protocol`]). [`EciBackend`] plays the audio in the main process and
 //! turns those offsets into audio-clock word events, so the highlight
-//! follows the exact word being heard.
+//! follows the exact word being heard. The framing, host process handling,
+//! and playback are shared with the SAPI backend through
+//! `textweaver-enginehost` (ADR-0012).
 //!
 //! Wiring (for the application and the backend registry):
 //! - [`backend_info`] describes the backend (id `"eci"`, the highest

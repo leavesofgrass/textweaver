@@ -9,11 +9,26 @@ repository.workspace = true
 authors.workspace = true
 publish.workspace = true
 
+[features]
+# Audio output through rodio. Off by default so the host processes (built
+# with `--no-default-features` by `cargo xtask hosts`) never link an audio
+# stack; the engine crates turn it on through their own `playback` feature.
+playback = ["dep:rodio"]
+
 [dependencies]
 textweaver-core.workspace = true
 textweaver-speech.workspace = true
 thiserror.workspace = true
 log.workspace = true
+rodio = { workspace = true, optional = true, features = ["playback"] }
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile.workspace = true
+
+[[test]]
+name = "host_process"
+harness = false
 
 [lints]
 workspace = true

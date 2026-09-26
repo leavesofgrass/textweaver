@@ -1,15 +1,19 @@
-//! The framed binary protocol between `SapiBackend`
-//! and `textweaver-sapi-host`.
+//! The SAPI messages of the engine-host protocol between `SapiBackend` and
+//! `textweaver-sapi-host` (ADR-0012).
 //!
-//! It deliberately mirrors the ECI host protocol (`textweaver-eci`), so the
-//! two can merge into one engine-host protocol at integration:
+//! Framing, the shared messages (Speak, Stop, Quit, the `Ready` header,
+//! Audio, End, Error), and the version rule live in
+//! [`textweaver_enginehost::protocol`]; this module defines the SAPI
+//! payloads and messages:
 //!
-//! - Every frame is `len: u32 LE`, then `len` bytes: a one-byte tag followed
-//!   by the tag's payload.
-//! - Integers are little-endian; strings are a `u32` byte length followed by
-//!   UTF-8; sample lists are a `u32` count followed by `i16` samples.
-//! - Requests (backend to host, on the host's stdin) have tags `0x01..`;
-//!   replies (host to backend, on stdout) have tags `0x81..`.
+//! - `Speak` (0x01) carries the text and a SAPI pitch;
+//! - `SetVoice` (0x03) selects a voice token; `SetRate` (0x04) sets the
+//!   SAPI rate;
+//! - `Ready` (0x81) adds the host's architecture and engine name to the
+//!   shared header;
+//! - `Word` (0x83) reports a word boundary as a UTF-16 range and its sample
+//!   offset;
+//! - `Voice` (0x86) describes one voice token (voice listing only).
 //!
 //! Conversation:
 //!
@@ -34,44 +38,13 @@
 //! map them back exactly; see [`crate::words`]). Audio positions are samples
 //! from the utterance's first sample.
 
-use std::io::{self, Read, Write};
-
-/// Version of this protocol, reported in [`Reply::Ready`].
-pub const PROTOCOL_VERSION: u16 = 1;
-
-/// Largest frame either side accepts (16 MiB). Larger lengths mean a
-/// corrupt stream.
-pub const MAX_FRAME: usize = 16 * 1024 * 1024;
-
-/// Outcome of one [`Request::Speak`], reported in [`Reply::End`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EndStatus {
-    /// All audio was delivered.
-    Done,
-    /// A [`Request::Stop`] cut synthesis short (or skipped it).
-    Aborted,
-    /// The engine failed; a [`Reply::Error`] preceded this frame.
-    Failed,
-}
-
-impl EndStatus {
-    fn to_byte(self) -> u8 {
-        match self {
-            EndStatus::Done => 0,
-            EndStatus::Aborted => 1,
-            EndStatus::Failed => 2,
-        }
-    }
-
-    fn from_byte(b: u8) -> Result<Self, ProtocolError> {
-        match b {
-            0 => Ok(EndStatus::Done),
-            1 => Ok(EndStatus::Aborted),
-            2 => Ok(EndStatus::Failed),
-            other => Err(ProtocolError::BadValue("end status", u32::from(other))),
-        }
-    }
-}
+pub use textweaver_enginehost::protocol::{
+    EndStatus, MAX_FRAME, PROTOCOL_VERSION, ProtocolError, read_body, write_frame,
+};
+use textweaver_enginehost::protocol::{
+    FrameReader, FrameWriter, Message, ReadyHeader, encode_audio, encode_end, encode_error,
+    encode_quit, encode_stop,
+};
 
 /// Backend to host.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -173,138 +146,12 @@ pub enum Reply {
     Voice(VoiceToken),
 }
 
-/// Protocol failures.
-#[derive(Debug, thiserror::Error)]
-pub enum ProtocolError {
-    /// The stream ended in the middle of a frame.
-    #[error("stream ended inside a frame")]
-    Truncated,
-    /// A frame claimed a length over [`MAX_FRAME`] or under one byte.
-    #[error("bad frame length {0}")]
-    BadLength(usize),
-    /// Unknown frame tag.
-    #[error("unknown frame tag {0:#04x}")]
-    BadTag(u8),
-    /// A field held an impossible value.
-    #[error("bad {0}: {1}")]
-    BadValue(&'static str, u32),
-    /// A string was not UTF-8.
-    #[error("string is not UTF-8")]
-    BadUtf8,
-    /// A frame had bytes left over after its payload.
-    #[error("{0} trailing bytes in frame")]
-    Trailing(usize),
-    /// Reading or writing the pipe failed.
-    #[error("i/o: {0}")]
-    Io(#[from] io::Error),
-}
-
+/// The shared tags plus the SAPI ones.
 mod tag {
-    pub const SPEAK: u8 = 0x01;
-    pub const STOP: u8 = 0x02;
+    pub use textweaver_enginehost::protocol::tag::*;
     pub const SET_VOICE: u8 = 0x03;
     pub const SET_RATE: u8 = 0x04;
-    pub const QUIT: u8 = 0x05;
-    pub const READY: u8 = 0x81;
-    pub const AUDIO: u8 = 0x82;
-    pub const WORD: u8 = 0x83;
-    pub const END: u8 = 0x84;
-    pub const ERROR: u8 = 0x85;
     pub const VOICE: u8 = 0x86;
-}
-
-/// Frame writer: length placeholder, tag, payload.
-struct Enc(Vec<u8>);
-
-impl Enc {
-    fn new(tag: u8) -> Self {
-        Enc(vec![0, 0, 0, 0, tag])
-    }
-    fn u8(&mut self, v: u8) {
-        self.0.push(v);
-    }
-    fn u16(&mut self, v: u16) {
-        self.0.extend_from_slice(&v.to_le_bytes());
-    }
-    fn u32(&mut self, v: u32) {
-        self.0.extend_from_slice(&v.to_le_bytes());
-    }
-    fn u64(&mut self, v: u64) {
-        self.0.extend_from_slice(&v.to_le_bytes());
-    }
-    fn len(&mut self, n: usize) {
-        self.u32(u32::try_from(n).unwrap_or(u32::MAX));
-    }
-    fn str(&mut self, s: &str) {
-        self.len(s.len());
-        self.0.extend_from_slice(s.as_bytes());
-    }
-    fn finish(mut self) -> Vec<u8> {
-        let n = u32::try_from(self.0.len() - 4).unwrap_or(u32::MAX);
-        self.0[..4].copy_from_slice(&n.to_le_bytes());
-        self.0
-    }
-}
-
-/// Payload reader over one frame body (after the tag).
-struct Dec<'a>(&'a [u8]);
-
-impl<'a> Dec<'a> {
-    fn take(&mut self, n: usize) -> Result<&'a [u8], ProtocolError> {
-        if self.0.len() < n {
-            return Err(ProtocolError::Truncated);
-        }
-        let (head, rest) = self.0.split_at(n);
-        self.0 = rest;
-        Ok(head)
-    }
-    fn array<const N: usize>(&mut self) -> Result<[u8; N], ProtocolError> {
-        let mut a = [0; N];
-        a.copy_from_slice(self.take(N)?);
-        Ok(a)
-    }
-    fn u8(&mut self) -> Result<u8, ProtocolError> {
-        Ok(self.take(1)?[0])
-    }
-    fn i8(&mut self) -> Result<i8, ProtocolError> {
-        Ok(i8::from_le_bytes(self.array()?))
-    }
-    fn u16(&mut self) -> Result<u16, ProtocolError> {
-        Ok(u16::from_le_bytes(self.array()?))
-    }
-    fn u32(&mut self) -> Result<u32, ProtocolError> {
-        Ok(u32::from_le_bytes(self.array()?))
-    }
-    fn u64(&mut self) -> Result<u64, ProtocolError> {
-        Ok(u64::from_le_bytes(self.array()?))
-    }
-    fn count(&mut self, item_size: usize) -> Result<usize, ProtocolError> {
-        let n = self.u32()? as usize;
-        if n.saturating_mul(item_size) > self.0.len() {
-            return Err(ProtocolError::Truncated);
-        }
-        Ok(n)
-    }
-    fn str(&mut self) -> Result<String, ProtocolError> {
-        let n = self.count(1)?;
-        let bytes = self.take(n)?;
-        String::from_utf8(bytes.to_vec()).map_err(|_| ProtocolError::BadUtf8)
-    }
-    fn samples(&mut self) -> Result<Vec<i16>, ProtocolError> {
-        let n = self.count(2)?;
-        let bytes = self.take(n * 2)?;
-        Ok(bytes
-            .chunks_exact(2)
-            .map(|c| i16::from_le_bytes([c[0], c[1]]))
-            .collect())
-    }
-    fn end(self) -> Result<(), ProtocolError> {
-        if self.0.is_empty() {
-            Ok(())
-        } else {
-            Err(ProtocolError::Trailing(self.0.len()))
-        }
-    }
 }
 
 impl Request {
@@ -312,31 +159,30 @@ impl Request {
     pub fn encode(&self) -> Vec<u8> {
         match self {
             Request::Speak { token, text, pitch } => {
-                let mut e = Enc::new(tag::SPEAK);
+                let mut e = FrameWriter::new(tag::SPEAK);
                 e.u64(*token);
                 e.str(text);
-                e.0.extend_from_slice(&pitch.to_le_bytes());
+                e.i8(*pitch);
                 e.finish()
             }
-            Request::Stop => Enc::new(tag::STOP).finish(),
+            Request::Stop => encode_stop(),
             Request::SetVoice { token_id } => {
-                let mut e = Enc::new(tag::SET_VOICE);
+                let mut e = FrameWriter::new(tag::SET_VOICE);
                 e.str(token_id);
                 e.finish()
             }
             Request::SetRate { rate } => {
-                let mut e = Enc::new(tag::SET_RATE);
-                e.0.extend_from_slice(&rate.to_le_bytes());
+                let mut e = FrameWriter::new(tag::SET_RATE);
+                e.i8(*rate);
                 e.finish()
             }
-            Request::Quit => Enc::new(tag::QUIT).finish(),
+            Request::Quit => encode_quit(),
         }
     }
 
     /// Decodes one frame body (tag and payload, without the length).
     pub fn decode(body: &[u8]) -> Result<Self, ProtocolError> {
-        let (&t, rest) = body.split_first().ok_or(ProtocolError::BadLength(0))?;
-        let mut d = Dec(rest);
+        let (t, mut d) = FrameReader::open(body)?;
         let r = match t {
             tag::SPEAK => Request::Speak {
                 token: d.u64()?,
@@ -349,8 +195,17 @@ impl Request {
             tag::QUIT => Request::Quit,
             other => return Err(ProtocolError::BadTag(other)),
         };
-        d.end()?;
+        d.finish()?;
         Ok(r)
+    }
+}
+
+impl Message for Request {
+    fn encode(&self) -> Vec<u8> {
+        Request::encode(self)
+    }
+    fn decode(body: &[u8]) -> Result<Self, ProtocolError> {
+        Request::decode(body)
     }
 }
 
@@ -364,30 +219,24 @@ impl Reply {
                 arch,
                 engine,
             } => {
-                let mut e = Enc::new(tag::READY);
-                e.u16(*protocol);
-                e.u32(*sample_rate);
+                let mut e = FrameWriter::new(tag::READY);
+                ReadyHeader {
+                    protocol: *protocol,
+                    sample_rate: *sample_rate,
+                }
+                .write(&mut e);
                 e.str(arch);
                 e.str(engine);
                 e.finish()
             }
-            Reply::Audio { token, samples } => {
-                let mut e = Enc::new(tag::AUDIO);
-                e.0.reserve(12 + samples.len() * 2);
-                e.u64(*token);
-                e.len(samples.len());
-                for s in samples {
-                    e.0.extend_from_slice(&s.to_le_bytes());
-                }
-                e.finish()
-            }
+            Reply::Audio { token, samples } => encode_audio(*token, samples),
             Reply::Word {
                 token,
                 start,
                 len,
                 sample,
             } => {
-                let mut e = Enc::new(tag::WORD);
+                let mut e = FrameWriter::new(tag::WORD);
                 e.u64(*token);
                 e.u32(*start);
                 e.u32(*len);
@@ -398,21 +247,10 @@ impl Reply {
                 token,
                 status,
                 samples,
-            } => {
-                let mut e = Enc::new(tag::END);
-                e.u64(*token);
-                e.u8(status.to_byte());
-                e.u64(*samples);
-                e.finish()
-            }
-            Reply::Error { token, message } => {
-                let mut e = Enc::new(tag::ERROR);
-                e.u64(*token);
-                e.str(message);
-                e.finish()
-            }
+            } => encode_end(*token, *status, *samples),
+            Reply::Error { token, message } => encode_error(*token, message),
             Reply::Voice(v) => {
-                let mut e = Enc::new(tag::VOICE);
+                let mut e = FrameWriter::new(tag::VOICE);
                 e.str(&v.token_id);
                 e.str(&v.name);
                 e.str(&v.language);
@@ -425,8 +263,7 @@ impl Reply {
 
     /// Decodes one frame body (tag and payload, without the length).
     pub fn decode(body: &[u8]) -> Result<Self, ProtocolError> {
-        let (&t, rest) = body.split_first().ok_or(ProtocolError::BadLength(0))?;
-        let mut d = Dec(rest);
+        let (t, mut d) = FrameReader::open(body)?;
         let r = match t {
             tag::READY => Reply::Ready {
                 protocol: d.u16()?,
@@ -462,48 +299,24 @@ impl Reply {
             }),
             other => return Err(ProtocolError::BadTag(other)),
         };
-        d.end()?;
+        d.finish()?;
         Ok(r)
     }
 }
 
-/// Writes one encoded frame and flushes.
-pub fn write_frame(w: &mut impl Write, frame: &[u8]) -> io::Result<()> {
-    w.write_all(frame)?;
-    w.flush()
-}
-
-/// Reads one frame body (tag and payload). `Ok(None)` at a clean end of
-/// stream (no bytes of a new frame read).
-pub fn read_body(r: &mut impl Read) -> Result<Option<Vec<u8>>, ProtocolError> {
-    let mut len = [0u8; 4];
-    let mut got = 0;
-    while got < 4 {
-        match r.read(&mut len[got..]) {
-            Ok(0) if got == 0 => return Ok(None),
-            Ok(0) => return Err(ProtocolError::Truncated),
-            Ok(n) => got += n,
-            Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
-            Err(e) => return Err(e.into()),
-        }
+impl Message for Reply {
+    fn encode(&self) -> Vec<u8> {
+        Reply::encode(self)
     }
-    let n = u32::from_le_bytes(len) as usize;
-    if n == 0 || n > MAX_FRAME {
-        return Err(ProtocolError::BadLength(n));
+    fn decode(body: &[u8]) -> Result<Self, ProtocolError> {
+        Reply::decode(body)
     }
-    let mut body = vec![0u8; n];
-    r.read_exact(&mut body).map_err(|e| {
-        if e.kind() == io::ErrorKind::UnexpectedEof {
-            ProtocolError::Truncated
-        } else {
-            ProtocolError::Io(e)
-        }
-    })?;
-    Ok(Some(body))
 }
 
 #[cfg(test)]
 mod tests {
+    use std::io::{self, Read};
+
     use super::*;
 
     fn requests() -> Vec<Request> {

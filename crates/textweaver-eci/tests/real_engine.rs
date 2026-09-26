@@ -7,7 +7,7 @@
 //!
 //! Linux: Voxin (`TEXTWEAVER_ECI_LIBRARY`, set by `compose.voxin.yaml` in the
 //! dev container). Windows: Code Factory's `eci.dll` through the 32-bit host
-//! (`cargo xtask eci-host`); these need a licensed Code Factory engine and
+//! (`cargo xtask hosts`); these need a licensed Code Factory engine and
 //! have not been run on Windows yet.
 //!
 //! They never play audio: output goes to the null sink or to a file.

@@ -7,7 +7,9 @@
 //! is written, and reports each word boundary with its audio offset over a
 //! framed pipe protocol ([`protocol`]). `SapiBackend` plays the audio in
 //! the main process and turns the offsets into audio-clock word events, so
-//! the highlight follows the word being heard.
+//! the highlight follows the word being heard. The framing, host process
+//! handling, and playback are shared with the ECI backend through
+//! `textweaver-enginehost` (ADR-0012).
 //!
 //! Wiring (for the application and the backend registry):
 //! - [`backend_info`] describes the backend (id `"sapi"`, priority
@@ -26,7 +28,7 @@
 //!   parent directory, for test binaries in `target/<profile>/deps`);
 //! - x86: [`SapiConfig::host_x86`], else `TEXTWEAVER_SAPI_HOST_X86`, else
 //!   `textweaver-sapi-host-x86.exe` next to the executable (where
-//!   `cargo xtask sapi-host` puts it), else a cargo
+//!   `cargo xtask hosts` puts it), else a cargo
 //!   `i686-pc-windows-msvc` build under the target directory.
 //!
 //! On other platforms the crate holds only its platform-neutral parts
@@ -74,7 +76,7 @@ pub const HOST_ENV_X86: &str = "TEXTWEAVER_SAPI_HOST_X86";
 
 /// File name of the 64-bit host.
 pub const HOST_NAME: &str = "textweaver-sapi-host.exe";
-/// File name `cargo xtask sapi-host` gives the 32-bit host.
+/// File name `cargo xtask hosts` gives the 32-bit host.
 pub const HOST_NAME_X86: &str = "textweaver-sapi-host-x86.exe";
 
 /// True when this build can use SAPI5 (Windows only).

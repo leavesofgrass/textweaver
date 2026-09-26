@@ -61,6 +61,11 @@ impl Arch {
             Arch::X86 => 1,
         }
     }
+
+    /// The architecture at [`index`](Self::index) `i`.
+    pub fn from_index(i: usize) -> Option<Arch> {
+        Arch::ALL.get(i).copied()
+    }
 }
 
 impl fmt::Display for Arch {
@@ -151,6 +156,14 @@ impl Family {
     /// Whether the voice's word events can drive the highlight.
     pub fn has_word_timing(self) -> bool {
         self != Family::Eloquence
+    }
+
+    /// Whether the voice expands numbers, dates, times, and abbreviations
+    /// itself, as ETI-Eloquence does (ADR-0007): the Eloquence families.
+    /// The speech service then skips its overlapping normalization for
+    /// this voice (`Caps::NATIVE_NORMALIZATION`).
+    pub fn normalizes_natively(self) -> bool {
+        matches!(self, Family::Eloquence | Family::OpenEvv)
     }
 }
 
@@ -409,6 +422,24 @@ mod tests {
         let mut v = token("VW Paul", "x");
         v.vendor = "NeoSpeech".into();
         assert_eq!(Family::of(&v), Family::Other);
+    }
+
+    #[test]
+    fn only_eloquence_voices_normalize_natively() {
+        for f in [Family::Eloquence, Family::OpenEvv] {
+            assert!(f.normalizes_natively(), "{f:?}");
+        }
+        for f in [Family::Microsoft, Family::Espeak, Family::Other] {
+            assert!(!f.normalizes_natively(), "{f:?}");
+        }
+    }
+
+    #[test]
+    fn architectures_round_trip_through_their_index() {
+        for a in Arch::ALL {
+            assert_eq!(Arch::from_index(a.index()), Some(a));
+        }
+        assert_eq!(Arch::from_index(2), None);
     }
 
     /// Synthetic attributes of an OpenEVV token (not installed here, and
