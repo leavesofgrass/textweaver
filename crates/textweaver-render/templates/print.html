@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}"{% if dir %} dir="{{ dir }}"{% endif %}>
+<head>
+<meta charset="utf-8">
+<meta name="generator" content="{{ generator }}">
+{%- if author %}
+<meta name="author" content="{{ author }}">
+{%- endif %}
+<title>{{ title }}</title>
+<style>
+{{ print_stylesheet }}
+</style>
+</head>
+<body>
+<main id="main">
+{%- if not has_h1 %}
+<h1>{{ title }}</h1>
+{%- endif %}
+{%- if author or date %}
+<p class="byline">{% if author %}{{ author }}{% endif %}{% if author and date %}, {% endif %}{% if date %}<time>{{ date }}</time>{% endif %}</p>
+{%- endif %}
+{{ content }}
+</main>
+</body>
+</html>

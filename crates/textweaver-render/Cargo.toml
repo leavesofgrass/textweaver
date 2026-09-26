@@ -12,6 +12,18 @@ publish.workspace = true
 [dependencies]
 thiserror.workspace = true
 serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
+pulldown-cmark.workspace = true
+comrak.workspace = true
+pulldown-latex.workspace = true
+ammonia.workspace = true
+minijinja.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+tempfile.workspace = true
+proptest.workspace = true
 
 [lints]
 workspace = true

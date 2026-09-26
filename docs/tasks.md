@@ -355,6 +355,8 @@ Jon's direction: conversion and bulk conversion must be **lightning fast, native
 
 **Acceptance:** CommonMark conformance for the pulldown path through its test suite; flavor features covered by snapshot tests; a bulk-conversion test on a temporary tree checking mirrored paths and skip-unchanged; the benchmark numbers in the report.
 
+**Status:** done on `wave2/l-render-convert` (Friday, September 25, 2026); awaiting integration. Both engines pass all 652 CommonMark 0.31.2 examples; EPUB, DOCX, BRF, and PDF output wait for Agent M's writers behind `textweaver_convert::DocumentWriter` (ADR-0016).
+
 #### Agent M — Native writers
 
 **Owns:** `crates/textweaver-writers/`, `fixtures/m/`, `docs/adr/0017-writers.md`.
@@ -367,6 +369,8 @@ Jon's direction: conversion and bulk conversion must be **lightning fast, native
 - A `Writer` trait (`fn write(&Document, &WriteOptions, &mut dyn Write)`) that Agent L's converter calls; agree on it in your reports.
 
 **Acceptance:** each writer has tests and a round-trip or structural validation; ADR-0017 explains the choices and the accessibility checks.
+
+**Status:** Wave 2 deliverables done on `wave2/m-writers` (Friday, September 25, 2026); awaiting integration. `Writer` trait and `writer_for`/`write_to_vec` in `textweaver-writers`; ADR-0017 lists the checks (epubcheck and liblouis not installed here, so skipped).
 
 ### Queued after Agent H: DECtalk
 
@@ -393,6 +397,8 @@ Jon asked to carry Star's lessons forward: reading aids, math normalization, liv
 - Detection helpers: find `$…$`, `$$…$$`, `\(…\)`, `\[…\]`, and backtick-ASCIIMath (`` `…` `` with a configurable delimiter) in plain text without false positives on prices ("$5 and $10") — Star's bug list mentions currency and math collisions.
 
 **Acceptance:** parser tests including every ASCIIMath symbol-table entry; MathML snapshot tests; spoken-math tests at each verbosity with offset-map invariants; property tests that parsing never panics on arbitrary input.
+
+**Status:** Wave 2 done on `wave2/o-math` (Friday, September 25, 2026). ADR-0018 describes how Agent B2's math transform (`speak_text`, run before numbers) and Agent L's renderer (`latex_to_mathml` in place of `pulldown-latex`) call the crate.
 
 #### Agent P — Citations
 

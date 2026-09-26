@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}"{% if dir %} dir="{{ dir }}"{% endif %}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="{{ generator }}">
+{%- if author %}
+<meta name="author" content="{{ author }}">
+{%- endif %}
+{%- if description %}
+<meta name="description" content="{{ description }}">
+{%- endif %}
+{%- if keywords %}
+<meta name="keywords" content="{{ keywords }}">
+{%- endif %}
+<title>{{ title }}</title>
+<style>
+{{ stylesheet }}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<main id="main" tabindex="-1">
+{%- if not has_h1 %}
+<h1>{{ title }}</h1>
+{%- endif %}
+{%- if author or date %}
+<p class="byline">{% if author %}{{ author }}{% endif %}{% if author and date %}, {% endif %}{% if date %}<time>{{ date }}</time>{% endif %}</p>
+{%- endif %}
+{%- if toc %}
+<nav class="toc" aria-label="Table of contents">
+<p class="toc-title">Contents</p>
+{{ toc }}
+</nav>
+{%- endif %}
+{{ content }}
+</main>
+</body>
+</html>
