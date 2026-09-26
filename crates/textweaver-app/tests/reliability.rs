@@ -305,6 +305,130 @@ fn an_unchanged_file_says_nothing_and_moves_nothing() {
     assert_eq!(bookmark_text(&app, 0), "bridges");
 }
 
+/// An engine with a bug: speaking "boom" panics on the speech thread.
+struct Boom;
+
+impl textweaver_app::speech::SpeechBackend for Boom {
+    fn id(&self) -> textweaver_app::speech::BackendId {
+        "boom"
+    }
+    fn capabilities(&self) -> textweaver_app::speech::Caps {
+        textweaver_app::speech::Caps::empty()
+    }
+    fn voices(
+        &self,
+    ) -> Result<Vec<textweaver_app::speech::Voice>, textweaver_app::speech::SpeechError> {
+        Ok(Vec::new())
+    }
+    fn set_params(
+        &mut self,
+        _: &textweaver_app::speech::VoiceParams,
+    ) -> Result<(), textweaver_app::speech::SpeechError> {
+        Ok(())
+    }
+    fn effective_wpm(&self) -> u16 {
+        200
+    }
+    fn speak(
+        &mut self,
+        u: &textweaver_app::core::Utterance,
+        sink: &mut dyn textweaver_app::speech::EventSink,
+    ) -> Result<(), textweaver_app::speech::SpeechError> {
+        assert!(!u.text.contains("boom"), "the engine blew up");
+        sink.emit(u.id, textweaver_app::speech::RawEvent::Started);
+        sink.emit(u.id, textweaver_app::speech::RawEvent::Finished);
+        Ok(())
+    }
+    fn stop(&mut self) {}
+}
+
+fn boom_service() -> textweaver_app::speech::SpeechService {
+    textweaver_app::speech::SpeechService::spawn(
+        Box::new(|| Ok(Box::new(Boom) as _)),
+        textweaver_app::speech::ServiceConfig::default(),
+    )
+    .unwrap()
+}
+
+/// Polls and ticks until `said` has a line containing `needle`.
+fn until_said(app: &mut App, said: &Said, needle: &str) {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+    while !said.all().iter().any(|m| m.contains(needle)) {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "never said {needle:?}: {:?}",
+            said.all()
+        );
+        app.poll_speech();
+        app.tick(std::time::Instant::now());
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+}
+
+#[test]
+fn speech_restarts_in_place_once_by_itself_then_on_request() {
+    let starts = Arc::new(Mutex::new(0u32));
+    let counted = Arc::clone(&starts);
+    let said = Said::default();
+    let mut app = App::new(AppConfig {
+        speech: boom_service(),
+        announcer: Box::new(said.clone()),
+        self_voicing: true,
+        backend_name: "boom".into(),
+        ..AppConfig::for_tests()
+    });
+    app.set_speech_starter(Arc::new(move |_settings| {
+        *counted.lock().unwrap() += 1;
+        (boom_service(), "boom".to_owned(), Vec::new())
+    }));
+    // The engine dies: textweaver restarts speech by itself, once.
+    app.announce("boom", Priority::Polite);
+    until_said(&mut app, &said, "Speech stopped working");
+    assert!(
+        said.all().iter().any(|m| m.contains("Restarting speech.")),
+        "{:?}",
+        said.all()
+    );
+    until_said(&mut app, &said, "Speech restarted.");
+    assert_eq!(*starts.lock().unwrap(), 1);
+    assert_eq!(app.backend_name(), "boom");
+    // Speech works again (a word that does not break it is spoken).
+    app.announce("fine", Priority::Polite);
+    // It dies again: no second automatic restart; the message says how.
+    said.0.lock().unwrap().clear();
+    app.announce("boom again", Priority::Polite);
+    until_said(&mut app, &said, "Speech stopped working");
+    let msg = said.last();
+    assert!(msg.contains("Restart speech with Shift+F8."), "{msg}");
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    app.tick(std::time::Instant::now());
+    assert_eq!(*starts.lock().unwrap(), 1);
+    // Restart Speech (Shift+F8) restarts it.
+    app.dispatch(Command::Action(ActionId::RestartSpeech));
+    until_said(&mut app, &said, "Speech restarted.");
+    assert_eq!(*starts.lock().unwrap(), 2);
+}
+
+#[test]
+fn without_a_starter_a_dead_speech_thread_leaves_textweaver_silent() {
+    let said = Said::default();
+    let mut app = App::new(AppConfig {
+        speech: boom_service(),
+        announcer: Box::new(said.clone()),
+        self_voicing: true,
+        ..AppConfig::for_tests()
+    });
+    app.announce("boom", Priority::Polite);
+    until_said(&mut app, &said, "Speech stopped working");
+    assert!(
+        said.last().contains("textweaver is silent now"),
+        "{}",
+        said.last()
+    );
+    app.dispatch(Command::Action(ActionId::RestartSpeech));
+    assert_eq!(said.last(), "Speech cannot be restarted here.");
+}
+
 /// A null engine whose voices are listed in the background, as SAPI's are.
 struct SlowVoices(textweaver_app::speech::VoiceCache);
 

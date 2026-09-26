@@ -339,6 +339,9 @@ actions! {
         gui ["g:F8"], term ["g:F8"], shared [];
     ChooseVoice = "choose_voice", Voice, "Choose a voice",
         gui ["g:Ctrl+Shift+V"], term ["g:Alt+V"], shared [];
+    RestartSpeech = "restart_speech", Voice,
+        "Restart speech with the current settings (after the speech engine stopped working)",
+        gui ["g:Shift+F8"], term ["g:Shift+F8"], shared [];
     CycleVerbosity = "cycle_verbosity", Voice, "Cycle how much textweaver says: low, normal, high",
         gui ["g:Alt+Shift+V"], term ["g:Alt+Shift+V"], shared [];
     CyclePunctuation = "cycle_punctuation", Voice, "Cycle how much punctuation is spoken: none, some, all",

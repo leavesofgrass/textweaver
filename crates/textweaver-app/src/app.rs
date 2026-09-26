@@ -323,6 +323,8 @@ pub struct App {
     pub(crate) disk_check_pending: bool,
     /// Choose Voice was asked for while the voices were loading.
     pub(crate) voices_pending: bool,
+    /// Restarting speech in place (crate::restart).
+    pub(crate) restart: crate::restart::Restart,
     /// The accessibility mode in effect (`[accessibility] mode`, or
     /// `--mode` for this run).
     pub(crate) access_mode: AccessMode,
@@ -396,6 +398,7 @@ impl App {
             pending_saves: Vec::new(),
             disk_check_pending: false,
             voices_pending: false,
+            restart: crate::restart::Restart::default(),
             access_mode,
             pending_hybrid: None,
             screen_say_all: None,
@@ -953,6 +956,7 @@ impl App {
     /// it moved, so a crash loses little. Nothing here waits on the disk.
     pub fn tick(&mut self, now: Instant) -> Vec<Effect> {
         let mut effects = self.poll_writes();
+        effects.extend(self.restart_tick());
         effects.extend(self.voices_tick());
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
         effects.extend(self.authoring_tick(now));
@@ -1391,6 +1395,7 @@ impl App {
             | A::InsertImage
             | A::Replace => return self.edit_action(a),
             A::ChooseVoice => return self.choose_voice(),
+            A::RestartSpeech => return self.restart_speech_command(),
             A::Copy => return self.copy(),
             A::Cut => return self.cut(),
             A::NextTableCell => return self.table_cell(textweaver_core::Direction::Forward),

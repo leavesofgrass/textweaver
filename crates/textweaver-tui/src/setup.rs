@@ -164,6 +164,11 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
     if let Some(mode) = run_mode(opts) {
         app.set_access_mode_for_run(mode);
     }
+    // Restarting speech in place (Restart Speech, and once automatically
+    // after the speech thread dies) starts it as above, with the settings
+    // current then.
+    let run = opts.clone();
+    app.set_speech_starter(std::sync::Arc::new(move |s| start_speech(s, &run)));
     if opts.theme.is_none() {
         // Follow the system's light, dark, or high-contrast setting unless
         // the user picked a theme (display.follow_os_theme and
