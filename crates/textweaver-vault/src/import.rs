@@ -463,6 +463,10 @@ pub fn apply(
         ..ImportReport::default()
     };
     let now = textweaver_store::now_ts();
+    // Every note id in the vault: a relation to a note that is not here
+    // could not have been written to the vault, so an import keeps it.
+    let in_vault: std::collections::HashSet<&str> =
+        read.notes.iter().map(|n| n.id.as_str()).collect();
     for note in &read.notes {
         if read.mode == ImportMode::Library {
             store.register_document(&note.path, &note.title, "markdown")?;
@@ -486,16 +490,18 @@ pub fn apply(
                     .collect();
                 match ann.note_mut(&note.id) {
                     Some(existing) => {
+                        let relations =
+                            merged_relations(&note.relations, &existing.relations, &in_vault);
                         let changed = existing.text != note.text
                             || existing.tags != tags
                             || existing.cite != note.cite
-                            || existing.relations != note.relations
+                            || existing.relations != relations
                             || existing.anchor != note.title;
                         if changed {
                             existing.text = note.text.clone();
                             existing.tags = tags;
                             existing.cite = note.cite.clone();
-                            existing.relations = note.relations.clone();
+                            existing.relations = relations;
                             existing.anchor = note.title.clone();
                             existing.ts = now;
                             report.notes_updated += 1;
@@ -544,6 +550,24 @@ pub fn apply(
 /// Creates or refreshes the node note of a plain vault note (Star's graph
 /// node: position 0, anchor the title, text the summary, tag
 /// `obsidian-note`).
+/// The relations a note has after an import: the ones its file lists, plus
+/// the ones it had to notes that are not in the vault. Those were left out
+/// of the export ("links left out because the linked note is not in the
+/// vault"), so their absence from the file does not mean they were deleted.
+fn merged_relations(
+    from_file: &[Relation],
+    existing: &[Relation],
+    in_vault: &std::collections::HashSet<&str>,
+) -> Vec<Relation> {
+    let mut out = from_file.to_vec();
+    for r in existing {
+        if !in_vault.contains(r.target_id.as_str()) && !out.contains(r) {
+            out.push(r.clone());
+        }
+    }
+    out
+}
+
 fn apply_node(
     note: &VaultNote,
     store: &mut dyn AnnotationStore,

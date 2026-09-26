@@ -175,6 +175,57 @@ fn export_then_import_into_an_empty_store_restores_everything() {
 }
 
 #[test]
+fn links_to_notes_left_out_of_the_vault_survive_an_import() {
+    let dir = tempfile::tempdir().unwrap();
+    let vault = dir.path().join("Bio only");
+    let mut s = store();
+    // Export only Biology: bio-2's link to chem-1 cannot be written.
+    let bio = s.docs.get(&bio_path()).cloned().unwrap();
+    let bio_path = bio_path();
+    let report = export_documents(
+        &vault,
+        &[ExportDocument {
+            path: &bio_path,
+            title: "Biology",
+            text: Some(BIO),
+            annotations: &bio,
+        }],
+        &ExportOptions::default(),
+    )
+    .unwrap();
+    assert_eq!(report.unresolved, 1, "{report:?}");
+    let before = s.docs[&bio_path].notes[1].relations.clone();
+    assert_eq!(before.len(), 2);
+
+    // Importing the vault keeps the link the vault could not hold, and
+    // the one it did hold.
+    import_vault(&vault, &ImportOptions::default(), &mut s).unwrap();
+    let after = &s.docs[&bio_path].notes[1].relations;
+    for r in &before {
+        assert!(after.contains(r), "{r:?} lost: {after:?}");
+    }
+    assert_eq!(after.len(), 2, "{after:?}");
+
+    // A link removed in Obsidian to a note that is in the vault is removed.
+    let file = textweaver_vault::note_files(&vault)
+        .unwrap()
+        .into_iter()
+        .find(|p| std::fs::read_to_string(p).unwrap().contains("SEE_ALSO::"))
+        .unwrap();
+    let text = std::fs::read_to_string(&file).unwrap();
+    let edited: String = text
+        .lines()
+        .filter(|l| !l.contains("SEE_ALSO::"))
+        .map(|l| format!("{l}\n"))
+        .collect();
+    std::fs::write(&file, edited).unwrap();
+    import_vault(&vault, &ImportOptions::default(), &mut s).unwrap();
+    let after = &s.docs[&bio_path].notes[1].relations;
+    assert_eq!(after.len(), 1, "{after:?}");
+    assert_eq!(after[0].target_id, "chem-1");
+}
+
+#[test]
 fn edits_made_in_obsidian_come_back_and_re_export_is_stable() {
     let dir = tempfile::tempdir().unwrap();
     let vault = dir.path().to_owned();

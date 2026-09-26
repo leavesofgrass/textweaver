@@ -8,7 +8,7 @@ use serde::Serialize;
 use textweaver_app::store::{Paths, StateStore};
 use textweaver_vault::{
     AnnotationStore, ExportDocument, ExportOptions, ImportMode, ImportOptions, LibraryEntry,
-    RelationType, StateStoreAnnotations, apply, export_documents, read_vault,
+    RelationType, StateStoreAnnotations, apply, export_documents, read_vault, save_library,
 };
 
 /// Arguments for `tw vault`.
@@ -193,6 +193,14 @@ fn import(args: &Args, paths: &Paths) -> anyhow::Result<()> {
     let mut store = StateStoreAnnotations::new(StateStore::new(paths.state_dir()));
     let report = apply(&read, &mut store)?;
     let library: Vec<LibraryEntry> = store.library().to_vec();
+    // The documents the import registered go into the library (both
+    // modes), so they are on the bookshelf and in library searches.
+    save_library(&library, &paths.library_file()).with_context(|| {
+        format!(
+            "The notes were imported, but the library {} could not be updated",
+            paths.library_file().display()
+        )
+    })?;
     if args.json {
         #[derive(Serialize)]
         struct Out<'a> {
