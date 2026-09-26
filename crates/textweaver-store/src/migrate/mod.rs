@@ -708,6 +708,78 @@ impl Run<'_> {
         Ok(())
     }
 
+    /// Star's `reading_stats` (seconds, sessions, and percentage per path)
+    /// into `stats.json`. A document textweaver already has statistics for
+    /// is left alone.
+    fn reading_stats(&mut self, star: &Map<String, Value>) -> Result<(), StoreError> {
+        let Some(entries) = obj(star.get("reading_stats")).filter(|m| !m.is_empty()) else {
+            return Ok(());
+        };
+        let library = obj(star.get("library"));
+        let mut stats = match crate::ReadingStats::load(self.paths) {
+            Ok(s) => s,
+            Err(e) => {
+                self.report.push(
+                    ItemKind::Other,
+                    "stats.json",
+                    Outcome::Skipped,
+                    format!("textweaver's reading statistics could not be read, so they are left alone: {e}"),
+                );
+                return Ok(());
+            }
+        };
+        let before = stats.clone();
+        for (path, r) in entries {
+            if let Some(why) = unusable(path) {
+                self.report
+                    .push(ItemKind::Other, path.clone(), Outcome::Skipped, why);
+                continue;
+            }
+            let p = Path::new(path);
+            let key = DocKey::for_path(p).0;
+            if stats.documents.contains_key(&key) {
+                self.report
+                    .push(ItemKind::Other, path.clone(), Outcome::Unchanged, "");
+                continue;
+            }
+            let title = library
+                .and_then(|l| l.get(path))
+                .and_then(|e| e.get("title"))
+                .and_then(Value::as_str)
+                .map(str::to_owned)
+                .or_else(|| p.file_name().map(|n| n.to_string_lossy().into_owned()))
+                .unwrap_or_default();
+            let seconds = r.get("seconds").and_then(Value::as_f64).unwrap_or(0.0);
+            let pct = r.get("pct").and_then(Value::as_u64).unwrap_or(0).min(100) as u8;
+            let sessions = r.get("sessions").and_then(Value::as_u64).unwrap_or(0);
+            stats.add(&crate::StatsDelta {
+                key: key.clone(),
+                title: title.clone(),
+                path: Some(p.to_owned()),
+                seconds,
+                new_session: false,
+                furthest_percent: pct,
+                furthest_char: 0,
+                at: star::star_ts(r.get("last_ts")),
+            });
+            if let Some(d) = stats.documents.get_mut(&key) {
+                d.sessions = u32::try_from(sessions).unwrap_or(u32::MAX);
+            }
+            let (h, m, s) = crate::stats::hms(seconds);
+            self.report.push(
+                ItemKind::Other,
+                path.clone(),
+                Outcome::Imported,
+                format!("reading statistics: {h}:{m:02}:{s:02} read, {pct}%"),
+            );
+        }
+        if stats != before {
+            let file = self.paths.stats_file();
+            self.write(&file, || stats.save(self.paths))?;
+        }
+        Ok(())
+    }
+
     fn sidecars(&mut self, star: &Map<String, Value>) -> Result<(), StoreError> {
         let folders: Vec<PathBuf> = star
             .get("library_folders")
@@ -1140,21 +1212,7 @@ pub fn migrate_star(
     run.recents(&star)?;
     run.bookshelf(&star)?;
     run.sidecars(&star)?;
-    if let Some(stats) = obj(star.get("reading_stats")).filter(|m| !m.is_empty()) {
-        run.report.push(
-            ItemKind::Other,
-            "reading statistics",
-            Outcome::Skipped,
-            format!(
-                "{} reading time and progress; textweaver does not keep reading statistics yet",
-                if stats.len() == 1 {
-                    "1 document's".to_owned()
-                } else {
-                    format!("{} documents'", stats.len())
-                }
-            ),
-        );
-    }
+    run.reading_stats(&star)?;
     if let Some(presets) = obj(star.get("annotation_filter_presets")).filter(|m| !m.is_empty()) {
         run.report.push(
             ItemKind::Other,

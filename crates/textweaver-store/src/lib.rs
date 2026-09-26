@@ -13,6 +13,8 @@
 //! - [`settings_io`]: settings and key overrides exported to and imported
 //!   from one JSON (or TOML) document, validated before anything is
 //!   written, with backups.
+//! - [`profiles`]: named settings profiles in `profiles.toml`, and
+//!   [`stats`]: reading statistics in `stats.json` (Agent W3e).
 //! - [`migrate`]: importing Star's settings, positions, bookmarks, notes,
 //!   highlights, recents, library, keybindings, and sidecars.
 //! - Folder sidecars (`<folder>/.textweaver/progress.json`) and their merge
@@ -37,6 +39,7 @@ pub mod profiles;
 mod recent;
 mod settings;
 pub mod settings_io;
+pub mod stats;
 pub mod sync;
 pub mod time;
 
@@ -63,6 +66,7 @@ pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,
     SettingsIoError,
 };
+pub use stats::{DocStats, ReadingStats, StatsDelta};
 pub use sync::{ConflictPolicy, SidecarStore};
 
 /// Persistence failures.
