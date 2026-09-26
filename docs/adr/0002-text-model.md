@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Implemented as decided. `Document`, markers, units, navigation, history, search, and narration are in `textweaver-text`; loaders for text, Markdown, HTML, EPUB, DOCX, and PDF in `textweaver-formats` produce this canonical shape. Positions are persisted as `CharPos` in the per-document state files, and `tw migrate-star` maps Star's offsets by word alignment as described.
 
 ## Context
 
@@ -34,3 +35,11 @@ Consequence: Star's saved character offsets do not map one-to-one onto textweave
 - One source of truth for text; highlight ranges, search hits, and bookmarks are all `CharRange`s into it.
 - Rope operations make edits and line lookups `O(log n)`; the Phase 0 unit functions materialize strings and are replaced by Agent A with rope-based segment iterators.
 - Parity with Star is measured, not assumed: the parity report compares word and sentence boundaries against Star's export and documents every difference.
+
+## See also
+
+- [Reading and moving around](../reading.md): the units and navigation this model supports.
+- [The library](../library.md): where positions are saved, and `tw migrate-star`.
+- [ADR-0005: Narration and the OffsetMap](0005-narration-and-offset-map.md): how this text is spoken.
+- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Documentation index](../README.md)

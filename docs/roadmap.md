@@ -218,6 +218,18 @@ Star's lesson: a stored setting must work.
 - **Engines.** A `textweaver-engines` crate for the backend registry, shared by the TUI, the CLI, export, and the GUI.
 - **Docs layout.** Split `docs/` into user guides, `docs/dev/` (architecture, building, testing, releasing, Docker), `docs/adr/` with an index, and `docs/history/` (plan, tasks, audits).
 
+### Binary size
+
+`tw.exe` grew from 9.4 MB in alpha.3 to 31.4 MB. `cargo bloat` shows code of 19.8 MB. The rest is data: the fonts, SCOWL, and the CSL styles.
+
+The biggest contributors are the citation stack (hayagriva and citationberg), the PDF stack (lopdf, krilla, and the font crates), minijinja, comrak and pulldown-cmark, two html5ever versions, rustls, and serde_path_to_error.
+
+Steps:
+- Align html5ever.
+- Bundle only the CSL styles used.
+- Put comrak behind a feature.
+- Consider building `textweaver` (the reader) without the conversion and citation stack, so the reader stays small and starts fast.
+
 ### Releases
 
 - **Windows in CI.** Build the Windows package in `release.yml`, keeping the local build as a fallback.
@@ -315,3 +327,5 @@ These are ranked for students with print disabilities, drawing on Star's history
 - [Implementation plan](plan.md)
 - [Tasks and agent briefs](tasks.md)
 - [Releasing](releasing.md)
+- [Architecture](architecture.md)
+- [Documentation index](README.md)

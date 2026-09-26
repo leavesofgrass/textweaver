@@ -2,13 +2,23 @@
 # Upload release packages to the GitHub release for TAG, creating the
 # release (a pre-release, notes from CHANGELOG.md) when it does not exist
 # yet, then rebuild SHA256SUMS.txt from every package on the release.
-# Used by .github/workflows/release.yml and by hand for the Windows
-# package (docs/releasing.md).
+# Used by .github/workflows/release.yml and by hand as the fallback when
+# a package is built locally (docs/releasing.md).
 #
-#   tools/release-upload.sh TAG FILE...
+#   tools/release-upload.sh [--no-sums] TAG [FILE...]
+#
+# --no-sums uploads without rebuilding SHA256SUMS.txt: the release
+# workflow's package jobs use it, and its last job writes the checksums
+# once, so parallel jobs never race on the file. With no FILE, the script
+# only creates the release (if needed) and rebuilds the checksums.
 set -euo pipefail
 
-tag="${1:?usage: tools/release-upload.sh TAG FILE...}"
+sums=1
+if [ "${1:-}" = "--no-sums" ]; then
+  sums=0
+  shift
+fi
+tag="${1:?usage: tools/release-upload.sh [--no-sums] TAG [FILE...]}"
 shift
 version="${tag#v}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -35,6 +45,10 @@ fi
 
 if [ "$#" -gt 0 ]; then
   gh release upload "$tag" "$@" --clobber
+fi
+
+if [ "$sums" = 0 ]; then
+  exit 0
 fi
 
 # Checksums of every package now on the release.

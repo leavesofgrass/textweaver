@@ -275,12 +275,19 @@ fn notes_by_key_and_delete_from_the_list() {
     h.press(key(KeyCode::Enter));
     assert!(h.status().starts_with("Note added"), "{}", h.status());
     assert_eq!(h.app().session().unwrap().notes.len(), 1);
-    // "A" lists the notes; Delete removes the focused one and closes the
-    // emptied list.
+    // "A" lists the notes; Delete asks, and y removes the focused one and
+    // closes the emptied list.
     h.typed("A");
     assert!(h.tui.list().is_some());
     assert!(h.screen().contains("Remember this"));
     h.press(key(KeyCode::Delete));
+    assert!(
+        h.status().contains("Delete this note? y or n"),
+        "{}",
+        h.status()
+    );
+    assert_eq!(h.app().session().unwrap().notes.len(), 1);
+    h.typed("y");
     assert!(h.tui.list().is_none());
     assert!(h.status().starts_with("Note deleted"), "{}", h.status());
     assert!(h.app().session().unwrap().notes.is_empty());
@@ -297,7 +304,7 @@ fn bracketed_paste_inserts_as_one_step() {
     // The caret was on "Notes" (after "# "); CRLF became one line break.
     assert_eq!(h.text(), "# Pasted\nlines Notes\n\nPlain words here.\n");
     assert!(
-        h.status().contains("Inserted 13 characters."),
+        h.status().contains("Pasted 13 characters: Pasted lines"),
         "{}",
         h.status()
     );

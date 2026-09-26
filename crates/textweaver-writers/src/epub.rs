@@ -22,6 +22,7 @@
 //! text, page navigation), hazards (none), and a spoken summary. It makes no
 //! WCAG conformance claim, which needs a human evaluation.
 
+use crate::math::Formula;
 use std::collections::HashMap;
 use std::io::{Cursor, Write};
 use std::rc::Rc;
@@ -530,6 +531,7 @@ impl Html<'_> {
                     self.out.push_str("<hr class=\"section-break\"/>\n");
                 }
             }
+            Block::Rule => self.out.push_str("<hr/>\n"),
             Block::PageBreak { label } => {
                 let label = label
                     .clone()
@@ -664,6 +666,13 @@ impl Html<'_> {
             Style::Italic => wrap(self, "<em>", "</em>"),
             Style::Underline => wrap(self, "<u>", "</u>"),
             Style::Code => wrap(self, "<code>", "</code>"),
+            Style::Strikethrough => wrap(self, "<del>", "</del>"),
+            // MathML with the source as alt text; reading systems draw it
+            // and screen readers read and explore it.
+            Style::Math { display } => {
+                let f = Formula::from_marked(&Inline::plain(children), *display);
+                self.out.push_str(&f.mathml());
+            }
             Style::Link(target) => {
                 if is_external(target) {
                     let open = format!("<a href=\"{}\">", xml::attr(target.trim()));
@@ -978,9 +987,15 @@ fn package_document(
         "    <item id=\"nav\" href=\"nav.xhtml\" media-type=\"application/xhtml+xml\" properties=\"nav\"/>\n    <item id=\"ncx\" href=\"toc.ncx\" media-type=\"application/x-dtbncx+xml\"/>\n    <item id=\"css\" href=\"style.css\" media-type=\"text/css\"/>\n",
     );
     let mut spine = String::new();
-    for (n, (name, _)) in files.iter().enumerate() {
+    for (n, (name, xhtml)) in files.iter().enumerate() {
+        // EPUB 3 asks for the mathml property on documents holding MathML.
+        let props = if xhtml.contains("<math") {
+            " properties=\"mathml\""
+        } else {
+            ""
+        };
         manifest.push_str(&format!(
-            "    <item id=\"chapter-{}\" href=\"{name}\" media-type=\"application/xhtml+xml\"/>\n",
+            "    <item id=\"chapter-{}\" href=\"{name}\" media-type=\"application/xhtml+xml\"{props}/>\n",
             n + 1
         ));
         spine.push_str(&format!("    <itemref idref=\"chapter-{}\"/>\n", n + 1));

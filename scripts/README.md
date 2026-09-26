@@ -25,16 +25,28 @@ powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1
 Builds textweaver from source and installs it, on any Linux distribution.
 
 - It finds your package manager from `/etc/os-release` and what is on your PATH: apt (Debian, Ubuntu), dnf or yum (Fedora, Red Hat), pacman (Arch, Manjaro), zypper (openSUSE), or apk (Alpine). On other systems it prints the list of packages to install by hand.
-- It installs the build dependencies: a C toolchain, clang and libclang, pkg-config, the ALSA headers, espeak-ng, and speech-dispatcher, with their development files.
+- It installs the build dependencies: a C toolchain, pkg-config, the ALSA headers, espeak-ng, and speech-dispatcher, with their development files.
 - It offers ffmpeg and pandoc, and says where to get whisper.cpp for dictation.
 - It installs rustup if cargo is missing, after asking. The Rust version comes from `rust-toolchain.toml`.
 - It builds `textweaver` and `tw` in release mode with the espeak-ng, speech-dispatcher, and Omnivox engines, and builds the engine hosts with `cargo xtask hosts`. If the espeak-ng engine does not build on your distribution, it builds again without it (`--no-espeak` skips it from the start).
 - It installs under `~/.local`, or `--prefix DIR`: the programs are linked from `bin/`, and the programs, engine hosts, and dictionaries live in `lib/textweaver/`. The guides, a `HELP.txt` with every command's help, manual pages, a menu entry, and these helper scripts are installed too.
 - It offers to add `~/.local/bin` to your PATH.
 
+To install:
+
 ```bash
 scripts/install-linux.sh
+```
+
+To see what it would do, without doing it:
+
+```bash
 scripts/install-linux.sh --dry-run
+```
+
+To remove it again:
+
+```bash
 scripts/install-linux.sh --uninstall
 ```
 
@@ -113,7 +125,12 @@ Run every check CI runs, so contributors see CI's answer before they push:
 - the tests;
 - rustdoc with `-D warnings`;
 - `cargo xtask keyboard --check`;
+- `tools/check_links.py`: every relative link and anchor in the docs resolves;
+- `tools/gen_site_data.py --check`: the data in the `docs/site` pages is current;
+- `tools/check_site_a11y.py`: static accessibility checks of the `docs/site` pages;
 - shellcheck or PSScriptAnalyzer on these scripts, when installed.
+
+The two Python steps need Python 3; without it they are skipped and the summary says so.
 
 On Windows it uses `--features textweaver-speech/omnivox` instead of `--all-features`, and it also builds the 32-bit engine hosts. `--only fmt,clippy` runs some of the steps, and `--docker` runs everything in the development container.
 
@@ -121,9 +138,21 @@ On Windows it uses `--features textweaver-speech/omnivox` instead of `--all-feat
 
 Convert a folder of Markdown, or other documents, with `tw convert`. The output goes to a folder beside it named after the format, so `notes` becomes `notes-html`.
 
+To convert the folder `notes` to HTML:
+
 ```bash
 scripts/convert-folder.sh notes
+```
+
+To make EPUB books instead:
+
+```bash
 scripts/convert-folder.sh notes --to epub
+```
+
+To keep watching the folder and convert files as they arrive:
+
+```bash
 scripts/convert-folder.sh notes --watch
 ```
 
@@ -132,3 +161,11 @@ Formats are html (the default), epub, pdf, docx, brf (braille), txt, and md. Any
 ### linux/textweaver.desktop
 
 The menu entry that `install-linux.sh` installs. It opens textweaver in a terminal (`Terminal=true`) for text, Markdown, HTML, EPUB, DOCX, and PDF files.
+
+## See also
+
+- [Installing textweaver](../docs/install.md): the packages, and what the install scripts do.
+- [Troubleshooting](../docs/troubleshooting.md): using the doctor and speech-check reports.
+- [Converting documents](../docs/converting.md): everything `tw convert` can do.
+- [CONTRIBUTING.md](../CONTRIBUTING.md): the checks dev-check runs, and why.
+- [Documentation index](../docs/README.md)

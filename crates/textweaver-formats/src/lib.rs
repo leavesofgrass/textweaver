@@ -15,12 +15,16 @@
 //! | [`EpubLoader`] | `epub` | [`NATIVE_PRIORITY`] (10) |
 //! | [`DocxLoader`] | `docx`, `docm` | [`NATIVE_PRIORITY`] (10) |
 //! | `PdfLoader` (feature `pdf`, on by default; ADR-0010) | `pdf` | [`NATIVE_PRIORITY`] (10) |
-//! | `PandocLoader` (feature `pandoc`, when `pandoc` runs) | `odt`, `rtf`, `rst`, `org`, `tex`, `dbk`, `textile`, `mediawiki`, `fb2`, `opml`, `ipynb`, and more | 5 |
 //! | [`TextLoader`] | `txt`, `text`, `log` (and the fallback for everything else) | 0 |
 //!
-//! Every built-in loader is native Rust. Optional loaders rank below them,
-//! so they never displace a native loader (Star preferred Pandoc for HTML
-//! and DOCX and inherited its bugs).
+//! Every built-in loader is native Rust. The Pandoc loader (feature
+//! `pandoc`; `odt`, `rtf`, `rst`, `org`, `tex`, `dbk`, `textile`,
+//! `mediawiki`, `fb2`, `opml`, `ipynb`, and more; priority 5) is not among
+//! the built-ins: a caller that wants Pandoc registers it
+//! ([`Registry::with_pandoc`]), as `tw convert` does, so the reader never
+//! runs a subprocess to open a file. It ranks below the native loaders, so
+//! it never displaces one (Star preferred Pandoc for HTML and DOCX and
+//! inherited its bugs).
 //!
 //! Owner: Agent A.
 
@@ -31,6 +35,7 @@ use textweaver_text::{Document, DocumentMeta};
 
 mod builder;
 pub mod cache;
+mod counter;
 pub mod docx;
 pub mod encoding;
 pub mod epub;
@@ -44,6 +49,7 @@ pub mod pandoc;
 #[cfg(feature = "pdf")]
 pub mod pdf;
 mod text;
+mod xmldepth;
 
 pub use cache::{CacheKey, DocumentCache};
 pub use docx::DocxLoader;
@@ -67,9 +73,54 @@ pub const NATIVE_PRIORITY: i32 = 10;
 /// Separator between table cells on a row of canonical text.
 pub const CELL_SEPARATOR: &str = " | ";
 
+/// The deepest element nesting the HTML, EPUB, and DOCX walkers follow.
+/// Content nested deeper is read as plain text without structure, so a
+/// malformed or hostile file cannot overflow the stack (and take a whole
+/// `tw convert` batch down with it); the document then carries
+/// [`NESTING_WARNING`].
+pub const MAX_NESTING: usize = 256;
+
+/// The warning a document carries when content past [`MAX_NESTING`] was
+/// flattened.
+pub const NESTING_WARNING: &str =
+    "Some content was nested too deeply to keep its structure, so it is read as plain text.";
+
+/// The `DocumentMeta::properties` key holding loader warnings, one sentence
+/// per line (see [`warnings`]).
+pub const WARNINGS_PROPERTY: &str = "textweaver.warnings";
+
+/// Adds a warning sentence to `meta` (once), and logs it.
+pub fn add_warning(meta: &mut DocumentMeta, sentence: &str) {
+    let name = meta
+        .path
+        .as_deref()
+        .map_or_else(|| "document".into(), |p| p.display().to_string());
+    let entry = meta
+        .properties
+        .entry(WARNINGS_PROPERTY.to_owned())
+        .or_default();
+    if entry.lines().any(|l| l == sentence) {
+        return;
+    }
+    log::warn!("{name}: {sentence}");
+    if !entry.is_empty() {
+        entry.push('\n');
+    }
+    entry.push_str(sentence);
+}
+
+/// The warnings a loader left on a document (for example
+/// [`NESTING_WARNING`]), each a sentence that reads well aloud.
+pub fn warnings(meta: &DocumentMeta) -> Vec<String> {
+    meta.properties
+        .get(WARNINGS_PROPERTY)
+        .map(|w| w.lines().map(str::to_owned).collect())
+        .unwrap_or_default()
+}
+
 /// Version of the canonical text the loaders produce. Bumped whenever a
 /// loader's output changes, which invalidates cached documents.
-pub const CANONICAL_VERSION: u32 = 2;
+pub const CANONICAL_VERSION: u32 = 3;
 
 /// Where a document comes from.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -104,6 +155,25 @@ impl Source {
         match self {
             Source::Path(p) => std::fs::read(p).map_err(|e| LoadError::Io(p.clone(), e)),
             Source::Bytes { data, .. } => Ok(data.clone()),
+            Source::Url(u) => Err(LoadError::Unsupported(format!("URL sources: {u}"))),
+        }
+    }
+
+    /// The first `n` bytes of the source (fewer when it is shorter), read
+    /// without reading the rest of a file.
+    pub fn read_head(&self, n: usize) -> Result<Vec<u8>, LoadError> {
+        use std::io::Read;
+        match self {
+            Source::Path(p) => {
+                let io = |e| LoadError::Io(p.clone(), e);
+                let file = std::fs::File::open(p).map_err(io)?;
+                let mut head = Vec::with_capacity(n.min(1 << 16));
+                file.take(u64::try_from(n).unwrap_or(u64::MAX))
+                    .read_to_end(&mut head)
+                    .map_err(io)?;
+                Ok(head)
+            }
+            Source::Bytes { data, .. } => Ok(data[..data.len().min(n)].to_vec()),
             Source::Url(u) => Err(LoadError::Unsupported(format!("URL sources: {u}"))),
         }
     }
@@ -196,14 +266,31 @@ impl Registry {
         r.register(Box::new(DocxLoader));
         #[cfg(feature = "pdf")]
         r.register(Box::new(PdfLoader));
-        #[cfg(feature = "pandoc")]
-        r.register(Box::new(PandocLoader));
+        r
+    }
+
+    /// The built-in loaders plus Pandoc for the formats textweaver has no
+    /// reader for (used when Pandoc is installed), stopped after `timeout`
+    /// on one document (`None`: `TEXTWEAVER_PANDOC_TIMEOUT`, else two
+    /// minutes).
+    #[cfg(feature = "pandoc")]
+    pub fn with_pandoc(timeout: Option<std::time::Duration>) -> Self {
+        let mut r = Registry::with_builtins();
+        r.register(Box::new(
+            timeout.map_or_else(PandocLoader::default, PandocLoader::with_timeout),
+        ));
         r
     }
 
     /// Adds a loader.
     pub fn register(&mut self, loader: Box<dyn Loader>) {
         self.loaders.push(loader);
+    }
+
+    /// Removes the loaders registered under `id` (to drop an optional
+    /// loader, or to register it again with other settings).
+    pub fn remove(&mut self, id: &str) {
+        self.loaders.retain(|l| l.id() != id);
     }
 
     /// Ids of the registered loaders.
@@ -238,9 +325,10 @@ impl Registry {
         let hint = source.hint().unwrap_or_default();
         let mut best: Option<&dyn Loader> = None;
         for l in &self.loaders {
-            if l.available()
-                && l.extensions().contains(&hint.as_str())
+            // Availability last: for Pandoc it runs a program once.
+            if l.extensions().contains(&hint.as_str())
                 && best.is_none_or(|b| l.priority() > b.priority())
+                && l.available()
             {
                 best = Some(l.as_ref());
             }
@@ -295,10 +383,13 @@ pub fn decode_source(
     source: &Source,
     declared: Option<&str>,
 ) -> Result<encoding::Decoded, LoadError> {
-    let bytes = source.read()?;
-    if let Some(kind) = encoding::binary_kind(&bytes) {
+    // Binary detection looks only at the first `SNIFF_BYTES`, so a file is
+    // refused before the rest of it is read (a 2 GB video costs 8 KB).
+    let head = source.read_head(encoding::SNIFF_BYTES)?;
+    if let Some(kind) = encoding::binary_kind(&head) {
         return Err(LoadError::Binary(source_name(source), kind));
     }
+    let bytes = source.read()?;
     Ok(decode_bytes(&bytes, declared))
 }
 
@@ -386,9 +477,7 @@ mod tests {
         if cfg!(feature = "pdf") {
             ids.push("pdf");
         }
-        if cfg!(feature = "pandoc") {
-            ids.push("pandoc");
-        }
+        // Pandoc is never a built-in (see `Registry::with_pandoc`).
         ids.extend(["low", "high"]);
         assert_eq!(r.ids(), ids);
     }

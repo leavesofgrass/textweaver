@@ -76,9 +76,56 @@ pub fn word_before(text: &Rope, at: CharPos) -> Option<String> {
         .then(|| word.to_owned())
 }
 
+/// Text longer than this many characters is summarized, not read out, when
+/// it is selected or deleted ([`summarize`]).
+pub const SUMMARY_THRESHOLD: usize = 200;
+
+/// Words quoted from each end of a summarized text.
+const SUMMARY_WORDS: usize = 4;
+
+/// `n` with thousands separators: `3,412`.
+pub fn thousands(n: usize) -> String {
+    let digits = n.to_string();
+    let mut out = String::with_capacity(digits.len() + digits.len() / 3);
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// A spoken summary of a long text instead of the text itself: "3,412
+/// characters deleted, from The first words to the last words." (`what`
+/// is "deleted", "selected", ...). `None` for text of
+/// [`SUMMARY_THRESHOLD`] characters or fewer, which is read as it is.
+pub fn summarize(text: &str, what: &str) -> Option<String> {
+    let n = text.chars().count();
+    if n <= SUMMARY_THRESHOLD {
+        return None;
+    }
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let first = words
+        .iter()
+        .take(SUMMARY_WORDS)
+        .copied()
+        .collect::<Vec<_>>()
+        .join(" ");
+    let last = words[words.len().saturating_sub(SUMMARY_WORDS)..].join(" ");
+    let count = thousands(n);
+    Some(if words.len() <= SUMMARY_WORDS {
+        // A few very long tokens (a URL, a base64 blob): the count alone.
+        format!("{count} characters {what}")
+    } else {
+        format!("{count} characters {what}, from {first} to {last}")
+    })
+}
+
 /// Echo events for `edit`, given the text as it was before the edit.
 ///
-/// - A pure deletion gives `Deleted` with exactly the removed text.
+/// - A pure deletion gives `Deleted` with exactly the removed text, or its
+///   [`summarize`]d form when that is longer than [`SUMMARY_THRESHOLD`].
 /// - Typing one character gives `Typed`, and when that character ends a
 ///   word (anything but a word character) also `WordCompleted` with the
 ///   word before it. Typing over a selection does not speak the selection.
@@ -89,7 +136,9 @@ pub fn for_edit(policy: &EchoPolicy, before: &Rope, edit: &Edit) -> Vec<EchoEven
     let r = edit.range.clamp_to(len);
     if edit.text.is_empty() {
         if policy.deletions && !r.is_empty() {
-            out.push(EchoEvent::Deleted(before.slice(r.to_range()).to_string()));
+            let removed = before.slice(r.to_range()).to_string();
+            let spoken = summarize(&removed, "deleted").unwrap_or(removed);
+            out.push(EchoEvent::Deleted(spoken));
         }
         return out;
     }
@@ -199,6 +248,32 @@ mod tests {
                 EchoEvent::Typed('\n'),
                 EchoEvent::WordCompleted("one".into())
             ]
+        );
+    }
+
+    #[test]
+    fn long_deletions_are_summarized() {
+        assert_eq!(thousands(3412), "3,412");
+        assert_eq!(thousands(1_000_000), "1,000,000");
+        assert_eq!(thousands(999), "999");
+        let long = format!("Start of it {} end of it.", "middle ".repeat(60));
+        let text = rope(&long);
+        let n = long.chars().count();
+        let ev = for_edit(&EchoPolicy::default(), &text, &Edit::delete(0..n));
+        assert_eq!(
+            ev,
+            vec![EchoEvent::Deleted(format!(
+                "{} characters deleted, from Start of it middle to middle end of it.",
+                thousands(n)
+            ))]
+        );
+        assert_eq!(summarize("short text", "selected"), None);
+        let exactly = "x".repeat(SUMMARY_THRESHOLD);
+        assert_eq!(summarize(&exactly, "selected"), None);
+        let one_word = "y".repeat(SUMMARY_THRESHOLD + 1);
+        assert_eq!(
+            summarize(&one_word, "selected").unwrap(),
+            "201 characters selected"
         );
     }
 

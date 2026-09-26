@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-cli"
-description = "tw: scripting CLI for textweaver (extract, search, speak, voices, backends, marks)"
+description = "tw: the textweaver command line (extract, search, speak, convert, export audio, cite, library, vault, dictate, settings, JSON-RPC)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

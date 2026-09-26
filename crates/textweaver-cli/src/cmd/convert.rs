@@ -5,6 +5,11 @@
 //! line per failure, and per-file lines only with `--verbose`. `--json`
 //! prints the whole summary (every file, its status and timing) instead.
 //! The exit status is 1 when any file failed.
+//!
+//! Pandoc citations in Markdown (`[@doe2020]`) are formatted in a CSL style
+//! (`--style`, APA by default) with a References section appended, from
+//! `--bibliography`, the front matter's `bibliography`, the folder's
+//! `references.json`, and your own library (`tw cite`), in that order.
 
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
@@ -12,7 +17,8 @@ use std::time::Duration;
 
 use anyhow::{Context, bail};
 use textweaver_convert::{
-    ConvertOptions, Converter, OutputFormat, PdfOptions, Status, WatchOptions, WriteOptions, watch,
+    CitationOptions, ConvertOptions, Converter, OutputFormat, PdfOptions, Status, WatchOptions,
+    WriteOptions, watch,
 };
 use textweaver_render::{EmbedMode, Engine, Flavor, RenderOptions, TemplateChoice};
 
@@ -77,12 +83,30 @@ pub struct Args {
     /// Never use Pandoc, even for formats with no native reader.
     #[arg(long)]
     pub no_pandoc: bool,
+    /// Seconds Pandoc may spend on one file before it is stopped (default:
+    /// the TEXTWEAVER_PANDOC_TIMEOUT environment variable, else 120).
+    #[arg(long, value_name = "SECONDS")]
+    pub pandoc_timeout: Option<u64>,
+    /// Citations: a bibliography (CSL-JSON, BibTeX, BibLaTeX, or RIS) to
+    /// look keys up in first, before the folder's references.json and your
+    /// own library.
+    #[arg(long, value_name = "FILE")]
+    pub bibliography: Option<PathBuf>,
+    /// Citations: the CSL style, a name (apa, mla, chicago, chicago-notes,
+    /// harvard, ieee, vancouver, ama, nature; tw cite styles lists all) or
+    /// a .csl file.
+    #[arg(long, value_name = "NAME", default_value = textweaver_convert::citations::DEFAULT_STYLE)]
+    pub style: String,
+    /// Leave Pandoc citations as written, without a References section.
+    #[arg(long)]
+    pub no_citations: bool,
     /// Read inline code spans as ASCIIMath (for course material written
     /// for MathJax); fenced blocks marked asciimath are read either way.
     #[arg(long)]
     pub asciimath: bool,
     /// PDF: a TrueType or OpenType font file for the text (default: the
-    /// TEXTWEAVER_PDF_FONT environment variable, then an installed font).
+    /// TEXTWEAVER_PDF_FONT environment variable, then the bundled Atkinson
+    /// Hyperlegible Next, then an installed font).
     #[arg(long, value_name = "FILE")]
     pub pdf_font: Option<PathBuf>,
     #[command(flatten)]
@@ -138,6 +162,18 @@ fn options(args: &Args) -> ConvertOptions {
         jobs: args.jobs,
         force: args.force,
         pandoc: !args.no_pandoc,
+        pandoc_timeout: args
+            .pandoc_timeout
+            .filter(|&s| s > 0)
+            .map(Duration::from_secs),
+        citations: CitationOptions {
+            enabled: !args.no_citations,
+            bibliography: args.bibliography.clone(),
+            style: args.style.clone(),
+            user_library: textweaver_app::store::Paths::platform()
+                .ok()
+                .map(|p| textweaver_cite::user_library_path(&p.data_dir)),
+        },
         write: args.layout.apply(WriteOptions {
             pdf: PdfOptions {
                 font: args.pdf_font.clone(),

@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Implemented, with changes. The host protocol, process handling, and playback moved into `textweaver-enginehost` (ADR-0012). Code Factory's Eloquence is used only after the user opts in, with `TEXTWEAVER_ECI_CODE_FACTORY=1` or `[speech.eci] code_factory = true`, because an installed copy is not necessarily licensed for other programs; its SAPI voices are hidden the same way. The Apple backends (ADR-0008) and the SAPI5 backend (ADR-0009) that this ADR placed in wave 3 were built in Wave 1. The `[speech.eci]` settings (`library`, `dictionaries`, `code_factory`) sit beside the environment variables.
 
 ## Context
 
@@ -37,3 +38,11 @@ vdaddons\openevv\synthDrivers\_openevv\lib_64\eci.dll`); Code Factory's `eci.
 
 - Eloquence is proprietary. textweaver ships no part of it and links nothing: the user supplies a licensed ECI library, found at its default install location or named in `TEXTWEAVER_ECI_LIBRARY`. Whether a given product's license permits use by other programs is between the user and that vendor; a copy bundled with another application is often licensed for that application only.
 - Engine output (audio made with Eloquence or Voxin) is never committed to this repository. Local samples go to git-ignored paths.
+
+## See also
+
+- [Getting ETI-Eloquence](../eloquence.md): the user guide.
+- [Speech engines and voices](../speech.md): how Eloquence is chosen among the engines.
+- [ADR-0012: The engine host](0012-engine-host.md): the shared host protocol.
+- [Docker development container](../docker.md#voxin-eti-eloquence-for-linux): testing with Voxin.
+- [Documentation index](../README.md)

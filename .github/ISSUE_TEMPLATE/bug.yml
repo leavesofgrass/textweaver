@@ -1,0 +1,70 @@
+name: Bug report
+description: Something does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting this. Every field is plain text, and only the summary and the steps are required.
+
+        If textweaver stops speaking or a speech engine misbehaves, the "Speech engine problem" form asks for the details that help most. If something cannot be reached with your screen reader or the keyboard, use the "Accessibility barrier" form.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The commands or keys, one per line. Attach a small file that shows the problem if you can.
+      placeholder: |
+        1. tw open notes.md
+        2. Press Alt+V
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of the doctor script
+      description: |
+        Run `scripts/doctor.sh` on Linux or macOS, or `scripts\doctor.ps1` on Windows (in a package, the `scripts` folder), and paste the output. It lists the version, the speech engines found, and the paths textweaver uses. It does not include your documents.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: textweaver version
+      description: The output of `tw --version`.
+      placeholder: tw 0.1.0-alpha.3
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and version
+      placeholder: Windows 11 24H2, macOS 15.5, Debian 13
+  - type: input
+    id: screen-reader
+    attributes:
+      label: Screen reader and its version
+      description: Or "none".
+      placeholder: NVDA 2026.2, JAWS 2026, VoiceOver, Orca 48, none
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal
+      description: For the terminal reader. Or "GUI" for textweaver-gui.
+      placeholder: Windows Terminal 1.23, Terminal.app, GNOME Terminal
+  - type: input
+    id: engine
+    attributes:
+      label: Speech engine and voice
+      description: From `tw backends`, or Alt+V in the reader.
+      placeholder: Eloquence (ECI), SAPI5 David, espeak-ng, speech-dispatcher
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: If you have it, the end of `textweaver.log` in the state folder (the doctor script prints where it is).
+      render: text

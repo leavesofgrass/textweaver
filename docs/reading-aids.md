@@ -2,7 +2,19 @@
 
 textweaver has aids that make text easier to see and follow. They change how text looks, never what it says. Speech, search, bookmarks, and notes always use the real text.
 
-The keys for each aid are in Help and in `docs/keyboard.md`. Every aid can be turned on and off, and textweaver says when it changes.
+Every aid can be turned on and off, and textweaver says when it changes. The keys, in both the terminal and the GUI, are:
+
+- **Alt+Shift+R**: show or hide RSVP, starting from the cursor.
+- **Alt+Shift+P**: start or pause RSVP.
+- **Alt+Shift+Up** and **Alt+Shift+Down**: RSVP faster or slower.
+- **Alt+Shift+O**: move the RSVP word to the next place on the screen.
+- **Alt+Shift+B**: bionic reading on or off.
+- **Alt+Shift+U**: the reading ruler: off, current line, or ruler.
+- **Alt+Shift+G**: say the reading level of the document, or of the selection.
+
+The [keyboard reference](keyboard.md) lists every key. Each aid's settings are in the `[reading_aids]` sections of `settings.toml`; [Settings](settings.md#reading_aids) lists them.
+
+To try RSVP, bionic reading, and the ruler in a web browser first, open the [reading aids demo page](site/reading-aids.html) in `docs/site/`.
 
 ## RSVP: one word at a time
 
@@ -45,6 +57,16 @@ There are three presets:
 If a setting is below the WCAG value, textweaver tells you. That is information, not an error. Use what reads best for you.
 
 In the terminal, textweaver cannot change letter spacing or line height exactly. It uses blank lines and extra spaces instead.
+
+Set the spacing in `settings.toml`. For example, the WCAG values:
+
+```toml
+[reading_aids.spacing]
+line_height = 1.5
+paragraph_spacing = 2.0
+letter_spacing = 0.12
+word_spacing = 0.16
+```
 
 ## Fonts
 
@@ -97,13 +119,9 @@ The choices in settings (and in HTML views) are:
   - **Lexend**: wide letter spacing, made to reduce visual stress. Home page: https://www.lexend.com/
 - **Any other font** installed on your computer.
 
-All three reading fonts are free, under the SIL Open Font License. OpenDyslexic comes with textweaver. For Atkinson Hyperlegible, textweaver uses the newer Atkinson Hyperlegible Next that comes with it, unless you have the original installed. Lexend does not come with textweaver. If you choose it and it is not installed, textweaver:
+All three reading fonts are free, under the SIL Open Font License. OpenDyslexic comes with textweaver. For Atkinson Hyperlegible, textweaver uses the newer Atkinson Hyperlegible Next that comes with it, unless you have the original installed. Lexend does not come with textweaver. If you choose it and it is not installed, textweaver uses another reading font, or a plain font, so you can keep reading.
 
-1. uses another reading font, or a plain font, so you can keep reading;
-2. tells you which font it is using;
-3. offers to download Lexend. It asks first, and says how big the download is. The files come from the font's own project on GitHub, and are kept in textweaver's cache folder. Nothing is installed on your system.
-
-You can also install a reading font yourself, from its home page. textweaver finds it the next time it starts.
+The reading-aids library is designed to offer a download of a missing reading font, asking first and saying how big the download is (the `[reading_aids.font] fetch_missing` setting). No part of textweaver offers the download yet. To use Lexend, install it yourself from its home page; textweaver finds it the next time it starts.
 
 Font size is in points, from 6 to 144. The default is 14. Below 12, textweaver suggests a larger size.
 
@@ -119,6 +137,8 @@ In the terminal, the current line is underlined with a bar in the left margin. L
 ## Difficult words
 
 textweaver can mark rare words, so you can look them up before you read. A word is rare when it is uncommon in everyday English.
+
+This aid is built and tested in textweaver's reading-aids library, but the terminal reader does not show the marks yet.
 
 textweaver has a word list built in, so this works with no download. The list comes from SCOWL (Spell Checker Oriented Word Lists), which sorts English words into sizes by the smallest dictionary they appear in:
 
@@ -150,6 +170,15 @@ These are estimates. Other tools may give a slightly different grade.
 
 ## Syllables
 
-textweaver can show long words split into syllables, like `read·a·bil·i·ty`. This helps you sound out a word. Only the screen changes. Speech reads the word normally.
+textweaver can show long words split into syllables, like `read·a·bil·i·ty`. Like difficult words, this is in the reading-aids library, and the terminal reader does not show it yet. This helps you sound out a word. Only the screen changes. Speech reads the word normally.
 
 The split is worked out from English spelling rules, not a dictionary, so a few words split in odd places.
+
+## See also
+
+- [Reading aids demo](site/reading-aids.html): try RSVP, bionic reading, and the ruler in a browser.
+- [Themes](themes.md): the colours the aids use, all checked for contrast.
+- [Settings](settings.md#reading_aids): every `[reading_aids]` setting.
+- [Reading and moving around](reading.md): reading aloud and moving through a document.
+- [ADR-0022: Reading aids](adr/0022-reading-aids.md): the design, and the Star faults each aid fixes.
+- [Documentation index](README.md)

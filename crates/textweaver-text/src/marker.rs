@@ -91,7 +91,10 @@ impl Marker {
             | MarkerKind::SectionBreak
             | MarkerKind::Bold
             | MarkerKind::Italic
-            | MarkerKind::Underline => false,
+            | MarkerKind::Underline
+            | MarkerKind::Strikethrough
+            | MarkerKind::Rule
+            | MarkerKind::Math => false,
         }
     }
 
@@ -115,14 +118,17 @@ impl Marker {
 /// Containers sort before their contents when ranges tie.
 fn nesting_rank(kind: MarkerKind) -> u8 {
     match kind {
-        MarkerKind::SectionBreak | MarkerKind::PageBreak => 0,
+        MarkerKind::SectionBreak | MarkerKind::PageBreak | MarkerKind::Rule => 0,
         MarkerKind::Quote => 1,
         MarkerKind::List | MarkerKind::Table => 2,
         MarkerKind::ListItem | MarkerKind::TableRow => 3,
         MarkerKind::TableCell => 4,
         MarkerKind::Heading | MarkerKind::Paragraph | MarkerKind::Code | MarkerKind::Footnote => 5,
-        MarkerKind::Link | MarkerKind::Image => 6,
-        MarkerKind::Bold | MarkerKind::Italic | MarkerKind::Underline => 7,
+        MarkerKind::Link | MarkerKind::Image | MarkerKind::Math => 6,
+        MarkerKind::Bold
+        | MarkerKind::Italic
+        | MarkerKind::Underline
+        | MarkerKind::Strikethrough => 7,
     }
 }
 

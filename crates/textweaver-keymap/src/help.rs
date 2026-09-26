@@ -162,6 +162,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 - Some terminal programs keep F10 (menu) or F11 (full screen) for themselves. Chapters also move with `Alt+PageDown` and `Alt+PageUp`.
 - `Shift` with the arrow keys extends the selection in browse mode; most terminals send these keys, but some terminal programs keep `Shift+Up` and `Shift+Down` for scrolling their own window.
 - `Alt` chords work in the terminal. Star's terminal reader lost them to the Escape key; textweaver reads them directly.
+- The keys `1` to `6` move to the next heading of that level, as in a screen reader's browse mode. Terminals send the character a shifted digit types, so the previous heading of a level is on `!` `@` `#` `$` `%` `^` (Shift with 1 to 6 on a US keyboard); on other layouts, use the command palette or bind other keys in `keymap.toml`.
 ";
 
 /// `docs/keyboard.md`: every action by category, with its keys in both

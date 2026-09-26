@@ -1,0 +1,70 @@
+# cargo-deny: licences, advisories, duplicate versions, and crate sources.
+# Run with `cargo deny check` (CI: the `deny` job in .github/workflows/ci.yml).
+# https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+# The platforms textweaver ships for.
+targets = [
+    "x86_64-pc-windows-msvc",
+    "i686-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+]
+all-features = true
+
+[advisories]
+# Every RustSec advisory fails the check unless it is listed here with a
+# reason. Unmaintained crates are reported for the whole tree.
+unmaintained = "all"
+yanked = "deny"
+ignore = [
+    # Checked on Saturday, September 26, 2026. Each has no fix textweaver
+    # can take yet; remove the entry when upstream moves.
+    { id = "RUSTSEC-2026-0194", reason = "quick-xml 0.38 (quadratic duplicate-attribute check) through citationberg 0.7 and hayagriva 0.10, which pin 0.38. It parses CSL styles and locales: the bundled ones, or a style file the user chose. Take quick-xml >= 0.41 when citationberg does." },
+    { id = "RUSTSEC-2026-0195", reason = "quick-xml 0.38 (NsReader namespace allocation) through citationberg 0.7 and hayagriva 0.10, as above." },
+    { id = "RUSTSEC-2024-0436", reason = "paste is unmaintained: a proc-macro used at build time by biblatex and hayagriva; no code of it runs in textweaver." },
+    { id = "RUSTSEC-2026-0206", reason = "rustybuzz is unmaintained: text shaping in krilla 0.8, the PDF writer. Move when krilla does." },
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser is unmaintained: through rustybuzz in krilla 0.8, as above." },
+]
+
+[licenses]
+# textweaver is GPL-3.0-or-later. Every licence here can be combined with
+# it. Keep this list in step with about.toml.
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Unlicense",
+    "Zlib",
+]
+confidence-threshold = 0.9
+
+[licenses.private]
+# textweaver's own crates (publish = false) are covered by LICENSE.
+ignore = true
+
+[bans]
+# Two versions of one crate cost build time and size; report them, but do
+# not fail (several come from upstream and cannot be aligned yet).
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+highlight = "all"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

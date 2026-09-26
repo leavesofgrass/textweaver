@@ -144,6 +144,9 @@ pub struct EditSession {
     autosave: AutosavePolicy,
     recovery_dir: Option<PathBuf>,
     last_snapshot: Option<Instant>,
+    /// Snapshot writes that failed in a row since the last one that worked;
+    /// each failure doubles the wait before the next attempt.
+    snapshot_failures: u32,
     /// Held while this session writes snapshots, so another instance does
     /// not offer or overwrite them (shared by clones).
     snapshot_lock: Option<std::sync::Arc<autosave::SnapshotLock>>,
@@ -164,6 +167,7 @@ impl EditSession {
             },
             recovery_dir: None,
             last_snapshot: None,
+            snapshot_failures: 0,
             snapshot_lock: None,
         }
     }
@@ -248,6 +252,7 @@ impl EditSession {
             let _ = autosave::delete_snapshot(&p);
         }
         self.last_snapshot = None;
+        self.snapshot_failures = 0;
         self.snapshot_lock = None;
     }
 
@@ -287,7 +292,7 @@ impl EditSession {
         let target = match &self.doc.path {
             Some(p) => save_target(p, &self.doc.loader_id),
             None => SaveTarget::SaveAsMarkdown {
-                suggested: PathBuf::from("document.md"),
+                suggested: PathBuf::from(autosave::suggest_file_name(&text)),
             },
         };
         let (dest, adopted) = match (target, save_as) {
@@ -494,17 +499,73 @@ impl EditSession {
         })
     }
 
+    /// The longest wait between snapshot attempts after failures.
+    pub const SNAPSHOT_BACKOFF_MAX: std::time::Duration = std::time::Duration::from_secs(300);
+
+    /// Snapshot writes that failed in a row (0 after a success). The app
+    /// announces the first failure of a run once, not every attempt.
+    pub fn snapshot_failures(&self) -> u32 {
+        self.snapshot_failures
+    }
+
     /// The autosave timer fired: writes a snapshot when autosave is on, the
     /// session is editing with unsaved changes, and the interval has passed.
     /// Returns whether a snapshot was written.
+    ///
+    /// A failed write is recorded as an attempt, so the next one waits
+    /// (Star retried on every tick, about every 40 ms): the interval
+    /// doubles with each failure in a row, up to
+    /// [`SNAPSHOT_BACKOFF_MAX`](Self::SNAPSHOT_BACKOFF_MAX), and resets
+    /// after a success.
     pub fn autosave_tick(&mut self, now: Instant) -> std::io::Result<bool> {
+        if self.recovery_dir.is_none() {
+            return Ok(false);
+        }
+        let since = self.last_snapshot.map(|t| now.saturating_duration_since(t));
+        let wait = self
+            .autosave
+            .interval
+            .saturating_mul(1u32 << self.snapshot_failures.min(16))
+            .min(Self::SNAPSHOT_BACKOFF_MAX.max(self.autosave.interval));
+        let policy = AutosavePolicy {
+            interval: wait,
+            ..self.autosave
+        };
+        if !policy.due(self.is_dirty(), since) {
+            return Ok(false);
+        }
+        match self.write_snapshot_now() {
+            Ok(written) => {
+                // Also when another instance holds the snapshot: ask again
+                // after the interval, not on every tick.
+                self.last_snapshot = Some(now);
+                if written {
+                    self.snapshot_failures = 0;
+                }
+                Ok(written)
+            }
+            Err(e) => {
+                self.last_snapshot = Some(now);
+                self.snapshot_failures = self.snapshot_failures.saturating_add(1);
+                Err(e)
+            }
+        }
+    }
+
+    /// Writes a snapshot now, whatever the timer says, when autosave is
+    /// configured and the text has unsaved changes (a crash or a closing
+    /// terminal). Returns whether one was written.
+    pub fn snapshot_now(&mut self) -> std::io::Result<bool> {
+        if !self.autosave.enabled || !self.is_dirty() {
+            return Ok(false);
+        }
+        self.write_snapshot_now()
+    }
+
+    fn write_snapshot_now(&mut self) -> std::io::Result<bool> {
         let Some(dir) = self.recovery_dir.clone() else {
             return Ok(false);
         };
-        let since = self.last_snapshot.map(|t| now.saturating_duration_since(t));
-        if !self.autosave.due(self.is_dirty(), since) {
-            return Ok(false);
-        }
         if self.snapshot_lock.is_none() {
             match autosave::SnapshotLock::acquire(&dir, &self.doc.key)? {
                 Some(lock) => self.snapshot_lock = Some(std::sync::Arc::new(lock)),
@@ -521,7 +582,6 @@ impl EditSession {
             title: Some(self.doc.title.clone()),
         };
         autosave::write_snapshot(&dir, &snap)?;
-        self.last_snapshot = Some(now);
         Ok(true)
     }
 

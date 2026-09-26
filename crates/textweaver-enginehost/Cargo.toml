@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-enginehost"
-description = "Shared engine-host protocol and playback client for out-of-process speech engines (ECI, SAPI)"
+description = "Shared engine-host protocol and playback client for out-of-process speech engines (ECI, SAPI, DECtalk)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

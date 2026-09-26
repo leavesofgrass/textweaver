@@ -139,8 +139,9 @@ fn pausing_drops_the_paused_readings_late_words() {
         panic!("not paused: {:?}", r.app.playback());
     };
     let before = r.app.spoken_log().len();
-    // Whatever the paused reading still reports is ignored.
-    std::thread::sleep(Duration::from_millis(50));
+    // Whatever the paused reading still reports is ignored: once the speech
+    // thread has handled the pause, everything it reported is waiting.
+    r.app.wait_for_speech_thread();
     r.app.poll_speech();
     assert_eq!(r.app.spoken_log().len(), before);
     assert!(matches!(r.app.playback(), Playback::Paused { .. }));

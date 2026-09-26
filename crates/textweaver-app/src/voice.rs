@@ -12,17 +12,29 @@ use crate::app::App;
 pub const VOICE_SAMPLE: &str = "The quick brown fox jumps over the lazy dog.";
 
 /// A voice as listed: its name, then its languages and tags ("Microsoft
-/// Zira, en-US, OneCore"), and "current" for the one in use.
-fn voice_label(v: &textweaver_speech::Voice, current: bool) -> String {
+/// Zira, en-US, OneCore"), "favourite" for one in
+/// `speech.favorite_voices`, and "current" for the one in use.
+fn voice_label(v: &textweaver_speech::Voice, favourite: bool, current: bool) -> String {
     let mut parts = vec![v.name.clone()];
     if let Some(l) = v.languages.first() {
         parts.push(l.clone());
     }
     parts.extend(v.tags.iter().cloned());
+    if favourite {
+        parts.push("favourite".into());
+    }
     if current {
         parts.push("current".into());
     }
     parts.join(", ")
+}
+
+/// Where `(id, name)` is in the favourites (matched by id, or by name
+/// ignoring case), if it is one.
+fn favourite_rank(favourites: &[String], id: &str, name: &str) -> Option<usize> {
+    favourites
+        .iter()
+        .position(|f| f == id || f.eq_ignore_ascii_case(name))
 }
 
 impl App {
@@ -41,24 +53,67 @@ impl App {
             self.tell("This speech engine has no voices to choose from.");
             return vec![Effect::Redraw];
         }
-        let current = self.settings.speech.voice.clone();
-        let is_current = |v: &textweaver_speech::Voice| {
-            current
-                .as_deref()
-                .is_some_and(|c| c == v.id || c.eq_ignore_ascii_case(&v.name))
-        };
-        let items: Vec<String> = voices
-            .iter()
-            .map(|v| voice_label(v, is_current(v)))
-            .collect();
+        let mut voices = voices;
+        // Favourites first, in the order they were added; the rest keep
+        // the engine's order.
+        let favourites = self.settings.speech.favorite_voices.clone();
+        voices.sort_by_key(|v| favourite_rank(&favourites, &v.id, &v.name).unwrap_or(usize::MAX));
         let n = voices.len();
+        let items = self.voice_items(&voices);
+        self.voice_list = voices;
         self.list = Some(crate::app::ListKind::Voices(
-            voices.into_iter().map(|v| (v.id, v.name)).collect(),
+            self.voice_list
+                .iter()
+                .map(|v| (v.id.clone(), v.name.clone()))
+                .collect(),
         ));
         self.tell(&format!(
-            "Voices, {n} {}. Enter chooses one and speaks a sample. Escape cancels.",
+            "Voices, {n} {}, favourites first. Enter chooses one and speaks a sample, Space adds or removes a favourite, Escape cancels.",
             if n == 1 { "voice" } else { "voices" }
         ));
+        vec![Effect::ShowList {
+            title: "Choose a voice".into(),
+            items,
+        }]
+    }
+
+    fn voice_items(&self, voices: &[textweaver_speech::Voice]) -> Vec<String> {
+        let current = self.settings.speech.voice.clone();
+        let favourites = &self.settings.speech.favorite_voices;
+        voices
+            .iter()
+            .map(|v| {
+                let is_current = current
+                    .as_deref()
+                    .is_some_and(|c| c == v.id || c.eq_ignore_ascii_case(&v.name));
+                let fav = favourite_rank(favourites, &v.id, &v.name).is_some();
+                voice_label(v, fav, is_current)
+            })
+            .collect()
+    }
+
+    /// Space in the voice list: adds voice `n` to `speech.favorite_voices`,
+    /// or removes it, saved at once. The list stays open, in the same
+    /// order, with the item relabelled.
+    pub(crate) fn toggle_favourite_voice(&mut self, n: usize) -> Vec<crate::command::Effect> {
+        use crate::command::Effect;
+        let Some(v) = self.voice_list.get(n).cloned() else {
+            return vec![Effect::Redraw];
+        };
+        let favs = &mut self.settings.speech.favorite_voices;
+        let msg = match favourite_rank(favs, &v.id, &v.name) {
+            Some(i) => {
+                favs.remove(i);
+                format!("{} removed from favourites.", v.name)
+            }
+            None => {
+                favs.push(v.id.clone());
+                format!("{} added to favourites.", v.name)
+            }
+        };
+        self.settings_dirty = true;
+        self.tell(&msg);
+        let items = self.voice_items(&self.voice_list);
         vec![Effect::ShowList {
             title: "Choose a voice".into(),
             items,

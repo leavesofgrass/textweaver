@@ -19,6 +19,7 @@
 //! - The document language is the default run language, and the title,
 //!   author, and language are in the core properties.
 
+use crate::math::Formula;
 use std::collections::HashMap;
 use std::io::{Cursor, Write};
 use std::rc::Rc;
@@ -87,7 +88,7 @@ impl Writer for DocxWriter {
             "<w:sectPr><w:pgSz w:w=\"{page_w}\" w:h=\"{page_h}\"/><w:pgMar w:top=\"1440\" w:right=\"1440\" w:bottom=\"1440\" w:left=\"1440\" w:header=\"720\" w:footer=\"720\" w:gutter=\"0\"/></w:sectPr>"
         ));
         let document = format!(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:document xmlns:w=\"{W}\" xmlns:r=\"{R}\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><w:body>{}</w:body></w:document>\n",
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<w:document xmlns:w=\"{W}\" xmlns:r=\"{R}\" xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><w:body>{}</w:body></w:document>\n",
             body.out
         );
         let numbering = numbering_part(&body.nums);
@@ -185,6 +186,7 @@ struct Props {
     bold: bool,
     italic: bool,
     underline: bool,
+    strike: bool,
     code: bool,
     link: bool,
 }
@@ -319,6 +321,10 @@ impl Body<'_> {
             }
             // Print page numbers have no place in a reflowing document.
             Block::PageBreak { .. } => {}
+            // A horizontal rule: an empty paragraph with a bottom border.
+            Block::Rule => self.out.push_str(
+                "<w:p><w:pPr><w:pBdr><w:bottom w:val=\"single\" w:sz=\"6\" w:space=\"1\" w:color=\"auto\"/></w:pBdr></w:pPr></w:p>",
+            ),
         }
     }
 
@@ -428,6 +434,9 @@ impl Body<'_> {
         if p.italic {
             rpr.push_str("<w:i/><w:iCs/>");
         }
+        if p.strike {
+            rpr.push_str("<w:strike/>");
+        }
         if p.underline && !p.link {
             rpr.push_str("<w:u w:val=\"single\"/>");
         }
@@ -472,6 +481,12 @@ impl Body<'_> {
                 ctx,
             ),
             Style::Code => self.inlines(children, Props { code: true, ..p }, ctx),
+            Style::Strikethrough => self.inlines(children, Props { strike: true, ..p }, ctx),
+            // Office Math, which Word draws and reads aloud.
+            Style::Math { display } => {
+                let f = Formula::from_marked(&Inline::plain(children), *display);
+                self.out.push_str(&f.omml());
+            }
             Style::Link(target) if !p.link && is_external(target) => {
                 let target = target.trim().to_owned();
                 let id = match self.links.get(&target) {

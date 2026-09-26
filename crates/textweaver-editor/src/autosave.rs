@@ -130,12 +130,52 @@ fn write_atomic_with(
         if let Some(p) = permissions {
             std::fs::set_permissions(&tmp, p)?;
         }
-        std::fs::rename(&tmp, path)
+        rename_with_retry(&tmp, path)
     })();
     if result.is_err() {
         let _ = std::fs::remove_file(&tmp);
     }
     result
+}
+
+/// Waits between attempts to rename a saved file into place while another
+/// program has the target open (Windows only): four retries, about 0.4 s
+/// in all.
+pub const RENAME_RETRY_DELAYS_MS: [u64; 4] = [25, 50, 100, 200];
+
+/// True for the errors Windows gives while another program (Obsidian,
+/// OneDrive, an antivirus scanner, a search indexer) holds the file:
+/// access denied (5), sharing violation (32), and lock violation (33).
+fn is_transient_lock(e: &std::io::Error) -> bool {
+    cfg!(windows) && matches!(e.raw_os_error(), Some(5 | 32 | 33))
+}
+
+/// Runs `op` on `path`, retrying with a short backoff
+/// ([`RENAME_RETRY_DELAYS_MS`]) while Windows reports the file as in use.
+/// Other errors, and every error elsewhere, are returned at once.
+fn retry_while_in_use<T>(
+    path: &Path,
+    mut op: impl FnMut() -> std::io::Result<T>,
+) -> std::io::Result<T> {
+    let mut delays = RENAME_RETRY_DELAYS_MS.iter();
+    loop {
+        match op() {
+            Err(e) if is_transient_lock(&e) => match delays.next() {
+                Some(&ms) => {
+                    log::debug!("{} is in use; trying again in {ms} ms", path.display());
+                    std::thread::sleep(Duration::from_millis(ms));
+                }
+                None => return Err(e),
+            },
+            other => return other,
+        }
+    }
+}
+
+/// Renames `from` over `to`, retrying while Windows reports the target as
+/// in use (see [`RENAME_RETRY_DELAYS_MS`]).
+pub fn rename_with_retry(from: &Path, to: &Path) -> std::io::Result<()> {
+    retry_while_in_use(to, || std::fs::rename(from, to))
 }
 
 /// `<dir>/<doc_key>.json`.
@@ -322,6 +362,107 @@ pub fn save_as_path(chosen: &Path) -> PathBuf {
     }
 }
 
+/// The file name suggested for a new document with no title of its own.
+pub const DEFAULT_FILE_NAME: &str = "document.md";
+
+/// The title a Markdown text gives itself: the front matter's `title:`,
+/// else the first heading (ATX `# Title` or a setext heading underlined
+/// with `===` or `---`), skipping fenced code. `None` when it has neither.
+pub fn document_title(text: &str) -> Option<String> {
+    let mut lines = text.lines().peekable();
+    // Front matter: a first line of `---`, closed by `---` or `...`.
+    if lines.peek().is_some_and(|l| l.trim_end() == "---") {
+        lines.next();
+        let mut title = None;
+        for line in lines.by_ref() {
+            let t = line.trim_end();
+            if t == "---" || t == "..." {
+                break;
+            }
+            if title.is_none()
+                && let Some(v) = t.strip_prefix("title:")
+            {
+                let v = v.trim().trim_matches(|c| c == '"' || c == '\'').trim();
+                if !v.is_empty() {
+                    title = Some(v.to_owned());
+                }
+            }
+        }
+        if title.is_some() {
+            return title;
+        }
+    }
+    let mut fence: Option<&str> = None;
+    let mut previous: Option<&str> = None;
+    for line in lines {
+        let t = line.trim();
+        if let Some(f) = fence {
+            if t.starts_with(f) {
+                fence = None;
+            }
+            previous = None;
+            continue;
+        }
+        if t.starts_with("```") || t.starts_with("~~~") {
+            fence = Some(&t[..3]);
+            previous = None;
+            continue;
+        }
+        let hashes = t.chars().take_while(|&c| c == '#').count();
+        if (1..=6).contains(&hashes) {
+            let rest = &t[hashes..];
+            if rest.is_empty() || rest.starts_with(' ') {
+                let title = rest.trim().trim_end_matches('#').trim();
+                if !title.is_empty() {
+                    return Some(title.to_owned());
+                }
+            }
+        }
+        if let Some(p) = previous
+            && !t.is_empty()
+            && (t.chars().all(|c| c == '=') || (t.len() >= 2 && t.chars().all(|c| c == '-')))
+        {
+            return Some(p.to_owned());
+        }
+        previous = (!t.is_empty() && !t.starts_with(['>', '-', '*', '|'])).then_some(t);
+    }
+    None
+}
+
+/// A file name made from a title: letters and digits kept, lowercase, every
+/// other run of characters a single hyphen, at most 60 characters, with
+/// `.md`. "Methods and Results" becomes `methods-and-results.md`. `None`
+/// when nothing usable is left.
+pub fn file_name_for_title(title: &str) -> Option<String> {
+    let mut slug = String::new();
+    let mut gap = false;
+    for c in title.chars() {
+        if c.is_alphanumeric() {
+            if gap && !slug.is_empty() {
+                slug.push('-');
+            }
+            gap = false;
+            slug.extend(c.to_lowercase());
+        } else {
+            gap = true;
+        }
+        if slug.chars().count() >= 60 {
+            break;
+        }
+    }
+    let slug: String = slug.chars().take(60).collect();
+    let slug = slug.trim_matches('-');
+    (!slug.is_empty()).then(|| format!("{slug}.md"))
+}
+
+/// The file name to suggest when saving `text` for the first time: from
+/// its front matter title or first heading, else [`DEFAULT_FILE_NAME`].
+pub fn suggest_file_name(text: &str) -> String {
+    document_title(text)
+        .and_then(|t| file_name_for_title(&t))
+        .unwrap_or_else(|| DEFAULT_FILE_NAME.to_owned())
+}
+
 /// How a text file was encoded on disk, so a save can keep it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct TextFormat {
@@ -406,7 +547,7 @@ pub fn save_text(path: &Path, text: &str) -> std::io::Result<()> {
                 "the file is read-only; use Save As to write a copy",
             ));
         }
-        let bytes = std::fs::read(&target)?;
+        let bytes = retry_while_in_use(&target, || std::fs::read(&target))?;
         format = TextFormat::detect(&bytes);
         let body = if format.bom { &bytes[3..] } else { &bytes[..] };
         if std::str::from_utf8(body).is_err() {
@@ -549,6 +690,58 @@ mod tests {
         std::fs::set_permissions(&ro, perm).unwrap();
     }
 
+    /// Another program holding the file without sharing (as an antivirus
+    /// scanner or OneDrive may for a moment) makes the rename fail with a
+    /// sharing violation; the save retries and succeeds once it lets go,
+    /// and gives up with the error, leaving no temporary file, when it
+    /// does not.
+    #[cfg(windows)]
+    #[test]
+    fn save_retries_while_another_program_holds_the_file() {
+        use std::os::windows::fs::OpenOptionsExt;
+        use std::sync::mpsc;
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("held.md");
+        std::fs::write(&p, "old").unwrap();
+        let hold = |path: std::path::PathBuf| {
+            std::fs::OpenOptions::new()
+                .read(true)
+                .share_mode(0)
+                .open(path)
+                .unwrap()
+        };
+        // Released while the save is retrying: it succeeds.
+        let (tx, rx) = mpsc::channel();
+        let path = p.clone();
+        let holder = std::thread::spawn(move || {
+            let f = hold(path);
+            tx.send(()).unwrap();
+            std::thread::sleep(Duration::from_millis(60));
+            drop(f);
+        });
+        rx.recv().unwrap();
+        save_text(&p, "new").unwrap();
+        holder.join().unwrap();
+        assert_eq!(std::fs::read_to_string(&p).unwrap(), "new");
+        // Held for longer than every retry: the error comes back.
+        let f = hold(p.clone());
+        let e = write_atomic(&p, b"newer").unwrap_err();
+        drop(f);
+        assert!(matches!(e.raw_os_error(), Some(5 | 32 | 33)), "{e:?}");
+        assert_eq!(std::fs::read_to_string(&p).unwrap(), "new");
+        let left: Vec<_> = std::fs::read_dir(dir.path()).unwrap().collect();
+        assert_eq!(left.len(), 1, "no temporary file left behind");
+    }
+
+    #[test]
+    fn other_rename_errors_are_not_retried() {
+        let dir = tempfile::tempdir().unwrap();
+        let started = std::time::Instant::now();
+        let e = rename_with_retry(&dir.path().join("missing"), &dir.path().join("x")).unwrap_err();
+        assert_eq!(e.kind(), std::io::ErrorKind::NotFound);
+        assert!(started.elapsed() < Duration::from_millis(20));
+    }
+
     #[cfg(unix)]
     #[test]
     fn save_text_writes_through_links_and_keeps_permissions() {
@@ -607,6 +800,37 @@ mod tests {
                 .unwrap()
                 .is_some()
         );
+    }
+
+    #[test]
+    fn suggested_names_come_from_the_title() {
+        assert_eq!(
+            suggest_file_name("---\ntitle: \"My Essay: Draft 2\"\n---\n# Other\n"),
+            "my-essay-draft-2.md"
+        );
+        assert_eq!(
+            suggest_file_name("intro\n\n## Methods and Results ##\n"),
+            "methods-and-results.md"
+        );
+        assert_eq!(
+            suggest_file_name("Setext Title\n=====\n"),
+            "setext-title.md"
+        );
+        assert_eq!(
+            suggest_file_name("```\n# not a heading\n```\n# Real\n"),
+            "real.md"
+        );
+        assert_eq!(suggest_file_name("#hashtag only\n"), DEFAULT_FILE_NAME);
+        assert_eq!(suggest_file_name(""), DEFAULT_FILE_NAME);
+        assert_eq!(suggest_file_name("# !!!\n"), DEFAULT_FILE_NAME);
+        assert_eq!(
+            suggest_file_name("---\nauthor: x\n---\n# Café Notes\n"),
+            "café-notes.md"
+        );
+        let long = format!("# {}\n", "word ".repeat(40));
+        let name = suggest_file_name(&long);
+        assert!(name.chars().count() <= 63, "{name}");
+        assert!(!name.contains("-.md"), "{name}");
     }
 
     #[test]

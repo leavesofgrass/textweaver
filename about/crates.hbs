@@ -1,0 +1,23 @@
+## Rust crates
+
+textweaver is built from these Rust crates. Each licence below lists the crates under it, with their versions. Where a crate offers a choice of licences, the one listed is the one textweaver uses.
+
+Licences, with the number of crates under each:
+
+{{#each overview}}
+- {{{name}}}: {{count}}
+{{/each}}
+{{#each licenses}}
+
+### {{{name}}} ({{{id}}})
+
+Used by:
+
+{{#each used_by}}
+- {{{crate.name}}} {{{crate.version}}}{{#if crate.repository}}, {{{crate.repository}}}{{/if}}
+{{/each}}
+
+```text
+{{{text}}}
+```
+{{/each}}

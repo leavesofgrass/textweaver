@@ -1095,10 +1095,10 @@ fn choose_voice_lists_the_voices_and_enter_speaks_a_sample() {
             _ => None,
         })
         .expect("a voice list");
-    assert_eq!(items, ["Test voice"]);
+    assert_eq!(items, ["Test voice", "Second voice"]);
     assert_eq!(
         r.said.last(),
-        "Voices, 1 voice. Enter chooses one and speaks a sample. Escape cancels."
+        "Voices, 2 voices, favourites first. Enter chooses one and speaks a sample, Space adds or removes a favourite, Escape cancels."
     );
     r.log.clear();
     r.app.dispatch(Command::Choose(0));
@@ -1114,6 +1114,43 @@ fn choose_voice_lists_the_voices_and_enter_speaks_a_sample() {
     let effects = r.act(ActionId::ChooseVoice);
     assert!(effects.iter().any(|e| matches!(
         e,
-        Effect::ShowList { items, .. } if items == &["Test voice, current".to_owned()]
+        Effect::ShowList { items, .. }
+            if items == &["Test voice, current".to_owned(), "Second voice".to_owned()]
     )));
+}
+
+/// `speech.favorite_voices` puts favourites first in the voice list, and
+/// Space in the list adds or removes one (saved at once).
+#[test]
+fn favourite_voices_come_first_and_space_marks_them() {
+    let mut r = rig(PROSE);
+    r.act(ActionId::ChooseVoice);
+    let effects = r.app.dispatch(Command::MarkItem(1));
+    assert_eq!(r.said.last(), "Second voice added to favourites.");
+    let Some(Effect::ShowList { items, .. }) = effects.first() else {
+        panic!("{effects:?}");
+    };
+    assert_eq!(items, &["Test voice", "Second voice, favourite"]);
+    assert_eq!(r.app.settings().speech.favorite_voices, ["second"]);
+    // Next time the favourite is first, and choosing by position follows.
+    r.app.dispatch(Command::Cancel);
+    let effects = r.act(ActionId::ChooseVoice);
+    let items = effects
+        .iter()
+        .find_map(|e| match e {
+            Effect::ShowList { items, .. } => Some(items.clone()),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(items, ["Second voice, favourite", "Test voice"]);
+    r.app.dispatch(Command::Choose(0));
+    assert_eq!(r.app.settings().speech.voice.as_deref(), Some("second"));
+    // Space again removes it; other lists say there is nothing to mark.
+    r.act(ActionId::ChooseVoice);
+    r.app.dispatch(Command::MarkItem(0));
+    assert_eq!(r.said.last(), "Second voice removed from favourites.");
+    assert!(r.app.settings().speech.favorite_voices.is_empty());
+    r.act(ActionId::KeyboardHelp);
+    r.app.dispatch(Command::MarkItem(0));
+    assert_eq!(r.said.last(), "Nothing to mark in this list.");
 }

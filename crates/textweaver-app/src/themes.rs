@@ -24,6 +24,7 @@ impl App {
             }
         }
         self.check_theme_name();
+        self.check_reading_colors();
     }
 
     /// Says so when the configured theme does not exist (Galaxy is used).
@@ -42,9 +43,51 @@ impl App {
     }
 
     /// The theme in effect: the configured one, or Galaxy when there is no
-    /// theme by that name.
+    /// theme by that name, as stored (without the reader's highlight
+    /// colours; see [`reading_theme`](Self::reading_theme)).
     pub fn current_theme(&self) -> &Theme {
         self.themes.resolve(&self.settings.display.theme).0
+    }
+
+    /// The theme to draw with: [`current_theme`](Self::current_theme) with
+    /// `[highlight] color` and `sentence_color` laid over its spoken-word
+    /// and spoken-sentence styles ([`textweaver_theme::reading`]).
+    pub fn reading_theme(&self) -> Theme {
+        let mut theme = self.current_theme().clone();
+        let h = &self.settings.highlight;
+        textweaver_theme::reading::apply_reading_colors(
+            &mut theme,
+            &h.color,
+            h.sentence_color.as_deref(),
+        );
+        theme
+    }
+
+    /// What decides [`reading_theme`](Self::reading_theme): the theme name
+    /// and the two highlight colours. Frontends rebuild their styles when
+    /// it changes.
+    pub fn reading_theme_key(&self) -> (String, String, Option<String>) {
+        let h = &self.settings.highlight;
+        (
+            self.current_theme().meta.name.clone(),
+            h.color.clone(),
+            h.sentence_color.clone(),
+        )
+    }
+
+    /// Says what is wrong with the highlight colours on the current theme:
+    /// an unknown colour, or too little contrast.
+    pub(crate) fn check_reading_colors(&mut self) {
+        let mut theme = self.current_theme().clone();
+        let h = &self.settings.highlight;
+        let report = textweaver_theme::reading::apply_reading_colors(
+            &mut theme,
+            &h.color,
+            h.sentence_color.as_deref(),
+        );
+        for w in report.warnings {
+            self.tell(&w);
+        }
     }
 
     /// At startup, follows the system's scheme when `display.follow_os_theme`
@@ -76,6 +119,7 @@ impl App {
         self.settings.display.theme_explicit = true;
         self.settings_dirty = true;
         self.tell(&format!("Theme {spoken}."));
+        self.check_reading_colors();
     }
 }
 
@@ -98,6 +142,44 @@ mod tests {
         assert_eq!(
             app.status_text(),
             "There is no theme called neon; using Galaxy."
+        );
+    }
+
+    /// `[highlight] color` and `sentence_color` reach the drawn theme, and a
+    /// colour with poor contrast is reported when the app starts.
+    #[test]
+    fn highlight_colours_are_laid_over_the_theme() {
+        use textweaver_theme::{Rgb, StyleRole};
+        let app = App::new(AppConfig::for_tests());
+        assert_eq!(app.reading_theme(), *app.current_theme(), "theme default");
+
+        let mut config = AppConfig::for_tests();
+        config.settings.highlight.color = "yellow".into();
+        config.settings.highlight.sentence_color = Some("#003355".into());
+        let app = App::new(config);
+        let t = app.reading_theme();
+        assert_eq!(
+            t.style(StyleRole::SpokenWord).background,
+            Some(Rgb::from_u32(0xffff00))
+        );
+        assert_eq!(
+            t.style(StyleRole::SpokenSentence).background,
+            Some(Rgb::from_u32(0x003355))
+        );
+        assert_eq!(app.reading_theme_key().1, "yellow");
+        assert!(
+            !app.status_text().contains("contrast"),
+            "{}",
+            app.status_text()
+        );
+
+        let mut config = AppConfig::for_tests();
+        config.settings.highlight.color = "#777777".into();
+        let app = App::new(config);
+        assert!(
+            app.status_text().contains("leaves its text at"),
+            "{}",
+            app.status_text()
         );
     }
 

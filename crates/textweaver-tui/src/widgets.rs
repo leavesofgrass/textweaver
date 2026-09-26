@@ -164,6 +164,27 @@ impl ListView {
         self.items.get(self.selected).map(String::as_str)
     }
 
+    /// Moves the focus to the next item (after the focused one, wrapping)
+    /// whose first letter or digit is `c`, ignoring case. Returns true when
+    /// one was found.
+    pub fn jump_to_letter(&mut self, c: char) -> bool {
+        let want: Vec<char> = c.to_lowercase().collect();
+        let n = self.items.len();
+        let starts = |s: &str| {
+            s.chars()
+                .find(|ch| ch.is_alphanumeric())
+                .is_some_and(|f| f.to_lowercase().eq(want.iter().copied()))
+        };
+        for step in 1..=n {
+            let i = (self.selected + step) % n;
+            if starts(&self.items[i]) {
+                self.selected = i;
+                return true;
+            }
+        }
+        false
+    }
+
     /// The focused item as spoken: its text and where it is in the list
     /// ("Chapter two, 2 of 5").
     pub fn spoken_item(&self) -> Option<String> {
@@ -207,5 +228,27 @@ mod tests {
         assert_eq!(l.current(), Some("b"));
         assert_eq!(l.spoken_item().as_deref(), Some("b, 2 of 2"));
         assert_eq!(ListView::new("t", Vec::new()).spoken_item(), None);
+    }
+
+    #[test]
+    fn first_letter_jumps_wrap_and_ignore_case() {
+        let mut l = ListView::new(
+            "t",
+            vec![
+                "Apple".into(),
+                "banana".into(),
+                "Avocado".into(),
+                "\u{201c}Cherry\u{201d}".into(),
+            ],
+        );
+        assert!(l.jump_to_letter('a'));
+        assert_eq!(l.current(), Some("Avocado"));
+        assert!(l.jump_to_letter('A'));
+        assert_eq!(l.current(), Some("Apple"));
+        assert!(l.jump_to_letter('c'));
+        assert_eq!(l.selected, 3);
+        assert!(!l.jump_to_letter('z'));
+        assert_eq!(l.selected, 3);
+        assert!(!ListView::new("t", Vec::new()).jump_to_letter('a'));
     }
 }

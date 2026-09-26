@@ -13,8 +13,9 @@
 //!
 //! The crate reads and writes notes only through [`AnnotationStore`];
 //! [`MemoryStore`] serves tests and dry runs, and
-//! [`StateStoreAnnotations`] keeps notes in the per-document state files
-//! until the store has typed notes (Agent C2).
+//! [`StateStoreAnnotations`] reads and writes the typed notes and
+//! highlights in the per-document state files, the same ones the reader
+//! uses (`docs/vault.md` is the user guide).
 //!
 //! Owner: Agent J.
 
@@ -41,7 +42,7 @@ pub use model::{
     Note, Relation, RelationType, color_name, derive_id,
 };
 pub use names::{MAX_NAME_CHARS, NameAllocator, sanitize as sanitize_name};
-pub use state::StateStoreAnnotations;
+pub use state::{StateStoreAnnotations, save_library};
 pub use walk::note_files;
 
 /// The tag on a vault note's node note (Star's `_NODE_TAG`).

@@ -1,5 +1,6 @@
-//! Markdown loader: CommonMark (plus tables, footnotes, strikethrough, and
-//! front matter) parsed with pulldown-cmark into canonical text and markers.
+//! Markdown loader: CommonMark (plus tables, footnotes, strikethrough, task
+//! lists, math, GFM alerts, wiki links, heading attributes, and front
+//! matter) parsed with pulldown-cmark into canonical text and markers.
 //!
 //! Unlike Star, which strips Markdown with regular expressions (and merges
 //! headings into lists, speaks front matter, and never processes inline
@@ -16,11 +17,23 @@
 //!   ([`FootnoteMode::Skip`]);
 //! - code blocks are text under a `Code` marker (level 1, label = language),
 //!   dropped entirely with [`LoadOptions::skip_code`]; inline code is kept;
-//! - raw HTML is dropped, except `<br>`, which breaks the line.
+//! - raw HTML is dropped, except `<br>`, which breaks the line;
+//! - math (`$…$`, `$$…$$`) keeps its delimiters in the text under a `Math`
+//!   marker (level 1 for display math), so speech reads it as math and the
+//!   writers typeset it; `$5 and $10` stays prose;
+//! - struck-through text is under a `Strikethrough` marker, and a horizontal
+//!   rule is an empty `Rule` marker where the next block starts, so both
+//!   can be heard;
+//! - a GFM alert (`> [!NOTE]`) is a block quote labeled `note` whose text
+//!   starts "Note:";
+//! - wiki links (`[[Page]]`, `[[Page|shown]]`) are links to the page;
+//!   heading attributes (`# Title {#id .class}`) are not read.
 
 use std::collections::BTreeMap;
 
-use pulldown_cmark::{CodeBlockKind, Event, MetadataBlockKind, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::{
+    BlockQuoteKind, CodeBlockKind, Event, MetadataBlockKind, Options, Parser, Tag, TagEnd,
+};
 use ropey::Rope;
 use textweaver_core::{CharRange, MarkerKind};
 use textweaver_text::{Document, DocumentMeta, HEADER_ROW_LABEL, Marker};
@@ -69,6 +82,30 @@ fn parser_options() -> Options {
         | Options::ENABLE_TASKLISTS
         | Options::ENABLE_YAML_STYLE_METADATA_BLOCKS
         | Options::ENABLE_PLUSES_DELIMITED_METADATA_BLOCKS
+        | Options::ENABLE_MATH
+        | Options::ENABLE_GFM
+        | Options::ENABLE_HEADING_ATTRIBUTES
+        | Options::ENABLE_WIKILINKS
+}
+
+/// Math source with its delimiters, as it stays in the canonical text.
+fn delimited_math(t: &str, display: bool) -> String {
+    if display {
+        format!("$${t}$$")
+    } else {
+        format!("${t}$")
+    }
+}
+
+/// What a GFM alert's text starts with.
+fn alert_label(kind: BlockQuoteKind) -> &'static str {
+    match kind {
+        BlockQuoteKind::Note => "Note",
+        BlockQuoteKind::Tip => "Tip",
+        BlockQuoteKind::Important => "Important",
+        BlockQuoteKind::Warning => "Warning",
+        BlockQuoteKind::Caution => "Caution",
+    }
 }
 
 /// Converts Markdown source to canonical text and markers, filling `meta`
@@ -93,6 +130,7 @@ pub fn convert(
         heading_text: None,
         image: Vec::new(),
         html: HtmlState::default(),
+        alert: None,
     };
     for event in Parser::new_ext(source, parser_options()) {
         c.event(event);
@@ -126,6 +164,16 @@ fn collect_footnotes(source: &str) -> Vec<(String, String)> {
             Event::Text(t) | Event::Code(t) => {
                 if let Some((_, text)) = current.as_mut() {
                     text.push_str(&t);
+                }
+            }
+            Event::InlineMath(t) => {
+                if let Some((_, text)) = current.as_mut() {
+                    text.push_str(&delimited_math(&t, false));
+                }
+            }
+            Event::DisplayMath(t) => {
+                if let Some((_, text)) = current.as_mut() {
+                    text.push_str(&delimited_math(&t, true));
                 }
             }
             Event::SoftBreak | Event::HardBreak | Event::End(TagEnd::Paragraph) => {
@@ -165,6 +213,8 @@ struct Converter<'a> {
     image: Vec<(String, usize)>,
     /// Raw HTML read so far (comments and scripts span events).
     html: HtmlState,
+    /// A GFM alert's label ("Note"), written before its first text.
+    alert: Option<&'static str>,
 }
 
 /// Where the reader is inside raw HTML, carried from one HTML event to the
@@ -317,6 +367,10 @@ impl Converter<'_> {
     }
 
     fn text(&mut self, t: &str) {
+        if let Some(label) = self.alert.take() {
+            self.b.text(&format!("{label}:"));
+            self.b.space();
+        }
         if let Some(h) = self.heading_text.as_mut() {
             h.push_str(t);
         }
@@ -452,7 +506,10 @@ impl Converter<'_> {
             }
             Event::SoftBreak => self.b.space(),
             Event::HardBreak => self.b.line_break(),
-            Event::Rule => self.b.paragraph_break(),
+            Event::Rule => {
+                self.b.paragraph_break();
+                self.b.point(Self::marker(MarkerKind::Rule));
+            }
             // Raw HTML: its text is read and its tags dropped (README-style
             // `<p align="center">`, `<details>`, `<img alt>`); comments,
             // scripts, and styles are not read (audit finding M2).
@@ -469,7 +526,8 @@ impl Converter<'_> {
                     });
                 }
             }
-            Event::InlineMath(t) | Event::DisplayMath(t) => self.text(&t),
+            Event::InlineMath(t) => self.math(&t, false),
+            Event::DisplayMath(t) => self.math(&t, true),
         }
     }
 
@@ -488,9 +546,15 @@ impl Converter<'_> {
                 }
                 self.push(Some(Self::marker(MarkerKind::Heading).with_level(level)));
             }
-            Tag::BlockQuote(_) => {
+            Tag::BlockQuote(kind) => {
                 self.block_break();
-                self.push(Some(Self::marker(MarkerKind::Quote)));
+                let mut m = Self::marker(MarkerKind::Quote);
+                if let Some(kind) = kind {
+                    let label = alert_label(kind);
+                    m = m.with_label(label.to_lowercase());
+                    self.alert = Some(label);
+                }
+                self.push(Some(m));
             }
             Tag::CodeBlock(kind) => {
                 self.block_break();
@@ -583,8 +647,8 @@ impl Converter<'_> {
             Tag::MetadataBlock(kind) => {
                 self.meta_text = Some((kind, String::new()));
             }
-            Tag::Strikethrough
-            | Tag::Superscript
+            Tag::Strikethrough => self.push(Some(Self::marker(MarkerKind::Strikethrough))),
+            Tag::Superscript
             | Tag::Subscript
             | Tag::DefinitionList
             | Tag::DefinitionListTitle
@@ -642,6 +706,16 @@ impl Converter<'_> {
             | TagEnd::DefinitionListDefinition => self.pop(),
             TagEnd::CodeBlock | TagEnd::FootnoteDefinition | TagEnd::MetadataBlock(_) => {}
         }
+    }
+
+    /// Math with its delimiters under a `Math` marker (level 1 for display
+    /// math).
+    fn math(&mut self, t: &str, display: bool) {
+        let id = self
+            .b
+            .open(Self::marker(MarkerKind::Math).with_level(u8::from(display)));
+        self.text(&delimited_math(t, display));
+        self.b.close(id);
     }
 
     fn definition(&self, label: &str) -> Option<&str> {
@@ -743,6 +817,86 @@ mod tests {
             .iter(kind, None)
             .map(|m| d.slice(m.range))
             .collect()
+    }
+
+    #[test]
+    fn math_keeps_its_delimiters_under_a_math_marker() {
+        let d = load(
+            "The area is $\\pi r^2$, not $5 and $10.\n\n$$\\frac{a}{b}$$\n\nA $x_1 * y_2$ product.\n",
+            &LoadOptions::default(),
+        );
+        let text = d.text().to_string();
+        assert!(
+            text.contains("The area is $\\pi r^2$, not $5 and $10."),
+            "{text}"
+        );
+        let math: Vec<(String, u8)> = d
+            .marker_index()
+            .iter(MarkerKind::Math, None)
+            .map(|m| (d.slice(m.range), m.level))
+            .collect();
+        assert_eq!(
+            math,
+            vec![
+                ("$\\pi r^2$".to_owned(), 0),
+                ("$$\\frac{a}{b}$$".to_owned(), 1),
+                // Emphasis is not parsed inside math.
+                ("$x_1 * y_2$".to_owned(), 0),
+            ]
+        );
+        assert_eq!(d.marker_index().count(MarkerKind::Italic, None), 0);
+    }
+
+    #[test]
+    fn strikethrough_and_rules_have_markers() {
+        let d = load(
+            "Keep ~~drop this~~ here.\n\n---\n\nAfter the rule.\n\n***\n",
+            &LoadOptions::default(),
+        );
+        assert_eq!(kinds(&d, MarkerKind::Strikethrough), vec!["drop this"]);
+        let rules: Vec<CharPos> = d
+            .marker_index()
+            .iter(MarkerKind::Rule, None)
+            .map(|m| {
+                assert!(m.range.is_empty());
+                m.range.start
+            })
+            .collect();
+        let after = d.text().to_string().find("After").unwrap();
+        // The first rule is where the next paragraph starts; the last, with
+        // nothing after it, at the end.
+        assert_eq!(rules, vec![CharPos(after), CharPos(d.len_chars())]);
+        assert!(!d.text().to_string().contains("---"));
+    }
+
+    #[test]
+    fn gfm_alerts_wiki_links_and_heading_attributes() {
+        let d = load(
+            "# Title {#intro .big}\n\n> [!NOTE]\n> Remember to save.\n\n> [!warning]\n> Hot.\n\nSee [[Other page]] and [[Page#Part|that part]].\n",
+            &LoadOptions::default(),
+        );
+        let text = d.text().to_string();
+        assert!(text.starts_with("Title\n"), "{text}");
+        assert!(text.contains("Note: Remember to save."), "{text}");
+        assert!(text.contains("Warning: Hot."), "{text}");
+        assert!(!text.contains("[!"), "{text}");
+        let quotes: Vec<Option<String>> = d
+            .marker_index()
+            .iter(MarkerKind::Quote, None)
+            .map(|m| m.label.clone())
+            .collect();
+        assert_eq!(quotes, vec![Some("note".into()), Some("warning".into())]);
+        assert!(text.contains("See Other page and that part."), "{text}");
+        let links: Vec<Option<String>> = d
+            .marker_index()
+            .iter(MarkerKind::Link, None)
+            .map(|m| m.reference.clone())
+            .collect();
+        assert_eq!(
+            links,
+            vec![Some("Other page".into()), Some("Page#Part".into())]
+        );
+        assert_eq!(d.meta.title.as_deref(), Some("Title"));
     }
 
     #[test]

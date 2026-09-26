@@ -28,7 +28,7 @@
 //! - **Persistence**: the reading position, history, and bookmarks are saved
 //!   on quit and on switching documents, and restored on open (first word at
 //!   or after the saved position, when `auto_resume` is on). Settings are
-//!   saved on quit only if they changed.
+//!   saved as soon as they change (see below).
 //! - **Announcements**: every state change goes to the status line
 //!   ([`App::status`], which doubles as the TUI's `StatusLineAnnouncer`) and
 //!   the configured announcer, filtered by verbosity; with self-voicing they
@@ -101,6 +101,7 @@
 
 pub mod align;
 mod app;
+mod authoring;
 mod backends;
 mod command;
 pub mod disk;
@@ -112,6 +113,7 @@ mod help;
 mod library;
 pub mod logfile;
 mod marks;
+mod mdline;
 mod nav;
 mod notes;
 mod playback;
@@ -126,6 +128,7 @@ mod view;
 mod voice;
 
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
+pub use authoring::osc52;
 pub use backends::{
     CODE_FACTORY_LIBRARY, apple_preference, eci_config, sapi_config, service_config,
     speech_registry, speech_registry_for,

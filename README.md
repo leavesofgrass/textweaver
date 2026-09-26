@@ -1,48 +1,64 @@
 # textweaver
 
-An accessible, keyboard-first document reader and writer that speaks. textweaver reads documents aloud with a highlight that follows the spoken word exactly, lets you move by character, word, sentence, line, paragraph, heading, table, list, and link, and gives speech feedback while you write Markdown. It is built first for screen-reader users and students with print disabilities.
+An accessible, keyboard-first document reader and writer that speaks. textweaver reads documents aloud with a highlight that follows the spoken word exactly. You can move by character, word, sentence, line, paragraph, heading, table, list, and link. While you write Markdown, it tells you what you type. It is built first for screen-reader users and for students with print disabilities.
 
 textweaver is a Rust reimplementation of the core of [Star](https://github.com/leavesofgrass/star). It learns from [Paperback](https://github.com/trypsynth/paperback) for document handling and accessibility, and from Omnivox for queued, multi-stream speech.
 
-> **Status: alpha.** textweaver reads documents aloud with exact word highlighting, has an edit mode, notes, and a library, and runs on Windows, macOS, and Linux. It is usable for testing, not yet for daily reliance. See [CHANGELOG.md](CHANGELOG.md).
+> **Status: alpha.** textweaver reads documents aloud with exact word highlighting. It has an edit mode, notes, a library, conversion to many formats, audio export, math, and citations. It runs on Windows, macOS, and Linux. It is ready for testing, not yet for daily reliance. See [CHANGELOG.md](CHANGELOG.md).
+
+## Start here
+
+- New to textweaver? Read the [quick start](docs/quickstart.md). It covers your first 30 seconds on Windows, macOS, and Linux.
+- Every guide is listed in the [documentation index](docs/README.md), grouped for users, contributors, and design decisions.
+- The [roadmap](docs/roadmap.md) says what comes next, quick wins first.
+- The [interactive pages](docs/site/index.html) explain the architecture, the speech pipeline, the keyboard, and the reading aids. Open `docs/site/index.html` in any browser. They work offline.
 
 ## Download
 
-Windows and macOS packages are on the [releases page](https://github.com/leavesofgrass/textweaver/releases). New here? Read the [quick start](docs/quickstart.md): what to do in your first 30 seconds on Windows, macOS, and Linux. [docs/install.md](docs/install.md) has the details. The macOS build is not notarized yet; the guide shows how to open it anyway. On Linux, build from source with `scripts/install-linux.sh`.
+Windows and macOS packages are on the [releases page](https://github.com/leavesofgrass/textweaver/releases). [docs/install.md](docs/install.md) has the details. The macOS build is not notarized yet; the install guide shows how to open it anyway. On Linux, build from source with `scripts/install-linux.sh`.
 
 ## What it does
 
-- `textweaver FILE`: a self-voicing terminal reader.
-  - It opens text, Markdown, and HTML.
-  - The highlight follows the spoken word exactly.
-  - Move by character, word, sentence, line, paragraph, heading, table, list, and link.
-  - Speech Cursor mode, bookmarks, notes and highlights, find, and navigation history.
-  - Your position is restored when you reopen a document.
-  - Edit mode, with typing echo and Markdown commands.
-  - Keys are configurable, and single-key shortcuts can be switched off.
-- `tw`: a command-line tool.
-  - `tw text`, `tw info`, and `tw search` extract, inspect, and search a document.
-  - `tw speak` and `tw export-audio` speak a document or write it to audio with subtitles.
-  - `tw voices` and `tw backends` list voices and speech engines.
-  - `tw library`, `tw vault`, `tw migrate-star`, and `tw eloquence` manage your library, your Obsidian vault, your Star data, and Eloquence.
+textweaver has two programs.
+
+- `textweaver FILE` is a self-voicing terminal reader.
+  - It opens text, Markdown, HTML, EPUB, Word (DOCX), and PDF. Other formats, such as OpenDocument or RTF, can be converted to Markdown first with `tw convert`, which uses Pandoc for them when it is installed.
+  - The highlight follows the spoken word exactly, even when numbers, abbreviations, or math are read in words.
+  - You move by character, word, sentence, line, paragraph, heading, table, list, list item, link, and chapter.
+  - It has Speech Cursor mode, bookmarks, notes and highlights, find, go to, and navigation history.
+  - It remembers your place in every document.
+  - Edit mode gives typing echo, Markdown formatting commands, undo, find and replace, and autosave recovery.
+  - Reading aids: RSVP (one word at a time), bionic reading, a reading ruler, and 23 themes checked for contrast.
+  - Every key can be changed, and single-key shortcuts can be turned off with F9.
+  - It is designed to work alongside a screen reader such as JAWS, NVDA, VoiceOver, or Orca: start it with `--no-speech` to let your screen reader do the talking. [Using textweaver with a screen reader](docs/screen-readers.md) says what has been tested so far.
+- `tw` is a command-line tool.
+  - `tw text`, `tw info`, and `tw search` extract, describe, and search a document.
+  - `tw convert` converts files and whole folders to Markdown, HTML, text, EPUB, Word, braille (BRF), and tagged PDF. It uses every processor core, and it can watch a folder. With Pandoc installed, it also reads formats textweaver has no reader for.
+  - `tw speak` and `tw export-audio` speak a document, or write it to WAV, MP3, or an M4B audiobook with chapters and subtitles.
+  - `tw voices`, `tw backends`, and `tw eloquence` list voices and speech engines.
+  - `tw cite` keeps a reference library: DOI and ISBN lookup, BibTeX, RIS, CSL-JSON, and citation styles.
+  - `tw library`, `tw marks`, `tw vault`, and `tw migrate-star` manage your library, your saved places, your Obsidian vault, and your Star data.
+  - `tw dictate` turns speech in an audio file into text with Whisper.
+  - `tw settings` exports, imports, and resets your settings as JSON.
+  - `tw serve --stdio` lets editors and other programs drive textweaver over JSON-RPC.
 - Speech engines:
   - ETI-Eloquence through its ECI engine, with exact word timing;
-  - SAPI5 and OneCore voices on Windows;
+  - SAPI5 and OneCore voices on Windows, 64-bit and 32-bit;
   - Apple's voices on macOS, including Eloquence Reed;
   - espeak-ng and speech-dispatcher on Linux;
+  - DECtalk, when you have a licensed copy;
   - Omnivox.
 
-Coming next:
+Coming next (the [roadmap](docs/roadmap.md) has the full list):
 
-- EPUB, DOCX, and PDF reading;
-- conversion to HTML, EPUB, DOCX, PDF, and braille;
-- math and citations;
-- themes and reading aids;
-- a native GUI built on wxWidgets.
+- the native GUI (a working spike exists; see [ADR-0014](docs/adr/0014-gui-toolkit.md));
+- dictation from the microphone;
+- exploring math term by term in the reader;
+- Linux packages.
 
 ## Building
 
-Requirements: Rust 1.96 (installed automatically from `rust-toolchain.toml` by rustup).
+You need Rust. rustup installs the right version (1.96) from `rust-toolchain.toml`.
 
 ```bash
 cargo build --workspace
@@ -52,7 +68,7 @@ cargo build --workspace
 cargo test --workspace
 ```
 
-On Linux, the espeak-ng backend needs `libespeak-ng-dev` and clang. The Docker development image has everything; see [docs/docker.md](docs/docker.md).
+On Linux, the espeak-ng backend needs the espeak-ng development files (`libespeak-ng-dev` on Debian and Ubuntu). The Docker development image has everything; see [docs/docker.md](docs/docker.md).
 
 ```bash
 docker compose build dev
@@ -62,9 +78,15 @@ docker compose build dev
 docker compose run --rm -T dev cargo test --workspace --all-features
 ```
 
+Before you send a change, run the checks CI runs. [CONTRIBUTING.md](CONTRIBUTING.md) explains them and the rest of the workflow.
+
+```bash
+scripts/dev-check.sh
+```
+
 ## Scripts
 
-The `scripts/` folder has installers and helpers for every system. Each script has `--help` and `--dry-run`, says what it will do before it does it, and asks before it uses sudo or changes your PATH. The full list is in [scripts/README.md](scripts/README.md).
+The `scripts/` folder has installers and helpers for every system. Each script has `--help` and `--dry-run`. It says what it will do before it does it, and asks before it uses sudo or changes your PATH. The full list is in [scripts/README.md](scripts/README.md).
 
 - `install-linux.sh`: build and install from source on Debian, Ubuntu, Fedora, Arch, openSUSE, or Alpine.
 - `install-macos.sh`: install the newest macOS release, or build from source.
@@ -73,40 +95,19 @@ The `scripts/` folder has installers and helpers for every system. Each script h
 - `speech-check.sh` and `speech-check.ps1`: report the speech engines, voices, and audio.
 - `doctor.sh` and `doctor.ps1`: a system report to paste into a bug report.
 - `dev-check.sh` and `dev-check.ps1`: run CI's checks locally.
-- `convert-folder.sh` and `convert-folder.ps1`: convert a folder of Markdown to HTML, EPUB, or PDF.
+- `convert-folder.sh` and `convert-folder.ps1`: convert a folder of Markdown to HTML, EPUB, PDF, or another format.
 - `voxin-docker.sh`: run the Eloquence tests or `tw speak` with Voxin in the Docker container.
 
 ## Repository layout
 
-| Path | What |
-|---|---|
-| `crates/textweaver-core` | Positions, units, offset maps, edits, voice parameters, utterances |
-| `crates/textweaver-text` | Document model, units, navigation, history, search, narration |
-| `crates/textweaver-formats` | Loaders and registry |
-| `crates/textweaver-speech` | Speech backends, speech service, pacing, normalization |
-| `crates/textweaver-store` | Settings, keymap file, per-document state, sync |
-| `crates/textweaver-keymap` | Actions, key chords, layers, defaults |
-| `crates/textweaver-a11y` | Announcements and verbosity |
-| `crates/textweaver-editor` | Undo, Markdown commands, typing echo, autosave |
-| `crates/textweaver-app` | UI-independent application core |
-| `crates/textweaver-tui` | The `textweaver` terminal reader |
-| `crates/textweaver-cli` | The `tw` command |
-| `xtask` | `cargo xtask dist`, `hosts`, `keyboard`, `parity` |
-| `scripts` | Installers, update, speech check, doctor, dev-check, and folder conversion |
-| `docs/` | Plan, ADRs, Star parity reference, tasks, Docker guide |
-| `fixtures/` | Sample documents and Star's reference output for them |
-
-## Documentation
-
-- [Roadmap](docs/roadmap.md): what comes next, with quick wins first
-- [Implementation plan](docs/plan.md)
-- Architecture decisions: [workspace](docs/adr/0001-workspace-and-dependencies.md), [text model](docs/adr/0002-text-model.md), [speech threading](docs/adr/0003-speech-threading-and-event-timing.md), [rate, pitch, volume](docs/adr/0004-rate-pitch-volume.md), [narration and offset maps](docs/adr/0005-narration-and-offset-map.md), [keymap](docs/adr/0006-keymap-and-actions.md), [Eloquence](docs/adr/0007-eloquence-via-eci-host.md), [Apple speech](docs/adr/0008-apple-speech.md), [SAPI5](docs/adr/0009-sapi5-voices.md)
-- [Installing a release](docs/install.md) and [making one](docs/releasing.md)
-- [Settings: export, share, and import](docs/settings.md) (or run `tw settings --help`)
-- [Getting ETI-Eloquence](docs/eloquence.md) (or run `tw eloquence`)
-- [Star parity reference](docs/star-parity.md)
-- [Tasks and ownership](docs/tasks.md)
-- [Docker development container](docs/docker.md)
+- `crates/`: the Rust crates, one per job. [docs/architecture.md](docs/architecture.md) describes each one, how they depend on each other, and how a document becomes speech.
+- `xtask/`: maintenance tasks, run as `cargo xtask bench`, `dist`, `hosts`, `eci-host`, `sapi-host`, `keyboard`, and `parity`.
+- `scripts/`: installers, update, speech check, doctor, dev-check, and folder conversion.
+- `tools/`: helper programs, among them the link checker (`check_links.py`), the site data generator (`gen_site_data.py`), and the engine spikes.
+- `docs/`: user guides, contributor guides, the ADRs, and the interactive pages in `docs/site/`. Start at [docs/README.md](docs/README.md).
+- `fixtures/`: sample documents for tests, and Star's reference output for them.
+- `third_party/`: pronunciation dictionaries, fonts, and word lists, each with its licence.
+- `docker/`, `compose.yaml`, `compose.voxin.yaml`: the Linux development container.
 
 ## Third-party data
 
@@ -119,3 +120,12 @@ The `scripts/` folder has installers and helpers for every system. Each script h
 ## License
 
 GPL-3.0-or-later, like Star. See [LICENSE](LICENSE).
+
+## See also
+
+- [Documentation index](docs/README.md): every guide, grouped by audience.
+- [Quick start](docs/quickstart.md): your first 30 seconds.
+- [Architecture](docs/architecture.md): the crates and how speech and highlighting work.
+- [Roadmap](docs/roadmap.md): what comes next.
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to build, check, and send changes.
+- [CHANGELOG.md](CHANGELOG.md): what changed in each release.

@@ -287,6 +287,16 @@ pub struct App {
     pub(crate) overwrite_confirmed: bool,
     /// When the open file was last checked for changes on disk.
     pub(crate) last_disk_check: Option<Instant>,
+    /// Writing the recovery snapshot failed and has not worked since.
+    pub(crate) snapshot_trouble: bool,
+    /// A note or highlight chosen for deletion in its list, waiting for y
+    /// or n (deleting one at the cursor asks too).
+    pub(crate) pending_list_delete: Option<(ListKind, usize)>,
+    /// The voices shown by the last voice list, in list order.
+    pub(crate) voice_list: Vec<textweaver_speech::Voice>,
+    /// Text copied or cut, waiting for the frontend
+    /// ([`App::take_clipboard`]).
+    pub(crate) clipboard: Option<String>,
 }
 
 impl App {
@@ -340,6 +350,10 @@ impl App {
             pending_disk: None,
             overwrite_confirmed: false,
             last_disk_check: None,
+            snapshot_trouble: false,
+            pending_list_delete: None,
+            voice_list: Vec::new(),
+            clipboard: None,
         };
         app.apply_voice_settings();
         app.load_themes();
@@ -370,6 +384,7 @@ impl App {
         self.pending_confirm.is_some()
             || self.pending_import.is_some()
             || self.pending_disk.is_some()
+            || self.pending_list_delete.is_some()
     }
 
     /// Answers a pending confirmation.
@@ -380,6 +395,30 @@ impl App {
         }
         if self.pending_import.is_some() {
             return self.confirm_import(answer);
+        }
+        if let Some((kind, n)) = self.pending_list_delete.clone() {
+            return match answer {
+                Confirm::Yes => {
+                    self.pending_list_delete = None;
+                    self.list = Some(kind.clone());
+                    match kind {
+                        ListKind::Highlights => self.delete_highlight(n),
+                        _ => self.delete_note(n),
+                    }
+                }
+                Confirm::No => {
+                    self.pending_list_delete = None;
+                    self.tell("Kept.");
+                    match kind {
+                        ListKind::Highlights => self.list_highlights(),
+                        _ => self.notes_command(NoteCommand::List),
+                    }
+                }
+                Confirm::Repeat => {
+                    self.tell(list_delete_question(&kind));
+                    vec![Effect::Redraw]
+                }
+            };
         }
         let Some(a) = self.pending_confirm else {
             return vec![Effect::Redraw];
@@ -677,8 +716,13 @@ impl App {
         state.position = pos;
         state.pct = text_util::percent(&s.doc, pos);
         state.ts = textweaver_store::now_ts();
+        state.anchor = Some(text_util::anchor_at(&s.doc, pos));
         state.history = s.history.entries().to_vec();
         state.bookmarks = s.bookmarks.clone();
+        // Bookmarks move with edits: their anchors follow the text now.
+        for b in &mut state.bookmarks {
+            b.anchor = Some(text_util::anchor_at(&s.doc, b.pos));
+        }
         state.notes = s.notes.clone();
         state.highlights = s.highlights.clone();
         store.save(&s.key, &state)?;
@@ -783,6 +827,7 @@ impl App {
                 self.notes_command(c)
             }
             Command::DeleteItem(n) => self.delete_item(n),
+            Command::MarkItem(n) => self.mark_item(n),
             Command::RenameItem(n) => self.rename_item(n),
             Command::Tick => self.tick(Instant::now()),
             Command::Find(pattern) => {
@@ -989,10 +1034,42 @@ impl App {
     fn delete_item(&mut self, n: usize) -> Vec<Effect> {
         match self.list.clone() {
             Some(ListKind::Bookmarks) => self.delete_bookmark(n),
-            Some(ListKind::Notes) => self.delete_note(n),
-            Some(ListKind::Highlights) => self.delete_highlight(n),
+            // Deleting a note or highlight asks first, as the delete_note
+            // action does: a stray Delete in the list cannot lose one.
+            Some(kind @ (ListKind::Notes | ListKind::Highlights)) => {
+                let question = list_delete_question(&kind);
+                self.list = None;
+                self.pending_list_delete = Some((kind, n));
+                self.tell(question);
+                vec![Effect::Redraw]
+            }
             _ => {
                 self.tell("Nothing to delete in this list.");
+                vec![Effect::Redraw]
+            }
+        }
+    }
+
+    /// The item a letter chooses at once in the list shown, if the list has
+    /// such keys: in the Save, Discard, Cancel list, `s`, `d`, and `c`.
+    /// Other letters (and other lists) jump to the next item starting with
+    /// the letter instead, which the frontend does.
+    pub fn list_accelerator(&self, c: char) -> Option<usize> {
+        match (&self.list, c.to_ascii_lowercase()) {
+            (Some(ListKind::SaveChoice(_)), 's') => Some(0),
+            (Some(ListKind::SaveChoice(_)), 'd') => Some(1),
+            (Some(ListKind::SaveChoice(_)), 'c') => Some(2),
+            _ => None,
+        }
+    }
+
+    /// Space on a list item: in the voice list, adds the voice to the
+    /// favourites or removes it.
+    fn mark_item(&mut self, n: usize) -> Vec<Effect> {
+        match self.list.clone() {
+            Some(ListKind::Voices(_)) => self.toggle_favourite_voice(n),
+            _ => {
+                self.tell("Nothing to mark in this list.");
                 vec![Effect::Redraw]
             }
         }
@@ -1069,6 +1146,8 @@ impl App {
             A::ReadParagraph => self.read_current_unit(textweaver_core::Unit::Paragraph),
             A::ReadSelection => self.read_selection(),
             A::SayPosition => self.say_position(),
+            A::WordCount => self.word_count(),
+            A::LinkAddress => self.link_address(),
             A::ReplaySentence => self.replay_sentence(),
             A::ReplayParagraph => self.replay_paragraph(),
             A::RsvpToggle => self.rsvp_toggle(Instant::now()),
@@ -1086,6 +1165,27 @@ impl App {
             A::PreviousHeading => self.heading(textweaver_core::Direction::Backward, true),
             A::SkipNextHeading => self.heading(textweaver_core::Direction::Forward, false),
             A::SkipPreviousHeading => self.heading(textweaver_core::Direction::Backward, false),
+            A::NextHeadingLevel1
+            | A::NextHeadingLevel2
+            | A::NextHeadingLevel3
+            | A::NextHeadingLevel4
+            | A::NextHeadingLevel5
+            | A::NextHeadingLevel6
+            | A::PreviousHeadingLevel1
+            | A::PreviousHeadingLevel2
+            | A::PreviousHeadingLevel3
+            | A::PreviousHeadingLevel4
+            | A::PreviousHeadingLevel5
+            | A::PreviousHeadingLevel6 => {
+                if let Some((level, next)) = a.heading_level_jump() {
+                    let dir = if next {
+                        textweaver_core::Direction::Forward
+                    } else {
+                        textweaver_core::Direction::Backward
+                    };
+                    self.heading_level_jump(level, dir);
+                }
+            }
             A::NextTable => self.marker_jump(
                 textweaver_core::MarkerKind::Table,
                 textweaver_core::Direction::Forward,
@@ -1220,8 +1320,21 @@ impl App {
             | A::InsertImage
             | A::Replace => return self.edit_action(a),
             A::ChooseVoice => return self.choose_voice(),
+            A::Copy => return self.copy(),
+            A::Cut => return self.cut(),
+            A::NextTableCell => return self.table_cell(textweaver_core::Direction::Forward),
+            A::PreviousTableCell => return self.table_cell(textweaver_core::Direction::Backward),
+            A::CycleTypingEcho => self.cycle_typing_echo(),
         }
         vec![Effect::Redraw]
+    }
+}
+
+/// The question asked before deleting from the notes or highlights list.
+fn list_delete_question(kind: &ListKind) -> &'static str {
+    match kind {
+        ListKind::Highlights => "Remove this highlight? y or n",
+        _ => "Delete this note? y or n",
     }
 }
 

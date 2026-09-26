@@ -1,0 +1,70 @@
+name: Accessibility barrier
+description: Something you cannot reach, hear, see, or operate with your screen reader, magnifier, braille display, or keyboard.
+labels: [accessibility]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Accessibility is the product, so a barrier is a bug of the highest kind. Describe it in your own words; you do not need to know what causes it.
+  - type: textarea
+    id: barrier
+    attributes:
+      label: The barrier
+      description: What you were trying to do, and what stopped you. For example, "the Save As prompt is not spoken", "the highlight is too faint to follow", or "Tab does not reach the Stop button".
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The commands or keys, one per line.
+    validations:
+      required: true
+  - type: textarea
+    id: heard
+    attributes:
+      label: What you heard, saw, or felt
+      description: What the screen reader said, or what the braille display or screen showed, word for word if you can.
+  - type: textarea
+    id: expected
+    attributes:
+      label: What would work for you
+  - type: dropdown
+    id: frontend
+    attributes:
+      label: Where
+      options:
+        - The terminal reader (textweaver)
+        - The command line (tw)
+        - The GUI (textweaver-gui)
+        - Exported files (PDF, EPUB, DOCX, HTML, braille)
+        - The documentation
+    validations:
+      required: true
+  - type: input
+    id: screen-reader
+    attributes:
+      label: Screen reader, magnifier, or braille display, with versions
+      placeholder: NVDA 2026.2 with a Focus 40, JAWS 2026, ZoomText, VoiceOver, Orca 48
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and version
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal
+      placeholder: Windows Terminal 1.23, conhost, Terminal.app, GNOME Terminal
+  - type: input
+    id: version
+    attributes:
+      label: textweaver version
+      description: The output of `tw --version`.
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of the doctor script (optional)
+      description: "`scripts/doctor.sh` or `scripts\\doctor.ps1`."
+      render: text

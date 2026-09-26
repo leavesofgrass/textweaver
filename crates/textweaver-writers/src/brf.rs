@@ -52,7 +52,10 @@ impl Writer for BrfWriter {
         out: &mut dyn Write,
     ) -> Result<WriteReport, WriteError> {
         let mut report = WriteReport::default();
-        let blocks = model::blocks(doc);
+        let mut blocks = model::blocks(doc);
+        // Math is written as it is read aloud ("x squared"), which grade 1
+        // braille spells out readably.
+        crate::math::replace_spans(&mut blocks, &|f| f.spoken());
         let mut items = Vec::new();
         flatten(&blocks, 0, &mut items);
         let texts: Vec<&str> = items.iter().filter_map(Item::text).collect();
@@ -171,6 +174,14 @@ fn flatten(blocks: &[Block], indent: usize, out: &mut Vec<Item>) {
                 out.push(text_item(text, indent, indent + 2));
             }
             Block::SectionBreak { .. } => out.push(Item::NewPage),
+            // A horizontal rule: a line of hyphens on its own line.
+            Block::Rule => {
+                let mut item = text_item("-".repeat(12), indent, indent);
+                if let Item::Text { blank_before, .. } = &mut item {
+                    *blank_before = true;
+                }
+                out.push(item);
+            }
             Block::PageBreak { label } => out.push(Item::PrintPage(label.clone())),
         }
     }

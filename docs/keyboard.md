@@ -57,6 +57,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 - Some terminal programs keep F10 (menu) or F11 (full screen) for themselves. Chapters also move with `Alt+PageDown` and `Alt+PageUp`.
 - `Shift` with the arrow keys extends the selection in browse mode; most terminals send these keys, but some terminal programs keep `Shift+Up` and `Shift+Down` for scrolling their own window.
 - `Alt` chords work in the terminal. Star's terminal reader lost them to the Escape key; textweaver reads them directly.
+- The keys `1` to `6` move to the next heading of that level, as in a screen reader's browse mode. Terminals send the character a shifted digit types, so the previous heading of a level is on `!` `@` `#` `$` `%` `^` (Shift with 1 to 6 on a US keyboard); on other layouts, use the command palette or bind other keys in `keymap.toml`.
 
 ## Reading
 
@@ -72,7 +73,9 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Say the line at the cursor | `Alt+Shift+L`, `l` (browse) | `Ctrl+L`, `l` (browse) | `read_current_line` |
 | Say the paragraph at the cursor without moving | `Shift+S` (browse) | `Shift+S` (browse) | `read_paragraph` |
 | Read the selected text | `v` (browse) | `v` (browse) | `read_selection` |
-| Say the position: line, percentage, and heading | `%` (browse) | `%` (browse) | `say_position` |
+| Say the position: line, percentage, word number, and heading | `Alt+Shift+Y`, `Shift+W` (browse) | `Alt+Shift+Y`, `Shift+W` (browse) | `say_position` |
+| Say how many words are in the document, or in the selection | `Alt+Shift+T` | `Alt+Shift+T` | `word_count` |
+| Say the address of the link at the cursor | `Alt+Shift+K`, `Shift+K` (browse) | `Alt+Shift+K`, `Shift+K` (browse) | `link_address` |
 | Read again from the start of the current sentence | `Alt+;`, `;` (browse) | `Alt+;`, `;` (browse) | `replay_sentence` |
 | Read again from the start of the current paragraph | `Ctrl+R`, `r` (browse) | `Ctrl+R`, `r` (browse) | `replay_paragraph` |
 | Show or hide RSVP: one word at a time, from the cursor | `Alt+Shift+R` | `Alt+Shift+R` | `rsvp_toggle` |
@@ -94,6 +97,18 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Read from the previous heading | `<` (browse) | `Ctrl+Shift+H`, `<` (browse) | `previous_heading` |
 | Move to the next heading without reading | `h` (browse), `}` (browse) | `h` (browse), `}` (browse) | `skip_next_heading` |
 | Move to the previous heading without reading | `{` (browse) | `{` (browse) | `skip_previous_heading` |
+| Move to the next heading at level 1 | `1` (browse) | `1` (browse) | `next_heading_level_1` |
+| Move to the next heading at level 2 | `2` (browse) | `2` (browse) | `next_heading_level_2` |
+| Move to the next heading at level 3 | `3` (browse) | `3` (browse) | `next_heading_level_3` |
+| Move to the next heading at level 4 | `4` (browse) | `4` (browse) | `next_heading_level_4` |
+| Move to the next heading at level 5 | `5` (browse) | `5` (browse) | `next_heading_level_5` |
+| Move to the next heading at level 6 | `6` (browse) | `6` (browse) | `next_heading_level_6` |
+| Move to the previous heading at level 1 | `!` (browse) | `!` (browse) | `previous_heading_level_1` |
+| Move to the previous heading at level 2 | `@` (browse) | `@` (browse) | `previous_heading_level_2` |
+| Move to the previous heading at level 3 | `#` (browse) | `#` (browse) | `previous_heading_level_3` |
+| Move to the previous heading at level 4 | `$` (browse) | `$` (browse) | `previous_heading_level_4` |
+| Move to the previous heading at level 5 | `%` (browse) | `%` (browse) | `previous_heading_level_5` |
+| Move to the previous heading at level 6 | `^` (browse) | `^` (browse) | `previous_heading_level_6` |
 | Move to the next table | `t` (browse) | `Ctrl+T`, `t` (browse) | `next_table` |
 | Move to the previous table | `Shift+T` (browse) | `Ctrl+Shift+T`, `Shift+T` (browse) | `previous_table` |
 | Move to the next list | `o` (browse) | `o` (browse) | `next_list` |
@@ -161,10 +176,10 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | List bookmarks | `Shift+M` (browse) | `Shift+M` (browse) | `list_bookmarks` |
 | Move to the next bookmark | `b` (browse) | `b` (browse) | `next_bookmark` |
 | Move to the previous bookmark | `Shift+B` (browse) | `Shift+B` (browse) | `previous_bookmark` |
-| Add a note to the selection or the word at the cursor | `a` (browse) | `a` (browse) | `add_note` |
-| List notes and highlights | `Shift+A` (browse) | `Ctrl+Shift+N`, `Shift+A` (browse) | `list_notes` |
-| Move to the next note or highlight | `Alt+Down`, `e` (browse) | `Alt+Down`, `e` (browse) | `next_note` |
-| Move to the previous note or highlight | `Alt+Up`, `Shift+E` (browse) | `Alt+Up`, `Shift+E` (browse) | `previous_note` |
+| Add a note to the selection or the sentence at the cursor | `Alt+N`, `a` (browse) | `Alt+N`, `a` (browse) | `add_note` |
+| List notes | `Shift+A` (browse) | `Ctrl+Shift+N`, `Shift+A` (browse) | `list_notes` |
+| Move to the next note | `Alt+Down`, `e` (browse) | `Alt+Down`, `e` (browse) | `next_note` |
+| Move to the previous note | `Alt+Up`, `Shift+E` (browse) | `Alt+Up`, `Shift+E` (browse) | `previous_note` |
 | Delete the note or highlight at the cursor | `Delete` (browse) | `Delete` (browse) | `delete_note` |
 | Highlight the selection, or the sentence at the cursor | `y` (browse) | `y` (browse) | `highlight_selection` |
 
@@ -204,6 +219,11 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Add a row to the table at the cursor | `Alt+W` (edit) | `Ctrl+Shift+Enter` (edit) | `add_table_row` |
 | Insert an image | `Alt+G` (edit) | `Ctrl+Shift+I` (edit) | `insert_image` |
 | Find and replace | `Alt+F` (edit) | `Ctrl+Shift+F` (edit) | `replace` |
+| Copy the selection, or the sentence at the cursor, to the clipboard | `Ctrl+C` | `Ctrl+C` | `copy` |
+| Cut the selection to the clipboard | `Ctrl+X` (edit) | `Ctrl+X` (edit) | `cut` |
+| In a table, move to the next cell and say its column; elsewhere, type a tab | `Tab` (edit) | `Tab` (edit) | `next_table_cell` |
+| In a table, move to the previous cell and say its column | `Shift+Tab` (edit) | `Shift+Tab` (edit) | `previous_table_cell` |
+| Cycle typing echo: characters and words, characters, words, or none | `Shift+F9` | `Shift+F9` | `cycle_typing_echo` |
 
 ## View and help
 
@@ -227,11 +247,22 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | Read the whole document from the start | palette | palette | `read_document` |
 | Say the paragraph at the cursor without moving | palette | palette | `read_paragraph` |
 | Read the selected text | palette | palette | `read_selection` |
-| Say the position: line, percentage, and heading | palette | palette | `say_position` |
 | Read from the next heading | palette | has a chord | `next_heading` |
 | Read from the previous heading | palette | has a chord | `previous_heading` |
 | Move to the next heading without reading | palette | palette | `skip_next_heading` |
 | Move to the previous heading without reading | palette | palette | `skip_previous_heading` |
+| Move to the next heading at level 1 | palette | palette | `next_heading_level_1` |
+| Move to the next heading at level 2 | palette | palette | `next_heading_level_2` |
+| Move to the next heading at level 3 | palette | palette | `next_heading_level_3` |
+| Move to the next heading at level 4 | palette | palette | `next_heading_level_4` |
+| Move to the next heading at level 5 | palette | palette | `next_heading_level_5` |
+| Move to the next heading at level 6 | palette | palette | `next_heading_level_6` |
+| Move to the previous heading at level 1 | palette | palette | `previous_heading_level_1` |
+| Move to the previous heading at level 2 | palette | palette | `previous_heading_level_2` |
+| Move to the previous heading at level 3 | palette | palette | `previous_heading_level_3` |
+| Move to the previous heading at level 4 | palette | palette | `previous_heading_level_4` |
+| Move to the previous heading at level 5 | palette | palette | `previous_heading_level_5` |
+| Move to the previous heading at level 6 | palette | palette | `previous_heading_level_6` |
 | Move to the next table | palette | has a chord | `next_table` |
 | Move to the previous table | palette | has a chord | `previous_table` |
 | Move to the next list | palette | palette | `next_list` |
@@ -251,7 +282,6 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | List bookmarks | palette | palette | `list_bookmarks` |
 | Move to the next bookmark | palette | palette | `next_bookmark` |
 | Move to the previous bookmark | palette | palette | `previous_bookmark` |
-| Add a note to the selection or the word at the cursor | palette | palette | `add_note` |
-| List notes and highlights | palette | has a chord | `list_notes` |
+| List notes | palette | has a chord | `list_notes` |
 | Highlight the selection, or the sentence at the cursor | palette | palette | `highlight_selection` |
 | List keyboard shortcuts | palette | has a chord | `keyboard_help` |

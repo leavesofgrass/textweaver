@@ -7,13 +7,13 @@ use std::time::{Duration, Instant};
 use textweaver_text::core::{CharPos, Unit};
 use textweaver_text::{Document, next_unit, prev_unit, unit_at};
 
-/// About 4 MB of wrapped prose with no blank line: one paragraph.
-fn huge_paragraph() -> Document {
+/// About `bytes` of wrapped prose with no blank line: one paragraph.
+fn paragraph(bytes: usize) -> Document {
     let sentence =
         "Dr. Smith read 1,250 pages of the report at 9:30 a.m. on Friday, e.g. the appendix. ";
-    let mut text = String::with_capacity(4_200_000);
+    let mut text = String::with_capacity(bytes + 200);
     let mut line_len = 0;
-    while text.len() < 4_000_000 {
+    while text.len() < bytes {
         text.push_str(sentence);
         line_len += sentence.len();
         if line_len > 70 {
@@ -25,31 +25,49 @@ fn huge_paragraph() -> Document {
     Document::from_plain_text(&text)
 }
 
-#[test]
-fn sentence_steps_in_a_huge_paragraph_are_fast() {
-    let doc = huge_paragraph();
+/// The time of one sentence step from the middle of `doc`, averaged over
+/// 50 steps forward, 50 back, and one `unit_at`.
+fn step_time(doc: &Document) -> Duration {
     let mid = CharPos(doc.len_chars() / 2);
     let started = Instant::now();
     let mut pos = mid;
     for _ in 0..50 {
-        let s = next_unit(&doc, pos, Unit::Sentence).expect("a next sentence");
+        let s = next_unit(doc, pos, Unit::Sentence).expect("a next sentence");
         assert!(s.start > pos);
         assert!(doc.slice(s).starts_with("Dr. Smith"), "{:?}", doc.slice(s));
         pos = s.start;
     }
     for _ in 0..50 {
-        let s = prev_unit(&doc, pos, Unit::Sentence).expect("a previous sentence");
+        let s = prev_unit(doc, pos, Unit::Sentence).expect("a previous sentence");
         assert!(s.start < pos);
         pos = s.start;
     }
-    let at = unit_at(&doc, mid, Unit::Sentence).expect("a sentence");
+    let at = unit_at(doc, mid, Unit::Sentence).expect("a sentence");
     assert!(at.len() < 100);
-    let per_step = started.elapsed() / 101;
-    eprintln!("sentence step in a 4 MB paragraph: {per_step:?}");
-    // Segmenting the whole paragraph takes seconds in a debug build; a
-    // windowed step takes milliseconds. The bound is loose for slow CI.
+    started.elapsed() / 101
+}
+
+#[test]
+fn sentence_steps_in_a_huge_paragraph_are_fast() {
+    // A step in a 4 MB paragraph must cost about what it costs in a 40 KB
+    // one: windowed, its work does not grow with the paragraph. Without
+    // windowing it would be about a hundred times slower. Comparing with a
+    // baseline measured on the same machine in the same run keeps the test
+    // meaningful on a slow or busy CI runner, where any fixed wall-clock
+    // bound is either too loose to catch a regression or flaky.
+    let small = paragraph(40_000);
+    let huge = paragraph(4_000_000);
+    // Warm up (allocations, caches), then measure; the baseline is the
+    // faster of two runs, so one noisy run cannot make it too strict.
+    let _ = step_time(&small);
+    let baseline = step_time(&small).min(step_time(&small));
+    let per_step = step_time(&huge);
+    eprintln!("sentence step: {baseline:?} in 40 KB, {per_step:?} in 4 MB");
+    // Twenty times the baseline, plus 20 ms for scheduling noise: far
+    // below the hundredfold cost of segmenting the whole paragraph.
+    let bound = baseline * 20 + Duration::from_millis(20);
     assert!(
-        per_step < Duration::from_millis(250),
-        "{per_step:?} per step"
+        per_step < bound,
+        "{per_step:?} per step in 4 MB, over {bound:?} (baseline {baseline:?} in 40 KB)"
     );
 }
