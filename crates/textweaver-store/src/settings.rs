@@ -788,6 +788,69 @@ pub struct ReadingAidsSettings {
     pub extra: toml::Table,
 }
 
+/// `[lexicon]`: define word (`textweaver-lexicon`).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct LexiconSettings {
+    /// Your own glossary, looked up before the dictionary: a JSON file in
+    /// Star's custom dictionary format, or a text file of `term:
+    /// definition` lines. Unset uses `glossary.txt` or `glossary.json` in
+    /// the configuration folder when there is one.
+    pub glossary: Option<PathBuf>,
+    /// The dictionary data file (`lexicon-en.twlex`); unset looks beside
+    /// the program and in the data folder.
+    pub data_file: Option<PathBuf>,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+/// `[stats]`: reading statistics (time read, furthest point, sessions),
+/// kept in `stats.json` in the state folder.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct StatsSettings {
+    /// Keep reading statistics. On by default; off stops recording (what
+    /// is recorded stays until `tw stats --clear`).
+    pub enabled: bool,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+impl Default for StatsSettings {
+    fn default() -> Self {
+        StatsSettings {
+            enabled: true,
+            extra: toml::Table::new(),
+        }
+    }
+}
+
+/// `[interface]`: the language of textweaver's own words (messages,
+/// lists, and help), not of documents.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct InterfaceSettings {
+    /// A language tag such as `en`. Only English is complete; `en-XA` and
+    /// `ar-XB` are test languages (accented, and right to left). A
+    /// `<language>.ftl` file in the `locales` folder of the configuration
+    /// folder adds a language.
+    pub language: String,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+impl Default for InterfaceSettings {
+    fn default() -> Self {
+        InterfaceSettings {
+            language: "en".into(),
+            extra: toml::Table::new(),
+        }
+    }
+}
+
 /// All settings, one TOML table per group.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -816,6 +879,12 @@ pub struct Settings {
     pub reading_aids: ReadingAidsSettings,
     /// `[preview]`
     pub preview: PreviewSettings,
+    /// `[lexicon]`
+    pub lexicon: LexiconSettings,
+    /// `[stats]`
+    pub stats: StatsSettings,
+    /// `[interface]`
+    pub interface: InterfaceSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -936,6 +1005,9 @@ impl Settings {
             export: lenient_section("export", table.remove("export"), &mut w),
             reading_aids: lenient_section("reading_aids", table.remove("reading_aids"), &mut w),
             preview: lenient_section("preview", table.remove("preview"), &mut w),
+            lexicon: lenient_section("lexicon", table.remove("lexicon"), &mut w),
+            stats: lenient_section("stats", table.remove("stats"), &mut w),
+            interface: lenient_section("interface", table.remove("interface"), &mut w),
             extra: table,
         };
         (s, w)
@@ -1120,9 +1192,12 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 22] = [
+pub(crate) const STRUCT_TABLES: [&str; 25] = [
     "keyboard",
     "preview",
+    "lexicon",
+    "stats",
+    "interface",
     "accessibility",
     "reading_aids",
     "reading_aids.rsvp",
@@ -1995,5 +2070,35 @@ mod tests {
         );
         assert!(w.is_empty(), "{w:?}");
         assert!(s.preview.auto_reload && s.preview.live);
+    }
+
+    #[test]
+    fn lexicon_stats_and_interface_sections() {
+        let d = Settings::default();
+        assert!(d.stats.enabled);
+        assert_eq!(d.interface.language, "en");
+        assert!(d.lexicon.glossary.is_none() && d.lexicon.data_file.is_none());
+        // Defaults are not written.
+        assert!(!d.to_minimal_toml().unwrap().contains("[stats]"));
+        let (s, w) = Settings::from_table(
+            "[stats]\nenabled = false\n[interface]\nlanguage = \"en-XA\"\n\
+             [lexicon]\nglossary = \"g.txt\"\nfuture = 1\n"
+                .parse()
+                .unwrap(),
+        );
+        assert!(w.is_empty(), "{w:?}");
+        assert!(!s.stats.enabled);
+        assert_eq!(s.interface.language, "en-XA");
+        assert_eq!(
+            s.lexicon.glossary.as_deref(),
+            Some(std::path::Path::new("g.txt"))
+        );
+        let text = s.to_minimal_toml().unwrap();
+        assert!(
+            text.contains("enabled = false") && text.contains("future = 1"),
+            "{text}"
+        );
+        let (_, w) = Settings::from_table("[stats]\nenabled = 3\n".parse().unwrap());
+        assert_eq!(w, ["stats.enabled has an invalid value"]);
     }
 }

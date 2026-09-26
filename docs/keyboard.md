@@ -128,6 +128,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | RSVP slower | `Alt+Shift+Down`, `Alt+Shift+PageDown` | `Alt+Shift+Down`, `Alt+Shift+PageDown` | `rsvp_slower` |
 | Move the RSVP word to the next place on the screen | `Alt+Shift+O` | `Alt+Shift+O` | `rsvp_position_next` |
 | Say the reading level of the document or the selection | `Alt+Shift+G` | `Alt+Shift+G` | `reading_level` |
+| Define the word at the cursor, or the selected words: senses, examples, synonyms, and pronunciation | `Alt+E` | `Ctrl+Shift+D` | `define_word` |
 | Turn citations on or off in continuous reading: off skips them, on says them in words | `Alt+Shift+Q` | `Alt+Shift+Q` | `toggle_citations` |
 | Explore the math at the cursor term by term: arrows move, Down goes into a part, Up comes out, Escape leaves | `Alt+Shift+X` | `Alt+Shift+X` | `explore_math` |
 | Listen to the document as it will render, without leaving edit mode | palette | palette | `listen_rendered` |
@@ -260,6 +261,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Save under a new name | `Alt+S` | `Ctrl+Shift+S` | `save_as` |
 | Export settings and key overrides to a JSON or TOML file | `Alt+Shift+E` | `Alt+Shift+E` | `export_settings` |
 | Import settings from a JSON or TOML file, after a yes or no | `Alt+Shift+I` | `Alt+Shift+I` | `import_settings` |
+| List reading statistics: time read, the furthest point, sessions, and the most read documents | `Alt+Y` | `Ctrl+Shift+Y` | `reading_statistics` |
 | Start a new document from a template, with a title, author, date, and References heading | palette | palette | `new_from_template` |
 | Export the document as a web page (HTML) next to it | palette | palette | `export_html` |
 | Export the document as a tagged PDF next to it | palette | palette | `export_pdf` |
@@ -317,6 +319,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Show or hide line numbers | `F6` | `F6` | `toggle_line_numbers` |
 | Turn single-key shortcuts on or off, so dictation and typing never trigger commands | `F9` | `F9` | `toggle_character_keys` |
 | Cycle the accessibility mode: self-voicing, hybrid, or screen reader | `Alt+Shift+A` | `Alt+Shift+A` | `cycle_access_mode` |
+| List settings profiles: switch to one, save the current settings as one, rename, delete, import, or export | `Alt+U` | `Ctrl+Shift+U` | `settings_profiles` |
 | Turn bionic reading on or off: the start of each word in bold | `Alt+Shift+B` | `Alt+Shift+B` | `bionic_toggle` |
 | Cycle the reading ruler: off, current line, ruler | `Alt+Shift+U` | `Alt+Shift+U` | `ruler_cycle` |
 | Show or hide syllables: words split with a middle dot | `Alt+Shift+Z` | `Alt+Shift+Z` | `syllables_toggle` |

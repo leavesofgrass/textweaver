@@ -82,6 +82,32 @@ impl Paths {
         self.data_dir.join("library.json")
     }
 
+    /// `profiles.toml`: named settings profiles.
+    pub fn profiles_file(&self) -> PathBuf {
+        self.config_dir.join("profiles.toml")
+    }
+
+    /// `stats.json`: reading statistics.
+    pub fn stats_file(&self) -> PathBuf {
+        self.data_dir.join("stats.json")
+    }
+
+    /// The interface translations folder, `locales/` in the configuration
+    /// directory (`<language>.ftl` files).
+    pub fn locales_dir(&self) -> PathBuf {
+        self.config_dir.join("locales")
+    }
+
+    /// The glossary define word reads when `[lexicon] glossary` is unset:
+    /// `glossary.txt`, else `glossary.json`, in the configuration directory,
+    /// if either exists.
+    pub fn default_glossary(&self) -> Option<PathBuf> {
+        ["glossary.txt", "glossary.json"]
+            .iter()
+            .map(|n| self.config_dir.join(n))
+            .find(|p| p.is_file())
+    }
+
     /// The library search cache.
     pub fn fulltext_file(&self) -> PathBuf {
         self.cache_dir.join("fulltext.json")

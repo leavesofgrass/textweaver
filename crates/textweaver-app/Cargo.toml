@@ -40,6 +40,8 @@ textweaver-math.workspace = true
 textweaver-cite = { workspace = true, optional = true }
 textweaver-convert = { workspace = true, optional = true }
 textweaver-render = { workspace = true, optional = true }
+# Agent W3e: define word and the message catalog.
+textweaver-lexicon.workspace = true
 pulldown-cmark.workspace = true
 serde.workspace = true
 serde_json.workspace = true

@@ -1,6 +1,7 @@
 //! `tw settings`: export settings and key overrides to JSON or TOML, import
 //! them (validated, backed up, merged or replaced), show where the files
-//! are, and reset them to the defaults. Owner: Agent U.
+//! are, and reset them to the defaults. Owner: Agent U. `tw settings
+//! profile` (settings profiles) is in `profiles.rs` (Agent W3e).
 
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
@@ -36,6 +37,10 @@ pub enum Command {
     Path,
     /// Return settings to their defaults: all of them, or one section.
     Reset(ResetArgs),
+    /// Settings profiles: named sets of voice, rate, theme, font, spacing,
+    /// highlight, and access-mode settings to switch between.
+    #[command(subcommand)]
+    Profile(super::profiles::ProfileCommand),
 }
 
 /// Arguments for `tw settings export`.
@@ -114,6 +119,7 @@ fn execute(
         Command::Import(a) => import(store, &a, input, out),
         Command::Path => show_paths(store, out),
         Command::Reset(a) => reset(store, &a, input, out),
+        Command::Profile(p) => super::profiles::execute(store, p, input, out),
     }
 }
 

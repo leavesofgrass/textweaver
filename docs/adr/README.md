@@ -52,6 +52,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted, with 2 status updates.
 - [ADR-0024: App core for the GUI](0024-app-core-for-the-gui.md): the document window, shared list and prompt state, the waker, the replace-range edit, the settings schema, and work moved off the input thread.
   - Status: accepted.
+- [ADR-0025: Define word offline, and the message catalog](0025-lexicon-and-message-catalog.md): Open English WordNet and CMUdict in an fst and zstd file, and a Fluent-subset catalog with pseudo-locales.
+  - Status: accepted.
 
 ## Writing a new ADR
 

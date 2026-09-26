@@ -313,10 +313,11 @@ fn imports_settings_state_library_keys_and_sidecars() {
         e.added,
         crate::time::parse_timestamp("2026-06-01T08:00:00").unwrap()
     );
-    assert_eq!(
-        item(&r, ItemKind::Other, "reading statistics").outcome,
-        Outcome::Skipped
-    );
+    // Star's reading statistics reach stats.json.
+    let stats = crate::ReadingStats::load(&f.paths).unwrap();
+    let (_, d) = stats.most_read(1)[0];
+    assert_eq!(d.seconds, 12.5);
+    assert_eq!(d.title, "The Book");
 
     // The sidecar is converted next to Star's, which is left alone.
     let side = sync::read_sidecar(&f.lib);
