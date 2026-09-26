@@ -1,11 +1,90 @@
 //! Phase 1 safety and authoring quick wins (Agent P1b), driven through
 //! `App::dispatch` without a terminal.
 
-use textweaver_app::core::CharPos;
+use std::time::{Duration, Instant};
+
+use textweaver_app::core::{CharPos, Direction};
 use textweaver_app::keymap::ActionId;
 use textweaver_app::store::{DocKey, Paths, StateStore};
+use textweaver_app::testing::{SpeechLog, recording_service};
 use textweaver_app::text::{Document, GoTo};
-use textweaver_app::{App, AppConfig, Command, Effect};
+use textweaver_app::{App, AppConfig, CaretMove, Command, Effect};
+
+/// A self-voicing app recording what it says, with `text` open.
+fn voiced_app(text: &str) -> (App, SpeechLog) {
+    let (speech, log) = recording_service().unwrap();
+    let mut app = App::new(AppConfig {
+        speech,
+        self_voicing: true,
+        backend_name: "test-recording".into(),
+        ..AppConfig::for_tests()
+    });
+    app.open_document(
+        Document::from_plain_text(text),
+        DocKey::untitled(1),
+        "T".into(),
+    );
+    (app, log)
+}
+
+/// Waits (up to a deadline) until the speech log has a text containing
+/// `needle`; returns every text.
+fn wait_for_speech(log: &SpeechLog, needle: &str) -> Vec<String> {
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let texts = log.texts();
+        if texts.iter().any(|t| t.contains(needle)) || Instant::now() > deadline {
+            return texts;
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+}
+
+/// Selecting or deleting more than about 200 characters says how many and
+/// where they start and end, not the whole text.
+#[test]
+fn big_selections_and_deletions_are_summarized() {
+    let long = format!(
+        "Opening words here {}closing words here.",
+        "and more ".repeat(40)
+    );
+    let text = format!("{long}\nNext line.\n");
+    let mut app = app_with(&text);
+    act(&mut app, ActionId::SelectNextLine);
+    let n = long.chars().count();
+    let expected = format!(
+        "{} characters selected, from Opening words here and to more closing words here.",
+        textweaver_app::editor::echo::thousands(n)
+    );
+    assert_eq!(app.status_text(), expected);
+    // Short changes are still read as they are.
+    act(&mut app, ActionId::SelectNextLine);
+    assert_eq!(app.status_text(), "Next line. selected");
+
+    let (mut app, log) = voiced_app(&text);
+    act(&mut app, ActionId::ToggleEditMode);
+    // Entering edit mode reads the line; only what follows matters here.
+    wait_for_speech(&log, "Edit mode on");
+    log.clear();
+    for _ in 0..n {
+        app.dispatch(Command::MoveCaret {
+            by: CaretMove::Char,
+            direction: Direction::Forward,
+            extend: true,
+        });
+    }
+    app.dispatch(Command::DeleteBack);
+    let said = wait_for_speech(&log, "characters deleted");
+    assert!(
+        said.iter()
+            .any(|t| t.contains("characters deleted, from Opening words here and to")),
+        "{said:?}"
+    );
+    assert!(
+        !said.iter().any(|t| t.contains(&long)),
+        "the whole text was read"
+    );
+}
 
 /// A silent app (no self-voicing, as with `--no-speech`) with `text` open.
 fn app_with(text: &str) -> App {

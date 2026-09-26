@@ -332,15 +332,14 @@ impl App {
         s.selection_anchor = Some(anchor);
         s.selection = (!sel.is_empty()).then_some(sel);
         s.cursor = new_head;
-        let text = if text.trim().is_empty() {
-            text_util::char_name(text.chars().next().unwrap_or(' '))
-        } else {
-            text.trim().to_owned()
-        };
-        let msg = match (self.settings.speech.verbosity, grew) {
-            (Verbosity::Low, _) => text,
-            (_, true) => format!("{text} selected"),
-            (_, false) => format!("{text} unselected"),
+        let what = if grew { "selected" } else { "unselected" };
+        let msg = match textweaver_editor::echo::summarize(&text, what) {
+            Some(summary) => summary,
+            // Low says the text alone.
+            None if self.settings.speech.verbosity == Verbosity::Low => {
+                text_util::spoken_fragment(&text)
+            }
+            None => text_util::selection_change_message(&text, what),
         };
         self.scroll_to_cursor();
         self.tell(&msg);

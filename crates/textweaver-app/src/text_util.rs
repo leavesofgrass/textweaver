@@ -142,6 +142,28 @@ pub fn anchor_at(doc: &Document, pos: CharPos) -> textweaver_store::Anchor {
     textweaver_store::Anchor::from_text_at(rope.slice(start..end).chars())
 }
 
+/// What is said when a selection grows or shrinks by `text` (`what` is
+/// "selected" or "unselected"): the text itself, a character's name for
+/// white space, or above
+/// [`SUMMARY_THRESHOLD`](textweaver_editor::echo::SUMMARY_THRESHOLD)
+/// characters a summary ("3,412 characters selected, from ... to ...").
+pub fn selection_change_message(text: &str, what: &str) -> String {
+    if let Some(summary) = textweaver_editor::echo::summarize(text, what) {
+        return summary;
+    }
+    format!("{} {what}", spoken_fragment(text))
+}
+
+/// A short piece of text as spoken: trimmed, or the name of its first
+/// character when it is only white space ("space", "new line").
+pub fn spoken_fragment(text: &str) -> String {
+    if text.trim().is_empty() {
+        char_name(text.chars().next().unwrap_or(' '))
+    } else {
+        text.trim().to_owned()
+    }
+}
+
 /// A spoken name for a character read on its own.
 pub fn char_name(c: char) -> String {
     match c {

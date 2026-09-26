@@ -1062,16 +1062,8 @@ impl App {
             let changed = CharRange::new(head, target);
             let text = doc.slice(changed);
             let grew = new_sel.range().contains_range(changed);
-            let text = if text.trim().is_empty() {
-                text_util::char_name(text.chars().next().unwrap_or(' '))
-            } else {
-                text.trim().to_owned()
-            };
-            Some(if grew {
-                format!("{text} selected")
-            } else {
-                format!("{text} unselected")
-            })
+            let what = if grew { "selected" } else { "unselected" };
+            Some(text_util::selection_change_message(&text, what))
         } else {
             match by {
                 CaretMove::Char | CaretMove::LineEdge => Some(match doc.char_at(target) {
