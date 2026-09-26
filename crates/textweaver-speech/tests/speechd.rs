@@ -35,6 +35,12 @@ impl FakeServer {
     /// With a `gate`, the server answers `CANCEL SELF` only once the gate
     /// opens (a slow server).
     fn start_gated(hold: bool, gate: Option<Receiver<()>>) -> Self {
+        Self::start_with(hold, gate, false)
+    }
+
+    /// With `slow_all`, the gate holds every answer after the voice list
+    /// (a server busy with something else).
+    fn start_with(hold: bool, gate: Option<Receiver<()>>, slow_all: bool) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();
         let lines = Arc::new(Mutex::new(Vec::new()));
@@ -43,7 +49,7 @@ impl FakeServer {
             let Ok((stream, _)) = listener.accept() else {
                 return;
             };
-            serve(stream, &log, hold, gate.as_ref());
+            serve(stream, &log, hold, gate.as_ref(), slow_all);
         });
         FakeServer {
             port,
@@ -72,8 +78,15 @@ impl Drop for FakeServer {
     }
 }
 
-fn serve(stream: TcpStream, log: &Mutex<Vec<String>>, hold: bool, gate: Option<&Receiver<()>>) {
+fn serve(
+    stream: TcpStream,
+    log: &Mutex<Vec<String>>,
+    hold: bool,
+    gate: Option<&Receiver<()>>,
+    slow_all: bool,
+) {
     let mut out = stream.try_clone().unwrap();
+    let mut listed = false;
     let mut reader = BufReader::new(stream);
     let mut next_msg = 1u64;
     let mut held: Vec<u64> = Vec::new();
@@ -88,6 +101,17 @@ fn serve(stream: TcpStream, log: &Mutex<Vec<String>>, hold: bool, gate: Option<&
         }
         let cmd = line.trim_end().to_owned();
         log.lock().unwrap().push(cmd.clone());
+        if slow_all
+            && listed
+            && let Some(g) = gate
+        {
+            // Busy: the first answer after the voice list waits.
+            let _ = g.recv();
+            listed = false;
+        }
+        if cmd == "LIST SYNTHESIS_VOICES" {
+            listed = true;
+        }
         match cmd.as_str() {
             "LIST SYNTHESIS_VOICES" => send(
                 "249-English (America)\ten-US\tnone\n249-German+Adam\tde\tAdam\n249 OK VOICE LIST SENT\n",
@@ -123,7 +147,7 @@ fn serve(stream: TcpStream, log: &Mutex<Vec<String>>, hold: bool, gate: Option<&
                 }
             }
             "CANCEL SELF" => {
-                if let Some(g) = gate {
+                if let Some(g) = gate.filter(|_| !slow_all) {
                     let _ = g.recv();
                 }
                 send("213 OK CANCELED\n");
@@ -299,20 +323,19 @@ fn stop_does_not_wait_for_the_server() {
 }
 
 #[test]
-fn a_refused_command_is_an_error() {
+fn a_voice_the_server_did_not_list_is_refused_at_once() {
     let server = FakeServer::start(false);
     let mut b = SpeechdBackend::connect(&server.address()).unwrap();
-    // Voices are passed through by name; the server decides.
+    // Checked against the list read when connecting: no round trip.
     let err = b
         .set_params(&VoiceParams {
             voice: Some("Refused Voice".into()),
             ..VoiceParams::default()
         })
         .unwrap_err();
-    assert!(
-        err.to_string()
-            .contains("refused \"SET SELF SYNTHESIS_VOICE Refused Voice\": 409"),
-        "{err}"
+    assert_eq!(
+        err,
+        textweaver_speech::SpeechError::UnknownVoice("Refused Voice".into())
     );
     // The session goes on: the next command gets its own reply.
     b.pause().unwrap();
@@ -326,6 +349,45 @@ fn a_refused_command_is_an_error() {
     };
     let e = SpeechdBackend::connect(&closed).unwrap_err();
     assert!(e.to_string().contains("speech-dispatcher"), "{e}");
+}
+
+#[test]
+fn nothing_waits_for_the_server_after_connecting() {
+    // Before: every setting, SPEAK, PAUSE, and RESUME waited for its answer
+    // (up to five seconds each) on the speech thread.
+    let (release, gate) = mpsc::channel();
+    let server = FakeServer::start_with(false, Some(gate), true);
+    let mut b = SpeechdBackend::connect(&server.address()).unwrap();
+    let release = release;
+    let mut sink = Collect::default();
+    let mut u = Utterance::literal("Busy server here.", CharPos(0));
+    u.id = UtteranceId {
+        generation: 1,
+        chunk: 0,
+    };
+    let t0 = Instant::now();
+    b.set_params(&VoiceParams {
+        rate: Rate::Wpm(200),
+        ..VoiceParams::default()
+    })
+    .unwrap();
+    b.speak(&u, &mut sink).unwrap();
+    b.pause().unwrap();
+    b.resume().unwrap();
+    b.poll(&mut sink);
+    // The server has answered nothing yet (it waits for `release`).
+    assert!(t0.elapsed() < Duration::from_secs(1), "{:?}", t0.elapsed());
+    assert!(sink.0.is_empty());
+    release.send(()).unwrap();
+    poll_until(&mut b, &mut sink, |s| {
+        s.0.last().is_some_and(|(_, e)| *e == RawEvent::Finished)
+    });
+    let words = sink
+        .0
+        .iter()
+        .filter(|(_, e)| matches!(e, RawEvent::Word { .. }))
+        .count();
+    assert_eq!(words, 3);
 }
 
 fn service(addr: SpeechdAddress) -> SpeechService {
