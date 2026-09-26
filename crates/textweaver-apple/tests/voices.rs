@@ -89,6 +89,10 @@ mod macos {
         ("avspeech_synthesizes_reed_to_wav", av_file),
         ("avspeech_latency_and_offset_accuracy", av_accuracy),
         ("avspeech_rate_calibration", av_calibration),
+        (
+            "avspeech_plays_through_the_device_clock_at_volume_zero",
+            av_speakers,
+        ),
     ];
 
     pub fn main() {
@@ -771,6 +775,54 @@ mod macos {
             })?;
         }
         check_sequence(&rec, u3.id, "After the stop.", &["After", "the", "stop"]).map(|_| ())
+    }
+
+    /// The real output (rodio on the default device) at volume 0: silent,
+    /// but the device's mixer drives the clock. Skipped without a device.
+    fn av_speakers() -> Result<(), String> {
+        let mut b = match AvSpeechBackend::new(Output::Speakers) {
+            Ok(b) => b,
+            Err(e) => {
+                println!("  no output device ({e}); skipped");
+                return Ok(());
+            }
+        };
+        b.set_params(&quiet()).map_err(|e| e.to_string())?;
+        let mut rec = Rec::default();
+        let u = utt(SENTENCE, 1, 0);
+        let t = Instant::now();
+        b.speak(&u, &mut rec).map_err(|e| e.to_string())?;
+        drive(&mut b, &mut rec, Duration::from_secs(30), |r| r.ended(u.id))?;
+        let words = check_sequence(&rec, u.id, SENTENCE, &SENTENCE_WORDS)?;
+        let started = rec
+            .events
+            .iter()
+            .find(|(i, e, _)| *i == u.id && *e == RawEvent::Started)
+            .map(|x| x.2)
+            .ok_or("no start")?;
+        let finished = rec
+            .events
+            .iter()
+            .find(|(i, e, _)| *i == u.id && *e == RawEvent::Finished)
+            .map(|x| x.2)
+            .ok_or("no finish")?;
+        let last = words.last().and_then(|w| w.1).unwrap_or(0);
+        println!(
+            "  device clock: started {:.0} ms after speak, last word offset {last} ms arrived at {:.0} ms, finished at {:.0} ms",
+            ms(started.duration_since(t)),
+            words
+                .last()
+                .map_or(-1.0, |w| ms(w.2.duration_since(started))),
+            ms(finished.duration_since(started))
+        );
+        // Playback runs in real time: the last word cannot arrive before its
+        // offset.
+        ensure(
+            words
+                .last()
+                .is_some_and(|w| ms(w.2.duration_since(started)) + 60.0 >= f64::from(last)),
+            || "words ran ahead of the device clock".into(),
+        )
     }
 
     fn av_file() -> Result<(), String> {
