@@ -76,16 +76,18 @@
              toolkit_version: Some(env!("CARGO_PKG_VERSION").to_string()),
 --- a/masonry_testing/src/harness.rs
 +++ b/masonry_testing/src/harness.rs
-@@ -33,7 +33,7 @@
+@@ -33,7 +33,9 @@
  use oxipng::{Options, optimize_from_memory};
  use tracing::debug;
  
 -use masonry_core::accesskit::{Action, ActionRequest, Node, Role, Tree, TreeId, TreeUpdate};
-+use masonry_core::accesskit::{Action, ActionRequest, Node, NodeId, Role, TreeId, TreeInfo, TreeUpdate};
++use masonry_core::accesskit::{
++    Action, ActionRequest, Node, NodeId, Role, TreeId, TreeInfo, TreeUpdate,
++};
  use masonry_core::anymore::AnyDebug;
  use masonry_core::app::{
      RenderRoot, RenderRootOptions, RenderRootSignal, VisualLayerKind, VisualLayerPlan,
-@@ -151,6 +151,8 @@
+@@ -151,6 +153,8 @@
      mouse_state: PointerState,
      window_size: PhysicalSize<u32>,
      root_padding: u32,
@@ -94,7 +96,7 @@
      background_color: Color,
      panic_on_rewrite_saturation: bool,
      max_screenshot_size: u32,
-@@ -379,7 +381,7 @@
+@@ -379,7 +383,7 @@
          let dummy_tree_update = TreeUpdate {
              tree_id: TreeId::ROOT,
              nodes: vec![(0.into(), Node::new(Role::Window))],
@@ -103,7 +105,7 @@
                  root: 0.into(),
                  toolkit_name: None,
                  toolkit_version: None,
-@@ -406,6 +408,7 @@
+@@ -406,6 +410,7 @@
              window_size,
              background_color: params.background_color,
              root_padding: params.root_padding,
@@ -111,7 +113,7 @@
              panic_on_rewrite_saturation: params.panic_on_rewrite_saturation,
              max_screenshot_size: params.max_screenshot_size,
              action_queue: VecDeque::new(),
-@@ -549,8 +552,11 @@
+@@ -549,8 +554,11 @@
              let mut painter = Painter::new(&mut full_scene);
              painter.fill_rect(Rect::new(0.0, 0.0, width, height), self.background_color);
  
@@ -124,7 +126,7 @@
  
              for layer in &visual_layers.layers {
                  if let VisualLayerKind::Scene(scene) = &layer.kind {
-@@ -582,26 +588,28 @@
+@@ -582,26 +590,27 @@
          (visual_layers, tree_update)
      }
  
@@ -160,14 +162,13 @@
 +        // accesskit_consumer 0.37 added a public lookup by tree-local id
 +        // (AccessKit PR #707), which replaces the old unsafe NodeId hack
 +        // (https://github.com/AccessKit/accesskit/issues/701).
-+        self.access_tree.state().node_by_tree_local_id(
-+            NodeId(id.to_raw()),
-+            TreeId::ROOT,
-+        )
++        self.access_tree
++            .state()
++            .node_by_tree_local_id(NodeId(id.to_raw()), TreeId::ROOT)
      }
  
      // --- MARK: EVENT HELPERS
-@@ -1205,21 +1213,21 @@
+@@ -1205,21 +1214,21 @@
  struct NoOpTreeChangeHandler;
  
  impl accesskit_consumer::TreeChangeHandler for NoOpTreeChangeHandler {

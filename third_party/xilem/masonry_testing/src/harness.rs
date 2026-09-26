@@ -33,7 +33,9 @@ use masonry_core::imaging::{ImageRenderer as _, Painter};
 use oxipng::{Options, optimize_from_memory};
 use tracing::debug;
 
-use masonry_core::accesskit::{Action, ActionRequest, Node, NodeId, Role, TreeId, TreeInfo, TreeUpdate};
+use masonry_core::accesskit::{
+    Action, ActionRequest, Node, NodeId, Role, TreeId, TreeInfo, TreeUpdate,
+};
 use masonry_core::anymore::AnyDebug;
 use masonry_core::app::{
     RenderRoot, RenderRootOptions, RenderRootSignal, VisualLayerKind, VisualLayerPlan,
@@ -606,10 +608,9 @@ impl<W: Widget> TestHarness<W> {
         // accesskit_consumer 0.37 added a public lookup by tree-local id
         // (AccessKit PR #707), which replaces the old unsafe NodeId hack
         // (https://github.com/AccessKit/accesskit/issues/701).
-        self.access_tree.state().node_by_tree_local_id(
-            NodeId(id.to_raw()),
-            TreeId::ROOT,
-        )
+        self.access_tree
+            .state()
+            .node_by_tree_local_id(NodeId(id.to_raw()), TreeId::ROOT)
     }
 
     // --- MARK: EVENT HELPERS
