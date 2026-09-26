@@ -99,6 +99,9 @@ pub struct SapiConfig {
     pub output: AudioOutput,
     /// Run the hosts with their fake engine (tests only).
     pub fake_engine: bool,
+    /// More arguments for the speaking hosts (tests: the fake engine's
+    /// `--start-delay-ms`); not passed to voice listing.
+    pub host_args: Vec<std::ffi::OsString>,
 }
 
 impl Default for SapiConfig {
@@ -110,6 +113,7 @@ impl Default for SapiConfig {
             #[cfg(windows)]
             output: AudioOutput::default(),
             fake_engine: false,
+            host_args: Vec::new(),
         }
     }
 }

@@ -23,6 +23,7 @@ fn config(speed: f32) -> SapiConfig {
         onecore: false,
         output: AudioOutput::Null { speed },
         fake_engine: true,
+        host_args: Vec::new(),
     }
 }
 
@@ -258,12 +259,68 @@ fn a_32_bit_voice_runs_in_the_x86_host() {
     assert!(b.host_path(Arch::X86).is_none(), "started on first use");
     let mut rec = Rec::default();
     let u = utt("narrow voice", 1, 0);
+    // The 32-bit host starts without holding up `speak`; the utterance
+    // waits for it in `poll`.
     b.speak(&u, &mut rec).unwrap();
-    assert!(b.host_path(Arch::X86).is_some());
     pump(&mut b, &mut rec, Duration::from_secs(10), |r| r.ended(u.id));
+    assert!(b.host_path(Arch::X86).is_some());
     assert_eq!(
         slices("narrow voice", &rec.words(u.id)),
         ["narrow", "voice"]
+    );
+}
+
+#[test]
+fn a_host_starting_in_poll_takes_stop_and_pause_meanwhile() {
+    // Every host start takes two seconds; the first (64-bit) one waits in
+    // `new`, the 32-bit one starts on first use without waiting.
+    let mut b = SapiBackend::new(SapiConfig {
+        host_args: vec!["--start-delay-ms".into(), "2000".into()],
+        ..config(8.0)
+    })
+    .unwrap();
+    b.set_params(&rate0()).unwrap();
+    let narrow = b
+        .voice_details()
+        .unwrap()
+        .into_iter()
+        .find(|v| v.arch == Arch::X86)
+        .unwrap();
+    b.set_params(&VoiceParams {
+        voice: Some(narrow.voice.id.clone()),
+        ..rate0()
+    })
+    .unwrap();
+    let mut rec = Rec::default();
+    let u = utt("stopped while starting", 1, 0);
+    let t = Instant::now();
+    b.speak(&u, &mut rec).unwrap();
+    assert!(
+        t.elapsed() < Duration::from_millis(1000),
+        "{:?}",
+        t.elapsed()
+    );
+    let t = Instant::now();
+    b.stop();
+    b.poll(&mut rec);
+    assert!(t.elapsed() < Duration::from_millis(500));
+    assert_eq!(rec.of(u.id), [&RawEvent::Cancelled]);
+    let p = utt("paused while starting", 2, 0);
+    b.speak(&p, &mut rec).unwrap();
+    b.pause().unwrap();
+    pump(&mut b, &mut rec, Duration::from_millis(3500), |r| {
+        r.of(p.id).contains(&&RawEvent::Started)
+    });
+    assert!(
+        !rec.of(p.id).contains(&&RawEvent::Started),
+        "paused: silent"
+    );
+    assert!(b.host_path(Arch::X86).is_some(), "the host is up by now");
+    b.resume().unwrap();
+    pump(&mut b, &mut rec, Duration::from_secs(10), |r| r.ended(p.id));
+    assert_eq!(
+        slices("paused while starting", &rec.words(p.id)),
+        ["paused", "while", "starting"]
     );
 }
 
