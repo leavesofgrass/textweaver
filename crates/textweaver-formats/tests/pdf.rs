@@ -167,7 +167,9 @@ fn running_heads_removed_and_pages_marked() {
         .map(|m| (m.label.clone().unwrap_or_default(), doc.slice(m.range)))
         .collect();
     assert_eq!(pages.len(), 3);
-    assert_eq!(pages[0].0, "1");
+    // Printed page labels from /PageLabels: a roman first page, then 1, 2.
+    let labels: Vec<&str> = pages.iter().map(|(l, _)| l.as_str()).collect();
+    assert_eq!(labels, ["i", "1", "2"]);
     // Page numbers are not text; a paragraph continues across a page.
     for (_, t) in &pages {
         assert!(

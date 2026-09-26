@@ -18,8 +18,9 @@
 //!    bulleted and numbered lists with nesting; monospaced blocks as code;
 //!    images with alternate text (marked content `/Alt` or the structure
 //!    tree's `Figure` elements).
-//! 5. **Markers**: `PageBreak` per page (label = the page number, range =
-//!    that page's text, so reading can go to a page), `SectionBreak` per
+//! 5. **Markers**: `PageBreak` per page (label = the printed page label
+//!    from `/PageLabels`, such as `iv` or `A-3`, else the page number;
+//!    range = that page's text, so reading can go to a page), `SectionBreak` per
 //!    outline entry (label = its title, level = its depth), and the usual
 //!    heading, paragraph, list, table, code, and image markers.
 //!
@@ -142,7 +143,8 @@ fn convert(pdf: &lopdf::Document) -> (String, Vec<textweaver_text::Marker>, usiz
     };
     let (units, sections) = structure::units(&pages, &cx);
     let mut b = Builder::new();
-    structure::emit(&mut b, &units, &sections, &outline);
+    let labels = page_labels(pdf, page_ids.len());
+    structure::emit(&mut b, &units, &sections, &outline, &labels);
     let (text, markers) = b.finish();
     (text, markers, page_ids.len())
 }
@@ -176,6 +178,122 @@ fn read_info(pdf: &lopdf::Document, meta: &mut textweaver_text::DocumentMeta) {
     {
         meta.language = Some(lang);
     }
+}
+
+/// Printed page labels from the catalog's `/PageLabels` number tree
+/// (decimal, roman, or letter numbering with prefixes and start values), or
+/// an empty list when the PDF has none.
+fn page_labels(pdf: &lopdf::Document, pages: usize) -> Vec<String> {
+    let Some(tree) = pdf
+        .catalog()
+        .ok()
+        .and_then(|c| c.get(b"PageLabels").ok())
+        .and_then(|o| pdf.dereference(o).ok())
+        .and_then(|(_, o)| o.as_dict().ok())
+    else {
+        return Vec::new();
+    };
+    let mut ranges: Vec<(usize, &Dictionary)> = Vec::new();
+    collect_nums(pdf, tree, &mut ranges, 0);
+    ranges.sort_by_key(|(start, _)| *start);
+    if ranges.is_empty() {
+        return Vec::new();
+    }
+    (0..pages)
+        .map(|p| {
+            let Some(&(start, style)) = ranges.iter().rev().find(|(s, _)| *s <= p) else {
+                return (p + 1).to_string();
+            };
+            let first = style
+                .get(b"St")
+                .ok()
+                .and_then(|o| o.as_i64().ok())
+                .unwrap_or(1)
+                .max(1) as usize;
+            let n = first + (p - start);
+            let prefix = style
+                .get(b"P")
+                .ok()
+                .and_then(|o| text_of(pdf, o))
+                .unwrap_or_default();
+            let number = match style.get(b"S").and_then(Object::as_name).unwrap_or(b"") {
+                b"D" => n.to_string(),
+                b"R" => roman(n),
+                b"r" => roman(n).to_lowercase(),
+                b"A" => letters(n),
+                b"a" => letters(n).to_lowercase(),
+                _ => String::new(),
+            };
+            let label = format!("{prefix}{number}");
+            if label.is_empty() {
+                (p + 1).to_string()
+            } else {
+                label
+            }
+        })
+        .collect()
+}
+
+fn collect_nums<'a>(
+    pdf: &'a lopdf::Document,
+    node: &'a Dictionary,
+    out: &mut Vec<(usize, &'a Dictionary)>,
+    depth: usize,
+) {
+    if depth > 32 {
+        return;
+    }
+    if let Ok(nums) = node.get(b"Nums").and_then(Object::as_array) {
+        for pair in nums.chunks(2) {
+            if let [k, v] = pair
+                && let Ok(k) = k.as_i64()
+                && let Ok((_, Object::Dictionary(d))) = pdf.dereference(v)
+                && let Ok(k) = usize::try_from(k)
+            {
+                out.push((k, d));
+            }
+        }
+    }
+    if let Ok(kids) = node.get(b"Kids").and_then(Object::as_array) {
+        for kid in kids {
+            if let Ok((_, Object::Dictionary(d))) = pdf.dereference(kid) {
+                collect_nums(pdf, d, out, depth + 1);
+            }
+        }
+    }
+}
+
+fn roman(mut n: usize) -> String {
+    const TABLE: [(usize, &str); 13] = [
+        (1000, "M"),
+        (900, "CM"),
+        (500, "D"),
+        (400, "CD"),
+        (100, "C"),
+        (90, "XC"),
+        (50, "L"),
+        (40, "XL"),
+        (10, "X"),
+        (9, "IX"),
+        (5, "V"),
+        (4, "IV"),
+        (1, "I"),
+    ];
+    let mut s = String::new();
+    for (v, r) in TABLE {
+        while n >= v {
+            s.push_str(r);
+            n -= v;
+        }
+    }
+    s
+}
+
+/// A, B, ... Z, AA, BB, ... (the PDF page-label letter style).
+fn letters(n: usize) -> String {
+    let n = n.max(1) - 1;
+    let c = char::from(b'A' + (n % 26) as u8);
+    std::iter::repeat_n(c, n / 26 + 1).collect()
 }
 
 /// The outline (bookmarks): title, 0-based page, and depth (1 = top).

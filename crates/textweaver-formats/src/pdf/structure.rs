@@ -607,12 +607,14 @@ fn glue_hyphen(prev: &mut Unit, next: &mut Unit) {
 }
 
 /// Writes the units into `b`, with `PageBreak` markers per page (label =
-/// the page number) and `SectionBreak` markers for the outline.
+/// the printed page label, `labels[page]`, or the page number) and
+/// `SectionBreak` markers for the outline.
 pub(super) fn emit(
     b: &mut Builder,
     units: &[Unit],
     sections: &[(usize, usize)],
     outline: &[(String, usize, u8)],
+    labels: &[String],
 ) {
     let marker = |k: MarkerKind| Marker::new(k, CharRange::empty(0));
     let mut page: Option<(usize, OpenId)> = None;
@@ -625,7 +627,11 @@ pub(super) fn emit(
         if let Some((_, id)) = page.take() {
             b.close(id);
         }
-        let m = marker(MarkerKind::PageBreak).with_label((p + 1).to_string());
+        let label = labels
+            .get(p)
+            .cloned()
+            .unwrap_or_else(|| (p + 1).to_string());
+        let m = marker(MarkerKind::PageBreak).with_label(label);
         *page = Some((p, b.open(m)));
     };
     let close_lists = |b: &mut Builder, lists: &mut Vec<(f32, OpenId)>| {

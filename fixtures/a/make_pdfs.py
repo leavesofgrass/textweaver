@@ -134,6 +134,10 @@ class Pdf:
         outline_ref = b""
         if self.outline:
             outline_ref = self._outline(objs, page_ids)
+        if getattr(self, "labels", None):
+            outline_ref += b" /PageLabels << /Nums [%s] >>" % b" ".join(
+                b"%d << %s >>" % (start, style) for start, style in self.labels
+            )
         catalog = add(
             b"<< /Type /Catalog /Pages %d 0 R /Lang %s%s >>"
             % (pages_id, pdf_string(self.lang), outline_ref)
@@ -356,6 +360,8 @@ def make_running():
         n = pdf.pages.index(p) + 1
         p.text(72, 750, [("H", 9, "Journal of Reading Examples, Volume 3")])
         p.text(300, 40, [("H", 9, str(n))])
+    # Printed page labels: a roman-numbered first page, then 1, 2, ...
+    pdf.labels = [(0, b"/S /r"), (1, b"/S /D")]
     pdf.save(HERE / "running.pdf")
 
 

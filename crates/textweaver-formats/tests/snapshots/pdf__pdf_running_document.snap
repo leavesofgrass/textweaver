@@ -6,7 +6,7 @@ expression: view(&doc)
   "markers": [
     {
       "kind": "page_break",
-      "label": "1",
+      "label": "i",
       "range": [
         0,
         2585
@@ -104,7 +104,7 @@ expression: view(&doc)
     },
     {
       "kind": "page_break",
-      "label": "2",
+      "label": "1",
       "range": [
         2587,
         5290
@@ -201,7 +201,7 @@ expression: view(&doc)
     },
     {
       "kind": "page_break",
-      "label": "3",
+      "label": "2",
       "range": [
         5291,
         6133
