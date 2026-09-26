@@ -18,9 +18,12 @@ use textweaver_app::{
     extra_lookup,
 };
 
-use crate::layout::{self, Row};
+use crate::layout::{self, Cells, Row};
 use crate::theme::Theme;
 use crate::widgets::{ListView, Minibuffer};
+use ratatui::style::Modifier;
+use textweaver_app::aids::rsvp::{Area as RsvpArea, SegmentRole, TuiBoxOptions, tui_box};
+use textweaver_app::aids::{RowMark, RulerMode, TermStyle as RulerStyle, ViewRow, ruler_rows};
 use textweaver_theme::ColorSupport;
 
 /// Converts a crossterm key event into a keymap chord.
@@ -583,12 +586,19 @@ impl Tui {
         }
     }
 
-    fn gutter_width(&self) -> u16 {
+    /// Columns for line numbers, if shown.
+    fn number_width(&self) -> u16 {
         if !self.app.settings().display.show_line_numbers {
             return 0;
         }
         let lines = self.app.session().map_or(1, |s| line_count(&s.doc));
         u16::try_from(lines.to_string().len() + 1).unwrap_or(6)
+    }
+
+    /// Columns left of the text: line numbers, and one for the reading
+    /// ruler's mark when the ruler is on.
+    fn gutter_width(&self) -> u16 {
+        self.number_width() + u16::from(self.app.ruler().mode != RulerMode::Off)
     }
 
     fn text_width(&self, body: Rect) -> u16 {
@@ -605,15 +615,17 @@ impl Tui {
         let theme = self.theme.clone();
         let areas = self.areas(f.area());
         let text_width = self.text_width(areas.body);
+        let text_height = self.layout_height(areas.body.height);
         let vp = self.app.viewport();
-        if vp.width != text_width || vp.height != areas.body.height {
+        if vp.width != text_width || vp.height != text_height {
             self.app.dispatch(Command::Resize {
                 width: text_width,
-                height: areas.body.height,
+                height: text_height,
             });
         }
         self.draw_title(f, areas.title, &theme);
         let cursor = self.draw_body(f, areas.body, &theme);
+        self.draw_rsvp(f, areas.body, &theme, cursor.map(|p| p.y));
         f.render_widget(
             Paragraph::new(self.status_line())
                 .wrap(ratatui::widgets::Wrap { trim: false })
@@ -673,8 +685,29 @@ impl Tui {
         f.render_widget(Paragraph::new(line).style(theme.title), area);
     }
 
+    /// How chars are measured: tab width and word spacing.
+    fn cells(&self) -> Cells {
+        Cells {
+            tab: usize::from(self.app.settings().display.tab_width),
+            word_extra: usize::from(self.app.terminal_spacing().extra_word_spaces),
+        }
+    }
+
+    /// Document rows that fit in `height` screen rows, given the blank
+    /// rows text spacing adds between lines.
+    fn layout_height(&self, height: u16) -> u16 {
+        let between = self.app.terminal_spacing().rows_between_lines;
+        (height.saturating_add(between) / (1 + between)).max(1)
+    }
+
     /// Draws the document window; returns where the hardware cursor
     /// belongs (the focus position) when it is visible.
+    ///
+    /// Reading aids drawn here: bionic reading (the start of each word in
+    /// bold), the reading ruler and current line (a gutter mark plus
+    /// underline, never colour alone; dim only for the opt-in mask), and
+    /// terminal text spacing (blank rows between lines and paragraphs,
+    /// wider spaces between words).
     fn draw_body(&self, f: &mut Frame<'_>, area: Rect, theme: &Theme) -> Option<Position> {
         f.render_widget(Block::new().style(theme.text), area);
         let Some(s) = self.app.session() else {
@@ -691,44 +724,136 @@ impl Tui {
         };
         let doc = &s.doc;
         let settings = self.app.settings();
-        let tab = usize::from(settings.display.tab_width);
-        let gutter = self.gutter_width();
+        let cells = self.cells();
+        let spacing = self.app.terminal_spacing();
+        let numbers = self.number_width();
+        let ruler = self.app.ruler();
+        let ruler_col = u16::from(ruler.mode != RulerMode::Off);
+        let gutter = numbers + ruler_col;
         let width = usize::from(self.text_width(area));
         let height = usize::from(area.height);
-        let margin = usize::from(settings.display.scroll_margin).min(height.saturating_sub(1) / 2);
+        let rows_wanted = usize::from(self.layout_height(area.height));
+        let margin =
+            usize::from(settings.display.scroll_margin).min(rows_wanted.saturating_sub(1) / 2);
         let focus = self.app.focus();
         let top = self.app.viewport().top_line;
-        let rows = layout::window(doc, top, width, height, tab, focus, margin);
+        let rows = layout::window_cells(doc, top, width, rows_wanted, cells, focus, margin);
         let window = match (rows.first(), rows.last()) {
             (Some(a), Some(b)) => CharRange::new(a.range.start, b.range.end.saturating_add(1)),
             _ => CharRange::empty(0),
         };
         let highlights = self.app.highlights(window);
-        let mut lines = Vec::with_capacity(rows.len());
+        let bold = self.app.bionic_ranges(window);
+        let view_rows: Vec<ViewRow> = rows
+            .iter()
+            .map(|r| ViewRow {
+                range: r.range,
+                line: r.line,
+            })
+            .collect();
+        let marks = focus.map_or_else(
+            || vec![RowMark::Normal; rows.len()],
+            |p| ruler_rows(&view_rows, p, &ruler),
+        );
+        let mut lines: Vec<Line<'static>> = Vec::with_capacity(height);
         let mut cursor = None;
         for (i, row) in rows.iter().enumerate() {
+            if lines.len() >= height {
+                break;
+            }
+            let mark = RulerStyle::recommended(marks.get(i).copied().unwrap_or_default());
             let mut spans = Vec::new();
-            if gutter > 0 {
+            if numbers > 0 {
                 let label = if row.first {
-                    format!("{:>w$} ", row.line + 1, w = usize::from(gutter) - 1)
+                    format!("{:>w$} ", row.line + 1, w = usize::from(numbers) - 1)
                 } else {
-                    " ".repeat(usize::from(gutter))
+                    " ".repeat(usize::from(numbers))
                 };
                 spans.push(Span::styled(label, theme.gutter));
             }
-            spans.extend(self.row_spans(doc, row, &highlights, theme, tab));
-            lines.push(Line::from(spans));
+            if ruler_col > 0 {
+                let c = mark.gutter.unwrap_or(' ');
+                spans.push(Span::styled(c.to_string(), theme.gutter));
+            }
+            let mut text = self.row_spans(doc, row, &highlights, &bold, theme, cells);
+            let extra = ruler_modifier(mark);
+            if !extra.is_empty() {
+                for sp in &mut text {
+                    sp.style = sp.style.add_modifier(extra);
+                }
+            }
+            spans.extend(text);
             if let Some(fp) = focus.filter(|&p| row.holds(p))
                 && cursor.is_none()
             {
-                let col = layout::column(doc, row, fp, tab).min(width.saturating_sub(1));
+                let col = layout::column_cells(doc, row, fp, cells).min(width.saturating_sub(1));
                 let x = area.x + gutter + u16::try_from(col).unwrap_or(0);
-                let y = area.y + u16::try_from(i).unwrap_or(0);
+                let y = area.y + u16::try_from(lines.len()).unwrap_or(0);
                 cursor = Some(Position::new(x, y));
+            }
+            lines.push(Line::from(spans));
+            // Text spacing: blank rows after each row, and more after a
+            // paragraph's blank line.
+            let mut blank = usize::from(spacing.rows_between_lines);
+            if row.range.is_empty() && row.first && row.last {
+                blank += usize::from(spacing.rows_between_paragraphs.saturating_sub(1));
+            }
+            for _ in 0..blank {
+                if lines.len() < height {
+                    lines.push(Line::from(""));
+                }
             }
         }
         f.render_widget(Paragraph::new(lines).style(theme.text), area);
         cursor
+    }
+
+    /// Draws the RSVP word in a box over the document (never over the
+    /// cursor's row). Only the glyphs change from word to word: the box
+    /// keeps its place and size, so nothing flashes.
+    fn draw_rsvp(&self, f: &mut Frame<'_>, body: Rect, theme: &Theme, avoid: Option<u16>) {
+        let Some(rsvp) = self.app.rsvp() else {
+            return;
+        };
+        let Some(frame) = rsvp.frame() else {
+            return;
+        };
+        let settings = rsvp.settings();
+        let opts = TuiBoxOptions {
+            position: settings.position,
+            width: 32,
+            show_previous: settings.show_previous,
+            show_next: settings.show_next,
+            avoid_row: avoid,
+        };
+        let area = RsvpArea::new(body.x, body.y, body.width, body.height);
+        let Some(bx) = tui_box(&frame, area, &opts) else {
+            return;
+        };
+        let rect = Rect::new(bx.area.x, bx.area.y, bx.area.width, bx.area.height);
+        f.render_widget(Clear, rect);
+        f.render_widget(Block::new().style(theme.list), rect);
+        for (y, segments) in &bx.rows {
+            for seg in segments {
+                let style = match seg.role {
+                    SegmentRole::Word => theme.list.add_modifier(Modifier::BOLD),
+                    SegmentRole::Pivot => theme
+                        .list
+                        .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+                    SegmentRole::Context | SegmentRole::Clipped => theme.list,
+                };
+                let w = u16::try_from(Span::raw(&seg.text).width()).unwrap_or(0);
+                let right = rect.x + rect.width;
+                let w = w.min(right.saturating_sub(seg.col));
+                if w == 0 {
+                    continue;
+                }
+                f.render_widget(
+                    Paragraph::new(Span::styled(seg.text.clone(), style)),
+                    Rect::new(seg.col, *y, w, 1),
+                );
+            }
+        }
     }
 
     fn row_spans(
@@ -736,26 +861,34 @@ impl Tui {
         doc: &textweaver_app::text::Document,
         row: &Row,
         highlights: &[textweaver_app::Highlight],
+        bold: &[CharRange],
         theme: &Theme,
-        tab: usize,
+        cells: Cells,
     ) -> Vec<Span<'static>> {
         let mut spans: Vec<Span<'static>> = Vec::new();
         let mut run = String::new();
         let mut run_style: Option<Style> = None;
         let chars = doc.text().slice(row.range.to_range()).chars();
+        let mut b = bold.partition_point(|r| r.end <= row.range.start);
         for (i, c) in chars.enumerate() {
             let pos = CharPos(row.range.start.0 + i);
-            let style = highlights
+            let mut style = highlights
                 .iter()
                 .filter(|h| h.range.contains(pos))
                 .fold(theme.text, |st, h| st.patch(theme.highlight(h.kind)));
+            while b < bold.len() && bold[b].end <= pos {
+                b += 1;
+            }
+            if bold.get(b).is_some_and(|r| r.contains(pos)) {
+                style = style.add_modifier(Modifier::BOLD);
+            }
             if run_style != Some(style) {
                 if let Some(st) = run_style {
                     spans.push(Span::styled(std::mem::take(&mut run), st));
                 }
                 run_style = Some(style);
             }
-            run.push_str(&layout::display_text(c, tab));
+            run.push_str(&cells.text(c));
         }
         if let Some(st) = run_style {
             spans.push(Span::styled(run, st));
@@ -793,7 +926,16 @@ impl Tui {
         if self.app.pending_confirmation().is_some() {
             return " y yes  n or a no  Escape no".to_owned();
         }
+        let rsvp_hints: &[(ActionId, &str)] = &[
+            (ActionId::RsvpPlayPause, "play"),
+            (ActionId::NextSentence, "sentence"),
+            (ActionId::RsvpFaster, "faster"),
+            (ActionId::RsvpSlower, "slower"),
+            (ActionId::RsvpToggle, "close RSVP"),
+            (ActionId::Quit, "quit"),
+        ];
         let hints: &[(ActionId, &str)] = match self.app.mode() {
+            _ if self.app.rsvp().is_some() => rsvp_hints,
             Mode::Edit => &[
                 (ActionId::Save, "save"),
                 (ActionId::ToggleEditMode, "finish"),
@@ -926,6 +1068,25 @@ fn common_prefix(ids: &[&str]) -> String {
             .count();
     }
     first[..len].to_owned()
+}
+
+/// The text attributes a reading-ruler mark adds (colours stay the
+/// theme's; the mark never relies on colour).
+fn ruler_modifier(m: RulerStyle) -> Modifier {
+    let mut out = Modifier::empty();
+    if m.bold {
+        out |= Modifier::BOLD;
+    }
+    if m.underline {
+        out |= Modifier::UNDERLINED;
+    }
+    if m.reverse {
+        out |= Modifier::REVERSED;
+    }
+    if m.dim {
+        out |= Modifier::DIM;
+    }
+    out
 }
 
 #[cfg(test)]
