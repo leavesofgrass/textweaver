@@ -71,8 +71,12 @@ jobs:
         run: cargo xtask keyboard --check
       - name: Dependency direction
         run: cargo xtask deps --check
+      # cargo-about reads each crate's licence files from the registry
+      # sources, so every platform's crates are fetched first.
       - name: THIRD-PARTY-NOTICES.md is current
-        run: cargo xtask notices --check
+        run: |
+          cargo fetch --locked
+          cargo xtask notices --check
 
   # Licences, advisories, duplicate versions, and sources (deny.toml).
   deny:
