@@ -2,6 +2,16 @@
 
 All notable changes to textweaver. Versions follow [Semantic Versioning](https://semver.org/); before 1.0 every release is an alpha and anything may change.
 
+## [Unreleased]
+
+### Added
+
+- **Settings export and import as JSON.** `tw settings export` saves every setting and key override to one JSON (or TOML) file; `tw settings import` checks it, backs up your files, and applies it, with `--dry-run` to preview each change. `tw settings path` and `tw settings reset` are new too. See [docs/settings.md](docs/settings.md).
+
+### Fixed
+
+- A speech volume above 100 in `settings.toml` is now set to 100 and reported, like other out-of-range values.
+
 ## [0.1.0-alpha.3] - 2026-09-25
 
 The first release with downloadable packages: Windows (x86_64) and macOS (universal, not notarized). Start with the [quick start](docs/quickstart.md) (`QUICKSTART.md` in each package); [docs/install.md](docs/install.md) has the details.

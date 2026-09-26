@@ -414,3 +414,11 @@ Jon wants several themes, as Star had. Star shipped 23 palettes in `star/themes.
 - ADR-0020 and `docs/themes.md` (how to pick, preview, and write a theme).
 
 **Acceptance:** contrast tests for every built-in theme; round-trip TOML tests; snapshot of the CSS output; the palette list and each adjustment in the report.
+
+### Agent U — Settings import and export (added 2026-09-25 at Jon's request)
+
+Jon asked for an easy way to import and export settings, preferring JSON. TOML stays the on-disk format.
+
+**Owns:** `crates/textweaver-store/src/settings_io.rs` (and its tests), the settings validation hooks in `settings.rs`, `crates/textweaver-cli/src/cmd/settings.rs`, `docs/settings.md`, `fixtures/u/`.
+
+**Status:** done on `wave2/u-settings-io`, not yet integrated. `tw settings export|import|path|reset` work; import validates, merges or replaces, backs up, and writes atomically; export then import changes nothing (tested with every setting non-default). The app's palette actions `export_settings` and `import_settings` are a verified patch for Agent D3 in `fixtures/u/d3-settings-palette.patch`.
