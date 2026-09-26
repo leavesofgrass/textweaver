@@ -4,7 +4,7 @@ An accessible, keyboard-first document reader and writer that speaks. textweaver
 
 textweaver is a Rust reimplementation of the core of [Star](https://github.com/leavesofgrass/star). It learns from [Paperback](https://github.com/trypsynth/paperback) for document handling and accessibility, and from Omnivox for queued, multi-stream speech.
 
-> **Status: alpha.** textweaver reads documents aloud with exact word highlighting. It has an edit mode, notes, a library, conversion to many formats, audio export, math, and citations. It runs on Windows, macOS, and Linux. It is ready for testing, not yet for daily reliance. See [CHANGELOG.md](CHANGELOG.md).
+> **Status: alpha.** textweaver reads documents aloud with exact word highlighting. It has an edit mode with spell check, an outline, and citations; notes, a library, conversion to many formats, audio export, math, and modes for working with a screen reader. It runs on Windows, macOS, and Linux. It is ready for testing, not yet for daily reliance. The newest release is 0.1.0-alpha.3; `main` has much more since then. See [CHANGELOG.md](CHANGELOG.md).
 
 ## Start here
 
@@ -15,7 +15,13 @@ textweaver is a Rust reimplementation of the core of [Star](https://github.com/l
 
 ## Download
 
-Windows and macOS packages are on the [releases page](https://github.com/leavesofgrass/textweaver/releases). [docs/install.md](docs/install.md) has the details. The macOS build is not notarized yet; the install guide shows how to open it anyway. On Linux, build from source with `scripts/install-linux.sh`.
+Windows and macOS packages are on the [releases page](https://github.com/leavesofgrass/textweaver/releases). [docs/install.md](docs/install.md) has the details. The macOS build is not notarized yet; the install guide shows how to open it anyway.
+
+On Linux, the next release adds an AppImage and a plain tarball. The current release, 0.1.0-alpha.3, has no Linux package, so build from source with the install script:
+
+```bash
+bash scripts/install-linux.sh
+```
 
 ## What it does
 
@@ -27,16 +33,20 @@ textweaver has two programs.
   - You move by character, word, sentence, line, paragraph, heading, table, list, list item, link, and chapter.
   - It has Speech Cursor mode, bookmarks, notes and highlights, find, go to, and navigation history.
   - It remembers your place in every document.
-  - Edit mode gives typing echo, Markdown formatting commands, undo, find and replace, and autosave recovery.
+  - Edit mode gives typing echo, Markdown formatting commands, undo, find and replace, and autosave recovery. Headings, lists, links, and tables can be moved through while you write, and the outline (Alt+O) lists the headings.
+  - Spell check on a built-in word list, citations inserted from your reference library, and export to HTML, PDF, Word, EPUB, or braille from the command palette, with a preview in the browser.
+  - Copy (Ctrl+C) goes to the system clipboard through the terminal, over SSH too.
+  - Saving and other disk work happen in the background, so a key never waits for the disk. Your place, bookmarks, and notes are found again after the file is changed in another program.
+  - If speech stops working, textweaver restarts it by itself; Shift+F8 restarts it at any time.
   - Reading aids: RSVP (one word at a time), bionic reading, a reading ruler, and 23 themes checked for contrast.
   - Every key can be changed, and single-key shortcuts can be turned off with F9.
-  - It is designed to work alongside a screen reader such as JAWS, NVDA, VoiceOver, or Orca: start it with `--no-speech` to let your screen reader do the talking. [Using textweaver with a screen reader](docs/screen-readers.md) says what has been tested so far.
+  - It is designed to work alongside a screen reader such as JAWS, NVDA, VoiceOver, or Orca. Three modes set who speaks: self-voicing (textweaver speaks everything), hybrid (textweaver reads documents aloud and your screen reader speaks the rest), and screen reader (textweaver is silent). Alt+Shift+A switches between them. [Using textweaver with a screen reader](docs/screen-readers.md) explains them and what has been tested so far.
 - `tw` is a command-line tool.
   - `tw text`, `tw info`, and `tw search` extract, describe, and search a document.
   - `tw convert` converts files and whole folders to Markdown, HTML, text, EPUB, Word, braille (BRF), and tagged PDF. It uses every processor core, and it can watch a folder. With Pandoc installed, it also reads formats textweaver has no reader for.
-  - `tw speak` and `tw export-audio` speak a document, or write it to WAV, MP3, or an M4B audiobook with chapters and subtitles.
+  - `tw speak` and `tw export-audio` speak a document, or write it to WAV, MP3, or an M4B audiobook with chapters and subtitles. Both use your settings.
   - `tw voices`, `tw backends`, and `tw eloquence` list voices and speech engines.
-  - `tw cite` keeps a reference library: DOI and ISBN lookup, BibTeX, RIS, CSL-JSON, and citation styles.
+  - `tw cite` keeps a reference library: DOI and ISBN lookup, BibTeX, RIS, CSL-JSON, citation styles, and a check for citations missing from the library. `tw convert` formats citations and adds a References section.
   - `tw library`, `tw marks`, `tw vault`, and `tw migrate-star` manage your library, your saved places, your Obsidian vault, and your Star data.
   - `tw dictate` turns speech in an audio file into text with Whisper.
   - `tw settings` exports, imports, and resets your settings as JSON.
@@ -49,12 +59,13 @@ textweaver has two programs.
   - DECtalk, when you have a licensed copy;
   - Omnivox.
 
-Coming next (the [roadmap](docs/roadmap.md) has the full list):
+Coming next, in Wave 3 (the [roadmap](docs/roadmap.md) has the full list):
 
-- the native GUI (a working spike exists; see [ADR-0014](docs/adr/0014-gui-toolkit.md));
-- dictation from the microphone;
-- exploring math term by term in the reader;
-- Linux packages.
+- a native GUI on Xilem, an all-Rust toolkit, with accessibility through AccessKit (a wxDragon spike stays as a fallback; see [ADR-0014](docs/adr/0014-gui-toolkit.md));
+- OCR for scanned PDFs, DAISY books, archives, web pages by address, PowerPoint, and spreadsheets;
+- Piper neural voices and a voice manager;
+- an offline dictionary, settings profiles, and reading statistics;
+- dictation inside textweaver, and exploring math term by term in the reader.
 
 ## Building
 
@@ -68,7 +79,7 @@ cargo build --workspace
 cargo test --workspace
 ```
 
-On Linux, the espeak-ng backend needs the espeak-ng development files (`libespeak-ng-dev` on Debian and Ubuntu). The Docker development image has everything; see [docs/docker.md](docs/docker.md).
+On Linux, the build needs pkg-config and the ALSA development files (`libasound2-dev` on Debian and Ubuntu). espeak-ng is loaded when textweaver starts, so building needs no espeak-ng files; install the `espeak-ng` package to hear it. The Docker development image has everything; see [docs/docker.md](docs/docker.md).
 
 ```bash
 docker compose build dev
@@ -88,7 +99,7 @@ scripts/dev-check.sh
 
 The `scripts/` folder has installers and helpers for every system. Each script has `--help` and `--dry-run`. It says what it will do before it does it, and asks before it uses sudo or changes your PATH. The full list is in [scripts/README.md](scripts/README.md).
 
-- `install-linux.sh`: build and install from source on Debian, Ubuntu, Fedora, Arch, openSUSE, or Alpine.
+- `install-linux.sh`: install a release (the AppImage, from the next release on), or build and install from source on Debian, Ubuntu, Fedora, Arch, openSUSE, or Alpine.
 - `install-macos.sh`: install the newest macOS release, or build from source.
 - `install-windows.ps1`: install the newest Windows release, or build from source.
 - `update.sh` and `update.ps1`: update an installed textweaver.
@@ -101,7 +112,7 @@ The `scripts/` folder has installers and helpers for every system. Each script h
 ## Repository layout
 
 - `crates/`: the Rust crates, one per job. [docs/architecture.md](docs/architecture.md) describes each one, how they depend on each other, and how a document becomes speech.
-- `xtask/`: maintenance tasks, run as `cargo xtask bench`, `dist`, `hosts`, `eci-host`, `sapi-host`, `keyboard`, and `parity`.
+- `xtask/`: maintenance tasks, run as `cargo xtask bench`, `startup`, `soak`, `dist`, `appimage`, `release`, `hosts`, `eci-host`, `sapi-host`, `keyboard`, `deps`, `notices`, and `parity`.
 - `scripts/`: installers, update, speech check, doctor, dev-check, and folder conversion.
 - `tools/`: helper programs, among them the link checker (`check_links.py`), the site data generator (`gen_site_data.py`), and the engine spikes.
 - `docs/`: user guides, contributor guides, the ADRs, and the interactive pages in `docs/site/`. Start at [docs/README.md](docs/README.md).

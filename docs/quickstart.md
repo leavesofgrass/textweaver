@@ -48,46 +48,54 @@ bash scripts/install-macos.sh
 
 ## Linux
 
-1. Download the Linux `.AppImage` from the [releases page](https://github.com/leavesofgrass/textweaver/releases). It runs on most distributions from 2022 on, on x86_64 computers.
-2. Open a terminal in the folder you saved it to, and make it executable. Type `chmod +x `, with a space after it, then the file's name, and press Enter:
-
-   ```bash
-   chmod +x textweaver-0.1.0-alpha.3-linux-x86_64.AppImage
-   ```
-
-3. Check that it runs; this says which version you have. With `--tw` first, the AppImage runs `tw`:
-
-   ```bash
-   ./textweaver-0.1.0-alpha.3-linux-x86_64.AppImage --tw --version
-   ```
-
-   On its own it runs the reader. Give it a document, for example this guide, saved from the repository as `quickstart.md`:
-
-   ```bash
-   ./textweaver-0.1.0-alpha.3-linux-x86_64.AppImage quickstart.md
-   ```
-
-4. To run `textweaver` and `tw` from any folder, and add a menu entry, run it once with `--install`. It asks first:
-
-   ```bash
-   ./textweaver-0.1.0-alpha.3-linux-x86_64.AppImage --install
-   ```
-
-textweaver speaks with espeak-ng when the `espeak-ng` package is installed, or through speech-dispatcher. `tw backends` lists the engines it found.
-
-Or install with the script, which downloads the newest release, checks it, and installs it in `~/.local`. From a copy of the repository (`git clone https://github.com/leavesofgrass/textweaver`):
+The current release, 0.1.0-alpha.3, has no Linux package. Until the next release, build textweaver from source with the install script. From a copy of the repository (`git clone https://github.com/leavesofgrass/textweaver`):
 
 ```bash
-bash scripts/install-linux.sh --release latest
+bash scripts/install-linux.sh
 ```
 
-Then run:
+It installs what the build needs, builds textweaver, and installs it in `~/.local`. Then run:
 
 ```bash
 textweaver ~/.local/share/doc/textweaver/QUICKSTART.md
 ```
 
-If the AppImage says FUSE is missing, the script installs the plain tarball instead; [Installing textweaver](install.md#linux) has the details. Without `--release`, the script builds textweaver from source.
+From the next release on, there is an AppImage: one file that runs on most distributions from 2022 on, on x86_64 computers.
+
+1. Download the Linux `.AppImage` from the [releases page](https://github.com/leavesofgrass/textweaver/releases).
+2. Open a terminal in the folder you saved it to, and make it executable:
+
+   ```bash
+   chmod +x textweaver-*-linux-x86_64.AppImage
+   ```
+
+3. Check that it runs; this says which version you have. With `--tw` first, the AppImage runs `tw`:
+
+   ```bash
+   ./textweaver-*-linux-x86_64.AppImage --tw --version
+   ```
+
+   On its own it runs the reader. Give it a document, for example this guide, saved from the repository as `quickstart.md`:
+
+   ```bash
+   ./textweaver-*-linux-x86_64.AppImage quickstart.md
+   ```
+
+4. To run `textweaver` and `tw` from any folder, and add a menu entry, run it once with `--install`. It asks first:
+
+   ```bash
+   ./textweaver-*-linux-x86_64.AppImage --install
+   ```
+
+Or let the script download the newest release, check it, and install it in `~/.local`:
+
+```bash
+bash scripts/install-linux.sh --release latest
+```
+
+If the AppImage says FUSE is missing, the script installs the plain tarball instead; [Installing textweaver](install.md#linux) has the details.
+
+textweaver speaks with espeak-ng when the `espeak-ng` package is installed, or through speech-dispatcher. `tw backends` lists the engines it found.
 
 ## Your first 30 seconds
 
@@ -99,7 +107,7 @@ Once the document is open:
 - **p** and **Shift+P** move by paragraph. **h** jumps to the next heading.
 - **+** and **-** make the voice faster or slower.
 - **Tab** turns Speech Cursor mode on and off. In it, the Up and Down arrows read one line at a time.
-- **%** says where you are.
+- **Shift+W** says where you are: the line, the percentage, and the heading.
 - **?** lists every key. **F1** opens the help.
 - **q** quits. textweaver asks "Quit textweaver? y or n". Press **y** to quit, or **n** to stay.
 
@@ -110,13 +118,15 @@ textweaver remembers your place. Open the same file again and it picks up where 
 - **Ctrl+E** switches between reading and editing. Type as usual; textweaver echoes what you type.
 - **Ctrl+S** saves.
 - **Ctrl+Z** undoes.
+- **Alt+O** lists the headings. Type to filter them, and press Enter to jump to one.
 
 ## Tips
 
 - **Ctrl+O** opens another document.
 - **F2** opens the command palette: type part of a command's name, then press Enter.
 - **F9** turns single-key shortcuts off, so dictation or typing never triggers a command. Chords such as **Alt+P** (play or pause) still work.
-- If you use a screen reader and want it to do all the talking, start with `textweaver --no-speech FILE`. [Using textweaver with a screen reader](screen-readers.md) explains what your screen reader reads then.
+- If you use a screen reader, **Alt+Shift+A** chooses who speaks: textweaver alone (self-voicing), both (hybrid: textweaver reads documents aloud and your screen reader speaks the rest), or your screen reader alone. `textweaver --no-speech FILE` starts silent. [Using textweaver with a screen reader](screen-readers.md) explains the modes.
+- If speech stops, **Shift+F8** restarts it.
 - `tw speak "Hello"` checks your voice. `tw voices` lists your voices, and `tw backends` lists the speech engines textweaver found. In the reader, **Alt+V** lists the voices; Enter chooses one and speaks a sample.
 - Something went wrong? Warnings and errors are written to `textweaver.log` in the state folder (next to your reading positions). Start with `textweaver --log debug FILE` to log more, or `--log off` to log nothing. [Troubleshooting](troubleshooting.md) covers the common problems.
 
