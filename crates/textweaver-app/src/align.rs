@@ -18,7 +18,7 @@ use textweaver_core::CharPos;
 /// than by an owned lowercase `String` each: a 5 MB document has about a
 /// million words, and allocating a string for every word of both texts
 /// made entering and leaving edit mode take up to two seconds
-/// (docs/audit-2026-09.md, finding P3). A collision can only mis-pair two
+/// (docs/history/audit-2026-09.md, finding P3). A collision can only mis-pair two
 /// different words, which moves a carried position by a word at worst.
 #[derive(Clone, Copy, Debug)]
 struct Word {

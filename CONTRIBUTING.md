@@ -1,145 +1,11 @@
 # Contributing to textweaver
 
-Thank you for helping. textweaver is built first for screen-reader users and students with print disabilities, so accessibility is the product, not a feature. This guide covers setting up, the checks every change must pass, how the parallel agents work, and how to write commits and docs.
+Thank you for helping. textweaver is built first for screen-reader users and students with print disabilities, so accessibility is the product, not a feature. This guide covers the code rules, how the parallel agents work, and how to write commits and docs. [Building](docs/dev/building.md) and [testing](docs/dev/testing.md) have their own guides.
 
-## Set up
+## Building and testing
 
-### Everyone
-
-1. Install Rust with [rustup](https://rustup.rs). You do not need to pick a version: `rust-toolchain.toml` pins Rust 1.96, and rustup installs it the first time you build. The minimum supported version is 1.92 (`rust-version` in `Cargo.toml`).
-2. Install Python 3. The link checker and the site data generator need it; they use only the standard library.
-3. Get the code:
-
-   ```bash
-   git clone https://github.com/leavesofgrass/textweaver
-   ```
-
-4. Build and test:
-
-   ```bash
-   cargo build --workspace
-   ```
-
-   ```bash
-   cargo test --workspace
-   ```
-
-`--workspace` builds the default members, which leave out the GUI spike. Build the GUI only when you work on it (see below).
-
-### Windows
-
-- Install Visual Studio or the Build Tools with the "Desktop development with C++" workload, for the MSVC linker.
-- Add the 32-bit target, which the 32-bit engine hosts need:
-
-  ```powershell
-  rustup target add i686-pc-windows-msvc
-  ```
-
-- On Windows, CI and `dev-check` use `--features textweaver-speech/omnivox` in place of `--all-features`. Test the Linux engines, espeak-ng and speech-dispatcher, in Docker.
-
-### Linux
-
-The build itself needs only pkg-config and the ALSA development files. espeak-ng is loaded when textweaver starts, with no headers at build time, and speech-dispatcher is spoken to over its socket in pure Rust. The engines themselves are needed to hear them and for their real-engine tests. On Debian and Ubuntu:
-
-```bash
-sudo apt install pkg-config libasound2-dev espeak-ng speech-dispatcher
-```
-
-`scripts/dev-check.sh` turns on every feature only when `pkg-config` finds espeak-ng, so for its full run also install `libespeak-ng-dev`. `scripts/install-linux.sh --deps-only` installs the build dependencies on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine.
-
-### macOS
-
-Install the Xcode command line tools. The Apple speech backends need nothing else.
-
-### Docker
-
-The development container has every library the workspace can link, so Linux-only features build and test on any machine with Docker. [docs/docker.md](docs/docker.md) explains it.
-
-```bash
-docker compose build dev
-```
-
-### The GUI
-
-The GUI moves to Xilem in Wave 3 (Jon's choice, Saturday, September 26, 2026), in a new crate; the wxDragon spike stays as a fallback until then. `textweaver-gui` builds wxWidgets from source through wxDragon. The first build takes several minutes and needs CMake, Ninja, and libclang. On Windows, `crates/textweaver-gui/tools/build-windows.ps1` finds Visual Studio's own CMake and Ninja and sets up the build. [ADR-0014](docs/adr/0014-gui-toolkit.md) has the details.
-
-## The checks
-
-CI runs these on every push. Run them yourself before you send a change. One script runs them all:
-
-```bash
-scripts/dev-check.sh
-```
-
-On Windows:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\dev-check.ps1
-```
-
-To run the full Linux set, with every feature, inside the container:
-
-```bash
-scripts/dev-check.sh --docker
-```
-
-The steps, in order:
-
-- **fmt**: `cargo fmt --all --check`. Formatting follows `rustfmt.toml`.
-- **clippy**: `cargo clippy --workspace --exclude textweaver-gui --all-targets` with the features for your system, and `-D warnings`. Every warning is an error.
-- **test**: `cargo test --workspace --exclude textweaver-gui` with the same features.
-- **doc**: `cargo doc --workspace --exclude textweaver-gui --no-deps` with `RUSTDOCFLAGS="-D warnings"`. The usual failures are a redundant link target (write ``[`X`]``, not ``[`X`](crate::X)``), a link to a private item from public docs, and square brackets in prose (put `[mm:ss]` or `[@key]` in backticks).
-- **keyboard**: `cargo xtask keyboard --check`. It fails when [docs/keyboard.md](docs/keyboard.md) is out of date. Regenerate it with `cargo xtask keyboard`; never edit it by hand.
-- **links**: `python3 tools/check_links.py`. Every relative link and anchor in the Markdown docs and in `docs/site` must resolve.
-- **site**: `python3 tools/gen_site_data.py --check`. The data embedded in the `docs/site` pages must match `cargo metadata`, the keymap, and the theme files. Regenerate it with `python3 tools/gen_site_data.py`.
-- **site-a11y**: `python3 tools/check_site_a11y.py`. Static accessibility checks of the `docs/site` pages: language, title, one level-1 heading and no skipped levels, the skip link, landmarks, a label for every control, text alternatives, and references that resolve.
-- **hosts32** (Windows only): the 32-bit engine hosts build.
-- **scripts**: shellcheck on the shell scripts, or PSScriptAnalyzer on the PowerShell scripts, when installed.
-
-Useful options: `--only fmt,clippy` runs some steps, `--fail-fast` stops at the first failure, and `--dry-run` prints the commands.
-
-CI also runs three checks that `dev-check` does not. Run them yourself when you change dependencies:
-
-- **deps**: `cargo xtask deps --check`. The dependency direction between the workspace crates ([docs/architecture.md](docs/architecture.md#dependency-direction)), with cargo features resolved: the reader built with `--no-default-features` must not reach the conversion and citation stack.
-- **notices**: `cargo xtask notices --check`. `THIRD-PARTY-NOTICES.md` is current. It needs `cargo-about`.
-- **deny**: `cargo deny check`. Licences, advisories, duplicate versions, and sources, from `deny.toml`.
-
-The features: Linux CI uses `--all-features`, which includes `espeak`, `speechd`, and `omnivox`. Windows and macOS use `--features textweaver-speech/omnivox`.
-
-## Tests
-
-- Every crate has unit tests. Segmentation, offset maps, history, marker shifting, and editing also have property tests (`proptest`); loaders and renderers have snapshot tests (`insta`).
-- Speech is tested with the `recording` backend and a fake clock, so timing tests never depend on the machine's speed. Engine hosts are tested against fake hosts that speak the real protocol.
-- Tests never play audio aloud. Write audio to a temporary file, or use a silent output.
-- Tests against real engines are ignored unless you ask for them with an environment variable: `TEXTWEAVER_ECI=1` (Eloquence, with licensed Voxin in the container), `TEXTWEAVER_SAPI=1` (Microsoft voices and eSpeak only), `TEXTWEAVER_APPLE=1` (macOS voices), `TEXTWEAVER_DECTALK=1` (a licensed DECtalk), `TEXTWEAVER_SPEECHD=1` (speech-dispatcher), `TEXTWEAVER_WHISPER_REAL=1` (an installed Whisper), and `TEXTWEAVER_WORD=1` (Microsoft Word opens a DOCX). Run them with `-- --ignored`.
-- Never load Code Factory's Eloquence or OpenEVV in tests, and never commit audio made by an engine. Local samples go in the git-ignored `target-local/`.
-
-## Benchmarks
-
-Performance is a requirement ([ADR-0001](docs/adr/0001-workspace-and-dependencies.md)). Measure before and after you optimize a hot path.
-
-```bash
-cargo xtask bench
-```
-
-It times opening, first speech, navigation while reading, search, and entering edit mode on generated corpora of 1 MB and 10 MB, a 50,000-item list, and a 1 MB single line, and reports peak memory and the number of allocations. It also times the start of `tw --version`, `tw text`, `tw info`, and `tw backends` (`cargo xtask startup` runs only those). `--quick` skips the 10 MB corpus, `--only NAME` runs one measurement, `--file PATH` adds your own document, and `--json PATH` writes the numbers. [The audit](docs/audit-2026-09.md#benchmark-harness) describes the harness.
-
-To compare with an earlier run, keep its JSON and pass it back:
-
-```bash
-cargo xtask bench --quick --json before.json
-cargo xtask bench --quick --baseline before.json --max-ratio 2
-```
-
-The comparison fails when a peak heap or an allocation count grew more than `--max-ratio` times (2 by default). Those numbers barely change from run to run; times do, so times are only reported. CI runs this on every pull request against main's numbers (`bench.yml`).
-
-`cargo xtask soak --minutes N` reads the 10 MB corpus with random navigation, pauses, rate changes, and edits, then from the top to the end, while a second reader's engine host is killed at random. It checks that the highlight only moves forward, reading finishes, memory stays level, and no engine host is left running. The nightly job runs it for 10 minutes.
-
-Bulk conversion has its own benchmark:
-
-```bash
-cargo run --release -p textweaver-convert --example bench_convert
-```
+- [Building](docs/dev/building.md): Rust, Python, what Windows, Linux, and macOS need, the Docker container, the GUI, and the lean reader.
+- [Testing](docs/dev/testing.md): the checks every change must pass (one script, `scripts/dev-check`, runs them), the tests, and the benchmarks.
 
 ## Code
 
@@ -157,13 +23,13 @@ cargo run --release -p textweaver-convert --example bench_convert
   - Keys come from the keymap, never hard-coded; a new action gets a default key, a help string, and a category in `crates/textweaver-keymap/src/action.rs`, and then `cargo xtask keyboard`.
 - Fix Star's bugs rather than port them. If you keep a Star quirk on purpose, say so.
 
-[docs/architecture.md](docs/architecture.md) explains how the crates fit together and which way dependencies may point.
+[docs/dev/architecture.md](docs/dev/architecture.md) explains how the crates fit together and which way dependencies may point.
 
 ## The agent and worktree workflow
 
-textweaver is built by an orchestrator and parallel agents, each in its own git worktree. [docs/tasks.md](docs/tasks.md) holds the briefs, the ownership of every path, the acceptance criteria, and each agent's status. The rules:
+textweaver is built by an orchestrator and parallel agents, each in its own git worktree. [docs/history/tasks.md](docs/history/tasks.md) holds the briefs, the ownership of every path, the acceptance criteria, and each agent's status. The rules:
 
-- **Read first**: the shared preamble in `docs/tasks.md`, your brief, [the plan](docs/plan.md), and the ADRs your brief names.
+- **Read first**: the shared preamble in `docs/history/tasks.md`, your brief, [the plan](docs/history/plan.md), and the ADRs your brief names.
 - **Branch**: work on your own branch, in your own worktree, from `main`. The brief names it: `phase2/<letter>-<topic>` in Phase 2, and `wave3/<letter>-<name>` in Wave 3.
 - **Ownership**: edit only the paths your brief lists. Never edit `crates/textweaver-core`, the root `Cargo.toml`, `rust-toolchain.toml`, `.github/`, `docker/`, `compose.yaml`, or another agent's paths unless your brief says so.
 - **Contract changes**: if a public type in core or in another agent's crate must change, work around it and write the exact change you need under "Contract change requests" in your report. The orchestrator decides at integration.
@@ -175,7 +41,7 @@ textweaver is built by an orchestrator and parallel agents, each in its own git 
 
   From Git Bash on Windows, set `MSYS_NO_PATHCONV=1` first, or Git Bash rewrites `/target/...` into a Windows path.
 - **Git**: commit in small steps. Do not push, merge, rebase onto `main`, or tag; the orchestrator integrates. Never use a bare `git stash` in a worktree, because the stash is shared with every other worktree.
-- **Report**: the format is in `docs/tasks.md`: a summary, the files changed, the test results natively and in the container, contract change requests, open issues, and what the next wave should do first. Add one status line under your own heading in `docs/tasks.md`; leave the rest of its history alone.
+- **Report**: the format is in `docs/history/tasks.md`: a summary, the files changed, the test results natively and in the container, contract change requests, open issues, and what the next wave should do first. Add one status line under your own heading in `docs/history/tasks.md`; leave the rest of its history alone.
 
 ## Commits
 
@@ -196,12 +62,12 @@ textweaver is built by an orchestrator and parallel agents, each in its own git 
 - Every doc ends with a "See also" section linking related docs and the [documentation index](docs/README.md). Guides link to the ADRs that decided them, and ADRs link back to the guides.
 - Keep links relative. `tools/check_links.py` must pass.
 - ADRs keep their decisions. When later work changes one, add a dated "Status update" line under its date instead of rewriting it.
-- Generated files are never edited by hand: `docs/keyboard.md` (`cargo xtask keyboard`), `docs/parity-report.md` (`cargo xtask parity`), and the data in `docs/site/*.html` (`python3 tools/gen_site_data.py`).
+- Generated files are never edited by hand: `docs/keyboard.md` (`cargo xtask keyboard`), `docs/history/parity-report.md` (`cargo xtask parity`), and the data in `docs/site/*.html` (`python3 tools/gen_site_data.py`).
 - Add a line to `CHANGELOG.md` under "Unreleased" for anything a user would notice.
 
 ## Releases
 
-[docs/releasing.md](docs/releasing.md) describes how a release is made and what the packages hold.
+[docs/dev/releasing.md](docs/dev/releasing.md) describes how a release is made and what the packages hold.
 
 ## CI
 
@@ -212,14 +78,15 @@ The workflows in `.github/workflows/`:
 - `scripts.yml`: lints and dry runs of the scripts in `scripts/`.
 - `apple.yml`: extra macOS voice measurements.
 - `ci.yml` also has the real-engine jobs, marked "Real engine" in their names: espeak-ng on Linux and Microsoft's SAPI5 voices on Windows, silent (WAV files and a silent output).
-- `bench.yml`: the benchmark gate on pull requests and main (see Benchmarks).
+- `bench.yml`: the benchmark gate on pull requests and main (see [benchmarks](docs/dev/testing.md#benchmarks)).
 - `nightly.yml`: every night, the fuzz targets for 10 minutes each (`fuzz/README.md`), Miri on core, text, and the engine-host protocol, AddressSanitizer on the FFI crates, the tests in release mode, an MSRV check with Rust 1.92, the Docker image and its tests, and the soak test; on Mondays, `cargo hack --each-feature` on the speech, formats, and writers crates. Nightly Rust is used only for fuzzing, Miri, and the sanitizer.
 - `release.yml`: the release job, started by pushing a tag. It builds the Windows, macOS, and Linux packages (the AppImage in `docker/appimage`).
 
 ## See also
 
 - [Documentation index](docs/README.md): every guide, grouped by audience.
-- [Architecture](docs/architecture.md): the crates, the threads, and the path from a file to a spoken word.
-- [Docker development container](docs/docker.md): Linux builds and Voxin on any machine.
-- [Tasks and ownership](docs/tasks.md): the agents' briefs and status.
+- [Building](docs/dev/building.md) and [testing](docs/dev/testing.md).
+- [Architecture](docs/dev/architecture.md): the crates, the threads, and the path from a file to a spoken word.
+- [Docker development container](docs/dev/docker.md): Linux builds and Voxin on any machine.
+- [Tasks and ownership](docs/history/tasks.md): the agents' briefs and status.
 - [scripts/README.md](scripts/README.md): dev-check and the other scripts.

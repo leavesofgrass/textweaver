@@ -1,7 +1,7 @@
 //! `settings.toml` and `keymap.toml`.
 //!
 //! The settings surface mirrors Star's reading-relevant keys
-//! (docs/star-parity.md, "Settings surface") grouped into TOML tables. Every
+//! (docs/history/star-parity.md, "Settings surface") grouped into TOML tables. Every
 //! table keeps unknown keys in `extra`, so a newer or older textweaver never
 //! loses a user's settings.
 //!
@@ -943,7 +943,7 @@ impl Settings {
 
     /// Clamps values to their supported ranges. Returns a message for each
     /// value changed. Star validated nothing, so a bad value failed later
-    /// (docs/star-parity.md Part 3 §7 items 4 and 7).
+    /// (docs/history/star-parity.md Part 3 §7 items 4 and 7).
     pub fn validate(&mut self) -> Vec<String> {
         self.fix_ranges()
             .into_iter()
@@ -1559,7 +1559,7 @@ mod tests {
         assert_eq!(store.load().0.speech.prefer_voice.as_deref(), Some("david"));
     }
 
-    // ---- tests/test_settings.py, ported (docs/star-parity.md Part 3 §1.3) ----
+    // ---- tests/test_settings.py, ported (docs/history/star-parity.md Part 3 §1.3) ----
 
     /// Star test 1, `test_save_writes_valid_json`
     #[test]

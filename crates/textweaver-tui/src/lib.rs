@@ -93,7 +93,7 @@ pub fn input_wait(app: &textweaver_app::App, now: Instant) -> Duration {
 /// Status is applied before drawing, so a highlight step is on screen (and
 /// the hardware cursor, which screen readers and magnifiers follow, is on
 /// its word) as soon as it arrives, not after the next wait for a key
-/// (docs/audit-2026-09.md, finding R3).
+/// (docs/history/audit-2026-09.md, finding R3).
 pub fn frame<B: Backend>(terminal: &mut Terminal<B>, tui: &mut Tui) -> Result<Duration, B::Error> {
     tui.tick();
     // Apple's AVSpeechSynthesizer delivers audio and words through the

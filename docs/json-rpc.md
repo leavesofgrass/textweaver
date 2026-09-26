@@ -681,7 +681,7 @@ This client only reads while it waits for an answer. A real client, such as an e
 ## See also
 
 - [ADR-0015: JSON-RPC server](adr/0015-json-rpc.md): the design decision behind `tw serve`.
-- [Architecture](architecture.md): how the server shares the app core with the terminal reader and the GUI.
+- [Architecture](dev/architecture.md): how the server shares the app core with the terminal reader and the GUI.
 - [Keyboard reference](keyboard.md): every action id you can pass to `action` and `navigate`.
 - [Using textweaver with a screen reader](screen-readers.md): `--no-speech` and working with JAWS, NVDA, VoiceOver, and Orca.
 - [Troubleshooting](troubleshooting.md): the log file and common problems.

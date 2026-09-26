@@ -1,6 +1,6 @@
 # Star features not yet planned
 
-This inventory was made on Friday, September 25, 2026. It lists Star features (D:\star) that `docs/plan.md` and `docs/tasks.md` did not cover then. For each one it gives the Star code location, and the test file and count where Star has tests. Priorities are for students with print disabilities.
+This inventory was made on Friday, September 25, 2026. It lists Star features (D:\star) that `docs/history/plan.md` and `docs/history/tasks.md` did not cover then. For each one it gives the Star code location, and the test file and count where Star has tests. Priorities are for students with print disabilities.
 
 Each item now has a **status**, checked against `main` on Saturday, September 26, 2026:
 
@@ -9,7 +9,7 @@ Each item now has a **status**, checked against `main` on Saturday, September 26
 - **missing**: not done yet. The [roadmap](roadmap.md) says which of these come next.
 - **dropped**: out of scope on purpose.
 
-Updated after Phase 2 on Saturday, September 26, 2026. Items that Wave 3 takes on say which agent; the briefs are in [tasks.md](tasks.md). Wave 3 prefers pure-Rust, in-process solutions, so several items below name the Rust crate planned in place of Star's Python or C dependency.
+Updated after Phase 2 on Saturday, September 26, 2026. Items that Wave 3 takes on say which agent; the briefs are in [tasks.md](history/tasks.md). Wave 3 prefers pure-Rust, in-process solutions, so several items below name the Rust crate planned in place of Star's Python or C dependency.
 
 ## Covered by Wave 2
 
@@ -89,7 +89,7 @@ These areas were being built when the list was made. All are now on `main`:
 ## See also
 
 - [Roadmap](roadmap.md): what comes next, in order.
-- [Star parity reference](star-parity.md): what Star does, in detail.
+- [Star parity reference](history/star-parity.md): what Star does, in detail.
 - [Features page](site/features.html): what textweaver does today, with its status.
-- [Implementation plan](plan.md): the original scope.
+- [Implementation plan](history/plan.md): the original scope.
 - [Documentation index](README.md)

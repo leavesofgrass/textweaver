@@ -85,7 +85,7 @@ impl SpeechTrack {
 /// How much text continuous reading plans at a time, in chars (about ten
 /// minutes of speech). Planning the whole rest of a 10 MB document on the
 /// UI thread took a quarter of a second on every Read, every jump while
-/// reading, and every resume (docs/audit-2026-09.md, finding P1).
+/// reading, and every resume (docs/history/audit-2026-09.md, finding P1).
 pub(crate) const READ_WINDOW: usize = 32_768;
 
 /// The end of the reading window that starts at `start`: the end of the

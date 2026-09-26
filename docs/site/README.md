@@ -126,7 +126,7 @@ To change the shared styles, the header, or the shared script, edit the script a
 
 ## See also
 
-- [Architecture guide](../architecture.md): how the crates fit together, in text.
+- [Architecture guide](../dev/architecture.md): how the crates fit together, in text.
 - [Keyboard reference](../keyboard.md): the generated tables of every shortcut.
 - [Reading aids guide](../reading-aids.md): every reading aid and its settings.
 - [Themes guide](../themes.md): colors, contrast, and your own themes.

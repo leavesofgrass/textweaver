@@ -1,7 +1,7 @@
 //! Engine implementations, the backend registry, and backend selection.
 //!
 //! Selection follows Star (`star/tts/manager/_selection.py`, Part 2 section 3
-//! of `docs/star-parity.md`) with its bug B11 fixed:
+//! of `docs/history/star-parity.md`) with its bug B11 fixed:
 //!
 //! 1. An explicit preference (anything but `None`, `""`, or `"auto"`) wins
 //!    when that backend is available.

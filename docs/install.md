@@ -189,7 +189,7 @@ Run `tw backends` to see which engines textweaver found.
 
 **Updates.** The AppImage carries update information, so AppImageUpdate and similar tools can update it, downloading only what changed. `scripts/update.sh` updates an install made by the script.
 
-To build from source instead, run the install script without `--release`; it works on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine, and on other architectures. The Docker image in `docker/` has everything a build needs, including espeak-ng; see [docs/docker.md](docker.md).
+To build from source instead, run the install script without `--release`; it works on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine, and on other architectures. The Docker image in `docker/` has everything a build needs, including espeak-ng; see [docs/dev/docker.md](dev/docker.md).
 
 ## Checking a download
 
@@ -223,5 +223,5 @@ The [README](../README.md#building) has the build commands, and [CONTRIBUTING.md
 - [Speech engines and voices](speech.md): choosing an engine and a voice.
 - [Troubleshooting](troubleshooting.md): when something does not work.
 - [scripts/README.md](../scripts/README.md): every install and helper script.
-- [Releasing](releasing.md): how the packages are made.
+- [Releasing](dev/releasing.md): how the packages are made.
 - [Documentation index](README.md)

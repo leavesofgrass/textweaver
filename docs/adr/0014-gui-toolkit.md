@@ -115,5 +115,5 @@ Adopt wxDragon with `live-region` for the Wave 3 GUI, with these rules:
 
 - [Using textweaver with a screen reader](../screen-readers.md): the terminal reader with NVDA and JAWS today.
 - [Reading aids](../reading-aids.md#the-fonts-dialog-in-the-gui): the Fonts dialog.
-- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Architecture](../dev/architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
 - [Documentation index](../README.md)

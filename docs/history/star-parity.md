@@ -13,7 +13,7 @@ How to use this document:
 
 Each part ends with the bugs and quirks to fix rather than copy.
 
-> **Status update (Saturday, September 26, 2026).** This is a reference about Star, not about textweaver, so it is not changed as textweaver grows. The segmentation comparison with Star is regenerated in [the parity report](parity-report.md). What textweaver does today is in the [documentation index](README.md) and the [architecture guide](architecture.md); Star features not carried over yet are in [star-gaps.md](star-gaps.md).
+> **Status update (Saturday, September 26, 2026).** This is a reference about Star, not about textweaver, so it is not changed as textweaver grows. The segmentation comparison with Star is regenerated in [the parity report](parity-report.md). What textweaver does today is in the [documentation index](../README.md) and the [architecture guide](../dev/architecture.md); Star features not carried over yet are in [star-gaps.md](../star-gaps.md).
 
 ## Contents
 
@@ -159,8 +159,8 @@ Tag handling:
 | `i/em` | `*…*` (`:214-215`) |
 | Both bold and italic | `***…***` (`:210-211`) |
 | `code` outside `pre` | `` `…` `` (`:208-209`) |
-| `a` | `[text](href)`, or plain text when there is no href or text (`:84-87, 165-169`) |
-| **`img`** | `![ALT](src)`. ALT comes from `alt`, then `title`, then `aria-label`, then `""`, stripped. With `longdesc`, ` (long description: URL)` is appended (`:88-98`). An empty alt gives `![](src)`, which is spoken as nothing. |
+| `a` | `[text](../href)`, or plain text when there is no href or text (`:84-87, 165-169`) |
+| **`img`** | `![ALT](../src)`. ALT comes from `alt`, then `title`, then `aria-label`, then `""`, stripped. With `longdesc`, ` (long description: URL)` is appended (`:88-98`). An empty alt gives `![](../src)`, which is spoken as nothing. |
 | `figure` / `figcaption` | The caption becomes `*caption*` then a blank line (`:99-103, 146-156`) |
 | `br` | A literal `"\n"` in the buffer (`:104-105`). The soft-break join later turns it into a space. |
 | `hr` | `---` (`:106-108`) |
@@ -1956,7 +1956,7 @@ Porting notes:
 
 ## Part 3 — Settings, persistence, sync, authoring, autosave, announcements
 
-Source: Star v0.1.31 at `D:\star` (HEAD `e4b4ef8`). Every path below is relative to `D:\star`. `file:N` is a line number in that file. This section is part of `docs/star-parity.md`. Engineers porting to Rust (textweaver) should be able to work from it without re-reading Star.
+Source: Star v0.1.31 at `D:\star` (HEAD `e4b4ef8`). Every path below is relative to `D:\star`. `file:N` is a line number in that file. This section is part of `docs/history/star-parity.md`. Engineers porting to Rust (textweaver) should be able to work from it without re-reading Star.
 
 "Derived" means the behavior follows from reading the code and no test asserts it. Everything else is either tested or stated directly in the code.
 
@@ -2500,7 +2500,7 @@ Other shortcuts in this area: Ctrl+M adds a bookmark, Ctrl+N creates a new docum
 **`_qt_md_insert_image()`** (`:221-255`)
 - File filter: `Images (*.png *.jpg *.jpeg *.gif *.webp *.bmp *.svg);;All Files (*)`.
 - If the doc has a path, the reference is `relpath(src, doc_dir)` with `/` separators, unless it starts with `../../` (two or more levels up), in which case the absolute path is kept. On a different Windows drive the absolute path is used.
-- Inserts `![{stem}]({ref})`. The docstring promises a prompt offering the relative path and a selected alt text; **the code does neither**.
+- Inserts `![{stem}](../{ref})`. The docstring promises a prompt offering the relative path and a selected alt text; **the code does neither**.
 - Announces `Inserted image {filename}`.
 
 **New document** (`:23-58`)
@@ -2572,7 +2572,7 @@ Other shortcuts in this area: Ctrl+M adds a bookmark, Ctrl+N creates a new docum
 | 7 | `test_table_skeleton_shape` (131) | `(2,3)`: line 0 has 4 pipes, line 1 is only `-` after stripping pipes and spaces, 4 lines in total |
 | 8 | `test_insert_table_writes_markdown` (141) | Empty doc, answers cols 2 and rows 2 → contains `"| Column 1 | Column 2 |"` and `"| --- | --- |"`. Exact derived text: `"\n| Column 1 | Column 2 |\n| --- | --- |\n|   |   |\n|   |   |\n\n"` |
 | 9 | `test_add_table_row_matches_columns` (157) | `"| a | b | c |\n| --- | --- | --- |\n| 1 | 2 | 3 |"`, cursor at End → the last line has 4 pipes (`"|   |   |   |"`) |
-| 10 | `test_insert_image_uses_relative_path_when_saved` (171) | Doc `tmp/note.md`, image `tmp/pic.png` → contains `"![pic](pic.png)"` |
+| 10 | `test_insert_image_uses_relative_path_when_saved` (171) | Doc `tmp/note.md`, image `tmp/pic.png` → contains `"![pic](../pic.png)"` |
 | 11 | `test_live_markdown_reflects_unsaved_edits` (194) | Buffer `"# Draft heading\n\nlive body"` → `_qt_live_markdown()` equals it. `_qt_live_doc().markdown` contains "live body". `self.doc.markdown` is unchanged |
 | 12 | `test_export_markdown_writes_editor_buffer` (203) | Buffer `"edited but unsaved"` → the exported file has exactly that content |
 | 13-18 | autosave tests | See §5.3 |
@@ -2833,6 +2833,6 @@ Other shortcuts in this area: Ctrl+M adds a bookmark, Ctrl+N creates a new docum
 ## See also
 
 - [Star parity report](parity-report.md): the generated comparison of word, sentence, and paragraph boundaries with Star.
-- [Star features not yet planned](star-gaps.md): what textweaver has not carried over yet.
-- [ADR-0002: Text model](adr/0002-text-model.md) and [ADR-0005: Narration and the OffsetMap](adr/0005-narration-and-offset-map.md): the deliberate differences from Star.
-- [Documentation index](README.md)
+- [Star features not yet planned](../star-gaps.md): what textweaver has not carried over yet.
+- [ADR-0002: Text model](../adr/0002-text-model.md) and [ADR-0005: Narration and the OffsetMap](../adr/0005-narration-and-offset-map.md): the deliberate differences from Star.
+- [Documentation index](../README.md)

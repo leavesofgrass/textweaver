@@ -232,14 +232,14 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     Each crate has one job.
     <span id="crate-summary">This page lists every crate, its job, and how it depends on the others.</span></p>
     <noscript><p class="note">The interactive map needs JavaScript.
-    The <a href="../architecture.md">architecture guide</a> describes the same crates in text.</p></noscript>
+    The <a href="../dev/architecture.md">architecture guide</a> describes the same crates in text.</p></noscript>
 
     <h2>The dependency rule</h2>
     <p>Dependencies point one way: down.
     The core crate is at the bottom and depends on no other crate in the workspace.
     The speech crates receive utterances and never see a Document, so speech does not depend on the text model.
     The frontends sit at the top: they turn keys into commands, and the app crate does the work.</p>
-    <p>Read more in the <a href="../architecture.md">architecture guide</a>
+    <p>Read more in the <a href="../dev/architecture.md">architecture guide</a>
     and in <a href="../adr/0001-workspace-and-dependencies.md">ADR-0001: Workspace layout and dependency policy</a>.</p>
 
     <h2>Choose a crate</h2>
@@ -290,9 +290,9 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
   <div class="wrap">
     <h2>Related documents</h2>
     <ul>
-      <li><a href="../architecture.md">Architecture guide</a>: how the crates fit together, in text.</li>
+      <li><a href="../dev/architecture.md">Architecture guide</a>: how the crates fit together, in text.</li>
       <li><a href="../adr/0001-workspace-and-dependencies.md">ADR-0001: Workspace layout and dependency policy</a></li>
-      <li><a href="../plan.md">Implementation plan</a>: section 5 lists the crates and who owns them.</li>
+      <li><a href="../history/plan.md">Implementation plan</a>: section 5 lists the crates and who owns them.</li>
       <li><a href="README.md">About these pages</a></li>
       <li><a href="../README.md">Documentation index</a></li>
     </ul>
@@ -853,7 +853,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
   },
   {
    "adr_note": {
-    "href": "../plan.md#66-editing-editor",
+    "href": "../history/plan.md#66-editing-editor",
     "text": "Plan section 6.6: Editing"
    },
    "adrs": [],

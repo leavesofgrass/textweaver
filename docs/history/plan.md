@@ -2,7 +2,7 @@
 
 > Approved by Jon on 2026-09-25 (Friday). Approval started Phase 0 only; each later wave is reported before the next begins. Phase 0 amendments are recorded at the end of this document ("Phase 0 amendments") and in the ADRs; where they differ, the amendments and ADRs win.
 
-> **Status update (Saturday, September 26, 2026).** This plan is kept as it was approved. Phase 0, Wave 1, and Wave 2 are done and merged on `main`; releases `v0.1.0-alpha.1` to `v0.1.0-alpha.3` are tagged. Wave 2 grew well beyond the four agents in section 7: formats and PDF, speech and audio export, state and library, app wiring, the shared engine host, the Obsidian vault and dictation, a GUI spike, rendering and bulk conversion, native writers, math, citations, themes, reading aids, DECtalk, settings import and export, scripts, bundled fonts, and an audit with its fixes. `docs/tasks.md` is the record of who did what. The `paperback` feature in section 6.2 is reserved and does nothing, because PDF is read natively ([ADR-0010](adr/0010-pdf-loader.md)). Wave 3 (the GUI) has not started. For the system as built, read [the architecture guide](architecture.md) and the [documentation index](README.md).
+> **Status update (Saturday, September 26, 2026).** This plan is kept as it was approved. Phase 0, Wave 1, and Wave 2 are done and merged on `main`; releases `v0.1.0-alpha.1` to `v0.1.0-alpha.3` are tagged. Wave 2 grew well beyond the four agents in section 7: formats and PDF, speech and audio export, state and library, app wiring, the shared engine host, the Obsidian vault and dictation, a GUI spike, rendering and bulk conversion, native writers, math, citations, themes, reading aids, DECtalk, settings import and export, scripts, bundled fonts, and an audit with its fixes. `docs/history/tasks.md` is the record of who did what. The `paperback` feature in section 6.2 is reserved and does nothing, because PDF is read natively ([ADR-0010](../adr/0010-pdf-loader.md)). Wave 3 (the GUI) has not started. For the system as built, read [the architecture guide](../dev/architecture.md) and the [documentation index](../README.md).
 
 ## 1. Context
 
@@ -28,7 +28,7 @@ textweaver is a Rust-native reimplementation of Star's core: read documents alou
 
 ## 3. What we preserve from Star, and what we fix
 
-Inventories were taken of `star/documents/`, `star/tts/`, `star/ttstext/`, `star/gui/`, `star/tui/`, `star/settings.py`, `star/library.py`, `star/annotations.py`, `star/sync.py`, `star/search.py`, `star/fulltext.py`, and `docs/`. They are `docs/star-parity.md` and are handed to the subagents as reference.
+Inventories were taken of `star/documents/`, `star/tts/`, `star/ttstext/`, `star/gui/`, `star/tui/`, `star/settings.py`, `star/library.py`, `star/annotations.py`, `star/sync.py`, `star/search.py`, `star/fulltext.py`, and `docs/`. They are `docs/history/star-parity.md` and are handed to the subagents as reference.
 
 **Preserve:**
 - Reading units: continuous from a word; sentence next / previous / replay (previous rewinds to the sentence start when more than 3 words in); paragraph; heading (read-aloud and scroll-only); table; chapter; Speech Cursor line mode saying "blank" on empty lines.
@@ -71,7 +71,7 @@ textweaver/
     textweaver-cli/       `tw`: main.rs + cmd/ (text.rs info.rs search.rs → A; speak.rs voices.rs backends.rs → B; marks.rs migrate.rs → C; open.rs serve.rs → D)
   xtask/                  keyboard.md + star-parity generation, fixtures, release                             (C for keymap docs, A for parity corpus)
   tools/                  star_parity_export.py (one-off Star export)                                         (orchestrator)
-  docs/adr/  docs/plan.md  docs/star-parity.md  docs/keyboard.md  docs/tasks.md  docs/docker.md             (orchestrator; agents append)
+  docs/adr/  docs/history/plan.md  docs/history/star-parity.md  docs/keyboard.md  docs/history/tasks.md  docs/dev/docker.md             (orchestrator; agents append)
   fixtures/                                                                                                   (A creates; all may add under their own subdir)
 ```
 
@@ -129,12 +129,12 @@ Undo / redo of grouped `core::Edit`s over a `Rope`; Markdown ops as pure `(text,
 2. Workspace skeleton: every crate exists and compiles; shared lints; CI (fmt, clippy `-D warnings`, test, doc on ubuntu / macos / windows).
 3. `textweaver-core` complete and tested.
 4. Contract stubs in each owned crate, `todo!()`-free.
-5. ADRs 0001–0006, `docs/star-parity.md`, `docs/tasks.md`, fixtures, `fixtures/star-parity/`.
+5. ADRs 0001–0006, `docs/history/star-parity.md`, `docs/history/tasks.md`, fixtures, `fixtures/star-parity/`.
 6. Push `main`. Report to Jon; **Wave 1 starts only after that report**.
 
 ### Wave 1 — four subagents in parallel (M1–M3 scope)
 
-See `docs/tasks.md` for the briefs, ownership, and acceptance criteria.
+See `docs/history/tasks.md` for the briefs, ownership, and acceptance criteria.
 
 ### Integration 1 (orchestrator)
 
@@ -167,7 +167,7 @@ GUI on wxDragon (with the `live-region` announcer), native word-boundary backend
 ## 9. Documentation
 
 - ADRs 0001–0006; later: PDF loader choice, GUI toolkit, native backends.
-- `docs/plan.md`, `docs/star-parity.md`, `docs/keyboard.md` (generated), `docs/tasks.md`, `docs/docker.md`.
+- `docs/history/plan.md`, `docs/history/star-parity.md`, `docs/keyboard.md` (generated), `docs/history/tasks.md`, `docs/dev/docker.md`.
 - Rustdoc on every public item (`missing_docs` is a warning and CI denies warnings).
 - The Obsidian wiki: domain page `textweaver`, one session note per phase and wave under `meta/textweaver-releases/`, and concept notes for the designs worth keeping (OffsetMap, speech threading).
 - In `leavesofgrass/star`, `docs/textweaver.md` on branch `claude/textweaver-plan-m42jiy` pointing to the new repo and this plan (pushed in Phase 0, commit `06a5995`; not merged into star's `main`).
@@ -207,8 +207,8 @@ Decisions taken while writing the contract. Each is reflected in the code and th
 
 ## See also
 
-- [Architecture](architecture.md): the system as built, with links to every ADR.
+- [Architecture](../dev/architecture.md): the system as built, with links to every ADR.
 - [Tasks and ownership](tasks.md): the work log of every wave and agent.
-- [Star parity reference](star-parity.md) and [Star features not yet planned](star-gaps.md): what was carried over from Star, and what was not.
-- [CHANGELOG.md](../CHANGELOG.md): what each release contains.
-- [Documentation index](README.md)
+- [Star parity reference](star-parity.md) and [Star features not yet planned](../star-gaps.md): what was carried over from Star, and what was not.
+- [CHANGELOG.md](../../CHANGELOG.md): what each release contains.
+- [Documentation index](../README.md)

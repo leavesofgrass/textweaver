@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # voxin-docker.sh: run textweaver's Eloquence tests, or tw speak, in the
 # Docker development container with your Voxin installation mounted
-# (compose.voxin.yaml). Wraps the command lines in docs/docker.md.
+# (compose.voxin.yaml). Wraps the command lines in docs/dev/docker.md.
 #
 # Shell: bash (3.2 or later); works from Git Bash on Windows. See
 # scripts/README.md, or run with --help.
@@ -117,7 +117,7 @@ VOLUME="${VOXIN_VOLUME:-emacspeak-docker_voxin}"
 if [ "$DRY_RUN" = 0 ]; then
   command -v docker > /dev/null 2>&1 || die "docker is not installed or not on PATH."
   if ! docker volume inspect "$VOLUME" > /dev/null 2>&1; then
-    die "The Docker volume $VOLUME does not exist. Install Voxin with emacspeak-docker's install-outloud, or set VOXIN_VOLUME to the volume that holds /opt/oralux. See docs/docker.md."
+    die "The Docker volume $VOLUME does not exist. Install Voxin with emacspeak-docker's install-outloud, or set VOXIN_VOLUME to the volume that holds /opt/oralux. See docs/dev/docker.md."
   fi
 fi
 
