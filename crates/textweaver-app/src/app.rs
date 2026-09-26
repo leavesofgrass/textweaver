@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use textweaver_a11y::{Announcer, LogAnnouncer, Priority, StatusLineAnnouncer, Verbosity};
+use textweaver_a11y::{
+    AccessMode, Announcer, Channel, LogAnnouncer, Priority, StatusLineAnnouncer, Verbosity,
+};
 use textweaver_core::{CharPos, CharRange};
 use textweaver_editor::autosave::RecoverySnapshot;
 use textweaver_formats::{LoadError, Registry, Source};
@@ -300,6 +302,13 @@ pub struct App {
     /// Text copied or cut, waiting for the frontend
     /// ([`App::take_clipboard`]).
     pub(crate) clipboard: Option<String>,
+    /// The accessibility mode in effect (`[accessibility] mode`, or
+    /// `--mode` for this run).
+    pub(crate) access_mode: AccessMode,
+    /// The first-run question about hybrid mode, waiting for y or n.
+    pub(crate) pending_hybrid: Option<String>,
+    /// Continuous reading on the status line (screen-reader mode).
+    pub(crate) screen_say_all: Option<crate::access::ScreenSayAll>,
     /// Authoring and navigation state (structure while editing, outline,
     /// citations, export, spelling, links; Agent P2b).
     pub(crate) authoring: crate::authoring_state::Authoring,
@@ -313,6 +322,8 @@ impl App {
     pub fn new(config: AppConfig) -> Self {
         let speech_caps = config.speech.capabilities();
         let library_sync = Self::make_library_sync(&config.settings);
+        let access_mode =
+            crate::access::access_mode_from_setting(config.settings.accessibility.mode);
         let mut keymap = config.keymap;
         keymap.set_character_keys(config.settings.keyboard.character_keys);
         let mut app = App {
@@ -360,6 +371,9 @@ impl App {
             pending_list_delete: None,
             voice_list: Vec::new(),
             clipboard: None,
+            access_mode,
+            pending_hybrid: None,
+            screen_say_all: None,
             authoring: crate::authoring_state::Authoring::default(),
         };
         app.apply_voice_settings();
@@ -389,6 +403,7 @@ impl App {
     /// [`Command::Confirm`].
     pub fn confirmation_pending(&self) -> bool {
         self.pending_confirm.is_some()
+            || self.pending_hybrid.is_some()
             || self.pending_import.is_some()
             || self.pending_disk.is_some()
             || self.pending_list_delete.is_some()
@@ -398,6 +413,9 @@ impl App {
     /// Answers a pending confirmation.
     fn confirm(&mut self, answer: crate::command::Confirm) -> Vec<Effect> {
         use crate::command::Confirm;
+        if self.pending_hybrid.is_some() {
+            return self.confirm_hybrid(answer);
+        }
         if self.pending_disk.is_some() {
             return self.confirm_disk(answer);
         }
@@ -510,29 +528,39 @@ impl App {
         if text.is_empty() {
             return;
         }
-        let shown = match self.status.current.as_deref() {
-            Some(before) if !before.is_empty() => format!("{before} {text}"),
-            _ => text.to_owned(),
-        };
-        self.status.announce(&shown, priority);
+        let route = self.route(Channel::Message);
+        if route.status {
+            let text = self.screen_text(text);
+            let shown = match self.status.current.as_deref() {
+                Some(before) if !before.is_empty() => format!("{before} {text}"),
+                _ => text,
+            };
+            self.status.announce(&shown, priority);
+        }
         self.announcer.announce(text, priority);
         let reading = matches!(self.playback, Playback::Reading);
-        if self.self_voicing && (!reading || priority == Priority::Assertive) {
+        if route.speak && (!reading || priority == Priority::Assertive) {
             self.speech.say(text, SayMode::Queue);
         }
     }
 
     /// Announces at a minimum verbosity. Spoken announcements never
-    /// interrupt reading unless assertive; the status line always updates.
+    /// interrupt reading unless assertive. The accessibility mode decides
+    /// whether a message is spoken, shown on the status line, or both
+    /// ([`Channel::Message`]; with a screen reader it is only shown).
     pub(crate) fn say_at(&mut self, text: &str, min: Verbosity, priority: Priority) {
         let current = self.settings.speech.verbosity;
         if current < min || text.is_empty() {
             return;
         }
-        self.status.announce(text, priority);
+        let route = self.route(Channel::Message);
+        if route.status {
+            let shown = self.screen_text(text);
+            self.status.announce(&shown, priority);
+        }
         self.announcer.announce(text, priority);
         let reading = matches!(self.playback, Playback::Reading);
-        if self.self_voicing && (!reading || priority == Priority::Assertive) {
+        if route.speak && (!reading || priority == Priority::Assertive) {
             self.speech.say(text, SayMode::Announce);
         }
     }
@@ -555,7 +583,8 @@ impl App {
     /// Shows `text` on the status line only (used while reading, when the
     /// reading itself is the audible feedback).
     pub(crate) fn show(&mut self, text: &str) {
-        self.status.announce(text, Priority::Polite);
+        let shown = self.screen_text(text);
+        self.status.announce(&shown, Priority::Polite);
         self.announcer.announce(text, Priority::Polite);
     }
 
@@ -907,7 +936,7 @@ impl App {
     /// [`POSITION_SAVE_INTERVAL`](Self::POSITION_SAVE_INTERVAL) when it
     /// moved, so a crash loses little.
     pub fn tick(&mut self, now: Instant) -> Vec<Effect> {
-        let rsvp_moved = self.rsvp_tick(now);
+        let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
         let authored = self.authoring_tick(now);
         let asked = self.disk_tick(now);
         if !asked.is_empty() {
@@ -1309,6 +1338,7 @@ impl App {
             A::NextTheme => self.next_theme(),
             A::ToggleLineNumbers => self.toggle_line_numbers(),
             A::ToggleCharacterKeys => self.toggle_character_keys(),
+            A::CycleAccessMode => self.cycle_access_mode(),
             A::BionicToggle => self.bionic_toggle(),
             A::RulerCycle => self.ruler_cycle(),
             A::CommandPalette => return self.prompt(PromptPurpose::CommandPalette),

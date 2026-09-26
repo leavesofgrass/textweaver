@@ -8,7 +8,7 @@
 //! line, page), scrolling, and Speech Cursor line moves do not. History moves
 //! themselves never record.
 
-use textweaver_a11y::Verbosity;
+use textweaver_a11y::{Channel, Verbosity};
 use textweaver_core::{CharPos, CharRange, Direction, MarkerKind, Unit};
 use textweaver_speech::Earcon;
 use textweaver_text::units::unit_at;
@@ -100,7 +100,8 @@ impl App {
             s.speech_cursor_line = Some(line);
             self.scroll_to_line(line);
             self.speech_cursor_read();
-            self.show(message);
+            // What is read aloud is not copied for a screen reader too.
+            self.show_as(Channel::Line, message);
             return;
         }
         self.scroll_to_cursor();
@@ -108,17 +109,28 @@ impl App {
             (ReadAfter::Always, _) => {
                 self.stop_speech();
                 self.read_from(target);
-                self.show(message);
+                self.show_nav_while_reading(message);
             }
             (ReadAfter::Follow, Playback::Reading) => {
                 self.read_from(target);
-                self.show(message);
+                self.show_nav_while_reading(message);
             }
             (ReadAfter::Follow, _) => {
                 self.follow_jump(target);
                 self.tell(message);
             }
         }
+    }
+
+    /// Shows where a jump landed while reading restarts there: on the
+    /// status line unless the reading is aloud and a screen reader would
+    /// read the same text too (or the screen is kept quiet). Continuous
+    /// reading on the status line shows the sentence itself instead.
+    fn show_nav_while_reading(&mut self, message: &str) {
+        if self.screen_say_all_running() {
+            return;
+        }
+        self.show_as(Channel::Line, message);
     }
 
     /// The unit containing `pos`, else the one before it, else the one after.
@@ -573,7 +585,7 @@ impl App {
                     _ => said,
                 };
                 self.caret_to(t.range.start);
-                self.speak_content(&said);
+                self.speak_content(Channel::Caret, &said);
             }
             None => {
                 self.speech.earcon(Earcon::Boundary);
@@ -664,7 +676,7 @@ impl App {
         if let Some(s) = self.session.as_mut() {
             s.goal_column = Some(goal);
         }
-        self.speak_content(&text);
+        self.speak_content(Channel::Caret, &text);
     }
 
     /// Page moves: by the viewport height less four lines (Star's rule);

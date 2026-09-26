@@ -32,6 +32,7 @@ const SECTIONS: &[(&str, &str)] = &[
     ("EditingSettings", "editing"),
     ("LibrarySettings", "library"),
     ("KeyboardSettings", "keyboard"),
+    ("AccessibilitySettings", "accessibility"),
     ("ReadingAidsSettings", "reading_aids"),
 ];
 

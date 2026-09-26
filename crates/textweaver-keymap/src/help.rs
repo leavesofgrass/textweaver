@@ -4,7 +4,7 @@
 
 use std::fmt::Write as _;
 
-use crate::{ActionId, Binding, Category, Frontend, Keymap, Layer, Platform};
+use crate::{ActionId, Binding, Category, Frontend, Keymap, Layer, Platform, Preset};
 
 /// One action and its bindings.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -201,6 +201,7 @@ pub fn keyboard_markdown() -> String {
             );
         }
     }
+    out.push_str(&preset_markdown(Preset::ScreenReader));
     let mut term_off = term.clone();
     term_off.set_character_keys(false);
     let mut gui_off = gui.clone();
@@ -232,6 +233,65 @@ pub fn keyboard_markdown() -> String {
     );
     for &action in ActionId::ALL.iter().filter(|a| a.is_palette_command()) {
         let _ = writeln!(out, "| {} | `{}` |", action.help(), action.id());
+    }
+    out
+}
+
+/// The section of `docs/keyboard.md` for a preset: each key it changes,
+/// what the key did before and does now, and where the displaced commands
+/// went. Empty for the default preset.
+pub fn preset_markdown(preset: Preset) -> String {
+    if preset.changes().is_empty() {
+        return String::new();
+    }
+    let term = Keymap::defaults(Platform::Linux, Frontend::Terminal);
+    let changed = Keymap::with_preset(Platform::Linux, Frontend::Terminal, preset);
+    let mut out = format!(
+        "\n## The {id} preset\n\n\
+         A second set of keys for people used to a screen reader's browse mode: `h` and `Shift+H` for headings, `1` to `6` for heading levels, `l` and `Shift+L` for lists, `i` for list items, `t` for tables, and `k` and `Shift+K` for links. Choose it in `settings.toml`:\n\n\
+         ```toml\n[keyboard]\npreset = \"{id}\"\n```\n\n\
+         Your `keymap.toml` overrides apply on top of it. The tables above show the default keys; the preset changes only these, in both frontends:\n\n\
+         | Key | Default keys | {id} preset |\n|---|---|---|\n",
+        id = preset.id()
+    );
+    for (s, action) in preset.changes() {
+        let (layer, chord) = s.split_once(':').unwrap_or(("b", s));
+        let layer = Layer::from_prefix(layer).unwrap_or(Layer::Browse);
+        let Ok(parsed) = chord.parse::<crate::KeyChord>() else {
+            continue;
+        };
+        let before = term
+            .bindings()
+            .iter()
+            .find(|b| b.chord == parsed && b.layer == layer)
+            .map_or_else(|| "nothing".to_owned(), |b| b.action.help().to_owned());
+        // A backslash needs no escape inside a code span.
+        let key = parsed.to_string();
+        let _ = writeln!(
+            out,
+            "| `{key}` ({}) | {before} | {} |",
+            layer.name(),
+            action.help()
+        );
+    }
+    out.push_str("\nWhere the commands those keys had went, in the terminal:\n\n");
+    let mut moved: Vec<ActionId> = Vec::new();
+    for (s, _) in preset.changes() {
+        let chord = s.split_once(':').map_or(*s, |(_, c)| c);
+        if let Ok(parsed) = chord.parse::<crate::KeyChord>()
+            && let Some(b) = term.bindings().iter().find(|b| b.chord == parsed)
+            && !moved.contains(&b.action)
+        {
+            moved.push(b.action);
+        }
+    }
+    for action in moved {
+        let _ = writeln!(
+            out,
+            "- {}: {}.",
+            action.help(),
+            cell(action, &changed.bindings_for(action))
+        );
     }
     out
 }
@@ -276,5 +336,18 @@ mod tests {
         }
         assert!(md.contains("| Move to the next sentence | `Alt+.`, `.` (browse) | `Alt+.`, `.` (browse) | `next_sentence` |"));
         assert!(md.contains("`` Alt+` ``"));
+    }
+
+    #[test]
+    fn markdown_documents_the_screen_reader_preset() {
+        let md = keyboard_markdown();
+        assert!(md.contains("## The screen-reader preset"), "{md}");
+        assert!(md.contains("preset = \"screen-reader\""));
+        assert!(md.contains(
+            "| `Shift+H` (browse) | Go back to where you were before the last jump | Move to the previous heading without reading |"
+        ));
+        assert!(md.contains("| `k` (browse) | Scroll up one line without moving the cursor | Move to the next link |"));
+        assert!(md.contains("- Go back to where you were before the last jump: `Alt+Left`, `Backspace` (browse)."), "{md}");
+        assert!(preset_markdown(Preset::Default).is_empty());
     }
 }

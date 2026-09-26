@@ -16,6 +16,10 @@ pub struct Args {
     /// Do not speak (use with a screen reader).
     #[arg(long)]
     pub no_speech: bool,
+    /// Accessibility mode for this run: self-voicing, hybrid, or
+    /// screen-reader (not saved).
+    #[arg(long, value_name = "MODE")]
+    pub mode: Option<textweaver_tui::AccessMode>,
     /// Speech backend id (see `tw backends`).
     #[arg(long)]
     pub backend: Option<String>,
@@ -36,6 +40,7 @@ pub struct Args {
 fn options(args: &Args) -> textweaver_tui::Options {
     textweaver_tui::Options {
         no_speech: args.no_speech,
+        mode: args.mode,
         backend: args.backend.clone(),
         home: args.home.clone(),
         theme: args.theme.clone(),
@@ -60,6 +65,7 @@ mod tests {
         let args = Args {
             file: "doc.md".into(),
             no_speech: true,
+            mode: Some(textweaver_tui::AccessMode::Hybrid),
             backend: Some("espeak".into()),
             home: Some("state".into()),
             theme: Some("light".into()),
@@ -68,6 +74,7 @@ mod tests {
         let o = options(&args);
         assert_eq!(o.log.as_deref(), Some("info"));
         assert!(o.no_speech);
+        assert_eq!(o.mode, Some(textweaver_tui::AccessMode::Hybrid));
         assert_eq!(o.backend.as_deref(), Some("espeak"));
         assert_eq!(o.home, Some(PathBuf::from("state")));
         assert_eq!(o.theme.as_deref(), Some("light"));
@@ -78,6 +85,7 @@ mod tests {
         let args = Args {
             file: "definitely/not/here.txt".into(),
             no_speech: true,
+            mode: None,
             backend: None,
             home: None,
             theme: None,

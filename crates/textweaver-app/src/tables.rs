@@ -163,7 +163,7 @@ impl App {
             ));
         }
         self.caret_to(cell.start);
-        self.speak_content(&msg);
+        self.speak_content(textweaver_a11y::Channel::Caret, &msg);
     }
 
     /// "Table, row 2 of 5, column 3 of 4." for "say position", when the

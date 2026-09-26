@@ -19,6 +19,12 @@ struct Args {
     /// screen reader, which reads the status line and follows the cursor).
     #[arg(long)]
     no_speech: bool,
+    /// Accessibility mode for this run: self-voicing (textweaver speaks
+    /// everything), hybrid (textweaver reads documents aloud; your screen
+    /// reader speaks messages and typing), or screen-reader (textweaver is
+    /// silent). Not saved; Alt+Shift+A changes and saves it.
+    #[arg(long, value_name = "MODE")]
+    mode: Option<textweaver_tui::AccessMode>,
     /// Speech backend id (see `tw backends`); overrides the settings.
     #[arg(long)]
     backend: Option<String>,
@@ -39,6 +45,7 @@ fn main() -> Result<()> {
     let args = Args::parse();
     let opts = Options {
         no_speech: args.no_speech,
+        mode: args.mode,
         backend: args.backend,
         home: args.home,
         theme: args.theme,

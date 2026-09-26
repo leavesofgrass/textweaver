@@ -431,6 +431,20 @@ impl App {
             map.to_canonical(&rendered, &s.doc, caret)
         };
         let start = crate::text_util::word_start(&rendered, start);
+        // Without textweaver's voice (screen-reader mode), the rendered
+        // paragraph goes on the status line for the screen reader instead.
+        if !self.route(textweaver_a11y::Channel::Reading).speak {
+            let para =
+                textweaver_text::units::unit_at(&rendered, start, textweaver_core::Unit::Paragraph)
+                    .unwrap_or_else(|| CharRange::new(start, rendered.end()));
+            let text = crate::lists::one_line(
+                &rendered.slice(CharRange::new(start, para.end.max(start))),
+                crate::access::STATUS_TEXT_LIMIT,
+            );
+            let text = self.screen_text(&text);
+            self.show_as(textweaver_a11y::Channel::Reading, &text);
+            return vec![Effect::Redraw];
+        }
         let end = (start.0 + LISTEN_LIMIT).min(rendered.len_chars());
         let policy = self.narration_policy();
         let utterances: Vec<Utterance> =

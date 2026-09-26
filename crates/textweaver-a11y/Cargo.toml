@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-a11y"
-description = "textweaver accessibility: announcer trait, verbosity, speech and status-line announcers"
+description = "textweaver accessibility: announcer trait, verbosity, speech and status-line announcers, accessibility modes, screen reader detection"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -18,6 +18,14 @@ live-region = []
 [dependencies]
 textweaver-core.workspace = true
 serde.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+# Screen reader detection: the system flag and the process list.
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_UI_WindowsAndMessaging",
+] }
 
 [dev-dependencies]
 serde_json.workspace = true

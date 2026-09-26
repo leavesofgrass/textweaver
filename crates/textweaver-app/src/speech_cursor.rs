@@ -40,10 +40,15 @@ impl App {
         self.scroll_to_line(line);
         self.speech_cursor_read();
         // The line read is on the status line too, for screen readers that
-        // follow it (with `--no-speech` nothing else is heard).
-        let text = self.status_text().to_owned();
+        // follow it (with `--no-speech` nothing else is heard), unless
+        // textweaver reads it aloud to a screen reader user (hybrid).
+        let text = if self.route(textweaver_a11y::Channel::Line).status {
+            format!(": {}", self.status_text())
+        } else {
+            String::new()
+        };
         self.show(&format!(
-            "Speech Cursor on, line {}: {text}. Up and Down read lines, Enter reads on, Tab or Escape leaves.",
+            "Speech Cursor on, line {}{text}. Up and Down read lines, Enter reads on, Tab or Escape leaves.",
             line + 1
         ));
     }

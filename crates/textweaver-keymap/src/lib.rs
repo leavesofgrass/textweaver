@@ -7,6 +7,8 @@
 //! - [`Keymap`]: defaults plus user overrides keyed by action id, looked up
 //!   by [`Layer`] (global chords, browse-mode single keys, Speech Cursor,
 //!   edit mode), with conflict detection.
+//! - [`Preset`]: named sets of changes to the defaults (`[keyboard]
+//!   preset`), such as the screen-reader preset.
 //! - [`help`]: the in-app keyboard help and `docs/keyboard.md`, generated
 //!   from the same table by `cargo xtask keyboard`.
 //!
@@ -16,8 +18,10 @@ mod action;
 mod chord;
 pub mod help;
 mod keymap;
+mod preset;
 
 pub use action::{ActionId, Category};
 pub use chord::{ChordError, Key, KeyChord, Modifiers};
-pub use help::{HelpEntry, HelpSection, keyboard_markdown};
+pub use help::{HelpEntry, HelpSection, keyboard_markdown, preset_markdown};
 pub use keymap::{Binding, Conflict, Frontend, Keymap, Layer, Platform};
+pub use preset::Preset;

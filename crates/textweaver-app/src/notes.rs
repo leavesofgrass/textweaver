@@ -661,8 +661,11 @@ impl App {
         }
         let (id, text) = (n.id.clone(), collapse(&n.note, 80));
         self.authoring.note_signalled = Some(id);
-        self.speech.tone(880.0, 40);
-        self.speech.tone(1320.0, 60);
+        // The earcon only where textweaver's voice is reading.
+        if self.route(textweaver_a11y::Channel::Reading).speak {
+            self.speech.tone(880.0, 40);
+            self.speech.tone(1320.0, 60);
+        }
         if self.settings.speech.verbosity >= Verbosity::Normal {
             self.show(&format!("Note: {text}"));
         }

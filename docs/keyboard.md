@@ -261,11 +261,43 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Switch to the next color theme | `F5` | `F5` | `next_theme` |
 | Show or hide line numbers | `F6` | `F6` | `toggle_line_numbers` |
 | Turn single-key shortcuts on or off, so dictation and typing never trigger commands | `F9` | `F9` | `toggle_character_keys` |
+| Cycle the accessibility mode: self-voicing, hybrid, or screen reader | `Alt+Shift+A` | `Alt+Shift+A` | `cycle_access_mode` |
 | Turn bionic reading on or off: the start of each word in bold | `Alt+Shift+B` | `Alt+Shift+B` | `bionic_toggle` |
 | Cycle the reading ruler: off, current line, ruler | `Alt+Shift+U` | `Alt+Shift+U` | `ruler_cycle` |
 | Run any command by name | `F2`, `Alt+X`, `:` (browse) | `F2`, `:` (browse) | `command_palette` |
 | List keyboard shortcuts | `?` (browse) | `F3`, `?` (browse) | `keyboard_help` |
 | Open the help | `F1` | `F1` | `help` |
+
+## The screen-reader preset
+
+A second set of keys for people used to a screen reader's browse mode: `h` and `Shift+H` for headings, `1` to `6` for heading levels, `l` and `Shift+L` for lists, `i` for list items, `t` for tables, and `k` and `Shift+K` for links. Choose it in `settings.toml`:
+
+```toml
+[keyboard]
+preset = "screen-reader"
+```
+
+Your `keymap.toml` overrides apply on top of it. The tables above show the default keys; the preset changes only these, in both frontends:
+
+| Key | Default keys | screen-reader preset |
+|---|---|---|
+| `Shift+H` (browse) | Go back to where you were before the last jump | Move to the previous heading without reading |
+| `Backspace` (browse) | nothing | Go back to where you were before the last jump |
+| `l` (browse) | Say the line at the cursor | Move to the next list |
+| `Shift+L` (browse) | Go forward again after going back | Move to the previous list |
+| `\` (browse) | nothing | Go forward again after going back |
+| `k` (browse) | Scroll up one line without moving the cursor | Move to the next link |
+| `Shift+K` (browse) | Say the address of the link at the cursor | Move to the previous link |
+| `Ctrl+Up` (browse) | nothing | Scroll up one line without moving the cursor |
+| `Ctrl+Down` (browse) | nothing | Scroll down one line without moving the cursor |
+
+Where the commands those keys had went, in the terminal:
+
+- Go back to where you were before the last jump: `Alt+Left`, `Backspace` (browse).
+- Say the line at the cursor: `Alt+Shift+L`.
+- Go forward again after going back: `Alt+Right`, `\` (browse).
+- Scroll up one line without moving the cursor: `Ctrl+Up` (browse).
+- Say the address of the link at the cursor: `Alt+Shift+K`.
 
 ## Command palette only, with single-key shortcuts off
 

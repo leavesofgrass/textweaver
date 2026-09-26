@@ -478,7 +478,8 @@ impl App {
             }
         });
         self.show(&said);
-        if self.settings.editing.echo_deletions && self.self_voicing {
+        if self.settings.editing.echo_deletions && self.route(textweaver_a11y::Channel::Echo).speak
+        {
             self.speech.say(said, textweaver_speech::SayMode::Interrupt);
         }
         vec![Effect::Redraw]

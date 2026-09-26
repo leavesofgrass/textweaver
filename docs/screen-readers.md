@@ -1,83 +1,188 @@
 # Using textweaver with a screen reader
 
-This guide is for people who use a screen reader, such as JAWS, NVDA, VoiceOver, or Orca, and want to use textweaver's terminal reader alongside it. It explains the two ways to work, how to avoid hearing everything twice, what your screen reader can read, which terminals to use, and which keys may clash. It also covers braille displays and the GUI preview.
+This guide is for people who use a screen reader, such as JAWS, NVDA, VoiceOver, or Orca, and want to use textweaver's terminal reader alongside it. It explains the three accessibility modes, how to stop hearing things twice, what your screen reader can read, the settings to try in NVDA and JAWS, which terminals to use, and which keys may clash. It also covers braille displays and the GUI preview, and ends with a checklist for trying each mode.
 
-textweaver's keys are the same whichever way you work. See [Reading and moving around](reading.md) and the [keyboard reference](keyboard.md).
+textweaver's keys are the same in every mode. See [Reading and moving around](reading.md) and the [keyboard reference](keyboard.md).
 
-What this guide says about textweaver comes from its code. Which combinations of screen reader, terminal, and system have been tried by ear is stated for each; where it says untested, please tell us how it goes (see [Troubleshooting](troubleshooting.md), "Report a bug").
+What this guide says about textweaver comes from its code. Screen reader and terminal settings are marked **verify on Jon's machine** until they have been tried by ear. Where something is untested, please tell us how it goes (see [Troubleshooting](troubleshooting.md), "Report a bug").
 
-## Two ways to work
+## Three modes
 
-### Self-voicing: textweaver speaks
+textweaver can speak with its own voice, write on its status line, or both. A screen reader that reads new text in a terminal speaks the status line too. The accessibility mode decides which of the two each kind of output uses, so you hear it once.
 
-This is the default. textweaver reads documents aloud with its own voice, highlights each word, and speaks every announcement: "Paused.", "Heading level 2: Methods", "No next heading.", and so on.
+### Self-voicing
 
-Choose this when you want textweaver's voice, rate, and word highlighting for long reading, such as Eloquence at 400 words per minute, while your screen reader stays at its own settings for everything else.
+textweaver speaks everything with its own voice: reading, messages such as "Paused." or "Heading level 2: Methods", typing echo, and the word or line a caret key reaches. Each message is also written on the status line.
 
-### --no-speech: your screen reader speaks
+This is the default, and it is what textweaver always did. Choose it when you use textweaver without a screen reader, or when you quiet your screen reader in the terminal (see [Avoid hearing things twice](#avoid-hearing-things-twice)).
 
-```bash
-textweaver --no-speech essay.md
+### Hybrid
+
+textweaver reads documents aloud: continuous reading, and reading a character, word, sentence, line, paragraph, or selection. That reading includes the narration only textweaver can do: math in words, table rows with their headers, citations, and structure such as "heading level 2" and "list with 3 items".
+
+Your screen reader does the rest from the status line and the cursor: messages, typing echo, and caret moves. textweaver does not speak those, and it does not copy what it reads aloud onto the status line.
+
+Hybrid is recommended when a screen reader is running. You keep textweaver's voice and rate for long reading, and your screen reader's voice for everything else.
+
+### Screen reader
+
+textweaver never speaks on its own. Everything goes to the status line, written for your screen reader:
+
+- Messages, moves, and questions, as in the other modes.
+- The word, line, or character a caret key or a "say" key reaches.
+- Text you ask to hear, such as the sentence (`s`) or the line (`l`), narrated as textweaver would say it: math in words, and tables with their headers.
+
+Continuous reading still works. By default, **Space** moves through the text a sentence at a time. Each sentence goes to the status line for your screen reader, the cursor moves with it, and the next one follows after the time textweaver's rate allows. Press **+** or **-** to match the pace to your screen reader. **Space** pauses and resumes, and **Escape** stops. To have textweaver's own voice read instead, set `say_all = "voice"`; that is the only thing it then says.
+
+You can also move through the text yourself, by sentence (`.`), line (**Down**), or word (**Right**), and your screen reader reads each place from the status line.
+
+### Choosing a mode
+
+- **Alt+Shift+A** cycles self-voicing, hybrid, and screen reader, and saves your choice. The new mode is announced the way the old one spoke, so you hear it.
+- `--mode hybrid`, `--mode screen-reader`, or `--mode self-voicing` on the command line sets the mode for one run without saving it. `tw open --mode hybrid essay.md` works too.
+- `--no-speech` starts textweaver with no voice at all, in screen-reader mode.
+- In `settings.toml`:
+
+```toml
+[accessibility]
+mode = "hybrid"
 ```
 
-`tw open --no-speech essay.md` does the same. With `--no-speech`, textweaver says nothing at all. It neither reads aloud nor speaks announcements. Your screen reader does all the talking, from what textweaver puts on the screen. The title line shows `silent` as the speech engine.
+The title line shows `hybrid` or `screen reader mode` when one of those is in effect.
 
-Choose this when you want one voice for everything, or when you use a braille display.
+### The first run with a screen reader
+
+When textweaver starts, the mode has never been chosen, and a screen reader is running, it asks once: "NVDA is running. Use hybrid mode, where textweaver reads documents aloud and your screen reader speaks messages and typing? y or n". The question stays on the status line until you answer. **y** switches to hybrid and saves it. **n** or **Escape** keeps self-voicing. Either way it is not asked again; set `hybrid_offered = false` under `[accessibility]` to be asked again.
+
+How textweaver notices a screen reader:
+
+- Windows: the system's screen reader flag, which NVDA, JAWS, and Narrator set, and the running programs `nvda.exe`, `jfw.exe` (JAWS), and `narrator.exe`, which also give its name.
+- macOS: VoiceOver's setting (`defaults read com.apple.universalaccess voiceOverOnOffKey`).
+- Linux: GNOME's screen reader setting, the accessibility bus's "screen reader enabled" flag, or a running `orca`.
+
+If textweaver gets it wrong, set `TEXTWEAVER_SCREEN_READER=0` to say there is none, or `TEXTWEAVER_SCREEN_READER=NVDA` (any name) to say there is one.
 
 ## Avoid hearing things twice
 
-In self-voicing mode textweaver speaks each announcement, and also writes it on the status line. A screen reader that reads new text in a terminal will read the status line too, so you hear it twice. There are two ways out.
+- **Use hybrid mode** (Alt+Shift+A). textweaver reads; your screen reader speaks the rest.
+- **Use screen-reader mode** for one voice for everything, or with a braille display.
+- **Stay in self-voicing and quiet your screen reader** while you are in textweaver. NVDA's speech modes (**NVDA+S**) include "on demand" in recent versions, which speaks only when you ask, for example to read the current line. JAWS has a way to turn speech off (**Insert+Space**, then **S**) and, in recent versions, a Speech on Demand setting. These belong to your screen reader; check its own documentation. **Verify on Jon's machine.**
 
-- **Let textweaver talk, and quiet your screen reader in the terminal.** Most screen readers have a command to stop speaking for a while. In NVDA, **NVDA+S** changes the speech mode. In JAWS, **Insert+Space**, then **S**, turns speech off and on. NVDA can also stop reading new text in terminals: **NVDA+5** turns "report dynamic content changes" off and on. Turn your screen reader back on when you leave textweaver. Check your screen reader's own documentation; these commands belong to it, not to textweaver.
-- **Let your screen reader talk, and start textweaver with `--no-speech`.** You then hear each announcement once, in your screen reader's voice.
+While textweaver reads aloud, the terminal's cursor moves to each word. If your screen reader speaks as the cursor moves, it talks over the reading. Two settings help:
 
-While textweaver reads aloud, the terminal's cursor moves to each word as it is spoken. If your screen reader speaks as the cursor moves, it will talk over the reading. Quiet it while textweaver reads, or use `--no-speech`.
+- `quiet_screen = true` keeps the screen still while textweaver reads continuously: the title line's position stops updating, and the text being read is not copied to the status line.
+- `cursor = "status"` parks the cursor on the status line instead of on the spoken word.
 
-## What your screen reader can read with --no-speech
+```toml
+[accessibility]
+quiet_screen = true
+cursor = "status"
+```
 
-textweaver is built so that everything it would say is also on the screen.
+With `cursor = "status"`, the cursor waits at the start of the status line, as it did in Star, so your screen reader's "read current line" (**NVDA+Up**, JAWS **Insert+Up**) repeats the last message. A prompt, such as Find, still puts the cursor at its caret, where you type.
 
-- **The status line.** It is the line above the bottom line. Every announcement goes there: moves, modes, settings, errors, and questions such as "Quit textweaver? y or n". Screen readers that read new text in a terminal read it as it changes. While a yes-or-no question waits, it stays on the status line in front of any other message.
+## What your screen reader can read
+
+textweaver is built so that everything it would say is also on the screen, in screen-reader mode, and for the parts left to your screen reader in hybrid mode.
+
+- **The status line** is the line above the bottom line. Messages go there: moves, modes, settings, errors, and questions such as "Quit textweaver? y or n". Screen readers that read new text in a terminal read it as it changes. While a yes-or-no question waits, it stays on the status line in front of any other message.
+- **Math** on the status line is written in words for a screen reader, as textweaver would say it: `$x^2$` becomes "x squared".
 - **Repeated messages.** A terminal screen reader speaks the status line only when it changes. When the same message comes twice in a row, such as "No next heading." after pressing **h** twice at the end, textweaver blanks the status line for 150 milliseconds first, so the message changes and is read again.
-- **The cursor.** textweaver parks the terminal's cursor where your attention is: on the chosen item of a list, on the caret of a prompt, on the Speech Cursor line, on the word being read, or else on the reading cursor. Screen readers, braille displays, and magnifiers that follow the cursor follow it there.
-- **Lists.** The help, the keyboard shortcuts, bookmarks, notes, the library, and the voices appear in a box over the document. When a list opens, the status line says what it is and how to use it, followed by the first item. As you press **Up** and **Down**, the status line shows the chosen item, and the cursor sits on it.
-- **The prompt line.** The bottom line shows the prompt and what you type, with the cursor at the caret. Find, Go to, Open file, the command palette, and the note prompt all use it. Typing is not echoed by textweaver with `--no-speech`; your screen reader echoes it as usual.
-
-What does not reach the status line:
-
-- **Reading aloud.** **Space**, **Enter**, **s**, **w**, and the other keys that read text make no sound, and the text is not copied to the status line. Read the document with your screen reader's own review commands instead.
-- **Speech Cursor lines.** In Speech Cursor mode, **Up** and **Down** move the cursor to the next line, but the line's text is not put on the status line. Use your screen reader's line review instead. Speech Cursor mode is of little use with `--no-speech`.
-
-What does reach it:
-
+- **The cursor.** With `cursor = "follow"`, the default, textweaver parks the terminal's cursor where your attention is: on the chosen item of a list, on the caret of a prompt, on the Speech Cursor line, on the word being read, or else on the reading cursor. Screen readers, braille displays, and magnifiers that follow the cursor follow it there.
+- **Lists.** The help, the keyboard shortcuts, bookmarks, notes, the library, and the voices appear in a box over the document. When a list opens, the status line says what it is and how to use it, followed by the first item. As you press **Up** and **Down**, the status line shows the chosen item.
+- **The prompt line.** The bottom line shows the prompt and what you type, with the cursor at the caret. Find, Go to, Open file, the command palette, and the note prompt all use it. In hybrid and screen-reader modes textweaver does not echo typing; your screen reader does.
 - **Moves.** After a sentence, paragraph, heading, table, link, find, go to, or bookmark jump, the status line shows where you arrived, with a preview of the text.
 - **Caret keys.** **Right** and **Left** put the word on the status line; **Down** and **Up** put the whole line there. **c** puts the character's name there.
-- **Where am I.** **%** puts the line, the percentage, and the heading on the status line.
+- **Where am I.** **Shift+W** puts the line, the percentage, and the heading on the status line.
 
 How much textweaver says is set by `[speech] verbosity`. See [Reading and moving around](reading.md).
+
+## Keys like a screen reader's browse mode
+
+The screen-reader keymap preset uses the single-letter keys of NVDA's and JAWS's browse mode:
+
+- **h** and **Shift+H**: next and previous heading.
+- **1** to **6**: next heading at that level (as in the default keys).
+- **l** and **Shift+L**: next and previous list.
+- **i**: next list item, and **t**: next table (as in the default keys).
+- **k** and **Shift+K**: next and previous link.
+
+What those keys did by default moves: history back to **Backspace** and history forward to **\\** (**Alt+Left** and **Alt+Right** still work), "say the line" to **Alt+Shift+L**, "scroll up" to **Ctrl+Up**, and "link address" to **Alt+Shift+K**.
+
+```toml
+[keyboard]
+preset = "screen-reader"
+```
+
+Your `keymap.toml` overrides apply on top. The [keyboard reference](keyboard.md#the-screen-reader-preset) lists every change.
+
+## Screen reader settings
+
+These are the settings to look at in NVDA and JAWS for each mode. Names and keys differ between versions. **Every item here: verify on Jon's machine.**
+
+### NVDA
+
+- **Report dynamic content changes** (**NVDA+5**, in Object Presentation settings). On for hybrid and screen-reader modes: that is how NVDA reads the status line as it changes. Off, or speech on demand, for self-voicing.
+- **Speak typed characters** (**NVDA+2**) and **Speak typed words** (**NVDA+3**), in Keyboard settings. On for hybrid and screen-reader modes, where textweaver leaves typing echo to NVDA. Off for self-voicing, where textweaver echoes.
+- **Speech mode** (**NVDA+S**): talk, beeps, off, and, in recent versions, on demand. "On demand" suits self-voicing: NVDA stays quiet until you ask it to read.
+- **Windows Terminal**: in Advanced settings, NVDA can read new text in Windows Terminal by "diffing" or by UIA notifications. Try both if new text is missed or read late.
+- **Windows Console support** (Advanced settings): UIA or legacy, for the classic console.
+- **Read current line**: **NVDA+Up** (laptop layout **NVDA+L**). With `cursor = "status"` it repeats the last message.
+
+### JAWS
+
+- **Screen echo** (**Insert+S** cycles none, highlighted, and all). "All" for hybrid and screen-reader modes, so JAWS reads the status line as it changes. "None" for self-voicing.
+- **Typing echo** (**Insert+2** cycles characters, words, both, and none). On for hybrid and screen-reader modes; none for self-voicing.
+- **Speech on and off**: **Insert+Space**, then **S**. Recent versions also have Speech on Demand in Settings Center, which suits self-voicing.
+- **Read current line**: **Insert+Up**. With `cursor = "status"` it repeats the last message.
+- JAWS's PC cursor follows the terminal's cursor; with `cursor = "follow"` it moves with the spoken word while textweaver reads.
+
+### VoiceOver (macOS)
+
+- textweaver runs in Terminal.app. VoiceOver reads new text in Terminal as it appears. Untested on a real Mac.
+- textweaver's **Alt** chords, such as **Alt+P** and **Alt+Shift+A**, need the Option key to act as Alt (Meta). In Terminal, open Settings, Profiles, Keyboard, and turn on "Use Option as Meta key". Untested.
+- VoiceOver's own keys use **Control+Option**; textweaver's terminal keys use no **Ctrl+Alt** chords, so there is no clash by default.
+
+### Orca (Linux)
+
+- textweaver runs in GNOME Terminal and other terminals. Orca reads new text in terminals as it appears. Untested.
+- Orca's typing echo is in Orca Preferences, Echo: on for hybrid and screen-reader modes, off for self-voicing.
 
 ## Terminals
 
 textweaver runs in any terminal that sends key presses in the usual way.
 
-### Windows
+### Windows Terminal or the classic console
 
 textweaver runs in Windows Terminal and in the classic console (conhost, the window `cmd` opens by default).
 
-- Windows Terminal keeps some keys for itself by default, such as **F11** (full screen) and **Alt+Enter**. Use **Alt+PageDown** and **Alt+PageUp** for chapters instead of **F11** and **F10**.
+- Windows Terminal exposes its text through UI Automation, which recent NVDA and JAWS versions use. The classic console is older and well known to screen readers. Try both; which works better with JAWS and NVDA for each mode has not been recorded yet. **Verify on Jon's machine.**
 - Paste with **Ctrl+V** in Windows Terminal, or with right-click in either.
 
-Which of the two works better with JAWS and NVDA has not been recorded yet.
+### Windows Terminal keys that clash
 
-### macOS
+Windows Terminal keeps some keys for itself, so textweaver never sees them. These come from Windows Terminal's defaults and the settings file a new installation writes (checked against Windows Terminal 1.24 on this machine):
 
-textweaver runs in Terminal.app with VoiceOver. This has not been tested on a real Mac yet.
+- **Alt+Left** and **Alt+Right** move between panes. In textweaver they are history back and forward. Use **Shift+H** and **Shift+L** instead (**Backspace** and **\\** with the screen-reader preset), or unbind them in Windows Terminal. With only one pane open, Windows Terminal may pass them on; **verify on Jon's machine**.
+- **Alt+Up** and **Alt+Down** move between panes. In textweaver they step through notes. Use **e** and **Shift+E** instead, or unbind them.
+- **Alt+Shift+Up** and **Alt+Shift+Down** resize panes. In textweaver they make RSVP faster and slower. Run "rsvp faster" and "rsvp slower" from the command palette (**F2**), or unbind them.
+- **F11** and **Alt+Enter** switch full screen. In textweaver **F11** is the next chapter. Use **Alt+PageDown** and **Alt+PageUp** for chapters.
+- **Ctrl+C** copies when text is selected in Windows Terminal; otherwise textweaver gets it and copies. **Ctrl+V** pastes, which textweaver takes as pasted text.
+- **Alt+Shift+D**, **Alt+Shift+minus**, and **Alt+Shift+plus** split the window into panes. textweaver does not use them, but pitch is **Alt+=** and **Alt+-**: pressing Shift by mistake splits the window.
+- **Alt+Space** opens the window menu. textweaver does not use it.
+- **Ctrl+Shift** chords (new tab, close pane, find, scroll) and **Ctrl+Alt** with digits (switch tabs) do not clash: terminals cannot send textweaver Ctrl+Shift chords, and textweaver's terminal keys use no Ctrl+Alt digits.
 
-Terminal.app normally uses the Option key to type special characters. textweaver's **Alt** chords, such as **Alt+P** and **Alt+V**, need Option to act as Alt. Turning on "Use Option as Meta key" in Terminal's profile settings is expected to do this; this too is untested.
+To unbind a key in Windows Terminal, open its settings (**Ctrl+comma**), choose Actions, and remove the key from the action; or add this to the `actions` list in its `settings.json`, one line per key:
 
-### Linux
+```json
+{ "command": "unbound", "keys": "alt+left" }
+```
 
-textweaver runs in GNOME Terminal and other terminals. Its use with Orca has not been tested yet.
+**Verify on Jon's machine** which of the two works in his version.
+
+### macOS and Linux
+
+See [VoiceOver](#voiceover-macos) and [Orca](#orca-linux) above.
 
 ## Keys that may clash
 
@@ -85,12 +190,13 @@ textweaver runs in GNOME Terminal and other terminals. Its use with Orca has not
 - **Single-letter keys.** textweaver's reading keys are single letters and punctuation, such as `.`, `h`, and `t`, like a screen reader's browse mode in a web page. Screen readers do not use their own browse mode in a terminal, so these keys reach textweaver. If a letter does nothing, check that your screen reader is not in a special mode, such as a virtual or review mode.
 - **Dictation and speech recognition.** Dictation software types letters, and a letter is a command in textweaver. Press **F9** to turn single-key shortcuts off. You hear "Single-key shortcuts off." Chords with **Ctrl** or **Alt**, the arrow keys, the function keys, and the command palette (**F2**) keep working. Press **F9** again to turn them back on.
 - **VoiceOver** uses **Control+Option** as its modifier. textweaver's terminal keys use no **Ctrl+Alt** chords, so there is no clash by default.
+- **Windows Terminal**: see [the keys it keeps](#windows-terminal-keys-that-clash).
 
 Any key can be changed in `keymap.toml`. The [keyboard reference](keyboard.md) explains how, and lists what terminals cannot send.
 
 ## Braille displays
 
-textweaver draws no braille of its own. A braille display shows what your screen reader shows: the line at the terminal's cursor, and new text as it appears. With `--no-speech`, the status line and the cursor position described above are what reach the display. Which screen reader and display combinations work well has not been tested yet.
+textweaver draws no braille of its own. A braille display shows what your screen reader shows: the line at the terminal's cursor, and new text as it appears. In screen-reader mode, the status line and the cursor are what reach the display; with `cursor = "status"`, the display rests on the latest message. Which screen reader and display combinations work well has not been tested yet.
 
 ## The GUI preview
 
@@ -99,20 +205,72 @@ textweaver also has an early native window, the GUI. It is a preview, not yet pa
 - It uses native controls: the document is in a read-only text box whose caret follows the spoken word, so your screen reader reads it with its usual keys.
 - Self-voicing is off by default in the GUI: your screen reader speaks the announcements. Start it with `--self-voicing` to have textweaver speak them too, for use without a screen reader. Reading aloud works either way; `--no-speech` turns that off too.
 - Announcements are sent to your screen reader as UI Automation notifications on Windows, as accessibility announcements on macOS, and as ATK notifications on Linux.
+- The GUI reads `[accessibility] mode` from the same settings file. In hybrid and screen-reader modes textweaver leaves messages to your screen reader even when the GUI was started with `--self-voicing`. The GUI has not been tried in those modes yet.
 
 On Windows, the notifications and the text box were checked through UI Automation; NVDA speaks such notifications, and JAWS has not been tried. VoiceOver has not been tried on a real Mac, and the Linux version has not been built. [ADR-0014](adr/0014-gui-toolkit.md) records what was checked.
 
+## Checklist: try each mode with JAWS and NVDA
+
+Run through this once with NVDA and once with JAWS, in Windows Terminal and, if you like, again in the classic console. Use a throwaway state folder so your own settings are untouched: add `--home %TEMP%\tw-check` to each command (in PowerShell, `--home $env:TEMP\tw-check`). Two sample files have what is needed: `fixtures/sample.md` has a table, and `fixtures/o/math-sample.md` has math.
+
+### First run
+
+1. Delete the folder `%TEMP%\tw-check` if it exists. With your screen reader running, start `textweaver --home %TEMP%\tw-check fixtures/sample.md`.
+2. Expected: the question "NVDA is running. Use hybrid mode ...? y or n" (JAWS: "JAWS is running."). Your screen reader reads it from the status line, and textweaver speaks it too.
+3. Press **y**. Expected: "Hybrid mode. ..." is read once, by your screen reader. Quit with **q**, then **y**, and start again: no question this time.
+
+### Hybrid (`--mode hybrid`)
+
+Screen reader settings: dynamic content (NVDA) or screen echo "all" (JAWS) on; typing echo on.
+
+1. Press **.** (next sentence). Expected: your screen reader reads the sentence preview once; textweaver is silent.
+2. Press **s**. Expected: textweaver reads the sentence in its voice; your screen reader says nothing more.
+3. Press **Space**. Expected: textweaver reads on; the status line does not change while it reads. Press **Space** again: "Paused" from your screen reader.
+4. Press **Right**. Expected: your screen reader says the word; textweaver is silent.
+5. Press **Ctrl+F** and type `ada`. Expected: your screen reader echoes the typing; textweaver does not. Press **Escape**.
+6. Press **t** to reach the table, then **s**. Expected: textweaver narrates the row with its headers.
+7. Open `fixtures/o/math-sample.md` (**Ctrl+O**) and press **s** on a formula. Expected: textweaver says the math in words.
+
+### Screen reader (`--mode screen-reader`, or `--no-speech`)
+
+1. Press **.**, then **s**. Expected: your screen reader reads the preview, then the sentence; textweaver never speaks.
+2. In `fixtures/o/math-sample.md`, press **s** on a formula. Expected: your screen reader reads the math in words, not dollar signs and carets.
+3. Press **Space**. Expected: your screen reader reads the document a sentence at a time, and the cursor moves along. Press **+** or **-** to change the pace, **Space** to pause and resume, **Escape** to stop.
+4. With `say_all = "voice"` under `[accessibility]`, press **Space** again. Expected: textweaver's voice reads instead.
+
+### Self-voicing (`--mode self-voicing`)
+
+1. Turn your screen reader to speech on demand, or turn dynamic content (NVDA) or screen echo (JAWS) off.
+2. Press **.** and **Space**. Expected: textweaver speaks everything, once.
+
+### Quiet screen and the status-line cursor
+
+1. Add `quiet_screen = true` and `cursor = "status"` under `[accessibility]` in `%TEMP%\tw-check`'s `settings.toml`, and start in self-voicing mode with your screen reader's dynamic content or screen echo on.
+2. Press **Space**. Expected: the title line's "line ... of ..." stays still while textweaver reads, and your screen reader does not chatter.
+3. Press **Escape**, then **.**, then your screen reader's "read current line" (**NVDA+Up**, **Insert+Up**). Expected: it repeats the message on the status line.
+
+### Keys
+
+1. Add `preset = "screen-reader"` under `[keyboard]`. Expected: **h** and **Shift+H** move by heading, **l** by list, **k** by link, **Backspace** goes back.
+2. In Windows Terminal, press **Alt+Left** after a jump. Expected: textweaver goes back, or Windows Terminal takes the key. Note which, and whether it changes with more than one pane.
+3. Press **Alt+Shift+A** three times. Expected: hybrid, screen reader, and self-voicing, each announced once.
+
+Please note which steps did not behave as expected, with the screen reader, its version, and the terminal.
+
 ## If something goes wrong
 
-- **Everything is said twice.** See [Avoid hearing things twice](#avoid-hearing-things-twice).
-- **Your screen reader does not read the status line.** Turn on its reading of new text in terminals. In NVDA that is "report dynamic content changes", **NVDA+5**.
-- **A key does nothing.** See [Troubleshooting](troubleshooting.md), "A key does nothing".
+- **Everything is said twice.** Use hybrid mode (**Alt+Shift+A**), or see [Avoid hearing things twice](#avoid-hearing-things-twice).
+- **Your screen reader does not read the status line.** Turn on its reading of new text in terminals: NVDA's "report dynamic content changes" (**NVDA+5**), or JAWS's screen echo (**Insert+S**).
+- **Nothing is said at all.** In screen-reader mode textweaver is silent by design; check that your screen reader reads new text. The title line shows the mode.
+- **The question about hybrid mode never came, or came wrongly.** See [The first run with a screen reader](#the-first-run-with-a-screen-reader) and `TEXTWEAVER_SCREEN_READER`.
+- **A key does nothing.** See [Windows Terminal keys that clash](#windows-terminal-keys-that-clash) and [Troubleshooting](troubleshooting.md), "A key does nothing".
 - **No speech from textweaver.** Check the title line: `silent` means `--no-speech` or no engine. See [Troubleshooting](troubleshooting.md).
 
 ## See also
 
 - [Reading and moving around](reading.md): every reading key, and the command line options.
-- [Keyboard reference](keyboard.md): every key, and what terminals cannot send.
+- [Keyboard reference](keyboard.md): every key, the screen-reader preset, and what terminals cannot send.
+- [Settings](settings.md): the `[accessibility]` settings and `[keyboard] preset`.
 - [Troubleshooting](troubleshooting.md): common problems and how to report a bug.
 - [ADR-0006: Keymap, actions, and announcements](adr/0006-keymap-and-actions.md): how announcements reach the status line.
 - [ADR-0014: GUI toolkit](adr/0014-gui-toolkit.md): the GUI preview and what was checked.

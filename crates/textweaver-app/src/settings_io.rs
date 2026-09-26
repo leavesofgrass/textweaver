@@ -157,8 +157,14 @@ impl App {
         self.apply_voice_settings();
         // apply_voice_settings leaves the voice alone when none is set.
         self.speech.set_voice(self.settings.speech.voice.clone());
-        let (mut keymap, key_warnings) =
-            Keymap::with_overrides(Platform::current(), Frontend::Terminal, &plan.keymap);
+        let (mut keymap, key_warnings) = Keymap::with_preset_and_overrides(
+            Platform::current(),
+            Frontend::Terminal,
+            crate::access::keymap_preset(self.settings.keyboard.preset),
+            &plan.keymap,
+        );
+        self.access_mode =
+            crate::access::access_mode_from_setting(self.settings.accessibility.mode);
         keymap.set_character_keys(self.settings.keyboard.character_keys);
         self.keymap = keymap;
         // Library folders and sync policy, and the theme name, may have

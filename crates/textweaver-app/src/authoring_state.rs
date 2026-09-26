@@ -131,6 +131,7 @@ pub(crate) enum Question {
 }
 
 /// The authoring state.
+#[derive(Default)]
 pub(crate) struct Authoring {
     pub(crate) structure: Structure,
     pub(crate) prefetch: crate::structure::Prefetch,
@@ -189,29 +190,6 @@ impl std::fmt::Debug for Authoring {
             .field("question", &self.question)
             .field("preview", &self.preview)
             .finish()
-    }
-}
-
-impl Default for Authoring {
-    fn default() -> Self {
-        Authoring {
-            structure: Structure::default(),
-            prefetch: crate::structure::Prefetch::default(),
-            launcher: None,
-            client: None,
-            jobs: Vec::new(),
-            question: None,
-            filter: String::new(),
-            preview: None,
-            copied: None,
-            listening: None,
-            link_back: Vec::new(),
-            citing: None,
-            words: None,
-            replace: None,
-            template: None,
-            note_signalled: None,
-        }
     }
 }
 

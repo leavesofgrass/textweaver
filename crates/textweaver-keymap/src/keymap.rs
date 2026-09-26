@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ActionId, KeyChord};
+use crate::{ActionId, KeyChord, Preset};
 
 /// Where a binding is active.
 ///
@@ -161,6 +161,8 @@ pub struct Keymap {
     bindings: Vec<Binding>,
     /// Single-key shortcuts are off: text-input chords trigger nothing.
     character_keys_off: bool,
+    /// The preset the keys started from.
+    preset: Preset,
 }
 
 /// Splits `g:Ctrl+P` into its layer and chord text. `:` alone, and strings
@@ -214,7 +216,34 @@ impl Keymap {
         Keymap {
             bindings,
             character_keys_off: false,
+            preset: Preset::Default,
         }
+    }
+
+    /// The default keymap changed by `preset` ([`Preset::changes`]): each
+    /// chord of the preset leaves whatever it did by default and triggers
+    /// the preset's action.
+    pub fn with_preset(platform: Platform, frontend: Frontend, preset: Preset) -> Self {
+        let mut map = Keymap::defaults(platform, frontend);
+        for (s, action) in preset.changes() {
+            let Some((layer, chord)) = parse_default(s, platform, frontend) else {
+                continue;
+            };
+            map.bindings
+                .retain(|b| !(b.chord == chord && b.layer == layer));
+            map.bindings.push(Binding {
+                chord,
+                layer,
+                action: *action,
+            });
+        }
+        map.preset = preset;
+        map
+    }
+
+    /// The preset these keys started from.
+    pub fn preset(&self) -> Preset {
+        self.preset
     }
 
     /// Turns single-key shortcuts on or off (the `[keyboard]
@@ -274,7 +303,18 @@ impl Keymap {
         frontend: Frontend,
         overrides: &BTreeMap<String, Vec<String>>,
     ) -> (Self, Vec<String>) {
-        let mut map = Keymap::defaults(platform, frontend);
+        Self::with_preset_and_overrides(platform, frontend, Preset::Default, overrides)
+    }
+
+    /// [`with_overrides`](Self::with_overrides) on top of a preset
+    /// ([`with_preset`](Self::with_preset)) instead of the defaults.
+    pub fn with_preset_and_overrides(
+        platform: Platform,
+        frontend: Frontend,
+        preset: Preset,
+        overrides: &BTreeMap<String, Vec<String>>,
+    ) -> (Self, Vec<String>) {
+        let mut map = Keymap::with_preset(platform, frontend, preset);
         let before: Vec<Conflict> = map.conflicts();
         let mut warnings = Vec::new();
         for (id, chords) in overrides {
@@ -477,6 +517,143 @@ mod tests {
             }
         }
         v
+    }
+
+    /// Every platform, frontend, and preset: the rules the defaults follow
+    /// hold for each preset too.
+    fn all_preset_maps() -> Vec<(Platform, Frontend, Keymap)> {
+        let mut v = Vec::new();
+        for platform in Platform::ALL {
+            for frontend in Frontend::ALL {
+                for preset in Preset::ALL {
+                    v.push((
+                        platform,
+                        frontend,
+                        Keymap::with_preset(platform, frontend, preset),
+                    ));
+                }
+            }
+        }
+        v
+    }
+
+    #[test]
+    fn presets_keep_the_rules() {
+        for (platform, frontend, map) in all_preset_maps() {
+            let what = format!("{platform:?} {frontend:?} {:?}", map.preset());
+            assert!(map.conflicts().is_empty(), "{what}: {:#?}", map.conflicts());
+            // Palette commands have no keys by design.
+            for a in ActionId::ALL.iter().filter(|a| !a.is_palette_command()) {
+                let reachable = Layer::ALL
+                    .iter()
+                    .any(|m| !map.chords_in_mode(*a, *m).is_empty());
+                assert!(reachable, "{a:?} unreachable, {what}");
+            }
+            for b in map.bindings() {
+                assert!(
+                    b.chord.is_layout_independent(),
+                    "{:?} {}",
+                    b.action,
+                    b.chord
+                );
+                if frontend == Frontend::Terminal {
+                    assert_eq!(
+                        b.chord.terminal_limitation(),
+                        None,
+                        "{:?} {}",
+                        b.action,
+                        b.chord
+                    );
+                }
+                if matches!(b.layer, Layer::Global | Layer::Edit) {
+                    assert!(!b.chord.is_text_input(), "{:?} {}", b.action, b.chord);
+                }
+            }
+            // No action needs the command palette with single-key
+            // shortcuts off unless it did already with the defaults.
+            let mut off = map.clone();
+            off.set_character_keys(false);
+            let mut default_off = Keymap::defaults(platform, frontend);
+            default_off.set_character_keys(false);
+            let before = default_off.palette_only();
+            for a in off.palette_only() {
+                assert!(before.contains(&a), "{a:?} needs the palette, {what}");
+            }
+        }
+    }
+
+    #[test]
+    fn screen_reader_preset_keys() {
+        for platform in Platform::ALL {
+            for frontend in Frontend::ALL {
+                let map = Keymap::with_preset(platform, frontend, Preset::ScreenReader);
+                assert_eq!(map.preset(), Preset::ScreenReader);
+                let mac_gui = frontend == Frontend::Gui && platform == Platform::MacOs;
+                for (chord, action) in [
+                    ("h", ActionId::SkipNextHeading),
+                    ("Shift+H", ActionId::SkipPreviousHeading),
+                    ("1", ActionId::NextHeadingLevel1),
+                    ("6", ActionId::NextHeadingLevel6),
+                    ("l", ActionId::NextList),
+                    ("Shift+L", ActionId::PreviousList),
+                    ("o", ActionId::NextList),
+                    ("i", ActionId::NextListItem),
+                    ("t", ActionId::NextTable),
+                    ("Shift+T", ActionId::PreviousTable),
+                    ("k", ActionId::NextLink),
+                    ("Shift+K", ActionId::PreviousLink),
+                    ("u", ActionId::NextLink),
+                    ("Backspace", ActionId::HistoryBack),
+                    ("\\", ActionId::HistoryForward),
+                    ("j", ActionId::ScrollDown),
+                    ("Ctrl+Down", ActionId::ScrollDown),
+                    ("Ctrl+Up", ActionId::ScrollUp),
+                    ("Alt+Left", ActionId::HistoryBack),
+                    ("Space", ActionId::PlayPause),
+                    (".", ActionId::NextSentence),
+                ] {
+                    let chord = if mac_gui {
+                        k(chord).ctrl_to_meta()
+                    } else {
+                        k(chord)
+                    };
+                    assert_eq!(
+                        map.lookup(&chord, Layer::Browse),
+                        Some(action),
+                        "{chord} on {platform:?} {frontend:?}"
+                    );
+                }
+                // The default keymap is unchanged.
+                let d = Keymap::defaults(platform, frontend);
+                assert_eq!(d.preset(), Preset::Default);
+                assert_eq!(
+                    d.lookup(&k("Shift+H"), Layer::Browse),
+                    Some(ActionId::HistoryBack)
+                );
+                assert_eq!(
+                    d.lookup(&k("l"), Layer::Browse),
+                    Some(ActionId::ReadCurrentLine)
+                );
+                assert_eq!(d, Keymap::with_preset(platform, frontend, Preset::Default));
+            }
+        }
+    }
+
+    /// Overrides apply on top of the preset.
+    #[test]
+    fn overrides_apply_over_a_preset() {
+        let mut o = BTreeMap::new();
+        o.insert("next_link".to_owned(), vec!["b:u".to_owned()]);
+        let (map, warnings) = Keymap::with_preset_and_overrides(
+            Platform::Linux,
+            Frontend::Terminal,
+            Preset::ScreenReader,
+            &o,
+        );
+        assert!(warnings.is_empty(), "{warnings:?}");
+        assert_eq!(map.lookup(&k("k"), Layer::Browse), None);
+        assert_eq!(map.lookup(&k("u"), Layer::Browse), Some(ActionId::NextLink));
+        assert_eq!(map.lookup(&k("l"), Layer::Browse), Some(ActionId::NextList));
     }
 
     #[test]
