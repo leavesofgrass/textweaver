@@ -1068,10 +1068,16 @@ impl ServiceCore {
     /// rate, pitch, or volume used to be heard only two or three sentences
     /// later. While a reading plays, restart it from the last confirmed
     /// word (may repeat a word, never skips one), as an announcement does.
+    ///
+    /// Only engines that report words: a timer-paced engine resumes one
+    /// word behind the painted highlight, and a frontend that judges a
+    /// restarted reading by its positions (textweaver-app before it tracks
+    /// reading generations) would take the step back for a stale reading.
     fn respeak_with_new_params(&mut self) {
         let playing = self.paused.is_none()
             && self.reading
             && self.char_params.is_none()
+            && self.caps.contains(Caps::WORD_EVENTS)
             && self.queue.iter().any(|u| u.kind == UtteranceKind::Text);
         if !playing {
             return;

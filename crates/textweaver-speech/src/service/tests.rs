@@ -962,6 +962,13 @@ fn parameter_changes_while_idle_or_paused_restart_nothing() {
     rig.core.set_rate(Rate::Wpm(200));
     assert_eq!(rig.spoken().len(), n);
     assert!(rig.core.is_paused());
+    // A timer-paced engine (no word events) is not restarted either.
+    let mut rig = Rig::new(RecordingMode::Manual, Caps::PITCH, plain());
+    rig.core.read(doc(0, &["One two three.", "Four."]));
+    rig.step();
+    let n = rig.spoken().len();
+    rig.core.set_rate(Rate::Wpm(400));
+    assert_eq!(rig.spoken().len(), n);
 }
 
 #[test]
