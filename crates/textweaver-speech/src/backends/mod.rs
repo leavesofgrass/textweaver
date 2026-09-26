@@ -304,9 +304,127 @@ pub fn resolve_preferred_voice(voices: &[Voice], prefer: &str) -> Option<String>
         .map(|v| v.id.clone())
 }
 
+fn words(s: &str) -> Vec<String> {
+    s.split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(str::to_lowercase)
+        .collect()
+}
+
+fn is_us_english(v: &Voice) -> bool {
+    v.languages.iter().any(|l| {
+        l.split(['-', '_'])
+            .skip(1)
+            .any(|sub| sub.eq_ignore_ascii_case("us"))
+    })
+}
+
+/// Resolves what a user typed for a voice (`--voice`, settings, a prompt)
+/// to a voice id: an exact id first, then an exact name (ignoring case),
+/// then a name or id containing every word typed ("Zira" finds "Microsoft
+/// Zira Desktop", "eloquence reed" finds Eloquence Reed), then any
+/// substring. Among several matches a US English voice wins, then list
+/// order. `None` when nothing matches.
+pub fn resolve_voice(voices: &[Voice], query: &str) -> Option<String> {
+    let q = query.trim();
+    if q.is_empty() {
+        return None;
+    }
+    if let Some(v) = voices.iter().find(|v| v.id == q) {
+        return Some(v.id.clone());
+    }
+    let pick = |matches: Vec<&Voice>| {
+        matches
+            .iter()
+            .find(|v| is_us_english(v))
+            .or_else(|| matches.first())
+            .map(|v| v.id.clone())
+    };
+    let exact: Vec<&Voice> = voices
+        .iter()
+        .filter(|v| v.name.eq_ignore_ascii_case(q))
+        .collect();
+    if !exact.is_empty() {
+        return pick(exact);
+    }
+    let wanted = words(q);
+    if !wanted.is_empty() {
+        let by_words: Vec<&Voice> = voices
+            .iter()
+            .filter(|v| {
+                let have = words(&format!("{} {}", v.name, v.id));
+                wanted.iter().all(|w| have.contains(w))
+            })
+            .collect();
+        if !by_words.is_empty() {
+            return pick(by_words);
+        }
+    }
+    let lower = q.to_lowercase();
+    pick(
+        voices
+            .iter()
+            .filter(|v| {
+                format!("{} {}", v.name, v.id)
+                    .to_lowercase()
+                    .contains(&lower)
+            })
+            .collect(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn voice(id: &str, name: &str, lang: &str) -> Voice {
+        Voice {
+            id: id.into(),
+            name: name.into(),
+            languages: vec![lang.into()],
+            gender: None,
+        }
+    }
+
+    #[test]
+    fn voices_resolve_by_plain_name() {
+        let vs = vec![
+            voice(
+                r"x64:HKLM\TTS_MS_EN-US_DAVID_11.0",
+                "Microsoft David Desktop",
+                "en-US",
+            ),
+            voice(
+                r"x64:HKLM\TTS_MS_EN-US_ZIRA_11.0",
+                "Microsoft Zira Desktop",
+                "en-US",
+            ),
+            voice(
+                r"x64:HKLM\MSTTS_V110_enUS_ZiraM",
+                "Microsoft Zira (OneCore)",
+                "en-US",
+            ),
+            voice(r"x86:VW Paul", "VW Paul (32-bit)", "en-US"),
+            voice("eci:engb:reed", "Reed (UK English)", "en-GB"),
+            voice("eci:enu:reed", "Reed", "en-US"),
+        ];
+        assert_eq!(
+            resolve_voice(&vs, "Zira").as_deref(),
+            Some(r"x64:HKLM\TTS_MS_EN-US_ZIRA_11.0")
+        );
+        assert_eq!(
+            resolve_voice(&vs, "zira onecore").as_deref(),
+            Some(r"x64:HKLM\MSTTS_V110_enUS_ZiraM")
+        );
+        assert_eq!(resolve_voice(&vs, "paul").as_deref(), Some(r"x86:VW Paul"));
+        assert_eq!(resolve_voice(&vs, "Reed").as_deref(), Some("eci:enu:reed"));
+        assert_eq!(
+            resolve_voice(&vs, "eci:engb:reed").as_deref(),
+            Some("eci:engb:reed")
+        );
+        assert_eq!(resolve_voice(&vs, "Hal"), None);
+        assert_eq!(resolve_voice(&vs, "  "), None);
+    }
 
     fn info(id: &'static str, priority: i32, available: bool, opt_in: bool) -> BackendInfo {
         BackendInfo {

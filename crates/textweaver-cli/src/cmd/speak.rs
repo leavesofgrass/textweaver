@@ -15,7 +15,7 @@ use textweaver_app::core::{CharRange, Pitch, Rate, Utterance};
 use textweaver_app::formats;
 use textweaver_app::speech::{
     BackendRegistry, Caps, Pipeline, Selection, ServiceConfig, SpeechService, SpeechStatus,
-    VoiceParams,
+    VoiceParams, resolve_voice,
 };
 use textweaver_app::text::{Document, NarrationPolicy, plan};
 
@@ -115,7 +115,15 @@ pub fn speak(args: &Args, registry: &BackendRegistry) -> anyhow::Result<Report> 
 
     if let Some(out) = &args.out {
         let mut backend = factory()?;
-        backend.set_params(&config.params)?;
+        let mut params = config.params.clone();
+        if let Some(asked) = &params.voice {
+            // Plain names ("Zira", "Reed") resolve to the backend's voice id.
+            let voices = backend.voices().unwrap_or_default();
+            if let Some(id) = resolve_voice(&voices, asked) {
+                params.voice = Some(id);
+            }
+        }
+        backend.set_params(&params)?;
         let caps = backend.capabilities();
         if !caps.contains(Caps::SYNTH_TO_FILE) {
             bail!(

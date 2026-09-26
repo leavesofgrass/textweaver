@@ -50,7 +50,7 @@ use textweaver_core::{
 use crate::backend::{
     BackendFactory, BackendId, Caps, EventSink, RawEvent, SpeechBackend, SpeechError, VoiceParams,
 };
-use crate::backends::{NullBackend, resolve_preferred_voice};
+use crate::backends::{NullBackend, resolve_preferred_voice, resolve_voice};
 use crate::normalize::{self, NormalizeConfig, Pipeline};
 use crate::pacing::{
     Clock, PacingConfig, PlaybackClock, SystemClock, TimerPacer, spoken_words, word_interval,
@@ -538,8 +538,9 @@ impl ServiceCore {
             out: Vec::new(),
             engine_busy: false,
         };
-        if core.params.voice.is_none()
-            && let Some(prefer) = core.config.prefer_voice.clone()
+        if let Some(asked) = core.params.voice.clone() {
+            core.params.voice = Some(core.resolve_voice_name(&asked));
+        } else if let Some(prefer) = core.config.prefer_voice.clone()
             && let Ok(voices) = core.backend.voices()
         {
             core.params.voice = resolve_preferred_voice(&voices, &prefer);
@@ -913,8 +914,19 @@ impl ServiceCore {
 
     /// Sets the voice.
     pub fn set_voice(&mut self, voice: Option<String>) {
-        self.params.voice = voice;
+        self.params.voice = voice.map(|v| self.resolve_voice_name(&v));
         self.apply_params();
+    }
+
+    /// A voice id for what the user typed (an id, a name such as "Zira" or
+    /// "Reed", or part of one; see [`resolve_voice`]). Unknown text is
+    /// passed through unchanged so the backend reports it.
+    fn resolve_voice_name(&self, asked: &str) -> String {
+        self.backend
+            .voices()
+            .ok()
+            .and_then(|voices| resolve_voice(&voices, asked))
+            .unwrap_or_else(|| asked.to_owned())
     }
 
     /// Sets punctuation verbosity for utterances read from now on.
