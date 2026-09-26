@@ -4,7 +4,7 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [0.1.0-alpha.3] - 2026-09-25
 
-The first release with downloadable packages: Windows (x86_64) and macOS (universal, not notarized). See [docs/install.md](docs/install.md).
+The first release with downloadable packages: Windows (x86_64) and macOS (universal, not notarized). Start with the [quick start](docs/quickstart.md) (`QUICKSTART.md` in each package); [docs/install.md](docs/install.md) has the details.
 
 ### Added
 

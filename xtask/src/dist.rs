@@ -31,7 +31,8 @@ const FEATURES: &str = "textweaver-tui/omnivox,textweaver-cli/omnivox";
 /// The two macOS targets joined by `--universal`.
 const MAC_TARGETS: [&str; 2] = ["aarch64-apple-darwin", "x86_64-apple-darwin"];
 /// Documents copied into the package: (source, name in the package).
-const DOCS: [(&str, &str); 5] = [
+const DOCS: [(&str, &str); 6] = [
+    ("docs/quickstart.md", "QUICKSTART.md"),
     ("README.md", "README.md"),
     ("LICENSE", "LICENSE"),
     ("CHANGELOG.md", "CHANGELOG.md"),

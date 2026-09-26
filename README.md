@@ -8,7 +8,7 @@ textweaver is a Rust reimplementation of the core of [Star](https://github.com/l
 
 ## Download
 
-Windows and macOS packages are on the [releases page](https://github.com/leavesofgrass/textweaver/releases). [docs/install.md](docs/install.md) explains how to install them. The macOS build is not notarized yet; the guide shows how to open it anyway. On Linux, build from source.
+Windows and macOS packages are on the [releases page](https://github.com/leavesofgrass/textweaver/releases). New here? Read the [quick start](docs/quickstart.md): what to do in your first 30 seconds on Windows, macOS, and Linux. [docs/install.md](docs/install.md) has the details. The macOS build is not notarized yet; the guide shows how to open it anyway. On Linux, build from source.
 
 ## What it does
 

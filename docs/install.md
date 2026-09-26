@@ -1,5 +1,7 @@
 # Installing textweaver
 
+In a hurry? The [quick start](quickstart.md) is the short version.
+
 textweaver is in alpha. Each release on GitHub has a Windows package and a macOS package:
 
 - `textweaver-VERSION-windows-x86_64.zip`
