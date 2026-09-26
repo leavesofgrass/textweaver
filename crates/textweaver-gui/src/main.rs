@@ -10,6 +10,8 @@
 //! Owner: Agent K (spike).
 
 mod announce;
+mod font_dialog;
+mod fonts;
 mod keys;
 mod log;
 mod positions;

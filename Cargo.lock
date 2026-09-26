@@ -4591,7 +4591,9 @@ version = "0.1.0-alpha.3"
 dependencies = [
  "clap",
  "live-region",
+ "textweaver-aids",
  "textweaver-app",
+ "textweaver-fonts",
  "wxdragon",
 ]
 

@@ -24,6 +24,8 @@ use wxdragon::prelude::*;
 use wxdragon::timer::Timer;
 
 use crate::announce::LiveRegionAnnouncer;
+use crate::font_dialog;
+use crate::fonts::{self, Installed};
 use crate::keys::{self, Mods};
 use crate::positions::Units;
 use crate::setup::{self, Options};
@@ -37,9 +39,12 @@ const SLOW_HIGHLIGHT_MS: u128 = 30;
 /// Delay before opening the document, so the window is up and focused.
 const STARTUP_DELAY_MS: i32 = 100;
 
-/// First menu id; menu item `n` of [`MENU_ACTIONS`] (flattened) has id
+/// First menu id; menu item `n` of [`MENUS`] (flattened) has id
 /// `MENU_BASE + n`.
 const MENU_BASE: i32 = ID_HIGHEST + 1;
+
+/// View, Fonts: the font chooser (not a keymap action).
+const FONTS_MENU_ID: i32 = ID_HIGHEST + 900;
 
 /// The menu bar: titles and the actions under them, in order.
 const MENUS: &[(&str, &[ActionId])] = &[
@@ -146,6 +151,10 @@ struct Gui {
     last_set: Option<i64>,
     last_reading: bool,
     last_status: (String, String),
+    /// Installed font families (scanned in the background).
+    installed: Installed,
+    /// Automated run: dialogs open off the screen.
+    background: bool,
     closed: bool,
     _poll_timer: Option<Timer<Frame>>,
     _start_timer: Option<Timer<Frame>>,
@@ -154,8 +163,53 @@ struct Gui {
 
 type Shared = Rc<RefCell<Gui>>;
 
+/// Registers the bundled fonts for this process, from files written under
+/// the cache folder (nothing is installed on the system). Returns messages
+/// for the user.
+fn register_bundled_fonts(opts: &Options, log: bool) -> Vec<String> {
+    let cache = match &opts.home {
+        Some(home) => textweaver_app::store::Paths::under(home).cache_dir,
+        None => textweaver_app::store::Paths::platform()
+            .map(|p| p.cache_dir)
+            .unwrap_or_else(|_| std::env::temp_dir().join("textweaver")),
+    };
+    let dir = cache.join("fonts");
+    match fonts::extract_bundled(&dir) {
+        Ok(paths) => {
+            let mut failed = 0;
+            for p in &paths {
+                let ok = Font::add_private_font(&p.to_string_lossy());
+                if !ok {
+                    failed += 1;
+                }
+                if log {
+                    crate::log::line(&format!(
+                        "font registered: {} ({})",
+                        p.display(),
+                        if ok { "ok" } else { "failed" }
+                    ));
+                }
+            }
+            if failed > 0 {
+                vec![format!(
+                    "{failed} of the built-in font files could not be registered; those fonts may look different."
+                )]
+            } else {
+                Vec::new()
+            }
+        }
+        Err(e) => vec![format!(
+            "The built-in fonts could not be prepared ({e}); the system fonts are still available."
+        )],
+    }
+}
+
 /// Builds and shows the window. Called from `wxdragon::main`.
 pub fn build(opts: GuiOptions) {
+    // Bundled fonts first: wx registers private fonts before it creates
+    // the fonts that use them.
+    let font_messages = register_bundled_fonts(&opts.app, opts.log);
+    let installed = Installed::scan_in_background();
     // Automated runs keep out of the way (see `GuiOptions::background`).
     let style = if opts.background {
         FrameStyle::Default | FrameStyle::NoTaskbar
@@ -218,6 +272,7 @@ pub fn build(opts: GuiOptions) {
     let muted = Rc::new(Cell::new(false));
     let announcer = LiveRegionAnnouncer::new(live, Rc::clone(&muted), opts.log);
     let (app, mut messages) = setup::build_app(&opts.app, Box::new(announcer));
+    messages.extend(font_messages);
     if !live_ok {
         messages.push("Screen reader announcements are not available on this system.".into());
     }
@@ -235,11 +290,17 @@ pub fn build(opts: GuiOptions) {
         last_set: None,
         last_reading: false,
         last_status: (String::new(), String::new()),
+        installed,
+        background: opts.background,
         closed: false,
         _poll_timer: None,
         _start_timer: None,
         _exit_timer: None,
     }));
+    // The saved reading font, before the document is loaded.
+    if let Some(note) = gui.borrow_mut().apply_font() {
+        messages.push(note);
+    }
 
     bind_events(&gui, frame, text, play, stop);
     start_timers(&gui, frame, opts.exit_after);
@@ -306,6 +367,16 @@ fn menu_bar(app: &App) -> MenuBar {
     let mut bar = MenuBar::builder();
     let mut n = 0;
     for (title, actions) in MENUS {
+        if *title == "&Help" {
+            let view = Menu::builder()
+                .append_item(
+                    FONTS_MENU_ID,
+                    "&Fonts...",
+                    "Choose the font, size, and weight of the document text",
+                )
+                .build();
+            bar = bar.append(view, "&View");
+        }
         let mut menu = Menu::builder();
         for &action in *actions {
             let chords = app.keymap().chords_in_mode(action, Layer::Browse);
@@ -363,7 +434,10 @@ fn action_for_menu_id(id: i32) -> Option<ActionId> {
 fn bind_events(gui: &Shared, frame: Frame, text: TextCtrl, play: Button, stop: Button) {
     let st = Rc::clone(gui);
     frame.on_menu(move |ev| {
-        if let Some(a) = action_for_menu_id(ev.get_id()) {
+        let id = ev.get_id();
+        if id == FONTS_MENU_ID {
+            open_fonts(&st);
+        } else if let Some(a) = action_for_menu_id(id) {
             dispatch(&st, Command::Action(a));
         }
     });
@@ -527,6 +601,61 @@ fn run_effects(st: &Shared, effects: Vec<Effect>) {
     }
 }
 
+/// View, Fonts: shows the font chooser, then applies, saves, and announces
+/// the choice. The shared state is not borrowed while the dialog is open
+/// (its nested event loop keeps the speech timer running).
+fn open_fonts(st: &Shared) {
+    let (frame, choices, current, background, log) = {
+        let Ok(g) = st.try_borrow() else {
+            return;
+        };
+        if g.log {
+            crate::log::line("font dialog: opening");
+        }
+        let choices = fonts::choices(g.installed.names());
+        let current = fonts::applied(&g.app.settings().display.font, |n| g.installed.has(n));
+        (g.w.frame, choices, current, g.background, g.log)
+    };
+    if background {
+        let st = Rc::clone(st);
+        font_dialog::open_background(&choices, &current, log, move |picked| {
+            fonts_chosen(&st, picked)
+        });
+    } else {
+        let picked = font_dialog::run(&frame, &choices, &current, log);
+        fonts_chosen(st, picked);
+    }
+}
+
+/// Applies, saves, and announces the font chooser's answer.
+fn fonts_chosen(st: &Shared, picked: Option<font_dialog::Picked>) {
+    let Ok(mut g) = st.try_borrow_mut() else {
+        return;
+    };
+    let log = g.log;
+    let Some(p) = picked else {
+        if log {
+            crate::log::line("font dialog: cancelled");
+        }
+        g.app.announce("Font unchanged.", Priority::Polite);
+        return;
+    };
+    let new = fonts::chosen(&g.app.settings().display.font, &p.family, p.size, p.bold);
+    if let Err(e) = g.app.update_settings(|s| s.display.font = new.clone()) {
+        g.app.announce(
+            &format!("The font was applied but could not be saved: {e}."),
+            Priority::Assertive,
+        );
+    }
+    let note = g.apply_font();
+    let said = fonts::announcement(&p.family, new.size_pt.round() as i32, new.weight >= 600);
+    let said = match note {
+        Some(n) => format!("{said} {n}"),
+        None => said,
+    };
+    g.app.announce(&said, Priority::Polite);
+}
+
 /// Asks for a prompt's answer: a file dialog to open a document, a text
 /// entry dialog otherwise.
 fn ask(frame: &Frame, label: &str, purpose: PromptPurpose) -> Option<String> {
@@ -559,6 +688,28 @@ fn choose(frame: &Frame, title: &str, items: &[String]) -> Option<usize> {
 }
 
 impl Gui {
+    /// Sets the document control's font from `[display.font]`. Returns a
+    /// sentence to announce when the chosen family is not available.
+    fn apply_font(&mut self) -> Option<String> {
+        let installed = &self.installed;
+        // At startup the scan may still be running: trust the saved name
+        // then (wx substitutes a missing face itself).
+        let a = fonts::applied(&self.app.settings().display.font, |n| {
+            installed.has_now(n).unwrap_or(true)
+        });
+        let font = font_dialog::make_font(a.face.as_deref(), a.size, a.bold)?;
+        self.w.text.set_font(&font);
+        if self.log {
+            crate::log::line(&format!(
+                "font applied: {} {} {}",
+                a.face.as_deref().unwrap_or("(default)"),
+                a.size,
+                if a.bold { "bold" } else { "regular" }
+            ));
+        }
+        (!a.note.is_empty()).then_some(a.note)
+    }
+
     /// Moves the app's cursor to the native caret if the user moved it
     /// (arrow keys, mouse) since the GUI last placed it. Quiet: the screen
     /// reader already spoke the caret movement.
