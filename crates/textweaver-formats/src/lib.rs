@@ -34,6 +34,7 @@ pub mod docx;
 pub mod encoding;
 pub mod epub;
 pub mod export;
+pub mod fulltext;
 pub mod html;
 pub mod markdown;
 mod package;
@@ -48,6 +49,7 @@ pub use export::{
     ExportFormat, HtmlOptions, MarkdownOptions, TextOptions, export, to_html, to_markdown,
     to_markdown_with, to_text,
 };
+pub use fulltext::{FullTextIndex, IndexedDocument, RefreshReport, SearchHit};
 pub use html::HtmlLoader;
 pub use markdown::MarkdownLoader;
 #[cfg(feature = "pdf")]
