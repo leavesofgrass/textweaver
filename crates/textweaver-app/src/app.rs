@@ -246,6 +246,10 @@ pub struct App {
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
     pub(crate) track: SpeechTrack,
+    /// Where continuous reading goes on when the planned window finishes.
+    pub(crate) continue_from: Option<CharPos>,
+    /// Where the text handed to the speech service ends.
+    pub(crate) planned_end: Option<CharPos>,
     /// The backend's capabilities as last reported.
     pub(crate) speech_caps: textweaver_speech::Caps,
     pub(crate) view: Viewport,
@@ -300,6 +304,8 @@ impl App {
             pause_origin: None,
             reading: ReadKind::Continuous,
             track: SpeechTrack::default(),
+            continue_from: None,
+            planned_end: None,
             speech_caps,
             view: Viewport::default(),
             self_voicing: config.self_voicing,
@@ -469,7 +475,7 @@ impl App {
     pub fn open(&mut self, path: &Path) -> Result<Vec<Effect>, AppError> {
         let mut doc = self
             .registry
-            .load(&Source::Path(path.to_owned()), &LoadOptions::default())?;
+            .load(&Source::Path(path.to_owned()), &self.load_options())?;
         if doc.meta.path.is_none() {
             doc.meta.path = Some(path.to_owned());
         }

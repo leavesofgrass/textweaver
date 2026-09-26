@@ -511,7 +511,7 @@ impl App {
         let rebuilt = if rebuild {
             let loaded = path.as_ref().map(|p| {
                 self.registry
-                    .load(&Source::Path(p.clone()), &LoadOptions::default())
+                    .load(&Source::Path(p.clone()), &self.load_options())
             });
             match loaded {
                 Some(Ok(doc)) => Some(doc),
@@ -523,7 +523,7 @@ impl App {
                                 data: saved_text.clone().into_bytes(),
                                 hint: hint.into(),
                             },
-                            &LoadOptions::default(),
+                            &self.load_options(),
                         )
                         .ok()
                 }
@@ -1406,7 +1406,7 @@ impl App {
         let title = snap.display_title();
         let loaded = snap.path.as_ref().filter(|p| p.is_file()).and_then(|p| {
             self.registry
-                .load(&Source::Path(p.clone()), &LoadOptions::default())
+                .load(&Source::Path(p.clone()), &self.load_options())
                 .ok()
                 .map(|d| (d, DocKey::for_path(p)))
         });
@@ -1445,8 +1445,11 @@ impl App {
         if self.is_dirty() {
             return self.leave_edit(None, None, AfterLeave::Quit);
         }
-        if self.edit.is_some() {
-            self.finish_leave(false, false);
+        // A save during this session changed the file: rebuild the reading
+        // view from it, so the positions saved on the way out match what
+        // will be loaded next time (docs/audit-2026-09.md, finding D1).
+        if let Some(rebuild) = self.edit.as_ref().map(|e| e.session.maps_stale()) {
+            self.finish_leave(rebuild, false);
         }
         self.shutdown();
         vec![Effect::Quit]

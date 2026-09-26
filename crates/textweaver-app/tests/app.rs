@@ -889,3 +889,139 @@ fn stop_leaves_speech_cursor() {
     assert_eq!(r.app.playback(), Playback::Idle);
     assert_eq!(r.said.last(), "Stopped. Speech Cursor off.");
 }
+
+// Ported from the September 2026 audit's patches (docs/audit-2026-09/) by
+// Agent D4: S2 (single keys and missing actions), S6 (table mode), S7
+// (ordered list items).
+
+#[test]
+fn every_action_with_a_default_key_has_a_handler() {
+    // Shift+arrows (select), Shift+S (read paragraph), and F9 (single-key
+    // shortcuts) said "... is not available yet."
+    use textweaver_app::keymap::{Frontend, Keymap, Platform};
+    let keymap = Keymap::defaults(Platform::current(), Frontend::Terminal);
+    let mut r = rig(PROSE);
+    for &a in ActionId::ALL {
+        // Choose voice waits for a voice list from the speech service.
+        let pending = a == ActionId::ChooseVoice;
+        if pending || a.confirmation_prompt().is_some() || keymap.chords_for(a).is_empty() {
+            continue;
+        }
+        let before = r.said.all().len();
+        r.act(a);
+        r.app.dispatch(Command::Cancel);
+        let new = &r.said.all()[before..];
+        assert!(
+            !new.iter().any(|m| m.contains("is not available yet")),
+            "{a:?} has a key but no handler: {new:?}"
+        );
+        // Leave edit mode where an action entered it.
+        if r.app.mode() == Mode::Edit {
+            r.act(ActionId::ToggleEditMode);
+        }
+        r.app.dispatch(Command::Action(ActionId::Stop));
+    }
+}
+
+#[test]
+fn single_key_shortcuts_follow_the_setting_and_f9() {
+    use std::str::FromStr;
+    let mut r = rig(PROSE);
+    let t = textweaver_app::keymap::KeyChord::from_str("t").unwrap();
+    let layer = Mode::Browse.layer();
+    assert!(r.app.keymap().lookup(&t, layer).is_some());
+    r.act(ActionId::ToggleCharacterKeys);
+    assert!(r.said.any("Single-key shortcuts off"), "{:?}", r.said.all());
+    assert!(r.app.keymap().lookup(&t, layer).is_none());
+    assert!(!r.app.settings().keyboard.character_keys);
+    r.act(ActionId::ToggleCharacterKeys);
+    assert!(r.app.keymap().lookup(&t, layer).is_some());
+    // The setting applies at startup.
+    let said = Said::default();
+    let (mut config, _log) = make_config(&said);
+    config.settings.keyboard.character_keys = false;
+    let app = App::new(config);
+    assert!(app.keymap().lookup(&t, layer).is_none());
+}
+
+#[test]
+fn shift_arrows_select_in_browse_mode() {
+    let mut r = rig(PROSE);
+    r.act(ActionId::SelectNextWord);
+    r.act(ActionId::SelectNextWord);
+    let sel = r.app.session().unwrap().selection.expect("a selection");
+    assert_eq!(r.app.session().unwrap().doc.slice(sel).trim(), "Alpha beta");
+}
+
+fn load_md(md: &str) -> Document {
+    use textweaver_app::formats::{LoadOptions, Registry, Source};
+    Registry::with_builtins()
+        .load(
+            &Source::Bytes {
+                data: md.as_bytes().to_vec(),
+                hint: "md".into(),
+            },
+            &LoadOptions::default(),
+        )
+        .unwrap()
+}
+
+#[test]
+fn table_mode_setting_changes_how_tables_are_read() {
+    use textweaver_app::store::TableMode;
+    let doc = load_md("Intro.\n\n| Name | Role |\n|---|---|\n| Ada | Engineer |\n\nAfter.\n");
+    for (mode, expect) in [
+        (TableMode::Flat, "Ada, Engineer"),
+        (TableMode::Skip, "skipped"),
+    ] {
+        let said = Said::default();
+        let (mut config, log) = make_config(&said);
+        config.settings.normalization.table_mode = mode;
+        let mut app = App::new(config);
+        app.open_document(doc.clone(), DocKey::untitled(1), "T".into());
+        app.dispatch(Command::Action(ActionId::ReadFromCursor));
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while app.playback() != Playback::Idle && Instant::now() < deadline {
+            app.poll_speech();
+            std::thread::sleep(Duration::from_millis(2));
+        }
+        let texts = log.texts().join(" | ");
+        assert!(texts.contains(expect), "{mode:?}: {texts}");
+    }
+}
+
+#[test]
+fn footnote_mode_setting_decides_where_footnotes_are_read() {
+    use textweaver_app::store::FootnoteMode;
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("notes.md");
+    std::fs::write(
+        &file,
+        "Text with a note[^1] here.\n\n[^1]: The note body.\n",
+    )
+    .unwrap();
+    let text_for = |mode: FootnoteMode| {
+        let said = Said::default();
+        let (mut config, _log) = make_config(&said);
+        config.settings.normalization.footnote_mode = mode;
+        let mut app = App::new(config);
+        app.open(&file).unwrap();
+        app.session().unwrap().doc.text().to_string()
+    };
+    let inline = text_for(FootnoteMode::Inline);
+    let skip = text_for(FootnoteMode::Skip);
+    let deferred = text_for(FootnoteMode::Deferred);
+    assert!(inline.contains("footnote: The note body"), "{inline}");
+    assert!(!skip.contains("The note body"), "{skip}");
+    assert!(deferred.contains("Footnotes"), "{deferred}");
+    assert_ne!(inline, deferred);
+}
+
+#[test]
+fn an_ordered_list_item_is_announced_with_its_text() {
+    let doc = load_md("Intro.\n\n1. Buy milk\n2. Walk the dog\n");
+    let mut r = rig_with_doc(doc);
+    r.act(ActionId::NextListItem);
+    r.act(ActionId::NextListItem);
+    assert_eq!(r.said.last(), "List item: 2. Walk the dog");
+}

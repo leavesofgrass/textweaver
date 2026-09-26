@@ -760,6 +760,30 @@ fn reading_the_whole_document_and_the_source_while_editing() {
     assert_eq!(ranges.first().map(|x| x.start), Some(CharPos(0)));
 }
 
+/// Ported from the audit's patch S5 (Agent D4).
+#[test]
+fn quitting_in_edit_mode_after_a_save_keeps_positions_on_the_saved_text() {
+    // Quitting while still in edit mode (clean after a save) restored the
+    // reading text from before the edits and saved positions against it.
+    let mut r = rig();
+    let file = r.file("note.md", NOTE_MD);
+    r.app.open(&file).unwrap();
+    let canon = r.text();
+    r.go(at(&canon, "The end"));
+    r.act(ActionId::AddBookmark);
+    r.act(ActionId::ToggleEditMode);
+    r.go(CharPos(at(NOTE_MD, "Hello").0));
+    r.type_str("A much longer opening sentence goes here. ");
+    r.act(ActionId::Save);
+    assert!(!r.app.is_dirty());
+    assert_eq!(r.quit(), vec![Effect::Quit]);
+    r.relaunch();
+    r.app.open(&file).unwrap();
+    let canon = r.text();
+    assert!(canon.contains("A much longer opening"), "{canon}");
+    assert_eq!(bookmark_pos(&r.app), at(&canon, "The end"));
+}
+
 /// Waits (up to five seconds) for speech sent on the speech thread to reach
 /// the recording backend; fixed sleeps race on a busy machine.
 fn wait_until(done: impl Fn() -> bool) {
