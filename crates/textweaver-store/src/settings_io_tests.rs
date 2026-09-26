@@ -78,6 +78,7 @@ fn everything_changed() -> Settings {
     r.wrap_navigation = true;
     r.cursor_follows_speech = false;
     r.sync_conflict_policy = ConflictPolicy::Manual;
+    r.citations = crate::CitationReading::Words;
     let d = &mut s.display;
     d.theme = "nord".into();
     d.wrap_width = 100;
@@ -96,7 +97,8 @@ fn everything_changed() -> Settings {
     s.library.recent_limit = 10;
     s.library.folders = vec!["C:/Books".into()];
     s.keyboard.character_keys = false;
-    s.keyboard.preset = crate::KeymapPreset::ScreenReader;
+    s.keyboard.preset = crate::KeymapPreset::Classic;
+    s.keyboard.digit_row = crate::DigitRow::Azerty;
     let acc = &mut s.accessibility;
     acc.mode = crate::AccessMode::Hybrid;
     acc.say_all = crate::SayAll::Voice;
@@ -160,6 +162,7 @@ fn everything_changed() -> Settings {
         mask_outside: true,
     };
     a.syllables = true;
+    a.difficult_words = true;
     a.syllable_options = textweaver_aids::SyllableOptions {
         separator: "-".into(),
         left_min: 1,
@@ -168,6 +171,8 @@ fn everything_changed() -> Settings {
         skip_urls: false,
         skip_code: false,
     };
+    s.preview.auto_reload = true;
+    s.preview.live = true;
     s.extra.insert("future_key".into(), toml::Value::Integer(1));
     let future: toml::Table = "a = 1\nwhen = 2026-09-25T14:03:07Z\n".parse().unwrap();
     s.extra

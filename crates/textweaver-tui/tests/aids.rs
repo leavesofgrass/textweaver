@@ -128,7 +128,7 @@ fn rsvp_shows_one_word_steps_and_closes() {
     assert!(h.status().starts_with("RSVP paused."));
 
     // The sentence key moves the RSVP word; faster says the rate.
-    h.press(KeyEvent::new(KeyCode::Char('.'), KeyModifiers::NONE));
+    h.press(KeyEvent::new(KeyCode::Down, KeyModifiers::ALT));
     assert_eq!(h.rsvp_word(), "Four");
     h.press(KeyEvent::new(
         KeyCode::Up,

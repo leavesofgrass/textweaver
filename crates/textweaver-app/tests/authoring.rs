@@ -597,6 +597,104 @@ fn preview_opens_the_browser_and_saving_rewrites_it() {
     assert_eq!(r.opened().len(), 1);
     let page = std::fs::read_to_string(&opened[0]).unwrap();
     assert!(page.contains("Note: The area"), "{page}");
+    // Jon's decision: say it, and do not reload by itself.
+    assert!(
+        r.said.any("Preview updated. Press F5 in the browser."),
+        "{:?}",
+        r.said.all()
+    );
+}
+
+/// `[preview] auto_reload`: the page comes from a server on 127.0.0.1 with
+/// a secret path, and a save sends a reload naming the heading nearest the
+/// caret; turning it off stops the server.
+#[test]
+fn preview_auto_reload_serves_the_page_and_reloads_after_saves() {
+    use std::io::{BufRead, BufReader, Read, Write};
+    let mut r = Rig::new();
+    r.open(
+        "live.md",
+        "# Intro\n\nFirst part.\n\n## Methods\n\nWe measured.\n\n## Results\n\nIt worked.\n",
+    );
+    r.act(ActionId::TogglePreviewAutoReload);
+    assert!(r.app.settings().preview.auto_reload);
+    assert!(
+        r.status().starts_with("Automatic preview reloading on"),
+        "{}",
+        r.status()
+    );
+    r.act(ActionId::PreviewInBrowser);
+    r.wait();
+    let opened = r.opened();
+    assert_eq!(opened.len(), 1, "{opened:?}");
+    let url = opened[0].clone();
+    assert!(url.starts_with("http://127.0.0.1:"), "{url}");
+    let rest = url.trim_start_matches("http://");
+    let (host, path) = rest.split_once('/').unwrap();
+    let addr: std::net::SocketAddr = host.parse().unwrap();
+    let get = |p: &str| {
+        let mut c = std::net::TcpStream::connect(addr).unwrap();
+        c.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+        write!(c, "GET {p} HTTP/1.1\r\n\r\n").unwrap();
+        let mut out = String::new();
+        let _ = c.read_to_string(&mut out);
+        out
+    };
+    let page = get(&format!("/{path}"));
+    assert!(page.contains("<h2 id=\"methods\""), "{page}");
+    assert!(get("/nottheright/").starts_with("HTTP/1.1 404"));
+    // A page listens for reloads.
+    let mut events = std::net::TcpStream::connect(addr).unwrap();
+    events
+        .set_read_timeout(Some(Duration::from_secs(10)))
+        .unwrap();
+    write!(events, "GET /{path}events HTTP/1.1\r\n\r\n").unwrap();
+    let mut reader = BufReader::new(events);
+    let mut line = String::new();
+    while !line.starts_with("retry:") {
+        line.clear();
+        reader.read_line(&mut line).unwrap();
+    }
+    // Edit under Methods and save: the page is told to reload there.
+    r.act(ActionId::ToggleEditMode);
+    r.go("We measured");
+    r.type_text("Then ");
+    r.act(ActionId::Save);
+    r.wait();
+    let mut event = String::new();
+    loop {
+        line.clear();
+        if reader.read_line(&mut line).unwrap() == 0 {
+            break;
+        }
+        if line.trim().is_empty() {
+            if event.is_empty() {
+                continue;
+            }
+            break;
+        }
+        event.push_str(&line);
+    }
+    assert_eq!(
+        event,
+        "event: reload\ndata: methods\n",
+        "{:?}",
+        r.said.all()
+    );
+    assert!(r.said.any("Preview updated."));
+    assert!(!r.said.any("Press F5"), "{:?}", r.said.all());
+    // Off: the server stops.
+    r.act(ActionId::TogglePreviewAutoReload);
+    assert!(!r.app.settings().preview.auto_reload);
+    let refused = std::net::TcpStream::connect_timeout(&addr, Duration::from_millis(300))
+        .and_then(|mut c| {
+            write!(c, "GET /{path} HTTP/1.1\r\n\r\n")?;
+            c.set_read_timeout(Some(Duration::from_millis(500)))?;
+            let mut b = [0u8; 1];
+            c.read(&mut b)
+        })
+        .map_or(true, |n| n == 0);
+    assert!(refused, "the server still answers");
 }
 
 // Spelling.

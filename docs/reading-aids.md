@@ -6,11 +6,13 @@ Every aid can be turned on and off, and textweaver says when it changes. The key
 
 - **Alt+Shift+R**: show or hide RSVP, starting from the cursor.
 - **Alt+Shift+P**: start or pause RSVP.
-- **Alt+Shift+Up** and **Alt+Shift+Down**: RSVP faster or slower.
+- **Alt+Shift+Up** and **Alt+Shift+Down**, or **Alt+Shift+PageUp** and **Alt+Shift+PageDown**: RSVP faster or slower. Windows Terminal resizes its panes with the first two; the Page keys always reach textweaver.
 - **Alt+Shift+O**: move the RSVP word to the next place on the screen.
 - **Alt+Shift+B**: bionic reading on or off.
 - **Alt+Shift+U**: the reading ruler: off, current line, or ruler.
 - **Alt+Shift+G**: say the reading level of the document, or of the selection.
+- **Alt+Shift+Z**: syllables shown or hidden.
+- **Alt+Shift+J**: difficult words marked or not.
 
 The [keyboard reference](keyboard.md) lists every key. Each aid's settings are in the `[reading_aids]` sections of `settings.toml`; [Settings](settings.md#reading_aids) lists them.
 
@@ -138,7 +140,7 @@ In the terminal, the current line is underlined with a bar in the left margin. L
 
 textweaver can mark rare words, so you can look them up before you read. A word is rare when it is uncommon in everyday English.
 
-This aid is built and tested in textweaver's reading-aids library, but the terminal reader does not show the marks yet.
+Press **Alt+Shift+J** (or run `difficult words toggle` from the palette) to mark them. You hear "Difficult words underlined." In the terminal, each difficult word is underlined, never shown by colour alone. When verbosity is high (**Alt+Shift+V**), moving onto one with the Right or Left arrow adds "difficult word" after it: "mitochondria, difficult word". The choice is saved as `difficult_words = true` under `[reading_aids]`. The GUI does not show the marks yet.
 
 textweaver has a word list built in, so this works with no download. The list comes from SCOWL (Spell Checker Oriented Word Lists), which sorts English words into sizes by the smallest dictionary they appear in:
 
@@ -170,7 +172,9 @@ These are estimates. Other tools may give a slightly different grade.
 
 ## Syllables
 
-textweaver can show long words split into syllables, like `read·a·bil·i·ty`. Like difficult words, this is in the reading-aids library, and the terminal reader does not show it yet. This helps you sound out a word. Only the screen changes. Speech reads the word normally.
+textweaver can show long words split into syllables, like `read·a·bil·i·ty`. Press **Alt+Shift+Z** (or run `syllables toggle` from the palette); you hear "Syllables shown." This helps you sound out a word. Only the screen changes. Speech, search, bookmarks, and positions use the word as it is.
+
+The separator is drawn between the letters, so the reading highlight still covers exactly the word being spoken, separators and all, and the cursor stays on the right letter. The choice is saved as `syllables = true` under `[reading_aids]`; `[reading_aids.syllable_options]` sets the separator (a middle dot by default) and which words are split. The GUI does not show syllables yet.
 
 The split is worked out from English spelling rules, not a dictionary, so a few words split in odd places.
 

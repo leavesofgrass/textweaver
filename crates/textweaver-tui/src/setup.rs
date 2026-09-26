@@ -245,7 +245,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = SettingsStore::new(Paths::under(dir.path()));
         let mut s = Settings::default();
-        s.keyboard.preset = textweaver_app::store::KeymapPreset::ScreenReader;
+        s.keyboard.preset = textweaver_app::store::KeymapPreset::Classic;
         store.save(&s).unwrap();
         let opts = Options {
             no_speech: true,
@@ -255,11 +255,11 @@ mod tests {
         };
         let (mut app, _) = build_app(&opts);
         assert_eq!(app.access_mode(), AccessMode::ScreenReader);
-        assert_eq!(app.keymap().preset(), Preset::ScreenReader);
+        assert_eq!(app.keymap().preset(), Preset::Classic);
         let k: textweaver_app::keymap::KeyChord = "k".parse().unwrap();
         assert_eq!(
             app.keymap().lookup(&k, Layer::Browse),
-            Some(ActionId::NextLink)
+            Some(ActionId::ScrollUp)
         );
         // A mode given on the command line asks nothing at startup.
         assert!(!offer_hybrid_if_screen_reader(&mut app, &opts));

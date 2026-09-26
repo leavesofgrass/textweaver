@@ -49,12 +49,12 @@ pub use notes::{Annotation, Highlight, Note, NotesExport, Relation};
 pub use paths::Paths;
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
-    AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, CommunityLexiconSettings,
-    CursorPlacement, DisplaySettings, EciDictionaries, EciSettings, EditingSettings,
-    ExportSettings, FootnoteMode, HighlightSettings, KeyboardSettings, KeymapOverrides,
-    KeymapPreset, LibrarySettings, NormalizationSettings, RESERVED_SETTINGS, ReadingSettings,
-    SapiSettings, SayAll, Settings, SettingsLoad, SettingsStore, SpeechSettings, SubtitleFormat,
-    TableMode,
+    AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, CitationReading,
+    CommunityLexiconSettings, CursorPlacement, DigitRow, DisplaySettings, EciDictionaries,
+    EciSettings, EditingSettings, ExportSettings, FootnoteMode, HighlightSettings,
+    KeyboardSettings, KeymapOverrides, KeymapPreset, LibrarySettings, NormalizationSettings,
+    PreviewSettings, RESERVED_SETTINGS, ReadingSettings, SapiSettings, SayAll, Settings,
+    SettingsLoad, SettingsStore, SpeechSettings, SubtitleFormat, TableMode,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,

@@ -27,8 +27,15 @@
 //! (bracketed paste) is one undo step. In lists, Enter chooses, Delete
 //! deletes the item (bookmarks, notes, highlights), and F2 renames or edits
 //! it. Most note and highlight keys are keymap
-//! actions; three more (`'` next note, `"` previous note, `Shift+Y` list
-//! highlights) come from `textweaver_app::extra_bindings`.
+//! actions; `Shift+Y` (list highlights) comes from
+//! `textweaver_app::extra_bindings`.
+//!
+//! Browse keys follow NVDA's and JAWS's quick navigation. The digit row
+//! (`1` to `6`, heading levels) is matched by the physical key
+//! ([`physical`]): on Windows the event loop peeks at the console's input
+//! records before crossterm reads them. While math exploration is on
+//! (Alt+Shift+X), the arrows, Home, End, Space, Enter, and Escape move
+//! through the formula.
 //!
 //! Reading aids (ADR-0022): RSVP shows one word at a time in a box over the
 //! document (Alt+Shift+R; Alt+Shift+P plays), bionic reading bolds the
@@ -40,6 +47,7 @@
 
 pub mod layout;
 pub mod paths;
+pub mod physical;
 pub mod setup;
 pub mod signals;
 pub mod theme;
@@ -101,7 +109,17 @@ pub fn frame<B: Backend>(terminal: &mut Terminal<B>, tui: &mut Tui) -> Result<Du
 pub fn run(terminal: &mut DefaultTerminal, tui: &mut Tui) -> anyhow::Result<()> {
     while !tui.should_quit() && !signals::requested() {
         let wait = frame(terminal, tui)?;
-        if event::poll(wait)? {
+        // On Windows the loop waits on the console itself, so it can peek
+        // at the physical keys before crossterm reads them (the digit row
+        // on any layout; see `physical`).
+        let ready = match physical::peek_console(wait) {
+            Some((ready, keys)) => {
+                tui.digit_keys_mut().set_pending(keys);
+                ready && event::poll(Duration::ZERO)?
+            }
+            None => event::poll(wait)?,
+        };
+        if ready {
             let ev = event::read()?;
             tui.handle_event(&ev);
             if let Some(seq) = tui.take_clipboard_sequence() {

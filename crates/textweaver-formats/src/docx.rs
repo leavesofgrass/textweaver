@@ -30,6 +30,11 @@
 //! - **Images** (`w:drawing`) read as their alt text (`wp:docPr` `descr`,
 //!   else `title`) under an `Image` marker; images without alt text are
 //!   decorative and read as nothing, as in the HTML loader.
+//! - **Equations** (Office Math, `m:oMath`) become LaTeX with its
+//!   delimiters under a `Math` marker, as in the Markdown loader: `$…$` at
+//!   level 0 inline, and `$$…$$` at level 1 on a line of its own for
+//!   display math (`m:oMathPara`). See the `omml` module for the elements
+//!   covered.
 //! - **Tables** stay in place, one row per line, cells separated by
 //!   [`CELL_SEPARATOR`](crate::CELL_SEPARATOR); the first row is the header
 //!   when the table's look says so (`w:tblLook` first row, Word's default)
@@ -742,18 +747,17 @@ impl Conv<'_> {
                 }
                 "fldSimple" | "smartTag" | "ins" | "moveTo" | "customXml" | "sdtContent"
                 | "dir" | "bdo" => self.inline(c),
-                // Office Math: its text in reading order (not LaTeX, so it
-                // is not marked as math), rather than nothing at all.
-                "oMath" | "oMathPara" => {
-                    let text: String = c
-                        .descendants()
-                        .filter(|n| n.tag_name().name() == "t")
-                        .filter_map(|n| n.text())
-                        .collect();
-                    self.set_fmt([false; 4]);
-                    self.b.space();
-                    self.b.text(&text);
-                    self.b.space();
+                "oMath" => self.math(c, false),
+                // Display math: each equation of the paragraph on its own.
+                "oMathPara" => {
+                    let mut any = false;
+                    for m in c.children().filter(|n| n.tag_name().name() == "oMath") {
+                        self.math(m, true);
+                        any = true;
+                    }
+                    if !any {
+                        self.math(c, true);
+                    }
                 }
                 "sdt" => {
                     if let Some(content) = child(c, "sdtContent") {
@@ -812,6 +816,42 @@ impl Conv<'_> {
                 }
                 _ => {}
             }
+        }
+    }
+
+    /// Office Math as LaTeX with its delimiters under a `Math` marker, as
+    /// the Markdown loader writes it: `$…$` at level 0, or display math
+    /// `$$…$$` at level 1 on a line of its own (in a table cell, where a
+    /// line break would split the row, between spaces).
+    fn math(&mut self, node: Node<'_, '_>, display: bool) {
+        let latex = crate::omml::to_latex(node);
+        if latex.is_empty() {
+            return;
+        }
+        self.set_fmt([false; 4]);
+        self.display_break(display);
+        let text = if display {
+            format!("$${latex}$$")
+        } else {
+            format!("${latex}$")
+        };
+        let id = self
+            .b
+            .open(Self::marker(MarkerKind::Math).with_level(u8::from(display)));
+        self.b.text(&text);
+        self.b.close(id);
+        self.display_break(display);
+    }
+
+    /// The break around display math: a line break, or a space in a cell.
+    fn display_break(&mut self, display: bool) {
+        if !display {
+            return;
+        }
+        if self.in_cell > 0 {
+            self.b.space();
+        } else {
+            self.b.line_break();
         }
     }
 
@@ -958,5 +998,266 @@ mod tests {
         assert_eq!(counter(28, "upperLetter"), "BB");
         assert_eq!(counter(14, "lowerRoman"), "xiv");
         assert_eq!(counter(1999, "upperRoman"), "MCMXCIX");
+    }
+
+    use std::io::{Cursor, Write};
+
+    const W: &str = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+    const M: &str = "http://schemas.openxmlformats.org/officeDocument/2006/math";
+
+    /// A Word document with this body, loaded.
+    fn load(body: &str) -> Document {
+        let xml = format!(
+            r#"<?xml version="1.0"?><w:document xmlns:w="{W}" xmlns:m="{M}"><w:body>{body}</w:body></w:document>"#
+        );
+        let mut z = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        z.start_file(
+            "word/document.xml",
+            zip::write::SimpleFileOptions::default(),
+        )
+        .expect("zip entry");
+        z.write_all(xml.as_bytes()).expect("zip write");
+        let data = z.finish().expect("zip finish").into_inner();
+        DocxLoader
+            .load(
+                &Source::Bytes {
+                    data,
+                    hint: "docx".into(),
+                },
+                &LoadOptions::default(),
+            )
+            .expect("the document loads")
+    }
+
+    /// (covered text, level) of every `Math` marker.
+    fn math(doc: &Document) -> Vec<(String, u8)> {
+        doc.markers()
+            .iter()
+            .filter(|m| m.kind == MarkerKind::Math)
+            .map(|m| (doc.slice(m.range).to_string(), m.level))
+            .collect()
+    }
+
+    fn r(text: &str) -> String {
+        format!("<m:r><m:t>{text}</m:t></m:r>")
+    }
+
+    fn wr(text: &str) -> String {
+        format!(r#"<w:r><w:t xml:space="preserve">{text}</w:t></w:r>"#)
+    }
+
+    #[test]
+    fn inline_equations_read_as_latex_math() {
+        let frac = format!(
+            "<m:oMath><m:f><m:num>{}</m:num><m:den>{}</m:den></m:f></m:oMath>",
+            r("a"),
+            r("b")
+        );
+        let doc = load(&format!(
+            "<w:p>{}{frac}{}</w:p>",
+            wr("Half is "),
+            wr(" of it.")
+        ));
+        assert_eq!(doc.text().to_string(), "Half is $\\frac{a}{b}$ of it.");
+        assert_eq!(math(&doc), vec![("$\\frac{a}{b}$".to_owned(), 0)]);
+        let m = doc
+            .markers()
+            .iter()
+            .find(|m| m.kind == MarkerKind::Math)
+            .map(|m| m.range);
+        assert_eq!(m, Some(CharRange::new(8, 21)));
+    }
+
+    #[test]
+    fn display_equations_stand_on_their_own() {
+        let sum = format!(
+            r#"<m:oMathPara><m:oMath><m:nary><m:naryPr><m:chr m:val="∑"/></m:naryPr><m:sub>{}</m:sub><m:sup>{}</m:sup><m:e>{}</m:e></m:nary><m:r><m:t>=</m:t></m:r><m:f><m:num>{}</m:num><m:den>{}</m:den></m:f></m:oMath></m:oMathPara>"#,
+            r("i=1"),
+            r("n"),
+            r("i"),
+            r("n(n+1)"),
+            r("2")
+        );
+        let doc = load(&format!(
+            "<w:p>{}</w:p><w:p>{sum}</w:p><w:p>{}</w:p>",
+            wr("Gauss:"),
+            wr("So it goes.")
+        ));
+        let latex = "$$\\sum_{i=1}^{n} i=\\frac{n(n+1)}{2}$$";
+        assert_eq!(
+            doc.text().to_string(),
+            format!("Gauss:\n\n{latex}\n\nSo it goes.")
+        );
+        assert_eq!(math(&doc), vec![(latex.to_owned(), 1)]);
+        // The equation is a paragraph of its own.
+        let para = doc
+            .markers()
+            .iter()
+            .filter(|m| m.kind == MarkerKind::Paragraph)
+            .map(|m| doc.slice(m.range).to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(para, vec!["Gauss:", latex, "So it goes."]);
+    }
+
+    #[test]
+    fn display_math_with_text_around_gets_its_own_line() {
+        let eq = format!("<m:oMathPara><m:oMath>{}</m:oMath></m:oMathPara>", r("x=1"));
+        let doc = load(&format!(
+            "<w:p>{}{eq}{}</w:p>",
+            wr("Take"),
+            wr("then stop.")
+        ));
+        assert_eq!(doc.text().to_string(), "Take\n$$x=1$$\nthen stop.");
+        assert_eq!(math(&doc), vec![("$$x=1$$".to_owned(), 1)]);
+    }
+
+    #[test]
+    fn several_equations_in_one_math_paragraph_are_separate() {
+        let eq = format!(
+            "<m:oMathPara><m:oMath>{}</m:oMath><m:oMath>{}</m:oMath></m:oMathPara>",
+            r("a=1"),
+            r("b=2")
+        );
+        let doc = load(&format!("<w:p>{eq}</w:p>"));
+        assert_eq!(doc.text().to_string(), "$$a=1$$\n$$b=2$$");
+        assert_eq!(
+            math(&doc),
+            vec![("$$a=1$$".to_owned(), 1), ("$$b=2$$".to_owned(), 1)]
+        );
+    }
+
+    #[test]
+    fn every_element_reads_back_from_a_document() {
+        let e = |b: &str| format!("<m:e>{b}</m:e>");
+        let cases: Vec<(String, &str)> = vec![
+            (r("α≤π"), "\\alpha\\leq\\pi"),
+            (
+                format!("<m:sSup>{}<m:sup>{}</m:sup></m:sSup>", e(&r("x")), r("2")),
+                "x^{2}",
+            ),
+            (
+                format!("<m:sSub>{}<m:sub>{}</m:sub></m:sSub>", e(&r("x")), r("i")),
+                "x_{i}",
+            ),
+            (
+                format!(
+                    "<m:sSubSup>{}<m:sub>{}</m:sub><m:sup>{}</m:sup></m:sSubSup>",
+                    e(&r("x")),
+                    r("i"),
+                    r("2")
+                ),
+                "x_{i}^{2}",
+            ),
+            (
+                format!(
+                    "<m:sPre><m:sub>{}</m:sub><m:sup>{}</m:sup>{}</m:sPre>",
+                    r("a"),
+                    r("b"),
+                    e(&r("C"))
+                ),
+                "{}_{a}^{b}C",
+            ),
+            (
+                format!(
+                    r#"<m:rad><m:radPr><m:degHide m:val="1"/></m:radPr><m:deg/>{}</m:rad>"#,
+                    e(&r("x"))
+                ),
+                "\\sqrt{x}",
+            ),
+            (
+                format!("<m:rad><m:deg>{}</m:deg>{}</m:rad>", r("n"), e(&r("x"))),
+                "\\sqrt[n]{x}",
+            ),
+            (
+                format!(
+                    "<m:nary><m:sub>{}</m:sub><m:sup>{}</m:sup>{}</m:nary>",
+                    r("0"),
+                    r("1"),
+                    e(&r("x dx"))
+                ),
+                "\\int_{0}^{1} x dx",
+            ),
+            (format!("<m:d>{}</m:d>", e(&r("a"))), "\\left( a \\right)"),
+            (
+                format!(
+                    "<m:d><m:dPr><m:begChr m:val=\"[\"/><m:endChr m:val=\"]\"/></m:dPr><m:e><m:m><m:mr>{}{}</m:mr><m:mr>{}{}</m:mr></m:m></m:e></m:d>",
+                    e(&r("1")),
+                    e(&r("0")),
+                    e(&r("0")),
+                    e(&r("1"))
+                ),
+                "\\left[ \\begin{matrix} 1 & 0 \\\\ 0 & 1 \\end{matrix} \\right]",
+            ),
+            (
+                format!(
+                    r#"<m:func><m:fName><m:r><m:rPr><m:sty m:val="p"/></m:rPr><m:t>cos</m:t></m:r></m:fName>{}</m:func>"#,
+                    e(&r("θ"))
+                ),
+                "\\cos \\theta",
+            ),
+            (
+                format!(
+                    "<m:acc><m:accPr><m:chr m:val=\"\u{20D7}\"/></m:accPr>{}</m:acc>",
+                    e(&r("v"))
+                ),
+                "\\vec{v}",
+            ),
+            (
+                format!(
+                    r#"<m:bar><m:barPr><m:pos m:val="top"/></m:barPr>{}</m:bar>"#,
+                    e(&r("z"))
+                ),
+                "\\overline{z}",
+            ),
+            (
+                format!(
+                    "<m:func><m:fName><m:limLow>{}<m:lim>{}</m:lim></m:limLow></m:fName>{}</m:func>",
+                    e(&r("lim")),
+                    r("n→∞"),
+                    e(&r("a"))
+                ),
+                "\\lim_{n\\to\\infty} a",
+            ),
+            (
+                format!("<m:borderBox>{}</m:borderBox>", e(&r("y"))),
+                "\\boxed{y}",
+            ),
+            (
+                format!("<m:groupChr>{}</m:groupChr>", e(&r("abc"))),
+                "\\underbrace{abc}",
+            ),
+            (
+                format!(
+                    "<m:eqArr>{}{}</m:eqArr>",
+                    e(&r("a&amp;=b")),
+                    e(&r("c&amp;=d"))
+                ),
+                "\\begin{aligned} a & =b \\\\ c & =d \\end{aligned}",
+            ),
+            (
+                "<m:r><m:rPr><m:nor/></m:rPr><m:t>for all x</m:t></m:r>".to_owned(),
+                "\\text{for all x}",
+            ),
+        ];
+        for (omml, want) in cases {
+            let doc = load(&format!("<w:p><m:oMath>{omml}</m:oMath></w:p>"));
+            let want = format!("${want}$");
+            assert_eq!(doc.text().to_string(), want, "for {omml}");
+            assert_eq!(math(&doc), vec![(want.clone(), 0)], "for {omml}");
+        }
+    }
+
+    #[test]
+    fn math_in_a_table_cell_keeps_the_row_whole() {
+        let eq = format!(
+            "<m:oMathPara><m:oMath>{}</m:oMath></m:oMathPara>",
+            r("E=mc")
+        );
+        let doc = load(&format!(
+            "<w:tbl><w:tr><w:tc><w:p>{}</w:p></w:tc><w:tc><w:p>{eq}</w:p></w:tc></w:tr></w:tbl>",
+            wr("Energy")
+        ));
+        assert_eq!(doc.text().to_string(), "Energy | $$E=mc$$");
+        assert_eq!(math(&doc), vec![("$$E=mc$$".to_owned(), 1)]);
     }
 }

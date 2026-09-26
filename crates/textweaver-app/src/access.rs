@@ -59,7 +59,15 @@ pub fn access_mode_setting(m: AccessMode) -> textweaver_store::AccessMode {
 pub fn keymap_preset(p: textweaver_store::KeymapPreset) -> textweaver_keymap::Preset {
     match p {
         textweaver_store::KeymapPreset::Default => textweaver_keymap::Preset::Default,
-        textweaver_store::KeymapPreset::ScreenReader => textweaver_keymap::Preset::ScreenReader,
+        textweaver_store::KeymapPreset::Classic => textweaver_keymap::Preset::Classic,
+    }
+}
+
+/// The digit row for the `[keyboard] digit_row` setting.
+pub fn digit_row(d: textweaver_store::DigitRow) -> textweaver_keymap::digits::DigitRow {
+    match d {
+        textweaver_store::DigitRow::Auto => textweaver_keymap::digits::DigitRow::Auto,
+        textweaver_store::DigitRow::Azerty => textweaver_keymap::digits::DigitRow::Azerty,
     }
 }
 
@@ -166,13 +174,14 @@ impl App {
     /// Document text in `range` as textweaver would say it, for the status
     /// line: table and structure narration from the reading plan, math in
     /// words; at most [`STATUS_TEXT_LIMIT`] characters.
-    pub(crate) fn narrated(&self, range: CharRange) -> String {
+    pub(crate) fn narrated(&mut self, range: CharRange) -> String {
+        let citations = self.citation_speech_in(range);
         let Some(s) = self.session.as_ref() else {
             return String::new();
         };
         let policy = self.narration_policy();
         let range = range.clamp_to(s.doc.len_chars());
-        let joined = textweaver_text::plan(&s.doc, range, &policy)
+        let joined = textweaver_text::plan_with(&s.doc, range, &policy, &citations)
             .into_iter()
             .map(|u| u.text.trim().to_owned())
             .filter(|t| !t.is_empty())

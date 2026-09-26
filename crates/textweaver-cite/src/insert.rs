@@ -15,6 +15,10 @@
 //!
 //! When reading, [`describe_citation`] turns a citation under the cursor
 //! into a spoken description: "Citation: Doe and Roe, 2020, On X, page 12."
+//! Continuous reading uses the shorter [`spoken_citation`] ("Doe and Roe,
+//! 2020, page 12") when citations are on, and [`spoken_citation_authors`]
+//! for an in-text citation when they are off, since it is part of the
+//! sentence ("Doe and Roe argue ...").
 
 use crate::library::ReferenceSource;
 use crate::pandoc::{Citation, CiteItem, Locator, write_citation};
@@ -128,6 +132,68 @@ pub fn announce_inserted(
     }
     s.push('.');
     s
+}
+
+/// A citation as continuous reading says it when citations are on: each
+/// work's authors and year, its locator, and the prefix and suffix typed
+/// around it, joined with semicolons: "Doe and Roe, 2020, page 12" for
+/// `[@doe2020, p. 12]`, "see Doe and Roe, 2020; Roe, 2019" for `[see
+/// @doe2020; @roe2019]`. `[-@key]` leaves the authors out ("2020"). A key
+/// no library has is read as the key.
+pub fn spoken_citation(c: &Citation, source: &dyn ReferenceSource) -> String {
+    let parts: Vec<String> = c
+        .items
+        .iter()
+        .map(|i| {
+            let mut s = String::new();
+            if !i.prefix.is_empty() {
+                s.push_str(i.prefix.trim());
+                s.push(' ');
+            }
+            match source.get(&i.key) {
+                Some(r) if i.suppress_author => {
+                    s.push_str(
+                        &r.year()
+                            .map_or_else(|| "no date".to_owned(), |y| y.to_string()),
+                    );
+                }
+                Some(_) => s.push_str(&short_description(&i.key, source)),
+                None => s.push_str(&i.key),
+            }
+            if let Some(l) = &i.locator {
+                s.push_str(", ");
+                s.push_str(&l.spoken());
+            }
+            let suffix = i.suffix.trim_start_matches([',', ' ']).trim_end();
+            if !suffix.is_empty() {
+                s.push_str(", ");
+                s.push_str(suffix);
+            }
+            s
+        })
+        .collect();
+    parts.join("; ")
+}
+
+/// The authors of an in-text citation, for continuous reading with
+/// citations off, where `@doe2020 argues` is the subject of a sentence:
+/// "Doe and Roe" (the key when no library has it, or the title when the
+/// work has no authors).
+pub fn spoken_citation_authors(c: &Citation, source: &dyn ReferenceSource) -> String {
+    let names: Vec<String> = c
+        .items
+        .iter()
+        .map(|i| match source.get(&i.key) {
+            Some(r) => r.creators_short().unwrap_or_else(|| {
+                r.title
+                    .as_deref()
+                    .map(crate::text::plain_title)
+                    .unwrap_or_else(|| i.key.clone())
+            }),
+            None => i.key.clone(),
+        })
+        .collect();
+    join_and(&names)
 }
 
 /// A spoken description of a citation: "Citation: Doe and Roe, 2020, On
@@ -278,6 +344,35 @@ mod tests {
         );
         let rows = picker_entries(None, &lib);
         assert_eq!(rows[0].label, "Doe and Roe, 2020. On X. Key doe2020.");
+        let find = |t: &str| crate::pandoc::find_citations(t).remove(0);
+        assert_eq!(
+            spoken_citation(&find("[@doe2020, p. 12]"), &lib),
+            "Doe and Roe, 2020, page 12"
+        );
+        assert_eq!(
+            spoken_citation(
+                &find("[see @doe2020, pp. 33-35, emphasis added; @nobody]"),
+                &lib
+            ),
+            "see Doe and Roe, 2020, pages 33 to 35, emphasis added; nobody"
+        );
+        assert_eq!(spoken_citation(&find("[-@doe2020]"), &lib), "2020");
+        assert_eq!(
+            spoken_citation(&find("@doe2020 [p. 3] shows"), &lib),
+            "Doe and Roe, 2020, page 3"
+        );
+        assert_eq!(
+            spoken_citation(&find("[@nobody, p. 4]"), &lib),
+            "nobody, page 4"
+        );
+        assert_eq!(
+            spoken_citation_authors(&find("@doe2020 argues"), &lib),
+            "Doe and Roe"
+        );
+        assert_eq!(
+            spoken_citation_authors(&find("@nobody argues"), &lib),
+            "nobody"
+        );
         assert_eq!(filter_picker(&rows, "roe 2020").len(), 1);
         assert!(filter_picker(&rows, "smith").is_empty());
     }

@@ -43,6 +43,7 @@ pub mod export;
 pub mod fulltext;
 pub mod html;
 pub mod markdown;
+mod omml;
 mod package;
 #[cfg(feature = "pandoc")]
 pub mod pandoc;

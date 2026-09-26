@@ -12,13 +12,27 @@
 //! instead. While RSVP is showing, sentence, paragraph, and word keys move
 //! the RSVP word, Play/Pause (when nothing is read aloud) starts and pauses
 //! it, and Stop closes it.
+//!
+//! **Syllables** (`[reading_aids] syllables`, Alt+Shift+Z) draw long words
+//! split with a middle dot (`read·a·bil·i·ty`). The aids crate builds the
+//! display text with an offset map (ADR-0005); the app hands frontends the
+//! places where a separator goes ([`App::syllable_breaks`]), always between
+//! two chars of the document, so every highlight, the cursor, and a click
+//! stay on the document's own positions, and speech reads the text as it
+//! is.
+//!
+//! **Difficult words** (`[reading_aids] difficult_words`, Alt+Shift+J) are
+//! words SCOWL ranks as rare. Frontends underline them (never colour
+//! alone), and at high verbosity a word move onto one adds "difficult
+//! word".
 
 use std::time::{Duration, Instant};
 
 use textweaver_aids::{
-    Millis, Rsvp, RsvpEvent, RulerMode, RulerSettings, TerminalSpacing, WordTrack, bionic_range,
-    reading_level,
+    DifficultOptions, Millis, Rsvp, RsvpEvent, RulerMode, RulerSettings, ScowlList, SplitText,
+    TerminalSpacing, WordTrack, bionic_range, difficult_range, reading_level, split_range,
 };
+use textweaver_core::SpanKind;
 use textweaver_core::{CharPos, CharRange};
 use textweaver_keymap::ActionId;
 
@@ -318,6 +332,85 @@ impl App {
             }
             _ => Vec::new(),
         }
+    }
+
+    /// `syllables_toggle`: syllables shown or hidden; saved.
+    pub(crate) fn syllables_toggle(&mut self) {
+        let on = !self.settings.reading_aids.syllables;
+        self.settings.reading_aids.syllables = on;
+        self.settings_dirty = true;
+        self.tell(if on {
+            "Syllables shown."
+        } else {
+            "Syllables hidden."
+        });
+    }
+
+    /// The syllable display of `range` (text and offset map), or `None`
+    /// when syllables are off.
+    pub fn syllable_display(&self, range: CharRange) -> Option<SplitText> {
+        let s = self.session.as_ref()?;
+        let a = &self.settings.reading_aids;
+        a.syllables
+            .then(|| split_range(&s.doc, range, &a.syllable_options))
+    }
+
+    /// Where the syllable separator ([`syllable_separator`](Self::syllable_separator))
+    /// is drawn in `range`: before the char at each position, in order.
+    /// Empty when syllables are off.
+    pub fn syllable_breaks(&self, range: CharRange) -> Vec<CharPos> {
+        let Some(split) = self.syllable_display(range) else {
+            return Vec::new();
+        };
+        split
+            .map
+            .spans()
+            .iter()
+            .filter(|sp| sp.kind == SpanKind::Inserted)
+            .map(|sp| sp.source.start)
+            .collect()
+    }
+
+    /// What is drawn between syllables (a middle dot by default).
+    pub fn syllable_separator(&self) -> &str {
+        &self.settings.reading_aids.syllable_options.separator
+    }
+
+    /// `difficult_words_toggle`: difficult words marked or not; saved.
+    pub(crate) fn difficult_words_toggle(&mut self) {
+        let on = !self.settings.reading_aids.difficult_words;
+        self.settings.reading_aids.difficult_words = on;
+        self.settings_dirty = true;
+        let msg = match (on, ScowlList::builtin().is_some()) {
+            (true, true) => "Difficult words underlined.",
+            (true, false) => "Difficult words on, but the word list is missing from this build.",
+            (false, _) => "Difficult words not marked.",
+        };
+        self.tell(msg);
+    }
+
+    /// The difficult words in `range`, to underline; none when the setting
+    /// is off.
+    pub fn difficult_ranges(&self, range: CharRange) -> Vec<CharRange> {
+        let (Some(s), Some(list)) = (self.session.as_ref(), ScowlList::builtin()) else {
+            return Vec::new();
+        };
+        if !self.settings.reading_aids.difficult_words {
+            return Vec::new();
+        }
+        difficult_range(&s.doc, range, list, &DifficultOptions::default())
+    }
+
+    /// ", difficult word" for a word move onto `word` at high verbosity
+    /// with difficult words marked.
+    pub(crate) fn difficult_word_note(&self, word: CharRange) -> Option<&'static str> {
+        let high = self.settings.speech.verbosity >= textweaver_a11y::Verbosity::High;
+        (high
+            && self
+                .difficult_ranges(word)
+                .iter()
+                .any(|r| r.start == word.start))
+        .then_some(", difficult word")
     }
 
     /// `ruler_cycle`: off, current line, ruler; saved.

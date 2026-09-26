@@ -21,7 +21,7 @@ pub mod units;
 pub use document::{DisplayIndex, Document, DocumentData, DocumentMeta};
 pub use history::History;
 pub use marker::{HEADER_ROW_LABEL, Marker, MarkerIndex, MarkerTables};
-pub use narrate::{NarrationPolicy, TableNarration, plan};
+pub use narrate::{InlineSpeech, NarrationPolicy, TableNarration, plan, plan_with};
 pub use navigate::{GoTo, NavOptions, NavTarget, ParseGoToError, go_to, go_to_checked, navigate};
 pub use search::{SearchError, SearchQuery, find, find_all};
 pub use units::{

@@ -300,7 +300,7 @@ fn f9_turns_single_keys_off_and_on_and_saves() {
     let alt_period: KeyChord = "Alt+.".parse().unwrap();
     assert_eq!(
         r.app.keymap().lookup(&period, Layer::Browse),
-        Some(ActionId::NextSentence)
+        Some(ActionId::ReadCurrentSentence)
     );
     r.act(ActionId::ToggleCharacterKeys);
     assert_eq!(r.said.last(), "Single-key shortcuts off.");
@@ -321,7 +321,7 @@ fn f9_turns_single_keys_off_and_on_and_saves() {
     assert_eq!(r.said.last(), "Single-key shortcuts on.");
     assert_eq!(
         r.app.keymap().lookup(&period, Layer::Browse),
-        Some(ActionId::NextSentence)
+        Some(ActionId::ReadCurrentSentence)
     );
     assert!(SettingsStore::new(paths).load().0.keyboard.character_keys);
 }

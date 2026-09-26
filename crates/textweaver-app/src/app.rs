@@ -337,6 +337,10 @@ pub struct App {
     /// Authoring and navigation state (structure while editing, outline,
     /// citations, export, spelling, links; Agent P2b).
     pub(crate) authoring: crate::authoring_state::Authoring,
+    /// Math exploration, while it is on.
+    pub(crate) math_explore: Option<crate::math_explore::MathExplore>,
+    /// The browser preview's reload server, while one runs.
+    pub(crate) preview_server: Option<crate::preview_server::PreviewServer>,
 }
 
 impl App {
@@ -406,6 +410,8 @@ impl App {
             pending_hybrid: None,
             screen_say_all: None,
             authoring: crate::authoring_state::Authoring::default(),
+            math_explore: None,
+            preview_server: None,
         };
         app.apply_voice_settings();
         app.load_themes();
@@ -742,6 +748,10 @@ impl App {
             resumed = Some((text_util::percent(&s.doc, s.cursor), r));
         }
         let title = s.title.clone();
+        // The previous document closes: its preview server and math
+        // exploration end.
+        self.close_preview();
+        self.math_explore = None;
         self.session = Some(s);
         self.view.top_line = 0;
         self.scroll_to_cursor();
@@ -829,6 +839,7 @@ impl App {
         }
         self.flush_library_sync();
         self.stop_speech();
+        self.close_preview();
         self.finish_writes();
     }
 
@@ -893,6 +904,7 @@ impl App {
             Command::MarkItem(n) => self.mark_item(n),
             Command::RenameItem(n) => self.rename_item(n),
             Command::Tick => self.tick(Instant::now()),
+            Command::MathStep(mv) => self.math_step(mv),
             Command::Find(pattern) => {
                 self.leave_prompt();
                 self.run_find(&pattern);
@@ -1204,6 +1216,10 @@ impl App {
         if self.rsvp_action(a, Instant::now()) {
             return vec![Effect::Redraw];
         }
+        if a != ActionId::ExploreMath {
+            // Any other command leaves math exploration.
+            self.math_explore = None;
+        }
         use ActionId as A;
         match a {
             A::Quit => return self.quit(),
@@ -1234,6 +1250,8 @@ impl App {
             A::RsvpSlower => self.rsvp_rate(false),
             A::RsvpPositionNext => self.rsvp_position_next(),
             A::ReadingLevel => self.say_reading_level(),
+            A::ToggleCitations => self.toggle_citations(),
+            A::ExploreMath => self.explore_math(),
             // Navigation
             A::NextSentence => self.next_sentence(),
             A::PreviousSentence => self.previous_sentence(),
@@ -1294,6 +1312,30 @@ impl App {
             ),
             A::PreviousLink => self.marker_jump(
                 textweaver_core::MarkerKind::Link,
+                textweaver_core::Direction::Backward,
+            ),
+            A::NextBlockQuote => self.marker_jump(
+                textweaver_core::MarkerKind::Quote,
+                textweaver_core::Direction::Forward,
+            ),
+            A::PreviousBlockQuote => self.marker_jump(
+                textweaver_core::MarkerKind::Quote,
+                textweaver_core::Direction::Backward,
+            ),
+            A::NextSeparator => self.marker_jump(
+                textweaver_core::MarkerKind::Rule,
+                textweaver_core::Direction::Forward,
+            ),
+            A::PreviousSeparator => self.marker_jump(
+                textweaver_core::MarkerKind::Rule,
+                textweaver_core::Direction::Backward,
+            ),
+            A::NextGraphic => self.marker_jump(
+                textweaver_core::MarkerKind::Image,
+                textweaver_core::Direction::Forward,
+            ),
+            A::PreviousGraphic => self.marker_jump(
+                textweaver_core::MarkerKind::Image,
                 textweaver_core::Direction::Backward,
             ),
             A::NextChapter => self.chapter(textweaver_core::Direction::Forward),
@@ -1368,6 +1410,8 @@ impl App {
             A::CycleAccessMode => self.cycle_access_mode(),
             A::BionicToggle => self.bionic_toggle(),
             A::RulerCycle => self.ruler_cycle(),
+            A::SyllablesToggle => self.syllables_toggle(),
+            A::DifficultWordsToggle => self.difficult_words_toggle(),
             A::CommandPalette => return self.prompt(PromptPurpose::CommandPalette),
             A::KeyboardHelp => return self.keyboard_help(),
             A::Help => return self.help(),
@@ -1425,6 +1469,8 @@ impl App {
             | A::ExportEpub
             | A::ExportBrf
             | A::PreviewInBrowser
+            | A::TogglePreviewAutoReload
+            | A::TogglePreviewLive
             | A::SelectAll
             | A::DeleteWordBefore
             | A::DeleteWordAfter

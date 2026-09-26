@@ -249,16 +249,7 @@ mod empty_is_none {
 /// `(section.field, reason)`. A test (`tests/settings_used.rs`) fails when a
 /// setting is read nowhere and is not listed here, and when a listed one is
 /// read after all (Star's lesson: a stored setting must work).
-pub const RESERVED_SETTINGS: &[(&str, &str)] = &[
-    (
-        "reading_aids.syllables",
-        "syllable display is built in textweaver-aids, but no frontend draws it yet (Agent D3's follow-up)",
-    ),
-    (
-        "reading_aids.syllable_options",
-        "options for the syllable display, which no frontend draws yet",
-    ),
-];
+pub const RESERVED_SETTINGS: &[(&str, &str)] = &[];
 
 /// Reading highlight settings.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -463,6 +454,11 @@ pub struct ReadingSettings {
     pub cursor_follows_speech: bool,
     /// Sidecar merge policy.
     pub sync_conflict_policy: ConflictPolicy,
+    /// Citations (`[@doe2020, p. 12]`) in continuous reading: skipped
+    /// (`off`, the default) or said in words (`words`: "Doe and Roe, 2020,
+    /// page 12"). Word moves and the link address key say them in words
+    /// either way.
+    pub citations: CitationReading,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -476,9 +472,39 @@ impl Default for ReadingSettings {
             wrap_navigation: false,
             cursor_follows_speech: true,
             sync_conflict_policy: ConflictPolicy::default(),
+            citations: CitationReading::Off,
             extra: toml::Table::new(),
         }
     }
+}
+
+/// `[reading] citations`: what continuous reading does with a citation.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CitationReading {
+    /// Skip citations: nothing is said for them.
+    #[default]
+    Off,
+    /// Say each citation in words, from the reference library.
+    Words,
+}
+
+/// `[preview]`: the browser preview of the document (the palette's
+/// `preview in browser`).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PreviewSettings {
+    /// Reload the page in the browser after each save, through a small
+    /// server on this computer only (127.0.0.1, with a secret in the
+    /// address). Off by default: textweaver says "Preview updated. Press F5
+    /// in the browser." instead, because a reload moves the screen reader's
+    /// place.
+    pub auto_reload: bool,
+    /// With `auto_reload`, also reload when typing pauses for a second.
+    pub live: bool,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
 }
 
 /// Display settings.
@@ -595,11 +621,18 @@ pub struct KeyboardSettings {
     /// accident (WCAG 2.1.4). The app passes this to
     /// `Keymap::set_character_keys`.
     pub character_keys: bool,
-    /// The set of default keys to start from: `default`, or
-    /// `screen-reader` for `h`, `l`, `k`, `t`, `i`, and `1` to `6` as in a
-    /// screen reader's browse mode (`textweaver_keymap::Preset`).
+    /// The set of default keys to start from: `default`, the quick
+    /// navigation keys of NVDA's and JAWS's browse mode, or `classic`,
+    /// textweaver's earlier keys (`textweaver_keymap::Preset`).
+    /// `screen-reader`, the old name of the default, still reads.
     /// `keymap.toml` applies on top.
     pub preset: KeymapPreset,
+    /// How the terminal recognises the digit keys `1` to `6` (heading
+    /// levels) where it gets only the typed character: `auto` knows the
+    /// shifted digits of the US, UK, German, Spanish, Nordic, and Italian
+    /// layouts; `azerty` is for French keyboards. On Windows the digit key
+    /// itself is read, whatever this says.
+    pub digit_row: DigitRow,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -610,6 +643,7 @@ impl Default for KeyboardSettings {
         KeyboardSettings {
             character_keys: true,
             preset: KeymapPreset::Default,
+            digit_row: DigitRow::Auto,
             extra: toml::Table::new(),
         }
     }
@@ -620,11 +654,25 @@ impl Default for KeyboardSettings {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum KeymapPreset {
-    /// textweaver's own keys.
+    /// NVDA and JAWS browse-mode quick navigation. `screen-reader`, the
+    /// Phase 2 preset that became the default, reads as this.
     #[default]
+    #[serde(alias = "screen-reader")]
     Default,
-    /// Screen reader browse-mode keys: `h`, `l`, `k`, `t`, `i`, `1` to `6`.
-    ScreenReader,
+    /// textweaver's earlier single keys.
+    Classic,
+}
+
+/// `[keyboard] digit_row` (the app maps it to
+/// `textweaver_keymap::digits::DigitRow`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DigitRow {
+    /// Digits without Shift (US, UK, German, Spanish, Nordic, Italian).
+    #[default]
+    Auto,
+    /// French AZERTY: digits with Shift.
+    Azerty,
 }
 
 /// `[accessibility] mode` (the app maps it to `textweaver_a11y::AccessMode`,
@@ -727,8 +775,12 @@ pub struct ReadingAidsSettings {
     pub font: textweaver_aids::FontSettings,
     /// `[reading_aids.ruler]`: off, current line, or ruler.
     pub ruler: textweaver_aids::RulerSettings,
-    /// Syllable splitting on (off by default).
+    /// Syllable splitting on (off by default): words are drawn split with
+    /// a middle dot; speech and positions use the text as it is.
     pub syllables: bool,
+    /// Mark difficult words (rare in SCOWL) with an underline, and name
+    /// them on word moves at high verbosity (off by default).
+    pub difficult_words: bool,
     /// `[reading_aids.syllable_options]`.
     pub syllable_options: textweaver_aids::SyllableOptions,
     /// Unknown keys, preserved.
@@ -762,6 +814,8 @@ pub struct Settings {
     pub export: ExportSettings,
     /// `[reading_aids]`
     pub reading_aids: ReadingAidsSettings,
+    /// `[preview]`
+    pub preview: PreviewSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -881,6 +935,7 @@ impl Settings {
             accessibility: lenient_section("accessibility", table.remove("accessibility"), &mut w),
             export: lenient_section("export", table.remove("export"), &mut w),
             reading_aids: lenient_section("reading_aids", table.remove("reading_aids"), &mut w),
+            preview: lenient_section("preview", table.remove("preview"), &mut w),
             extra: table,
         };
         (s, w)
@@ -1062,8 +1117,9 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 21] = [
+pub(crate) const STRUCT_TABLES: [&str; 22] = [
     "keyboard",
+    "preview",
     "accessibility",
     "reading_aids",
     "reading_aids.rsvp",
@@ -1818,12 +1874,12 @@ mod tests {
         let mut s = d.clone();
         s.accessibility.mode = AccessMode::Hybrid;
         s.accessibility.cursor = CursorPlacement::Status;
-        s.keyboard.preset = KeymapPreset::ScreenReader;
+        s.keyboard.preset = KeymapPreset::Classic;
         store.save(&s).unwrap();
         let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
         assert!(text.contains("mode = \"hybrid\""), "{text}");
         assert!(text.contains("cursor = \"status\""), "{text}");
-        assert!(text.contains("preset = \"screen-reader\""), "{text}");
+        assert!(text.contains("preset = \"classic\""), "{text}");
         assert!(!text.contains("quiet_screen"), "{text}");
         assert_eq!(store.load().0, s);
         write(
@@ -1907,5 +1963,31 @@ mod tests {
         o.insert("stop".into(), vec![]);
         store.save_keymap(&o).unwrap();
         assert_eq!(store.load_keymap().unwrap(), o);
+    }
+
+    /// Jon's decisions of 2026-09-26: the screen-reader preset became the
+    /// default (its id still reads), citations are skipped in continuous
+    /// reading by default, and the preview does not reload by itself.
+    #[test]
+    fn phase2_e_settings() {
+        let k: KeyboardSettings = toml::from_str("preset = \"screen-reader\"").unwrap();
+        assert_eq!(k.preset, KeymapPreset::Default);
+        let k: KeyboardSettings =
+            toml::from_str("preset = \"classic\"\ndigit_row = \"azerty\"").unwrap();
+        assert_eq!(k.preset, KeymapPreset::Classic);
+        assert_eq!(k.digit_row, DigitRow::Azerty);
+        let d = Settings::default();
+        assert_eq!(d.reading.citations, CitationReading::Off);
+        assert!(!d.preview.auto_reload && !d.preview.live);
+        assert!(!d.reading_aids.difficult_words);
+        let r: ReadingSettings = toml::from_str("citations = \"words\"").unwrap();
+        assert_eq!(r.citations, CitationReading::Words);
+        let (s, w) = Settings::from_table_unclamped(
+            "[preview]\nauto_reload = true\nlive = true\n"
+                .parse()
+                .unwrap(),
+        );
+        assert!(w.is_empty(), "{w:?}");
+        assert!(s.preview.auto_reload && s.preview.live);
     }
 }

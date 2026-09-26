@@ -16,25 +16,40 @@ impl App {
         if self.structure_tick(now) {
             effects.push(Effect::Redraw);
         }
-        if self.poll_jobs() {
+        if self.poll_jobs(now) {
             effects.push(Effect::Redraw);
         }
+        self.live_preview_tick(now);
         effects
     }
 
-    /// Applies every finished background job. True when one finished.
-    fn poll_jobs(&mut self) -> bool {
+    /// Applies every finished background job, and says how a long export
+    /// is getting on. True when one finished.
+    fn poll_jobs(&mut self, now: Instant) -> bool {
         let jobs = std::mem::take(&mut self.authoring.jobs);
         let mut done = false;
         for job in jobs {
             match job {
-                Job::Export { what, kind, rx } => match rx.try_recv() {
+                Job::Export {
+                    what,
+                    kind,
+                    rx,
+                    mut progress,
+                } => match rx.try_recv() {
                     Ok(result) => {
                         done = true;
                         self.export_finished(&what, kind, result);
                     }
                     Err(std::sync::mpsc::TryRecvError::Empty) => {
-                        self.authoring.jobs.push(Job::Export { what, kind, rx });
+                        if let Some(secs) = progress.due(now) {
+                            self.export_progress(kind, &what, secs);
+                        }
+                        self.authoring.jobs.push(Job::Export {
+                            what,
+                            kind,
+                            rx,
+                            progress,
+                        });
                     }
                     Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                         done = true;
@@ -65,7 +80,7 @@ impl App {
     pub fn wait_for_background(&mut self, timeout: Duration) -> bool {
         let deadline = Instant::now() + timeout;
         loop {
-            self.poll_jobs();
+            self.poll_jobs(Instant::now());
             if self.authoring.jobs.is_empty() {
                 return true;
             }

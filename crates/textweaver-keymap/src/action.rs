@@ -1,9 +1,18 @@
 //! Every user command, with its help text and default keys.
 //!
-//! Defaults follow Star (docs/star-parity.md Part 1 §6): Star's GUI chords
-//! for the GUI, Star's TUI single keys as the browse layer shared by both
-//! frontends, and new keys for what Star lacked (pitch, volume, read the
-//! current unit, list and link navigation, bookmark stepping).
+//! The browse layer mirrors the quick navigation keys of NVDA's and
+//! JAWS's browse mode (Jon's decision, 2026-09-26): `h` headings, `1` to
+//! `6` heading levels, `l` lists, `i` list items, `t` tables, `k` links,
+//! `q` block quotes, `s` separators, `g` graphics, and `d` sections or
+//! chapters, each with Shift for the previous one; `Backspace` goes back.
+//! Sentences move with `Alt+Down` and `Alt+Up` and paragraphs with
+//! `Ctrl+Down` and `Ctrl+Up`, as in both screen readers. The keys this
+//! layout displaced keep chords, and the whole earlier layout is the
+//! `classic` preset ([`Preset::Classic`](crate::Preset::Classic)).
+//!
+//! GUI chords follow Star (docs/star-parity.md Part 1 §6), and new keys
+//! cover what Star lacked (pitch, volume, read the current unit, list and
+//! link navigation, bookmark stepping).
 //!
 //! Rules the defaults follow, each enforced by a test:
 //!
@@ -27,8 +36,8 @@
 //!   ([`Keymap::set_character_keys`](crate::Keymap::set_character_keys)),
 //!   through a modifier chord or the command palette.
 //!
-//! Deliberate departures from Star: `q`, `Q`, and Ctrl+Q ask "Quit
-//! textweaver? y or n" before quitting; `Ctrl+T` means next table in the GUI
+//! Deliberate departures from Star: Ctrl+Q (and `q` in the classic
+//! preset) asks "Quit textweaver? y or n" before quitting; `Ctrl+T` means next table in the GUI
 //! and nothing in the terminal (Star's TUI used it for the voice picker,
 //! Part 1 §7 item 37); `Ctrl+S` saves in both (Star's TUI exported);
 //! Redo also answers to `Ctrl+Shift+Z` in the GUI (Star used that chord for
@@ -166,11 +175,11 @@ actions! {
     ReadCurrentWord = "read_current_word", Reading, "Say the word at the cursor",
         gui ["g:Ctrl+Shift+W"], term ["g:Alt+Shift+W"], shared ["b:w"];
     ReadCurrentSentence = "read_current_sentence", Reading, "Say the sentence at the cursor without moving",
-        gui ["g:Ctrl+Shift+E"], term ["g:Alt+Shift+S"], shared ["b:s"];
+        gui ["g:Ctrl+Shift+E"], term ["g:Alt+Shift+S"], shared ["b:."];
     ReadCurrentLine = "read_current_line", Reading, "Say the line at the cursor",
-        gui ["g:Ctrl+L"], term ["g:Alt+Shift+L"], shared ["b:l"];
+        gui ["g:Ctrl+L"], term ["g:Alt+Shift+L"], shared [];
     ReadParagraph = "read_paragraph", Reading, "Say the paragraph at the cursor without moving",
-        gui [], term [], shared ["b:Shift+S"];
+        gui [], term [], shared ["b:,"];
     ReadSelection = "read_selection", Reading, "Read the selected text",
         gui [], term [], shared ["b:v"];
     SayPosition = "say_position", Reading,
@@ -179,7 +188,7 @@ actions! {
     WordCount = "word_count", Reading, "Say how many words are in the document, or in the selection",
         gui ["g:Alt+Shift+T"], term ["g:Alt+Shift+T"], shared [];
     LinkAddress = "link_address", Reading, "Say the address of the link at the cursor",
-        gui ["g:Alt+Shift+K"], term ["g:Alt+Shift+K"], shared ["b:Shift+K"];
+        gui ["g:Alt+Shift+K"], term ["g:Alt+Shift+K"], shared [];
     ReplaySentence = "replay_sentence", Reading, "Read again from the start of the current sentence",
         gui ["g:Alt+;"], term ["g:Alt+;"], shared ["b:;"];
     ReplayParagraph = "replay_paragraph", Reading, "Read again from the start of the current paragraph",
@@ -189,27 +198,33 @@ actions! {
     RsvpPlayPause = "rsvp_play_pause", Reading, "Start or pause RSVP",
         gui ["g:Alt+Shift+P"], term ["g:Alt+Shift+P"], shared [];
     RsvpFaster = "rsvp_faster", Reading, "RSVP faster",
-        gui ["g:Alt+Shift+Up"], term ["g:Alt+Shift+Up"], shared [];
+        gui ["g:Alt+Shift+Up", "g:Alt+Shift+PageUp"], term ["g:Alt+Shift+Up", "g:Alt+Shift+PageUp"], shared [];
     RsvpSlower = "rsvp_slower", Reading, "RSVP slower",
-        gui ["g:Alt+Shift+Down"], term ["g:Alt+Shift+Down"], shared [];
+        gui ["g:Alt+Shift+Down", "g:Alt+Shift+PageDown"], term ["g:Alt+Shift+Down", "g:Alt+Shift+PageDown"], shared [];
     RsvpPositionNext = "rsvp_position_next", Reading, "Move the RSVP word to the next place on the screen",
         gui ["g:Alt+Shift+O"], term ["g:Alt+Shift+O"], shared [];
     ReadingLevel = "reading_level", Reading, "Say the reading level of the document or the selection",
         gui ["g:Alt+Shift+G"], term ["g:Alt+Shift+G"], shared [];
+    ToggleCitations = "toggle_citations", Reading,
+        "Turn citations on or off in continuous reading: off skips them, on says them in words",
+        gui ["g:Alt+Shift+Q"], term ["g:Alt+Shift+Q"], shared [];
+    ExploreMath = "explore_math", Reading,
+        "Explore the math at the cursor term by term: arrows move, Down goes into a part, Up comes out, Escape leaves",
+        gui ["g:Alt+Shift+X"], term ["g:Alt+Shift+X"], shared [];
     ListenRendered = "listen_rendered", Reading,
         "Listen to the document as it will render, without leaving edit mode",
         gui [], term [], shared [];
 
     // Navigation
     NextSentence = "next_sentence", Navigation, "Move to the next sentence",
-        gui ["g:Alt+."], term ["g:Alt+."], shared ["b:."];
+        gui ["g:Alt+.", "g:Alt+Down"], term ["g:Alt+.", "g:Alt+Down"], shared [];
     PreviousSentence = "previous_sentence", Navigation,
         "Move to the previous sentence, or to the start of this one when more than three words in",
-        gui ["g:Alt+,"], term ["g:Alt+,"], shared ["b:,"];
+        gui ["g:Alt+,", "g:Alt+Up"], term ["g:Alt+,", "g:Alt+Up"], shared [];
     NextParagraph = "next_paragraph", Navigation, "Move to the next paragraph",
-        gui ["g:Ctrl+P"], term ["g:Ctrl+P"], shared ["b:p", "b:]", "s:PageDown"];
+        gui ["g:Ctrl+P"], term ["g:Ctrl+P"], shared ["b:p", "b:]", "b:Ctrl+Down", "s:PageDown"];
     PreviousParagraph = "previous_paragraph", Navigation, "Move to the previous paragraph",
-        gui ["g:Ctrl+Shift+P"], term [], shared ["b:Shift+P", "b:[", "s:PageUp"];
+        gui ["g:Ctrl+Shift+P"], term [], shared ["b:Shift+P", "b:[", "b:Ctrl+Up", "s:PageUp"];
     NextHeading = "next_heading", Navigation, "Read from the next heading",
         gui ["g:Ctrl+H"], term [], shared ["b:>"];
     PreviousHeading = "previous_heading", Navigation, "Read from the previous heading",
@@ -217,7 +232,7 @@ actions! {
     SkipNextHeading = "skip_next_heading", Navigation, "Move to the next heading without reading",
         gui [], term ["g:Alt+H"], shared ["b:h", "b:}"];
     SkipPreviousHeading = "skip_previous_heading", Navigation, "Move to the previous heading without reading",
-        gui [], term ["g:Alt+Shift+H"], shared ["b:{"];
+        gui [], term ["g:Alt+Shift+H"], shared ["b:Shift+H", "b:{"];
     Outline = "outline", Navigation, "List the headings: type to filter, Enter jumps to one",
         gui ["g:Alt+O"], term ["g:Alt+O"], shared [];
     NextHeadingLevel1 = "next_heading_level_1", Navigation, "Move to the next heading at level 1",
@@ -249,17 +264,29 @@ actions! {
     PreviousTable = "previous_table", Navigation, "Move to the previous table",
         gui ["g:Ctrl+Shift+T"], term [], shared ["b:Shift+T"];
     NextList = "next_list", Navigation, "Move to the next list",
-        gui [], term [], shared ["b:o"];
+        gui [], term [], shared ["b:l"];
     PreviousList = "previous_list", Navigation, "Move to the previous list",
-        gui [], term [], shared ["b:Shift+O"];
+        gui [], term [], shared ["b:Shift+L"];
     NextListItem = "next_list_item", Navigation, "Move to the next list item",
         gui [], term [], shared ["b:i"];
     PreviousListItem = "previous_list_item", Navigation, "Move to the previous list item",
         gui [], term [], shared ["b:Shift+I"];
     NextLink = "next_link", Navigation, "Move to the next link",
-        gui [], term [], shared ["b:u"];
+        gui [], term [], shared ["b:k", "b:u"];
     PreviousLink = "previous_link", Navigation, "Move to the previous link",
-        gui [], term [], shared ["b:Shift+U"];
+        gui [], term [], shared ["b:Shift+K", "b:Shift+U"];
+    NextBlockQuote = "next_block_quote", Navigation, "Move to the next block quote",
+        gui [], term [], shared ["b:q"];
+    PreviousBlockQuote = "previous_block_quote", Navigation, "Move to the previous block quote",
+        gui [], term [], shared ["b:Shift+Q"];
+    NextSeparator = "next_separator", Navigation, "Move to the next separator (horizontal rule)",
+        gui [], term [], shared ["b:s"];
+    PreviousSeparator = "previous_separator", Navigation, "Move to the previous separator (horizontal rule)",
+        gui [], term [], shared ["b:Shift+S"];
+    NextGraphic = "next_graphic", Navigation, "Move to the next graphic (image)",
+        gui [], term [], shared ["b:g"];
+    PreviousGraphic = "previous_graphic", Navigation, "Move to the previous graphic (image)",
+        gui [], term [], shared ["b:Shift+G"];
     FollowLink = "follow_link", Navigation,
         "Follow the link at the cursor, or go between a footnote and its note",
         gui ["g:Alt+Shift+F"], term ["g:Alt+Shift+F"], shared [];
@@ -272,13 +299,13 @@ actions! {
     TablePreviousColumn = "table_previous_column", Navigation, "In a table, move to the previous cell in the row",
         gui ["g:Ctrl+Alt+Left"], term ["g:Ctrl+Alt+Left"], shared [];
     NextChapter = "next_chapter", Navigation, "Move to the next chapter or section",
-        gui ["g:Alt+PageDown"], term ["g:F11", "g:Alt+PageDown"], shared [];
+        gui ["g:Alt+PageDown"], term ["g:F11", "g:Alt+PageDown"], shared ["b:d"];
     PreviousChapter = "previous_chapter", Navigation, "Move to the previous chapter or section",
-        gui ["g:Alt+PageUp"], term ["g:F10", "g:Alt+PageUp"], shared [];
+        gui ["g:Alt+PageUp"], term ["g:F10", "g:Alt+PageUp"], shared ["b:Shift+D"];
     HistoryBack = "history_back", Navigation, "Go back to where you were before the last jump",
-        gui ["g:Alt+Left"], term ["g:Alt+Left"], shared ["b:Shift+H"];
+        gui ["g:Alt+Left"], term ["g:Alt+Left"], shared ["b:Backspace"];
     HistoryForward = "history_forward", Navigation, "Go forward again after going back",
-        gui ["g:Alt+Right"], term ["g:Alt+Right"], shared ["b:Shift+L"];
+        gui ["g:Alt+Right"], term ["g:Alt+Right"], shared ["b:\\"];
     GoTo = "go_to", Navigation, "Go to a line, percentage, or position",
         gui ["g:Ctrl+G"], term ["g:Ctrl+G"], shared [];
     DocumentStart = "document_start", Navigation, "Move to the start of the document",
@@ -308,7 +335,7 @@ actions! {
     ScrollDown = "scroll_down", Navigation, "Scroll down one line without moving the cursor",
         gui [], term [], shared ["b:j"];
     ScrollUp = "scroll_up", Navigation, "Scroll up one line without moving the cursor",
-        gui [], term [], shared ["b:k"];
+        gui [], term [], shared ["b:Shift+J"];
 
     // Speech Cursor
     SpeechCursorToggle = "speech_cursor_toggle", SpeechCursor, "Enter or leave Speech Cursor (line) mode",
@@ -376,9 +403,9 @@ actions! {
     ListNotes = "list_notes", Bookmarks, "List notes",
         gui ["g:Ctrl+Shift+N"], term [], shared ["b:Shift+A"];
     NextNote = "next_note", Bookmarks, "Move to the next note",
-        gui ["g:Alt+Down"], term ["g:Alt+Down"], shared ["b:e"];
+        gui ["g:F12"], term ["g:F12"], shared ["b:e"];
     PreviousNote = "previous_note", Bookmarks, "Move to the previous note",
-        gui ["g:Alt+Up"], term ["g:Alt+Up"], shared ["b:Shift+E"];
+        gui ["g:Shift+F12"], term ["g:Shift+F12"], shared ["b:Shift+E"];
     DeleteNote = "delete_note", Bookmarks, "Delete the note or highlight at the cursor",
         gui [], term [], shared ["b:Delete"];
     HighlightSelection = "highlight_selection", Bookmarks, "Highlight the selection, or the sentence at the cursor",
@@ -418,8 +445,14 @@ actions! {
     PreviewInBrowser = "preview_in_browser", File,
         "Preview the document in the web browser, with math; each save rewrites the preview",
         gui [], term [], shared [];
+    TogglePreviewAutoReload = "toggle_preview_auto_reload", File,
+        "Turn automatic reloading of the browser preview on or off",
+        gui [], term [], shared [];
+    TogglePreviewLive = "toggle_preview_live", File,
+        "Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses",
+        gui [], term [], shared [];
     Quit = "quit", File, "Quit, saving the reading position",
-        gui ["g:Ctrl+Q"], term ["g:Ctrl+Q"], shared ["b:q", "b:Shift+Q"];
+        gui ["g:Ctrl+Q"], term ["g:Ctrl+Q"], shared [];
 
     // Editing
     ToggleEditMode = "toggle_edit_mode", Editing, "Switch between reading and editing",
@@ -486,7 +519,7 @@ actions! {
         "Insert a citation: pick a reference, then give a page or other locator",
         gui ["e:Alt+C"], term ["e:Alt+C"], shared [];
     AddReference = "add_reference", Editing, "Add a reference to your library by DOI or ISBN",
-        gui ["g:Alt+Shift+D"], term ["g:Alt+Shift+D"], shared [];
+        gui ["g:Alt+Shift+D"], term ["g:Alt+B"], shared [];
     InsertBibliography = "insert_bibliography", Editing,
         "Insert the bibliography of the works cited, at the cursor",
         gui [], term [], shared [];
@@ -512,6 +545,11 @@ actions! {
         gui ["g:Alt+Shift+B"], term ["g:Alt+Shift+B"], shared [];
     RulerCycle = "ruler_cycle", View, "Cycle the reading ruler: off, current line, ruler",
         gui ["g:Alt+Shift+U"], term ["g:Alt+Shift+U"], shared [];
+    SyllablesToggle = "syllables_toggle", View, "Show or hide syllables: words split with a middle dot",
+        gui ["g:Alt+Shift+Z"], term ["g:Alt+Shift+Z"], shared [];
+    DifficultWordsToggle = "difficult_words_toggle", View,
+        "Mark difficult words on or off: underlined, and named on word moves at high verbosity",
+        gui ["g:Alt+Shift+J"], term ["g:Alt+Shift+J"], shared [];
     CommandPalette = "command_palette", View, "Run any command by name",
         gui ["g:F2"], term ["g:F2", "g:Alt+X"], shared ["b::"];
     KeyboardHelp = "keyboard_help", View, "List keyboard shortcuts",

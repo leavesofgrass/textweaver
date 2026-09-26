@@ -175,9 +175,10 @@ mod tests {
 
     #[test]
     fn keymap_entries_keep_browse_keys() {
-        let e = keymap_entry("next_sentence", "Alt+N").unwrap();
+        let e = keymap_entry("next_paragraph", "Alt+N").unwrap();
         assert_eq!(e[0], "Alt+N");
-        assert!(e.contains(&"b:.".to_owned()), "{e:?}");
+        assert!(e.contains(&"b:p".to_owned()), "{e:?}");
+        assert!(e.contains(&"s:PageDown".to_owned()), "{e:?}");
         assert!(keymap_entry("next_sentence", "Nonsense+++").is_none());
         assert!(keymap_entry("no_such_action", "F9").is_none());
     }

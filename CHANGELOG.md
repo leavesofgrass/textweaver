@@ -4,6 +4,30 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Keys: what changed
+
+The default keys are now the quick navigation keys of NVDA's and JAWS's browse mode (Jon's decision). `preset = "classic"` under `[keyboard]` keeps the earlier keys; `preset = "screen-reader"` now means the default. Old key, then where its command went (terminal):
+
+- `.` next sentence: `Alt+Down` or `Alt+.`. `.` now says the sentence.
+- `,` previous sentence: `Alt+Up` or `Alt+,`. `,` now says the paragraph.
+- `s` say the sentence: `.` or `Alt+Shift+S`. `s` is the next separator.
+- `Shift+S` say the paragraph: `,`. `Shift+S` is the previous separator.
+- `l` say the line: `Alt+Shift+L` (GUI `Ctrl+L`). `l` is the next list.
+- `o`, `Shift+O` lists: `l`, `Shift+L`.
+- `Shift+H` history back: `Backspace` or `Alt+Left`. `Shift+H` is the previous heading.
+- `Shift+L` history forward: `\` or `Alt+Right`. `Shift+L` is the previous list.
+- `k` scroll up: `Shift+J`. `k` is the next link.
+- `Shift+K` link address: `Alt+Shift+K`. `Shift+K` is the previous link.
+- `q`, `Shift+Q` quit: `Ctrl+Q`, which still asks. `q` is the next block quote.
+- `Alt+Down`, `Alt+Up` notes: `F12`, `Shift+F12`, or `e`, `Shift+E`. `Alt+Down` and `Alt+Up` move by sentence.
+- `'` and `"` notes: removed (`"` is Shift+2 on most non-US layouts).
+- `Alt+Shift+D` add a reference (terminal): `Alt+B`, because Windows Terminal splits panes with it. The GUI keeps `Alt+Shift+D`.
+- RSVP faster and slower: `Alt+Shift+PageUp` and `Alt+Shift+PageDown` as well, because Windows Terminal resizes panes with `Alt+Shift+Up` and `Alt+Shift+Down`.
+- New: `g` graphics, `d` sections or chapters, `Ctrl+Down` and `Ctrl+Up` paragraphs, `Alt+Shift+Q` citations, `Alt+Shift+X` explore math, `Alt+Shift+Z` syllables, `Alt+Shift+J` difficult words. `p` still moves by paragraph; `Shift+W` still says the position.
+- `1` to `6` and Shift with them follow the physical digit key on any layout: read from the console on Windows; the shifted digits of the US, UK, German, Spanish, Nordic, and Italian layouts elsewhere, and French with `[keyboard] digit_row = "azerty"`.
+
+See [docs/keyboard.md](docs/keyboard.md#what-changed).
+
 ### Added
 
 - **EPUB, Word, and PDF reading.** `textweaver` and `tw text` open EPUB (chapters from the table of contents), DOCX (headings, lists, tables, footnotes, alt text), and PDF. The PDF reader is pure Rust and on by default. It finds columns, removes running headers and page numbers, and recovers headings, lists, and tables. See [ADR-0010](docs/adr/0010-pdf-loader.md).
@@ -46,6 +70,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Favourite voices:** Space in the voice list marks one, and favourites are listed first. `[highlight] color` and `sentence_color` now colour the reading highlight, with a contrast warning.
 - **Markdown:** wiki links, GFM alerts, math, and heading attributes are read, and strikethrough and horizontal rules are announced.
 - `tw info --exact` counts words and sentences with the reader's full segmentation.
+- **Citations in continuous reading** are skipped by default and said in words with Alt+Shift+Q (`[reading] citations = "off" | "words"`), with the highlight exact both ways. See [docs/citations.md](docs/citations.md#citations-in-continuous-reading-altshiftq).
+- **Explore math** (Alt+Shift+X): move through a formula term by term, into fractions, scripts, and roots and back out, each part said and highlighted. See [docs/math.md](docs/math.md#exploring-a-formula-part-by-part).
+- **Syllables and difficult words in the terminal reader** (Alt+Shift+Z, Alt+Shift+J): words drawn split into syllables with exact highlights, and rare words underlined and named on word moves at high verbosity.
+- **Preview.** After a save, "Preview updated. Press F5 in the browser." `[preview] auto_reload` serves the preview from 127.0.0.1 with a secret address and reloads it after each save, landing on the heading nearest the caret; `live` also reloads after a typing pause. Both off by default. See [docs/editing.md](docs/editing.md#preview-in-the-browser).
+- **Export progress.** A long export says "Still exporting to PDF, 2 seconds." and then every ten seconds.
+- **Writers.** PDF output draws strikethrough; Word equations (OMML) read back from DOCX as LaTeX math.
+- **GUI on macOS** says once when a built-in font falls back to a system font.
 
 ### Changed
 

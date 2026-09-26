@@ -2,7 +2,9 @@
 
 This guide covers the terminal reader, `textweaver`: opening a document, reading it aloud, and moving through it by sentence, paragraph, heading, and more. It is for anyone who reads with textweaver, with or without a screen reader.
 
-Keys are the terminal defaults. Where the GUI uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key in both frontends. Many keys are single keys, such as `.` for the next sentence. Those are called browse keys. They work while you read, not while you edit or type in a prompt.
+Keys are the terminal defaults. Where the GUI uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key in both frontends. Many keys are single keys, such as `h` for the next heading. Those are called browse keys. They work while you read, not while you edit or type in a prompt.
+
+The browse keys follow the quick navigation keys of NVDA's and JAWS's browse mode: `h` for headings, `1` to `6` for heading levels, `l` for lists, `k` for links, and so on, with Shift for the previous one. They changed on Saturday, September 26, 2026. The [keyboard reference](keyboard.md#what-changed) lists every change, and `preset = "classic"` under `[keyboard]` brings back the earlier keys.
 
 ## Open a document
 
@@ -55,7 +57,7 @@ tw convert essay.odt --to md
 
 The [converting guide](converting.md) explains `tw convert`.
 
-A PDF must have a text layer. A scanned PDF is a picture of the pages, and textweaver has no text recognition (OCR). Such a PDF reads as one sentence: "This PDF has no text layer. It is probably a scanned image, so its text must be recognized (OCR) before it can be read aloud."
+A PDF must have a text layer. A scanned PDF is a picture of the pages, and textweaver has no text recognition (OCR) yet; it is planned for Wave 3. Such a PDF reads as one sentence: "This PDF has no text layer. It is probably a scanned image, so its text must be recognized (OCR) before it can be read aloud."
 
 ## What the screen shows
 
@@ -100,9 +102,9 @@ These keys read a piece of text where the cursor is. They do not move the cursor
 
 - **c**: say the character. Terminal chord **Alt+Shift+C**; GUI **Ctrl+Shift+C**.
 - **w**: say the word. Terminal chord **Alt+Shift+W**; GUI **Ctrl+Shift+W**.
-- **s**: say the sentence. Terminal chord **Alt+Shift+S**; GUI **Ctrl+Shift+E**.
-- **l**: say the line. Terminal chord **Alt+Shift+L**; GUI **Ctrl+L**.
-- **Shift+S**: say the paragraph.
+- **.** (period): say the sentence. Terminal chord **Alt+Shift+S**; GUI **Ctrl+Shift+E**.
+- **Alt+Shift+L**: say the line. GUI **Ctrl+L**.
+- **,** (comma): say the paragraph.
 - **v**: read the selected text. With nothing selected, you hear "No selection."
 
 An empty line is read as "blank". Pressing **Space** right after one of these keys reads on from the cursor.
@@ -129,13 +131,15 @@ A wrapped move starts with "Wrapped." Find, bookmarks, and notes always wrap, wh
 
 ### Sentences
 
-- **.** or **Alt+.**: next sentence.
-- **,** or **Alt+,**: previous sentence. If you are more than three words into a sentence, this goes back to its start instead.
+- **Alt+Down** or **Alt+.**: next sentence, as in JAWS.
+- **Alt+Up** or **Alt+,**: previous sentence. If you are more than three words into a sentence, this goes back to its start instead.
+
+Windows Terminal moves between panes with **Alt+Down** and **Alt+Up**; **Alt+.** and **Alt+,** always work. See [the screen reader guide](screen-readers.md#windows-terminal-keys-that-clash).
 
 ### Paragraphs
 
-- **p**, **]**, or **Ctrl+P**: next paragraph.
-- **Shift+P** or **[**: previous paragraph. The GUI also has **Ctrl+Shift+P**.
+- **p**, **]**, **Ctrl+Down**, or **Ctrl+P**: next paragraph.
+- **Shift+P**, **[**, or **Ctrl+Up**: previous paragraph. The GUI also has **Ctrl+Shift+P**.
 
 ### Headings
 
@@ -144,7 +148,8 @@ There are two kinds of heading keys. One reads from the heading. The other only 
 - **>**: read from the next heading. The GUI also has **Ctrl+H**.
 - **<**: read from the previous heading. The GUI also has **Ctrl+Shift+H**.
 - **h**, **}**, or **Alt+H**: move to the next heading without reading.
-- **{** or **Alt+Shift+H**: move to the previous heading without reading.
+- **Shift+H**, **{**, or **Alt+Shift+H**: move to the previous heading without reading.
+- **1** to **6**: the next heading at that level. **Shift** with the digit: the previous one. textweaver matches the digit key itself, so this works on any keyboard layout; see [the keyboard reference](keyboard.md#terminal-notes).
 
 You hear the heading level and text, for example "Heading level 2: Methods". **Alt+H** and **Alt+Shift+H** are chords, so they also work in edit mode and with single-key shortcuts turned off. They are terminal keys; the GUI has **Ctrl+H** and **Ctrl+Shift+H**.
 
@@ -158,12 +163,16 @@ Press **Alt+O** for a list of the document's headings, in order, each with its l
 
 The outline works while reading and while editing; in edit mode it lists the headings as you have written them so far.
 
-### Tables, lists, and links
+### Tables, lists, links, and more
 
 - **t**: next table. **Shift+T**: previous table. The GUI also has **Ctrl+T** and **Ctrl+Shift+T**.
-- **o**: next list. **Shift+O**: previous list.
+- **l**: next list. **Shift+L**: previous list.
 - **i**: next list item. **Shift+I**: previous list item.
-- **u**: next link. **Shift+U**: previous link.
+- **k** or **u**: next link. **Shift+K** or **Shift+U**: previous link.
+- **q**: next block quote. **Shift+Q**: previous block quote.
+- **s**: next separator (a horizontal rule). **Shift+S**: previous separator.
+- **g**: next graphic (an image, read by its alt text). **Shift+G**: previous graphic.
+- **d**: next section or chapter. **Shift+D**: previous one. See [Chapters](#chapters).
 
 A table is announced with its row count ("Table, 3 rows"). A list is announced with its item count ("List, 5 items"). A numbered list item is read with its number ("3. Buy milk"). A nested item says its level ("List item, level 2").
 
@@ -188,12 +197,12 @@ Put the cursor on a link and press **Alt+Shift+F**:
 
 On a footnote reference, **Alt+Shift+F** goes to the note; on the note, it goes back to the reference. When footnotes are read in place (the default, `[normalization] footnote_mode = "inline"`), it says the note instead.
 
-**Shift+K** or **Alt+Shift+K** says a link's address without following it.
+**Alt+Shift+K** says a link's address without following it.
 
 ### Chapters
 
-- **F11** or **Alt+PageDown**: next chapter.
-- **F10** or **Alt+PageUp**: previous chapter. More than five words into a chapter, this goes back to its start instead.
+- **d**, **F11**, or **Alt+PageDown**: next chapter.
+- **Shift+D**, **F10**, or **Alt+PageUp**: previous chapter. More than five words into a chapter, this goes back to its start instead.
 
 Chapters are the book's sections when the document has them (EPUB chapters, Word sections, PDF bookmarks). Otherwise they are the level-1 headings. A document with neither says "This document has no chapters." Some terminal programs keep F10 and F11 for themselves; the Alt chords always work. The GUI uses only the Alt chords.
 
@@ -205,7 +214,7 @@ Chapters are the book's sections when the document has them (EPUB chapters, Word
 ### Pages and scrolling
 
 - **PageDown** and **PageUp**: move one screen, less four lines. You hear "Page, line", the line number, and a preview.
-- **j** and **k**: scroll the view down or up one line without moving the cursor.
+- **j** and **Shift+J**: scroll the view down or up one line without moving the cursor.
 
 ### The caret keys
 
@@ -292,12 +301,41 @@ You hear the percentage, the line, and a preview. Anything else gives: "Not a go
 
 Line numbers are lines of the document's text, as in Speech Cursor mode. Press **F6** to show them on screen. There is no way to go to a printed page number yet.
 
+## Citations while reading
+
+Citations in Pandoc's style, such as `[@doe2020, p. 12]`, `[see @doe2020; @roe2021]`, `[-@doe2020]`, and `@doe2020 [p. 3]`, are read from your reference library (see [Citations](citations.md)).
+
+- **By default, continuous reading skips citations.** Reading aloud, reading from the cursor, saying a sentence or paragraph, and "listen to the rendered text" pass over a bracketed citation as if it were not there. An in-text citation, such as `@doe2020 argues`, is part of the sentence, so its authors are said: "Doe and Roe argues".
+- **Alt+Shift+Q** turns citations on or off, and saves the choice. You hear "Citations on." or "Citations off." While reading continuously, reading goes on from the word you were on, with the new setting. It is also `toggle citations` in the command palette.
+- **With citations on**, each is said in words: "Doe and Roe, 2020, page 12". A key that is in no library is read as the key.
+- **Word moves** (Right and Left) and **Alt+Shift+K** say a citation in words whatever the setting: "Citation: Doe and Roe, 2020, On reading, page 12."
+
+The highlight stays exact either way: a skipped citation is never highlighted, and while a citation is said in words the whole citation is highlighted. Which `@` marks count as citations follows the converter's rule for its usual Markdown flavor: a bracketed citation when one of its keys is in a library, and an in-text one when all its keys are. Citations in code and math are never touched. In `settings.toml`:
+
+```toml
+[reading]
+citations = "off"    # or "words"
+```
+
+## Explore math: Alt+Shift+X
+
+Put the cursor on a formula, such as `$\frac{a+b}{2}$`, and press **Alt+Shift+X**. You hear the whole expression, then move through it:
+
+- **Right** and **Left**: the next or previous term at this level.
+- **Down**: into the part: a fraction's numerator, a script, a root, the inside of brackets.
+- **Up**: back out.
+- **Home** and **End**: the first and last term at this level.
+- **Space** or **Enter**: say the part again.
+- **Escape**: leave. Any other key leaves too, and does what it usually does.
+
+Each step says the part and its role, such as "numerator, a plus b", and highlights it; the cursor moves there. At an edge you hear "Last term.", "First term.", "No parts inside.", or "Whole expression." How much is said follows `[normalization] math_verbosity`. See [Math](math.md).
+
 ## Go back and forward
 
 textweaver keeps a history of your jumps, like the Back button of a web browser.
 
-- **Alt+Left** or **Shift+H**: go back to where you were before the last jump.
-- **Alt+Right** or **Shift+L**: go forward again.
+- **Backspace** or **Alt+Left**: go back to where you were before the last jump.
+- **\\** (backslash) or **Alt+Right**: go forward again.
 
 You hear "Back, line", the number, and a preview. With nothing to go back to, you hear "No earlier history."
 
@@ -322,6 +360,8 @@ auto_resume = false
 
 If the document is in a library folder that another computer also uses, the place may come from that computer. The [library guide](library.md) explains how.
 
+If the file changed outside textweaver, in Obsidian, git, or another editor, your place, bookmarks, notes, and highlights are found again from the text they were on, and textweaver says once what moved and what it could not find. See [How marks move when you edit](notes.md#how-marks-move-when-you-edit).
+
 `tw marks` shows the saved place of a document without opening it:
 
 ```bash
@@ -339,7 +379,7 @@ These settings are in the `[highlight]` section of `settings.toml`:
 - `lead_words` (default `1`): where the highlight sits, from -5 to 5. At 1 it is on the word you hear. At 2 it runs one word ahead; at 0, one word behind. It moves only the drawn highlight, never your saved place.
 - `speed` (default `1.0`): from 0.5 to 1.5. It speeds up or slows down the highlight for engines that do not report words, where textweaver estimates the timing.
 
-`color` and `sentence_color` are stored but the terminal reader does not use them yet; the [colour theme](themes.md) decides the highlight's look.
+- `color` and `sentence_color`: the colours of the word and sentence highlight, such as `"#ff8800"` or `"yellow"`. The terminal reader draws them over the [colour theme](themes.md) and warns when one does not stand out from the text.
 
 If the highlight runs ahead of or behind the voice with an engine that does report words, change `[speech] latency_offset_ms`. The [speech guide](speech.md) explains it.
 
@@ -405,7 +445,7 @@ In any list: **Up** and **Down** (or **j** and **k**) move, **PageUp** and **Pag
 
 ## Turn single-key shortcuts off: F9
 
-Speech recognition, dictation, and switch or scanning keyboards can type a letter by accident, and a letter such as `q` or `.` is a command in textweaver. To prevent this, press **F9**. You hear "Single-key shortcuts off." Press it again to turn them back on.
+Speech recognition, dictation, and switch or scanning keyboards can type a letter by accident, and a letter such as `h` or `.` is a command in textweaver. To prevent this, press **F9**. You hear "Single-key shortcuts off." Press it again to turn them back on.
 
 While they are off, letters, punctuation, and **Space** never run commands. Chords with **Ctrl** or **Alt**, the arrow keys, and the function keys still work, and so does the command palette. This follows WCAG 2.1.4, Character Key Shortcuts. The choice is saved. You can also set it in `settings.toml`:
 
@@ -418,7 +458,7 @@ Some commands have only single keys, such as next table. Run those from the comm
 
 ## Quit
 
-Press **q**, **Shift+Q**, or **Ctrl+Q**. textweaver asks "Quit textweaver? y or n".
+Press **Ctrl+Q**. textweaver asks "Quit textweaver? y or n". (In the classic preset, **q** and **Shift+Q** quit too, after the same question.)
 
 - Press **y** to quit. Your place is saved.
 - Press **n**, **a**, or **Escape** to stay. You hear "Cancelled."

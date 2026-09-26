@@ -222,7 +222,7 @@ impl Keymap {
 
     /// The default keymap changed by `preset` ([`Preset::changes`]): each
     /// chord of the preset leaves whatever it did by default and triggers
-    /// the preset's action.
+    /// the preset's action, or nothing.
     pub fn with_preset(platform: Platform, frontend: Frontend, preset: Preset) -> Self {
         let mut map = Keymap::defaults(platform, frontend);
         for (s, action) in preset.changes() {
@@ -231,11 +231,13 @@ impl Keymap {
             };
             map.bindings
                 .retain(|b| !(b.chord == chord && b.layer == layer));
-            map.bindings.push(Binding {
-                chord,
-                layer,
-                action: *action,
-            });
+            if let Some(action) = action {
+                map.bindings.push(Binding {
+                    chord,
+                    layer,
+                    action: *action,
+                });
+            }
         }
         map.preset = preset;
         map
@@ -542,8 +544,12 @@ mod tests {
         for (platform, frontend, map) in all_preset_maps() {
             let what = format!("{platform:?} {frontend:?} {:?}", map.preset());
             assert!(map.conflicts().is_empty(), "{what}: {:#?}", map.conflicts());
-            // Palette commands have no keys by design.
-            for a in ActionId::ALL.iter().filter(|a| !a.is_palette_command()) {
+            // Palette commands have no keys by design, and a preset may
+            // give some actions' keys back to its own commands.
+            for a in ActionId::ALL
+                .iter()
+                .filter(|a| !a.is_palette_command() && !map.preset().palette_only().contains(a))
+            {
                 let reachable = Layer::ALL
                     .iter()
                     .any(|m| !map.chords_in_mode(*a, *m).is_empty());
@@ -582,37 +588,62 @@ mod tests {
         }
     }
 
+    /// The default keys mirror NVDA's and JAWS's browse-mode quick
+    /// navigation (Jon's decision, 2026-09-26).
     #[test]
-    fn screen_reader_preset_keys() {
+    fn default_keys_mirror_screen_reader_quick_navigation() {
         for platform in Platform::ALL {
             for frontend in Frontend::ALL {
-                let map = Keymap::with_preset(platform, frontend, Preset::ScreenReader);
-                assert_eq!(map.preset(), Preset::ScreenReader);
-                let mac_gui = frontend == Frontend::Gui && platform == Platform::MacOs;
+                let map = Keymap::defaults(platform, frontend);
+                assert_eq!(map.preset(), Preset::Default);
+                assert_eq!(
+                    map,
+                    Keymap::with_preset(platform, frontend, Preset::Default)
+                );
                 for (chord, action) in [
                     ("h", ActionId::SkipNextHeading),
                     ("Shift+H", ActionId::SkipPreviousHeading),
                     ("1", ActionId::NextHeadingLevel1),
                     ("6", ActionId::NextHeadingLevel6),
+                    ("!", ActionId::PreviousHeadingLevel1),
                     ("l", ActionId::NextList),
                     ("Shift+L", ActionId::PreviousList),
-                    ("o", ActionId::NextList),
                     ("i", ActionId::NextListItem),
+                    ("Shift+I", ActionId::PreviousListItem),
                     ("t", ActionId::NextTable),
                     ("Shift+T", ActionId::PreviousTable),
                     ("k", ActionId::NextLink),
                     ("Shift+K", ActionId::PreviousLink),
                     ("u", ActionId::NextLink),
+                    ("q", ActionId::NextBlockQuote),
+                    ("Shift+Q", ActionId::PreviousBlockQuote),
+                    ("s", ActionId::NextSeparator),
+                    ("Shift+S", ActionId::PreviousSeparator),
+                    ("g", ActionId::NextGraphic),
+                    ("Shift+G", ActionId::PreviousGraphic),
+                    ("d", ActionId::NextChapter),
+                    ("Shift+D", ActionId::PreviousChapter),
                     ("Backspace", ActionId::HistoryBack),
                     ("\\", ActionId::HistoryForward),
-                    ("j", ActionId::ScrollDown),
-                    ("Ctrl+Down", ActionId::ScrollDown),
-                    ("Ctrl+Up", ActionId::ScrollUp),
                     ("Alt+Left", ActionId::HistoryBack),
+                    ("Alt+Right", ActionId::HistoryForward),
+                    ("Shift+W", ActionId::SayPosition),
+                    (".", ActionId::ReadCurrentSentence),
+                    (",", ActionId::ReadParagraph),
+                    ("Alt+Down", ActionId::NextSentence),
+                    ("Alt+Up", ActionId::PreviousSentence),
+                    ("Alt+.", ActionId::NextSentence),
+                    ("Ctrl+Down", ActionId::NextParagraph),
+                    ("Ctrl+Up", ActionId::PreviousParagraph),
+                    ("p", ActionId::NextParagraph),
+                    ("j", ActionId::ScrollDown),
+                    ("Shift+J", ActionId::ScrollUp),
+                    ("F12", ActionId::NextNote),
+                    ("Shift+F12", ActionId::PreviousNote),
+                    ("e", ActionId::NextNote),
                     ("Space", ActionId::PlayPause),
-                    (".", ActionId::NextSentence),
                 ] {
-                    let chord = if mac_gui {
+                    let chord = if frontend == Frontend::Gui && platform == Platform::MacOs {
                         k(chord).ctrl_to_meta()
                     } else {
                         k(chord)
@@ -623,18 +654,64 @@ mod tests {
                         "{chord} on {platform:?} {frontend:?}"
                     );
                 }
-                // The default keymap is unchanged.
-                let d = Keymap::defaults(platform, frontend);
-                assert_eq!(d.preset(), Preset::Default);
-                assert_eq!(
-                    d.lookup(&k("Shift+H"), Layer::Browse),
-                    Some(ActionId::HistoryBack)
+                // Displaced keys: quit keeps only its chord, which asks
+                // first.
+                assert!(
+                    map.chords_for(ActionId::Quit)
+                        .iter()
+                        .all(|c| !c.is_text_input())
                 );
-                assert_eq!(
-                    d.lookup(&k("l"), Layer::Browse),
-                    Some(ActionId::ReadCurrentLine)
-                );
-                assert_eq!(d, Keymap::with_preset(platform, frontend, Preset::Default));
+                assert!(!map.chords_for(ActionId::Quit).is_empty());
+                assert_eq!(map.lookup(&k("o"), Layer::Browse), None);
+            }
+        }
+    }
+
+    /// The classic preset brings back the earlier single keys.
+    #[test]
+    fn classic_preset_keys() {
+        for platform in Platform::ALL {
+            for frontend in Frontend::ALL {
+                let map = Keymap::with_preset(platform, frontend, Preset::Classic);
+                assert_eq!(map.preset(), Preset::Classic);
+                for (chord, action) in [
+                    (".", ActionId::NextSentence),
+                    (",", ActionId::PreviousSentence),
+                    ("s", ActionId::ReadCurrentSentence),
+                    ("Shift+S", ActionId::ReadParagraph),
+                    ("l", ActionId::ReadCurrentLine),
+                    ("Shift+H", ActionId::HistoryBack),
+                    ("Shift+L", ActionId::HistoryForward),
+                    ("o", ActionId::NextList),
+                    ("Shift+O", ActionId::PreviousList),
+                    ("k", ActionId::ScrollUp),
+                    ("Shift+K", ActionId::LinkAddress),
+                    ("q", ActionId::Quit),
+                    ("Shift+Q", ActionId::Quit),
+                    ("Alt+Down", ActionId::NextNote),
+                    ("Alt+Up", ActionId::PreviousNote),
+                    ("u", ActionId::NextLink),
+                    ("h", ActionId::SkipNextHeading),
+                    ("1", ActionId::NextHeadingLevel1),
+                    ("Ctrl+Down", ActionId::NextParagraph),
+                ] {
+                    let chord = if frontend == Frontend::Gui && platform == Platform::MacOs {
+                        k(chord).ctrl_to_meta()
+                    } else {
+                        k(chord)
+                    };
+                    assert_eq!(
+                        map.lookup(&chord, Layer::Browse),
+                        Some(action),
+                        "{chord} on {platform:?} {frontend:?}"
+                    );
+                }
+                for free in ["g", "Shift+G", "d", "Shift+D"] {
+                    assert_eq!(map.lookup(&k(free), Layer::Browse), None, "{free}");
+                }
+                for a in Preset::Classic.palette_only() {
+                    assert!(map.chords_for(*a).is_empty(), "{a:?}");
+                }
             }
         }
     }
@@ -647,13 +724,16 @@ mod tests {
         let (map, warnings) = Keymap::with_preset_and_overrides(
             Platform::Linux,
             Frontend::Terminal,
-            Preset::ScreenReader,
+            Preset::Classic,
             &o,
         );
         assert!(warnings.is_empty(), "{warnings:?}");
-        assert_eq!(map.lookup(&k("k"), Layer::Browse), None);
+        assert_eq!(map.lookup(&k("k"), Layer::Browse), Some(ActionId::ScrollUp));
         assert_eq!(map.lookup(&k("u"), Layer::Browse), Some(ActionId::NextLink));
-        assert_eq!(map.lookup(&k("l"), Layer::Browse), Some(ActionId::NextList));
+        assert_eq!(
+            map.lookup(&k("l"), Layer::Browse),
+            Some(ActionId::ReadCurrentLine)
+        );
     }
 
     #[test]
@@ -812,9 +892,10 @@ mod tests {
         }
     }
 
+    /// Star's terminal keys, in the classic preset.
     #[test]
     fn star_tui_keys_are_kept() {
-        let map = Keymap::defaults(Platform::Linux, Frontend::Terminal);
+        let map = Keymap::with_preset(Platform::Linux, Frontend::Terminal, Preset::Classic);
         for (chord, action) in [
             (".", ActionId::NextSentence),
             (",", ActionId::PreviousSentence),
@@ -957,7 +1038,7 @@ mod tests {
                 ("Shift+Left", ActionId::SelectPreviousWord),
                 ("Shift+Down", ActionId::SelectNextLine),
                 ("Shift+Up", ActionId::SelectPreviousLine),
-                ("S", ActionId::ReadParagraph),
+                (",", ActionId::ReadParagraph),
                 ("?", ActionId::KeyboardHelp),
                 ("F1", ActionId::Help),
                 ("a", ActionId::AddNote),
@@ -1105,7 +1186,12 @@ mod tests {
                     ("Alt+J", ActionId::SpellingSuggestions),
                     ("Alt+Shift+V", ActionId::CycleVerbosity),
                     ("Alt+Shift+N", ActionId::CyclePunctuation),
-                    ("Alt+Shift+D", ActionId::AddReference),
+                    ("Alt+Shift+Q", ActionId::ToggleCitations),
+                    ("Alt+Shift+X", ActionId::ExploreMath),
+                    ("Alt+Shift+Z", ActionId::SyllablesToggle),
+                    ("Alt+Shift+J", ActionId::DifficultWordsToggle),
+                    ("Alt+Shift+PageUp", ActionId::RsvpFaster),
+                    ("Alt+Shift+PageDown", ActionId::RsvpSlower),
                 ] {
                     assert_eq!(
                         map.lookup(&c(chord), mode),
@@ -1122,6 +1208,22 @@ mod tests {
             ] {
                 assert_eq!(map.lookup(&c(chord), Layer::Edit), Some(action), "{chord}");
                 assert_eq!(map.lookup(&c(chord), Layer::Browse), None, "{chord}");
+            }
+            // Windows Terminal splits its window with Alt+Shift+D, so the
+            // terminal adds references with Alt+B.
+            let add_reference = if frontend == Frontend::Terminal {
+                k("Alt+B")
+            } else {
+                k("Alt+Shift+D")
+            };
+            for mode in [Layer::Browse, Layer::Edit] {
+                assert_eq!(
+                    map.lookup(&add_reference, mode),
+                    Some(ActionId::AddReference)
+                );
+            }
+            if frontend == Frontend::Terminal {
+                assert_eq!(map.lookup(&k("Alt+Shift+D"), Layer::Browse), None);
             }
             let word_back = if frontend == Frontend::Terminal {
                 k("Alt+Backspace")
@@ -1155,6 +1257,8 @@ mod tests {
                 ActionId::ImportReferences,
                 ActionId::ExportStudySheet,
                 ActionId::NewFromTemplate,
+                ActionId::TogglePreviewAutoReload,
+                ActionId::TogglePreviewLive,
             ] {
                 assert!(a.is_palette_command(), "{a:?}");
                 assert!(map.chords_for(a).is_empty(), "{a:?}");
@@ -1169,10 +1273,14 @@ mod tests {
         let map = Keymap::defaults(Platform::Linux, Frontend::Terminal);
         assert_eq!(
             map.lookup(&k("."), Layer::Browse),
-            Some(ActionId::NextSentence)
+            Some(ActionId::ReadCurrentSentence)
         );
         assert_eq!(
             map.lookup(&k("Alt+."), Layer::Edit),
+            Some(ActionId::NextSentence)
+        );
+        assert_eq!(
+            map.lookup(&k("Alt+Down"), Layer::Edit),
             Some(ActionId::NextSentence)
         );
         assert_eq!(map.lookup(&k("."), Layer::Edit), None);
@@ -1205,7 +1313,8 @@ mod tests {
             map.lookup(&k("x"), Layer::Browse),
             Some(ActionId::NextSentence)
         );
-        assert_eq!(map.lookup(&k("."), Layer::Browse), None);
+        assert_eq!(map.lookup(&k("Alt+."), Layer::Browse), None);
+        assert_eq!(map.lookup(&k("Alt+Down"), Layer::Browse), None);
         assert_eq!(warnings.len(), 1);
     }
 
@@ -1216,7 +1325,12 @@ mod tests {
         let mut o = BTreeMap::new();
         o.insert("next_sentence".to_owned(), vec![",".to_owned()]);
         o.insert("previous_sentence".to_owned(), vec![".".to_owned()]);
-        let (map, warnings) = Keymap::with_overrides(Platform::Linux, Frontend::Terminal, &o);
+        let (map, warnings) = Keymap::with_preset_and_overrides(
+            Platform::Linux,
+            Frontend::Terminal,
+            Preset::Classic,
+            &o,
+        );
         assert!(warnings.is_empty(), "{warnings:?}");
         assert_eq!(
             map.lookup(&k(","), Layer::Browse),
@@ -1252,7 +1366,7 @@ mod tests {
             assert!(map.character_keys());
             assert_eq!(
                 map.lookup(&k("."), Layer::Browse),
-                Some(ActionId::NextSentence)
+                Some(ActionId::ReadCurrentSentence)
             );
             map.set_character_keys(false);
             assert!(!map.character_keys());
@@ -1318,9 +1432,14 @@ mod tests {
             vec!["Alt+.".to_owned(), ".".to_owned()],
         );
         o.insert("speech_cursor_next_line".to_owned(), vec!["n".to_owned()]);
-        o.insert("bold".to_owned(), vec!["Alt+B".to_owned()]);
+        o.insert("bold".to_owned(), vec!["Alt+U".to_owned()]);
         o.insert("stop".to_owned(), vec![]);
-        let (map, warnings) = Keymap::with_overrides(Platform::Linux, Frontend::Terminal, &o);
+        let (map, warnings) = Keymap::with_preset_and_overrides(
+            Platform::Linux,
+            Frontend::Terminal,
+            Preset::Classic,
+            &o,
+        );
         assert!(warnings.is_empty(), "{warnings:?}");
         assert_eq!(map.lookup(&k("."), Layer::Edit), None);
         assert_eq!(
@@ -1336,8 +1455,8 @@ mod tests {
             Some(ActionId::SpeechCursorNextLine)
         );
         assert_eq!(map.lookup(&k("n"), Layer::Browse), Some(ActionId::FindNext));
-        assert_eq!(map.lookup(&k("Alt+B"), Layer::Edit), Some(ActionId::Bold));
-        assert_eq!(map.lookup(&k("Alt+B"), Layer::Browse), None);
+        assert_eq!(map.lookup(&k("Alt+U"), Layer::Edit), Some(ActionId::Bold));
+        assert_eq!(map.lookup(&k("Alt+U"), Layer::Browse), None);
         assert!(map.chords_for(ActionId::Stop).is_empty());
     }
 

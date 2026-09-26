@@ -17,7 +17,7 @@ These areas were being built when the list was made. All are now on `main`:
 
 - Themes (Agent Q). Status: done. See [themes.md](themes.md).
 - Math (Agent O). Status: done. Math is spoken with exact highlighting and becomes MathML in HTML. See [math.md](math.md).
-- Citations (Agent P). Status: done in the reader since Phase 2 (Agent P2b): Alt+C inserts from a filtered picker with a locator, Alt+Shift+D adds by DOI or ISBN, and the palette inserts a bibliography and checks citations. Continuous reading still reads a citation as written. See [citations.md](citations.md).
+- Citations (Agent P). Status: done in the reader since Phase 2 (Agent P2b): Alt+C inserts from a filtered picker with a locator, Alt+Shift+D adds by DOI or ISBN, and the palette inserts a bibliography and checks citations. Continuous reading skips citations by default, and says them in words with Alt+Shift+Q (Agent P2e). See [citations.md](citations.md).
 - Batch conversion and folder watching (Agents A2 and L). Status: done. See [converting.md](converting.md).
 - Braille output (Agent M). Status: done for grade 1; grade 2 needs the `liblouis` feature and liblouis installed. See [converting.md](converting.md).
 - Large-document paging, which plan §6.1 handles by design. Status: done for the terminal reader, which plans reading in windows. The GUI's window model is planned for Wave 3 (Agent W3a), for the Xilem GUI (Agent W3b).
