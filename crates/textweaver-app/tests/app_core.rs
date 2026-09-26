@@ -572,3 +572,93 @@ fn window_timings_on_ten_million_characters() {
     assert!(make < Duration::from_millis(500), "{make:?}");
     assert!(follow < Duration::from_millis(30), "{follow:?}");
 }
+
+/// Measurements for the report (Wave 3, W3a): what the input thread waits
+/// for now, against the work moved off it. Run with
+/// `cargo test -p textweaver-app --test app_core -- --ignored --nocapture`.
+#[test]
+#[ignore = "a measurement: run it with --ignored --nocapture"]
+fn measure_work_off_the_input_thread() {
+    let dir = tempfile::tempdir().unwrap();
+    let para = "Some **bold** text with a few wrods to chek, and more prose after them. ";
+    let mut text = String::new();
+    let mut n = 0;
+    while text.len() < 10_000_000 {
+        n += 1;
+        text.push_str(&format!("## Section {n}\n\n{}\n\n", para.repeat(6)));
+    }
+    let file = dir.path().join("big.md");
+    std::fs::write(&file, &text).unwrap();
+    let doc = Document::from_plain_text(&text);
+
+    // The UTF-16 index: the old Vec of every char's offset, and the rope.
+    let t = Instant::now();
+    let mut old: Vec<u32> = Vec::with_capacity(doc.len_chars() + 1);
+    let mut at = 0u32;
+    for c in doc.text().chars() {
+        old.push(at);
+        at += c.len_utf16() as u32;
+    }
+    old.push(at);
+    let old_index = t.elapsed();
+    let t = Instant::now();
+    let new_len = doc.display().len_utf16();
+    let new_index = t.elapsed();
+    assert_eq!(new_len as u32, at);
+    println!(
+        "UTF-16 index on {} chars: old Vec {old_index:?} and {} MB, now {new_index:?} and no copy",
+        doc.len_chars(),
+        old.len() * 4 / 1_000_000
+    );
+    drop(old);
+
+    // Opening 10 MB of Markdown: at once, and in the background.
+    let (mut app, _said) = app_with(None);
+    app.set_background_open_threshold(u64::MAX);
+    let t = Instant::now();
+    app.dispatch(Command::Open(file.clone()));
+    let at_once = t.elapsed();
+    let (mut app, _said) = app_with(None);
+    app.set_background_open_threshold(0);
+    let t = Instant::now();
+    app.dispatch(Command::Open(file.clone()));
+    let returned = t.elapsed();
+    assert!(app.wait_for_open(Duration::from_secs(120)));
+    let loaded = t.elapsed();
+    println!(
+        "open 10 MB: at once {at_once:?}; in the background the key returns in {returned:?}, the document is ready after {loaded:?}"
+    );
+
+    // Saving in edit mode: the misspelling count now follows on a thread.
+    let dir2 = tempfile::tempdir().unwrap();
+    let (mut app, said) = app_with(Some(Paths::under(dir2.path())));
+    app.open(&file).unwrap();
+    app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    app.dispatch(Command::Insert("x".into()));
+    let t = Instant::now();
+    app.dispatch(Command::Action(ActionId::Save));
+    let save_key = t.elapsed();
+    let t = Instant::now();
+    app.wait_for_writes();
+    let written = t.elapsed();
+    let t = Instant::now();
+    assert!(app.wait_for_spell_count(Duration::from_secs(120)));
+    let counted = t.elapsed();
+    assert!(said.any("possible misspellings"), "{:?}", said.all());
+    println!(
+        "save 10 MB: the key returns in {save_key:?}; written and reported in {written:?}; the misspelling count arrives {counted:?} later, off the input thread"
+    );
+
+    // Settings: the key no longer waits for settings.toml.
+    let t = Instant::now();
+    app.dispatch(Command::Action(ActionId::RateUp));
+    let settings_key = t.elapsed();
+    let t = Instant::now();
+    SettingsStore::new(Paths::under(dir2.path()))
+        .save(app.settings())
+        .unwrap();
+    let direct = t.elapsed();
+    println!(
+        "settings: a key that changes one returns in {settings_key:?}; writing settings.toml takes {direct:?} on the writer"
+    );
+}

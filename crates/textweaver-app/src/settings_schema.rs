@@ -1593,9 +1593,13 @@ impl App {
         screen.shown = (0..screen.schema.settings.len())
             .filter(|&i| {
                 let s = &screen.schema.settings[i];
+                let unit = match &s.kind {
+                    SettingKind::Number { unit, .. } => unit,
+                    _ => "",
+                };
                 !s.internal
                     && crate::lists::matches(
-                        &format!("{} {} {} {}", s.label, s.section, s.path, s.help),
+                        &format!("{} {} {} {} {unit}", s.label, s.section, s.path, s.help),
                         &query,
                     )
             })
