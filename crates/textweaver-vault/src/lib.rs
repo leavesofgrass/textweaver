@@ -13,8 +13,9 @@
 //!
 //! The crate reads and writes notes only through [`AnnotationStore`];
 //! [`MemoryStore`] serves tests and dry runs, and
-//! [`StateStoreAnnotations`] keeps notes in the per-document state files
-//! until the store has typed notes (Agent C2).
+//! [`StateStoreAnnotations`] reads and writes the typed notes and
+//! highlights in the per-document state files, the same ones the reader
+//! uses (`docs/vault.md` is the user guide).
 //!
 //! Owner: Agent J.
 

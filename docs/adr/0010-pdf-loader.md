@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Implemented as decided and on by default. The `PageBreak` markers exist, but the reader has no page navigation yet: go to does not take a page number. `pdf-extract` and `pdfium-render` remain in the workspace table although no crate uses them; removing them is still open. OCR is still out of scope.
 
 ## Context
 
@@ -55,3 +56,9 @@ A password-protected PDF (not openable with the empty password) and an unparseab
 - `tw text file.pdf --format markdown` prints Markdown from the recovered structure (tests check that it reads back with the same headings, list items, table rows, and paragraphs).
 - Layout heuristics can misjudge unusual pages (three-column magazines with irregular gutters, tables without aligned columns, lists whose bullets are images and whose PDF is untagged). Tagged PDFs are the most reliable, since headings and list items come from the tags.
 - Not yet done: vertical and right-to-left scripts, OCR, form fields and annotations (link targets are not recovered), and CJK predefined CMaps other than Identity. lopdf's default features (`chrono`, `jiff`, `time`, `rayon`) are not needed by the loader; the orchestrator can set `default-features = false` on `lopdf` in the workspace table.
+
+## See also
+
+- [Converting documents](../converting.md#formats-textweaver-reads): the formats textweaver reads.
+- [Reading and moving around](../reading.md): reading a PDF.
+- [Documentation index](../README.md)

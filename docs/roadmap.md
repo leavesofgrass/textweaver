@@ -315,3 +315,5 @@ These are ranked for students with print disabilities, drawing on Star's history
 - [Implementation plan](plan.md)
 - [Tasks and agent briefs](tasks.md)
 - [Releasing](releasing.md)
+- [Architecture](architecture.md)
+- [Documentation index](README.md)

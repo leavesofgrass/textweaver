@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): Implemented. The duplicated host protocol was merged into `textweaver-enginehost` (ADR-0012); `cargo xtask hosts` builds both SAPI hosts. OneCore voices are listed through SAPI5 by default (`[speech.sapi] onecore`). Code Factory's Eloquence SAPI voices are hidden unless the user opts in (ADR-0007), and the backend reports capabilities per voice.
 
 ## Context
 
@@ -23,3 +24,9 @@ A probe on 2026-09-25 (`System.Speech`, 64-bit and 32-bit PowerShell, output to 
 - Windows builds produce two host binaries (`cargo xtask sapi-host`); CI builds the 32-bit host on the Windows runner.
 - The host protocol duplicates the ECI host's in Wave 1; the two are merged into one shared engine-host protocol at integration.
 - Automated real-voice tests use Microsoft David, Zira, and eSpeak; voices bundled with other products are the user's to enable.
+
+## See also
+
+- [Speech engines and voices](../speech.md): SAPI5 and OneCore voices.
+- [ADR-0012: The engine host](0012-engine-host.md): the shared host protocol.
+- [Documentation index](../README.md)

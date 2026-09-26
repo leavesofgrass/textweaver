@@ -10,11 +10,11 @@ textweaver is developed on Windows and tested on Linux in a Docker container. Th
 |---|---|---|
 | Debian trixie + `rust:1.96` | Rust 1.96.1, rustfmt, clippy | matches `rust-toolchain.toml` |
 | espeak-ng, `libespeak-ng-dev` | 1.52.0 | `textweaver-speech/espeak` |
-| `libasound2-dev` | | `rodio` (wave 2 export, tones) |
-| speech-dispatcher, `libspeechd-dev` | | `textweaver-speech/speechd` (wave 2) |
-| clang, `libclang-dev`, pkg-config | | bindgen for `-sys` crates |
-| Python 3 | 3.13.5 | parity scripts |
-| pandoc | 3.1.11.1 | `textweaver-formats/pandoc` (wave 2) |
+| `libasound2-dev` | | `rodio` (audio playback for the engine hosts and tones) |
+| speech-dispatcher, `libspeechd-dev` | | `textweaver-speech/speechd` |
+| clang, `libclang-dev`, pkg-config | | pkg-config finds espeak-ng; clang is no longer needed by the espeak feature, whose declarations are hand-written, and is kept for bindgen-based crates |
+| Python 3 | 3.13.5 | parity scripts, `tools/check_links.py`, `tools/gen_site_data.py` |
+| pandoc | 3.1.11.1 | the Pandoc fallback in `tw convert` and `textweaver-formats/pandoc` |
 
 The container has no sound device, so audio features are tested for building and for synthesis to files, not for playback. Listen on the host.
 
@@ -35,11 +35,13 @@ Build (or rebuild) the image:
 docker compose build dev
 ```
 
-The full check, as CI runs it on Linux:
+The full check, as CI runs it on Linux. `scripts/dev-check.sh` runs formatting, clippy, the tests, rustdoc, the keyboard reference check, the link check, and the site data check, with every feature:
 
 ```bash
-docker compose run --rm -T dev bash -c "cargo fmt --all --check && cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo test --workspace --all-features && cargo doc --workspace --no-deps"
+docker compose run --rm -T dev bash scripts/dev-check.sh
 ```
+
+The GUI crate (`textweaver-gui`) is left out, as in CI: it builds wxWidgets, which the image does not carry.
 
 An interactive shell in `/work`:
 
@@ -47,7 +49,7 @@ An interactive shell in `/work`:
 docker compose run --rm dev
 ```
 
-Speak to a file with espeak-ng inside the container (once Agent B's backend lands):
+Speak to a file with espeak-ng inside the container:
 
 ```bash
 docker compose run --rm -T dev cargo run -p textweaver-cli --features espeak -- speak --backend espeak --out /work/target-audio/test.wav "Hello from textweaver"
@@ -96,3 +98,13 @@ The overlay sets `ECIINI`, `LD_LIBRARY_PATH`, and `TEXTWEAVER_ECI_LIBRARY` (`/op
 ## Hearing the container
 
 ALSA inside the image is routed to PulseAudio. Point `PULSE_SERVER` at a PulseAudio server on the host (the Voxin overlay defaults to `tcp:host.docker.internal:4713`, the address emacspeak-docker's `scripts/setup-audio.ps1` sets up on Windows) and anything textweaver plays in the container is heard on the host. Tests never open an audio device.
+
+`scripts/voxin-docker.sh` wraps the Voxin commands above; see [scripts/README.md](../scripts/README.md#voxin-dockersh).
+
+## See also
+
+- [CONTRIBUTING.md](../CONTRIBUTING.md): setting up, the checks, and the agent workflow.
+- [The Eloquence guide](eloquence.md): Voxin for users.
+- [ADR-0001: Workspace and dependencies](adr/0001-workspace-and-dependencies.md): why Linux-only features are tested in the container.
+- [ADR-0007: Eloquence through an ECI host](adr/0007-eloquence-via-eci-host.md): the Voxin measurements.
+- [Documentation index](README.md)

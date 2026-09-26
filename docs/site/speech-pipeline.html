@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speech pipeline: textweaver guide</title>
+<meta name="description" content="Step through what textweaver does between pressing Space and hearing a word with its highlight.">
+<!-- BEGIN generated: theme-init -->
+<script>(function () {
+  try {
+    var t = window.localStorage.getItem("tw-site-theme");
+    if (t === "dark" || t === "light") { document.documentElement.setAttribute("data-theme", t); }
+  } catch (e) { /* storage blocked: follow the system setting */ }
+})();</script>
+<!-- END generated: theme-init -->
+<!-- BEGIN generated: base-style -->
+<style>
+/* Galaxy (dark, the default) and Galaxy Light, from
+   crates/textweaver-theme/themes/galaxy.toml and galaxy-light.toml. */
+:root {
+  --bg: #1e1e1e;
+  --surface: #2a2a2a;
+  --text: #dadada;
+  --dim: #858585;
+  --accent: #a882ff;
+  --h1: #c9b6ff;
+  --h2: #a98eff;
+  --h3: #8aa2ff;
+  --ok: #7bd0c1;
+  --code: #e0a87a;
+  --error: #ff7b93;
+  --mark-fg: #1e1e1e;
+  --mark-bg: #c9b6ff;
+  --sel-bg: #483d6b;
+  --focus-fg: #1e1e1e;
+  --border: var(--dim);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #ffffff;
+    --surface: #f2f0f9;
+    --text: #2e3338;
+    --dim: #727780;
+    --accent: #7c3aed;
+    --h1: #6c3fd6;
+    --h2: #8257e5;
+    --h3: #3a6df0;
+    --ok: #008577;
+    --code: #a65a2c;
+    --error: #c0264b;
+    --mark-fg: #ffffff;
+    --mark-bg: #6c3fd6;
+    --sel-bg: #d8caff;
+    --focus-fg: #ffffff;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #ffffff;
+  --surface: #f2f0f9;
+  --text: #2e3338;
+  --dim: #727780;
+  --accent: #7c3aed;
+  --h1: #6c3fd6;
+  --h2: #8257e5;
+  --h3: #3a6df0;
+  --ok: #008577;
+  --code: #a65a2c;
+  --error: #c0264b;
+  --mark-fg: #ffffff;
+  --mark-bg: #6c3fd6;
+  --sel-bg: #d8caff;
+  --focus-fg: #ffffff;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); color: var(--text); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+.wrap { max-width: 72rem; margin: 0 auto; padding: 0 1rem; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.5em 0 0.5em; }
+h1 { color: var(--h1); font-size: 2.1rem; margin-top: 0.75em; }
+h2 { color: var(--h2); font-size: 1.6rem; }
+h3 { color: var(--text); font-size: 1.25rem; }
+p, ul, ol, dl { margin: 0 0 1em; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 0.15em; }
+a:hover { text-decoration-thickness: 0.15em; }
+code, kbd {
+  font-family: "Atkinson Hyperlegible Mono", ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+  font-size: 0.95em;
+  color: var(--code);
+}
+kbd { border: 1px solid var(--border); border-radius: 0.25em; padding: 0 0.25em; color: var(--text); white-space: nowrap; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.vh {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: absolute; left: 0.5rem; top: -100rem; z-index: 10;
+  background: var(--bg); color: var(--accent); padding: 0.5rem 1rem;
+  border: 2px solid var(--accent); font-weight: bold;
+}
+.skip-link:focus { top: 0.5rem; }
+.site-header { border-bottom: 2px solid var(--border); padding: 0.5rem 0 0.75rem; }
+.site-header .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem; }
+.site-name { margin: 0; font-weight: bold; font-size: 1.25rem; }
+.site-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; }
+.site-nav a { display: inline-block; padding: 0.4rem 0.5rem; min-height: 2.75rem; line-height: 1.9rem; }
+.site-nav a[aria-current="page"] { color: var(--text); font-weight: bold; text-decoration-thickness: 0.2em; border-bottom: 3px solid var(--accent); }
+.theme-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-left: auto; }
+main { display: block; padding-bottom: 2rem; }
+.site-footer { border-top: 2px solid var(--border); padding: 1rem 0 2rem; }
+.site-footer h2 { font-size: 1.25rem; margin-top: 0.5em; }
+button, select, input, textarea { font: inherit; color: var(--text); }
+button, select, input[type="search"], input[type="number"], input[type="text"] {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 0.3rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.75rem;
+}
+button { cursor: pointer; }
+button:hover { border-color: var(--accent); }
+input[type="range"] { accent-color: var(--accent); min-height: 2.75rem; min-width: 12rem; max-width: 100%; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); width: 1.5rem; height: 1.5rem; margin: 0 0.5rem 0 0; vertical-align: middle; }
+fieldset { border: 2px solid var(--border); border-radius: 0.3rem; margin: 0 0 1rem; padding: 0.5rem 1rem 0.75rem; min-width: 0; }
+legend { font-weight: bold; padding: 0 0.25rem; }
+label { cursor: pointer; }
+.check { display: flex; align-items: center; min-height: 2.75rem; }
+.row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 0 0 1rem; }
+.field { display: flex; flex-direction: column; gap: 0.25rem; margin: 0 0 1rem; max-width: 100%; }
+.panel { background: var(--surface); border: 2px solid var(--border); border-radius: 0.4rem; padding: 0.5rem 1rem 1rem; margin: 0 0 1.5rem; }
+.panel h2:first-child, .panel h3:first-child { margin-top: 0.5em; }
+.status-line { border-left: 6px solid var(--accent); padding: 0.25rem 0.75rem; margin: 0 0 1rem; min-height: 2.5rem; }
+.note { border-left: 6px double var(--border); padding: 0.25rem 0.75rem; }
+.table-wrap { max-width: 100%; overflow-x: auto; margin: 0 0 1.5rem; }
+table { border-collapse: collapse; width: 100%; }
+caption { text-align: left; font-weight: bold; padding: 0.5rem 0; color: var(--text); }
+th, td { border: 1px solid var(--border); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+thead th { background: var(--surface); }
+td code, th code { overflow-wrap: break-word; }
+mark { background: var(--mark-bg); color: var(--mark-fg); }
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (forced-colors: active) {
+  :focus-visible { outline: 3px solid Highlight; }
+  button, select, input, fieldset, th, td, .panel, kbd { border-color: CanvasText; }
+  .site-nav a[aria-current="page"] { border-bottom-color: Highlight; }
+  .status-line, .note { border-left-color: CanvasText; }
+}
+@media print {
+  .site-header, .skip-link, .theme-switch { display: none; }
+}
+</style>
+<!-- END generated: base-style -->
+<style>
+.flow { list-style: none; margin: 0 0 1.5rem; padding: 0 0 0 1.75rem; display: flex; flex-wrap: wrap; gap: 0.75rem 1.75rem; }
+.flow li { position: relative; }
+.flow li + li::before {
+  content: ""; position: absolute; left: -1.35rem; top: 50%;
+  width: 0.7rem; height: 0.7rem; margin-top: -0.35rem;
+  border-top: 3px solid var(--text); border-right: 3px solid var(--text);
+  transform: rotate(45deg);
+}
+@media (max-width: 40rem) {
+  .flow { flex-direction: column; gap: 1.25rem; padding-left: 0; }
+  .flow li + li::before { left: 1.25rem; top: -1rem; margin-top: -0.35rem; transform: rotate(135deg); }
+}
+.flow button { min-width: 8.5rem; text-align: left; line-height: 1.3; padding: 0.4rem 0.6rem; }
+.flow .num { font-weight: bold; margin-right: 0.25rem; }
+.flow .cur { display: block; font-size: 0.9rem; font-weight: bold; }
+.flow button[aria-current="step"] { border: 5px solid var(--accent); font-weight: bold; }
+.stepper-controls { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 0 0 1rem; }
+.step { border-left: 6px solid var(--border); padding: 0 0 0 1rem; margin: 0 0 1.5rem; }
+.step h3 { margin-top: 0.25em; }
+.step .lead { font-weight: bold; }
+.example-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; margin: 0 0 1rem; }
+.example-box { background: var(--surface); border: 2px solid var(--border); border-radius: 0.4rem; padding: 0.25rem 1rem 0.75rem; }
+.example-box h3 { margin-top: 0.5em; font-size: 1.1rem; }
+.sample { font-family: "Atkinson Hyperlegible Mono", ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace; font-size: 1.25rem; white-space: pre-wrap; margin: 0 0 0.5rem; }
+.sample mark { text-decoration: underline; text-decoration-thickness: 0.2em; text-underline-offset: 0.2em; outline: 2px solid var(--mark-bg); }
+.where { margin: 0; }
+@media (forced-colors: active) {
+  .flow button[aria-current="step"] { border-color: Highlight; }
+  .flow li + li::before { border-color: CanvasText; }
+  .sample mark { forced-color-adjust: none; background: Mark; color: MarkText; }
+}
+</style>
+</head>
+<body>
+<!-- BEGIN generated: header -->
+<a class="skip-link" href="#main">Skip to main content</a>
+<header class="site-header">
+  <div class="wrap">
+    <p class="site-name">textweaver guide</p>
+    <nav class="site-nav" aria-label="Site">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="architecture.html">Crate map</a></li>
+        <li><a href="speech-pipeline.html" aria-current="page">Speech pipeline</a></li>
+        <li><a href="keyboard.html">Keyboard</a></li>
+        <li><a href="features.html">Features</a></li>
+        <li><a href="reading-aids.html">Reading aids</a></li>
+      </ul>
+    </nav>
+    <div class="theme-switch">
+      <label for="theme-select">Color theme</label>
+      <select id="theme-select">
+        <option value="system">System</option>
+        <option value="dark">Dark (Galaxy)</option>
+        <option value="light">Light (Galaxy Light)</option>
+      </select>
+    </div>
+  </div>
+</header>
+<!-- END generated: header -->
+<main id="main" tabindex="-1">
+  <div class="wrap">
+    <h1>From Space to a spoken word</h1>
+    <p>When you press Space, textweaver reads from the cursor.
+    You hear each word, and the same word is highlighted on the screen at the same moment.
+    This page follows one reading through the ten stages that make that happen.</p>
+    <p>The design is in the <a href="../architecture.md">architecture guide</a> and in four decision records:
+    <a href="../adr/0002-text-model.md">ADR-0002: Text model</a>,
+    <a href="../adr/0003-speech-threading-and-event-timing.md">ADR-0003: Speech threading and event timing</a>,
+    <a href="../adr/0005-narration-and-offset-map.md">ADR-0005: Narration and the OffsetMap</a>, and
+    <a href="../adr/0012-engine-host.md">ADR-0012: One engine-host protocol and playback client</a>.</p>
+    <p id="status" role="status" class="vh"></p>
+
+    <h2>The ten stages</h2>
+    <div id="stepper-ui" hidden>
+      <p>The diagram below is a list of the ten stages in order.
+      Each stage is a button: press it to show that stage.
+      The current stage has a thick border and the word "current".
+      Use Next step and Previous step to move one stage at a time,
+      or Show all steps to read every stage at once.</p>
+      <ol class="flow" id="flow" aria-label="The ten stages"></ol>
+      <div class="stepper-controls">
+        <button type="button" id="prev">Previous step</button>
+        <button type="button" id="next">Next step</button>
+        <button type="button" id="show-all" aria-pressed="false">Show all steps</button>
+      </div>
+    </div>
+
+    <div id="steps">
+      <section class="step" id="step-1" aria-labelledby="step-1-h" data-title="Document">
+        <h3 id="step-1-h" tabindex="-1">Step 1 of 10: Document</h3>
+        <p class="lead">The document is canonical text in a rope, plus markers.</p>
+        <p>A rope is a tree of text pieces, so edits and lookups stay fast even in a very large book.
+        Markers note what each range of the text is: a heading, a link, a list item, a table, code, or math.
+        Every position is a character position, counted in Unicode scalar values.
+        That keeps saved positions the same as Star's.
+        When you press Space, reading starts at the word under the cursor.</p>
+        <p>Decided in <a href="../adr/0002-text-model.md">ADR-0002: Text model</a>.</p>
+      </section>
+
+      <section class="step" id="step-2" aria-labelledby="step-2-h" data-title="Units">
+        <h3 id="step-2-h" tabindex="-1">Step 2 of 10: Units</h3>
+        <p class="lead">Words and sentences are found with the Unicode text segmentation rules, UAX #29.</p>
+        <p>An abbreviation list keeps "Dr." or "e.g." from ending a sentence.
+        A few abbreviations, such as "a.m." and "etc.", end a sentence only when the next word starts with a capital letter.
+        List items, table rows, and code lines are sentences of their own.
+        The same units drive navigation, so "next sentence" and reading aloud always agree.</p>
+      </section>
+
+      <section class="step" id="step-3" aria-labelledby="step-3-h" data-title="Narration">
+        <h3 id="step-3-h" tabindex="-1">Step 3 of 10: Narration</h3>
+        <p class="lead">The narration planner, narrate::plan, turns the text into sentence-sized utterances.</p>
+        <p>Continuous reading is planned in windows of about ten minutes of speech (32,768 characters).
+        The next window is planned when this one ends, so a long book starts reading at once.</p>
+        <p>The planner adds spoken words for structure that has no text of its own.
+        For example, it says "heading level 2" before a heading, and "list with 3 items" before a list.
+        These are inserted spans: you hear them, but they have no place in the document.</p>
+        <p>Decided in <a href="../adr/0005-narration-and-offset-map.md">ADR-0005: Narration and the OffsetMap</a>.</p>
+      </section>
+
+      <section class="step" id="step-4" aria-labelledby="step-4-h" data-title="Offset map">
+        <h3 id="step-4-h" tabindex="-1">Step 4 of 10: Offset map</h3>
+        <p class="lead">An offset map records where every piece of the spoken text came from.</p>
+        <p>It is a list of spans.
+        Each span pairs a byte range in the spoken text with a character range in the document.
+        There are four kinds of span:</p>
+        <ul>
+          <li>Literal: the same text, character for character.</li>
+          <li>Expanded: spoken words that replace a whole source token, such as "Doctor" for "Dr.".
+          Any word inside highlights the whole token.</li>
+          <li>Inserted: spoken words with no source, such as "heading level 2".
+          They highlight nothing.</li>
+          <li>Elided: source that is not spoken, such as Markdown's <code>**</code>.
+          Its spoken range is empty.</li>
+        </ul>
+        <p>The spoken text and its map are built together.
+        They are never lined up afterwards by guessing.</p>
+      </section>
+
+      <section class="step" id="step-5" aria-labelledby="step-5-h" data-title="Utterance">
+        <h3 id="step-5-h" tabindex="-1">Step 5 of 10: Utterance</h3>
+        <p class="lead">An utterance is what goes to the speech service: the text to speak, an id, and the offset map.</p>
+        <p>The id has two parts: the reading generation and the chunk number.
+        The generation changes every time reading stops or restarts.
+        The chunk number counts the utterances within one reading.</p>
+      </section>
+
+      <section class="step" id="step-6" aria-labelledby="step-6-h" data-title="Speech service">
+        <h3 id="step-6-h" tabindex="-1">Step 6 of 10: Speech service</h3>
+        <p class="lead">The speech service runs on its own thread, so the screen never waits for speech.</p>
+        <p>Its queue keeps two sentences of lookahead in the engine.
+        That way there is no gap between sentences, even with slow engines.</p>
+        <p>The service normalizes each utterance on its own, never across two utterances.
+        The steps run in this order: math first, then Markdown residue, then abbreviations, then numbers, then punctuation.
+        Math goes first so that a formula such as <code>$2x$</code> is not read as money.
+        Every step returns a new offset map, and the maps are chained, so the final map still points into the document.</p>
+        <p>Decided in <a href="../adr/0003-speech-threading-and-event-timing.md">ADR-0003: Speech threading and event timing</a>.</p>
+      </section>
+
+      <section class="step" id="step-7" aria-labelledby="step-7-h" data-title="Backend or engine host">
+        <h3 id="step-7-h" tabindex="-1">Step 7 of 10: Backend or engine host</h3>
+        <p class="lead">A backend turns the text into sound, either inside textweaver or in a separate host process.</p>
+        <p>Some backends run inside textweaver's own process, such as espeak-ng.
+        Others run in a host process: ETI-Eloquence, SAPI5 voices, and DECtalk.
+        A host loads the engine's library, speaks into memory, and sends the audio and word positions back over a framed pipe protocol.
+        textweaver plays the audio itself.
+        If an engine crashes, only its host stops, and textweaver restarts it.</p>
+        <p>Decided in <a href="../adr/0012-engine-host.md">ADR-0012: One engine-host protocol and playback client</a>.</p>
+      </section>
+
+      <section class="step" id="step-8" aria-labelledby="step-8-h" data-title="Word events">
+        <h3 id="step-8-h" tabindex="-1">Step 8 of 10: Word events</h3>
+        <p class="lead">Each word event gives the byte range of a spoken word and the audio time when it is heard.</p>
+        <p>For engines that report audio positions, the event is scheduled on the playback clock.
+        So the highlight moves when you hear the word, not when the engine made it.
+        Some engines send no word events, such as Omnivox.
+        For them a timer pacer estimates when each word is heard.</p>
+      </section>
+
+      <section class="step" id="step-9" aria-labelledby="step-9-h" data-title="Generation check">
+        <h3 id="step-9-h" tabindex="-1">Step 9 of 10: Generation check</h3>
+        <p class="lead">Events from an older reading generation are dropped, so a late event never moves the highlight.</p>
+        <p>Suppose you press Space to pause, then jump to the next heading.
+        The engine may still send an event for a word from before the pause.
+        That event carries the old generation, so the service drops it before anything else sees it.</p>
+      </section>
+
+      <section class="step" id="step-10" aria-labelledby="step-10-h" data-title="Highlight">
+        <h3 id="step-10-h" tabindex="-1">Step 10 of 10: Highlight</h3>
+        <p class="lead">The word's byte range maps back through the offset map to a range in the document, and that range is highlighted.</p>
+        <p>The terminal reader draws the highlight at once.
+        It also parks the hardware cursor on the spoken word.
+        Screen readers and screen magnifiers follow the hardware cursor, so they follow the reading too.</p>
+      </section>
+    </div>
+
+    <h2>Worked example</h2>
+    <p>Here is one sentence of Markdown with a little math in it.
+    The numbers below come from running <code>tw speak --backend null --json</code> on this sentence.</p>
+
+    <h3>The source and the spoken text</h3>
+    <ul>
+      <li>Source: <code>The area is $x^2$ today.</code>
+      It is 24 characters long, numbered 0 to 23.
+      Every character here is one byte, so byte and character positions are the same in the source.</li>
+      <li>Spoken text: <code>The area is x squared today.</code>
+      It is 28 bytes long.</li>
+    </ul>
+    <p>A range such as "13 to 14" starts at the first number and stops just before the second, as ranges do in Rust.
+    So "characters 13 to 14" means the one character at position 13.</p>
+
+    <div class="table-wrap" role="region" aria-labelledby="span-caption" tabindex="0">
+      <table>
+        <caption id="span-caption">The offset map for the example: 7 spans, in spoken order</caption>
+        <thead>
+          <tr>
+            <th scope="col">Kind</th>
+            <th scope="col">Spoken text</th>
+            <th scope="col">Spoken bytes</th>
+            <th scope="col">Source text</th>
+            <th scope="col">Source characters</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Literal</th><td><code>The area is </code></td><td>0 to 12</td><td><code>The area is </code></td><td>0 to 12</td></tr>
+          <tr><th scope="row">Elided</th><td>nothing</td><td>12 to 12 (empty)</td><td><code>$</code></td><td>12 to 13</td></tr>
+          <tr><th scope="row">Literal</th><td><code>x</code></td><td>12 to 13</td><td><code>x</code></td><td>13 to 14</td></tr>
+          <tr><th scope="row">Inserted</th><td>a space</td><td>13 to 14</td><td>nothing (an anchor at 14)</td><td>14 to 14 (empty)</td></tr>
+          <tr><th scope="row">Expanded</th><td><code>squared</code></td><td>14 to 21</td><td><code>^2</code></td><td>14 to 16</td></tr>
+          <tr><th scope="row">Elided</th><td>nothing</td><td>21 to 21 (empty)</td><td><code>$</code></td><td>16 to 17</td></tr>
+          <tr><th scope="row">Literal</th><td><code> today.</code></td><td>21 to 28</td><td><code> today.</code></td><td>17 to 24</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>How a word maps back</h3>
+    <p>The math step keeps the letter <code>x</code> as it is.
+    It inserts a space, and it expands the superscript <code>^2</code> into the word "squared".
+    The dollar signs are Markdown math delimiters, so they are elided.</p>
+    <p>Say the engine reports the word "squared" at spoken bytes 14 to 21.
+    Those bytes fall in the expanded span, and an expanded span always maps to its whole source token.
+    So the highlight covers source characters 14 to 16, which is <code>^2</code>.
+    The word before it, "x", falls in a literal span and maps to character 13 alone.
+    As you listen to "x squared", the highlight moves from <code>x</code> to <code>^2</code>, and together the two words cover all of <code>x^2</code>.</p>
+
+    <h3>Try it</h3>
+    <p>Press Speak next word to step through the spoken words.
+    Nothing is played aloud.
+    The page marks the spoken word and its source range side by side.
+    Each mark is highlighted and has a thick underline, and the text under each box says what is marked.</p>
+    <div class="row">
+      <button type="button" id="speak-next">Speak next word</button>
+      <button type="button" id="speak-reset">Start over</button>
+    </div>
+    <div class="example-grid">
+      <div class="example-box">
+        <h4>Spoken text</h4>
+        <p class="sample" id="spoken-sample">The area is x squared today.</p>
+        <p class="where" id="spoken-where">No word spoken yet.</p>
+      </div>
+      <div class="example-box">
+        <h4>Source text</h4>
+        <p class="sample" id="source-sample">The area is $x^2$ today.</p>
+        <p class="where" id="source-where">Nothing highlighted yet.</p>
+      </div>
+    </div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <h2>Related documents</h2>
+    <ul>
+      <li><a href="../architecture.md">Architecture guide</a></li>
+      <li><a href="../adr/0002-text-model.md">ADR-0002: Text model</a></li>
+      <li><a href="../adr/0003-speech-threading-and-event-timing.md">ADR-0003: Speech threading and event timing</a></li>
+      <li><a href="../adr/0005-narration-and-offset-map.md">ADR-0005: Narration and the OffsetMap</a></li>
+      <li><a href="../adr/0012-engine-host.md">ADR-0012: One engine-host protocol and playback client</a></li>
+      <li><a href="../speech.md">Speech engines and voices guide</a></li>
+      <li><a href="README.md">About these pages</a></li>
+      <li><a href="../README.md">Documentation index</a></li>
+    </ul>
+  </div>
+</footer>
+<!-- BEGIN generated: site-data -->
+<script type="application/json" id="site-data">
+{
+ "generator": "tools/gen_site_data.py",
+ "pages": [
+  {
+   "file": "index.html",
+   "title": "Home"
+  },
+  {
+   "file": "architecture.html",
+   "title": "Crate map"
+  },
+  {
+   "file": "speech-pipeline.html",
+   "title": "Speech pipeline"
+  },
+  {
+   "file": "keyboard.html",
+   "title": "Keyboard"
+  },
+  {
+   "file": "features.html",
+   "title": "Features"
+  },
+  {
+   "file": "reading-aids.html",
+   "title": "Reading aids"
+  }
+ ]
+}
+</script>
+<!-- END generated: site-data -->
+<!-- BEGIN generated: base-script -->
+<script>
+/* Shared by every page: data, announcements, theme switch. */
+window.TW = (function () {
+  "use strict";
+  var data = {};
+  try { data = JSON.parse(document.getElementById("site-data").textContent); } catch (e) { data = {}; }
+  var statusEl = document.getElementById("status");
+  var pending = null;
+  /* Replace the text of the page's one live region. Repeating the same text
+     clears it first, so screen readers announce it again. */
+  function announce(message) {
+    if (!statusEl) { return; }
+    window.clearTimeout(pending);
+    if (statusEl.textContent === message) {
+      statusEl.textContent = "";
+      pending = window.setTimeout(function () { statusEl.textContent = message; }, 100);
+    } else {
+      statusEl.textContent = message;
+    }
+  }
+  function debounce(fn, ms) {
+    var t = null;
+    return function () {
+      var args = arguments, self = this;
+      window.clearTimeout(t);
+      t = window.setTimeout(function () { fn.apply(self, args); }, ms);
+    };
+  }
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+  var KEY = "tw-site-theme";
+  var root = document.documentElement;
+  var select = document.getElementById("theme-select");
+  function currentTheme() {
+    var t = root.getAttribute("data-theme");
+    return (t === "dark" || t === "light") ? t : "system";
+  }
+  if (select) {
+    select.value = currentTheme();
+    select.addEventListener("change", function () {
+      var v = select.value;
+      if (v === "dark" || v === "light") { root.setAttribute("data-theme", v); } else { root.removeAttribute("data-theme"); }
+      try {
+        if (v === "dark" || v === "light") { window.localStorage.setItem(KEY, v); } else { window.localStorage.removeItem(KEY); }
+      } catch (e) { /* storage blocked: the choice lasts until the page closes */ }
+    });
+  }
+  /* A table wider than the screen scrolls inside its box. Only then is the
+     box a labelled region that Tab can reach, so the arrow keys can scroll
+     it; otherwise it is a plain box and adds no tab stop. */
+  function fitTables() {
+    Array.prototype.forEach.call(document.querySelectorAll(".table-wrap"), function (w) {
+      var label = w.getAttribute("aria-labelledby") || w.getAttribute("data-labelledby");
+      if (label) { w.setAttribute("data-labelledby", label); }
+      if (w.scrollWidth > w.clientWidth + 1) {
+        w.setAttribute("role", "region");
+        w.setAttribute("tabindex", "0");
+        if (label) { w.setAttribute("aria-labelledby", label); }
+      } else {
+        w.removeAttribute("role");
+        w.removeAttribute("tabindex");
+        w.removeAttribute("aria-labelledby");
+      }
+    });
+  }
+  window.addEventListener("resize", debounce(fitTables, 200));
+  window.addEventListener("load", fitTables);
+  return { data: data, announce: announce, debounce: debounce, plural: plural, fitTables: fitTables };
+})();
+</script>
+<!-- END generated: base-script -->
+<script>
+(function () {
+  "use strict";
+  var TW = window.TW;
+
+  /* ---- The stepper. Without JavaScript every step shows, in order. ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll("#steps .step"));
+  var total = sections.length;
+  var flow = document.getElementById("flow");
+  var showAll = document.getElementById("show-all");
+  var current = 0;
+  var all = false;
+  var stepButtons = [];
+
+  sections.forEach(function (s, i) {
+    var li = document.createElement("li");
+    var b = document.createElement("button");
+    b.type = "button";
+    var num = document.createElement("span");
+    num.className = "num";
+    num.textContent = (i + 1) + ".";
+    b.appendChild(num);
+    b.appendChild(document.createTextNode(" " + s.getAttribute("data-title")));
+    var cur = document.createElement("span");
+    cur.className = "cur";
+    cur.setAttribute("aria-hidden", "true");
+    b.appendChild(cur);
+    b.addEventListener("click", function () { go(i, true); });
+    li.appendChild(b);
+    flow.appendChild(li);
+    stepButtons.push(b);
+  });
+
+  function summary(i) {
+    var s = sections[i];
+    return "Step " + (i + 1) + " of " + total + ": " + s.getAttribute("data-title") + ". " +
+      s.querySelector(".lead").textContent;
+  }
+  function render() {
+    sections.forEach(function (s, i) { s.hidden = !all && i !== current; });
+    stepButtons.forEach(function (b, i) {
+      if (i === current) { b.setAttribute("aria-current", "step"); } else { b.removeAttribute("aria-current"); }
+      b.querySelector(".cur").textContent = i === current ? "current" : "";
+    });
+    showAll.setAttribute("aria-pressed", all ? "true" : "false");
+  }
+  function go(i, speak) {
+    current = i;
+    render();
+    if (all) { sections[i].scrollIntoView({ block: "start" }); }
+    if (speak) { TW.announce(summary(i)); }
+  }
+  document.getElementById("next").addEventListener("click", function () {
+    if (current === total - 1) { TW.announce("Last step. " + summary(current)); return; }
+    go(current + 1, true);
+  });
+  document.getElementById("prev").addEventListener("click", function () {
+    if (current === 0) { TW.announce("First step. " + summary(current)); return; }
+    go(current - 1, true);
+  });
+  showAll.addEventListener("click", function () {
+    all = !all;
+    render();
+    TW.announce(all ? "All " + total + " steps shown." : "One step at a time. " + summary(current));
+  });
+  document.getElementById("stepper-ui").hidden = false;
+  render();
+
+  /* ---- The worked example. ---- */
+  var spoken = "The area is x squared today.";
+  var source = "The area is $x^2$ today.";
+  /* The offset map from `tw speak --backend null --json`. Spoken ranges are
+     bytes, source ranges are chars; this text is ASCII, so they coincide. */
+  var spans = [
+    { kind: "literal", sp: [0, 12], src: [0, 12] },
+    { kind: "elided", sp: [12, 12], src: [12, 13] },
+    { kind: "literal", sp: [12, 13], src: [13, 14] },
+    { kind: "inserted", sp: [13, 14], src: [14, 14] },
+    { kind: "expanded", sp: [14, 21], src: [14, 16] },
+    { kind: "elided", sp: [21, 21], src: [16, 17] },
+    { kind: "literal", sp: [21, 28], src: [17, 24] }
+  ];
+  /* OffsetMap::to_source, as in crates/textweaver-core/src/offset_map.rs. */
+  function toSource(s, e) {
+    var out = null;
+    spans.forEach(function (span) {
+      if (span.sp[0] >= e || span.sp[1] <= s) { return; }
+      var part;
+      if (span.kind === "literal") {
+        var a = Math.max(s, span.sp[0]), b = Math.min(e, span.sp[1]);
+        var start = span.src[0] + (a - span.sp[0]);
+        part = [start, Math.min(start + Math.max(b - a, 1), span.src[1])];
+      } else if (span.kind === "expanded") {
+        part = span.src.slice();
+      } else { return; }
+      out = out ? [Math.min(out[0], part[0]), Math.max(out[1], part[1])] : part;
+    });
+    return out;
+  }
+  var words = [];
+  var re = /[A-Za-z0-9']+/g, m;
+  while ((m = re.exec(spoken)) !== null) { words.push([m.index, m.index + m[0].length]); }
+  var wi = -1;
+  var spokenEl = document.getElementById("spoken-sample");
+  var sourceEl = document.getElementById("source-sample");
+  var spokenWhere = document.getElementById("spoken-where");
+  var sourceWhere = document.getElementById("source-where");
+
+  function markInto(elm, text, range) {
+    elm.textContent = "";
+    if (!range) { elm.textContent = text; return; }
+    elm.appendChild(document.createTextNode(text.slice(0, range[0])));
+    var mk = document.createElement("mark");
+    mk.textContent = text.slice(range[0], range[1]);
+    elm.appendChild(mk);
+    elm.appendChild(document.createTextNode(text.slice(range[1])));
+  }
+  function showWord() {
+    if (wi < 0) {
+      markInto(spokenEl, spoken, null);
+      markInto(sourceEl, source, null);
+      spokenWhere.textContent = "No word spoken yet.";
+      sourceWhere.textContent = "Nothing highlighted yet.";
+      return;
+    }
+    var w = words[wi];
+    var word = spoken.slice(w[0], w[1]);
+    var src = toSource(w[0], w[1]);
+    var srcText = source.slice(src[0], src[1]);
+    markInto(spokenEl, spoken, w);
+    markInto(sourceEl, source, src);
+    spokenWhere.textContent = "Marked: “" + word + "”, spoken bytes " + w[0] + " to " + w[1] + ".";
+    sourceWhere.textContent = "Highlighted: “" + srcText + "”, source characters " + src[0] + " to " + src[1] + ".";
+    TW.announce(word + ": spoken bytes " + w[0] + " to " + w[1] + ", source characters " + src[0] + " to " + src[1] + ", " + srcText);
+  }
+  document.getElementById("speak-next").addEventListener("click", function () {
+    if (wi >= words.length - 1) { TW.announce("End of the sentence. Press Start over to hear it again."); return; }
+    wi += 1;
+    showWord();
+  });
+  document.getElementById("speak-reset").addEventListener("click", function () {
+    wi = -1;
+    showWord();
+    TW.announce("Back to the start. No word spoken yet.");
+  });
+})();
+</script>
+</body>
+</html>

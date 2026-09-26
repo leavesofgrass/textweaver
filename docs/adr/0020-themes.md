@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
+- Status update (Saturday, September 26, 2026): The TUI, the app's theme cycle, and the settings moved onto this crate (Agent D3): the terminal reader runs Galaxy by default, cycles all 23 built-ins plus user themes with F5, and follows the system at startup. The TUI's three hand-made themes are gone. The GUI `system` theme is still Wave 3 work.
 
 ## Context
 
@@ -88,3 +89,10 @@ Quotes use the dim-text color (Star's `muted`), so each `dim_text` change applie
 - Faint bands (the sentence band, the selection) disappear on 16-color terminals, and light themes there underline headings instead of bolding them; attributes carry the meaning.
 - The TUI (`textweaver-tui/src/theme.rs`), the app's theme cycle, and the store's settings move onto this crate at integration; until then the TUI's three hand-made themes remain, and its `galaxy` is not Star's.
 - A GUI `system` theme built from the platform palette (503.2's follow-system mode) belongs to the GUI in wave 3; the terminal's equivalent is the no-color level, which uses the terminal's own colors.
+
+## See also
+
+- [Themes](../themes.md): the user guide.
+- [Settings](../settings.md#display): the `[display]` settings.
+- [Interactive pages](../site/index.html): the docs site uses Galaxy and Galaxy Light.
+- [Documentation index](../README.md)
