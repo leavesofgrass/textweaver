@@ -344,6 +344,7 @@ fn splits_chapters_at_section_breaks_with_page_list() {
         &WriteOptions {
             epub: EpubOptions {
                 split_chapters: false,
+                ..EpubOptions::default()
             },
             ..options()
         },

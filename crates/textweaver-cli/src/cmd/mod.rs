@@ -3,6 +3,7 @@
 pub mod backends;
 pub mod cite;
 pub mod convert;
+pub mod convert_layout;
 pub mod dictate;
 pub mod eloquence;
 pub mod export_audio;

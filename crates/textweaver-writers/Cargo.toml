@@ -16,12 +16,16 @@ thiserror.workspace = true
 serde.workspace = true
 krilla.workspace = true
 zip.workspace = true
+textweaver-fonts.workspace = true
 
 [features]
-default = []
+default = ["bundled-fonts"]
 # Contracted (grade 2) braille through liblouis's `lou_translate`, when it
 # is installed.
 liblouis = []
+# Bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic): PDF
+# output needs no installed font, and EPUB can embed them.
+bundled-fonts = ["textweaver-fonts/bundled-fonts"]
 
 [dev-dependencies]
 ropey.workspace = true

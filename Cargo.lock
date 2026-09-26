@@ -4441,6 +4441,7 @@ dependencies = [
  "textweaver-render",
  "textweaver-tui",
  "textweaver-vault",
+ "textweaver-writers",
 ]
 
 [[package]]
@@ -4737,6 +4738,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "textweaver-core",
+ "textweaver-fonts",
  "textweaver-formats",
  "textweaver-text",
  "thiserror 2.0.21",

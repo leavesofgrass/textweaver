@@ -1,22 +1,50 @@
-//! Fonts for PDF output: discovery on the system and just enough of the
-//! OpenType tables (`head`, `hhea`, `hmtx`, `cmap`, `OS/2`) to measure
-//! text and to know which characters a font can show.
+//! Fonts for PDF output: the bundled families (`textweaver-fonts`),
+//! installed families found by name, and just enough of the OpenType
+//! tables (`head`, `hhea`, `hmtx`, `cmap`, `OS/2`) to measure text and to
+//! know which characters a font can show.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use krilla::text::Font as KrillaFont;
+use textweaver_fonts::{FamilySource, Style, SystemFace, bundled, system};
 
-use crate::WriteError;
+use crate::{PdfOptions, WriteError};
+
+/// Font bytes: embedded in the program, or read from a file.
+#[derive(Clone)]
+enum Bytes {
+    Static(&'static [u8]),
+    Owned(Arc<Vec<u8>>),
+}
+
+impl std::ops::Deref for Bytes {
+    type Target = [u8];
+    fn deref(&self) -> &[u8] {
+        match self {
+            Bytes::Static(b) => b,
+            Bytes::Owned(v) => v,
+        }
+    }
+}
+
+impl From<Bytes> for krilla::Data {
+    fn from(b: Bytes) -> krilla::Data {
+        match b {
+            Bytes::Static(s) => s.into(),
+            Bytes::Owned(v) => v.into(),
+        }
+    }
+}
 
 /// A parsed font face.
 pub(crate) struct Face {
     pub(crate) krilla: KrillaFont,
     /// Where it came from, for messages.
     pub(crate) name: String,
-    data: Arc<Vec<u8>>,
+    data: Bytes,
     upem: f32,
     /// Ascender as a fraction of the em.
     pub(crate) ascent: f32,
@@ -52,12 +80,13 @@ fn tables(d: &[u8], base: usize) -> Option<HashMap<[u8; 4], usize>> {
 }
 
 impl Face {
-    /// Parses the first face of a font file (TrueType, OpenType, or a
+    /// Parses face `index` of a font file (TrueType, OpenType, or a
     /// collection).
-    pub(crate) fn parse(data: Vec<u8>, name: &str) -> Result<Face, WriteError> {
+    fn parse(data: Bytes, index: u32, name: &str) -> Result<Face, WriteError> {
         let bad = |why: &str| WriteError::Font(name.to_owned(), why.to_owned());
         let base = if data.starts_with(b"ttcf") {
-            u32_at(&data, 12).ok_or_else(|| bad("truncated collection"))? as usize
+            let at = 12 + 4 * index as usize;
+            u32_at(&data, at).ok_or_else(|| bad("truncated collection"))? as usize
         } else {
             0
         };
@@ -87,8 +116,7 @@ impl Face {
         if cmap.is_none() {
             return Err(bad("no Unicode character map"));
         }
-        let data = Arc::new(data);
-        let krilla = KrillaFont::new(data.clone().into(), 0)
+        let krilla = KrillaFont::new(data.clone().into(), index)
             .ok_or_else(|| bad("the PDF library cannot read it"))?;
         Ok(Face {
             krilla,
@@ -103,12 +131,23 @@ impl Face {
         })
     }
 
-    /// Reads a font file.
-    pub(crate) fn load(path: &Path) -> Result<Face, WriteError> {
+    /// Reads face `index` of a font file.
+    pub(crate) fn load(path: &Path, index: u32) -> Result<Face, WriteError> {
         let name = path.display().to_string();
         let data =
             std::fs::read(path).map_err(|e| WriteError::Font(name.clone(), e.to_string()))?;
-        Face::parse(data, &name)
+        Face::parse(Bytes::Owned(Arc::new(data)), index, &name)
+    }
+
+    /// Parses a font embedded in the program.
+    pub(crate) fn embedded(data: &'static [u8], name: &str) -> Result<Face, WriteError> {
+        Face::parse(Bytes::Static(data), 0, name)
+    }
+
+    /// Parses font bytes held in memory (tests).
+    #[cfg(test)]
+    pub(crate) fn from_vec(data: Vec<u8>, name: &str) -> Result<Face, WriteError> {
+        Face::parse(Bytes::Owned(Arc::new(data)), 0, name)
     }
 
     /// The glyph for `c`, or 0 when the font has none.
@@ -227,17 +266,18 @@ fn lookup(d: &[u8], off: usize, format: u16, cp: u32) -> Option<u16> {
     }
 }
 
-/// A family's styles.
+/// A family's styles, as indexes into [`Fonts::faces`].
 pub(crate) struct Family {
     pub(crate) regular: usize,
     pub(crate) bold: usize,
     pub(crate) italic: usize,
     pub(crate) bold_italic: usize,
     pub(crate) mono: usize,
+    pub(crate) mono_bold: usize,
 }
 
 /// Font files by style for one family, as file names tried in the system
-/// font folders.
+/// font folders when fonts are not bundled.
 struct Candidate {
     regular: &'static str,
     bold: &'static str,
@@ -245,8 +285,9 @@ struct Candidate {
     bold_italic: &'static str,
 }
 
-/// Families tried in order: Atkinson Hyperlegible (designed for low-vision
-/// readers) when installed, then common sans serif system fonts.
+/// System families tried in order when this build has no bundled fonts:
+/// Atkinson Hyperlegible (designed for low-vision readers) when installed,
+/// then common sans serif system fonts.
 const FAMILIES: &[Candidate] = &[
     Candidate {
         regular: "AtkinsonHyperlegible-Regular.ttf",
@@ -304,6 +345,7 @@ const FAMILIES: &[Candidate] = &[
     },
 ];
 
+/// Monospaced system fonts tried when this build has no bundled fonts.
 const MONO: &[&str] = &[
     "consola.ttf",
     "DejaVuSansMono.ttf",
@@ -313,7 +355,8 @@ const MONO: &[&str] = &[
     "NotoSansMono-Regular.ttf",
 ];
 
-/// Fonts tried for characters the body font lacks.
+/// Fonts tried for characters the chosen fonts lack (other scripts,
+/// symbols).
 const FALLBACK: &[&str] = &[
     "DejaVuSans.ttf",
     "seguisym.ttf",
@@ -325,23 +368,10 @@ const FALLBACK: &[&str] = &[
     "Arial Unicode.ttf",
 ];
 
-/// Folders searched for font files.
+/// Folders searched for the fallback font files.
 fn font_dirs() -> Vec<PathBuf> {
-    let mut dirs = Vec::new();
-    if cfg!(windows) {
-        let windir = std::env::var_os("WINDIR").unwrap_or_else(|| "C:\\Windows".into());
-        dirs.push(PathBuf::from(windir).join("Fonts"));
-        if let Some(local) = std::env::var_os("LOCALAPPDATA") {
-            dirs.push(PathBuf::from(local).join("Microsoft\\Windows\\Fonts"));
-        }
-    } else if cfg!(target_os = "macos") {
-        dirs.push("/System/Library/Fonts/Supplemental".into());
-        dirs.push("/System/Library/Fonts".into());
-        dirs.push("/Library/Fonts".into());
-        if let Some(home) = std::env::var_os("HOME") {
-            dirs.push(PathBuf::from(home).join("Library/Fonts"));
-        }
-    } else {
+    let mut dirs = system::font_dirs();
+    if !cfg!(windows) && !cfg!(target_os = "macos") {
         for d in [
             "/usr/share/fonts/truetype/dejavu",
             "/usr/share/fonts/dejavu",
@@ -352,14 +382,12 @@ fn font_dirs() -> Vec<PathBuf> {
             "/usr/share/fonts/truetype/noto",
             "/usr/share/fonts/noto",
             "/usr/share/fonts/truetype/atkinson-hyperlegible",
-            "/usr/local/share/fonts",
         ] {
             dirs.push(d.into());
         }
-        if let Some(home) = std::env::var_os("HOME") {
-            dirs.push(PathBuf::from(&home).join(".local/share/fonts"));
-            dirs.push(PathBuf::from(home).join(".fonts"));
-        }
+    }
+    if cfg!(target_os = "macos") {
+        dirs.insert(0, "/System/Library/Fonts/Supplemental".into());
     }
     dirs
 }
@@ -368,41 +396,147 @@ fn find(dirs: &[PathBuf], name: &str) -> Option<PathBuf> {
     dirs.iter().map(|d| d.join(name)).find(|p| p.is_file())
 }
 
+/// Installed faces, scanned once per process (a batch conversion asks for
+/// the same family for every file).
+fn installed() -> &'static [SystemFace] {
+    static FACES: OnceLock<Vec<SystemFace>> = OnceLock::new();
+    FACES.get_or_init(system::scan)
+}
+
+/// The four styles of a family, loaded.
+struct Loaded {
+    name: String,
+    faces: [Face; 4],
+}
+
+/// Loads the family `name`: a bundled family, else an installed one.
+fn load_family(name: &str) -> Result<Loaded, WriteError> {
+    let not_found = || {
+        let bundled: Vec<&str> = bundled::BUNDLED.iter().map(|f| f.name).collect();
+        let hint = if bundled.is_empty() {
+            "it is not installed".to_owned()
+        } else {
+            format!(
+                "it is not installed and not bundled (bundled fonts: {})",
+                bundled.join(", ")
+            )
+        };
+        WriteError::Font(name.to_owned(), hint)
+    };
+    let source = if bundled::is_bundled(name) {
+        textweaver_fonts::resolve_family(name, &[])
+    } else {
+        textweaver_fonts::resolve_family(name, installed())
+    };
+    match source.ok_or_else(not_found)? {
+        FamilySource::Bundled(f) => {
+            let load = |s: Style| Face::embedded(f.face(s).data, f.face(s).file_name);
+            Ok(Loaded {
+                name: f.name.to_owned(),
+                faces: [
+                    load(Style::Regular)?,
+                    load(Style::Bold)?,
+                    load(Style::Italic)?,
+                    load(Style::BoldItalic)?,
+                ],
+            })
+        }
+        FamilySource::Installed(f) => {
+            let load = |s: Style| {
+                let r = f.face(s);
+                Face::load(&r.path, r.index)
+            };
+            Ok(Loaded {
+                name: f.name.clone(),
+                faces: [
+                    load(Style::Regular)?,
+                    load(Style::Bold)?,
+                    load(Style::Italic)?,
+                    load(Style::BoldItalic)?,
+                ],
+            })
+        }
+    }
+}
+
+/// A font choice that is a file rather than a family name.
+fn is_path(choice: &str) -> bool {
+    let lower = choice.to_ascii_lowercase();
+    [".ttf", ".otf", ".ttc", ".otc"]
+        .iter()
+        .any(|e| lower.ends_with(e))
+        || choice.contains('/')
+        || choice.contains('\\')
+}
+
 /// The fonts a PDF uses: the faces and which is which.
 pub(crate) struct Fonts {
     pub(crate) faces: Vec<Face>,
     pub(crate) family: Family,
+    /// The text family's name (checked by the tests).
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) family_name: String,
     /// Fallback faces, by index into `faces`.
     fallback: Vec<usize>,
 }
 
 impl Fonts {
-    /// Finds fonts: `explicit`, then `TEXTWEAVER_PDF_FONT`, then the first
-    /// system family found.
-    pub(crate) fn discover(explicit: Option<&Path>) -> Result<Fonts, WriteError> {
+    /// Finds the fonts `options` ask for.
+    ///
+    /// Text: [`PdfOptions::font`] (a file), else [`PdfOptions::font_family`]
+    /// (a bundled or installed family, or a file path), else the
+    /// `TEXTWEAVER_PDF_FONT` environment variable (a file), else the bundled
+    /// Atkinson Hyperlegible Next, else the first installed family of
+    /// [`FAMILIES`]. Code: [`PdfOptions::code_font_family`], else the
+    /// bundled Atkinson Hyperlegible Mono, else an installed monospaced
+    /// font, else the text font. A family that was asked for by name and
+    /// cannot be found is an error, so a typing mistake is not silently
+    /// replaced.
+    pub(crate) fn discover(options: &PdfOptions) -> Result<Fonts, WriteError> {
         let dirs = font_dirs();
         let mut faces: Vec<Face> = Vec::new();
         let env = std::env::var_os("TEXTWEAVER_PDF_FONT").map(PathBuf::from);
-        let family = if let Some(path) = explicit.map(Path::to_path_buf).or(env) {
-            faces.push(Face::load(&path)?);
-            Family {
-                regular: 0,
-                bold: 0,
-                italic: 0,
-                bold_italic: 0,
-                mono: 0,
+        let single = |faces: &mut Vec<Face>, face: Face| -> (String, [usize; 4]) {
+            let name = face.name.clone();
+            faces.push(face);
+            let i = faces.len() - 1;
+            (name, [i; 4])
+        };
+        let push_family = |faces: &mut Vec<Face>, l: Loaded| -> (String, [usize; 4]) {
+            let base = faces.len();
+            faces.extend(l.faces);
+            (l.name, [base, base + 1, base + 2, base + 3])
+        };
+        let family_choice = options
+            .font_family
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty());
+        let (family_name, text) = if let Some(path) = &options.font {
+            single(&mut faces, Face::load(path, 0)?)
+        } else if let Some(choice) = family_choice {
+            if is_path(choice) {
+                single(&mut faces, Face::load(Path::new(choice), 0)?)
+            } else {
+                push_family(&mut faces, load_family(choice)?)
             }
+        } else if let Some(path) = env {
+            single(&mut faces, Face::load(&path, 0)?)
+        } else if let Some(f) = bundled::default_text() {
+            push_family(&mut faces, load_family(f.key)?)
         } else {
             let mut found = None;
             for c in FAMILIES {
                 if let Some(p) = find(&dirs, c.regular)
-                    && let Ok(face) = Face::load(&p)
+                    && let Ok(face) = Face::load(&p, 0)
                 {
+                    let name = face.name.clone();
                     faces.push(face);
-                    let mut style = |name: &str| -> usize {
-                        find(&dirs, name)
-                            .and_then(|p| Face::load(&p).ok())
-                            .map_or(0, |f| {
+                    let regular = faces.len() - 1;
+                    let mut style = |file: &str| -> usize {
+                        find(&dirs, file)
+                            .and_then(|p| Face::load(&p, 0).ok())
+                            .map_or(regular, |f| {
                                 faces.push(f);
                                 faces.len() - 1
                             })
@@ -410,32 +544,48 @@ impl Fonts {
                     let bold = style(c.bold);
                     let italic = style(c.italic);
                     let bold_italic = style(c.bold_italic);
-                    found = Some(Family {
-                        regular: 0,
-                        bold,
-                        italic,
-                        bold_italic: if bold_italic == 0 { bold } else { bold_italic },
-                        mono: 0,
-                    });
+                    let bold_italic = if bold_italic == regular {
+                        bold
+                    } else {
+                        bold_italic
+                    };
+                    found = Some((name, [regular, bold, italic, bold_italic]));
                     break;
                 }
             }
             found.ok_or(WriteError::NoFont)?
         };
-        let mut family = family;
-        if let Some(face) = MONO
+        let code_choice = options
+            .code_font_family
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty());
+        let (mono, mono_bold) = if let Some(choice) = code_choice {
+            if is_path(choice) {
+                let (_, s) = single(&mut faces, Face::load(Path::new(choice), 0)?);
+                (s[0], s[1])
+            } else {
+                let (_, s) = push_family(&mut faces, load_family(choice)?);
+                (s[0], s[1])
+            }
+        } else if let Some(f) = bundled::default_mono() {
+            let (_, s) = push_family(&mut faces, load_family(f.key)?);
+            (s[0], s[1])
+        } else if let Some(face) = MONO
             .iter()
             .filter_map(|m| find(&dirs, m))
-            .find_map(|p| Face::load(&p).ok())
+            .find_map(|p| Face::load(&p, 0).ok())
         {
             faces.push(face);
-            family.mono = faces.len() - 1;
-        }
+            (faces.len() - 1, faces.len() - 1)
+        } else {
+            (text[0], text[1])
+        };
         let mut fallback = Vec::new();
         for name in FALLBACK {
             if let Some(p) = find(&dirs, name)
                 && !faces.iter().any(|f| Path::new(&f.name) == p)
-                && let Ok(face) = Face::load(&p)
+                && let Ok(face) = Face::load(&p, 0)
             {
                 faces.push(face);
                 fallback.push(faces.len() - 1);
@@ -443,7 +593,15 @@ impl Fonts {
         }
         Ok(Fonts {
             faces,
-            family,
+            family: Family {
+                regular: text[0],
+                bold: text[1],
+                italic: text[2],
+                bold_italic: text[3],
+                mono,
+                mono_bold,
+            },
+            family_name,
             fallback,
         })
     }
@@ -465,9 +623,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn system_fonts_measure_text_when_present() {
-        let Ok(fonts) = Fonts::discover(None) else {
-            eprintln!("no system font; skipping");
+    fn default_fonts_measure_text() {
+        let Ok(fonts) = Fonts::discover(&PdfOptions::default()) else {
+            eprintln!("no bundled or system font; skipping");
             return;
         };
         let f = &fonts.faces[fonts.family.regular];
@@ -477,11 +635,52 @@ mod tests {
         assert!(w > 20.0 && w < 45.0, "{w}");
         assert!(f.width("WWW", 12.0) > f.width("iii", 12.0));
         assert!(f.ascent > 0.5);
+        if cfg!(feature = "bundled-fonts") {
+            assert_eq!(fonts.family_name, "Atkinson Hyperlegible Next");
+            // The code font is monospaced: every letter the same width.
+            let m = &fonts.faces[fonts.family.mono];
+            assert!((m.width("iii", 12.0) - m.width("WWW", 12.0)).abs() < 0.01);
+            assert!(m.name.contains("AtkinsonHyperlegibleMono"));
+            // Four distinct text faces.
+            let fam = &fonts.family;
+            let mut idx = vec![fam.regular, fam.bold, fam.italic, fam.bold_italic];
+            idx.dedup();
+            assert_eq!(idx.len(), 4);
+        }
+    }
+
+    #[cfg(feature = "bundled-fonts")]
+    #[test]
+    fn bundled_families_by_name() {
+        let o = PdfOptions {
+            font_family: Some("OpenDyslexic".into()),
+            code_font_family: Some("atkinson-hyperlegible-mono".into()),
+            ..PdfOptions::default()
+        };
+        let fonts = Fonts::discover(&o).unwrap();
+        assert_eq!(fonts.family_name, "OpenDyslexic");
+        assert!(fonts.faces[fonts.family.bold].name.contains("Bold"));
+        let bad = PdfOptions {
+            font_family: Some("No Such Font Anywhere".into()),
+            ..PdfOptions::default()
+        };
+        let e = Fonts::discover(&bad).err().unwrap().to_string();
+        assert!(e.contains("No Such Font Anywhere"), "{e}");
+        assert!(e.contains("Atkinson Hyperlegible Next"), "{e}");
+    }
+
+    #[test]
+    fn paths_and_names_are_told_apart() {
+        assert!(is_path("fonts/My.ttf"));
+        assert!(is_path("C:\\Fonts\\x.otf"));
+        assert!(is_path("Font.TTC"));
+        assert!(!is_path("Atkinson Hyperlegible Next"));
+        assert!(!is_path("Segoe UI"));
     }
 
     #[test]
     fn rejects_garbage() {
-        assert!(Face::parse(b"not a font at all".to_vec(), "x").is_err());
-        assert!(Face::parse(Vec::new(), "x").is_err());
+        assert!(Face::from_vec(b"not a font at all".to_vec(), "x").is_err());
+        assert!(Face::from_vec(Vec::new(), "x").is_err());
     }
 }

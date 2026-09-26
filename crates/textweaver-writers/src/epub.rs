@@ -11,6 +11,11 @@
 //! `epub:type="pagebreak"`, and the document language on every root
 //! element.
 //!
+//! With [`EpubOptions::font`](crate::EpubOptions) or
+//! [`EpubOptions::code_font`](crate::EpubOptions), a bundled font is
+//! embedded (`OEBPS/fonts/<family>/`, with its `OFL.txt`) and named in the
+//! stylesheet; reading systems may still let the reader choose another.
+//!
 //! The package metadata declares the schema.org accessibility properties
 //! (EPUB Accessibility 1.1): access modes, sufficient access mode, features
 //! (structural navigation, table of contents, reading order, alternative
@@ -21,13 +26,16 @@ use std::collections::HashMap;
 use std::io::{Cursor, Write};
 use std::rc::Rc;
 
+use textweaver_fonts::{BundledFamily, bundled};
 use textweaver_text::Document;
 use zip::CompressionMethod;
 use zip::write::SimpleFileOptions;
 
 use crate::model::{self, Block, Facts, Image, Inline, List, Style, Table};
 use crate::resource::{Resource, Resources};
-use crate::{Format, WriteError, WriteOptions, WriteReport, Writer, iso8601, timestamp, xml};
+use crate::{
+    EpubOptions, Format, WriteError, WriteOptions, WriteReport, Writer, iso8601, timestamp, xml,
+};
 
 /// Writes EPUB 3.
 #[derive(Clone, Copy, Debug, Default)]
@@ -84,7 +92,16 @@ impl Writer for EpubWriter {
         let toc = toc_tree(&index, &chapters, &facts);
         let nav = nav_document(&facts, &toc, &pages);
         let ncx = ncx_document(&facts, &toc, &identifier(doc, &facts));
-        let opf = package_document(doc, options, &facts, &files, &images, !pages.is_empty());
+        let fonts = EmbeddedFonts::choose(&options.epub, &mut report);
+        let opf = package_document(
+            doc,
+            options,
+            &facts,
+            &files,
+            &images,
+            &fonts,
+            !pages.is_empty(),
+        );
 
         let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
         let stored = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
@@ -104,6 +121,12 @@ impl Writer for EpubWriter {
         zip.write_all(ncx.as_bytes())?;
         zip.start_file("OEBPS/style.css", deflated).map_err(zerr)?;
         zip.write_all(STYLE.as_bytes())?;
+        zip.write_all(fonts.css().as_bytes())?;
+        for (href, data) in fonts.files() {
+            zip.start_file(format!("OEBPS/{href}"), deflated)
+                .map_err(zerr)?;
+            zip.write_all(data)?;
+        }
         for (name, body) in &files {
             zip.start_file(format!("OEBPS/{name}"), deflated)
                 .map_err(zerr)?;
@@ -127,6 +150,123 @@ const CONTAINER: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
   </rootfiles>
 </container>
 "#;
+
+/// Bundled fonts the book embeds (SIL OFL 1.1, whose licence travels in
+/// the book beside the font files).
+struct EmbeddedFonts {
+    /// The text family, when one was asked for.
+    text: Option<&'static BundledFamily>,
+    /// The code family, when one was asked for.
+    code: Option<&'static BundledFamily>,
+}
+
+impl EmbeddedFonts {
+    fn choose(options: &EpubOptions, report: &mut WriteReport) -> EmbeddedFonts {
+        let mut pick = |name: &Option<String>| -> Option<&'static BundledFamily> {
+            let name = name.as_deref().map(str::trim).filter(|n| !n.is_empty())?;
+            let found = bundled::family(name);
+            if found.is_none() {
+                let names: Vec<&str> = bundled::BUNDLED.iter().map(|f| f.name).collect();
+                report.warn(if names.is_empty() {
+                    format!("The font {name} was not embedded: this build has no bundled fonts.")
+                } else {
+                    format!(
+                        "The font {name} was not embedded: only bundled fonts can go into an EPUB ({}).",
+                        names.join(", ")
+                    )
+                });
+            }
+            found
+        };
+        let text = pick(&options.font);
+        let code = pick(&options.code_font);
+        EmbeddedFonts { text, code }
+    }
+
+    fn families(&self) -> Vec<&'static BundledFamily> {
+        let mut v: Vec<&'static BundledFamily> = self.text.into_iter().collect();
+        if let Some(c) = self.code
+            && !v.iter().any(|f| f.key == c.key)
+        {
+            v.push(c);
+        }
+        v
+    }
+
+    /// (href inside `OEBPS/`, bytes) of every font file and licence.
+    fn files(&self) -> Vec<(String, &'static [u8])> {
+        let mut out = Vec::new();
+        for f in self.families() {
+            for face in &f.faces {
+                out.push((format!("fonts/{}/{}", f.key, face.file_name), face.data));
+            }
+            out.push((
+                format!("fonts/{}/OFL.txt", f.key),
+                f.license_text.as_bytes(),
+            ));
+        }
+        out
+    }
+
+    /// Manifest items: (id, href, media type).
+    fn manifest(&self) -> Vec<(String, String, &'static str)> {
+        let mut out = Vec::new();
+        for f in self.families() {
+            for (n, face) in f.faces.iter().enumerate() {
+                out.push((
+                    format!("font-{}-{}", f.key, n + 1),
+                    format!("fonts/{}/{}", f.key, face.file_name),
+                    face.media_type(),
+                ));
+            }
+            out.push((
+                format!("font-{}-licence", f.key),
+                format!("fonts/{}/OFL.txt", f.key),
+                "text/plain",
+            ));
+        }
+        out
+    }
+
+    /// `@font-face` rules and the families for text and code.
+    fn css(&self) -> String {
+        let mut css = String::new();
+        for f in self.families() {
+            css.push_str(&format!(
+                "/* {} {}: {}. SIL Open Font License 1.1; see fonts/{}/OFL.txt. */\n",
+                f.name, f.version, f.copyright, f.key
+            ));
+            for face in &f.faces {
+                css.push_str(&format!(
+                    "@font-face {{ font-family: \"{}\"; font-weight: {}; font-style: {}; src: url(\"fonts/{}/{}\"); }}\n",
+                    f.name,
+                    if face.style.is_bold() { "bold" } else { "normal" },
+                    if face.style.is_italic() { "italic" } else { "normal" },
+                    f.key,
+                    face.file_name
+                ));
+            }
+        }
+        if let Some(f) = self.text {
+            let generic = if f.monospace {
+                "monospace"
+            } else {
+                "sans-serif"
+            };
+            css.push_str(&format!(
+                "body {{ font-family: \"{}\", {generic}; }}\n",
+                f.name
+            ));
+        }
+        if let Some(f) = self.code {
+            css.push_str(&format!(
+                "pre, code {{ font-family: \"{}\", monospace; }}\n",
+                f.name
+            ));
+        }
+        css
+    }
+}
 
 /// A readable default: reading systems and user settings override it.
 const STYLE: &str = "body { line-height: 1.5; margin: 0 4%; }
@@ -780,6 +920,7 @@ fn package_document(
     facts: &Facts,
     files: &[(String, String)],
     images: &Images,
+    fonts: &EmbeddedFonts,
     has_pages: bool,
 ) -> String {
     let uid = identifier(doc, facts);
@@ -850,6 +991,13 @@ fn package_document(
             n + 1,
             xml::attr(href),
             res.kind.media_type()
+        ));
+    }
+    for (id, href, media_type) in fonts.manifest() {
+        manifest.push_str(&format!(
+            "    <item id=\"{}\" href=\"{}\" media-type=\"{media_type}\"/>\n",
+            xml::attr(&id),
+            xml::attr(&href),
         ));
     }
     format!(
