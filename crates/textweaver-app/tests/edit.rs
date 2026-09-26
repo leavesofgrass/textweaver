@@ -157,7 +157,10 @@ fn type_format_undo_save_and_reopen() {
     assert_eq!(r.text(), edited);
     assert_eq!(bookmark_pos(&r.app), at(edited, "world"));
     assert!(r.app.is_dirty());
-    std::thread::sleep(Duration::from_millis(50));
+    wait_until(|| {
+        let t = r.log.texts();
+        t.iter().any(|x| x == "Hello") && t.iter().any(|x| x == "t")
+    });
     let texts = r.log.texts();
     // The space completed "Hello"; the letters were spoken one by one.
     assert!(texts.iter().any(|t| t == "Hello"), "{texts:?}");
@@ -438,7 +441,7 @@ fn replace_all_heading_cycle_and_caret_echo() {
         direction: Direction::Forward,
         extend: false,
     });
-    std::thread::sleep(Duration::from_millis(50));
+    wait_until(|| r.log.texts().iter().any(|t| t == "cat"));
     assert!(
         r.log.texts().iter().any(|t| t == "cat"),
         "{:?}",
@@ -696,4 +699,13 @@ fn reading_the_whole_document_and_the_source_while_editing() {
     r.wait_idle();
     let ranges = r.log.spoken_ranges();
     assert_eq!(ranges.first().map(|x| x.start), Some(CharPos(0)));
+}
+
+/// Waits (up to five seconds) for speech sent on the speech thread to reach
+/// the recording backend; fixed sleeps race on a busy machine.
+fn wait_until(done: impl Fn() -> bool) {
+    let end = std::time::Instant::now() + Duration::from_secs(5);
+    while !done() && std::time::Instant::now() < end {
+        std::thread::sleep(Duration::from_millis(5));
+    }
 }

@@ -72,6 +72,7 @@ textweaver-keymap = { path = "crates/textweaver-keymap" }
 textweaver-a11y = { path = "crates/textweaver-a11y" }
 textweaver-editor = { path = "crates/textweaver-editor" }
 textweaver-app = { path = "crates/textweaver-app" }
+textweaver-tui = { path = "crates/textweaver-tui" }
 textweaver-eci = { path = "crates/textweaver-eci" }
 textweaver-apple = { path = "crates/textweaver-apple" }
 textweaver-sapi = { path = "crates/textweaver-sapi" }

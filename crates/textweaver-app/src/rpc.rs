@@ -739,6 +739,9 @@ where
     std::thread::spawn(move || read_messages(reader, &tx));
     let mut framing = Framing::Line;
     loop {
+        // Apple's AVSpeechSynthesizer delivers through the main run loop
+        // (ADR-0008); a no-op on other platforms.
+        crate::apple::pump_main_loop(Duration::ZERO);
         let out = match rx.recv_timeout(POLL_INTERVAL) {
             Ok((f, msg)) => {
                 framing = f;
