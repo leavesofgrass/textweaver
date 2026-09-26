@@ -34,7 +34,7 @@ fn harness(app: &textweaver_app::App) -> TestHarness<Root> {
         Default::default(),
         Some(app),
         Rc::new(Cell::new(0)),
-        false,
+        Default::default(),
     );
     let mut params = TestHarnessParams::default();
     params.window_size = (1100, 780).into();

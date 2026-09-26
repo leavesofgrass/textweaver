@@ -141,6 +141,10 @@ pub struct DocumentView {
     state: DocState,
     /// Speech-cursor style: select the spoken word instead of a caret.
     select_spoken: bool,
+    /// Expose the document as a read-only multi-line edit instead of a
+    /// Document (an experiment: screen readers may treat a Document as a
+    /// web-style page in browse mode and keep single-letter keys).
+    edit_role: bool,
     focused: bool,
 
     // Layout.
@@ -199,6 +203,7 @@ impl DocumentView {
             model: DocModel::default(),
             state: DocState::default(),
             select_spoken: false,
+            edit_role: false,
             focused: false,
             layouts: HashMap::new(),
             line_starts: Vec::new(),
@@ -224,6 +229,13 @@ impl DocumentView {
     /// it (an experiment for screen-reader listening sessions).
     pub fn with_select_spoken(mut self, on: bool) -> Self {
         self.select_spoken = on;
+        self
+    }
+
+    /// Exposes the view as a read-only multi-line edit (UI Automation's
+    /// Edit, AT-SPI's text) instead of a Document.
+    pub fn with_edit_role(mut self, on: bool) -> Self {
+        self.edit_role = on;
         self
     }
 
@@ -1207,7 +1219,11 @@ impl Widget for DocumentView {
     }
 
     fn accessibility_role(&self) -> Role {
-        Role::Document
+        if self.edit_role {
+            Role::MultilineTextInput
+        } else {
+            Role::Document
+        }
     }
 
     fn accessibility(

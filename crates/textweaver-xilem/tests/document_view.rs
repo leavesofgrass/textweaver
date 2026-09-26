@@ -237,3 +237,25 @@ fn large_documents_open_and_highlight_quickly() {
     assert!(open_ms < 20_000.0, "{open_ms} ms");
     assert!(median < 1_000.0, "{median} ms");
 }
+
+#[test]
+fn the_edit_role_experiment_is_a_readonly_multiline_edit() {
+    let p = Palette::galaxy();
+    let view = DocumentView::new(p.clone(), DocFont::default(), Rc::new(Cell::new(0)))
+        .with_edit_role(true);
+    let mut h = TestHarness::create(theme::default_properties(&p), NewWidget::new(view));
+    let doc = Document::from_plain_text("Some text.");
+    let model = DocModel {
+        paragraphs: window::window_paragraphs(&doc, doc.full_range()),
+        spans: Vec::new(),
+        doc_len: doc.len_chars(),
+        title: String::new(),
+    };
+    h.edit_root_widget(|mut d| DocumentView::set_model(&mut d, model));
+    let _ = h.redraw();
+    let node = h.access_node(h.root_id()).unwrap();
+    assert_eq!(node.role(), Role::MultilineTextInput);
+    assert!(node.is_read_only());
+    assert!(node.supports_text_ranges());
+    assert_eq!(node.document_range().text(), "Some text.");
+}

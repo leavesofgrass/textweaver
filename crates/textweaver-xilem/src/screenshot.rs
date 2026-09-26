@@ -59,7 +59,13 @@ pub fn screenshot(opts: &ShotOptions) -> Result<(), String> {
         None => Palette::from_theme(app.current_theme()),
     };
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
-    let tree = gui::build_tree(&palette, font, Some(&app), Rc::new(Cell::new(0)), false);
+    let tree = gui::build_tree(
+        &palette,
+        font,
+        Some(&app),
+        Rc::new(Cell::new(0)),
+        Default::default(),
+    );
     render(&app, tree.root, &palette, opts)
 }
 

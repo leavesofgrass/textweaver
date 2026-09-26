@@ -51,6 +51,10 @@ struct Args {
     /// on it (an experiment for listening sessions).
     #[arg(long)]
     select_spoken: bool,
+    /// Expose the document as a read-only multi-line edit instead of a
+    /// Document (an experiment for listening sessions).
+    #[arg(long)]
+    edit_role: bool,
     /// Use this theme instead of the saved one.
     #[arg(long)]
     theme: Option<String>,
@@ -132,7 +136,10 @@ fn main() {
             .map(Duration::from_secs_f64),
         log: args.log || args.log_file.is_some(),
         background: args.background,
-        select_spoken: args.select_spoken,
+        experiments: textweaver_xilem::gui::Experiments {
+            select_spoken: args.select_spoken,
+            edit_role: args.edit_role,
+        },
         theme: args.theme,
     };
     if let Err(e) = gui::run(opts) {

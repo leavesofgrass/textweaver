@@ -99,10 +99,21 @@ pub struct GuiOptions {
     pub log: bool,
     /// Automated runs: never activated, off screen, no taskbar button.
     pub background: bool,
-    /// Select the spoken word instead of putting the caret on it.
-    pub select_spoken: bool,
+    /// Listening-session experiments.
+    pub experiments: Experiments,
     /// A theme to use instead of the saved one.
     pub theme: Option<String>,
+}
+
+/// Choices to compare by ear in a listening session (ADR-0023).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Experiments {
+    /// While reading, select the spoken word instead of placing the caret
+    /// on it.
+    pub select_spoken: bool,
+    /// Expose the document as a read-only multi-line edit instead of a
+    /// Document.
+    pub edit_role: bool,
 }
 
 /// Wakes the event loop.
@@ -274,7 +285,7 @@ pub fn build_tree(
     font: DocFont,
     app: Option<&App>,
     full_passes: Rc<Cell<u64>>,
-    select_spoken: bool,
+    experiments: Experiments,
 ) -> Tree {
     let mut ids = HashMap::new();
     let p = palette;
@@ -299,7 +310,8 @@ pub fn build_tree(
     // The document.
     let doc = NewWidget::new(
         DocumentView::new(p.clone(), font, Rc::clone(&full_passes))
-            .with_select_spoken(select_spoken),
+            .with_select_spoken(experiments.select_spoken)
+            .with_edit_role(experiments.edit_role),
     )
     .with_tag(DOC);
 
@@ -1066,7 +1078,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
     };
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
     let full_passes = Rc::new(Cell::new(0));
-    let tree = build_tree(&palette, font, Some(&app), full_passes, opts.select_spoken);
+    let tree = build_tree(&palette, font, Some(&app), full_passes, opts.experiments);
 
     let mut attrs = WinitWindow::default_attributes()
         .with_title("textweaver")
