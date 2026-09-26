@@ -42,7 +42,7 @@ pub enum Category {
     Voice,
     /// Find.
     Search,
-    /// Bookmarks.
+    /// Bookmarks, notes, and highlights.
     Bookmarks,
     /// Files and the application.
     File,
@@ -74,7 +74,7 @@ impl Category {
             Category::SpeechCursor => "Speech Cursor",
             Category::Voice => "Voice",
             Category::Search => "Search",
-            Category::Bookmarks => "Bookmarks",
+            Category::Bookmarks => "Bookmarks and notes",
             Category::File => "File",
             Category::Editing => "Editing",
             Category::View => "View and help",
@@ -161,6 +161,8 @@ actions! {
         gui [], term [], shared ["b:s"];
     ReadCurrentLine = "read_current_line", Reading, "Say the line at the cursor",
         gui [], term [], shared ["b:l"];
+    ReadParagraph = "read_paragraph", Reading, "Say the paragraph at the cursor without moving",
+        gui [], term [], shared ["b:Shift+S"];
     ReadSelection = "read_selection", Reading, "Read the selected text",
         gui [], term [], shared ["b:v"];
     SayPosition = "say_position", Reading, "Say the position: line, percentage, and heading",
@@ -226,6 +228,14 @@ actions! {
         gui [], term [], shared ["b:Down"];
     CaretPreviousLine = "caret_previous_line", Navigation, "Move the cursor to the previous line",
         gui [], term [], shared ["b:Up"];
+    SelectNextWord = "select_next_word", Navigation, "Extend the selection to the next word",
+        gui [], term [], shared ["b:Shift+Right"];
+    SelectPreviousWord = "select_previous_word", Navigation, "Extend the selection to the previous word",
+        gui [], term [], shared ["b:Shift+Left"];
+    SelectNextLine = "select_next_line", Navigation, "Extend the selection to the next line",
+        gui [], term [], shared ["b:Shift+Down"];
+    SelectPreviousLine = "select_previous_line", Navigation, "Extend the selection to the previous line",
+        gui [], term [], shared ["b:Shift+Up"];
     PageDown = "page_down", Navigation, "Move down one screen",
         gui [], term [], shared ["b:PageDown"];
     PageUp = "page_up", Navigation, "Move up one screen",
@@ -282,10 +292,24 @@ actions! {
         gui [], term [], shared ["b:b"];
     PreviousBookmark = "previous_bookmark", Bookmarks, "Move to the previous bookmark",
         gui [], term [], shared ["b:Shift+B"];
+    AddNote = "add_note", Bookmarks, "Add a note to the selection or the word at the cursor",
+        gui [], term [], shared ["b:a"];
+    ListNotes = "list_notes", Bookmarks, "List notes and highlights",
+        gui ["g:Ctrl+Shift+N"], term [], shared ["b:Shift+A"];
+    NextNote = "next_note", Bookmarks, "Move to the next note or highlight",
+        gui [], term [], shared ["b:e"];
+    PreviousNote = "previous_note", Bookmarks, "Move to the previous note or highlight",
+        gui [], term [], shared ["b:Shift+E"];
+    DeleteNote = "delete_note", Bookmarks, "Delete the note or highlight at the cursor",
+        gui [], term [], shared ["b:Delete"];
+    HighlightSelection = "highlight_selection", Bookmarks, "Highlight the selection, or the sentence at the cursor",
+        gui [], term [], shared ["b:y"];
 
     // File
     Open = "open", File, "Open a document",
         gui ["g:Ctrl+O"], term ["g:Ctrl+O"], shared [];
+    OpenLibrary = "open_library", File, "Open the library: documents in your library folders and recent files",
+        gui ["g:Ctrl+Shift+B"], term ["g:Alt+L"], shared [];
     NewDocument = "new_document", File, "Start a new document in edit mode",
         gui ["g:Ctrl+N"], term ["g:Ctrl+N"], shared [];
     Save = "save", File, "Save (Markdown and text in place; other formats as Markdown)",

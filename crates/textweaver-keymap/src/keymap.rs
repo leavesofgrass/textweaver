@@ -682,6 +682,63 @@ mod tests {
         }
     }
 
+    /// Wave 1 requests: Shift+arrows select in browse mode on both
+    /// frontends, `read_paragraph` exists, terminal F3 stays Find next, and
+    /// keyboard help is `?` (plus F3 in the GUI) with F1 for the help.
+    #[test]
+    fn wave2_selection_help_and_notes_keys() {
+        for (_, frontend, map) in all_maps() {
+            for (chord, action) in [
+                ("Shift+Right", ActionId::SelectNextWord),
+                ("Shift+Left", ActionId::SelectPreviousWord),
+                ("Shift+Down", ActionId::SelectNextLine),
+                ("Shift+Up", ActionId::SelectPreviousLine),
+                ("S", ActionId::ReadParagraph),
+                ("?", ActionId::KeyboardHelp),
+                ("F1", ActionId::Help),
+                ("a", ActionId::AddNote),
+                ("A", ActionId::ListNotes),
+                ("e", ActionId::NextNote),
+                ("E", ActionId::PreviousNote),
+                ("Delete", ActionId::DeleteNote),
+                ("y", ActionId::HighlightSelection),
+            ] {
+                assert_eq!(
+                    map.lookup(&k(chord), Layer::Browse),
+                    Some(action),
+                    "{chord} on {frontend:?}"
+                );
+            }
+            // Selection keys are browse keys: edit mode keeps Shift+arrows
+            // for the text control's own selection.
+            assert_eq!(map.lookup(&k("Shift+Right"), Layer::Edit), None);
+        }
+        let term = Keymap::defaults(Platform::Linux, Frontend::Terminal);
+        assert_eq!(
+            term.lookup(&k("F3"), Layer::Browse),
+            Some(ActionId::FindNext)
+        );
+        assert_eq!(
+            term.lookup(&k("Alt+L"), Layer::Browse),
+            Some(ActionId::OpenLibrary)
+        );
+        let gui = Keymap::defaults(Platform::Windows, Frontend::Gui);
+        assert_eq!(
+            gui.lookup(&k("F3"), Layer::Browse),
+            Some(ActionId::KeyboardHelp)
+        );
+        assert_eq!(
+            gui.lookup(&k("Ctrl+Shift+B"), Layer::Browse),
+            Some(ActionId::OpenLibrary),
+            "Star's Library chord"
+        );
+        assert_eq!(
+            gui.lookup(&k("Ctrl+Shift+N"), Layer::Browse),
+            Some(ActionId::ListNotes),
+            "Star's notes panel chord"
+        );
+    }
+
     #[test]
     fn lookup_by_layer() {
         let map = Keymap::defaults(Platform::Linux, Frontend::Terminal);
