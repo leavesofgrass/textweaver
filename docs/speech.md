@@ -39,6 +39,16 @@ When you name an engine, with `--backend` or in the settings, textweaver uses it
 
 `--no-speech` always means silent.
 
+### Who speaks: the accessibility mode
+
+With a screen reader running, you may not want textweaver to speak everything. `[accessibility] mode` decides:
+
+- `"self-voicing"` (the default): textweaver speaks everything.
+- `"hybrid"`: textweaver reads documents aloud; your screen reader speaks messages, typing, and caret moves from the status line.
+- `"screen-reader"`: textweaver never speaks. `--no-speech` starts in this mode.
+
+**Alt+Shift+A** cycles the mode and saves it, and `--mode` sets it for one run. `tw serve` always speaks for itself, unless you start it with `--no-speech`. [Using textweaver with a screen reader](screen-readers.md) explains each mode.
+
 ## List the engines: tw backends
 
 ```bash
@@ -63,7 +73,7 @@ tw backends --json
 tw voices
 ```
 
-It lists the voices of the automatically chosen engine: "Windows SAPI5 voices has 6 voices." then one line per voice, with the voice id, name, languages, gender, and tags. Name an engine with `--backend`:
+It lists the voices of the engine in your settings (`[speech] backend`), or of the automatic choice: "Windows SAPI5 voices has 6 voices." then one line per voice, with the voice id, name, languages, gender, and tags. Name an engine with `--backend`:
 
 ```bash
 tw voices --backend sapi
@@ -88,15 +98,17 @@ tw speak "The quick brown fox."
 - `--out FILE`: write the audio to a file instead of playing it. The engine must be able to write audio files.
 - `--json`: print the prepared text, its offset maps, and every status the engine reported, as JSON.
 
-`tw speak`, `tw voices`, and `tw backends` do not read your `settings.toml`. They use the default settings plus the options you give. For example, `tw speak` uses 265 words per minute unless you give `--rate`.
+`tw speak`, `tw voices`, and `tw backends` read your `settings.toml`, as the reader does. `tw speak` uses your engine, voice, rate, pitch, and volume, and your normalization, punctuation, table, footnote, and math settings; the options you give win over them. Your voice is used only with your engine: with `--backend` naming another engine, that engine's default voice speaks unless you give `--voice`. `--home FOLDER` reads the settings from another folder, like `TEXTWEAVER_HOME`.
 
 To write a whole document to an audio file with subtitles, use `tw export-audio`. See [the audio export guide](audio-export.md).
 
 ## Choose a voice in the reader: Alt+V
 
-Press **Alt+V**. The GUI uses **Ctrl+Shift+V**. You hear "Voices", the number, then "Enter chooses one and speaks a sample. Escape cancels." Each item says the voice's name, language, and tags; the one in use ends with "current".
+Press **Alt+V**. The GUI uses **Ctrl+Shift+V**. You hear "Voices", the number, "favourites first", then "Enter chooses one and speaks a sample, Space adds or removes a favourite, Escape cancels." Each item says the voice's name, language, and tags; a favourite says "favourite", and the one in use ends with "current".
 
 Press **Enter** on a voice. You hear "Voice", its name, then a sample: "The quick brown fox jumps over the lazy dog." The choice is saved in `[speech] voice`.
+
+Press **Space** on a voice to make it a favourite, or to stop it being one. You hear, for example, "Microsoft Zira added to favourites." Favourites are listed first, in the order you added them, and are saved in `[speech] favorite_voices`.
 
 An engine with no voice list says "This speech engine has no voices to choose from."
 
@@ -189,15 +201,17 @@ verbosity = "normal"
 - `pitch`: semitones, -12 to 12.
 - `voice`: the voice, by id or name. It has no default; it is left out until you choose one.
 - `prefer_voice`: part of a voice name to prefer when no voice is chosen. `""` means no preference.
-- `favorite_voices`: a list of voices. It is stored but not used yet.
-- `punctuation`: how much punctuation is spoken. `"none"` speaks none; it only shapes the voice. `"some"` speaks marks that carry meaning in prose, such as `@`, `#`, and `/`. `"all"` speaks every mark.
+- `favorite_voices`: your favourite voices, by id or name, listed first by Choose voice (**Alt+V**).
+- `punctuation`: how much punctuation is spoken. `"none"` speaks none; it only shapes the voice. `"some"` speaks marks that carry meaning in prose, such as `@`, `#`, and `/`. `"all"` speaks every mark. **Alt+Shift+N** cycles it while textweaver runs.
 - `split_caps`: speak the parts of words written in mixed capitals separately: "camelCase" as "camel Case", "XMLHttpRequest" as "XML Http Request".
 - `caps`: how a capital letter is marked when a single character is spoken: `"pitch"`, `"tone"`, `"say_cap"`, or `"none"`. See [Writing and editing](editing.md).
 - `auto_play`: start reading as soon as a document opens.
 - `skip_code`: do not read code blocks aloud.
 - `speed_presets`: the presets for **F8**, as above.
 - `latency_offset_ms`: how many milliseconds to delay the highlight behind an engine's reported word time. See [How exactly words are highlighted](#how-exactly-words-are-highlighted).
-- `verbosity`: how much textweaver says about what it does: `"low"`, `"normal"`, or `"high"`. See [Reading and moving around](reading.md).
+- `verbosity`: how much textweaver says about what it does: `"low"`, `"normal"`, or `"high"`. **Alt+Shift+V** cycles it while textweaver runs. See [Reading and moving around](reading.md).
+
+Both cycling keys say the new level and save it.
 
 A value out of range is set to the nearest allowed value, and textweaver says which setting it changed.
 

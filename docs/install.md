@@ -2,12 +2,14 @@
 
 In a hurry? The [quick start](quickstart.md) is the short version.
 
-textweaver is in alpha. Each release on GitHub has packages for Windows, macOS, and Linux:
+textweaver is in alpha. The newest release is 0.1.0-alpha.3. A release on GitHub has these packages:
 
 - `textweaver-VERSION-windows-x86_64.zip`
 - `textweaver-VERSION-macos-universal.tar.gz`, for Apple silicon and Intel Macs
 - `textweaver-VERSION-linux-x86_64.AppImage`, one file that runs on most Linux distributions
 - `textweaver-VERSION-linux-x86_64.tar.gz`, the same programs as a plain folder, for Linux systems where AppImages cannot run
+
+The two Linux packages start with the next release. 0.1.0-alpha.3 has the Windows and macOS packages only; on Linux, build it from source with the install script (see [Install with a script](#install-with-a-script)).
 
 Every package contains two programs:
 
@@ -32,16 +34,16 @@ On macOS, this downloads the newest release, checks it, and installs `textweaver
 bash scripts/install-macos.sh
 ```
 
-On Linux, this downloads the newest release, checks it, and installs it in `~/.local`: the AppImage, with `textweaver` and `tw` in `~/.local/bin`, or the tarball where AppImages cannot run:
-
-```bash
-bash scripts/install-linux.sh --release latest
-```
-
-Without `--release`, the Linux script builds textweaver from source instead: it installs the build dependencies with apt, dnf, pacman, zypper, or apk, builds textweaver, and installs it in `~/.local`:
+On Linux, this builds textweaver from source: it installs the build dependencies with apt, dnf, pacman, zypper, or apk, builds textweaver, and installs it in `~/.local`. This is the way to install 0.1.0-alpha.3, which has no Linux package:
 
 ```bash
 bash scripts/install-linux.sh
+```
+
+From the next release on, `--release` downloads a release instead, checks it, and installs it in `~/.local`: the AppImage, with `textweaver` and `tw` in `~/.local/bin`, or the tarball where AppImages cannot run:
+
+```bash
+bash scripts/install-linux.sh --release latest
 ```
 
 The scripts are in a copy of the repository. To get one:
@@ -136,6 +138,8 @@ tw voices
 
 The Linux package is an AppImage: one file that holds `textweaver`, `tw`, the engine hosts for Eloquence (Voxin) and DECtalk, the pronunciation dictionaries, the guides, and the licences. It is built on Ubuntu 22.04, so it runs on distributions from 2022 on, including Debian 12 and 13, Ubuntu 22.04 and later, Fedora, Arch, and openSUSE. It is for x86_64 computers.
 
+The first release with the AppImage is the one after 0.1.0-alpha.3. Until it is out, build from source with `bash scripts/install-linux.sh`, as described at the end of this section.
+
 The easiest way is the install script, which checks the download for you (see [Install with a script](#install-with-a-script)):
 
 ```bash
@@ -148,25 +152,25 @@ To install it by hand:
 2. Put it where you want to keep it, for example `~/Applications`, and make it executable:
 
    ```bash
-   chmod +x textweaver-0.1.0-alpha.3-linux-x86_64.AppImage
+   chmod +x textweaver-*-linux-x86_64.AppImage
    ```
 
 3. Run it. On its own it starts `textweaver`, the reader:
 
    ```bash
-   ./textweaver-0.1.0-alpha.3-linux-x86_64.AppImage FILE
+   ./textweaver-*-linux-x86_64.AppImage FILE
    ```
 
    With `--tw` first it runs `tw` instead:
 
    ```bash
-   ./textweaver-0.1.0-alpha.3-linux-x86_64.AppImage --tw backends
+   ./textweaver-*-linux-x86_64.AppImage --tw backends
    ```
 
 4. To run `textweaver` and `tw` from any folder, let the AppImage link itself into `~/.local/bin` and add a menu entry and an icon. It says what it will do and asks first:
 
    ```bash
-   ./textweaver-0.1.0-alpha.3-linux-x86_64.AppImage --install
+   ./textweaver-*-linux-x86_64.AppImage --install
    ```
 
    A link named `tw` runs `tw`; a link named `textweaver` runs the reader. The links point at the AppImage where it is, so move it before you run `--install`. `--uninstall` removes the links, the menu entry, and the icon.
@@ -204,7 +208,7 @@ shasum -a 256 textweaver-0.1.0-alpha.3-macos-universal.tar.gz
 On Linux:
 
 ```bash
-sha256sum textweaver-0.1.0-alpha.3-linux-x86_64.AppImage
+sha256sum textweaver-*-linux-x86_64.AppImage
 ```
 
 Compare the result with the line for that file in `SHA256SUMS.txt`.

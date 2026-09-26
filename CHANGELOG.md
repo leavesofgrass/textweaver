@@ -33,9 +33,29 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Restart speech** (Shift+F8) starts speech again with your current settings. When speech stops working, textweaver restarts it once by itself and says "Speech restarted."
 - **Positions survive outside edits.** When a file changed in Obsidian, git, or another editor, your place, bookmarks, notes, and highlights are found again from the text they were on, and textweaver says once what moved and what it could not find.
 - `[editing] undo_steps` and `undo_memory_mb` cap the undo history (1,000 steps or 50 MB by default).
+- **Screen reader modes.** `[accessibility] mode` chooses who speaks: self-voicing (textweaver speaks everything), hybrid (textweaver reads documents aloud; your screen reader speaks messages, typing, and caret moves from the status line), or screen reader (textweaver is silent, and Space steps through the text a sentence at a time on the status line). Alt+Shift+A cycles and saves it, and `--mode` sets it for one run. On its first run with a screen reader, textweaver offers hybrid once. A quiet-screen option, a status-line cursor option, and a screen-reader keymap preset (`[keyboard] preset = "screen-reader"`) help too. See [docs/screen-readers.md](docs/screen-readers.md).
+- **Structure while writing.** In edit mode, headings, lists, links, and tables can be moved through, and "say position" names the heading, in the text you are writing.
+- **The outline** (Alt+O) lists the headings; type to filter them, and Enter jumps.
+- **Spell check** on a built-in word list (SCOWL): next and previous misspelling (Alt+M, Alt+Shift+M), each spelled aloud; suggestions and your own word list (Alt+J); and a count of misspellings on save.
+- **Citations while writing.** Alt+C inserts a citation from your library, with a page; Alt+Shift+D adds a reference by DOI or ISBN; the palette inserts a bibliography, checks citations, and imports references. `tw cite` gains `remove`, `styles`, and `check`.
+- **Export and preview from the reader.** Palette commands export the open document, or the text you are editing, to HTML, PDF, Word, EPUB, or braille. "Preview in browser" writes a web page with MathML and rewrites it on each save. "Listen rendered" reads the text as it will render.
+- **Citations and math in converted documents.** `tw convert` formats Pandoc citations in a CSL style and adds a References section (`--bibliography`, `--style`, `--no-citations`), and typesets math in PDF, Word, EPUB, and braille.
+- **New documents from a template,** with front matter, the date, and a References heading (`[editing] author`).
+- **A study sheet:** your notes and highlights as Markdown, grouped by the document's headings. A note is signalled with a sound when reading reaches it.
+- **Reading and writing quick wins:** keys 1 to 6 jump to the next heading of that level; a word count; the address of the link at the cursor; following a link or footnote (Alt+Shift+F), wiki links included; table rows and cells (Ctrl+Alt+arrows); Enter continues a list; Tab and Shift+Tab move between table cells in edit mode; copy (Ctrl+C) to the system clipboard through the terminal (OSC 52); in edit mode cut, paste, select all, and deleting a word; Add note (Alt+N) in edit mode; typing echo cycled with Shift+F9; verbosity and punctuation cycled with Alt+Shift+V and Alt+Shift+N.
+- **Favourite voices:** Space in the voice list marks one, and favourites are listed first. `[highlight] color` and `sentence_color` now colour the reading highlight, with a contrast warning.
+- **Markdown:** wiki links, GFM alerts, math, and heading attributes are read, and strikethrough and horizontal rules are announced.
+- `tw info --exact` counts words and sentences with the reader's full segmentation.
 
 ### Changed
 
+- **Say position moved** from `%` to Shift+W and Alt+Shift+Y.
+- `tw speak`, `tw voices`, and `tw backends` read your settings, and take `--home`.
+- Save As suggests a name from the first heading or the title, and asks before replacing a file. A crash, a closed terminal, Ctrl+C, or a stop signal saves your place and your unsaved work, and restores the terminal.
+- Find and replace goes one match at a time, with match case and whole word choices.
+- Entering edit mode on a 10 MB file takes about 50 ms instead of 276 ms, with less memory.
+- Malformed or hostile files (deep nesting, impossible list and page numbers, binary files) can no longer stop a `tw convert` batch; Pandoc runs sandboxed, with a two-minute timeout.
+- `tw info` is about three times faster on large files.
 - **Nothing waits for the disk.** Saving, autosave, positions, bookmarks, notes, the library sidecars, and the check for a changed file run on one background writer; "Saved" is said when the file is written, and quitting waits for it (saying so if the disk is slow).
 - **Nothing waits for the speech engine.** A restarting engine helper, the first 32-bit SAPI voice, and the audio device start in the background, so Stop and Pause always work at once; speech-dispatcher is never waited for after connecting; DECtalk is synthesized a sentence at a time, so Stop takes effect quickly.
 - **Voices are listed once**, when the engine starts, and Choose Voice (Alt+V) opens at once, or says the voices are still loading and opens when they arrive.

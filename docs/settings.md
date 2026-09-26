@@ -81,7 +81,7 @@ Return settings to their defaults:
 tw settings reset
 ```
 
-It says how many settings will change and asks you to type `y` first. `--yes` skips the question. To reset only one section, add `--section` and the section name. The sections are `speech`, `speech.eci`, `speech.sapi`, `speech.apple`, `highlight`, `normalization`, `normalization.community_lexicon`, `reading`, `display`, `editing`, `library`, `keyboard`, `export`, `reading_aids`, `reading_aids.rsvp`, `reading_aids.bionic_options`, `reading_aids.spacing`, `reading_aids.font`, `reading_aids.ruler`, and `keymap` (your key overrides). Sections you added yourself, such as `speech.dectalk`, can be reset by name too. A reset is backed up like an import.
+It says how many settings will change and asks you to type `y` first. `--yes` skips the question. To reset only one section, add `--section` and the section name. The sections are `speech`, `speech.eci`, `speech.sapi`, `speech.apple`, `highlight`, `normalization`, `normalization.community_lexicon`, `reading`, `display`, `editing`, `library`, `keyboard`, `accessibility`, `export`, `reading_aids`, `reading_aids.rsvp`, `reading_aids.bionic_options`, `reading_aids.spacing`, `reading_aids.font`, `reading_aids.ruler`, `reading_aids.syllable_options`, and `keymap` (your key overrides). Sections you added yourself, such as `speech.dectalk`, can be reset by name too. A reset is backed up like an import.
 
 ## Example file
 
@@ -141,14 +141,14 @@ The voice and how it speaks. [Speech engines and voices](speech.md) explains the
 - `volume`, default `100`: a percentage, from 0 to 100.
 - `voice`, not set by default: the voice to use. Unset, textweaver chooses one.
 - `prefer_voice`, default `"eloquence"`: when `voice` is not set, a voice whose name contains this text is preferred. An empty string means no preference.
-- `favorite_voices`, default empty: starred voices. Not used yet.
-- `punctuation`, default `"some"`: how much punctuation is spoken. `"none"` speaks none, `"some"` speaks punctuation that carries meaning in prose (such as `@`, `#`, and `/`), and `"all"` speaks every punctuation character.
+- `favorite_voices`, default empty: your favourite voices, by id or name. Choose voice (Alt+V) lists them first, and Space in that list adds or removes one.
+- `punctuation`, default `"some"`: how much punctuation is spoken. `"none"` speaks none, `"some"` speaks punctuation that carries meaning in prose (such as `@`, `#`, and `/`), and `"all"` speaks every punctuation character. Alt+Shift+N cycles it while textweaver runs, and saves it.
 - `split_caps`, default `false`: speak the parts of words written in mixed capitals separately, such as "Java Script" for "JavaScript".
 - `caps`, default `"pitch"`: how a capital letter is shown when a single character is spoken or echoed. `"none"`, `"tone"` (a short tone first), `"pitch"` (a higher pitch), or `"say_cap"` (the word "cap" first).
 - `auto_play`, default `false`: start reading as soon as a document opens.
 - `skip_code`, default `true`: do not read code blocks aloud.
 - `latency_offset_ms`, default `120`: for engines whose word events carry audio times, how many milliseconds to wait before moving the highlight, so it matches what you hear.
-- `verbosity`, default `"normal"`: how much textweaver says about state changes and structure. `"low"`, `"normal"`, or `"high"`. [Reading and moving around](reading.md) has examples.
+- `verbosity`, default `"normal"`: how much textweaver says about state changes and structure. `"low"`, `"normal"`, or `"high"`. Alt+Shift+V cycles it while textweaver runs, and saves it. [Reading and moving around](reading.md) has examples.
 
 ### [speech.speed_presets]
 

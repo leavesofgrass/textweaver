@@ -18,7 +18,7 @@ For example: "Cells, 25 percent, in Readings".
 
 Use **Up** and **Down** to move, **Enter** to open, and **Escape** to close. With nothing to show you hear: "The library is empty. Add a folder with tw library --add, or open a file with Control O."
 
-The reader has no search box in this list yet. To search, use `tw library --search`, below.
+Type a letter to move to the next item that starts with it. The list has no search box yet. To search, use `tw library --search`, below.
 
 ## Library folders
 
@@ -171,7 +171,7 @@ On macOS and Linux:
 export TEXTWEAVER_HOME=~/textweaver-home
 ```
 
-The reader's `--home FOLDER` option, and `--home` on `tw settings`, `tw export-audio`, and `tw serve`, do the same for one run. `tw library`, `tw marks`, and `tw migrate-star` have no `--home` option; they follow `TEXTWEAVER_HOME`.
+The reader's `--home FOLDER` option, and `--home` on `tw open`, `tw settings`, `tw speak`, `tw voices`, `tw backends`, `tw export-audio`, and `tw serve`, do the same for one run. `tw library`, `tw marks`, and `tw migrate-star` have no `--home` option; they follow `TEXTWEAVER_HOME`.
 
 ## Import from Star: tw migrate-star
 

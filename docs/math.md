@@ -148,8 +148,7 @@ If a value is wrong, for example `math_verbosity = "loud"`, only that setting fa
 
 Where these settings apply, in this version:
 
-- The terminal reader (`textweaver` and `tw open`) and `tw export-audio` follow all three settings.
-- `tw speak` does not read your settings file. It always uses the defaults: math on, normal verbosity, and no ASCIIMath.
+- The terminal reader (`textweaver` and `tw open`), `tw speak`, and `tw export-audio` follow all three settings.
 - The experimental window app (`textweaver-gui`) follows `math`, but not yet `math_verbosity` or `asciimath_delimiter`. It always uses normal verbosity and no ASCIIMath.
 
 ## Check what textweaver will say
@@ -184,7 +183,7 @@ How to read it:
 - The two `elided` spans are the dollar signs. They are in your text but not spoken.
 - The `expanded` span says that the word "squared" (spoken bytes 14 to 21) stands for `^2` (source characters 14 to 16).
 
-`tw speak` always uses normal verbosity (see the previous section). To hear your own verbosity setting without sound, use `tw export-audio` with the `recording` backend, a test backend that plays nothing and writes a placeholder audio file:
+`tw speak` uses your `math_verbosity`, so the JSON above follows your setting. You can also check it with `tw export-audio` and the `recording` backend, a test backend that plays nothing and writes a placeholder audio file:
 
 ```powershell
 tw export-audio sample.txt --out sample.wav --backend recording --json
@@ -367,7 +366,7 @@ The part that understands a formula's structure is written and tested; the reade
 - `\(a+b\)` in a Markdown file is read as "(a plus b)", not as math. Markdown removes the backslash. Use `$a+b$` instead.
 - ASCIIMath in backticks is read as symbols, such as "x caret 2 slash 2". In the reader, set `` asciimath_delimiter = "`" `` in `[normalization]`; it is off by default. In a Markdown file, this still does not work, because Markdown removes the backticks around code before textweaver reads the text. It works in plain text files. For `tw convert`, add `--asciimath`.
 - A code block marked `asciimath` is read as "code block skipped". The reader skips code blocks by default (`[speech] skip_code`). With `skip_code = false` you hear the ASCIIMath source, not math.
-- Your `math_verbosity` has no effect. `tw speak` and the experimental window app do not use it yet; try the terminal reader or `tw export-audio`. Also check the spelling: `"low"`, `"normal"`, or `"high"`, in quotes. A wrong value is reported and falls back to `"normal"`.
+- Your `math_verbosity` has no effect. The experimental window app does not use it yet; try the terminal reader, `tw speak`, or `tw export-audio`. Also check the spelling: `"low"`, `"normal"`, or `"high"`, in quotes. A wrong value is reported and falls back to `"normal"`.
 - A formula with a mistake, such as a missing brace, is still read as far as it makes sense. `\frac{1}{` is read as "the fraction with numerator 1 and denominator". In `tw convert` output it is shown as its LaTeX source instead of MathML.
 - In the web page, a formula shows up as code. textweaver could not read it completely, so it kept your LaTeX. Look for an unknown command or a missing brace.
 - In the web page, "$5-$10" or "US$5 or US$6" became a formula. The default Markdown engine uses its own rule for dollar signs, which is looser than the reader's. Convert with `--engine comrak`, which follows the same rule as the reader, or write the second price as `\$10`.

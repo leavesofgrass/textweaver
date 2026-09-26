@@ -3,6 +3,7 @@
 - Status: accepted
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): Implemented, with these differences. Logs go to `textweaver.log` in the state folder, not to stderr. The `prompt`, `list`, and `quit` notifications are never sent on their own; they arrive only inside the `effects` of a result. In edit mode, `open` returns `{document, effects}` without `position`. The serve loop pumps the macOS main run loop for `avspeech`, as the terminal reader does.
+- Status update (Saturday, September 26, 2026, Phases 1 and 2): the server waits for the writes a request caused before it answers (Agent P2a). It speaks for itself whatever `[accessibility] mode` the reader uses, and is silent only with `--no-speech` (Agent P2c). Prompt purposes gained `citation_locator`, `reference_identifier`, `import_references`, and `template_title` (Agent P2b). The protocol is still version 1.
 
 ## Context
 

@@ -4,6 +4,7 @@
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): Implemented. DECtalk (ADR-0021) is the third engine on this protocol, still at version 1. A crashed or stalled host is restarted, and the speech service resumes from the last word heard and says "Speech restarted" (Agent D4).
 - Status update (Saturday, September 26, 2026, Phase 2, Agent P2a): a restarted host, and SAPI's 32-bit host on first use, start inside `poll` (`start::HostStart`), so the speech thread never waits for `Ready` in `speak`; the audio device opens on its own thread; the DECtalk host synthesizes a long utterance a sentence at a time. The protocol is unchanged (version 1); the fake hosts take `--start-delay-ms` for tests.
+- Status update (Saturday, September 26, 2026, Phase 1, Agent P1a): hosts never outlive textweaver (end of input, a Job Object on Windows, a parent-death signal on Linux), stderr is always drained, and oversized requests are refused; see Host lifecycle below. Agent P2d added a fuzz target for the frame decoder and CI runs the fake-host tests against all three 32-bit hosts.
 
 ## Context
 
