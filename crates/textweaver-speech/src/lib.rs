@@ -25,10 +25,11 @@ pub mod normalize;
 pub mod pacing;
 pub mod queue;
 pub mod service;
+pub mod wav;
 
 pub use backend::{
-    BackendFactory, BackendId, BackendInfo, Caps, EventSink, RawEvent, SpeechBackend, SpeechError,
-    Voice, VoiceParams,
+    BackendFactory, BackendId, BackendInfo, Caps, EventSink, FileSynthesis, RawEvent,
+    SpeechBackend, SpeechError, Voice, VoiceParams, WordTiming,
 };
 pub use backends::{
     BackendRegistry, NullBackend, RecordingBackend, RecordingHandle, RecordingMode, Selection,
@@ -36,6 +37,8 @@ pub use backends::{
 };
 pub use normalize::{NormalizeConfig, Pipeline, TableMode};
 pub use pacing::{Clock, FakeClock, PacingConfig, SystemClock};
-pub use service::{Earcon, SayMode, ServiceConfig, ServiceCore, SpeechService, SpeechStatus};
+pub use service::{
+    Earcon, ReadingGeneration, SayMode, ServiceConfig, ServiceCore, SpeechService, SpeechStatus,
+};
 
 pub use textweaver_core as core;

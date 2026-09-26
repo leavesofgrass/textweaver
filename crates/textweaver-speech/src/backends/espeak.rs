@@ -23,7 +23,10 @@
 //! without a sound device (the dev container, CI) get realistic event
 //! timing. Select it with `TEXTWEAVER_ESPEAK_OUTPUT=virtual`.
 //! [`synthesize_to_file`](SpeechBackend::synthesize_to_file) always uses
-//! retrieval mode and writes a 16-bit mono WAV.
+//! retrieval mode and writes a 16-bit mono WAV;
+//! [`synthesize_utterance`](SpeechBackend::synthesize_utterance) also
+//! returns each word's `audio_position` in that file, for word-level
+//! subtitles in audio export.
 //!
 //! **Mapping** (ADR-0004): rate in wpm clamped to espeak's 80..=450 (one
 //! mapping for every espeak build, fixing Star's 0.8× CLI versus 1.0× library
@@ -43,11 +46,19 @@ use std::time::{Duration, Instant};
 use textweaver_core::{Utterance, UtteranceId, UtteranceKind};
 
 use crate::backend::{
-    BackendId, Caps, EventSink, RawEvent, SpeechBackend, SpeechError, Voice, VoiceParams,
+    BackendId, Caps, EventSink, FileSynthesis, RawEvent, SpeechBackend, SpeechError, Voice,
+    VoiceParams, WordTiming,
 };
 
 /// Rate range espeak-ng accepts, in wpm.
 pub const RATE_RANGE: std::ops::RangeInclusive<u16> = 80..=450;
+
+/// What the espeak-ng backend can do.
+pub const CAPS: Caps = Caps::WORD_EVENTS
+    .union(Caps::AUDIO_CLOCK)
+    .union(Caps::PITCH)
+    .union(Caps::VOLUME)
+    .union(Caps::SYNTH_TO_FILE);
 
 /// Where the audio goes.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -162,7 +173,7 @@ enum Job {
         text: String,
         path: std::path::PathBuf,
         params: VoiceParams,
-        reply: Sender<Result<(), SpeechError>>,
+        reply: Sender<Result<FileSynthesis, SpeechError>>,
     },
 }
 
@@ -228,6 +239,7 @@ impl EspeakBackend {
                     2 => Some("female".into()),
                     _ => None,
                 },
+                tags: Vec::new(),
             })
             .collect();
         Ok(EspeakBackend {
@@ -382,17 +394,29 @@ fn speak_one(
     let _ = events.send((id, end));
 }
 
-fn to_file(text: &str, path: &Path, params: &VoiceParams) -> Result<(), SpeechError> {
+/// Synthesizes `text` in retrieval mode into a WAV file, collecting each
+/// word's `audio_position` (milliseconds from the start of the audio).
+fn to_file(text: &str, path: &Path, params: &VoiceParams) -> Result<FileSynthesis, SpeechError> {
     let engine = |e: String| SpeechError::Engine(e);
     let rate = ensure(ffi::Mode::Retrieval).map_err(engine)?;
     apply_params(params).map_err(engine)?;
     let pcm: Arc<Mutex<Vec<i16>>> = Arc::default();
+    let words: Arc<Mutex<Vec<WordTiming>>> = Arc::default();
     {
         let pcm = Arc::clone(&pcm);
-        ffi::set_sink(Some(Box::new(move |wav: &[i16], _: &[ffi::Event]| {
+        let words = Arc::clone(&words);
+        let offsets = char_offsets(text);
+        ffi::set_sink(Some(Box::new(move |wav: &[i16], evs: &[ffi::Event]| {
             pcm.lock()
                 .unwrap_or_else(|p| p.into_inner())
                 .extend_from_slice(wav);
+            let mut w = words.lock().unwrap_or_else(|p| p.into_inner());
+            for e in evs.iter().filter(|e| e.kind == ffi::EventKind::Word) {
+                w.push(WordTiming {
+                    byte_range: byte_range(&offsets, e.text_position, e.length),
+                    audio_ms: u32::try_from(e.audio_ms).unwrap_or(0),
+                });
+            }
             false
         })));
     }
@@ -403,30 +427,12 @@ fn to_file(text: &str, path: &Path, params: &VoiceParams) -> Result<(), SpeechEr
     ffi::set_sink(None);
     r.map_err(engine)?;
     let pcm = std::mem::take(&mut *pcm.lock().unwrap_or_else(|p| p.into_inner()));
-    std::fs::write(path, wav_bytes(&pcm, rate)).map_err(|e| SpeechError::Io(e.to_string()))
+    std::fs::write(path, wav_bytes(&pcm, rate)).map_err(|e| SpeechError::Io(e.to_string()))?;
+    let words = std::mem::take(&mut *words.lock().unwrap_or_else(|p| p.into_inner()));
+    Ok(FileSynthesis { words })
 }
 
-/// A 16-bit mono PCM WAV file.
-pub fn wav_bytes(samples: &[i16], sample_rate: u32) -> Vec<u8> {
-    let data_len = u32::try_from(samples.len() * 2).unwrap_or(u32::MAX - 36);
-    let mut out = Vec::with_capacity(44 + samples.len() * 2);
-    out.extend_from_slice(b"RIFF");
-    out.extend_from_slice(&(36 + data_len).to_le_bytes());
-    out.extend_from_slice(b"WAVEfmt ");
-    out.extend_from_slice(&16u32.to_le_bytes());
-    out.extend_from_slice(&1u16.to_le_bytes()); // PCM
-    out.extend_from_slice(&1u16.to_le_bytes()); // mono
-    out.extend_from_slice(&sample_rate.to_le_bytes());
-    out.extend_from_slice(&(sample_rate * 2).to_le_bytes()); // byte rate
-    out.extend_from_slice(&2u16.to_le_bytes()); // block align
-    out.extend_from_slice(&16u16.to_le_bytes()); // bits per sample
-    out.extend_from_slice(b"data");
-    out.extend_from_slice(&data_len.to_le_bytes());
-    for s in samples {
-        out.extend_from_slice(&s.to_le_bytes());
-    }
-    out
-}
+pub use crate::wav::wav_bytes;
 
 impl SpeechBackend for EspeakBackend {
     fn id(&self) -> BackendId {
@@ -434,7 +440,7 @@ impl SpeechBackend for EspeakBackend {
     }
 
     fn capabilities(&self) -> Caps {
-        Caps::WORD_EVENTS | Caps::AUDIO_CLOCK | Caps::PITCH | Caps::VOLUME | Caps::SYNTH_TO_FILE
+        CAPS
     }
 
     fn voices(&self) -> Result<Vec<Voice>, SpeechError> {
@@ -501,6 +507,21 @@ impl SpeechBackend for EspeakBackend {
     }
 
     fn synthesize_to_file(&mut self, text: &str, path: &Path) -> Result<(), SpeechError> {
+        self.to_file(text, path).map(|_| ())
+    }
+
+    fn synthesize_utterance(
+        &mut self,
+        utterance: &Utterance,
+        path: &Path,
+    ) -> Result<FileSynthesis, SpeechError> {
+        self.to_file(&utterance.text, path)
+    }
+}
+
+impl EspeakBackend {
+    /// Synthesizes `text` into a WAV file on the worker thread.
+    fn to_file(&mut self, text: &str, path: &Path) -> Result<FileSynthesis, SpeechError> {
         let (tx, rx) = mpsc::channel();
         self.send(Job::ToFile {
             text: text.to_owned(),
@@ -564,14 +585,5 @@ mod tests {
         assert_eq!(espeak_values(&p(900, 12, 50)), (450, 100, 50));
         assert_eq!(espeak_values(&p(50, -12, 0)), (80, 0, 0));
         assert_eq!(espeak_values(&p(200, 6, 100)).1, 75);
-    }
-
-    #[test]
-    fn wav_header() {
-        let w = wav_bytes(&[0, 1, -1], 22050);
-        assert_eq!(&w[..4], b"RIFF");
-        assert_eq!(&w[8..16], b"WAVEfmt ");
-        assert_eq!(w.len(), 44 + 6);
-        assert_eq!(u32::from_le_bytes([w[24], w[25], w[26], w[27]]), 22050);
     }
 }

@@ -214,7 +214,7 @@ fn the_service_highlights_each_word_on_the_audio_clock() {
             Ok(SpeechStatus::Position { source_range, .. }) => {
                 got.push((source_range, t0.elapsed()))
             }
-            Ok(SpeechStatus::Finished) => break,
+            Ok(SpeechStatus::Finished { .. }) => break,
             Ok(other) => panic!("unexpected {other:?}"),
             Err(e) => panic!("{e}: {got:?}"),
         }

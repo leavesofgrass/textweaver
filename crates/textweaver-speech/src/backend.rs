@@ -60,6 +60,19 @@ pub struct Voice {
     pub languages: Vec<String>,
     /// Gender, when the engine reports one.
     pub gender: Option<String>,
+    /// Short labels that tell voices apart beyond their names, for lists
+    /// read aloud and for choosing: the product ("Eloquence", "OpenEVV"),
+    /// the voice family ("OneCore"), the host architecture ("32-bit"), or a
+    /// limitation ("no word timing"). Empty when there is nothing to add.
+    #[serde(default)]
+    pub tags: Vec<String>,
+}
+
+impl Voice {
+    /// True when the voice carries `tag` (compared ignoring ASCII case).
+    pub fn has_tag(&self, tag: &str) -> bool {
+        self.tags.iter().any(|t| t.eq_ignore_ascii_case(tag))
+    }
 }
 
 /// Parameters applied with [`SpeechBackend::set_params`].
@@ -176,10 +189,43 @@ pub trait SpeechBackend {
         let _ = (text, path);
         Err(SpeechError::Unsupported("synthesize_to_file"))
     }
+    /// Writes one utterance as a WAV file to `path` and reports when each
+    /// word sounds in it (requires `SYNTH_TO_FILE`). Audio export
+    /// (`textweaver-export`) calls this utterance by utterance.
+    ///
+    /// Default: [`synthesize_to_file`](Self::synthesize_to_file) with no
+    /// word timings, so export times cues by sentence only. Engines that
+    /// know where each word sounds in their audio (espeak-ng, ECI, SAPI)
+    /// override it.
+    fn synthesize_utterance(
+        &mut self,
+        utterance: &Utterance,
+        path: &Path,
+    ) -> Result<FileSynthesis, SpeechError> {
+        self.synthesize_to_file(&utterance.text, path)?;
+        Ok(FileSynthesis::default())
+    }
     /// Plays a tone (requires `TONES`). Default: silently ignored.
     fn tone(&mut self, hz: f32, ms: u32) {
         let _ = (hz, ms);
     }
+}
+
+/// When one word sounds in a synthesized file.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WordTiming {
+    /// Byte range of the word in `Utterance::text`.
+    pub byte_range: Range<u32>,
+    /// Milliseconds from the start of the file's audio.
+    pub audio_ms: u32,
+}
+
+/// What [`SpeechBackend::synthesize_utterance`] reports about the file it
+/// wrote.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FileSynthesis {
+    /// Word timings in audio order; empty when the engine reports none.
+    pub words: Vec<WordTiming>,
 }
 
 /// Creates a backend on the speech thread.
@@ -187,7 +233,7 @@ pub type BackendFactory =
     Box<dyn FnOnce() -> Result<Box<dyn SpeechBackend>, SpeechError> + Send + 'static>;
 
 /// A backend the registry knows about.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 pub struct BackendInfo {
     /// Stable id.
     pub id: BackendId,
@@ -199,4 +245,11 @@ pub struct BackendInfo {
     pub opt_in: bool,
     /// Compiled in and able to start on this machine.
     pub available: bool,
+    /// What the backend can do with its default voice, known without
+    /// starting it (for choosing, and for announcing "no word highlighting"
+    /// before switching). A running backend reports its current voice's
+    /// capabilities through [`SpeechBackend::capabilities`], which can be
+    /// fewer (some SAPI voices give no word timing); the speech service
+    /// re-reads them after every parameter change.
+    pub caps: Caps,
 }

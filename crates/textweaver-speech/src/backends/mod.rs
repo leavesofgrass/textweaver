@@ -100,6 +100,7 @@ fn null_info() -> BackendInfo {
         priority: i32::MIN,
         opt_in: false,
         available: true,
+        caps: NullBackend::CAPS,
     }
 }
 
@@ -126,6 +127,7 @@ impl BackendRegistry {
                 priority: 0,
                 opt_in: true,
                 available: true,
+                caps: RecordingBackend::DEFAULT_CAPS,
             },
             || true,
             || Ok(Box::new(RecordingBackend::new().0) as Box<dyn SpeechBackend>),
@@ -138,6 +140,7 @@ impl BackendRegistry {
                 priority: 50,
                 opt_in: false,
                 available: false,
+                caps: espeak::CAPS,
             },
             espeak::available,
             || {
@@ -153,6 +156,7 @@ impl BackendRegistry {
                 priority: 40,
                 opt_in: false,
                 available: false,
+                caps: omnivox::CAPS,
             },
             || omnivox::OmnivoxCommand::from_env().is_some(),
             || {
@@ -376,13 +380,14 @@ pub fn resolve_voice(voices: &[Voice], query: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::backend::Caps;
 
     fn voice(id: &str, name: &str, lang: &str) -> Voice {
         Voice {
             id: id.into(),
             name: name.into(),
             languages: vec![lang.into()],
-            gender: None,
+            ..Voice::default()
         }
     }
 
@@ -433,6 +438,7 @@ mod tests {
             priority,
             opt_in,
             available,
+            caps: Caps::empty(),
         }
     }
 
@@ -503,12 +509,14 @@ mod tests {
                 priority: 60,
                 opt_in: false,
                 available: false,
+                caps: Caps::WORD_EVENTS | Caps::NATIVE_NORMALIZATION,
             },
             || true,
             || Ok(Box::new(NullBackend::default()) as Box<dyn SpeechBackend>),
         );
         assert_eq!(r.select(None).backend.id, "eci");
         assert_eq!(r.list()[0].id, "eci");
+        assert!(r.list()[0].caps.contains(Caps::NATIVE_NORMALIZATION));
         assert!(r.factory("eci").is_some());
         assert!(r.factory("nope").is_none());
         // Re-registering replaces.
@@ -516,9 +524,7 @@ mod tests {
             BackendInfo {
                 id: "eci",
                 name: "ETI-Eloquence",
-                priority: 60,
-                opt_in: false,
-                available: false,
+                ..BackendInfo::default()
             },
             || false,
             || Err(SpeechError::Unavailable("eci", "missing".into())),
@@ -540,12 +546,26 @@ mod tests {
     }
 
     #[test]
+    fn registry_infos_carry_the_constructed_backends_caps() {
+        let r = BackendRegistry::with_builtins();
+        for info in r.list().into_iter().filter(|b| b.available) {
+            let Some(make) = r.factory(info.id) else {
+                continue;
+            };
+            let Ok(backend) = make() else {
+                continue;
+            };
+            assert_eq!(backend.capabilities(), info.caps, "{}", info.id);
+        }
+    }
+
+    #[test]
     fn preferred_voice_resolution() {
         let v = |id: &str, name: &str, lang: &str| Voice {
             id: id.into(),
             name: name.into(),
             languages: vec![lang.into()],
-            gender: None,
+            ..Voice::default()
         };
         let voices = vec![
             v("eloq-gb", "Eloquence Reed", "en-GB"),
