@@ -364,6 +364,14 @@ Jon's direction: conversion and bulk conversion must be **lightning fast, native
 
 A `dectalk` backend on the shared engine host (`textweaver-enginehost`), mirroring ECI: the DECtalk TTS API in memory mode with `[:index mark]` word marks, loaded from a user-supplied library (`TEXTWEAVER_DECTALK_LIBRARY`, and the install locations of a licensed DECtalk). The community DECtalk source's own licence file states it is proprietary to Fonix and usable only under a written licence, so textweaver never bundles, downloads, or tests against it; Jon may point textweaver at a build he has (his emacspeak-docker image compiles one) for his own testing.
 
+### Agent R — DECtalk and export word timings
+
+**Owns:** `crates/textweaver-dectalk/`, `docs/adr/0021-dectalk.md`, `docs/dectalk.md`; the `synthesize_utterance` overrides in `crates/textweaver-eci/` and `crates/textweaver-sapi/`, and `word_timings` in `crates/textweaver-enginehost/`.
+
+**Deliverables:** a `dectalk` backend on the shared engine host for a user-installed, licensed DECtalk (never bundled, downloaded, or tested against the community source), with index-mark word timing, the nine speakers as voices, rate, pitch, volume, pause, and WAV export; word timings in audio export for ECI, SAPI, and DECtalk. Registry and xtask wiring are the orchestrator's (lines in the report).
+
+**Status:** done on `wave2/r-dectalk` (Friday, September 25, 2026); awaiting integration. The DECtalk FFI is tested against a stand-in library (64-bit, and 32-bit `cdecl` and `stdcall`), not yet against a licensed DECtalk (none on this machine; live tests wait behind `TEXTWEAVER_DECTALK=1`). Export word timings verified with Microsoft David (SAPI) and Voxin (ECI, in the container).
+
 ### Math and citations agents (added 2026-09-25 at Jon's request)
 
 Jon asked to carry Star's lessons forward: reading aids, math normalization, live previews, citation support, and ASCIIMath. Math and citations start now; reading aids and live previews follow the Star-lessons research (`docs/star-lessons.md`, being written) and Agent L's renderer and Agent K's GUI findings.

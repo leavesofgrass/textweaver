@@ -38,6 +38,8 @@ A frame is `len: u32 LE` followed by `len` bytes: a one-byte tag and its payload
 
 Tags `0x06..=0x7f` and `0x87..=0xff` are free for new messages.
 
+DECtalk (ADR-0021) is a third engine on this protocol. Its Speak and Mark payloads are laid out as ECI's; its SetVoice (0x03) is speaker `u8`, rate `u16` (wpm), pitch `u16` (Hz, 0 = the speaker's own); its Ready adds version `str` and engine `str` (`dectalk`, `fake`). It changes no existing frame, so the version stays 1.
+
 Conversation: the host announces itself with `Ready` (ECI may precede it with `Dictionary` reports; a host that cannot start sends one `Error` instead). Each `Speak` is answered by any number of `Audio` and `Word` frames and exactly one `End`, preceded by `Error` when synthesis failed. `Word` samples count from the utterance's first sample. `Stop` aborts the utterance in progress and every `Speak` read before it; each still gets its `End` (aborted). The host exits on `Quit` or end of input. SAPI's voice listing is a one-shot run (`--list-voices`): `Ready`, one `Voice` per token, exit.
 
 ### Versioning

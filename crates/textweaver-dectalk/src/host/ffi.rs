@@ -298,7 +298,7 @@ trait Calls {
 macro_rules! dectalk_api {
     ($module:ident, $abi:literal) => {
         mod $module {
-            use std::ffi::{c_char, c_long, c_void};
+            use std::ffi::{c_char, c_long};
             use std::sync::Mutex;
 
             use libloading::Library;
@@ -312,7 +312,8 @@ macro_rules! dectalk_api {
             type StartupEx =
                 unsafe extern $abi fn(*mut Handle, u32, u32, Option<Callback>, c_long) -> u32;
             #[cfg(windows)]
-            type Startup = unsafe extern $abi fn(*mut c_void, *mut Handle, u32, u32) -> u32;
+            type Startup =
+                unsafe extern $abi fn(*mut std::ffi::c_void, *mut Handle, u32, u32) -> u32;
             #[cfg(not(windows))]
             type Startup = StartupEx;
             type OnHandle = unsafe extern $abi fn(Handle) -> u32;
@@ -573,8 +574,10 @@ fn probe_convention(lib: &Library) -> Result<Convention, String> {
 pub struct DectalkEngine {
     calls: Box<dyn Calls>,
     h: Handle,
-    /// The speech-to-memory buffer, boxed so its address never changes.
-    buffer: Box<TtsBuffer>,
+    /// The speech-to-memory buffer (a leaked `Box`, so its address never
+    /// changes and DECtalk's copy of the pointer stays valid; freed in
+    /// `Drop` after DECtalk has shut down).
+    buffer: *mut TtsBuffer,
     /// The buffer's storage; allocated once, never reallocated, and read
     /// only through `buffer`'s pointers.
     _data: Vec<u8>,
@@ -671,7 +674,7 @@ impl DectalkEngine {
         }
         let mut data = vec![0u8; BUFFER_SAMPLES * 2];
         let mut marks = vec![TtsIndex::default(); BUFFER_MARKS];
-        let buffer = Box::new(TtsBuffer {
+        let buffer = Box::into_raw(Box::new(TtsBuffer {
             data: data.as_mut_ptr().cast(),
             phonemes: std::ptr::null_mut(),
             indices: marks.as_mut_ptr(),
@@ -682,7 +685,7 @@ impl DectalkEngine {
             phoneme_count: 0,
             index_count: 0,
             reserved: 0,
-        });
+        }));
         Ok(DectalkEngine {
             calls,
             h,
@@ -706,14 +709,10 @@ impl DectalkEngine {
         self.calls.has_callback()
     }
 
-    fn buffer_ptr(&mut self) -> *mut TtsBuffer {
-        &raw mut *self.buffer
-    }
-
     /// Runs one utterance through DECtalk and collects its buffers.
     fn collect(&mut self, text: &[u8]) -> Result<Vec<Chunk>, String> {
         let h = self.h;
-        let buf = self.buffer_ptr();
+        let buf = self.buffer;
         {
             let mut st = callback_state();
             st.handle = h as usize;
@@ -721,9 +720,13 @@ impl DectalkEngine {
             st.chunks.clear();
         }
         if !self.queued {
-            self.buffer.buffer_length = 0;
-            self.buffer.index_count = 0;
-            self.buffer.phoneme_count = 0;
+            // SAFETY: DECtalk does not hold the buffer (`queued` is false),
+            // so nothing else reads or writes it.
+            unsafe {
+                (*buf).buffer_length = 0;
+                (*buf).index_count = 0;
+                (*buf).phoneme_count = 0;
+            }
             // SAFETY: the buffer and its storage live as long as the engine
             // and are not moved or reallocated.
             let rc = unsafe { self.calls.add_buffer(h, buf) };
@@ -828,6 +831,9 @@ impl Drop for DectalkEngine {
             self.calls.close_in_memory(self.h);
             self.calls.shutdown(self.h);
         }
+        // SAFETY: `buffer` came from `Box::into_raw` in `load` and is freed
+        // once, now that DECtalk has shut down and no longer holds it.
+        drop(unsafe { Box::from_raw(self.buffer) });
     }
 }
 

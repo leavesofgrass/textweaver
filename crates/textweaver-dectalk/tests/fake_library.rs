@@ -72,10 +72,14 @@ fn converse(lib: &Path, env: &[(&str, &str)], requests: &[Request]) -> Vec<Reply
     cmd.envs(env.iter().copied());
     let mut child = cmd.spawn().expect("host starts");
     let mut stdin = child.stdin.take().unwrap();
+    // A host that cannot start exits at once, so writes may find the pipe
+    // closed; its replies are still read below.
     for r in requests.iter().chain([&Request::Quit]) {
-        stdin.write_all(&r.encode()).unwrap();
+        if stdin.write_all(&r.encode()).is_err() {
+            break;
+        }
     }
-    stdin.flush().unwrap();
+    let _ = stdin.flush();
     let mut stdout = child.stdout.take().unwrap();
     let mut replies = Vec::new();
     while let Ok(Some(body)) = protocol::read_body(&mut stdout) {
