@@ -16,6 +16,12 @@
 //!
 //! The chosen encoding is reported in [`Decoded::encoding`]; loaders record
 //! anything other than UTF-8 in `DocumentMeta::properties["encoding"]`.
+//!
+//! UTF-16 without a byte order mark (a NUL after or before nearly every
+//! ASCII letter) is recognized between steps 2 and 3. Bytes that are not
+//! text at all (a PDF, a zip archive, an image, a program) are recognized
+//! by [`binary_kind`], so the text loaders can refuse them instead of
+//! reading them aloud as garbage (docs/audit-2026-09.md, finding D3).
 
 use encoding_rs::{Encoding, UTF_8, UTF_16BE, UTF_16LE, WINDOWS_1252};
 
@@ -49,6 +55,9 @@ pub fn decode(bytes: &[u8], declared: Option<&str>) -> Decoded {
     {
         return run(enc.output_encoding(), bytes);
     }
+    if let Some(enc) = utf16_without_bom(bytes) {
+        return run(enc, bytes);
+    }
     match std::str::from_utf8(bytes) {
         Ok(s) => Decoded {
             text: s.to_owned(),
@@ -57,6 +66,88 @@ pub fn decode(bytes: &[u8], declared: Option<&str>) -> Decoded {
         },
         Err(_) => run(WINDOWS_1252, bytes),
     }
+}
+
+/// How much of the start of a file is examined to tell text from binary.
+pub const SNIFF_BYTES: usize = 8192;
+
+/// UTF-16 without a byte order mark: in the first [`SNIFF_BYTES`], most
+/// code units have a NUL high byte (ASCII-range text), on the same side.
+fn utf16_without_bom(bytes: &[u8]) -> Option<&'static Encoding> {
+    let head = &bytes[..bytes.len().min(SNIFF_BYTES) & !1];
+    let units = head.len() / 2;
+    if units < 2 {
+        return None;
+    }
+    let (mut even, mut odd) = (0usize, 0usize);
+    for pair in head.chunks_exact(2) {
+        even += usize::from(pair[0] == 0 && pair[1] != 0);
+        odd += usize::from(pair[1] == 0 && pair[0] != 0);
+    }
+    // Nine in ten units ASCII-range, with the NUL on one side.
+    if odd * 10 >= units * 9 && even * 20 <= units {
+        Some(UTF_16LE)
+    } else if even * 10 >= units * 9 && odd * 20 <= units {
+        Some(UTF_16BE)
+    } else {
+        None
+    }
+}
+
+/// What kind of non-text file `bytes` look like, or `None` for text.
+///
+/// Known signatures are named ("a PDF document", "a zip archive (such as
+/// a Word document or an EPUB)", "an image", "a program"); other bytes
+/// count as binary when the first [`SNIFF_BYTES`] hold a NUL byte (and are
+/// not UTF-16) or more than one control character in twenty. Text with a
+/// byte order mark is always text.
+pub fn binary_kind(bytes: &[u8]) -> Option<&'static str> {
+    if Encoding::for_bom(bytes).is_some() || utf16_without_bom(bytes).is_some() {
+        return None;
+    }
+    const SIGNATURES: &[(&[u8], &str)] = &[
+        (b"%PDF-", "a PDF document"),
+        (
+            b"PK\x03\x04",
+            "a zip archive (such as a Word document or an EPUB)",
+        ),
+        (b"\x89PNG", "an image"),
+        (b"\xff\xd8\xff", "an image"),
+        (b"GIF8", "an image"),
+        (b"RIFF", "an audio, video, or image file"),
+        (b"ID3", "an audio file"),
+        (b"OggS", "an audio file"),
+        (b"fLaC", "an audio file"),
+        (b"\x7fELF", "a program"),
+        (b"MZ", "a program"),
+        (b"\xd0\xcf\x11\xe0", "an old Microsoft Office document"),
+        (b"{\\rtf", "a rich text (RTF) document"),
+    ];
+    for (magic, kind) in SIGNATURES {
+        if bytes.starts_with(magic) {
+            // "MZ" and "RIFF" are short: only when the rest is not text.
+            if (*magic == b"MZ" || *magic == b"RIFF") && binary_by_content(bytes).is_none() {
+                continue;
+            }
+            return Some(kind);
+        }
+    }
+    binary_by_content(bytes)
+}
+
+fn binary_by_content(bytes: &[u8]) -> Option<&'static str> {
+    let head = &bytes[..bytes.len().min(SNIFF_BYTES)];
+    if head.is_empty() {
+        return None;
+    }
+    if head.contains(&0) {
+        return Some("a binary file");
+    }
+    let controls = head
+        .iter()
+        .filter(|&&b| b < 0x20 && !matches!(b, b'\t' | b'\n' | b'\r' | 0x0c | 0x1b))
+        .count();
+    (controls * 20 > head.len()).then_some("a binary file")
 }
 
 fn run(enc: &'static Encoding, bytes: &[u8]) -> Decoded {
@@ -141,6 +232,46 @@ fn attr_value(s: &[u8]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn utf16_without_a_bom_is_recognized() {
+        let le: Vec<u8> = "Hello, world.\nSecond line."
+            .encode_utf16()
+            .flat_map(u16::to_le_bytes)
+            .collect();
+        let d = decode(&le, None);
+        assert_eq!(
+            (d.text.as_str(), d.encoding),
+            ("Hello, world.\nSecond line.", "UTF-16LE")
+        );
+        let be: Vec<u8> = "Hi there"
+            .encode_utf16()
+            .flat_map(u16::to_be_bytes)
+            .collect();
+        let d = decode(&be, None);
+        assert_eq!((d.text.as_str(), d.encoding), ("Hi there", "UTF-16BE"));
+        assert_eq!(binary_kind(&le), None);
+    }
+
+    #[test]
+    fn binary_files_are_named_and_text_is_not_binary() {
+        assert_eq!(binary_kind(b"%PDF-1.7\n%\xe2\xe3"), Some("a PDF document"));
+        assert!(binary_kind(b"PK\x03\x04\x14\x00").unwrap().contains("zip"));
+        assert_eq!(binary_kind(b"\x89PNG\r\n\x1a\n\0\0"), Some("an image"));
+        assert_eq!(binary_kind(b"abc\0def"), Some("a binary file"));
+        assert_eq!(binary_kind(b"\x01\x02\x03\x04 text"), Some("a binary file"));
+        // Text, including text that happens to start like a signature.
+        assert_eq!(binary_kind(b"MZ is a postcode area.\n"), None);
+        assert_eq!(binary_kind(b"RIFF raff and friends.\n"), None);
+        assert_eq!(
+            binary_kind("caf\u{e9} \u{2014} na\u{ef}ve\n".as_bytes()),
+            None
+        );
+        assert_eq!(binary_kind(b"caf\xe9 in Windows-1252\n"), None);
+        assert_eq!(binary_kind(b"\x1b[1mbold\x1b[0m\tand\x0c\n"), None);
+        assert_eq!(binary_kind(b"\xff\xfeh\x00\x00\x00"), None);
+        assert_eq!(binary_kind(b""), None);
+    }
 
     #[test]
     fn bom_declared_utf8_then_windows_1252() {

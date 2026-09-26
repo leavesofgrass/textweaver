@@ -1025,3 +1025,46 @@ fn an_ordered_list_item_is_announced_with_its_text() {
     r.act(ActionId::NextListItem);
     assert_eq!(r.said.last(), "List item: 2. Walk the dog");
 }
+
+#[test]
+fn binary_files_are_refused_and_utf16_files_are_read() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut r = rig(PROSE);
+    // A PDF with an unknown extension, and a program renamed to .md.
+    let pdf = dir.path().join("report.dat");
+    std::fs::write(&pdf, b"%PDF-1.7\n%\xe2\xe3\xcf\xd3\n1 0 obj\n").unwrap();
+    let exe = dir.path().join("notes.md");
+    std::fs::write(&exe, b"\x7fELF\x02\x01\x01\x00\x00\x00\x00").unwrap();
+    for (path, kind) in [(&pdf, "a PDF document"), (&exe, "a program")] {
+        r.app.dispatch(Command::Open(path.clone()));
+        let name = path.file_name().unwrap().to_string_lossy();
+        let expected = format!("{name} is not a text file; it looks like {kind}.");
+        assert!(r.said.last().contains(&expected), "{}", r.said.last());
+        // The open document is still the one before.
+        assert!(
+            r.app
+                .session()
+                .unwrap()
+                .doc
+                .text()
+                .to_string()
+                .starts_with("Alpha")
+        );
+    }
+    // UTF-16 with a byte order mark (PowerShell 5.1's `>`), and without.
+    let text = "Caf\u{e9} notes.\r\nSecond line.\r\n";
+    let mut with_bom = vec![0xff, 0xfe];
+    with_bom.extend(text.encode_utf16().flat_map(u16::to_le_bytes));
+    let without: Vec<u8> = text.encode_utf16().flat_map(u16::to_le_bytes).collect();
+    for (name, bytes) in [("bom.txt", with_bom), ("plain.md", without)] {
+        let path = dir.path().join(name);
+        std::fs::write(&path, bytes).unwrap();
+        r.app.open(&path).unwrap();
+        let doc = r.app.session().unwrap().doc.text().to_string();
+        // (Markdown joins the soft line break into a space.)
+        assert!(
+            doc.starts_with("Caf\u{e9} notes.") && doc.contains("Second line."),
+            "{doc:?}"
+        );
+    }
+}

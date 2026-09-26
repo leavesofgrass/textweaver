@@ -150,6 +150,10 @@ pub enum LoadError {
     /// The content is malformed.
     #[error("parse error: {0}")]
     Parse(String),
+    /// The file is not text (and no loader for its kind is available):
+    /// the file's name and what it looks like.
+    #[error("{0} is not a text file; it looks like {1}. textweaver cannot read it as text.")]
+    Binary(String, &'static str),
 }
 
 /// Turns a source into a document.
@@ -279,7 +283,8 @@ pub fn meta_for(source: &Source, id: &str) -> DocumentMeta {
 
 /// The source's text: decoded as [`encoding::decode`] decides (BOM, UTF-8,
 /// else Windows-1252), without a byte order mark, with `\r\n` and `\r`
-/// turned into `\n`.
+/// turned into `\n`. A source that is not text is refused
+/// ([`LoadError::Binary`]).
 pub fn source_text(source: &Source) -> Result<String, LoadError> {
     Ok(decode_source(source, None)?.text)
 }
@@ -291,7 +296,15 @@ pub fn decode_source(
     declared: Option<&str>,
 ) -> Result<encoding::Decoded, LoadError> {
     let bytes = source.read()?;
+    if let Some(kind) = encoding::binary_kind(&bytes) {
+        return Err(LoadError::Binary(source_name(source), kind));
+    }
     Ok(decode_bytes(&bytes, declared))
+}
+
+/// How a source is named in messages: its file name, else "This document".
+fn source_name(source: &Source) -> String {
+    title_from_path(source).unwrap_or_else(|| "This document".to_owned())
 }
 
 /// [`encoding::decode`] with line endings normalized to `\n` and any stray
