@@ -360,6 +360,8 @@ Jon's direction: conversion and bulk conversion must be **lightning fast, native
 
 **Acceptance:** each writer has tests and a round-trip or structural validation; ADR-0017 explains the choices and the accessibility checks.
 
+**Status:** Wave 2 deliverables done on `wave2/m-writers` (Friday, September 25, 2026); awaiting integration. `Writer` trait and `writer_for`/`write_to_vec` in `textweaver-writers`; ADR-0017 lists the checks (epubcheck and liblouis not installed here, so skipped).
+
 ### Queued after Agent H: DECtalk
 
 A `dectalk` backend on the shared engine host (`textweaver-enginehost`), mirroring ECI: the DECtalk TTS API in memory mode with `[:index mark]` word marks, loaded from a user-supplied library (`TEXTWEAVER_DECTALK_LIBRARY`, and the install locations of a licensed DECtalk). The community DECtalk source's own licence file states it is proprietary to Fonix and usable only under a written licence, so textweaver never bundles, downloads, or tests against it; Jon may point textweaver at a build he has (his emacspeak-docker image compiles one) for his own testing.
