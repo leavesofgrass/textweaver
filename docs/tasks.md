@@ -428,3 +428,9 @@ Jon wants several themes, as Star had. Star shipped 23 palettes in `star/themes.
 - ADR-0020 and `docs/themes.md` (how to pick, preview, and write a theme).
 
 **Acceptance:** contrast tests for every built-in theme; round-trip TOML tests; snapshot of the CSS output; the palette list and each adjustment in the report.
+
+### Agent S — Reading aids (added 2026-09-25 at Jon's request)
+
+**Owns:** `crates/textweaver-aids/`, `docs/adr/0022-reading-aids.md`, `docs/reading-aids.md`.
+
+**Status:** done on `wave2/s-reading-aids` (Friday, September 25, 2026); awaiting integration. `textweaver-aids` holds RSVP (clock-driven state machine, recognition point, WPM pauses, nine positions, terminal box), bionic reading, WCAG 1.4.12 text spacing with CSS, font settings with Star's three OFL reading fonts (not bundled; fetched by the GUI after asking), the reading ruler and current-line marks, difficult-word marking (no word list vendored: licences need Jon's decision), reading level, and rule-based syllable display with an offset map. One workspace dependency added: `unicode-width` (already in the tree through ratatui). Integration steps for Agents D3 (TUI) and K (GUI) are in the Agent S report and ADR-0022.

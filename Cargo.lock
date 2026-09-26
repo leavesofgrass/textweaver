@@ -3834,6 +3834,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-aids"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "proptest",
+ "serde",
+ "serde_json",
+ "textweaver-core",
+ "textweaver-text",
+ "thiserror 2.0.21",
+ "toml",
+ "unicode-segmentation",
+ "unicode-width",
+]
+
+[[package]]
 name = "textweaver-app"
 version = "0.1.0-alpha.3"
 dependencies = [

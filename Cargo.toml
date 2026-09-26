@@ -26,6 +26,7 @@ members = [
     "crates/textweaver-math",
     "crates/textweaver-cite",
     "crates/textweaver-theme",
+    "crates/textweaver-aids",
     "xtask",
 ]
 default-members = [
@@ -53,6 +54,7 @@ default-members = [
     "crates/textweaver-math",
     "crates/textweaver-cite",
     "crates/textweaver-theme",
+    "crates/textweaver-aids",
 ]
 
 [workspace.package]
@@ -92,6 +94,7 @@ textweaver-writers = { path = "crates/textweaver-writers" }
 textweaver-math = { path = "crates/textweaver-math" }
 textweaver-cite = { path = "crates/textweaver-cite" }
 textweaver-theme = { path = "crates/textweaver-theme" }
+textweaver-aids = { path = "crates/textweaver-aids" }
 
 # text and formats
 ropey = "1.6"
@@ -165,6 +168,10 @@ memmap2 = "0.9"
 # GUI (wave 3 spike; the textweaver-gui crate only).
 wxdragon = "0.9"
 live-region = "0.3"
+
+# Reading aids (Agent S): terminal cell widths for the RSVP box (already in
+# the tree through ratatui).
+unicode-width = "0.2"
 
 # tests
 proptest = "1.11"
