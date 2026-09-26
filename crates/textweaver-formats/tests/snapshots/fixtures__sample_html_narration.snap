@@ -1,0 +1,27 @@
+---
+source: crates/textweaver-formats/tests/fixtures.rs
+expression: narration(&doc)
+---
+[
+  "heading level 1, Sample HTML Document",
+  "This paragraph has strong text, emphasis, and a link.",
+  "Mrs. Lee paid $3.99 on 2026-09-25.",
+  "heading level 2, Lists",
+  "list with 2 items, Apples",
+  "Oranges",
+  "list with 1 item, Blood oranges",
+  "list with 2 items, 1. Preheat the oven.",
+  "2. Bake for 20 min.",
+  "heading level 2, Table",
+  "Scores",
+  "Table with 2 columns: Name, Score.",
+  "Row 1: Name is Ada, Score is 98.",
+  "Row 2: Name is Grace, Score is 100.",
+  "heading level 3, Media",
+  "graphic, A bar chart of scores",
+  "block quote, Quoted text in a block.",
+  "Second sentence.",
+  "code block, let x = 1;",
+  "Last paragraph.",
+  "The end?"
+]

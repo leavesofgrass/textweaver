@@ -1,0 +1,396 @@
+---
+source: crates/textweaver-formats/tests/fixtures.rs
+expression: view(&doc)
+---
+{
+  "markers": [
+    {
+      "kind": "heading",
+      "level": 1,
+      "range": [
+        0,
+        24
+      ],
+      "text": "Sample Markdown Document"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        26,
+        144
+      ],
+      "text": "This paragraph has bold text, italic text, inline code, and a link to the example site. Dr. Jones arrived at 3:30 p.m."
+    },
+    {
+      "kind": "bold",
+      "range": [
+        45,
+        54
+      ],
+      "text": "bold text"
+    },
+    {
+      "kind": "italic",
+      "range": [
+        56,
+        67
+      ],
+      "text": "italic text"
+    },
+    {
+      "kind": "code",
+      "range": [
+        69,
+        80
+      ],
+      "text": "inline code"
+    },
+    {
+      "kind": "link",
+      "range": [
+        88,
+        112
+      ],
+      "reference": "https://example.org",
+      "text": "link to the example site"
+    },
+    {
+      "kind": "heading",
+      "level": 2,
+      "range": [
+        146,
+        151
+      ],
+      "text": "Lists"
+    },
+    {
+      "kind": "list",
+      "level": 1,
+      "range": [
+        153,
+        252
+      ],
+      "text": "First bullet item\nSecond bullet item with emphasis\nNested bullet under the second\nThird bullet item"
+    },
+    {
+      "kind": "list_item",
+      "level": 1,
+      "range": [
+        153,
+        170
+      ],
+      "text": "First bullet item"
+    },
+    {
+      "kind": "list_item",
+      "level": 1,
+      "range": [
+        171,
+        234
+      ],
+      "text": "Second bullet item with emphasis\nNested bullet under the second"
+    },
+    {
+      "kind": "italic",
+      "range": [
+        195,
+        203
+      ],
+      "text": "emphasis"
+    },
+    {
+      "kind": "list",
+      "level": 2,
+      "range": [
+        204,
+        234
+      ],
+      "text": "Nested bullet under the second"
+    },
+    {
+      "kind": "list_item",
+      "level": 2,
+      "range": [
+        204,
+        234
+      ],
+      "text": "Nested bullet under the second"
+    },
+    {
+      "kind": "list_item",
+      "level": 1,
+      "range": [
+        235,
+        252
+      ],
+      "text": "Third bullet item"
+    },
+    {
+      "kind": "list",
+      "level": 1,
+      "range": [
+        254,
+        314
+      ],
+      "text": "Step one of the procedure.\nStep two costs $5.25.\nStep three."
+    },
+    {
+      "kind": "list_item",
+      "label": "1.",
+      "level": 1,
+      "range": [
+        254,
+        280
+      ],
+      "text": "Step one of the procedure."
+    },
+    {
+      "kind": "list_item",
+      "label": "2.",
+      "level": 1,
+      "range": [
+        281,
+        302
+      ],
+      "text": "Step two costs $5.25."
+    },
+    {
+      "kind": "list_item",
+      "label": "3.",
+      "level": 1,
+      "range": [
+        303,
+        314
+      ],
+      "text": "Step three."
+    },
+    {
+      "kind": "heading",
+      "level": 2,
+      "range": [
+        316,
+        323
+      ],
+      "text": "A Table"
+    },
+    {
+      "kind": "table",
+      "range": [
+        325,
+        386
+      ],
+      "text": "Name | Role | Score\nAda | Engineer | 98\nGrace | Admiral | 100"
+    },
+    {
+      "kind": "table_row",
+      "label": "header",
+      "range": [
+        325,
+        344
+      ],
+      "text": "Name | Role | Score"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        325,
+        329
+      ],
+      "text": "Name"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        332,
+        336
+      ],
+      "text": "Role"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        339,
+        344
+      ],
+      "text": "Score"
+    },
+    {
+      "kind": "table_row",
+      "range": [
+        345,
+        364
+      ],
+      "text": "Ada | Engineer | 98"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        345,
+        348
+      ],
+      "text": "Ada"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        351,
+        359
+      ],
+      "text": "Engineer"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        362,
+        364
+      ],
+      "text": "98"
+    },
+    {
+      "kind": "table_row",
+      "range": [
+        365,
+        386
+      ],
+      "text": "Grace | Admiral | 100"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        365,
+        370
+      ],
+      "text": "Grace"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        373,
+        380
+      ],
+      "text": "Admiral"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        383,
+        386
+      ],
+      "text": "100"
+    },
+    {
+      "kind": "heading",
+      "level": 2,
+      "range": [
+        388,
+        403
+      ],
+      "text": "Quotes and Code"
+    },
+    {
+      "kind": "quote",
+      "range": [
+        405,
+        466
+      ],
+      "text": "A block quote spans a sentence. It has a second sentence too."
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        405,
+        466
+      ],
+      "text": "A block quote spans a sentence. It has a second sentence too."
+    },
+    {
+      "kind": "code",
+      "label": "rust",
+      "level": 1,
+      "range": [
+        468,
+        504
+      ],
+      "text": "fn main() {\n    println!(\"hello\");\n}"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        506,
+        539
+      ],
+      "text": "A diagram of the reading pipeline"
+    },
+    {
+      "kind": "image",
+      "range": [
+        506,
+        539
+      ],
+      "reference": "pipeline.png",
+      "text": "A diagram of the reading pipeline"
+    },
+    {
+      "kind": "heading",
+      "level": 3,
+      "range": [
+        541,
+        555
+      ],
+      "text": "Deeper Heading"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        557,
+        625
+      ],
+      "text": "The final paragraph mentions a footnote.[1] It ends with a question?"
+    },
+    {
+      "kind": "footnote",
+      "range": [
+        597,
+        600
+      ],
+      "reference": "1",
+      "text": "[1]"
+    },
+    {
+      "kind": "heading",
+      "level": 2,
+      "range": [
+        627,
+        636
+      ],
+      "text": "Footnotes"
+    },
+    {
+      "kind": "footnote",
+      "level": 1,
+      "range": [
+        638,
+        671
+      ],
+      "reference": "1",
+      "text": "[1] The footnote text lives here."
+    },
+    {
+      "kind": "footnote",
+      "range": [
+        638,
+        641
+      ],
+      "reference": "1",
+      "text": "[1]"
+    }
+  ],
+  "meta": {
+    "author": "Test Author",
+    "format": "markdown",
+    "language": null,
+    "path": null,
+    "title": "Sample Markdown Document"
+  },
+  "text": "Sample Markdown Document\n\nThis paragraph has bold text, italic text, inline code, and a link to the example site. Dr. Jones arrived at 3:30 p.m.\n\nLists\n\nFirst bullet item\nSecond bullet item with emphasis\nNested bullet under the second\nThird bullet item\n\nStep one of the procedure.\nStep two costs $5.25.\nStep three.\n\nA Table\n\nName | Role | Score\nAda | Engineer | 98\nGrace | Admiral | 100\n\nQuotes and Code\n\nA block quote spans a sentence. It has a second sentence too.\n\nfn main() {\n    println!(\"hello\");\n}\n\nA diagram of the reading pipeline\n\nDeeper Heading\n\nThe final paragraph mentions a footnote.[1] It ends with a question?\n\nFootnotes\n\n[1] The footnote text lives here."
+}
