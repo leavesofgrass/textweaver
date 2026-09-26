@@ -14,9 +14,12 @@
 //!   every block marker is split into paragraphs at blank lines, so a plain
 //!   text document (no markers) is a list of paragraphs whose single line
 //!   breaks are kept as [`Inline::LineBreak`].
-//! - `SectionBreak` and `PageBreak` are points at their start, emitted once
-//!   between blocks: before a block that starts where they start, after a
-//!   leaf block they fall inside.
+//! - `SectionBreak`, `PageBreak`, and `Rule` are points at their start,
+//!   emitted once between blocks: before a block that starts where they
+//!   start, after a leaf block they fall inside; a rule at the very end is
+//!   the last block.
+//! - `Math` markers are [`Style::Math`] spans whose text is the source with
+//!   its delimiters; each writer typesets it (see `math`).
 //! - Inline markers that overlap without nesting are split so every writer
 //!   can emit well-nested markup; a link inside a link keeps only the outer
 //!   one.
@@ -72,6 +75,8 @@ pub enum Block {
         /// The print page number or label, when the source gave one.
         label: Option<String>,
     },
+    /// A horizontal rule (thematic break) between blocks.
+    Rule,
 }
 
 /// A list.
@@ -161,6 +166,13 @@ pub enum Style {
     FootnoteRef(String),
     /// An inline image; the children are its alt text.
     Image(Option<String>),
+    /// Struck-through text.
+    Strikethrough,
+    /// Math; the children are the LaTeX source with its delimiters.
+    Math {
+        /// Display (block) math rather than inline.
+        display: bool,
+    },
 }
 
 impl Inline {
@@ -255,7 +267,15 @@ pub fn blocks(doc: &Document) -> Vec<Block> {
         markers: doc.markers(),
         emitted: vec![false; doc.markers().len()],
     };
-    b.blocks_in(doc.full_range(), None)
+    let mut out = b.blocks_in(doc.full_range(), None);
+    // Breaks at the very end (a closing rule) start at no char of the text.
+    let end = CharPos(doc.len_chars());
+    for i in 0..b.markers.len() {
+        if is_break(&b.markers[i]) && b.markers[i].range.start >= end {
+            b.emit_break(i, &mut out);
+        }
+    }
+    out
 }
 
 struct TreeBuilder<'a> {
@@ -266,7 +286,10 @@ struct TreeBuilder<'a> {
 }
 
 fn is_break(m: &Marker) -> bool {
-    matches!(m.kind, MarkerKind::SectionBreak | MarkerKind::PageBreak)
+    matches!(
+        m.kind,
+        MarkerKind::SectionBreak | MarkerKind::PageBreak | MarkerKind::Rule
+    )
 }
 
 fn is_block_candidate(m: &Marker) -> bool {
@@ -288,6 +311,8 @@ fn is_inline(m: &Marker) -> bool {
         MarkerKind::Bold
         | MarkerKind::Italic
         | MarkerKind::Underline
+        | MarkerKind::Strikethrough
+        | MarkerKind::Math
         | MarkerKind::Link
         | MarkerKind::Image => true,
         MarkerKind::Code | MarkerKind::Footnote => m.level == 0,
@@ -321,6 +346,7 @@ impl TreeBuilder<'_> {
                     })
                     .filter(|t| !t.is_empty() && t.chars().count() <= 200),
             },
+            MarkerKind::Rule => Block::Rule,
             _ => Block::PageBreak {
                 label: m.label.clone(),
             },
@@ -778,6 +804,10 @@ fn style_of(m: &Marker) -> Style {
         MarkerKind::Bold => Style::Bold,
         MarkerKind::Italic => Style::Italic,
         MarkerKind::Underline => Style::Underline,
+        MarkerKind::Strikethrough => Style::Strikethrough,
+        MarkerKind::Math => Style::Math {
+            display: m.level == 1,
+        },
         MarkerKind::Code => Style::Code,
         MarkerKind::Link => Style::Link(m.reference.clone().unwrap_or_default()),
         MarkerKind::Footnote => Style::FootnoteRef(m.reference.clone().unwrap_or_default()),

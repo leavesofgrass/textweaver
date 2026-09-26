@@ -4716,6 +4716,7 @@ dependencies = [
  "textweaver-core",
  "textweaver-fonts",
  "textweaver-formats",
+ "textweaver-math",
  "textweaver-text",
  "thiserror 2.0.21",
  "zip",
