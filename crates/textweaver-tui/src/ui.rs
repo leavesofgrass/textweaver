@@ -394,13 +394,33 @@ impl Tui {
     }
 
     fn list_key(&mut self, k: KeyEvent) {
-        let Some(list) = self.list.as_mut() else {
+        if self.list.is_none() {
             return;
-        };
+        }
         let page = 10;
         let plain = !k
             .modifiers
             .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT);
+        // Lists that filter as you type (the outline, the citation picker):
+        // characters and Space add to the filter, Backspace removes one.
+        if let Some(filter) = self.app.list_filter().map(str::to_owned) {
+            match k.code {
+                KeyCode::Char(c) if plain && !c.is_control() => {
+                    self.dispatch(Command::FilterList(format!("{filter}{c}")));
+                    return;
+                }
+                KeyCode::Backspace if !filter.is_empty() => {
+                    let mut q = filter;
+                    q.pop();
+                    self.dispatch(Command::FilterList(q));
+                    return;
+                }
+                _ => {}
+            }
+        }
+        let Some(list) = self.list.as_mut() else {
+            return;
+        };
         // Letter keys: an accelerator (s, d, c in the Save, Discard,
         // Cancel list), else the next item starting with that letter.
         if let KeyCode::Char(c) = k.code

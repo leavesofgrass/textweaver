@@ -246,6 +246,27 @@ impl App {
         true
     }
 
+    /// Reads utterances planned elsewhere (from another document, such as
+    /// the rendered text while editing) in place: the cursor does not
+    /// follow, and Stop and Pause work as for any reading. Returns the
+    /// reading's generation, or `None` when there is nothing to read.
+    pub(crate) fn read_planned(
+        &mut self,
+        utterances: Vec<textweaver_core::Utterance>,
+    ) -> Option<ReadingGeneration> {
+        if utterances.is_empty() {
+            return None;
+        }
+        self.stop_speech();
+        let generation = self.speech.read(utterances);
+        self.track.follow(generation);
+        self.playback = Playback::Reading;
+        self.reading = ReadKind::InPlace;
+        self.continue_from = None;
+        self.planned_end = None;
+        Some(generation)
+    }
+
     /// Reads the window starting at `start` continuously and notes where
     /// the next one starts. False when there was nothing left to read.
     fn read_window(&mut self, start: CharPos) -> bool {
@@ -636,7 +657,11 @@ impl App {
                 let Some(r) = source_range else {
                     return false;
                 };
+                // Listening to the rendered text: its positions are in the
+                // rendered document; the highlight follows in the source.
+                let r = self.map_listened(generation, r);
                 self.set_spoken(r);
+                self.note_signal(r);
                 true
             }
             SpeechStatus::Paused {

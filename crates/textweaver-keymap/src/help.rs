@@ -17,10 +17,15 @@ pub struct HelpEntry {
 
 impl HelpEntry {
     /// Keys as text, each with its layer unless global:
-    /// `Alt+. or . (browse)`. "unbound" when there are none.
+    /// `Alt+. or . (browse)`. "command palette" for a palette command
+    /// without keys, "unbound" for any other action without keys.
     pub fn keys_text(&self) -> String {
         if self.bindings.is_empty() {
-            return "unbound".to_owned();
+            return if self.action.is_palette_command() {
+                "command palette".to_owned()
+            } else {
+                "unbound".to_owned()
+            };
         }
         self.bindings
             .iter()
@@ -36,7 +41,11 @@ impl HelpEntry {
     /// Alt period, or period in browse mode."
     pub fn spoken(&self) -> String {
         if self.bindings.is_empty() {
-            return format!("{}: no key.", self.action.help());
+            return if self.action.is_palette_command() {
+                format!("{}: from the command palette.", self.action.help())
+            } else {
+                format!("{}: no key.", self.action.help())
+            };
         }
         let keys: Vec<String> = self
             .bindings
@@ -78,9 +87,13 @@ impl Keymap {
     }
 }
 
-fn cell(bindings: &[Binding]) -> String {
+fn cell(action: ActionId, bindings: &[Binding]) -> String {
     if bindings.is_empty() {
-        return "none".to_owned();
+        return if action.is_palette_command() {
+            "palette".to_owned()
+        } else {
+            "none".to_owned()
+        };
     }
     bindings
         .iter()
@@ -182,8 +195,8 @@ pub fn keyboard_markdown() -> String {
                 out,
                 "| {} | {} | {} | `{}` |",
                 action.help(),
-                cell(&term.bindings_for(action)),
-                cell(&gui.bindings_for(action)),
+                cell(action, &term.bindings_for(action)),
+                cell(action, &gui.bindings_for(action)),
                 action.id()
             );
         }
@@ -198,7 +211,7 @@ pub fn keyboard_markdown() -> String {
          These actions have only single-key shortcuts by default. With single-key shortcuts off, run them from the command palette (F2) or bind a chord in `keymap.toml`.\n\n\
          | Action | Terminal | GUI | Id |\n|---|---|---|---|\n",
     );
-    for &action in ActionId::ALL {
+    for &action in ActionId::ALL.iter().filter(|a| !a.is_palette_command()) {
         let (t, g) = (t_only.contains(&action), g_only.contains(&action));
         if t || g {
             let mark = |b: bool| if b { "palette" } else { "has a chord" };
@@ -211,6 +224,14 @@ pub fn keyboard_markdown() -> String {
                 action.id()
             );
         }
+    }
+    out.push_str(
+        "\n## Commands without keys\n\n\
+         These commands have no keys by default. Run them from the command palette (F2, then type part of the name), or bind a key in `keymap.toml`.\n\n\
+         | Action | Id |\n|---|---|\n",
+    );
+    for &action in ActionId::ALL.iter().filter(|a| a.is_palette_command()) {
+        let _ = writeln!(out, "| {} | `{}` |", action.help(), action.id());
     }
     out
 }

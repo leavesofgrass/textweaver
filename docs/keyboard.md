@@ -84,6 +84,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | RSVP slower | `Alt+Shift+Down` | `Alt+Shift+Down` | `rsvp_slower` |
 | Move the RSVP word to the next place on the screen | `Alt+Shift+O` | `Alt+Shift+O` | `rsvp_position_next` |
 | Say the reading level of the document or the selection | `Alt+Shift+G` | `Alt+Shift+G` | `reading_level` |
+| Listen to the document as it will render, without leaving edit mode | palette | palette | `listen_rendered` |
 
 ## Navigation
 
@@ -95,8 +96,9 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Move to the previous paragraph | `Shift+P` (browse), `[` (browse), `PageUp` (speech cursor) | `Ctrl+Shift+P`, `Shift+P` (browse), `[` (browse), `PageUp` (speech cursor) | `previous_paragraph` |
 | Read from the next heading | `>` (browse) | `Ctrl+H`, `>` (browse) | `next_heading` |
 | Read from the previous heading | `<` (browse) | `Ctrl+Shift+H`, `<` (browse) | `previous_heading` |
-| Move to the next heading without reading | `h` (browse), `}` (browse) | `h` (browse), `}` (browse) | `skip_next_heading` |
-| Move to the previous heading without reading | `{` (browse) | `{` (browse) | `skip_previous_heading` |
+| Move to the next heading without reading | `Alt+H`, `h` (browse), `}` (browse) | `h` (browse), `}` (browse) | `skip_next_heading` |
+| Move to the previous heading without reading | `Alt+Shift+H`, `{` (browse) | `{` (browse) | `skip_previous_heading` |
+| List the headings: type to filter, Enter jumps to one | `Alt+O` | `Alt+O` | `outline` |
 | Move to the next heading at level 1 | `1` (browse) | `1` (browse) | `next_heading_level_1` |
 | Move to the next heading at level 2 | `2` (browse) | `2` (browse) | `next_heading_level_2` |
 | Move to the next heading at level 3 | `3` (browse) | `3` (browse) | `next_heading_level_3` |
@@ -117,6 +119,11 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Move to the previous list item | `Shift+I` (browse) | `Shift+I` (browse) | `previous_list_item` |
 | Move to the next link | `u` (browse) | `u` (browse) | `next_link` |
 | Move to the previous link | `Shift+U` (browse) | `Shift+U` (browse) | `previous_link` |
+| Follow the link at the cursor, or go between a footnote and its note | `Alt+Shift+F` | `Alt+Shift+F` | `follow_link` |
+| In a table, move down a row in the same column | `Ctrl+Alt+Down` | `Ctrl+Alt+Down` | `table_next_row` |
+| In a table, move up a row in the same column | `Ctrl+Alt+Up` | `Ctrl+Alt+Up` | `table_previous_row` |
+| In a table, move to the next cell in the row | `Ctrl+Alt+Right` | `Ctrl+Alt+Right` | `table_next_column` |
+| In a table, move to the previous cell in the row | `Ctrl+Alt+Left` | `Ctrl+Alt+Left` | `table_previous_column` |
 | Move to the next chapter or section | `F11`, `Alt+PageDown` | `Alt+PageDown` | `next_chapter` |
 | Move to the previous chapter or section | `F10`, `Alt+PageUp` | `Alt+PageUp` | `previous_chapter` |
 | Go back to where you were before the last jump | `Alt+Left`, `Shift+H` (browse) | `Alt+Left`, `Shift+H` (browse) | `history_back` |
@@ -159,6 +166,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Quieter | `Shift+F7`, `9` (browse) | `Shift+F7`, `9` (browse) | `volume_down` |
 | Cycle the speed presets (skim, normal, study, slow) | `F8` | `F8` | `cycle_speed_preset` |
 | Choose a voice | `Alt+V` | `Ctrl+Shift+V` | `choose_voice` |
+| Cycle how much textweaver says: low, normal, high | `Alt+Shift+V` | `Alt+Shift+V` | `cycle_verbosity` |
+| Cycle how much punctuation is spoken: none, some, all | `Alt+Shift+N` | `Alt+Shift+N` | `cycle_punctuation` |
 
 ## Search
 
@@ -167,6 +176,9 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Find text in the document | `Ctrl+F`, `/` (browse) | `Ctrl+F`, `/` (browse) | `find` |
 | Find the next match | `F3`, `n` (browse) | `n` (browse) | `find_next` |
 | Find the previous match | `F4`, `Shift+N` (browse) | `Shift+N` (browse) | `find_previous` |
+| Move to the next misspelled word, and spell it | `Alt+M` | `Alt+M` | `next_misspelling` |
+| Move to the previous misspelled word, and spell it | `Alt+Shift+M` | `Alt+Shift+M` | `previous_misspelling` |
+| List suggestions for the misspelled word at the cursor, or add it to your word list | `Alt+J` | `Alt+J` | `spelling_suggestions` |
 
 ## Bookmarks and notes
 
@@ -182,6 +194,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Move to the previous note | `Alt+Up`, `Shift+E` (browse) | `Alt+Up`, `Shift+E` (browse) | `previous_note` |
 | Delete the note or highlight at the cursor | `Delete` (browse) | `Delete` (browse) | `delete_note` |
 | Highlight the selection, or the sentence at the cursor | `y` (browse) | `y` (browse) | `highlight_selection` |
+| Export the notes and highlights as a Markdown study sheet, grouped by heading | palette | palette | `export_study_sheet` |
 
 ## File
 
@@ -194,6 +207,13 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Save under a new name | `Alt+S` | `Ctrl+Shift+S` | `save_as` |
 | Export settings and key overrides to a JSON or TOML file | `Alt+Shift+E` | `Alt+Shift+E` | `export_settings` |
 | Import settings from a JSON or TOML file, after a yes or no | `Alt+Shift+I` | `Alt+Shift+I` | `import_settings` |
+| Start a new document from a template, with a title, author, date, and References heading | palette | palette | `new_from_template` |
+| Export the document as a web page (HTML) next to it | palette | palette | `export_html` |
+| Export the document as a tagged PDF next to it | palette | palette | `export_pdf` |
+| Export the document as a Word file (DOCX) next to it | palette | palette | `export_docx` |
+| Export the document as an EPUB book next to it | palette | palette | `export_epub` |
+| Export the document as braille (BRF) next to it | palette | palette | `export_brf` |
+| Preview the document in the web browser, with math; each save rewrites the preview | palette | palette | `preview_in_browser` |
 | Quit, saving the reading position | `Ctrl+Q`, `q` (browse), `Shift+Q` (browse) | `Ctrl+Q`, `q` (browse), `Shift+Q` (browse) | `quit` |
 
 ## Editing
@@ -224,6 +244,15 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | In a table, move to the next cell and say its column; elsewhere, type a tab | `Tab` (edit) | `Tab` (edit) | `next_table_cell` |
 | In a table, move to the previous cell and say its column | `Shift+Tab` (edit) | `Shift+Tab` (edit) | `previous_table_cell` |
 | Cycle typing echo: characters and words, characters, words, or none | `Shift+F9` | `Shift+F9` | `cycle_typing_echo` |
+| Select all the text | `Ctrl+A` (edit) | `Ctrl+A` (edit) | `select_all` |
+| Delete the word before the cursor | `Alt+Backspace` (edit) | `Ctrl+Backspace` (edit) | `delete_word_before` |
+| Delete the word after the cursor | `Ctrl+Delete` (edit) | `Ctrl+Delete` (edit) | `delete_word_after` |
+| Paste the text last copied or cut in textweaver; the terminal paste works too | `Ctrl+V` (edit) | `Ctrl+V` (edit) | `paste` |
+| Insert a citation: pick a reference, then give a page or other locator | `Alt+C` (edit) | `Alt+C` (edit) | `insert_citation` |
+| Add a reference to your library by DOI or ISBN | `Alt+Shift+D` | `Alt+Shift+D` | `add_reference` |
+| Insert the bibliography of the works cited, at the cursor | palette | palette | `insert_bibliography` |
+| Check the citations: how many there are, and which keys are not in your library | palette | palette | `check_citations` |
+| Import references from a BibTeX, RIS, or CSL-JSON file into your library | palette | palette | `import_references` |
 
 ## View and help
 
@@ -249,8 +278,8 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | Read the selected text | palette | palette | `read_selection` |
 | Read from the next heading | palette | has a chord | `next_heading` |
 | Read from the previous heading | palette | has a chord | `previous_heading` |
-| Move to the next heading without reading | palette | palette | `skip_next_heading` |
-| Move to the previous heading without reading | palette | palette | `skip_previous_heading` |
+| Move to the next heading without reading | has a chord | palette | `skip_next_heading` |
+| Move to the previous heading without reading | has a chord | palette | `skip_previous_heading` |
 | Move to the next heading at level 1 | palette | palette | `next_heading_level_1` |
 | Move to the next heading at level 2 | palette | palette | `next_heading_level_2` |
 | Move to the next heading at level 3 | palette | palette | `next_heading_level_3` |
@@ -285,3 +314,22 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | List notes | palette | has a chord | `list_notes` |
 | Highlight the selection, or the sentence at the cursor | palette | palette | `highlight_selection` |
 | List keyboard shortcuts | palette | has a chord | `keyboard_help` |
+
+## Commands without keys
+
+These commands have no keys by default. Run them from the command palette (F2, then type part of the name), or bind a key in `keymap.toml`.
+
+| Action | Id |
+|---|---|
+| Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
+| Export the notes and highlights as a Markdown study sheet, grouped by heading | `export_study_sheet` |
+| Start a new document from a template, with a title, author, date, and References heading | `new_from_template` |
+| Export the document as a web page (HTML) next to it | `export_html` |
+| Export the document as a tagged PDF next to it | `export_pdf` |
+| Export the document as a Word file (DOCX) next to it | `export_docx` |
+| Export the document as an EPUB book next to it | `export_epub` |
+| Export the document as braille (BRF) next to it | `export_brf` |
+| Preview the document in the web browser, with math; each save rewrites the preview | `preview_in_browser` |
+| Insert the bibliography of the works cited, at the cursor | `insert_bibliography` |
+| Check the citations: how many there are, and which keys are not in your library | `check_citations` |
+| Import references from a BibTeX, RIS, or CSL-JSON file into your library | `import_references` |

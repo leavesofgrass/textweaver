@@ -232,6 +232,9 @@ pub(crate) enum ListKind {
     Library(Vec<PathBuf>),
     /// The speech engine's voices: id and name, in order.
     Voices(Vec<(String, String)>),
+    /// An outline, citation picker, spelling, replace, or template list
+    /// (Agent P2b's `lists` module).
+    Authoring(crate::authoring_state::AuthoringList),
 }
 
 /// The application: the only owner of mutable state.
@@ -297,6 +300,9 @@ pub struct App {
     /// Text copied or cut, waiting for the frontend
     /// ([`App::take_clipboard`]).
     pub(crate) clipboard: Option<String>,
+    /// Authoring and navigation state (structure while editing, outline,
+    /// citations, export, spelling, links; Agent P2b).
+    pub(crate) authoring: crate::authoring_state::Authoring,
 }
 
 impl App {
@@ -354,6 +360,7 @@ impl App {
             pending_list_delete: None,
             voice_list: Vec::new(),
             clipboard: None,
+            authoring: crate::authoring_state::Authoring::default(),
         };
         app.apply_voice_settings();
         app.load_themes();
@@ -385,6 +392,7 @@ impl App {
             || self.pending_import.is_some()
             || self.pending_disk.is_some()
             || self.pending_list_delete.is_some()
+            || self.authoring.question.is_some()
     }
 
     /// Answers a pending confirmation.
@@ -395,6 +403,9 @@ impl App {
         }
         if self.pending_import.is_some() {
             return self.confirm_import(answer);
+        }
+        if self.authoring.question.is_some() {
+            return self.confirm_authoring(answer);
         }
         if let Some((kind, n)) = self.pending_list_delete.clone() {
             return match answer {
@@ -854,6 +865,7 @@ impl App {
             }
             Command::Answer(text) => self.answer(text),
             Command::Choose(n) => self.choose(n),
+            Command::FilterList(query) => self.filter_list(query),
             Command::Resize { width, height } => {
                 self.view.width = width;
                 self.view.height = height;
@@ -875,6 +887,7 @@ impl App {
                     match list {
                         Some(ListKind::Recovery) => self.postpone_recovery(),
                         Some(ListKind::SaveChoice(_)) => self.tell("Still editing."),
+                        Some(ListKind::Authoring(l)) => self.cancel_authoring_list(l),
                         _ => self.note("Cancelled."),
                     }
                 }
@@ -893,16 +906,17 @@ impl App {
     /// moved, so a crash loses little.
     pub fn tick(&mut self, now: Instant) -> Vec<Effect> {
         let rsvp_moved = self.rsvp_tick(now);
+        let authored = self.authoring_tick(now);
         let asked = self.disk_tick(now);
         if !asked.is_empty() {
             return asked;
         }
         if self.edit.is_some() {
             self.autosave_tick(now);
-            return Vec::new();
+            return authored;
         }
         let Some(pos) = self.reading_position() else {
-            return Vec::new();
+            return authored;
         };
         let due = match self.last_position_save {
             None => {
@@ -920,11 +934,11 @@ impl App {
             }
             self.last_position_save = Some((now, pos));
         }
-        if rsvp_moved {
-            vec![Effect::Redraw]
-        } else {
-            Vec::new()
+        let mut effects = authored;
+        if rsvp_moved && effects.is_empty() {
+            effects.push(Effect::Redraw);
         }
+        effects
     }
 
     /// Opens a prompt: switches mode and returns the effect that shows it.
@@ -984,6 +998,10 @@ impl App {
             PromptPurpose::ImportSettings => return self.answer_import_settings(text),
             PromptPurpose::ReplaceFind => return self.answer_replace(text, false),
             PromptPurpose::ReplaceWith => return self.answer_replace(text, true),
+            PromptPurpose::CitationLocator
+            | PromptPurpose::ReferenceIdentifier
+            | PromptPurpose::ImportReferences
+            | PromptPurpose::TemplateTitle => return self.answer_authoring(purpose, text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
                 if let Some(i) = self.pending_item.take() {
@@ -1025,6 +1043,7 @@ impl App {
                     self.select_voice(&id, &name);
                 }
             }
+            Some(ListKind::Authoring(l)) => return self.choose_authoring(l, n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -1059,6 +1078,7 @@ impl App {
             (Some(ListKind::SaveChoice(_)), 's') => Some(0),
             (Some(ListKind::SaveChoice(_)), 'd') => Some(1),
             (Some(ListKind::SaveChoice(_)), 'c') => Some(2),
+            (Some(ListKind::Authoring(l)), c) => crate::lists::accelerator(l, c),
             _ => None,
         }
     }
@@ -1325,6 +1345,35 @@ impl App {
             A::NextTableCell => return self.table_cell(textweaver_core::Direction::Forward),
             A::PreviousTableCell => return self.table_cell(textweaver_core::Direction::Backward),
             A::CycleTypingEcho => self.cycle_typing_echo(),
+            A::ListenRendered
+            | A::Outline
+            | A::FollowLink
+            | A::TableNextRow
+            | A::TablePreviousRow
+            | A::TableNextColumn
+            | A::TablePreviousColumn
+            | A::CycleVerbosity
+            | A::CyclePunctuation
+            | A::NextMisspelling
+            | A::PreviousMisspelling
+            | A::SpellingSuggestions
+            | A::ExportStudySheet
+            | A::NewFromTemplate
+            | A::ExportHtml
+            | A::ExportPdf
+            | A::ExportDocx
+            | A::ExportEpub
+            | A::ExportBrf
+            | A::PreviewInBrowser
+            | A::SelectAll
+            | A::DeleteWordBefore
+            | A::DeleteWordAfter
+            | A::Paste
+            | A::InsertCitation
+            | A::AddReference
+            | A::InsertBibliography
+            | A::CheckCitations
+            | A::ImportReferences => return self.authoring_action(a),
         }
         vec![Effect::Redraw]
     }

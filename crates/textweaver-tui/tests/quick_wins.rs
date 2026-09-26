@@ -141,7 +141,9 @@ fn key_hints_show_only_keys_that_work() {
     let off = tui.hints(200);
     assert!(off.contains("Alt+P play"), "{off}");
     assert!(off.contains("Alt+. sentence"), "{off}");
-    assert!(!off.contains("heading"), "{off}");
+    // Headings have a chord in the terminal since Phase 2 (Alt+H).
+    assert!(off.contains("Alt+H heading"), "{off}");
+    assert!(!off.contains("h heading"), "{off}");
     assert!(!off.contains("Space"), "{off}");
     // Edit mode shows edit keys, not browse keys.
     tui.handle_key(ctrl('e'));

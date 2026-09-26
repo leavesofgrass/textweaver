@@ -4318,6 +4318,7 @@ name = "textweaver-app"
 version = "0.1.0-alpha.3"
 dependencies = [
  "log",
+ "pulldown-cmark",
  "ropey",
  "serde",
  "serde_json",
@@ -4325,18 +4326,22 @@ dependencies = [
  "textweaver-a11y",
  "textweaver-aids",
  "textweaver-apple",
+ "textweaver-cite",
+ "textweaver-convert",
  "textweaver-core",
  "textweaver-dectalk",
  "textweaver-eci",
  "textweaver-editor",
  "textweaver-formats",
  "textweaver-keymap",
+ "textweaver-render",
  "textweaver-sapi",
  "textweaver-speech",
  "textweaver-store",
  "textweaver-text",
  "textweaver-theme",
  "thiserror 2.0.21",
+ "windows",
 ]
 
 [[package]]

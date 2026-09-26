@@ -503,8 +503,10 @@ mod tests {
 
     #[test]
     fn every_action_has_a_default() {
+        // Palette commands (exports, templates) have no default keys by
+        // design; every other action has one on each frontend.
         for (platform, frontend, map) in all_maps() {
-            for a in ActionId::ALL {
+            for a in ActionId::ALL.iter().filter(|a| !a.is_palette_command()) {
                 assert!(
                     !map.chords_for(*a).is_empty(),
                     "{a:?} unbound on {platform:?} {frontend:?}"
@@ -518,7 +520,7 @@ mod tests {
         // Each action has a chord that actually triggers it in at least one
         // mode (not fully shadowed).
         for (platform, frontend, map) in all_maps() {
-            for a in ActionId::ALL {
+            for a in ActionId::ALL.iter().filter(|a| !a.is_palette_command()) {
                 let reachable = Layer::ALL
                     .iter()
                     .any(|m| !map.chords_in_mode(*a, *m).is_empty());
@@ -753,7 +755,10 @@ mod tests {
             for a in ActionId::in_category(Category::Editing) {
                 if matches!(
                     a,
-                    ActionId::ToggleEditMode | ActionId::Copy | ActionId::CycleTypingEcho
+                    ActionId::ToggleEditMode
+                        | ActionId::Copy
+                        | ActionId::CycleTypingEcho
+                        | ActionId::AddReference
                 ) {
                     continue;
                 }
@@ -894,6 +899,91 @@ mod tests {
                 map.lookup(&k("Alt+Shift+Y"), Layer::Edit),
                 Some(ActionId::SayPosition)
             );
+        }
+    }
+
+    /// Phase 2 keys (Agent P2b): heading chords reach edit mode in the
+    /// terminal, the outline and the table, link, spelling, and settings
+    /// chords work in every mode, the editing basics are the standard
+    /// chords, and palette commands have no keys but are listed.
+    #[test]
+    fn phase2_authoring_keys() {
+        for (platform, frontend, map) in all_maps() {
+            let ctrl = if platform == Platform::MacOs && frontend == Frontend::Gui {
+                "Cmd"
+            } else {
+                "Ctrl"
+            };
+            let c = |s: &str| k(&s.replace("Ctrl", ctrl));
+            for mode in [Layer::Browse, Layer::SpeechCursor, Layer::Edit] {
+                for (chord, action) in [
+                    ("Alt+O", ActionId::Outline),
+                    ("Alt+Shift+F", ActionId::FollowLink),
+                    ("Ctrl+Alt+Down", ActionId::TableNextRow),
+                    ("Ctrl+Alt+Up", ActionId::TablePreviousRow),
+                    ("Ctrl+Alt+Right", ActionId::TableNextColumn),
+                    ("Ctrl+Alt+Left", ActionId::TablePreviousColumn),
+                    ("Alt+M", ActionId::NextMisspelling),
+                    ("Alt+Shift+M", ActionId::PreviousMisspelling),
+                    ("Alt+J", ActionId::SpellingSuggestions),
+                    ("Alt+Shift+V", ActionId::CycleVerbosity),
+                    ("Alt+Shift+N", ActionId::CyclePunctuation),
+                    ("Alt+Shift+D", ActionId::AddReference),
+                ] {
+                    assert_eq!(
+                        map.lookup(&c(chord), mode),
+                        Some(action),
+                        "{chord} in {mode:?} on {platform:?} {frontend:?}"
+                    );
+                }
+            }
+            for (chord, action) in [
+                ("Ctrl+A", ActionId::SelectAll),
+                ("Ctrl+V", ActionId::Paste),
+                ("Ctrl+Delete", ActionId::DeleteWordAfter),
+                ("Alt+C", ActionId::InsertCitation),
+            ] {
+                assert_eq!(map.lookup(&c(chord), Layer::Edit), Some(action), "{chord}");
+                assert_eq!(map.lookup(&c(chord), Layer::Browse), None, "{chord}");
+            }
+            let word_back = if frontend == Frontend::Terminal {
+                k("Alt+Backspace")
+            } else {
+                c("Ctrl+Backspace")
+            };
+            assert_eq!(
+                map.lookup(&word_back, Layer::Edit),
+                Some(ActionId::DeleteWordBefore)
+            );
+            if frontend == Frontend::Terminal {
+                assert_eq!(
+                    map.lookup(&k("Alt+H"), Layer::Edit),
+                    Some(ActionId::SkipNextHeading)
+                );
+                assert_eq!(
+                    map.lookup(&k("Alt+Shift+H"), Layer::Edit),
+                    Some(ActionId::SkipPreviousHeading)
+                );
+            }
+            for a in [
+                ActionId::ExportHtml,
+                ActionId::ExportPdf,
+                ActionId::ExportDocx,
+                ActionId::ExportEpub,
+                ActionId::ExportBrf,
+                ActionId::PreviewInBrowser,
+                ActionId::ListenRendered,
+                ActionId::InsertBibliography,
+                ActionId::CheckCitations,
+                ActionId::ImportReferences,
+                ActionId::ExportStudySheet,
+                ActionId::NewFromTemplate,
+            ] {
+                assert!(a.is_palette_command(), "{a:?}");
+                assert!(map.chords_for(a).is_empty(), "{a:?}");
+                assert!(map.palette_only().contains(&a), "{a:?}");
+            }
+            assert!(!ActionId::Outline.is_palette_command());
         }
     }
 
