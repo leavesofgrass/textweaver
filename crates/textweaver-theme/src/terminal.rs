@@ -193,15 +193,30 @@ pub fn xterm_rgb(index: u8) -> Rgb {
 /// The index in 16–255 nearest to `target` whose contrast against
 /// `against` is at least `min`; the nearest overall when none is.
 fn nearest_256(target: Rgb, against: Option<Rgb>, min: f64) -> u8 {
+    // OKLab and luminance of indexes 16–255, computed once per process.
+    static TABLE: std::sync::OnceLock<Vec<([f64; 3], f64)>> = std::sync::OnceLock::new();
+    let table = TABLE.get_or_init(|| {
+        (16..=255u8)
+            .map(|i| {
+                let c = xterm_rgb(i);
+                (c.to_oklab(), c.relative_luminance())
+            })
+            .collect()
+    });
+    let [tl, ta, tb] = target.to_oklab();
+    let against_l = against.map(Rgb::relative_luminance);
     let mut best: Option<(f64, u8)> = None;
     let mut nearest: (f64, u8) = (f64::MAX, 16);
-    for i in 16..=255u8 {
-        let c = xterm_rgb(i);
-        let d = c.distance(target);
+    for (i, &([l, a, b], lum)) in (16..=255u8).zip(table.iter()) {
+        // Squared distance orders the same as distance.
+        let d = (l - tl).powi(2) + (a - ta).powi(2) + (b - tb).powi(2);
         if d < nearest.0 {
             nearest = (d, i);
         }
-        let ok = against.is_none_or(|a| contrast_ratio(c, a) >= min);
+        let ok = against_l.is_none_or(|al| {
+            let (hi, lo) = if lum >= al { (lum, al) } else { (al, lum) };
+            (hi + 0.05) / (lo + 0.05) >= min
+        });
         if ok && best.is_none_or(|(bd, _)| d < bd) {
             best = Some((d, i));
         }
