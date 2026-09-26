@@ -521,3 +521,217 @@ Jon asked for install scripts for Linux (any distribution: he uses Debian, Arch,
 ### Agent P2a — Reliability (Phase 2)
 
 **Status:** done on `phase2/a-reliability` (Saturday, September 26, 2026), merged with `main` at 0c7b694; awaiting integration. All ten items, each with tests. One background writer (`app/src/writer.rs`, `writes.rs`) does saves (a rope clone handed over; the file version is checked there, so saving over outside changes still asks), autosave snapshots in order with their locks, positions, bookmarks, notes, sidecars, the bookshelf, and the two-second disk check; quitting waits at most 10 s and says "Still saving" after 300 ms; JSON-RPC requests finish their writes before answering. Voices are listed once into a `VoiceCache` (SAPI in the background; `select_voice` no longer lists tokens); Alt+V says "still loading" and opens when they arrive. ECI, SAPI, and DECtalk restarts and the first 32-bit SAPI voice start inside `poll` (`enginehost::HostStart`), Stop and Pause work meanwhile; the audio device opens on its own thread. Restart Speech (Shift+F8, new action) and one automatic restart after the speech thread dies (`App::set_speech_starter`, set by the TUI setup). Probes are cached per process (`register_cached`). Positions, bookmarks, notes, and highlights are found again after outside edits (`app/src/relocate.rs`; state keeps a text stamp; not-found items are marked), announced once. Backspace and Delete remove graphemes; undo capped by `[editing] undo_steps` and `undo_memory_mb`. Find streams over the rope and keeps 10,000 matches around the cursor; edit-mode find folds without a string per character and P2b's replace searches once per step. speechd makes no round trips after connecting; DECtalk synthesizes a sentence at a time. The library scans on a thread with a count. Bench, 10 MB (UI thread, before to after): autosave 41 to 0.6 ms (snapshot written off-thread in 34 ms), Ctrl+S 75 to 0.01 ms, position save 3.8 to 0.02 ms, find "the" 15 to 5 ms, find a rare word 12 to 2 ms, edit-mode replace count 1,035 to 69 ms and replace all 2,411 to 137 ms. Left: P2b's `on_saved` misspelling count runs on the input thread when a save is reported (about 0.6 s on 10 MB); first engine starts still wait in `new`; DECtalk does not stream within a sentence. Tests: native Windows 1,854 passed; Docker with all features 1,861 passed; the new timing tests ran 40 times each (0 failures).
+
+## Wave 3 (planned 2026-09-26; starts after Agent P2e merges and Docker is restarted)
+
+Jon asked to go "full steam ahead" with six agents.
+
+**Setup:** each agent works in its own worktree and branch, `wave3/<letter>-<name>`, from `main`. Each reads the shared preamble above, `docs/roadmap.md`, `docs/architecture.md`, and the ADRs for its area.
+
+**Checks, natively on Windows:**
+- fmt;
+- clippy with `-D warnings`;
+- tests with `--no-fail-fast`;
+- rustdoc with `-D warnings`;
+- `cargo xtask keyboard --check` and `cargo xtask deps --check`;
+- `python tools/check_links.py` and `python tools/gen_site_data.py --check`.
+
+Also run the Docker all-features clippy and tests once, at the end (Jon's memory rule).
+
+**Rules for new code:**
+- Route every new announcement through `textweaver_a11y::route`.
+- Make every save through the writer thread.
+- New keys must pass the keymap's conflict and WCAG 2.1.4 tests, and follow the NVDA and JAWS-style defaults (Agent P2e).
+
+**Reporting:** plain, short sentences, with headings and lists and no tables. Add a status line under your own heading here.
+
+Areas are split to keep merges small.
+
+**Spirit of Wave 3 (Jon, 2026-09-26).** textweaver is an experimental alpha, for Jon's own use first. The aim is to push the envelope with Rust, not to be conservative.
+- Prefer pure-Rust, in-process solutions over subprocesses and C or C++ dependencies whenever they are viable.
+- Accept alpha crates and API churn.
+- Keep the tests and CI gates: they are what let us move fast.
+- Record each bold choice, and its fallback, in an ADR.
+
+### Agent W3a — App core for the GUI (Phase 3, first half)
+
+**Owns:** `crates/textweaver-app` (new modules), and the list and prompt code moved out of `crates/textweaver-tui`.
+
+1. **Document window model.**
+   - It holds about 500,000 UTF-16 units at a time, aligned to paragraphs.
+   - It extends while reading and recentres on jumps.
+   - It maps control offsets to `CharPos` through `DisplayIndex`.
+   - The TUI keeps its own slicing but shares the model where that fits.
+2. **List and prompt state in the app.** Move the selected item, type-to-filter, the "k of n" announcements, and prompt editing out of `tui/src/ui.rs` and `widgets.rs`. The TUI, the GUI dialogs, and JSON-RPC then share one implementation.
+3. **A waker.** A callback or channel, so a frontend reacts to speech events instead of polling every 30 ms.
+4. **`Command::ReplaceRange`**, for edits made in a native text control.
+5. **Settings schema,** generated from the store: labels, help, ranges, steps, and choices.
+   - It drives a new TUI settings screen (F10 or the palette), the GUI dialog, and RPC.
+6. **Work off the input thread.**
+   - Open documents in the background, with progress and cancel.
+   - Move settings saves to the writer thread.
+   - Move P2b's misspelling count on save (0.6 s on 10 MB).
+   - Make an engine's first start non-blocking, not just restarts.
+
+### Agent W3b — The Xilem GUI (Phase 3; Jon chose Xilem on 2026-09-26)
+
+Jon chose Xilem, from Linebender, for the GUI on every platform, to "keep as much of it Rust as I can". The stack is:
+- Xilem and Masonry for the widgets;
+- Vello for rendering;
+- Parley for text layout;
+- AccessKit for accessibility;
+- winit for windows.
+
+The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It is removed only after the Xilem GUI passes the same accessibility checks.
+
+**Owns:** a new crate, `crates/textweaver-xilem` (binary `textweaver-gui`, once it replaces the spike), plus GUI packaging in `xtask` and the workflows.
+
+**Read `docs/research/xilem-gui.md` first.** Key points:
+- Write your own `DocumentView` widget against Masonry and AccessKit. Masonry's read-only text can't take focus, and Parley's editor has a single style.
+- Patch the workspace to `accesskit_winit` 0.34 or later, so Orca detects the app.
+- Build a live-region announcer node, using a fresh node for each repeat.
+- Use windowing with stable run IDs.
+- Depend on Masonry more than on Xilem.
+- Keep wxDragon working on Windows until the UI Automation report passes.
+- Propose upstream PRs for the gaps.
+- **Visual starting point (Jon, 2026-09-26):** Jon likes the dark look of Xilem's `to_do_mvc` example (github.com/linebender/xilem, the `examples` folder). Use its layout, spacing, and dark styling as the base for the main window and dialogs.
+  - Map textweaver's Galaxy theme onto it. Not every theme needs to meet WCAG AA (Jon, 2026-09-26), but Galaxy, Galaxy Light, and the high-contrast themes must.
+  - Keep the same structure for Galaxy Light and high contrast.
+
+1. **ADR-0023, "Xilem GUI".** It supersedes ADR-0014 and records:
+   - the choice;
+   - the Xilem version pinned;
+   - the accessibility bar;
+   - the fallback plan;
+   - what we may need to contribute upstream to AccessKit or Masonry.
+2. **The main window.**
+   - A document view built on W3a's window model, with the caret following speech, the selection, and highlight attributes, all exposed through AccessKit. Read-only first, then editable.
+   - Announcements through AccessKit live regions.
+   - Labelled play and stop buttons, a status bar, and a menu, or a command palette where menus are missing.
+   - Keyboard-only operation, using the keymap's GUI layer with native caret keys.
+3. **Dialogs.** Find, go to, bookmarks, notes, voices, library, command palette, help, and a settings dialog from W3a's schema. Build them on the app's list and prompt model.
+4. **Themes and fonts.**
+   - Themes through `Theme::rgb_table`, including Galaxy.
+   - A system or high-contrast theme.
+   - The bundled fonts, loaded straight into Parley, so no OS registration is needed.
+   - The font chooser, ported from the wx spike.
+5. **Accessibility checks on every OS.**
+   - Port the UI Automation report tool (`crates/textweaver-gui/tools/uia-report.ps1`) to the new window. It checks names, roles, text, caret movement while reading, and announcements.
+   - Add an AT-SPI tree dump (pyatspi) on Linux under Xvfb.
+   - Add a macOS smoke test.
+   - Run everything with `--background`, and never steal focus.
+   - Record where AccessKit falls short, especially text-range support in UI Automation, and propose fixes or upstream contributions.
+6. **Large documents.** A 10-million-character document opens in under 300 ms, and the highlight moves in under 30 ms per word. Measure both.
+7. **Packaging.** The GUI binary goes into the Windows zip, a macOS `.app`, and a Linux AppImage of its own. There are no GTK or wxWidgets dependencies; winit and Vello only need the system's graphics stack.
+
+### Agent W3c — Architecture consolidation
+
+**Owns:** crate manifests and module moves across `store`, `aids`, `vault`, `fonts`, and a new `textweaver-engines`. Keep app edits to imports and registry wiring, to avoid conflicts with W3a.
+
+1. **Take `store` off `aids`.**
+   - The settings types move into `store`, and `aids` converts them.
+   - `cargo xtask deps --check` then allows no exception for store.
+2. **One notes model.**
+   - `textweaver-vault` uses the store's `Note` and `Highlight` types directly.
+   - Remove the app's `app_notes` migration shim, which is one release old.
+3. **Font resolution in one place:** `textweaver-fonts`, used by aids, the writers, and the GUI.
+4. **A `textweaver-engines` crate** for the backend registry and engine features.
+   - The TUI, CLI, export, and GUI share it.
+   - `app` no longer depends on each engine crate directly.
+5. **Make in-reader export, preview, and citations an app feature.**
+   - It is on by default and in releases.
+   - `cargo xtask deps --check` refuses the edge again when the feature is off.
+6. **Split `docs/`.**
+   - User guides stay where they are.
+   - `docs/dev/` gets architecture, building, testing, releasing, and Docker.
+   - `docs/adr/` gets a README index with statuses.
+   - `docs/history/` gets plan, tasks, audits, and star-parity.
+   - Fix every link, and update `xtask dist`, the site generator, and the link checker.
+
+### Agent W3d — Formats for students (Phase 4)
+
+**Owns:** `crates/textweaver-formats`, and a new `textweaver-ocr` crate if needed.
+
+1. **OCR for scanned PDFs and images.**
+   - **Read `docs/research/pure-rust-wave3.md` first.**
+   - Use the pure-Rust `ocrs` engine (0.13.1, on rten 0.26) in-process first, running only on pages with no text layer.
+     - Render pages with `hayro` 0.7.1. Before rendering, try pulling the page's single scanned image out with lopdf.
+     - ocrs reads only ASCII plus the euro sign, so route accented or non-English text to the fallback. Also evaluate the PaddleOCR PP-OCRv5 Latin models through rten.
+     - The model files download only after the user confirms (12.2 MB, CC BY-SA 4.0, checked by SHA-256). Credit them in the notices.
+   - Keep a Tesseract subprocess as a fallback for languages ocrs lacks, selected with the `ocr_lang` setting.
+   - Detect Tesseract on PATH (the installers offer it). Measure the quality of both engines on a few test pages.
+   - Show progress and allow cancel.
+   - Announce clearly when Tesseract is missing.
+2. **DAISY 3 / DTBook and DAISY zips** (Bookshare), in spine order, with NCX navigation.
+3. **Archives.**
+   - ZIP and TAR, with 7z optional.
+   - Opening one lists its readable files.
+   - `book.zip!inner.pdf` opens a member, and notes and positions are keyed by that form.
+4. **Open a web page by URL.** Fetch it, detect the encoding, and read it as HTML. For a PDF, save it to the cache and open it.
+5. **PPTX.** Slide titles become headings, speaker notes follow each slide, and images use their alt text.
+6. **Spreadsheets.** XLSX and CSV/TSV become tables, using `calamine` if its licence and size are acceptable.
+7. **Hostile-input limits and fuzz targets** for every new loader, following P1d's patterns.
+
+### Agent W3e — Language and study aids (Phase 4)
+
+**Owns:** a new `textweaver-lexicon` crate, plus the app wiring for its actions and store settings.
+
+1. **Define word, offline.**
+   - Look up the user's own glossary first, then **Open English WordNet 2025** (CC BY 4.0; Princeton WordNet 3.1 is the alternative), then CMUdict pronunciations (BSD). See `docs/research/pure-rust-wave3.md`.
+   - Use `fst` plus `ruzstd` for the compact data file, and add a "morphy" step that reduces inflected forms.
+   - **Jon approved on 2026-09-26** downloading Open English WordNet 2025 (the WNDB zip) and CMUdict, from their official GitHub releases only, for the one-time data build. Record the SHA-256 sums and add the licences to the notices.
+   - Build a compact derived data file with a script in `tools/`.
+   - Record licences and SHA-256 sums in `third_party/`, and add them to the notices.
+   - Ask the orchestrator before downloading the source data.
+   - A list shows definitions, synonyms, and pronunciation. Open it for the word at the cursor with a chord such as Alt+Shift+W, or another that fits.
+2. **Settings profiles.**
+   - Named sets of voice, rate, theme, font, spacing, highlight, and access-mode settings.
+   - Switch, save, rename, delete, import, and export them.
+   - Build on `tw settings`.
+3. **Reading statistics.**
+   - Time read, furthest point, sessions per document, and a "most read" list.
+   - Store them in state, with an opt-out.
+   - Add `tw stats`.
+4. **Scaffolding for interface translations.**
+   - A message-catalog mechanism for spoken and displayed strings: fluent, or a small in-crate catalog (justify the choice).
+   - English complete, plus a pseudo-locale to test coverage and a right-to-left check.
+   - Actual translations come later.
+
+### Agent W3f — Voices and speech (Phase 4)
+
+**Owns:** `crates/textweaver-speech` (new backends), a new `textweaver-piper` crate, and the voice manager in the app.
+
+1. **Piper neural voices.**
+   - **Read `docs/research/pure-rust-wave3.md` first.**
+   - Run the Piper voice models in-process with **rten** 0.26, the pure-Rust ONNX runtime, following `rten-examples/src/piper.rs`. tract and candle cannot run the VITS voice graphs yet.
+   - Phonemize with our libespeak-ng loader, falling back to the pure-Rust `espeak-ng` crate when the library is missing.
+   - Get word timing from the `w_ceil` duration tensor.
+   - Measure the real-time factor and the time to first audio.
+   - Show each voice's licence (from its `MODEL_CARD`) before downloading it, and never bundle non-commercial voices.
+   - Keep a `piper` subprocess only as a fallback.
+   - Word timing comes from Piper if it reports it, otherwise it is estimated. `tw backends` says which.
+   - A voice catalog lists language, quality, size, and licence.
+   - A voice is downloaded only after the user confirms, with a SHA-256 check, into the data folder.
+2. **Voice manager.**
+   - Every voice from every engine, filterable by language and engine.
+   - Preview, favourites, download (Piper), and remove.
+   - Build it in the terminal on the app's list model (W3a), and in the GUI later.
+3. **In-process dictation.** Move Whisper dictation into the process with **rten** (the ONNX int8 models from onnx-community, following `rten-examples/src/whisper.rs`). The research found rten purer than candle, which builds a C library.
+   - Jon approved rten over candle on 2026-09-26. Record the switch from candle in an ADR.
+   - Capture audio with rodio's `recording` feature, resample with `rubato`, and detect speech with `earshot`.
+   - Keep candle behind a feature, and the whisper.cpp subprocess as the fallback.
+   - Measure latency on the CPU with `base.en`.
+4. **Rate and pitch per voice.** Remember them for each voice, as screen readers do.
+5. **Real-engine listening checklist.**
+   - Add steps to `docs/releasing.md` for Jon to hear Eloquence, SAPI, and Piper before each release.
+   - Add `cargo xtask` helpers that write sample WAV files to listen to.
+   - Never play audio in tests.
+
+### After Wave 3
+
+- Jon's NVDA and JAWS listening session for the Xilem GUI.
+- The GUI's edit mode and reading aids.
+- VoiceOver and Orca testing.
+- The aarch64 AppImage, on GitHub's arm64 runners.
+- Signing, when funding allows.
+- Release `0.1.0-alpha.4` or `beta.1` when Jon says so.

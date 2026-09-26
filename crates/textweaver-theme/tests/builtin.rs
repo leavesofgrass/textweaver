@@ -30,9 +30,14 @@ fn shipped_files_match_the_generator() {
 }
 
 #[test]
-fn every_built_in_theme_passes_every_check() {
+fn the_required_themes_pass_every_check() {
+    // Jon's policy: only Galaxy, Galaxy Light, and the high-contrast themes
+    // must meet WCAG AA; the others keep Star's colors and are labelled.
     let mut failures = Vec::new();
-    for t in builtin::all() {
+    for t in builtin::all()
+        .iter()
+        .filter(|t| star::must_meet_aa(t.name()))
+    {
         let r = check(t);
         assert!(r.checks.len() >= 40, "{}", t.name());
         if !r.passed() {
@@ -213,4 +218,37 @@ fn galaxy_is_the_default_and_faithful_to_star() {
     let gl = builtin::get("galaxy-light").unwrap();
     assert!(check(gl).passed());
     assert_eq!(gl.meta.counterpart.as_deref(), Some("galaxy"));
+}
+
+#[test]
+fn themes_outside_the_required_set_keep_star_colors_exactly() {
+    for p in star::PALETTES
+        .iter()
+        .filter(|p| !star::must_meet_aa(p.name))
+    {
+        let (_, adj) = star::port(p).unwrap();
+        let explicit: Vec<_> = adj
+            .iter()
+            .filter(|a| {
+                [
+                    "colors.background",
+                    "colors.text",
+                    "colors.heading1",
+                    "colors.heading2",
+                    "colors.heading3",
+                    "colors.heading4",
+                    "colors.link",
+                    "colors.code",
+                    "colors.code_background",
+                    "colors.dim_text",
+                    "colors.error",
+                ]
+                .contains(&a.key.as_str())
+            })
+            .collect();
+        assert!(explicit.is_empty(), "{}: {explicit:?}", p.name);
+        let t = builtin::get(p.name).unwrap();
+        assert_eq!(t.color(ColorRole::DimText), p.muted, "{}", p.name);
+        assert_eq!(t.color(ColorRole::Text), p.fg, "{}", p.name);
+    }
 }
