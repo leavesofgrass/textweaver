@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use serde_json::{Value, json};
 use textweaver_core::Unit;
-use textweaver_formats::{LoadOptions, Registry, Source};
+use textweaver_formats::{FootnoteMode, LoadOptions, Registry, Source};
 use textweaver_text::{Document, NarrationPolicy, plan, segments};
 
 fn fixture(name: &str) -> PathBuf {
@@ -80,7 +80,7 @@ fn sample_md() {
 fn sample_md_inline_footnotes_skip_code() {
     let options = LoadOptions {
         skip_code: true,
-        footnotes_inline: true,
+        footnotes: FootnoteMode::Inline,
     };
     let doc = load("sample.md", &options);
     insta::assert_json_snapshot!("sample_md_inline_skip_document", view(&doc));
@@ -114,5 +114,87 @@ fn headings_list_items_and_rows_are_lines() {
             lines.iter().any(|l| l == expected),
             "missing line {expected:?}"
         );
+    }
+}
+
+#[test]
+fn sample_epub() {
+    let doc = load("a/sample.epub", &LoadOptions::default());
+    insta::assert_json_snapshot!("a_sample_epub_document", view(&doc));
+    insta::assert_json_snapshot!("a_sample_epub_narration", narration(&doc));
+}
+
+#[test]
+fn pandoc_epub() {
+    let doc = load("a/pandoc.epub", &LoadOptions::default());
+    insta::assert_json_snapshot!("a_pandoc_epub_document", view(&doc));
+}
+
+#[test]
+fn sample_docx() {
+    let doc = load("a/sample.docx", &LoadOptions::default());
+    insta::assert_json_snapshot!("a_sample_docx_document", view(&doc));
+    insta::assert_json_snapshot!("a_sample_docx_narration", narration(&doc));
+    let inline = load(
+        "a/sample.docx",
+        &LoadOptions {
+            skip_code: false,
+            footnotes: FootnoteMode::Inline,
+        },
+    );
+    let text = inline.text().to_string();
+    assert!(text.contains("p.m. (footnote: The footnote text lives here.) It ends"));
+    assert!(!text.contains("Footnotes"));
+}
+
+#[test]
+fn pandoc_docx() {
+    let doc = load("a/pandoc.docx", &LoadOptions::default());
+    insta::assert_json_snapshot!("a_pandoc_docx_document", view(&doc));
+    let skipped = load(
+        "a/pandoc.docx",
+        &LoadOptions {
+            skip_code: true,
+            footnotes: FootnoteMode::Skip,
+        },
+    );
+    let text = skipped.text().to_string();
+    assert!(!text.contains("println"));
+    assert!(!text.contains("[1]"));
+}
+
+/// Load time of every fixture (fastest of five, from memory); run with
+/// `cargo test --release -p textweaver-formats --test fixtures -- --ignored --nocapture`.
+#[test]
+#[ignore = "benchmark"]
+fn fixture_load_times() {
+    let registry = Registry::with_builtins();
+    for name in [
+        "sample.txt",
+        "sample.md",
+        "sample.html",
+        "a/sample.epub",
+        "a/pandoc.epub",
+        "a/sample.docx",
+        "a/pandoc.docx",
+    ] {
+        let path = fixture(name);
+        let data = std::fs::read(&path).expect("readable");
+        let hint = path
+            .extension()
+            .map(|e| e.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let source = Source::Bytes { data, hint };
+        let mut best = std::time::Duration::MAX;
+        let mut chars = 0;
+        for _ in 0..5 {
+            let started = std::time::Instant::now();
+            let doc = registry
+                .load(&source, &LoadOptions::default())
+                .expect("loads");
+            best = best.min(started.elapsed());
+            chars = doc.len_chars();
+        }
+        eprintln!("{name}: {chars} chars, {best:?}");
     }
 }

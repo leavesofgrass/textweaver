@@ -8,10 +8,13 @@
 
 use textweaver_text::Document;
 
-use crate::{LoadError, LoadOptions, Loader, Source, meta_for, source_text, title_from_path};
+use crate::{
+    LoadError, LoadOptions, Loader, Source, decode_source, meta_for, note_encoding, title_from_path,
+};
 
-/// Loads UTF-8 text (lossy for invalid bytes); a leading BOM is dropped and
-/// line endings become `\n`. The title is the file name.
+/// Loads text in UTF-8, UTF-16 (with a BOM), or Windows-1252 (see
+/// [`crate::encoding`]); a leading BOM is dropped and line endings become
+/// `\n`. The title is the file name.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TextLoader;
 
@@ -25,10 +28,11 @@ impl Loader for TextLoader {
     }
 
     fn load(&self, source: &Source, _options: &LoadOptions) -> Result<Document, LoadError> {
-        let text = source_text(source)?;
-        let mut doc = Document::from_plain_text(&text);
+        let decoded = decode_source(source, None)?;
+        let mut doc = Document::from_plain_text(&decoded.text);
         doc.meta = meta_for(source, self.id());
         doc.meta.title = title_from_path(source);
+        note_encoding(&mut doc.meta, &decoded);
         Ok(doc)
     }
 }
@@ -52,12 +56,22 @@ mod tests {
     }
 
     #[test]
-    fn invalid_utf8_is_replaced_not_an_error() {
+    fn non_utf8_text_is_windows_1252() {
         let src = Source::Bytes {
-            data: vec![b'a', 0xff, b'b'],
+            data: b"caf\xe9 \x93quoted\x94".to_vec(),
             hint: "txt".into(),
         };
         let doc = TextLoader.load(&src, &LoadOptions::default()).unwrap();
-        assert_eq!(doc.text().to_string(), "a\u{fffd}b");
+        assert_eq!(doc.text().to_string(), "café \u{201c}quoted\u{201d}");
+        assert_eq!(
+            doc.meta.properties.get("encoding").map(String::as_str),
+            Some("windows-1252")
+        );
+        let utf16 = Source::Bytes {
+            data: b"\xfe\xff\x00h\x00i".to_vec(),
+            hint: "txt".into(),
+        };
+        let doc = TextLoader.load(&utf16, &LoadOptions::default()).unwrap();
+        assert_eq!(doc.text().to_string(), "hi");
     }
 }

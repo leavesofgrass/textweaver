@@ -10,10 +10,13 @@ authors.workspace = true
 publish.workspace = true
 
 [features]
-default = []
-# Wave 2: PDF and the long tail via paperback-core (pdfium, mathcat).
+default = ["pdf"]
+# PDF loader (pure Rust, on lopdf; ADR-0010). On by default.
+pdf = ["dep:lopdf"]
+# Reserved: paperback-core (pdfium, mathcat) is not on crates.io, so this
+# feature enables nothing (ADR-0010).
 paperback = []
-# Wave 2: pandoc subprocess loader.
+# Pandoc subprocess loader for the long tail (odt, rtf, rst, org, latex, ...).
 pandoc = []
 
 [dependencies]
@@ -26,6 +29,10 @@ ropey.workspace = true
 pulldown-cmark.workspace = true
 scraper.workspace = true
 toml.workspace = true
+encoding_rs.workspace = true
+zip.workspace = true
+roxmltree.workspace = true
+lopdf = { workspace = true, optional = true }
 
 [dev-dependencies]
 insta.workspace = true

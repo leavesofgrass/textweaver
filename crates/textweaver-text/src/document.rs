@@ -95,6 +95,8 @@ pub struct Document {
     markers: Vec<Marker>,
     display: OnceCell<DisplayIndex>,
     tables: OnceCell<MarkerTables>,
+    /// Sorted numbers of the blank (whitespace-only) lines.
+    blank_lines: OnceCell<Vec<usize>>,
 }
 
 /// The serialized shape of a [`Document`].
@@ -145,6 +147,7 @@ impl Document {
             markers,
             display: OnceCell::new(),
             tables: OnceCell::new(),
+            blank_lines: OnceCell::new(),
         }
     }
 
@@ -267,11 +270,42 @@ impl Document {
 
     /// True when line `line` holds only whitespace (or nothing).
     pub fn line_is_blank(&self, line: usize) -> bool {
-        let r = self.line_range(line);
-        self.text
-            .slice(r.to_range())
-            .chars()
-            .all(char::is_whitespace)
+        if line >= self.line_count() {
+            return true;
+        }
+        self.blank_lines().binary_search(&line).is_ok()
+    }
+
+    /// The sorted numbers of the blank (whitespace-only) lines, built on
+    /// first use, so paragraph boundaries are a binary search away even in a
+    /// multi-megabyte paragraph.
+    pub fn blank_lines(&self) -> &[usize] {
+        self.blank_lines.get_or_init(|| {
+            let n = self.line_count();
+            self.text
+                .lines()
+                .take(n)
+                .enumerate()
+                .filter(|(_, l)| l.chars().all(char::is_whitespace))
+                .map(|(i, _)| i)
+                .collect()
+        })
+    }
+
+    /// The paragraph (run of non-blank lines) containing line `line`, as its
+    /// first and last line; `None` for a blank line.
+    pub fn paragraph_lines(&self, line: usize) -> Option<(usize, usize)> {
+        let n = self.line_count();
+        let blanks = self.blank_lines();
+        match blanks.binary_search(&line) {
+            Ok(_) => None,
+            Err(_) if line >= n => None,
+            Err(i) => {
+                let first = if i == 0 { 0 } else { blanks[i - 1] + 1 };
+                let last = blanks.get(i).map_or(n - 1, |&b| b - 1);
+                Some((first, last))
+            }
+        }
     }
 
     /// Applies an edit to the text, shifts the markers (keeping them sorted),
@@ -285,6 +319,7 @@ impl Document {
         self.markers.sort_by_key(Marker::sort_key);
         self.display = OnceCell::new();
         self.tables = OnceCell::new();
+        self.blank_lines = OnceCell::new();
         Ok(outcome)
     }
 }
@@ -299,6 +334,22 @@ mod tests {
     fn plain_text_normalizes_newlines() {
         let d = Document::from_plain_text("a\r\nb\rc");
         assert_eq!(d.text().to_string(), "a\nb\nc");
+    }
+
+    #[test]
+    fn blank_line_index_and_paragraphs() {
+        let mut d = Document::from_plain_text("a\nb\n  \nc\n\nd\n");
+        assert_eq!(d.blank_lines(), &[2, 4]);
+        assert_eq!(d.paragraph_lines(1), Some((0, 1)));
+        assert_eq!(d.paragraph_lines(2), None);
+        assert_eq!(d.paragraph_lines(3), Some((3, 3)));
+        assert_eq!(d.paragraph_lines(5), Some((5, 5)));
+        assert_eq!(d.paragraph_lines(6), None);
+        assert!(d.line_is_blank(4) && !d.line_is_blank(5));
+        // An edit drops the index; the rebuilt one sees the new text.
+        d.apply(&Edit::insert(CharPos(4), "x")).unwrap();
+        assert_eq!(d.blank_lines(), &[4]);
+        assert_eq!(d.paragraph_lines(0), Some((0, 3)));
     }
 
     #[test]

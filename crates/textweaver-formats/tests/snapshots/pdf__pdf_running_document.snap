@@ -1,0 +1,247 @@
+---
+source: crates/textweaver-formats/tests/pdf.rs
+expression: view(&doc)
+---
+{
+  "markers": [
+    {
+      "kind": "page_break",
+      "label": "i",
+      "range": [
+        0,
+        2585
+      ],
+      "text": "Running Heads and Page Numbers\n\nParagraph 1 of the running e"
+    },
+    {
+      "kind": "heading",
+      "level": 1,
+      "range": [
+        0,
+        30
+      ],
+      "text": "Running Heads and Page Numbers"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        32,
+        301
+      ],
+      "text": "Paragraph 1 of the running example. Reading aloud helps stud"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        303,
+        558
+      ],
+      "text": "Paragraph 2 of the running example. The loader rebuilds stru"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        560,
+        791
+      ],
+      "text": "Paragraph 3 of the running example. Columns are read one aft"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        793,
+        1062
+      ],
+      "text": "Paragraph 4 of the running example. Reading aloud helps stud"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        1064,
+        1319
+      ],
+      "text": "Paragraph 5 of the running example. The loader rebuilds stru"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        1321,
+        1552
+      ],
+      "text": "Paragraph 6 of the running example. Columns are read one aft"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        1554,
+        1823
+      ],
+      "text": "Paragraph 7 of the running example. Reading aloud helps stud"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        1825,
+        2080
+      ],
+      "text": "Paragraph 8 of the running example. The loader rebuilds stru"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        2082,
+        2313
+      ],
+      "text": "Paragraph 9 of the running example. Columns are read one aft"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        2315,
+        2585
+      ],
+      "text": "Paragraph 10 of the running example. Reading aloud helps stu"
+    },
+    {
+      "kind": "page_break",
+      "label": "1",
+      "range": [
+        2587,
+        5290
+      ],
+      "text": "Paragraph 11 of the running example. The loader rebuilds str"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        2587,
+        2843
+      ],
+      "text": "Paragraph 11 of the running example. The loader rebuilds str"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        2845,
+        3077
+      ],
+      "text": "Paragraph 12 of the running example. Columns are read one af"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        3079,
+        3349
+      ],
+      "text": "Paragraph 13 of the running example. Reading aloud helps stu"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        3351,
+        3607
+      ],
+      "text": "Paragraph 14 of the running example. The loader rebuilds str"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        3609,
+        3841
+      ],
+      "text": "Paragraph 15 of the running example. Columns are read one af"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        3843,
+        4113
+      ],
+      "text": "Paragraph 16 of the running example. Reading aloud helps stu"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        4115,
+        4371
+      ],
+      "text": "Paragraph 17 of the running example. The loader rebuilds str"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        4373,
+        4605
+      ],
+      "text": "Paragraph 18 of the running example. Columns are read one af"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        4607,
+        4877
+      ],
+      "text": "Paragraph 19 of the running example. Reading aloud helps stu"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        4879,
+        5135
+      ],
+      "text": "Paragraph 20 of the running example. The loader rebuilds str"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        5137,
+        5369
+      ],
+      "text": "Paragraph 21 of the running example. Columns are read one af"
+    },
+    {
+      "kind": "page_break",
+      "label": "2",
+      "range": [
+        5291,
+        6133
+      ],
+      "text": "headers and page numbers repeat on every page and are left o"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        5371,
+        5641
+      ],
+      "text": "Paragraph 22 of the running example. Reading aloud helps stu"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        5643,
+        5899
+      ],
+      "text": "Paragraph 23 of the running example. The loader rebuilds str"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        5901,
+        6133
+      ],
+      "text": "Paragraph 24 of the running example. Columns are read one af"
+    }
+  ],
+  "meta": {
+    "author": "Test Author",
+    "format": "pdf",
+    "language": "en-US",
+    "path": null,
+    "properties": {
+      "pages": "3"
+    },
+    "title": "Running Heads"
+  },
+  "text": "Running Heads and Page Numbers\n\nParagraph 1 of the running example. Reading aloud helps students who find print hard to follow. A reader that highlights each word as it is spoken keeps the eyes and ears together, and a reader that remembers where the student stopped makes long assignments manageable.\n\nParagraph 2 of the running example. The loader rebuilds structure from the page: it finds the body text size, treats larger or bolder short lines as headings, joins wrapped lines into paragraphs, and removes the hyphens that typesetting adds at line ends.\n\nParagraph 3 of the running example. Columns are read one after another, top to bottom, so a sentence is never interrupted by the text beside it. Running headers and page numbers repeat on every page and are left out of the reading.\n\nParagraph 4 of the running example. Reading aloud helps students who find print hard to follow. A reader that highlights each word as it is spoken keeps the eyes and ears together, and a reader that remembers where the student stopped makes long assignments manageable.\n\nParagraph 5 of the running example. The loader rebuilds structure from the page: it finds the body text size, treats larger or bolder short lines as headings, joins wrapped lines into paragraphs, and removes the hyphens that typesetting adds at line ends.\n\nParagraph 6 of the running example. Columns are read one after another, top to bottom, so a sentence is never interrupted by the text beside it. Running headers and page numbers repeat on every page and are left out of the reading.\n\nParagraph 7 of the running example. Reading aloud helps students who find print hard to follow. A reader that highlights each word as it is spoken keeps the eyes and ears together, and a reader that remembers where the student stopped makes long assignments manageable.\n\nParagraph 8 of the running example. The loader rebuilds structure from the page: it finds the body text size, treats larger or bolder short lines as headings, joins wrapped lines into paragraphs, and removes the hyphens that typesetting adds at line ends.\n\nParagraph 9 of the running example. Columns are read one after another, top to bottom, so a sentence is never interrupted by the text beside it. Running headers and page numbers repeat on every page and are left out of the reading.\n\nParagraph 10 of the running example. Reading aloud helps students who find print hard to follow. A reader that highlights each word as it is spoken keeps the eyes and ears together, and a reader that remembers where the student stopped makes long assignments manageable.\n\nParagraph 11 of the running example. The loader rebuilds structure from the page: it finds the body text size, treats larger or bolder short lines as headings, joins wrapped lines into paragraphs, and removes the hyphens that typesetting adds at line ends.\n\nParagraph 12 of the running example. Columns are read one after another, top to bottom, so a sentence is never interrupted by the text beside it. Running headers and page numbers repeat on every page and are left out of the reading.\n\nParagraph 13 of the running example. Reading aloud helps students who find print hard to follow. A reader that highlights each word as it is spoken keeps the eyes and ears together, and a reader that remembers where the student stopped makes long assignments manageable.\n\nParagraph 14 of the running example. The loader rebuilds structure from the page: it finds the body text size, treats larger or bolder short lines as headings, joins wrapped lines into paragraphs, and removes the hyphens that typesetting adds at line ends.\n\nParagraph 15 of the running example. Columns are read one after another, top to bottom, so a sentence is never interrupted by the text beside it. Running headers and page numbers repeat on every page and are left out of the reading.\n\nParagraph 16 of the running example. Reading aloud helps students who find print hard to follow. A reader that highlights each word as it is spoken keeps the eyes and ears together, and a reader that remembers where the student stopped makes long assignments manageable.\n\nParagraph 17 of the running example. The loader rebuilds structure from the page: it finds the body text size, treats larger or bolder short lines as headings, joins wrapped lines into paragraphs, and removes the hyphens that typesetting adds at line ends.\n\nParagraph 18 of the running example. Columns are read one after another, top to bottom, so a sentence is never interrupted by the text beside it. Running headers and page numbers repeat on every page and are left out of the reading.\n\nParagraph 19 of the running example. Reading aloud helps students who find print hard to follow. A reader that highlights each word as it is spoken keeps the eyes and ears together, and a reader that remembers where the student stopped makes long assignments manageable.\n\nParagraph 20 of the running example. The loader rebuilds structure from the page: it finds the body text size, treats larger or bolder short lines as headings, joins wrapped lines into paragraphs, and removes the hyphens that typesetting adds at line ends.\n\nParagraph 21 of the running example. Columns are read one after another, top to bottom, so a sentence is never interrupted by the text beside it. Running headers and page numbers repeat on every page and are left out of the reading.\n\nParagraph 22 of the running example. Reading aloud helps students who find print hard to follow. A reader that highlights each word as it is spoken keeps the eyes and ears together, and a reader that remembers where the student stopped makes long assignments manageable.\n\nParagraph 23 of the running example. The loader rebuilds structure from the page: it finds the body text size, treats larger or bolder short lines as headings, joins wrapped lines into paragraphs, and removes the hyphens that typesetting adds at line ends.\n\nParagraph 24 of the running example. Columns are read one after another, top to bottom, so a sentence is never interrupted by the text beside it. Running headers and page numbers repeat on every page and are left out of the reading."
+}

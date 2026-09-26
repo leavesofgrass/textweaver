@@ -5,7 +5,9 @@
 //!
 //! - `--format text` (default): the canonical text; with `--structure`,
 //!   followed by an outline of every marker (`line:column`, kind, text).
-//! - `--format markdown`: the document converted back to Markdown.
+//! - `--format markdown`: the document as Markdown (any format: a PDF's
+//!   recovered headings, lists, and tables become Markdown).
+//! - `--format html`: the document as a standalone, accessible HTML page.
 //! - `--format json`: `{ "meta", "text" }`, plus `"markers"` with
 //!   `--structure` (each with `kind`, `start`, `end`, `line`, `column`,
 //!   `level`, `label`, `reference`, and `text`).
@@ -24,7 +26,7 @@ pub struct Args {
     /// Document to extract.
     pub file: PathBuf,
     /// Output format.
-    #[arg(long, value_parser = ["text", "markdown", "json"], default_value = "text")]
+    #[arg(long, value_parser = ["text", "markdown", "html", "json"], default_value = "text")]
     pub format: String,
     /// Include markers (structure) in the output.
     #[arg(long)]
@@ -47,6 +49,13 @@ pub(crate) fn load_document(path: &Path) -> anyhow::Result<Document> {
 pub(crate) fn render(doc: &Document, format: &str, structure: bool) -> anyhow::Result<String> {
     let mut out = match format {
         "markdown" => formats::to_markdown(doc),
+        "html" => formats::to_html(
+            doc,
+            &formats::HtmlOptions {
+                standalone: true,
+                ..formats::HtmlOptions::default()
+            },
+        ),
         "json" => {
             // Paths that are not UTF-8 would fail to serialize; show them lossily.
             let mut plain = doc.meta.clone();
@@ -170,6 +179,30 @@ mod tests {
         assert!(out.starts_with("# Sample HTML Document\n"));
         assert!(out.contains("| Name | Score |\n|---|---|\n| Ada | 98 |"));
         assert!(out.contains("1. Preheat the oven."));
+    }
+
+    #[test]
+    fn every_new_format_prints() {
+        for (name, needle) in [
+            ("a/sample.epub", "Chapter One: Beginnings"),
+            ("a/sample.docx", "Ada | Engineer and poet | 98"),
+            ("a/single.pdf", "1.1 Background"),
+            (
+                "a/columns.pdf",
+                "It ends with this sentence in the left column.",
+            ),
+        ] {
+            let doc = sample(name);
+            let out = render(&doc, "text", false).unwrap();
+            assert!(out.lines().any(|l| l == needle), "{name}: {out}");
+            let md = render(&doc, "markdown", false).unwrap();
+            assert!(
+                md.contains(needle.trim_start_matches(char::is_numeric)),
+                "{name}"
+            );
+            let html = render(&doc, "html", false).unwrap();
+            assert!(html.starts_with("<!DOCTYPE html>"));
+        }
     }
 
     #[test]

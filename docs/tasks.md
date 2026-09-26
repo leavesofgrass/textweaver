@@ -240,6 +240,8 @@ Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech la
 
 **Acceptance:** crate tests and snapshots green; `tw text` works on every new format's fixture; `tw convert --watch` has a test with a temporary folder; the parity report still has zero unexplained deltas.
 
+**Status:** done on `wave2/a-formats` (Friday, September 25, 2026): EPUB, DOCX, and PDF loaders (PDF on by default, pure Rust, ADR-0010), `pandoc` feature, Markdown/HTML/text exports, full-text index, and the Wave 1 requests. `tw convert` and `--watch` moved to Agent L and were not done here. Parity report: 0 unexplained deltas.
+
 ### Agent B2 — Speech service and audio export
 
 **Owns:** `crates/textweaver-speech/`, `crates/textweaver-export/`, `crates/textweaver-cli/src/cmd/{speak,voices,backends,export_audio}.rs`, `docs/adr/0011-audio-export.md`.

@@ -1,0 +1,43 @@
+---
+source: crates/textweaver-formats/tests/pdf.rs
+expression: to_markdown(&doc)
+---
+# Printed Article Sample
+
+*A sample article printed by a browser, for testing the PDF reader.*
+
+## Introduction
+
+Students who find print hard to follow often read with their ears. A reader that highlights each word as it speaks keeps the eyes and the ears together, and a reader that remembers where the student stopped makes long assignments manageable. This paragraph is long enough to wrap across several lines of the narrow column, and the browser justifies it and may hyphenate some of the longer words such as accessibility, internationalization, and characterization.
+
+The second paragraph continues the introduction with more ordinary sentences. Every sentence here should be read in order, and the column on the right should only begin after the column on the left has ended.
+
+## Methods
+
+The study compared three ways of reading:
+
+- listening without highlighting;
+- listening with word highlighting;
+- reading silently.
+
+1. Choose a passage.
+2. Read it aloud.
+3. Answer the questions.
+
+![A bar chart of reading speed by method]()
+
+*Figure 1. Reading speed by method.*
+
+## Results
+
+| Method | Words per minute |
+|---|---|
+| Listening | 180 |
+| Highlighting | 210 |
+| Silent | 150 |
+
+Highlighting was fastest. The difference was largest for the students who reported the most difficulty with print, which suggests that synchronized highlighting helps most where it is needed most.
+
+## Discussion
+
+These results are only a sample, written for a test fixture, and they do not describe a real study. They exist so that the reader has realistic structure to rebuild: headings, lists, a figure with alternative text, a table, and two columns of justified text.

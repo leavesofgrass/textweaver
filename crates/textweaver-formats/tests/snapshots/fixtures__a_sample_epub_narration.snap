@@ -1,0 +1,21 @@
+---
+source: crates/textweaver-formats/tests/fixtures.rs
+expression: narration(&doc)
+---
+[
+  "heading level 1, Sample EPUB Book",
+  "By Ada Author and Grace Writer.",
+  "heading level 1, Chapter One: Beginnings",
+  "The first chapter opens with bold words.",
+  "Dr. Smith opened the library at 9:30 a.m. on Friday.1",
+  "heading level 2, A Section Inside",
+  "This section is a nested entry in the table of contents.",
+  "heading level 1, Chapter Two: Tables and Lists",
+  "graphic, A map of the old town",
+  "The café serves crème brûlée.",
+  "Opening hours",
+  "Table with 2 columns: Day, Hours.",
+  "Row 1: Day is Monday, Hours is 9 to 5.",
+  "list with 2 items, 1. Arrive early.",
+  "2. Find a seat."
+]
