@@ -7,7 +7,9 @@
 //! is written, and reports each word boundary with its audio offset over a
 //! framed pipe protocol ([`protocol`]). `SapiBackend` plays the audio in
 //! the main process and turns the offsets into audio-clock word events, so
-//! the highlight follows the word being heard.
+//! the highlight follows the word being heard. The framing, host process
+//! handling, and playback are shared with the ECI backend through
+//! `textweaver-enginehost` (ADR-0012).
 //!
 //! Wiring (for the application and the backend registry):
 //! - [`backend_info`] describes the backend (id `"sapi"`, priority

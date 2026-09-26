@@ -38,7 +38,11 @@ pub fn run() -> anyhow::Result<()> {
     for h in &hosts {
         let to = target_dir.join(profile).join(h.installed_name());
         eci::copy(&h.built(&target_dir, profile), &to)?;
-        println!("{} host: {}", h.target.map_or("x64", |_| "x86"), to.display());
+        println!(
+            "{} host: {}",
+            h.target.map_or("x64", |_| "x86"),
+            to.display()
+        );
     }
     Ok(())
 }

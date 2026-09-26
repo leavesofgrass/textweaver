@@ -120,7 +120,8 @@ pub(crate) fn build(root: &Path, hosts: &[HostBuild], release: bool) -> anyhow::
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     for target in targets {
         let mut cmd = Command::new(&cargo);
-        cmd.current_dir(root).args(["build", "--no-default-features"]);
+        cmd.current_dir(root)
+            .args(["build", "--no-default-features"]);
         if release {
             cmd.arg("--release");
         }
@@ -198,7 +199,9 @@ fn dest_args(args: &[String]) -> anyhow::Result<Vec<PathBuf>> {
     let mut it = args.iter();
     while let Some(a) = it.next() {
         match a.as_str() {
-            "--dest" => out.push(PathBuf::from(it.next().context("--dest needs a directory")?)),
+            "--dest" => out.push(PathBuf::from(
+                it.next().context("--dest needs a directory")?,
+            )),
             other => bail!("unknown argument {other} (usage: cargo xtask hosts [--dest DIR])"),
         }
     }
