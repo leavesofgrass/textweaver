@@ -372,19 +372,25 @@ fn apply_pronunciations_vectors() {
 
 #[test]
 fn normalize_math_vectors() {
-    // tests/test_ttstext.py:351-374
+    // tests/test_ttstext.py:351-374. Star's undelimited vectors are
+    // delimited here, as math is in documents (ADR-0018); the wording of
+    // `\alpha + \beta` ("plus" is spoken) and `\bar{x}` ("x bar") changed
+    // deliberately.
     for (input, want) in [
         (r"$\frac{a}{b}$", "a over b"),
         (r"$\sqrt{x}$", "square root of x"),
-        (r"\alpha + \beta", "alpha + beta"),
-        (r"a \times b \leq c", "a times b less than or equal to c"),
-        (r"\bar{x}", "x-bar"),
-        ("x^2 and y^{3}", "x squared and y cubed"),
-        ("x_i and x_{ij}", "x sub i and x sub i j"),
+        (r"$\alpha + \beta$", "alpha plus beta"),
+        (r"$a \times b \leq c$", "a times b less than or equal to c"),
+        (r"$\bar{x}$", "x bar"),
+        ("$x^2$ and $y^{3}$", "x squared and y cubed"),
+        ("$x_i$ and $x_{ij}$", "x sub i and x sub i j"),
         ("hello world", "hello world"),
     ] {
         assert_eq!(math(input), want, "{input}");
     }
+    // Undelimited notation in prose is left as written.
+    assert_eq!(math("x^2 and y^{3}"), "x^2 and y^{3}");
+    assert_eq!(normalize_math(r"$\sqrt{x}$"), "square root of x");
 }
 
 #[test]
@@ -392,13 +398,146 @@ fn math_bugs_are_fixed() {
     // Q6: prose identifiers.
     assert_eq!(math("snake_case word"), "snake_case word");
     assert_eq!(math("my_var_name is x"), "my_var_name is x");
-    assert_eq!(math(r"\alpha_i"), "alpha sub i");
+    assert_eq!(math(r"$\alpha_i$"), "alpha sub i");
     // Q7: trailing power.
-    assert_eq!(math("x^2"), "x squared");
+    assert_eq!(math("$x^2$"), "x squared");
+    assert_eq!(math("area $x^2$"), "area x squared");
     // Q8: no global cleanup; dollars that are not math.
     assert_eq!(math("$5 and $10 {kept}"), "$5 and $10 {kept}");
     assert_eq!(math(r"\alphabet"), r"\alphabet");
+    assert_eq!(math(r"Pandoc \$3.99"), r"Pandoc \$3.99");
+    // Operator symbols in prose are still read.
     assert_eq!(math("A → B"), "A approaches B");
+    assert_eq!(math("3 × 4 ≤ 12"), "3 times 4 less than or equal to 12");
+}
+
+#[test]
+fn math_verbosity_and_asciimath_settings() {
+    let at = |v: Verbosity, s: &str| checked(s, Math::new(v, None).apply(s));
+    assert_eq!(
+        at(Verbosity::Low, r"$\frac{x+1}{2}$"),
+        "fraction x plus 1 over 2"
+    );
+    assert_eq!(
+        at(Verbosity::Normal, r"$\frac{x+1}{2}$"),
+        "the fraction with numerator x plus 1 and denominator 2"
+    );
+    assert!(
+        at(Verbosity::High, r"$\frac{x+1}{2}$").contains("end fraction"),
+        "{}",
+        at(Verbosity::High, r"$\frac{x+1}{2}$")
+    );
+    // ASCIIMath is off unless a delimiter is set.
+    assert_eq!(math("so `x^2` is"), "so `x^2` is");
+    let am = Math::new(Verbosity::Normal, Some('`'));
+    assert_eq!(
+        checked("so `x^2` is", am.apply("so `x^2` is")),
+        "so x squared is"
+    );
+    // From the settings.
+    let cfg = NormalizeConfig {
+        math_verbosity: Verbosity::Low,
+        asciimath_delimiter: Some('`'),
+        ..NormalizeConfig::default()
+    };
+    let m = Math::from_config(&cfg);
+    assert_eq!(m.options().speech.verbosity, Verbosity::Low);
+    assert_eq!(m.options().detect.asciimath, Some('`'));
+    assert_eq!(NormalizeConfig::default().math_verbosity, Verbosity::Normal);
+    assert_eq!(NormalizeConfig::default().asciimath_delimiter, None);
+}
+
+/// The full pipeline (as the speech service runs it) over math, with the
+/// utterance placed at a document offset.
+fn pipeline_utterance(text: &str, cfg: &NormalizeConfig) -> Utterance {
+    let p = Pipeline::for_settings(cfg, PunctuationLevel::Some, false, false);
+    let u = p.apply(Utterance::literal(text, CharPos(1000)));
+    u.offset_map
+        .check_invariants(&u.text)
+        .unwrap_or_else(|e| panic!("{e} for {text:?} -> {:?}", u.text));
+    u
+}
+
+/// The document text a spoken word highlights.
+fn highlighted(text: &str, u: &Utterance, word: &str) -> String {
+    let i = u
+        .text
+        .find(word)
+        .unwrap_or_else(|| panic!("{word:?} in {:?}", u.text)) as u32;
+    let r = u
+        .source_for(i..i + word.len() as u32)
+        .unwrap_or_else(|| panic!("no source for {word:?} in {:?}", u.text));
+    let chars: Vec<char> = text.chars().collect();
+    chars[r.start.0 - 1000..r.end.0 - 1000].iter().collect()
+}
+
+#[test]
+fn math_runs_before_numbers_and_highlights_its_source() {
+    assert_eq!(
+        pipeline_utterance("", &settings()).text,
+        "",
+        "empty stays empty"
+    );
+    assert_eq!(
+        Pipeline::for_settings(&settings(), PunctuationLevel::Some, false, false).names()[0],
+        "math"
+    );
+
+    // A power inside a sentence: "2" is not currency, "x" highlights x.
+    let text = "We know that $x^2$ grows fast.";
+    let u = pipeline_utterance(text, &settings());
+    assert_eq!(u.text, "We know that x squared grows fast.");
+    assert_eq!(highlighted(text, &u, "x squared"), "x^2");
+    assert_eq!(highlighted(text, &u, "grows"), "grows");
+    assert_eq!(highlighted(text, &u, "know"), "know");
+
+    // A digit right after the opening dollar is still math, not money.
+    let text = "Solve $2x = 4$ first.";
+    let u = pipeline_utterance(text, &settings());
+    assert_eq!(u.text, "Solve 2 x equals 4 first.");
+    assert_eq!(highlighted(text, &u, "equals"), "=");
+
+    // A fraction, word by word as an engine reports it: each part
+    // highlights its own source, "over" the bar between them, and the
+    // delimiters are never spoken.
+    let text = r"Take \(\frac{a}{b}\) now.";
+    let u = pipeline_utterance(text, &settings());
+    assert_eq!(u.text, "Take a over b now.");
+    let words: Vec<String> = [0..4, 5..6, 7..11, 12..13, 14..17]
+        .into_iter()
+        .map(|spoken| {
+            let r = u.source_for(spoken).unwrap_or_default();
+            text.chars()
+                .skip(r.start.0 - 1000)
+                .take(r.end.0 - r.start.0)
+                .collect()
+        })
+        .collect();
+    assert_eq!(words, ["Take", "a", "}{", "b", "now"]);
+
+    // Prices stay prices: Numbers reads them after math left them alone.
+    let text = "It costs $5 and $10 today.";
+    let u = pipeline_utterance(text, &settings());
+    assert_eq!(u.text, "It costs five dollars and ten dollars today.");
+    assert_eq!(highlighted(text, &u, "ten dollars"), "$10");
+
+    // Math and money in one sentence.
+    let text = "Pay $5 when $n > 3$.";
+    let u = pipeline_utterance(text, &settings());
+    assert_eq!(u.text, "Pay five dollars when n greater than 3.");
+    assert_eq!(highlighted(text, &u, "3"), "3");
+    assert_eq!(highlighted(text, &u, "greater"), ">");
+    assert_eq!(highlighted(text, &u, "five dollars"), "$5");
+}
+
+#[test]
+fn math_off_leaves_latex_to_the_other_transforms() {
+    let cfg = NormalizeConfig {
+        math: false,
+        ..settings()
+    };
+    let p = Pipeline::for_settings(&cfg, PunctuationLevel::Some, false, false);
+    assert!(!p.names().contains(&"math"));
 }
 
 fn settings() -> NormalizeConfig {

@@ -33,6 +33,7 @@ tts-crate = []
 
 [dependencies]
 textweaver-core.workspace = true
+textweaver-math.workspace = true
 bitflags.workspace = true
 serde.workspace = true
 thiserror.workspace = true

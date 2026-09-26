@@ -17,7 +17,14 @@ The formats you can ask for with `--to`:
 - `md`: Markdown (the default).
 - `html`: a web page you can open in any browser. Headings, lists, tables, and math are real HTML structure, so screen readers can move by heading, table, and list.
 - `txt`: plain text, the same text textweaver reads aloud.
-- `epub`, `docx`, `brf`, and `pdf`: EPUB books, Word documents, braille files, and tagged PDF. These arrive with the native writers; until then `tw convert` says so before it starts.
+- `epub`: an EPUB 3 book with a table of contents, real headings, and accessibility metadata.
+- `docx`: a Word document with Word's own heading styles, numbered lists, and tables whose header row repeats.
+- `brf`: a braille file for a braille display or embosser, in uncontracted Unified English Braille, 40 cells by 25 lines.
+- `pdf`: a tagged PDF that screen readers can move through by heading, list, and table.
+
+Some outputs come with warnings, for example "The image cat.png was not found, so its description was written instead." Each warning is read out with its file name, and the summary says how many files had warnings.
+
+PDF output needs a font on the computer. textweaver uses the first it finds of Atkinson Hyperlegible, Verdana, Segoe UI, Arial, DejaVu Sans, Liberation Sans, and Noto Sans. To choose one, give a TrueType or OpenType font file with `--pdf-font`, or set the `TEXTWEAVER_PDF_FONT` environment variable. When no font is found, `tw convert` says so once, before converting anything.
 
 ## Convert a folder
 
@@ -74,7 +81,11 @@ In every flavor except `commonmark`, a YAML block at the top of the file (betwee
 
 ## Math
 
-Math written in LaTeX between dollar signs, `$x^2$` inside a sentence or `$$ … $$` on its own lines, becomes MathML. Screen readers that read math (NVDA with MathCAT, JAWS, VoiceOver) can then speak it and let you explore it term by term. The LaTeX source travels with it, so copying still gives you the LaTeX. A formula that cannot be read is shown as its LaTeX source. Add `--no-math` to keep all math as LaTeX.
+Math written in LaTeX between dollar signs, `$x^2$` inside a sentence or `$$ … $$` on its own lines, becomes MathML. Screen readers that read math (NVDA with MathCAT, JAWS, VoiceOver) can then speak it and let you explore it term by term. The LaTeX source travels with it, as the formula's text alternative and as an annotation, so copying still gives you the LaTeX. A formula that cannot be read is shown as its LaTeX source. Add `--no-math` to keep all math as LaTeX. Prices such as "$5 and $10" are never taken for math.
+
+ASCIIMath works too. A code block that starts with three backticks and the word `asciimath` becomes one formula. Course material written for MathJax often puts ASCIIMath between single backticks, like `` `x^2/2` ``; add `--asciimath` to read those as math instead of code.
+
+EPUB, Word, braille, and PDF output keep math as its LaTeX source for now.
 
 ## Templates
 
@@ -95,6 +106,7 @@ You can write your own templates. They are HTML files with MiniJinja placeholder
 - `--sanitize` removes scripts and other unsafe HTML, for Markdown you did not write yourself.
 - `--smart` turns straight quotes into curly quotes and double hyphens into dashes.
 - `--no-pandoc` never runs Pandoc (see below).
+- `--pdf-font FILE` chooses the font for PDF output.
 - `--verbose` reads out every file, not only the failures and the summary.
 - `--json` prints the full result, every file with its status and timing, as JSON for scripts.
 

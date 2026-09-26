@@ -19,8 +19,8 @@ Some <mark>highlighted text</mark> here.</p>
 <p>Yes, with a minus sign.</p>
 </details>
 <h2 id="summary">Summary</h2>
-<p>Energy: <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi><mo>=</mo><mi>m</mi><msup><mi>c</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">E = mc^2</annotation></semantics></math>.</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munderover><mo movablelimits="false">∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mrow><mi>n</mi></mrow></munderover><mi>i</mi><mo>=</mo><mfrac><mrow><mi>n</mi><mo symmetric="false" stretchy="false">(</mo><mi>n</mi><mo>+</mo><mn>1</mn><mo symmetric="false" stretchy="false">)</mo></mrow><mrow><mn>2</mn></mrow></mfrac></mrow><annotation encoding="application/x-tex">
+<p>Energy: <math xmlns="http://www.w3.org/1998/Math/MathML" alttext="E = mc^2"><semantics><mrow><mi>E</mi><mo>=</mo><mi>m</mi><msup><mi>c</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">E = mc^2</annotation></semantics></math>.</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" alttext="\sum_{i=1}^{n} i = \frac{n(n+1)}{2}"><semantics><mrow><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><mi>i</mi><mo>=</mo><mfrac><mrow><mi>n</mi><mrow><mo fence="true" form="prefix">(</mo><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow><mo fence="true" form="postfix">)</mo></mrow></mrow><mn>2</mn></mfrac></mrow><annotation encoding="application/x-tex">
 \sum_{i=1}^{n} i = \frac{n(n+1)}{2}
 </annotation></semantics></math></p>
 <pre><code>[[not a link]] #not-a-tag

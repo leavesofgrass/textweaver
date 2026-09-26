@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use pulldown_cmark::{CowStr, Event, Tag, TagEnd};
+use pulldown_cmark::{CodeBlockKind, CowStr, Event, Tag, TagEnd};
 
 use crate::inline::{self, Ctx, Inline, Seg};
 use crate::slug::{Slugger, slugify};
@@ -227,9 +227,24 @@ impl<'a> Pass<'_, 'a> {
                     self.link_depth = self.link_depth.saturating_sub(1);
                     self.emit(Event::End(end));
                 }
+                Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(info)))
+                    if self.opts.math && is_asciimath_fence(&info) =>
+                {
+                    // A fenced ASCIIMath block becomes one display formula.
+                    let end = find_end(&ev, i, |t| matches!(t, TagEnd::CodeBlock));
+                    let src = plain_text(&ev[i + 1..end]);
+                    let html = self.asciimath(src.trim(), true);
+                    self.emit(Event::Html(CowStr::from(format!("<p>{html}</p>\n"))));
+                    i = end + 1;
+                    continue;
+                }
                 Event::Start(tag @ Tag::CodeBlock(_)) => {
                     self.code_depth += 1;
                     self.emit(Event::Start(tag));
+                }
+                Event::Code(src) if self.opts.math && self.opts.asciimath => {
+                    let html = self.asciimath(&src, false);
+                    self.emit(Event::InlineHtml(CowStr::from(html)));
                 }
                 Event::End(TagEnd::CodeBlock) => {
                     self.code_depth = self.code_depth.saturating_sub(1);
@@ -320,11 +335,17 @@ impl<'a> Pass<'_, 'a> {
     fn math(&mut self, src: &str, display: bool) -> String {
         if self.opts.math {
             self.facts.has_math = true;
-            math::to_mathml(src, display)
+            math::to_mathml_latex(src, display)
         } else {
             let delim = if display { "$$" } else { "$" };
             format!("{delim}{}{delim}", escape_html(src))
         }
+    }
+
+    /// ASCIIMath (only called with math on).
+    fn asciimath(&mut self, src: &str, display: bool) -> String {
+        self.facts.has_math = true;
+        math::to_mathml_asciimath(src, display)
     }
 
     fn footnote_ref(&mut self, name: &str) -> String {
@@ -435,6 +456,12 @@ fn find_end(ev: &[Event<'_>], start: usize, is_end: impl Fn(&TagEnd) -> bool) ->
         .iter()
         .position(|e| matches!(e, Event::End(t) if is_end(t)))
         .map_or(ev.len(), |p| start + 1 + p)
+}
+
+/// True for a fence info string naming ASCIIMath (`asciimath`, `am`).
+fn is_asciimath_fence(info: &str) -> bool {
+    let lang = info.split_whitespace().next().unwrap_or("");
+    lang.eq_ignore_ascii_case("asciimath") || lang.eq_ignore_ascii_case("am")
 }
 
 /// The text a heading or paragraph reads as, without markup.

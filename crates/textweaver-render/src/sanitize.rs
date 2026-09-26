@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 
 use ammonia::Builder;
 
-/// MathML Core elements `pulldown-latex` writes.
+/// MathML Core elements (a superset of what `textweaver-math` writes).
 const MATHML: &[&str] = &[
     "math",
     "semantics",
@@ -65,7 +65,9 @@ const EXTRA_TAGS: &[&str] = &[
 ];
 
 const MATH_ATTRS: &[&str] = &[
+    "alttext",
     "display",
+    "form",
     "xmlns",
     "encoding",
     "mathvariant",

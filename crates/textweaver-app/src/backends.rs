@@ -183,6 +183,8 @@ pub fn service_config(settings: &Settings) -> ServiceConfig {
             abbrev_expansions: norm.abbrev_expansions.clone(),
             numbers: norm.numbers,
             math: norm.math,
+            math_verbosity: norm.math_verbosity,
+            asciimath_delimiter: norm.asciimath_delimiter,
             community_lexicon: CommunityLexiconConfig {
                 enabled: lexicon.enabled,
                 dir: lexicon.dir.clone(),
@@ -304,5 +306,19 @@ mod tests {
                 assert!(b.priority > dectalk.priority, "{above}");
             }
         }
+    }
+
+    #[test]
+    fn service_config_maps_math_speech() {
+        let d = service_config(&Settings::default());
+        let speech_defaults = NormalizeConfig::default();
+        assert_eq!(d.normalize.math_verbosity, speech_defaults.math_verbosity);
+        assert_eq!(d.normalize.asciimath_delimiter, None);
+        let mut s = Settings::default();
+        s.normalization.math_verbosity = textweaver_core::Verbosity::Low;
+        s.normalization.asciimath_delimiter = Some('`');
+        let c = service_config(&s);
+        assert_eq!(c.normalize.math_verbosity, textweaver_core::Verbosity::Low);
+        assert_eq!(c.normalize.asciimath_delimiter, Some('`'));
     }
 }

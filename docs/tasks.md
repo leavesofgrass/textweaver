@@ -442,6 +442,12 @@ Jon wants several themes, as Star had. Star shipped 23 palettes in `star/themes.
 
 **Acceptance:** contrast tests for every built-in theme; round-trip TOML tests; snapshot of the CSS output; the palette list and each adjustment in the report.
 
+### Agent V — Connect writers and math
+
+**Owns (this task):** the writer seam in `crates/textweaver-convert/`, math in `crates/textweaver-render/` and `crates/textweaver-speech/src/normalize/`, the two math settings in `crates/textweaver-store/`, their mapping in `crates/textweaver-app/src/backends.rs`, and `tw convert`'s new flags. Branch `wave2/v-convert-math`.
+
+**Status:** done on `wave2/v-convert-math` (Friday, September 25, 2026); awaiting integration. The converter uses `textweaver_writers::Writer` directly, and `Writers::builtin()` registers EPUB, DOCX, BRF, and PDF; writer warnings reach the summary; PDF checks for a font once per batch. The renderer and the speech pipeline use `textweaver-math`; `pulldown-latex` is gone; math speaks first in the pipeline with `[normalization] math_verbosity` and `asciimath_delimiter`. Pandoc: A2's loader (`wave2/a-formats`, not on `main` yet) should become the one Pandoc path at integration; see the Agent V report. Bundling Atkinson Hyperlegible for PDF is proposed, not done.
+
 ### Agent S — Reading aids (added 2026-09-25 at Jon's request)
 
 **Owns:** `crates/textweaver-aids/`, `docs/adr/0022-reading-aids.md`, `docs/reading-aids.md`.

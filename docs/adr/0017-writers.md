@@ -51,6 +51,7 @@ What krilla's validator does not check, and textweaver does not yet do: a veraPD
 ## Consequences
 
 - Agent L's converter calls `writer_for(format).write(...)` or `write_to_vec`; `WriteOptions` deserializes from the converter's settings with defaults for anything missing.
+- The converter uses `Writer` itself (Agent V removed its separate `DocumentWriter`), and calls `pdf::check_fonts(&WriteOptions)` once before a PDF batch so a missing font is one message, not one failure per file.
 - PDF output needs a font on the system. Bundling Atkinson Hyperlegible (SIL Open Font License) in the repository would make PDF output identical everywhere; that is a request to the orchestrator.
 - The HTML loader skips `aside` (Star's rule for web pages), so a future EPUB loader should read `aside epub:type="footnote"` as footnote bodies to round-trip textweaver's own EPUBs.
 - Grade 2 braille depends on liblouis until a native contraction table is written and tested against liblouis's UEB test corpus.

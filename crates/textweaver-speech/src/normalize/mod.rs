@@ -12,14 +12,20 @@
 //!
 //! | # | Transform | Setting | Star |
 //! |---|---|---|---|
-//! | 1 | [`MarkdownResidue`] (and table narration) | `markdown` (off by default) | `_strip_markdown_for_tts`, load time |
-//! | 2 | [`Pronunciations`] | `use_pronunciations` + lexicon | step 1 |
-//! | 3 | [`CommunityLexicon`] (IBMTTS community dictionaries) | `community_lexicon.enabled` (off by default) | new |
-//! | 4 | [`Abbreviations`] | `abbreviations` | step 2 |
-//! | 5 | [`Numbers`] (dates, times, currency, percent, ordinals, decimals, years) | `numbers` | step 3 |
-//! | 6 | [`Math`] | `math` | step 4 |
+//! | 1 | [`Math`] (`textweaver-math`, ADR-0018) | `math`, `math_verbosity`, `asciimath_delimiter` | step 4 |
+//! | 2 | [`MarkdownResidue`] (and table narration) | `markdown` (off by default) | `_strip_markdown_for_tts`, load time |
+//! | 3 | [`Pronunciations`] | `use_pronunciations` + lexicon | step 1 |
+//! | 4 | [`CommunityLexicon`] (IBMTTS community dictionaries) | `community_lexicon.enabled` (off by default) | new |
+//! | 5 | [`Abbreviations`] | `abbreviations` | step 2 |
+//! | 6 | [`Numbers`] (dates, times, currency, percent, ordinals, decimals, years) | `numbers` | step 3 |
 //! | 7 | [`SplitCaps`] | service `split_caps` | new |
 //! | 8 | [`Punctuation`] | service punctuation level | new |
+//!
+//! Math runs first, where Star ran it last: `Numbers` turns `$2` into
+//! currency words, which destroyed `$2x$`, and Markdown residue removal or a
+//! lexicon could rewrite parts of a formula. Math speech leaves digits
+//! literal, so `Numbers` still reads them afterwards, and every later step
+//! sees spoken words, never LaTeX.
 //!
 //! **Engines that normalize natively.** A backend with
 //! [`Caps::NATIVE_NORMALIZATION`](crate::Caps::NATIVE_NORMALIZATION) (such
@@ -57,7 +63,7 @@ pub use numbers::{Numbers, normalize_numbers};
 pub use punctuation::{Punctuation, SplitCaps, char_name};
 use serde::{Deserialize, Serialize};
 pub use ssml::{text_to_dectalk, text_to_ssml};
-use textweaver_core::{CharPos, OffsetMap, PunctuationLevel, Utterance};
+use textweaver_core::{CharPos, OffsetMap, PunctuationLevel, Utterance, Verbosity};
 
 /// One normalization step.
 pub trait Transform: Send + Sync {
@@ -97,8 +103,16 @@ pub struct NormalizeConfig {
     pub abbrev_expansions: BTreeMap<String, String>,
     /// Numbers, dates, times, and currency to words.
     pub numbers: bool,
-    /// Speak math notation.
+    /// Speak math notation (`$…$`, `$$…$$`, `\(…\)`, `\[…\]`, and ASCIIMath
+    /// when `asciimath_delimiter` is set).
     pub math: bool,
+    /// How explicit spoken math is: low ("a over b"), normal (ClearSpeak
+    /// style, the default), or high (with end markers such as "end
+    /// fraction").
+    pub math_verbosity: Verbosity,
+    /// The character around ASCIIMath (usually a backtick). `None`, the
+    /// default, reads no ASCIIMath, because in Markdown a backtick is code.
+    pub asciimath_delimiter: Option<char>,
     /// The IBMTTS community pronunciation dictionaries as a lexicon, for
     /// engines that do not normalize natively (off by default; see
     /// [`community`]).
@@ -117,6 +131,8 @@ impl Default for NormalizeConfig {
             abbrev_expansions: BTreeMap::new(),
             numbers: true,
             math: true,
+            math_verbosity: Verbosity::Normal,
+            asciimath_delimiter: None,
             community_lexicon: CommunityLexiconConfig::default(),
         }
     }
@@ -136,6 +152,8 @@ impl NormalizeConfig {
             abbrev_expansions: BTreeMap::new(),
             numbers: false,
             math: false,
+            math_verbosity: Verbosity::Normal,
+            asciimath_delimiter: None,
             community_lexicon: CommunityLexiconConfig::default(),
         }
     }
@@ -169,6 +187,9 @@ impl Pipeline {
         native: bool,
     ) -> Self {
         let mut p = Pipeline::new();
+        if config.math {
+            p.push(Box::new(Math::from_config(config)));
+        }
         if config.markdown {
             p.push(Box::new(MarkdownResidue::new(
                 config.skip_code,
@@ -190,9 +211,6 @@ impl Pipeline {
         }
         if config.numbers && !native {
             p.push(Box::new(Numbers::default()));
-        }
-        if config.math {
-            p.push(Box::new(Math::default()));
         }
         if split_caps {
             p.push(Box::new(SplitCaps));
@@ -255,10 +273,14 @@ impl Transform for Identity {
     }
 }
 
-/// Star's speak-time pipeline `_preprocess_tts_text(text, settings)`:
-/// lexicon, abbreviations, numbers, math (no punctuation step).
+/// Star's speak-time pipeline `_preprocess_tts_text(text, settings)`
+/// (no punctuation step), with math moved first: math, lexicon,
+/// abbreviations, numbers.
 pub fn preprocess(text: &str, config: &NormalizeConfig) -> String {
     let mut p = Pipeline::new();
+    if config.math {
+        p.push(Box::new(Math::from_config(config)));
+    }
     if config.use_pronunciations && !config.pronunciations.is_empty() {
         p.push(Box::new(Pronunciations::new(&config.pronunciations)));
     }
@@ -267,9 +289,6 @@ pub fn preprocess(text: &str, config: &NormalizeConfig) -> String {
     }
     if config.numbers {
         p.push(Box::new(Numbers::default()));
-    }
-    if config.math {
-        p.push(Box::new(Math::default()));
     }
     p.apply_text(text).0
 }

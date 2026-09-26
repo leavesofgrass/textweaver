@@ -511,6 +511,35 @@ fn punctuation_and_split_caps_settings_apply_to_later_reads() {
     assert_eq!(rig.rec.spoken_texts()[1], "camelCase, okay");
 }
 
+#[test]
+fn spoken_math_highlights_the_formula_word_by_word() {
+    let mut rig = Rig::instant();
+    let mut n = NormalizeConfig::none();
+    n.math = true;
+    n.numbers = true;
+    rig.core.set_normalization(n);
+    // "Area $x^2$ costs $5." at document char 100.
+    rig.core.read(vec![Utterance::literal(
+        "Area $x^2$ costs $5.",
+        CharPos(100),
+    )]);
+    let st = rig.step();
+    assert_eq!(
+        rig.rec.spoken_texts(),
+        ["Area x squared costs five dollars."]
+    );
+    assert_eq!(
+        positions(&st),
+        [
+            r(100, 104), // Area
+            r(106, 107), // x
+            r(107, 109), // squared: ^2
+            r(111, 116), // costs
+            r(117, 119), // five dollars: $5 (one position for both words)
+        ]
+    );
+}
+
 // ---- pause and resume -------------------------------------------------------
 
 #[test]
