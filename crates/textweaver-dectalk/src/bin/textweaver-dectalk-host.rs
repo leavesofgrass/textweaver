@@ -19,6 +19,7 @@ use std::process::ExitCode;
 use textweaver_dectalk::discovery;
 use textweaver_dectalk::host::{self, fake, ffi};
 use textweaver_dectalk::protocol::{self, Reply};
+use textweaver_enginehost::serve::{AtEnd, log_line};
 
 struct Args {
     library: Option<PathBuf>,
@@ -60,7 +61,7 @@ fn parse_args() -> Result<Args, String> {
 }
 
 fn fail(message: String) -> ExitCode {
-    eprintln!("textweaver-dectalk-host: {message}");
+    log_line(&format!("textweaver-dectalk-host: {message}"));
     let mut out = std::io::stdout().lock();
     let _ = protocol::write_frame(&mut out, &Reply::Error { token: 0, message }.encode());
     let _ = out.flush();
@@ -75,7 +76,7 @@ fn main() -> ExitCode {
     let stdin = std::io::stdin();
     let mut stdout = std::io::BufWriter::with_capacity(64 * 1024, std::io::stdout().lock());
     let result = if args.fake {
-        host::run(&mut fake::FakeEngine, stdin, &mut stdout)
+        host::run(&mut fake::FakeEngine, stdin, &mut stdout, AtEnd::host())
     } else {
         let path = match args.library {
             // A library named on the command line is used as given (the
@@ -85,7 +86,7 @@ fn main() -> ExitCode {
                 let candidates = discovery::library_candidates(None, &discovery::Places::current());
                 match discovery::choose_library(&candidates) {
                     Ok(c) => {
-                        eprintln!("textweaver-dectalk-host: using {}", c.reason);
+                        log_line(&format!("textweaver-dectalk-host: using {}", c.reason));
                         c.candidate.path
                     }
                     Err(e) => return fail(e),
@@ -96,7 +97,7 @@ fn main() -> ExitCode {
             Ok(e) => e,
             Err(e) => return fail(e),
         };
-        eprintln!(
+        log_line(&format!(
             "textweaver-dectalk-host: DECtalk started ({} convention, {})",
             engine.convention().name(),
             if engine.has_callback() {
@@ -104,15 +105,15 @@ fn main() -> ExitCode {
             } else {
                 "single buffer"
             }
-        );
-        host::run(&mut engine, stdin, &mut stdout)
+        ));
+        host::run(&mut engine, stdin, &mut stdout, AtEnd::host())
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
         // The backend closed the pipe; nothing is listening any more.
         Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("textweaver-dectalk-host: {e}");
+            log_line(&format!("textweaver-dectalk-host: {e}"));
             ExitCode::FAILURE
         }
     }

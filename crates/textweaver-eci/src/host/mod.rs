@@ -17,7 +17,7 @@ pub mod ffi;
 
 use std::io::{Read, Write};
 
-use textweaver_enginehost::serve::{Incoming, RequestReader, StopEpoch};
+use textweaver_enginehost::serve::{AtEnd, Incoming, RequestReader, StopEpoch};
 
 use crate::language;
 use crate::protocol::{self, EndStatus, Piece, PresetInfo, Reply, Request};
@@ -96,11 +96,14 @@ pub trait Engine {
 }
 
 /// Runs the host loop until `Quit` or end of input. Returns an error only
-/// when the output pipe fails.
+/// when the output pipe fails. `at_end` says what the end of input does:
+/// the host process passes [`AtEnd::host`] (stop, and exit even if the
+/// engine is stuck), in-process tests [`AtEnd::Finish`].
 pub fn run<E: Engine>(
     engine: &mut E,
     input: impl Read + Send + 'static,
     output: &mut impl Write,
+    at_end: AtEnd,
 ) -> std::io::Result<()> {
     let info = engine.info();
     // Dictionary reports for the start-up language come first, so the
@@ -119,7 +122,7 @@ pub fn run<E: Engine>(
         .encode(),
     )?;
 
-    let reader = RequestReader::<Request>::spawn(input, "eci-host-reader")?;
+    let reader = RequestReader::<Request>::spawn_with(input, "eci-host-reader", at_end)?;
     let epoch = reader.epoch().clone();
     while let Some(item) = reader.next() {
         match item {
@@ -278,7 +281,7 @@ mod tests {
         let input: Vec<u8> = requests.iter().flat_map(Request::encode).collect();
         let mut engine = fake::FakeEngine::new(fake::FakeConfig::default());
         let mut out = Vec::new();
-        run(&mut engine, Cursor::new(input), &mut out).unwrap();
+        run(&mut engine, Cursor::new(input), &mut out, AtEnd::Finish).unwrap();
         let mut dec = FrameDecoder::new();
         dec.push(&out);
         let mut replies = Vec::new();
@@ -385,7 +388,7 @@ mod tests {
         input[4] = 0x7e; // unknown tag
         let mut engine = fake::FakeEngine::new(fake::FakeConfig::default());
         let mut out = Vec::new();
-        run(&mut engine, Cursor::new(input), &mut out).unwrap();
+        run(&mut engine, Cursor::new(input), &mut out, AtEnd::Finish).unwrap();
         let mut dec = FrameDecoder::new();
         dec.push(&out);
         let mut replies = Vec::new();

@@ -66,6 +66,7 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use libloading::Library;
+use textweaver_enginehost::serve::log_line;
 
 use super::input::{self, EnginePiece, START_MARK};
 use super::{Engine, EngineInfo, Settings, SynthEvent};
@@ -631,10 +632,10 @@ impl DectalkEngine {
         if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty())
             && let Err(e) = std::env::set_current_dir(dir)
         {
-            eprintln!(
+            log_line(&format!(
                 "textweaver-dectalk-host: cannot enter {}: {e}",
                 dir.display()
-            );
+            ));
         }
         let lib = open_library(path)?;
         #[cfg(all(windows, target_arch = "x86"))]

@@ -408,3 +408,38 @@ fn capabilities_declare_playback_events_and_follow_the_output() {
     // A silent output cannot play tones.
     assert!(!caps.contains(Caps::TONES));
 }
+
+#[test]
+fn a_host_stuck_in_synthesis_exits_when_its_input_closes() {
+    // Before: the host of a voice stuck in synthesis lived on after
+    // textweaver closed its input (textweaver exited or crashed).
+    use textweaver_enginehost::{HostMsg, HostProcess};
+    use textweaver_sapi::protocol::{Reply, Request};
+    let mut h = HostProcess::<Reply>::spawn(&host(), ["--engine", "fake"], "sapi-test")
+        .expect("the fake host starts");
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let mut next = || h.recv_until(deadline).expect("the host answers in time");
+    while !matches!(next(), HostMsg::Reply(Reply::Ready { .. })) {}
+    h.send(&Request::Speak {
+        token: 1,
+        text: "one __hang__".into(),
+        pitch: 0,
+    })
+    .unwrap();
+    // The first word says synthesis has started.
+    loop {
+        match h.recv_until(deadline) {
+            Some(HostMsg::Reply(Reply::Word { token: 1, .. })) => break,
+            Some(HostMsg::Reply(_)) => {}
+            other => panic!("expected the engine to start, got {other:?}"),
+        }
+    }
+    h.close_input();
+    loop {
+        match h.recv_until(deadline) {
+            Some(HostMsg::Closed(_)) => break,
+            Some(HostMsg::Reply(_)) => {}
+            None => panic!("the stuck host did not exit after its input closed"),
+        }
+    }
+}

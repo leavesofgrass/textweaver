@@ -47,6 +47,8 @@ use windows::Win32::System::Com::{
 use windows::Win32::System::Threading::WaitForSingleObject;
 use windows::core::{GUID, HRESULT, IUnknown, IUnknown_Vtbl, Interface, PCWSTR, PWSTR};
 
+use textweaver_enginehost::serve::log_line;
+
 use super::{Engine, Out, SpeakText};
 use crate::protocol::{EndStatus, Reply, VoiceToken};
 
@@ -315,7 +317,9 @@ unsafe extern "system" fn pcm_seek(
             _ => None,
         };
         if target != Some(pos as i64) {
-            eprintln!("sapi host: refused a seek on the output stream ({origin:?}, {moveby})");
+            log_line(&format!(
+                "sapi host: refused a seek on the output stream ({origin:?}, {moveby})"
+            ));
             return STG_E_INVALIDFUNCTION;
         }
         if !newpos.is_null() {

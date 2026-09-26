@@ -559,3 +559,37 @@ fn dictionaries_load_per_language_and_can_be_turned_off() {
     off.synthesize("x").unwrap();
     assert!(off.dictionary_loads().is_empty());
 }
+
+#[test]
+fn a_host_stuck_in_synthesis_exits_when_its_input_closes() {
+    // Before: the host of an engine stuck in synthesis lived on after
+    // textweaver closed its input (textweaver exited or crashed).
+    use textweaver_eci::protocol::{Piece, Reply, Request};
+    use textweaver_enginehost::{HostMsg, HostProcess};
+    let mut h = HostProcess::<Reply>::spawn(&test_host(), ["--engine", "fake"], "eci-test")
+        .expect("the fake host starts");
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let mut next = || h.recv_until(deadline).expect("the host answers in time");
+    while !matches!(next(), HostMsg::Reply(Reply::Ready { .. })) {}
+    h.send(&Request::Speak {
+        token: 1,
+        pieces: vec![Piece::Index(0), Piece::Text("__hang__".into())],
+    })
+    .unwrap();
+    // The mark before the hang says synthesis has started.
+    loop {
+        match h.recv_until(deadline) {
+            Some(HostMsg::Reply(Reply::Mark { token: 1, .. })) => break,
+            Some(HostMsg::Reply(_)) => {}
+            other => panic!("expected the engine to start, got {other:?}"),
+        }
+    }
+    h.close_input();
+    loop {
+        match h.recv_until(deadline) {
+            Some(HostMsg::Closed(_)) => break,
+            Some(HostMsg::Reply(_)) => {}
+            None => panic!("the stuck host did not exit after its input closed"),
+        }
+    }
+}

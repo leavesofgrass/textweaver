@@ -20,6 +20,7 @@ use std::process::ExitCode;
 
 use textweaver_eci::host::{self, fake, ffi};
 use textweaver_eci::protocol::{self, Reply};
+use textweaver_enginehost::serve::{AtEnd, log_line};
 
 struct Args {
     library: Option<PathBuf>,
@@ -68,7 +69,7 @@ fn parse_args() -> Result<Args, String> {
 }
 
 fn fail(message: String) -> ExitCode {
-    eprintln!("textweaver-eci-host: {message}");
+    log_line(&format!("textweaver-eci-host: {message}"));
     let mut out = std::io::stdout().lock();
     let _ = protocol::write_frame(&mut out, &Reply::Error { token: 0, message }.encode());
     let _ = out.flush();
@@ -87,14 +88,14 @@ fn main() -> ExitCode {
             dictionaries: args.dictionaries,
             ..fake::FakeConfig::default()
         });
-        host::run(&mut engine, stdin, &mut stdout)
+        host::run(&mut engine, stdin, &mut stdout, AtEnd::host())
     } else {
         use textweaver_eci::discovery;
         let candidates =
             discovery::library_candidates(args.library.as_deref(), &discovery::Places::current());
         let path = match discovery::choose_library(&candidates) {
             Ok(c) => {
-                eprintln!("textweaver-eci-host: using {}", c.reason);
+                log_line(&format!("textweaver-eci-host: using {}", c.reason));
                 c.candidate.path
             }
             Err(e) => return fail(e),
@@ -103,14 +104,14 @@ fn main() -> ExitCode {
             Ok(e) => e,
             Err(e) => return fail(e),
         };
-        host::run(&mut engine, stdin, &mut stdout)
+        host::run(&mut engine, stdin, &mut stdout, AtEnd::host())
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
         // The backend closed the pipe; nothing is listening any more.
         Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("textweaver-eci-host: {e}");
+            log_line(&format!("textweaver-eci-host: {e}"));
             ExitCode::FAILURE
         }
     }

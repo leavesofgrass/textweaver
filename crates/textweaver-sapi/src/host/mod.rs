@@ -12,8 +12,9 @@
 //! - `--engine fake`: a deterministic test engine (no SAPI): each
 //!   whitespace-separated word becomes a word event and a short tone, with
 //!   a little synthesis time per word so stop can land mid-utterance. The
-//!   text `__crash__` makes it exit abruptly and `__fail__` fails the
-//!   utterance (tests of host death and engine errors). `--report-arch`
+//!   text `__crash__` makes it exit abruptly, `__fail__` fails the
+//!   utterance, and the word `__hang__` never returns (tests of host
+//!   death, engine errors, and a stuck voice). `--report-arch`
 //!   makes it claim an architecture, so one test binary can stand in for
 //!   both hosts.
 //! - `--list-voices`: write `Ready`, one `Voice` per token of the category,
@@ -39,7 +40,7 @@ use std::process::ExitCode;
 use std::sync::Arc;
 use std::time::Duration;
 
-use textweaver_enginehost::serve::{Incoming, RequestReader, SharedOut};
+use textweaver_enginehost::serve::{AtEnd, Incoming, RequestReader, SharedOut, log_line};
 
 use crate::protocol::{EndStatus, PROTOCOL_VERSION, Reply, Request, VoiceToken};
 use crate::voices::Arch;
@@ -71,7 +72,7 @@ impl Out {
     /// the reader thread notices the closed pipe and ends the host.
     pub fn send(&self, reply: &Reply) {
         if let Err(e) = self.w.send_frame(&reply.encode()) {
-            eprintln!("sapi host: cannot write reply: {e}");
+            log_line(&format!("sapi host: cannot write reply: {e}"));
         }
     }
 }
@@ -211,23 +212,26 @@ fn sapi_engine(_out: Arc<Out>) -> Result<Box<dyn Engine>, String> {
 
 /// Reads requests until `Quit` or end of input.
 fn serve(engine: &mut dyn Engine, out: &Out) {
-    let reader =
-        match RequestReader::<Request>::spawn(BufReader::new(io::stdin()), "sapi-host-stdin") {
-            Ok(r) => r,
-            Err(e) => {
-                out.send(&Reply::Error {
-                    token: 0,
-                    message: format!("cannot start the input thread: {e}"),
-                });
-                return;
-            }
-        };
+    let reader = match RequestReader::<Request>::spawn_with(
+        BufReader::new(io::stdin()),
+        "sapi-host-stdin",
+        AtEnd::host(),
+    ) {
+        Ok(r) => r,
+        Err(e) => {
+            out.send(&Reply::Error {
+                token: 0,
+                message: format!("cannot start the input thread: {e}"),
+            });
+            return;
+        }
+    };
     let stop_gen = reader.epoch().clone();
     while let Some(item) = reader.next() {
         let (req, stamp) = match item {
             Incoming::Request(req, stamp) => (req, stamp),
             Incoming::Bad(e) => {
-                eprintln!("sapi host: bad request: {e}");
+                log_line(&format!("sapi host: bad request: {e}"));
                 continue;
             }
         };
@@ -410,7 +414,7 @@ impl Engine for FakeEngine {
         stopped: &dyn Fn() -> bool,
     ) -> Result<(EndStatus, u64), String> {
         if text.trim() == "__crash__" {
-            eprintln!("sapi host (fake): crashing on request");
+            log_line("sapi host (fake): crashing on request");
             std::process::exit(3);
         }
         if text.trim() == "__fail__" {
@@ -422,6 +426,17 @@ impl Engine for FakeEngine {
         for (start, len) in utf16_words(text) {
             if stopped() {
                 return Ok((EndStatus::Aborted, sent));
+            }
+            if text
+                .encode_utf16()
+                .skip(start as usize)
+                .take(len as usize)
+                .eq("__hang__".encode_utf16())
+            {
+                // A voice stuck in synthesis that never checks for a stop.
+                loop {
+                    std::thread::sleep(Duration::from_secs(60));
+                }
             }
             out.send(&Reply::Word {
                 token,
