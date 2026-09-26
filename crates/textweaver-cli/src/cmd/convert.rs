@@ -77,10 +77,6 @@ pub struct Args {
     /// Never use Pandoc, even for formats with no native reader.
     #[arg(long)]
     pub no_pandoc: bool,
-    /// Read inline code spans as ASCIIMath (for course material written
-    /// for MathJax); fenced blocks marked asciimath are read either way.
-    #[arg(long)]
-    pub asciimath: bool,
     /// PDF: a TrueType or OpenType font file for the text (default: the
     /// TEXTWEAVER_PDF_FONT environment variable, then an installed font).
     #[arg(long, value_name = "FILE")]
@@ -124,7 +120,6 @@ fn options(args: &Args) -> ConvertOptions {
             engine: args.engine,
             flavor: args.flavor,
             math: !args.no_math,
-            asciimath: args.asciimath,
             sanitize: args.sanitize,
             smart_punctuation: args.smart,
             embeds: args.embeds,
