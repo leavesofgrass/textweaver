@@ -21,9 +21,10 @@ omnivox = ["textweaver-app/omnivox"]
 
 [dependencies]
 textweaver-app.workspace = true
-# In-process `tw open` and `tw serve` (Agent D2); the orchestrator moves this
-# to the workspace table at integration.
+# In-process `tw open` and `tw serve`.
 textweaver-tui.workspace = true
+textweaver-vault.workspace = true
+textweaver-dictation.workspace = true
 clap.workspace = true
 anyhow.workspace = true
 serde.workspace = true

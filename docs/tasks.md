@@ -305,6 +305,8 @@ Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech la
 
 **Acceptance:** vault round-trip tests on a temporary vault; dictation tests with a fake whisper process; real whisper tested only if installed (report whether it is).
 
+**Status:** done on `wave2/j-vault-dictation` (Friday, September 25, 2026); awaiting integration. Notes and highlights go through `textweaver_vault::AnnotationStore` (a bridge keeps them in `DocState::extra` until C2's typed notes land); microphone capture waits for `cpal` in the workspace (ADR-0013). Real Whisper: openai-whisper is installed on this machine and its ignored test passes; whisper.cpp and faster-whisper are not installed.
+
 ### Agent K — GUI feasibility spike (wxDragon)
 
 **Owns:** `crates/textweaver-gui/`, `.github/workflows/gui.yml` (create it), `docs/adr/0014-gui-toolkit.md`. You may push your branch `wave2/k-gui-spike` to run CI on Windows and macOS runners (CI triggers on `agent/**`; add `wave2/k-*` to your own `gui.yml` trigger).
