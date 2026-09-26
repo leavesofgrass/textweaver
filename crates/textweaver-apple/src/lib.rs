@@ -3,18 +3,27 @@
 //! Two macOS backends over Apple's system voices, which include
 //! ETI-Eloquence (Reed, Shelley, Rocko, Sandy, Flo, Eddy, Grandma, Grandpa):
 //!
-//! - `nsspeech` ([`NsSpeechBackend`]): `NSSpeechSynthesizer`; the system
-//!   plays the audio; word events arrive as each word is spoken; the most
-//!   responsive.
-//! - `avspeech` ([`AvSpeechBackend`]): `AVSpeechSynthesizer` writing into
+//! - `nsspeech` (`NsSpeechBackend`): Apple's classic engine, the one behind
+//!   `NSSpeechSynthesizer`, driven through its C API (the Speech Synthesis
+//!   Manager); the system plays the audio; word events arrive as each word
+//!   is spoken; the most responsive (first word about 50 ms after `speak`
+//!   with Reed).
+//! - `avspeech` (`AvSpeechBackend`): `AVSpeechSynthesizer` writing into
 //!   buffers; each word's sample offset comes from the running sample count;
 //!   textweaver plays the audio, so word events carry `audio_ms` and pause
 //!   and resume are exact.
 //!
-//! Both are created and driven on the speech service's thread, which pumps
-//! that thread's run loop from `poll` (ADR-0003); neither needs the main
-//! thread. The default voice is Eloquence Reed ([`DEFAULT_VOICE`]) when
-//! installed.
+//! Threads (probes 5 and 6 in `tools/avspeech-spike/`): both backends are
+//! created and driven on the speech service's thread (ADR-0003).
+//! `nsspeech` needs nothing else: its callbacks run on the engine's own
+//! threads. `NSSpeechSynthesizer` itself was not usable there, because it
+//! delivers its callbacks only through the main run loop. `avspeech`'s
+//! callbacks arrive through the main dispatch queue, so it works only while
+//! the application's main thread runs its run loop (`run_main_loop_until`,
+//! or `pump_main_loop` on each tick); otherwise each utterance ends after
+//! five seconds with an error saying so.
+//!
+//! The default voice is Eloquence Reed ([`DEFAULT_VOICE`]) when installed.
 //!
 //! Wiring: [`backends`] lists what this build offers and [`factory`] creates
 //! a backend by id, for the speech registry. [`normalizes_natively`] says
@@ -64,7 +73,7 @@ pub const AVSPEECH_ID: &str = "avspeech";
 pub fn nsspeech_info() -> BackendInfo {
     BackendInfo {
         id: NSSPEECH_ID,
-        name: "Apple speech, NSSpeechSynthesizer (system voices, fastest response)",
+        name: "Apple speech, classic engine (system voices, fastest response)",
         priority: 80,
         opt_in: false,
         available: available(),

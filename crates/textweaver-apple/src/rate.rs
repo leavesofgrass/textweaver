@@ -70,19 +70,96 @@ fn interpolate(points: impl Iterator<Item = (f32, f32)> + Clone, x: f32) -> f32 
     prev.map_or(0.0, |(_, py)| py)
 }
 
-/// `NSSpeechSynthesizer` with Eloquence voices: `(rate property, wpm)`.
-pub const NS_ELOQUENCE: RateTable = RateTable::new(&[(50.0, 50.0), (900.0, 900.0)]);
+/// The classic engine (`nsspeech`) with Eloquence voices (measured with
+/// Reed): `(rate property, wpm)`. The property is nominally words per
+/// minute, but Reed speaks faster than asked at low values and slower in
+/// the middle (265 gives 242 wpm).
+pub const NS_ELOQUENCE: RateTable = RateTable::new(&[
+    (80.0, 114.0),
+    (100.0, 123.0),
+    (120.0, 133.0),
+    (140.0, 145.0),
+    (160.0, 157.0),
+    (175.0, 169.0),
+    (190.0, 176.0),
+    (200.0, 184.0),
+    (210.0, 190.0),
+    (220.0, 199.0),
+    (230.0, 207.0),
+    (240.0, 214.0),
+    (250.0, 223.0),
+    (265.0, 242.0),
+    (280.0, 252.0),
+    (300.0, 273.0),
+    (330.0, 306.0),
+    (360.0, 345.0),
+    (400.0, 412.0),
+]);
 
-/// `NSSpeechSynthesizer` with other voices: `(rate property, wpm)`.
-pub const NS_OTHER: RateTable = RateTable::new(&[(50.0, 50.0), (900.0, 900.0)]);
+/// The classic engine (`nsspeech`) with other voices (measured with
+/// Samantha, whose rate moves in steps): `(rate property, wpm)`.
+pub const NS_OTHER: RateTable = RateTable::new(&[
+    (80.0, 165.0),
+    (120.0, 180.0),
+    (160.0, 198.0),
+    (200.0, 222.0),
+    (225.0, 244.0),
+    (250.0, 268.0),
+    (265.0, 282.0),
+    (300.0, 315.0),
+    (350.0, 361.0),
+    (400.0, 416.0),
+    (450.0, 451.0),
+    (500.0, 492.0),
+]);
 
-/// `AVSpeechSynthesizer` with Eloquence voices: `(utterance rate, wpm)`.
-pub const AV_ELOQUENCE: RateTable = RateTable::new(&[(0.0, 60.0), (0.5, 180.0), (1.0, 540.0)]);
+/// `AVSpeechSynthesizer` with Eloquence voices (measured with Reed):
+/// `(utterance rate, wpm)`. Above the default 0.5 the rate climbs steeply.
+pub const AV_ELOQUENCE: RateTable = RateTable::new(&[
+    (0.00, 62.0),
+    (0.05, 67.0),
+    (0.10, 76.0),
+    (0.15, 82.0),
+    (0.20, 93.0),
+    (0.25, 101.0),
+    (0.30, 114.0),
+    (0.35, 123.0),
+    (0.40, 139.0),
+    (0.45, 150.0),
+    (0.50, 169.0),
+    (0.55, 214.0),
+    (0.60, 273.0),
+    (0.65, 345.0),
+    (0.70, 444.0),
+    (0.75, 581.0),
+    (0.80, 727.0),
+    (0.85, 922.0),
+]);
 
-/// `AVSpeechSynthesizer` with other voices: `(utterance rate, wpm)`.
-pub const AV_OTHER: RateTable = RateTable::new(&[(0.0, 60.0), (0.5, 180.0), (1.0, 540.0)]);
+/// `AVSpeechSynthesizer` with other voices (measured with Samantha):
+/// `(utterance rate, wpm)`.
+pub const AV_OTHER: RateTable = RateTable::new(&[
+    (0.00, 99.0),
+    (0.05, 110.0),
+    (0.10, 116.0),
+    (0.15, 132.0),
+    (0.20, 141.0),
+    (0.25, 152.0),
+    (0.35, 165.0),
+    (0.40, 180.0),
+    (0.50, 198.0),
+    (0.55, 256.0),
+    (0.60, 315.0),
+    (0.65, 361.0),
+    (0.70, 416.0),
+    (0.75, 492.0),
+    (0.80, 554.0),
+    (0.85, 616.0),
+    (0.90, 696.0),
+    (1.00, 797.0),
+]);
 
-/// The `NSSpeechSynthesizer` table for a voice.
+/// The `nsspeech` table for a voice.
 pub fn ns_table(voice_id: Option<&str>) -> RateTable {
     if voice_id.is_some_and(crate::voices::is_eloquence) {
         NS_ELOQUENCE
@@ -91,7 +168,7 @@ pub fn ns_table(voice_id: Option<&str>) -> RateTable {
     }
 }
 
-/// The `AVSpeechSynthesizer` table for a voice.
+/// The `avspeech` table for a voice.
 pub fn av_table(voice_id: Option<&str>) -> RateTable {
     if voice_id.is_some_and(crate::voices::is_eloquence) {
         AV_ELOQUENCE

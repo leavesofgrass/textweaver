@@ -50,7 +50,10 @@ struct Current {
     /// Kept alive while the engine speaks it.
     _ns: Retained<NSString>,
     tracker: WordTracker,
+    /// When `speak` was asked to start it (before opening a channel).
     started: Instant,
+    /// A word callback has arrived.
+    heard: bool,
 }
 
 /// Apple's classic speech engine (`NSSpeechSynthesizer`'s engine) through the
@@ -136,7 +139,8 @@ impl NsSpeechBackend {
         self.voice.as_deref()
     }
 
-    /// Time from starting the most recent utterance to its first word
+    /// Time from asking the engine to speak the most recent utterance
+    /// (including opening a channel when needed) to its first word
     /// callback, as measured at the callback.
     pub fn first_word_latency(&self) -> Option<Duration> {
         self.first_word_latency
@@ -199,6 +203,7 @@ impl NsSpeechBackend {
                 sink.emit(u.id, RawEvent::Finished);
                 continue;
             }
+            let t0 = Instant::now();
             let ns = NSString::from_str(&u.text);
             let started = match self.ensure_channel() {
                 Ok(channel) => channel.speak(&ns).map_err(engine),
@@ -217,7 +222,8 @@ impl NsSpeechBackend {
                 tracker: WordTracker::new(&u.text),
                 text: u.text,
                 _ns: ns,
-                started: Instant::now(),
+                started: t0,
+                heard: false,
             });
         }
     }
@@ -236,7 +242,8 @@ impl NsSpeechBackend {
                     let Some(cur) = self.current.as_mut() else {
                         continue;
                     };
-                    if self.first_word_latency.is_none() {
+                    if !cur.heard {
+                        cur.heard = true;
                         self.first_word_latency = Some(at.saturating_duration_since(cur.started));
                     }
                     if let Some(range) = cur.tracker.word(&cur.text, location, length) {
