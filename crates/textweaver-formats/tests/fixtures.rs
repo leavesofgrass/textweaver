@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use serde_json::{Value, json};
 use textweaver_core::Unit;
-use textweaver_formats::{LoadOptions, Registry, Source};
+use textweaver_formats::{FootnoteMode, LoadOptions, Registry, Source};
 use textweaver_text::{Document, NarrationPolicy, plan, segments};
 
 fn fixture(name: &str) -> PathBuf {
@@ -80,7 +80,7 @@ fn sample_md() {
 fn sample_md_inline_footnotes_skip_code() {
     let options = LoadOptions {
         skip_code: true,
-        footnotes_inline: true,
+        footnotes: FootnoteMode::Inline,
     };
     let doc = load("sample.md", &options);
     insta::assert_json_snapshot!("sample_md_inline_skip_document", view(&doc));

@@ -27,6 +27,7 @@ use textweaver_text::{Document, DocumentMeta};
 
 mod builder;
 pub mod cache;
+pub mod encoding;
 pub mod export;
 pub mod html;
 pub mod markdown;
@@ -46,7 +47,7 @@ pub const CELL_SEPARATOR: &str = " | ";
 
 /// Version of the canonical text the loaders produce. Bumped whenever a
 /// loader's output changes, which invalidates cached documents.
-pub const CANONICAL_VERSION: u32 = 1;
+pub const CANONICAL_VERSION: u32 = 2;
 
 /// Where a document comes from.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -86,15 +87,30 @@ impl Source {
     }
 }
 
+/// Where footnotes go in the canonical text (Star's `footnote_mode`, whose
+/// default `inline` did nothing at all; here every mode works).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum FootnoteMode {
+    /// References read `[label]` where they are; the notes follow the text
+    /// under a "Footnotes" heading, one per line.
+    #[default]
+    Deferred,
+    /// Each note replaces its reference as `(footnote: text)`.
+    Inline,
+    /// References and notes are left out.
+    Skip,
+}
+
 /// Options that affect how a document is loaded (part of the cache key).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(default)]
 pub struct LoadOptions {
     /// Drop code blocks (text under block `Code` markers) from the canonical
     /// text. Inline code is kept, as in Star.
     pub skip_code: bool,
-    /// Put each footnote's text where it is referenced, as
-    /// `(footnote: text)`, instead of in a "Footnotes" section at the end.
-    pub footnotes_inline: bool,
+    /// Where footnotes go.
+    pub footnotes: FootnoteMode,
 }
 
 /// Loader failures.
@@ -233,13 +249,47 @@ pub fn meta_for(source: &Source, id: &str) -> DocumentMeta {
     }
 }
 
-/// The source decoded as UTF-8 (invalid bytes replaced), without a byte
-/// order mark, with `\r\n` and `\r` turned into `\n`.
+/// The source's text: decoded as [`encoding::decode`] decides (BOM, UTF-8,
+/// else Windows-1252), without a byte order mark, with `\r\n` and `\r`
+/// turned into `\n`.
 pub fn source_text(source: &Source) -> Result<String, LoadError> {
+    Ok(decode_source(source, None)?.text)
+}
+
+/// The source decoded with an optional declared encoding label (see
+/// [`encoding::decode`]), line endings normalized to `\n`.
+pub fn decode_source(
+    source: &Source,
+    declared: Option<&str>,
+) -> Result<encoding::Decoded, LoadError> {
     let bytes = source.read()?;
-    let text = String::from_utf8_lossy(&bytes);
-    let text = text.strip_prefix('\u{feff}').unwrap_or(&text);
-    Ok(text.replace("\r\n", "\n").replace('\r', "\n"))
+    Ok(decode_bytes(&bytes, declared))
+}
+
+/// [`encoding::decode`] with line endings normalized to `\n` and any stray
+/// BOM character at the start dropped.
+pub fn decode_bytes(bytes: &[u8], declared: Option<&str>) -> encoding::Decoded {
+    let mut d = encoding::decode(bytes, declared);
+    let text = d.text.strip_prefix('\u{feff}').unwrap_or(&d.text);
+    d.text = normalize_newlines(text);
+    d
+}
+
+/// `\r\n` and lone `\r` turned into `\n`.
+pub fn normalize_newlines(text: &str) -> String {
+    if text.contains('\r') {
+        text.replace("\r\n", "\n").replace('\r', "\n")
+    } else {
+        text.to_owned()
+    }
+}
+
+/// Records a non-UTF-8 source encoding in `meta.properties["encoding"]`.
+pub fn note_encoding(meta: &mut DocumentMeta, decoded: &encoding::Decoded) {
+    if decoded.is_legacy() {
+        meta.properties
+            .insert("encoding".to_owned(), decoded.encoding.to_owned());
+    }
 }
 
 /// A title from the file name (with its extension), for sources with a path.

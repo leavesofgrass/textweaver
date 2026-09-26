@@ -20,6 +20,10 @@
 //!
 //! Also skipped: elements with the `hidden` attribute or `aria-hidden="true"`,
 //! and images with `role="presentation"`.
+//!
+//! The charset comes from a byte order mark, a `<meta charset>` (or
+//! `http-equiv` content type, or XML declaration) in the first 1024 bytes,
+//! else UTF-8 when valid, else Windows-1252 (see [`crate::encoding`]).
 
 use ropey::Rope;
 use scraper::{ElementRef, Html, Node};
@@ -27,7 +31,10 @@ use textweaver_core::{CharRange, MarkerKind};
 use textweaver_text::{Document, DocumentMeta, HEADER_ROW_LABEL, Marker};
 
 use crate::builder::Builder;
-use crate::{LoadError, LoadOptions, Loader, Source, meta_for, source_text, title_from_path};
+use crate::{
+    LoadError, LoadOptions, Loader, Source, decode_bytes, encoding, meta_for, note_encoding,
+    title_from_path,
+};
 
 /// Loads HTML and XHTML.
 #[derive(Clone, Copy, Debug, Default)]
@@ -47,9 +54,12 @@ impl Loader for HtmlLoader {
     }
 
     fn load(&self, source: &Source, options: &LoadOptions) -> Result<Document, LoadError> {
-        let text = source_text(source)?;
+        let bytes = source.read()?;
+        let declared = encoding::sniff_html_charset(&bytes);
+        let decoded = decode_bytes(&bytes, declared.as_deref());
         let mut meta = meta_for(source, self.id());
-        let (canonical, markers) = convert(&text, options, &mut meta);
+        note_encoding(&mut meta, &decoded);
+        let (canonical, markers) = convert(&decoded.text, options, &mut meta);
         if meta.title.is_none() {
             meta.title = markers
                 .iter()
@@ -483,6 +493,24 @@ mod tests {
         assert_eq!(d.meta.title.as_deref(), Some("T"));
         assert_eq!(d.meta.language.as_deref(), Some("en"));
         assert_eq!(kinds(&d, MarkerKind::Bold), ["world"]);
+    }
+
+    #[test]
+    fn declared_charset_decodes_legacy_pages() {
+        let d = HtmlLoader
+            .load(
+                &Source::Bytes {
+                    data: b"<html><head><meta charset=iso-8859-1></head><body><p>Caf\xe9 cr\xe8me.</p></body></html>".to_vec(),
+                    hint: "html".into(),
+                },
+                &LoadOptions::default(),
+            )
+            .unwrap();
+        assert_eq!(d.text().to_string(), "Café crème.");
+        assert_eq!(
+            d.meta.properties.get("encoding").map(String::as_str),
+            Some("windows-1252")
+        );
     }
 
     #[test]
