@@ -11,7 +11,9 @@ use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 use anyhow::{Context, bail};
-use textweaver_convert::{ConvertOptions, Converter, OutputFormat, Status, WatchOptions, watch};
+use textweaver_convert::{
+    ConvertOptions, Converter, OutputFormat, PdfOptions, Status, WatchOptions, WriteOptions, watch,
+};
 use textweaver_render::{EmbedMode, Engine, Flavor, RenderOptions, TemplateChoice};
 
 /// Arguments for `tw convert`.
@@ -75,6 +77,14 @@ pub struct Args {
     /// Never use Pandoc, even for formats with no native reader.
     #[arg(long)]
     pub no_pandoc: bool,
+    /// Read inline code spans as ASCIIMath (for course material written
+    /// for MathJax); fenced blocks marked asciimath are read either way.
+    #[arg(long)]
+    pub asciimath: bool,
+    /// PDF: a TrueType or OpenType font file for the text (default: the
+    /// TEXTWEAVER_PDF_FONT environment variable, then an installed font).
+    #[arg(long, value_name = "FILE")]
+    pub pdf_font: Option<PathBuf>,
     /// Watch: seconds a file's size must hold still before converting.
     #[arg(long, default_value_t = 2.0)]
     pub stable_seconds: f64,
@@ -114,6 +124,7 @@ fn options(args: &Args) -> ConvertOptions {
             engine: args.engine,
             flavor: args.flavor,
             math: !args.no_math,
+            asciimath: args.asciimath,
             sanitize: args.sanitize,
             smart_punctuation: args.smart,
             embeds: args.embeds,
@@ -125,6 +136,13 @@ fn options(args: &Args) -> ConvertOptions {
         jobs: args.jobs,
         force: args.force,
         pandoc: !args.no_pandoc,
+        write: WriteOptions {
+            pdf: PdfOptions {
+                font: args.pdf_font.clone(),
+                ..PdfOptions::default()
+            },
+            ..WriteOptions::default()
+        },
         ..ConvertOptions::default()
     }
 }
@@ -151,6 +169,11 @@ pub fn run(args: Args) -> anyhow::Result<()> {
                     println!("Up to date: {}", f.output.display());
                 }
                 _ => {}
+            }
+            // Writer warnings are always printed: they say what the output
+            // is missing (an image, a braille symbol).
+            for w in &f.warnings {
+                eprintln!("Warning: {}: {w}", f.source.display());
             }
         }
         println!("{}", summary.sentence());

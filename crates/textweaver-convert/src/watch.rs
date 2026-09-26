@@ -106,7 +106,14 @@ impl WatchEvent {
                 output.display()
             ),
             WatchEvent::File(r) => match &r.status {
-                Status::Converted => format!("Converted {}.", name(&r.source)),
+                Status::Converted if r.warnings.is_empty() => {
+                    format!("Converted {}.", name(&r.source))
+                }
+                Status::Converted => format!(
+                    "Converted {}. Warning: {}",
+                    name(&r.source),
+                    r.warnings.join(" ")
+                ),
                 Status::Skipped => format!("{} is up to date.", name(&r.source)),
                 Status::Failed(reason) => {
                     format!("Could not convert {}: {reason}", name(&r.source))

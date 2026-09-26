@@ -55,6 +55,15 @@ use crate::resource::{ImageKind, Resource, Resources};
 use crate::{Format, WriteError, WriteOptions, WriteReport, Writer, civil, timestamp};
 use font::Fonts;
 
+/// Checks, without writing anything, that the fonts PDF output needs can be
+/// found and read with these options: [`WriteError::NoFont`] when no font
+/// is installed or named, [`WriteError::Font`] when the named one cannot be
+/// used. A batch converter calls this once before converting many files,
+/// so a missing font is one clear message rather than one failure per file.
+pub fn check_fonts(options: &WriteOptions) -> Result<(), WriteError> {
+    Fonts::discover(options.pdf.font.as_deref()).map(|_| ())
+}
+
 /// Writes tagged PDF.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PdfWriter;
