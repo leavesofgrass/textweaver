@@ -5,7 +5,7 @@
 //! backend is one sentence, so the list reads well aloud.
 
 use serde::Serialize;
-use textweaver_app::speech::{BackendInfo, BackendRegistry};
+use textweaver_app::speech::{BackendInfo, BackendRegistry, Caps};
 
 /// Arguments for `tw backends`.
 #[derive(clap::Args, Debug)]
@@ -32,6 +32,37 @@ pub fn report(registry: &BackendRegistry) -> Report {
     }
 }
 
+/// What a backend can do, as a phrase list ("word highlighting, pause,
+/// audio files"); empty when it can do none of the things listed.
+pub fn features(caps: Caps) -> Vec<&'static str> {
+    [
+        (Caps::WORD_EVENTS, "word highlighting"),
+        (Caps::PAUSE, "pause"),
+        (Caps::PITCH, "pitch"),
+        (Caps::VOLUME, "volume"),
+        (Caps::SYNTH_TO_FILE, "audio files"),
+        (Caps::TONES, "tones"),
+        (
+            Caps::NATIVE_NORMALIZATION,
+            "reads numbers and abbreviations itself",
+        ),
+    ]
+    .into_iter()
+    .filter(|(c, _)| caps.contains(*c))
+    .map(|(_, s)| s)
+    .collect()
+}
+
+/// "a, b, and c".
+fn and_list(items: &[&str]) -> String {
+    match items {
+        [] => String::new(),
+        [a] => (*a).to_owned(),
+        [a, b] => format!("{a} and {b}"),
+        [rest @ .., last] => format!("{}, and {last}", rest.join(", ")),
+    }
+}
+
 /// One sentence describing a backend.
 pub fn describe(b: &BackendInfo, auto: &str) -> String {
     let mut s = format!(
@@ -48,6 +79,10 @@ pub fn describe(b: &BackendInfo, auto: &str) -> String {
         s.push_str(&format!(" Priority {}.", b.priority));
     } else {
         s.push_str(" Last resort.");
+    }
+    let f = features(b.caps);
+    if !f.is_empty() {
+        s.push_str(&format!(" Supports {}.", and_list(&f)));
     }
     if b.opt_in {
         s.push_str(" Only when chosen by name.");
@@ -83,9 +118,26 @@ mod tests {
         let line = describe(null, "null");
         assert_eq!(
             line,
-            "null: Silent (no audio). Available. Last resort. Chosen automatically."
+            "null: Silent (no audio). Available. Last resort. \
+             Supports pause, pitch, and volume. Chosen automatically."
         );
         let rec = r.backends.iter().find(|b| b.id == "recording").unwrap();
-        assert!(describe(rec, r.auto).contains("Only when chosen by name."));
+        assert_eq!(
+            describe(rec, "null"),
+            "recording: Recording (test double). Available. Priority 0. Supports word \
+             highlighting, pitch, volume, audio files, and tones. Only when chosen by name."
+        );
+        let json = serde_json::to_value(&r).unwrap();
+        assert!(json["backends"][0]["caps"].is_string());
+    }
+
+    #[test]
+    fn feature_lists() {
+        assert_eq!(and_list(&features(Caps::empty())), "");
+        assert_eq!(and_list(&features(Caps::TONES)), "tones");
+        assert_eq!(
+            and_list(&features(Caps::PAUSE | Caps::TONES)),
+            "pause and tones"
+        );
     }
 }

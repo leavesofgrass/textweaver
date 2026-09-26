@@ -50,6 +50,12 @@ pub fn describe(v: &Voice) -> String {
     if let Some(g) = &v.gender {
         s.push_str(&format!(", {g}"));
     }
+    for t in &v.tags {
+        // Names often already say it ("Zira (OneCore)"); do not repeat.
+        if !v.name.to_lowercase().contains(&t.to_lowercase()) {
+            s.push_str(&format!(", {t}"));
+        }
+    }
     s.push('.');
     s
 }
@@ -89,5 +95,20 @@ mod tests {
         let r = voices(&args, &BackendRegistry::with_builtins()).unwrap();
         assert_eq!(r.backend.backend.id, "recording");
         assert_eq!(describe(&r.voices[1]), "rec-en-us: Recording US, en-US.");
+    }
+
+    #[test]
+    fn tags_are_read_unless_the_name_says_them() {
+        let v = Voice {
+            id: "eci:enu:reed".into(),
+            name: "Eloquence Reed, American English".into(),
+            languages: vec!["en-US".into()],
+            gender: Some("male".into()),
+            tags: vec!["Eloquence".into(), "OpenEVV".into()],
+        };
+        assert_eq!(
+            describe(&v),
+            "eci:enu:reed: Eloquence Reed, American English, en-US, male, OpenEVV."
+        );
     }
 }

@@ -152,14 +152,18 @@ pub fn speak(args: &Args, registry: &BackendRegistry) -> anyhow::Result<Report> 
     let service = SpeechService::spawn(factory, config.clone())?;
     let p = pipeline(service.capabilities());
     let utterances: Vec<Utterance> = planned.iter().cloned().map(|u| p.apply(u)).collect();
-    service.read(planned);
+    let reading = service.read(planned);
     let mut statuses = Vec::new();
     loop {
         let status = service
             .statuses()
             .recv_timeout(STATUS_TIMEOUT)
             .context("the speech service stopped answering")?;
-        let done = matches!(status, SpeechStatus::Finished | SpeechStatus::Stopped);
+        let done = matches!(
+            status,
+            SpeechStatus::Finished { generation } | SpeechStatus::Stopped { generation }
+                if generation == reading
+        );
         statuses.push(status);
         if done {
             break;
@@ -258,12 +262,15 @@ mod tests {
         for u in &r.utterances {
             u.offset_map.check_invariants(&u.text).unwrap();
         }
-        assert_eq!(r.statuses.last(), Some(&SpeechStatus::Finished));
+        assert_eq!(
+            r.statuses.last(),
+            Some(&SpeechStatus::Finished { generation: 1 })
+        );
         let json = serde_json::to_value(&r).unwrap();
         assert!(json["utterances"][0]["offset_map"]["spans"].is_array());
         assert_eq!(
-            json["statuses"].as_array().unwrap().last().unwrap(),
-            "finished"
+            json["statuses"].as_array().unwrap().last().unwrap()["finished"]["generation"],
+            1
         );
     }
 
@@ -300,7 +307,10 @@ mod tests {
         a.out = Some(path.clone());
         let r = speak(&a, &BackendRegistry::with_builtins()).unwrap();
         assert_eq!(r.out.as_deref(), Some(path.as_path()));
-        assert_eq!(std::fs::read_to_string(&path).unwrap(), "Hello.");
+        // The recording backend writes one word-length of silence as WAV.
+        let wav = std::fs::read(&path).unwrap();
+        assert_eq!(&wav[..4], b"RIFF");
+        assert_eq!(wav.len(), 44 + 4000 * 2);
         let _ = std::fs::remove_file(&path);
         let mut a = args("Hello.", "null");
         a.out = Some(path);
