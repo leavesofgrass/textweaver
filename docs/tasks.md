@@ -594,6 +594,9 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 - Depend on Masonry more than on Xilem.
 - Keep wxDragon working on Windows until the UI Automation report passes.
 - Propose upstream PRs for the gaps.
+- **Visual starting point (Jon, 2026-09-26):** Jon likes the dark look of Xilem's `to_do_mvc` example (github.com/linebender/xilem, the `examples` folder). Use its layout, spacing, and dark styling as the base for the main window and dialogs.
+  - Map textweaver's Galaxy theme onto it, and keep contrast at WCAG AA or better.
+  - Keep the same structure for Galaxy Light and high contrast.
 
 1. **ADR-0023, "Xilem GUI".** It supersedes ADR-0014 and records:
    - the choice;
