@@ -52,8 +52,9 @@ use crate::align::Aligner;
 use crate::app::{App, ListKind, Mode, Session};
 use crate::command::{CaretMove, Effect, PromptPurpose};
 use crate::help::chords_text;
-use crate::notes::{Note, UserHighlight, shift_notes};
+use crate::notes::{UserHighlight, shift_marks};
 use crate::text_util;
+use textweaver_store::Note;
 
 /// Positions that move with the text.
 #[derive(Clone, Debug, Default)]
@@ -717,14 +718,10 @@ impl App {
             s.doc = Document::from_plain_text(&ed.text().to_string());
             s.doc.meta = meta;
         }
+        shift_marks(&mut s.notes, &mut s.highlights, &mut s.bookmarks, outcomes);
         for o in outcomes {
-            for b in &mut s.bookmarks {
-                b.pos = o.map_pos(b.pos, textweaver_core::Bias::Before);
-            }
-            shift_notes(&mut s.notes, &mut s.highlights, o);
             s.history.shift(o);
         }
-        s.bookmarks.sort_by_key(|b| b.pos);
         if !outcomes.is_empty() {
             edit.changed = true;
             s.find = None;

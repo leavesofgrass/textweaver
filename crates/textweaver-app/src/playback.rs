@@ -3,7 +3,7 @@
 
 use textweaver_a11y::{Priority, Verbosity};
 use textweaver_core::{CharPos, CharRange, Unit};
-use textweaver_speech::{SayMode, SpeechStatus};
+use textweaver_speech::{Caps, ReadingGeneration, SayMode, SpeechStatus};
 use textweaver_text::narrate::NarrationPolicy;
 use textweaver_text::units::unit_at;
 
@@ -36,124 +36,82 @@ pub(crate) enum ReadKind {
     InPlace,
 }
 
-/// Tells the current reading's status from stale status still in the channel.
+/// Which reading's statuses the app follows.
 ///
-/// The service stamps utterances with a generation that grows with every
-/// stop or restart, but the Phase 0 contract does not tell the app which
-/// generation its own `read` got (see the contract change request in the
-/// wave 1 report). So the app:
-///
-/// 1. drains the channel before every read or stop and treats every
-///    generation seen so far as stale (`floor`);
-/// 2. adopts a newer generation as its own only when that generation's
-///    first located position touches the first utterance it asked for
-///    (`head`); a stale reading started elsewhere is rejected whole;
-/// 3. attributes `Finished` (which carries no generation) to the generation
-///    of the latest position, since the speech thread emits in order.
-///
-/// A later generation that continues forward from the adopted one is
-/// accepted too, so a service that restarts internally (for example to
-/// apply a rate change) keeps the highlight moving.
-#[derive(Clone, Copy, Debug, Default)]
+/// Every [`SpeechService::read`](textweaver_speech::SpeechService::read)
+/// returns a [`ReadingGeneration`] that each `Position`, `Paused`,
+/// `Stopped`, and `Finished` status about that reading carries. The app
+/// keeps the generation of the reading it started last and drops every
+/// status with another one, so a late word or "finished" from a reading
+/// that was stopped, paused, or replaced can never move the highlight or
+/// end a newer reading. (The wave 1 tracker had to guess from positions.)
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) struct SpeechTrack {
-    floor: u64,
-    max_seen: u64,
-    head: Option<CharRange>,
-    current: Option<u64>,
-    rejected: Option<u64>,
-    last: Option<(u64, Verdict)>,
-    last_accepted: Option<CharPos>,
-    active: bool,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Verdict {
-    Ours,
-    Stale,
-    Undecided,
-}
-
-fn touches(a: CharRange, b: CharRange) -> bool {
-    a.start <= b.end && b.start <= a.end
+    /// The reading being followed.
+    current: Option<ReadingGeneration>,
+    /// A reading that was paused: only its `Paused` status is still wanted,
+    /// for the service's resume point.
+    paused: Option<ReadingGeneration>,
 }
 
 impl SpeechTrack {
-    fn restart(&mut self, head: Option<CharRange>, active: bool) {
-        self.floor = self.max_seen + 1;
-        self.head = head;
-        self.current = None;
-        self.rejected = None;
-        self.last = None;
-        self.last_accepted = None;
-        self.active = active;
+    /// Follows a new reading.
+    fn follow(&mut self, g: ReadingGeneration) {
+        self.current = Some(g);
+        self.paused = None;
     }
 
-    fn saw(&mut self, g: u64) {
-        self.max_seen = self.max_seen.max(g);
+    /// Stops following anything.
+    fn clear(&mut self) {
+        *self = SpeechTrack::default();
     }
 
-    /// Whether a position belongs to the current reading.
-    fn position(&mut self, g: u64, range: Option<CharRange>) -> bool {
-        self.saw(g);
-        let verdict = self.judge(g, range);
-        self.last = Some((g, verdict));
-        if verdict == Verdict::Ours
-            && let Some(r) = range
-        {
-            self.last_accepted = Some(r.start);
-        }
-        verdict == Verdict::Ours && range.is_some()
+    /// The followed reading paused.
+    fn pause(&mut self) {
+        self.paused = self.current.take();
     }
 
-    fn judge(&mut self, g: u64, range: Option<CharRange>) -> Verdict {
-        if !self.active || g < self.floor || Some(g) == self.rejected {
-            return Verdict::Stale;
-        }
-        match self.current {
-            Some(c) if g == c => return Verdict::Ours,
-            Some(c) if g < c => return Verdict::Stale,
-            _ => {}
-        }
-        let Some(r) = range else {
-            return Verdict::Undecided;
-        };
-        let ours = match (self.current, self.last_accepted) {
-            // A newer generation continuing forward from ours.
-            (Some(_), Some(at)) => r.start >= at,
-            _ => self.head.is_none_or(|h| touches(h, r)),
-        };
-        if ours {
-            self.current = Some(g);
-            Verdict::Ours
-        } else {
-            self.rejected = Some(g);
-            Verdict::Stale
-        }
+    /// Whether a status of reading `g` belongs to the followed reading.
+    fn is_current(&self, g: ReadingGeneration) -> bool {
+        self.current == Some(g)
     }
 
-    /// Whether `Finished` ends the current reading. When it does, the
-    /// finished generation becomes stale, and a newer reading is judged
-    /// against the head again.
-    fn finished(&mut self) -> bool {
-        let done = self.active
-            && matches!(
-                self.last,
-                Some((g, Verdict::Ours | Verdict::Undecided)) if g >= self.floor
-            );
-        if let (true, Some((g, _))) = (done, self.last) {
-            self.floor = g + 1;
-            self.current = None;
-            self.rejected = None;
-            self.last_accepted = None;
-        }
-        done
+    /// Whether a reading is being followed.
+    fn active(&self) -> bool {
+        self.current.is_some()
     }
+}
+
+/// What a capability change means for the listener, or `None` when nothing
+/// they would notice changed.
+pub(crate) fn capability_message(old: Caps, new: Caps) -> Option<String> {
+    let mut parts: Vec<&str> = Vec::new();
+    let lost = |c: Caps| old.contains(c) && !new.contains(c);
+    let gained = |c: Caps| !old.contains(c) && new.contains(c);
+    if lost(Caps::WORD_EVENTS) {
+        parts.push("This voice does not report words, so the word highlight is estimated.");
+    } else if gained(Caps::WORD_EVENTS) {
+        parts.push("This voice reports each word, so the highlight follows it exactly.");
+    }
+    if lost(Caps::PITCH) {
+        parts.push("Pitch cannot be changed with this voice.");
+    }
+    if lost(Caps::VOLUME) {
+        parts.push("Volume cannot be changed with this voice.");
+    }
+    (!parts.is_empty()).then(|| parts.join(" "))
 }
 
 impl App {
     /// Whether the app is reading, paused, or idle.
     pub fn playback(&self) -> Playback {
         self.playback
+    }
+
+    /// The speech backend's capabilities as last reported (they follow the
+    /// selected voice).
+    pub fn speech_capabilities(&self) -> Caps {
+        self.speech_caps
     }
 
     pub(crate) fn narration_policy(&self) -> NarrationPolicy {
@@ -164,25 +122,14 @@ impl App {
         }
     }
 
-    /// Takes stale status out of the channel before a restart, keeping only
-    /// what the tracker needs (generations) and reporting backend errors.
-    fn drain_stale(&mut self) {
-        while let Some(status) = self.speech.try_status() {
-            match status {
-                SpeechStatus::Position { utterance, .. } => self.track.saw(utterance.generation),
-                SpeechStatus::BackendError(e) => self.error(&format!("Speech error: {e}")),
-                _ => {}
-            }
-        }
-    }
-
     /// Stops speech and forgets the reading state, without announcing.
+    /// Statuses of the stopped reading still in the channel are dropped
+    /// when they arrive (their generation is no longer followed).
     pub(crate) fn stop_speech(&mut self) {
-        if self.playback != Playback::Idle || self.track.active {
-            self.drain_stale();
+        if self.playback != Playback::Idle || self.track.active() {
             self.speech.stop();
-            self.track.restart(None, false);
         }
+        self.track.clear();
         self.playback = Playback::Idle;
         if let Some(s) = self.session.as_mut() {
             s.spoken = None;
@@ -203,10 +150,8 @@ impl App {
         }
         s.spoken = None;
         s.spoken_sentence = None;
-        let head = utterances.iter().find_map(|u| u.source_range());
-        self.drain_stale();
-        self.speech.read(utterances);
-        self.track.restart(head, true);
+        let generation = self.speech.read(utterances);
+        self.track.follow(generation);
         self.playback = Playback::Reading;
         self.reading = kind;
         true
@@ -255,22 +200,25 @@ impl App {
                 // point is the latest confirmed word. A `Finished` among
                 // them is ignored: the user asked to pause.
                 while let Some(status) = self.speech.try_status() {
-                    if let SpeechStatus::Position {
-                        utterance,
-                        source_range: Some(r),
-                        ..
-                    } = status
-                    {
-                        if self.track.position(utterance.generation, Some(r)) {
-                            self.set_spoken(r);
+                    match status {
+                        SpeechStatus::Position {
+                            generation,
+                            source_range: Some(r),
+                            ..
+                        } if self.track.is_current(generation) => self.set_spoken(r),
+                        s @ (SpeechStatus::Capabilities { .. } | SpeechStatus::BackendError(_)) => {
+                            self.apply_status(s);
                         }
-                    } else if let SpeechStatus::Position { utterance, .. } = status {
-                        self.track.saw(utterance.generation);
+                        _ => {}
                     }
+                }
+                if self.playback != Playback::Reading {
+                    // A backend error ended the reading meanwhile.
+                    return;
                 }
                 let resume_at = self.reading_position();
                 self.speech.pause();
-                self.track.restart(None, false);
+                self.track.pause();
                 self.playback = Playback::Paused { resume_at };
                 self.pause_origin = resume_at;
                 self.note("Paused.");
@@ -429,30 +377,30 @@ impl App {
     fn apply_status(&mut self, status: SpeechStatus) -> bool {
         match status {
             SpeechStatus::Position {
-                utterance,
+                generation,
                 source_range,
                 ..
             } => {
-                if !self.track.position(utterance.generation, source_range) {
+                if !self.track.is_current(generation) || self.playback != Playback::Reading {
                     return false;
                 }
-                if self.playback == Playback::Idle {
-                    // A newer reading of ours after an older one finished.
-                    self.playback = Playback::Reading;
-                }
-                if self.playback != Playback::Reading {
-                    return false;
-                }
+                // `None` inside inserted speech ("heading level 2"): the
+                // highlight stays where it was.
                 let Some(r) = source_range else {
                     return false;
                 };
                 self.set_spoken(r);
                 true
             }
-            SpeechStatus::Paused { resume_at, .. } => {
+            SpeechStatus::Paused {
+                generation,
+                resume_at,
+            } => {
                 // The service knows the last confirmed word; prefer it unless
                 // the user has moved since pausing.
-                if let (Playback::Paused { resume_at: at }, Some(p)) = (self.playback, resume_at)
+                if self.track.paused == Some(generation)
+                    && let (Playback::Paused { resume_at: at }, Some(p)) =
+                        (self.playback, resume_at)
                     && at == self.pause_origin
                 {
                     self.playback = Playback::Paused { resume_at: Some(p) };
@@ -460,8 +408,9 @@ impl App {
                 }
                 false
             }
-            SpeechStatus::Finished { .. } => {
-                if self.playback == Playback::Reading && self.track.finished() {
+            SpeechStatus::Finished { generation } => {
+                if self.playback == Playback::Reading && self.track.is_current(generation) {
+                    self.track.clear();
                     self.playback = Playback::Idle;
                     if let Some(s) = self.session.as_mut() {
                         s.spoken = None;
@@ -472,8 +421,17 @@ impl App {
                 }
                 false
             }
-            SpeechStatus::Stopped { .. } | SpeechStatus::Capabilities { .. } => false,
+            SpeechStatus::Stopped { .. } => false,
+            SpeechStatus::Capabilities { caps } => {
+                let old = std::mem::replace(&mut self.speech_caps, caps);
+                if let Some(msg) = capability_message(old, caps) {
+                    self.tell(&msg);
+                    return true;
+                }
+                false
+            }
             SpeechStatus::BackendError(e) => {
+                self.track.clear();
                 self.playback = Playback::Idle;
                 self.error(&format!("Speech error: {e}"));
                 true
@@ -503,5 +461,44 @@ impl App {
             self.spoken_log.push(r);
         }
         self.scroll_to_focus();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_tracker_follows_one_reading() {
+        let mut t = SpeechTrack::default();
+        assert!(!t.active());
+        t.follow(3);
+        assert!(t.is_current(3) && !t.is_current(2) && !t.is_current(4));
+        t.pause();
+        assert!(!t.active() && t.paused == Some(3));
+        t.follow(4);
+        assert_eq!(t.paused, None);
+        t.clear();
+        assert!(!t.is_current(4));
+    }
+
+    #[test]
+    fn capability_changes_read_well() {
+        let full = Caps::WORD_EVENTS | Caps::PITCH | Caps::VOLUME;
+        assert_eq!(
+            capability_message(full, Caps::PITCH | Caps::VOLUME).as_deref(),
+            Some("This voice does not report words, so the word highlight is estimated.")
+        );
+        assert_eq!(
+            capability_message(Caps::VOLUME, full).as_deref(),
+            Some("This voice reports each word, so the highlight follows it exactly.")
+        );
+        assert_eq!(
+            capability_message(full, Caps::WORD_EVENTS).as_deref(),
+            Some(
+                "Pitch cannot be changed with this voice. Volume cannot be changed with this voice."
+            )
+        );
+        assert_eq!(capability_message(full, full | Caps::TONES), None);
     }
 }

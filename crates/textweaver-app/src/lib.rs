@@ -109,8 +109,9 @@ pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpos
 pub use extra::{extra_bindings, extra_chords, extra_lookup};
 pub use goto::parse_go_to;
 pub use help::{chords_text, help_entries, palette_matches, resolve_command};
-pub use notes::{HIGHLIGHTS_KEY, NOTES_KEY, Note, UserHighlight, parse_tags};
+pub use notes::{HIGHLIGHTS_KEY, NOTES_KEY, UserHighlight, migrate_legacy_notes, parse_tags};
 pub use playback::Playback;
+pub use textweaver_store::Note;
 pub use view::{Highlight, HighlightKind, Viewport};
 
 pub use textweaver_a11y as a11y;

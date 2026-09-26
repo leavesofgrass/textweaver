@@ -3,20 +3,24 @@
 //! A note is text attached to a range (the selection, else the sentence at
 //! the cursor), with `#tags` taken from its text (Star's tag rule: split on
 //! commas and spaces, leading `#` dropped). A highlight is a colored range.
-//! Both move with edits exactly like bookmarks (one `EditOutcome` for all),
-//! are listed accessibly (Enter jumps, Delete removes, F2 edits), and are
-//! saved with the document's state.
+//! Both move with edits exactly like bookmarks (one `EditOutcome` for all,
+//! through [`DocState::shift`]), are listed accessibly (Enter jumps, Delete
+//! removes, F2 edits), and are saved with the document's state.
 //!
-//! Until Agent C2's typed notes land in `DocState`, they are stored in its
-//! preserved extra keys `app_notes` and `app_highlights`, which cannot clash
-//! with the fields C2 adds; the orchestrator moves them over at
-//! integration.
+//! They are the store's typed [`Note`] and [`Highlight`]
+//! (`DocState::notes` and `DocState::highlights`), the one model the vault
+//! export, `tw marks`, and sidecar sync use too. Wave 2's first app build
+//! kept its own notes in `DocState::extra` under `app_notes` and
+//! `app_highlights`; those are moved onto the typed fields the first time
+//! the document opens, and the old keys removed.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use textweaver_a11y::Verbosity;
 use textweaver_core::{CharPos, CharRange, Direction, EditOutcome, Unit};
 use textweaver_speech::Earcon;
-use textweaver_store::DocState;
+use textweaver_store::notes::{self as store_notes, color_name, highlight_color};
+use textweaver_store::{DocState, Highlight, Note};
+use textweaver_text::Document;
 use textweaver_text::units::unit_at;
 
 use crate::app::{App, ListKind};
@@ -24,79 +28,105 @@ use crate::command::{Effect, NoteCommand, PromptPurpose};
 use crate::nav::ReadAfter;
 use crate::text_util::{self, preview};
 
-/// A note attached to a range of the document.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Note {
-    /// Short stable id (8 hex digits).
-    pub id: String,
-    /// The text the note is about.
-    pub range: CharRange,
-    /// That text when the note was written, whitespace collapsed, at most
-    /// 120 characters (Star's `anchor`).
-    pub anchor: String,
-    /// The note.
-    pub text: String,
-    /// Tags from `#words` in the note.
-    #[serde(default)]
-    pub tags: Vec<String>,
-    /// When it was written or last edited (Unix seconds, UTC).
-    pub ts: i64,
-}
+/// A highlighted range: the store's [`Highlight`] (named for the app so it
+/// does not clash with [`crate::Highlight`], a range drawn on screen).
+pub type UserHighlight = Highlight;
 
-/// A highlighted range.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct UserHighlight {
-    /// The highlighted text.
-    pub range: CharRange,
-    /// Color name (Star's default is yellow).
-    pub color: String,
-    /// When it was added (Unix seconds, UTC).
-    pub ts: i64,
-}
-
-/// `DocState` extra key holding the notes.
+/// The `DocState` extra key where the first wave 2 build kept notes; read
+/// once on open, moved to `DocState::notes`, and removed.
 pub const NOTES_KEY: &str = "app_notes";
-/// `DocState` extra key holding the highlights.
+/// The `DocState` extra key where the first wave 2 build kept highlights;
+/// read once on open, moved to `DocState::highlights`, and removed.
 pub const HIGHLIGHTS_KEY: &str = "app_highlights";
 
 /// Longest anchor kept, in characters (Star's limit).
-const ANCHOR_CHARS: usize = 120;
+const ANCHOR_CHARS: usize = store_notes::ANCHOR_MAX_CHARS;
 
-/// The notes and highlights stored in `state`; malformed entries are
-/// dropped with a warning.
-pub fn load_notes(state: &DocState) -> (Vec<Note>, Vec<UserHighlight>) {
-    fn get<T: serde::de::DeserializeOwned>(state: &DocState, key: &str) -> Vec<T> {
-        state
-            .extra
-            .get(key)
-            .and_then(|v| match serde_json::from_value(v.clone()) {
-                Ok(v) => Some(v),
-                Err(e) => {
-                    log::warn!("ignoring stored {key}: {e}");
-                    None
-                }
-            })
-            .unwrap_or_default()
-    }
-    let mut notes: Vec<Note> = get(state, NOTES_KEY);
-    notes.sort_by_key(|n| (n.range.start, n.range.end));
-    let mut highlights: Vec<UserHighlight> = get(state, HIGHLIGHTS_KEY);
-    highlights.sort_by_key(|h| (h.range.start, h.range.end));
-    (notes, highlights)
+/// A note as the first wave 2 build stored it.
+#[derive(Deserialize)]
+struct LegacyNote {
+    id: String,
+    range: CharRange,
+    #[serde(default)]
+    anchor: String,
+    text: String,
+    #[serde(default)]
+    tags: Vec<String>,
+    #[serde(default)]
+    ts: i64,
 }
 
-/// Stores notes and highlights in `state` (an empty list removes the key,
-/// as Star did).
-pub fn store_notes(state: &mut DocState, notes: &[Note], highlights: &[UserHighlight]) {
-    fn put<T: Serialize>(state: &mut DocState, key: &str, items: &[T]) {
-        if items.is_empty() {
-            state.extra.remove(key);
-        } else if let Ok(v) = serde_json::to_value(items) {
-            state.extra.insert(key.to_owned(), v);
+/// A highlight as the first wave 2 build stored it.
+#[derive(Deserialize)]
+struct LegacyHighlight {
+    range: CharRange,
+    #[serde(default)]
+    color: String,
+    #[serde(default)]
+    ts: i64,
+}
+
+/// Moves notes and highlights kept under the legacy extra keys onto the
+/// typed fields, clamped to `doc` (highlights take their text from it), and
+/// removes the keys. A note whose id is already typed is not duplicated.
+/// Returns whether anything changed, so the caller saves the state once.
+pub fn migrate_legacy_notes(state: &mut DocState, doc: &Document) -> bool {
+    let len = doc.len_chars();
+    let mut changed = false;
+    if let Some(v) = state.extra.remove(NOTES_KEY) {
+        changed = true;
+        match serde_json::from_value::<Vec<LegacyNote>>(v) {
+            Ok(notes) => {
+                for n in notes {
+                    if state.note(&n.id).is_some() {
+                        continue;
+                    }
+                    state.insert_note(Note {
+                        id: n.id,
+                        range: n.range.clamp_to(len),
+                        anchor: n.anchor,
+                        note: n.text,
+                        tags: n.tags,
+                        created: n.ts,
+                        ts: n.ts,
+                        ..Note::default()
+                    });
+                }
+            }
+            Err(e) => log::warn!("ignoring stored {NOTES_KEY}: {e}"),
         }
     }
-    put(state, NOTES_KEY, notes);
-    put(state, HIGHLIGHTS_KEY, highlights);
+    if let Some(v) = state.extra.remove(HIGHLIGHTS_KEY) {
+        changed = true;
+        match serde_json::from_value::<Vec<LegacyHighlight>>(v) {
+            Ok(highlights) => {
+                for h in highlights {
+                    let range = h.range.clamp_to(len);
+                    if range.is_empty() || state.highlights.iter().any(|x| x.range == range) {
+                        continue;
+                    }
+                    let text = doc.slice(range);
+                    let color = if h.color.is_empty() {
+                        store_notes::DEFAULT_HIGHLIGHT_COLOR.to_owned()
+                    } else {
+                        highlight_color(&h.color)
+                    };
+                    let start = range.start.0.to_string();
+                    let end = range.end.0.to_string();
+                    state.insert_highlight(Highlight {
+                        id: store_notes::stable_id("h", &[&start, &end, &color]),
+                        range,
+                        color,
+                        text: store_notes::collapse(&text, store_notes::HIGHLIGHT_TEXT_MAX_CHARS),
+                        ts: h.ts,
+                        extra: serde_json::Map::new(),
+                    });
+                }
+            }
+            Err(e) => log::warn!("ignoring stored {HIGHLIGHTS_KEY}: {e}"),
+        }
+    }
+    changed
 }
 
 /// Tags in a note: words starting with `#`, without the `#`, lowercase,
@@ -116,6 +146,8 @@ pub fn parse_tags(text: &str) -> Vec<String> {
     tags
 }
 
+/// Whitespace collapsed, cut to `max` chars with an ellipsis (for lists
+/// and announcements).
 fn collapse(s: &str, max: usize) -> String {
     let all = s.split_whitespace().collect::<Vec<_>>().join(" ");
     if all.chars().count() <= max {
@@ -127,35 +159,38 @@ fn collapse(s: &str, max: usize) -> String {
     }
 }
 
-fn new_id(existing: &[Note], seed: usize) -> String {
-    let base = u32::try_from(textweaver_store::now_ts() & 0xffff_ffff).unwrap_or(0);
-    (0u32..)
-        .map(|n| {
-            format!(
-                "{:08x}",
-                base.wrapping_mul(2_654_435_761)
-                    .wrapping_add(u32::try_from(seed).unwrap_or(0))
-                    .wrapping_add(n)
-            )
-        })
-        .find(|id| !existing.iter().any(|x| &x.id == id))
-        .unwrap_or_default()
+/// An id no note or highlight in `notes` and `highlights` uses.
+fn fresh_id(notes: &[Note], highlights: &[Highlight]) -> String {
+    loop {
+        let id = store_notes::new_id();
+        if !notes.iter().any(|n| n.id == id) && !highlights.iter().any(|h| h.id == id) {
+            return id;
+        }
+    }
 }
 
-/// Moves notes and highlights across an edit; a note whose text was deleted
-/// entirely stays, collapsed at the edit point (its anchor keeps the text).
-pub(crate) fn shift_notes(
-    notes: &mut [Note],
-    highlights: &mut Vec<UserHighlight>,
-    o: &EditOutcome,
+/// Moves notes, highlights, and bookmarks across an edit with the store's
+/// one rule ([`DocState::shift`]): a note whose text was deleted stays,
+/// collapsed at the edit point (its anchor keeps the text); a highlight
+/// whose text was deleted is dropped.
+pub(crate) fn shift_marks(
+    notes: &mut Vec<Note>,
+    highlights: &mut Vec<Highlight>,
+    bookmarks: &mut Vec<textweaver_store::Bookmark>,
+    outcomes: &[EditOutcome],
 ) {
-    for n in notes.iter_mut() {
-        n.range = o.map_range(n.range);
+    let mut state = DocState {
+        notes: std::mem::take(notes),
+        highlights: std::mem::take(highlights),
+        bookmarks: std::mem::take(bookmarks),
+        ..DocState::default()
+    };
+    for o in outcomes {
+        state.shift(o);
     }
-    for h in highlights.iter_mut() {
-        h.range = o.map_range(h.range);
-    }
-    highlights.retain(|h| !h.range.is_empty());
+    *notes = state.notes;
+    *highlights = state.highlights;
+    *bookmarks = state.bookmarks;
 }
 
 impl App {
@@ -204,16 +239,19 @@ impl App {
         let Some(s) = self.session.as_mut() else {
             return;
         };
-        let anchor = collapse(&s.doc.slice(range), ANCHOR_CHARS);
-        let id = new_id(&s.notes, s.notes.len());
+        let anchor = store_notes::collapse(&s.doc.slice(range), ANCHOR_CHARS);
+        let id = fresh_id(&s.notes, &s.highlights);
         let tags = parse_tags(text);
+        let now = textweaver_store::now_ts();
         s.notes.push(Note {
             id,
             range,
             anchor: anchor.clone(),
-            text: text.to_owned(),
+            note: text.to_owned(),
             tags: tags.clone(),
-            ts: textweaver_store::now_ts(),
+            created: now,
+            ts: now,
+            ..Note::default()
         });
         s.notes.sort_by_key(|n| (n.range.start, n.range.end));
         self.persist_marks();
@@ -232,7 +270,7 @@ impl App {
         let line = text_util::line_of(&s.doc, n.range.start) + 1;
         Some(format!(
             "{}, line {line}. On: {}",
-            n.text,
+            n.note,
             collapse(&n.anchor, 60)
         ))
     }
@@ -264,7 +302,7 @@ impl App {
             return;
         };
         let target = n.range.start;
-        let content = format!("{}. On: {}", n.text, collapse(&n.anchor, 60));
+        let content = format!("{}. On: {}", n.note, collapse(&n.anchor, 60));
         let label = format!("Note {} of {}", i + 1, s.notes.len());
         let mut msg = self.nav_message(Some(&label), target, &content);
         if wrapped {
@@ -308,7 +346,7 @@ impl App {
         let n = s.notes.remove(i);
         let left = s.notes.len();
         self.persist_marks();
-        self.tell(&format!("Note deleted: {}.", collapse(&n.text, 40)));
+        self.tell(&format!("Note deleted: {}.", collapse(&n.note, 40)));
         if left > 0 {
             // Keep the list open, one item shorter, on the next item.
             let mut effects = self.list_notes_quiet();
@@ -365,7 +403,7 @@ impl App {
         let Some(n) = self.session.as_mut().and_then(|s| s.notes.get_mut(i)) else {
             return;
         };
-        n.text = text.to_owned();
+        n.note = text.to_owned();
         n.tags = parse_tags(text);
         n.ts = textweaver_store::now_ts();
         self.persist_marks();
@@ -401,10 +439,14 @@ impl App {
             return;
         }
         let text = preview(&s.doc, range, 8);
-        s.highlights.push(UserHighlight {
+        let id = fresh_id(&s.notes, &s.highlights);
+        s.highlights.push(Highlight {
+            id,
             range,
-            color: "yellow".into(),
+            color: highlight_color("yellow"),
+            text: store_notes::collapse(&s.doc.slice(range), store_notes::HIGHLIGHT_TEXT_MAX_CHARS),
             ts: textweaver_store::now_ts(),
+            extra: serde_json::Map::new(),
         });
         s.highlights.sort_by_key(|h| (h.range.start, h.range.end));
         s.selection = None;
@@ -426,7 +468,11 @@ impl App {
             .iter()
             .map(|h| {
                 let line = text_util::line_of(&s.doc, h.range.start) + 1;
-                format!("{}, line {line}, {}", preview(&s.doc, h.range, 10), h.color)
+                format!(
+                    "{}, line {line}, {}",
+                    preview(&s.doc, h.range, 10),
+                    color_name(&h.color)
+                )
             })
             .collect()
     }
@@ -593,6 +639,8 @@ impl App {
 
 #[cfg(test)]
 mod tests {
+    use textweaver_core::Edit;
+
     use super::*;
 
     #[test]
@@ -605,25 +653,69 @@ mod tests {
     }
 
     #[test]
-    fn notes_round_trip_through_doc_state() {
+    fn legacy_extra_keys_move_to_the_typed_fields_once() {
+        let doc = Document::from_plain_text("Alpha beta. Gamma delta.");
         let mut st = DocState::default();
-        let notes = vec![Note {
-            id: "0000abcd".into(),
-            range: CharRange::new(3, 9),
-            anchor: "anchor".into(),
-            text: "text".into(),
-            tags: vec![],
-            ts: 1,
+        st.extra.insert(
+            NOTES_KEY.into(),
+            serde_json::json!([{
+                "id": "0000abcd", "range": {"start": 12, "end": 24},
+                "anchor": "Gamma delta.", "text": "Check #exam", "tags": ["exam"], "ts": 7
+            }]),
+        );
+        st.extra.insert(
+            HIGHLIGHTS_KEY.into(),
+            serde_json::json!([{ "range": {"start": 0, "end": 5}, "color": "yellow", "ts": 8 }]),
+        );
+        st.extra.insert("other".into(), serde_json::json!(1));
+        assert!(migrate_legacy_notes(&mut st, &doc));
+        assert_eq!(st.notes.len(), 1);
+        let n = &st.notes[0];
+        assert_eq!(
+            (n.id.as_str(), n.note.as_str()),
+            ("0000abcd", "Check #exam")
+        );
+        assert_eq!(
+            (n.range, n.tags.clone(), n.ts),
+            (CharRange::new(12, 24), vec!["exam".to_owned()], 7)
+        );
+        assert_eq!(st.highlights.len(), 1);
+        let h = &st.highlights[0];
+        assert_eq!(
+            (h.color.as_str(), h.text.as_str(), h.ts),
+            ("#ffff00", "Alpha", 8)
+        );
+        assert!(!h.id.is_empty());
+        assert!(!st.extra.contains_key(NOTES_KEY) && !st.extra.contains_key(HIGHLIGHTS_KEY));
+        assert_eq!(st.extra["other"], 1, "other keys stay");
+        // Once moved, nothing more to do.
+        assert!(!migrate_legacy_notes(&mut st, &doc));
+    }
+
+    #[test]
+    fn marks_shift_with_the_store_rule() {
+        let mut notes = vec![Note {
+            id: "n".into(),
+            range: CharRange::new(10, 20),
+            ..Note::default()
         }];
-        let hl = vec![UserHighlight {
-            range: CharRange::new(1, 2),
-            color: "yellow".into(),
-            ts: 2,
+        let mut highlights = vec![Highlight {
+            id: "h".into(),
+            range: CharRange::new(30, 40),
+            ..Highlight::default()
         }];
-        store_notes(&mut st, &notes, &hl);
-        assert_eq!(load_notes(&st), (notes, hl));
-        store_notes(&mut st, &[], &[]);
-        assert!(st.extra.is_empty());
+        let mut bookmarks = Vec::new();
+        shift_marks(
+            &mut notes,
+            &mut highlights,
+            &mut bookmarks,
+            &[
+                Edit::insert(0, "abc").outcome(),
+                Edit::delete(33..43).outcome(),
+            ],
+        );
+        assert_eq!(notes[0].range, CharRange::new(13, 23));
+        assert!(highlights.is_empty(), "deleted text drops its highlight");
     }
 
     #[test]

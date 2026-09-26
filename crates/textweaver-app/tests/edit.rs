@@ -546,8 +546,16 @@ fn notes_add_list_jump_edit_delete_and_persist() {
     r.app.open(&file).unwrap();
     let s = r.app.session().unwrap();
     assert_eq!(s.notes.len(), 1);
-    assert_eq!(s.notes[0].text, "Revised #review");
+    assert_eq!(s.notes[0].note, "Revised #review");
+    assert_eq!(s.notes[0].tags, vec!["review"]);
     assert_eq!(s.highlights.len(), 1);
+    // Stored in the typed fields every other tool reads.
+    let on_disk = StateStore::new(r.paths.state_dir())
+        .load(&DocKey::for_path(&file))
+        .unwrap();
+    assert_eq!(on_disk.notes, s.notes);
+    assert_eq!(on_disk.highlights[0].color, "#ffff00");
+    assert_eq!(on_disk.highlights[0].text, "First sentence here.");
 
     // Toggling again on the highlight removes it; Delete removes the note.
     r.go(CharPos(2));
@@ -560,6 +568,46 @@ fn notes_add_list_jump_edit_delete_and_persist() {
     let store = StateStore::new(r.paths.state_dir());
     let state = store.load(&DocKey::for_path(&file)).unwrap();
     assert!(!state.extra.contains_key("app_notes"));
+    assert!(state.notes.is_empty() && state.highlights.is_empty());
+}
+
+#[test]
+fn legacy_app_notes_are_migrated_once_on_open() {
+    let mut r = rig();
+    let text = "Alpha beta. Gamma delta.";
+    let file = r.file("legacy.txt", text);
+    // A state file as the first wave 2 build wrote it.
+    let store = StateStore::new(r.paths.state_dir());
+    let key = DocKey::for_path(&file);
+    let mut old = textweaver_app::store::DocState::default();
+    old.extra.insert(
+        "app_notes".into(),
+        serde_json::json!([{
+            "id": "0000abcd", "range": {"start": 12, "end": 24},
+            "anchor": "Gamma delta.", "text": "Old note #exam", "tags": ["exam"], "ts": 5
+        }]),
+    );
+    old.extra.insert(
+        "app_highlights".into(),
+        serde_json::json!([{ "range": {"start": 0, "end": 11}, "color": "yellow", "ts": 6 }]),
+    );
+    store.save(&key, &old).unwrap();
+    r.app.open(&file).unwrap();
+    let s = r.app.session().unwrap();
+    assert_eq!(s.notes.len(), 1);
+    assert_eq!(s.notes[0].note, "Old note #exam");
+    assert_eq!(s.highlights.len(), 1);
+    assert_eq!(s.doc.slice(s.highlights[0].range), "Alpha beta.");
+    // The file was rewritten at once: typed fields, no legacy keys.
+    let saved = StateStore::new(r.paths.state_dir()).load(&key).unwrap();
+    assert!(!saved.extra.contains_key("app_notes"));
+    assert!(!saved.extra.contains_key("app_highlights"));
+    assert_eq!(saved.notes.len(), 1);
+    assert_eq!(saved.highlights.len(), 1);
+    // Stepping and deleting work on the migrated note.
+    r.go(CharPos(0));
+    r.app.dispatch(Command::Notes(NoteCommand::Next));
+    assert_eq!(r.app.session().unwrap().cursor, at(text, "Gamma"));
 }
 
 #[test]

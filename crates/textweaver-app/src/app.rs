@@ -8,13 +8,14 @@ use textweaver_formats::{LoadError, LoadOptions, Registry, Source};
 use textweaver_keymap::{ActionId, Frontend, Keymap, Layer, Platform};
 use textweaver_speech::{SayMode, SpeechService};
 use textweaver_store::{
-    Bookmark, DocKey, DocState, Paths, Recent, Settings, SettingsStore, StateStore, StoreError,
+    Bookmark, DocKey, DocState, Note, Paths, Recent, Settings, SettingsStore, StateStore,
+    StoreError,
 };
 use textweaver_text::{Document, History, SearchQuery};
 
 use crate::command::{Command, Effect, NoteCommand, PromptPurpose};
 use crate::edit::{AfterLeave, EditState, SaveThen};
-use crate::notes::{Note, UserHighlight, load_notes, store_notes};
+use crate::notes::{UserHighlight, migrate_legacy_notes};
 use crate::playback::{Playback, ReadKind, SpeechTrack};
 use crate::text_util;
 use crate::view::Viewport;
@@ -243,6 +244,8 @@ pub struct App {
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
     pub(crate) track: SpeechTrack,
+    /// The backend's capabilities as last reported.
+    pub(crate) speech_caps: textweaver_speech::Caps,
     pub(crate) view: Viewport,
     pub(crate) self_voicing: bool,
     pub(crate) backend_name: String,
@@ -269,6 +272,7 @@ impl App {
 
     /// Creates the application.
     pub fn new(config: AppConfig) -> Self {
+        let speech_caps = config.speech.capabilities();
         let mut app = App {
             session: None,
             speech: config.speech,
@@ -286,6 +290,7 @@ impl App {
             pause_origin: None,
             reading: ReadKind::Continuous,
             track: SpeechTrack::default(),
+            speech_caps,
             view: Viewport::default(),
             self_voicing: config.self_voicing,
             backend_name: config.backend_name,
@@ -484,8 +489,13 @@ impl App {
         let mut s = Session::new(doc, key, title, self.settings.reading.nav_history_size);
         let mut resumed = None;
         if let Some(store) = self.state_store()
-            && let Some(state) = store.load(&s.key)
+            && let Some(mut state) = store.load(&s.key)
         {
+            if migrate_legacy_notes(&mut state, &s.doc)
+                && let Err(e) = store.save(&s.key, &state)
+            {
+                log::warn!("cannot save migrated notes: {e}");
+            }
             for &h in &state.history {
                 s.history.record(h.clamp_to(s.doc.len_chars()));
             }
@@ -495,15 +505,17 @@ impl App {
             for b in &mut s.bookmarks {
                 b.pos = b.pos.clamp_to(len);
             }
-            let (mut notes, mut highlights) = load_notes(&state);
-            for n in &mut notes {
+            s.notes = state.notes.clone();
+            for n in &mut s.notes {
                 n.range = n.range.clamp_to(len);
             }
-            for h in &mut highlights {
+            s.notes.sort_by_key(|n| (n.range.start, n.range.end));
+            s.highlights = state.highlights.clone();
+            for h in &mut s.highlights {
                 h.range = h.range.clamp_to(len);
             }
-            s.notes = notes;
-            s.highlights = highlights;
+            s.highlights.retain(|h| !h.range.is_empty());
+            s.highlights.sort_by_key(|h| (h.range.start, h.range.end));
             if self.settings.reading.auto_resume && state.position > CharPos::ZERO {
                 s.cursor = text_util::first_word_at_or_after(&s.doc, state.position);
                 resumed = Some(text_util::percent(&s.doc, s.cursor));
@@ -563,7 +575,8 @@ impl App {
         state.ts = textweaver_store::now_ts();
         state.history = s.history.entries().to_vec();
         state.bookmarks = s.bookmarks.clone();
-        store_notes(&mut state, &s.notes, &s.highlights);
+        state.notes = s.notes.clone();
+        state.highlights = s.highlights.clone();
         store.save(&s.key, &state)?;
         s.saved = state;
         self.last_position_save = Some((Instant::now(), pos));
@@ -846,7 +859,7 @@ impl App {
                     .session
                     .as_ref()
                     .and_then(|s| s.notes.get(n))
-                    .map(|x| x.text.clone())
+                    .map(|x| x.note.clone())
                 else {
                     return vec![Effect::Redraw];
                 };
