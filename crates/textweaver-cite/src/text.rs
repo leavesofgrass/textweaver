@@ -45,11 +45,12 @@ pub(crate) fn to_format_string(s: &str) -> String {
                         nocase_depth += 1;
                         out.push('{');
                     }
-                } else if lower.starts_with("</span") {
-                    if span_stack.pop() == Some(true) && nocase_depth > 0 {
-                        nocase_depth -= 1;
-                        out.push('}');
-                    }
+                } else if lower.starts_with("</span")
+                    && span_stack.pop() == Some(true)
+                    && nocase_depth > 0
+                {
+                    nocase_depth -= 1;
+                    out.push('}');
                 }
             }
         }

@@ -335,14 +335,9 @@ fn write_entry(out: &mut String, r: &Reference, dialect: Dialect) {
         put(out, "number", n, false);
     }
     if let Some(p) = &r.page {
-        put(
-            out,
-            "pages",
-            &p.replace(['–', '—'], "-")
-                .replace('-', "--")
-                .replace("----", "--"),
-            false,
-        );
+        // Page ranges use BibTeX's en dash, `--`.
+        let pages: Vec<&str> = p.split(['-', '–', '—']).filter(|s| !s.is_empty()).collect();
+        put(out, "pages", &pages.join("--"), true);
     }
     if let Some(e) = &r.edition {
         put(out, "edition", e, false);
@@ -394,10 +389,7 @@ fn put(out: &mut String, name: &str, value: &str, raw: bool) {
     } else {
         out.push_str(&escape(value));
     }
-    out.push_str(
-        "},
-",
-    );
+    out.push_str("},\n");
 }
 
 const MONTHS: [&str; 12] = [
@@ -430,6 +422,8 @@ fn escape(s: &str) -> String {
                 out.push('\\');
                 out.push(c);
             }
+            // `--` is an en dash in LaTeX; keep literal hyphens literal.
+            '-' if out.ends_with('-') => out.push_str("{}-"),
             _ => out.push(c),
         }
     }

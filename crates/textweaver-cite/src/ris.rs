@@ -317,10 +317,8 @@ pub fn write(refs: &[Reference]) -> String {
         if let Some(v) = &r.url {
             put("UR", v);
         }
-        if let Some(d) = &r.accessed {
-            if let Some(iso) = d.iso() {
-                put("Y2", &iso.replace('-', "/"));
-            }
+        if let Some(iso) = r.accessed.as_ref().and_then(CslDate::iso) {
+            put("Y2", &iso.replace('-', "/"));
         }
         if let Some(v) = &r.language {
             put("LA", v);

@@ -146,7 +146,7 @@ pub fn valid_isbn(s: &str) -> bool {
                     .enumerate()
                     .map(|(i, c)| (10 - i as u32) * c.to_digit(10).unwrap_or(10))
                     .sum();
-                total % 11 == 0
+                total.is_multiple_of(11)
             }
         }
         13 => {
@@ -156,7 +156,7 @@ pub fn valid_isbn(s: &str) -> bool {
                     .enumerate()
                     .map(|(i, c)| c.to_digit(10).unwrap_or(0) * if i % 2 == 0 { 1 } else { 3 })
                     .sum();
-                total % 10 == 0
+                total.is_multiple_of(10)
             }
         }
         _ => false,
