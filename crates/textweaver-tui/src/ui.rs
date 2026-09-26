@@ -412,6 +412,11 @@ impl Tui {
                 self.list_action(Command::RenameItem(n));
                 return;
             }
+            KeyCode::Char(' ') => {
+                let n = list.selected;
+                self.list_action(Command::MarkItem(n));
+                return;
+            }
             _ => return,
         };
         let text = list.spoken_item().unwrap_or_default();

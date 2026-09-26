@@ -292,6 +292,8 @@ pub struct App {
     /// A note or highlight chosen for deletion in its list, waiting for y
     /// or n (deleting one at the cursor asks too).
     pub(crate) pending_list_delete: Option<(ListKind, usize)>,
+    /// The voices shown by the last voice list, in list order.
+    pub(crate) voice_list: Vec<textweaver_speech::Voice>,
 }
 
 impl App {
@@ -347,6 +349,7 @@ impl App {
             last_disk_check: None,
             snapshot_trouble: false,
             pending_list_delete: None,
+            voice_list: Vec::new(),
         };
         app.apply_voice_settings();
         app.load_themes();
@@ -820,6 +823,7 @@ impl App {
                 self.notes_command(c)
             }
             Command::DeleteItem(n) => self.delete_item(n),
+            Command::MarkItem(n) => self.mark_item(n),
             Command::RenameItem(n) => self.rename_item(n),
             Command::Tick => self.tick(Instant::now()),
             Command::Find(pattern) => {
@@ -1037,6 +1041,18 @@ impl App {
             }
             _ => {
                 self.tell("Nothing to delete in this list.");
+                vec![Effect::Redraw]
+            }
+        }
+    }
+
+    /// Space on a list item: in the voice list, adds the voice to the
+    /// favourites or removes it.
+    fn mark_item(&mut self, n: usize) -> Vec<Effect> {
+        match self.list.clone() {
+            Some(ListKind::Voices(_)) => self.toggle_favourite_voice(n),
+            _ => {
+                self.tell("Nothing to mark in this list.");
                 vec![Effect::Redraw]
             }
         }
