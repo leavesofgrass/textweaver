@@ -15,6 +15,7 @@
 //! | [`EpubLoader`] | `epub` | [`NATIVE_PRIORITY`] (10) |
 //! | [`DocxLoader`] | `docx`, `docm` | [`NATIVE_PRIORITY`] (10) |
 //! | `PdfLoader` (feature `pdf`, on by default; ADR-0010) | `pdf` | [`NATIVE_PRIORITY`] (10) |
+//! | `PandocLoader` (feature `pandoc`, when `pandoc` runs) | `odt`, `rtf`, `rst`, `org`, `tex`, `dbk`, `textile`, `mediawiki`, `fb2`, `opml`, `ipynb`, and more | 5 |
 //! | [`TextLoader`] | `txt`, `text`, `log` (and the fallback for everything else) | 0 |
 //!
 //! Every built-in loader is native Rust. Optional loaders rank below them,
@@ -38,6 +39,8 @@ pub mod fulltext;
 pub mod html;
 pub mod markdown;
 mod package;
+#[cfg(feature = "pandoc")]
+pub mod pandoc;
 #[cfg(feature = "pdf")]
 pub mod pdf;
 mod text;
@@ -52,6 +55,8 @@ pub use export::{
 pub use fulltext::{FullTextIndex, IndexedDocument, RefreshReport, SearchHit};
 pub use html::HtmlLoader;
 pub use markdown::MarkdownLoader;
+#[cfg(feature = "pandoc")]
+pub use pandoc::PandocLoader;
 #[cfg(feature = "pdf")]
 pub use pdf::PdfLoader;
 pub use text::TextLoader;
@@ -187,6 +192,8 @@ impl Registry {
         r.register(Box::new(DocxLoader));
         #[cfg(feature = "pdf")]
         r.register(Box::new(PdfLoader));
+        #[cfg(feature = "pandoc")]
+        r.register(Box::new(PandocLoader));
         r
     }
 
@@ -365,6 +372,9 @@ mod tests {
         let mut ids = vec!["text", "markdown", "html", "epub", "docx"];
         if cfg!(feature = "pdf") {
             ids.push("pdf");
+        }
+        if cfg!(feature = "pandoc") {
+            ids.push("pandoc");
         }
         ids.extend(["low", "high"]);
         assert_eq!(r.ids(), ids);

@@ -13,9 +13,10 @@ publish.workspace = true
 default = ["pdf"]
 # PDF loader (pure Rust, on lopdf; ADR-0010). On by default.
 pdf = ["dep:lopdf"]
-# Wave 2: PDF and the long tail via paperback-core (pdfium, mathcat).
+# Reserved: paperback-core (pdfium, mathcat) is not on crates.io, so this
+# feature enables nothing (ADR-0010).
 paperback = []
-# Wave 2: pandoc subprocess loader.
+# Pandoc subprocess loader for the long tail (odt, rtf, rst, org, latex, ...).
 pandoc = []
 
 [dependencies]
