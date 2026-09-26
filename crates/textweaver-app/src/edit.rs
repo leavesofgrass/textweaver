@@ -42,7 +42,7 @@ use textweaver_editor::echo::{self, EchoEvent, EchoPolicy};
 use textweaver_editor::{
     Choice, DocInfo, EditSession, FindOptions, LeaveOutcome, MarkdownOp, SaveOutcome, Selection,
 };
-use textweaver_formats::{LoadOptions, Source};
+use textweaver_formats::Source;
 use textweaver_keymap::ActionId;
 use textweaver_speech::{Earcon, SayMode};
 use textweaver_store::{Bookmark, DocKey, Recent};

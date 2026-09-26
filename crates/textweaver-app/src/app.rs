@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use textweaver_a11y::{Announcer, LogAnnouncer, Priority, StatusLineAnnouncer, Verbosity};
 use textweaver_core::{CharPos, CharRange};
 use textweaver_editor::autosave::RecoverySnapshot;
-use textweaver_formats::{LoadError, LoadOptions, Registry, Source};
+use textweaver_formats::{LoadError, Registry, Source};
 use textweaver_keymap::{ActionId, Frontend, Keymap, Layer, Platform};
 use textweaver_speech::{SayMode, SpeechService};
 use textweaver_store::{
