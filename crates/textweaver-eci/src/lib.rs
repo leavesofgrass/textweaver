@@ -39,7 +39,7 @@ pub mod words;
 use std::path::PathBuf;
 
 pub use audio::AudioOutput;
-pub use backend::{EciBackend, Synthesis};
+pub use backend::{EciBackend, STALL_TIMEOUT, Synthesis};
 use textweaver_speech::{BackendFactory, BackendId, BackendInfo};
 pub use voices::VoiceParam;
 
@@ -101,6 +101,9 @@ pub struct EciConfig {
     pub output: AudioOutput,
     /// Run the host with its fake engine (tests only).
     pub fake_engine: bool,
+    /// How long the engine may go silent while it owes audio before it is
+    /// treated as hung; `None` uses [`STALL_TIMEOUT`] (10 s).
+    pub stall_timeout: Option<std::time::Duration>,
 }
 
 const HOST_NAME: &str = if cfg!(windows) {

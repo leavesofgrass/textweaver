@@ -211,6 +211,10 @@ impl EciEngine {
             sample_rate: 11025,
             dialect: 0,
         };
+        // Voxin rejects an output buffer until a callback is registered.
+        // SAFETY: `callback` matches ECI's callback signature and ignores
+        // calls with null data (synthesis registers real data later).
+        unsafe { (engine.api.register_callback)(h, Some(callback), std::ptr::null_mut()) };
         let len = c_int::try_from(engine.buf.len()).unwrap_or(c_int::MAX);
         // SAFETY: `h` is a live handle; `buf` has `len` samples and lives as
         // long as the engine (it is never resized), and is released only

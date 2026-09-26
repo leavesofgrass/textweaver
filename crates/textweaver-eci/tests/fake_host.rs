@@ -433,3 +433,31 @@ fn the_factory_builds_a_working_backend() {
     }
     assert_eq!(rec.of(u.id).last(), Some(&RawEvent::Finished));
 }
+
+#[test]
+fn a_hung_engine_is_killed_and_the_utterance_fails() {
+    let mut b = EciBackend::new(EciConfig {
+        stall_timeout: Some(Duration::from_millis(500)),
+        ..config(8.0)
+    })
+    .unwrap();
+    let mut rec = Rec::default();
+    let u = utt("this will __hang__ forever", 11, 0);
+    b.speak(&u, &mut rec).unwrap();
+    assert!(pump(
+        &mut b,
+        &mut rec,
+        Duration::from_secs(10),
+        finished(u.id)
+    ));
+    assert!(rec.has(
+        u.id,
+        |e| matches!(e, RawEvent::Error(m) if m.contains("stopped responding"))
+    ));
+    assert!(matches!(
+        b.synthesize("again __hang__"),
+        Err(SpeechError::Engine(m)) if m.contains("stopped responding")
+    ));
+    // A fresh host serves the next request.
+    assert_eq!(b.synthesize("fine now").unwrap().words.len(), 2);
+}

@@ -8,7 +8,8 @@
 //! reported where they fall; the speed voice parameter scales the duration
 //! (50 is 1x, 100 is twice as fast). Special words, for testing failure
 //! paths: `__crash__` exits the process at once; `__fail__` makes synthesis
-//! return an error; `__slow__` sleeps 50 ms per audio block.
+//! return an error; `__hang__` never returns (a hung engine); `__slow__`
+//! sleeps 50 ms per audio block.
 
 use std::time::Duration;
 
@@ -143,6 +144,11 @@ impl Engine for FakeEngine {
                 EnginePiece::Text(t) => {
                     if t.windows(9).any(|w| w == b"__crash__") {
                         std::process::exit(3);
+                    }
+                    if t.windows(8).any(|w| w == b"__hang__") {
+                        loop {
+                            std::thread::sleep(Duration::from_secs(60));
+                        }
                     }
                     if t.windows(8).any(|w| w == b"__fail__") {
                         return Err("fake engine failure".into());

@@ -160,6 +160,34 @@ pub fn run<E: Engine>(
     Ok(())
 }
 
+/// Encodes pieces for the engine. The text always ends in whitespace:
+/// Voxin never finishes synthesizing input whose last byte is a Latin-1
+/// letter ("café", "Ü"; measured on libvoxin 1.5.8), and a trailing space
+/// changes nothing for any engine.
+fn engine_input(dialect: u32, pieces: &[Piece]) -> Vec<EnginePiece> {
+    let mut input: Vec<EnginePiece> = pieces
+        .iter()
+        .map(|p| match p {
+            Piece::Text(s) => EnginePiece::Text(language::encode_for(dialect, s)),
+            Piece::Index(i) => EnginePiece::Index(*i),
+        })
+        .collect();
+    let ends_in_space = input.iter().rev().find_map(|p| match p {
+        EnginePiece::Text(t) if !t.is_empty() => t.last().map(u8::is_ascii_whitespace),
+        _ => None,
+    });
+    if ends_in_space == Some(false) {
+        if let Some(EnginePiece::Text(t)) = input
+            .iter_mut()
+            .rev()
+            .find(|p| matches!(p, EnginePiece::Text(t) if !t.is_empty()))
+        {
+            t.push(b' ');
+        }
+    }
+    input
+}
+
 fn speak<E: Engine>(
     engine: &mut E,
     output: &mut impl Write,
@@ -179,14 +207,7 @@ fn speak<E: Engine>(
             .encode(),
         );
     }
-    let dialect = engine.dialect();
-    let input: Vec<EnginePiece> = pieces
-        .iter()
-        .map(|p| match p {
-            Piece::Text(s) => EnginePiece::Text(language::encode_for(dialect, s)),
-            Piece::Index(i) => EnginePiece::Index(*i),
-        })
-        .collect();
+    let input = engine_input(engine.dialect(), pieces);
     let mut samples: u64 = 0;
     let mut io_error: Option<std::io::Error> = None;
     let result = {
@@ -322,6 +343,33 @@ mod tests {
                 ..
             }
         )));
+    }
+
+    #[test]
+    fn engine_text_is_encoded_and_always_ends_in_whitespace() {
+        let input = engine_input(
+            0x0001_0000,
+            &[
+                Piece::Index(0),
+                Piece::Text("naïve ".into()),
+                Piece::Index(1),
+                Piece::Text("café".into()),
+                Piece::Index(2),
+            ],
+        );
+        assert_eq!(
+            input,
+            [
+                EnginePiece::Index(0),
+                EnginePiece::Text(b"na\xefve ".to_vec()),
+                EnginePiece::Index(1),
+                EnginePiece::Text(b"caf\xe9 ".to_vec()),
+                EnginePiece::Index(2),
+            ]
+        );
+        let kept = engine_input(0x0001_0000, &[Piece::Text("end.\n".into())]);
+        assert_eq!(kept, [EnginePiece::Text(b"end.\n".to_vec())]);
+        assert!(engine_input(0x0001_0000, &[]).is_empty());
     }
 
     #[test]

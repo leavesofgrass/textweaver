@@ -48,8 +48,10 @@ use crate::{BACKEND_ID, EciConfig, words};
 
 /// How long to wait for a new host to report `Ready`.
 const READY_TIMEOUT: Duration = Duration::from_secs(10);
-/// How long `synthesize` waits for the host to finish one text.
-const SYNTH_TIMEOUT: Duration = Duration::from_secs(60);
+/// How long the host may stay silent while it owes audio before the
+/// backend treats the engine as hung, kills it, and fails the utterance
+/// (Eloquence is known to hang on some inputs).
+pub const STALL_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// What the host said at start-up.
 #[derive(Clone, Debug)]
@@ -269,6 +271,8 @@ pub struct EciBackend {
     active: VecDeque<Active>,
     captures: HashMap<u64, Capture>,
     cancelled: Vec<UtteranceId>,
+    /// When the host last sent anything (or was last given work).
+    last_activity: Instant,
 }
 
 impl std::fmt::Debug for EciBackend {
@@ -304,6 +308,7 @@ impl EciBackend {
             active: VecDeque::new(),
             captures: HashMap::new(),
             cancelled: Vec::new(),
+            last_activity: Instant::now(),
         };
         b.ensure_host()?;
         Ok(b)
@@ -453,13 +458,31 @@ impl EciBackend {
             let msg = match &self.host {
                 Some(h) => match h.rx.try_recv() {
                     Ok(m) => m,
-                    Err(TryRecvError::Empty) => return,
+                    Err(TryRecvError::Empty) => break,
                     Err(TryRecvError::Disconnected) => HostMsg::Closed("host exited".into()),
                 },
                 None => return,
             };
+            self.last_activity = Instant::now();
             self.handle(msg);
         }
+        let owed = self.active.iter().any(|a| !a.done) || self.captures.values().any(|c| !c.done);
+        if owed && self.last_activity.elapsed() > self.stall_timeout() {
+            self.kill_host("Eloquence stopped responding");
+        }
+    }
+
+    fn stall_timeout(&self) -> Duration {
+        self.config.stall_timeout.unwrap_or(STALL_TIMEOUT)
+    }
+
+    /// Kills a hung host; everything it owed fails.
+    fn kill_host(&mut self, why: &str) {
+        if let Some(mut h) = self.host.take() {
+            let _ = h.child.kill();
+            h.shutdown();
+        }
+        self.host_died(why);
     }
 
     fn handle(&mut self, msg: HostMsg) {
@@ -606,20 +629,21 @@ impl EciBackend {
             self.captures.remove(&token);
             return Err(e);
         }
-        let deadline = Instant::now() + SYNTH_TIMEOUT;
+        self.last_activity = Instant::now();
+        let stall = self.stall_timeout();
         while !self.captures.get(&token).is_some_and(|c| c.done) {
-            let left = deadline.saturating_duration_since(Instant::now());
             let msg = match &self.host {
-                Some(h) => match h.rx.recv_timeout(left) {
+                Some(h) => match h.rx.recv_timeout(stall) {
                     Ok(m) => m,
                     Err(RecvTimeoutError::Timeout) => {
-                        self.captures.remove(&token);
-                        return Err(SpeechError::Engine("Eloquence took too long".into()));
+                        self.kill_host("Eloquence stopped responding");
+                        continue;
                     }
                     Err(RecvTimeoutError::Disconnected) => HostMsg::Closed("host exited".into()),
                 },
                 None => HostMsg::Closed("host is not running".into()),
             };
+            self.last_activity = Instant::now();
             self.handle(msg);
         }
         let cap = self.captures.remove(&token).unwrap_or_default();
@@ -737,6 +761,9 @@ impl SpeechBackend for EciBackend {
             token,
             pieces: words::pieces(&utterance.text, &ws),
         })?;
+        if !self.active.iter().any(|a| !a.done) {
+            self.last_activity = Instant::now();
+        }
         self.active.push_back(Active {
             id: utterance.id,
             token,
