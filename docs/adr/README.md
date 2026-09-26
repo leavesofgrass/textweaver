@@ -33,7 +33,7 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
 - [ADR-0013: Dictation through a Whisper program](0013-dictation.md): voice typing with a Whisper subprocess.
   - Status: accepted, with 2 status updates.
 - [ADR-0014: GUI toolkit (wxDragon)](0014-gui-toolkit.md): the GUI spike's findings. Wave 3 moves the GUI to Xilem, and the spike stays as a fallback.
-  - Status: proposed. Wave 3 replaces it with a Xilem GUI (Agent W3b, ADR-0023); the wxDragon spike stays as a fallback until then. It has 2 status updates.
+  - Status: superseded by [ADR-0023](0023-xilem-gui.md); the wxDragon spike stays as a fallback until the Xilem GUI passes the same checks and Jon's NVDA and JAWS session. It has 3 status updates.
 - [ADR-0015: JSON-RPC server (`tw serve --stdio`)](0015-json-rpc.md): `tw serve --stdio`, its methods, and notifications.
   - Status: accepted, with 2 status updates.
 - [ADR-0016: Rendering and bulk conversion](0016-rendering-and-conversion.md): Markdown to accessible HTML, and fast, incremental conversion.
@@ -50,6 +50,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted, with 2 status updates.
 - [ADR-0022: Reading aids](0022-reading-aids.md): RSVP, bionic reading, spacing, fonts, the ruler, and more, as pure data.
   - Status: accepted, with 2 status updates.
+- [ADR-0023: Xilem GUI](0023-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, the accessibility checks, and what to send upstream.
+  - Status: accepted.
 - [ADR-0024: App core for the GUI](0024-app-core-for-the-gui.md): the document window, shared list and prompt state, the waker, the replace-range edit, the settings schema, and work moved off the input thread.
   - Status: accepted.
 

@@ -9,7 +9,8 @@
 use std::collections::BTreeSet;
 use std::sync::{Arc, OnceLock};
 
-use textweaver_app::aids::fonts::{FontFamily, FontSettings};
+use textweaver_app::aids::fonts::{FontFamily, FontSettings, from_store, to_store};
+use textweaver_app::store::reading_aids::FontSettings as SavedFont;
 use textweaver_fonts::{BUNDLED, system};
 
 /// Said after a bundled family's name, so a listener knows it needs
@@ -67,8 +68,13 @@ pub fn sizes(current: f32) -> (Vec<String>, usize) {
     (labels, nearest)
 }
 
-/// The settings for a family and size, keeping the weight.
-pub fn chosen(previous: &FontSettings, family: &str, size: u16) -> FontSettings {
+/// The saved settings for a family and size, keeping the weight.
+pub fn chosen(previous: &SavedFont, family: &str, size: u16) -> SavedFont {
+    to_store(&chosen_font(&from_store(previous), family, size))
+}
+
+/// [`chosen`] for settings already parsed.
+pub fn chosen_font(previous: &FontSettings, family: &str, size: u16) -> FontSettings {
     FontSettings {
         family: FontFamily::Named(family.to_owned()),
         size_pt: f32::from(size),
@@ -139,7 +145,7 @@ mod tests {
             weight: 700,
             ..FontSettings::default()
         };
-        let s = chosen(&prev, "Verdana", 18);
+        let s = chosen_font(&prev, "Verdana", 18);
         assert_eq!(s.weight, 700);
         assert!((s.size_pt - 18.0).abs() < 0.01);
         assert_eq!(s.family, FontFamily::Named("Verdana".into()));

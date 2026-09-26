@@ -5,7 +5,8 @@
 use std::sync::Arc;
 
 use masonry::peniko::Blob;
-use textweaver_app::aids::fonts::{FontSettings, Platform};
+use textweaver_app::aids::fonts::{FontSettings, Platform, from_store};
+use textweaver_app::store::reading_aids::FontSettings as SavedFont;
 
 use crate::document::DocFont;
 
@@ -39,7 +40,12 @@ fn quoted(name: &str) -> String {
 /// its family's fallback chain (which ends with a platform sans-serif and
 /// the bundled Atkinson Hyperlegible Next), its size in points as
 /// logical pixels, and bold from a weight of 600 or more.
-pub fn doc_font(settings: &FontSettings) -> DocFont {
+pub fn doc_font(saved: &SavedFont) -> DocFont {
+    font_for(&from_store(saved))
+}
+
+/// [`doc_font`] for settings already parsed.
+pub fn font_for(settings: &FontSettings) -> DocFont {
     let s = settings.clamped();
     let mut names: Vec<String> = s
         .family
@@ -80,7 +86,7 @@ mod tests {
             weight: 700,
             ..FontSettings::default()
         };
-        let f = doc_font(&s);
+        let f = font_for(&s);
         assert!(
             f.family.starts_with("\"Atkinson Hyperlegible Next\""),
             "{}",
