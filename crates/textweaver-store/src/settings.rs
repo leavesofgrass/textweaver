@@ -245,6 +245,21 @@ mod empty_is_none {
     }
 }
 
+/// Settings that are stored but deliberately not read yet, as
+/// `(section.field, reason)`. A test (`tests/settings_used.rs`) fails when a
+/// setting is read nowhere and is not listed here, and when a listed one is
+/// read after all (Star's lesson: a stored setting must work).
+pub const RESERVED_SETTINGS: &[(&str, &str)] = &[
+    (
+        "reading_aids.syllables",
+        "syllable display is built in textweaver-aids, but no frontend draws it yet (Agent D3's follow-up)",
+    ),
+    (
+        "reading_aids.syllable_options",
+        "options for the syllable display, which no frontend draws yet",
+    ),
+];
+
 /// Reading highlight settings.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]

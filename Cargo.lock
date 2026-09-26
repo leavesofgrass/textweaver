@@ -4666,6 +4666,7 @@ version = "0.1.0-alpha.3"
 dependencies = [
  "directories",
  "log",
+ "regex",
  "serde",
  "serde_json",
  "tempfile",
