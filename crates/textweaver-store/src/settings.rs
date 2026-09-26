@@ -588,6 +588,11 @@ pub struct KeyboardSettings {
     /// accident (WCAG 2.1.4). The app passes this to
     /// `Keymap::set_character_keys`.
     pub character_keys: bool,
+    /// The set of default keys to start from: `default`, or
+    /// `screen-reader` for `h`, `l`, `k`, `t`, `i`, and `1` to `6` as in a
+    /// screen reader's browse mode (`textweaver_keymap::Preset`).
+    /// `keymap.toml` applies on top.
+    pub preset: KeymapPreset,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -597,6 +602,98 @@ impl Default for KeyboardSettings {
     fn default() -> Self {
         KeyboardSettings {
             character_keys: true,
+            preset: KeymapPreset::Default,
+            extra: toml::Table::new(),
+        }
+    }
+}
+
+/// `[keyboard] preset`: the set of default keys to start from (the app
+/// maps it to `textweaver_keymap::Preset`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum KeymapPreset {
+    /// textweaver's own keys.
+    #[default]
+    Default,
+    /// Screen reader browse-mode keys: `h`, `l`, `k`, `t`, `i`, `1` to `6`.
+    ScreenReader,
+}
+
+/// `[accessibility] mode` (the app maps it to `textweaver_a11y::AccessMode`,
+/// which holds the routing rules).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum AccessMode {
+    /// textweaver speaks everything.
+    #[default]
+    SelfVoicing,
+    /// textweaver is silent; a screen reader reads the status line.
+    ScreenReader,
+    /// textweaver reads documents aloud; a screen reader speaks the rest.
+    Hybrid,
+}
+
+/// `[accessibility] say_all`: continuous reading in screen-reader mode.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SayAll {
+    /// A sentence at a time on the status line.
+    #[default]
+    Screen,
+    /// textweaver's own voice.
+    Voice,
+}
+
+/// `[accessibility] cursor`: where the terminal's cursor waits.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CursorPlacement {
+    /// On the spoken word, the caret, or the chosen item.
+    #[default]
+    Follow,
+    /// On the status line.
+    Status,
+}
+
+/// `[accessibility]`: sharing the work with a screen reader
+/// (`textweaver_a11y::mode`, `docs/screen-readers.md`).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AccessibilitySettings {
+    /// `self-voicing` (textweaver speaks everything), `screen-reader`
+    /// (textweaver is silent and the screen reader reads the status line),
+    /// or `hybrid` (textweaver reads documents aloud; the screen reader
+    /// speaks messages, typing, and caret moves).
+    pub mode: AccessMode,
+    /// Continuous reading in screen-reader mode: `screen` moves a sentence
+    /// at a time and puts each on the status line; `voice` reads with
+    /// textweaver's voice.
+    pub say_all: SayAll,
+    /// While textweaver reads aloud, keep the screen still: the title
+    /// line's position stops updating and the text being read is not copied
+    /// to the status line, so a screen reader has nothing to chatter about.
+    pub quiet_screen: bool,
+    /// Where the terminal's cursor waits: `follow` (the spoken word, the
+    /// caret, the chosen item) or `status` (the status line, so "read
+    /// current line" repeats the last message).
+    pub cursor: CursorPlacement,
+    /// Set once textweaver has asked, on a run with a screen reader, whether
+    /// to use hybrid mode; it asks only once.
+    pub hybrid_offered: bool,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+impl Default for AccessibilitySettings {
+    fn default() -> Self {
+        AccessibilitySettings {
+            mode: AccessMode::default(),
+            say_all: SayAll::default(),
+            quiet_screen: false,
+            cursor: CursorPlacement::default(),
+            hybrid_offered: false,
             extra: toml::Table::new(),
         }
     }
@@ -652,6 +749,8 @@ pub struct Settings {
     pub library: LibrarySettings,
     /// `[keyboard]`
     pub keyboard: KeyboardSettings,
+    /// `[accessibility]`
+    pub accessibility: AccessibilitySettings,
     /// `[export]`
     pub export: ExportSettings,
     /// `[reading_aids]`
@@ -772,6 +871,7 @@ impl Settings {
             editing: lenient_section("editing", table.remove("editing"), &mut w),
             library: lenient_section("library", table.remove("library"), &mut w),
             keyboard: lenient_section("keyboard", table.remove("keyboard"), &mut w),
+            accessibility: lenient_section("accessibility", table.remove("accessibility"), &mut w),
             export: lenient_section("export", table.remove("export"), &mut w),
             reading_aids: lenient_section("reading_aids", table.remove("reading_aids"), &mut w),
             extra: table,
@@ -949,8 +1049,9 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 20] = [
+pub(crate) const STRUCT_TABLES: [&str; 21] = [
     "keyboard",
+    "accessibility",
     "reading_aids",
     "reading_aids.rsvp",
     "reading_aids.bionic_options",
@@ -1690,6 +1791,41 @@ mod tests {
         );
         write(&store, "[speech.eci]\ndictionaries = true\n");
         assert_eq!(store.load().0.speech.eci.dictionaries, EciDictionaries::On);
+    }
+
+    /// `[accessibility]` and `[keyboard] preset` are stored by name, only
+    /// when changed, and a bad value falls back to the default alone.
+    #[test]
+    fn accessibility_settings_round_trip() {
+        let (_d, store) = store();
+        let d = Settings::default();
+        assert_eq!(d.accessibility.mode, AccessMode::SelfVoicing);
+        assert_eq!(d.accessibility.cursor, CursorPlacement::Follow);
+        assert_eq!(d.keyboard.preset, KeymapPreset::Default);
+        let mut s = d.clone();
+        s.accessibility.mode = AccessMode::Hybrid;
+        s.accessibility.cursor = CursorPlacement::Status;
+        s.keyboard.preset = KeymapPreset::ScreenReader;
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("mode = \"hybrid\""), "{text}");
+        assert!(text.contains("cursor = \"status\""), "{text}");
+        assert!(text.contains("preset = \"screen-reader\""), "{text}");
+        assert!(!text.contains("quiet_screen"), "{text}");
+        assert_eq!(store.load().0, s);
+        write(
+            &store,
+            "[accessibility]\nmode = \"loud\"\nquiet_screen = true\nsay_all = \"voice\"\n",
+        );
+        let loaded = store.load_detailed();
+        let a = &loaded.settings.accessibility;
+        assert_eq!(a.mode, AccessMode::SelfVoicing);
+        assert!(a.quiet_screen);
+        assert_eq!(a.say_all, SayAll::Voice);
+        assert_eq!(
+            loaded.warnings,
+            vec!["accessibility.mode has an invalid value"]
+        );
     }
 
     #[test]

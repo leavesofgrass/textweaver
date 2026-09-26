@@ -684,6 +684,7 @@ fn check_leaf(section: &str, key: &str, value: toml::Value) -> Result<(), String
         "editing" => fits::<EditingSettings>(key, value),
         "library" => fits::<LibrarySettings>(key, value),
         "keyboard" => fits::<KeyboardSettings>(key, value),
+        "accessibility" => fits::<crate::AccessibilitySettings>(key, value),
         "export" => fits::<ExportSettings>(key, value),
         _ => Ok(()),
     }
@@ -941,6 +942,7 @@ pub fn reset_sections(current: &Settings) -> Vec<String> {
         "editing",
         "library",
         "keyboard",
+        "accessibility",
         "export",
         "reading_aids",
         "reading_aids.rsvp",

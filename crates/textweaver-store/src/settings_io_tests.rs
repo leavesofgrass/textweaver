@@ -94,6 +94,13 @@ fn everything_changed() -> Settings {
     s.library.recent_limit = 10;
     s.library.folders = vec!["C:/Books".into()];
     s.keyboard.character_keys = false;
+    s.keyboard.preset = crate::KeymapPreset::ScreenReader;
+    let acc = &mut s.accessibility;
+    acc.mode = crate::AccessMode::Hybrid;
+    acc.say_all = crate::SayAll::Voice;
+    acc.quiet_screen = true;
+    acc.cursor = crate::CursorPlacement::Status;
+    acc.hybrid_offered = true;
     // Agent D3's additions: themes, the community lexicon, audio export,
     // and the reading aids.
     s.display.follow_os_theme = false;
