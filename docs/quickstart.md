@@ -48,16 +48,37 @@ bash scripts/install-macos.sh
 
 ## Linux
 
-Install with the script in a copy of the repository. To get a copy:
+1. Download the Linux `.AppImage` from the [releases page](https://github.com/leavesofgrass/textweaver/releases). It runs on most distributions from 2022 on, on x86_64 computers.
+2. Open a terminal in the folder you saved it to, and make it executable. Type `chmod +x `, with a space after it, then the file's name, and press Enter:
+
+   ```bash
+   chmod +x textweaver-0.1.0-alpha.3-linux-x86_64.AppImage
+   ```
+
+3. Check that it runs; this says which version you have. With `--tw` first, the AppImage runs `tw`:
+
+   ```bash
+   ./textweaver-0.1.0-alpha.3-linux-x86_64.AppImage --tw --version
+   ```
+
+   On its own it runs the reader. Give it a document, for example this guide, saved from the repository as `quickstart.md`:
+
+   ```bash
+   ./textweaver-0.1.0-alpha.3-linux-x86_64.AppImage quickstart.md
+   ```
+
+4. To run `textweaver` and `tw` from any folder, and add a menu entry, run it once with `--install`. It asks first:
+
+   ```bash
+   ./textweaver-0.1.0-alpha.3-linux-x86_64.AppImage --install
+   ```
+
+textweaver speaks with espeak-ng when the `espeak-ng` package is installed, or through speech-dispatcher. `tw backends` lists the engines it found.
+
+Or install with the script, which downloads the newest release, checks it, and installs it in `~/.local`. From a copy of the repository (`git clone https://github.com/leavesofgrass/textweaver`):
 
 ```bash
-git clone https://github.com/leavesofgrass/textweaver
-```
-
-The script works on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine. It installs what the build needs, builds textweaver, and installs it in `~/.local`. It asks before it uses sudo or changes your PATH. Run it from the copy's folder:
-
-```bash
-bash scripts/install-linux.sh
+bash scripts/install-linux.sh --release latest
 ```
 
 Then run:
@@ -65,6 +86,8 @@ Then run:
 ```bash
 textweaver ~/.local/share/doc/textweaver/QUICKSTART.md
 ```
+
+If the AppImage says FUSE is missing, the script installs the plain tarball instead; [Installing textweaver](install.md#linux) has the details. Without `--release`, the script builds textweaver from source.
 
 ## Your first 30 seconds
 

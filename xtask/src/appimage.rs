@@ -256,7 +256,7 @@ fn in_docker(args: &Args) -> anyhow::Result<()> {
     if cfg!(unix)
         && let (Some(uid), Some(gid)) = (id("-u"), id("-g"))
     {
-        cmd.args(["--user", &format!("{uid}:{gid}")]);
+        cmd.args(["--user", &format!("{uid}:{gid}"), "-e", "HOME=/tmp"]);
     }
     cmd.args([
         IMAGE,

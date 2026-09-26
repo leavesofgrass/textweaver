@@ -4,9 +4,11 @@ A release is a git tag `vX.Y.Z[-pre]` and a GitHub release with these files:
 
 - the Windows package, `textweaver-VERSION-windows-x86_64.zip`;
 - the macOS package, `textweaver-VERSION-macos-universal.tar.gz`;
+- the Linux AppImage, `textweaver-VERSION-linux-x86_64.AppImage`, and its `.zsync` file for delta updates;
+- the Linux tarball, `textweaver-VERSION-linux-x86_64.tar.gz`, for systems without FUSE;
 - `SHA256SUMS.txt`.
 
-The `Release` workflow (`.github/workflows/release.yml`) builds both packages, attests their build provenance, and writes the checksums. Releases before 1.0 are marked as pre-releases.
+The `Release` workflow (`.github/workflows/release.yml`) builds the packages, attests their build provenance, and writes the checksums. Releases before 1.0 are marked as pre-releases.
 
 ## Steps
 
@@ -49,9 +51,10 @@ The `Release` workflow (`.github/workflows/release.yml`) builds both packages, a
 
    - **Create the release.** Checks that the version in `Cargo.toml` matches the tag, then creates the GitHub release as a pre-release, with notes taken from the matching `CHANGELOG.md` section.
    - **Windows package** (on `windows-latest`) and **macOS package** (on `macos-14`), in parallel. Each runs `cargo xtask dist`, checks the package (the binaries run, and the notices and licence files are inside), attests its build provenance, and uploads it to the release.
-   - **SHA256SUMS.txt.** Once both packages are uploaded, one job writes the checksums of every package on the release and attests the checksum file. The package jobs never write checksums, so they cannot race.
+   - **Linux AppImage and tarball** (on `ubuntu-latest`, in parallel with the others). It runs `cargo xtask appimage` in the `docker/appimage` image (Ubuntu 22.04), then `docker/appimage/test-distros.sh`, which runs both packages on Debian stable, Fedora, and Arch: `tw --version`, `tw backends` without and with espeak-ng, `tw text`, `--install` and `--uninstall`, and `install-linux.sh --release` with each package. Then it attests and uploads the AppImage, its `.zsync` file, and the tarball.
+   - **SHA256SUMS.txt.** Once all the packages are uploaded, one job writes the checksums of every package on the release and attests the checksum file. The package jobs never write checksums, so they cannot race.
 
-4. **Check.** Read the release page. It should have both packages and `SHA256SUMS.txt`, with the pre-release flag set. Anyone can check where a package was built:
+4. **Check.** Read the release page. It should have every package and `SHA256SUMS.txt`, with the pre-release flag set. Anyone can check where a package was built:
 
    ```bash
    gh attestation verify textweaver-0.1.0-alpha.3-windows-x86_64.zip --repo leavesofgrass/textweaver
@@ -63,10 +66,29 @@ The `Release` workflow (`.github/workflows/release.yml`) builds both packages, a
 
 - `textweaver` and `tw`;
 - on Windows, the engine hosts for Eloquence, SAPI5, and DECtalk, each for x64 and x86, and the IBMTTS community dictionaries;
+- on Linux, the engine hosts for Eloquence (Voxin) and DECtalk, the IBMTTS community dictionaries, and the menu entry and icon under `share/`. `textweaver` and `tw` are built with Omnivox, speech-dispatcher, and espeak-ng; espeak-ng is loaded when the program starts, if it is installed, so the same binaries work without it;
 - `QUICKSTART.md`, `README.md`, `LICENSE`, `CHANGELOG.md`, and `INSTALL.md` at the top;
 - in `docs/`, every user guide listed under "For users" in the [documentation index](README.md), and the offline interactive pages in `docs/site/`;
 - the platform's helper scripts (doctor, speech check, update) and their README;
 - `THIRD-PARTY-NOTICES.md`, and under `licenses/`: each bundled font's `OFL.txt`, SCOWL's `Copyright`, and the IBMTTS dictionaries' licence. `cargo xtask dist` fails if any of these is missing.
+
+## The Linux packages
+
+`cargo xtask appimage` stages the Linux package as `cargo xtask dist` does, writes the tarball, and then wraps the same folder in an AppImage with `appimagetool`. The folder sits whole under `usr/lib/textweaver/` inside the AppImage, so the programs find the hosts and dictionaries beside them, as in the tarball. `scripts/linux/AppRun` is the entry point: it starts `textweaver`, or `tw` when started through a link named `tw` or with `--tw` first, and it offers `--install` and `--uninstall`. The AppImage carries `gh-releases-zsync` update information pointing at the newest release or pre-release.
+
+Build on an old glibc, so the packages run on older distributions. The `docker/appimage` image is Ubuntu 22.04 (glibc 2.35), with Rust from rustup and the AppImage tools. `docker/appimage/fetch-tools.sh` downloads appimagetool 1.9.1 and the type 2 runtime from their GitHub releases and checks each against the SHA-256 digest GitHub publishes for it; a changed file stops the build. To build locally on any system with Docker:
+
+```bash
+cargo xtask appimage --docker
+```
+
+The packages land in `target/dist/`. To check them on Debian, Fedora, and Arch, as the release job does (it needs Docker and bash):
+
+```bash
+bash docker/appimage/test-distros.sh target/dist
+```
+
+The AppImage is not signed; its checksum is in `SHA256SUMS.txt`, and its build provenance is attested. It needs the system's ALSA library (`libasound.so.2`), which every desktop has, and warns when it is missing.
 
 ## Building a package by hand (fallback)
 
@@ -96,7 +118,7 @@ To rerun the workflow for an existing tag, start `Release` from the Actions tab 
 
 - **macOS signing.** The macOS binaries are universal (built with `lipo`) and signed ad hoc (`codesign -s -`). They are not notarized. `docs/install.md` tells users how to get past Gatekeeper. Notarizing needs an Apple Developer ID. When there is one, add `codesign --options runtime` with that identity and `xcrun notarytool submit --wait` to the workflow.
 - **No engines are bundled.** No speech engines are in the packages: no Eloquence, no DECtalk, no voices. The packages hold only textweaver's own programs and hosts, and the CC0 IBMTTS dictionaries.
-- **Linux.** There is no Linux package yet. Linux users build from source with `scripts/install-linux.sh`, or use the Docker image. `cargo xtask dist` on Linux builds a `.tar.gz` with the ECI host for Voxin, but it is not published.
+- **Linux.** The AppImage and the tarball are x86_64 only for now; an aarch64 build needs an arm64 runner. Other systems build from source with `scripts/install-linux.sh`.
 
 ## See also
 

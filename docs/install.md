@@ -2,17 +2,19 @@
 
 In a hurry? The [quick start](quickstart.md) is the short version.
 
-textweaver is in alpha. Each release on GitHub has a Windows package and a macOS package:
+textweaver is in alpha. Each release on GitHub has packages for Windows, macOS, and Linux:
 
 - `textweaver-VERSION-windows-x86_64.zip`
 - `textweaver-VERSION-macos-universal.tar.gz`, for Apple silicon and Intel Macs
+- `textweaver-VERSION-linux-x86_64.AppImage`, one file that runs on most Linux distributions
+- `textweaver-VERSION-linux-x86_64.tar.gz`, the same programs as a plain folder, for Linux systems where AppImages cannot run
 
-Both packages contain two programs:
+Every package contains two programs:
 
 - `textweaver`, the terminal reader. Run `textweaver FILE`.
 - `tw`, the command-line tool. Run `tw --help`.
 
-Download from the [releases page](https://github.com/leavesofgrass/textweaver/releases). There is no Linux package yet. On Linux, the install script builds textweaver from source.
+Download from the [releases page](https://github.com/leavesofgrass/textweaver/releases).
 
 ## Install with a script
 
@@ -30,7 +32,13 @@ On macOS, this downloads the newest release, checks it, and installs `textweaver
 bash scripts/install-macos.sh
 ```
 
-On Linux, this installs the build dependencies with apt, dnf, pacman, zypper, or apk, builds textweaver, and installs it in `~/.local`:
+On Linux, this downloads the newest release, checks it, and installs it in `~/.local`: the AppImage, with `textweaver` and `tw` in `~/.local/bin`, or the tarball where AppImages cannot run:
+
+```bash
+bash scripts/install-linux.sh --release latest
+```
+
+Without `--release`, the Linux script builds textweaver from source instead: it installs the build dependencies with apt, dnf, pacman, zypper, or apk, builds textweaver, and installs it in `~/.local`:
 
 ```bash
 bash scripts/install-linux.sh
@@ -126,9 +134,58 @@ tw voices
 
 ## Linux
 
-There is no Linux package yet. The install script builds textweaver from source on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine; see [Install with a script](#install-with-a-script). The Docker image in `docker/` has everything a build needs, including espeak-ng; see [docs/docker.md](docker.md).
+The Linux package is an AppImage: one file that holds `textweaver`, `tw`, the engine hosts for Eloquence (Voxin) and DECtalk, the pronunciation dictionaries, the guides, and the licences. It is built on Ubuntu 22.04, so it runs on distributions from 2022 on, including Debian 12 and 13, Ubuntu 22.04 and later, Fedora, Arch, and openSUSE. It is for x86_64 computers.
 
-On Linux, textweaver speaks with espeak-ng in process, or through speech-dispatcher. It can also use Eloquence through Voxin, and a licensed DECtalk.
+The easiest way is the install script, which checks the download for you (see [Install with a script](#install-with-a-script)):
+
+```bash
+bash scripts/install-linux.sh --release latest
+```
+
+To install it by hand:
+
+1. Download `textweaver-VERSION-linux-x86_64.AppImage` and `SHA256SUMS.txt`, and check the file (see [Checking a download](#checking-a-download)).
+2. Put it where you want to keep it, for example `~/Applications`, and make it executable:
+
+   ```bash
+   chmod +x textweaver-0.1.0-alpha.3-linux-x86_64.AppImage
+   ```
+
+3. Run it. On its own it starts `textweaver`, the reader:
+
+   ```bash
+   ./textweaver-0.1.0-alpha.3-linux-x86_64.AppImage FILE
+   ```
+
+   With `--tw` first it runs `tw` instead:
+
+   ```bash
+   ./textweaver-0.1.0-alpha.3-linux-x86_64.AppImage --tw backends
+   ```
+
+4. To run `textweaver` and `tw` from any folder, let the AppImage link itself into `~/.local/bin` and add a menu entry and an icon. It says what it will do and asks first:
+
+   ```bash
+   ./textweaver-0.1.0-alpha.3-linux-x86_64.AppImage --install
+   ```
+
+   A link named `tw` runs `tw`; a link named `textweaver` runs the reader. The links point at the AppImage where it is, so move it before you run `--install`. `--uninstall` removes the links, the menu entry, and the icon.
+
+**Without FUSE.** An AppImage mounts itself with FUSE, which most desktops have. Where it is missing (some containers and minimal systems), the AppImage says so. Then either set `APPIMAGE_EXTRACT_AND_RUN=1`, which makes it unpack itself to a temporary folder each time it runs, or use the tarball: extract it anywhere and run `textweaver` and `tw` from the folder. The install script picks the tarball by itself when FUSE is missing (`--tarball` asks for it).
+
+**Sound.** textweaver needs the ALSA library, `libasound.so.2`, which every Linux desktop has. On a minimal system, install `alsa-lib` (Fedora, Arch, openSUSE) or `libasound2` (Debian, Ubuntu).
+
+**Speech engines.**
+
+- **espeak-ng** speaks inside textweaver when it is installed: install the `espeak-ng` package. Without it, the same AppImage still works and speaks through the other engines.
+- **speech-dispatcher** works when its server is installed and running, as it is on most desktops.
+- **Eloquence** through Voxin, and a licensed **DECtalk**, work through the bundled engine hosts; see [the Eloquence guide](eloquence.md) and [the DECtalk guide](dectalk.md).
+
+Run `tw backends` to see which engines textweaver found.
+
+**Updates.** The AppImage carries update information, so AppImageUpdate and similar tools can update it, downloading only what changed. `scripts/update.sh` updates an install made by the script.
+
+To build from source instead, run the install script without `--release`; it works on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine, and on other architectures. The Docker image in `docker/` has everything a build needs, including espeak-ng; see [docs/docker.md](docker.md).
 
 ## Checking a download
 
@@ -142,6 +199,12 @@ On macOS:
 
 ```bash
 shasum -a 256 textweaver-0.1.0-alpha.3-macos-universal.tar.gz
+```
+
+On Linux:
+
+```bash
+sha256sum textweaver-0.1.0-alpha.3-linux-x86_64.AppImage
 ```
 
 Compare the result with the line for that file in `SHA256SUMS.txt`.

@@ -11,8 +11,16 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
+textweaver-core = { path = "../crates/textweaver-core" }
 textweaver-formats = { path = "../crates/textweaver-formats" }
 textweaver-store = { path = "../crates/textweaver-store" }
+textweaver-keymap = { path = "../crates/textweaver-keymap" }
+textweaver-enginehost = { path = "../crates/textweaver-enginehost" }
+# The engine crates for their protocol messages only: no audio output.
+textweaver-eci = { path = "../crates/textweaver-eci", default-features = false }
+textweaver-dectalk = { path = "../crates/textweaver-dectalk", default-features = false }
+textweaver-sapi = { path = "../crates/textweaver-sapi", default-features = false }
+serde_json = "1"
 toml = "1.1"
 zip = { version = "8.6", default-features = false, features = ["deflate"] }
 
@@ -61,6 +69,27 @@ bench = false
 [[bin]]
 name = "settings"
 path = "fuzz_targets/settings.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "keymap"
+path = "fuzz_targets/keymap.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "state"
+path = "fuzz_targets/state.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "frame"
+path = "fuzz_targets/frame.rs"
 test = false
 doc = false
 bench = false

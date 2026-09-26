@@ -116,7 +116,18 @@ Performance is a requirement ([ADR-0001](docs/adr/0001-workspace-and-dependencie
 cargo xtask bench
 ```
 
-It times opening, first speech, navigation while reading, search, and entering edit mode on generated corpora of 1 MB and 10 MB, a 50,000-item list, and a 1 MB single line, and reports peak memory. `--quick` skips the 10 MB corpus, `--only NAME` runs one measurement, `--file PATH` adds your own document, and `--json PATH` writes the numbers. [The audit](docs/audit-2026-09.md#benchmark-harness) describes the harness.
+It times opening, first speech, navigation while reading, search, and entering edit mode on generated corpora of 1 MB and 10 MB, a 50,000-item list, and a 1 MB single line, and reports peak memory and the number of allocations. It also times the start of `tw --version`, `tw text`, `tw info`, and `tw backends` (`cargo xtask startup` runs only those). `--quick` skips the 10 MB corpus, `--only NAME` runs one measurement, `--file PATH` adds your own document, and `--json PATH` writes the numbers. [The audit](docs/audit-2026-09.md#benchmark-harness) describes the harness.
+
+To compare with an earlier run, keep its JSON and pass it back:
+
+```bash
+cargo xtask bench --quick --json before.json
+cargo xtask bench --quick --baseline before.json --max-ratio 2
+```
+
+The comparison fails when a peak heap or an allocation count grew more than `--max-ratio` times (2 by default). Those numbers barely change from run to run; times do, so times are only reported. CI runs this on every pull request against main's numbers (`bench.yml`).
+
+`cargo xtask soak --minutes N` reads the 10 MB corpus with random navigation, pauses, rate changes, and edits, then from the top to the end, while a second reader's engine host is killed at random. It checks that the highlight only moves forward, reading finishes, memory stays level, and no engine host is left running. The nightly job runs it for 10 minutes.
 
 Bulk conversion has its own benchmark:
 
@@ -193,7 +204,10 @@ The workflows in `.github/workflows/`:
 - `gui.yml`: the GUI spike on Windows and macOS, with a UI Automation report.
 - `scripts.yml`: lints and dry runs of the scripts in `scripts/`.
 - `apple.yml`: extra macOS voice measurements.
-- `release.yml`: the release job, started by pushing a tag.
+- `ci.yml` also has the real-engine jobs, marked "Real engine" in their names: espeak-ng on Linux and Microsoft's SAPI5 voices on Windows, silent (WAV files and a silent output).
+- `bench.yml`: the benchmark gate on pull requests and main (see Benchmarks).
+- `nightly.yml`: every night, the fuzz targets for 10 minutes each (`fuzz/README.md`), Miri on core, text, and the engine-host protocol, AddressSanitizer on the FFI crates, the tests in release mode, an MSRV check with Rust 1.89, the Docker image and its tests, and the soak test; on Mondays, `cargo hack --each-feature` on the speech, formats, and writers crates. Nightly Rust is used only for fuzzing, Miri, and the sanitizer.
+- `release.yml`: the release job, started by pushing a tag. It builds the Windows, macOS, and Linux packages (the AppImage in `docker/appimage`).
 
 ## See also
 

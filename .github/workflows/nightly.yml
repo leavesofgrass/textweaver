@@ -1,0 +1,243 @@
+# Nightly checks that take too long, or need a nightly compiler, for every
+# push (docs/roadmap.md, "CI and quality gates"):
+#
+# - fuzz: every cargo-fuzz target for 10 minutes on Linux; crashes are
+#   uploaded as artifacts (fuzz/README.md says how to replay one);
+# - miri: textweaver-core, textweaver-text, and the engine-host protocol
+#   module under Miri;
+# - asan: the FFI crates' tests (espeak-ng, ECI, DECtalk) under
+#   AddressSanitizer on Linux;
+# - release: the workspace tests in release mode, and the loaders'
+#   property tests with many more cases;
+# - msrv: `cargo check` with Rust 1.89, the rust-version in Cargo.toml;
+# - docker: the development image built from docker/Dockerfile, and the
+#   tests run in it with every feature;
+# - soak: `cargo xtask soak`, ten minutes of randomized reading with engine
+#   host kills (xtask/src/soak.rs);
+# - features (weekly, Mondays): `cargo hack --each-feature` on the speech,
+#   formats, and writers crates.
+#
+# Nightly Rust is used only where it must be (fuzz, miri, asan); everything
+# else uses the toolchain in rust-toolchain.toml. Run it by hand from the
+# Actions tab; tick "weekly" to include the feature matrix.
+
+name: Nightly
+
+on:
+  schedule:
+    # Every night at 03:17 UTC.
+    - cron: '17 3 * * *'
+    # Mondays at 04:41 UTC: the weekly feature matrix.
+    - cron: '41 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      weekly:
+        description: Also run the weekly feature matrix (cargo hack)
+        type: boolean
+        default: false
+      soak_minutes:
+        description: Minutes for the soak test
+        default: '10'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fuzz:
+    name: fuzz ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [markdown, html, epub, docx, pdf, settings, keymap, state, frame]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Nightly Rust (this job only)
+        run: rustup toolchain install nightly --profile minimal
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz
+          key: fuzz-${{ matrix.target }}
+      # Real files are a better start than nothing (fuzz/README.md).
+      - name: Seed the corpus
+        run: |
+          mkdir -p fuzz/corpus/${{ matrix.target }}
+          case ${{ matrix.target }} in
+            markdown) cp fixtures/*.md fuzz/corpus/markdown/ ;;
+            html) cp fixtures/*.html fuzz/corpus/html/ ;;
+            pdf) cp fixtures/a/*.pdf fuzz/corpus/pdf/ ;;
+            docx) cp fixtures/a/*.docx fuzz/corpus/docx/ ;;
+            epub) cp fixtures/a/*.epub fuzz/corpus/epub/ ;;
+          esac 2> /dev/null || true
+      - name: Fuzz for 10 minutes
+        run: cargo +nightly fuzz run ${{ matrix.target }} -- -max_total_time=600 -rss_limit_mb=4096 -timeout=30
+      - name: Upload the crash
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-crash-${{ matrix.target }}
+          path: fuzz/artifacts/${{ matrix.target }}
+          if-no-files-found: ignore
+
+  miri:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - name: Nightly Rust with Miri (this job only)
+        run: |
+          rustup toolchain install nightly --profile minimal --component miri,rust-src
+          cargo +nightly miri setup
+      # Miri runs every operation through an interpreter: property tests
+      # get a few cases, and the tests read their fixtures from disk.
+      - name: textweaver-core
+        env:
+          PROPTEST_CASES: '4'
+          MIRIFLAGS: -Zmiri-disable-isolation
+        run: cargo +nightly miri test --locked -p textweaver-core
+      - name: textweaver-text
+        env:
+          PROPTEST_CASES: '4'
+          MIRIFLAGS: -Zmiri-disable-isolation
+        run: cargo +nightly miri test --locked -p textweaver-text --lib
+      - name: The engine-host protocol
+        env:
+          PROPTEST_CASES: '4'
+          MIRIFLAGS: -Zmiri-disable-isolation
+        run: cargo +nightly miri test --locked -p textweaver-enginehost --lib protocol
+
+  asan:
+    name: AddressSanitizer (FFI crates)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: System libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libespeak-ng1 espeak-ng-data libasound2-dev pkg-config
+      - name: Nightly Rust (this job only)
+        run: rustup toolchain install nightly --profile minimal
+      # The explicit --target keeps build scripts and proc macros out of the
+      # sanitizer. Leak checking is off: libespeak-ng keeps its voice data
+      # for the life of the process.
+      - name: espeak-ng, ECI, and DECtalk tests
+        env:
+          RUSTFLAGS: -Zsanitizer=address
+          RUSTDOCFLAGS: -Zsanitizer=address
+          ASAN_OPTIONS: detect_leaks=0:detect_stack_use_after_return=1
+          TEXTWEAVER_ESPEAK_OUTPUT: virtual
+        run: |
+          cargo +nightly test --locked --target x86_64-unknown-linux-gnu \
+            -p textweaver-speech --features espeak --test espeak --lib
+          cargo +nightly test --locked --target x86_64-unknown-linux-gnu \
+            -p textweaver-eci -p textweaver-dectalk
+
+  release:
+    name: tests in release mode
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - name: System libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libespeak-ng1 espeak-ng-data libasound2-dev pkg-config
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: nightly-release
+      - name: Workspace tests (release)
+        run: cargo test --locked --release --workspace --exclude textweaver-gui --all-features --no-fail-fast
+      - name: Loader property tests, 2,048 cases each
+        env:
+          PROPTEST_CASES: '2048'
+        run: cargo test --locked --release -p textweaver-formats --test positions --test hostile
+
+  msrv:
+    name: MSRV (Rust 1.89)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: System libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
+      - run: rustup toolchain install 1.89 --profile minimal
+      - run: cargo +1.89 check --locked --workspace --exclude textweaver-gui
+
+  docker:
+    name: Docker image and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the development image
+        run: docker build -t textweaver-dev docker
+      - name: Tests in the image (every feature, no GUI)
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work -e CARGO_TARGET_DIR=/work/target/docker \
+            textweaver-dev cargo test --locked --workspace --exclude textweaver-gui --all-features --no-fail-fast
+
+  soak:
+    name: soak test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: System libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: soak
+      - name: Soak
+        env:
+          MINUTES: ${{ github.event.inputs.soak_minutes || '10' }}
+        run: cargo xtask soak --minutes "$MINUTES"
+
+  features:
+    name: each feature (weekly)
+    if: github.event.schedule == '41 4 * * 1' || github.event.inputs.weekly == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - name: System libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libespeak-ng1 espeak-ng-data libasound2-dev pkg-config
+      - run: rustup toolchain install
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: features
+      - name: Clippy, each feature on its own
+        run: |
+          cargo hack clippy --locked --each-feature --all-targets \
+            -p textweaver-speech -p textweaver-formats -p textweaver-writers -- -D warnings
+      - name: Tests, each feature on its own
+        env:
+          TEXTWEAVER_ESPEAK_OUTPUT: virtual
+        run: |
+          cargo hack test --locked --each-feature \
+            -p textweaver-speech -p textweaver-formats -p textweaver-writers

@@ -22,7 +22,12 @@
 //! checked by the tests below against the C definitions (`int`-sized enums;
 //! the event's `id` union is 8 bytes).
 
-#![allow(non_camel_case_types, non_upper_case_globals, non_snake_case, unsafe_code)]
+#![allow(
+    non_camel_case_types,
+    non_upper_case_globals,
+    non_snake_case,
+    unsafe_code
+)]
 
 use std::ffi::{OsString, c_char, c_int, c_short, c_uchar, c_uint, c_void};
 use std::sync::OnceLock;
@@ -168,8 +173,7 @@ pub fn library_candidates() -> &'static [&'static str] {
     }
 }
 
-type InitializeFn =
-    unsafe extern "C" fn(espeak_AUDIO_OUTPUT, c_int, *const c_char, c_int) -> c_int;
+type InitializeFn = unsafe extern "C" fn(espeak_AUDIO_OUTPUT, c_int, *const c_char, c_int) -> c_int;
 type SetSynthCallbackFn = unsafe extern "C" fn(t_espeak_callback);
 type SynthFn = unsafe extern "C" fn(
     *const c_void,
@@ -266,9 +270,7 @@ impl Api {
 static API: OnceLock<Result<Api, String>> = OnceLock::new();
 
 fn api() -> Result<&'static Api, &'static str> {
-    API.get_or_init(Api::open)
-        .as_ref()
-        .map_err(String::as_str)
+    API.get_or_init(Api::open).as_ref().map_err(String::as_str)
 }
 
 /// Loads libespeak-ng (once). The error says which files were tried.

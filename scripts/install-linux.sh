@@ -1133,6 +1133,8 @@ install_release() {
     done
     desktop="$LIBDIR/share/applications/textweaver.desktop"
     icon="$LIBDIR/share/icons/hicolor/scalable/apps/textweaver.svg"
+    ir mkdir -p "$DOCDIR"
+    ir install -m 0644 "$LIBDIR/QUICKSTART.md" "$DOCDIR/QUICKSTART.md"
   fi
   install_desktop "$desktop" "$icon"
 
@@ -1164,10 +1166,8 @@ install_release() {
     say "FUSE seems to be missing, so set APPIMAGE_EXTRACT_AND_RUN=1 before running textweaver or tw, or install again with --tarball."
   fi
   say "Check your speech engines: $BINDIR/tw backends"
-  if [ "$kind" = appimage ]; then
-    say "Read the quick start aloud: $BINDIR/textweaver $DOCDIR/QUICKSTART.md"
-  else
-    say "Read the quick start aloud: $BINDIR/textweaver $LIBDIR/QUICKSTART.md"
+  say "Read the quick start aloud: $BINDIR/textweaver $DOCDIR/QUICKSTART.md"
+  if [ "$kind" = tarball ]; then
     say "The guides are in $LIBDIR/docs."
   fi
   say "To update later, run $DATADIR/scripts/update.sh. To remove textweaver, run this script with --uninstall."

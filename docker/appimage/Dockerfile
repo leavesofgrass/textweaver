@@ -30,7 +30,8 @@ RUN apt-get update \
       desktop-file-utils zsync \
  && rm -rf /var/lib/apt/lists/*
 
-# Rust, as the official rust images install it.
+# Rust, as the official rust images install it. RUST_VERSION matches
+# rust-toolchain.toml (with its components), so nothing is fetched later.
 ARG RUSTUP_VERSION=1.29.1
 ARG RUST_VERSION=1.96
 ENV RUSTUP_HOME=/usr/local/rustup \
@@ -49,6 +50,7 @@ RUN set -eu; \
     chmod +x /tmp/rustup-init; \
     /tmp/rustup-init -y -q --no-modify-path --profile minimal --default-toolchain "$RUST_VERSION"; \
     rm /tmp/rustup-init; \
+    rustup component add rustfmt clippy; \
     chmod -R a+w "$RUSTUP_HOME" "$CARGO_HOME"; \
     rustc --version
 

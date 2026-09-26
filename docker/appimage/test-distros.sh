@@ -17,7 +17,10 @@
 # - `tw text` on a fixture, which must print the fixture's text;
 # - `textweaver --version` (the default program);
 # - `--install --yes` and `--uninstall --yes` into a scratch home;
-# - the tarball's `tw --version`.
+# - the tarball's `tw --version` and `tw text`;
+# - scripts/install-linux.sh --release with the tarball and with the
+#   AppImage (file:// URLs to DIST_DIR, checked against a SHA256SUMS.txt
+#   written here when the folder has none), then --uninstall.
 # Distributions ship the ALSA library on every desktop; minimal images may
 # not, so it is installed first, as a desktop would have it.
 set -eu
@@ -27,16 +30,38 @@ shift
 if [ "$#" -eq 0 ]; then
   set -- debian:stable fedora:latest archlinux:latest
 fi
-dist="$(cd "$dist" && pwd)"
+# Git Bash on Windows: hand Docker Windows paths and leave /pkg alone.
+abs() { (cd "$1" && pwd); }
+case "$(uname -s)" in
+  MINGW* | MSYS*)
+    export MSYS_NO_PATHCONV=1
+    abs() { (cd "$1" && pwd -W); }
+    ;;
+esac
+dist="$(abs "$dist")"
 here="$(cd "$(dirname "$0")" && pwd)"
-fixtures="$(cd "$here/../../fixtures" && pwd)"
+fixtures="$(abs "$here/../../fixtures")"
+scripts="$(abs "$here/../../scripts")"
 
-appimage="$(cd "$dist" && ls textweaver-*-linux-x86_64.AppImage | head -n 1)"
-tarball="$(cd "$dist" && ls textweaver-*-linux-x86_64.tar.gz | head -n 1)"
+appimage=""
+tarball=""
+for f in "$dist"/textweaver-*-linux-x86_64.AppImage; do
+  [ -e "$f" ] && appimage="$(basename "$f")"
+done
+for f in "$dist"/textweaver-*-linux-x86_64.tar.gz; do
+  [ -e "$f" ] && tarball="$(basename "$f")"
+done
 [ -n "$appimage" ] || {
   echo "No AppImage in $dist." >&2
   exit 1
 }
+
+# The checksums install-linux.sh checks against, as the release has them.
+made_sums=0
+if [ ! -f "$dist/SHA256SUMS.txt" ]; then
+  (cd "$dist" && sha256sum textweaver-*-linux-x86_64.AppImage textweaver-*-linux-x86_64.tar.gz > SHA256SUMS.txt)
+  made_sums=1
+fi
 
 # The check, run inside each container as root.
 cat > "$dist/.distro-check.sh" << 'EOF'
@@ -48,9 +73,9 @@ pm_install() {
     apt-get update -qq > /dev/null
     for p in "$@"; do apt-get install -y -qq --no-install-recommends "$p" > /dev/null 2>&1 || true; done
   elif command -v dnf > /dev/null; then
-    dnf install -y -q "$@" > /dev/null
+    dnf install -y -q "$@" > /dev/null 2>&1
   elif command -v pacman > /dev/null; then
-    pacman -Sy --noconfirm --needed "$@" > /dev/null
+    pacman -Sy --noconfirm --needed "$@" > /dev/null 2>&1
   fi
 }
 alsa() {
@@ -135,6 +160,39 @@ run_round() {
   cd /
   rm -rf "$work" "$home"
 }
+# scripts/install-linux.sh --release, from the packages in /pkg (served
+# as file:// URLs), checked against /pkg/SHA256SUMS.txt: the tarball (the
+# automatic choice without FUSE) and the AppImage (--appimage), each
+# installed, run, and uninstalled.
+install_round() {
+  kind="$1"
+  echo "$image, install-linux.sh --release ($kind):"
+  home="$(mktemp -d)"
+  version="${appimage#textweaver-}"
+  version="${version%-linux-x86_64.AppImage}"
+  flag=""
+  [ "$kind" = appimage ] && flag="--appimage"
+  # shellcheck disable=SC2086
+  check "install" env HOME="$home" SHELL=/bin/bash TEXTWEAVER_RELEASE_URL=file:///pkg \
+    bash /scripts/install-linux.sh --release "v$version" $flag --yes
+  check "tw --version from ~/.local/bin" env HOME="$home" APPIMAGE_EXTRACT_AND_RUN=1 "$home/.local/bin/tw" --version
+  check "textweaver --version from ~/.local/bin" env HOME="$home" APPIMAGE_EXTRACT_AND_RUN=1 "$home/.local/bin/textweaver" --version
+  [ -f "$home/.local/share/applications/textweaver.desktop" ] || {
+    echo "  FAILED: no menu entry"
+    fail=1
+  }
+  check "uninstall" env HOME="$home" SHELL=/bin/bash bash /scripts/install-linux.sh --uninstall --yes
+  if [ -e "$home/.local/bin/tw" ] || [ -L "$home/.local/bin/tw" ] || [ -e "$home/.local/bin/textweaver.AppImage" ]; then
+    echo "  FAILED: --uninstall left files in ~/.local/bin"
+    fail=1
+  fi
+  rm -rf "$home"
+}
+pm_install curl
+if [ -f /pkg/SHA256SUMS.txt ]; then
+  install_round tarball
+  install_round appimage
+fi
 run_round "without espeak-ng" no
 # shellcheck disable=SC2046
 pm_install $(espeak)
@@ -145,7 +203,7 @@ EOF
 status=0
 for image in "$@"; do
   echo "== $image =="
-  if ! docker run --rm -v "$dist:/pkg:ro" -v "$fixtures:/fixtures:ro" "$image" \
+  if ! docker run --rm -v "$dist:/pkg:ro" -v "$fixtures:/fixtures:ro" -v "$scripts:/scripts:ro" "$image" \
     sh /pkg/.distro-check.sh "$image" "$appimage" "$tarball"; then
     echo "$image: FAILED"
     status=1
@@ -154,4 +212,7 @@ for image in "$@"; do
   fi
 done
 rm -f "$dist/.distro-check.sh"
+if [ "$made_sums" = 1 ]; then
+  rm -f "$dist/SHA256SUMS.txt"
+fi
 exit "$status"
