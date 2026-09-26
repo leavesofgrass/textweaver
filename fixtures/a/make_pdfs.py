@@ -12,8 +12,11 @@ copyrighted text. Each fixture targets one part of the PDF loader:
   and numbered lists, a small table, and bookmarks (an outline).
 - columns.pdf: a full-width title, two columns, a full-width figure
   caption band between two column sections (Star's divider rule).
-- running.pdf: four pages with a running header, page-number footers, and
-  a paragraph that continues across a page break.
+- running.pdf: three pages with a running header, page-number footers, a
+  paragraph that continues across a page break, and page labels (a
+  roman-numbered first page).
+- notes.pdf: a footnote in small type at the foot of page one, between a
+  paragraph's first half and its continuation on page two.
 
 Standard library only.
 """
@@ -365,6 +368,38 @@ def make_running():
     pdf.save(HERE / "running.pdf")
 
 
+def make_notes():
+    pdf = Pdf("Notes at the Foot", "Test Author")
+    p1 = pdf.page()
+    p1.text(72, 700, [("HB", 16, "Notes at the Foot")])
+    y = 670
+    for line in [
+        "The first paragraph is short and complete. It ends here.",
+    ]:
+        p1.text(72, y, [("T", 11, line)])
+        y -= 14
+    y -= 8
+    for line in [
+        "The second paragraph begins near the foot of the first page, and its",
+        "sentence carries on past the footnote below, which is printed in",
+    ]:
+        p1.text(72, y, [("T", 11, line)])
+        y -= 14
+    p1.rule(72, 110, 200)
+    p1.text(72, 96, [("T", 8, "1 The footnote sits at the foot of page one, in smaller type.")])
+    p2 = pdf.page()
+    y = 700
+    for line in [
+        "smaller type, and ends on the second page without a break.",
+        "",
+        "A last paragraph closes the document.",
+    ]:
+        if line:
+            p2.text(72, y, [("T", 11, line)])
+        y -= 14
+    pdf.save(HERE / "notes.pdf")
+
+
 def make_big(out, pages):
     pdf = Pdf("A Very Long Document", "Test Author")
     f = Flow(pdf, 72, 468, top=700, bottom=90)
@@ -389,4 +424,5 @@ if __name__ == "__main__":
         make_single()
         make_columns()
         make_running()
-        print("wrote single.pdf, columns.pdf, running.pdf")
+        make_notes()
+        print("wrote single.pdf, columns.pdf, running.pdf, notes.pdf")

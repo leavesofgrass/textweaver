@@ -217,6 +217,28 @@ fn browser_printed_two_columns() {
     round_trip(&doc);
 }
 
+#[test]
+fn footnotes_do_not_interrupt_a_paragraph_across_pages() {
+    let doc = load("notes.pdf");
+    insta::assert_json_snapshot!("pdf_notes_document", view(&doc));
+    let text = doc.text().to_string();
+    assert!(
+        text.contains("which is printed in smaller type, and ends on the second page"),
+        "{text}"
+    );
+    let note = doc
+        .marker_index()
+        .iter(MarkerKind::Footnote, Some(1))
+        .map(|m| doc.slice(m.range))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        note,
+        ["1 The footnote sits at the foot of page one, in smaller type."]
+    );
+    // The note is read after the paragraph it interrupted on the page.
+    assert!(text.find("second page").unwrap_or(0) < text.find("The footnote").unwrap_or(0));
+}
+
 /// A minimal PDF with one page and the given content stream.
 fn one_page_pdf(content: &str) -> Vec<u8> {
     let objs = [

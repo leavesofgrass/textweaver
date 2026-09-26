@@ -1,0 +1,70 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Italic /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Pages /Kids [8 0 R 10 0 R] /Count 2 >>
+endobj
+7 0 obj
+<< /Length 483 >>
+stream
+BT 72.00 700.00 Td /HB 16 Tf (Notes at the Foot) Tj ET
+BT 72.00 670.00 Td /T 11 Tf (The first paragraph is short and complete. It ends here.) Tj ET
+BT 72.00 648.00 Td /T 11 Tf (The second paragraph begins near the foot of the first page, and its) Tj ET
+BT 72.00 634.00 Td /T 11 Tf (sentence carries on past the footnote below, which is printed in) Tj ET
+72.00 110.00 m 200.00 110.00 l S
+BT 72.00 96.00 Td /T 8 Tf (1 The footnote sits at the foot of page one, in smaller type.) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 6 0 R /MediaBox [0 0 612 792] /Resources << /Font << /H 1 0 R /HB 2 0 R /T 3 0 R /TI 4 0 R /TB 5 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 169 >>
+stream
+BT 72.00 700.00 Td /T 11 Tf (smaller type, and ends on the second page without a break.) Tj ET
+BT 72.00 672.00 Td /T 11 Tf (A last paragraph closes the document.) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 6 0 R /MediaBox [0 0 612 792] /Resources << /Font << /H 1 0 R /HB 2 0 R /T 3 0 R /TI 4 0 R /TB 5 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Type /Catalog /Pages 6 0 R /Lang (en-US) >>
+endobj
+12 0 obj
+<< /Title (Notes at the Foot) /Author (Test Author) /Producer (textweaver fixtures) >>
+endobj
+xref
+0 13
+0000000000 65535 f 
+0000000015 00000 n 
+0000000112 00000 n 
+0000000214 00000 n 
+0000000313 00000 n 
+0000000413 00000 n 
+0000000511 00000 n 
+0000000575 00000 n 
+0000001108 00000 n 
+0000001272 00000 n 
+0000001491 00000 n 
+0000001656 00000 n 
+0000001720 00000 n 
+trailer
+<< /Size 13 /Root 11 0 R /Info 12 0 R >>
+startxref
+1823
+%%EOF

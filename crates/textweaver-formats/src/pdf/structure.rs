@@ -148,6 +148,10 @@ pub(super) struct Unit {
     pub mcid: u32,
     /// Text with any list marker (for heading and outline matching).
     pub full: String,
+    /// Top of the unit's block, as a fraction of the page height.
+    pub top: f32,
+    /// A note at the foot of the page (small text below the body).
+    pub note: bool,
 }
 
 impl Unit {
@@ -229,6 +233,8 @@ fn block_units(block: &Block, page: usize, margin: f32, cx: &Context<'_>, out: &
                 lines: t.rows.len(),
                 mcid: u32::MAX,
                 full: String::new(),
+                top: 0.0,
+                note: false,
             });
             return;
         }
@@ -242,6 +248,8 @@ fn block_units(block: &Block, page: usize, margin: f32, cx: &Context<'_>, out: &
                 lines: 1,
                 mcid: u32::MAX,
                 full: alt.clone(),
+                top: 0.0,
+                note: false,
             });
             return;
         }
@@ -261,6 +269,8 @@ fn block_units(block: &Block, page: usize, margin: f32, cx: &Context<'_>, out: &
         out.push(Unit {
             kind: Kind::Code,
             full: text.clone(),
+            top: 0.0,
+            note: false,
             pieces: vec![Piece::new(page, text)],
             size,
             bold: 0.0,
@@ -326,6 +336,8 @@ fn block_units(block: &Block, page: usize, margin: f32, cx: &Context<'_>, out: &
                 lines: 1,
                 mcid: line.mcid,
                 full: text.to_owned(),
+                top: 0.0,
+                note: false,
             });
         } else if let Some(u) = current.as_mut() {
             if let Some(last) = u.pieces.last_mut() {
@@ -405,9 +417,19 @@ pub(super) fn units(pages: &[Page], cx: &Context<'_>) -> (Vec<Unit>, Vec<(usize,
                 .iter()
                 .find(|(lo, hi, _)| b.x0 >= lo - 3.0 && b.x1 <= hi + 3.0)
                 .map_or_else(|| margins.iter().map(|m| m.2).fold(b.x0, f32::min), |m| m.2);
+            let first = raw.len();
             block_units(b, pi, margin, cx, &mut raw);
+            let top = if p.height > 0.0 {
+                b.top / p.height
+            } else {
+                0.0
+            };
+            for u in &mut raw[first..] {
+                u.top = top;
+            }
         }
     }
+    mark_notes(&mut raw, cx.body_size);
 
     // Outline entries matched to units.
     let mut outline_at: Vec<Option<usize>> = vec![None; cx.outline.len()];
@@ -513,13 +535,21 @@ pub(super) fn units(pages: &[Page], cx: &Context<'_>) -> (Vec<Unit>, Vec<(usize,
             let full = u.full.clone();
             u.pieces = vec![Piece::new(u.page(), full)];
         }
-        if let Some(prev) = out.last_mut()
-            && continues_unit(prev, &u)
+        // A paragraph continued on the next page skips the notes at the
+        // foot of the page before (they follow it instead).
+        let target = if u.note {
+            out.len().checked_sub(1).filter(|&k| out[k].note)
+        } else {
+            out.iter().rposition(|x| !x.note)
+        };
+        if let Some(k) = target
+            && continues_unit(&out[k], &u)
         {
+            let prev = &mut out[k];
             glue_hyphen(prev, &mut u);
             prev.pieces.extend(u.pieces);
             prev.lines += u.lines;
-            index_map[i] = out.len() - 1;
+            index_map[i] = k;
             continue;
         }
         out.push(u);
@@ -533,8 +563,36 @@ pub(super) fn units(pages: &[Page], cx: &Context<'_>) -> (Vec<Unit>, Vec<(usize,
     (out, sections)
 }
 
+/// Marks notes at the foot of pages: text smaller than the body in the
+/// lower 40% of a page that also has body text above it.
+fn mark_notes(units: &mut [Unit], body: f32) {
+    let mut i = 0;
+    while i < units.len() {
+        let page = units[i].page();
+        let mut j = i;
+        while j < units.len() && units[j].page() == page {
+            j += 1;
+        }
+        let body_top = units[i..j]
+            .iter()
+            .filter(|u| {
+                u.size >= 0.95 * body && matches!(u.kind, Kind::Paragraph | Kind::Item { .. })
+            })
+            .map(|u| u.top)
+            .fold(f32::MAX, f32::min);
+        for u in &mut units[i..j] {
+            u.note = matches!(u.kind, Kind::Paragraph | Kind::Item { .. })
+                && u.size > 0.0
+                && u.size <= 0.88 * body
+                && u.top >= 0.6
+                && body_top < u.top;
+        }
+        i = j;
+    }
+}
+
 fn heading_reason(u: &Unit, cx: &Context<'_>, outline: Option<u8>) -> Option<Why> {
-    if matches!(u.kind, Kind::Table(_) | Kind::Image | Kind::Code) {
+    if matches!(u.kind, Kind::Table(_) | Kind::Image | Kind::Code) || u.note {
         return None;
     }
     if let Some(role) = cx.roles.get(&(u.page(), u.mcid)) {
@@ -621,7 +679,9 @@ pub(super) fn emit(
     let mut open_sections: Vec<(u8, OpenId)> = Vec::new();
     let mut lists: Vec<(f32, OpenId)> = Vec::new();
     let mut set_page = |b: &mut Builder, p: usize, page: &mut Option<(usize, OpenId)>| {
-        if page.as_ref().is_some_and(|(cur, _)| *cur == p) {
+        // Pages only move forward (notes moved after a paragraph that
+        // continued onto the next page stay in that page's range).
+        if page.as_ref().is_some_and(|(cur, _)| *cur >= p) {
             return;
         }
         if let Some((_, id)) = page.take() {
@@ -671,6 +731,9 @@ pub(super) fn emit(
                 b.paragraph_break();
                 set_page(b, u.page(), &mut page);
                 let id = b.open(marker(MarkerKind::Paragraph));
+                let note = u
+                    .note
+                    .then(|| b.open(marker(MarkerKind::Footnote).with_level(1)));
                 // An image is a paragraph holding its alternate text.
                 let image = (u.kind == Kind::Image).then(|| b.open(marker(MarkerKind::Image)));
                 // A paragraph set wholly in italic or bold (a byline, a
@@ -687,6 +750,9 @@ pub(super) fn emit(
                 }
                 if let Some(img) = image {
                     b.close(img);
+                }
+                if let Some(n) = note {
+                    b.close(n);
                 }
                 b.close(id);
                 b.paragraph_break();
