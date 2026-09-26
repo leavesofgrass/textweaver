@@ -1,0 +1,46 @@
+[package]
+name = "textweaver-dectalk"
+description = "DECtalk for textweaver: engine host process and speech backend for a user-installed DECtalk"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "textweaver-dectalk-host"
+path = "src/bin/textweaver-dectalk-host.rs"
+
+# A stand-in for DECtalk's library (the `TextToSpeech*` C API), built as a
+# shared library so the tests can drive the host's real FFI code without
+# DECtalk. It is test scaffolding: no DECtalk code, no speech.
+[[example]]
+name = "fake_dectalk"
+path = "examples/fake_dectalk.rs"
+crate-type = ["cdylib"]
+
+[features]
+default = ["playback"]
+# Audio output through rodio (in textweaver-enginehost). The host process
+# does not need it: `cargo xtask hosts` builds the host with
+# `--no-default-features`.
+playback = ["textweaver-enginehost/playback"]
+# Builds the fake library (`examples/fake_dectalk.rs`) with the `stdcall`
+# convention instead of `cdecl`, to test the 32-bit host's convention probe.
+fake-stdcall = []
+
+[dependencies]
+textweaver-core.workspace = true
+textweaver-speech.workspace = true
+textweaver-enginehost.workspace = true
+log.workspace = true
+libloading.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

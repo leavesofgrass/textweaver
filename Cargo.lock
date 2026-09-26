@@ -2659,6 +2659,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-dectalk"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "libloading",
+ "log",
+ "proptest",
+ "tempfile",
+ "textweaver-core",
+ "textweaver-enginehost",
+ "textweaver-speech",
+]
+
+[[package]]
 name = "textweaver-dictation"
 version = "0.1.0-alpha.0"
 dependencies = [
