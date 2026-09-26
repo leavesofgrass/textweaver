@@ -143,6 +143,7 @@ pub(super) struct Unit {
     pub pieces: Vec<Piece>,
     pub size: f32,
     pub bold: f32,
+    pub italic: f32,
     pub lines: usize,
     pub mcid: u32,
     /// Text with any list marker (for heading and outline matching).
@@ -224,6 +225,7 @@ fn block_units(block: &Block, page: usize, margin: f32, cx: &Context<'_>, out: &
                 pieces: vec![Piece::new(page, String::new())],
                 size: 0.0,
                 bold: 0.0,
+                italic: 0.0,
                 lines: t.rows.len(),
                 mcid: u32::MAX,
                 full: String::new(),
@@ -236,6 +238,7 @@ fn block_units(block: &Block, page: usize, margin: f32, cx: &Context<'_>, out: &
                 pieces: vec![Piece::new(page, alt.clone())],
                 size: 0.0,
                 bold: 0.0,
+                italic: 0.0,
                 lines: 1,
                 mcid: u32::MAX,
                 full: alt.clone(),
@@ -261,6 +264,7 @@ fn block_units(block: &Block, page: usize, margin: f32, cx: &Context<'_>, out: &
             pieces: vec![Piece::new(page, text)],
             size,
             bold: 0.0,
+            italic: 0.0,
             lines: lines.len(),
             mcid: lines[0].mcid,
         });
@@ -318,6 +322,7 @@ fn block_units(block: &Block, page: usize, margin: f32, cx: &Context<'_>, out: &
                 pieces: vec![Piece::new(page, body)],
                 size: line.size,
                 bold: line.bold,
+                italic: line.italic,
                 lines: 1,
                 mcid: line.mcid,
                 full: text.to_owned(),
@@ -329,6 +334,7 @@ fn block_units(block: &Block, page: usize, margin: f32, cx: &Context<'_>, out: &
             join_text(&mut u.full, text);
             let n = u.lines as f32;
             u.bold = (u.bold * n + line.bold) / (n + 1.0);
+            u.italic = (u.italic * n + line.italic) / (n + 1.0);
             u.lines += 1;
         }
         prev = Some(line);
@@ -657,14 +663,25 @@ pub(super) fn emit(
             }
             Kind::Paragraph | Kind::Image => {
                 b.paragraph_break();
-                let kind = if u.kind == Kind::Image {
-                    MarkerKind::Image
-                } else {
-                    MarkerKind::Paragraph
-                };
                 set_page(b, u.page(), &mut page);
-                let id = b.open(marker(kind));
+                let id = b.open(marker(MarkerKind::Paragraph));
+                // An image is a paragraph holding its alternate text.
+                let image = (u.kind == Kind::Image).then(|| b.open(marker(MarkerKind::Image)));
+                // A paragraph set wholly in italic or bold (a byline, a
+                // caption, a callout) keeps its emphasis.
+                let emphasis: Vec<OpenId> =
+                    [(u.italic, MarkerKind::Italic), (u.bold, MarkerKind::Bold)]
+                        .into_iter()
+                        .filter(|(f, _)| *f >= 0.9 && u.kind == Kind::Paragraph)
+                        .map(|(_, k)| b.open(marker(k)))
+                        .collect();
                 pieces(b, u, &mut page, &mut set_page);
+                for e in emphasis.into_iter().rev() {
+                    b.close(e);
+                }
+                if let Some(img) = image {
+                    b.close(img);
+                }
                 b.close(id);
                 b.paragraph_break();
             }

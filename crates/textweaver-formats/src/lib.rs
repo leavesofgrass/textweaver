@@ -43,7 +43,10 @@ mod text;
 pub use cache::{CacheKey, DocumentCache};
 pub use docx::DocxLoader;
 pub use epub::EpubLoader;
-pub use export::to_markdown;
+pub use export::{
+    ExportFormat, HtmlOptions, MarkdownOptions, TextOptions, export, to_html, to_markdown,
+    to_markdown_with, to_text,
+};
 pub use html::HtmlLoader;
 pub use markdown::MarkdownLoader;
 #[cfg(feature = "pdf")]
@@ -356,9 +359,11 @@ mod tests {
         };
         assert_eq!(r.resolve(&unknown).id(), "text");
         assert!(r.extensions().contains(&"html"));
-        assert_eq!(
-            r.ids(),
-            ["text", "markdown", "html", "epub", "docx", "low", "high"]
-        );
+        let mut ids = vec!["text", "markdown", "html", "epub", "docx"];
+        if cfg!(feature = "pdf") {
+            ids.push("pdf");
+        }
+        ids.extend(["low", "high"]);
+        assert_eq!(r.ids(), ids);
     }
 }

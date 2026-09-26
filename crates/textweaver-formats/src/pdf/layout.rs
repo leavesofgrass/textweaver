@@ -546,14 +546,6 @@ fn blocks(mut lines: Vec<Line>) -> Vec<Block> {
 /// Lays out one page (before running-head removal and ordering).
 pub(super) fn layout(page: &PageContent, image_alts: &HashMap<u32, String>) -> Page {
     let segs = lines(spans(page));
-    if std::env::var_os("TW_PDF_DEBUG").is_some() {
-        for l in &segs {
-            eprintln!(
-                "{:7.1} {:7.1}-{:7.1} {:5.1} b{:.1} m{} {}",
-                l.y, l.x0, l.x1, l.size, l.bold, l.mcid, l.text
-            );
-        }
-    }
     let columns = columns(&segs, page.width);
     // Lines by column (`None`: crossing a gutter).
     let mut groups: Vec<Vec<Line>> = vec![Vec::new(); columns.len() + 1];
