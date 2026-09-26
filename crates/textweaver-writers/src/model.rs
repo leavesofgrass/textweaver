@@ -615,8 +615,7 @@ impl TreeBuilder<'_> {
             // No row markers: one row per line, cells split at the separator.
             let mut line_start = range.start.0;
             let text = self.doc.slice(range);
-            let mut pos = range.start.0;
-            for c in text.chars().chain(std::iter::once('\n')) {
+            for (pos, c) in (range.start.0..).zip(text.chars().chain(std::iter::once('\n'))) {
                 if c == '\n' {
                     let lr = CharRange::new(line_start, pos.min(range.end.0));
                     if !self.doc.slice(lr).trim().is_empty() {
@@ -627,7 +626,6 @@ impl TreeBuilder<'_> {
                     }
                     line_start = pos + 1;
                 }
-                pos += 1;
             }
         }
         Table { caption, rows }
@@ -728,10 +726,12 @@ impl TreeBuilder<'_> {
         };
         let push_empty_images = |stack: &mut Vec<(Option<usize>, Vec<Inline>)>, at: usize| {
             for m in spans.iter() {
-                if m.kind == MarkerKind::Image && m.range.is_empty() && m.range.start.0 == at {
-                    if let Some(top) = stack.last_mut() {
-                        top.1.push(Inline::Span(style_of(m), Vec::new()));
-                    }
+                if m.kind == MarkerKind::Image
+                    && m.range.is_empty()
+                    && m.range.start.0 == at
+                    && let Some(top) = stack.last_mut()
+                {
+                    top.1.push(Inline::Span(style_of(m), Vec::new()));
                 }
             }
         };

@@ -136,7 +136,17 @@ fn flatten(blocks: &[Block], indent: usize, out: &mut Vec<Item>) {
             Block::Table(t) => flatten_table(t, indent, out),
             Block::Code { text, .. } => {
                 for line in text.split('\n') {
-                    out.push(text_item(line.to_owned(), indent, indent + 2));
+                    // Keep the code's own indentation (a tab is four cells).
+                    let lead: usize = line
+                        .chars()
+                        .take_while(|c| matches!(c, ' ' | '\t'))
+                        .map(|c| if c == '\t' { 4 } else { 1 })
+                        .sum();
+                    out.push(text_item(
+                        line.trim_start().to_owned(),
+                        indent + lead,
+                        indent + 2,
+                    ));
                 }
             }
             Block::Quote(inner) => {
@@ -654,6 +664,18 @@ mod tests {
         assert_eq!(lines[2], "  ,TWO");
         assert_eq!(report.warnings.len(), 1);
         assert!(report.warnings[0].contains("U+1F600"), "{report:?}");
+    }
+
+    #[test]
+    fn code_keeps_its_indentation() {
+        let doc = Document::new(
+            DocumentMeta::default(),
+            Rope::from_str("if x {\n    y();\n\tz\n}"),
+            vec![Marker::new(MarkerKind::Code, CharRange::new(0, 21)).with_level(1)],
+        );
+        let (out, _) = brf(&doc, &WriteOptions::default());
+        let lines: Vec<&str> = out.split("\r\n").take(4).collect();
+        assert_eq!(lines, ["IF X _<", "    Y\"<\">2", "    Z", "_>"]);
     }
 
     #[test]

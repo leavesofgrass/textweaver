@@ -16,7 +16,8 @@
 //! writer_for(Format::Brf)
 //!     .write(&doc, &WriteOptions::default(), &mut brf)
 //!     .unwrap();
-//! assert!(brf.starts_with(b",HELLO1 ,WORLD4"));
+//! // A paragraph starts in cell 3.
+//! assert!(brf.starts_with(b"  ,HELLO1 WORLD4"));
 //! ```
 //!
 //! All writers share one block tree ([`model::blocks`]), so they agree on
