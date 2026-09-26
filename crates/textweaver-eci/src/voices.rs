@@ -132,6 +132,7 @@ pub fn voice_list(dialects: &[u32], presets: &[PresetInfo]) -> Vec<Voice> {
                 name: display,
                 languages: vec![d.tag.to_string()],
                 gender: gender.map(str::to_string),
+                tags: vec!["Eloquence".to_owned()],
             });
         }
     }

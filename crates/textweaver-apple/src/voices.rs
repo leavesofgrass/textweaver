@@ -98,6 +98,11 @@ pub fn voice(id: &str, name: &str, language: &str, gender: Option<&str>) -> Voic
             vec![tag]
         },
         gender: gender.map(str::to_string),
+        tags: if is_eloquence(id) {
+            vec!["Eloquence".to_string()]
+        } else {
+            Vec::new()
+        },
     }
 }
 

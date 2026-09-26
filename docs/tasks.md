@@ -253,6 +253,8 @@ Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech la
 
 **Acceptance:** service tests for the new status generations and the caps re-read; export tests with the `recording` backend (deterministic timings) checking cue files byte for byte; an espeak export in the container producing a WAV and an SRT; ffmpeg conversion tested when available (Windows has ffmpeg on PATH; skip cleanly where absent).
 
+**Status:** Wave 2 deliverables done on `wave2/b-speech-export` (Friday, September 25, 2026); awaiting integration. Breaking API changes (statuses, `BackendInfo::caps`, `Voice::tags`) are adapted in the app, ECI, and SAPI crates by a separate "integration shim" commit on the branch; ADR-0011 written. The container needs `speech-dispatcher-espeak-ng` for the real speech-dispatcher test (installed ad hoc for this run).
+
 ### Agent C2 — State, notes, library, migration
 
 **Owns:** `crates/textweaver-store/`, `crates/textweaver-keymap/`, `crates/textweaver-a11y/`, `crates/textweaver-editor/`, `crates/textweaver-cli/src/cmd/{marks,migrate,library}.rs`, `xtask/src/keyboard.rs`, `docs/keyboard.md`.

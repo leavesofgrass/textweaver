@@ -43,6 +43,10 @@ use crate::pacing::{Clock, SystemClock, spoken_words};
 /// Rate range sent to the server, in wpm.
 pub const RATE_RANGE: std::ops::RangeInclusive<u16> = 80..=900;
 
+/// What the Omnivox backend can do: tones only (the protocol is write-only,
+/// so there are no word events and the timer paces the highlight).
+pub const CAPS: Caps = Caps::TONES;
+
 /// How to start the Omnivox server.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OmnivoxCommand {
@@ -65,16 +69,8 @@ impl OmnivoxCommand {
                 .is_file()
                 .then_some(OmnivoxCommand { program, args });
         }
-        find_on_path("omnivox").map(|program| OmnivoxCommand { program, args })
+        crate::backends::on_path("omnivox").map(|program| OmnivoxCommand { program, args })
     }
-}
-
-fn find_on_path(name: &str) -> Option<PathBuf> {
-    let path = std::env::var_os("PATH")?;
-    let exe = format!("{name}{}", std::env::consts::EXE_SUFFIX);
-    std::env::split_paths(&path)
-        .map(|dir| dir.join(&exe))
-        .find(|p| p.is_file())
 }
 
 /// Makes `text` safe for one protocol line inside braces.
@@ -182,15 +178,15 @@ impl SpeechBackend for OmnivoxBackend {
     }
 
     fn capabilities(&self) -> Caps {
-        Caps::TONES
+        CAPS
     }
 
     fn voices(&self) -> Result<Vec<Voice>, SpeechError> {
         Ok(vec![Voice {
             id: "default".into(),
             name: "Omnivox default voice".into(),
-            languages: Vec::new(),
-            gender: None,
+            tags: vec!["no word timing".into()],
+            ..Voice::default()
         }])
     }
 

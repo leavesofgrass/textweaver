@@ -14,6 +14,7 @@ default = []
 # Speech engines, passed through to textweaver-speech.
 espeak = ["textweaver-speech/espeak"]
 omnivox = ["textweaver-speech/omnivox"]
+speechd = ["textweaver-speech/speechd"]
 
 [dependencies]
 textweaver-core.workspace = true

@@ -324,6 +324,7 @@ pub fn lcid_to_bcp47(lcid: u32) -> Option<&'static str> {
 /// needs to know: "(32-bit)" for voices that run in the x86 host, and a
 /// note on Eloquence voices, which give no word timing through SAPI.
 pub fn to_voice(token: &VoiceToken, arch: Arch) -> Voice {
+    let mut tags = Vec::new();
     let mut name = if token.name.is_empty() {
         token
             .token_id
@@ -336,12 +337,15 @@ pub fn to_voice(token: &VoiceToken, arch: Arch) -> Voice {
     };
     if is_onecore(&token.token_id) {
         name.push_str(" (OneCore)");
+        tags.push("OneCore".to_owned());
     }
     if arch == Arch::X86 {
         name.push_str(" (32-bit)");
+        tags.push("32-bit".to_owned());
     }
     if !Family::of(token).has_word_timing() {
         name.push_str(" (no word highlighting)");
+        tags.push("no word timing".to_owned());
     }
     let gender = match token.gender.trim() {
         "" => None,
@@ -356,6 +360,7 @@ pub fn to_voice(token: &VoiceToken, arch: Arch) -> Voice {
         name,
         languages: languages(&token.language),
         gender,
+        tags,
     }
 }
 

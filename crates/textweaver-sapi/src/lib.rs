@@ -54,7 +54,7 @@ use std::path::PathBuf;
 pub use audio::AudioOutput;
 #[cfg(windows)]
 pub use backend::{SapiBackend, Synthesis};
-use textweaver_speech::{BackendFactory, BackendId, BackendInfo, SpeechError};
+use textweaver_speech::{BackendFactory, BackendId, BackendInfo, Caps, SpeechError};
 use voices::{Arch, SapiVoice};
 
 /// The backend id.
@@ -230,6 +230,15 @@ pub fn backend_info() -> BackendInfo {
         priority: PRIORITY,
         opt_in: false,
         available: available() && !host_candidates(&SapiConfig::default(), Arch::X64).is_empty(),
+        // The default voice's (Microsoft voices report every word); a
+        // voice without word timing reports fewer once selected.
+        caps: Caps::WORD_EVENTS
+            | Caps::AUDIO_CLOCK
+            | Caps::PAUSE
+            | Caps::PITCH
+            | Caps::VOLUME
+            | Caps::SYNTH_TO_FILE
+            | Caps::TONES,
     }
 }
 

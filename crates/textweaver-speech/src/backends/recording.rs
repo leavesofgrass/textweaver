@@ -17,7 +17,7 @@
 //! while let Ok(s) = service.statuses().recv_timeout(Duration::from_secs(5)) {
 //!     match s {
 //!         SpeechStatus::Position { source_range: Some(r), .. } => words.push(r),
-//!         SpeechStatus::Finished => break,
+//!         SpeechStatus::Finished { .. } => break,
 //!         _ => {}
 //!     }
 //! }
@@ -39,6 +39,11 @@
 //!
 //! `stop` ends every unfinished utterance with `Cancelled` (delivered on the
 //! next `poll`).
+//!
+//! Files: `synthesize_to_file` and `synthesize_utterance` write a silent WAV
+//! of one word-length per spoken word ([`RecordingBackend::FILE_MS_PER_WORD`],
+//! or `ms_per_word` in `Timed` mode) and report word `i` at
+//! `i × ms_per_word`, so audio export can be tested with exact timings.
 
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
@@ -48,10 +53,11 @@ use std::time::Duration;
 use textweaver_core::{Rate, Utterance, UtteranceId};
 
 use crate::backend::{
-    BackendFactory, BackendId, Caps, EventSink, RawEvent, SpeechBackend, SpeechError, Voice,
-    VoiceParams,
+    BackendFactory, BackendId, Caps, EventSink, FileSynthesis, RawEvent, SpeechBackend,
+    SpeechError, Voice, VoiceParams, WordTiming,
 };
 use crate::pacing::{Clock, SystemClock, spoken_words};
+use crate::wav::silent_wav;
 
 /// How the recording backend responds to `speak`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -257,6 +263,13 @@ impl RecordingBackend {
         .union(Caps::TONES)
         .union(Caps::SYNTH_TO_FILE);
 
+    /// Sample rate of the silent WAV files `synthesize_to_file` writes.
+    pub const FILE_SAMPLE_RATE: u32 = 16_000;
+
+    /// Length of one word in written files, in ms (outside `Timed` mode,
+    /// whose `ms_per_word` is used instead).
+    pub const FILE_MS_PER_WORD: u32 = 250;
+
     /// A backend in [`RecordingMode::Instant`] with [`Self::DEFAULT_CAPS`],
     /// and the handle that inspects it.
     pub fn new() -> (Self, RecordingHandle) {
@@ -269,7 +282,7 @@ impl RecordingBackend {
             id: id.into(),
             name: name.into(),
             languages: vec![lang.into()],
-            gender: None,
+            ..Voice::default()
         };
         let state = Arc::new(Mutex::new(State {
             mode,
@@ -303,6 +316,45 @@ impl RecordingBackend {
     /// [`SpeechService::spawn`](crate::SpeechService::spawn).
     pub fn into_factory(self) -> BackendFactory {
         Box::new(move || Ok(Box::new(self) as Box<dyn SpeechBackend>))
+    }
+
+    /// Writes the stand-in audio for `text`: a silent 16-bit mono WAV at
+    /// [`FILE_SAMPLE_RATE`](Self::FILE_SAMPLE_RATE), one word-length of
+    /// silence per spoken word (at least one), and reports word `i` at
+    /// `i × ms_per_word`. Deterministic, so export tests can compare cue
+    /// files byte for byte.
+    fn write_silence(&mut self, text: &str, path: &Path) -> Result<FileSynthesis, SpeechError> {
+        let per_word = {
+            let mut s = lock(&self.state);
+            s.calls.push(Call::SynthesizeToFile {
+                text: text.to_owned(),
+                path: path.to_owned(),
+            });
+            match s.mode {
+                RecordingMode::Timed { ms_per_word } => ms_per_word,
+                _ => Self::FILE_MS_PER_WORD,
+            }
+        };
+        let words = spoken_words(text);
+        let n = u64::try_from(words.len().max(1)).unwrap_or(u64::MAX);
+        let samples = n
+            .saturating_mul(u64::from(per_word))
+            .saturating_mul(u64::from(Self::FILE_SAMPLE_RATE))
+            / 1000;
+        let samples = usize::try_from(samples).map_err(|e| SpeechError::Io(e.to_string()))?;
+        std::fs::write(path, silent_wav(samples, Self::FILE_SAMPLE_RATE))
+            .map_err(|e| SpeechError::Io(e.to_string()))?;
+        let words = words
+            .into_iter()
+            .enumerate()
+            .map(|(i, byte_range)| WordTiming {
+                byte_range,
+                audio_ms: u32::try_from(i)
+                    .unwrap_or(u32::MAX)
+                    .saturating_mul(per_word),
+            })
+            .collect();
+        Ok(FileSynthesis { words })
     }
 
     /// Moves due `Timed` events into the outbox, then delivers the outbox.
@@ -484,12 +536,15 @@ impl SpeechBackend for RecordingBackend {
     }
 
     fn synthesize_to_file(&mut self, text: &str, path: &Path) -> Result<(), SpeechError> {
-        lock(&self.state).calls.push(Call::SynthesizeToFile {
-            text: text.to_owned(),
-            path: path.to_owned(),
-        });
-        // A stand-in for audio: the text itself, so tests can check it.
-        std::fs::write(path, text).map_err(|e| SpeechError::Io(e.to_string()))
+        self.write_silence(text, path).map(|_| ())
+    }
+
+    fn synthesize_utterance(
+        &mut self,
+        utterance: &Utterance,
+        path: &Path,
+    ) -> Result<FileSynthesis, SpeechError> {
+        self.write_silence(&utterance.text, path)
     }
 
     fn tone(&mut self, hz: f32, ms: u32) {
@@ -566,6 +621,26 @@ mod tests {
         assert_eq!(sink.0.last().unwrap().1, RawEvent::Cancelled);
         assert!(h.pending().is_empty());
         assert!(b.pause().is_err());
+    }
+
+    #[test]
+    fn files_are_silence_with_exact_word_timings() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("u.wav");
+        let (mut b, h) = RecordingBackend::new();
+        let s = b
+            .synthesize_utterance(&utt("One two three.", 0), &path)
+            .unwrap();
+        let ms: Vec<u32> = s.words.iter().map(|w| w.audio_ms).collect();
+        assert_eq!(ms, [0, 250, 500]);
+        assert_eq!(s.words[2].byte_range, 8..13);
+        let bytes = std::fs::read(&path).unwrap();
+        // 3 words × 250 ms at 16 kHz, 2 bytes per sample.
+        assert_eq!(bytes.len(), 44 + 3 * 4000 * 2);
+        assert!(matches!(
+            h.calls().last(),
+            Some(Call::SynthesizeToFile { text, .. }) if text == "One two three."
+        ));
     }
 
     #[test]

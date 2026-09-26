@@ -14,7 +14,14 @@
 //! - **Generations.** The generation is bumped before every stop or restart;
 //!   an [`EventSink`] drops events of stale generations before the service
 //!   logic sees them, so a late `Word` or `Finished` never moves a newer
-//!   reading's highlight (fixes Star bugs B1 and B2).
+//!   reading's highlight (fixes Star bugs B1 and B2). Separately, every
+//!   `read` gets a [`ReadingGeneration`] that its `Position`, `Paused`,
+//!   `Stopped`, and `Finished` statuses carry, so the frontend drops a
+//!   status from an older reading by comparing one number.
+//! - **Capabilities** are re-read after every parameter change: a voice
+//!   can lack word timing or normalize text itself. A change rebuilds the
+//!   normalization pipeline and is reported as
+//!   [`SpeechStatus::Capabilities`].
 //! - **Normalization.** Every utterance goes through the transform
 //!   [`Pipeline`] on its own (never across chunks), composing offset maps so
 //!   positions still point into the document (ADR-0005). Utterances are
@@ -37,6 +44,8 @@
 
 use std::collections::VecDeque;
 use std::ops::Range;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -100,30 +109,78 @@ impl Earcon {
     }
 }
 
+/// Identifies one [`SpeechService::read`] request: the value `read` returns
+/// and every status about that reading carries.
+///
+/// It starts at 1 and rises with every `read`, so a frontend keeps the value
+/// of its latest `read` and drops any status with a different one, with no
+/// heuristics. It is not [`UtteranceId::generation`], which the service
+/// bumps on every internal restart (pause, resume, skip, an announcement
+/// inside a reading) to drop the engine's late events; one reading can span
+/// many utterance generations. 0 means "no reading yet".
+pub type ReadingGeneration = u64;
+
 /// What the service reports back to the application.
+///
+/// Statuses about a reading carry its [`ReadingGeneration`], so a status
+/// that arrives after the frontend started a newer reading is recognizably
+/// stale.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SpeechStatus {
     /// The highlight should cover `source_range` (`None` inside inserted
     /// speech such as "heading level 2").
     Position {
+        /// The reading this position belongs to.
+        generation: ReadingGeneration,
         /// The utterance being spoken.
         utterance: UtteranceId,
         /// Document range to highlight.
         source_range: Option<CharRange>,
     },
-    /// Speech paused; `resume_at` is where reading continues (the last
+    /// The reading paused; `resume_at` is where it continues (the last
     /// confirmed word; may repeat, never skips).
     Paused {
+        /// The reading that paused.
+        generation: ReadingGeneration,
         /// Resume position, if known.
         resume_at: Option<CharPos>,
     },
-    /// Speech stopped by request.
-    Stopped,
-    /// Everything queued has been spoken.
-    Finished,
+    /// Speech stopped by request (or a reading was interrupted by speech
+    /// that replaces it).
+    Stopped {
+        /// The latest reading when speech stopped.
+        generation: ReadingGeneration,
+    },
+    /// Everything the reading queued has been spoken.
+    Finished {
+        /// The reading that finished.
+        generation: ReadingGeneration,
+    },
+    /// The backend's capabilities changed, typically after a voice change
+    /// (some SAPI voices give no word timing, some engines normalize text
+    /// themselves). Frontends announce what the user loses or gains, for
+    /// example "This voice does not report words; the highlight is
+    /// estimated."
+    Capabilities {
+        /// The capabilities now in effect.
+        caps: Caps,
+    },
     /// The backend failed.
     BackendError(String),
+}
+
+impl SpeechStatus {
+    /// The reading this status belongs to, for statuses about a reading.
+    pub fn generation(&self) -> Option<ReadingGeneration> {
+        match self {
+            SpeechStatus::Position { generation, .. }
+            | SpeechStatus::Paused { generation, .. }
+            | SpeechStatus::Stopped { generation }
+            | SpeechStatus::Finished { generation } => Some(*generation),
+            SpeechStatus::Capabilities { .. } | SpeechStatus::BackendError(_) => None,
+        }
+    }
 }
 
 /// Service configuration.
@@ -178,7 +235,7 @@ pub const POLL_INTERVAL: Duration = Duration::from_millis(10);
 #[derive(Debug)]
 enum Command {
     Say(String, SayMode),
-    Read(Vec<Utterance>),
+    Read(Vec<Utterance>, ReadingGeneration),
     Stop,
     Pause,
     Resume,
@@ -204,14 +261,18 @@ pub struct SpeechService {
     status_rx: Receiver<SpeechStatus>,
     thread: Option<JoinHandle<()>>,
     backend_id: BackendId,
-    caps: Caps,
+    /// The backend's current capabilities, updated by the speech thread
+    /// when they change.
+    caps: Arc<AtomicU32>,
+    /// The last reading generation handed out by `read`.
+    last_reading: AtomicU64,
 }
 
 impl std::fmt::Debug for SpeechService {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SpeechService")
             .field("backend", &self.backend_id)
-            .field("caps", &self.caps)
+            .field("caps", &self.capabilities())
             .finish_non_exhaustive()
     }
 }
@@ -231,29 +292,36 @@ impl SpeechService {
         let (tx, rx) = mpsc::channel();
         let (status_tx, status_rx) = mpsc::channel();
         let (ready_tx, ready_rx) = mpsc::channel();
+        let caps = Arc::new(AtomicU32::new(0));
+        let shared_caps = Arc::clone(&caps);
         let thread = thread::Builder::new()
             .name("textweaver-speech".into())
             .spawn(move || match factory() {
                 Ok(backend) => {
                     let mut core = ServiceCore::new(backend, config, clock);
-                    let _ = ready_tx.send(Ok((core.backend_id(), core.capabilities())));
-                    for s in core.take_statuses() {
-                        let _ = status_tx.send(s);
+                    shared_caps.store(core.capabilities().bits(), Ordering::SeqCst);
+                    let _ = ready_tx.send(Ok(core.backend_id()));
+                    let link = StatusLink {
+                        tx: status_tx,
+                        caps: shared_caps,
+                    };
+                    if link.forward(core.take_statuses()) {
+                        run(&mut core, &rx, &link);
                     }
-                    run(&mut core, &rx, &status_tx);
                 }
                 Err(e) => {
                     let _ = ready_tx.send(Err(e));
                 }
             })
             .map_err(|e| SpeechError::Io(e.to_string()))?;
-        let (backend_id, caps) = ready_rx.recv().map_err(|_| SpeechError::ServiceStopped)??;
+        let backend_id = ready_rx.recv().map_err(|_| SpeechError::ServiceStopped)??;
         Ok(SpeechService {
             tx,
             status_rx,
             thread: Some(thread),
             backend_id,
             caps,
+            last_reading: AtomicU64::new(0),
         })
     }
 
@@ -271,10 +339,12 @@ impl SpeechService {
         self.backend_id
     }
 
-    /// The backend's capabilities (for example, to announce "pitch not
-    /// supported by this voice").
+    /// The backend's current capabilities (for example, to announce "pitch
+    /// not supported by this voice"). The speech thread re-reads them after
+    /// every parameter change, so they follow the selected voice; a change
+    /// is also reported as [`SpeechStatus::Capabilities`].
     pub fn capabilities(&self) -> Caps {
-        self.caps
+        Caps::from_bits_retain(self.caps.load(Ordering::SeqCst))
     }
 
     fn send(&self, cmd: Command) {
@@ -287,8 +357,12 @@ impl SpeechService {
         self.send(Command::Say(text.into(), mode));
     }
     /// Reads utterances in order, replacing any reading in progress.
-    pub fn read(&self, utterances: Vec<Utterance>) {
-        self.send(Command::Read(utterances));
+    /// Returns the reading's generation, which every status about this
+    /// reading carries (see [`ReadingGeneration`]).
+    pub fn read(&self, utterances: Vec<Utterance>) -> ReadingGeneration {
+        let generation = self.last_reading.fetch_add(1, Ordering::SeqCst) + 1;
+        self.send(Command::Read(utterances, generation));
+        generation
     }
     /// Stops all speech.
     pub fn stop(&self) {
@@ -388,7 +462,29 @@ impl Drop for SpeechService {
     }
 }
 
-fn run(core: &mut ServiceCore, rx: &Receiver<Command>, status: &Sender<SpeechStatus>) {
+/// The speech thread's side of the status channel; it also keeps the
+/// handle's copy of the capabilities current.
+struct StatusLink {
+    tx: Sender<SpeechStatus>,
+    caps: Arc<AtomicU32>,
+}
+
+impl StatusLink {
+    /// Sends `statuses`; false when the handle is gone.
+    fn forward(&self, statuses: Vec<SpeechStatus>) -> bool {
+        for s in statuses {
+            if let SpeechStatus::Capabilities { caps } = &s {
+                self.caps.store(caps.bits(), Ordering::SeqCst);
+            }
+            if self.tx.send(s).is_err() {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+fn run(core: &mut ServiceCore, rx: &Receiver<Command>, status: &StatusLink) {
     loop {
         let cmd = match core.next_wakeup() {
             None => match rx.recv() {
@@ -409,10 +505,8 @@ fn run(core: &mut ServiceCore, rx: &Receiver<Command>, status: &Sender<SpeechSta
             core.apply(cmd);
         }
         core.step();
-        for s in core.take_statuses() {
-            if status.send(s).is_err() {
-                return;
-            }
+        if !status.forward(core.take_statuses()) {
+            return;
         }
     }
 }
@@ -485,6 +579,8 @@ pub struct ServiceCore {
     paused: Option<PauseState>,
     /// A `read` is in progress; `Finished` is reported when it drains.
     reading: bool,
+    /// The generation of the latest `read` (0 before the first).
+    reading_generation: ReadingGeneration,
     /// Parameters were changed for this character utterance.
     char_params: Option<UtteranceId>,
     last_position: Option<(UtteranceId, Option<CharRange>)>,
@@ -532,6 +628,7 @@ impl ServiceCore {
             playing: None,
             paused: None,
             reading: false,
+            reading_generation: 0,
             char_params: None,
             last_position: None,
             events: Vec::new(),
@@ -546,6 +643,10 @@ impl ServiceCore {
             core.params.voice = resolve_preferred_voice(&voices, &prefer);
         }
         core.apply_params();
+        // The starting capabilities are what the handle reports at spawn;
+        // only later changes are statuses.
+        core.out
+            .retain(|s| !matches!(s, SpeechStatus::Capabilities { .. }));
         core
     }
 
@@ -554,9 +655,15 @@ impl ServiceCore {
         self.backend.id()
     }
 
-    /// The backend's capabilities.
+    /// The backend's capabilities, as last read (after every parameter
+    /// change).
     pub fn capabilities(&self) -> Caps {
         self.caps
+    }
+
+    /// The generation of the latest `read` (0 before the first).
+    pub fn reading_generation(&self) -> ReadingGeneration {
+        self.reading_generation
     }
 
     /// The voice parameters currently requested.
@@ -609,7 +716,7 @@ impl ServiceCore {
     fn apply(&mut self, cmd: Command) {
         match cmd {
             Command::Say(text, mode) => self.say(&text, mode),
-            Command::Read(u) => self.read(u),
+            Command::Read(u, generation) => self.read_as(u, generation),
             Command::Stop => self.stop(),
             Command::Pause => self.pause(),
             Command::Resume => self.resume(),
@@ -633,16 +740,27 @@ impl ServiceCore {
     // ---- commands -------------------------------------------------------
 
     /// Reads `utterances` in order, replacing any reading in progress (and
-    /// any pause).
-    pub fn read(&mut self, utterances: Vec<Utterance>) {
+    /// any pause). Returns the new reading's generation.
+    pub fn read(&mut self, utterances: Vec<Utterance>) -> ReadingGeneration {
+        let generation = self.reading_generation + 1;
+        self.read_as(utterances, generation);
+        generation
+    }
+
+    /// [`read`](Self::read) with a generation chosen by the caller (the
+    /// [`SpeechService`] handle numbers readings itself so `read` can return
+    /// at once). Generations should rise; a lower one is still used as
+    /// given.
+    pub fn read_as(&mut self, utterances: Vec<Utterance>, generation: ReadingGeneration) {
         self.clear_engine();
         self.paused = None;
         self.queue.start(Vec::new());
         self.backlog = utterances.into();
         self.last_position = None;
+        self.reading_generation = generation;
         if self.backlog.is_empty() {
             self.reading = false;
-            self.out.push(SpeechStatus::Finished);
+            self.out.push(SpeechStatus::Finished { generation });
             return;
         }
         self.reading = true;
@@ -652,7 +770,9 @@ impl ServiceCore {
     /// Stops everything, forgets any pause, and reports `Stopped`.
     pub fn stop(&mut self) {
         self.stop_silently();
-        self.out.push(SpeechStatus::Stopped);
+        self.out.push(SpeechStatus::Stopped {
+            generation: self.reading_generation,
+        });
     }
 
     fn stop_silently(&mut self) {
@@ -682,7 +802,10 @@ impl ServiceCore {
                 reading,
             });
         }
-        self.out.push(SpeechStatus::Paused { resume_at });
+        self.out.push(SpeechStatus::Paused {
+            generation: self.reading_generation,
+            resume_at,
+        });
     }
 
     /// Resumes after [`pause`](Self::pause).
@@ -1002,6 +1125,24 @@ impl ServiceCore {
         if let Err(e) = self.backend.set_params(&self.params) {
             self.out.push(SpeechStatus::BackendError(e.to_string()));
         }
+        self.refresh_caps();
+    }
+
+    /// Re-reads the backend's capabilities, which can follow the voice (a
+    /// SAPI voice without word timing, an Eloquence voice that normalizes
+    /// text itself). On a change: the pipeline is rebuilt for utterances
+    /// normalized from now on, and `Capabilities` is reported.
+    fn refresh_caps(&mut self) {
+        let caps = self.backend.capabilities();
+        if caps == self.caps {
+            return;
+        }
+        let native_changed = (caps ^ self.caps).contains(Caps::NATIVE_NORMALIZATION);
+        self.caps = caps;
+        if native_changed {
+            self.rebuild_pipeline();
+        }
+        self.out.push(SpeechStatus::Capabilities { caps });
     }
 
     fn restore_char_params(&mut self) {
@@ -1042,7 +1183,9 @@ impl ServiceCore {
         self.backlog.clear();
         if was_reading && self.paused.is_none() {
             self.reading = false;
-            self.out.push(SpeechStatus::Stopped);
+            self.out.push(SpeechStatus::Stopped {
+                generation: self.reading_generation,
+            });
         }
     }
 
@@ -1287,6 +1430,7 @@ impl ServiceCore {
         }
         self.last_position = Some(key);
         self.out.push(SpeechStatus::Position {
+            generation: self.reading_generation,
             utterance: id,
             source_range: source,
         });
@@ -1311,7 +1455,9 @@ impl ServiceCore {
             self.playing = None;
             if self.reading {
                 self.reading = false;
-                self.out.push(SpeechStatus::Finished);
+                self.out.push(SpeechStatus::Finished {
+                    generation: self.reading_generation,
+                });
             }
         }
     }

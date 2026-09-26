@@ -72,7 +72,7 @@ fn the_service_reads_through_the_server_with_timer_pacing() {
                 source_range: Some(r),
                 ..
             }) => positions.push(r),
-            Ok(SpeechStatus::Finished) => break,
+            Ok(SpeechStatus::Finished { .. }) => break,
             Ok(other) => panic!("unexpected status {other:?}"),
             Err(e) => panic!("no Finished: {e}; positions so far {positions:?}"),
         }

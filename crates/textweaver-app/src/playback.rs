@@ -258,6 +258,7 @@ impl App {
                     if let SpeechStatus::Position {
                         utterance,
                         source_range: Some(r),
+                        ..
                     } = status
                     {
                         if self.track.position(utterance.generation, Some(r)) {
@@ -430,6 +431,7 @@ impl App {
             SpeechStatus::Position {
                 utterance,
                 source_range,
+                ..
             } => {
                 if !self.track.position(utterance.generation, source_range) {
                     return false;
@@ -447,7 +449,7 @@ impl App {
                 self.set_spoken(r);
                 true
             }
-            SpeechStatus::Paused { resume_at } => {
+            SpeechStatus::Paused { resume_at, .. } => {
                 // The service knows the last confirmed word; prefer it unless
                 // the user has moved since pausing.
                 if let (Playback::Paused { resume_at: at }, Some(p)) = (self.playback, resume_at)
@@ -458,7 +460,7 @@ impl App {
                 }
                 false
             }
-            SpeechStatus::Finished => {
+            SpeechStatus::Finished { .. } => {
                 if self.playback == Playback::Reading && self.track.finished() {
                     self.playback = Playback::Idle;
                     if let Some(s) = self.session.as_mut() {
@@ -470,7 +472,7 @@ impl App {
                 }
                 false
             }
-            SpeechStatus::Stopped => false,
+            SpeechStatus::Stopped { .. } | SpeechStatus::Capabilities { .. } => false,
             SpeechStatus::BackendError(e) => {
                 self.playback = Playback::Idle;
                 self.error(&format!("Speech error: {e}"));

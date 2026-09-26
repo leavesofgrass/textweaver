@@ -80,7 +80,7 @@ mod no_runloop {
 #[cfg(not(target_os = "macos"))]
 pub use no_runloop::{is_main_thread, pump_main_loop, run_main_loop_until};
 
-use textweaver_speech::{BackendFactory, BackendInfo};
+use textweaver_speech::{BackendFactory, BackendInfo, Caps};
 
 pub use voices::normalizes_natively;
 
@@ -106,6 +106,7 @@ pub fn nsspeech_info() -> BackendInfo {
         priority: 80,
         opt_in: false,
         available: available(),
+        caps: Caps::WORD_EVENTS | Caps::PAUSE | Caps::PITCH | Caps::VOLUME | Caps::SYNTH_TO_FILE,
     }
 }
 
@@ -117,6 +118,12 @@ pub fn avspeech_info() -> BackendInfo {
         priority: 70,
         opt_in: false,
         available: available(),
+        caps: Caps::WORD_EVENTS
+            | Caps::AUDIO_CLOCK
+            | Caps::PAUSE
+            | Caps::PITCH
+            | Caps::VOLUME
+            | Caps::SYNTH_TO_FILE,
     }
 }
 

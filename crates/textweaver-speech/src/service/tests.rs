@@ -106,6 +106,18 @@ fn count(statuses: &[SpeechStatus], want: &SpeechStatus) -> usize {
     statuses.iter().filter(|s| *s == want).count()
 }
 
+/// `Finished` for the first reading of a rig.
+const FIN: SpeechStatus = SpeechStatus::Finished { generation: 1 };
+/// `Stopped` while the first reading of a rig is the latest.
+const STOPPED: SpeechStatus = SpeechStatus::Stopped { generation: 1 };
+
+fn generations(statuses: &[SpeechStatus]) -> Vec<ReadingGeneration> {
+    statuses
+        .iter()
+        .filter_map(SpeechStatus::generation)
+        .collect()
+}
+
 // ---- queue order, lookahead, generations ---------------------------------
 
 #[test]
@@ -118,8 +130,8 @@ fn reads_in_order_with_word_positions_then_finished_once() {
         [r(0, 3), r(4, 7), r(9, 14), r(15, 19)],
         "{st:?}"
     );
-    assert_eq!(count(&st, &SpeechStatus::Finished), 1);
-    assert_eq!(st.last(), Some(&SpeechStatus::Finished));
+    assert_eq!(count(&st, &FIN), 1);
+    assert_eq!(st.last(), Some(&FIN));
     assert_eq!(
         rig.rec.spoken_texts(),
         ["One two.", "Three four."],
@@ -134,7 +146,7 @@ fn reads_in_order_with_word_positions_then_finished_once() {
 fn empty_read_finishes_at_once() {
     let mut rig = Rig::manual();
     rig.core.read(Vec::new());
-    assert_eq!(rig.step(), [SpeechStatus::Finished]);
+    assert_eq!(rig.step(), [FIN]);
 }
 
 #[test]
@@ -165,11 +177,215 @@ fn a_new_read_makes_old_events_stale() {
     rig.rec.finish(old);
     let st = rig.step();
     assert!(positions(&st).is_empty(), "{st:?}");
-    assert!(!st.contains(&SpeechStatus::Finished));
+    assert!(!st.contains(&FIN));
     let new = rig.last_spoken();
     assert!(new.id.generation > old.generation);
     rig.rec.start(new.id);
-    assert_eq!(positions(&rig.step()), [r(100, 103)]);
+    let st = rig.step();
+    assert_eq!(positions(&st), [r(100, 103)]);
+    assert_eq!(
+        generations(&st),
+        [2],
+        "the new reading's statuses carry its generation"
+    );
+}
+
+// ---- reading generations (Wave 1 request from the app) ----------------------
+
+#[test]
+fn read_returns_rising_generations_that_statuses_carry() {
+    let mut rig = Rig::instant();
+    assert_eq!(rig.core.reading_generation(), 0);
+    let g1 = rig.core.read(doc(0, &["One two."]));
+    let st = rig.step();
+    assert_eq!(g1, 1);
+    assert!(!st.is_empty());
+    assert!(generations(&st).iter().all(|&g| g == g1), "{st:?}");
+    assert_eq!(st.last(), Some(&SpeechStatus::Finished { generation: g1 }));
+    let g2 = rig.core.read(Vec::new());
+    assert_eq!(g2, 2);
+    assert_eq!(rig.step(), [SpeechStatus::Finished { generation: 2 }]);
+}
+
+#[test]
+fn a_reading_keeps_its_generation_across_pause_resume_and_announcements() {
+    let mut rig = Rig::manual();
+    let g = rig.core.read(doc(0, &["One two three.", "Four five."]));
+    rig.step();
+    let first = rig.spoken()[0].id;
+    rig.rec.start(first);
+    rig.rec.word(first, 1, None);
+    rig.step();
+    rig.core.pause();
+    let paused = rig.core.take_statuses();
+    assert!(matches!(paused[..], [SpeechStatus::Paused { generation, .. }] if generation == g));
+    rig.core.resume();
+    rig.step();
+    let resumed = rig.last_spoken();
+    assert!(
+        resumed.id.generation > first.generation,
+        "engine generation moved on"
+    );
+    rig.rec.start(resumed.id);
+    rig.rec.word(resumed.id, 0, None);
+    rig.core.say("Note", SayMode::Announce);
+    let st = rig.step();
+    assert!(generations(&st).iter().all(|&x| x == g), "{st:?}");
+    // Finish everything still pending: the reading reports its generation.
+    for _ in 0..6 {
+        for id in rig.rec.pending() {
+            rig.rec.start(id);
+            rig.rec.finish(id);
+        }
+        let st = rig.step();
+        if st.contains(&SpeechStatus::Finished { generation: g }) {
+            return;
+        }
+    }
+    panic!("the reading never finished");
+}
+
+#[test]
+fn stop_and_interrupt_carry_the_latest_generation() {
+    let mut rig = Rig::manual();
+    rig.core.read(doc(0, &["Alpha."]));
+    let g = rig.core.read(doc(10, &["Beta gamma."]));
+    rig.step();
+    rig.core.take_statuses();
+    rig.core.say("Hello", SayMode::Interrupt);
+    assert_eq!(
+        rig.core.take_statuses(),
+        [SpeechStatus::Stopped { generation: g }]
+    );
+    rig.core.stop();
+    assert_eq!(
+        rig.core.take_statuses(),
+        [SpeechStatus::Stopped { generation: g }]
+    );
+}
+
+#[test]
+fn threaded_read_returns_the_generation_statuses_carry() {
+    let (b, _rec) = RecordingBackend::new();
+    let s = SpeechService::spawn(b.into_factory(), plain()).unwrap();
+    let g1 = s.read(doc(0, &["One."]));
+    let g2 = s.read(doc(5, &["Two three."]));
+    assert_eq!((g1, g2), (1, 2));
+    let mut got = Vec::new();
+    while let Ok(st) = s.statuses().recv_timeout(Duration::from_secs(5)) {
+        let done = st == SpeechStatus::Finished { generation: g2 };
+        got.push(st);
+        if done {
+            break;
+        }
+    }
+    let latest: Vec<Option<CharRange>> = got
+        .iter()
+        .filter_map(|st| match st {
+            SpeechStatus::Position {
+                generation,
+                source_range,
+                ..
+            } if *generation == g2 => Some(*source_range),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(latest, [r(5, 8), r(9, 14)]);
+}
+
+// ---- capabilities follow the voice (Wave 1 request from the SAPI backend) --
+
+/// A backend whose voice "quiet" has no word events, like some SAPI voices.
+struct VoiceCaps {
+    inner: RecordingBackend,
+    caps: Caps,
+}
+
+impl SpeechBackend for VoiceCaps {
+    fn id(&self) -> BackendId {
+        "voice-caps"
+    }
+    fn capabilities(&self) -> Caps {
+        self.caps
+    }
+    fn voices(&self) -> Result<Vec<crate::Voice>, SpeechError> {
+        self.inner.voices()
+    }
+    fn set_params(&mut self, params: &VoiceParams) -> Result<(), SpeechError> {
+        self.caps = if params.voice.as_deref() == Some("quiet") {
+            Caps::PITCH | Caps::NATIVE_NORMALIZATION
+        } else {
+            RecordingBackend::DEFAULT_CAPS
+        };
+        self.inner.set_params(params)
+    }
+    fn effective_wpm(&self) -> u16 {
+        self.inner.effective_wpm()
+    }
+    fn speak(&mut self, u: &Utterance, sink: &mut dyn EventSink) -> Result<(), SpeechError> {
+        self.inner.speak(u, sink)
+    }
+    fn poll(&mut self, sink: &mut dyn EventSink) {
+        self.inner.poll(sink);
+    }
+    fn stop(&mut self) {
+        self.inner.stop();
+    }
+}
+
+#[test]
+fn capabilities_are_re_read_after_set_params() {
+    let (inner, _rec) = RecordingBackend::new();
+    let backend = VoiceCaps {
+        inner,
+        caps: RecordingBackend::DEFAULT_CAPS,
+    };
+    let mut core = ServiceCore::new(
+        Box::new(backend),
+        ServiceConfig::default(),
+        Box::new(FakeClock::new()),
+    );
+    assert!(core.take_statuses().is_empty(), "no status for the start");
+    assert!(core.pipeline().names().contains(&"numbers"));
+    core.set_voice(Some("quiet".into()));
+    let caps = Caps::PITCH | Caps::NATIVE_NORMALIZATION;
+    assert_eq!(core.take_statuses(), [SpeechStatus::Capabilities { caps }]);
+    assert_eq!(core.capabilities(), caps);
+    assert!(
+        !core.pipeline().names().contains(&"numbers"),
+        "native normalization now skips numbers"
+    );
+    core.set_rate(Rate::Wpm(300));
+    assert!(
+        core.take_statuses().is_empty(),
+        "unchanged caps are not reported"
+    );
+    core.set_voice(None);
+    assert_eq!(
+        core.take_statuses(),
+        [SpeechStatus::Capabilities {
+            caps: RecordingBackend::DEFAULT_CAPS
+        }]
+    );
+}
+
+#[test]
+fn the_handle_follows_capability_changes() {
+    let (inner, _rec) = RecordingBackend::new();
+    let backend = VoiceCaps {
+        inner,
+        caps: RecordingBackend::DEFAULT_CAPS,
+    };
+    let s = SpeechService::spawn(
+        Box::new(move || Ok(Box::new(backend) as Box<dyn SpeechBackend>)),
+        plain(),
+    )
+    .unwrap();
+    assert!(s.capabilities().contains(Caps::WORD_EVENTS));
+    s.set_voice(Some("quiet".into()));
+    let st = s.statuses().recv_timeout(Duration::from_secs(5)).unwrap();
+    assert!(matches!(st, SpeechStatus::Capabilities { .. }), "{st:?}");
+    assert!(!s.capabilities().contains(Caps::WORD_EVENTS));
 }
 
 #[test]
@@ -179,7 +395,7 @@ fn stop_reports_stopped_and_drops_late_events() {
     rig.step();
     let id = rig.spoken()[0].id;
     rig.core.stop();
-    assert_eq!(rig.core.take_statuses(), [SpeechStatus::Stopped]);
+    assert_eq!(rig.core.take_statuses(), [STOPPED]);
     rig.rec.start(id);
     rig.rec.word(id, 1, None);
     rig.rec.finish(id);
@@ -215,7 +431,7 @@ fn backend_error_is_reported_and_reading_goes_on() {
         "engine error: synth failed".into()
     )));
     assert_eq!(positions(&st), [r(9, 13), r(14, 17)]);
-    assert_eq!(st.last(), Some(&SpeechStatus::Finished));
+    assert_eq!(st.last(), Some(&FIN));
 }
 
 #[test]
@@ -226,13 +442,7 @@ fn engine_error_event_is_reported() {
     let id = rig.spoken()[0].id;
     rig.rec.emit(id, RawEvent::Error("device lost".into()));
     let st = rig.step();
-    assert_eq!(
-        st,
-        [
-            SpeechStatus::BackendError("device lost".into()),
-            SpeechStatus::Finished
-        ]
-    );
+    assert_eq!(st, [SpeechStatus::BackendError("device lost".into()), FIN]);
 }
 
 // ---- normalization and mapping ----------------------------------------------
@@ -312,6 +522,7 @@ fn pause_before_the_first_word_resumes_at_the_utterance_start() {
     assert_eq!(
         rig.core.take_statuses(),
         [SpeechStatus::Paused {
+            generation: 1,
             resume_at: Some(CharPos(20))
         }]
     );
@@ -344,6 +555,7 @@ fn pause_resumes_from_the_last_confirmed_word() {
     assert_eq!(
         rig.core.take_statuses(),
         [SpeechStatus::Paused {
+            generation: 1,
             resume_at: Some(CharPos(21))
         }]
     );
@@ -403,6 +615,7 @@ fn pause_inside_inserted_speech_repeats_it_and_reports_its_anchor() {
     assert_eq!(
         rig.core.take_statuses(),
         [SpeechStatus::Paused {
+            generation: 1,
             resume_at: Some(CharPos(50))
         }]
     );
@@ -429,6 +642,7 @@ fn pause_inside_an_expansion_repeats_the_whole_expansion() {
     assert_eq!(
         rig.core.take_statuses(),
         [SpeechStatus::Paused {
+            generation: 1,
             resume_at: Some(CharPos(8))
         }]
     );
@@ -456,7 +670,7 @@ fn a_long_reading_is_normalized_as_it_is_reached() {
         rig.rec.finish(u.id);
         let st = rig.step();
         done += 1;
-        assert_eq!(st.contains(&SpeechStatus::Finished), done == 10, "{done}");
+        assert_eq!(st.contains(&FIN), done == 10, "{done}");
     }
     assert_eq!(done, 10);
 }
@@ -507,6 +721,7 @@ fn native_pause_freezes_the_playback_clock() {
     assert_eq!(
         rig.core.take_statuses(),
         [SpeechStatus::Paused {
+            generation: 1,
             resume_at: Some(CharPos(4))
         }]
     );
@@ -521,7 +736,7 @@ fn native_pause_freezes_the_playback_clock() {
     assert!(positions(&rig.advance(ms(150))).is_empty());
     assert_eq!(positions(&rig.advance(ms(40))), [r(8, 13)]);
     let st = rig.advance(ms(100));
-    assert_eq!(st, [SpeechStatus::Finished]);
+    assert_eq!(st, [FIN]);
 }
 
 // ---- pacing ---------------------------------------------------------------
@@ -548,7 +763,7 @@ fn timer_paces_an_engine_without_word_events() {
     );
     assert_eq!(rig.core.next_wakeup(), Some(POLL_INTERVAL));
     rig.rec.finish(id);
-    assert_eq!(rig.step(), [SpeechStatus::Finished]);
+    assert_eq!(rig.step(), [FIN]);
     assert_eq!(rig.core.next_wakeup(), None);
 }
 
@@ -592,7 +807,7 @@ fn audio_clock_words_are_scheduled_not_fired_on_arrival() {
     assert!(positions(&rig.advance(ms(319))).is_empty());
     assert_eq!(positions(&rig.advance(ms(1))), [r(4, 7)]);
     assert_eq!(positions(&rig.advance(ms(200))), [r(8, 13)]);
-    assert_eq!(rig.advance(ms(80)), [SpeechStatus::Finished]);
+    assert_eq!(rig.advance(ms(80)), [FIN]);
 }
 
 #[test]
@@ -635,7 +850,7 @@ fn say_interrupt_stops_the_reading() {
     rig.step();
     rig.core.say("Hello", SayMode::Interrupt);
     let st = rig.core.take_statuses();
-    assert_eq!(st, [SpeechStatus::Stopped]);
+    assert_eq!(st, [STOPPED]);
     let last = rig.last_spoken();
     assert_eq!(last.text, "Hello");
     assert_eq!(last.kind, UtteranceKind::Announcement);
@@ -655,7 +870,7 @@ fn say_queue_speaks_after_the_reading() {
     rig.rec.finish(ids[0]);
     assert!(rig.step().is_empty());
     rig.rec.finish(ids[1]);
-    assert_eq!(rig.step(), [SpeechStatus::Finished]);
+    assert_eq!(rig.step(), [FIN]);
 }
 
 #[test]
@@ -860,7 +1075,7 @@ fn threaded_service_with_the_recording_backend() {
     s.read(doc(0, &["One two.", "Three."]));
     let mut got = Vec::new();
     while let Ok(st) = s.statuses().recv_timeout(Duration::from_secs(5)) {
-        let done = st == SpeechStatus::Finished;
+        let done = st == FIN;
         got.push(st);
         if done {
             break;
@@ -881,7 +1096,7 @@ fn null_service_reports_positions_then_finished() {
     ]);
     let mut got = Vec::new();
     while let Ok(st) = s.statuses().recv_timeout(Duration::from_secs(2)) {
-        let done = st == SpeechStatus::Finished;
+        let done = st == FIN;
         got.push(st);
         if done {
             break;

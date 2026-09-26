@@ -12,13 +12,22 @@ pub struct NullBackend {
     params: VoiceParams,
 }
 
+impl NullBackend {
+    /// What the silent backend claims: everything a voice setting needs, so
+    /// changing settings never reports "not supported" while silent.
+    pub const CAPS: Caps = Caps::PAUSE
+        .union(Caps::PITCH)
+        .union(Caps::VOLUME)
+        .union(Caps::LIVE_RATE);
+}
+
 impl SpeechBackend for NullBackend {
     fn id(&self) -> BackendId {
         "null"
     }
 
     fn capabilities(&self) -> Caps {
-        Caps::PAUSE | Caps::PITCH | Caps::VOLUME | Caps::LIVE_RATE
+        Self::CAPS
     }
 
     fn voices(&self) -> Result<Vec<Voice>, SpeechError> {
