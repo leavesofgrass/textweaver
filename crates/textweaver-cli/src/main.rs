@@ -33,6 +33,8 @@ enum Cmd {
     Voices(cmd::voices::Args),
     /// List speech backends and their availability.
     Backends(cmd::backends::Args),
+    /// Find ETI-Eloquence on this computer and explain how to get it.
+    Eloquence(cmd::eloquence::Args),
     /// List a document's saved position and bookmarks.
     Marks(cmd::marks::Args),
     /// Import settings and reading positions from Star.
@@ -51,6 +53,7 @@ fn main() -> Result<()> {
         Cmd::Speak(a) => cmd::speak::run(a),
         Cmd::Voices(a) => cmd::voices::run(a),
         Cmd::Backends(a) => cmd::backends::run(a),
+        Cmd::Eloquence(a) => cmd::eloquence::run(a),
         Cmd::Marks(a) => cmd::marks::run(a),
         Cmd::MigrateStar(a) => cmd::migrate::run(a),
         Cmd::Serve(a) => cmd::serve::run(a),

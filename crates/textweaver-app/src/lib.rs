@@ -92,6 +92,7 @@ pub use view::{Highlight, HighlightKind, Viewport};
 
 pub use textweaver_a11y as a11y;
 pub use textweaver_core as core;
+pub use textweaver_eci as eci;
 pub use textweaver_editor as editor;
 pub use textweaver_formats as formats;
 pub use textweaver_keymap as keymap;

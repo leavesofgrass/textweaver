@@ -300,7 +300,7 @@ pub fn choose_library(candidates: &[LibraryCandidate]) -> Result<LibraryChoice, 
             .map(|c| c.path.display().to_string())
             .collect();
         return Err(format!(
-            "no ECI library found (tried {}); install Eloquence, Voxin, or OpenEVV, or set {}",
+            "no ECI library found (tried {}); see `tw eloquence` for how to get Eloquence, or set {}",
             tried.join(", "),
             crate::LIBRARY_ENV
         ));
