@@ -604,6 +604,15 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 - **Visual starting point (Jon, 2026-09-26):** Jon likes the dark look of Xilem's `to_do_mvc` example (github.com/linebender/xilem, the `examples` folder). Use its layout, spacing, and dark styling as the base for the main window and dialogs.
   - Map textweaver's Galaxy theme onto it. Not every theme needs to meet WCAG AA (Jon, 2026-09-26), but Galaxy, Galaxy Light, and the high-contrast themes must.
   - Keep the same structure for Galaxy Light and high contrast.
+- **Look and feel (Jon, 2026-09-26): a highly polished, modern, dark-mode look is a goal in its own right.**
+  - Galaxy is the default.
+  - Keep the spacing, type scale, and alignment consistent.
+  - Use subtle surfaces and elevation for panels, dialogs, and the status bar.
+  - Rounded corners, clear focus rings (at least 3:1 against their background), and smooth, restrained motion that respects the reduced-motion setting.
+  - Crisp text rendering at every DPI, with good default fonts from the bundled set.
+  - No clutter.
+  - Produce screenshots (`--background --screenshot PATH` or a test helper) at 100% and 200% scale for review.
+- **Manual accessibility testing:** Jon tests with screen readers himself. Automated checks (the UI Automation report, AT-SPI dumps) still run in CI. After each milestone, write down exactly what Jon should try, with a short checklist.
 
 1. **ADR-0023, "Xilem GUI".** It supersedes ADR-0014 and records:
    - the choice;
@@ -742,3 +751,75 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 - The aarch64 AppImage, on GitHub's arm64 runners.
 - Signing, when funding allows.
 - Release `0.1.0-alpha.4` or `beta.1` when Jon says so.
+
+## Wave 4 (draft, 2026-09-26; starts when Wave 3 is merged and Docker is restarted)
+
+A draft, so the next wave can start the moment Wave 3 lands. It follows the same rules and spirit as Wave 3: pure-Rust first, experimental, and Jon's own use first. The orchestrator will refine these briefs from Wave 3's reports before launch.
+
+### Agent W4a: The Xilem GUI, part two
+
+- **Edit mode** in `DocumentView`. It uses `Command::ReplaceRange`, and keeps structure while editing, as the terminal reader does.
+- **Reading aids in the GUI:**
+  - an RSVP panel that never covers the caret;
+  - a reading ruler and current-line band;
+  - text spacing;
+  - bionic reading;
+  - difficult words.
+- **Parity with the terminal reader:**
+  - outline;
+  - citations while writing;
+  - export and preview;
+  - spell check;
+  - tables and links;
+  - notes;
+  - the access modes.
+- **Fixes from Jon's NVDA and JAWS listening session.** Where AccessKit falls short, write the changes and send them upstream.
+- **Remove the wxDragon spike** once the Xilem GUI passes the UI Automation report and Jon's session.
+
+### Agent W4b: Speed, round two
+
+- **Faster text search and segmentation.**
+  - Adopt `icu_segmenter` for word and sentence boundaries, measured against `unicode-segmentation`.
+  - Use `memchr::memmem` for literal find.
+  - Use aho-corasick for highlighting many terms at once.
+- **Pure-Rust compression.** Turn on the zip crate's pure-Rust features: zlib-rs, lzma, xz, bzip2, and ppmd.
+- **Allocation and memory.** Cut allocations and peak memory, using the benchmark gate's numbers.
+- **Startup time** of `textweaver` and `tw`.
+- **Ropey 2.** Evaluate it (byte indexing), and whether `crop` or `jumprope` helps where the writer thread does not need a cheap clone.
+- **Binary size.** Reduce it now that the reader's export and citations are a feature.
+- **Optional TLS change.** Consider `rustls-graviola` in place of ring's C code, with ring as the fallback.
+
+### Agent W4c: Formats, round two
+
+- **Math from EPUB 3.** Read EPUB 3 MathML as math.
+- **More from DOCX.** Read Word comments, tracked changes, and footnotes into notes.
+- **RTF and ODT natively,** so neither needs Pandoc.
+- **A native LaTeX subset.** Sections, lists, math, citations, and tables are enough for course notes.
+- **Emails and web archives.** EML and MHTML.
+- **Fuzz targets and hostile-input limits** for each new loader.
+
+### Agent W4d: Interface translations
+
+- **Catalogs.** Fill the message catalogs from W3e for Spanish, French, German, Portuguese, and Arabic, the languages Star had. Take Star's catalogs where they apply.
+- **Right-to-left layout** in the terminal reader and the GUI.
+- **A first-run language choice.**
+- **Speech in the same language.** Each language gets a default voice for that language.
+- **A pseudo-locale in CI,** to catch strings that were never translated.
+
+### Agent W4e: Offline intelligence on rten (experimental)
+
+- **Offline translation of a document or selection.** OPUS-MT or Marian models in ONNX, run on rten. The user confirms any model download, and sees its licence.
+- **Extractive summaries.** LexRank on sentence embeddings from a small ONNX embedding model, or no model at all. Star used LexRank.
+- **The difficult-word overlay** gets definitions from W3e's lexicon.
+- **Every model** is optional, downloaded only on request, and checked by SHA-256.
+
+### Agent W4f: Platforms and releases
+
+- **An aarch64 AppImage,** built on GitHub's arm64 runners.
+- **VoiceOver on macOS and Orca on Linux.** Fix what the accessibility dumps and tester reports show.
+- **Release automation.**
+  - `cargo xtask release` checks that the listening checklist is done.
+  - Changelog grouping.
+- **The pull-request merge gate.** Integrations go through pull requests with required checks.
+- **Prune merged branches.** Keep only `main` and active work.
+- **Release notes.** Prepare `0.1.0-beta.1` notes, for when Jon asks for a release.
