@@ -26,6 +26,11 @@
 //! (`TEXTWEAVER_PANDOC` names the program, `TEXTWEAVER_PANDOC_TIMEOUT` or
 //! [`ConvertOptions::pandoc_timeout`] the time limit).
 //!
+//! **Citations.** Pandoc citations in Markdown sources (`[@doe2020]`) are
+//! formatted with `textweaver-cite` in a CSL style, and a References
+//! section is appended, for every output but Markdown (see [`citations`]
+//! and ADR-0019).
+//!
 //! **Memory.** Each worker holds one document at a time; the batch keeps
 //! only paths and per-file results, so memory is proportional to the
 //! largest documents in flight, not to the batch.
@@ -49,10 +54,12 @@ use textweaver_render::{
 };
 use textweaver_text::Document;
 
+pub mod citations;
 mod plan;
 pub mod watch;
 pub mod writer;
 
+pub use citations::CitationOptions;
 pub use plan::{Job, Plan};
 pub use watch::{WatchEvent, WatchOptions, watch};
 pub use writer::{
@@ -175,6 +182,8 @@ pub struct ConvertOptions {
     pub pandoc_timeout: Option<Duration>,
     /// Options passed to the native writers.
     pub write: WriteOptions,
+    /// How Pandoc citations in Markdown are formatted.
+    pub citations: CitationOptions,
 }
 
 impl Default for ConvertOptions {
@@ -192,6 +201,7 @@ impl Default for ConvertOptions {
             pandoc: true,
             pandoc_timeout: None,
             write: WriteOptions::default(),
+            citations: CitationOptions::default(),
         }
     }
 }
@@ -444,6 +454,7 @@ pub struct Converter {
     templates: Templates,
     template: String,
     writers: Writers,
+    citations: citations::Citations,
     /// Embed resolvers, one per input root (built on first use).
     resolvers: std::sync::Mutex<HashMap<PathBuf, std::sync::Arc<FsResolver>>>,
 }
@@ -480,6 +491,8 @@ impl Converter {
             templates.load_dir(dir)?;
         }
         let template = templates.resolve(&options.template)?;
+        let citations =
+            citations::Citations::new(options.citations.clone()).map_err(ConvertError::Output)?;
         let mut registry = Registry::with_builtins();
         registry.remove("pandoc");
         if options.pandoc {
@@ -494,6 +507,7 @@ impl Converter {
             templates,
             template,
             writers,
+            citations,
             resolvers: std::sync::Mutex::new(HashMap::new()),
         })
     }
@@ -647,11 +661,33 @@ impl Converter {
             .registry
             .load(&Source::Path(job.source.clone()), &self.options.load)
             .map_err(|e| e.to_string())?;
-        Ok(self.convert_document(job, &doc, None)?.read_from(size))
+        let mut out = self.convert_document(job, &doc, None)?.read_from(size);
+        // What the loader had to leave out (content nested too deeply).
+        out.warnings
+            .splice(0..0, textweaver_formats::warnings(&doc.meta));
+        Ok(out)
     }
 
     /// Output for Markdown text (a Markdown file, or Pandoc's output).
     fn convert_markdown(&self, job: &Job, text: &str) -> Result<Output, String> {
+        // Citations are formatted for every output but Markdown itself.
+        let cited = if self.options.to == OutputFormat::Markdown {
+            citations::Cited::default()
+        } else {
+            self.citations.apply(
+                &job.source,
+                text,
+                self.options.to == OutputFormat::Html,
+                self.options.render.flavor == textweaver_render::Flavor::Pandoc,
+            )
+        };
+        let text = cited.markdown.as_deref().unwrap_or(text);
+        let mut out = self.convert_markdown_text(job, text)?;
+        out.warnings.extend(cited.warnings);
+        Ok(out)
+    }
+
+    fn convert_markdown_text(&self, job: &Job, text: &str) -> Result<Output, String> {
         match self.options.to {
             OutputFormat::Markdown => Ok(Output::new(text.as_bytes().to_vec())),
             OutputFormat::Html => {

@@ -15,8 +15,8 @@ expression: snapshot_text(&r)
 <p>And a nested one.</p>
 </div>
 </div>
-<p>Here is a <span class="smallcaps">small caps</span> span and a citation <span class="citation" data-cites="doe99 roe04">(see <a href="#ref-doe99">doe99</a>, p. 33; <a href="#ref-roe04">roe04</a>)</span>.
-As <span class="citation" data-cites="smith2020"><a href="#ref-smith2020">smith2020</a></span> argues, water is H<sub>2</sub>O and 2<sup>10</sup> is 1024.</p>
+<p>Here is a <span class="smallcaps">small caps</span> span and a citation <span class="citation" data-cites="doe99 roe04">(see doe99, p. 33; roe04)</span>.
+As <span class="citation" data-cites="smith2020">smith2020</span> argues, water is H<sub>2</sub>O and 2<sup>10</sup> is 1024.</p>
 <h1 id="introduction">Introduction</h1>
 <p>A second heading with the same text gets its own id.</p>
 

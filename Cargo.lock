@@ -4418,10 +4418,12 @@ version = "0.1.0-alpha.3"
 dependencies = [
  "log",
  "notify",
+ "pulldown-cmark",
  "rayon",
  "serde",
  "serde_json",
  "tempfile",
+ "textweaver-cite",
  "textweaver-core",
  "textweaver-formats",
  "textweaver-render",
