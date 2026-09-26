@@ -683,6 +683,7 @@ mod macos {
         })?;
         let words = check_sequence(&rec, u1.id, SENTENCE, &SENTENCE_WORDS)?;
         check_sequence(&rec, u2.id, "Second sentence.", &["Second", "sentence"])?;
+        println!("  synthesis end recognized by {:?}", b.last_synthesis_end());
         let offsets: Vec<u32> = words
             .iter()
             .map(|(_, a, _)| a.unwrap_or(u32::MAX))
@@ -897,6 +898,10 @@ mod macos {
             ensure(s.words.len() >= enough, || {
                 format!("{} words", s.words.len())
             })?;
+            println!(
+                "  END avspeech {voice}: synthesis end recognized by {:?}",
+                s.end
+            );
             ensure(offsets.windows(2).all(|w| w[0] <= w[1]), || {
                 "offsets fall".into()
             })?;
