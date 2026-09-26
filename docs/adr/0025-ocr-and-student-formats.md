@@ -63,6 +63,8 @@ Release build on the development machine (Windows 11), on the pages in `fixtures
 - **`scan-small.png`**, English at 100 dots per inch:
   - Tesseract: 2.1% words, 0.3 s.
   - ocrs, with the page enlarged twice: 29.8% words, 0.4 s.
+  - Paddle, also enlarged: 21.3% words.
+- Times are from an unloaded machine. With a Docker build running at the same time, the same pages took about twice as long for ocrs and Paddle (2.6 s for `scan-en.pdf`), and Tesseract 1.7 s.
 - **A clean rendering** of page 1 (no noise): ocrs 8.5%, Paddle 5.4%, Tesseract 0%.
 - **Loading the ocrs models** takes 0.02 to 0.2 s. The first page is slower (up to 3 s), while RTen prepares its plans.
 
