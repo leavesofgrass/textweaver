@@ -65,6 +65,32 @@ pub fn chord(k: &KeyEvent) -> Option<KeyChord> {
     Some(KeyChord::new(key, mods))
 }
 
+/// The character a key press types, if it types one: a character key
+/// without Control or Alt, or with both when the character is not an ASCII
+/// letter or digit.
+///
+/// On Windows, AltGr (the right Alt key on German, French, Nordic, Polish,
+/// and many other layouts) arrives from crossterm as Control plus Alt, so
+/// `@ [ ] { } | ~` and characters such as `€` and `ą` came with both
+/// modifiers and could not be typed. Such a key reaches this only when no
+/// binding claims its chord, and a real Control+Alt shortcut is an ASCII
+/// letter or digit.
+pub fn typed_char(k: &KeyEvent) -> Option<char> {
+    let KeyCode::Char(c) = k.code else {
+        return None;
+    };
+    if c.is_control() {
+        return None;
+    }
+    let ctrl = k.modifiers.contains(KeyModifiers::CONTROL);
+    let alt = k.modifiers.contains(KeyModifiers::ALT);
+    match (ctrl, alt) {
+        (false, false) => Some(c),
+        (true, true) if !c.is_ascii_alphanumeric() => Some(c),
+        _ => None,
+    }
+}
+
 /// Most recalled answers kept per prompt.
 const PROMPT_HISTORY: usize = 50;
 
@@ -297,7 +323,7 @@ impl Tui {
             extend,
         };
         let cmd = match k.code {
-            KeyCode::Char(ch) if !ctrl && !alt => Command::Insert(ch.to_string()),
+            KeyCode::Char(ch) if typed_char(&k).is_some() => Command::Insert(ch.to_string()),
             KeyCode::Enter if !ctrl && !alt => Command::Insert("\n".into()),
             KeyCode::Tab if !ctrl && !alt => Command::Insert("\t".into()),
             KeyCode::Backspace => Command::DeleteBack,
@@ -416,7 +442,6 @@ impl Tui {
             return;
         };
         let ctrl = k.modifiers.contains(KeyModifiers::CONTROL);
-        let alt = k.modifiers.contains(KeyModifiers::ALT);
         let mut echo: Option<String> = None;
         match k.code {
             KeyCode::Enter => {
@@ -449,7 +474,7 @@ impl Tui {
             KeyCode::Char('u') if ctrl => echo = Some(mb.kill_to_start()),
             KeyCode::Char('k') if ctrl => echo = Some(mb.kill_to_end()),
             KeyCode::Char('w') if ctrl => echo = Some(mb.delete_word_back()),
-            KeyCode::Char(c) if !ctrl && !alt => {
+            KeyCode::Char(c) if typed_char(&k).is_some() => {
                 mb.insert(c);
                 mb.candidate = None;
                 echo = Some(c.to_string());
