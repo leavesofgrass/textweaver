@@ -634,7 +634,7 @@ fn library_deepest_folder_wins() {
     std::fs::write(&doc, "x").unwrap();
     let (root, rel) = folder_for(&[folder.clone(), inner.clone()], &doc).unwrap();
     assert_eq!(rel, "doc.md");
-    assert_eq!(root, std::fs::canonicalize(&inner).unwrap());
+    assert_eq!(root, crate::library::resolve_path(&inner));
     let (_, rel) = folder_for(&[folder], &doc).unwrap();
     assert_eq!(rel, "inner/doc.md");
 }

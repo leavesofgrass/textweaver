@@ -638,11 +638,10 @@ pub fn sidecar_file(folder: &Path) -> PathBuf {
     folder.join(SIDECAR_DIR).join(SIDECAR_FILE)
 }
 
-/// The canonical path when it exists, else the absolute path.
+/// The canonical path when it exists, else the absolute path (without
+/// Windows' `\?\` prefix).
 fn resolved(p: &Path) -> PathBuf {
-    std::fs::canonicalize(p)
-        .or_else(|_| std::path::absolute(p))
-        .unwrap_or_else(|_| p.to_owned())
+    crate::library::resolve_path(p)
 }
 
 fn relative_posix(root: &Path, p: &Path) -> Option<String> {

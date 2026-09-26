@@ -7,7 +7,11 @@
 //! - Per-document [`DocState`] in `state/<doc-key>.json` (position,
 //!   history, bookmarks, [`notes`] and highlights), with position saves
 //!   coalesced by [`StateStore`] and flushed on demand and on drop.
-//! - [`Recent`] files.
+//! - [`Recent`] files and the [`library`]: folders, the bookshelf in
+//!   `library.json`, sidecar sync wired to the folders, and search through
+//!   [`fulltext::FullTextIndex`].
+//! - [`migrate`]: importing Star's settings, positions, bookmarks, notes,
+//!   highlights, recents, library, keybindings, and sidecars.
 //! - Folder sidecars (`<folder>/.textweaver/progress.json`) and their merge
 //!   rules, ported from `star/sync.py`, in [`sync`].
 //!
@@ -21,6 +25,8 @@
 
 mod atomic;
 mod doc_state;
+pub mod fulltext;
+pub mod library;
 pub mod notes;
 mod paths;
 mod recent;
@@ -30,6 +36,8 @@ pub mod time;
 
 pub use atomic::atomic_write;
 pub use doc_state::{Bookmark, DEFAULT_DEBOUNCE, DocKey, DocState, StateStore, percent};
+pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
+pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, ScannedDoc};
 pub use notes::{Annotation, Highlight, Note, NotesExport, Relation};
 pub use paths::Paths;
 pub use recent::{Recent, RecentEntry};
