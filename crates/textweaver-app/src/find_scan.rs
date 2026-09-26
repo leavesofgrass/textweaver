@@ -276,13 +276,13 @@ mod tests {
             i += 1;
             let n = (i * 7919 % 97) as usize;
             text.push_str(&"word ".repeat(n % 13));
-            if i % 5 == 0 {
+            if i.is_multiple_of(5) {
                 text.push_str("reading\n  room ");
             }
-            if i % 11 == 0 {
+            if i.is_multiple_of(11) {
                 text.push_str(&"b".repeat(n * 3));
             }
-            if i % 17 == 0 {
+            if i.is_multiple_of(17) {
                 text.push_str("x\n\n y ");
             }
             text.push_str("the cat\n");

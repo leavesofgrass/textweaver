@@ -393,7 +393,7 @@ mod tests {
         while text.chars().count() < 3 * WINDOW + 999 {
             i += 1;
             text.push_str(["cat ", "Cat", "\u{130}x", "catalog ", "aaa", "\n"][(i % 6) as usize]);
-            if i % 7 == 0 {
+            if i.is_multiple_of(7) {
                 text.push_str(&"a".repeat((i % 23) as usize));
             }
         }

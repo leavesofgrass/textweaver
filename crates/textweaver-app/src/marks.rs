@@ -230,17 +230,15 @@ impl App {
             anchor: Some(text_util::anchor_at(&s.doc, pos)),
         });
         s.bookmarks.sort_by_key(|b| b.pos);
-        match self.save_position() {
-            Ok(()) => self.tell(&format!("Bookmark {name} set at {pct} percent.")),
-            Err(e) => {
-                // Kept for this session and saved again with the position;
-                // the user must not believe it is safe on disk.
-                log::warn!("cannot save bookmarks: {e}");
-                self.speech.earcon(Earcon::Error);
-                self.error(&format!(
-                    "Bookmark {name} is set for now, but could not be saved: {e}."
-                ));
-            }
+        // Saved on the writer; "set" is said once the file is written (or
+        // why it could not be), on the next tick. Without a place to save
+        // (or while editing), it is set at once.
+        let note = crate::writer::StateNote::Bookmark {
+            name: name.clone(),
+            pct,
+        };
+        if !self.save_state(note) {
+            self.tell(&format!("Bookmark {name} set at {pct} percent."));
         }
     }
 

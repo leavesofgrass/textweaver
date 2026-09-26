@@ -293,7 +293,8 @@ impl Server {
         while self.app.poll_speech_step().is_some() {
             self.changes(&mut out);
         }
-        self.app.tick(Instant::now());
+        let effects = self.app.tick(Instant::now());
+        out.extend(self.effects(effects));
         self.changes(&mut out);
         out
     }
@@ -418,8 +419,11 @@ impl Server {
     }
 
     /// Dispatches and turns effects into notifications queued for `poll`.
+    /// A request's file work (a save, a bookmark) is finished before its
+    /// response, so a client can rely on the disk when it gets the answer.
     fn dispatch(&mut self, cmd: Command) -> Vec<Value> {
-        let effects = self.app.dispatch(cmd);
+        let mut effects = self.app.dispatch(cmd);
+        effects.extend(self.app.wait_for_writes());
         self.effects(effects)
     }
 

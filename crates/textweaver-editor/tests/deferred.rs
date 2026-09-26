@@ -45,7 +45,7 @@ fn typing_during_a_save_stays_unsaved() {
         "the words typed during the save are not saved"
     );
     // Undoing back to the saved text makes it clean.
-    while s.editor().unwrap().text().to_string() != "one two" {
+    while s.editor().unwrap().text() != "one two" {
         assert!(s.undo().unwrap());
     }
     assert!(!s.is_dirty());

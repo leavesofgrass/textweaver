@@ -71,41 +71,27 @@ impl App {
         }
     }
 
-    /// Records an opened document on the bookshelf (`library.json`).
-    pub(crate) fn record_library_open(&self, path: &Path, title: &str, format: &str) {
+    /// Records an opened document on the bookshelf (`library.json`) and the
+    /// recent list, on the background writer.
+    pub(crate) fn record_library_open(&mut self, path: &Path, title: &str, format: &str) {
         let Some(paths) = &self.paths else {
             return;
         };
-        let file = paths.library_file();
-        match Library::load(&file) {
-            Ok(mut lib) => {
-                lib.record_open(path, title, format);
-                if let Err(e) = lib.save(&file) {
-                    log::warn!("cannot save the library: {e}");
-                }
-            }
-            // An unreadable library is left alone rather than overwritten.
-            Err(e) => log::warn!("cannot read the library: {e}"),
-        }
+        let job = crate::writer::Job::Opened {
+            library_file: paths.library_file(),
+            recent_file: paths.recent_file(),
+            path: path.to_owned(),
+            title: title.to_owned(),
+            format: format.to_owned(),
+            recent_limit: self.settings.library.recent_limit,
+        };
+        self.writer.send(job);
     }
 
-    /// Mirrors a saved state into the library folder's sidecar, when the
-    /// document is in a library folder.
-    pub(crate) fn sync_position(&self, path: &Path, state: &DocState) {
-        if let Err(e) = self.library_sync.record(path, state, None) {
-            log::warn!("cannot sync the reading position: {e}");
-        }
-    }
-
-    /// Writes pending sidecars (document switch and quit).
-    pub(crate) fn flush_library_sync(&self) {
-        match self.library_sync.flush() {
-            Ok(conflicts) if !conflicts.is_empty() => {
-                log::info!("{} sidecar entries differed on write", conflicts.len());
-            }
-            Ok(_) => {}
-            Err(e) => log::warn!("cannot write the library sidecar: {e}"),
-        }
+    /// Writes pending sidecars (document switch and quit), on the writer.
+    pub(crate) fn flush_library_sync(&mut self) {
+        let sync = self.library_sync.clone();
+        self.writer.send(crate::writer::Job::SyncFlush(sync));
     }
 
     /// The library's documents: every document in the library folders,

@@ -119,6 +119,7 @@ mod nav;
 mod notes;
 mod playback;
 mod reading_aids;
+mod relocate;
 pub mod rpc;
 pub mod settings_io;
 mod speech_cursor;
@@ -127,6 +128,8 @@ pub mod text_util;
 mod themes;
 mod view;
 mod voice;
+mod writer;
+mod writes;
 
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use authoring::osc52;

@@ -8,8 +8,7 @@ use textweaver_formats::{LoadError, Registry, Source};
 use textweaver_keymap::{ActionId, Frontend, Keymap, Layer, Platform};
 use textweaver_speech::{SayMode, SpeechService};
 use textweaver_store::{
-    Bookmark, DocKey, DocState, Note, Paths, Recent, Settings, SettingsStore, StateStore,
-    StoreError,
+    Bookmark, DocKey, DocState, Note, Paths, Settings, SettingsStore, StateStore, StoreError,
 };
 use textweaver_text::{Document, History, SearchQuery};
 
@@ -144,6 +143,9 @@ pub struct Session {
     /// The open file's modification time and size when it was opened or
     /// last saved (`None` for documents not read from a file).
     pub disk: Option<crate::disk::FileStamp>,
+    /// The document text's stamp, saved with its positions so a change
+    /// made outside textweaver is noticed on the next open.
+    pub(crate) text_stamp: Option<textweaver_store::TextStamp>,
 }
 
 impl Session {
@@ -167,6 +169,7 @@ impl Session {
             notes: Vec::new(),
             highlights: Vec::new(),
             disk: None,
+            text_stamp: None,
         }
     }
 
@@ -306,6 +309,13 @@ pub struct App {
     /// Text copied or cut, waiting for the frontend
     /// ([`App::take_clipboard`]).
     pub(crate) clipboard: Option<String>,
+    /// The background writer: saves, snapshots, positions, and the disk
+    /// check (crate::writer).
+    pub(crate) writer: crate::writer::Writer,
+    /// Saves on the writer, by id, with what follows each.
+    pub(crate) pending_saves: Vec<(u64, SaveThen)>,
+    /// A change-on-disk check is on the writer.
+    pub(crate) disk_check_pending: bool,
 }
 
 impl App {
@@ -363,6 +373,9 @@ impl App {
             pending_list_delete: None,
             voice_list: Vec::new(),
             clipboard: None,
+            writer: crate::writer::Writer::spawn(),
+            pending_saves: Vec::new(),
+            disk_check_pending: false,
         };
         app.apply_voice_settings();
         app.load_themes();
@@ -574,18 +587,7 @@ impl App {
                 .unwrap_or_else(|| path.display().to_string())
         });
         let key = DocKey::for_path(path);
-        if let Some(paths) = &self.paths {
-            let file = paths.recent_file();
-            let mut recent = Recent::load(&file);
-            recent.touch(
-                path,
-                Some(title.clone()),
-                self.settings.library.recent_limit,
-            );
-            if let Err(e) = recent.save(&file) {
-                log::warn!("cannot save recent files: {e}");
-            }
-        }
+        // The recent list and the bookshelf, on the writer.
         self.record_library_open(path, &title, &doc.meta.format);
         let effects = self.open_document(doc, key, title);
         if let Some(s) = self.session.as_mut() {
@@ -618,6 +620,12 @@ impl App {
         self.list = None;
         self.spoken_log.clear();
         let mut s = Session::new(doc, key, title, self.settings.reading.nav_history_size);
+        s.text_stamp = Some(crate::relocate::text_stamp(&s.doc));
+        // The state saves queued above (the previous document, or this one
+        // on a reload) must be on disk before this reads them back.
+        if !self.writer.flush(std::time::Duration::from_secs(2)) {
+            log::warn!("the writer is slow; reading the saved state anyway");
+        }
         let loaded = self.state_store().and_then(|store| store.load(&s.key));
         let resume = match s.doc.meta.path.clone() {
             Some(path) => self.resume_point(&path, loaded.as_ref()),
@@ -707,40 +715,12 @@ impl App {
     /// highlights of the open document (a no-op without persistence, and
     /// while editing, when positions are in the source text; leaving edit
     /// mode saves them).
+    ///
+    /// The file is written by the background writer: this returns at once,
+    /// and a failure is logged when the writer reports it (Phase 2). The
+    /// `Result` is kept for callers written before; it is always `Ok`.
     pub fn save_position(&mut self) -> Result<(), AppError> {
-        if self.edit.is_some() {
-            return Ok(());
-        }
-        let Some(pos) = self.reading_position() else {
-            return Ok(());
-        };
-        let Some(store) = self.state_store() else {
-            return Ok(());
-        };
-        let Some(s) = self.session.as_mut() else {
-            return Ok(());
-        };
-        let pos = text_util::word_start(&s.doc, pos);
-        let mut state = s.saved.clone();
-        state.position = pos;
-        state.pct = text_util::percent(&s.doc, pos);
-        state.ts = textweaver_store::now_ts();
-        state.anchor = Some(text_util::anchor_at(&s.doc, pos));
-        state.history = s.history.entries().to_vec();
-        state.bookmarks = s.bookmarks.clone();
-        // Bookmarks move with edits: their anchors follow the text now.
-        for b in &mut state.bookmarks {
-            b.anchor = Some(text_util::anchor_at(&s.doc, b.pos));
-        }
-        state.notes = s.notes.clone();
-        state.highlights = s.highlights.clone();
-        store.save(&s.key, &state)?;
-        let path = s.doc.meta.path.clone();
-        s.saved = state;
-        self.last_position_save = Some((Instant::now(), pos));
-        if let (Some(path), Some(s)) = (path, self.session.as_ref()) {
-            self.sync_position(&path, &s.saved);
-        }
+        self.save_state(crate::writer::StateNote::Quiet);
         Ok(())
     }
 
@@ -766,8 +746,9 @@ impl App {
         Ok(())
     }
 
-    /// Saves everything and stops speech: what quitting does. Safe to call
-    /// more than once.
+    /// Saves everything and stops speech: what quitting does. Waits for the
+    /// background writer (at most ten seconds, saying so when it takes more
+    /// than a moment). Safe to call more than once.
     pub fn shutdown(&mut self) {
         if let Err(e) = self.save_position() {
             log::warn!("cannot save position: {e}");
@@ -777,6 +758,7 @@ impl App {
         }
         self.flush_library_sync();
         self.stop_speech();
+        self.finish_writes();
     }
 
     /// Handles one command. Settings changed by it are saved at once.
@@ -800,6 +782,7 @@ impl App {
         {
             self.error(&format!("Could not save settings: {e}"));
         }
+        self.send_snapshot_ops();
         effects
     }
 
@@ -896,22 +879,29 @@ impl App {
     pub const POSITION_SAVE_INTERVAL: Duration = Duration::from_secs(30);
 
     /// Periodic housekeeping; call it from the event loop (a few times a
-    /// second is plenty). Writes the autosave snapshot while editing with
-    /// unsaved changes, and saves the reading position every
-    /// [`POSITION_SAVE_INTERVAL`](Self::POSITION_SAVE_INTERVAL) when it
-    /// moved, so a crash loses little.
+    /// second is plenty). Applies what the background writer finished
+    /// ([`poll_writes`](Self::poll_writes)), queues the autosave snapshot
+    /// while editing with unsaved changes, and queues the reading position
+    /// every [`POSITION_SAVE_INTERVAL`](Self::POSITION_SAVE_INTERVAL) when
+    /// it moved, so a crash loses little. Nothing here waits on the disk.
     pub fn tick(&mut self, now: Instant) -> Vec<Effect> {
+        let mut effects = self.poll_writes();
         let rsvp_moved = self.rsvp_tick(now);
+        if rsvp_moved {
+            effects.push(Effect::Redraw);
+        }
         let asked = self.disk_tick(now);
         if !asked.is_empty() {
-            return asked;
+            effects.extend(asked);
+            return effects;
         }
         if self.edit.is_some() {
             self.autosave_tick(now);
-            return Vec::new();
+            self.send_snapshot_ops();
+            return effects;
         }
         let Some(pos) = self.reading_position() else {
-            return Vec::new();
+            return effects;
         };
         let due = match self.last_position_save {
             None => {
@@ -929,11 +919,7 @@ impl App {
             }
             self.last_position_save = Some((now, pos));
         }
-        if rsvp_moved {
-            vec![Effect::Redraw]
-        } else {
-            Vec::new()
-        }
+        effects
     }
 
     /// Opens a prompt: switches mode and returns the effect that shows it.

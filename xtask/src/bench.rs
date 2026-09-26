@@ -820,6 +820,7 @@ mod inner {
             app.dispatch(Command::Action(ActionId::Undo));
             alloc::reset_peak();
             let mut autosaves = Vec::new();
+            let mut written = Vec::new();
             let mut now = Instant::now();
             for _ in 0..5 {
                 app.dispatch(Command::Insert("x".into()));
@@ -828,11 +829,20 @@ mod inner {
                 let t = Instant::now();
                 app.tick(now);
                 autosaves.push(t.elapsed());
+                // The snapshot is written on the writer thread; wait for
+                // it outside the measured tick.
+                app.wait_for_writes();
+                written.push(t.elapsed());
             }
             r.samples(
                 "autosave",
-                "autosave tick (writes the recovery snapshot)",
+                "autosave tick on the input thread (queues the recovery snapshot)",
                 &autosaves,
+            );
+            r.samples(
+                "autosave_written",
+                "autosave, snapshot written by the writer thread",
+                &written,
             );
             r.peak("autosave_peak_mb", "autosave");
             alloc::reset_peak();
@@ -849,7 +859,35 @@ mod inner {
             );
             r.peak("edit_leave_peak_mb", "leave edit mode");
         }
+        // Saving (Ctrl+S) a copy under the bench home, so the corpus and
+        // the fixtures are never written.
+        let copy = home.join(path.file_name().unwrap_or_default());
+        if std::fs::copy(path, &copy).is_ok() && app.open(&copy).is_ok() {
+            app.dispatch(Command::Action(ActionId::ToggleEditMode));
+            let mut dispatch = Vec::new();
+            let mut written = Vec::new();
+            for _ in 0..5 {
+                app.dispatch(Command::Insert("x".into()));
+                let t = Instant::now();
+                app.dispatch(Command::Action(ActionId::Save));
+                dispatch.push(t.elapsed());
+                app.wait_for_writes();
+                written.push(t.elapsed());
+            }
+            r.samples(
+                "save_dispatch",
+                "save (Ctrl+S) on the input thread",
+                &dispatch,
+            );
+            r.samples(
+                "save_written",
+                "save (Ctrl+S), file written by the writer thread",
+                &written,
+            );
+        }
+        let t = Instant::now();
         app.shutdown();
+        r.time("shutdown_ms", "quit (waits for the writer)", t.elapsed());
         r
     }
 

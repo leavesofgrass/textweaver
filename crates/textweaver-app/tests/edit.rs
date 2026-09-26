@@ -87,24 +87,38 @@ impl Rig {
         std::fs::write(&p, text).unwrap();
         p
     }
+    /// Dispatches, then waits for the background writer and applies its
+    /// results (saves, bookmarks, questions about the disk), as the event
+    /// loop's next tick would.
+    fn send(&mut self, cmd: Command) -> Vec<Effect> {
+        let effects = self.app.dispatch(cmd);
+        self.app.wait_for_writes();
+        effects
+    }
     fn act(&mut self, a: ActionId) -> Vec<Effect> {
-        self.app.dispatch(Command::Action(a))
+        self.send(Command::Action(a))
+    }
+    /// A tick, then the writer's results.
+    fn tick(&mut self, now: Instant) -> Vec<Effect> {
+        let mut effects = self.app.tick(now);
+        effects.extend(self.app.wait_for_writes());
+        effects
     }
     /// Quit, answering yes to "Quit textweaver? y or n".
     fn quit(&mut self) -> Vec<Effect> {
         assert_eq!(self.act(ActionId::Quit), vec![Effect::Redraw]);
         assert_eq!(self.app.pending_confirmation(), Some(ActionId::Quit));
-        self.app.dispatch(Command::Confirm(Confirm::Yes))
+        self.send(Command::Confirm(Confirm::Yes))
     }
     fn text(&self) -> String {
         self.app.session().unwrap().doc.text().to_string()
     }
     fn go(&mut self, pos: CharPos) {
-        self.app.dispatch(Command::GoTo(GoTo::Char(pos)));
+        self.send(Command::GoTo(GoTo::Char(pos)));
     }
     fn type_str(&mut self, s: &str) {
         for c in s.chars() {
-            self.app.dispatch(Command::Insert(c.to_string()));
+            self.send(Command::Insert(c.to_string()));
         }
     }
     fn relaunch(&mut self) {
@@ -174,8 +188,7 @@ fn type_format_undo_save_and_reopen() {
 
     // Select "there" and make it bold; the markup counts as an edit.
     let there = at(edited, "there");
-    r.app
-        .dispatch(Command::Select(CharRange::new(there, CharPos(there.0 + 5))));
+    r.send(Command::Select(CharRange::new(there, CharPos(there.0 + 5))));
     r.act(ActionId::Bold);
     let bold = "# Title\n\nHello **there** world. The end.\n";
     assert_eq!(r.text(), bold);
@@ -237,16 +250,16 @@ fn leaving_with_unsaved_changes_asks_and_discard_restores_everything() {
     assert_eq!(items.len(), 3);
     assert!(r.said.last().contains("unsaved changes"));
     // Cancel keeps editing.
-    r.app.dispatch(Command::Choose(2));
+    r.send(Command::Choose(2));
     assert!(r.app.is_editing());
     assert_eq!(r.said.last(), "Still editing.");
     // Escape on the list keeps editing too.
     r.act(ActionId::ToggleEditMode);
-    r.app.dispatch(Command::Cancel);
+    r.send(Command::Cancel);
     assert!(r.app.is_editing());
     // Discard: the text and the bookmark are as they were.
     r.act(ActionId::ToggleEditMode);
-    r.app.dispatch(Command::Choose(1));
+    r.send(Command::Choose(1));
     assert!(!r.app.is_editing());
     assert_eq!(r.text(), "one two three\nfour five\n");
     assert_eq!(bookmark_pos(&r.app), CharPos(8));
@@ -268,8 +281,8 @@ fn plain_text_keeps_crlf_and_edits_move_marks_exactly() {
     // Plain text is edited as is: the bookmark does not move on entry.
     assert_eq!(bookmark_pos(&r.app), CharPos(11));
     r.go(CharPos(6));
-    r.app.dispatch(Command::DeleteForward); // "b"
-    r.app.dispatch(Command::DeleteForward); // "e"
+    r.send(Command::DeleteForward); // "b"
+    r.send(Command::DeleteForward); // "e"
     assert_eq!(r.text(), "alpha ta\ngamma delta\n");
     assert_eq!(bookmark_pos(&r.app), CharPos(9));
     r.act(ActionId::Save);
@@ -302,8 +315,7 @@ fn new_document_saves_as_and_adopts_the_path() {
     assert_eq!(*purpose, PromptPurpose::SaveAs);
     assert!(label.starts_with("Save as"), "{label}");
     let target = r.dir.join("draft.md");
-    r.app
-        .dispatch(Command::Answer(target.display().to_string()));
+    r.send(Command::Answer(target.display().to_string()));
     assert_eq!(std::fs::read_to_string(&target).unwrap(), "Draft");
     assert_eq!(r.app.session().unwrap().title, "draft.md");
     assert_eq!(r.app.session().unwrap().key, DocKey::for_path(&target));
@@ -328,7 +340,7 @@ fn save_as_suggests_from_the_heading_and_asks_before_overwriting() {
     assert!(label.ends_with("field-notes.md"), "{label}");
     // Another file is in the way.
     let taken = r.file("taken.md", "keep me");
-    r.app.dispatch(Command::Answer(taken.display().to_string()));
+    r.send(Command::Answer(taken.display().to_string()));
     assert!(r.app.confirmation_pending());
     assert!(
         r.said
@@ -336,7 +348,7 @@ fn save_as_suggests_from_the_heading_and_asks_before_overwriting() {
             .contains("taken.md already exists. Replace it? y or n")
     );
     // No: nothing written, and the name is asked again.
-    let effects = r.app.dispatch(Command::Confirm(Confirm::No));
+    let effects = r.send(Command::Confirm(Confirm::No));
     assert!(matches!(
         effects.first(),
         Some(Effect::Prompt {
@@ -347,9 +359,9 @@ fn save_as_suggests_from_the_heading_and_asks_before_overwriting() {
     assert_eq!(std::fs::read_to_string(&taken).unwrap(), "keep me");
     // A relative answer goes in the same folder; it exists too, and y
     // replaces it.
-    r.app.dispatch(Command::Answer("taken.md".into()));
+    r.send(Command::Answer("taken.md".into()));
     assert!(r.app.confirmation_pending());
-    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    r.send(Command::Confirm(Confirm::Yes));
     assert!(!r.app.confirmation_pending());
     assert_eq!(
         std::fs::read_to_string(&taken).unwrap(),
@@ -359,7 +371,7 @@ fn save_as_suggests_from_the_heading_and_asks_before_overwriting() {
     r.type_str("!");
     let effects = r.act(ActionId::SaveAs);
     assert!(matches!(effects.first(), Some(Effect::Prompt { .. })));
-    r.app.dispatch(Command::Answer(String::new()));
+    r.send(Command::Answer(String::new()));
     assert!(!r.app.confirmation_pending());
     assert!(std::fs::read_to_string(&taken).unwrap().ends_with('!'));
 }
@@ -380,7 +392,7 @@ fn a_failing_recovery_copy_is_announced_once() {
     r.said.clear();
     let t0 = Instant::now();
     for s in 0..200u64 {
-        r.app.tick(t0 + Duration::from_millis(s * 500));
+        r.tick(t0 + Duration::from_millis(s * 500));
     }
     let failures: Vec<String> = r
         .said
@@ -390,7 +402,7 @@ fn a_failing_recovery_copy_is_announced_once() {
         .collect();
     assert_eq!(failures.len(), 1, "{:?}", r.said.all());
     std::fs::remove_file(&rec).unwrap();
-    r.app.tick(t0 + Duration::from_secs(1000));
+    r.tick(t0 + Duration::from_secs(1000));
     assert!(r.said.any("The recovery copy is being written again."));
 }
 
@@ -448,7 +460,7 @@ fn quitting_with_changes_saves_on_request() {
     let file = r.file("q.md", "Some text.\n");
     r.app.open(&file).unwrap();
     r.act(ActionId::ToggleEditMode);
-    r.app.dispatch(Command::MoveCaret {
+    r.send(Command::MoveCaret {
         by: CaretMove::DocumentEdge,
         direction: Direction::Forward,
         extend: false,
@@ -456,7 +468,7 @@ fn quitting_with_changes_saves_on_request() {
     r.type_str("More.");
     let effects = r.quit();
     assert!(matches!(effects.first(), Some(Effect::ShowList { .. })));
-    let effects = r.app.dispatch(Command::Choose(0));
+    let effects = r.send(Command::Choose(0));
     assert_eq!(effects, vec![Effect::Quit]);
     assert_eq!(std::fs::read_to_string(&file).unwrap(), "Some text.\nMore.");
 }
@@ -469,7 +481,7 @@ fn autosave_snapshot_is_offered_after_a_crash() {
     r.act(ActionId::ToggleEditMode);
     r.type_str("Lost? ");
     // The first tick while dirty writes a snapshot.
-    r.app.tick(Instant::now());
+    r.tick(Instant::now());
     // One snapshot (the lock file beside it guards it; see autosave).
     let snaps: Vec<_> = std::fs::read_dir(r.paths.recovery_dir())
         .unwrap()
@@ -486,7 +498,7 @@ fn autosave_snapshot_is_offered_after_a_crash() {
     assert!(title.contains("crash.md"), "{title}");
     assert_eq!(items.len(), 2);
     assert!(r.said.last().contains("unsaved changes"));
-    r.app.dispatch(Command::Choose(0));
+    r.send(Command::Choose(0));
     assert!(r.app.is_editing());
     assert!(r.app.is_dirty());
     assert_eq!(r.text(), "Lost? Before.\n");
@@ -509,10 +521,10 @@ fn declining_recovery_deletes_the_snapshot() {
     r.app.open(&file).unwrap();
     r.act(ActionId::ToggleEditMode);
     r.type_str("x");
-    r.app.tick(Instant::now());
+    r.tick(Instant::now());
     r.relaunch();
     assert!(!r.app.offer_recovery().is_empty());
-    r.app.dispatch(Command::Choose(1));
+    r.send(Command::Choose(1));
     assert!(!r.app.is_editing());
     assert!(r.said.last().starts_with("Discarded the unsaved changes"));
     assert_eq!(
@@ -534,7 +546,7 @@ fn formatting_outside_edit_mode_is_refused_and_announced() {
         "{}",
         r.said.last()
     );
-    r.app.dispatch(Command::Insert("x".into()));
+    r.send(Command::Insert("x".into()));
     assert!(r.said.last().starts_with("Turn on edit mode"));
     assert!(r.text().starts_with("Read only."));
 }
@@ -553,9 +565,9 @@ fn replace_all_heading_cycle_and_caret_echo() {
             ..
         })
     ));
-    r.app.dispatch(Command::Answer("cat".into()));
+    r.send(Command::Answer("cat".into()));
     assert!(r.said.last().contains("2 matches"), "{}", r.said.last());
-    r.app.dispatch(Command::Answer("bird".into()));
+    r.send(Command::Answer("bird".into()));
     assert_eq!(r.text(), "bird bird dog\n");
     assert_eq!(r.said.last(), "Replaced 2 matches.");
     r.act(ActionId::Undo);
@@ -569,13 +581,13 @@ fn replace_all_heading_cycle_and_caret_echo() {
     assert_eq!(r.said.last(), "Heading level 2.");
 
     // Caret moves speak what they reach.
-    r.app.dispatch(Command::MoveCaret {
+    r.send(Command::MoveCaret {
         by: CaretMove::LineEdge,
         direction: Direction::Backward,
         extend: false,
     });
     r.log.clear();
-    r.app.dispatch(Command::MoveCaret {
+    r.send(Command::MoveCaret {
         by: CaretMove::Word,
         direction: Direction::Forward,
         extend: false,
@@ -586,14 +598,14 @@ fn replace_all_heading_cycle_and_caret_echo() {
         "{:?}",
         r.log.texts()
     );
-    r.app.dispatch(Command::MoveCaret {
+    r.send(Command::MoveCaret {
         by: CaretMove::Word,
         direction: Direction::Forward,
         extend: true,
     });
     assert_eq!(r.said.last(), "cat selected");
     // Backspace deletes the selection.
-    r.app.dispatch(Command::DeleteBack);
+    r.send(Command::DeleteBack);
     assert_eq!(r.text(), "## cat dog\n");
 }
 
@@ -604,7 +616,7 @@ fn notes_add_list_jump_edit_delete_and_persist() {
     let file = r.file("n.txt", text);
     r.app.open(&file).unwrap();
     r.go(at(text, "Second"));
-    let effects = r.app.dispatch(Command::Notes(NoteCommand::Add));
+    let effects = r.send(Command::Notes(NoteCommand::Add));
     assert!(matches!(
         effects.first(),
         Some(Effect::Prompt {
@@ -612,7 +624,7 @@ fn notes_add_list_jump_edit_delete_and_persist() {
             ..
         })
     ));
-    r.app.dispatch(Command::Answer("Check this #exam".into()));
+    r.send(Command::Answer("Check this #exam".into()));
     assert!(
         r.said.last().starts_with("Note added with tags exam"),
         "{}",
@@ -625,21 +637,21 @@ fn notes_add_list_jump_edit_delete_and_persist() {
 
     // Jump to it from elsewhere, by next note and from the list.
     r.go(CharPos(0));
-    r.app.dispatch(Command::Notes(NoteCommand::Next));
+    r.send(Command::Notes(NoteCommand::Next));
     assert_eq!(r.app.session().unwrap().cursor, at(text, "Second"));
     assert!(r.said.last().contains("Check this #exam"));
     r.go(CharPos(0));
-    let effects = r.app.dispatch(Command::Notes(NoteCommand::List));
+    let effects = r.send(Command::Notes(NoteCommand::List));
     let Some(Effect::ShowList { items, .. }) = effects.first() else {
         panic!("{effects:?}");
     };
     assert_eq!(items.len(), 1);
-    r.app.dispatch(Command::Choose(0));
+    r.send(Command::Choose(0));
     assert_eq!(r.app.session().unwrap().cursor, at(text, "Second"));
 
     // Edit it through F2 on the list.
-    r.app.dispatch(Command::Notes(NoteCommand::List));
-    let effects = r.app.dispatch(Command::RenameItem(0));
+    r.send(Command::Notes(NoteCommand::List));
+    let effects = r.send(Command::RenameItem(0));
     assert!(matches!(
         effects.first(),
         Some(Effect::Prompt {
@@ -647,12 +659,12 @@ fn notes_add_list_jump_edit_delete_and_persist() {
             ..
         })
     ));
-    r.app.dispatch(Command::Answer("Revised #review".into()));
+    r.send(Command::Answer("Revised #review".into()));
     assert_eq!(r.said.last(), "Note updated.");
 
     // A highlight on the first sentence.
     r.go(CharPos(0));
-    r.app.dispatch(Command::Notes(NoteCommand::ToggleHighlight));
+    r.send(Command::Notes(NoteCommand::ToggleHighlight));
     assert!(
         r.said.last().starts_with("Highlighted"),
         "{}",
@@ -687,20 +699,20 @@ fn notes_add_list_jump_edit_delete_and_persist() {
 
     // Toggling again on the highlight removes it; Delete removes the note.
     r.go(CharPos(2));
-    r.app.dispatch(Command::Notes(NoteCommand::ToggleHighlight));
+    r.send(Command::Notes(NoteCommand::ToggleHighlight));
     assert!(r.said.last().starts_with("Highlight removed"));
-    r.app.dispatch(Command::Notes(NoteCommand::List));
+    r.send(Command::Notes(NoteCommand::List));
     // Delete in the list asks first; n keeps the note and shows the list
     // again, y deletes it.
-    r.app.dispatch(Command::DeleteItem(0));
+    r.send(Command::DeleteItem(0));
     assert!(r.app.confirmation_pending());
     assert_eq!(r.said.last(), "Delete this note? y or n");
-    let effects = r.app.dispatch(Command::Confirm(Confirm::No));
+    let effects = r.send(Command::Confirm(Confirm::No));
     assert!(effects.iter().any(|e| matches!(e, Effect::ShowList { .. })));
     assert_eq!(r.app.session().unwrap().notes.len(), 1);
-    let effects = r.app.dispatch(Command::DeleteItem(0));
+    let effects = r.send(Command::DeleteItem(0));
     assert!(!effects.iter().any(|e| matches!(e, Effect::ShowList { .. })));
-    let effects = r.app.dispatch(Command::Confirm(Confirm::Yes));
+    let effects = r.send(Command::Confirm(Confirm::Yes));
     assert!(!effects.iter().any(|e| matches!(e, Effect::ShowList { .. })));
     assert!(r.said.last().starts_with("Note deleted"));
     let store = StateStore::new(r.paths.state_dir());
@@ -744,7 +756,7 @@ fn legacy_app_notes_are_migrated_once_on_open() {
     assert_eq!(saved.highlights.len(), 1);
     // Stepping and deleting work on the migrated note.
     r.go(CharPos(0));
-    r.app.dispatch(Command::Notes(NoteCommand::Next));
+    r.send(Command::Notes(NoteCommand::Next));
     assert_eq!(r.app.session().unwrap().cursor, at(text, "Gamma"));
 }
 
@@ -755,8 +767,8 @@ fn notes_move_with_edits() {
     let file = r.file("m.txt", text);
     r.app.open(&file).unwrap();
     r.go(at(text, "Gamma"));
-    r.app.dispatch(Command::Notes(NoteCommand::Add));
-    r.app.dispatch(Command::Answer("note".into()));
+    r.send(Command::Notes(NoteCommand::Add));
+    r.send(Command::Answer("note".into()));
     r.act(ActionId::ToggleEditMode);
     r.go(CharPos(0));
     r.type_str("New. ");
@@ -779,7 +791,7 @@ fn bookmarks_rename_and_delete() {
     r.go(at(text, "five"));
     r.act(ActionId::AddBookmark);
     // Rename the bookmark at the cursor directly.
-    let effects = r.app.dispatch(Command::Notes(NoteCommand::RenameBookmark));
+    let effects = r.send(Command::Notes(NoteCommand::RenameBookmark));
     assert!(matches!(
         effects.first(),
         Some(Effect::Prompt {
@@ -787,16 +799,16 @@ fn bookmarks_rename_and_delete() {
             ..
         })
     ));
-    r.app.dispatch(Command::Answer("chapter".into()));
+    r.send(Command::Answer("chapter".into()));
     assert_eq!(r.said.last(), "Bookmark mark2 renamed to chapter.");
     // A clashing name is refused.
     r.act(ActionId::ListBookmarks);
-    r.app.dispatch(Command::RenameItem(0));
-    r.app.dispatch(Command::Answer("chapter".into()));
+    r.send(Command::RenameItem(0));
+    r.send(Command::Answer("chapter".into()));
     assert!(r.said.last().contains("already a bookmark called chapter"));
     // Delete from the list; the list stays open with one item.
     r.act(ActionId::ListBookmarks);
-    let effects = r.app.dispatch(Command::DeleteItem(0));
+    let effects = r.send(Command::DeleteItem(0));
     let Some(Effect::ShowList { items, .. }) = effects.first() else {
         panic!("{effects:?}");
     };
@@ -811,7 +823,7 @@ fn bookmarks_rename_and_delete() {
     assert_eq!(state.bookmarks[0].name, "chapter");
     // Delete the one at the cursor through the command.
     r.go(at(text, "five"));
-    r.app.dispatch(Command::Notes(NoteCommand::DeleteBookmark));
+    r.send(Command::Notes(NoteCommand::DeleteBookmark));
     assert!(r.app.session().unwrap().bookmarks.is_empty());
 }
 
@@ -832,18 +844,17 @@ fn position_is_saved_periodically() {
     let file = r.file("p.txt", text);
     r.app.open(&file).unwrap();
     let t0 = Instant::now();
-    r.app.tick(t0);
+    r.tick(t0);
     r.go(at(text, "Three"));
     let store = StateStore::new(r.paths.state_dir());
     let key = DocKey::for_path(&file);
     // Not yet: less than the interval has passed.
-    r.app.tick(t0 + Duration::from_secs(5));
+    r.tick(t0 + Duration::from_secs(5));
     assert_ne!(
         store.load(&key).map(|s| s.position),
         Some(at(text, "Three"))
     );
-    r.app
-        .tick(t0 + App::POSITION_SAVE_INTERVAL + Duration::from_secs(1));
+    r.tick(t0 + App::POSITION_SAVE_INTERVAL + Duration::from_secs(1));
     assert_eq!(store.load(&key).unwrap().position, at(text, "Three"));
 }
 
@@ -953,7 +964,7 @@ fn saving_over_a_file_changed_on_disk_asks_first() {
         "shared.md changed on disk since you opened it. Save over those changes? y or n."
     );
     // No keeps their version on disk and stays in edit mode.
-    r.app.dispatch(Command::Confirm(Confirm::No));
+    r.send(Command::Confirm(Confirm::No));
     assert!(
         r.said.last().starts_with("Not saved. Still editing."),
         "{}",
@@ -964,7 +975,7 @@ fn saving_over_a_file_changed_on_disk_asks_first() {
     // Yes saves over them; the next save does not ask again.
     r.act(ActionId::Save);
     assert!(r.app.confirmation_pending());
-    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    r.send(Command::Confirm(Confirm::Yes));
     assert!(!r.app.is_dirty());
     assert!(std::fs::read_to_string(&file).unwrap().contains("Mine. "));
     r.type_str("More. ");
@@ -987,10 +998,10 @@ fn leaving_with_save_over_a_changed_file_asks_first() {
     change_on_disk(&file, "# Title\n\nChanged elsewhere, longer.\n");
     r.act(ActionId::ToggleEditMode);
     // Save, discard, or cancel: save.
-    r.app.dispatch(Command::Choose(0));
+    r.send(Command::Choose(0));
     assert!(r.app.confirmation_pending());
     assert!(r.app.is_editing());
-    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    r.send(Command::Confirm(Confirm::Yes));
     assert!(!r.app.is_editing());
     assert!(std::fs::read_to_string(&file).unwrap().contains("Mine. "));
 }
@@ -1001,16 +1012,16 @@ fn a_file_changed_on_disk_while_open_offers_a_reload() {
     let file = r.file("watched.md", NOTE_MD);
     r.app.open(&file).unwrap();
     let t0 = Instant::now();
-    r.app.tick(t0);
+    r.tick(t0);
     assert!(!r.app.confirmation_pending());
     change_on_disk(&file, "# Title\n\nFresh text from elsewhere.\n");
-    r.app.tick(t0 + Duration::from_secs(5));
+    r.tick(t0 + Duration::from_secs(5));
     assert!(r.app.confirmation_pending());
     assert_eq!(
         r.said.last(),
         "watched.md changed on disk. Reload it? y or n."
     );
-    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    r.send(Command::Confirm(Confirm::Yes));
     assert!(
         r.text().contains("Fresh text from elsewhere."),
         "{}",
@@ -1018,11 +1029,11 @@ fn a_file_changed_on_disk_while_open_offers_a_reload() {
     );
     // No: keep the open version, and do not ask again about it.
     change_on_disk(&file, "# Title\n\nA third version, longer still.\n");
-    r.app.tick(t0 + Duration::from_secs(10));
+    r.tick(t0 + Duration::from_secs(10));
     assert!(r.app.confirmation_pending());
-    r.app.dispatch(Command::Confirm(Confirm::No));
+    r.send(Command::Confirm(Confirm::No));
     assert_eq!(r.said.last(), "Kept the open version.");
-    r.app.tick(t0 + Duration::from_secs(15));
+    r.tick(t0 + Duration::from_secs(15));
     assert!(!r.app.confirmation_pending());
     assert!(r.text().contains("Fresh text"));
 }
@@ -1036,7 +1047,7 @@ fn a_reload_is_not_offered_over_unsaved_changes_but_is_in_clean_edit_mode() {
     r.type_str("Unsaved. ");
     let t0 = Instant::now();
     change_on_disk(&file, "# Title\n\nOther words here.\n");
-    r.app.tick(t0 + Duration::from_secs(5));
+    r.tick(t0 + Duration::from_secs(5));
     assert!(!r.app.confirmation_pending(), "{}", r.said.last());
     // Undo back to clean: the reload is offered and keeps edit mode on.
     for _ in 0..20 {
@@ -1046,9 +1057,9 @@ fn a_reload_is_not_offered_over_unsaved_changes_but_is_in_clean_edit_mode() {
         r.act(ActionId::Undo);
     }
     assert!(!r.app.is_dirty());
-    r.app.tick(t0 + Duration::from_secs(10));
+    r.tick(t0 + Duration::from_secs(10));
     assert!(r.app.confirmation_pending());
-    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    r.send(Command::Confirm(Confirm::Yes));
     assert!(r.app.is_editing());
     assert!(r.text().contains("Other words here."), "{}", r.text());
 }
