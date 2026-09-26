@@ -158,7 +158,10 @@ comrak = { version = "0.55", default-features = false }
 minijinja = "2.24"
 rayon = "1.12"
 walkdir = "2.5"
-ammonia = "4.2"
+# Held on 4.1 (security fixes still land there): 4.1.4 uses html5ever 0.39,
+# the version scraper 0.27 uses, so one HTML parser is linked instead of
+# two. Move to 4.2 together with a scraper release on html5ever 0.40.
+ammonia = "~4.1.4"
 krilla = "0.8"
 # Citations (Agent P): bibliography model and CSL styles, BibTeX, blocking HTTP
 hayagriva = "0.10"
