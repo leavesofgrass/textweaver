@@ -57,6 +57,7 @@ A live region (`widgets.rs`, `Announcer`): an invisible widget whose children ar
 ### Themes and fonts
 
 - `theme.rs` maps a textweaver theme onto Masonry's default properties: Galaxy by default. Panels have a surface colour, a hairline border, 10-pixel corners, and a soft shadow; buttons and fields have 6-pixel corners; focus is a 2-pixel ring. Unit tests hold Galaxy, Galaxy Light, Contrast, and High Contrast to 4.5 to 1 for text (7 to 1 in high contrast) and 3 to 1 for the focus ring against the page, the panels, and the buttons.
+- Review screenshots, drawn with `textweaver-xilem --review-screenshots DIR` (Vello's CPU renderer, no window): Galaxy at 100% and 200%, Galaxy Light, High Contrast, and a list dialog at both scales, in [docs/screenshots/xilem-gui](../screenshots/xilem-gui/).
 - The bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic) are loaded straight into Parley's font collection; nothing is registered with the operating system, so macOS needs no bundle folder for them. The reader's `[reading_aids.font]` setting becomes a Parley family list.
 
 ### The accessibility bar, and how it is checked
@@ -69,7 +70,7 @@ A live region (`widgets.rs`, `Announcer`): an invisible widget whose children ar
 
 ## Measurements
 
-Measured on Saturday, September 26, 2026, on the development machine (Windows 11, 12 threads), release build, with the harness test `large_documents_open_and_highlight_quickly` and the GUI's `--log`. The test document is 10,000,054 characters of plain text in about 22,000 paragraphs; the window around the caret is 120,286 characters.
+Measured on Saturday, September 26, 2026, on the development machine (Windows 11, 12 threads), release build, with the harness test `large_documents_open_and_highlight_quickly` and the GUI's `--log`. The test document is 10,000,054 characters of plain text in about 22,800 paragraphs; the window around the caret is 120,286 characters.
 
 - **Opening a 10-million-character document: about 88 ms**, under the 300 ms goal. Of that, `App::open` (loading, the rope, the markers) took 63 ms; building the window's paragraphs and styles, 2.5 ms; and the view's first layout, its text runs, and the whole accessibility tree, 22 ms. A 1-million-character document: `App::open` 31 ms, the rest the same (the window is the same size).
 - **Moving the highlight: median 0.29 ms, worst 0.89 ms per word** (20 moves, each an edit, a layout check, a paint, and an accessibility update including AccessKit's own tree processing), against a 30 ms goal.

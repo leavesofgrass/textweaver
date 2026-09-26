@@ -279,7 +279,7 @@ impl ActionButton {
     pub fn new(label: impl Into<String>) -> Self {
         let label = label.into();
         ActionButton {
-            child: NewWidget::new(Label::new(label.clone()).accessibility_hidden(true)).to_pod(),
+            child: NewWidget::new(button_text(label.clone())).to_pod(),
             label,
             shortcut: String::new(),
             description: String::new(),
@@ -290,7 +290,7 @@ impl ActionButton {
     /// accent).
     pub fn with_text_color(mut self, color: masonry::peniko::Color) -> Self {
         let label = self.label.clone();
-        self.child = NewWidget::new(Label::new(label).accessibility_hidden(true))
+        self.child = NewWidget::new(button_text(label))
             .with_props(masonry::properties::ContentColor::new(color))
             .to_pod();
         self
@@ -453,6 +453,19 @@ impl Widget for ActionButton {
     fn accepts_focus(&self) -> bool {
         true
     }
+}
+
+/// A button's visible text: the interface font, hidden from screen
+/// readers (the button carries the name).
+fn button_text(text: String) -> Label {
+    use masonry::core::StyleProperty;
+    use masonry::parley::style::FontFamily;
+    Label::new(text)
+        .with_style(StyleProperty::FontFamily(FontFamily::Source(
+            crate::fonts::DEFAULT_STACK.into(),
+        )))
+        .with_style(StyleProperty::FontSize(crate::theme::UI_TEXT))
+        .accessibility_hidden(true)
 }
 
 // --- Announcer.
