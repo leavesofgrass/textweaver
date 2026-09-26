@@ -154,13 +154,24 @@ impl App {
     }
 
     pub(crate) fn list_bookmarks(&mut self) -> Vec<Effect> {
-        let Some(s) = self.session.as_ref() else {
-            return vec![Effect::Redraw];
-        };
-        if s.bookmarks.is_empty() {
+        let n = self.session.as_ref().map_or(0, |s| s.bookmarks.len());
+        if n == 0 {
             self.tell("No bookmarks.");
             return vec![Effect::Redraw];
         }
+        let effects = self.list_bookmarks_quiet();
+        self.tell(&format!(
+            "Bookmarks, {n} {}. Enter goes to one, Delete deletes it, F2 renames it.",
+            if n == 1 { "item" } else { "items" }
+        ));
+        effects
+    }
+
+    /// The bookmark list effect, without announcing it (after a delete).
+    pub(crate) fn list_bookmarks_quiet(&mut self) -> Vec<Effect> {
+        let Some(s) = self.session.as_ref() else {
+            return vec![Effect::Redraw];
+        };
         let items: Vec<String> = s
             .bookmarks
             .iter()
@@ -176,12 +187,7 @@ impl App {
                 )
             })
             .collect();
-        let n = items.len();
         self.list = Some(ListKind::Bookmarks);
-        self.tell(&format!(
-            "Bookmarks, {n} {}.",
-            if n == 1 { "item" } else { "items" }
-        ));
         vec![Effect::ShowList {
             title: "Bookmarks".into(),
             items,

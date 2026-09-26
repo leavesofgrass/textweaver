@@ -63,19 +63,40 @@
 //!   display lines.
 //! - Chapters are section breaks, else level-1 headings (Star's chapter
 //!   indices were always 0).
-//! - Not yet: the highlight lead/lag setting (`highlight.lead_words`) is
-//!   not applied; highlights follow the speech service's positions exactly.
+//! - `highlight.lead_words` shifts only the drawn highlight, counted so
+//!   Star's default of 1 is the word being heard ([`App::highlight_lead`]);
+//!   the TUI now honors it too (Star's TUI ignored it).
+//! - The position is also saved every 30 seconds while it moves
+//!   ([`App::tick`]), and settings are saved as soon as they change.
+//!
+//! # Editing, notes, and JSON-RPC (wave 2)
+//!
+//! - **Edit mode** (Ctrl+E) edits the source text with typing echo,
+//!   Markdown formatting, undo and redo, Save, Save As, New, Star's
+//!   Save / Discard / Cancel decisions, autosave snapshots, and recovery at
+//!   startup ([`App::offer_recovery`]); see the `edit` module notes for how
+//!   positions move between the source and the canonical text.
+//! - **Notes and highlights** ([`NoteCommand`], [`Note`],
+//!   [`UserHighlight`]): add, list, jump, edit, delete, all announced; with
+//!   bookmark rename and delete from the bookmark list.
+//! - **[`rpc`]**: JSON-RPC 2.0 over any reader and writer, which
+//!   `tw serve --stdio` runs (ADR-0015).
 //!
 //! Owner: Agent D.
 
+pub mod align;
 mod app;
 mod backends;
 mod command;
+mod edit;
+mod extra;
 mod goto;
 mod help;
 mod marks;
 mod nav;
+mod notes;
 mod playback;
+pub mod rpc;
 mod speech_cursor;
 pub mod testing;
 pub mod text_util;
@@ -84,9 +105,11 @@ mod voice;
 
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use backends::speech_registry;
-pub use command::{Command, Effect, PromptPurpose};
+pub use command::{CaretMove, Command, Effect, NoteCommand, PromptPurpose};
+pub use extra::{extra_bindings, extra_chords, extra_lookup};
 pub use goto::parse_go_to;
 pub use help::{chords_text, help_entries, palette_matches, resolve_command};
+pub use notes::{HIGHLIGHTS_KEY, NOTES_KEY, Note, UserHighlight, parse_tags};
 pub use playback::Playback;
 pub use view::{Highlight, HighlightKind, Viewport};
 

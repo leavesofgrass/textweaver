@@ -1,7 +1,9 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
 use textweaver_a11y::{Announcer, LogAnnouncer, Priority, StatusLineAnnouncer, Verbosity};
 use textweaver_core::{CharPos, CharRange};
+use textweaver_editor::autosave::RecoverySnapshot;
 use textweaver_formats::{LoadError, LoadOptions, Registry, Source};
 use textweaver_keymap::{ActionId, Frontend, Keymap, Layer, Platform};
 use textweaver_speech::{SayMode, SpeechService};
@@ -11,6 +13,8 @@ use textweaver_store::{
 use textweaver_text::{Document, History, SearchQuery};
 
 use crate::command::{Command, Effect, PromptPurpose};
+use crate::edit::{AfterLeave, EditState, SaveThen};
+use crate::notes::{Note, UserHighlight, load_notes, store_notes};
 use crate::playback::{Playback, ReadKind, SpeechTrack};
 use crate::text_util;
 use crate::view::Viewport;
@@ -33,6 +37,8 @@ pub enum Mode {
     GoTo,
     /// Typing a path to open.
     Open,
+    /// Answering any other prompt (save as, table size, note text, ...).
+    Prompt,
 }
 
 impl Mode {
@@ -42,13 +48,16 @@ impl Mode {
             Mode::Browse => Layer::Browse,
             Mode::SpeechCursor => Layer::SpeechCursor,
             Mode::Edit => Layer::Edit,
-            Mode::Find | Mode::Command | Mode::GoTo | Mode::Open => Layer::Global,
+            Mode::Find | Mode::Command | Mode::GoTo | Mode::Open | Mode::Prompt => Layer::Global,
         }
     }
 
     /// True while a prompt owns the keyboard.
     pub fn is_prompt(self) -> bool {
-        matches!(self, Mode::Find | Mode::Command | Mode::GoTo | Mode::Open)
+        matches!(
+            self,
+            Mode::Find | Mode::Command | Mode::GoTo | Mode::Open | Mode::Prompt
+        )
     }
 
     /// A short spoken and displayed name.
@@ -61,6 +70,7 @@ impl Mode {
             Mode::Command => "Command",
             Mode::GoTo => "Go to",
             Mode::Open => "Open",
+            Mode::Prompt => "Prompt",
         }
     }
 
@@ -70,6 +80,7 @@ impl Mode {
             PromptPurpose::GoTo => Mode::GoTo,
             PromptPurpose::Open => Mode::Open,
             PromptPurpose::CommandPalette => Mode::Command,
+            _ => Mode::Prompt,
         }
     }
 }
@@ -116,6 +127,10 @@ pub struct Session {
     pub title: String,
     /// State loaded at open, kept so unknown keys survive the next save.
     pub saved: DocState,
+    /// Notes, sorted by position.
+    pub notes: Vec<Note>,
+    /// User highlights, sorted by position.
+    pub highlights: Vec<UserHighlight>,
 }
 
 impl Session {
@@ -136,6 +151,8 @@ impl Session {
             goal_column: None,
             title: title.into(),
             saved: DocState::default(),
+            notes: Vec::new(),
+            highlights: Vec::new(),
         }
     }
 
@@ -202,6 +219,10 @@ pub(crate) enum ListKind {
     Bookmarks,
     Actions(Vec<ActionId>),
     Info,
+    Notes,
+    Highlights,
+    SaveChoice(AfterLeave),
+    Recovery,
 }
 
 /// The application: the only owner of mutable state.
@@ -226,6 +247,15 @@ pub struct App {
     pub(crate) self_voicing: bool,
     pub(crate) backend_name: String,
     pub(crate) spoken_log: Vec<CharRange>,
+    pub(crate) edit: Option<EditState>,
+    pub(crate) save_then: Option<SaveThen>,
+    pub(crate) suggested_path: Option<PathBuf>,
+    pub(crate) replace_query: Option<String>,
+    pub(crate) pending_item: Option<usize>,
+    pub(crate) recovery: Vec<(PathBuf, RecoverySnapshot)>,
+    pub(crate) untitled: u32,
+    pub(crate) last_position_save: Option<(Instant, CharPos)>,
+    pub(crate) prompt_purpose: PromptPurpose,
 }
 
 impl App {
@@ -258,6 +288,15 @@ impl App {
             self_voicing: config.self_voicing,
             backend_name: config.backend_name,
             spoken_log: Vec::new(),
+            edit: None,
+            save_then: None,
+            suggested_path: None,
+            replace_query: None,
+            pending_item: None,
+            recovery: Vec::new(),
+            untitled: 0,
+            last_position_save: None,
+            prompt_purpose: PromptPurpose::Find,
         };
         app.apply_voice_settings();
         app
@@ -391,7 +430,14 @@ impl App {
 
     /// Makes an already loaded document current (tests, in-memory sources).
     /// Saved state for `key` is restored when persistence is configured.
+    ///
+    /// Callers resolve unsaved edits first ([`Command::Open`] asks); as a
+    /// safety net, edit mode is dropped here without saving, keeping its
+    /// recovery snapshot.
     pub fn open_document(&mut self, doc: Document, key: DocKey, title: String) -> Vec<Effect> {
+        if self.edit.take().is_some() {
+            log::warn!("a document was opened over unsaved edit mode");
+        }
         if self.session.is_some()
             && let Err(e) = self.save_position()
         {
@@ -399,6 +445,8 @@ impl App {
         }
         self.stop_speech();
         self.mode = Mode::Browse;
+        self.return_mode = Mode::Browse;
+        self.last_position_save = None;
         self.list = None;
         self.spoken_log.clear();
         let mut s = Session::new(doc, key, title, self.settings.reading.nav_history_size);
@@ -411,6 +459,19 @@ impl App {
             }
             s.bookmarks = state.bookmarks.clone();
             s.bookmarks.sort_by_key(|b| b.pos);
+            let len = s.doc.len_chars();
+            for b in &mut s.bookmarks {
+                b.pos = b.pos.clamp_to(len);
+            }
+            let (mut notes, mut highlights) = load_notes(&state);
+            for n in &mut notes {
+                n.range = n.range.clamp_to(len);
+            }
+            for h in &mut highlights {
+                h.range = h.range.clamp_to(len);
+            }
+            s.notes = notes;
+            s.highlights = highlights;
             if self.settings.reading.auto_resume && state.position > CharPos::ZERO {
                 s.cursor = text_util::first_word_at_or_after(&s.doc, state.position);
                 resumed = Some(text_util::percent(&s.doc, s.cursor));
@@ -446,9 +507,14 @@ impl App {
         })
     }
 
-    /// Saves the reading position, history, and bookmarks of the open
-    /// document (a no-op without persistence).
+    /// Saves the reading position, history, bookmarks, notes, and
+    /// highlights of the open document (a no-op without persistence, and
+    /// while editing, when positions are in the source text; leaving edit
+    /// mode saves them).
     pub fn save_position(&mut self) -> Result<(), AppError> {
+        if self.edit.is_some() {
+            return Ok(());
+        }
         let Some(pos) = self.reading_position() else {
             return Ok(());
         };
@@ -465,8 +531,10 @@ impl App {
         state.ts = textweaver_store::now_ts();
         state.history = s.history.entries().to_vec();
         state.bookmarks = s.bookmarks.clone();
+        store_notes(&mut state, &s.notes, &s.highlights);
         store.save(&s.key, &state)?;
         s.saved = state;
+        self.last_position_save = Some((Instant::now(), pos));
         Ok(())
     }
 
@@ -494,25 +562,64 @@ impl App {
         self.stop_speech();
     }
 
-    /// Handles one command.
+    /// Handles one command. Settings changed by it are saved at once.
     pub fn dispatch(&mut self, cmd: Command) -> Vec<Effect> {
+        let edits_text = matches!(
+            cmd,
+            Command::Insert(_)
+                | Command::DeleteBack
+                | Command::DeleteForward
+                | Command::MoveCaret { .. }
+                | Command::Tick
+                | Command::Resize { .. }
+        );
+        let effects = self.dispatch_inner(cmd);
+        if self.edit.is_some() && !edits_text {
+            // A navigation or search moved the cursor: the caret follows.
+            self.sync_editor_caret();
+        }
+        if self.settings_dirty
+            && let Err(e) = self.save_settings()
+        {
+            self.error(&format!("Could not save settings: {e}"));
+        }
+        effects
+    }
+
+    /// Opens `path` (after edit mode was resolved), announcing failures.
+    pub(crate) fn dispatch_open(&mut self, path: &Path) -> Vec<Effect> {
+        match self.open(path) {
+            Ok(e) => e,
+            Err(e) => {
+                let name = path.display();
+                self.error(&format!("Could not open {name}: {e}"));
+                vec![Effect::Redraw]
+            }
+        }
+    }
+
+    fn dispatch_inner(&mut self, cmd: Command) -> Vec<Effect> {
         match cmd {
             Command::Open(path) => {
                 self.leave_prompt();
-                match self.open(&path) {
-                    Ok(e) => e,
-                    Err(e) => {
-                        let name = path.display();
-                        self.error(&format!("Could not open {name}: {e}"));
-                        vec![Effect::Redraw]
-                    }
-                }
+                self.open_command(path)
             }
             Command::Action(a) => self.action(a),
-            Command::Insert(_) => {
-                self.tell("Editing is not available yet.");
-                vec![Effect::Redraw]
+            Command::Insert(text) => self.insert(&text),
+            Command::DeleteBack => self.delete(false),
+            Command::DeleteForward => self.delete(true),
+            Command::MoveCaret {
+                by,
+                direction,
+                extend,
+            } => self.move_caret(by, direction, extend),
+            Command::Notes(c) => {
+                self.leave_prompt();
+                self.notes_command(c)
             }
+            Command::DeleteItem(n) => self.delete_item(n),
+            Command::RenameItem(n) => self.rename_item(n),
+            Command::Tick => self.tick(Instant::now()),
             Command::Find(pattern) => {
                 self.leave_prompt();
                 self.run_find(&pattern);
@@ -541,13 +648,56 @@ impl App {
             }
             Command::Cancel => {
                 if self.mode.is_prompt() || self.list.is_some() {
+                    let list = self.list.take();
                     self.leave_prompt();
-                    self.list = None;
-                    self.note("Cancelled.");
+                    self.save_then = None;
+                    self.suggested_path = None;
+                    self.replace_query = None;
+                    self.pending_item = None;
+                    match list {
+                        Some(ListKind::Recovery) => self.postpone_recovery(),
+                        Some(ListKind::SaveChoice(_)) => self.tell("Still editing."),
+                        _ => self.note("Cancelled."),
+                    }
                 }
                 vec![Effect::Redraw]
             }
         }
+    }
+
+    /// How often the reading position is saved while the app runs.
+    pub const POSITION_SAVE_INTERVAL: Duration = Duration::from_secs(30);
+
+    /// Periodic housekeeping; call it from the event loop (a few times a
+    /// second is plenty). Writes the autosave snapshot while editing with
+    /// unsaved changes, and saves the reading position every
+    /// [`POSITION_SAVE_INTERVAL`](Self::POSITION_SAVE_INTERVAL) when it
+    /// moved, so a crash loses little.
+    pub fn tick(&mut self, now: Instant) -> Vec<Effect> {
+        if self.edit.is_some() {
+            self.autosave_tick(now);
+            return Vec::new();
+        }
+        let Some(pos) = self.reading_position() else {
+            return Vec::new();
+        };
+        let due = match self.last_position_save {
+            None => {
+                // Start the clock at the first tick after opening.
+                self.last_position_save = Some((now, pos));
+                false
+            }
+            Some((t, at)) => {
+                at != pos && now.saturating_duration_since(t) >= Self::POSITION_SAVE_INTERVAL
+            }
+        };
+        if due {
+            if let Err(e) = self.save_position() {
+                log::warn!("cannot save position: {e}");
+            }
+            self.last_position_save = Some((now, pos));
+        }
+        Vec::new()
     }
 
     /// Opens a prompt: switches mode and returns the effect that shows it.
@@ -556,6 +706,7 @@ impl App {
             self.return_mode = self.mode;
         }
         self.mode = Mode::for_prompt(purpose);
+        self.prompt_purpose = purpose;
         let label = purpose.label().to_owned();
         self.tell(&label);
         vec![Effect::Prompt { label, purpose }]
@@ -569,7 +720,11 @@ impl App {
 
     fn answer(&mut self, text: String) -> Vec<Effect> {
         let mode = self.mode;
+        let purpose = self.prompt_purpose;
         self.leave_prompt();
+        if mode == Mode::Prompt {
+            return self.answer_prompt(purpose, &text);
+        }
         match mode {
             Mode::Find => self.run_find(&text),
             Mode::GoTo => match crate::goto::parse_go_to(&text) {
@@ -592,6 +747,33 @@ impl App {
         vec![Effect::Redraw]
     }
 
+    /// Answers of the prompts in [`Mode::Prompt`].
+    fn answer_prompt(&mut self, purpose: PromptPurpose, text: &str) -> Vec<Effect> {
+        match purpose {
+            PromptPurpose::SaveAs => return self.answer_save_as(text),
+            PromptPurpose::TableSize => return self.answer_table(text),
+            PromptPurpose::ImagePath => return self.answer_image(text),
+            PromptPurpose::ReplaceFind => return self.answer_replace(text, false),
+            PromptPurpose::ReplaceWith => return self.answer_replace(text, true),
+            PromptPurpose::NoteText => self.add_note(text),
+            PromptPurpose::EditNote => {
+                if let Some(i) = self.pending_item.take() {
+                    self.edit_note(i, text);
+                }
+            }
+            PromptPurpose::RenameBookmark => {
+                if let Some(i) = self.pending_item.take() {
+                    self.rename_bookmark(i, text);
+                }
+            }
+            PromptPurpose::Find
+            | PromptPurpose::GoTo
+            | PromptPurpose::Open
+            | PromptPurpose::CommandPalette => {}
+        }
+        vec![Effect::Redraw]
+    }
+
     fn choose(&mut self, n: usize) -> Vec<Effect> {
         match self.list.take() {
             Some(ListKind::Bookmarks) => self.go_to_bookmark(n),
@@ -600,9 +782,53 @@ impl App {
                     return self.action(a);
                 }
             }
+            Some(ListKind::Notes) => self.go_to_note(n, false),
+            Some(ListKind::Highlights) => self.go_to_highlight(n),
+            Some(ListKind::SaveChoice(after)) => return self.answer_save_choice(n, after),
+            Some(ListKind::Recovery) => return self.answer_recovery(n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
+    }
+
+    /// Delete on a list item (bookmarks, notes, highlights).
+    fn delete_item(&mut self, n: usize) -> Vec<Effect> {
+        match self.list.clone() {
+            Some(ListKind::Bookmarks) => self.delete_bookmark(n),
+            Some(ListKind::Notes) => self.delete_note(n),
+            Some(ListKind::Highlights) => self.delete_highlight(n),
+            _ => {
+                self.tell("Nothing to delete in this list.");
+                vec![Effect::Redraw]
+            }
+        }
+    }
+
+    /// F2 on a list item: rename a bookmark or edit a note.
+    fn rename_item(&mut self, n: usize) -> Vec<Effect> {
+        match self.list.clone() {
+            Some(ListKind::Bookmarks) => self.rename_bookmark_prompt(n),
+            Some(ListKind::Notes) => {
+                let Some(text) = self
+                    .session
+                    .as_ref()
+                    .and_then(|s| s.notes.get(n))
+                    .map(|x| x.text.clone())
+                else {
+                    return vec![Effect::Redraw];
+                };
+                self.list = None;
+                self.pending_item = Some(n);
+                let mut e = self.prompt(PromptPurpose::EditNote);
+                self.tell(&format!("Editing note: {text}"));
+                e.push(Effect::Redraw);
+                e
+            }
+            _ => {
+                self.tell("Nothing to rename in this list.");
+                vec![Effect::Redraw]
+            }
+        }
     }
 
     pub(crate) fn action(&mut self, a: ActionId) -> Vec<Effect> {
@@ -615,10 +841,7 @@ impl App {
         }
         use ActionId as A;
         match a {
-            A::Quit => {
-                self.shutdown();
-                return vec![Effect::Quit];
-            }
+            A::Quit => return self.quit(),
             // Reading
             A::PlayPause => self.play_pause(),
             A::Stop => self.stop_action(),
@@ -724,7 +947,33 @@ impl App {
             A::CommandPalette => return self.prompt(PromptPurpose::CommandPalette),
             A::KeyboardHelp => return self.keyboard_help(),
             A::Help => return self.help(),
-            // Editing and saving arrive with edit mode in wave 2.
+            A::ReadDocument => {
+                self.stop_speech();
+                self.read_from(CharPos::ZERO);
+            }
+            // File and editing
+            A::NewDocument => return self.new_document(),
+            A::Save => return self.save(None),
+            A::SaveAs => return self.save_as(),
+            A::ToggleEditMode => return self.toggle_edit(),
+            A::Undo
+            | A::Redo
+            | A::Bold
+            | A::Italic
+            | A::Underline
+            | A::Strikethrough
+            | A::InlineCode
+            | A::CodeBlock
+            | A::InsertLink
+            | A::Heading
+            | A::BulletList
+            | A::NumberedList
+            | A::BlockQuote
+            | A::HorizontalRule
+            | A::InsertTable
+            | A::AddTableRow
+            | A::InsertImage
+            | A::Replace => return self.edit_action(a),
             other => {
                 let msg = format!("{} is not available yet.", other.help());
                 self.tell(&msg);

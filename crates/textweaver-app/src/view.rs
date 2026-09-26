@@ -6,7 +6,9 @@
 
 use textweaver_a11y::Priority;
 use textweaver_a11y::Verbosity;
-use textweaver_core::{CharPos, CharRange, HighlightGranularity};
+use textweaver_core::{CharPos, CharRange, Direction, HighlightGranularity, Unit};
+use textweaver_text::units::unit_at;
+use textweaver_text::{NavOptions, navigate};
 
 use crate::app::{App, Mode};
 use crate::playback::Playback;
@@ -27,6 +29,10 @@ pub struct Viewport {
 /// kinds are listed from lowest to highest drawing priority.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum HighlightKind {
+    /// A range the user highlighted.
+    UserHighlight,
+    /// A range with a note.
+    Note,
     /// A bookmarked word.
     Bookmark,
     /// A search match.
@@ -126,6 +132,55 @@ impl App {
         );
     }
 
+    /// Words the highlight is drawn ahead of (positive) or behind (negative)
+    /// the word speech confirmed, from `highlight.lead_words`.
+    ///
+    /// Star's setting counts from its playback manager's word, which lags
+    /// the audio by one: its default of 1 paints the word being heard
+    /// (docs/star-parity.md Part 2 §1.11). textweaver's positions are the
+    /// word being heard already, so the same numbers keep their meaning
+    /// with an offset of `lead_words - 1`: 1 (the default) is exact, 2 is
+    /// one word ahead, 0 one word behind.
+    pub fn highlight_lead(&self) -> i8 {
+        self.settings.highlight.lead_words.clamp(-5, 5) - 1
+    }
+
+    /// The spoken word and sentence as drawn: the confirmed word shifted by
+    /// [`highlight_lead`](Self::highlight_lead). The cursor, resume point,
+    /// and saved position always use the confirmed word.
+    pub fn shown_spoken(&self) -> (Option<CharRange>, Option<CharRange>) {
+        let Some(s) = self.session.as_ref() else {
+            return (None, None);
+        };
+        let lead = self.highlight_lead();
+        let Some(word) = s.spoken.filter(|_| lead != 0) else {
+            return (s.spoken, s.spoken_sentence);
+        };
+        let dir = if lead > 0 {
+            Direction::Forward
+        } else {
+            Direction::Backward
+        };
+        let mut at = word;
+        for _ in 0..lead.unsigned_abs() {
+            match navigate(
+                &s.doc,
+                at.start,
+                Unit::Word,
+                dir,
+                NavOptions { wrap: false },
+            ) {
+                Some(t) => at = t.range,
+                None => break,
+            }
+        }
+        if at == word {
+            return (s.spoken, s.spoken_sentence);
+        }
+        let sentence = unit_at(&s.doc, at.start, Unit::Sentence).map(|x| x.cover(at));
+        (Some(at), sentence)
+    }
+
     /// Highlights intersecting `range` (typically the visible window), in
     /// drawing order: later entries win where they overlap.
     pub fn highlights(&self, range: CharRange) -> Vec<Highlight> {
@@ -138,6 +193,19 @@ impl App {
                 out.push(Highlight { range: r, kind });
             }
         };
+        for h in &s.highlights {
+            push(h.range, HighlightKind::UserHighlight);
+        }
+        for n in &s.notes {
+            // A note collapsed by an edit still marks its place.
+            let r = if n.range.is_empty() {
+                CharRange::new(n.range.start, n.range.start.saturating_add(1))
+                    .clamp_to(s.doc.len_chars())
+            } else {
+                n.range
+            };
+            push(r, HighlightKind::Note);
+        }
         for b in &s.bookmarks {
             if range.contains(b.pos) {
                 let r = text_util::word_containing(&s.doc, b.pos)
@@ -164,15 +232,16 @@ impl App {
         }
         if self.settings.highlight.enabled {
             let g = self.settings.highlight.granularity;
+            let (word, sentence) = self.shown_spoken();
             if matches!(
                 g,
                 HighlightGranularity::Sentence | HighlightGranularity::Both
-            ) && let Some(r) = s.spoken_sentence.or(s.spoken)
+            ) && let Some(r) = sentence.or(word)
             {
                 push(r, HighlightKind::SpokenSentence);
             }
             if matches!(g, HighlightGranularity::Word | HighlightGranularity::Both)
-                && let Some(r) = s.spoken
+                && let Some(r) = word
             {
                 push(r, HighlightKind::SpokenWord);
             }
