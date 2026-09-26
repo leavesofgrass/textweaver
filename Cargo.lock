@@ -4554,6 +4554,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-fonts"
+version = "0.1.0-alpha.3"
+dependencies = [
+ "tempfile",
+]
+
+[[package]]
 name = "textweaver-formats"
 version = "0.1.0-alpha.3"
 dependencies = [
