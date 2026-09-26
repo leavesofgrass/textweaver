@@ -97,10 +97,10 @@ impl SpeechTrack {
         self.saw(g);
         let verdict = self.judge(g, range);
         self.last = Some((g, verdict));
-        if verdict == Verdict::Ours {
-            if let Some(r) = range {
-                self.last_accepted = Some(r.start);
-            }
+        if verdict == Verdict::Ours
+            && let Some(r) = range
+        {
+            self.last_accepted = Some(r.start);
         }
         verdict == Verdict::Ours && range.is_some()
     }
@@ -304,11 +304,11 @@ impl App {
         }
         if was_active {
             self.note("Stopped.");
-        } else if let Some(s) = self.session.as_mut() {
-            if s.find.take().is_some() {
-                s.selection = None;
-                self.note("Search cleared.");
-            }
+        } else if let Some(s) = self.session.as_mut()
+            && s.find.take().is_some()
+        {
+            s.selection = None;
+            self.note("Search cleared.");
         }
     }
 
@@ -450,11 +450,11 @@ impl App {
             SpeechStatus::Paused { resume_at } => {
                 // The service knows the last confirmed word; prefer it unless
                 // the user has moved since pausing.
-                if let (Playback::Paused { resume_at: at }, Some(p)) = (self.playback, resume_at) {
-                    if at == self.pause_origin {
-                        self.playback = Playback::Paused { resume_at: Some(p) };
-                        self.pause_origin = Some(p);
-                    }
+                if let (Playback::Paused { resume_at: at }, Some(p)) = (self.playback, resume_at)
+                    && at == self.pause_origin
+                {
+                    self.playback = Playback::Paused { resume_at: Some(p) };
+                    self.pause_origin = Some(p);
                 }
                 false
             }

@@ -59,10 +59,10 @@ impl App {
         if let (Playback::Reading, Some(r)) = (self.playback, s.spoken) {
             return Some(r.start);
         }
-        if self.mode == Mode::SpeechCursor {
-            if let Some(line) = s.speech_cursor_line {
-                return Some(text_util::line_range(&s.doc, line).start);
-            }
+        if self.mode == Mode::SpeechCursor
+            && let Some(line) = s.speech_cursor_line
+        {
+            return Some(text_util::line_range(&s.doc, line).start);
         }
         Some(s.cursor)
     }
@@ -167,15 +167,14 @@ impl App {
             if matches!(
                 g,
                 HighlightGranularity::Sentence | HighlightGranularity::Both
-            ) {
-                if let Some(r) = s.spoken_sentence.or(s.spoken) {
-                    push(r, HighlightKind::SpokenSentence);
-                }
+            ) && let Some(r) = s.spoken_sentence.or(s.spoken)
+            {
+                push(r, HighlightKind::SpokenSentence);
             }
-            if matches!(g, HighlightGranularity::Word | HighlightGranularity::Both) {
-                if let Some(r) = s.spoken {
-                    push(r, HighlightKind::SpokenWord);
-                }
+            if matches!(g, HighlightGranularity::Word | HighlightGranularity::Both)
+                && let Some(r) = s.spoken
+            {
+                push(r, HighlightKind::SpokenWord);
             }
         }
         out.sort_by_key(|h| h.kind);

@@ -392,10 +392,10 @@ impl App {
     /// Makes an already loaded document current (tests, in-memory sources).
     /// Saved state for `key` is restored when persistence is configured.
     pub fn open_document(&mut self, doc: Document, key: DocKey, title: String) -> Vec<Effect> {
-        if self.session.is_some() {
-            if let Err(e) = self.save_position() {
-                log::warn!("cannot save position: {e}");
-            }
+        if self.session.is_some()
+            && let Err(e) = self.save_position()
+        {
+            log::warn!("cannot save position: {e}");
         }
         self.stop_speech();
         self.mode = Mode::Browse;
@@ -403,19 +403,19 @@ impl App {
         self.spoken_log.clear();
         let mut s = Session::new(doc, key, title, self.settings.reading.nav_history_size);
         let mut resumed = None;
-        if let Some(store) = self.state_store() {
-            if let Some(state) = store.load(&s.key) {
-                for &h in &state.history {
-                    s.history.record(h.clamp_to(s.doc.len_chars()));
-                }
-                s.bookmarks = state.bookmarks.clone();
-                s.bookmarks.sort_by_key(|b| b.pos);
-                if self.settings.reading.auto_resume && state.position > CharPos::ZERO {
-                    s.cursor = text_util::first_word_at_or_after(&s.doc, state.position);
-                    resumed = Some(text_util::percent(&s.doc, s.cursor));
-                }
-                s.saved = state;
+        if let Some(store) = self.state_store()
+            && let Some(state) = store.load(&s.key)
+        {
+            for &h in &state.history {
+                s.history.record(h.clamp_to(s.doc.len_chars()));
             }
+            s.bookmarks = state.bookmarks.clone();
+            s.bookmarks.sort_by_key(|b| b.pos);
+            if self.settings.reading.auto_resume && state.position > CharPos::ZERO {
+                s.cursor = text_util::first_word_at_or_after(&s.doc, state.position);
+                resumed = Some(text_util::percent(&s.doc, s.cursor));
+            }
+            s.saved = state;
         }
         let title = s.title.clone();
         self.session = Some(s);

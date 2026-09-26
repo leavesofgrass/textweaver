@@ -384,20 +384,18 @@ fn sentences_in(
         let Some((s, e)) = trimmed(&chars, a, z) else {
             continue;
         };
-        if joinable {
-            if let Some(prev) = out.last_mut() {
-                let gap_has_break = (prev.1..s).any(|i| is_line_break(chars[i]) && hard_break(i));
-                let next_upper = chars[s..e]
-                    .iter()
-                    .find(|c| c.is_alphanumeric())
-                    .is_some_and(|c| c.is_uppercase());
-                let token = last_token(&chars[prev.0..prev.1]);
-                let always = is_abbreviation(&token, ABBREVIATIONS);
-                if !gap_has_break && (always || !next_upper) {
-                    prev.1 = e;
-                    joinable = ends_with_abbreviation(&chars[prev.0..prev.1]);
-                    continue;
-                }
+        if joinable && let Some(prev) = out.last_mut() {
+            let gap_has_break = (prev.1..s).any(|i| is_line_break(chars[i]) && hard_break(i));
+            let next_upper = chars[s..e]
+                .iter()
+                .find(|c| c.is_alphanumeric())
+                .is_some_and(|c| c.is_uppercase());
+            let token = last_token(&chars[prev.0..prev.1]);
+            let always = is_abbreviation(&token, ABBREVIATIONS);
+            if !gap_has_break && (always || !next_upper) {
+                prev.1 = e;
+                joinable = ends_with_abbreviation(&chars[prev.0..prev.1]);
+                continue;
             }
         }
         out.push((s, e));

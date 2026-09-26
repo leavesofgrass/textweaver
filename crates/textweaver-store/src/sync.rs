@@ -346,10 +346,10 @@ pub fn progress_value(entry: &Value) -> f64 {
         return -1.0;
     };
     for field in ["offset", "pct"] {
-        if let Some(Value::Number(n)) = m.get(field) {
-            if let Some(f) = n.as_f64() {
-                return f;
-            }
+        if let Some(Value::Number(n)) = m.get(field)
+            && let Some(f) = n.as_f64()
+        {
+            return f;
         }
     }
     -1.0
@@ -473,10 +473,10 @@ pub fn merge_annotations(
         }
     }
     for ann in rlist {
-        if let Some(id) = ann_id(ann) {
-            if seen.insert(id) {
-                merged.push(ann.clone());
-            }
+        if let Some(id) = ann_id(ann)
+            && seen.insert(id)
+        {
+            merged.push(ann.clone());
         }
     }
     merged.extend(remote_idless.into_iter().cloned());

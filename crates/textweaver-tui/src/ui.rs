@@ -161,10 +161,10 @@ impl Tui {
 
     /// Handles one terminal event.
     pub fn handle_event(&mut self, event: &Event) {
-        if let Event::Key(k) = event {
-            if matches!(k.kind, KeyEventKind::Press | KeyEventKind::Repeat) {
-                self.handle_key(*k);
-            }
+        if let Event::Key(k) = event
+            && matches!(k.kind, KeyEventKind::Press | KeyEventKind::Repeat)
+        {
+            self.handle_key(*k);
         }
     }
 
@@ -547,13 +547,13 @@ impl Tui {
             }
             spans.extend(self.row_spans(doc, row, &highlights, theme, tab));
             lines.push(Line::from(spans));
-            if let Some(fp) = focus.filter(|&p| row.holds(p)) {
-                if cursor.is_none() {
-                    let col = layout::column(doc, row, fp, tab).min(width.saturating_sub(1));
-                    let x = area.x + gutter + u16::try_from(col).unwrap_or(0);
-                    let y = area.y + u16::try_from(i).unwrap_or(0);
-                    cursor = Some(Position::new(x, y));
-                }
+            if let Some(fp) = focus.filter(|&p| row.holds(p))
+                && cursor.is_none()
+            {
+                let col = layout::column(doc, row, fp, tab).min(width.saturating_sub(1));
+                let x = area.x + gutter + u16::try_from(col).unwrap_or(0);
+                let y = area.y + u16::try_from(i).unwrap_or(0);
+                cursor = Some(Position::new(x, y));
             }
         }
         f.render_widget(Paragraph::new(lines).style(theme.text), area);

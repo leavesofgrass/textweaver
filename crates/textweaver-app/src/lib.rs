@@ -69,6 +69,7 @@
 //! Owner: Agent D.
 
 mod app;
+mod backends;
 mod command;
 mod goto;
 mod help;
@@ -82,6 +83,7 @@ mod view;
 mod voice;
 
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
+pub use backends::speech_registry;
 pub use command::{Command, Effect, PromptPurpose};
 pub use goto::parse_go_to;
 pub use help::{chords_text, help_entries, palette_matches, resolve_command};

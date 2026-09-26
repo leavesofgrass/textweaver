@@ -180,7 +180,7 @@ pub fn speak(args: &Args, registry: &BackendRegistry) -> anyhow::Result<Report> 
 
 /// Runs `tw speak`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let report = speak(&args, &BackendRegistry::with_builtins())?;
+    let report = speak(&args, &textweaver_app::speech_registry())?;
     if let Some(msg) = report.backend.fallback_message() {
         eprintln!("{msg}");
     }

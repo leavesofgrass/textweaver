@@ -538,12 +538,11 @@ impl ServiceCore {
             out: Vec::new(),
             engine_busy: false,
         };
-        if core.params.voice.is_none() {
-            if let Some(prefer) = core.config.prefer_voice.clone() {
-                if let Ok(voices) = core.backend.voices() {
-                    core.params.voice = resolve_preferred_voice(&voices, &prefer);
-                }
-            }
+        if core.params.voice.is_none()
+            && let Some(prefer) = core.config.prefer_voice.clone()
+            && let Ok(voices) = core.backend.voices()
+        {
+            core.params.voice = resolve_preferred_voice(&voices, &prefer);
         }
         core.apply_params();
         core
@@ -965,10 +964,11 @@ impl ServiceCore {
 
     fn normalize(&self, u: Utterance) -> Utterance {
         let u = self.pipeline.apply(u);
-        if cfg!(debug_assertions) && !u.offset_map.is_empty() {
-            if let Err(e) = u.offset_map.check_invariants(&u.text) {
-                log::warn!("normalized utterance has an invalid map: {e}");
-            }
+        if cfg!(debug_assertions)
+            && !u.offset_map.is_empty()
+            && let Err(e) = u.offset_map.check_invariants(&u.text)
+        {
+            log::warn!("normalized utterance has an invalid map: {e}");
         }
         u
     }
@@ -1176,6 +1176,11 @@ impl ServiceCore {
                     .words
                     .partition_point(|r| r.end <= byte_range.start)
                     .min(p.words.len() - 1);
+                let audio_ms = if self.caps.contains(Caps::PLAYBACK_EVENTS) {
+                    None
+                } else {
+                    audio_ms
+                };
                 match audio_ms {
                     Some(ms) => {
                         let due = p.started + Duration::from_millis(u64::from(ms)) + latency;

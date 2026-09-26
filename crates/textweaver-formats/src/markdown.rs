@@ -109,11 +109,11 @@ fn collect_footnotes(source: &str) -> Vec<(String, String)> {
             }
             Event::End(TagEnd::FootnoteDefinition) => {
                 depth = depth.saturating_sub(1);
-                if depth == 0 {
-                    if let Some((label, text)) = current.take() {
-                        let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
-                        out.push((label, text));
-                    }
+                if depth == 0
+                    && let Some((label, text)) = current.take()
+                {
+                    let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+                    out.push((label, text));
                 }
             }
             Event::Text(t) | Event::Code(t) => {
@@ -402,10 +402,11 @@ impl Converter<'_> {
                 self.block_break();
             }
             TagEnd::Image => {
-                if let Some((title, written)) = self.image.pop() {
-                    if written == 0 && !title.trim().is_empty() {
-                        self.b.text(&title);
-                    }
+                if let Some((title, written)) = self.image.pop()
+                    && written == 0
+                    && !title.trim().is_empty()
+                {
+                    self.b.text(&title);
                 }
                 self.pop();
             }
@@ -435,17 +436,17 @@ impl Converter<'_> {
     }
 
     fn footnote_reference(&mut self, label: &str) {
-        if self.options.footnotes_inline {
-            if let Some(def) = self.definition(label).map(str::to_owned) {
-                self.b.space();
-                let m = Self::marker(MarkerKind::Footnote)
-                    .with_level(1)
-                    .with_reference(label);
-                let id = self.b.open(m);
-                self.b.text(&format!("(footnote: {def})"));
-                self.b.close(id);
-                return;
-            }
+        if self.options.footnotes_inline
+            && let Some(def) = self.definition(label).map(str::to_owned)
+        {
+            self.b.space();
+            let m = Self::marker(MarkerKind::Footnote)
+                .with_level(1)
+                .with_reference(label);
+            let id = self.b.open(m);
+            self.b.text(&format!("(footnote: {def})"));
+            self.b.close(id);
+            return;
         }
         let id = self
             .b

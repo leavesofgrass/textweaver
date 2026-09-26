@@ -89,10 +89,10 @@ pub fn convert(
 ) -> (String, Vec<Marker>) {
     let html = Html::parse_document(source);
     let root = html.root_element();
-    if let Some(lang) = root.attr("lang").or_else(|| root.attr("xml:lang")) {
-        if !lang.trim().is_empty() {
-            meta.language = Some(lang.trim().to_owned());
-        }
+    if let Some(lang) = root.attr("lang").or_else(|| root.attr("xml:lang"))
+        && !lang.trim().is_empty()
+    {
+        meta.language = Some(lang.trim().to_owned());
     }
     let mut w = Walker {
         b: Builder::new(),

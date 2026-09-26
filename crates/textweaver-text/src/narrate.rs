@@ -198,24 +198,24 @@ impl Planner<'_> {
         if clip.is_empty() {
             return;
         }
-        if let Some(row) = self.index.enclosing(MarkerKind::TableRow, clip.start) {
-            if let Some(table) = self.index.enclosing(MarkerKind::Table, row.range.start) {
-                self.table_row(table, row, clip.start);
-                return;
-            }
+        if let Some(row) = self.index.enclosing(MarkerKind::TableRow, clip.start)
+            && let Some(table) = self.index.enclosing(MarkerKind::Table, row.range.start)
+        {
+            self.table_row(table, row, clip.start);
+            return;
         }
         if let Some(code) = self
             .index
             .enclosing(MarkerKind::Code, clip.start)
             .filter(|m| m.level == 1)
+            && self.policy.skip_code
+            && !code.range.contains(self.range.start)
         {
-            if self.policy.skip_code && !code.range.contains(self.range.start) {
-                if self.policy.announces(Verbosity::Normal) {
-                    self.push_notice("code block skipped", code.range.start);
-                }
-                self.done_until = code.range.end;
-                return;
+            if self.policy.announces(Verbosity::Normal) {
+                self.push_notice("code block skipped", code.range.start);
             }
+            self.done_until = code.range.end;
+            return;
         }
         let mut pieces = Vec::new();
         let prefix = self.prefix_at(clip.start);

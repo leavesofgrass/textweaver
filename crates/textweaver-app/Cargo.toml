@@ -24,6 +24,7 @@ textweaver-store.workspace = true
 textweaver-keymap.workspace = true
 textweaver-a11y.workspace = true
 textweaver-editor.workspace = true
+textweaver-eci.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 log.workspace = true

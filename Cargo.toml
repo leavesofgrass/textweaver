@@ -37,7 +37,7 @@ default-members = [
 [workspace.package]
 version = "0.1.0-alpha.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.89"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/leavesofgrass/textweaver"
 authors = ["Jon Pielaet"]

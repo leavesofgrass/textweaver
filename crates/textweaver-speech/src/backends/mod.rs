@@ -232,14 +232,14 @@ pub fn select_from(list: &[BackendInfo], preferred: Option<&str>) -> Selection {
         .map(str::trim)
         .filter(|p| !p.is_empty() && !p.eq_ignore_ascii_case("auto"))
         .map(str::to_owned);
-    if let Some(p) = requested.as_deref() {
-        if let Some(b) = list.iter().find(|b| b.id == p && b.available) {
-            return Selection {
-                backend: b.clone(),
-                requested,
-                fell_back: false,
-            };
-        }
+    if let Some(p) = requested.as_deref()
+        && let Some(b) = list.iter().find(|b| b.id == p && b.available)
+    {
+        return Selection {
+            backend: b.clone(),
+            requested,
+            fell_back: false,
+        };
     }
     let auto = list
         .iter()

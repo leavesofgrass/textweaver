@@ -41,6 +41,11 @@ bitflags::bitflags! {
         /// pronunciation lexicon, split caps, and punctuation verbosity
         /// (see [`crate::normalize`]).
         const NATIVE_NORMALIZATION = 1 << 10;
+        /// Word events are emitted at the moment the word is heard (the
+        /// backend owns playback and its `audio_ms` excludes paused time),
+        /// so the service fires them on arrival instead of scheduling them
+        /// from the utterance start plus the latency offset.
+        const PLAYBACK_EVENTS = 1 << 11;
     }
 }
 

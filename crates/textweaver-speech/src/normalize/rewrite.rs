@@ -36,15 +36,15 @@ pub(crate) fn template(t: &str) -> Vec<Piece> {
     let mut text = String::new();
     let mut chars = t.chars().peekable();
     while let Some(c) = chars.next() {
-        if c == '\\' {
-            if let Some(d) = chars.peek().and_then(|d| d.to_digit(10)) {
-                chars.next();
-                if !text.is_empty() {
-                    out.push(Piece::Text(std::mem::take(&mut text)));
-                }
-                out.push(Piece::Keep(d as usize));
-                continue;
+        if c == '\\'
+            && let Some(d) = chars.peek().and_then(|d| d.to_digit(10))
+        {
+            chars.next();
+            if !text.is_empty() {
+                out.push(Piece::Text(std::mem::take(&mut text)));
             }
+            out.push(Piece::Keep(d as usize));
+            continue;
         }
         text.push(c);
     }
@@ -199,19 +199,15 @@ impl Rule {
         }
         if self.pad {
             let out_ws = b.text().chars().next_back().is_none_or(char::is_whitespace);
-            if out_ws {
-                if let Some(first) = texts.first_mut() {
-                    *first = first.trim_start_matches(' ').to_owned();
-                }
+            if out_ws && let Some(first) = texts.first_mut() {
+                *first = first.trim_start_matches(' ').to_owned();
             }
             let in_ws = input[m.end..]
                 .chars()
                 .next()
                 .is_none_or(char::is_whitespace);
-            if in_ws {
-                if let Some(last) = texts.last_mut() {
-                    *last = last.trim_end_matches(' ').to_owned();
-                }
+            if in_ws && let Some(last) = texts.last_mut() {
+                *last = last.trim_end_matches(' ').to_owned();
             }
         }
         if !valid {

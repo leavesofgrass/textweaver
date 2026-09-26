@@ -398,12 +398,11 @@ impl FromStr for KeyChord {
         let mut key = parse_key(key_str)?;
         // With Ctrl/Alt/Meta, a letter's case carries no meaning; Shift must
         // be explicit.
-        if let Key::Char(c) = key {
-            if c.is_ascii_alphabetic()
-                && mods.intersects(Modifiers::CTRL | Modifiers::ALT | Modifiers::META)
-            {
-                key = Key::Char(c.to_ascii_lowercase());
-            }
+        if let Key::Char(c) = key
+            && c.is_ascii_alphabetic()
+            && mods.intersects(Modifiers::CTRL | Modifiers::ALT | Modifiers::META)
+        {
+            key = Key::Char(c.to_ascii_lowercase());
         }
         Ok(KeyChord::new(key, mods))
     }

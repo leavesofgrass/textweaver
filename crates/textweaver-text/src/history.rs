@@ -300,15 +300,14 @@ mod props {
                     Op::Record(p) => h.record(CharPos(p)),
                     Op::Back(p) => {
                         let was_live = !h.is_browsing();
-                        if let Some(target) = h.back(CharPos(p)) {
-                            if was_live {
+                        if let Some(target) = h.back(CharPos(p))
+                            && was_live {
                                 prop_assert_ne!(target, CharPos(p));
                                 // One forward returns to where we were.
                                 let mut probe = h.clone();
                                 prop_assert_eq!(probe.forward(), Some(CharPos(p)));
                                 prop_assert!(!probe.is_browsing());
                             }
-                        }
                     }
                     Op::Forward => {
                         let _ = h.forward();

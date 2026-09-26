@@ -262,10 +262,10 @@ impl Editor {
             anchor: f.selection.anchor.clamp_to(len),
             head: f.selection.head.clamp_to(len),
         };
-        if let Some(g) = self.undo.last_mut() {
-            if !outs.is_empty() {
-                g.after = self.selection;
-            }
+        if let Some(g) = self.undo.last_mut()
+            && !outs.is_empty()
+        {
+            g.after = self.selection;
         }
         Ok(outs)
     }

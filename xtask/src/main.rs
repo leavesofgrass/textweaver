@@ -4,16 +4,18 @@
 //! - `parity`: compare word and sentence segmentation with the Star corpus
 //!   in `fixtures/star-parity/` and write the report (Agent A).
 
+mod eci;
 mod keyboard;
 mod parity;
 
 fn main() -> anyhow::Result<()> {
     let task = std::env::args().nth(1).unwrap_or_default();
     match task.as_str() {
+        "eci-host" => eci::run(),
         "keyboard" => keyboard::run(),
         "parity" => parity::run(),
         _ => {
-            eprintln!("usage: cargo xtask <keyboard|parity>");
+            eprintln!("usage: cargo xtask <eci-host|keyboard|parity>");
             std::process::exit(2);
         }
     }

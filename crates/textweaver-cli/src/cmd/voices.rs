@@ -56,7 +56,7 @@ pub fn describe(v: &Voice) -> String {
 
 /// Runs `tw voices`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let report = voices(&args, &BackendRegistry::with_builtins())?;
+    let report = voices(&args, &textweaver_app::speech_registry())?;
     if let Some(msg) = report.backend.fallback_message() {
         eprintln!("{msg}");
     }

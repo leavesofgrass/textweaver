@@ -13,11 +13,23 @@ publish.workspace = true
 name = "textweaver-eci-host"
 path = "src/bin/textweaver-eci-host.rs"
 
+[features]
+default = ["playback"]
+# Audio output through rodio. The host process does not need it:
+# `cargo xtask eci-host` builds the host with `--no-default-features`.
+playback = ["dep:rodio"]
+
 [dependencies]
 textweaver-core.workspace = true
 textweaver-speech.workspace = true
 thiserror.workspace = true
 log.workspace = true
+libloading.workspace = true
+rodio = { workspace = true, optional = true, features = ["playback"] }
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

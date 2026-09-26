@@ -344,10 +344,10 @@ impl TimerPacer {
                 }
                 self.anchor_deadline = None;
             }
-            if let Some(e) = self.estimate {
-                if e > self.idx {
-                    self.idx = e;
-                }
+            if let Some(e) = self.estimate
+                && e > self.idx
+            {
+                self.idx = e;
             }
             if let Some((cb, at)) = self.last_cb {
                 let age = t.saturating_sub(at);

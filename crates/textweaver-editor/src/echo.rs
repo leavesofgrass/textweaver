@@ -98,10 +98,11 @@ pub fn for_edit(policy: &EchoPolicy, before: &Rope, edit: &Edit) -> Vec<EchoEven
         if policy.characters {
             out.push(EchoEvent::Typed(c));
         }
-        if policy.words && !is_word_char(c) {
-            if let Some(w) = word_before(before, r.start) {
-                out.push(EchoEvent::WordCompleted(w));
-            }
+        if policy.words
+            && !is_word_char(c)
+            && let Some(w) = word_before(before, r.start)
+        {
+            out.push(EchoEvent::WordCompleted(w));
         }
     }
     out

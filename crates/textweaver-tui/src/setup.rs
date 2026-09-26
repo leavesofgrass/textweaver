@@ -6,7 +6,7 @@ use textweaver_app::a11y::LogAnnouncer;
 use textweaver_app::keymap::{Frontend, Keymap, Platform};
 use textweaver_app::speech::pacing::PacingConfig;
 use textweaver_app::speech::{
-    NormalizeConfig, ServiceConfig, SpeechService, TableMode, VoiceParams, backends,
+    NormalizeConfig, ServiceConfig, SpeechService, TableMode, VoiceParams,
 };
 use textweaver_app::store::{Paths, Settings, SettingsStore, TableMode as StoreTableMode};
 use textweaver_app::{App, AppConfig};
@@ -77,16 +77,18 @@ pub fn start_speech(settings: &Settings, opts: &Options) -> (SpeechService, Stri
         .clone()
         .unwrap_or_else(|| settings.speech.backend.clone());
     let preference = (wanted != "auto" && !wanted.is_empty()).then_some(wanted.as_str());
-    let info = backends::select(preference);
-    if let Some(p) = preference {
-        if info.id != p {
-            messages.push(format!(
-                "Speech backend {p} is not available; using {}.",
-                info.id
-            ));
-        }
+    let registry = textweaver_app::speech_registry();
+    let info = registry.select(preference).backend;
+    if let Some(p) = preference
+        && info.id != p
+    {
+        messages.push(format!(
+            "Speech backend {p} is not available; using {}.",
+            info.id
+        ));
     }
-    let spawned = backends::factory(info.id)
+    let spawned = registry
+        .factory(info.id)
         .ok_or_else(|| format!("backend {} is not compiled in", info.id))
         .and_then(|factory| {
             SpeechService::spawn(factory, service_config(settings)).map_err(|e| e.to_string())

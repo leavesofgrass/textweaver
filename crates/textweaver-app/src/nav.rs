@@ -90,10 +90,8 @@ impl App {
             return;
         };
         let target = target.clamp_to(s.doc.len_chars());
-        if record {
-            if let Some(from) = departure.filter(|&d| d != target) {
-                s.history.record(from);
-            }
+        if record && let Some(from) = departure.filter(|&d| d != target) {
+            s.history.record(from);
         }
         s.cursor = target;
         s.goal_column = None;
@@ -175,13 +173,13 @@ impl App {
             return;
         };
         let current = unit_at(doc, pos, Unit::Sentence).filter(|r| r.start <= pos);
-        if let Some(cur) = current {
-            if text_util::words_between(doc, cur.start, pos, 4) > 3 {
-                let content = preview(doc, cur, PREVIEW_WORDS);
-                let msg = self.nav_message(None, cur.start, &content);
-                self.jump(cur.start, true, ReadAfter::Follow, &msg);
-                return;
-            }
+        if let Some(cur) = current
+            && text_util::words_between(doc, cur.start, pos, 4) > 3
+        {
+            let content = preview(doc, cur, PREVIEW_WORDS);
+            let msg = self.nav_message(None, cur.start, &content);
+            self.jump(cur.start, true, ReadAfter::Follow, &msg);
+            return;
         }
         let from = current.map_or(pos, |c| c.start);
         match navigate(doc, from, Unit::Sentence, Direction::Backward, opts) {

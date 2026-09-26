@@ -176,10 +176,10 @@ impl FromStr for GoTo {
             ("l", GoTo::Line),
             ("c", |n| GoTo::Char(CharPos(n))),
         ] {
-            if let Some(rest) = t.strip_prefix(prefix) {
-                if let Ok(n) = num(rest) {
-                    return Ok(make(n));
-                }
+            if let Some(rest) = t.strip_prefix(prefix)
+                && let Ok(n) = num(rest)
+            {
+                return Ok(make(n));
             }
         }
         num(&t).map(GoTo::Line)

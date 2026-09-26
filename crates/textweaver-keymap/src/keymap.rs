@@ -254,10 +254,10 @@ impl Keymap {
                         continue;
                     }
                 };
-                if frontend == Frontend::Terminal {
-                    if let Some(why) = chord.terminal_limitation() {
-                        warnings.push(format!("{id}: {chord}: {why}"));
-                    }
+                if frontend == Frontend::Terminal
+                    && let Some(why) = chord.terminal_limitation()
+                {
+                    warnings.push(format!("{id}: {chord}: {why}"));
                 }
                 let layer = explicit.unwrap_or_else(|| infer_layer(&chord, &default_layers));
                 map.bindings.push(Binding {

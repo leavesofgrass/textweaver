@@ -126,12 +126,12 @@ pub fn to_markdown(doc: &Document) -> String {
                 out.push('|');
             }
         }
-        if let Some(code) = in_code {
-            if code.range.end <= range.end {
-                out.push('\n');
-                out.push_str(&quote_prefix(doc, at));
-                out.push_str("```");
-            }
+        if let Some(code) = in_code
+            && code.range.end <= range.end
+        {
+            out.push('\n');
+            out.push_str(&quote_prefix(doc, at));
+            out.push_str("```");
         }
         if line + 1 < lines {
             out.push('\n');

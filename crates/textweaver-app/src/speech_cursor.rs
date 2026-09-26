@@ -53,11 +53,11 @@ impl App {
         }
         self.mode = Mode::Browse;
         self.speech.earcon(Earcon::ModeOff);
-        if let Some(s) = self.session.as_mut() {
-            if let Some(line) = s.speech_cursor_line.take() {
-                let start = text_util::line_range(&s.doc, line).start;
-                s.cursor = text_util::first_word_at_or_after(&s.doc, start).max(start);
-            }
+        if let Some(s) = self.session.as_mut()
+            && let Some(line) = s.speech_cursor_line.take()
+        {
+            let start = text_util::line_range(&s.doc, line).start;
+            s.cursor = text_util::first_word_at_or_after(&s.doc, start).max(start);
         }
         self.scroll_to_cursor();
     }

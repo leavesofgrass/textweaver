@@ -436,19 +436,19 @@ fn normalize(spans: Vec<Span>) -> Vec<Span> {
             }
         }
         let mut s = s;
-        if let Some(prev) = out.last() {
-            if s.source.start < prev.source.end {
-                match s.kind {
-                    SpanKind::Inserted => s.source = CharRange::empty(prev.source.end),
-                    SpanKind::Elided => {
-                        let start = prev.source.end;
-                        if s.source.end <= start {
-                            continue;
-                        }
-                        s.source = CharRange::new(start, s.source.end);
+        if let Some(prev) = out.last()
+            && s.source.start < prev.source.end
+        {
+            match s.kind {
+                SpanKind::Inserted => s.source = CharRange::empty(prev.source.end),
+                SpanKind::Elided => {
+                    let start = prev.source.end;
+                    if s.source.end <= start {
+                        continue;
                     }
-                    SpanKind::Literal | SpanKind::Expanded => {}
+                    s.source = CharRange::new(start, s.source.end);
                 }
+                SpanKind::Literal | SpanKind::Expanded => {}
             }
         }
         out.push(s);
@@ -490,15 +490,14 @@ impl SpokenBuilder {
         self.text.push_str(s);
         let end = self.end();
         let source = CharRange::new(source_start, source_start.saturating_add(s.chars().count()));
-        if let Some(prev) = self.spans.last_mut() {
-            if prev.kind == SpanKind::Literal
-                && prev.spoken.end == start
-                && prev.source.end == source.start
-            {
-                prev.spoken.end = end;
-                prev.source.end = source.end;
-                return;
-            }
+        if let Some(prev) = self.spans.last_mut()
+            && prev.kind == SpanKind::Literal
+            && prev.spoken.end == start
+            && prev.source.end == source.start
+        {
+            prev.spoken.end = end;
+            prev.source.end = source.end;
+            return;
         }
         self.spans.push(Span {
             spoken: start..end,

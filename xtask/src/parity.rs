@@ -581,10 +581,10 @@ impl Ctx<'_> {
         if is_narration(&self.star_sentence_of(i)) {
             return "table-narration";
         }
-        if let Some(j) = self.star_to_tw[i] {
-            if self.tw_in(j, MarkerKind::Table, None) || self.tw_in_caption(j) {
-                return self.table_rule();
-            }
+        if let Some(j) = self.star_to_tw[i]
+            && (self.tw_in(j, MarkerKind::Table, None) || self.tw_in_caption(j))
+        {
+            return self.table_rule();
         }
         UNEXPLAINED
     }

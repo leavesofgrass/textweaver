@@ -60,7 +60,7 @@ pub fn describe(b: &BackendInfo, auto: &str) -> String {
 
 /// Runs `tw backends`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let r = report(&BackendRegistry::with_builtins());
+    let r = report(&textweaver_app::speech_registry());
     if args.json {
         println!("{}", serde_json::to_string_pretty(&r)?);
         return Ok(());
