@@ -547,6 +547,12 @@ Also run the Docker all-features clippy and tests once, at the end (Jon's memory
 
 Areas are split to keep merges small.
 
+**Spirit of Wave 3 (Jon, 2026-09-26).** textweaver is an experimental alpha, for Jon's own use first. The aim is to push the envelope with Rust, not to be conservative.
+- Prefer pure-Rust, in-process solutions over subprocesses and C or C++ dependencies whenever they are viable.
+- Accept alpha crates and API churn.
+- Keep the tests and CI gates: they are what let us move fast.
+- Record each bold choice, and its fallback, in an ADR.
+
 ### Agent W3a — App core for the GUI (Phase 3, first half)
 
 **Owns:** `crates/textweaver-app` (new modules), and the list and prompt code moved out of `crates/textweaver-tui`.
@@ -635,8 +641,9 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 **Owns:** `crates/textweaver-formats`, and a new `textweaver-ocr` crate if needed.
 
 1. **OCR for scanned PDFs and images.**
-   - Run Tesseract as a subprocess, only on pages with no text layer, using the `ocr_lang` setting.
-   - Detect Tesseract on PATH (the installers offer it).
+   - Use the pure-Rust `ocrs` engine in-process first, running only on pages with no text layer.
+   - Keep a Tesseract subprocess as a fallback for languages ocrs lacks, selected with the `ocr_lang` setting.
+   - Detect Tesseract on PATH (the installers offer it). Measure the quality of both engines on a few test pages.
    - Show progress and allow cancel.
    - Announce clearly when Tesseract is missing.
 2. **DAISY 3 / DTBook and DAISY zips** (Bookshare), in spine order, with NCX navigation.
@@ -677,7 +684,8 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 **Owns:** `crates/textweaver-speech` (new backends), a new `textweaver-piper` crate, and the voice manager in the app.
 
 1. **Piper neural voices.**
-   - A backend runs the `piper` binary as a subprocess.
+   - Run the Piper voice models (VITS in ONNX) in-process with a pure-Rust inference engine, `tract` or `candle`. Choose one and justify it with measurements of real-time factor and first-audio latency.
+   - Keep a `piper` subprocess only as a fallback.
    - Word timing comes from Piper if it reports it, otherwise it is estimated. `tw backends` says which.
    - A voice catalog lists language, quality, size, and licence.
    - A voice is downloaded only after the user confirms, with a SHA-256 check, into the data folder.
@@ -685,8 +693,9 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
    - Every voice from every engine, filterable by language and engine.
    - Preview, favourites, download (Piper), and remove.
    - Build it in the terminal on the app's list model (W3a), and in the GUI later.
-3. **Rate and pitch per voice.** Remember them for each voice, as screen readers do.
-4. **Real-engine listening checklist.**
+3. **In-process dictation.** Move Whisper dictation into the process with `candle`, replacing today's whisper subprocess, and keep the subprocess as a fallback. Measure its latency on the CPU.
+4. **Rate and pitch per voice.** Remember them for each voice, as screen readers do.
+5. **Real-engine listening checklist.**
    - Add steps to `docs/releasing.md` for Jon to hear Eloquence, SAPI, and Piper before each release.
    - Add `cargo xtask` helpers that write sample WAV files to listen to.
    - Never play audio in tests.
