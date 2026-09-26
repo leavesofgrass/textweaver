@@ -41,6 +41,10 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     }
     let opts = textweaver_tui::Options {
         no_speech: args.no_speech,
+        // The client decides what to do with announcements; reading and
+        // announcing stay as they were (self-voicing, or silent with
+        // --no-speech), whatever mode the terminal reader uses.
+        mode: Some(textweaver_tui::AccessMode::SelfVoicing),
         backend: args.backend,
         home: args.home,
         theme: None,

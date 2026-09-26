@@ -9,7 +9,7 @@ use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph};
-use textweaver_app::a11y::Priority;
+use textweaver_app::a11y::{AccessMode, CursorPlacement, Priority};
 use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
 use textweaver_app::keymap::{ActionId, Key, KeyChord, Modifiers};
 use textweaver_app::text_util::line_count;
@@ -120,6 +120,9 @@ pub struct Tui {
     /// Copied text as an OSC 52 sequence, waiting to be written to the
     /// terminal ([`Tui::take_clipboard_sequence`]).
     clipboard_out: Option<String>,
+    /// The title line's position while it is frozen (`[accessibility]
+    /// quiet_screen` during continuous reading).
+    frozen_position: Option<String>,
 }
 
 /// Screen areas of the last draw.
@@ -159,6 +162,7 @@ impl Tui {
             status_shown: (0, String::new()),
             status_blank_until: None,
             clipboard_out: None,
+            frozen_position: None,
         }
     }
 
@@ -666,11 +670,7 @@ impl Tui {
     /// a yes or no (so it stays in view whatever else is announced), else
     /// the latest announcement.
     pub fn status_line(&self) -> String {
-        match self
-            .app
-            .pending_confirmation()
-            .and_then(ActionId::confirmation_prompt)
-        {
+        match self.app.pending_question() {
             Some(question) if self.app.status_text() != question => {
                 format!("{question}  {}", self.app.status_text())
                     .trim_end()
@@ -772,7 +772,8 @@ impl Tui {
                 height: text_height,
             });
         }
-        self.draw_title(f, areas.title, &theme);
+        let position = self.title_position();
+        self.draw_title(f, areas.title, &theme, position.as_deref());
         let cursor = self.draw_body(f, areas.body, &theme);
         self.draw_rsvp(f, areas.body, &theme, cursor.map(|p| p.y));
         let status = self.status_to_draw(now);
@@ -782,12 +783,40 @@ impl Tui {
                 .style(theme.status),
             areas.status,
         );
-        let cursor = self.draw_bottom(f, areas.bottom, &theme).or(cursor);
+        let prompt = self.draw_bottom(f, areas.bottom, &theme);
+        let cursor = prompt.or(cursor);
         let cursor = self.draw_list(f, areas.body, &theme).or(cursor);
+        // `[accessibility] cursor = "status"`: the cursor waits at the start
+        // of the status line (as in Star), except at a prompt's caret, where
+        // typing needs it.
+        let cursor = if prompt.is_none() && self.app.cursor_placement() == CursorPlacement::Status {
+            Some(Position::new(areas.status.x, areas.status.y))
+        } else {
+            cursor
+        };
         f.set_cursor_position(cursor.unwrap_or(Position::new(areas.body.x, areas.body.y)));
     }
 
-    fn draw_title(&self, f: &mut Frame<'_>, area: Rect, theme: &Theme) {
+    /// The title line's "line 3 of 40, 7%": frozen while
+    /// [`App::quiet_screen_active`], so a screen reader that reads the
+    /// changing screen does not hear it tick over as textweaver reads.
+    fn title_position(&mut self) -> Option<String> {
+        let s = self.app.session()?;
+        let now = format!(
+            "line {} of {}, {}%",
+            s.line() + 1,
+            line_count(&s.doc),
+            s.percent()
+        );
+        if self.app.quiet_screen_active() {
+            Some(self.frozen_position.get_or_insert(now).clone())
+        } else {
+            self.frozen_position = None;
+            Some(now)
+        }
+    }
+
+    fn draw_title(&self, f: &mut Frame<'_>, area: Rect, theme: &Theme, position: Option<&str>) {
         let app = &self.app;
         let title = app.session().map_or("no document", |s| s.title.as_str());
         let left = format!(" textweaver: {title}");
@@ -805,13 +834,13 @@ impl Tui {
             parts.push("modified".to_owned());
         }
         parts.push(state.to_owned());
-        if let Some(s) = app.session() {
-            parts.push(format!(
-                "line {} of {}, {}%",
-                s.line() + 1,
-                line_count(&s.doc),
-                s.percent()
-            ));
+        if let Some(p) = position {
+            parts.push(p.to_owned());
+        }
+        match app.access_mode() {
+            AccessMode::SelfVoicing => {}
+            AccessMode::Hybrid => parts.push("hybrid".to_owned()),
+            AccessMode::ScreenReader => parts.push("screen reader mode".to_owned()),
         }
         parts.push(format!("{} wpm", app.settings().speech.rate.wpm()));
         parts.push(app.backend_name().to_owned());
