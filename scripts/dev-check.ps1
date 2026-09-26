@@ -86,7 +86,9 @@ if ($Help) {
     Write-Line 'Usage: scripts\dev-check.ps1 [-Only STEP,...] [-FailFast] [-Docker] [-DryRun] [-Help]'
     Write-Line
     Write-Line 'Runs the checks CI runs: fmt, clippy, test, doc (rustdoc with -D warnings),'
-    Write-Line 'keyboard (cargo xtask keyboard --check), hosts32 (the 32-bit engine hosts), and'
+    Write-Line 'keyboard (cargo xtask keyboard --check), hosts32 (the 32-bit engine hosts),'
+    Write-Line 'links (tools\check_links.py: links and anchors in the docs resolve), site'
+    Write-Line '(tools\gen_site_data.py --check: the docs\site data is current), and'
     Write-Line 'scripts (PSScriptAnalyzer, when installed). Windows uses'
     Write-Line '--features textweaver-speech/omnivox instead of --all-features.'
     Write-Line
@@ -180,6 +182,25 @@ Invoke-CheckStep 'clippy' 'lints, warnings are errors' (@('cargo', 'clippy', '--
 Invoke-CheckStep 'test' 'tests' (@('cargo', 'test', '--workspace', '--exclude', 'textweaver-gui') + $features)
 Invoke-CheckStep 'doc' 'API documentation, warnings are errors' (@('cargo', 'doc', '--workspace', '--exclude', 'textweaver-gui', '--no-deps') + $features) @{ RUSTDOCFLAGS = '-D warnings' }
 Invoke-CheckStep 'keyboard' 'docs/keyboard.md is current' @('cargo', 'xtask', 'keyboard', '--check')
+$python = $null
+foreach ($candidate in @('python', 'python3')) {
+    if (Get-Command $candidate -ErrorAction SilentlyContinue) { $python = $candidate; break }
+}
+foreach ($pyStep in @('links', 'site')) {
+    if (-not (Test-Wanted $pyStep)) { continue }
+    if (-not $python) {
+        Write-Line
+        Write-Line "== ${pyStep}: skipped =="
+        Write-Line "Python 3 is not installed, so the $pyStep check cannot run."
+        $script:skipped += $pyStep
+        continue
+    }
+    if ($pyStep -eq 'links') {
+        Invoke-CheckStep 'links' 'links and anchors in the docs resolve' @($python, 'tools\check_links.py')
+    } else {
+        Invoke-CheckStep 'site' 'the docs\site data is current' @($python, 'tools\gen_site_data.py', '--check')
+    }
+}
 Invoke-CheckStep 'hosts32' 'the 32-bit engine hosts build' @('cargo', 'build', '-p', 'textweaver-eci', '-p', 'textweaver-sapi', '--bins', '--target', 'i686-pc-windows-msvc')
 
 if (Test-Wanted 'scripts') {

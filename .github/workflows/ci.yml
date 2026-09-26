@@ -18,6 +18,24 @@ jobs:
       - run: rustup toolchain install
       - run: cargo fmt --all --check
 
+  docs:
+    name: docs (links and site data)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: rustup toolchain install
+      # Every relative link and anchor in the Markdown docs and docs/site
+      # resolves (tools/check_links.py; standard library only, no network).
+      - name: Links and anchors
+        run: python tools/check_links.py
+      # The data embedded in docs/site/*.html matches cargo metadata,
+      # docs/keyboard.md, and the theme files.
+      - name: Site data is current
+        run: python tools/gen_site_data.py --check
+
   check:
     name: ${{ matrix.os }}
     strategy:
