@@ -413,6 +413,20 @@
          }
  
          let cache = ctx.property_cache();
+--- a/masonry_winit/src/event_loop_runner.rs
++++ b/masonry_winit/src/event_loop_runner.rs
+@@ -1007,6 +1007,11 @@
+         }
+ 
+         self.handle_signals(event_loop, app_driver);
++        // textweaver patch: an app may exit from an async action (a timer
++        // or a background thread), not only from a window event.
++        if self.exit {
++            event_loop.exit();
++        }
+     }
+ 
+     // --- MARK: EMPTY WINIT HANDLERS
 --- a/parley/Cargo.toml
 +++ b/parley/Cargo.toml
 @@ -63,7 +63,7 @@

@@ -519,8 +519,9 @@ impl Announcer {
 }
 
 fn message_node(m: &Message) -> Node {
+    // A Label's name comes from its value in AccessKit.
     let mut n = Node::new(Role::Label);
-    n.set_label(m.text.as_str());
+    n.set_value(m.text.as_str());
     n.set_live(match m.priority {
         Priority::Polite => Live::Polite,
         Priority::Assertive => Live::Assertive,

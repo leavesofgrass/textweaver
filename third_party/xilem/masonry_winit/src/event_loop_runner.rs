@@ -1007,6 +1007,11 @@ impl MasonryState {
         }
 
         self.handle_signals(event_loop, app_driver);
+        // textweaver patch: an app may exit from an async action (a timer
+        // or a background thread), not only from a window event.
+        if self.exit {
+            event_loop.exit();
+        }
     }
 
     // --- MARK: EMPTY WINIT HANDLERS

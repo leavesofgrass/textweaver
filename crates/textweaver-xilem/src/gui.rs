@@ -513,8 +513,8 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
     }
     let bar = [shown.status.as_str(), shown.position.as_str()]
         .iter()
+        .map(|s| s.trim().trim_end_matches('.'))
         .filter(|s| !s.is_empty())
-        .copied()
         .collect::<Vec<_>>()
         .join(". ");
     host.edit(STATUS_BAR, |mut r| Region::set_label(&mut r, bar));
