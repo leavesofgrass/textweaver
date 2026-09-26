@@ -249,6 +249,9 @@ pub(crate) enum ListKind {
     /// An outline, citation picker, spelling, replace, or template list
     /// (Agent P2b's `lists` module).
     Authoring(crate::authoring_state::AuthoringList),
+    /// Define word, settings profiles, or reading statistics (Agent W3e's
+    /// `study` module).
+    Study(crate::study::StudyList),
 }
 
 /// The application: the only owner of mutable state.
@@ -341,6 +344,8 @@ pub struct App {
     pub(crate) math_explore: Option<crate::math_explore::MathExplore>,
     /// The browser preview's reload server, while one runs.
     pub(crate) preview_server: Option<crate::preview_server::PreviewServer>,
+    /// Define word, profiles, statistics, and the message catalog.
+    pub(crate) study: crate::study::Study,
 }
 
 impl App {
@@ -355,6 +360,12 @@ impl App {
             crate::access::access_mode_from_setting(config.settings.accessibility.mode);
         let mut keymap = config.keymap;
         keymap.set_character_keys(config.settings.keyboard.character_keys);
+        let locales = config.paths.as_ref().map(Paths::locales_dir);
+        let (study, language_warning) =
+            crate::study::Study::new(&config.settings.interface.language, locales.as_deref());
+        if let Some(w) = language_warning {
+            log::warn!("{w}");
+        }
         let mut app = App {
             session: None,
             speech: config.speech,
@@ -412,6 +423,7 @@ impl App {
             authoring: crate::authoring_state::Authoring::default(),
             math_explore: None,
             preview_server: None,
+            study,
         };
         app.apply_voice_settings();
         app.load_themes();
@@ -445,6 +457,7 @@ impl App {
             || self.pending_disk.is_some()
             || self.pending_list_delete.is_some()
             || self.authoring.question.is_some()
+            || self.study.question.is_some()
     }
 
     /// Answers a pending confirmation.
@@ -461,6 +474,9 @@ impl App {
         }
         if self.authoring.question.is_some() {
             return self.confirm_authoring(answer);
+        }
+        if self.study.question.is_some() {
+            return self.confirm_study(answer);
         }
         if let Some((kind, n)) = self.pending_list_delete.clone() {
             return match answer {
@@ -666,6 +682,7 @@ impl App {
                 log::warn!("cannot save position: {e}");
             }
             self.flush_library_sync();
+            self.stats_flush();
         }
         self.stop_speech();
         self.rsvp = None;
@@ -753,6 +770,7 @@ impl App {
         self.close_preview();
         self.math_explore = None;
         self.session = Some(s);
+        self.stats_open();
         self.view.top_line = 0;
         self.scroll_to_cursor();
         // A large Markdown file's source structure, for a quick Ctrl+E.
@@ -837,6 +855,7 @@ impl App {
         if let Err(e) = self.save_settings() {
             log::warn!("cannot save settings: {e}");
         }
+        self.stats_flush();
         self.flush_library_sync();
         self.stop_speech();
         self.close_preview();
@@ -970,6 +989,7 @@ impl App {
     /// every [`POSITION_SAVE_INTERVAL`](Self::POSITION_SAVE_INTERVAL) when
     /// it moved, so a crash loses little. Nothing here waits on the disk.
     pub fn tick(&mut self, now: Instant) -> Vec<Effect> {
+        self.stats_tick(now);
         let mut effects = self.poll_writes();
         effects.extend(self.restart_tick());
         effects.extend(self.library_tick());
@@ -1018,7 +1038,8 @@ impl App {
         }
         self.mode = Mode::for_prompt(purpose);
         self.prompt_purpose = purpose;
-        let label = purpose.label().to_owned();
+        let label = crate::study::prompt_label(&self.study.catalog, purpose)
+            .unwrap_or_else(|| purpose.label().to_owned());
         self.tell(&label);
         vec![Effect::Prompt { label, purpose }]
     }
@@ -1072,6 +1093,11 @@ impl App {
             | PromptPurpose::ReferenceIdentifier
             | PromptPurpose::ImportReferences
             | PromptPurpose::TemplateTitle => return self.answer_authoring(purpose, text),
+            PromptPurpose::DefineWord
+            | PromptPurpose::ProfileName
+            | PromptPurpose::RenameProfile
+            | PromptPurpose::ImportProfiles
+            | PromptPurpose::ExportProfiles => return self.answer_study(purpose, text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
                 if let Some(i) = self.pending_item.take() {
@@ -1114,6 +1140,7 @@ impl App {
                 }
             }
             Some(ListKind::Authoring(l)) => return self.choose_authoring(l, n),
+            Some(ListKind::Study(l)) => return self.choose_study(l, n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -1132,6 +1159,7 @@ impl App {
                 self.tell(question);
                 vec![Effect::Redraw]
             }
+            Some(ListKind::Study(l)) => self.delete_study_item(l, n),
             _ => {
                 self.tell("Nothing to delete in this list.");
                 vec![Effect::Redraw]
@@ -1185,6 +1213,7 @@ impl App {
                 e.push(Effect::Redraw);
                 e
             }
+            Some(ListKind::Study(l)) => self.rename_study_item(l, n),
             _ => {
                 self.tell("Nothing to rename in this list.");
                 vec![Effect::Redraw]
@@ -1250,6 +1279,9 @@ impl App {
             A::RsvpSlower => self.rsvp_rate(false),
             A::RsvpPositionNext => self.rsvp_position_next(),
             A::ReadingLevel => self.say_reading_level(),
+            A::DefineWord => return self.define_word(),
+            A::ReadingStatistics => return self.reading_statistics(),
+            A::SettingsProfiles => return self.settings_profiles(),
             A::ToggleCitations => self.toggle_citations(),
             A::ExploreMath => self.explore_math(),
             // Navigation
@@ -1496,7 +1528,7 @@ fn list_delete_question(kind: &ListKind) -> &'static str {
 /// Actions that do nothing useful without a document.
 fn needs_document(a: ActionId) -> bool {
     use textweaver_keymap::Category as C;
-    a != ActionId::Stop
+    !matches!(a, ActionId::Stop | ActionId::DefineWord)
         && matches!(
             a.category(),
             C::Reading | C::Navigation | C::SpeechCursor | C::Search | C::Bookmarks

@@ -14,6 +14,8 @@
 //!   the same document collapse into the newest.
 //! - **The check for a change on disk** every two seconds, and the
 //!   bookshelf and recent-files updates when a document opens.
+//! - **Reading statistics** (`stats.json`) and **settings profiles**
+//!   (`profiles.toml`), Agent W3e.
 //!
 //! Each job's result comes back as a [`Report`], which the app applies on
 //! its next [`App::tick`](crate::App::tick): "Saved", an error, or a
@@ -29,7 +31,10 @@ use std::time::Duration;
 
 use textweaver_editor::autosave::{self, SnapshotLock};
 use textweaver_editor::{SaveRequest, SnapshotOp};
-use textweaver_store::{DocKey, DocState, Library, LibrarySync, Recent, StateStore};
+use textweaver_store::{
+    DocKey, DocState, Library, LibrarySync, Paths, Profiles, ReadingStats, Recent, StateStore,
+    StatsDelta,
+};
 
 use crate::disk::FileStamp;
 
@@ -80,6 +85,16 @@ pub(crate) enum Job {
     },
     /// Write the library sidecars' pending entries.
     SyncFlush(LibrarySync),
+    /// Add reading to `stats.json`.
+    Stats {
+        paths: Paths,
+        deltas: Vec<StatsDelta>,
+    },
+    /// Save `profiles.toml`.
+    Profiles {
+        paths: Paths,
+        profiles: Box<Profiles>,
+    },
     /// Answer when everything sent before has been done.
     Barrier(Sender<()>),
     /// A disk that takes this long (tests of waiting).
@@ -121,6 +136,8 @@ pub(crate) enum Report {
         path: PathBuf,
         stamp: Option<FileStamp>,
     },
+    /// Saving the settings profiles failed.
+    ProfilesFailed(String),
 }
 
 /// The handle to the writer thread.
@@ -358,6 +375,16 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
             }
             None
         }
+        Job::Stats { paths, deltas } => {
+            if let Err(e) = ReadingStats::add_to_file(&paths, &deltas) {
+                log::warn!("cannot save reading statistics: {e}");
+            }
+            None
+        }
+        Job::Profiles { paths, profiles } => profiles
+            .save(&paths)
+            .err()
+            .map(|e| Report::ProfilesFailed(e.to_string())),
         Job::Barrier(done) => {
             let _ = done.send(());
             None

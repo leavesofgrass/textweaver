@@ -5,7 +5,7 @@
 //! it packs about 1.6 to 1. This module plugs a hash-chain match finder
 //! with lazy matching into `ruzstd`'s encoder through its [`Matcher`]
 //! trait: the output is ordinary zstd, read by any decoder, and the data
-//! file comes out about a quarter smaller. Only the build uses it.
+//! synset records come out about a fifth smaller. Only the build uses it.
 //!
 //! It also steers around two bugs in `ruzstd` 0.9's encoder, worth
 //! reporting upstream: match lengths over 65,538 are written with the wrong

@@ -362,6 +362,25 @@ impl Catalog {
     }
 }
 
+/// A length of time as it is said, from the catalog's `duration-*`
+/// messages: "2 hours and 5 minutes", "3 minutes and 1 second", "40
+/// seconds" (rounded to the second).
+pub fn duration(c: &Catalog, seconds: f64) -> String {
+    let total = if seconds.is_finite() && seconds > 0.0 {
+        seconds.round() as u64
+    } else {
+        0
+    };
+    let (h, m, s) = (total / 3600, total % 3600 / 60, total % 60);
+    if h > 0 {
+        c.fmt("duration-hours", &[("h", h.into()), ("m", m.into())])
+    } else if m > 0 {
+        c.fmt("duration-minutes", &[("m", m.into()), ("s", s.into())])
+    } else {
+        c.fmt("duration-seconds", &[("s", s.into())])
+    }
+}
+
 fn is_pseudo(lang: &str) -> bool {
     lang.eq_ignore_ascii_case(PSEUDO_ACCENTED) || lang.eq_ignore_ascii_case(PSEUDO_RTL)
 }
