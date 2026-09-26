@@ -2698,6 +2698,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "imaging_vello_hybrid"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d356056536b6ae939f9f6f3604bc6c29a876097285f726d26cf533f2a7eda38"
+dependencies = [
+ "imaging",
+ "imaging_wgpu",
+ "kurbo",
+ "peniko",
+ "vello_common",
+ "vello_hybrid",
+ "wgpu",
+]
+
+[[package]]
 name = "imaging_wgpu"
 version = "0.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3295,6 +3310,7 @@ version = "0.4.0"
 dependencies = [
  "imaging",
  "imaging_vello",
+ "imaging_vello_hybrid",
  "imaging_wgpu",
  "kurbo",
  "peniko",
@@ -7417,6 +7433,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "vello_hybrid"
+version = "0.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a2b295a72c9fb73be9679c0d468c64d4f97ef09b91ce6d16d309747719c6ff2"
+dependencies = [
+ "bytemuck",
+ "hashbrown 0.16.1",
+ "log",
+ "thiserror 2.0.21",
+ "vello_api",
+ "vello_common",
+ "vello_sparse_shaders",
+ "wgpu",
+]
+
+[[package]]
 name = "vello_shaders"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7428,6 +7460,12 @@ dependencies = [
  "thiserror 2.0.21",
  "vello_encoding",
 ]
+
+[[package]]
+name = "vello_sparse_shaders"
+version = "0.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9afd2601f1c8cc1e16807aaf1a66dd182eb6f895df095a48fb353fe49377a9ce"
 
 [[package]]
 name = "version_check"
