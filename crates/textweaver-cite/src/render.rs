@@ -206,7 +206,7 @@ impl<'s> Formatter<'s> {
     }
 
     /// One reference's in-text citation, as if cited alone: "(Doe &
-    /// Roe, 2020)" in APA, "[1]" in IEEE, the full note in a note style.
+    /// Roe, 2020)" in APA, `[1]` in IEEE, the full note in a note style.
     pub fn cite(&self, r: &Reference) -> Result<String> {
         let entry = to_entry(r)?;
         let mut driver = BibliographyDriver::new();
