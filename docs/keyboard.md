@@ -62,14 +62,14 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 
 | Action | Terminal | GUI | Id |
 |---|---|---|---|
-| Play or pause reading from the current word | `Alt+P`, `Space` (browse) | `Space` (browse) | `play_pause` |
+| Play or pause reading from the current word | `Alt+P`, `Space` (browse) | `Ctrl+Shift+Space`, `Space` (browse) | `play_pause` |
 | Stop reading | `Escape`, `Ctrl+X` (browse) | `Escape` | `stop` |
 | Read continuously from the cursor | `Ctrl+Space`, `Enter` (browse) | `Ctrl+Space`, `Enter` (browse) | `read_from_cursor` |
 | Read the whole document from the start | `Shift+R` (browse) | `Shift+R` (browse) | `read_document` |
-| Say the character at the cursor | `c` (browse) | `c` (browse) | `read_current_character` |
-| Say the word at the cursor | `w` (browse) | `w` (browse) | `read_current_word` |
-| Say the sentence at the cursor without moving | `s` (browse) | `s` (browse) | `read_current_sentence` |
-| Say the line at the cursor | `l` (browse) | `l` (browse) | `read_current_line` |
+| Say the character at the cursor | `Alt+Shift+C`, `c` (browse) | `Ctrl+Shift+C`, `c` (browse) | `read_current_character` |
+| Say the word at the cursor | `Alt+Shift+W`, `w` (browse) | `Ctrl+Shift+W`, `w` (browse) | `read_current_word` |
+| Say the sentence at the cursor without moving | `Alt+Shift+S`, `s` (browse) | `Ctrl+Shift+E`, `s` (browse) | `read_current_sentence` |
+| Say the line at the cursor | `Alt+Shift+L`, `l` (browse) | `Ctrl+L`, `l` (browse) | `read_current_line` |
 | Say the paragraph at the cursor without moving | `Shift+S` (browse) | `Shift+S` (browse) | `read_paragraph` |
 | Read the selected text | `v` (browse) | `v` (browse) | `read_selection` |
 | Say the position: line, percentage, and heading | `%` (browse) | `%` (browse) | `say_position` |
@@ -134,8 +134,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Speak slower | `-` (browse) | `Ctrl+-`, `-` (browse) | `rate_down` |
 | Raise the pitch | `Alt+=`, `)` (browse) | `Alt+=`, `)` (browse) | `pitch_up` |
 | Lower the pitch | `Alt+-`, `(` (browse) | `Alt+-`, `(` (browse) | `pitch_down` |
-| Louder | `0` (browse) | `0` (browse) | `volume_up` |
-| Quieter | `9` (browse) | `9` (browse) | `volume_down` |
+| Louder | `F7`, `0` (browse) | `F7`, `0` (browse) | `volume_up` |
+| Quieter | `Shift+F7`, `9` (browse) | `Shift+F7`, `9` (browse) | `volume_down` |
 | Cycle the speed presets (skim, normal, study, slow) | `F8` | `F8` | `cycle_speed_preset` |
 | Choose a voice | `Alt+V` | `Ctrl+Shift+V` | `choose_voice` |
 
@@ -157,8 +157,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Move to the previous bookmark | `Shift+B` (browse) | `Shift+B` (browse) | `previous_bookmark` |
 | Add a note to the selection or the word at the cursor | `a` (browse) | `a` (browse) | `add_note` |
 | List notes and highlights | `Shift+A` (browse) | `Ctrl+Shift+N`, `Shift+A` (browse) | `list_notes` |
-| Move to the next note or highlight | `e` (browse) | `e` (browse) | `next_note` |
-| Move to the previous note or highlight | `Shift+E` (browse) | `Shift+E` (browse) | `previous_note` |
+| Move to the next note or highlight | `Alt+Down`, `e` (browse) | `Alt+Down`, `e` (browse) | `next_note` |
+| Move to the previous note or highlight | `Alt+Up`, `Shift+E` (browse) | `Alt+Up`, `Shift+E` (browse) | `previous_note` |
 | Delete the note or highlight at the cursor | `Delete` (browse) | `Delete` (browse) | `delete_note` |
 | Highlight the selection, or the sentence at the cursor | `y` (browse) | `y` (browse) | `highlight_selection` |
 
@@ -214,12 +214,7 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 
 | Action | Terminal | GUI | Id |
 |---|---|---|---|
-| Play or pause reading from the current word | has a chord | palette | `play_pause` |
 | Read the whole document from the start | palette | palette | `read_document` |
-| Say the character at the cursor | palette | palette | `read_current_character` |
-| Say the word at the cursor | palette | palette | `read_current_word` |
-| Say the sentence at the cursor without moving | palette | palette | `read_current_sentence` |
-| Say the line at the cursor | palette | palette | `read_current_line` |
 | Say the paragraph at the cursor without moving | palette | palette | `read_paragraph` |
 | Read the selected text | palette | palette | `read_selection` |
 | Say the position: line, percentage, and heading | palette | palette | `say_position` |
@@ -240,8 +235,6 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | Speech Cursor: read the current line again | palette | palette | `speech_cursor_reread_line` |
 | Speak faster | palette | has a chord | `rate_up` |
 | Speak slower | palette | has a chord | `rate_down` |
-| Louder | palette | palette | `volume_up` |
-| Quieter | palette | palette | `volume_down` |
 | Find the next match | has a chord | palette | `find_next` |
 | Find the previous match | has a chord | palette | `find_previous` |
 | Add a bookmark at the cursor | palette | has a chord | `add_bookmark` |
@@ -250,7 +243,5 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | Move to the previous bookmark | palette | palette | `previous_bookmark` |
 | Add a note to the selection or the word at the cursor | palette | palette | `add_note` |
 | List notes and highlights | palette | has a chord | `list_notes` |
-| Move to the next note or highlight | palette | palette | `next_note` |
-| Move to the previous note or highlight | palette | palette | `previous_note` |
 | Highlight the selection, or the sentence at the cursor | palette | palette | `highlight_selection` |
 | List keyboard shortcuts | palette | has a chord | `keyboard_help` |

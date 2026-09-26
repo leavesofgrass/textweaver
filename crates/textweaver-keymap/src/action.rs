@@ -154,7 +154,7 @@ macro_rules! actions {
 actions! {
     // Reading
     PlayPause = "play_pause", Reading, "Play or pause reading from the current word",
-        gui [], term ["g:Alt+P"], shared ["b:Space"];
+        gui ["g:Ctrl+Shift+Space"], term ["g:Alt+P"], shared ["b:Space"];
     Stop = "stop", Reading, "Stop reading",
         gui ["g:Escape"], term ["g:Escape", "b:Ctrl+X"], shared [];
     ReadFromCursor = "read_from_cursor", Reading, "Read continuously from the cursor",
@@ -162,13 +162,13 @@ actions! {
     ReadDocument = "read_document", Reading, "Read the whole document from the start",
         gui [], term [], shared ["b:Shift+R"];
     ReadCurrentCharacter = "read_current_character", Reading, "Say the character at the cursor",
-        gui [], term [], shared ["b:c"];
+        gui ["g:Ctrl+Shift+C"], term ["g:Alt+Shift+C"], shared ["b:c"];
     ReadCurrentWord = "read_current_word", Reading, "Say the word at the cursor",
-        gui [], term [], shared ["b:w"];
+        gui ["g:Ctrl+Shift+W"], term ["g:Alt+Shift+W"], shared ["b:w"];
     ReadCurrentSentence = "read_current_sentence", Reading, "Say the sentence at the cursor without moving",
-        gui [], term [], shared ["b:s"];
+        gui ["g:Ctrl+Shift+E"], term ["g:Alt+Shift+S"], shared ["b:s"];
     ReadCurrentLine = "read_current_line", Reading, "Say the line at the cursor",
-        gui [], term [], shared ["b:l"];
+        gui ["g:Ctrl+L"], term ["g:Alt+Shift+L"], shared ["b:l"];
     ReadParagraph = "read_paragraph", Reading, "Say the paragraph at the cursor without moving",
         gui [], term [], shared ["b:Shift+S"];
     ReadSelection = "read_selection", Reading, "Read the selected text",
@@ -275,9 +275,9 @@ actions! {
     PitchDown = "pitch_down", Voice, "Lower the pitch",
         gui ["g:Alt+-"], term ["g:Alt+-"], shared ["b:("];
     VolumeUp = "volume_up", Voice, "Louder",
-        gui [], term [], shared ["b:0"];
+        gui ["g:F7"], term ["g:F7"], shared ["b:0"];
     VolumeDown = "volume_down", Voice, "Quieter",
-        gui [], term [], shared ["b:9"];
+        gui ["g:Shift+F7"], term ["g:Shift+F7"], shared ["b:9"];
     CycleSpeedPreset = "cycle_speed_preset", Voice, "Cycle the speed presets (skim, normal, study, slow)",
         gui ["g:F8"], term ["g:F8"], shared [];
     ChooseVoice = "choose_voice", Voice, "Choose a voice",
@@ -305,9 +305,9 @@ actions! {
     ListNotes = "list_notes", Bookmarks, "List notes and highlights",
         gui ["g:Ctrl+Shift+N"], term [], shared ["b:Shift+A"];
     NextNote = "next_note", Bookmarks, "Move to the next note or highlight",
-        gui [], term [], shared ["b:e"];
+        gui ["g:Alt+Down"], term ["g:Alt+Down"], shared ["b:e"];
     PreviousNote = "previous_note", Bookmarks, "Move to the previous note or highlight",
-        gui [], term [], shared ["b:Shift+E"];
+        gui ["g:Alt+Up"], term ["g:Alt+Up"], shared ["b:Shift+E"];
     DeleteNote = "delete_note", Bookmarks, "Delete the note or highlight at the cursor",
         gui [], term [], shared ["b:Delete"];
     HighlightSelection = "highlight_selection", Bookmarks, "Highlight the selection, or the sentence at the cursor",
