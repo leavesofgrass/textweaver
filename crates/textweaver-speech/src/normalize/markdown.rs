@@ -219,6 +219,9 @@ fn cells(s: &str, line: Line) -> Vec<Cell> {
     let lead_ws = text.len() - text.trim_start().len();
     let mut a = lead_ws;
     let mut b = text.trim_end().len();
+    if a >= b {
+        return Vec::new();
+    }
     if text[a..b].starts_with('|') {
         a += 1;
     }
