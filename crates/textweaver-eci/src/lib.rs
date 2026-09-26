@@ -42,7 +42,7 @@ pub use audio::AudioOutput;
 pub use backend::{EciBackend, STALL_TIMEOUT, Synthesis};
 pub use dictionaries::Dictionaries;
 pub use discovery::{HOST_NAME, HOST_NAME_X86, Product};
-use textweaver_speech::{BackendFactory, BackendId, BackendInfo};
+use textweaver_speech::{BackendFactory, BackendId, BackendInfo, Caps};
 pub use voices::VoiceParam;
 
 /// The backend id.
@@ -138,6 +138,15 @@ pub fn backend_info() -> BackendInfo {
         priority: PRIORITY,
         opt_in: false,
         available: d.library.is_ok() && !d.hosts.is_empty(),
+        caps: Caps::WORD_EVENTS
+            | Caps::AUDIO_CLOCK
+            | Caps::PAUSE
+            | Caps::PITCH
+            | Caps::VOLUME
+            | Caps::SYNTH_TO_FILE
+            | Caps::NATIVE_NORMALIZATION
+            | Caps::PLAYBACK_EVENTS
+            | Caps::TONES,
     }
 }
 
