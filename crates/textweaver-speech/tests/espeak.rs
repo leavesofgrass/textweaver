@@ -107,12 +107,25 @@ fn stop_cancels_a_long_utterance() {
     let u = utt(&text, 0);
     let mut sink = Collect::default();
     b.speak(&u, &mut sink).unwrap();
-    std::thread::sleep(Duration::from_millis(200));
-    let t0 = Instant::now();
+    // Stop once speech is under way (its first word), not after a fixed
+    // 200 ms; then it must end as cancelled, within a generous deadline.
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while !sink
+        .0
+        .iter()
+        .any(|(_, e)| matches!(e, RawEvent::Word { .. }))
+    {
+        assert!(Instant::now() < deadline, "no word: {:?}", sink.0);
+        b.poll(&mut sink);
+        std::thread::sleep(Duration::from_millis(5));
+    }
     b.stop();
-    run_until_end(&mut b, &mut sink, u.id, Duration::from_secs(5));
-    assert!(t0.elapsed() < Duration::from_secs(2));
+    run_until_end(&mut b, &mut sink, u.id, Duration::from_secs(10));
     assert_eq!(sink.0.last().map(|(_, e)| e), Some(&RawEvent::Cancelled));
+    assert!(
+        !sink.0.iter().any(|(_, e)| *e == RawEvent::Finished),
+        "stopped, not finished"
+    );
     // Jobs queued before the stop are cancelled without speaking.
     let later = utt("Queued.", 1);
     b.speak(&later, &mut sink).unwrap();
@@ -227,8 +240,10 @@ fn the_service_highlights_each_word_on_the_audio_clock() {
         ranges,
         [c(0, 3), c(4, 9), c(10, 14), c(16, 18), c(19, 21), c(22, 26)]
     );
-    // Words are spread over the audio, not fired in a burst.
-    let first = got[1].1;
+    // Words are spread over the audio, not fired in a burst: the last one
+    // comes after most of the audio has played. Measured from before
+    // `read`, so a slow machine only makes it later. (Before: the gap
+    // between the second and last word, which a late second word shrank.)
     let last = got[got.len() - 1].1;
-    assert!(last > first + Duration::from_millis(300), "{got:?}");
+    assert!(last > Duration::from_millis(500), "{got:?}");
 }

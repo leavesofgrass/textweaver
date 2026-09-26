@@ -232,7 +232,10 @@ fn stop_cancels_and_late_events_are_ignored() {
     b.pause().unwrap();
     b.resume().unwrap();
     b.stop();
-    std::thread::sleep(Duration::from_millis(100));
+    // The server sends the late notifications right after its answer to
+    // CANCEL; the answer to one more command comes after them on the same
+    // connection, so once it is in, so are they. (Before: a 100 ms sleep.)
+    b.load_voices().unwrap();
     b.poll(&mut sink);
     assert_eq!(sink.0.len(), 1, "only Started: {:?}", sink.0);
     drop(b);
@@ -241,6 +244,7 @@ fn stop_cancels_and_late_events_are_ignored() {
         "PAUSE SELF".to_owned(),
         "RESUME SELF".to_owned(),
         "CANCEL SELF".to_owned(),
+        "LIST SYNTHESIS_VOICES".to_owned(),
         "QUIT".to_owned()
     ]));
 }
