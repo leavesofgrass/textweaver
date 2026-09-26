@@ -1,5 +1,5 @@
 //! The only unsafe code in the crate: calls into libespeak-ng through
-//! `espeakng-sys` (ADR-0001). Every function here is safe to call; each
+//! the declarations in `sys` (ADR-0001). Every function here is safe to call; each
 //! `unsafe` block states why it is sound.
 //!
 //! libespeak-ng is a process-wide singleton. Callers serialize access (the
@@ -13,7 +13,7 @@
 use std::ffi::{CStr, CString, c_char, c_int, c_short, c_void};
 use std::sync::Mutex;
 
-use espeakng_sys as sys;
+use super::sys;
 
 /// Output mode for [`initialize`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
