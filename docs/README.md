@@ -112,6 +112,7 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 
 - [A Xilem GUI for textweaver](research/xilem-gui.md): findings on Xilem, Masonry, and AccessKit accessibility (September 2026).
 - [Pure-Rust choices for Wave 3](research/pure-rust-wave3.md): OCR, Piper voices, Whisper, define word, and other swaps (September 2026).
+- [Research for Wave 4](research/wave4.md): the GUI part two, speed, formats (MathCAT), translations, offline models, and releases (September 2026).
 
 ## See also
 
