@@ -55,6 +55,10 @@ struct Args {
     /// Document (an experiment for listening sessions).
     #[arg(long)]
     edit_role: bool,
+    /// Let textweaver announce each list item as well as the screen reader
+    /// (an experiment for listening sessions).
+    #[arg(long)]
+    app_list_announcements: bool,
     /// Use this theme instead of the saved one.
     #[arg(long)]
     theme: Option<String>,
@@ -139,6 +143,7 @@ fn main() {
         experiments: textweaver_xilem::gui::Experiments {
             select_spoken: args.select_spoken,
             edit_role: args.edit_role,
+            app_list_announcements: args.app_list_announcements,
         },
         theme: args.theme,
     };

@@ -10,17 +10,18 @@ use masonry::accesskit::Role;
 use masonry::core::keyboard::{Key, NamedKey};
 use masonry::core::{NewWidget, TextEvent, WidgetTag};
 use masonry_testing::{TestHarness, TestHarnessParams};
+use textweaver_app::DocWindow;
 use textweaver_app::a11y::Priority;
 use textweaver_app::core::{CharPos, CharRange};
 use textweaver_app::text::Document;
 use textweaver_xilem::document::{DocAction, DocFont, DocModel, DocState, DocumentView};
 use textweaver_xilem::theme::{self, Palette};
 use textweaver_xilem::widgets::{Announcer, Message};
-use textweaver_xilem::window::{self, TextWindow, WINDOW_CHARS};
+use textweaver_xilem::window::{self, WINDOW_UNITS};
 
 const DOC: WidgetTag<DocumentView> = WidgetTag::named("doc");
 
-fn harness_with(doc: &Document, focus: CharPos) -> (TestHarness<DocumentView>, TextWindow) {
+fn harness_with(doc: &Document, focus: CharPos) -> (TestHarness<DocumentView>, DocWindow) {
     let p = Palette::galaxy();
     let view = DocumentView::new(p.clone(), DocFont::default(), Rc::new(Cell::new(0)));
     let mut params = TestHarnessParams::default();
@@ -33,10 +34,10 @@ fn harness_with(doc: &Document, focus: CharPos) -> (TestHarness<DocumentView>, T
     for b in textweaver_xilem::fonts::bundled_blobs() {
         h.register_fonts(b);
     }
-    let w = TextWindow::around(doc, focus, WINDOW_CHARS);
+    let w = DocWindow::with_budget(doc, focus, WINDOW_UNITS);
     let model = DocModel {
-        paragraphs: window::window_paragraphs(doc, w.range),
-        spans: window::window_spans(doc, w.range),
+        paragraphs: window::window_paragraphs(doc, w.range()),
+        spans: window::window_spans(doc, w.range()),
         doc_len: doc.len_chars(),
         title: "Test".into(),
     };
@@ -207,7 +208,7 @@ fn large_documents_open_and_highlight_quickly() {
     let (mut h, w) = harness_with(&doc, focus);
     let open_ms = started.elapsed().as_secs_f64() * 1000.0;
     let mut moves = Vec::new();
-    let mut pos = w.range.start.0 + 1000;
+    let mut pos = w.range().start.0 + 1000;
     for _ in 0..20 {
         let r = CharRange::new(pos, pos + 3);
         let t = Instant::now();
@@ -232,7 +233,7 @@ fn large_documents_open_and_highlight_quickly() {
     let worst = moves[moves.len() - 1];
     println!(
         "10M chars: window {} chars; open (model, layout, runs, tree) {open_ms:.1} ms; highlight median {median:.2} ms, worst {worst:.2} ms",
-        w.range.len()
+        w.range().len()
     );
     assert!(open_ms < 20_000.0, "{open_ms} ms");
     assert!(median < 1_000.0, "{median} ms");

@@ -35,6 +35,11 @@ pub enum DialogAction {
     Choose(usize),
     /// The dialog was closed without an answer.
     Cancel,
+    /// A key for the app's list model (`Command::ListKey`): the list is
+    /// the app's, which moves its focus, filters it, and chooses from it.
+    Key(textweaver_app::ListKey),
+    /// The pointer moved the list's focus (`Command::ListFocus`, quiet).
+    Focus(usize),
 }
 
 // --- Modal.
@@ -188,6 +193,8 @@ pub struct ChoiceList {
     layouts: Vec<Option<Layout<BrushIndex>>>,
     option_ids: Vec<NodeId>,
     width: f64,
+    /// Keys go to the app's list model instead of moving the focus here.
+    app_keys: bool,
 }
 
 impl ChoiceList {
@@ -206,7 +213,29 @@ impl ChoiceList {
             layouts: (0..n).map(|_| None).collect(),
             option_ids: Vec::new(),
             width: 0.0,
+            app_keys: false,
         }
+    }
+
+    /// Sends keys to the app's list model ([`DialogAction::Key`]); the
+    /// driver then shows the model's items and focus with [`sync`](Self::sync).
+    pub fn with_app_keys(mut self, on: bool) -> Self {
+        self.app_keys = on;
+        self
+    }
+
+    /// Shows `items` with `selected` focused (the app's list model),
+    /// keeping the layouts when the items did not change.
+    pub fn sync(this: &mut WidgetMut<'_, Self>, items: &[String], selected: usize) {
+        let w = &mut *this.widget;
+        if w.items != items {
+            w.layouts = (0..items.len()).map(|_| None).collect();
+            w.items = items.to_vec();
+            w.top = 0;
+            this.ctx.request_layout();
+        }
+        w.set_selected(selected);
+        this.ctx.request_render();
     }
 
     /// Starts on item `i`.
@@ -291,6 +320,32 @@ impl Widget for ChoiceList {
         if k.state != KeyState::Down || k.modifiers.ctrl() || k.modifiers.alt() {
             return;
         }
+        if self.app_keys {
+            use textweaver_app::ListKey as L;
+            let key = match &k.key {
+                Key::Named(NamedKey::ArrowDown) => L::Down,
+                Key::Named(NamedKey::ArrowUp) => L::Up,
+                Key::Named(NamedKey::ArrowLeft) => L::Left,
+                Key::Named(NamedKey::ArrowRight) => L::Right,
+                Key::Named(NamedKey::Home) => L::Home,
+                Key::Named(NamedKey::End) => L::End,
+                Key::Named(NamedKey::PageDown) => L::PageDown,
+                Key::Named(NamedKey::PageUp) => L::PageUp,
+                Key::Named(NamedKey::Enter) => L::Enter,
+                Key::Named(NamedKey::Escape) => L::Escape,
+                Key::Named(NamedKey::Backspace) => L::Backspace,
+                Key::Named(NamedKey::Delete) => L::Delete,
+                Key::Named(NamedKey::F2) => L::Rename,
+                Key::Character(s) => match s.chars().next() {
+                    Some(c) if !c.is_control() => L::Char(c),
+                    _ => return,
+                },
+                _ => return,
+            };
+            ctx.submit_action::<DialogAction>(DialogAction::Key(key));
+            ctx.set_handled();
+            return;
+        }
         let n = self.items.len();
         if n == 0 {
             return;
@@ -330,11 +385,19 @@ impl Widget for ChoiceList {
                 let local = ctx.local_position(state.position);
                 let row = self.top + (local.y / self.row_h).max(0.0) as usize;
                 if row < self.items.len() {
-                    if row == self.selected && state.count >= 2 {
-                        ctx.submit_action::<DialogAction>(DialogAction::Choose(row));
-                    }
+                    let double = row == self.selected && state.count >= 2;
                     self.set_selected(row);
                     ctx.request_render();
+                    if self.app_keys {
+                        ctx.submit_action::<DialogAction>(DialogAction::Focus(row));
+                        if double {
+                            ctx.submit_action::<DialogAction>(DialogAction::Key(
+                                textweaver_app::ListKey::Enter,
+                            ));
+                        }
+                    } else if double {
+                        ctx.submit_action::<DialogAction>(DialogAction::Choose(row));
+                    }
                 }
                 ctx.set_handled();
             }

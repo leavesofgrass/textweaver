@@ -102,7 +102,8 @@ fn a_list_dialog_is_modal_and_hides_the_window_behind_it() {
     let app = app_with_sample(dir.path());
     let mut h = harness(&app);
     let p = Palette::galaxy();
-    let (modal, list_id) = gui::list_dialog(&p, "Bookmarks", vec!["One".into(), "Two".into()], 0);
+    let (modal, list_id) =
+        gui::list_dialog(&p, "Bookmarks", vec!["One".into(), "Two".into()], 0, false);
     h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
     h.focus_on(Some(list_id));
     let _ = h.redraw();

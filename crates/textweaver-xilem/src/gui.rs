@@ -6,9 +6,10 @@
 //! document, a toolbar with Play and Stop, and a status bar. Everything a
 //! screen reader needs has a role and a name.
 //!
-//! The driver owns the [`App`]. A ticker thread wakes the event loop (every
-//! 30 ms while reading, 250 ms otherwise) to poll speech; W3a's waker will
-//! replace it (ADR-0023, "Waiting on W3a").
+//! The driver owns the [`App`]. The app's waker (ADR-0024) posts a tick to
+//! the event loop whenever speech or background work has something to
+//! apply; a ticker thread covers the app's own timers, sleeping as long as
+//! `App::tick_interval` allows.
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, VecDeque};
@@ -38,7 +39,9 @@ use textweaver_app::a11y::{Announcer as AppAnnouncer, Priority};
 use textweaver_app::core::CharRange;
 use textweaver_app::keymap::{ActionId, Platform};
 use textweaver_app::store::DocKey;
-use textweaver_app::{App, Command, Effect, Playback, PromptPurpose, extra_lookup};
+use textweaver_app::{
+    App, Command, DocWindow, Effect, Playback, PromptPurpose, WindowChange, extra_lookup,
+};
 
 use crate::dialog::{self, ChoiceList, DialogAction, Modal};
 use crate::document::{DocAction, DocFont, DocModel, DocState, DocumentView};
@@ -48,7 +51,7 @@ use crate::theme::{self, Palette};
 use crate::widgets::{
     ActionButton, Announcer, KeyAction, Message, MessageQueue, Pressed, Region, Root,
 };
-use crate::window::{self, TextWindow, WINDOW_CHARS};
+use crate::window::{self, WINDOW_UNITS};
 
 /// The document view.
 pub const DOC: WidgetTag<DocumentView> = WidgetTag::named("tw-document");
@@ -77,10 +80,8 @@ pub const PROMPT_FIELD: WidgetTag<TextArea<true>> = WidgetTag::named("tw-prompt-
 /// The list of an open list dialog.
 pub const LIST: WidgetTag<ChoiceList> = WidgetTag::named("tw-list");
 
-/// How often speech is polled while reading.
-const READING_TICK: Duration = Duration::from_millis(30);
-/// How often it is polled otherwise.
-const IDLE_TICK: Duration = Duration::from_millis(250);
+/// The first wait between ticks, before the app says (`App::tick_interval`).
+const FIRST_TICK: Duration = Duration::from_millis(250);
 /// Highlight moves slower than this are logged.
 const SLOW_HIGHLIGHT_MS: f64 = 30.0;
 
@@ -114,6 +115,11 @@ pub struct Experiments {
     /// Expose the document as a read-only multi-line edit instead of a
     /// Document.
     pub edit_role: bool,
+    /// Let the app announce each list item as the focus moves, as the
+    /// terminal reader does. Off by default: the list's options are
+    /// AccessKit nodes the screen reader follows itself (the list's active
+    /// descendant is its focus), and both would say each item twice.
+    pub app_list_announcements: bool,
 }
 
 /// Wakes the event loop.
@@ -147,8 +153,9 @@ impl AppAnnouncer for QueueAnnouncer {
 /// What the window last showed, to update only what changed.
 #[derive(Default)]
 struct Shown {
-    doc: Option<(DocKey, usize)>,
-    window: Option<TextWindow>,
+    /// The document shown: its key and text revision.
+    doc: Option<(DocKey, u64)>,
+    window: Option<DocWindow>,
     state: DocState,
     status: String,
     position: String,
@@ -189,7 +196,12 @@ pub struct Gui {
     started: bool,
     startup: Option<(Option<PathBuf>, bool, Vec<String>)>,
     exit_at: Option<Instant>,
-    reading_flag: Arc<AtomicBool>,
+    /// The app's waker: speech statuses and finished background work post
+    /// a tick at once (ADR-0024). Set when a tick is posted and not yet
+    /// handled, so a burst of rings posts one.
+    wake_pending: Arc<AtomicBool>,
+    /// How long the ticker sleeps when nothing rings (`App::tick_interval`).
+    tick_ms: Arc<AtomicU64>,
     /// Installed font families, for the font chooser.
     installed: crate::font_chooser::Installed,
     /// `--theme` was given: the saved theme is not followed.
@@ -398,9 +410,14 @@ pub fn list_dialog(
     title: &str,
     items: Vec<String>,
     selected: usize,
+    app_keys: bool,
 ) -> (NewWidget<dyn Widget>, WidgetId) {
-    let list = NewWidget::new(ChoiceList::new(title, items, p.clone()).with_selected(selected))
-        .with_tag(LIST);
+    let list = NewWidget::new(
+        ChoiceList::new(title, items, p.clone())
+            .with_selected(selected)
+            .with_app_keys(app_keys),
+    )
+    .with_tag(LIST);
     let list_id = list.id();
     let card = Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
@@ -519,32 +536,37 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             }
         }
         Some(s) => {
-            let id = (s.key.clone(), s.doc.len_chars());
+            let id = (s.key.clone(), s.revision);
             let focus = match (app.playback(), s.spoken) {
                 (Playback::Reading, Some(r)) => r.start,
                 _ => s.cursor,
             };
-            let rebuild =
-                shown.doc.as_ref() != Some(&id) || shown.window.is_none_or(|w| w.needs_move(focus));
-            if rebuild {
-                let started = Instant::now();
-                let w = TextWindow::around(&s.doc, focus, WINDOW_CHARS);
-                if let Some(model) = model_for(app, w.range) {
+            let started = Instant::now();
+            let new_doc = shown.doc.as_ref() != Some(&id);
+            let mut w = match shown.window {
+                Some(w) if !new_doc => w,
+                _ => DocWindow::with_budget(&s.doc, focus, WINDOW_UNITS),
+            };
+            // The app's window follows the focus: it slides while reading
+            // and recentres on jumps or when the text changed.
+            let change = w.follow_session(s, focus);
+            if new_doc || change != WindowChange::Unchanged {
+                if let Some(model) = model_for(app, w.range()) {
                     host.edit(DOC, |mut d| DocumentView::set_model(&mut d, model));
                 }
                 let ms = started.elapsed().as_secs_f64() * 1000.0;
                 if log {
                     crate::log::line(&format!(
-                        "loaded {} chars: window {}..{} in {ms:.1} ms",
+                        "loaded {} chars: window {}..{} ({change:?}) in {ms:.1} ms",
                         s.doc.len_chars(),
-                        w.range.start.0,
-                        w.range.end.0
+                        w.range().start.0,
+                        w.range().end.0
                     ));
                 }
                 shown.doc = Some(id);
-                shown.window = Some(w);
                 loaded = Some(ms);
             }
+            shown.window = Some(w);
         }
     }
     let state = state_for(app);
@@ -596,8 +618,6 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
 
 impl Gui {
     fn refresh(&mut self, ctx: &mut DriverCtx<'_>) {
-        let reading = self.app.playback() == Playback::Reading;
-        self.reading_flag.store(reading, Ordering::Relaxed);
         let root = ctx.render_root(self.window_id);
         let before = self.shown.state;
         if let Some(ms) = refresh_host(&self.app, &mut self.shown, root, self.log) {
@@ -656,6 +676,11 @@ impl Gui {
                     purpose: PromptPurpose::CommandPalette,
                 } => self.open_palette(ctx, &label),
                 Effect::Prompt { label, purpose } => self.open_prompt(ctx, &label, purpose),
+                // The open list changed (filtered, a setting changed): show
+                // it in place, keeping focus in the dialog.
+                Effect::ShowList { .. } if matches!(self.dialog, Some(OpenDialog::List)) => {
+                    self.sync_list(ctx);
+                }
                 Effect::ShowList { title, items } => self.open_list(ctx, &title, items),
             }
         }
@@ -697,7 +722,8 @@ impl Gui {
 
     fn open_list(&mut self, ctx: &mut DriverCtx<'_>, title: &str, items: Vec<String>) {
         let count = items.len();
-        let (modal, list_id) = list_dialog(&self.palette, title, items, 0);
+        let selected = self.app.list_model().map_or(0, |m| m.selected);
+        let (modal, list_id) = list_dialog(&self.palette, title, items, selected, true);
         let root = ctx.render_root(self.window_id);
         root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
         root.focus_on(Some(list_id));
@@ -761,7 +787,7 @@ impl Gui {
             .iter()
             .position(|c| current.family.starts_with(&format!("\"{}\"", c.family)))
             .unwrap_or(0);
-        let (modal, list_id) = list_dialog(&self.palette, "Font family", items, selected);
+        let (modal, list_id) = list_dialog(&self.palette, "Font family", items, selected, false);
         let root = ctx.render_root(self.window_id);
         root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
         root.focus_on(Some(list_id));
@@ -789,7 +815,7 @@ impl Gui {
                 let size = self.app.settings().reading_aids.font.size_pt;
                 let (items, selected) = crate::font_chooser::sizes(size);
                 let title = format!("Size for {family}");
-                let (modal, list_id) = list_dialog(&self.palette, &title, items, selected);
+                let (modal, list_id) = list_dialog(&self.palette, &title, items, selected, false);
                 let root = ctx.render_root(self.window_id);
                 root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
                 root.focus_on(Some(list_id));
@@ -847,6 +873,34 @@ impl Gui {
         };
         self.app.announce(&said, Priority::Polite);
         self.refresh(ctx);
+    }
+
+    /// A key in an app list: the app moves its focus, filters, or chooses;
+    /// then the dialog shows the list as the app has it, or closes.
+    fn list_key(&mut self, ctx: &mut DriverCtx<'_>, k: textweaver_app::ListKey) {
+        if self.log {
+            crate::log::line(&format!("list key {k:?}"));
+        }
+        let effects = self.app.dispatch(Command::ListKey(k));
+        self.sync_list(ctx);
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
+    }
+
+    /// Shows the app's list model in the open list dialog, or closes the
+    /// dialog when the app's list is gone.
+    fn sync_list(&mut self, ctx: &mut DriverCtx<'_>) {
+        if !matches!(self.dialog, Some(OpenDialog::List)) {
+            return;
+        }
+        match self.app.list_model() {
+            Some(m) => {
+                let (items, selected) = (m.items.clone(), m.selected);
+                ctx.render_root(self.window_id)
+                    .edit_widget_with_tag(LIST, |mut l| ChoiceList::sync(&mut l, &items, selected));
+            }
+            None => self.close_dialog(ctx),
+        }
     }
 
     fn close_dialog(&mut self, ctx: &mut DriverCtx<'_>) {
@@ -976,6 +1030,19 @@ impl AppDriver for Gui {
             if self.font_answer(ctx, d) {
                 return;
             }
+            match d {
+                DialogAction::Key(k) => {
+                    let k = *k;
+                    self.list_key(ctx, k);
+                    return;
+                }
+                DialogAction::Focus(i) => {
+                    let i = *i;
+                    self.dispatch(ctx, Command::ListFocus(i));
+                    return;
+                }
+                _ => {}
+            }
             let cmd = match (d, &self.dialog) {
                 (DialogAction::Choose(i), Some(OpenDialog::Palette(ids))) => match ids.get(*i) {
                     Some(a) => Command::Answer(a.id().to_owned()),
@@ -983,6 +1050,8 @@ impl AppDriver for Gui {
                 },
                 (DialogAction::Choose(i), _) => Command::Choose(*i),
                 (DialogAction::Cancel, _) => Command::Cancel,
+                // Handled above.
+                (DialogAction::Key(_) | DialogAction::Focus(_), _) => return,
             };
             self.answer(ctx, cmd);
         } else if let Some(t) = action.downcast_ref::<masonry::widgets::TextAction>() {
@@ -1017,6 +1086,7 @@ impl AppDriver for Gui {
         if action.downcast_ref::<Tick>().is_none() || self.closed {
             return;
         }
+        self.wake_pending.store(false, Ordering::Release);
         if !self.started {
             self.started = true;
             self.start(ctx);
@@ -1031,15 +1101,32 @@ impl AppDriver for Gui {
             self.close(ctx);
             return;
         }
+        let now = Instant::now();
         let mut effects = self.app.poll_speech();
-        effects.extend(self.app.tick(Instant::now()));
+        effects.extend(self.app.tick(now));
         self.run_effects(ctx, effects);
         self.refresh(ctx);
+        let wait = self.app.tick_interval(Instant::now());
+        self.tick_ms.store(
+            u64::try_from(wait.as_millis()).unwrap_or(u64::MAX).max(10),
+            Ordering::Relaxed,
+        );
     }
 
     fn on_start(&mut self, state: &mut MasonryState) {
         if let Some(proxy) = self.ticker.take() {
-            spawn_ticker(proxy, self.window_id, Arc::clone(&self.reading_flag));
+            // The app rings from other threads; post one tick per burst.
+            let pending = Arc::clone(&self.wake_pending);
+            let window_id = self.window_id;
+            let waker_proxy = std::sync::Mutex::new(proxy.clone());
+            self.app.set_waker(Some(Arc::new(move || {
+                if !pending.swap(true, Ordering::AcqRel)
+                    && let Ok(p) = waker_proxy.lock()
+                {
+                    let _ = p.send_event(MasonryUserEvent::AsyncAction(window_id, Box::new(Tick)));
+                }
+            })));
+            spawn_ticker(proxy, self.window_id, Arc::clone(&self.tick_ms));
         }
         for root in state.roots() {
             for blob in crate::fonts::bundled_blobs() {
@@ -1067,6 +1154,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         log: opts.log,
     };
     let (mut app, messages) = setup::build_app(&opts.app, Box::new(announcer));
+    app.set_announce_list_focus(opts.experiments.app_list_announcements);
     if opts.theme.is_none() {
         // The system's light, dark, or high-contrast setting, when the
         // settings ask to follow it (`display.follow_os_theme`).
@@ -1105,7 +1193,6 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         .build()
         .map_err(|e| format!("cannot start the event loop: {e}"))?;
     let proxy = event_loop.create_proxy();
-    let reading_flag = Arc::new(AtomicBool::new(false));
     if let Some(after) = opts.exit_after {
         exit_watchdog(after);
     }
@@ -1123,7 +1210,10 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         started: false,
         startup: Some((opts.file.clone(), opts.read_on_start, messages)),
         exit_at: opts.exit_after.map(|d| Instant::now() + d),
-        reading_flag,
+        wake_pending: Arc::new(AtomicBool::new(false)),
+        tick_ms: Arc::new(AtomicU64::new(
+            u64::try_from(FIRST_TICK.as_millis()).unwrap_or(250),
+        )),
         ticker: Some(proxy),
         fixed_theme: opts.theme.is_some(),
         installed: crate::font_chooser::Installed::scan_in_background(),
@@ -1136,23 +1226,19 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         .map_err(|e| format!("the event loop failed: {e}"))
 }
 
-fn spawn_ticker(proxy: EventLoopProxy, window_id: WindowId, reading: Arc<AtomicBool>) {
-    static TICKS: AtomicU64 = AtomicU64::new(0);
+/// Ticks for the app's own timers (autosave, the position save, RSVP),
+/// sleeping as long as the app says it may; speech and background work
+/// ring the waker instead.
+fn spawn_ticker(proxy: EventLoopProxy, window_id: WindowId, tick_ms: Arc<AtomicU64>) {
     std::thread::spawn(move || {
         loop {
-            let every = if reading.load(Ordering::Relaxed) {
-                READING_TICK
-            } else {
-                IDLE_TICK
-            };
-            TICKS.fetch_add(1, Ordering::Relaxed);
+            std::thread::sleep(Duration::from_millis(tick_ms.load(Ordering::Relaxed)));
             if proxy
                 .send_event(MasonryUserEvent::AsyncAction(window_id, Box::new(Tick)))
                 .is_err()
             {
                 return;
             }
-            std::thread::sleep(every);
         }
     });
 }
