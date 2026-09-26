@@ -396,25 +396,36 @@ Add the missing references with `tw cite add` or `tw cite import`, or fix the sp
 ## See citations in converted documents
 
 ```bash
-tw convert essay.md --to html --flavor pandoc
+tw convert essay.md --to html --style apa
 ```
 
-The `pandoc` flavor of `tw convert` finds Pandoc citations and marks them in the web page. Right now it shows the keys, not formatted citations. For example, `[@doe2020, p. 12]` appears as "(doe2020, p. 12)", and the key is a link. This is what a real conversion gives:
+`tw convert` formats your citations in a citation style and adds a References section with every work you cited. It does this for web pages, Word, PDF, EPUB, braille, and plain text; Markdown output keeps your citations as you wrote them. You do not need Pandoc. This is a real conversion to plain text:
 
-- A bracketed citation becomes the keys in parentheses, with any prefix and page: "(see muller2019, pp. 33-35; doe2020)".
-- A citation in your sentence, `@muller2019 [p. 40]`, becomes the key alone. The `[p. 40]` stays as written.
-- `[-@doe2020]` becomes "(doe2020)". The author is not left out, because no author is shown yet.
-- No bibliography is added. The key links point to `#ref-` and the key, which is where a bibliography entry would be, but the page has none yet, so the links go nowhere.
+```text
+The area of a circle is $\pi r^2$ (see Doe, 2020, p. 12). As Müller (2019, p. 40) argues, reading aloud helps (2020).
 
-Formatting citations in a style during conversion, and adding a References section, is not yet available. For now, you can print a bibliography with `tw cite format --bibliography --as markdown` and paste it under a "References" heading at the end of your document.
+References
 
-If you have Pandoc installed, it can also format the citations itself from the same library file, because `references.json` is CSL-JSON. For example:
+Doe, J. (2020). Reading by ear. Example Press.
 
-```bash
-pandoc essay.md --citeproc --bibliography references.json -o essay.html
+Müller, A. (2019). Speech and study. Journal of Listening, 4, 33–50.
 ```
 
-That is Pandoc's own feature, not part of textweaver. The other flavors of `tw convert` leave citations as plain text. See [the converting guide](converting.md) for flavors and other options.
+- A bracketed citation, `[see @doe2020, p. 12]`, becomes "(see Doe, 2020, p. 12)", with its prefix and page.
+- A citation in your sentence, `@muller2019 [p. 40]`, becomes "Müller (2019, p. 40)".
+- `[-@doe2020]` leaves the author out: "(2020)".
+- In a web page each citation is a link to its entry in the References section.
+- `--style` chooses the style: `apa` (the default), `mla`, `chicago`, `chicago-notes`, `harvard`, `ieee`, `vancouver`, `ama`, `nature`, any name `tw cite styles` lists, or a `.csl` file. With a note style, such as `chicago-notes`, each citation becomes a footnote.
+
+Keys are looked up in this order, and the first library that has the key wins:
+
+1. The file you name with `--bibliography FILE`, or with a `bibliography:` line in the document's front matter. It can be CSL-JSON, BibTeX, BibLaTeX, or RIS, so a `.bib` file from another program works as it is.
+2. `references.json` in the document's folder (a folder library).
+3. Your own library, the one `tw cite add` and `tw cite import` fill.
+
+A key that is in none of them is written as "missing reference" and the key, and the conversion warns you: "The citation key smith1999 is not in any library, so it reads as missing reference smith1999." Citations inside code or math are never touched. With the default `gfm` flavor, `@name` counts as a citation only when `name` is a key in one of the libraries, so a mention of a person or an email address stays as it is; use `--flavor pandoc` to have every citation formatted, as Pandoc does. `--no-citations` turns all of this off. See [the converting guide](converting.md#citations) for the other options.
+
+Pandoc can also format citations from the same library, because `references.json` is CSL-JSON: `pandoc essay.md --citeproc --bibliography references.json -o essay.html`. That is Pandoc's own feature.
 
 ## Citations while reading and writing in textweaver
 

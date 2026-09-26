@@ -74,7 +74,7 @@ Markdown comes in dialects. Choose yours with `--flavor`:
 
 - `gfm`, the default: GitHub Flavored Markdown. Tables, task lists, strikethrough, web addresses that become links by themselves, footnotes, and alerts such as `> [!NOTE]`.
 - `obsidian`: everything in GFM, plus Obsidian's own syntax. `[[Note]]` links to `Note.html`, `[[Note#Heading]]` links to that heading, and `[[Note|text]]` shows your own link text. `![[picture.png|description]]` shows a picture with that description as its alternative text. `![[Note]]` is a link to the note, or, with `--embeds inline`, the note's text itself. Callouts such as `> [!tip] Remember` become labelled notes; a callout with a minus sign after the type becomes a section you can expand and collapse. `#tags`, `==highlights==`, and block references (`^id`) work too.
-- `pandoc`: Pandoc's Markdown. Definition lists, fenced divs (`::: warning`), spans with classes (`[text]{.smallcaps}`), heading ids (`# Title {#intro}`), citations (`[@doe99, p. 33]`, shown as links to `#ref-doe99`), `H~2~O` and `2^10^`, and a title block (`% Title`, `% Author`, `% Date`). [Citations](citations.md) explains how to keep the references those citations point to.
+- `pandoc`: Pandoc's Markdown. Definition lists, fenced divs (`::: warning`), spans with classes (`[text]{.smallcaps}`), heading ids (`# Title {#intro}`), citations such as `[@doe99, p. 33]` (see [Citations](#citations) below), `H~2~O` and `2^10^`, and a title block (`% Title`, `% Author`, `% Date`).
 - `commonmark`: plain CommonMark, with no extensions.
 
 In every flavor except `commonmark`, a YAML block at the top of the file (between two lines of three dashes) sets the page's title, language, author, date, and description.
@@ -85,7 +85,45 @@ Math written in LaTeX between dollar signs, `$x^2$` inside a sentence or `$$ …
 
 ASCIIMath works too. A code block that starts with three backticks and the word `asciimath` (or `am`) becomes one formula. Course material written for MathJax often puts ASCIIMath between single backticks, like `` `x^2/2` ``; add `--asciimath` to read those as math instead of code.
 
-EPUB, Word, braille, and PDF output keep math as its LaTeX source for now. [Math](math.md) explains how math is read aloud and how to write it.
+The other outputs never print the dollar signs and LaTeX commands either:
+
+- EPUB: MathML, as in a web page. Reading apps draw it, and screen readers read it and let you explore it.
+- Word: Word's own equations. Word draws them, and Narrator, NVDA, and JAWS can read them.
+- PDF: the formula in print form, such as πr² or (a + b)/2, marked as a formula whose description is how it is read aloud, for example "pi r squared".
+- Braille: the formula as it is read aloud, "pi r squared", which grade 1 braille spells out.
+
+[Math](math.md) explains how math is read aloud and how to write it.
+
+## Citations
+
+```bash
+tw convert essay.md --to docx
+```
+
+Citations written the way Pandoc writes them, such as `[@doe2020, p. 12]` or `@doe2020 says`, are formatted in a citation style, and a References section listing the works you cited is added at the end. This works for web pages, Word, PDF, EPUB, braille, and plain text. Markdown output keeps your citations as you wrote them. You do not need Pandoc.
+
+A real example, converted to plain text in the default style, APA:
+
+```text
+The area of a circle is $\pi r^2$ (see Doe, 2020, p. 12). As Müller (2019, p. 40) argues, reading aloud helps (2020).
+
+References
+
+Doe, J. (2020). Reading by ear. Example Press.
+
+Müller, A. (2019). Speech and study. Journal of Listening, 4, 33–50.
+```
+
+The source was `[see @doe2020, p. 12]`, `@muller2019 [p. 40]`, and `[-@doe2020]`. (Plain text keeps math as LaTeX; the other outputs typeset it.)
+
+- `--style NAME` chooses the style: `apa` (the default), `mla`, `chicago`, `chicago-notes`, `harvard`, `ieee`, `vancouver`, `ama`, `nature`, any other name `tw cite styles` lists, or a `.csl` file. A note style such as `chicago-notes` puts each citation in a footnote.
+- `--bibliography FILE` names a file of references to look in first. It can be CSL-JSON, BibTeX, BibLaTeX, or RIS. A `bibliography:` line in the document's front matter does the same, with the path relative to the document.
+- After that, keys are looked up in `references.json` in the document's folder, then in your own library, the one `tw cite` keeps.
+- `--no-citations` leaves citations exactly as written.
+
+In a web page, each citation is a link to its entry in the References section.
+
+A citation key that is in none of the libraries is written as "missing reference" and the key, and you hear a warning such as "The citation key smith1999 is not in any library, so it reads as missing reference smith1999." Citations inside code and math are never touched. With the `gfm` and `obsidian` flavors, where `@name` is more often a mention of a person than a citation, `@name` is formatted only when `name` is a key in one of the libraries, and a bracketed citation only when at least one of its keys is; with `--flavor pandoc` every citation is formatted, as Pandoc does. [Citations](citations.md) explains how to build the library.
 
 ## Templates
 
@@ -132,6 +170,7 @@ For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the 
 - `--sanitize` removes scripts and other unsafe HTML, for Markdown you did not write yourself.
 - `--smart` turns straight quotes into curly quotes and double hyphens into dashes.
 - `--no-pandoc` never runs Pandoc (see below).
+- `--pandoc-timeout 300` gives Pandoc up to 300 seconds for each file instead of 120 (see below).
 - `--pdf-font FILE` chooses a font file for the text of PDF output. `--font` does the same by name.
 - `--verbose` reads out every file, not only the failures and the summary.
 - `--json` prints the full result, every file with its status and timing, as JSON for scripts.
@@ -139,6 +178,10 @@ For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the 
 ## Formats textweaver reads
 
 textweaver reads Markdown, HTML, plain text, EPUB, Word (DOCX), and PDF itself. For other formats, such as OpenDocument text, RTF, reStructuredText, Org, and LaTeX, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself. `--no-pandoc` turns it off.
+
+Pandoc runs in its sandbox, so a document cannot make it read other files on your computer (a LaTeX `\input`, for example); this needs Pandoc 2.19 or later. A file Pandoc takes more than two minutes on is stopped and counted as failed, with the reason "pandoc took longer than 2 minutes and was stopped", and the other files go on. Change the limit with `--pandoc-timeout SECONDS` or the `TEXTWEAVER_PANDOC_TIMEOUT` environment variable. To use a Pandoc that is not on your `PATH`, set `TEXTWEAVER_PANDOC` to its full path.
+
+A damaged or deliberately odd file cannot stop a batch either. Content nested thousands of levels deep, in a web page, EPUB, or Word document, is read as plain text below 256 levels, with the warning "Some content was nested too deeply to keep its structure, so it is read as plain text." List and page numbers that claim impossible values are capped. A file that is really a picture, a program, or another binary file is refused after its first 8 kilobytes, however large it is.
 
 The reader, `textweaver`, does not use Pandoc. To read an OpenDocument or RTF file aloud, convert it to Markdown first, then open the Markdown:
 
