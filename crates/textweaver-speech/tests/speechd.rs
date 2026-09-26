@@ -6,9 +6,10 @@
 
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
+use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use textweaver_speech::backends::speechd::{SpeechdAddress, SpeechdBackend};
 use textweaver_speech::core::{CharPos, CharRange, Rate, Utterance, UtteranceId};
@@ -28,6 +29,12 @@ struct FakeServer {
 
 impl FakeServer {
     fn start(hold: bool) -> Self {
+        Self::start_gated(hold, None)
+    }
+
+    /// With a `gate`, the server answers `CANCEL SELF` only once the gate
+    /// opens (a slow server).
+    fn start_gated(hold: bool, gate: Option<Receiver<()>>) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();
         let lines = Arc::new(Mutex::new(Vec::new()));
@@ -36,7 +43,7 @@ impl FakeServer {
             let Ok((stream, _)) = listener.accept() else {
                 return;
             };
-            serve(stream, &log, hold);
+            serve(stream, &log, hold, gate.as_ref());
         });
         FakeServer {
             port,
@@ -65,7 +72,7 @@ impl Drop for FakeServer {
     }
 }
 
-fn serve(stream: TcpStream, log: &Mutex<Vec<String>>, hold: bool) {
+fn serve(stream: TcpStream, log: &Mutex<Vec<String>>, hold: bool, gate: Option<&Receiver<()>>) {
     let mut out = stream.try_clone().unwrap();
     let mut reader = BufReader::new(stream);
     let mut next_msg = 1u64;
@@ -116,6 +123,9 @@ fn serve(stream: TcpStream, log: &Mutex<Vec<String>>, hold: bool) {
                 }
             }
             "CANCEL SELF" => {
+                if let Some(g) = gate {
+                    let _ = g.recv();
+                }
                 send("213 OK CANCELED\n");
                 for id in held.drain(..) {
                     send(&format!("703-{id}\n703-1\n703 CANCELED\n"));
@@ -243,6 +253,41 @@ fn stop_cancels_and_late_events_are_ignored() {
     assert!(lines.ends_with(&[
         "PAUSE SELF".to_owned(),
         "RESUME SELF".to_owned(),
+        "CANCEL SELF".to_owned(),
+        "LIST SYNTHESIS_VOICES".to_owned(),
+        "QUIT".to_owned()
+    ]));
+}
+
+#[test]
+fn stop_does_not_wait_for_the_server() {
+    // Before: Stop waited for the server's answer (up to five seconds
+    // when the server was busy), and so did everything queued behind it
+    // on the speech thread.
+    let (release, gate) = mpsc::channel();
+    let server = FakeServer::start_gated(true, Some(gate));
+    let mut b = SpeechdBackend::connect(&server.address()).unwrap();
+    let mut sink = Collect::default();
+    let mut u = Utterance::literal("One two.", CharPos(0));
+    u.id = UtteranceId {
+        generation: 1,
+        chunk: 0,
+    };
+    b.speak(&u, &mut sink).unwrap();
+    poll_until(&mut b, &mut sink, |s| !s.0.is_empty());
+    let t0 = Instant::now();
+    b.stop();
+    // The server has not answered yet (it waits for `release`); a Stop
+    // that waited would take the whole five-second reply timeout.
+    assert!(t0.elapsed() < Duration::from_secs(4), "{:?}", t0.elapsed());
+    release.send(()).unwrap();
+    // The next command gets its own answer, not the one to CANCEL.
+    let voices = b.load_voices().unwrap();
+    assert_eq!(voices.len(), 2);
+    b.poll(&mut sink);
+    assert_eq!(sink.0.len(), 1, "only Started: {:?}", sink.0);
+    drop(b);
+    assert!(server.lines().ends_with(&[
         "CANCEL SELF".to_owned(),
         "LIST SYNTHESIS_VOICES".to_owned(),
         "QUIT".to_owned()

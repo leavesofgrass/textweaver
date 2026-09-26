@@ -15,7 +15,9 @@
 //! SSIP messages: event messages (7xx) go to `poll`, every other message
 //! is the reply to the one command in flight (SSIP answers commands in
 //! order). `speak` waits only for the server's "message queued" reply (a few
-//! milliseconds), never for audio (ADR-0003).
+//! milliseconds), never for audio (ADR-0003). `stop` does not wait at all:
+//! its reply is read (and a refusal logged) before the next command's, so
+//! a slow or busy server never holds up Stop.
 //!
 //! **Parameters** (ADR-0004). speech-dispatcher takes rate, pitch, and
 //! volume on a -100..=100 scale that each output module maps to its engine.
@@ -427,6 +429,9 @@ pub struct SpeechdBackend {
     params: VoiceParams,
     applied: Option<VoiceParams>,
     voices: Option<Vec<Voice>>,
+    /// Commands sent without waiting for their replies (`CANCEL SELF`),
+    /// whose replies come before the next command's.
+    unanswered: usize,
 }
 
 impl std::fmt::Debug for SpeechdBackend {
@@ -506,6 +511,7 @@ impl SpeechdBackend {
             params: VoiceParams::default(),
             applied: None,
             voices: None,
+            unanswered: 0,
         };
         b.command("SET SELF CLIENT_NAME user:textweaver:main")?;
         b.command("SET SELF SSML_MODE on")?;
@@ -527,6 +533,19 @@ impl SpeechdBackend {
     }
 
     fn reply(&mut self) -> Result<Message, SpeechError> {
+        // Replies to commands sent without waiting come first (SSIP
+        // answers in order).
+        while self.unanswered > 0 {
+            let m = self.next_reply()?;
+            self.unanswered -= 1;
+            if !m.is_ok() {
+                log::warn!("speech-dispatcher refused to stop: {} {}", m.code, m.text);
+            }
+        }
+        self.next_reply()
+    }
+
+    fn next_reply(&mut self) -> Result<Message, SpeechError> {
         match self.replies.recv_timeout(REPLY_TIMEOUT) {
             Ok(m) => Ok(m),
             Err(RecvTimeoutError::Timeout) => Err(SpeechError::Engine(
@@ -725,8 +744,12 @@ impl SpeechBackend for SpeechdBackend {
     }
 
     fn stop(&mut self) {
-        if let Err(e) = self.command("CANCEL SELF") {
-            log::warn!("{e}");
+        // Not waiting for the reply: Stop must be immediate even when the
+        // server is slow to answer. The reply is read before the next
+        // command's.
+        match self.send_line("CANCEL SELF") {
+            Ok(()) => self.unanswered += 1,
+            Err(e) => log::warn!("{e}"),
         }
         // Late events for these messages are ignored.
         self.sent.clear();
