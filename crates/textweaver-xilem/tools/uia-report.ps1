@@ -33,7 +33,9 @@ param(
     [string] $Exe = '',
     [string] $Document = '',
     [ValidateSet('paced', 'null')] [string] $Backend = 'paced',
-    [string] $Out = ''
+    [string] $Out = '',
+    # More arguments for the GUI, such as --edit-role or --select-spoken.
+    [string] $GuiArgs = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -398,6 +400,7 @@ Say "- Windows: $([Environment]::OSVersion.VersionString)"
 Say "- Executable: $Exe"
 Say "- Document: $Document"
 Say "- Backend: $Backend (silent: no audio output)"
+Say "- Extra GUI arguments: $(if ($GuiArgs) { $GuiArgs } else { '(none)' })"
 Say "- Launch: --background (never activated, off screen, no taskbar button) with SW_SHOWNOACTIVATE; closed when the probe ends"
 Say ""
 
@@ -405,7 +408,7 @@ Say ""
 $scratch = Join-Path ([IO.Path]::GetTempPath()) ("tw-xuia-" + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Force $scratch | Out-Null
 $logFile = Join-Path $scratch 'gui.log'
-$guiArgs = "`"$Document`" --backend $Backend --home `"$scratch`" --read --background --log-file `"$logFile`" --exit-after 90"
+$guiArgs = "`"$Document`" --backend $Backend --home `"$scratch`" --read --background --log-file `"$logFile`" --exit-after 90 $GuiArgs"
 $foregroundBefore = [TwXUia]::GetForegroundWindow()
 [TwXUia]::ListenFor(0)
 $guiPid = [TwXUia]::LaunchInactive($Exe, $guiArgs, $repo)
@@ -420,6 +423,8 @@ try {
     $doc = $null
     for ($i = 0; $i -lt 60 -and -not $doc; $i++) {
         $doc = [TwXUia]::Find($window, [System.Windows.Automation.ControlType]::Document, $null)
+        # With --edit-role the document is a read-only Edit.
+        if (-not $doc) { $doc = [TwXUia]::Find($window, [System.Windows.Automation.ControlType]::Edit, 'Document') }
         if (-not $doc) { Start-Sleep -Milliseconds 100 }
     }
     Start-Sleep -Milliseconds 1200   # the document opens and reading starts
