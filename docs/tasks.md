@@ -562,6 +562,8 @@ Areas are split to keep merges small.
 
 ### Agent W3a — App core for the GUI (Phase 3, first half)
 
+**Status (Saturday, September 26, 2026): done, on `wave3/a-app-core`.** All six items, with ADR-0024. `DocWindow` (paragraph-aligned, slides and recentres, UTF-16, UTF-8, and char offsets; `DisplayIndex` is now the rope, 29 µs instead of 1.1 s and 40 MB on 10 million characters); `ListModel` and `PromptModel` in the app, which the TUI now only maps keys to and draws; `App::set_waker` and `SpeechService::set_waker`; `Command::ReplaceRange`; `SettingsSchema` from the store's keys, a settings screen (`Shift+F10`, GUI `Ctrl+,`), and JSON-RPC `settings_schema`, `get_setting`, `set_setting`, `list_state`, `list_key`, `prompt_state`, `prompt_key`; large files open in the background with progress and cancel (the key returns in 0.3 ms instead of 2.7 s on 10 MB, debug build), settings saves on the writer, the misspelling count after a save on a helper thread, and the speech engine's first start in the background. Small edits outside the app: `SpeechService::set_waker` (speech), `DisplayIndex` (text), the Settings action (keymap).
+
 **Owns:** `crates/textweaver-app` (new modules), and the list and prompt code moved out of `crates/textweaver-tui`.
 
 1. **Document window model.**

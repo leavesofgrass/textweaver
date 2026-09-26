@@ -1727,7 +1727,8 @@ impl App {
             return vec![Effect::Redraw];
         };
         let now = self.setting_value(&s.path).unwrap_or(Value::Null);
-        if text.trim() == s.edit_text(&now).trim() {
+        let may_unset = matches!(s.kind, SettingKind::Text { optional: true });
+        if text.trim() == s.edit_text(&now).trim() || (text.trim().is_empty() && !may_unset) {
             self.note("Kept.");
             return self.show_settings_list();
         }

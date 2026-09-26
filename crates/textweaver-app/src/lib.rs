@@ -124,6 +124,24 @@
 //!   Files and addresses open through [`App::set_launcher`] (the system's
 //!   default program otherwise, only in a session that keeps files).
 //!
+//! # The app core for the GUI (Wave 3, Agent W3a; ADR-0024)
+//!
+//! - **[`window`]**: [`DocWindow`], about [`WINDOW_UNITS`] UTF-16 units of
+//!   text around the focus, paragraph-aligned, which slides while reading
+//!   and recentres on jumps, with control offsets in [`Units`];
+//!   [`Session::revision`] says when the text changed.
+//! - **[`list_model`]**: the list shown ([`App::list_model`]) and the prompt
+//!   open ([`App::prompt_model`]), driven by [`Command::ListKey`],
+//!   [`Command::ListFocus`], and [`Command::PromptKey`], for every frontend.
+//! - **[`wake`]**: [`App::set_waker`], rung by the speech thread, the writer,
+//!   and background jobs; [`App::tick_interval`].
+//! - **[`Command::ReplaceRange`]**: edits made in a native text control.
+//! - **[`settings_schema`]**: [`SettingsSchema`] from the store's own keys,
+//!   [`App::set_setting`], and the settings screen (the Settings action).
+//! - **Off the input thread**: [`opening`] (large files open in the
+//!   background), settings saves on the writer, the misspelling count after
+//!   a save, and [`App::start_speech_in_background`].
+//!
 //! Owner: Agent D.
 
 mod access;
