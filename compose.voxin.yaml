@@ -1,0 +1,23 @@
+# Optional overlay: ETI-Eloquence for Linux (Voxin) in the dev container.
+#
+# Mounts an existing, licensed Voxin installation read-only. By default it
+# uses the volume created by the emacspeak-docker project (install-outloud);
+# set VOXIN_VOLUME to use another. Nothing from Voxin enters this repository
+# or the textweaver-dev image. See docs/docker.md and ADR-0007.
+#
+#   docker compose -f compose.yaml -f compose.voxin.yaml run --rm -T dev voxin-say -w /tmp/t.wav "hello"
+services:
+  dev:
+    volumes:
+      - voxin:/opt/oralux:ro
+    environment:
+      ECIINI: /opt/oralux/voxin/rfs32/var/opt/IBM/ibmtts/cfg/eci.ini
+      LD_LIBRARY_PATH: /opt/oralux/voxin/lib
+      TEXTWEAVER_ECI_LIBRARY: /opt/oralux/voxin/lib/libibmeci.so
+      PATH: /opt/oralux/voxin/bin:/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      PULSE_SERVER: ${PULSE_SERVER:-tcp:host.docker.internal:4713}
+
+volumes:
+  voxin:
+    external: true
+    name: ${VOXIN_VOLUME:-emacspeak-docker_voxin}

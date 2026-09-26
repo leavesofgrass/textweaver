@@ -68,3 +68,31 @@ Remove the build output and caches (the next build downloads and compiles everyt
 ```bash
 docker volume rm textweaver_textweaver-target textweaver_textweaver-cargo-registry textweaver_textweaver-cargo-git
 ```
+
+## Voxin (ETI-Eloquence for Linux)
+
+Voxin is licensed per user, so it is never copied into this repository or the `textweaver-dev` image. `compose.voxin.yaml` mounts an existing installation read-only: by default the `emacspeak-docker_voxin` volume created by the emacspeak-docker project's `install-outloud` (Voxin 3.3, US English), or another volume named in `VOXIN_VOLUME`. The image already carries what Voxin needs: 32-bit libc for its `voxind` engine and the `/opt/IBM` and `/var/opt/IBM` links `libvoxin` looks for.
+
+Check that the engine runs:
+
+```bash
+docker compose -f compose.yaml -f compose.voxin.yaml run --rm -T dev voxin-say -w /tmp/t.wav "hello"
+```
+
+Check ECI index marks (the mechanism behind word highlighting; ADR-0007):
+
+```bash
+docker compose -f compose.yaml -f compose.voxin.yaml run --rm -T dev python3 tools/eci-spike/voxin_spike.py
+```
+
+Run the Eloquence backend's real-engine tests on Linux:
+
+```bash
+docker compose -f compose.yaml -f compose.voxin.yaml run --rm -T -e TEXTWEAVER_ECI=1 dev cargo test -p textweaver-eci -- --ignored
+```
+
+The overlay sets `ECIINI`, `LD_LIBRARY_PATH`, and `TEXTWEAVER_ECI_LIBRARY` (`/opt/oralux/voxin/lib/libibmeci.so`, the 64-bit ECI library).
+
+## Hearing the container
+
+ALSA inside the image is routed to PulseAudio. Point `PULSE_SERVER` at a PulseAudio server on the host (the Voxin overlay defaults to `tcp:host.docker.internal:4713`, the address emacspeak-docker's `scripts/setup-audio.ps1` sets up on Windows) and anything textweaver plays in the container is heard on the host. Tests never open an audio device.

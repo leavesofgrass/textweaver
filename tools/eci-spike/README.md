@@ -11,3 +11,5 @@ tools/eci-spike/target/i686-pc-windows-msvc/release/eci-spike.exe eci.wav
 ```
 
 Result on 2026-09-25 (Windows 11, Eloquence for Windows 6.1): 4,710 ms of audio at 11,025 Hz synthesized in 8 ms; every index mark reported at its word's sample offset (for example "Smith" at 325 ms, "library" at 1,051 ms); `eciWantWordIndex` produced no replies, so explicit `eciInsertIndex` marks are the mechanism. Through SAPI5, the same engine gave one word event per sentence and no bookmark events.
+
+`voxin_spike.py` is the Linux counterpart for Voxin's 64-bit `libibmeci.so`, run inside the dev container with `compose.voxin.yaml` (docs/docker.md). Result on 2026-09-25 (libvoxin 1.5.8, Voxin 3.3 US English): every index mark at its word's audio position, 6,131 ms for the sentence at the default rate.

@@ -9,6 +9,7 @@ Jon's preferred voice is ETI-Eloquence (Code Factory "Eloquence for Windows" 6.1
 
 - **SAPI5.** Code Factory registers 64-bit and 32-bit SAPI5 voices ("Eloquence US English" and nine others). They speak, but through SAPI the engine reports one word-boundary event per sentence, at the wrong time, and no bookmark events. The default Microsoft voice reports every word. SAPI is therefore usable for Eloquence speech but not for word highlighting.
 - **The `tts` crate on Windows** uses WinRT/OneCore voices; Eloquence is not among them.
+- **Voxin on Linux** (Jon's existing licensed install, used by his emacspeak-docker setup). Its `libibmeci.so` is a 64-bit ECI library (libvoxin 1.5.8) that runs the 32-bit engine in its own `voxind` process. Driven with the same calls from `tools/eci-spike/voxin_spike.py` inside the textweaver dev container, it reported every word's index mark at its audio position ("Smith" 400 ms, "library" 1,286 ms at its default rate).
 - **ECI directly.** `eci.dll` (ECI 6.1) is a 32-bit library. A 32-bit Rust spike (`tools/eci-spike/`) loaded it, inserted an index mark before every word, synthesized 4.7 s of audio into its own buffer in 8 ms, and received every mark at the exact sample offset of its word.
 
 ## Decision
@@ -24,5 +25,5 @@ Jon's preferred voice is ETI-Eloquence (Code Factory "Eloquence for Windows" 6.1
 ## Consequences
 
 - Windows builds need the `i686-pc-windows-msvc` target to produce the host (`rustup target add i686-pc-windows-msvc`; `cargo xtask eci-host` builds it and places it next to the main binaries).
-- The container cannot test real ECI; tests run against a fake ECI library or a fake host. Real-engine tests run on Jon's machine and are marked `#[ignore]` unless `TEXTWEAVER_ECI=1`.
+- The plain container cannot test real ECI; with `compose.voxin.yaml` it mounts Jon's Voxin volume read-only and can (docs/docker.md). Elsewhere tests run against a fake host. Real-engine tests run on Jon's machine and are marked `#[ignore]` unless `TEXTWEAVER_ECI=1`.
 - Eloquence is proprietary and user-installed; textweaver ships no part of it.
