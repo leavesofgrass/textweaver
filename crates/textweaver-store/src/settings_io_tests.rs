@@ -408,6 +408,20 @@ fn wrong_types_and_ranges_are_errors_naming_the_path() {
     ] {
         assert!(has(p), "{p} missing from {errors:?}");
     }
+    for e in [
+        "settings.speech.rate: expected a whole number, 0 or more, found the text \"fast\"",
+        "settings.speech.punctuation: loud is not one of the choices: none, some, all",
+        "settings.display: expected a section (a JSON object), found dark",
+    ] {
+        assert!(errors.iter().any(|x| x == e), "{e} missing from {errors:?}");
+    }
+    let SettingsIoError::Invalid(big) = store
+        .plan_import(r#"{"speech": {"rate": 70000}}"#, ImportMode::Merge)
+        .unwrap_err()
+    else {
+        panic!()
+    };
+    assert_eq!(big, vec!["speech.rate: the number 70000 is out of range"]);
     assert!(
         errors.iter().all(|e| !e.contains('`')),
         "no backticks for screen readers: {errors:?}"
@@ -649,6 +663,12 @@ fn reset_everything_one_section_or_the_keys() {
 
     let future = plan_reset(&s, &k, Some("future_table")).unwrap();
     assert!(!future.settings.extra.contains_key("future_table"));
+
+    let sections = reset_sections(&s);
+    for t in STRUCT_TABLES {
+        assert!(sections.iter().any(|x| x == t), "{t} cannot be reset");
+    }
+    assert_eq!(sections[0], "speech");
 
     let err = plan_reset(&s, &k, Some("sound")).unwrap_err();
     let msg = err.to_string();

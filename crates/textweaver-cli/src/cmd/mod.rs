@@ -12,6 +12,7 @@ pub mod migrate;
 pub mod open;
 pub mod search;
 pub mod serve;
+pub mod settings;
 pub mod speak;
 pub mod text;
 pub mod vault;

@@ -668,7 +668,7 @@ fn check_leaf(section: &str, key: &str, value: toml::Value) -> Result<(), String
         toml::Value::Table(t)
             .try_into::<T>()
             .map(drop)
-            .map_err(|e| e.message().trim().replace('`', ""))
+            .map_err(|e| plain_serde(e.message()))
     }
     match section {
         "speech" => fits::<SpeechSettings>(key, value),
@@ -684,6 +684,65 @@ fn check_leaf(section: &str, key: &str, value: toml::Value) -> Result<(), String
         "keyboard" => fits::<KeyboardSettings>(key, value),
         _ => Ok(()),
     }
+}
+
+/// A serde message in plain words: `invalid type: string "fast", expected
+/// u16` becomes `expected a whole number, found the text "fast"`.
+fn plain_serde(msg: &str) -> String {
+    let msg = msg.trim().replace('`', "");
+    let split = |rest: &str| {
+        rest.split_once(", expected ")
+            .map(|(f, e)| (f.trim().to_owned(), e.trim().to_owned()))
+    };
+    if let Some((found, expected)) = msg.strip_prefix("invalid type: ").and_then(split) {
+        return format!(
+            "expected {}, found {}",
+            plain_expected(&expected),
+            plain_found(&found)
+        );
+    }
+    if let Some((found, _)) = msg.strip_prefix("invalid value: ").and_then(split) {
+        return format!("{} is out of range", plain_found(&found));
+    }
+    if let Some(rest) = msg.strip_prefix("unknown variant ")
+        && let Some((found, choices)) = rest.split_once(", expected one of ")
+    {
+        return format!("{found} is not one of the choices: {choices}");
+    }
+    msg
+}
+
+fn plain_expected(e: &str) -> String {
+    match e {
+        "f32" | "f64" => "a number",
+        "u8" | "u16" | "u32" | "u64" | "usize" => "a whole number, 0 or more",
+        "i8" | "i16" | "i32" | "i64" | "isize" => "a whole number",
+        "a sequence" => "a list",
+        "a map" => "a section",
+        "struct EciSettings" | "struct SapiSettings" | "struct AppleSettings" => "a section",
+        other => other,
+    }
+    .to_owned()
+}
+
+fn plain_found(f: &str) -> String {
+    if let Some(s) = f.strip_prefix("string ") {
+        return format!("the text {s}");
+    }
+    for p in ["integer ", "floating point "] {
+        if let Some(n) = f.strip_prefix(p) {
+            return format!("the number {n}");
+        }
+    }
+    if let Some(b) = f.strip_prefix("boolean ") {
+        return b.to_owned();
+    }
+    match f {
+        "sequence" => "a list",
+        "map" => "a section",
+        other => other,
+    }
+    .to_owned()
 }
 
 /// Validates an incoming settings object against the defaults' shape:
@@ -865,8 +924,24 @@ pub fn plan_import(
 /// The names [`plan_reset`] accepts: the settings sections, `keymap`, and
 /// any unknown sections present in `current`.
 pub fn reset_sections(current: &Settings) -> Vec<String> {
-    let mut v: Vec<String> = STRUCT_TABLES.iter().map(|s| (*s).to_owned()).collect();
-    v.push("keymap".to_owned());
+    // STRUCT_TABLES, in the order of settings.toml's documentation.
+    let mut v: Vec<String> = [
+        "speech",
+        "speech.eci",
+        "speech.sapi",
+        "speech.apple",
+        "highlight",
+        "normalization",
+        "reading",
+        "display",
+        "editing",
+        "library",
+        "keyboard",
+        "keymap",
+    ]
+    .iter()
+    .map(|s| (*s).to_owned())
+    .collect();
     v.extend(
         current
             .extra
