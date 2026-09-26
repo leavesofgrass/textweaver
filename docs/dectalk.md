@@ -2,6 +2,8 @@
 
 DECtalk is the classic synthesizer many of us learned to listen with: Perfect Paul, Beautiful Betty, Huge Harry, and the rest. textweaver can speak with a DECtalk you have installed, and it highlights each word as DECtalk says it. textweaver does not include DECtalk and never downloads it: DECtalk is proprietary, so you supply your own licensed copy.
 
+textweaver's DECtalk support has been tested against a stand-in library that behaves like DECtalk, not yet against a licensed DECtalk. If you try it with yours, the [troubleshooting guide](troubleshooting.md) says how to send a report.
+
 ## What you need
 
 - A licensed DECtalk for your system: DECtalk Software for Windows (from DEC, Force Computers, Fonix, or Access Solutions), or a DECtalk SDK or runtime for Linux. On Windows its library is usually `DECtalk.dll` or `dectalk.dll`, with the dictionary `dtalk_us.dic` in the same folder. On Linux it is usually `libtts.so`.
@@ -41,15 +43,33 @@ library = "C:\\Path\\To\\DECtalk.dll"
 
 The environment variable wins over the setting, and the setting wins over the usual folders.
 
-To check what textweaver found, run `tw backends`. The DECtalk line says whether it is available.
+To check what textweaver found, run this. The DECtalk line says whether it is available:
+
+```bash
+tw backends
+```
+
+The DECtalk hosts must sit next to `tw` and `textweaver`, as the release package puts them. To use a host from somewhere else, name it with the `TEXTWEAVER_DECTALK_HOST` environment variable.
 
 ## Choosing DECtalk and a voice
 
-DECtalk is not chosen automatically when Eloquence or a Windows SAPI voice is available, so choose it:
+DECtalk is not chosen automatically when Eloquence or a Windows SAPI voice is available, so choose it. To hear a sentence:
 
-```
+```bash
 tw speak --backend dectalk "Hello from DECtalk."
-tw open --backend dectalk book.md
+```
+
+To read a document with DECtalk:
+
+```bash
+textweaver --backend dectalk book.md
+```
+
+To make DECtalk your engine for good, set it in `settings.toml`:
+
+```toml
+[speech]
+backend = "dectalk"
 ```
 
 The voices are the nine DECtalk speakers:
@@ -78,3 +98,12 @@ Rate is in words per minute, DECtalk's own unit, from 75 to 600. Pitch raises or
 ## About the free DECtalk source
 
 A DECtalk source tree is published on GitHub. Its own licence says the code belongs to Fonix and may be used only under a written licence from them, so textweaver does not include it, build it, or test against it. If you point textweaver at a DECtalk library, that choice, and the licence it needs, are yours.
+
+## See also
+
+- [Speech engines and voices](speech.md): every engine textweaver can use, and how it chooses.
+- [Audio export](audio-export.md): DECtalk gives exact word timing in subtitles.
+- [Troubleshooting](troubleshooting.md): when no speech is heard.
+- [ADR-0021: DECtalk through a host process](adr/0021-dectalk.md): the design, the licensing rules, and what is not yet verified.
+- [ADR-0012: The engine host](adr/0012-engine-host.md): the protocol between textweaver and the helper.
+- [Documentation index](README.md)

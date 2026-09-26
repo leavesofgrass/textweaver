@@ -20,8 +20,18 @@ Galaxy's light partner is Galaxy Light. When textweaver follows your system's ap
 ## Choosing a theme
 
 - Press F5 to move to the next theme. textweaver says the theme's name.
-- Start with a theme for one session: `textweaver --theme sepia`.
-- Set it for good in `settings.toml`, under `[display]`: `theme = "nord"`.
+- Start with a theme for one session:
+
+  ```bash
+  textweaver --theme sepia notes.md
+  ```
+
+- Set it for good in `settings.toml`, under `[display]`:
+
+  ```toml
+  [display]
+  theme = "nord"
+  ```
 
 Names ignore case. Star's older names still work (`obsidian` means Galaxy). If a name is not found, textweaver uses Galaxy and tells you so.
 
@@ -29,7 +39,9 @@ Names ignore case. Star's older names still work (`obsidian` means Galaxy). If a
 
 ## The built-in themes
 
-In the order F5 goes through them. Each is one of Star's palettes. Where a Star color missed the contrast minimum, it was moved by the smallest change that passes; the theme file lists every change.
+They are grouped here by kind. Each is one of Star's palettes. Where a Star color missed the contrast minimum, it was moved by the smallest change that passes; the theme file lists every change.
+
+F5 goes through them in a different order: Galaxy, Galaxy Light, One Dark, One Light, Dark, Light, Contrast, High Contrast, Phosphor, Dracula, Nord, Solarized Dark, Solarized Light, Gruvbox Dark, Tokyo Night, Catppuccin Mocha, Monokai, Sepia, Amber, Everforest Dark, Rose Pine, Kanagawa, and Gruvbox Light. Your own themes come after them.
 
 Dark themes:
 
@@ -84,7 +96,17 @@ textweaver uses as many colors as your terminal offers:
 - 16 colors: the terminal decides what its 16 colors look like, so textweaver paints the page itself (black for dark themes, white for light) and uses only colors that stay readable in the common terminal color sets. Faint bands, such as the sentence band, are left out; the underline still shows the sentence. On light themes, headings are underlined instead of bold, because some terminals brighten bold text until it fades.
 - No color: attributes only. Headings bold, links underlined, quotes italic, the spoken word in reverse video, the sentence underlined.
 
-To turn color off, set `NO_COLOR=1`. To choose a level yourself, set `TEXTWEAVER_COLOR` to `truecolor`, `256`, `16`, or `none`.
+To turn color off, set the `NO_COLOR` environment variable to any value, such as `1`. To choose a level yourself, set `TEXTWEAVER_COLOR` to `truecolor`, `256`, `16`, or `none`. For example, in a Linux or macOS shell:
+
+```bash
+export TEXTWEAVER_COLOR=256
+```
+
+In a Windows command prompt:
+
+```powershell
+set TEXTWEAVER_COLOR=256
+```
 
 textweaver never changes your terminal's own colors or cursor.
 
@@ -172,9 +194,23 @@ If a file has a mistake, textweaver skips that file, loads the rest, and says wh
 
 From textweaver's source folder, this prints a theme's contrast report and the colors each part gets at every terminal level, as plain text:
 
-```text
+```bash
 cargo run -p textweaver-theme --example preview -- galaxy
-cargo run -p textweaver-theme --example preview -- path\to\midnight.toml
+```
+
+To preview your own theme file, give its path:
+
+```bash
+cargo run -p textweaver-theme --example preview -- path/to/midnight.toml
 ```
 
 Add `--swatch` to also print sample lines in color, for sighted checking.
+
+## See also
+
+- [Reading aids](reading-aids.md): the ruler, RSVP, and bionic reading, which use the theme's colours.
+- [Settings](settings.md#display): the `[display]` settings.
+- [Converting documents](converting.md): HTML output uses these themes.
+- [ADR-0020: Themes](adr/0020-themes.md): the design, the contrast rules, and every palette adjustment.
+- [Interactive pages](site/index.html): the pages in `docs/site/` use Galaxy and Galaxy Light.
+- [Documentation index](README.md)

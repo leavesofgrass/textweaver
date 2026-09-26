@@ -12,11 +12,9 @@ It lists every Eloquence engine it detected, which one it will use, and what to 
 
 ## The short version
 
-| Your computer | How to get Eloquence | Cost |
-|---|---|---|
-| Mac (macOS 13 Ventura or later) | Already built in: Reed, Shelley, Rocko, Sandy, Flo, Eddy, Grandma, and Grandpa | Free |
-| Linux | Voxin, from Oralux | Paid, per user |
-| Windows | Code Factory's Eloquence for Windows | Paid, per user |
+- **Mac** (macOS 13 Ventura or later): Eloquence is already built in, free. The voices are Reed, Shelley, Rocko, Sandy, Flo, Eddy, Grandma, and Grandpa.
+- **Linux**: Voxin, from Oralux. It is paid, per user.
+- **Windows**: Code Factory's Eloquence for Windows. It is paid, per user.
 
 textweaver picks Eloquence automatically when it finds a licensed engine, and uses Reed unless you choose another voice.
 
@@ -78,30 +76,61 @@ OpenEVV is an independent reimplementation of IBM's Embedded ViaVoice, the engin
 
 textweaver includes the community IBMTTS pronunciation dictionaries (by amirsol81, x0, thunderdrop, and many contributors, released into the public domain under CC0) and loads them into Eloquence automatically. They fix thousands of words Eloquence mispronounces. To turn them off, or to use your own copy:
 
-```
+```powershell
 set TEXTWEAVER_ECI_DICTIONARIES=off
+```
+
+```powershell
 set TEXTWEAVER_ECI_DICTIONARIES=C:\path\to\my\dictionaries
+```
+
+Or set it for good in `settings.toml`. Write `false` to turn them off, or a folder path:
+
+```toml
+[speech.eci]
+dictionaries = false
 ```
 
 ## Checking that it works
 
-```
+First, list the speech engines. `eci` should be listed as available:
+
+```bash
 tw backends
+```
+
+Then list Eloquence's voices. You should hear of Reed and the other seven voices:
+
+```bash
 tw voices --backend eci
+```
+
+Finally, speak a sentence with Reed:
+
+```bash
 tw speak --voice Reed "Eloquence is working."
 ```
 
-`tw backends` lists `eci` as available, `tw voices` lists Reed and the other seven voices, and the last command speaks with Reed.
-
 ## Settings reference
 
-| Variable | What it does |
-|---|---|
-| `TEXTWEAVER_ECI_LIBRARY` | Use this engine library instead of searching. |
-| `TEXTWEAVER_ECI_CODE_FACTORY` | Set to `1` after buying Code Factory's Eloquence for Windows, so textweaver uses it. |
-| `TEXTWEAVER_ECI_DICTIONARIES` | `off`, or a folder of dictionaries to use instead of the included ones. |
-| `TEXTWEAVER_ECI_HOST` | Use this helper program instead of the one next to textweaver. |
+These environment variables change how textweaver finds and runs Eloquence:
+
+- `TEXTWEAVER_ECI_LIBRARY`: use this engine library instead of searching.
+- `TEXTWEAVER_ECI_CODE_FACTORY`: set to `1` after buying Code Factory's Eloquence for Windows, so textweaver uses it.
+- `TEXTWEAVER_ECI_DICTIONARIES`: `off`, or a folder of dictionaries to use instead of the included ones.
+- `TEXTWEAVER_ECI_HOST`: use this helper program instead of the one next to textweaver.
+
+The same choices can be kept in `settings.toml`, in the `[speech.eci]` section: `library`, `code_factory`, and `dictionaries`. An environment variable wins over the setting for that run. [Settings](settings.md#speecheci) describes them.
 
 ## Why textweaver does not include Eloquence
 
 Eloquence belongs to Cerence, which acquired it with Nuance's text-to-speech business, and it cannot be given away without Cerence's permission. IBM's old Embedded ViaVoice developer kit, still downloadable from IBM, is licensed for building prototypes only, not for use in finished applications. If Cerence ever allows free redistribution for accessibility software, textweaver will offer Eloquence out of the box.
+
+## See also
+
+- [Speech engines and voices](speech.md): every engine textweaver can use, and how it chooses.
+- [Troubleshooting](troubleshooting.md): when no speech is heard.
+- [ADR-0007: Eloquence through an ECI host](adr/0007-eloquence-via-eci-host.md): why Eloquence runs in a helper process, and how word timing works.
+- [ADR-0012: The engine host](adr/0012-engine-host.md): the protocol between textweaver and the helper.
+- [ADR-0008: Apple speech](adr/0008-apple-speech.md): Eloquence on macOS.
+- [Documentation index](README.md)
