@@ -16,7 +16,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 - [Quick start](quickstart.md): your first 30 seconds on Windows, macOS, and Linux.
 - [Installing textweaver](install.md): the packages, the install scripts, and checking a download.
-- [Using textweaver with a screen reader](screen-readers.md): JAWS, NVDA, VoiceOver, and Orca, self-voicing, and `--no-speech`.
+- [Using textweaver with a screen reader](screen-readers.md): the three accessibility modes (self-voicing, hybrid, and screen reader), settings for NVDA and JAWS, and terminal keys that clash.
 - [Troubleshooting](troubleshooting.md): the log file, diagnosing speech, and common problems.
 
 ### Reading
@@ -30,8 +30,8 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 ### Writing
 
-- [Writing and editing](editing.md): edit mode, typing echo, Markdown commands, undo, and saving.
-- [Citations](citations.md): `tw cite`, the reference library, DOI and ISBN lookup, and citation styles.
+- [Writing and editing](editing.md): edit mode, typing echo, Markdown commands, undo, saving, the outline, spell check, clipboard, templates, and find and replace.
+- [Citations](citations.md): inserting citations while writing, `tw cite`, the reference library, DOI and ISBN lookup, and citation styles.
 - [Dictation](dictation.md): `tw dictate`, turning speech in an audio file into text.
 
 ### Speech
@@ -43,7 +43,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 ### Files, the library, and settings
 
-- [Converting documents](converting.md): `tw convert` to HTML, EPUB, Word, braille, PDF, and more.
+- [Converting documents](converting.md): `tw convert` to HTML, EPUB, Word, braille, PDF, and more; exporting and previewing from inside the reader.
 - [The library](library.md): library folders, recent files, sync between computers, and importing from Star.
 - [The Obsidian vault](vault.md): exporting notes and highlights to a vault, and importing them back.
 - [Settings](settings.md): where settings live, every setting, and export, import, and reset.
@@ -57,9 +57,10 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 - [Testing](../CONTRIBUTING.md#tests) and [benchmarks](../CONTRIBUTING.md#benchmarks).
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
 - [Docker development container](docker.md): building and testing Linux features on any machine, and Voxin.
-- [Releasing](releasing.md): making a release and what the packages hold.
+- [Fuzzing](../fuzz/README.md): the cargo-fuzz targets for the loaders, the settings and state files, and the engine-host protocol, run every night.
+- [Releasing](releasing.md): making a release, the Linux AppImage, and what the packages hold.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
-- [Roadmap](roadmap.md): what comes next, quick wins first.
+- [Roadmap](roadmap.md): Phases 1 and 2 (done), and Wave 3, which is next.
 - [Tasks and ownership](tasks.md): the briefs and status of every agent, wave by wave.
 - [Implementation plan](plan.md): the original plan and the Phase 0 amendments.
 - [Audit, September 2026](audit-2026-09.md): findings, fixes, and benchmark numbers.
@@ -85,7 +86,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0011: Audio export](adr/0011-audio-export.md): sentence-by-sentence synthesis, exact subtitles, and chapters.
 - [ADR-0012: One engine-host protocol and playback client](adr/0012-engine-host.md): the shared protocol for Eloquence, SAPI5, and DECtalk.
 - [ADR-0013: Dictation through a Whisper program](adr/0013-dictation.md): voice typing with a Whisper subprocess.
-- [ADR-0014: GUI toolkit (wxDragon)](adr/0014-gui-toolkit.md): the GUI spike's findings and the Wave 3 plan.
+- [ADR-0014: GUI toolkit (wxDragon)](adr/0014-gui-toolkit.md): the GUI spike's findings. Wave 3 moves the GUI to Xilem, and the spike stays as a fallback.
 - [ADR-0015: JSON-RPC server](adr/0015-json-rpc.md): `tw serve --stdio`, its methods, and notifications.
 - [ADR-0016: Rendering and bulk conversion](adr/0016-rendering-and-conversion.md): Markdown to accessible HTML, and fast, incremental conversion.
 - [ADR-0017: Native writers](adr/0017-writers.md): EPUB 3, DOCX, BRF braille, and tagged PDF, and their accessibility checks.

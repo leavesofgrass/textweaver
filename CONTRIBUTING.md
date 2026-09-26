@@ -35,17 +35,17 @@ Thank you for helping. textweaver is built first for screen-reader users and stu
   rustup target add i686-pc-windows-msvc
   ```
 
-- The `espeak` feature needs libespeak-ng, which Windows does not have. Use `--features textweaver-speech/omnivox` in place of `--all-features`, and test Linux-only features in Docker.
+- On Windows, CI and `dev-check` use `--features textweaver-speech/omnivox` in place of `--all-features`. Test the Linux engines, espeak-ng and speech-dispatcher, in Docker.
 
 ### Linux
 
-Install the development files for espeak-ng, ALSA, and speech-dispatcher, and pkg-config. On Debian and Ubuntu:
+The build itself needs only pkg-config and the ALSA development files. espeak-ng is loaded when textweaver starts, with no headers at build time, and speech-dispatcher is spoken to over its socket in pure Rust. The engines themselves are needed to hear them and for their real-engine tests. On Debian and Ubuntu:
 
 ```bash
-sudo apt install libespeak-ng-dev espeak-ng-data libasound2-dev libspeechd-dev pkg-config
+sudo apt install pkg-config libasound2-dev espeak-ng speech-dispatcher
 ```
 
-`scripts/install-linux.sh --deps-only` installs the build dependencies on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine.
+`scripts/dev-check.sh` turns on every feature only when `pkg-config` finds espeak-ng, so for its full run also install `libespeak-ng-dev`. `scripts/install-linux.sh --deps-only` installs the build dependencies on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine.
 
 ### macOS
 
@@ -59,9 +59,9 @@ The development container has every library the workspace can link, so Linux-onl
 docker compose build dev
 ```
 
-### The GUI spike
+### The GUI
 
-`textweaver-gui` builds wxWidgets from source through wxDragon. The first build takes several minutes and needs CMake, Ninja, and libclang. On Windows, `crates/textweaver-gui/tools/build-windows.ps1` finds Visual Studio's own CMake and Ninja and sets up the build. [ADR-0014](docs/adr/0014-gui-toolkit.md) has the details.
+The GUI moves to Xilem in Wave 3 (Jon's choice, Saturday, September 26, 2026), in a new crate; the wxDragon spike stays as a fallback until then. `textweaver-gui` builds wxWidgets from source through wxDragon. The first build takes several minutes and needs CMake, Ninja, and libclang. On Windows, `crates/textweaver-gui/tools/build-windows.ps1` finds Visual Studio's own CMake and Ninja and sets up the build. [ADR-0014](docs/adr/0014-gui-toolkit.md) has the details.
 
 ## The checks
 
@@ -97,6 +97,12 @@ The steps, in order:
 - **scripts**: shellcheck on the shell scripts, or PSScriptAnalyzer on the PowerShell scripts, when installed.
 
 Useful options: `--only fmt,clippy` runs some steps, `--fail-fast` stops at the first failure, and `--dry-run` prints the commands.
+
+CI also runs three checks that `dev-check` does not. Run them yourself when you change dependencies:
+
+- **deps**: `cargo xtask deps --check`. The dependency direction between the workspace crates ([docs/architecture.md](docs/architecture.md#dependency-direction)).
+- **notices**: `cargo xtask notices --check`. `THIRD-PARTY-NOTICES.md` is current. It needs `cargo-about`.
+- **deny**: `cargo deny check`. Licences, advisories, duplicate versions, and sources, from `deny.toml`.
 
 The features: Linux CI uses `--all-features`, which includes `espeak`, `speechd`, and `omnivox`. Windows and macOS use `--features textweaver-speech/omnivox`.
 
@@ -144,7 +150,8 @@ cargo run --release -p textweaver-convert --example bench_convert
 - Every third-party crate is declared once, in `[workspace.dependencies]` in the root `Cargo.toml`, and used with `name.workspace = true`. Adding one is a decision for the orchestrator; ask for it in your report.
 - No async runtime in the speech path. Speech engines have thread affinity ([ADR-0003](docs/adr/0003-speech-threading-and-event-timing.md)).
 - Accessibility rules:
-  - Every user-visible state change is announced through the app's announcer, filtered by verbosity.
+  - Every user-visible state change is announced through the app's announcer, filtered by verbosity, and routed by the accessibility mode with `textweaver_a11y::route`, so a screen reader never hears it twice.
+  - Every file the app writes while it runs goes through the writer thread (`crates/textweaver-app/src/writer.rs`), never from the input thread.
   - Every string the user hears must read well aloud: no symbols a speech engine skips or spells out, no visual-only formatting.
   - Nothing is shown by colour alone.
   - Keys come from the keymap, never hard-coded; a new action gets a default key, a help string, and a category in `crates/textweaver-keymap/src/action.rs`, and then `cargo xtask keyboard`.
@@ -157,7 +164,7 @@ cargo run --release -p textweaver-convert --example bench_convert
 textweaver is built by an orchestrator and parallel agents, each in its own git worktree. [docs/tasks.md](docs/tasks.md) holds the briefs, the ownership of every path, the acceptance criteria, and each agent's status. The rules:
 
 - **Read first**: the shared preamble in `docs/tasks.md`, your brief, [the plan](docs/plan.md), and the ADRs your brief names.
-- **Branch**: work on your own branch, named `wave2/<letter>-<topic>` in Wave 2, in your own worktree, from `main`.
+- **Branch**: work on your own branch, in your own worktree, from `main`. The brief names it: `phase2/<letter>-<topic>` in Phase 2, and `wave3/<letter>-<name>` in Wave 3.
 - **Ownership**: edit only the paths your brief lists. Never edit `crates/textweaver-core`, the root `Cargo.toml`, `rust-toolchain.toml`, `.github/`, `docker/`, `compose.yaml`, or another agent's paths unless your brief says so.
 - **Contract changes**: if a public type in core or in another agent's crate must change, work around it and write the exact change you need under "Contract change requests" in your report. The orchestrator decides at integration.
 - **Separate build directories**: parallel agents must not share a build lock. Give cargo your own target directory, and in Docker use a fixed project name with a private target directory:

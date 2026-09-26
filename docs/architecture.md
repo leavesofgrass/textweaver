@@ -11,7 +11,7 @@ textweaver is one Cargo workspace with 28 crates and a maintenance crate, `xtask
 - `textweaver`, the terminal reader, built from `crates/textweaver-tui`;
 - `tw`, the command-line tool, built from `crates/textweaver-cli`.
 
-A third program, `textweaver-gui`, is a feasibility spike for the native GUI ([ADR-0014](adr/0014-gui-toolkit.md)). It is not built by default.
+A third program, `textweaver-gui`, is a feasibility spike for the native GUI on wxDragon ([ADR-0014](adr/0014-gui-toolkit.md)). It is not built by default. On Saturday, September 26, 2026, Jon chose Xilem, Linebender's all-Rust toolkit, for the real GUI: Wave 3 builds it in a new crate, `textweaver-xilem`, and the wxDragon spike stays as a fallback until the new GUI passes the same accessibility checks. The plan is Agent W3b's brief in [tasks.md](tasks.md).
 
 Three helper programs run speech engines in their own processes: `textweaver-eci-host` (Eloquence), `textweaver-sapi-host` (SAPI5 voices), and `textweaver-dectalk-host` (DECtalk), each in a 64-bit build and, on Windows, a 32-bit `-x86` build. `cargo xtask hosts` builds them.
 
@@ -28,7 +28,7 @@ The crates are grouped here by the part of the system they serve. For each crate
 ### Documents
 
 - **`textweaver-text`**: the document model. A `Document` is canonical text in a rope plus `Marker`s. Units (grapheme, word, sentence, line, paragraph), navigation, go to, history, search, and narration (`narrate::plan`) are pure functions of a document and a position. ADRs: [0002](adr/0002-text-model.md), [0005](adr/0005-narration-and-offset-map.md). Depends on core.
-- **`textweaver-formats`**: loaders. Text, Markdown, HTML, EPUB, DOCX, and PDF, a registry that picks the loader by extension, a document cache, and exports to Markdown, HTML, and text. An optional `pandoc` feature adds a Pandoc loader. ADRs: [0002](adr/0002-text-model.md), [0010](adr/0010-pdf-loader.md). Depends on core and text.
+- **`textweaver-formats`**: loaders. Text, Markdown, HTML, EPUB, DOCX, and PDF, a registry that picks the loader by extension, a document cache, and exports to Markdown, HTML, and text. The loaders refuse binary files and limit nesting depth and counters, so a hostile file cannot crash a batch. An optional `pandoc` feature adds the one Pandoc loader, sandboxed and with a timeout; only `tw convert` registers it. ADRs: [0002](adr/0002-text-model.md), [0010](adr/0010-pdf-loader.md). Depends on core and text.
 - **`textweaver-math`**: LaTeX and ASCIIMath parsed into one tree, written as MathML, spoken as English with an offset map, navigable part by part, and found in plain text without mistaking prices for math. ADR: [0018](adr/0018-math.md). Depends on core.
 - **`textweaver-cite`**: the reference library, DOI and ISBN lookup, BibTeX, RIS, and CSL-JSON, CSL formatting, and Pandoc citation keys. ADR: [0019](adr/0019-citations.md). Depends on core.
 
@@ -46,24 +46,24 @@ The crates are grouped here by the part of the system they serve. For each crate
 
 - **`textweaver-store`**: settings and key overrides, per-document state (position, history, bookmarks, notes, highlights), recent files, the library and its full-text index, folder sidecars and their merge rules, settings import and export, and the Star migration. ADR: [0001](adr/0001-workspace-and-dependencies.md). Depends on core and aids (for the `[reading_aids]` settings types).
 - **`textweaver-keymap`**: every action, key chords, layers, the default keys for the terminal and the GUI, overrides, conflict checks, and the generated help. ADR: [0006](adr/0006-keymap-and-actions.md). Depends on core.
-- **`textweaver-a11y`**: the `Announcer` trait, the announcement catalogue, and verbosity. ADR: [0006](adr/0006-keymap-and-actions.md). Depends on core.
+- **`textweaver-a11y`**: the `Announcer` trait, the announcement catalogue, verbosity, the accessibility mode with `route` (which decides whether each message, echo, caret move, and piece of read text goes to the voice, the status line, or both), and screen reader detection (`detect`). ADR: [0006](adr/0006-keymap-and-actions.md). Depends on core.
 - **`textweaver-editor`**: undo and redo over a rope, Markdown commands, find and replace, typing echo, autosave and recovery, and saving. Designed in section 6.6 of [the plan](plan.md). Depends on core.
 
 ### Application
 
-- **`textweaver-app`**: the application core. `App` owns all mutable state. Frontends send `Command`s to `App::dispatch` and act on the `Effect`s it returns; `App::poll_speech` applies speech status. It also holds the backend registry wiring, reading aids, themes, notes, the library list, and the JSON-RPC server (`rpc`). ADRs: [0003](adr/0003-speech-threading-and-event-timing.md), [0006](adr/0006-keymap-and-actions.md), [0015](adr/0015-json-rpc.md). Depends on core, text, formats, speech, store, keymap, a11y, editor, aids, theme, eci, sapi, apple, and dectalk.
+- **`textweaver-app`**: the application core. `App` owns all mutable state. Frontends send `Command`s to `App::dispatch` and act on the `Effect`s it returns; `App::poll_speech` applies speech status. It also holds the backend registry wiring, reading aids, themes, notes, the library list, the writer thread (`writer`, `writes`), finding marks again after outside edits (`relocate`), the structure of Markdown source while editing (`structure`), the authoring features (outline, spelling, citations, export, preview, templates), and the JSON-RPC server (`rpc`). ADRs: [0003](adr/0003-speech-threading-and-event-timing.md), [0006](adr/0006-keymap-and-actions.md), [0015](adr/0015-json-rpc.md). Depends on core, text, formats, speech, store, keymap, a11y, editor, aids, theme, eci, sapi, apple, dectalk, and, for export and citations in the reader, render, convert, and cite.
 
 ### Frontends
 
 - **`textweaver-tui`**: the terminal reader, on ratatui and crossterm; builds the `textweaver` program. ADRs: [0006](adr/0006-keymap-and-actions.md), [0020](adr/0020-themes.md), [0022](adr/0022-reading-aids.md). Depends on app, theme, and aids.
 - **`textweaver-cli`**: the `tw` program. One module per subcommand. `tw open` and `tw serve` run the terminal reader and the JSON-RPC server in process. ADRs: [0015](adr/0015-json-rpc.md), [0016](adr/0016-rendering-and-conversion.md), [0011](adr/0011-audio-export.md). Depends on app, tui, convert, render, writers, export, cite, vault, and dictation.
-- **`textweaver-gui`**: the GUI spike on wxDragon. ADR: [0014](adr/0014-gui-toolkit.md). Depends on app, aids, and fonts. Not a default member of the workspace.
+- **`textweaver-gui`**: the GUI spike on wxDragon, kept as a fallback while Wave 3 builds the Xilem GUI. ADR: [0014](adr/0014-gui-toolkit.md). Depends on app, aids, and fonts. Not a default member of the workspace.
 
 ### Output and study tools
 
 - **`textweaver-render`**: Markdown to accessible HTML, with two engines, four flavors, math as MathML, and MiniJinja templates. ADRs: [0016](adr/0016-rendering-and-conversion.md), [0018](adr/0018-math.md). Depends on math.
-- **`textweaver-convert`**: converts files and folder trees on every core, skipping what is up to date, and watches folders. ADR: [0016](adr/0016-rendering-and-conversion.md). Depends on core, text, formats, render, and writers.
-- **`textweaver-writers`**: EPUB 3, DOCX, BRF braille, and tagged PDF, written from a `Document`. ADR: [0017](adr/0017-writers.md). Depends on core, text, and fonts.
+- **`textweaver-convert`**: converts files and folder trees on every core, skipping what is up to date, and watches folders. It formats citations with a References section. ADR: [0016](adr/0016-rendering-and-conversion.md). Depends on core, text, formats, render, writers, and cite.
+- **`textweaver-writers`**: EPUB 3, DOCX, BRF braille, and tagged PDF, written from a `Document`, with math typeset in each. ADR: [0017](adr/0017-writers.md). Depends on core, text, fonts, and math.
 - **`textweaver-fonts`**: the bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic) and a scan of installed fonts. ADRs: [0017](adr/0017-writers.md), [0022](adr/0022-reading-aids.md). Depends on nothing in the workspace.
 - **`textweaver-theme`**: the 23 themes, user themes, contrast checks, and output for the terminal, the GUI, and CSS. ADR: [0020](adr/0020-themes.md). Depends on nothing in the workspace.
 - **`textweaver-aids`**: RSVP, bionic reading, text spacing, fonts, the reading ruler, difficult words, reading level, and syllables, as pure data in and out. ADR: [0022](adr/0022-reading-aids.md). Depends on core, text, and fonts.
@@ -72,7 +72,7 @@ The crates are grouped here by the part of the system they serve. For each crate
 
 ### Tools
 
-- **`xtask`**: `cargo xtask bench`, `dist`, `hosts`, `eci-host`, `sapi-host`, `keyboard` (writes [keyboard.md](keyboard.md)), and `parity` (writes [the parity report](parity-report.md)). Depends on app, formats, keymap, and text.
+- **`xtask`**: `cargo xtask bench` and `startup` (with a baseline gate), `soak`, `dist`, `appimage`, `release`, `hosts`, `eci-host`, `sapi-host`, `keyboard` (writes [keyboard.md](keyboard.md)), `deps` (checks the dependency direction), `notices` (writes `THIRD-PARTY-NOTICES.md`), and `parity` (writes [the parity report](parity-report.md)). Depends on formats, keymap, and text, and on app for the benchmarks.
 
 ## Dependency direction
 
@@ -85,7 +85,9 @@ Dependencies point down, from the frontends to the foundation, and never back up
 - `textweaver-app` is the only crate that knows about everything. Frontends depend on the app, never on each other, except that the CLI runs the TUI in process for `tw open`.
 - Output crates (render, convert, writers) do not depend on speech or the app, so conversion works with no speech at all.
 
-Two rules changed after ADR-0001 was written: speech depends on math, because math is spoken inside the normalization pipeline, and store depends on aids, for the reading-aid settings types. Both still keep documents out of speech.
+Three rules changed after ADR-0001 was written. Speech depends on math, because math is spoken inside the normalization pipeline. Store depends on aids, for the reading-aid settings types. And since Phase 2 the app depends on render, convert, and cite, because the reader exports, previews, and inserts citations. Documents still stay out of speech.
+
+`cargo xtask deps --check` checks these rules and runs in CI. It refuses a forbidden edge: core depending on anything, speech reaching text or formats, store reaching more than core, or the reader reaching the conversion and citation stack. Two known exceptions are reported as "allowed for now" without failing: store on aids, and the reader reaching convert, render, writers, and cite through the app. Wave 3 plans to remove both: the settings types move into store (Agent W3c), and in-reader export and citations become an app feature, on by default and in releases, so a lean reader can still be built.
 
 The crates in levels, from the bottom up. Each crate depends only on crates in lower levels:
 
@@ -111,7 +113,7 @@ In the terminal reader, the main thread runs the event loop in `crates/textweave
 3. draws the screen, and parks the terminal's hardware cursor where attention is (the prompt, the list item, the Speech Cursor line, the spoken word, or the caret), so screen readers and magnifiers follow it;
 4. waits briefly for a key, then turns the key into a `Command` through the keymap and dispatches it.
 
-Nothing on this thread blocks on audio or on the disk. A key press is handled in milliseconds even while a long document is being read or saved.
+Nothing on this thread blocks on audio or on the disk. A key press is handled in milliseconds even while a long document is being read or saved. Other slow work goes to short-lived background threads too: exporting from the reader, looking up a DOI or ISBN, and parsing the Markdown source of a file of 256 KB or more when edit mode opens it.
 
 `tw serve --stdio` runs the same core on its calling thread and reads JSON-RPC messages on a second thread, polling speech every 20 milliseconds while it waits ([ADR-0015](adr/0015-json-rpc.md)).
 
@@ -131,7 +133,7 @@ Eloquence, SAPI5 voices, and DECtalk each run in a separate host process ([ADR-0
 - the playback client feeds the audio to the output device (through rodio, on its own audio thread) and keeps the audio clock;
 - word events are emitted as each word is heard.
 
-A host that crashes or stalls is killed and started again, and reading resumes from the last word heard. A new host starts without holding up the speech thread: requests queue until it reports ready, which `poll` notices. A host also lets a 32-bit engine work with 64-bit textweaver, and keeps a proprietary engine at arm's length from the reader.
+A host that crashes or stalls is killed and started again, and reading resumes from the last word heard, at most three times for one sentence. Hosts never outlive textweaver: a host exits when its input closes, on Windows every host is in a Job Object that ends with textweaver, and on Linux each asks for a signal when its parent dies. A new host starts without holding up the speech thread: requests queue until it reports ready, which `poll` notices. A host also lets a 32-bit engine work with 64-bit textweaver, and keeps a proprietary engine at arm's length from the reader.
 
 ### The writer thread
 
@@ -148,7 +150,7 @@ Every file the app writes while it runs goes through one writer thread (`crates/
 
 This is the path a document takes from the disk to your ears, with the highlight following along. The [speech pipeline page](site/speech-pipeline.html) walks through it one step at a time.
 
-1. **Load.** `textweaver-formats` picks a loader by the file's extension and builds a `Document`: canonical text in a rope, plus markers for headings, paragraphs, lists, tables, links, code, pages, and sections ([ADR-0002](adr/0002-text-model.md)). Positions are `CharPos`, counts of Unicode scalar values. They are what gets saved.
+1. **Load.** `textweaver-formats` picks a loader by the file's extension and builds a `Document`: canonical text in a rope, plus markers for headings, paragraphs, lists, tables, links, code, math, strikethrough, horizontal rules, pages, and sections ([ADR-0002](adr/0002-text-model.md)). Positions are `CharPos`, counts of Unicode scalar values. They are what gets saved.
 2. **Units.** `textweaver-text` finds words and sentences with Unicode text segmentation (UAX #29), with an abbreviation list so "Dr." does not end a sentence. Navigation moves by these units and by markers.
 3. **Plan.** When you press Space, the app asks `narrate::plan` for utterances covering about ten minutes of speech from the cursor (32,768 characters, ended at a sentence boundary). Each utterance is about one sentence. Structure the eye sees but the ear would miss, such as "heading level 2" or a table's row and column, is added as inserted speech ([ADR-0005](adr/0005-narration-and-offset-map.md)). When that window has been read, the next one is planned.
 4. **Hand over.** The app calls `SpeechService::read`, which returns a new **reading generation** (see below).
@@ -203,8 +205,10 @@ On engines that report words, changing the rate, pitch, or volume while reading 
 Every state change is announced through the `Announcer` trait in `textweaver-a11y` ([ADR-0006](adr/0006-keymap-and-actions.md)). The app filters by `[speech] verbosity` and sends each announcement to:
 
 - the status line, which the terminal reader draws and screen readers read;
-- the speech service, when self-voicing is on, but never over the reading itself unless it is an error;
+- the speech service, when the accessibility mode lets textweaver speak, but never over the reading itself unless it is an error;
 - JSON-RPC clients, as `announcement` notifications.
+
+Before anything is spoken or written to the status line, the app asks `textweaver_a11y::route` where it goes. The answer depends on the kind of output (a message, typing echo, a caret move, read text, or a Speech Cursor line) and on `[accessibility] mode`: self-voicing, hybrid, or screen reader. So a screen reader that reads the status line never hears the same thing twice. New code must route its announcements the same way. [Using textweaver with a screen reader](screen-readers.md) describes the modes for users.
 
 The GUI spike sends announcements to the screen reader as UI Automation notifications through the `live-region` crate.
 

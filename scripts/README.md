@@ -30,6 +30,7 @@ With `--release TAG` (a tag such as `v0.1.0-alpha.4`, or `latest` for the newest
 - It installs the AppImage as `~/.local/bin/textweaver.AppImage` (or under `--prefix DIR`), links `textweaver` and `tw` to it, and adds a menu entry, an icon, and the quick start.
 - Where FUSE is missing, so AppImages cannot run, it installs the plain tarball instead, checked the same way, into `lib/textweaver/` with `textweaver` and `tw` linked from `bin/`. `--tarball` asks for the tarball anyway; `--appimage` asks for the AppImage anyway.
 - It is for x86_64 computers. Elsewhere, build from source.
+- It needs a release with Linux packages. The first is the release after 0.1.0-alpha.3, which has Windows and macOS packages only; until then, build from source.
 - `--uninstall` removes either kind of install; `scripts/update.sh` installs the newest release of the same kind.
 
 ```bash
@@ -147,6 +148,8 @@ Run every check CI runs, so contributors see CI's answer before they push:
 The two Python steps need Python 3; without it they are skipped and the summary says so.
 
 On Windows it uses `--features textweaver-speech/omnivox` instead of `--all-features`, and it also builds the 32-bit engine hosts. `--only fmt,clippy` runs some of the steps, and `--docker` runs everything in the development container.
+
+Three CI checks are not in dev-check: `cargo xtask deps --check`, `cargo xtask notices --check`, and cargo-deny. [CONTRIBUTING.md](../CONTRIBUTING.md#the-checks) shows how to run them.
 
 ### convert-folder.sh and convert-folder.ps1
 
