@@ -238,7 +238,12 @@ mod platform {
             return false;
         };
         dir.filter_map(Result::ok)
-            .filter(|e| e.file_name().to_string_lossy().bytes().all(|b| b.is_ascii_digit()))
+            .filter(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .bytes()
+                    .all(|b| b.is_ascii_digit())
+            })
             .any(|e| {
                 std::fs::read_to_string(e.path().join("comm")).is_ok_and(|c| c.trim() == "orca")
             })
