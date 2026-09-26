@@ -258,8 +258,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
 <script type="application/json" id="site-data">
 {
  "counts": {
-  "done": 39,
-  "not yet": 4,
+  "done": 42,
+  "not yet": 5,
   "partial": 6
  },
  "generator": "tools/gen_site_data.py",
@@ -307,13 +307,33 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
-     "description": "Reopening a document puts you back where you stopped reading.",
+     "description": "Reopening a document puts you back where you stopped reading, even after the file changed in another program.",
+     "guide": {
+      "href": "../notes.md",
+      "title": "Bookmarks, notes, and highlights guide"
+     },
+     "name": "Position restored on reopen",
+     "note": "Saved in the background; your place, bookmarks, and notes are found again from their text.",
+     "status": "done"
+    },
+    {
+     "description": "Move by table row and cell with the column header, follow a link or footnote, and come back.",
      "guide": {
       "href": "../reading.md",
       "title": "Reading and navigating guide"
      },
-     "name": "Position restored on reopen",
-     "note": "The position is saved when you quit.",
+     "name": "Tables, links, and footnotes",
+     "note": "Ctrl+Alt+arrows in tables; Alt+Shift+F follows a link, wiki links included.",
+     "status": "done"
+    },
+    {
+     "description": "Choose who speaks: textweaver, your screen reader, or both, so nothing is heard twice.",
+     "guide": {
+      "href": "../screen-readers.md",
+      "title": "Screen reader guide"
+     },
+     "name": "Screen reader modes",
+     "note": "Alt+Shift+A cycles self-voicing, hybrid, and screen reader.",
      "status": "done"
     },
     {
@@ -378,7 +398,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
       "title": "What Star did that textweaver does not do yet"
      },
      "name": "DAISY, OCR of scans, archives, and PPTX",
-     "note": "Planned; see the list of gaps.",
+     "note": "Planned for Wave 3, OCR with the pure-Rust ocrs engine first.",
      "status": "not yet"
     }
    ],
@@ -455,6 +475,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "name": "Templates",
      "note": "From the command palette: new from template.",
      "status": "done"
+    },
+    {
+     "description": "Copy to the system clipboard, and cut and paste while writing.",
+     "guide": {
+      "href": "../editing.md",
+      "title": "Editing guide"
+     },
+     "name": "Copy, cut, and paste",
+     "note": "Ctrl+C copies through the terminal (OSC 52), over SSH too.",
+     "status": "done"
     }
    ],
    "name": "Writing"
@@ -522,13 +552,13 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "partial"
     },
     {
-     "description": "Pick a voice from a list while reading.",
+     "description": "Pick a voice from a list while reading, with your favourites first.",
      "guide": {
       "href": "../speech.md",
       "title": "Speech engines and voices guide"
      },
      "name": "Choose a voice",
-     "note": "Alt+V in the terminal; Ctrl+Shift+V in the GUI.",
+     "note": "Alt+V in the terminal; Space marks a favourite.",
      "status": "done"
     },
     {
@@ -538,8 +568,18 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
       "title": "Troubleshooting guide"
      },
      "name": "Crash and stall recovery",
-     "note": "The log file records what happened.",
+     "note": "Shift+F8 restarts speech at any time.",
      "status": "done"
+    },
+    {
+     "description": "Download and use Piper voices, and manage every engine's voices in one list.",
+     "guide": {
+      "href": "../roadmap.md",
+      "title": "Roadmap"
+     },
+     "name": "Piper neural voices and a voice manager",
+     "note": "Planned for Wave 3, running Piper inside textweaver.",
+     "status": "not yet"
     }
    ],
    "name": "Speech"
@@ -557,12 +597,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
-     "description": "LaTeX and ASCIIMath become MathML in converted HTML.",
+     "description": "LaTeX and ASCIIMath become MathML in HTML and EPUB, Word equations in DOCX, and typeset formulas in PDF.",
      "guide": {
       "href": "../math.md",
       "title": "Math guide"
      },
-     "name": "Math in HTML output",
+     "name": "Math in converted documents",
      "note": "Screen readers read MathML directly.",
      "status": "done"
     },
@@ -583,7 +623,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
       "title": "Citations guide"
      },
      "name": "Citations",
-     "note": "Through tw cite.",
+     "note": "Through tw cite; tw convert adds a References section.",
      "status": "done"
     }
    ],
@@ -718,7 +758,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
       "title": "Dictation guide"
      },
      "name": "Dictation from the microphone",
-     "note": "Only audio files for now.",
+     "note": "Only audio files for now; Whisper inside textweaver is planned for Wave 3.",
      "status": "not yet"
     },
     {
@@ -767,34 +807,34 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
-     "description": "Build and install from source with one script.",
+     "description": "Build and install from source with one script, or install a release.",
      "guide": {
       "href": "../install.md",
       "title": "Installation guide"
      },
      "name": "Linux install script",
-     "note": "Needs Rust.",
+     "note": "Building from source needs Rust; the script installs it after asking.",
      "status": "done"
     },
     {
-     "description": "Ready-made packages for Linux distributions.",
+     "description": "One file that runs on most Linux distributions from 2022 on, with a plain tarball as a fallback.",
      "guide": {
       "href": "../install.md",
       "title": "Installation guide"
      },
-     "name": "Linux packages",
-     "note": "Use the install script for now.",
-     "status": "not yet"
+     "name": "Linux AppImage",
+     "note": "Built by the release workflow; the first release with it is the one after 0.1.0-alpha.3.",
+     "status": "partial"
     },
     {
-     "description": "A native window with menus, for people who prefer a GUI.",
+     "description": "A native window for people who prefer a GUI, in the all-Rust Xilem toolkit with AccessKit.",
      "guide": {
-      "href": "../adr/0014-gui-toolkit.md",
-      "title": "ADR-0014: GUI toolkit (wxDragon)"
+      "href": "../roadmap.md",
+      "title": "Roadmap"
      },
-     "name": "Native GUI on wxDragon",
-     "note": "A feasibility spike, not built by default.",
-     "status": "partial"
+     "name": "Native GUI on Xilem",
+     "note": "Planned for Wave 3; a wxDragon spike stays as a fallback.",
+     "status": "not yet"
     }
    ],
    "name": "Platforms"
@@ -826,7 +866,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "title": "Reading aids"
   }
  ],
- "total": 49
+ "total": 53
 }
 </script>
 <!-- END generated: site-data -->
