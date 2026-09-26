@@ -91,6 +91,40 @@ pub fn typed_char(k: &KeyEvent) -> Option<char> {
     }
 }
 
+/// The reading aids drawn on a row.
+struct RowAids<'a> {
+    /// Bionic reading: ranges drawn bold.
+    bold: &'a [CharRange],
+    /// Difficult words: ranges underlined.
+    difficult: &'a [CharRange],
+    /// Syllable breaks: the separator is drawn before these positions.
+    breaks: &'a [CharPos],
+    /// The syllable separator.
+    sep: &'a str,
+}
+
+/// The math exploration move for a key, if it is one: arrows, Home, End,
+/// Space, Enter, and Escape, without modifiers.
+fn math_move(k: &KeyEvent) -> Option<textweaver_app::MathMove> {
+    use textweaver_app::MathMove as M;
+    if k.modifiers
+        .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SHIFT)
+    {
+        return None;
+    }
+    Some(match k.code {
+        KeyCode::Right => M::Next,
+        KeyCode::Left => M::Previous,
+        KeyCode::Down => M::Enter,
+        KeyCode::Up => M::Exit,
+        KeyCode::Home => M::First,
+        KeyCode::End => M::Last,
+        KeyCode::Char(' ') | KeyCode::Enter => M::Repeat,
+        KeyCode::Esc => M::Leave,
+        _ => return None,
+    })
+}
+
 /// Most recalled answers kept per prompt.
 const PROMPT_HISTORY: usize = 50;
 
@@ -123,6 +157,8 @@ pub struct Tui {
     /// The title line's position while it is frozen (`[accessibility]
     /// quiet_screen` during continuous reading).
     frozen_position: Option<String>,
+    /// Physical keys peeked from the Windows console, for the digit row.
+    digits: crate::physical::DigitKeys,
 }
 
 /// Screen areas of the last draw.
@@ -163,6 +199,43 @@ impl Tui {
             status_blank_until: None,
             clipboard_out: None,
             frozen_position: None,
+            digits: crate::physical::DigitKeys::default(),
+        }
+    }
+
+    /// The physical keys the event loop peeked from the console (Windows),
+    /// matched with the next character events.
+    pub fn digit_keys_mut(&mut self) -> &mut crate::physical::DigitKeys {
+        &mut self.digits
+    }
+
+    /// The chord for a browse-mode key press, with the digit row matched by
+    /// the physical key ([`crate::physical`]): `1` to `6` and Shift with
+    /// them reach the heading levels on any layout.
+    pub fn browse_chord(&mut self, k: &KeyEvent) -> Option<KeyChord> {
+        let c = chord(k)?;
+        let KeyCode::Char(ch) = k.code else {
+            return Some(c);
+        };
+        if k.modifiers
+            .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SUPER)
+        {
+            return Some(c);
+        }
+        use textweaver_app::keymap::digits::{DigitRow, digit_row_chord, from_typed};
+        match self.digits.take(ch) {
+            // The console named the key: a digit-row key is its digit.
+            Some(Some((d, shift))) => return digit_row_chord(d, shift).or(Some(c)),
+            Some(None) => return Some(c),
+            None => {}
+        }
+        let row = textweaver_app::digit_row(self.app.settings().keyboard.digit_row);
+        let layer = self.app.mode().layer();
+        let unbound = self.app.keymap().lookup(&c, layer).is_none() && extra_lookup(&c, layer).is_none();
+        match row {
+            DigitRow::Azerty => from_typed(ch, row).or(Some(c)),
+            DigitRow::Auto if unbound => from_typed(ch, row).or(Some(c)),
+            DigitRow::Auto => Some(c),
         }
     }
 
@@ -302,6 +375,17 @@ impl Tui {
 
     /// Handles one key press.
     pub fn handle_key(&mut self, k: KeyEvent) {
+        if self.app.math_exploring() && !self.app.confirmation_pending() {
+            if let Some(mv) = math_move(&k) {
+                self.dispatch(Command::MathStep(mv));
+                return;
+            }
+            if !matches!(k.code, KeyCode::Modifier(_)) {
+                // Any other key leaves math exploration and does what it
+                // usually does.
+                self.app.stop_math_exploring();
+            }
+        }
         if self.app.confirmation_pending() {
             let answer = match k.code {
                 KeyCode::Esc => Confirm::No,
@@ -370,7 +454,9 @@ impl Tui {
     }
 
     fn browse_key(&mut self, k: KeyEvent) {
-        let Some(c) = chord(&k) else { return };
+        let Some(c) = self.browse_chord(&k) else {
+            return;
+        };
         let layer = self.app.mode().layer();
         if let Some(action) = self.app.keymap().lookup(&c, layer) {
             self.dispatch(Command::Action(action));
@@ -904,9 +990,12 @@ impl Tui {
     ///
     /// Reading aids drawn here: bionic reading (the start of each word in
     /// bold), the reading ruler and current line (a gutter mark plus
-    /// underline, never colour alone; dim only for the opt-in mask), and
+    /// underline, never colour alone; dim only for the opt-in mask),
     /// terminal text spacing (blank rows between lines and paragraphs,
-    /// wider spaces between words).
+    /// wider spaces between words), syllables (a separator drawn between
+    /// syllables, at the app's break positions, so highlights and the
+    /// cursor keep the document's positions), and difficult words
+    /// (underlined).
     fn draw_body(&self, f: &mut Frame<'_>, area: Rect, theme: &Theme) -> Option<Position> {
         f.render_widget(Block::new().style(theme.text), area);
         let Some(s) = self.app.session() else {
@@ -936,13 +1025,40 @@ impl Tui {
             usize::from(settings.display.scroll_margin).min(rows_wanted.saturating_sub(1) / 2);
         let focus = self.app.focus();
         let top = self.app.viewport().top_line;
-        let rows = layout::window_cells(doc, top, width, rows_wanted, cells, focus, margin);
+        let syllables = settings.reading_aids.syllables;
+        let line_breaks = |r: CharRange| self.app.syllable_breaks(r);
+        let decor = syllables.then(|| layout::Decor {
+            breaks: &line_breaks,
+            text: self.app.syllable_separator().to_owned(),
+        });
+        let sep_width = decor.as_ref().map_or(0, layout::Decor::width);
+        let rows = layout::window_decor(
+            doc,
+            top,
+            width,
+            rows_wanted,
+            cells,
+            decor.as_ref(),
+            focus,
+            margin,
+        );
         let window = match (rows.first(), rows.last()) {
             (Some(a), Some(b)) => CharRange::new(a.range.start, b.range.end.saturating_add(1)),
             _ => CharRange::empty(0),
         };
         let highlights = self.app.highlights(window);
         let bold = self.app.bionic_ranges(window);
+        let difficult = self.app.difficult_ranges(window);
+        // The syllable breaks of each line shown, as the layout used them.
+        let mut breaks: HashMap<usize, Vec<CharPos>> = HashMap::new();
+        if syllables {
+            for r in &rows {
+                breaks
+                    .entry(r.line)
+                    .or_insert_with(|| line_breaks(textweaver_app::text_util::line_range(doc, r.line)));
+            }
+        }
+        let sep = self.app.syllable_separator().to_owned();
         let view_rows: Vec<ViewRow> = rows
             .iter()
             .map(|r| ViewRow {
@@ -974,7 +1090,14 @@ impl Tui {
                 let c = mark.gutter.unwrap_or(' ');
                 spans.push(Span::styled(c.to_string(), theme.gutter));
             }
-            let mut text = self.row_spans(doc, row, &highlights, &bold, theme, cells);
+            let row_breaks = breaks.get(&row.line).map_or(&[][..], Vec::as_slice);
+            let aids = RowAids {
+                bold: &bold,
+                difficult: &difficult,
+                breaks: row_breaks,
+                sep: &sep,
+            };
+            let mut text = self.row_spans(doc, row, &highlights, &aids, theme, cells);
             let extra = ruler_modifier(mark);
             if !extra.is_empty() {
                 for sp in &mut text {
@@ -985,7 +1108,8 @@ impl Tui {
             if let Some(fp) = focus.filter(|&p| row.holds(p))
                 && cursor.is_none()
             {
-                let col = layout::column_cells(doc, row, fp, cells).min(width.saturating_sub(1));
+                let col = layout::column_decor(doc, row, fp, cells, row_breaks, sep_width)
+                    .min(width.saturating_sub(1));
                 let x = area.x + gutter + u16::try_from(col).unwrap_or(0);
                 let y = area.y + u16::try_from(lines.len()).unwrap_or(0);
                 cursor = Some(Position::new(x, y));
@@ -1060,7 +1184,7 @@ impl Tui {
         doc: &textweaver_app::text::Document,
         row: &Row,
         highlights: &[textweaver_app::Highlight],
-        bold: &[CharRange],
+        aids: &RowAids<'_>,
         theme: &Theme,
         cells: Cells,
     ) -> Vec<Span<'static>> {
@@ -1068,7 +1192,10 @@ impl Tui {
         let mut run = String::new();
         let mut run_style: Option<Style> = None;
         let chars = doc.text().slice(row.range.to_range()).chars();
+        let bold = aids.bold;
+        let difficult = aids.difficult;
         let mut b = bold.partition_point(|r| r.end <= row.range.start);
+        let mut d = difficult.partition_point(|r| r.end <= row.range.start);
         for (i, c) in chars.enumerate() {
             let pos = CharPos(row.range.start.0 + i);
             let mut style = highlights
@@ -1081,11 +1208,22 @@ impl Tui {
             if bold.get(b).is_some_and(|r| r.contains(pos)) {
                 style = style.add_modifier(Modifier::BOLD);
             }
+            while d < difficult.len() && difficult[d].end <= pos {
+                d += 1;
+            }
+            if difficult.get(d).is_some_and(|r| r.contains(pos)) {
+                style = style.add_modifier(Modifier::UNDERLINED);
+            }
             if run_style != Some(style) {
                 if let Some(st) = run_style {
                     spans.push(Span::styled(std::mem::take(&mut run), st));
                 }
                 run_style = Some(style);
+            }
+            // A syllable separator takes the style of the char after it,
+            // so a highlight over a word covers its separators too.
+            if i > 0 && aids.breaks.binary_search(&pos).is_ok() {
+                run.push_str(aids.sep);
             }
             run.push_str(&cells.text(c));
         }

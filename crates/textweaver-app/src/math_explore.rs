@@ -123,6 +123,11 @@ impl App {
         self.math_explore.is_some()
     }
 
+    /// Leaves math exploration without a word (another key was pressed).
+    pub fn stop_math_exploring(&mut self) {
+        self.math_explore = None;
+    }
+
     /// The part of the formula being explored, highlighted.
     pub fn math_explore_span(&self) -> Option<CharRange> {
         self.math_explore.as_ref().map(|m| m.span)

@@ -744,6 +744,58 @@ mod tests {
         assert_eq!(folder_url(Path::new("D:\\notes")), "file:///D:/notes/");
     }
 
+    /// Item 4 of Agent P2e: an export says it started (the command's own
+    /// "Exporting to PDF."), then, when it takes long, how long so far:
+    /// after 2 seconds, then every 10, never more often.
+    #[test]
+    fn long_exports_say_progress_without_flooding() {
+        use std::time::{Duration, Instant};
+        let mut app = App::new(crate::AppConfig::for_tests());
+        let (tx, rx) = std::sync::mpsc::channel();
+        let t0 = Instant::now();
+        app.authoring.jobs.push(Job::Export {
+            what: "Exported to PDF".into(),
+            kind: ExportKind::Export,
+            rx,
+            progress: Progress::new(t0),
+        });
+        app.authoring_tick(t0 + Duration::from_millis(1500));
+        assert!(!app.status_text().starts_with("Still"), "{}", app.status_text());
+        app.authoring_tick(t0 + Duration::from_millis(2100));
+        assert_eq!(app.status_text(), "Still exporting to PDF, 2 seconds.");
+        app.tell("Something else.");
+        for ms in [2500, 5000, 9000, 12000] {
+            app.authoring_tick(t0 + Duration::from_millis(ms));
+            assert_eq!(app.status_text(), "Something else.", "at {ms} ms");
+        }
+        app.authoring_tick(t0 + Duration::from_millis(12200));
+        assert_eq!(app.status_text(), "Still exporting to PDF, 12 seconds.");
+        // A preview being rewritten stays quiet.
+        let (_tx2, rx2) = std::sync::mpsc::channel();
+        app.authoring.jobs.push(Job::Export {
+            what: "Preview".into(),
+            kind: ExportKind::PreviewRefresh,
+            rx: rx2,
+            progress: Progress::new(t0),
+        });
+        app.tell("Quiet.");
+        app.authoring_tick(t0 + Duration::from_millis(30000));
+        assert!(app.status_text().starts_with("Still exporting to PDF, 30"));
+        drop(tx);
+    }
+
+    #[test]
+    fn page_headings_have_ids_and_texts() {
+        let html = "<h1 id=\"intro\">Intro <em>here</em></h1><p>x</p><h2 id=\"methods-1\">Methods</h2>";
+        assert_eq!(
+            page_headings(html),
+            vec![
+                ("intro".to_owned(), "introhere".to_owned()),
+                ("methods-1".to_owned(), "methods".to_owned())
+            ]
+        );
+    }
+
     #[test]
     fn front_matter_names_a_bibliography() {
         let folder = Path::new("/docs");

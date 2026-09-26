@@ -3,6 +3,12 @@
 //! Only the lines from the viewport's first line down to what fits (plus
 //! enough to reach the focus position) are laid out, so opening a large
 //! document costs nothing extra. Positions stay document-absolute.
+//!
+//! [`Decor`] draws extra text between chars without changing positions:
+//! the syllable separators of the syllable display (`read·a·bil·i·ty`).
+//! A separator takes columns before its char, so wrapping and the
+//! cursor's column count it, while every highlight and the cursor stay on
+//! the document's own positions.
 
 use ratatui::text::Span;
 use textweaver_app::core::{CharPos, CharRange};
@@ -65,6 +71,23 @@ pub fn display_text(c: char, tab: usize) -> String {
     }
 }
 
+/// Text drawn before some chars without changing positions: the syllable
+/// separators.
+pub struct Decor<'a> {
+    /// The positions in a line (given as its range) that get the text
+    /// before them, in order.
+    pub breaks: &'a dyn Fn(CharRange) -> Vec<CharPos>,
+    /// The text drawn at each break.
+    pub text: String,
+}
+
+impl Decor<'_> {
+    /// Columns the text takes.
+    pub fn width(&self) -> usize {
+        Span::raw(self.text.as_str()).width()
+    }
+}
+
 /// Word-wraps `chars` to `width` columns. Returns `(start, end)` char
 /// offsets of each row; every char belongs to exactly one row, and an empty
 /// line is one empty row. Whitespace at a break stays at the end of the
@@ -75,13 +98,23 @@ pub fn wrap(chars: &[char], width: usize, tab: usize) -> Vec<(usize, usize)> {
 
 /// [`wrap`] measuring with `cells`.
 pub fn wrap_cells(chars: &[char], width: usize, cells: Cells) -> Vec<(usize, usize)> {
+    wrap_extra(chars, width, cells, |_| 0)
+}
+
+/// [`wrap_cells`] with `extra(i)` more columns before char `i` (decor).
+pub fn wrap_extra(
+    chars: &[char],
+    width: usize,
+    cells: Cells,
+    extra: impl Fn(usize) -> usize,
+) -> Vec<(usize, usize)> {
     let width = width.max(1);
     let mut rows = Vec::new();
     let mut start = 0;
     let mut used = 0;
     let mut last_break: Option<usize> = None;
     for (i, &c) in chars.iter().enumerate() {
-        let w = cells.width(c);
+        let w = cells.width(c) + extra(i);
         if used + w > width && i > start && !c.is_whitespace() {
             let brk = match last_break {
                 Some(b) if b > start && b <= i => b,
@@ -89,7 +122,7 @@ pub fn wrap_cells(chars: &[char], width: usize, cells: Cells) -> Vec<(usize, usi
             };
             rows.push((start, brk));
             start = brk;
-            used = chars[start..i].iter().map(|&c| cells.width(c)).sum();
+            used = (start..i).map(|j| cells.width(chars[j]) + extra(j)).sum();
             last_break = chars[start..i]
                 .iter()
                 .rposition(|c| c.is_whitespace())
@@ -155,6 +188,21 @@ pub fn window_cells(
     focus: Option<CharPos>,
     margin: usize,
 ) -> Vec<Row> {
+    window_decor(doc, top_line, width, height, cells, None, focus, margin)
+}
+
+/// [`window_cells`] with `decor` drawn between chars.
+#[allow(clippy::too_many_arguments)]
+pub fn window_decor(
+    doc: &Document,
+    top_line: usize,
+    width: usize,
+    height: usize,
+    cells: Cells,
+    decor: Option<&Decor<'_>>,
+    focus: Option<CharPos>,
+    margin: usize,
+) -> Vec<Row> {
     let lines = line_count(doc);
     let limit = height.saturating_mul(4).max(height + 1).max(512);
     let mut rows: Vec<Row> = Vec::new();
@@ -163,7 +211,20 @@ pub fn window_cells(
     while line < lines {
         let base = line_range(doc, line).start.0;
         let chars = line_chars(doc, line);
-        let wrapped = wrap_cells(&chars, width, cells);
+        let wrapped = match decor {
+            Some(d) => {
+                let breaks = (d.breaks)(line_range(doc, line));
+                let w = d.width();
+                wrap_extra(&chars, width, cells, |i| {
+                    if breaks.binary_search(&CharPos(base + i)).is_ok() {
+                        w
+                    } else {
+                        0
+                    }
+                })
+            }
+            None => wrap_cells(&chars, width, cells),
+        };
         let n = wrapped.len();
         for (i, (a, b)) in wrapped.into_iter().enumerate() {
             let row = Row {
@@ -199,12 +260,32 @@ pub fn column(doc: &Document, row: &Row, pos: CharPos, tab: usize) -> usize {
 
 /// [`column()`] measuring with `cells`.
 pub fn column_cells(doc: &Document, row: &Row, pos: CharPos, cells: Cells) -> usize {
+    column_decor(doc, row, pos, cells, &[], 0)
+}
+
+/// [`column_cells`] counting `sep_width` columns at each of `breaks` (the
+/// row's decor positions, in order) before `pos`. A break at `pos` itself
+/// is counted, so the cursor sits on the char, after its separator.
+pub fn column_decor(
+    doc: &Document,
+    row: &Row,
+    pos: CharPos,
+    cells: Cells,
+    breaks: &[CharPos],
+    sep_width: usize,
+) -> usize {
     let end = pos.clamp_to(row.range.end.0).max(row.range.start);
-    doc.text()
+    let text: usize = doc
+        .text()
         .slice(row.range.start.0..end.0)
         .chars()
         .map(|c| cells.width(c))
-        .sum()
+        .sum();
+    let seps = breaks
+        .iter()
+        .filter(|b| **b > row.range.start && **b <= end && **b < row.range.end)
+        .count();
+    text + seps * sep_width
 }
 
 #[cfg(test)]
@@ -257,6 +338,25 @@ mod tests {
         let rows = window_cells(&doc, 0, 20, 1, cells, None, 0);
         assert_eq!(column_cells(&doc, &rows[0], CharPos(3), cells), 5);
         assert_eq!(cells.text(' '), "   ");
+    }
+
+    #[test]
+    fn decor_takes_columns_but_not_positions() {
+        let doc = Document::from_plain_text("readability test");
+        let breaks = |_: CharRange| vec![CharPos(4), CharPos(5), CharPos(8)];
+        let decor = Decor {
+            breaks: &breaks,
+            text: "\u{b7}".into(),
+        };
+        let rows = window_decor(&doc, 0, 40, 1, Cells::tab(4), Some(&decor), None, 0);
+        assert_eq!(rows[0].range, CharRange::new(0, 16));
+        // "read·a·bil|ity": the cursor on "i" (8) is after three separators.
+        let b = breaks(rows[0].range);
+        assert_eq!(column_decor(&doc, &rows[0], CharPos(8), Cells::tab(4), &b, 1), 10);
+        assert_eq!(column_decor(&doc, &rows[0], CharPos(3), Cells::tab(4), &b, 1), 3);
+        // Narrow: the separators count toward the width.
+        let rows = window_decor(&doc, 0, 14, 2, Cells::tab(4), Some(&decor), None, 0);
+        assert_eq!(rows[0].range, CharRange::new(0, 12));
     }
 
     #[test]
