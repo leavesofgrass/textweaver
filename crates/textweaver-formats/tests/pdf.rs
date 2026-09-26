@@ -229,25 +229,44 @@ fn broken_and_protected_pdfs_fail_clearly() {
     assert!(err.to_string().contains("not a readable PDF"), "{err}");
 }
 
-/// Load time of a large PDF named by `TW_PDF_BENCH` (for example one made
-/// with `python fixtures/a/make_pdfs.py big big.pdf 300`); run with
+/// Load times (fastest of five, from memory) of the PDF fixtures and of any
+/// PDFs named in `TW_PDF_BENCH` (`;`-separated; for example a large one
+/// made with `python fixtures/a/make_pdfs.py big big.pdf 300`); run with
 /// `cargo test --release -p textweaver-formats --test pdf -- --ignored --nocapture`.
 #[test]
-#[ignore = "benchmark; needs TW_PDF_BENCH"]
-fn large_pdf_load_time() {
-    let Some(path) = std::env::var_os("TW_PDF_BENCH") else {
-        return;
-    };
-    for _ in 0..3 {
-        let started = Instant::now();
-        let doc = Registry::with_builtins()
-            .load(&Source::Path(path.clone().into()), &LoadOptions::default())
-            .expect("loads");
+#[ignore = "benchmark"]
+fn pdf_load_times() {
+    let mut paths: Vec<PathBuf> = ["single.pdf", "columns.pdf", "running.pdf", "browser.pdf"]
+        .iter()
+        .map(|n| fixture(n))
+        .collect();
+    if let Some(extra) = std::env::var_os("TW_PDF_BENCH") {
+        paths.extend(std::env::split_paths(&extra));
+    }
+    let loader = textweaver_formats::PdfLoader;
+    for path in paths {
+        let data = std::fs::read(&path).expect("readable");
+        let source = Source::Bytes {
+            data,
+            hint: "pdf".into(),
+        };
+        let mut best = std::time::Duration::MAX;
+        let mut doc = None;
+        for _ in 0..5 {
+            let started = Instant::now();
+            let d = loader
+                .load(&source, &LoadOptions::default())
+                .expect("loads");
+            best = best.min(started.elapsed());
+            doc = Some(d);
+        }
+        let doc = doc.expect("loaded");
         eprintln!(
-            "{} pages, {} chars: {:?}",
+            "{}: {} pages, {} chars, {:?}",
+            path.display(),
             doc.meta.properties.get("pages").map_or("?", String::as_str),
             doc.len_chars(),
-            started.elapsed()
+            best
         );
     }
 }
