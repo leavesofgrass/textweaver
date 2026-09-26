@@ -59,6 +59,137 @@ pub struct SpeechSettings {
     pub latency_offset_ms: u32,
     /// Announcement verbosity.
     pub verbosity: Verbosity,
+    /// `[speech.eci]`: ETI-Eloquence through the ECI host (ADR-0007).
+    pub eci: EciSettings,
+    /// `[speech.sapi]`: Windows SAPI5 voices (ADR-0009).
+    pub sapi: SapiSettings,
+    /// `[speech.apple]`: Apple speech on macOS (ADR-0008).
+    pub apple: AppleSettings,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+/// Which pronunciation dictionaries the ECI backend loads (ADR-0007): the
+/// community IBMTTS dictionaries shipped with textweaver, none, or the
+/// user's own directory. Stored as `dictionaries = true`, `false`, or a
+/// path string (`"on"` and `"off"` are read too).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum EciDictionaries {
+    /// The bundled community dictionaries (the default).
+    #[default]
+    On,
+    /// No dictionaries.
+    Off,
+    /// Dictionaries from this directory (same layout as the bundled ones).
+    Path(PathBuf),
+}
+
+impl Serialize for EciDictionaries {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        match self {
+            EciDictionaries::On => s.serialize_bool(true),
+            EciDictionaries::Off => s.serialize_bool(false),
+            EciDictionaries::Path(p) => s.serialize_str(&p.to_string_lossy()),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for EciDictionaries {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Raw {
+            Bool(bool),
+            Text(String),
+        }
+        Ok(match Raw::deserialize(d)? {
+            Raw::Bool(true) => EciDictionaries::On,
+            Raw::Bool(false) => EciDictionaries::Off,
+            Raw::Text(t) => match t.trim().to_ascii_lowercase().as_str() {
+                "on" | "true" | "yes" | "" => EciDictionaries::On,
+                "off" | "false" | "no" | "none" => EciDictionaries::Off,
+                _ => EciDictionaries::Path(PathBuf::from(t.trim())),
+            },
+        })
+    }
+}
+
+/// `[speech.eci]`: the Eloquence (ECI) backend. The app maps these onto the
+/// ECI backend's options at integration; the environment variables
+/// (`TEXTWEAVER_ECI_LIBRARY`, `TEXTWEAVER_ECI_DICTIONARIES`,
+/// `TEXTWEAVER_ECI_CODE_FACTORY`) still win for one run.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct EciSettings {
+    /// Pronunciation dictionaries: on (bundled), off, or a directory.
+    pub dictionaries: EciDictionaries,
+    /// The ECI library to load; unset searches the usual places (an
+    /// OpenEVV installation, Voxin on Linux, and Code Factory when
+    /// `code_factory` is on).
+    pub library: Option<PathBuf>,
+    /// Also search Code Factory's "Eloquence for Windows" location. Off by
+    /// default: an installed copy is not necessarily licensed for use by
+    /// other programs, so textweaver loads it only when the user says so
+    /// (ADR-0007).
+    pub code_factory: bool,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+/// `[speech.sapi]`: Windows SAPI5 voices.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SapiSettings {
+    /// Also list the OneCore voices (Microsoft Mark, David, Zira) through
+    /// SAPI5. On by default.
+    pub onecore: bool,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+impl Default for SapiSettings {
+    fn default() -> Self {
+        SapiSettings {
+            onecore: true,
+            extra: toml::Table::new(),
+        }
+    }
+}
+
+/// Which Apple speech backend to prefer on macOS.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AppleBackend {
+    /// Let textweaver choose (ADR-0008 picks after measuring on a Mac).
+    #[default]
+    Auto,
+    /// `NSSpeechSynthesizer`: the most responsive; the system plays audio.
+    NsSpeech,
+    /// `AVSpeechSynthesizer`: textweaver plays audio, so word timing
+    /// follows the audio clock.
+    AvSpeech,
+}
+
+impl AppleBackend {
+    /// The backend id the speech registry uses, or `None` for automatic.
+    pub fn backend_id(self) -> Option<&'static str> {
+        match self {
+            AppleBackend::Auto => None,
+            AppleBackend::NsSpeech => Some("nsspeech"),
+            AppleBackend::AvSpeech => Some("avspeech"),
+        }
+    }
+}
+
+/// `[speech.apple]`: Apple speech on macOS.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AppleSettings {
+    /// Backend preference.
+    pub backend: AppleBackend,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -90,6 +221,9 @@ impl Default for SpeechSettings {
             .collect(),
             latency_offset_ms: 120,
             verbosity: Verbosity::default(),
+            eci: EciSettings::default(),
+            sapi: SapiSettings::default(),
+            apple: AppleSettings::default(),
             extra: toml::Table::new(),
         }
     }
@@ -335,6 +469,30 @@ impl Default for LibrarySettings {
     }
 }
 
+/// Keyboard settings.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct KeyboardSettings {
+    /// Single-key shortcuts (browse keys such as `.` and `a`). Off means
+    /// printable keys and Space never trigger commands, so dictation,
+    /// speech recognition, and switch keyboards cannot set them off by
+    /// accident (WCAG 2.1.4). The app passes this to
+    /// `Keymap::set_character_keys`.
+    pub character_keys: bool,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+impl Default for KeyboardSettings {
+    fn default() -> Self {
+        KeyboardSettings {
+            character_keys: true,
+            extra: toml::Table::new(),
+        }
+    }
+}
+
 /// All settings, one TOML table per group.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -353,6 +511,8 @@ pub struct Settings {
     pub editing: EditingSettings,
     /// `[library]`
     pub library: LibrarySettings,
+    /// `[keyboard]`
+    pub keyboard: KeyboardSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -431,14 +591,27 @@ impl Settings {
     /// [`validate`](Self::validate).
     pub fn from_table(mut table: toml::Table) -> (Settings, Vec<String>) {
         let mut w = Vec::new();
+        // Engine sub-tables are read on their own, so one bad value in
+        // `[speech.eci]` does not throw away the rest of `[speech]`.
+        let mut speech_table = table.remove("speech");
+        let mut sub = |name: &str| match &mut speech_table {
+            Some(toml::Value::Table(t)) => t.remove(name),
+            _ => None,
+        };
+        let (eci, sapi, apple) = (sub("eci"), sub("sapi"), sub("apple"));
+        let mut speech: SpeechSettings = lenient_section("speech", speech_table, &mut w);
+        speech.eci = lenient_section("speech.eci", eci, &mut w);
+        speech.sapi = lenient_section("speech.sapi", sapi, &mut w);
+        speech.apple = lenient_section("speech.apple", apple, &mut w);
         let mut s = Settings {
-            speech: lenient_section("speech", table.remove("speech"), &mut w),
+            speech,
             highlight: lenient_section("highlight", table.remove("highlight"), &mut w),
             normalization: lenient_section("normalization", table.remove("normalization"), &mut w),
             reading: lenient_section("reading", table.remove("reading"), &mut w),
             display: lenient_section("display", table.remove("display"), &mut w),
             editing: lenient_section("editing", table.remove("editing"), &mut w),
             library: lenient_section("library", table.remove("library"), &mut w),
+            keyboard: lenient_section("keyboard", table.remove("keyboard"), &mut w),
             extra: table,
         };
         w.extend(s.validate());
@@ -534,27 +707,55 @@ impl Settings {
     pub fn to_minimal_toml(&self) -> Result<String, toml::ser::Error> {
         let full = toml::Table::try_from(self)?;
         let defaults = toml::Table::try_from(Settings::default())?;
-        let mut out = toml::Table::new();
-        for (key, value) in full {
-            match (value, defaults.get(&key)) {
-                (toml::Value::Table(section), Some(toml::Value::Table(dsection))) => {
-                    let kept: toml::Table = section
-                        .into_iter()
-                        .filter(|(k, v)| dsection.get(k) != Some(v))
-                        .collect();
-                    if !kept.is_empty() {
-                        out.insert(key, toml::Value::Table(kept));
-                    }
-                }
-                (value, Some(d)) if *d == value => {}
-                (value, _) => {
-                    out.insert(key, value);
-                }
-            }
-        }
+        let out = minimal_table(full, &defaults, "");
         let body = toml::to_string_pretty(&out)?;
         Ok(format!("{SETTINGS_HEADER}{body}"))
     }
+}
+
+/// Tables whose own keys are compared one by one with the defaults. Every
+/// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
+/// map that replaces its default as a whole, so it is stored whole.
+const STRUCT_TABLES: [&str; 11] = [
+    "keyboard",
+    "speech",
+    "speech.eci",
+    "speech.sapi",
+    "speech.apple",
+    "highlight",
+    "normalization",
+    "reading",
+    "display",
+    "editing",
+    "library",
+];
+
+/// `table` without the values equal to `defaults`, descending into the
+/// [`STRUCT_TABLES`]; empty sub-tables are dropped.
+fn minimal_table(table: toml::Table, defaults: &toml::Table, path: &str) -> toml::Table {
+    let mut out = toml::Table::new();
+    for (key, value) in table {
+        let sub_path = if path.is_empty() {
+            key.clone()
+        } else {
+            format!("{path}.{key}")
+        };
+        match (value, defaults.get(&key)) {
+            (toml::Value::Table(t), Some(toml::Value::Table(d)))
+                if STRUCT_TABLES.contains(&sub_path.as_str()) =>
+            {
+                let kept = minimal_table(t, d, &sub_path);
+                if !kept.is_empty() {
+                    out.insert(key, toml::Value::Table(kept));
+                }
+            }
+            (value, Some(d)) if *d == value => {}
+            (value, _) => {
+                out.insert(key, value);
+            }
+        }
+    }
+    out
 }
 
 const SETTINGS_HEADER: &str = "\
@@ -1023,6 +1224,98 @@ mod tests {
         let (_d, store) = store();
         let _ = store.load();
         assert!(config_files(&store).is_empty());
+    }
+
+    #[test]
+    fn engine_tables_default_round_trip_and_stay_minimal() {
+        let s = Settings::default();
+        assert_eq!(s.speech.eci.dictionaries, EciDictionaries::On);
+        assert!(!s.speech.eci.code_factory, "Code Factory is opt-in");
+        assert!(s.speech.sapi.onecore);
+        assert_eq!(s.speech.apple.backend, AppleBackend::Auto);
+
+        let (_d, store) = store();
+        let mut s = Settings::default();
+        s.speech.eci.code_factory = true;
+        s.speech.eci.dictionaries = EciDictionaries::Path(PathBuf::from("dicts"));
+        s.speech.sapi.onecore = false;
+        s.speech.apple.backend = AppleBackend::NsSpeech;
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        let table: toml::Table = text.parse().unwrap();
+        let eci = table["speech"]["eci"].as_table().unwrap();
+        assert_eq!(eci.len(), 2, "only changed keys: {text}");
+        assert_eq!(eci["code_factory"].as_bool(), Some(true));
+        assert_eq!(eci["dictionaries"].as_str(), Some("dicts"));
+        assert_eq!(table["speech"]["sapi"]["onecore"].as_bool(), Some(false));
+        assert_eq!(
+            table["speech"]["apple"]["backend"].as_str(),
+            Some("nsspeech")
+        );
+        assert_eq!(table["speech"].as_table().unwrap().len(), 3, "{text}");
+        assert_eq!(store.load().0, s);
+
+        // Only one engine key changed: the others are not written.
+        let mut s = Settings::default();
+        s.speech.eci.dictionaries = EciDictionaries::Off;
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("dictionaries = false"), "{text}");
+        assert!(
+            !text.contains("sapi") && !text.contains("code_factory"),
+            "{text}"
+        );
+        assert_eq!(store.load().0, s);
+    }
+
+    #[test]
+    fn engine_tables_read_leniently() {
+        let (_d, store) = store();
+        write(
+            &store,
+            "[speech]\nrate = 300\n[speech.eci]\ndictionaries = \"off\"\ncode_factory = \"yes please\"\nfuture = 1\n[speech.apple]\nbackend = \"avspeech\"\n",
+        );
+        let loaded = store.load_detailed();
+        let s = &loaded.settings;
+        assert_eq!(
+            s.speech.rate,
+            Rate::Wpm(300),
+            "the rest of [speech] survives"
+        );
+        assert_eq!(s.speech.eci.dictionaries, EciDictionaries::Off);
+        assert!(!s.speech.eci.code_factory);
+        assert!(s.speech.eci.extra.contains_key("future"));
+        assert_eq!(s.speech.apple.backend.backend_id(), Some("avspeech"));
+        assert_eq!(
+            loaded.warnings,
+            vec!["speech.eci.code_factory has an invalid value"]
+        );
+        write(&store, "[speech.eci]\ndictionaries = true\n");
+        assert_eq!(store.load().0.speech.eci.dictionaries, EciDictionaries::On);
+    }
+
+    #[test]
+    fn character_keys_default_on_and_round_trip() {
+        let (_d, store) = store();
+        assert!(Settings::default().keyboard.character_keys);
+        let mut s = Settings::default();
+        s.keyboard.character_keys = false;
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(
+            text.contains("[keyboard]\ncharacter_keys = false"),
+            "{text}"
+        );
+        assert!(!store.load().0.keyboard.character_keys);
+    }
+
+    #[test]
+    fn map_tables_are_stored_whole() {
+        let (_d, store) = store();
+        let mut s = Settings::default();
+        s.speech.speed_presets.insert("skim".into(), 400);
+        store.save(&s).unwrap();
+        assert_eq!(store.load().0.speech.speed_presets.len(), 4);
     }
 
     #[test]

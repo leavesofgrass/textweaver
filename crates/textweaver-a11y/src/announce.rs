@@ -209,6 +209,49 @@ pub enum Announcement {
     /// The document has no bookmarks.
     NoBookmarks,
 
+    // ---- Notes and highlights ----
+    /// A note was added.
+    NoteAdded {
+        /// Percentage through the document.
+        pct: u8,
+    },
+    /// Text was highlighted.
+    HighlightAdded {
+        /// The color's name ("yellow").
+        color: String,
+    },
+    /// Moved to a note or highlight; `text` is what it says, as the store
+    /// words it ("Note: check this, on \u{201c}claim\u{201d}", "Yellow
+    /// highlight: key idea").
+    NoteReached {
+        /// The spoken description.
+        text: String,
+    },
+    /// A note or highlight was deleted.
+    NoteDeleted {
+        /// True for a highlight.
+        highlight: bool,
+    },
+    /// The document has no notes or highlights.
+    NoNotes,
+
+    // ---- Library and sync ----
+    /// A folder was added to the library.
+    LibraryFolderAdded {
+        /// The folder's name.
+        name: String,
+        /// Documents found in it.
+        documents: usize,
+    },
+    /// Reading positions from another device were merged.
+    SyncMerged {
+        /// Entries that differed between the devices.
+        conflicts: usize,
+        /// True under the `manual` policy: nothing was chosen, the local
+        /// entries were kept, and the user should decide.
+        manual: bool,
+    },
+
     // ---- Editing ----
     /// A new empty document is ready.
     NewDocument,
@@ -261,6 +304,11 @@ pub enum Announcement {
     },
     /// Line numbers shown or hidden.
     LineNumbers {
+        /// On or off.
+        on: bool,
+    },
+    /// Single-key shortcuts turned on or off (`toggle_character_keys`).
+    CharacterKeys {
         /// On or off.
         on: bool,
     },
@@ -334,6 +382,13 @@ impl Announcement {
             A::BookmarkReached { .. } => "bookmark_reached",
             A::BookmarkDeleted { .. } => "bookmark_deleted",
             A::NoBookmarks => "no_bookmarks",
+            A::NoteAdded { .. } => "note_added",
+            A::HighlightAdded { .. } => "highlight_added",
+            A::NoteReached { .. } => "note_reached",
+            A::NoteDeleted { .. } => "note_deleted",
+            A::NoNotes => "no_notes",
+            A::LibraryFolderAdded { .. } => "library_folder_added",
+            A::SyncMerged { .. } => "sync_merged",
             A::NewDocument => "new_document",
             A::Saved { .. } => "saved",
             A::SaveFailed { .. } => "save_failed",
@@ -347,6 +402,7 @@ impl Announcement {
             A::Recovered => "recovered",
             A::Theme { .. } => "theme",
             A::LineNumbers { .. } => "line_numbers",
+            A::CharacterKeys { .. } => "character_keys",
             A::Error { .. } => "error",
             A::Info { .. } => "info",
         }
@@ -367,7 +423,8 @@ impl Announcement {
             | A::Heading { .. }
             | A::Table { .. }
             | A::List { .. }
-            | A::Link { .. } => Priority::Polite,
+            | A::Link { .. }
+            | A::SyncMerged { manual: false, .. } => Priority::Polite,
             _ => Priority::Assertive,
         }
     }
@@ -506,6 +563,46 @@ impl Announcement {
             A::BookmarkReached { name } => format!("Bookmark {name}"),
             A::BookmarkDeleted { name } => format!("Bookmark {name} deleted"),
             A::NoBookmarks => "No bookmarks".to_owned(),
+            A::NoteAdded { pct } => match v {
+                Low => "Note added".to_owned(),
+                _ => format!("Note added at {pct} percent"),
+            },
+            A::HighlightAdded { color } => match v {
+                Low => "Highlighted".to_owned(),
+                _ => format!("Highlighted in {color}"),
+            },
+            A::NoteReached { text } => text.clone(),
+            A::NoteDeleted { highlight: false } => "Note deleted".to_owned(),
+            A::NoteDeleted { highlight: true } => "Highlight removed".to_owned(),
+            A::NoNotes => "No notes or highlights".to_owned(),
+            A::LibraryFolderAdded { name, documents } => match v {
+                Low => format!("Added {name}"),
+                _ => format!(
+                    "Added folder {name} with {}",
+                    plural(*documents, "document", "documents")
+                ),
+            },
+            A::SyncMerged {
+                conflicts,
+                manual: true,
+            } => format!(
+                "{} another device. Kept this device's; choose in the library",
+                if *conflicts == 1 {
+                    "1 reading position differs from".to_owned()
+                } else {
+                    format!("{conflicts} reading positions differ from")
+                }
+            ),
+            A::SyncMerged {
+                conflicts,
+                manual: false,
+            } => match v {
+                Low => return None,
+                _ => format!(
+                    "Merged {} from another device",
+                    plural(*conflicts, "change", "changes")
+                ),
+            },
             A::NewDocument => "New document, ready for editing".to_owned(),
             A::Saved { name } => match v {
                 Low => "Saved".to_owned(),
@@ -534,6 +631,7 @@ impl Announcement {
             A::Recovered => "Recovered unsaved work. Remember to save.".to_owned(),
             A::Theme { name } => format!("Theme {name}"),
             A::LineNumbers { on } => format!("Line numbers {}", on_off(*on)),
+            A::CharacterKeys { on } => format!("Single-key shortcuts {}", on_off(*on)),
             A::Error { message } => message.clone(),
             A::Info { message } => match v {
                 Low => return None,
@@ -609,6 +707,21 @@ impl Announcement {
             A::BookmarkReached { name: s("mark1") },
             A::BookmarkDeleted { name: s("mark1") },
             A::NoBookmarks,
+            A::NoteAdded { pct: 42 },
+            A::HighlightAdded { color: s("yellow") },
+            A::NoteReached {
+                text: s("Note: check this, on \u{201c}claim\u{201d}"),
+            },
+            A::NoteDeleted { highlight: false },
+            A::NoNotes,
+            A::LibraryFolderAdded {
+                name: s("Readings"),
+                documents: 12,
+            },
+            A::SyncMerged {
+                conflicts: 2,
+                manual: false,
+            },
             A::NewDocument,
             A::Saved {
                 name: s("notes.md"),
@@ -626,6 +739,7 @@ impl Announcement {
             A::Recovered,
             A::Theme { name: s("galaxy") },
             A::LineNumbers { on: true },
+            A::CharacterKeys { on: false },
             A::Error {
                 message: s("Speech engine stopped"),
             },
@@ -732,6 +846,45 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn notes_library_and_sync_wording() {
+        let manual = Announcement::SyncMerged {
+            conflicts: 1,
+            manual: true,
+        };
+        assert_eq!(manual.priority(), Priority::Assertive);
+        assert_eq!(
+            manual.text(Verbosity::Low).as_deref(),
+            Some(
+                "1 reading position differs from another device. Kept this device's; choose in the library"
+            )
+        );
+        let two = Announcement::SyncMerged {
+            conflicts: 2,
+            manual: true,
+        };
+        assert!(
+            two.text(Verbosity::Low)
+                .unwrap()
+                .starts_with("2 reading positions differ")
+        );
+        assert_eq!(
+            Announcement::NoteDeleted { highlight: true }
+                .text(Verbosity::Low)
+                .as_deref(),
+            Some("Highlight removed")
+        );
+        assert_eq!(
+            Announcement::LibraryFolderAdded {
+                name: "Readings".into(),
+                documents: 1
+            }
+            .text(Verbosity::Normal)
+            .as_deref(),
+            Some("Added folder Readings with 1 document")
+        );
     }
 
     #[test]

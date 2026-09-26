@@ -82,6 +82,13 @@
 //! | `bookmark_reached` | assertive | Bookmark mark1 | Bookmark mark1 | Bookmark mark1 |
 //! | `bookmark_deleted` | assertive | Bookmark mark1 deleted | Bookmark mark1 deleted | Bookmark mark1 deleted |
 //! | `no_bookmarks` | assertive | No bookmarks | No bookmarks | No bookmarks |
+//! | `note_added` | assertive | Note added | Note added at 42 percent | Note added at 42 percent |
+//! | `highlight_added` | assertive | Highlighted | Highlighted in yellow | Highlighted in yellow |
+//! | `note_reached` | assertive | Note: check this, on “claim” | Note: check this, on “claim” | Note: check this, on “claim” |
+//! | `note_deleted` | assertive | Note deleted | Note deleted | Note deleted |
+//! | `no_notes` | assertive | No notes or highlights | No notes or highlights | No notes or highlights |
+//! | `library_folder_added` | assertive | Added Readings | Added folder Readings with 12 documents | Added folder Readings with 12 documents |
+//! | `sync_merged` | polite | — | Merged 2 changes from another device | Merged 2 changes from another device |
 //! | `new_document` | assertive | New document, ready for editing | New document, ready for editing | New document, ready for editing |
 //! | `saved` | polite | Saved | Saved notes.md | Saved notes.md |
 //! | `save_failed` | assertive | Could not save: the disk is full | Could not save: the disk is full | Could not save: the disk is full |
@@ -95,6 +102,7 @@
 //! | `recovered` | polite | Recovered unsaved work. Remember to save. | Recovered unsaved work. Remember to save. | Recovered unsaved work. Remember to save. |
 //! | `theme` | assertive | Theme galaxy | Theme galaxy | Theme galaxy |
 //! | `line_numbers` | assertive | Line numbers on | Line numbers on | Line numbers on |
+//! | `character_keys` | assertive | Single-key shortcuts off | Single-key shortcuts off | Single-key shortcuts off |
 //! | `error` | assertive | Speech engine stopped | Speech engine stopped | Speech engine stopped |
 //! | `info` | polite | — | Copied | Copied |
 //! <!-- VERBOSITY-TABLE-END -->

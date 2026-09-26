@@ -285,7 +285,7 @@ fn present(v: Option<&Value>) -> Option<&Value> {
 }
 
 /// Deep equality with Python's numeric rule (`1 == 1.0`).
-fn json_eq(a: &Value, b: &Value) -> bool {
+pub(crate) fn json_eq(a: &Value, b: &Value) -> bool {
     match (a, b) {
         (Value::Number(x), Value::Number(y)) => {
             if let (Some(i), Some(j)) = (x.as_i64(), y.as_i64()) {
@@ -414,7 +414,7 @@ pub fn resolve_entry(
 
 /// The id of an annotation: `str(a["id"])` when it is truthy (Star's
 /// `_ann_id`). `""`, `0`, `false`, and `null` count as no id.
-fn ann_id(ann: &Value) -> Option<String> {
+pub(crate) fn ann_id(ann: &Value) -> Option<String> {
     let id = ann.as_object()?.get("id")?;
     let truthy = match id {
         Value::Null => false,
@@ -638,11 +638,10 @@ pub fn sidecar_file(folder: &Path) -> PathBuf {
     folder.join(SIDECAR_DIR).join(SIDECAR_FILE)
 }
 
-/// The canonical path when it exists, else the absolute path.
+/// The canonical path when it exists, else the absolute path (without
+/// Windows' `\?\` prefix).
 fn resolved(p: &Path) -> PathBuf {
-    std::fs::canonicalize(p)
-        .or_else(|_| std::path::absolute(p))
-        .unwrap_or_else(|_| p.to_owned())
+    crate::library::resolve_path(p)
 }
 
 fn relative_posix(root: &Path, p: &Path) -> Option<String> {
@@ -703,7 +702,7 @@ pub fn reconcile_before_write(
     merge_maps(local, &remote, policy, Prefer::Local)
 }
 
-fn write_sidecar(folder: &Path, data: &SidecarMap) -> Result<(), StoreError> {
+pub(crate) fn write_sidecar(folder: &Path, data: &SidecarMap) -> Result<(), StoreError> {
     let path = sidecar_file(folder);
     let text = serde_json::to_string_pretty(data).map_err(|e| StoreError::Parse {
         path: path.clone(),

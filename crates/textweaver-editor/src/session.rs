@@ -144,6 +144,9 @@ pub struct EditSession {
     autosave: AutosavePolicy,
     recovery_dir: Option<PathBuf>,
     last_snapshot: Option<Instant>,
+    /// Held while this session writes snapshots, so another instance does
+    /// not offer or overwrite them (shared by clones).
+    snapshot_lock: Option<std::sync::Arc<autosave::SnapshotLock>>,
 }
 
 impl EditSession {
@@ -161,6 +164,7 @@ impl EditSession {
             },
             recovery_dir: None,
             last_snapshot: None,
+            snapshot_lock: None,
         }
     }
 
@@ -244,6 +248,7 @@ impl EditSession {
             let _ = autosave::delete_snapshot(&p);
         }
         self.last_snapshot = None;
+        self.snapshot_lock = None;
     }
 
     /// Enters edit mode on the document's text (Ctrl+E). Undo history
@@ -499,6 +504,14 @@ impl EditSession {
         let since = self.last_snapshot.map(|t| now.saturating_duration_since(t));
         if !self.autosave.due(self.is_dirty(), since) {
             return Ok(false);
+        }
+        if self.snapshot_lock.is_none() {
+            match autosave::SnapshotLock::acquire(&dir, &self.doc.key)? {
+                Some(lock) => self.snapshot_lock = Some(std::sync::Arc::new(lock)),
+                // Another instance is editing this document and owns its
+                // snapshot; do not overwrite it.
+                None => return Ok(false),
+            }
         }
         let snap = RecoverySnapshot {
             doc_key: self.doc.key.clone(),

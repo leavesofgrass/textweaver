@@ -64,4 +64,14 @@ impl Paths {
     pub fn recent_file(&self) -> PathBuf {
         self.data_dir.join("recent.json")
     }
+
+    /// `library.json`, the bookshelf.
+    pub fn library_file(&self) -> PathBuf {
+        self.data_dir.join("library.json")
+    }
+
+    /// The library search cache.
+    pub fn fulltext_file(&self) -> PathBuf {
+        self.cache_dir.join("fulltext.json")
+    }
 }
