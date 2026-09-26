@@ -32,7 +32,7 @@
 //! is left, and restored when it is chosen again.
 
 use textweaver_core::{Pitch, Rate};
-use textweaver_piper::{Catalog, Licence, LicenceKind, VoiceStore};
+use textweaver_engines::piper::{Catalog, Licence, LicenceKind, VoiceStore};
 use textweaver_speech::Voice;
 use textweaver_store::Settings;
 
@@ -395,7 +395,7 @@ pub fn entry_label(e: &VoiceEntry, engine: bool, favourite: bool, current: bool)
     if let VoiceStatus::Downloadable { bytes, licence } = &e.status {
         parts.push(format!(
             "download {}",
-            textweaver_piper::catalog::megabytes(*bytes)
+            textweaver_engines::piper::catalog::megabytes(*bytes)
         ));
         parts.push(
             match licence.kind {
@@ -466,7 +466,7 @@ pub fn piper_entries(store: &VoiceStore, catalog: Option<&Catalog>) -> Vec<Voice
                     id: v.key.clone(),
                     name: format!(
                         "{} ({quality})",
-                        textweaver_piper::catalog::display_name(&v.name)
+                        textweaver_engines::piper::catalog::display_name(&v.name)
                     ),
                     languages: vec![v.bcp47()],
                     gender: None,

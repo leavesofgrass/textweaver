@@ -14,14 +14,18 @@ name = "textweaver"
 path = "src/main.rs"
 
 [features]
-default = []
+default = ["publish"]
+# In-reader export, preview, and citations (textweaver-app's `publish`).
+# `--no-default-features` builds the lean reader without them.
+publish = ["textweaver-app/publish"]
 # Speech engines, passed through to textweaver-speech.
-espeak = ["textweaver-app/espeak"]
-omnivox = ["textweaver-app/omnivox"]
-speechd = ["textweaver-app/speechd"]
+espeak = ["textweaver-app/espeak", "textweaver-engines/espeak"]
+omnivox = ["textweaver-app/omnivox", "textweaver-engines/omnivox"]
+speechd = ["textweaver-app/speechd", "textweaver-engines/speechd"]
 
 [dependencies]
 textweaver-app.workspace = true
+textweaver-engines.workspace = true
 textweaver-theme.workspace = true
 textweaver-aids.workspace = true
 ratatui.workspace = true

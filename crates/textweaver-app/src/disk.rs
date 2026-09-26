@@ -1,4 +1,4 @@
-//! Files changed on disk while open (docs/audit-2026-09.md, finding D2).
+//! Files changed on disk while open (docs/history/audit-2026-09.md, finding D2).
 //!
 //! The open file's modification time and size are recorded when it is
 //! opened and after every save. Saving in place over a file that changed

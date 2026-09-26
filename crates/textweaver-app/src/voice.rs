@@ -14,8 +14,8 @@ use std::sync::mpsc::{Receiver, TryRecvError};
 
 use textweaver_a11y::{Announcement, Verbosity};
 use textweaver_core::{Pitch, Rate, Volume};
-use textweaver_piper::download::DownloadPlan;
-use textweaver_piper::{Catalog, InstalledVoice, PiperError};
+use textweaver_engines::piper::download::DownloadPlan;
+use textweaver_engines::piper::{Catalog, InstalledVoice, PiperError};
 use textweaver_speech::Earcon;
 
 use crate::app::App;
@@ -124,8 +124,8 @@ impl App {
     /// The Piper voices folder: `[speech.piper] voices` or
     /// `TEXTWEAVER_PIPER_VOICES` when set, else `piper/voices` in this
     /// session's data folder. `None` in a session that keeps no files.
-    fn piper_store(&self) -> Option<textweaver_piper::VoiceStore> {
-        let mut config = crate::backends::piper_config(&self.settings);
+    fn piper_store(&self) -> Option<textweaver_engines::piper::VoiceStore> {
+        let mut config = textweaver_engines::piper_config(&self.settings);
         let overridden = std::env::var_os("TEXTWEAVER_PIPER_VOICES").is_some_and(|v| !v.is_empty())
             || self
                 .settings
@@ -176,6 +176,9 @@ impl App {
             textweaver_speech::VoiceList::Ready(v) => v,
             textweaver_speech::VoiceList::Loading => {
                 self.voices_pending = true;
+                // The frontend is woken when they arrive (crate::wake).
+                let wake = self.waker_slot();
+                self.speech.voice_cache().on_ready(move || wake.wake());
                 self.tell("The voices are still loading. The list opens when they are ready.");
                 return vec![Effect::Redraw];
             }
@@ -188,7 +191,7 @@ impl App {
         match &self.voices.others {
             Some(others) => entries.extend(others.iter().cloned()),
             None if self.voices.others_rx.is_none() && self.can_start_speech() => {
-                let registry = crate::backends::speech_registry_for(&self.settings);
+                let registry = textweaver_engines::speech_registry_for(&self.settings);
                 self.voices.others_rx =
                     list_other_engines(registry, self.speech.backend_id().to_owned());
             }
@@ -202,6 +205,21 @@ impl App {
             "Voice manager. {shown} Enter uses a voice and speaks a sample, or downloads one; \
              Space marks a favourite; Delete removes a downloaded voice; Escape closes."
         ));
+        // Focus the voice in use, else the first voice; the filter rows
+        // are above it.
+        let (engine, voice) = self.current_voice();
+        let rows = self.voices.manager.rows().len();
+        let focus = (0..rows)
+            .find(|&n| {
+                self.voices.manager.entry_at(n).is_some_and(|e| {
+                    e.engine == engine
+                        && voice.as_deref().is_some_and(|v| {
+                            v == e.voice.id || v.eq_ignore_ascii_case(&e.voice.name)
+                        })
+                })
+            })
+            .or_else(|| (0..rows).find(|&n| self.voices.manager.entry_at(n).is_some()));
+        self.pending_list_focus = focus;
         self.show_voice_list()
     }
 
@@ -260,11 +278,13 @@ impl App {
             Some(VoiceRow::LanguageFilter) => {
                 let s = self.voices.manager.next_language(&favourites);
                 self.tell(&s);
+                self.pending_list_focus = Some(n);
                 self.show_voice_list()
             }
             Some(VoiceRow::EngineFilter) => {
                 let s = self.voices.manager.next_engine(&favourites);
                 self.tell(&s);
+                self.pending_list_focus = Some(n);
                 self.show_voice_list()
             }
             Some(VoiceRow::FetchCatalog) => {
@@ -328,7 +348,7 @@ impl App {
         let spawned = std::thread::Builder::new()
             .name("textweaver-voice-plan".into())
             .spawn(move || {
-                let _ = tx.send(textweaver_piper::download::plan(&voice));
+                let _ = tx.send(textweaver_engines::piper::download::plan(&voice));
             });
         if spawned.is_err() {
             self.error("Could not start the download.");
@@ -390,7 +410,9 @@ impl App {
                 }
                 let removed = match self.piper_store() {
                     Some(store) => store.remove(&key),
-                    None => Err(textweaver_piper::PiperError::NotInstalled(key.clone())),
+                    None => Err(textweaver_engines::piper::PiperError::NotInstalled(
+                        key.clone(),
+                    )),
                 };
                 match removed {
                     Ok(()) => {
@@ -411,7 +433,7 @@ impl App {
                 let spawned = std::thread::Builder::new()
                     .name("textweaver-voice-catalog".into())
                     .spawn(move || {
-                        let r = textweaver_piper::download::fetch_catalog_json().and_then(
+                        let r = textweaver_engines::piper::download::fetch_catalog_json().and_then(
                             |(json, catalog)| {
                                 std::fs::create_dir_all(&dir)
                                     .and_then(|()| std::fs::write(catalog_path(&dir), json))
@@ -438,7 +460,7 @@ impl App {
             return vec![Effect::Redraw];
         };
         let name = plan.voice.describe();
-        let short = textweaver_piper::catalog::display_name(&plan.voice.name);
+        let short = textweaver_engines::piper::catalog::display_name(&plan.voice.name);
         let total = plan.total_bytes();
         let done = Arc::new(AtomicU64::new(0));
         let cancel = Arc::new(AtomicBool::new(false));
@@ -450,7 +472,7 @@ impl App {
                 let r = std::fs::create_dir_all(store.dir())
                     .map_err(|e| PiperError::io(store.dir(), e))
                     .and_then(|()| {
-                        textweaver_piper::download::download(&plan, &store, &mut |n, _| {
+                        textweaver_engines::piper::download::download(&plan, &store, &mut |n, _| {
                             d.store(n, Ordering::Relaxed);
                             !c.load(Ordering::Relaxed)
                         })
@@ -546,7 +568,7 @@ impl App {
     pub(crate) fn toggle_favourite_voice(&mut self, n: usize) -> Vec<Effect> {
         let Some(e) = self.voices.manager.entry_at(n).cloned() else {
             self.tell("Only a voice can be a favourite.");
-            return vec![Effect::Redraw];
+            return self.show_voice_list();
         };
         let v = &e.voice;
         let favs = &mut self.settings.speech.favorite_voices;

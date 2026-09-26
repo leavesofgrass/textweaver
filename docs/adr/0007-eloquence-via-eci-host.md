@@ -32,7 +32,7 @@ vdaddons\openevv\synthDrivers\_openevv\lib_64\eci.dll`); Code Factory's `eci.
 ## Consequences
 
 - Windows builds need the `i686-pc-windows-msvc` target to produce the host (`rustup target add i686-pc-windows-msvc`; `cargo xtask eci-host` builds it and places it next to the main binaries).
-- Tests run against a fake host everywhere. Real-engine tests are `#[ignore]`d unless `TEXTWEAVER_ECI=1` and need a licensed ECI library: in development, a licensed Voxin installation mounted read-only into the container with `compose.voxin.yaml` (docs/docker.md). Windows real-engine tests run only where a licensed Code Factory installation exists.
+- Tests run against a fake host everywhere. Real-engine tests are `#[ignore]`d unless `TEXTWEAVER_ECI=1` and need a licensed ECI library: in development, a licensed Voxin installation mounted read-only into the container with `compose.voxin.yaml` (docs/dev/docker.md). Windows real-engine tests run only where a licensed Code Factory installation exists.
 
 ## Licensing
 
@@ -44,5 +44,5 @@ vdaddons\openevv\synthDrivers\_openevv\lib_64\eci.dll`); Code Factory's `eci.
 - [Getting ETI-Eloquence](../eloquence.md): the user guide.
 - [Speech engines and voices](../speech.md): how Eloquence is chosen among the engines.
 - [ADR-0012: The engine host](0012-engine-host.md): the shared host protocol.
-- [Docker development container](../docker.md#voxin-eti-eloquence-for-linux): testing with Voxin.
+- [Docker development container](../dev/docker.md#voxin-eti-eloquence-for-linux): testing with Voxin.
 - [Documentation index](../README.md)

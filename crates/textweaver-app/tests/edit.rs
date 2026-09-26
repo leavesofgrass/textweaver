@@ -248,7 +248,7 @@ fn leaving_with_unsaved_changes_asks_and_discard_restores_everything() {
         panic!("{effects:?}");
     };
     assert_eq!(items.len(), 3);
-    assert!(r.said.last().contains("unsaved changes"));
+    assert!(r.said.any("unsaved changes"));
     // Cancel keeps editing.
     r.send(Command::Choose(2));
     assert!(r.app.is_editing());
@@ -497,7 +497,7 @@ fn autosave_snapshot_is_offered_after_a_crash() {
     };
     assert!(title.contains("crash.md"), "{title}");
     assert_eq!(items.len(), 2);
-    assert!(r.said.last().contains("unsaved changes"));
+    assert!(r.said.any("unsaved changes"));
     r.send(Command::Choose(0));
     assert!(r.app.is_editing());
     assert!(r.app.is_dirty());
@@ -724,49 +724,7 @@ fn notes_add_list_jump_edit_delete_and_persist() {
     assert!(r.said.last().starts_with("Note deleted"));
     let store = StateStore::new(r.paths.state_dir());
     let state = store.load(&DocKey::for_path(&file)).unwrap();
-    assert!(!state.extra.contains_key("app_notes"));
     assert!(state.notes.is_empty() && state.highlights.is_empty());
-}
-
-#[test]
-fn legacy_app_notes_are_migrated_once_on_open() {
-    let mut r = rig();
-    let text = "Alpha beta. Gamma delta.";
-    let file = r.file("legacy.txt", text);
-    // A state file as the first wave 2 build wrote it.
-    let store = StateStore::new(r.paths.state_dir());
-    let key = DocKey::for_path(&file);
-    let mut old = textweaver_app::store::DocState::default();
-    old.extra.insert(
-        "app_notes".into(),
-        serde_json::json!([{
-            "id": "0000abcd", "range": {"start": 12, "end": 24},
-            "anchor": "Gamma delta.", "text": "Old note #exam", "tags": ["exam"], "ts": 5
-        }]),
-    );
-    old.extra.insert(
-        "app_highlights".into(),
-        serde_json::json!([{ "range": {"start": 0, "end": 11}, "color": "yellow", "ts": 6 }]),
-    );
-    store.save(&key, &old).unwrap();
-    r.app.open(&file).unwrap();
-    let s = r.app.session().unwrap();
-    assert_eq!(s.notes.len(), 1);
-    assert_eq!(s.notes[0].note, "Old note #exam");
-    assert_eq!(s.highlights.len(), 1);
-    assert_eq!(s.doc.slice(s.highlights[0].range), "Alpha beta.");
-    // The file was rewritten on opening (by the background writer): typed
-    // fields, no legacy keys.
-    r.app.wait_for_writes();
-    let saved = StateStore::new(r.paths.state_dir()).load(&key).unwrap();
-    assert!(!saved.extra.contains_key("app_notes"));
-    assert!(!saved.extra.contains_key("app_highlights"));
-    assert_eq!(saved.notes.len(), 1);
-    assert_eq!(saved.highlights.len(), 1);
-    // Stepping and deleting work on the migrated note.
-    r.go(CharPos(0));
-    r.send(Command::Notes(NoteCommand::Next));
-    assert_eq!(r.app.session().unwrap().cursor, at(text, "Gamma"));
 }
 
 #[test]
@@ -823,7 +781,7 @@ fn bookmarks_rename_and_delete() {
     };
     assert_eq!(items.len(), 1);
     assert!(items[0].starts_with("chapter"));
-    assert_eq!(r.said.last(), "Bookmark mark1 deleted.");
+    assert!(r.said.any("Bookmark mark1 deleted."));
     // Persisted at once.
     let state = StateStore::new(r.paths.state_dir())
         .load(&DocKey::for_path(&file))

@@ -1,5 +1,5 @@
 //! Obsidian vault import and export, ported from `star/obsidian.py`
-//! (`docs/star-parity.md` Part 3 §4.8).
+//! (`docs/history/star-parity.md` Part 3 §4.8).
 //!
 //! - [`export_documents`] writes documents' notes and highlights into a
 //!   vault: one Markdown note per note, with front matter and its relations

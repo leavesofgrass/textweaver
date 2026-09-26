@@ -1,5 +1,5 @@
 //! `cargo xtask listen`: sample WAV files from every real speech engine
-//! on this machine, for the listening checklist in `docs/releasing.md`.
+//! on this machine, for the listening checklist in `docs/dev/releasing.md`.
 //!
 //! For each engine (Eloquence, SAPI 5, DECtalk, Piper, eSpeak NG) it runs
 //! `tw export-audio` on a short sample (a sentence, a heading, numbers,
@@ -140,7 +140,7 @@ pub fn run() -> anyhow::Result<()> {
         bail!("no engine wrote a sample");
     }
     println!(
-        "Wrote {written} files. Listen to them, then follow the checklist in docs/releasing.md."
+        "Wrote {written} files. Listen to them, then follow the checklist in docs/dev/releasing.md."
     );
     Ok(())
 }

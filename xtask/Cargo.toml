@@ -9,7 +9,7 @@ publish = false
 
 [features]
 # `cargo xtask bench` builds xtask again with this feature, in release mode.
-bench = ["dep:textweaver-app"]
+bench = ["dep:textweaver-app", "textweaver-app/publish"]
 
 [dependencies]
 textweaver-app = { workspace = true, optional = true }

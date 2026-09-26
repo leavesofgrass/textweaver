@@ -1,6 +1,6 @@
 //! AltGr characters on non-US Windows layouts arrive from crossterm as
 //! Control plus Alt; they type text in edit mode and prompts when no
-//! binding claims them (docs/audit-2026-09.md, finding X1; Agent D4).
+//! binding claims them (docs/history/audit-2026-09.md, finding X1; Agent D4).
 
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use textweaver_app::keymap::ActionId;

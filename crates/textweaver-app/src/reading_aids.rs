@@ -29,8 +29,9 @@
 use std::time::{Duration, Instant};
 
 use textweaver_aids::{
-    DifficultOptions, Millis, Rsvp, RsvpEvent, RulerMode, RulerSettings, ScowlList, SplitText,
-    TerminalSpacing, WordTrack, bionic_range, difficult_range, reading_level, split_range,
+    BionicOptions, DifficultOptions, Millis, Rsvp, RsvpEvent, RsvpPosition, RsvpSettings,
+    RulerMode, RulerSettings, ScowlList, SplitText, TerminalSpacing, TextSpacing, WordTrack,
+    bionic_range, difficult_range, reading_level, split_range,
 };
 use textweaver_core::SpanKind;
 use textweaver_core::{CharPos, CharRange};
@@ -105,7 +106,7 @@ impl App {
                 Some(st.rsvp.seek_pos(pos, t))
             }
             None => {
-                let mut rsvp = Rsvp::new(track, self.settings.reading_aids.rsvp.clone());
+                let mut rsvp = Rsvp::new(track, (&self.settings.reading_aids.rsvp).into());
                 let e = rsvp.seek_pos(pos, 0);
                 self.rsvp = Some(RsvpState { rsvp, start: now });
                 Some(e)
@@ -156,7 +157,7 @@ impl App {
     /// Faster or slower by [`RSVP_STEP`]; the rate is saved.
     pub(crate) fn rsvp_rate(&mut self, faster: bool) {
         let rate = &mut self.settings.reading_aids.rsvp;
-        let old = rate.clamped_wpm();
+        let old = RsvpSettings::from(&*rate).clamped_wpm();
         let new = if faster {
             old.saturating_add(RSVP_STEP)
         } else {
@@ -185,9 +186,10 @@ impl App {
     /// Moves the RSVP word to the next of Star's nine places; saved.
     pub(crate) fn rsvp_position_next(&mut self) {
         let rs = &mut self.settings.reading_aids.rsvp;
-        rs.position = rs.position.next();
-        let label = rs.position.label();
-        let settings = rs.clone();
+        let position = RsvpPosition::from(rs.position).next();
+        rs.position = position.into();
+        let label = position.label();
+        let settings = RsvpSettings::from(&*rs);
         self.settings_dirty = true;
         if let Some(st) = self.rsvp.as_mut() {
             st.rsvp.set_settings(settings);
@@ -327,9 +329,11 @@ impl App {
     /// none when it is off.
     pub fn bionic_ranges(&self, range: CharRange) -> Vec<CharRange> {
         match self.session.as_ref() {
-            Some(s) if self.settings.reading_aids.bionic => {
-                bionic_range(&s.doc, range, &self.settings.reading_aids.bionic_options)
-            }
+            Some(s) if self.settings.reading_aids.bionic => bionic_range(
+                &s.doc,
+                range,
+                &BionicOptions::from(&self.settings.reading_aids.bionic_options),
+            ),
             _ => Vec::new(),
         }
     }
@@ -352,7 +356,7 @@ impl App {
         let s = self.session.as_ref()?;
         let a = &self.settings.reading_aids;
         a.syllables
-            .then(|| split_range(&s.doc, range, &a.syllable_options))
+            .then(|| split_range(&s.doc, range, &(&a.syllable_options).into()))
     }
 
     /// Where the syllable separator ([`syllable_separator`](Self::syllable_separator))
@@ -416,12 +420,13 @@ impl App {
     /// `ruler_cycle`: off, current line, ruler; saved.
     pub(crate) fn ruler_cycle(&mut self) {
         let r = &mut self.settings.reading_aids.ruler;
-        r.mode = match r.mode {
+        let mode = match RulerMode::from(r.mode) {
             RulerMode::Off => RulerMode::CurrentLine,
             RulerMode::CurrentLine => RulerMode::Ruler,
             RulerMode::Ruler => RulerMode::Off,
         };
-        let msg = match r.mode {
+        r.mode = mode.into();
+        let msg = match mode {
             RulerMode::Off => "Reading ruler off.",
             RulerMode::CurrentLine => "Current line marked.",
             RulerMode::Ruler => "Reading ruler on.",
@@ -432,13 +437,13 @@ impl App {
 
     /// The reading ruler settings.
     pub fn ruler(&self) -> RulerSettings {
-        self.settings.reading_aids.ruler
+        RulerSettings::from(&self.settings.reading_aids.ruler)
     }
 
     /// The terminal's share of the text spacing settings: blank rows and
     /// extra spaces.
     pub fn terminal_spacing(&self) -> TerminalSpacing {
-        self.settings.reading_aids.spacing.terminal()
+        TextSpacing::from(&self.settings.reading_aids.spacing).terminal()
     }
 
     /// `reading_level`: the Flesch-Kincaid grade and reading ease of the

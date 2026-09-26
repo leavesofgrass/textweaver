@@ -77,9 +77,14 @@ See [docs/keyboard.md](docs/keyboard.md#what-changed).
 - **Export progress.** A long export says "Still exporting to PDF, 2 seconds." and then every ten seconds.
 - **Writers.** PDF output draws strikethrough; Word equations (OMML) read back from DOCX as LaTeX math.
 - **GUI on macOS** says once when a built-in font falls back to a system font.
+- **A settings screen** (Shift+F10, or "settings" in the palette): every setting with its value, filtered as you type; Left and Right change a value, Enter types one, Delete puts the default back. Each change is said and saved. See [docs/settings.md](docs/settings.md#the-settings-screen).
+- **Large files open in the background.** A file of 512 KB or more opens on a helper thread: "Opening report.pdf. Escape cancels.", then "Still opening report.pdf, 3 seconds." The keys keep working, and Escape stops waiting.
+- **JSON-RPC: lists, prompts, and settings.** `list_state`, `list_key`, `prompt_state`, `prompt_key`, `settings_schema`, `get_setting`, and `set_setting`. The server is woken as each word is heard instead of polling. See [docs/json-rpc.md](docs/json-rpc.md).
+- **The app core for the GUI** (Wave 3): a document window of about 500,000 characters around the reading, a waker, an edit command for native text controls, and the settings schema. See [ADR-0024](docs/adr/0024-app-core-for-the-gui.md).
 
 ### Changed
 
+- **Nothing slow waits on the keyboard.** The speech engine starts in the background, so the reader is ready at once and speaks when the engine is; `settings.toml` is written by the writer thread; and the misspelling count after a save follows a moment later instead of holding up the keys (0.6 s on 10 MB).
 - **Say position moved** from `%` to Shift+W and Alt+Shift+Y.
 - `tw speak`, `tw voices`, and `tw backends` read your settings, and take `--home`.
 - Save As suggests a name from the first heading or the title, and asks before replacing a file. A crash, a closed terminal, Ctrl+C, or a stop signal saves your place and your unsaved work, and restores the terminal.

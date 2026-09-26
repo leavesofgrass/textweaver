@@ -115,7 +115,9 @@
 //! - **Lists** (`lists`): the outline (Alt+O) and the citation picker
 //!   filter as you type ([`Command::FilterList`], [`App::list_filter`]);
 //!   spelling, find-and-replace, and template lists.
-//! - **Citations** (`citations`), **export and preview** (`publish`),
+//! - **Citations** (`citations`), **export and preview** (`publish`;
+//!   both need the `publish` cargo feature, on by default; without it the
+//!   commands say they are not in this build),
 //!   **spelling** (`spell`), **tables** (`tables`), **links and
 //!   footnotes** (`links`), **find and replace one at a time**
 //!   (`replace`), **templates** (`templates`, [`local_date`]).
@@ -123,6 +125,24 @@
 //!   [`App::tick`]; [`App::wait_for_background`] waits for them in tests.
 //!   Files and addresses open through [`App::set_launcher`] (the system's
 //!   default program otherwise, only in a session that keeps files).
+//!
+//! # The app core for the GUI (Wave 3, Agent W3a; ADR-0024)
+//!
+//! - **[`window`]**: [`DocWindow`], about [`WINDOW_UNITS`] UTF-16 units of
+//!   text around the focus, paragraph-aligned, which slides while reading
+//!   and recentres on jumps, with control offsets in [`Units`];
+//!   [`Session::revision`] says when the text changed.
+//! - **[`list_model`]**: the list shown ([`App::list_model`]) and the prompt
+//!   open ([`App::prompt_model`]), driven by [`Command::ListKey`],
+//!   [`Command::ListFocus`], and [`Command::PromptKey`], for every frontend.
+//! - **[`wake`]**: [`App::set_waker`], rung by the speech thread, the writer,
+//!   and background jobs; [`App::tick_interval`].
+//! - **[`Command::ReplaceRange`]**: edits made in a native text control.
+//! - **[`settings_schema`]**: [`SettingsSchema`] from the store's own keys,
+//!   [`App::set_setting`], and the settings screen (the Settings action).
+//! - **Off the input thread**: [`opening`] (large files open in the
+//!   background), settings saves on the writer, the misspelling count after
+//!   a save, and [`App::start_speech_in_background`].
 //!
 //! Owner: Agent D.
 
@@ -132,7 +152,12 @@ pub mod align;
 mod app;
 mod authoring;
 mod authoring_state;
-mod backends;
+// In-reader export, preview, and citations: the full modules with the
+// `publish` feature, stand-ins that say "not in this build" without it.
+#[cfg(feature = "publish")]
+mod citations;
+#[cfg(not(feature = "publish"))]
+#[path = "lean/citations.rs"]
 mod citations;
 mod command;
 pub mod disk;
@@ -144,6 +169,7 @@ mod goto;
 mod help;
 mod library;
 mod links;
+pub mod list_model;
 mod lists;
 pub mod logfile;
 mod marks;
@@ -151,8 +177,18 @@ mod math_explore;
 mod mdline;
 mod nav;
 mod notes;
+pub mod opening;
+pub mod path_complete;
 mod playback;
+#[cfg(feature = "publish")]
 pub mod preview_server;
+#[cfg(not(feature = "publish"))]
+#[path = "lean/preview_server.rs"]
+mod preview_server;
+#[cfg(feature = "publish")]
+mod publish;
+#[cfg(not(feature = "publish"))]
+#[path = "lean/publish.rs"]
 mod publish;
 mod reading_aids;
 mod relocate;
@@ -160,6 +196,7 @@ mod replace;
 mod restart;
 pub mod rpc;
 pub mod settings_io;
+pub mod settings_schema;
 mod speech_cursor;
 mod spell;
 mod structure;
@@ -172,6 +209,8 @@ mod themes;
 mod view;
 mod voice;
 pub mod voice_manager;
+pub mod wake;
+pub mod window;
 mod writer;
 mod writes;
 
@@ -182,34 +221,40 @@ pub use access::{
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use authoring::osc52;
 pub use authoring_state::{ClientFactory, Launcher, open_with_system};
-pub use backends::{
-    CODE_FACTORY_LIBRARY, apple_preference, eci_config, piper_config, sapi_config, service_config,
-    speech_registry, speech_registry_for,
-};
 pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpose};
 pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_lookup};
 pub use goto::parse_go_to;
 pub use help::{chords_text, help_entries, palette_matches, resolve_command};
+pub use list_model::{ListKey, ListModel, PromptKey, PromptModel};
 pub use math_explore::MathMove;
-pub use notes::{HIGHLIGHTS_KEY, NOTES_KEY, UserHighlight, migrate_legacy_notes, parse_tags};
+pub use notes::{UserHighlight, parse_tags};
 pub use playback::{Playback, load_options, narration_policy};
 pub use restart::SpeechStarter;
+pub use settings_schema::{Setting, SettingKind, SettingsSchema};
 pub use templates::local_date;
+pub use textweaver_engines::{
+    CODE_FACTORY_LIBRARY, apple_preference, dectalk_config, eci_config, piper_config, sapi_config,
+    service_config, speech_registry, speech_registry_for,
+};
 pub use textweaver_store::Note;
 pub use view::{Highlight, HighlightKind, Viewport};
+pub use wake::{Waker, channel_waker};
+pub use window::{DocWindow, Units, WINDOW_UNITS, WindowChange};
 
 pub use reading_aids::{RSVP_STEP, RSVP_WINDOW};
 pub use textweaver_a11y as a11y;
 pub use textweaver_aids as aids;
-pub use textweaver_apple as apple;
+#[cfg(feature = "publish")]
 pub use textweaver_cite as cite;
 pub use textweaver_core as core;
-pub use textweaver_eci as eci;
 pub use textweaver_editor as editor;
+pub use textweaver_engines as engines;
+pub use textweaver_engines::apple;
+pub use textweaver_engines::eci;
+pub use textweaver_engines::piper;
 pub use textweaver_formats as formats;
 pub use textweaver_keymap as keymap;
-pub use textweaver_piper as piper;
 pub use textweaver_speech as speech;
 pub use textweaver_store as store;
 pub use textweaver_text as text;

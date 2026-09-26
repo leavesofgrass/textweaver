@@ -1,7 +1,7 @@
 # Release: on a version tag, create the GitHub release (a pre-release before
 # 1.0, notes from CHANGELOG.md), build the Windows and macOS packages with
 # `cargo xtask dist`, attest their build provenance, upload them, and write
-# SHA256SUMS.txt once at the end. docs/releasing.md has the steps, and the
+# SHA256SUMS.txt once at the end. docs/dev/releasing.md has the steps, and the
 # local fallback (tools/release-upload.sh) for a package built by hand.
 #
 # - Windows: x86_64 zip with the x64 and x86 engine hosts; the C runtime is

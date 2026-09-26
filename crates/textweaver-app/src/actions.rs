@@ -1,12 +1,12 @@
 //! Dispatch for the Phase 2 authoring and navigation actions (Agent P2b),
 //! so the app's core dispatch stays one arm long for them.
 
-use textweaver_convert::OutputFormat;
 use textweaver_core::Direction;
 use textweaver_keymap::ActionId;
 
 use crate::app::App;
 use crate::command::{Effect, PromptPurpose};
+use crate::publish::OutputFormat;
 use crate::tables::TableStep;
 
 impl App {

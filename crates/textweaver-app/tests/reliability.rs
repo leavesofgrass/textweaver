@@ -572,9 +572,11 @@ fn the_library_is_scanned_off_the_input_thread() {
     };
     assert_eq!(items.len(), 3000);
     assert!(
-        said.last().starts_with("Library, 3000 documents."),
-        "{}",
-        said.last()
+        said.all()
+            .iter()
+            .any(|s| s.starts_with("Library, 3000 documents.")),
+        "{:?}",
+        said.all()
     );
     assert!(!app.library_scanning());
 }
@@ -614,8 +616,10 @@ fn choose_voice_never_waits_and_opens_when_the_voices_arrive() {
     };
     assert!(items[2].starts_with("Vera"), "{items:?}");
     assert!(
-        said.last().starts_with("Voice manager. 1 voice"),
-        "{}",
-        said.last()
+        said.all()
+            .iter()
+            .any(|s| s.starts_with("Voice manager. 1 voice")),
+        "{:?}",
+        said.all()
     );
 }

@@ -51,6 +51,9 @@ impl App {
             self.error(&format!("Could not save settings: {e}"));
             return None;
         }
+        // The save is on the writer: the file must be current before it is
+        // read or replaced here.
+        let _ = self.wait_for_writes();
         Some(SettingsStore::new(paths))
     }
 

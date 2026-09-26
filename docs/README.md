@@ -51,27 +51,35 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 ## For contributors
 
-- [CONTRIBUTING.md](../CONTRIBUTING.md): setting up, the checks, tests, benchmarks, the agent and worktree workflow, and commit style.
-- [Architecture](architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.
-- [The crates](architecture.md#the-crates): what each of the 28 crates does, with its ADRs.
-- [Testing](../CONTRIBUTING.md#tests) and [benchmarks](../CONTRIBUTING.md#benchmarks).
+The developer documents are in [dev/](dev/), the decision records in [adr/](adr/README.md), and the plans, briefs, and audits of past waves in [history/](history/).
+
+### Building and working on textweaver
+
+- [CONTRIBUTING.md](../CONTRIBUTING.md): the code rules, the agent and worktree workflow, commit style, and how to write docs.
+- [Building](dev/building.md): Rust, Python, what each system needs, Docker, the GUI, and the lean reader.
+- [Testing](dev/testing.md): the checks every change must pass, the tests, and the [benchmarks](dev/testing.md#benchmarks).
+- [Architecture](dev/architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.
+- [The crates](dev/architecture.md#the-crates): what each of the 29 crates does, with its ADRs.
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
-- [Docker development container](docker.md): building and testing Linux features on any machine, and Voxin.
+- [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
 - [Fuzzing](../fuzz/README.md): the cargo-fuzz targets for the loaders, the settings and state files, and the engine-host protocol, run every night.
-- [Releasing](releasing.md): making a release, the Linux AppImage, and what the packages hold.
+- [Releasing](dev/releasing.md): making a release, the Linux AppImage, and what the packages hold.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
-- [Roadmap](roadmap.md): Phases 1 and 2 (done), and Wave 3, which is next.
-- [Tasks and ownership](tasks.md): the briefs and status of every agent, wave by wave.
-- [Implementation plan](plan.md): the original plan and the Phase 0 amendments.
-- [Audit, September 2026](audit-2026-09.md): findings, fixes, and benchmark numbers.
-- [Star parity reference](star-parity.md): what Star does, in detail.
-- [Star parity report](parity-report.md): the generated comparison of segmentation with Star.
+- [Roadmap](roadmap.md): Phases 1 and 2 (done), and Wave 3.
 - [Star features not yet planned](star-gaps.md): Star features with their status in textweaver.
 - [CHANGELOG.md](../CHANGELOG.md): what changed in each release.
 
+### History
+
+- [Tasks and ownership](history/tasks.md): the briefs and status of every agent, wave by wave.
+- [Implementation plan](history/plan.md): the original plan and the Phase 0 amendments.
+- [Audit, September 2026](history/audit-2026-09.md): findings, fixes, and benchmark numbers.
+- [Star parity reference](history/star-parity.md): what Star does, in detail.
+- [Star parity report](history/parity-report.md): the generated comparison of segmentation with Star.
+
 ## Decisions
 
-Each ADR records one decision: the context, the choice, and its consequences. A dated status update under the date says what changed later.
+Each ADR records one decision: the context, the choice, and its consequences. A dated status update under the date says what changed later. [The ADR index](adr/README.md) lists them with their statuses.
 
 - [ADR-0001: Workspace layout and dependency policy](adr/0001-workspace-and-dependencies.md): one crate per job, one table of approved dependencies, and no async runtime in speech.
 - [ADR-0002: Text model](adr/0002-text-model.md): canonical text in a rope plus markers, and character positions.
@@ -95,6 +103,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0020: Themes](adr/0020-themes.md): Star's palettes, contrast rules, and output for every frontend.
 - [ADR-0021: DECtalk through a host process](adr/0021-dectalk.md): DECtalk with word timing, and its licensing.
 - [ADR-0022: Reading aids](adr/0022-reading-aids.md): RSVP, bionic reading, spacing, fonts, the ruler, and more, as pure data.
+- [ADR-0024: App core for the GUI](adr/0024-app-core-for-the-gui.md): the document window, shared list and prompt state, the waker, the replace-range edit, the settings schema, and work moved off the input thread.
 
 ## Interactive pages
 
@@ -112,6 +121,7 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 
 - [A Xilem GUI for textweaver](research/xilem-gui.md): findings on Xilem, Masonry, and AccessKit accessibility (September 2026).
 - [Pure-Rust choices for Wave 3](research/pure-rust-wave3.md): OCR, Piper voices, Whisper, define word, and other swaps (September 2026).
+- [Research for Wave 4](research/wave4.md): the GUI part two, speed, formats (MathCAT), translations, offline models, and releases (September 2026).
 
 ## See also
 

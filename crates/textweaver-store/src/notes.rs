@@ -1,5 +1,5 @@
 //! Notes and highlights: Star's annotations and user highlights
-//! (docs/star-parity.md Part 3 §2.3 and §2.4), stored in [`DocState`].
+//! (docs/history/star-parity.md Part 3 §2.3 and §2.4), stored in [`DocState`].
 //!
 //! Changes from Star, all deliberate:
 //!
@@ -16,6 +16,7 @@
 //! [`DocState`]: crate::DocState
 //! [`EditOutcome`]: textweaver_core::EditOutcome
 
+use std::fmt;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::{Deserialize, Serialize};
@@ -38,6 +39,103 @@ pub const RELATION_TYPES: [&str; 10] = [
 
 /// The relation used for a link without a type (Star's default).
 pub const DEFAULT_RELATION: &str = "SEE_ALSO";
+
+/// How one note relates to another (Star's `RELATION_TYPES`,
+/// `star/annotations.py:153-164`). [`Relation::rel_type`] keeps the name
+/// as a string, so a type from a newer version survives a round trip;
+/// [`Relation::relation_type`] parses it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum RelationType {
+    /// The source conflicts with the target.
+    ConflictsWith,
+    /// The source supports the target.
+    Supports,
+    /// The source is an example of the target.
+    IsExampleOf,
+    /// The source cites the target.
+    Cites,
+    /// The source contradicts the target.
+    Contradicts,
+    /// The source defines the target.
+    Defines,
+    /// The source extends the target.
+    Extends,
+    /// A plain link: see also the target. The default for untyped links.
+    SeeAlso,
+    /// The source comes before the target.
+    Precedes,
+    /// The source comes after the target.
+    Follows,
+}
+
+impl RelationType {
+    /// Every relation type, in Star's order.
+    pub const ALL: [RelationType; 10] = [
+        RelationType::ConflictsWith,
+        RelationType::Supports,
+        RelationType::IsExampleOf,
+        RelationType::Cites,
+        RelationType::Contradicts,
+        RelationType::Defines,
+        RelationType::Extends,
+        RelationType::SeeAlso,
+        RelationType::Precedes,
+        RelationType::Follows,
+    ];
+
+    /// The stored name, as Star wrote it: `SEE_ALSO`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RelationType::ConflictsWith => "CONFLICTS_WITH",
+            RelationType::Supports => "SUPPORTS",
+            RelationType::IsExampleOf => "IS_EXAMPLE_OF",
+            RelationType::Cites => "CITES",
+            RelationType::Contradicts => "CONTRADICTS",
+            RelationType::Defines => "DEFINES",
+            RelationType::Extends => "EXTENDS",
+            RelationType::SeeAlso => "SEE_ALSO",
+            RelationType::Precedes => "PRECEDES",
+            RelationType::Follows => "FOLLOWS",
+        }
+    }
+
+    /// The name as it reads aloud: `see also`.
+    pub fn spoken(self) -> &'static str {
+        match self {
+            RelationType::ConflictsWith => "conflicts with",
+            RelationType::Supports => "supports",
+            RelationType::IsExampleOf => "is an example of",
+            RelationType::Cites => "cites",
+            RelationType::Contradicts => "contradicts",
+            RelationType::Defines => "defines",
+            RelationType::Extends => "extends",
+            RelationType::SeeAlso => "see also",
+            RelationType::Precedes => "precedes",
+            RelationType::Follows => "follows",
+        }
+    }
+
+    /// Parses a relation name the way Star's `_norm_rel` does: trimmed,
+    /// upper-cased, spaces and hyphens turned into underscores, then matched
+    /// against the known types. `see also`, `See-Also`, and `SEE_ALSO` all
+    /// give [`RelationType::SeeAlso`].
+    pub fn parse(name: &str) -> Option<Self> {
+        let key: String = name
+            .trim()
+            .chars()
+            .map(|c| if c == ' ' || c == '-' { '_' } else { c })
+            .collect::<String>()
+            .to_uppercase();
+        RelationType::ALL.into_iter().find(|t| t.as_str() == key)
+    }
+}
+
+impl fmt::Display for RelationType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
 
 /// Star's default highlight color.
 pub const DEFAULT_HIGHLIGHT_COLOR: &str = "#ffff00";
@@ -62,15 +160,7 @@ pub const HIGHLIGHT_TEXT_MAX_CHARS: usize = 500;
 /// turned into `_` (Star's normalization for Dataview fields). `None` when
 /// it is not one of [`RELATION_TYPES`].
 pub fn normalize_relation(name: &str) -> Option<&'static str> {
-    let canon: String = name
-        .trim()
-        .chars()
-        .map(|c| match c {
-            ' ' | '-' => '_',
-            c => c.to_ascii_uppercase(),
-        })
-        .collect();
-    RELATION_TYPES.iter().copied().find(|t| *t == canon)
+    RelationType::parse(name).map(RelationType::as_str)
 }
 
 /// The `#rrggbb` form of a named highlight color, or the input unchanged.
@@ -86,10 +176,22 @@ pub fn highlight_color(name: &str) -> String {
 /// value as stored.
 pub fn color_name(color: &str) -> String {
     let lower = color.trim().to_ascii_lowercase();
-    HIGHLIGHT_COLORS
+    if let Some((n, _)) = HIGHLIGHT_COLORS
         .iter()
         .find(|(n, hex)| *hex == lower || *n == lower)
-        .map_or_else(|| color.trim().to_owned(), |(n, _)| (*n).to_owned())
+    {
+        return (*n).to_owned();
+    }
+    let named = match lower.as_str() {
+        "#ff0" => "yellow",
+        "#00ff00" | "#0f0" | "lime" | "lightgreen" => "green",
+        "#0ff" | "aqua" => "cyan",
+        "#ff00ff" | "#f0f" | "magenta" | "fuchsia" => "magenta",
+        "#ff0000" | "#f00" | "red" => "red",
+        "#0000ff" | "#00f" | "blue" | "#add8e6" | "lightblue" => "blue",
+        _ => return color.trim().to_owned(),
+    };
+    named.to_owned()
 }
 
 /// Splits a tag string on commas and whitespace, dropping a leading `#` and
@@ -157,7 +259,7 @@ pub fn stable_id(prefix: &str, parts: &[&str]) -> String {
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Relation {
-    /// One of [`RELATION_TYPES`].
+    /// One of [`RELATION_TYPES`] ([`Relation::relation_type`] parses it).
     pub rel_type: String,
     /// The target note's document key (empty for this document).
     pub target_doc: String,
@@ -168,8 +270,15 @@ pub struct Relation {
     pub note: String,
 }
 
+impl Relation {
+    /// The relation's type, when it is one textweaver knows.
+    pub fn relation_type(&self) -> Option<RelationType> {
+        RelationType::parse(&self.rel_type)
+    }
+}
+
 /// A note attached to a range of the text.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Note {
     /// Stable id, assigned on creation.
@@ -264,7 +373,7 @@ impl Note {
 }
 
 /// A highlighted range of the text.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Highlight {
     /// Stable id, assigned on creation.
@@ -536,11 +645,38 @@ mod tests {
     }
 
     #[test]
+    fn relation_names_normalize_like_star() {
+        assert_eq!(RelationType::parse("see also"), Some(RelationType::SeeAlso));
+        assert_eq!(RelationType::parse("See-Also"), Some(RelationType::SeeAlso));
+        assert_eq!(
+            RelationType::parse(" supports "),
+            Some(RelationType::Supports)
+        );
+        assert_eq!(
+            RelationType::parse("is example of"),
+            Some(RelationType::IsExampleOf)
+        );
+        assert_eq!(RelationType::parse("related"), None);
+        assert_eq!(RelationType::parse(""), None);
+        for t in RelationType::ALL {
+            assert_eq!(RelationType::parse(t.as_str()), Some(t));
+        }
+    }
+
+    #[test]
+    fn relation_serializes_as_star_names() {
+        let json = serde_json::to_string(&RelationType::IsExampleOf).unwrap();
+        assert_eq!(json, "\"IS_EXAMPLE_OF\"");
+    }
+
+    #[test]
     fn colors_and_collapse() {
         assert_eq!(highlight_color("Green"), "#90ee90");
         assert_eq!(highlight_color("#123456"), "#123456");
         assert_eq!(color_name("#FFFF00"), "yellow");
         assert_eq!(color_name("teal"), "teal");
+        assert_eq!(color_name("#00FF00"), "green");
+        assert_eq!(color_name("#123456"), "#123456");
         assert_eq!(collapse("  a \n\t b  ", 120), "a b");
         assert_eq!(collapse("abcdef", 3), "abc");
     }

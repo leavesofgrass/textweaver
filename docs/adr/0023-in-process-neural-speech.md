@@ -49,7 +49,7 @@ On Jon's desktop (AMD Ryzen 5 5600G, 6 cores), Saturday, September 26, 2026, deb
 - Word timing: for words that follow a pause, the predicted start was 26 to 34 ms from where the sound starts on average (worst 130 to 180 ms), over 26 to 30 pauses in 154 words. Every word was timed.
 - The two phonemizers differed in 2 of 167 phonemes on the test clauses (word joins aside).
 
-Whisper base.en int8 on the same machine, under load: 2.3 s of speech ("Please add a note about chapter three.") was transcribed correctly. See `docs/releasing.md` and the ADR's status updates for quiet-machine latency.
+Whisper base.en int8 on the same machine, under load: 2.3 s of speech ("Please add a note about chapter three.") was transcribed correctly. See `docs/dev/releasing.md` and the ADR's status updates for quiet-machine latency.
 
 ## Consequences
 

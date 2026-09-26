@@ -10,11 +10,18 @@ authors.workspace = true
 publish.workspace = true
 
 [features]
-default = []
-# Speech engines, passed through to textweaver-speech.
-espeak = ["textweaver-speech/espeak"]
-omnivox = ["textweaver-speech/omnivox"]
-speechd = ["textweaver-speech/speechd"]
+default = ["publish"]
+# In-reader export (HTML, PDF, DOCX, EPUB, BRF), the browser preview, and
+# citations (insert, look up, check, read aloud). On by default and in
+# releases. Off, the app links none of the conversion and citation stack
+# (convert, render, writers, cite, and hayagriva, comrak, minijinja,
+# krilla, ammonia, ureq), and those commands say they are not in this
+# build; `cargo xtask deps --check` holds the reader to that.
+publish = ["dep:textweaver-cite", "dep:textweaver-convert", "dep:textweaver-render"]
+# Speech engines, passed through to textweaver-engines.
+espeak = ["textweaver-engines/espeak"]
+omnivox = ["textweaver-engines/omnivox"]
+speechd = ["textweaver-engines/speechd"]
 
 [dependencies]
 textweaver-core.workspace = true
@@ -25,20 +32,14 @@ textweaver-store.workspace = true
 textweaver-keymap.workspace = true
 textweaver-a11y.workspace = true
 textweaver-editor.workspace = true
-textweaver-eci.workspace = true
-textweaver-sapi.workspace = true
-textweaver-dectalk.workspace = true
-textweaver-apple.workspace = true
-# Piper neural voices in-process on RTen (ADR-0023): phonemes from an
-# installed libespeak-ng, else the built-in pure-Rust port; downloads
-# checked by hash.
-textweaver-piper = { workspace = true, features = ["playback", "espeak-lib", "espeak-rs", "download"] }
+# The backend registry and every engine crate, through one crate.
+textweaver-engines.workspace = true
 textweaver-theme.workspace = true
 textweaver-aids.workspace = true
 textweaver-math.workspace = true
-textweaver-cite.workspace = true
-textweaver-convert.workspace = true
-textweaver-render.workspace = true
+textweaver-cite = { workspace = true, optional = true }
+textweaver-convert = { workspace = true, optional = true }
+textweaver-render = { workspace = true, optional = true }
 pulldown-cmark.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -50,6 +51,15 @@ log.workspace = true
 [target.'cfg(windows)'.dependencies]
 # GetLocalTime, for the local date in new documents from templates.
 windows = { workspace = true, features = ["Win32_Foundation", "Win32_System_SystemInformation"] }
+
+# Export, preview, and citations are tested with the feature on.
+[[test]]
+name = "authoring"
+required-features = ["publish"]
+
+[[test]]
+name = "citations_reading"
+required-features = ["publish"]
 
 [dev-dependencies]
 tempfile.workspace = true

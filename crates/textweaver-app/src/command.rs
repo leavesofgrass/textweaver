@@ -91,6 +91,47 @@ pub enum Command {
     /// A move in math exploration, sent while
     /// [`App::math_exploring`](crate::App::math_exploring) is true.
     MathStep(crate::math_explore::MathMove),
+    /// A key pressed in the list shown ([`App::list_model`]): moves the
+    /// focus and says "item, k of n", filters, jumps by first letter,
+    /// chooses, closes, or acts on the item. See [`ListKey`].
+    ///
+    /// [`App::list_model`]: crate::App::list_model
+    /// [`ListKey`]: crate::ListKey
+    ListKey(crate::list_model::ListKey),
+    /// The list's focus moved to item `n` in a GUI list that announces its
+    /// own focus: recorded quietly.
+    ListFocus(usize),
+    /// A key pressed in the open prompt ([`App::prompt_model`]): edits its
+    /// text (echoed), recalls earlier answers, completes, answers, or
+    /// cancels. See [`PromptKey`].
+    ///
+    /// [`App::prompt_model`]: crate::App::prompt_model
+    /// [`PromptKey`]: crate::PromptKey
+    PromptKey(crate::list_model::PromptKey),
+    /// Edit mode: replace the chars of `range` with `text`, as a native
+    /// text control reports an edit (typing, a paste, a deletion, a
+    /// correction from a spell checker or dictation). `range` is in the
+    /// text being edited (the source); an empty `range` inserts, an empty
+    /// `text` deletes. One typed character at the caret joins the typing
+    /// undo step, as a key press would; anything else is one undo step.
+    /// Nothing is echoed or spoken: the control and the screen reader
+    /// already did. The caret goes to the end of the new text.
+    ReplaceRange {
+        /// The chars replaced.
+        range: CharRange,
+        /// Their replacement.
+        text: String,
+    },
+    /// Change one setting by its path in `settings.toml` (`speech.rate`,
+    /// `display.theme`), checked against the [settings
+    /// schema](crate::settings_schema): from a GUI settings dialog or
+    /// JSON-RPC. Announced as "Rate, 200 words per minute." and saved.
+    SetSetting {
+        /// The setting's path.
+        path: String,
+        /// Its new value (`null` resets it to the default).
+        value: serde_json::Value,
+    },
 }
 
 /// How far a [`Command::MoveCaret`] moves.
@@ -254,6 +295,9 @@ pub enum PromptPurpose {
     ImportReferences,
     /// Answer is the title of a new document from a template.
     TemplateTitle,
+    /// Answer is a new value for the setting chosen in the settings list;
+    /// empty keeps it.
+    SettingValue,
 }
 
 impl PromptPurpose {
@@ -282,6 +326,7 @@ impl PromptPurpose {
             PromptPurpose::ReferenceIdentifier => "DOI or ISBN to add",
             PromptPurpose::ImportReferences => "Import references from file",
             PromptPurpose::TemplateTitle => "Title of the new document",
+            PromptPurpose::SettingValue => "New value, Enter keeps it",
         }
     }
 }

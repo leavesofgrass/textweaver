@@ -322,6 +322,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Show or hide syllables: words split with a middle dot | `Alt+Shift+Z` | `Alt+Shift+Z` | `syllables_toggle` |
 | Mark difficult words on or off: underlined, and named on word moves at high verbosity | `Alt+Shift+J` | `Alt+Shift+J` | `difficult_words_toggle` |
 | Run any command by name | `F2`, `Alt+X`, `:` (browse) | `F2`, `:` (browse) | `command_palette` |
+| Open the settings: every option with its help, filtered as you type; Left and Right change a value | `Shift+F10` | `Ctrl+,` | `settings` |
 | List keyboard shortcuts | `?` (browse) | `F3`, `?` (browse) | `keyboard_help` |
 | Open the help | `F1` | `F1` | `help` |
 

@@ -45,7 +45,7 @@
 //!    ends; inside a code block every line is one sentence.
 //!
 //! Sentences and words exclude surrounding whitespace. Differences from Star
-//! are measured by `cargo xtask parity` (docs/parity-report.md).
+//! are measured by `cargo xtask parity` (docs/history/parity-report.md).
 
 use std::collections::VecDeque;
 

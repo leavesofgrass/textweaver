@@ -4,8 +4,8 @@
 use std::path::Path;
 
 use serde::Serialize;
-use textweaver_app::eci::discovery;
-use textweaver_app::eci::{CODE_FACTORY_ENV, EciConfig};
+use textweaver_engines::eci::discovery;
+use textweaver_engines::eci::{CODE_FACTORY_ENV, EciConfig};
 
 /// The guide, compiled in so it is available wherever `tw` is installed.
 const GUIDE: &str = include_str!("../../../../docs/eloquence.md");
