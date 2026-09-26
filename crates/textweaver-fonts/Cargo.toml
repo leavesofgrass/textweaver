@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-fonts"
-description = "Fonts for textweaver: bundled Atkinson Hyperlegible Next and Mono and OpenDyslexic (SIL OFL 1.1), and installed fonts found by family name"
+description = "Fonts for textweaver: bundled Atkinson Hyperlegible Next and Mono and OpenDyslexic (SIL OFL 1.1), installed fonts found by family name, and font choice and resolution"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -16,6 +16,7 @@ default = ["bundled-fonts"]
 bundled-fonts = []
 
 [dependencies]
+thiserror.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

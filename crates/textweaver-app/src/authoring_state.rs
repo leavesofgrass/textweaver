@@ -4,6 +4,9 @@
 //! field of [`App`](crate::App) so the features stay out of the app's core
 //! state.
 
+// Without the `publish` feature the export and lookup jobs are never made.
+#![cfg_attr(not(feature = "publish"), allow(dead_code))]
+
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::mpsc::Receiver;
@@ -16,7 +19,7 @@ pub type Launcher = Arc<dyn Fn(&str) -> std::io::Result<()> + Send + Sync>;
 
 /// Makes the HTTP client for reference lookups (DOI, ISBN); called on the
 /// lookup thread.
-pub type ClientFactory = Arc<dyn Fn() -> Box<dyn textweaver_cite::HttpClient> + Send + Sync>;
+pub type ClientFactory = Arc<dyn Fn() -> Box<dyn crate::citations::HttpClient> + Send + Sync>;
 
 /// Re-parsing the Markdown being edited.
 #[derive(Debug, Default)]
@@ -56,7 +59,7 @@ pub(crate) enum Job {
     /// A DOI or ISBN lookup.
     Lookup {
         input: String,
-        rx: Receiver<Result<textweaver_cite::Reference, String>>,
+        rx: Receiver<Result<crate::citations::Reference, String>>,
     },
 }
 
@@ -89,7 +92,7 @@ pub(crate) enum AuthoringList {
     },
     /// The citation picker; `shown` holds the indexes that match.
     Citations {
-        entries: Vec<textweaver_cite::insert::PickerEntry>,
+        entries: Vec<crate::citations::PickerEntry>,
         shown: Vec<usize>,
     },
     /// Spelling choices for the word at `range`.

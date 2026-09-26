@@ -161,7 +161,7 @@ pub fn export_audio(
         .factory(selection.backend.id)
         .with_context(|| format!("backend {} is not built in", selection.backend.id))?;
     let mut backend = factory()?;
-    let config = textweaver_app::service_config(settings);
+    let config = textweaver_engines::service_config(settings);
     let mut params = VoiceParams {
         // A configured voice belongs to the configured backend.
         voice: None,
@@ -276,7 +276,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     let report = export_audio(
         &args,
         &settings,
-        &textweaver_app::speech_registry_for(&settings),
+        &textweaver_engines::speech_registry_for(&settings),
         ffmpeg::find(),
         &mut |msg| {
             if !quiet {

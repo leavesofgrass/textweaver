@@ -437,10 +437,7 @@ impl App {
             .flatten()
             .map(|w| format!("{w}\n"))
             .collect();
-        let written = file
-            .parent()
-            .map_or(Ok(()), std::fs::create_dir_all)
-            .and_then(|()| textweaver_convert::write_atomic(&file, text.as_bytes()));
+        let written = textweaver_store::atomic_write(&file, text.as_bytes());
         match written {
             Ok(()) => self.tell(&format!("Added {word} to your word list.")),
             Err(e) => self.error(&format!("Could not save your word list: {e}")),

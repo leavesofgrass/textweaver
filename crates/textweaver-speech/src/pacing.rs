@@ -4,7 +4,7 @@
 //! Everything here is pure and driven by an injectable [`Clock`], so it is
 //! tested with a [`FakeClock`] instead of wall time. The constants and clamp
 //! rules are Star's (`star/tts/manager/_playback.py`, inventoried in
-//! `docs/star-parity.md` Part 2 section 1):
+//! `docs/history/star-parity.md` Part 2 section 1):
 //!
 //! | Star name | Here | Value |
 //! |---|---|---|

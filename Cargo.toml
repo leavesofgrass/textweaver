@@ -30,6 +30,7 @@ members = [
     "crates/textweaver-aids",
     "crates/textweaver-dectalk",
     "crates/textweaver-fonts",
+    "crates/textweaver-engines",
     "xtask",
 ]
 # The vendored Xilem and Masonry snapshot is its own workspace (ADR-0023).
@@ -62,6 +63,7 @@ default-members = [
     "crates/textweaver-aids",
     "crates/textweaver-dectalk",
     "crates/textweaver-fonts",
+    "crates/textweaver-engines",
 ]
 
 [workspace.package]
@@ -86,7 +88,9 @@ textweaver-store = { path = "crates/textweaver-store" }
 textweaver-keymap = { path = "crates/textweaver-keymap" }
 textweaver-a11y = { path = "crates/textweaver-a11y" }
 textweaver-editor = { path = "crates/textweaver-editor" }
-textweaver-app = { path = "crates/textweaver-app" }
+# Default features off, so a crate can build the app without `publish`
+# (the lean reader); crates that want it say `features = ["publish"]`.
+textweaver-app = { path = "crates/textweaver-app", default-features = false }
 textweaver-tui = { path = "crates/textweaver-tui" }
 textweaver-eci = { path = "crates/textweaver-eci" }
 textweaver-apple = { path = "crates/textweaver-apple" }
@@ -104,6 +108,7 @@ textweaver-theme = { path = "crates/textweaver-theme" }
 textweaver-aids = { path = "crates/textweaver-aids" }
 textweaver-dectalk = { path = "crates/textweaver-dectalk" }
 textweaver-fonts = { path = "crates/textweaver-fonts", default-features = false }
+textweaver-engines = { path = "crates/textweaver-engines" }
 
 # text and formats
 ropey = "1.6"

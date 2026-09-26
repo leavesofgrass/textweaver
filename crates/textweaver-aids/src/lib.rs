@@ -17,10 +17,14 @@
 //! - [`spacing`]: WCAG 1.4.12 text spacing settings, checks, and CSS.
 //! - [`fonts`]: font family, size, and weight, with the reading fonts Star
 //!   offered (OpenDyslexic, Atkinson Hyperlegible, Lexend), fallbacks, and CSS.
+//!   Choosing and resolving a family is `textweaver-fonts`' job; this crate
+//!   re-exports those types and adds text spacing.
 //! - [`ruler`]: the reading ruler and current-line band as row marks.
 //! - [`difficult`]: rare-word marking, with SCOWL's word levels built in
 //!   (no download) or any word-frequency list.
 //! - [`html`]: wraps ranges of text in HTML tags, escaping the rest.
+//! - [`settings`]: conversions from and to the saved `[reading_aids]`
+//!   settings (`textweaver_store::reading_aids`).
 //!
 //! Positions are canonical [`CharPos`](textweaver_core::CharPos) values
 //! (ADR-0002). Words come from `textweaver-text`'s word units, so every aid
@@ -34,6 +38,7 @@ pub mod html;
 pub mod level;
 pub mod rsvp;
 pub mod ruler;
+pub mod settings;
 pub mod spacing;
 pub mod syllables;
 mod util;
@@ -45,6 +50,7 @@ pub use difficult::{
 };
 pub use fonts::{
     FontDescription, FontFamily, FontSettings, Platform, READING_FONTS, ReadingFont, ReadingFontId,
+    describe as describe_font, to_css as font_css,
 };
 pub use level::{GradeBand, ReadingLevel, count_syllables, reading_level, reading_level_text};
 pub use rsvp::{

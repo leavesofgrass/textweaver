@@ -502,7 +502,7 @@ fn real_speech_dispatcher_reports_every_word() {
 /// counted as not available there while `spd-say` worked. Run in the dev
 /// container with `TEXTWEAVER_SPEECHD=1`, `speech-dispatcher-espeak-ng`,
 /// and a user configuration that sends audio to ALSA's null device (see
-/// the Agent D4 notes in `docs/tasks.md`).
+/// the Agent D4 notes in `docs/history/tasks.md`).
 #[test]
 #[ignore = "needs speech-dispatcher with sd_espeak-ng and no XDG_RUNTIME_DIR; run with TEXTWEAVER_SPEECHD=1"]
 fn the_server_is_found_or_spawned_without_a_runtime_dir() {

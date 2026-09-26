@@ -16,7 +16,7 @@ use textweaver_text::{Document, History, SearchQuery};
 
 use crate::command::{Command, Effect, NoteCommand, PromptPurpose};
 use crate::edit::{AfterLeave, EditState, SaveThen};
-use crate::notes::{UserHighlight, migrate_legacy_notes};
+use crate::notes::UserHighlight;
 use crate::playback::{Playback, ReadKind, SpeechTrack};
 use crate::text_util;
 use crate::view::Viewport;
@@ -750,7 +750,7 @@ impl App {
         let mut loaded = self.state_store().and_then(|store| store.load(&s.key));
         let mut relocated = None;
         if let Some(state) = loaded.as_mut() {
-            let mut changed = migrate_legacy_notes(state, &s.doc);
+            let mut changed = false;
             // The file changed outside textweaver: find every position,
             // bookmark, note, and highlight again (crate::relocate).
             if let Some(now) = &s.text_stamp

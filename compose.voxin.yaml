@@ -3,7 +3,7 @@
 # Mounts an existing, licensed Voxin installation read-only. By default it
 # uses the volume created by the emacspeak-docker project (install-outloud);
 # set VOXIN_VOLUME to use another. Nothing from Voxin enters this repository
-# or the textweaver-dev image. See docs/docker.md and ADR-0007.
+# or the textweaver-dev image. See docs/dev/docker.md and ADR-0007.
 #
 #   docker compose -f compose.yaml -f compose.voxin.yaml run --rm -T dev voxin-say -w /tmp/t.wav "hello"
 services:

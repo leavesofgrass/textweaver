@@ -42,5 +42,5 @@ Consequence: Star's saved character offsets do not map one-to-one onto textweave
 - [Reading and moving around](../reading.md): the units and navigation this model supports.
 - [The library](../library.md): where positions are saved, and `tw migrate-star`.
 - [ADR-0005: Narration and the OffsetMap](0005-narration-and-offset-map.md): how this text is spoken.
-- [Architecture](../architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
+- [Architecture](../dev/architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
 - [Documentation index](../README.md)

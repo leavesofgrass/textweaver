@@ -1,5 +1,5 @@
 //! `cargo xtask appimage [--out DIR] [--docker]`: the Linux release
-//! packages (docs/releasing.md).
+//! packages (docs/dev/releasing.md).
 //!
 //! Stages the Linux package exactly as `cargo xtask dist` does (the `dist`
 //! profile; `textweaver` and `tw` with Omnivox, speech-dispatcher, and

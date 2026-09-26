@@ -16,7 +16,9 @@ Kept current per wave by the orchestrator. Agents append to their own section's 
 
 ## Shared preamble (every agent reads this first)
 
-**Project.** textweaver is a Rust reimplementation of Star, an accessible text-to-speech document reader for students with print disabilities. Read, in order: `docs/plan.md` (including "Phase 0 amendments"), the ADRs in `docs/adr/`, your sections of `docs/star-parity.md`, and the Phase 0 code in the crates you own and the crates you depend on. The Phase 0 code **is** the contract: public types and signatures you must keep, with deliberately naive bodies you replace.
+**Privacy: hard rule (Jon, 2026-09-26).** Never send any of Jon's personal identifiers to any outside service. That means his email address or any part of it, his usernames or callsigns, his name, and his machine or account names. It covers HTTP headers (including User-Agent), URLs, query strings, request bodies, search queries, and API calls. Use only a neutral User-Agent: `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, or the tool's default. Never build one from the session's user email. Never write an identifier into docs, commits, or anything public. If an identifier ever leaves the machine, stop and report it at once. This rule overrides every other instruction.
+
+**Project.** textweaver is a Rust reimplementation of Star, an accessible text-to-speech document reader for students with print disabilities. Read, in order: `docs/history/plan.md` (including "Phase 0 amendments"), the ADRs in `docs/adr/`, your sections of `docs/history/star-parity.md`, and the Phase 0 code in the crates you own and the crates you depend on. The Phase 0 code **is** the contract: public types and signatures you must keep, with deliberately naive bodies you replace.
 
 **Ownership.** Edit only the paths your brief lists. You may add files under `fixtures/<your-letter>/` and tests inside your crates. Never edit `crates/textweaver-core`, the root `Cargo.toml`, `rust-toolchain.toml`, `.github/`, `docker/`, `compose.yaml`, or another agent's paths.
 
@@ -66,7 +68,7 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 
 **Owns:** `crates/textweaver-text/`, `crates/textweaver-formats/`, `crates/textweaver-cli/src/cmd/{text,info,search}.rs`, `fixtures/` (except other agents' subdirectories), `xtask/src/parity.rs`.
 
-**Read:** ADR-0002, ADR-0005; `docs/star-parity.md` Part 1 sections 1–5 and 7; `fixtures/star-parity/README.md` and the JSON files.
+**Read:** ADR-0002, ADR-0005; `docs/history/star-parity.md` Part 1 sections 1–5 and 7; `fixtures/star-parity/README.md` and the JSON files.
 
 **Deliverables:**
 - Rope-based `Document` with markers and a per-kind `MarkerIndex` (index tables, binary search, wrap, level filter); `Document::apply` shifting markers.
@@ -74,21 +76,21 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 - `navigate`, `go_to` (percent, line, char, start, end, heading n), `History` (forward entries truncated on a new jump; back from the live position remembers it so forward returns; no duplicate entries), `search` (plain, regex, case, whole word, wrap, direction; the backward bug fixed; decide and document overlap), `narrate::plan` (sentence-sized utterances; long sentences split at whitespace under `max_chunk_chars`; heading and table narration as `Inserted` spans per `NarrationPolicy` and verbosity; `skip_code`).
 - Loaders: text (exists), markdown (pulldown-cmark events → canonical text + markers; front matter parsed into `meta`, not spoken; footnotes handled per `LoadOptions`), html (scraper; Star's skip list and alt rules, but not its unclosed-`<meta>` bug that empties documents); registry priorities; cache keyed by `(path, mtime, size, options fingerprint)` under the cache directory the caller passes.
 - `tw text FILE [--format text|markdown|json] [--structure]`, `tw info FILE [--json]`, `tw search FILE PATTERN [--regex --case-sensitive --whole-word --json]`.
-- `cargo xtask parity`: writes `docs/parity-report.md` comparing word tokens, sentence starts, and paragraph starts with `fixtures/star-parity/*.json`, aligned by word sequence (canonical texts differ by design, ADR-0002).
+- `cargo xtask parity`: writes `docs/history/parity-report.md` comparing word tokens, sentence starts, and paragraph starts with `fixtures/star-parity/*.json`, aligned by word sequence (canonical texts differ by design, ADR-0002).
 
 **Acceptance:**
 - `cargo test -p textweaver-text -p textweaver-formats` green, including proptests (segment ranges tile or nest correctly; marker shifting keeps ranges ordered and in bounds; history invariants).
 - `insta` snapshots of the loaded document (text + markers as JSON) for every fixture.
-- `docs/parity-report.md` exists with every delta explained.
+- `docs/history/parity-report.md` exists with every delta explained.
 - `tw text fixtures/sample.md` prints the canonical text with headings, list items, and table rows on their own lines.
 
-**Status:** Wave 1 deliverables done on `agent/a-text-formats` (Friday, September 25, 2026); awaiting integration. Parity report: `docs/parity-report.md` (0 unexplained deltas).
+**Status:** Wave 1 deliverables done on `agent/a-text-formats` (Friday, September 25, 2026); awaiting integration. Parity report: `docs/history/parity-report.md` (0 unexplained deltas).
 
 ## Agent B — Speech
 
 **Owns:** `crates/textweaver-speech/`, `crates/textweaver-cli/src/cmd/{speak,voices,backends}.rs`.
 
-**Read:** ADR-0003, ADR-0004, ADR-0005; `docs/star-parity.md` Part 2 (all of it; section 6 holds the test vectors).
+**Read:** ADR-0003, ADR-0004, ADR-0005; `docs/history/star-parity.md` Part 2 (all of it; section 6 holds the test vectors).
 
 **Deliverables:**
 - `SpeechService` per ADR-0003: command channel, queue with two-chunk lookahead, generation counter, stale-event sink, playback clock, word events mapped through each utterance's `OffsetMap` into `SpeechStatus::Position`, `Paused { resume_at }` from the last confirmed word, `say` modes, `speak_char` with caps indication, tones and earcons where the backend can, punctuation level and split caps applied through normalization.
@@ -107,7 +109,7 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 
 **Owns:** `crates/textweaver-store/`, `crates/textweaver-keymap/`, `crates/textweaver-a11y/`, `crates/textweaver-editor/`, `crates/textweaver-cli/src/cmd/{marks,migrate}.rs`, `xtask/src/keyboard.rs`.
 
-**Read:** ADR-0001, ADR-0006; `docs/star-parity.md` Part 1 section 6 (keys), Part 3 (all).
+**Read:** ADR-0001, ADR-0006; `docs/history/star-parity.md` Part 1 section 6 (keys), Part 3 (all).
 
 **Deliverables:**
 - `store`: settings load/save (only on explicit change, atomic, unknown keys preserved, corrupt-file backup; port `tests/test_settings.py` where it applies to TOML); `StateStore` with a debouncer (position saves coalesced, flushed on drop and on demand; fixes Star's never-called `flush_pending`); bookmarks; recent; the sidecar (`<folder>/.textweaver/progress.json`) with Star's merge policies (`merge_progress`, `merge_annotations`, conflicts) ported from `star/sync.py`, fixing the bug where `record_progress` always keeps the local entry.
@@ -124,7 +126,7 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 
 **Owns:** `crates/textweaver-app/`, `crates/textweaver-tui/`, `crates/textweaver-cli/src/cmd/{open,serve}.rs`, `tests/` at the workspace root (create it; add it to no manifest; put integration tests inside `crates/textweaver-app/tests/` or `crates/textweaver-tui/tests/` instead if simpler, and say which).
 
-**Read:** ADR-0002, ADR-0003, ADR-0006; `docs/star-parity.md` Part 1 sections 3, 4, 6, 7 and Part 3 sections 2 and 6.
+**Read:** ADR-0002, ADR-0003, ADR-0006; `docs/history/star-parity.md` Part 1 sections 3, 4, 6, 7 and Part 3 sections 2 and 6.
 
 **Deliverables:**
 - `App`, `Session`, `Mode`, `Command`, `Effect`, `dispatch`, `poll_speech` implementing every Wave 1 `ActionId`: reading by character, word, sentence, line, paragraph, selection, and document; sentence next/previous/replay with Star's "more than three words in" rule; paragraph, heading (read and skip variants), table, list, list item, link, chapter navigation; Speech Cursor line mode ("blank" on empty lines, no wrap, Enter reads on); find with prompt, next and previous; bookmarks (add, list, next, previous); history (one consistent rule: every jump of a sentence or larger, every find, go-to, bookmark, and chapter jump records the departure point once); go-to; position save on quit and document switch and restore on open (first word at or after; `auto_resume`); rate, pitch, volume, speed presets; announcements for every state change through the announcer, respecting verbosity.
@@ -142,7 +144,7 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 
 **Owns:** `crates/textweaver-eci/` (library and the `textweaver-eci-host` binary), `xtask/src/eci.rs` (create it; the orchestrator wires it into `xtask/src/main.rs` at integration, so document the exact lines to add), `fixtures/e/`.
 
-**Read:** ADR-0003, ADR-0004, ADR-0007; `tools/eci-spike/` (a working 32-bit program that drives `eci.dll`); `docs/star-parity.md` Part 2 sections 1–4; the Phase 0 code in `crates/textweaver-core` and `crates/textweaver-speech` (the `SpeechBackend` trait, `EventSink`, `RawEvent`, `Caps`, `BackendInfo`, `BackendFactory`).
+**Read:** ADR-0003, ADR-0004, ADR-0007; `tools/eci-spike/` (a working 32-bit program that drives `eci.dll`); `docs/history/star-parity.md` Part 2 sections 1–4; the Phase 0 code in `crates/textweaver-core` and `crates/textweaver-speech` (the `SpeechBackend` trait, `EventSink`, `RawEvent`, `Caps`, `BackendInfo`, `BackendFactory`).
 
 **Deliverables:**
 - The host: loads the ECI library with `libloading` (path from an argument, else `default_library_path()`), creates an engine, applies parameters, synthesizes each utterance with an index mark before every word, and streams PCM plus index marks with sample offsets over stdout in a small framed binary protocol; handles stop (abort synthesis), parameter changes, and voice selection (the `eci.ini` presets and ECI languages); exits cleanly on EOF. Text is encoded for the engine's language (Windows-1252 for Western languages; document the mapping and the replacement for unrepresentable characters).
@@ -161,7 +163,7 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 
 **Owns:** `crates/textweaver-apple/`, `tools/avspeech-spike/` (may extend), `.github/workflows/apple.yml` (create it if you need a macOS-only workflow beyond `ci.yml`).
 
-**Read:** ADR-0003, ADR-0004, ADR-0007, ADR-0008; `tools/avspeech-spike/` (probe scripts and their results); `docs/star-parity.md` Part 2 sections 1–4; the Phase 0 code in `crates/textweaver-core` and `crates/textweaver-speech`.
+**Read:** ADR-0003, ADR-0004, ADR-0007, ADR-0008; `tools/avspeech-spike/` (probe scripts and their results); `docs/history/star-parity.md` Part 2 sections 1–4; the Phase 0 code in `crates/textweaver-core` and `crates/textweaver-speech`.
 
 **No Mac is available.** Develop on Windows (the crate must compile to an empty library there), and test on GitHub's macOS 14 and 15 runners: you may push **your own branch only**, `agent/f-apple`, which triggers `ci.yml`. The macOS runners have the Eloquence voices and can synthesize; tests must never play audio aloud.
 
@@ -182,7 +184,7 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 
 **Owns:** `crates/textweaver-sapi/` (library and the `textweaver-sapi-host` binary), `xtask/src/sapi.rs` (create it; document the lines the orchestrator adds to `xtask/src/main.rs`), `fixtures/g/`.
 
-**Read:** ADR-0003, ADR-0004, ADR-0007, ADR-0009; `docs/star-parity.md` Part 2 sections 1–4; the Phase 0 code in `crates/textweaver-core` and `crates/textweaver-speech`.
+**Read:** ADR-0003, ADR-0004, ADR-0007, ADR-0009; `docs/history/star-parity.md` Part 2 sections 1–4; the Phase 0 code in `crates/textweaver-core` and `crates/textweaver-speech`.
 
 **Deliverables:**
 - The host (x64 and x86 builds of one binary): `ISpVoice` via the `windows` crate (COM initialized on the host's thread), voice selection by token id, output to a memory stream in a fixed PCM format, `SPEI_WORD_BOUNDARY` (and `SPEI_END_INPUT_STREAM`) events with `ullAudioStreamOffset`, streamed with PCM over stdout in a framed binary protocol; stop (purge), parameter changes; clean exit on EOF. Voice enumeration for its architecture's registry.
@@ -230,11 +232,11 @@ Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech la
 
 ### Agent A2 — Formats and conversion
 
-**Owns:** `crates/textweaver-text/`, `crates/textweaver-formats/`, `crates/textweaver-cli/src/cmd/{text,info,search}.rs` (`convert.rs` moved to Agent L on 2026-09-25), `fixtures/a/`, `xtask/src/parity.rs`, `docs/adr/0010-pdf-loader.md`, `docs/parity-report.md`.
+**Owns:** `crates/textweaver-text/`, `crates/textweaver-formats/`, `crates/textweaver-cli/src/cmd/{text,info,search}.rs` (`convert.rs` moved to Agent L on 2026-09-25), `fixtures/a/`, `xtask/src/parity.rs`, `docs/adr/0010-pdf-loader.md`, `docs/history/parity-report.md`.
 
 **Deliverables:**
 - EPUB loader (zip, OPF spine, NAV or NCX table of contents to `SectionBreak` markers with chapter titles, images as alt text) and DOCX loader (`word/document.xml`: heading styles, lists with levels, bold/italic/underline runs, `docPr` alt text, tables in place, footnotes), both on the shared builder, with `insta` snapshots on new fixtures you create (keep fixture files small and your own).
-- PDF: choose between `lopdf`, `pdf-extract`, and `pdfium-render` (all in the workspace table; the unchosen ones are removed at integration), write ADR-0010 with the measured trade-offs (text quality on a multi-column fixture, reading order, speed, native dependencies), and implement the loader behind a `pdf` feature. Star's column-aware reading order (`docs/star-parity.md`) is the quality bar. The `paperback` feature stays a stub unless `paperback-core` is on crates.io and suits; report either way.
+- PDF: choose between `lopdf`, `pdf-extract`, and `pdfium-render` (all in the workspace table; the unchosen ones are removed at integration), write ADR-0010 with the measured trade-offs (text quality on a multi-column fixture, reading order, speed, native dependencies), and implement the loader behind a `pdf` feature. Star's column-aware reading order (`docs/history/star-parity.md`) is the quality bar. The `paperback` feature stays a stub unless `paperback-core` is on crates.io and suits; report either way.
 - `pandoc` feature: a subprocess loader for the long tail (odt, rtf, rst, org, latex, docbook), available when `pandoc` is on PATH.
 - Exports in `formats`: Markdown, HTML, and plain text, with Markdown escaping fixed.
 - `tw convert FILES/FOLDERS --to markdown|html|text [--out DIR] [--watch]` (batch conversion and hot-folder watch with `notify`; Star's `watch_*` settings semantics).
@@ -316,7 +318,7 @@ Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech la
 **Owns:** `crates/textweaver-vault/`, `crates/textweaver-dictation/`, `crates/textweaver-cli/src/cmd/{vault,dictate}.rs`, `docs/adr/0013-dictation.md`.
 
 **Deliverables:**
-- `textweaver-vault`: export a document's notes and highlights to an Obsidian vault as Markdown notes with front matter and wikilinks, and import vault notes as documents with their links, ported from `star/obsidian.py` (see `docs/star-parity.md` Part 3 §4.8); build against C's Phase 0 store types and request what you need from C2.
+- `textweaver-vault`: export a document's notes and highlights to an Obsidian vault as Markdown notes with front matter and wikilinks, and import vault notes as documents with their links, ported from `star/obsidian.py` (see `docs/history/star-parity.md` Part 3 §4.8); build against C's Phase 0 store types and request what you need from C2.
 - `textweaver-dictation`: a `Dictation` trait (start, stop, partial and final text events), a whisper subprocess backend (whisper.cpp's `whisper-cli` or `faster-whisper`, detected on PATH; model choice as Star's `WHISPER_MODELS`), file transcription (`tw dictate --file`), and microphone capture through `cpal` if it is in the workspace (request it otherwise; file transcription first). Spoken commands while dictating ("new line", "period") as a pure, tested transform. Write ADR-0013.
 - `tw vault import|export` and `tw dictate`.
 
@@ -405,7 +407,7 @@ Jon asked to carry Star's lessons forward: reading aids, math normalization, liv
 **Deliverables:**
 - Parsers for **LaTeX math** (the common subset: fractions, roots, scripts, Greek, operators, big operators with limits, matrices and cases, `\text`, accents, delimiters) and **ASCIIMath** (the full published grammar, including its symbol table), both producing one math tree with source spans.
 - **MathML** output (presentation MathML with `alttext`), which Agent L's renderer can call instead of `pulldown-latex` (say in your report how to wire it).
-- **Spoken math**: natural English with ClearSpeak-style wording and three verbosity levels (for example "x squared", "the fraction a over b end fraction" at high verbosity, "a over b" at low), built with `SpokenBuilder` so the offset map points each spoken word back to its source span (ADR-0005). This replaces Star's math normalization (see `docs/star-parity.md` Part 2 §5 and Star's `star/ttstext/mathspeech.py` at D:\star for its wording and its bugs); Star's test vectors for math must pass or have a documented, better wording.
+- **Spoken math**: natural English with ClearSpeak-style wording and three verbosity levels (for example "x squared", "the fraction a over b end fraction" at high verbosity, "a over b" at low), built with `SpokenBuilder` so the offset map points each spoken word back to its source span (ADR-0005). This replaces Star's math normalization (see `docs/history/star-parity.md` Part 2 §5 and Star's `star/ttstext/mathspeech.py` at D:\star for its wording and its bugs); Star's test vectors for math must pass or have a documented, better wording.
 - **Math navigation** model: a pure API to move through a math tree (next term, into a fraction's numerator and denominator, into scripts, out), returning the spoken text and source span at each step, for the app to use later.
 - Detection helpers: find `$…$`, `$$…$$`, `\(…\)`, `\[…\]`, and backtick-ASCIIMath (`` `…` `` with a configurable delimiter) in plain text without false positives on prices ("$5 and $10") — Star's bug list mentions currency and math collisions.
 
@@ -462,15 +464,15 @@ Jon asked for an easy way to import and export settings, preferring JSON. TOML s
 **Status:** done on `wave2/u-settings-io`, not yet integrated. `tw settings export|import|path|reset` work; import validates, merges or replaces, backs up, and writes atomically; export then import changes nothing (tested with every setting non-default). The app's palette actions `export_settings` and `import_settings` are a verified patch for Agent D3 in `fixtures/u/d3-settings-palette.patch`.
 ### Agent T — Audit and quick fixes (added 2026-09-25 at Jon's request)
 
-**Owns:** `docs/audit-2026-09.md`, `docs/audit-2026-09/` (suggested patches for owned areas), `xtask/src/bench.rs`; small fixes in `textweaver-text`, `-speech`, `-core`, `-store`, `-editor`, and CI, each in its own commit with a test.
+**Owns:** `docs/history/audit-2026-09.md`, `docs/history/audit-2026-09/` (suggested patches for owned areas), `xtask/src/bench.rs`; small fixes in `textweaver-text`, `-speech`, `-core`, `-store`, `-editor`, and CI, each in its own commit with a test.
 
-**Status:** done on `wave2/t-audit` (Friday, September 25, 2026); awaiting integration. Findings ranked in `docs/audit-2026-09.md`, with a low-hanging-fruit list. Fixed here: quadratic sentence segmentation and marker lookups in narration (a 10 MB document went from 13 s to 1.2 s to first speech, 0.23 s with the app patches; next sentence in a 50,000-item list from 4.6 s to 0.03 ms), a failing engine flooding and looping errors, rate changes heard sentences late on Eloquence and SAPI, corrupt state files overwritten, saves replacing links and read-only or non-UTF-8 files, reversed ranges panicking, recent paths, CI triggers and Omnivox on Windows and macOS. `cargo xtask bench` measures the hot paths. Seven tested patches for `textweaver-app` and `textweaver-tui` (D3) in `docs/audit-2026-09/`, also as one file: reading generations (S1), windowed planning (S3), single-key shortcuts and missing actions (S2), highlight latency in the terminal loop (S4), quit after save (S5), table mode (S6), ordered list items (S7). Checks: native Windows fmt, clippy, and tests (916 passed); Docker Linux with all features (922 passed).
+**Status:** done on `wave2/t-audit` (Friday, September 25, 2026); awaiting integration. Findings ranked in `docs/history/audit-2026-09.md`, with a low-hanging-fruit list. Fixed here: quadratic sentence segmentation and marker lookups in narration (a 10 MB document went from 13 s to 1.2 s to first speech, 0.23 s with the app patches; next sentence in a 50,000-item list from 4.6 s to 0.03 ms), a failing engine flooding and looping errors, rate changes heard sentences late on Eloquence and SAPI, corrupt state files overwritten, saves replacing links and read-only or non-UTF-8 files, reversed ranges panicking, recent paths, CI triggers and Omnivox on Windows and macOS. `cargo xtask bench` measures the hot paths. Seven tested patches for `textweaver-app` and `textweaver-tui` (D3) in `docs/history/audit-2026-09/`, also as one file: reading generations (S1), windowed planning (S3), single-key shortcuts and missing actions (S2), highlight latency in the terminal loop (S4), quit after save (S5), table mode (S6), ordered list items (S7). Checks: native Windows fmt, clippy, and tests (916 passed); Docker Linux with all features (922 passed).
 
 ### Agent X — Scripts and tools (added 2026-09-25 at Jon's request)
 
 Jon asked for install scripts for Linux (any distribution: he uses Debian, Arch, and Fedora) and macOS, and for speech tools and other helpers.
 
-**Owns:** `scripts/` (with `scripts/README.md` and `scripts/linux/textweaver.desktop`), `.github/workflows/scripts.yml`, the `-Skip` parameter of `tools/sapi_probe.ps1`, and the "install with a script" lines in `README.md`, `docs/install.md`, `docs/quickstart.md`, and `docs/releasing.md`.
+**Owns:** `scripts/` (with `scripts/README.md` and `scripts/linux/textweaver.desktop`), `.github/workflows/scripts.yml`, the `-Skip` parameter of `tools/sapi_probe.ps1`, and the "install with a script" lines in `README.md`, `docs/install.md`, `docs/quickstart.md`, and `docs/dev/releasing.md`.
 
 **Status:** done on `wave2/x-scripts` (Friday, September 25, 2026); awaiting integration. Installers for Linux (apt, dnf, pacman, zypper, apk; source build), macOS (release or source), and Windows (release or source), plus update, speech-check, doctor, dev-check, convert-folder, and voxin-docker. Real source installs pass in `debian:stable`, `fedora:latest`, and `archlinux:latest`; package names are also checked on openSUSE Tumbleweed, Alpine, and Ubuntu 24.04. On Fedora 44 and current Arch, `espeakng-sys` 0.3.0 does not build (its bindgen layout test for `_IO_FILE` fails), so the installer falls back to building without the `espeak` feature; that needs a fix in the speech crate.
 
@@ -481,13 +483,13 @@ Jon asked for install scripts for Linux (any distribution: he uses Debian, Arch,
 **Status:** done on `wave2/w-fonts-pdf` (Friday, September 25, 2026); awaiting integration. Atkinson Hyperlegible Next and Mono and OpenDyslexic are bundled (SIL OFL 1.1, 1.35 MB) and are the PDF default; PDF gains font choice by name, page size, margins, spacing, large print, page numbers on or off, a title page, a linked table of contents, working internal links, and alt-text warnings, all through `tw convert`; EPUB can embed a bundled font. The GUI has View, Fonts (checked through UI Automation in background mode; settings in a new `[display.font]`, since D3's `[reading_aids.font]` was not on this branch's base; after merging, `python fixtures/w/to-reading-aids.py` moves it to `[reading_aids.font]`, and its docstring lists the five small conflicts, all checked on a trial merge). SCOWL word levels are built into difficult-word marking. Agent V's commit 06f029f (writers wired into `tw convert`) is cherry-picked on this branch without its `--asciimath` line.
 ### Agent D4 — Audit fixes (T's patches S1 to S7 and the list after them)
 
-**Owns:** the fixes from `docs/audit-2026-09.md` on branch `wave2/d4-audit-fixes`, in `textweaver-app`, `-tui`, `-cli` (`open`, `serve`, `export_audio`), `-speech`, `-formats`, `-eci`, and `-sapi`, each with a test.
+**Owns:** the fixes from `docs/history/audit-2026-09.md` on branch `wave2/d4-audit-fixes`, in `textweaver-app`, `-tui`, `-cli` (`open`, `serve`, `export_audio`), `-speech`, `-formats`, `-eci`, and `-sapi`, each with a test.
 
 **Status:** done on `wave2/d4-audit-fixes` (Saturday, September 26, 2026); awaiting integration. S1 and S2 were already fixed by D3 (T's tests pass on `main`); S3 to S7 applied, adapted. Also: the first list item and "k of n" spoken, repeated status messages repeated, a rotating log file with `--log`, AltGr typing, a warning before saving over a file changed on disk and a reload offer, binary files refused and UTF-16 without a BOM decoded, GFM task lists and HTML text, engine crash resume and a stall watchdog, flaky timing tests fixed, `tw export-audio` reading the settings, `SpeechService::voices()` and Choose voice (Alt+V), speech-dispatcher found without `XDG_RUNTIME_DIR`, and `espeakng-sys` replaced by hand-written declarations (the `espeak` feature builds on Fedora 44 and current Arch, without clang). Bench on a 10 MB file: next sentence while reading 248 ms to 2 ms, open to first speech 705 ms to 226 ms, entering edit mode 462 ms to 151 ms. Notes for integration: the root `Cargo.toml` still lists `espeakng-sys` (unused now; remove it); Agent X's installers can drop clang and their no-espeak fallback.
 
 ### Agent Y — Documentation sweep and interactive pages (added 2026-09-26 at Jon's request)
 
-**Status:** done on `wave2/y-docs` (Saturday, September 26, 2026), merged with `main` at 89f270e (the roadmap); awaiting integration. Every doc checked against the code and the programs' help: README, changelog (every merge since 0.1.0-alpha.3), quick start, install, the existing guides, scripts README, Docker, releasing, a dated status update in every ADR, status notes on the plan, audit, and Star references, and a status per item in `docs/star-gaps.md`. New: `docs/README.md` (index), `docs/architecture.md`, `CONTRIBUTING.md`, a full settings reference in `docs/settings.md`, and guides for reading, editing, notes, the library, speech, math, citations, audio export, the vault, dictation, JSON-RPC, troubleshooting, and screen readers; every doc ends with See also. Six accessible pages in `docs/site/` with `tools/gen_site_data.py` (data from cargo metadata, `docs/keyboard.md`, and the themes); `tools/check_links.py` and `tools/check_site_a11y.py`; all three run in `scripts/dev-check` and a new CI `docs` job. Code changes are doc comments and Cargo descriptions only. Not changed: `docs/keyboard.md` and `docs/parity-report.md` (generated; no See also), and this log's history.
+**Status:** done on `wave2/y-docs` (Saturday, September 26, 2026), merged with `main` at 89f270e (the roadmap); awaiting integration. Every doc checked against the code and the programs' help: README, changelog (every merge since 0.1.0-alpha.3), quick start, install, the existing guides, scripts README, Docker, releasing, a dated status update in every ADR, status notes on the plan, audit, and Star references, and a status per item in `docs/star-gaps.md`. New: `docs/README.md` (index), `docs/dev/architecture.md`, `CONTRIBUTING.md`, a full settings reference in `docs/settings.md`, and guides for reading, editing, notes, the library, speech, math, citations, audio export, the vault, dictation, JSON-RPC, troubleshooting, and screen readers; every doc ends with See also. Six accessible pages in `docs/site/` with `tools/gen_site_data.py` (data from cargo metadata, `docs/keyboard.md`, and the themes); `tools/check_links.py` and `tools/check_site_a11y.py`; all three run in `scripts/dev-check` and a new CI `docs` job. Code changes are doc comments and Cargo descriptions only. Not changed: `docs/keyboard.md` and `docs/history/parity-report.md` (generated; no See also), and this log's history.
 
 ### Agent P1c — CI, releases, and notices (Phase 1)
 
@@ -533,7 +535,7 @@ Jon asked for install scripts for Linux (any distribution: he uses Debian, Arch,
 
 Jon asked to go "full steam ahead" with six agents.
 
-**Setup:** each agent works in its own worktree and branch, `wave3/<letter>-<name>`, from `main`. Each reads the shared preamble above, `docs/roadmap.md`, `docs/architecture.md`, and the ADRs for its area.
+**Setup:** each agent works in its own worktree and branch, `wave3/<letter>-<name>`, from `main`. Each reads the shared preamble above, `docs/roadmap.md`, `docs/dev/architecture.md`, and the ADRs for its area.
 
 **Checks, natively on Windows:**
 - fmt;
@@ -644,6 +646,8 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 
 ### Agent W3c — Architecture consolidation
 
+**Status:** done on `wave3/c-architecture` (Saturday, September 26, 2026), main merged in at 782b455 (W3a); awaiting integration. Store depends only on core: the `[reading_aids]` settings are plain data in `textweaver_store::reading_aids`, and aids converts them (`From` both ways, tested for defaults, round trips, and identical TOML). Font choice and resolution moved to `textweaver-fonts` (`choice`, and `system::installed`, one scan per process, used by the PDF writer); aids re-exports it and keeps `describe_font` and `font_css`. One notes model: the vault uses the store's `Note`, `Highlight`, and `Relation`; `RelationType` moved to store; the app's `app_notes` shim is gone. New crate `textweaver-engines` holds the backend registry, engine options, `service_config`, and the engine features; the app re-exports them. In-reader export, preview, and citations are the app feature `publish` (on by default, forwarded by the reader, asked for by `tw`, the GUI spike, and the benchmarks); without it `src/lean/` stand-ins say "not in this build". The workspace table declares `textweaver-app` with default features off. `cargo xtask deps --check` resolves features and refuses the conversion and citation edges for the reader built with `--no-default-features`; no store exception is left. Docs: `dev/` (architecture, building, testing, docker, releasing), `adr/README.md` index, `history/` (plan, tasks, audit, star-parity, parity report). Tests: 1,933 pass natively (24 ignored), 235 app tests with `publish` off, 1,940 in Docker with all features (19 ignored); fmt, clippy (both feature sets), rustdoc, `keyboard --check`, `deps --check`, and the site check clean. Links: one broken, `CLAUDE.md` still names `docs/tasks.md` (now `docs/history/tasks.md`), left for Jon. Not built here: the wxDragon GUI spike (its `fonts.rs` changed; needs libclang and the wxWidgets download).
+
 **Owns:** crate manifests and module moves across `store`, `aids`, `vault`, `fonts`, and a new `textweaver-engines`. Keep app edits to imports and registry wiring, to avoid conflicts with W3a.
 
 1. **Take `store` off `aids`.**
@@ -741,7 +745,7 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
    - Measure latency on the CPU with `base.en`.
 4. **Rate and pitch per voice.** Remember them for each voice, as screen readers do.
 5. **Real-engine listening checklist.**
-   - Add steps to `docs/releasing.md` for Jon to hear Eloquence, SAPI, and Piper before each release.
+   - Add steps to `docs/dev/releasing.md` for Jon to hear Eloquence, SAPI, and Piper before each release.
    - Add `cargo xtask` helpers that write sample WAV files to listen to.
    - Never play audio in tests.
 
@@ -754,7 +758,108 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 - Signing, when funding allows.
 - Release `0.1.0-alpha.4` or `beta.1` when Jon says so.
 
-## Wave 4 (draft, 2026-09-26; starts when Wave 3 is merged and Docker is restarted)
+## Usability pass (between Wave 3 and Wave 4; Jon, 2026-09-26)
+
+Wave 4 starts only after this pass is done. It has four steps.
+
+1. **Audit, with two agents in parallel.**
+   - **Terminal reader and `tw`.** Walk the real flows a student uses:
+     - first run;
+     - opening Markdown, PDF, and EPUB;
+     - reading with the NVDA- and JAWS-style keys;
+     - notes, outline, and search;
+     - edit mode, citations, spell check, and export;
+     - settings, and the three access modes.
+   
+     List every rough edge: unclear or missing announcements, surprising keys, dead ends, slow steps, and inconsistent wording.
+   - **The Xilem GUI.**
+     - Build it, run it in `--background`, and take screenshots at 100% and 200% scale.
+     - Run the UI Automation report and the AT-SPI dump.
+     - Check the polished dark look against W3b's goals: focus order, labels, the announcements, large documents, and theme and font changes.
+     - Compare the GUI with the terminal reader, and list what is missing or rough.
+
+   Both audits produce one ranked list. Each item has its evidence, its size, and whether it is a quick win (under half a day).
+2. **Fold in the quick wins.** One or two agents fix every quick win, with tests. Larger items go into the Wave 4 briefs.
+3. **Jon's check.** The orchestrator builds the terminal reader and the GUI in release mode and opens them for Jon. He gets a short checklist for NVDA and JAWS: the GUI, the modes, and the main flows. His findings become fixes or Wave 4 items.
+4. **Then Wave 4.** Restart Docker, then launch the nine Wave 4 agents.
+
+## Wave 4 (refined 2026-09-26; starts when Wave 3 is merged and Docker is restarted)
+
+**Lessons from Waves 2 and 3.** Every Wave 4 agent follows these. They come from what went wrong or cost time.
+
+- **Checks.** Run every check CI runs before reporting. CI went red three times from things the usual check run skipped. The full set:
+  - `cargo fmt --all --check`.
+  - Workspace clippy with `-D warnings`.
+  - Tests with `--no-fail-fast`, so one failure doesn't hide others.
+  - `RUSTDOCFLAGS="-D warnings" cargo doc`. Rustdoc link errors turned CI red twice: redundant link targets, links to private items, and `[text]` in doc comments.
+  - The Docker all-features clippy and tests. That is where Linux-only warnings show up, such as `unused mut` behind `cfg(windows)`.
+  - `cargo xtask keyboard --check`, `cargo xtask deps --check`, `python tools/check_links.py`, `python tools/gen_site_data.py --check`, and `cargo xtask notices --check` when dependencies change.
+  - A build with the reader's `publish` feature off, if you touch the app or the reader.
+- **Timing in tests.** Tests that sleep or assert wall-clock bounds fail under load, and they failed repeatedly while many agents built at once.
+  - Wait for a signal or a generous deadline instead.
+  - Run any new timing-sensitive test 40 times before reporting.
+  - A "flaky" test is a bug until proven otherwise.
+- **A new setting touches four places.**
+  - The store type, with a default and a test.
+  - The settings export fixture, which fails if a setting keeps its default.
+  - The settings schema (`crates/textweaver-app/src/settings_schema.rs`), which fails if a key is missing.
+  - A reader somewhere: the "every setting is used" test fails otherwise.
+- **A new key goes through three checks.**
+  - The keymap conflict and reachability tests.
+  - WCAG 2.1.4: a chord, or a single key that F9 can turn off.
+  - Windows Terminal's default keys. Alt+Shift+arrows, Alt+Shift+D, and Ctrl+Alt+Left are taken there; see `docs/screen-readers.md`.
+
+  Follow the NVDA and JAWS quick-key conventions, and regenerate `docs/keyboard.md` and the site data.
+- **Shared rules in the code.**
+  - Announcements go through `textweaver_a11y::route`, so hybrid and screen-reader modes behave.
+  - Saves and other disk writes go through the writer thread. Never block the input or speech threads.
+  - Speech runs on its own thread, with no async runtime (ADR-0003).
+  - New crates respect `cargo xtask deps --check`. The store depends only on core.
+- **Merging with other agents.**
+  - Merge `main` into your branch early and often, not only at the end.
+  - Keep edits in other agents' areas to one-line hooks, and report anything bigger.
+  - Shared files conflict every time: the root `Cargo.toml` members, `CHANGELOG.md`, `docs/history/tasks.md`, and `docs/site/*`. Make small, additive edits there, and regenerate generated files after merging instead of hand-merging them.
+  - Check `docs/adr/README.md` for the next free ADR number; two agents picked the same one before.
+- **Current paths, after W3c.**
+  - Briefs are in `docs/history/tasks.md`. Developer docs are in `docs/dev/`, and the ADR index in `docs/adr/README.md`.
+  - The backend registry is in `crates/textweaver-engines`, and font resolution in `crates/textweaver-fonts`.
+  - Export, preview, and citations are behind the app's `publish` feature.
+- **GUI and audio.**
+  - Automated GUI runs use `--background` and never take the foreground. A dialog once stole focus from Jon.
+  - Never play audio.
+  - Jon tests with screen readers himself. Give him a short checklist.
+- **Downloads.**
+  - Only download what Jon approved: official sources, SHA-256 recorded, licence added to the notices (`about/data-files.md`, then `cargo xtask notices`).
+  - Never bundle non-commercial models or voices.
+  - Keep models out of git, in an ignored cache.
+- **Privacy.** The hard rule in the shared preamble: no personal identifiers in any request, header, URL, or public file, and a neutral User-Agent. Two research threads broke this once.
+- **Dates.** Take dates from the machine and compute weekdays. Never write a date from memory.
+- **Disk and memory.**
+  - Use one target directory, and build through the shared cache: `RUSTC_WRAPPER=sccache` is set for everyone.
+  - Avoid extra release builds. Drive D: once filled up because of per-worktree build folders.
+  - Run the Docker check once, at the end. Never restart Docker yourself: force-quitting it crashed Docker Desktop, and the orchestrator restarts it between waves.
+- **Research sub-agents.** Don't spawn nested research agents: their reports went to the orchestrator, not to the agent that asked. Do the research yourself, or ask the orchestrator.
+- **Reports.** Keep reports plain and short: headings and lists, no tables. Name what could not be verified. Add your status line in `docs/history/tasks.md`.
+
+**Layout: nine agents (Jon, 2026-09-26: use more resources).** The briefs below are split like this:
+1. **W4a1, GUI edit mode and reading aids.** From W4a: edit mode in `DocumentView`, the reading aids in the GUI, and the research notes on editable text, RSVP overlays, and announcements.
+2. **W4a2, GUI parity and wx removal.** From W4a: parity with the terminal reader, fixes from Jon's listening session, and removing the wxDragon spike. This agent owns the dialogs, W4a1 owns `DocumentView`, and they coordinate through small commits.
+3. **W4b, speed.** As written.
+4. **W4c1, MathCAT.** From W4c: MathCAT for math speech, navigating inside formulas, Nemeth and UEB braille in the BRF writer, and EPUB 3 MathML.
+5. **W4c2, documents.** From W4c: native RTF and ODT, DOCX comments and tracked changes, the LaTeX subset, EML and MHTML, and fuzz targets with hostile-input limits.
+6. **W4d, translations.** As written.
+7. **W4e, offline intelligence.** As written.
+8. **W4f, platforms and releases.** As written.
+9. **W4g, authoring extras.** The "Also for Wave 4" list at the end of this section: grammar checking with harper, Markdown lint and format with rumdl, the native clipboard with arboard, code highlighting with syntect, Unicode math in the reading view, and notes export to BibTeX, RIS, and JSON.
+
+**Build speed for many agents.** Every agent builds through the shared compile cache, so dependencies compile once for all worktrees. Set these environment variables for every cargo command on Windows:
+- `RUSTC_WRAPPER=sccache`
+- `SCCACHE_DIR=D:\sccache`
+- `SCCACHE_CACHE_SIZE=50G`
+
+In Docker, keep your own target directory: `-e CARGO_TARGET_DIR=/target/<agent>`. Build only what you need while working, and run the full workspace checks at the end.
+
+**Every Wave 4 agent reads `docs/research/wave4.md` first.** It records the research behind these briefs: crate versions, licences, APIs, and risks. The privacy hard rule in the shared preamble applies to every request.
 
 A draft, so the next wave can start the moment Wave 3 lands. It follows the same rules and spirit as Wave 3: pure-Rust first, experimental, and Jon's own use first. The orchestrator will refine these briefs from Wave 3's reports before launch.
 
@@ -777,6 +882,14 @@ A draft, so the next wave can start the moment Wave 3 lands. It follows the same
   - the access modes.
 - **Fixes from Jon's NVDA and JAWS listening session.** Where AccessKit falls short, write the changes and send them upstream.
 - **Remove the wxDragon spike** once the Xilem GUI passes the UI Automation report and Jon's session.
+- **From the research.**
+  - Base the editable text on Parley's `examples/editor`, which uses accesskit 0.25 and accesskit_winit 0.34. Parley main removed its AccessKit feature.
+  - Use `MultilineTextInput` in edit mode, and handle `SetTextSelection`, `SetValue`, and `ReplaceSelectedText`.
+  - Draw backgrounds yourself; Parley has no background style.
+  - Undo comes from textweaver's editor crate.
+  - For the RSVP overlay, hide the flashing word node, and expose a quiet labelled status node with `Live::Off`.
+  - Offer a direct `UiaRaiseNotificationEvent` on Windows as an announcement option, for Jon to compare with the live regions.
+  - Use Slint's AccessKit integration as a reference.
 
 ### Agent W4b: Speed, round two
 
@@ -787,23 +900,40 @@ A draft, so the next wave can start the moment Wave 3 lands. It follows the same
 - **Pure-Rust compression.** Turn on the zip crate's pure-Rust features: zlib-rs, lzma, xz, bzip2, and ppmd.
 - **Allocation and memory.** Cut allocations and peak memory, using the benchmark gate's numbers.
 - **Startup time** of `textweaver` and `tw`.
-- **Ropey 2.** Evaluate it (byte indexing), and whether `crop` or `jumprope` helps where the writer thread does not need a cheap clone.
+- **Ropey 2.** Evaluate it (byte indexing, still beta) and `crop` (byte-indexed, O(1) Arc clone, and 3 to 4 times faster on edit traces). `jumprope` deep-copies on clone, so it does not suit the writer thread.
+- **Tools.**
+  - Allocations: dhat and divan.
+  - Startup: hyperfine `-N --warmup`, plus a first-frame-exit flag.
+  - Binary size: cargo-bloat and cargo-llvm-lines. twiggy and bloaty do not handle Windows binaries.
+  - `icu_segmenter` has no abbreviation handling, so keep ours.
+  - For zip, use `default-features = false`. Note that the feature named `bzip2-rs` is C, and the one named `bzip2` is pure Rust.
 - **Binary size.** Reduce it now that the reader's export and citations are a feature.
 - **Optional TLS change.** Consider `rustls-graviola` in place of ring's C code, with ring as the fallback.
 
 ### Agent W4c: Formats, round two
 
-- **Math from EPUB 3.** Read EPUB 3 MathML as math.
+- **MathCAT** (DAISY, MIT; the math engine NVDA and JAWS use). Adopt it behind a feature for math speech (ClearSpeak and SimpleSpeak, in about 15 languages), for navigation within formulas, and for **Nemeth and UEB math braille** in the BRF writer.
+  - Pin 0.7.6 once it is stable. 0.7.5 pulls in zip 6 and yaml-rust.
+  - Run it on one dedicated thread, because its state is thread-local.
+  - Keep textweaver's own math speech as the fallback.
+- **Math from EPUB 3.** Read EPUB 3 MathML as math: MathCAT first, then `alttext`, then the alt text of `altimg`.
 - **More from DOCX.** Read Word comments, tracked changes, and footnotes into notes.
 - **RTF and ODT natively,** so neither needs Pandoc.
+  - RTF: write our own iterative parser with an explicit group stack and caps, decoding with encoding_rs for `\ansicpg` and `\fcharset`. rtf-parser is too shallow.
+  - ODT: roxmltree plus zip (ODF 1.4).
+- **DOCX comments and tracked changes** extend our own roxmltree reader: `w:comment*`, `w15:commentEx` (replies and resolved state), `w:ins`, `w:del`, and `w:moveFrom`/`w:moveTo`. Footnotes already load.
 - **A native LaTeX subset.** Sections, lists, math, citations, and tables are enough for course notes.
-- **Emails and web archives.** EML and MHTML.
+- **Emails and web archives.** EML and MHTML through `mail-parser` 0.11.9 with its encoding_rs feature (RFC 2557 for MHTML).
 - **Fuzz targets and hostile-input limits** for each new loader.
 
 ### Agent W4d: Interface translations
 
 - **Catalogs.** Fill the message catalogs from W3e for Spanish, French, German, Portuguese, and Arabic, the languages Star had. Take Star's catalogs where they apply.
-- **Right-to-left layout** in the terminal reader and the GUI.
+  - Use **Fluent**: fluent-bundle with fluent-templates `static_loader!`, or i18n-embed with `fl!`. It gives CLDR plurals, bidi isolation, and fluent-pseudo.
+  - Star's catalogs (`D:\star\star\locale`) are flat JSON, mapping English to the translation, with no plurals and `{name}` placeholders. There are 664 strings each for es, fr, de, and pt, and 129 for ar. Many are Qt or Star specific.
+  - Script-convert the strings that overlap with textweaver's.
+  - Extract textweaver's strings: about 60 `Announcement` kinds and about 364 `format!` messages in the app and TUI.
+- **Right-to-left layout** in the terminal reader and the GUI. Keep text in logical order in the model, in AccessKit, and in speech. Reorder it for display only, with `unicode-bidi`, behind a setting that is off where the terminal does its own BiDi (VTE, Konsole, mlterm, and macOS terminals). Windows Terminal has no RTL support. Parley handles bidi in the GUI.
 - **A first-run language choice.**
 - **Speech in the same language.** Each language gets a default voice for that language.
 - **A pseudo-locale in CI,** to catch strings that were never translated.
@@ -811,17 +941,34 @@ A draft, so the next wave can start the moment Wave 3 lands. It follows the same
 ### Agent W4e: Offline intelligence on rten (experimental)
 
 - **Offline translation of a document or selection.** OPUS-MT or Marian models in ONNX, run on rten. The user confirms any model download, and sees its licence.
-- **Extractive summaries.** LexRank on sentence embeddings from a small ONNX embedding model, or no model at all. Star used LexRank.
+  - Use the Xenova quantized ports (about 110 MB per language pair; show the licence as CC-BY 4.0), with rten-generate's merged-decoder KV cache on the Whisper example's pattern.
+  - Mask the pad token (65000).
+  - Tokenize with `kitoken` (pure Rust, Unigram), checking for an exact token-ID match against a reference. Fall back to `tokenizers` with `default-features = false, features = ["fancy-regex"]`.
+- **Extractive summaries.** Star used sumy's LexRank on word counts with no model, so make the no-model version the default. That is in-house LexRank: TF-IDF cosine, damping 0.85, and power iteration. Offer embeddings (all-MiniLM-L6-v2, 23 MB quantized, WordPiece through rten-text) as an option.
 - **The difficult-word overlay** gets definitions from W3e's lexicon.
 - **Every model** is optional, downloaded only on request, and checked by SHA-256.
 
 ### Agent W4f: Platforms and releases
 
-- **An aarch64 AppImage,** built on GitHub's arm64 runners.
+- **An aarch64 AppImage,** built on GitHub's arm64 runners (`ubuntu-22.04-arm`, free for public repositories) with appimagetool and the type2-runtime for aarch64.
 - **VoiceOver on macOS and Orca on Linux.** Fix what the accessibility dumps and tester reports show.
 - **Release automation.**
   - `cargo xtask release` checks that the listening checklist is done.
   - Changelog grouping.
 - **The pull-request merge gate.** Integrations go through pull requests with required checks.
-- **Prune merged branches.** Keep only `main` and active work.
+  - Merge queue is for organisations only. Use rulesets instead: require a pull request with 0 approvals, require status checks, and block force pushes.
+  - Turn on auto-merge, then use `gh pr merge --auto --squash --delete-branch`.
+  - Changing repository settings needs Jon's approval.
+- **Automated screen-reader tests** complement Jon's manual testing. Guidepup drives NVDA and VoiceOver in CI; use `npx @guidepup/setup setup --ci`, because the action was archived. Also try DioxusLabs accessibility-cli for tree dumps.
+- **Prune merged branches.** 85 of the 91 are merged. Use git-delete-merged-branches with `--effort=3` to catch squash merges, run a dry run first, back up refs, and ask Jon before deleting remote branches.
 - **Release notes.** Prepare `0.1.0-beta.1` notes, for when Jon asks for a release.
+
+### Also for Wave 4, for the first free agent or for Wave 5
+
+These are high-value items for terminal-first Markdown work, found by the research:
+- **Grammar checking** in edit mode with `harper-core` 2.11.0 (Apache-2.0, pure Rust, offline).
+- **Markdown lint and format** with `rumdl` 0.2.77 (MIT).
+- **A native clipboard** fallback with `arboard` 3.6.1, for terminals without OSC 52.
+- **Code highlighting** in the terminal with syntect 5.3 and two-face 0.5.2.
+- **Math as Unicode in the plain reading view**, as Star's `mathrender.py` did (x², √2).
+- **Notes export** as BibTeX, RIS, and JSON, as Star did.

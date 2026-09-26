@@ -3,7 +3,7 @@
 //!
 //! Star sent DOCX through Pandoc to Markdown when Pandoc was installed, and
 //! on Windows decoded Pandoc's UTF-8 output with the ANSI code page, which
-//! corrupted every non-ASCII letter (docs/star-parity.md, Part 1 §1.5).
+//! corrupted every non-ASCII letter (docs/history/star-parity.md, Part 1 §1.5).
 //! This loader reads the package directly:
 //!
 //! - **Headings**: paragraph styles named `heading 1`–`heading 9` (levels

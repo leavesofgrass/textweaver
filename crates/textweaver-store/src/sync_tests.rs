@@ -1,4 +1,4 @@
-//! `tests/test_sync.py` ported one-to-one (45 tests, docs/star-parity.md
+//! `tests/test_sync.py` ported one-to-one (45 tests, docs/history/star-parity.md
 //! Part 3 §3.6), numbered as in the inventory, followed by the sidecar tests
 //! from `tests/test_library.py` and tests for the fixed Star bugs.
 

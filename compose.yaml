@@ -1,4 +1,4 @@
-# Development container for textweaver. See docs/docker.md.
+# Development container for textweaver. See docs/dev/docker.md.
 #
 #   docker compose build dev
 #   docker compose run --rm dev cargo test --workspace

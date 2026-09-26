@@ -30,7 +30,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use textweaver_convert::{ConvertOptions, Converter, Job as ConvertJob, OutputFormat, Status};
+pub(crate) use textweaver_convert::OutputFormat;
+use textweaver_convert::{ConvertOptions, Converter, Job as ConvertJob, Status};
 use textweaver_core::{CharRange, Utterance};
 use textweaver_formats::{Loader, MarkdownLoader, Source};
 use textweaver_speech::ReadingGeneration;
@@ -170,18 +171,6 @@ fn front_matter_bibliography(text: &str, folder: &Path) -> Option<PathBuf> {
 }
 
 impl App {
-    /// Where files made from a document that has no file yet go (exports,
-    /// study sheets): the folder textweaver was started in, as Save As
-    /// suggests; in a session that keeps no files (tests), the system's
-    /// temporary folder.
-    pub(crate) fn loose_folder(&self) -> PathBuf {
-        if self.paths.is_some() {
-            std::env::current_dir().unwrap_or_else(|_| std::env::temp_dir())
-        } else {
-            std::env::temp_dir()
-        }
-    }
-
     /// The document's folder and base name.
     fn doc_place(&self) -> (Option<PathBuf>, PathBuf, String) {
         let path = self

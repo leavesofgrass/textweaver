@@ -10,7 +10,7 @@
 #
 # Build:   docker compose build dev
 # Use:     docker compose run --rm dev cargo test --workspace
-# See docs/docker.md.
+# See docs/dev/docker.md.
 
 ARG RUST_VERSION=1.96
 FROM rust:${RUST_VERSION}-trixie

@@ -1480,7 +1480,7 @@ impl App {
     fn settings_changed(&mut self, old: &Settings, path: &str) {
         let top = path.split('.').next().unwrap_or_default();
         if matches!(top, "speech" | "normalization" | "highlight") {
-            let config = crate::backends::service_config(&self.settings);
+            let config = textweaver_engines::service_config(&self.settings);
             self.speech.set_normalization(config.normalize);
             self.speech.set_pacing(config.pacing);
             self.apply_voice_settings();

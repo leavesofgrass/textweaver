@@ -49,9 +49,9 @@ pub fn start_log(opts: &Options) -> Option<String> {
 }
 
 /// The speech configuration the settings describe (the app's
-/// [`textweaver_app::service_config`], shared by every frontend).
+/// [`textweaver_engines::service_config`], shared by every frontend).
 pub fn service_config(settings: &Settings) -> ServiceConfig {
-    textweaver_app::service_config(settings)
+    textweaver_engines::service_config(settings)
 }
 
 /// Starts the speech service: the requested backend if available, else the
@@ -69,7 +69,7 @@ pub fn start_speech(settings: &Settings, opts: &Options) -> (SpeechService, Stri
         .unwrap_or_else(|| settings.speech.backend.clone());
     let preference = (wanted != "auto" && !wanted.is_empty()).then_some(wanted.as_str());
     // Engine options from `[speech.eci]`, `[speech.sapi]`, `[speech.apple]`.
-    let registry = textweaver_app::speech_registry_for(settings);
+    let registry = textweaver_engines::speech_registry_for(settings);
     let info = registry.select(preference).backend;
     if let Some(p) = preference
         && info.id != p

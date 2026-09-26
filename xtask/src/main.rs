@@ -10,7 +10,7 @@
 //! - `hosts`: build every speech-engine host for this platform and install
 //!   them with the dictionaries (`--dest DIR` for a package directory).
 //! - `dist`: build a release package for this platform (`--universal` on
-//!   macOS); see `docs/releasing.md`.
+//!   macOS); see `docs/dev/releasing.md`.
 //! - `eci-host`, `sapi-host`: build one engine's hosts.
 //! - `gui-dist`: the Xilem GUI's own package: a zip on Windows, a `.app`
 //!   on macOS, a tarball and an AppImage on Linux (see `gui_dist.rs`).

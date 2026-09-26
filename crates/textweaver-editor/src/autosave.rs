@@ -1,7 +1,7 @@
 //! Autosave snapshots, crash recovery, and the save rule.
 //!
 //! Ported from `star/gui/mixin_autosave.py` and `_editing.py`
-//! (docs/star-parity.md Part 3 §4.2 and §5) with these fixes:
+//! (docs/history/star-parity.md Part 3 §4.2 and §5) with these fixes:
 //!
 //! - snapshots are written to a unique temp file, synced, and renamed
 //!   (Star used a fixed `<key>.tmp` and no fsync, §7 item 40);
