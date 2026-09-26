@@ -386,7 +386,7 @@ Jon asked to carry Star's lessons forward: reading aids, math normalization, liv
 
 **Deliverables:**
 - A reference library stored as CSL-JSON (per user, and per document folder), with import and export of **BibTeX/BibLaTeX** (`biblatex`), **RIS**, and **CSL-JSON**, round-trip tested.
-- **DOI lookup** (doi.org content negotiation for CSL-JSON) and **ISBN lookup** (Open Library), over blocking HTTP (`ureq`, no async runtime), with timeouts, a small on-disk cache, and offline-friendly errors; tests against recorded responses (no network in tests; one `#[ignore]`d live test).
+- **DOI lookup** (doi.org content negotiation for CSL-JSON) and **ISBN lookup** (Open Library), over blocking HTTP (`ureq`; an async client is allowed outside speech per ADR-0001 if parallel lookups need it), with timeouts, a small on-disk cache, and offline-friendly errors; tests against recorded responses (no network in tests; one `#[ignore]`d live test).
 - **Formatting with CSL styles** through `hayagriva` (APA, MLA, Chicago author-date, IEEE, Vancouver at least, plus loading a `.csl` file): in-text citations and bibliography entries as plain text and as Markdown/HTML, readable aloud (no visual-only formatting).
 - **Citation keys and insertion**: Pandoc-style `[@key]`, `[@key, p. 12]`, `[@a; @b]` parsing and resolution against the library, so Agent L's Pandoc-flavor renderer can render citations and a bibliography, and the editor can insert them (describe the API the app needs).
 - `tw cite add DOI|ISBN`, `tw cite import FILE`, `tw cite export --to bibtex|ris|csl-json`, `tw cite format KEY --style apa`, `tw cite list [--json]`.

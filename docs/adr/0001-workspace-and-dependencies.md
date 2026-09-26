@@ -26,7 +26,7 @@ all of the above ← app ← tui, cli
 **Every third-party crate is declared once** in `[workspace.dependencies]` in the root `Cargo.toml`, and crates opt in with `name.workspace = true`. That table is the approved list. Adding to it is an orchestrator decision; agents ask in their report. At Phase 0 it holds: `ropey` 1.6, `unicode-segmentation`, `regex`, `pulldown-cmark`, `scraper`, `zip`, `roxmltree`, `serde`, `serde_json`, `toml`, `directories`, `thiserror`, `anyhow`, `bitflags`, `log`, `clap`, `ratatui`, `crossterm`, `espeakng-sys`, `speech-dispatcher`, `tts`, `rodio`, `proptest`, `insta`, `tempfile`.
 
 **Rules:**
-- No async runtime. Threads and `std::sync::mpsc` channels.
+- No async runtime in speech: `textweaver-speech`, the engine backends, and anything the speech thread calls use threads and `std::sync::mpsc` channels, because engines have thread affinity (SAPI and WinRT COM apartments, Apple engines on the main run loop, espeak-ng's process-wide state; ADR-0003). Other crates may use an async runtime where it clearly helps, such as network-heavy work, as long as it stays out of the speech path (clarified by Jon, 2026-09-25).
 - `thiserror` in libraries, `anyhow` only in binaries (`tui`, `cli`, `xtask`).
 - Engines and heavy formats behind cargo features, off by default: `textweaver-speech/{espeak, omnivox, speechd, tts-crate}`, `textweaver-formats/{paperback, pandoc}`, `textweaver-a11y/live-region`.
 - Workspace lints: `unsafe_code = "deny"` (the espeak backend's FFI module opts out with `#[allow(unsafe_code)]` and a `// SAFETY:` comment on every block), `missing_docs = "warn"`, clippy `all = "warn"`. CI and `-D warnings` make all of them errors.
