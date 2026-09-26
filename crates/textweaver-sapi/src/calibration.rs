@@ -2,24 +2,34 @@
 //!
 //! SAPI rate is an integer `-10..=10`; each voice family speaks a different
 //! number of words per minute at each step. The tables below were measured
-//! on 2026-09-25 by synthesizing the same 83-word passage (several
+//! on 2026-09-25 by synthesizing the same 63-word passage (several
 //! sentences, read as a document would be) at every rate and dividing its
 //! word count by the audio's duration from the first word to the end
 //! (`TEXTWEAVER_SAPI=1 cargo test -p textweaver-sapi --test real_voices
 //! calibrate -- --ignored --nocapture` prints them again).
 //!
-//! `set_params` picks the rate whose measured wpm is closest (in ratio) to
-//! the requested wpm, and `effective_wpm` reports that measured value, so
-//! the timer pacer never assumes a speed the voice cannot reach. Requests
-//! beyond a voice's range are clamped to its fastest or slowest rate.
+//! | rate | -10 | -5 | 0 | +5 | +10 |
+//! |---|---|---|---|---|---|
+//! | Microsoft David Desktop | 53 | 92 | 158 | 284 | 483 |
+//! | Microsoft Zira Desktop | 54 | 95 | 162 | 290 | 444 |
+//! | eSpeak-en (SAPI) | 91 | 170 | 214 | 331 | 576 |
 //!
-//! Families without a measurement (VW voices, OpenEVV, third-party engines)
-//! use the Microsoft table: SAPI's rate curve is roughly the same shape for
-//! every engine (about 3× faster at +10 and 3× slower at -10).
+//! [`MICROSOFT`] is the mean of David and Zira. `set_params` picks the rate
+//! whose measured wpm is closest (in ratio) to the requested wpm, and
+//! `effective_wpm` reports that measured value, so the timer pacer never
+//! assumes a speed the voice cannot reach. Requests beyond a voice's range
+//! are clamped to its fastest or slowest rate: SAPI tops out near 460 wpm
+//! (Microsoft) and 580 wpm (eSpeak), well below textweaver's 900.
 //!
-//! Pitch: textweaver's semitone offset maps one-to-one onto SAPI's
-//! `<pitch absmiddle>` (`-10..=10`), clamped; SAPI documents no unit, and
-//! the Microsoft voices move by roughly a semitone per step.
+//! Families without a measurement (VW voices, OpenEVV, other engines) use
+//! the Microsoft table: SAPI's rate curve has roughly the same shape for
+//! every engine (about 3 times faster at +10, 3 times slower at -10).
+//!
+//! Pitch: SAPI's `<pitch absmiddle>` (`-10..=10`) moved Microsoft David's
+//! median fundamental frequency from 71 Hz (-10) through 90 Hz (0) to
+//! 119 Hz (+10), about 0.45 semitone per step. A semitone offset therefore
+//! maps to `round(2.2 × semitones)`, clamped, so SAPI voices reach about
+//! ±4.5 semitones of textweaver's ±12.
 
 use crate::voices::Family;
 
@@ -27,17 +37,20 @@ use crate::voices::Family;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RateTable(pub [u16; 21]);
 
-/// Microsoft David and Zira (desktop and OneCore).
+/// Microsoft David and Zira (desktop voices; also used for OneCore).
 pub const MICROSOFT: RateTable = RateTable([
-    64, 71, 79, 87, 96, 106, 117, 129, 142, 156, 173, 191, 211, 233, 256, 283, 312, 344, 380, 419,
-    462,
+    54, 60, 67, 75, 84, 94, 105, 117, 132, 146, 160, 184, 205, 230, 257, 287, 319, 353, 389, 428,
+    464,
 ]);
 
 /// eSpeak's SAPI5 voices.
 pub const ESPEAK: RateTable = RateTable([
-    64, 71, 79, 87, 96, 106, 117, 129, 142, 156, 173, 191, 211, 233, 256, 283, 312, 344, 380, 419,
-    462,
+    91, 119, 135, 148, 158, 170, 180, 189, 197, 206, 214, 229, 242, 269, 298, 331, 372, 415, 461,
+    512, 576,
 ]);
+
+/// SAPI pitch steps per semitone (measured: 0.45 semitone per step).
+pub const PITCH_STEPS_PER_SEMITONE: f32 = 2.2;
 
 /// The table for a voice family.
 pub fn table_for(family: Family) -> &'static RateTable {
@@ -70,7 +83,9 @@ impl RateTable {
 
 /// SAPI `<pitch absmiddle>` for a semitone offset.
 pub fn sapi_pitch(semitones: i8) -> i8 {
-    semitones.clamp(-10, 10)
+    (f32::from(semitones) * PITCH_STEPS_PER_SEMITONE)
+        .round()
+        .clamp(-10.0, 10.0) as i8
 }
 
 #[cfg(test)]
@@ -94,6 +109,13 @@ mod tests {
     }
 
     #[test]
+    fn star_default_rate_maps_close() {
+        // 265 wpm: Microsoft rate 4 (257), eSpeak rate 3 (269).
+        assert_eq!(MICROSOFT.rate_for(265), 4);
+        assert_eq!(ESPEAK.rate_for(265), 3);
+    }
+
+    #[test]
     fn out_of_range_requests_clamp() {
         assert_eq!(MICROSOFT.rate_for(10), -10);
         assert_eq!(MICROSOFT.rate_for(900), 10);
@@ -102,8 +124,11 @@ mod tests {
     }
 
     #[test]
-    fn pitch_is_clamped() {
-        assert_eq!(sapi_pitch(3), 3);
+    fn pitch_maps_at_the_measured_slope() {
+        assert_eq!(sapi_pitch(0), 0);
+        assert_eq!(sapi_pitch(1), 2);
+        assert_eq!(sapi_pitch(-2), -4);
+        assert_eq!(sapi_pitch(4), 9);
         assert_eq!(sapi_pitch(-12), -10);
         assert_eq!(sapi_pitch(12), 10);
     }

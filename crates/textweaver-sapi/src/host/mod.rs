@@ -1,7 +1,7 @@
 //! The host process, `textweaver-sapi-host` (ADR-0009).
 //!
 //! One binary, built twice: x64 for 64-bit voices and x86 for 32-bit-only
-//! voices. It speaks the [`protocol`](crate::protocol) on stdin and stdout
+//! voices. It speaks the [`crate::protocol`] on stdin and stdout
 //! and logs to stderr.
 //!
 //! ```text

@@ -492,14 +492,11 @@ impl SapiBackend {
     /// Reads everything the hosts have sent so far.
     fn drain_hosts(&mut self) {
         for arch in Arch::ALL {
-            loop {
-                let msg = match &self.hosts[arch.index()] {
-                    Some(h) => match h.rx.try_recv() {
-                        Ok(m) => m,
-                        Err(TryRecvError::Empty) => break,
-                        Err(TryRecvError::Disconnected) => HostMsg::Closed("host exited".into()),
-                    },
-                    None => break,
+            while let Some(h) = &self.hosts[arch.index()] {
+                let msg = match h.rx.try_recv() {
+                    Ok(m) => m,
+                    Err(TryRecvError::Empty) => break,
+                    Err(TryRecvError::Disconnected) => HostMsg::Closed("host exited".into()),
                 };
                 self.handle(arch, msg);
             }
