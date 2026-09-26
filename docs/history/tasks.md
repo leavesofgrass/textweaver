@@ -758,6 +758,31 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 - Signing, when funding allows.
 - Release `0.1.0-alpha.4` or `beta.1` when Jon says so.
 
+## Usability pass (between Wave 3 and Wave 4; Jon, 2026-09-26)
+
+Wave 4 starts only after this pass is done. It has four steps.
+
+1. **Audit, with two agents in parallel.**
+   - **Terminal reader and `tw`.** Walk the real flows a student uses:
+     - first run;
+     - opening Markdown, PDF, and EPUB;
+     - reading with the NVDA- and JAWS-style keys;
+     - notes, outline, and search;
+     - edit mode, citations, spell check, and export;
+     - settings, and the three access modes.
+   
+     List every rough edge: unclear or missing announcements, surprising keys, dead ends, slow steps, and inconsistent wording.
+   - **The Xilem GUI.**
+     - Build it, run it in `--background`, and take screenshots at 100% and 200% scale.
+     - Run the UI Automation report and the AT-SPI dump.
+     - Check the polished dark look against W3b's goals: focus order, labels, the announcements, large documents, and theme and font changes.
+     - Compare the GUI with the terminal reader, and list what is missing or rough.
+
+   Both audits produce one ranked list. Each item has its evidence, its size, and whether it is a quick win (under half a day).
+2. **Fold in the quick wins.** One or two agents fix every quick win, with tests. Larger items go into the Wave 4 briefs.
+3. **Jon's check.** The orchestrator builds the terminal reader and the GUI in release mode and opens them for Jon. He gets a short checklist for NVDA and JAWS: the GUI, the modes, and the main flows. His findings become fixes or Wave 4 items.
+4. **Then Wave 4.** Restart Docker, then launch the nine Wave 4 agents.
+
 ## Wave 4 (refined 2026-09-26; starts when Wave 3 is merged and Docker is restarted)
 
 **Lessons from Waves 2 and 3.** Every Wave 4 agent follows these. They come from what went wrong or cost time.
