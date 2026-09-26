@@ -30,6 +30,7 @@ clap.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+log.workspace = true
 
 [lints]
 workspace = true

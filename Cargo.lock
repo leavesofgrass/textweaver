@@ -4697,6 +4697,7 @@ version = "0.1.0-alpha.3"
 dependencies = [
  "anyhow",
  "clap",
+ "log",
  "ratatui",
  "tempfile",
  "textweaver-aids",

@@ -109,6 +109,7 @@ mod extra;
 mod goto;
 mod help;
 mod library;
+pub mod logfile;
 mod marks;
 mod nav;
 mod notes;

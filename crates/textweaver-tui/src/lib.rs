@@ -102,7 +102,9 @@ pub fn run(terminal: &mut DefaultTerminal, tui: &mut Tui) -> anyhow::Result<()> 
 /// offers unsaved work from a previous run, runs until the user quits, and
 /// saves on the way out. Used by the `textweaver` binary and `tw open`.
 pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
-    let (app, messages) = build_app(opts);
+    let log_message = setup::start_log(opts);
+    let (app, mut messages) = build_app(opts);
+    messages.extend(log_message);
     let mut tui = Tui::new(app);
     match file {
         Some(file) => {

@@ -25,6 +25,11 @@ pub struct Args {
     /// Color theme for this run; the help lists every theme.
     #[arg(long, help = textweaver_tui::theme_help())]
     pub theme: Option<String>,
+    /// Write a log to textweaver.log in the state folder at this level:
+    /// off, error, warn (the default), info, debug, or trace. --log alone
+    /// means debug.
+    #[arg(long, value_name = "LEVEL", num_args = 0..=1, default_missing_value = "debug")]
+    pub log: Option<String>,
 }
 
 /// The reader's options for `args`.
@@ -34,6 +39,7 @@ fn options(args: &Args) -> textweaver_tui::Options {
         backend: args.backend.clone(),
         home: args.home.clone(),
         theme: args.theme.clone(),
+        log: args.log.clone(),
     }
 }
 
@@ -57,8 +63,10 @@ mod tests {
             backend: Some("espeak".into()),
             home: Some("state".into()),
             theme: Some("light".into()),
+            log: Some("info".into()),
         };
         let o = options(&args);
+        assert_eq!(o.log.as_deref(), Some("info"));
         assert!(o.no_speech);
         assert_eq!(o.backend.as_deref(), Some("espeak"));
         assert_eq!(o.home, Some(PathBuf::from("state")));
@@ -73,6 +81,7 @@ mod tests {
             backend: None,
             home: None,
             theme: None,
+            log: None,
         };
         assert!(run(args).unwrap_err().to_string().contains("no such file"));
     }
