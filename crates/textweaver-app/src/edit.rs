@@ -1536,7 +1536,7 @@ impl App {
                 .as_ref()
                 .and_then(|e| e.session.editor())
                 .map_or(0, |ed| {
-                    textweaver_editor::find::find_all(ed.text(), text, FindOptions::default()).len()
+                    textweaver_editor::find::count_matches(ed.text(), text, FindOptions::default())
                 });
             if n == 0 {
                 self.speech.earcon(Earcon::Error);
@@ -1559,16 +1559,18 @@ impl App {
             return vec![Effect::Redraw];
         };
         let before = ed.text().clone();
-        let hits = textweaver_editor::find::find_all(ed.text(), &query, FindOptions::default());
-        // Replace All applies the edits back to front.
-        let outcomes: Vec<EditOutcome> = hits
-            .iter()
-            .rev()
-            .map(|r| Edit::replace(*r, text).outcome())
-            .collect();
-        match textweaver_editor::find::replace_all(ed, &query, text, FindOptions::default()) {
-            Ok(0) => self.tell(&format!("No matches for {query}.")),
-            Ok(n) => {
+        // One search: the ranges replaced also shift the reading marks.
+        match textweaver_editor::find::replace_all_ranges(ed, &query, text, FindOptions::default())
+        {
+            Ok(hits) if hits.is_empty() => self.tell(&format!("No matches for {query}.")),
+            Ok(hits) => {
+                let n = hits.len();
+                // Replace All applies the edits back to front.
+                let outcomes: Vec<EditOutcome> = hits
+                    .iter()
+                    .rev()
+                    .map(|r| Edit::replace(*r, text).outcome())
+                    .collect();
                 self.after_edit(&before, &outcomes);
                 let what = if n == 1 {
                     "1 match".to_owned()

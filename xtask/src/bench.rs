@@ -721,7 +721,7 @@ mod inner {
             let hits = app
                 .session()
                 .and_then(|s| s.find.as_ref())
-                .map_or(0, |f| f.hits.len());
+                .map_or(0, |f| f.total);
             r.time(&format!("{key}_ms"), &format!("{label} ({hits} hits)"), d);
             r.peak(&format!("{key}_peak_mb"), label);
             let t = Instant::now();
@@ -802,6 +802,22 @@ mod inner {
                 "caret down one line, dispatch",
                 &line,
             );
+            // Edit-mode Replace: the prompt's count, then replacing every
+            // match (one undo step), then undoing it.
+            app.dispatch(Command::Action(ActionId::Replace));
+            alloc::reset_peak();
+            let t = Instant::now();
+            app.dispatch(Command::Answer("the".into()));
+            r.time("replace_count_ms", "replace: count \"the\"", t.elapsed());
+            let t = Instant::now();
+            app.dispatch(Command::Answer("THE".into()));
+            r.time(
+                "replace_all_ms",
+                "replace every \"the\" (one undo step)",
+                t.elapsed(),
+            );
+            r.peak("replace_peak_mb", "replace");
+            app.dispatch(Command::Action(ActionId::Undo));
             alloc::reset_peak();
             let mut autosaves = Vec::new();
             let mut now = Instant::now();

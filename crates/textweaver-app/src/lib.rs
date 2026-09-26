@@ -108,6 +108,7 @@ pub mod disk;
 mod edit;
 mod export;
 mod extra;
+mod find_scan;
 mod goto;
 mod help;
 mod library;

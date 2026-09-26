@@ -87,14 +87,23 @@ impl Mode {
 }
 
 /// The last search and its matches.
+///
+/// A search counts every match but keeps at most 10,000 of them, those
+/// around the cursor; stepping past the ones kept searches again (Phase 2:
+/// a common word in a 10 MB file no longer costs tens of megabytes).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FindState {
     /// The query as run.
     pub query: SearchQuery,
-    /// Every match, in document order.
+    /// The matches kept, in document order: match number
+    /// [`first_index`](Self::first_index) and the ones after it.
     pub hits: Vec<CharRange>,
-    /// Index of the match the cursor is on.
+    /// Index into [`hits`](Self::hits) of the match the cursor is on.
     pub current: Option<usize>,
+    /// How many matches the document has in all.
+    pub total: usize,
+    /// The number (from 0) of `hits[0]` among all matches.
+    pub first_index: usize,
 }
 
 /// One open document and the reader's place in it.
