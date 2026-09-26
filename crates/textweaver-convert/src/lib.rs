@@ -20,7 +20,11 @@
 //! for Markdown output. Every other source is loaded by the
 //! `textweaver-formats` registry into a `Document`, exported to Markdown for
 //! HTML, or given to a native writer (EPUB, DOCX, BRF, PDF). Formats with no
-//! native loader go through Pandoc when it is installed.
+//! native loader go through Pandoc when it is installed, by way of the
+//! formats crate's Pandoc loader: the one Pandoc path in textweaver, run with
+//! `--sandbox`, its output pipes read on their own threads, and a timeout
+//! (`TEXTWEAVER_PANDOC` names the program, `TEXTWEAVER_PANDOC_TIMEOUT` or
+//! [`ConvertOptions::pandoc_timeout`] the time limit).
 //!
 //! **Memory.** Each worker holds one document at a time; the batch keeps
 //! only paths and per-file results, so memory is proportional to the
@@ -38,13 +42,13 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime};
 
 use serde::Serialize;
+use textweaver_formats::pandoc::PandocLoader;
 use textweaver_formats::{LoadOptions, Loader, MarkdownLoader, Registry, Source};
 use textweaver_render::{
     EmbedMode, FsResolver, PageOptions, RenderOptions, Resolver, TemplateChoice, Templates,
 };
 use textweaver_text::Document;
 
-pub mod pandoc;
 mod plan;
 pub mod watch;
 pub mod writer;
@@ -166,6 +170,9 @@ pub struct ConvertOptions {
     pub load: LoadOptions,
     /// Use Pandoc for formats with no native loader, when installed.
     pub pandoc: bool,
+    /// How long Pandoc may run on one file; `None` uses
+    /// `TEXTWEAVER_PANDOC_TIMEOUT` or two minutes.
+    pub pandoc_timeout: Option<Duration>,
     /// Options passed to the native writers.
     pub write: WriteOptions,
 }
@@ -183,6 +190,7 @@ impl Default for ConvertOptions {
             force: false,
             load: LoadOptions::default(),
             pandoc: true,
+            pandoc_timeout: None,
             write: WriteOptions::default(),
         }
     }
@@ -472,9 +480,17 @@ impl Converter {
             templates.load_dir(dir)?;
         }
         let template = templates.resolve(&options.template)?;
+        let mut registry = Registry::with_builtins();
+        registry.remove("pandoc");
+        if options.pandoc {
+            let loader = options
+                .pandoc_timeout
+                .map_or_else(PandocLoader::default, PandocLoader::with_timeout);
+            registry.register(Box::new(loader));
+        }
         Ok(Converter {
             options,
-            registry: Registry::with_builtins(),
+            registry,
             templates,
             template,
             writers,
@@ -490,13 +506,7 @@ impl Converter {
     /// Lowercase extensions this converter reads: every native loader's,
     /// plus Pandoc's when Pandoc is enabled and installed.
     pub fn source_extensions(&self) -> Vec<&'static str> {
-        let mut v = self.registry.extensions();
-        if self.options.pandoc && pandoc::available() {
-            v.extend(pandoc::EXTENSIONS.iter().copied());
-        }
-        v.sort_unstable();
-        v.dedup();
-        v
+        self.registry.extensions()
     }
 
     /// Plans the jobs for `inputs` (files and folders).
@@ -617,10 +627,7 @@ impl Converter {
     fn convert_bytes(&self, job: &Job) -> Result<Output, String> {
         let ext = extension(&job.source);
         let is_markdown = MarkdownLoader.extensions().contains(&ext.as_str());
-        let native = self
-            .registry
-            .loader_for(&Source::Path(job.source.clone()))
-            .is_some();
+        let loader = self.registry.loader_for(&Source::Path(job.source.clone()));
         if is_markdown {
             let bytes = std::fs::read(&job.source).map_err(|e| format!("cannot read: {e}"))?;
             let text = decode(&bytes);
@@ -628,20 +635,12 @@ impl Converter {
                 .convert_markdown(job, &text)?
                 .read_from(bytes.len() as u64));
         }
-        if !native && pandoc::EXTENSIONS.contains(&ext.as_str()) {
-            if !self.options.pandoc {
-                return Err(format!(
-                    "no native reader for .{ext} files, and Pandoc is turned off"
-                ));
-            }
-            if !pandoc::available() {
-                return Err(format!(
-                    "no native reader for .{ext} files, and Pandoc is not installed"
-                ));
-            }
-            let size = std::fs::metadata(&job.source).map_or(0, |m| m.len());
-            let md = pandoc::to_markdown(&job.source, self.options.render.flavor)?;
-            return Ok(self.convert_markdown(job, &md)?.read_from(size));
+        if loader.is_none() && textweaver_formats::pandoc::EXTENSIONS.contains(&ext.as_str()) {
+            return Err(if self.options.pandoc {
+                format!("no native reader for .{ext} files, and Pandoc is not installed")
+            } else {
+                format!("no native reader for .{ext} files, and Pandoc is turned off")
+            });
         }
         let size = std::fs::metadata(&job.source).map_or(0, |m| m.len());
         let doc = self

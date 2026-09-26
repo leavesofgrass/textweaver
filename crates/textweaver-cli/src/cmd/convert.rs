@@ -77,6 +77,10 @@ pub struct Args {
     /// Never use Pandoc, even for formats with no native reader.
     #[arg(long)]
     pub no_pandoc: bool,
+    /// Seconds Pandoc may spend on one file before it is stopped (default:
+    /// the TEXTWEAVER_PANDOC_TIMEOUT environment variable, else 120).
+    #[arg(long, value_name = "SECONDS")]
+    pub pandoc_timeout: Option<u64>,
     /// Read inline code spans as ASCIIMath (for course material written
     /// for MathJax); fenced blocks marked asciimath are read either way.
     #[arg(long)]
@@ -138,6 +142,10 @@ fn options(args: &Args) -> ConvertOptions {
         jobs: args.jobs,
         force: args.force,
         pandoc: !args.no_pandoc,
+        pandoc_timeout: args
+            .pandoc_timeout
+            .filter(|&s| s > 0)
+            .map(Duration::from_secs),
         write: args.layout.apply(WriteOptions {
             pdf: PdfOptions {
                 font: args.pdf_font.clone(),

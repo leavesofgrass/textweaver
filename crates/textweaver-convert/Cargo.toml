@@ -12,7 +12,7 @@ publish.workspace = true
 [dependencies]
 textweaver-core.workspace = true
 textweaver-text.workspace = true
-textweaver-formats.workspace = true
+textweaver-formats = { workspace = true, features = ["pandoc"] }
 textweaver-render.workspace = true
 textweaver-writers.workspace = true
 thiserror.workspace = true
