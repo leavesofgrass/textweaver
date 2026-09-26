@@ -1,8 +1,51 @@
-//! Themes (ADR-0020): one palette definition per theme, checked for WCAG
-//! contrast, rendered for the terminal UI, the GUI, and HTML output (CSS
-//! custom properties).
+//! Themes (ADR-0020): one palette per theme, checked for WCAG contrast, and
+//! rendered for the terminal UI, the GUI, and HTML output.
 //!
-//! Owner: Agent Q. Skeleton.
+//! - [`Theme`] names a color for every semantic role ([`ColorRole`]: page,
+//!   text, dim text, six heading levels, links, code, quotes, errors, panels)
+//!   and a foreground, background, and attributes for every highlight and
+//!   chrome style ([`StyleRole`]: selection, spoken word and sentence, find
+//!   matches, bookmarks, notes, status bar, focus), plus the reader's
+//!   highlight colors. Every highlight carries a text attribute, so no state
+//!   is shown by color alone.
+//! - Themes are TOML files ([`ThemeFile`]). Star's 23 palettes are built in
+//!   ([`builtin`], ported by [`star`]); user themes load from the config
+//!   folder's `themes/` directory ([`Registry::load_dir`]), with errors
+//!   reported per file and unknown keys kept.
+//! - [`check()`] measures every pair against WCAG 2.x (4.5:1 text, 7:1 in
+//!   high-contrast themes, 3:1 for indicators) and reports APCA for
+//!   information. Built-in themes pass; user themes are warned about, never
+//!   blocked or silently changed.
+//! - Renderers: [`terminal`] (truecolor, 256, 16, and no-color levels),
+//!   [`css`] (custom properties with `prefers-color-scheme` pairs), and
+//!   [`Theme::rgb_table`] for the GUI.
+//! - [`os`] follows the system's light, dark, or high-contrast setting.
 
-/// This crate's name, so the skeleton has one public item.
-pub const CRATE: &str = env!("CARGO_PKG_NAME");
+pub mod builtin;
+pub mod check;
+pub mod color;
+pub mod css;
+mod error;
+pub mod file;
+mod model;
+pub mod os;
+pub mod registry;
+pub mod resolve;
+pub mod star;
+pub mod terminal;
+
+pub use check::{Check, ContrastReport, Requirement, check};
+pub use color::{Rgb, apca_lc, contrast_ratio};
+pub use error::ThemeError;
+pub use file::ThemeFile;
+pub use model::{
+    Attrs, ColorRole, Meta, Resolved, Style, StyleRole, Theme, ThemeKind, USER_HIGHLIGHT_NO_COLOR,
+    UserHighlight,
+};
+pub use os::OsScheme;
+pub use registry::{LoadReport, Registry};
+pub use resolve::{Adjustment, Repair};
+pub use terminal::{ColorSupport, TermColor, TermStyle, TerminalTheme};
+
+/// The theme used when none is chosen or the chosen one is missing.
+pub const DEFAULT_THEME: &str = "galaxy";
