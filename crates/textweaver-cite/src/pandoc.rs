@@ -335,6 +335,20 @@ pub fn find_citations(text: &str) -> Vec<Citation> {
     out
 }
 
+/// Whether `c` counts as a citation, by the rules `tw convert` and the
+/// reader share. With the Pandoc flavor (`pandoc`) every citation does, as
+/// in Pandoc. With the other flavors, where `@name` is more often a mention
+/// than a citation, a bracketed citation counts when one of its keys is
+/// `known` (in a library), and an in-text `@key` only when all are.
+pub fn counts_as_citation(c: &Citation, known: impl Fn(&str) -> bool, pandoc: bool) -> bool {
+    pandoc
+        || if c.narrative {
+            c.items.iter().all(|i| known(&i.key))
+        } else {
+            c.items.iter().any(|i| known(&i.key))
+        }
+}
+
 /// The citation containing character position `pos` (or ending exactly
 /// there), for "what am I on?" and editing.
 pub fn citation_at(text: &str, pos: usize) -> Option<Citation> {

@@ -23,6 +23,13 @@
 //! asked for it). Empty table cells read as "blank" in structured mode
 //! instead of shifting later values to the wrong header (Star bug 7).
 //!
+//! [`plan_with`] also takes [`InlineSpeech`] changes from the caller: a
+//! source range spoken as other words (an `Expanded` span, so the highlight
+//! covers the whole range while they are said) or skipped (an `Elided`
+//! span, so nothing is said and later highlights stay exact). The app uses
+//! it for citations (`[@doe2020, p. 12]`): skipped, or said in words from
+//! the reference library.
+//!
 //! Sentences longer than `max_chunk_chars` are split at whitespace, never
 //! inside a word or an expanded token. Normalization (numbers,
 //! abbreviations, punctuation) is not done here: the speech service applies
@@ -86,28 +93,82 @@ impl NarrationPolicy {
     }
 }
 
+/// A change the caller makes to how a range of the source is spoken.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InlineSpeech {
+    /// The source range.
+    pub range: CharRange,
+    /// What is said instead; empty to say nothing.
+    pub spoken: String,
+}
+
+impl InlineSpeech {
+    /// Say `spoken` for `range`.
+    pub fn say(range: CharRange, spoken: impl Into<String>) -> Self {
+        InlineSpeech {
+            range,
+            spoken: spoken.into(),
+        }
+    }
+
+    /// Say nothing for `range`.
+    pub fn skip(range: CharRange) -> Self {
+        InlineSpeech {
+            range,
+            spoken: String::new(),
+        }
+    }
+}
+
 /// One step of building a sentence's spoken text.
 enum Piece {
     /// Spoken text with no source, anchored at a position.
     Insert(CharPos, String),
     /// Source replaced by spoken text.
     Replace(CharRange, String),
+    /// Source not spoken.
+    Elide(CharRange),
 }
 
 impl Piece {
     fn start(&self) -> CharPos {
         match self {
             Piece::Insert(at, _) => *at,
-            Piece::Replace(r, _) => r.start,
+            Piece::Replace(r, _) | Piece::Elide(r) => r.start,
         }
     }
 }
 
 /// Sentence-sized utterances covering `range`, numbered from chunk 0.
 pub fn plan(doc: &Document, range: CharRange, policy: &NarrationPolicy) -> Vec<Utterance> {
+    plan_with(doc, range, policy, &[])
+}
+
+/// [`plan`] with the caller's changes to how some ranges are spoken
+/// (`inline`, in any order; overlapping ones after the first are
+/// ignored). A change that a sentence boundary cuts is said in the
+/// sentence where it starts and skipped in the next. Table rows and
+/// skipped code blocks are planned as usual.
+pub fn plan_with(
+    doc: &Document,
+    range: CharRange,
+    policy: &NarrationPolicy,
+    inline: &[InlineSpeech],
+) -> Vec<Utterance> {
     let range = range.clamp_to(doc.len_chars());
     if range.is_empty() {
         return Vec::new();
+    }
+    let mut changes: Vec<&InlineSpeech> = inline
+        .iter()
+        .filter(|c| !c.range.is_empty() && c.range.intersection(range).is_some())
+        .collect();
+    changes.sort_by_key(|c| (c.range.start, c.range.end));
+    let mut kept: Vec<&InlineSpeech> = Vec::with_capacity(changes.len());
+    for c in changes {
+        if kept.last().is_none_or(|k| k.range.end <= c.range.start) {
+            kept.push(c);
+        }
     }
     let mut planner = Planner {
         doc,
@@ -117,6 +178,7 @@ pub fn plan(doc: &Document, range: CharRange, policy: &NarrationPolicy) -> Vec<U
         out: Vec::new(),
         done_until: CharPos::ZERO,
         table: None,
+        inline: kept,
     };
     let sentences: Vec<CharRange> =
         Units::new(doc, Unit::Sentence, range.start, Direction::Forward)
@@ -151,6 +213,8 @@ struct Planner<'a> {
     done_until: CharPos,
     /// Facts about the table being read, computed once per table.
     table: Option<TableInfo>,
+    /// The caller's changes, sorted, not overlapping.
+    inline: Vec<&'a InlineSpeech>,
 }
 
 /// What row narration needs to know about a table.
@@ -223,6 +287,7 @@ impl Planner<'_> {
             pieces.push(Piece::Insert(clip.start, prefix));
         }
         self.inline_pieces(clip, &mut pieces);
+        self.caller_pieces(clip, &mut pieces);
         let (text, map) = self.build(clip, pieces);
         self.push(text, map);
     }
@@ -307,6 +372,40 @@ impl Planner<'_> {
         pieces.sort_by_key(Piece::start);
     }
 
+    /// The caller's changes inside a sentence ([`plan_with`]).
+    fn caller_pieces(&self, clip: CharRange, pieces: &mut Vec<Piece>) {
+        if self.inline.is_empty() {
+            return;
+        }
+        let first = self.inline.partition_point(|c| c.range.end <= clip.start);
+        let mut added = false;
+        for c in &self.inline[first..] {
+            if c.range.start >= clip.end {
+                break;
+            }
+            let Some(part) = c.range.intersection(clip).filter(|p| !p.is_empty()) else {
+                continue;
+            };
+            // Pieces the planner made itself (footnotes, links) win.
+            let taken = pieces.iter().any(|p| match p {
+                Piece::Replace(r, _) | Piece::Elide(r) => r.intersection(part).is_some_and(|x| !x.is_empty()),
+                Piece::Insert(at, _) => part.start < *at && *at < part.end,
+            });
+            if taken {
+                continue;
+            }
+            if c.range.start >= clip.start && !c.spoken.is_empty() {
+                pieces.push(Piece::Replace(part, c.spoken.clone()));
+            } else {
+                pieces.push(Piece::Elide(part));
+            }
+            added = true;
+        }
+        if added {
+            pieces.sort_by_key(Piece::start);
+        }
+    }
+
     /// Builds the spoken text of `clip` with inserts and replacements.
     fn build(&self, clip: CharRange, pieces: Vec<Piece>) -> (String, OffsetMap) {
         let mut b = SpokenBuilder::new();
@@ -322,6 +421,12 @@ impl Planner<'_> {
                 Piece::Replace(r, text) => {
                     if r.start >= at && r.end <= clip.end {
                         b.push_expanded(&text, r);
+                        at = r.end;
+                    }
+                }
+                Piece::Elide(r) => {
+                    if r.start >= at && r.end <= clip.end {
+                        b.push_elided(r);
                         at = r.end;
                     }
                 }
@@ -886,6 +991,96 @@ mod tests {
         check(&us);
         assert_eq!(texts(&us), ["abcdefghijkl", "mnopqrstuvwx", "yz"]);
         assert_eq!(us[2].source_range(), Some(CharRange::new(24, 26)));
+    }
+
+    /// Where each spoken word of `u` lands in the source.
+    fn word_sources(u: &Utterance) -> Vec<(String, CharRange)> {
+        let mut out = Vec::new();
+        let mut start = None;
+        let text = &u.text;
+        for (i, c) in text.char_indices().chain(std::iter::once((text.len(), ' '))) {
+            let word = c.is_alphanumeric() || c == ',';
+            match (word, start) {
+                (true, None) => start = Some(i),
+                (false, Some(a)) => {
+                    let w = text[a..i].trim_end_matches(',').to_owned();
+                    if let Some(r) = u.source_for(a as u32..(a + w.len()) as u32) {
+                        out.push((w, r));
+                    }
+                    start = None;
+                }
+                _ => {}
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn caller_changes_skip_or_say_ranges_and_keep_highlights_exact() {
+        let text = "Reading helps [@doe2020, p. 12] a lot. Next one.";
+        let d = Document::from_plain_text(text);
+        let cite = CharRange::new(14, 31);
+        assert_eq!(d.slice(cite), "[@doe2020, p. 12]");
+        let lot = CharRange::new(34, 37);
+        let next = CharRange::new(39, 43);
+
+        // Skipped: an Elided span; the words after it keep their places.
+        let skip = [InlineSpeech::skip(CharRange::new(13, 31))];
+        let us = plan_with(&d, d.full_range(), &NarrationPolicy::default(), &skip);
+        check(&us);
+        assert_eq!(texts(&us), ["Reading helps a lot.", "Next one."]);
+        let map = &us[0].offset_map;
+        assert!(map.spans().iter().any(|sp| sp.kind == SpanKind::Elided
+            && sp.source == CharRange::new(13, 31)));
+        let words = word_sources(&us[0]);
+        assert!(words.contains(&("lot".to_owned(), lot)), "{words:?}");
+        assert!(words.contains(&("helps".to_owned(), CharRange::new(8, 13))));
+        assert_eq!(word_sources(&us[1])[0], ("Next".to_owned(), next));
+
+        // Said in words: an Expanded span over the whole citation.
+        let say = [InlineSpeech::say(cite, "Doe and Roe, 2020, page 12")];
+        let us = plan_with(&d, d.full_range(), &NarrationPolicy::default(), &say);
+        check(&us);
+        assert_eq!(
+            texts(&us),
+            ["Reading helps Doe and Roe, 2020, page 12 a lot.", "Next one."]
+        );
+        let at = us[0].text.find("Roe").unwrap();
+        assert_eq!(us[0].source_for(at as u32..at as u32 + 3), Some(cite));
+        let words = word_sources(&us[0]);
+        assert!(words.contains(&("lot".to_owned(), lot)), "{words:?}");
+        assert_eq!(word_sources(&us[1])[0], ("Next".to_owned(), next));
+        // Without changes the text is read as written.
+        let plain = plan(&d, d.full_range(), &NarrationPolicy::default());
+        assert!(plain[0].text.contains("[@doe2020, p. 12]"));
+    }
+
+    #[test]
+    fn a_change_cut_by_a_sentence_end_is_said_once() {
+        // "p." does not end a sentence, but "etc." can; the change is said
+        // where it starts and skipped after the cut.
+        let d = Document::from_plain_text("See it [@a, etc. More]. Then.");
+        let r = CharRange::new(7, 23);
+        let us = plan_with(
+            &d,
+            d.full_range(),
+            &NarrationPolicy::default(),
+            &[InlineSpeech::say(r, "A, 2020")],
+        );
+        check(&us);
+        let joined = texts(&us).join(" | ");
+        assert_eq!(joined.matches("A, 2020").count(), 1, "{joined}");
+        assert!(!joined.contains("More"), "{joined}");
+        assert!(joined.contains("Then."), "{joined}");
+        // Overlapping changes after the first are ignored.
+        let us = plan_with(
+            &d,
+            d.full_range(),
+            &NarrationPolicy::default(),
+            &[InlineSpeech::skip(r), InlineSpeech::say(CharRange::new(8, 10), "x")],
+        );
+        check(&us);
+        assert!(!texts(&us).join(" ").contains('x'));
     }
 }
 

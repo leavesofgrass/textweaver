@@ -107,7 +107,7 @@ fn the_pending_question_stays_on_the_status_line() {
     let mut h = launch(Settings::default(), &dir.path().join("home"));
     h.tui.app_mut().open(&file).unwrap();
     h.draw();
-    h.press(ch('q'));
+    h.press(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL));
     assert!(
         h.status().contains("Quit textweaver? y or n"),
         "{}",
@@ -214,7 +214,7 @@ fn f9_switches_single_keys_off_and_on() {
         "{}",
         h.status()
     );
-    h.press(ch('.'));
+    h.press(ch('p'));
     assert_eq!(h.cursor(), CharPos(TEXT.find("Seven").unwrap()));
 }
 

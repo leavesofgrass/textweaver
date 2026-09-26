@@ -271,16 +271,16 @@ fn scripted_session_with_restore() {
     assert_eq!(h.cursor(), alice);
     h.assert_cursor_on(alice);
 
-    // Sentences, with the key the keymap binds.
+    // Sentences, with the key the keymap binds (Alt+Down, as in JAWS).
     let s2 = h.nav(alice, Unit::Sentence, Direction::Forward);
-    h.press(ch('.'));
+    h.press(KeyEvent::new(KeyCode::Down, KeyModifiers::ALT));
     assert_eq!(h.cursor(), s2);
     h.assert_cursor_on(s2);
     let s3 = h.nav(s2, Unit::Sentence, Direction::Forward);
-    h.press(ch('.'));
+    h.press(KeyEvent::new(KeyCode::Down, KeyModifiers::ALT));
     assert_eq!(h.cursor(), s3);
     // Previous at a sentence start goes to the previous sentence.
-    h.press(ch(','));
+    h.press(KeyEvent::new(KeyCode::Up, KeyModifiers::ALT));
     assert_eq!(h.cursor(), s2);
 
     // Paragraphs.
@@ -299,8 +299,13 @@ fn scripted_session_with_restore() {
     // Read the current word, sentence, and line in place, checking the
     // highlight on screen at every step.
     let mut read_since = h.log.spoken_ranges().len();
-    for c in ['w', 's', 'l'] {
-        h.press(ch(c));
+    // The word (w), the sentence (.), and the line (Alt+Shift+L).
+    for k in [
+        ch('w'),
+        ch('.'),
+        KeyEvent::new(KeyCode::Char('L'), KeyModifiers::ALT | KeyModifiers::SHIFT),
+    ] {
+        h.press(k);
         let seen = h.follow_speech();
         h.assert_highlights_match_speech(&seen, read_since);
         read_since = h.log.spoken_ranges().len();
@@ -412,17 +417,17 @@ fn scripted_session_with_restore() {
 
     // Quit saves the position.
     let saved = h.cursor();
-    h.press(ch('q'));
+    h.press(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL));
     assert!(!h.tui.should_quit());
     assert!(h.status().contains("Quit textweaver? y or n"));
     // n and a abort; y quits.
     h.press(ch('n'));
     assert!(!h.tui.should_quit());
     assert!(h.status().contains("Cancelled."));
-    h.press(ch('q'));
+    h.press(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL));
     h.press(ch('a'));
     assert!(!h.tui.should_quit());
-    h.press(ch('q'));
+    h.press(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL));
     h.press(ch('x'));
     // The question is asked again: the status line blanks for a moment so
     // a screen reader hears it again, then shows it.
@@ -496,7 +501,7 @@ fn narrow_terminal_wraps_and_keeps_the_cursor_visible() {
     h.term.backend_mut().resize(30, 8);
     h.draw();
     for _ in 0..6 {
-        h.press(ch('.'));
+        h.press(KeyEvent::new(KeyCode::Down, KeyModifiers::ALT));
         let p = h.screen_cursor();
         let body = h.areas().body;
         assert!(

@@ -147,10 +147,12 @@ mod links;
 mod lists;
 pub mod logfile;
 mod marks;
+mod math_explore;
 mod mdline;
 mod nav;
 mod notes;
 mod playback;
+pub mod preview_server;
 mod publish;
 mod reading_aids;
 mod relocate;
@@ -184,6 +186,7 @@ pub use backends::{
     speech_registry, speech_registry_for,
 };
 pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpose};
+pub use math_explore::MathMove;
 pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_lookup};
 pub use goto::parse_go_to;

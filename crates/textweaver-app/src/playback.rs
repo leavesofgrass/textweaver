@@ -225,11 +225,12 @@ impl App {
         lead: Option<&str>,
     ) -> bool {
         let policy = self.narration_policy();
+        let citations = self.citation_speech_in(range);
         let Some(s) = self.session.as_mut() else {
             return false;
         };
         let range = range.clamp_to(s.doc.len_chars());
-        let mut utterances = textweaver_text::plan(&s.doc, range, &policy);
+        let mut utterances = textweaver_text::plan_with(&s.doc, range, &policy, &citations);
         if let Some(lead) = lead.filter(|_| !utterances.is_empty()) {
             utterances.insert(0, textweaver_core::Utterance::announcement(lead));
         }

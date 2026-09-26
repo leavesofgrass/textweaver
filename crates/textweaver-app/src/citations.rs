@@ -17,6 +17,19 @@
 //! - Reading: moving onto a citation by word, or asking for the link
 //!   address there (Alt+Shift+K), says it in words: "Citation: Doe and
 //!   Roe, 2020, On X, page 12."
+//! - Continuous reading (and the sentence, paragraph, and status-line
+//!   narration) follows `[reading] citations`: `off`, the default, skips
+//!   a bracketed citation (an `Elided` span, so later highlights stay
+//!   exact) and says only the authors of an in-text one, which is part of
+//!   the sentence ("Doe and Roe argue"); `words` says each citation in
+//!   words ("Doe and Roe, 2020, page 12", an `Expanded` span over the
+//!   citation). Alt+Shift+Q (`toggle_citations`) switches and saves it,
+//!   also while reading. Which `@` marks count as citations follows the
+//!   renderer's rules for its default flavor
+//!   ([`counts_as_citation`](textweaver_cite::pandoc::counts_as_citation)):
+//!   a bracketed citation when one of its keys is in a library, an in-text
+//!   one when all are; citations in code and math never count. A key no
+//!   library has is read as the key.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -25,13 +38,18 @@ use textweaver_cite::insert::{
     add_to_citation, announce_inserted, describe_citation, insertion_text, parse_locator,
     picker_entries,
 };
-use textweaver_cite::pandoc::{Citation, CiteItem, citation_at, find_citations, write_citation};
+use textweaver_cite::insert::{spoken_citation, spoken_citation_authors};
+use textweaver_cite::pandoc::{
+    Citation, CiteItem, citation_at, counts_as_citation, find_citations, write_citation,
+};
 use textweaver_cite::{
     CitationStyle, Formatter, Layered, Library, OutputFormat as CiteFormat, Reference,
     folder_library_path, user_library_path,
 };
-use textweaver_core::{CharPos, CharRange};
+use textweaver_core::{CharPos, CharRange, MarkerKind};
 use textweaver_editor::Selection;
+use textweaver_store::CitationReading;
+use textweaver_text::{Document, InlineSpeech};
 
 use crate::app::App;
 use crate::authoring_state::{AuthoringList, Job};
@@ -40,6 +58,66 @@ use crate::text_util;
 
 /// How long a DOI or ISBN lookup may take.
 const LOOKUP_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// How long loaded libraries are reused for reading before they are read
+/// again from disk.
+const LIBRARY_CACHE: Duration = Duration::from_secs(60);
+
+/// Libraries loaded for reading citations aloud.
+#[derive(Debug)]
+pub(crate) struct CachedLibraries {
+    folder: Option<PathBuf>,
+    loaded: std::time::Instant,
+    libraries: (Option<Library>, Library),
+}
+
+/// How continuous reading says the citations of `text` (first char at
+/// `base`) of `doc`: skipped or in words (`mode`), from the libraries
+/// `layers`. Citations in code and math, and `@` marks that do not count
+/// as citations, are left alone.
+pub(crate) fn citation_speech(
+    doc: &Document,
+    base: CharPos,
+    text: &str,
+    mode: CitationReading,
+    layers: &[&Library],
+) -> Vec<InlineSpeech> {
+    let found = find_citations(text);
+    if found.is_empty() {
+        return Vec::new();
+    }
+    let index = doc.marker_index();
+    let source = Layered { layers };
+    let known = |key: &str| layers.iter().any(|l| l.contains(key));
+    let mut out = Vec::new();
+    for c in found {
+        let start = base.saturating_add(c.chars.start.0);
+        let range = CharRange::new(start, base.saturating_add(c.chars.end.0));
+        let in_code = [MarkerKind::Code, MarkerKind::Math]
+            .iter()
+            .any(|k| index.enclosing(*k, range.start).is_some());
+        if in_code || !counts_as_citation(&c, known, false) {
+            continue;
+        }
+        out.push(match (mode, c.narrative) {
+            (CitationReading::Words, _) => InlineSpeech::say(range, spoken_citation(&c, &source)),
+            (CitationReading::Off, true) => {
+                InlineSpeech::say(range, spoken_citation_authors(&c, &source))
+            }
+            (CitationReading::Off, false) => {
+                // "shown [@doe2020]." reads "shown." without the space.
+                let before = c.chars.start.0.checked_sub(1).and_then(|i| text.chars().nth(i));
+                let from = if before.is_some_and(|b| b == ' ' || b == '\t') {
+                    range.start.saturating_sub(1)
+                } else {
+                    range.start
+                };
+                InlineSpeech::skip(CharRange::new(from, range.end))
+            }
+        });
+    }
+    out
+}
 
 /// The style named in Markdown front matter (`csl:` or
 /// `citation-style:`), else APA.
@@ -73,6 +151,103 @@ impl App {
     /// The user library's file, when state is kept.
     fn user_library_file(&self) -> Option<PathBuf> {
         self.paths.as_ref().map(|p| user_library_path(&p.data_dir))
+    }
+
+    /// Libraries for reading citations aloud, loaded once a minute at
+    /// most (and again after a reference is added or imported).
+    fn reading_libraries(&mut self) -> (Option<Library>, Library) {
+        let folder = self.doc_folder();
+        let fresh = self.authoring.cite_cache.as_ref().is_some_and(|c| {
+            c.folder == folder && c.loaded.elapsed() < LIBRARY_CACHE
+        });
+        if !fresh {
+            let libraries = self.libraries();
+            self.authoring.cite_cache = Some(CachedLibraries {
+                folder,
+                loaded: std::time::Instant::now(),
+                libraries,
+            });
+        }
+        self.authoring
+            .cite_cache
+            .as_ref()
+            .map(|c| c.libraries.clone())
+            .unwrap_or_default()
+    }
+
+    /// How the citations in `range` of the open document are read aloud
+    /// (`[reading] citations`), for the reading plan.
+    pub(crate) fn citation_speech_in(&mut self, range: CharRange) -> Vec<InlineSpeech> {
+        let Some(s) = self.session.as_ref() else {
+            return Vec::new();
+        };
+        let range = range.clamp_to(s.doc.len_chars());
+        let text = s.doc.slice(range);
+        if !text.contains('@') {
+            return Vec::new();
+        }
+        let mode = self.settings.reading.citations;
+        let (folder, user) = self.reading_libraries();
+        let layers: Vec<&Library> = folder.iter().chain(std::iter::once(&user)).collect();
+        match self.session.as_ref() {
+            Some(s) => citation_speech(&s.doc, range.start, &text, mode, &layers),
+            None => Vec::new(),
+        }
+    }
+
+    /// [`citation_speech_in`](Self::citation_speech_in) for another
+    /// document (the rendered text while editing).
+    pub(crate) fn citation_speech_of(&mut self, doc: &Document, range: CharRange) -> Vec<InlineSpeech> {
+        let range = range.clamp_to(doc.len_chars());
+        let text = doc.slice(range);
+        if !text.contains('@') {
+            return Vec::new();
+        }
+        let mode = self.settings.reading.citations;
+        let (folder, user) = self.reading_libraries();
+        let layers: Vec<&Library> = folder.iter().chain(std::iter::once(&user)).collect();
+        citation_speech(doc, range.start, &text, mode, &layers)
+    }
+
+    /// Alt+Shift+Q: citations on or off in continuous reading, saved.
+    /// While reading continuously, reading goes on from the word being
+    /// read with the new setting, after the announcement.
+    pub(crate) fn toggle_citations(&mut self) {
+        let next = match self.settings.reading.citations {
+            CitationReading::Off => CitationReading::Words,
+            CitationReading::Words => CitationReading::Off,
+        };
+        self.settings.reading.citations = next;
+        self.settings_dirty = true;
+        let msg = match next {
+            CitationReading::Words => "Citations on.",
+            CitationReading::Off => "Citations off.",
+        };
+        let continuous = self.playback == crate::Playback::Reading
+            && self.reading == crate::playback::ReadKind::Continuous
+            && self.route(textweaver_a11y::Channel::Reading).speak;
+        let from = self.reading_position();
+        match (continuous, from) {
+            (true, Some(pos)) => {
+                self.stop_speech();
+                self.show(msg);
+                let Some(s) = self.session.as_ref() else {
+                    return;
+                };
+                let start = crate::text_util::word_start(&s.doc, pos);
+                let (end, doc_end) = (crate::playback::window_end(&s.doc, start), s.doc.end());
+                if self.read_range_led(
+                    CharRange::new(start, end),
+                    crate::playback::ReadKind::Continuous,
+                    Some(msg),
+                ) {
+                    self.continue_from = (end < doc_end).then_some(end);
+                } else {
+                    self.tell(msg);
+                }
+            }
+            _ => self.tell(msg),
+        }
     }
 
     /// The folder library (when the document's folder has one) and the
@@ -284,6 +459,7 @@ impl App {
                 }
             }
         };
+        self.authoring.cite_cache = None;
         let outcome = lib.add(reference);
         let label = lib
             .get(outcome.key())
@@ -368,6 +544,7 @@ impl App {
             cache_dir: None,
             client: &offline,
         };
+        self.authoring.cite_cache = None;
         match textweaver_cite::commands::import(&ctx, &path) {
             Ok(msg) => self.tell(&msg),
             Err(e) => self.error(&format!("Could not import {}: {e}", path.display())),
@@ -452,21 +629,6 @@ impl App {
             Err(e) => self.error(&format!("Could not insert the bibliography: {e}")),
         }
         vec![Effect::Redraw]
-    }
-
-    /// `text` with each citation replaced by its formatted in-text form
-    /// ("(Doe & Roe, 2020, p. 12)"), for listening to the rendered text.
-    pub(crate) fn with_formatted_citations(&mut self, text: &str) -> String {
-        let Some((cites, doc, _)) = self.format_citations(text, CiteFormat::Plain) else {
-            return text.to_owned();
-        };
-        let mut out = text.to_owned();
-        for (c, formatted) in cites.iter().zip(doc.citations.iter()).rev() {
-            if c.range.end <= out.len() {
-                out.replace_range(c.range.clone(), formatted);
-            }
-        }
-        out
     }
 
     /// The citation at `pos`, in words, when there is one:

@@ -174,13 +174,14 @@ impl App {
     /// Document text in `range` as textweaver would say it, for the status
     /// line: table and structure narration from the reading plan, math in
     /// words; at most [`STATUS_TEXT_LIMIT`] characters.
-    pub(crate) fn narrated(&self, range: CharRange) -> String {
+    pub(crate) fn narrated(&mut self, range: CharRange) -> String {
+        let citations = self.citation_speech_in(range);
         let Some(s) = self.session.as_ref() else {
             return String::new();
         };
         let policy = self.narration_policy();
         let range = range.clamp_to(s.doc.len_chars());
-        let joined = textweaver_text::plan(&s.doc, range, &policy)
+        let joined = textweaver_text::plan_with(&s.doc, range, &policy, &citations)
             .into_iter()
             .map(|u| u.text.trim().to_owned())
             .filter(|t| !t.is_empty())

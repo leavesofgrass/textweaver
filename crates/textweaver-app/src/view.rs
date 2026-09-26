@@ -246,6 +246,9 @@ impl App {
                 push(r, HighlightKind::SpokenWord);
             }
         }
+        if let Some(r) = self.math_explore_span() {
+            push(r, HighlightKind::SpokenWord);
+        }
         out.sort_by_key(|h| h.kind);
         out
     }

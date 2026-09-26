@@ -49,7 +49,9 @@ pub(crate) enum Job {
     Export {
         what: String,
         kind: ExportKind,
-        rx: Receiver<Result<(PathBuf, Vec<String>), String>>,
+        rx: Receiver<Result<ExportDone, String>>,
+        /// When it started, and when progress was last said.
+        progress: Progress,
     },
     /// A DOI or ISBN lookup.
     Lookup {
@@ -121,6 +123,54 @@ pub(crate) enum ExportKind {
     PreviewOpen,
     /// The preview rewritten after a save.
     PreviewRefresh,
+    /// The preview rewritten after typing paused (`[preview] live`).
+    PreviewLive,
+}
+
+/// A finished export or preview.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct ExportDone {
+    /// The file written.
+    pub(crate) path: PathBuf,
+    /// The writer's warnings.
+    pub(crate) warnings: Vec<String>,
+    /// For a preview: its headings' ids and texts, in order, so a reload
+    /// can land on the heading nearest the caret.
+    pub(crate) headings: Vec<(String, String)>,
+}
+
+/// Progress announcements for a long export: the first after
+/// [`Progress::FIRST`], then every [`Progress::EVERY`], so a slow export
+/// is heard without flooding.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct Progress {
+    pub(crate) started: Instant,
+    pub(crate) next: Instant,
+}
+
+impl Progress {
+    /// When the first "still exporting" is said.
+    pub(crate) const FIRST: std::time::Duration = std::time::Duration::from_secs(2);
+    /// How often it is said after that.
+    pub(crate) const EVERY: std::time::Duration = std::time::Duration::from_secs(10);
+
+    /// Progress from `now`.
+    pub(crate) fn new(now: Instant) -> Self {
+        Progress {
+            started: now,
+            next: now + Self::FIRST,
+        }
+    }
+
+    /// The whole seconds since the start when a progress announcement is
+    /// due at `now` (and schedules the next one); `None` otherwise.
+    pub(crate) fn due(&mut self, now: Instant) -> Option<u64> {
+        if now < self.next {
+            return None;
+        }
+        self.next = now + Self::EVERY;
+        Some(now.saturating_duration_since(self.started).as_secs())
+    }
 }
 
 /// A yes or no question this module asked.
@@ -162,6 +212,12 @@ pub(crate) struct Authoring {
     pub(crate) template: Option<crate::templates::Template>,
     /// The note last signalled while reading, so it is signalled once.
     pub(crate) note_signalled: Option<String>,
+    /// Libraries loaded for reading citations aloud.
+    pub(crate) cite_cache: Option<crate::citations::CachedLibraries>,
+    /// The edit version the preview last showed (`[preview] live`).
+    pub(crate) preview_version: u64,
+    /// The document folder of the preview, for its images.
+    pub(crate) preview_folder: Option<PathBuf>,
 }
 
 /// Listening to the rendered text while editing.

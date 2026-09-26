@@ -579,6 +579,10 @@ impl App {
                 let word = s.doc.slice(t.range);
                 // A citation is said in words; a note's passage says so.
                 let said = self.citation_description_at(t.range.start).unwrap_or(word);
+                let said = match self.difficult_word_note(t.range) {
+                    Some(n) => format!("{said}{n}"),
+                    None => said,
+                };
                 let said = match self.note_here_suffix(t.range.start) {
                     Some(n) if cursor_left_note(self, cursor, t.range.start) => {
                         format!("{said}. {n}")

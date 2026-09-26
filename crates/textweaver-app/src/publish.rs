@@ -12,11 +12,20 @@
 //!   and asks "Open it? y or n".
 //! - **Preview in browser** writes the page, with math as MathML, to the
 //!   `preview` folder of the cache folder and opens the default browser.
-//!   Each save while editing writes it again; refresh the browser (F5) to
-//!   see the change.
+//!   Each save while editing writes it again, and textweaver says "Preview
+//!   updated. Press F5 in the browser." With `[preview] auto_reload`
+//!   (palette: `toggle preview auto reload`), the page is served by a small
+//!   server on this computer only ([`crate::preview_server`]) and reloads
+//!   itself after each save, landing on the heading nearest the caret; with
+//!   `[preview] live` too, also when typing pauses for a second.
+//! - **Progress.** An export says it started; one that takes more than two
+//!   seconds says "Still exporting to PDF, 2 seconds." and then every ten
+//!   seconds, never more often.
 //! - **Listen to the rendered text** reads, from the caret, what a reader of
-//!   the exported document hears: no Markdown marks, citations formatted,
-//!   without leaving edit mode. The highlight follows in the source.
+//!   the exported document hears: no Markdown marks, without leaving edit
+//!   mode. Citations follow `[reading] citations`, as in continuous
+//!   reading: skipped, or said in words. The highlight follows in the
+//!   source.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -27,11 +36,65 @@ use textweaver_formats::{Loader, MarkdownLoader, Source};
 use textweaver_speech::ReadingGeneration;
 
 use crate::app::App;
-use crate::authoring_state::{ExportKind, Job, Listening, file_name};
+use crate::authoring_state::{ExportDone, ExportKind, Job, Listening, Progress, file_name};
 use crate::command::Effect;
 
 /// How much text "listen to the rendered text" plans at once, in chars.
 const LISTEN_LIMIT: usize = 400_000;
+
+/// How long typing must pause before a live preview reloads.
+const LIVE_PAUSE: std::time::Duration = std::time::Duration::from_secs(1);
+
+/// The headings of an HTML page: each one's id and its text without tags.
+fn page_headings(html: &str) -> Vec<(String, String)> {
+    let ids = crate::preview_server::heading_ids(html);
+    let lower = html.to_ascii_lowercase();
+    let mut texts = Vec::new();
+    let mut at = 0;
+    while let Some(i) = lower[at..].find("<h") {
+        let start = at + i;
+        at = start + 2;
+        let Some(level) = lower.as_bytes().get(start + 2).copied() else {
+            break;
+        };
+        if !(b'1'..=b'6').contains(&level) {
+            continue;
+        }
+        let close = format!("</h{}>", char::from(level));
+        let Some(open_end) = lower[start..].find('>') else {
+            break;
+        };
+        let body_start = start + open_end + 1;
+        let Some(len) = lower[body_start..].find(&close) else {
+            break;
+        };
+        texts.push(heading_key(&strip_tags(&html[body_start..body_start + len])));
+        at = body_start + len;
+    }
+    ids.into_iter().zip(texts).collect()
+}
+
+fn strip_tags(s: &str) -> String {
+    let mut out = String::new();
+    let mut in_tag = false;
+    for c in s.chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            c if !in_tag => out.push(c),
+            _ => {}
+        }
+    }
+    out
+}
+
+/// Heading text compared loosely: letters and digits, lowercase.
+fn heading_key(s: &str) -> String {
+    s.chars()
+        .filter(|c| c.is_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
 
 /// Numbers the temporary folders of exports in this process.
 static EXPORT_SEQ: AtomicU32 = AtomicU32::new(0);
@@ -223,7 +286,7 @@ impl App {
         output: PathBuf,
         base: Option<String>,
     ) {
-        let (tx, rx) = std::sync::mpsc::channel();
+        let (tx, rx) = std::sync::mpsc::channel::<Result<ExportDone, String>>();
         let job = ConvertJob {
             source: src.file.clone(),
             output: output.clone(),
@@ -242,16 +305,22 @@ impl App {
                     match r.status {
                         Status::Failed(reason) => Err(reason),
                         Status::Converted | Status::Skipped => {
+                            let mut headings = Vec::new();
                             if let Some(href) = base {
                                 let html =
                                     std::fs::read_to_string(&output).map_err(|e| e.to_string())?;
+                                headings = page_headings(&html);
                                 textweaver_convert::write_atomic(
                                     &output,
                                     with_base(&html, &href).as_bytes(),
                                 )
                                 .map_err(|e| e.to_string())?;
                             }
-                            Ok((output, r.warnings))
+                            Ok(ExportDone {
+                                path: output,
+                                warnings: r.warnings,
+                                headings,
+                            })
                         }
                     }
                 })();
@@ -261,7 +330,12 @@ impl App {
                 let _ = tx.send(result);
             });
         match spawned {
-            Ok(_) => self.authoring.jobs.push(Job::Export { what, kind, rx }),
+            Ok(_) => self.authoring.jobs.push(Job::Export {
+                what,
+                kind,
+                rx,
+                progress: Progress::new(std::time::Instant::now()),
+            }),
             Err(e) => self.error(&format!("Could not start the export: {e}")),
         }
     }
@@ -299,7 +373,8 @@ impl App {
         vec![Effect::Redraw]
     }
 
-    /// Writes the HTML preview and opens it in the browser.
+    /// Writes the HTML preview and opens it in the browser (through the
+    /// reload server with `[preview] auto_reload`).
     pub(crate) fn preview_in_browser(&mut self) -> Vec<Effect> {
         if self.session.is_none() {
             self.tell("No document is open. Press Control O to open one.");
@@ -326,7 +401,116 @@ impl App {
         let options = self.convert_options(OutputFormat::Html, &src);
         let base = Some(folder_url(&src.folder));
         self.authoring.preview = Some(output.clone());
+        self.authoring.preview_version = self.authoring.structure.version;
+        if let Some(server) = &self.preview_server {
+            server.set_page(output.clone(), src.folder.clone());
+        }
+        self.authoring.preview_folder = Some(src.folder.clone());
         self.spawn_export("Preview".into(), kind, src, options, output, base);
+    }
+
+    /// Says how a long export is getting on (at most every ten seconds).
+    pub(crate) fn export_progress(&mut self, kind: ExportKind, what: &str, secs: u64) {
+        let doing = match kind {
+            ExportKind::Export => what.replacen("Exported", "exporting", 1),
+            ExportKind::PreviewOpen => "writing the preview".to_owned(),
+            // Rewriting the preview is quiet.
+            ExportKind::PreviewRefresh | ExportKind::PreviewLive => return,
+        };
+        let unit = if secs == 1 { "second" } else { "seconds" };
+        self.note(&format!("Still {doing}, {secs} {unit}."));
+    }
+
+    /// Stops the preview's reload server, if one runs, and forgets the
+    /// preview: the document closed or textweaver is quitting.
+    pub(crate) fn close_preview(&mut self) {
+        if let Some(mut server) = self.preview_server.take() {
+            server.stop();
+        }
+        self.authoring.preview = None;
+    }
+
+    /// The id of the preview heading nearest the caret: the last heading at
+    /// or before it, matched by its text (and by its order among headings
+    /// with the same text).
+    fn preview_anchor(&self, headings: &[(String, String)]) -> Option<String> {
+        let s = self.session.as_ref()?;
+        let caret = s.cursor;
+        let doc_headings: Vec<String> = s
+            .doc
+            .markers()
+            .iter()
+            .filter(|m| m.kind == textweaver_core::MarkerKind::Heading && m.range.start <= caret)
+            .map(|m| heading_key(s.doc.slice(m.range).trim_start_matches('#')))
+            .collect();
+        let last = doc_headings.last()?;
+        let nth = doc_headings.iter().filter(|h| *h == last).count();
+        headings
+            .iter()
+            .filter(|(_, text)| text == last)
+            .nth(nth.saturating_sub(1))
+            .or_else(|| headings.get(doc_headings.len().saturating_sub(1)))
+            .map(|(id, _)| id.clone())
+            .filter(|id| !id.is_empty())
+    }
+
+    /// `toggle_preview_auto_reload`: saved.
+    pub(crate) fn toggle_preview_auto_reload(&mut self) {
+        let on = !self.settings.preview.auto_reload;
+        self.settings.preview.auto_reload = on;
+        self.settings_dirty = true;
+        if on {
+            let more = if self.authoring.preview.is_some() {
+                " Run preview in browser again to use it."
+            } else {
+                ""
+            };
+            self.tell(&format!(
+                "Automatic preview reloading on: after each save the browser reloads the page by itself.{more}"
+            ));
+        } else {
+            if let Some(mut server) = self.preview_server.take() {
+                server.stop();
+            }
+            self.tell("Automatic preview reloading off: press F5 in the browser after a save.");
+        }
+    }
+
+    /// `toggle_preview_live`: saved.
+    pub(crate) fn toggle_preview_live(&mut self) {
+        let on = !self.settings.preview.live;
+        self.settings.preview.live = on;
+        self.settings_dirty = true;
+        self.tell(match (on, self.settings.preview.auto_reload) {
+            (true, true) => "Live preview on: the preview also reloads when typing pauses.",
+            (true, false) => {
+                "Live preview on. It works with automatic reloading, which is off; turn it on with toggle preview auto reload."
+            }
+            (false, _) => "Live preview off: the preview reloads after saves only.",
+        });
+    }
+
+    /// `[preview] live`: rewrites the preview a second after typing stops.
+    pub(crate) fn live_preview_tick(&mut self, now: std::time::Instant) {
+        let p = &self.settings.preview;
+        if !(p.live && p.auto_reload) || self.preview_server.is_none() || self.edit.is_none() {
+            return;
+        }
+        let st = &self.authoring.structure;
+        let changed = st.version != self.authoring.preview_version;
+        let paused = st.last_edit.is_some_and(|t| now.saturating_duration_since(t) >= LIVE_PAUSE);
+        let busy = self.authoring.jobs.iter().any(|j| {
+            matches!(
+                j,
+                Job::Export {
+                    kind: ExportKind::PreviewLive | ExportKind::PreviewRefresh,
+                    ..
+                }
+            )
+        });
+        if changed && paused && !busy {
+            self.write_preview(ExportKind::PreviewLive);
+        }
     }
 
     /// An export or preview finished on its thread.
@@ -334,9 +518,13 @@ impl App {
         &mut self,
         what: &str,
         kind: ExportKind,
-        result: Result<(PathBuf, Vec<String>), String>,
+        result: Result<ExportDone, String>,
     ) {
-        let (path, warnings) = match result {
+        let ExportDone {
+            path,
+            warnings,
+            headings,
+        } = match result {
             Ok(x) => x,
             Err(e) => {
                 self.speech.earcon(textweaver_speech::Earcon::Error);
@@ -364,14 +552,67 @@ impl App {
                 );
             }
             ExportKind::PreviewOpen => {
-                self.tell(&format!(
-                    "Preview written. Opening it in the browser. Saving writes it again; refresh the browser to see it.{warned}"
-                ));
-                let target = path.display().to_string();
-                self.launch(&target);
+                let served = if self.settings.preview.auto_reload {
+                    self.serve_preview(&path)
+                } else {
+                    None
+                };
+                match served {
+                    Some(url) => {
+                        self.tell(&format!(
+                            "Preview written. Opening it in the browser. It reloads by itself after each save.{warned}"
+                        ));
+                        self.launch(&url);
+                    }
+                    None => {
+                        self.tell(&format!(
+                            "Preview written. Opening it in the browser. Saving writes it again; then press F5 in the browser.{warned}"
+                        ));
+                        let target = path.display().to_string();
+                        self.launch(&target);
+                    }
+                }
             }
-            ExportKind::PreviewRefresh => {
-                self.note("Preview updated.");
+            ExportKind::PreviewRefresh | ExportKind::PreviewLive => {
+                let anchor = self.preview_anchor(&headings);
+                match &self.preview_server {
+                    Some(server) => {
+                        server.reload(anchor.as_deref());
+                        if kind == ExportKind::PreviewRefresh {
+                            self.tell("Preview updated.");
+                        } else {
+                            self.show("Preview updated.");
+                        }
+                    }
+                    None => self.tell("Preview updated. Press F5 in the browser."),
+                }
+            }
+        }
+    }
+
+    /// Starts the reload server for the preview at `page` (or points the
+    /// running one at it); its address, or `None` when it cannot start.
+    fn serve_preview(&mut self, page: &Path) -> Option<String> {
+        let folder = self
+            .authoring
+            .preview_folder
+            .clone()
+            .unwrap_or_else(|| self.loose_folder());
+        if let Some(server) = &self.preview_server {
+            server.set_page(page.to_owned(), folder);
+            return Some(server.url());
+        }
+        match crate::preview_server::PreviewServer::start(page.to_owned(), folder) {
+            Ok(server) => {
+                let url = server.url();
+                self.preview_server = Some(server);
+                Some(url)
+            }
+            Err(e) => {
+                self.error(&format!(
+                    "Could not start the preview's reload server ({e}); opening the file instead."
+                ));
+                None
             }
         }
     }
@@ -406,10 +647,9 @@ impl App {
         };
         let text = s.doc.text().to_string();
         let caret = s.cursor;
-        let rendered_md = self.with_formatted_citations(&text);
         let loaded = MarkdownLoader.load(
             &Source::Bytes {
-                data: rendered_md.into_bytes(),
+                data: text.into_bytes(),
                 hint: "md".into(),
             },
             &self.load_options(),
@@ -446,9 +686,11 @@ impl App {
             return vec![Effect::Redraw];
         }
         let end = (start.0 + LISTEN_LIMIT).min(rendered.len_chars());
+        let range = CharRange::new(start, end);
         let policy = self.narration_policy();
+        let citations = self.citation_speech_of(&rendered, range);
         let utterances: Vec<Utterance> =
-            textweaver_text::plan(&rendered, CharRange::new(start, end), &policy);
+            textweaver_text::plan_with(&rendered, range, &policy, &citations);
         let Some(generation) = self.read_planned(utterances) else {
             self.tell("Nothing to read after the caret.");
             return vec![Effect::Redraw];

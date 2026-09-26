@@ -88,6 +88,9 @@ pub enum Command {
     /// snapshots while editing and periodic position saves. The same as
     /// [`App::tick`](crate::App::tick) with the current time.
     Tick,
+    /// A move in math exploration, sent while
+    /// [`App::math_exploring`](crate::App::math_exploring) is true.
+    MathStep(crate::math_explore::MathMove),
 }
 
 /// How far a [`Command::MoveCaret`] moves.

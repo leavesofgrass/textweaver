@@ -202,14 +202,7 @@ impl Citations {
 
         let cites: Vec<Citation> = found
             .into_iter()
-            .filter(|c| {
-                pandoc
-                    || if c.narrative {
-                        c.items.iter().all(|i| known(&i.key))
-                    } else {
-                        c.items.iter().any(|i| known(&i.key))
-                    }
-            })
+            .filter(|c| textweaver_cite::pandoc::counts_as_citation(c, known, pandoc))
             .collect();
         if cites.is_empty() {
             return cited;
