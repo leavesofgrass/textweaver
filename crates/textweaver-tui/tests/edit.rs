@@ -130,11 +130,16 @@ impl Harness {
         );
     }
 
-    fn settle(&mut self) {
-        // Let the speech thread record what it was asked to say.
-        let deadline = Instant::now() + Duration::from_millis(200);
-        while Instant::now() < deadline {
+    /// Applies speech status until the speech thread has recorded what
+    /// `done` waits for (or ten seconds pass). A fixed 200 ms wait failed on
+    /// a busy machine.
+    fn settle(&mut self, done: impl Fn(&[String]) -> bool) {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
             self.tui.tick();
+            if done(&self.log.texts()) || Instant::now() >= deadline {
+                break;
+            }
             std::thread::sleep(Duration::from_millis(5));
         }
         self.draw();
@@ -174,7 +179,7 @@ fn type_format_undo_save_and_reopen_through_keys() {
     h.log.clear();
     h.press(key(KeyCode::End));
     h.typed(" More text");
-    h.settle();
+    h.settle(|spoken| spoken.iter().any(|t| t == "M") && spoken.iter().any(|t| t == "More"));
     assert_eq!(h.text(), "# Notes\n\nPlain words here. More text\n");
     assert!(h.row_text(0).contains("modified"), "{}", h.row_text(0));
     h.assert_cursor_on_caret();

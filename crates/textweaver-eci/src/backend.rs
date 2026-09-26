@@ -265,6 +265,12 @@ impl EciBackend {
         calibration::speed_for_wpm(self.rate_table, self.params.rate.wpm())
     }
 
+    /// Changes how long the host may stay silent while it owes audio
+    /// before it counts as hung (`None`: [`STALL_TIMEOUT`]).
+    pub fn set_stall_timeout(&mut self, timeout: Option<Duration>) {
+        self.config.stall_timeout = timeout;
+    }
+
     fn ensure_host(&mut self) -> Result<(), SpeechError> {
         if self.host.is_some() {
             return Ok(());

@@ -47,18 +47,16 @@ fn a_frame_applies_speech_status_before_drawing() {
     term.draw(|f| tui.draw(f)).unwrap();
     tui.dispatch(Command::Action(ActionId::ReadFromCursor));
     assert!(tui.app().session().unwrap().spoken.is_none());
-    // Wait (with a deadline) until the speech thread has spoken, so word
-    // positions are waiting in the status channel.
+    // Run frames (with a deadline) until one applies word positions.
     let deadline = Instant::now() + Duration::from_secs(10);
-    while log.text_utterances().is_empty() && Instant::now() < deadline {
+    while tui.app().spoken_log().is_empty() && Instant::now() < deadline {
         std::thread::sleep(Duration::from_millis(2));
+        frame(&mut term, &mut tui).unwrap();
     }
     assert!(!log.text_utterances().is_empty(), "nothing was spoken");
-    std::thread::sleep(Duration::from_millis(20));
-    frame(&mut term, &mut tui).unwrap();
     assert!(
         !tui.app().spoken_log().is_empty(),
-        "the frame applied no word positions"
+        "no frame applied word positions"
     );
     // What the frame left on screen is the state after the statuses: drawing
     // again without applying anything changes nothing. (Drawing before
