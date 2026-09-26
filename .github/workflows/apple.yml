@@ -23,11 +23,11 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Swift probe 5 (which thread runs Apple's speech callbacks)
+      - name: Swift probe 6 (Speech Synthesis Manager on a background thread)
         run: |
-          swiftc -suppress-warnings tools/avspeech-spike/probe5.swift -o "$RUNNER_TEMP/probe5"
-          for s in ns-bg ns-bg-main ns-bg-dispatch ns-bg-file av-bg av-bg-main av-bg-dispatch ssm-bg; do
-            "$RUNNER_TEMP/probe5" "$s" || echo "scenario $s exited with $?"
+          swiftc -suppress-warnings tools/avspeech-spike/probe6.swift -o "$RUNNER_TEMP/probe6"
+          for s in attrs voice pause stop file rate pitch; do
+            "$RUNNER_TEMP/probe6" "$s" || echo "scenario $s exited with $?"
             echo
           done
       - run: rustup toolchain install
