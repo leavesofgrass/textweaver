@@ -203,3 +203,20 @@ fn quantizing_stays_close() {
         );
     }
 }
+
+#[test]
+fn sixteen_colors_keep_each_color_s_character() {
+    // Dark body text on a light page is black, not a dark hue.
+    let sepia = TerminalTheme::new(builtin::get("sepia").unwrap(), ColorSupport::Ansi16);
+    assert_eq!(sepia.page().fg, Some(TermColor::Indexed(0)));
+    assert_eq!(sepia.page().bg, Some(TermColor::Indexed(15)));
+    // Grays stay gray.
+    let galaxy = TerminalTheme::new(builtin::get("galaxy").unwrap(), ColorSupport::Ansi16);
+    assert_eq!(
+        galaxy.color(ColorRole::DimText).fg,
+        Some(TermColor::Indexed(7))
+    );
+    // Green phosphor stays green.
+    let phosphor = TerminalTheme::new(builtin::get("phosphor").unwrap(), ColorSupport::Ansi16);
+    assert_eq!(phosphor.page().fg, Some(TermColor::Indexed(2)));
+}

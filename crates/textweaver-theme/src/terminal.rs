@@ -440,13 +440,9 @@ impl TerminalTheme {
         // becomes underline where no index survives it.
         let text = |target: Rgb, attrs: Attrs| -> (u8, Attrs) {
             let pick = |bold: bool| {
-                (1..16u8)
+                (0..16u8)
                     .filter(|&i| i != page_i && worst_16(i, page_i, bold) >= min)
-                    .min_by(|&a, &b| {
-                        XTERM_16[usize::from(a)]
-                            .distance(target)
-                            .total_cmp(&XTERM_16[usize::from(b)].distance(target))
-                    })
+                    .min_by(|&a, &b| hue_distance(a, target).total_cmp(&hue_distance(b, target)))
             };
             if let Some(i) = pick(attrs.bold) {
                 return (i, attrs);
@@ -501,11 +497,7 @@ impl TerminalTheme {
                         let i = bands
                             .iter()
                             .copied()
-                            .min_by(|&x, &y| {
-                                XTERM_16[usize::from(x)]
-                                    .distance(b)
-                                    .total_cmp(&XTERM_16[usize::from(y)].distance(b))
-                            })
+                            .min_by(|&x, &y| hue_distance(x, b).total_cmp(&hue_distance(y, b)))
                             .unwrap_or(4);
                         TermStyle {
                             fg: Some(TermColor::Indexed(ink_i)),
@@ -527,6 +519,16 @@ impl TerminalTheme {
             },
         )
     }
+}
+
+/// How far base index `i` (as xterm draws it) is from `target`, weighting
+/// hue and chroma over lightness: the contrast filter has already settled
+/// lightness, so the choice should keep the color's character (a gray stays
+/// gray, a brown heading goes red rather than black).
+fn hue_distance(i: u8, target: Rgb) -> f64 {
+    let [l1, a1, b1] = XTERM_16[usize::from(i)].to_oklab();
+    let [l2, a2, b2] = target.to_oklab();
+    ((0.3 * (l1 - l2)).powi(2) + (a1 - a2).powi(2) + (b1 - b2).powi(2)).sqrt()
 }
 
 /// The theme's attributes, or the no-color set when it gave none.
