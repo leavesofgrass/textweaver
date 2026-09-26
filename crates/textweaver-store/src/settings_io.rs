@@ -45,9 +45,10 @@ use serde_json::{Map, Value};
 
 use crate::settings::STRUCT_TABLES;
 use crate::{
-    AppleSettings, DisplaySettings, EciSettings, EditingSettings, HighlightSettings,
-    KeyboardSettings, KeymapOverrides, LibrarySettings, NormalizationSettings, ReadingSettings,
-    SapiSettings, Settings, SettingsStore, SpeechSettings, StoreError,
+    AppleSettings, CommunityLexiconSettings, DisplaySettings, EciSettings, EditingSettings,
+    ExportSettings, HighlightSettings, KeyboardSettings, KeymapOverrides, LibrarySettings,
+    NormalizationSettings, ReadingSettings, SapiSettings, Settings, SettingsStore, SpeechSettings,
+    StoreError,
 };
 
 /// The key that marks a settings export and holds its format number.
@@ -677,11 +678,13 @@ fn check_leaf(section: &str, key: &str, value: toml::Value) -> Result<(), String
         "speech.apple" => fits::<AppleSettings>(key, value),
         "highlight" => fits::<HighlightSettings>(key, value),
         "normalization" => fits::<NormalizationSettings>(key, value),
+        "normalization.community_lexicon" => fits::<CommunityLexiconSettings>(key, value),
         "reading" => fits::<ReadingSettings>(key, value),
         "display" => fits::<DisplaySettings>(key, value),
         "editing" => fits::<EditingSettings>(key, value),
         "library" => fits::<LibrarySettings>(key, value),
         "keyboard" => fits::<KeyboardSettings>(key, value),
+        "export" => fits::<ExportSettings>(key, value),
         _ => Ok(()),
     }
 }
@@ -932,11 +935,13 @@ pub fn reset_sections(current: &Settings) -> Vec<String> {
         "speech.apple",
         "highlight",
         "normalization",
+        "normalization.community_lexicon",
         "reading",
         "display",
         "editing",
         "library",
         "keyboard",
+        "export",
         "keymap",
     ]
     .iter()

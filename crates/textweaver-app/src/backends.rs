@@ -119,7 +119,31 @@ pub fn speech_registry_for(settings: &Settings) -> BackendRegistry {
             move || (textweaver_sapi::factory(sapi.clone()))(),
         );
     }
+    // DECtalk (ADR-0021): only a copy the user installed, below SAPI.
+    let dectalk = dectalk_config(settings);
+    let probe = dectalk.clone();
+    registry.register(
+        textweaver_dectalk::backend_info_for(&dectalk),
+        move || textweaver_dectalk::backend_info_for(&probe).available,
+        move || (textweaver_dectalk::factory(dectalk.clone()))(),
+    );
     registry
+}
+
+/// The DECtalk backend's options: `library` from `[speech.dectalk]` (kept
+/// as an unknown section until the store gains a typed one).
+pub fn dectalk_config(settings: &Settings) -> textweaver_dectalk::DectalkConfig {
+    let library = settings
+        .speech
+        .extra
+        .get("dectalk")
+        .and_then(|t| t.get("library"))
+        .and_then(|v| v.as_str())
+        .map(std::path::PathBuf::from);
+    textweaver_dectalk::DectalkConfig {
+        library,
+        ..textweaver_dectalk::DectalkConfig::default()
+    }
 }
 
 /// Whether `settings` pin an Apple engine (`[speech.apple] backend`).
@@ -265,5 +289,20 @@ mod tests {
             d.normalize.community_lexicon,
             CommunityLexiconConfig::default()
         );
+    }
+
+    #[test]
+    fn dectalk_is_registered_below_sapi_and_eloquence() {
+        let list = speech_registry().list();
+        let dectalk = list
+            .iter()
+            .find(|b| b.id == "dectalk")
+            .expect("dectalk registered");
+        assert_eq!(dectalk.priority, 300);
+        for above in ["eci", "sapi"] {
+            if let Some(b) = list.iter().find(|b| b.id == above) {
+                assert!(b.priority > dectalk.priority, "{above}");
+            }
+        }
     }
 }

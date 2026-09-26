@@ -94,6 +94,13 @@ fn everything_changed() -> Settings {
     s.library.recent_limit = 10;
     s.library.folders = vec!["C:/Books".into()];
     s.keyboard.character_keys = false;
+    s.export.subtitle_format = crate::SubtitleFormat::Vtt;
+    s.export.subtitle_word_level = true;
+    s.export.subtitles_with_audio = true;
+    let lex = &mut s.normalization.community_lexicon;
+    lex.enabled = true;
+    lex.dir = Some("C:/Dictionaries".into());
+    lex.language = "DEU".into();
     s.extra.insert("future_key".into(), toml::Value::Integer(1));
     let future: toml::Table = "a = 1\nwhen = 2026-09-25T14:03:07Z\n".parse().unwrap();
     s.extra

@@ -48,7 +48,7 @@ use textweaver_core::Utterance;
 use textweaver_enginehost::protocol::check_version;
 use textweaver_enginehost::{HostMsg, HostProcess, Playback};
 use textweaver_speech::{
-    BackendId, Caps, EventSink, SpeechBackend, SpeechError, Voice, VoiceParams,
+    BackendId, Caps, EventSink, FileSynthesis, SpeechBackend, SpeechError, Voice, VoiceParams,
 };
 
 use crate::audio::AudioOutput;
@@ -447,10 +447,16 @@ impl SapiBackend {
     /// Synthesizes `text` with the current voice and parameters, returning
     /// the audio and word offsets instead of playing it.
     pub fn synthesize(&mut self, text: &str) -> Result<Synthesis, SpeechError> {
+        self.capture_text(text, true)
+    }
+
+    /// Synthesizes `text` into memory; word offsets are collected only when
+    /// `words` is true.
+    fn capture_text(&mut self, text: &str, words: bool) -> Result<Synthesis, SpeechError> {
         let arch = self.prepare()?;
         let token = self.playback.next_token();
         self.playback
-            .capture(token, arch.index(), Words::new(text, true));
+            .capture(token, arch.index(), Words::new(text, words));
         let pitch = self.pitch();
         if let Err(e) = self.send(
             arch,
@@ -640,6 +646,23 @@ impl SpeechBackend for SapiBackend {
         let s = self.synthesize(text)?;
         crate::wav::write(path, &s.samples, s.sample_rate)
             .map_err(|e| SpeechError::Io(format!("{}: {e}", path.display())))
+    }
+
+    /// Writes the utterance as a WAV and reports each word at its
+    /// word-boundary event's audio offset in that file (ADR-0011). Voices
+    /// without usable word timing (Code Factory's Eloquence through SAPI,
+    /// ADR-0007) report none, so export times their cues by sentence.
+    fn synthesize_utterance(
+        &mut self,
+        utterance: &Utterance,
+        path: &Path,
+    ) -> Result<FileSynthesis, SpeechError> {
+        let s = self.capture_text(&utterance.text, self.family.has_word_timing())?;
+        crate::wav::write(path, &s.samples, s.sample_rate)
+            .map_err(|e| SpeechError::Io(format!("{}: {e}", path.display())))?;
+        Ok(FileSynthesis {
+            words: textweaver_enginehost::word_timings(&s.words, s.sample_rate),
+        })
     }
 
     fn tone(&mut self, hz: f32, ms: u32) {

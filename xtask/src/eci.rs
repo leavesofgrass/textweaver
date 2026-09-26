@@ -29,6 +29,8 @@ const ECI_PACKAGE: &str = "textweaver-eci";
 const ECI_BIN: &str = "textweaver-eci-host";
 const SAPI_PACKAGE: &str = "textweaver-sapi";
 const SAPI_BIN: &str = "textweaver-sapi-host";
+const DECTALK_PACKAGE: &str = "textweaver-dectalk";
+const DECTALK_BIN: &str = "textweaver-dectalk-host";
 /// The 32-bit Windows target.
 pub(crate) const X86_TARGET: &str = "i686-pc-windows-msvc";
 
@@ -104,6 +106,20 @@ pub(crate) fn all_hosts() -> Vec<HostBuild> {
             bin: SAPI_BIN,
             target,
         }));
+    }
+    // DECtalk (ADR-0021): the native host everywhere, and on Windows the
+    // 32-bit host for the usual 32-bit DECtalk.dll.
+    v.push(HostBuild {
+        package: DECTALK_PACKAGE,
+        bin: DECTALK_BIN,
+        target: None,
+    });
+    if cfg!(windows) {
+        v.push(HostBuild {
+            package: DECTALK_PACKAGE,
+            bin: DECTALK_BIN,
+            target: Some(X86_TARGET),
+        });
     }
     v
 }
@@ -245,11 +261,13 @@ mod tests {
                     "textweaver-eci-host-x86.exe",
                     "textweaver-sapi-host.exe",
                     "textweaver-sapi-host-x86.exe",
+                    "textweaver-dectalk-host.exe",
+                    "textweaver-dectalk-host-x86.exe",
                 ]
             );
         } else {
-            assert_eq!(all.len(), 1);
-            assert_eq!(all[0].installed_name(), "textweaver-eci-host");
+            let names: Vec<String> = all.iter().map(HostBuild::installed_name).collect();
+            assert_eq!(names, ["textweaver-eci-host", "textweaver-dectalk-host"]);
         }
     }
 

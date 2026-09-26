@@ -24,7 +24,7 @@
 //!   indicator (dot 5);
 //! - lines end in CR LF, pages are separated by a form feed.
 //!
-//! Translation is UEB grade 1 by [`ueb`](crate::ueb), or grade 2 through
+//! Translation is UEB grade 1 by [`ueb`], or grade 2 through
 //! liblouis when [`BrailleGrade::Two`](crate::BrailleGrade) is chosen and
 //! the `liblouis` feature is on and `lou_translate` is installed.
 

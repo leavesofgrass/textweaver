@@ -4379,6 +4379,7 @@ dependencies = [
  "textweaver-a11y",
  "textweaver-apple",
  "textweaver-core",
+ "textweaver-dectalk",
  "textweaver-eci",
  "textweaver-editor",
  "textweaver-formats",
@@ -4470,6 +4471,19 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "textweaver-dectalk"
+version = "0.1.0-alpha.3"
+dependencies = [
+ "libloading 0.9.0",
+ "log",
+ "proptest",
+ "tempfile",
+ "textweaver-core",
+ "textweaver-enginehost",
+ "textweaver-speech",
 ]
 
 [[package]]

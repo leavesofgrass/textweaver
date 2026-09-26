@@ -37,6 +37,6 @@ pub mod serve;
 pub mod wav;
 
 pub use audio::{AudioOutput, Feed, Player};
-pub use playback::{Captured, Playback};
+pub use playback::{Captured, Playback, word_timings};
 pub use process::{HostMsg, HostProcess};
 pub use protocol::{EndStatus, Message, PROTOCOL_VERSION, ProtocolError};

@@ -37,7 +37,7 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use textweaver_core::UtteranceId;
-use textweaver_speech::{BackendId, EventSink, RawEvent, SpeechError};
+use textweaver_speech::{BackendId, EventSink, RawEvent, SpeechError, WordTiming};
 
 use crate::audio::{AudioOutput, Feed, Player};
 use crate::protocol::EndStatus;
@@ -84,6 +84,32 @@ pub struct Captured {
     pub words: Vec<(Range<u32>, u64)>,
     /// Why synthesis failed, if it did.
     pub failed: Option<String>,
+}
+
+impl Captured {
+    /// The word timings of this capture on its own clock (sample 0 is the
+    /// first sample of [`samples`](Self::samples)), for
+    /// `SpeechBackend::synthesize_utterance`. See [`word_timings`].
+    pub fn word_timings(&self, sample_rate: u32) -> Vec<WordTiming> {
+        word_timings(&self.words, sample_rate)
+    }
+}
+
+/// Turns word positions, each a byte range and the sample at which the
+/// engine reached the word, into [`WordTiming`]s in milliseconds at
+/// `sample_rate` Hz. The times are measured on the synthesized audio's own
+/// sample clock (the first sample of the file is 0 ms), rounded down as the
+/// playback clock rounds them (ADR-0003), so they never point past the
+/// word's first sample. Positions keep their order.
+pub fn word_timings(words: &[(Range<u32>, u64)], sample_rate: u32) -> Vec<WordTiming> {
+    let rate = u64::from(sample_rate.max(1));
+    words
+        .iter()
+        .map(|(range, sample)| WordTiming {
+            byte_range: range.clone(),
+            audio_ms: u32::try_from(sample.saturating_mul(1000) / rate).unwrap_or(u32::MAX),
+        })
+        .collect()
 }
 
 /// The shared playback client. See the module docs.
@@ -719,6 +745,39 @@ mod tests {
         );
         assert_eq!(p.capture_done(t), None);
         assert_eq!(p.feed().pushed(), 0, "captures never play");
+    }
+
+    #[test]
+    fn word_timings_use_the_capture_clock() {
+        let words = vec![(0..3, 0), (4..7, 11025), (8..9, 16537)];
+        let t = word_timings(&words, 11025);
+        assert_eq!(
+            t,
+            [
+                WordTiming {
+                    byte_range: 0..3,
+                    audio_ms: 0
+                },
+                WordTiming {
+                    byte_range: 4..7,
+                    audio_ms: 1000
+                },
+                // 1,499.95 ms rounds down, as the playback clock does.
+                WordTiming {
+                    byte_range: 8..9,
+                    audio_ms: 1499
+                },
+            ]
+        );
+        let c = Captured {
+            samples: vec![0; 20000],
+            words,
+            failed: None,
+        };
+        assert_eq!(c.word_timings(11025), t);
+        assert!(word_timings(&[], 8000).is_empty());
+        // A zero rate cannot divide by zero.
+        assert_eq!(word_timings(&[(0..1, 5)], 0)[0].audio_ms, 5000);
     }
 
     #[test]
