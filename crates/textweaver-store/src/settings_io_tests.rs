@@ -102,6 +102,8 @@ fn everything_changed() -> Settings {
     lex.enabled = true;
     lex.dir = Some("C:/dicts".into());
     lex.language = "DEU".into();
+    s.normalization.math_verbosity = textweaver_core::Verbosity::High;
+    s.normalization.asciimath_delimiter = Some('`');
     s.export.subtitle_format = crate::SubtitleFormat::Vtt;
     s.export.subtitle_word_level = true;
     s.export.subtitles_with_audio = true;
