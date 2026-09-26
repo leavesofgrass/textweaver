@@ -151,6 +151,10 @@ impl Places {
     }
 }
 
+fn join(base: &Path, parts: &[&str]) -> PathBuf {
+    parts.iter().fold(base.to_path_buf(), |p, c| p.join(c))
+}
+
 /// Every candidate, in order, existing or not.
 pub fn library_candidates(option: Option<&Path>, places: &Places) -> Vec<LibraryCandidate> {
     let mut out = Vec::new();
@@ -173,14 +177,26 @@ pub fn library_candidates(option: Option<&Path>, places: &Places) -> Vec<Library
     if places.windows {
         if let Some(pf) = &places.program_files {
             push(
-                pf.join(r"OpenEVV\lib\x86_64\eci.dll"),
+                join(pf, &["OpenEVV", "lib", "x86_64", "eci.dll"]),
                 Source::Default,
                 Some(Product::OpenEvv),
             );
         }
         if let Some(ad) = &places.appdata {
             push(
-                ad.join(r"nvda\addons\openevv\synthDrivers\_openevv\lib\x86_64\eci.dll"),
+                join(
+                    ad,
+                    &[
+                        "nvda",
+                        "addons",
+                        "openevv",
+                        "synthDrivers",
+                        "_openevv",
+                        "lib",
+                        "x86_64",
+                        "eci.dll",
+                    ],
+                ),
                 Source::Default,
                 Some(Product::OpenEvv),
             );
@@ -514,11 +530,14 @@ mod tests {
                 Source::Default
             ]
         );
-        assert!(c[2].path.ends_with(r"OpenEVV\lib\x86_64\eci.dll"));
+        assert!(
+            c[2].path
+                .ends_with(join(Path::new("OpenEVV"), &["lib", "x86_64", "eci.dll"]))
+        );
         assert_eq!(c[2].product, Product::OpenEvv);
         assert!(
             c[3].path
-                .ends_with(r"nvda\addons\openevv\synthDrivers\_openevv\lib\x86_64\eci.dll")
+                .ends_with(join(Path::new("_openevv"), &["lib", "x86_64", "eci.dll"]))
         );
         assert_eq!(c[4].product, Product::CodeFactory);
         assert!(
@@ -551,7 +570,7 @@ mod tests {
     fn the_first_existing_candidate_wins_with_its_architecture() {
         let dir = tempfile::tempdir().unwrap();
         let pf = dir.path().join("pf");
-        let evv = pf.join(r"OpenEVV\lib\x86_64");
+        let evv = join(&pf, &["OpenEVV", "lib", "x86_64"]);
         std::fs::create_dir_all(&evv).unwrap();
         std::fs::write(evv.join("eci.dll"), pe(0x8664)).unwrap();
         let places = Places {
