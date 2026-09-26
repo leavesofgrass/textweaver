@@ -227,7 +227,7 @@ Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech la
 
 ### Agent A2 — Formats and conversion
 
-**Owns:** `crates/textweaver-text/`, `crates/textweaver-formats/`, `crates/textweaver-cli/src/cmd/{text,info,search,convert}.rs`, `fixtures/a/`, `xtask/src/parity.rs`, `docs/adr/0010-pdf-loader.md`, `docs/parity-report.md`.
+**Owns:** `crates/textweaver-text/`, `crates/textweaver-formats/`, `crates/textweaver-cli/src/cmd/{text,info,search}.rs` (`convert.rs` moved to Agent L on 2026-09-25), `fixtures/a/`, `xtask/src/parity.rs`, `docs/adr/0010-pdf-loader.md`, `docs/parity-report.md`.
 
 **Deliverables:**
 - EPUB loader (zip, OPF spine, NAV or NCX table of contents to `SectionBreak` markers with chapter titles, images as alt text) and DOCX loader (`word/document.xml`: heading styles, lists with levels, bold/italic/underline runs, `docPr` alt text, tables in place, footnotes), both on the shared builder, with `insta` snapshots on new fixtures you create (keep fixture files small and your own).
@@ -315,3 +315,43 @@ Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech la
 - ADR-0014: whether wxDragon meets the bar (build cost, accessibility tree, text control behavior with large documents, live-region behavior), and the recommended Wave 3 plan.
 
 **Acceptance:** `cargo build -p textweaver-gui` succeeds on Windows; the UIA report is included; the GUI workflow is green or its failures are explained.
+
+### Conversion agents (added 2026-09-25 at Jon's request)
+
+Jon's direction: conversion and bulk conversion must be **lightning fast, native Rust, and memory safe**, even where that means writing custom parsers; Pandoc stays only as an optional fallback for formats textweaver has no native reader for. His choices: Markdown flavors GFM, Obsidian, Pandoc Markdown, and LaTeX math as MathML; MiniJinja templates; outputs EPUB, DOCX, BRF braille, and PDF beyond Markdown, HTML, and text; folders converted by mirroring the tree and skipping outputs newer than their source. `tw convert` moves from Agent A2 to Agent L; A2 keeps the loaders and `formats` exports.
+
+| Agent | Branch | Status |
+|---|---|---|
+| L — Rendering and bulk conversion | `wave2/l-render-convert` | not started |
+| M — Native writers | `wave2/m-writers` | not started |
+
+#### Agent L — Rendering and bulk conversion
+
+**Owns:** `crates/textweaver-render/`, `crates/textweaver-convert/`, `crates/textweaver-cli/src/cmd/convert.rs` (from A2), `fixtures/l/`, `docs/adr/0016-rendering-and-conversion.md`, `docs/converting.md` (a user guide).
+
+**Deliverables:**
+- `textweaver-render`: Markdown to HTML through selectable engines behind one API (`Engine::PulldownCmark` default for speed, `Engine::Comrak` for full GFM), flavors (GFM: tables, task lists, strikethrough, autolinks, footnotes, alerts; Obsidian: `[[wikilinks]]` with aliases and headings, `![[embeds]]` as links or inlined text, `> [!note]` callouts, `#tags`, `^block` references; Pandoc Markdown: definition lists, fenced divs and bracketed spans with attributes, YAML metadata blocks, citations `[@key]` rendered as links, custom where engines lack it), LaTeX math `$…$` and `$$…$$` to MathML (`pulldown-latex`) so screen readers can read it, heading ids and a table of contents, optional sanitization (`ammonia`).
+- Templates with MiniJinja: built-in templates (an accessible default with `lang`, landmarks, skip link, a readable stylesheet respecting `prefers-color-scheme` and `prefers-reduced-motion`; a print template; a bare fragment), user templates from a folder, variables from front matter.
+- `textweaver-convert`: convert files and folder trees on all cores (`rayon`), mirroring the tree, skipping outputs newer than their source, with `--jobs`, `--force`, and a summary (files, bytes, time, failures); output formats Markdown, HTML (through `render` for Markdown sources and templates for everything), text, and, through Agent M's writers, EPUB, DOCX, BRF, and PDF (build against the writer trait you agree on in your reports; the orchestrator wires M's crate if needed). Inputs through `textweaver-formats` loaders; Pandoc only as a fallback when no native loader exists.
+- `tw convert FILES/DIRS --to md|html|txt|epub|docx|brf|pdf [--out DIR] [--engine pulldown|comrak] [--flavor gfm|obsidian|pandoc] [--template NAME|PATH] [--jobs N] [--force] [--watch] [--json]`; `--watch` with `notify` and Star's `watch_*` semantics.
+- Performance: a benchmark (`cargo xtask bench-convert` is the orchestrator's, so provide `crates/textweaver-convert/benches/` or an example binary) converting a generated corpus of 1,000 Markdown files; report files per second and peak memory, and profile the hot path. Memory stays proportional to one document per worker.
+- ADR-0016 and `docs/converting.md` (a short guide for users, written for screen-reader users).
+
+**Acceptance:** CommonMark conformance for the pulldown path through its test suite; flavor features covered by snapshot tests; a bulk-conversion test on a temporary tree checking mirrored paths and skip-unchanged; the benchmark numbers in the report.
+
+#### Agent M — Native writers
+
+**Owns:** `crates/textweaver-writers/`, `fixtures/m/`, `docs/adr/0017-writers.md`.
+
+**Deliverables:** writers from a `Document` (text plus markers; `textweaver-text`) in pure Rust, each validated:
+- **EPUB 3**: XHTML content documents with semantic headings, lists, tables, figures with alt text; nav document from headings; package metadata including `schema:accessibilityFeature` and related accessibility metadata; passes `epubcheck` if Java and epubcheck are available (skip cleanly otherwise).
+- **DOCX**: WordprocessingML with real Heading 1 to 6 styles, list numbering, tables with header rows, alt text on images; opens in Word and LibreOffice (validate structure by round-tripping through A's DOCX loader).
+- **BRF braille**: Braille Ready Format pages (40 cells by 25 lines by default, configurable) with Unified English Braille grade 1 translation in pure Rust (tables in code, tested against known UEB examples); grade 2 contractions as a second phase if time allows, or through `liblouis` behind an optional feature if installed (report which).
+- **Tagged PDF**: `krilla` with structure tagging (headings, paragraphs, lists, tables, alt text) aiming at PDF/UA, an embedded font, and document language; report what krilla's validation says.
+- A `Writer` trait (`fn write(&Document, &WriteOptions, &mut dyn Write)`) that Agent L's converter calls; agree on it in your reports.
+
+**Acceptance:** each writer has tests and a round-trip or structural validation; ADR-0017 explains the choices and the accessibility checks.
+
+### Queued after Agent H: DECtalk
+
+A `dectalk` backend on the shared engine host (`textweaver-enginehost`), mirroring ECI: the DECtalk TTS API in memory mode with `[:index mark]` word marks, loaded from a user-supplied library (`TEXTWEAVER_DECTALK_LIBRARY`, and the install locations of a licensed DECtalk). The community DECtalk source's own licence file states it is proprietary to Fonix and usable only under a written licence, so textweaver never bundles, downloads, or tests against it; Jon may point textweaver at a build he has (his emacspeak-docker image compiles one) for his own testing.

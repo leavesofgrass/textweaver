@@ -2585,6 +2585,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-convert"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "textweaver-core",
+ "textweaver-formats",
+ "textweaver-render",
+ "textweaver-text",
+ "textweaver-writers",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "textweaver-core"
 version = "0.1.0-alpha.0"
 dependencies = [
@@ -2692,6 +2707,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-render"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "textweaver-sapi"
 version = "0.1.0-alpha.0"
 dependencies = [
@@ -2766,6 +2789,16 @@ dependencies = [
  "serde_json",
  "textweaver-core",
  "textweaver-store",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "textweaver-writers"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "serde",
+ "textweaver-core",
+ "textweaver-text",
  "thiserror 2.0.21",
 ]
 

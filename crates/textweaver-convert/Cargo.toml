@@ -1,0 +1,24 @@
+[package]
+name = "textweaver-convert"
+description = "Fast bulk document conversion for textweaver: parallel, incremental, mirrored output trees"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+textweaver-core.workspace = true
+textweaver-text.workspace = true
+textweaver-formats.workspace = true
+textweaver-render.workspace = true
+textweaver-writers.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
+
+[lints]
+workspace = true

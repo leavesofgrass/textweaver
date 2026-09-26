@@ -20,6 +20,9 @@ members = [
     "crates/textweaver-vault",
     "crates/textweaver-dictation",
     "crates/textweaver-gui",
+    "crates/textweaver-render",
+    "crates/textweaver-convert",
+    "crates/textweaver-writers",
     "xtask",
 ]
 default-members = [
@@ -41,6 +44,9 @@ default-members = [
     "crates/textweaver-export",
     "crates/textweaver-vault",
     "crates/textweaver-dictation",
+    "crates/textweaver-render",
+    "crates/textweaver-convert",
+    "crates/textweaver-writers",
 ]
 
 [workspace.package]
@@ -73,6 +79,9 @@ textweaver-enginehost = { path = "crates/textweaver-enginehost" }
 textweaver-export = { path = "crates/textweaver-export" }
 textweaver-vault = { path = "crates/textweaver-vault" }
 textweaver-dictation = { path = "crates/textweaver-dictation" }
+textweaver-render = { path = "crates/textweaver-render" }
+textweaver-convert = { path = "crates/textweaver-convert" }
+textweaver-writers = { path = "crates/textweaver-writers" }
 
 # text and formats
 ropey = "1.6"
@@ -128,6 +137,14 @@ pdfium-render = "0.9"
 encoding_rs = "0.8"
 # Hot-folder watch for batch conversion.
 notify = "8"
+# Conversion and rendering (Agents L and M)
+comrak = { version = "0.55", default-features = false }
+minijinja = "2.24"
+rayon = "1.12"
+walkdir = "2.5"
+pulldown-latex = "0.8"
+ammonia = "4.2"
+krilla = "0.8"
 # GUI (wave 3 spike; the textweaver-gui crate only).
 wxdragon = "0.9"
 live-region = "0.3"

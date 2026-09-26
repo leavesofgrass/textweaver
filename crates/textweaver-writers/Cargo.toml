@@ -1,0 +1,19 @@
+[package]
+name = "textweaver-writers"
+description = "Native document writers for textweaver: accessible EPUB 3, DOCX, BRF braille, tagged PDF"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+textweaver-core.workspace = true
+textweaver-text.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+
+[lints]
+workspace = true
