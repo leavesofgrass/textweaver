@@ -1,0 +1,773 @@
+//! List and prompt state, shared by every frontend (Wave 3, Agent W3a).
+//!
+//! Until Wave 3 the terminal reader kept the focused list item, first-letter
+//! jumps, the "3 of 12" announcements, and the prompt's text, caret, and
+//! history itself (`textweaver-tui`'s `widgets` and `ui`). They live here
+//! now, so the terminal reader, the GUI's dialogs, and JSON-RPC share one
+//! implementation and say the same things:
+//!
+//! - When the app shows a list ([`Effect::ShowList`]), it keeps a
+//!   [`ListModel`]: the title, the items, and the focused item, which
+//!   stays in place when the same list is shown again (after a delete).
+//!   The focused item is announced after the list's introduction.
+//! - A frontend sends list keys as [`Command::ListKey`]: arrows, Page Up
+//!   and Down, Home and End move and announce "item, k of n" (or "Top of
+//!   list."); a typed character filters a list that filters as you type,
+//!   chooses by its accelerator (`s`, `d`, `c` in Save, Discard, Cancel),
+//!   or jumps to the next item starting with it; Enter chooses; Escape
+//!   closes; Delete, F2, and Space act on the item. A GUI list that moves
+//!   its own focus reports it quietly with [`Command::ListFocus`].
+//! - When the app opens a prompt ([`Effect::Prompt`]), it keeps a
+//!   [`PromptModel`]: label, purpose, text, and caret. A frontend sends
+//!   [`Command::PromptKey`]: characters, Backspace, Delete, the caret keys,
+//!   the Emacs-style kills, Up and Down (earlier answers to the same
+//!   prompt, or command palette matches), Tab (completes a command name or
+//!   a file path), Enter, and Escape. Typing is echoed as in edit mode. A
+//!   GUI text field that edits its own text sends its whole text with
+//!   [`PromptKey::SetText`] and Enter with [`PromptKey::Enter`].
+//!
+//! [`Effect::ShowList`]: crate::Effect::ShowList
+//! [`Effect::Prompt`]: crate::Effect::Prompt
+//! [`Command::ListKey`]: crate::Command::ListKey
+//! [`Command::ListFocus`]: crate::Command::ListFocus
+//! [`Command::PromptKey`]: crate::Command::PromptKey
+
+use textweaver_a11y::Priority;
+use textweaver_keymap::ActionId;
+
+use crate::app::App;
+use crate::command::{Command, Effect, PromptPurpose};
+
+/// Most recalled answers kept per prompt.
+pub const PROMPT_HISTORY: usize = 50;
+
+/// How far Page Up and Page Down move in a list.
+pub const LIST_PAGE: usize = 10;
+
+/// A list shown to the user: its title, items, and focused item.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ListModel {
+    /// Title.
+    pub title: String,
+    /// Items, as shown and spoken.
+    pub items: Vec<String>,
+    /// The focused item (0 in an empty list).
+    pub selected: usize,
+}
+
+impl ListModel {
+    /// A list focused on its first item.
+    pub fn new(title: impl Into<String>, items: Vec<String>) -> Self {
+        ListModel {
+            title: title.into(),
+            items,
+            selected: 0,
+        }
+    }
+
+    /// Moves the focus by `delta`, clamped; returns true when it moved.
+    pub fn step(&mut self, delta: isize) -> bool {
+        let last = self.items.len().saturating_sub(1);
+        let next = self.selected.saturating_add_signed(delta).min(last);
+        let moved = next != self.selected;
+        self.selected = next;
+        moved
+    }
+
+    /// The focused item's text.
+    pub fn current(&self) -> Option<&str> {
+        self.items.get(self.selected).map(String::as_str)
+    }
+
+    /// Moves the focus to the next item (after the focused one, wrapping)
+    /// whose first letter or digit is `c`, ignoring case. Returns true when
+    /// one was found.
+    pub fn jump_to_letter(&mut self, c: char) -> bool {
+        let want: Vec<char> = c.to_lowercase().collect();
+        let n = self.items.len();
+        let starts = |s: &str| {
+            s.chars()
+                .find(|ch| ch.is_alphanumeric())
+                .is_some_and(|f| f.to_lowercase().eq(want.iter().copied()))
+        };
+        for step in 1..=n {
+            let i = (self.selected + step) % n;
+            if starts(&self.items[i]) {
+                self.selected = i;
+                return true;
+            }
+        }
+        false
+    }
+
+    /// The focused item as spoken: its text and where it is in the list
+    /// ("Chapter two, 2 of 5").
+    pub fn spoken_item(&self) -> Option<String> {
+        let item = self.current()?;
+        Some(format!(
+            "{item}, {} of {}",
+            self.selected + 1,
+            self.items.len()
+        ))
+    }
+}
+
+/// A key pressed in a list ([`Command::ListKey`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ListKey {
+    /// Up: the previous item.
+    Up,
+    /// Down: the next item.
+    Down,
+    /// Page Up: [`LIST_PAGE`] items back.
+    PageUp,
+    /// Page Down: [`LIST_PAGE`] items on.
+    PageDown,
+    /// Home: the first item.
+    Home,
+    /// End: the last item.
+    End,
+    /// Left: in the settings list, a smaller value or the previous choice.
+    Left,
+    /// Right: in the settings list, a larger value or the next choice.
+    Right,
+    /// A typed character (no Control or Alt): filters a list that filters
+    /// as you type, chooses by an accelerator, or jumps to the next item
+    /// starting with it; Space marks an item (a favourite voice).
+    Char(char),
+    /// Backspace: removes the filter's last character, else closes the
+    /// list.
+    Backspace,
+    /// Enter: chooses the focused item.
+    Enter,
+    /// Escape: closes the list.
+    Escape,
+    /// Delete: deletes the focused item (bookmarks, notes, highlights), or
+    /// resets a setting to its default.
+    Delete,
+    /// F2: renames or edits the focused item.
+    Rename,
+}
+
+/// A key pressed in a prompt ([`Command::PromptKey`]).
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum PromptKey {
+    /// A typed character, inserted at the caret.
+    Char(char),
+    /// Pasted text (control characters are dropped), inserted at the caret.
+    Paste(String),
+    /// The whole text, from a GUI text field that edits its own text; the
+    /// caret goes to the end. Nothing is echoed (the field does that).
+    SetText(String),
+    /// Deletes the character before the caret.
+    Backspace,
+    /// Deletes the character at the caret.
+    Delete,
+    /// The caret one character left.
+    Left,
+    /// The caret one character right.
+    Right,
+    /// The caret to the start.
+    Home,
+    /// The caret to the end.
+    End,
+    /// Deletes from the start to the caret (Ctrl+U).
+    KillToStart,
+    /// Deletes from the caret to the end (Ctrl+K).
+    KillToEnd,
+    /// Deletes the word before the caret (Ctrl+W).
+    DeleteWordBack,
+    /// Up: an earlier answer to this prompt, or the previous command
+    /// palette match.
+    Up,
+    /// Down: a later answer, or the next command palette match.
+    Down,
+    /// Tab: completes a command name or a file path.
+    Tab,
+    /// Enter: answers the prompt with its text.
+    Enter,
+    /// Escape: cancels the prompt.
+    Escape,
+}
+
+/// A one-line prompt with a caret, history position, and (for the command
+/// palette) completion candidates.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PromptModel {
+    /// Prompt label.
+    pub label: String,
+    /// What the answer is for.
+    pub purpose: PromptPurpose,
+    text: Vec<char>,
+    caret: usize,
+    /// Position in the prompt's history while recalling (`None` when
+    /// editing fresh text).
+    pub history_index: Option<usize>,
+    /// Palette candidates for the current text: the action and what is
+    /// said for it.
+    pub candidates: Vec<(ActionId, String)>,
+    /// Which candidate Up and Down are on.
+    pub candidate: Option<usize>,
+}
+
+impl PromptModel {
+    /// An empty prompt.
+    pub fn new(label: impl Into<String>, purpose: PromptPurpose) -> Self {
+        PromptModel {
+            label: label.into(),
+            purpose,
+            text: Vec::new(),
+            caret: 0,
+            history_index: None,
+            candidates: Vec::new(),
+            candidate: None,
+        }
+    }
+
+    /// The text typed so far.
+    pub fn text(&self) -> String {
+        self.text.iter().collect()
+    }
+
+    /// The caret, in chars from the start of the text.
+    pub fn caret(&self) -> usize {
+        self.caret
+    }
+
+    /// Replaces the text and puts the caret at its end.
+    pub fn set_text(&mut self, s: &str) {
+        self.text = s.chars().collect();
+        self.caret = self.text.len();
+    }
+
+    /// Inserts a char at the caret.
+    pub fn insert(&mut self, c: char) {
+        self.text.insert(self.caret, c);
+        self.caret += 1;
+    }
+
+    /// Deletes the char before the caret.
+    pub fn backspace(&mut self) -> Option<char> {
+        if self.caret == 0 {
+            return None;
+        }
+        self.caret -= 1;
+        Some(self.text.remove(self.caret))
+    }
+
+    /// Deletes the char at the caret.
+    pub fn delete(&mut self) -> Option<char> {
+        (self.caret < self.text.len()).then(|| self.text.remove(self.caret))
+    }
+
+    /// Moves the caret one char left; false at the start.
+    pub fn left(&mut self) -> bool {
+        let moved = self.caret > 0;
+        self.caret = self.caret.saturating_sub(1);
+        moved
+    }
+
+    /// Moves the caret one char right; false at the end.
+    pub fn right(&mut self) -> bool {
+        let moved = self.caret < self.text.len();
+        self.caret = (self.caret + 1).min(self.text.len());
+        moved
+    }
+
+    /// Caret to the start.
+    pub fn home(&mut self) {
+        self.caret = 0;
+    }
+
+    /// Caret to the end.
+    pub fn end(&mut self) {
+        self.caret = self.text.len();
+    }
+
+    /// Deletes from the start to the caret; returns what was deleted.
+    pub fn kill_to_start(&mut self) -> String {
+        let gone: String = self.text.drain(..self.caret).collect();
+        self.caret = 0;
+        gone
+    }
+
+    /// Deletes from the caret to the end; returns what was deleted.
+    pub fn kill_to_end(&mut self) -> String {
+        self.text.drain(self.caret..).collect()
+    }
+
+    /// Deletes the word before the caret; returns it.
+    pub fn delete_word_back(&mut self) -> String {
+        let mut start = self.caret;
+        while start > 0 && self.text[start - 1].is_whitespace() {
+            start -= 1;
+        }
+        while start > 0 && !self.text[start - 1].is_whitespace() {
+            start -= 1;
+        }
+        let gone: String = self.text.drain(start..self.caret).collect();
+        self.caret = start;
+        gone
+    }
+
+    /// The char at the caret, if any.
+    pub fn char_at_caret(&self) -> Option<char> {
+        self.text.get(self.caret).copied()
+    }
+}
+
+/// The longest start shared by `ids`.
+fn common_prefix(ids: &[&str]) -> String {
+    let Some(first) = ids.first() else {
+        return String::new();
+    };
+    let mut len = first.len();
+    for id in &ids[1..] {
+        len = first
+            .bytes()
+            .zip(id.bytes())
+            .take(len)
+            .take_while(|(a, b)| a == b)
+            .count();
+    }
+    first[..len].to_owned()
+}
+
+impl App {
+    /// The list shown, with its focused item, if any. While one is shown,
+    /// a frontend sends list keys as [`Command::ListKey`].
+    pub fn list_model(&self) -> Option<&ListModel> {
+        self.list_model.as_ref()
+    }
+
+    /// The prompt open, with its text and caret, if any. While one is open,
+    /// a frontend sends prompt keys as [`Command::PromptKey`].
+    pub fn prompt_model(&self) -> Option<&PromptModel> {
+        self.prompt_model.as_ref()
+    }
+
+    /// Earlier answers to prompts for `purpose`, oldest first (at most
+    /// [`PROMPT_HISTORY`]).
+    pub fn prompt_history(&self, purpose: PromptPurpose) -> &[String] {
+        self.answers.get(&purpose).map_or(&[], Vec::as_slice)
+    }
+
+    /// Keeps the list and prompt models in step with effects returned to
+    /// the frontend: a prompt replaces any list, a list any prompt; the
+    /// same list shown again keeps its focus. The focused item is said
+    /// after the list's introduction, without interrupting it (the first
+    /// item was never heard unless the user pressed Up,
+    /// docs/audit-2026-09.md, finding A4).
+    pub(crate) fn adopt(&mut self, effects: &[Effect]) {
+        for e in effects {
+            match e {
+                Effect::Prompt { label, purpose } => {
+                    self.list_model = None;
+                    let mut model = PromptModel::new(label.clone(), *purpose);
+                    if let Some(text) = self.pending_prompt_text.take() {
+                        model.set_text(&text);
+                    }
+                    self.prompt_model = Some(model);
+                }
+                Effect::ShowList { title, items } => {
+                    self.prompt_model = None;
+                    let keep = self
+                        .list_model
+                        .as_ref()
+                        .filter(|l| &l.title == title)
+                        .map(|l| l.selected);
+                    let mut view = ListModel::new(title.clone(), items.clone());
+                    if let Some(i) = keep.or(self.pending_list_focus.take()) {
+                        view.selected = i.min(view.items.len().saturating_sub(1));
+                    }
+                    if let Some(item) = view.spoken_item() {
+                        self.announce_queued(&item, Priority::Polite);
+                    }
+                    self.list_model = Some(view);
+                }
+                Effect::Redraw | Effect::Quit => {}
+            }
+        }
+    }
+
+    /// Before a command runs: the list or prompt it closes.
+    pub(crate) fn close_models_for(&mut self, cmd: &Command) {
+        match cmd {
+            Command::Choose(_) | Command::Cancel => {
+                self.list_model = None;
+                self.prompt_model = None;
+            }
+            Command::Answer(_) => self.prompt_model = None,
+            _ => {}
+        }
+    }
+
+    /// After a command acting on a list item (delete, rename, mark): the
+    /// list stays only if the app showed it again (or asked for a name).
+    pub(crate) fn close_list_unless_reshown(&mut self, effects: &[Effect]) {
+        let reshown = effects
+            .iter()
+            .any(|e| matches!(e, Effect::ShowList { .. } | Effect::Prompt { .. }));
+        if !reshown {
+            self.list_model = None;
+        }
+    }
+
+    /// A key in the list shown.
+    pub(crate) fn list_key(&mut self, key: ListKey) -> Vec<Effect> {
+        if self.list_model.is_none() {
+            return vec![Effect::Redraw];
+        }
+        if self.settings_screen.is_some()
+            && let Some(effects) = self.settings_list_key(key)
+        {
+            return effects;
+        }
+        // Lists that filter as you type (the outline, the citation picker):
+        // characters and Space add to the filter, Backspace removes one.
+        if let Some(filter) = self.list_filter().map(str::to_owned) {
+            match key {
+                ListKey::Char(c) if !c.is_control() => {
+                    return self.dispatch_inner(Command::FilterList(format!("{filter}{c}")));
+                }
+                ListKey::Backspace if !filter.is_empty() => {
+                    let mut q = filter;
+                    q.pop();
+                    return self.dispatch_inner(Command::FilterList(q));
+                }
+                _ => {}
+            }
+        }
+        let n = self.list_model.as_ref().map_or(0, |l| l.selected);
+        let delta: isize = match key {
+            ListKey::Char(c) if c.is_alphanumeric() => {
+                // An accelerator, else the next item starting with it.
+                if let Some(i) = self.list_accelerator(c) {
+                    return self.choose_closing(i);
+                }
+                let found = self.list_model.as_mut().map(|l| l.jump_to_letter(c));
+                match found {
+                    Some(true) => {
+                        let text = self
+                            .list_model
+                            .as_ref()
+                            .and_then(ListModel::spoken_item)
+                            .unwrap_or_default();
+                        self.announce(&text, Priority::Assertive);
+                    }
+                    _ => self.announce(&format!("No item starts with {c}."), Priority::Polite),
+                }
+                return vec![Effect::Redraw];
+            }
+            ListKey::Char(' ') => return self.list_item_command(Command::MarkItem(n)),
+            ListKey::Char(_) | ListKey::Left | ListKey::Right => return vec![Effect::Redraw],
+            ListKey::Enter => return self.choose_closing(n),
+            ListKey::Escape | ListKey::Backspace => {
+                self.list_model = None;
+                return self.dispatch_inner(Command::Cancel);
+            }
+            ListKey::Delete => return self.list_item_command(Command::DeleteItem(n)),
+            ListKey::Rename => return self.list_item_command(Command::RenameItem(n)),
+            ListKey::Up => -1,
+            ListKey::Down => 1,
+            ListKey::PageUp => -(LIST_PAGE as isize),
+            ListKey::PageDown => LIST_PAGE as isize,
+            ListKey::Home => isize::MIN / 2,
+            ListKey::End => isize::MAX / 2,
+        };
+        let Some(list) = self.list_model.as_mut() else {
+            return vec![Effect::Redraw];
+        };
+        let moved = list.step(delta);
+        let text = list.spoken_item().unwrap_or_default();
+        if moved {
+            self.announce(&text, Priority::Assertive);
+        } else {
+            let edge = if delta < 0 {
+                "Top of list."
+            } else {
+                "End of list."
+            };
+            self.announce(edge, Priority::Polite);
+        }
+        vec![Effect::Redraw]
+    }
+
+    /// Chooses item `n` of the list shown, closing it.
+    fn choose_closing(&mut self, n: usize) -> Vec<Effect> {
+        self.list_model = None;
+        self.dispatch_inner(Command::Choose(n))
+    }
+
+    /// Runs a command on a list item; the list stays open only if the app
+    /// shows it again.
+    fn list_item_command(&mut self, cmd: Command) -> Vec<Effect> {
+        let effects = self.dispatch_inner(cmd);
+        self.close_list_unless_reshown(&effects);
+        effects
+    }
+
+    /// Moves the list's focus to item `n` quietly (a GUI list that moved
+    /// its own focus, which the screen reader already announced).
+    pub(crate) fn list_focus(&mut self, n: usize) -> Vec<Effect> {
+        if let Some(l) = self.list_model.as_mut() {
+            l.selected = n.min(l.items.len().saturating_sub(1));
+        }
+        vec![Effect::Redraw]
+    }
+
+    /// A key in the prompt open.
+    pub(crate) fn prompt_key(&mut self, key: PromptKey) -> Vec<Effect> {
+        let Some(mb) = self.prompt_model.as_mut() else {
+            return vec![Effect::Redraw];
+        };
+        let mut echo: Option<String> = None;
+        match key {
+            PromptKey::Enter => {
+                let answer = mb.text();
+                let purpose = mb.purpose;
+                self.remember_answer(purpose, &answer);
+                self.prompt_model = None;
+                return self.dispatch_inner(Command::Answer(answer));
+            }
+            PromptKey::Escape => {
+                self.prompt_model = None;
+                return self.dispatch_inner(Command::Cancel);
+            }
+            PromptKey::Char(c) if !c.is_control() => {
+                mb.insert(c);
+                mb.candidate = None;
+                echo = Some(c.to_string());
+            }
+            PromptKey::Char(_) => {}
+            PromptKey::Paste(text) => {
+                for c in text.chars().filter(|c| !c.is_control()) {
+                    mb.insert(c);
+                }
+                mb.candidate = None;
+                echo = Some(text);
+            }
+            PromptKey::SetText(text) => {
+                mb.set_text(&text);
+                mb.candidate = None;
+            }
+            PromptKey::KillToStart => echo = Some(mb.kill_to_start()),
+            PromptKey::KillToEnd => echo = Some(mb.kill_to_end()),
+            PromptKey::DeleteWordBack => echo = Some(mb.delete_word_back()),
+            PromptKey::Backspace => echo = mb.backspace().map(|c| c.to_string()),
+            PromptKey::Delete => echo = mb.delete().map(|c| c.to_string()),
+            PromptKey::Left => {
+                mb.left();
+                echo = mb.char_at_caret().map(|c| c.to_string());
+            }
+            PromptKey::Right => {
+                mb.right();
+                echo = mb.char_at_caret().map(|c| c.to_string());
+            }
+            PromptKey::Home => mb.home(),
+            PromptKey::End => mb.end(),
+            PromptKey::Tab => {
+                self.complete_prompt();
+                return vec![Effect::Redraw];
+            }
+            PromptKey::Up => {
+                self.recall(-1);
+                return vec![Effect::Redraw];
+            }
+            PromptKey::Down => {
+                self.recall(1);
+                return vec![Effect::Redraw];
+            }
+        }
+        if let Some(e) = echo.filter(|e| !e.is_empty()) {
+            self.echo(&e);
+        }
+        vec![Effect::Redraw]
+    }
+
+    /// Records an answer in the prompt's history (blank answers are not
+    /// kept; a repeated answer moves to the end).
+    pub(crate) fn remember_answer(&mut self, purpose: PromptPurpose, answer: &str) {
+        if answer.trim().is_empty() {
+            return;
+        }
+        let hist = self.answers.entry(purpose).or_default();
+        hist.retain(|a| a != answer);
+        hist.push(answer.to_owned());
+        if hist.len() > PROMPT_HISTORY {
+            hist.remove(0);
+        }
+    }
+
+    /// Up and Down: palette candidates, or earlier answers to this prompt.
+    fn recall(&mut self, delta: isize) {
+        let Some(purpose) = self.prompt_model.as_ref().map(|m| m.purpose) else {
+            return;
+        };
+        if purpose == PromptPurpose::CommandPalette {
+            let Some(mb) = self.prompt_model.as_ref() else {
+                return;
+            };
+            let fresh = mb.candidate.is_none().then(|| mb.text());
+            let cands = fresh.map(|t| self.palette_candidates(&t));
+            let Some(mb) = self.prompt_model.as_mut() else {
+                return;
+            };
+            if let Some(c) = cands {
+                mb.candidates = c;
+            }
+            if mb.candidates.is_empty() {
+                self.announce("No matching commands.", Priority::Polite);
+                return;
+            }
+            let n = mb.candidates.len();
+            let i = match mb.candidate {
+                None if delta > 0 => 0,
+                None => n - 1,
+                Some(i) => (i as isize + delta).rem_euclid(n as isize) as usize,
+            };
+            mb.candidate = Some(i);
+            let (action, desc) = mb.candidates[i].clone();
+            mb.set_text(action.id());
+            self.announce(&desc, Priority::Assertive);
+            return;
+        }
+        let hist = self.answers.get(&purpose).cloned().unwrap_or_default();
+        let Some(mb) = self.prompt_model.as_mut() else {
+            return;
+        };
+        if hist.is_empty() {
+            self.announce("No earlier entries.", Priority::Polite);
+            return;
+        }
+        let n = hist.len();
+        let i = match (mb.history_index, delta < 0) {
+            (None, true) => Some(n - 1),
+            (None, false) => None,
+            (Some(i), true) => Some(i.saturating_sub(1)),
+            (Some(i), false) if i + 1 < n => Some(i + 1),
+            (Some(_), false) => None,
+        };
+        mb.history_index = i;
+        let text = i.map_or_else(String::new, |i| hist[i].clone());
+        mb.set_text(&text);
+        let spoken = if text.is_empty() {
+            "blank".to_owned()
+        } else {
+            text
+        };
+        self.announce(&spoken, Priority::Assertive);
+    }
+
+    /// Tab: in the command palette, completes to the longest common prefix
+    /// of the matching command ids and says what matches; in a file prompt
+    /// (Open, Save As, Insert image), completes the path.
+    fn complete_prompt(&mut self) {
+        let Some(mb) = self.prompt_model.as_ref() else {
+            return;
+        };
+        let purpose = mb.purpose;
+        let typed = mb.text();
+        if matches!(
+            purpose,
+            PromptPurpose::Open | PromptPurpose::SaveAs | PromptPurpose::ImagePath
+        ) {
+            let cwd = std::env::current_dir().unwrap_or_default();
+            let (done, spoken) = crate::path_complete::complete(&typed, &cwd);
+            if let (Some(text), Some(mb)) = (done, self.prompt_model.as_mut()) {
+                mb.set_text(&text);
+            }
+            self.announce(&spoken, Priority::Assertive);
+            return;
+        }
+        if purpose != PromptPurpose::CommandPalette {
+            return;
+        }
+        let cands = self.palette_candidates(&typed);
+        match cands.as_slice() {
+            [] => self.announce("No matching commands.", Priority::Polite),
+            [(a, desc)] => {
+                if let Some(mb) = self.prompt_model.as_mut() {
+                    mb.set_text(a.id());
+                }
+                let desc = desc.clone();
+                self.announce(&desc, Priority::Assertive);
+            }
+            many => {
+                let ids: Vec<&str> = many.iter().map(|(a, _)| a.id()).collect();
+                let prefix = common_prefix(&ids);
+                if prefix.len() > typed.len()
+                    && ids.iter().all(|i| i.starts_with(&prefix))
+                    && let Some(mb) = self.prompt_model.as_mut()
+                {
+                    mb.set_text(&prefix);
+                }
+                let first: Vec<String> = ids.iter().take(5).map(|i| i.replace('_', " ")).collect();
+                let msg = format!("{} matches: {}.", many.len(), first.join(", "));
+                self.announce(&msg, Priority::Assertive);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn prompt_editing() {
+        let mut m = PromptModel::new("Find", PromptPurpose::Find);
+        for c in "hello world".chars() {
+            m.insert(c);
+        }
+        assert_eq!(m.delete_word_back(), "world");
+        assert_eq!(m.text(), "hello ");
+        m.home();
+        m.right();
+        assert_eq!(m.kill_to_end(), "ello ");
+        assert_eq!(m.backspace(), Some('h'));
+        assert_eq!(m.backspace(), None);
+        m.set_text("abc");
+        m.left();
+        assert_eq!(m.kill_to_start(), "ab");
+        assert_eq!(m.text(), "c");
+    }
+
+    #[test]
+    fn list_steps_clamp() {
+        let mut l = ListModel::new("t", vec!["a".into(), "b".into()]);
+        assert!(!l.step(-1));
+        assert!(l.step(5));
+        assert_eq!(l.current(), Some("b"));
+        assert_eq!(l.spoken_item().as_deref(), Some("b, 2 of 2"));
+        assert_eq!(ListModel::new("t", Vec::new()).spoken_item(), None);
+    }
+
+    #[test]
+    fn first_letter_jumps_wrap_and_ignore_case() {
+        let mut l = ListModel::new(
+            "t",
+            vec![
+                "Apple".into(),
+                "banana".into(),
+                "Avocado".into(),
+                "\u{201c}Cherry\u{201d}".into(),
+            ],
+        );
+        assert!(l.jump_to_letter('a'));
+        assert_eq!(l.current(), Some("Avocado"));
+        assert!(l.jump_to_letter('A'));
+        assert_eq!(l.current(), Some("Apple"));
+        assert!(l.jump_to_letter('c'));
+        assert_eq!(l.selected, 3);
+        assert!(!l.jump_to_letter('z'));
+        assert_eq!(l.selected, 3);
+        assert!(!ListModel::new("t", Vec::new()).jump_to_letter('a'));
+    }
+
+    #[test]
+    fn prefix() {
+        assert_eq!(common_prefix(&["next_list", "next_link"]), "next_li");
+        assert_eq!(common_prefix(&["a"]), "a");
+    }
+}

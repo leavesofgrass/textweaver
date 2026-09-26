@@ -315,3 +315,95 @@ fn closing_input_ends_the_server() {
     .unwrap();
     assert!(out.is_empty());
 }
+
+/// Wave 3: lists, prompts, and settings through JSON-RPC, on the app's own
+/// list and prompt models and its settings schema.
+#[test]
+fn lists_prompts_and_settings_over_json_rpc() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("doc.txt");
+    std::fs::write(&file, TEXT).unwrap();
+    let home = dir.path().join("home");
+    let mut s = Session {
+        server: server(&home),
+        next_id: 0,
+        notes: Vec::new(),
+    };
+    let init = s.result("initialize", json!({}));
+    for m in [
+        "list_state",
+        "list_key",
+        "prompt_key",
+        "settings_schema",
+        "set_setting",
+    ] {
+        assert!(
+            init["methods"].as_array().unwrap().contains(&json!(m)),
+            "{m}"
+        );
+    }
+    s.result("open", json!({"path": file.display().to_string()}));
+    assert_eq!(s.result("list_state", json!({})), Value::Null);
+
+    // Two bookmarks, then their list: the app keeps the focus.
+    s.result("action", json!({"id": "add_bookmark"}));
+    s.result("navigate", json!({"action": "next_paragraph"}));
+    s.result("action", json!({"id": "add_bookmark"}));
+    s.result("action", json!({"id": "list_bookmarks"}));
+    let list = s.result("list_state", json!({}));
+    assert_eq!(list["items"].as_array().unwrap().len(), 2, "{list}");
+    assert_eq!(list["selected"], 0);
+    let r = s.result("list_key", json!({"key": "down"}));
+    assert_eq!(r["list"]["selected"], 1);
+    assert!(r["status"].as_str().unwrap().ends_with("2 of 2"), "{r}");
+    let r = s.result("list_key", json!({"key": "down"}));
+    assert_eq!(r["status"], "End of list.");
+    let r = s.result("list_key", json!({"key": "escape"}));
+    assert_eq!(r["list"], Value::Null);
+
+    // The find prompt: typed, recalled, answered.
+    s.result("action", json!({"id": "find"}));
+    let r = s.result("prompt_key", json!({"text": "new"}));
+    assert_eq!(r["prompt"]["text"], "new");
+    assert_eq!(r["prompt"]["purpose"], "find");
+    s.result("prompt_key", json!({"key": "enter"}));
+    assert_eq!(s.result("prompt_state", json!({})), Value::Null);
+    assert_eq!(s.result("position", json!({}))["char"], char_of("new"));
+    s.result("action", json!({"id": "find"}));
+    let r = s.result("prompt_key", json!({"key": "up"}));
+    assert_eq!(r["prompt"]["text"], "new", "the earlier answer comes back");
+    s.result("prompt_key", json!({"key": "escape"}));
+
+    // Settings: the schema, a change, and a refusal.
+    let schema = s.result("settings_schema", json!({}));
+    let rate = schema
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|x| x["path"] == "speech.rate")
+        .unwrap()
+        .clone();
+    assert_eq!(rate["kind"], "number");
+    assert_eq!(rate["max"], 900.0);
+    let r = s.result("set_setting", json!({"path": "speech.rate", "value": 320}));
+    assert_eq!(r["value"], 320);
+    assert_eq!(r["spoken"], "320 words per minute");
+    assert_eq!(s.result("status", json!({}))["rate"], 320);
+    let saved = textweaver_app::store::SettingsStore::new(Paths::under(&home))
+        .load()
+        .0;
+    assert_eq!(saved.speech.rate.wpm(), 320, "saved through the writer");
+    assert_eq!(
+        s.error_code("set_setting", json!({"path": "speech.nothing", "value": 1})),
+        codes::INVALID_PARAMS
+    );
+    assert_eq!(
+        s.error_code(
+            "set_setting",
+            json!({"path": "speech.rate", "value": "fast"})
+        ),
+        codes::INVALID_PARAMS
+    );
+    let r = s.result("get_setting", json!({"path": "highlight.granularity"}));
+    assert_eq!(r["spoken"], "the word");
+}

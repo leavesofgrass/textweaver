@@ -30,6 +30,13 @@
 //! | `answer` | `{text}`: answers the open prompt | `{status, effects}` |
 //! | `choose` | `{index}`: picks from the shown list | `{status, effects}` |
 //! | `cancel` | none | `{status, effects}`; also answers no to a pending question |
+//! | `list_state` | none | the list shown: `{title, items, selected, filter}`, or null |
+//! | `list_key` | `{key}`: `up`, `down`, `page_up`, `page_down`, `home`, `end`, `left`, `right`, `enter`, `escape`, `backspace`, `delete`, `rename`, or one character | `{status, effects, list}` |
+//! | `prompt_state` | none | the prompt open: `{label, purpose, text, caret}`, or null |
+//! | `prompt_key` | `{key}` as for `list_key` plus `tab`, `kill_to_start`, `kill_to_end`, `delete_word_back`; or `{text}` to set the whole text | `{status, effects, prompt}` |
+//! | `settings_schema` | none | every setting: `path`, `section`, `label`, `help`, `kind`, `default`, and its range or choices |
+//! | `get_setting` | `{path}` | `{path, value, spoken}` |
+//! | `set_setting` | `{path, value}` (`null` for the default) | `{path, value, spoken}`; the change is in effect and saved |
 //! | `shutdown` | none | `null`; saves the position and settings |
 //! | `exit` | none (a notification) | the server stops |
 //!
@@ -58,7 +65,7 @@ use crate::text_util;
 pub const PROTOCOL_VERSION: u32 = 1;
 
 /// Every request method.
-pub const METHODS: [&str; 17] = [
+pub const METHODS: [&str; 24] = [
     "initialize",
     "open",
     "status",
@@ -74,6 +81,13 @@ pub const METHODS: [&str; 17] = [
     "answer",
     "choose",
     "cancel",
+    "list_state",
+    "list_key",
+    "prompt_state",
+    "prompt_key",
+    "settings_schema",
+    "get_setting",
+    "set_setting",
     "shutdown",
     "exit",
 ];
@@ -388,6 +402,38 @@ impl Server {
                 Ok(self.run(Command::Choose(index)))
             }
             "cancel" => Ok(self.run(Command::Cancel)),
+            "list_state" => Ok(self.list_state()),
+            "list_key" => {
+                let key = list_key(str_param(params, "key")?)?;
+                let mut result = self.run(Command::ListKey(key));
+                result["list"] = self.list_state();
+                Ok(result)
+            }
+            "prompt_state" => Ok(self.prompt_state()),
+            "prompt_key" => {
+                let key = match params.get("text").and_then(Value::as_str) {
+                    Some(text) => crate::list_model::PromptKey::SetText(text.to_owned()),
+                    None => prompt_key(str_param(params, "key")?)?,
+                };
+                let mut result = self.run(Command::PromptKey(key));
+                result["prompt"] = self.prompt_state();
+                Ok(result)
+            }
+            "settings_schema" => Ok(self.app.settings_schema().to_json()),
+            "get_setting" => {
+                let path = str_param(params, "path")?;
+                self.setting_result(path)
+            }
+            "set_setting" => {
+                let path = str_param(params, "path")?.to_owned();
+                let value = params.get("value").cloned().unwrap_or(Value::Null);
+                self.app
+                    .set_setting(&path, value)
+                    .map_err(RpcError::params)?;
+                let _ = self.app.save_settings();
+                self.app.wait_for_writes();
+                self.setting_result(&path)
+            }
             "shutdown" => {
                 self.app.shutdown();
                 self.shut_down = true;
@@ -676,6 +722,46 @@ impl Server {
         Ok(result)
     }
 
+    /// The list shown, or null.
+    fn list_state(&self) -> Value {
+        match self.app.list_model() {
+            Some(l) => json!({
+                "title": l.title,
+                "items": l.items,
+                "selected": l.selected,
+                "filter": self.app.list_filter(),
+            }),
+            None => Value::Null,
+        }
+    }
+
+    /// The prompt open, or null.
+    fn prompt_state(&self) -> Value {
+        match self.app.prompt_model() {
+            Some(p) => json!({
+                "label": p.label,
+                "purpose": purpose_name(p.purpose),
+                "text": p.text(),
+                "caret": p.caret(),
+            }),
+            None => Value::Null,
+        }
+    }
+
+    /// A setting's value, and how it reads aloud.
+    fn setting_result(&self, path: &str) -> RpcResult {
+        let schema = self.app.settings_schema();
+        let setting = schema
+            .get(path)
+            .ok_or_else(|| RpcError::params(format!("There is no setting {path}.")))?;
+        let value = self.app.setting_value(path).unwrap_or(Value::Null);
+        Ok(json!({
+            "path": path,
+            "spoken": setting.describe(&value),
+            "value": value,
+        }))
+    }
+
     /// The question waiting for a yes or no, as `{action, question}`, or
     /// null.
     fn pending(&self) -> Value {
@@ -687,6 +773,57 @@ impl Server {
             None => Value::Null,
         }
     }
+}
+
+/// A list key by name (`down`, `enter`, or one character).
+fn list_key(name: &str) -> Result<crate::list_model::ListKey, RpcError> {
+    use crate::list_model::ListKey as K;
+    let mut chars = name.chars();
+    if let (Some(c), None) = (chars.next(), chars.next()) {
+        return Ok(K::Char(c));
+    }
+    Ok(match name {
+        "up" => K::Up,
+        "down" => K::Down,
+        "page_up" => K::PageUp,
+        "page_down" => K::PageDown,
+        "home" => K::Home,
+        "end" => K::End,
+        "left" => K::Left,
+        "right" => K::Right,
+        "enter" => K::Enter,
+        "escape" => K::Escape,
+        "backspace" => K::Backspace,
+        "delete" => K::Delete,
+        "rename" => K::Rename,
+        other => return Err(RpcError::params(format!("No list key {other}"))),
+    })
+}
+
+/// A prompt key by name (`enter`, `tab`, or one character).
+fn prompt_key(name: &str) -> Result<crate::list_model::PromptKey, RpcError> {
+    use crate::list_model::PromptKey as K;
+    let mut chars = name.chars();
+    if let (Some(c), None) = (chars.next(), chars.next()) {
+        return Ok(K::Char(c));
+    }
+    Ok(match name {
+        "up" => K::Up,
+        "down" => K::Down,
+        "left" => K::Left,
+        "right" => K::Right,
+        "home" => K::Home,
+        "end" => K::End,
+        "enter" => K::Enter,
+        "escape" => K::Escape,
+        "backspace" => K::Backspace,
+        "delete" => K::Delete,
+        "tab" => K::Tab,
+        "kill_to_start" => K::KillToStart,
+        "kill_to_end" => K::KillToEnd,
+        "delete_word_back" => K::DeleteWordBack,
+        other => return Err(RpcError::params(format!("No prompt key {other}"))),
+    })
 }
 
 fn str_param<'a>(params: &'a Value, key: &str) -> Result<&'a str, RpcError> {
@@ -711,8 +848,18 @@ enum Framing {
     Header,
 }
 
+/// What wakes the serve loop: a message from the client, or the app's
+/// waker.
+enum Incoming {
+    Message(Framing, String),
+    Wake,
+    /// The client closed its end (the waker keeps the channel open, so
+    /// the reader says so itself).
+    Closed,
+}
+
 /// Reads messages from `reader`, one per line or `Content-Length` framed.
-fn read_messages<R: BufRead>(mut reader: R, tx: &std::sync::mpsc::Sender<(Framing, String)>) {
+fn read_messages<R: BufRead>(mut reader: R, tx: &std::sync::mpsc::Sender<Incoming>) {
     let mut line = String::new();
     loop {
         line.clear();
@@ -747,7 +894,7 @@ fn read_messages<R: BufRead>(mut reader: R, tx: &std::sync::mpsc::Sender<(Framin
             }
             None => (Framing::Line, trimmed.to_owned()),
         };
-        if tx.send(msg).is_err() {
+        if tx.send(Incoming::Message(msg.0, msg.1)).is_err() {
             return;
         }
     }
@@ -762,8 +909,12 @@ fn write_message<W: Write>(w: &mut W, framing: Framing, msg: &Value) -> std::io:
     w.flush()
 }
 
-/// How often the server polls speech while waiting for input.
-pub const POLL_INTERVAL: Duration = Duration::from_millis(20);
+/// How long the server waits for input at most before it polls again.
+/// Since Wave 3 the app's waker ([`crate::wake`]) wakes the loop as soon
+/// as a word is heard or background work finishes, so this is only a
+/// backstop; [`App::tick_interval`] is shorter when the app's timers need
+/// it.
+pub const POLL_INTERVAL: Duration = Duration::from_millis(250);
 
 /// Serves `server` over `reader` and `writer` until the client sends `exit`
 /// or closes its end. The position and settings are saved on the way out.
@@ -772,20 +923,40 @@ where
     R: BufRead + Send + 'static,
     W: Write,
 {
-    let (tx, rx) = channel();
-    std::thread::spawn(move || read_messages(reader, &tx));
+    let (tx, rx) = channel::<Incoming>();
+    let wake_tx = Mutex::new(tx.clone());
+    std::thread::spawn(move || {
+        read_messages(reader, &tx);
+        let _ = tx.send(Incoming::Closed);
+    });
+    // Speech statuses and finished background work wake the loop at once.
+    server.app_mut().set_waker(Some(Arc::new(move || {
+        if let Ok(t) = wake_tx.lock() {
+            let _ = t.send(Incoming::Wake);
+        }
+    })));
     let mut framing = Framing::Line;
     loop {
         // Apple's AVSpeechSynthesizer delivers through the main run loop
         // (ADR-0008); a no-op on other platforms.
         crate::apple::pump_main_loop(Duration::ZERO);
-        let out = match rx.recv_timeout(POLL_INTERVAL) {
-            Ok((f, msg)) => {
+        let wait = if cfg!(target_os = "macos") {
+            // The main run loop needs pumping while speech is active.
+            Duration::from_millis(20)
+        } else {
+            server
+                .app()
+                .tick_interval(Instant::now())
+                .min(POLL_INTERVAL)
+        };
+        let out = match rx.recv_timeout(wait) {
+            Ok(Incoming::Message(f, msg)) => {
                 framing = f;
                 server.handle(&msg)
             }
-            Err(RecvTimeoutError::Timeout) => server.poll(),
-            Err(RecvTimeoutError::Disconnected) => {
+            Ok(Incoming::Wake) | Err(RecvTimeoutError::Timeout) => server.poll(),
+            Ok(Incoming::Closed) | Err(RecvTimeoutError::Disconnected) => {
+                server.app_mut().set_waker(None);
                 server.app_mut().shutdown();
                 return Ok(());
             }

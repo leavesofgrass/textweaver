@@ -19,6 +19,8 @@ fn a_frontend_change_is_saved_and_kept() {
     })
     .unwrap();
     assert_eq!(app.settings().reading_aids.font.size_pt, 22.0);
+    // The writer thread writes the file (Wave 3); a key press never waits.
+    app.wait_for_writes();
     let (saved, _) = SettingsStore::new(paths.clone()).load();
     assert_eq!(saved.reading_aids.font.size_pt, 22.0);
     assert_eq!(saved.reading_aids.font.weight, 700);

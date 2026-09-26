@@ -48,6 +48,9 @@ impl App {
             textweaver_speech::VoiceList::Ready(v) => v,
             textweaver_speech::VoiceList::Loading => {
                 self.voices_pending = true;
+                // The frontend is woken when they arrive (crate::wake).
+                let wake = self.waker_slot();
+                self.speech.voice_cache().on_ready(move || wake.wake());
                 self.tell("The voices are still loading. The list opens when they are ready.");
                 return vec![Effect::Redraw];
             }

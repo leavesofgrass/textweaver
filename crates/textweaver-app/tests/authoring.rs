@@ -746,8 +746,12 @@ fn misspellings_are_found_spelled_suggested_and_learned() {
     assert_eq!(words, "qwertyson\n");
     r.act(ActionId::PreviousMisspelling);
     assert_eq!(r.status(), "sytem. s y t e m.");
-    // Saving counts what is left.
+    // Saving counts what is left, on a helper thread (Wave 3).
     r.act(ActionId::Save);
+    assert!(
+        r.app
+            .wait_for_spell_count(std::time::Duration::from_secs(30))
+    );
     assert!(r.said.any("1 possible misspelling."), "{:?}", r.said.all());
     // Reading mode finds them too, and skips the code span.
     r.act(ActionId::ToggleEditMode);
