@@ -5,7 +5,7 @@
 //! the integration tests use.
 //!
 //! Threads: the shared engine host's reader thread
-//! ([`RequestReader`](textweaver_enginehost::serve::RequestReader)) decodes
+//! ([`RequestReader`]) decodes
 //! requests from stdin. It handles `Stop` itself by bumping a stop epoch,
 //! which the synthesis callback checks, so a stop aborts synthesis already
 //! in progress; every `Speak` is stamped with the epoch at which it was read

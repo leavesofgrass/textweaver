@@ -24,7 +24,7 @@
 //!
 //! Threads: the main thread owns the engine (COM is initialized on it). The
 //! shared engine host's reader thread
-//! ([`RequestReader`](textweaver_enginehost::serve::RequestReader)) decodes
+//! ([`RequestReader`]) decodes
 //! requests from stdin; a `Stop` bumps a shared stop epoch at once (so it
 //! reaches an utterance mid-synthesis), and every other request is queued,
 //! stamped with the stop epoch current when it arrived. A `Speak` whose
