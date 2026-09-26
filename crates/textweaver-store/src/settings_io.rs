@@ -942,6 +942,13 @@ pub fn reset_sections(current: &Settings) -> Vec<String> {
         "library",
         "keyboard",
         "export",
+        "reading_aids",
+        "reading_aids.rsvp",
+        "reading_aids.bionic_options",
+        "reading_aids.spacing",
+        "reading_aids.font",
+        "reading_aids.ruler",
+        "reading_aids.syllable_options",
         "keymap",
     ]
     .iter()

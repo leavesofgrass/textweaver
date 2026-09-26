@@ -1,15 +1,25 @@
-//! Color themes. Every highlight also carries a text modifier (bold,
-//! underline, reverse), so no state is shown by color alone.
+//! Terminal styles from the shared themes (ADR-0020, `textweaver-theme`):
+//! each [`TerminalTheme`] role resolved at the terminal's detected color
+//! level (truecolor, 256, 16, or none) and turned into ratatui styles.
+//! Every highlight carries a text attribute (bold, underline, italic, or
+//! reverse), so no state is shown by color alone, even with color off.
 
 use ratatui::style::{Color, Modifier, Style};
 use textweaver_app::HighlightKind;
+use textweaver_theme::{
+    Attrs, ColorRole, ColorSupport, Registry, StyleRole, TermColor, TermStyle, TerminalTheme,
+};
 
 /// Styles for every part of the screen.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Theme {
-    /// Theme name as stored in settings.
-    pub name: &'static str,
-    /// Document text.
+    /// Theme name as stored in settings (`galaxy`).
+    pub name: String,
+    /// Name read aloud (`Galaxy`).
+    pub display_name: String,
+    /// The color level the styles were resolved for.
+    pub support: ColorSupport,
+    /// Document text on the page.
     pub text: Style,
     /// Title line.
     pub title: Style,
@@ -33,7 +43,8 @@ pub struct Theme {
     pub bookmark: Style,
     /// The selection.
     pub selection: Style,
-    /// Ranges the user highlighted.
+    /// Ranges the user highlighted (the theme's first reader highlight,
+    /// yellow in the built-ins).
     pub user_highlight: Style,
     /// Ranges with notes.
     pub note: Style,
@@ -43,168 +54,86 @@ pub struct Theme {
     pub list_selected: Style,
 }
 
-const BOLD: Modifier = Modifier::BOLD;
-const UNDERLINED: Modifier = Modifier::UNDERLINED;
-const REVERSED: Modifier = Modifier::REVERSED;
-const ITALIC: Modifier = Modifier::ITALIC;
+fn color(c: TermColor) -> Color {
+    match c {
+        TermColor::Rgb(rgb) => Color::Rgb(rgb.r, rgb.g, rgb.b),
+        TermColor::Indexed(i) => Color::Indexed(i),
+    }
+}
+
+fn modifiers(a: Attrs) -> Modifier {
+    let mut m = Modifier::empty();
+    if a.bold {
+        m |= Modifier::BOLD;
+    }
+    if a.italic {
+        m |= Modifier::ITALIC;
+    }
+    if a.underline {
+        m |= Modifier::UNDERLINED;
+    }
+    if a.reverse {
+        m |= Modifier::REVERSED;
+    }
+    m
+}
+
+/// A theme style as a ratatui style: colors left unset stay as drawn
+/// underneath, attributes add.
+pub fn style(t: TermStyle) -> Style {
+    let mut s = Style::new().add_modifier(modifiers(t.attrs));
+    if let Some(fg) = t.fg {
+        s = s.fg(color(fg));
+    }
+    if let Some(bg) = t.bg {
+        s = s.bg(color(bg));
+    }
+    s
+}
 
 impl Theme {
-    /// The default dark theme.
-    pub fn galaxy() -> Self {
-        let bg = Color::Rgb(0x14, 0x12, 0x2e);
-        let fg = Color::Rgb(0xe4, 0xe2, 0xf4);
+    /// The styles of `theme` at color level `support`.
+    pub fn from_theme(theme: &textweaver_theme::Theme, support: ColorSupport) -> Self {
+        let t = TerminalTheme::new(theme, support);
+        let page = t.page();
+        let on_page = |s: TermStyle| style(page.patch(s));
+        let status = style(t.style(StyleRole::StatusBar));
+        let panel = style(t.color(ColorRole::Surface));
         Theme {
-            name: "galaxy",
-            text: Style::new().fg(fg).bg(bg),
-            title: Style::new()
-                .fg(Color::White)
-                .bg(Color::Rgb(0x3b, 0x2a, 0x6b))
-                .add_modifier(BOLD),
-            status: Style::new()
-                .fg(Color::Rgb(0xf6, 0xe7, 0x8c))
-                .bg(Color::Rgb(0x1e, 0x1b, 0x40)),
-            hints: Style::new().fg(Color::Rgb(0xa6, 0xa4, 0xd0)).bg(bg),
-            minibuffer: Style::new()
-                .fg(Color::White)
-                .bg(Color::Rgb(0x2a, 0x26, 0x55)),
-            gutter: Style::new().fg(Color::Rgb(0x6e, 0x6a, 0x9e)).bg(bg),
-            spoken_word: Style::new()
-                .fg(Color::Black)
-                .bg(Color::Rgb(0x4d, 0xd0, 0xe1))
-                .add_modifier(BOLD),
-            spoken_sentence: Style::new()
-                .bg(Color::Rgb(0x2e, 0x2a, 0x5e))
-                .add_modifier(UNDERLINED),
-            find_hit: Style::new()
-                .fg(Color::Black)
-                .bg(Color::Rgb(0xb3, 0x8a, 0x2e))
-                .add_modifier(UNDERLINED),
-            current_hit: Style::new()
-                .fg(Color::Black)
-                .bg(Color::Rgb(0xff, 0xc1, 0x07))
-                .add_modifier(BOLD | UNDERLINED),
-            bookmark: Style::new()
-                .fg(Color::Rgb(0xff, 0x8a, 0xc8))
-                .add_modifier(UNDERLINED),
-            selection: Style::new()
-                .bg(Color::Rgb(0x44, 0x55, 0x99))
-                .add_modifier(REVERSED),
-            user_highlight: Style::new()
-                .fg(Color::Black)
-                .bg(Color::Rgb(0xe8, 0xd8, 0x5a))
-                .add_modifier(ITALIC),
-            note: Style::new()
-                .fg(Color::Rgb(0x8c, 0xf0, 0xa8))
-                .add_modifier(ITALIC | UNDERLINED),
-            list: Style::new().fg(fg).bg(Color::Rgb(0x22, 0x1f, 0x4a)),
-            list_selected: Style::new()
-                .fg(Color::Black)
-                .bg(Color::Rgb(0x4d, 0xd0, 0xe1))
-                .add_modifier(BOLD),
+            name: theme.meta.name.clone(),
+            display_name: theme.meta.display_name.clone(),
+            support,
+            text: style(page),
+            title: status.add_modifier(Modifier::BOLD),
+            status,
+            hints: on_page(t.color(ColorRole::DimText)),
+            minibuffer: panel,
+            gutter: on_page(t.color(ColorRole::DimText)),
+            spoken_word: style(t.style(StyleRole::SpokenWord)),
+            spoken_sentence: style(t.style(StyleRole::SpokenSentence)),
+            find_hit: style(t.style(StyleRole::FindHit)),
+            current_hit: style(t.style(StyleRole::CurrentFindHit)),
+            bookmark: style(t.style(StyleRole::Bookmark)),
+            selection: style(t.style(StyleRole::Selection)),
+            user_highlight: t
+                .user_highlight(0)
+                .map_or_else(|| style(t.style(StyleRole::Selection)), style),
+            note: style(t.style(StyleRole::Note)),
+            list: panel,
+            list_selected: style(t.style(StyleRole::Focus)),
         }
     }
 
-    /// A light theme with the terminal's named colors.
-    pub fn light() -> Self {
-        Theme {
-            name: "light",
-            text: Style::new().fg(Color::Black).bg(Color::White),
-            title: Style::new()
-                .fg(Color::White)
-                .bg(Color::Blue)
-                .add_modifier(BOLD),
-            status: Style::new().fg(Color::Black).bg(Color::Gray),
-            hints: Style::new().fg(Color::DarkGray).bg(Color::White),
-            minibuffer: Style::new().fg(Color::Black).bg(Color::LightCyan),
-            gutter: Style::new().fg(Color::DarkGray).bg(Color::White),
-            spoken_word: Style::new()
-                .fg(Color::Black)
-                .bg(Color::Cyan)
-                .add_modifier(BOLD),
-            spoken_sentence: Style::new().bg(Color::LightYellow).add_modifier(UNDERLINED),
-            find_hit: Style::new()
-                .fg(Color::Black)
-                .bg(Color::LightGreen)
-                .add_modifier(UNDERLINED),
-            current_hit: Style::new()
-                .fg(Color::White)
-                .bg(Color::Green)
-                .add_modifier(BOLD | UNDERLINED),
-            bookmark: Style::new().fg(Color::Magenta).add_modifier(UNDERLINED),
-            selection: Style::new().add_modifier(REVERSED),
-            user_highlight: Style::new()
-                .fg(Color::Black)
-                .bg(Color::LightYellow)
-                .add_modifier(ITALIC),
-            note: Style::new()
-                .fg(Color::Green)
-                .add_modifier(ITALIC | UNDERLINED),
-            list: Style::new().fg(Color::Black).bg(Color::Gray),
-            list_selected: Style::new()
-                .fg(Color::White)
-                .bg(Color::Blue)
-                .add_modifier(BOLD),
-        }
-    }
-
-    /// Black and white with yellow accents; highlights use reverse video,
-    /// bold, and underline so they survive any palette.
-    pub fn high_contrast() -> Self {
-        Theme {
-            name: "high-contrast",
-            text: Style::new().fg(Color::White).bg(Color::Black),
-            title: Style::new()
-                .fg(Color::Black)
-                .bg(Color::White)
-                .add_modifier(BOLD),
-            status: Style::new()
-                .fg(Color::Black)
-                .bg(Color::Yellow)
-                .add_modifier(BOLD),
-            hints: Style::new().fg(Color::White).bg(Color::Black),
-            minibuffer: Style::new()
-                .fg(Color::Black)
-                .bg(Color::White)
-                .add_modifier(BOLD),
-            gutter: Style::new().fg(Color::Yellow).bg(Color::Black),
-            spoken_word: Style::new()
-                .fg(Color::Black)
-                .bg(Color::Yellow)
-                .add_modifier(BOLD | UNDERLINED),
-            spoken_sentence: Style::new()
-                .fg(Color::White)
-                .add_modifier(BOLD | UNDERLINED),
-            find_hit: Style::new().add_modifier(REVERSED),
-            current_hit: Style::new()
-                .fg(Color::Black)
-                .bg(Color::Cyan)
-                .add_modifier(BOLD | UNDERLINED),
-            bookmark: Style::new()
-                .fg(Color::Yellow)
-                .add_modifier(BOLD | UNDERLINED),
-            selection: Style::new().add_modifier(REVERSED),
-            user_highlight: Style::new()
-                .fg(Color::Black)
-                .bg(Color::White)
-                .add_modifier(ITALIC),
-            note: Style::new()
-                .fg(Color::Cyan)
-                .add_modifier(ITALIC | UNDERLINED),
-            list: Style::new().fg(Color::White).bg(Color::Black),
-            list_selected: Style::new()
-                .fg(Color::Black)
-                .bg(Color::Yellow)
-                .add_modifier(BOLD),
-        }
-    }
-
-    /// The theme with this name, or `galaxy`.
+    /// The built-in theme with this name (Star's old names accepted), or
+    /// Galaxy, at the detected color level.
     pub fn named(name: &str) -> Self {
-        match name {
-            "light" => Theme::light(),
-            "high-contrast" | "high_contrast" | "contrast" => Theme::high_contrast(),
-            _ => Theme::galaxy(),
-        }
+        let registry = Registry::builtin();
+        Theme::from_theme(registry.resolve(name).0, ColorSupport::detect())
+    }
+
+    /// Galaxy, the default theme.
+    pub fn galaxy() -> Self {
+        Theme::named(textweaver_theme::DEFAULT_THEME)
     }
 
     /// The style patched onto text for a highlight.
@@ -222,26 +151,82 @@ impl Theme {
     }
 }
 
+/// The `--theme` help text: every built-in theme, Galaxy first.
+pub fn theme_help() -> String {
+    format!(
+        "Color theme for this run (not saved): {}; or the name of a theme in your themes folder",
+        Registry::builtin().names().join(", ")
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn named_themes_and_fallback() {
-        assert_eq!(Theme::named("light").name, "light");
-        assert_eq!(Theme::named("high-contrast").name, "high-contrast");
+        assert_eq!(Theme::named("galaxy-light").name, "galaxy-light");
+        assert_eq!(Theme::named("High_Contrast").name, "high-contrast");
         assert_eq!(Theme::named("nonsense").name, "galaxy");
-        for t in [Theme::galaxy(), Theme::light(), Theme::high_contrast()] {
-            // Highlights never rely on color alone.
-            for k in [
-                HighlightKind::SpokenWord,
-                HighlightKind::CurrentFindHit,
-                HighlightKind::Bookmark,
-                HighlightKind::UserHighlight,
-                HighlightKind::Note,
-            ] {
-                assert!(!t.highlight(k).add_modifier.is_empty(), "{} {k:?}", t.name);
+        assert_eq!(Theme::galaxy().display_name, "Galaxy");
+    }
+
+    #[test]
+    fn highlights_never_rely_on_color_alone_at_any_level() {
+        let registry = Registry::builtin();
+        for support in [
+            ColorSupport::TrueColor,
+            ColorSupport::Ansi256,
+            ColorSupport::Ansi16,
+            ColorSupport::NoColor,
+        ] {
+            for theme in registry.themes() {
+                let t = Theme::from_theme(theme, support);
+                for k in [
+                    HighlightKind::SpokenWord,
+                    HighlightKind::SpokenSentence,
+                    HighlightKind::FindHit,
+                    HighlightKind::CurrentFindHit,
+                    HighlightKind::Bookmark,
+                    HighlightKind::Note,
+                ] {
+                    assert!(
+                        !t.highlight(k).add_modifier.is_empty(),
+                        "{} {k:?} {support:?}",
+                        t.name
+                    );
+                }
+                // The spoken word and its sentence differ by attribute.
+                assert_ne!(
+                    t.spoken_word.add_modifier, t.spoken_sentence.add_modifier,
+                    "{}",
+                    t.name
+                );
             }
         }
+    }
+
+    #[test]
+    fn truecolor_galaxy_is_stars_palette() {
+        let t = Theme::from_theme(
+            Registry::builtin().resolve("galaxy").0,
+            ColorSupport::TrueColor,
+        );
+        assert_eq!(t.text.bg, Some(Color::Rgb(0x1e, 0x1e, 0x1e)));
+        assert_eq!(t.text.fg, Some(Color::Rgb(0xda, 0xda, 0xda)));
+        let none = Theme::from_theme(
+            Registry::builtin().resolve("galaxy").0,
+            ColorSupport::NoColor,
+        );
+        assert_eq!(none.text.bg, None);
+    }
+
+    #[test]
+    fn help_lists_every_builtin_theme() {
+        let help = theme_help();
+        for name in Registry::builtin().names() {
+            assert!(help.contains(name), "{name}");
+        }
+        assert!(help.contains("galaxy, galaxy-light"));
     }
 }

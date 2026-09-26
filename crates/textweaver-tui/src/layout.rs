@@ -9,6 +9,41 @@ use textweaver_app::core::{CharPos, CharRange};
 use textweaver_app::text::Document;
 use textweaver_app::text_util::{line_count, line_range};
 
+/// How chars are measured and drawn: the tab width, and extra spaces after
+/// each space for word spacing (reading aids' terminal text spacing).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Cells {
+    /// Columns a tab takes.
+    pub tab: usize,
+    /// Extra columns after each space.
+    pub word_extra: usize,
+}
+
+impl Cells {
+    /// Tabs of `tab` columns, no extra word spacing.
+    pub fn tab(tab: usize) -> Self {
+        Cells { tab, word_extra: 0 }
+    }
+
+    /// Display width of `c`.
+    pub fn width(self, c: char) -> usize {
+        if c == ' ' {
+            1 + self.word_extra
+        } else {
+            char_width(c, self.tab)
+        }
+    }
+
+    /// How `c` is drawn.
+    pub fn text(self, c: char) -> String {
+        if c == ' ' {
+            " ".repeat(1 + self.word_extra)
+        } else {
+            display_text(c, self.tab)
+        }
+    }
+}
+
 /// Display width of one char (tabs expand to `tab` columns).
 pub fn char_width(c: char, tab: usize) -> usize {
     match c {
@@ -35,13 +70,18 @@ pub fn display_text(c: char, tab: usize) -> String {
 /// line is one empty row. Whitespace at a break stays at the end of the
 /// row it follows.
 pub fn wrap(chars: &[char], width: usize, tab: usize) -> Vec<(usize, usize)> {
+    wrap_cells(chars, width, Cells::tab(tab))
+}
+
+/// [`wrap`] measuring with `cells`.
+pub fn wrap_cells(chars: &[char], width: usize, cells: Cells) -> Vec<(usize, usize)> {
     let width = width.max(1);
     let mut rows = Vec::new();
     let mut start = 0;
     let mut used = 0;
     let mut last_break: Option<usize> = None;
     for (i, &c) in chars.iter().enumerate() {
-        let w = char_width(c, tab);
+        let w = cells.width(c);
         if used + w > width && i > start && !c.is_whitespace() {
             let brk = match last_break {
                 Some(b) if b > start && b <= i => b,
@@ -49,7 +89,7 @@ pub fn wrap(chars: &[char], width: usize, tab: usize) -> Vec<(usize, usize)> {
             };
             rows.push((start, brk));
             start = brk;
-            used = chars[start..i].iter().map(|&c| char_width(c, tab)).sum();
+            used = chars[start..i].iter().map(|&c| cells.width(c)).sum();
             last_break = chars[start..i]
                 .iter()
                 .rposition(|c| c.is_whitespace())
@@ -102,6 +142,19 @@ pub fn window(
     focus: Option<CharPos>,
     margin: usize,
 ) -> Vec<Row> {
+    window_cells(doc, top_line, width, height, Cells::tab(tab), focus, margin)
+}
+
+/// [`window`] measuring with `cells`.
+pub fn window_cells(
+    doc: &Document,
+    top_line: usize,
+    width: usize,
+    height: usize,
+    cells: Cells,
+    focus: Option<CharPos>,
+    margin: usize,
+) -> Vec<Row> {
     let lines = line_count(doc);
     let limit = height.saturating_mul(4).max(height + 1).max(512);
     let mut rows: Vec<Row> = Vec::new();
@@ -110,7 +163,7 @@ pub fn window(
     while line < lines {
         let base = line_range(doc, line).start.0;
         let chars = line_chars(doc, line);
-        let wrapped = wrap(&chars, width, tab);
+        let wrapped = wrap_cells(&chars, width, cells);
         let n = wrapped.len();
         for (i, (a, b)) in wrapped.into_iter().enumerate() {
             let row = Row {
@@ -141,11 +194,16 @@ pub fn window(
 
 /// Display column of `pos` on `row`.
 pub fn column(doc: &Document, row: &Row, pos: CharPos, tab: usize) -> usize {
+    column_cells(doc, row, pos, Cells::tab(tab))
+}
+
+/// [`column()`] measuring with `cells`.
+pub fn column_cells(doc: &Document, row: &Row, pos: CharPos, cells: Cells) -> usize {
     let end = pos.clamp_to(row.range.end.0).max(row.range.start);
     doc.text()
         .slice(row.range.start.0..end.0)
         .chars()
-        .map(|c| char_width(c, tab))
+        .map(|c| cells.width(c))
         .sum()
 }
 
@@ -184,6 +242,21 @@ mod tests {
         assert_eq!(rows[3].line, 20);
         let rows = window(&doc, 0, 20, 5, 4, None, 1);
         assert_eq!(rows[0].line, 0);
+    }
+
+    #[test]
+    fn word_spacing_widens_spaces() {
+        let cells = Cells {
+            tab: 4,
+            word_extra: 2,
+        };
+        let chars: Vec<char> = "ab cd ef".chars().collect();
+        // "ab" + 3 + "cd" = 7 fits; "ef" wraps.
+        assert_eq!(wrap_cells(&chars, 8, cells), vec![(0, 6), (6, 8)]);
+        let doc = Document::from_plain_text("ab cd");
+        let rows = window_cells(&doc, 0, 20, 1, cells, None, 0);
+        assert_eq!(column_cells(&doc, &rows[0], CharPos(3), cells), 5);
+        assert_eq!(cells.text(' '), "   ");
     }
 
     #[test]

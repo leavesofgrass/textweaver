@@ -75,6 +75,12 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Say the position: line, percentage, and heading | `%` (browse) | `%` (browse) | `say_position` |
 | Read again from the start of the current sentence | `Alt+;`, `;` (browse) | `Alt+;`, `;` (browse) | `replay_sentence` |
 | Read again from the start of the current paragraph | `Ctrl+R`, `r` (browse) | `Ctrl+R`, `r` (browse) | `replay_paragraph` |
+| Show or hide RSVP: one word at a time, from the cursor | `Alt+Shift+R` | `Alt+Shift+R` | `rsvp_toggle` |
+| Start or pause RSVP | `Alt+Shift+P` | `Alt+Shift+P` | `rsvp_play_pause` |
+| RSVP faster | `Alt+Shift+Up` | `Alt+Shift+Up` | `rsvp_faster` |
+| RSVP slower | `Alt+Shift+Down` | `Alt+Shift+Down` | `rsvp_slower` |
+| Move the RSVP word to the next place on the screen | `Alt+Shift+O` | `Alt+Shift+O` | `rsvp_position_next` |
+| Say the reading level of the document or the selection | `Alt+Shift+G` | `Alt+Shift+G` | `reading_level` |
 
 ## Navigation
 
@@ -171,6 +177,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Start a new document in edit mode | `Ctrl+N` | `Ctrl+N` | `new_document` |
 | Save (Markdown and text in place; other formats as Markdown) | `Ctrl+S` | `Ctrl+S` | `save` |
 | Save under a new name | `Alt+S` | `Ctrl+Shift+S` | `save_as` |
+| Export settings and key overrides to a JSON or TOML file | `Alt+Shift+E` | `Alt+Shift+E` | `export_settings` |
+| Import settings from a JSON or TOML file, after a yes or no | `Alt+Shift+I` | `Alt+Shift+I` | `import_settings` |
 | Quit, saving the reading position | `Ctrl+Q`, `q` (browse), `Shift+Q` (browse) | `Ctrl+Q`, `q` (browse), `Shift+Q` (browse) | `quit` |
 
 ## Editing
@@ -204,6 +212,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Switch to the next color theme | `F5` | `F5` | `next_theme` |
 | Show or hide line numbers | `F6` | `F6` | `toggle_line_numbers` |
 | Turn single-key shortcuts on or off, so dictation and typing never trigger commands | `F9` | `F9` | `toggle_character_keys` |
+| Turn bionic reading on or off: the start of each word in bold | `Alt+Shift+B` | `Alt+Shift+B` | `bionic_toggle` |
+| Cycle the reading ruler: off, current line, ruler | `Alt+Shift+U` | `Alt+Shift+U` | `ruler_cycle` |
 | Run any command by name | `F2`, `Alt+X`, `:` (browse) | `F2`, `:` (browse) | `command_palette` |
 | List keyboard shortcuts | `?` (browse) | `F3`, `?` (browse) | `keyboard_help` |
 | Open the help | `F1` | `F1` | `help` |

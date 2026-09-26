@@ -94,13 +94,69 @@ fn everything_changed() -> Settings {
     s.library.recent_limit = 10;
     s.library.folders = vec!["C:/Books".into()];
     s.keyboard.character_keys = false;
+    // Agent D3's additions: themes, the community lexicon, audio export,
+    // and the reading aids.
+    s.display.follow_os_theme = false;
+    s.display.theme_explicit = true;
+    let lex = &mut s.normalization.community_lexicon;
+    lex.enabled = true;
+    lex.dir = Some("C:/dicts".into());
+    lex.language = "DEU".into();
     s.export.subtitle_format = crate::SubtitleFormat::Vtt;
     s.export.subtitle_word_level = true;
     s.export.subtitles_with_audio = true;
-    let lex = &mut s.normalization.community_lexicon;
-    lex.enabled = true;
-    lex.dir = Some("C:/Dictionaries".into());
-    lex.language = "DEU".into();
+    let a = &mut s.reading_aids;
+    a.rsvp = textweaver_aids::RsvpSettings {
+        wpm: 450,
+        pacing: textweaver_aids::Pacing::External,
+        clause_pause: 40,
+        sentence_pause: 90,
+        paragraph_pause: 120,
+        long_word_len: 9,
+        long_word_step: 12,
+        long_word_max: 60,
+        show_previous: false,
+        show_next: false,
+        position: textweaver_aids::RsvpPosition::Center,
+        font_size_pt: 60,
+        lead_words: 1,
+    };
+    a.bionic = true;
+    a.bionic_options = textweaver_aids::BionicOptions {
+        ratio: 0.5,
+        min_word_len: 3,
+        skip_numbers: false,
+        skip_urls: false,
+        skip_code: false,
+    };
+    a.spacing = textweaver_aids::TextSpacing {
+        line_height: 2.0,
+        paragraph_spacing: 2.0,
+        letter_spacing: 0.12,
+        word_spacing: 0.16,
+    };
+    a.font = textweaver_aids::FontSettings {
+        family: textweaver_aids::FontFamily::Serif,
+        size_pt: 18.0,
+        weight: 700,
+        fetch_missing: false,
+    };
+    a.ruler = textweaver_aids::RulerSettings {
+        mode: textweaver_aids::RulerMode::Ruler,
+        scope: textweaver_aids::RulerScope::Row,
+        rows_above: 2,
+        rows_below: 2,
+        mask_outside: true,
+    };
+    a.syllables = true;
+    a.syllable_options = textweaver_aids::SyllableOptions {
+        separator: "-".into(),
+        left_min: 1,
+        right_min: 3,
+        min_word_len: 5,
+        skip_urls: false,
+        skip_code: false,
+    };
     s.extra.insert("future_key".into(), toml::Value::Integer(1));
     let future: toml::Table = "a = 1\nwhen = 2026-09-25T14:03:07Z\n".parse().unwrap();
     s.extra

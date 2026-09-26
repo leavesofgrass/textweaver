@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use textweaver_core::{CharRange, Direction, Unit};
+use textweaver_core::{CharPos, CharRange, Direction, Unit};
 use textweaver_keymap::ActionId;
 use textweaver_text::GoTo;
 
@@ -20,6 +20,10 @@ pub enum Command {
     GoTo(GoTo),
     /// Set the selection (mouse, shift-arrows in the frontend).
     Select(CharRange),
+    /// Move the cursor quietly (a GUI caret click): no history entry, no
+    /// announcement, no reading; while paused, reading resumes from there.
+    /// See [`App::set_cursor`](crate::App::set_cursor).
+    SetCursor(CharPos),
     /// Grow or shrink the selection by one unit from its moving end
     /// (Shift+arrows). Only `Grapheme`, `Word`, and `Line` are meaningful.
     ExtendSelection(Unit, Direction),
@@ -225,6 +229,10 @@ pub enum PromptPurpose {
     EditNote,
     /// Answer is the new name of a bookmark; empty keeps it.
     RenameBookmark,
+    /// Answer is the file to export settings to (`.toml` for TOML).
+    ExportSettings,
+    /// Answer is the settings file to import (JSON or TOML).
+    ImportSettings,
 }
 
 impl PromptPurpose {
@@ -243,6 +251,10 @@ impl PromptPurpose {
             PromptPurpose::NoteText => "Note",
             PromptPurpose::EditNote => "Edit note, Enter keeps it",
             PromptPurpose::RenameBookmark => "New bookmark name, Enter keeps it",
+            PromptPurpose::ExportSettings => {
+                "Export settings to file, for example textweaver-settings.json"
+            }
+            PromptPurpose::ImportSettings => "Import settings from file",
         }
     }
 }

@@ -483,3 +483,61 @@ fn opening_from_the_library_asks_about_unsaved_edits_first() {
         "Save / Discard / Cancel: {effects:?}"
     );
 }
+
+// ---- GUI requests (Agent K) ----
+
+#[test]
+fn set_cursor_moves_quietly_and_sets_the_resume_point() {
+    let mut r = rig(PROSE);
+    let before = r.said.all().len();
+    r.app.dispatch(Command::SetCursor(at(PROSE, "Kappa")));
+    assert_eq!(r.cursor(), at(PROSE, "Kappa"));
+    assert_eq!(r.said.all().len(), before, "no announcement");
+    assert_eq!(r.app.playback(), Playback::Idle, "no reading");
+    // No history entry: Back has nowhere to go.
+    r.act(ActionId::HistoryBack);
+    assert_eq!(r.cursor(), at(PROSE, "Kappa"));
+    // Out of range is clamped.
+    r.app.dispatch(Command::SetCursor(CharPos(10_000)));
+    assert_eq!(r.cursor(), CharPos(PROSE.chars().count()));
+
+    // While paused, reading resumes from the new place.
+    r.app.dispatch(Command::SetCursor(CharPos(0)));
+    r.act(ActionId::ReadFromCursor);
+    r.act(ActionId::PlayPause);
+    assert!(matches!(r.app.playback(), Playback::Paused { .. }));
+    r.app.dispatch(Command::SetCursor(at(PROSE, "Omicron")));
+    assert_eq!(
+        r.app.playback(),
+        Playback::Paused {
+            resume_at: Some(at(PROSE, "Omicron"))
+        }
+    );
+    r.act(ActionId::PlayPause);
+    r.wait_idle();
+    // The resumed reading is the last one and starts at Omicron.
+    assert_eq!(
+        r.log.spoken_ranges().last().unwrap().start,
+        at(PROSE, "Omicron")
+    );
+    assert_eq!(r.app.spoken_log().last().unwrap().start, at(PROSE, "pi"));
+}
+
+#[test]
+fn play_after_saying_one_word_reads_on_instead_of_pausing() {
+    let mut r = rig(PROSE);
+    r.go(at(PROSE, "Kappa"));
+    r.act(ActionId::ReadCurrentWord);
+    assert_eq!(r.app.playback(), Playback::Reading);
+    r.act(ActionId::PlayPause);
+    assert_eq!(r.app.playback(), Playback::Reading, "reading, not paused");
+    r.wait_idle();
+    // The last reading ran from Kappa to the end of the document.
+    let last = r.log.spoken_ranges();
+    assert_eq!(last.last().unwrap().end.0, PROSE.len());
+    assert!(
+        last.iter()
+            .any(|s| s.start == at(PROSE, "Kappa") && s.len() > 5),
+        "{last:?}"
+    );
+}

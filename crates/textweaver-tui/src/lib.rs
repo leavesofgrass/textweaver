@@ -23,6 +23,12 @@
 //! it. Keys for notes and highlights come from
 //! `textweaver_app::extra_bindings` until the keymap has actions for them.
 //!
+//! Reading aids (ADR-0022): RSVP shows one word at a time in a box over the
+//! document (Alt+Shift+R; Alt+Shift+P plays), bionic reading bolds the
+//! start of each word (Alt+Shift+B), the reading ruler marks the current
+//! line or a band with a gutter mark and underline (Alt+Shift+U), and
+//! `[reading_aids.spacing]` adds blank rows and wider word spaces.
+//!
 //! Owner: Agent D.
 
 pub mod layout;
@@ -40,7 +46,7 @@ use ratatui::crossterm::execute;
 use textweaver_app::a11y::Priority;
 
 pub use setup::{Options, build_app, build_app_with};
-pub use theme::Theme;
+pub use theme::{Theme, theme_help};
 pub use ui::{Tui, chord};
 
 /// Runs the event loop until the user quits: draw, apply speech status and
@@ -52,7 +58,13 @@ pub fn run(terminal: &mut DefaultTerminal, tui: &mut Tui) -> anyhow::Result<()> 
         // Apple's AVSpeechSynthesizer delivers audio and words through the
         // main thread's run loop (ADR-0008); a no-op on other platforms.
         textweaver_app::apple::pump_main_loop(Duration::ZERO);
-        if event::poll(Duration::from_millis(40))? {
+        // Wake in time for the next RSVP word, else every 40 ms.
+        let idle = Duration::from_millis(40);
+        let wait = tui
+            .app()
+            .rsvp_wait(std::time::Instant::now())
+            .map_or(idle, |w| w.min(idle));
+        if event::poll(wait)? {
             let ev = event::read()?;
             tui.handle_event(&ev);
         }

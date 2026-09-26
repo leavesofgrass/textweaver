@@ -259,18 +259,21 @@ pub struct App {
     pub(crate) pending_item: Option<usize>,
     /// An action waiting for a yes or no ([`ActionId::needs_confirmation`]).
     pub(crate) pending_confirm: Option<ActionId>,
+    /// A checked settings import and its file name, waiting for a yes or no.
+    pub(crate) pending_import: Option<(textweaver_store::ImportPlan, String)>,
     pub(crate) recovery: Vec<(PathBuf, RecoverySnapshot)>,
     pub(crate) untitled: u32,
     pub(crate) last_position_save: Option<(Instant, CharPos)>,
     pub(crate) prompt_purpose: PromptPurpose,
     /// Reading positions synced through the library folders' sidecars.
     pub(crate) library_sync: textweaver_store::LibrarySync,
+    /// Built-in and user themes (ADR-0020).
+    pub(crate) themes: textweaver_theme::Registry,
+    /// RSVP while it is showing.
+    pub(crate) rsvp: Option<crate::reading_aids::RsvpState>,
 }
 
 impl App {
-    /// Themes the `next_theme` action cycles through.
-    pub const THEMES: [&'static str; 3] = ["galaxy", "light", "high-contrast"];
-
     /// Most highlight ranges kept by [`App::spoken_log`].
     pub const SPOKEN_LOG_LIMIT: usize = 4096;
 
@@ -308,13 +311,17 @@ impl App {
             replace_query: None,
             pending_item: None,
             pending_confirm: None,
+            pending_import: None,
             recovery: Vec::new(),
             untitled: 0,
             last_position_save: None,
             prompt_purpose: PromptPurpose::Find,
             library_sync,
+            themes: textweaver_theme::Registry::builtin(),
+            rsvp: None,
         };
         app.apply_voice_settings();
+        app.load_themes();
         app
     }
 
@@ -334,9 +341,20 @@ impl App {
         self.pending_confirm
     }
 
+    /// True while a yes-or-no question is open: an action's
+    /// ([`pending_confirmation`](Self::pending_confirmation)) or a settings
+    /// import's. The frontend then sends every key press as a
+    /// [`Command::Confirm`].
+    pub fn confirmation_pending(&self) -> bool {
+        self.pending_confirm.is_some() || self.pending_import.is_some()
+    }
+
     /// Answers a pending confirmation.
     fn confirm(&mut self, answer: crate::command::Confirm) -> Vec<Effect> {
         use crate::command::Confirm;
+        if self.pending_import.is_some() {
+            return self.confirm_import(answer);
+        }
         let Some(a) = self.pending_confirm else {
             return vec![Effect::Redraw];
         };
@@ -494,6 +512,7 @@ impl App {
             self.flush_library_sync();
         }
         self.stop_speech();
+        self.rsvp = None;
         self.mode = Mode::Browse;
         self.return_mode = Mode::Browse;
         self.last_position_save = None;
@@ -719,6 +738,10 @@ impl App {
                 self.select(range);
                 vec![Effect::Redraw]
             }
+            Command::SetCursor(pos) => {
+                self.set_cursor(pos);
+                vec![Effect::Redraw]
+            }
             Command::ExtendSelection(unit, dir) => {
                 self.extend_selection(unit, dir);
                 vec![Effect::Redraw]
@@ -732,7 +755,7 @@ impl App {
                 vec![Effect::Redraw]
             }
             Command::Cancel => {
-                if self.pending_confirm.is_some() {
+                if self.confirmation_pending() {
                     // Cancelling a question answers no.
                     return self.confirm(crate::command::Confirm::No);
                 }
@@ -763,6 +786,7 @@ impl App {
     /// [`POSITION_SAVE_INTERVAL`](Self::POSITION_SAVE_INTERVAL) when it
     /// moved, so a crash loses little.
     pub fn tick(&mut self, now: Instant) -> Vec<Effect> {
+        let rsvp_moved = self.rsvp_tick(now);
         if self.edit.is_some() {
             self.autosave_tick(now);
             return Vec::new();
@@ -786,7 +810,11 @@ impl App {
             }
             self.last_position_save = Some((now, pos));
         }
-        Vec::new()
+        if rsvp_moved {
+            vec![Effect::Redraw]
+        } else {
+            Vec::new()
+        }
     }
 
     /// Opens a prompt: switches mode and returns the effect that shows it.
@@ -842,6 +870,8 @@ impl App {
             PromptPurpose::SaveAs => return self.answer_save_as(text),
             PromptPurpose::TableSize => return self.answer_table(text),
             PromptPurpose::ImagePath => return self.answer_image(text),
+            PromptPurpose::ExportSettings => return self.answer_export_settings(text),
+            PromptPurpose::ImportSettings => return self.answer_import_settings(text),
             PromptPurpose::ReplaceFind => return self.answer_replace(text, false),
             PromptPurpose::ReplaceWith => return self.answer_replace(text, true),
             PromptPurpose::NoteText => self.add_note(text),
@@ -946,6 +976,9 @@ impl App {
         if self.mode.is_prompt() {
             self.leave_prompt();
         }
+        if self.rsvp_action(a, Instant::now()) {
+            return vec![Effect::Redraw];
+        }
         use ActionId as A;
         match a {
             A::Quit => return self.quit(),
@@ -968,6 +1001,12 @@ impl App {
             A::SayPosition => self.say_position(),
             A::ReplaySentence => self.replay_sentence(),
             A::ReplayParagraph => self.replay_paragraph(),
+            A::RsvpToggle => self.rsvp_toggle(Instant::now()),
+            A::RsvpPlayPause => self.rsvp_play_pause(Instant::now()),
+            A::RsvpFaster => self.rsvp_rate(true),
+            A::RsvpSlower => self.rsvp_rate(false),
+            A::RsvpPositionNext => self.rsvp_position_next(),
+            A::ReadingLevel => self.say_reading_level(),
             // Navigation
             A::NextSentence => self.next_sentence(),
             A::PreviousSentence => self.previous_sentence(),
@@ -1072,10 +1111,14 @@ impl App {
             // File
             A::Open => return self.prompt(PromptPurpose::Open),
             A::OpenLibrary => return self.open_library(),
+            A::ExportSettings => return self.settings_file_prompt(false),
+            A::ImportSettings => return self.settings_file_prompt(true),
             // View and help
             A::NextTheme => self.next_theme(),
             A::ToggleLineNumbers => self.toggle_line_numbers(),
             A::ToggleCharacterKeys => self.toggle_character_keys(),
+            A::BionicToggle => self.bionic_toggle(),
+            A::RulerCycle => self.ruler_cycle(),
             A::CommandPalette => return self.prompt(PromptPurpose::CommandPalette),
             A::KeyboardHelp => return self.keyboard_help(),
             A::Help => return self.help(),

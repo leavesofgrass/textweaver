@@ -109,15 +109,6 @@ impl App {
         ));
     }
 
-    pub(crate) fn next_theme(&mut self) {
-        let current = self.settings.display.theme.as_str();
-        let i = Self::THEMES.iter().position(|t| *t == current);
-        let next = Self::THEMES[i.map_or(0, |i| (i + 1) % Self::THEMES.len())];
-        self.settings.display.theme = next.to_owned();
-        self.settings_dirty = true;
-        self.tell(&format!("Theme {}.", next.replace('-', " ")));
-    }
-
     pub(crate) fn toggle_line_numbers(&mut self) {
         let on = !self.settings.display.show_line_numbers;
         self.settings.display.show_line_numbers = on;
