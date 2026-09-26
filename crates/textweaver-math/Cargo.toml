@@ -14,5 +14,10 @@ textweaver-core.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 
+[dev-dependencies]
+proptest.workspace = true
+insta.workspace = true
+serde_json.workspace = true
+
 [lints]
 workspace = true

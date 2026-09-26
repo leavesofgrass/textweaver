@@ -390,6 +390,8 @@ Jon asked to carry Star's lessons forward: reading aids, math normalization, liv
 
 **Acceptance:** parser tests including every ASCIIMath symbol-table entry; MathML snapshot tests; spoken-math tests at each verbosity with offset-map invariants; property tests that parsing never panics on arbitrary input.
 
+**Status:** Wave 2 done on `wave2/o-math` (Friday, September 25, 2026). ADR-0018 describes how Agent B2's math transform (`speak_text`, run before numbers) and Agent L's renderer (`latex_to_mathml` in place of `pulldown-latex`) call the crate.
+
 #### Agent P — Citations
 
 **Owns:** `crates/textweaver-cite/`, `crates/textweaver-cli/src/cmd/cite.rs` (create it; the orchestrator wires the subcommand), `fixtures/p/`, `docs/adr/0019-citations.md`.
