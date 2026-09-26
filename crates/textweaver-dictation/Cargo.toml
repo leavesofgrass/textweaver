@@ -8,6 +8,16 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 publish.workspace = true
+autobins = false
+
+# A fake whisper program for the integration tests: behaves like
+# whisper.cpp's `whisper-cli` or the openai-whisper / whisper-ctranslate2
+# command line, reading a script from its "audio" file.
+[[bin]]
+name = "tw-fake-whisper"
+path = "src/bin/fake_whisper.rs"
+test = false
+doc = false
 
 [dependencies]
 textweaver-core.workspace = true
@@ -15,6 +25,10 @@ thiserror.workspace = true
 log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+regex.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true
