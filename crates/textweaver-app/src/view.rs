@@ -52,19 +52,19 @@ pub struct Highlight {
 
 impl App {
     /// The position the viewport keeps in view and where the hardware
-    /// cursor belongs: the Speech Cursor line, else the spoken word while
-    /// reading, else the cursor.
+    /// cursor belongs: the spoken word while reading, else the Speech
+    /// Cursor line, else the cursor.
     pub fn focus(&self) -> Option<CharPos> {
         let s = self.session.as_ref()?;
+        if let (Playback::Reading, Some(r)) = (self.playback, s.spoken) {
+            return Some(r.start);
+        }
         if self.mode == Mode::SpeechCursor {
             if let Some(line) = s.speech_cursor_line {
                 return Some(text_util::line_range(&s.doc, line).start);
             }
         }
-        match (self.playback, s.spoken) {
-            (Playback::Reading, Some(r)) => Some(r.start),
-            _ => Some(s.cursor),
-        }
+        Some(s.cursor)
     }
 
     fn margin(&self) -> usize {

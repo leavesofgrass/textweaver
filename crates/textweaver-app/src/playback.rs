@@ -385,6 +385,31 @@ impl App {
         }
     }
 
+    /// Applies at most one waiting status update. Returns `None` when none
+    /// was waiting, else whether the display changed. Frontends that want to
+    /// draw every highlight step (and tests that check each one) call this
+    /// instead of [`App::poll_speech`].
+    pub fn poll_speech_step(&mut self) -> Option<bool> {
+        let status = self.speech.try_status()?;
+        Some(self.apply_status(status))
+    }
+
+    /// Echoes typed or deleted prompt text when self-voicing (a screen
+    /// reader echoes it otherwise): one character spoken as a character,
+    /// longer text as a word.
+    pub fn echo(&mut self, text: &str) {
+        if !self.self_voicing || self.playback == Playback::Reading {
+            return;
+        }
+        let mut chars = text.chars();
+        match (chars.next(), chars.next()) {
+            (Some(c), None) if !c.is_whitespace() => self.speech.speak_char(c, None),
+            (Some(c), None) => self.speech.say(text_util::char_name(c), SayMode::Interrupt),
+            (Some(_), Some(_)) => self.speech.say(text, SayMode::Interrupt),
+            (None, _) => {}
+        }
+    }
+
     fn apply_status(&mut self, status: SpeechStatus) -> bool {
         match status {
             SpeechStatus::Position {

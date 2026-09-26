@@ -1,22 +1,13 @@
 //! `textweaver`: the self-voicing terminal reader.
 //!
-//! Owner: Agent D. Phase 0 shows the document, maps keys through the keymap,
-//! and dispatches to the app; the full layout (title, viewport over a window
-//! slice, status line, key hints, minibuffer, themes, palette, help) comes
-//! in wave 1.
+//! Owner: Agent D.
 
 use std::path::PathBuf;
-use std::time::Duration;
 
 use anyhow::Result;
 use clap::Parser;
-use ratatui::DefaultTerminal;
-use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-use ratatui::layout::{Constraint, Layout};
-use ratatui::text::Line;
-use ratatui::widgets::{Block, Paragraph, Wrap};
-use textweaver_app::keymap::{Key, KeyChord, Modifiers};
-use textweaver_app::{App, AppConfig, Command, Effect};
+use textweaver_app::a11y::Priority;
+use textweaver_tui::{Options, Tui, build_app, run};
 
 /// Read documents aloud in the terminal.
 #[derive(Parser, Debug)]
@@ -24,99 +15,48 @@ use textweaver_app::{App, AppConfig, Command, Effect};
 struct Args {
     /// Document to open.
     file: Option<PathBuf>,
+    /// Do not speak: no self-voicing and no reading aloud (use with a
+    /// screen reader, which reads the status line and follows the cursor).
+    #[arg(long)]
+    no_speech: bool,
+    /// Speech backend id (see `tw backends`); overrides the settings.
+    #[arg(long)]
+    backend: Option<String>,
+    /// Keep settings and reading positions under this directory.
+    #[arg(long)]
+    home: Option<PathBuf>,
+    /// Color theme for this run: galaxy, light, or high-contrast.
+    #[arg(long)]
+    theme: Option<String>,
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let mut app = App::new(AppConfig::for_tests());
-    if let Some(f) = &args.file {
-        app.open(f)?;
-    }
-    let terminal = ratatui::init();
-    let result = run(terminal, &mut app);
-    ratatui::restore();
-    result
-}
-
-/// Converts a crossterm key event into a keymap chord.
-fn chord(k: &KeyEvent) -> Option<KeyChord> {
-    let key = match k.code {
-        KeyCode::Char(c) => Key::Char(c),
-        KeyCode::F(n) => Key::F(n),
-        KeyCode::Enter => Key::Enter,
-        KeyCode::Esc => Key::Escape,
-        KeyCode::Tab => Key::Tab,
-        KeyCode::BackTab => {
-            return Some(KeyChord::new(Key::Tab, Modifiers::SHIFT));
-        }
-        KeyCode::Backspace => Key::Backspace,
-        KeyCode::Delete => Key::Delete,
-        KeyCode::Insert => Key::Insert,
-        KeyCode::Home => Key::Home,
-        KeyCode::End => Key::End,
-        KeyCode::PageUp => Key::PageUp,
-        KeyCode::PageDown => Key::PageDown,
-        KeyCode::Up => Key::Up,
-        KeyCode::Down => Key::Down,
-        KeyCode::Left => Key::Left,
-        KeyCode::Right => Key::Right,
-        _ => return None,
+    let opts = Options {
+        no_speech: args.no_speech,
+        backend: args.backend,
+        home: args.home,
+        theme: args.theme,
     };
-    let mut mods = Modifiers::empty();
-    if k.modifiers.contains(KeyModifiers::CONTROL) {
-        mods |= Modifiers::CTRL;
-    }
-    if k.modifiers.contains(KeyModifiers::ALT) {
-        mods |= Modifiers::ALT;
-    }
-    if k.modifiers.contains(KeyModifiers::SHIFT) {
-        mods |= Modifiers::SHIFT;
-    }
-    if k.modifiers.contains(KeyModifiers::SUPER) {
-        mods |= Modifiers::META;
-    }
-    Some(KeyChord::new(key, mods))
-}
-
-fn run(mut terminal: DefaultTerminal, app: &mut App) -> Result<()> {
-    loop {
-        terminal.draw(|f| {
-            let [body, status] =
-                Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).areas(f.area());
-            let text = app
-                .session()
-                .map(|s| s.doc.text().to_string())
-                .unwrap_or_else(|| "No document. Run: textweaver FILE".to_owned());
-            f.render_widget(
-                Paragraph::new(text)
-                    .wrap(Wrap { trim: false })
-                    .block(Block::bordered().title("textweaver")),
-                body,
-            );
-            let pos = app.session().map(|s| s.cursor.0).unwrap_or(0);
-            f.render_widget(
-                Line::from(format!("{:?}  char {pos}  q quits", app.mode())),
-                status,
-            );
-        })?;
-        app.poll_speech();
-        if !event::poll(Duration::from_millis(50))? {
-            continue;
+    let (app, messages) = build_app(&opts);
+    let mut tui = Tui::new(app);
+    if let Some(file) = &args.file {
+        if let Err(e) = tui.app_mut().open(file) {
+            let msg = format!("Could not open {}: {e}", file.display());
+            tui.app_mut().announce(&msg, Priority::Assertive);
         }
-        if let Event::Key(k) = event::read()? {
-            if k.kind != KeyEventKind::Press {
-                continue;
-            }
-            let Some(c) = chord(&k) else { continue };
-            let Some(action) = app.keymap().lookup(&c, app.mode().layer()) else {
-                continue;
-            };
-            if app
-                .dispatch(Command::Action(action))
-                .contains(&Effect::Quit)
-            {
-                return Ok(());
-            }
-        }
+    } else {
+        tui.app_mut().announce(
+            "No document is open. Press Control O to open one, or F1 for help.",
+            Priority::Polite,
+        );
     }
+    for m in messages {
+        tui.app_mut().announce(&m, Priority::Assertive);
+    }
+    let mut terminal = ratatui::init();
+    let result = run(&mut terminal, &mut tui);
+    ratatui::restore();
+    tui.app_mut().shutdown();
+    result
 }
