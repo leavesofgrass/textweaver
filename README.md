@@ -98,6 +98,7 @@ The `scripts/` folder has installers and helpers for every system. Each script h
 
 ## Documentation
 
+- [Roadmap](docs/roadmap.md): what comes next, with quick wins first
 - [Implementation plan](docs/plan.md)
 - Architecture decisions: [workspace](docs/adr/0001-workspace-and-dependencies.md), [text model](docs/adr/0002-text-model.md), [speech threading](docs/adr/0003-speech-threading-and-event-timing.md), [rate, pitch, volume](docs/adr/0004-rate-pitch-volume.md), [narration and offset maps](docs/adr/0005-narration-and-offset-map.md), [keymap](docs/adr/0006-keymap-and-actions.md), [Eloquence](docs/adr/0007-eloquence-via-eci-host.md), [Apple speech](docs/adr/0008-apple-speech.md), [SAPI5](docs/adr/0009-sapi5-voices.md)
 - [Installing a release](docs/install.md) and [making one](docs/releasing.md)
