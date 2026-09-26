@@ -300,6 +300,15 @@ impl App {
         self.stop_speech();
         let policy = self.autosave_policy();
         let recovery_dir = self.paths.as_ref().map(|p| p.recovery_dir());
+        let undo_limits = textweaver_editor::UndoLimits {
+            steps: self.settings.editing.undo_steps.max(1),
+            bytes: self
+                .settings
+                .editing
+                .undo_memory_mb
+                .max(1)
+                .saturating_mul(1024 * 1024),
+        };
         let Some(s) = self.session.as_mut() else {
             self.tell("No document to edit. Press Control N for a new one.");
             return;
@@ -336,6 +345,7 @@ impl App {
             title: s.title.clone(),
         };
         let mut session = EditSession::new(info, text);
+        session.set_undo_limits(undo_limits);
         if let Some(dir) = recovery_dir {
             session = session.with_autosave(policy, dir);
         }

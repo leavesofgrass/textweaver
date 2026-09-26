@@ -28,4 +28,4 @@ mod undo;
 pub use find::FindOptions;
 pub use markdown::{FormatError, Formatted, MarkdownOp};
 pub use session::{Choice, DocInfo, EditSession, LeaveOutcome, SaveOutcome, SessionError};
-pub use undo::{Editor, Selection};
+pub use undo::{Editor, Selection, UndoLimits};

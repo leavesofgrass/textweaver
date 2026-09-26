@@ -150,6 +150,8 @@ pub struct EditSession {
     /// Held while this session writes snapshots, so another instance does
     /// not offer or overwrite them (shared by clones).
     snapshot_lock: Option<std::sync::Arc<autosave::SnapshotLock>>,
+    /// Undo history limits for the editor.
+    undo_limits: crate::UndoLimits,
 }
 
 impl EditSession {
@@ -169,6 +171,7 @@ impl EditSession {
             last_snapshot: None,
             snapshot_failures: 0,
             snapshot_lock: None,
+            undo_limits: crate::UndoLimits::DEFAULT,
         }
     }
 
@@ -177,6 +180,15 @@ impl EditSession {
         self.autosave = policy;
         self.recovery_dir = Some(dir.into());
         self
+    }
+
+    /// Sets how much undo history the editor keeps, now and in later edit
+    /// sessions.
+    pub fn set_undo_limits(&mut self, limits: crate::UndoLimits) {
+        self.undo_limits = limits;
+        if let Some(ed) = &mut self.editor {
+            ed.set_undo_limits(limits);
+        }
     }
 
     /// The document.
@@ -261,7 +273,9 @@ impl EditSession {
     /// editing.
     pub fn enter_edit(&mut self) {
         if self.editor.is_none() {
-            self.editor = Some(Editor::new(&self.doc_text));
+            let mut ed = Editor::new(&self.doc_text);
+            ed.set_undo_limits(self.undo_limits);
+            self.editor = Some(ed);
             self.last_snapshot = None;
         }
     }

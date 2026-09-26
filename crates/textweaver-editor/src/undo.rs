@@ -1,6 +1,7 @@
 use ropey::Rope;
 use serde::{Deserialize, Serialize};
 use textweaver_core::{Bias, CharPos, CharRange, CoreError, Edit, EditOutcome};
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::markdown::Formatted;
 
@@ -80,6 +81,54 @@ fn class(c: char) -> Class {
     }
 }
 
+/// How much undo history an [`Editor`] keeps. When a new step would go
+/// over either limit, the oldest steps are forgotten (the newest step is
+/// always kept, however large).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UndoLimits {
+    /// Most undo steps kept.
+    pub steps: usize,
+    /// Most bytes the undo steps may hold: the inserted and removed text of
+    /// every step, plus a small allowance per edit.
+    pub bytes: usize,
+}
+
+impl UndoLimits {
+    /// The default: 1,000 steps or 50 MB.
+    pub const DEFAULT: UndoLimits = UndoLimits {
+        steps: 1000,
+        bytes: 50 * 1024 * 1024,
+    };
+
+    /// No limit.
+    pub const UNLIMITED: UndoLimits = UndoLimits {
+        steps: usize::MAX,
+        bytes: usize::MAX,
+    };
+}
+
+impl Default for UndoLimits {
+    fn default() -> Self {
+        UndoLimits::DEFAULT
+    }
+}
+
+/// Bytes counted per edit on top of its text, for [`UndoLimits::bytes`].
+const EDIT_OVERHEAD: usize = 64;
+
+/// How far [`Editor::backspace`] and [`Editor::delete_forward`] look for
+/// the edge of the grapheme next to the caret. A grapheme longer than this
+/// (hundreds of combining marks) is deleted in pieces.
+const GRAPHEME_WINDOW: usize = 256;
+
+/// The saved state can no longer be reached by undo (the history cap
+/// forgot the steps leading to it).
+const UNREACHABLE: u64 = u64::MAX;
+
+fn edit_bytes(e: &Edit, inv: &Edit) -> usize {
+    e.text.len() + inv.text.len() + EDIT_OVERHEAD
+}
+
 /// One undo step: edits applied in order, with their inverses.
 #[derive(Clone, Debug, Default)]
 struct Group {
@@ -94,6 +143,12 @@ struct Group {
     id: u64,
 }
 
+impl Group {
+    fn bytes(&self) -> usize {
+        self.edits.iter().map(|(e, i)| edit_bytes(e, i)).sum()
+    }
+}
+
 /// Text being edited, with undo and redo.
 ///
 /// Undo steps: every [`apply`](Self::apply), [`apply_group`](Self::apply_group),
@@ -103,34 +158,107 @@ struct Group {
 /// [`delete_forward`](Self::delete_forward) coalesce into word-sized steps:
 /// typing `hello world` gives two steps, `hello ` and `world`; a new line,
 /// moving the caret, any other edit, or saving starts a new step.
+///
+/// Backspace and Delete remove one grapheme (what reads as one character:
+/// an emoji with its modifiers, a flag, a letter with its combining
+/// accents), not one code point.
+///
+/// History is capped by [`UndoLimits`] (by default 1,000 steps or 50 MB);
+/// the oldest steps are forgotten first.
 #[derive(Clone, Debug, Default)]
 pub struct Editor {
     text: Rope,
     selection: Selection,
     undo: Vec<Group>,
     redo: Vec<Group>,
-    /// Id of the step on top of the undo stack when last saved (0: none).
+    /// Id of the step on top of the undo stack when last saved (0: none,
+    /// [`UNREACHABLE`]: forgotten by the history cap).
     saved_id: u64,
     /// Forces dirty until the next save (recovered text).
     modified: bool,
     next_id: u64,
+    limits: UndoLimits,
+    /// Bytes the undo stack holds, for [`UndoLimits::bytes`].
+    undo_bytes: usize,
+    /// Undo steps forgotten because of the limits.
+    forgotten: usize,
 }
 
 impl Editor {
-    /// An editor over `text`, caret at the start, clean.
+    /// An editor over `text`, caret at the start, clean, with the default
+    /// [`UndoLimits`].
     pub fn new(text: &str) -> Self {
         Editor {
             text: Rope::from_str(text),
             next_id: 1,
+            limits: UndoLimits::DEFAULT,
             ..Editor::default()
         }
     }
 
     /// Replaces the whole text and clears undo history, as when a new
     /// editing session starts (undo cannot cross back into a previous
-    /// session). The caret goes to the start and the editor is clean.
+    /// session). The caret goes to the start and the editor is clean. The
+    /// undo limits stay.
     pub fn set_text(&mut self, text: &str) {
+        let limits = self.limits;
         *self = Editor::new(text);
+        self.limits = limits;
+    }
+
+    /// Sets how much undo history is kept, forgetting the oldest steps at
+    /// once when there are too many. A step limit of 0 counts as 1.
+    pub fn set_undo_limits(&mut self, limits: UndoLimits) {
+        self.limits = UndoLimits {
+            steps: limits.steps.max(1),
+            bytes: limits.bytes,
+        };
+        self.trim();
+    }
+
+    /// The undo history limits.
+    pub fn undo_limits(&self) -> UndoLimits {
+        self.limits
+    }
+
+    /// Bytes the undo history holds (see [`UndoLimits::bytes`]).
+    pub fn undo_bytes(&self) -> usize {
+        self.undo_bytes
+    }
+
+    /// Undo steps forgotten because of the limits since the editor was
+    /// created.
+    pub fn forgotten_steps(&self) -> usize {
+        self.forgotten
+    }
+
+    /// Forgets the oldest undo steps while over a limit, keeping at least
+    /// the newest one.
+    fn trim(&mut self) {
+        let steps = self.limits.steps.max(1);
+        let mut drop = 0;
+        let mut bytes = self.undo_bytes;
+        let mut len = self.undo.len();
+        while len > 1 && (len > steps || bytes > self.limits.bytes) {
+            bytes = bytes.saturating_sub(self.undo[drop].bytes());
+            drop += 1;
+            len -= 1;
+        }
+        if drop == 0 {
+            return;
+        }
+        for g in self.undo.drain(..drop) {
+            // After forgetting step g, an empty stack (top id 0) means "g
+            // applied": a save right after g is still reachable, a save
+            // before it is not.
+            if self.saved_id == g.id {
+                self.saved_id = 0;
+            } else if self.saved_id == 0 {
+                self.saved_id = UNREACHABLE;
+            }
+        }
+        self.undo_bytes = bytes;
+        self.forgotten += drop;
     }
 
     /// The text.
@@ -210,8 +338,26 @@ impl Editor {
         }
         group.id = self.next_id.max(1);
         self.next_id = group.id + 1;
+        self.undo_bytes += group.bytes();
         self.undo.push(group);
         self.redo.clear();
+        self.trim();
+    }
+
+    /// Adds a coalesced keystroke to the open step on top of the stack.
+    fn extend_top(&mut self, edit: Edit, inv: Edit, cls: Class) {
+        let bytes = edit_bytes(&edit, &inv);
+        let after = self.selection;
+        if let Some(g) = self.undo.last_mut() {
+            g.edits.push((edit, inv));
+            g.after = after;
+            g.last_class = Some(cls);
+            self.undo_bytes += bytes;
+        }
+        self.redo.clear();
+        if self.undo_bytes > self.limits.bytes {
+            self.trim();
+        }
     }
 
     /// Applies one edit as its own undo step. The selection follows the edit.
@@ -299,12 +445,7 @@ impl Editor {
         let before = self.selection;
         self.selection = Selection::caret(out.inserted.end);
         if joins {
-            if let Some(g) = self.undo.last_mut() {
-                g.edits.push((edit, inv));
-                g.after = self.selection;
-                g.last_class = Some(cls);
-            }
-            self.redo.clear();
+            self.extend_top(edit, inv, cls);
         } else {
             self.push_group(Group {
                 edits: vec![(edit, inv)],
@@ -327,24 +468,49 @@ impl Editor {
         Ok(())
     }
 
+    /// The grapheme next to `caret`: after it (`forward`) or before it.
+    /// Empty at the edge of the text.
+    pub fn grapheme_at(&self, caret: CharPos, forward: bool) -> CharRange {
+        let len = self.text.len_chars();
+        let at = caret.0.min(len);
+        if forward {
+            if at >= len {
+                return CharRange::empty(CharPos(at));
+            }
+            let end = (at + GRAPHEME_WINDOW).min(len);
+            let window = self.text.slice(at..end).to_string();
+            let n = window
+                .graphemes(true)
+                .next()
+                .map_or(1, |g| g.chars().count().max(1));
+            CharRange::new(at, at + n)
+        } else {
+            if at == 0 {
+                return CharRange::empty(CharPos(0));
+            }
+            // Start the window at the line start when it is near, so a run
+            // of regional indicators (flags) pairs up as it does on screen.
+            let floor = at.saturating_sub(GRAPHEME_WINDOW);
+            let line_start = self.text.line_to_char(self.text.char_to_line(at - 1));
+            let start = line_start.max(floor);
+            let window = self.text.slice(start..at).to_string();
+            let n = window
+                .graphemes(true)
+                .next_back()
+                .map_or(1, |g| g.chars().count().max(1));
+            CharRange::new(at - n, at)
+        }
+    }
+
     fn delete_one(&mut self, forward: bool) -> Result<Option<EditOutcome>, CoreError> {
         let r = self.selection.range();
         if !r.is_empty() {
             return self.apply(Edit::delete(r)).map(Some);
         }
-        let caret = self.selection.head;
-        let len = self.text.len_chars();
-        let range = if forward {
-            if caret.0 >= len {
-                return Ok(None);
-            }
-            CharRange::new(caret.0, caret.0 + 1)
-        } else {
-            if caret.0 == 0 {
-                return Ok(None);
-            }
-            CharRange::new(caret.0 - 1, caret.0)
-        };
+        let range = self.grapheme_at(self.selection.head, forward);
+        if range.is_empty() {
+            return Ok(None);
+        }
         let deleted = self.text.char(range.start.0);
         let cls = class(deleted);
         let kind = if forward {
@@ -364,12 +530,7 @@ impl Editor {
         let before = self.selection;
         self.selection = Selection::caret(range.start);
         if joins {
-            if let Some(g) = self.undo.last_mut() {
-                g.edits.push((edit, inv));
-                g.after = self.selection;
-                g.last_class = Some(cls);
-            }
-            self.redo.clear();
+            self.extend_top(edit, inv, cls);
         } else {
             self.push_group(Group {
                 edits: vec![(edit, inv)],
@@ -384,15 +545,15 @@ impl Editor {
         Ok(Some(out))
     }
 
-    /// Deletes the selection, or the character before the caret. Returns
-    /// `None` at the start of the text. Consecutive deletions coalesce like
-    /// typing.
+    /// Deletes the selection, or the character (grapheme) before the
+    /// caret. Returns `None` at the start of the text. Consecutive
+    /// deletions coalesce like typing.
     pub fn backspace(&mut self) -> Result<Option<EditOutcome>, CoreError> {
         self.delete_one(false)
     }
 
-    /// Deletes the selection, or the character after the caret. Returns
-    /// `None` at the end of the text.
+    /// Deletes the selection, or the character (grapheme) after the caret.
+    /// Returns `None` at the end of the text.
     pub fn delete_forward(&mut self) -> Result<Option<EditOutcome>, CoreError> {
         self.delete_one(true)
     }
@@ -410,6 +571,7 @@ impl Editor {
             }
         }
         self.selection = group.before;
+        self.undo_bytes = self.undo_bytes.saturating_sub(group.bytes());
         self.redo.push(group);
         Some(outs)
     }
@@ -427,7 +589,9 @@ impl Editor {
         if let Some(g) = self.undo.last_mut() {
             g.open = false;
         }
+        self.undo_bytes += group.bytes();
         self.undo.push(group);
+        self.trim();
         Some(outs)
     }
 }
@@ -541,6 +705,173 @@ mod tests {
         assert!(err.is_err());
         assert_eq!(ed.text().to_string(), "abc");
         assert!(!ed.can_undo());
+    }
+
+    /// Backspaces from the end of `text` until it is empty; returns what
+    /// each keystroke removed.
+    fn backspace_all(text: &str) -> Vec<String> {
+        let mut ed = Editor::new(text);
+        ed.set_selection(Selection::caret(CharPos(text.chars().count())));
+        let mut removed = Vec::new();
+        let mut before = ed.text().to_string();
+        while ed.backspace().unwrap().is_some() {
+            let now = ed.text().to_string();
+            removed.push(before[now.len()..].to_owned());
+            before = now;
+        }
+        removed
+    }
+
+    /// Deletes forward from the start until empty; returns each removal.
+    fn delete_all(text: &str) -> Vec<String> {
+        let mut ed = Editor::new(text);
+        let mut removed = Vec::new();
+        let mut before = ed.text().to_string();
+        while ed.delete_forward().unwrap().is_some() {
+            let now = ed.text().to_string();
+            removed.push(before[..before.len() - now.len()].to_owned());
+            before = now;
+        }
+        removed
+    }
+
+    #[test]
+    fn backspace_and_delete_remove_whole_graphemes() {
+        // A family emoji (zero-width joiners), a thumbs-up with a skin
+        // tone, two flags, "e" with a combining acute, and "n" with a
+        // combining tilde.
+        let family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}";
+        let thumbs = "\u{1F44D}\u{1F3FD}";
+        let flags = "\u{1F1FA}\u{1F1F8}\u{1F1EC}\u{1F1E7}";
+        let accents = "e\u{301}n\u{303}";
+        let text = format!("a{family}{thumbs}{flags}{accents}");
+        let back = backspace_all(&text);
+        assert_eq!(
+            back,
+            vec![
+                "n\u{303}",
+                "e\u{301}",
+                "\u{1F1EC}\u{1F1E7}",
+                "\u{1F1FA}\u{1F1F8}",
+                thumbs,
+                family,
+                "a"
+            ]
+        );
+        let fwd = delete_all(&text);
+        assert_eq!(
+            fwd,
+            vec![
+                "a",
+                family,
+                thumbs,
+                "\u{1F1FA}\u{1F1F8}",
+                "\u{1F1EC}\u{1F1E7}",
+                "e\u{301}",
+                "n\u{303}"
+            ]
+        );
+    }
+
+    #[test]
+    fn a_grapheme_delete_is_undone_whole() {
+        let text = "x\u{1F1FA}\u{1F1F8}";
+        let mut ed = Editor::new(text);
+        ed.set_selection(Selection::caret(CharPos(3)));
+        let out = ed.backspace().unwrap().unwrap();
+        assert_eq!(out.removed, CharRange::new(1, 3));
+        assert_eq!(ed.text().to_string(), "x");
+        ed.undo().unwrap();
+        assert_eq!(ed.text().to_string(), text);
+        assert_eq!(ed.selection(), Selection::caret(CharPos(3)));
+        // Line breaks: CRLF is one grapheme; a flag at a line start pairs
+        // from there.
+        assert_eq!(backspace_all("a\r\nb"), vec!["b", "\r\n", "a"]);
+        assert_eq!(
+            backspace_all("\u{1F1FA}\n\u{1F1FA}\u{1F1F8}"),
+            vec!["\u{1F1FA}\u{1F1F8}", "\n", "\u{1F1FA}"]
+        );
+    }
+
+    #[test]
+    fn undo_history_is_capped_by_steps() {
+        let mut ed = Editor::new("");
+        ed.set_undo_limits(UndoLimits {
+            steps: 3,
+            bytes: usize::MAX,
+        });
+        for w in ["one ", "two ", "three ", "four ", "five "] {
+            ed.insert_text(w).unwrap();
+        }
+        assert_eq!(ed.undo_depth(), 3);
+        assert_eq!(ed.forgotten_steps(), 2);
+        while ed.undo().is_some() {}
+        assert_eq!(
+            ed.text().to_string(),
+            "one two ",
+            "the two oldest steps are kept in the text, not undoable"
+        );
+        assert!(ed.is_dirty(), "the original text cannot be reached");
+    }
+
+    #[test]
+    fn undo_history_is_capped_by_bytes() {
+        let mut ed = Editor::new("");
+        let limit = 10_000;
+        ed.set_undo_limits(UndoLimits {
+            steps: usize::MAX,
+            bytes: limit,
+        });
+        let chunk = "x".repeat(1000);
+        for _ in 0..50 {
+            ed.insert_text(&chunk).unwrap();
+            assert!(ed.undo_bytes() <= limit, "{}", ed.undo_bytes());
+        }
+        assert!(ed.undo_depth() < 50 && ed.undo_depth() >= 5);
+        // One step bigger than the limit is still kept.
+        ed.insert_text(&"y".repeat(20_000)).unwrap();
+        assert_eq!(ed.undo_depth(), 1);
+        ed.undo().unwrap();
+        assert_eq!(ed.text().len_chars(), 50_000);
+        assert_eq!(ed.undo_bytes(), 0);
+        ed.redo().unwrap();
+        assert!(ed.undo_bytes() > limit);
+    }
+
+    #[test]
+    fn a_save_inside_forgotten_history_stays_reachable_only_at_the_edge() {
+        let mut ed = Editor::new("");
+        ed.set_undo_limits(UndoLimits {
+            steps: 2,
+            bytes: usize::MAX,
+        });
+        ed.insert_text("a").unwrap();
+        ed.mark_saved();
+        ed.insert_text("b").unwrap();
+        ed.insert_text("c").unwrap();
+        // "a" was forgotten; the saved state ("a") is the bottom of the
+        // stack now.
+        assert_eq!(ed.undo_depth(), 2);
+        ed.undo().unwrap();
+        ed.undo().unwrap();
+        assert_eq!(ed.text().to_string(), "a");
+        assert!(!ed.is_dirty());
+        ed.redo().unwrap();
+        assert!(ed.is_dirty());
+    }
+
+    #[test]
+    fn typing_many_words_keeps_memory_bounded() {
+        let mut ed = Editor::new("");
+        ed.set_undo_limits(UndoLimits {
+            steps: 100,
+            bytes: usize::MAX,
+        });
+        for _ in 0..500 {
+            ed.type_text("word ").unwrap();
+        }
+        assert_eq!(ed.undo_depth(), 100);
+        assert_eq!(ed.text().len_chars(), 2500);
     }
 
     #[test]
