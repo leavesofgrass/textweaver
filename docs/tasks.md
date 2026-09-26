@@ -10,6 +10,7 @@ Kept current per wave by the orchestrator. Agents append to their own section's 
 | B — Speech | `agent/b-speech` | not started |
 | C — State, Keys, Editing | `agent/c-state-keys-editing` | not started |
 | D — App & TUI | `agent/d-app-tui` | not started |
+| E — Eloquence | `agent/e-eloquence` | not started |
 
 ## Shared preamble (every agent reads this first)
 
@@ -128,12 +129,30 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 - `App` tests without a terminal.
 - A ratatui `TestBackend` scripted test: open a fixture, navigate by each unit, read with a recording speech backend (use B's once merged; until then a local test double that implements `SpeechBackend`), check that highlight ranges equal the spoken source ranges, quit, relaunch with the same state directory, and verify the restored position.
 
+## Agent E — Eloquence (added 2026-09-25 at Jon's request)
+
+**Owns:** `crates/textweaver-eci/` (library and the `textweaver-eci-host` binary), `xtask/src/eci.rs` (create it; the orchestrator wires it into `xtask/src/main.rs` at integration, so document the exact lines to add), `fixtures/e/`.
+
+**Read:** ADR-0003, ADR-0004, ADR-0007; `tools/eci-spike/` (a working 32-bit program that drives `eci.dll`); `docs/star-parity.md` Part 2 sections 1–4; the Phase 0 code in `crates/textweaver-core` and `crates/textweaver-speech` (the `SpeechBackend` trait, `EventSink`, `RawEvent`, `Caps`, `BackendInfo`, `BackendFactory`).
+
+**Deliverables:**
+- The host: loads the ECI library with `libloading` (path from an argument, else `default_library_path()`), creates an engine, applies parameters, synthesizes each utterance with an index mark before every word, and streams PCM plus index marks with sample offsets over stdout in a small framed binary protocol; handles stop (abort synthesis), parameter changes, and voice selection (the `eci.ini` presets and ECI languages); exits cleanly on EOF. Text is encoded for the engine's language (Windows-1252 for Western languages; document the mapping and the replacement for unrepresentable characters).
+- The backend: `EciBackend` implementing `SpeechBackend`, spawning the host, playing PCM through rodio (`rodio = { workspace = true, features = ["playback"] }`), emitting `Started`, `Word { byte_range, audio_ms }` (each index mapped back to the word's byte range in `Utterance::text`), `Finished`, and `Cancelled` under ADR-0003's non-blocking `speak` plus `poll` contract; native pause and resume; `set_params` mapping rate, pitch, and volume per ADR-0004 with a measured rate calibration for `effective_wpm()`; `voices()`; `synthesize_to_file` (WAV). Expose `pub fn backend_info() -> BackendInfo` and `pub fn factory(...) -> BackendFactory` so the app can register it (Agent B is making the registry extensible; the orchestrator wires the two together at integration).
+- `cargo xtask eci-host`: builds the host for `i686-pc-windows-msvc` on Windows (native elsewhere) and copies it next to the workspace's debug and release binaries; the backend finds the host beside the current executable, or via `TEXTWEAVER_ECI_HOST`.
+
+**Acceptance:**
+- Unit tests for the protocol (round-trip framing, partial reads) and for index-to-byte-range mapping, including multibyte text.
+- An integration test with a fake host (a test binary speaking the protocol) covering speak, word events in order with rising `audio_ms`, stop mid-utterance (`Cancelled`, no late events), pause and resume.
+- Real-engine tests on this machine, `#[ignore]`d unless `TEXTWEAVER_ECI=1`: synthesize the spike's sentence to WAV and check that every word's mark arrives with rising offsets; run them with `TEXTWEAVER_ECI=1` before reporting and include the output. Never play audio aloud in tests; use `synthesize_to_file` or a silent sink.
+- clippy and tests green natively; `cargo build -p textweaver-eci` green in the container (no real engine there).
+
 ## Seams to watch at integration
 
 - `text::narrate::plan` (A) → `SpeechService::read` (B): utterance ids, offset maps, `Inserted` spans.
 - `Document::apply` (A) ↔ `Editor` (C) ↔ bookmarks and history (C, D): one `EditOutcome` shifts all of them.
 - `Keymap` (C) ↔ TUI key translation (D): chord normalization and layers.
 - `Settings` (C) ↔ `ServiceConfig` (B) ↔ `App` (D): rate, pitch, volume, pacing, verbosity.
+- `EciBackend` (E) ↔ backend registry (B) ↔ app backend selection (D): Eloquence first when installed; normalization skipped for engines that normalize natively.
 
 ## Wave 2 (after Integration 1 and Jon's review)
 

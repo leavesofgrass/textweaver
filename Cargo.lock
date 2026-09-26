@@ -1762,6 +1762,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-eci"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "log",
+ "textweaver-core",
+ "textweaver-speech",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "textweaver-editor"
 version = "0.1.0-alpha.0"
 dependencies = [

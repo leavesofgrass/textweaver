@@ -12,6 +12,7 @@ members = [
     "crates/textweaver-app",
     "crates/textweaver-tui",
     "crates/textweaver-cli",
+    "crates/textweaver-eci",
     "xtask",
 ]
 default-members = [
@@ -26,6 +27,7 @@ default-members = [
     "crates/textweaver-app",
     "crates/textweaver-tui",
     "crates/textweaver-cli",
+    "crates/textweaver-eci",
 ]
 
 [workspace.package]
@@ -51,6 +53,7 @@ textweaver-keymap = { path = "crates/textweaver-keymap" }
 textweaver-a11y = { path = "crates/textweaver-a11y" }
 textweaver-editor = { path = "crates/textweaver-editor" }
 textweaver-app = { path = "crates/textweaver-app" }
+textweaver-eci = { path = "crates/textweaver-eci" }
 
 # text and formats
 ropey = "1.6"
@@ -83,6 +86,9 @@ espeakng-sys = "0.3"
 speech-dispatcher = "0.16"
 tts = "0.26"
 rodio = { version = "0.22", default-features = false }
+
+# ETI-Eloquence host: runtime loading of the user-installed ECI library
+libloading = "0.9"
 
 # tests
 proptest = "1.11"

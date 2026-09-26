@@ -10,7 +10,7 @@ textweaver is a Rust reimplementation of the core of [Star](https://github.com/l
 
 - `textweaver FILE`: a self-voicing terminal reader for text, Markdown, and HTML, with synchronized highlighting, position restore, bookmarks, find, navigation history, configurable keys, and edit mode with typing echo.
 - `tw`: a scripting CLI: extract canonical text (`tw text`), inspect (`tw info`), search (`tw search`), speak or write audio (`tw speak`), list voices and speech backends (`tw voices`, `tw backends`).
-- Speech backends: espeak-ng in-process with audio-clock word timing (Linux), Omnivox over its speech-server protocol, and a silent backend; native Windows and macOS voices come later.
+- Speech backends: ETI-Eloquence through its ECI engine with exact word timing, espeak-ng in-process with audio-clock word timing (Linux), Omnivox over its speech-server protocol, and a silent backend; native Windows and macOS voices come later.
 
 Later: EPUB, DOCX, and PDF; audio and subtitle export; a library with full-text search and Obsidian vault import and export; dictation; a native GUI built on wxWidgets.
 
@@ -58,7 +58,7 @@ docker compose run --rm -T dev cargo test --workspace --all-features
 ## Documentation
 
 - [Implementation plan](docs/plan.md)
-- Architecture decisions: [workspace](docs/adr/0001-workspace-and-dependencies.md), [text model](docs/adr/0002-text-model.md), [speech threading](docs/adr/0003-speech-threading-and-event-timing.md), [rate, pitch, volume](docs/adr/0004-rate-pitch-volume.md), [narration and offset maps](docs/adr/0005-narration-and-offset-map.md), [keymap](docs/adr/0006-keymap-and-actions.md)
+- Architecture decisions: [workspace](docs/adr/0001-workspace-and-dependencies.md), [text model](docs/adr/0002-text-model.md), [speech threading](docs/adr/0003-speech-threading-and-event-timing.md), [rate, pitch, volume](docs/adr/0004-rate-pitch-volume.md), [narration and offset maps](docs/adr/0005-narration-and-offset-map.md), [keymap](docs/adr/0006-keymap-and-actions.md), [Eloquence](docs/adr/0007-eloquence-via-eci-host.md)
 - [Star parity reference](docs/star-parity.md)
 - [Tasks and ownership](docs/tasks.md)
 - [Docker development container](docs/docker.md)
