@@ -521,3 +521,164 @@ Jon asked for install scripts for Linux (any distribution: he uses Debian, Arch,
 ### Agent P2a — Reliability (Phase 2)
 
 **Status:** done on `phase2/a-reliability` (Saturday, September 26, 2026), merged with `main` at 0c7b694; awaiting integration. All ten items, each with tests. One background writer (`app/src/writer.rs`, `writes.rs`) does saves (a rope clone handed over; the file version is checked there, so saving over outside changes still asks), autosave snapshots in order with their locks, positions, bookmarks, notes, sidecars, the bookshelf, and the two-second disk check; quitting waits at most 10 s and says "Still saving" after 300 ms; JSON-RPC requests finish their writes before answering. Voices are listed once into a `VoiceCache` (SAPI in the background; `select_voice` no longer lists tokens); Alt+V says "still loading" and opens when they arrive. ECI, SAPI, and DECtalk restarts and the first 32-bit SAPI voice start inside `poll` (`enginehost::HostStart`), Stop and Pause work meanwhile; the audio device opens on its own thread. Restart Speech (Shift+F8, new action) and one automatic restart after the speech thread dies (`App::set_speech_starter`, set by the TUI setup). Probes are cached per process (`register_cached`). Positions, bookmarks, notes, and highlights are found again after outside edits (`app/src/relocate.rs`; state keeps a text stamp; not-found items are marked), announced once. Backspace and Delete remove graphemes; undo capped by `[editing] undo_steps` and `undo_memory_mb`. Find streams over the rope and keeps 10,000 matches around the cursor; edit-mode find folds without a string per character and P2b's replace searches once per step. speechd makes no round trips after connecting; DECtalk synthesizes a sentence at a time. The library scans on a thread with a count. Bench, 10 MB (UI thread, before to after): autosave 41 to 0.6 ms (snapshot written off-thread in 34 ms), Ctrl+S 75 to 0.01 ms, position save 3.8 to 0.02 ms, find "the" 15 to 5 ms, find a rare word 12 to 2 ms, edit-mode replace count 1,035 to 69 ms and replace all 2,411 to 137 ms. Left: P2b's `on_saved` misspelling count runs on the input thread when a save is reported (about 0.6 s on 10 MB); first engine starts still wait in `new`; DECtalk does not stream within a sentence. Tests: native Windows 1,854 passed; Docker with all features 1,861 passed; the new timing tests ran 40 times each (0 failures).
+
+## Wave 3 (planned 2026-09-26; starts after Agent P2e merges and Docker is restarted)
+
+Jon asked to go "full steam ahead" with six agents.
+
+**Setup:** each agent works in its own worktree and branch, `wave3/<letter>-<name>`, from `main`. Each reads the shared preamble above, `docs/roadmap.md`, `docs/architecture.md`, and the ADRs for its area.
+
+**Checks, natively on Windows:**
+- fmt;
+- clippy with `-D warnings`;
+- tests with `--no-fail-fast`;
+- rustdoc with `-D warnings`;
+- `cargo xtask keyboard --check` and `cargo xtask deps --check`;
+- `python tools/check_links.py` and `python tools/gen_site_data.py --check`.
+
+Also run the Docker all-features clippy and tests once, at the end (Jon's memory rule).
+
+**Rules for new code:**
+- Route every new announcement through `textweaver_a11y::route`.
+- Make every save through the writer thread.
+- New keys must pass the keymap's conflict and WCAG 2.1.4 tests, and follow the NVDA and JAWS-style defaults (Agent P2e).
+
+**Reporting:** plain, short sentences, with headings and lists and no tables. Add a status line under your own heading here.
+
+Areas are split to keep merges small.
+
+### Agent W3a — App core for the GUI (Phase 3, first half)
+
+**Owns:** `crates/textweaver-app` (new modules), and the list and prompt code moved out of `crates/textweaver-tui`.
+
+1. **Document window model.**
+   - It holds about 500,000 UTF-16 units at a time, aligned to paragraphs.
+   - It extends while reading and recentres on jumps.
+   - It maps control offsets to `CharPos` through `DisplayIndex`.
+   - The TUI keeps its own slicing but shares the model where that fits.
+2. **List and prompt state in the app.** Move the selected item, type-to-filter, the "k of n" announcements, and prompt editing out of `tui/src/ui.rs` and `widgets.rs`. The TUI, the GUI dialogs, and JSON-RPC then share one implementation.
+3. **A waker.** A callback or channel, so a frontend reacts to speech events instead of polling every 30 ms.
+4. **`Command::ReplaceRange`**, for edits made in a native text control.
+5. **Settings schema,** generated from the store: labels, help, ranges, steps, and choices.
+   - It drives a new TUI settings screen (F10 or the palette), the GUI dialog, and RPC.
+6. **Work off the input thread.**
+   - Open documents in the background, with progress and cancel.
+   - Move settings saves to the writer thread.
+   - Move P2b's misspelling count on save (0.6 s on 10 MB).
+   - Make an engine's first start non-blocking, not just restarts.
+
+### Agent W3b — The GUI shell (Phase 3, second half)
+
+**Owns:** `crates/textweaver-gui`, plus GUI packaging in `xtask` and the workflows.
+
+1. **GUI keymap defaults.** Leave arrows, Home, End, Page Up, Page Down, and Tab native in the Browse layer (ADR-0014's contract request).
+2. **Themes.**
+   - Use `Theme::rgb_table` for the colours.
+   - Add a "system" theme that respects Windows High Contrast.
+3. **Native, labelled dialogs.**
+   - Find, go to, bookmarks, notes, voices (with favourites), library, command palette, and help.
+   - Build them on the app's list and prompt model once W3a lands it. Until then, use a thin adapter.
+   - Test each one with `--background` and the UI Automation report.
+4. **Settings dialog.** Build it from W3a's schema. If the schema isn't on main yet, stub it and report that.
+5. **Packaging.**
+   - Put `textweaver-gui.exe` in the Windows zip.
+   - Build a macOS `.app` bundle with `Info.plist`, and the fonts in `Contents/Resources` so font registration works.
+   - Add a Linux GTK build in CI (`libgtk-3-dev`), with an Xvfb smoke test and an AT-SPI tree dump (pyatspi).
+6. **ADR-0014.**
+   - Accept it.
+   - Record the answers to open questions that can be settled without Jon's listening session.
+   - List the ones that need him.
+
+### Agent W3c — Architecture consolidation
+
+**Owns:** crate manifests and module moves across `store`, `aids`, `vault`, `fonts`, and a new `textweaver-engines`. Keep app edits to imports and registry wiring, to avoid conflicts with W3a.
+
+1. **Take `store` off `aids`.**
+   - The settings types move into `store`, and `aids` converts them.
+   - `cargo xtask deps --check` then allows no exception for store.
+2. **One notes model.**
+   - `textweaver-vault` uses the store's `Note` and `Highlight` types directly.
+   - Remove the app's `app_notes` migration shim, which is one release old.
+3. **Font resolution in one place:** `textweaver-fonts`, used by aids, the writers, and the GUI.
+4. **A `textweaver-engines` crate** for the backend registry and engine features.
+   - The TUI, CLI, export, and GUI share it.
+   - `app` no longer depends on each engine crate directly.
+5. **Make in-reader export, preview, and citations an app feature.**
+   - It is on by default and in releases.
+   - `cargo xtask deps --check` refuses the edge again when the feature is off.
+6. **Split `docs/`.**
+   - User guides stay where they are.
+   - `docs/dev/` gets architecture, building, testing, releasing, and Docker.
+   - `docs/adr/` gets a README index with statuses.
+   - `docs/history/` gets plan, tasks, audits, and star-parity.
+   - Fix every link, and update `xtask dist`, the site generator, and the link checker.
+
+### Agent W3d — Formats for students (Phase 4)
+
+**Owns:** `crates/textweaver-formats`, and a new `textweaver-ocr` crate if needed.
+
+1. **OCR for scanned PDFs and images.**
+   - Run Tesseract as a subprocess, only on pages with no text layer, using the `ocr_lang` setting.
+   - Detect Tesseract on PATH (the installers offer it).
+   - Show progress and allow cancel.
+   - Announce clearly when Tesseract is missing.
+2. **DAISY 3 / DTBook and DAISY zips** (Bookshare), in spine order, with NCX navigation.
+3. **Archives.**
+   - ZIP and TAR, with 7z optional.
+   - Opening one lists its readable files.
+   - `book.zip!inner.pdf` opens a member, and notes and positions are keyed by that form.
+4. **Open a web page by URL.** Fetch it, detect the encoding, and read it as HTML. For a PDF, save it to the cache and open it.
+5. **PPTX.** Slide titles become headings, speaker notes follow each slide, and images use their alt text.
+6. **Spreadsheets.** XLSX and CSV/TSV become tables, using `calamine` if its licence and size are acceptable.
+7. **Hostile-input limits and fuzz targets** for every new loader, following P1d's patterns.
+
+### Agent W3e — Language and study aids (Phase 4)
+
+**Owns:** a new `textweaver-lexicon` crate, plus the app wiring for its actions and store settings.
+
+1. **Define word, offline.**
+   - Look up the user's own glossary first, then WordNet (Princeton licence), then CMUdict pronunciations (BSD).
+   - Build a compact derived data file with a script in `tools/`.
+   - Record licences and SHA-256 sums in `third_party/`, and add them to the notices.
+   - Ask the orchestrator before downloading the source data.
+   - A list shows definitions, synonyms, and pronunciation. Open it for the word at the cursor with a chord such as Alt+Shift+W, or another that fits.
+2. **Settings profiles.**
+   - Named sets of voice, rate, theme, font, spacing, highlight, and access-mode settings.
+   - Switch, save, rename, delete, import, and export them.
+   - Build on `tw settings`.
+3. **Reading statistics.**
+   - Time read, furthest point, sessions per document, and a "most read" list.
+   - Store them in state, with an opt-out.
+   - Add `tw stats`.
+4. **Scaffolding for interface translations.**
+   - A message-catalog mechanism for spoken and displayed strings: fluent, or a small in-crate catalog (justify the choice).
+   - English complete, plus a pseudo-locale to test coverage and a right-to-left check.
+   - Actual translations come later.
+
+### Agent W3f — Voices and speech (Phase 4)
+
+**Owns:** `crates/textweaver-speech` (new backends), a new `textweaver-piper` crate, and the voice manager in the app.
+
+1. **Piper neural voices.**
+   - A backend runs the `piper` binary as a subprocess.
+   - Word timing comes from Piper if it reports it, otherwise it is estimated. `tw backends` says which.
+   - A voice catalog lists language, quality, size, and licence.
+   - A voice is downloaded only after the user confirms, with a SHA-256 check, into the data folder.
+2. **Voice manager.**
+   - Every voice from every engine, filterable by language and engine.
+   - Preview, favourites, download (Piper), and remove.
+   - Build it in the terminal on the app's list model (W3a), and in the GUI later.
+3. **Rate and pitch per voice.** Remember them for each voice, as screen readers do.
+4. **Real-engine listening checklist.**
+   - Add steps to `docs/releasing.md` for Jon to hear Eloquence, SAPI, and Piper before each release.
+   - Add `cargo xtask` helpers that write sample WAV files to listen to.
+   - Never play audio in tests.
+
+### After Wave 3
+
+- Jon's NVDA and JAWS listening session for the GUI (Phase 3, step 3).
+- The GUI's edit mode and reading aids.
+- VoiceOver and Orca testing.
+- The aarch64 AppImage, on GitHub's arm64 runners.
+- Signing, when funding allows.
+- Release `0.1.0-alpha.4` or `beta.1` when Jon says so.
