@@ -8,9 +8,31 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 - **Settings export and import as JSON.** `tw settings export` saves every setting and key override to one JSON (or TOML) file; `tw settings import` checks it, backs up your files, and applies it, with `--dry-run` to preview each change. `tw settings path` and `tw settings reset` are new too. See [docs/settings.md](docs/settings.md).
 
+- **Choose a voice** (Alt+V) lists the engine's voices; Enter selects one and speaks a sample.
+- **A log file.** Warnings and errors go to `textweaver.log` in the state folder, rotated at 1 MB. `--log debug` (or `TEXTWEAVER_LOG`) logs more; `--log off` turns it off.
+- **Files changed on disk.** Saving over a file that another program changed since you opened it asks first. A change to an open file with no unsaved edits offers a reload.
+- **Speech recovers from an engine crash or a stall.** The reading goes on from the last word heard, and says "Speech restarted".
+- **GFM task lists** say "checked" or "not checked", and the text of HTML in Markdown (`<p align>`, `<details>`, `<img alt>`) is read.
+- `tw export-audio` uses your settings: voice, rate, pitch, volume, the preferred engine, table and footnote modes, and the `[export]` subtitles.
+
+### Changed
+
+- Reading a long document starts at once: continuous reading is planned about ten minutes at a time. On a 10 MB file, next sentence while reading went from about 250 ms to 3 ms.
+- The highlight is drawn as soon as its word is heard, not up to 40 ms later.
+- A list says its first item after its title, and each item says where it is ("Chapter two, 2 of 5").
+- The same message twice in a row is spoken twice by a screen reader: the status line blanks for a moment first.
+- Entering edit mode on a large file is two to four times faster.
+
 ### Fixed
 
 - A speech volume above 100 in `settings.toml` is now set to 100 and reported, like other out-of-range values.
+- Bookmarks and notes landed in the wrong place after saving and then quitting in edit mode.
+- `[normalization] table_mode` and `footnote_mode` had no effect.
+- Jumping to an ordered list item says "2. Walk the dog", not just "2.".
+- AltGr characters (`@ [ ] { } \ | ~ €`) can be typed in edit mode and prompts on non-US Windows keyboards.
+- Binary files (a PDF or Word file without its reader, a program) are refused with a clear message instead of being read as garbage; UTF-16 text without a byte order mark is decoded.
+- speech-dispatcher counted as not available where `XDG_RUNTIME_DIR` is unset (containers), though `spd-say` worked.
+- The `espeak` feature builds on Fedora 44 and current Arch: its FFI no longer runs bindgen over the system headers.
 
 ## [0.1.0-alpha.3] - 2026-09-25
 

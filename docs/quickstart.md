@@ -85,4 +85,5 @@ textweaver remembers your place. Open the same file again and it picks up where 
 - **F2** opens the command palette: type part of a command's name, then press Enter.
 - **F9** turns single-key shortcuts off, so dictation or typing never triggers a command. Chords such as **Alt+P** (play or pause) still work.
 - If you use a screen reader and want it to do all the talking, start with `textweaver --no-speech FILE`.
-- `tw speak "Hello"` checks your voice. `tw voices` lists your voices, and `tw backends` lists the speech engines textweaver found.
+- `tw speak "Hello"` checks your voice. `tw voices` lists your voices, and `tw backends` lists the speech engines textweaver found. In the reader, **Alt+V** lists the voices; Enter chooses one and speaks a sample.
+- Something went wrong? Warnings and errors are written to `textweaver.log` in the state folder (next to your reading positions). Start with `textweaver --log debug FILE` to log more, or `--log off` to log nothing.
