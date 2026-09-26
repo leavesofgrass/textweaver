@@ -57,7 +57,7 @@ pub fn report() -> Report {
     let status = match (&d.library, d.hosts.is_empty()) {
         (Ok(c), false) => format!("Eloquence is available: {}.", c.reason),
         (Ok(c), true) => format!(
-            "Found {}, but the helper program that runs it is missing; reinstall textweaver (developers: cargo xtask eci-host).",
+            "Found {}, but the helper program that runs it is missing; reinstall textweaver (developers: cargo xtask hosts).",
             c.reason
         ),
         (Err(e), _) => format!("No Eloquence engine found ({e})."),

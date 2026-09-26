@@ -2594,7 +2594,9 @@ dependencies = [
  "serde",
  "serde_json",
  "textweaver-app",
+ "textweaver-dictation",
  "textweaver-tui",
+ "textweaver-vault",
 ]
 
 [[package]]
@@ -2628,8 +2630,10 @@ name = "textweaver-dictation"
 version = "0.1.0-alpha.0"
 dependencies = [
  "log",
+ "regex",
  "serde",
  "serde_json",
+ "tempfile",
  "textweaver-core",
  "thiserror 2.0.21",
 ]
@@ -2819,8 +2823,10 @@ dependencies = [
 name = "textweaver-vault"
 version = "0.1.0-alpha.0"
 dependencies = [
+ "regex",
  "serde",
  "serde_json",
+ "tempfile",
  "textweaver-core",
  "textweaver-store",
  "thiserror 2.0.21",

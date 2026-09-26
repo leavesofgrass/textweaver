@@ -209,7 +209,6 @@ fn dest_args(args: &[String]) -> anyhow::Result<Vec<PathBuf>> {
 }
 
 /// `cargo xtask hosts [--dest DIR]`: every host for this platform.
-#[allow(dead_code)] // wired into main.rs at integration (see the module docs)
 pub fn hosts() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().skip(2).collect();
     let extra = dest_args(&args)?;
