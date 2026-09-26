@@ -14,25 +14,28 @@
 //! |---|---|---|---|
 //! | 1 | [`MarkdownResidue`] (and table narration) | `markdown` (off by default) | `_strip_markdown_for_tts`, load time |
 //! | 2 | [`Pronunciations`] | `use_pronunciations` + lexicon | step 1 |
-//! | 3 | [`Abbreviations`] | `abbreviations` | step 2 |
-//! | 4 | [`Numbers`] (dates, times, currency, percent, ordinals, decimals, years) | `numbers` | step 3 |
-//! | 5 | [`Math`] | `math` | step 4 |
-//! | 6 | [`SplitCaps`] | service `split_caps` | new |
-//! | 7 | [`Punctuation`] | service punctuation level | new |
+//! | 3 | [`CommunityLexicon`] (IBMTTS community dictionaries) | `community_lexicon.enabled` (off by default) | new |
+//! | 4 | [`Abbreviations`] | `abbreviations` | step 2 |
+//! | 5 | [`Numbers`] (dates, times, currency, percent, ordinals, decimals, years) | `numbers` | step 3 |
+//! | 6 | [`Math`] | `math` | step 4 |
+//! | 7 | [`SplitCaps`] | service `split_caps` | new |
+//! | 8 | [`Punctuation`] | service punctuation level | new |
 //!
 //! **Engines that normalize natively.** A backend with
 //! [`Caps::NATIVE_NORMALIZATION`](crate::Caps::NATIVE_NORMALIZATION) (such
 //! as ETI-Eloquence, which reads numbers, dates, times, currency, and
 //! abbreviations itself) gets the pipeline without the built-in
-//! abbreviations (user abbreviations still apply) and without numbers.
-//! Markdown residue, the pronunciation lexicon, math, split caps, and
-//! punctuation verbosity still apply.
+//! abbreviations (user abbreviations still apply), without numbers, and
+//! without the community lexicon (Eloquence loads those dictionaries
+//! itself). Markdown residue, the user's pronunciation lexicon, math, split
+//! caps, and punctuation verbosity still apply.
 //!
 //! Star's expected strings from `tests/test_ttstext.py` are ported as tests
 //! in this module, each also checking the offset map's invariants; the
 //! deliberate differences are listed in each transform's module docs.
 
 mod abbreviations;
+pub mod community;
 mod markdown;
 mod math;
 mod numbers;
@@ -47,6 +50,7 @@ pub use abbreviations::{
     Abbreviations, BUILTIN as BUILTIN_ABBREVIATIONS, Pronunciations, apply_pronunciations,
     expand_abbreviations,
 };
+pub use community::{CommunityLexicon, CommunityLexiconConfig};
 pub use markdown::{MarkdownResidue, TableMode, strip_markdown, tables_to_narration};
 pub use math::{Math, normalize_math};
 pub use numbers::{Numbers, normalize_numbers};
@@ -95,6 +99,10 @@ pub struct NormalizeConfig {
     pub numbers: bool,
     /// Speak math notation.
     pub math: bool,
+    /// The IBMTTS community pronunciation dictionaries as a lexicon, for
+    /// engines that do not normalize natively (off by default; see
+    /// [`community`]).
+    pub community_lexicon: CommunityLexiconConfig,
 }
 
 impl Default for NormalizeConfig {
@@ -109,6 +117,7 @@ impl Default for NormalizeConfig {
             abbrev_expansions: BTreeMap::new(),
             numbers: true,
             math: true,
+            community_lexicon: CommunityLexiconConfig::default(),
         }
     }
 }
@@ -127,6 +136,7 @@ impl NormalizeConfig {
             abbrev_expansions: BTreeMap::new(),
             numbers: false,
             math: false,
+            community_lexicon: CommunityLexiconConfig::default(),
         }
     }
 }
@@ -167,6 +177,9 @@ impl Pipeline {
         }
         if config.use_pronunciations && !config.pronunciations.is_empty() {
             p.push(Box::new(Pronunciations::new(&config.pronunciations)));
+        }
+        if !native && let Some(l) = CommunityLexicon::from_config(&config.community_lexicon) {
+            p.push(Box::new(l));
         }
         if config.abbreviations && !native {
             p.push(Box::new(Abbreviations::new(&config.abbrev_expansions)));

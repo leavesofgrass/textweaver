@@ -25,7 +25,8 @@ default = []
 espeak = ["dep:espeakng-sys"]
 # Omnivox subprocess backend (Emacspeak speech-server protocol on stdin).
 omnivox = []
-# Wave 2: speech-dispatcher with index marks.
+# speech-dispatcher through its SSIP socket, with SSML index marks for word
+# events (pure Rust; no libspeechd).
 speechd = []
 # Wave 2: the `tts` crate (WinRT, AVSpeech, speech-dispatcher).
 tts-crate = []
@@ -37,11 +38,13 @@ serde.workspace = true
 thiserror.workspace = true
 log.workspace = true
 regex.workspace = true
+encoding_rs.workspace = true
 espeakng-sys = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
 tempfile.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true
