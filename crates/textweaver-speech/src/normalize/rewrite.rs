@@ -278,21 +278,6 @@ pub(crate) fn apply_rules(input: &str, rules: &[Rule]) -> (String, OffsetMap) {
     (text, map)
 }
 
-/// Like [`apply_rules`], also reporting whether any rule matched.
-pub(crate) fn apply_rules_tracked(input: &str, rules: &[Rule]) -> (String, OffsetMap, bool) {
-    let mut text = input.to_owned();
-    let mut map = OffsetMap::identity(input, CharPos::ZERO);
-    let mut any = false;
-    for r in rules {
-        if let Some((out, m)) = r.apply(&text) {
-            map = OffsetMap::compose(&map, &text, &m);
-            text = out;
-            any = true;
-        }
-    }
-    (text, map, any)
-}
-
 /// Composes a later step onto an accumulated `(text, map)`.
 pub(crate) fn then(
     acc: (String, OffsetMap),

@@ -312,6 +312,15 @@ pub enum FootnoteMode {
 pub struct NormalizationSettings {
     /// Speak math notation.
     pub math: bool,
+    /// How explicit spoken math is: `low` ("a over b"), `normal` (the
+    /// default, ClearSpeak style: "the fraction with numerator ... and
+    /// denominator ..."), or `high` (adds end markers such as "end
+    /// fraction").
+    pub math_verbosity: Verbosity,
+    /// The character written around ASCIIMath, usually a backtick
+    /// (`` asciimath_delimiter = "`" ``). Unset, the default, reads no
+    /// ASCIIMath, because in Markdown a backtick marks code.
+    pub asciimath_delimiter: Option<char>,
     /// Expand abbreviations.
     pub abbreviations: bool,
     /// User abbreviation expansions, `"abbrev." = "expansion"`.
@@ -407,6 +416,8 @@ impl Default for NormalizationSettings {
     fn default() -> Self {
         NormalizationSettings {
             math: true,
+            math_verbosity: Verbosity::Normal,
+            asciimath_delimiter: None,
             abbreviations: true,
             abbrev_expansions: BTreeMap::new(),
             numbers: true,
@@ -1085,6 +1096,50 @@ mod tests {
         assert_eq!(s.normalization.community_lexicon.language, "DEU");
         assert_eq!(s.export.subtitle_format, SubtitleFormat::Srt);
         assert!(s.export.subtitle_word_level);
+    }
+
+    /// Spoken math settings (Agent V): normal verbosity and no ASCIIMath by
+    /// default, stored only when changed, and a bad value costs only itself.
+    #[test]
+    fn math_settings_default_round_trip_and_stay_minimal() {
+        let s = Settings::default();
+        assert!(s.normalization.math);
+        assert_eq!(s.normalization.math_verbosity, Verbosity::Normal);
+        assert_eq!(s.normalization.asciimath_delimiter, None);
+        let text = s.to_minimal_toml().unwrap();
+        assert!(!text.contains("math_verbosity") && !text.contains("asciimath"));
+
+        let (_d, store) = store();
+        write(
+            &store,
+            "[normalization]\nmath_verbosity = \"high\"\nasciimath_delimiter = \"`\"\n",
+        );
+        let (s, err) = store.load();
+        assert!(err.is_none(), "{err:?}");
+        assert_eq!(s.normalization.math_verbosity, Verbosity::High);
+        assert_eq!(s.normalization.asciimath_delimiter, Some('`'));
+        store.save(&s).unwrap();
+        assert_eq!(store.load().0, s);
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("math_verbosity = \"high\""), "{text}");
+        assert!(text.contains("asciimath_delimiter = \"`\""), "{text}");
+        assert!(
+            !text.contains("numbers"),
+            "unchanged values stay out: {text}"
+        );
+
+        // Invalid values fall back to the defaults, one by one.
+        write(
+            &store,
+            "[normalization]\nmath_verbosity = \"loud\"\nasciimath_delimiter = \"``\"\nnumbers = false\n",
+        );
+        let (s, err) = store.load();
+        assert_eq!(s.normalization.math_verbosity, Verbosity::Normal);
+        assert_eq!(s.normalization.asciimath_delimiter, None);
+        assert!(!s.normalization.numbers);
+        let err = err.unwrap_or_default();
+        assert!(err.contains("normalization.math_verbosity"), "{err}");
+        assert!(err.contains("normalization.asciimath_delimiter"), "{err}");
     }
 
     #[test]
