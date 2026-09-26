@@ -3,6 +3,7 @@
 - Status: accepted
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): Implemented as decided. `Document`, markers, units, navigation, history, search, and narration are in `textweaver-text`; loaders for text, Markdown, HTML, EPUB, DOCX, and PDF in `textweaver-formats` produce this canonical shape. Positions are persisted as `CharPos` in the per-document state files, and `tw migrate-star` maps Star's offsets by word alignment as described.
+- Status update (Saturday, September 26, 2026, Phases 1 and 2): core gained `Strikethrough`, `Rule`, and `Math` markers (Agent P1d). Positions and bookmarks carry the text they were on, and each state records the text's length and hash, so marks are found again after the file changes outside textweaver (Agents P1b and P2a, `crates/textweaver-app/src/relocate.rs`). In edit mode, the Markdown source has its own markers at source positions, and positions move between the source and the canonical text by paired block markers instead of the word aligner (Agent P2b, `crates/textweaver-app/src/structure.rs`).
 
 ## Context
 

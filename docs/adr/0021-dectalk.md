@@ -3,6 +3,7 @@
 - Status: accepted
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): Integrated. The backend is registered by the app, and `[speech.dectalk] library` is read from the settings. It has still not been tested against a licensed DECtalk.
+- Status update (Saturday, September 26, 2026, Phases 1 and 2): the DECtalk host synthesizes a long utterance a sentence at a time, so Stop takes effect quickly (Agent P2a), and CI builds the 32-bit DECtalk host and runs the fake-host tests against it (Agent P2d). It has still not been tested against a licensed DECtalk.
 
 ## Context
 

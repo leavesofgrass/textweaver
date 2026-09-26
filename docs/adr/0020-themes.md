@@ -3,6 +3,7 @@
 - Status: accepted
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): The TUI, the app's theme cycle, and the settings moved onto this crate (Agent D3): the terminal reader runs Galaxy by default, cycles all 23 built-ins plus user themes with F5, and follows the system at startup. The TUI's three hand-made themes are gone. The GUI `system` theme is still Wave 3 work.
+- Status update (Saturday, September 26, 2026, Phase 1, Agent P1b): `[highlight] color` and `sentence_color` are laid over the theme's highlight, with a warning when the text falls below 4.5 to 1 contrast (7 to 1 in high-contrast themes). The Wave 3 Xilem GUI takes its colours from `Theme::rgb_table`.
 
 ## Context
 

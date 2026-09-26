@@ -3,6 +3,7 @@
 - Status: accepted
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): Implemented with the amendment above. Of the two Consequences lines about fonts, the second is current: PDF output does not need an installed font. MathML in EPUB and DOCX, real Word footnotes, and native grade 2 braille are still to do.
+- Status update (Saturday, September 26, 2026, Phase 1, Agent P1d): math is typeset by every writer: MathML in EPUB, Word equations in DOCX, print form with its spoken description in PDF, and the spoken form in braille. Of the first update's list, real Word footnotes and native grade 2 braille are still to do.
 
 ## Context
 
