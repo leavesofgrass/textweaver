@@ -5,8 +5,10 @@ use std::path::PathBuf;
 use textweaver_app::a11y::LogAnnouncer;
 use textweaver_app::keymap::{Frontend, Keymap, Platform};
 use textweaver_app::speech::pacing::PacingConfig;
-use textweaver_app::speech::{ServiceConfig, SpeechService, VoiceParams, backends};
-use textweaver_app::store::{Paths, Settings, SettingsStore};
+use textweaver_app::speech::{
+    NormalizeConfig, ServiceConfig, SpeechService, TableMode, VoiceParams, backends,
+};
+use textweaver_app::store::{Paths, Settings, SettingsStore, TableMode as StoreTableMode};
 use textweaver_app::{App, AppConfig};
 
 /// Startup options (from the command line).
@@ -25,6 +27,7 @@ pub struct Options {
 /// The speech configuration the settings describe.
 pub fn service_config(settings: &Settings) -> ServiceConfig {
     let sp = &settings.speech;
+    let norm = &settings.normalization;
     ServiceConfig {
         params: VoiceParams {
             voice: sp.voice.clone(),
@@ -39,6 +42,24 @@ pub fn service_config(settings: &Settings) -> ServiceConfig {
         },
         punctuation: sp.punctuation,
         split_caps: sp.split_caps,
+        normalize: NormalizeConfig {
+            skip_code: sp.skip_code,
+            table_mode: match norm.table_mode {
+                StoreTableMode::Structured => TableMode::Structured,
+                StoreTableMode::Flat => TableMode::Flat,
+                StoreTableMode::Skip => TableMode::Skip,
+            },
+            use_pronunciations: norm.use_pronunciations,
+            pronunciations: norm.pronunciations.clone(),
+            abbreviations: norm.abbreviations,
+            abbrev_expansions: norm.abbrev_expansions.clone(),
+            numbers: norm.numbers,
+            math: norm.math,
+            ..NormalizeConfig::default()
+        },
+        caps: sp.caps,
+        prefer_voice: sp.prefer_voice.clone().filter(|p| !p.is_empty()),
+        ..ServiceConfig::default()
     }
 }
 
