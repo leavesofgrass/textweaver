@@ -58,7 +58,9 @@ pub use library::{
     AddOutcome, Layered, Library, MergeReport, ReferenceSource, folder_library_path,
     user_library_path,
 };
-pub use lookup::{Cache, HttpClient, HttpResponse, Identifier, Lookup, TransportError, UreqClient};
+pub use lookup::{
+    Cache, HttpClient, HttpResponse, Identifier, Lookup, RecordedClient, TransportError, UreqClient,
+};
 pub use pandoc::{Citation, CiteItem, Locator, LocatorLabel};
 pub use reference::{CslDate, Name, Reference};
 pub use render::{FormattedEntry, Formatter, OutputFormat, RenderedDocument};

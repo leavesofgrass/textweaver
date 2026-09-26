@@ -1,0 +1,90 @@
+[
+  {
+    "id": "kucsko2013",
+    "type": "article-journal",
+    "title": "Nanometre-scale thermometry in a living cell",
+    "author": [
+      { "family": "Kucsko", "given": "G." },
+      { "family": "Maurer", "given": "P. C." },
+      { "family": "Yao", "given": "N. Y." }
+    ],
+    "issued": { "date-parts": [[2013, 7, 31]] },
+    "container-title": "Nature",
+    "volume": "500",
+    "issue": "7460",
+    "page": "54-58",
+    "DOI": "10.1038/nature12373",
+    "ISSN": "0028-0836"
+  },
+  {
+    "id": "dahl1988",
+    "type": "book",
+    "title": "Fantastic Mr. Fox",
+    "author": [{ "family": "Dahl", "given": "Roald" }],
+    "issued": { "date-parts": [[1988, 10, 1]] },
+    "publisher": "Puffin",
+    "publisher-place": "London",
+    "ISBN": "9780140328721"
+  },
+  {
+    "id": "smyth2007",
+    "type": "chapter",
+    "title": "Adventures in personalized information access",
+    "author": [{ "family": "Smyth", "given": "Barry" }],
+    "editor": [
+      { "family": "Conati", "given": "Cristina" },
+      { "family": "McCoy", "given": "Kathleen" }
+    ],
+    "container-title": "User Modeling 2007",
+    "collection-title": "Lecture Notes in Computer Science",
+    "issued": { "date-parts": [[2007]] },
+    "publisher": "Springer",
+    "publisher-place": "Berlin",
+    "page": "5-6",
+    "DOI": "10.1007/978-3-540-74958-5_4"
+  },
+  {
+    "id": "vangogh2020",
+    "type": "paper-conference",
+    "title": "Screen readers and the reading of mathematics",
+    "author": [
+      { "family": "Gogh", "given": "Vincent", "non-dropping-particle": "van" },
+      { "literal": "The Accessible Reading Group" }
+    ],
+    "container-title": "Proceedings of the Conference on Accessible Reading",
+    "issued": { "date-parts": [[2020, 5]] },
+    "page": "101-110",
+    "publisher": "Accessible Press"
+  },
+  {
+    "id": "muller2019",
+    "type": "thesis",
+    "genre": "PhD thesis",
+    "title": "Hörbücher und Sprachsynthese",
+    "author": [{ "family": "Müller", "given": "Jörg" }],
+    "issued": { "date-parts": [[2019]] },
+    "publisher": "Universität Wien",
+    "language": "de"
+  },
+  {
+    "id": "who2021",
+    "type": "report",
+    "title": "World report on vision & print disability",
+    "author": [{ "literal": "World Health Organization" }],
+    "issued": { "date-parts": [[2021, 3, 4]] },
+    "publisher": "World Health Organization",
+    "publisher-place": "Geneva",
+    "number": "WHO/2021.1",
+    "URL": "https://example.org/who_report?id=1&lang=en"
+  },
+  {
+    "id": "access2024",
+    "type": "webpage",
+    "title": "Designing for keyboard and screen reader users",
+    "author": [{ "family": "Doe", "given": "Jane" }],
+    "container-title": "Accessibility Notes",
+    "issued": { "date-parts": [[2024, 1, 15]] },
+    "accessed": { "date-parts": [[2026, 9, 1]] },
+    "URL": "https://example.org/notes/keyboard"
+  }
+]

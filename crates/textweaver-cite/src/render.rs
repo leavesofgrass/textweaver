@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use hayagriva::citationberg::{FontStyle, FontVariant, FontWeight, TextDecoration, VerticalAlign};
 use hayagriva::{
     BibliographyDriver, BibliographyRequest, CitationItem, CitationRequest, CitePurpose, ElemChild,
-    ElemChildren, Entry, Formatting, LocatorPayload, SpecificLocator,
+    ElemChildren, ElemMeta, Entry, Formatting, LocatorPayload, SpecificLocator,
 };
 use serde_json::{Map, Value, json};
 
@@ -96,16 +96,84 @@ enum Part {
         request: usize,
         prefix: String,
         suffix: String,
-        /// For `-@key`: the author text to strip from a prose rendering.
-        strip_author: Option<String>,
     },
     Missing(String),
+}
+
+/// A flattened piece of rendered output.
+enum Leaf<'a> {
+    Text(&'a str, Formatting),
+    Link(&'a str, Formatting, &'a str),
+    BlockStart,
+    BlockEnd,
+}
+
+impl Leaf<'_> {
+    fn raised(&self) -> Option<VerticalAlign> {
+        match self {
+            Leaf::Text(_, f) | Leaf::Link(_, f, _) => {
+                matches!(f.vertical_align, VerticalAlign::Sup | VerticalAlign::Sub)
+                    .then_some(f.vertical_align)
+            }
+            _ => None,
+        }
+    }
+
+    fn text(&self) -> &str {
+        match self {
+            Leaf::Text(t, _) | Leaf::Link(t, _, _) => t,
+            _ => "",
+        }
+    }
+}
+
+fn flatten<'a>(children: &'a [ElemChild], out: &mut Vec<Leaf<'a>>) {
+    for c in children {
+        match c {
+            ElemChild::Text(t) => out.push(Leaf::Text(&t.text, t.formatting)),
+            ElemChild::Markup(m) => out.push(Leaf::Text(m, Formatting::default())),
+            ElemChild::Link { text, url } => out.push(Leaf::Link(&text.text, text.formatting, url)),
+            ElemChild::Elem(e) => {
+                let block = e.display.is_some();
+                if block {
+                    out.push(Leaf::BlockStart);
+                }
+                flatten(&e.children.0, out);
+                if block {
+                    out.push(Leaf::BlockEnd);
+                }
+            }
+            ElemChild::Transparent { .. } => {}
+        }
+    }
+}
+
+/// Removes the first names element (the author) from rendered output, for
+/// `-@key` (suppress author).
+fn remove_first_names(children: &mut Vec<ElemChild>) -> bool {
+    for i in 0..children.len() {
+        if let ElemChild::Elem(e) = &mut children[i] {
+            if matches!(e.meta, Some(ElemMeta::Names(..))) {
+                children.remove(i);
+                return true;
+            }
+            if remove_first_names(&mut e.children.0) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 impl<'s> Formatter<'s> {
     /// A formatter.
     pub fn new(style: &'s CitationStyle, format: OutputFormat) -> Self {
         Formatter { style, format }
+    }
+
+    /// The output format.
+    pub fn format(&self) -> OutputFormat {
+        self.format
     }
 
     /// Formats references as a bibliography, sorted and numbered as the
@@ -138,7 +206,7 @@ impl<'s> Formatter<'s> {
     }
 
     /// One reference's in-text citation, as if cited alone: "(Doe &
-    /// Roe, 2020)" in APA, "[1]" in IEEE.
+    /// Roe, 2020)" in APA, "[1]" in IEEE, the full note in a note style.
     pub fn cite(&self, r: &Reference) -> Result<String> {
         let entry = to_entry(r)?;
         let mut driver = BibliographyDriver::new();
@@ -168,6 +236,10 @@ impl<'s> Formatter<'s> {
     }
 
     /// Formats every citation of a document and its bibliography.
+    ///
+    /// In a note style (Chicago notes), in-text (`@key`) and author-less
+    /// (`-@key`) citations are formatted as ordinary notes, as Pandoc does:
+    /// the note carries the full reference either way.
     pub fn document(
         &self,
         cites: &[Citation],
@@ -190,27 +262,25 @@ impl<'s> Formatter<'s> {
 
         let style = &self.style.csl;
         let locale = self.style.locale.clone();
+        let note = self.style.is_note_style();
         let mut driver = BibliographyDriver::new();
         let mut requests = 0usize;
+        let mut suppressed: Vec<bool> = Vec::new();
         let mut plans: Vec<Plan> = Vec::with_capacity(cites.len());
-        let note = self.style.is_note_style();
         for (n, cite) in cites.iter().enumerate() {
             let note_number = note.then_some(n + 1);
+            let narrative = cite.narrative && !note;
             let simple = cite.items.iter().all(|i| {
                 i.prefix.is_empty()
                     && i.suffix.is_empty()
-                    && !i.suppress_author
+                    && (note || !i.suppress_author)
                     && entries.contains_key(&i.key)
             });
             if simple {
                 let items = cite
                     .items
                     .iter()
-                    .filter_map(|i| {
-                        entries
-                            .get(&i.key)
-                            .map(|e| citation_item(e, i, cite.narrative))
-                    })
+                    .filter_map(|i| entries.get(&i.key).map(|e| citation_item(e, i, narrative)))
                     .collect();
                 driver.citation(CitationRequest::new(
                     items,
@@ -220,6 +290,7 @@ impl<'s> Formatter<'s> {
                     note_number,
                 ));
                 plans.push(Plan::Whole(requests));
+                suppressed.push(false);
                 requests += 1;
                 continue;
             }
@@ -229,14 +300,9 @@ impl<'s> Formatter<'s> {
                     parts.push(Part::Missing(i.key.clone()));
                     continue;
                 };
-                let strip_author = if i.suppress_author {
-                    Some(self.standalone_author(e))
-                } else {
-                    None
-                };
-                let prose = cite.narrative || i.suppress_author;
+                let suppress = i.suppress_author && !note;
                 driver.citation(CitationRequest::new(
-                    vec![citation_item(e, i, prose)],
+                    vec![citation_item(e, i, narrative || suppress)],
                     style,
                     locale.clone(),
                     locales(),
@@ -246,8 +312,8 @@ impl<'s> Formatter<'s> {
                     request: requests,
                     prefix: i.prefix.clone(),
                     suffix: i.suffix.clone(),
-                    strip_author,
                 });
+                suppressed.push(suppress);
                 requests += 1;
             }
             plans.push(Plan::Parts(parts));
@@ -256,56 +322,75 @@ impl<'s> Formatter<'s> {
         let texts: Vec<String> = rendered
             .citations
             .iter()
-            .map(|c| self.children(&c.citation))
+            .zip(&suppressed)
+            .map(|(c, &suppress)| {
+                if suppress {
+                    // A prose citation ("Doe (2020)") without its names.
+                    let mut children = c.citation.clone();
+                    remove_first_names(&mut children.0);
+                    self.children(&children)
+                } else {
+                    self.children(&c.citation)
+                }
+            })
             .collect();
 
         let layout = &style.citation.layout;
-        let (open, close) = (
-            layout.prefix.clone().unwrap_or_default(),
-            layout.suffix.clone().unwrap_or_default(),
-        );
+        let open = layout.prefix.clone().unwrap_or_default();
+        let close = layout.suffix.clone().unwrap_or_default();
         let delimiter = layout.delimiter.clone().unwrap_or_else(|| "; ".to_owned());
         let citations = plans
             .into_iter()
             .map(|plan| match plan {
                 Plan::Whole(i) => texts.get(i).cloned().unwrap_or_default(),
                 Plan::Parts(parts) => {
-                    let pieces: Vec<String> = parts
-                        .into_iter()
-                        .map(|p| match p {
-                            Part::Missing(key) => self.missing_text(&key),
+                    let mut out = String::new();
+                    for p in parts {
+                        let (piece, has_prefix) = match p {
+                            Part::Missing(key) => (self.missing_text(&key), false),
                             Part::Rendered {
                                 request,
                                 prefix,
                                 suffix,
-                                strip_author,
                             } => {
-                                let mut t = texts.get(request).cloned().unwrap_or_default();
-                                if let Some(author) = strip_author {
-                                    t = t
-                                        .strip_prefix(author.as_str())
-                                        .map(str::trim_start)
-                                        .map(str::to_owned)
-                                        .unwrap_or(t);
-                                }
-                                let t = strip_affixes(&t, &open, &close);
+                                let t = texts.get(request).map(String::as_str).unwrap_or_default();
+                                let t = strip_affixes(t, &open, &close).trim();
                                 let mut piece = String::new();
                                 if !prefix.is_empty() {
                                     piece.push_str(&self.escape(&prefix));
-                                    piece.push(' ');
+                                    if !t.is_empty() {
+                                        piece.push(' ');
+                                    }
                                 }
                                 piece.push_str(t);
                                 if !suffix.is_empty() {
-                                    if !suffix.starts_with([',', '.', ';', ':', ')']) {
+                                    if !suffix.starts_with([',', '.', ';', ':', ')'])
+                                        && !piece.is_empty()
+                                    {
                                         piece.push(' ');
                                     }
                                     piece.push_str(&self.escape(&suffix));
                                 }
-                                piece
+                                (piece, !prefix.is_empty())
                             }
-                        })
-                        .collect();
-                    format!("{open}{}{close}", pieces.join(&delimiter))
+                        };
+                        if piece.trim().is_empty() {
+                            continue;
+                        }
+                        if !out.is_empty() {
+                            out.push_str(&delimiter);
+                            // "(see 3, also 4)", not "(see 3,also 4)".
+                            if has_prefix && !delimiter.ends_with(' ') {
+                                out.push(' ');
+                            }
+                        }
+                        out.push_str(&piece);
+                    }
+                    if out.is_empty() {
+                        String::new()
+                    } else {
+                        format!("{open}{out}{close}")
+                    }
                 }
             })
             .collect();
@@ -316,17 +401,6 @@ impl<'s> Formatter<'s> {
             missing,
             note_style: note,
         })
-    }
-
-    fn standalone_author(&self, e: &Entry) -> String {
-        let req = CitationRequest::new(
-            vec![CitationItem::with_entry(e).kind(CitePurpose::Author)],
-            &self.style.csl,
-            self.style.locale.clone(),
-            locales(),
-            None,
-        );
-        self.children(&hayagriva::standalone_citation(req))
     }
 
     fn missing_text(&self, key: &str) -> String {
@@ -358,9 +432,7 @@ impl<'s> Formatter<'s> {
             .map(|item| {
                 let mut text = String::new();
                 if let Some(first) = &item.first_field {
-                    let mut f = String::new();
-                    self.child(first, &mut f);
-                    text.push_str(f.trim());
+                    text.push_str(&self.children(&ElemChildren(vec![first.clone()])));
                     text.push(' ');
                 }
                 text.push_str(&self.children(&item.content));
@@ -373,59 +445,88 @@ impl<'s> Formatter<'s> {
     }
 
     fn children(&self, children: &ElemChildren) -> String {
+        let mut leaves = Vec::new();
+        flatten(&children.0, &mut leaves);
         let mut out = String::new();
-        for c in &children.0 {
-            self.child(c, &mut out);
+        let mut i = 0;
+        while i < leaves.len() {
+            // A run of raised (superscript or subscript) text is rendered as
+            // one unit; numbers in it are bracketed so they are not heard as
+            // part of the word before them ("reported [1]", not "reported1").
+            if let Some(align) = leaves[i].raised() {
+                let start = i;
+                while i < leaves.len() && leaves[i].raised() == Some(align) {
+                    i += 1;
+                }
+                let run: String = leaves[start..i].iter().map(Leaf::text).collect();
+                self.raised_run(&run, align, &mut out);
+                continue;
+            }
+            match &leaves[i] {
+                Leaf::Text(t, f) => self.formatted(t, *f, &mut out),
+                Leaf::Link(t, f, url) => self.link(t, *f, url, &mut out),
+                Leaf::BlockStart => match self.format {
+                    OutputFormat::Html => out.push_str("<div class=\"csl-block\">"),
+                    _ => out.push(' '),
+                },
+                Leaf::BlockEnd => match self.format {
+                    OutputFormat::Html => out.push_str("</div>"),
+                    _ => out.push(' '),
+                },
+            }
+            i += 1;
         }
         tidy(&out, self.format)
     }
 
-    fn child(&self, child: &ElemChild, out: &mut String) {
-        match child {
-            ElemChild::Text(t) => self.formatted(&t.text, t.formatting, out),
-            ElemChild::Markup(m) => out.push_str(&self.escape(m)),
-            ElemChild::Elem(e) => {
-                let block = e.display.is_some();
-                if block {
-                    match self.format {
-                        OutputFormat::Html => out.push_str("<div class=\"csl-block\">"),
-                        _ => out.push(' '),
-                    }
-                }
-                for c in &e.children.0 {
-                    self.child(c, out);
-                }
-                if block {
-                    match self.format {
-                        OutputFormat::Html => out.push_str("</div>"),
-                        _ => out.push(' '),
-                    }
+    fn raised_run(&self, run: &str, align: VerticalAlign, out: &mut String) {
+        let core = run.trim();
+        if core.is_empty() {
+            return;
+        }
+        let bracketed = core.chars().any(|c| c.is_ascii_digit());
+        let body = if bracketed {
+            format!("[{core}]")
+        } else {
+            core.to_owned()
+        };
+        match self.format {
+            OutputFormat::Plain => out.push_str(&body),
+            OutputFormat::Markdown => out.push_str(&escape_markdown(&body)),
+            OutputFormat::Html => {
+                let tag = if align == VerticalAlign::Sub {
+                    "sub"
+                } else {
+                    "sup"
+                };
+                out.push_str(&format!("<{tag}>{}</{tag}>", escape_html(&body)));
+            }
+        }
+    }
+
+    fn link(&self, text: &str, f: Formatting, url: &str, out: &mut String) {
+        match self.format {
+            OutputFormat::Plain => self.formatted(text, f, out),
+            OutputFormat::Markdown => {
+                if text == url && !url.contains(['<', '>', ' ']) {
+                    out.push('<');
+                    out.push_str(url);
+                    out.push('>');
+                } else {
+                    out.push('[');
+                    self.formatted(text, f, out);
+                    out.push_str("](");
+                    out.push_str(&url.replace(' ', "%20").replace(')', "%29"));
+                    out.push(')');
                 }
             }
-            ElemChild::Link { text, url } => match self.format {
-                OutputFormat::Plain => self.formatted(&text.text, text.formatting, out),
-                OutputFormat::Markdown => {
-                    if text.text == *url && !url.contains(['<', '>', ' ']) {
-                        out.push('<');
-                        out.push_str(url);
-                        out.push('>');
-                    } else {
-                        out.push('[');
-                        self.formatted(&text.text, text.formatting, out);
-                        out.push_str("](");
-                        out.push_str(&url.replace(' ', "%20").replace(')', "%29"));
-                        out.push(')');
-                    }
-                }
-                OutputFormat::Html => {
-                    out.push_str("<a href=\"");
-                    out.push_str(&escape_html(url));
-                    out.push_str("\">");
-                    self.formatted(&text.text, text.formatting, out);
-                    out.push_str("</a>");
-                }
-            },
-            ElemChild::Transparent { .. } => {}
+            OutputFormat::Html => {
+                out.push_str("<a href=\"");
+                out.push_str(&escape_html(url));
+                out.push_str("\">");
+                self.formatted(text, f, out);
+                out.push_str("</a>");
+            }
         }
     }
 
@@ -433,27 +534,12 @@ impl<'s> Formatter<'s> {
         if text.is_empty() {
             return;
         }
-        // Superscript and subscript numbers are bracketed so they are not
-        // heard as part of the word before them.
-        let numeric = text
-            .trim()
-            .chars()
-            .all(|c| c.is_ascii_digit() || matches!(c, ',' | '-' | '–' | ' '));
-        let raised = !matches!(
-            f.vertical_align,
-            VerticalAlign::None | VerticalAlign::Baseline
-        );
-        let body: String = if raised && numeric {
-            format!("[{}]", text.trim())
-        } else {
-            text.to_owned()
-        };
         match self.format {
-            OutputFormat::Plain => out.push_str(&body),
+            OutputFormat::Plain => out.push_str(text),
             OutputFormat::Markdown => {
-                let lead = &body[..body.len() - body.trim_start().len()];
-                let trail = &body[body.trim_end().len()..];
-                let core = body.trim();
+                let lead = &text[..text.len() - text.trim_start().len()];
+                let trail = &text[text.trim_end().len()..];
+                let core = text.trim();
                 let mut marks = String::new();
                 if matches!(f.font_weight, FontWeight::Bold) {
                     marks.push_str("**");
@@ -487,18 +573,7 @@ impl<'s> Formatter<'s> {
                     out.push_str("<u>");
                     close.push("</u>");
                 }
-                match f.vertical_align {
-                    VerticalAlign::Sup => {
-                        out.push_str("<sup>");
-                        close.push("</sup>");
-                    }
-                    VerticalAlign::Sub => {
-                        out.push_str("<sub>");
-                        close.push("</sub>");
-                    }
-                    _ => {}
-                }
-                out.push_str(&escape_html(&body));
+                out.push_str(&escape_html(text));
                 for c in close.into_iter().rev() {
                     out.push_str(c);
                 }
@@ -550,7 +625,7 @@ fn hayagriva_types(r: &Reference) -> (&'static str, Option<&'static str>) {
         }
         "article-newspaper" => ("article", Some("newspaper")),
         "article" => ("article", container.then_some("periodical")),
-        "paper-conference" => ("article", Some("proceedings")),
+        "paper-conference" => ("chapter", Some("book")),
         "chapter" => ("chapter", Some("book")),
         "entry-encyclopedia" | "entry-dictionary" | "entry" => ("chapter", Some("reference")),
         "book" | "classic" => ("book", None),

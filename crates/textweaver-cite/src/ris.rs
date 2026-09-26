@@ -69,6 +69,16 @@ fn csl_type(ris: &str) -> &'static str {
     }
 }
 
+/// RIS writes people as `Family, Given`; a name without a comma is an
+/// organization ("World Health Organization"), as Zotero exports them.
+fn ris_name(s: &str) -> Name {
+    if s.contains(',') {
+        Name::parse(s)
+    } else {
+        Name::literal(s.trim())
+    }
+}
+
 /// Splits a line into `(tag, value)`: two uppercase letters or a letter
 /// and a digit, spaces, a hyphen, and the value. Tolerates one or two
 /// spaces before the hyphen and a missing space after it.
@@ -169,17 +179,9 @@ fn record_to_reference(rec: Record) -> Reference {
         r.title = rec.first(&["BT"]);
     }
     r.title_short = rec.first(&["ST"]);
-    r.author = rec
-        .all(&["AU", "A1"])
-        .into_iter()
-        .map(Name::parse)
-        .collect();
-    r.editor = rec
-        .all(&["ED", "A2"])
-        .into_iter()
-        .map(Name::parse)
-        .collect();
-    r.translator = rec.all(&["A4"]).into_iter().map(Name::parse).collect();
+    r.author = rec.all(&["AU", "A1"]).into_iter().map(ris_name).collect();
+    r.editor = rec.all(&["ED", "A2"]).into_iter().map(ris_name).collect();
+    r.translator = rec.all(&["A4"]).into_iter().map(ris_name).collect();
     let container_tags: &[&str] = if kind == "book" {
         &["T2", "JF", "JO"]
     } else {

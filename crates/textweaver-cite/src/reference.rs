@@ -321,6 +321,23 @@ impl Name {
         }
     }
 
+    /// A name whose family part may start with lowercase particles
+    /// ("van Gogh"), which become the non-dropping particle.
+    fn with_particle(family: &str, given: &str) -> Self {
+        let words: Vec<&str> = family.split_whitespace().collect();
+        let n = words
+            .iter()
+            .take_while(|w| w.chars().next().is_some_and(char::is_lowercase))
+            .count();
+        if n == 0 || n == words.len() {
+            return Name::new(family, given);
+        }
+        Name {
+            non_dropping_particle: non_empty(&words[..n].join(" ")),
+            ..Name::new(&words[n..].join(" "), given)
+        }
+    }
+
     /// An unsplit name (an organization).
     pub fn literal(name: &str) -> Self {
         Name {
@@ -340,9 +357,9 @@ impl Name {
         match parts.as_slice() {
             [family, suffix, given] => Name {
                 suffix: non_empty(suffix),
-                ..Name::new(family, given)
+                ..Name::with_particle(family, given)
             },
-            [family, given] => Name::new(family, given),
+            [family, given] => Name::with_particle(family, given),
             _ => {
                 let words: Vec<&str> = s.split_whitespace().collect();
                 match words.split_last() {
@@ -801,7 +818,8 @@ fn de_opt_date<'de, D: Deserializer<'de>>(d: D) -> Result<Option<CslDate>, D::Er
             .and_then(|y| i32::try_from(y).ok())
             .map(CslDate::year),
         _ => None,
-    })
+    }
+    .filter(|d| !d.date_parts.is_empty() || d.literal.is_some() || d.raw.is_some()))
 }
 
 fn de_date_parts<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<Vec<i32>>, D::Error> {

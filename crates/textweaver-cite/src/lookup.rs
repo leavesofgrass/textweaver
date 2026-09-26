@@ -4,7 +4,10 @@
 //!   (`Accept: application/vnd.citationstyles.csl+json`). This works for
 //!   Crossref, DataCite, and mEDRA DOIs alike; Star asked the Crossref API
 //!   only, so DataCite DOIs (datasets, many theses) failed.
-//! - **ISBN**: the Open Library Books API (no key needed).
+//! - **ISBN**: Open Library's edition records (`/isbn/<isbn>.json`) and
+//!   author records (no key needed). Star used Open Library's Books API
+//!   (`/api/books?bibkeys=`), which answered 404 for every ISBN when this
+//!   was written.
 //!
 //! Lookups are blocking (one request each; ADR-0001 allows async outside
 //! speech, but nothing here needs parallel requests) and go through the
@@ -289,10 +292,56 @@ fn classify(e: &ureq::Error) -> TransportError {
     }
 }
 
+// ---- test client --------------------------------------------------------------
+
+/// An [`HttpClient`] that answers from recorded responses, for tests and
+/// offline demonstrations. Unknown URLs fail as if the network were down,
+/// so offline behavior is testable too.
+#[derive(Clone, Debug, Default)]
+pub struct RecordedClient {
+    routes: Vec<(String, HttpResponse)>,
+    requests: std::cell::RefCell<Vec<String>>,
+}
+
+impl RecordedClient {
+    /// A client that knows no URLs (always "offline").
+    pub fn new() -> Self {
+        RecordedClient::default()
+    }
+
+    /// Answers `url` with `status` and `body`.
+    pub fn with(mut self, url: &str, status: u16, body: &str) -> Self {
+        self.routes.push((
+            url.to_owned(),
+            HttpResponse {
+                status,
+                body: body.to_owned(),
+            },
+        ));
+        self
+    }
+
+    /// The URLs requested so far, in order.
+    pub fn requests(&self) -> Vec<String> {
+        self.requests.borrow().clone()
+    }
+}
+
+impl HttpClient for RecordedClient {
+    fn get(&self, url: &str, _accept: &str) -> Result<HttpResponse, TransportError> {
+        self.requests.borrow_mut().push(url.to_owned());
+        self.routes
+            .iter()
+            .find(|(u, _)| u == url)
+            .map(|(_, r)| r.clone())
+            .ok_or_else(|| TransportError::Unreachable(format!("no recorded response for {url}")))
+    }
+}
+
 // ---- cache ------------------------------------------------------------------
 
-/// A small on-disk cache of lookup answers, one file per identifier,
-/// oldest files removed past [`Cache::max_entries`].
+/// A small on-disk cache of looked-up references (as CSL-JSON), one file
+/// per identifier, oldest files removed past [`Cache::max_entries`].
 #[derive(Clone, Debug)]
 pub struct Cache {
     dir: PathBuf,
@@ -301,7 +350,7 @@ pub struct Cache {
 }
 
 impl Cache {
-    /// A cache in `dir` (created on first write), keeping 500 answers.
+    /// A cache in `dir` (created on first write), keeping 500 references.
     pub fn new(dir: impl Into<PathBuf>) -> Self {
         Cache {
             dir: dir.into(),
@@ -336,17 +385,28 @@ impl Cache {
         ))
     }
 
-    /// The cached answer for an identifier.
-    pub fn get(&self, id: &Identifier) -> Option<String> {
-        std::fs::read_to_string(self.file(id)).ok()
+    /// The cached reference for an identifier.
+    pub fn get(&self, id: &Identifier) -> Option<Reference> {
+        let text = std::fs::read_to_string(self.file(id)).ok()?;
+        match serde_json::from_str::<Reference>(&text) {
+            Ok(r) => Some(r),
+            Err(e) => {
+                log::warn!("citation lookup cache: ignoring an unreadable entry: {e}");
+                None
+            }
+        }
     }
 
-    /// Stores an answer. Failures only log: a cache must never stop a
+    /// Stores a reference. Failures only log: a cache must never stop a
     /// lookup that succeeded.
-    pub fn put(&self, id: &Identifier, body: &str) {
-        if let Err(e) =
-            std::fs::create_dir_all(&self.dir).and_then(|_| std::fs::write(self.file(id), body))
-        {
+    pub fn put(&self, id: &Identifier, r: &Reference) {
+        let written = serde_json::to_string_pretty(r)
+            .map_err(std::io::Error::other)
+            .and_then(|text| {
+                std::fs::create_dir_all(&self.dir)?;
+                std::fs::write(self.file(id), text)
+            });
+        if let Err(e) = written {
             log::warn!(
                 "citation lookup cache: could not write to {}: {e}",
                 self.dir.display()
@@ -387,6 +447,9 @@ fn fnv1a(bytes: &[u8]) -> u64 {
 
 // ---- lookup -----------------------------------------------------------------
 
+/// Open Library's base URL.
+pub const OPEN_LIBRARY: &str = "https://openlibrary.org";
+
 /// Looks up references by DOI or ISBN.
 pub struct Lookup<'a> {
     client: &'a dyn HttpClient,
@@ -413,75 +476,152 @@ impl<'a> Lookup<'a> {
         self.identifier(&Identifier::parse(input)?)
     }
 
-    /// Looks up an identifier. The reference's key is left empty for the
-    /// library to assign.
+    /// Looks up an identifier, from the cache when it has the answer. The
+    /// reference's key is left empty for the library to assign.
     pub fn identifier(&self, id: &Identifier) -> Result<Reference, LookupError> {
-        if let Some(cache) = &self.cache
-            && let Some(body) = cache.get(id)
-        {
-            match self.decode(id, &body) {
-                Ok(r) => return Ok(r),
-                Err(e) => log::warn!("citation lookup cache: ignoring an unreadable entry: {e}"),
-            }
+        if let Some(r) = self.cache.as_ref().and_then(|c| c.get(id)) {
+            return Ok(r);
         }
-        let (url, accept, service) = match id {
-            Identifier::Doi(d) => (
-                format!("https://doi.org/{}", encode_doi(d)),
-                CSL_JSON_ACCEPT,
-                DOI_SERVICE,
-            ),
-            Identifier::Isbn(i) => {
-                let mut keys = vec![format!("ISBN:{i}")];
-                for alt in [isbn_to_13(i), isbn_to_10(i)].into_iter().flatten() {
-                    if &alt != i {
-                        keys.push(format!("ISBN:{alt}"));
-                    }
-                }
-                (
-                    format!(
-                        "https://openlibrary.org/api/books?bibkeys={}&format=json&jscmd=data",
-                        keys.join(",")
-                    ),
-                    "application/json",
-                    ISBN_SERVICE,
-                )
-            }
+        let r = match id {
+            Identifier::Doi(d) => self.doi(d)?,
+            Identifier::Isbn(i) => self.isbn(i)?,
         };
-        let resp = self.client.get(&url, accept).map_err(|e| match e {
+        if let Some(cache) = &self.cache {
+            cache.put(id, &r);
+        }
+        Ok(r)
+    }
+
+    fn fetch(
+        &self,
+        service: &'static str,
+        url: &str,
+        accept: &str,
+    ) -> Result<HttpResponse, LookupError> {
+        self.client.get(url, accept).map_err(|e| match e {
             TransportError::Timeout => LookupError::Timeout {
                 service,
                 seconds: self.client.timeout().as_secs(),
             },
             TransportError::Unreachable(detail) => LookupError::Offline { service, detail },
-        })?;
-        match resp.status {
-            200..=299 => {}
-            404 | 410 => {
-                return Err(LookupError::NotFound {
-                    service,
-                    what: id.describe(),
-                });
-            }
-            status => return Err(LookupError::Http { service, status }),
-        }
-        let r = self.decode(id, &resp.body)?;
-        if let Some(cache) = &self.cache {
-            cache.put(id, &resp.body);
-        }
-        Ok(r)
+        })
     }
 
-    fn decode(&self, id: &Identifier, body: &str) -> Result<Reference, LookupError> {
-        match id {
-            Identifier::Doi(d) => reference_from_doi_csl(d, body),
-            Identifier::Isbn(i) => reference_from_open_library(i, body),
+    fn doi(&self, doi: &str) -> Result<Reference, LookupError> {
+        let url = format!("https://doi.org/{}", encode_doi(doi));
+        let resp = self.fetch(DOI_SERVICE, &url, CSL_JSON_ACCEPT)?;
+        match resp.status {
+            200..=299 => reference_from_doi_csl(doi, &resp.body),
+            404 | 410 => Err(LookupError::NotFound {
+                service: DOI_SERVICE,
+                what: format!("DOI {doi}"),
+            }),
+            status => Err(LookupError::Http {
+                service: DOI_SERVICE,
+                status,
+            }),
         }
+    }
+
+    /// The edition record (`/isbn/<isbn>.json`, trying the other ISBN form
+    /// on a miss), then author names from the edition's author records, or
+    /// the work's when the edition lists none.
+    fn isbn(&self, isbn: &str) -> Result<Reference, LookupError> {
+        let mut candidates = vec![isbn.to_owned()];
+        for alt in [isbn_to_13(isbn), isbn_to_10(isbn)].into_iter().flatten() {
+            if !candidates.contains(&alt) {
+                candidates.push(alt);
+            }
+        }
+        let mut edition = None;
+        for c in &candidates {
+            let resp = self.fetch(
+                ISBN_SERVICE,
+                &format!("{OPEN_LIBRARY}/isbn/{c}.json"),
+                "application/json",
+            )?;
+            match resp.status {
+                200..=299 => {
+                    edition = Some(resp.body);
+                    break;
+                }
+                404 | 410 => continue,
+                status => {
+                    return Err(LookupError::Http {
+                        service: ISBN_SERVICE,
+                        status,
+                    });
+                }
+            }
+        }
+        let Some(edition) = edition else {
+            return Err(LookupError::NotFound {
+                service: ISBN_SERVICE,
+                what: format!("ISBN {isbn}"),
+            });
+        };
+        let edition: Value =
+            serde_json::from_str(&edition).map_err(|e| LookupError::BadResponse {
+                service: ISBN_SERVICE,
+                detail: format!("not JSON ({e})"),
+            })?;
+        let mut author_keys = keys_at(&edition, "authors", &["key"]);
+        if author_keys.is_empty()
+            && let Some(work) = keys_at(&edition, "works", &["key"]).first()
+        {
+            let resp = self.fetch(
+                ISBN_SERVICE,
+                &format!("{OPEN_LIBRARY}{work}.json"),
+                "application/json",
+            )?;
+            if (200..300).contains(&resp.status)
+                && let Ok(w) = serde_json::from_str::<Value>(&resp.body)
+            {
+                author_keys = keys_at(&w, "authors", &["author", "key"]);
+            }
+        }
+        let mut authors = Vec::new();
+        for key in author_keys.iter().take(10) {
+            let resp = self.fetch(
+                ISBN_SERVICE,
+                &format!("{OPEN_LIBRARY}{key}.json"),
+                "application/json",
+            )?;
+            if (200..300).contains(&resp.status)
+                && let Ok(a) = serde_json::from_str::<Value>(&resp.body)
+                && let Some(name) = a.get("name").and_then(Value::as_str).and_then(non_empty)
+            {
+                authors.push(name);
+            }
+        }
+        reference_from_open_library(isbn, &edition, &authors)
     }
 }
 
+/// Keys such as `/authors/OL34184A` found at `field[].path...`.
+fn keys_at(v: &Value, field: &str, path: &[&str]) -> Vec<String> {
+    v.get(field)
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| {
+                    let mut cur = item;
+                    for p in path {
+                        cur = cur.get(p)?;
+                    }
+                    cur.as_str()
+                        .filter(|s| s.starts_with('/'))
+                        .map(str::to_owned)
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 /// Percent-encodes a DOI for a URL path, keeping `/` (DOI suffixes may
-/// contain `#`, `?`, `<`, `>`, and spaces-free punctuation that would
-/// otherwise end or change the path).
+/// contain `#`, `?`, `<`, and `>`, which would otherwise end or change the
+/// path).
 fn encode_doi(doi: &str) -> String {
     let mut out = String::with_capacity(doi.len());
     for b in doi.bytes() {
@@ -499,10 +639,36 @@ fn encode_doi(doi: &str) -> String {
     out
 }
 
-/// Crossref fields that are bulky and never cited.
+/// Crossref's content negotiation labels items with Crossref's own types
+/// (`journal-article`, `book-chapter`) rather than CSL types; this maps
+/// them. CSL types pass through.
+fn csl_type_for(t: &str) -> &str {
+    match t {
+        "journal-article" => "article-journal",
+        "book-chapter" | "book-section" | "book-part" => "chapter",
+        "proceedings-article" => "paper-conference",
+        "posted-content" => "article",
+        "dissertation" => "thesis",
+        "report" | "report-component" | "report-series" => "report",
+        "book" | "monograph" | "edited-book" | "reference-book" | "book-set" | "book-track"
+        | "book-series" => "book",
+        "reference-entry" => "entry-encyclopedia",
+        "dataset" | "database" => "dataset",
+        "peer-review" => "review",
+        "standard" | "standard-series" => "standard",
+        "journal-issue" | "journal-volume" | "journal" | "proceedings" | "proceedings-series" => {
+            "periodical"
+        }
+        "component" | "other" | "grant" => "document",
+        other => other,
+    }
+}
+
+/// Crossref and DataCite fields that are bulky and never cited.
 const DROPPED_FIELDS: &[&str] = &[
     "reference",
     "references-count",
+    "reference-count",
     "is-referenced-by-count",
     "link",
     "license",
@@ -525,22 +691,22 @@ const DROPPED_FIELDS: &[&str] = &[
     "journal-issue",
     "subject",
     "alternative-id",
-    "container-title-short",
     "short-container-title",
     "original-title",
     "short-title",
     "subtitle",
-    "archive",
     "resource",
     "institution",
     "update-to",
-    "article-number",
     "review",
-    "language",
+    "categories",
+    "copyright",
+    "id",
 ];
 
-/// Turns doi.org's CSL-JSON answer into a clean reference: markup removed
-/// from titles (it would be spelled out aloud), bulky Crossref metadata
+/// Turns doi.org's CSL-JSON answer into a clean reference: Crossref types
+/// mapped to CSL types, markup removed from titles (it would be spelled out
+/// aloud), bulky Crossref metadata dropped, a URL that only repeats the DOI
 /// dropped, the DOI normalized, and the key left for the library.
 pub fn reference_from_doi_csl(doi: &str, body: &str) -> Result<Reference, LookupError> {
     let bad = |detail: String| LookupError::BadResponse {
@@ -552,34 +718,35 @@ pub fn reference_from_doi_csl(doi: &str, body: &str) -> Result<Reference, Lookup
     let Value::Object(map) = &mut value else {
         return Err(bad("expected one reference".to_owned()));
     };
-    // Keep the journal abbreviation if Crossref gave one under its own name.
-    let short = map
-        .get("container-title-short")
-        .or_else(|| map.get("short-container-title"))
-        .cloned();
+    if map.get("container-title-short").is_none()
+        && let Some(s) = map.get("short-container-title").cloned()
+    {
+        map.insert("container-title-short".into(), s);
+    }
     let subtitle = map.get("subtitle").cloned();
-    let language = map.get("language").cloned();
     for f in DROPPED_FIELDS {
         map.remove(*f);
     }
-    if let Some(s) = short {
-        map.insert("container-title-short".into(), s);
-    }
-    if let Some(l) = language.filter(Value::is_string) {
-        map.insert("language".into(), l);
-    }
     let mut r: Reference = serde_json::from_value(value).map_err(|e| bad(e.to_string()))?;
     r.id = String::new();
+    r.kind = csl_type_for(&r.kind).to_owned();
     r.doi = Some(normalize_doi(doi).unwrap_or_else(|| doi.to_owned()));
+    if r.url.as_deref().and_then(normalize_doi).is_some() {
+        r.url = None;
+    }
     for t in [
         &mut r.title,
         &mut r.container_title,
         &mut r.container_title_short,
         &mut r.collection_title,
+        &mut r.abstract_text,
     ] {
         if let Some(s) = t.as_mut() {
             *s = crate::text::plain_title(s);
         }
+    }
+    if r.container_title_short == r.container_title {
+        r.container_title_short = None;
     }
     let sub = subtitle.and_then(|v| match v {
         Value::String(s) => non_empty(&s),
@@ -593,8 +760,11 @@ pub fn reference_from_doi_csl(doi: &str, body: &str) -> Result<Reference, Lookup
             title.push_str(&sub);
         }
     }
-    if let Some(a) = r.abstract_text.as_mut() {
-        *a = crate::text::plain_title(a);
+    if let Some(p) = &r.page
+        && let Some((a, b)) = p.split_once('-')
+        && a == b
+    {
+        r.page = Some(a.to_owned());
     }
     if r.title.is_none() {
         return Err(bad("the record has no title".to_owned()));
@@ -602,29 +772,25 @@ pub fn reference_from_doi_csl(doi: &str, body: &str) -> Result<Reference, Lookup
     Ok(r)
 }
 
-/// Turns an Open Library Books API answer into a book reference.
-pub fn reference_from_open_library(isbn: &str, body: &str) -> Result<Reference, LookupError> {
-    let bad = |detail: String| LookupError::BadResponse {
-        service: ISBN_SERVICE,
-        detail,
-    };
-    let value: Value = serde_json::from_str(body).map_err(|e| bad(format!("not JSON ({e})")))?;
-    let Value::Object(map) = value else {
-        return Err(bad("expected an object".to_owned()));
-    };
-    let Some(book) = map.into_iter().find_map(|(_, v)| v.as_object().cloned()) else {
-        return Err(LookupError::NotFound {
-            service: ISBN_SERVICE,
-            what: format!("ISBN {isbn}"),
-        });
-    };
-    let text = |k: &str| book.get(k).and_then(Value::as_str).and_then(non_empty);
-    let names = |k: &str| -> Vec<String> {
-        book.get(k)
+/// Turns an Open Library edition record (and the author names found for
+/// it) into a book reference.
+pub fn reference_from_open_library(
+    isbn: &str,
+    edition: &Value,
+    authors: &[String],
+) -> Result<Reference, LookupError> {
+    let text = |k: &str| edition.get(k).and_then(Value::as_str).and_then(non_empty);
+    let list = |k: &str| -> Vec<String> {
+        edition
+            .get(k)
             .and_then(Value::as_array)
             .map(|a| {
                 a.iter()
-                    .filter_map(|x| x.get("name").and_then(Value::as_str).and_then(non_empty))
+                    .filter_map(|x| {
+                        x.as_str()
+                            .or_else(|| x.get("name").and_then(Value::as_str))
+                            .and_then(non_empty)
+                    })
                     .collect()
             })
             .unwrap_or_default()
@@ -635,16 +801,22 @@ pub fn reference_from_open_library(isbn: &str, body: &str) -> Result<Reference, 
         None => t,
     });
     if r.title.is_none() {
-        return Err(bad("the record has no title".to_owned()));
+        return Err(LookupError::BadResponse {
+            service: ISBN_SERVICE,
+            detail: "the record has no title".to_owned(),
+        });
     }
-    r.author = names("authors").iter().map(|n| Name::parse(n)).collect();
+    r.author = authors.iter().map(|n| Name::parse(n)).collect();
     r.issued = text("publish_date").and_then(|d| parse_loose_date(&d));
-    let publishers = names("publishers");
+    let publishers = list("publishers");
     r.publisher = (!publishers.is_empty()).then(|| publishers.join(", "));
-    r.publisher_place = names("publish_places").into_iter().next();
+    r.publisher_place = list("publish_places").into_iter().next();
+    r.edition = text("edition_name");
     r.isbn = Some(isbn_to_13(isbn).unwrap_or_else(|| isbn.to_owned()));
-    r.url = text("url");
-    if let Some(n) = book.get("number_of_pages").and_then(Value::as_u64) {
+    if let Some(key) = text("key") {
+        r.url = Some(format!("{OPEN_LIBRARY}{key}"));
+    }
+    if let Some(n) = edition.get("number_of_pages").and_then(Value::as_u64) {
         r.extra
             .insert("number-of-pages".into(), Value::String(n.to_string()));
     }
@@ -652,7 +824,7 @@ pub fn reference_from_open_library(isbn: &str, body: &str) -> Result<Reference, 
 }
 
 /// Dates as Open Library writes them: "2008", "May 2008", "May 5, 2008",
-/// "5 May 2008", "2008-05-05".
+/// "October 1, 1988", "5 May 2008", "2008-05-05".
 fn parse_loose_date(s: &str) -> Option<CslDate> {
     if let Some(d) = CslDate::parse(s).filter(|d| !d.date_parts.is_empty()) {
         return Some(d);

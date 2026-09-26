@@ -43,7 +43,7 @@ const FEATURED: &[(&str, &str)] = &[
     ("chicago-notes", "chicago-notes"),
     ("harvard", "harvard-cite-them-right"),
     ("ieee", "ieee"),
-    ("vancouver", "vancouver"),
+    ("vancouver", "elsevier-vancouver"),
     ("ama", "american-medical-association"),
     ("nature", "nature"),
 ];
