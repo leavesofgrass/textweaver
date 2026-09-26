@@ -119,13 +119,9 @@ The choices in settings (and in HTML views) are:
   - **Lexend**: wide letter spacing, made to reduce visual stress. Home page: https://www.lexend.com/
 - **Any other font** installed on your computer.
 
-All three reading fonts are free, under the SIL Open Font License. OpenDyslexic comes with textweaver. For Atkinson Hyperlegible, textweaver uses the newer Atkinson Hyperlegible Next that comes with it, unless you have the original installed. Lexend does not come with textweaver. If you choose it and it is not installed, textweaver:
+All three reading fonts are free, under the SIL Open Font License. OpenDyslexic comes with textweaver. For Atkinson Hyperlegible, textweaver uses the newer Atkinson Hyperlegible Next that comes with it, unless you have the original installed. Lexend does not come with textweaver. If you choose it and it is not installed, textweaver uses another reading font, or a plain font, so you can keep reading.
 
-1. uses another reading font, or a plain font, so you can keep reading;
-2. tells you which font it is using;
-3. offers to download Lexend. It asks first, and says how big the download is. The files come from the font's own project on GitHub, and are kept in textweaver's cache folder. Nothing is installed on your system.
-
-You can also install a reading font yourself, from its home page. textweaver finds it the next time it starts.
+The reading-aids library is designed to offer a download of a missing reading font, asking first and saying how big the download is (the `[reading_aids.font] fetch_missing` setting). No part of textweaver offers the download yet. To use Lexend, install it yourself from its home page; textweaver finds it the next time it starts.
 
 Font size is in points, from 6 to 144. The default is 14. Below 12, textweaver suggests a larger size.
 

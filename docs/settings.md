@@ -307,7 +307,7 @@ The font in the GUI. The terminal always uses its own font.
 - `family`, default `"sans"`: `"system-ui"`, `"sans"`, `"serif"`, `"monospace"`, a reading font (`"opendyslexic"`, `"atkinson"`, `"lexend"`), or the name of any installed font.
 - `size_pt`, default `14.0`: the size in points, from 6 to 144.
 - `weight`, default `400`: from 100 to 900. 700 is bold.
-- `fetch_missing`, default `true`: offer to download a reading font that is missing. textweaver always asks first.
+- `fetch_missing`, default `true`: offer to download a reading font that is missing, asking first. Not used yet: no part of textweaver offers the download.
 
 ### [reading_aids.ruler]
 
