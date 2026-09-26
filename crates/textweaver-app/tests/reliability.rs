@@ -469,6 +469,66 @@ impl textweaver_app::speech::SpeechBackend for SlowVoices {
 }
 
 #[test]
+fn the_library_is_scanned_off_the_input_thread() {
+    let dir = tempfile::tempdir().unwrap();
+    let folder = dir.path().join("Readings");
+    for sub in 0..10 {
+        let d = folder.join(format!("part{sub}"));
+        std::fs::create_dir_all(&d).unwrap();
+        for i in 0..300 {
+            std::fs::write(d.join(format!("doc{i}.txt")), "Text.").unwrap();
+        }
+    }
+    let mut settings = textweaver_app::store::Settings::default();
+    settings.library.add_folder(&folder);
+    let said = Said::default();
+    let mut app = App::new(AppConfig {
+        settings,
+        paths: Some(textweaver_app::store::Paths::under(
+            &dir.path().join("home"),
+        )),
+        announcer: Box::new(said.clone()),
+        ..AppConfig::for_tests()
+    });
+    let effects = app.dispatch(Command::Action(ActionId::OpenLibrary));
+    // No list yet: the scan runs on its own thread.
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, textweaver_app::Effect::ShowList { .. })),
+        "{effects:?}"
+    );
+    assert!(app.library_scanning());
+    assert_eq!(said.last(), "Scanning the library.");
+    // Asking again while it scans says how far it got.
+    app.dispatch(Command::Action(ActionId::OpenLibrary));
+    assert!(
+        said.last().starts_with("Still scanning the library: "),
+        "{}",
+        said.last()
+    );
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+    let items = loop {
+        assert!(std::time::Instant::now() < deadline, "the scan never ended");
+        let effects = app.tick(std::time::Instant::now());
+        if let Some(items) = effects.iter().find_map(|e| match e {
+            textweaver_app::Effect::ShowList { items, .. } => Some(items.clone()),
+            _ => None,
+        }) {
+            break items;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    };
+    assert_eq!(items.len(), 3000);
+    assert!(
+        said.last().starts_with("Library, 3000 documents."),
+        "{}",
+        said.last()
+    );
+    assert!(!app.library_scanning());
+}
+
+#[test]
 fn choose_voice_never_waits_and_opens_when_the_voices_arrive() {
     use textweaver_app::speech::{ServiceConfig, SpeechService, Voice, VoiceCache};
     let cache = VoiceCache::loading();

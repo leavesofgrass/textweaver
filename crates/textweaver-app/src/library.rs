@@ -12,6 +12,10 @@
 //! says that another device differs).
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::mpsc::{self, Receiver, TryRecvError};
+use std::time::{Duration, Instant};
 
 use textweaver_store::library::{self, LibraryItem, ResumeSource};
 use textweaver_store::sync::Resolution;
@@ -95,38 +99,92 @@ impl App {
     }
 
     /// The library's documents: every document in the library folders,
-    /// then recently opened ones, newest first.
+    /// then recently opened ones, newest first. Scans the folders here,
+    /// which can take a while (up to 20,000 files); the Library command
+    /// scans on a background thread instead.
     pub fn library_items(&self) -> Vec<LibraryItem> {
-        let exts = self.registry.extensions();
-        let supported = |ext: &str| exts.contains(&ext);
-        let scanned = library::scan_library(&self.settings.library.folders, &supported);
-        let (lib, recent) = match &self.paths {
-            Some(p) => (
-                Library::load(&p.library_file()).unwrap_or_default(),
-                Recent::load(&p.recent_file()),
-            ),
-            None => (Library::default(), Recent::default()),
-        };
-        let states = self.state_store();
-        let local = |p: &Path| {
-            states
-                .as_ref()?
-                .load(&DocKey::for_path(p))
-                .filter(DocState::has_position)
-                .map(|s| s.pct)
-        };
-        library::library_view(
-            &scanned,
-            &lib,
-            &recent,
-            self.library_sync.sidecars(),
-            &local,
-        )
+        self.library_inputs().items(&|_| {})
     }
 
-    /// Shows the library list (`open_library`).
+    /// True while the library is being scanned for the Library command.
+    pub fn library_scanning(&self) -> bool {
+        self.library_scan.is_some()
+    }
+
+    /// What a library scan needs, to run on another thread.
+    fn library_inputs(&self) -> LibraryInputs {
+        LibraryInputs {
+            folders: self.settings.library.folders.clone(),
+            extensions: self.registry.extensions(),
+            files: self
+                .paths
+                .as_ref()
+                .map(|p| (p.library_file(), p.recent_file(), p.state_dir())),
+            sync: self.library_sync.clone(),
+        }
+    }
+
+    /// Shows the library list (`open_library`). The folders are scanned on
+    /// a background thread (Phase 2), with the count found shown as it
+    /// goes; the list opens when the scan is done ([`library_tick`](Self::library_tick)).
     pub(crate) fn open_library(&mut self) -> Vec<Effect> {
-        let items = self.library_items();
+        if let Some(scan) = &self.library_scan {
+            let n = scan.found.load(Ordering::Relaxed);
+            self.tell(&format!("Still scanning the library: {n} found so far."));
+            return vec![Effect::Redraw];
+        }
+        let inputs = self.library_inputs();
+        let found = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&found);
+        let (tx, rx) = mpsc::channel();
+        let spawned = std::thread::Builder::new()
+            .name("textweaver-library-scan".into())
+            .spawn(move || {
+                let items = inputs.items(&|n| counter.store(n, Ordering::Relaxed));
+                let _ = tx.send(items);
+            });
+        if let Err(e) = spawned {
+            self.error(&format!("Could not scan the library: {e}."));
+            return vec![Effect::Redraw];
+        }
+        self.library_scan = Some(LibraryScan {
+            items: rx,
+            found,
+            shown_at: Instant::now(),
+        });
+        self.note("Scanning the library.");
+        vec![Effect::Redraw]
+    }
+
+    /// Opens the library list once the scan is done, and shows how many
+    /// documents it has found every second meanwhile (from [`App::tick`]).
+    pub(crate) fn library_tick(&mut self) -> Vec<Effect> {
+        let Some(scan) = &mut self.library_scan else {
+            return Vec::new();
+        };
+        let items = match scan.items.try_recv() {
+            Ok(items) => items,
+            Err(TryRecvError::Empty) => {
+                if scan.shown_at.elapsed() >= PROGRESS_EVERY {
+                    scan.shown_at = Instant::now();
+                    let n = scan.found.load(Ordering::Relaxed);
+                    self.show(&format!("Scanning the library: {n} found so far."));
+                    return vec![Effect::Redraw];
+                }
+                return Vec::new();
+            }
+            Err(TryRecvError::Disconnected) => {
+                self.library_scan = None;
+                self.error("The library scan stopped with an internal error.");
+                return vec![Effect::Redraw];
+            }
+        };
+        self.library_scan = None;
+        self.show_library(items)
+    }
+
+    /// Shows a scanned library as a list.
+    fn show_library(&mut self, items: Vec<LibraryItem>) -> Vec<Effect> {
         if items.is_empty() {
             self.tell(
                 "The library is empty. Add a folder with tw library --add, or open a file with Control O.",
@@ -145,5 +203,60 @@ impl App {
             title: "Library".into(),
             items: lines,
         }]
+    }
+}
+
+/// How often a running library scan shows its count.
+const PROGRESS_EVERY: Duration = Duration::from_secs(1);
+
+/// A library scan on a background thread.
+pub(crate) struct LibraryScan {
+    items: Receiver<Vec<LibraryItem>>,
+    found: Arc<AtomicUsize>,
+    shown_at: Instant,
+}
+
+impl std::fmt::Debug for LibraryScan {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LibraryScan")
+            .field("found", &self.found.load(Ordering::Relaxed))
+            .finish_non_exhaustive()
+    }
+}
+
+/// What a library scan reads: the folders, the extensions the loaders
+/// open, the bookshelf, recent list, and state files, and the sidecars.
+struct LibraryInputs {
+    folders: Vec<PathBuf>,
+    extensions: Vec<&'static str>,
+    files: Option<(PathBuf, PathBuf, PathBuf)>,
+    sync: LibrarySync,
+}
+
+impl LibraryInputs {
+    /// Scans the folders and builds the list, calling `found` with the
+    /// count of documents found so far.
+    fn items(&self, found: &dyn Fn(usize)) -> Vec<LibraryItem> {
+        let supported = |ext: &str| self.extensions.contains(&ext);
+        let scanned = library::scan_library_with(&self.folders, &supported, found);
+        let (lib, recent) = match &self.files {
+            Some((library_file, recent_file, _)) => (
+                Library::load(library_file).unwrap_or_default(),
+                Recent::load(recent_file),
+            ),
+            None => (Library::default(), Recent::default()),
+        };
+        let states = self
+            .files
+            .as_ref()
+            .map(|(_, _, dir)| textweaver_store::StateStore::new(dir.clone()));
+        let local = |p: &Path| {
+            states
+                .as_ref()?
+                .load(&DocKey::for_path(p))
+                .filter(DocState::has_position)
+                .map(|s| s.pct)
+        };
+        library::library_view(&scanned, &lib, &recent, self.sync.sidecars(), &local)
     }
 }

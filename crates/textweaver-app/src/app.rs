@@ -325,6 +325,8 @@ pub struct App {
     pub(crate) voices_pending: bool,
     /// Restarting speech in place (crate::restart).
     pub(crate) restart: crate::restart::Restart,
+    /// A library scan on a background thread (crate::library).
+    pub(crate) library_scan: Option<crate::library::LibraryScan>,
     /// The accessibility mode in effect (`[accessibility] mode`, or
     /// `--mode` for this run).
     pub(crate) access_mode: AccessMode,
@@ -399,6 +401,7 @@ impl App {
             disk_check_pending: false,
             voices_pending: false,
             restart: crate::restart::Restart::default(),
+            library_scan: None,
             access_mode,
             pending_hybrid: None,
             screen_say_all: None,
@@ -957,6 +960,7 @@ impl App {
     pub fn tick(&mut self, now: Instant) -> Vec<Effect> {
         let mut effects = self.poll_writes();
         effects.extend(self.restart_tick());
+        effects.extend(self.library_tick());
         effects.extend(self.voices_tick());
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
         effects.extend(self.authoring_tick(now));
