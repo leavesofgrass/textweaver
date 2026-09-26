@@ -393,7 +393,8 @@ textweaver --help
 
 `textweaver` takes one optional argument, the document to open, and these options. `tw open` takes the same options, but needs the document.
 
-- `--no-speech`: do not speak at all. There is no self-voicing and no reading aloud. Use it when your screen reader should do all the talking; it reads the status line and follows the cursor. See [Using textweaver with a screen reader](screen-readers.md).
+- `--no-speech`: do not speak at all, in screen-reader mode. There is no self-voicing and no reading aloud. Use it when your screen reader should do all the talking; it reads the status line and follows the cursor. See [Using textweaver with a screen reader](screen-readers.md).
+- `--mode MODE`: the accessibility mode for this run, not saved: `self-voicing`, `hybrid` (textweaver reads documents aloud and your screen reader speaks messages and typing), or `screen-reader` (textweaver is silent). **Alt+Shift+A** changes the mode and saves it. See [Using textweaver with a screen reader](screen-readers.md#three-modes).
 - `--backend ID`: use this speech engine for this run, instead of the one in your settings. `tw backends` lists the engine ids. An engine that is not available falls back to the automatic choice, and textweaver says so.
 - `--home FOLDER`: keep settings, reading positions, and the log under this folder. It works like the `TEXTWEAVER_HOME` environment variable. Use it for a portable copy, or to try things without touching your own settings.
 - `--theme NAME`: use this colour theme for this run only; it is not saved. The help lists the built-in themes. You can also name a theme in your themes folder. See [Themes](themes.md).
