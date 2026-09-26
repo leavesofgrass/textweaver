@@ -108,6 +108,40 @@ pub(crate) fn window_end(doc: &textweaver_text::Document, start: CharPos) -> Cha
     end.clamp_to(len)
 }
 
+/// How documents are narrated with `settings`: code skipped or not, the
+/// verbosity, and `[normalization] table_mode` (which was stored but never
+/// used). Reading aloud and audio export use the same policy.
+pub fn narration_policy(settings: &textweaver_store::Settings) -> NarrationPolicy {
+    use textweaver_store::TableMode;
+    use textweaver_text::narrate::TableNarration;
+    NarrationPolicy {
+        skip_code: settings.speech.skip_code,
+        verbosity: settings.speech.verbosity,
+        table_mode: match settings.normalization.table_mode {
+            TableMode::Structured => TableNarration::Structured,
+            TableMode::Flat => TableNarration::Flat,
+            TableMode::Skip => TableNarration::Skip,
+        },
+        ..NarrationPolicy::default()
+    }
+}
+
+/// How documents are loaded with `settings`: `[normalization]
+/// footnote_mode` decides where footnotes are read (it was stored but never
+/// used).
+pub fn load_options(settings: &textweaver_store::Settings) -> textweaver_formats::LoadOptions {
+    use textweaver_formats::FootnoteMode as Load;
+    use textweaver_store::FootnoteMode;
+    textweaver_formats::LoadOptions {
+        footnotes: match settings.normalization.footnote_mode {
+            FootnoteMode::Inline => Load::Inline,
+            FootnoteMode::Deferred => Load::Deferred,
+            FootnoteMode::Skip => Load::Skip,
+        },
+        ..textweaver_formats::LoadOptions::default()
+    }
+}
+
 /// What a capability change means for the listener, or `None` when nothing
 /// they would notice changed.
 pub(crate) fn capability_message(old: Caps, new: Caps) -> Option<String> {
@@ -141,34 +175,11 @@ impl App {
     }
 
     pub(crate) fn narration_policy(&self) -> NarrationPolicy {
-        use textweaver_store::TableMode;
-        use textweaver_text::narrate::TableNarration;
-        NarrationPolicy {
-            skip_code: self.settings.speech.skip_code,
-            verbosity: self.settings.speech.verbosity,
-            // `[normalization] table_mode` was stored but never used.
-            table_mode: match self.settings.normalization.table_mode {
-                TableMode::Structured => TableNarration::Structured,
-                TableMode::Flat => TableNarration::Flat,
-                TableMode::Skip => TableNarration::Skip,
-            },
-            ..NarrationPolicy::default()
-        }
+        narration_policy(&self.settings)
     }
 
-    /// How documents are loaded: `[normalization] footnote_mode` decides
-    /// where footnotes are read (it was stored but never used).
     pub(crate) fn load_options(&self) -> textweaver_formats::LoadOptions {
-        use textweaver_formats::FootnoteMode as Load;
-        use textweaver_store::FootnoteMode;
-        textweaver_formats::LoadOptions {
-            footnotes: match self.settings.normalization.footnote_mode {
-                FootnoteMode::Inline => Load::Inline,
-                FootnoteMode::Deferred => Load::Deferred,
-                FootnoteMode::Skip => Load::Skip,
-            },
-            ..textweaver_formats::LoadOptions::default()
-        }
+        load_options(&self.settings)
     }
 
     /// Stops speech and forgets the reading state, without announcing.

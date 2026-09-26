@@ -16,6 +16,7 @@ use serde::Serialize;
 use textweaver_app::core::{Pitch, Rate};
 use textweaver_app::formats;
 use textweaver_app::speech::{BackendRegistry, Caps, Selection, VoiceParams, resolve_voice};
+use textweaver_app::store::{Paths, Settings, SettingsStore};
 use textweaver_export::{
     AudioFormat, CueOptions, ExportOptions, ExportReport, SubtitleRequest, export, ffmpeg,
 };
@@ -52,6 +53,9 @@ pub struct Args {
     /// No progress messages.
     #[arg(long)]
     pub quiet: bool,
+    /// Read settings from this directory (like `TEXTWEAVER_HOME`).
+    #[arg(long)]
+    pub home: Option<PathBuf>,
 }
 
 /// What `tw export-audio --json` prints.
@@ -64,11 +68,28 @@ pub struct Report {
 }
 
 /// Picks the backend: the one asked for (falling back to automatic
-/// selection when unavailable), else the highest-priority available
-/// backend that can write audio files.
-pub fn choose(registry: &BackendRegistry, asked: Option<&str>) -> anyhow::Result<Selection> {
+/// selection when unavailable), else `configured` (`[speech] backend`)
+/// when it is available and can write audio files, else the
+/// highest-priority available backend that can write audio files.
+pub fn choose(
+    registry: &BackendRegistry,
+    asked: Option<&str>,
+    configured: Option<&str>,
+) -> anyhow::Result<Selection> {
     if asked.is_some() {
         return Ok(registry.select(asked));
+    }
+    if let Some(id) = configured.filter(|id| !id.is_empty() && *id != "auto")
+        && let Some(backend) = registry
+            .list()
+            .into_iter()
+            .find(|b| b.id == id && b.available && b.caps.contains(Caps::SYNTH_TO_FILE))
+    {
+        return Ok(Selection {
+            backend,
+            requested: None,
+            fell_back: false,
+        });
     }
     registry
         .list()
@@ -102,9 +123,13 @@ pub fn spoken_duration(ms: u64) -> String {
     parts.join(", ")
 }
 
-/// Exports and returns what happened.
+/// Exports and returns what happened, with `settings`: the voice, rate,
+/// pitch, and volume of `[speech]` (the flags override them), the preferred
+/// backend, normalization and table narration, where footnotes go, and the
+/// subtitles of `[export]`.
 pub fn export_audio(
     args: &Args,
+    settings: &Settings,
     registry: &BackendRegistry,
     ffmpeg_path: Option<PathBuf>,
     progress: &mut dyn FnMut(&str),
@@ -121,15 +146,34 @@ pub fn export_audio(
             format.name()
         );
     }
-    let doc = formats::load_path(&args.file)
+    let doc = formats::Registry::with_builtins()
+        .load(
+            &formats::Source::Path(args.file.clone()),
+            &textweaver_app::load_options(settings),
+        )
         .with_context(|| format!("cannot open {}", args.file.display()))?;
-    let selection = choose(registry, args.backend.as_deref())?;
+    let selection = choose(
+        registry,
+        args.backend.as_deref(),
+        Some(settings.speech.backend.as_str()),
+    )?;
     let factory = registry
         .factory(selection.backend.id)
         .with_context(|| format!("backend {} is not built in", selection.backend.id))?;
     let mut backend = factory()?;
-    let mut params = VoiceParams::default();
-    if let Some(asked) = &args.voice {
+    let config = textweaver_app::service_config(settings);
+    let mut params = VoiceParams {
+        // A configured voice belongs to the configured backend.
+        voice: None,
+        ..config.params.clone()
+    };
+    let same_backend = settings.speech.backend == selection.backend.id;
+    let voice = args.voice.clone().or_else(|| {
+        same_backend
+            .then(|| settings.speech.voice.clone())
+            .flatten()
+    });
+    if let Some(asked) = &voice {
         let voices = backend.voices().unwrap_or_default();
         params.voice = Some(resolve_voice(&voices, asked).unwrap_or_else(|| asked.clone()));
     }
@@ -146,13 +190,26 @@ pub fn export_audio(
             selection.backend.name
         );
     }
-    let subtitles = args.subtitles.as_ref().map(|path| SubtitleRequest {
-        path: path.clone(),
+    let plan = textweaver_app::subtitle_plan(
+        settings,
+        &args.out,
+        args.subtitles.as_deref(),
+        args.word_level,
+    );
+    let subtitles = plan.path.map(|path| SubtitleRequest {
+        path,
         cues: CueOptions {
-            word_level: args.word_level,
+            word_level: plan.word_level,
             ..CueOptions::default()
         },
     });
+    let options = ExportOptions {
+        narration: textweaver_app::narration_policy(settings),
+        normalize: config.normalize,
+        punctuation: config.punctuation,
+        split_caps: config.split_caps,
+        ..ExportOptions::default()
+    };
     let mut last_tenth = 0;
     let report = export(
         &doc,
@@ -160,7 +217,7 @@ pub fn export_audio(
         &args.out,
         subtitles.as_ref(),
         ffmpeg_path.as_deref(),
-        &ExportOptions::default(),
+        &options,
         &mut |p| {
             let tenth = p.percent() / 10;
             if p.total > 0 && tenth > last_tenth && p.done < p.total {
@@ -195,12 +252,31 @@ pub fn summary(r: &Report) -> String {
     s
 }
 
+/// The settings `tw export-audio` uses: from `--home`, else the platform
+/// folders; defaults when there are none. A message when the file was
+/// damaged (it is backed up and defaults are used).
+pub fn load_settings(home: Option<&std::path::Path>) -> (Settings, Option<String>) {
+    let paths = match home {
+        Some(h) => Some(Paths::under(h)),
+        None => Paths::platform().ok(),
+    };
+    match paths {
+        Some(p) => SettingsStore::new(p).load(),
+        None => (Settings::default(), None),
+    }
+}
+
 /// Runs `tw export-audio`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     let quiet = args.quiet || args.json;
+    let (settings, message) = load_settings(args.home.as_deref());
+    if let Some(m) = message {
+        eprintln!("{m}");
+    }
     let report = export_audio(
         &args,
-        &textweaver_app::speech_registry(),
+        &settings,
+        &textweaver_app::speech_registry_for(&settings),
         ffmpeg::find(),
         &mut |msg| {
             if !quiet {
@@ -260,6 +336,7 @@ mod tests {
             pitch: None,
             json: true,
             quiet: true,
+            home: None,
         }
     }
 
@@ -268,9 +345,13 @@ mod tests {
         let dir = Scratch::new("wav");
         let a = args(dir.path(), "doc.wav");
         let mut messages = Vec::new();
-        let r = export_audio(&a, &BackendRegistry::with_builtins(), None, &mut |m| {
-            messages.push(m.to_owned())
-        })
+        let r = export_audio(
+            &a,
+            &Settings::default(),
+            &BackendRegistry::with_builtins(),
+            None,
+            &mut |m| messages.push(m.to_owned()),
+        )
         .unwrap();
         assert_eq!(r.backend.backend.id, "recording");
         assert_eq!(r.export.timeline.duration_ms, 2500);
@@ -298,30 +379,94 @@ mod tests {
         let dir = Scratch::new("errors");
         let reg = BackendRegistry::with_builtins();
         let mut a = args(dir.path(), "doc.mp3");
-        let e = export_audio(&a, &reg, None, &mut |_| {}).unwrap_err();
+        let e = export_audio(&a, &Settings::default(), &reg, None, &mut |_| {}).unwrap_err();
         assert!(e.to_string().contains("needs ffmpeg"), "{e}");
         a.out = dir.path().join("doc.ogg");
-        let e = export_audio(&a, &reg, None, &mut |_| {}).unwrap_err();
+        let e = export_audio(&a, &Settings::default(), &reg, None, &mut |_| {}).unwrap_err();
         assert!(e.to_string().contains("use a .wav, .mp3, or .m4b"), "{e}");
         a.out = dir.path().join("doc.wav");
         a.backend = Some("null".into());
-        let e = export_audio(&a, &reg, None, &mut |_| {}).unwrap_err();
+        let e = export_audio(&a, &Settings::default(), &reg, None, &mut |_| {}).unwrap_err();
         assert!(e.to_string().contains("cannot write audio files"), "{e}");
     }
 
     #[test]
     fn automatic_choice_needs_a_backend_that_writes_files() {
         // The built-ins here: null (cannot write) and recording (opt-in).
-        let e = choose(&BackendRegistry::with_builtins(), None);
+        let e = choose(&BackendRegistry::with_builtins(), None, None);
         if cfg!(feature = "espeak") {
             return;
         }
         assert!(e.is_err());
         assert_eq!(
-            choose(&BackendRegistry::with_builtins(), Some("recording"))
+            choose(&BackendRegistry::with_builtins(), Some("recording"), None)
                 .unwrap()
                 .backend
                 .id,
+            "recording"
+        );
+    }
+
+    #[test]
+    fn export_settings_and_speech_settings_are_used() {
+        use textweaver_app::store::{FootnoteMode, SubtitleFormat, TableMode};
+        let dir = Scratch::new("settings");
+        let file = dir.path().join("doc.md");
+        std::fs::write(
+            &file,
+            "Intro with a note[^1].\n\n| Name | Role |\n|---|---|\n| Ada | Engineer |\n\n[^1]: Secret footnote text.\n",
+        )
+        .unwrap();
+        let mut settings = Settings::default();
+        settings.export.subtitles_with_audio = true;
+        settings.export.subtitle_format = SubtitleFormat::Vtt;
+        settings.export.subtitle_word_level = true;
+        settings.speech.backend = "recording".into();
+        settings.normalization.table_mode = TableMode::Skip;
+        settings.normalization.footnote_mode = FootnoteMode::Skip;
+        let a = Args {
+            file,
+            out: dir.path().join("book.wav"),
+            subtitles: None,
+            word_level: false,
+            backend: None,
+            voice: None,
+            rate: None,
+            pitch: None,
+            json: true,
+            quiet: true,
+            home: None,
+        };
+        let r = export_audio(
+            &a,
+            &settings,
+            &BackendRegistry::with_builtins(),
+            None,
+            &mut |_| {},
+        )
+        .unwrap();
+        // [speech] backend chose the (opt-in) recording backend.
+        assert_eq!(r.backend.backend.id, "recording");
+        // [export]: WebVTT beside the audio, one cue per word.
+        let vtt_path = dir.path().join("book.vtt");
+        assert_eq!(r.export.subtitles.as_deref(), Some(vtt_path.as_path()));
+        let vtt = std::fs::read_to_string(&vtt_path).unwrap();
+        assert!(vtt.starts_with("WEBVTT"), "{vtt}");
+        assert!(vtt.lines().any(|l| l.trim() == "Intro"), "{vtt}");
+        // table_mode and footnote_mode shaped what was read (the "table
+        // skipped" notice has no document text, so it has no cue).
+        assert!(!vtt.contains("Ada") && !vtt.contains("Engineer"), "{vtt}");
+        assert!(!vtt.contains("Secret"), "{vtt}");
+    }
+
+    #[test]
+    fn a_configured_backend_that_cannot_write_files_is_passed_over() {
+        let reg = BackendRegistry::with_builtins();
+        let chosen = choose(&reg, None, Some("null"));
+        // null cannot write files: the automatic choice applies instead.
+        assert!(!matches!(chosen, Ok(s) if s.backend.id == "null"));
+        assert_eq!(
+            choose(&reg, None, Some("recording")).unwrap().backend.id,
             "recording"
         );
     }
