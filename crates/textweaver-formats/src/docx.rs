@@ -742,6 +742,19 @@ impl Conv<'_> {
                 }
                 "fldSimple" | "smartTag" | "ins" | "moveTo" | "customXml" | "sdtContent"
                 | "dir" | "bdo" => self.inline(c),
+                // Office Math: its text in reading order (not LaTeX, so it
+                // is not marked as math), rather than nothing at all.
+                "oMath" | "oMathPara" => {
+                    let text: String = c
+                        .descendants()
+                        .filter(|n| n.tag_name().name() == "t")
+                        .filter_map(|n| n.text())
+                        .collect();
+                    self.set_fmt([false; 4]);
+                    self.b.space();
+                    self.b.text(&text);
+                    self.b.space();
+                }
                 "sdt" => {
                     if let Some(content) = child(c, "sdtContent") {
                         self.inline(content);

@@ -39,6 +39,21 @@ fn docx_writes_office_math_strike_and_a_rule() {
     );
     assert!(xml.contains("<w:strike/>"), "{xml}");
     assert!(xml.contains("<w:pBdr><w:bottom"), "{xml}");
+    // Read back, the formula's text is there.
+    let back = textweaver_formats::Registry::with_builtins()
+        .load(
+            &Source::Bytes {
+                data: bytes,
+                hint: "docx".into(),
+            },
+            &LoadOptions::default(),
+        )
+        .unwrap();
+    let text = back.text().to_string();
+    assert!(
+        text.contains("The area is \u{3C0}r2 and was is known."),
+        "{text}"
+    );
 }
 
 #[test]
