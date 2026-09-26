@@ -329,6 +329,9 @@ pub struct TextFormat {
     pub bom: bool,
     /// Uses CRLF line endings.
     pub crlf: bool,
+    /// Uses lone CR line endings (classic Mac OS text), which a save used to
+    /// turn into LF.
+    pub cr: bool,
 }
 
 impl TextFormat {
@@ -340,6 +343,7 @@ impl TextFormat {
         TextFormat {
             bom,
             crlf: lf > 0 && crlf * 2 > lf,
+            cr: lf == 0 && bytes.contains(&b'\r'),
         }
     }
 
@@ -351,6 +355,8 @@ impl TextFormat {
         }
         if self.crlf {
             out.extend_from_slice(text.replace("\r\n", "\n").replace('\n', "\r\n").as_bytes());
+        } else if self.cr {
+            out.extend_from_slice(text.replace("\r\n", "\n").replace('\n', "\r").as_bytes());
         } else {
             out.extend_from_slice(text.as_bytes());
         }
@@ -480,7 +486,8 @@ mod tests {
             f,
             TextFormat {
                 bom: true,
-                crlf: true
+                crlf: true,
+                cr: false
             }
         );
         assert_eq!(f.encode(&t), b"\xEF\xBB\xBFa\r\nb\r\n");
@@ -500,6 +507,18 @@ mod tests {
         assert_eq!(std::fs::read(&fresh).unwrap(), b"a\nb");
         let names: Vec<_> = std::fs::read_dir(dir.path()).unwrap().collect();
         assert_eq!(names.len(), 2, "no temp files left behind");
+    }
+
+    #[test]
+    fn save_text_keeps_classic_mac_line_endings() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("mac.txt");
+        std::fs::write(&p, b"one\rtwo\r").unwrap();
+        let (text, format) = decode(&std::fs::read(&p).unwrap());
+        assert!(format.cr && !format.crlf);
+        assert_eq!(text, "one\rtwo\r", "decode leaves lone CRs to the loader");
+        save_text(&p, "one\ntwo\nthree\n").unwrap();
+        assert_eq!(std::fs::read(&p).unwrap(), b"one\rtwo\rthree\r");
     }
 
     #[test]
