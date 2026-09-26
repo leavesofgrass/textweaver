@@ -183,6 +183,10 @@ fn read_info(pdf: &lopdf::Document, meta: &mut textweaver_text::DocumentMeta) {
 /// Printed page labels from the catalog's `/PageLabels` number tree
 /// (decimal, roman, or letter numbering with prefixes and start values), or
 /// an empty list when the PDF has none.
+///
+/// A hostile file can claim any start value and prefix: counters saturate,
+/// letters and roman numerals fall back to decimal when they would grow
+/// long, and labels are cut to a few dozen characters (`crate::counter`).
 fn page_labels(pdf: &lopdf::Document, pages: usize) -> Vec<String> {
     let Some(tree) = pdf
         .catalog()
@@ -199,32 +203,48 @@ fn page_labels(pdf: &lopdf::Document, pages: usize) -> Vec<String> {
     if ranges.is_empty() {
         return Vec::new();
     }
-    (0..pages)
-        .map(|p| {
-            let Some(&(start, style)) = ranges.iter().rev().find(|(s, _)| *s <= p) else {
-                return (p + 1).to_string();
-            };
+    // Each range's style, read once (a file can list many ranges).
+    let styles: Vec<(usize, u64, String, Vec<u8>)> = ranges
+        .iter()
+        .map(|&(start, style)| {
             let first = style
                 .get(b"St")
                 .ok()
                 .and_then(|o| o.as_i64().ok())
-                .unwrap_or(1)
-                .max(1) as usize;
-            let n = first + (p - start);
+                .map_or(1, |n| crate::counter::clamp(i128::from(n)));
             let prefix = style
                 .get(b"P")
                 .ok()
                 .and_then(|o| text_of(pdf, o))
+                .map(crate::counter::cap_label)
                 .unwrap_or_default();
-            let number = match style.get(b"S").and_then(Object::as_name).unwrap_or(b"") {
-                b"D" => n.to_string(),
-                b"R" => roman(n),
-                b"r" => roman(n).to_lowercase(),
-                b"A" => letters(n),
-                b"a" => letters(n).to_lowercase(),
+            let kind = style
+                .get(b"S")
+                .and_then(Object::as_name)
+                .unwrap_or(b"")
+                .to_vec();
+            (start, first, prefix, kind)
+        })
+        .collect();
+    (0..pages)
+        .map(|p| {
+            let i = styles.partition_point(|(s, ..)| *s <= p);
+            let Some((start, first, prefix, kind)) = i.checked_sub(1).map(|i| &styles[i]) else {
+                return (p + 1).to_string();
+            };
+            let offset = u64::try_from(p - start).unwrap_or(u64::MAX);
+            let n = first
+                .saturating_add(offset)
+                .min(crate::counter::MAX_COUNTER);
+            let number = match kind.as_slice() {
+                b"D" => crate::counter::decimal(n),
+                b"R" => crate::counter::roman(n),
+                b"r" => crate::counter::roman(n).to_lowercase(),
+                b"A" => crate::counter::letters(n),
+                b"a" => crate::counter::letters(n).to_lowercase(),
                 _ => String::new(),
             };
-            let label = format!("{prefix}{number}");
+            let label = crate::counter::cap_label(format!("{prefix}{number}"));
             if label.is_empty() {
                 (p + 1).to_string()
             } else {
@@ -261,39 +281,6 @@ fn collect_nums<'a>(
             }
         }
     }
-}
-
-fn roman(mut n: usize) -> String {
-    const TABLE: [(usize, &str); 13] = [
-        (1000, "M"),
-        (900, "CM"),
-        (500, "D"),
-        (400, "CD"),
-        (100, "C"),
-        (90, "XC"),
-        (50, "L"),
-        (40, "XL"),
-        (10, "X"),
-        (9, "IX"),
-        (5, "V"),
-        (4, "IV"),
-        (1, "I"),
-    ];
-    let mut s = String::new();
-    for (v, r) in TABLE {
-        while n >= v {
-            s.push_str(r);
-            n -= v;
-        }
-    }
-    s
-}
-
-/// A, B, ... Z, AA, BB, ... (the PDF page-label letter style).
-fn letters(n: usize) -> String {
-    let n = n.max(1) - 1;
-    let c = char::from(b'A' + (n % 26) as u8);
-    std::iter::repeat_n(c, n / 26 + 1).collect()
 }
 
 /// The outline (bookmarks): title, 0-based page, and depth (1 = top).
@@ -466,5 +453,79 @@ impl TagWalker<'_> {
         if let Some(a) = alt {
             self.tags.alts.insert((page, mcid), a.to_owned());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use lopdf::{StringFormat, dictionary};
+
+    use super::*;
+
+    /// A document whose catalog's `/PageLabels` tree holds `nums`.
+    fn with_labels(nums: Vec<Object>) -> lopdf::Document {
+        let mut pdf = lopdf::Document::with_version("1.7");
+        let tree = pdf.add_object(dictionary! { "Nums" => nums });
+        let catalog = pdf.add_object(dictionary! {
+            "Type" => "Catalog",
+            "PageLabels" => tree,
+        });
+        pdf.trailer.set("Root", catalog);
+        pdf
+    }
+
+    fn style(s: &str, start: i64, prefix: Option<&str>) -> Object {
+        let mut d = dictionary! { "S" => Object::Name(s.as_bytes().to_vec()), "St" => start };
+        if let Some(p) = prefix {
+            d.set(
+                "P",
+                Object::String(p.as_bytes().to_vec(), StringFormat::Literal),
+            );
+        }
+        Object::Dictionary(d)
+    }
+
+    #[test]
+    fn hostile_page_labels_are_clamped() {
+        let huge_prefix = "x".repeat(10_000);
+        let pdf = with_labels(vec![
+            Object::Integer(0),
+            style("R", i64::MAX, None),
+            Object::Integer(2),
+            style("A", i64::MAX - 1, Some(&huge_prefix)),
+            Object::Integer(4),
+            style("D", i64::MIN, None),
+            Object::Integer(6),
+            style("a", 1_000_000_000, None),
+            Object::Integer(8),
+            style("r", 3_998, None),
+        ]);
+        let labels = page_labels(&pdf, 10);
+        assert_eq!(labels.len(), 10);
+        for l in &labels {
+            assert!(l.chars().count() <= crate::counter::MAX_LABEL_CHARS, "{l}");
+        }
+        // Roman past 3,999 and letters past ten repeats read as decimal,
+        // and counters stop at the cap instead of overflowing.
+        assert_eq!(labels[0], "999999");
+        assert_eq!(labels[1], "999999");
+        assert!(labels[2].starts_with("xxxx"));
+        // A negative start is clamped to 1.
+        assert_eq!(labels[4], "1");
+        assert_eq!(labels[5], "2");
+        assert_eq!(labels[6], "999999");
+        assert_eq!(labels[8], "mmmcmxcviii");
+        assert_eq!(labels[9], "mmmcmxcix");
+    }
+
+    #[test]
+    fn page_labels_start_where_their_range_starts() {
+        let pdf = with_labels(vec![
+            Object::Integer(0),
+            style("r", 1, None),
+            Object::Integer(3),
+            style("D", 1, Some("A-")),
+        ]);
+        assert_eq!(page_labels(&pdf, 5), vec!["i", "ii", "iii", "A-1", "A-2"]);
     }
 }

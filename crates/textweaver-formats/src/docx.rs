@@ -131,13 +131,19 @@ impl Loader for DocxLoader {
             code: None,
             deferred: Vec::new(),
             note_count: 0,
+            depth: 0,
+            flattened: false,
         };
         c.blocks(body);
         c.close_code();
         c.close_lists();
         let deferred = std::mem::take(&mut c.deferred);
         c.b.footnotes_section(&deferred);
+        let flattened = c.flattened || pkg.flattened();
         let (text, markers) = c.b.finish();
+        if flattened {
+            crate::add_warning(&mut meta, crate::NESTING_WARNING);
+        }
         if meta.title.is_none() {
             meta.title = markers
                 .iter()
@@ -303,13 +309,14 @@ fn num_pr(ppr: Node<'_, '_>) -> Option<(String, u8)> {
 struct Level {
     fmt: String,
     text: String,
-    start: u32,
+    /// Clamped to `1..=MAX_COUNTER` when read.
+    start: u64,
 }
 
 #[derive(Debug, Default)]
 struct Numbering {
     /// numId → (abstractNumId, start overrides by level).
-    nums: HashMap<String, (String, HashMap<u8, u32>)>,
+    nums: HashMap<String, (String, HashMap<u8, u64>)>,
     abstracts: HashMap<String, HashMap<u8, Level>>,
 }
 
@@ -334,9 +341,7 @@ impl Numbering {
                     Level {
                         fmt: child_val(l, "numFmt").unwrap_or("decimal").to_owned(),
                         text: child_val(l, "lvlText").unwrap_or("").to_owned(),
-                        start: child_val(l, "start")
-                            .and_then(|v| v.parse().ok())
-                            .unwrap_or(1),
+                        start: child_val(l, "start").map_or(1, parse_counter),
                     },
                 );
             }
@@ -354,7 +359,7 @@ impl Numbering {
             {
                 if let (Some(l), Some(s)) = (
                     attr(o, "ilvl").and_then(|v| v.parse().ok()),
-                    child_val(o, "startOverride").and_then(|v| v.parse().ok()),
+                    child_val(o, "startOverride").map(parse_counter),
                 ) {
                     overrides.insert(l, s);
                 }
@@ -374,48 +379,22 @@ impl Numbering {
     }
 }
 
+/// A start value from `numbering.xml`, clamped: Word caps starts at
+/// 32,767, but a hostile file can claim any integer.
+fn parse_counter(v: &str) -> u64 {
+    v.trim().parse::<i128>().map_or(1, crate::counter::clamp)
+}
+
 /// `n` formatted as a list counter of format `fmt`.
-fn counter(n: u32, fmt: &str) -> String {
+fn counter(n: u64, fmt: &str) -> String {
+    use crate::counter::{decimal, letters, roman};
     match fmt {
         "lowerLetter" => letters(n).to_lowercase(),
         "upperLetter" => letters(n),
         "lowerRoman" => roman(n).to_lowercase(),
         "upperRoman" => roman(n),
-        _ => n.to_string(),
+        _ => decimal(n),
     }
-}
-
-fn letters(n: u32) -> String {
-    // Word repeats the letter: a..z, aa..zz, ...
-    let n = n.max(1) - 1;
-    let c = char::from(b'A' + u8::try_from(n % 26).unwrap_or(0));
-    std::iter::repeat_n(c, (n / 26 + 1) as usize).collect()
-}
-
-fn roman(mut n: u32) -> String {
-    const TABLE: [(u32, &str); 13] = [
-        (1000, "M"),
-        (900, "CM"),
-        (500, "D"),
-        (400, "CD"),
-        (100, "C"),
-        (90, "XC"),
-        (50, "L"),
-        (40, "XL"),
-        (10, "X"),
-        (9, "IX"),
-        (5, "V"),
-        (4, "IV"),
-        (1, "I"),
-    ];
-    let mut s = String::new();
-    for (v, r) in TABLE {
-        while n >= v {
-            s.push_str(r);
-            n -= v;
-        }
-    }
-    s
 }
 
 fn relationships(text: &str) -> Result<HashMap<String, String>, LoadError> {
@@ -470,7 +449,7 @@ struct Conv<'a> {
     /// last.
     lists: Vec<(u8, String, OpenId)>,
     /// Counters per numbering instance and level.
-    counters: HashMap<String, [u32; 9]>,
+    counters: HashMap<String, [u64; 9]>,
     in_cell: usize,
     /// Open bold, italic, underline, and inline code markers.
     fmt: [Option<OpenId>; 4],
@@ -478,6 +457,11 @@ struct Conv<'a> {
     code: Option<OpenId>,
     deferred: Vec<(String, String)>,
     note_count: usize,
+    /// Nesting of `blocks` and `inline` calls, bounded by
+    /// [`MAX_NESTING`](crate::MAX_NESTING).
+    depth: usize,
+    /// Set once content past the nesting limit was flattened.
+    flattened: bool,
 }
 
 const FMT_KINDS: [MarkerKind; 4] = [
@@ -492,9 +476,52 @@ impl Conv<'_> {
         Marker::new(kind, CharRange::empty(0))
     }
 
+    /// Enters one level of nesting, or returns false at the limit.
+    fn enter(&mut self) -> bool {
+        if self.depth >= crate::MAX_NESTING {
+            return false;
+        }
+        self.depth += 1;
+        true
+    }
+
+    /// Content nested past the limit: its text, runs separated by spaces,
+    /// without structure. Iterative, so no depth can overflow the stack.
+    fn flatten(&mut self, node: Node<'_, '_>) {
+        self.flattened = true;
+        self.set_fmt([false; 4]);
+        self.b.space();
+        for n in node.descendants() {
+            if n.is_text() {
+                // Run text (`w:t`), and the spaces left between flattened
+                // elements; other elements' text (field codes, deleted
+                // revisions) is not read.
+                let parent = n.parent().map(|p| p.tag_name().name());
+                if matches!(parent, Some("t" | crate::xmldepth::FLAT_ELEMENT)) {
+                    self.b.text(n.text().unwrap_or(""));
+                }
+                continue;
+            }
+            if matches!(n.tag_name().name(), "p" | "tab" | "br" | "cr" | "tc") {
+                self.b.space();
+            }
+        }
+        self.b.space();
+    }
+
     fn blocks(&mut self, node: Node<'_, '_>) {
+        if !self.enter() {
+            self.flatten(node);
+            return;
+        }
+        self.blocks_inner(node);
+        self.depth -= 1;
+    }
+
+    fn blocks_inner(&mut self, node: Node<'_, '_>) {
         for c in node.children().filter(Node::is_element) {
             match c.tag_name().name() {
+                crate::xmldepth::FLAT_ELEMENT => self.flatten(c),
                 "p" => self.paragraph(c),
                 "tbl" => self.table(c),
                 "sdt" => {
@@ -657,7 +684,7 @@ impl Conv<'_> {
         counters[i] = if counters[i] == 0 {
             start
         } else {
-            counters[i] + 1
+            crate::counter::next(counters[i])
         };
         for c in counters.iter_mut().skip(i + 1) {
             *c = 0;
@@ -669,7 +696,7 @@ impl Conv<'_> {
         if level.text.is_empty() {
             return Some(format!("{}.", counter(counters[i], &level.fmt)));
         }
-        let mut label = level.text.clone();
+        let mut label = crate::counter::cap_label(level.text.clone());
         for l in (0..=ilvl).rev() {
             let placeholder = format!("%{}", l + 1);
             if label.contains(&placeholder) {
@@ -681,12 +708,22 @@ impl Conv<'_> {
                 label = label.replace(&placeholder, &counter(n, &fmt));
             }
         }
-        Some(label)
+        Some(crate::counter::cap_label(label))
     }
 
     fn inline(&mut self, node: Node<'_, '_>) {
+        if !self.enter() {
+            self.flatten(node);
+            return;
+        }
+        self.inline_inner(node);
+        self.depth -= 1;
+    }
+
+    fn inline_inner(&mut self, node: Node<'_, '_>) {
         for c in node.children().filter(Node::is_element) {
             match c.tag_name().name() {
+                crate::xmldepth::FLAT_ELEMENT => self.flatten(c),
                 "r" => self.run(c),
                 "hyperlink" => {
                     let target = attr(c, "id")
@@ -815,16 +852,36 @@ impl Conv<'_> {
         }
     }
 
+    /// A table cell's content (or flattened content standing in for it).
+    fn cell(&mut self, tc: Node<'_, '_>) {
+        if tc.tag_name().name() == crate::xmldepth::FLAT_ELEMENT {
+            self.flatten(tc);
+        } else {
+            self.blocks(tc);
+        }
+    }
+
     fn table(&mut self, tbl: Node<'_, '_>) {
+        use crate::xmldepth::FLAT_ELEMENT;
+        // Rows and cells; content flattened for depth (see `xmldepth`) is
+        // a row of one cell, or a cell.
         let rows: Vec<Node<'_, '_>> = tbl
             .children()
-            .filter(|n| n.tag_name().name() == "tr")
+            .filter(|n| matches!(n.tag_name().name(), "tr" | FLAT_ELEMENT))
             .collect();
+        fn cells_of<'a, 'i>(tr: Node<'a, 'i>) -> Vec<Node<'a, 'i>> {
+            if tr.tag_name().name() == FLAT_ELEMENT {
+                return vec![tr];
+            }
+            tr.children()
+                .filter(|n| matches!(n.tag_name().name(), "tc" | FLAT_ELEMENT))
+                .collect()
+        }
         if self.in_cell > 0 {
             self.in_cell += 1;
             for tr in &rows {
-                for tc in tr.children().filter(|n| n.tag_name().name() == "tc") {
-                    self.blocks(tc);
+                for tc in cells_of(*tr) {
+                    self.cell(tc);
                     self.b.space();
                 }
             }
@@ -848,10 +905,7 @@ impl Conv<'_> {
         self.b.paragraph_break();
         let table = self.b.open(Self::marker(MarkerKind::Table));
         for (i, tr) in rows.iter().enumerate() {
-            let cells: Vec<Node<'_, '_>> = tr
-                .children()
-                .filter(|n| n.tag_name().name() == "tc")
-                .collect();
+            let cells = cells_of(*tr);
             if cells.is_empty() {
                 continue;
             }
@@ -868,7 +922,7 @@ impl Conv<'_> {
                 }
                 let cell = self.b.open_here(Self::marker(MarkerKind::TableCell));
                 self.in_cell += 1;
-                self.blocks(tc);
+                self.cell(tc);
                 self.in_cell -= 1;
                 self.set_fmt([false; 4]);
                 self.b.close(cell);

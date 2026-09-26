@@ -129,6 +129,8 @@ pub(crate) fn walk_into<'a>(
         lists: Vec::new(),
         in_cell: 0,
         on_anchor,
+        depth: 0,
+        flattened: false,
     };
     for child in root.child_elements() {
         if child.value().name() == "head" {
@@ -136,6 +138,9 @@ pub(crate) fn walk_into<'a>(
         } else {
             w.element(child);
         }
+    }
+    if w.flattened {
+        crate::add_warning(meta, crate::NESTING_WARNING);
     }
 }
 
@@ -198,6 +203,10 @@ struct Walker<'a> {
     /// Inside a table cell: blocks become spaces.
     in_cell: usize,
     on_anchor: Option<AnchorHook<'a>>,
+    /// Element nesting, bounded by [`MAX_NESTING`](crate::MAX_NESTING).
+    depth: usize,
+    /// Set once content past the nesting limit was flattened.
+    flattened: bool,
 }
 
 fn marker(kind: MarkerKind) -> Marker {
@@ -251,6 +260,51 @@ impl Walker<'_> {
     }
 
     fn element(&mut self, el: ElementRef<'_>) {
+        if self.depth >= crate::MAX_NESTING {
+            self.flatten(el);
+            return;
+        }
+        self.depth += 1;
+        self.element_inner(el);
+        self.depth -= 1;
+    }
+
+    /// Content nested past the limit: its text without structure, skipped
+    /// and hidden elements still left out. Iterative, so no depth can
+    /// overflow the stack.
+    fn flatten(&mut self, el: ElementRef<'_>) {
+        /// Inline elements that do not separate words.
+        const INLINE: &[&str] = &[
+            "a", "abbr", "b", "bdi", "bdo", "cite", "code", "data", "dfn", "em", "i", "kbd",
+            "mark", "q", "s", "samp", "small", "span", "strong", "sub", "sup", "time", "u", "var",
+        ];
+        self.flattened = true;
+        self.b.space();
+        // Depth-first with an explicit stack, children in document order.
+        let mut stack: Vec<_> = el.children().collect();
+        stack.reverse();
+        while let Some(n) = stack.pop() {
+            match n.value() {
+                Node::Text(t) => self.b.text(t),
+                Node::Element(e) => {
+                    let hidden = ElementRef::wrap(n).is_some_and(|r| is_hidden(&r));
+                    if SKIP.contains(&e.name()) || hidden {
+                        continue;
+                    }
+                    if !INLINE.contains(&e.name()) {
+                        self.b.space();
+                    }
+                    let from = stack.len();
+                    stack.extend(n.children());
+                    stack[from..].reverse();
+                }
+                _ => {}
+            }
+        }
+        self.b.space();
+    }
+
+    fn element_inner(&mut self, el: ElementRef<'_>) {
         let name = el.value().name();
         if let Some(hook) = &mut self.on_anchor {
             if let Some(id) = el.attr("id") {

@@ -16,6 +16,8 @@ pub(crate) struct Package {
     zip: ZipArchive<Cursor<Vec<u8>>>,
     /// Lowercased member names, for case-insensitive fallback lookups.
     names: Vec<(String, String)>,
+    /// Set when an XML member was nested too deeply and was flattened.
+    flattened: bool,
 }
 
 impl Package {
@@ -27,7 +29,11 @@ impl Package {
             .file_names()
             .map(|n| (n.to_lowercase(), n.to_owned()))
             .collect();
-        Ok(Package { zip, names })
+        Ok(Package {
+            zip,
+            names,
+            flattened: false,
+        })
     }
 
     fn real_name(&self, name: &str) -> Option<String> {
@@ -61,11 +67,31 @@ impl Package {
 
     /// Member `name` as text (see [`crate::decode_bytes`], honoring an XML
     /// declaration), or `None` when missing.
+    ///
+    /// XML members (`.xml`, `.rels`, `.opf`, `.ncx`) nested deeper than
+    /// [`MAX_NESTING`](crate::MAX_NESTING) are flattened below that depth
+    /// (see `xmldepth`), because the XML parser recurses per element.
     pub(crate) fn read_text(&mut self, name: &str) -> Result<Option<String>, LoadError> {
-        Ok(self.read(name)?.map(|b| {
-            let declared = crate::encoding::sniff_html_charset(&b);
-            crate::decode_bytes(&b, declared.as_deref()).text
-        }))
+        let Some(bytes) = self.read(name)? else {
+            return Ok(None);
+        };
+        let declared = crate::encoding::sniff_html_charset(&bytes);
+        let text = crate::decode_bytes(&bytes, declared.as_deref()).text;
+        let lower = name.to_ascii_lowercase();
+        let is_xml = [".xml", ".rels", ".opf", ".ncx"]
+            .iter()
+            .any(|e| lower.ends_with(e));
+        if is_xml && let Some(flat) = crate::xmldepth::limit_depth(&text, crate::MAX_NESTING) {
+            self.flattened = true;
+            return Ok(Some(flat));
+        }
+        Ok(Some(text))
+    }
+
+    /// True when some XML member had to be flattened (the loader then
+    /// adds [`NESTING_WARNING`](crate::NESTING_WARNING)).
+    pub(crate) fn flattened(&self) -> bool {
+        self.flattened
     }
 }
 

@@ -57,7 +57,10 @@ impl Loader for EpubLoader {
         if meta.title.is_none() {
             meta.title = title_from_path(source);
         }
-        let (text, markers) = convert(&mut pkg, &book, options)?;
+        let (text, markers) = convert(&mut pkg, &book, options, &mut meta)?;
+        if pkg.flattened() {
+            crate::add_warning(&mut meta, crate::NESTING_WARNING);
+        }
         Ok(Document::new(meta, Rope::from_str(&text), markers))
     }
 }
@@ -211,6 +214,12 @@ fn refuse_drm(pkg: &mut Package, spine: &[String]) -> Result<(), LoadError> {
     Ok(())
 }
 
+/// A table-of-contents depth as stored in [`TocEntry`] (levels past 255
+/// share the last one).
+fn toc_depth(depth: usize) -> u8 {
+    u8::try_from(depth).unwrap_or(u8::MAX)
+}
+
 /// Entries of the EPUB 3 navigation document's table of contents.
 fn nav_toc(text: &str, base: &str) -> Vec<TocEntry> {
     use scraper::{ElementRef, Html};
@@ -228,7 +237,12 @@ fn nav_toc(text: &str, base: &str) -> Vec<TocEntry> {
     let Some(nav) = navs.iter().find(|e| is_toc(e)).or(navs.first()).copied() else {
         return Vec::new();
     };
-    fn walk(list: ElementRef<'_>, depth: u8, base: &str, out: &mut Vec<TocEntry>) {
+    fn walk(list: ElementRef<'_>, depth: usize, base: &str, out: &mut Vec<TocEntry>) {
+        // Entries nested past the limit are left out of the table of
+        // contents; their chapters are still read.
+        if depth > crate::MAX_NESTING {
+            return;
+        }
         for li in list.child_elements().filter(|e| e.value().name() == "li") {
             let label = li
                 .child_elements()
@@ -243,11 +257,11 @@ fn nav_toc(text: &str, base: &str) -> Vec<TocEntry> {
                     title,
                     file,
                     fragment,
-                    depth,
+                    depth: toc_depth(depth),
                 });
             }
             for sub in li.child_elements().filter(|e| e.value().name() == "ol") {
-                walk(sub, depth.saturating_add(1), base, out);
+                walk(sub, depth + 1, base, out);
             }
         }
     }
@@ -261,7 +275,10 @@ fn nav_toc(text: &str, base: &str) -> Vec<TocEntry> {
 /// Entries of an EPUB 2 NCX `navMap`.
 fn ncx_toc(text: &str, base: &str) -> Result<Vec<TocEntry>, LoadError> {
     let xml = parse_xml(text)?;
-    fn walk(node: roxmltree::Node<'_, '_>, depth: u8, base: &str, out: &mut Vec<TocEntry>) {
+    fn walk(node: roxmltree::Node<'_, '_>, depth: usize, base: &str, out: &mut Vec<TocEntry>) {
+        if depth > crate::MAX_NESTING {
+            return;
+        }
         for point in node
             .children()
             .filter(|n| n.tag_name().name() == "navPoint")
@@ -273,10 +290,10 @@ fn ncx_toc(text: &str, base: &str) -> Result<Vec<TocEntry>, LoadError> {
                     title,
                     file,
                     fragment,
-                    depth,
+                    depth: toc_depth(depth),
                 });
             }
-            walk(point, depth.saturating_add(1), base, out);
+            walk(point, depth + 1, base, out);
         }
     }
     let mut out = Vec::new();
@@ -308,10 +325,13 @@ impl Sections {
     }
 }
 
+/// The spine's chapters as canonical text and markers; chapter warnings
+/// (content nested too deeply) are added to `meta`.
 fn convert(
     pkg: &mut Package,
     book: &Book,
     options: &LoadOptions,
+    meta: &mut DocumentMeta,
 ) -> Result<(String, Vec<Marker>), LoadError> {
     let spine: HashSet<&str> = book.spine.iter().map(String::as_str).collect();
     let toc: Vec<TocEntry> = if book.toc.iter().any(|e| spine.contains(e.file.as_str())) {
@@ -356,6 +376,9 @@ fn convert(
             }
         };
         crate::html::walk_into(&mut b, &text, options, &mut scratch, Some(&mut hook));
+        for w in crate::warnings(&scratch) {
+            crate::add_warning(meta, &w);
+        }
     }
     let (text, mut markers) = b.finish();
     label_sections_by_heading(&text, &mut markers);
