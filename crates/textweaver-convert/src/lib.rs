@@ -20,7 +20,16 @@
 //! for Markdown output. Every other source is loaded by the
 //! `textweaver-formats` registry into a `Document`, exported to Markdown for
 //! HTML, or given to a native writer (EPUB, DOCX, BRF, PDF). Formats with no
-//! native loader go through Pandoc when it is installed.
+//! native loader go through Pandoc when it is installed, by way of the
+//! formats crate's Pandoc loader: the one Pandoc path in textweaver, run with
+//! `--sandbox`, its output pipes read on their own threads, and a timeout
+//! (`TEXTWEAVER_PANDOC` names the program, `TEXTWEAVER_PANDOC_TIMEOUT` or
+//! [`ConvertOptions::pandoc_timeout`] the time limit).
+//!
+//! **Citations.** Pandoc citations in Markdown sources (`[@doe2020]`) are
+//! formatted with `textweaver-cite` in a CSL style, and a References
+//! section is appended, for every output but Markdown (see [`citations`]
+//! and ADR-0019).
 //!
 //! **Memory.** Each worker holds one document at a time; the batch keeps
 //! only paths and per-file results, so memory is proportional to the
@@ -44,11 +53,12 @@ use textweaver_render::{
 };
 use textweaver_text::Document;
 
-pub mod pandoc;
+pub mod citations;
 mod plan;
 pub mod watch;
 pub mod writer;
 
+pub use citations::CitationOptions;
 pub use plan::{Job, Plan};
 pub use watch::{WatchEvent, WatchOptions, watch};
 pub use writer::{
@@ -166,8 +176,13 @@ pub struct ConvertOptions {
     pub load: LoadOptions,
     /// Use Pandoc for formats with no native loader, when installed.
     pub pandoc: bool,
+    /// How long Pandoc may run on one file; `None` uses
+    /// `TEXTWEAVER_PANDOC_TIMEOUT` or two minutes.
+    pub pandoc_timeout: Option<Duration>,
     /// Options passed to the native writers.
     pub write: WriteOptions,
+    /// How Pandoc citations in Markdown are formatted.
+    pub citations: CitationOptions,
 }
 
 impl Default for ConvertOptions {
@@ -183,7 +198,9 @@ impl Default for ConvertOptions {
             force: false,
             load: LoadOptions::default(),
             pandoc: true,
+            pandoc_timeout: None,
             write: WriteOptions::default(),
+            citations: CitationOptions::default(),
         }
     }
 }
@@ -436,6 +453,7 @@ pub struct Converter {
     templates: Templates,
     template: String,
     writers: Writers,
+    citations: citations::Citations,
     /// Embed resolvers, one per input root (built on first use).
     resolvers: std::sync::Mutex<HashMap<PathBuf, std::sync::Arc<FsResolver>>>,
 }
@@ -472,12 +490,20 @@ impl Converter {
             templates.load_dir(dir)?;
         }
         let template = templates.resolve(&options.template)?;
+        let citations =
+            citations::Citations::new(options.citations.clone()).map_err(ConvertError::Output)?;
+        let registry = if options.pandoc {
+            Registry::with_pandoc(options.pandoc_timeout)
+        } else {
+            Registry::with_builtins()
+        };
         Ok(Converter {
             options,
-            registry: Registry::with_builtins(),
+            registry,
             templates,
             template,
             writers,
+            citations,
             resolvers: std::sync::Mutex::new(HashMap::new()),
         })
     }
@@ -490,13 +516,7 @@ impl Converter {
     /// Lowercase extensions this converter reads: every native loader's,
     /// plus Pandoc's when Pandoc is enabled and installed.
     pub fn source_extensions(&self) -> Vec<&'static str> {
-        let mut v = self.registry.extensions();
-        if self.options.pandoc && pandoc::available() {
-            v.extend(pandoc::EXTENSIONS.iter().copied());
-        }
-        v.sort_unstable();
-        v.dedup();
-        v
+        self.registry.extensions()
     }
 
     /// Plans the jobs for `inputs` (files and folders).
@@ -617,10 +637,7 @@ impl Converter {
     fn convert_bytes(&self, job: &Job) -> Result<Output, String> {
         let ext = extension(&job.source);
         let is_markdown = MarkdownLoader.extensions().contains(&ext.as_str());
-        let native = self
-            .registry
-            .loader_for(&Source::Path(job.source.clone()))
-            .is_some();
+        let loader = self.registry.loader_for(&Source::Path(job.source.clone()));
         if is_markdown {
             let bytes = std::fs::read(&job.source).map_err(|e| format!("cannot read: {e}"))?;
             let text = decode(&bytes);
@@ -628,31 +645,45 @@ impl Converter {
                 .convert_markdown(job, &text)?
                 .read_from(bytes.len() as u64));
         }
-        if !native && pandoc::EXTENSIONS.contains(&ext.as_str()) {
-            if !self.options.pandoc {
-                return Err(format!(
-                    "no native reader for .{ext} files, and Pandoc is turned off"
-                ));
-            }
-            if !pandoc::available() {
-                return Err(format!(
-                    "no native reader for .{ext} files, and Pandoc is not installed"
-                ));
-            }
-            let size = std::fs::metadata(&job.source).map_or(0, |m| m.len());
-            let md = pandoc::to_markdown(&job.source, self.options.render.flavor)?;
-            return Ok(self.convert_markdown(job, &md)?.read_from(size));
+        if loader.is_none() && textweaver_formats::pandoc::EXTENSIONS.contains(&ext.as_str()) {
+            return Err(if self.options.pandoc {
+                format!("no native reader for .{ext} files, and Pandoc is not installed")
+            } else {
+                format!("no native reader for .{ext} files, and Pandoc is turned off")
+            });
         }
         let size = std::fs::metadata(&job.source).map_or(0, |m| m.len());
         let doc = self
             .registry
             .load(&Source::Path(job.source.clone()), &self.options.load)
             .map_err(|e| e.to_string())?;
-        Ok(self.convert_document(job, &doc, None)?.read_from(size))
+        let mut out = self.convert_document(job, &doc, None)?.read_from(size);
+        // What the loader had to leave out (content nested too deeply).
+        out.warnings
+            .splice(0..0, textweaver_formats::warnings(&doc.meta));
+        Ok(out)
     }
 
     /// Output for Markdown text (a Markdown file, or Pandoc's output).
     fn convert_markdown(&self, job: &Job, text: &str) -> Result<Output, String> {
+        // Citations are formatted for every output but Markdown itself.
+        let cited = if self.options.to == OutputFormat::Markdown {
+            citations::Cited::default()
+        } else {
+            self.citations.apply(
+                &job.source,
+                text,
+                self.options.to == OutputFormat::Html,
+                self.options.render.flavor == textweaver_render::Flavor::Pandoc,
+            )
+        };
+        let text = cited.markdown.as_deref().unwrap_or(text);
+        let mut out = self.convert_markdown_text(job, text)?;
+        out.warnings.extend(cited.warnings);
+        Ok(out)
+    }
+
+    fn convert_markdown_text(&self, job: &Job, text: &str) -> Result<Output, String> {
         match self.options.to {
             OutputFormat::Markdown => Ok(Output::new(text.as_bytes().to_vec())),
             OutputFormat::Html => {

@@ -5,8 +5,12 @@
 //!   which lacks them (comrak parses them itself);
 //! - Obsidian `[[wikilinks]]` with aliases, headings (`#Heading`) and block
 //!   references (`#^id`), `![[embeds]]`, `#tags`, and `==highlights==`;
-//! - Pandoc citations (`[@key]`, `[see @a, p. 3; -@b]`, bare `@key`) rendered
-//!   as links to `#ref-key`, and bracketed spans `[text]{.class #id k=v}`.
+//! - Pandoc citations (`[@key]`, `[see @a, p. 3; -@b]`, bare `@key`) marked
+//!   up as `<span class="citation" data-cites="…">` with their keys as
+//!   text, and bracketed spans `[text]{.class #id k=v}`. The renderer has no
+//!   references to link to; `tw convert` formats citations with
+//!   `textweaver-cite` before rendering and links them to the References
+//!   it appends (ADR-0019).
 
 use crate::escape_html;
 use crate::slug::slugify;
@@ -319,11 +323,8 @@ fn citation_group(inner: &str) -> Option<String> {
             part.push_str(&escape_html(prefix));
             part.push(' ');
         }
-        part.push_str(&format!(
-            "<a href=\"#ref-{}\">{}</a>",
-            escape_html(key),
-            escape_html(key)
-        ));
+        // No link: this page has no `#ref-…` entries to go to.
+        part.push_str(&escape_html(key));
         part.push_str(&escape_html(suffix.trim_end()));
         parts.push(part);
         keys.push(key);
@@ -362,7 +363,7 @@ fn bare_citation(s: &str) -> Option<(usize, String)> {
     Some((
         len + 1,
         format!(
-            "<span class=\"citation\" data-cites=\"{0}\"><a href=\"#ref-{0}\">{0}</a></span>",
+            "<span class=\"citation\" data-cites=\"{0}\">{0}</span>",
             escape_html(key)
         ),
     ))
@@ -606,11 +607,11 @@ mod tests {
     fn citations_and_spans() {
         assert_eq!(
             run("As shown [see @doe99, p. 33; -@roe04].", PANDOC),
-            "As shown <span class=\"citation\" data-cites=\"doe99 roe04\">(see <a href=\"#ref-doe99\">doe99</a>, p. 33; <a href=\"#ref-roe04\">roe04</a>)</span>."
+            "As shown <span class=\"citation\" data-cites=\"doe99 roe04\">(see doe99, p. 33; roe04)</span>."
         );
         assert_eq!(
             run("@doe99 says.", PANDOC),
-            "<span class=\"citation\" data-cites=\"doe99\"><a href=\"#ref-doe99\">doe99</a></span> says."
+            "<span class=\"citation\" data-cites=\"doe99\">doe99</span> says."
         );
         assert_eq!(
             run("mail me@example.org", PANDOC),

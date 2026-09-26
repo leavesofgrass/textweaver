@@ -7,8 +7,8 @@
 //! attached at a position, a store note to a range (empty for a point).
 //! Saving keeps an existing note's range when its start has not moved, and
 //! keeps fields the vault does not know (created time, color, unknown
-//! keys). Library registrations are collected in memory for the caller to
-//! report or hand to the library.
+//! keys). Library registrations are collected in memory; the caller saves
+//! them to the library with [`save_library`].
 
 use std::path::{Path, PathBuf};
 
@@ -159,10 +159,65 @@ impl AnnotationStore for StateStoreAnnotations {
     }
 }
 
+/// Adds the documents an import registered to the library file
+/// (`library.json`), keeping every entry already there. Returns how many
+/// documents were new to the library. An unreadable library file is an
+/// error, and is left as it is.
+pub fn save_library(entries: &[LibraryEntry], file: &Path) -> Result<usize, VaultError> {
+    if entries.is_empty() {
+        return Ok(0);
+    }
+    let mut library = textweaver_store::Library::load(file)?;
+    let now = textweaver_store::now_ts();
+    let mut added = 0;
+    for e in entries {
+        if library.get(&e.path).is_none() {
+            added += 1;
+        }
+        library.record_open_at(&e.path, &e.title, &e.format, now);
+    }
+    library.save(file)?;
+    Ok(added)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use textweaver_core::{CharPos, CharRange};
+
+    #[test]
+    fn registered_documents_are_saved_to_the_library() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("library.json");
+        let mut existing = textweaver_store::Library::default();
+        existing.record_open_at(&dir.path().join("book.md"), "Book", "markdown", 5);
+        existing.save(&file).unwrap();
+        let entries = vec![
+            LibraryEntry {
+                path: dir.path().join("vault/Cell.md"),
+                title: "Cell".into(),
+                format: "markdown".into(),
+            },
+            LibraryEntry {
+                path: dir.path().join("book.md"),
+                title: "Book".into(),
+                format: "markdown".into(),
+            },
+        ];
+        assert_eq!(save_library(&entries, &file).unwrap(), 1);
+        let back = textweaver_store::Library::load(&file).unwrap();
+        assert_eq!(back.entries.len(), 2);
+        assert_eq!(
+            back.get(&dir.path().join("vault/Cell.md")).unwrap().title,
+            "Cell"
+        );
+        // Again: nothing new.
+        assert_eq!(save_library(&entries, &file).unwrap(), 0);
+        // A damaged library is not overwritten.
+        std::fs::write(&file, "{ not json").unwrap();
+        assert!(save_library(&entries, &file).is_err());
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "{ not json");
+    }
 
     #[test]
     fn keeps_notes_beside_the_position_and_bookmarks() {

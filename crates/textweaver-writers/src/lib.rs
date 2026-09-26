@@ -32,6 +32,7 @@ use textweaver_text::Document;
 pub mod brf;
 pub mod docx;
 pub mod epub;
+mod math;
 pub mod model;
 pub mod pdf;
 mod resource;

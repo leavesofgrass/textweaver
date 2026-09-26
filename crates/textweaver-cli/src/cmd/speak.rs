@@ -5,6 +5,11 @@
 //! note on stderr), and either speaks through the speech service or, with
 //! `--out`, writes audio to a file. `--json` prints the normalized
 //! utterances with their offset maps and every status the service reported.
+//!
+//! The user's settings apply, as in the reader and `tw export-audio`: the
+//! backend, voice, rate, pitch, and volume of `[speech]` (the flags override
+//! them), normalization, punctuation, table narration, and where footnotes
+//! go. A configured voice is used only with the configured backend.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -15,9 +20,10 @@ use textweaver_app::core::{CharRange, Pitch, Rate, Utterance};
 use textweaver_app::formats;
 use textweaver_app::speech::{
     BackendRegistry, Caps, Pipeline, Selection, ServiceConfig, SpeechService, SpeechStatus,
-    VoiceParams, resolve_voice,
+    resolve_voice,
 };
-use textweaver_app::text::{Document, NarrationPolicy, plan};
+use textweaver_app::store::Settings;
+use textweaver_app::text::{Document, plan};
 
 /// Arguments for `tw speak`.
 #[derive(clap::Args, Debug)]
@@ -27,10 +33,11 @@ pub struct Args {
     /// Speak this file instead.
     #[arg(long)]
     pub file: Option<PathBuf>,
-    /// Backend id (default: auto).
+    /// Backend id (default: the settings' backend, else auto).
     #[arg(long)]
     pub backend: Option<String>,
-    /// Voice id.
+    /// Voice id or name (default: the settings' voice, with the settings'
+    /// backend).
     #[arg(long)]
     pub voice: Option<String>,
     /// Rate in words per minute.
@@ -45,6 +52,9 @@ pub struct Args {
     /// Print the utterances, offset maps, and status events as JSON.
     #[arg(long)]
     pub json: bool,
+    /// Read settings from this directory (like `TEXTWEAVER_HOME`).
+    #[arg(long)]
+    pub home: Option<PathBuf>,
 }
 
 /// What `tw speak --json` prints.
@@ -63,47 +73,64 @@ pub struct Report {
 /// How long to wait for the next status before giving up.
 const STATUS_TIMEOUT: Duration = Duration::from_secs(60);
 
-fn load(args: &Args) -> anyhow::Result<Document> {
+fn load(args: &Args, settings: &Settings) -> anyhow::Result<Document> {
     match (&args.text, &args.file) {
         (Some(t), None) => Ok(Document::from_plain_text(t)),
-        (None, Some(f)) => {
-            formats::load_path(f).with_context(|| format!("cannot open {}", f.display()))
-        }
+        (None, Some(f)) => formats::Registry::with_builtins()
+            .load(
+                &formats::Source::Path(f.clone()),
+                &textweaver_app::load_options(settings),
+            )
+            .with_context(|| format!("cannot open {}", f.display())),
         (Some(_), Some(_)) => bail!("give either TEXT or --file, not both"),
         (None, None) => bail!("nothing to speak: give TEXT or --file"),
     }
 }
 
-fn config(args: &Args) -> ServiceConfig {
-    let mut params = VoiceParams {
-        voice: args.voice.clone(),
-        ..VoiceParams::default()
-    };
+/// The service configuration: the settings', with the flags on top. The
+/// settings' voice belongs to the settings' backend, so it applies only
+/// when that backend was chosen.
+fn config(args: &Args, settings: &Settings, backend: &str) -> ServiceConfig {
+    let mut config = textweaver_app::service_config(settings);
+    let same_backend = settings.speech.backend == backend;
+    config.params.voice = args.voice.clone().or_else(|| {
+        same_backend
+            .then(|| settings.speech.voice.clone())
+            .flatten()
+    });
+    if !same_backend {
+        config.prefer_voice = None;
+    }
     if let Some(r) = args.rate {
-        params.rate = Rate::Wpm(r).clamped();
+        config.params.rate = Rate::Wpm(r).clamped();
     }
     if let Some(p) = args.pitch {
-        params.pitch = Pitch::Semitones(p).clamped();
+        config.params.pitch = Pitch::Semitones(p).clamped();
     }
-    ServiceConfig {
-        params,
-        ..ServiceConfig::default()
-    }
+    config
 }
 
-/// Speaks (or writes) and returns what happened.
-pub fn speak(args: &Args, registry: &BackendRegistry) -> anyhow::Result<Report> {
-    let doc = load(args)?;
+/// Speaks (or writes) with `settings` and returns what happened.
+pub fn speak(
+    args: &Args,
+    settings: &Settings,
+    registry: &BackendRegistry,
+) -> anyhow::Result<Report> {
+    let doc = load(args, settings)?;
     let planned = plan(
         &doc,
         CharRange::new(0, doc.len_chars()),
-        &NarrationPolicy::default(),
+        &textweaver_app::narration_policy(settings),
     );
-    let selection = registry.select(args.backend.as_deref());
+    let asked = args
+        .backend
+        .as_deref()
+        .or(Some(settings.speech.backend.as_str()));
+    let selection = registry.select(asked);
     let factory = registry
         .factory(selection.backend.id)
         .with_context(|| format!("backend {} is not built in", selection.backend.id))?;
-    let config = config(args);
+    let config = config(args, settings, selection.backend.id);
     let pipeline = |caps: Caps| {
         Pipeline::for_settings(
             &config.normalize,
@@ -192,7 +219,12 @@ pub fn speak(args: &Args, registry: &BackendRegistry) -> anyhow::Result<Report> 
 
 /// Runs `tw speak`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let report = speak(&args, &textweaver_app::speech_registry())?;
+    let (settings, message) = super::export_audio::load_settings(args.home.as_deref());
+    if let Some(m) = message {
+        eprintln!("{m}");
+    }
+    let registry = textweaver_app::speech_registry_for(&settings);
+    let report = speak(&args, &settings, &registry)?;
     if let Some(msg) = report.backend.fallback_message() {
         eprintln!("{msg}");
     }
@@ -245,7 +277,32 @@ mod tests {
             pitch: None,
             out: None,
             json: true,
+            home: None,
         }
+    }
+
+    fn speak(args: &Args, registry: &BackendRegistry) -> anyhow::Result<Report> {
+        super::speak(args, &Settings::default(), registry)
+    }
+
+    #[test]
+    fn settings_choose_the_backend_voice_and_rate() {
+        let mut settings = Settings::default();
+        settings.speech.backend = "recording".into();
+        settings.speech.voice = Some("rec-en-us".into());
+        let mut a = args("One. Two.", "x");
+        a.backend = None;
+        let r = super::speak(&a, &settings, &BackendRegistry::with_builtins()).unwrap();
+        // The opt-in recording backend is chosen only by the settings.
+        assert_eq!(r.backend.backend.id, "recording");
+        assert!(!r.backend.fell_back);
+        let c = config(&a, &settings, "recording");
+        assert_eq!(c.params.voice.as_deref(), Some("rec-en-us"));
+        // Another backend does not get the settings' voice; flags win.
+        a.rate = Some(300);
+        let c = config(&a, &settings, "null");
+        assert_eq!(c.params.voice, None);
+        assert_eq!(c.params.rate, Rate::Wpm(300).clamped());
     }
 
     #[test]

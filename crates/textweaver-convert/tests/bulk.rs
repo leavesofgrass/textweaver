@@ -8,8 +8,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant, SystemTime};
 
 use textweaver_convert::{
-    ConvertOptions, Converter, OutputFormat, Status, WatchEvent, WatchOptions, pandoc, watch,
+    ConvertOptions, Converter, OutputFormat, Status, WatchEvent, WatchOptions, watch,
 };
+use textweaver_formats::pandoc::pandoc_available;
 
 fn write(root: &Path, rel: &str, text: &str) -> PathBuf {
     let p = root.join(rel);
@@ -221,7 +222,7 @@ fn missing_input_is_an_error() {
 
 #[test]
 fn pandoc_fallback_when_installed() {
-    if !pandoc::available() {
+    if !pandoc_available() {
         eprintln!("pandoc not on PATH; skipping");
         return;
     }
@@ -264,30 +265,47 @@ fn hot_folder_converts_and_moves_sources() {
         rescan: Duration::from_millis(300),
         ..WatchOptions::default()
     };
-    let mut events: Vec<String> = Vec::new();
+    // The watcher's events, shared so the test waits for what it expects
+    // instead of for a fixed time.
+    let log: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+    let seen = |pred: &dyn Fn(&str) -> bool| log.lock().expect("log").iter().any(|e| pred(e));
+    // Generous: the conditions are signals, so a fast machine never waits
+    // this long, and a slow CI runner still passes.
+    let wait_for = |what: &str, done: &dyn Fn() -> bool| {
+        let deadline = Instant::now() + Duration::from_secs(120);
+        while !done() {
+            assert!(
+                Instant::now() < deadline,
+                "timed out waiting for {what}: {:?}",
+                log.lock().expect("log")
+            );
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    };
     std::thread::scope(|scope| {
         let handle = scope.spawn(|| {
-            let mut log = Vec::new();
             watch(&conv, &input, &out, &opts, &stop, &mut |e: &WatchEvent| {
-                log.push(e.sentence())
+                log.lock().expect("log").push(e.sentence())
             })
             .expect("watch");
-            log
         });
-        std::thread::sleep(Duration::from_millis(100));
+        // Files written once the watcher has started are "later" ones.
+        wait_for("the watcher to start", &|| {
+            seen(&|e: &str| e.starts_with("Watching "))
+        });
         write(&input, "late.md", "# Late\n\nArrived later.\n");
         write(&input, "photo.png", "x");
-        let deadline = Instant::now() + Duration::from_secs(20);
-        while Instant::now() < deadline
-            && !(out.join("late.txt").is_file()
+        wait_for("both files to be handled", &|| {
+            out.join("late.txt").is_file()
                 && input.join("processed/late.md").is_file()
-                && input.join("processed/early.md").is_file())
-        {
-            std::thread::sleep(Duration::from_millis(50));
-        }
+                && input.join("processed/early.md").is_file()
+                && seen(&|e: &str| e == "Converted late.md.")
+                && seen(&|e: &str| e.starts_with("Ignored photo.png"))
+        });
         stop.store(true, Ordering::SeqCst);
-        events = handle.join().expect("join");
+        handle.join().expect("join");
     });
+    let events = log.into_inner().expect("log");
     assert_eq!(
         fs::read_to_string(out.join("late.txt")).expect("late output"),
         "Late\n\nArrived later.\n"

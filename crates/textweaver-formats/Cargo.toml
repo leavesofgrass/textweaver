@@ -23,6 +23,7 @@ pandoc = []
 textweaver-core.workspace = true
 textweaver-text.workspace = true
 thiserror.workspace = true
+log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 ropey.workspace = true

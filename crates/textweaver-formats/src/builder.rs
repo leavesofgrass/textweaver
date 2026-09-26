@@ -43,6 +43,9 @@ pub(crate) struct Builder {
     next_id: usize,
     pending: Option<Break>,
     line_has_text: bool,
+    /// Empty markers waiting for the next content (a horizontal rule is
+    /// placed where the block after it starts).
+    points: Vec<Marker>,
 }
 
 impl Builder {
@@ -77,6 +80,10 @@ impl Builder {
             if o.start.is_none() {
                 o.start = Some(self.len);
             }
+        }
+        for mut m in self.points.drain(..) {
+            m.range = CharRange::empty(self.len);
+            self.markers.push(m);
         }
     }
 
@@ -158,6 +165,12 @@ impl Builder {
     /// Starts a new paragraph (a blank line) before the next text.
     pub(crate) fn paragraph_break(&mut self) {
         self.request(Break::Paragraph);
+    }
+
+    /// An empty marker at the start of the next content (after the pending
+    /// separator), or at the end when no content follows.
+    pub(crate) fn point(&mut self, marker: Marker) {
+        self.points.push(marker);
     }
 
     /// Opens a marker whose range starts at its first content.
@@ -265,6 +278,10 @@ impl Builder {
         while let Some(o) = self.open.last() {
             let id = OpenId(o.id);
             self.close(id);
+        }
+        for mut m in std::mem::take(&mut self.points) {
+            m.range = CharRange::empty(self.len);
+            self.markers.push(m);
         }
         (self.text, self.markers)
     }

@@ -17,6 +17,7 @@ serde.workspace = true
 krilla.workspace = true
 zip.workspace = true
 textweaver-fonts.workspace = true
+textweaver-math.workspace = true
 
 [features]
 default = ["bundled-fonts"]

@@ -4398,10 +4398,12 @@ version = "0.1.0-alpha.3"
 dependencies = [
  "log",
  "notify",
+ "pulldown-cmark",
  "rayon",
  "serde",
  "serde_json",
  "tempfile",
+ "textweaver-cite",
  "textweaver-core",
  "textweaver-formats",
  "textweaver-render",
@@ -4516,6 +4518,7 @@ version = "0.1.0-alpha.3"
 dependencies = [
  "encoding_rs",
  "insta",
+ "log",
  "lopdf",
  "proptest",
  "pulldown-cmark",
@@ -4699,6 +4702,7 @@ dependencies = [
  "textweaver-core",
  "textweaver-fonts",
  "textweaver-formats",
+ "textweaver-math",
  "textweaver-text",
  "thiserror 2.0.21",
  "zip",

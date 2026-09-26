@@ -259,7 +259,14 @@ Course material written for MathJax often puts ASCIIMath between single backtick
 tw convert notes.md --to epub
 ```
 
-EPUB, Word (`docx`), braille (`brf`), and PDF output do not turn math into MathML yet. They keep each formula as its LaTeX source, dollar signs included. For example, the Word document says "The area is $x^2$." Braille output transcribes the LaTeX characters one by one. For MathML, convert to HTML.
+These outputs typeset math from Markdown too, and never print the dollar signs:
+
+- EPUB: MathML, as in HTML, with the LaTeX as its text alternative.
+- Word (`docx`): Word's own equations (Office Math), with real fractions, scripts, roots, and matrices. Word draws them and can read them aloud.
+- PDF: the formula in print form, such as πr² or (a + b)/2, tagged as a formula whose text alternative is how it is read aloud, for example "pi r squared".
+- Braille (`brf`): the formula as it is read aloud, for example "pi r squared", which grade 1 braille spells out. Nemeth and UEB technical notation are not written yet.
+
+Plain text (`txt`) keeps the LaTeX source with its dollar signs, as textweaver reads it.
 
 ## Read MathML with your screen reader
 

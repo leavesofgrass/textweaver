@@ -37,6 +37,7 @@
 
 mod font;
 
+use crate::math::Formula;
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::num::NonZeroU16;
@@ -141,6 +142,8 @@ enum LinkTarget {
     Heading(usize),
     /// The body of footnote `id`.
     Note(String),
+    /// Not a link: a formula, tagged `Formula` with this spoken alt text.
+    Formula(String),
 }
 
 /// Headings and footnotes, found before layout so links (and the table of
@@ -448,6 +451,26 @@ impl<'a> Flow<'a> {
                         link,
                     ),
                     Style::Code => self.inlines(children, Look { mono: true, ..look }, link),
+                    // A formula prints in linear form ("πr²"), tagged
+                    // `Formula` with its spoken form as alt text; display
+                    // math stands on its own line.
+                    Style::Math { display } => {
+                        let f = Formula::from_marked(&Inline::plain(children), *display);
+                        let tag = match link {
+                            Some(l) => Some(l),
+                            None => {
+                                self.links.push(LinkTarget::Formula(f.spoken()));
+                                Some(self.links.len() - 1)
+                            }
+                        };
+                        if *display {
+                            self.pending_break = true;
+                        }
+                        self.push_text(&f.linear(), look, tag);
+                        if *display {
+                            self.pending_break = true;
+                        }
+                    }
                     Style::Link(uri) if link.is_none() && is_external(uri) => {
                         self.linked(LinkTarget::Uri(uri.trim().to_owned()), children, look);
                     }
@@ -803,9 +826,12 @@ impl<'a> Layout<'a> {
             for (x, p) in merged {
                 let psize = size * self.look_scale(p.look);
                 let parent = match p.link {
-                    Some(l) if slots => *link_groups
-                        .entry(l)
-                        .or_insert_with(|| self.tree.group(group, Tag::Link)),
+                    Some(l) if slots => *link_groups.entry(l).or_insert_with(|| match &links[l] {
+                        LinkTarget::Formula(alt) => {
+                            self.tree.group(group, Tag::Formula(Some(alt.clone())))
+                        }
+                        _ => self.tree.group(group, Tag::Link),
+                    }),
                     _ => group,
                 };
                 let mut rx = self.margin + indent + x;
@@ -824,7 +850,9 @@ impl<'a> Layout<'a> {
                     });
                     rx += w;
                 }
-                if let (Some(l), true) = (p.link, slots) {
+                if let (Some(l), true) = (p.link, slots)
+                    && !matches!(links[l], LinkTarget::Formula(_))
+                {
                     let slot = self.tree.slot(parent);
                     let top = self.y;
                     self.op(Op::Link {
@@ -1075,6 +1103,19 @@ impl<'a> Layout<'a> {
                 }
             }
             Block::PageBreak { .. } => {}
+            // A horizontal rule: a line across the text, as layout.
+            Block::Rule => {
+                let size = self.base;
+                self.ensure(self.line_height(size));
+                let y = self.y + self.line_height(size) / 2.0;
+                self.op(Op::Rule {
+                    x0: self.margin + indent,
+                    x1: self.margin + self.width(),
+                    y,
+                    width: 0.75,
+                });
+                self.y += self.line_height(size);
+            }
         }
     }
 
@@ -1504,6 +1545,7 @@ fn link_target(laid: &Laid, target: &LinkTarget) -> Option<Target> {
         LinkTarget::Uri(uri) => Some(Target::Action(Action::Link(LinkAction::new(uri.clone())))),
         LinkTarget::Heading(n) => laid.headings.get(*n).map(|h| place(h.2, h.3)),
         LinkTarget::Note(id) => laid.notes.get(id).map(|&(p, y)| place(p, y)),
+        LinkTarget::Formula(_) => None,
     }
 }
 
