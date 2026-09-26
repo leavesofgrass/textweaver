@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
-- Status update (Saturday, September 26, 2026): Implemented as decided and on by default. `pdf-extract` and `pdfium-render` remain in the workspace table although no crate uses them; removing them is still open. OCR is still out of scope.
+- Status update (Saturday, September 26, 2026): Implemented as decided and on by default. The `PageBreak` markers exist, but the reader has no page navigation yet: go to does not take a page number. `pdf-extract` and `pdfium-render` remain in the workspace table although no crate uses them; removing them is still open. OCR is still out of scope.
 
 ## Context
 

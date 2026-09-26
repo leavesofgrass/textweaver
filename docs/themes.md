@@ -104,7 +104,7 @@ export TEXTWEAVER_COLOR=256
 
 In a Windows command prompt:
 
-```powershell
+```bat
 set TEXTWEAVER_COLOR=256
 ```
 

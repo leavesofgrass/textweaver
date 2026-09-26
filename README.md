@@ -30,7 +30,7 @@ textweaver has two programs.
   - Edit mode gives typing echo, Markdown formatting commands, undo, find and replace, and autosave recovery.
   - Reading aids: RSVP (one word at a time), bionic reading, a reading ruler, and 23 themes checked for contrast.
   - Every key can be changed, and single-key shortcuts can be turned off with F9.
-  - It works alongside JAWS, NVDA, VoiceOver, and Orca. Start it with `--no-speech` to let your screen reader do the talking.
+  - It is designed to work alongside a screen reader such as JAWS, NVDA, VoiceOver, or Orca: start it with `--no-speech` to let your screen reader do the talking. [Using textweaver with a screen reader](docs/screen-readers.md) says what has been tested so far.
 - `tw` is a command-line tool.
   - `tw text`, `tw info`, and `tw search` extract, describe, and search a document.
   - `tw convert` converts files and whole folders to Markdown, HTML, text, EPUB, Word, braille (BRF), and tagged PDF. It uses every processor core, and it can watch a folder. With Pandoc installed, it also reads formats textweaver has no reader for.

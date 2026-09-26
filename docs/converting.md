@@ -6,7 +6,7 @@ This guide is written to be read with a screen reader. Each section starts with 
 
 ## Convert one file
 
-```
+```bash
 tw convert notes.md --to html
 ```
 
@@ -28,7 +28,7 @@ PDF output uses fonts that come with textweaver, so it works on every computer w
 
 ## Convert a folder
 
-```
+```bash
 tw convert "Biology notes" --to html --out "Biology site"
 ```
 
@@ -44,7 +44,7 @@ When you run the same command again, a file is skipped when its output is newer 
 
 To convert everything anyway, for example after changing the template, add `--force`:
 
-```
+```bash
 tw convert "Biology notes" --to html --out "Biology site" --force
 ```
 
@@ -52,7 +52,7 @@ Outputs are written to a temporary file first and then renamed, so stopping a co
 
 ## Watch a folder
 
-```
+```bash
 tw convert Inbox --to txt --watch
 ```
 
@@ -101,7 +101,7 @@ You can write your own templates. They are HTML files with MiniJinja placeholder
 
 ## PDF and EPUB layout
 
-```
+```bash
 tw convert "Chapter 3.md" --to pdf --large-print --title-page --contents
 ```
 
@@ -142,11 +142,11 @@ textweaver reads Markdown, HTML, plain text, EPUB, Word (DOCX), and PDF itself. 
 
 The reader, `textweaver`, does not use Pandoc. To read an OpenDocument or RTF file aloud, convert it to Markdown first, then open the Markdown:
 
-```
+```bash
 tw convert essay.odt --to md
 ```
 
-```
+```bash
 textweaver essay.md
 ```
 

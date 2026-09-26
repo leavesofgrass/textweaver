@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
-- Status update (Saturday, September 26, 2026): Integrated in 0.1.0-alpha.2. As built, `nsspeech` drives Apple's classic engine through its C API (the Speech Synthesis Manager), because `NSSpeechSynthesizer` delivers its callbacks only on the main run loop; `avspeech`'s callbacks arrive through the main dispatch queue, so it works only while the application pumps the main run loop, which the terminal reader and `tw serve` do. The `[speech.apple] backend` setting chooses between them. Neither has been tested with VoiceOver on a real Mac.
+- Status update (Saturday, September 26, 2026): Integrated in 0.1.0-alpha.2. As built, `nsspeech` drives Apple's classic engine through its C API (the Speech Synthesis Manager), because `NSSpeechSynthesizer` delivers its callbacks only on the main run loop; `avspeech`'s callbacks arrive through the main dispatch queue, so it works only while the application pumps the main run loop, which the terminal reader and `tw serve` do; `tw speak` does not, so live `avspeech` playback from `tw speak` is expected to fail (untested on a Mac). The `[speech.apple] backend` setting chooses between them. Neither has been tested with VoiceOver on a real Mac.
 
 ## Context
 

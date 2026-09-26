@@ -15,9 +15,10 @@
 //!   (`crates/textweaver-gui`, ADR-0014) until the Wave 3 GUI moves it
 //!   here behind the reserved `live-region` feature.
 //!
-//! What is said, and when, lives in the [`Announcement`] catalog: each state
-//! change has fixed wording, a [`Priority`], and a text for each
-//! [`Verbosity`] level. Frontends call
+//! The [`Announcement`] catalog gives some state changes fixed wording, a
+//! [`Priority`], and a text for each [`Verbosity`] level; the application
+//! words most of its messages itself (see `textweaver-app`) and sends them
+//! through the same announcer and verbosity filter. Frontends call
 //! [`Announcer::announce_event`] with the user's verbosity. Star announced
 //! some changes only on the status bar (rate, Speech Cursor, edit mode,
 //! resume position) and gave no feedback at all for a TUI pause;

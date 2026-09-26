@@ -22,7 +22,7 @@ If your DECtalk is somewhere else, name its library with an environment variable
 
 On Windows, in a command prompt:
 
-```
+```bat
 setx TEXTWEAVER_DECTALK_LIBRARY "C:\Path\To\DECtalk.dll"
 ```
 
@@ -30,7 +30,7 @@ Then open a new command prompt, since `setx` affects new windows only.
 
 On Linux, for the current shell (add the line to your shell's start-up file to keep it):
 
-```
+```bash
 export TEXTWEAVER_DECTALK_LIBRARY=/path/to/libtts.so
 ```
 

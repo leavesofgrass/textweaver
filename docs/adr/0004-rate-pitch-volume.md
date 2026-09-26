@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
-- Status update (Saturday, September 26, 2026): Implemented as decided. Rate, pitch, volume, and the speed presets are the `[speech]` settings `rate`, `pitch`, `volume`, and `speed_presets`; each engine crate documents its own mapping. DECtalk takes words per minute natively, from 75 to 600 (ADR-0021).
+- Status update (Saturday, September 26, 2026): Implemented, with two differences: the volume keys step by 10, not 5, and a voice without pitch control is announced as "Pitch cannot be changed with this voice." Rate, pitch, volume, and the speed presets are the `[speech]` settings `rate`, `pitch`, `volume`, and `speed_presets`; each engine crate documents its own mapping. DECtalk takes words per minute natively, from 75 to 600 (ADR-0021).
 
 ## Context
 

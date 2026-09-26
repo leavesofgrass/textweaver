@@ -4,7 +4,7 @@ ETI-Eloquence is the voice many screen-reader users know from JAWS, NVDA, and Ku
 
 To see what textweaver finds on your computer, run:
 
-```
+```bash
 tw eloquence
 ```
 
@@ -40,7 +40,7 @@ Voxin, from Oralux (voxin.oralux.net), is the licensed way to run Eloquence on L
 2. Run its installer, as its instructions describe.
 3. Run `tw eloquence`. textweaver looks for the library at `/opt/oralux/voxin/lib/libibmeci.so`, `/usr/lib/libibmeci.so`, and `/opt/IBM/ibmtts/lib/libibmeci.so`. If yours is elsewhere, name it:
 
-   ```
+   ```bash
    export TEXTWEAVER_ECI_LIBRARY=/path/to/libibmeci.so
    ```
 
@@ -53,7 +53,7 @@ Code Factory (codefactoryglobal.com) sells Eloquence for Windows, which installs
 1. Buy and install Eloquence for Windows from Code Factory.
 2. Tell textweaver you own it, once:
 
-   ```
+   ```powershell
    setx TEXTWEAVER_ECI_CODE_FACTORY 1
    ```
 
@@ -74,13 +74,13 @@ OpenEVV is an independent reimplementation of IBM's Embedded ViaVoice, the engin
 
 ## Pronunciation dictionaries
 
-textweaver includes the community IBMTTS pronunciation dictionaries (by amirsol81, x0, thunderdrop, and many contributors, released into the public domain under CC0) and loads them into Eloquence automatically. They fix thousands of words Eloquence mispronounces. To turn them off, or to use your own copy:
+textweaver includes the community IBMTTS pronunciation dictionaries (by amirsol81, x0, thunderdrop, and many contributors, released into the public domain under CC0) and loads them into Eloquence automatically. They fix thousands of words Eloquence mispronounces. To turn them off, or to use your own copy, set `TEXTWEAVER_ECI_DICTIONARIES`. In a Windows command prompt, for the current window only:
 
-```powershell
+```bat
 set TEXTWEAVER_ECI_DICTIONARIES=off
 ```
 
-```powershell
+```bat
 set TEXTWEAVER_ECI_DICTIONARIES=C:\path\to\my\dictionaries
 ```
 
