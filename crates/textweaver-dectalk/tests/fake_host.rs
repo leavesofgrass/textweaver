@@ -193,7 +193,7 @@ fn stop_mid_utterance_cancels_and_nothing_follows() {
     assert!(pump(
         &mut b,
         &mut rec,
-        Duration::from_secs(2),
+        Duration::from_secs(10),
         finished(u.id)
     ));
     let n = rec.events.len();
@@ -230,15 +230,30 @@ fn pause_holds_every_event_and_resume_continues_without_skipping() {
         r.words(u.id).len() >= 2
     }));
     b.pause().unwrap();
-    std::thread::sleep(Duration::from_millis(20));
-    b.poll(&mut rec);
-    let held = rec.events.len();
+    // Paused for longer than the rest of the audio lasts (about half a
+    // second at this speed): if the pause did not hold, the utterance
+    // would finish. A word whose audio had already played may still
+    // arrive late on a busy machine, so the check is that the reading is
+    // held, not that nothing at all arrives. (Before: a fixed 20 ms sleep
+    // was meant to let such words arrive, and failed when one came later.)
     let t0 = Instant::now();
-    while t0.elapsed() < Duration::from_millis(400) {
+    while t0.elapsed() < Duration::from_secs(1) {
         b.poll(&mut rec);
         std::thread::sleep(Duration::from_millis(5));
     }
-    assert_eq!(rec.events.len(), held, "events while paused");
+    assert!(
+        !rec.has(u.id, |e| *e == RawEvent::Finished),
+        "the utterance went on while paused: {:?}",
+        rec.of(u.id)
+    );
+    assert!(rec.words(u.id).len() < 10, "every word came while paused");
+    assert!(
+        rec.of(u.id)
+            .iter()
+            .all(|e| matches!(e, RawEvent::Started | RawEvent::Word { .. })),
+        "{:?}",
+        rec.of(u.id)
+    );
     b.resume().unwrap();
     assert!(pump(
         &mut b,

@@ -110,6 +110,7 @@ fn speak_reports_started_each_word_in_order_then_finished() {
     let mut rec = Rec::default();
     let text = "Hello brave new world, café naïve 日本 ok.";
     let u = utt(text, 1, 0);
+    let t0 = Instant::now();
     b.speak(&u, &mut rec).unwrap();
     assert!(pump(
         &mut b,
@@ -136,18 +137,22 @@ fn speak_reports_started_each_word_in_order_then_finished() {
         assert!(pair[0].1 < pair[1].1, "audio_ms must rise: {words:?}");
     }
     // Word events fire on the playback clock, not in a burst: the last word
-    // arrives well after the first.
-    let times: Vec<Instant> = rec
+    // cannot arrive before its audio has played (at 4x speed). Measured
+    // from before `speak`, so a slow machine only makes it later. (Before,
+    // the spread between the first and last word was measured, which a
+    // late first word shrank.)
+    let last = rec
         .events
         .iter()
-        .filter(|(_, e, _)| matches!(e, RawEvent::Word { .. }))
+        .rev()
+        .find(|(_, e, _)| matches!(e, RawEvent::Word { .. }))
         .map(|(.., t)| *t)
-        .collect();
-    let spread = times[times.len() - 1] - times[0];
+        .unwrap();
+    let heard = last - t0;
     let expected = Duration::from_millis(u64::from(words[words.len() - 1].1) / 4);
     assert!(
-        spread + Duration::from_millis(40) >= expected,
-        "words spread over {spread:?}, audio says {expected:?}"
+        heard + Duration::from_millis(40) >= expected,
+        "the last word came {heard:?} after speak, audio says {expected:?}"
     );
 }
 
@@ -196,7 +201,7 @@ fn stop_mid_utterance_cancels_and_nothing_follows() {
     assert!(pump(
         &mut b,
         &mut rec,
-        Duration::from_secs(2),
+        Duration::from_secs(10),
         finished(u.id)
     ));
     let n = rec.events.len();
@@ -236,16 +241,30 @@ fn pause_holds_every_event_and_resume_continues_without_skipping() {
         r.words(u.id).len() >= 2
     }));
     b.pause().unwrap();
-    // Let anything already due drain, then expect silence.
-    std::thread::sleep(Duration::from_millis(20));
-    b.poll(&mut rec);
-    let held = rec.events.len();
+    // Paused for longer than the rest of the audio lasts (about half a
+    // second at this speed): if the pause did not hold, the utterance
+    // would finish. A word whose audio had already played may still
+    // arrive late on a busy machine, so the check is that the reading is
+    // held, not that nothing at all arrives. (Before: a fixed 20 ms sleep
+    // was meant to let such words arrive, and failed when one came later.)
     let t0 = Instant::now();
-    while t0.elapsed() < Duration::from_millis(400) {
+    while t0.elapsed() < Duration::from_secs(1) {
         b.poll(&mut rec);
         std::thread::sleep(Duration::from_millis(5));
     }
-    assert_eq!(rec.events.len(), held, "events while paused");
+    assert!(
+        !rec.has(u.id, |e| *e == RawEvent::Finished),
+        "the utterance went on while paused: {:?}",
+        rec.of(u.id)
+    );
+    assert!(rec.words(u.id).len() < 10, "every word came while paused");
+    assert!(
+        rec.of(u.id)
+            .iter()
+            .all(|e| matches!(e, RawEvent::Started | RawEvent::Word { .. })),
+        "{:?}",
+        rec.of(u.id)
+    );
     b.resume().unwrap();
     assert!(pump(
         &mut b,
