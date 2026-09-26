@@ -584,7 +584,16 @@ Jon chose Xilem, from Linebender, for the GUI on every platform, to "keep as muc
 
 The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It is removed only after the Xilem GUI passes the same accessibility checks.
 
-**Owns:** a new crate, `crates/textweaver-xilem` (binary `textweaver-gui`, once it replaces the spike), plus GUI packaging in `xtask` and the workflows. The research findings on Xilem, Masonry, and AccessKit come in the orchestrator's brief update; read them first.
+**Owns:** a new crate, `crates/textweaver-xilem` (binary `textweaver-gui`, once it replaces the spike), plus GUI packaging in `xtask` and the workflows.
+
+**Read `docs/research/xilem-gui.md` first.** Key points:
+- Write your own `DocumentView` widget against Masonry and AccessKit. Masonry's read-only text can't take focus, and Parley's editor has a single style.
+- Patch the workspace to `accesskit_winit` 0.34 or later, so Orca detects the app.
+- Build a live-region announcer node, using a fresh node for each repeat.
+- Use windowing with stable run IDs.
+- Depend on Masonry more than on Xilem.
+- Keep wxDragon working on Windows until the UI Automation report passes.
+- Propose upstream PRs for the gaps.
 
 1. **ADR-0023, "Xilem GUI".** It supersedes ADR-0014 and records:
    - the choice;

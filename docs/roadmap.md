@@ -269,7 +269,7 @@ Then the GUI steps, in order:
 6. **Reading aids in the GUI:** text spacing, the ruler, and an RSVP panel that never covers the caret. The font chooser already exists.
 7. **Edit mode** on the same control, with incremental updates.
 8. **Packaging.** The Windows zip gets `textweaver-gui.exe`. macOS gets an `.app` with the fonts inside, which likely fixes font registration.
-9. **Linux.** GTK builds in CI, a smoke test under Xvfb, an AT-SPI tree check, and an Orca test by a person. GTK 3 has no announcement API, so the Linux GUI keeps self-voicing on by default.
+9. **Linux.** GTK builds in CI, a smoke test under Xvfb, an AT-SPI tree check, and an Orca test by a person. (Superseded, 2026-09-26: GTK 3 does announce through ATK's notification signal, which the `live-region` crate uses; see `docs/research/xilem-gui.md`.)
 10. **VoiceOver** on a real Mac, by a tester.
 11. **Ship it.** Make the GUI a default workspace member and include it in the packages.
 

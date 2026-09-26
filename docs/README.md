@@ -107,6 +107,10 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 - [Reading aids](site/reading-aids.html): try RSVP, bionic reading, and the reading ruler.
 - [About the pages](site/README.md): how they are made and regenerated.
 
+## Research
+
+- [A Xilem GUI for textweaver](research/xilem-gui.md): findings on Xilem, Masonry, and AccessKit accessibility (September 2026).
+
 ## See also
 
 - [README](../README.md): what textweaver is, and how to build it.
