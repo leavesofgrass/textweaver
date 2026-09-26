@@ -744,13 +744,17 @@ mod tests {
     }
 
     /// Star's `test_authoring.py` 5 ("the formatting toolbar follows edit
-    /// mode"): formatting commands are reachable only in edit mode.
+    /// mode"): formatting commands are reachable only in edit mode. Edit
+    /// mode on and off, copying, and the typing echo work everywhere.
     #[test]
     fn formatting_is_bound_only_in_edit_mode() {
         use crate::Category;
         for (_, _, map) in all_maps() {
             for a in ActionId::in_category(Category::Editing) {
-                if a == ActionId::ToggleEditMode {
+                if matches!(
+                    a,
+                    ActionId::ToggleEditMode | ActionId::Copy | ActionId::CycleTypingEcho
+                ) {
                     continue;
                 }
                 for b in map.bindings_for(a) {
@@ -815,6 +819,82 @@ mod tests {
             Some(ActionId::ListNotes),
             "Star's notes panel chord"
         );
+    }
+
+    /// Phase 1 keys (Agent P1b): 1 to 6 jump to the next heading of that
+    /// level and Shift with the digit (as a US layout sends it) to the
+    /// previous one, in browse mode only; the new chords reach their
+    /// actions in every mode that needs them.
+    #[test]
+    fn phase1_authoring_keys() {
+        for (platform, frontend, map) in all_maps() {
+            for (level, prev) in (1..=6u8).zip(["!", "@", "#", "$", "%", "^"]) {
+                let next = ActionId::next_heading_at(level).unwrap();
+                let back = ActionId::previous_heading_at(level).unwrap();
+                assert_eq!(next.heading_level_jump(), Some((level, true)));
+                assert_eq!(back.heading_level_jump(), Some((level, false)));
+                assert_eq!(
+                    map.lookup(&k(&level.to_string()), Layer::Browse),
+                    Some(next),
+                    "{platform:?} {frontend:?}"
+                );
+                assert_eq!(map.lookup(&k(prev), Layer::Browse), Some(back));
+                // Digits type in edit mode.
+                assert_eq!(map.lookup(&k(&level.to_string()), Layer::Edit), None);
+            }
+            assert_eq!(ActionId::next_heading_at(7), None);
+            assert_eq!(ActionId::NextSentence.heading_level_jump(), None);
+            assert_eq!(
+                map.lookup(&k("Alt+N"), Layer::Edit),
+                Some(ActionId::AddNote)
+            );
+            assert_eq!(
+                map.lookup(&k("Alt+N"), Layer::Browse),
+                Some(ActionId::AddNote)
+            );
+            let ctrl = if platform == Platform::MacOs && frontend == Frontend::Gui {
+                "Cmd"
+            } else {
+                "Ctrl"
+            };
+            let c = k(&format!("{ctrl}+C"));
+            assert_eq!(map.lookup(&c, Layer::Edit), Some(ActionId::Copy));
+            assert_eq!(map.lookup(&c, Layer::Browse), Some(ActionId::Copy));
+            let x = k(&format!("{ctrl}+X"));
+            assert_eq!(map.lookup(&x, Layer::Edit), Some(ActionId::Cut));
+            assert_eq!(
+                map.lookup(&k("Tab"), Layer::Edit),
+                Some(ActionId::NextTableCell)
+            );
+            assert_eq!(
+                map.lookup(&k("Shift+Tab"), Layer::Edit),
+                Some(ActionId::PreviousTableCell)
+            );
+            assert_eq!(
+                map.lookup(&k("Tab"), Layer::Browse),
+                Some(ActionId::SpeechCursorToggle)
+            );
+            assert_eq!(
+                map.lookup(&k("Shift+F9"), Layer::Edit),
+                Some(ActionId::CycleTypingEcho)
+            );
+            assert_eq!(
+                map.lookup(&k("Alt+Shift+K"), Layer::Edit),
+                Some(ActionId::LinkAddress)
+            );
+            assert_eq!(
+                map.lookup(&k("Alt+Shift+T"), Layer::Browse),
+                Some(ActionId::WordCount)
+            );
+            assert_eq!(
+                map.lookup(&k("W"), Layer::Browse),
+                Some(ActionId::SayPosition)
+            );
+            assert_eq!(
+                map.lookup(&k("Alt+Shift+Y"), Layer::Edit),
+                Some(ActionId::SayPosition)
+            );
+        }
     }
 
     #[test]

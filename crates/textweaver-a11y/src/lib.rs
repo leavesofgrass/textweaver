@@ -7,7 +7,9 @@
 //!   the app with a closure, so this crate does not depend on speech);
 //! - [`StatusLineAnnouncer`]: the terminal's status line, which terminal
 //!   screen readers read as it changes;
-//! - [`LogAnnouncer`]: records announcements for tests;
+//! - [`LogAnnouncer`]: records every announcement, for tests;
+//! - [`RingAnnouncer`]: keeps only the latest 256, for a long-running
+//!   reader (the terminal frontend);
 //! - [`MultiAnnouncer`]: several of the above at once;
 //! - [`Shared`]: a clonable handle, so the app can own an announcer while
 //!   the TUI draws the status line from it and tests read the log;
@@ -184,6 +186,69 @@ impl Announcer for LogAnnouncer {
     }
 }
 
+/// Keeps only the most recent announcements, in a ring of fixed size: the
+/// terminal reader's record of what was said, which must not grow for as
+/// long as the reader runs ([`LogAnnouncer`] keeps everything, for tests).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RingAnnouncer {
+    entries: std::collections::VecDeque<(String, Priority)>,
+    capacity: usize,
+}
+
+impl RingAnnouncer {
+    /// The ring size the terminal reader uses.
+    pub const DEFAULT_CAPACITY: usize = 256;
+
+    /// A ring keeping at most `capacity` announcements (at least one).
+    pub fn new(capacity: usize) -> Self {
+        let capacity = capacity.max(1);
+        RingAnnouncer {
+            entries: std::collections::VecDeque::with_capacity(capacity),
+            capacity,
+        }
+    }
+
+    /// The announcements kept, oldest first.
+    pub fn texts(&self) -> Vec<&str> {
+        self.entries.iter().map(|(t, _)| t.as_str()).collect()
+    }
+
+    /// The most recent announcement.
+    pub fn last(&self) -> Option<&str> {
+        self.entries.back().map(|(t, _)| t.as_str())
+    }
+
+    /// How many announcements are kept.
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// True when nothing was announced yet.
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// The most kept.
+    pub fn capacity(&self) -> usize {
+        self.capacity
+    }
+}
+
+impl Default for RingAnnouncer {
+    fn default() -> Self {
+        RingAnnouncer::new(Self::DEFAULT_CAPACITY)
+    }
+}
+
+impl Announcer for RingAnnouncer {
+    fn announce(&mut self, text: &str, priority: Priority) {
+        if self.entries.len() == self.capacity {
+            self.entries.pop_front();
+        }
+        self.entries.push_back((text.to_owned(), priority));
+    }
+}
+
 /// Speaks announcements through a callback (the app passes one that calls
 /// `SpeechService::say(text, SayMode::Announce)`).
 pub struct SpeechAnnouncer<F: FnMut(&str, Priority)> {
@@ -330,6 +395,23 @@ mod tests {
         );
         a.announce_at("state", Priority::Polite, Verbosity::Low, Verbosity::Normal);
         assert_eq!(a.log, vec![("state".to_owned(), Priority::Polite)]);
+    }
+
+    #[test]
+    fn the_ring_keeps_only_the_latest() {
+        let mut r = RingAnnouncer::default();
+        assert!(r.is_empty());
+        assert_eq!(r.capacity(), 256);
+        for i in 0..1000 {
+            r.announce(&format!("message {i}"), Priority::Polite);
+        }
+        assert_eq!(r.len(), 256);
+        assert_eq!(r.texts()[0], "message 744");
+        assert_eq!(r.last(), Some("message 999"));
+        let mut tiny = RingAnnouncer::new(0);
+        tiny.announce("a", Priority::Polite);
+        tiny.announce("b", Priority::Assertive);
+        assert_eq!(tiny.texts(), vec!["b"]);
     }
 
     #[test]

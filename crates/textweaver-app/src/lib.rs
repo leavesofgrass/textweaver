@@ -101,6 +101,7 @@
 
 pub mod align;
 mod app;
+mod authoring;
 mod backends;
 mod command;
 pub mod disk;
@@ -112,6 +113,7 @@ mod help;
 mod library;
 pub mod logfile;
 mod marks;
+mod mdline;
 mod nav;
 mod notes;
 mod playback;
@@ -126,6 +128,7 @@ mod view;
 mod voice;
 
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
+pub use authoring::osc52;
 pub use backends::{
     CODE_FACTORY_LIBRARY, apple_preference, eci_config, sapi_config, service_config,
     speech_registry, speech_registry_for,

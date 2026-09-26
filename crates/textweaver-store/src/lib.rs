@@ -40,7 +40,7 @@ pub mod sync;
 pub mod time;
 
 pub use atomic::atomic_write;
-pub use doc_state::{Bookmark, DEFAULT_DEBOUNCE, DocKey, DocState, StateStore, percent};
+pub use doc_state::{Anchor, Bookmark, DEFAULT_DEBOUNCE, DocKey, DocState, StateStore, percent};
 pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
 pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, ScannedDoc};
 pub use notes::{Annotation, Highlight, Note, NotesExport, Relation};
@@ -49,8 +49,9 @@ pub use recent::{Recent, RecentEntry};
 pub use settings::{
     AppleBackend, AppleSettings, CommunityLexiconSettings, DisplaySettings, EciDictionaries,
     EciSettings, EditingSettings, ExportSettings, FootnoteMode, HighlightSettings,
-    KeyboardSettings, KeymapOverrides, LibrarySettings, NormalizationSettings, ReadingSettings,
-    SapiSettings, Settings, SettingsLoad, SettingsStore, SpeechSettings, SubtitleFormat, TableMode,
+    KeyboardSettings, KeymapOverrides, LibrarySettings, NormalizationSettings, RESERVED_SETTINGS,
+    ReadingSettings, SapiSettings, Settings, SettingsLoad, SettingsStore, SpeechSettings,
+    SubtitleFormat, TableMode,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,

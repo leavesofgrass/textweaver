@@ -314,6 +314,134 @@ fn new_document_saves_as_and_adopts_the_path() {
     assert_eq!(std::fs::read_to_string(&target).unwrap(), "Draft!");
 }
 
+/// Save As suggests a name from the first heading and asks y or n before
+/// replacing another file; n asks for another name, y replaces it.
+#[test]
+fn save_as_suggests_from_the_heading_and_asks_before_overwriting() {
+    let mut r = rig();
+    r.act(ActionId::NewDocument);
+    r.type_str("# Field Notes\n\nBody.");
+    let effects = r.act(ActionId::SaveAs);
+    let Some(Effect::Prompt { label, .. }) = effects.first() else {
+        panic!("{effects:?}");
+    };
+    assert!(label.ends_with("field-notes.md"), "{label}");
+    // Another file is in the way.
+    let taken = r.file("taken.md", "keep me");
+    r.app.dispatch(Command::Answer(taken.display().to_string()));
+    assert!(r.app.confirmation_pending());
+    assert!(
+        r.said
+            .last()
+            .contains("taken.md already exists. Replace it? y or n")
+    );
+    // No: nothing written, and the name is asked again.
+    let effects = r.app.dispatch(Command::Confirm(Confirm::No));
+    assert!(matches!(
+        effects.first(),
+        Some(Effect::Prompt {
+            purpose: PromptPurpose::SaveAs,
+            ..
+        })
+    ));
+    assert_eq!(std::fs::read_to_string(&taken).unwrap(), "keep me");
+    // A relative answer goes in the same folder; it exists too, and y
+    // replaces it.
+    r.app.dispatch(Command::Answer("taken.md".into()));
+    assert!(r.app.confirmation_pending());
+    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    assert!(!r.app.confirmation_pending());
+    assert_eq!(
+        std::fs::read_to_string(&taken).unwrap(),
+        "# Field Notes\n\nBody."
+    );
+    // Saving onto the file already open does not ask.
+    r.type_str("!");
+    let effects = r.act(ActionId::SaveAs);
+    assert!(matches!(effects.first(), Some(Effect::Prompt { .. })));
+    r.app.dispatch(Command::Answer(String::new()));
+    assert!(!r.app.confirmation_pending());
+    assert!(std::fs::read_to_string(&taken).unwrap().ends_with('!'));
+}
+
+/// A recovery snapshot that cannot be written is announced once, the
+/// attempts back off, and a later success is said.
+#[test]
+fn a_failing_recovery_copy_is_announced_once() {
+    let mut r = rig();
+    let file = r.file("s.md", "Text.\n");
+    r.app.open(&file).unwrap();
+    // A file where the recovery folder should be.
+    let rec = r.paths.recovery_dir();
+    std::fs::create_dir_all(rec.parent().unwrap()).unwrap();
+    std::fs::write(&rec, "blocked").unwrap();
+    r.act(ActionId::ToggleEditMode);
+    r.type_str("More ");
+    r.said.clear();
+    let t0 = Instant::now();
+    for s in 0..200u64 {
+        r.app.tick(t0 + Duration::from_millis(s * 500));
+    }
+    let failures: Vec<String> = r
+        .said
+        .all()
+        .into_iter()
+        .filter(|m| m.contains("Could not write the recovery copy"))
+        .collect();
+    assert_eq!(failures.len(), 1, "{:?}", r.said.all());
+    std::fs::remove_file(&rec).unwrap();
+    r.app.tick(t0 + Duration::from_secs(1000));
+    assert!(r.said.any("The recovery copy is being written again."));
+}
+
+/// A crash or a closing terminal writes the snapshot at once and saves the
+/// position, without asking.
+#[test]
+fn emergency_save_writes_the_snapshot_at_once() {
+    let mut r = rig();
+    let file = r.file("e.md", "Original.\n");
+    r.app.open(&file).unwrap();
+    r.act(ActionId::ToggleEditMode);
+    r.type_str("Unsaved ");
+    r.app.emergency_save();
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "Original.\n");
+    r.relaunch();
+    let effects = r.app.offer_recovery();
+    assert!(
+        matches!(effects.first(), Some(Effect::ShowList { .. })),
+        "{effects:?}"
+    );
+}
+
+/// "Bookmark set" is said only when the bookmark reached the disk.
+#[test]
+fn a_bookmark_that_cannot_be_saved_is_not_announced_as_set() {
+    let mut r = rig();
+    let file = r.file(
+        "b.md",
+        "One two three.
+",
+    );
+    r.app.open(&file).unwrap();
+    // A file where the state folder should be: saving fails.
+    let state = r.paths.state_dir();
+    let _ = std::fs::remove_dir_all(&state);
+    std::fs::create_dir_all(state.parent().unwrap()).unwrap();
+    std::fs::write(&state, "blocked").unwrap();
+    r.said.clear();
+    r.act(ActionId::AddBookmark);
+    assert!(!r.said.any("set at"), "{:?}", r.said.all());
+    assert!(r.said.any("could not be saved"), "{:?}", r.said.all());
+    // It still works for this session.
+    assert!(r.app.bookmark_position(0).is_some());
+    // Once saving works again, so does the announcement.
+    std::fs::remove_file(&state).unwrap();
+    r.act(ActionId::CaretNextWord);
+    r.said.clear();
+    r.act(ActionId::AddBookmark);
+    assert!(r.said.any("Bookmark mark2 set at"), "{:?}", r.said.all());
+}
+
 #[test]
 fn quitting_with_changes_saves_on_request() {
     let mut r = rig();
@@ -562,7 +690,17 @@ fn notes_add_list_jump_edit_delete_and_persist() {
     r.app.dispatch(Command::Notes(NoteCommand::ToggleHighlight));
     assert!(r.said.last().starts_with("Highlight removed"));
     r.app.dispatch(Command::Notes(NoteCommand::List));
+    // Delete in the list asks first; n keeps the note and shows the list
+    // again, y deletes it.
+    r.app.dispatch(Command::DeleteItem(0));
+    assert!(r.app.confirmation_pending());
+    assert_eq!(r.said.last(), "Delete this note? y or n");
+    let effects = r.app.dispatch(Command::Confirm(Confirm::No));
+    assert!(effects.iter().any(|e| matches!(e, Effect::ShowList { .. })));
+    assert_eq!(r.app.session().unwrap().notes.len(), 1);
     let effects = r.app.dispatch(Command::DeleteItem(0));
+    assert!(!effects.iter().any(|e| matches!(e, Effect::ShowList { .. })));
+    let effects = r.app.dispatch(Command::Confirm(Confirm::Yes));
     assert!(!effects.iter().any(|e| matches!(e, Effect::ShowList { .. })));
     assert!(r.said.last().starts_with("Note deleted"));
     let store = StateStore::new(r.paths.state_dir());

@@ -212,12 +212,26 @@ impl App {
     /// Reads `range` aloud. `kind` decides whether the cursor follows.
     /// Returns false when there was nothing to read.
     pub(crate) fn read_range(&mut self, range: CharRange, kind: ReadKind) -> bool {
+        self.read_range_led(range, kind, None)
+    }
+
+    /// [`read_range`](Self::read_range), saying `lead` first (structure the
+    /// narration does not say, such as "list item").
+    pub(crate) fn read_range_led(
+        &mut self,
+        range: CharRange,
+        kind: ReadKind,
+        lead: Option<&str>,
+    ) -> bool {
         let policy = self.narration_policy();
         let Some(s) = self.session.as_mut() else {
             return false;
         };
         let range = range.clamp_to(s.doc.len_chars());
-        let utterances = textweaver_text::plan(&s.doc, range, &policy);
+        let mut utterances = textweaver_text::plan(&s.doc, range, &policy);
+        if let Some(lead) = lead.filter(|_| !utterances.is_empty()) {
+            utterances.insert(0, textweaver_core::Utterance::announcement(lead));
+        }
         self.continue_from = None;
         if utterances.is_empty() {
             return false;
@@ -423,7 +437,29 @@ impl App {
         self.stop_speech();
         if !self.read_range(range, ReadKind::InPlace) {
             self.speak_content("blank");
+        } else {
+            self.show_read_text(range, false);
         }
+    }
+
+    /// Puts text read in place on the status line: always for lines (the
+    /// Speech Cursor), otherwise only without self-voicing, where a screen
+    /// reader reads the status line and would hear nothing else
+    /// (`--no-speech`).
+    pub(crate) fn show_read_text(&mut self, range: CharRange, always: bool) {
+        if !always && self.self_voicing {
+            return;
+        }
+        let Some(s) = self.session.as_ref() else {
+            return;
+        };
+        let text = text_util::preview(&s.doc, range, 80);
+        let text = if text.is_empty() {
+            "blank".to_owned()
+        } else {
+            text
+        };
+        self.show(&text);
     }
 
     pub(crate) fn read_current_line(&mut self) {
@@ -434,15 +470,40 @@ impl App {
         self.read_line_range(range);
     }
 
-    /// Reads one line in place, saying "blank" for an empty line.
+    /// Reads one line in place, saying "blank" for an empty line, and its
+    /// structure first ("list item", "heading level 2", "row 3"). The
+    /// narration already says headings and table rows, so only the rest
+    /// is added to what is spoken; the status line shows all of it.
     pub(crate) fn read_line_range(&mut self, range: CharRange) {
-        let blank = self
-            .session
-            .as_ref()
-            .is_none_or(|s| text_util::is_blank(&s.doc, range));
+        let Some(s) = self.session.as_ref() else {
+            return;
+        };
+        let blank = text_util::is_blank(&s.doc, range);
+        let structure = if self.settings.speech.verbosity >= textweaver_a11y::Verbosity::Normal {
+            crate::app::App::line_structure(&s.doc, text_util::line_of(&s.doc, range.start))
+        } else {
+            None
+        };
+        // The first item of a list is introduced by the narration ("list
+        // with 3 items").
+        let first_item = s
+            .doc
+            .marker_index()
+            .enclosing(MarkerKind::List, range.start)
+            .is_some_and(|l| l.range.start == range.start);
+        let lead = structure
+            .as_deref()
+            .filter(|k| !k.starts_with("heading") && !k.starts_with("row") && !first_item);
+        let lead = lead.map(str::to_owned);
         self.stop_speech();
-        if blank || !self.read_range(range, ReadKind::InPlace) {
+        if blank || !self.read_range_led(range, ReadKind::InPlace, lead.as_deref()) {
             self.speak_content("blank");
+        } else {
+            self.show_read_text(range, true);
+            if let Some(kind) = structure {
+                let shown = format!("{kind}, {}", self.status_text());
+                self.show(&shown);
+            }
         }
     }
 
@@ -457,10 +518,56 @@ impl App {
                 self.stop_speech();
                 if !self.read_range(r, ReadKind::InPlace) {
                     self.speak_content("blank");
+                } else {
+                    self.show_read_text(r, false);
                 }
             }
             None => self.tell("No selection."),
         }
+    }
+
+    /// What the app does when its speech thread has died: reading stops,
+    /// the error is shown on the status line (and through the announcer,
+    /// which a screen reader or the JSON-RPC client hears; self-voicing
+    /// cannot say it), and the silent service takes over so every other
+    /// command keeps working. Frontends may call it; the app will once the
+    /// speech service reports a dead thread.
+    ///
+    /// TODO(P1a speech thread death): Agent P1a is making a dead speech
+    /// thread detectable in `textweaver-speech` (an `is_alive()` check or a
+    /// fatal status). Its API was not on `main` when this was written, so
+    /// nothing calls this yet: once it lands, check it in
+    /// [`poll_speech`](Self::poll_speech) (or match the fatal status in
+    /// `apply_status`) and call this, then offer a restart.
+    pub fn speech_thread_died(&mut self, reason: &str) {
+        self.track = SpeechTrack::default();
+        self.playback = Playback::Idle;
+        self.continue_from = None;
+        self.planned_end = None;
+        if let Some(s) = self.session.as_mut() {
+            s.spoken = None;
+            s.spoken_sentence = None;
+        }
+        self.speech = textweaver_speech::SpeechService::null();
+        self.speech_caps = self.speech.capabilities();
+        let voiced = std::mem::replace(&mut self.self_voicing, false);
+        self.backend_name = "silent".into();
+        let msg = if voiced {
+            format!(
+                "Speech stopped working ({reason}). textweaver is silent now; restart it to hear speech again."
+            )
+        } else {
+            format!("Speech stopped working ({reason}).")
+        };
+        self.error(&msg);
+    }
+
+    /// Waits until the speech thread has handled every command sent before
+    /// this call (a round trip to it), so every status those commands
+    /// produced is already waiting for [`poll_speech`](Self::poll_speech).
+    /// Tests use it instead of sleeping.
+    pub fn wait_for_speech_thread(&self) {
+        let _ = self.speech.voices();
     }
 
     /// Drains speech status updates and applies them (highlight, cursor).

@@ -344,6 +344,66 @@ impl App {
         self.structure_jump(MarkerKind::Heading, None, dir, read, &missing);
     }
 
+    /// Keys 1 to 6 (and Shift with them): the next or previous heading at
+    /// `level`, moving without reading (reading follows if it was on).
+    pub(crate) fn heading_level_jump(&mut self, level: u8, dir: Direction) {
+        let missing = format!("No {} heading at level {level}.", dir_word(dir));
+        self.structure_jump(
+            MarkerKind::Heading,
+            Some(level),
+            dir,
+            ReadAfter::Follow,
+            &missing,
+        );
+    }
+
+    /// The structure of the canonical line `line`, said before its text on
+    /// caret and Speech Cursor moves: "heading level 2", "list item",
+    /// "list item, level 2", "row 3", "code", "block quote". `None` for
+    /// plain text.
+    pub(crate) fn line_structure(doc: &Document, line: usize) -> Option<String> {
+        let r = text_util::line_range(doc, line);
+        let index = doc.marker_index();
+        let at = r.start;
+        if let Some(h) = index
+            .starting_in(CharRange::new(at, r.end.max(at.saturating_add(1))))
+            .iter()
+            .find(|m| m.kind == MarkerKind::Heading)
+        {
+            return Some(format!("heading level {}", h.level));
+        }
+        if let Some(row) = index.enclosing(MarkerKind::TableRow, at) {
+            let n = index.enclosing(MarkerKind::Table, at).map_or(1, |t| {
+                doc.markers()
+                    .iter()
+                    .filter(|m| {
+                        m.kind == MarkerKind::TableRow
+                            && t.range.contains_range(m.range)
+                            && m.range.start <= row.range.start
+                    })
+                    .count()
+            });
+            return Some(format!("row {n}"));
+        }
+        if let Some(item) = index.enclosing(MarkerKind::ListItem, at) {
+            return Some(if item.level > 1 {
+                format!("list item, level {}", item.level)
+            } else {
+                "list item".to_owned()
+            });
+        }
+        if index
+            .enclosing(MarkerKind::Code, at)
+            .is_some_and(|m| m.level == 1)
+        {
+            return Some("code".to_owned());
+        }
+        if index.enclosing(MarkerKind::Quote, at).is_some() {
+            return Some("block quote".to_owned());
+        }
+        None
+    }
+
     /// Next or previous table, list, list item, or link.
     pub(crate) fn marker_jump(&mut self, kind: MarkerKind, dir: Direction) {
         let missing = format!("No {} {}.", dir_word(dir), kind.spoken_name());
@@ -577,6 +637,13 @@ impl App {
             })
             .unwrap_or(r.start);
         let text = doc.slice(r);
+        // Structure first: "heading level 2, Methods" (Normal and above).
+        let text = match Self::line_structure(doc, text_util::line_of(doc, r.start)) {
+            Some(kind) if self.settings.speech.verbosity >= Verbosity::Normal => {
+                format!("{kind}, {text}")
+            }
+            _ => text,
+        };
         self.caret_to(target);
         if let Some(s) = self.session.as_mut() {
             s.goal_column = Some(goal);
@@ -636,6 +703,15 @@ impl App {
         let lines = text_util::line_count(doc);
         let pct = text_util::percent(doc, pos);
         let mut msg = format!("Line {line} of {lines}, {pct} percent.");
+        if self.settings.speech.verbosity >= Verbosity::Normal
+            && let Some((word, words)) = self.word_position(pos)
+        {
+            msg.push_str(&format!(
+                " Word {} of {}.",
+                textweaver_editor::echo::thousands(word),
+                textweaver_editor::echo::thousands(words)
+            ));
+        }
         if self.settings.speech.verbosity >= Verbosity::Normal {
             let heading = navigate(
                 doc,

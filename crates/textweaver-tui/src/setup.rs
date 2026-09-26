@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use textweaver_app::a11y::{Announcer, LogAnnouncer};
+use textweaver_app::a11y::{Announcer, RingAnnouncer};
 use textweaver_app::keymap::{Frontend, Keymap, Platform};
 use textweaver_app::speech::{ServiceConfig, SpeechService};
 use textweaver_app::store::{Paths, Settings, SettingsStore};
@@ -92,8 +92,12 @@ pub fn start_speech(settings: &Settings, opts: &Options) -> (SpeechService, Stri
 
 /// Builds the app from the options: persistence paths, settings, keymap
 /// overrides, and speech. Returns messages to announce once it is running.
+///
+/// Announcements are kept in a [`RingAnnouncer`] of the latest
+/// [`RingAnnouncer::DEFAULT_CAPACITY`]: a log of every one grew for as long
+/// as the reader ran.
 pub fn build_app(opts: &Options) -> (App, Vec<String>) {
-    build_app_with(opts, Box::new(LogAnnouncer::default()))
+    build_app_with(opts, Box::new(RingAnnouncer::default()))
 }
 
 /// [`build_app`] with a chosen announcer (the JSON-RPC server passes one

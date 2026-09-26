@@ -173,8 +173,13 @@ actions! {
         gui [], term [], shared ["b:Shift+S"];
     ReadSelection = "read_selection", Reading, "Read the selected text",
         gui [], term [], shared ["b:v"];
-    SayPosition = "say_position", Reading, "Say the position: line, percentage, and heading",
-        gui [], term [], shared ["b:%"];
+    SayPosition = "say_position", Reading,
+        "Say the position: line, percentage, word number, and heading",
+        gui ["g:Alt+Shift+Y"], term ["g:Alt+Shift+Y"], shared ["b:Shift+W"];
+    WordCount = "word_count", Reading, "Say how many words are in the document, or in the selection",
+        gui ["g:Alt+Shift+T"], term ["g:Alt+Shift+T"], shared [];
+    LinkAddress = "link_address", Reading, "Say the address of the link at the cursor",
+        gui ["g:Alt+Shift+K"], term ["g:Alt+Shift+K"], shared ["b:Shift+K"];
     ReplaySentence = "replay_sentence", Reading, "Read again from the start of the current sentence",
         gui ["g:Alt+;"], term ["g:Alt+;"], shared ["b:;"];
     ReplayParagraph = "replay_paragraph", Reading, "Read again from the start of the current paragraph",
@@ -210,6 +215,30 @@ actions! {
         gui [], term [], shared ["b:h", "b:}"];
     SkipPreviousHeading = "skip_previous_heading", Navigation, "Move to the previous heading without reading",
         gui [], term [], shared ["b:{"];
+    NextHeadingLevel1 = "next_heading_level_1", Navigation, "Move to the next heading at level 1",
+        gui [], term [], shared ["b:1"];
+    NextHeadingLevel2 = "next_heading_level_2", Navigation, "Move to the next heading at level 2",
+        gui [], term [], shared ["b:2"];
+    NextHeadingLevel3 = "next_heading_level_3", Navigation, "Move to the next heading at level 3",
+        gui [], term [], shared ["b:3"];
+    NextHeadingLevel4 = "next_heading_level_4", Navigation, "Move to the next heading at level 4",
+        gui [], term [], shared ["b:4"];
+    NextHeadingLevel5 = "next_heading_level_5", Navigation, "Move to the next heading at level 5",
+        gui [], term [], shared ["b:5"];
+    NextHeadingLevel6 = "next_heading_level_6", Navigation, "Move to the next heading at level 6",
+        gui [], term [], shared ["b:6"];
+    PreviousHeadingLevel1 = "previous_heading_level_1", Navigation, "Move to the previous heading at level 1",
+        gui [], term [], shared ["b:!"];
+    PreviousHeadingLevel2 = "previous_heading_level_2", Navigation, "Move to the previous heading at level 2",
+        gui [], term [], shared ["b:@"];
+    PreviousHeadingLevel3 = "previous_heading_level_3", Navigation, "Move to the previous heading at level 3",
+        gui [], term [], shared ["b:#"];
+    PreviousHeadingLevel4 = "previous_heading_level_4", Navigation, "Move to the previous heading at level 4",
+        gui [], term [], shared ["b:$"];
+    PreviousHeadingLevel5 = "previous_heading_level_5", Navigation, "Move to the previous heading at level 5",
+        gui [], term [], shared ["b:%"];
+    PreviousHeadingLevel6 = "previous_heading_level_6", Navigation, "Move to the previous heading at level 6",
+        gui [], term [], shared ["b:^"];
     NextTable = "next_table", Navigation, "Move to the next table",
         gui ["g:Ctrl+T"], term [], shared ["b:t"];
     PreviousTable = "previous_table", Navigation, "Move to the previous table",
@@ -312,13 +341,13 @@ actions! {
         gui [], term [], shared ["b:b"];
     PreviousBookmark = "previous_bookmark", Bookmarks, "Move to the previous bookmark",
         gui [], term [], shared ["b:Shift+B"];
-    AddNote = "add_note", Bookmarks, "Add a note to the selection or the word at the cursor",
-        gui [], term [], shared ["b:a"];
-    ListNotes = "list_notes", Bookmarks, "List notes and highlights",
+    AddNote = "add_note", Bookmarks, "Add a note to the selection or the sentence at the cursor",
+        gui ["g:Alt+N"], term ["g:Alt+N"], shared ["b:a"];
+    ListNotes = "list_notes", Bookmarks, "List notes",
         gui ["g:Ctrl+Shift+N"], term [], shared ["b:Shift+A"];
-    NextNote = "next_note", Bookmarks, "Move to the next note or highlight",
+    NextNote = "next_note", Bookmarks, "Move to the next note",
         gui ["g:Alt+Down"], term ["g:Alt+Down"], shared ["b:e"];
-    PreviousNote = "previous_note", Bookmarks, "Move to the previous note or highlight",
+    PreviousNote = "previous_note", Bookmarks, "Move to the previous note",
         gui ["g:Alt+Up"], term ["g:Alt+Up"], shared ["b:Shift+E"];
     DeleteNote = "delete_note", Bookmarks, "Delete the note or highlight at the cursor",
         gui [], term [], shared ["b:Delete"];
@@ -382,6 +411,19 @@ actions! {
         gui ["e:Ctrl+Shift+I"], term ["e:Alt+G"], shared [];
     Replace = "replace", Editing, "Find and replace",
         gui ["e:Ctrl+Shift+F"], term ["e:Alt+F"], shared [];
+    Copy = "copy", Editing, "Copy the selection, or the sentence at the cursor, to the clipboard",
+        gui ["g:Ctrl+C"], term ["g:Ctrl+C"], shared [];
+    Cut = "cut", Editing, "Cut the selection to the clipboard",
+        gui ["e:Ctrl+X"], term ["e:Ctrl+X"], shared [];
+    NextTableCell = "next_table_cell", Editing,
+        "In a table, move to the next cell and say its column; elsewhere, type a tab",
+        gui ["e:Tab"], term ["e:Tab"], shared [];
+    PreviousTableCell = "previous_table_cell", Editing,
+        "In a table, move to the previous cell and say its column",
+        gui ["e:Shift+Tab"], term ["e:Shift+Tab"], shared [];
+    CycleTypingEcho = "cycle_typing_echo", Editing,
+        "Cycle typing echo: characters and words, characters, words, or none",
+        gui ["g:Shift+F9"], term ["g:Shift+F9"], shared [];
 
     // View and help
     NextTheme = "next_theme", View, "Switch to the next color theme",
@@ -404,6 +446,48 @@ actions! {
 }
 
 impl ActionId {
+    /// The next-heading action for level 1 to 6 (the browse keys 1 to 6).
+    pub fn next_heading_at(level: u8) -> Option<ActionId> {
+        use ActionId as A;
+        Some(match level {
+            1 => A::NextHeadingLevel1,
+            2 => A::NextHeadingLevel2,
+            3 => A::NextHeadingLevel3,
+            4 => A::NextHeadingLevel4,
+            5 => A::NextHeadingLevel5,
+            6 => A::NextHeadingLevel6,
+            _ => return None,
+        })
+    }
+
+    /// The previous-heading action for level 1 to 6 (Shift with 1 to 6).
+    pub fn previous_heading_at(level: u8) -> Option<ActionId> {
+        use ActionId as A;
+        Some(match level {
+            1 => A::PreviousHeadingLevel1,
+            2 => A::PreviousHeadingLevel2,
+            3 => A::PreviousHeadingLevel3,
+            4 => A::PreviousHeadingLevel4,
+            5 => A::PreviousHeadingLevel5,
+            6 => A::PreviousHeadingLevel6,
+            _ => return None,
+        })
+    }
+
+    /// The heading level and direction (true for next) of a heading-level
+    /// action.
+    pub fn heading_level_jump(self) -> Option<(u8, bool)> {
+        (1..=6u8).find_map(|l| {
+            if Self::next_heading_at(l) == Some(self) {
+                Some((l, true))
+            } else if Self::previous_heading_at(l) == Some(self) {
+                Some((l, false))
+            } else {
+                None
+            }
+        })
+    }
+
     /// True for actions the app must confirm before running, however they
     /// are triggered (key, palette, or script): quitting ("Quit textweaver?
     /// y or n": `y` quits; `n`, `a`, or Escape aborts) and deleting a note
@@ -449,7 +533,9 @@ mod tests {
             assert_eq!(ActionId::from_id(a.id()), Some(*a));
             assert!(!a.help().is_empty());
             assert!(
-                a.id().bytes().all(|b| b.is_ascii_lowercase() || b == b'_'),
+                a.id()
+                    .bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_'),
                 "{}",
                 a.id()
             );

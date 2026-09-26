@@ -134,15 +134,15 @@ fn a_repeated_message_blanks_the_status_line_once() {
     term.draw(|f| tui.draw(f)).unwrap();
     assert_eq!(status_rows(&tui, &term), "");
     assert!(tui.status_blanked());
-    let deadline = Instant::now() + REPEAT_BLANK + Duration::from_secs(5);
-    loop {
-        std::thread::sleep(Duration::from_millis(20));
-        term.draw(|f| tui.draw(f)).unwrap();
-        if status_rows(&tui, &term) == first {
-            break;
-        }
-        assert!(Instant::now() < deadline, "the message never came back");
-    }
+    // Back once the pause is over: the frame is drawn at a given time, so
+    // no sleep decides the outcome.
+    let later = Instant::now() + REPEAT_BLANK + Duration::from_millis(1);
+    term.draw(|f| tui.draw_at(f, later)).unwrap();
+    assert_eq!(
+        status_rows(&tui, &term),
+        first,
+        "the message never came back"
+    );
     assert!(!tui.status_blanked());
     // Drawing again without a new announcement does not blank it.
     term.draw(|f| tui.draw(f)).unwrap();

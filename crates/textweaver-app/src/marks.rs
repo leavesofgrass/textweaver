@@ -145,12 +145,21 @@ impl App {
             pos,
             pct,
             ts: textweaver_store::now_ts(),
+            anchor: Some(text_util::anchor_at(&s.doc, pos)),
         });
         s.bookmarks.sort_by_key(|b| b.pos);
-        if let Err(e) = self.save_position() {
-            log::warn!("cannot save bookmarks: {e}");
+        match self.save_position() {
+            Ok(()) => self.tell(&format!("Bookmark {name} set at {pct} percent.")),
+            Err(e) => {
+                // Kept for this session and saved again with the position;
+                // the user must not believe it is safe on disk.
+                log::warn!("cannot save bookmarks: {e}");
+                self.speech.earcon(Earcon::Error);
+                self.error(&format!(
+                    "Bookmark {name} is set for now, but could not be saved: {e}."
+                ));
+            }
         }
-        self.tell(&format!("Bookmark {name} set at {pct} percent."));
     }
 
     pub(crate) fn list_bookmarks(&mut self) -> Vec<Effect> {
@@ -323,15 +332,14 @@ impl App {
         s.selection_anchor = Some(anchor);
         s.selection = (!sel.is_empty()).then_some(sel);
         s.cursor = new_head;
-        let text = if text.trim().is_empty() {
-            text_util::char_name(text.chars().next().unwrap_or(' '))
-        } else {
-            text.trim().to_owned()
-        };
-        let msg = match (self.settings.speech.verbosity, grew) {
-            (Verbosity::Low, _) => text,
-            (_, true) => format!("{text} selected"),
-            (_, false) => format!("{text} unselected"),
+        let what = if grew { "selected" } else { "unselected" };
+        let msg = match textweaver_editor::echo::summarize(&text, what) {
+            Some(summary) => summary,
+            // Low says the text alone.
+            None if self.settings.speech.verbosity == Verbosity::Low => {
+                text_util::spoken_fragment(&text)
+            }
+            None => text_util::selection_change_message(&text, what),
         };
         self.scroll_to_cursor();
         self.tell(&msg);

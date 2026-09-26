@@ -173,6 +173,10 @@ live-region = "0.3"
 # the tree through ratatui).
 unicode-width = "0.2"
 
+# Signals: Ctrl+C, SIGTERM, SIGHUP, and the Windows console closing
+# (the terminal reader saves and restores the terminal on each).
+ctrlc = { version = "3.4", features = ["termination"] }
+
 # tests
 proptest = "1.11"
 insta = { version = "1.48", features = ["json", "yaml"] }

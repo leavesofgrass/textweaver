@@ -75,6 +75,9 @@ pub enum Command {
     /// Rename or edit item `n` of the shown list: opens a prompt for the new
     /// bookmark name or note text.
     RenameItem(usize),
+    /// Mark or unmark item `n` of the shown list (Space): in the voice
+    /// list, a favourite voice. Other lists ignore it and say so.
+    MarkItem(usize),
     /// Periodic housekeeping from the frontend's event loop: autosave
     /// snapshots while editing and periodic position saves. The same as
     /// [`App::tick`](crate::App::tick) with the current time.

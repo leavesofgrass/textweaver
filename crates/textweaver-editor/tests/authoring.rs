@@ -735,6 +735,45 @@ fn d16_autosave_tick_writes_only_when_dirty() {
     assert!(s.autosave_tick(t0 + Duration::from_secs(20)).unwrap());
 }
 
+/// A failed snapshot counts as an attempt: the next one waits, twice as
+/// long after each failure in a row, instead of retrying on every tick; a
+/// forced snapshot (crash, closing terminal) ignores the timer.
+#[test]
+fn failed_snapshots_back_off_and_forced_snapshots_ignore_the_timer() {
+    let dir = tempfile::tempdir().unwrap();
+    // A file where the recovery folder should be: every write fails.
+    let blocked = dir.path().join("recovery");
+    std::fs::write(&blocked, "not a folder").unwrap();
+    let mut s = autosaving(&blocked, "untitled-1", None);
+    s.enter_edit();
+    s.editor_mut().unwrap().type_text("typing").unwrap();
+    let t0 = Instant::now();
+    assert!(s.autosave_tick(t0).is_err());
+    assert_eq!(s.snapshot_failures(), 1);
+    // Ticks inside the backed-off interval do not try again.
+    for ms in [40, 400, 20_000, 39_000] {
+        assert!(!s.autosave_tick(t0 + Duration::from_millis(ms)).unwrap());
+    }
+    assert_eq!(s.snapshot_failures(), 1);
+    let t1 = t0 + Duration::from_secs(40);
+    assert!(s.autosave_tick(t1).is_err());
+    assert_eq!(s.snapshot_failures(), 2);
+    assert!(!s.autosave_tick(t1 + Duration::from_secs(79)).unwrap());
+    // The folder comes back: the next attempt works and the count resets.
+    std::fs::remove_file(&blocked).unwrap();
+    assert!(s.autosave_tick(t1 + Duration::from_secs(80)).unwrap());
+    assert_eq!(s.snapshot_failures(), 0);
+    // Forced: written at once while dirty, not when clean.
+    s.editor_mut().unwrap().type_text("!").unwrap();
+    assert!(s.snapshot_now().unwrap());
+    let snap: RecoverySnapshot =
+        serde_json::from_str(&std::fs::read_to_string(s.snapshot_path().unwrap()).unwrap())
+            .unwrap();
+    assert_eq!(snap.text, "typing!");
+    s.editor_mut().unwrap().mark_saved();
+    assert!(!s.snapshot_now().unwrap());
+}
+
 #[test]
 fn d17_autosave_opt_out_setting_disables_snapshots() {
     let dir = tempfile::tempdir().unwrap();

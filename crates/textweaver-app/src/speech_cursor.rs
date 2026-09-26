@@ -39,8 +39,11 @@ impl App {
         self.speech.earcon(Earcon::ModeOn);
         self.scroll_to_line(line);
         self.speech_cursor_read();
+        // The line read is on the status line too, for screen readers that
+        // follow it (with `--no-speech` nothing else is heard).
+        let text = self.status_text().to_owned();
         self.show(&format!(
-            "Speech Cursor on, line {}. Up and Down read lines, Enter reads on, Tab or Escape leaves.",
+            "Speech Cursor on, line {}: {text}. Up and Down read lines, Enter reads on, Tab or Escape leaves.",
             line + 1
         ));
     }

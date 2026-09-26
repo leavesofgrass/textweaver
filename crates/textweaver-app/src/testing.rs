@@ -136,11 +136,18 @@ impl SpeechBackend for RecordingBackend {
     }
 
     fn voices(&self) -> Result<Vec<Voice>, SpeechError> {
-        Ok(vec![Voice {
-            id: "test".into(),
-            name: "Test voice".into(),
-            ..Voice::default()
-        }])
+        Ok(vec![
+            Voice {
+                id: "test".into(),
+                name: "Test voice".into(),
+                ..Voice::default()
+            },
+            Voice {
+                id: "second".into(),
+                name: "Second voice".into(),
+                ..Voice::default()
+            },
+        ])
     }
 
     fn set_params(&mut self, params: &VoiceParams) -> Result<(), SpeechError> {

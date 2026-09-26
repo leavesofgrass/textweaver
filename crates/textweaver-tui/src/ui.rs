@@ -110,11 +110,16 @@ pub struct Tui {
     support: ColorSupport,
     /// The styles of the theme in effect, rebuilt only when it changes.
     theme: Theme,
+    /// The theme name and highlight colours `theme` was built for.
+    theme_key: (String, String, Option<String>),
     /// The status announcement last drawn: its sequence number and text.
     status_shown: (u64, String),
     /// While set, the status line is drawn blank until then (a repeated
     /// message).
     status_blank_until: Option<Instant>,
+    /// Copied text as an OSC 52 sequence, waiting to be written to the
+    /// terminal ([`Tui::take_clipboard_sequence`]).
+    clipboard_out: Option<String>,
 }
 
 /// Screen areas of the last draw.
@@ -140,7 +145,8 @@ impl Tui {
     /// [`ColorSupport::detect`] also honors `TEXTWEAVER_COLOR` and
     /// `NO_COLOR`).
     pub fn with_color_support(app: App, support: ColorSupport) -> Self {
-        let theme = Theme::from_theme(app.current_theme(), support);
+        let theme = Theme::from_theme(&app.reading_theme(), support);
+        let theme_key = app.reading_theme_key();
         Tui {
             app,
             minibuffer: None,
@@ -149,8 +155,10 @@ impl Tui {
             quit: false,
             support,
             theme,
+            theme_key,
             status_shown: (0, String::new()),
             status_blank_until: None,
+            clipboard_out: None,
         }
     }
 
@@ -179,17 +187,19 @@ impl Tui {
         self.list.as_ref()
     }
 
-    /// The styles of the theme in effect, cached by theme name and rebuilt
-    /// only when the theme changes.
+    /// The styles of the theme in effect (with the reader's highlight
+    /// colours), cached and rebuilt only when the theme or those colours
+    /// change.
     pub fn theme(&self) -> &Theme {
         &self.theme
     }
 
     /// Rebuilds the cached styles when the app's theme changed.
     fn refresh_theme(&mut self) {
-        let current = self.app.current_theme();
-        if current.meta.name != self.theme.name {
-            self.theme = Theme::from_theme(current, self.support);
+        let key = self.app.reading_theme_key();
+        if key != self.theme_key {
+            self.theme = Theme::from_theme(&self.app.reading_theme(), self.support);
+            self.theme_key = key;
         }
     }
 
@@ -215,7 +225,17 @@ impl Tui {
         self.apply(effects);
     }
 
+    /// The OSC 52 sequence for text copied or cut since the last call; the
+    /// event loop writes it to the terminal, which puts the text on the
+    /// system clipboard (over SSH too).
+    pub fn take_clipboard_sequence(&mut self) -> Option<String> {
+        self.clipboard_out.take()
+    }
+
     fn apply(&mut self, effects: Vec<Effect>) {
+        if let Some(text) = self.app.take_clipboard() {
+            self.clipboard_out = Some(textweaver_app::osc52(&text));
+        }
         for e in effects {
             match e {
                 Effect::Redraw => {}
@@ -378,9 +398,35 @@ impl Tui {
             return;
         };
         let page = 10;
+        let plain = !k
+            .modifiers
+            .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT);
+        // Letter keys: an accelerator (s, d, c in the Save, Discard,
+        // Cancel list), else the next item starting with that letter.
+        if let KeyCode::Char(c) = k.code
+            && plain
+            && c.is_alphanumeric()
+        {
+            if let Some(n) = self.app.list_accelerator(c) {
+                self.list = None;
+                self.dispatch(Command::Choose(n));
+                return;
+            }
+            let Some(list) = self.list.as_mut() else {
+                return;
+            };
+            if list.jump_to_letter(c) {
+                let text = list.spoken_item().unwrap_or_default();
+                self.app.announce(&text, Priority::Assertive);
+            } else {
+                self.app
+                    .announce(&format!("No item starts with {c}."), Priority::Polite);
+            }
+            return;
+        }
         let moved = match k.code {
-            KeyCode::Up | KeyCode::Char('k') => list.step(-1),
-            KeyCode::Down | KeyCode::Char('j') => list.step(1),
+            KeyCode::Up => list.step(-1),
+            KeyCode::Down => list.step(1),
             KeyCode::PageUp => list.step(-page),
             KeyCode::PageDown => list.step(page),
             KeyCode::Home => list.step(isize::MIN / 2),
@@ -391,7 +437,7 @@ impl Tui {
                 self.dispatch(Command::Choose(n));
                 return;
             }
-            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Backspace => {
+            KeyCode::Esc | KeyCode::Backspace => {
                 self.list = None;
                 self.dispatch(Command::Cancel);
                 return;
@@ -406,16 +452,18 @@ impl Tui {
                 self.list_action(Command::RenameItem(n));
                 return;
             }
+            KeyCode::Char(' ') => {
+                let n = list.selected;
+                self.list_action(Command::MarkItem(n));
+                return;
+            }
             _ => return,
         };
         let text = list.spoken_item().unwrap_or_default();
         if moved {
             self.app.announce(&text, Priority::Assertive);
         } else {
-            let edge = if matches!(
-                k.code,
-                KeyCode::Up | KeyCode::Char('k') | KeyCode::PageUp | KeyCode::Home
-            ) {
+            let edge = if matches!(k.code, KeyCode::Up | KeyCode::PageUp | KeyCode::Home) {
                 "Top of list."
             } else {
                 "End of list."
@@ -560,12 +608,36 @@ impl Tui {
         self.app.announce(&spoken, Priority::Assertive);
     }
 
+    /// Tab in a file prompt (Open, Save As, Insert image): completes the
+    /// file or folder name typed so far, to the longest common part of the
+    /// names that match, and says what matches.
+    fn complete_path(&mut self) {
+        let Some(mb) = self.minibuffer.as_mut() else {
+            return;
+        };
+        let typed = mb.text();
+        let (done, spoken) =
+            crate::paths::complete(&typed, &std::env::current_dir().unwrap_or_default());
+        if let Some(text) = done {
+            mb.set_text(&text);
+        }
+        self.app.announce(&spoken, Priority::Assertive);
+    }
+
     /// Tab in the command palette: complete to the longest common prefix of
-    /// the matching command ids, and say what matches.
+    /// the matching command ids, and say what matches. Tab in a file prompt
+    /// completes the path.
     fn complete(&mut self) {
         let Some(mb) = self.minibuffer.as_mut() else {
             return;
         };
+        if matches!(
+            mb.purpose,
+            PromptPurpose::Open | PromptPurpose::SaveAs | PromptPurpose::ImagePath
+        ) {
+            self.complete_path();
+            return;
+        }
         if mb.purpose != PromptPurpose::CommandPalette {
             return;
         }
@@ -682,6 +754,12 @@ impl Tui {
 
     /// Draws the whole screen and parks the hardware cursor.
     pub fn draw(&mut self, f: &mut Frame<'_>) {
+        self.draw_at(f, Instant::now());
+    }
+
+    /// [`draw`](Self::draw) as of `now`, which decides whether a repeated
+    /// status message is still blanked (tests pass their own times).
+    pub fn draw_at(&mut self, f: &mut Frame<'_>, now: Instant) {
         self.refresh_theme();
         let theme = self.theme.clone();
         let areas = self.areas(f.area());
@@ -697,7 +775,7 @@ impl Tui {
         self.draw_title(f, areas.title, &theme);
         let cursor = self.draw_body(f, areas.body, &theme);
         self.draw_rsvp(f, areas.body, &theme, cursor.map(|p| p.y));
-        let status = self.status_to_draw(Instant::now());
+        let status = self.status_to_draw(now);
         f.render_widget(
             Paragraph::new(status)
                 .wrap(ratatui::widgets::Wrap { trim: false })
@@ -995,7 +1073,7 @@ impl Tui {
 
     /// Key hints for the current mode, from the keymap, fitted to `width`.
     pub fn hints(&self, width: u16) -> String {
-        if self.app.pending_confirmation().is_some() {
+        if self.app.confirmation_pending() {
             return " y yes  n or a no  Escape no".to_owned();
         }
         let rsvp_hints: &[(ActionId, &str)] = &[
@@ -1014,7 +1092,7 @@ impl Tui {
                 (ActionId::Undo, "undo"),
                 (ActionId::Bold, "bold"),
                 (ActionId::Heading, "heading"),
-                (ActionId::KeyboardHelp, "keys"),
+                (ActionId::CommandPalette, "commands"),
                 (ActionId::Quit, "quit"),
             ],
             Mode::SpeechCursor => &[
@@ -1037,10 +1115,14 @@ impl Tui {
             ],
         };
         let keymap = self.app.keymap();
+        // Only keys that work here: in this mode's layers, and with
+        // single-key shortcuts as F9 left them (a hint for a key that does
+        // nothing misleads).
+        let layer = self.app.mode().layer();
         let parts: Vec<String> = hints
             .iter()
             .filter_map(|(a, label)| {
-                let chords = keymap.chords_for(*a);
+                let chords = keymap.chords_in_mode(*a, layer);
                 let best = chords
                     .iter()
                     .find(|c| c.is_text_input() || c.mods.is_empty())
