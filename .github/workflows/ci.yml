@@ -52,5 +52,10 @@ jobs:
         env:
           TEXTWEAVER_APPLE: '1'
         run: cargo test -p textweaver-apple -- --ignored
+      - name: 32-bit engine hosts (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          rustup target add i686-pc-windows-msvc
+          cargo build -p textweaver-eci -p textweaver-sapi --bins --target i686-pc-windows-msvc
       - name: Docs
         run: cargo doc --workspace --no-deps ${{ matrix.features }}

@@ -12,6 +12,7 @@ Kept current per wave by the orchestrator. Agents append to their own section's 
 | D — App & TUI | `agent/d-app-tui` | not started |
 | E — Eloquence | `agent/e-eloquence` | not started |
 | F — Apple speech (macOS) | `agent/f-apple` | not started |
+| G — SAPI5 voices (Windows) | `agent/g-sapi` | not started |
 
 ## Shared preamble (every agent reads this first)
 
@@ -168,13 +169,33 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 - macOS-only tests `#[ignore]`d unless `TEXTWEAVER_APPLE=1` (CI sets it on macOS): synthesize a sentence with Reed through each backend to a temporary file; check word events arrive in order and cover every word; `avspeech` offsets rise.
 - `ci.yml` green on your branch on all three OSes.
 
+## Agent G — SAPI5 voices on Windows (added 2026-09-25 at Jon's request)
+
+**Owns:** `crates/textweaver-sapi/` (library and the `textweaver-sapi-host` binary), `xtask/src/sapi.rs` (create it; document the lines the orchestrator adds to `xtask/src/main.rs`), `fixtures/g/`.
+
+**Read:** ADR-0003, ADR-0004, ADR-0007, ADR-0009; `docs/star-parity.md` Part 2 sections 1–4; the Phase 0 code in `crates/textweaver-core` and `crates/textweaver-speech`.
+
+**Deliverables:**
+- The host (x64 and x86 builds of one binary): `ISpVoice` via the `windows` crate (COM initialized on the host's thread), voice selection by token id, output to a memory stream in a fixed PCM format, `SPEI_WORD_BOUNDARY` (and `SPEI_END_INPUT_STREAM`) events with `ullAudioStreamOffset`, streamed with PCM over stdout in a framed binary protocol; stop (purge), parameter changes; clean exit on EOF. Voice enumeration for its architecture's registry.
+- The backend: `SapiBackend` implementing `SpeechBackend` under ADR-0003's non-blocking `speak` plus `poll` contract; voice listing across both registries (64-bit preferred; each voice tagged with its host architecture); rodio playback (`features = ["playback"]`) with `Word { byte_range, audio_ms }` from the stream offsets and UTF-16 to UTF-8 range mapping; native pause and resume; rate, pitch, and volume mapping with measured wpm calibration; `synthesize_to_file` (WAV); `backend_info()` and a factory for the orchestrator to wire. Eloquence voices listed with a note that they give no word timing (never load them in tests; that product is not licensed on this machine).
+- Probe and report whether OneCore voices (`HKLM\SOFTWARE\Microsoft\Speech_OneCore\Voices`: Microsoft Mark, David, Zira) are usable through SAPI5 by setting the token category, and include them if so.
+- `cargo xtask sapi-host`: builds both hosts and places them next to the workspace binaries (`textweaver-sapi-host.exe` and `textweaver-sapi-host-x86.exe`); the backend finds them beside the current executable or via `TEXTWEAVER_SAPI_HOST` / `TEXTWEAVER_SAPI_HOST_X86`.
+
+**Acceptance:**
+- Unit tests for framing and UTF-16 to UTF-8 mapping (multibyte, repeated events on one range, sub-token ranges).
+- A fake-host integration test: ordered word events with rising `audio_ms`, stop mid-utterance (`Cancelled`, no late events), pause and resume.
+- Real-voice tests `#[ignore]`d unless `TEXTWEAVER_SAPI=1`, run locally before reporting with output included: Microsoft David (64-bit host) and eSpeak (32-bit host) synthesize to WAV with every word's event in order. Use only Microsoft voices and eSpeak in tests. Never play audio aloud. Never commit engine audio (local samples go to the git-ignored `target-local/`).
+- clippy and tests green on Windows; the crate builds as an empty library in the Linux container.
+
 ## Seams to watch at integration
+
+- The ECI (E) and SAPI (G) hosts each define a PCM-plus-events protocol and a playback client; merge them into one shared engine-host crate at integration.
 
 - `text::narrate::plan` (A) → `SpeechService::read` (B): utterance ids, offset maps, `Inserted` spans.
 - `Document::apply` (A) ↔ `Editor` (C) ↔ bookmarks and history (C, D): one `EditOutcome` shifts all of them.
 - `Keymap` (C) ↔ TUI key translation (D): chord normalization and layers.
 - `Settings` (C) ↔ `ServiceConfig` (B) ↔ `App` (D): rate, pitch, volume, pacing, verbosity.
-- `NsSpeechBackend`/`AvSpeechBackend` (F) and `EciBackend` (E) ↔ backend registry (B) ↔ app backend selection (D): Eloquence first when installed; normalization skipped for engines that normalize natively.
+- `SapiBackend` (G), `NsSpeechBackend`/`AvSpeechBackend` (F) and `EciBackend` (E) ↔ backend registry (B) ↔ app backend selection (D): Eloquence first when installed; normalization skipped for engines that normalize natively.
 
 ## Wave 2 (after Integration 1 and Jon's review)
 
