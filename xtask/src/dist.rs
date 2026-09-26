@@ -40,7 +40,16 @@ const DOCS: [(&str, &str); 6] = [
     ("docs/eloquence.md", "docs/eloquence.md"),
 ];
 /// More guides copied when present.
-const OPTIONAL_DOCS: [&str; 3] = ["docs/keyboard.md", "docs/docker.md", "docs/themes.md"];
+const OPTIONAL_DOCS: [&str; 8] = [
+    "docs/keyboard.md",
+    "docs/themes.md",
+    "docs/settings.md",
+    "docs/converting.md",
+    "docs/reading-aids.md",
+    "docs/dectalk.md",
+    "docs/quickstart.md",
+    "scripts/README.md",
+];
 
 /// Parsed arguments.
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -152,6 +161,16 @@ pub fn run() -> anyhow::Result<()> {
 
     for (src, dest) in DOCS {
         eci::copy(&root.join(src), &stage.join(dest))?;
+    }
+    // The helper scripts for this platform (doctor, speech check, update).
+    let ext = if cfg!(windows) { "ps1" } else { "sh" };
+    if let Ok(entries) = fs::read_dir(root.join("scripts")) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().is_some_and(|e| e == ext) {
+                eci::copy(&path, &stage.join("scripts").join(entry.file_name()))?;
+            }
+        }
     }
     for src in OPTIONAL_DOCS {
         let path = root.join(src);
