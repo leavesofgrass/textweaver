@@ -758,6 +758,24 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 
 ## Wave 4 (refined 2026-09-26; starts when Wave 3 is merged and Docker is restarted)
 
+**Layout: nine agents (Jon, 2026-09-26: use more resources).** The briefs below are split like this:
+1. **W4a1, GUI edit mode and reading aids.** From W4a: edit mode in `DocumentView`, the reading aids in the GUI, and the research notes on editable text, RSVP overlays, and announcements.
+2. **W4a2, GUI parity and wx removal.** From W4a: parity with the terminal reader, fixes from Jon's listening session, and removing the wxDragon spike. This agent owns the dialogs, W4a1 owns `DocumentView`, and they coordinate through small commits.
+3. **W4b, speed.** As written.
+4. **W4c1, MathCAT.** From W4c: MathCAT for math speech, navigating inside formulas, Nemeth and UEB braille in the BRF writer, and EPUB 3 MathML.
+5. **W4c2, documents.** From W4c: native RTF and ODT, DOCX comments and tracked changes, the LaTeX subset, EML and MHTML, and fuzz targets with hostile-input limits.
+6. **W4d, translations.** As written.
+7. **W4e, offline intelligence.** As written.
+8. **W4f, platforms and releases.** As written.
+9. **W4g, authoring extras.** The "Also for Wave 4" list at the end of this section: grammar checking with harper, Markdown lint and format with rumdl, the native clipboard with arboard, code highlighting with syntect, Unicode math in the reading view, and notes export to BibTeX, RIS, and JSON.
+
+**Build speed for many agents.** Every agent builds through the shared compile cache, so dependencies compile once for all worktrees. Set these environment variables for every cargo command on Windows:
+- `RUSTC_WRAPPER=sccache`
+- `SCCACHE_DIR=D:\sccache`
+- `SCCACHE_CACHE_SIZE=50G`
+
+In Docker, keep your own target directory: `-e CARGO_TARGET_DIR=/target/<agent>`. Build only what you need while working, and run the full workspace checks at the end.
+
 **Every Wave 4 agent reads `docs/research/wave4.md` first.** It records the research behind these briefs: crate versions, licences, APIs, and risks. The privacy hard rule in the shared preamble applies to every request.
 
 A draft, so the next wave can start the moment Wave 3 lands. It follows the same rules and spirit as Wave 3: pure-Rust first, experimental, and Jon's own use first. The orchestrator will refine these briefs from Wave 3's reports before launch.
