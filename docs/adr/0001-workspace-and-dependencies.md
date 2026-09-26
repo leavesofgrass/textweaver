@@ -30,7 +30,7 @@ all of the above ← app ← tui, cli
 - `thiserror` in libraries, `anyhow` only in binaries (`tui`, `cli`, `xtask`).
 - Engines and heavy formats behind cargo features, off by default: `textweaver-speech/{espeak, omnivox, speechd, tts-crate}`, `textweaver-formats/{paperback, pandoc}`, `textweaver-a11y/live-region`.
 - Workspace lints: `unsafe_code = "deny"` (the espeak backend's FFI module opts out with `#[allow(unsafe_code)]` and a `// SAFETY:` comment on every block), `missing_docs = "warn"`, clippy `all = "warn"`. CI and `-D warnings` make all of them errors.
-- Edition 2024. Toolchain pinned in `rust-toolchain.toml` to 1.96 so Windows, CI, and the Docker image agree; `rust-version = "1.85"` states the true minimum (edition 2024).
+- Edition 2024. Toolchain pinned in `rust-toolchain.toml` to 1.96 so Windows, CI, and the Docker image agree; `rust-version = "1.89"` states the true minimum (raised from 1.85 at Integration 1: `libloading` needs 1.88, `File::try_lock` 1.89).
 
 **Environments.** Native Windows (Jon's machine) and Linux in Docker (`docker/Dockerfile`, `compose.yaml`, see `docs/docker.md`). CI runs fmt, clippy, tests, and rustdoc on Ubuntu, macOS, and Windows; only Ubuntu enables the features that link system libraries.
 
