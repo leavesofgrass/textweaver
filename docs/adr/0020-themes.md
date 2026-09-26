@@ -90,6 +90,13 @@ Quotes use the dim-text color (Star's `muted`), so each `dim_text` change applie
 - The TUI (`textweaver-tui/src/theme.rs`), the app's theme cycle, and the store's settings move onto this crate at integration; until then the TUI's three hand-made themes remain, and its `galaxy` is not Star's.
 - A GUI `system` theme built from the platform palette (503.2's follow-system mode) belongs to the GUI in wave 3; the terminal's equivalent is the no-color level, which uses the terminal's own colors.
 
+
+**Status update (Saturday, September 26, 2026).** Jon's decision: not every theme has to meet WCAG AA, as long as some do. The contrast check becomes a label for most themes, not a gate. Each theme reports whether it meets AA, and the theme list and `docs/themes.md` say so. These themes must still pass:
+- Galaxy (the default) and Galaxy Light;
+- the high-contrast themes (`contrast`, `high-contrast`), at 7:1.
+
+The test gate applies to those themes only.
+
 ## See also
 
 - [Themes](../themes.md): the user guide.
