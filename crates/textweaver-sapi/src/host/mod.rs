@@ -294,18 +294,31 @@ pub struct SpeakText {
 
 impl SpeakText {
     /// Prepares `text` at SAPI pitch `pitch` (`-10..=10`).
+    ///
+    /// Control characters, NUL included, become spaces in both modes: a
+    /// NUL would end the text early (SAPI reads up to the first 0), and a
+    /// control character is not allowed in XML, so the voice would fail
+    /// the whole utterance. Each is one UTF-16 unit, as is the space, so
+    /// positions are unchanged.
     pub fn new(text: &str, pitch: i8) -> SpeakText {
         let plain_len = u32::try_from(text.encode_utf16().count()).unwrap_or(u32::MAX);
+        let chars = text.chars().map(|c| if c.is_control() { ' ' } else { c });
         if pitch == 0 {
+            let mut wide = Vec::with_capacity(text.len() + 1);
+            let mut buf = [0u16; 2];
+            for c in chars {
+                wide.extend_from_slice(c.encode_utf16(&mut buf));
+            }
+            wide.push(0);
             return SpeakText {
-                wide: text.encode_utf16().chain(Some(0)).collect(),
+                wide,
                 head: None,
                 plain_len,
             };
         }
         let head = format!("<pitch absmiddle=\"{}\">", pitch.clamp(-10, 10));
         let mut xml = head.clone();
-        for c in text.chars() {
+        for c in chars {
             match c {
                 '&' => xml.push_str("&amp;"),
                 '<' => xml.push_str("&lt;"),
@@ -511,5 +524,30 @@ mod tests {
         .collect();
         assert_eq!(words, ["Tom", "&", "Jerry", "said", "x", "y", "fine"]);
         assert_eq!(SpeakText::new("x", 99).wide, SpeakText::new("x", 10).wide);
+    }
+
+    #[test]
+    fn control_characters_and_nul_become_spaces_in_both_modes() {
+        // Before: a NUL ended the text early (SAPI stops at the first 0),
+        // and a control character made the XML invalid, so the voice
+        // failed the utterance.
+        let text = "a\0b\u{7}c\u{1b}d\te\nf\u{7f}g\u{85}h";
+        let plain = SpeakText::new(text, 0);
+        assert_eq!(wide_str(&plain), "a b c d e f g h");
+        assert_eq!(
+            plain.wide.iter().filter(|&&u| u == 0).count(),
+            1,
+            "only the terminator"
+        );
+        let xml = SpeakText::new(text, 3);
+        assert_eq!(
+            wide_str(&xml),
+            "<pitch absmiddle=\"3\">a b c d e f g h</pitch>"
+        );
+        // Every replacement is one UTF-16 unit, so word positions still
+        // point at the right words of the original text.
+        assert_eq!(plain.to_plain(2, 1), (2, 1));
+        assert_eq!(xml.to_plain(21 + 14, 1), (14, 1));
+        assert_eq!(text.encode_utf16().nth(14), Some(u16::from(b'h')));
     }
 }
