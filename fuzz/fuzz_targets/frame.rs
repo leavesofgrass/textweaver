@@ -11,12 +11,18 @@ use std::io::Cursor;
 
 use libfuzzer_sys::fuzz_target;
 use textweaver_enginehost::protocol::{
-    FrameReader, Message, ReadFrame, ReadyHeader, read_body_or_skip,
+    FrameReader, Message, ReadFrame, ReadyHeader, read_body, read_body_or_skip,
 };
 
 fn round_trip<M: Message + PartialEq + std::fmt::Debug>(body: &[u8]) {
     if let Ok(m) = M::decode(body) {
-        let again = M::decode(&m.encode()).expect("an encoded message decodes");
+        // `encode` writes a whole frame, length prefix included; `decode`
+        // takes the body.
+        let framed = m.encode();
+        let again = read_body(&mut Cursor::new(&framed))
+            .expect("an encoded frame reads")
+            .expect("an encoded frame is not empty");
+        let again = M::decode(&again).expect("an encoded message decodes");
         assert_eq!(again, m);
     }
 }

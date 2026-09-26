@@ -110,7 +110,9 @@ jobs:
         env:
           PROPTEST_CASES: '4'
           MIRIFLAGS: -Zmiri-disable-isolation
-        run: cargo +nightly miri test --locked -p textweaver-text --lib
+        # The property tests take over an hour here even with four cases;
+        # they run natively, with many more cases, in the release job.
+        run: cargo +nightly miri test --locked -p textweaver-text --lib -- --skip props
       - name: The engine-host protocol
         env:
           PROPTEST_CASES: '4'
