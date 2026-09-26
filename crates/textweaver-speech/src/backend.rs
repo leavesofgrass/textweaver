@@ -35,6 +35,12 @@ bitflags::bitflags! {
         /// Must be created and driven on the process's main thread (the GUI
         /// hosts such engines; the TUI cannot use them).
         const REQUIRES_MAIN_THREAD = 1 << 9;
+        /// The engine normalizes text itself (numbers, dates, times,
+        /// currency, abbreviations), as ETI-Eloquence does. The service then
+        /// skips those transforms and still applies Markdown residue, the
+        /// pronunciation lexicon, split caps, and punctuation verbosity
+        /// (see [`crate::normalize`]).
+        const NATIVE_NORMALIZATION = 1 << 10;
     }
 }
 
