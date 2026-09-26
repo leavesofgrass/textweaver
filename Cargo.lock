@@ -4239,6 +4239,7 @@ dependencies = [
  "textweaver-editor",
  "textweaver-formats",
  "textweaver-keymap",
+ "textweaver-math",
  "textweaver-render",
  "textweaver-sapi",
  "textweaver-speech",
