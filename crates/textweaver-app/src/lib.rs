@@ -28,7 +28,7 @@
 //! - **Persistence**: the reading position, history, and bookmarks are saved
 //!   on quit and on switching documents, and restored on open (first word at
 //!   or after the saved position, when `auto_resume` is on). Settings are
-//!   saved on quit only if they changed.
+//!   saved as soon as they change (see below).
 //! - **Announcements**: every state change goes to the status line
 //!   ([`App::status`], which doubles as the TUI's `StatusLineAnnouncer`) and
 //!   the configured announcer, filtered by verbosity; with self-voicing they

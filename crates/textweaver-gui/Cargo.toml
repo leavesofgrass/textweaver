@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-gui"
-description = "textweaver native GUI on wxDragon (wave 3; feasibility spike in wave 2)"
+description = "textweaver native GUI on wxDragon: the Wave 2 feasibility spike (ADR-0014), not built by default"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

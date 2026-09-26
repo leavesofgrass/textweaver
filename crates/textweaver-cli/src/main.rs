@@ -1,8 +1,11 @@
-//! `tw`: the textweaver scripting CLI.
+//! `tw`: the textweaver command line.
 //!
-//! One module per subcommand under `cmd/`, each owned by one agent
-//! (docs/tasks.md): text, info, search (A); speak, voices, backends (B);
-//! marks, migrate-star (C); open, serve (D).
+//! One module per subcommand under `cmd/`: `open`, `text`, `info`,
+//! `search`, `speak`, `voices`, `backends`, `eloquence`, `convert` (with
+//! `convert_layout` for the PDF and EPUB layout flags), `export-audio`,
+//! `library`, `vault`, `dictate`, `marks`, `migrate-star`, `cite`,
+//! `settings`, and `serve`. Each module's docs name the ADR and crate it
+//! wraps; the user guides are listed in `docs/README.md`.
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -55,7 +58,7 @@ enum Cmd {
     Cite(cmd::cite::Args),
     /// Export, import, locate, or reset settings and key overrides (JSON or TOML).
     Settings(cmd::settings::Args),
-    /// Serve the app over JSON-RPC on stdio (wave 2).
+    /// Serve the app over JSON-RPC 2.0 on stdin and stdout, for editors and other tools.
     Serve(cmd::serve::Args),
 }
 
