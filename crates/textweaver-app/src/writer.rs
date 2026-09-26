@@ -183,8 +183,8 @@ impl Writer {
             None => job,
         };
         let (report_tx, report_rx) = mpsc::channel();
-        let mut locks = HashMap::new();
-        do_job(job, &report_tx, &mut locks, false);
+        let mut state = WriterState::default();
+        do_job(job, &report_tx, &mut state, false);
         drop(report_tx);
         self.inline_reports.extend(report_rx.try_iter());
     }
@@ -241,8 +241,7 @@ impl Drop for Writer {
 /// The writer thread: takes every job waiting, collapses state saves of the
 /// same document into the newest, and does the rest in order.
 fn run(jobs: &Receiver<Job>, reports: &Sender<Report>) {
-    // Snapshot locks held while their documents are being edited.
-    let mut locks: HashMap<PathBuf, SnapshotLock> = HashMap::new();
+    let mut state = WriterState::default();
     while let Ok(first) = jobs.recv() {
         let mut batch = vec![first];
         batch.extend(jobs.try_iter());
@@ -263,7 +262,7 @@ fn run(jobs: &Receiver<Job>, reports: &Sender<Report>) {
                 _ => false,
             };
             let outcome = catch_unwind(AssertUnwindSafe(|| {
-                do_job(job, reports, &mut locks, superseded);
+                do_job(job, reports, &mut state, superseded);
             }));
             if outcome.is_err() {
                 log::error!("a write failed with an internal error; the writer goes on");
@@ -272,13 +271,19 @@ fn run(jobs: &Receiver<Job>, reports: &Sender<Report>) {
     }
 }
 
+/// What the writer thread keeps between jobs.
+#[derive(Default)]
+struct WriterState {
+    /// Snapshot locks held while their documents are being edited.
+    locks: HashMap<PathBuf, SnapshotLock>,
+    /// The stamp each file had after this writer last saved it: a second
+    /// save queued before the app heard of the first is not a change made
+    /// by another program.
+    wrote: HashMap<PathBuf, FileStamp>,
+}
+
 /// Does one job and sends its report.
-fn do_job(
-    job: Job,
-    reports: &Sender<Report>,
-    locks: &mut HashMap<PathBuf, SnapshotLock>,
-    superseded: bool,
-) {
+fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, superseded: bool) {
     let report = match job {
         Job::State {
             store,
@@ -303,7 +308,7 @@ fn do_job(
         }
         Job::Snapshot(SnapshotOp::Write { dir, snapshot }) => {
             let file = autosave::snapshot_file(&dir, &snapshot.doc_key);
-            let result = write_snapshot(&dir, &file, &snapshot, locks);
+            let result = write_snapshot(&dir, &file, &snapshot, &mut state.locks);
             Some(Report::Snapshot {
                 doc_key: snapshot.doc_key,
                 result,
@@ -314,11 +319,11 @@ fn do_job(
             if let Err(e) = autosave::delete_snapshot(&file) {
                 log::warn!("cannot delete the recovery snapshot: {e}");
             }
-            locks.remove(&file);
+            state.locks.remove(&file);
             None
         }
         Job::Save { id, req, expect } => {
-            let result = save(&req, expect);
+            let result = save(&req, expect, &mut state.wrote);
             Some(Report::Saved { id, req, result })
         }
         Job::DiskCheck { path } => Some(Report::Disk {
@@ -391,17 +396,23 @@ fn write_snapshot(
 fn save(
     req: &SaveRequest,
     expect: Option<FileStamp>,
+    wrote: &mut HashMap<PathBuf, FileStamp>,
 ) -> Result<(String, Option<FileStamp>), SaveFailure> {
     if let Some(known) = expect
         && let Some(now) = FileStamp::of(&req.dest)
         && now != known
+        && wrote.get(&req.dest) != Some(&now)
     {
         return Err(SaveFailure::ChangedOnDisk);
     }
     let text = req.text.to_string();
     autosave::save_text(&req.dest, &text)
         .map_err(|e| SaveFailure::Io(format!("{}: {e}", req.dest.display())))?;
-    Ok((text, FileStamp::of(&req.dest)))
+    let stamp = FileStamp::of(&req.dest);
+    if let Some(st) = stamp {
+        wrote.insert(req.dest.clone(), st);
+    }
+    Ok((text, stamp))
 }
 
 fn record_open(
@@ -496,14 +507,25 @@ mod tests {
         let textweaver_editor::SaveStart::Write(req) = s.begin_save(None).unwrap() else {
             panic!("in place");
         };
-        assert_eq!(save(&req, known), Err(SaveFailure::ChangedOnDisk));
+        let mut wrote = HashMap::new();
+        assert_eq!(
+            save(&req, known, &mut wrote),
+            Err(SaveFailure::ChangedOnDisk)
+        );
         assert_eq!(
             std::fs::read_to_string(&path).unwrap(),
             "changed elsewhere, longer"
         );
-        let (text, stamp) = save(&req, None).unwrap();
+        let (text, stamp) = save(&req, None, &mut wrote).unwrap();
         assert_eq!(text, "xone");
         assert_eq!(stamp, FileStamp::of(&path));
+        // A second save queued before the app heard of the first still
+        // expects the old version: its own change is not a conflict.
+        std::fs::write(&path, "x").unwrap();
+        let theirs = FileStamp::of(&path);
+        let mut wrote = HashMap::new();
+        save(&req, theirs, &mut wrote).unwrap();
+        assert!(save(&req, theirs, &mut wrote).is_ok());
     }
 
     #[test]

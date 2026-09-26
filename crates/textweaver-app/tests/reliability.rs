@@ -119,6 +119,16 @@ fn a_save_is_written_by_the_writer_and_typing_goes_on_meanwhile() {
     assert_eq!(saved.len(), body.len() + 1);
     assert!(saved.starts_with('X'), "the text as it was at Save");
     assert!(app.is_dirty(), "Y was typed after the save began");
+    // Two saves in a row, the second queued before the first is heard of:
+    // the first one's change on disk is not taken for another program's.
+    app.dispatch(Command::Action(ActionId::Save));
+    app.dispatch(Command::Insert("Z".into()));
+    app.dispatch(Command::Action(ActionId::Save));
+    app.wait_for_writes();
+    assert!(!app.confirmation_pending(), "{:?}", said.all());
+    assert_eq!(said.last(), "Saved big.md. Still editing.");
+    assert!(std::fs::read_to_string(&file).unwrap().starts_with("XYZ"));
+    assert!(!app.is_dirty());
 }
 
 #[test]

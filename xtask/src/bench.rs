@@ -708,7 +708,10 @@ mod inner {
         // Highlight updates: one word position applied at a time.
         highlight(&mut r, path, home);
 
-        // Search.
+        // Search. Background work (the structure parse, the writer) is
+        // finished first: the peak heap counts every thread.
+        app.wait_for_background(Duration::from_secs(60));
+        app.wait_for_writes();
         app.dispatch(Command::GoTo(parse_go_to("start").expect("start")));
         for (key, label, pattern) in [
             ("find_word", "find \"the\"", "the"),
