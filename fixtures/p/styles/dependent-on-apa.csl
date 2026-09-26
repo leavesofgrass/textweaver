@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A dependent style (like most journal styles in the Zotero repository):
+     it names a parent and inherits all formatting from it. -->
+<style xmlns="http://purl.org/net/xbiblio/csl" version="1.0" default-locale="en-GB">
+  <info>
+    <title>Journal of Accessible Reading (test)</title>
+    <id>https://example.org/styles/journal-of-accessible-reading</id>
+    <link href="https://example.org/styles/journal-of-accessible-reading" rel="self"/>
+    <link href="http://www.zotero.org/styles/apa" rel="independent-parent"/>
+    <category citation-format="author-date"/>
+    <updated>2026-09-25T00:00:00+00:00</updated>
+  </info>
+</style>
