@@ -38,6 +38,8 @@ pub struct Options {
     /// Speak announcements with the reading voice as well as sending them to
     /// the screen reader.
     pub self_voicing: bool,
+    /// Voice id or name for this run (see `tw voices`); not saved.
+    pub voice: Option<String>,
 }
 
 /// The speech configuration the settings describe (the same mapping as the
@@ -155,7 +157,7 @@ pub fn build_app(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<Str
             }
         },
     };
-    let (settings, keymap) = match &paths {
+    let (mut settings, keymap) = match &paths {
         Some(p) => {
             let store = SettingsStore::new(p.clone());
             let (settings, msg) = store.load();
@@ -173,6 +175,9 @@ pub fn build_app(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<Str
             Keymap::defaults(platform, Frontend::Gui),
         ),
     };
+    if let Some(voice) = &opts.voice {
+        settings.speech.voice = Some(voice.clone());
+    }
     let (speech, backend_name, speech_messages) = start_speech(&settings, opts);
     messages.extend(speech_messages);
     let self_voicing = opts.self_voicing && backend_name != "silent";

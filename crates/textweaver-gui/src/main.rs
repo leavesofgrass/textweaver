@@ -36,6 +36,9 @@ struct Args {
     /// that times words like a real engine, for automated checks.
     #[arg(long)]
     backend: Option<String>,
+    /// Voice id or name for this run (see `tw voices --backend ID`).
+    #[arg(long)]
+    voice: Option<String>,
     /// Keep settings and reading positions under this directory.
     #[arg(long)]
     home: Option<PathBuf>,
@@ -86,6 +89,7 @@ fn main() {
             backend: args.backend,
             home: args.home,
             self_voicing: args.self_voicing,
+            voice: args.voice,
         },
         file: args.file,
         read_on_start: args.read,
