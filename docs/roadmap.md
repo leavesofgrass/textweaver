@@ -247,6 +247,8 @@ Steps:
 
 ## Phase 3: the GUI (Wave 3)
 
+**Update, 2026-09-26:** Jon chose Xilem, Linebender's all-Rust toolkit, for the GUI on every platform. The steps below were written for the wxDragon spike, which stays as a fallback until the Xilem GUI passes the same accessibility checks. The Xilem plan is Agent W3b's brief in `docs/tasks.md`.
+
 Many users will want a GUI, even though Jon works in the terminal. The wxDragon spike is accessible on Windows (ADR-0014). The app core still needs these pieces first:
 
 1. **A document window model** in the app: about 500,000 UTF-16 units at a time, aligned to paragraphs, with positions mapped through `DisplayIndex`. Today the GUI loads the whole document, which takes 9.3 s for 10 million characters.

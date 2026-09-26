@@ -567,30 +567,44 @@ Areas are split to keep merges small.
    - Move P2b's misspelling count on save (0.6 s on 10 MB).
    - Make an engine's first start non-blocking, not just restarts.
 
-### Agent W3b — The GUI shell (Phase 3, second half)
+### Agent W3b — The Xilem GUI (Phase 3; Jon chose Xilem on 2026-09-26)
 
-**Owns:** `crates/textweaver-gui`, plus GUI packaging in `xtask` and the workflows.
+Jon chose Xilem, from Linebender, for the GUI on every platform, to "keep as much of it Rust as I can". The stack is:
+- Xilem and Masonry for the widgets;
+- Vello for rendering;
+- Parley for text layout;
+- AccessKit for accessibility;
+- winit for windows.
 
-1. **GUI keymap defaults.** Leave arrows, Home, End, Page Up, Page Down, and Tab native in the Browse layer (ADR-0014's contract request).
-2. **Themes.**
-   - Use `Theme::rgb_table` for the colours.
-   - Add a "system" theme that respects Windows High Contrast.
-3. **Native, labelled dialogs.**
-   - Find, go to, bookmarks, notes, voices (with favourites), library, command palette, and help.
-   - Build them on the app's list and prompt model once W3a lands it. Until then, use a thin adapter.
-   - Test each one with `--background` and the UI Automation report.
-4. **Settings dialog.** Build it from W3a's schema. If the schema isn't on main yet, stub it and report that.
-5. **Packaging.**
-   - Put `textweaver-gui.exe` in the Windows zip.
-   - Build a macOS `.app` bundle with `Info.plist`, and the fonts in `Contents/Resources` so font registration works.
-   - Add a Linux GTK build in CI (`libgtk-3-dev`), with an Xvfb smoke test and an AT-SPI tree dump (pyatspi).
-   - **Pending research (2026-09-26):** the Linux toolkit choice is on hold until the toolkit research reports: wxWidgets on GTK 3, GTK 4 through gtk4-rs, Qt 6, AccessKit toolkits, or web views. Build nothing Linux-GUI-specific until then.
-   - The Linux GUI uses the system's GTK 3 and does not bundle it. Most desktops already have it (Jon, 2026-09-26: GTK is bulky, so keep the download small).
-   - Ship the GUI as its own optional Linux download, separate from the terminal AppImage.
-6. **ADR-0014.**
-   - Accept it.
-   - Record the answers to open questions that can be settled without Jon's listening session.
-   - List the ones that need him.
+The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It is removed only after the Xilem GUI passes the same accessibility checks.
+
+**Owns:** a new crate, `crates/textweaver-xilem` (binary `textweaver-gui`, once it replaces the spike), plus GUI packaging in `xtask` and the workflows. The research findings on Xilem, Masonry, and AccessKit come in the orchestrator's brief update; read them first.
+
+1. **ADR-0023, "Xilem GUI".** It supersedes ADR-0014 and records:
+   - the choice;
+   - the Xilem version pinned;
+   - the accessibility bar;
+   - the fallback plan;
+   - what we may need to contribute upstream to AccessKit or Masonry.
+2. **The main window.**
+   - A document view built on W3a's window model, with the caret following speech, the selection, and highlight attributes, all exposed through AccessKit. Read-only first, then editable.
+   - Announcements through AccessKit live regions.
+   - Labelled play and stop buttons, a status bar, and a menu, or a command palette where menus are missing.
+   - Keyboard-only operation, using the keymap's GUI layer with native caret keys.
+3. **Dialogs.** Find, go to, bookmarks, notes, voices, library, command palette, help, and a settings dialog from W3a's schema. Build them on the app's list and prompt model.
+4. **Themes and fonts.**
+   - Themes through `Theme::rgb_table`, including Galaxy.
+   - A system or high-contrast theme.
+   - The bundled fonts, loaded straight into Parley, so no OS registration is needed.
+   - The font chooser, ported from the wx spike.
+5. **Accessibility checks on every OS.**
+   - Port the UI Automation report tool (`crates/textweaver-gui/tools/uia-report.ps1`) to the new window. It checks names, roles, text, caret movement while reading, and announcements.
+   - Add an AT-SPI tree dump (pyatspi) on Linux under Xvfb.
+   - Add a macOS smoke test.
+   - Run everything with `--background`, and never steal focus.
+   - Record where AccessKit falls short, especially text-range support in UI Automation, and propose fixes or upstream contributions.
+6. **Large documents.** A 10-million-character document opens in under 300 ms, and the highlight moves in under 30 ms per word. Measure both.
+7. **Packaging.** The GUI binary goes into the Windows zip, a macOS `.app`, and a Linux AppImage of its own. There are no GTK or wxWidgets dependencies; winit and Vello only need the system's graphics stack.
 
 ### Agent W3c — Architecture consolidation
 
@@ -679,7 +693,7 @@ Areas are split to keep merges small.
 
 ### After Wave 3
 
-- Jon's NVDA and JAWS listening session for the GUI (Phase 3, step 3).
+- Jon's NVDA and JAWS listening session for the Xilem GUI.
 - The GUI's edit mode and reading aids.
 - VoiceOver and Orca testing.
 - The aarch64 AppImage, on GitHub's arm64 runners.
