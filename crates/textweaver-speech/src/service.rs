@@ -17,7 +17,9 @@
 //!   reading's highlight (fixes Star bugs B1 and B2).
 //! - **Normalization.** Every utterance goes through the transform
 //!   [`Pipeline`] on its own (never across chunks), composing offset maps so
-//!   positions still point into the document (ADR-0005).
+//!   positions still point into the document (ADR-0005). Utterances are
+//!   normalized just before they enter the lookahead window, so reading a
+//!   whole book from the cursor starts at once.
 //! - **Positions.** Word events are mapped through the utterance's offset
 //!   map into [`SpeechStatus::Position`]. Audio-clock events are scheduled at
 //!   `audio_ms + latency_offset` on the playback clock, never fired on
@@ -33,6 +35,7 @@
 //!   anchor as `resume_at`; queued chunks are cancelled by id.
 //! - **Say modes, characters, tones, earcons** as documented on each method.
 
+use std::collections::VecDeque;
 use std::ops::Range;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::thread::{self, JoinHandle};
@@ -451,9 +454,11 @@ struct Playing {
 enum PauseState {
     /// The engine paused itself; the queue is intact.
     Native,
-    /// The engine was stopped; these utterances continue the reading.
+    /// The engine was stopped; these utterances (normalized) and then the
+    /// backlog (not yet normalized) continue the reading.
     Emulated {
         utterances: Vec<Utterance>,
+        backlog: VecDeque<Utterance>,
         reading: bool,
     },
 }
@@ -472,6 +477,10 @@ pub struct ServiceCore {
     pipeline: Pipeline,
     params: VoiceParams,
     queue: ReadingQueue,
+    /// The rest of the reading, not yet normalized: utterances are
+    /// normalized just before they join the queue, so a long reading starts
+    /// at once.
+    backlog: VecDeque<Utterance>,
     playing: Option<Playing>,
     paused: Option<PauseState>,
     /// A `read` is in progress; `Finished` is reported when it drains.
@@ -517,6 +526,7 @@ impl ServiceCore {
             clock: PlaybackClock::new(clock),
             params: config.params.clone(),
             queue: ReadingQueue::new(config.lookahead),
+            backlog: VecDeque::new(),
             config,
             pipeline,
             playing: None,
@@ -566,7 +576,7 @@ impl ServiceCore {
 
     /// True while anything is queued or playing.
     pub fn is_active(&self) -> bool {
-        !self.queue.is_empty()
+        !self.queue.is_empty() || !self.backlog.is_empty()
     }
 
     /// Statuses produced since the last call.
@@ -627,11 +637,10 @@ impl ServiceCore {
     pub fn read(&mut self, utterances: Vec<Utterance>) {
         self.clear_engine();
         self.paused = None;
-        let normalized: Vec<Utterance> =
-            utterances.into_iter().map(|u| self.normalize(u)).collect();
-        self.queue.start(normalized);
+        self.queue.start(Vec::new());
+        self.backlog = utterances.into();
         self.last_position = None;
-        if self.queue.is_empty() {
+        if self.backlog.is_empty() {
             self.reading = false;
             self.out.push(SpeechStatus::Finished);
             return;
@@ -648,6 +657,7 @@ impl ServiceCore {
 
     fn stop_silently(&mut self) {
         self.clear_engine();
+        self.backlog.clear();
         self.paused = None;
         self.reading = false;
     }
@@ -663,10 +673,12 @@ impl ServiceCore {
             self.paused = Some(PauseState::Native);
         } else {
             let utterances = self.remainder(byte);
+            let backlog = std::mem::take(&mut self.backlog);
             let reading = self.reading;
             self.clear_engine();
             self.paused = Some(PauseState::Emulated {
                 utterances,
+                backlog,
                 reading,
             });
         }
@@ -685,8 +697,9 @@ impl ServiceCore {
             }
             Some(PauseState::Emulated {
                 utterances,
+                backlog,
                 reading,
-            }) => self.restart(utterances, reading),
+            }) => self.restart(utterances, backlog, reading),
         }
     }
 
@@ -694,34 +707,41 @@ impl ServiceCore {
     pub fn resume_at(&mut self, pos: CharPos) {
         self.demote_native_pause();
         let Some(PauseState::Emulated {
-            utterances,
+            mut utterances,
+            mut backlog,
             reading,
         }) = self.paused.take()
         else {
             return;
         };
-        let hit = utterances.iter().position(|u| {
+        let contains = |u: &Utterance| {
             u.kind == UtteranceKind::Text
                 && u.source_range()
                     .is_some_and(|r| r.start <= pos && pos < r.end)
-        });
-        let utterances = match hit {
-            None => utterances,
-            Some(i) => {
-                let mut rest: Vec<Utterance> = utterances.into_iter().skip(i).collect();
-                let first = &rest[0];
-                let byte = first.offset_map.to_spoken(&first.text, pos).unwrap_or(0);
-                let byte = snap_to_span(first, byte);
-                match trim_utterance(first, byte) {
-                    Some(t) => rest[0] = t,
-                    None => {
-                        rest.remove(0);
-                    }
-                }
-                rest
-            }
         };
-        self.restart(utterances, reading);
+        if let Some(i) = utterances.iter().position(contains) {
+            utterances.drain(..i);
+        } else if let Some(j) = backlog.iter().position(contains) {
+            backlog.drain(..j);
+            utterances = backlog
+                .pop_front()
+                .map(|u| self.normalize(u))
+                .into_iter()
+                .collect();
+        } else {
+            // Not in the paused reading: resume at the pause point.
+            return self.restart(utterances, backlog, reading);
+        }
+        let first = &utterances[0];
+        let byte = first.offset_map.to_spoken(&first.text, pos).unwrap_or(0);
+        let byte = snap_to_span(first, byte);
+        match trim_utterance(first, byte) {
+            Some(t) => utterances[0] = t,
+            None => {
+                utterances.remove(0);
+            }
+        }
+        self.restart(utterances, backlog, reading);
     }
 
     /// Skips the playing utterance (or, while paused, the next one).
@@ -741,9 +761,10 @@ impl ServiceCore {
         };
         let mut rest = self.queue.take_all();
         rest.retain(|u| u.id != front);
+        let backlog = std::mem::take(&mut self.backlog);
         let reading = self.reading;
         self.clear_engine();
-        self.restart(rest, reading);
+        self.restart(rest, backlog, reading);
     }
 
     /// Speaks `text` according to `mode`.
@@ -764,12 +785,13 @@ impl ServiceCore {
                 let reading_playing = self.paused.is_none()
                     && self.reading
                     && self.queue.iter().any(|u| u.kind == UtteranceKind::Text);
+                let backlog = std::mem::take(&mut self.backlog);
                 if reading_playing {
                     let (byte, _) = self.resume_point();
                     let mut rest = self.remainder(byte);
                     rest.insert(0, u);
                     self.clear_engine();
-                    self.restart(rest, true);
+                    self.restart(rest, backlog, true);
                     return;
                 }
                 // Interrupt other announcements only.
@@ -783,7 +805,7 @@ impl ServiceCore {
                 self.clear_engine();
                 let mut all = vec![u];
                 all.extend(rest);
-                self.restart(all, reading);
+                self.restart(all, backlog, reading);
                 return;
             }
         }
@@ -1000,11 +1022,12 @@ impl ServiceCore {
     /// Stops whatever plays for an interrupting utterance, reporting
     /// `Stopped` if a reading was playing. A pause is kept.
     fn interrupt(&mut self) {
-        if self.queue.is_empty() {
+        if self.queue.is_empty() && self.backlog.is_empty() {
             return;
         }
         let was_reading = self.reading;
         self.clear_engine();
+        self.backlog.clear();
         if was_reading && self.paused.is_none() {
             self.reading = false;
             self.out.push(SpeechStatus::Stopped);
@@ -1019,22 +1042,35 @@ impl ServiceCore {
         }
         let (byte, _) = self.resume_point();
         let utterances = self.remainder(byte);
+        let backlog = std::mem::take(&mut self.backlog);
         let reading = self.reading;
         self.clear_engine();
         self.paused = Some(PauseState::Emulated {
             utterances,
+            backlog,
             reading,
         });
     }
 
-    fn restart(&mut self, utterances: Vec<Utterance>, reading: bool) {
+    /// Restarts the engine (new generation) with normalized `utterances`
+    /// followed by the raw `backlog`.
+    fn restart(&mut self, utterances: Vec<Utterance>, backlog: VecDeque<Utterance>, reading: bool) {
         self.queue.restart(utterances);
+        self.backlog = backlog;
         self.reading = reading;
         self.last_position = None;
-        if self.queue.is_empty() {
-            self.finish_if_done();
-        } else {
-            self.pump();
+        self.pump();
+    }
+
+    /// Normalizes backlog utterances into the queue until it holds the
+    /// playing utterance, the lookahead, and one more.
+    fn refill(&mut self) {
+        while self.queue.len() < self.config.lookahead + 2 {
+            let Some(u) = self.backlog.pop_front() else {
+                break;
+            };
+            let u = self.normalize(u);
+            self.queue.push_back(u);
         }
     }
 
@@ -1088,6 +1124,7 @@ impl ServiceCore {
     /// result, until nothing more can be submitted.
     fn pump(&mut self) {
         loop {
+            self.refill();
             let batch = self.queue.to_submit();
             if batch.is_empty() {
                 break;
@@ -1253,7 +1290,7 @@ impl ServiceCore {
             // Everything handed over has ended; nothing left to stop.
             self.engine_busy = false;
         }
-        if self.queue.is_empty() && self.paused.is_none() {
+        if self.queue.is_empty() && self.backlog.is_empty() && self.paused.is_none() {
             self.playing = None;
             if self.reading {
                 self.reading = false;

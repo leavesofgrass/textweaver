@@ -437,6 +437,57 @@ fn pause_inside_an_expansion_repeats_the_whole_expansion() {
 }
 
 #[test]
+fn a_long_reading_is_normalized_as_it_is_reached() {
+    let mut rig = Rig::new(
+        RecordingMode::Manual,
+        RecordingBackend::DEFAULT_CAPS,
+        ServiceConfig::default(),
+    );
+    let sentences: Vec<String> = (0..10).map(|i| format!("Item {i} costs $5.")).collect();
+    let refs: Vec<&str> = sentences.iter().map(String::as_str).collect();
+    rig.core.read(doc(0, &refs));
+    rig.step();
+    assert_eq!(rig.spoken().len(), 3, "only the lookahead is handed over");
+    let mut done = 0;
+    while done < rig.spoken().len() {
+        let u = rig.spoken()[done].clone();
+        assert_eq!(u.text, format!("Item {done} costs five dollars."));
+        assert_eq!(u.id.chunk, u32::try_from(done).unwrap());
+        rig.rec.finish(u.id);
+        let st = rig.step();
+        done += 1;
+        assert_eq!(st.contains(&SpeechStatus::Finished), done == 10, "{done}");
+    }
+    assert_eq!(done, 10);
+}
+
+#[test]
+fn resume_at_a_cursor_beyond_the_normalized_window() {
+    let mut rig = Rig::manual();
+    let sentences: Vec<String> = (0..10).map(|i| format!("Sentence number {i}.")).collect();
+    let refs: Vec<&str> = sentences.iter().map(String::as_str).collect();
+    let utts = doc(0, &refs);
+    let eighth = utts[8].source_range().unwrap();
+    rig.core.read(utts);
+    rig.step();
+    rig.core.pause();
+    rig.core.take_statuses();
+    let before = rig.spoken().len();
+    // The cursor moved to "number" in sentence 8 (still in the backlog).
+    rig.core.resume_at(eighth.start.saturating_add(9));
+    let texts: Vec<String> = rig.spoken()[before..]
+        .iter()
+        .map(|u| u.text.clone())
+        .collect();
+    assert_eq!(texts, ["number 8.", "Sentence number 9."]);
+    let resumed = &rig.spoken()[before];
+    assert_eq!(
+        resumed.source_for(0..6),
+        Some(CharRange::new(eighth.start.0 + 9, eighth.start.0 + 15))
+    );
+}
+
+#[test]
 fn pause_when_idle_does_nothing() {
     let mut rig = Rig::manual();
     rig.core.pause();
