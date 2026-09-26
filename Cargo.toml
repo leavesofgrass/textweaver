@@ -25,6 +25,7 @@ members = [
     "crates/textweaver-writers",
     "crates/textweaver-math",
     "crates/textweaver-cite",
+    "crates/textweaver-theme",
     "xtask",
 ]
 default-members = [
@@ -51,6 +52,7 @@ default-members = [
     "crates/textweaver-writers",
     "crates/textweaver-math",
     "crates/textweaver-cite",
+    "crates/textweaver-theme",
 ]
 
 [workspace.package]
@@ -89,6 +91,7 @@ textweaver-convert = { path = "crates/textweaver-convert" }
 textweaver-writers = { path = "crates/textweaver-writers" }
 textweaver-math = { path = "crates/textweaver-math" }
 textweaver-cite = { path = "crates/textweaver-cite" }
+textweaver-theme = { path = "crates/textweaver-theme" }
 
 # text and formats
 ropey = "1.6"
@@ -156,6 +159,9 @@ krilla = "0.8"
 hayagriva = "0.10"
 biblatex = "0.12"
 ureq = { version = "3.4", default-features = false, features = ["rustls"] }
+# Performance (ADR-0001): async I/O outside speech, memory-mapped reading
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util", "sync", "time"] }
+memmap2 = "0.9"
 # GUI (wave 3 spike; the textweaver-gui crate only).
 wxdragon = "0.9"
 live-region = "0.3"

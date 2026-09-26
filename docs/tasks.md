@@ -209,7 +209,7 @@ Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech la
 
 - **Branches:** `wave2/<letter>-<topic>`. Do not push (except Agent K, below); the orchestrator integrates.
 - **Toolchain:** `rust-version` is 1.89; let-chains are expected (clippy's `collapsible_if`).
-- **Native checks on Windows** use `--features textweaver-speech/omnivox` instead of `--all-features` (the `espeak` feature needs libespeak-ng, Linux only) and `--exclude textweaver-gui` on workspace commands. The container runs `--all-features`.
+- **Native checks on Windows** use `--features textweaver-speech/omnivox` (only when `textweaver-speech` is among the packages checked; otherwise `--features textweaver-cli/omnivox` when the CLI is, or no features) instead of `--all-features` (the `espeak` feature needs libespeak-ng, Linux only) and `--exclude textweaver-gui` on workspace commands. The container runs `--all-features`.
 - **Docker from Git Bash:** prefix with `MSYS_NO_PATHCONV=1`, or Git Bash rewrites `/target/...` into a Windows path.
 - **Engines:** never load Code Factory's Eloquence (unlicensed on this machine) or OpenEVV in tests; real Eloquence tests use Voxin in the container (`compose.voxin.yaml`); real SAPI tests use Microsoft voices and eSpeak only. Never play audio aloud; never commit engine audio.
 - **New ADRs:** each agent below owns the ADR number given in its brief.
@@ -393,3 +393,18 @@ Jon asked to carry Star's lessons forward: reading aids, math normalization, liv
 - Compare with Star's `star/citations.py` (D:\star) and list what you carried over and fixed.
 
 **Acceptance:** crate tests green; import/export round trips; formatting snapshots per style; the CLI commands tested with a temporary library.
+
+### Agent Q — Themes (added 2026-09-25 at Jon's request)
+
+Jon wants several themes, as Star had. Star shipped 23 palettes in `star/themes.py` (galaxy, galaxy-light, one-dark, one-light, dark, light, contrast, high-contrast, phosphor, dracula, nord, solarized-dark, solarized-light, gruvbox-dark, gruvbox-light, tokyo-night, catppuccin-mocha, monokai, sepia, amber, everforest-dark, rose-pine, kanagawa) plus user CSS themes and OS light/dark following; the wiki's "star TUI palette contrast audit" found contrast failures (for example sepia losing headings, galaxy missing a TUI entry).
+
+**Owns:** `crates/textweaver-theme/`, `docs/adr/0020-themes.md`, `docs/themes.md` (a user guide). Agent D2's TUI theme code (`crates/textweaver-tui/src/theme.rs`) moves onto this crate at integration: describe exactly what the TUI and app must change, with a patch-ready snippet, in your report.
+
+**Deliverables:**
+- A `Theme` model with semantic roles (background, text, dim text, heading levels, link, code, quote, selection, spoken word, spoken sentence band, find hit, bookmark, note, user highlight colors, status bar, focus, error), light/dark/high-contrast kind, and metadata; themes as TOML files, with Star's 23 palettes ported faithfully and built in, and user themes loaded from the config `themes/` folder (unknown keys preserved, errors reported per theme).
+- WCAG checks: contrast ratios (WCAG 2.x relative luminance; report APCA as information) for every text role against its background and for the highlight roles, requiring 4.5:1 for text, 3:1 for large text and non-text indicators, and a high-contrast theme at 7:1; a test that every built-in theme passes, adjusting palettes minimally where Star's failed and documenting each adjustment.
+- Renderers: terminal colors (truecolor, with 256-color and 16-color fallbacks chosen by detected capability, and a `NO_COLOR` mode relying on bold, underline, and reverse video so highlights never depend on color alone), CSS custom properties for Agent L's HTML templates (`prefers-color-scheme` pairs), and a plain RGB table the GUI can use.
+- OS light/dark detection on Windows, macOS, and Linux (a pure function plus a small platform probe), with Star's `theme_for_os_scheme` behavior.
+- ADR-0020 and `docs/themes.md` (how to pick, preview, and write a theme).
+
+**Acceptance:** contrast tests for every built-in theme; round-trip TOML tests; snapshot of the CSS output; the palette list and each adjustment in the report.

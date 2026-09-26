@@ -2793,6 +2793,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-theme"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "serde",
+ "thiserror 2.0.21",
+ "toml",
+]
+
+[[package]]
 name = "textweaver-tui"
 version = "0.1.0-alpha.0"
 dependencies = [
