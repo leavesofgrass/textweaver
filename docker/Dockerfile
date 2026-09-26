@@ -2,8 +2,9 @@
 #
 # Linux build and test environment with every native library the workspace can
 # link: espeak-ng (feature `espeak`), ALSA (rodio, wave 2 export/tones),
-# speech-dispatcher (wave 2 backend), clang for bindgen-based -sys crates,
-# Python for the Star parity scripts, and pandoc for the optional loader.
+# speech-dispatcher (wave 2 backend), Python for the Star parity scripts, and
+# pandoc for the optional loader. No clang: nothing outside the GUI (which is
+# not built here) uses bindgen.
 # It is also ready for Voxin (ETI-Eloquence for Linux), mounted from an
 # existing licensed installation by compose.voxin.yaml.
 #
@@ -20,7 +21,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN dpkg --add-architecture i386 \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
-      ca-certificates git pkg-config clang libclang-dev file \
+      ca-certificates git pkg-config file \
       espeak-ng espeak-ng-data libespeak-ng-dev \
       libasound2-dev libasound2-plugins alsa-utils pulseaudio-utils \
       libc6:i386 libstdc++6:i386 \

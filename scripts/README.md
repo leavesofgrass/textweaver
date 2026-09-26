@@ -25,7 +25,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1
 Builds textweaver from source and installs it, on any Linux distribution.
 
 - It finds your package manager from `/etc/os-release` and what is on your PATH: apt (Debian, Ubuntu), dnf or yum (Fedora, Red Hat), pacman (Arch, Manjaro), zypper (openSUSE), or apk (Alpine). On other systems it prints the list of packages to install by hand.
-- It installs the build dependencies: a C toolchain, clang and libclang, pkg-config, the ALSA headers, espeak-ng, and speech-dispatcher, with their development files.
+- It installs the build dependencies: a C toolchain, pkg-config, the ALSA headers, espeak-ng, and speech-dispatcher, with their development files.
 - It offers ffmpeg and pandoc, and says where to get whisper.cpp for dictation.
 - It installs rustup if cargo is missing, after asking. The Rust version comes from `rust-toolchain.toml`.
 - It builds `textweaver` and `tw` in release mode with the espeak-ng, speech-dispatcher, and Omnivox engines, and builds the engine hosts with `cargo xtask hosts`. If the espeak-ng engine does not build on your distribution, it builds again without it (`--no-espeak` skips it from the start).

@@ -313,25 +313,26 @@ detect_pm() {
   PM=unknown
 }
 
-# Build dependencies for each package manager: a C toolchain, clang and
-# libclang (bindgen), pkg-config, ALSA headers (audio output), espeak-ng
-# with its headers, speech-dispatcher with its headers, and git and curl.
+# Build dependencies for each package manager: a C toolchain, pkg-config,
+# ALSA headers (audio output), espeak-ng with its headers,
+# speech-dispatcher with its headers, and git and curl. No clang: nothing
+# in the terminal build uses bindgen (only the GUI's wxdragon-sys does).
 packages_for() {
   case $1 in
     apt)
-      echo "build-essential clang libclang-dev pkg-config libasound2-dev espeak-ng libespeak-ng-dev speech-dispatcher speech-dispatcher-espeak-ng libspeechd-dev git curl ca-certificates"
+      echo "build-essential pkg-config libasound2-dev espeak-ng libespeak-ng-dev speech-dispatcher speech-dispatcher-espeak-ng libspeechd-dev git curl ca-certificates"
       ;;
     dnf | yum)
-      echo "gcc gcc-c++ make clang clang-devel pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-utils speech-dispatcher-devel git curl ca-certificates"
+      echo "gcc gcc-c++ make pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-utils speech-dispatcher-devel git curl ca-certificates"
       ;;
     pacman)
-      echo "base-devel clang pkgconf alsa-lib espeak-ng speech-dispatcher git curl ca-certificates"
+      echo "base-devel pkgconf alsa-lib espeak-ng speech-dispatcher git curl ca-certificates"
       ;;
     zypper)
-      echo "gcc gcc-c++ make clang clang-devel pkgconf-pkg-config alsa-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-module-espeak libspeechd-devel git curl ca-certificates"
+      echo "gcc gcc-c++ make pkgconf-pkg-config alsa-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-module-espeak libspeechd-devel git curl ca-certificates"
       ;;
     apk)
-      echo "build-base clang clang-dev clang-libclang pkgconf alsa-lib-dev espeak-ng espeak-ng-dev speech-dispatcher speech-dispatcher-dev git curl ca-certificates"
+      echo "build-base pkgconf alsa-lib-dev espeak-ng espeak-ng-dev speech-dispatcher speech-dispatcher-dev git curl ca-certificates"
       ;;
     *)
       echo ""
@@ -388,7 +389,6 @@ pm_install() {
 print_generic_packages() {
   say "Install these with your package manager, then run this script again with --no-deps:"
   say "- a C compiler and make (gcc or clang)"
-  say "- clang and libclang (the development files)"
   say "- pkg-config"
   say "- the ALSA development files (often alsa-lib-devel or libasound2-dev)"
   say "- espeak-ng and its development files"
