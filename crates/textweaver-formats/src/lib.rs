@@ -1,19 +1,52 @@
 //! Document loaders.
 //!
-//! A [`Loader`] turns a [`Source`] into a [`Document`]. The [`Registry`] picks
-//! the highest-priority available loader for a source's extension or hint.
+//! A [`Loader`] turns a [`Source`] into a [`Document`] in the canonical shape
+//! of ADR-0002. The [`Registry`] picks the highest-priority available loader
+//! for a source's extension or hint; unknown extensions load as plain text.
+//! [`DocumentCache`] keeps loaded documents on disk, keyed by path,
+//! modification time, size, and an options fingerprint.
 //!
-//! Owner: Agent A. Phase 0 ships only the plain-text loader; Markdown and HTML
-//! (wave 1), EPUB, DOCX, `paperback`, and `pandoc` (wave 2) follow.
+//! Built-in loaders and their priorities (higher wins for an extension):
+//!
+//! | Loader | Extensions | Priority |
+//! |---|---|---|
+//! | [`MarkdownLoader`] | `md`, `markdown`, `mdown`, `mkd`, `mkdn`, `mdwn`, `mdtxt`, `rmd` | [`NATIVE_PRIORITY`] (10) |
+//! | [`HtmlLoader`] | `html`, `htm`, `xhtml`, `xht` | [`NATIVE_PRIORITY`] (10) |
+//! | [`TextLoader`] | `txt`, `text`, `log` (and the fallback for everything else) | 0 |
+//!
+//! Wave 2 adds EPUB and DOCX natively (priority 10) and the optional
+//! `pandoc` (5) and `paperback` (1) loaders, which therefore never displace
+//! a native loader (Star preferred Pandoc for HTML and inherited its bugs).
+//!
+//! Owner: Agent A.
 
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use textweaver_text::{Document, DocumentMeta};
 
+mod builder;
+pub mod cache;
+pub mod export;
+pub mod html;
+pub mod markdown;
 mod text;
 
+pub use cache::{CacheKey, DocumentCache};
+pub use export::to_markdown;
+pub use html::HtmlLoader;
+pub use markdown::MarkdownLoader;
 pub use text::TextLoader;
+
+/// Priority of the built-in native loaders for their formats.
+pub const NATIVE_PRIORITY: i32 = 10;
+
+/// Separator between table cells on a row of canonical text.
+pub const CELL_SEPARATOR: &str = " | ";
+
+/// Version of the canonical text the loaders produce. Bumped whenever a
+/// loader's output changes, which invalidates cached documents.
+pub const CANONICAL_VERSION: u32 = 1;
 
 /// Where a document comes from.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -36,7 +69,7 @@ impl Source {
     pub fn hint(&self) -> Option<String> {
         match self {
             Source::Path(p) => p.extension().map(|e| e.to_string_lossy().to_lowercase()),
-            Source::Bytes { hint, .. } => Some(hint.to_lowercase()),
+            Source::Bytes { hint, .. } => Some(hint.trim_start_matches('.').to_lowercase()),
             Source::Url(u) => Path::new(u.split(['?', '#']).next().unwrap_or(u))
                 .extension()
                 .map(|e| e.to_string_lossy().to_lowercase()),
@@ -56,9 +89,11 @@ impl Source {
 /// Options that affect how a document is loaded (part of the cache key).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct LoadOptions {
-    /// Drop text under `Code` markers from the canonical text.
+    /// Drop code blocks (text under block `Code` markers) from the canonical
+    /// text. Inline code is kept, as in Star.
     pub skip_code: bool,
-    /// Keep footnotes inline where referenced instead of at the end.
+    /// Put each footnote's text where it is referenced, as
+    /// `(footnote: text)`, instead of in a "Footnotes" section at the end.
     pub footnotes_inline: bool,
 }
 
@@ -113,6 +148,8 @@ impl Registry {
     pub fn with_builtins() -> Self {
         let mut r = Registry::new();
         r.register(Box::new(TextLoader));
+        r.register(Box::new(MarkdownLoader));
+        r.register(Box::new(HtmlLoader));
         r
     }
 
@@ -126,23 +163,53 @@ impl Registry {
         self.loaders.iter().map(|l| l.id()).collect()
     }
 
-    /// The best available loader for `source`.
-    pub fn loader_for(&self, source: &Source) -> Option<&dyn Loader> {
-        let hint = source.hint().unwrap_or_default();
+    /// Every extension some available loader claims, sorted.
+    pub fn extensions(&self) -> Vec<&'static str> {
+        let mut v: Vec<&'static str> = self
+            .loaders
+            .iter()
+            .filter(|l| l.available())
+            .flat_map(|l| l.extensions().iter().copied())
+            .collect();
+        v.sort_unstable();
+        v.dedup();
+        v
+    }
+
+    /// The loader registered under `id`.
+    pub fn loader_by_id(&self, id: &str) -> Option<&dyn Loader> {
         self.loaders
             .iter()
-            .filter(|l| l.available() && l.extensions().contains(&hint.as_str()))
-            .max_by_key(|l| l.priority())
+            .find(|l| l.id() == id)
             .map(|l| l.as_ref())
+    }
+
+    /// The best available loader for `source`: the highest priority among
+    /// those claiming its extension; the first registered wins a tie.
+    pub fn loader_for(&self, source: &Source) -> Option<&dyn Loader> {
+        let hint = source.hint().unwrap_or_default();
+        let mut best: Option<&dyn Loader> = None;
+        for l in &self.loaders {
+            if l.available()
+                && l.extensions().contains(&hint.as_str())
+                && best.is_none_or(|b| l.priority() > b.priority())
+            {
+                best = Some(l.as_ref());
+            }
+        }
+        best
+    }
+
+    /// The loader that [`load`](Self::load) would use: the best one for the
+    /// extension, or plain text.
+    pub fn resolve(&self, source: &Source) -> &dyn Loader {
+        self.loader_for(source).unwrap_or(&TextLoader)
     }
 
     /// Loads `source` with the best loader, falling back to plain text for
     /// unknown extensions.
     pub fn load(&self, source: &Source, options: &LoadOptions) -> Result<Document, LoadError> {
-        match self.loader_for(source) {
-            Some(l) => l.load(source, options),
-            None => TextLoader.load(source, options),
-        }
+        self.resolve(source).load(source, options)
     }
 }
 
@@ -163,5 +230,67 @@ pub fn meta_for(source: &Source, id: &str) -> DocumentMeta {
         },
         format: id.to_owned(),
         ..DocumentMeta::default()
+    }
+}
+
+/// The source decoded as UTF-8 (invalid bytes replaced), without a byte
+/// order mark, with `\r\n` and `\r` turned into `\n`.
+pub fn source_text(source: &Source) -> Result<String, LoadError> {
+    let bytes = source.read()?;
+    let text = String::from_utf8_lossy(&bytes);
+    let text = text.strip_prefix('\u{feff}').unwrap_or(&text);
+    Ok(text.replace("\r\n", "\n").replace('\r', "\n"))
+}
+
+/// A title from the file name (without extension), for sources with a path.
+pub fn title_from_path(source: &Source) -> Option<String> {
+    match source {
+        Source::Path(p) => p
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .filter(|s| !s.is_empty()),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Fake(&'static str, i32);
+
+    impl Loader for Fake {
+        fn id(&self) -> &'static str {
+            self.0
+        }
+        fn extensions(&self) -> &'static [&'static str] {
+            &["md"]
+        }
+        fn priority(&self) -> i32 {
+            self.1
+        }
+        fn load(&self, _: &Source, _: &LoadOptions) -> Result<Document, LoadError> {
+            Ok(Document::from_plain_text(self.0))
+        }
+    }
+
+    #[test]
+    fn registry_picks_by_priority_and_falls_back_to_text() {
+        let mut r = Registry::with_builtins();
+        r.register(Box::new(Fake("low", 1)));
+        let md = Source::Bytes {
+            data: b"# Hi".to_vec(),
+            hint: "md".into(),
+        };
+        assert_eq!(r.resolve(&md).id(), "markdown");
+        r.register(Box::new(Fake("high", 20)));
+        assert_eq!(r.resolve(&md).id(), "high");
+        let unknown = Source::Bytes {
+            data: b"x".to_vec(),
+            hint: "weird".into(),
+        };
+        assert_eq!(r.resolve(&unknown).id(), "text");
+        assert!(r.extensions().contains(&"html"));
+        assert_eq!(r.ids(), ["text", "markdown", "html", "low", "high"]);
     }
 }

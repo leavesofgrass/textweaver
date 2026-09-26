@@ -398,6 +398,16 @@ fn hard_breaks(doc: &Document, block: &Block) -> Vec<CharPos> {
     out
 }
 
+/// True when the whole block lies in a code block: its sentences are its
+/// lines (prose rules would split `println!("hi")` after the `!`).
+fn in_code_block(doc: &Document, block: &Block) -> bool {
+    !doc.markers().is_empty()
+        && doc
+            .marker_index()
+            .enclosing(MarkerKind::Code, block.range.start)
+            .is_some_and(|m| m.level == 1 && block.range.end <= m.range.end)
+}
+
 /// The segments of `unit` inside one block, as absolute ranges, in order.
 fn segment_block(doc: &Document, unit: Unit, block: &Block) -> Vec<CharRange> {
     let base = block.range.start.0;
@@ -414,6 +424,14 @@ fn segment_block(doc: &Document, unit: Unit, block: &Block) -> Vec<CharRange> {
         Unit::Word => words_in(&doc.slice(block.range))
             .into_iter()
             .map(abs)
+            .collect(),
+        Unit::Sentence if in_code_block(doc, block) => (block.first_line..=block.last_line)
+            .filter_map(|l| {
+                let r = doc.line_range(l);
+                let text: Vec<char> = doc.slice(r).chars().collect();
+                trimmed(&text, 0, text.len())
+                    .map(|(s, e)| CharRange::new(r.start.0 + s, r.start.0 + e))
+            })
             .collect(),
         Unit::Sentence => {
             let breaks = hard_breaks(doc, block);
@@ -675,6 +693,19 @@ mod tests {
         assert_eq!(
             texts(&plain, Unit::Sentence),
             ["Intro", "First item\nSecond item\nthird item"]
+        );
+    }
+
+    #[test]
+    fn code_block_sentences_are_lines() {
+        let text = "Run it.\n\nfn main() {\n    println!(\"hi\"); x();\n}";
+        let markers = vec![
+            Marker::new(MarkerKind::Code, CharRange::new(9, text.chars().count())).with_level(1),
+        ];
+        let d = Document::new(DocumentMeta::default(), Rope::from_str(text), markers);
+        assert_eq!(
+            texts(&d, Unit::Sentence),
+            ["Run it.", "fn main() {", "println!(\"hi\"); x();", "}"]
         );
     }
 

@@ -21,10 +21,16 @@ textweaver-core.workspace = true
 textweaver-text.workspace = true
 thiserror.workspace = true
 serde.workspace = true
+serde_json.workspace = true
+ropey.workspace = true
+pulldown-cmark.workspace = true
+scraper.workspace = true
+toml.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
 tempfile.workspace = true
+proptest.workspace = true
 
 [lints]
 workspace = true
