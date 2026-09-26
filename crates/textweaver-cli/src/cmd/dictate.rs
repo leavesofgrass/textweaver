@@ -37,7 +37,7 @@ pub struct Args {
     /// The spoken language (en, de, ...); detected when not given.
     #[arg(long)]
     pub language: Option<String>,
-    /// Start each segment on its own line with its time, [mm:ss].
+    /// Start each segment on its own line with its time, `[mm:ss]`.
     #[arg(long)]
     pub timestamps: bool,
     /// Apply spoken commands ("new line", "period", "open quote", ...).

@@ -22,10 +22,14 @@ use crate::{StoreError, atomic_write};
 pub struct DocKey(pub String);
 
 impl DocKey {
-    /// The key for a file path (made absolute; not canonicalized, so the
-    /// same file reached through different links gets different keys).
+    /// The key for a file path, resolved as library entries are
+    /// ([`resolve_path`](crate::library::resolve_path)): absolute, with
+    /// links and short names resolved when the file exists, so the same
+    /// file reached through a link or a short name keeps one key.
     pub fn for_path(path: &Path) -> Self {
-        let abs = std::path::absolute(path).unwrap_or_else(|_| path.to_owned());
+        // The same form as library entries: symbolic links and Windows short
+        // names resolved when the file exists, so one file has one key.
+        let abs = crate::library::resolve_path(path);
         let s = abs.to_string_lossy();
         let mut h: u64 = 0xcbf2_9ce4_8422_2325;
         for b in s.as_bytes() {
