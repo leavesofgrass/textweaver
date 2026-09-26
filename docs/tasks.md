@@ -267,6 +267,8 @@ Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech la
 
 **Acceptance:** crate tests green; migration tested against a synthetic Star configuration directory built in the test (no real Star data); `docs/keyboard.md` regenerated.
 
+**Status:** Wave 2 deliverables done on `wave2/c-state-library` (Friday, September 25, 2026), including the orchestrator's character-key additions (single-key shortcuts off switch, quit and delete confirmation marks, conflicting overrides rejected); awaiting integration.
+
 ### Agent D2 — App, TUI editing, JSON-RPC
 
 **Owns:** `crates/textweaver-app/`, `crates/textweaver-tui/`, `crates/textweaver-cli/src/cmd/{open,serve}.rs`, `docs/adr/0015-json-rpc.md`.
