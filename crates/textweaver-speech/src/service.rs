@@ -231,6 +231,16 @@ impl Default for ServiceConfig {
 /// How often the core polls the backend while speech is active.
 pub const POLL_INTERVAL: Duration = Duration::from_millis(10);
 
+/// After this many `speak` failures in a row the reading stops, instead of
+/// failing through every remaining sentence of the document in one go.
+pub const MAX_CONSECUTIVE_FAILURES: u32 = 3;
+
+/// A backend error identical to one reported this recently is not reported
+/// again. A frontend that announces errors through speech (which fails the
+/// same way) would otherwise loop forever, and a host crash that fails
+/// several queued utterances would be reported once per utterance.
+pub const ERROR_REPEAT_WINDOW: Duration = Duration::from_secs(3);
+
 /// Commands sent to the speech thread.
 #[derive(Debug)]
 enum Command {
@@ -588,6 +598,11 @@ pub struct ServiceCore {
     out: Vec<SpeechStatus>,
     /// The engine was given something since it was last stopped.
     engine_busy: bool,
+    /// `speak` failures in a row (reset by a successful `speak`).
+    failures: u32,
+    /// Errors reported recently, with when (wall clock), for
+    /// [`ERROR_REPEAT_WINDOW`].
+    recent_errors: Vec<(String, Duration)>,
 }
 
 impl std::fmt::Debug for ServiceCore {
@@ -634,6 +649,8 @@ impl ServiceCore {
             events: Vec::new(),
             out: Vec::new(),
             engine_busy: false,
+            failures: 0,
+            recent_errors: Vec::new(),
         };
         if let Some(asked) = core.params.voice.clone() {
             core.params.voice = Some(core.resolve_voice_name(&asked));
@@ -815,7 +832,7 @@ impl ServiceCore {
             Some(PauseState::Native) => {
                 self.clock.resume();
                 if let Err(e) = self.backend.resume() {
-                    self.out.push(SpeechStatus::BackendError(e.to_string()));
+                    self.backend_error(e.to_string());
                 }
             }
             Some(PauseState::Emulated {
@@ -989,7 +1006,7 @@ impl ServiceCore {
         let id = self.queue.push_back(u);
         if p != self.params {
             if let Err(e) = self.backend.set_params(&p) {
-                self.out.push(SpeechStatus::BackendError(e.to_string()));
+                self.backend_error(e.to_string());
             }
             self.char_params = Some(id);
         }
@@ -1123,7 +1140,7 @@ impl ServiceCore {
             return;
         }
         if let Err(e) = self.backend.set_params(&self.params) {
-            self.out.push(SpeechStatus::BackendError(e.to_string()));
+            self.backend_error(e.to_string());
         }
         self.refresh_caps();
     }
@@ -1289,14 +1306,52 @@ impl ServiceCore {
                 self.engine_busy = true;
                 let result = self.backend.speak(&u, &mut sink);
                 self.events.extend(sink.events);
-                if let Err(e) = result {
-                    self.out.push(SpeechStatus::BackendError(e.to_string()));
-                    self.events.push((u.id, RawEvent::Cancelled));
+                match result {
+                    Ok(()) => self.failures = 0,
+                    Err(e) => {
+                        self.failures = self.failures.saturating_add(1);
+                        self.backend_error(e.to_string());
+                        self.events.push((u.id, RawEvent::Cancelled));
+                        if self.failures >= MAX_CONSECUTIVE_FAILURES {
+                            self.give_up();
+                            return;
+                        }
+                    }
                 }
             }
             self.drain_events();
         }
         self.finish_if_done();
+    }
+
+    /// The engine failed [`MAX_CONSECUTIVE_FAILURES`] times in a row: stop
+    /// everything (the reading reports `Stopped`) and say why once.
+    fn give_up(&mut self) {
+        let was_reading = self.reading;
+        self.stop_silently();
+        // The same words every time, so a repeat within the window is quiet.
+        self.backend_error(format!(
+            "the speech engine failed {MAX_CONSECUTIVE_FAILURES} times in a row, so speech stopped"
+        ));
+        if was_reading {
+            self.out.push(SpeechStatus::Stopped {
+                generation: self.reading_generation,
+            });
+        }
+    }
+
+    /// Reports a backend error, unless the same error was reported within
+    /// [`ERROR_REPEAT_WINDOW`].
+    fn backend_error(&mut self, message: String) {
+        let now = self.clock.wall();
+        self.recent_errors
+            .retain(|(_, at)| now.saturating_sub(*at) < ERROR_REPEAT_WINDOW);
+        if self.recent_errors.iter().any(|(m, _)| *m == message) {
+            log::debug!("not repeating speech error: {message}");
+            return;
+        }
+        self.recent_errors.push((message.clone(), now));
+        self.out.push(SpeechStatus::BackendError(message));
     }
 
     fn drain_events(&mut self) {
@@ -1351,7 +1406,7 @@ impl ServiceCore {
             }
             RawEvent::Finished | RawEvent::Cancelled => self.complete(id),
             RawEvent::Error(e) => {
-                self.out.push(SpeechStatus::BackendError(e));
+                self.backend_error(e);
                 self.complete(id);
             }
         }

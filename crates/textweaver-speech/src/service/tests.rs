@@ -435,6 +435,92 @@ fn backend_error_is_reported_and_reading_goes_on() {
 }
 
 #[test]
+fn an_engine_that_always_fails_stops_the_reading_once() {
+    // Before: every remaining sentence was tried in one pump, each
+    // reporting its own error (a whole book's worth at once).
+    let mut rig = Rig::instant();
+    rig.rec.fail_every_speak(Some("host did not start".into()));
+    let sentences: Vec<String> = (0..200).map(|i| format!("Sentence {i}.")).collect();
+    let refs: Vec<&str> = sentences.iter().map(String::as_str).collect();
+    rig.core.read(doc(0, &refs));
+    let st = rig.step();
+    let speaks = rig
+        .rec
+        .calls()
+        .iter()
+        .filter(|c| matches!(c, Call::Speak(_)))
+        .count();
+    assert_eq!(speaks, MAX_CONSECUTIVE_FAILURES as usize);
+    let errors: Vec<&SpeechStatus> = st
+        .iter()
+        .filter(|s| matches!(s, SpeechStatus::BackendError(_)))
+        .collect();
+    assert_eq!(
+        errors,
+        [
+            &SpeechStatus::BackendError("engine error: host did not start".into()),
+            &SpeechStatus::BackendError(
+                "the speech engine failed 3 times in a row, so speech stopped".into()
+            ),
+        ]
+    );
+    assert_eq!(st.last(), Some(&STOPPED));
+    assert!(!rig.core.is_active());
+}
+
+#[test]
+fn a_repeated_error_is_not_reported_again_within_the_window() {
+    // A frontend that voices "Speech error" through the failing engine gets
+    // no new error back, so it cannot loop.
+    let mut rig = Rig::instant();
+    rig.rec.fail_every_speak(Some("no audio device".into()));
+    rig.core.read(doc(0, &["One.", "Two.", "Three.", "Four."]));
+    let first = rig.step();
+    assert!(first.iter().any(|s| matches!(s, SpeechStatus::BackendError(_))));
+    for _ in 0..5 {
+        rig.core.say("Speech error: no audio device", SayMode::Announce);
+        let st = rig.step();
+        assert!(
+            !st.iter().any(|s| matches!(s, SpeechStatus::BackendError(_))),
+            "{st:?}"
+        );
+    }
+    // Later, the same failure is reported again.
+    rig.clock.advance(ERROR_REPEAT_WINDOW + ms(1));
+    rig.core.say("Hello.", SayMode::Interrupt);
+    let st = rig.step();
+    assert!(st.contains(&SpeechStatus::BackendError(
+        "engine error: no audio device".into()
+    )));
+    // A working engine resets the count: one failure no longer stops.
+    rig.rec.fail_every_speak(None);
+    rig.clock.advance(ERROR_REPEAT_WINDOW + ms(1));
+    rig.core.say("Works.", SayMode::Interrupt);
+    rig.step();
+    rig.rec.fail_next_speak("glitch");
+    rig.core.read(doc(0, &["Bad one.", "Good one."]));
+    let st = rig.step();
+    assert_eq!(positions(&st), [r(9, 13), r(14, 17)]);
+    assert_eq!(st.last(), Some(&SpeechStatus::Finished { generation: 2 }));
+}
+
+#[test]
+fn a_host_crash_failing_queued_utterances_is_reported_once() {
+    let mut rig = Rig::manual();
+    rig.core.read(doc(0, &["One.", "Two.", "Three."]));
+    rig.step();
+    for u in rig.spoken() {
+        rig.rec.emit(u.id, RawEvent::Error("engine host exited".into()));
+    }
+    let st = rig.step();
+    let errors = st
+        .iter()
+        .filter(|s| matches!(s, SpeechStatus::BackendError(_)))
+        .count();
+    assert_eq!(errors, 1, "{st:?}");
+}
+
+#[test]
 fn engine_error_event_is_reported() {
     let mut rig = Rig::manual();
     rig.core.read(doc(0, &["Only one."]));

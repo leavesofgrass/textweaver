@@ -124,6 +124,8 @@ struct State {
     pending: Vec<Pending>,
     voices: Vec<Voice>,
     fail_next_speak: Option<String>,
+    /// Every `speak` fails with this message (an engine that cannot start).
+    fail_every_speak: Option<String>,
     /// Backend clock time of a native pause (`PAUSE` capability only).
     paused_at: Option<Duration>,
     mode: RecordingMode,
@@ -234,6 +236,12 @@ impl RecordingHandle {
     /// Makes the next `speak` fail with `SpeechError::Engine(message)`.
     pub fn fail_next_speak(&self, message: impl Into<String>) {
         lock(&self.state).fail_next_speak = Some(message.into());
+    }
+
+    /// Makes every `speak` fail with `SpeechError::Engine(message)` until
+    /// called with `None` (an engine or host that cannot start).
+    pub fn fail_every_speak(&self, message: Option<String>) {
+        lock(&self.state).fail_every_speak = message;
     }
 
     /// Changes the mode for subsequent `speak` calls.
@@ -431,7 +439,7 @@ impl SpeechBackend for RecordingBackend {
         {
             let mut s = lock(&self.state);
             s.calls.push(Call::Speak(utterance.clone()));
-            if let Some(msg) = s.fail_next_speak.take() {
+            if let Some(msg) = s.fail_next_speak.take().or_else(|| s.fail_every_speak.clone()) {
                 return Err(SpeechError::Engine(msg));
             }
             let words = spoken_words(&utterance.text);
