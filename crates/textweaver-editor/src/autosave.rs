@@ -99,6 +99,16 @@ pub(crate) fn now_ts() -> i64 {
 /// Writes `bytes` to `path` through a unique temp file in the same
 /// directory, synced, then renamed over the target.
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    write_atomic_with(path, bytes, None)
+}
+
+/// [`write_atomic`], giving the new file `permissions` (those of the file
+/// it replaces) before it is renamed into place.
+fn write_atomic_with(
+    path: &Path,
+    bytes: &[u8],
+    permissions: Option<std::fs::Permissions>,
+) -> std::io::Result<()> {
     let dir = path
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
@@ -117,6 +127,9 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
         f.write_all(bytes)?;
         f.sync_all()?;
         drop(f);
+        if let Some(p) = permissions {
+            std::fs::set_permissions(&tmp, p)?;
+        }
         std::fs::rename(&tmp, path)
     })();
     if result.is_err() {
@@ -356,11 +369,50 @@ pub fn decode(bytes: &[u8]) -> (String, TextFormat) {
 
 /// Saves `text` to `path` atomically, keeping the existing file's BOM and
 /// line endings (a new file gets `\n` and no BOM).
+///
+/// An existing file is protected:
+///
+/// - a symbolic link is written through to its target (replacing the link
+///   with a plain file would silently stop updating the real file);
+/// - the new file keeps the old one's permissions (Unix mode bits);
+/// - a read-only file is refused ([`std::io::ErrorKind::PermissionDenied`];
+///   renaming over it would succeed on Unix and overwrite it anyway);
+/// - a file that is not UTF-8 (Windows-1252, UTF-16) is refused
+///   ([`std::io::ErrorKind::InvalidData`]): it was read with replacement
+///   characters, and saving would write them back for good.
 pub fn save_text(path: &Path, text: &str) -> std::io::Result<()> {
-    let format = std::fs::read(path)
-        .map(|b| TextFormat::detect(&b))
-        .unwrap_or_default();
-    write_atomic(path, &format.encode(text))
+    use std::io::{Error, ErrorKind};
+    let target = match std::fs::symlink_metadata(path) {
+        Ok(m) if m.file_type().is_symlink() => std::fs::canonicalize(path)?,
+        _ => path.to_owned(),
+    };
+    let existing = match std::fs::metadata(&target) {
+        Ok(m) => Some(m),
+        Err(e) if e.kind() == ErrorKind::NotFound => None,
+        Err(e) => return Err(e),
+    };
+    let mut format = TextFormat::default();
+    let mut permissions = None;
+    if let Some(meta) = existing {
+        if meta.permissions().readonly() {
+            return Err(Error::new(
+                ErrorKind::PermissionDenied,
+                "the file is read-only; use Save As to write a copy",
+            ));
+        }
+        let bytes = std::fs::read(&target)?;
+        format = TextFormat::detect(&bytes);
+        let body = if format.bom { &bytes[3..] } else { &bytes[..] };
+        if std::str::from_utf8(body).is_err() {
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "the file is not UTF-8 text, and saving would replace the characters \
+                 that could not be read; use Save As to write a copy",
+            ));
+        }
+        permissions = Some(meta.permissions());
+    }
+    write_atomic_with(&target, &format.encode(text), permissions)
 }
 
 #[cfg(test)]
@@ -448,6 +500,56 @@ mod tests {
         assert_eq!(std::fs::read(&fresh).unwrap(), b"a\nb");
         let names: Vec<_> = std::fs::read_dir(dir.path()).unwrap().collect();
         assert_eq!(names.len(), 2, "no temp files left behind");
+    }
+
+    #[test]
+    fn save_text_refuses_read_only_and_non_utf8_files() {
+        let dir = tempfile::tempdir().unwrap();
+        // Windows-1252 smart quotes: read as replacement characters.
+        let legacy = dir.path().join("legacy.md");
+        let bytes = b"\x93quoted\x94 caf\xe9\n".to_vec();
+        std::fs::write(&legacy, &bytes).unwrap();
+        let e = save_text(&legacy, "\u{fffd}quoted\u{fffd} caf\u{fffd}\n").unwrap_err();
+        assert_eq!(e.kind(), std::io::ErrorKind::InvalidData);
+        assert_eq!(std::fs::read(&legacy).unwrap(), bytes, "left untouched");
+        // UTF-16 with a byte-order mark.
+        let wide = dir.path().join("wide.txt");
+        std::fs::write(&wide, b"\xFF\xFEh\x00i\x00").unwrap();
+        assert!(save_text(&wide, "hi").is_err());
+        // Read-only.
+        let ro = dir.path().join("ro.md");
+        std::fs::write(&ro, "keep").unwrap();
+        let mut perm = std::fs::metadata(&ro).unwrap().permissions();
+        perm.set_readonly(true);
+        std::fs::set_permissions(&ro, perm.clone()).unwrap();
+        let e = save_text(&ro, "changed").unwrap_err();
+        assert_eq!(e.kind(), std::io::ErrorKind::PermissionDenied);
+        assert_eq!(std::fs::read_to_string(&ro).unwrap(), "keep");
+        #[allow(clippy::permissions_set_readonly_false)]
+        perm.set_readonly(false);
+        std::fs::set_permissions(&ro, perm).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn save_text_writes_through_links_and_keeps_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let real = dir.path().join("real.md");
+        std::fs::write(&real, "old").unwrap();
+        std::fs::set_permissions(&real, std::fs::Permissions::from_mode(0o600)).unwrap();
+        let link = dir.path().join("link.md");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+        save_text(&link, "new").unwrap();
+        assert!(
+            std::fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        assert_eq!(std::fs::read_to_string(&real).unwrap(), "new");
+        let mode = std::fs::metadata(&real).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600);
     }
 
     #[test]
