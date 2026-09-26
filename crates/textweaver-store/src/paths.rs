@@ -16,11 +16,13 @@ pub struct Paths {
 impl Paths {
     /// The platform directories (`%APPDATA%\leavesofgrass\textweaver`,
     /// `~/Library/Application Support/org.leavesofgrass.textweaver`,
-    /// `$XDG_CONFIG_HOME/textweaver`, ...). `TEXTWEAVER_HOME`, when set,
-    /// puts everything under one directory instead.
+    /// `$XDG_CONFIG_HOME/textweaver`, ...). `TEXTWEAVER_HOME`, when set
+    /// and not empty, puts everything under one directory instead (an empty
+    /// value used to put `config/`, `data/`, and `cache/` in the current
+    /// directory).
     pub fn platform() -> Result<Self, StoreError> {
-        if let Some(home) = std::env::var_os("TEXTWEAVER_HOME") {
-            return Ok(Paths::under(Path::new(&home)));
+        if let Some(home) = home_override(std::env::var_os("TEXTWEAVER_HOME")) {
+            return Ok(Paths::under(&home));
         }
         let dirs = directories::ProjectDirs::from("org", "leavesofgrass", "textweaver")
             .ok_or(StoreError::NoConfigDir)?;
@@ -32,6 +34,10 @@ impl Paths {
     }
 
     /// Everything under `root` (tests, portable installs).
+    ///
+    /// An empty `root` would mean the current directory; callers read it
+    /// from `TEXTWEAVER_HOME` through [`platform`](Self::platform), which
+    /// ignores an empty value.
     pub fn under(root: &Path) -> Self {
         Paths {
             config_dir: root.join("config"),
@@ -73,5 +79,29 @@ impl Paths {
     /// The library search cache.
     pub fn fulltext_file(&self) -> PathBuf {
         self.cache_dir.join("fulltext.json")
+    }
+}
+
+/// The `TEXTWEAVER_HOME` directory, if the variable holds one: unset and
+/// empty (or all-whitespace) values mean "use the platform directories".
+fn home_override(value: Option<std::ffi::OsString>) -> Option<PathBuf> {
+    value
+        .filter(|v| !v.to_string_lossy().trim().is_empty())
+        .map(PathBuf::from)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_empty_home_override_is_ignored() {
+        assert_eq!(home_override(None), None);
+        assert_eq!(home_override(Some("".into())), None);
+        assert_eq!(home_override(Some("  ".into())), None);
+        assert_eq!(
+            home_override(Some("/tmp/tw".into())),
+            Some(PathBuf::from("/tmp/tw"))
+        );
     }
 }

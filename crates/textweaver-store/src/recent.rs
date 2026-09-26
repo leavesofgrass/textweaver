@@ -25,12 +25,20 @@ pub struct Recent {
 impl Recent {
     /// Records an open: moves the path to the front (Star did not move
     /// existing entries; fixed) and trims to `limit`.
+    ///
+    /// The path is stored resolved, as document keys and library entries
+    /// are ([`resolve_path`](crate::library::resolve_path)), so an entry
+    /// recorded from `textweaver notes.md` still opens from another working
+    /// directory, and the same file opened by a relative and an absolute
+    /// path is listed once.
     pub fn touch(&mut self, path: &Path, title: Option<String>, limit: usize) {
-        self.entries.retain(|e| e.path != path);
+        let path = crate::library::resolve_path(path);
+        self.entries
+            .retain(|e| e.path != path && crate::library::resolve_path(&e.path) != path);
         self.entries.insert(
             0,
             RecentEntry {
-                path: path.to_owned(),
+                path,
                 title,
                 opened: crate::now_ts(),
             },
@@ -66,9 +74,37 @@ mod tests {
         r.touch(Path::new("a"), None, 2);
         r.touch(Path::new("b"), None, 2);
         r.touch(Path::new("a"), None, 2);
-        let names: Vec<_> = r.entries.iter().map(|e| e.path.clone()).collect();
+        let names: Vec<_> = r
+            .entries
+            .iter()
+            .map(|e| e.path.file_name().unwrap().to_owned())
+            .collect();
         assert_eq!(names, vec![PathBuf::from("a"), PathBuf::from("b")]);
         r.touch(Path::new("c"), None, 2);
         assert_eq!(r.entries.len(), 2);
+    }
+
+    #[test]
+    fn relative_and_absolute_paths_are_one_resolved_entry() {
+        // Before: the path was stored as typed, so `textweaver notes.md`
+        // left an entry that did not open from another directory.
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("notes.md");
+        std::fs::write(&file, "# Notes").unwrap();
+        let mut r = Recent::default();
+        // An older entry stored as typed (relative, with `..`).
+        let sub = dir.path().join("sub");
+        std::fs::create_dir(&sub).unwrap();
+        r.entries.push(RecentEntry {
+            path: sub.join("..").join("notes.md"),
+            title: None,
+            opened: 0,
+        });
+        r.touch(&file, Some("Notes".into()), 10);
+        assert_eq!(r.entries.len(), 1);
+        let stored = &r.entries[0].path;
+        assert!(stored.is_absolute());
+        assert_eq!(stored, &crate::library::resolve_path(&file));
+        assert!(!stored.to_string_lossy().starts_with(r"\\?\"));
     }
 }
