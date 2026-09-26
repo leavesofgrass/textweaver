@@ -155,7 +155,6 @@ comrak = { version = "0.55", default-features = false }
 minijinja = "2.24"
 rayon = "1.12"
 walkdir = "2.5"
-pulldown-latex = "0.8"
 ammonia = "4.2"
 krilla = "0.8"
 # Citations (Agent P): bibliography model and CSL styles, BibTeX, blocking HTTP

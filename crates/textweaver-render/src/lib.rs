@@ -25,7 +25,9 @@
 //! CommonMark and becomes template variables.
 //!
 //! **Accessibility.** Headings get ids for navigation and a table of
-//! contents; math becomes MathML with its LaTeX as an annotation; footnotes
+//! contents; math (LaTeX, and ASCIIMath in `asciimath` code fences or,
+//! when asked, code spans) becomes MathML through `textweaver-math`, with
+//! its source as `alttext` and as an annotation; footnotes
 //! are collected into a labelled endnotes section with back links that say
 //! where they go; callouts are `role="note"` (or `details` when foldable);
 //! templates declare the language and landmarks.
@@ -141,8 +143,13 @@ pub struct RenderOptions {
     pub engine: Engine,
     /// Dialect.
     pub flavor: Flavor,
-    /// LaTeX math to MathML (`$…$`, `$$…$$`); off leaves the source.
+    /// Math to MathML: LaTeX (`$…$`, `$$…$$`) and fenced code blocks marked
+    /// `asciimath` (or `am`); off leaves the source.
     pub math: bool,
+    /// Read inline code spans as ASCIIMath (`` `x^2` ``), as course
+    /// material written for MathJax does. Off by default, because in
+    /// Markdown a backtick marks code.
+    pub asciimath: bool,
     /// Give every heading an id (needed for the table of contents).
     pub heading_ids: bool,
     /// Clean the HTML with ammonia (for untrusted Markdown).
@@ -163,6 +170,7 @@ impl Default for RenderOptions {
             engine: Engine::default(),
             flavor: Flavor::default(),
             math: true,
+            asciimath: false,
             heading_ids: true,
             sanitize: false,
             smart_punctuation: false,
