@@ -3537,6 +3537,7 @@ version = "0.1.0-alpha.3"
 dependencies = [
  "anyhow",
  "serde_json",
+ "textweaver-app",
  "textweaver-formats",
  "textweaver-keymap",
  "textweaver-text",
