@@ -23,7 +23,7 @@ Fixtures (all generated here, none copyrighted): `fixtures/a/single.pdf` (one co
 | Robustness | no panics by construction (no `unwrap` on file data); a page that fails to parse is skipped; operation and recursion budgets | about 100 `unwrap`/`expect`/`panic!` on file data (for example `Tj` with a non-string operand, missing `MediaBox`); image XObjects are fed to the content parser; form XObjects ignore the current CTM and `/Matrix`; `'` and `"` operators ignored | depends on PDFium (robust, C++) |
 | 300 pages, unloaded machine | 0.20–0.31 s | 0.67 s | not measured |
 | 300 pages, loaded machine | 0.14–0.28 s | 2.3–2.9 s | not measured |
-| Small fixtures | 3–8 ms each | 1.4–9 ms each | not measured |
+| Small fixtures (fastest of five, from memory) | 0.6–1.8 ms; 8.9 ms for `browser.pdf` (embedded fonts) | 1.4–9 ms | not measured |
 | Peak memory, `tw info` on 300 pages | about 20 MB working set (whole process) | not measured | not measured |
 | Dependencies | lopdf 0.45 (already in the table) | pins lopdf 0.42 (a second lopdf), `euclid`, `adobe-cmap-parser`, `cff-parser`, `type1-encoding-parser`, `postscript` | `pdfium-render`, plus the library |
 

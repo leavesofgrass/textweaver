@@ -162,3 +162,39 @@ fn pandoc_docx() {
     assert!(!text.contains("println"));
     assert!(!text.contains("[1]"));
 }
+
+/// Load time of every fixture (fastest of five, from memory); run with
+/// `cargo test --release -p textweaver-formats --test fixtures -- --ignored --nocapture`.
+#[test]
+#[ignore = "benchmark"]
+fn fixture_load_times() {
+    let registry = Registry::with_builtins();
+    for name in [
+        "sample.txt",
+        "sample.md",
+        "sample.html",
+        "a/sample.epub",
+        "a/pandoc.epub",
+        "a/sample.docx",
+        "a/pandoc.docx",
+    ] {
+        let path = fixture(name);
+        let data = std::fs::read(&path).expect("readable");
+        let hint = path
+            .extension()
+            .map(|e| e.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let source = Source::Bytes { data, hint };
+        let mut best = std::time::Duration::MAX;
+        let mut chars = 0;
+        for _ in 0..5 {
+            let started = std::time::Instant::now();
+            let doc = registry
+                .load(&source, &LoadOptions::default())
+                .expect("loads");
+            best = best.min(started.elapsed());
+            chars = doc.len_chars();
+        }
+        eprintln!("{name}: {chars} chars, {best:?}");
+    }
+}
