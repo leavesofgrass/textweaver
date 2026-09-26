@@ -118,11 +118,10 @@ fn espeak_values(p: &VoiceParams) -> (i32, i32, i32) {
 
 fn apply_params(p: &VoiceParams) -> Result<(), String> {
     let voice = p.voice.as_deref().unwrap_or("en-us");
-    if let Err(e) = ffi::set_voice(voice) {
-        if p.voice.is_some() {
+    if let Err(e) = ffi::set_voice(voice)
+        && p.voice.is_some() {
             return Err(e);
         }
-    }
     let (rate, pitch, volume) = espeak_values(p);
     ffi::set_param(ffi::Param::Rate, rate)?;
     ffi::set_param(ffi::Param::Pitch, pitch)?;
