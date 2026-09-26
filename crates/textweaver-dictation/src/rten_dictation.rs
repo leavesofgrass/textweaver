@@ -344,7 +344,7 @@ impl Worker {
         };
         let spans = match &self.vad {
             Some(c) => utterances(&audio, c),
-            None => vec![0..audio.len()],
+            None => std::iter::once(0..audio.len()).collect(),
         };
         let rate = u64::from(WHISPER_SAMPLE_RATE);
         let mut all = Transcript::default();

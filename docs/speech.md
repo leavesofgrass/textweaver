@@ -9,6 +9,7 @@ textweaver calls a speech engine a backend. Each has a short id, used by `--back
 - `eci`: ETI-Eloquence, through its engine library (ECI). Windows and Linux. It runs in a small helper program, the ECI host, so a 32-bit Eloquence works with 64-bit textweaver. textweaver does not include Eloquence; the [Eloquence guide](eloquence.md) explains how to get it. Eloquence reads numbers, dates, and abbreviations itself.
 - `sapi`: Windows SAPI5 voices, including the OneCore voices (Microsoft David, Zira, Mark). Windows only. Each voice runs in a helper program: the 64-bit host for 64-bit voices, and the 32-bit host for older 32-bit-only voices.
 - `dectalk`: DECtalk, from a copy you installed. See the [DECtalk guide](dectalk.md).
+- `piper`: Piper neural voices, run inside textweaver on RTen, a speech model runtime written in Rust. Every platform. It is available once you download a voice in the voice manager (Alt+V). Words are highlighted from the voice's own timing. See [Piper voices](#piper-voices) below.
 - `nsspeech`: Apple's system voices through the classic engine. macOS only. It answers fastest.
 - `avspeech`: Apple's system voices through AVSpeechSynthesizer. macOS only. It highlights words most exactly. On macOS 13 and later the system voices include Eloquence (Reed, Shelley, and others).
 - `espeak`: eSpeak NG, inside textweaver itself. In builds made with it: the Linux AppImage and tarball, and the Linux install script. textweaver loads libespeak-ng when it starts, so install the `espeak-ng` package to use it; without it, the backend is simply not available. `TEXTWEAVER_ESPEAK_LIBRARY` names the library file to load instead.
@@ -55,10 +56,10 @@ With a screen reader running, you may not want textweaver to speak everything. `
 tw backends
 ```
 
-It prints one line per engine: its id and name, whether it is available here, its priority, and what it supports. The engine the automatic choice picks says "Chosen automatically". For example:
+It prints one line per engine: its id and name, whether it is available here, its priority, what it supports, and where the word highlight's timing comes from: "Word timing from the engine" when the engine says where each word is (Piper's comes from the voice model itself), or "Word timing estimated" when textweaver paces it. The engine the automatic choice picks says "Chosen automatically". For example:
 
 ```text
-eci: ETI-Eloquence. Available. Priority 1000. Supports word highlighting, pause, pitch, volume, audio files, tones, and reads numbers and abbreviations itself. Chosen automatically.
+eci: ETI-Eloquence. Available. Priority 1000. Supports word highlighting, pause, pitch, volume, audio files, tones, and reads numbers and abbreviations itself. Word timing from the engine. Chosen automatically.
 ```
 
 For a program or script, print JSON; it includes the automatic choice as `auto`:
@@ -104,9 +105,18 @@ To write a whole document to an audio file with subtitles, use `tw export-audio`
 
 ## Choose a voice in the reader: Alt+V
 
-Press **Alt+V**. The GUI uses **Ctrl+Shift+V**. You hear "Voices", the number, "favourites first", then "Enter chooses one and speaks a sample, Space adds or removes a favourite, Escape cancels." Each item says the voice's name, language, and tags; a favourite says "favourite", and the one in use ends with "current".
+Press **Alt+V**. The GUI uses **Ctrl+Shift+V**. This opens the voice manager. You hear "Voice manager", how many voices are shown and which language and engine, then "Enter uses a voice and speaks a sample, or downloads one; Space marks a favourite; Delete removes a downloaded voice; Escape closes."
 
-Press **Enter** on a voice. You hear "Voice", its name, then a sample: "The quick brown fox jumps over the lazy dog." The choice is saved in `[speech] voice`.
+The list holds:
+
+- **Language: all languages.** Press Enter to show only the next language, then the next, and back to all. You hear, for example, "3 voices: English, all engines."
+- **Engine: all engines.** Press Enter to show only one engine's voices, in the same way.
+- **The voices.** Each says its name, language, engine, and tags; a favourite says "favourite", and the one in use says "current". Favourites come first. The list holds the running engine's voices and the Piper voices you have downloaded. Once you have fetched the Piper voice list, it also holds the Piper voices you can download, each with its size and "non-commercial" when its licence says so.
+- **Fetch the Piper voice list from the internet.** Press Enter, then y, to download the list of Piper voices (about 250 KB).
+
+Press **Enter** on a voice. You hear "Voice", its name, then a sample: "The quick brown fox jumps over the lazy dog." The choice is saved in `[speech] voice`. A voice of another engine switches engine: you hear "Switching engine", and speech restarts with that voice.
+
+**Each voice keeps its own rate and pitch**, as screen readers do. Change the rate on one voice, choose another, and come back: the first voice has its rate again. They are saved in `[speech.voice_params]`.
 
 Press **Space** on a voice to make it a favourite, or to stop it being one. You hear, for example, "Microsoft Zira added to favourites." Favourites are listed first, in the order you added them, and are saved in `[speech] favorite_voices`.
 
@@ -115,6 +125,21 @@ An engine with no voice list says "This speech engine has no voices to choose fr
 Each engine lists its voices once, when it starts, and keeps the list, so the list opens at once. The Windows voices are listed in the background (a helper program reads each registry); if you press **Alt+V** before that is done, you hear "The voices are still loading. The list opens when they are ready.", and it opens by itself when they arrive.
 
 When a voice changes what the engine can do, textweaver tells you. For example: "This voice does not report words, so the word highlight is estimated." or "Pitch cannot be changed with this voice."
+
+### Piper voices
+
+Piper voices are neural voices: natural-sounding, and each a file of 20 to 140 MB. textweaver runs them itself, with no other program. Nothing is downloaded until you say yes.
+
+1. Press **Alt+V**, go to "Fetch the Piper voice list from the internet", press Enter, and answer y.
+2. Press Alt+V again. Use the language row to show your language.
+3. Press Enter on a voice to download. textweaver reads the voice's details and says, for example: "Download Joe, English (United States), medium quality, 63 MB? Licence: CC0. Free to use for anything. y or n". Answer y. You hear progress at each quarter, then "Joe is installed."
+4. Press Enter on the new voice to use it.
+
+**Licences differ from voice to voice.** Some are free for anything (`joe` is CC0; `kristin`, `norman`, and `cori` are public domain), some ask for credit (`libritts_r` is CC BY), and some are for personal, non-commercial use only (`lessac`, `ryan`, `hfc_female`). textweaver says the licence before every download and does not ship any voice itself.
+
+Every file is checked against the hash Hugging Face publishes for it; a file that does not match is deleted and nothing is installed. Voices are kept in `<data>/piper/voices/`. To remove one, press Delete on it in the voice manager and answer y.
+
+To read words into phonemes, Piper uses eSpeak NG: the installed library when there is one, otherwise a copy written in Rust that is built into textweaver (English only). Piper voices in other languages need eSpeak NG installed.
 
 ### Voice names
 
@@ -253,6 +278,21 @@ library = "C:\\Path\\To\\DECtalk.dll"
 ```
 
 - `library`: the DECtalk library to use. It has no default; textweaver searches the usual places. This section is not yet part of textweaver's typed settings, so `tw settings export` does not list it, and `tw settings import` says "speech.dectalk is not a textweaver setting; it is kept." It is still kept and used. The [DECtalk guide](dectalk.md) explains it.
+
+### [speech.piper]: Piper voices
+
+```toml
+[speech.piper]
+voices = "D:\\Voices\\piper"
+voice = "en_US-joe-medium"
+phonemizer = "auto"
+```
+
+- `voices`: the folder of Piper voices. Default: `<data>/piper/voices`. `TEXTWEAVER_PIPER_VOICES` overrides it for one run.
+- `voice`: the voice Piper starts with when `[speech] voice` does not name one of its voices. Default: the first English voice.
+- `phonemizer`: `auto` (the installed eSpeak NG, else the built-in one), `library`, or `rust`.
+
+Like `[speech.dectalk]`, this section is not yet part of the typed settings; it is kept and used. So is `[speech.voice_params]`, where each voice's own rate and pitch are kept.
 
 ## How text is prepared for speech
 

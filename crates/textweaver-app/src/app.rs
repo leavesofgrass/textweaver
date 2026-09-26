@@ -244,8 +244,9 @@ pub(crate) enum ListKind {
     Recovery,
     /// The library: the documents listed, in order.
     Library(Vec<PathBuf>),
-    /// The speech engine's voices: id and name, in order.
-    Voices(Vec<(String, String)>),
+    /// The voice manager; its rows are in `App::voices`
+    /// (`crate::voice_manager`).
+    Voices,
     /// An outline, citation picker, spelling, replace, or template list
     /// (Agent P2b's `lists` module).
     Authoring(crate::authoring_state::AuthoringList),
@@ -309,8 +310,8 @@ pub struct App {
     /// A note or highlight chosen for deletion in its list, waiting for y
     /// or n (deleting one at the cursor asks too).
     pub(crate) pending_list_delete: Option<(ListKind, usize)>,
-    /// The voices shown by the last voice list, in list order.
-    pub(crate) voice_list: Vec<textweaver_speech::Voice>,
+    /// The voice manager: its list, question, and download (crate::voice).
+    pub(crate) voices: crate::voice::VoicesState,
     /// Text copied or cut, waiting for the frontend
     /// ([`App::take_clipboard`]).
     pub(crate) clipboard: Option<String>,
@@ -398,7 +399,7 @@ impl App {
             last_disk_check: None,
             snapshot_trouble: false,
             pending_list_delete: None,
-            voice_list: Vec::new(),
+            voices: crate::voice::VoicesState::default(),
             clipboard: None,
             writer: crate::writer::Writer::spawn(),
             pending_saves: Vec::new(),
@@ -445,6 +446,7 @@ impl App {
             || self.pending_disk.is_some()
             || self.pending_list_delete.is_some()
             || self.authoring.question.is_some()
+            || self.voices.question.is_some()
     }
 
     /// Answers a pending confirmation.
@@ -461,6 +463,9 @@ impl App {
         }
         if self.authoring.question.is_some() {
             return self.confirm_authoring(answer);
+        }
+        if self.voices.question.is_some() {
+            return self.confirm_voice(answer);
         }
         if let Some((kind, n)) = self.pending_list_delete.clone() {
             return match answer {
@@ -1108,11 +1113,7 @@ impl App {
                     return self.open_command(path);
                 }
             }
-            Some(ListKind::Voices(voices)) => {
-                if let Some((id, name)) = voices.get(n).cloned() {
-                    self.select_voice(&id, &name);
-                }
-            }
+            Some(ListKind::Voices) => return self.choose_voice_row(n),
             Some(ListKind::Authoring(l)) => return self.choose_authoring(l, n),
             Some(ListKind::Info) | None => {}
         }
@@ -1123,6 +1124,7 @@ impl App {
     fn delete_item(&mut self, n: usize) -> Vec<Effect> {
         match self.list.clone() {
             Some(ListKind::Bookmarks) => self.delete_bookmark(n),
+            Some(ListKind::Voices) => self.remove_voice_row(n),
             // Deleting a note or highlight asks first, as the delete_note
             // action does: a stray Delete in the list cannot lose one.
             Some(kind @ (ListKind::Notes | ListKind::Highlights)) => {
@@ -1157,7 +1159,7 @@ impl App {
     /// favourites or removes it.
     fn mark_item(&mut self, n: usize) -> Vec<Effect> {
         match self.list.clone() {
-            Some(ListKind::Voices(_)) => self.toggle_favourite_voice(n),
+            Some(ListKind::Voices) => self.toggle_favourite_voice(n),
             _ => {
                 self.tell("Nothing to mark in this list.");
                 vec![Effect::Redraw]

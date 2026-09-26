@@ -63,6 +63,12 @@ impl App {
         self.restart.starter = Some(starter);
     }
 
+    /// True when the frontend gave a way to start speech: real engines are
+    /// in play (the voice manager then lists the other engines' voices).
+    pub(crate) fn can_start_speech(&self) -> bool {
+        self.restart.starter.is_some()
+    }
+
     /// True while speech is being restarted.
     pub fn speech_restarting(&self) -> bool {
         self.restart.pending.is_some()

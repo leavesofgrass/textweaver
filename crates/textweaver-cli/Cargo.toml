@@ -25,7 +25,8 @@ textweaver-app.workspace = true
 # In-process `tw open` and `tw serve`.
 textweaver-tui.workspace = true
 textweaver-vault.workspace = true
-textweaver-dictation.workspace = true
+# Whisper in-process on RTen and the microphone (ADR-0023).
+textweaver-dictation = { workspace = true, features = ["rten", "mic"] }
 textweaver-export.workspace = true
 # Agent L: `tw convert`.
 textweaver-convert.workspace = true

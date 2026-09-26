@@ -12,6 +12,10 @@
 //! - `dist`: build a release package for this platform (`--universal` on
 //!   macOS); see `docs/releasing.md`.
 //! - `eci-host`, `sapi-host`: build one engine's hosts.
+//! - `listen [--engine ID] [--text FILE] [--out DIR]`: write sample WAV
+//!   files (and word-level subtitles) from every real speech engine here,
+//!   for the listening checklist in `docs/releasing.md`; plays nothing
+//!   (see `listen.rs`).
 //! - `keyboard`: regenerate `docs/keyboard.md` from the keymap (Agent C).
 //! - `notices [--check]`: regenerate `THIRD-PARTY-NOTICES.md` with
 //!   `cargo about` (see `notices.rs`).
@@ -30,6 +34,7 @@ mod deps;
 mod dist;
 mod eci;
 mod keyboard;
+mod listen;
 mod notices;
 mod parity;
 mod release;
@@ -52,6 +57,7 @@ fn main() -> anyhow::Result<()> {
         "hosts" => eci::hosts(),
         "eci-host" => eci::run(),
         "keyboard" => keyboard::run(),
+        "listen" => listen::run(),
         "notices" => notices::run(),
         "sapi-host" => sapi::run(),
         "parity" => parity::run(),
@@ -62,7 +68,7 @@ fn main() -> anyhow::Result<()> {
         "startup" => bench::startup(),
         _ => {
             eprintln!(
-                "usage: cargo xtask <appimage|bench|deps|dist|hosts|eci-host|keyboard|notices|parity|release|sapi-host|soak|startup>"
+                "usage: cargo xtask <appimage|bench|deps|dist|hosts|eci-host|keyboard|listen|notices|parity|release|sapi-host|soak|startup>"
             );
             std::process::exit(2);
         }

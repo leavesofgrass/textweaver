@@ -189,15 +189,16 @@ pub fn verify(file: &RemoteFile, path: &Path) -> Result<(), PiperError> {
     Ok(())
 }
 
+/// The User-Agent sent with every request: the project, nothing personal.
+pub const USER_AGENT: &str = "textweaver-research (+https://github.com/leavesofgrass/textweaver)";
+
 fn agent() -> ureq::Agent {
     ureq::Agent::config_builder()
         .timeout_connect(Some(Duration::from_secs(20)))
         .timeout_recv_body(Some(Duration::from_secs(60)))
-        .user_agent(concat!(
-            "textweaver/",
-            env!("CARGO_PKG_VERSION"),
-            " (Piper voices; https://github.com/leavesofgrass/textweaver)"
-        ))
+        // Neutral on purpose: no user, machine, or account names ever go
+        // out with a request (Jon's rule).
+        .user_agent(USER_AGENT)
         .build()
         .into()
 }
@@ -216,7 +217,15 @@ fn get_text(agent: &ureq::Agent, url: &str) -> Result<String, PiperError> {
 
 /// Downloads and parses the voice catalogue (`voices.json`, about 250 KB).
 pub fn fetch_catalog() -> Result<Catalog, PiperError> {
-    Catalog::from_json(&get_text(&agent(), CATALOG_URL)?)
+    fetch_catalog_json().map(|(_, c)| c)
+}
+
+/// Downloads the voice catalogue: its text (to keep in the voices folder)
+/// and the parsed catalogue.
+pub fn fetch_catalog_json() -> Result<(String, Catalog), PiperError> {
+    let json = get_text(&agent(), CATALOG_URL)?;
+    let catalog = Catalog::from_json(&json)?;
+    Ok((json, catalog))
 }
 
 /// Asks Hugging Face for `voice`'s files and hashes and reads its licence.

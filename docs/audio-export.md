@@ -17,7 +17,7 @@ tw backends
 This lists the speech engines textweaver knows about. An engine that can write files has "audio files" in its list of what it supports. For example:
 
 ```text
-sapi: Windows SAPI5 voices. Available. Priority 500. Supports word highlighting, pause, pitch, volume, audio files, and tones.
+sapi: Windows SAPI5 voices. Available. Priority 500. Supports word highlighting, pause, pitch, volume, audio files, and tones. Word timing from the engine.
 ```
 
 These engines can write files: ETI-Eloquence (`eci`), Windows SAPI5 voices (`sapi`), DECtalk (`dectalk`), eSpeak NG (`espeak`), and the two Apple engines on macOS (`nsspeech` and `avspeech`). Omnivox (`omnivox`) and Speech Dispatcher (`speechd`) can only speak aloud, so they cannot export. The silent engine (`null`) cannot export either.

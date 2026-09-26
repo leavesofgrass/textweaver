@@ -22,8 +22,8 @@ use std::time::{Duration, Instant};
 use rten::{Dimension, Model};
 use rten_generate::filter::LogitsFilter;
 use rten_generate::{Generator, GeneratorConfig, GeneratorUtils, Logits};
+use rten_tensor::NdTensor;
 use rten_tensor::prelude::*;
-use rten_tensor::{NdTensor, NdTensorView};
 use rten_text::Tokenizer;
 use rustfft::FftPlanner;
 use rustfft::num_complex::Complex32;
@@ -606,10 +606,7 @@ pub fn log_mel_spectrogram(
         }
     }
     let mut max = f32::NEG_INFINITY;
-    mels.apply(|x| {
-        let v = x.max(1e-10).log10();
-        v
-    });
+    mels.apply(|x| x.max(1e-10).log10());
     for &v in mels.iter() {
         max = max.max(v);
     }
@@ -628,7 +625,7 @@ pub fn to_f32(samples: &[i16]) -> Vec<f32> {
 /// A view helper for tests: the filter bank as rows.
 #[cfg(test)]
 fn row(t: &NdTensor<f32, 2>, i: usize) -> Vec<f32> {
-    let v: NdTensorView<'_, f32, 1> = t.slice(i);
+    let v: rten_tensor::NdTensorView<'_, f32, 1> = t.slice(i);
     v.to_vec()
 }
 

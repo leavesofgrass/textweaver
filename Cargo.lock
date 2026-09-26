@@ -4579,6 +4579,7 @@ dependencies = [
  "textweaver-text",
  "textweaver-theme",
  "thiserror 2.0.21",
+ "toml",
  "windows",
 ]
 

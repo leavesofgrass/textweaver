@@ -715,6 +715,8 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 
 ### Agent W3f — Voices and speech (Phase 4)
 
+**Status (Saturday, September 26, 2026):** done on `wave3/f-voices`, not merged. Piper voices run in-process on RTen with word timing from `w_ceil` (real-time factor 0.13, first audio 77 to 284 ms, on a quiet machine); the voice manager lists every engine's voices with language and engine filters, downloads Piper voices after a yes with the licence said and every file hash-checked, and each voice keeps its own rate and pitch; Whisper base.en int8 runs in-process on RTen (`tw dictate`, microphone included), after a fix for RTen's int8 saturation on CPUs without VNNI; `cargo xtask listen` and a listening checklist in `docs/releasing.md`. ADR-0023. candle was never built, so no candle feature exists.
+
 **Owns:** `crates/textweaver-speech` (new backends), a new `textweaver-piper` crate, and the voice manager in the app.
 
 1. **Piper neural voices.**
