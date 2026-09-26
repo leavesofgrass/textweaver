@@ -207,7 +207,8 @@ fn edits_made_in_obsidian_come_back_and_re_export_is_stable() {
     let energy = bio.note("bio-1").unwrap();
     assert_eq!(
         energy.text,
-        "Powerhouse of the cell. #review\n\n- Proteins are large molecules"
+        // The typed link became a relation; its line leaves the text.
+        "Powerhouse of the cell. #review"
     );
     assert_eq!(energy.tags, vec!["exam", "cells", "review"]);
     assert_eq!(energy.cite, "Campbell, Biology, p. 112");

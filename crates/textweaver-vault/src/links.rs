@@ -167,8 +167,20 @@ fn is_embed(text: &str, at: usize) -> bool {
 /// `Some text supports`), so the name's word suffixes are tried longest
 /// first. Star tried only the whole capture and lost such relations.
 fn field_relation(key: &str) -> Option<RelationType> {
-    let words: Vec<&str> = key.split_whitespace().collect();
-    (0..words.len()).find_map(|i| RelationType::parse(&words[i..].join(" ")))
+    field_relation_at(key).map(|(rt, _)| rt)
+}
+
+/// Like [`field_relation`], also returning the byte offset in `key` where
+/// the relation's name begins (what precedes it is prose).
+fn field_relation_at(key: &str) -> Option<(RelationType, usize)> {
+    let starts: Vec<usize> = key
+        .char_indices()
+        .filter(|&(i, c)| !c.is_whitespace() && (i == 0 || key[..i].ends_with(char::is_whitespace)))
+        .map(|(i, _)| i)
+        .collect();
+    starts
+        .into_iter()
+        .find_map(|i| RelationType::parse(&key[i..]).map(|rt| (rt, i)))
 }
 
 /// Every link in `body`, in order: typed Dataview fields first as they
@@ -254,20 +266,21 @@ pub fn inline_tags(body: &str) -> Vec<String> {
     tags
 }
 
-/// `text` with link syntax reduced to what it reads as: `[[T|Alias]]`
-/// becomes `Alias`, `[[T]]` and `![[T]]` become `T`, and a Dataview field
-/// `rel:: [[T]]` becomes `T`. The result reads well aloud and never
-/// re-introduces an edge when exported again.
+/// `text` with link syntax reduced to what it reads as: a relation field
+/// `supports:: [[T]]` is removed (the relation keeps it, as in Star's
+/// `_first_line`), `[[T|Alias]]` becomes `Alias`, and `[[T]]` and `![[T]]`
+/// become `T`. Lines left holding only a list marker are dropped and runs
+/// of spaces collapse. The result reads well aloud and never re-introduces
+/// an edge when exported again.
 pub fn strip_link_syntax(text: &str) -> String {
     let no_fields = INLINE_REL.replace_all(text, |c: &regex::Captures<'_>| {
-        match c.get(1).and_then(|k| field_relation(k.as_str())) {
-            Some(_) => c
-                .get(2)
-                .map_or(String::new(), |t| t.as_str().trim().to_owned()),
+        let key = c.get(1).map_or("", |k| k.as_str());
+        match field_relation_at(key) {
+            Some((_, at)) => key[..at].to_owned(),
             None => c.get(0).map_or(String::new(), |m| m.as_str().to_owned()),
         }
     });
-    ANY_WIKILINK
+    let reduced = ANY_WIKILINK
         .replace_all(&no_fields, |c: &regex::Captures<'_>| {
             match c
                 .get(2)
@@ -280,7 +293,37 @@ pub fn strip_link_syntax(text: &str) -> String {
                     .map_or(String::new(), |t| t.as_str().trim().to_owned()),
             }
         })
-        .into_owned()
+        .into_owned();
+    tidy(&reduced)
+}
+
+/// Collapses runs of spaces (keeping indentation), trims line ends, and
+/// drops lines left holding only a list marker.
+fn tidy(text: &str) -> String {
+    let mut lines = Vec::new();
+    for line in text.lines() {
+        let indent_len = line.len() - line.trim_start().len();
+        let (indent, rest) = line.split_at(indent_len);
+        let mut out = String::from(indent);
+        let mut prev_space = false;
+        for c in rest.chars() {
+            if c == ' ' {
+                if !prev_space {
+                    out.push(c);
+                }
+                prev_space = true;
+            } else {
+                out.push(c);
+                prev_space = false;
+            }
+        }
+        let out = out.trim_end().to_owned();
+        if matches!(out.trim(), "-" | "*" | "+") {
+            continue;
+        }
+        lines.push(out);
+    }
+    lines.join("\n")
 }
 
 /// The note's first line of content as a one-line summary: heading marks
@@ -366,7 +409,8 @@ mod tests {
     #[test]
     fn first_line_strips_link_syntax() {
         let body = "\n## [[Alpha]] supports:: [[Beta]] and [[Gamma|G]]\nmore";
-        assert_eq!(first_line(body), "Alpha Beta and G");
+        // The relation field goes entirely, as in Star.
+        assert_eq!(first_line(body), "Alpha and G");
         assert_eq!(first_line("\n\n"), "");
         let long = "x".repeat(300);
         assert_eq!(first_line(&long).chars().count(), 200);
@@ -376,6 +420,18 @@ mod tests {
     fn strip_keeps_unknown_fields() {
         assert_eq!(strip_link_syntax("related:: [[X]]"), "related:: X");
         assert_eq!(strip_link_syntax("see ![[img.png]]"), "see img.png");
+    }
+
+    #[test]
+    fn strip_removes_relation_fields_but_keeps_prose() {
+        assert_eq!(
+            strip_link_syntax("This note clearly see also:: [[X]] ends."),
+            "This note clearly ends."
+        );
+        assert_eq!(
+            strip_link_syntax("Body text.\n\n- supports:: [[A]]\n  - cites:: [[B]]\nMore"),
+            "Body text.\n\nMore"
+        );
     }
 
     #[test]

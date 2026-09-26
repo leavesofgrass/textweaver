@@ -24,7 +24,7 @@ use crate::transcript::{Segment, Transcript, WhisperModel};
 
 /// Which Whisper program.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "lowercase")]
 pub enum WhisperEngine {
     /// whisper.cpp (`whisper-cli`).
     Cpp,
@@ -388,6 +388,11 @@ mod tests {
     fn engine_names() {
         for e in WhisperEngine::ALL {
             assert_eq!(WhisperEngine::parse(e.as_str()), Some(e));
+            // JSON uses the same names.
+            assert_eq!(
+                serde_json::to_string(&e).unwrap(),
+                format!("\"{}\"", e.as_str())
+            );
         }
         assert_eq!(
             WhisperEngine::parse("faster-whisper"),

@@ -23,6 +23,15 @@ pub fn sanitize(name: &str) -> String {
         })
         .collect();
     let collapsed = mapped.split_whitespace().collect::<Vec<_>>().join(" ");
+    // A name ending in `.md` would make `Name.md.md`.
+    let collapsed = match collapsed.len().checked_sub(3) {
+        Some(at)
+            if collapsed.is_char_boundary(at) && collapsed[at..].eq_ignore_ascii_case(".md") =>
+        {
+            collapsed[..at].to_owned()
+        }
+        _ => collapsed,
+    };
     let mut out: String = collapsed.chars().take(MAX_NAME_CHARS).collect();
     while out.ends_with(['.', ' ']) {
         out.pop();
@@ -103,6 +112,8 @@ mod tests {
         assert_eq!(sanitize("CON"), "CON note");
         assert_eq!(sanitize("com1"), "com1 note");
         assert_eq!(sanitize("Console"), "Console");
+        assert_eq!(sanitize("Chapter 1.MD"), "Chapter 1");
+        assert_eq!(sanitize(".md"), "note");
         assert_eq!(sanitize(&"é".repeat(200)).chars().count(), MAX_NAME_CHARS);
     }
 

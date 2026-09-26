@@ -21,6 +21,8 @@ omnivox = ["textweaver-app/omnivox"]
 
 [dependencies]
 textweaver-app.workspace = true
+textweaver-vault.workspace = true
+textweaver-dictation.workspace = true
 clap.workspace = true
 anyhow.workspace = true
 serde.workspace = true
