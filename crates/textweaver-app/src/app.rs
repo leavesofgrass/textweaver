@@ -674,6 +674,8 @@ impl App {
         self.session = Some(s);
         self.view.top_line = 0;
         self.scroll_to_cursor();
+        // A large Markdown file's source structure, for a quick Ctrl+E.
+        self.prefetch_structure();
         let msg = match resumed {
             Some((p, r)) if r.synced => {
                 format!("Opened {title}. Resumed at {p} percent, from another device.")

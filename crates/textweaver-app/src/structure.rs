@@ -333,7 +333,7 @@ fn to_char_markers(source: &str, pending: Vec<Pending>) -> Vec<Marker> {
         source,
         pending.iter().flat_map(|p| [p.start, p.end]).collect(),
     );
-    pending
+    let mut markers: Vec<Marker> = pending
         .into_iter()
         .map(|p| {
             let mut m = Marker::new(p.kind, CharRange::new(conv.get(p.start), conv.get(p.end)))
@@ -342,7 +342,11 @@ fn to_char_markers(source: &str, pending: Vec<Pending>) -> Vec<Marker> {
             m.reference = p.reference;
             m
         })
-        .collect()
+        .collect();
+    // Sorted here (on the parsing thread, when there is one), so the
+    // document's own sort finds them in order.
+    markers.sort_by_key(Marker::sort_key);
+    markers
 }
 
 /// Char offsets of a set of byte offsets, found in one pass.
@@ -631,6 +635,33 @@ impl Walk {
 /// How long typing must pause before the structure is parsed again.
 pub(crate) const REPARSE_PAUSE: Duration = Duration::from_millis(300);
 
+/// Markdown files at least this large have their source structure parsed
+/// in the background as soon as they open, so entering edit mode does not
+/// wait for it (a 10 MB file takes a few hundred milliseconds to parse).
+pub(crate) const PREFETCH_MIN_BYTES: u64 = 256 * 1024;
+
+/// The source structure of the open Markdown file, parsed in the
+/// background after it opened, for the next Ctrl+E.
+#[derive(Debug, Default)]
+pub(crate) struct Prefetch {
+    /// The file and its stamp when it was read.
+    key: Option<(std::path::PathBuf, crate::disk::FileStamp)>,
+    /// The parse, while it runs.
+    rx: Option<std::sync::mpsc::Receiver<Vec<Marker>>>,
+}
+
+/// The Markdown source of `path` as edit mode holds it (decoded, `\n`
+/// line breaks).
+fn source_for_edit(path: &std::path::Path) -> Option<String> {
+    let text =
+        textweaver_formats::source_text(&textweaver_formats::Source::Path(path.to_owned())).ok()?;
+    Some(if text.contains('\r') {
+        text.replace("\r\n", "\n").replace('\r', "\n")
+    } else {
+        text
+    })
+}
+
 /// Texts up to this many chars are parsed on the UI thread (a few
 /// milliseconds); longer ones on a worker thread.
 pub(crate) const INLINE_PARSE_LIMIT: usize = 262_144;
@@ -657,9 +688,11 @@ impl App {
         self.authoring.structure.parsed = self.authoring.structure.version;
     }
 
-    /// Parses the edited text now when its markers are stale (before
-    /// leaving edit mode, or when a command needs the structure at once).
-    /// Larger texts are parsed now only when `force` is set.
+    /// Parses the edited text now when its markers are stale, for a
+    /// command that needs the structure at once (navigation, the outline,
+    /// leaving edit mode). A small text is parsed at once; a large one when
+    /// `force` is set or its markers were dropped while typing, waiting for
+    /// a background parse of the same text rather than starting another.
     pub(crate) fn refresh_structure(&mut self, force: bool) {
         let st = &self.authoring.structure;
         if self.edit.is_none() || !st.markdown || st.fresh() {
@@ -668,9 +701,21 @@ impl App {
         let Some(s) = self.session.as_ref() else {
             return;
         };
-        if !force && s.doc.len_chars() > INLINE_PARSE_LIMIT {
+        let large = s.doc.len_chars() > INLINE_PARSE_LIMIT;
+        if large && !force && !s.doc.markers().is_empty() {
+            // Shifted by the edits: good enough until typing pauses.
             return;
         }
+        if let Some((version, rx)) = self.authoring.structure.pending.take()
+            && version == self.authoring.structure.version
+            && let Ok(markers) = rx.recv_timeout(Duration::from_secs(30))
+        {
+            self.set_source_markers(markers);
+            return;
+        }
+        let Some(s) = self.session.as_ref() else {
+            return;
+        };
         let text = s.doc.text().to_string();
         let markers = source_markers(&text);
         self.authoring.structure.pending = None;
@@ -735,6 +780,65 @@ impl App {
             }
         }
         changed
+    }
+
+    /// Starts parsing the open Markdown file's source structure in the
+    /// background, when it is large enough to be worth it and was not
+    /// parsed already (called when a document opens and after edit mode).
+    pub(crate) fn prefetch_structure(&mut self) {
+        if self.edit.is_some() {
+            return;
+        }
+        let Some(path) = self
+            .session
+            .as_ref()
+            .filter(|s| s.doc.meta.format == "markdown")
+            .and_then(|s| s.doc.meta.path.clone())
+        else {
+            self.authoring.prefetch = Prefetch::default();
+            return;
+        };
+        let Some(stamp) = crate::disk::FileStamp::of(&path) else {
+            return;
+        };
+        let key = (path.clone(), stamp);
+        if self.authoring.prefetch.key.as_ref() == Some(&key) {
+            return;
+        }
+        if stamp.len < PREFETCH_MIN_BYTES {
+            self.authoring.prefetch = Prefetch::default();
+            return;
+        }
+        let (tx, rx) = std::sync::mpsc::channel();
+        let spawned = std::thread::Builder::new()
+            .name("tw-structure-prefetch".into())
+            .spawn(move || {
+                if let Some(text) = source_for_edit(&path) {
+                    let _ = tx.send(source_markers(&text));
+                }
+            });
+        self.authoring.prefetch = match spawned {
+            Ok(_) => Prefetch {
+                key: Some(key),
+                rx: Some(rx),
+            },
+            Err(e) => {
+                log::warn!("cannot start the structure parser: {e}");
+                Prefetch::default()
+            }
+        };
+    }
+
+    /// The structure parsed in the background for the open file, when the
+    /// file is unchanged since (waiting for a parse still running).
+    pub(crate) fn prefetched_markers(&mut self) -> Option<Vec<Marker>> {
+        let p = std::mem::take(&mut self.authoring.prefetch);
+        let (path, stamp) = p.key?;
+        let open = self.session.as_ref().and_then(|s| s.doc.meta.path.clone());
+        if open.as_ref() != Some(&path) || crate::disk::FileStamp::of(&path) != Some(stamp) {
+            return None;
+        }
+        p.rx?.recv_timeout(Duration::from_secs(30)).ok()
     }
 
     /// Waits (up to `timeout`) for a background structure parse and applies

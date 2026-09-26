@@ -133,6 +133,7 @@ pub(crate) enum Question {
 /// The authoring state.
 pub(crate) struct Authoring {
     pub(crate) structure: Structure,
+    pub(crate) prefetch: crate::structure::Prefetch,
     /// How files and addresses are opened; `None` is the system's default
     /// program, and only in a session that keeps files (not in tests).
     pub(crate) launcher: Option<Launcher>,
@@ -195,6 +196,7 @@ impl Default for Authoring {
     fn default() -> Self {
         Authoring {
             structure: Structure::default(),
+            prefetch: crate::structure::Prefetch::default(),
             launcher: None,
             client: None,
             jobs: Vec::new(),

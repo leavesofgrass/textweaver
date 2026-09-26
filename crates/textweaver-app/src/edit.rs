@@ -321,6 +321,13 @@ impl App {
         self.stop_speech();
         let policy = self.autosave_policy();
         let recovery_dir = self.paths.as_ref().map(|p| p.recovery_dir());
+        // The structure parsed in the background when the file opened, if
+        // the file is unchanged (large Markdown files only).
+        let prefetched = if source.is_none() {
+            self.prefetched_markers()
+        } else {
+            None
+        };
         let Some(s) = self.session.as_mut() else {
             self.tell("No document to edit. Press Control N for a new one.");
             return;
@@ -359,7 +366,8 @@ impl App {
                 .editor()
                 .map(|e| e.text().clone())
                 .unwrap_or_else(|| Rope::from_str(session.document_text()));
-            let markers = crate::structure::source_markers(session.document_text());
+            let markers = prefetched
+                .unwrap_or_else(|| crate::structure::source_markers(session.document_text()));
             Document::new(s.doc.meta.clone(), rope, markers)
         };
         let entry = Marks::of(s);
@@ -591,8 +599,11 @@ impl App {
     /// document from the saved file when a save happened, else restores it,
     /// and maps every position back.
     pub(crate) fn finish_leave(&mut self, rebuild: bool, discarded: bool) {
-        // The structure must match the text before positions are carried.
-        self.refresh_structure(true);
+        // The structure must match the text before positions are carried
+        // from it; discarding goes back to positions that need none.
+        if !discarded {
+            self.refresh_structure(true);
+        }
         let markdown = self.authoring.structure.markdown;
         self.authoring.structure = crate::authoring_state::Structure::default();
         let Some(state) = self.edit.take() else {
@@ -694,6 +705,8 @@ impl App {
             "Edit mode off."
         };
         self.tell(msg);
+        // Ready for the next Ctrl+E on a large Markdown file.
+        self.prefetch_structure();
     }
 
     fn continue_after(&mut self, after: AfterLeave) -> Vec<Effect> {
@@ -841,6 +854,17 @@ impl App {
         let Some(s) = self.session.as_mut() else {
             return;
         };
+        // In a large Markdown text, shifting (and sorting) every marker on
+        // each keystroke would cost milliseconds: the markers are dropped
+        // at the first edit and parsed again when typing pauses, or at once
+        // when a command needs them (`structure`).
+        if span.is_some()
+            && self.authoring.structure.markdown
+            && s.doc.len_chars() > crate::structure::INLINE_PARSE_LIMIT
+            && !s.doc.markers().is_empty()
+        {
+            s.doc = Document::new(s.doc.meta.clone(), s.doc.text().clone(), Vec::new());
+        }
         if let Some(e) = span
             && let Err(err) = s.doc.apply(&e)
         {
