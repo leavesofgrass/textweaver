@@ -149,6 +149,79 @@ fn a_dead_speech_thread_is_reported_and_the_app_goes_on() {
     assert!(app.status_text().contains("Two."), "{}", app.status_text());
 }
 
+/// A backend with a bug: its `speak` panics, which kills the speech
+/// thread.
+struct Panics;
+
+impl textweaver_app::speech::SpeechBackend for Panics {
+    fn id(&self) -> textweaver_app::speech::BackendId {
+        "panics"
+    }
+    fn capabilities(&self) -> textweaver_app::speech::Caps {
+        textweaver_app::speech::Caps::WORD_EVENTS
+    }
+    fn voices(
+        &self,
+    ) -> Result<Vec<textweaver_app::speech::Voice>, textweaver_app::speech::SpeechError> {
+        Ok(Vec::new())
+    }
+    fn set_params(
+        &mut self,
+        _: &textweaver_app::speech::VoiceParams,
+    ) -> Result<(), textweaver_app::speech::SpeechError> {
+        Ok(())
+    }
+    fn effective_wpm(&self) -> u16 {
+        180
+    }
+    fn speak(
+        &mut self,
+        _: &textweaver_app::core::Utterance,
+        _: &mut dyn textweaver_app::speech::EventSink,
+    ) -> Result<(), textweaver_app::speech::SpeechError> {
+        panic!("the engine had a bug")
+    }
+    fn stop(&mut self) {}
+}
+
+/// The speech thread really dies: the app notices it while polling,
+/// reports it, and goes on silently.
+#[test]
+fn the_app_notices_a_dead_speech_thread_while_polling() {
+    let speech = textweaver_app::speech::SpeechService::spawn(
+        Box::new(|| Ok(Box::new(Panics) as _)),
+        textweaver_app::speech::ServiceConfig::default(),
+    )
+    .unwrap();
+    let mut app = App::new(AppConfig {
+        speech,
+        self_voicing: true,
+        backend_name: "panics".into(),
+        ..AppConfig::for_tests()
+    });
+    app.open_document(
+        Document::from_plain_text("One. Two.\n"),
+        DocKey::untitled(1),
+        "T".into(),
+    );
+    act(&mut app, ActionId::ReadFromCursor);
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while app.backend_name() != "silent" {
+        assert!(Instant::now() < deadline, "the dead thread was not noticed");
+        app.poll_speech();
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    assert_eq!(app.playback(), textweaver_app::Playback::Idle);
+    assert!(
+        app.status_text()
+            .starts_with("Speech stopped working (the engine had a bug)."),
+        "{}",
+        app.status_text()
+    );
+    act(&mut app, ActionId::NextSentence);
+    assert!(app.status_text().contains("Two."), "{}", app.status_text());
+}
+
 /// With `--no-speech` a screen reader reads the status line, so every
 /// line the Speech Cursor reads is put there.
 #[test]

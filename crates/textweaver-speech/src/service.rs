@@ -172,7 +172,7 @@ pub enum SpeechStatus {
     ///
     /// Also the last status of a speech thread that panicked: the service
     /// is dead after it ([`SpeechService::is_alive`] is false, and
-    /// [`SpeechService::failure`] holds the same message). Every later
+    /// [`SpeechService::failure`] holds the reason). Every later
     /// command is ignored, so the frontend announces the message through
     /// something other than speech and starts a new service.
     BackendError(String),
@@ -308,7 +308,7 @@ enum Command {
 /// (which shuts its engine hosts down), sends one last
 /// [`SpeechStatus::BackendError`] saying what happened, and ends. From
 /// then on [`is_alive`](Self::is_alive) is false,
-/// [`failure`](Self::failure) holds the message, every command is
+/// [`failure`](Self::failure) holds the reason, every command is
 /// ignored, and [`poll_status`](Self::poll_status) returns
 /// [`SpeechError::ServiceStopped`] once the last status has been read
 /// (where [`try_status`](Self::try_status) only returns `None`). A
@@ -385,8 +385,7 @@ impl SpeechService {
                     let message = format!(
                         "speech stopped after an internal error ({why}); restart speech to go on"
                     );
-                    *thread_failure.lock().unwrap_or_else(|e| e.into_inner()) =
-                        Some(message.clone());
+                    *thread_failure.lock().unwrap_or_else(|e| e.into_inner()) = Some(why);
                     thread_alive.store(false, Ordering::SeqCst);
                     // Only one of these has a listener: `spawn` waits for
                     // the first until the backend is ready, the handle
@@ -458,8 +457,8 @@ impl SpeechService {
         self.alive.load(Ordering::SeqCst) && self.thread.as_ref().is_some_and(|t| !t.is_finished())
     }
 
-    /// Why the speech thread died, when it panicked: the message of its
-    /// last [`SpeechStatus::BackendError`].
+    /// Why the speech thread died, when it panicked: the panic's own text
+    /// (its last [`SpeechStatus::BackendError`] puts it in a sentence).
     pub fn failure(&self) -> Option<String> {
         self.failure
             .lock()

@@ -530,15 +530,9 @@ impl App {
     /// the error is shown on the status line (and through the announcer,
     /// which a screen reader or the JSON-RPC client hears; self-voicing
     /// cannot say it), and the silent service takes over so every other
-    /// command keeps working. Frontends may call it; the app will once the
-    /// speech service reports a dead thread.
-    ///
-    /// TODO(P1a speech thread death): Agent P1a is making a dead speech
-    /// thread detectable in `textweaver-speech` (an `is_alive()` check or a
-    /// fatal status). Its API was not on `main` when this was written, so
-    /// nothing calls this yet: once it lands, check it in
-    /// [`poll_speech`](Self::poll_speech) (or match the fatal status in
-    /// `apply_status`) and call this, then offer a restart.
+    /// command keeps working. [`poll_speech`](Self::poll_speech) calls it
+    /// when the speech service reports its thread dead
+    /// (`SpeechService::poll_status` returns `ServiceStopped`).
     pub fn speech_thread_died(&mut self, reason: &str) {
         self.track = SpeechTrack::default();
         self.playback = Playback::Idle;
@@ -573,8 +567,27 @@ impl App {
     /// Drains speech status updates and applies them (highlight, cursor).
     pub fn poll_speech(&mut self) -> Vec<Effect> {
         let mut changed = false;
-        while let Some(status) = self.speech.try_status() {
-            changed |= self.apply_status(status);
+        loop {
+            match self.speech.poll_status() {
+                Ok(Some(status)) => {
+                    // A dead thread's last error says why it died;
+                    // `speech_thread_died` reports that below.
+                    if !self.speech.is_alive() && matches!(status, SpeechStatus::BackendError(_)) {
+                        continue;
+                    }
+                    changed |= self.apply_status(status);
+                }
+                Ok(None) => break,
+                Err(_) => {
+                    let reason = self
+                        .speech
+                        .failure()
+                        .unwrap_or_else(|| "the speech thread ended".to_owned());
+                    self.speech_thread_died(&reason);
+                    changed = true;
+                    break;
+                }
+            }
         }
         if changed {
             vec![Effect::Redraw]

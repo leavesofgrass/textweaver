@@ -1647,7 +1647,7 @@ fn a_panic_on_the_speech_thread_is_reported_and_the_service_is_dead() {
         "{message}"
     );
     assert!(!s.is_alive());
-    assert_eq!(s.failure(), Some(message));
+    assert_eq!(s.failure().as_deref(), Some("the buggy backend blew up"));
     // A dead thread is not an empty queue.
     assert_eq!(s.poll_status(), Err(SpeechError::ServiceStopped));
     assert_eq!(s.try_status(), None);
