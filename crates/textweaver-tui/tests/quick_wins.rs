@@ -1,0 +1,206 @@
+//! Terminal parts of the Phase 1 quick wins (Agent P1b): copying through
+//! OSC 52, path completion in prompts, first-letter jumps and s, d, c in
+//! lists, key hints that match the mode and F9, and drawing at narrow
+//! widths.
+
+use std::path::Path;
+
+use ratatui::Terminal;
+use ratatui::backend::TestBackend;
+use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use textweaver_app::keymap::ActionId;
+use textweaver_app::store::DocKey;
+use textweaver_app::text::Document;
+use textweaver_app::theme::ColorSupport;
+use textweaver_app::{App, AppConfig, Command, Mode};
+use textweaver_tui::Tui;
+
+fn key(code: KeyCode) -> KeyEvent {
+    KeyEvent::new(code, KeyModifiers::NONE)
+}
+
+fn ch(c: char) -> KeyEvent {
+    let mods = if c.is_ascii_uppercase() {
+        KeyModifiers::SHIFT
+    } else {
+        KeyModifiers::NONE
+    };
+    KeyEvent::new(KeyCode::Char(c), mods)
+}
+
+fn ctrl(c: char) -> KeyEvent {
+    KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL)
+}
+
+fn tui_with(text: &str) -> Tui {
+    let mut app = App::new(AppConfig::for_tests());
+    app.open_document(
+        Document::from_plain_text(text),
+        DocKey::untitled(1),
+        "Doc".into(),
+    );
+    Tui::with_color_support(app, ColorSupport::NoColor)
+}
+
+fn tui_opening(file: &Path) -> Tui {
+    let mut app = App::new(AppConfig::for_tests());
+    app.open(file).unwrap();
+    Tui::with_color_support(app, ColorSupport::NoColor)
+}
+
+#[test]
+fn copy_sends_the_text_to_the_terminal_clipboard() {
+    let mut tui = tui_with("Copy me. Not me.\n");
+    assert_eq!(tui.take_clipboard_sequence(), None);
+    tui.handle_key(ctrl('c'));
+    assert_eq!(
+        tui.take_clipboard_sequence().as_deref(),
+        Some("\u{1b}]52;c;Q29weSBtZS4=\u{7}")
+    );
+    assert_eq!(tui.take_clipboard_sequence(), None);
+}
+
+#[test]
+fn tab_completes_paths_in_file_prompts() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("chapter-one.md"), "One.\n").unwrap();
+    std::fs::write(dir.path().join("notes.md"), "Notes.\n").unwrap();
+    let mut tui = tui_with("Text.\n");
+    tui.handle_key(ctrl('o'));
+    assert_eq!(tui.app().mode(), Mode::Open);
+    let typed = format!("{}/chap", dir.path().display());
+    for c in typed.chars() {
+        tui.handle_key(ch(c));
+    }
+    tui.handle_key(key(KeyCode::Tab));
+    let text = tui.minibuffer().unwrap().text();
+    assert!(text.ends_with("chapter-one.md"), "{text}");
+    assert_eq!(tui.app().status_text(), "chapter-one.md, file");
+    tui.handle_key(key(KeyCode::Enter));
+    assert_eq!(tui.app().session().unwrap().title, "chapter-one.md");
+}
+
+#[test]
+fn lists_jump_by_first_letter_and_the_save_list_takes_s_d_c() {
+    let mut tui = tui_with("Words.\n");
+    tui.dispatch(Command::Action(ActionId::KeyboardHelp));
+    let first = tui.list().unwrap().selected;
+    tui.handle_key(ch('v'));
+    let list = tui.list().unwrap();
+    assert_ne!(list.selected, first);
+    assert!(
+        list.items[list.selected].starts_with("Voice"),
+        "{}",
+        list.items[list.selected]
+    );
+    assert!(
+        tui.app().status_text().starts_with("Voice"),
+        "{}",
+        tui.app().status_text()
+    );
+    // q and j are letters in a list now, not close and down.
+    tui.handle_key(ch('q'));
+    assert!(tui.list().is_some());
+    tui.handle_key(key(KeyCode::Esc));
+    assert!(tui.list().is_none());
+
+    // s saves at once from the Save, Discard, Cancel list.
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("s.md");
+    std::fs::write(&file, "Start.\n").unwrap();
+    let mut tui = tui_opening(&file);
+    tui.handle_key(ctrl('e'));
+    tui.handle_key(ch('X'));
+    tui.handle_key(ctrl('e'));
+    assert!(tui.list().is_some());
+    tui.handle_key(ch('s'));
+    assert!(tui.list().is_none());
+    assert!(!tui.app().is_editing());
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "XStart.\n");
+    // d discards, c cancels.
+    tui.handle_key(ctrl('e'));
+    tui.handle_key(ch('Y'));
+    tui.handle_key(ctrl('e'));
+    tui.handle_key(ch('c'));
+    assert!(tui.app().is_editing());
+    tui.handle_key(ctrl('e'));
+    tui.handle_key(ch('d'));
+    assert!(!tui.app().is_editing());
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "XStart.\n");
+}
+
+#[test]
+fn key_hints_show_only_keys_that_work() {
+    let mut tui = tui_with("Words here.\n");
+    let on = tui.hints(200);
+    assert!(on.contains("Space play"), "{on}");
+    assert!(on.contains("h heading"), "{on}");
+    // F9: single keys off; the hints switch to chords, and actions with
+    // only single keys drop out.
+    tui.handle_key(key(KeyCode::F(9)));
+    let off = tui.hints(200);
+    assert!(off.contains("Alt+P play"), "{off}");
+    assert!(off.contains("Alt+. sentence"), "{off}");
+    assert!(!off.contains("heading"), "{off}");
+    assert!(!off.contains("Space"), "{off}");
+    // Edit mode shows edit keys, not browse keys.
+    tui.handle_key(ctrl('e'));
+    let edit = tui.hints(200);
+    assert!(edit.contains("Ctrl+S save"), "{edit}");
+    assert!(edit.contains("F2 commands"), "{edit}");
+    assert!(!edit.contains("?"), "{edit}");
+}
+
+/// A long heading, a wide table, and a long code line drawn at 20, 40, 60,
+/// and 80 columns: nothing panics, no row is wider than the screen, the
+/// cursor stays on screen, and the status and hint lines are there.
+#[test]
+fn narrow_widths_draw_cleanly() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("wide.md");
+    let text = format!(
+        "# {}\n\n| {} |\n| {} |\n| {} |\n\n```\n{}\n```\n\nLast paragraph.\n",
+        "A heading that goes on and on well past any narrow screen width",
+        (1..=12)
+            .map(|i| format!("Column {i}"))
+            .collect::<Vec<_>>()
+            .join(" | "),
+        (1..=12).map(|_| "---").collect::<Vec<_>>().join(" | "),
+        (1..=12)
+            .map(|i| format!("value {i}"))
+            .collect::<Vec<_>>()
+            .join(" | "),
+        "let x = compute(alpha, beta, gamma, delta, epsilon, zeta, eta, theta, iota, kappa);",
+    );
+    std::fs::write(&file, text).unwrap();
+    for width in [20u16, 40, 60, 80] {
+        let mut tui = tui_opening(&file);
+        let mut term = Terminal::new(TestBackend::new(width, 12)).unwrap();
+        for step in 0..6 {
+            term.draw(|f| tui.draw(f)).unwrap();
+            let buf = term.backend().buffer();
+            assert_eq!(buf.area.width, width);
+            let cursor = term.backend().cursor_position();
+            assert!(
+                cursor.x < width && cursor.y < 12,
+                "{width}: cursor {cursor:?} at step {step}"
+            );
+            let rows: Vec<String> = (0..12)
+                .map(|y| (0..width).map(|x| buf[(x, y)].symbol()).collect())
+                .collect();
+            assert!(
+                rows[0].contains("textweaver"),
+                "{width}: title {:?}",
+                rows[0]
+            );
+            let hints = &rows[11];
+            assert!(!hints.trim().is_empty(), "{width}: no hints");
+            tui.handle_key(key(KeyCode::Down));
+        }
+        // Edit mode draws the source at every width too.
+        tui.handle_key(ctrl('e'));
+        term.draw(|f| tui.draw(f)).unwrap();
+        let c = term.backend().cursor_position();
+        assert!(c.x < width, "{width}: {c:?}");
+    }
+}
