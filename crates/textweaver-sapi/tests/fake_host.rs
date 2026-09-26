@@ -270,6 +270,9 @@ fn a_32_bit_voice_runs_in_the_x86_host() {
 #[test]
 fn unknown_voices_are_refused() {
     let mut b = backend(8.0);
+    // Once the background listing is in (while it loads, an id is taken as
+    // given and settled when the list arrives).
+    b.voice_details().unwrap();
     let e = b
         .set_params(&VoiceParams {
             voice: Some("x64:HKEY_LOCAL_MACHINE\\nowhere".into()),

@@ -39,16 +39,17 @@
 //! finished end with `Error` then `Finished`, and the next `speak` starts a
 //! new host.
 
-use std::cell::RefCell;
 use std::ops::Range;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use textweaver_core::Utterance;
 use textweaver_enginehost::protocol::check_version;
 use textweaver_enginehost::{HostMsg, HostProcess, Playback};
 use textweaver_speech::{
-    BackendId, Caps, EventSink, FileSynthesis, SpeechBackend, SpeechError, Voice, VoiceParams,
+    BackendId, Caps, EventSink, FileSynthesis, SpeechBackend, SpeechError, Voice, VoiceCache,
+    VoiceParams,
 };
 
 use crate::audio::AudioOutput;
@@ -198,6 +199,9 @@ struct Applied {
     rate: i8,
 }
 
+/// The voice details, once listed (the failure kept too).
+type Details = Arc<Mutex<Option<Result<Vec<SapiVoice>, SpeechError>>>>;
+
 /// The SAPI5 backend.
 pub struct SapiBackend {
     config: SapiConfig,
@@ -211,7 +215,14 @@ pub struct SapiBackend {
     family: Family,
     /// A SAPI rate forced by `SapiBackend::synthesize_at_rate`.
     rate_override: Option<i8>,
-    voices: RefCell<Option<Vec<SapiVoice>>>,
+    /// Every voice with its SAPI details, listed once in the background
+    /// when the backend starts (the failure kept too).
+    details: Details,
+    /// The same list as the speech service sees it.
+    voice_cache: VoiceCache,
+    /// The selected voice's family was guessed from its id while the list
+    /// was loading; the list settles it.
+    family_guessed: bool,
 }
 
 impl std::fmt::Debug for SapiBackend {
@@ -234,6 +245,19 @@ impl SapiBackend {
     /// opens on the first `speak`.
     pub fn new(config: SapiConfig) -> Result<Self, SpeechError> {
         let playback = Playback::new(BACKEND_ID, config.output, crate::host::SAMPLE_RATE);
+        // The voices are listed once, in the background: a helper process
+        // per registry reads the voice tokens, which must not hold up the
+        // speech thread (Phase 2).
+        let details: Details = Arc::new(Mutex::new(None));
+        let voice_cache = {
+            let details = Arc::clone(&details);
+            let config = config.clone();
+            VoiceCache::spawn("sapi-voices", move || {
+                let listed = crate::list_voices(&config);
+                *details.lock().unwrap_or_else(|e| e.into_inner()) = Some(listed.clone());
+                listed.map(|l| l.into_iter().map(|v| v.voice).collect())
+            })
+        };
         let mut b = SapiBackend {
             config,
             playback,
@@ -243,7 +267,9 @@ impl SapiBackend {
             voice: None,
             family: Family::Microsoft,
             rate_override: None,
-            voices: RefCell::new(None),
+            details,
+            voice_cache,
+            family_guessed: false,
         };
         b.ensure_host(Arch::X64)?;
         Ok(b)
@@ -251,14 +277,41 @@ impl SapiBackend {
 
     /// Every voice with its SAPI details (architecture, family, vendor, and
     /// tags such as [`TAG_OPENEVV`](crate::voices::TAG_OPENEVV)). Listed
-    /// once per backend and cached.
+    /// once per backend, in the background; this waits for the list (up to
+    /// the listing's own limit), so the speech service never calls it.
     pub fn voice_details(&self) -> Result<Vec<SapiVoice>, SpeechError> {
-        if let Some(v) = self.voices.borrow().as_ref() {
-            return Ok(v.clone());
+        self.voice_cache.wait(LIST_TIMEOUT * 2);
+        self.known_details().unwrap_or_else(|| {
+            Err(SpeechError::Engine(
+                "the voice list did not arrive in time".into(),
+            ))
+        })
+    }
+
+    /// The voice details if they have been listed; never waits.
+    fn known_details(&self) -> Option<Result<Vec<SapiVoice>, SpeechError>> {
+        self.details
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+    }
+
+    /// The selected voice's family: settled from the list once it is known
+    /// when it had to be guessed.
+    fn current_family(&self) -> Family {
+        if !self.family_guessed {
+            return self.family;
         }
-        let list = crate::list_voices(&self.config)?;
-        *self.voices.borrow_mut() = Some(list.clone());
-        Ok(list)
+        let Some(voice) = &self.voice else {
+            return self.family;
+        };
+        match self.known_details() {
+            Some(Ok(list)) => list
+                .into_iter()
+                .find(|v| v.voice.id.eq_ignore_ascii_case(&voice.to_string()))
+                .map_or(self.family, |v| v.family),
+            _ => self.family,
+        }
     }
 
     /// The host executable serving `arch`, if running.
@@ -268,7 +321,7 @@ impl SapiBackend {
 
     /// The selected voice's family.
     pub fn family(&self) -> Family {
-        self.family
+        self.current_family()
     }
 
     /// The SAPI rate the current parameters map to.
@@ -278,7 +331,7 @@ impl SapiBackend {
     }
 
     fn rate_table(&self) -> &'static RateTable {
-        calibration::table_for(self.family)
+        calibration::table_for(self.current_family())
     }
 
     fn arch(&self) -> Arch {
@@ -516,27 +569,38 @@ impl SapiBackend {
         let Some(id) = id.map(str::trim).filter(|s| !s.is_empty()) else {
             self.voice = None;
             self.family = Family::Microsoft;
+            self.family_guessed = false;
             return Ok(());
         };
         let parsed = VoiceId::parse(id).ok_or_else(|| SpeechError::UnknownVoice(id.into()))?;
         // A listed voice gives its family; an id missing from a successful
         // listing is unknown. If listing failed, the id is tried as is.
-        let family = match self.voice_details() {
-            Ok(list) => list
-                .into_iter()
-                .find(|v| v.voice.id.eq_ignore_ascii_case(&parsed.to_string()))
-                .map(|v| v.family)
-                .ok_or_else(|| SpeechError::UnknownVoice(id.into()))?,
-            Err(e) => {
+        // While the list is still loading (never waited for here, on the
+        // speech thread), the family is guessed from the id and settled
+        // when the list arrives.
+        let guess = || {
+            Family::of(&VoiceToken {
+                token_id: parsed.token_id.clone(),
+                ..VoiceToken::default()
+            })
+        };
+        let (family, guessed) = match self.known_details() {
+            Some(Ok(list)) => (
+                list.into_iter()
+                    .find(|v| v.voice.id.eq_ignore_ascii_case(&parsed.to_string()))
+                    .map(|v| v.family)
+                    .ok_or_else(|| SpeechError::UnknownVoice(id.into()))?,
+                false,
+            ),
+            Some(Err(e)) => {
                 log::warn!("sapi: cannot list voices ({e}); trying {id}");
-                Family::of(&VoiceToken {
-                    token_id: parsed.token_id.clone(),
-                    ..VoiceToken::default()
-                })
+                (guess(), false)
             }
+            None => (guess(), true),
         };
         self.voice = Some(parsed);
         self.family = family;
+        self.family_guessed = guessed;
         Ok(())
     }
 }
@@ -554,10 +618,11 @@ impl SpeechBackend for SapiBackend {
         if self.config.output == AudioOutput::Device {
             caps |= Caps::TONES;
         }
-        if self.family.has_word_timing() {
+        let family = self.current_family();
+        if family.has_word_timing() {
             caps |= Caps::WORD_EVENTS | Caps::AUDIO_CLOCK;
         }
-        if self.family.normalizes_natively() {
+        if family.normalizes_natively() {
             caps |= Caps::NATIVE_NORMALIZATION;
         }
         caps
@@ -609,7 +674,7 @@ impl SpeechBackend for SapiBackend {
             utterance.id,
             token,
             arch.index(),
-            Words::new(&utterance.text, self.family.has_word_timing()),
+            Words::new(&utterance.text, self.current_family().has_word_timing()),
         );
         Ok(())
     }
@@ -671,7 +736,7 @@ impl SpeechBackend for SapiBackend {
         utterance: &Utterance,
         path: &Path,
     ) -> Result<FileSynthesis, SpeechError> {
-        let s = self.capture_text(&utterance.text, self.family.has_word_timing())?;
+        let s = self.capture_text(&utterance.text, self.current_family().has_word_timing())?;
         crate::wav::write(path, &s.samples, s.sample_rate)
             .map_err(|e| SpeechError::Io(format!("{}: {e}", path.display())))?;
         Ok(FileSynthesis {
@@ -681,5 +746,10 @@ impl SpeechBackend for SapiBackend {
 
     fn tone(&mut self, hz: f32, ms: u32) {
         self.playback.tone(hz, ms);
+    }
+
+    /// Listed in the background when the backend starts.
+    fn voice_cache(&self) -> Option<VoiceCache> {
+        Some(self.voice_cache.clone())
     }
 }

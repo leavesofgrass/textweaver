@@ -304,3 +304,83 @@ fn an_unchanged_file_says_nothing_and_moves_nothing() {
     );
     assert_eq!(bookmark_text(&app, 0), "bridges");
 }
+
+/// A null engine whose voices are listed in the background, as SAPI's are.
+struct SlowVoices(textweaver_app::speech::VoiceCache);
+
+impl textweaver_app::speech::SpeechBackend for SlowVoices {
+    fn id(&self) -> textweaver_app::speech::BackendId {
+        "slow-voices"
+    }
+    fn capabilities(&self) -> textweaver_app::speech::Caps {
+        textweaver_app::speech::Caps::empty()
+    }
+    fn voices(
+        &self,
+    ) -> Result<Vec<textweaver_app::speech::Voice>, textweaver_app::speech::SpeechError> {
+        panic!("never asked on the speech thread");
+    }
+    fn set_params(
+        &mut self,
+        _: &textweaver_app::speech::VoiceParams,
+    ) -> Result<(), textweaver_app::speech::SpeechError> {
+        Ok(())
+    }
+    fn effective_wpm(&self) -> u16 {
+        200
+    }
+    fn speak(
+        &mut self,
+        u: &textweaver_app::core::Utterance,
+        sink: &mut dyn textweaver_app::speech::EventSink,
+    ) -> Result<(), textweaver_app::speech::SpeechError> {
+        sink.emit(u.id, textweaver_app::speech::RawEvent::Started);
+        sink.emit(u.id, textweaver_app::speech::RawEvent::Finished);
+        Ok(())
+    }
+    fn stop(&mut self) {}
+    fn voice_cache(&self) -> Option<textweaver_app::speech::VoiceCache> {
+        Some(self.0.clone())
+    }
+}
+
+#[test]
+fn choose_voice_never_waits_and_opens_when_the_voices_arrive() {
+    use textweaver_app::speech::{ServiceConfig, SpeechService, Voice, VoiceCache};
+    let cache = VoiceCache::loading();
+    let engine = cache.clone();
+    let speech = SpeechService::spawn(
+        Box::new(move || Ok(Box::new(SlowVoices(engine)) as _)),
+        ServiceConfig::default(),
+    )
+    .unwrap();
+    let said = Said::default();
+    let mut app = App::new(AppConfig {
+        speech,
+        announcer: Box::new(said.clone()),
+        ..AppConfig::for_tests()
+    });
+    let t = std::time::Instant::now();
+    app.dispatch(Command::Action(ActionId::ChooseVoice));
+    assert!(t.elapsed() < std::time::Duration::from_millis(200));
+    assert_eq!(
+        said.last(),
+        "The voices are still loading. The list opens when they are ready."
+    );
+    assert!(app.tick(std::time::Instant::now()).is_empty());
+    cache.set(Ok(vec![Voice {
+        id: "v1".into(),
+        name: "Vera".into(),
+        ..Voice::default()
+    }]));
+    let effects = app.tick(std::time::Instant::now());
+    let Some(textweaver_app::Effect::ShowList { items, .. }) = effects.first() else {
+        panic!("{effects:?}");
+    };
+    assert!(items[0].starts_with("Vera"), "{items:?}");
+    assert!(
+        said.last().starts_with("Voices, 1 voice"),
+        "{}",
+        said.last()
+    );
+}

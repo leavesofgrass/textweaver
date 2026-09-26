@@ -608,7 +608,7 @@ impl App {
     /// produced is already waiting for [`poll_speech`](Self::poll_speech).
     /// Tests use it instead of sleeping.
     pub fn wait_for_speech_thread(&self) {
-        let _ = self.speech.voices();
+        let _ = self.speech.sync();
     }
 
     /// Drains speech status updates and applies them (highlight, cursor).

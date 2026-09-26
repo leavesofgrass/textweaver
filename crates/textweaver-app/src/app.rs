@@ -318,6 +318,8 @@ pub struct App {
     pub(crate) pending_saves: Vec<(u64, SaveThen)>,
     /// A change-on-disk check is on the writer.
     pub(crate) disk_check_pending: bool,
+    /// Choose Voice was asked for while the voices were loading.
+    pub(crate) voices_pending: bool,
     /// The accessibility mode in effect (`[accessibility] mode`, or
     /// `--mode` for this run).
     pub(crate) access_mode: AccessMode,
@@ -387,6 +389,7 @@ impl App {
             writer: crate::writer::Writer::spawn(),
             pending_saves: Vec::new(),
             disk_check_pending: false,
+            voices_pending: false,
             access_mode,
             pending_hybrid: None,
             screen_say_all: None,
@@ -935,6 +938,7 @@ impl App {
     /// it moved, so a crash loses little. Nothing here waits on the disk.
     pub fn tick(&mut self, now: Instant) -> Vec<Effect> {
         let mut effects = self.poll_writes();
+        effects.extend(self.voices_tick());
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
         if rsvp_moved {
             effects.push(Effect::Redraw);
