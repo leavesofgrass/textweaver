@@ -287,6 +287,7 @@ function Get-ReleasePackage {
     $name = "textweaver-$version-windows-x86_64"
     $base = "https://github.com/$Repo/releases/download/$tag"
     $work = Join-Path ([IO.Path]::GetTempPath()) ("textweaver-install-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
+    $script:DownloadDir = $work
     $zip = Join-Path $work "$name.zip"
     $sums = Join-Path $work 'SHA256SUMS.txt'
     Write-Line "Downloading $name.zip and SHA256SUMS.txt from release $tag."
@@ -400,12 +401,23 @@ function Build-FromSource {
 
 # ------------------------------------------------------------- install --
 
+# True when the folder is missing, empty, or holds a textweaver install, so
+# clearing or removing it cannot delete anything else.
+function Test-OwnFolder([string] $Dir) {
+    if (-not (Test-Path -LiteralPath $Dir)) { return $true }
+    if (-not (Get-ChildItem -LiteralPath $Dir -Force | Select-Object -First 1)) { return $true }
+    return (Test-Path -LiteralPath (Join-Path $Dir 'tw.exe')) -or (Test-Path -LiteralPath (Join-Path $Dir 'install-manifest.txt'))
+}
+
 function Install-Stage($Package) {
     Write-Section 'Install'
     $stage = $Package.Stage
     Write-Line "Installing textweaver, tw, the engine hosts, and the dictionaries into $InstallDir."
     if (-not $DryRun -and -not (Test-Path -LiteralPath (Join-Path $stage 'tw.exe'))) {
         throw "$stage\tw.exe is missing, so there is nothing to install."
+    }
+    if (-not (Test-OwnFolder $InstallDir)) {
+        throw "$InstallDir already holds other files and no textweaver install, so the script will not replace its contents. Choose an empty or new folder with -InstallDir."
     }
     if (Test-Path -LiteralPath $InstallDir) {
         Invoke-Step "remove the previous files in $InstallDir" {
@@ -451,7 +463,9 @@ function Uninstall-Textweaver {
         return
     }
     if (-not (Confirm-Choice "Remove textweaver from ${InstallDir}?")) { Write-Line 'Nothing removed.'; return }
-    if ((Test-Path -LiteralPath $InstallDir) -or $DryRun) {
+    if (-not (Test-OwnFolder $InstallDir)) {
+        Write-Line "$InstallDir holds other files and no textweaver install, so it is left alone."
+    } elseif ((Test-Path -LiteralPath $InstallDir) -or $DryRun) {
         Invoke-Step "remove $InstallDir" { Remove-Item -LiteralPath $InstallDir -Recurse -Force }
     } else {
         Write-Line "$InstallDir does not exist."
@@ -468,31 +482,38 @@ function Uninstall-Textweaver {
 
 if ($DryRun) { Write-Line 'Dry run: nothing is changed. Each step is printed instead of done.' }
 
-if ($Uninstall) {
-    Uninstall-Textweaver
-    exit 0
-}
-
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 } catch {
     Write-Verbose 'TLS 1.2 is already the default.'
 }
 
-if ($FromSource) {
-    Write-Line "This script builds textweaver from source and installs it in $InstallDir."
-    $package = Build-FromSource
-} else {
-    Write-Line "This script downloads the newest textweaver release for Windows, checks it, and installs it in $InstallDir."
-    $package = Get-ReleasePackage
-}
+# Errors end the script with one plain sentence, and the download folder
+# is always cleaned up.
+$package = $null
 try {
+    if ($Uninstall) {
+        Uninstall-Textweaver
+        exit 0
+    }
+    if ($FromSource) {
+        Write-Line "This script builds textweaver from source and installs it in $InstallDir."
+        $package = Build-FromSource
+    } else {
+        Write-Line "This script downloads the newest textweaver release for Windows, checks it, and installs it in $InstallDir."
+        $package = Get-ReleasePackage
+    }
     Install-Stage $package
+    Add-ToUserPath
+    Add-StartMenuShortcut
+} catch {
+    Write-Line
+    Write-Line "Error: $($_.Exception.Message)"
+    exit 1
 } finally {
-    if ($package.Work -and (Test-Path -LiteralPath $package.Work)) { Remove-Item -LiteralPath $package.Work -Recurse -Force }
+    $work = $script:DownloadDir
+    if ($work -and (Test-Path -LiteralPath $work)) { Remove-Item -LiteralPath $work -Recurse -Force }
 }
-Add-ToUserPath
-Add-StartMenuShortcut
 
 Write-Section 'Done'
 if ($DryRun) {
