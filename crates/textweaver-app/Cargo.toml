@@ -11,10 +11,10 @@ publish.workspace = true
 
 [features]
 default = []
-# Speech engines, passed through to textweaver-speech.
-espeak = ["textweaver-speech/espeak"]
-omnivox = ["textweaver-speech/omnivox"]
-speechd = ["textweaver-speech/speechd"]
+# Speech engines, passed through to textweaver-engines.
+espeak = ["textweaver-engines/espeak"]
+omnivox = ["textweaver-engines/omnivox"]
+speechd = ["textweaver-engines/speechd"]
 
 [dependencies]
 textweaver-core.workspace = true
@@ -25,10 +25,8 @@ textweaver-store.workspace = true
 textweaver-keymap.workspace = true
 textweaver-a11y.workspace = true
 textweaver-editor.workspace = true
-textweaver-eci.workspace = true
-textweaver-sapi.workspace = true
-textweaver-dectalk.workspace = true
-textweaver-apple.workspace = true
+# The backend registry and every engine crate, through one crate.
+textweaver-engines.workspace = true
 textweaver-theme.workspace = true
 textweaver-aids.workspace = true
 textweaver-math.workspace = true

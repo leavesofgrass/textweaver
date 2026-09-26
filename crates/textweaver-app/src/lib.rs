@@ -132,7 +132,6 @@ pub mod align;
 mod app;
 mod authoring;
 mod authoring_state;
-mod backends;
 mod citations;
 mod command;
 pub mod disk;
@@ -181,10 +180,6 @@ pub use access::{
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use authoring::osc52;
 pub use authoring_state::{ClientFactory, Launcher, open_with_system};
-pub use backends::{
-    CODE_FACTORY_LIBRARY, apple_preference, eci_config, sapi_config, service_config,
-    speech_registry, speech_registry_for,
-};
 pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpose};
 pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_lookup};
@@ -195,17 +190,22 @@ pub use notes::{UserHighlight, parse_tags};
 pub use playback::{Playback, load_options, narration_policy};
 pub use restart::SpeechStarter;
 pub use templates::local_date;
+pub use textweaver_engines::{
+    CODE_FACTORY_LIBRARY, apple_preference, dectalk_config, eci_config, sapi_config,
+    service_config, speech_registry, speech_registry_for,
+};
 pub use textweaver_store::Note;
 pub use view::{Highlight, HighlightKind, Viewport};
 
 pub use reading_aids::{RSVP_STEP, RSVP_WINDOW};
 pub use textweaver_a11y as a11y;
 pub use textweaver_aids as aids;
-pub use textweaver_apple as apple;
 pub use textweaver_cite as cite;
 pub use textweaver_core as core;
-pub use textweaver_eci as eci;
 pub use textweaver_editor as editor;
+pub use textweaver_engines as engines;
+pub use textweaver_engines::apple;
+pub use textweaver_engines::eci;
 pub use textweaver_formats as formats;
 pub use textweaver_keymap as keymap;
 pub use textweaver_speech as speech;

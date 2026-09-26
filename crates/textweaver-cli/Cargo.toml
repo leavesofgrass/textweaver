@@ -16,12 +16,14 @@ path = "src/main.rs"
 [features]
 default = []
 # Speech engines, passed through to textweaver-speech.
-espeak = ["textweaver-app/espeak"]
-omnivox = ["textweaver-app/omnivox"]
-speechd = ["textweaver-app/speechd"]
+espeak = ["textweaver-app/espeak", "textweaver-engines/espeak"]
+omnivox = ["textweaver-app/omnivox", "textweaver-engines/omnivox"]
+speechd = ["textweaver-app/speechd", "textweaver-engines/speechd"]
 
 [dependencies]
 textweaver-app.workspace = true
+# The speech backend registry (`tw backends`, `speak`, `voices`, `export-audio`).
+textweaver-engines.workspace = true
 # In-process `tw open` and `tw serve`.
 textweaver-tui.workspace = true
 textweaver-vault.workspace = true

@@ -4231,18 +4231,15 @@ dependencies = [
  "tempfile",
  "textweaver-a11y",
  "textweaver-aids",
- "textweaver-apple",
  "textweaver-cite",
  "textweaver-convert",
  "textweaver-core",
- "textweaver-dectalk",
- "textweaver-eci",
  "textweaver-editor",
+ "textweaver-engines",
  "textweaver-formats",
  "textweaver-keymap",
  "textweaver-math",
  "textweaver-render",
- "textweaver-sapi",
  "textweaver-speech",
  "textweaver-store",
  "textweaver-text",
@@ -4297,6 +4294,7 @@ dependencies = [
  "textweaver-cite",
  "textweaver-convert",
  "textweaver-dictation",
+ "textweaver-engines",
  "textweaver-export",
  "textweaver-render",
  "textweaver-tui",
@@ -4403,6 +4401,19 @@ dependencies = [
  "textweaver-speech",
  "thiserror 2.0.21",
  "windows",
+]
+
+[[package]]
+name = "textweaver-engines"
+version = "0.1.0-alpha.3"
+dependencies = [
+ "textweaver-apple",
+ "textweaver-core",
+ "textweaver-dectalk",
+ "textweaver-eci",
+ "textweaver-sapi",
+ "textweaver-speech",
+ "textweaver-store",
 ]
 
 [[package]]
@@ -4587,6 +4598,7 @@ dependencies = [
  "tempfile",
  "textweaver-aids",
  "textweaver-app",
+ "textweaver-engines",
  "textweaver-theme",
  "windows",
 ]
