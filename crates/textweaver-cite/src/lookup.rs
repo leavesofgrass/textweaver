@@ -813,8 +813,13 @@ pub fn reference_from_open_library(
     r.publisher_place = list("publish_places").into_iter().next();
     r.edition = text("edition_name");
     r.isbn = Some(isbn_to_13(isbn).unwrap_or_else(|| isbn.to_owned()));
+    // The Open Library page is kept for reference but not as the URL:
+    // styles print a book's URL, and a catalog page is not the book.
     if let Some(key) = text("key") {
-        r.url = Some(format!("{OPEN_LIBRARY}{key}"));
+        r.extra.insert(
+            "openlibrary".into(),
+            Value::String(format!("{OPEN_LIBRARY}{key}")),
+        );
     }
     if let Some(n) = edition.get("number_of_pages").and_then(Value::as_u64) {
         r.extra

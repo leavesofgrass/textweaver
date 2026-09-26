@@ -116,8 +116,9 @@ fn isbn_reads_the_edition_and_its_authors() {
     assert_eq!(r.publisher.as_deref(), Some("Puffin"));
     assert_eq!(r.issued, Some(CslDate::ymd(1988, Some(10), Some(1))));
     assert_eq!(r.isbn.as_deref(), Some("9780140328721"));
+    assert_eq!(r.url, None, "a catalog page is not the book");
     assert_eq!(
-        r.url.as_deref(),
+        r.extra.get("openlibrary").and_then(|v| v.as_str()),
         Some("https://openlibrary.org/books/OL7353617M")
     );
     assert_eq!(
