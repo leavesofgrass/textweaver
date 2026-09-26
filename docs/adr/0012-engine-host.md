@@ -49,7 +49,7 @@ Conversation: the host announces itself with `Ready` (ECI may precede it with `D
 
 ### Host lifecycle
 
-- A backend starts its host on creation (ECI; SAPI's x64 host) or on first use (SAPI's x86 host) and waits up to 10 s for `Ready`.
+- A backend starts its host on creation (ECI; SAPI's x64 host) or on first use (SAPI's x86 host) and waits up to 10 s for `Ready` (for ECI, up to 10 s after each dictionary report that precedes it, since loading dictionaries on a cold engine takes a while).
 - A host that exits, breaks its pipe, or sends an undecodable frame is dead. A host that stays silent while it owes audio is hung: after 10 s for ECI (configurable, `EciConfig::stall_timeout`; Eloquence hangs on some inputs) and 60 s for SAPI (whose host already gives up on a silent voice after 30 s and reports an error). A hung host is killed.
 - What a dead or hung host owed ends with `Error` then `Finished` (utterances) or an error (captures). The next request starts a new host: restart after a crash or a hang.
 - Shutdown sends `Quit`, waits 500 ms, then kills the process.

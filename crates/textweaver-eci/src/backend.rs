@@ -28,7 +28,7 @@
 
 use std::ops::Range;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use textweaver_core::Utterance;
 use textweaver_enginehost::protocol::check_version;
@@ -86,10 +86,11 @@ fn spawn_host(
         args.extend(["--dictionaries".into(), dir.into()]);
     }
     let mut host = HostProcess::spawn(path, &args, "eci")?;
-    let deadline = Instant::now() + READY_TIMEOUT;
     let mut loads = Vec::new();
+    // Each report restarts the wait: loading dictionaries takes a while on
+    // a cold engine, and the host is making progress.
     let first = loop {
-        match host.recv_until(deadline) {
+        match host.recv_timeout(READY_TIMEOUT) {
             Some(HostMsg::Reply(Reply::Dictionary {
                 dialect,
                 volume,
