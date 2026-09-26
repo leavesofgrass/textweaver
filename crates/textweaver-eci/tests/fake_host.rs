@@ -408,6 +408,16 @@ fn capabilities_match_adr_0007() {
 }
 
 #[test]
+fn word_events_are_timed_by_playback_and_normalization_is_native() {
+    let caps = backend(1.0).capabilities();
+    assert!(caps.contains(Caps::PLAYBACK_EVENTS | Caps::NATIVE_NORMALIZATION));
+    assert!(
+        !caps.contains(Caps::TONES),
+        "a silent output plays no tones"
+    );
+}
+
+#[test]
 fn host_search_skips_files_that_do_not_exist() {
     let cfg = EciConfig {
         host: Some(PathBuf::from("definitely-not-here/textweaver-eci-host")),

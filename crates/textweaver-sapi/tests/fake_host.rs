@@ -373,3 +373,15 @@ fn rate_maps_through_the_calibration_and_reaches_the_host() {
     let s = b.synthesize("one two").unwrap();
     assert_eq!(s.words[1].1, 2205);
 }
+
+#[test]
+fn capabilities_declare_playback_events_and_follow_the_output() {
+    let b = backend(8.0);
+    let caps = b.capabilities();
+    // The backend plays the audio, so word events arrive as words are heard.
+    assert!(caps.contains(Caps::PLAYBACK_EVENTS | Caps::SYNTH_TO_FILE | Caps::VOLUME));
+    // Microsoft voices keep textweaver's own normalization.
+    assert!(!caps.contains(Caps::NATIVE_NORMALIZATION));
+    // A silent output cannot play tones.
+    assert!(!caps.contains(Caps::TONES));
+}

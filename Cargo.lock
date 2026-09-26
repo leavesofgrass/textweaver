@@ -2609,9 +2609,9 @@ dependencies = [
  "libloading",
  "log",
  "proptest",
- "rodio",
  "tempfile",
  "textweaver-core",
+ "textweaver-enginehost",
  "textweaver-speech",
  "thiserror 2.0.21",
 ]
@@ -2634,6 +2634,9 @@ name = "textweaver-enginehost"
 version = "0.1.0-alpha.0"
 dependencies = [
  "log",
+ "proptest",
+ "rodio",
+ "tempfile",
  "textweaver-core",
  "textweaver-speech",
  "thiserror 2.0.21",
@@ -2693,9 +2696,9 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "log",
  "proptest",
- "rodio",
  "tempfile",
  "textweaver-core",
+ "textweaver-enginehost",
  "textweaver-speech",
  "thiserror 2.0.21",
  "windows",

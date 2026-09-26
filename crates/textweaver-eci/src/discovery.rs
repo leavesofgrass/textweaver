@@ -344,7 +344,7 @@ pub const HOST_NAME: &str = if cfg!(windows) {
     "textweaver-eci-host"
 };
 
-/// The 32-bit Windows host's file name (`cargo xtask eci-host` installs it
+/// The 32-bit Windows host's file name (`cargo xtask hosts` installs it
 /// next to the binaries).
 pub const HOST_NAME_X86: &str = "textweaver-eci-host-x86.exe";
 
@@ -424,7 +424,7 @@ impl Diagnosis {
         }
         match self.hosts.first() {
             Some(h) => s.push_str(&format!("Host: {}\n", h.display())),
-            None => s.push_str("Host: not found (run `cargo xtask eci-host`)\n"),
+            None => s.push_str("Host: not found (run `cargo xtask hosts`)\n"),
         }
         s
     }

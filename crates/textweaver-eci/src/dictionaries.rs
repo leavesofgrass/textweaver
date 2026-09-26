@@ -12,7 +12,7 @@
 //! The directory is chosen by [`find_dir`]: the backend option
 //! ([`Dictionaries`]), else `TEXTWEAVER_ECI_DICTIONARIES` (`off` turns them
 //! off), else an `ibmtts-dictionaries` folder beside the host executable
-//! (where `cargo xtask eci-host` copies them), else the repository's
+//! (where `cargo xtask hosts` copies them), else the repository's
 //! `third_party/ibmtts-dictionaries` when running from a checkout.
 
 use std::path::{Path, PathBuf};

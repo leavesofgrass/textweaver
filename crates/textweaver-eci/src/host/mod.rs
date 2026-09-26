@@ -4,20 +4,20 @@
 //! library ([`ffi::EciEngine`]) and the deterministic [`fake::FakeEngine`]
 //! the integration tests use.
 //!
-//! Threads: a reader thread decodes requests from stdin. It handles `Stop`
-//! itself by bumping a stop epoch, which the synthesis callback checks, so a
-//! stop aborts synthesis already in progress; every `Speak` is stamped with
-//! the epoch at which it was read and skipped if a `Stop` followed it. The
-//! main thread owns the engine and writes replies.
+//! Threads: the shared engine host's reader thread
+//! ([`RequestReader`](textweaver_enginehost::serve::RequestReader)) decodes
+//! requests from stdin. It handles `Stop` itself by bumping a stop epoch,
+//! which the synthesis callback checks, so a stop aborts synthesis already
+//! in progress; every `Speak` is stamped with the epoch at which it was read
+//! and skipped if a `Stop` followed it. The main thread owns the engine and
+//! writes replies.
 
 pub mod fake;
 pub mod ffi;
 
 use std::io::{Read, Write};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::mpsc;
-use std::thread;
+
+use textweaver_enginehost::serve::{Incoming, RequestReader, StopEpoch};
 
 use crate::language;
 use crate::protocol::{self, EndStatus, Piece, PresetInfo, Reply, Request};
@@ -95,12 +95,6 @@ pub trait Engine {
     ) -> Result<bool, String>;
 }
 
-enum Cmd {
-    Req(Request, u64),
-    Bad(String),
-    Eof,
-}
-
 /// Runs the host loop until `Quit` or end of input. Returns an error only
 /// when the output pipe fails.
 pub fn run<E: Engine>(
@@ -125,46 +119,16 @@ pub fn run<E: Engine>(
         .encode(),
     )?;
 
-    let epoch = Arc::new(AtomicU64::new(0));
-    let (tx, rx) = mpsc::channel();
-    {
-        let epoch = Arc::clone(&epoch);
-        let mut input = input;
-        thread::Builder::new()
-            .name("eci-host-reader".into())
-            .spawn(move || {
-                loop {
-                    let cmd = match protocol::read_body(&mut input) {
-                        Ok(None) => Cmd::Eof,
-                        Ok(Some(body)) => match Request::decode(&body) {
-                            Ok(Request::Stop) => {
-                                let e = epoch.fetch_add(1, Ordering::SeqCst) + 1;
-                                Cmd::Req(Request::Stop, e)
-                            }
-                            Ok(r) => Cmd::Req(r, epoch.load(Ordering::SeqCst)),
-                            Err(e) => Cmd::Bad(e.to_string()),
-                        },
-                        Err(e) => {
-                            let _ = tx.send(Cmd::Bad(e.to_string()));
-                            Cmd::Eof
-                        }
-                    };
-                    let end = matches!(cmd, Cmd::Eof | Cmd::Req(Request::Quit, _));
-                    if tx.send(cmd).is_err() || end {
-                        break;
-                    }
-                }
-            })?;
-    }
-
-    while let Ok(cmd) = rx.recv() {
-        match cmd {
-            Cmd::Eof | Cmd::Req(Request::Quit, _) => break,
-            Cmd::Bad(message) => {
+    let reader = RequestReader::<Request>::spawn(input, "eci-host-reader")?;
+    let epoch = reader.epoch().clone();
+    while let Some(item) = reader.next() {
+        match item {
+            Incoming::Request(Request::Quit, _) => break,
+            Incoming::Bad(message) => {
                 protocol::write_frame(output, &Reply::Error { token: 0, message }.encode())?;
             }
-            Cmd::Req(Request::Stop, _) => {}
-            Cmd::Req(Request::SetVoice { dialect, preset }, _) => {
+            Incoming::Request(Request::Stop, _) => {}
+            Incoming::Request(Request::SetVoice { dialect, preset }, _) => {
                 match engine.set_voice(dialect, preset) {
                     Ok(()) => report_dictionaries(engine, output)?,
                     Err(message) => {
@@ -175,12 +139,12 @@ pub fn run<E: Engine>(
                     }
                 }
             }
-            Cmd::Req(Request::SetVoiceParam { param, value }, _) => {
+            Incoming::Request(Request::SetVoiceParam { param, value }, _) => {
                 if let Err(message) = engine.set_voice_param(param, value) {
                     protocol::write_frame(output, &Reply::Error { token: 0, message }.encode())?;
                 }
             }
-            Cmd::Req(Request::Speak { token, pieces }, at) => {
+            Incoming::Request(Request::Speak { token, pieces }, at) => {
                 speak(engine, output, &epoch, token, &pieces, at)?;
             }
         }
@@ -234,12 +198,12 @@ fn engine_input(dialect: u32, pieces: &[Piece]) -> Vec<EnginePiece> {
 fn speak<E: Engine>(
     engine: &mut E,
     output: &mut impl Write,
-    epoch: &AtomicU64,
+    epoch: &StopEpoch,
     token: u64,
     pieces: &[Piece],
     at: u64,
 ) -> std::io::Result<()> {
-    if epoch.load(Ordering::SeqCst) != at {
+    if !epoch.is_current(at) {
         return protocol::write_frame(
             output,
             &Reply::End {
@@ -255,7 +219,7 @@ fn speak<E: Engine>(
     let mut io_error: Option<std::io::Error> = None;
     let result = {
         let mut out = |ev: SynthEvent<'_>| -> bool {
-            if epoch.load(Ordering::SeqCst) != at {
+            if !epoch.is_current(at) {
                 return false;
             }
             let frame = match ev {

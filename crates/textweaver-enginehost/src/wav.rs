@@ -63,15 +63,17 @@ pub fn read_wav(bytes: &[u8]) -> Option<(u32, Vec<i16>)> {
     ))
 }
 
-/// Scales samples by a linear `gain` (volume), rounding and clamping to
-/// the 16-bit range. A gain of 1 returns the samples unchanged.
+/// Scales samples by a linear `gain` (volume), truncating toward zero and
+/// clamping to the 16-bit range, so half volume halves every sample
+/// exactly as integer division would. A gain of 1 returns the samples
+/// unchanged.
 pub fn apply_gain(samples: Vec<i16>, gain: f32) -> Vec<i16> {
     if (gain - 1.0).abs() < f32::EPSILON {
         return samples;
     }
     samples
         .iter()
-        .map(|&s| (f32::from(s) * gain).round().clamp(-32768.0, 32767.0) as i16)
+        .map(|&s| (f32::from(s) * gain).clamp(-32768.0, 32767.0) as i16)
         .collect()
 }
 
@@ -112,9 +114,9 @@ mod tests {
     }
 
     #[test]
-    fn gain_rounds_and_clamps() {
+    fn gain_truncates_and_clamps() {
         assert_eq!(apply_gain(vec![100, -100], 1.0), [100, -100]);
-        assert_eq!(apply_gain(vec![3, -3, 16384], 0.5), [2, -2, 8192]);
+        assert_eq!(apply_gain(vec![3, -3, 16384, 999], 0.5), [1, -1, 8192, 499]);
         assert_eq!(apply_gain(vec![30000, -30000], 2.0), [32767, -32768]);
     }
 }
