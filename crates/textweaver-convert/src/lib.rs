@@ -51,7 +51,10 @@ pub mod writer;
 
 pub use plan::{Job, Plan};
 pub use watch::{WatchEvent, WatchOptions, watch};
-pub use writer::{DocumentWriter, WriteError, WriteOptions, Writers};
+pub use writer::{
+    BrailleGrade, BrailleOptions, EpubOptions, PageSize, PdfOptions, WriteError, WriteOptions,
+    WriteReport, Writer, Writers,
+};
 
 /// An output format.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
@@ -191,9 +194,13 @@ pub enum ConvertError {
     /// An input does not exist.
     #[error("{0} does not exist")]
     Missing(PathBuf),
-    /// The output format has no writer in this build.
-    #[error("{0} output is not available in this build yet; choose md, html, or txt")]
+    /// The output format has no writer in this converter.
+    #[error("{0} output is not available in this build; choose md, html, or txt")]
     Unavailable(&'static str),
+    /// The output format cannot be written on this system (PDF output with
+    /// no font); the message says what to do.
+    #[error("{0}")]
+    Output(String),
     /// A template could not be loaded.
     #[error(transparent)]
     Template(#[from] textweaver_render::RenderError),
@@ -236,18 +243,56 @@ pub struct FileResult {
     pub bytes_out: u64,
     /// Time spent on this file, in microseconds.
     pub micros: u64,
+    /// What the writer wants the user to know about a converted file (an
+    /// image that could not be embedded, characters braille cannot show),
+    /// each a sentence that reads well aloud.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<String>,
 }
 
 impl FileResult {
     fn failed(job: &Job, reason: impl Into<String>) -> Self {
         FileResult {
+            status: Status::Failed(reason.into()),
+            ..FileResult::skipped(job)
+        }
+    }
+
+    fn skipped(job: &Job) -> Self {
+        FileResult {
             source: job.source.clone(),
             output: job.output.clone(),
-            status: Status::Failed(reason.into()),
+            status: Status::Skipped,
             bytes_in: 0,
             bytes_out: 0,
             micros: 0,
+            warnings: Vec::new(),
         }
+    }
+}
+
+/// One converted file in memory, before it is written.
+struct Output {
+    /// Bytes read from the source.
+    bytes_in: u64,
+    /// The output file's bytes.
+    data: Vec<u8>,
+    /// The writer's warnings.
+    warnings: Vec<String>,
+}
+
+impl Output {
+    fn new(data: Vec<u8>) -> Self {
+        Output {
+            bytes_in: 0,
+            data,
+            warnings: Vec::new(),
+        }
+    }
+
+    /// The same output, recording the source size.
+    fn read_from(self, bytes_in: u64) -> Self {
+        Output { bytes_in, ..self }
     }
 }
 
@@ -262,6 +307,8 @@ pub struct Summary {
     pub skipped: usize,
     /// Files that failed.
     pub failed: usize,
+    /// Converted files that came with writer warnings.
+    pub warned: usize,
     /// Bytes read from converted sources.
     pub bytes_in: u64,
     /// Bytes written.
@@ -294,6 +341,11 @@ impl Summary {
         self.files
             .iter()
             .filter(|f| matches!(f.status, Status::Failed(_)))
+    }
+
+    /// The converted files that came with writer warnings.
+    pub fn warnings(&self) -> impl Iterator<Item = &FileResult> {
+        self.files.iter().filter(|f| !f.warnings.is_empty())
     }
 
     /// One sentence that reads well aloud, for example "Converted 12 files
@@ -329,6 +381,11 @@ impl Summary {
                 " Skipped {} whose output is up to date.",
                 count(self.skipped, "file")
             ));
+        }
+        if self.warned == 1 {
+            s.push_str(" 1 file has warnings.");
+        } else if self.warned > 1 {
+            s.push_str(&format!(" {} files have warnings.", self.warned));
         }
         if self.failed == 0 {
             s.push_str(" No failures.");
@@ -369,6 +426,9 @@ fn round_sig(x: f64) -> String {
     }
 }
 
+/// What to do when PDF output finds no font.
+const NO_FONT: &str = "PDF output needs a font, and none was found. Install Atkinson Hyperlegible, Verdana, Arial, DejaVu Sans, or Noto Sans, or name a TrueType font file with the PDF font option (tw convert --pdf-font) or the TEXTWEAVER_PDF_FONT environment variable.";
+
 /// Converts files with one set of options; shared by all workers.
 pub struct Converter {
     options: ConvertOptions,
@@ -399,6 +459,13 @@ impl Converter {
     pub fn with_writers(options: ConvertOptions, writers: Writers) -> Result<Self, ConvertError> {
         if options.to.needs_writer() && writers.get(options.to).is_none() {
             return Err(ConvertError::Unavailable(options.to.label()));
+        }
+        if options.to == OutputFormat::Pdf {
+            // Once, before any file: without a font every file would fail.
+            textweaver_writers::pdf::check_fonts(&options.write).map_err(|e| match e {
+                WriteError::NoFont => ConvertError::Output(NO_FONT.to_owned()),
+                other => ConvertError::Output(format!("Cannot write PDF files: {other}.")),
+            })?;
         }
         let mut templates = Templates::builtin();
         if let Some(dir) = &options.template_dir {
@@ -463,14 +530,7 @@ impl Converter {
         let mut todo: Vec<usize> = Vec::new();
         for (i, job) in plan.jobs.iter().enumerate() {
             if !self.options.force && is_up_to_date(&job.source, &job.output) {
-                files.push(Some(FileResult {
-                    source: job.source.clone(),
-                    output: job.output.clone(),
-                    status: Status::Skipped,
-                    bytes_in: 0,
-                    bytes_out: 0,
-                    micros: 0,
-                }));
+                files.push(Some(FileResult::skipped(job)));
             } else {
                 files.push(None);
                 todo.push(i);
@@ -504,6 +564,9 @@ impl Converter {
                     s.converted += 1;
                     s.bytes_in += f.bytes_in;
                     s.bytes_out += f.bytes_out;
+                    if !f.warnings.is_empty() {
+                        s.warned += 1;
+                    }
                 }
                 Status::Skipped => s.skipped += 1,
                 Status::Failed(_) => s.failed += 1,
@@ -519,14 +582,7 @@ impl Converter {
     /// file; the reason goes into the result.
     pub fn convert_job(&self, job: &Job) -> FileResult {
         if !self.options.force && is_up_to_date(&job.source, &job.output) {
-            return FileResult {
-                source: job.source.clone(),
-                output: job.output.clone(),
-                status: Status::Skipped,
-                bytes_in: 0,
-                bytes_out: 0,
-                micros: 0,
-            };
+            return FileResult::skipped(job);
         }
         self.convert_now(job)
     }
@@ -537,14 +593,13 @@ impl Converter {
         let outcome =
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.convert_bytes(job)));
         let result = match outcome {
-            Ok(Ok((bytes_in, data))) => match write_atomic(&job.output, &data) {
+            Ok(Ok(out)) => match write_atomic(&job.output, &out.data) {
                 Ok(()) => FileResult {
-                    source: job.source.clone(),
-                    output: job.output.clone(),
                     status: Status::Converted,
-                    bytes_in,
-                    bytes_out: data.len() as u64,
-                    micros: 0,
+                    bytes_in: out.bytes_in,
+                    bytes_out: out.data.len() as u64,
+                    warnings: out.warnings,
+                    ..FileResult::skipped(job)
                 },
                 Err(e) => FileResult::failed(job, format!("cannot write the output: {e}")),
             },
@@ -557,8 +612,9 @@ impl Converter {
         }
     }
 
-    /// The converted bytes of a job's source, and the source size.
-    fn convert_bytes(&self, job: &Job) -> Result<(u64, Vec<u8>), String> {
+    /// The converted bytes of a job's source, with the source size and the
+    /// writer's warnings.
+    fn convert_bytes(&self, job: &Job) -> Result<Output, String> {
         let ext = extension(&job.source);
         let is_markdown = MarkdownLoader.extensions().contains(&ext.as_str());
         let native = self
@@ -568,7 +624,9 @@ impl Converter {
         if is_markdown {
             let bytes = std::fs::read(&job.source).map_err(|e| format!("cannot read: {e}"))?;
             let text = decode(&bytes);
-            return Ok((bytes.len() as u64, self.convert_markdown(job, &text)?));
+            return Ok(self
+                .convert_markdown(job, &text)?
+                .read_from(bytes.len() as u64));
         }
         if !native && pandoc::EXTENSIONS.contains(&ext.as_str()) {
             if !self.options.pandoc {
@@ -583,20 +641,20 @@ impl Converter {
             }
             let size = std::fs::metadata(&job.source).map_or(0, |m| m.len());
             let md = pandoc::to_markdown(&job.source, self.options.render.flavor)?;
-            return Ok((size, self.convert_markdown(job, &md)?));
+            return Ok(self.convert_markdown(job, &md)?.read_from(size));
         }
         let size = std::fs::metadata(&job.source).map_or(0, |m| m.len());
         let doc = self
             .registry
             .load(&Source::Path(job.source.clone()), &self.options.load)
             .map_err(|e| e.to_string())?;
-        Ok((size, self.convert_document(job, &doc, None)?))
+        Ok(self.convert_document(job, &doc, None)?.read_from(size))
     }
 
     /// Output for Markdown text (a Markdown file, or Pandoc's output).
-    fn convert_markdown(&self, job: &Job, text: &str) -> Result<Vec<u8>, String> {
+    fn convert_markdown(&self, job: &Job, text: &str) -> Result<Output, String> {
         match self.options.to {
-            OutputFormat::Markdown => Ok(text.as_bytes().to_vec()),
+            OutputFormat::Markdown => Ok(Output::new(text.as_bytes().to_vec())),
             OutputFormat::Html => {
                 let resolver = self.resolver_for(job);
                 let rendered = textweaver_render::render_with(
@@ -604,7 +662,7 @@ impl Converter {
                     &self.options.render,
                     resolver.as_deref().map(|r| r as &dyn Resolver),
                 );
-                self.page(job, &rendered)
+                self.page(job, &rendered).map(Output::new)
             }
             _ => {
                 let source = Source::Bytes {
@@ -626,16 +684,18 @@ impl Converter {
         job: &Job,
         doc: &Document,
         markdown: Option<&str>,
-    ) -> Result<Vec<u8>, String> {
+    ) -> Result<Output, String> {
         match self.options.to {
             OutputFormat::Text => {
                 let mut t = doc.text().to_string();
                 if !t.ends_with('\n') {
                     t.push('\n');
                 }
-                Ok(t.into_bytes())
+                Ok(Output::new(t.into_bytes()))
             }
-            OutputFormat::Markdown => Ok(textweaver_formats::to_markdown(doc).into_bytes()),
+            OutputFormat::Markdown => Ok(Output::new(
+                textweaver_formats::to_markdown(doc).into_bytes(),
+            )),
             OutputFormat::Html => {
                 let md = match markdown {
                     Some(m) => m.to_owned(),
@@ -662,28 +722,25 @@ impl Converter {
                         .entry("author")
                         .or_insert_with(|| serde_json::Value::String(a.clone()));
                 }
-                self.page(job, &rendered)
+                self.page(job, &rendered).map(Output::new)
             }
             format => {
                 let writer = self
                     .writers
                     .get(format)
                     .ok_or_else(|| format!("{} output is not available", format.label()))?;
-                let options = WriteOptions {
-                    title: doc.meta.title.clone().or_else(|| stem(&job.source)),
-                    language: doc
-                        .meta
-                        .language
-                        .clone()
-                        .unwrap_or_else(|| self.options.write.language.clone()),
-                    author: doc.meta.author.clone(),
-                    ..self.options.write.clone()
-                };
-                let mut out = Vec::new();
-                writer
-                    .write(doc, &options, &mut out)
+                // The writer takes title, language, and author from the
+                // options when set, else from the document (front matter,
+                // HTML or EPUB metadata), its first heading, and its file
+                // name; images resolve beside the source.
+                let mut data = Vec::new();
+                let report = writer
+                    .write(doc, &self.options.write, &mut data)
                     .map_err(|e| e.to_string())?;
-                Ok(out)
+                Ok(Output {
+                    warnings: report.warnings,
+                    ..Output::new(data)
+                })
             }
         }
     }
@@ -815,18 +872,39 @@ mod tests {
             one.sentence(),
             "Converted 1 file to plain text in 12 milliseconds, 83.3 files per second. 2 files failed."
         );
+        let warned = Summary {
+            format: Some(OutputFormat::Brf),
+            converted: 4,
+            warned: 2,
+            seconds: 2.0,
+            ..Summary::default()
+        };
+        assert_eq!(
+            warned.sentence(),
+            "Converted 4 files to braille in 2 seconds, 2 files per second. 2 files have warnings. No failures."
+        );
+        let one_warned = Summary {
+            warned: 1,
+            ..warned
+        };
+        assert!(
+            one_warned
+                .sentence()
+                .ends_with(" 1 file has warnings. No failures.")
+        );
     }
 
     #[test]
     fn writer_formats_need_a_writer() {
-        let err = Converter::new(ConvertOptions {
+        let epub = || ConvertOptions {
             to: OutputFormat::Epub,
             ..ConvertOptions::default()
-        })
-        .unwrap_err();
+        };
+        assert!(Converter::new(epub()).is_ok(), "built-in writers");
+        let err = Converter::with_writers(epub(), Writers::none()).unwrap_err();
         assert_eq!(
             err.to_string(),
-            "EPUB output is not available in this build yet; choose md, html, or txt"
+            "EPUB output is not available in this build; choose md, html, or txt"
         );
         let skipped = Summary {
             format: Some(OutputFormat::Html),
