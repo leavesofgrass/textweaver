@@ -590,14 +590,12 @@ impl SpeechBackend for EciBackend {
                 .ok_or_else(|| {
                     SpeechError::UnknownVoice(params.voice.clone().unwrap_or_default())
                 })?;
-            if self.ready.is_some() {
-                if !self.installed.contains(&d.code) {
-                    return Err(SpeechError::UnknownVoice(format!(
-                        "{} ({} is not installed)",
-                        params.voice.clone().unwrap_or_default(),
-                        d.name
-                    )));
-                }
+            if self.ready.is_some() && !self.installed.contains(&d.code) {
+                return Err(SpeechError::UnknownVoice(format!(
+                    "{} ({} is not installed)",
+                    params.voice.clone().unwrap_or_default(),
+                    d.name
+                )));
             }
             self.dialect = Some(code);
         } else if params.voice.is_none() {
