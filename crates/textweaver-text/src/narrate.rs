@@ -255,6 +255,10 @@ impl Planner<'_> {
                 MarkerKind::Image if p.announces(Verbosity::Normal) => {
                     MarkerKind::Image.spoken_name().to_owned()
                 }
+                // A horizontal rule before this block: "separator".
+                MarkerKind::Rule if p.announces(Verbosity::Normal) => {
+                    MarkerKind::Rule.spoken_name().to_owned()
+                }
                 _ => continue,
             };
             out.push_str(&part);
@@ -278,6 +282,11 @@ impl Planner<'_> {
             match m.kind {
                 MarkerKind::Link if p.announces(Verbosity::High) => {
                     pieces.push(Piece::Insert(m.range.start, "link, ".to_owned()));
+                }
+                // Struck-through text is announced like a link: at high
+                // verbosity, before it.
+                MarkerKind::Strikethrough if p.announces(Verbosity::High) => {
+                    pieces.push(Piece::Insert(m.range.start, "strikethrough, ".to_owned()));
                 }
                 MarkerKind::Footnote
                     if m.level == 0 && p.announce_structure && m.range.end <= clip.end =>
@@ -748,6 +757,41 @@ mod tests {
         let f = &us[7];
         let at = f.text.find("footnote").unwrap() as u32;
         assert_eq!(f.source_for(at..at + 8), Some(CharRange::new(72, 75)));
+    }
+
+    #[test]
+    fn rules_and_strikethrough_can_be_heard() {
+        let text = "Keep old text.\n\nAfter the rule.";
+        let r = |a: usize, b: usize| CharRange::new(a, b);
+        let markers = vec![
+            Marker::new(MarkerKind::Strikethrough, r(5, 8)),
+            Marker::new(MarkerKind::Rule, r(16, 16)),
+        ];
+        let d = Document::new(DocumentMeta::default(), Rope::from_str(text), markers);
+        let us = plan(&d, d.full_range(), &NarrationPolicy::default());
+        check(&us);
+        assert_eq!(texts(&us), ["Keep old text.", "separator, After the rule."]);
+        let high = NarrationPolicy {
+            verbosity: Verbosity::High,
+            ..NarrationPolicy::default()
+        };
+        let us = plan(&d, d.full_range(), &high);
+        check(&us);
+        assert_eq!(
+            texts(&us),
+            [
+                "Keep strikethrough, old text.",
+                "separator, After the rule."
+            ]
+        );
+        let quiet = NarrationPolicy {
+            announce_structure: false,
+            ..NarrationPolicy::default()
+        };
+        assert_eq!(
+            texts(&plan(&d, d.full_range(), &quiet)),
+            ["Keep old text.", "After the rule."]
+        );
     }
 
     #[test]

@@ -172,14 +172,43 @@ fn inserts(doc: &Document, flavor: Flavor, page_marks: bool) -> Vec<Insert> {
             (Flavor::Markdown, MarkerKind::Italic) => ("*".to_owned(), "*".to_owned()),
             (Flavor::Markdown, MarkerKind::Underline) => ("<u>".to_owned(), "</u>".to_owned()),
             (Flavor::Markdown, MarkerKind::Code) if m.level == 0 => {
-                let ticks = "`".repeat(longest_run(&doc.slice(m.range), '`') + 1);
-                let pad = if doc.slice(m.range).starts_with('`') {
+                // Backslash escapes are literal inside a code span, so the
+                // code is written as it is.
+                let code = doc.slice(m.range);
+                let ticks = "`".repeat(longest_run(&code, '`') + 1);
+                let pad = if code.starts_with('`') || code.ends_with('`') {
                     " "
                 } else {
                     ""
                 };
-                (format!("{ticks}{pad}"), format!("{pad}{ticks}"))
+                raw(
+                    &mut out,
+                    m,
+                    order,
+                    format!("{ticks}{pad}{code}{pad}{ticks}"),
+                );
+                continue;
             }
+            // Math keeps its delimiters in the text and is written as it is.
+            (Flavor::Markdown, MarkerKind::Math) => {
+                raw(&mut out, m, order, doc.slice(m.range));
+                continue;
+            }
+            (Flavor::Html, MarkerKind::Math) => {
+                let class = if m.level == 1 {
+                    "math display"
+                } else {
+                    "math inline"
+                };
+                let html = format!(
+                    "<span class=\"{class}\">{}</span>",
+                    text(&doc.slice(m.range))
+                );
+                raw(&mut out, m, order, html);
+                continue;
+            }
+            (Flavor::Markdown, MarkerKind::Strikethrough) => ("~~".to_owned(), "~~".to_owned()),
+            (Flavor::Html, MarkerKind::Strikethrough) => ("<del>".to_owned(), "</del>".to_owned()),
             (Flavor::Markdown, MarkerKind::Link) => {
                 ("[".to_owned(), format!("]({})", md_destination(r)))
             }
@@ -241,6 +270,35 @@ fn inserts(doc: &Document, flavor: Flavor, page_marks: bool) -> Vec<Insert> {
     }
     out.sort_by_key(|i| (i.at, !i.closing, i.order));
     out
+}
+
+/// An insert that replaces a marker's text with `text`, written as it is.
+fn raw(out: &mut Vec<Insert>, m: &Marker, order: usize, text: String) {
+    out.push(Insert {
+        at: m.range.start.0,
+        closing: false,
+        order,
+        text,
+        skip_to: Some(m.range.end.0),
+    });
+}
+
+/// True when a horizontal rule stands before the block starting at `at`.
+fn rule_at(doc: &Document, at: CharPos) -> bool {
+    doc.marker_index()
+        .starting_at(at)
+        .iter()
+        .any(|m| m.kind == MarkerKind::Rule)
+}
+
+/// True when a horizontal rule ends the document.
+fn rule_at_end(doc: &Document) -> bool {
+    let end = CharPos(doc.len_chars());
+    doc.markers()
+        .iter()
+        .rev()
+        .take_while(|m| m.range.start == end)
+        .any(|m| m.kind == MarkerKind::Rule)
 }
 
 fn longest_run(s: &str, c: char) -> usize {
@@ -464,6 +522,12 @@ pub fn to_markdown_with(doc: &Document, options: &MarkdownOptions) -> String {
         let at = range.start;
         let quote = "> ".repeat(walk.quote_depth(range));
         let starting = index.starting_at(at);
+        if !range.is_empty() && rule_at(doc, at) {
+            out.push_str(&quote);
+            out.push_str("---\n");
+            out.push_str(quote.trim_end());
+            out.push('\n');
+        }
         if let Some(code) = walk.code_at(at) {
             let fence = "`".repeat(longest_run(&doc.slice(code.range), '`').max(2) + 1);
             if code.range.start == at {
@@ -551,6 +615,9 @@ pub fn to_markdown_with(doc: &Document, options: &MarkdownOptions) -> String {
         if line + 1 < lines {
             out.push('\n');
         }
+    }
+    if rule_at_end(doc) {
+        out.push_str("\n\n---");
     }
     out.push('\n');
     out
@@ -654,6 +721,9 @@ pub fn to_html(doc: &Document, options: &HtmlOptions) -> String {
         }
         if blank {
             continue;
+        }
+        if rule_at(doc, at) {
+            body.push_str("<hr>\n");
         }
 
         if let Some(c) = code {
@@ -773,6 +843,9 @@ pub fn to_html(doc: &Document, options: &HtmlOptions) -> String {
     if in_para {
         body.push_str("</p>\n");
     }
+    if rule_at_end(doc) {
+        body.push_str("<hr>\n");
+    }
     close_lists(&mut body, &mut lists, 0);
     if table.is_some() {
         body.push_str("</tbody></table>\n");
@@ -878,6 +951,33 @@ mod tests {
         assert_eq!(
             to_markdown(&doc),
             "# Title\n\nSome **bold** and [a link](https://x.org).\n\n- one\n  - two\n\n1. first\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n> Quoted.\n\n```rust\nlet x = 1;\n```\n"
+        );
+    }
+
+    #[test]
+    fn math_strikethrough_rules_and_code_round_trip() {
+        let src =
+            "Area $\\pi r_1^2$ and ~~old~~ new; `a*b_c` code.\n\n---\n\n$$\\frac{a}{b}$$\n\n***\n";
+        let doc = md(src);
+        let out = to_markdown(&doc);
+        assert_eq!(
+            out,
+            "Area $\\pi r_1^2$ and ~~old~~ new; `a*b_c` code.\n\n---\n\n$$\\frac{a}{b}$$\n\n---\n"
+        );
+        // Reading the export back gives the same text and markers.
+        let again = md(&out);
+        assert_eq!(again.text().to_string(), doc.text().to_string());
+        assert_eq!(again.markers(), doc.markers());
+        let html = to_html(&doc, &HtmlOptions::default());
+        assert!(
+            html.contains("<span class=\"math inline\">$\\pi r_1^2$</span>"),
+            "{html}"
+        );
+        assert!(html.contains("<del>old</del>"), "{html}");
+        assert_eq!(html.matches("<hr>").count(), 2, "{html}");
+        assert!(
+            html.contains("<span class=\"math display\">$$\\frac{a}{b}$$</span>"),
+            "{html}"
         );
     }
 

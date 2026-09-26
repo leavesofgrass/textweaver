@@ -41,11 +41,20 @@ pub enum MarkerKind {
     Underline,
     /// A footnote body or reference; `Marker::reference` holds the id.
     Footnote,
+    /// Struck-through text (Markdown `~~text~~`).
+    Strikethrough,
+    /// A horizontal rule (thematic break): an empty marker where the block
+    /// after it starts.
+    Rule,
+    /// Math: the text is the source with its delimiters (`$…$`, or
+    /// `$$…$$` for display math at level 1), which speech reads as math and
+    /// writers typeset.
+    Math,
 }
 
 impl MarkerKind {
     /// All marker kinds, in declaration order.
-    pub const ALL: [MarkerKind; 17] = [
+    pub const ALL: [MarkerKind; 20] = [
         MarkerKind::Heading,
         MarkerKind::Paragraph,
         MarkerKind::ListItem,
@@ -63,6 +72,9 @@ impl MarkerKind {
         MarkerKind::Italic,
         MarkerKind::Underline,
         MarkerKind::Footnote,
+        MarkerKind::Strikethrough,
+        MarkerKind::Rule,
+        MarkerKind::Math,
     ];
 
     /// The spoken, user-facing name ("heading", "list item").
@@ -85,15 +97,21 @@ impl MarkerKind {
             MarkerKind::Italic => "italic",
             MarkerKind::Underline => "underline",
             MarkerKind::Footnote => "footnote",
+            MarkerKind::Strikethrough => "strikethrough",
+            MarkerKind::Rule => "separator",
+            MarkerKind::Math => "math",
         }
     }
 
     /// True for inline formatting kinds that never define navigation stops of
-    /// their own (bold, italic, underline).
+    /// their own (bold, italic, underline, strikethrough).
     pub fn is_formatting(self) -> bool {
         matches!(
             self,
-            MarkerKind::Bold | MarkerKind::Italic | MarkerKind::Underline
+            MarkerKind::Bold
+                | MarkerKind::Italic
+                | MarkerKind::Underline
+                | MarkerKind::Strikethrough
         )
     }
 }
