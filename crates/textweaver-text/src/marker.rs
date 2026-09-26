@@ -137,26 +137,39 @@ fn to_u32(i: usize) -> u32 {
 }
 
 /// Per-kind index tables over a sorted marker slice: for every kind, the
-/// indices of its markers in order of start. Built once per document (see
+/// indices of its markers in order of start, and how far they reach (the
+/// greatest end among the first n). Built once per document (see
 /// `Document::marker_index`) and rebuilt after edits.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct MarkerTables {
     by_kind: Vec<Vec<u32>>,
+    /// For every kind, `reach[j]` is the greatest `range.end` among its
+    /// markers `0..=j`: [`MarkerIndex::enclosing`] stops scanning back once
+    /// no earlier marker can still contain the position.
+    reach: Vec<Vec<usize>>,
 }
 
 impl MarkerTables {
     /// Builds the tables for markers sorted by start.
     pub fn build(markers: &[Marker]) -> Self {
         let mut by_kind = vec![Vec::new(); MarkerKind::ALL.len()];
+        let mut reach: Vec<Vec<usize>> = vec![Vec::new(); MarkerKind::ALL.len()];
         for (i, m) in markers.iter().enumerate() {
-            by_kind[slot(m.kind)].push(to_u32(i));
+            let k = slot(m.kind);
+            by_kind[k].push(to_u32(i));
+            let far = reach[k].last().copied().unwrap_or(0).max(m.range.end.0);
+            reach[k].push(far);
         }
-        MarkerTables { by_kind }
+        MarkerTables { by_kind, reach }
     }
 
     /// Indices (into the marker slice) of the markers of `kind`.
     pub fn indices(&self, kind: MarkerKind) -> &[u32] {
         self.by_kind.get(slot(kind)).map_or(&[], Vec::as_slice)
+    }
+
+    fn reach(&self, kind: MarkerKind) -> &[usize] {
+        self.reach.get(slot(kind)).map_or(&[], Vec::as_slice)
     }
 }
 
@@ -281,15 +294,30 @@ impl<'a> MarkerIndex<'a> {
         }
     }
 
-    /// The innermost marker of `kind` containing `pos`.
+    /// The innermost marker of `kind` containing `pos` (the shortest; the
+    /// first in document order among equals).
+    ///
+    /// With index tables the scan runs back from `pos` only while an
+    /// earlier marker can still reach it, so a lookup in a document with
+    /// thousands of table rows or code blocks costs a few steps, not one
+    /// per marker before `pos` (narration looks up every sentence).
     pub fn enclosing(&self, kind: MarkerKind, pos: CharPos) -> Option<&'a Marker> {
         let ids = self.ids(kind);
         let split = ids.partition_point(|&i| self.get(i).range.start <= pos);
-        ids[..split]
-            .iter()
-            .map(|&i| self.get(i))
-            .filter(|m| m.range.contains(pos))
-            .min_by_key(|m| m.range.len())
+        let reach = self.tables.map(|t| t.reach(kind));
+        let mut best: Option<&'a Marker> = None;
+        for j in (0..split).rev() {
+            if let Some(r) = reach
+                && r.get(j).is_some_and(|&far| far <= pos.0)
+            {
+                break;
+            }
+            let m = self.get(ids[j]);
+            if m.range.contains(pos) && best.is_none_or(|b| m.range.len() <= b.range.len()) {
+                best = Some(m);
+            }
+        }
+        best
     }
 
     /// Every marker (of any kind) whose range contains `pos`, outermost first.
@@ -475,5 +503,39 @@ mod tests {
         let row =
             Marker::new(MarkerKind::TableRow, CharRange::new(0, 1)).with_label(HEADER_ROW_LABEL);
         assert!(row.is_header_row());
+    }
+}
+
+#[cfg(test)]
+mod props {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    fn marker() -> impl Strategy<Value = Marker> {
+        (0usize..60, 0usize..60, 0usize..3).prop_map(|(a, b, k)| {
+            let kind = [MarkerKind::TableRow, MarkerKind::Code, MarkerKind::List][k];
+            Marker::new(kind, CharRange::new(a, b))
+        })
+    }
+
+    proptest! {
+        /// The early-stopping scan finds what a scan of every marker finds,
+        /// for arbitrary (overlapping, nested, empty) ranges.
+        #[test]
+        fn enclosing_with_tables_matches_a_full_scan(
+            mut markers in proptest::collection::vec(marker(), 0..30),
+            pos in 0usize..62,
+        ) {
+            markers.sort_by_key(Marker::sort_key);
+            let tables = MarkerTables::build(&markers);
+            let fast = MarkerIndex::with_tables(&markers, &tables);
+            let slow = MarkerIndex::new(&markers);
+            for kind in [MarkerKind::TableRow, MarkerKind::Code, MarkerKind::List] {
+                let a = fast.enclosing(kind, CharPos(pos)).map(|m| m.range);
+                let b = slow.enclosing(kind, CharPos(pos)).map(|m| m.range);
+                prop_assert_eq!(a, b);
+            }
+        }
     }
 }
