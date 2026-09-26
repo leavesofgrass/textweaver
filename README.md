@@ -63,6 +63,10 @@ docker compose run --rm -T dev cargo test --workspace --all-features
 - [Tasks and ownership](docs/tasks.md)
 - [Docker development container](docs/docker.md)
 
+## Third-party data
+
+- `third_party/ibmtts-dictionaries/`: the community IBMTTS pronunciation dictionaries by amirsol81, x0, thunderdrop and contributors (CC0 1.0), used by the Eloquence backend.
+
 ## License
 
 GPL-3.0-or-later, like Star. See [LICENSE](LICENSE).

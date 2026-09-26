@@ -6,3 +6,4 @@
 *.docx binary
 *.pdf binary
 *.snap text eol=lf
+third_party/ibmtts-dictionaries/*.dic binary
