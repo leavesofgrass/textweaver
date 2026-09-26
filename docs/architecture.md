@@ -106,12 +106,12 @@ textweaver keeps the user interface responsive by never waiting for speech on th
 
 In the terminal reader, the main thread runs the event loop in `crates/textweaver-tui/src/lib.rs`. Each turn of the loop:
 
-1. applies any speech status that arrived (`App::poll_speech`) and runs housekeeping, such as autosave and the periodic position save (`App::tick`);
+1. applies any speech status that arrived (`App::poll_speech`) and runs housekeeping (`App::tick`): it applies what the writer thread finished, queues the autosave snapshot and the periodic position save, and opens lists that were being prepared in the background (the library, the voices);
 2. on macOS, pumps the main run loop for Apple's `avspeech` backend;
 3. draws the screen, and parks the terminal's hardware cursor where attention is (the prompt, the list item, the Speech Cursor line, the spoken word, or the caret), so screen readers and magnifiers follow it;
 4. waits briefly for a key, then turns the key into a `Command` through the keymap and dispatches it.
 
-Nothing on this thread blocks on audio. A key press is handled in milliseconds even while a long document is being read.
+Nothing on this thread blocks on audio or on the disk. A key press is handled in milliseconds even while a long document is being read or saved.
 
 `tw serve --stdio` runs the same core on its calling thread and reads JSON-RPC messages on a second thread, polling speech every 20 milliseconds while it waits ([ADR-0015](adr/0015-json-rpc.md)).
 
@@ -119,7 +119,9 @@ Nothing on this thread blocks on audio. A key press is handled in milliseconds e
 
 `SpeechService::spawn` starts one speech thread. It builds the engine backend on that thread, from a factory, because many engines must stay on the thread that created them (SAPI and WinRT COM apartments, espeak-ng's global state). The app talks to it through a command channel and reads `SpeechStatus` from a status channel.
 
-The speech thread owns the queue, the normalization pipeline, the generation counter, and the playback clock. While speech is active it calls the backend's `poll` every few milliseconds, which is how `stop` and `pause` reach an engine in the middle of a sentence.
+The speech thread owns the queue, the normalization pipeline, the generation counter, and the playback clock. While speech is active it calls the backend's `poll` every few milliseconds, which is how `stop` and `pause` reach an engine in the middle of a sentence. Nothing on it waits for long: an engine host that is starting, the audio device that is opening, and speech-dispatcher's replies are all picked up in `poll` (Phase 2).
+
+Each backend lists its voices once, when it starts, into a `VoiceCache` that any thread reads without waiting; SAPI fills its cache from a background thread. If the speech thread dies, the app goes silent at once and restarts speech in place, once by itself and then on the Restart Speech command, starting the new service on a helper thread (`crates/textweaver-app/src/restart.rs`).
 
 ### Engine hosts
 
@@ -129,13 +131,18 @@ Eloquence, SAPI5 voices, and DECtalk each run in a separate host process ([ADR-0
 - the playback client feeds the audio to the output device (through rodio, on its own audio thread) and keeps the audio clock;
 - word events are emitted as each word is heard.
 
-A host that crashes or stalls is killed and started again, and reading resumes from the last word heard. A host also lets a 32-bit engine work with 64-bit textweaver, and keeps a proprietary engine at arm's length from the reader.
+A host that crashes or stalls is killed and started again, and reading resumes from the last word heard. A new host starts without holding up the speech thread: requests queue until it reports ready, which `poll` notices. A host also lets a 32-bit engine work with 64-bit textweaver, and keeps a proprietary engine at arm's length from the reader.
+
+### The writer thread
+
+Every file the app writes while it runs goes through one writer thread (`crates/textweaver-app/src/writer.rs`): saves, autosave snapshots and their deletion, reading positions, bookmarks, notes, and highlights, the library sidecars, the bookshelf and recent list, and the two-second check for a change on disk. The interface thread hands it a copy of the text (a rope clone, which costs nothing) and reads the result on its next tick: "Saved", an error, or a question about a file that changed on disk. Saves of the same document's state that queue up are collapsed into the newest. Quitting waits for the writer, at most ten seconds, saying so when it takes more than a moment.
 
 ### Other workers
 
 - `tw convert` runs conversions on a rayon thread pool, one document per worker ([ADR-0016](adr/0016-rendering-and-conversion.md)).
 - Dictation runs a Whisper program as a subprocess and reads its output on a worker thread ([ADR-0013](adr/0013-dictation.md)).
 - Audio export runs synthesis on the calling thread, utterance by utterance ([ADR-0011](adr/0011-audio-export.md)).
+- The Library command scans the library folders on a background thread and shows the count found as it goes.
 
 ## From file to highlighted word
 
@@ -203,7 +210,7 @@ The GUI spike sends announcements to the screen reader as UI Automation notifica
 
 ## Persistence
 
-`textweaver-store` keeps settings in `settings.toml` and key overrides in `keymap.toml`, written only when they change, atomically, keeping keys it does not know. Each document's position, history, bookmarks, notes, and highlights are in a state file named after the document; positions are saved every 30 seconds while they move, on quit, and on switching documents. Library folders can hold a sidecar, `.textweaver/progress.json`, so positions follow a folder between computers. [Settings](settings.md) and [the library](library.md) describe the files and folders.
+`textweaver-store` keeps settings in `settings.toml` and key overrides in `keymap.toml`, written only when they change, atomically, keeping keys it does not know. Each document's position, history, bookmarks, notes, and highlights are in a state file named after the document; positions are saved every 30 seconds while they move, on quit, and on switching documents, by the writer thread. The state file also keeps the text's length and hash and, with each position and bookmark, the 40 characters it was on: when the file changed outside textweaver, positions, bookmarks, notes, and highlights are found again from their text on the next open (`crates/textweaver-app/src/relocate.rs`). Library folders can hold a sidecar, `.textweaver/progress.json`, so positions follow a folder between computers. [Settings](settings.md) and [the library](library.md) describe the files and folders.
 
 ## See also
 

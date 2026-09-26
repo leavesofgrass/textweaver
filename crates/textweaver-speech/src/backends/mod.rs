@@ -18,6 +18,12 @@
 //!
 //! Built-in priorities (higher is tried first): `espeak` 50, `speechd` 45,
 //! `omnivox` 40, `recording` 0 (opt-in, tests only), `null` lowest.
+//!
+//! Availability probes run at most once per registry entry (clones share
+//! the answer), and entries registered with a cache key
+//! ([`BackendRegistry::register_cached`], which the built-ins and the app's
+//! engines use) at most once per process for that key: `tw backends` and
+//! the reader no longer look for the same engine twice.
 
 #[cfg(feature = "espeak")]
 pub mod espeak;
@@ -28,13 +34,14 @@ pub mod recording;
 #[cfg(feature = "speechd")]
 pub mod speechd;
 
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock};
 
 pub use null::NullBackend;
 pub use recording::{Call, RecordingBackend, RecordingHandle, RecordingMode};
 use serde::Serialize;
 
-use crate::backend::{BackendFactory, BackendInfo, SpeechBackend, SpeechError, Voice};
+use crate::backend::{BackendFactory, BackendId, BackendInfo, SpeechBackend, SpeechError, Voice};
 
 /// The program `name` (plus the platform's executable suffix) on `PATH`.
 #[cfg_attr(not(any(feature = "omnivox", feature = "speechd")), allow(dead_code))]
@@ -52,6 +59,55 @@ pub type BackendConstructor =
 
 /// An availability probe: true when the backend can start on this machine.
 pub type AvailabilityProbe = Arc<dyn Fn() -> bool + Send + Sync + 'static>;
+
+/// Probe answers kept for the life of the process, by backend id and the
+/// cache key given at registration.
+fn process_probes() -> &'static Mutex<HashMap<(BackendId, String), bool>> {
+    static PROBES: OnceLock<Mutex<HashMap<(BackendId, String), bool>>> = OnceLock::new();
+    PROBES.get_or_init(Mutex::default)
+}
+
+/// Forgets every probe answer kept for the process, so the next listing
+/// looks again (after the user installs an engine, or before restarting
+/// speech). Registries already built keep the answers they have.
+pub fn forget_probes() {
+    process_probes()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clear();
+}
+
+/// Wraps `probe` so it runs at most once: per entry (clones share it), and
+/// with a `key`, at most once per process for that id and key.
+fn once(
+    id: BackendId,
+    key: Option<String>,
+    probe: impl Fn() -> bool + Send + Sync + 'static,
+) -> AvailabilityProbe {
+    let answer: Arc<OnceLock<bool>> = Arc::new(OnceLock::new());
+    Arc::new(move || {
+        *answer.get_or_init(|| {
+            let Some(key) = &key else {
+                return probe();
+            };
+            let cache_key = (id, key.clone());
+            if let Some(&known) = process_probes()
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .get(&cache_key)
+            {
+                return known;
+            }
+            // Probe outside the lock: a slow probe must not hold up others.
+            let found = probe();
+            process_probes()
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .insert(cache_key, found);
+            found
+        })
+    })
+}
 
 /// One registered backend.
 #[derive(Clone)]
@@ -145,7 +201,7 @@ impl BackendRegistry {
             || Ok(Box::new(RecordingBackend::new().0) as Box<dyn SpeechBackend>),
         );
         #[cfg(feature = "espeak")]
-        r.register(
+        r.register_cached(
             BackendInfo {
                 id: "espeak",
                 name: "eSpeak NG",
@@ -154,6 +210,7 @@ impl BackendRegistry {
                 available: false,
                 caps: espeak::CAPS,
             },
+            "builtin",
             espeak::available,
             || {
                 espeak::EspeakBackend::new(espeak::EspeakOutput::from_env())
@@ -161,7 +218,7 @@ impl BackendRegistry {
             },
         );
         #[cfg(feature = "omnivox")]
-        r.register(
+        r.register_cached(
             BackendInfo {
                 id: "omnivox",
                 name: "Omnivox speech server",
@@ -170,6 +227,7 @@ impl BackendRegistry {
                 available: false,
                 caps: omnivox::CAPS,
             },
+            "builtin",
             || omnivox::OmnivoxCommand::from_env().is_some(),
             || {
                 let cmd = omnivox::OmnivoxCommand::from_env().ok_or_else(|| {
@@ -179,7 +237,7 @@ impl BackendRegistry {
             },
         );
         #[cfg(feature = "speechd")]
-        r.register(
+        r.register_cached(
             BackendInfo {
                 id: "speechd",
                 name: "Speech Dispatcher",
@@ -188,6 +246,7 @@ impl BackendRegistry {
                 available: false,
                 caps: speechd::CAPS,
             },
+            "builtin",
             speechd::available,
             || {
                 speechd::SpeechdBackend::connect_default()
@@ -197,18 +256,46 @@ impl BackendRegistry {
         r
     }
 
-    /// Adds a backend, replacing any entry with the same id.
+    /// Adds a backend, replacing any entry with the same id. The probe
+    /// runs at most once for this entry (clones of the registry share the
+    /// answer).
     pub fn register(
         &mut self,
         info: BackendInfo,
         probe: impl Fn() -> bool + Send + Sync + 'static,
         constructor: impl Fn() -> Result<Box<dyn SpeechBackend>, SpeechError> + Send + Sync + 'static,
     ) {
+        let probe = once(info.id, None, probe);
+        self.insert(info, probe, Arc::new(constructor));
+    }
+
+    /// Like [`register`](Self::register), but the probe's answer is kept
+    /// for the whole process under the backend's id and `key`: any registry
+    /// built later with the same id and key reuses it. Use a key that names
+    /// what the probe depends on (the engine's configuration), so a changed
+    /// setting probes again. [`forget_probes`] clears the process cache.
+    pub fn register_cached(
+        &mut self,
+        info: BackendInfo,
+        key: impl Into<String>,
+        probe: impl Fn() -> bool + Send + Sync + 'static,
+        constructor: impl Fn() -> Result<Box<dyn SpeechBackend>, SpeechError> + Send + Sync + 'static,
+    ) {
+        let probe = once(info.id, Some(key.into()), probe);
+        self.insert(info, probe, Arc::new(constructor));
+    }
+
+    fn insert(
+        &mut self,
+        info: BackendInfo,
+        probe: AvailabilityProbe,
+        constructor: BackendConstructor,
+    ) {
         self.entries.retain(|e| e.info.id != info.id);
         self.entries.push(RegisteredBackend {
             info,
-            probe: Arc::new(probe),
-            constructor: Arc::new(constructor),
+            probe,
+            constructor,
         });
     }
 
@@ -559,6 +646,64 @@ mod tests {
         );
         assert_ne!(r.select(None).backend.id, "eci");
         assert_eq!(r.list().iter().filter(|b| b.id == "eci").count(), 1);
+    }
+
+    #[test]
+    fn probes_run_once_per_entry_and_once_per_process_with_a_key() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        let info = |id: BackendId| BackendInfo {
+            id,
+            name: "probe test",
+            priority: 70,
+            ..BackendInfo::default()
+        };
+        let make = || Ok(Box::new(NullBackend::default()) as Box<dyn SpeechBackend>);
+        // Per entry: list, get, and select all share one probe.
+        let calls = Arc::new(AtomicU32::new(0));
+        let mut r = BackendRegistry::new();
+        let c = Arc::clone(&calls);
+        r.register(
+            info("probe-entry"),
+            move || {
+                c.fetch_add(1, Ordering::SeqCst);
+                true
+            },
+            make,
+        );
+        let copy = r.clone();
+        r.list();
+        r.get("probe-entry");
+        assert_eq!(r.select(None).backend.id, "probe-entry");
+        copy.list();
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        // Per process with a key: a new registry with the same key reuses
+        // the answer; another key probes again.
+        let calls = Arc::new(AtomicU32::new(0));
+        let build = |key: &str| {
+            let mut r = BackendRegistry::new();
+            let c = Arc::clone(&calls);
+            r.register_cached(
+                info("probe-process"),
+                key,
+                move || {
+                    c.fetch_add(1, Ordering::SeqCst);
+                    false
+                },
+                make,
+            );
+            r
+        };
+        for _ in 0..3 {
+            let r = build("config A");
+            assert!(!r.get("probe-process").unwrap().available);
+            r.list();
+        }
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        build("config B").list();
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+        forget_probes();
+        build("config A").list();
+        assert_eq!(calls.load(Ordering::SeqCst), 3);
     }
 
     #[test]

@@ -13,11 +13,16 @@
 //!
 //! **Messages and replies.** A reader thread splits the socket's input into
 //! SSIP messages: event messages (7xx) go to `poll`, every other message
-//! is the reply to the one command in flight (SSIP answers commands in
-//! order). `speak` waits only for the server's "message queued" reply (a few
-//! milliseconds), never for audio (ADR-0003). `stop` does not wait at all:
-//! its reply is read (and a refusal logged) before the next command's, so
-//! a slow or busy server never holds up Stop.
+//! is a reply, and SSIP answers commands in order. After connecting, no
+//! command waits for its reply on the speech thread (Phase 2): `speak`,
+//! parameter changes, `pause`, `resume`, and `stop` send and return, and
+//! `poll` reads the replies in order: the "message queued" reply gives an
+//! utterance its message id (before any of its events, which arrive after
+//! it on the same connection), a refused text fails its utterance, and a
+//! refused setting is logged. Only connecting (the session setup and the
+//! voice list) waits, for at most [`CONNECT_TIMEOUT`] per reply. A voice
+//! that is not in that list is refused at once, without asking the
+//! server.
 //!
 //! **Parameters** (ADR-0004). speech-dispatcher takes rate, pitch, and
 //! volume on a -100..=100 scale that each output module maps to its engine.
@@ -76,7 +81,12 @@ pub const RATE_NORMAL: u16 = 170;
 /// wpm at rate +100.
 pub const RATE_MAX: u16 = 449;
 
-/// How long to wait for the server's reply to a command.
+/// How long to wait for a reply while connecting (the only time the
+/// backend waits for the server).
+pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// How long a command that must be answered at once (tests, and
+/// [`SpeechdBackend::load_voices`]) waits.
 const REPLY_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Where speech-dispatcher listens.
@@ -419,6 +429,29 @@ struct Sent {
     words: Vec<Range<u32>>,
 }
 
+/// A reply the backend has not read yet, in the order the commands went.
+#[derive(Debug)]
+enum Expect {
+    /// A setting, `PAUSE`, `RESUME`, or `CANCEL`: a refusal is logged.
+    Check(String),
+    /// `SPEAK`: "receiving data" (230), else the text went nowhere.
+    SpeakStart(u64),
+    /// The text sent after `SPEAK`: "message queued" (225) with the id.
+    Queued(u64),
+}
+
+/// An utterance sent, waiting for its message id.
+#[derive(Debug)]
+struct Waiting {
+    ticket: u64,
+    id: UtteranceId,
+    words: Vec<Range<u32>>,
+    /// False once `stop` discarded it (its id is still read, then dropped).
+    live: bool,
+    /// The server refused `SPEAK`: the text's reply is an error too.
+    refused: Option<String>,
+}
+
 /// The speech-dispatcher backend.
 pub struct SpeechdBackend {
     writer: Stream,
@@ -429,9 +462,11 @@ pub struct SpeechdBackend {
     params: VoiceParams,
     applied: Option<VoiceParams>,
     voices: Option<Vec<Voice>>,
-    /// Commands sent without waiting for their replies (`CANCEL SELF`),
-    /// whose replies come before the next command's.
-    unanswered: usize,
+    /// Replies not read yet, in order.
+    expect: VecDeque<Expect>,
+    /// Utterances sent whose message id has not arrived.
+    waiting: VecDeque<Waiting>,
+    next_ticket: u64,
 }
 
 impl std::fmt::Debug for SpeechdBackend {
@@ -511,12 +546,15 @@ impl SpeechdBackend {
             params: VoiceParams::default(),
             applied: None,
             voices: None,
-            unanswered: 0,
+            expect: VecDeque::new(),
+            waiting: VecDeque::new(),
+            next_ticket: 1,
         };
-        b.command("SET SELF CLIENT_NAME user:textweaver:main")?;
-        b.command("SET SELF SSML_MODE on")?;
-        b.command("SET SELF NOTIFICATION ALL on")?;
-        if let Err(e) = b.load_voices() {
+        // The session and the voice list: the only replies waited for.
+        b.command_within("SET SELF CLIENT_NAME user:textweaver:main", CONNECT_TIMEOUT)?;
+        b.command_within("SET SELF SSML_MODE on", CONNECT_TIMEOUT)?;
+        b.command_within("SET SELF NOTIFICATION ALL on", CONNECT_TIMEOUT)?;
+        if let Err(e) = b.load_voices_within(CONNECT_TIMEOUT) {
             log::warn!("speech-dispatcher voice list: {e}");
             b.voices = Some(Vec::new());
         }
@@ -532,21 +570,27 @@ impl SpeechdBackend {
             })
     }
 
-    fn reply(&mut self) -> Result<Message, SpeechError> {
-        // Replies to commands sent without waiting come first (SSIP
-        // answers in order).
-        while self.unanswered > 0 {
-            let m = self.next_reply()?;
-            self.unanswered -= 1;
-            if !m.is_ok() {
-                log::warn!("speech-dispatcher refused to stop: {} {}", m.code, m.text);
+    /// Waits for the reply to the command just sent, reading the replies
+    /// still owed to earlier commands first (connecting, and tools that
+    /// want an answer).
+    fn reply_within(
+        &mut self,
+        timeout: Duration,
+        sink: Option<&mut dyn EventSink>,
+    ) -> Result<Message, SpeechError> {
+        let mut sink = sink;
+        while !self.expect.is_empty() {
+            let m = self.next_reply(timeout)?;
+            match sink.as_deref_mut() {
+                Some(s) => self.answered(m, s),
+                None => self.answered(m, &mut NoSink),
             }
         }
-        self.next_reply()
+        self.next_reply(timeout)
     }
 
-    fn next_reply(&mut self) -> Result<Message, SpeechError> {
-        match self.replies.recv_timeout(REPLY_TIMEOUT) {
+    fn next_reply(&mut self, timeout: Duration) -> Result<Message, SpeechError> {
+        match self.replies.recv_timeout(timeout) {
             Ok(m) => Ok(m),
             Err(RecvTimeoutError::Timeout) => Err(SpeechError::Engine(
                 "speech-dispatcher did not answer".into(),
@@ -557,11 +601,12 @@ impl SpeechdBackend {
         }
     }
 
-    /// Sends one command and waits for its reply; a non-2xx reply is an
-    /// error.
-    fn command(&mut self, line: &str) -> Result<Message, SpeechError> {
+    /// Sends one command and waits up to `timeout` for its reply; a
+    /// non-2xx reply is an error. Only for connecting and for callers that
+    /// may block (the speech thread's work never uses it).
+    fn command_within(&mut self, line: &str, timeout: Duration) -> Result<Message, SpeechError> {
         self.send_line(line)?;
-        let m = self.reply()?;
+        let m = self.reply_within(timeout, None)?;
         if m.is_ok() {
             Ok(m)
         } else {
@@ -569,6 +614,78 @@ impl SpeechdBackend {
                 "speech-dispatcher refused \"{line}\": {} {}",
                 m.code, m.text
             )))
+        }
+    }
+
+    /// Sends a command whose reply is read later, by `poll`.
+    fn send_checked(&mut self, line: &str) -> Result<(), SpeechError> {
+        self.send_line(line)?;
+        self.expect.push_back(Expect::Check(line.to_owned()));
+        Ok(())
+    }
+
+    /// Reads every reply that has arrived, in order, without waiting.
+    fn read_replies(&mut self, sink: &mut dyn EventSink) {
+        while !self.expect.is_empty() {
+            match self.replies.try_recv() {
+                Ok(m) => self.answered(m, sink),
+                Err(_) => break,
+            }
+        }
+    }
+
+    /// The reply to the oldest command still owed one.
+    fn answered(&mut self, m: Message, sink: &mut dyn EventSink) {
+        let Some(e) = self.expect.pop_front() else {
+            log::warn!("speech-dispatcher: unexpected reply {} {}", m.code, m.text);
+            return;
+        };
+        match e {
+            Expect::Check(line) => {
+                if !m.is_ok() {
+                    log::warn!(
+                        "speech-dispatcher refused \"{line}\": {} {}",
+                        m.code,
+                        m.text
+                    );
+                }
+            }
+            Expect::SpeakStart(ticket) => {
+                if !m.is_ok()
+                    && let Some(w) = self.waiting.iter_mut().find(|w| w.ticket == ticket)
+                {
+                    w.refused = Some(format!("{} {}", m.code, m.text));
+                }
+            }
+            Expect::Queued(ticket) => {
+                let Some(i) = self.waiting.iter().position(|w| w.ticket == ticket) else {
+                    return;
+                };
+                let Some(w) = self.waiting.remove(i) else {
+                    return;
+                };
+                let msg = m.data.first().and_then(|d| d.trim().parse().ok());
+                match (w.live, &w.refused, m.is_ok(), msg) {
+                    (false, ..) => {}
+                    (true, None, true, Some(msg)) => self.sent.push_back(Sent {
+                        msg,
+                        id: w.id,
+                        words: w.words,
+                    }),
+                    (true, refused, ..) => {
+                        let why = refused
+                            .clone()
+                            .unwrap_or_else(|| format!("{} {}", m.code, m.text));
+                        sink.emit(
+                            w.id,
+                            RawEvent::Error(format!(
+                                "speech-dispatcher did not queue the text: {why}"
+                            )),
+                        );
+                        sink.emit(w.id, RawEvent::Finished);
+                    }
+                }
+            }
         }
     }
 
@@ -587,16 +704,16 @@ impl SpeechdBackend {
                 .and_then(|vs| vs.iter().find(|x| &x.id == v))
                 .and_then(|x| x.languages.first().cloned())
             {
-                self.command(&format!("SET SELF LANGUAGE {lang}"))?;
+                self.send_checked(&format!("SET SELF LANGUAGE {lang}"))?;
             }
-            self.command(&format!("SET SELF SYNTHESIS_VOICE {v}"))?;
+            self.send_checked(&format!("SET SELF SYNTHESIS_VOICE {v}"))?;
         }
-        self.command(&format!("SET SELF RATE {}", rate_for_wpm(p.rate.wpm())))?;
-        self.command(&format!(
+        self.send_checked(&format!("SET SELF RATE {}", rate_for_wpm(p.rate.wpm())))?;
+        self.send_checked(&format!(
             "SET SELF PITCH {}",
             pitch_for_semitones(p.pitch.semitones())
         ))?;
-        self.command(&format!(
+        self.send_checked(&format!(
             "SET SELF VOLUME {}",
             volume_for_percent(p.volume.percent())
         ))?;
@@ -605,6 +722,10 @@ impl SpeechdBackend {
     }
 
     fn deliver(&mut self, sink: &mut dyn EventSink) {
+        // Replies first: a message's id (its "queued" reply) arrives before
+        // its events on the connection, so every event read below can be
+        // matched.
+        self.read_replies(sink);
         while let Ok(m) = self.events.try_recv() {
             let Some(ev) = SsipEvent::from_message(&m) else {
                 continue;
@@ -694,6 +815,14 @@ impl SpeechBackend for SpeechdBackend {
     }
 
     fn set_params(&mut self, params: &VoiceParams) -> Result<(), SpeechError> {
+        // A voice the server did not list is refused here, without a round
+        // trip (the server would refuse it too).
+        if let (Some(v), Some(list)) = (&params.voice, &self.voices)
+            && !list.is_empty()
+            && !list.iter().any(|x| &x.id == v)
+        {
+            return Err(SpeechError::UnknownVoice(v.clone()));
+        }
         self.params = params.clone();
         self.apply_params()
     }
@@ -714,27 +843,24 @@ impl SpeechBackend for SpeechdBackend {
             Vec::new()
         };
         let ssml = ssml_with_marks(&utterance.text, &words);
-        self.command("SPEAK")?;
+        // SPEAK, the text, and the end go out at once: SSIP reads them in
+        // order (it answers SPEAK, then reads the text). The message id
+        // comes back through `poll`, before any event for the message.
         // The SSML is one line (line ends were escaped to spaces) that
         // starts with "<speak>", so it never needs SSIP's dot escaping.
+        let ticket = self.next_ticket;
+        self.next_ticket += 1;
+        self.send_line("SPEAK")?;
         self.send_line(&ssml)?;
         self.send_line(".")?;
-        let m = self.reply()?;
-        if !m.is_ok() {
-            return Err(SpeechError::Engine(format!(
-                "speech-dispatcher did not queue the text: {} {}",
-                m.code, m.text
-            )));
-        }
-        let msg = m
-            .data
-            .first()
-            .and_then(|d| d.trim().parse().ok())
-            .ok_or_else(|| SpeechError::Engine("no message id from speech-dispatcher".into()))?;
-        self.sent.push_back(Sent {
-            msg,
+        self.expect.push_back(Expect::SpeakStart(ticket));
+        self.expect.push_back(Expect::Queued(ticket));
+        self.waiting.push_back(Waiting {
+            ticket,
             id: utterance.id,
             words,
+            live: true,
+            refused: None,
         });
         Ok(())
     }
@@ -745,30 +871,37 @@ impl SpeechBackend for SpeechdBackend {
 
     fn stop(&mut self) {
         // Not waiting for the reply: Stop must be immediate even when the
-        // server is slow to answer. The reply is read before the next
-        // command's.
-        match self.send_line("CANCEL SELF") {
-            Ok(()) => self.unanswered += 1,
-            Err(e) => log::warn!("{e}"),
+        // server is slow to answer.
+        if let Err(e) = self.send_checked("CANCEL SELF") {
+            log::warn!("{e}");
         }
-        // Late events for these messages are ignored.
+        // Late events for these messages are ignored, and so are the ids of
+        // messages not queued yet.
         self.sent.clear();
+        for w in &mut self.waiting {
+            w.live = false;
+        }
     }
 
     fn pause(&mut self) -> Result<(), SpeechError> {
-        self.command("PAUSE SELF").map(|_| ())
+        self.send_checked("PAUSE SELF")
     }
 
     fn resume(&mut self) -> Result<(), SpeechError> {
-        self.command("RESUME SELF").map(|_| ())
+        self.send_checked("RESUME SELF")
     }
 }
 
 impl SpeechdBackend {
-    /// Loads the output module's voices (`LIST SYNTHESIS_VOICES`); later
-    /// calls to `voices` return them.
+    /// Loads the output module's voices (`LIST SYNTHESIS_VOICES`), waiting
+    /// for the answer; later calls to `voices` return them. Connecting
+    /// does this once; the speech service never calls it.
     pub fn load_voices(&mut self) -> Result<&[Voice], SpeechError> {
-        let m = self.command("LIST SYNTHESIS_VOICES")?;
+        self.load_voices_within(REPLY_TIMEOUT)
+    }
+
+    fn load_voices_within(&mut self, timeout: Duration) -> Result<&[Voice], SpeechError> {
+        let m = self.command_within("LIST SYNTHESIS_VOICES", timeout)?;
         let voices = m
             .data
             .iter()
@@ -798,6 +931,17 @@ impl SpeechdBackend {
             })
             .collect();
         Ok(self.voices.insert(voices))
+    }
+}
+
+/// A sink for replies read outside `poll` (the events they would emit
+/// belong to utterances the caller is not tracking).
+struct NoSink;
+
+impl EventSink for NoSink {
+    fn emit(&mut self, _: UtteranceId, _: RawEvent) {}
+    fn is_current(&self, _: UtteranceId) -> bool {
+        false
     }
 }
 

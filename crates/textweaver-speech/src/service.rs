@@ -67,6 +67,7 @@ use crate::pacing::{
     Clock, PacingConfig, PlaybackClock, SystemClock, TimerPacer, spoken_words, word_interval,
 };
 use crate::queue::{DEFAULT_LOOKAHEAD, Generation, ReadingQueue};
+use crate::voices::{VoiceCache, VoiceList};
 
 /// How `say` interacts with speech in progress.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -247,7 +248,7 @@ impl Default for ServiceConfig {
     }
 }
 
-/// How long [`SpeechService::voices`] waits for the speech thread.
+/// How long [`SpeechService::sync`] waits for the speech thread.
 pub const VOICES_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// How often the core polls the backend while speech is active.
@@ -297,7 +298,10 @@ enum Command {
     SpeakChar(char, Option<CharPos>),
     Tone(f32, u32),
     Earcon(Earcon),
-    Voices(Sender<Result<Vec<Voice>, SpeechError>>),
+    /// The voice list arrived (from the backend's background listing).
+    VoicesReady,
+    /// Answer once every command before this one is handled.
+    Sync(Sender<()>),
     Shutdown,
 }
 
@@ -336,6 +340,8 @@ pub struct SpeechService {
     alive: Arc<AtomicBool>,
     /// Why the speech thread died, when it panicked.
     failure: Arc<Mutex<Option<String>>>,
+    /// The backend's voices, listed once when it started.
+    voices: VoiceCache,
 }
 
 impl std::fmt::Debug for SpeechService {
@@ -371,13 +377,15 @@ impl SpeechService {
             tx: status_tx,
             caps: Arc::clone(&caps),
         };
+        // The voice list's arrival reaches the speech thread as a command.
+        let voices_tx = tx.clone();
         let thread = thread::Builder::new()
             .name("textweaver-speech".into())
             .spawn(move || {
                 let fatal_tx = link.tx.clone();
                 let ready_fail = ready_tx.clone();
                 let outcome = catch_unwind(AssertUnwindSafe(move || {
-                    speech_thread(factory, config, clock, &rx, &ready_tx, &link);
+                    speech_thread(factory, config, clock, &rx, &ready_tx, &link, voices_tx);
                 }));
                 if let Err(payload) = outcome {
                     let why = panic_message(payload.as_ref());
@@ -396,7 +404,7 @@ impl SpeechService {
                 thread_alive.store(false, Ordering::SeqCst);
             })
             .map_err(|e| SpeechError::Io(e.to_string()))?;
-        let backend_id = ready_rx.recv().map_err(|_| SpeechError::ServiceStopped)??;
+        let (backend_id, voices) = ready_rx.recv().map_err(|_| SpeechError::ServiceStopped)??;
         Ok(SpeechService {
             tx,
             status_rx,
@@ -406,6 +414,7 @@ impl SpeechService {
             last_reading: AtomicU64::new(0),
             alive,
             failure,
+            voices,
         })
     }
 
@@ -547,18 +556,41 @@ impl SpeechService {
         self.post(Command::Earcon(earcon));
     }
 
-    /// The backend's voices, asked on the speech thread (backends are not
-    /// shared across threads). Waits up to [`VOICES_TIMEOUT`]; a backend
-    /// busy starting a host answers when it is done.
+    /// The backend's voices, from the list made once when it started;
+    /// never waits (Phase 2). While the list is still being made (SAPI
+    /// lists its voices in the background), this is an error saying so:
+    /// use [`voice_list`](Self::voice_list) to tell that apart and
+    /// [`voice_cache`](Self::voice_cache) to be told when they arrive.
     pub fn voices(&self) -> Result<Vec<Voice>, SpeechError> {
+        self.voice_list().into_result()
+    }
+
+    /// What is known about the backend's voices now: still loading, the
+    /// list, or why listing failed. Never waits.
+    pub fn voice_list(&self) -> VoiceList {
+        if !self.is_alive() {
+            return VoiceList::Failed(SpeechError::ServiceStopped);
+        }
+        self.voices.get()
+    }
+
+    /// The backend's voice list, for waiting on it
+    /// ([`VoiceCache::on_ready`], [`VoiceCache::wait`]).
+    pub fn voice_cache(&self) -> &VoiceCache {
+        &self.voices
+    }
+
+    /// Waits until the speech thread has handled every command sent before
+    /// this call (a round trip), at most [`VOICES_TIMEOUT`]. False when it
+    /// did not answer in time or has stopped.
+    pub fn sync(&self) -> bool {
         let (reply, answer) = mpsc::channel();
-        self.send(Command::Voices(reply))?;
+        if self.send(Command::Sync(reply)).is_err() {
+            return false;
+        }
         match answer.recv_timeout(VOICES_TIMEOUT) {
-            Ok(result) => result,
-            Err(RecvTimeoutError::Timeout) => Err(SpeechError::Engine(
-                "the voice list did not arrive in time".into(),
-            )),
-            Err(RecvTimeoutError::Disconnected) => Err(SpeechError::ServiceStopped),
+            Ok(()) => true,
+            Err(RecvTimeoutError::Timeout | RecvTimeoutError::Disconnected) => false,
         }
     }
 
@@ -638,15 +670,22 @@ fn speech_thread(
     config: ServiceConfig,
     clock: Box<dyn Clock>,
     rx: &Receiver<Command>,
-    ready: &Sender<Result<BackendId, SpeechError>>,
+    ready: &Sender<Result<(BackendId, VoiceCache), SpeechError>>,
     link: &StatusLink,
+    voices_tx: Sender<Command>,
 ) {
     match factory() {
         Ok(backend) => {
             let mut core = ServiceCore::new(backend, config, clock);
             link.caps
                 .store(core.capabilities().bits(), Ordering::SeqCst);
-            let _ = ready.send(Ok(core.backend_id()));
+            let voices = core.voice_cache().clone();
+            if voices.get().is_loading() {
+                voices.on_ready(move || {
+                    let _ = voices_tx.send(Command::VoicesReady);
+                });
+            }
+            let _ = ready.send(Ok((core.backend_id(), voices)));
             if link.forward(core.take_statuses()) {
                 run(&mut core, rx, link);
             }
@@ -789,6 +828,13 @@ pub struct ServiceCore {
     sentence_restarts: Option<(Option<CharPos>, u32)>,
     /// Error events since the reading last made progress.
     event_failures: u32,
+    /// The backend's voices, listed once when it started.
+    voices: VoiceCache,
+    /// A voice asked for while the list was loading, resolved (a name
+    /// such as "Zira" to its id) once it arrives.
+    pending_voice: Option<String>,
+    /// `prefer_voice` could not be resolved yet: the list was loading.
+    prefer_pending: bool,
     /// When (wall clock) the reading last made progress or was handed to
     /// the engine, for [`STALL_TIMEOUT`].
     last_progress: Duration,
@@ -814,6 +860,11 @@ impl ServiceCore {
         clock: Box<dyn Clock>,
     ) -> Self {
         let caps = backend.capabilities();
+        // Listed once: in the background by backends that list slowly,
+        // else here, with the answer (or the failure) kept.
+        let voices = backend
+            .voice_cache()
+            .unwrap_or_else(|| VoiceCache::ready(backend.voices()));
         let pipeline = Pipeline::for_settings(
             &config.normalize,
             config.punctuation,
@@ -845,13 +896,20 @@ impl ServiceCore {
             sentence_restarts: None,
             event_failures: 0,
             last_progress: Duration::ZERO,
+            voices,
+            pending_voice: None,
+            prefer_pending: false,
         };
         if let Some(asked) = core.params.voice.clone() {
             core.params.voice = Some(core.resolve_voice_name(&asked));
-        } else if let Some(prefer) = core.config.prefer_voice.clone()
-            && let Ok(voices) = core.backend.voices()
-        {
-            core.params.voice = resolve_preferred_voice(&voices, &prefer);
+        } else if let Some(prefer) = core.config.prefer_voice.clone() {
+            match core.voices.get() {
+                VoiceList::Ready(voices) => {
+                    core.params.voice = resolve_preferred_voice(&voices, &prefer);
+                }
+                VoiceList::Loading => core.prefer_pending = true,
+                VoiceList::Failed(_) => {}
+            }
         }
         core.apply_params();
         // The starting capabilities are what the handle reports at spawn;
@@ -877,9 +935,47 @@ impl ServiceCore {
         self.reading_generation
     }
 
-    /// The backend's voices.
+    /// The backend's voices, from the list made when it started.
     pub fn voices(&self) -> Result<Vec<Voice>, SpeechError> {
-        self.backend.voices()
+        self.voices.get().into_result()
+    }
+
+    /// The backend's voice list.
+    pub fn voice_cache(&self) -> &VoiceCache {
+        &self.voices
+    }
+
+    /// The voice list arrived: resolves a voice asked for by name while it
+    /// was loading, and the preferred voice, and applies them.
+    pub fn voices_arrived(&mut self) {
+        let VoiceList::Ready(voices) = self.voices.get() else {
+            self.pending_voice = None;
+            self.prefer_pending = false;
+            return;
+        };
+        let mut changed = false;
+        if let Some(asked) = self.pending_voice.take()
+            && self.params.voice.as_deref() == Some(asked.as_str())
+            && let Some(id) = resolve_voice(&voices, &asked)
+            && id != asked
+        {
+            self.params.voice = Some(id);
+            changed = true;
+        }
+        if std::mem::take(&mut self.prefer_pending)
+            && self.params.voice.is_none()
+            && let Some(prefer) = self.config.prefer_voice.clone()
+        {
+            self.params.voice = resolve_preferred_voice(&voices, &prefer);
+            changed |= self.params.voice.is_some();
+        }
+        if changed {
+            self.apply_params();
+        } else {
+            // The list can tell a backend more about its voice (SAPI's
+            // voice families): its capabilities may follow.
+            self.refresh_caps();
+        }
     }
 
     /// The voice parameters currently requested.
@@ -949,8 +1045,9 @@ impl ServiceCore {
             Command::SpeakChar(c, at) => self.speak_char(c, at),
             Command::Tone(hz, ms) => self.tone(hz, ms),
             Command::Earcon(e) => self.earcon(e),
-            Command::Voices(reply) => {
-                let _ = reply.send(self.voices());
+            Command::VoicesReady => self.voices_arrived(),
+            Command::Sync(reply) => {
+                let _ = reply.send(());
             }
             Command::Shutdown => self.stop_silently(),
         }
@@ -1298,6 +1395,7 @@ impl ServiceCore {
 
     /// Sets the voice.
     pub fn set_voice(&mut self, voice: Option<String>) {
+        self.pending_voice = None;
         self.params.voice = voice.map(|v| self.resolve_voice_name(&v));
         self.apply_params();
     }
@@ -1305,12 +1403,21 @@ impl ServiceCore {
     /// A voice id for what the user typed (an id, a name such as "Zira" or
     /// "Reed", or part of one; see [`resolve_voice`]). Unknown text is
     /// passed through unchanged so the backend reports it.
-    fn resolve_voice_name(&self, asked: &str) -> String {
-        self.backend
-            .voices()
-            .ok()
-            .and_then(|voices| resolve_voice(&voices, asked))
-            .unwrap_or_else(|| asked.to_owned())
+    ///
+    /// While the voice list is still loading, the text is passed through
+    /// and resolved when the list arrives ([`voices_arrived`](Self::voices_arrived)).
+    fn resolve_voice_name(&mut self, asked: &str) -> String {
+        match self.voices.get() {
+            VoiceList::Ready(voices) => {
+                self.pending_voice = None;
+                resolve_voice(&voices, asked).unwrap_or_else(|| asked.to_owned())
+            }
+            VoiceList::Loading => {
+                self.pending_voice = Some(asked.to_owned());
+                asked.to_owned()
+            }
+            VoiceList::Failed(_) => asked.to_owned(),
+        }
     }
 
     /// Sets punctuation verbosity for utterances read from now on.

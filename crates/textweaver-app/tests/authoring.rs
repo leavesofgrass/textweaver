@@ -81,8 +81,16 @@ impl Rig {
         path
     }
 
+    /// Dispatches, then waits for the background writer (saves, bookmarks)
+    /// and applies its results, as the event loop's next tick would.
+    fn send(&mut self, cmd: Command) -> Vec<Effect> {
+        let effects = self.app.dispatch(cmd);
+        self.app.wait_for_writes();
+        effects
+    }
+
     fn act(&mut self, a: ActionId) -> Vec<Effect> {
-        self.app.dispatch(Command::Action(a))
+        self.send(Command::Action(a))
     }
 
     fn status(&self) -> String {
@@ -106,7 +114,7 @@ impl Rig {
 
     fn type_text(&mut self, text: &str) {
         for c in text.chars() {
-            self.app.dispatch(Command::Insert(c.to_string()));
+            self.send(Command::Insert(c.to_string()));
         }
     }
 
@@ -166,7 +174,7 @@ fn typing_a_heading_is_found_after_a_pause() {
     r.open("essay.md", ESSAY);
     r.act(ActionId::ToggleEditMode);
     r.act(ActionId::DocumentEnd);
-    r.app.dispatch(Command::MoveCaret {
+    r.send(Command::MoveCaret {
         by: textweaver_app::CaretMove::DocumentEdge,
         direction: textweaver_app::core::Direction::Forward,
         extend: false,
@@ -200,8 +208,7 @@ fn positions_carry_into_the_source_and_back() {
     // Reading: the cursor on "carefully".
     let reading = r.text();
     let at = reading.find("carefully").unwrap();
-    r.app
-        .dispatch(Command::GoTo(textweaver_app::text::GoTo::Char(CharPos(at))));
+    r.send(Command::GoTo(textweaver_app::text::GoTo::Char(CharPos(at))));
     assert_eq!(r.at_cursor(9), "carefully");
     r.act(ActionId::ToggleEditMode);
     assert_eq!(r.at_cursor(9), "carefully");
@@ -211,10 +218,9 @@ fn positions_carry_into_the_source_and_back() {
     assert_eq!(r.at_cursor(9), "carefully");
     let t = r.text();
     let bob = t.find("Bob").unwrap();
-    r.app
-        .dispatch(Command::GoTo(textweaver_app::text::GoTo::Char(CharPos(
-            bob,
-        ))));
+    r.send(Command::GoTo(textweaver_app::text::GoTo::Char(CharPos(
+        bob,
+    ))));
     r.act(ActionId::AddBookmark);
     r.act(ActionId::ToggleEditMode);
     let b = r.app.bookmark_position(0).unwrap();
@@ -222,10 +228,9 @@ fn positions_carry_into_the_source_and_back() {
     assert_eq!(s.doc.slice(CharRange::new(b, b.saturating_add(3))), "Bob");
     // Edit above it, save, and leave: the bookmark stays on Bob.
     let intro = r.text().find("Intro").unwrap();
-    r.app
-        .dispatch(Command::GoTo(textweaver_app::text::GoTo::Char(CharPos(
-            intro,
-        ))));
+    r.send(Command::GoTo(textweaver_app::text::GoTo::Char(CharPos(
+        intro,
+    ))));
     r.type_text("Preface. ");
     r.act(ActionId::Save);
     r.act(ActionId::ToggleEditMode);
@@ -273,8 +278,7 @@ impl Rig {
             .find(needle)
             .unwrap_or_else(|| panic!("{needle:?} in {t:?}"));
         let pos = CharPos(t[..at].chars().count());
-        self.app
-            .dispatch(Command::GoTo(textweaver_app::text::GoTo::Char(pos)));
+        self.send(Command::GoTo(textweaver_app::text::GoTo::Char(pos)));
     }
 
     fn opened(&self) -> Vec<String> {
@@ -293,8 +297,7 @@ impl Rig {
     fn with_library(&mut self) {
         let bib = Self::fixtures().join("sample.bib");
         self.act(ActionId::ImportReferences);
-        self.app
-            .dispatch(Command::Answer(bib.display().to_string()));
+        self.send(Command::Answer(bib.display().to_string()));
         assert!(self.said.any("Imported"), "{:?}", self.said.all());
     }
 }
@@ -310,19 +313,19 @@ fn the_outline_filters_as_you_type_and_jumps() {
     assert_eq!(list_title(&effects), "Outline, 3 headings");
     assert!(r.said.any("You are under Methods."), "{:?}", r.said.all());
     assert_eq!(r.app.list_filter(), Some(""));
-    let effects = r.app.dispatch(Command::FilterList("res".into()));
+    let effects = r.send(Command::FilterList("res".into()));
     assert_eq!(list_items(&effects), ["Results, level 2"]);
     assert_eq!(list_title(&effects), "Outline, 1 of 3 match res");
     assert_eq!(r.app.list_filter(), Some("res"));
-    let effects = r.app.dispatch(Command::FilterList("zzz".into()));
+    let effects = r.send(Command::FilterList("zzz".into()));
     assert!(list_items(&effects).is_empty());
     assert!(
         r.status().contains("No headings match zzz"),
         "{}",
         r.status()
     );
-    r.app.dispatch(Command::FilterList("res".into()));
-    r.app.dispatch(Command::Choose(0));
+    r.send(Command::FilterList("res".into()));
+    r.send(Command::Choose(0));
     assert_eq!(r.at_cursor(7), "Results");
     assert!(r.status().contains("Results"), "{}", r.status());
     assert_eq!(r.app.list_filter(), None);
@@ -331,7 +334,7 @@ fn the_outline_filters_as_you_type_and_jumps() {
     assert_eq!(r.at_cursor(9), "carefully");
     // Escape closes it.
     r.act(ActionId::Outline);
-    r.app.dispatch(Command::Cancel);
+    r.send(Command::Cancel);
     assert_eq!(r.app.list_filter(), None);
 }
 
@@ -367,7 +370,7 @@ fn select_all_delete_words_copy_and_paste() {
             textweaver_app::core::Direction::Forward,
         ),
     ] {
-        r.app.dispatch(Command::MoveCaret {
+        r.send(Command::MoveCaret {
             by,
             direction,
             extend: false,
@@ -384,10 +387,10 @@ fn select_all_delete_words_copy_and_paste() {
     r.act(ActionId::Undo);
     assert_eq!(r.text(), "one two \n");
     // Copy a word, paste it at the end.
-    r.app.dispatch(Command::Select(CharRange::new(4, 7)));
+    r.send(Command::Select(CharRange::new(4, 7)));
     r.act(ActionId::Copy);
     assert_eq!(r.app.take_clipboard().as_deref(), Some("two"));
-    r.app.dispatch(Command::MoveCaret {
+    r.send(Command::MoveCaret {
         by: textweaver_app::CaretMove::LineEdge,
         direction: textweaver_app::core::Direction::Forward,
         extend: false,
@@ -420,11 +423,11 @@ fn citations_are_picked_inserted_checked_and_listed() {
         "{effects:?}"
     );
     assert!(r.app.list_filter().is_some());
-    let effects = r.app.dispatch(Command::FilterList("thermometry".into()));
+    let effects = r.send(Command::FilterList("thermometry".into()));
     let items = list_items(&effects);
     assert_eq!(items.len(), 1, "{items:?}");
     assert!(items[0].contains("Key kucsko2013"), "{items:?}");
-    let effects = r.app.dispatch(Command::Choose(0));
+    let effects = r.send(Command::Choose(0));
     assert!(matches!(
         effects.first(),
         Some(Effect::Prompt {
@@ -433,10 +436,10 @@ fn citations_are_picked_inserted_checked_and_listed() {
         })
     ));
     // A locator it cannot read asks again.
-    let effects = r.app.dispatch(Command::Answer("the intro".into()));
+    let effects = r.send(Command::Answer("the intro".into()));
     assert!(r.said.any("Could not read the locator the intro"));
     assert!(matches!(effects.first(), Some(Effect::Prompt { .. })));
-    r.app.dispatch(Command::Answer("54".into()));
+    r.send(Command::Answer("54".into()));
     assert!(
         r.text().contains("As shown [@kucsko2013, p. 54]."),
         "{}",
@@ -451,9 +454,9 @@ fn citations_are_picked_inserted_checked_and_listed() {
     // Inside that citation a second key joins it.
     r.go("kucsko2013");
     r.act(ActionId::InsertCitation);
-    r.app.dispatch(Command::FilterList("fox".into()));
-    r.app.dispatch(Command::Choose(0));
-    r.app.dispatch(Command::Answer(String::new()));
+    r.send(Command::FilterList("fox".into()));
+    r.send(Command::Choose(0));
+    r.send(Command::Answer(String::new()));
     assert!(
         r.text().contains("[@kucsko2013, p. 54; @dahl1988]"),
         "{}",
@@ -464,7 +467,7 @@ fn citations_are_picked_inserted_checked_and_listed() {
     assert_eq!(r.status(), "1 citation found. Every key is in the library.");
     // The bibliography, at the caret under References.
     r.act(ActionId::DocumentEnd);
-    r.app.dispatch(Command::MoveCaret {
+    r.send(Command::MoveCaret {
         by: textweaver_app::CaretMove::DocumentEdge,
         direction: textweaver_app::core::Direction::Forward,
         extend: false,
@@ -511,7 +514,7 @@ fn a_reference_is_added_by_doi_off_the_ui_thread() {
             ..
         })
     ));
-    r.app.dispatch(Command::Answer(
+    r.send(Command::Answer(
         "https://doi.org/10.1038/nature12373".into(),
     ));
     assert!(r.status().starts_with("Looking up"), "{}", r.status());
@@ -521,7 +524,7 @@ fn a_reference_is_added_by_doi_off_the_ui_thread() {
     assert!(lib.contains("Nanometre-scale thermometry"), "{lib}");
     // A malformed identifier is refused at once.
     r.act(ActionId::AddReference);
-    r.app.dispatch(Command::Answer("not an id".into()));
+    r.send(Command::Answer("not an id".into()));
     assert!(r.app.wait_for_background(Duration::from_secs(1)));
 }
 
@@ -548,12 +551,12 @@ fn exports_go_next_to_the_document_and_offer_to_open() {
         );
         assert!(r.status().ends_with("Open it? y or n."), "{}", r.status());
         assert!(r.app.confirmation_pending());
-        r.app.dispatch(Command::Confirm(Confirm::No));
+        r.send(Command::Confirm(Confirm::No));
     }
     // Yes opens it with the default program.
     r.act(ActionId::ExportHtml);
     r.wait();
-    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    r.send(Command::Confirm(Confirm::Yes));
     assert_eq!(
         r.opened(),
         [path.with_extension("html").display().to_string()]
@@ -564,7 +567,7 @@ fn exports_go_next_to_the_document_and_offer_to_open() {
     r.type_text("Unsaved words. ");
     r.act(ActionId::ExportHtml);
     r.wait();
-    r.app.dispatch(Command::Confirm(Confirm::No));
+    r.send(Command::Confirm(Confirm::No));
     let html = std::fs::read_to_string(path.with_extension("html")).unwrap();
     assert!(html.contains("Unsaved words."), "{html}");
     assert!(r.app.is_dirty());
@@ -623,7 +626,7 @@ fn misspellings_are_found_spelled_suggested_and_learned() {
     assert!(items.contains(&"test".to_owned()), "{items:?}");
     assert_eq!(items.last().map(String::as_str), Some("Leave it as it is"));
     let i = items.iter().position(|x| x == "test").unwrap();
-    r.app.dispatch(Command::Choose(i));
+    r.send(Command::Choose(i));
     assert!(
         r.text().starts_with("This is a test of the sytem."),
         "{}",
@@ -640,7 +643,7 @@ fn misspellings_are_found_spelled_suggested_and_learned() {
         .iter()
         .position(|x| x.starts_with("Add Qwertyson"))
         .unwrap();
-    r.app.dispatch(Command::Choose(add));
+    r.send(Command::Choose(add));
     let words = std::fs::read_to_string(r.paths.data_dir.join("words.txt")).unwrap();
     assert_eq!(words, "qwertyson\n");
     r.act(ActionId::PreviousMisspelling);
@@ -736,7 +739,7 @@ fn links_open_local_files_and_come_back() {
         r.status(),
         "Web link: https://example.org. Open it? y or n."
     );
-    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    r.send(Command::Confirm(Confirm::Yes));
     assert_eq!(r.opened(), ["https://example.org"]);
     // A wiki link finds b.md by name.
     r.go("b.");
@@ -817,8 +820,7 @@ fn notes_export_as_a_study_sheet_grouped_by_heading() {
     let path = r.open("essay.md", ESSAY);
     r.go("We measured");
     r.act(ActionId::AddNote);
-    r.app
-        .dispatch(Command::Answer("Check the method #exam".into()));
+    r.send(Command::Answer("Check the method #exam".into()));
     r.go("Intro");
     r.act(ActionId::HighlightSelection);
     r.act(ActionId::ExportStudySheet);
@@ -843,7 +845,7 @@ fn notes_export_as_a_study_sheet_grouped_by_heading() {
         "{}",
         r.status()
     );
-    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    r.send(Command::Confirm(Confirm::Yes));
     assert_eq!(r.opened(), [out.display().to_string()]);
 }
 
@@ -942,8 +944,8 @@ fn replace_one_at_a_time_with_skip_case_and_all() {
     r.open("cats.md", "cat Cat cat cat dog\n");
     r.act(ActionId::ToggleEditMode);
     r.act(ActionId::Replace);
-    r.app.dispatch(Command::Answer("cat".into()));
-    let effects = r.app.dispatch(Command::Answer("bird".into()));
+    r.send(Command::Answer("cat".into()));
+    let effects = r.send(Command::Answer("bird".into()));
     assert_eq!(
         list_title(&effects),
         "Match 1 of 4, line 1: cat Cat cat cat dog"
@@ -959,10 +961,10 @@ fn replace_one_at_a_time_with_skip_case_and_all() {
         ]
     );
     // r: replace this one.
-    r.app.dispatch(Command::Choose(0));
+    r.send(Command::Choose(0));
     assert_eq!(r.text(), "bird Cat cat cat dog\n");
     // c: match case; "Cat" no longer matches.
-    let effects = r.app.dispatch(Command::Choose(3));
+    let effects = r.send(Command::Choose(3));
     assert!(
         r.said.any("Match case on. 2 matches."),
         "{:?}",
@@ -973,8 +975,8 @@ fn replace_one_at_a_time_with_skip_case_and_all() {
         "{effects:?}"
     );
     // s: skip, then a: all the rest.
-    r.app.dispatch(Command::Choose(1));
-    r.app.dispatch(Command::Choose(2));
+    r.send(Command::Choose(1));
+    r.send(Command::Choose(2));
     assert_eq!(r.text(), "bird Cat cat bird dog\n");
     assert_eq!(r.status(), "Replaced 2, skipped 1.");
     // Undo takes back the last step only.
@@ -982,9 +984,9 @@ fn replace_one_at_a_time_with_skip_case_and_all() {
     assert_eq!(r.text(), "bird Cat cat cat dog\n");
     // Escape stops with the counts.
     r.act(ActionId::Replace);
-    r.app.dispatch(Command::Answer("dog".into()));
-    r.app.dispatch(Command::Answer("cow".into()));
-    r.app.dispatch(Command::Cancel);
+    r.send(Command::Answer("dog".into()));
+    r.send(Command::Answer("cow".into()));
+    r.send(Command::Cancel);
     assert_eq!(r.status(), "Stopped. Replaced 0, skipped 0.");
 }
 
@@ -1005,7 +1007,7 @@ fn a_new_document_from_a_template_has_front_matter_and_references() {
         list_items(&effects),
         ["Essay", "Report", "Notes", "Lab report, your template"]
     );
-    let effects = r.app.dispatch(Command::Choose(0));
+    let effects = r.send(Command::Choose(0));
     assert!(matches!(
         effects.first(),
         Some(Effect::Prompt {
@@ -1013,7 +1015,7 @@ fn a_new_document_from_a_template_has_front_matter_and_references() {
             ..
         })
     ));
-    r.app.dispatch(Command::Answer("On Bees".into()));
+    r.send(Command::Answer("On Bees".into()));
     assert_eq!(r.app.mode(), Mode::Edit);
     assert!(r.app.is_dirty());
     let date = textweaver_app::local_date();
@@ -1045,16 +1047,16 @@ fn a_new_document_from_a_template_has_front_matter_and_references() {
     let effects = r.act(ActionId::Outline);
     assert_eq!(list_items(&effects).len(), 5);
     // A user template, while editing: asks about the unsaved one first.
-    r.app.dispatch(Command::Cancel);
+    r.send(Command::Cancel);
     let effects = r.act(ActionId::NewFromTemplate);
     assert!(
         list_title(&effects).starts_with("Save changes to"),
         "{effects:?}"
     );
-    r.app.dispatch(Command::Choose(1));
-    let effects = r.app.dispatch(Command::Choose(3));
+    r.send(Command::Choose(1));
+    let effects = r.send(Command::Choose(3));
     assert!(matches!(effects.first(), Some(Effect::Prompt { .. })));
-    r.app.dispatch(Command::Answer(String::new()));
+    r.send(Command::Answer(String::new()));
     assert!(
         r.text().starts_with(&format!("# Untitled\n\nBy , {date}.")),
         "{}",
@@ -1084,7 +1086,7 @@ fn large_markdown_is_parsed_in_the_background_and_after_typing() {
     r.act(ActionId::SkipNextHeading);
     assert_eq!(r.at_cursor(11), "Section 501");
     // Typing a heading: found at once by the next heading command.
-    r.app.dispatch(Command::MoveCaret {
+    r.send(Command::MoveCaret {
         by: textweaver_app::CaretMove::DocumentEdge,
         direction: textweaver_app::core::Direction::Backward,
         extend: false,

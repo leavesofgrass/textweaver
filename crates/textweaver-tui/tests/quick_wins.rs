@@ -115,6 +115,11 @@ fn lists_jump_by_first_letter_and_the_save_list_takes_s_d_c() {
     assert!(tui.list().is_some());
     tui.handle_key(ch('s'));
     assert!(tui.list().is_none());
+    // The save is written by the background writer; the next tick leaves
+    // edit mode.
+    tui.app_mut()
+        .flush_writes(std::time::Duration::from_secs(10));
+    tui.tick();
     assert!(!tui.app().is_editing());
     assert_eq!(std::fs::read_to_string(&file).unwrap(), "XStart.\n");
     // d discards, c cancels.

@@ -73,7 +73,15 @@ fn rig(text: &str) -> Rig {
 
 impl Rig {
     fn act(&mut self, a: ActionId) -> Vec<Effect> {
-        self.app.dispatch(Command::Action(a))
+        let mut effects = self.app.dispatch(Command::Action(a));
+        // The library is scanned on a background thread; its list opens on
+        // a tick, as in the event loop.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+        while self.app.library_scanning() && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(2));
+            effects.extend(self.app.tick(std::time::Instant::now()));
+        }
+        effects
     }
     fn go(&mut self, pos: CharPos) {
         self.app.dispatch(Command::GoTo(GoTo::Char(pos)));

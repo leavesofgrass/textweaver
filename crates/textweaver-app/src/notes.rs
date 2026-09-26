@@ -268,8 +268,13 @@ impl App {
         let s = self.session.as_ref()?;
         let n = s.notes.get(i)?;
         let line = text_util::line_of(&s.doc, n.range.start) + 1;
+        let lost = if crate::relocate::is_marked(&n.extra) {
+            " Not found after the file changed."
+        } else {
+            ""
+        };
         Some(format!(
-            "{}, line {line}. On: {}",
+            "{}, line {line}. On: {}{lost}",
             n.note,
             collapse(&n.anchor, 60)
         ))
@@ -468,8 +473,13 @@ impl App {
             .iter()
             .map(|h| {
                 let line = text_util::line_of(&s.doc, h.range.start) + 1;
+                let lost = if crate::relocate::is_marked(&h.extra) {
+                    ", not found after the file changed"
+                } else {
+                    ""
+                };
                 format!(
-                    "{}, line {line}, {}",
+                    "{}, line {line}, {}{lost}",
                     preview(&s.doc, h.range, 10),
                     color_name(&h.color)
                 )

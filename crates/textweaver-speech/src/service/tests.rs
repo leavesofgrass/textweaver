@@ -1581,6 +1581,108 @@ fn the_voice_list_is_asked_on_the_speech_thread() {
     service.shutdown();
 }
 
+// ---- voices listed in the background --------------------------------------------
+
+/// A backend whose voice list arrives later (as SAPI's does).
+struct SlowVoices(RecordingBackend, crate::voices::VoiceCache);
+
+impl SpeechBackend for SlowVoices {
+    fn id(&self) -> BackendId {
+        "slow-voices"
+    }
+    fn capabilities(&self) -> Caps {
+        self.0.capabilities()
+    }
+    fn voices(&self) -> Result<Vec<crate::Voice>, SpeechError> {
+        panic!("the service must not list voices on the speech thread");
+    }
+    fn set_params(&mut self, params: &VoiceParams) -> Result<(), SpeechError> {
+        self.0.set_params(params)
+    }
+    fn effective_wpm(&self) -> u16 {
+        self.0.effective_wpm()
+    }
+    fn speak(&mut self, u: &Utterance, sink: &mut dyn EventSink) -> Result<(), SpeechError> {
+        self.0.speak(u, sink)
+    }
+    fn poll(&mut self, sink: &mut dyn EventSink) {
+        self.0.poll(sink);
+    }
+    fn stop(&mut self) {
+        self.0.stop();
+    }
+    fn voice_cache(&self) -> Option<crate::voices::VoiceCache> {
+        Some(self.1.clone())
+    }
+}
+
+#[test]
+fn voices_never_wait_and_a_name_asked_while_loading_resolves_when_they_arrive() {
+    let (b, rec) = RecordingBackend::with(RecordingMode::Instant, RecordingBackend::DEFAULT_CAPS);
+    let cache = crate::voices::VoiceCache::loading();
+    let backend_cache = cache.clone();
+    let service = SpeechService::spawn(
+        Box::new(move || Ok(Box::new(SlowVoices(b, backend_cache)) as Box<dyn SpeechBackend>)),
+        plain(),
+    )
+    .unwrap();
+    // No waiting: the list is loading, and says so.
+    let t = std::time::Instant::now();
+    assert_eq!(service.voice_list(), crate::VoiceList::Loading);
+    assert!(
+        service
+            .voices()
+            .unwrap_err()
+            .to_string()
+            .contains("still loading")
+    );
+    assert!(t.elapsed() < Duration::from_millis(100));
+    // A voice asked for by name goes through as typed for now.
+    service.set_voice(Some("Beta".into()));
+    assert!(service.sync());
+    assert_eq!(rec.params().voice.as_deref(), Some("Beta"));
+    // The list arrives: the name resolves to the voice's id.
+    cache.set(Ok(vec![
+        Voice {
+            id: "a".into(),
+            name: "Alpha".into(),
+            ..Voice::default()
+        },
+        Voice {
+            id: "b".into(),
+            name: "Beta".into(),
+            ..Voice::default()
+        },
+    ]));
+    assert!(service.sync());
+    assert_eq!(rec.params().voice.as_deref(), Some("b"));
+    assert_eq!(service.voices().unwrap().len(), 2);
+    assert!(
+        rec.calls()
+            .iter()
+            .filter(|c| matches!(c, Call::SetParams(_)))
+            .count()
+            >= 2
+    );
+    service.shutdown();
+}
+
+#[test]
+fn a_failed_listing_is_kept() {
+    let (b, _rec) = RecordingBackend::with(RecordingMode::Instant, RecordingBackend::DEFAULT_CAPS);
+    let cache = crate::voices::VoiceCache::ready(Err(SpeechError::Engine("no registry".into())));
+    let service = SpeechService::spawn(
+        Box::new(move || Ok(Box::new(SlowVoices(b, cache)) as Box<dyn SpeechBackend>)),
+        plain(),
+    )
+    .unwrap();
+    assert_eq!(
+        service.voice_list(),
+        crate::VoiceList::Failed(SpeechError::Engine("no registry".into()))
+    );
+    service.shutdown();
+}
+
 // ---- a panic on the speech thread ---------------------------------------------
 
 /// A backend with a bug: `speak` panics on the text "boom".

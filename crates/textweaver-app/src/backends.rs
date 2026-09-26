@@ -76,12 +76,12 @@ pub fn speech_registry_for(settings: &Settings) -> BackendRegistry {
     let mut registry = BackendRegistry::with_builtins();
     let eci = eci_config(settings);
     let probe_config = eci.clone();
-    registry.register(
-        textweaver_eci::backend_info(),
-        move || {
-            let d = textweaver_eci::discovery::diagnose(&probe_config);
-            d.library.is_ok() && !d.hosts.is_empty()
-        },
+    // Each engine is looked for at most once per process and configuration
+    // (the registry caches the probe); describing it probes nothing.
+    registry.register_cached(
+        textweaver_eci::backend_description(),
+        format!("{eci:?}"),
+        move || textweaver_eci::probe(&probe_config),
         move || {
             textweaver_eci::EciBackend::new(eci.clone())
                 .map(|b| Box::new(b) as Box<dyn SpeechBackend>)
@@ -113,18 +113,21 @@ pub fn speech_registry_for(settings: &Settings) -> BackendRegistry {
     #[cfg(windows)]
     {
         let sapi = sapi_config(settings);
-        registry.register(
-            textweaver_sapi::backend_info(),
-            || textweaver_sapi::backend_info().available,
+        let probe = sapi.clone();
+        registry.register_cached(
+            textweaver_sapi::backend_description(),
+            format!("{sapi:?}"),
+            move || textweaver_sapi::probe(&probe),
             move || (textweaver_sapi::factory(sapi.clone()))(),
         );
     }
     // DECtalk (ADR-0021): only a copy the user installed, below SAPI.
     let dectalk = dectalk_config(settings);
     let probe = dectalk.clone();
-    registry.register(
-        textweaver_dectalk::backend_info_for(&dectalk),
-        move || textweaver_dectalk::backend_info_for(&probe).available,
+    registry.register_cached(
+        textweaver_dectalk::backend_description(),
+        format!("{dectalk:?}"),
+        move || textweaver_dectalk::probe(&probe),
         move || (textweaver_dectalk::factory(dectalk.clone()))(),
     );
     registry

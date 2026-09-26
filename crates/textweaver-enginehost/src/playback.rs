@@ -204,7 +204,10 @@ impl<W> Playback<W> {
         self.sample_rate = hz;
     }
 
-    /// Opens the output at the current sample rate, unless it is open.
+    /// Opens the output at the current sample rate, unless it is open. The
+    /// device opens on its own thread: this returns at once, audio waits in
+    /// the feed meanwhile, and a device that cannot be opened fails what is
+    /// queued (on the next [`emit`](Self::emit)).
     pub fn ensure_player(&mut self) -> Result<(), SpeechError> {
         let rate = self.sample_rate;
         if self.player.as_ref().is_some_and(|(_, r)| *r == rate) {
@@ -444,6 +447,25 @@ impl<W> Playback<W> {
         hosts
     }
 
+    /// The output could not be opened: everything queued ends with `why`
+    /// as its error (nothing can play it), and the next
+    /// [`ensure_player`](Self::ensure_player) tries again.
+    fn fail_queued(&mut self, why: &str) {
+        for a in self.active.iter_mut() {
+            a.done = true;
+            a.failed.get_or_insert_with(|| why.to_owned());
+            a.start.get_or_insert(0);
+        }
+        self.feed.clear();
+        // Every utterance counts as played to its end.
+        let played = self.feed.consumed();
+        for a in self.active.iter_mut() {
+            a.start = Some(played);
+            a.total = 0;
+            a.waiting.clear();
+        }
+    }
+
     /// How many times a stalled output was reopened ([`DEVICE_STALL`]).
     pub fn device_reopens(&self) -> u32 {
         self.stall.reopens
@@ -452,9 +474,17 @@ impl<W> Playback<W> {
     /// Reopens an open output whose clock has not moved for the stall
     /// wait while audio waits and nothing is paused.
     fn watch_output(&mut self) {
+        if let Some(why) = self.player.as_ref().and_then(|(p, _)| p.failure()) {
+            log::warn!("{}: {why}", self.backend);
+            self.player = None;
+            self.fail_queued(&why);
+            return;
+        }
         let consumed = self.feed.consumed();
-        let waiting =
-            self.player.is_some() && self.feed.pushed() > consumed && !self.feed.is_paused();
+        // A device still opening is not stalled.
+        let waiting = self.player.as_ref().is_some_and(|(p, _)| p.is_open())
+            && self.feed.pushed() > consumed
+            && !self.feed.is_paused();
         if !waiting {
             self.stall.seen = None;
             self.stall.wait = None;

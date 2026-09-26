@@ -68,6 +68,12 @@ impl Harness {
 
     fn press(&mut self, k: KeyEvent) {
         self.tui.handle_key(k);
+        // As the event loop does: the background writer's results (a save,
+        // a bookmark) are applied on the next tick.
+        self.tui
+            .app_mut()
+            .flush_writes(std::time::Duration::from_secs(10));
+        self.tui.tick();
         self.draw();
     }
 

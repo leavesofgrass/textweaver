@@ -366,6 +366,10 @@ fn scripted_session_with_restore() {
 
     // A bookmark here.
     h.press(ch('m'));
+    // "Set" is said once the background writer saved it, on the next tick.
+    h.tui.app_mut().flush_writes(Duration::from_secs(10));
+    h.tui.tick();
+    h.draw();
     assert!(h.status().starts_with("Bookmark mark1 set at"));
 
     // The command palette runs a command by name.

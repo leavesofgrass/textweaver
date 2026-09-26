@@ -119,6 +119,8 @@ fn positions_and_bookmarks_are_saved_with_anchors() {
     act(&mut app, ActionId::AddBookmark);
     app.dispatch(Command::GoTo(GoTo::Char(CharPos(6))));
     app.save_position().unwrap();
+    // Written by the background writer.
+    app.wait_for_writes();
     let state = StateStore::new(paths.state_dir())
         .load(&DocKey::for_path(&file))
         .unwrap();

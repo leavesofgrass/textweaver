@@ -10,10 +10,11 @@ use textweaver_a11y::Verbosity;
 use textweaver_core::{CharPos, CharRange, Direction, Unit};
 use textweaver_speech::Earcon;
 use textweaver_store::Bookmark;
-use textweaver_text::{NavOptions, SearchQuery, find_all, navigate};
+use textweaver_text::{NavOptions, SearchQuery, navigate};
 
 use crate::app::{App, FindState, ListKind};
 use crate::command::{Effect, PromptPurpose};
+use crate::find_scan;
 use crate::nav::ReadAfter;
 use crate::text_util::{self, preview};
 
@@ -39,21 +40,28 @@ impl App {
         let Some(s) = self.session.as_mut() else {
             return;
         };
-        let hits = match find_all(&s.doc, &query) {
-            Ok(h) => h,
+        let cursor = s.cursor;
+        let found = match find_scan::collect_around(
+            s.doc.text(),
+            &query,
+            cursor,
+            find_scan::MAX_STORED_HITS,
+        ) {
+            Ok(a) => a,
             Err(e) => {
                 self.error(&format!("Cannot search: {e}."));
                 return;
             }
         };
-        let cursor = s.cursor;
-        let first = hits.iter().position(|h| h.start >= cursor);
+        let first = found.hits.iter().position(|h| h.start >= cursor);
+        let count = found.total;
         s.find = Some(FindState {
             query,
-            hits,
+            hits: found.hits,
             current: None,
+            total: found.total,
+            first_index: found.first_index,
         });
-        let count = s.find.as_ref().map_or(0, |f| f.hits.len());
         if count == 0 {
             self.speech.earcon(Earcon::Error);
             self.tell(&format!("No matches for {pattern}."));
@@ -61,7 +69,29 @@ impl App {
         }
         match first {
             Some(i) => self.go_to_hit(i, None),
-            None => self.go_to_hit(0, Some(Direction::Forward)),
+            None => {
+                self.refill_hits(CharPos::ZERO);
+                self.go_to_hit(0, Some(Direction::Forward));
+            }
+        }
+    }
+
+    /// Searches again, keeping the matches around `pos` (stepping past the
+    /// matches kept, or wrapping to the other end).
+    fn refill_hits(&mut self, pos: CharPos) {
+        let Some(s) = self.session.as_mut() else {
+            return;
+        };
+        let Some(f) = s.find.as_mut() else {
+            return;
+        };
+        if let Ok(a) =
+            find_scan::collect_around(s.doc.text(), &f.query, pos, find_scan::MAX_STORED_HITS)
+        {
+            f.hits = a.hits;
+            f.total = a.total;
+            f.first_index = a.first_index;
+            f.current = None;
         }
     }
 
@@ -73,24 +103,75 @@ impl App {
         let Some(f) = &s.find else {
             return self.prompt(PromptPurpose::Find);
         };
-        if f.hits.is_empty() {
+        if f.total == 0 || f.hits.is_empty() {
             let msg = format!("No matches for {}.", f.query.pattern);
             self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let cursor = s.cursor;
-        let (i, wrapped) = match dir {
-            Direction::Forward => match f.hits.iter().position(|h| h.start > cursor) {
-                Some(i) => (i, None),
-                None => (0, Some(dir)),
-            },
-            Direction::Backward => match f.hits.iter().rposition(|h| h.start < cursor) {
-                Some(i) => (i, None),
-                None => (f.hits.len() - 1, Some(dir)),
-            },
+        let kept_before = f.first_index > 0;
+        let kept_after = f.first_index + f.hits.len() < f.total;
+        let step = match dir {
+            Direction::Forward => f.hits.iter().position(|h| h.start > cursor),
+            Direction::Backward => f.hits.iter().rposition(|h| h.start < cursor),
         };
-        self.go_to_hit(i, wrapped);
+        // Matches may lie beyond the ones kept: search again around the
+        // cursor before wrapping.
+        let step = match (dir, step) {
+            (_, Some(i)) => Some(i),
+            (Direction::Forward, None) if kept_after || kept_before => {
+                self.refill_hits(cursor.saturating_add(1));
+                self.hit_after(cursor)
+            }
+            (Direction::Backward, None) if kept_after || kept_before => {
+                self.refill_hits(cursor);
+                self.hit_before(cursor)
+            }
+            (_, None) => None,
+        };
+        let (i, wrapped) = match (dir, step) {
+            (_, Some(i)) => (Some(i), None),
+            // Wrap to the other end of the document.
+            (Direction::Forward, None) => {
+                if self.kept_window().is_some_and(|(before, _)| before) {
+                    self.refill_hits(CharPos::ZERO);
+                }
+                (Some(0), Some(dir))
+            }
+            (Direction::Backward, None) => {
+                if self.kept_window().is_some_and(|(_, after)| after) {
+                    self.refill_hits(CharPos(usize::MAX));
+                }
+                let n = self
+                    .session
+                    .as_ref()
+                    .and_then(|s| s.find.as_ref())
+                    .map_or(0, |f| f.hits.len());
+                (n.checked_sub(1), Some(dir))
+            }
+        };
+        if let Some(i) = i {
+            self.go_to_hit(i, wrapped);
+        }
         vec![Effect::Redraw]
+    }
+
+    /// Whether matches exist before and after the ones kept.
+    fn kept_window(&self) -> Option<(bool, bool)> {
+        let f = self.session.as_ref()?.find.as_ref()?;
+        Some((f.first_index > 0, f.first_index + f.hits.len() < f.total))
+    }
+
+    /// Index into the kept hits of the first match after `pos`.
+    fn hit_after(&self, pos: CharPos) -> Option<usize> {
+        let f = self.session.as_ref()?.find.as_ref()?;
+        f.hits.iter().position(|h| h.start > pos)
+    }
+
+    /// Index into the kept hits of the last match before `pos`.
+    fn hit_before(&self, pos: CharPos) -> Option<usize> {
+        let f = self.session.as_ref()?.find.as_ref()?;
+        f.hits.iter().rposition(|h| h.start < pos)
     }
 
     fn go_to_hit(&mut self, i: usize, wrapped: Option<Direction>) {
@@ -104,10 +185,11 @@ impl App {
             return;
         };
         f.current = Some(i);
-        let n = f.hits.len();
+        let n = f.total;
+        let number = f.first_index + i + 1;
         let line = text_util::line_of(&s.doc, hit.start);
         let context = preview(&s.doc, text_util::line_range(&s.doc, line), 12);
-        let label = format!("Match {} of {n}", i + 1);
+        let label = format!("Match {number} of {n}");
         let mut msg = self.nav_message(Some(&label), hit.start, &context);
         if let Some(dir) = wrapped {
             self.speech.earcon(Earcon::Wrap);
@@ -146,19 +228,18 @@ impl App {
             pct,
             ts: textweaver_store::now_ts(),
             anchor: Some(text_util::anchor_at(&s.doc, pos)),
+            not_found: false,
         });
         s.bookmarks.sort_by_key(|b| b.pos);
-        match self.save_position() {
-            Ok(()) => self.tell(&format!("Bookmark {name} set at {pct} percent.")),
-            Err(e) => {
-                // Kept for this session and saved again with the position;
-                // the user must not believe it is safe on disk.
-                log::warn!("cannot save bookmarks: {e}");
-                self.speech.earcon(Earcon::Error);
-                self.error(&format!(
-                    "Bookmark {name} is set for now, but could not be saved: {e}."
-                ));
-            }
+        // Saved on the writer; "set" is said once the file is written (or
+        // why it could not be), on the next tick. Without a place to save
+        // (or while editing), it is set at once.
+        let note = crate::writer::StateNote::Bookmark {
+            name: name.clone(),
+            pct,
+        };
+        if !self.save_state(note) {
+            self.tell(&format!("Bookmark {name} set at {pct} percent."));
         }
     }
 
@@ -188,8 +269,13 @@ impl App {
                 let line = text_util::line_of(&s.doc, b.pos);
                 let end = text_util::line_range(&s.doc, line).end.max(b.pos);
                 let text = preview(&s.doc, CharRange::new(b.pos, end), 6);
+                let lost = if b.not_found {
+                    " (not found after the file changed)"
+                } else {
+                    ""
+                };
                 format!(
-                    "{}, line {}, {} percent: {text}",
+                    "{}{lost}, line {}, {} percent: {text}",
                     b.name,
                     line + 1,
                     text_util::percent(&s.doc, b.pos)

@@ -588,3 +588,81 @@ fn a_host_stuck_in_synthesis_exits_when_its_input_closes() {
         }
     }
 }
+
+/// Crashes the backend's host, so the next request starts a new one.
+fn crash(b: &mut DectalkBackend, rec: &mut Rec) {
+    let bad = utt("__crash__", 90, 0);
+    b.speak(&bad, rec).unwrap();
+    assert!(pump(b, rec, Duration::from_secs(10), finished(bad.id)));
+}
+
+#[test]
+fn a_restart_starts_in_poll_and_stop_and_pause_work_meanwhile() {
+    // Every start of this host takes two seconds; the first one waits.
+    let mut b = DectalkBackend::new(DectalkConfig {
+        host_args: vec!["--start-delay-ms".into(), "2000".into()],
+        ..config(8.0)
+    })
+    .unwrap();
+    let mut rec = Rec::default();
+    crash(&mut b, &mut rec);
+    // `speak` returns at once; the request waits for the host in `poll`.
+    let u = utt("stopped while starting", 91, 0);
+    let t = Instant::now();
+    b.speak(&u, &mut rec).unwrap();
+    assert!(
+        t.elapsed() < Duration::from_millis(1000),
+        "{:?}",
+        t.elapsed()
+    );
+    let t = Instant::now();
+    b.stop();
+    b.poll(&mut rec);
+    assert!(t.elapsed() < Duration::from_millis(500));
+    assert_eq!(rec.of(u.id), [RawEvent::Cancelled]);
+    // Pause while starting: silent until resumed.
+    let p = utt("paused while starting", 92, 0);
+    b.speak(&p, &mut rec).unwrap();
+    b.pause().unwrap();
+    assert!(!pump(&mut b, &mut rec, Duration::from_millis(3500), |r| r
+        .has(p.id, |e| *e == RawEvent::Started)));
+    b.resume().unwrap();
+    assert!(pump(
+        &mut b,
+        &mut rec,
+        Duration::from_secs(10),
+        finished(p.id)
+    ));
+    assert_eq!(rec.of(p.id).last(), Some(&RawEvent::Finished));
+    assert_eq!(rec.words(p.id).len(), 3);
+    assert_eq!(rec.of(u.id).len(), 1, "the stopped one said nothing more");
+}
+
+#[test]
+fn long_utterances_are_spoken_whole_across_sentences() {
+    // Synthesized a sentence at a time in the host; every word is marked
+    // once, in order, with rising offsets.
+    let mut b = backend(8.0);
+    let mut rec = Rec::default();
+    let text = "First sentence here. Second one! Third? And the last one.";
+    let u = utt(text, 95, 0);
+    b.speak(&u, &mut rec).unwrap();
+    assert!(pump(
+        &mut b,
+        &mut rec,
+        Duration::from_secs(10),
+        finished(u.id)
+    ));
+    let words = rec.words(u.id);
+    let spoken: Vec<&str> = words
+        .iter()
+        .map(|(r, _)| &text[r.start as usize..r.end as usize])
+        .collect();
+    assert_eq!(
+        spoken,
+        [
+            "First", "sentence", "here", "Second", "one", "Third", "And", "the", "last", "one"
+        ]
+    );
+    assert!(words.windows(2).all(|w| w[0].1 < w[1].1), "{words:?}");
+}

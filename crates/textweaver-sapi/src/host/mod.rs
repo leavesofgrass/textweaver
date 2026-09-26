@@ -101,6 +101,8 @@ struct Args {
     list: bool,
     category: String,
     arch: Arch,
+    /// Fake engine only (tests): wait this long before starting.
+    start_delay_ms: u64,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -109,6 +111,7 @@ fn parse_args() -> Result<Args, String> {
         list: false,
         category: CATEGORY_SAPI.to_owned(),
         arch: Arch::native(),
+        start_delay_ms: 0,
     };
     let mut it = std::env::args().skip(1);
     while let Some(arg) = it.next() {
@@ -119,6 +122,10 @@ fn parse_args() -> Result<Args, String> {
                 other => return Err(format!("unknown engine {other:?}")),
             },
             "--list-voices" => a.list = true,
+            "--start-delay-ms" => {
+                let v = it.next().ok_or("--start-delay-ms needs a number")?;
+                a.start_delay_ms = v.parse().map_err(|_| format!("bad delay {v}"))?;
+            }
             "--report-arch" => {
                 a.arch = it
                     .next()
@@ -154,6 +161,7 @@ pub fn main() -> ExitCode {
         }
     };
     let engine: Result<Box<dyn Engine>, String> = if args.fake {
+        std::thread::sleep(std::time::Duration::from_millis(args.start_delay_ms));
         Ok(Box::new(FakeEngine {
             arch: args.arch,
             ..FakeEngine::default()

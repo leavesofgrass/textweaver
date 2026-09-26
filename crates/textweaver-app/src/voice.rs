@@ -39,12 +39,19 @@ fn favourite_rank(favourites: &[String], id: &str, name: &str) -> Option<usize> 
 
 impl App {
     /// Choose voice (Alt+V): lists the engine's voices; Enter selects one
-    /// and speaks a sample. The list comes from the speech thread.
+    /// and speaks a sample. The list was made once when the engine started
+    /// and is read without waiting; while it is still being made, this
+    /// says so and the list opens when it arrives ([`voices_tick`](Self::voices_tick)).
     pub(crate) fn choose_voice(&mut self) -> Vec<crate::command::Effect> {
         use crate::command::Effect;
-        let voices = match self.speech.voices() {
-            Ok(v) => v,
-            Err(e) => {
+        let voices = match self.speech.voice_list() {
+            textweaver_speech::VoiceList::Ready(v) => v,
+            textweaver_speech::VoiceList::Loading => {
+                self.voices_pending = true;
+                self.tell("The voices are still loading. The list opens when they are ready.");
+                return vec![Effect::Redraw];
+            }
+            textweaver_speech::VoiceList::Failed(e) => {
                 self.error(&format!("Could not list the voices: {e}."));
                 return vec![Effect::Redraw];
             }
@@ -75,6 +82,23 @@ impl App {
             title: "Choose a voice".into(),
             items,
         }]
+    }
+
+    /// Opens the voice list asked for while the voices were loading, once
+    /// they arrive (from [`App::tick`]); if something else is open by
+    /// then, says they are ready instead.
+    pub(crate) fn voices_tick(&mut self) -> Vec<crate::command::Effect> {
+        if !self.voices_pending || self.speech.voice_list().is_loading() {
+            return Vec::new();
+        }
+        self.voices_pending = false;
+        if self.list.is_some() || self.mode.is_prompt() || self.confirmation_pending() {
+            let keys =
+                crate::help::chords_text(&self.keymap, textweaver_keymap::ActionId::ChooseVoice);
+            self.tell(&format!("The voices are ready. {keys} lists them."));
+            return vec![crate::command::Effect::Redraw];
+        }
+        self.choose_voice()
     }
 
     fn voice_items(&self, voices: &[textweaver_speech::Voice]) -> Vec<String> {

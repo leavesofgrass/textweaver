@@ -166,6 +166,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Quieter | `Shift+F7`, `9` (browse) | `Shift+F7`, `9` (browse) | `volume_down` |
 | Cycle the speed presets (skim, normal, study, slow) | `F8` | `F8` | `cycle_speed_preset` |
 | Choose a voice | `Alt+V` | `Ctrl+Shift+V` | `choose_voice` |
+| Restart speech with the current settings (after the speech engine stopped working) | `Shift+F8` | `Shift+F8` | `restart_speech` |
 | Cycle how much textweaver says: low, normal, high | `Alt+Shift+V` | `Alt+Shift+V` | `cycle_verbosity` |
 | Cycle how much punctuation is spoken: none, some, all | `Alt+Shift+N` | `Alt+Shift+N` | `cycle_punctuation` |
 
