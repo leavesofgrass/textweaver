@@ -2646,6 +2646,7 @@ dependencies = [
  "log",
  "serde",
  "serde_json",
+ "tempfile",
  "textweaver-core",
  "textweaver-speech",
  "textweaver-text",

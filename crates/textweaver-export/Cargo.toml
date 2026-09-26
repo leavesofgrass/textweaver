@@ -9,6 +9,11 @@ repository.workspace = true
 authors.workspace = true
 publish.workspace = true
 
+[features]
+default = []
+# Passed through so the container can export with espeak-ng in tests.
+espeak = ["textweaver-speech/espeak"]
+
 [dependencies]
 textweaver-core.workspace = true
 textweaver-text.workspace = true
@@ -17,6 +22,7 @@ thiserror.workspace = true
 log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true
