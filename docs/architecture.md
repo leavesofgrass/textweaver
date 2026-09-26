@@ -211,5 +211,6 @@ The GUI spike sends announcements to the screen reader as UI Automation notifica
 - [Speech pipeline, step by step](site/speech-pipeline.html): the data flow above, one stage at a time, with the offset map example.
 - [CONTRIBUTING.md](../CONTRIBUTING.md): building, testing, and sending changes.
 - [Implementation plan](plan.md): the original design, and the Phase 0 amendments.
+- [Roadmap](roadmap.md): the planned changes to this architecture, including the GUI and the stability work.
 - [ADR-0001: Workspace and dependencies](adr/0001-workspace-and-dependencies.md), [ADR-0003: Speech threading](adr/0003-speech-threading-and-event-timing.md), and [ADR-0005: Narration and the OffsetMap](adr/0005-narration-and-offset-map.md): the three decisions this guide leans on most.
 - [Documentation index](README.md)
