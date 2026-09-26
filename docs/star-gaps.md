@@ -4,6 +4,17 @@ This inventory was made on 2026-09-25. It lists Star features (D:\star) that `do
 
 Some of the areas were already covered at the time: themes (Agent Q); math (O); citations (P); batch conversion and folder watching (A2, L); braille output (M); and large-document paging, which plan §6.1 handles by design.
 
+> **Status update (Saturday, September 26, 2026).** Since this list was made, these items were done, fully or in part:
+>
+> - Reading aids: RSVP, the reading ruler and current line, text spacing, and bionic reading are in the terminal reader ([reading-aids.md](reading-aids.md), [ADR-0022](adr/0022-reading-aids.md)). Syllable splitting and the difficult-word overlay are built in the `textweaver-aids` library, with SCOWL word levels, but the reader does not show them yet.
+> - Reading fonts: Atkinson Hyperlegible Next and Mono and OpenDyslexic are bundled; Lexend is offered for download after asking. Font choice is in the GUI spike only.
+> - Better PDF reading order: running headers, footers, and page numbers are removed, and columns are found ([ADR-0010](adr/0010-pdf-loader.md)). Captions are not marked by pattern.
+> - Settings profiles: settings can be exported and imported as JSON ([settings.md](settings.md)); named profiles are not done.
+> - Crash log: textweaver writes a rotating log file ([troubleshooting.md](troubleshooting.md)).
+> - Accessible publishing: `tw convert` has a large-print PDF option and accessible HTML, EPUB, Word, and PDF output ([converting.md](converting.md)); Star's stylesheets and Word templates are not ported.
+>
+> Everything else below is still not done.
+
 ## Core: plan these next
 
 - **Reading aids.** Star's wiki page "Accessibility and WCAG reading aids" describes them.
@@ -65,3 +76,10 @@ Some of the areas were already covered at the time: themes (Agent Q); math (O); 
   - line numbers and syntax highlighting in the terminal;
   - auto-play when a document opens;
   - tapping Ctrl alone to pause.
+
+## See also
+
+- [Star parity reference](star-parity.md): what Star does, in detail.
+- [Features page](site/features.html): what textweaver does today, with its status.
+- [Implementation plan](plan.md): the original scope.
+- [Documentation index](README.md)
