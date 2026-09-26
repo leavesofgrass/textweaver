@@ -466,6 +466,9 @@ pub struct DisplaySettings {
     pub show_line_numbers: bool,
     /// Context lines kept above and below the cursor.
     pub scroll_margin: u16,
+    /// `[display.font]`: the GUI's reading font (family, size in points,
+    /// weight). The terminal UI always shows the terminal's own font.
+    pub font: textweaver_aids::FontSettings,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -479,6 +482,7 @@ impl Default for DisplaySettings {
             tab_width: 4,
             show_line_numbers: false,
             scroll_margin: 3,
+            font: textweaver_aids::FontSettings::default(),
             extra: toml::Table::new(),
         }
     }
@@ -832,6 +836,15 @@ impl Settings {
             );
             self.display.tab_width = 4;
         }
+        if let Err(e) = self.display.font.validate() {
+            let fixed = self.display.font.clamped();
+            fix(
+                "display.font".into(),
+                e.to_string(),
+                fixed.summary().trim_end_matches('.').to_owned(),
+            );
+            self.display.font = fixed;
+        }
         if self.editing.autosave_interval_secs < 5 {
             fix(
                 "editing.autosave_interval_secs".into(),
@@ -871,7 +884,7 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 13] = [
+pub(crate) const STRUCT_TABLES: [&str; 14] = [
     "keyboard",
     "export",
     "normalization.community_lexicon",
@@ -883,6 +896,7 @@ pub(crate) const STRUCT_TABLES: [&str; 13] = [
     "normalization",
     "reading",
     "display",
+    "display.font",
     "editing",
     "library",
 ];
@@ -1536,6 +1550,37 @@ mod tests {
         s.speech.speed_presets.insert("skim".into(), 400);
         store.save(&s).unwrap();
         assert_eq!(store.load().0.speech.speed_presets.len(), 4);
+    }
+
+    #[test]
+    fn display_font_round_trips_and_is_clamped() {
+        let (_d, store) = store();
+        let mut s = Settings::default();
+        s.display.font.family = textweaver_aids::FontFamily::Named("OpenDyslexic".into());
+        s.display.font.size_pt = 20.0;
+        s.display.font.weight = 700;
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(
+            text.contains(
+                "[display.font]\nfamily = \"OpenDyslexic\"\nsize_pt = 20.0\nweight = 700"
+            ),
+            "{text}"
+        );
+        assert_eq!(store.load().0.display.font, s.display.font);
+        // Out of range: clamped, with a warning naming the setting.
+        std::fs::write(
+            store.paths().settings_file(),
+            "[display.font]\nfamily = \"Verdana\"\nsize_pt = 500.0\n",
+        )
+        .unwrap();
+        let load = store.load_detailed();
+        assert_eq!(load.settings.display.font.size_pt, 144.0);
+        assert!(
+            load.warnings.iter().any(|w| w.starts_with("display.font")),
+            "{:?}",
+            load.warnings
+        );
     }
 
     #[test]

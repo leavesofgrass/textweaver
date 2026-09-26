@@ -84,6 +84,12 @@ fn everything_changed() -> Settings {
     d.tab_width = 2;
     d.show_line_numbers = true;
     d.scroll_margin = 5;
+    d.font = textweaver_aids::FontSettings {
+        family: textweaver_aids::FontFamily::Named("OpenDyslexic".into()),
+        size_pt: 18.0,
+        weight: 700,
+        fetch_missing: false,
+    };
     let e = &mut s.editing;
     e.autosave_recovery = false;
     e.autosave_interval_secs = 60;
