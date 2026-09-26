@@ -25,7 +25,7 @@
 //! engines use) at most once per process for that key: `tw backends` and
 //! the reader no longer look for the same engine twice.
 
-#[cfg(feature = "espeak")]
+#[cfg(feature = "espeak-phonemes")]
 pub mod espeak;
 mod null;
 #[cfg(feature = "omnivox")]

@@ -34,6 +34,15 @@
 //! scale; volume percent as is (espeak's 100 is normal). No native pause
 //! (the service emulates it) and no tones.
 
+//! **Phonemes** (feature `espeak-phonemes`, which `espeak` includes):
+//! [`text_to_phonemes`] turns text into IPA with the same library, for
+//! Piper's neural voices (`textweaver-piper`). A build with only
+//! `espeak-phonemes` compiles this module but registers no espeak-ng
+//! backend.
+
+// With only `espeak-phonemes`, the backend below is compiled but unused.
+#![cfg_attr(not(feature = "espeak"), allow(dead_code))]
+
 mod ffi;
 mod sys;
 
@@ -117,6 +126,35 @@ pub fn available() -> bool {
         drop(e);
         ensure(ffi::Mode::Playback).is_ok()
     })
+}
+
+/// Translates `text` into IPA phonemes with libespeak-ng's `voice`
+/// (`"en-us"`), one string per clause, as `espeak_TextToPhonemes` returns
+/// them: words separated by spaces, stress marks kept, and the punctuation
+/// that ended each clause dropped (Piper's phonemizer adds it back).
+///
+/// libespeak-ng is a process-wide singleton: this selects `voice` for the
+/// whole process, so a running espeak-ng backend speaks its next utterance
+/// with the voice it sets again for it (it sets its voice before each one).
+/// Calls are serialized with the backend's initialization. Initializes the
+/// library in retrieval mode (no audio device) when nothing has yet.
+///
+/// Errors say why: the library is missing, too old to have
+/// `espeak_TextToPhonemes`, or has no such voice.
+pub fn text_to_phonemes(voice: &str, text: &str) -> Result<Vec<String>, String> {
+    let mut e = ENGINE.lock().unwrap_or_else(|p| p.into_inner());
+    if e.is_none() {
+        let rate = ffi::initialize(ffi::Mode::Retrieval)?;
+        *e = Some((ffi::Mode::Retrieval, rate));
+    }
+    ffi::set_voice(voice)?;
+    ffi::text_to_phonemes(text)
+}
+
+/// True when libespeak-ng loads and can translate text into phonemes
+/// (`espeak_TextToPhonemes`, eSpeak NG 1.49 and later).
+pub fn phonemes_available() -> bool {
+    sys::load().is_ok() && sys::has_text_to_phonemes()
 }
 
 /// Maps canonical parameters onto espeak's scales.
