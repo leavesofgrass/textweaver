@@ -666,7 +666,9 @@ impl SapiBackend {
             if !(a.done && played >= start + a.total) {
                 break;
             }
-            let a = self.active.pop_front().expect("front exists");
+            let Some(a) = self.active.pop_front() else {
+                break;
+            };
             if !a.started {
                 sink.emit(a.id, RawEvent::Started);
             }

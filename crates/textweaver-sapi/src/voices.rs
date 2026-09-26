@@ -431,14 +431,16 @@ mod tests {
 
     #[test]
     fn code_factory_eloquence_stays_flagged() {
+        // The attributes Code Factory's installation registers (read from
+        // the registry on 2026-09-25; the engine itself is never loaded).
         let cf = VoiceToken {
             token_id:
-                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\ETI-Eloquence-US"
+                r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_Eloquence_eng_usa"
                     .into(),
             name: "Eloquence US English".into(),
             language: "409".into(),
             gender: "Male".into(),
-            vendor: "Code Factory".into(),
+            vendor: "Nuance Communications, Inc.".into(),
         };
         let d = describe(&cf, Arch::X86);
         assert_eq!(d.family, Family::Eloquence);
