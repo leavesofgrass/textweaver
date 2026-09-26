@@ -208,7 +208,6 @@ impl Writer {
                     OpClass::Open => attrs.extend([("form", "prefix"), ("stretchy", "false")]),
                     OpClass::Close => attrs.extend([("form", "postfix"), ("stretchy", "false")]),
                     OpClass::Fence => attrs.push(("stretchy", "false")),
-                    OpClass::Large if !self.display => attrs.push(("largeop", "false")),
                     _ => {}
                 }
                 self.token("mo", &attrs, text);

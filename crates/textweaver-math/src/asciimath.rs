@@ -1138,3 +1138,7 @@ fn cell(mut items: Vec<Node>, at: usize) -> Node {
     let span = items_span(&items).unwrap_or(CharRange::empty(at));
     row(items, span)
 }
+
+#[cfg(test)]
+#[path = "asciimath_tests.rs"]
+mod tests;

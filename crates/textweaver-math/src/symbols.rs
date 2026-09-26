@@ -1121,3 +1121,50 @@ pub(crate) fn function_words(name: &str) -> String {
     };
     w.to_owned()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{NodeKind, parse_latex};
+
+    /// Every LaTeX symbol command parses to its Unicode token and has a
+    /// spoken name.
+    #[test]
+    fn every_latex_symbol() {
+        for name in LATEX_NAMES {
+            let sym = latex_symbol(name).unwrap_or_else(|| panic!("\\{name} has no symbol"));
+            let text = match sym {
+                Sym::Ident(t) | Sym::Op(t, _) => t,
+            };
+            let m = parse_latex(&format!("\\{name}"));
+            assert!(m.is_clean(), "\\{name}: {:?}", m.diagnostics);
+            let NodeKind::Row(items) = &m.root.kind else {
+                panic!("\\{name}");
+            };
+            assert_eq!(items.len(), 1, "\\{name}");
+            assert_eq!(items[0].token_text(), Some(text), "\\{name}");
+            assert!(
+                words(text).is_some(),
+                "\\{name} ({text}) has no spoken name"
+            );
+        }
+    }
+
+    #[test]
+    fn every_function_has_words() {
+        for name in [
+            "sin", "cos", "tan", "cot", "sec", "csc", "sinh", "cosh", "tanh", "coth", "arcsin",
+            "arccos", "arctan", "ln", "exp", "lim", "max", "min", "sup", "inf", "det",
+        ] {
+            assert!(latex_function(name).is_some(), "{name}");
+            assert_ne!(function_words(name), name, "{name}");
+        }
+    }
+
+    #[test]
+    fn negation() {
+        assert_eq!(negate("="), "≠");
+        assert_eq!(negate("∈"), "∉");
+        assert_eq!(negate("⊲"), "⊲\u{0338}");
+    }
+}

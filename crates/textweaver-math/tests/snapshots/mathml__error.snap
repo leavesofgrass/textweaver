@@ -1,0 +1,5 @@
+---
+source: crates/textweaver-math/tests/mathml.rs
+expression: balanced(&xml)
+---
+<math xmlns="http://www.w3.org/1998/Math/MathML" alttext="\unknown{x}"><semantics><mrow><merror><mtext>\unknown</mtext></merror><mi>x</mi></mrow><annotation encoding="application/x-tex">\unknown{x}</annotation></semantics></math>

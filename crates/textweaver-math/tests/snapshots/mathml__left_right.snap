@@ -1,0 +1,5 @@
+---
+source: crates/textweaver-math/tests/mathml.rs
+expression: balanced(&xml)
+---
+<math xmlns="http://www.w3.org/1998/Math/MathML" alttext="\left[ \frac{a}{b} \right]"><semantics><mrow><mo fence="true" form="prefix">[</mo><mfrac><mi>a</mi><mi>b</mi></mfrac><mo fence="true" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">\left[ \frac{a}{b} \right]</annotation></semantics></math>
