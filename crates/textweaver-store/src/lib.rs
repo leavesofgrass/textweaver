@@ -27,6 +27,7 @@ mod atomic;
 mod doc_state;
 pub mod fulltext;
 pub mod library;
+pub mod migrate;
 pub mod notes;
 mod paths;
 mod recent;
