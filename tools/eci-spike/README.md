@@ -1,5 +1,7 @@
 # ECI feasibility spike
 
+> Run these only against an ECI library you are licensed to use. Never commit the audio they produce.
+
 A dependency-free 32-bit Rust program that loads Code Factory's `eci.dll` (ETI-Eloquence 6.1), inserts an index mark before every word, synthesizes into its own buffer, and prints the audio time of each mark. It is a reference for `crates/textweaver-eci`, not part of the workspace.
 
 ```bash

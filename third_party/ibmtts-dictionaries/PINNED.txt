@@ -1,0 +1,4 @@
+repository: https://github.com/eigencrow/IBMTTSDictionaries
+tag: v26.09
+commit: babb402df6c63d69a43c23de511834683a2727ae
+commit date: 2026-09-03T14:47:00Z

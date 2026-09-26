@@ -1,0 +1,26 @@
+[package]
+name = "textweaver-sapi"
+description = "Windows SAPI5 voices for textweaver: host process (x64 and x86) and speech backend"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "textweaver-sapi-host"
+path = "src/bin/textweaver-sapi-host.rs"
+
+[dependencies]
+textweaver-core.workspace = true
+textweaver-speech.workspace = true
+thiserror.workspace = true
+log.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows.workspace = true
+
+[lints]
+workspace = true

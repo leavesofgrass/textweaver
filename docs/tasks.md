@@ -11,6 +11,8 @@ Kept current per wave by the orchestrator. Agents append to their own section's 
 | C — State, Keys, Editing | `agent/c-state-keys-editing` | not started |
 | D — App & TUI | `agent/d-app-tui` | not started |
 | E — Eloquence | `agent/e-eloquence` | not started |
+| F — Apple speech (macOS) | `agent/f-apple` | not started |
+| G — SAPI5 voices (Windows) | `agent/g-sapi` | not started |
 
 ## Shared preamble (every agent reads this first)
 
@@ -138,21 +140,63 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 **Deliverables:**
 - The host: loads the ECI library with `libloading` (path from an argument, else `default_library_path()`), creates an engine, applies parameters, synthesizes each utterance with an index mark before every word, and streams PCM plus index marks with sample offsets over stdout in a small framed binary protocol; handles stop (abort synthesis), parameter changes, and voice selection (the `eci.ini` presets and ECI languages); exits cleanly on EOF. Text is encoded for the engine's language (Windows-1252 for Western languages; document the mapping and the replacement for unrepresentable characters).
 - The backend: `EciBackend` implementing `SpeechBackend`, spawning the host, playing PCM through rodio (`rodio = { workspace = true, features = ["playback"] }`), emitting `Started`, `Word { byte_range, audio_ms }` (each index mapped back to the word's byte range in `Utterance::text`), `Finished`, and `Cancelled` under ADR-0003's non-blocking `speak` plus `poll` contract; native pause and resume; `set_params` mapping rate, pitch, and volume per ADR-0004 with a measured rate calibration for `effective_wpm()`; `voices()`; `synthesize_to_file` (WAV). Expose `pub fn backend_info() -> BackendInfo` and `pub fn factory(...) -> BackendFactory` so the app can register it (Agent B is making the registry extensible; the orchestrator wires the two together at integration).
+- Community dictionaries (added 2026-09-25): load `third_party/ibmtts-dictionaries/` (CC0; see its README and ADR-0007) with `eciNewDict`, `eciLoadDict` for the main, root, and abbreviation volumes, and `eciSetDict`, per language (ENU, DEU); on by default, switchable off, overridable with a directory (`TEXTWEAVER_ECI_DICTIONARIES` and a backend option); files are Windows-1252 with CRLF line ends and must reach the engine unchanged; the xtask copies them next to the host; report load results per volume and a before/after example that the dictionary changes (for instance "omg" or "tabindex").
 - `cargo xtask eci-host`: builds the host for `i686-pc-windows-msvc` on Windows (native elsewhere) and copies it next to the workspace's debug and release binaries; the backend finds the host beside the current executable, or via `TEXTWEAVER_ECI_HOST`.
 
 **Acceptance:**
 - Unit tests for the protocol (round-trip framing, partial reads) and for index-to-byte-range mapping, including multibyte text.
 - An integration test with a fake host (a test binary speaking the protocol) covering speak, word events in order with rising `audio_ms`, stop mid-utterance (`Cancelled`, no late events), pause and resume.
-- Real-engine tests on this machine, `#[ignore]`d unless `TEXTWEAVER_ECI=1`: synthesize the spike's sentence to WAV and check that every word's mark arrives with rising offsets; run them with `TEXTWEAVER_ECI=1` before reporting and include the output. Never play audio aloud in tests; use `synthesize_to_file` or a silent sink.
-- clippy and tests green natively; `cargo build -p textweaver-eci` green in the container (no real engine there).
+- Real-engine tests, `#[ignore]`d unless `TEXTWEAVER_ECI=1`, run against **licensed Voxin only**, in the container with `compose.voxin.yaml`: synthesize the spike's sentence to WAV and check every word's mark arrives with rising offsets; include the output. The Code Factory installation on this machine is not licensed: never load it. Windows real-engine tests wait for a licensed engine. Never play audio aloud in tests; use `synthesize_to_file` or a silent sink. Never commit engine audio; local samples go to the git-ignored `target-local/`.
+- clippy and tests green natively (fake host) and in the container, with and without the Voxin overlay.
+
+## Agent F — Apple speech on macOS (added 2026-09-25 at Jon's request)
+
+**Owns:** `crates/textweaver-apple/`, `tools/avspeech-spike/` (may extend), `.github/workflows/apple.yml` (create it if you need a macOS-only workflow beyond `ci.yml`).
+
+**Read:** ADR-0003, ADR-0004, ADR-0007, ADR-0008; `tools/avspeech-spike/` (probe scripts and their results); `docs/star-parity.md` Part 2 sections 1–4; the Phase 0 code in `crates/textweaver-core` and `crates/textweaver-speech`.
+
+**No Mac is available.** Develop on Windows (the crate must compile to an empty library there), and test on GitHub's macOS 14 and 15 runners: you may push **your own branch only**, `agent/f-apple`, which triggers `ci.yml`. The macOS runners have the Eloquence voices and can synthesize; tests must never play audio aloud.
+
+**Deliverables:**
+- `NsSpeechBackend` (`nsspeech`) implementing `SpeechBackend` over `NSSpeechSynthesizer`: voices (with Eloquence voices named clearly), rate in wpm, pitch, volume, `willSpeakWord` → `RawEvent::Word` (no `audio_ms`), native pause at a word boundary and resume, stop, `synthesize_to_file`; delegate callbacks pumped from `poll` on the speech thread's run loop (ADR-0003). First verify with a probe that `NSSpeechSynthesizer` works on a background thread with its own run loop; report the result.
+- `AvSpeechBackend` (`avspeech`) over `AVSpeechSynthesizer.write`: buffers plus interleaved `willSpeakRangeOfSpeechString` callbacks → word sample offsets; playback through rodio (`features = ["playback"]`); `Word { byte_range, audio_ms }`; native pause and resume; WAV export.
+- Range mapping from UTF-16 `NSRange` to UTF-8 byte ranges of `Utterance::text`, including Eloquence's sub-token ranges ("Dr" in "Dr.", "9" and "30" in "9:30").
+- Voice selection defaulting to Eloquence Reed (`DEFAULT_VOICE`) when present; both backends expose `backend_info()` and a factory for the app to register (the orchestrator wires them).
+- Declare native normalization for the Eloquence voices (Agent B is adding a way to declare it; describe your need in the report if you cannot see it).
+- Measurements, reported: first-word latency for both backends and Reed versus Samantha; highlight offset accuracy of `avspeech` on macOS 14 and 15; the wpm calibration of each backend.
+
+**Acceptance:**
+- Unit tests for range mapping (UTF-16 to UTF-8, multibyte, sub-token ranges) run on every OS.
+- macOS-only tests `#[ignore]`d unless `TEXTWEAVER_APPLE=1` (CI sets it on macOS): synthesize a sentence with Reed through each backend to a temporary file; check word events arrive in order and cover every word; `avspeech` offsets rise.
+- `ci.yml` green on your branch on all three OSes.
+
+## Agent G — SAPI5 voices on Windows (added 2026-09-25 at Jon's request)
+
+**Owns:** `crates/textweaver-sapi/` (library and the `textweaver-sapi-host` binary), `xtask/src/sapi.rs` (create it; document the lines the orchestrator adds to `xtask/src/main.rs`), `fixtures/g/`.
+
+**Read:** ADR-0003, ADR-0004, ADR-0007, ADR-0009; `docs/star-parity.md` Part 2 sections 1–4; the Phase 0 code in `crates/textweaver-core` and `crates/textweaver-speech`.
+
+**Deliverables:**
+- The host (x64 and x86 builds of one binary): `ISpVoice` via the `windows` crate (COM initialized on the host's thread), voice selection by token id, output to a memory stream in a fixed PCM format, `SPEI_WORD_BOUNDARY` (and `SPEI_END_INPUT_STREAM`) events with `ullAudioStreamOffset`, streamed with PCM over stdout in a framed binary protocol; stop (purge), parameter changes; clean exit on EOF. Voice enumeration for its architecture's registry.
+- The backend: `SapiBackend` implementing `SpeechBackend` under ADR-0003's non-blocking `speak` plus `poll` contract; voice listing across both registries (64-bit preferred; each voice tagged with its host architecture); rodio playback (`features = ["playback"]`) with `Word { byte_range, audio_ms }` from the stream offsets and UTF-16 to UTF-8 range mapping; native pause and resume; rate, pitch, and volume mapping with measured wpm calibration; `synthesize_to_file` (WAV); `backend_info()` and a factory for the orchestrator to wire. Eloquence voices listed with a note that they give no word timing (never load them in tests; that product is not licensed on this machine).
+- Probe and report whether OneCore voices (`HKLM\SOFTWARE\Microsoft\Speech_OneCore\Voices`: Microsoft Mark, David, Zira) are usable through SAPI5 by setting the token category, and include them if so.
+- `cargo xtask sapi-host`: builds both hosts and places them next to the workspace binaries (`textweaver-sapi-host.exe` and `textweaver-sapi-host-x86.exe`); the backend finds them beside the current executable or via `TEXTWEAVER_SAPI_HOST` / `TEXTWEAVER_SAPI_HOST_X86`.
+
+**Acceptance:**
+- Unit tests for framing and UTF-16 to UTF-8 mapping (multibyte, repeated events on one range, sub-token ranges).
+- A fake-host integration test: ordered word events with rising `audio_ms`, stop mid-utterance (`Cancelled`, no late events), pause and resume.
+- Real-voice tests `#[ignore]`d unless `TEXTWEAVER_SAPI=1`, run locally before reporting with output included: Microsoft David (64-bit host) and eSpeak (32-bit host) synthesize to WAV with every word's event in order. Use only Microsoft voices and eSpeak in tests. Never play audio aloud. Never commit engine audio (local samples go to the git-ignored `target-local/`).
+- clippy and tests green on Windows; the crate builds as an empty library in the Linux container.
 
 ## Seams to watch at integration
+
+- The ECI (E) and SAPI (G) hosts each define a PCM-plus-events protocol and a playback client; merge them into one shared engine-host crate at integration.
 
 - `text::narrate::plan` (A) → `SpeechService::read` (B): utterance ids, offset maps, `Inserted` spans.
 - `Document::apply` (A) ↔ `Editor` (C) ↔ bookmarks and history (C, D): one `EditOutcome` shifts all of them.
 - `Keymap` (C) ↔ TUI key translation (D): chord normalization and layers.
 - `Settings` (C) ↔ `ServiceConfig` (B) ↔ `App` (D): rate, pitch, volume, pacing, verbosity.
-- `EciBackend` (E) ↔ backend registry (B) ↔ app backend selection (D): Eloquence first when installed; normalization skipped for engines that normalize natively.
+- `SapiBackend` (G), `NsSpeechBackend`/`AvSpeechBackend` (F) and `EciBackend` (E) ↔ backend registry (B) ↔ app backend selection (D): Eloquence first when installed; normalization skipped for engines that normalize natively.
 
 ## Wave 2 (after Integration 1 and Jon's review)
 
@@ -161,4 +205,5 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 | A | EPUB and DOCX loaders; `paperback` feature; `pandoc` feature; exports to Markdown / HTML / text; full-text index |
 | B | `speech-dispatcher` backend with index marks; `tts`-crate backend; `synthesize_to_file` and a capture wrapper; audio export (WAV, ffmpeg, SRT / VTT, M4B chapters); omnivox in-process option |
 | C | Notes and highlights with remapping across edits; library folders and recent; `tw migrate-star`; dictation trait with a whisper subprocess backend; Obsidian vault import / export |
+| B (idea) | Reuse the plain-text entries of the IBMTTS community dictionary (word to respelling, not the phoneme entries) as a shared pronunciation lexicon for non-ECI engines |
 | D | Edit mode in the TUI; notes and highlights UI; `tw serve --stdio` JSON-RPC; expanded scripted tests |
