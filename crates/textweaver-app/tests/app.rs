@@ -1027,6 +1027,23 @@ fn an_ordered_list_item_is_announced_with_its_text() {
 }
 
 #[test]
+fn task_list_items_are_announced_and_read_as_checked_or_not() {
+    let doc = load_md("Intro.\n\n- [ ] Buy milk\n- [x] Walk the dog\n");
+    let mut r = rig_with_doc(doc);
+    r.act(ActionId::NextListItem);
+    assert_eq!(r.said.last(), "List item: not checked Buy milk");
+    r.act(ActionId::NextListItem);
+    assert_eq!(r.said.last(), "List item: checked Walk the dog");
+    r.act(ActionId::ReadCurrentSentence);
+    r.wait_idle();
+    let texts = r.log.texts();
+    assert!(
+        texts.iter().any(|t| t.starts_with("checked Walk the dog")),
+        "{texts:?}"
+    );
+}
+
+#[test]
 fn binary_files_are_refused_and_utf16_files_are_read() {
     let dir = tempfile::tempdir().unwrap();
     let mut r = rig(PROSE);

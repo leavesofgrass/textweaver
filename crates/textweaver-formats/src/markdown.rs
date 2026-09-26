@@ -66,6 +66,7 @@ fn parser_options() -> Options {
     Options::ENABLE_TABLES
         | Options::ENABLE_FOOTNOTES
         | Options::ENABLE_STRIKETHROUGH
+        | Options::ENABLE_TASKLISTS
         | Options::ENABLE_YAML_STYLE_METADATA_BLOCKS
         | Options::ENABLE_PLUSES_DELIMITED_METADATA_BLOCKS
 }
@@ -91,6 +92,7 @@ pub fn convert(
         meta_text: None,
         heading_text: None,
         image: Vec::new(),
+        html: HtmlState::default(),
     };
     for event in Parser::new_ext(source, parser_options()) {
         c.event(event);
@@ -161,6 +163,129 @@ struct Converter<'a> {
     heading_text: Option<String>,
     /// For each open image: its title, and whether alt text was written.
     image: Vec<(String, usize)>,
+    /// Raw HTML read so far (comments and scripts span events).
+    html: HtmlState,
+}
+
+/// Where the reader is inside raw HTML, carried from one HTML event to the
+/// next (a block's lines arrive as separate events).
+#[derive(Debug, Default)]
+struct HtmlState {
+    /// Inside `<!-- ... -->`.
+    in_comment: bool,
+    /// Inside `<script>` or `<style>`: the closing tag that ends it.
+    skip_until: Option<&'static str>,
+}
+
+/// HTML tags that start a new line of text.
+const HTML_BLOCK_TAGS: &[&str] = &[
+    "address",
+    "article",
+    "aside",
+    "blockquote",
+    "center",
+    "dd",
+    "details",
+    "div",
+    "dl",
+    "dt",
+    "figcaption",
+    "figure",
+    "footer",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "header",
+    "hr",
+    "li",
+    "main",
+    "nav",
+    "ol",
+    "p",
+    "pre",
+    "section",
+    "summary",
+    "table",
+    "tr",
+    "ul",
+];
+
+/// The common character references, decoded (`&amp;`, `&lt;`, `&#233;`,
+/// `&#xe9;`, `&nbsp;`, ...); anything else is kept as written.
+fn decode_entities(s: &str) -> String {
+    if !s.contains('&') {
+        return s.to_owned();
+    }
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(i) = rest.find('&') {
+        out.push_str(&rest[..i]);
+        rest = &rest[i..];
+        let end = rest[1..].find(';').map(|e| e + 1).filter(|&e| e <= 10);
+        let decoded = end.and_then(|e| {
+            let name = &rest[1..e];
+            let c = match name {
+                "amp" => '&',
+                "lt" => '<',
+                "gt" => '>',
+                "quot" => '"',
+                "apos" => '\'',
+                "nbsp" => ' ',
+                _ => {
+                    let num = name.strip_prefix('#')?;
+                    let n = match num.strip_prefix(['x', 'X']) {
+                        Some(hex) => u32::from_str_radix(hex, 16).ok()?,
+                        None => num.parse().ok()?,
+                    };
+                    char::from_u32(n)?
+                }
+            };
+            Some((c, e))
+        });
+        match decoded {
+            Some((c, e)) => {
+                out.push(c);
+                rest = &rest[e + 1..];
+            }
+            None => {
+                out.push('&');
+                rest = &rest[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// The value of attribute `name` in a tag's inside (`img src="a" alt="b"`).
+fn html_attr(tag: &str, name: &str) -> Option<String> {
+    let lower = tag.to_ascii_lowercase();
+    let mut from = 0;
+    while let Some(i) = lower[from..].find(name) {
+        let at = from + i;
+        from = at + name.len();
+        let before = lower[..at].chars().last();
+        if !before.is_some_and(char::is_whitespace) {
+            continue;
+        }
+        let rest = tag[from..].trim_start();
+        let Some(rest) = rest.strip_prefix('=') else {
+            continue;
+        };
+        let rest = rest.trim_start();
+        let value = match rest.chars().next() {
+            Some(q @ ('"' | '\'')) => rest[1..].split(q).next().unwrap_or(""),
+            _ => rest
+                .split(|c: char| c.is_whitespace() || c == '/')
+                .next()
+                .unwrap_or(""),
+        };
+        return Some(decode_entities(value));
+    }
+    None
 }
 
 impl Converter<'_> {
@@ -199,6 +324,87 @@ impl Converter<'_> {
             *written += t.trim().len();
         }
         self.b.text(t);
+    }
+
+    /// Reads raw HTML: text kept (entities decoded), tags dropped, with a
+    /// line break for `<br>` and block tags and alt text for `<img>`.
+    fn html(&mut self, h: &str) {
+        let mut rest = h;
+        loop {
+            if self.html.in_comment {
+                match rest.find("-->") {
+                    Some(i) => {
+                        rest = &rest[i + 3..];
+                        self.html.in_comment = false;
+                    }
+                    None => return,
+                }
+            }
+            if let Some(end) = self.html.skip_until {
+                match rest.to_ascii_lowercase().find(end) {
+                    Some(i) => {
+                        rest = &rest[i..];
+                        self.html.skip_until = None;
+                    }
+                    None => return,
+                }
+            }
+            let Some(i) = rest.find('<') else {
+                self.html_text(rest);
+                return;
+            };
+            self.html_text(&rest[..i]);
+            rest = &rest[i..];
+            if let Some(after) = rest.strip_prefix("<!--") {
+                self.html.in_comment = true;
+                rest = after;
+                continue;
+            }
+            let Some(close) = rest.find('>') else {
+                // Not a tag after all ("a < b").
+                self.html_text(rest);
+                return;
+            };
+            let tag = &rest[1..close];
+            rest = &rest[close + 1..];
+            self.html_tag(tag);
+        }
+    }
+
+    fn html_text(&mut self, t: &str) {
+        if !t.is_empty() {
+            self.text(&decode_entities(t));
+        }
+    }
+
+    fn html_tag(&mut self, tag: &str) {
+        let inner = tag.trim();
+        let closing = inner.starts_with('/');
+        let name: String = inner
+            .trim_start_matches('/')
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric())
+            .collect::<String>()
+            .to_ascii_lowercase();
+        match name.as_str() {
+            "br" => self.b.line_break(),
+            "img" if !closing => {
+                let alt = html_attr(inner, "alt").unwrap_or_default();
+                if !alt.trim().is_empty() {
+                    let src = html_attr(inner, "src").unwrap_or_default();
+                    let id = self
+                        .b
+                        .open(Self::marker(MarkerKind::Image).with_reference(src));
+                    self.text(&alt);
+                    self.b.close(id);
+                }
+            }
+            "script" if !closing => self.html.skip_until = Some("</script"),
+            "style" if !closing => self.html.skip_until = Some("</style"),
+            "td" | "th" => self.b.space(),
+            n if HTML_BLOCK_TAGS.contains(&n) => self.b.line_break(),
+            _ => {}
+        }
     }
 
     fn event(&mut self, event: Event<'_>) {
@@ -247,16 +453,21 @@ impl Converter<'_> {
             Event::SoftBreak => self.b.space(),
             Event::HardBreak => self.b.line_break(),
             Event::Rule => self.b.paragraph_break(),
-            Event::InlineHtml(h) | Event::Html(h) => {
-                let tag = h.trim().to_ascii_lowercase();
-                if tag.starts_with("<br") {
-                    self.b.line_break();
-                }
-            }
+            // Raw HTML: its text is read and its tags dropped (README-style
+            // `<p align="center">`, `<details>`, `<img alt>`); comments,
+            // scripts, and styles are not read (audit finding M2).
+            Event::InlineHtml(h) | Event::Html(h) => self.html(&h),
             Event::FootnoteReference(label) => self.footnote_reference(&label),
+            // A task list item says whether it is done through its label
+            // ("checked Buy milk"); the brackets are not read (finding M1).
             Event::TaskListMarker(done) => {
-                self.b.text(if done { "[x]" } else { "[ ]" });
-                self.b.space();
+                let state = if done { "checked" } else { "not checked" };
+                if let Some(m) = self.b.innermost_open_mut(MarkerKind::ListItem) {
+                    m.label = Some(match m.label.take() {
+                        Some(number) => format!("{number} {state}"),
+                        None => state.to_owned(),
+                    });
+                }
             }
             Event::InlineMath(t) | Event::DisplayMath(t) => self.text(&t),
         }
@@ -532,6 +743,79 @@ mod tests {
             .iter(kind, None)
             .map(|m| d.slice(m.range))
             .collect()
+    }
+
+    #[test]
+    fn task_list_items_say_checked_or_not_checked() {
+        let d = load(
+            "- [ ] Buy milk\n- [x] Walk the dog\n- plain\n\n1. [X] Numbered done\n",
+            &LoadOptions::default(),
+        );
+        let text = d.text().to_string();
+        assert!(!text.contains('['), "{text}");
+        assert_eq!(
+            kinds(&d, MarkerKind::ListItem),
+            vec!["Buy milk", "Walk the dog", "plain", "Numbered done"]
+        );
+        let labels: Vec<Option<String>> = d
+            .marker_index()
+            .iter(MarkerKind::ListItem, None)
+            .map(|m| m.label.clone())
+            .collect();
+        assert_eq!(
+            labels,
+            vec![
+                Some("not checked".into()),
+                Some("checked".into()),
+                None,
+                Some("1. checked".into())
+            ]
+        );
+    }
+
+    #[test]
+    fn html_blocks_and_inline_html_keep_their_text() {
+        let d = load(
+            "<p align=\"center\">Welcome to the <b>project</b> &amp; friends</p>\n\n\
+             <!-- a comment\nacross lines -->\n\n\
+             <details>\n<summary>More &#233;tails</summary>\n\nHidden text.\n\n</details>\n\n\
+             Inline <img src=\"logo.png\" alt=\"The logo\"> and <kbd>Ctrl</kbd>.\n\n\
+             <script>var x = 1;</script>\n\n<style>p { color: red }</style>\n\nEnd.\n",
+            &LoadOptions::default(),
+        );
+        let text = d.text().to_string();
+        for kept in [
+            "Welcome to the project & friends",
+            "More \u{e9}tails",
+            "Hidden text.",
+            "Inline The logo and Ctrl.",
+            "End.",
+        ] {
+            assert!(text.contains(kept), "{kept:?} missing from {text:?}");
+        }
+        for dropped in ["comment", "across", "var x", "color", "<", "align"] {
+            assert!(!text.contains(dropped), "{dropped:?} in {text:?}");
+        }
+        assert_eq!(kinds(&d, MarkerKind::Image), vec!["The logo"]);
+        let img = d
+            .marker_index()
+            .iter(MarkerKind::Image, None)
+            .next()
+            .cloned();
+        assert_eq!(img.and_then(|m| m.reference), Some("logo.png".into()));
+    }
+
+    #[test]
+    fn entities_and_attributes() {
+        assert_eq!(
+            decode_entities("a &lt;b&gt; &#x41;&#66; &bogus; &"),
+            "a <b> AB &bogus; &"
+        );
+        assert_eq!(
+            html_attr("img data-alt=\"no\" alt='Yes it is' src=x.png", "alt").as_deref(),
+            Some("Yes it is")
+        );
+        assert_eq!(html_attr("img src=x.png", "alt"), None);
     }
 
     #[test]
