@@ -1,0 +1,128 @@
+# The wxDragon GUI (textweaver-gui) on Windows and macOS: build, clippy, unit
+# tests, a launch smoke test, and on Windows the UI Automation report
+# (crates/textweaver-gui/tools/uia-report.ps1), uploaded as an artifact.
+# Kept apart from ci.yml because the first wxWidgets build takes minutes.
+# ADR-0014.
+
+name: GUI
+
+on:
+  push:
+    branches: [main, 'wave2/k-*']
+    paths:
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/gui.yml'
+  pull_request:
+    paths:
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/gui.yml'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  # wxdragon-sys builds wxWidgets with CMake; keep its trees outside target/
+  # so actions/cache can keep them between runs.
+  WXWIDGETS_DIR: ${{ github.workspace }}/../wx/src
+  WXWIDGETS_BUILD_DIR: ${{ github.workspace }}/../wx/build
+  WXDRAGON_SYS_BUILD_DIR: ${{ github.workspace }}/../wx/wrapper
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Ninja and libclang
+        shell: pwsh
+        run: |
+          choco install ninja -y --no-progress
+          # bindgen (wxdragon-sys) needs libclang; the image ships LLVM.
+          "LIBCLANG_PATH=C:\Program Files\LLVM\bin" >> $env:GITHUB_ENV
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: gui
+      - name: Cache wxWidgets build
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/../wx
+          key: wx-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: wx-${{ runner.os }}-
+      - name: Build (timed)
+        shell: pwsh
+        run: |
+          cmake --version | Select-Object -First 1
+          ninja --version
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          cargo build -p textweaver-gui --timings
+          "cargo build -p textweaver-gui: $([math]::Round($sw.Elapsed.TotalSeconds, 1)) s" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+      - name: Clippy
+        run: cargo clippy -p textweaver-gui --all-targets -- -D warnings
+      - name: Unit tests
+        run: cargo test -p textweaver-gui
+      - name: UI Automation report (silent paced backend, window never activated)
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File crates/textweaver-gui/tools/uia-report.ps1 -NameModes "label,accessible" -Out uia-report.md
+          Get-Content uia-report.md | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gui-windows
+          path: |
+            uia-report.md
+            target/cargo-timings/cargo-timing.html
+          if-no-files-found: ignore
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ninja
+        run: brew install ninja || true
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: gui
+      - name: Cache wxWidgets build
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/../wx
+          key: wx-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: wx-${{ runner.os }}-
+      - name: Build (timed)
+        run: |
+          cmake --version | head -1
+          start=$(date +%s)
+          cargo build -p textweaver-gui --timings
+          echo "cargo build -p textweaver-gui: $(( $(date +%s) - start )) s" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Clippy
+        run: cargo clippy -p textweaver-gui --all-targets -- -D warnings
+      - name: Unit tests
+        run: cargo test -p textweaver-gui
+      - name: Launch smoke test (silent; closes itself)
+        run: |
+          ./target/debug/textweaver-gui fixtures/sample.md --backend paced --read --log \
+            --home "$RUNNER_TEMP/tw-home" --exit-after 8 2> gui-macos.log &
+          pid=$!
+          for i in $(seq 1 60); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
+          if kill -0 "$pid" 2>/dev/null; then kill "$pid"; echo "did not exit"; cat gui-macos.log; exit 1; fi
+          wait "$pid"
+          cat gui-macos.log
+          grep -q "loaded " gui-macos.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gui-macos
+          path: |
+            gui-macos.log
+            target/cargo-timings/cargo-timing.html
+          if-no-files-found: ignore
