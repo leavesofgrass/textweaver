@@ -26,6 +26,17 @@ Global chords work in every mode. Speech Cursor keys take over browse keys with 
 In the tables below a key without a note is global; the others name their layer.
 The GUI column shows Windows and Linux; on macOS the GUI uses Cmd wherever it shows Ctrl.
 
+## Single-key shortcuts
+
+Browse keys are single printable keys. Speech recognition, dictation, and switch or scanning keyboards can type them by accident, so they can be turned off (WCAG 2.1.4, Character Key Shortcuts): press F9, run `toggle character keys` from the command palette, or set this in `settings.toml`:
+
+```toml
+[keyboard]
+character_keys = false
+```
+
+While they are off, printable keys and Space never trigger commands in any mode; chords with Ctrl or Alt, the arrow and function keys, and the command palette (F2) keep working. Quitting and deleting a note or highlight always ask first ("Quit textweaver? y or n"), however you start them, so a stray `q` cannot close a document. The actions listed at the end of this page have only single keys; with single-key shortcuts off, run them from the command palette or give them a chord in `keymap.toml`.
+
 ## Changing keys
 
 Put overrides in `keymap.toml` in the configuration directory. Each line replaces all of an action's keys; an empty list removes them:
@@ -38,7 +49,7 @@ bold = []
 
 A key may name its layer with a prefix: `g:` global, `b:` browse, `s:` Speech Cursor, `e:` edit.
 Without a prefix, a single character goes to the browse layer (so it never gets in the way of typing), and any other chord goes to the action's usual layer.
-textweaver warns about unknown actions, keys it cannot read, keys a terminal cannot send, and keys bound twice in one mode, and keeps going.
+textweaver warns about unknown actions, keys it cannot read, and keys a terminal cannot send, and keeps going. A key your overrides would bind to two commands in one mode is not applied; the warning names it.
 
 ## Terminal notes
 
@@ -51,7 +62,7 @@ textweaver warns about unknown actions, keys it cannot read, keys a terminal can
 
 | Action | Terminal | GUI | Id |
 |---|---|---|---|
-| Play or pause reading from the current word | `Space` (browse) | `Space` (browse) | `play_pause` |
+| Play or pause reading from the current word | `Alt+P`, `Space` (browse) | `Space` (browse) | `play_pause` |
 | Stop reading | `Escape`, `Ctrl+X` (browse) | `Escape` | `stop` |
 | Read continuously from the cursor | `Ctrl+Space`, `Enter` (browse) | `Ctrl+Space`, `Enter` (browse) | `read_from_cursor` |
 | Read the whole document from the start | `Shift+R` (browse) | `Shift+R` (browse) | `read_document` |
@@ -192,6 +203,54 @@ textweaver warns about unknown actions, keys it cannot read, keys a terminal can
 |---|---|---|---|
 | Switch to the next color theme | `F5` | `F5` | `next_theme` |
 | Show or hide line numbers | `F6` | `F6` | `toggle_line_numbers` |
+| Turn single-key shortcuts on or off, so dictation and typing never trigger commands | `F9` | `F9` | `toggle_character_keys` |
 | Run any command by name | `F2`, `Alt+X`, `:` (browse) | `F2`, `:` (browse) | `command_palette` |
 | List keyboard shortcuts | `?` (browse) | `F3`, `?` (browse) | `keyboard_help` |
 | Open the help | `F1` | `F1` | `help` |
+
+## Command palette only, with single-key shortcuts off
+
+These actions have only single-key shortcuts by default. With single-key shortcuts off, run them from the command palette (F2) or bind a chord in `keymap.toml`.
+
+| Action | Terminal | GUI | Id |
+|---|---|---|---|
+| Play or pause reading from the current word | has a chord | palette | `play_pause` |
+| Read the whole document from the start | palette | palette | `read_document` |
+| Say the character at the cursor | palette | palette | `read_current_character` |
+| Say the word at the cursor | palette | palette | `read_current_word` |
+| Say the sentence at the cursor without moving | palette | palette | `read_current_sentence` |
+| Say the line at the cursor | palette | palette | `read_current_line` |
+| Say the paragraph at the cursor without moving | palette | palette | `read_paragraph` |
+| Read the selected text | palette | palette | `read_selection` |
+| Say the position: line, percentage, and heading | palette | palette | `say_position` |
+| Read from the next heading | palette | has a chord | `next_heading` |
+| Read from the previous heading | palette | has a chord | `previous_heading` |
+| Move to the next heading without reading | palette | palette | `skip_next_heading` |
+| Move to the previous heading without reading | palette | palette | `skip_previous_heading` |
+| Move to the next table | palette | has a chord | `next_table` |
+| Move to the previous table | palette | has a chord | `previous_table` |
+| Move to the next list | palette | palette | `next_list` |
+| Move to the previous list | palette | palette | `previous_list` |
+| Move to the next list item | palette | palette | `next_list_item` |
+| Move to the previous list item | palette | palette | `previous_list_item` |
+| Move to the next link | palette | palette | `next_link` |
+| Move to the previous link | palette | palette | `previous_link` |
+| Scroll down one line without moving the cursor | palette | palette | `scroll_down` |
+| Scroll up one line without moving the cursor | palette | palette | `scroll_up` |
+| Speech Cursor: read the current line again | palette | palette | `speech_cursor_reread_line` |
+| Speak faster | palette | has a chord | `rate_up` |
+| Speak slower | palette | has a chord | `rate_down` |
+| Louder | palette | palette | `volume_up` |
+| Quieter | palette | palette | `volume_down` |
+| Find the next match | has a chord | palette | `find_next` |
+| Find the previous match | has a chord | palette | `find_previous` |
+| Add a bookmark at the cursor | palette | has a chord | `add_bookmark` |
+| List bookmarks | palette | palette | `list_bookmarks` |
+| Move to the next bookmark | palette | palette | `next_bookmark` |
+| Move to the previous bookmark | palette | palette | `previous_bookmark` |
+| Add a note to the selection or the word at the cursor | palette | palette | `add_note` |
+| List notes and highlights | palette | has a chord | `list_notes` |
+| Move to the next note or highlight | palette | palette | `next_note` |
+| Move to the previous note or highlight | palette | palette | `previous_note` |
+| Highlight the selection, or the sentence at the cursor | palette | palette | `highlight_selection` |
+| List keyboard shortcuts | palette | has a chord | `keyboard_help` |

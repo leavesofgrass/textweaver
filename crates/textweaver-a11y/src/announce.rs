@@ -307,6 +307,11 @@ pub enum Announcement {
         /// On or off.
         on: bool,
     },
+    /// Single-key shortcuts turned on or off (`toggle_character_keys`).
+    CharacterKeys {
+        /// On or off.
+        on: bool,
+    },
     /// Something went wrong; said at every level.
     Error {
         /// The message.
@@ -397,6 +402,7 @@ impl Announcement {
             A::Recovered => "recovered",
             A::Theme { .. } => "theme",
             A::LineNumbers { .. } => "line_numbers",
+            A::CharacterKeys { .. } => "character_keys",
             A::Error { .. } => "error",
             A::Info { .. } => "info",
         }
@@ -625,6 +631,7 @@ impl Announcement {
             A::Recovered => "Recovered unsaved work. Remember to save.".to_owned(),
             A::Theme { name } => format!("Theme {name}"),
             A::LineNumbers { on } => format!("Line numbers {}", on_off(*on)),
+            A::CharacterKeys { on } => format!("Single-key shortcuts {}", on_off(*on)),
             A::Error { message } => message.clone(),
             A::Info { message } => match v {
                 Low => return None,
@@ -732,6 +739,7 @@ impl Announcement {
             A::Recovered,
             A::Theme { name: s("galaxy") },
             A::LineNumbers { on: true },
+            A::CharacterKeys { on: false },
             A::Error {
                 message: s("Speech engine stopped"),
             },

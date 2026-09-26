@@ -159,6 +159,8 @@ impl Conflict {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Keymap {
     bindings: Vec<Binding>,
+    /// Single-key shortcuts are off: text-input chords trigger nothing.
+    character_keys_off: bool,
 }
 
 /// Splits `g:Ctrl+P` into its layer and chord text. `:` alone, and strings
@@ -209,7 +211,46 @@ impl Keymap {
                 }
             }
         }
-        Keymap { bindings }
+        Keymap {
+            bindings,
+            character_keys_off: false,
+        }
+    }
+
+    /// Turns single-key shortcuts on or off (the `[keyboard]
+    /// character_keys` setting and the `toggle_character_keys` action).
+    /// While off, [`lookup`](Self::lookup) ignores every binding whose chord
+    /// is text input (a printable character or Space, at most with Shift)
+    /// in every layer, so dictated or typed text can never trigger a
+    /// command (WCAG 2.1.4). Modifier chords, named keys, and the command
+    /// palette keep working.
+    pub fn set_character_keys(&mut self, on: bool) {
+        self.character_keys_off = !on;
+    }
+
+    /// True when single-key shortcuts are on (the default).
+    pub fn character_keys(&self) -> bool {
+        !self.character_keys_off
+    }
+
+    /// True when `binding` can fire now: always, unless it is a text-input
+    /// chord and single-key shortcuts are off.
+    pub fn is_active(&self, binding: &Binding) -> bool {
+        !(self.character_keys_off && binding.chord.is_text_input())
+    }
+
+    /// Actions no chord reaches in any mode, given the current single-key
+    /// setting. They remain available from the command palette.
+    pub fn palette_only(&self) -> Vec<ActionId> {
+        ActionId::ALL
+            .iter()
+            .copied()
+            .filter(|a| {
+                Layer::ALL
+                    .iter()
+                    .all(|m| self.chords_in_mode(*a, *m).is_empty())
+            })
+            .collect()
     }
 
     /// Defaults with user overrides applied. Each override replaces all of
@@ -224,7 +265,10 @@ impl Keymap {
     ///
     /// Returns warnings for unknown actions, unparsable chords, chords a
     /// terminal cannot deliver (terminal frontend), and conflicts the
-    /// overrides introduce. Warnings never stop loading.
+    /// overrides introduce. A chord from an override that would reach two
+    /// actions in one mode is not applied (the other action keeps it) and
+    /// is reported; so is an action left with no keys because of that.
+    /// Warnings never stop loading.
     pub fn with_overrides(
         platform: Platform,
         frontend: Frontend,
@@ -267,9 +311,39 @@ impl Keymap {
                 });
             }
         }
+        let overridden: Vec<ActionId> = overrides
+            .keys()
+            .filter_map(|id| ActionId::from_id(id))
+            .collect();
         for c in map.conflicts() {
-            if !before.contains(&c) {
-                warnings.push(format!("keymap.toml: {}", c.describe()));
+            if before.contains(&c) {
+                continue;
+            }
+            // Drop the override bindings behind the conflict; defaults never
+            // conflict (a test), so what remains is conflict-free.
+            let dropped: Vec<ActionId> = c
+                .actions
+                .iter()
+                .copied()
+                .filter(|a| overridden.contains(a))
+                .collect();
+            map.bindings.retain(|b| {
+                !(b.chord == c.chord && c.layers.contains(&b.layer) && dropped.contains(&b.action))
+            });
+            let names: Vec<&str> = dropped.iter().map(|a| a.id()).collect();
+            warnings.push(format!(
+                "keymap.toml: {}; not applied for {}",
+                c.describe(),
+                names.join(" and ")
+            ));
+        }
+        for &a in &overridden {
+            let wanted = overrides.get(a.id()).is_some_and(|v| !v.is_empty());
+            if wanted && map.bindings_for(a).is_empty() {
+                warnings.push(format!(
+                    "keymap.toml: {} has no keys left; use the command palette or choose other keys",
+                    a.id()
+                ));
             }
         }
         (map, warnings)
@@ -280,8 +354,12 @@ impl Keymap {
         &self.bindings
     }
 
-    /// The action for `chord` in a mode whose layer is `mode`.
+    /// The action for `chord` in a mode whose layer is `mode`. With
+    /// single-key shortcuts off, text-input chords find nothing.
     pub fn lookup(&self, chord: &KeyChord, mode: Layer) -> Option<ActionId> {
+        if self.character_keys_off && chord.is_text_input() {
+            return None;
+        }
         mode.lookup_order().iter().find_map(|layer| {
             self.bindings
                 .iter()
@@ -784,6 +862,105 @@ mod tests {
         assert_eq!(warnings.len(), 1);
     }
 
+    /// Swapping two actions' keys is not a conflict once both overrides
+    /// apply, whatever order they are read in.
+    #[test]
+    fn swapped_keys_apply() {
+        let mut o = BTreeMap::new();
+        o.insert("next_sentence".to_owned(), vec![",".to_owned()]);
+        o.insert("previous_sentence".to_owned(), vec![".".to_owned()]);
+        let (map, warnings) = Keymap::with_overrides(Platform::Linux, Frontend::Terminal, &o);
+        assert!(warnings.is_empty(), "{warnings:?}");
+        assert_eq!(
+            map.lookup(&k(","), Layer::Browse),
+            Some(ActionId::NextSentence)
+        );
+        assert_eq!(
+            map.lookup(&k("."), Layer::Browse),
+            Some(ActionId::PreviousSentence)
+        );
+    }
+
+    /// WCAG 2.1.4: no single printable key quits, leaves, or deletes
+    /// without a confirmation, and with single-key shortcuts off nothing a
+    /// dictation or typing produces triggers a command.
+    #[test]
+    fn character_keys_can_be_turned_off() {
+        use crate::Category;
+        for (platform, frontend, mut map) in all_maps() {
+            for b in map.bindings() {
+                // A single printable key may reach a quitting or
+                // destructive action only through its confirmation.
+                let risky = matches!(
+                    b.action,
+                    ActionId::Quit | ActionId::DeleteNote | ActionId::Open | ActionId::NewDocument
+                );
+                assert!(
+                    !(risky && b.chord.is_text_input() && !b.action.needs_confirmation()),
+                    "{:?} on {} ({platform:?} {frontend:?})",
+                    b.action,
+                    b.chord
+                );
+            }
+            assert!(map.character_keys());
+            assert_eq!(
+                map.lookup(&k("."), Layer::Browse),
+                Some(ActionId::NextSentence)
+            );
+            map.set_character_keys(false);
+            assert!(!map.character_keys());
+            for text in ["a", "q", ".", "Space", "Shift+R", "?", ":", "j"] {
+                for mode in Layer::ALL {
+                    assert_eq!(map.lookup(&k(text), mode), None, "{text} in {mode:?}");
+                }
+            }
+            // Modifier chords and named keys still work, including the way
+            // back and the palette, which reaches every action.
+            for mode in [Layer::Browse, Layer::SpeechCursor, Layer::Edit] {
+                for a in [
+                    ActionId::ToggleCharacterKeys,
+                    ActionId::CommandPalette,
+                    ActionId::Stop,
+                    ActionId::Quit,
+                ] {
+                    assert!(
+                        !map.chords_in_mode(a, mode).is_empty(),
+                        "{a:?} in {mode:?} on {platform:?} {frontend:?}"
+                    );
+                }
+            }
+            assert_eq!(
+                map.lookup(&k("F9"), Layer::Browse),
+                Some(ActionId::ToggleCharacterKeys)
+            );
+            let palette_only = map.palette_only();
+            assert!(!palette_only.contains(&ActionId::CommandPalette));
+            for a in &palette_only {
+                assert!(!a.palette_name().is_empty());
+            }
+            // Every other action is still reachable by a chord with a
+            // modifier or a named key.
+            for a in ActionId::ALL {
+                if palette_only.contains(a) {
+                    continue;
+                }
+                let reachable = Layer::ALL.iter().any(|m| {
+                    map.chords_in_mode(*a, *m)
+                        .iter()
+                        .any(|c| !c.is_text_input())
+                });
+                assert!(reachable, "{a:?}");
+            }
+            // Reading basics never depend on character keys.
+            for a in ActionId::in_category(Category::Reading) {
+                if palette_only.contains(&a) {
+                    continue;
+                }
+                assert!(map.bindings_for(a).iter().any(|b| map.is_active(b)));
+            }
+        }
+    }
+
     /// ADR-0006's example: `next_sentence = ["Alt+.", "."]` keeps `.` a
     /// browse key, so typing a period in edit mode still types.
     #[test]
@@ -839,7 +1016,17 @@ mod tests {
         assert!(joined.contains("Backspace"), "{joined}");
         assert!(joined.contains("find: unknown modifier"), "{joined}");
         assert!(joined.contains("p is bound to"), "{joined}");
-        assert_eq!(warnings.len(), 3, "{joined}");
+        assert!(joined.contains("not applied for find_next"), "{joined}");
+        assert!(joined.contains("find_next has no keys left"), "{joined}");
+        // The conflicting override is not applied: p still moves by
+        // paragraph.
+        assert_eq!(
+            map.lookup(&k("p"), Layer::Browse),
+            Some(ActionId::NextParagraph)
+        );
+        assert!(map.conflicts().is_empty());
+        assert!(joined.contains("find has no keys left"), "{joined}");
+        assert_eq!(warnings.len(), 5, "{joined}");
     }
 
     #[test]

@@ -102,6 +102,7 @@
 //! | `recovered` | polite | Recovered unsaved work. Remember to save. | Recovered unsaved work. Remember to save. | Recovered unsaved work. Remember to save. |
 //! | `theme` | assertive | Theme galaxy | Theme galaxy | Theme galaxy |
 //! | `line_numbers` | assertive | Line numbers on | Line numbers on | Line numbers on |
+//! | `character_keys` | assertive | Single-key shortcuts off | Single-key shortcuts off | Single-key shortcuts off |
 //! | `error` | assertive | Speech engine stopped | Speech engine stopped | Speech engine stopped |
 //! | `info` | polite | — | Copied | Copied |
 //! <!-- VERBOSITY-TABLE-END -->

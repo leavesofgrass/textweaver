@@ -18,9 +18,17 @@
 //!   so they do not depend on the keyboard layout (on a US layout
 //!   `Ctrl+Shift+8` arrives as `Ctrl+*`, on others as something else);
 //! - edit-layer chords never use Ctrl+Alt with a letter, which is AltGr on
-//!   many layouts and types characters.
+//!   many layouts and types characters;
+//! - an action that quits or destroys work asks for confirmation before it
+//!   runs ([`ActionId::needs_confirmation`]); only such actions may have a
+//!   single printable key (Star's `q` quit at once, even when dictated text
+//!   reached the reader, WCAG 2.1.4 Character Key Shortcuts), and every
+//!   action stays usable with single-key shortcuts turned off
+//!   ([`Keymap::set_character_keys`](crate::Keymap::set_character_keys)),
+//!   through a modifier chord or the command palette.
 //!
-//! Deliberate departures from Star: `Ctrl+T` means next table in the GUI
+//! Deliberate departures from Star: `q`, `Q`, and Ctrl+Q ask "Quit
+//! textweaver? y or n" before quitting; `Ctrl+T` means next table in the GUI
 //! and nothing in the terminal (Star's TUI used it for the voice picker,
 //! Part 1 §7 item 37); `Ctrl+S` saves in both (Star's TUI exported);
 //! Redo also answers to `Ctrl+Shift+Z` in the GUI (Star used that chord for
@@ -146,7 +154,7 @@ macro_rules! actions {
 actions! {
     // Reading
     PlayPause = "play_pause", Reading, "Play or pause reading from the current word",
-        gui [], term [], shared ["b:Space"];
+        gui [], term ["g:Alt+P"], shared ["b:Space"];
     Stop = "stop", Reading, "Stop reading",
         gui ["g:Escape"], term ["g:Escape", "b:Ctrl+X"], shared [];
     ReadFromCursor = "read_from_cursor", Reading, "Read continuously from the cursor",
@@ -364,6 +372,9 @@ actions! {
         gui ["g:F5"], term ["g:F5"], shared [];
     ToggleLineNumbers = "toggle_line_numbers", View, "Show or hide line numbers",
         gui ["g:F6"], term ["g:F6"], shared [];
+    ToggleCharacterKeys = "toggle_character_keys", View,
+        "Turn single-key shortcuts on or off, so dictation and typing never trigger commands",
+        gui ["g:F9"], term ["g:F9"], shared [];
     CommandPalette = "command_palette", View, "Run any command by name",
         gui ["g:F2"], term ["g:F2", "g:Alt+X"], shared ["b::"];
     KeyboardHelp = "keyboard_help", View, "List keyboard shortcuts",
@@ -373,6 +384,26 @@ actions! {
 }
 
 impl ActionId {
+    /// True for actions the app must confirm before running, however they
+    /// are triggered (key, palette, or script): quitting ("Quit textweaver?
+    /// y or n": `y` quits; `n`, `a`, or Escape aborts) and deleting a note
+    /// or highlight. A single printable key reaches them only through that
+    /// confirmation, so a stray or dictated keystroke cannot quit or delete.
+    pub fn needs_confirmation(self) -> bool {
+        matches!(self, ActionId::Quit | ActionId::DeleteNote)
+    }
+
+    /// The confirmation question for an action that
+    /// [`needs_confirmation`](Self::needs_confirmation), worded to be read
+    /// aloud.
+    pub fn confirmation_prompt(self) -> Option<&'static str> {
+        match self {
+            ActionId::Quit => Some("Quit textweaver? y or n"),
+            ActionId::DeleteNote => Some("Delete this note or highlight? y or n"),
+            _ => None,
+        }
+    }
+
     /// The command palette name: the id with spaces, e.g. `next sentence`.
     pub fn palette_name(self) -> String {
         self.id().replace('_', " ")
@@ -406,6 +437,27 @@ mod tests {
         ids.sort_unstable();
         ids.dedup();
         assert_eq!(ids.len(), ActionId::ALL.len());
+    }
+
+    #[test]
+    fn confirmation_marks() {
+        let marked: Vec<ActionId> = ActionId::ALL
+            .iter()
+            .copied()
+            .filter(|a| a.needs_confirmation())
+            .collect();
+        assert_eq!(marked, vec![ActionId::DeleteNote, ActionId::Quit]);
+        for a in ActionId::ALL {
+            assert_eq!(
+                a.needs_confirmation(),
+                a.confirmation_prompt().is_some(),
+                "{a:?}"
+            );
+        }
+        assert_eq!(
+            ActionId::Quit.confirmation_prompt(),
+            Some("Quit textweaver? y or n")
+        );
     }
 
     #[test]

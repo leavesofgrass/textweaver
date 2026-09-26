@@ -469,6 +469,30 @@ impl Default for LibrarySettings {
     }
 }
 
+/// Keyboard settings.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct KeyboardSettings {
+    /// Single-key shortcuts (browse keys such as `.` and `a`). Off means
+    /// printable keys and Space never trigger commands, so dictation,
+    /// speech recognition, and switch keyboards cannot set them off by
+    /// accident (WCAG 2.1.4). The app passes this to
+    /// `Keymap::set_character_keys`.
+    pub character_keys: bool,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+impl Default for KeyboardSettings {
+    fn default() -> Self {
+        KeyboardSettings {
+            character_keys: true,
+            extra: toml::Table::new(),
+        }
+    }
+}
+
 /// All settings, one TOML table per group.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -487,6 +511,8 @@ pub struct Settings {
     pub editing: EditingSettings,
     /// `[library]`
     pub library: LibrarySettings,
+    /// `[keyboard]`
+    pub keyboard: KeyboardSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -585,6 +611,7 @@ impl Settings {
             display: lenient_section("display", table.remove("display"), &mut w),
             editing: lenient_section("editing", table.remove("editing"), &mut w),
             library: lenient_section("library", table.remove("library"), &mut w),
+            keyboard: lenient_section("keyboard", table.remove("keyboard"), &mut w),
             extra: table,
         };
         w.extend(s.validate());
@@ -689,7 +716,8 @@ impl Settings {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-const STRUCT_TABLES: [&str; 10] = [
+const STRUCT_TABLES: [&str; 11] = [
+    "keyboard",
     "speech",
     "speech.eci",
     "speech.sapi",
@@ -1264,6 +1292,21 @@ mod tests {
         );
         write(&store, "[speech.eci]\ndictionaries = true\n");
         assert_eq!(store.load().0.speech.eci.dictionaries, EciDictionaries::On);
+    }
+
+    #[test]
+    fn character_keys_default_on_and_round_trip() {
+        let (_d, store) = store();
+        assert!(Settings::default().keyboard.character_keys);
+        let mut s = Settings::default();
+        s.keyboard.character_keys = false;
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(
+            text.contains("[keyboard]\ncharacter_keys = false"),
+            "{text}"
+        );
+        assert!(!store.load().0.keyboard.character_keys);
     }
 
     #[test]

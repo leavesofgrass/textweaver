@@ -44,9 +44,9 @@ pub use paths::Paths;
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
     AppleBackend, AppleSettings, DisplaySettings, EciDictionaries, EciSettings, EditingSettings,
-    FootnoteMode, HighlightSettings, KeymapOverrides, LibrarySettings, NormalizationSettings,
-    ReadingSettings, SapiSettings, Settings, SettingsLoad, SettingsStore, SpeechSettings,
-    TableMode,
+    FootnoteMode, HighlightSettings, KeyboardSettings, KeymapOverrides, LibrarySettings,
+    NormalizationSettings, ReadingSettings, SapiSettings, Settings, SettingsLoad, SettingsStore,
+    SpeechSettings, TableMode,
 };
 pub use sync::{ConflictPolicy, SidecarStore};
 

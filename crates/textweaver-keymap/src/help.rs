@@ -131,6 +131,17 @@ Global chords work in every mode. Speech Cursor keys take over browse keys with 
 In the tables below a key without a note is global; the others name their layer.
 The GUI column shows Windows and Linux; on macOS the GUI uses Cmd wherever it shows Ctrl.
 
+## Single-key shortcuts
+
+Browse keys are single printable keys. Speech recognition, dictation, and switch or scanning keyboards can type them by accident, so they can be turned off (WCAG 2.1.4, Character Key Shortcuts): press F9, run `toggle character keys` from the command palette, or set this in `settings.toml`:
+
+```toml
+[keyboard]
+character_keys = false
+```
+
+While they are off, printable keys and Space never trigger commands in any mode; chords with Ctrl or Alt, the arrow and function keys, and the command palette (F2) keep working. Quitting and deleting a note or highlight always ask first (\"Quit textweaver? y or n\"), however you start them, so a stray `q` cannot close a document. The actions listed at the end of this page have only single keys; with single-key shortcuts off, run them from the command palette or give them a chord in `keymap.toml`.
+
 ## Changing keys
 
 Put overrides in `keymap.toml` in the configuration directory. Each line replaces all of an action's keys; an empty list removes them:
@@ -143,7 +154,7 @@ bold = []
 
 A key may name its layer with a prefix: `g:` global, `b:` browse, `s:` Speech Cursor, `e:` edit.
 Without a prefix, a single character goes to the browse layer (so it never gets in the way of typing), and any other chord goes to the action's usual layer.
-textweaver warns about unknown actions, keys it cannot read, keys a terminal cannot send, and keys bound twice in one mode, and keeps going.
+textweaver warns about unknown actions, keys it cannot read, and keys a terminal cannot send, and keeps going. A key your overrides would bind to two commands in one mode is not applied; the warning names it.
 
 ## Terminal notes
 
@@ -172,6 +183,30 @@ pub fn keyboard_markdown() -> String {
                 action.help(),
                 cell(&term.bindings_for(action)),
                 cell(&gui.bindings_for(action)),
+                action.id()
+            );
+        }
+    }
+    let mut term_off = term.clone();
+    term_off.set_character_keys(false);
+    let mut gui_off = gui.clone();
+    gui_off.set_character_keys(false);
+    let (t_only, g_only) = (term_off.palette_only(), gui_off.palette_only());
+    out.push_str(
+        "\n## Command palette only, with single-key shortcuts off\n\n\
+         These actions have only single-key shortcuts by default. With single-key shortcuts off, run them from the command palette (F2) or bind a chord in `keymap.toml`.\n\n\
+         | Action | Terminal | GUI | Id |\n|---|---|---|---|\n",
+    );
+    for &action in ActionId::ALL {
+        let (t, g) = (t_only.contains(&action), g_only.contains(&action));
+        if t || g {
+            let mark = |b: bool| if b { "palette" } else { "has a chord" };
+            let _ = writeln!(
+                out,
+                "| {} | {} | {} | `{}` |",
+                action.help(),
+                mark(t),
+                mark(g),
                 action.id()
             );
         }
