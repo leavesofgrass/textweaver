@@ -39,7 +39,7 @@ fn docx_writes_office_math_strike_and_a_rule() {
     );
     assert!(xml.contains("<w:strike/>"), "{xml}");
     assert!(xml.contains("<w:pBdr><w:bottom"), "{xml}");
-    // Read back, the formula's text is there.
+    // Read back, the formula is LaTeX math again.
     let back = textweaver_formats::Registry::with_builtins()
         .load(
             &Source::Bytes {
@@ -51,7 +51,7 @@ fn docx_writes_office_math_strike_and_a_rule() {
         .unwrap();
     let text = back.text().to_string();
     assert!(
-        text.contains("The area is \u{3C0}r2 and was is known."),
+        text.contains("The area is $\\pi r^{2}$ and was is known."),
         "{text}"
     );
 }

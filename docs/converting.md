@@ -161,6 +161,8 @@ These options change how a PDF looks. None of them changes what a screen reader 
 
 Links in a PDF work: web and email links open, and links to a heading in the same document, such as `[see the summary](#summary)` in Markdown, jump to that heading. Footnote numbers jump to their footnote. textweaver tells you about a link to a heading that does not exist, and about any image that has no description, since screen readers skip such images.
 
+Struck-through text, such as `~~old plan~~` in Markdown, is drawn with a line through it. Screen readers still read the words.
+
 For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the book, with its licence, and make it the book's font. Reading apps may still let you choose another. Fonts installed on your computer cannot be put into a book, because their licences may not allow it.
 
 ## Other options
@@ -178,6 +180,8 @@ For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the 
 ## Formats textweaver reads
 
 textweaver reads Markdown, HTML, plain text, EPUB, Word (DOCX), and PDF itself. For other formats, such as OpenDocument text, RTF, reStructuredText, Org, and LaTeX, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself. `--no-pandoc` turns it off.
+
+Equations in a Word document are read as math. textweaver turns them into LaTeX between dollar signs, as in Markdown, so they are spoken as formulas.
 
 Pandoc runs in its sandbox, so a document cannot make it read other files on your computer (a LaTeX `\input`, for example); this needs Pandoc 2.19 or later. A file Pandoc takes more than two minutes on is stopped and counted as failed, with the reason "pandoc took longer than 2 minutes and was stopped", and the other files go on. Change the limit with `--pandoc-timeout SECONDS` or the `TEXTWEAVER_PANDOC_TIMEOUT` environment variable. To use a Pandoc that is not on your `PATH`, set `TEXTWEAVER_PANDOC` to its full path.
 

@@ -125,12 +125,22 @@ impl Writer for PdfWriter {
 /// The root of the tag tree under construction.
 const ROOT: usize = 0;
 
+/// Height of the strikethrough line above the baseline, as a fraction of
+/// the font size (about the middle of the lowercase letters).
+const STRIKE_RISE: f32 = 0.3;
+
+/// Thickness of the strikethrough line, as a fraction of the font size.
+const STRIKE_THICKNESS: f32 = 0.06;
+
 /// Font style of a run.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct Look {
     bold: bool,
     italic: bool,
     mono: bool,
+    /// Struck through: a line is drawn through the text (as an artifact;
+    /// the text itself is tagged as usual).
+    strike: bool,
 }
 
 /// Where a link goes.
@@ -451,6 +461,14 @@ impl<'a> Flow<'a> {
                         link,
                     ),
                     Style::Code => self.inlines(children, Look { mono: true, ..look }, link),
+                    Style::Strikethrough => self.inlines(
+                        children,
+                        Look {
+                            strike: true,
+                            ..look
+                        },
+                        link,
+                    ),
                     // A formula prints in linear form ("πr²"), tagged
                     // `Formula` with its spoken form as alt text; display
                     // math stands on its own line.
@@ -850,6 +868,9 @@ impl<'a> Layout<'a> {
                     });
                     rx += w;
                 }
+                if p.look.strike {
+                    self.strike(&p, start_x, rx, baseline, psize);
+                }
                 if let (Some(l), true) = (p.link, slots)
                     && !matches!(links[l], LinkTarget::Formula(_))
                 {
@@ -865,6 +886,31 @@ impl<'a> Layout<'a> {
             }
             self.y += lh;
         }
+    }
+
+    /// A line through struck text drawn from `x0` to `x1` at `baseline`,
+    /// leaving out the spaces that start or end the part. It sits about the
+    /// middle of the lowercase letters (0.3 of the size above the
+    /// baseline), in the text colour, with a thickness that scales with the
+    /// size. It is a layout artifact: the text keeps its tags.
+    fn strike(&mut self, p: &Part, x0: f32, x1: f32, baseline: f32, size: f32) {
+        let space = self.measure(" ", p.look, size);
+        let lead = p.text.chars().take_while(|c| *c == ' ').count();
+        if lead == p.text.chars().count() {
+            return;
+        }
+        let trail = p.text.chars().rev().take_while(|c| *c == ' ').count();
+        let x0 = x0 + space * lead as f32;
+        let x1 = x1 - space * trail as f32;
+        if x1 <= x0 {
+            return;
+        }
+        self.op(Op::Rule {
+            x0,
+            x1,
+            y: baseline - size * STRIKE_RISE,
+            width: (size * STRIKE_THICKNESS).max(0.4),
+        });
     }
 
     fn baseline(&self, size: f32) -> f32 {
@@ -917,6 +963,7 @@ impl<'a> Layout<'a> {
                 bold: true,
                 italic: level == 6,
                 mono: false,
+                strike: false,
             },
         );
         let lines = self.lines(&flow.words, self.width() - indent, size);
@@ -1822,5 +1869,139 @@ mod tests {
         assert_eq!(a.fragment("Intro"), Some(0));
         assert_eq!(a.fragment("missing"), None);
         assert!(a.notes.contains("1"));
+    }
+
+    use textweaver_formats::{LoadOptions, Loader, MarkdownLoader, PdfLoader, Source};
+
+    /// A Markdown document.
+    fn markdown(text: &str) -> Document {
+        MarkdownLoader
+            .load(
+                &Source::Bytes {
+                    data: text.as_bytes().to_vec(),
+                    hint: "md".into(),
+                },
+                &LoadOptions::default(),
+            )
+            .expect("markdown loads")
+    }
+
+    /// Uncompressed PDF of `doc`, or `None` when no font is available.
+    fn pdf(doc: &Document) -> Option<Vec<u8>> {
+        let options = WriteOptions {
+            timestamp: Some(1_790_339_696),
+            pdf: crate::PdfOptions {
+                compress: false,
+                ..crate::PdfOptions::default()
+            },
+            ..WriteOptions::default()
+        };
+        let mut out = Vec::new();
+        match PdfWriter.write(doc, &options, &mut out) {
+            Ok(_) => Some(out),
+            Err(WriteError::NoFont) => None,
+            Err(e) => panic!("{e}"),
+        }
+    }
+
+    /// Stroked paths (the `S` operator on a line of its own) in the
+    /// uncompressed content streams.
+    fn strokes(bytes: &[u8]) -> usize {
+        String::from_utf8_lossy(bytes)
+            .lines()
+            .filter(|l| l.trim() == "S")
+            .count()
+    }
+
+    /// The text of a PDF, read back with the PDF loader.
+    fn read_back(bytes: Vec<u8>) -> String {
+        PdfLoader
+            .load(
+                &Source::Bytes {
+                    data: bytes,
+                    hint: "pdf".into(),
+                },
+                &LoadOptions::default(),
+            )
+            .expect("the PDF loads")
+            .text()
+            .to_string()
+    }
+
+    #[test]
+    fn strikethrough_draws_a_line_and_keeps_the_text() {
+        let (Some(plain), Some(struck)) = (
+            pdf(&markdown("Keep the old plan here.\n")),
+            pdf(&markdown("Keep the ~~old plan~~ here.\n")),
+        ) else {
+            return;
+        };
+        // One more stroked line: the strikethrough, as a layout artifact.
+        assert_eq!(strokes(&struck), strokes(&plain) + 1);
+        let text = read_back(struck);
+        assert!(text.contains("Keep the old plan here."), "{text:?}");
+    }
+
+    #[test]
+    fn strikethrough_follows_line_wraps() {
+        let words = "struck words wrap across lines ".repeat(30);
+        let words = words.trim_end();
+        let (Some(plain), Some(struck)) = (
+            pdf(&markdown(&format!("Start {words} end.\n"))),
+            pdf(&markdown(&format!("Start ~~{words}~~ end.\n"))),
+        ) else {
+            return;
+        };
+        // A line per wrapped line of struck text.
+        let extra = strokes(&struck) - strokes(&plain);
+        assert!(extra >= 3, "{extra} strike lines");
+        let text = read_back(struck);
+        assert!(text.contains("wrap across lines"), "{text:?}");
+        assert!(text.contains("end."), "{text:?}");
+    }
+
+    #[test]
+    fn strike_line_sits_above_the_baseline_and_skips_spaces() {
+        let fonts = match Fonts::discover(&crate::PdfOptions::default()) {
+            Ok(f) => f,
+            Err(WriteError::NoFont) => return,
+            Err(e) => panic!("{e}"),
+        };
+        let options = WriteOptions::default();
+        let anchors = Anchors::default();
+        let mut report = WriteReport::default();
+        let doc = Document::from_plain_text("");
+        let mut resources = Resources::new(&doc, &options);
+        let mut layout = Layout::new(&fonts, &options, &anchors, &mut report, &mut resources);
+        let look = Look {
+            strike: true,
+            ..Look::default()
+        };
+        let part = Part {
+            text: "gone ".into(),
+            look,
+            link: None,
+        };
+        let space = layout.measure(" ", look, 12.0);
+        layout.strike(&part, 100.0, 140.0, 500.0, 12.0);
+        let blank = Part {
+            text: "  ".into(),
+            look,
+            link: None,
+        };
+        layout.strike(&blank, 100.0, 110.0, 500.0, 12.0);
+        let rules: Vec<_> = layout.pages[0]
+            .iter()
+            .filter_map(|op| match op {
+                Op::Rule { x0, x1, y, width } => Some((*x0, *x1, *y, *width)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(rules.len(), 1);
+        let (x0, x1, y, width) = rules[0];
+        assert!((x0 - 100.0).abs() < 0.001);
+        assert!((x1 - (140.0 - space)).abs() < 0.001);
+        assert!((y - (500.0 - 12.0 * STRIKE_RISE)).abs() < 0.001);
+        assert!((width - 12.0 * STRIKE_THICKNESS).abs() < 0.001);
     }
 }
