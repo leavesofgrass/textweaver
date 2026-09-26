@@ -454,3 +454,11 @@ Jon asked for an easy way to import and export settings, preferring JSON. TOML s
 **Owns:** `crates/textweaver-store/src/settings_io.rs` (and its tests), the settings validation hooks in `settings.rs`, `crates/textweaver-cli/src/cmd/settings.rs`, `docs/settings.md`, `fixtures/u/`.
 
 **Status:** done on `wave2/u-settings-io`, not yet integrated. `tw settings export|import|path|reset` work; import validates, merges or replaces, backs up, and writes atomically; export then import changes nothing (tested with every setting non-default). The app's palette actions `export_settings` and `import_settings` are a verified patch for Agent D3 in `fixtures/u/d3-settings-palette.patch`.
+
+### Agent X — Scripts and tools (added 2026-09-25 at Jon's request)
+
+Jon asked for install scripts for Linux (any distribution: he uses Debian, Arch, and Fedora) and macOS, and for speech tools and other helpers.
+
+**Owns:** `scripts/` (with `scripts/README.md` and `scripts/linux/textweaver.desktop`), `.github/workflows/scripts.yml`, the `-Skip` parameter of `tools/sapi_probe.ps1`, and the "install with a script" lines in `README.md`, `docs/install.md`, `docs/quickstart.md`, and `docs/releasing.md`.
+
+**Status:** done on `wave2/x-scripts` (Friday, September 25, 2026); awaiting integration. Installers for Linux (apt, dnf, pacman, zypper, apk; source build), macOS (release or source), and Windows (release or source), plus update, speech-check, doctor, dev-check, convert-folder, and voxin-docker. Real source installs pass in `debian:stable`, `fedora:latest`, and `archlinux:latest`; package names are also checked on openSUSE Tumbleweed, Alpine, and Ubuntu 24.04. On Fedora 44 and current Arch, `espeakng-sys` 0.3.0 does not build (its bindgen layout test for `_IO_FILE` fails), so the installer falls back to building without the `espeak` feature; that needs a fix in the speech crate.
