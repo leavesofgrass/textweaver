@@ -1,8 +1,9 @@
-# macOS-only probes and measurements for the Apple speech backends
+# macOS-only voice tests and measurements for the Apple speech backends
 # (textweaver-apple, ADR-0008). Runs on Agent F's branch only, on both
-# macOS 14 and macOS 15 runners. Nothing is played aloud: live speech in the
-# probes runs at volume 0, and the Rust tests synthesize to files or through
-# a silent audio clock.
+# macOS 14 and macOS 15 runners (ci.yml covers macos-latest). Nothing is
+# played aloud: live speech runs at volume 0 or into a silent output, and
+# files go to temporary directories. The Swift probes in
+# tools/avspeech-spike/ can be run by hand with `swift <file>`.
 name: Apple speech
 
 on:
@@ -23,13 +24,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Swift probe 6 (Speech Synthesis Manager on a background thread)
-        run: |
-          swiftc -suppress-warnings tools/avspeech-spike/probe6.swift -o "$RUNNER_TEMP/probe6"
-          for s in attrs voice pause stop file rate pitch; do
-            "$RUNNER_TEMP/probe6" "$s" || echo "scenario $s exited with $?"
-            echo
-          done
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
       - name: Voice tests and measurements
