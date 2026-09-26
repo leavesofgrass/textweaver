@@ -1,7 +1,9 @@
 //! CSS custom properties for HTML output (Agent L's templates and exports).
 //!
 //! [`variables`] gives one theme's properties; [`stylesheet`] pairs a light
-//! and a dark theme under `prefers-color-scheme`, adds a high-contrast theme
+//! and a dark theme under `prefers-color-scheme` ([`default_stylesheet`]:
+//! Galaxy, with Galaxy Light only when the system asks for light), adds a
+//! high-contrast theme
 //! under `prefers-contrast: more`, maps everything to system colors under
 //! `forced-colors: active` (so Windows contrast themes win, as they should),
 //! and appends element rules that use the properties. Properties are named
@@ -100,12 +102,31 @@ pub fn variables(theme: &Theme) -> String {
 /// The themes a stylesheet is built from.
 #[derive(Clone, Copy, Debug)]
 pub struct SchemeSet<'a> {
-    /// Used by default and under `prefers-color-scheme: light`.
+    /// Used under `prefers-color-scheme: light`.
     pub light: &'a Theme,
     /// Used under `prefers-color-scheme: dark`.
     pub dark: &'a Theme,
     /// Used under `prefers-contrast: more`, when given.
     pub high_contrast: Option<&'a Theme>,
+    /// Which theme `:root` gets when the reader's system states no
+    /// preference: the dark one when true.
+    pub prefer_dark: bool,
+}
+
+impl SchemeSet<'static> {
+    /// textweaver's default: Galaxy (dark) unless the system asks for
+    /// light, then Galaxy Light; High Contrast when the system asks for
+    /// more contrast.
+    pub fn galaxy() -> Self {
+        let b = crate::builtin::get;
+        let fallback = crate::builtin::default_theme;
+        SchemeSet {
+            light: b("galaxy-light").unwrap_or_else(fallback),
+            dark: b("galaxy").unwrap_or_else(fallback),
+            high_contrast: b("high-contrast"),
+            prefer_dark: true,
+        }
+    }
 }
 
 fn forced_colors(theme: &Theme) -> String {
@@ -197,18 +218,24 @@ pub fn stylesheet(set: SchemeSet<'_>) -> String {
     let mut out = String::new();
     let _ = writeln!(
         out,
-        "/* textweaver themes: {} (light), {} (dark){} */",
+        "/* textweaver themes: {} (light), {} (dark){}; {} unless the system says otherwise */",
         set.light.meta.display_name,
         set.dark.meta.display_name,
         set.high_contrast
             .map(|t| format!(", {} (more contrast)", t.meta.display_name))
-            .unwrap_or_default()
+            .unwrap_or_default(),
+        if set.prefer_dark { "dark" } else { "light" },
     );
-    let _ = write!(out, ":root {{\n{}}}\n", declarations(set.light, "  "));
+    let (base, other, other_scheme) = if set.prefer_dark {
+        (set.dark, set.light, "light")
+    } else {
+        (set.light, set.dark, "dark")
+    };
+    let _ = write!(out, ":root {{\n{}}}\n", declarations(base, "  "));
     let _ = write!(
         out,
-        "@media (prefers-color-scheme: dark) {{\n  :root {{\n{}  }}\n}}\n",
-        declarations(set.dark, "    ")
+        "@media (prefers-color-scheme: {other_scheme}) {{\n  :root {{\n{}  }}\n}}\n",
+        declarations(other, "    ")
     );
     if let Some(hc) = set.high_contrast {
         let _ = write!(
@@ -220,7 +247,7 @@ pub fn stylesheet(set: SchemeSet<'_>) -> String {
     let _ = write!(
         out,
         "@media (forced-colors: active) {{\n  :root {{\n{}  }}\n}}\n",
-        forced_colors(set.light)
+        forced_colors(base)
     );
     let mut names: Vec<&str> = Vec::new();
     for t in [Some(set.light), Some(set.dark), set.high_contrast]
@@ -235,6 +262,28 @@ pub fn stylesheet(set: SchemeSet<'_>) -> String {
     }
     out.push_str(&rules(&names));
     out
+}
+
+/// textweaver's default stylesheet ([`SchemeSet::galaxy`]).
+pub fn default_stylesheet() -> String {
+    stylesheet(SchemeSet::galaxy())
+}
+
+/// A stylesheet for one theme that does not follow the system's light or
+/// dark setting (for a reader who chose a theme explicitly). System colors
+/// still win under `forced-colors: active`.
+pub fn single_stylesheet(theme: &Theme) -> String {
+    let names: Vec<&str> = theme
+        .user_highlights
+        .iter()
+        .map(|h| h.name.as_str())
+        .collect();
+    format!(
+        "{}@media (forced-colors: active) {{\n  :root {{\n{}  }}\n}}\n{}",
+        variables(theme),
+        forced_colors(theme),
+        rules(&names)
+    )
 }
 
 #[cfg(test)]

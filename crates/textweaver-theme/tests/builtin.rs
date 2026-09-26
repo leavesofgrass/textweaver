@@ -188,3 +188,29 @@ fn adjustments_table_lists_every_change() {
     assert_eq!(rows, total);
     assert!(table.contains("| galaxy | `colors.dim_text` | `#7d7d7d` |"));
 }
+
+#[test]
+fn galaxy_is_the_default_and_faithful_to_star() {
+    // Jon's theme: Star's default, modeled on Obsidian's dark palette.
+    let g = builtin::default_theme();
+    assert_eq!(g.name(), "galaxy");
+    assert_eq!(textweaver_theme::DEFAULT_THEME, "galaxy");
+    assert_eq!(builtin::NAMES[0], "galaxy");
+    assert_eq!(g.kind(), ThemeKind::Dark);
+    assert_eq!(g.meta.counterpart.as_deref(), Some("galaxy-light"));
+    // Every Star value is kept except muted, which moved from 4.05 to 4.52
+    // to 1, toward Obsidian's own muted gray.
+    let (_, adj) = star::port(star::palette("galaxy").unwrap()).unwrap();
+    assert_eq!(adj.len(), 1);
+    assert_eq!(adj[0].key, "colors.dim_text");
+    let hex = |r: ColorRole| g.color(r).hex();
+    assert_eq!(hex(ColorRole::Background), "#1e1e1e");
+    assert_eq!(hex(ColorRole::Text), "#dadada");
+    assert_eq!(hex(ColorRole::Heading1), "#c9b6ff");
+    assert_eq!(hex(ColorRole::Link), "#a882ff");
+    assert_eq!(hex(ColorRole::DimText), "#858585");
+    // The light pair passes too and points back.
+    let gl = builtin::get("galaxy-light").unwrap();
+    assert!(check(gl).passed());
+    assert_eq!(gl.meta.counterpart.as_deref(), Some("galaxy"));
+}
