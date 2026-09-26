@@ -20,6 +20,7 @@ RELEASE_TAG=""
 SOURCE_DIR=""
 PM=""
 INSTALL_DEPS=1
+DEPS_ONLY=0
 ESPEAK=1
 OPTIONAL="ask"
 UNINSTALL=0
@@ -51,6 +52,7 @@ Options:
   --package-manager PM   Use PM (apt, dnf, yum, pacman, zypper, or apk)
                          instead of detecting it. "none" skips packages.
   --no-deps              Do not install system packages.
+  --deps-only            Install the system packages, then stop.
   --no-espeak            Build without the in-process espeak-ng engine.
                          speech-dispatcher still speaks with espeak-ng. The
                          script also falls back to this when the espeak-ng
@@ -181,6 +183,7 @@ while [ "$#" -gt 0 ]; do
       ;;
     --package-manager=*) PM="${1#*=}" ;;
     --no-deps) INSTALL_DEPS=0 ;;
+    --deps-only) DEPS_ONLY=1 ;;
     --no-espeak) ESPEAK=0 ;;
     --no-optional) OPTIONAL="no" ;;
     --optional) OPTIONAL="yes" ;;
@@ -943,6 +946,11 @@ say "It has six steps: system packages, the source code, Rust, the build, the in
 say "It asks before it uses sudo, installs Rust, or changes your PATH."
 
 install_dependencies
+if [ "$DEPS_ONLY" = 1 ]; then
+  section "Done"
+  say "The system packages are done, and --deps-only stops here. Run the script again without it to build and install textweaver."
+  exit 0
+fi
 find_source
 ensure_rust
 build

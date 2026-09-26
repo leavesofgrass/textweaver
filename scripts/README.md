@@ -38,7 +38,7 @@ scripts/install-linux.sh --dry-run
 scripts/install-linux.sh --uninstall
 ```
 
-`--release TAG` is reserved for Linux packages, which are not published yet; for now it says so.
+`--deps-only` installs the system packages and stops. `--release TAG` is reserved for Linux packages, which are not published yet; for now it says so. Alpine has no bash by default: run `apk add bash` first.
 
 ### install-macos.sh
 

@@ -96,7 +96,7 @@ while ($null -ne $Rest -and $i -lt $Rest.Count) {
 }
 
 if ($Help) {
-    Write-Line 'Usage: scripts\convert-folder.ps1 FOLDER [-To FORMAT] [-Out DIR] [-Watch] [-Force] [-DryRun] [-- TW-CONVERT-OPTIONS]'
+    Write-Line 'Usage: scripts\convert-folder.ps1 FOLDER [-To FORMAT] [-Out DIR] [-Watch] [-Force] [-TwArgs "..."] [-DryRun]'
     Write-Line
     Write-Line 'Converts every document in FOLDER, and its subfolders, with tw convert. The output'
     Write-Line 'goes beside it, in FOLDER-FORMAT (notes becomes notes-html). Up-to-date files are'

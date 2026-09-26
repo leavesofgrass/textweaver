@@ -444,7 +444,12 @@ function Install-Stage($Package) {
 function Uninstall-Textweaver {
     Write-Line "This removes textweaver from $InstallDir, its user PATH entry, and its Start menu shortcut."
     Write-Line 'It keeps your settings, reading positions, and notes, and it does not remove Rust.'
-    if (-not (Confirm-Choice "Remove textweaver from $InstallDir?")) { Write-Line 'Nothing removed.'; return }
+    $installed = (Test-Path -LiteralPath $InstallDir) -or (Test-Path -LiteralPath $ShortcutPath) -or (Test-PathEntry (Get-UserPath) $InstallDir)
+    if (-not $installed -and -not $DryRun) {
+        Write-Line "textweaver is not installed in $InstallDir, so there is nothing to remove."
+        return
+    }
+    if (-not (Confirm-Choice "Remove textweaver from ${InstallDir}?")) { Write-Line 'Nothing removed.'; return }
     if ((Test-Path -LiteralPath $InstallDir) -or $DryRun) {
         Invoke-Step "remove $InstallDir" { Remove-Item -LiteralPath $InstallDir -Recurse -Force }
     } else {
