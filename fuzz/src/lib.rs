@@ -15,6 +15,7 @@ pub fn load_checked(data: &[u8], hint: &str) {
         LoadOptions {
             skip_code: true,
             footnotes: FootnoteMode::Inline,
+            ..LoadOptions::default()
         },
     ] {
         let source = Source::Bytes {

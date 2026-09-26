@@ -72,17 +72,15 @@ impl PdfPages {
         let page = pages
             .get(index)
             .ok_or_else(|| OcrError::Image(format!("the PDF has no page {}", index + 1)))?;
-        let extracted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            single_image(page)
-        }))
-        .ok()
-        .flatten();
+        let extracted =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| single_image(page)))
+                .ok()
+                .flatten();
         if let Some(img) = extracted {
             return Ok((img, PageImageKind::Extracted));
         }
-        let rendered =
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| render_page(page)))
-                .map_err(|_| OcrError::Image(format!("page {} could not be drawn", index + 1)))??;
+        let rendered = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| render_page(page)))
+            .map_err(|_| OcrError::Image(format!("page {} could not be drawn", index + 1)))??;
         Ok((rendered, PageImageKind::Rendered))
     }
 }

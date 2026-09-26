@@ -48,7 +48,12 @@ fn install_dirs() -> Vec<PathBuf> {
             dirs.push(p.join("Tesseract-OCR"));
         }
     } else {
-        for d in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/opt/local/bin"] {
+        for d in [
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin",
+            "/opt/local/bin",
+        ] {
             dirs.push(PathBuf::from(d));
         }
     }

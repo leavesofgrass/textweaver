@@ -72,27 +72,29 @@ fn main() {
     for file in files {
         let path = Path::new(file);
         let bytes = std::fs::read(path).expect("read");
-        let images: Vec<(GrayImage, String)> =
-            if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("pdf")) {
-                let pdf = PdfPages::open(bytes).expect("pdf");
-                (0..pdf.len())
-                    .map(|i| {
-                        let t = Instant::now();
-                        let (img, kind) = pdf.page_image(i).expect("page");
-                        let how = format!(
-                            "page {} {:?} {}x{} in {:.3} s",
-                            i + 1,
-                            kind,
-                            img.width,
-                            img.height,
-                            t.elapsed().as_secs_f64()
-                        );
-                        (img, how)
-                    })
-                    .collect()
-            } else {
-                vec![(GrayImage::decode(&bytes).expect("image"), "image".into())]
-            };
+        let images: Vec<(GrayImage, String)> = if path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("pdf"))
+        {
+            let pdf = PdfPages::open(bytes).expect("pdf");
+            (0..pdf.len())
+                .map(|i| {
+                    let t = Instant::now();
+                    let (img, kind) = pdf.page_image(i).expect("page");
+                    let how = format!(
+                        "page {} {:?} {}x{} in {:.3} s",
+                        i + 1,
+                        kind,
+                        img.width,
+                        img.height,
+                        t.elapsed().as_secs_f64()
+                    );
+                    (img, how)
+                })
+                .collect()
+        } else {
+            vec![(GrayImage::decode(&bytes).expect("image"), "image".into())]
+        };
         let mut text = String::new();
         let mut secs = 0.0;
         for (n, (img, how)) in images.iter().enumerate() {

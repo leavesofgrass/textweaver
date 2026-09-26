@@ -14,8 +14,23 @@
 //! | [`HtmlLoader`] | `html`, `htm`, `xhtml`, `xht` | [`NATIVE_PRIORITY`] (10) |
 //! | [`EpubLoader`] | `epub` | [`NATIVE_PRIORITY`] (10) |
 //! | [`DocxLoader`] | `docx`, `docm` | [`NATIVE_PRIORITY`] (10) |
-//! | `PdfLoader` (feature `pdf`, on by default; ADR-0010) | `pdf` | [`NATIVE_PRIORITY`] (10) |
+//! | `PdfLoader` (feature `pdf`, on by default; ADR-0010), with OCR of scanned pages (feature `ocr`; ADR-0023) | `pdf` | [`NATIVE_PRIORITY`] (10) |
+//! | `ImageLoader` (feature `ocr`): OCR of an image file | `png`, `jpg`, `jpeg` | [`NATIVE_PRIORITY`] (10) |
+//! | [`DaisyLoader`]: DAISY 3 books and DTBook files | `opf`, `xml`, `dtbook` | [`NATIVE_PRIORITY`] (10) |
+//! | [`PptxLoader`]: PowerPoint slides and speaker notes | `pptx`, `pptm`, `ppsx` | [`NATIVE_PRIORITY`] (10) |
+//! | [`SheetLoader`]: spreadsheets as tables | `csv`, `tsv`, `tab`, `ods`, and (feature `spreadsheets`) `xlsx`, `xlsm`, `xlsb` | [`NATIVE_PRIORITY`] (10) |
+//! | [`ArchiveLoader`]: a list of the files inside, or the DAISY book or EPUB it holds | `zip`, and (feature `archives`) `tar`, `tgz`, `gz`, `7z` | [`NATIVE_PRIORITY`] (10) |
 //! | [`TextLoader`] | `txt`, `text`, `log` (and the fallback for everything else) | 0 |
+//!
+//! Two kinds of path are not plain files:
+//!
+//! - **Archive members**, `book.zip!chapter.pdf` (nested ones too,
+//!   `outer.zip!inner.tar!notes.md`): [`Source::read`] reads the member,
+//!   so every loader opens one, and the document's path (the key for
+//!   notes and positions) is the whole form. See [`archive`].
+//! - **Web addresses**, `https://...` (feature `url`): [`Registry::load`]
+//!   fetches the page and reads it as HTML, or the PDF, EPUB, or other
+//!   file it is. See `web`.
 //!
 //! Every built-in loader is native Rust. The Pandoc loader (feature
 //! `pandoc`; `odt`, `rtf`, `rst`, `org`, `tex`, `dbk`, `textile`,
@@ -33,9 +48,11 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use textweaver_text::{Document, DocumentMeta};
 
+pub mod archive;
 mod builder;
 pub mod cache;
 mod counter;
+pub mod daisy;
 pub mod docx;
 pub mod encoding;
 pub mod epub;
@@ -49,10 +66,17 @@ mod package;
 pub mod pandoc;
 #[cfg(feature = "pdf")]
 pub mod pdf;
+pub mod pptx;
+pub mod progress;
+pub mod sheet;
 mod text;
+#[cfg(feature = "url")]
+pub mod web;
 mod xmldepth;
 
+pub use archive::ArchiveLoader;
 pub use cache::{CacheKey, DocumentCache};
+pub use daisy::DaisyLoader;
 pub use docx::DocxLoader;
 pub use epub::EpubLoader;
 pub use export::{
@@ -66,6 +90,11 @@ pub use markdown::MarkdownLoader;
 pub use pandoc::PandocLoader;
 #[cfg(feature = "pdf")]
 pub use pdf::PdfLoader;
+#[cfg(feature = "ocr")]
+pub use pdf::image::ImageLoader;
+pub use pptx::PptxLoader;
+pub use progress::{Progress, ProgressReport};
+pub use sheet::SheetLoader;
 pub use text::TextLoader;
 
 /// Priority of the built-in native loaders for their formats.
@@ -121,7 +150,7 @@ pub fn warnings(meta: &DocumentMeta) -> Vec<String> {
 
 /// Version of the canonical text the loaders produce. Bumped whenever a
 /// loader's output changes, which invalidates cached documents.
-pub const CANONICAL_VERSION: u32 = 3;
+pub const CANONICAL_VERSION: u32 = 4;
 
 /// Where a document comes from.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -151,10 +180,26 @@ impl Source {
         }
     }
 
-    /// Reads the source's bytes (paths and in-memory data only).
+    /// The web address this source names: a [`Source::Url`], or a path
+    /// written as `http://` or `https://` (how the reader passes one on).
+    pub fn url(&self) -> Option<String> {
+        match self {
+            Source::Url(u) => Some(u.clone()),
+            Source::Path(p) => {
+                let s = p.to_string_lossy();
+                let lower = s.to_ascii_lowercase();
+                (lower.starts_with("http://") || lower.starts_with("https://"))
+                    .then(|| s.replace('\\', "/"))
+            }
+            Source::Bytes { .. } => None,
+        }
+    }
+
+    /// Reads the source's bytes (paths, archive members such as
+    /// `book.zip!chapter.xml`, and in-memory data).
     pub fn read(&self) -> Result<Vec<u8>, LoadError> {
         match self {
-            Source::Path(p) => std::fs::read(p).map_err(|e| LoadError::Io(p.clone(), e)),
+            Source::Path(p) => archive::read_path(p).map_err(|e| LoadError::Io(p.clone(), e)),
             Source::Bytes { data, .. } => Ok(data.clone()),
             Source::Url(u) => Err(LoadError::Unsupported(format!("URL sources: {u}"))),
         }
@@ -165,6 +210,11 @@ impl Source {
     pub fn read_head(&self, n: usize) -> Result<Vec<u8>, LoadError> {
         use std::io::Read;
         match self {
+            Source::Path(p) if !p.exists() && archive::split_member(p).is_some() => {
+                let mut bytes = archive::read_path(p).map_err(|e| LoadError::Io(p.clone(), e))?;
+                bytes.truncate(n);
+                Ok(bytes)
+            }
             Source::Path(p) => {
                 let io = |e| LoadError::Io(p.clone(), e);
                 let file = std::fs::File::open(p).map_err(io)?;
@@ -195,7 +245,8 @@ pub enum FootnoteMode {
     Skip,
 }
 
-/// Options that affect how a document is loaded (part of the cache key).
+/// Options that affect how a document is loaded (part of the cache key,
+/// except [`progress`](Self::progress)).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LoadOptions {
@@ -204,6 +255,63 @@ pub struct LoadOptions {
     pub skip_code: bool,
     /// Where footnotes go.
     pub footnotes: FootnoteMode,
+    /// Text recognition for scanned pages and images.
+    pub ocr: OcrOptions,
+    /// Progress reports and cancelling (not part of the cache key).
+    #[serde(skip)]
+    pub progress: Progress,
+}
+
+/// Which OCR engine reads scanned pages (the `ocr_engine` setting).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum OcrEngineChoice {
+    /// ocrs (in process) for English, Tesseract for other languages.
+    #[default]
+    Auto,
+    /// Always ocrs.
+    Ocrs,
+    /// Always Tesseract.
+    Tesseract,
+    /// PaddleOCR's Latin model (experimental).
+    Paddle,
+}
+
+impl OcrEngineChoice {
+    /// Parses `auto`, `ocrs`, `tesseract`, or `paddle` (any case).
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "" | "auto" => Some(Self::Auto),
+            "ocrs" => Some(Self::Ocrs),
+            "tesseract" => Some(Self::Tesseract),
+            "paddle" | "paddleocr" => Some(Self::Paddle),
+            _ => None,
+        }
+    }
+}
+
+/// How scanned pages and images are read (ADR-0023).
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(default)]
+pub struct OcrOptions {
+    /// Recognize text in pages that have none (on by default).
+    pub enabled: bool,
+    /// The text's language: Tesseract codes (`eng`, `fra+eng`) or language
+    /// tags (`fr`); empty means the document's own language, else English
+    /// (the `ocr_lang` setting).
+    pub lang: String,
+    /// The engine.
+    pub engine: OcrEngineChoice,
+}
+
+impl Default for OcrOptions {
+    fn default() -> Self {
+        OcrOptions {
+            enabled: true,
+            lang: String::new(),
+            engine: OcrEngineChoice::Auto,
+        }
+    }
 }
 
 /// Loader failures.
@@ -267,6 +375,12 @@ impl Registry {
         r.register(Box::new(DocxLoader));
         #[cfg(feature = "pdf")]
         r.register(Box::new(PdfLoader));
+        #[cfg(feature = "ocr")]
+        r.register(Box::new(ImageLoader));
+        r.register(Box::new(DaisyLoader));
+        r.register(Box::new(PptxLoader));
+        r.register(Box::new(SheetLoader));
+        r.register(Box::new(ArchiveLoader));
         r
     }
 
@@ -344,10 +458,55 @@ impl Registry {
     }
 
     /// Loads `source` with the best loader, falling back to plain text for
-    /// unknown extensions.
+    /// unknown extensions. A web address is fetched first (feature `url`).
     pub fn load(&self, source: &Source, options: &LoadOptions) -> Result<Document, LoadError> {
+        if let Some(url) = source.url() {
+            return self.load_url(&url, source, options);
+        }
         self.resolve(source).load(source, options)
     }
+
+    #[cfg(feature = "url")]
+    fn load_url(
+        &self,
+        url: &str,
+        source: &Source,
+        options: &LoadOptions,
+    ) -> Result<Document, LoadError> {
+        web::load(self, url, source, options)
+    }
+
+    #[cfg(not(feature = "url"))]
+    fn load_url(&self, url: &str, _: &Source, _: &LoadOptions) -> Result<Document, LoadError> {
+        Err(LoadError::Unsupported(format!(
+            "this build of textweaver cannot open web addresses such as {url}"
+        )))
+    }
+}
+
+static CACHE_DIR: std::sync::RwLock<Option<PathBuf>> = std::sync::RwLock::new(None);
+
+/// Keeps downloaded web files and OCR results under `dir` instead of
+/// textweaver's cache folder (the app's own paths, or tests); `None` goes
+/// back to the default.
+pub fn set_cache_dir(dir: Option<PathBuf>) {
+    *CACHE_DIR.write().unwrap_or_else(|p| p.into_inner()) = dir;
+}
+
+/// textweaver's cache folder, as the store places it (`TEXTWEAVER_HOME`'s
+/// `cache/` when that is set): downloaded web files and OCR results live
+/// under it.
+pub(crate) fn cache_dir() -> Option<PathBuf> {
+    if let Some(dir) = CACHE_DIR.read().unwrap_or_else(|p| p.into_inner()).clone() {
+        return Some(dir);
+    }
+    if let Some(home) =
+        std::env::var_os("TEXTWEAVER_HOME").filter(|v| !v.to_string_lossy().trim().is_empty())
+    {
+        return Some(PathBuf::from(home).join("cache"));
+    }
+    directories::ProjectDirs::from("org", "leavesofgrass", "textweaver")
+        .map(|d| d.cache_dir().to_owned())
 }
 
 /// Loads a file with the built-in registry and default options.
@@ -478,6 +637,10 @@ mod tests {
         if cfg!(feature = "pdf") {
             ids.push("pdf");
         }
+        if cfg!(feature = "ocr") {
+            ids.push("image");
+        }
+        ids.extend(["daisy", "pptx", "sheet", "archive"]);
         // Pandoc is never a built-in (see `Registry::with_pandoc`).
         ids.extend(["low", "high"]);
         assert_eq!(r.ids(), ids);

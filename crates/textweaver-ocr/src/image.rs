@@ -277,7 +277,12 @@ fn decode_png(bytes: &[u8]) -> Result<GrayImage, OcrError> {
     let mut buf = vec![0; size];
     let frame = reader.next_frame(&mut buf).map_err(bad)?;
     let channels = frame.color_type.samples();
-    GrayImage::from_interleaved(frame.width, frame.height, channels, &buf[..frame.buffer_size()])
+    GrayImage::from_interleaved(
+        frame.width,
+        frame.height,
+        channels,
+        &buf[..frame.buffer_size()],
+    )
 }
 
 fn decode_jpeg(bytes: &[u8]) -> Result<GrayImage, OcrError> {

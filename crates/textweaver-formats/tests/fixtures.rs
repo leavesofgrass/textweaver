@@ -81,6 +81,7 @@ fn sample_md_inline_footnotes_skip_code() {
     let options = LoadOptions {
         skip_code: true,
         footnotes: FootnoteMode::Inline,
+        ..LoadOptions::default()
     };
     let doc = load("sample.md", &options);
     insta::assert_json_snapshot!("sample_md_inline_skip_document", view(&doc));
@@ -140,6 +141,7 @@ fn sample_docx() {
         &LoadOptions {
             skip_code: false,
             footnotes: FootnoteMode::Inline,
+            ..LoadOptions::default()
         },
     );
     let text = inline.text().to_string();
@@ -156,6 +158,7 @@ fn pandoc_docx() {
         &LoadOptions {
             skip_code: true,
             footnotes: FootnoteMode::Skip,
+            ..LoadOptions::default()
         },
     );
     let text = skipped.text().to_string();

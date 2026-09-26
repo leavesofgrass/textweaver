@@ -115,10 +115,30 @@ pub enum ModelStatus {
     Damaged(&'static str),
 }
 
+/// A folder set by [`set_flat_dir`], which wins over everything.
+static FLAT_DIR: std::sync::RwLock<Option<PathBuf>> = std::sync::RwLock::new(None);
+
+/// Makes every model set's files come from one folder, as
+/// `TEXTWEAVER_OCR_MODELS` does (a portable install, or tests); `None`
+/// goes back to the usual places.
+pub fn set_flat_dir(dir: Option<PathBuf>) {
+    *FLAT_DIR.write().unwrap_or_else(|p| p.into_inner()) = dir;
+}
+
+/// The folder holding every set's files directly, when one is chosen
+/// ([`set_flat_dir`] or `TEXTWEAVER_OCR_MODELS`).
+fn flat_dir() -> Option<PathBuf> {
+    FLAT_DIR
+        .read()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone()
+        .or_else(|| env_dir("TEXTWEAVER_OCR_MODELS"))
+}
+
 /// The folder every model set lives under: `TEXTWEAVER_OCR_MODELS` when
 /// set, else `models/ocr` in the data folder.
 pub fn root_dir() -> Option<PathBuf> {
-    if let Some(dir) = env_dir("TEXTWEAVER_OCR_MODELS") {
+    if let Some(dir) = flat_dir() {
         return Some(dir);
     }
     if let Some(home) = env_dir("TEXTWEAVER_HOME") {
@@ -150,7 +170,7 @@ impl ModelSet {
     /// The folder this set's files are in (`TEXTWEAVER_OCR_MODELS` holds
     /// every set's files together).
     pub fn dir(&self) -> Option<PathBuf> {
-        if let Some(dir) = env_dir("TEXTWEAVER_OCR_MODELS") {
+        if let Some(dir) = flat_dir() {
             return Some(dir);
         }
         root_dir().map(|r| r.join(self.id))
@@ -263,7 +283,16 @@ pub fn download(
             progress(DownloadProgress { done, total });
             continue;
         }
-        let bytes = fetch(f, &mut |n| progress(DownloadProgress { done: done + n, total }), cancel)?;
+        let bytes = fetch(
+            f,
+            &mut |n| {
+                progress(DownloadProgress {
+                    done: done + n,
+                    total,
+                })
+            },
+            cancel,
+        )?;
         verify(f, &bytes)?;
         let part = dir.join(format!("{}.part", f.name));
         std::fs::write(&part, &bytes).map_err(|e| OcrError::Io(part.clone(), e))?;
@@ -287,7 +316,7 @@ fn fetch(
         .user_agent(concat!(
             "textweaver/",
             env!("CARGO_PKG_VERSION"),
-            " (OCR model download; https://github.com/leavesofgrass/textweaver)"
+            " (+https://github.com/leavesofgrass/textweaver)"
         ))
         .build()
         .into();
@@ -361,7 +390,10 @@ mod tests {
                 sha256: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
             }],
         };
-        assert_eq!(status_in(&set, dir.path()), ModelStatus::Missing(vec!["a.bin"]));
+        assert_eq!(
+            status_in(&set, dir.path()),
+            ModelStatus::Missing(vec!["a.bin"])
+        );
         std::fs::write(dir.path().join("a.bin"), b"ab").unwrap();
         assert_eq!(status_in(&set, dir.path()), ModelStatus::Damaged("a.bin"));
         std::fs::write(dir.path().join("a.bin"), b"abc").unwrap();

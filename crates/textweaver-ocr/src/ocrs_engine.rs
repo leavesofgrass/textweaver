@@ -63,7 +63,9 @@ pub(crate) fn recognize(image: &GrayImage) -> Result<OcrPage, OcrError> {
     let input = engine.prepare_input(source).map_err(engine_error)?;
     let words = engine.detect_words(&input).map_err(engine_error)?;
     let lines = engine.find_text_lines(&input, &words);
-    let recognized = engine.recognize_text(&input, &lines).map_err(engine_error)?;
+    let recognized = engine
+        .recognize_text(&input, &lines)
+        .map_err(engine_error)?;
     let mut page = OcrPage {
         width: image.width,
         height: image.height,
