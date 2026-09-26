@@ -507,7 +507,7 @@ impl SpeechBackend for EspeakBackend {
     }
 
     fn synthesize_to_file(&mut self, text: &str, path: &Path) -> Result<(), SpeechError> {
-        self.to_file(text, path).map(|_| ())
+        self.write_file(text, path).map(|_| ())
     }
 
     fn synthesize_utterance(
@@ -515,13 +515,13 @@ impl SpeechBackend for EspeakBackend {
         utterance: &Utterance,
         path: &Path,
     ) -> Result<FileSynthesis, SpeechError> {
-        self.to_file(&utterance.text, path)
+        self.write_file(&utterance.text, path)
     }
 }
 
 impl EspeakBackend {
     /// Synthesizes `text` into a WAV file on the worker thread.
-    fn to_file(&mut self, text: &str, path: &Path) -> Result<FileSynthesis, SpeechError> {
+    fn write_file(&mut self, text: &str, path: &Path) -> Result<FileSynthesis, SpeechError> {
         let (tx, rx) = mpsc::channel();
         self.send(Job::ToFile {
             text: text.to_owned(),

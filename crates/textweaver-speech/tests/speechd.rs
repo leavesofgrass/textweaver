@@ -264,12 +264,13 @@ fn a_refused_command_is_an_error() {
     // The session goes on: the next command gets its own reply.
     b.pause().unwrap();
     drop(b);
-    // Nothing listening: a clear error, not a hang.
+    drop(server);
+    // Nothing listening (port 1 is reserved and unused): a clear error,
+    // not a hang.
     let closed = SpeechdAddress::Inet {
         host: "127.0.0.1".into(),
-        port: server.port,
+        port: 1,
     };
-    drop(server);
     let e = SpeechdBackend::connect(&closed).unwrap_err();
     assert!(e.to_string().contains("speech-dispatcher"), "{e}");
 }

@@ -494,7 +494,9 @@ impl SpeechdBackend {
         self.writer
             .write_all(format!("{line}\r\n").as_bytes())
             .and_then(|()| self.writer.flush())
-            .map_err(io_err)
+            .map_err(|e| {
+                SpeechError::Engine(format!("lost the connection to speech-dispatcher: {e}"))
+            })
     }
 
     fn reply(&mut self) -> Result<Message, SpeechError> {
