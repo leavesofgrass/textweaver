@@ -287,6 +287,8 @@ pub struct App {
     pub(crate) overwrite_confirmed: bool,
     /// When the open file was last checked for changes on disk.
     pub(crate) last_disk_check: Option<Instant>,
+    /// Writing the recovery snapshot failed and has not worked since.
+    pub(crate) snapshot_trouble: bool,
 }
 
 impl App {
@@ -340,6 +342,7 @@ impl App {
             pending_disk: None,
             overwrite_confirmed: false,
             last_disk_check: None,
+            snapshot_trouble: false,
         };
         app.apply_voice_settings();
         app.load_themes();

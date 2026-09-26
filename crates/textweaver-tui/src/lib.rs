@@ -33,6 +33,7 @@
 
 pub mod layout;
 pub mod setup;
+pub mod signals;
 pub mod theme;
 pub mod ui;
 pub mod widgets;
@@ -85,10 +86,11 @@ pub fn frame<B: Backend>(terminal: &mut Terminal<B>, tui: &mut Tui) -> Result<Du
     Ok(input_wait(tui.app(), Instant::now()))
 }
 
-/// Runs the event loop until the user quits: apply speech status and
-/// housekeeping, draw, wait briefly for input.
+/// Runs the event loop until the user quits or a signal asks it to stop
+/// ([`signals`]): apply speech status and housekeeping, draw, wait briefly
+/// for input.
 pub fn run(terminal: &mut DefaultTerminal, tui: &mut Tui) -> anyhow::Result<()> {
-    while !tui.should_quit() {
+    while !tui.should_quit() && !signals::requested() {
         let wait = frame(terminal, tui)?;
         if event::poll(wait)? {
             let ev = event::read()?;
@@ -122,12 +124,82 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
         tui.app_mut().announce(&m, Priority::Assertive);
     }
     tui.offer_recovery();
+    if let Some(msg) = signals::install() {
+        log::warn!("{msg}");
+    }
     let mut terminal = ratatui::init();
     // Pasted text arrives as one event (one undo step), not as keystrokes.
     let _ = execute!(std::io::stdout(), EnableBracketedPaste);
-    let result = run(&mut terminal, &mut tui);
+    install_panic_hook();
+    let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        run(&mut terminal, &mut tui)
+    }));
     let _ = execute!(std::io::stdout(), DisableBracketedPaste);
     ratatui::restore();
-    tui.app_mut().shutdown();
+    let result = finish(&mut tui, outcome);
+    signals::finished();
     result
+}
+
+/// What happens after the event loop ends, however it ended (the terminal
+/// is already restored): a normal quit saves as usual; a stop asked for by
+/// a signal, or a panic, saves without asking anything, writing unsaved
+/// edits to the recovery snapshot. A panic becomes an error that says the
+/// work was kept.
+pub fn finish(
+    tui: &mut Tui,
+    outcome: std::thread::Result<anyhow::Result<()>>,
+) -> anyhow::Result<()> {
+    match outcome {
+        Ok(result) => {
+            if signals::requested() && !tui.should_quit() {
+                log::warn!("stopping on a signal");
+                save_after_trouble(tui);
+            } else {
+                tui.app_mut().shutdown();
+            }
+            result
+        }
+        Err(panic) => {
+            save_after_trouble(tui);
+            let what = panic_text(panic.as_ref());
+            log::error!("the terminal reader stopped after an internal error: {what}");
+            Err(anyhow::anyhow!(
+                "textweaver stopped after an internal error ({what}). Your place was saved, and unsaved edits will be offered for recovery next time."
+            ))
+        }
+    }
+}
+
+/// Saves what can be saved after a panic or a signal: the recovery
+/// snapshot, the position, and the settings. A second panic while saving
+/// is caught and logged.
+fn save_after_trouble(tui: &mut Tui) {
+    let saved = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        tui.app_mut().emergency_save();
+    }));
+    if saved.is_err() {
+        log::error!("saving after an internal error failed as well");
+    }
+}
+
+/// The message a panic carried.
+fn panic_text(panic: &(dyn std::any::Any + Send)) -> String {
+    panic
+        .downcast_ref::<&str>()
+        .map(|s| (*s).to_owned())
+        .or_else(|| panic.downcast_ref::<String>().cloned())
+        .unwrap_or_else(|| "no message".to_owned())
+}
+
+/// Adds to the panic hook (after `ratatui::init`, whose hook restores the
+/// terminal): bracketed paste is turned off first and the panic is logged,
+/// so the shell is usable and the log says what happened.
+fn install_panic_hook() {
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let _ = execute!(std::io::stdout(), DisableBracketedPaste);
+        log::error!("panic: {info}");
+        previous(info);
+    }));
 }

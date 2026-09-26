@@ -322,6 +322,107 @@ pub fn save_as_path(chosen: &Path) -> PathBuf {
     }
 }
 
+/// The file name suggested for a new document with no title of its own.
+pub const DEFAULT_FILE_NAME: &str = "document.md";
+
+/// The title a Markdown text gives itself: the front matter's `title:`,
+/// else the first heading (ATX `# Title` or a setext heading underlined
+/// with `===` or `---`), skipping fenced code. `None` when it has neither.
+pub fn document_title(text: &str) -> Option<String> {
+    let mut lines = text.lines().peekable();
+    // Front matter: a first line of `---`, closed by `---` or `...`.
+    if lines.peek().is_some_and(|l| l.trim_end() == "---") {
+        lines.next();
+        let mut title = None;
+        for line in lines.by_ref() {
+            let t = line.trim_end();
+            if t == "---" || t == "..." {
+                break;
+            }
+            if title.is_none()
+                && let Some(v) = t.strip_prefix("title:")
+            {
+                let v = v.trim().trim_matches(|c| c == '"' || c == '\'').trim();
+                if !v.is_empty() {
+                    title = Some(v.to_owned());
+                }
+            }
+        }
+        if title.is_some() {
+            return title;
+        }
+    }
+    let mut fence: Option<&str> = None;
+    let mut previous: Option<&str> = None;
+    for line in lines {
+        let t = line.trim();
+        if let Some(f) = fence {
+            if t.starts_with(f) {
+                fence = None;
+            }
+            previous = None;
+            continue;
+        }
+        if t.starts_with("```") || t.starts_with("~~~") {
+            fence = Some(&t[..3]);
+            previous = None;
+            continue;
+        }
+        let hashes = t.chars().take_while(|&c| c == '#').count();
+        if (1..=6).contains(&hashes) {
+            let rest = &t[hashes..];
+            if rest.is_empty() || rest.starts_with(' ') {
+                let title = rest.trim().trim_end_matches('#').trim();
+                if !title.is_empty() {
+                    return Some(title.to_owned());
+                }
+            }
+        }
+        if let Some(p) = previous
+            && !t.is_empty()
+            && (t.chars().all(|c| c == '=') || (t.len() >= 2 && t.chars().all(|c| c == '-')))
+        {
+            return Some(p.to_owned());
+        }
+        previous = (!t.is_empty() && !t.starts_with(['>', '-', '*', '|'])).then_some(t);
+    }
+    None
+}
+
+/// A file name made from a title: letters and digits kept, lowercase, every
+/// other run of characters a single hyphen, at most 60 characters, with
+/// `.md`. "Methods and Results" becomes `methods-and-results.md`. `None`
+/// when nothing usable is left.
+pub fn file_name_for_title(title: &str) -> Option<String> {
+    let mut slug = String::new();
+    let mut gap = false;
+    for c in title.chars() {
+        if c.is_alphanumeric() {
+            if gap && !slug.is_empty() {
+                slug.push('-');
+            }
+            gap = false;
+            slug.extend(c.to_lowercase());
+        } else {
+            gap = true;
+        }
+        if slug.chars().count() >= 60 {
+            break;
+        }
+    }
+    let slug: String = slug.chars().take(60).collect();
+    let slug = slug.trim_matches('-');
+    (!slug.is_empty()).then(|| format!("{slug}.md"))
+}
+
+/// The file name to suggest when saving `text` for the first time: from
+/// its front matter title or first heading, else [`DEFAULT_FILE_NAME`].
+pub fn suggest_file_name(text: &str) -> String {
+    document_title(text)
+        .and_then(|t| file_name_for_title(&t))
+        .unwrap_or_else(|| DEFAULT_FILE_NAME.to_owned())
+}
+
 /// How a text file was encoded on disk, so a save can keep it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct TextFormat {
@@ -607,6 +708,37 @@ mod tests {
                 .unwrap()
                 .is_some()
         );
+    }
+
+    #[test]
+    fn suggested_names_come_from_the_title() {
+        assert_eq!(
+            suggest_file_name("---\ntitle: \"My Essay: Draft 2\"\n---\n# Other\n"),
+            "my-essay-draft-2.md"
+        );
+        assert_eq!(
+            suggest_file_name("intro\n\n## Methods and Results ##\n"),
+            "methods-and-results.md"
+        );
+        assert_eq!(
+            suggest_file_name("Setext Title\n=====\n"),
+            "setext-title.md"
+        );
+        assert_eq!(
+            suggest_file_name("```\n# not a heading\n```\n# Real\n"),
+            "real.md"
+        );
+        assert_eq!(suggest_file_name("#hashtag only\n"), DEFAULT_FILE_NAME);
+        assert_eq!(suggest_file_name(""), DEFAULT_FILE_NAME);
+        assert_eq!(suggest_file_name("# !!!\n"), DEFAULT_FILE_NAME);
+        assert_eq!(
+            suggest_file_name("---\nauthor: x\n---\n# Café Notes\n"),
+            "café-notes.md"
+        );
+        let long = format!("# {}\n", "word ".repeat(40));
+        let name = suggest_file_name(&long);
+        assert!(name.chars().count() <= 63, "{name}");
+        assert!(!name.contains("-.md"), "{name}");
     }
 
     #[test]

@@ -314,6 +314,105 @@ fn new_document_saves_as_and_adopts_the_path() {
     assert_eq!(std::fs::read_to_string(&target).unwrap(), "Draft!");
 }
 
+/// Save As suggests a name from the first heading and asks y or n before
+/// replacing another file; n asks for another name, y replaces it.
+#[test]
+fn save_as_suggests_from_the_heading_and_asks_before_overwriting() {
+    let mut r = rig();
+    r.act(ActionId::NewDocument);
+    r.type_str("# Field Notes\n\nBody.");
+    let effects = r.act(ActionId::SaveAs);
+    let Some(Effect::Prompt { label, .. }) = effects.first() else {
+        panic!("{effects:?}");
+    };
+    assert!(label.ends_with("field-notes.md"), "{label}");
+    // Another file is in the way.
+    let taken = r.file("taken.md", "keep me");
+    r.app.dispatch(Command::Answer(taken.display().to_string()));
+    assert!(r.app.confirmation_pending());
+    assert!(
+        r.said
+            .last()
+            .contains("taken.md already exists. Replace it? y or n")
+    );
+    // No: nothing written, and the name is asked again.
+    let effects = r.app.dispatch(Command::Confirm(Confirm::No));
+    assert!(matches!(
+        effects.first(),
+        Some(Effect::Prompt {
+            purpose: PromptPurpose::SaveAs,
+            ..
+        })
+    ));
+    assert_eq!(std::fs::read_to_string(&taken).unwrap(), "keep me");
+    // A relative answer goes in the same folder; it exists too, and y
+    // replaces it.
+    r.app.dispatch(Command::Answer("taken.md".into()));
+    assert!(r.app.confirmation_pending());
+    r.app.dispatch(Command::Confirm(Confirm::Yes));
+    assert!(!r.app.confirmation_pending());
+    assert_eq!(
+        std::fs::read_to_string(&taken).unwrap(),
+        "# Field Notes\n\nBody."
+    );
+    // Saving onto the file already open does not ask.
+    r.type_str("!");
+    let effects = r.act(ActionId::SaveAs);
+    assert!(matches!(effects.first(), Some(Effect::Prompt { .. })));
+    r.app.dispatch(Command::Answer(String::new()));
+    assert!(!r.app.confirmation_pending());
+    assert!(std::fs::read_to_string(&taken).unwrap().ends_with('!'));
+}
+
+/// A recovery snapshot that cannot be written is announced once, the
+/// attempts back off, and a later success is said.
+#[test]
+fn a_failing_recovery_copy_is_announced_once() {
+    let mut r = rig();
+    let file = r.file("s.md", "Text.\n");
+    r.app.open(&file).unwrap();
+    // A file where the recovery folder should be.
+    let rec = r.paths.recovery_dir();
+    std::fs::create_dir_all(rec.parent().unwrap()).unwrap();
+    std::fs::write(&rec, "blocked").unwrap();
+    r.act(ActionId::ToggleEditMode);
+    r.type_str("More ");
+    r.said.clear();
+    let t0 = Instant::now();
+    for s in 0..200u64 {
+        r.app.tick(t0 + Duration::from_millis(s * 500));
+    }
+    let failures: Vec<String> = r
+        .said
+        .all()
+        .into_iter()
+        .filter(|m| m.contains("Could not write the recovery copy"))
+        .collect();
+    assert_eq!(failures.len(), 1, "{:?}", r.said.all());
+    std::fs::remove_file(&rec).unwrap();
+    r.app.tick(t0 + Duration::from_secs(1000));
+    assert!(r.said.any("The recovery copy is being written again."));
+}
+
+/// A crash or a closing terminal writes the snapshot at once and saves the
+/// position, without asking.
+#[test]
+fn emergency_save_writes_the_snapshot_at_once() {
+    let mut r = rig();
+    let file = r.file("e.md", "Original.\n");
+    r.app.open(&file).unwrap();
+    r.act(ActionId::ToggleEditMode);
+    r.type_str("Unsaved ");
+    r.app.emergency_save();
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "Original.\n");
+    r.relaunch();
+    let effects = r.app.offer_recovery();
+    assert!(
+        matches!(effects.first(), Some(Effect::ShowList { .. })),
+        "{effects:?}"
+    );
+}
+
 #[test]
 fn quitting_with_changes_saves_on_request() {
     let mut r = rig();

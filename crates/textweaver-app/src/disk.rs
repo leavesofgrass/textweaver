@@ -50,6 +50,13 @@ pub(crate) enum DiskQuestion {
     Overwrite { leaving: Option<AfterLeave> },
     /// Reload a file changed on disk while open and unmodified.
     Reload(PathBuf),
+    /// Save As onto a file that already exists.
+    SaveAsOver {
+        /// The path the user typed.
+        path: PathBuf,
+        /// What the save is for.
+        then: crate::edit::SaveThen,
+    },
 }
 
 fn file_name(path: &Path) -> String {
@@ -114,6 +121,35 @@ impl App {
             (Confirm::Repeat, DiskQuestion::Reload(p)) => {
                 self.tell(&reload_question(&p));
                 vec![Effect::Redraw]
+            }
+            (Confirm::Repeat, DiskQuestion::SaveAsOver { path, .. }) => {
+                let dest = textweaver_editor::autosave::save_as_path(&path);
+                self.tell(&format!(
+                    "{} already exists. Replace it? y or n.",
+                    file_name(&dest)
+                ));
+                vec![Effect::Redraw]
+            }
+            (Confirm::Yes, DiskQuestion::SaveAsOver { path, then }) => {
+                self.pending_disk = None;
+                self.save_as_to(path, then, true)
+            }
+            (Confirm::No, DiskQuestion::SaveAsOver { path, then }) => {
+                self.pending_disk = None;
+                // A relative name typed next goes in the same folder.
+                self.suggested_path = Some(path);
+                let label = "Not replaced. Type another name";
+                self.save_then = Some(then);
+                if !self.mode.is_prompt() {
+                    self.return_mode = self.mode;
+                }
+                self.mode = Mode::Prompt;
+                self.prompt_purpose = crate::command::PromptPurpose::SaveAs;
+                self.tell(&format!("{label}."));
+                vec![Effect::Prompt {
+                    label: label.to_owned(),
+                    purpose: crate::command::PromptPurpose::SaveAs,
+                }]
             }
             (Confirm::Yes, DiskQuestion::Overwrite { leaving }) => {
                 self.pending_disk = None;

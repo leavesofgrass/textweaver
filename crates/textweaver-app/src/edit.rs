@@ -208,6 +208,15 @@ fn parse_table_size(s: &str) -> Option<(u16, u16)> {
     }
 }
 
+/// True when `a` and `b` name the same file (compared resolved when both
+/// exist, else as written).
+fn same_path(a: &Path, b: &Path) -> bool {
+    match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
+        (Ok(x), Ok(y)) => x == y,
+        _ => a == b,
+    }
+}
+
 /// The heading level of a Markdown line (`## x` is 2), 0 for none.
 fn heading_level(line: &str) -> u8 {
     let hashes = line.chars().take_while(|&c| c == '#').count();
@@ -481,6 +490,38 @@ impl App {
             self.note("Cancelled.");
             return vec![Effect::Redraw];
         };
+        self.save_as_to(path, then, false)
+    }
+
+    /// Saves under `path` (a Save As answer). Another file already there is
+    /// overwritten only after a yes (`confirmed`); the question is asked
+    /// first ("notes.md already exists. Replace it? y or n").
+    pub(crate) fn save_as_to(
+        &mut self,
+        path: PathBuf,
+        then: SaveThen,
+        confirmed: bool,
+    ) -> Vec<Effect> {
+        // The file actually written (a converted extension becomes `.md`).
+        let dest = autosave::save_as_path(&path);
+        let current = self
+            .edit
+            .as_ref()
+            .and_then(|e| e.session.doc().path.clone());
+        let same_file = current.as_deref().is_some_and(|c| same_path(c, &dest));
+        if !confirmed && !same_file && dest.exists() {
+            let name = dest.file_name().map_or_else(
+                || dest.display().to_string(),
+                |n| n.to_string_lossy().into_owned(),
+            );
+            self.pending_disk = Some(crate::disk::DiskQuestion::SaveAsOver {
+                path: path.clone(),
+                then,
+            });
+            self.list = None;
+            self.tell(&format!("{name} already exists. Replace it? y or n."));
+            return vec![Effect::Redraw];
+        }
         match then {
             SaveThen::Stay => self.save(Some(path)),
             SaveThen::Leave(after) => self.leave_edit(Some(Choice::Save), Some(path), after),
@@ -676,7 +717,14 @@ impl App {
             .path
             .as_ref()
             .map(|p| autosave::save_as_path(p))
-            .unwrap_or_else(|| PathBuf::from("document.md"));
+            .unwrap_or_else(|| {
+                let text = edit
+                    .session
+                    .editor()
+                    .map(|e| e.text().to_string())
+                    .unwrap_or_default();
+                PathBuf::from(autosave::suggest_file_name(&text))
+            });
         self.ask_save_path(suggested, SaveThen::Stay)
     }
 
@@ -1339,13 +1387,40 @@ impl App {
         let Some(edit) = self.edit.as_mut() else {
             return;
         };
-        if let Err(e) = edit.session.autosave_tick(now) {
-            log::warn!("autosave failed: {e}");
-            let msg = format!("Could not write the recovery copy: {e}");
-            if self.status_text() != msg {
-                self.say_at(&msg, Verbosity::Low, Priority::Polite);
+        match edit.session.autosave_tick(now) {
+            Err(e) => {
+                let failures = edit.session.snapshot_failures();
+                log::warn!("autosave failed ({failures} in a row): {e}");
+                // Said once per run of failures; the session backs off
+                // between attempts, and the log keeps every one.
+                if failures == 1 {
+                    let msg = format!(
+                        "Could not write the recovery copy: {e}. Save soon; textweaver will keep trying."
+                    );
+                    self.say_at(&msg, Verbosity::Low, Priority::Polite);
+                }
+                self.snapshot_trouble = true;
+            }
+            Ok(true) if std::mem::take(&mut self.snapshot_trouble) => {
+                self.note("The recovery copy is being written again.");
+            }
+            Ok(_) => {}
+        }
+    }
+
+    /// Before the process ends unexpectedly (a panic, a signal, the
+    /// terminal closing): writes the recovery snapshot of unsaved edits at
+    /// once, saves the reading position and settings, and stops speech.
+    /// Never asks anything; safe to call more than once.
+    pub fn emergency_save(&mut self) {
+        if let Some(edit) = self.edit.as_mut() {
+            match edit.session.snapshot_now() {
+                Ok(true) => log::warn!("wrote a recovery snapshot before exiting"),
+                Ok(false) => {}
+                Err(e) => log::error!("could not write the recovery snapshot: {e}"),
             }
         }
+        self.shutdown();
     }
 
     /// Offers unsaved work found at startup (Star's recovery prompt), one
