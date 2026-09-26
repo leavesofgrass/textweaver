@@ -228,6 +228,7 @@ impl App {
             pct,
             ts: textweaver_store::now_ts(),
             anchor: Some(text_util::anchor_at(&s.doc, pos)),
+            not_found: false,
         });
         s.bookmarks.sort_by_key(|b| b.pos);
         // Saved on the writer; "set" is said once the file is written (or
@@ -268,8 +269,13 @@ impl App {
                 let line = text_util::line_of(&s.doc, b.pos);
                 let end = text_util::line_range(&s.doc, line).end.max(b.pos);
                 let text = preview(&s.doc, CharRange::new(b.pos, end), 6);
+                let lost = if b.not_found {
+                    " (not found after the file changed)"
+                } else {
+                    ""
+                };
                 format!(
-                    "{}, line {}, {} percent: {text}",
+                    "{}{lost}, line {}, {} percent: {text}",
                     b.name,
                     line + 1,
                     text_util::percent(&s.doc, b.pos)

@@ -155,6 +155,11 @@ pub struct Bookmark {
     /// The text at the bookmark, for finding it again after outside edits.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub anchor: Option<Anchor>,
+    /// The file changed outside textweaver and the bookmark's text could
+    /// not be found again: it was placed by percentage, and lists say so
+    /// until it is set again.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub not_found: bool,
 }
 
 /// Percentage of `pos` through a document of `len` chars, floored, as Star
@@ -259,6 +264,7 @@ impl DocState {
             pct: percent(pos, doc_len),
             ts: crate::now_ts(),
             anchor: None,
+            not_found: false,
         };
         let at = self.bookmarks.partition_point(|b| b.pos <= pos);
         self.bookmarks.insert(at, mark.clone());

@@ -626,7 +626,28 @@ impl App {
         if !self.writer.flush(std::time::Duration::from_secs(2)) {
             log::warn!("the writer is slow; reading the saved state anyway");
         }
-        let loaded = self.state_store().and_then(|store| store.load(&s.key));
+        let mut loaded = self.state_store().and_then(|store| store.load(&s.key));
+        let mut relocated = None;
+        if let Some(state) = loaded.as_mut() {
+            let mut changed = migrate_legacy_notes(state, &s.doc);
+            // The file changed outside textweaver: find every position,
+            // bookmark, note, and highlight again (crate::relocate).
+            if let Some(now) = &s.text_stamp
+                && crate::relocate::needs_relocation(state, now, &s.doc)
+            {
+                relocated = crate::relocate::relocate(state, &s.doc).message();
+                changed = true;
+            }
+            if changed && let Some(store) = self.state_store() {
+                self.writer.send(crate::writer::Job::State {
+                    store,
+                    key: s.key.clone(),
+                    state: Box::new(state.clone()),
+                    sync: None,
+                    note: crate::writer::StateNote::Quiet,
+                });
+            }
+        }
         let resume = match s.doc.meta.path.clone() {
             Some(path) => self.resume_point(&path, loaded.as_ref()),
             None => loaded
@@ -639,14 +660,9 @@ impl App {
                     unresolved: false,
                 }),
         };
-        if let Some(store) = self.state_store()
-            && let Some(mut state) = loaded
+        if self.paths.is_some()
+            && let Some(state) = loaded
         {
-            if migrate_legacy_notes(&mut state, &s.doc)
-                && let Err(e) = store.save(&s.key, &state)
-            {
-                log::warn!("cannot save migrated notes: {e}");
-            }
             for &h in &state.history {
                 s.history.record(h.clamp_to(s.doc.len_chars()));
             }
@@ -689,6 +705,10 @@ impl App {
             ),
             Some((p, _)) => format!("Opened {title}. Resumed at {p} percent."),
             None => format!("Opened {title}."),
+        };
+        let msg = match relocated {
+            Some(moved) => format!("{msg} {moved}"),
+            None => msg,
         };
         self.tell(&msg);
         if self.settings.speech.auto_play {

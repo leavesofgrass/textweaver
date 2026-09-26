@@ -144,3 +144,163 @@ fn quitting_writes_the_position_and_bookmarks_before_it_returns() {
     assert_eq!(state.bookmarks[0].pos, CharPos(18));
     assert!(state.text.is_some(), "the text stamp is saved too");
 }
+
+const P1: &str = "Alpha paragraph talks about apples and orchards.\n\n";
+const P2: &str = "Beta paragraph describes bridges over rivers.\n\n";
+const P3: &str = "Gamma paragraph covers gardens in spring.\n\n";
+const P4: &str = "Delta paragraph ends with deserts at dusk.\n";
+
+/// The char offset of `needle` in the open document.
+fn offset_of(app: &App, needle: &str) -> CharPos {
+    let text = app.session().unwrap().doc.text().to_string();
+    let byte = text
+        .find(needle)
+        .unwrap_or_else(|| panic!("{needle:?} in {text:?}"));
+    CharPos(text[..byte].chars().count())
+}
+
+/// The document text from `pos`, `n` chars.
+fn text_at(app: &App, pos: CharPos, n: usize) -> String {
+    let rope = app.session().unwrap().doc.text();
+    rope.slice(pos.0..(pos.0 + n).min(rope.len_chars()))
+        .to_string()
+}
+
+/// Reads a file, places a reading position, two bookmarks, a note, and a
+/// highlight, and quits; then another program rewrites the file with
+/// `change`, and textweaver opens it again.
+fn marks_then_outside_edit(change: impl FnOnce(&str) -> String) -> (App, Said) {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("essay.txt");
+    let original = format!("{P1}{P2}{P3}{P4}");
+    std::fs::write(&file, &original).unwrap();
+    let home = dir.path().join("home");
+    let (mut app, _said) = persistent_app(&home);
+    app.open(&file).unwrap();
+    let go = |app: &mut App, needle: &str| {
+        let pos = offset_of(app, needle);
+        app.dispatch(Command::GoTo(textweaver_app::text::GoTo::Char(pos)));
+    };
+    go(&mut app, "bridges");
+    app.dispatch(Command::Action(ActionId::AddBookmark));
+    go(&mut app, "gardens");
+    app.dispatch(Command::Action(ActionId::AddBookmark));
+    go(&mut app, "deserts");
+    app.dispatch(Command::Notes(textweaver_app::NoteCommand::Add));
+    app.dispatch(Command::Answer("Check the dusk scene".into()));
+    app.dispatch(Command::Notes(textweaver_app::NoteCommand::ToggleHighlight));
+    go(&mut app, "covers");
+    app.shutdown();
+    drop(app);
+    // Another program (an editor, git) rewrites the file.
+    std::fs::write(&file, change(&original)).unwrap();
+    let (mut app, said) = persistent_app(&home);
+    app.open(&file).unwrap();
+    // Keep the directory alive with the app.
+    std::mem::forget(dir);
+    (app, said)
+}
+
+fn bookmark_text(app: &App, i: usize) -> String {
+    let b = &app.session().unwrap().bookmarks[i];
+    text_at(app, b.pos, 7)
+}
+
+#[test]
+fn positions_follow_text_inserted_before_them() {
+    let (app, said) =
+        marks_then_outside_edit(|t| format!("A preface another program added.\n\n{t}"));
+    let s = app.session().unwrap();
+    assert_eq!(text_at(&app, s.cursor, 6), "covers");
+    assert_eq!(bookmark_text(&app, 0), "bridges");
+    assert_eq!(bookmark_text(&app, 1), "gardens");
+    assert!(s.bookmarks.iter().all(|b| !b.not_found));
+    let note = &s.notes[0];
+    assert_eq!(
+        s.doc.slice(note.range),
+        "Delta paragraph ends with deserts at dusk."
+    );
+    assert_eq!(s.doc.slice(s.highlights[0].range), s.doc.slice(note.range));
+    assert!(
+        said.all().iter().any(|m| m.contains(
+            "The file changed; your reading position, 2 bookmarks, 1 note, and 1 highlight were moved to match."
+        )),
+        "{:?}",
+        said.all()
+    );
+}
+
+#[test]
+fn positions_follow_paragraphs_that_were_reordered() {
+    let (app, said) = marks_then_outside_edit(|_| format!("{P3}{P1}{P4}\n\n{P2}"));
+    let s = app.session().unwrap();
+    assert_eq!(text_at(&app, s.cursor, 6), "covers");
+    // Bookmarks are kept in document order: gardens now comes first.
+    assert_eq!(bookmark_text(&app, 0), "gardens");
+    assert_eq!(bookmark_text(&app, 1), "bridges");
+    assert_eq!(
+        s.doc.slice(s.notes[0].range),
+        "Delta paragraph ends with deserts at dusk."
+    );
+    assert!(
+        said.all().iter().any(|m| m.contains("were moved to match")),
+        "{:?}",
+        said.all()
+    );
+}
+
+#[test]
+fn text_deleted_elsewhere_is_marked_not_found() {
+    // The third paragraph is deleted (the reading position and the second
+    // bookmark were in it), and a word inside the note's sentence changes.
+    let (mut app, said) = marks_then_outside_edit(|t| {
+        t.replace(P3, "")
+            .replace("ends with deserts", "ends among deserts")
+    });
+    let s = app.session().unwrap();
+    assert_eq!(bookmark_text(&app, 0), "bridges");
+    assert!(!s.bookmarks[0].not_found);
+    assert!(s.bookmarks[1].not_found, "{:?}", s.bookmarks[1]);
+    // The note's sentence was found by similarity.
+    assert!(
+        s.doc
+            .slice(s.notes[0].range)
+            .starts_with("Delta paragraph ends among deserts"),
+        "{:?}",
+        s.doc.slice(s.notes[0].range)
+    );
+    let msg = said
+        .all()
+        .into_iter()
+        .find(|m| m.contains("The file changed"))
+        .unwrap();
+    assert!(
+        msg.contains("your reading position and 1 bookmark could not be found and are marked"),
+        "{msg}"
+    );
+    // The bookmark list says which one was not found.
+    let effects = app.dispatch(Command::Action(ActionId::ListBookmarks));
+    let items = effects
+        .iter()
+        .find_map(|e| match e {
+            textweaver_app::Effect::ShowList { items, .. } => Some(items.clone()),
+            _ => None,
+        })
+        .unwrap();
+    assert!(
+        items[1].contains("(not found after the file changed)"),
+        "{items:?}"
+    );
+    assert!(!items[0].contains("not found"), "{items:?}");
+}
+
+#[test]
+fn an_unchanged_file_says_nothing_and_moves_nothing() {
+    let (app, said) = marks_then_outside_edit(str::to_owned);
+    assert!(
+        !said.all().iter().any(|m| m.contains("The file changed")),
+        "{:?}",
+        said.all()
+    );
+    assert_eq!(bookmark_text(&app, 0), "bridges");
+}

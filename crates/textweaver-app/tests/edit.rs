@@ -748,7 +748,9 @@ fn legacy_app_notes_are_migrated_once_on_open() {
     assert_eq!(s.notes[0].note, "Old note #exam");
     assert_eq!(s.highlights.len(), 1);
     assert_eq!(s.doc.slice(s.highlights[0].range), "Alpha beta.");
-    // The file was rewritten at once: typed fields, no legacy keys.
+    // The file was rewritten on opening (by the background writer): typed
+    // fields, no legacy keys.
+    r.app.wait_for_writes();
     let saved = StateStore::new(r.paths.state_dir()).load(&key).unwrap();
     assert!(!saved.extra.contains_key("app_notes"));
     assert!(!saved.extra.contains_key("app_highlights"));
