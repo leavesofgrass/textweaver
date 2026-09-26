@@ -12,9 +12,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, TryRecvError};
 
+use net::DownloadPlan;
 use textweaver_a11y::{Announcement, Verbosity};
 use textweaver_core::{Pitch, Rate, Volume};
-use textweaver_engines::piper::download::DownloadPlan;
 use textweaver_engines::piper::{Catalog, InstalledVoice, PiperError};
 use textweaver_speech::Earcon;
 
@@ -24,6 +24,58 @@ use crate::voice_manager::{
     PIPER, VoiceEntry, VoiceManager, VoiceRow, VoiceStatus, cached_catalog, catalog_path,
     engine_entries, params_key, piper_entries, remember_params, remembered_params,
 };
+
+/// Piper voice downloads: HTTP, so part of the app's `publish` feature.
+#[cfg(feature = "publish")]
+mod net {
+    pub(crate) use textweaver_engines::piper::download::{
+        DownloadPlan, download, fetch_catalog_json, plan,
+    };
+}
+
+/// Without the `publish` feature the lean reader links no HTTP client:
+/// every download says it is not in this build.
+#[cfg(not(feature = "publish"))]
+mod net {
+    use textweaver_engines::piper::{
+        Catalog, CatalogVoice, InstalledVoice, PiperError, VoiceStore,
+    };
+
+    /// Stands in for the download plan; never made.
+    #[derive(Debug)]
+    pub(crate) struct DownloadPlan {
+        pub(crate) voice: CatalogVoice,
+    }
+
+    impl DownloadPlan {
+        pub(crate) fn describe(&self) -> String {
+            self.voice.describe()
+        }
+        pub(crate) fn total_bytes(&self) -> u64 {
+            self.voice.size_bytes()
+        }
+    }
+
+    fn missing() -> PiperError {
+        PiperError::Unsupported("downloading voices is not in this build of textweaver".into())
+    }
+
+    pub(crate) fn plan(_: &CatalogVoice) -> Result<DownloadPlan, PiperError> {
+        Err(missing())
+    }
+
+    pub(crate) fn fetch_catalog_json() -> Result<(String, Catalog), PiperError> {
+        Err(missing())
+    }
+
+    pub(crate) fn download(
+        _: &DownloadPlan,
+        _: &VoiceStore,
+        _: &mut dyn FnMut(u64, u64) -> bool,
+    ) -> Result<InstalledVoice, PiperError> {
+        Err(missing())
+    }
+}
 
 /// What a chosen voice says as its sample.
 pub const VOICE_SAMPLE: &str = "The quick brown fox jumps over the lazy dog.";
@@ -348,7 +400,7 @@ impl App {
         let spawned = std::thread::Builder::new()
             .name("textweaver-voice-plan".into())
             .spawn(move || {
-                let _ = tx.send(textweaver_engines::piper::download::plan(&voice));
+                let _ = tx.send(net::plan(&voice));
             });
         if spawned.is_err() {
             self.error("Could not start the download.");
@@ -433,14 +485,12 @@ impl App {
                 let spawned = std::thread::Builder::new()
                     .name("textweaver-voice-catalog".into())
                     .spawn(move || {
-                        let r = textweaver_engines::piper::download::fetch_catalog_json().and_then(
-                            |(json, catalog)| {
-                                std::fs::create_dir_all(&dir)
-                                    .and_then(|()| std::fs::write(catalog_path(&dir), json))
-                                    .map_err(|e| PiperError::io(&dir, e))?;
-                                Ok(catalog)
-                            },
-                        );
+                        let r = net::fetch_catalog_json().and_then(|(json, catalog)| {
+                            std::fs::create_dir_all(&dir)
+                                .and_then(|()| std::fs::write(catalog_path(&dir), json))
+                                .map_err(|e| PiperError::io(&dir, e))?;
+                            Ok(catalog)
+                        });
                         let _ = tx.send(r);
                     });
                 if spawned.is_err() {
@@ -472,7 +522,7 @@ impl App {
                 let r = std::fs::create_dir_all(store.dir())
                     .map_err(|e| PiperError::io(store.dir(), e))
                     .and_then(|()| {
-                        textweaver_engines::piper::download::download(&plan, &store, &mut |n, _| {
+                        net::download(&plan, &store, &mut |n, _| {
                             d.store(n, Ordering::Relaxed);
                             !c.load(Ordering::Relaxed)
                         })

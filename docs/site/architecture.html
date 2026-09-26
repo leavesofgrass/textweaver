@@ -497,7 +497,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-formats",
     "textweaver-keymap",
     "textweaver-math",
-    "textweaver-piper",
     "textweaver-render",
     "textweaver-speech",
     "textweaver-store",
@@ -958,11 +957,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-core",
     "textweaver-dectalk",
     "textweaver-eci",
+    "textweaver-piper",
     "textweaver-sapi",
     "textweaver-speech",
     "textweaver-store"
    ],
-   "description": "textweaver speech engines: the backend registry every frontend shares (built-ins, Eloquence, SAPI5, Apple, DECtalk), engine options from the settings, and the speech service configuration",
+   "description": "textweaver speech engines: the backend registry every frontend shares (built-ins, Eloquence, SAPI5, Apple, DECtalk, Piper), engine options from the settings, and the speech service configuration",
    "dev_deps": [],
    "job": "The one speech engine registry every frontend shares: the built-in engines, Eloquence, SAPI5, Apple, and DECtalk, configured from the settings.",
    "layer": "speech",
@@ -1162,7 +1162,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
-    "textweaver-app"
+    "textweaver-engines"
    ],
    "deps": [
     "textweaver-core",

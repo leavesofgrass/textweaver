@@ -93,7 +93,7 @@ Do this before each release, on the machine you use every day, with Eloquence, S
    - In the voice manager, "Fetch the Piper voice list" asks before downloading, and a voice to download says its size and its licence before asking. Say no once, then yes once, and check the voice appears in `<data>/piper/voices/`.
    - Remove the downloaded voice with Delete; it asks first.
 
-6. **Dictation.** With the Whisper model in `<data>/whisper/rten/base.en` ([dictation guide](dictation.md#whisper-inside-textweaver)), run `tw dictate --timings`, say a sentence, and press Enter. Check the text, and write down the time from Enter to the text.
+6. **Dictation.** With the Whisper model in `<data>/whisper/rten/base.en` ([dictation guide](../dictation.md#whisper-inside-textweaver)), run `tw dictate --timings`, say a sentence, and press Enter. Check the text, and write down the time from Enter to the text.
 
 Write down what you heard in the release notes' testing section, including anything odd.
 
