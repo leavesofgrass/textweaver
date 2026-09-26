@@ -41,6 +41,7 @@ use textweaver_speech::{
 
 use crate::audio::{Feed, Player};
 use crate::calibration::{self, RatePoint};
+use crate::discovery::{self, LibraryChoice};
 use crate::host::DictLoad;
 use crate::language;
 use crate::protocol::{self, EndStatus, PresetInfo, Reply, Request};
@@ -78,11 +79,15 @@ struct Host {
 }
 
 impl Host {
-    fn spawn(path: &Path, config: &EciConfig) -> Result<(Host, ReadyInfo, Vec<DictLoad>), String> {
+    fn spawn(
+        path: &Path,
+        config: &EciConfig,
+        library: Option<&Path>,
+    ) -> Result<(Host, ReadyInfo, Vec<DictLoad>), String> {
         let mut cmd = Command::new(path);
         if config.fake_engine {
             cmd.args(["--engine", "fake"]);
-        } else if let Some(lib) = config.library.clone().or_else(crate::library_path) {
+        } else if let Some(lib) = library {
             cmd.arg("--library").arg(lib);
         }
         if let Some(hz) = config.sample_rate {
@@ -297,6 +302,8 @@ pub struct EciBackend {
     last_activity: Instant,
     /// Every dictionary file the engine has loaded, with its status.
     dictionary_loads: Vec<DictLoad>,
+    /// The library the running host loaded (not set for the fake engine).
+    library: Option<LibraryChoice>,
 }
 
 impl std::fmt::Debug for EciBackend {
@@ -348,6 +355,7 @@ impl EciBackend {
             cancelled: Vec::new(),
             last_activity: Instant::now(),
             dictionary_loads: Vec::new(),
+            library: None,
         };
         b.ensure_host()?;
         Ok(b)
@@ -376,6 +384,11 @@ impl EciBackend {
         &self.dictionary_loads
     }
 
+    /// The ECI library in use, its product, and why it was chosen.
+    pub fn library(&self) -> Option<&LibraryChoice> {
+        self.library.as_ref()
+    }
+
     /// The ECI speed the current rate maps to.
     pub fn eci_speed(&self) -> i32 {
         calibration::speed_for_wpm(self.rate_table, self.params.rate.wpm())
@@ -385,15 +398,23 @@ impl EciBackend {
         if self.host.is_some() {
             return Ok(());
         }
-        let candidates = crate::host_candidates(&self.config);
+        let (library, candidates) = if self.config.fake_engine {
+            (None, discovery::host_candidates(&self.config, None))
+        } else {
+            let d = discovery::diagnose(&self.config);
+            let choice = d.library.map_err(unavailable)?;
+            log::info!("eci: using {}", choice.reason);
+            (Some(choice), d.hosts)
+        };
         if candidates.is_empty() {
             return Err(unavailable(
                 "textweaver-eci-host not found (run `cargo xtask eci-host`, or set TEXTWEAVER_ECI_HOST)",
             ));
         }
+        let lib_path = library.as_ref().map(|c| c.candidate.path.clone());
         let mut errors = Vec::new();
         for path in candidates {
-            match Host::spawn(&path, &self.config) {
+            match Host::spawn(&path, &self.config, lib_path.as_deref()) {
                 Ok((host, ready, loads)) => {
                     for l in &loads {
                         log_dictionary(l);
@@ -406,6 +427,10 @@ impl EciBackend {
                         ready.sample_rate
                     );
                     self.rate_table = calibration::table_for(&ready.version);
+                    self.library = library.map(|mut c| {
+                        c.candidate.product = c.candidate.product.with_version(&ready.version);
+                        c
+                    });
                     self.host = Some(host);
                     self.ready = Some(ready);
                     self.applied = None;
@@ -760,8 +785,8 @@ impl SpeechBackend for EciBackend {
             .ready
             .as_ref()
             .ok_or_else(|| unavailable("the engine has not started"))?;
-        let library = self.config.library.clone().or_else(crate::library_path);
-        let dialects = Self::installed_dialects(ready, library.as_deref());
+        let library = self.library.as_ref().map(|c| c.candidate.path.as_path());
+        let dialects = Self::installed_dialects(ready, library);
         Ok(voices::voice_list(&dialects, &ready.presets))
     }
 
@@ -782,8 +807,8 @@ impl SpeechBackend for EciBackend {
                     SpeechError::UnknownVoice(params.voice.clone().unwrap_or_default())
                 })?;
             if let Some(ready) = &self.ready {
-                let library = self.config.library.clone().or_else(crate::library_path);
-                if !Self::installed_dialects(ready, library.as_deref()).contains(&d.code) {
+                let library = self.library.as_ref().map(|c| c.candidate.path.as_path());
+                if !Self::installed_dialects(ready, library).contains(&d.code) {
                     return Err(SpeechError::UnknownVoice(format!(
                         "{} ({} is not installed)",
                         params.voice.clone().unwrap_or_default(),

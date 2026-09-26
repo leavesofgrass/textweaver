@@ -1,35 +1,34 @@
 //! ETI-Eloquence for textweaver (ADR-0007).
 //!
-//! Eloquence's engine is the ECI library: Code Factory's `eci.dll` on
-//! Windows (32-bit only) or Voxin's `libibmeci.so` on Linux (64-bit). It is
-//! loaded at run time, never linked, and always runs in a separate host
-//! process, `textweaver-eci-host`, which synthesizes into a buffer and
-//! reports each index mark with its sample offset over a framed pipe
-//! protocol ([`protocol`]). [`EciBackend`] plays the audio in the main
-//! process and turns those offsets into audio-clock word events, so the
-//! highlight follows the exact word being heard.
+//! Eloquence's engine is the ECI library the user installed: Code Factory's
+//! `eci.dll` on Windows (32-bit), OpenEVV's `eci.dll` (x86_64), or Voxin's
+//! `libibmeci.so` on Linux (64-bit). It is loaded at run time, never
+//! linked, and always runs in a separate host process,
+//! `textweaver-eci-host`, which synthesizes into a buffer and reports each
+//! index mark with its sample offset over a framed pipe protocol
+//! ([`protocol`]). [`EciBackend`] plays the audio in the main process and
+//! turns those offsets into audio-clock word events, so the highlight
+//! follows the exact word being heard.
 //!
 //! Wiring (for the application and the backend registry):
 //! - [`backend_info`] describes the backend (id `"eci"`, the highest
-//!   automatic priority, available when the library and host are found);
+//!   automatic priority, available when a library and a matching host are
+//!   found);
 //! - [`factory`] builds it on the speech thread;
 //! - [`NORMALIZES_NATIVELY`]: Eloquence expands numbers, dates, times,
 //!   currency, and abbreviations itself, so the speech service should skip
-//!   its own overlapping normalization transforms for this backend.
+//!   its own overlapping normalization transforms for this backend;
+//! - [`discovery::diagnose`] explains which library was chosen and why, for
+//!   `tw backends` and error messages.
 //!
-//! Finding things:
-//! - the ECI library: [`EciConfig::library`], else `TEXTWEAVER_ECI_LIBRARY`,
-//!   else [`default_library_path`];
-//! - the host: [`EciConfig::host`], else `TEXTWEAVER_ECI_HOST`, else next to
-//!   the running executable (`textweaver-eci-host-i686.exe` first on
-//!   Windows, which `cargo xtask eci-host` puts there, then
-//!   `textweaver-eci-host[.exe]`), else a cargo `i686-pc-windows-msvc`
-//!   build of it under the target directory (Windows development builds).
+//! Finding things: the library and the host are described in
+//! [`discovery`]; the pronunciation dictionaries in [`dictionaries`].
 
 pub mod audio;
 mod backend;
 pub mod calibration;
 pub mod dictionaries;
+pub mod discovery;
 pub mod host;
 pub mod language;
 pub mod protocol;
@@ -42,6 +41,7 @@ use std::path::PathBuf;
 pub use audio::AudioOutput;
 pub use backend::{EciBackend, STALL_TIMEOUT, Synthesis};
 pub use dictionaries::Dictionaries;
+pub use discovery::{HOST_NAME, HOST_NAME_X86, Product};
 use textweaver_speech::{BackendFactory, BackendId, BackendInfo};
 pub use voices::VoiceParam;
 
@@ -63,38 +63,36 @@ pub const LIBRARY_ENV: &str = "TEXTWEAVER_ECI_LIBRARY";
 /// Environment variable naming the host executable.
 pub const HOST_ENV: &str = "TEXTWEAVER_ECI_HOST";
 
-/// Where the ECI library usually lives on this platform, if it is installed.
-///
-/// Windows: Code Factory "Eloquence for Windows" (`eci.dll`, 32-bit).
-/// Linux: Voxin (`libibmeci.so`).
+/// Where the ECI library is installed on this platform, if it is: the first
+/// existing standard location (see [`discovery`]; `TEXTWEAVER_ECI_LIBRARY`
+/// is not consulted here).
 pub fn default_library_path() -> Option<PathBuf> {
-    let candidates: &[&str] = if cfg!(windows) {
-        &[r"C:\Program Files (x86)\Code Factory\Eloquence for Windows\eci.dll"]
-    } else {
-        &[
-            "/opt/IBM/ibmtts/lib/libibmeci.so",
-            "/usr/lib/libibmeci.so",
-            "/opt/oralux/voxin/lib/libibmeci.so",
-        ]
+    let places = discovery::Places {
+        env_library: None,
+        ..discovery::Places::current()
     };
-    candidates.iter().map(PathBuf::from).find(|p| p.exists())
+    discovery::library_candidates(None, &places)
+        .into_iter()
+        .find(|c| c.exists)
+        .map(|c| c.path)
 }
 
-/// The ECI library to load: `TEXTWEAVER_ECI_LIBRARY` if set and non-empty,
-/// else [`default_library_path`].
+/// The ECI library to load: the first existing candidate, starting with
+/// `TEXTWEAVER_ECI_LIBRARY` (see [`discovery`]).
 pub fn library_path() -> Option<PathBuf> {
-    std::env::var_os(LIBRARY_ENV)
-        .filter(|v| !v.is_empty())
-        .map(PathBuf::from)
-        .or_else(default_library_path)
+    discovery::library_candidates(None, &discovery::Places::current())
+        .into_iter()
+        .find(|c| c.exists)
+        .map(|c| c.path)
 }
 
 /// Backend configuration.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct EciConfig {
-    /// The ECI library; `None` uses [`library_path`].
+    /// The ECI library, tried after `TEXTWEAVER_ECI_LIBRARY` and before the
+    /// standard install locations (see [`discovery`]).
     pub library: Option<PathBuf>,
-    /// The host executable; `None` searches (see the crate docs).
+    /// The host executable; `None` searches (see [`discovery::host_candidates`]).
     pub host: Option<PathBuf>,
     /// Engine sample rate in Hz (8000, 11025, or 22050); `None` keeps the
     /// engine's default (11025 Hz).
@@ -111,69 +109,30 @@ pub struct EciConfig {
     pub stall_timeout: Option<std::time::Duration>,
 }
 
-const HOST_NAME: &str = if cfg!(windows) {
-    "textweaver-eci-host.exe"
-} else {
-    "textweaver-eci-host"
-};
-
-/// The 32-bit host `cargo xtask eci-host` installs next to the binaries.
-pub const HOST_NAME_I686: &str = "textweaver-eci-host-i686.exe";
-
-/// Host executables to try, in order (see the crate docs). Only existing
-/// files are returned.
+/// Host executables that could run the configured library (see
+/// [`discovery::host_candidates`]).
 pub fn host_candidates(config: &EciConfig) -> Vec<PathBuf> {
-    let mut out: Vec<PathBuf> = Vec::new();
-    if let Some(h) = &config.host {
-        out.push(h.clone());
+    if config.fake_engine {
+        return discovery::host_candidates(config, None);
     }
-    if let Some(h) = std::env::var_os(HOST_ENV).filter(|v| !v.is_empty()) {
-        out.push(PathBuf::from(h));
-    }
-    if let Some(dir) = std::env::current_exe()
-        .ok()
-        .and_then(|e| e.parent().map(PathBuf::from))
-    {
-        // The executable's directory, and its parent (test binaries live in
-        // `target/<profile>/deps`).
-        let dirs: Vec<PathBuf> = dir.ancestors().take(2).map(PathBuf::from).collect();
-        for d in &dirs {
-            if cfg!(windows) && !config.fake_engine {
-                out.push(d.join(HOST_NAME_I686));
-            }
-            out.push(d.join(HOST_NAME));
-        }
-        if cfg!(windows) && !config.fake_engine {
-            for d in dir.ancestors().take(4) {
-                for profile in ["release", "debug"] {
-                    out.push(d.join("i686-pc-windows-msvc").join(profile).join(HOST_NAME));
-                }
-            }
-        }
-    }
-    let mut seen = Vec::new();
-    out.retain(|p| {
-        let keep = p.is_file() && !seen.contains(p);
-        if keep {
-            seen.push(p.clone());
-        }
-        keep
-    });
-    out
+    let d = discovery::diagnose(config);
+    d.hosts
 }
 
-/// Describes the backend for the registry. `available` means the library
-/// and a host executable were found; the engine itself starts in
-/// [`factory`], which reports [`SpeechError::Unavailable`](textweaver_speech::SpeechError)
-/// if it cannot.
+/// Describes the backend for the registry. `available` means a usable
+/// library and a matching host executable were found (it reads the
+/// library's header but does not load it); the engine itself starts in
+/// [`factory`], which reports
+/// [`SpeechError::Unavailable`](textweaver_speech::SpeechError) if it
+/// cannot.
 pub fn backend_info() -> BackendInfo {
-    let config = EciConfig::default();
+    let d = discovery::diagnose(&EciConfig::default());
     BackendInfo {
         id: BACKEND_ID,
         name: "ETI-Eloquence",
         priority: PRIORITY,
         opt_in: false,
-        available: library_path().is_some() && !host_candidates(&config).is_empty(),
+        available: d.library.is_ok() && !d.hosts.is_empty(),
     }
 }
 

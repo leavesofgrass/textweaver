@@ -64,6 +64,11 @@ fn spike_sentence_to_wav_marks_every_word_with_rising_offsets() {
             .map(|p| p.display().to_string())
             .unwrap_or_default()
     );
+    let choice = b.library().expect("a real library was chosen");
+    println!("library: {}", choice.reason);
+    if cfg!(target_os = "linux") {
+        assert_eq!(choice.candidate.product, textweaver_eci::Product::Voxin);
+    }
     let s = b.synthesize(SPIKE).unwrap();
     let rate = u64::from(s.sample_rate);
     for (r, sample) in &s.words {

@@ -89,10 +89,15 @@ fn main() -> ExitCode {
         });
         host::run(&mut engine, stdin, &mut stdout)
     } else {
-        let Some(path) = args.library.or_else(textweaver_eci::library_path) else {
-            return fail(
-                "no ECI library found (install Eloquence, or set TEXTWEAVER_ECI_LIBRARY)".into(),
-            );
+        use textweaver_eci::discovery;
+        let candidates =
+            discovery::library_candidates(args.library.as_deref(), &discovery::Places::current());
+        let path = match discovery::choose_library(&candidates) {
+            Ok(c) => {
+                eprintln!("textweaver-eci-host: using {}", c.reason);
+                c.candidate.path
+            }
+            Err(e) => return fail(e),
         };
         let mut engine = match ffi::EciEngine::load(&path, args.sample_rate, args.dictionaries) {
             Ok(e) => e,
