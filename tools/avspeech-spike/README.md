@@ -28,4 +28,21 @@ Added by Agent F (Wave 1):
 
 ## Measurements (Rust voice tests, `crates/textweaver-apple/tests/voices.rs`)
 
-Printed by `cargo test -p textweaver-apple --test voices` with `TEXTWEAVER_APPLE=1`; the `Apple speech` workflow runs them on macOS 14 and 15 and CI's `macos-latest` job runs them too. The report in the Agent F Wave 1 summary quotes the numbers.
+Printed by `cargo test -p textweaver-apple --test voices` with `TEXTWEAVER_APPLE=1`; the `Apple speech` workflow runs them on macOS 14 and 15, and CI's `macos-latest` job (macOS 26.6 on 2026-09-25) runs them too. Numbers from the runs of 2026-09-25 on GitHub's runners (no audio device output; live speech at volume 0):
+
+| | macOS 14.8 | macOS 15.7 | macOS 26.6 |
+|---|---|---|---|
+| `nsspeech` Reed, first word after `speak` (first in process / warm) | 97 / 63 to 107 ms | 103 / 30 to 55 ms | 122 / 52 to 61 ms |
+| `nsspeech` Samantha, first word (cold / warm) | 578 / 89 to 114 ms | 651 / 150 to 351 ms | 506 / 76 to 251 ms |
+| `avspeech` Reed, first buffer / first word event (warm) | 9 to 10 / 86 to 203 ms | 13 to 22 / 56 to 82 ms | 7 to 13 / 49 to 58 ms |
+| `avspeech` Samantha, first buffer / first word event (warm) | 30 to 38 / 183 to 318 ms | 22 to 30 / 58 to 69 ms | 30 / 81 to 96 ms |
+| `avspeech` buffer size (Reed / Samantha) | 32 / 23 ms | 16 / 12 ms | 16 / 12 ms |
+| `avspeech` Reed word offset vs. silent-gap ends: median, max | 116, 416 ms (late) | 20, 144 ms | 20, 144 ms |
+| `avspeech` end of synthesis recognized by | synthesizer idle (neither end signal arrives) | empty buffer and delegate | empty buffer and delegate |
+| `nsspeech` rate property 265, Reed / Samantha | 497 / 449 wpm | 498 / 451 wpm | 242 / 282 wpm |
+| `nsspeech` asked for 265 wpm through the tables, live | Reed 265, Samantha 267 | Reed 265, Samantha 270 | Reed 264, Samantha 270 |
+| `avspeech` utterance rate 0.5 (default), Reed / Samantha | 169 / 197 wpm | 169 / 198 wpm | 169 / 198 wpm |
+
+- `nsspeech` rate: macOS 14 and 15 map the rate property onto the same steep curve as `AVSpeechSynthesizer`; macOS 26 keeps it close to nominal words per minute. `crate::rate` holds a table for each and picks by the running release. Reed tops out near 3,450 wpm, Samantha near 800.
+- `avspeech` accuracy: on macOS 15 and 26 a word's offset is within about one buffer (16 ms) of where its audio starts, measured against the ends of silent gaps before words; on macOS 14 the word callbacks lag the buffers, so offsets land 80 to 150 ms late, and neither the final empty buffer nor the delegate's finish arrives (the backend ends synthesis when the synthesizer goes idle).
+- Stop and restart with `nsspeech`: closing the channel takes 7 ms (macOS 15) to 300 ms (macOS 14); the next utterance's first word follows 73 to 87 ms later.
