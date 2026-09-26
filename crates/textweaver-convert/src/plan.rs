@@ -151,16 +151,11 @@ fn with_ext(path: &Path, ext: &str) -> PathBuf {
     path.with_extension(ext)
 }
 
-/// A path for comparison: canonical when it exists, else made absolute
-/// lexically, with case folded on Windows.
+/// A path for comparison: made absolute lexically (no filesystem access;
+/// canonicalizing every path cost more than converting on Windows), with
+/// case folded on Windows.
 fn normalize(p: &Path) -> PathBuf {
-    let abs = p.canonicalize().unwrap_or_else(|_| {
-        if p.is_absolute() {
-            p.to_owned()
-        } else {
-            std::env::current_dir().map_or_else(|_| p.to_owned(), |d| d.join(p))
-        }
-    });
+    let abs = std::path::absolute(p).unwrap_or_else(|_| p.to_owned());
     if cfg!(windows) {
         PathBuf::from(abs.to_string_lossy().to_lowercase())
     } else {
