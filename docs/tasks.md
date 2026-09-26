@@ -436,3 +436,10 @@ Jon wants several themes, as Star had. Star shipped 23 palettes in `star/themes.
 **Owns:** `crates/textweaver-aids/`, `docs/adr/0022-reading-aids.md`, `docs/reading-aids.md`.
 
 **Status:** done on `wave2/s-reading-aids` (Friday, September 25, 2026); awaiting integration. `textweaver-aids` holds RSVP (clock-driven state machine, recognition point, WPM pauses, nine positions, terminal box), bionic reading, WCAG 1.4.12 text spacing with CSS, font settings with Star's three OFL reading fonts (not bundled; fetched by the GUI after asking), the reading ruler and current-line marks, difficult-word marking (no word list vendored: licences need Jon's decision), reading level, and rule-based syllable display with an offset map. One workspace dependency added: `unicode-width` (already in the tree through ratatui). Integration steps for Agents D3 (TUI) and K (GUI) are in the Agent S report and ADR-0022.
+### Agent U — Settings import and export (added 2026-09-25 at Jon's request)
+
+Jon asked for an easy way to import and export settings, preferring JSON. TOML stays the on-disk format.
+
+**Owns:** `crates/textweaver-store/src/settings_io.rs` (and its tests), the settings validation hooks in `settings.rs`, `crates/textweaver-cli/src/cmd/settings.rs`, `docs/settings.md`, `fixtures/u/`.
+
+**Status:** done on `wave2/u-settings-io`, not yet integrated. `tw settings export|import|path|reset` work; import validates, merges or replaces, backs up, and writes atomically; export then import changes nothing (tested with every setting non-default). The app's palette actions `export_settings` and `import_settings` are a verified patch for Agent D3 in `fixtures/u/d3-settings-palette.patch`.

@@ -10,6 +10,9 @@
 //! - [`Recent`] files and the [`library`]: folders, the bookshelf in
 //!   `library.json`, sidecar sync wired to the folders, and search through
 //!   [`fulltext::FullTextIndex`].
+//! - [`settings_io`]: settings and key overrides exported to and imported
+//!   from one JSON (or TOML) document, validated before anything is
+//!   written, with backups.
 //! - [`migrate`]: importing Star's settings, positions, bookmarks, notes,
 //!   highlights, recents, library, keybindings, and sidecars.
 //! - Folder sidecars (`<folder>/.textweaver/progress.json`) and their merge
@@ -32,6 +35,7 @@ pub mod notes;
 mod paths;
 mod recent;
 mod settings;
+pub mod settings_io;
 pub mod sync;
 pub mod time;
 
@@ -47,6 +51,10 @@ pub use settings::{
     EciSettings, EditingSettings, ExportSettings, FootnoteMode, HighlightSettings,
     KeyboardSettings, KeymapOverrides, LibrarySettings, NormalizationSettings, ReadingSettings,
     SapiSettings, Settings, SettingsLoad, SettingsStore, SpeechSettings, SubtitleFormat, TableMode,
+};
+pub use settings_io::{
+    Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,
+    SettingsIoError,
 };
 pub use sync::{ConflictPolicy, SidecarStore};
 
