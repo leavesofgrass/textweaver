@@ -103,6 +103,15 @@ pub fn describe(b: &BackendInfo, auto: &str, selected: &str) -> String {
     if !f.is_empty() {
         s.push_str(&format!(" Supports {}.", and_list(&f)));
     }
+    if b.id != "null" {
+        // Where the highlight's timing comes from (Agent W3f): the engine's
+        // own word positions, or the timer's estimate.
+        s.push_str(if b.caps.contains(Caps::WORD_EVENTS) {
+            " Word timing from the engine."
+        } else {
+            " Word timing estimated."
+        });
+    }
     if b.opt_in {
         s.push_str(" Only when chosen by name.");
     }
@@ -152,7 +161,8 @@ mod tests {
         assert_eq!(
             describe(rec, "null", "null"),
             "recording: Recording (test double). Available. Priority 0. Supports word \
-             highlighting, pitch, volume, audio files, and tones. Only when chosen by name."
+             highlighting, pitch, volume, audio files, and tones. Word timing from the engine. \
+             Only when chosen by name."
         );
         let json = serde_json::to_value(&r).unwrap();
         assert!(json["backends"][0]["caps"].is_string());

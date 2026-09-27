@@ -1011,6 +1011,34 @@ pub const INFO: &[Info] = &[
         "Live preview",
         "With reloading on, also reload when typing pauses.",
     ),
+    // [lexicon] (Agent W3e)
+    optional(
+        "lexicon.glossary",
+        "Glossary",
+        "Your own glossary, looked up before the dictionary: term: definition lines, or Star's JSON. Not set uses glossary.txt in the settings folder.",
+    ),
+    optional(
+        "lexicon.data_file",
+        "Dictionary file",
+        "The define-word dictionary, lexicon-en.twlex. Not set looks beside the program.",
+    ),
+    // [stats]
+    toggle(
+        "stats.enabled",
+        "Reading statistics",
+        "Count the time read aloud, the furthest point, and sessions for each document.",
+    ),
+    // [interface]
+    open_choice(
+        "interface.language",
+        "Interface language",
+        "The language of textweaver's own words, from the next start. Only English is complete; the others are for testing.",
+        &[
+            ("en", "English"),
+            ("en-XA", "test: accented"),
+            ("ar-XB", "test: right to left"),
+        ],
+    ),
 ];
 
 /// The section title for a top-level key.
@@ -1028,6 +1056,9 @@ fn section_title(key: &str) -> &'static str {
         "export" => "Export",
         "reading_aids" => "Reading aids",
         "preview" => "Preview",
+        "lexicon" => "Define word",
+        "stats" => "Reading statistics",
+        "interface" => "Interface",
         _ => "Other",
     }
 }
@@ -1505,7 +1536,7 @@ impl App {
 
     /// Puts a changed setting into effect: the voice, the speech pipeline,
     /// the keys, the accessibility mode, the theme, the library.
-    fn settings_changed(&mut self, old: &Settings, path: &str) {
+    pub(crate) fn settings_changed(&mut self, old: &Settings, path: &str) {
         let top = path.split('.').next().unwrap_or_default();
         if matches!(top, "speech" | "normalization" | "highlight") {
             let config = textweaver_engines::service_config(&self.settings);

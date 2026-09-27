@@ -370,6 +370,42 @@ The browser preview of the document you are editing (`preview in browser` in the
 - `auto_reload`, default `false`: reload the page by itself after each save, through a small server on this computer only (127.0.0.1, with a secret in the address), landing on the heading nearest the caret. Off, textweaver says "Preview updated. Press F5 in the browser." A reload moves your screen reader's place in the page, which is why it is off. The palette's `toggle preview auto reload` switches it.
 - `live`, default `false`: with `auto_reload`, also reload when typing pauses for a second. The palette's `toggle preview live` switches it.
 
+### [lexicon]
+
+Define word (see [the reading guide](reading.md#define-a-word-ctrlshiftd-or-alte)).
+
+- `glossary`, no default: your own glossary, looked up before the dictionary. Unset, textweaver uses `glossary.txt`, else `glossary.json`, in the settings folder when there is one. A text glossary has one `term: definition` line per sense (`term = definition` and `term - definition` work too); a JSON glossary is Star's custom dictionary format.
+- `data_file`, no default: the dictionary file, `lexicon-en.twlex`. Unset, textweaver looks in the `lexicon` folder beside the program, then in its data folder.
+
+### [stats]
+
+Reading statistics (see [the reading guide](reading.md#reading-statistics-ctrlshifty-or-alty)).
+
+- `enabled`, default `true`: count the time textweaver reads each document aloud, the furthest point, and the sessions, in `stats.json` in the data folder. Off, nothing more is recorded; what was recorded stays until `tw stats --clear`.
+
+### [interface]
+
+- `language`, default `"en"`: the language of textweaver's own words. Only English is complete so far. `en-XA` shows every message accented and in `⟦ ⟧` brackets, and `ar-XB` shows them right to left: both are for testing. A `<language>.ftl` file in the `locales` folder of the settings folder adds a language; messages it lacks stay in English. The define-word, profile, and statistics messages use it; the rest of the interface follows in later versions.
+
+## Settings profiles
+
+A profile is a named set of the settings you change together: the speech engine, voice, rate, pitch, and volume; the theme; the font and text spacing; bionic reading and the ruler; the highlight; and the access mode. Keep one for studying and one for skimming, or one for each person who shares the computer.
+
+- In the reader, **Ctrl+Shift+U** in the GUI or **Alt+U** in the terminal lists your profiles. Enter switches to one; its settings take effect at once and are saved. F2 renames a profile, and Delete deletes one after a yes or no. The last items save the current settings as a new profile, save them into the profile in use, and import and export profiles.
+- From the command line:
+
+  ```sh
+  tw settings profile list
+  tw settings profile save "Study"
+  tw settings profile switch "Study"
+  tw settings profile rename "Study" "Exam"
+  tw settings profile export profiles.json
+  tw settings profile import profiles.json
+  tw settings profile delete "Exam"
+  ```
+
+Profiles are kept in `profiles.toml`, beside `settings.toml`, so exporting your settings does not include them. A profile export works in any version of textweaver: settings a version does not know are left out, and it says which.
+
 ## See also
 
 - [Speech engines and voices](speech.md): the speech settings in use.

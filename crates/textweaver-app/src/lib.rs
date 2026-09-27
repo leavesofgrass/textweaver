@@ -200,6 +200,7 @@ pub mod settings_schema;
 mod speech_cursor;
 mod spell;
 mod structure;
+mod study;
 mod tables;
 mod tasks;
 mod templates;
@@ -208,6 +209,7 @@ pub mod text_util;
 mod themes;
 mod view;
 mod voice;
+pub mod voice_manager;
 pub mod wake;
 pub mod window;
 mod writer;
@@ -233,7 +235,7 @@ pub use restart::SpeechStarter;
 pub use settings_schema::{Setting, SettingKind, SettingsSchema};
 pub use templates::local_date;
 pub use textweaver_engines::{
-    CODE_FACTORY_LIBRARY, apple_preference, dectalk_config, eci_config, sapi_config,
+    CODE_FACTORY_LIBRARY, apple_preference, dectalk_config, eci_config, piper_config, sapi_config,
     service_config, speech_registry, speech_registry_for,
 };
 pub use textweaver_store::Note;
@@ -251,8 +253,10 @@ pub use textweaver_editor as editor;
 pub use textweaver_engines as engines;
 pub use textweaver_engines::apple;
 pub use textweaver_engines::eci;
+pub use textweaver_engines::piper;
 pub use textweaver_formats as formats;
 pub use textweaver_keymap as keymap;
+pub use textweaver_lexicon as lexicon;
 pub use textweaver_speech as speech;
 pub use textweaver_store as store;
 pub use textweaver_text as text;

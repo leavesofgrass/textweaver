@@ -16,7 +16,7 @@
 //!
 //! Smaller files open at once, as before, except those that may be slow
 //! whatever their size (Agent W3d): PDFs and pictures, whose pages may need
-//! text recognition (OCR, ADR-0025), archives, and web addresses. While
+//! text recognition (OCR, ADR-0026), archives, and web addresses. While
 //! pages are recognized, "Still opening" says which page ("Still opening
 //! scan.pdf: recognizing text on page 3 (3 of 40)."), and Escape stops the
 //! recognition before its next page as well. [`App::open`] itself always

@@ -220,7 +220,7 @@ A scanned PDF has pictures of pages instead of text. textweaver recognizes the t
 - Recognized pages are remembered, so a book opens instantly the second time.
 - In the reader, a scanned book takes about a second a page to open the first time. Every three seconds you hear which page it is on, such as "Still opening scan.pdf: recognizing text on page 3 (3 of 40)." Escape stops it.
 
-[ADR-0025](adr/0025-ocr-and-student-formats.md) explains the choices and gives measurements.
+[ADR-0026](adr/0026-ocr-and-student-formats.md) explains the choices and gives measurements.
 
 ## Export from inside the reader
 

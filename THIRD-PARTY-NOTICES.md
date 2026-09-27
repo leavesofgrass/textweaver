@@ -25,6 +25,12 @@ Packages also carry the licence files themselves, under `licenses/`.
 - Copyright 2000-2026 by Kevin Atkinson; the Australian English data copyright 2016 by Benjamin Titze.
 - Licence: SCOWL's own permissive notice, reproduced in full below and in `licenses/scowl/Copyright` in each package. It must accompany every copy of the list.
 
+### Open English WordNet and CMUdict (define word)
+
+- Used by define word. The dictionary file in textweaver (`lexicon/lexicon-en.twlex`) is derived from two sources; `third_party/lexicon/README.md` says how.
+- Open English WordNet 2025 (release `2025-edition`), by the Open English WordNet team, based on Princeton WordNet 3.1 (WordNet 3.1 copyright 2011 by Princeton University). Licence: Creative Commons Attribution 4.0 International (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/, with Princeton's WordNet notice, reproduced in full below and in `licenses/lexicon/WORDNET-LICENSE` in each package. **Modification notice:** the definitions, examples, synonyms, opposites, and hypernyms were extracted from the WordNet database files, reformatted, and compressed; nothing was reworded.
+- CMUdict, the CMU Pronouncing Dictionary (commit `74790861f652b15e4ac49015a90074ad62a27690`), copyright 1993-2015 Carnegie Mellon University. Licence: a two-clause BSD-style licence, reproduced in full below and in `licenses/lexicon/CMUDICT-LICENSE` in each package. The pronunciations are stored in a compact form and respelled for reading aloud.
+
 ### IBMTTS community pronunciation dictionaries
 
 - Used by the Eloquence (ECI) backend. From eigencrow/IBMTTSDictionaries, tag `v26.09`, maintained by amirsol81, x0, and thunderdrop with contributions from many people.
@@ -473,14 +479,91 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
 
+### Open English WordNet (define word)
+
+From `third_party/lexicon/WORDNET-LICENSE`.
+
+```text
+This software and database is being provided to you, the LICENSEE, by
+the Open English Wordnet team under the Creative Commons Attribution 4.0
+International License (CC-BY 4.0).
+
+Open English Wordnet 2023 Copyright 2023 by the Open English Wordnet team.
+
+Permission to use, copy, modify and distribute this software and
+database and its documentation for any purpose and without fee or
+royalty is hereby granted, provided that you agree to comply with
+the following copyright notice and statements, including the disclaimer,
+and that the same appear on ALL copies of the software, database and
+documentation, including modifications that you make for internal
+use or for distribution.
+
+WordNet 3.1 Copyright 2011 by Princeton University.  All rights reserved.
+
+THIS SOFTWARE AND DATABASE IS PROVIDED "AS IS" AND PRINCETON
+UNIVERSITY MAKES NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR
+IMPLIED.  BY WAY OF EXAMPLE, BUT NOT LIMITATION, PRINCETON
+UNIVERSITY MAKES NO REPRESENTATIONS OR WARRANTIES OF MERCHANT-
+ABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR THAT THE USE
+OF THE LICENSED SOFTWARE, DATABASE OR DOCUMENTATION WILL NOT
+INFRINGE ANY THIRD PARTY PATENTS, COPYRIGHTS, TRADEMARKS OR
+OTHER RIGHTS.
+
+The name of Princeton University or Princeton may not be used in
+advertising or publicity pertaining to distribution of the software
+and/or database.  Title to copyright in this software, database and
+any associated documentation shall at all times remain with
+Princeton University and LICENSEE agrees to preserve same.
+```
+
+### CMUdict (define word pronunciations)
+
+From `third_party/lexicon/CMUDICT-LICENSE`.
+
+```text
+Copyright (C) 1993-2015 Carnegie Mellon University. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+   The contents of this file are deemed to be source code.
+
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in
+   the documentation and/or other materials provided with the
+   distribution.
+
+This work was supported in part by funding from the Defense Advanced
+Research Projects Agency, the Office of Naval Research and the National
+Science Foundation of the United States of America, and by member
+companies of the Carnegie Mellon Sphinx Speech Consortium. We acknowledge
+the contributions of many volunteers to the expansion and improvement of
+this dictionary.
+
+THIS SOFTWARE IS PROVIDED BY CARNEGIE MELLON UNIVERSITY ``AS IS'' AND
+ANY EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL CARNEGIE MELLON UNIVERSITY
+NOR ITS EMPLOYEES BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
 ## Rust crates
 
 textweaver is built from these Rust crates. Each licence below lists the crates under it, with their versions. Where a crate offers a choice of licences, the one listed is the one textweaver uses.
 
 Licences, with the number of crates under each:
 
-- Apache License 2.0: 307
-- MIT License: 73
+- Apache License 2.0: 309
+- MIT License: 76
 - Unicode License v3: 25
 - ISC License: 23
 - BSD 3-Clause "New" or "Revised" License: 7
@@ -8955,6 +9038,7 @@ Used by:
 - fdeflate 0.3.7, https://github.com/image-rs/fdeflate
 - fearless_simd 0.4.1, https://github.com/linebender/fearless_simd
 - finl_unicode 1.5.0, https://github.com/dahosek/finl_unicode
+- glifo 0.1.1, https://github.com/linebender/vello
 - guillotiere 0.7.0, https://github.com/nical/guillotiere
 - half 2.7.1, https://github.com/VoidStarKat/half-rs
 - hayro-ccitt 0.3.0, https://github.com/LaurenzV/hayro
@@ -9032,6 +9116,7 @@ Used by:
 - utf8-zero 0.8.1, https://github.com/algesten/utf8-zero
 - utf8parse 0.2.2, https://github.com/alacritty/vte
 - vello_common 0.0.8, https://github.com/linebender/vello
+- vello_common 0.0.9, https://github.com/linebender/vello
 - vello_cpu 0.0.8, https://github.com/linebender/vello
 - wxdragon-macros 0.9.22, https://github.com/AllenDang/wxDragon
 - wxdragon-sys 0.9.22, https://github.com/AllenDang/wxDragon
@@ -10783,6 +10868,37 @@ SOFTWARE.
 
 Used by:
 
+- ruzstd 0.9.0, https://github.com/KillingSpark/zstd-rs
+
+```text
+MIT License
+
+Copyright (c) 2019 Moritz Borcherding
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+```
+
+### MIT License (MIT)
+
+Used by:
+
 - strum 0.27.2, https://github.com/Peternator7/strum
 - strum 0.28.0, https://github.com/Peternator7/strum
 - strum_macros 0.27.2, https://github.com/Peternator7/strum
@@ -11289,6 +11405,7 @@ Used by:
 - aho-corasick 1.1.5, https://github.com/BurntSushi/aho-corasick
 - byteorder-lite 0.1.0, https://github.com/image-rs/byteorder-lite
 - byteorder 1.5.0, https://github.com/BurntSushi/byteorder
+- fst 0.4.7, https://github.com/BurntSushi/fst
 - memchr 2.8.3, https://github.com/BurntSushi/memchr
 - walkdir 2.5.0, https://github.com/BurntSushi/walkdir
 
@@ -11360,6 +11477,37 @@ The MIT License (MIT)
 Copyright (c) 2015 Danny Guo
 Copyright (c) 2016 Titus Wormer <tituswormer@gmail.com>
 Copyright (c) 2018 Akash Kurdekar
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+```
+
+### MIT License (MIT)
+
+Used by:
+
+- twox-hash 2.1.4, https://github.com/shepmaster/twox-hash
+
+```text
+The MIT License (MIT)
+
+Copyright (c) 2015 Jake Goulding
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

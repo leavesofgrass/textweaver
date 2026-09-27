@@ -35,7 +35,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
    Before a release, also run `cargo xtask notices` (it needs `cargo install --locked cargo-about`) and commit `THIRD-PARTY-NOTICES.md` if it changed. CI fails when it is out of date.
 
-2. **Listen.** Before pushing, a person listens on real hardware with Eloquence and one other engine: open a document, read, pause, resume, move by sentence and heading, and change the rate. Tests that fake the engine cannot hear a silent one.
+2. **Listen.** Before pushing, a person listens on real hardware. Tests that fake the engine cannot hear a silent one, and tests never play audio. See [the listening checklist](#listening-checklist) below.
 
 3. **Push.** Push the commit, then the tag:
 
@@ -59,6 +59,43 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    ```bash
    gh attestation verify textweaver-0.1.0-alpha.3-windows-x86_64.zip --repo leavesofgrass/textweaver
    ```
+
+## Listening checklist
+
+Do this before each release, on the machine you use every day, with Eloquence, SAPI 5, and Piper (and DECtalk if it is installed).
+
+1. **Write the samples.**
+
+   ```bash
+   cargo xtask listen
+   ```
+
+   It writes `target/listen/<engine>.wav`, `<engine>-fast.wav` (400 words per minute), and `<engine>-low.wav` (4 semitones down) for every engine on this machine, each with word-level subtitles (`.srt`) beside it. An engine that is not installed is reported and skipped. It plays nothing. `--engine piper` limits it to one engine.
+
+2. **Listen to each file.** For each engine:
+   - The heading, "Chapter 3: The Library", is read, and "Chapter 3" is not "Chapter three colon".
+   - "9:00 a.m." is a time, "$1.50" is money, and "Dr. Okafor" is "Doctor Okafor".
+   - The question rises at the end.
+   - The fast file is still clear; the low file is lower, not slower.
+   - No clicks, no cut-off first or last word, and no long silence between sentences.
+
+3. **Check the highlight timing.** Open a `.srt` file in a player that shows subtitles (or read the times): each word's time should match when you hear it, within about a tenth of a second.
+
+4. **In the reader.** Run `textweaver` on a document and, with each engine:
+   - Read, pause, resume, and stop.
+   - Move by sentence and heading while reading.
+   - Change the rate and pitch; then choose another voice (Alt+V) and back. The first voice comes back with its own rate and pitch.
+   - In the voice manager (Alt+V), move the language and engine filters with Enter on their rows.
+
+5. **Piper.** With a Piper voice installed:
+   - `tw backends` lists `piper` as available and says it supports word highlighting.
+   - The first word of a long paragraph starts within about a third of a second of pressing Read.
+   - In the voice manager, "Fetch the Piper voice list" asks before downloading, and a voice to download says its size and its licence before asking. Say no once, then yes once, and check the voice appears in `<data>/piper/voices/`.
+   - Remove the downloaded voice with Delete; it asks first.
+
+6. **Dictation.** With the Whisper model in `<data>/whisper/rten/base.en` ([dictation guide](../dictation.md#whisper-inside-textweaver)), run `tw dictate --timings`, say a sentence, and press Enter. Check the text, and write down the time from Enter to the text.
+
+Write down what you heard in the release notes' testing section, including anything odd.
 
 ## What the packages hold
 

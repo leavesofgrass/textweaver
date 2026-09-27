@@ -1,49 +1,229 @@
-//! Rate, pitch, volume, speed presets, and display toggles. Every change is
-//! announced (Star showed rate changes only visually) and marks the settings
-//! for saving on quit.
+//! Rate, pitch, volume, speed presets, display toggles, and the voice
+//! manager's wiring. Every change is announced (Star showed rate changes
+//! only visually) and marks the settings for saving on quit.
+//!
+//! The voice manager's model (rows, filters, labels, per-voice rate and
+//! pitch) is `crate::voice_manager`; this file runs its commands: using a
+//! voice (switching engine when needed), favourites, downloading and
+//! removing Piper voices, and fetching the Piper catalogue, each download
+//! only after a yes.
 
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::mpsc::{Receiver, TryRecvError};
+
+use net::DownloadPlan;
 use textweaver_a11y::{Announcement, Verbosity};
 use textweaver_core::{Pitch, Rate, Volume};
+use textweaver_engines::piper::{Catalog, InstalledVoice, PiperError};
 use textweaver_speech::Earcon;
 
 use crate::app::App;
+use crate::command::{Confirm, Effect};
+use crate::voice_manager::{
+    PIPER, VoiceEntry, VoiceManager, VoiceRow, VoiceStatus, cached_catalog, catalog_path,
+    engine_entries, params_key, piper_entries, remember_params, remembered_params,
+};
+
+/// Piper voice downloads: HTTP, so part of the app's `publish` feature.
+#[cfg(feature = "publish")]
+mod net {
+    pub(crate) use textweaver_engines::piper::download::{
+        DownloadPlan, download, fetch_catalog_json, plan,
+    };
+}
+
+/// Without the `publish` feature the lean reader links no HTTP client:
+/// every download says it is not in this build.
+#[cfg(not(feature = "publish"))]
+mod net {
+    use textweaver_engines::piper::{
+        Catalog, CatalogVoice, InstalledVoice, PiperError, VoiceStore,
+    };
+
+    /// Stands in for the download plan; never made.
+    #[derive(Debug)]
+    pub(crate) struct DownloadPlan {
+        pub(crate) voice: CatalogVoice,
+    }
+
+    impl DownloadPlan {
+        pub(crate) fn describe(&self) -> String {
+            self.voice.describe()
+        }
+        pub(crate) fn total_bytes(&self) -> u64 {
+            self.voice.size_bytes()
+        }
+    }
+
+    fn missing() -> PiperError {
+        PiperError::Unsupported("downloading voices is not in this build of textweaver".into())
+    }
+
+    pub(crate) fn plan(_: &CatalogVoice) -> Result<DownloadPlan, PiperError> {
+        Err(missing())
+    }
+
+    pub(crate) fn fetch_catalog_json() -> Result<(String, Catalog), PiperError> {
+        Err(missing())
+    }
+
+    pub(crate) fn download(
+        _: &DownloadPlan,
+        _: &VoiceStore,
+        _: &mut dyn FnMut(u64, u64) -> bool,
+    ) -> Result<InstalledVoice, PiperError> {
+        Err(missing())
+    }
+}
 
 /// What a chosen voice says as its sample.
 pub const VOICE_SAMPLE: &str = "The quick brown fox jumps over the lazy dog.";
 
-/// A voice as listed: its name, then its languages and tags ("Microsoft
-/// Zira, en-US, OneCore"), "favourite" for one in
-/// `speech.favorite_voices`, and "current" for the one in use.
-fn voice_label(v: &textweaver_speech::Voice, favourite: bool, current: bool) -> String {
-    let mut parts = vec![v.name.clone()];
-    if let Some(l) = v.languages.first() {
-        parts.push(l.clone());
-    }
-    parts.extend(v.tags.iter().cloned());
-    if favourite {
-        parts.push("favourite".into());
-    }
-    if current {
-        parts.push("current".into());
-    }
-    parts.join(", ")
+/// A question the voice manager is waiting on (y or n).
+#[derive(Debug)]
+pub(crate) enum VoiceQuestion {
+    /// Download this voice (its size and licence were said).
+    Download(Box<DownloadPlan>),
+    /// Remove this installed Piper voice: key and name.
+    Remove(String, String),
+    /// Fetch the Piper catalogue.
+    FetchCatalog,
 }
 
-/// Where `(id, name)` is in the favourites (matched by id, or by name
-/// ignoring case), if it is one.
-fn favourite_rank(favourites: &[String], id: &str, name: &str) -> Option<usize> {
-    favourites
-        .iter()
-        .position(|f| f == id || f.eq_ignore_ascii_case(name))
+/// Work on a background thread.
+pub(crate) enum VoiceJob {
+    /// Asking Hugging Face for a voice's files and licence.
+    Plan(Receiver<Result<DownloadPlan, PiperError>>),
+    /// Downloading a voice: its name, bytes so far and in all, the
+    /// quarter last announced, and a way to cancel.
+    Download {
+        name: String,
+        rx: Receiver<Result<InstalledVoice, PiperError>>,
+        done: Arc<AtomicU64>,
+        total: u64,
+        told: u64,
+        cancel: Arc<AtomicBool>,
+    },
+    /// Fetching the catalogue.
+    Catalog(Receiver<Result<Catalog, PiperError>>),
 }
+
+impl std::fmt::Debug for VoiceJob {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            VoiceJob::Plan(_) => "Plan",
+            VoiceJob::Download { .. } => "Download",
+            VoiceJob::Catalog(_) => "Catalog",
+        })
+    }
+}
+
+/// The voice manager's state in the app.
+#[derive(Debug, Default)]
+pub(crate) struct VoicesState {
+    pub(crate) manager: VoiceManager,
+    pub(crate) question: Option<VoiceQuestion>,
+    pub(crate) job: Option<VoiceJob>,
+    /// The other engines' voices, listed once per session in the
+    /// background (each engine is started, asked, and closed).
+    pub(crate) others: Option<Vec<VoiceEntry>>,
+    pub(crate) others_rx: Option<Receiver<Vec<VoiceEntry>>>,
+}
+
+/// Starts every other available engine on a helper thread, lists its
+/// voices, and closes it. Engines that need the main thread (Apple's) are
+/// skipped, as are Piper (read from its folder) and the silent ones.
+fn list_other_engines(
+    registry: textweaver_speech::BackendRegistry,
+    running: String,
+) -> Option<Receiver<Vec<VoiceEntry>>> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::Builder::new()
+        .name("textweaver-voice-engines".into())
+        .spawn(move || {
+            let mut out = Vec::new();
+            for info in registry.list() {
+                if !info.available
+                    || info.opt_in
+                    || info.id == running
+                    || info.id == PIPER
+                    || info.id == "null"
+                    || info
+                        .caps
+                        .contains(textweaver_speech::Caps::REQUIRES_MAIN_THREAD)
+                {
+                    continue;
+                }
+                let Some(make) = registry.factory(info.id) else {
+                    continue;
+                };
+                match make().and_then(|b| b.voices()) {
+                    Ok(v) => out.extend(engine_entries(info.id, info.name, &v)),
+                    Err(e) => log::info!("voice manager: {}: {e}", info.id),
+                }
+            }
+            let _ = tx.send(out);
+        })
+        .ok()?;
+    Some(rx)
+}
+
+/// The title of the voice list.
+const TITLE: &str = "Choose a voice";
 
 impl App {
-    /// Choose voice (Alt+V): lists the engine's voices; Enter selects one
-    /// and speaks a sample. The list was made once when the engine started
-    /// and is read without waiting; while it is still being made, this
-    /// says so and the list opens when it arrives ([`voices_tick`](Self::voices_tick)).
-    pub(crate) fn choose_voice(&mut self) -> Vec<crate::command::Effect> {
-        use crate::command::Effect;
+    /// The Piper voices folder: `[speech.piper] voices` or
+    /// `TEXTWEAVER_PIPER_VOICES` when set, else `piper/voices` in this
+    /// session's data folder. `None` in a session that keeps no files.
+    fn piper_store(&self) -> Option<textweaver_engines::piper::VoiceStore> {
+        let mut config = textweaver_engines::piper_config(&self.settings);
+        let overridden = std::env::var_os("TEXTWEAVER_PIPER_VOICES").is_some_and(|v| !v.is_empty())
+            || self
+                .settings
+                .speech
+                .extra
+                .get("piper")
+                .and_then(|t| t.get("voices"))
+                .and_then(|v| v.as_str())
+                .is_some_and(|v| !v.is_empty());
+        if !overridden {
+            config.voices_dir = self.paths.as_ref()?.data_dir.join("piper").join("voices");
+        }
+        Some(config.store())
+    }
+
+    /// The engine and voice in use.
+    fn current_voice(&self) -> (String, Option<String>) {
+        (
+            self.speech.backend_id().to_owned(),
+            self.settings.speech.voice.clone(),
+        )
+    }
+
+    /// Every voice the manager lists: the running engine's, then Piper's
+    /// installed and downloadable voices (when Piper is not the running
+    /// engine, its installed voices are read from the data folder).
+    fn gather_voices(&self, engine_voices: &[textweaver_speech::Voice]) -> Vec<VoiceEntry> {
+        let engine = self.speech.backend_id();
+        let mut entries = engine_entries(engine, &self.backend_name, engine_voices);
+        if let Some(store) = self.piper_store() {
+            let catalog = cached_catalog(store.dir());
+            let piper = piper_entries(&store, catalog.as_ref());
+            entries.extend(
+                piper
+                    .into_iter()
+                    .filter(|p| !(engine == PIPER && p.status == VoiceStatus::Ready)),
+            );
+        }
+        entries
+    }
+
+    /// Choose voice (Alt+V): the voice manager. Lists every voice (the
+    /// engine's list was made once when it started and is read without
+    /// waiting; while it is still being made, this says so and the list
+    /// opens when it arrives, [`voices_tick`](Self::voices_tick)).
+    pub(crate) fn choose_voice(&mut self) -> Vec<Effect> {
         let voices = match self.speech.voice_list() {
             textweaver_speech::VoiceList::Ready(v) => v,
             textweaver_speech::VoiceList::Loading => {
@@ -56,79 +236,396 @@ impl App {
             }
             textweaver_speech::VoiceList::Failed(e) => {
                 self.error(&format!("Could not list the voices: {e}."));
-                return vec![Effect::Redraw];
+                Vec::new()
             }
         };
-        if voices.is_empty() {
-            self.tell("This speech engine has no voices to choose from.");
-            return vec![Effect::Redraw];
+        let mut entries = self.gather_voices(&voices);
+        match &self.voices.others {
+            Some(others) => entries.extend(others.iter().cloned()),
+            None if self.voices.others_rx.is_none() && self.can_start_speech() => {
+                let registry = textweaver_engines::speech_registry_for(&self.settings);
+                self.voices.others_rx =
+                    list_other_engines(registry, self.speech.backend_id().to_owned());
+            }
+            None => {}
         }
-        let mut voices = voices;
-        // Favourites first, in the order they were added; the rest keep
-        // the engine's order.
         let favourites = self.settings.speech.favorite_voices.clone();
-        voices.sort_by_key(|v| favourite_rank(&favourites, &v.id, &v.name).unwrap_or(usize::MAX));
-        let n = voices.len();
-        let items = self.voice_items(&voices);
-        self.voice_list = voices;
-        self.list = Some(crate::app::ListKind::Voices(
-            self.voice_list
-                .iter()
-                .map(|v| (v.id.clone(), v.name.clone()))
-                .collect(),
-        ));
+        self.voices.manager.offer_catalog = self.piper_store().is_some();
+        self.voices.manager.set_entries(entries, &favourites);
+        let shown = self.voices.manager.shown_sentence();
         self.tell(&format!(
-            "Voices, {n} {}, favourites first. Enter chooses one and speaks a sample, Space adds or removes a favourite, Escape cancels.",
-            if n == 1 { "voice" } else { "voices" }
+            "Voice manager. {shown} Enter uses a voice and speaks a sample, or downloads one; \
+             Space marks a favourite; Delete removes a downloaded voice; Escape closes."
         ));
+        // Focus the voice in use, else the first voice; the filter rows
+        // are above it.
+        let (engine, voice) = self.current_voice();
+        let rows = self.voices.manager.rows().len();
+        let focus = (0..rows)
+            .find(|&n| {
+                self.voices.manager.entry_at(n).is_some_and(|e| {
+                    e.engine == engine
+                        && voice.as_deref().is_some_and(|v| {
+                            v == e.voice.id || v.eq_ignore_ascii_case(&e.voice.name)
+                        })
+                })
+            })
+            .or_else(|| (0..rows).find(|&n| self.voices.manager.entry_at(n).is_some()));
+        self.pending_list_focus = focus;
+        self.show_voice_list()
+    }
+
+    /// Shows the voice list again, as it is now.
+    fn show_voice_list(&mut self) -> Vec<Effect> {
+        let (engine, voice) = self.current_voice();
+        let items = self.voices.manager.labels(
+            &self.settings.speech.favorite_voices,
+            (&engine, voice.as_deref()),
+        );
+        self.list = Some(crate::app::ListKind::Voices);
         vec![Effect::ShowList {
-            title: "Choose a voice".into(),
+            title: TITLE.into(),
             items,
         }]
     }
 
     /// Opens the voice list asked for while the voices were loading, once
     /// they arrive (from [`App::tick`]); if something else is open by
-    /// then, says they are ready instead.
-    pub(crate) fn voices_tick(&mut self) -> Vec<crate::command::Effect> {
+    /// then, says they are ready instead. Also collects the voice
+    /// manager's background work.
+    pub(crate) fn voices_tick(&mut self) -> Vec<Effect> {
+        let mut effects = self.voice_job_tick();
+        if let Some(rx) = &self.voices.others_rx
+            && let Ok(others) = rx.try_recv()
+        {
+            self.voices.others_rx = None;
+            let n = others.len();
+            self.voices.others = Some(others);
+            if n > 0 && self.list == Some(crate::app::ListKind::Voices) {
+                self.tell(&format!(
+                    "{n} more voices from other engines are ready. Press Escape and open the voice manager again to see them."
+                ));
+                effects.push(Effect::Redraw);
+            }
+        }
         if !self.voices_pending || self.speech.voice_list().is_loading() {
-            return Vec::new();
+            return effects;
         }
         self.voices_pending = false;
         if self.list.is_some() || self.mode.is_prompt() || self.confirmation_pending() {
             let keys =
                 crate::help::chords_text(&self.keymap, textweaver_keymap::ActionId::ChooseVoice);
             self.tell(&format!("The voices are ready. {keys} lists them."));
-            return vec![crate::command::Effect::Redraw];
+            effects.push(Effect::Redraw);
+            return effects;
         }
-        self.choose_voice()
+        effects.extend(self.choose_voice());
+        effects
     }
 
-    fn voice_items(&self, voices: &[textweaver_speech::Voice]) -> Vec<String> {
-        let current = self.settings.speech.voice.clone();
-        let favourites = &self.settings.speech.favorite_voices;
-        voices
-            .iter()
-            .map(|v| {
-                let is_current = current
-                    .as_deref()
-                    .is_some_and(|c| c == v.id || c.eq_ignore_ascii_case(&v.name));
-                let fav = favourite_rank(favourites, &v.id, &v.name).is_some();
-                voice_label(v, fav, is_current)
-            })
-            .collect()
+    /// Enter on row `n` of the voice list.
+    pub(crate) fn choose_voice_row(&mut self, n: usize) -> Vec<Effect> {
+        let favourites = self.settings.speech.favorite_voices.clone();
+        match self.voices.manager.row(n).cloned() {
+            Some(VoiceRow::LanguageFilter) => {
+                let s = self.voices.manager.next_language(&favourites);
+                self.tell(&s);
+                self.pending_list_focus = Some(n);
+                self.show_voice_list()
+            }
+            Some(VoiceRow::EngineFilter) => {
+                let s = self.voices.manager.next_engine(&favourites);
+                self.tell(&s);
+                self.pending_list_focus = Some(n);
+                self.show_voice_list()
+            }
+            Some(VoiceRow::FetchCatalog) => {
+                self.voices.question = Some(VoiceQuestion::FetchCatalog);
+                self.tell(
+                    "Download the list of Piper voices, about 250 kilobytes, from Hugging Face? y or n",
+                );
+                vec![Effect::Redraw]
+            }
+            Some(VoiceRow::Voice(_)) => {
+                let Some(e) = self.voices.manager.entry_at(n).cloned() else {
+                    return vec![Effect::Redraw];
+                };
+                match e.status {
+                    VoiceStatus::Ready => self.use_voice(&e),
+                    VoiceStatus::Downloadable { .. } => self.plan_download(&e),
+                }
+            }
+            None => vec![Effect::Redraw],
+        }
     }
 
-    /// Space in the voice list: adds voice `n` to `speech.favorite_voices`,
-    /// or removes it, saved at once. The list stays open, in the same
-    /// order, with the item relabelled.
-    pub(crate) fn toggle_favourite_voice(&mut self, n: usize) -> Vec<crate::command::Effect> {
-        use crate::command::Effect;
-        let Some(v) = self.voice_list.get(n).cloned() else {
+    /// Uses `e`: on the running engine at once with a sample; on another
+    /// engine by restarting speech with it.
+    fn use_voice(&mut self, e: &VoiceEntry) -> Vec<Effect> {
+        self.remember_voice_params();
+        if e.engine == self.speech.backend_id() {
+            self.select_voice(&e.voice.id, &e.voice.name);
+            return vec![Effect::Redraw];
+        }
+        self.stop_speech();
+        self.settings.speech.backend = e.engine.clone();
+        self.settings.speech.voice = Some(e.voice.id.clone());
+        self.settings_dirty = true;
+        self.restore_voice_params(&e.key());
+        textweaver_speech::forget_probes();
+        self.tell(&format!(
+            "Voice {}, on {}. Switching engine.",
+            e.voice.name, e.engine_name
+        ));
+        self.restart_speech_command()
+    }
+
+    /// Enter on a voice to download: asks Hugging Face for its files and
+    /// licence (a few kilobytes), then asks the user.
+    fn plan_download(&mut self, e: &VoiceEntry) -> Vec<Effect> {
+        if self.voices.job.is_some() {
+            self.tell("A voice download is already in progress.");
+            return vec![Effect::Redraw];
+        }
+        let Some(store) = self.piper_store() else {
+            self.error("There is no data folder to keep Piper voices in.");
             return vec![Effect::Redraw];
         };
+        let Some(voice) = cached_catalog(store.dir()).and_then(|c| c.get(&e.voice.id).cloned())
+        else {
+            self.error("That voice is not in the Piper voice list any more.");
+            return vec![Effect::Redraw];
+        };
+        let (tx, rx) = std::sync::mpsc::channel();
+        let spawned = std::thread::Builder::new()
+            .name("textweaver-voice-plan".into())
+            .spawn(move || {
+                let _ = tx.send(net::plan(&voice));
+            });
+        if spawned.is_err() {
+            self.error("Could not start the download.");
+            return vec![Effect::Redraw];
+        }
+        self.voices.job = Some(VoiceJob::Plan(rx));
+        self.list = None;
+        self.tell(&format!("Reading the licence of {}.", e.voice.name));
+        vec![Effect::Redraw]
+    }
+
+    /// Delete on row `n`: removes a downloaded Piper voice, after a yes.
+    pub(crate) fn remove_voice_row(&mut self, n: usize) -> Vec<Effect> {
+        match self.voices.manager.entry_at(n).cloned() {
+            Some(e) if e.engine == PIPER && e.status == VoiceStatus::Ready => {
+                self.list = None;
+                self.voices.question = Some(VoiceQuestion::Remove(
+                    e.voice.id.clone(),
+                    e.voice.name.clone(),
+                ));
+                self.tell(&format!("Remove the voice {}? y or n", e.voice.name));
+            }
+            _ => self.tell("Only downloaded Piper voices can be removed."),
+        }
+        vec![Effect::Redraw]
+    }
+
+    /// Answers the voice manager's question.
+    pub(crate) fn confirm_voice(&mut self, answer: Confirm) -> Vec<Effect> {
+        let Some(q) = self.voices.question.take() else {
+            return vec![Effect::Redraw];
+        };
+        match (answer, q) {
+            (Confirm::Repeat, q) => {
+                let text = match &q {
+                    VoiceQuestion::Download(p) => format!("{} y or n", p.describe()),
+                    VoiceQuestion::Remove(_, name) => format!("Remove the voice {name}? y or n"),
+                    VoiceQuestion::FetchCatalog => {
+                        "Download the list of Piper voices? y or n".into()
+                    }
+                };
+                self.voices.question = Some(q);
+                self.tell(&text);
+                vec![Effect::Redraw]
+            }
+            (Confirm::No, _) => {
+                self.tell("Cancelled.");
+                vec![Effect::Redraw]
+            }
+            (Confirm::Yes, VoiceQuestion::Download(plan)) => self.start_download(*plan),
+            (Confirm::Yes, VoiceQuestion::Remove(key, name)) => {
+                if self.speech.backend_id() == PIPER
+                    && self.settings.speech.voice.as_deref() == Some(key.as_str())
+                {
+                    self.tell(&format!(
+                        "{name} is the voice in use. Choose another voice first."
+                    ));
+                    return vec![Effect::Redraw];
+                }
+                let removed = match self.piper_store() {
+                    Some(store) => store.remove(&key),
+                    None => Err(textweaver_engines::piper::PiperError::NotInstalled(
+                        key.clone(),
+                    )),
+                };
+                match removed {
+                    Ok(()) => {
+                        textweaver_speech::forget_probes();
+                        self.tell(&format!("{name} removed."));
+                    }
+                    Err(e) => self.error(&format!("Could not remove {name}: {e}.")),
+                }
+                vec![Effect::Redraw]
+            }
+            (Confirm::Yes, VoiceQuestion::FetchCatalog) => {
+                let Some(store) = self.piper_store() else {
+                    self.error("There is no data folder to keep Piper voices in.");
+                    return vec![Effect::Redraw];
+                };
+                let (tx, rx) = std::sync::mpsc::channel();
+                let dir = store.dir().to_owned();
+                let spawned = std::thread::Builder::new()
+                    .name("textweaver-voice-catalog".into())
+                    .spawn(move || {
+                        let r = net::fetch_catalog_json().and_then(|(json, catalog)| {
+                            std::fs::create_dir_all(&dir)
+                                .and_then(|()| std::fs::write(catalog_path(&dir), json))
+                                .map_err(|e| PiperError::io(&dir, e))?;
+                            Ok(catalog)
+                        });
+                        let _ = tx.send(r);
+                    });
+                if spawned.is_err() {
+                    self.error("Could not start the download.");
+                } else {
+                    self.voices.job = Some(VoiceJob::Catalog(rx));
+                    self.tell("Downloading the Piper voice list.");
+                }
+                vec![Effect::Redraw]
+            }
+        }
+    }
+
+    fn start_download(&mut self, plan: DownloadPlan) -> Vec<Effect> {
+        let Some(store) = self.piper_store() else {
+            self.error("There is no data folder to keep Piper voices in.");
+            return vec![Effect::Redraw];
+        };
+        let name = plan.voice.describe();
+        let short = textweaver_engines::piper::catalog::display_name(&plan.voice.name);
+        let total = plan.total_bytes();
+        let done = Arc::new(AtomicU64::new(0));
+        let cancel = Arc::new(AtomicBool::new(false));
+        let (tx, rx) = std::sync::mpsc::channel();
+        let (d, c) = (Arc::clone(&done), Arc::clone(&cancel));
+        let spawned = std::thread::Builder::new()
+            .name("textweaver-voice-download".into())
+            .spawn(move || {
+                let r = std::fs::create_dir_all(store.dir())
+                    .map_err(|e| PiperError::io(store.dir(), e))
+                    .and_then(|()| {
+                        net::download(&plan, &store, &mut |n, _| {
+                            d.store(n, Ordering::Relaxed);
+                            !c.load(Ordering::Relaxed)
+                        })
+                    });
+                let _ = tx.send(r);
+            });
+        if spawned.is_err() {
+            self.error("Could not start the download.");
+            return vec![Effect::Redraw];
+        }
+        self.voices.job = Some(VoiceJob::Download {
+            name: short,
+            rx,
+            done,
+            total,
+            told: 0,
+            cancel,
+        });
+        self.tell(&format!("Downloading {name}."));
+        vec![Effect::Redraw]
+    }
+
+    /// Collects the voice manager's background work.
+    fn voice_job_tick(&mut self) -> Vec<Effect> {
+        let Some(job) = self.voices.job.take() else {
+            return Vec::new();
+        };
+        match job {
+            VoiceJob::Plan(rx) => match rx.try_recv() {
+                Ok(Ok(plan)) => {
+                    self.tell(&format!("{} y or n", plan.describe()));
+                    self.voices.question = Some(VoiceQuestion::Download(Box::new(plan)));
+                }
+                Ok(Err(e)) => self.error(&format!("Could not read the voice's details: {e}.")),
+                Err(TryRecvError::Empty) => self.voices.job = Some(VoiceJob::Plan(rx)),
+                Err(TryRecvError::Disconnected) => self.error("The download stopped."),
+            },
+            VoiceJob::Catalog(rx) => match rx.try_recv() {
+                Ok(Ok(c)) => self.tell(&format!(
+                    "The Piper voice list has {} voices in {} languages. Choose Voice lists them.",
+                    c.voices.len(),
+                    c.languages().len()
+                )),
+                Ok(Err(e)) => self.error(&format!("Could not download the voice list: {e}.")),
+                Err(TryRecvError::Empty) => self.voices.job = Some(VoiceJob::Catalog(rx)),
+                Err(TryRecvError::Disconnected) => self.error("The download stopped."),
+            },
+            VoiceJob::Download {
+                name,
+                rx,
+                done,
+                total,
+                told,
+                cancel,
+            } => match rx.try_recv() {
+                Ok(Ok(v)) => {
+                    textweaver_speech::forget_probes();
+                    self.tell(&format!(
+                        "{name} is installed. {} Choose Voice lists it.",
+                        v.licence.describe()
+                    ));
+                }
+                Ok(Err(e)) => self.error(&format!("Could not download {name}: {e}.")),
+                Err(TryRecvError::Empty) => {
+                    // Say how it is going at each quarter.
+                    let quarter = (done.load(Ordering::Relaxed) * 4)
+                        .checked_div(total)
+                        .unwrap_or(0);
+                    let mut told = told;
+                    if quarter > told && quarter < 4 {
+                        told = quarter;
+                        self.show(&format!("Downloading {name}, {} percent.", quarter * 25));
+                    }
+                    self.voices.job = Some(VoiceJob::Download {
+                        name,
+                        rx,
+                        done,
+                        total,
+                        told,
+                        cancel,
+                    });
+                    return Vec::new();
+                }
+                Err(TryRecvError::Disconnected) => self.error("The download stopped."),
+            },
+        }
+        vec![Effect::Redraw]
+    }
+
+    /// Space in the voice list: adds the voice on row `n` to
+    /// `speech.favorite_voices`, or removes it, saved at once. The list
+    /// stays open, in the same order, with the item relabelled.
+    pub(crate) fn toggle_favourite_voice(&mut self, n: usize) -> Vec<Effect> {
+        let Some(e) = self.voices.manager.entry_at(n).cloned() else {
+            self.tell("Only a voice can be a favourite.");
+            return self.show_voice_list();
+        };
+        let v = &e.voice;
         let favs = &mut self.settings.speech.favorite_voices;
-        let msg = match favourite_rank(favs, &v.id, &v.name) {
+        let msg = match favs
+            .iter()
+            .position(|f| *f == v.id || f.eq_ignore_ascii_case(&v.name))
+        {
             Some(i) => {
                 favs.remove(i);
                 format!("{} removed from favourites.", v.name)
@@ -140,23 +637,46 @@ impl App {
         };
         self.settings_dirty = true;
         self.tell(&msg);
-        let items = self.voice_items(&self.voice_list);
-        vec![Effect::ShowList {
-            title: "Choose a voice".into(),
-            items,
-        }]
+        self.show_voice_list()
     }
 
-    /// Uses voice `id` from now on (saved in the settings) and speaks a
+    /// Uses voice `id` of the running engine from now on (saved in the
+    /// settings), with the rate and pitch it had last time, and speaks a
     /// sample with it.
     pub(crate) fn select_voice(&mut self, id: &str, name: &str) {
         self.stop_speech();
+        self.remember_voice_params();
         self.settings.speech.voice = Some(id.to_owned());
         self.settings_dirty = true;
         self.speech.set_voice(Some(id.to_owned()));
-        self.tell(&format!("Voice {name}."));
+        let restored = self.restore_voice_params(&params_key(self.speech.backend_id(), id));
+        match restored {
+            Some(wpm) => self.tell(&format!("Voice {name}, {wpm} words per minute.")),
+            None => self.tell(&format!("Voice {name}.")),
+        }
         self.speech
             .say(VOICE_SAMPLE, textweaver_speech::SayMode::Queue);
+    }
+
+    /// Saves the current rate and pitch as the current voice's own.
+    fn remember_voice_params(&mut self) {
+        let (engine, voice) = self.current_voice();
+        let key = params_key(&engine, voice.as_deref().unwrap_or("default"));
+        let (rate, pitch) = (self.settings.speech.rate, self.settings.speech.pitch);
+        remember_params(&mut self.settings, &key, rate, pitch);
+        self.settings_dirty = true;
+    }
+
+    /// Applies the rate and pitch remembered for `key`, if any; returns the
+    /// rate in words per minute when it did.
+    fn restore_voice_params(&mut self, key: &str) -> Option<u16> {
+        let (rate, pitch) = remembered_params(&self.settings, key)?;
+        self.settings.speech.rate = rate;
+        self.settings.speech.pitch = pitch;
+        self.settings_dirty = true;
+        self.speech.set_rate(rate);
+        self.speech.set_pitch(pitch);
+        Some(rate.wpm())
     }
 
     /// Sends the voice settings to the speech service.
@@ -176,6 +696,8 @@ impl App {
         self.settings.speech.rate = rate;
         self.settings_dirty = true;
         self.speech.set_rate(rate);
+        // Each voice keeps its own rate, as screen readers do.
+        self.remember_voice_params();
     }
 
     pub(crate) fn change_rate(&mut self, delta: i32) {
@@ -209,6 +731,7 @@ impl App {
         self.settings.speech.pitch = new;
         self.settings_dirty = true;
         self.speech.set_pitch(new);
+        self.remember_voice_params();
         self.tell(&pitch_words(new));
     }
 

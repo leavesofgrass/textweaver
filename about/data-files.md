@@ -25,6 +25,12 @@ Packages also carry the licence files themselves, under `licenses/`.
 - Copyright 2000-2026 by Kevin Atkinson; the Australian English data copyright 2016 by Benjamin Titze.
 - Licence: SCOWL's own permissive notice, reproduced in full below and in `licenses/scowl/Copyright` in each package. It must accompany every copy of the list.
 
+### Open English WordNet and CMUdict (define word)
+
+- Used by define word. The dictionary file in textweaver (`lexicon/lexicon-en.twlex`) is derived from two sources; `third_party/lexicon/README.md` says how.
+- Open English WordNet 2025 (release `2025-edition`), by the Open English WordNet team, based on Princeton WordNet 3.1 (WordNet 3.1 copyright 2011 by Princeton University). Licence: Creative Commons Attribution 4.0 International (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/, with Princeton's WordNet notice, reproduced in full below and in `licenses/lexicon/WORDNET-LICENSE` in each package. **Modification notice:** the definitions, examples, synonyms, opposites, and hypernyms were extracted from the WordNet database files, reformatted, and compressed; nothing was reworded.
+- CMUdict, the CMU Pronouncing Dictionary (commit `74790861f652b15e4ac49015a90074ad62a27690`), copyright 1993-2015 Carnegie Mellon University. Licence: a two-clause BSD-style licence, reproduced in full below and in `licenses/lexicon/CMUDICT-LICENSE` in each package. The pronunciations are stored in a compact form and respelled for reading aloud.
+
 ### IBMTTS community pronunciation dictionaries
 
 - Used by the Eloquence (ECI) backend. From eigencrow/IBMTTSDictionaries, tag `v26.09`, maintained by amirsol81, x0, and thunderdrop with contributions from many people.

@@ -1,4 +1,4 @@
-//! OCR for PDF pages with no text layer (feature `ocr`; ADR-0025).
+//! OCR for PDF pages with no text layer (feature `ocr`; ADR-0026).
 //!
 //! Each such page's image (its one scanned image, else the page rendered)
 //! goes to the engine `textweaver_ocr::plan` picks for the language (the

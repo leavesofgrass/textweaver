@@ -1,4 +1,4 @@
-//! OCR for textweaver: recognizing the text of scanned pages (ADR-0025).
+//! OCR for textweaver: recognizing the text of scanned pages (ADR-0026).
 //!
 //! - **ocrs, in process** (feature `ocrs`, on by default): Robert Knight's
 //!   pure-Rust engine on the RTen runtime. It reads English (ASCII and the

@@ -14,6 +14,8 @@
 //!   the same document collapse into the newest.
 //! - **The check for a change on disk** every two seconds, and the
 //!   bookshelf and recent-files updates when a document opens.
+//! - **Reading statistics** (`stats.json`) and **settings profiles**
+//!   (`profiles.toml`), Agent W3e.
 //!
 //! Each job's result comes back as a [`Report`], which the app applies on
 //! its next [`App::tick`](crate::App::tick): "Saved", an error, or a
@@ -30,7 +32,8 @@ use std::time::Duration;
 use textweaver_editor::autosave::{self, SnapshotLock};
 use textweaver_editor::{SaveRequest, SnapshotOp};
 use textweaver_store::{
-    DocKey, DocState, Library, LibrarySync, Recent, Settings, SettingsStore, StateStore,
+    DocKey, DocState, Library, LibrarySync, Paths, Profiles, ReadingStats, Recent, Settings,
+    SettingsStore, StateStore, StatsDelta,
 };
 
 use crate::disk::FileStamp;
@@ -83,6 +86,16 @@ pub(crate) enum Job {
     },
     /// Write the library sidecars' pending entries.
     SyncFlush(LibrarySync),
+    /// Add reading to `stats.json`.
+    Stats {
+        paths: Paths,
+        deltas: Vec<StatsDelta>,
+    },
+    /// Save `profiles.toml`.
+    Profiles {
+        paths: Paths,
+        profiles: Box<Profiles>,
+    },
     /// Save the settings (`settings.toml`); queued saves collapse into the
     /// newest.
     Settings {
@@ -130,6 +143,8 @@ pub(crate) enum Report {
         path: PathBuf,
         stamp: Option<FileStamp>,
     },
+    /// Saving the settings profiles failed.
+    ProfilesFailed(String),
     /// A settings save finished.
     Settings { result: Result<(), String> },
 }
@@ -393,6 +408,16 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
             }
             None
         }
+        Job::Stats { paths, deltas } => {
+            if let Err(e) = ReadingStats::add_to_file(&paths, &deltas) {
+                log::warn!("cannot save reading statistics: {e}");
+            }
+            None
+        }
+        Job::Profiles { paths, profiles } => profiles
+            .save(&paths)
+            .err()
+            .map(|e| Report::ProfilesFailed(e.to_string())),
         Job::Settings { store, settings } => {
             let result = if superseded {
                 Ok(())

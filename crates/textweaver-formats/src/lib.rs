@@ -14,7 +14,7 @@
 //! | [`HtmlLoader`] | `html`, `htm`, `xhtml`, `xht` | [`NATIVE_PRIORITY`] (10) |
 //! | [`EpubLoader`] | `epub` | [`NATIVE_PRIORITY`] (10) |
 //! | [`DocxLoader`] | `docx`, `docm` | [`NATIVE_PRIORITY`] (10) |
-//! | `PdfLoader` (feature `pdf`, on by default; ADR-0010), with OCR of scanned pages (feature `ocr`; ADR-0025) | `pdf` | [`NATIVE_PRIORITY`] (10) |
+//! | `PdfLoader` (feature `pdf`, on by default; ADR-0010), with OCR of scanned pages (feature `ocr`; ADR-0026) | `pdf` | [`NATIVE_PRIORITY`] (10) |
 //! | `ImageLoader` (feature `ocr`): OCR of an image file | `png`, `jpg`, `jpeg` | [`NATIVE_PRIORITY`] (10) |
 //! | [`DaisyLoader`]: DAISY 3 books and DTBook files | `opf`, `xml`, `dtbook` | [`NATIVE_PRIORITY`] (10) |
 //! | [`PptxLoader`]: PowerPoint slides and speaker notes | `pptx`, `pptm`, `ppsx` | [`NATIVE_PRIORITY`] (10) |
@@ -290,7 +290,7 @@ impl OcrEngineChoice {
     }
 }
 
-/// How scanned pages and images are read (ADR-0025).
+/// How scanned pages and images are read (ADR-0026).
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(default)]
 pub struct OcrOptions {

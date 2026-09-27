@@ -696,6 +696,8 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 
 ### Agent W3e — Language and study aids (Phase 4)
 
+**Status (Saturday, September 26, 2026): done, on `wave3/e-lexicon-study`.** New crate `textweaver-lexicon`: define word offline (glossary, then Open English WordNet 2025 through morphy, with CMUdict pronunciations respelled), from `third_party/lexicon/lexicon-en.twlex` (9,988,663 bytes, fst plus ruzstd, built by `tools/build_lexicon.py`); and a Fluent-subset message catalog with English complete, `en-XA`, and `ar-XB` (ADR-0025). Store: `[lexicon]`, `[stats]`, `[interface]`, `profiles.toml`, `stats.json`, and Star's reading statistics imported. App: define word (Ctrl+Shift+D, Alt+E), profiles (Ctrl+Shift+U, Alt+U), statistics (Ctrl+Shift+Y, Alt+Y) on the existing list model. CLI: `tw define`, `tw stats`, `tw settings profile`. Left: the rest of the interface's strings into the catalog (W4d), the study lists into W3a's list model, loading the dictionary off the input thread, and Star's profiles import.
+
 **Owns:** a new `textweaver-lexicon` crate, plus the app wiring for its actions and store settings.
 
 1. **Define word, offline.**
@@ -720,6 +722,8 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
    - Actual translations come later.
 
 ### Agent W3f — Voices and speech (Phase 4)
+
+**Status (Saturday, September 26, 2026):** done on `wave3/f-voices`, not merged. Piper voices run in-process on RTen with word timing from `w_ceil` (real-time factor 0.13, first audio 77 to 284 ms, on a quiet machine); the voice manager lists every engine's voices with language and engine filters, downloads Piper voices after a yes with the licence said and every file hash-checked, and each voice keeps its own rate and pitch; Whisper base.en int8 runs in-process on RTen (`tw dictate`, microphone included), after a fix for RTen's int8 saturation on CPUs without VNNI; `cargo xtask listen` and a listening checklist in `docs/dev/releasing.md`. ADR-0023. candle was never built, so no candle feature exists. main (W3a, W3c) is merged in: Piper is registered in `textweaver-engines`, voice downloads sit behind the app's `publish` feature, and the voice manager uses W3a's list model. Native tests: 1,933 passed, 0 failed, 29 ignored.
 
 **Owns:** `crates/textweaver-speech` (new backends), a new `textweaver-piper` crate, and the voice manager in the app.
 
@@ -758,7 +762,89 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 - Signing, when funding allows.
 - Release `0.1.0-alpha.4` or `beta.1` when Jon says so.
 
+## Usability pass (between Wave 3 and Wave 4; Jon, 2026-09-26)
+
+Wave 4 starts only after this pass is done. It has four steps.
+
+1. **Audit, with two agents in parallel.**
+   - **Terminal reader and `tw`.** Walk the real flows a student uses:
+     - first run;
+     - opening Markdown, PDF, and EPUB;
+     - reading with the NVDA- and JAWS-style keys;
+     - notes, outline, and search;
+     - edit mode, citations, spell check, and export;
+     - settings, and the three access modes.
+   
+     List every rough edge: unclear or missing announcements, surprising keys, dead ends, slow steps, and inconsistent wording.
+   - **The Xilem GUI.**
+     - Build it, run it in `--background`, and take screenshots at 100% and 200% scale.
+     - Run the UI Automation report and the AT-SPI dump.
+     - Check the polished dark look against W3b's goals: focus order, labels, the announcements, large documents, and theme and font changes.
+     - Compare the GUI with the terminal reader, and list what is missing or rough.
+
+   Both audits produce one ranked list. Each item has its evidence, its size, and whether it is a quick win (under half a day).
+2. **Fold in the quick wins.** One or two agents fix every quick win, with tests. Larger items go into the Wave 4 briefs.
+3. **Jon's check.** The orchestrator builds the terminal reader and the GUI in release mode and opens them for Jon. He gets a short checklist for NVDA and JAWS: the GUI, the modes, and the main flows. His findings become fixes or Wave 4 items.
+4. **Then Wave 4.** Restart Docker, then launch the nine Wave 4 agents.
+
 ## Wave 4 (refined 2026-09-26; starts when Wave 3 is merged and Docker is restarted)
+
+**Lessons from Waves 2 and 3.** Every Wave 4 agent follows these. They come from what went wrong or cost time.
+
+- **Checks.** Run every check CI runs before reporting. CI went red three times from things the usual check run skipped. The full set:
+  - `cargo fmt --all --check`.
+  - Workspace clippy with `-D warnings`.
+  - Tests with `--no-fail-fast`, so one failure doesn't hide others.
+  - `RUSTDOCFLAGS="-D warnings" cargo doc`. Rustdoc link errors turned CI red twice: redundant link targets, links to private items, and `[text]` in doc comments.
+  - The Docker all-features clippy and tests. That is where Linux-only warnings show up, such as `unused mut` behind `cfg(windows)`.
+  - `cargo xtask keyboard --check`, `cargo xtask deps --check`, `python tools/check_links.py`, `python tools/gen_site_data.py --check`, and `cargo xtask notices --check` when dependencies change.
+  - A build with the reader's `publish` feature off, if you touch the app or the reader.
+- **Timing in tests.** Tests that sleep or assert wall-clock bounds fail under load, and they failed repeatedly while many agents built at once.
+  - Wait for a signal or a generous deadline instead.
+  - Run any new timing-sensitive test 40 times before reporting.
+  - A "flaky" test is a bug until proven otherwise.
+- **A new setting touches four places.**
+  - The store type, with a default and a test.
+  - The settings export fixture, which fails if a setting keeps its default.
+  - The settings schema (`crates/textweaver-app/src/settings_schema.rs`), which fails if a key is missing.
+  - A reader somewhere: the "every setting is used" test fails otherwise.
+- **A new key goes through three checks.**
+  - The keymap conflict and reachability tests.
+  - WCAG 2.1.4: a chord, or a single key that F9 can turn off.
+  - Windows Terminal's default keys. Alt+Shift+arrows, Alt+Shift+D, and Ctrl+Alt+Left are taken there; see `docs/screen-readers.md`.
+
+  Follow the NVDA and JAWS quick-key conventions, and regenerate `docs/keyboard.md` and the site data.
+- **Shared rules in the code.**
+  - Announcements go through `textweaver_a11y::route`, so hybrid and screen-reader modes behave.
+  - Saves and other disk writes go through the writer thread. Never block the input or speech threads.
+  - Speech runs on its own thread, with no async runtime (ADR-0003).
+  - New crates respect `cargo xtask deps --check`. The store depends only on core.
+- **Merging with other agents.**
+  - Merge `main` into your branch early and often, not only at the end.
+  - Keep edits in other agents' areas to one-line hooks, and report anything bigger.
+  - Shared files conflict every time: the root `Cargo.toml` members, `CHANGELOG.md`, `docs/history/tasks.md`, and `docs/site/*`. Make small, additive edits there, and regenerate generated files after merging instead of hand-merging them.
+  - Check `docs/adr/README.md` for the next free ADR number; two agents picked the same one before.
+- **Current paths, after W3c.**
+  - Briefs are in `docs/history/tasks.md`. Developer docs are in `docs/dev/`, and the ADR index in `docs/adr/README.md`.
+  - The backend registry is in `crates/textweaver-engines`, and font resolution in `crates/textweaver-fonts`.
+  - Export, preview, and citations are behind the app's `publish` feature.
+- **GUI and audio.**
+  - Automated GUI runs use `--background` and never take the foreground. A dialog once stole focus from Jon.
+  - Never play audio.
+  - Jon tests with screen readers himself. Give him a short checklist.
+- **Downloads.**
+  - Only download what Jon approved: official sources, SHA-256 recorded, licence added to the notices (`about/data-files.md`, then `cargo xtask notices`).
+  - Never bundle non-commercial models or voices.
+  - Keep models out of git, in an ignored cache.
+- **Privacy.** The hard rule in the shared preamble: no personal identifiers in any request, header, URL, or public file, and a neutral User-Agent. Two research threads broke this once.
+- **Dates.** Take dates from the machine and compute weekdays. Never write a date from memory.
+- **Disk and memory.**
+  - Use one target directory, and build through the shared cache: `RUSTC_WRAPPER=sccache` is set for everyone.
+  - Avoid extra release builds. Drive D: once filled up because of per-worktree build folders.
+  - Always prefix Docker commands in Git Bash with `MSYS_NO_PATHCONV=1`. Without it, `-e CARGO_TARGET_DIR=/target/<agent>` becomes a Windows path, and build files were committed under a junk `C:/Program Files/Git/target` folder.
+  - Run the Docker check once, at the end. Never restart Docker yourself: force-quitting it crashed Docker Desktop, and the orchestrator restarts it between waves.
+- **Research sub-agents.** Don't spawn nested research agents: their reports went to the orchestrator, not to the agent that asked. Do the research yourself, or ask the orchestrator.
+- **Reports.** Keep reports plain and short: headings and lists, no tables. Name what could not be verified. Add your status line in `docs/history/tasks.md`.
 
 **Layout: nine agents (Jon, 2026-09-26: use more resources).** The briefs below are split like this:
 1. **W4a1, GUI edit mode and reading aids.** From W4a: edit mode in `DocumentView`, the reading aids in the GUI, and the research notes on editable text, RSVP overlays, and announcements.

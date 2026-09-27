@@ -29,7 +29,7 @@
 //! password-protected PDF is refused with a clear message.
 //!
 //! Pages with no text but a picture (scans) are recognized by OCR (feature
-//! `ocr`, ADR-0025; see `ocr`): the recognized words are placed on the page
+//! `ocr`, ADR-0026; see `ocr`): the recognized words are placed on the page
 //! as glyphs and go through the same layout. Without OCR, or when no
 //! engine can run, a PDF with no text layer loads as one sentence saying
 //! so and what is missing.

@@ -13,6 +13,8 @@
 //! - [`settings_io`]: settings and key overrides exported to and imported
 //!   from one JSON (or TOML) document, validated before anything is
 //!   written, with backups.
+//! - [`profiles`]: named settings profiles in `profiles.toml`, and
+//!   [`stats`]: reading statistics in `stats.json` (Agent W3e).
 //! - [`migrate`]: importing Star's settings, positions, bookmarks, notes,
 //!   highlights, recents, library, keybindings, and sidecars.
 //! - Folder sidecars (`<folder>/.textweaver/progress.json`) and their merge
@@ -38,10 +40,12 @@ pub mod library;
 pub mod migrate;
 pub mod notes;
 mod paths;
+pub mod profiles;
 pub mod reading_aids;
 mod recent;
 mod settings;
 pub mod settings_io;
+pub mod stats;
 pub mod sync;
 pub mod time;
 
@@ -53,19 +57,22 @@ pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
 pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, ScannedDoc};
 pub use notes::{Annotation, Highlight, Note, NotesExport, Relation, RelationType};
 pub use paths::Paths;
+pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
     AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, CitationReading,
     CommunityLexiconSettings, CursorPlacement, DigitRow, DisplaySettings, EciDictionaries,
     EciSettings, EditingSettings, ExportSettings, FootnoteMode, HighlightSettings,
-    KeyboardSettings, KeymapOverrides, KeymapPreset, LibrarySettings, NormalizationSettings,
-    OcrEngine, PreviewSettings, RESERVED_SETTINGS, ReadingSettings, SapiSettings, SayAll, Settings,
-    SettingsLoad, SettingsStore, SpeechSettings, SubtitleFormat, TableMode,
+    InterfaceSettings, KeyboardSettings, KeymapOverrides, KeymapPreset, LexiconSettings,
+    LibrarySettings, NormalizationSettings, OcrEngine, PreviewSettings, RESERVED_SETTINGS,
+    ReadingSettings, SapiSettings, SayAll, Settings, SettingsLoad, SettingsStore, SpeechSettings,
+    StatsSettings, SubtitleFormat, TableMode,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,
     SettingsIoError,
 };
+pub use stats::{DocStats, ReadingStats, StatsDelta};
 pub use sync::{ConflictPolicy, SidecarStore};
 
 /// Persistence failures.

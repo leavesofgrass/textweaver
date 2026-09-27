@@ -1,0 +1,46 @@
+[package]
+name = "textweaver-piper"
+description = "Piper neural voices for textweaver, run in-process on RTen (pure-Rust ONNX), with word timing from the model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[features]
+default = []
+# Audio output through rodio (in textweaver-enginehost). Without it the
+# backend plays nothing and paces itself silently (tests).
+playback = ["textweaver-enginehost/playback"]
+# Phonemes from an installed libespeak-ng, loaded at run time (never
+# linked): the same loader as the espeak-ng speech backend.
+espeak-lib = ["textweaver-speech/espeak-phonemes"]
+# Phonemes from the pure-Rust eSpeak NG port, English data built in: the
+# fallback when libespeak-ng is not installed.
+espeak-rs = ["dep:espeak-ng"]
+# Downloading voices from Hugging Face, each file checked by its hash.
+download = ["dep:ureq", "dep:sha2", "dep:sha1"]
+
+[dependencies]
+textweaver-core.workspace = true
+textweaver-speech.workspace = true
+textweaver-enginehost.workspace = true
+rten.workspace = true
+rten-tensor.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+log.workspace = true
+espeak-ng = { workspace = true, optional = true }
+ureq = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+sha1 = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

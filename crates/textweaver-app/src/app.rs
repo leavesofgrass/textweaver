@@ -259,11 +259,15 @@ pub(crate) enum ListKind {
     Recovery,
     /// The library: the documents listed, in order.
     Library(Vec<PathBuf>),
-    /// The speech engine's voices: id and name, in order.
-    Voices(Vec<(String, String)>),
+    /// The voice manager; its rows are in `App::voices`
+    /// (`crate::voice_manager`).
+    Voices,
     /// An outline, citation picker, spelling, replace, or template list
     /// (Agent P2b's `lists` module).
     Authoring(crate::authoring_state::AuthoringList),
+    /// Define word, settings profiles, or reading statistics (Agent W3e's
+    /// `study` module).
+    Study(crate::study::StudyList),
     /// The settings screen (crate::settings_schema).
     Settings,
 }
@@ -326,8 +330,8 @@ pub struct App {
     /// A note or highlight chosen for deletion in its list, waiting for y
     /// or n (deleting one at the cursor asks too).
     pub(crate) pending_list_delete: Option<(ListKind, usize)>,
-    /// The voices shown by the last voice list, in list order.
-    pub(crate) voice_list: Vec<textweaver_speech::Voice>,
+    /// The voice manager: its list, question, and download (crate::voice).
+    pub(crate) voices: crate::voice::VoicesState,
     /// Text copied or cut, waiting for the frontend
     /// ([`App::take_clipboard`]).
     pub(crate) clipboard: Option<String>,
@@ -358,6 +362,8 @@ pub struct App {
     pub(crate) math_explore: Option<crate::math_explore::MathExplore>,
     /// The browser preview's reload server, while one runs.
     pub(crate) preview_server: Option<crate::preview_server::PreviewServer>,
+    /// Define word, profiles, statistics, and the message catalog.
+    pub(crate) study: crate::study::Study,
     /// The frontend's waker, rung from other threads (crate::wake).
     pub(crate) wake: crate::wake::WakeSlot,
     /// How deep in public entry points the app is (`App::entry`).
@@ -397,6 +403,12 @@ impl App {
             crate::access::access_mode_from_setting(config.settings.accessibility.mode);
         let mut keymap = config.keymap;
         keymap.set_character_keys(config.settings.keyboard.character_keys);
+        let locales = config.paths.as_ref().map(Paths::locales_dir);
+        let (study, language_warning) =
+            crate::study::Study::new(&config.settings.interface.language, locales.as_deref());
+        if let Some(w) = language_warning {
+            log::warn!("{w}");
+        }
         let wake = crate::wake::WakeSlot::default();
         let mut app = App {
             session: None,
@@ -441,7 +453,7 @@ impl App {
             last_disk_check: None,
             snapshot_trouble: false,
             pending_list_delete: None,
-            voice_list: Vec::new(),
+            voices: crate::voice::VoicesState::default(),
             clipboard: None,
             writer: crate::writer::Writer::spawn(wake.clone()),
             pending_saves: Vec::new(),
@@ -455,6 +467,7 @@ impl App {
             authoring: crate::authoring_state::Authoring::default(),
             math_explore: None,
             preview_server: None,
+            study,
             wake,
             depth: 0,
             background_open_bytes: crate::opening::BACKGROUND_OPEN_BYTES,
@@ -500,6 +513,8 @@ impl App {
             || self.pending_disk.is_some()
             || self.pending_list_delete.is_some()
             || self.authoring.question.is_some()
+            || self.study.question.is_some()
+            || self.voices.question.is_some()
     }
 
     /// Answers a pending confirmation.
@@ -516,6 +531,12 @@ impl App {
         }
         if self.authoring.question.is_some() {
             return self.confirm_authoring(answer);
+        }
+        if self.study.question.is_some() {
+            return self.confirm_study(answer);
+        }
+        if self.voices.question.is_some() {
+            return self.confirm_voice(answer);
         }
         if let Some((kind, n)) = self.pending_list_delete.clone() {
             return match answer {
@@ -732,6 +753,7 @@ impl App {
                 log::warn!("cannot save position: {e}");
             }
             self.flush_library_sync();
+            self.stats_flush();
         }
         self.stop_speech();
         self.rsvp = None;
@@ -819,6 +841,7 @@ impl App {
         self.close_preview();
         self.math_explore = None;
         self.session = Some(s);
+        self.stats_open();
         self.view.top_line = 0;
         self.scroll_to_cursor();
         // A large Markdown file's source structure, for a quick Ctrl+E.
@@ -913,6 +936,7 @@ impl App {
         if let Err(e) = self.save_settings() {
             log::warn!("cannot save settings: {e}");
         }
+        self.stats_flush();
         self.flush_library_sync();
         self.stop_speech();
         self.close_preview();
@@ -1083,6 +1107,7 @@ impl App {
 
     /// [`tick`](Self::tick)'s work.
     pub(crate) fn tick_effects(&mut self, now: Instant) -> Vec<Effect> {
+        self.stats_tick(now);
         let mut effects = self.poll_writes();
         effects.extend(self.opening_tick(now));
         effects.extend(self.spell_count_tick());
@@ -1133,7 +1158,8 @@ impl App {
         }
         self.mode = Mode::for_prompt(purpose);
         self.prompt_purpose = purpose;
-        let label = purpose.label().to_owned();
+        let label = crate::study::prompt_label(&self.study.catalog, purpose)
+            .unwrap_or_else(|| purpose.label().to_owned());
         self.tell(&label);
         vec![Effect::Prompt { label, purpose }]
     }
@@ -1187,6 +1213,11 @@ impl App {
             | PromptPurpose::ReferenceIdentifier
             | PromptPurpose::ImportReferences
             | PromptPurpose::TemplateTitle => return self.answer_authoring(purpose, text),
+            PromptPurpose::DefineWord
+            | PromptPurpose::ProfileName
+            | PromptPurpose::RenameProfile
+            | PromptPurpose::ImportProfiles
+            | PromptPurpose::ExportProfiles => return self.answer_study(purpose, text),
             PromptPurpose::SettingValue => return self.answer_setting_value(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
@@ -1224,12 +1255,9 @@ impl App {
                     return self.open_command(path);
                 }
             }
-            Some(ListKind::Voices(voices)) => {
-                if let Some((id, name)) = voices.get(n).cloned() {
-                    self.select_voice(&id, &name);
-                }
-            }
+            Some(ListKind::Voices) => return self.choose_voice_row(n),
             Some(ListKind::Authoring(l)) => return self.choose_authoring(l, n),
+            Some(ListKind::Study(l)) => return self.choose_study(l, n),
             Some(ListKind::Settings) => return self.choose_setting(n),
             Some(ListKind::Info) | None => {}
         }
@@ -1240,6 +1268,7 @@ impl App {
     fn delete_item(&mut self, n: usize) -> Vec<Effect> {
         match self.list.clone() {
             Some(ListKind::Bookmarks) => self.delete_bookmark(n),
+            Some(ListKind::Voices) => self.remove_voice_row(n),
             // Deleting a note or highlight asks first, as the delete_note
             // action does: a stray Delete in the list cannot lose one.
             Some(kind @ (ListKind::Notes | ListKind::Highlights)) => {
@@ -1249,6 +1278,7 @@ impl App {
                 self.tell(question);
                 vec![Effect::Redraw]
             }
+            Some(ListKind::Study(l)) => self.delete_study_item(l, n),
             _ => {
                 self.tell("Nothing to delete in this list.");
                 vec![Effect::Redraw]
@@ -1274,7 +1304,7 @@ impl App {
     /// favourites or removes it.
     fn mark_item(&mut self, n: usize) -> Vec<Effect> {
         match self.list.clone() {
-            Some(ListKind::Voices(_)) => self.toggle_favourite_voice(n),
+            Some(ListKind::Voices) => self.toggle_favourite_voice(n),
             _ => {
                 self.tell("Nothing to mark in this list.");
                 vec![Effect::Redraw]
@@ -1302,6 +1332,7 @@ impl App {
                 e.push(Effect::Redraw);
                 e
             }
+            Some(ListKind::Study(l)) => self.rename_study_item(l, n),
             _ => {
                 self.tell("Nothing to rename in this list.");
                 vec![Effect::Redraw]
@@ -1367,6 +1398,9 @@ impl App {
             A::RsvpSlower => self.rsvp_rate(false),
             A::RsvpPositionNext => self.rsvp_position_next(),
             A::ReadingLevel => self.say_reading_level(),
+            A::DefineWord => return self.define_word(),
+            A::ReadingStatistics => return self.reading_statistics(),
+            A::SettingsProfiles => return self.settings_profiles(),
             A::ToggleCitations => self.toggle_citations(),
             A::ExploreMath => self.explore_math(),
             // Navigation
@@ -1614,7 +1648,7 @@ fn list_delete_question(kind: &ListKind) -> &'static str {
 /// Actions that do nothing useful without a document.
 fn needs_document(a: ActionId) -> bool {
     use textweaver_keymap::Category as C;
-    a != ActionId::Stop
+    !matches!(a, ActionId::Stop | ActionId::DefineWord)
         && matches!(
             a.category(),
             C::Reading | C::Navigation | C::SpeechCursor | C::Search | C::Bookmarks

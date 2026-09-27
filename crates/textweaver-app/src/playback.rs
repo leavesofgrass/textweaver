@@ -143,7 +143,7 @@ pub fn load_options(settings: &textweaver_store::Settings) -> textweaver_formats
     }
 }
 
-/// OCR from `[reading]`: `ocr`, `ocr_lang`, and `ocr_engine` (ADR-0025).
+/// OCR from `[reading]`: `ocr`, `ocr_lang`, and `ocr_engine` (ADR-0026).
 fn ocr_options(reading: &textweaver_store::ReadingSettings) -> textweaver_formats::OcrOptions {
     use textweaver_formats::OcrEngineChoice as Choice;
     use textweaver_store::OcrEngine;

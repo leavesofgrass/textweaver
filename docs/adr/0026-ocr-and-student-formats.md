@@ -1,4 +1,4 @@
-# ADR-0025: OCR, and formats for students
+# ADR-0026: OCR, and formats for students
 
 - Status: accepted
 - Date: 2026-09-26 (Saturday, September 26, 2026; Agent W3d, Wave 3)
