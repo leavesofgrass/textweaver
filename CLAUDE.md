@@ -50,9 +50,14 @@ Accessibility is the top priority. The owner is blind, and uses a screen reader 
 - **For the Braille display:** put the meaning first on each line, and prefer words to symbols. Emoji, arrows, check marks and box drawing often come through as noise. Keep lines short, and avoid ASCII art and character layouts.
 - **Braille output** (the BRF writer, and the Braille display through the screen reader) is first-class and tested like speech.
 
-## Colour never carries meaning alone
+## Color never carries meaning alone
 
-The owner is also colour-blind and struggles to tell red from green. In every theme, status display, diff, chart, report, screenshot annotation and artifact, colour alone must never convey meaning. Pair it with text first, such as "Pass" and "Fail" in words or + and - in diffs, then symbols or patterns if useful. Symbols alone don't come through well on a Braille display. Prefer colour-blind-safe palettes, but never rely on colour by itself.
+The owner is also color-blind and struggles to tell red from green. In every theme, status display, diff, chart, report, screenshot annotation and artifact, color alone must never convey meaning. Pair it with text first, such as "Pass" and "Fail" in words or + and - in diffs, then symbols or patterns if useful. Symbols alone don't come through well on a Braille display. Prefer color-blind-safe palettes, but never rely on color by itself.
+
+## Writing
+
+- **US English** in all prose, code comments, docs and reports ("color", "behavior", "organize").
+- **Use em dashes sparingly.** Readers take heavy em-dash use as a sign of AI-generated text. Prefer commas, periods, colons, semicolons or parentheses, and split long sentences.
 
 ## Everything else
 
