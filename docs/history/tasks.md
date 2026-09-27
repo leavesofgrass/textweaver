@@ -586,6 +586,25 @@ Areas are split to keep merges small.
 
 ### Agent W3b — The Xilem GUI (Phase 3; Jon chose Xilem on 2026-09-26)
 
+**Status (Saturday, September 26, 2026):** done on `worktree-agent-a7c54b19d90c611c7` (W3b's work continued by W3b-3 from `wave3/b-xilem-gui`), main merged in (W3a, W3c, W3e, W3f); awaiting integration and Jon's session. The record is ADR-0027 (renumbered from 0023). `textweaver-xilem` has `DocumentView` (text runs with stable ids, the spoken word as a background-colour attribute, the caret as the selection), the live-region announcer, in-window dialogs on W3a's list and prompt models (prompts keep the app's history, Tab completes paths), a settings dialog built from W3a's schema (check boxes, sliders, combo boxes, edit fields, per section), the command palette, the font chooser, Galaxy by default with Galaxy Light and high contrast, windowing through `DocWindow`, and `cargo xtask gui-dist`. A Masonry patch sends screen-reader actions on text runs, list options, and settings rows to the widget that owns them (they were a debug panic). The UI Automation report passes on Windows 11, settings dialog included; the AT-SPI check and the macOS smoke run are CI's (Docker is off). 10 million characters open in about 78 ms; a highlight move takes 0.27 ms (median). Screenshots at 100% and 200% are in `docs/screenshots/xilem-gui/`. wxDragon stays until Jon's NVDA and JAWS session passes. `THIRD-PARTY-NOTICES.md` was regenerated with GPL-3.0-or-later accepted for the run only: main's `about.toml` and `deny.toml` need it for W3f's espeak-ng crates.
+
+**Jon's checklist for the Xilem GUI** (NVDA, then JAWS; the release binary is `textweaver-xilem.exe`):
+
+1. Open a document: `textweaver-xilem.exe path\to\file.md`. The window title and "Document" are read, and the arrows read by character, word, and line.
+2. Press Space to read. Does the screen reader's caret follow the spoken word? With NVDA's formatting reports on, is the word's background colour reported?
+3. Pause, Stop, and the rate keys. Is each announcement heard once, in NVDA and in JAWS? If JAWS is silent, note it: that decides the UIA Notification question in ADR-0027.
+4. Press Ctrl+O. Type part of a path and press Tab: is the completion read? Press Up and Down: are earlier answers recalled? Escape closes.
+5. Press Ctrl+Comma for Settings. The first setting is read with its role and value ("Rate, slider, 265 words per minute").
+   - Up and Down move; Left and Right change. Is each new value said once, not twice?
+   - Space turns a check box on or off. Enter on "Voice" opens a prompt; Escape comes back to the same setting.
+   - Ctrl+Page Down moves to the next section, and its name is said. Shift+Tab reaches the section list.
+   - Escape closes and says "Settings closed."
+6. Press F2 for the command palette. Type "set": is the number of matches said? Up and Down move through the matches; Enter runs one.
+7. Fonts: choose a family, then a size. Is the change said and drawn?
+8. A list dialog (bookmarks or help): arrows, Home, End, and first letters.
+9. NVDA object navigation inside the settings form and a long list: are settings below the fold reachable? (AccessKit leaves out clipped rows until they scroll into view.)
+10. Compare by ear: `--select-spoken`, `--edit-role`, `--app-list-announcements`, and `--settings-list`.
+
 Jon chose Xilem, from Linebender, for the GUI on every platform, to "keep as much of it Rust as I can". The stack is:
 - Xilem and Masonry for the widgets;
 - Vello for rendering;
