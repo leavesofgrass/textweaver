@@ -58,9 +58,11 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         println!("{}", serde_json::to_string_pretty(&v)?);
         return Ok(());
     }
-    for h in &hits {
-        println!("{}", hit_line(&doc, *h));
-    }
+    let lines: String = hits
+        .iter()
+        .map(|h| format!("{}\n", hit_line(&doc, *h)))
+        .collect();
+    super::print_all(&lines)?;
     if hits.is_empty() {
         eprintln!("No matches for \"{}\".", args.pattern);
         std::process::exit(1);

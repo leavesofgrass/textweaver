@@ -195,11 +195,11 @@ textweaver notices when another program changes the open file, for example Obsid
 
 ## Leaving with unsaved changes
 
-When you finish editing, open another file, start a new document, or quit with unsaved changes, textweaver says the document's name, then "has unsaved changes. Save, discard, or cancel? Up and Down choose, Enter confirms, Escape cancels." A list appears with three choices:
+When you finish editing, open another file, start a new document, or quit with unsaved changes, textweaver says the document's name, then "has unsaved changes. Save, discard, or cancel? Press s, d, or c, or Up and Down and Enter. Escape cancels." A list appears with three choices:
 
-- "Save, then continue": saves, then does what you asked.
-- "Discard the changes": throws the changes away, then does what you asked. You hear "Changes discarded. Edit mode off."
-- "Cancel, keep editing": you stay in edit mode.
+- "Save, then continue" (**s**): saves, then does what you asked.
+- "Discard the changes" (**d**): throws the changes away, then does what you asked. You hear "Changes discarded. Edit mode off."
+- "Cancel, keep editing" (**c**): you stay in edit mode.
 
 **Escape** also cancels; you hear "Still editing."
 

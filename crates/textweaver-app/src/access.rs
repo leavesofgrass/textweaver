@@ -233,7 +233,7 @@ impl App {
         }
         self.pending_hybrid = Some(hybrid_question(found));
         let q = self.pending_hybrid.clone().unwrap_or_default();
-        self.tell(&q);
+        self.ask(&q);
         true
     }
 
@@ -274,7 +274,7 @@ impl App {
             }
             Confirm::Repeat => {
                 let q = self.pending_hybrid.clone().unwrap_or_default();
-                self.tell(&q);
+                self.ask(&q);
             }
         }
         vec![Effect::Redraw]

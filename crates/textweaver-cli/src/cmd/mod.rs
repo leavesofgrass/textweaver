@@ -22,3 +22,25 @@ pub mod stats;
 pub mod text;
 pub mod vault;
 pub mod voices;
+
+/// Writes `text` to standard output. A closed pipe (`tw text big.pdf |
+/// head`) ends the output quietly instead of a panic about "failed printing
+/// to stdout"; any other failure is reported.
+pub(crate) fn print_all(text: &str) -> anyhow::Result<()> {
+    use std::io::Write as _;
+    let mut out = std::io::stdout().lock();
+    let result = out.write_all(text.as_bytes()).and_then(|()| out.flush());
+    match result {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => Ok(()),
+        Err(e) => Err(e.into()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn print_all_writes_and_reports_nothing_on_success() {
+        assert!(super::print_all("").is_ok());
+    }
+}

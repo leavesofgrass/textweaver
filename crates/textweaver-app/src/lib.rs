@@ -226,10 +226,14 @@ pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpos
 pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_lookup};
 pub use goto::parse_go_to;
-pub use help::{chords_text, help_entries, palette_matches, resolve_command};
+pub use help::{
+    chords_text, help_entries, key_text, palette_matches, resolve_command, short_chords_text,
+    spoken_key,
+};
 pub use list_model::{ListKey, ListModel, PromptKey, PromptModel};
 pub use math_explore::MathMove;
 pub use notes::{UserHighlight, parse_tags};
+pub use opening::{open_failure_message, open_failure_reason};
 pub use playback::{Playback, load_options, narration_policy};
 pub use restart::SpeechStarter;
 pub use settings_schema::{Setting, SettingKind, SettingsSchema};

@@ -557,7 +557,7 @@ impl App {
                     }
                 }
                 Confirm::Repeat => {
-                    self.tell(list_delete_question(&kind));
+                    self.ask(list_delete_question(&kind));
                     vec![Effect::Redraw]
                 }
             };
@@ -576,7 +576,7 @@ impl App {
                 vec![Effect::Redraw]
             }
             Confirm::Repeat => {
-                self.tell(a.confirmation_prompt().unwrap_or("Press y or n."));
+                self.ask(a.confirmation_prompt().unwrap_or("Press y or n."));
                 vec![Effect::Redraw]
             }
         }
@@ -691,6 +691,14 @@ impl App {
     /// Announces an error.
     pub(crate) fn error(&mut self, text: &str) {
         self.say_at(text, Verbosity::Low, Priority::Assertive);
+    }
+
+    /// Asks a yes-or-no question ("Quit textweaver? y or n"). Assertive, so
+    /// it is spoken even while textweaver is reading aloud: the next key
+    /// press answers it, so the user must hear it (usability pass,
+    /// docs/research/usability-terminal.md).
+    pub(crate) fn ask(&mut self, question: &str) {
+        self.say_at(question, Verbosity::Low, Priority::Assertive);
     }
 
     /// Shows `text` on the status line only (used while reading, when the
@@ -1275,7 +1283,7 @@ impl App {
                 let question = list_delete_question(&kind);
                 self.list = None;
                 self.pending_list_delete = Some((kind, n));
-                self.tell(question);
+                self.ask(question);
                 vec![Effect::Redraw]
             }
             Some(ListKind::Study(l)) => self.delete_study_item(l, n),
@@ -1346,7 +1354,7 @@ impl App {
                 self.leave_prompt();
             }
             self.pending_confirm = Some(a);
-            self.tell(question);
+            self.ask(question);
             return vec![Effect::Redraw];
         }
         self.run_action(a)
@@ -1355,7 +1363,8 @@ impl App {
     /// Runs an action (after its confirmation, if it needs one).
     fn run_action(&mut self, a: ActionId) -> Vec<Effect> {
         if self.session.is_none() && needs_document(a) {
-            self.tell("No document is open. Press Control O to open one.");
+            let open = crate::help::spoken_key(&self.keymap, ActionId::Open);
+            self.tell(&format!("No document is open. Press {open} to open one."));
             return vec![Effect::Redraw];
         }
         if self.mode.is_prompt() {

@@ -103,7 +103,7 @@ impl App {
     /// Asks "Open it? y or n" about `target` (a file or an address).
     pub(crate) fn offer_open(&mut self, target: String, question: &str) {
         self.authoring.question = Some(Question::Open(target));
-        self.tell(question);
+        self.ask(question);
     }
 
     /// Opens `target` with the default program, announcing failures.
@@ -135,7 +135,7 @@ impl App {
                 self.authoring.question = None;
                 self.note("Not opened.");
             }
-            (Question::Open(_), Confirm::Repeat) => self.tell("Open it? y or n."),
+            (Question::Open(_), Confirm::Repeat) => self.ask("Open it? y or n."),
         }
         vec![Effect::Redraw]
     }

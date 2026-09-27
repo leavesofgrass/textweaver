@@ -116,7 +116,7 @@ impl App {
         );
         let question = import_question(&plan, &name);
         self.pending_import = Some((plan, name));
-        self.tell(&question);
+        self.ask(&question);
         vec![Effect::Redraw]
     }
 
@@ -135,7 +135,7 @@ impl App {
             Confirm::Repeat => {
                 if let Some((plan, name)) = &self.pending_import {
                     let q = import_question(plan, name);
-                    self.tell(&q);
+                    self.ask(&q);
                 }
             }
         }

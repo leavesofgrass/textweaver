@@ -586,7 +586,7 @@ impl App {
             }
             Confirm::Repeat => {
                 let q = self.msg_args("profile-delete-question", &args!["name" => &name]);
-                self.tell(&q);
+                self.ask(&q);
                 vec![Effect::Redraw]
             }
         }
@@ -815,7 +815,7 @@ impl App {
             self.list = None;
             self.study.question = Some(name.clone());
             let q = self.msg_args("profile-delete-question", &args!["name" => name]);
-            self.tell(&q);
+            self.ask(&q);
         } else {
             self.list = Some(ListKind::Study(list));
             self.tell(&self.msg("study-nothing-to-delete"));
