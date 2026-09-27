@@ -10,10 +10,13 @@
 #
 #   TW_AGENT=w4b docker compose run --rm -v "<worktree>:/work" dev cargo test
 #
-# Limits (September 27, 2026): each container gets 8 GB of RAM and 6 CPUs, and
-# Cargo runs 6 jobs, so five agents stay near 40 GB and 20 GB stays free on the
-# 64 GB host. The shared compile cache is capped at 30 GB. Build volumes are
-# listed and removed after an agent's work is merged (tools/build-hygiene.ps1).
+# Limits (corrected September 27, 2026): Docker's machine has about 31 GB in
+# all, so at most three containers build at once. Each gets 6 GB of RAM, 4
+# CPUs, and 4 cargo jobs by default; set TW_MEM, TW_CPUS, and TW_JOBS to change
+# them. Before a build, at least 26 GB of host RAM must be free. The shared
+# compile cache is capped at 30 GB. Build volumes are listed and removed after
+# an agent's work is merged (tools/build-hygiene.ps1). See
+# docs/research/wave4-orchestration.md for the budget.
 services:
   dev:
     build:
@@ -29,10 +32,10 @@ services:
       - textweaver-cargo-git:/usr/local/cargo/git
     environment:
       CARGO_TARGET_DIR: /target
-      CARGO_BUILD_JOBS: "6"
+      CARGO_BUILD_JOBS: ${TW_JOBS:-4}
       SCCACHE_CACHE_SIZE: 30G
-    mem_limit: 8g
-    cpus: 6
+    mem_limit: ${TW_MEM:-6g}
+    cpus: ${TW_CPUS:-4}
     stdin_open: true
     tty: true
 
