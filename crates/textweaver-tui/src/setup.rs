@@ -198,6 +198,55 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
     (app, messages)
 }
 
+/// True on the first run under these paths: no settings or keymap file,
+/// and no saved document state. Quitting with a document open writes its
+/// state, so the welcome is not heard again after that.
+pub fn is_first_run(paths: &Paths) -> bool {
+    let state_empty = std::fs::read_dir(paths.state_dir())
+        .map(|mut d| d.next().is_none())
+        .unwrap_or(true);
+    !paths.settings_file().exists() && !paths.keymap_file().exists() && state_empty
+}
+
+/// The welcome said once, on the first run: the five keys that get a new
+/// user reading, named from the keymap in effect.
+pub fn welcome_text(keymap: &Keymap) -> String {
+    use textweaver_app::keymap::ActionId;
+    let k = |a| textweaver_app::spoken_key(keymap, a);
+    format!(
+        "Welcome to textweaver. {} reads aloud and pauses, {} stops, {} moves to the next heading, {} opens the help, and {} quits.",
+        k(ActionId::PlayPause),
+        k(ActionId::Stop),
+        k(ActionId::SkipNextHeading),
+        k(ActionId::Help),
+        k(ActionId::Quit)
+    )
+}
+
+/// The welcome for this run, when it is the first one under the state
+/// folder `opts` chooses ([`is_first_run`]); `None` otherwise, and when
+/// nothing is persisted.
+pub fn first_run_message(opts: &Options, keymap: &Keymap) -> Option<String> {
+    let paths = match &opts.home {
+        Some(home) => Paths::under(home),
+        None => Paths::platform().ok()?,
+    };
+    is_first_run(&paths).then(|| welcome_text(keymap))
+}
+
+/// What the reader says when it starts without a document, naming the
+/// keys from the keymap in effect.
+pub fn no_document_text(keymap: &Keymap) -> String {
+    use textweaver_app::keymap::ActionId;
+    let k = |a| textweaver_app::spoken_key(keymap, a);
+    format!(
+        "No document is open. Press {} to open one, {} for a new one, or {} for help.",
+        k(ActionId::Open),
+        k(ActionId::NewDocument),
+        k(ActionId::Help)
+    )
+}
+
 /// The accessibility mode the command line asks for: `--mode`, else
 /// screen-reader mode for `--no-speech` (textweaver has no voice).
 pub fn run_mode(opts: &Options) -> Option<AccessMode> {
@@ -319,6 +368,52 @@ mod tests {
         let text = std::fs::read_to_string(&path).unwrap();
         assert!(text.contains("cannot save position: test"), "{text}");
         assert!(!text.contains("below the default level"), "{text}");
+    }
+
+    /// The welcome is said on the first run only: once a document's state
+    /// or a settings file exists, it is not.
+    #[test]
+    fn the_welcome_is_for_the_first_run_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let opts = Options {
+            no_speech: true,
+            home: Some(dir.path().to_owned()),
+            ..Options::default()
+        };
+        let (app, _) = build_app(&opts);
+        let welcome = first_run_message(&opts, app.keymap()).expect("a welcome on the first run");
+        assert_eq!(
+            welcome,
+            "Welcome to textweaver. Space reads aloud and pauses, Escape stops, H moves to the next heading, F1 opens the help, and Control Q quits."
+        );
+        assert_eq!(
+            no_document_text(app.keymap()),
+            "No document is open. Press Control O to open one, Control N for a new one, or F1 for help."
+        );
+        // A saved document state means a run happened before.
+        let state = Paths::under(dir.path()).state_dir();
+        std::fs::create_dir_all(&state).unwrap();
+        std::fs::write(state.join("essay.md-0123.json"), "{}").unwrap();
+        assert_eq!(first_run_message(&opts, app.keymap()), None);
+        // So does a settings file on its own.
+        let dir = tempfile::tempdir().unwrap();
+        let paths = Paths::under(dir.path());
+        assert!(is_first_run(&paths));
+        SettingsStore::new(paths.clone())
+            .save(&Settings::default())
+            .unwrap();
+        assert!(!is_first_run(&paths));
+        // Nothing persisted: no welcome.
+        assert_eq!(
+            first_run_message(
+                &Options {
+                    home: Some(dir.path().to_owned()),
+                    ..Options::default()
+                },
+                app.keymap()
+            ),
+            None
+        );
     }
 
     #[test]

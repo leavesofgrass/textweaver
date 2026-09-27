@@ -107,7 +107,10 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         }
     }
     if results.is_empty() && missing > 0 {
-        anyhow::bail!("no definition found");
+        // "No definition found for WORD." was printed above; exit 1 without
+        // saying it a second time as an error.
+        out.flush()?;
+        std::process::exit(1);
     }
     Ok(())
 }

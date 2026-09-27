@@ -15,7 +15,6 @@
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use anyhow::Context;
 use serde_json::{Value, json};
 use textweaver_app::formats;
 use textweaver_app::text::{Document, Marker};
@@ -36,13 +35,21 @@ pub struct Args {
 /// Runs `tw text`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     let doc = load_document(&args.file)?;
-    print!("{}", render(&doc, &args.format, args.structure)?);
-    Ok(())
+    super::print_all(&render(&doc, &args.format, args.structure)?)
 }
 
 /// Loads a document with the built-in loaders, for the read-only commands.
+/// A failure is one plain sentence, the same one the reader announces
+/// ("cannot open essay.md: there is no file named essay.md in ..."), not a
+/// chain of causes with an error code.
 pub(crate) fn load_document(path: &Path) -> anyhow::Result<Document> {
-    formats::load_path(path).with_context(|| format!("cannot open {}", path.display()))
+    formats::load_path(path).map_err(|e| {
+        anyhow::anyhow!(
+            "cannot open {}: {}",
+            path.display(),
+            textweaver_app::open_failure_reason(path, &e)
+        )
+    })
 }
 
 /// The output of `tw text` for `doc`, ending with a newline.
@@ -203,6 +210,22 @@ mod tests {
             let html = render(&doc, "html", false).unwrap();
             assert!(html.starts_with("<!DOCTYPE html>"));
         }
+    }
+
+    /// A file that is not there, or a folder, is one plain sentence without
+    /// an operating system error code.
+    #[test]
+    fn open_failures_are_one_plain_sentence() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing = dir.path().join("nothere.md");
+        let err = load_document(&missing).unwrap_err().to_string();
+        assert!(
+            err.contains("cannot open") && err.contains("there is no file named nothere.md in"),
+            "{err}"
+        );
+        assert!(!err.contains("os error"), "{err}");
+        let err = load_document(dir.path()).unwrap_err().to_string();
+        assert!(err.contains("is a folder, not a document"), "{err}");
     }
 
     #[test]

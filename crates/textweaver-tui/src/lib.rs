@@ -144,17 +144,29 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
     match file {
         Some(file) => {
             if let Err(e) = tui.app_mut().open(file) {
-                let msg = format!("Could not open {}: {e}", file.display());
+                let msg = match e {
+                    textweaver_app::AppError::Load(e) => {
+                        textweaver_app::open_failure_message(file, &e)
+                    }
+                    other => format!("Could not open {}: {other}", file.display()),
+                };
                 tui.app_mut().announce(&msg, Priority::Assertive);
             }
         }
-        None => tui.app_mut().announce(
-            "No document is open. Press Control O to open one, Control N for a new one, or F1 for help.",
-            Priority::Polite,
-        ),
+        None => {
+            let msg = setup::no_document_text(tui.app().keymap());
+            tui.app_mut().announce(&msg, Priority::Polite);
+        }
     }
+    // Startup messages follow the opening message instead of cutting it
+    // off: each is queued after the one before, and the status line shows
+    // them together. A settings or keymap warning stays assertive, so it is
+    // spoken even when the document starts reading at once.
     for m in messages {
-        tui.app_mut().announce(&m, Priority::Assertive);
+        tui.app_mut().announce_queued(&m, Priority::Assertive);
+    }
+    if let Some(welcome) = setup::first_run_message(opts, tui.app().keymap()) {
+        tui.app_mut().announce_queued(&welcome, Priority::Polite);
     }
     // First run with a screen reader: offer hybrid mode (once).
     setup::offer_hybrid_if_screen_reader(tui.app_mut(), opts);

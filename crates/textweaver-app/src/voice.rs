@@ -341,7 +341,7 @@ impl App {
             }
             Some(VoiceRow::FetchCatalog) => {
                 self.voices.question = Some(VoiceQuestion::FetchCatalog);
-                self.tell(
+                self.ask(
                     "Download the list of Piper voices, about 250 kilobytes, from Hugging Face? y or n",
                 );
                 vec![Effect::Redraw]
@@ -421,7 +421,7 @@ impl App {
                     e.voice.id.clone(),
                     e.voice.name.clone(),
                 ));
-                self.tell(&format!("Remove the voice {}? y or n", e.voice.name));
+                self.ask(&format!("Remove the voice {}? y or n", e.voice.name));
             }
             _ => self.tell("Only downloaded Piper voices can be removed."),
         }
@@ -443,7 +443,7 @@ impl App {
                     }
                 };
                 self.voices.question = Some(q);
-                self.tell(&text);
+                self.ask(&text);
                 vec![Effect::Redraw]
             }
             (Confirm::No, _) => {
@@ -553,7 +553,7 @@ impl App {
         match job {
             VoiceJob::Plan(rx) => match rx.try_recv() {
                 Ok(Ok(plan)) => {
-                    self.tell(&format!("{} y or n", plan.describe()));
+                    self.ask(&format!("{} y or n", plan.describe()));
                     self.voices.question = Some(VoiceQuestion::Download(Box::new(plan)));
                 }
                 Ok(Err(e)) => self.error(&format!("Could not read the voice's details: {e}.")),

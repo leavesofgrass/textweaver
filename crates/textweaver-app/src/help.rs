@@ -20,12 +20,16 @@ const CATEGORIES: [Category; 9] = [
 ];
 
 /// The chords bound to `action`, joined for reading aloud: `". or Alt+."`.
+/// A key bound in two layers (Tab in browse and in Speech Cursor mode) is
+/// named once, not "Tab or Tab".
 pub fn chords_text(keymap: &Keymap, action: ActionId) -> String {
-    let chords: Vec<String> = keymap
-        .chords_for(action)
-        .iter()
-        .map(ToString::to_string)
-        .collect();
+    let mut chords: Vec<String> = Vec::new();
+    for c in keymap.chords_for(action) {
+        let s = c.to_string();
+        if !chords.contains(&s) {
+            chords.push(s);
+        }
+    }
     if chords.is_empty() && action.is_palette_command() {
         "the command palette".into()
     } else if chords.is_empty() {
@@ -33,6 +37,56 @@ pub fn chords_text(keymap: &Keymap, action: ActionId) -> String {
     } else {
         chords.join(" or ")
     }
+}
+
+/// The one key that best stands for `action`: its single key (a browse
+/// key such as `h`) while single-key shortcuts are on, else its first
+/// chord, which still works with them off; `None` without keys.
+fn main_chord(keymap: &Keymap, action: ActionId) -> Option<textweaver_keymap::KeyChord> {
+    let chords = keymap.chords_for(action);
+    let single = chords.iter().find(|c| c.is_text_input());
+    let chord = chords.iter().find(|c| !c.is_text_input());
+    let pick = if keymap.character_keys() {
+        single.or(chord)
+    } else {
+        chord.or(single)
+    };
+    pick.or(chords.first()).copied()
+}
+
+/// At most two keys for `action`, for the help read aloud: the main key
+/// (the main chord) and one chord that works with single-key shortcuts
+/// off, such as "Space or Alt+P" and "h or Alt+H". The `?` list has every
+/// key; five of them in a row cannot be followed by ear.
+pub fn short_chords_text(keymap: &Keymap, action: ActionId) -> String {
+    let Some(main) = main_chord(keymap, action) else {
+        return chords_text(keymap, action);
+    };
+    if !keymap.character_keys() && main.is_text_input() {
+        // Only single keys, and they are off: the palette is the way.
+        return "the command palette".to_owned();
+    }
+    let chords = keymap.chords_for(action);
+    let other = chords.iter().find(|c| **c != main && !c.is_text_input());
+    match other {
+        Some(o) => format!("{main} or {o}"),
+        None => main.to_string(),
+    }
+}
+
+/// One key for `action`, as it is spoken: "Control O", "F1", "Space"
+/// (the main chord); "the command palette" for an action without keys.
+/// For messages that name a key in prose, such as "Press Control O to open
+/// one."
+pub fn spoken_key(keymap: &Keymap, action: ActionId) -> String {
+    main_chord(keymap, action).map_or_else(|| "the command palette".to_owned(), |c| c.spoken())
+}
+
+/// One key for `action`, written: "Ctrl+O", "h", "1" (the main chord);
+/// "the command palette" for an action without keys. For help lines that
+/// list many keys, where every chord of each would be too much.
+pub fn key_text(keymap: &Keymap, action: ActionId) -> String {
+    main_chord(keymap, action).map_or_else(|| "the command palette".to_owned(), |c| c.to_string())
 }
 
 /// Every action with its category and keys, in help order.
@@ -154,7 +208,8 @@ impl App {
     }
 
     pub(crate) fn help(&mut self) -> Vec<Effect> {
-        let k = |a| chords_text(&self.keymap, a);
+        let k = |a| short_chords_text(&self.keymap, a);
+        let one = |a| key_text(&self.keymap, a);
         let x = |c: NoteCommand| {
             let chords: Vec<String> = crate::extra::extra_chords(c)
                 .iter()
@@ -168,6 +223,11 @@ impl App {
         };
         let items = vec![
             "textweaver reads documents aloud. Keys below are the current bindings.".to_owned(),
+            format!(
+                "Open a document: {}. Library and recent files: {}.",
+                k(ActionId::Open),
+                k(ActionId::OpenLibrary)
+            ),
             format!("Play or pause: {}.", k(ActionId::PlayPause)),
             format!("Read from the cursor: {}.", k(ActionId::ReadFromCursor)),
             format!("Stop: {}.", k(ActionId::Stop)),
@@ -182,9 +242,27 @@ impl App {
                 k(ActionId::PreviousParagraph)
             ),
             format!(
-                "Read the next and previous heading: {} and {}.",
+                "Next and previous heading: {} and {}. Heading at a level: {} to {}, with Shift for the previous one.",
+                k(ActionId::SkipNextHeading),
+                k(ActionId::SkipPreviousHeading),
+                one(ActionId::NextHeadingLevel1),
+                one(ActionId::NextHeadingLevel6)
+            ),
+            format!(
+                "Read from the next and previous heading: {} and {}.",
                 k(ActionId::NextHeading),
                 k(ActionId::PreviousHeading)
+            ),
+            format!(
+                "Quick keys, as in NVDA and JAWS: list {}, list item {}, table {}, link {}, block quote {}, separator {}, graphic {}, section {}. Shift with the key goes to the previous one.",
+                one(ActionId::NextList),
+                one(ActionId::NextListItem),
+                one(ActionId::NextTable),
+                one(ActionId::NextLink),
+                one(ActionId::NextBlockQuote),
+                one(ActionId::NextSeparator),
+                one(ActionId::NextGraphic),
+                one(ActionId::NextChapter)
             ),
             format!(
                 "Speech Cursor, line by line: {}.",
@@ -256,6 +334,20 @@ impl App {
                 k(ActionId::CycleVerbosity),
                 k(ActionId::CyclePunctuation)
             ),
+            format!(
+                "Choose a voice: {}. Restart speech if it stops: {}.",
+                k(ActionId::ChooseVoice),
+                k(ActionId::RestartSpeech)
+            ),
+            format!(
+                "With a screen reader, who speaks: {} cycles self-voicing, hybrid, and screen reader mode.",
+                k(ActionId::CycleAccessMode)
+            ),
+            format!(
+                "Single-key shortcuts on or off, for dictation: {}. Settings: {}.",
+                k(ActionId::ToggleCharacterKeys),
+                k(ActionId::Settings)
+            ),
             format!("All keyboard shortcuts: {}.", k(ActionId::KeyboardHelp)),
             format!("Run any command by name: {}.", k(ActionId::CommandPalette)),
             format!(
@@ -275,6 +367,49 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn one_key_per_action_spoken_and_written() {
+        use textweaver_keymap::{Frontend, Platform};
+        let map = Keymap::defaults(Platform::Linux, Frontend::Terminal);
+        assert_eq!(spoken_key(&map, ActionId::Open), "Control O");
+        assert_eq!(key_text(&map, ActionId::Open), "Ctrl+O");
+        // The single key wins over a chord defined before it.
+        assert_eq!(spoken_key(&map, ActionId::PlayPause), "Space");
+        assert_eq!(key_text(&map, ActionId::NextChapter), "d");
+        assert_eq!(key_text(&map, ActionId::NextHeadingLevel1), "1");
+        assert_eq!(spoken_key(&map, ActionId::ExportPdf), "the command palette");
+        // The short form: the main key and one chord, never two single
+        // keys, and a key bound in two layers only once.
+        assert_eq!(
+            short_chords_text(&map, ActionId::NextParagraph),
+            "p or Ctrl+P"
+        );
+        assert_eq!(
+            short_chords_text(&map, ActionId::PlayPause),
+            "Space or Alt+P"
+        );
+        assert_eq!(
+            short_chords_text(&map, ActionId::NextSentence),
+            "Alt+. or Alt+Down"
+        );
+        assert_eq!(short_chords_text(&map, ActionId::SpeechCursorToggle), "Tab");
+        assert_eq!(chords_text(&map, ActionId::SpeechCursorToggle), "Tab");
+        assert_eq!(short_chords_text(&map, ActionId::AddBookmark), "m");
+        // With single-key shortcuts off, the chord comes first and a
+        // single key is not offered.
+        let mut off = map.clone();
+        off.set_character_keys(false);
+        assert_eq!(spoken_key(&off, ActionId::PlayPause), "Alt P");
+        assert_eq!(
+            short_chords_text(&off, ActionId::NextParagraph),
+            "Ctrl+P or Ctrl+Down"
+        );
+        assert_eq!(
+            short_chords_text(&off, ActionId::AddBookmark),
+            "the command palette"
+        );
+    }
 
     #[test]
     fn palette_finds_by_id_and_help() {

@@ -11,7 +11,11 @@ use textweaver_tui::{Options, launch};
 
 /// Read documents aloud in the terminal.
 #[derive(Parser, Debug)]
-#[command(name = "textweaver", version, about)]
+#[command(
+    name = "textweaver",
+    version,
+    about = "Read documents aloud in the terminal: text, Markdown, HTML, EPUB, Word, and PDF. Inside, Space reads and pauses, Escape stops, h moves by heading, F1 opens the help, ? lists every key, and Ctrl+Q quits."
+)]
 struct Args {
     /// Document to open.
     file: Option<PathBuf>,

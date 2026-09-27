@@ -586,7 +586,7 @@ impl App {
                 then,
             });
             self.list = None;
-            self.tell(&format!("{name} already exists. Replace it? y or n."));
+            self.ask(&format!("{name} already exists. Replace it? y or n."));
             return vec![Effect::Redraw];
         }
         match then {

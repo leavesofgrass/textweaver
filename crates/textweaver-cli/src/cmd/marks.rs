@@ -18,6 +18,9 @@ pub struct Args {
     /// Print JSON.
     #[arg(long)]
     pub json: bool,
+    /// Read the state under this directory (like `TEXTWEAVER_HOME`).
+    #[arg(long, value_name = "DIR")]
+    pub home: Option<PathBuf>,
 }
 
 /// One position with where it falls in the document.
@@ -277,7 +280,10 @@ fn render(r: &Report) -> String {
 
 /// Runs `tw marks`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let paths = Paths::platform()?;
+    let paths = match &args.home {
+        Some(home) => Paths::under(home),
+        None => Paths::platform()?,
+    };
     let report = build(&args.file, &paths);
     if args.json {
         println!("{}", serde_json::to_string_pretty(&report)?);

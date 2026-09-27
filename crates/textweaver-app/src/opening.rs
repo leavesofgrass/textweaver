@@ -62,6 +62,52 @@ fn file_name(path: &Path) -> String {
         .unwrap_or_else(|| path.display().to_string())
 }
 
+/// Why `path` could not be opened, in plain words for the status line or
+/// the terminal: a missing file, a folder, or a file that cannot be read
+/// gets a sentence, and any other failure the loader's own message. The
+/// operating system's error code is left out. Shared by the reader and
+/// `tw`, so both say the same thing.
+pub fn open_failure_reason(path: &Path, err: &LoadError) -> String {
+    let name = file_name(path);
+    if path.is_dir() {
+        return format!("{name} is a folder, not a document. Give the name of a file in it.");
+    }
+    match err {
+        LoadError::Io(_, io) => match io.kind() {
+            std::io::ErrorKind::NotFound => {
+                let folder = path
+                    .parent()
+                    .filter(|p| !p.as_os_str().is_empty())
+                    .map(|p| p.display().to_string());
+                match folder {
+                    Some(f) => format!("there is no file named {name} in {f}. Check the name."),
+                    None => format!("there is no file named {name} here. Check the name."),
+                }
+            }
+            std::io::ErrorKind::PermissionDenied => {
+                "you do not have permission to read it.".to_owned()
+            }
+            _ => {
+                let text = io.to_string();
+                // "The system cannot find the path specified. (os error 3)":
+                // the code adds nothing when read aloud.
+                let plain = text.split(" (os error").next().unwrap_or(&text).trim();
+                format!("{plain}.")
+            }
+        },
+        other => other.to_string(),
+    }
+}
+
+/// "Could not open NAME: REASON", for announcements.
+pub fn open_failure_message(path: &Path, err: &LoadError) -> String {
+    format!(
+        "Could not open {}: {}",
+        file_name(path),
+        open_failure_reason(path, err)
+    )
+}
+
 impl App {
     /// True while a document is opening in the background.
     pub fn opening(&self) -> bool {
@@ -97,9 +143,12 @@ impl App {
     pub(crate) fn open_now(&mut self, path: &Path) -> Vec<Effect> {
         match self.open(path) {
             Ok(e) => e,
+            Err(crate::app::AppError::Load(e)) => {
+                self.error(&open_failure_message(path, &e));
+                vec![Effect::Redraw]
+            }
             Err(e) => {
-                let name = path.display();
-                self.error(&format!("Could not open {name}: {e}"));
+                self.error(&format!("Could not open {}: {e}", file_name(path)));
                 vec![Effect::Redraw]
             }
         }
@@ -184,7 +233,7 @@ impl App {
         match result {
             Ok((doc, stamp)) => self.adopt_loaded(&o.path, doc, stamp),
             Err(e) => {
-                self.error(&format!("Could not open {}: {e}", o.path.display()));
+                self.error(&open_failure_message(&o.path, &e));
                 vec![Effect::Redraw]
             }
         }

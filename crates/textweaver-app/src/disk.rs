@@ -87,7 +87,7 @@ impl App {
         };
         self.pending_disk = Some(DiskQuestion::Overwrite { leaving });
         self.list = None;
-        self.tell(&overwrite_question(&path));
+        self.ask(&overwrite_question(&path));
         vec![Effect::Redraw]
     }
 
@@ -99,17 +99,17 @@ impl App {
         match (answer, question) {
             (Confirm::Repeat, DiskQuestion::Overwrite { .. }) => {
                 if let Some(p) = self.edited_path() {
-                    self.tell(&overwrite_question(&p));
+                    self.ask(&overwrite_question(&p));
                 }
                 vec![Effect::Redraw]
             }
             (Confirm::Repeat, DiskQuestion::Reload { path: p, .. }) => {
-                self.tell(&reload_question(&p));
+                self.ask(&reload_question(&p));
                 vec![Effect::Redraw]
             }
             (Confirm::Repeat, DiskQuestion::SaveAsOver { path, .. }) => {
                 let dest = textweaver_editor::autosave::save_as_path(&path);
-                self.tell(&format!(
+                self.ask(&format!(
                     "{} already exists. Replace it? y or n.",
                     file_name(&dest)
                 ));

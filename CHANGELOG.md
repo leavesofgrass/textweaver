@@ -28,6 +28,18 @@ The default keys are now the quick navigation keys of NVDA's and JAWS's browse m
 
 See [docs/keyboard.md](docs/keyboard.md#what-changed).
 
+### Usability pass: the terminal reader and `tw`
+
+- A yes-or-no question ("Quit textweaver? y or n", "Delete this note? y or n", "Reload it? y or n", the Piper download and every other one) is now spoken even while textweaver is reading aloud. It went to the status line only, so a self-voicing user heard the reading go on and the next key press vanished into the question.
+- The first run says a one-line welcome after the document opens: the keys that read, stop, move by heading, open the help, and quit, named from the keymap in effect.
+- Startup warnings (an unreadable settings file, a bad keymap line) follow the "Opened" message instead of cutting it off, and share the status line with it.
+- "Could not open" is one plain sentence: a missing file names the file and its folder, a folder says it is a folder, and no operating system error code is read aloud. `tw text`, `tw info`, and `tw search` say the same thing, and `tw open` refuses a folder before the reader starts.
+- The F1 help names how to open a document and the library, the quick navigation keys (h, 1 to 6, l, i, t, k, q, s, g, d), the accessibility mode (Alt+Shift+A), single-key shortcuts (F9), the settings screen, choosing a voice, and restarting speech. Each line names at most two keys (the single key and a chord that works with single keys off), and a key bound in two layers is no longer read twice ("Tab or Tab").
+- "No document is open. Press Control O ..." takes the key from the keymap.
+- `textweaver --help` describes the reader and its first keys instead of "self-voicing ratatui frontend".
+- `tw text big.pdf | head` no longer panics when the pipe closes; `tw define` no longer prints its failure twice; `tw marks` takes `--home` like the other commands.
+- Docs: lists no longer close on `q` (a letter jumps to the next item), and Delete in the notes and highlights lists asks first. The findings and what is left are in [docs/research/usability-terminal.md](docs/research/usability-terminal.md).
+
 ### Added
 
 - **EPUB, Word, and PDF reading.** `textweaver` and `tw text` open EPUB (chapters from the table of contents), DOCX (headings, lists, tables, footnotes, alt text), and PDF. The PDF reader is pure Rust and on by default. It finds columns, removes running headers and page numbers, and recovers headings, lists, and tables. See [ADR-0010](docs/adr/0010-pdf-loader.md).

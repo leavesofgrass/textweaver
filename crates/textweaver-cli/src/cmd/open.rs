@@ -51,7 +51,16 @@ fn options(args: &Args) -> textweaver_tui::Options {
 /// Runs `tw open`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     if !args.file.exists() {
-        bail!("{}: no such file", args.file.display());
+        bail!(
+            "{}: no such file. Check the name and the folder.",
+            args.file.display()
+        );
+    }
+    if args.file.is_dir() {
+        bail!(
+            "{} is a folder, not a document. Give the name of a file in it.",
+            args.file.display()
+        );
     }
     textweaver_tui::launch(&options(&args), Some(&args.file))
 }
@@ -92,5 +101,22 @@ mod tests {
             log: None,
         };
         assert!(run(args).unwrap_err().to_string().contains("no such file"));
+    }
+
+    /// A folder is refused before the reader starts, with a reason.
+    #[test]
+    fn a_folder_is_not_a_document() {
+        let dir = tempfile::tempdir().unwrap();
+        let args = Args {
+            file: dir.path().to_owned(),
+            no_speech: true,
+            mode: None,
+            backend: None,
+            home: None,
+            theme: None,
+            log: None,
+        };
+        let err = run(args).unwrap_err().to_string();
+        assert!(err.contains("is a folder, not a document"), "{err}");
     }
 }
