@@ -43,9 +43,16 @@ On Saturday, September 26, 2026 an agent ran a delete, without thinking and with
 
 Never work around it. If it blocks you, stop and tell the orchestrator or the owner.
 
+## Accessibility first
+
+Accessibility is the top priority. The owner is blind, and uses a screen reader (JAWS and NVDA) and a Braille display. When accessibility conflicts with looks, convenience or speed, accessibility wins. If an accessible way isn't possible, say so in your report; never ship the inaccessible version quietly.
+
+- **For the Braille display:** put the meaning first on each line, and prefer words to symbols. Emoji, arrows, check marks and box drawing often come through as noise. Keep lines short, and avoid ASCII art and character layouts.
+- **Braille output** (the BRF writer, and the Braille display through the screen reader) is first-class and tested like speech.
+
 ## Colour never carries meaning alone
 
-The owner is colour-blind and struggles to tell red from green. In every theme, status display, diff, chart, report, screenshot annotation and artifact, colour alone must never convey meaning. Pair it with text, a symbol or a pattern, such as "Pass" and "Fail" in words, check and cross marks, or + and - in diffs. Prefer colour-blind-safe palettes, but never rely on colour by itself.
+The owner is also colour-blind and struggles to tell red from green. In every theme, status display, diff, chart, report, screenshot annotation and artifact, colour alone must never convey meaning. Pair it with text first, such as "Pass" and "Fail" in words or + and - in diffs, then symbols or patterns if useful. Symbols alone don't come through well on a Braille display. Prefer colour-blind-safe palettes, but never rely on colour by itself.
 
 ## Everything else
 
