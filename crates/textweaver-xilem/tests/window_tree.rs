@@ -132,6 +132,13 @@ fn a_list_dialog_is_modal_and_hides_the_window_behind_it() {
     h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, None));
     let _ = h.redraw();
     assert!(names_of(&h, Role::Dialog).is_empty());
+    // Every region is back, the status bar too.
+    assert_eq!(
+        names_of(&h, Role::Status).len(),
+        1,
+        "the status bar is back"
+    );
+    assert_eq!(names_of(&h, Role::Toolbar), vec!["Reading".to_owned()]);
 }
 
 #[test]

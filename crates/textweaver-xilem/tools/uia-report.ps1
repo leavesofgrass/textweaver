@@ -303,6 +303,66 @@ public static class TwXUia
         return false;
     }
 
+    /// Presses the first button whose name starts with `prefix` ("Settings"
+    /// finds "Settings..." with its ellipsis character).
+    public static bool PressStartingWith(AutomationElement root, string prefix)
+    {
+        var cond = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button);
+        foreach (AutomationElement b in root.FindAll(TreeScope.Descendants, cond))
+        {
+            if (b.Current.Name.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                ((InvokePattern)b.GetCurrentPattern(InvokePattern.Pattern)).Invoke();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// The first element named `name`, of any type.
+    public static AutomationElement Named(AutomationElement root, string name)
+    {
+        return root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, name));
+    }
+
+    /// Every element of `type` under `root`, described.
+    public static List<string> All(AutomationElement root, ControlType type)
+    {
+        var lines = new List<string>();
+        foreach (AutomationElement e in root.FindAll(TreeScope.Descendants,
+            new PropertyCondition(AutomationElement.ControlTypeProperty, type)))
+            lines.Add(Describe(e) + ValueOf(e));
+        return lines;
+    }
+
+    /// The value a screen reader reads: RangeValue, Toggle, or Value.
+    public static string ValueOf(AutomationElement e)
+    {
+        object p;
+        if (e.TryGetCurrentPattern(RangeValuePattern.Pattern, out p))
+        {
+            var r = ((RangeValuePattern)p).Current;
+            return string.Format(" range={0} ({1} to {2}, step {3})", r.Value, r.Minimum, r.Maximum, r.SmallChange);
+        }
+        if (e.TryGetCurrentPattern(TogglePattern.Pattern, out p))
+            return " toggle=" + ((TogglePattern)p).Current.ToggleState;
+        if (e.TryGetCurrentPattern(ValuePattern.Pattern, out p))
+            return " value=" + Q(((ValuePattern)p).Current.Value);
+        return "";
+    }
+
+    /// Sets a slider through RangeValuePattern.
+    public static void SetRange(AutomationElement e, double v)
+    {
+        ((RangeValuePattern)e.GetCurrentPattern(RangeValuePattern.Pattern)).SetValue(v);
+    }
+
+    /// Toggles a check box through TogglePattern.
+    public static void Toggle(AutomationElement e)
+    {
+        ((TogglePattern)e.GetCurrentPattern(TogglePattern.Pattern)).Toggle();
+    }
+
     public static bool Press(AutomationElement root, string name)
     {
         var b = Find(root, ControlType.Button, name);
@@ -498,10 +558,76 @@ try {
         Fence $cmdLines
     }
 
+    Say "### Settings dialog (Settings button pressed; settings changed with RangeValuePattern and TogglePattern)"
+    Say ""
+    if (-not [TwXUia]::PressStartingWith($window, 'Settings')) {
+        Say "No Settings button."
+        $failures.Add('no Settings button')
+    } else {
+        Start-Sleep -Milliseconds 800
+        $dlg = [TwXUia]::Named($window, 'Settings')
+        $form = [TwXUia]::Named($window, 'Speech settings')
+        if (-not $dlg) { $failures.Add('no Settings dialog') } else { Say "- Dialog: $([TwXUia]::Describe($dlg))" }
+        $sections = [TwXUia]::Find($window, [System.Windows.Automation.ControlType]::List, 'Sections')
+        if ($sections) {
+            Say "- Sections: $([TwXUia]::Describe($sections))"
+            $items = [TwXUia]::All($sections, [System.Windows.Automation.ControlType]::ListItem)
+            Say "- $($items.Count) sections:"
+            Say ""
+            Fence $items
+            if ($items.Count -lt 4) { $failures.Add('too few settings sections') }
+        } else { $failures.Add('no Sections list') }
+        if ($form) { Say "- Form: $([TwXUia]::Describe($form))" } else { $failures.Add('no settings form') }
+        Say ""
+        Say "The settings a screen reader finds in the first section:"
+        Say ""
+        $setLines = @()
+        foreach ($t in @('Slider', 'CheckBox', 'ComboBox', 'Edit')) {
+            $ct = [System.Windows.Automation.ControlType]::$t
+            $setLines += [TwXUia]::All($window, $ct)
+        }
+        Fence $setLines
+        $rate = [TwXUia]::Find($window, [System.Windows.Automation.ControlType]::Slider, 'Rate')
+        if ($rate) {
+            $before = [TwXUia]::ValueOf($rate)
+            [TwXUia]::SetRange($rate, 300)
+            Start-Sleep -Milliseconds 500
+            $rate = [TwXUia]::Find($window, [System.Windows.Automation.ControlType]::Slider, 'Rate')
+            $after = [TwXUia]::ValueOf($rate)
+            Say "- Rate set to 300 through RangeValuePattern: before$before; after$after"
+            if ($after -notmatch 'range=300 ') { $failures.Add('the Rate slider did not take a value set through RangeValuePattern') }
+        } else { $failures.Add('no Rate slider') }
+        $box = [TwXUia]::Find($window, [System.Windows.Automation.ControlType]::CheckBox, $null)
+        if ($box) {
+            $name = $box.Current.Name
+            $before = [TwXUia]::ValueOf($box)
+            [TwXUia]::Toggle($box)
+            Start-Sleep -Milliseconds 500
+            $box = [TwXUia]::Find($window, [System.Windows.Automation.ControlType]::CheckBox, $name)
+            $after = [TwXUia]::ValueOf($box)
+            Say "- $name toggled through TogglePattern: before$before; after$after"
+            if ($before -eq $after) { $failures.Add('a settings check box did not toggle through TogglePattern') }
+            # Back as it was.
+            [TwXUia]::Toggle($box)
+            Start-Sleep -Milliseconds 300
+        } else { $failures.Add('no settings check box') }
+        # The dialog's own Close button (the window frame has one too).
+        if (-not ($dlg -and [TwXUia]::Press($dlg, 'Close'))) { $failures.Add('no Close button in the settings') }
+        Start-Sleep -Milliseconds 500
+        if ([TwXUia]::Named($window, 'Sections')) { $failures.Add('the settings dialog did not close') }
+        else { Say "- Close pressed: the dialog is gone." }
+        Say ""
+    }
+
     Say "### Status bar"
     Say ""
     $sb = [TwXUia]::Find($window, [System.Windows.Automation.ControlType]::StatusBar, $null)
-    if ($sb) { Say "- $([TwXUia]::Describe($sb))" } else { Say "No status bar."; $failures.Add('no status bar') }
+    if ($sb) { Say "- $([TwXUia]::Describe($sb))" } else {
+        Say "No status bar. The controls now:"
+        Say ""
+        Fence ([TwXUia]::Tree($window))
+        $failures.Add('no status bar')
+    }
     Say ""
 
     Start-Sleep -Milliseconds 300

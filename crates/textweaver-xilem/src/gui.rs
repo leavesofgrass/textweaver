@@ -337,6 +337,7 @@ pub fn build_tree(
         .with(title, 1.0)
         .with_fixed(button("Open…", ActionId::Open, app, &mut ids))
         .with_fixed(fonts_button)
+        .with_fixed(button("Settings…", ActionId::Settings, app, &mut ids))
         .with_fixed(button("Commands…", ActionId::CommandPalette, app, &mut ids));
     let header = NewWidget::new(Region::new(NewWidget::new(header), Role::Banner, ""))
         .with_tag(HEADER)

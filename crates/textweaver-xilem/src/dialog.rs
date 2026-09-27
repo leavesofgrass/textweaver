@@ -593,6 +593,19 @@ impl Widget for ChoiceList {
                 );
             }
         }
+        // A scroll hint when there are more items than rows.
+        let n = self.items.len();
+        if n > self.visible_rows {
+            let track = Rect::new(size.width - 3.0, 4.0, size.width - 1.0, size.height - 4.0);
+            let h = track.height() * (self.visible_rows as f64 / n as f64);
+            let top = track.y0 + track.height() * (self.top as f64 / n as f64);
+            painter
+                .fill(
+                    RoundedRect::new(track.x0, top, track.x1, top + h, 1.0),
+                    theme::with_alpha(p.dim_text, 0.6),
+                )
+                .draw();
+        }
         if self.focused {
             painter
                 .stroke(

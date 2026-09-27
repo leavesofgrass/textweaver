@@ -948,9 +948,6 @@ impl Widget for SettingsGrid {
             o.set_selected(i == self.selected);
             let y = (i as f64 - self.top as f64) * ROW_H;
             o.set_bounds(masonry::accesskit::Rect::new(0.0, y, self.width, y + ROW_H));
-            if i < self.top || i >= self.top + self.visible_rows {
-                o.set_hidden();
-            }
             ctx.tree_update().nodes.push((self.node_ids[i], o));
         }
         node.set_children(self.node_ids[..n].to_vec());
