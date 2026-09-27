@@ -114,9 +114,12 @@ try {
   $cands | ForEach-Object { "  $($_.Path)  ($($_.GB) GB)  - $($_.Reason)" }
   if (-not $Apply) { ''; 'Nothing removed. Run again with -Apply to remove exactly the folders listed above.'; return }
 
-  $roots = @($targetRoot) + @(Get-ChildItem $worktreeRoot -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object { Join-Path $_.FullName 'target' })
   foreach ($c in $cands) {
-    if (-not (Test-Inside $c.Path $roots)) { "SKIPPED (outside the allowed roots): $($c.Path)"; continue }
+    # A folder in target\, or a worktree's own target folder, and nothing else.
+    $inTarget = Test-Inside $c.Path @($targetRoot)
+    $inWorktree = (Split-Path $c.Path -Leaf) -eq 'target' -and (Test-Inside $c.Path @($worktreeRoot)) -and
+      ([IO.Path]::GetFullPath((Split-Path (Split-Path $c.Path -Parent) -Parent)).TrimEnd('\') -ieq [IO.Path]::GetFullPath($worktreeRoot).TrimEnd('\'))
+    if (-not ($inTarget -or $inWorktree)) { "SKIPPED (outside the allowed roots): $($c.Path)"; continue }
     if ($never -contains (Split-Path $c.Path -Leaf)) { "SKIPPED (protected): $($c.Path)"; continue }
     Remove-Item -LiteralPath $c.Path -Recurse -Force
     "removed $($c.Path)"
