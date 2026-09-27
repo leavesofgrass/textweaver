@@ -3,6 +3,17 @@
 #   docker compose build dev
 #   docker compose run --rm dev cargo test --workspace
 #   docker compose run --rm dev            # interactive shell in /work
+#
+# Agents work inside this container so their shell commands never touch the
+# host. Each agent mounts only its own worktree and sets TW_AGENT so it gets
+# its own build volume:
+#
+#   TW_AGENT=w4b docker compose run --rm -v "<worktree>:/work" dev cargo test
+#
+# Limits (September 27, 2026): each container gets 8 GB of RAM and 6 CPUs, and
+# Cargo runs 6 jobs, so five agents stay near 40 GB and 20 GB stays free on the
+# 64 GB host. The shared compile cache is capped at 30 GB. Build volumes are
+# listed and removed after an agent's work is merged (tools/build-hygiene.ps1).
 services:
   dev:
     build:
@@ -12,15 +23,23 @@ services:
     working_dir: /work
     volumes:
       - .:/work
-      - textweaver-target:/target
+      - target:/target
+      - sccache:/sccache
       - textweaver-cargo-registry:/usr/local/cargo/registry
       - textweaver-cargo-git:/usr/local/cargo/git
     environment:
       CARGO_TARGET_DIR: /target
+      CARGO_BUILD_JOBS: "6"
+      SCCACHE_CACHE_SIZE: 30G
+    mem_limit: 8g
+    cpus: 6
     stdin_open: true
     tty: true
 
 volumes:
-  textweaver-target:
+  target:
+    name: tw-target-${TW_AGENT:-orch}
+  sccache:
+    name: textweaver-sccache
   textweaver-cargo-registry:
   textweaver-cargo-git:

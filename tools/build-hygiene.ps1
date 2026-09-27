@@ -33,8 +33,38 @@ param(
   [switch]$Flush,
   [switch]$IncludeShared,
   [switch]$Apply,
-  [int]$FloorGB = 200
+  [int]$FloorGB = 200,
+  # Docker: remove one agent build volume by exact name (tw-target-<agent>),
+  # after its work is merged. Only names starting tw-target- are accepted.
+  [string]$RemoveVolume
 )
+
+function Show-Docker {
+  if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { 'Docker: not on PATH.'; return }
+  ''
+  'Docker disk use:'
+  docker system df 2>$null
+  $vhdx = Get-ChildItem 'D:\DockerData' -Recurse -Filter 'docker_data.vhdx' -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($vhdx) { "Docker virtual disk: {0:N1} GB ({1}). It only shrinks when compacted." -f ($vhdx.Length / 1GB), $vhdx.FullName }
+  $vols = docker volume ls -q --filter name=tw-target- 2>$null
+  if ($vols) {
+    ''
+    'Agent build volumes (tw-target-*):'
+    $sizes = docker system df -v 2>$null | Select-String '^tw-target-'
+    foreach ($s in $sizes) { '  ' + ($s.Line -replace '\s+', ' ') }
+  }
+}
+
+if ($RemoveVolume) {
+  if ($RemoveVolume -notmatch '^tw-target-[A-Za-z0-9._-]+$') { "REFUSED: only agent build volumes named tw-target-<agent> can be removed here."; return }
+  $inUse = docker ps -a --filter "volume=$RemoveVolume" --format '{{.Names}}' 2>$null
+  if ($inUse) { "REFUSED: $RemoveVolume is used by: $($inUse -join ', ')"; return }
+  "Volume to remove: $RemoveVolume"
+  docker system df -v 2>$null | Select-String "^$([regex]::Escape($RemoveVolume))\s" | ForEach-Object { '  ' + $_.Line }
+  if (-not $Apply) { 'Nothing removed. Run again with -Apply to remove exactly this volume.'; return }
+  docker volume rm $RemoveVolume
+  return
+}
 
 $ErrorActionPreference = 'Stop'
 $repo = 'D:\textweaver'
@@ -103,6 +133,7 @@ try {
   'Build folders:'
   $rows | Sort-Object GB -Descending | Format-Table Path, GB, Candidate, Reason -AutoSize | Out-String -Width 220
   "Shared compiler cache D:\sccache: $cache GB (sccache keeps it under its size limit itself)"
+  Show-Docker
 
   if (-not $Flush) { return }
 

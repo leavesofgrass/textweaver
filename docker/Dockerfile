@@ -32,6 +32,17 @@ RUN dpkg --add-architecture i386 \
 
 RUN rustup component add rustfmt clippy
 
+# The repository pins channel "1.96" (rust-toolchain.toml). Install it under
+# that name, with its components, so containers don't download it on every
+# run.
+RUN rustup toolchain install 1.96 --profile minimal --component rustfmt,clippy \
+ && rustup default 1.96
+
+# Shared compile cache: every container reuses dependencies compiled by any
+# other, through the textweaver-sccache volume (capped in compose.yaml).
+RUN cargo install sccache --locked --no-default-features \
+ && rm -rf /usr/local/cargo/registry /usr/local/cargo/git
+
 # Audio leaves the container through PulseAudio when PULSE_SERVER points at a
 # server (for example tcp:host.docker.internal:4713 with PulseAudio on
 # Windows, as emacspeak-docker does). Tests never open an audio device.
@@ -48,7 +59,10 @@ RUN ln -s /opt/oralux/voxin/rfs32/opt/IBM /opt/IBM \
 # Linux artifacts never mix with the Windows host's target/ directory.
 ENV CARGO_TARGET_DIR=/target \
     CARGO_TERM_COLOR=always \
-    RUST_BACKTRACE=1
+    RUST_BACKTRACE=1 \
+    RUSTC_WRAPPER=sccache \
+    SCCACHE_DIR=/sccache \
+    CARGO_INCREMENTAL=0
 WORKDIR /work
 
 CMD ["bash"]

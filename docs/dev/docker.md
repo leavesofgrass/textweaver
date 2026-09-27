@@ -18,12 +18,21 @@ textweaver is developed on Windows and tested on Linux in a Docker container. Th
 
 The container has no sound device, so audio features are tested for building and for synthesis to files, not for playback. Listen on the host.
 
-## Volumes
+## Volumes, limits, and disk
 
-`compose.yaml` mounts the working tree at `/work` and keeps three named volumes:
+`compose.yaml` mounts the working tree at `/work` and keeps these named volumes:
 
-- `textweaver-target` at `/target`: Linux build output (`CARGO_TARGET_DIR=/target`), so it never mixes with the Windows `target/` directory;
-- `textweaver-cargo-registry` and `textweaver-cargo-git`: the crates.io cache, so rebuilding the container does not re-download dependencies.
+- **`tw-target-<agent>` at `/target`:** Linux build output (`CARGO_TARGET_DIR=/target`). Each agent gets its own, chosen with `TW_AGENT`; the default is `tw-target-orch`. It never mixes with the Windows `target/` directory.
+- **`textweaver-sccache` at `/sccache`:** the shared compile cache, capped at 30 GB (`SCCACHE_CACHE_SIZE`). Dependencies compile once for every container. The image sets `RUSTC_WRAPPER=sccache`.
+- **`textweaver-cargo-registry` and `textweaver-cargo-git`:** the crates.io cache, so rebuilding the container does not re-download dependencies.
+
+Limits, set in September 2026 after one shared build volume grew to 536 GB and Docker's disk on D: to 626 GB:
+
+- **Per container:** 8 GB of RAM (`mem_limit`), 6 CPUs, and `CARGO_BUILD_JOBS=6`. Five agents stay near 40 GB, leaving 20 GB free on the 64 GB host.
+- **Smaller builds:** `Cargo.toml`'s dev and test profiles keep line tables only for our crates, no debug info for dependencies, and incremental builds off.
+- **Before heavy runs,** check the disk with `powershell -File tools/build-hygiene.ps1`. It reports D:'s free space, Docker's images, volumes, build cache and virtual disk, and each agent volume. Stop if D: is near its 200 GB floor.
+- **After an agent's work is merged,** remove its build volume with `tools/build-hygiene.ps1 -RemoveVolume tw-target-<agent>`. That lists the volume and removes nothing; run it again with `-Apply` to remove exactly that volume. The script refuses any volume not named `tw-target-*`.
+- **Docker's virtual disk** (`D:\DockerData\...\docker_data.vhdx`) never shrinks on its own. After a wave, compact it with Docker Desktop stopped. That needs one administrator prompt; see `D:\recovery\work\compact-docker-vhdx.ps1`.
 
 ## Everyday commands
 
@@ -57,19 +66,17 @@ docker compose run --rm -T dev cargo run -p textweaver-cli --features espeak -- 
 
 ## Parallel agents
 
-Each agent works in its own git worktree. To share the image and the registry cache but not the build lock, run from the worktree's root with a fixed project name and a private target directory:
+Each agent works in its own git worktree, and runs its builds, tests and file operations **inside the container**, so shell commands never touch the host or files outside its worktree. From the worktree's root, use a fixed project name and the agent's own build volume:
 
 ```bash
-docker compose -p textweaver run --rm -T -e CARGO_TARGET_DIR=/target/agent-b dev cargo test -p textweaver-speech --all-features
+TW_AGENT=w4b MSYS_NO_PATHCONV=1 docker compose -p textweaver run --rm -T dev cargo test -p textweaver-speech --all-features
 ```
+
+In Git Bash, `MSYS_NO_PATHCONV=1` stops Git Bash rewriting container paths into Windows paths.
 
 ## Resetting
 
-Remove the build output and caches (the next build downloads and compiles everything again):
-
-```bash
-docker volume rm textweaver_textweaver-target textweaver_textweaver-cargo-registry textweaver_textweaver-cargo-git
-```
+Removing volumes is a delete, so ask the owner first, and list what goes. Remove one agent's build output with `tools/build-hygiene.ps1 -RemoveVolume tw-target-<agent>`, then `-Apply`. Never remove the owner's other volumes, such as `emacspeak-docker_voxin`.
 
 ## Voxin (ETI-Eloquence for Linux)
 
