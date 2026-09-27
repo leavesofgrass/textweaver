@@ -16,8 +16,14 @@ default = ["publish"]
 # releases. Off, the app links none of the conversion and citation stack
 # (convert, render, writers, cite, and hayagriva, comrak, minijinja,
 # krilla, ammonia, ureq), and those commands say they are not in this
-# build; `cargo xtask deps --check` holds the reader to that.
-publish = ["dep:textweaver-cite", "dep:textweaver-convert", "dep:textweaver-render"]
+# build; `cargo xtask deps --check` holds the reader to that. It also
+# brings Piper voice downloads, the other use of HTTP in the reader.
+publish = [
+    "dep:textweaver-cite",
+    "dep:textweaver-convert",
+    "dep:textweaver-render",
+    "textweaver-engines/piper-download",
+]
 # Speech engines, passed through to textweaver-engines.
 espeak = ["textweaver-engines/espeak"]
 omnivox = ["textweaver-engines/omnivox"]
@@ -40,9 +46,12 @@ textweaver-math.workspace = true
 textweaver-cite = { workspace = true, optional = true }
 textweaver-convert = { workspace = true, optional = true }
 textweaver-render = { workspace = true, optional = true }
+# Agent W3e: define word and the message catalog.
+textweaver-lexicon.workspace = true
 pulldown-cmark.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+toml.workspace = true
 ropey.workspace = true
 thiserror.workspace = true
 log.workspace = true

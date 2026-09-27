@@ -214,7 +214,7 @@ Each skipped item is listed with the reason. The usual reasons:
 - a document textweaver cannot open;
 - a setting with no textweaver equivalent (listed together);
 - a key textweaver cannot read, or a Star shortcut for a command textweaver does not have;
-- Star's reading statistics and saved note searches, because textweaver does not keep those yet.
+- Star's saved note searches, because textweaver does not keep those yet. (Star's reading statistics are imported, into `stats.json`.)
 
 Running it twice imports nothing new. Where textweaver already has something, textweaver's copy wins: a newer position, a bookmark name already used, a note already there.
 

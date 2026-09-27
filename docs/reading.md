@@ -418,6 +418,33 @@ Change the level while textweaver runs with **Alt+Shift+V**: low, normal, high, 
 
 **Alt+M** moves to the next misspelled word and **Alt+Shift+M** to the previous one, while reading or editing. You hear the word, then its letters: "recieve. r e c i e v e." **Alt+J** lists suggestions. The [editing guide](editing.md#spelling) has the details.
 
+## Define a word: Ctrl+Shift+D or Alt+E
+
+**Ctrl+Shift+D** in the GUI, or **Alt+E** in the terminal, defines the word at the cursor, or the words you selected (`ice cream`). textweaver looks in your own glossary first, then in Open English WordNet, and says how the word is pronounced, from the CMU Pronouncing Dictionary. Everything is on your computer: nothing goes to the internet.
+
+The senses come up in a list. The first item is the pronunciation, respelled with the stressed syllable in capitals ("Pronounced RUN-ing."). Each sense then says its headword, its part of speech, which sense it is, the definition, an example, synonyms, opposites, and what it is a kind of:
+
+> dog, noun, 1 of 7: a member of the genus Canis (probably descended from the common wolf)... For example: the dog barked all night. Synonyms: domestic dog, Canis familiaris. A kind of: canine, domestic animal.
+
+Up and Down move through the senses. Enter copies one to the clipboard, for a note. Escape closes the list.
+
+- Inflected words find their base forms: `running` finds `running` and `run`, `geese` finds `goose`, and `wider` finds `wide`.
+- With no word at the cursor, or no document open, textweaver asks which word to define. The command palette's `define word` does the same.
+- **Your glossary** is a text file with one `term: definition` line per sense, or a JSON file in Star's format. Put it in the settings folder as `glossary.txt`, or name it with `[lexicon] glossary` ([settings.md](settings.md#lexicon)). Its senses come first, before WordNet's. An edited glossary is read again the next time you define a word.
+- `tw define WORD` does the same from the command line, as Markdown or, with `--json`, as JSON.
+- The dictionary is a 10 MB file, `lexicon/lexicon-en.twlex`, installed beside the program. If it is missing, textweaver says so and searches your glossary only.
+
+## Reading statistics: Ctrl+Shift+Y or Alt+Y
+
+textweaver counts the time it spends reading each document aloud, the furthest point you reached, and the sessions: each time you open a document and read it. **Ctrl+Shift+Y** in the GUI, or **Alt+Y** in the terminal, lists:
+
+- the total time read, over how many sessions and documents;
+- this document's time, furthest point, and sessions;
+- the ten documents you read most (Enter opens one);
+- whether statistics are on (Enter turns them off or on).
+
+Statistics are saved every 30 seconds while reading, and when a document closes. `tw stats` prints them, `tw stats --json` prints everything, and `tw stats --clear` removes them. To stop recording, turn them off in the list or set `[stats] enabled = false` ([settings.md](settings.md#stats)). `tw migrate-star` brings Star's reading statistics over.
+
 ## The command palette: F2
 
 Press **F2** to run any command by name. **Alt+X** and **:** open it too. The GUI uses **F2** and **:**.

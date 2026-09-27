@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-dictation"
-description = "Voice typing for textweaver: dictation trait and a whisper subprocess backend"
+description = "Voice typing for textweaver: dictation trait, Whisper in-process on RTen, and a whisper subprocess fallback"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -19,6 +19,24 @@ path = "src/bin/fake_whisper.rs"
 test = false
 doc = false
 
+[features]
+default = []
+# Whisper in-process on RTen, the pure-Rust ONNX runtime (ADR-0023), with
+# onnx-community's int8 models; silence skipped with earshot, audio
+# resampled with rubato.
+rten = [
+    "dep:rten",
+    "dep:rten-tensor",
+    "dep:rten-generate",
+    "dep:rten-text",
+    "dep:rustfft",
+    "dep:rubato",
+    "dep:earshot",
+]
+# The microphone, through rodio's recording feature (cpal underneath),
+# resampled to 16 kHz with rubato.
+mic = ["dep:rodio", "dep:rubato", "dep:earshot"]
+
 [dependencies]
 textweaver-core.workspace = true
 thiserror.workspace = true
@@ -26,6 +44,14 @@ log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 regex.workspace = true
+rten = { workspace = true, optional = true }
+rten-tensor = { workspace = true, optional = true }
+rten-generate = { workspace = true, optional = true }
+rten-text = { workspace = true, optional = true }
+rustfft = { workspace = true, optional = true }
+rubato = { workspace = true, optional = true }
+earshot = { workspace = true, optional = true }
+rodio = { workspace = true, optional = true, features = ["recording"] }
 
 [dev-dependencies]
 tempfile.workspace = true

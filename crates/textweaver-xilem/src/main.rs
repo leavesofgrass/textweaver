@@ -1,5 +1,5 @@
 //! `textweaver-xilem`: the textweaver GUI on Masonry, Vello, Parley,
-//! AccessKit, and winit (ADR-0023). It becomes `textweaver-gui` once it
+//! AccessKit, and winit (ADR-0027). It becomes `textweaver-gui` once it
 //! passes the UI Automation report the wxDragon spike passes.
 
 use std::path::PathBuf;

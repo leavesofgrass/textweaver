@@ -1,7 +1,8 @@
 //! The speech engines textweaver offers, in one registry: the speech
 //! crate's built-ins plus the engines that live in their own crates:
 //! ETI-Eloquence through ECI (ADR-0007), Apple's system voices on macOS
-//! (ADR-0008), SAPI5 voices on Windows (ADR-0009), and DECtalk (ADR-0021).
+//! (ADR-0008), SAPI5 voices on Windows (ADR-0009), DECtalk (ADR-0021),
+//! and Piper neural voices in-process on RTen (ADR-0023).
 //! Every frontend selects from this one registry, so `tw backends`,
 //! `tw speak`, audio export, the terminal reader, and the GUIs agree.
 //!
@@ -22,6 +23,7 @@
 pub use textweaver_apple as apple;
 pub use textweaver_dectalk as dectalk;
 pub use textweaver_eci as eci;
+pub use textweaver_piper as piper;
 pub use textweaver_sapi as sapi;
 
 use std::path::PathBuf;
@@ -144,7 +146,48 @@ pub fn speech_registry_for(settings: &Settings) -> BackendRegistry {
         move || textweaver_dectalk::probe(&probe),
         move || (textweaver_dectalk::factory(dectalk.clone()))(),
     );
+    // Piper neural voices (ADR-0023), in-process on RTen: available once a
+    // voice is installed, below DECtalk and above the built-in engines.
+    let piper = piper_config(settings);
+    let probe = piper.clone();
+    registry.register_cached(
+        textweaver_piper::backend_description(),
+        format!("{piper:?}"),
+        move || textweaver_piper::probe(&probe),
+        textweaver_piper::factory(piper),
+    );
     registry
+}
+
+/// The Piper backend's options: `[speech.piper]` `voices` (the voices
+/// folder, default `<data>/piper/voices`), `voice` (the voice to start
+/// with), and `phonemizer` (`auto`, `library`, or `rust`), kept as an
+/// unknown section until the store gains a typed one.
+/// `TEXTWEAVER_PIPER_VOICES` names the voices folder for one run.
+pub fn piper_config(settings: &Settings) -> textweaver_piper::PiperConfig {
+    let section = settings.speech.extra.get("piper");
+    let get = |key: &str| {
+        section
+            .and_then(|t| t.get(key))
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty())
+    };
+    let data_dir = textweaver_store::Paths::platform()
+        .map(|p| p.data_dir)
+        .unwrap_or_else(|_| std::env::temp_dir().join("textweaver"));
+    let mut config = textweaver_piper::PiperConfig::in_data_dir(&data_dir);
+    if let Some(dir) = std::env::var_os("TEXTWEAVER_PIPER_VOICES").filter(|v| !v.is_empty()) {
+        config.voices_dir = PathBuf::from(dir);
+    } else if let Some(dir) = get("voices") {
+        config.voices_dir = PathBuf::from(dir);
+    }
+    config.default_voice = get("voice").map(str::to_owned);
+    config.phonemizer = match get("phonemizer") {
+        Some("library") => textweaver_piper::PhonemizerChoice::Library,
+        Some("rust") => textweaver_piper::PhonemizerChoice::Rust,
+        _ => textweaver_piper::PhonemizerChoice::Auto,
+    };
+    config
 }
 
 /// The DECtalk backend's options: `library` from `[speech.dectalk]` (kept

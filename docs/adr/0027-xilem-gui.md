@@ -1,4 +1,4 @@
-# ADR-0023: Xilem GUI
+# ADR-0027: Xilem GUI
 
 - Status: accepted (Wave 3, first milestone; Agent W3b)
 - Date: 2026-09-26

@@ -106,7 +106,7 @@ pub struct GuiOptions {
     pub theme: Option<String>,
 }
 
-/// Choices to compare by ear in a listening session (ADR-0023).
+/// Choices to compare by ear in a listening session (ADR-0027).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Experiments {
     /// While reading, select the spoken word instead of placing the caret

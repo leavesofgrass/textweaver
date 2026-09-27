@@ -140,6 +140,47 @@ pub(super) fn set_voice(name: &str) -> Result<(), String> {
     ok(unsafe { sys::espeak_SetVoiceByName(c.as_ptr()) }, "voice")
 }
 
+/// Translates UTF-8 `text` into IPA phonemes, clause by clause, for the
+/// voice selected with [`set_voice`]. Each clause's phonemes are returned
+/// in order; libespeak-ng drops the punctuation that ended each clause.
+pub(super) fn text_to_phonemes(text: &str) -> Result<Vec<String>, String> {
+    if !sys::has_text_to_phonemes() {
+        return Err("this libespeak-ng has no espeak_TextToPhonemes".to_owned());
+    }
+    let c = CString::new(text.replace('\0', " ")).map_err(|e| e.to_string())?;
+    let mut cursor: *const c_void = c.as_ptr().cast::<c_void>();
+    let mut clauses = Vec::new();
+    // A clause is at least one character, so the loop ends; the bound
+    // guards against a library that never advances the pointer.
+    for _ in 0..=text.len() {
+        if cursor.is_null() {
+            break;
+        }
+        // SAFETY: the engine is initialized (callers hold the engine lock
+        // after initializing it); `cursor` points into `c`, a
+        // NUL-terminated UTF-8 buffer that outlives the loop, and
+        // libespeak-ng only moves it forward within that buffer or sets it
+        // to null. The returned string is copied before the next call.
+        let out = unsafe {
+            sys::espeak_TextToPhonemes(
+                &raw mut cursor,
+                sys::espeakCHARS_UTF8 as c_int,
+                sys::espeakPHONEMES_IPA,
+            )
+        };
+        if out.is_null() {
+            break;
+        }
+        // SAFETY: a non-null result is a NUL-terminated string owned by
+        // libespeak-ng, valid until the next call.
+        let clause = unsafe { CStr::from_ptr(out) }
+            .to_string_lossy()
+            .into_owned();
+        clauses.push(clause);
+    }
+    Ok(clauses)
+}
+
 /// Parameters libespeak-ng takes.
 #[derive(Clone, Copy, Debug)]
 pub(super) enum Param {

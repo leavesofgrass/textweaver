@@ -1,5 +1,5 @@
 //! `cargo xtask gui-dist [--out DIR]`: the Xilem GUI's own package
-//! (ADR-0023, "Packaging").
+//! (ADR-0027, "Packaging").
 //!
 //! Builds `textweaver-xilem` with the `dist` profile and stages it as
 //! `textweaver-gui` with the licence, the third-party notices, the font

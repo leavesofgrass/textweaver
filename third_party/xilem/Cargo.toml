@@ -1,7 +1,7 @@
 # Vendored from https://github.com/linebender/xilem at revision
 # 271a27a6d4a930f7878d404f9014e3c50a3a9b88 (Monday, September 14, 2026), trimmed
 # to the crates textweaver-xilem uses, with textweaver's patch applied: see
-# TEXTWEAVER.md and textweaver.patch (ADR-0023).
+# TEXTWEAVER.md and textweaver.patch (ADR-0027).
 [workspace]
 resolver = "2"
 members = [

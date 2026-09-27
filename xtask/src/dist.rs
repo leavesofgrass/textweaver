@@ -52,7 +52,7 @@ pub(crate) fn features() -> String {
 const PROFILE: &str = "dist";
 /// Where the licence files of bundled data go in the package: (source,
 /// path in the package). The notices file itself goes at the top.
-const LICENCE_FILES: [(&str, &str); 5] = [
+const LICENCE_FILES: [(&str, &str); 7] = [
     (
         "third_party/fonts/atkinson-hyperlegible-next/OFL.txt",
         "licenses/fonts/atkinson-hyperlegible-next/OFL.txt",
@@ -70,7 +70,22 @@ const LICENCE_FILES: [(&str, &str); 5] = [
         "third_party/ibmtts-dictionaries/LICENSE.md",
         "licenses/ibmtts-dictionaries/LICENSE.md",
     ),
+    (
+        "third_party/lexicon/WORDNET-LICENSE",
+        "licenses/lexicon/WORDNET-LICENSE",
+    ),
+    (
+        "third_party/lexicon/CMUDICT-LICENSE",
+        "licenses/lexicon/CMUDICT-LICENSE",
+    ),
 ];
+/// Data files copied into the package: (source, path in the package). The
+/// define-word dictionary sits in `lexicon/` beside the programs, where
+/// `textweaver_lexicon::data_file_candidates` looks.
+const DATA_FILES: [(&str, &str); 1] = [(
+    "third_party/lexicon/lexicon-en.twlex",
+    "lexicon/lexicon-en.twlex",
+)];
 /// The two macOS targets joined by `--universal`.
 const MAC_TARGETS: [&str; 2] = ["aarch64-apple-darwin", "x86_64-apple-darwin"];
 /// Documents copied into the package: (source, name in the package).
@@ -275,7 +290,7 @@ pub(crate) fn stage(out: Option<PathBuf>, universal: bool) -> anyhow::Result<Sta
         eci::copy_dictionaries(&root, &stage)?;
     }
 
-    for (src, dest) in DOCS {
+    for (src, dest) in DOCS.iter().chain(DATA_FILES.iter()) {
         eci::copy(&root.join(src), &stage.join(dest))?;
     }
     stage_notices(&root, &stage)?;
@@ -594,6 +609,7 @@ mod tests {
         stage_notices(&root, &stage).unwrap();
         check_notices(&stage).unwrap();
         assert!(stage.join("licenses/scowl/Copyright").is_file());
+        assert!(stage.join("licenses/lexicon/WORDNET-LICENSE").is_file());
         assert!(stage.join("licenses/fonts/opendyslexic/OFL.txt").is_file());
         let _ = fs::remove_dir_all(&stage);
     }

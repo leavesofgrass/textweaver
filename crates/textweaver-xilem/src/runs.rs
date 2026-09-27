@@ -15,7 +15,7 @@
 //!
 //! Runs are keyed by their document start, so a run keeps its AccessKit id
 //! while its text stays put: moving the spoken word changes only the runs of
-//! the paragraph it is in (ADR-0023, "Stable run ids").
+//! the paragraph it is in (ADR-0027, "Stable run ids").
 
 use std::ops::Range;
 

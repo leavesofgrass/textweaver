@@ -15,7 +15,7 @@ use textweaver_app::text::Document;
 use crate::runs::{self, Paragraph};
 
 /// The GUI's window budget, in UTF-16 units. Chosen by measurement
-/// (ADR-0023, "Measurements"): large enough that reading rarely moves it,
+/// (ADR-0027, "Measurements"): large enough that reading rarely moves it,
 /// small enough that building its text runs stays well inside a frame.
 /// The app's default is 500,000.
 pub const WINDOW_UNITS: usize = 120_000;

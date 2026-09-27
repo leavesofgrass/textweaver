@@ -1,4 +1,4 @@
-//! textweaver's GUI on Masonry, Xilem's widget layer (ADR-0023).
+//! textweaver's GUI on Masonry, Xilem's widget layer (ADR-0027).
 //!
 //! The stack is all Rust: Masonry widgets, Vello rendering, Parley text
 //! layout, AccessKit accessibility, and winit windows. The app core

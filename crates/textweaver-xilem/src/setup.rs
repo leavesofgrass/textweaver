@@ -7,7 +7,7 @@
 //! by the caller), and the silent `paced` backend for automated runs.
 //!
 //! When Agent W3a's settings schema and non-blocking engine start land,
-//! `start_speech` should use them (ADR-0023, "Waiting on W3a").
+//! `start_speech` should use them (ADR-0027, "Waiting on W3a").
 
 use std::path::PathBuf;
 use std::time::Duration;

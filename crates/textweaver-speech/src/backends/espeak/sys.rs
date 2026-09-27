@@ -190,6 +190,11 @@ type SetParameterFn = unsafe extern "C" fn(espeak_PARAMETER, c_int, c_int) -> es
 type SetVoiceByNameFn = unsafe extern "C" fn(*const c_char) -> espeak_ERROR;
 type ListVoicesFn = unsafe extern "C" fn(*mut espeak_VOICE) -> *mut *const espeak_VOICE;
 type NoArgFn = unsafe extern "C" fn() -> espeak_ERROR;
+type TextToPhonemesFn = unsafe extern "C" fn(*mut *const c_void, c_int, c_int) -> *const c_char;
+
+/// `phonememode` bit for [`espeak_TextToPhonemes`]: IPA as UTF-8 instead
+/// of eSpeak's ASCII phoneme names.
+pub const espeakPHONEMES_IPA: c_int = 0x02;
 
 /// The libespeak-ng functions the backend calls, resolved once.
 struct Api {
@@ -203,6 +208,9 @@ struct Api {
     cancel: NoArgFn,
     synchronize: NoArgFn,
     terminate: NoArgFn,
+    /// `espeak_TextToPhonemes` (since eSpeak NG 1.49), for Piper's
+    /// phonemizer; `None` in a library too old to have it.
+    text_to_phonemes: Option<TextToPhonemesFn>,
     /// Keeps the library mapped: the function pointers above point into
     /// it. The `Api` lives in a static, so it is never unloaded.
     _library: Library,
@@ -261,6 +269,7 @@ impl Api {
                 cancel: symbol(&lib, "espeak_Cancel")?,
                 synchronize: symbol(&lib, "espeak_Synchronize")?,
                 terminate: symbol(&lib, "espeak_Terminate")?,
+                text_to_phonemes: symbol(&lib, "espeak_TextToPhonemes").ok(),
                 _library: lib,
             })
         }
@@ -441,6 +450,35 @@ pub unsafe fn espeak_Terminate() -> espeak_ERROR {
         Ok(a) => unsafe { (a.terminate)() },
         Err(_) => espeak_ERROR_EE_INTERNAL_ERROR,
     }
+}
+
+/// Translates the next clause at `*textptr` into phonemes and moves
+/// `*textptr` past it (to null after the last clause). Returns null when
+/// the library is missing or too old to have the function.
+///
+/// # Safety
+///
+/// As `espeak_TextToPhonemes`: the engine is initialized, `*textptr`
+/// points to a NUL-terminated string in the encoding `textmode` names, and
+/// the returned string is read before the next call.
+pub unsafe fn espeak_TextToPhonemes(
+    textptr: *mut *const c_void,
+    textmode: c_int,
+    phonememode: c_int,
+) -> *const c_char {
+    match api() {
+        // SAFETY: forwarded unchanged.
+        Ok(Api {
+            text_to_phonemes: Some(f),
+            ..
+        }) => unsafe { f(textptr, textmode, phonememode) },
+        _ => std::ptr::null(),
+    }
+}
+
+/// True when the loaded library has `espeak_TextToPhonemes`.
+pub fn has_text_to_phonemes() -> bool {
+    api().is_ok_and(|a| a.text_to_phonemes.is_some())
 }
 
 #[cfg(test)]

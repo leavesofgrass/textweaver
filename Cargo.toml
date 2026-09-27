@@ -30,10 +30,12 @@ members = [
     "crates/textweaver-aids",
     "crates/textweaver-dectalk",
     "crates/textweaver-fonts",
+    "crates/textweaver-lexicon",
     "crates/textweaver-engines",
+    "crates/textweaver-piper",
     "xtask",
 ]
-# The vendored Xilem and Masonry snapshot is its own workspace (ADR-0023).
+# The vendored Xilem and Masonry snapshot is its own workspace (ADR-0027).
 exclude = ["third_party/xilem"]
 default-members = [
     "crates/textweaver-core",
@@ -63,7 +65,9 @@ default-members = [
     "crates/textweaver-aids",
     "crates/textweaver-dectalk",
     "crates/textweaver-fonts",
+    "crates/textweaver-lexicon",
     "crates/textweaver-engines",
+    "crates/textweaver-piper",
 ]
 
 [workspace.package]
@@ -108,7 +112,9 @@ textweaver-theme = { path = "crates/textweaver-theme" }
 textweaver-aids = { path = "crates/textweaver-aids" }
 textweaver-dectalk = { path = "crates/textweaver-dectalk" }
 textweaver-fonts = { path = "crates/textweaver-fonts", default-features = false }
+textweaver-lexicon = { path = "crates/textweaver-lexicon" }
 textweaver-engines = { path = "crates/textweaver-engines" }
+textweaver-piper = { path = "crates/textweaver-piper", default-features = false }
 
 # text and formats
 ropey = "1.6"
@@ -179,7 +185,7 @@ ureq = { version = "3.4", default-features = false, features = ["rustls"] }
 # features today; they are off so none arrive unnoticed in an update.
 wxdragon = { version = "0.9", default-features = false }
 live-region = "0.3"
-# The Xilem GUI (Wave 3, textweaver-xilem only; ADR-0023). Masonry is
+# The Xilem GUI (Wave 3, textweaver-xilem only; ADR-0027). Masonry is
 # vendored from Xilem at revision 271a27a6d4a9 (Monday, September 14, 2026)
 # under third_party/xilem, patched to AccessKit 0.25 and accesskit_winit 0.34
 # so Orca detects the app. Default features off: the crate picks the Vello
@@ -195,6 +201,32 @@ unicode-width = "0.2"
 # Signals: Ctrl+C, SIGTERM, SIGHUP, and the Windows console closing
 # (the terminal reader saves and restores the terminal on each).
 ctrlc = { version = "3.4", features = ["termination"] }
+
+# Define word (Agent W3e): headwords in a finite-state map, entries in zstd
+# blocks, both pure Rust (docs/research/pure-rust-wave3.md).
+fst = "0.4.7"
+ruzstd = "0.9"
+# Wave 3, Agent W3f: Piper voices and Whisper dictation in-process on RTen,
+# the pure-Rust ONNX runtime (ADR-0023, docs/research/pure-rust-wave3.md).
+# `rten_format` (RTen's own model files) is off: the models are ONNX.
+# `random` is for the noise Piper's voice graphs draw (RandomNormalLike).
+rten = { version = "0.26", default-features = false, features = ["onnx_format", "contrib", "random"] }
+rten-tensor = "0.26"
+rten-generate = { version = "0.26", features = ["text-decoder"] }
+rten-text = "0.26"
+# Whisper's spectrogram (the FFT crate rten itself uses).
+rustfft = "6.4"
+# Pure-Rust eSpeak NG (GPL-3.0-or-later, as textweaver): Piper's phonemizer
+# when libespeak-ng is not installed. Only English data is embedded.
+espeak-ng = { version = "0.2", default-features = false, features = ["bundled-data-en"] }
+# Microphone dictation: voice activity detection (model built in) and
+# resampling to Whisper's 16 kHz.
+earshot = "1.2"
+rubato = "5.0"
+# Download checks: SHA-256 for Hugging Face LFS files, the git blob SHA-1
+# for the small files kept in git.
+sha2 = "0.10"
+sha1 = "0.10"
 
 # tests
 proptest = "1.11"
@@ -216,6 +248,27 @@ print_stderr = "allow"
 [profile.dev.package."*"]
 opt-level = 1
 
+# Neural models are unusably slow unoptimized (OCR detection takes 4.8 s in
+# debug and 0.11 s in release), so the runtime builds optimized in dev too.
+[profile.dev.package.rten]
+opt-level = 3
+[profile.dev.package.rten-tensor]
+opt-level = 3
+[profile.dev.package.rten-base]
+opt-level = 3
+[profile.dev.package.rten-gemm]
+opt-level = 3
+[profile.dev.package.rten-simd]
+opt-level = 3
+[profile.dev.package.rten-vecmath]
+opt-level = 3
+[profile.dev.package.rten-generate]
+opt-level = 3
+[profile.dev.package.rten-text]
+opt-level = 3
+[profile.dev.package.rustfft]
+opt-level = 3
+
 [profile.release]
 lto = "thin"
 codegen-units = 1
@@ -228,6 +281,6 @@ inherits = "release"
 lto = "fat"
 
 # Parley 0.8.0 with its `accesskit` feature moved to AccessKit 0.25, for the
-# vendored Masonry (ADR-0023). No other crate in the workspace uses Parley.
+# vendored Masonry (ADR-0027). No other crate in the workspace uses Parley.
 [patch.crates-io]
 parley = { path = "third_party/xilem/parley" }

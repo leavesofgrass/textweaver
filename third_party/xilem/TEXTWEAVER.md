@@ -1,6 +1,6 @@
 # Vendored Xilem and Masonry
 
-This folder is a trimmed copy of [Xilem](https://github.com/linebender/xilem), Linebender's all-Rust GUI toolkit, used by textweaver's GUI crate, `crates/textweaver-xilem`. The decision is [ADR-0023](../../docs/adr/0023-xilem-gui.md).
+This folder is a trimmed copy of [Xilem](https://github.com/linebender/xilem), Linebender's all-Rust GUI toolkit, used by textweaver's GUI crate, `crates/textweaver-xilem`. The decision is [ADR-0027](../../docs/adr/0027-xilem-gui.md).
 
 ## What is here
 
@@ -21,12 +21,12 @@ It is its own Cargo workspace. The root workspace excludes it (`exclude = ["thir
 4. **Parley 0.8.0**: its optional `accesskit` dependency moved from 0.24 to 0.25.1. No source changes were needed.
 5. Manifests: the removed crates, examples, tests, and benches are gone from the workspace member list and the crate manifests, so the copy builds without them.
 
-These are small enough to send upstream as one pull request: "Update to AccessKit 0.25 and accesskit_winit 0.34". See ADR-0023, "Upstream".
+These are small enough to send upstream as one pull request: "Update to AccessKit 0.25 and accesskit_winit 0.34". See ADR-0027, "Upstream".
 
 ## Updating
 
 1. Pick a new upstream revision and copy the crates listed above over this folder, leaving out the same things.
 2. Apply `textweaver.patch` (parts may already be upstream; drop those).
-3. Build and test `textweaver-xilem`, then regenerate the patch and update the revision here, in the workspace manifest's comment, and in ADR-0023.
+3. Build and test `textweaver-xilem`, then regenerate the patch and update the revision here, in the workspace manifest's comment, and in ADR-0027.
 
 The licences travel with the code: Xilem and Masonry are Apache-2.0 (`LICENSE`), Parley is Apache-2.0 or MIT (`parley/LICENSE-APACHE`, `parley/LICENSE-MIT`).

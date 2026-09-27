@@ -258,9 +258,9 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
 <script type="application/json" id="site-data">
 {
  "counts": {
-  "done": 43,
+  "done": 46,
   "not yet": 4,
-  "partial": 6
+  "partial": 7
  },
  "generator": "tools/gen_site_data.py",
  "groups": [
@@ -762,6 +762,46 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "not yet"
     },
     {
+     "description": "Definitions, examples, synonyms, and pronunciation for the word at the cursor, from your glossary and Open English WordNet, offline.",
+     "guide": {
+      "href": "../reading.md",
+      "title": "Reading and navigating guide"
+     },
+     "name": "Define a word",
+     "note": "Ctrl+Shift+D in the GUI, Alt+E in the terminal; tw define on the command line.",
+     "status": "done"
+    },
+    {
+     "description": "Time read aloud, the furthest point, and sessions for each document, with a most-read list.",
+     "guide": {
+      "href": "../reading.md",
+      "title": "Reading and navigating guide"
+     },
+     "name": "Reading statistics",
+     "note": "Ctrl+Shift+Y or Alt+Y; tw stats; off with [stats] enabled = false.",
+     "status": "done"
+    },
+    {
+     "description": "Named sets of voice, rate, theme, font, spacing, highlight, and access mode to switch between.",
+     "guide": {
+      "href": "../settings.md",
+      "title": "Settings guide"
+     },
+     "name": "Settings profiles",
+     "note": "Ctrl+Shift+U or Alt+U; tw settings profile.",
+     "status": "done"
+    },
+    {
+     "description": "textweaver's own words in other languages, with right-to-left support.",
+     "guide": {
+      "href": "../settings.md",
+      "title": "Settings guide"
+     },
+     "name": "Interface translations",
+     "note": "The message catalog, English, and test languages are in; translations come in Wave 4.",
+     "status": "partial"
+    },
+    {
      "description": "Save your settings and key changes as JSON, and load them on another computer.",
      "guide": {
       "href": "../settings.md",
@@ -866,7 +906,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "title": "Reading aids"
   }
  ],
- "total": 53
+ "total": 57
 }
 </script>
 <!-- END generated: site-data -->

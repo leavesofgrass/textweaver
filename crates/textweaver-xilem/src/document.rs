@@ -1,6 +1,6 @@
 //! `DocumentView`: the document as one focusable node for screen readers,
 //! drawn with Parley and Vello, written against Masonry and AccessKit
-//! directly (ADR-0023).
+//! directly (ADR-0027).
 //!
 //! - **Accessibility.** One node, role `Document` and read-only, whose
 //!   children are text runs of at most 255 characters ([`crate::runs`]).

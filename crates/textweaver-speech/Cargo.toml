@@ -25,7 +25,10 @@ default = []
 # (hand-written declarations in src/backends/espeak/sys.rs), never linked:
 # building needs no espeak-ng headers, and one binary works with or without
 # libespeak-ng installed (the backend is then unavailable).
-espeak = ["dep:libloading"]
+espeak = ["espeak-phonemes"]
+# libespeak-ng loaded the same way, for its text-to-phonemes call only
+# (Piper voices, textweaver-piper). Registers no espeak-ng backend.
+espeak-phonemes = ["dep:libloading"]
 # Omnivox subprocess backend (Emacspeak speech-server protocol on stdin).
 omnivox = []
 # speech-dispatcher through its SSIP socket, with SSML index marks for word

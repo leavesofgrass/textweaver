@@ -295,6 +295,16 @@ pub enum PromptPurpose {
     ImportReferences,
     /// Answer is the title of a new document from a template.
     TemplateTitle,
+    /// Answer is a word to define.
+    DefineWord,
+    /// Answer is the name of a new settings profile.
+    ProfileName,
+    /// Answer is the new name of a settings profile; empty keeps it.
+    RenameProfile,
+    /// Answer is a profile export to import.
+    ImportProfiles,
+    /// Answer is the file to export the profiles to (`.toml` for TOML).
+    ExportProfiles,
     /// Answer is a new value for the setting chosen in the settings list;
     /// empty keeps it.
     SettingValue,
@@ -326,6 +336,12 @@ impl PromptPurpose {
             PromptPurpose::ReferenceIdentifier => "DOI or ISBN to add",
             PromptPurpose::ImportReferences => "Import references from file",
             PromptPurpose::TemplateTitle => "Title of the new document",
+            // The app takes these from the message catalog.
+            PromptPurpose::DefineWord => "Define which word?",
+            PromptPurpose::ProfileName => "Name for the new profile",
+            PromptPurpose::RenameProfile => "New name for the profile, Enter keeps it",
+            PromptPurpose::ImportProfiles => "Import profiles from file",
+            PromptPurpose::ExportProfiles => "Export profiles to file",
             PromptPurpose::SettingValue => "New value, Enter keeps it",
         }
     }

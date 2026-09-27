@@ -4,7 +4,7 @@
 //! `search`, `speak`, `voices`, `backends`, `eloquence`, `convert` (with
 //! `convert_layout` for the PDF and EPUB layout flags), `export-audio`,
 //! `library`, `vault`, `dictate`, `marks`, `migrate-star`, `cite`,
-//! `settings`, and `serve`. Each module's docs name the ADR and crate it
+//! `settings` (with `profile`), `define`, `stats`, and `serve`. Each module's docs name the ADR and crate it
 //! wraps; the user guides are listed in `docs/README.md`.
 
 use anyhow::Result;
@@ -56,8 +56,12 @@ enum Cmd {
     MigrateStar(cmd::migrate::Args),
     /// Manage references: add by DOI or ISBN, import, export, format, list.
     Cite(cmd::cite::Args),
-    /// Export, import, locate, or reset settings and key overrides (JSON or TOML).
+    /// Export, import, locate, or reset settings and key overrides (JSON or TOML), and manage settings profiles.
     Settings(cmd::settings::Args),
+    /// Define words offline: your glossary, then Open English WordNet, with pronunciations.
+    Define(cmd::define::Args),
+    /// Reading statistics: time read aloud, the furthest point, and sessions per document.
+    Stats(cmd::stats::Args),
     /// Serve the app over JSON-RPC 2.0 on stdin and stdout, for editors and other tools.
     Serve(cmd::serve::Args),
 }
@@ -81,6 +85,8 @@ fn main() -> Result<()> {
         Cmd::MigrateStar(a) => cmd::migrate::run(a),
         Cmd::Cite(a) => cmd::cite::run(a),
         Cmd::Settings(a) => cmd::settings::run(a),
+        Cmd::Define(a) => cmd::define::run(a),
+        Cmd::Stats(a) => cmd::stats::run(a),
         Cmd::Serve(a) => cmd::serve::run(a),
     }
 }

@@ -1,4 +1,4 @@
-# The Xilem GUI (textweaver-xilem, ADR-0023) on Windows, macOS, and Linux:
+# The Xilem GUI (textweaver-xilem, ADR-0027) on Windows, macOS, and Linux:
 # build, clippy, tests, and the accessibility checks, which never take the
 # foreground and play no audio:
 # - Windows: the UI Automation report (tools/uia-report.ps1);

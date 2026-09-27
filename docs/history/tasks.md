@@ -618,7 +618,7 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
   - Produce screenshots (`--background --screenshot PATH` or a test helper) at 100% and 200% scale for review.
 - **Manual accessibility testing:** Jon tests with screen readers himself. Automated checks (the UI Automation report, AT-SPI dumps) still run in CI. After each milestone, write down exactly what Jon should try, with a short checklist.
 
-1. **ADR-0023, "Xilem GUI".** It supersedes ADR-0014 and records:
+1. **ADR-0027, "Xilem GUI"** (planned as ADR-0023; renumbered because main took 0023 to 0026). It supersedes ADR-0014 and records:
    - the choice;
    - the Xilem version pinned;
    - the accessibility bar;
@@ -696,6 +696,8 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 
 ### Agent W3e — Language and study aids (Phase 4)
 
+**Status (Saturday, September 26, 2026): done, on `wave3/e-lexicon-study`.** New crate `textweaver-lexicon`: define word offline (glossary, then Open English WordNet 2025 through morphy, with CMUdict pronunciations respelled), from `third_party/lexicon/lexicon-en.twlex` (9,988,663 bytes, fst plus ruzstd, built by `tools/build_lexicon.py`); and a Fluent-subset message catalog with English complete, `en-XA`, and `ar-XB` (ADR-0025). Store: `[lexicon]`, `[stats]`, `[interface]`, `profiles.toml`, `stats.json`, and Star's reading statistics imported. App: define word (Ctrl+Shift+D, Alt+E), profiles (Ctrl+Shift+U, Alt+U), statistics (Ctrl+Shift+Y, Alt+Y) on the existing list model. CLI: `tw define`, `tw stats`, `tw settings profile`. Left: the rest of the interface's strings into the catalog (W4d), the study lists into W3a's list model, loading the dictionary off the input thread, and Star's profiles import.
+
 **Owns:** a new `textweaver-lexicon` crate, plus the app wiring for its actions and store settings.
 
 1. **Define word, offline.**
@@ -720,6 +722,8 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
    - Actual translations come later.
 
 ### Agent W3f — Voices and speech (Phase 4)
+
+**Status (Saturday, September 26, 2026):** done on `wave3/f-voices`, not merged. Piper voices run in-process on RTen with word timing from `w_ceil` (real-time factor 0.13, first audio 77 to 284 ms, on a quiet machine); the voice manager lists every engine's voices with language and engine filters, downloads Piper voices after a yes with the licence said and every file hash-checked, and each voice keeps its own rate and pitch; Whisper base.en int8 runs in-process on RTen (`tw dictate`, microphone included), after a fix for RTen's int8 saturation on CPUs without VNNI; `cargo xtask listen` and a listening checklist in `docs/dev/releasing.md`. ADR-0023. candle was never built, so no candle feature exists. main (W3a, W3c) is merged in: Piper is registered in `textweaver-engines`, voice downloads sit behind the app's `publish` feature, and the voice manager uses W3a's list model. Native tests: 1,933 passed, 0 failed, 29 ignored.
 
 **Owns:** `crates/textweaver-speech` (new backends), a new `textweaver-piper` crate, and the voice manager in the app.
 
@@ -837,6 +841,7 @@ Wave 4 starts only after this pass is done. It has four steps.
 - **Disk and memory.**
   - Use one target directory, and build through the shared cache: `RUSTC_WRAPPER=sccache` is set for everyone.
   - Avoid extra release builds. Drive D: once filled up because of per-worktree build folders.
+  - Always prefix Docker commands in Git Bash with `MSYS_NO_PATHCONV=1`. Without it, `-e CARGO_TARGET_DIR=/target/<agent>` becomes a Windows path, and build files were committed under a junk `C:/Program Files/Git/target` folder.
   - Run the Docker check once, at the end. Never restart Docker yourself: force-quitting it crashed Docker Desktop, and the orchestrator restarts it between waves.
 - **Research sub-agents.** Don't spawn nested research agents: their reports went to the orchestrator, not to the agent that asked. Do the research yourself, or ask the orchestrator.
 - **Reports.** Keep reports plain and short: headings and lists, no tables. Name what could not be verified. Add your status line in `docs/history/tasks.md`.

@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-xilem"
-description = "textweaver's all-Rust GUI on Masonry (Xilem's widget layer), Vello, Parley, AccessKit, and winit (ADR-0023)"
+description = "textweaver's all-Rust GUI on Masonry (Xilem's widget layer), Vello, Parley, AccessKit, and winit (ADR-0027)"
 version.workspace = true
 edition.workspace = true
 rust-version = "1.96"
@@ -11,7 +11,7 @@ publish.workspace = true
 
 # Not a default member yet: Vello and wgpu add a few minutes to a cold build.
 # Build with `cargo build -p textweaver-xilem`. It becomes `textweaver-gui`
-# once it passes the UI Automation report (ADR-0023).
+# once it passes the UI Automation report (ADR-0027).
 
 [[bin]]
 name = "textweaver-xilem"
