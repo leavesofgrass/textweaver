@@ -873,35 +873,96 @@ Wave 4 starts only after this pass is done. It has four steps.
 
 Run it in **two groups of five**, with a listed flush of merged build output between them. At Wave 3's measured sizes, nine agents' build folders could take up to about 360 GB and push D: through its 200 GB floor.
 
-Group 1 starts when Jon says go:
-1. **W4h, terminal polish (new, P1).** UX-1's top findings from `docs/research/usability-terminal.md`:
-   - key names in spoken form for textweaver's own voice;
-   - "say status" and "repeat last message" actions;
-   - "Ready" before the first play;
-   - Escape in edit mode saying how to finish;
-   - announcements queued until the speech engine is ready;
-   - `--json` output of `tw search` and `tw info` no longer panicking on a closed pipe.
-2. **W4a1, GUI edit mode and reading aids (P1).** As below. Add the direct UI Automation notification option for JAWS.
-3. **W4b, speed and memory (P1).** As below. Add finding the cause of the Xilem GUI's memory growth (172 to 187 MB, against 98 MB earlier).
-4. **W4g, authoring extras (P1).** The "Also for Wave 4" list at the end of this section.
-5. **W4c1, MathCAT (P2).** As below.
+This plan folds in the Fable review (`docs/research/wave4-plan-review.md`), adopted by Jon on Sunday, September 27, 2026. Where a brief below disagrees with this plan, this plan wins.
 
-Group 2:
-6. **W4a2, GUI parity and wx removal (P2).** Starts only after Jon's NVDA and JAWS session on the Xilem GUI (checklist under Agent W3b).
-7. **W4c2, documents (P2).**
-8. **W4f, platforms and CI (P3).** Add the six new W3d fuzz targets to the nightly workflow, and the first GUI packages for macOS and Linux. **Branch pruning is removed** from this agent. It happens only after a wave is complete, and only with Jon's approval.
+**Before Group 1 (orchestrator):**
+- Add the six W3d fuzz targets (`daisy`, `pptx`, `sheet`, `archive`, `image`, `web`) to the nightly workflow, with their corpus lines. Only the orchestrator or W4f may edit `.github/`.
+- Confirm `cargo xtask notices --check` passes on main.
+
+**Group 1 (starts when Jon says go):**
+1. **W4h, terminal polish (P1, new).** Small commits, merged first; W4g starts from W4h's merged work.
+   - UX-1's top findings from `docs/research/usability-terminal.md`:
+     - key names in spoken form for textweaver's own voice;
+     - "say status" and "repeat last message" actions;
+     - Escape in edit mode saying how to finish;
+     - announcements queued until the speech engine is ready. These are W4h's, not W4b's. After the change, run `cargo xtask listen` and report the result.
+   - Quick wins:
+     - "Ready" on the title line until the first play, instead of "Stopped";
+     - `tw search --json` and `tw info --json` on a closed pipe, through `print_all`;
+     - a two-line hint for `tw` with no arguments;
+     - the command palette's opening sentence;
+     - a key that repeats an open list's introduction;
+     - the quick start's `q` line;
+     - `py -3` in `CONTRIBUTING.md`, `docs/dev/testing.md`, `docs/dev/building.md`, and this file's date command.
+   - A test that every key named in a spoken message comes from the keymap, not from a fixed string.
+   - New keys go through the keymap conflict and reachability tests, WCAG 2.1.4, and Windows Terminal's taken keys.
+2. **W4b, speed and memory (P1).**
+   - Provide a peak-allocation counter behind a feature, and the `--log` numbers. W4a1 fixes the GUI's memory growth with them.
+   - Measure ropey 2.0.0-beta.1 and crop 0.4.3 on the edit traces and report the numbers. **Don't change the rope in Wave 4;** that's a Wave 5 ADR.
+   - The rustls-graviola TLS item is dropped.
+   - Make the zip feature change in one early commit, and tell W4c2.
+   - Startup announcements are W4h's; don't touch `launch`.
+   - Run new timing tests 40 times while another build is running.
+3. **W4c1, MathCAT (P2).** Independent of the other Group 1 agents, so it takes the fifth slot from the start.
+   - MathCAT 0.7.6 has no final release, so use 0.7.6-rc.3 behind the feature and record the version in the ADR.
+   - Do speech first. Add braille only if MathCAT issue #827 (a panic in `GetNavigationBraille` in no-unsafe builds) is closed, because this workspace denies unsafe code.
+   - EPUB 3 MathML is W4c1's; W4c2 leaves the EPUB loader alone.
+   - ADR 0029.
+4. **W4a1, GUI accessibility first, then reading aids and edit mode (P1).** In this order:
+   1. The direct `UiaRaiseNotificationEvent` option for JAWS.
+   2. The fix for clipped options in `ChoiceList` and `SettingsGrid`, so options scrolled out of view stay in the accessibility tree. This is a listed exception to W4a2 owning the dialogs.
+   3. The GUI's memory growth (98 to 172–187 MB), first measured with the engines and `publish` off, using W4b's tools. The likely cause is engines and data loaded at startup instead of on first use.
+   4. **Merge 1 to 3 and tell the orchestrator,** who builds the GUI for Jon's NVDA and JAWS session while W4a1 continues.
+   5. The reading aids.
+   6. Edit mode, on the vendored Parley 0.8.0. Don't upgrade it.
+
+   The RSVP word node never has a live setting and never takes focus; test that. Parity and the wxDragon removal belong to W4a2. ADR 0028.
+5. **W4g, authoring extras (P1).** Starts from main after W4h merges.
+   - **harper-core** 2.11.0 behind a `grammar` feature, with `thesaurus` off, and the binary size measured before and after.
+   - **rumdl** 0.2.77 (`rumdl_lib`) behind a feature, pinned exactly, with a fixed rule set. If its size or API churn is too much, write our own lint for the rules a blind author needs, and say which in the report.
+   - **syntect** 5.3 with `default-features = false, features = ["default-fancy"]`, and **two-face** 0.5.2 with `syntect-fancy`. The defaults build the Oniguruma C library.
+   - **arboard**, with `wayland-data-control` on Linux.
+   - Unicode math in the plain reading view.
+   - Notes export to BibTeX, RIS and JSON, using the citation crate's record types.
+
+**Group 2** (after a listed flush of Group 1's merged build volumes):
+6. **W4a2, GUI parity and wx removal (P2).** Starts only after Jon's session.
+   - First: a window slide during reading keeps the screen reader's place. Check it with the UI Automation report, and put it first on Jon's second checklist.
+   - Parity means Star's features, not Star's bugs; the Phase 0 inventory lists the bugs.
+   - A test that the first nine themes keep their cycle order.
+7. **W4c2, documents (P2).** Merge main after W4b's zip commit lands. Leave the EPUB loader alone.
+8. **W4f, platforms and CI (P3).**
+   - Do the six fuzz targets, if they weren't done before launch.
+   - The first GUI packages for macOS and Linux.
+   - A doc pass against the code, file by file, before release notes.
+   - **Branch pruning is removed.** It happens only after a wave is complete, and only with Jon's approval.
 9. **W4d, translations (P3).**
-10. **W4e, offline intelligence (P3, experimental).**
+   - Extend W3e's Fluent-subset catalog (`textweaver_lexicon::i18n`, ADR-0025) first. Switch to `fluent-bundle` only if a language needs attributes, functions or number formatting, and record that as a status update on ADR-0025.
+   - A missing voice for a language keeps the current voice and says so; never go silent.
+   - A language change applies live, with no restart.
+   - The first-run language choice and per-language voices are settings, so they touch the four places.
+   - ADR 0030.
+10. **W4e, offline intelligence (P3, experimental; the first to cut if Group 2 needs the disk or attention).**
+    - The no-model LexRank summary first.
+    - Translation only if there's disk to spare, and only with models Jon has approved.
+    - Pin `tokenizers` to 0.23, since 1.0 is at release candidate.
+    - ADR 0031.
 
-Rules added for every Wave 4 agent (see `CLAUDE.md`):
+**Rules for every Wave 4 agent** (see `CLAUDE.md`):
 - **Only the owner overrides rules.**
 - **Deleting from Bash** is a last resort that needs the owner's approval. Use PowerShell's `Remove-Item -LiteralPath`.
+  - Never chain a delete onto another command.
+  - Never hand-type an escaped file name; use `git rm` or `git clean`, and show the owner first.
 - **Work only in your own worktree and build folder.**
-- **Docker is allowed, but mind the disk.**
-  - Check D:'s free space and `docker system df` before a Docker run.
-  - Run the Docker check once, at the end.
-  - Stop if D: is near 200 GB free.
-  - The orchestrator clears merged agents' Docker build output after listing it.
+- **Develop in the container** (`docs/dev/docker.md`), so shell commands stay off the host.
+  - Use `TW_AGENT=<agent>`, so you get your own `tw-target-<agent>` volume.
+  - Each container gets 8 GB of RAM and 6 CPUs, and shares the 30 GB compile cache.
+  - Check D:'s free space and `docker system df` before heavy runs, and stop if D: is near 200 GB free.
+  - **Never delete inside a Docker volume.** The orchestrator lists and removes merged agents' volumes.
+- **The heavy all-features Docker check is the orchestrator's,** run one agent at a time at integration. Agents run the native checks, plus their own crates' tests in the container.
+- **ADR numbers:** W4a1 0028, W4c1 0029, W4d 0030, W4e 0031. `CHANGELOG.md` entries go under a heading with your agent's name.
+- **Dates:** on Windows, run `py -3 -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"`. `python` on this machine is the Windows Store stub.
+- **Every report ends with a checklist** of at most five things for Jon to try with NVDA and JAWS, or the line "nothing to hear".
 
 **Earlier layout: nine agents (Jon, 2026-09-26: use more resources), superseded by the refined plan above.** The briefs below were split like this:
 1. **W4a1, GUI edit mode and reading aids.** From W4a: edit mode in `DocumentView`, the reading aids in the GUI, and the research notes on editable text, RSVP overlays, and announcements.
