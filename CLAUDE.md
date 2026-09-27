@@ -32,7 +32,7 @@ On Saturday, September 26, 2026 an agent ran a delete, without thinking and with
 1. Delete only what this project's own work created and no longer needs, such as build output, finished worktrees, and scratch files. If a delete has nothing to do with the task at hand, don't do it.
 2. Before any delete, list exactly what the command will remove, using the same path, and read that list. If it shows anything you did not expect, stop.
 3. Use plain, literal paths inside the project. Never put `$'...'` escapes, `~`, `$HOME`, `$env:`, `%USERPROFILE%`, a drive letter other than `D:\textweaver` or `D:\recovery`, or `..` in a delete.
-4. **Never delete files from Bash.** Git Bash rewrites paths before Windows sees them, and that is how a folder named "C" plus a hidden character became `C:`. Delete only with PowerShell's `Remove-Item -LiteralPath` and a full literal path. The guard blocks `rm`, `rmdir`, `unlink`, `shred` and `find -delete` in Bash. `git rm` still works in Bash, because it acts on git's index by name.
+4. **Deleting from Bash is a last resort, and needs the owner's approval.** Git Bash rewrites paths before Windows sees them, and that is how a folder named "C" plus a hidden character became `C:`. Delete with PowerShell's `Remove-Item -LiteralPath` and a full literal path. The guard asks the owner before any `rm`, `rmdir`, `unlink`, `shred` or `find -delete` in Bash, and refuses any that reach outside the project. `git rm` still works in Bash, because it acts on git's index by name.
 5. Never chain a delete onto another command. Run it by itself, so it is seen and checked.
 6. To remove an oddly named file in the repo, use `git rm` or `git clean`, never a hand-typed escaped name.
 

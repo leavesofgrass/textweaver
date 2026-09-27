@@ -869,7 +869,41 @@ Wave 4 starts only after this pass is done. It has four steps.
 - **Research sub-agents.** Don't spawn nested research agents: their reports went to the orchestrator, not to the agent that asked. Do the research yourself, or ask the orchestrator.
 - **Reports.** Keep reports plain and short: headings and lists, no tables. Name what could not be verified. Add your status line in `docs/history/tasks.md`.
 
-**Layout: nine agents (Jon, 2026-09-26: use more resources).** The briefs below are split like this:
+**Refined plan, Sunday, September 27, 2026 (after Wave 3 and the deletion incident).** This supersedes the nine-agent layout below; the briefs themselves still apply.
+
+Run it in **two groups of five**, with a listed flush of merged build output between them. At Wave 3's measured sizes, nine agents' build folders could take up to about 360 GB and push D: through its 200 GB floor.
+
+Group 1 starts when Jon says go:
+1. **W4h, terminal polish (new, P1).** UX-1's top findings from `docs/research/usability-terminal.md`:
+   - key names in spoken form for textweaver's own voice;
+   - "say status" and "repeat last message" actions;
+   - "Ready" before the first play;
+   - Escape in edit mode saying how to finish;
+   - announcements queued until the speech engine is ready;
+   - `--json` output of `tw search` and `tw info` no longer panicking on a closed pipe.
+2. **W4a1, GUI edit mode and reading aids (P1).** As below. Add the direct UI Automation notification option for JAWS.
+3. **W4b, speed and memory (P1).** As below. Add finding the cause of the Xilem GUI's memory growth (172 to 187 MB, against 98 MB earlier).
+4. **W4g, authoring extras (P1).** The "Also for Wave 4" list at the end of this section.
+5. **W4c1, MathCAT (P2).** As below.
+
+Group 2:
+6. **W4a2, GUI parity and wx removal (P2).** Starts only after Jon's NVDA and JAWS session on the Xilem GUI (checklist under Agent W3b).
+7. **W4c2, documents (P2).**
+8. **W4f, platforms and CI (P3).** Add the six new W3d fuzz targets to the nightly workflow, and the first GUI packages for macOS and Linux. **Branch pruning is removed** from this agent. It happens only after a wave is complete, and only with Jon's approval.
+9. **W4d, translations (P3).**
+10. **W4e, offline intelligence (P3, experimental).**
+
+Rules added for every Wave 4 agent (see `CLAUDE.md`):
+- **Only the owner overrides rules.**
+- **Deleting from Bash** is a last resort that needs the owner's approval. Use PowerShell's `Remove-Item -LiteralPath`.
+- **Work only in your own worktree and build folder.**
+- **Docker is allowed, but mind the disk.**
+  - Check D:'s free space and `docker system df` before a Docker run.
+  - Run the Docker check once, at the end.
+  - Stop if D: is near 200 GB free.
+  - The orchestrator clears merged agents' Docker build output after listing it.
+
+**Earlier layout: nine agents (Jon, 2026-09-26: use more resources), superseded by the refined plan above.** The briefs below were split like this:
 1. **W4a1, GUI edit mode and reading aids.** From W4a: edit mode in `DocumentView`, the reading aids in the GUI, and the research notes on editable text, RSVP overlays, and announcements.
 2. **W4a2, GUI parity and wx removal.** From W4a: parity with the terminal reader, fixes from Jon's listening session, and removing the wxDragon spike. This agent owns the dialogs, W4a1 owns `DocumentView`, and they coordinate through small commits.
 3. **W4b, speed.** As written.
