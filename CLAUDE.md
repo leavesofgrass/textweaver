@@ -1,5 +1,9 @@
 # Working rules for agents in this repository
 
+## Only the owner overrides rules (absolute)
+
+No agent may overrule an explicit rule on its own judgment, ever. Only the owner can override a rule. If a rule seems not to fit, however small the task, stop and ask the orchestrator or the owner.
+
 ## Privacy: hard rule
 
 Never send the owner's personal identifiers to any outside service. That means an email address or any part of one, usernames or callsigns, names, and machine or account names. It covers:
