@@ -258,8 +258,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
 <script type="application/json" id="site-data">
 {
  "counts": {
-  "done": 46,
-  "not yet": 4,
+  "done": 48,
+  "not yet": 3,
   "partial": 7
  },
  "generator": "tools/gen_site_data.py",
@@ -392,14 +392,24 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "partial"
     },
     {
-     "description": "Reading DAISY books, scanned pages, archives, and PowerPoint files.",
+     "description": "DAISY 3 books and Bookshare zips, slides with speaker notes, CSV and Excel as tables, zip, tar, and 7z archives, and web addresses.",
      "guide": {
-      "href": "../star-gaps.md",
-      "title": "What Star did that textweaver does not do yet"
+      "href": "../converting.md",
+      "title": "Converting documents guide"
      },
-     "name": "DAISY, OCR of scans, archives, and PPTX",
-     "note": "Planned for Wave 3, OCR with the pure-Rust ocrs engine first.",
-     "status": "not yet"
+     "name": "DAISY, PowerPoint, spreadsheets, archives, and web pages",
+     "note": "Built in; web addresses open with tw.",
+     "status": "done"
+    },
+    {
+     "description": "Scanned PDFs and pictures are recognized: English in process with ocrs, other languages with Tesseract.",
+     "guide": {
+      "href": "../converting.md",
+      "title": "Converting documents guide"
+     },
+     "name": "Scanned pages (OCR)",
+     "note": "A one-time 12.2 MB model download (tw ocr download); Tesseract for other languages.",
+     "status": "done"
     }
    ],
    "name": "Formats read"
@@ -906,7 +916,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "title": "Reading aids"
   }
  ],
- "total": 57
+ "total": 58
 }
 </script>
 <!-- END generated: site-data -->

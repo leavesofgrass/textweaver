@@ -459,9 +459,32 @@ pub struct ReadingSettings {
     /// page 12"). Word moves and the link address key say them in words
     /// either way.
     pub citations: CitationReading,
+    /// Recognize the text of scanned pages and pictures (OCR; ADR-0026).
+    pub ocr: bool,
+    /// The language of scanned text: Tesseract codes (`fra`, `deu+eng`)
+    /// or language tags (`fr`); empty means the document's own language,
+    /// else English.
+    pub ocr_lang: String,
+    /// Which OCR engine reads scanned pages.
+    pub ocr_engine: OcrEngine,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
+}
+
+/// `[reading] ocr_engine`: which engine recognizes scanned pages.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum OcrEngine {
+    /// ocrs (in process) for English, Tesseract for other languages.
+    #[default]
+    Auto,
+    /// Always ocrs.
+    Ocrs,
+    /// Always Tesseract.
+    Tesseract,
+    /// PaddleOCR's Latin model (experimental).
+    Paddle,
 }
 
 impl Default for ReadingSettings {
@@ -473,6 +496,9 @@ impl Default for ReadingSettings {
             cursor_follows_speech: true,
             sync_conflict_policy: ConflictPolicy::default(),
             citations: CitationReading::Off,
+            ocr: true,
+            ocr_lang: String::new(),
+            ocr_engine: OcrEngine::Auto,
             extra: toml::Table::new(),
         }
     }

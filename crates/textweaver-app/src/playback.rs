@@ -138,7 +138,24 @@ pub fn load_options(settings: &textweaver_store::Settings) -> textweaver_formats
             FootnoteMode::Deferred => Load::Deferred,
             FootnoteMode::Skip => Load::Skip,
         },
+        ocr: ocr_options(&settings.reading),
         ..textweaver_formats::LoadOptions::default()
+    }
+}
+
+/// OCR from `[reading]`: `ocr`, `ocr_lang`, and `ocr_engine` (ADR-0026).
+fn ocr_options(reading: &textweaver_store::ReadingSettings) -> textweaver_formats::OcrOptions {
+    use textweaver_formats::OcrEngineChoice as Choice;
+    use textweaver_store::OcrEngine;
+    textweaver_formats::OcrOptions {
+        enabled: reading.ocr,
+        lang: reading.ocr_lang.trim().to_owned(),
+        engine: match reading.ocr_engine {
+            OcrEngine::Auto => Choice::Auto,
+            OcrEngine::Ocrs => Choice::Ocrs,
+            OcrEngine::Tesseract => Choice::Tesseract,
+            OcrEngine::Paddle => Choice::Paddle,
+        },
     }
 }
 
@@ -813,6 +830,22 @@ impl App {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn ocr_settings_come_from_the_reading_section() {
+        let mut settings = textweaver_store::Settings::default();
+        assert_eq!(
+            super::load_options(&settings).ocr,
+            textweaver_formats::OcrOptions::default()
+        );
+        settings.reading.ocr = false;
+        settings.reading.ocr_lang = " fra+eng ".into();
+        settings.reading.ocr_engine = textweaver_store::OcrEngine::Tesseract;
+        let o = super::load_options(&settings).ocr;
+        assert!(!o.enabled);
+        assert_eq!(o.lang, "fra+eng");
+        assert_eq!(o.engine, textweaver_formats::OcrEngineChoice::Tesseract);
+    }
+
     use super::*;
 
     #[test]

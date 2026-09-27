@@ -4,7 +4,7 @@
 //! `search`, `speak`, `voices`, `backends`, `eloquence`, `convert` (with
 //! `convert_layout` for the PDF and EPUB layout flags), `export-audio`,
 //! `library`, `vault`, `dictate`, `marks`, `migrate-star`, `cite`,
-//! `settings` (with `profile`), `define`, `stats`, and `serve`. Each module's docs name the ADR and crate it
+//! `settings` (with `profile`), `define`, `stats`, `serve`, and `ocr`. Each module's docs name the ADR and crate it
 //! wraps; the user guides are listed in `docs/README.md`.
 
 use anyhow::Result;
@@ -64,6 +64,8 @@ enum Cmd {
     Stats(cmd::stats::Args),
     /// Serve the app over JSON-RPC 2.0 on stdin and stdout, for editors and other tools.
     Serve(cmd::serve::Args),
+    /// Text recognition for scanned pages: engine status, model downloads, and reading a scan.
+    Ocr(cmd::ocr::Args),
 }
 
 fn main() -> Result<()> {
@@ -88,5 +90,6 @@ fn main() -> Result<()> {
         Cmd::Define(a) => cmd::define::run(a),
         Cmd::Stats(a) => cmd::stats::run(a),
         Cmd::Serve(a) => cmd::serve::run(a),
+        Cmd::Ocr(a) => cmd::ocr::run(a),
     }
 }

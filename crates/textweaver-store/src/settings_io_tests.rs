@@ -79,6 +79,9 @@ fn everything_changed() -> Settings {
     r.cursor_follows_speech = false;
     r.sync_conflict_policy = ConflictPolicy::Manual;
     r.citations = crate::CitationReading::Words;
+    r.ocr = false;
+    r.ocr_lang = "fra+eng".into();
+    r.ocr_engine = crate::OcrEngine::Tesseract;
     let d = &mut s.display;
     d.theme = "nord".into();
     d.wrap_width = 100;

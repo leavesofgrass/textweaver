@@ -26,13 +26,22 @@
 //!    heading, paragraph, list, table, code, and image markers.
 //!
 //! A page whose content cannot be parsed is skipped, never fatal; a
-//! password-protected PDF is refused with a clear message; a PDF with no
-//! text layer (a scan) loads as one sentence saying so.
+//! password-protected PDF is refused with a clear message.
+//!
+//! Pages with no text but a picture (scans) are recognized by OCR (feature
+//! `ocr`, ADR-0026; see `ocr`): the recognized words are placed on the page
+//! as glyphs and go through the same layout. Without OCR, or when no
+//! engine can run, a PDF with no text layer loads as one sentence saying
+//! so and what is missing.
 
 mod fonts;
+#[cfg(feature = "ocr")]
+pub mod image;
 mod interp;
 mod layout;
 mod metrics;
+#[cfg(feature = "ocr")]
+mod ocr;
 mod structure;
 
 use std::collections::HashMap;
@@ -40,7 +49,7 @@ use std::collections::HashMap;
 use lopdf::{Dictionary, Object, ObjectId};
 use ropey::Rope;
 use textweaver_core::MarkerKind;
-use textweaver_text::Document;
+use textweaver_text::{Document, DocumentMeta};
 
 use crate::builder::Builder;
 use crate::{LoadError, LoadOptions, Loader, Source, meta_for, title_from_path};
@@ -65,7 +74,7 @@ impl Loader for PdfLoader {
         crate::NATIVE_PRIORITY
     }
 
-    fn load(&self, source: &Source, _options: &LoadOptions) -> Result<Document, LoadError> {
+    fn load(&self, source: &Source, options: &LoadOptions) -> Result<Document, LoadError> {
         let bytes = source.read()?;
         let mut pdf = lopdf::Document::load_mem(&bytes)
             .map_err(|e| LoadError::Parse(format!("not a readable PDF: {e}")))?;
@@ -76,7 +85,7 @@ impl Loader for PdfLoader {
         }
         let mut meta = meta_for(source, self.id());
         read_info(&pdf, &mut meta);
-        let (text, markers, pages) = convert(&pdf);
+        let (text, markers, pages) = convert(&pdf, &bytes, options, &mut meta);
         meta.properties.insert("pages".into(), pages.to_string());
         if meta.title.is_none() {
             meta.title = markers
@@ -94,60 +103,102 @@ impl Loader for PdfLoader {
     }
 }
 
-/// Converts a loaded PDF to canonical text and markers; also returns the
-/// page count.
-fn convert(pdf: &lopdf::Document) -> (String, Vec<textweaver_text::Marker>, usize) {
+/// Converts a loaded PDF to canonical text and markers, recognizing the
+/// text of pages that have none (feature `ocr`); also returns the page
+/// count.
+fn convert(
+    pdf: &lopdf::Document,
+    #[cfg_attr(not(feature = "ocr"), allow(unused_variables))] bytes: &[u8],
+    #[cfg_attr(not(feature = "ocr"), allow(unused_variables))] options: &LoadOptions,
+    #[cfg_attr(not(feature = "ocr"), allow(unused_variables))] meta: &mut DocumentMeta,
+) -> (String, Vec<textweaver_text::Marker>, usize) {
     let page_ids: Vec<ObjectId> = pdf.get_pages().into_values().collect();
     let tags = Tags::read(pdf);
     let mut fonts = interp::FontCache::default();
-    let mut pages = Vec::with_capacity(page_ids.len());
+    let mut contents = Vec::with_capacity(page_ids.len());
     let mut roles: HashMap<(usize, u32), String> = HashMap::new();
-    let mut any_text = false;
     for (i, &id) in page_ids.iter().enumerate() {
         let run = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             interp::run_page(pdf, id, &mut fonts)
         }));
-        let content = run.unwrap_or_default();
-        any_text |= !content.glyphs.is_empty();
-        let alts: HashMap<u32, String> = tags
-            .alts
-            .iter()
-            .filter(|((p, _), _)| *p == id)
-            .map(|((_, m), a)| (*m, a.clone()))
-            .collect();
+        contents.push(run.unwrap_or_else(|_| interp::PageContent {
+            failed: true,
+            ..interp::PageContent::default()
+        }));
         for ((p, m), r) in &tags.roles {
             if *p == id {
                 roles.insert((i, *m), r.clone());
             }
         }
-        pages.push(layout::layout(&content, &alts));
     }
-    if !any_text {
+    // Pages with no text but a picture (a scan), or that could not be
+    // interpreted; an empty page has nothing to recognize.
+    let blank: Vec<usize> = (0..contents.len())
+        .filter(|&i| {
+            let c = &contents[i];
+            c.glyphs.is_empty() && (!c.images.is_empty() || c.failed)
+        })
+        .collect();
+    #[cfg_attr(not(feature = "ocr"), allow(unused_mut))]
+    let mut no_text = NO_TEXT_LAYER.to_owned();
+    #[cfg(feature = "ocr")]
+    if !blank.is_empty() && options.ocr.enabled {
+        let lang = meta.language.clone();
+        let outcome = ocr::recognize_pages(bytes, &mut contents, &blank, lang.as_deref(), options);
+        if let Some(sentence) = outcome.report(meta, contents.len(), &blank) {
+            no_text = sentence;
+        }
+    }
+    if contents.iter().all(|c| c.glyphs.is_empty()) {
         let text = if page_ids.is_empty() {
             String::new()
         } else {
-            NO_TEXT_LAYER.to_owned()
+            no_text
         };
         return (text, Vec::new(), page_ids.len());
     }
+    let pages: Vec<layout::Page> = contents
+        .iter()
+        .zip(&page_ids)
+        .map(|(content, id)| {
+            let alts: HashMap<u32, String> = tags
+                .alts
+                .iter()
+                .filter(|((p, _), _)| p == id)
+                .map(|((_, m), a)| (*m, a.clone()))
+                .collect();
+            layout::layout(content, &alts)
+        })
+        .collect();
+    let labels = page_labels(pdf, page_ids.len());
+    let outline = read_outline(pdf);
+    let (text, markers) = build(pages, &roles, &outline, &labels);
+    (text, markers, page_ids.len())
+}
+
+/// Laid-out pages as canonical text and markers: running heads removed,
+/// reading order, structure, and the page and section markers.
+fn build(
+    mut pages: Vec<layout::Page>,
+    roles: &HashMap<(usize, u32), String>,
+    outline: &[(String, usize, u8)],
+    labels: &[String],
+) -> (String, Vec<textweaver_text::Marker>) {
     layout::remove_running(&mut pages);
     for p in &mut pages {
         layout::order(p);
     }
     let (body_size, body_bold) = layout::body_style(&pages);
-    let outline = read_outline(pdf);
     let cx = structure::Context {
         body_size,
         body_bold,
-        roles: &roles,
-        outline: &outline,
+        roles,
+        outline,
     };
     let (units, sections) = structure::units(&pages, &cx);
     let mut b = Builder::new();
-    let labels = page_labels(pdf, page_ids.len());
-    structure::emit(&mut b, &units, &sections, &outline, &labels);
-    let (text, markers) = b.finish();
-    (text, markers, page_ids.len())
+    structure::emit(&mut b, &units, &sections, outline, labels);
+    b.finish()
 }
 
 fn text_of(pdf: &lopdf::Document, o: &Object) -> Option<String> {

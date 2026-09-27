@@ -1,0 +1,8 @@
+Lecture des pages numérisées
+Une page numérisée est une image du texte. Avant qu'un ordinateur
+puisse la lire à voix haute, chaque lettre doit être reconnue. Les
+élèves français écrivent « déjà », « où », « été » et « Noël » avec
+des accents, et une reconnaissance limitée à l'anglais les perd.
+Ce qui aide
+Des numérisations nettes, des pages droites et une encre foncée sur
+un papier blanc améliorent la qualité de la reconnaissance.

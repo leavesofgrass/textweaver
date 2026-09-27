@@ -672,6 +672,8 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 
 ### Agent W3d — Formats for students (Phase 4)
 
+**Status (Saturday, September 26, 2026): done, on `worktree-agent-a4ac0c5fbef60676c` (W3d's work, finished by W3d-3), main merged in; ADR-0026.** OCR in process with ocrs on RTen (a scanned page's one image taken straight out with hayro's interpreter, else the page rendered with hayro), accented and non-English text routed to Tesseract, and PaddleOCR PP-OCRv5 Latin through RTen as an experimental engine; Tesseract found on `PATH` or in its install folders; per-page progress and cancel; clear messages when models or Tesseract are missing. DAISY 3, DTBook, and Bookshare zips; zip, tar, tar.gz, and 7z with `book.zip!inner.pdf` paths; web addresses (`url` feature, in `tw`); PowerPoint; CSV, TSV, ODS, and XLSX read cell by cell (calamine). Hostile-input tests, and fuzz targets `daisy`, `pptx`, `sheet`, `archive`, `image`, and `web`. OCR on the test scans (release): English PDF, ocrs 9.6% word errors in 1.6 s, Tesseract 0% in 1.1 s; French, ocrs 40.3%, Paddle 16.9%, Tesseract 2.6%. Left: `cargo xtask notices` (cargo-about is not installed here; the notices were merged by hand), the new fuzz targets in the nightly matrix, the Linux check (to CI), and five stray build-lock files under the junk `C*/Program Files` folder, which the guard would not let `git rm` touch.
+
 **Owns:** `crates/textweaver-formats`, and a new `textweaver-ocr` crate if needed.
 
 1. **OCR for scanned PDFs and images.**

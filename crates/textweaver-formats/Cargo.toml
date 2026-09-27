@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-formats"
-description = "textweaver document loaders: loader trait, registry, text, Markdown, HTML, EPUB, DOCX, PDF, and Pandoc for other formats"
+description = "textweaver document loaders: loader trait, registry, text, Markdown, HTML, EPUB, DOCX, PDF with OCR, DAISY, PowerPoint, spreadsheets, archives, web pages, and Pandoc for other formats"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,9 +10,21 @@ authors.workspace = true
 publish.workspace = true
 
 [features]
-default = ["pdf"]
+default = ["pdf", "ocr", "archives", "spreadsheets"]
 # PDF loader (pure Rust, on lopdf; ADR-0010). On by default.
 pdf = ["dep:lopdf"]
+# OCR for scanned PDF pages and image files (ADR-0026): the pure-Rust ocrs
+# engine in process, Tesseract as a separate program for other languages.
+ocr = ["pdf", "dep:textweaver-ocr"]
+# Tar, tar.gz, and 7z archives (zip is always read).
+archives = ["dep:tar", "dep:sevenz-rust2", "dep:flate2"]
+# Excel workbooks (XLSX, XLSM, XLSB) through calamine; CSV, TSV, and ODS
+# need nothing.
+spreadsheets = ["dep:calamine"]
+# Opening a web page or file by its http or https address. Off by default:
+# it brings an HTTP client (ureq with rustls), which the reader keeps out
+# (`cargo xtask deps`); `tw` turns it on.
+url = ["dep:ureq"]
 # Reserved: paperback-core (pdfium, mathcat) is not on crates.io, so this
 # feature enables nothing (ADR-0010).
 paperback = []
@@ -33,7 +45,14 @@ toml.workspace = true
 encoding_rs.workspace = true
 zip.workspace = true
 roxmltree.workspace = true
+directories.workspace = true
 lopdf = { workspace = true, optional = true }
+textweaver-ocr = { workspace = true, optional = true }
+tar = { workspace = true, optional = true }
+sevenz-rust2 = { workspace = true, optional = true }
+flate2 = { workspace = true, optional = true }
+calamine = { workspace = true, optional = true }
+ureq = { workspace = true, optional = true }
 
 [dev-dependencies]
 insta.workspace = true

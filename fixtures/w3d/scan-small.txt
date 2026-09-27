@@ -1,0 +1,5 @@
+Reading Scanned Pages Aloud
+A scanned page is a picture of text. Before a computer can read it
+aloud, the letters in the picture must be recognized one by one and
+turned back into words. This step is called optical character
+recognition, and it is never perfect.

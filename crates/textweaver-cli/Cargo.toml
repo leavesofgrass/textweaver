@@ -36,6 +36,9 @@ textweaver-writers.workspace = true
 textweaver-render.workspace = true
 # Agent P: `tw cite`.
 textweaver-cite.workspace = true
+# Agent W3d: `tw ocr` (model downloads) and opening web addresses.
+textweaver-ocr = { workspace = true, features = ["download"] }
+textweaver-formats = { workspace = true, features = ["url"] }
 clap.workspace = true
 anyhow.workspace = true
 serde.workspace = true

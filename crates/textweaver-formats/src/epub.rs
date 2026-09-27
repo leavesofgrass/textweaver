@@ -67,12 +67,12 @@ impl Loader for EpubLoader {
 
 /// One entry of the table of contents.
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct TocEntry {
-    title: String,
+pub(crate) struct TocEntry {
+    pub(crate) title: String,
     /// Normalized member path.
-    file: String,
-    fragment: Option<String>,
-    depth: u8,
+    pub(crate) file: String,
+    pub(crate) fragment: Option<String>,
+    pub(crate) depth: u8,
 }
 
 /// What the package document says.
@@ -304,12 +304,12 @@ fn ncx_toc(text: &str, base: &str) -> Result<Vec<TocEntry>, LoadError> {
 }
 
 /// The open `SectionBreak` markers, innermost last.
-struct Sections {
-    open: Vec<(u8, OpenId)>,
+pub(crate) struct Sections {
+    pub(crate) open: Vec<(u8, OpenId)>,
 }
 
 impl Sections {
-    fn open(&mut self, b: &mut Builder, e: &TocEntry) {
+    pub(crate) fn open(&mut self, b: &mut Builder, e: &TocEntry) {
         while let Some(&(depth, id)) = self.open.last() {
             if depth < e.depth {
                 break;
@@ -386,7 +386,7 @@ fn convert(
 }
 
 /// Gives unlabeled sections the text of their first heading.
-fn label_sections_by_heading(text: &str, markers: &mut [Marker]) {
+pub(crate) fn label_sections_by_heading(text: &str, markers: &mut [Marker]) {
     let headings: Vec<(CharRange, String)> = markers
         .iter()
         .filter(|m| m.kind == MarkerKind::Heading)

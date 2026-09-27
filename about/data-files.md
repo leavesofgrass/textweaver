@@ -13,6 +13,12 @@ Packages also carry the licence files themselves, under `licenses/`.
 - OpenDyslexic: copyright Abbie Gonzalez, with Reserved Font Name OpenDyslexic.
 - Licence: SIL Open Font License, version 1.1. The full licence for each family is below, and in `licenses/fonts/` in each package.
 
+### OCR models (downloaded when you agree; not in the packages)
+
+- **ocrs models** (text detection and recognition for English): by Robert Knight for the ocrs engine, trained on the HierText dataset. Licence: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0), https://creativecommons.org/licenses/by-sa/4.0/. Source: https://github.com/robertknight/ocrs-models (files `text-detection.onnx` and `text-recognition.onnx`, 12.2 MB, from ocrs-models.s3-accelerate.amazonaws.com). `tw ocr download` fetches them only after you agree, and checks each file by SHA-256. textweaver does not change them.
+- **PaddleOCR PP-OCRv5 Latin recognition model** (experimental): `latin_PP-OCRv5_mobile_rec`, by the PaddlePaddle authors. Licence: Apache License 2.0. Source: https://huggingface.co/PaddlePaddle/latin_PP-OCRv5_mobile_rec_onnx (8.0 MB). Downloaded only with `tw ocr download paddle-latin`, and checked by SHA-256.
+- Tesseract, when installed, is a separate program with its own licence (Apache-2.0); textweaver runs it and does not include it.
+
 ### SCOWL word levels
 
 - Used to mark difficult words. The list in textweaver is derived from SCOWL (Spell Checker Oriented Word Lists) version 2, release `rel-2026.02.25`: it keeps each word's size level.

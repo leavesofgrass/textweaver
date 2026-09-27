@@ -12,6 +12,7 @@ pub mod info;
 pub mod library;
 pub mod marks;
 pub mod migrate;
+pub mod ocr;
 pub mod open;
 pub mod profiles;
 pub mod search;

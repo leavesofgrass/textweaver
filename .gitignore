@@ -11,6 +11,7 @@ __pycache__/
 /target-local/
 /target-*/
 *.wav
+/.cache/
 
 # Git Bash turned /target/<agent> into a Windows path when MSYS_NO_PATHCONV was unset.
 /C*/Program Files/

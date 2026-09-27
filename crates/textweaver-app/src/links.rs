@@ -80,7 +80,9 @@ pub(crate) fn heading_for_anchor(doc: &Document, anchor: &str) -> Option<CharPos
 /// that name anywhere under the folder (Obsidian resolves by name).
 pub(crate) fn resolve_local(folder: &Path, target: &str) -> Option<PathBuf> {
     let direct = folder.join(target);
-    if direct.is_file() {
+    // A file, or a file inside an archive (`book.zip!chapter.xml`, the links
+    // an archive's listing holds).
+    if direct.is_file() || textweaver_formats::archive::exists(&direct) {
         return Some(direct);
     }
     let with_md = folder.join(format!("{target}.md"));

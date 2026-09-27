@@ -25,7 +25,7 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
 - [ADR-0009: SAPI5 voices on Windows](0009-sapi5-voices.md): 64-bit and 32-bit voices in host processes.
   - Status: accepted, with 1 status update.
 - [ADR-0010: PDF loader](0010-pdf-loader.md): a pure Rust PDF reader with column-aware reading order.
-  - Status: accepted, with 2 status updates.
+  - Status: accepted, with 3 status updates.
 - [ADR-0011: Audio export](0011-audio-export.md): sentence-by-sentence synthesis, exact subtitles, and chapters.
   - Status: accepted, with 1 status update.
 - [ADR-0012: One engine-host protocol and playback client](0012-engine-host.md): the shared protocol for Eloquence, SAPI5, and DECtalk.
@@ -55,6 +55,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
 - [ADR-0024: App core for the GUI](0024-app-core-for-the-gui.md): the document window, shared list and prompt state, the waker, the replace-range edit, the settings schema, and work moved off the input thread.
   - Status: accepted.
 - [ADR-0025: Define word offline, and the message catalog](0025-lexicon-and-message-catalog.md): Open English WordNet and CMUdict in an fst and zstd file, and a Fluent-subset catalog with pseudo-locales.
+  - Status: accepted.
+- [ADR-0026: OCR, and formats for students](0026-ocr-and-student-formats.md): OCR of scanned pages (ocrs in process, Tesseract as the fallback), DAISY, PowerPoint, spreadsheets, archives, and web pages.
   - Status: accepted.
 
 ## Writing a new ADR

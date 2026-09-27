@@ -14,15 +14,21 @@
 //!   [`App::open`](crate::App::open) does, and the waker rings
 //!   ([`crate::wake`]).
 //!
-//! Smaller files open at once, as before. [`App::open`] itself always
+//! Smaller files open at once, as before, except those that may be slow
+//! whatever their size (Agent W3d): PDFs and pictures, whose pages may need
+//! text recognition (OCR, ADR-0026), archives, and web addresses. While
+//! pages are recognized, "Still opening" says which page ("Still opening
+//! scan.pdf: recognizing text on page 3 (3 of 40)."), and Escape stops the
+//! recognition before its next page as well. [`App::open`] itself always
 //! opens at once (the command line, tests, and callers that want the
 //! result).
 
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, TryRecvError, channel};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use textweaver_formats::{LoadError, Registry, Source};
+use textweaver_formats::{LoadError, Progress, Registry, Source};
 use textweaver_text::Document;
 
 use crate::app::App;
@@ -45,6 +51,11 @@ pub(crate) struct Opening {
     rx: Receiver<Loaded>,
     started: Instant,
     last_said: Instant,
+    /// The loader's progress handle: cancelling it stops OCR.
+    progress: Progress,
+    /// The loader's latest report ("Recognizing text on page 3 (3 of
+    /// 40).").
+    report: Arc<Mutex<Option<String>>>,
 }
 
 impl std::fmt::Debug for Opening {
@@ -129,11 +140,12 @@ impl App {
         self.background_open_bytes = bytes;
     }
 
-    /// Opens `path` in the background when it is large, else at once
-    /// (announcing failures either way).
+    /// Opens `path` in the background when it is large or may be slow,
+    /// else at once (announcing failures either way).
     pub(crate) fn open_maybe_in_background(&mut self, path: &Path) -> Vec<Effect> {
         let size = std::fs::metadata(path).map_or(0, |m| m.len());
-        if size < self.background_open_bytes {
+        let slow = self.background_open_bytes != u64::MAX && may_be_slow(path);
+        if size < self.background_open_bytes && !slow {
             return self.open_now(path);
         }
         self.begin_opening(path)
@@ -158,10 +170,19 @@ impl App {
     fn begin_opening(&mut self, path: &Path) -> Vec<Effect> {
         if let Some(o) = self.opening.take() {
             // A newer open replaces one still loading.
+            o.progress.cancel();
             self.note(&format!("Stopped opening {}.", o.name));
         }
         let (tx, rx) = channel::<Loaded>();
-        let options = self.load_options();
+        let mut options = self.load_options();
+        let report: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+        let latest = Arc::clone(&report);
+        let progress = Progress::new(move |r| {
+            if let Ok(mut slot) = latest.lock() {
+                *slot = Some(r.message.clone());
+            }
+        });
+        options.progress = progress.clone();
         let wake = self.waker_slot();
         let owned = path.to_owned();
         let spawned = std::thread::Builder::new()
@@ -189,6 +210,8 @@ impl App {
             rx,
             started: now,
             last_said: now,
+            progress,
+            report,
         });
         vec![Effect::Redraw]
     }
@@ -196,6 +219,7 @@ impl App {
     /// Escape while a document is opening: stops waiting for it.
     pub(crate) fn cancel_opening(&mut self) -> Vec<Effect> {
         if let Some(o) = self.opening.take() {
+            o.progress.cancel();
             self.tell(&format!("Stopped opening {}.", o.name));
         }
         vec![Effect::Redraw]
@@ -213,7 +237,19 @@ impl App {
                 if now.saturating_duration_since(o.last_said) >= PROGRESS_EVERY {
                     o.last_said = now;
                     let secs = now.saturating_duration_since(o.started).as_secs();
-                    let msg = format!("Still opening {}, {secs} seconds.", o.name);
+                    let step = o.report.lock().ok().and_then(|r| r.clone());
+                    let msg = match step {
+                        // "Still opening scan.pdf: recognizing text on page 3 (3 of 40)."
+                        Some(step) => {
+                            let mut chars = step.chars();
+                            let lower: String = chars
+                                .next()
+                                .map(|c| c.to_lowercase().chain(chars).collect())
+                                .unwrap_or_default();
+                            format!("Still opening {}: {lower}", o.name)
+                        }
+                        None => format!("Still opening {}, {secs} seconds.", o.name),
+                    };
                     self.show(&msg);
                 }
                 return Vec::new();
@@ -253,5 +289,39 @@ impl App {
             }
             std::thread::sleep(Duration::from_millis(5));
         }
+    }
+}
+
+/// Files that may be slow to open whatever their size: PDFs and pictures
+/// (text recognition), archives (a member deep inside), and web addresses.
+fn may_be_slow(path: &Path) -> bool {
+    if Source::Path(path.to_owned()).url().is_some() {
+        return true;
+    }
+    let s = path.to_string_lossy().to_ascii_lowercase();
+    if s.contains('!') && !path.exists() {
+        return true;
+    }
+    path.extension()
+        .map(|e| e.to_string_lossy().to_ascii_lowercase())
+        .is_some_and(|e| {
+            matches!(
+                e.as_str(),
+                "pdf" | "png" | "jpg" | "jpeg" | "zip" | "tar" | "tgz" | "gz" | "7z"
+            )
+        })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scans_archives_and_web_pages_may_be_slow() {
+        assert!(may_be_slow(Path::new("scan.PDF")));
+        assert!(may_be_slow(Path::new("photo.jpg")));
+        assert!(may_be_slow(Path::new("https://example.org/page")));
+        assert!(may_be_slow(Path::new("no-such.zip!notes.md")));
+        assert!(!may_be_slow(Path::new("notes.md")));
     }
 }

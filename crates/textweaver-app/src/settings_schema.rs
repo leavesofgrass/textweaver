@@ -532,6 +532,34 @@ pub const INFO: &[Info] = &[
         "Citations in continuous reading: skipped, or said in words.",
         &[("off", "skipped"), ("words", "in words")],
     ),
+    toggle(
+        "reading.ocr",
+        "Recognize scanned pages",
+        "Read the text of scanned PDFs and pictures by recognizing it (OCR).",
+    ),
+    open_choice(
+        "reading.ocr_lang",
+        "Scanned text language",
+        "The language of scanned text, as Tesseract codes such as fra or deu+eng; empty means the document's own language, else English.",
+        &[
+            ("", "the document's"),
+            ("eng", "English"),
+            ("fra", "French"),
+            ("deu", "German"),
+            ("spa", "Spanish"),
+        ],
+    ),
+    choice(
+        "reading.ocr_engine",
+        "OCR engine",
+        "Which engine recognizes scanned pages: ocrs for English and Tesseract for other languages, or one of them always.",
+        &[
+            ("auto", "automatic"),
+            ("ocrs", "ocrs"),
+            ("tesseract", "Tesseract"),
+            ("paddle", "PaddleOCR (experimental)"),
+        ],
+    ),
     // [display]
     open_choice("display.theme", "Theme", "The colour theme.", &[]),
     toggle(
