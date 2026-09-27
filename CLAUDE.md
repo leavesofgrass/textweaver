@@ -35,6 +35,12 @@ On Saturday, September 26, 2026 an agent ran a delete, without thinking and with
 4. **Deleting from Bash is a last resort, and needs the owner's approval.** Git Bash rewrites paths before Windows sees them, and that is how a folder named "C" plus a hidden character became `C:`. Delete with PowerShell's `Remove-Item -LiteralPath` and a full literal path. The guard asks the owner before any `rm`, `rmdir`, `unlink`, `shred` or `find -delete` in Bash, and refuses any that reach outside the project. `git rm` still works in Bash, because it acts on git's index by name.
 5. Never chain a delete onto another command. Run it by itself, so it is seen and checked.
 6. To remove an oddly named file in the repo, use `git rm` or `git clean`, never a hand-typed escaped name.
+7. **Escape sequences and odd names (the owner's global rule 1a).**
+   - Never type a file name with an escape sequence (`$'...'`, `\x..`, `\u....`, `printf`, URL encoding) in any command that deletes, moves, renames, copies or writes.
+   - Find unusual names by listing, and act on them by reference: git pathspecs with a dry run first, or the listed PowerShell object. Never retype them.
+   - Resolve and print the full path before any destructive command, and stop if it isn't inside the intended folder.
+   - Use `-LiteralPath` in PowerShell, and `MSYS_NO_PATHCONV=1` for Docker in Git Bash. Guard against empty variables, with `set -u` and `${VAR:?}`.
+   - The guard asks the owner before any move, copy or write that contains escapes or hidden characters, and refuses such deletes.
 
 **The guard.** A hook in `.claude/hooks/guard.sh` enforces this:
 
