@@ -63,6 +63,16 @@ jobs:
         with:
           name: uia-xilem-report
           path: uia-xilem.md
+      # The GUI's own package (a zip), on main and by hand: the dist profile
+      # is a long build.
+      - name: Package (cargo xtask gui-dist)
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        run: cargo xtask gui-dist --out gui-dist
+      - uses: actions/upload-artifact@v7
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        with:
+          name: textweaver-gui-windows
+          path: gui-dist/*.zip
 
   macos:
     runs-on: macos-latest
@@ -87,6 +97,15 @@ jobs:
           test "$status" -eq 0
           grep -q "Reading at" gui.log
           grep -q "closed" gui.log
+      # textweaver.app in a zip, on main and by hand.
+      - name: Package (cargo xtask gui-dist)
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        run: cargo xtask gui-dist --out gui-dist
+      - uses: actions/upload-artifact@v7
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        with:
+          name: textweaver-gui-macos
+          path: gui-dist/*.zip
 
   linux:
     runs-on: ubuntu-24.04
@@ -120,3 +139,21 @@ jobs:
           path: |
             atspi-xilem.md
             screenshots/*.png
+      # A tarball and the GUI's own AppImage, on main and by hand. The
+      # AppImage tools are fetched and checked by the same script the
+      # release workflow uses.
+      - name: Package (cargo xtask gui-dist)
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        run: |
+          sh docker/appimage/fetch-tools.sh "$RUNNER_TEMP/appimage"
+          APPIMAGE_EXTRACT_AND_RUN=1 \
+          APPIMAGETOOL="$RUNNER_TEMP/appimage/appimagetool" \
+          APPIMAGE_RUNTIME="$RUNNER_TEMP/appimage/runtime-x86_64" \
+            cargo xtask gui-dist --out gui-dist
+      - uses: actions/upload-artifact@v7
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        with:
+          name: textweaver-gui-linux
+          path: |
+            gui-dist/*.tar.gz
+            gui-dist/*.AppImage

@@ -458,7 +458,7 @@ pub fn list_dialog(
     (modal, list_id)
 }
 
-/// The settings dialog, built by [`settings_dialog`].
+/// The settings dialog, built by [`settings_dialog()`].
 pub struct SettingsDialog {
     /// The dialog, for [`Root::set_dialog`].
     pub modal: NewWidget<dyn Widget>,
