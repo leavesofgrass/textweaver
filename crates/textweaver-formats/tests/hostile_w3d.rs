@@ -1,5 +1,6 @@
 //! Malformed and hostile input for the Wave 3 loaders (Agent W3d):
-//! archives, DAISY and DTBook, PowerPoint, spreadsheets, and pictures.
+//! archives, DAISY and DTBook, PowerPoint, spreadsheets, pictures, and
+//! web responses (feature `url`).
 //! Every case loads, or fails with a clear error, quickly and without
 //! exhausting memory.
 
@@ -248,4 +249,59 @@ fn pictures_claiming_huge_sizes_are_refused() {
         .unwrap_err()
         .to_string();
     assert!(err.contains("JPEG"), "{err}");
+}
+
+/// The web loader's response reader, on random content types and bodies
+/// (the `web` fuzz target's input, in small doses): it never panics, and a
+/// document it returns keeps its markers inside the text, in order.
+#[cfg(feature = "url")]
+mod web_responses {
+    use proptest::prelude::*;
+    use textweaver_formats::web::read_response;
+
+    const TYPES: &[&str] = &[
+        "",
+        "text/html",
+        "text/html; charset=windows-1252",
+        "text/html; charset=\"no-such-charset\"",
+        "application/pdf",
+        "application/zip",
+        "application/epub+zip",
+        "text/csv",
+        "text/markdown",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ";;;=charset",
+    ];
+
+    const PREFIXES: &[&[u8]] = &[
+        b"",
+        b"%PDF-1.7\n",
+        b"PK\x03\x04",
+        b"<html><meta charset=utf-16>",
+    ];
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(96))]
+        #[test]
+        fn never_panic(
+            pick in 0..TYPES.len(),
+            prefix in 0..PREFIXES.len(),
+            body in prop::collection::vec(any::<u8>(), 0..512),
+        ) {
+            let mut data = PREFIXES[prefix].to_vec();
+            data.extend(body);
+            for url in ["https://example.org/page", "https://example.org/f.xlsx?x=1#y"] {
+                if let Ok(doc) = read_response(url, TYPES[pick], data.clone(), &super::no_ocr()) {
+                    let len = doc.len_chars();
+                    let mut last = 0;
+                    for m in doc.markers() {
+                        prop_assert!(m.range.start <= m.range.end);
+                        prop_assert!(m.range.end.0 <= len);
+                        prop_assert!(m.range.start.0 >= last);
+                        last = m.range.start.0;
+                    }
+                }
+            }
+        }
+    }
 }

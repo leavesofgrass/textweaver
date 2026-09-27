@@ -7,7 +7,7 @@
 
 Students with print disabilities get course material in many shapes: scanned chapters (PDFs with no text layer), photos of handouts, DAISY books from Bookshare, slides, spreadsheets, zip files from a learning platform, and web pages. Before Wave 3, textweaver read a scanned PDF as one sentence saying it could not ("OCR is out of scope", ADR-0010), and refused the rest.
 
-Wave 3's spirit (docs/tasks.md) is pure Rust and in process first, with a fallback for each bold choice. The research for this work is `docs/research/pure-rust-wave3.md`.
+Wave 3's spirit (docs/history/tasks.md) is pure Rust and in process first, with a fallback for each bold choice. The research for this work is `docs/research/pure-rust-wave3.md`.
 
 ## Decisions
 
@@ -122,7 +122,7 @@ ocrs is fast and good enough to listen to on clean English scans, and it needs n
 - **Binary size.** The reader and `tw` link RTen, ocrs, and hayro. The reader does not link an HTTP client: downloads and web addresses are in `tw`.
 - **Progress and cancel in the reader.** PDFs, pictures, archives, and web addresses always open on the app's helper thread (ADR-0024's background open), whatever their size. Its "Still opening" message names the page being recognized ("Still opening scan.pdf: recognizing text on page 3 (3 of 40)."), and Escape cancels the recognition before its next page. The result cache makes the second opening instant. `tw ocr read FILE` shows progress on standard error, and Ctrl+C stops it.
 - **Settings.** `[reading] ocr`, `ocr_lang`, and `ocr_engine` are store settings with settings-schema entries, so the settings screen offers them.
-- **Fuzz targets:** `daisy`, `pptx`, `sheet`, `archive`, and `image`.
+- **Fuzz targets:** `daisy`, `pptx`, `sheet`, `archive`, `image`, and `web` (a fetched response read by `web::read_response`, with no request and nothing saved). The nightly workflow's matrix does not list them yet; that file is outside this work.
 - **Hostile-input tests:** `crates/textweaver-formats/tests/hostile_w3d.rs`.
 - **Not done:**
   - Rotated scans. Tesseract's orientation detection and ocrs's upright assumption are not wired.

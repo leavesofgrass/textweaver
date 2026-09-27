@@ -151,7 +151,50 @@ pub(crate) fn load(
             "opening the web page was cancelled".into(),
         ));
     }
-    let (mime, charset) = parse_content_type(&content_type);
+    let doc = from_response(registry, url, source, &content_type, body, options, true)?;
+    options.progress.report(1, 1, "The web page is open.");
+    Ok(doc)
+}
+
+/// Reads a response already fetched from `url`: its `Content-Type` value
+/// and its body. HTML is decoded and read; any other file is read from the
+/// bytes, and nothing is written to disk (opening an address saves such
+/// files in the cache first). The fuzz target `web` uses this.
+pub fn read_response(
+    url: &str,
+    content_type: &str,
+    body: Vec<u8>,
+    options: &LoadOptions,
+) -> Result<Document, LoadError> {
+    if body.len() as u64 > MAX_BYTES {
+        return Err(LoadError::Unsupported(format!(
+            "the web page {url} could not be opened: it is larger than 64 MB"
+        )));
+    }
+    let source = Source::Url(url.to_owned());
+    from_response(
+        &Registry::with_builtins(),
+        url,
+        &source,
+        content_type,
+        body,
+        options,
+        false,
+    )
+}
+
+/// The document a response holds; `save` keeps non-HTML files in the
+/// cache's `web/` folder and opens them from there.
+fn from_response(
+    registry: &Registry,
+    url: &str,
+    source: &Source,
+    content_type: &str,
+    body: Vec<u8>,
+    options: &LoadOptions,
+    save: bool,
+) -> Result<Document, LoadError> {
+    let (mime, charset) = parse_content_type(content_type);
     let kind = kind_of(&mime, url, &body[..body.len().min(16)]);
     let mut doc = if kind == "html" {
         let declared = charset.or_else(|| crate::encoding::sniff_html_charset(&body));
@@ -165,7 +208,7 @@ pub(crate) fn load(
         Document::new(meta, ropey::Rope::from_str(&text), markers)
     } else {
         // Files are opened from the cache, as a file on disk would be.
-        let saved = download_dir().and_then(|dir| {
+        let saved = save.then(download_dir).flatten().and_then(|dir| {
             std::fs::create_dir_all(&dir).ok()?;
             let name = format!("{:016x}.{kind}", crate::cache::fnv1a64(url.as_bytes()));
             let path = dir.join(name);
@@ -192,7 +235,6 @@ pub(crate) fn load(
     if doc.meta.title.as_deref().is_none_or(str::is_empty) {
         doc.meta.title = Some(url.to_owned());
     }
-    options.progress.report(1, 1, "The web page is open.");
     Ok(doc)
 }
 
@@ -263,6 +305,36 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(err.contains("only web addresses"), "{err}");
+    }
+
+    #[test]
+    fn responses_read_without_a_network_or_disk() {
+        let doc = read_response(
+            "https://example.org/notes",
+            "text/markdown; charset=utf-8",
+            b"# Week 3\n\nRead chapter two.".to_vec(),
+            &LoadOptions::default(),
+        )
+        .unwrap();
+        assert_eq!(doc.text().to_string(), "Week 3\n\nRead chapter two.");
+        assert_eq!(doc.meta.properties.get("cached_file"), None);
+        assert_eq!(
+            doc.meta.path,
+            Some(PathBuf::from("https://example.org/notes"))
+        );
+        // Garbage that claims to be a PDF must not panic.
+        let _ = read_response(
+            "https://example.org/a.pdf",
+            "application/pdf",
+            b"%PDF-1.7 nonsense".to_vec(),
+            &LoadOptions::default(),
+        );
+        // A body over the limit is refused before it is read.
+        let big = vec![b' '; MAX_BYTES as usize + 1];
+        let err = read_response("https://x/", "text/html", big, &LoadOptions::default())
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("64 MB"), "{err}");
     }
 
     #[test]

@@ -16,6 +16,7 @@ Each target feeds random input to one part of textweaver. A loader may refuse th
 - `sheet`: the spreadsheet loader. The first byte picks CSV, TSV, OpenDocument, or Excel; the rest is the file, or the sheet's XML in a minimal package.
 - `archive`: the archive loader. The bytes are listed as a zip, tar, tar.gz, and 7z archive in turn.
 - `image`: the PNG and JPEG decoders that OCR reads, with their size limits, and the picture loader with OCR off.
+- `web`: a web page's response, read as the web loader reads it after fetching. The bytes up to the first NUL are the `Content-Type` value, and the rest is the body. No request is made and nothing is saved.
 - `settings`: `settings.toml` read into the settings, written back, and read again, and the same text planned as a settings import (JSON or TOML).
 - `keymap`: `keymap.toml`, the keyboard overrides, applied to every platform's and frontend's defaults; each line is also parsed as a key chord, which must print and parse back to itself.
 - `state`: a document's saved state (position, history, bookmarks), which must write back and read again, and a folder's sidecar (`.textweaver/progress.json`), merged with itself and with nothing under every policy.

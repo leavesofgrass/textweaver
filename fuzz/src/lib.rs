@@ -7,6 +7,7 @@ use std::io::{Cursor, Write};
 use textweaver_formats::{
     FootnoteMode, HtmlOptions, LoadOptions, OcrOptions, Registry, Source,
 };
+use textweaver_text::Document;
 use zip::write::SimpleFileOptions;
 
 /// Loads `data` as a file with extension `hint` and checks the result,
@@ -36,17 +37,47 @@ pub fn load_checked(data: &[u8], hint: &str) {
         let Ok(doc) = Registry::with_builtins().load(&source, &options) else {
             continue;
         };
-        let len = doc.len_chars();
-        let mut last = 0;
-        for m in doc.markers() {
-            assert!(m.range.start <= m.range.end, "{m:?} runs backwards");
-            assert!(m.range.end.0 <= len, "{m:?} past the end ({len})");
-            assert!(m.range.start.0 >= last, "{m:?} out of order");
-            last = m.range.start.0;
-        }
-        // The exports walk every marker; they must not panic either.
-        let _ = textweaver_formats::to_markdown(&doc);
-        let _ = textweaver_formats::to_html(&doc, &HtmlOptions::default());
+        check(&doc);
+    }
+}
+
+/// The options the fuzz targets load with: OCR off.
+pub fn options() -> LoadOptions {
+    LoadOptions {
+        ocr: OcrOptions {
+            enabled: false,
+            ..OcrOptions::default()
+        },
+        ..LoadOptions::default()
+    }
+}
+
+/// Checks a loaded document: every marker inside the text and in order,
+/// with no range running backwards, and the exports do not panic.
+pub fn check(doc: &Document) {
+    let len = doc.len_chars();
+    let mut last = 0;
+    for m in doc.markers() {
+        assert!(m.range.start <= m.range.end, "{m:?} runs backwards");
+        assert!(m.range.end.0 <= len, "{m:?} past the end ({len})");
+        assert!(m.range.start.0 >= last, "{m:?} out of order");
+        last = m.range.start.0;
+    }
+    // The exports walk every marker; they must not panic either.
+    let _ = textweaver_formats::to_markdown(doc);
+    let _ = textweaver_formats::to_html(doc, &HtmlOptions::default());
+}
+
+/// Fuzz input as a web response: the bytes up to the first NUL are the
+/// `Content-Type` value (at most 200 bytes of it), and the rest is the
+/// body. Without a NUL, the bytes are an HTML body with no type.
+pub fn web_response(data: &[u8]) -> (String, Vec<u8>) {
+    match data.iter().position(|&b| b == 0) {
+        Some(i) => (
+            String::from_utf8_lossy(&data[..i.min(200)]).into_owned(),
+            data[i + 1..].to_vec(),
+        ),
+        None => (String::new(), data.to_vec()),
     }
 }
 
