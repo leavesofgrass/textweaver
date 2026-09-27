@@ -24,7 +24,7 @@ On Saturday, September 26, 2026 an agent ran a delete, without thinking and with
 **Where you may work.** Work only in `D:\textweaver` and `D:\recovery`.
 
 - Never write anything to drive C, the drive that holds the operating system.
-- Anything outside these two folders, even reading, needs the owner's approval first.
+- Anything outside these two folders, even reading, needs the owner's approval first, with one standing exception. **Reading the owner's wiki, `D:\star\wiki`, is expressly permitted,** read-only, to put development in context (the owner's global rule 6). Never write to it from an agent; the orchestrator documents work there.
 - The owner's Desktop, Downloads, Documents, and application settings are critical. Never touch them.
 
 **Deleting.** Every delete takes forethought. The owner does not want to confirm routine project deletes, so thinking first is your job:
