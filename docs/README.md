@@ -128,6 +128,7 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 - [Usability pass: the terminal reader and tw](research/usability-terminal.md): what a screen reader user meets, what was fixed, what is left, ranked (September 2026).
 - [Wave 4 plan review](research/wave4-plan-review.md): the first review of the Wave 4 plan, with quick wins and research updates (September 2026).
 - [Wave 4 orchestration plan](research/wave4-orchestration.md): three sub-waves of three agents, the dependency map, the disk and memory budget, revised briefs, and the runbook (September 2026).
+- [Wave 5 plan](research/wave5-plan.md): goals ranked for the beta, research, the branches that depend on Wave 4's outcomes, three sub-waves with a Braille session as a gate, the budget, quick wins, draft briefs, the runbook, and the questions for Jon (September 2026).
 
 ## See also
 
