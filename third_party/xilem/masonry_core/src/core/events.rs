@@ -53,6 +53,10 @@ pub struct AccessEvent {
     pub action: accesskit::Action,
     /// Additional data associated with the action.
     pub data: Option<accesskit::ActionData>,
+    /// The node the action was sent to, when it is not the widget's own
+    /// node but one the widget added to the tree itself (a text run, a list
+    /// option). The event goes to the widget that added it. (textweaver)
+    pub node: Option<accesskit::NodeId>,
 }
 
 /// The light/dark mode of the window.

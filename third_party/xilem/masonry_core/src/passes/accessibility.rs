@@ -50,6 +50,9 @@ fn build_accessibility_tree(
             tree_update,
         };
         let mut node = build_access_node(widget, &mut ctx, scale_factor);
+        // Nodes the widget adds itself are recorded as its own, so actions
+        // sent to them reach it (textweaver).
+        let added_from = ctx.tree_update.nodes.len();
         let props = PropertiesRef {
             local: properties,
             default_map: default_properties.for_widget(widget.type_id()),
@@ -57,6 +60,10 @@ fn build_accessibility_tree(
             class_set,
         };
         widget.accessibility(&mut ctx, &props, &mut node);
+        let owner = ctx.widget_state.id;
+        for (added, _) in &ctx.tree_update.nodes[added_from..] {
+            ctx.global_state.access_node_owners.insert(*added, owner);
+        }
 
         let id: NodeId = ctx.widget_state.id.into();
         if ctx.global_state.trace.access {

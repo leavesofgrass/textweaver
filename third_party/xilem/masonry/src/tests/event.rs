@@ -633,7 +633,8 @@ fn access_event_bubbling() {
             record,
             Record::AccessEvent(AccessEvent {
                 action: accesskit::Action::Click,
-                data: None
+                data: None,
+                node: None,
             })
         )
     }

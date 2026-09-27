@@ -645,6 +645,13 @@ impl<const EDITABLE: bool> Widget for TextArea<EDITABLE> {
                             drv.move_right();
                         }
                     }
+                    // A one-line field leaves Up and Down to its parent (a
+                    // prompt's history, for instance). (textweaver)
+                    Key::Named(NamedKey::ArrowUp | NamedKey::ArrowDown)
+                        if !shift && self.insert_newline == InsertNewline::Never =>
+                    {
+                        return;
+                    }
                     Key::Named(NamedKey::ArrowUp) => {
                         let mut drv = self.editor.driver(fctx, lctx);
                         if shift {

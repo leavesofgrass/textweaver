@@ -500,3 +500,137 @@
  const fn mask(t: BidiClass) -> u32 {
      1 << (t.to_icu4c_value() as u32)
  }
+diff --git a/masonry/src/tests/event.rs b/masonry/src/tests/event.rs
+index 5bc3acf..04cdfdd 100644
+--- a/masonry/src/tests/event.rs
++++ b/masonry/src/tests/event.rs
+@@ -633,7 +633,8 @@ fn access_event_bubbling() {
+             record,
+             Record::AccessEvent(AccessEvent {
+                 action: accesskit::Action::Click,
+-                data: None
++                data: None,
++                node: None,
+             })
+         )
+     }
+diff --git a/masonry/src/widgets/text_area.rs b/masonry/src/widgets/text_area.rs
+index 2f7d161..181e384 100644
+--- a/masonry/src/widgets/text_area.rs
++++ b/masonry/src/widgets/text_area.rs
+@@ -645,6 +645,13 @@ impl<const EDITABLE: bool> Widget for TextArea<EDITABLE> {
+                             drv.move_right();
+                         }
+                     }
++                    // A one-line field leaves Up and Down to its parent (a
++                    // prompt's history, for instance). (textweaver)
++                    Key::Named(NamedKey::ArrowUp | NamedKey::ArrowDown)
++                        if !shift && self.insert_newline == InsertNewline::Never =>
++                    {
++                        return;
++                    }
+                     Key::Named(NamedKey::ArrowUp) => {
+                         let mut drv = self.editor.driver(fctx, lctx);
+                         if shift {
+diff --git a/masonry_core/src/app/render_root.rs b/masonry_core/src/app/render_root.rs
+index d00638e..8134dd6 100644
+--- a/masonry_core/src/app/render_root.rs
++++ b/masonry_core/src/app/render_root.rs
+@@ -115,6 +115,11 @@ pub(crate) struct RenderRootState {
+     /// in its border-box coordinate space.
+     pub(crate) scroll_request_targets: Vec<(WidgetId, Rect)>,
+ 
++    /// The widget that added each node that is not a widget's own node
++    /// (text runs, list options), so actions sent to those nodes reach it.
++    /// (textweaver)
++    pub(crate) access_node_owners: HashMap<NodeId, WidgetId>,
++
+     /// List of ancestors of the currently hovered widget.
+     pub(crate) hovered_path: Vec<WidgetId>,
+ 
+@@ -352,6 +357,7 @@ impl RenderRoot {
+                 focus_fallback: None,
+                 window_focused: true,
+                 scroll_request_targets: Vec::new(),
++                access_node_owners: HashMap::new(),
+                 hovered_path: Vec::new(),
+                 active_path: Vec::new(),
+                 pointer_capture_target: None,
+@@ -588,12 +594,36 @@ impl RenderRoot {
+             warn!("Received ActionRequest with id 0. This shouldn't be possible.");
+             return;
+         };
++        // An action sent to a node a widget added itself (a text run, a
++        // list option) goes to that widget, with the node named, instead of
++        // to a widget that does not exist. (textweaver)
++        let mut target = WidgetId(id);
++        let mut node = None;
++        if !self.has_widget(target) {
++            match self
++                .global_state
++                .access_node_owners
++                .get(&event.target_node)
++                .copied()
++                .filter(|owner| self.has_widget(*owner))
++            {
++                Some(owner) => {
++                    target = owner;
++                    node = Some(event.target_node);
++                }
++                None => {
++                    warn!("Received ActionRequest for an unknown node {id}.");
++                    return;
++                }
++            }
++        }
+         let event = AccessEvent {
+             action: event.action,
+             data: event.data,
++            node,
+         };
+ 
+-        run_on_access_event_pass(self, &event, WidgetId(id));
++        run_on_access_event_pass(self, &event, target);
+         self.run_rewrite_passes();
+     }
+ 
+diff --git a/masonry_core/src/core/events.rs b/masonry_core/src/core/events.rs
+index f2359b1..39705a8 100644
+--- a/masonry_core/src/core/events.rs
++++ b/masonry_core/src/core/events.rs
+@@ -53,6 +53,10 @@ pub struct AccessEvent {
+     pub action: accesskit::Action,
+     /// Additional data associated with the action.
+     pub data: Option<accesskit::ActionData>,
++    /// The node the action was sent to, when it is not the widget's own
++    /// node but one the widget added to the tree itself (a text run, a list
++    /// option). The event goes to the widget that added it. (textweaver)
++    pub node: Option<accesskit::NodeId>,
+ }
+ 
+ /// The light/dark mode of the window.
+diff --git a/masonry_core/src/passes/accessibility.rs b/masonry_core/src/passes/accessibility.rs
+index 62f6d42..d93a365 100644
+--- a/masonry_core/src/passes/accessibility.rs
++++ b/masonry_core/src/passes/accessibility.rs
+@@ -50,6 +50,9 @@ fn build_accessibility_tree(
+             tree_update,
+         };
+         let mut node = build_access_node(widget, &mut ctx, scale_factor);
++        // Nodes the widget adds itself are recorded as its own, so actions
++        // sent to them reach it (textweaver).
++        let added_from = ctx.tree_update.nodes.len();
+         let props = PropertiesRef {
+             local: properties,
+             default_map: default_properties.for_widget(widget.type_id()),
+@@ -57,6 +60,10 @@ fn build_accessibility_tree(
+             class_set,
+         };
+         widget.accessibility(&mut ctx, &props, &mut node);
++        let owner = ctx.widget_state.id;
++        for (added, _) in &ctx.tree_update.nodes[added_from..] {
++            ctx.global_state.access_node_owners.insert(*added, owner);
++        }
+ 
+         let id: NodeId = ctx.widget_state.id.into();
+         if ctx.global_state.trace.access {

@@ -23,6 +23,14 @@ It is its own Cargo workspace. The root workspace excludes it (`exclude = ["thir
 
 These are small enough to send upstream as one pull request: "Update to AccessKit 0.25 and accesskit_winit 0.34". See ADR-0027, "Upstream".
 
+textweaver's own fixes, each small, each a candidate for its own pull request:
+
+6. `masonry`: `TextArea` takes an accessible label (`with_accessible_label`), so a prompt's field has a name.
+7. `masonry_winit`: `DriverCtx::exit` is honoured after an async action too, so a window can close on a timer or a background message.
+8. `masonry_testing`: the harness registers fonts and draws at the scale factor it lays out at (the screenshots at 200%).
+9. **Actions on nodes a widget adds itself** (Wave 3, second half). A widget may add AccessKit nodes that are not widgets: text runs, list options, the settings form's rows. Masonry sent an action aimed at one of them to a widget id that does not exist, which panics in a debug build. Now the accessibility pass records which widget added each such node (`RenderRootState::access_node_owners`), and the action goes to that widget, with the node named in the new `AccessEvent::node` field. The appended part of `textweaver.patch` (it applies after the earlier parts) holds this change.
+10. `masonry`: a one-line `TextArea` (`InsertNewline::Never`) leaves Up and Down to its parent, as a one-line edit does on Windows, so a prompt can recall earlier answers with them.
+
 ## Updating
 
 1. Pick a new upstream revision and copy the crates listed above over this folder, leaving out the same things.

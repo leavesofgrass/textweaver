@@ -115,6 +115,11 @@ pub(crate) struct RenderRootState {
     /// in its border-box coordinate space.
     pub(crate) scroll_request_targets: Vec<(WidgetId, Rect)>,
 
+    /// The widget that added each node that is not a widget's own node
+    /// (text runs, list options), so actions sent to those nodes reach it.
+    /// (textweaver)
+    pub(crate) access_node_owners: HashMap<NodeId, WidgetId>,
+
     /// List of ancestors of the currently hovered widget.
     pub(crate) hovered_path: Vec<WidgetId>,
 
@@ -352,6 +357,7 @@ impl RenderRoot {
                 focus_fallback: None,
                 window_focused: true,
                 scroll_request_targets: Vec::new(),
+                access_node_owners: HashMap::new(),
                 hovered_path: Vec::new(),
                 active_path: Vec::new(),
                 pointer_capture_target: None,
@@ -588,12 +594,36 @@ impl RenderRoot {
             warn!("Received ActionRequest with id 0. This shouldn't be possible.");
             return;
         };
+        // An action sent to a node a widget added itself (a text run, a
+        // list option) goes to that widget, with the node named, instead of
+        // to a widget that does not exist. (textweaver)
+        let mut target = WidgetId(id);
+        let mut node = None;
+        if !self.has_widget(target) {
+            match self
+                .global_state
+                .access_node_owners
+                .get(&event.target_node)
+                .copied()
+                .filter(|owner| self.has_widget(*owner))
+            {
+                Some(owner) => {
+                    target = owner;
+                    node = Some(event.target_node);
+                }
+                None => {
+                    warn!("Received ActionRequest for an unknown node {id}.");
+                    return;
+                }
+            }
+        }
         let event = AccessEvent {
             action: event.action,
             data: event.data,
+            node,
         };
 
-        run_on_access_event_pass(self, &event, WidgetId(id));
+        run_on_access_event_pass(self, &event, target);
         self.run_rewrite_passes();
     }
 
