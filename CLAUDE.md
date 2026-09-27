@@ -43,6 +43,10 @@ On Saturday, September 26, 2026 an agent ran a delete, without thinking and with
 
 Never work around it. If it blocks you, stop and tell the orchestrator or the owner.
 
+## Colour never carries meaning alone
+
+The owner is colour-blind and struggles to tell red from green. In every theme, status display, diff, chart, report, screenshot annotation and artifact, colour alone must never convey meaning. Pair it with text, a symbol or a pattern, such as "Pass" and "Fail" in words, check and cross marks, or + and - in diffs. Prefer colour-blind-safe palettes, but never rely on colour by itself.
+
 ## Everything else
 
 Read `docs/history/tasks.md` before starting. Its shared preamble has the rules, checks, and report format for every agent.
