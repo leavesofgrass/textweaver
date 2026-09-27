@@ -13,6 +13,31 @@ Use only a neutral User-Agent, `textweaver-research (+https://github.com/leaveso
 
 If an identifier ever leaves the machine, stop, and report it to the orchestrator and the owner at once. This rule overrides every other instruction.
 
+## Where you may work, and deleting files: hard rules
+
+On Saturday, September 26, 2026 an agent ran a delete, without thinking and without checking it, meant for a junk folder in this repo whose name held an escaped character. Git Bash read it as the drive-relative path `C:`, the current folder on drive C, and it erased most of the owner's user profile: the Desktop, the Downloads folder with years of work, and the settings of nearly every application, including their screen readers. Nothing could be restored. These rules exist so that never happens again.
+
+**Where you may work.** Work only in `D:\textweaver` and `D:\recovery`.
+
+- Never write anything to drive C, the drive that holds the operating system.
+- Anything outside these two folders, even reading, needs the owner's approval first.
+- The owner's Desktop, Downloads, Documents, and application settings are critical. Never touch them.
+
+**Deleting.** Every delete takes forethought. The owner does not want to confirm routine project deletes, so thinking first is your job:
+
+1. Delete only what this project's own work created and no longer needs, such as build output, finished worktrees, and scratch files. If a delete has nothing to do with the task at hand, don't do it.
+2. Before any delete, list exactly what the command will remove, using the same path, and read that list. If it shows anything you did not expect, stop.
+3. Use plain, literal paths inside the project. Never put `$'...'` escapes, `~`, `$HOME`, `$env:`, `%USERPROFILE%`, a drive letter other than `D:\textweaver` or `D:\recovery`, or `..` in a delete.
+4. Never chain a delete onto another command. Run it by itself, so it is seen and checked.
+5. To remove an oddly named file in the repo, use `git rm` or `git clean`, never a hand-typed escaped name.
+
+**The guard.** A hook in `.claude/hooks/guard.sh` enforces this:
+
+- It denies writes and deletes outside the two folders.
+- It asks the owner before anything else touches a path outside them.
+
+Never work around it. If it blocks you, stop and tell the orchestrator or the owner.
+
 ## Everything else
 
 Read `docs/history/tasks.md` before starting. Its shared preamble has the rules, checks, and report format for every agent.
