@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-engines"
-description = "textweaver speech engines: the backend registry every frontend shares (built-ins, Eloquence, SAPI5, Apple, DECtalk), engine options from the settings, and the speech service configuration"
+description = "textweaver speech engines: the backend registry every frontend shares (built-ins, Eloquence, SAPI5, Apple, DECtalk, Piper), engine options from the settings, and the speech service configuration"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,6 +11,9 @@ publish.workspace = true
 
 [features]
 default = []
+# Downloading Piper voices (HTTP through ureq). The app turns it on with
+# its `publish` feature, so the lean reader links no HTTP client.
+piper-download = ["textweaver-piper/download"]
 # In-process engines, passed through to textweaver-speech.
 espeak = ["textweaver-speech/espeak"]
 omnivox = ["textweaver-speech/omnivox"]
@@ -24,6 +27,10 @@ textweaver-eci.workspace = true
 textweaver-sapi.workspace = true
 textweaver-dectalk.workspace = true
 textweaver-apple.workspace = true
+# Piper neural voices in-process on RTen (ADR-0023): phonemes from an
+# installed libespeak-ng, else the built-in pure-Rust port. Downloads
+# (checked by hash) are the `piper-download` feature.
+textweaver-piper = { workspace = true, features = ["playback", "espeak-lib", "espeak-rs"] }
 
 [lints]
 workspace = true

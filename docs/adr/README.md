@@ -31,7 +31,7 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
 - [ADR-0012: One engine-host protocol and playback client](0012-engine-host.md): the shared protocol for Eloquence, SAPI5, and DECtalk.
   - Status: accepted, with 3 status updates.
 - [ADR-0013: Dictation through a Whisper program](0013-dictation.md): voice typing with a Whisper subprocess.
-  - Status: accepted, with 2 status updates.
+  - Status: accepted, with 3 status updates; in part superseded by ADR-0023 (Whisper in-process).
 - [ADR-0014: GUI toolkit (wxDragon)](0014-gui-toolkit.md): the GUI spike's findings. Wave 3 moves the GUI to Xilem, and the spike stays as a fallback.
   - Status: proposed. Wave 3 replaces it with a Xilem GUI (Agent W3b, ADR-0023); the wxDragon spike stays as a fallback until then. It has 2 status updates.
 - [ADR-0015: JSON-RPC server (`tw serve --stdio`)](0015-json-rpc.md): `tw serve --stdio`, its methods, and notifications.
@@ -50,6 +50,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted, with 2 status updates.
 - [ADR-0022: Reading aids](0022-reading-aids.md): RSVP, bionic reading, spacing, fonts, the ruler, and more, as pure data.
   - Status: accepted, with 2 status updates.
+- [ADR-0023: Piper voices and Whisper dictation in-process on RTen](0023-in-process-neural-speech.md): neural voices with word timing from the model, and in-process dictation, on a pure-Rust ONNX runtime.
+  - Status: accepted.
 - [ADR-0024: App core for the GUI](0024-app-core-for-the-gui.md): the document window, shared list and prompt state, the waker, the replace-range edit, the settings schema, and work moved off the input thread.
   - Status: accepted.
 - [ADR-0025: Define word offline, and the message catalog](0025-lexicon-and-message-catalog.md): Open English WordNet and CMUdict in an fst and zstd file, and a Fluent-subset catalog with pseudo-locales.

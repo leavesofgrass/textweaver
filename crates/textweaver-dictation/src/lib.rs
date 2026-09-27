@@ -14,12 +14,31 @@
 //! Whisper in-process through Python; textweaver runs a Whisper program,
 //! so no Python is needed with whisper.cpp.
 //!
-//! Owner: Agent J.
+//! **In-process Whisper** (feature `rten`, ADR-0023): [`RtenDictation`]
+//! runs onnx-community's int8 Whisper models on RTen, the pure-Rust ONNX
+//! runtime, with silence skipped by the earshot voice detector. The
+//! Whisper programs stay as the fallback. Feature `mic` adds
+//! [`MicCapture`], the default microphone through rodio.
+//!
+//! Owners: Agent J (the trait and the subprocess backend), Agent W3f
+//! (in-process Whisper and the microphone).
 
+#[cfg(any(feature = "rten", feature = "mic"))]
+pub mod audio;
 mod capture;
 mod commands;
 pub mod engine;
+#[cfg(feature = "mic")]
+mod mic;
+#[cfg(feature = "rten")]
+mod onnx_patch;
+#[cfg(feature = "rten")]
+mod rten_dictation;
+#[cfg(feature = "rten")]
+pub mod rten_whisper;
 mod transcript;
+#[cfg(any(feature = "rten", feature = "mic"))]
+pub mod vad;
 mod whisper;
 
 use std::path::PathBuf;
@@ -27,6 +46,10 @@ use std::path::PathBuf;
 pub use capture::{AudioCapture, BufferCapture, Pcm, WHISPER_SAMPLE_RATE};
 pub use commands::{apply_spoken_commands, command_phrases};
 pub use engine::{DetectedEngine, WhisperEngine, detect};
+#[cfg(feature = "mic")]
+pub use mic::MicCapture;
+#[cfg(feature = "rten")]
+pub use rten_dictation::{RtenConfig, RtenDictation, SessionTimings};
 pub use transcript::{
     DictationEvent, Segment, Transcript, WHISPER_MODELS, WhisperModel, format_timestamp,
 };

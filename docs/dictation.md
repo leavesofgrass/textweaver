@@ -1,6 +1,6 @@
 # Dictation: turning speech into text
 
-`tw dictate` turns recorded speech into text. You give it an audio file, such as a recorded lecture, a voice memo, or a note you spoke into your phone, and it prints what was said. It can also follow spoken commands such as "new line" and "period", so you can dictate a letter or a paragraph with its punctuation. It is for students who find speaking easier than typing, and for anyone who wants a written copy of a recording. The recognition is done by Whisper, a speech recognition program you install once. Everything happens on your own computer. Dictating straight from a microphone is not available yet; see [Dictating from the microphone](#dictating-from-the-microphone).
+`tw dictate` turns recorded speech into text. You give it an audio file, such as a recorded lecture, a voice memo, or a note you spoke into your phone, and it prints what was said. It can also follow spoken commands such as "new line" and "period", so you can dictate a letter or a paragraph with its punctuation. It is for students who find speaking easier than typing, and for anyone who wants a written copy of a recording. The recognition is done by Whisper, a speech recognition program you install once. Everything happens on your own computer. With the in-process Whisper model installed, `tw dictate` also records from the microphone; see [Whisper inside textweaver](#whisper-inside-textweaver).
 
 This guide is written to be read with a screen reader. Each section starts with the command, then explains it.
 
@@ -336,21 +336,37 @@ While it works, textweaver makes a temporary folder for the session, in your sys
 
 The one time the internet is used is when faster-whisper or OpenAI Whisper downloads a model you have not used before. That download is done by the Whisper program, it fetches the model only, and it sends none of your audio.
 
-## Dictating from the microphone
+## Whisper inside textweaver
+
+textweaver can run Whisper itself, with no Whisper program, on RTen, a model runtime written in Rust ([ADR-0023](adr/0023-in-process-neural-speech.md)). It needs three files from Hugging Face's `onnx-community/whisper-base.en` in one folder, `<data>/whisper/rten/base.en` (77 MB in all):
+
+- `onnx/encoder_model_int8.onnx` (23 MB);
+- `onnx/decoder_model_merged_int8.onnx` (54 MB);
+- `tokenizer.json` (2.4 MB).
+
+The licence is MIT, from OpenAI. textweaver does not download them for you yet.
+
+When the folder holds them, `tw dictate` uses them without being asked. `--engine rten` asks for them, and `--model-dir DIR` names another folder (`tw dictate --model-dir D:\Models\whisper-tiny.en`).
+
+### Dictating from the microphone
 
 ```text
 tw dictate
 ```
 
-Without `--file`, `tw dictate` does not open the microphone. It says:
+Without `--file`, `tw dictate` records from your default microphone. You hear "Recording. Press Enter to stop." Speak, then press Enter. It says "Transcribing", then prints the text. Pauses are skipped: a voice detector (earshot) finds where you spoke, so long silences cost nothing and are not turned into invented words.
+
+Without the in-process model, `tw dictate` says where to put it, and you can still record with any program you like and transcribe the file with `tw dictate --file`.
+
+### How long it takes
+
+`--timings` prints where the time went: loading the model (once), the spectrogram, the encoder, the decoder, and the time from pressing Enter to the text.
 
 ```text
-Error: Dictating from the microphone is not available in tw yet. Transcribe a recording with --file AUDIO.
+tw dictate --file note.wav --timings
 ```
 
-Recording from a microphone is not available yet. It needs an audio input library that textweaver does not use yet (see [ADR-0013](adr/0013-dictation.md)). The textweaver reader has no dictation command yet either. Wave 3 plans to run Whisper inside textweaver itself, so no Whisper program is needed, keeping today's Whisper programs as a fallback; see the [roadmap](roadmap.md).
-
-Until then, record with any program you like, such as the Voice Recorder or Sound Recorder app on Windows, Voice Memos on a Mac, or your phone, and then transcribe the file with `tw dictate --file`.
+The textweaver reader has no dictation command yet.
 
 ## Dictating into the reader with other software
 
