@@ -812,6 +812,43 @@ Wave 4 starts only after this pass is done. It has four steps.
 
 ## Wave 4 (refined 2026-09-26; starts when Wave 3 is merged and Docker is restarted)
 
+**ADOPTED PLAN, Sunday, September 27, 2026.** This supersedes everything else in this section, including the "Refined plan" and the "Earlier layout" below; those are kept as history. The plan, the ready-to-paste briefs and the orchestrator's runbook are in `docs/research/wave4-orchestration.md`, with these decisions from Jon.
+
+**Shape:** three sub-waves, with at most three agents building at once. Memory limits this, not disk: Docker's machine has about 31 GB.
+- **Wave 4a, "hear it first":** W4h (terminal polish), W4s (GUI session prep), W4c1 (MathCAT speech). Gate: Jon's NVDA and JAWS session 1.
+- **Wave 4b:** W4g (authoring extras), W4b (speed), W4a2 (the GUI after the session). Gate: Jon's session 2.
+- **Wave 4c:**
+  - W4c2 (documents);
+  - W4d (translations);
+  - **W4a3 (GUI edit mode, new, below);**
+  - W4f (platforms and CI), running as a light fourth agent.
+
+  Gate: Jon's check in Spanish or French, then compacting Docker's disk.
+
+**Jon's decisions (September 27, 2026):**
+1. **W4e (offline intelligence) is deferred to Wave 5.**
+2. **GUI edit mode stays in Wave 4,** as W4a3 in sub-wave 4c after session 2.
+3. **No merge gate for now.** W4f doesn't change any repository settings (no rulesets, no required checks, no auto-merge).
+4. **The wxDragon spike (`crates/textweaver-gui`) is removed** once Jon's session 2 on the Xilem GUI passes. The orchestrator does this as its own commit, with the file list shown first.
+5. **Unbound keys in the reader are silent,** as in NVDA's browse mode. W4h adds no tone.
+
+**W4a3: GUI edit mode (sub-wave 4c, P1; ADR 0033).**
+- **Edit mode in `DocumentView`,** using `Command::ReplaceRange`, and keeping structure while editing as the terminal reader does.
+- **Based on Parley's `examples/editor`,** on the vendored Parley 0.8.0. Don't upgrade it.
+- **Accessibility:**
+  - use AccessKit's `MultilineTextInput` role;
+  - handle `SetTextSelection`, `SetValue` and `ReplaceSelectedText`;
+  - draw selection and backgrounds yourself, since Parley has no background style;
+  - undo comes from `textweaver-editor`.
+- **The GUI features that waited for edit mode:**
+  - citations while writing;
+  - export and preview;
+  - spell check.
+- **Uses the highlight and announcement designs** decided in Jon's sessions 1 and 2.
+- **Owns:** `textweaver-xilem`'s editing code. Don't touch `textweaver-app` beyond one-line hooks, `.github/`, or the workspace members.
+- **Report checklist,** at most five items: type and hear each character; select a word and hear it; undo; a citation while writing; spell check on a misspelled word.
+
+
 **Lessons from Waves 2 and 3.** Every Wave 4 agent follows these. They come from what went wrong or cost time.
 
 - **Checks.** Run every check CI runs before reporting. CI went red three times from things the usual check run skipped. The full set:

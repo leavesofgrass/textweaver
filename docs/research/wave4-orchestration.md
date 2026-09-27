@@ -590,6 +590,14 @@ For each agent that reports:
 4. **Remove the wxDragon spike after session 2 passes,** or keep it as a fallback through Wave 4?
 5. **Unbound keys in the reader: silent, as NVDA's browse mode is, or a short tone at high verbosity?** (UX-1's item 7.) W4h implements whichever you choose.
 
+## Jon's answers (Sunday, September 27, 2026)
+
+1. **W4e is deferred to Wave 5.**
+2. **GUI edit mode stays in Wave 4,** as a new agent, W4a3, in sub-wave 4c after session 2 (ADR 0033). It takes 4c's heavy slot, and W4f runs as a light fourth agent. Its brief is in `docs/history/tasks.md`, under "Adopted plan".
+3. **No merge gate for now.** W4f changes no repository settings.
+4. **The wxDragon spike is removed** once session 2 passes. The orchestrator does it as its own commit, after showing the file list.
+5. **Unbound keys are silent,** as in NVDA's browse mode.
+
 ## See also
 
 - [Wave 4 plan review](wave4-plan-review.md): the first review, folded into the plan.
