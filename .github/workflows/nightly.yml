@@ -163,7 +163,7 @@ jobs:
         with:
           key: nightly-release
       - name: Workspace tests (release)
-        run: cargo test --locked --release --workspace --exclude textweaver-gui --all-features --no-fail-fast
+        run: cargo test --locked --release --workspace --exclude textweaver-gui --exclude textweaver-xilem --all-features --no-fail-fast
       - name: Loader property tests, 2,048 cases each
         env:
           PROPTEST_CASES: '2048'
@@ -181,7 +181,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
       - run: rustup toolchain install 1.92 --profile minimal
       # rust-version is 1.92 because krilla 0.8 (the PDF writer) needs it.
-      - run: cargo +1.92 check --locked --workspace --exclude textweaver-gui
+      - run: cargo +1.92 check --locked --workspace --exclude textweaver-gui --exclude textweaver-xilem
 
   docker:
     name: Docker image and tests
@@ -194,7 +194,7 @@ jobs:
       - name: Tests in the image (every feature, no GUI)
         run: |
           docker run --rm -v "$PWD:/work" -w /work -e CARGO_TARGET_DIR=/work/target/docker \
-            textweaver-dev cargo test --locked --workspace --exclude textweaver-gui --all-features --no-fail-fast
+            textweaver-dev cargo test --locked --workspace --exclude textweaver-gui --exclude textweaver-xilem --all-features --no-fail-fast
 
   soak:
     name: soak test

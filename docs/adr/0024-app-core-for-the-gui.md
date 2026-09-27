@@ -5,7 +5,7 @@
 
 ## Context
 
-The Xilem GUI (Agent W3b, ADR-0023) and JSON-RPC need pieces the terminal reader kept to itself or did not need. The wxDragon spike loaded a whole document into a native control (9.3 s for 10 million characters) and polled speech every 30 ms. The list's focused item, first-letter jumps, the "3 of 12" announcements, and the prompt's text and history lived in `textweaver-tui`. There was no way to describe the settings to a dialog, no edit command a native text control could send, and a few slow jobs still ran on the input thread: opening a large file, writing `settings.toml`, the misspelling count after a save (0.6 s on 10 MB in a release build), and the speech engine's first start.
+The Xilem GUI (Agent W3b, ADR-0027) and JSON-RPC need pieces the terminal reader kept to itself or did not need. The wxDragon spike loaded a whole document into a native control (9.3 s for 10 million characters) and polled speech every 30 ms. The list's focused item, first-letter jumps, the "3 of 12" announcements, and the prompt's text and history lived in `textweaver-tui`. There was no way to describe the settings to a dialog, no edit command a native text control could send, and a few slow jobs still ran on the input thread: opening a large file, writing `settings.toml`, the misspelling count after a save (0.6 s on 10 MB in a release build), and the speech engine's first start.
 
 The spirit of Wave 3 is pure Rust first and bold choices with a recorded fallback. These are the choices.
 

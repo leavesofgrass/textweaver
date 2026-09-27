@@ -12,6 +12,8 @@
 //! - `dist`: build a release package for this platform (`--universal` on
 //!   macOS); see `docs/dev/releasing.md`.
 //! - `eci-host`, `sapi-host`: build one engine's hosts.
+//! - `gui-dist`: the Xilem GUI's own package: a zip on Windows, a `.app`
+//!   on macOS, a tarball and an AppImage on Linux (see `gui_dist.rs`).
 //! - `listen [--engine ID] [--text FILE] [--out DIR]`: write sample WAV
 //!   files (and word-level subtitles) from every real speech engine here,
 //!   for the listening checklist in `docs/releasing.md`; plays nothing
@@ -33,6 +35,7 @@ mod bench;
 mod deps;
 mod dist;
 mod eci;
+mod gui_dist;
 mod keyboard;
 mod listen;
 mod notices;
@@ -56,6 +59,7 @@ fn main() -> anyhow::Result<()> {
         "dist" => dist::run(),
         "hosts" => eci::hosts(),
         "eci-host" => eci::run(),
+        "gui-dist" => gui_dist::run(),
         "keyboard" => keyboard::run(),
         "listen" => listen::run(),
         "notices" => notices::run(),
@@ -68,7 +72,7 @@ fn main() -> anyhow::Result<()> {
         "startup" => bench::startup(),
         _ => {
             eprintln!(
-                "usage: cargo xtask <appimage|bench|deps|dist|hosts|eci-host|keyboard|listen|notices|parity|release|sapi-host|soak|startup>"
+                "usage: cargo xtask <appimage|bench|deps|dist|gui-dist|hosts|eci-host|keyboard|listen|notices|parity|release|sapi-host|soak|startup>"
             );
             std::process::exit(2);
         }

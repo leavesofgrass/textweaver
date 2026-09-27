@@ -6,7 +6,7 @@ The [interactive architecture page](../site/architecture.html) shows the same cr
 
 ## The big picture
 
-textweaver is one Cargo workspace with 29 crates and a maintenance crate, `xtask`. Two programs come out of it:
+textweaver is one Cargo workspace with 30 crates and a maintenance crate, `xtask`. Two programs come out of it:
 
 - `textweaver`, the terminal reader, built from `crates/textweaver-tui`;
 - `tw`, the command-line tool, built from `crates/textweaver-cli`.
@@ -59,6 +59,7 @@ The crates are grouped here by the part of the system they serve. For each crate
 - **`textweaver-tui`**: the terminal reader, on ratatui and crossterm; builds the `textweaver` program. ADRs: [0006](../adr/0006-keymap-and-actions.md), [0020](../adr/0020-themes.md), [0022](../adr/0022-reading-aids.md). Depends on app, engines, theme, and aids. Its default feature `publish` turns on the app's; `cargo build -p textweaver-tui --no-default-features` builds a lean reader without export, preview, and citations.
 - **`textweaver-cli`**: the `tw` program. One module per subcommand. `tw open` and `tw serve` run the terminal reader and the JSON-RPC server in process. ADRs: [0015](../adr/0015-json-rpc.md), [0016](../adr/0016-rendering-and-conversion.md), [0011](../adr/0011-audio-export.md). Depends on app (with `publish`), engines, tui, convert, render, writers, export, cite, vault, and dictation.
 - **`textweaver-gui`**: the GUI spike on wxDragon, kept as a fallback while Wave 3 builds the Xilem GUI. ADR: [0014](../adr/0014-gui-toolkit.md). Depends on app, aids, and fonts. Not a default member of the workspace.
+- **`textweaver-xilem`**: the all-Rust GUI on Masonry (Xilem's widget layer), Vello, Parley, AccessKit, and winit, with its own `DocumentView`; builds `textweaver-xilem`, to become `textweaver-gui`. Masonry is vendored under `third_party/xilem`, patched to AccessKit 0.25. ADR: [0027](../adr/0027-xilem-gui.md). Depends on app, theme, and fonts. Not a default member of the workspace.
 
 ### Output and study tools
 
@@ -99,7 +100,7 @@ The crates in levels, from the bottom up. Each crate depends only on crates in l
 5. eci, sapi, and dectalk;
 6. engines;
 7. app;
-8. tui, gui, and xtask;
+8. tui, gui, xilem, and xtask;
 9. cli.
 
 ## Threads and processes
