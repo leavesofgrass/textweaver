@@ -93,7 +93,7 @@ In the list:
 
 - **Enter** goes to the note.
 - **F2** edits the note. You hear "Editing note:" and its text. The prompt says "Edit note, Enter keeps it". Type the new text and press **Enter**; tags are read again from the new text. You hear "Note updated." Enter on an empty prompt leaves the note as it was.
-- **Delete** deletes the note at once, without asking. You hear "Note deleted:" and the start of the note.
+- **Delete** asks "Delete this note? y or n". Press **y** to delete it; you hear "Note deleted:" and the start of the note. Press **n**, **a**, or **Escape** to keep it; you hear "Kept." and the list comes back.
 - **Escape** closes the list.
 
 This list shows notes only. Highlights have their own list.
@@ -121,13 +121,13 @@ Highlights imported from Star, or from a synced folder, can have other colours. 
 
 Press **Shift+Y**. You hear "Highlights", the count, then "Enter goes to one, Delete removes it." Each item says the passage, the line, and the colour name.
 
-In the list, **Enter** goes to the highlight, **Delete** removes it at once, and **Escape** closes the list. In the command palette this command is `list_highlights`.
+In the list, **Enter** goes to the highlight, **Delete** asks "Remove this highlight? y or n" and removes it on **y**, and **Escape** closes the list. In the command palette this command is `list_highlights`.
 
 ## Delete a note or highlight at the cursor: Delete
 
 When reading, move to a note or a highlight and press **Delete**. textweaver asks "Delete this note or highlight? y or n". Press **y** to delete it, or **n**, **a**, or **Escape** to keep it. A note under the cursor is deleted before a highlight. With nothing there you hear "No note or highlight here."
 
-Delete in a list works differently: it deletes the chosen item at once, without asking.
+Delete in the notes and highlights lists asks the same way. Only the bookmarks list deletes at once, without asking.
 
 ## How marks move when you edit
 

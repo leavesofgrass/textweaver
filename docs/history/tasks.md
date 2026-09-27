@@ -783,6 +783,8 @@ Wave 4 starts only after this pass is done. It has four steps.
      - Compare the GUI with the terminal reader, and list what is missing or rough.
 
    Both audits produce one ranked list. Each item has its evidence, its size, and whether it is a quick win (under half a day).
+
+   **Status (Agent UX-1, terminal reader and `tw`, 2026-09-26):** audit done and the quick wins fixed on branch `ux/terminal-pass`; findings, the ranked remainder, and Wave 4 suggestions in [docs/research/usability-terminal.md](../research/usability-terminal.md). Fixed: questions spoken while reading aloud, a first-run welcome, plain open failures in the reader and `tw`, a fuller F1 help with at most two keys per line, startup warnings that no longer cut off "Opened", `tw text | head` no longer panics, `tw define` no longer reports twice, `tw marks --home`, and three stale doc passages.
 2. **Fold in the quick wins.** One or two agents fix every quick win, with tests. Larger items go into the Wave 4 briefs.
 3. **Jon's check.** The orchestrator builds the terminal reader and the GUI in release mode and opens them for Jon. He gets a short checklist for NVDA and JAWS: the GUI, the modes, and the main flows. His findings become fixes or Wave 4 items.
 4. **Then Wave 4.** Restart Docker, then launch the nine Wave 4 agents.

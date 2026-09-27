@@ -468,7 +468,7 @@ These keys work in every prompt, including Find, Go to, and Open file:
 - **?**: list every keyboard shortcut with its current keys, including your own changes. Up and Down move, **Enter** runs the command, **Escape** closes. The GUI also opens this list with **F3**.
 - **F1**: open the help, a short list of the most useful keys.
 
-In any list: **Up** and **Down** (or **j** and **k**) move, **PageUp** and **PageDown** move ten items, **Home** and **End** go to the first and last, **Enter** chooses, and **Escape**, **q**, or **Backspace** closes. At the ends you hear "Top of list." or "End of list."
+In any list: **Up** and **Down** move, **PageUp** and **PageDown** move ten items, **Home** and **End** go to the first and last, a letter jumps to the next item starting with it, **Enter** chooses, and **Escape** or **Backspace** closes. At the ends you hear "Top of list." or "End of list."
 
 ## Turn single-key shortcuts off: F9
 
