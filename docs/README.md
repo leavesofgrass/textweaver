@@ -126,6 +126,8 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 - [Pure-Rust choices for Wave 3](research/pure-rust-wave3.md): OCR, Piper voices, Whisper, define word, and other swaps (September 2026).
 - [Research for Wave 4](research/wave4.md): the GUI part two, speed, formats (MathCAT), translations, offline models, and releases (September 2026).
 - [Usability pass: the terminal reader and tw](research/usability-terminal.md): what a screen reader user meets, what was fixed, what is left, ranked (September 2026).
+- [Wave 4 plan review](research/wave4-plan-review.md): the first review of the Wave 4 plan, with quick wins and research updates (September 2026).
+- [Wave 4 orchestration plan](research/wave4-orchestration.md): three sub-waves of three agents, the dependency map, the disk and memory budget, revised briefs, and the runbook (September 2026).
 
 ## See also
 
