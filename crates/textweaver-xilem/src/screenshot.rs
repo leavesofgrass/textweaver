@@ -38,6 +38,8 @@ pub struct ShotOptions {
     pub highlight_at: Option<usize>,
     /// Draw an open list dialog with these items.
     pub list: Option<(String, Vec<String>)>,
+    /// Draw the settings dialog, on the speech rate.
+    pub settings: bool,
     /// Keep settings under this directory.
     pub home: Option<PathBuf>,
 }
@@ -106,6 +108,13 @@ fn render(
         harness.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
         harness.focus_on(Some(list_id));
     }
+    if opts.settings {
+        let form = crate::settings_dialog::SettingsForm::new(app.settings_schema());
+        let (section, row) = form.find("speech.rate").unwrap_or((0, 0));
+        let d = gui::settings_dialog(palette, &form, app, section, row);
+        harness.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(d.modal)));
+        harness.focus_on(Some(d.form));
+    }
     harness
         .render()
         .save(&opts.path)
@@ -113,7 +122,8 @@ fn render(
 }
 
 /// The screenshots for review: Galaxy, Galaxy Light, and high contrast at
-/// 100% and 200%, a spoken word, and a list dialog. Returns the files.
+/// 100% and 200% with a spoken word, a list dialog, and the settings
+/// dialog. Returns the files.
 pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
     std::fs::create_dir_all(dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
     let mut out = Vec::new();
@@ -125,22 +135,44 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         theme: Some("galaxy".into()),
         highlight_at: Some(120),
         list: None,
+        settings: false,
         home: Some(dir.join("home")),
     };
+    // What each shot shows over the window: nothing, a list, or settings.
+    const WINDOW: u8 = 0;
+    const LIST: u8 = 1;
+    const SETTINGS: u8 = 2;
     let shots = [
-        ("galaxy-100.png", "galaxy", 1.0, false),
-        ("galaxy-200.png", "galaxy", 2.0, false),
-        ("galaxy-light-100.png", "galaxy-light", 1.0, false),
-        ("high-contrast-100.png", "high-contrast", 1.0, false),
-        ("galaxy-dialog-100.png", "galaxy", 1.0, true),
-        ("galaxy-dialog-200.png", "galaxy", 2.0, true),
+        ("galaxy-100.png", "galaxy", 1.0, WINDOW),
+        ("galaxy-200.png", "galaxy", 2.0, WINDOW),
+        ("galaxy-light-100.png", "galaxy-light", 1.0, WINDOW),
+        ("galaxy-light-200.png", "galaxy-light", 2.0, WINDOW),
+        ("high-contrast-100.png", "high-contrast", 1.0, WINDOW),
+        ("high-contrast-200.png", "high-contrast", 2.0, WINDOW),
+        ("galaxy-dialog-100.png", "galaxy", 1.0, LIST),
+        ("galaxy-dialog-200.png", "galaxy", 2.0, LIST),
+        ("galaxy-settings-100.png", "galaxy", 1.0, SETTINGS),
+        ("galaxy-settings-200.png", "galaxy", 2.0, SETTINGS),
+        (
+            "galaxy-light-settings-100.png",
+            "galaxy-light",
+            1.0,
+            SETTINGS,
+        ),
+        (
+            "high-contrast-settings-100.png",
+            "high-contrast",
+            1.0,
+            SETTINGS,
+        ),
     ];
-    for (name, theme, scale, list) in shots {
+    for (name, theme, scale, over) in shots {
         let mut o = base.clone();
         o.path = dir.join(name);
         o.theme = Some(theme.into());
         o.scale = scale;
-        if list {
+        o.settings = over == SETTINGS;
+        if over == LIST {
             o.list = Some((
                 "Bookmarks".into(),
                 vec![

@@ -147,6 +147,7 @@ fn screenshots_are_written_at_both_scales() {
             theme: Some("galaxy".into()),
             highlight_at: Some(20),
             list: None,
+            settings: false,
             home: Some(dir.path().join("home")),
         };
         textweaver_xilem::screenshot::screenshot(&o).unwrap();

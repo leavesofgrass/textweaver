@@ -40,6 +40,11 @@ pub enum DialogAction {
     Key(textweaver_app::ListKey),
     /// The pointer moved the list's focus (`Command::ListFocus`, quiet).
     Focus(usize),
+    /// Up (`true`) or Down in a prompt's field: an earlier or later answer
+    /// (`PromptKey::Up` and `PromptKey::Down`).
+    Recall(bool),
+    /// Tab in a prompt for a path: complete it (`PromptKey::Tab`).
+    Complete,
 }
 
 // --- Modal.
@@ -51,6 +56,8 @@ pub struct Modal {
     label: String,
     palette: Palette,
     max_width: f64,
+    /// Tab completes the field (a path) instead of moving the focus.
+    tab_completes: bool,
 }
 
 impl Modal {
@@ -66,7 +73,20 @@ impl Modal {
             label: label.into(),
             palette,
             max_width: 600.0,
+            tab_completes: false,
         }
+    }
+
+    /// Tab completes the prompt's text (a path) instead of moving the focus.
+    pub fn with_tab_completion(mut self, on: bool) -> Self {
+        self.tab_completes = on;
+        self
+    }
+
+    /// The card's widest width, in logical pixels (600 by default).
+    pub fn with_max_width(mut self, width: f64) -> Self {
+        self.max_width = width;
+        self
     }
 }
 
@@ -79,13 +99,24 @@ impl Widget for Modal {
         _props: &mut PropertiesMut<'_>,
         event: &TextEvent,
     ) {
-        if let TextEvent::Keyboard(k) = event
-            && k.state == KeyState::Down
-            && k.key == Key::Named(NamedKey::Escape)
-        {
-            ctx.submit_action::<DialogAction>(DialogAction::Cancel);
-            ctx.set_handled();
+        let TextEvent::Keyboard(k) = event else {
+            return;
+        };
+        if k.state != KeyState::Down || k.modifiers.ctrl() || k.modifiers.alt() {
+            return;
         }
+        // Keys the dialog's controls left alone.
+        let action = match &k.key {
+            Key::Named(NamedKey::Escape) => DialogAction::Cancel,
+            Key::Named(NamedKey::ArrowUp) if !k.modifiers.shift() => DialogAction::Recall(true),
+            Key::Named(NamedKey::ArrowDown) if !k.modifiers.shift() => DialogAction::Recall(false),
+            Key::Named(NamedKey::Tab) if self.tab_completes && !k.modifiers.shift() => {
+                DialogAction::Complete
+            }
+            _ => return,
+        };
+        ctx.submit_action::<DialogAction>(action);
+        ctx.set_handled();
     }
 
     fn on_pointer_event(
@@ -195,6 +226,9 @@ pub struct ChoiceList {
     width: f64,
     /// Keys go to the app's list model instead of moving the focus here.
     app_keys: bool,
+    /// Every move is reported ([`DialogAction::Focus`]), for a list whose
+    /// focus changes what the dialog shows (the settings' sections).
+    focus_actions: bool,
 }
 
 impl ChoiceList {
@@ -214,6 +248,7 @@ impl ChoiceList {
             option_ids: Vec::new(),
             width: 0.0,
             app_keys: false,
+            focus_actions: false,
         }
     }
 
@@ -221,6 +256,12 @@ impl ChoiceList {
     /// driver then shows the model's items and focus with [`sync`](Self::sync).
     pub fn with_app_keys(mut self, on: bool) -> Self {
         self.app_keys = on;
+        self
+    }
+
+    /// Reports every move of the focus with [`DialogAction::Focus`].
+    pub fn with_focus_actions(mut self, on: bool) -> Self {
+        self.focus_actions = on;
         self
     }
 
@@ -367,8 +408,12 @@ impl Widget for ChoiceList {
             _ => return,
         };
         if let Some(i) = new {
+            let moved = i != self.selected;
             self.set_selected(i);
             ctx.request_render();
+            if moved && self.focus_actions {
+                ctx.submit_action::<DialogAction>(DialogAction::Focus(self.selected));
+            }
         }
         ctx.set_handled();
     }
@@ -388,14 +433,15 @@ impl Widget for ChoiceList {
                     let double = row == self.selected && state.count >= 2;
                     self.set_selected(row);
                     ctx.request_render();
-                    if self.app_keys {
+                    if self.app_keys || self.focus_actions {
                         ctx.submit_action::<DialogAction>(DialogAction::Focus(row));
                         if double {
                             ctx.submit_action::<DialogAction>(DialogAction::Key(
                                 textweaver_app::ListKey::Enter,
                             ));
                         }
-                    } else if double {
+                    }
+                    if !self.app_keys && double {
                         ctx.submit_action::<DialogAction>(DialogAction::Choose(row));
                     }
                 }
@@ -424,13 +470,30 @@ impl Widget for ChoiceList {
         _props: &mut PropertiesMut<'_>,
         event: &AccessEvent,
     ) {
-        // Screen readers choose an option by clicking or focusing it.
-        if let Some(ActionData::NumericValue(v)) = &event.data
-            && event.action == Action::SetValue
-        {
-            self.set_selected(*v as usize);
-            ctx.request_render();
+        // Screen readers choose an option by clicking or focusing it (the
+        // action names the option's node), or set the list's value.
+        let row = match (event.node, &event.data) {
+            (Some(node), _) => match self.option_ids.iter().position(|id| *id == node) {
+                Some(i) if i < self.items.len() => i,
+                _ => return,
+            },
+            (None, Some(ActionData::NumericValue(v))) if event.action == Action::SetValue => {
+                *v as usize
+            }
+            _ => return,
+        };
+        if !matches!(
+            event.action,
+            Action::Focus | Action::Click | Action::ScrollIntoView | Action::SetValue
+        ) {
+            return;
         }
+        self.set_selected(row);
+        ctx.request_render();
+        if self.app_keys || self.focus_actions {
+            ctx.submit_action::<DialogAction>(DialogAction::Focus(self.selected));
+        }
+        ctx.set_handled();
     }
 
     fn measure(
@@ -502,6 +565,17 @@ impl Widget for ChoiceList {
                         fg_fill,
                     )
                     .draw();
+                if !self.focused {
+                    // A hairline, so the selection shows where the raised
+                    // colour is the page's (high contrast).
+                    painter
+                        .stroke(
+                            RoundedRect::from_rect(row.inset(-2.0), theme::RADIUS),
+                            &Stroke::new(1.0),
+                            theme::color(p.border),
+                        )
+                        .draw();
+                }
             }
             let text_fg = if selected && !self.focused {
                 p.text
@@ -549,6 +623,8 @@ impl Widget for ChoiceList {
             let mut o = Node::new(Role::ListBoxOption);
             o.set_label(item.as_str());
             o.set_selected(i == self.selected);
+            o.add_action(Action::Focus);
+            o.add_action(Action::Click);
             o.set_position_in_set(i + 1);
             o.set_size_of_set(n);
             let y = (i as f64 - self.top as f64) * self.row_h;

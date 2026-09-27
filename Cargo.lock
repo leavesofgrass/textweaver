@@ -7023,6 +7023,7 @@ dependencies = [
  "masonry",
  "masonry_testing",
  "masonry_winit",
+ "serde_json",
  "tempfile",
  "textweaver-app",
  "textweaver-fonts",

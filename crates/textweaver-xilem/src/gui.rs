@@ -28,7 +28,7 @@ use masonry::layout::Length;
 use masonry::parley::style::{FontFamily, FontWeight};
 use masonry::properties::types::CrossAxisAlignment;
 use masonry::properties::{Background, Padding};
-use masonry::widgets::{Flex, Label, TextArea, TextInput};
+use masonry::widgets::{Flex, Label, SizedBox, TextArea, TextInput};
 use masonry_winit::app::{
     AppDriver, DriverCtx, EventLoop, EventLoopProxy, MasonryState, MasonryUserEvent, NewWindow,
     WindowId,
@@ -40,12 +40,13 @@ use textweaver_app::core::CharRange;
 use textweaver_app::keymap::{ActionId, Platform};
 use textweaver_app::store::DocKey;
 use textweaver_app::{
-    App, Command, DocWindow, Effect, Playback, PromptPurpose, WindowChange, extra_lookup,
+    App, Command, DocWindow, Effect, Playback, PromptKey, PromptPurpose, WindowChange, extra_lookup,
 };
 
 use crate::dialog::{self, ChoiceList, DialogAction, Modal};
 use crate::document::{DocAction, DocFont, DocModel, DocState, DocumentView};
 use crate::keys;
+use crate::settings_dialog::{self, FormAction, FormChange, SettingsForm, SettingsGrid};
 use crate::setup::{self, Options};
 use crate::theme::{self, Palette};
 use crate::widgets::{
@@ -79,6 +80,10 @@ pub const MAIN: WidgetTag<Region> = WidgetTag::named("tw-main");
 pub const PROMPT_FIELD: WidgetTag<TextArea<true>> = WidgetTag::named("tw-prompt-field");
 /// The list of an open list dialog.
 pub const LIST: WidgetTag<ChoiceList> = WidgetTag::named("tw-list");
+/// The settings dialog's list of sections.
+pub const SECTIONS: WidgetTag<ChoiceList> = WidgetTag::named("tw-settings-sections");
+/// The settings dialog's form.
+pub const FORM: WidgetTag<SettingsGrid> = WidgetTag::named("tw-settings-form");
 
 /// The first wait between ticks, before the app says (`App::tick_interval`).
 const FIRST_TICK: Duration = Duration::from_millis(250);
@@ -120,6 +125,9 @@ pub struct Experiments {
     /// AccessKit nodes the screen reader follows itself (the list's active
     /// descendant is its focus), and both would say each item twice.
     pub app_list_announcements: bool,
+    /// Settings opens the app's settings list (as the terminal reader
+    /// shows it) instead of the settings dialog.
+    pub settings_list: bool,
 }
 
 /// Wakes the event loop.
@@ -163,9 +171,22 @@ struct Shown {
     title: String,
 }
 
+/// The settings dialog while it is open.
+struct SettingsOpen {
+    form: SettingsForm,
+    section: usize,
+    /// The Close button.
+    close: WidgetId,
+}
+
 /// An open dialog.
 enum OpenDialog {
     Prompt,
+    /// The settings dialog.
+    Settings(SettingsOpen),
+    /// A prompt for a new value of the setting at this row of the settings
+    /// dialog, which comes back when it closes.
+    SettingEdit(SettingsOpen, usize),
     List,
     /// The command palette: the actions its list shows, in order.
     Palette(Vec<ActionId>),
@@ -206,6 +227,8 @@ pub struct Gui {
     installed: crate::font_chooser::Installed,
     /// `--theme` was given: the saved theme is not followed.
     fixed_theme: bool,
+    /// Settings opens the app's list instead of the dialog.
+    settings_list: bool,
     /// The window title last set.
     window_title: String,
     /// The ticker starts once the window exists (in `on_start`).
@@ -434,6 +457,84 @@ pub fn list_dialog(
     (modal, list_id)
 }
 
+/// The settings dialog, built by [`settings_dialog`].
+pub struct SettingsDialog {
+    /// The dialog, for [`Root::set_dialog`].
+    pub modal: NewWidget<dyn Widget>,
+    /// The form, which takes the focus.
+    pub form: WidgetId,
+    /// The Close button.
+    pub close: WidgetId,
+}
+
+/// The settings dialog: the sections on the left, the chosen section's
+/// settings as a form on the right, and a Close button. The form starts on
+/// `row` of `section`.
+pub fn settings_dialog(
+    p: &Palette,
+    form: &SettingsForm,
+    app: &App,
+    section: usize,
+    row: usize,
+) -> SettingsDialog {
+    let title = form.sections.get(section).copied().unwrap_or("Settings");
+    let sections = NewWidget::new(
+        ChoiceList::new("Sections", form.section_items(), p.clone())
+            .with_selected(section)
+            .with_focus_actions(true),
+    )
+    .with_tag(SECTIONS);
+    let grid = NewWidget::new(
+        SettingsGrid::new(title, form.rows(section, app), p.clone()).with_selected(row),
+    )
+    .with_tag(FORM);
+    let form_id = grid.id();
+    let close = NewWidget::new(
+        ActionButton::new("Close")
+            .with_shortcut("Escape")
+            .with_description("Close the settings. Every change is already saved."),
+    );
+    let close_id = close.id();
+    let body = Flex::row()
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .with_fixed(NewWidget::new(
+            SizedBox::new(sections).width(Length::px(250.0)),
+        ))
+        .with_fixed_spacer(Length::px(20.0))
+        .with(grid, 1.0);
+    let footer = Flex::row()
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .with(
+            NewWidget::new(
+                label(
+                    "Changes take effect and are saved at once.",
+                    theme::UI_TEXT,
+                    false,
+                )
+                .accessibility_hidden(true),
+            ),
+            1.0,
+        )
+        .with_fixed(close);
+    let card = Flex::column()
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .with_fixed(NewWidget::new(
+            label("Settings", 20.0, true).accessibility_hidden(true),
+        ))
+        .with_fixed_spacer(Length::px(14.0))
+        .with_fixed(NewWidget::new(body))
+        .with_fixed_spacer(Length::px(14.0))
+        .with_fixed(NewWidget::new(footer));
+    let card = NewWidget::new(card).with_props(dialog::card_props(p));
+    let modal =
+        NewWidget::new(Modal::new(card, "Settings", p.clone()).with_max_width(960.0)).erased();
+    SettingsDialog {
+        modal,
+        form: form_id,
+        close: close_id,
+    }
+}
+
 /// Recolours the window's own panels and the document for `p` (the
 /// default properties are replaced separately).
 pub fn apply_palette(host: &mut impl Host, p: &Palette) {
@@ -660,6 +761,10 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("command {cmd:?}"));
         }
+        if !self.settings_list && cmd == Command::Action(ActionId::Settings) {
+            self.open_settings(ctx, None);
+            return;
+        }
         let effects = self.app.dispatch(cmd);
         self.run_effects(ctx, effects);
         self.refresh(ctx);
@@ -689,14 +794,43 @@ impl Gui {
         }
     }
 
+    /// A prompt from the app: its text and history are the app's
+    /// `PromptModel`, which the field keeps in step with `PromptKey`s.
     fn open_prompt(&mut self, ctx: &mut DriverCtx<'_>, label_text: &str, purpose: PromptPurpose) {
-        let p = &self.palette;
-        let hint = match purpose {
-            PromptPurpose::Open => "Type the full path of a document, then press Enter.",
-            _ => "Press Enter to accept, or Escape to cancel.",
+        let paths = matches!(
+            purpose,
+            PromptPurpose::Open | PromptPurpose::SaveAs | PromptPurpose::ImagePath
+        );
+        let hint = if paths {
+            "Type the path of a document, then press Enter. Tab completes it; Up and Down recall earlier ones."
+        } else {
+            "Press Enter to accept, or Escape to cancel. Up and Down recall earlier answers."
         };
+        let initial = self
+            .app
+            .prompt_model()
+            .map(textweaver_app::PromptModel::text)
+            .unwrap_or_default();
+        self.show_prompt(ctx, label_text, hint, &initial, paths);
+        self.dialog = Some(OpenDialog::Prompt);
+        if self.log {
+            crate::log::line(&format!("dialog: prompt {label_text:?}"));
+        }
+    }
+
+    /// Shows a one-field prompt labelled `label_text`, starting with
+    /// `initial`, and focuses its field.
+    fn show_prompt(
+        &mut self,
+        ctx: &mut DriverCtx<'_>,
+        label_text: &str,
+        hint: &str,
+        initial: &str,
+        tab_completes: bool,
+    ) {
+        let p = &self.palette;
         let field = NewWidget::new(
-            TextArea::new_editable("")
+            TextArea::new_editable(initial)
                 .with_accessible_label(label_text.to_owned())
                 .with_style(StyleProperty::FontSize(theme::UI_TEXT + 2.0)),
         )
@@ -713,13 +847,223 @@ impl Gui {
                 label(hint, theme::UI_TEXT, false).accessibility_hidden(true),
             ));
         let card = NewWidget::new(card).with_props(dialog::card_props(p));
-        let modal = NewWidget::new(Modal::new(card, label_text, p.clone())).erased();
+        let modal = NewWidget::new(
+            Modal::new(card, label_text, p.clone()).with_tab_completion(tab_completes),
+        )
+        .erased();
         let root = ctx.render_root(self.window_id);
         root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
         root.focus_on(Some(field_id));
-        self.dialog = Some(OpenDialog::Prompt);
+    }
+
+    /// A key for the app's prompt: the app changes its text (history,
+    /// completion), and the field shows it.
+    fn prompt_key(&mut self, ctx: &mut DriverCtx<'_>, key: PromptKey) {
         if self.log {
-            crate::log::line(&format!("dialog: prompt {label_text:?}"));
+            crate::log::line(&format!("prompt key {key:?}"));
+        }
+        let effects = self.app.dispatch(Command::PromptKey(key));
+        if let Some(text) = self
+            .app
+            .prompt_model()
+            .map(textweaver_app::PromptModel::text)
+        {
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(PROMPT_FIELD, |mut f| TextArea::reset_text(&mut f, &text));
+        }
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
+    }
+
+    /// The Settings command: the settings dialog, from the app's schema.
+    fn open_settings(&mut self, ctx: &mut DriverCtx<'_>, at: Option<(usize, usize)>) {
+        let form = SettingsForm::new(self.app.settings_schema());
+        let (section, row) = at.unwrap_or((0, 0));
+        let section = section.min(form.sections.len().saturating_sub(1));
+        let d = settings_dialog(&self.palette, &form, &self.app, section, row);
+        let root = ctx.render_root(self.window_id);
+        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(d.modal)));
+        root.focus_on(Some(d.form));
+        if self.log {
+            crate::log::line(&format!(
+                "dialog: settings, {} sections, section {section}, row {row}",
+                form.sections.len()
+            ));
+        }
+        self.dialog = Some(OpenDialog::Settings(SettingsOpen {
+            form,
+            section,
+            close: d.close,
+        }));
+    }
+
+    /// A change, an edit, or a section move from the settings form.
+    fn settings_form_action(&mut self, ctx: &mut DriverCtx<'_>, a: FormAction) {
+        let Some(OpenDialog::Settings(open)) = &self.dialog else {
+            return;
+        };
+        let section = open.section;
+        match a {
+            FormAction::Section(delta) => {
+                let n = open.form.sections.len() as isize;
+                if n == 0 {
+                    return;
+                }
+                let next = (section as isize + delta).rem_euclid(n) as usize;
+                self.show_section(ctx, next, true);
+            }
+            FormAction::Edit { row, text } => {
+                let Some(setting) = open.form.setting(section, row).cloned() else {
+                    return;
+                };
+                if matches!(setting.kind, textweaver_app::SettingKind::Table) {
+                    self.app.announce(
+                        &format!("{} is a table. Edit it in settings.toml.", setting.label),
+                        Priority::Polite,
+                    );
+                    self.refresh(ctx);
+                    return;
+                }
+                let now = self.app.setting_value(&setting.path).unwrap_or_default();
+                let initial = if text.is_empty() {
+                    setting.edit_text(&now)
+                } else {
+                    text
+                };
+                let label_text = format!("New value for {}", setting.label);
+                let hint = if setting.help.is_empty() {
+                    "Press Enter to accept, or Escape to go back."
+                } else {
+                    setting.help
+                };
+                let Some(OpenDialog::Settings(open)) = self.dialog.take() else {
+                    return;
+                };
+                self.show_prompt(ctx, &label_text, hint, &initial, false);
+                self.dialog = Some(OpenDialog::SettingEdit(open, row));
+                if self.log {
+                    crate::log::line(&format!("dialog: {label_text}"));
+                }
+            }
+            FormAction::Change { row, change } => {
+                let Some(setting) = open.form.setting(section, row).cloned() else {
+                    return;
+                };
+                self.change_setting(ctx, &setting, row, change);
+            }
+        }
+    }
+
+    /// Changes a setting through the app and shows its new value; says only
+    /// what the form does not show.
+    fn change_setting(
+        &mut self,
+        ctx: &mut DriverCtx<'_>,
+        setting: &textweaver_app::Setting,
+        row: usize,
+        change: FormChange,
+    ) {
+        if self.log {
+            crate::log::line(&format!("setting {} {change:?}", setting.path));
+        }
+        let theme_before = self.palette.name.clone();
+        match settings_dialog::apply(&mut self.app, setting, change) {
+            Ok(said) => {
+                if self.log {
+                    crate::log::line(&format!("setting: {said}"));
+                }
+                self.refresh(ctx);
+                if self.palette.name != theme_before {
+                    // A new theme: draw the dialog again in its colours.
+                    let section = match &self.dialog {
+                        Some(OpenDialog::Settings(o)) => o.section,
+                        _ => 0,
+                    };
+                    self.open_settings(ctx, Some((section, row)));
+                }
+                let Some(OpenDialog::Settings(open)) = &self.dialog else {
+                    return;
+                };
+                let rows = open.form.rows(open.section, &self.app);
+                let note = rows
+                    .get(row)
+                    .and_then(|r| settings_dialog::extra_note(&said, r));
+                ctx.render_root(self.window_id)
+                    .edit_widget_with_tag(FORM, |mut g| SettingsGrid::update_rows(&mut g, rows));
+                if let Some(note) = note {
+                    self.app.announce(&note, Priority::Polite);
+                }
+            }
+            Err(why) => self.app.announce(&why, Priority::Assertive),
+        }
+        self.refresh(ctx);
+    }
+
+    /// Shows section `section` in the form; `say` announces it (a move
+    /// made from the form, where the section list is not heard).
+    fn show_section(&mut self, ctx: &mut DriverCtx<'_>, section: usize, say: bool) {
+        let Some(OpenDialog::Settings(open)) = &mut self.dialog else {
+            return;
+        };
+        if open.section == section && !say {
+            return;
+        }
+        open.section = section;
+        let title = open
+            .form
+            .sections
+            .get(section)
+            .copied()
+            .unwrap_or("Settings");
+        let rows = open.form.rows(section, &self.app);
+        let item = open.form.section_items().get(section).cloned();
+        let root = ctx.render_root(self.window_id);
+        root.edit_widget_with_tag(FORM, |mut g| {
+            SettingsGrid::set_section(&mut g, title, rows, 0);
+        });
+        root.edit_widget_with_tag(SECTIONS, |mut l| ChoiceList::select(&mut l, section));
+        if say && let Some(item) = item {
+            self.app.announce(&format!("{item}."), Priority::Polite);
+            self.refresh(ctx);
+        }
+    }
+
+    /// The settings dialog's own actions: the section list moved or chose,
+    /// the dialog was closed. Returns false when the settings dialog is not
+    /// open.
+    fn settings_dialog_action(&mut self, ctx: &mut DriverCtx<'_>, d: &DialogAction) -> bool {
+        if !matches!(self.dialog, Some(OpenDialog::Settings(_))) {
+            return false;
+        }
+        match d {
+            DialogAction::Focus(i) => self.show_section(ctx, *i, false),
+            DialogAction::Choose(i) => {
+                self.show_section(ctx, *i, false);
+                let root = ctx.render_root(self.window_id);
+                let form = root.get_widget_with_tag(FORM).map(|w| w.id());
+                root.focus_on(form);
+            }
+            DialogAction::Cancel => {
+                self.close_dialog(ctx);
+                self.app.announce("Settings closed.", Priority::Polite);
+                self.refresh(ctx);
+            }
+            _ => {}
+        }
+        true
+    }
+
+    /// The answer to a setting's prompt: the new value, then the settings
+    /// dialog again on the same setting.
+    fn setting_edit_answer(&mut self, ctx: &mut DriverCtx<'_>, answer: Option<String>) {
+        let Some(OpenDialog::SettingEdit(open, row)) = self.dialog.take() else {
+            return;
+        };
+        let section = open.section;
+        let setting = open.form.setting(section, row).cloned();
+        self.open_settings(ctx, Some((section, row)));
+        if let (Some(text), Some(setting)) = (answer, setting) {
+            self.change_setting(ctx, &setting, row, FormChange::Text(text));
         }
     }
 
@@ -920,8 +1264,51 @@ impl Gui {
         if self.dialog.is_none() {
             return;
         }
+        // Settings chosen in the command palette opens the dialog.
+        let palette = matches!(self.dialog, Some(OpenDialog::Palette(_)));
         self.close_dialog(ctx);
+        if palette
+            && !self.settings_list
+            && cmd == Command::Answer(ActionId::Settings.id().to_owned())
+        {
+            self.muted.set(true);
+            let effects = self.app.dispatch(Command::Cancel);
+            self.muted.set(false);
+            self.run_effects(ctx, effects);
+            self.open_settings(ctx, None);
+            self.refresh(ctx);
+            return;
+        }
         self.dispatch(ctx, cmd);
+    }
+
+    /// The prompt's answer (Enter) or cancel (Escape), through the app's
+    /// prompt model so the answer joins the prompt's history.
+    fn prompt_answer(&mut self, ctx: &mut DriverCtx<'_>, text: Option<String>) {
+        if !matches!(self.dialog, Some(OpenDialog::Prompt)) {
+            return;
+        }
+        self.close_dialog(ctx);
+        if self.app.prompt_model().is_none() {
+            // The app has no prompt open (it was closed under us): answer
+            // directly.
+            let cmd = text.map_or(Command::Cancel, Command::Answer);
+            self.dispatch(ctx, cmd);
+            return;
+        }
+        let key = match text {
+            Some(t) => {
+                let _ = self.app.dispatch(Command::PromptKey(PromptKey::SetText(t)));
+                PromptKey::Enter
+            }
+            None => PromptKey::Escape,
+        };
+        if self.log {
+            crate::log::line(&format!("prompt key {key:?}"));
+        }
+        let effects = self.app.dispatch(Command::PromptKey(key));
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
     }
 
     fn on_key(&mut self, ctx: &mut DriverCtx<'_>, k: &masonry::core::keyboard::KeyboardEvent) {
@@ -1024,13 +1411,20 @@ impl AppDriver for Gui {
                 self.refresh(ctx);
             }
         } else if action.downcast_ref::<Pressed>().is_some() {
-            if self.buttons.fonts == Some(widget_id) {
+            if let Some(OpenDialog::Settings(open)) = &self.dialog
+                && open.close == widget_id
+            {
+                self.settings_dialog_action(ctx, &DialogAction::Cancel);
+            } else if self.buttons.fonts == Some(widget_id) {
                 self.open_fonts(ctx);
             } else if let Some(a) = self.buttons.by_id.get(&widget_id).copied() {
                 self.dispatch(ctx, Command::Action(a));
             }
+        } else if let Some(a) = action.downcast_ref::<FormAction>() {
+            let a = a.clone();
+            self.settings_form_action(ctx, a);
         } else if let Some(d) = action.downcast_ref::<DialogAction>() {
-            if self.font_answer(ctx, d) {
+            if self.settings_dialog_action(ctx, d) || self.font_answer(ctx, d) {
                 return;
             }
             match d {
@@ -1044,6 +1438,60 @@ impl AppDriver for Gui {
                     self.dispatch(ctx, Command::ListFocus(i));
                     return;
                 }
+                DialogAction::Recall(up) => {
+                    let up = *up;
+                    match &self.dialog {
+                        Some(OpenDialog::Prompt) => {
+                            let key = if up { PromptKey::Up } else { PromptKey::Down };
+                            self.prompt_key(ctx, key);
+                        }
+                        // In the palette's filter, Up and Down move through
+                        // the matches, and say each.
+                        Some(OpenDialog::Palette(ids)) if !ids.is_empty() => {
+                            let n = ids.len();
+                            let root = ctx.render_root(self.window_id);
+                            let now = root
+                                .get_widget_with_tag(LIST)
+                                .map_or(0, |w| w.inner().selected());
+                            let next = if up {
+                                now.checked_sub(1).unwrap_or(n - 1)
+                            } else {
+                                (now + 1) % n
+                            };
+                            root.edit_widget_with_tag(LIST, |mut l| {
+                                ChoiceList::select(&mut l, next)
+                            });
+                            let said = self
+                                .app
+                                .palette_candidates("")
+                                .into_iter()
+                                .find(|(a, _)| Some(a) == ids.get(next))
+                                .map(|(_, d)| d);
+                            if let Some(said) = said {
+                                self.app.announce(&said, Priority::Assertive);
+                            }
+                            self.refresh(ctx);
+                        }
+                        _ => {}
+                    }
+                    return;
+                }
+                DialogAction::Complete => {
+                    if matches!(self.dialog, Some(OpenDialog::Prompt)) {
+                        self.prompt_key(ctx, PromptKey::Tab);
+                    }
+                    return;
+                }
+                DialogAction::Cancel
+                    if matches!(self.dialog, Some(OpenDialog::SettingEdit(..))) =>
+                {
+                    self.setting_edit_answer(ctx, None);
+                    return;
+                }
+                DialogAction::Cancel if matches!(self.dialog, Some(OpenDialog::Prompt)) => {
+                    self.prompt_answer(ctx, None);
+                    return;
+                }
                 _ => {}
             }
             let cmd = match (d, &self.dialog) {
@@ -1054,12 +1502,37 @@ impl AppDriver for Gui {
                 (DialogAction::Choose(i), _) => Command::Choose(*i),
                 (DialogAction::Cancel, _) => Command::Cancel,
                 // Handled above.
-                (DialogAction::Key(_) | DialogAction::Focus(_), _) => return,
+                (
+                    DialogAction::Key(_)
+                    | DialogAction::Focus(_)
+                    | DialogAction::Recall(_)
+                    | DialogAction::Complete,
+                    _,
+                ) => return,
             };
             self.answer(ctx, cmd);
         } else if let Some(t) = action.downcast_ref::<masonry::widgets::TextAction>() {
-            match t {
-                masonry::widgets::TextAction::Entered(text) => {
+            use masonry::widgets::TextAction;
+            match (t, &self.dialog) {
+                (TextAction::Entered(text), Some(OpenDialog::SettingEdit(..))) => {
+                    let text = text.clone();
+                    self.setting_edit_answer(ctx, Some(text));
+                }
+                (TextAction::Cancelled, Some(OpenDialog::SettingEdit(..))) => {
+                    self.setting_edit_answer(ctx, None);
+                }
+                (TextAction::Entered(text), Some(OpenDialog::Prompt)) => {
+                    let text = text.clone();
+                    self.prompt_answer(ctx, Some(text));
+                }
+                (TextAction::Cancelled, Some(OpenDialog::Prompt)) => self.prompt_answer(ctx, None),
+                (TextAction::Changed(q), Some(OpenDialog::Prompt)) => {
+                    // The app's prompt model follows the field (no echo:
+                    // the field says what was typed).
+                    let q = q.clone();
+                    let _ = self.app.dispatch(Command::PromptKey(PromptKey::SetText(q)));
+                }
+                (TextAction::Entered(text), _) => {
                     // In the palette, Enter runs the first match.
                     let answer = match &self.dialog {
                         Some(OpenDialog::Palette(ids)) => ids
@@ -1069,13 +1542,12 @@ impl AppDriver for Gui {
                     };
                     self.answer(ctx, Command::Answer(answer));
                 }
-                masonry::widgets::TextAction::Cancelled => self.answer(ctx, Command::Cancel),
-                masonry::widgets::TextAction::Changed(q) => {
-                    if matches!(self.dialog, Some(OpenDialog::Palette(_))) {
-                        let q = q.clone();
-                        self.filter_palette(ctx, &q);
-                    }
+                (TextAction::Cancelled, _) => self.answer(ctx, Command::Cancel),
+                (TextAction::Changed(q), Some(OpenDialog::Palette(_))) => {
+                    let q = q.clone();
+                    self.filter_palette(ctx, &q);
                 }
+                (TextAction::Changed(_), _) => {}
             }
         }
     }
@@ -1225,6 +1697,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         )),
         ticker: Some(proxy),
         fixed_theme: opts.theme.is_some(),
+        settings_list: opts.experiments.settings_list,
         installed: crate::font_chooser::Installed::scan_in_background(),
         window_title: String::new(),
         closed: false,

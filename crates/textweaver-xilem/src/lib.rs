@@ -9,6 +9,7 @@
 //! - [`document`]: the `DocumentView` widget.
 //! - [`widgets`]: the root, panels, buttons, and the live-region announcer.
 //! - [`dialog`]: in-window dialogs: prompts and lists.
+//! - [`settings_dialog`]: the settings dialog, built from the app's schema.
 //! - [`runs`]: the document as AccessKit text runs, with stable ids.
 //! - [`window`]: the part of a large document the view holds.
 //! - [`caret`]: caret moves that need no layout.
@@ -32,6 +33,7 @@ pub mod log;
 pub mod runs;
 #[cfg(feature = "screenshot")]
 pub mod screenshot;
+pub mod settings_dialog;
 pub mod setup;
 pub mod theme;
 pub mod widgets;

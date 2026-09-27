@@ -36,6 +36,7 @@ masonry.workspace = true
 masonry_winit.workspace = true
 masonry_testing = { workspace = true, optional = true }
 unicode-segmentation.workspace = true
+serde_json.workspace = true
 clap.workspace = true
 
 [dev-dependencies]

@@ -59,6 +59,10 @@ struct Args {
     /// (an experiment for listening sessions).
     #[arg(long)]
     app_list_announcements: bool,
+    /// Settings opens the app's settings list, as the terminal reader shows
+    /// it, instead of the settings dialog (for comparison).
+    #[arg(long)]
+    settings_list: bool,
     /// Use this theme instead of the saved one.
     #[arg(long)]
     theme: Option<String>,
@@ -115,6 +119,7 @@ fn main() {
                 theme: args.theme.clone(),
                 highlight_at: args.highlight_at,
                 list: None,
+                settings: false,
                 home: args.home.clone(),
             };
             if let Err(e) = screenshot(&o) {
@@ -144,6 +149,7 @@ fn main() {
             select_spoken: args.select_spoken,
             edit_role: args.edit_role,
             app_list_announcements: args.app_list_announcements,
+            settings_list: args.settings_list,
         },
         theme: args.theme,
     };
