@@ -85,6 +85,7 @@ nav = [
     { "History" = [
       { "Tasks and ownership" = "history/tasks.md" },
       { "Reservations for the Cloud Agent" = "history/reservations.md" },
+      { "Readiness for 0.1.0-alpha.5" = "history/alpha5-readiness.md" },
       { "Implementation plan" = "history/plan.md" },
       { "Audit, September 2026" = "history/audit-2026-09.md" },
       { "Star parity reference" = "history/star-parity.md" },

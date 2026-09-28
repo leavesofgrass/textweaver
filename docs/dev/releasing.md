@@ -193,4 +193,5 @@ To rerun the workflow for an existing tag, start `Release` from the Actions tab 
 - [CONTRIBUTING.md](../../CONTRIBUTING.md): the checks and the commit style.
 - [CHANGELOG.md](../../CHANGELOG.md): the release notes come from here.
 - [ADR-0012: The engine host](../adr/0012-engine-host.md): `cargo xtask hosts` and host versioning.
+- [Readiness for 0.1.0-alpha.5](../history/alpha5-readiness.md): what stands between main and the next release.
 - [Documentation index](../README.md)
