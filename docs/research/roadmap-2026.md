@@ -281,6 +281,12 @@ At most eight, each a decision only he can make, each with a recommended default
    - "feature complete" leaves out document translation, grade 2 in pure Rust, streaming dictation, signing, and the peripheral Star list;
    - macOS and Linux are marked "built, checked by tool, not heard", with testers sought during the beta.
 
+## Pause after Wave 4, and recalibration (Jon, Sunday, September 27, 2026)
+
+- **After all of Wave 4 is done, work pauses.** Wave 5 doesn't launch until Jon says so.
+- **A Cloud Agent contribution is planned** in `docs/research/cloud-agent-plan.md`: tasks chosen to run in a separate cloud session, delivered by pull request, within a $125 budget.
+- **Before Wave 5 launches,** this roadmap and `wave5-plan.md` are recalibrated to account for what the Cloud Agent's pull requests cover: agents' scopes shrink, and items it finishes are removed.
+
 ## See also
 
 - [What is left](whats-left.md): the inventory behind this roadmap.
