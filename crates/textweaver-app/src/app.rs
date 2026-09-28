@@ -290,6 +290,9 @@ pub struct App {
     /// Something was read aloud since the app started (the title line says
     /// "Ready" until then, "Stopped" after).
     pub(crate) has_read: bool,
+    /// The last message, as the status line shows it, with keys in both
+    /// forms (crate::status: Repeat Message and Say Status).
+    pub(crate) last_message: Option<String>,
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
     pub(crate) track: SpeechTrack,
@@ -428,6 +431,7 @@ impl App {
             list: None,
             playback: Playback::Idle,
             has_read: false,
+            last_message: None,
             pause_origin: None,
             reading: ReadKind::Continuous,
             track: SpeechTrack::default(),
@@ -647,6 +651,7 @@ impl App {
         }
         // Keys named in the message: written for the status line and the
         // screen reader, spoken for textweaver's voice (crate::help).
+        self.remember_message(text, true);
         let written = crate::help::written_text(text);
         let route = self.route(Channel::Message);
         if route.status {
@@ -674,6 +679,7 @@ impl App {
         if current < min || text.is_empty() {
             return;
         }
+        self.remember_message(text, false);
         let written = crate::help::written_text(text);
         let route = self.route(Channel::Message);
         if route.status {
@@ -714,6 +720,7 @@ impl App {
     /// Shows `text` on the status line only (used while reading, when the
     /// reading itself is the audible feedback).
     pub(crate) fn show(&mut self, text: &str) {
+        self.remember_message(text, false);
         let written = crate::help::written_text(text);
         let shown = self.screen_text(&written);
         self.status.announce(&shown, Priority::Polite);
@@ -1410,6 +1417,8 @@ impl App {
             A::ReadParagraph => self.read_current_unit(textweaver_core::Unit::Paragraph),
             A::ReadSelection => self.read_selection(),
             A::SayPosition => self.say_position(),
+            A::SayStatus => return self.say_status(),
+            A::RepeatMessage => return self.repeat_message(),
             A::WordCount => self.word_count(),
             A::LinkAddress => self.link_address(),
             A::ReplaySentence => self.replay_sentence(),
@@ -1670,9 +1679,11 @@ fn list_delete_question(kind: &ListKind) -> &'static str {
 /// Actions that do nothing useful without a document.
 fn needs_document(a: ActionId) -> bool {
     use textweaver_keymap::Category as C;
-    !matches!(a, ActionId::Stop | ActionId::DefineWord)
-        && matches!(
-            a.category(),
-            C::Reading | C::Navigation | C::SpeechCursor | C::Search | C::Bookmarks
-        )
+    !matches!(
+        a,
+        ActionId::Stop | ActionId::DefineWord | ActionId::SayStatus | ActionId::RepeatMessage
+    ) && matches!(
+        a.category(),
+        C::Reading | C::Navigation | C::SpeechCursor | C::Search | C::Bookmarks
+    )
 }

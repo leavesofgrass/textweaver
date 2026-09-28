@@ -414,6 +414,11 @@ impl App {
             ),
             format!("Where am I: {}.", k(ActionId::SayPosition)),
             format!(
+                "Hear the last message again: {}. The last message and the status: mode, rate, engine, and position: {}.",
+                k(ActionId::RepeatMessage),
+                k(ActionId::SayStatus)
+            ),
+            format!(
                 "Notes: add {}, list {}, next and previous {} and {}, delete the one at the cursor {}. In the list, Delete deletes and F2 edits.",
                 k(ActionId::AddNote),
                 k(ActionId::ListNotes),

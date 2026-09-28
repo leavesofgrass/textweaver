@@ -9,7 +9,7 @@ use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph};
-use textweaver_app::a11y::{AccessMode, CursorPlacement};
+use textweaver_app::a11y::CursorPlacement;
 use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
 use textweaver_app::keymap::{ActionId, Key, KeyChord, Modifiers};
 use textweaver_app::text_util::line_count;
@@ -636,13 +636,7 @@ impl Tui {
     /// [`App::quiet_screen_active`], so a screen reader that reads the
     /// changing screen does not hear it tick over as textweaver reads.
     fn title_position(&mut self) -> Option<String> {
-        let s = self.app.session()?;
-        let now = format!(
-            "line {} of {}, {}%",
-            s.line() + 1,
-            line_count(&s.doc),
-            s.percent()
-        );
+        let now = self.app.title_position()?;
         if self.app.quiet_screen_active() {
             Some(self.frozen_position.get_or_insert(now).clone())
         } else {
@@ -655,27 +649,10 @@ impl Tui {
         let app = &self.app;
         let title = app.session().map_or("no document", |s| s.title.as_str());
         let left = format!(" textweaver: {title}");
-        // "Ready" until the first reading, then "Stopped".
-        let state = app.reading_state();
         // Most important first; trailing parts are dropped when narrow.
-        let mut parts = Vec::new();
-        if app.mode() != Mode::Browse {
-            parts.push(app.mode().name().to_owned());
-        }
-        if app.is_dirty() {
-            parts.push("modified".to_owned());
-        }
-        parts.push(state.to_owned());
-        if let Some(p) = position {
-            parts.push(p.to_owned());
-        }
-        match app.access_mode() {
-            AccessMode::SelfVoicing => {}
-            AccessMode::Hybrid => parts.push("hybrid".to_owned()),
-            AccessMode::ScreenReader => parts.push("screen reader mode".to_owned()),
-        }
-        parts.push(format!("{} wpm", app.settings().speech.rate.wpm()));
-        parts.push(app.backend_name().to_owned());
+        // The app gives them ("Ready" until the first reading, then
+        // "Stopped"), so Say Status speaks the same parts.
+        let mut parts = app.title_parts(position);
         let width = usize::from(area.width);
         let lw = Span::raw(&left).width();
         let mut right = format!("{} ", parts.join(", "));

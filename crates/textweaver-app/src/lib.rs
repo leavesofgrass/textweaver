@@ -199,6 +199,7 @@ pub mod settings_io;
 pub mod settings_schema;
 mod speech_cursor;
 mod spell;
+mod status;
 mod structure;
 mod study;
 mod tables;

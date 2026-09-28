@@ -185,6 +185,11 @@ actions! {
     SayPosition = "say_position", Reading,
         "Say the position: line, percentage, word number, and heading",
         gui ["g:Alt+Shift+Y"], term ["g:Alt+Shift+Y"], shared ["b:Shift+W"];
+    SayStatus = "say_status", Reading,
+        "Say the last message again, then the status: mode, reading state, position, rate, and speech engine",
+        gui ["g:Alt+End"], term ["g:Alt+End"], shared ["b:z"];
+    RepeatMessage = "repeat_message", Reading, "Say the last message again",
+        gui ["g:Alt+'"], term ["g:Alt+'"], shared ["b:'"];
     WordCount = "word_count", Reading, "Say how many words are in the document, or in the selection",
         gui ["g:Alt+Shift+T"], term ["g:Alt+Shift+T"], shared [];
     LinkAddress = "link_address", Reading, "Say the address of the link at the cursor",

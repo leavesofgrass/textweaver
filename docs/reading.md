@@ -347,6 +347,13 @@ The history keeps the last 50 places. Change that with `[reading] nav_history_si
 
 Press **Shift+W**, or **Alt+Shift+Y** from any mode. You hear the line, the number of lines, and the percentage, for example "Line 12 of 300, 4 percent." In a table you also hear where in it: "Table, row 2 of 5, column 3 of 4." At normal verbosity you also hear the word number and the heading above you: "Under heading Methods." At high verbosity you also hear the document's title and the mode, when it is not plain reading. This works in edit mode too, on the headings as you have written them.
 
+## Hear it again: ' and z
+
+- **Repeat message**: **'** (apostrophe), or **Alt+'** from any mode, says the last message again, as the status line shows it.
+- **Say status**: **z**, or **Alt+End** from any mode, says the last message, then the status the title line shows: the mode, whether the document is modified, "Ready", "Reading", "Paused", or "Stopped", the line and percentage, the accessibility mode, the rate, and the speech engine.
+
+Both are heard over the reading, which then goes on. They are in the command palette as "say status" and "repeat message". With a screen reader, its own "read current line" key (NVDA+Up, Insert+Up in JAWS) reads the status line too.
+
 ## Your place is remembered
 
 textweaver saves your place when you quit, when you open another document, and every 30 seconds while your place changes. When you open the document again, it goes to the first word at or after the saved place and says "Resumed at", then the percentage.

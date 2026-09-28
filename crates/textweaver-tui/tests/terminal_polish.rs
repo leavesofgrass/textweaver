@@ -2,17 +2,55 @@
 //! and reads in the terminal reader, from the usability pass's list
 //! (docs/research/usability-terminal.md).
 
+use std::time::{Duration, Instant};
+
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use textweaver_app::keymap::{ActionId, Frontend, Keymap, Layer, Platform};
 use textweaver_app::store::DocKey;
+use textweaver_app::testing::{SpeechLog, recording_service};
 use textweaver_app::text::Document;
 use textweaver_app::theme::ColorSupport;
-use textweaver_app::{App, AppConfig};
+use textweaver_app::{App, AppConfig, Playback};
 use textweaver_tui::Tui;
 
 fn key(code: KeyCode) -> KeyEvent {
     KeyEvent::new(code, KeyModifiers::NONE)
+}
+
+fn with(code: KeyCode, mods: KeyModifiers) -> KeyEvent {
+    KeyEvent::new(code, mods)
+}
+
+/// A self-voicing reader with `text` open, and what its voice says.
+fn voiced(text: &str) -> (Tui, SpeechLog) {
+    let (speech, log) = recording_service().unwrap();
+    let mut app = App::new(AppConfig {
+        speech,
+        self_voicing: true,
+        backend_name: "test-recording".into(),
+        ..AppConfig::for_tests()
+    });
+    app.open_document(
+        Document::from_plain_text(text),
+        DocKey::untitled(1),
+        "Essay".into(),
+    );
+    (Tui::with_color_support(app, ColorSupport::NoColor), log)
+}
+
+/// Waits (with a deadline) until the voice has said something containing
+/// `needle`; returns that utterance.
+fn heard(log: &SpeechLog, needle: &str) -> Option<String> {
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while Instant::now() < deadline {
+        if let Some(t) = log.texts().into_iter().find(|t| t.contains(needle)) {
+            return Some(t);
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    None
 }
 
 fn tui_with(text: &str) -> Tui {
@@ -50,4 +88,123 @@ fn the_title_line_says_ready_until_the_first_reading() {
     let title = title_line(&mut tui);
     assert!(title.contains("Stopped"), "{title}");
     assert!(!title.contains("Ready"), "{title}");
+}
+
+/// Deliverable 5: the two new actions have keys in both frontends that
+/// reach them in browse mode, a chord that works with single-key
+/// shortcuts off, and palette entries.
+#[test]
+fn say_status_and_repeat_message_have_keys_everywhere() {
+    for frontend in [Frontend::Terminal, Frontend::Gui] {
+        let map = Keymap::defaults(Platform::current(), frontend);
+        for (action, chord, single) in [
+            (ActionId::SayStatus, "Alt+End", "z"),
+            (ActionId::RepeatMessage, "Alt+'", "'"),
+        ] {
+            let chord = chord.parse().unwrap();
+            let single = single.parse().unwrap();
+            assert_eq!(
+                map.lookup(&chord, Layer::Browse),
+                Some(action),
+                "{frontend:?}"
+            );
+            assert_eq!(
+                map.lookup(&chord, Layer::Edit),
+                Some(action),
+                "{frontend:?}"
+            );
+            assert_eq!(
+                map.lookup(&single, Layer::Browse),
+                Some(action),
+                "{frontend:?}"
+            );
+            let mut off = map.clone();
+            off.set_character_keys(false);
+            assert_eq!(
+                off.lookup(&chord, Layer::Browse),
+                Some(action),
+                "{frontend:?}"
+            );
+        }
+    }
+    assert_eq!(
+        textweaver_app::resolve_command("say status"),
+        Some(ActionId::SayStatus)
+    );
+    assert_eq!(
+        textweaver_app::resolve_command("repeat message"),
+        Some(ActionId::RepeatMessage)
+    );
+}
+
+/// Deliverable 5: Say Status says the last message, then the title
+/// line's parts; Repeat Message says the last message again. Both are
+/// heard over the reading, which goes on.
+#[test]
+fn say_status_and_repeat_message_are_heard() {
+    let (mut tui, log) = voiced("One sentence here. Another one there. And a third one.\n");
+    // Where am I, to have a message to repeat.
+    tui.handle_key(with(KeyCode::Char('W'), KeyModifiers::SHIFT));
+    let position = heard(&log, "Line 1 of").expect("the position");
+    log.clear();
+    tui.handle_key(key(KeyCode::Char('\'')));
+    let again = heard(&log, "Line 1 of").expect("the message again");
+    assert_eq!(again, position);
+    log.clear();
+    tui.handle_key(with(KeyCode::End, KeyModifiers::ALT));
+    let status = heard(&log, "Browse mode").expect("the status");
+    assert!(status.starts_with(&position), "{status}");
+    for part in [
+        "Essay: Browse mode",
+        "Ready",
+        "line 1 of 1, zero percent",
+        "self-voicing",
+        "words per minute",
+        "test-recording.",
+    ] {
+        assert!(status.contains(part), "{part}: {status}");
+    }
+    // Say Status twice does not say the status twice over, and Repeat
+    // Message after it repeats the message, not the status.
+    log.clear();
+    tui.handle_key(key(KeyCode::Char('z')));
+    let twice = heard(&log, "Browse mode").expect("the status again");
+    assert_eq!(twice, status);
+    log.clear();
+    tui.handle_key(with(KeyCode::Char('\''), KeyModifiers::ALT));
+    assert_eq!(heard(&log, "Line 1 of").as_deref(), Some(position.as_str()));
+    // While reading: heard over the reading, which goes on.
+    tui.handle_key(key(KeyCode::Char(' ')));
+    assert_eq!(tui.app().playback(), Playback::Reading);
+    log.clear();
+    tui.handle_key(with(KeyCode::End, KeyModifiers::ALT));
+    let reading = heard(&log, "Reading,").expect("the status while reading");
+    assert!(reading.contains("Browse mode"), "{reading}");
+    assert_eq!(tui.app().playback(), Playback::Reading);
+}
+
+/// Without a document the actions still work (no "No document is open").
+#[test]
+fn say_status_needs_no_document() {
+    let (speech, log) = recording_service().unwrap();
+    let app = App::new(AppConfig {
+        speech,
+        self_voicing: true,
+        backend_name: "test-recording".into(),
+        ..AppConfig::for_tests()
+    });
+    let mut tui = Tui::with_color_support(app, ColorSupport::NoColor);
+    tui.handle_key(with(KeyCode::End, KeyModifiers::ALT));
+    let status = heard(&log, "No document").expect("the status");
+    assert!(
+        status.starts_with("No document: Browse mode, Ready"),
+        "{status}"
+    );
+    log.clear();
+    tui.handle_key(key(KeyCode::Char('\'')));
+    assert!(
+        heard(&log, "No message yet.").is_some(),
+        "{:?}",
+        log.texts()
+    );
 }
