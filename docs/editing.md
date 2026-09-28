@@ -253,6 +253,28 @@ These are never checked: code, math, link addresses, web and e-mail addresses, c
 
 Your word list is `words.txt` in the data folder, one word per line; you can edit it in any text editor. The [library guide](library.md) says where the data folder is.
 
+## Markdown lint
+
+Some Markdown problems are plain to see and easy to miss by ear. In edit mode on a Markdown file, textweaver finds them for you:
+
+- **Ctrl+F8**: the next problem. **Ctrl+Shift+F8**: the previous one. The problem is selected and you hear what it is, starting with "Lint": "Lint: heading level 3 after level 1; use level 2." At high verbosity you also hear the line number.
+
+It checks five things:
+
+- **Heading levels.** A heading more than one level below the one before it, such as a level 3 heading right after a level 1, leaves a gap in the outline and in a screen reader's list of headings.
+- **List markers.** A bullet list that changes from `-` to `*` or `+` partway through. Markdown starts a new list there.
+- **Trailing spaces.** Spaces or tabs at the end of a line, which you cannot hear. Exactly two spaces before more text are left alone, because they make a line break.
+- **Link references.** `[text][intro]` or `[intro][]` with no `[intro]: address` line anywhere, which shows as plain brackets.
+- **Bare web addresses.** An address typed into a sentence. Put it in angle brackets, `<https://example.org>`, or make it a link with a name, `[the course page](https://example.org)`.
+
+Code blocks, inline code, math, front matter, and HTML are not checked, except for trailing spaces outside code blocks.
+
+To check files from the command line, use `tw lint`. It prints each file, how many problems it has, and one line per problem, for example `Line 3: heading level 3 after level 1; use level 2.` It ends with status 1 when there are problems, so a script can check. `--json` prints them as JSON.
+
+```bash
+tw lint essay.md notes.md
+```
+
 ## Listen to the rendered text
 
 In edit mode, type `listen rendered` in the command palette. textweaver reads from the caret what a reader of your finished document hears: no `#`, `*`, or link addresses, and citations formatted, such as "(Doe & Roe, 2020, p. 12)". You stay in edit mode, and the highlight follows in your Markdown. **Escape** stops. Outside edit mode it reads from the cursor, as **Enter** does.

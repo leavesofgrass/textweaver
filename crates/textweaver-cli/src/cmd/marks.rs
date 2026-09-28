@@ -343,7 +343,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
                     out.display()
                 );
             }
-            None => print!("{text}"),
+            None => super::print_all(&text)?,
         }
         return Ok(());
     }

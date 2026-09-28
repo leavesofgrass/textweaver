@@ -169,6 +169,8 @@ mod goto;
 mod help;
 mod library;
 mod links;
+#[cfg(feature = "lint")]
+pub mod lint;
 pub mod list_model;
 mod lists;
 pub mod logfile;
