@@ -600,11 +600,18 @@ fn git(root: &Path, args: &[&str]) -> anyhow::Result<()> {
 fn cargo(root: &Path, args: &[&str]) -> anyhow::Result<()> {
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     println!("cargo {}", args.join(" "));
-    let status = Command::new(cargo)
-        .current_dir(root)
-        .args(args)
-        .status()
-        .context("running cargo")?;
+    let mut cmd = Command::new(cargo);
+    cmd.current_dir(root).args(args);
+    // `cargo xtask ...` rebuilds xtask after the version bump, and on
+    // Windows the running xtask (this program) cannot be overwritten, so
+    // the nested run builds into a target folder of its own.
+    if args.first() == Some(&"xtask") {
+        cmd.env(
+            "CARGO_TARGET_DIR",
+            crate::eci::target_dir(root).join("release-xtask"),
+        );
+    }
+    let status = cmd.status().context("running cargo")?;
     if !status.success() {
         bail!("cargo {} failed ({status})", args.join(" "));
     }
