@@ -69,6 +69,39 @@ cargo build -p textweaver-tui --no-default-features
 
 `cargo xtask deps --check` makes sure that build links none of the conversion and citation stack.
 
+## Scripts
+
+The `scripts/` folder has installers and helpers for every system. Each script has `--help` and `--dry-run`. It says what it will do before it does it, and asks before it uses sudo or changes your PATH. The full list is in [scripts/README.md](../../scripts/README.md).
+
+- `install-linux.sh`: install a release (the AppImage or tarball, for x86_64 or aarch64), or build and install from source on Debian, Ubuntu, Fedora, Arch, openSUSE, or Alpine.
+- `install-macos.sh`: install the newest macOS release, or build from source.
+- `install-windows.ps1`: install the newest Windows release, or build from source.
+- `update.sh` and `update.ps1`: update an installed textweaver.
+- `speech-check.sh` and `speech-check.ps1`: report the speech engines, voices, and audio.
+- `doctor.sh` and `doctor.ps1`: a system report to paste into a bug report.
+- `dev-check.sh` and `dev-check.ps1`: run CI's checks locally.
+- `convert-folder.sh` and `convert-folder.ps1`: convert a folder of Markdown to HTML, EPUB, PDF, or another format.
+- `voxin-docker.sh`: run the Eloquence tests or `tw speak` with Voxin in the Docker container.
+
+## Repository layout
+
+- `crates/`: the Rust crates, one per job. [Architecture](architecture.md) describes each one, how they depend on each other, and how a document becomes speech.
+- `xtask/`: maintenance tasks, run as `cargo xtask bench`, `startup`, `soak`, `dist`, `gui-dist`, `appimage`, `release`, `listen`, `hosts`, `eci-host`, `sapi-host`, `keyboard`, `deps`, `docs`, `settings-doc`, `notices`, `fuzz-seed`, and `parity`.
+- `scripts/`: installers, update, speech check, doctor, dev-check, and folder conversion.
+- `tools/`: helper programs, among them the link checker (`check_links.py`), the site data generator (`gen_site_data.py`), and the engine spikes.
+- `docs/`: user guides, contributor guides, the ADRs, and the interactive pages in `docs/site/`. Start at [the documentation index](../README.md).
+- `fixtures/`: sample documents for tests, and Star's reference output for them.
+- `third_party/`: pronunciation dictionaries, fonts, and word lists, each with its licence (see [Third-party data](#third-party-data) below).
+- `docker/`, `compose.yaml`, `compose.voxin.yaml`: the Linux development container.
+
+## Third-party data
+
+- `third_party/ibmtts-dictionaries/`: the community IBMTTS pronunciation dictionaries by amirsol81, x0, thunderdrop and contributors (CC0 1.0), used by the Eloquence backend.
+- `third_party/fonts/`: fonts built into textweaver for PDF and EPUB output and the GUI, each with its licence file and a README giving its source, version, and SHA-256:
+  - Atkinson Hyperlegible Next and Atkinson Hyperlegible Mono, copyright 2020-2024 The Atkinson Hyperlegible Next Project Authors and The Atkinson Hyperlegible Mono Project Authors (Braille Institute of America), SIL Open Font License 1.1.
+  - OpenDyslexic, copyright 2019 Abbie Gonzalez, with Reserved Font Name OpenDyslexic, SIL Open Font License 1.1.
+- `third_party/scowl/`: word levels for difficult-word marking, derived from SCOWL (Spell Checker Oriented Word Lists) version 2, release 2026.02.25, copyright 2000-2026 Kevin Atkinson, with the Australian English data copyright 2016 Benjamin Titze; MIT-like licence. The full notices are in `third_party/scowl/Copyright`, and `tools/scowl_levels.py` rebuilds the list.
+
 ## See also
 
 - [Testing](testing.md): the checks, the tests, and the benchmarks.
