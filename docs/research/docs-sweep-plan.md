@@ -97,6 +97,10 @@ Grouped as `docs/README.md` already groups them. "Status" is this review's findi
 
 There is no `docs/site/` mkdocs.yml, book.toml, or Pages workflow in the repository today; only the five standalone interactive HTML pages exist. This is new work, not a correction, and it is the SITE agent's whole brief below.
 
+## The owner's decision on the site tool (Monday, September 28, 2026)
+
+**Zensical, as an experiment, used as it is meant to be used, scripts included.** It replaces the mdBook recommendation above. The owner first asked for no JavaScript in the docs, then chose Zensical with its normal scripting. The SITE agent pins Zensical's exact version, installs it into a virtual environment under `D:	extweaver\.claude	mp\zensical-venv` (never on drive C), and builds `docs/` with a hand-written navigation that mirrors `docs/README.md`. The accessibility pass with NVDA, JAWS and the Braille display is still required, including search from the keyboard alone. If Zensical cannot give an accessible site, the fallback is plain MkDocs, which the owner used for abax, and the report says so plainly. Wherever the briefs below say mdBook, `book.toml`, `SUMMARY.md` or `mdbook build`, read Zensical, its configuration file, its navigation, and its build command.
+
 ## The parallel split
 
 Five agents. Paste the common rules block below at the top of every brief, adapted from `docs/research/wave4-orchestration.md` section 6.
@@ -109,12 +113,12 @@ Five agents. Paste the common rules block below at the top of every brief, adapt
 - **Deleting.** Delete nothing but your own scratch output, listed first, with PowerShell `Remove-Item -LiteralPath`. Never from Bash without the owner's approval.
 - **Generated files are never hand-edited:** `docs/keyboard.md`, `docs/settings-reference.md`, `docs/history/parity-report.md`, and anything under `docs/site/*.html`'s embedded data. Regenerate and check instead.
 - **US English, em dashes sparingly, no ASCII art, color never carries meaning alone.**
-- **Checks before reporting:** `py -3 tools/check_links.py`; `cargo xtask docs --check`; `cargo xtask settings-doc --check` (if settings text changed); `py -3 tools/gen_site_data.py --check` (if `docs/site/` content changed); the site build (`mdbook build`, once the SITE agent's tooling exists; before that, skip and say so).
+- **Checks before reporting:** `py -3 tools/check_links.py`; `cargo xtask docs --check`; `cargo xtask settings-doc --check` (if settings text changed); `py -3 tools/gen_site_data.py --check` (if `docs/site/` content changed); the site build (Zensical's build, once the SITE agent's tooling exists; before that, skip and say so).
 - **Report** (plain sentences, headings and lists, no tables): summary in five lines; files changed; check results; what the next agent should do first; a checklist of at most five things for the owner to try with NVDA, JAWS, or the Braille display, or "nothing to hear."
 
 ### Agent SITE: the Pages site and its workflow
 
-**Branch** `docs-sweep/site-mdbook`.
+**Branch** `docs-sweep/site-zensical`.
 
 **Owns:** a new `book.toml` at the repository root or under `docs/`; a new `docs/SUMMARY.md` (mdBook's nav file, hand-authored to match `docs/README.md`'s groupings); a new `.github/workflows/pages.yml`; a new `docs/theme/` folder for any color-blind-safe, skip-link, and landmark fixes the default theme needs after the manual accessibility pass; the mechanism that serves `docs/site/`'s five standalone HTML pages as static files inside the built site, reachable from the nav.
 
