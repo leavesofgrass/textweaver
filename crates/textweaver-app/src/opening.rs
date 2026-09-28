@@ -106,8 +106,23 @@ pub fn open_failure_reason(path: &Path, err: &LoadError) -> String {
                 format!("{plain}.")
             }
         },
+        LoadError::Parse(detail) if matches!(extension(path).as_str(), "rtf") => {
+            log::warn!("{name}: {detail}");
+            "it is not a readable RTF file; it may be damaged.".to_owned()
+        }
+        LoadError::Parse(detail) if matches!(extension(path).as_str(), "odt" | "ott" | "fodt") => {
+            log::warn!("{name}: {detail}");
+            "it is not a readable OpenDocument text file; it may be damaged.".to_owned()
+        }
         other => other.to_string(),
     }
+}
+
+/// The lowercase extension of `path`, or nothing.
+fn extension(path: &Path) -> String {
+    path.extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .unwrap_or_default()
 }
 
 /// "Could not open NAME: REASON", for announcements.
@@ -323,5 +338,18 @@ mod tests {
         assert!(may_be_slow(Path::new("https://example.org/page")));
         assert!(may_be_slow(Path::new("no-such.zip!notes.md")));
         assert!(!may_be_slow(Path::new("notes.md")));
+    }
+
+    #[test]
+    fn damaged_rtf_and_odt_files_are_named_plainly() {
+        let parse = || LoadError::Parse("XML: unexpected end of stream".into());
+        assert_eq!(
+            open_failure_message(Path::new("handout.RTF"), &parse()),
+            "Could not open handout.RTF: it is not a readable RTF file; it may be damaged."
+        );
+        assert_eq!(
+            open_failure_message(Path::new("notes.odt"), &parse()),
+            "Could not open notes.odt: it is not a readable OpenDocument text file; it may be damaged."
+        );
     }
 }
