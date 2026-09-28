@@ -109,6 +109,18 @@ The key named in "No document is open" now comes from the keymap (`named_key`), 
 
 **Parity with the terminal reader** needed no new GUI code: the outline (Alt+O), the notes list (Ctrl+Shift+N), the access modes (Alt+Shift+A), and tables and links by key reach the app through the keymap, and the lists open as the GUI's list dialogs through `Effect::ShowList`. A test drives each from the document. In a list, F1 and Say Status (Alt+End) now repeat the list's introduction, as in the terminal.
 
+## Status update: the renderer options measured (Wave 5, Agent W5a4, Monday, September 28, 2026)
+
+The "Memory" section proposed three renderer options. W5a4 measured the first two on Parley 0.11.1, on the same machine (NVIDIA GeForce RTX 3060), release builds, `--background` with the silent paced backend, read 15 seconds after launch, three runs each, while other agents were building. The sample document, reading:
+
+- **Default (Vello, every wgpu backend):** 178 MB working set, 117 MB private working set, 654 MB private bytes.
+- **Vello with area antialiasing only** (`AaSupport::area_only()`, measured with a scratch copy of `imaging_vello`, not committed): 175 MB, 115 MB, 652 MB. With the 10-million-character document, 191 MB against 194 MB. About 3 MB, or 2 percent. Startup time was not measured separately. Not worth vendoring `imaging_vello` for; it is a one-line change upstream (`imaging_vello` creates its renderer with `RendererOptions::default()` and only ever renders with `AaConfig::Area`), proposed there.
+- **Vulkan only (`WGPU_BACKEND=vulkan`):** 152 MB, 94 MB, 635 MB: 26 MB less working set, 23 MB less private working set. With area antialiasing too, 149 MB.
+- **Direct3D 12 only:** 200 MB, 148 MB, 624 MB: 22 MB more.
+- **OpenGL:** one run failed to start ("could not lock adapter context"), the other used 324 MB. Not an option on this machine.
+
+**Decision.** One backend is now an opt-in, not a default: `--graphics vulkan` for one run, or `graphics = "vulkan"` in the `[gui]` table of `settings.toml` (also `dx12`, `metal`, `gl`, and `auto`, the default). The saving depends on the graphics driver and has been measured on one machine only, so the default stays `auto` until the owner's session 3 and a measurement elsewhere. `WGPU_BACKEND`, when set, still wins. The GUI sets it at the start of `main`, before any thread exists (one small, commented `unsafe` call, since setting an environment variable is unsafe in Rust 2024). The setting is read from the `[gui]` table's preserved keys, as `announce` was before W4a2: `textweaver-store` belongs to another Wave 5 agent, so the store type, the schema entry, and the export fixture are proposed for a later pass rather than made here. The hybrid renderer (item 3) stays a build option; nothing new was measured for it.
+
 ## Consequences
 
 - The GUI has a small, reviewed `unsafe` block for the Notification event (one COM call and one COM object), the first in the crate. It is Windows-only and needs `windows` and `windows-core`, which AccessKit already brings.

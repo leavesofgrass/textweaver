@@ -635,10 +635,10 @@ index 62f6d42..d93a365 100644
          let id: NodeId = ctx.widget_state.id.into();
          if ctx.global_state.trace.access {
 diff --git a/masonry/src/widgets/label.rs b/masonry/src/widgets/label.rs
-index 584f31d..53db137 100644
+index 584f31d..27a99aa 100644
 --- a/masonry/src/widgets/label.rs
 +++ b/masonry/src/widgets/label.rs
-@@ -110,11 +110,10 @@ impl TextLayout {
+@@ -110,11 +110,11 @@ impl TextLayout {
          }
          self.alignment = alignment;
          self.alignment_width = alignment_width;
@@ -650,7 +650,8 @@ index 584f31d..53db137 100644
 +        // textweaver (Parley 0.9 and later): `Layout::align` no longer takes
 +        // a width; lines align within the `max_advance` given to
 +        // `break_all_lines` (or the layout's own width without one).
-+        self.layout.align(self.alignment, TextAlignOptions::default());
++        self.layout
++            .align(self.alignment, TextAlignOptions::default());
      }
  
      /// Returns `true` if this layout would be the result for `max_advance`.

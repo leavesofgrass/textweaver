@@ -15,9 +15,15 @@ use std::time::Duration;
 use clap::Parser;
 use clap::error::ErrorKind;
 use textweaver_xilem::console;
+use textweaver_xilem::graphics::{self, GraphicsBackend};
 use textweaver_xilem::gui::{self, GuiOptions};
 use textweaver_xilem::setup::Options;
 use textweaver_xilem::widgets::AnnounceMode;
+
+fn parse_graphics(s: &str) -> Result<GraphicsBackend, String> {
+    GraphicsBackend::parse(s)
+        .ok_or_else(|| format!("use one of {}", GraphicsBackend::NAMES.join(", ")))
+}
 
 fn parse_announce(s: &str) -> Result<AnnounceMode, String> {
     AnnounceMode::parse(s).ok_or_else(|| format!("use {}", AnnounceMode::NAMES.join(" or ")))
@@ -83,6 +89,11 @@ struct Args {
     /// only). Overrides the `[gui] announce` setting.
     #[arg(long, value_name = "HOW", value_parser = parse_announce)]
     announce: Option<AnnounceMode>,
+    /// The graphics API the window draws with: `auto` (the default, every
+    /// one wgpu finds), `vulkan`, `dx12`, `metal`, or `gl`. Overrides the
+    /// `[gui] graphics` setting; `WGPU_BACKEND`, when set, wins over both.
+    #[arg(long, value_name = "API", value_parser = parse_graphics)]
+    graphics: Option<GraphicsBackend>,
     /// Use this theme instead of the saved one.
     #[arg(long)]
     theme: Option<String>,
@@ -138,6 +149,8 @@ fn main() {
     // Before anything is printed: connect to the terminal, if any.
     console::attach();
     let args = parse_args();
+    // Before any thread starts: it may set an environment variable.
+    let gpu = graphics::apply(graphics::wanted(args.graphics, args.home.as_deref()));
     log_panics();
     if let Some(path) = &args.log_file
         && let Err(e) = textweaver_xilem::log::to_file(path)
@@ -189,6 +202,11 @@ fn main() {
         }
     }
     let background = args.background;
+    if let Some(name) = gpu
+        && (args.log || args.log_file.is_some())
+    {
+        textweaver_xilem::log::line(&format!("graphics: {name}"));
+    }
     // `--log` with no file writes to the terminal for the whole run; else
     // let go of the terminal, so Control C there leaves the window open.
     if !(args.log && args.log_file.is_none()) {

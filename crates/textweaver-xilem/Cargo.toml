@@ -41,6 +41,8 @@ masonry_winit.workspace = true
 masonry_testing = { workspace = true, optional = true }
 unicode-segmentation.workspace = true
 serde_json.workspace = true
+# The `[gui]` table's `graphics` key, read before the window starts.
+toml.workspace = true
 clap.workspace = true
 rfd.workspace = true
 
@@ -65,7 +67,6 @@ windows-core.workspace = true
 accesskit_consumer.workspace = true
 masonry_testing.workspace = true
 tempfile.workspace = true
-toml.workspace = true
 
 [lints]
 workspace = true
