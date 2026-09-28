@@ -10,10 +10,10 @@
 //! frontend sends it to the terminal as an OSC 52 sequence
 //! ([`osc52`]), which Windows Terminal, iTerm2, kitty, WezTerm, foot,
 //! Alacritty, and xterm (when allowed) pass to the system clipboard, over
-//! SSH too, as Star did. There is no native fallback: the `arboard` crate
-//! would add an X11 client library on Linux for a feature the terminal
-//! already provides, so terminals without OSC 52 (the old Windows console
-//! host, macOS Terminal.app) cannot copy yet.
+//! SSH too, as Star did. Where the terminal cannot take OSC 52 (the old
+//! Windows console, macOS Terminal.app, VTE terminals), the terminal
+//! frontend puts the text on the system clipboard itself with `arboard`
+//! (its `clipboard` feature, Agent W4g), and says so once.
 
 use textweaver_a11y::Verbosity;
 use textweaver_core::{CharPos, CharRange, Direction, MarkerKind, PunctuationLevel, Unit};

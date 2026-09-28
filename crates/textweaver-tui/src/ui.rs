@@ -9,7 +9,7 @@ use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph};
-use textweaver_app::a11y::CursorPlacement;
+use textweaver_app::a11y::{CursorPlacement, Priority};
 use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
 use textweaver_app::keymap::{ActionId, Key, KeyChord, Layer, Modifiers};
 use textweaver_app::text_util::line_count;
@@ -149,6 +149,12 @@ pub struct Tui {
     /// Copied text as an OSC 52 sequence, waiting to be written to the
     /// terminal ([`Tui::take_clipboard_sequence`]).
     clipboard_out: Option<String>,
+    /// Where copied text goes ([`crate::clipboard`]).
+    clipboard_route: crate::clipboard::Route,
+    /// The system clipboard, for terminals that cannot take OSC 52.
+    system_clipboard: crate::clipboard::SystemClipboard,
+    /// Set once the listener was told that the system clipboard is used.
+    system_clipboard_said: bool,
     /// The title line's position while it is frozen (`[accessibility]
     /// quiet_screen` during continuous reading).
     frozen_position: Option<String>,
@@ -170,9 +176,12 @@ pub struct Areas {
 }
 
 impl Tui {
-    /// Wraps an app.
+    /// Wraps an app, with the terminal's color level and clipboard route
+    /// detected ([`crate::clipboard::detect`]).
     pub fn new(app: App) -> Self {
-        Self::with_color_support(app, ColorSupport::detect())
+        let mut tui = Self::with_color_support(app, ColorSupport::detect());
+        tui.clipboard_route = crate::clipboard::detect_here();
+        tui
     }
 
     /// Wraps an app, drawing at a given color level (tests; at run time
@@ -190,6 +199,9 @@ impl Tui {
             status_shown: (0, String::new()),
             status_blank_until: None,
             clipboard_out: None,
+            clipboard_route: crate::clipboard::Route::Osc52,
+            system_clipboard: crate::clipboard::SystemClipboard::default(),
+            system_clipboard_said: false,
             frozen_position: None,
             digits: crate::physical::DigitKeys::default(),
         }
@@ -304,9 +316,55 @@ impl Tui {
         self.clipboard_out.take()
     }
 
+    /// Where copied text goes: OSC 52 (the default for a `Tui` made with
+    /// [`Tui::with_color_support`]), the system clipboard, or both.
+    pub fn set_clipboard_route(&mut self, route: crate::clipboard::Route) {
+        self.clipboard_route = route;
+    }
+
+    /// Where copied text goes.
+    pub fn clipboard_route(&self) -> crate::clipboard::Route {
+        self.clipboard_route
+    }
+
+    /// Sends copied text on its route. The first use of the system
+    /// clipboard is said once; if it fails, the text goes to the terminal
+    /// instead, and the failure is said.
+    fn send_to_clipboard(&mut self, text: &str) {
+        use crate::clipboard::Route;
+        let route = self.clipboard_route;
+        let mut osc = route != Route::System;
+        if route != Route::Osc52 {
+            match self.system_clipboard.set_text(text) {
+                Ok(()) => {
+                    if route == Route::System && !self.system_clipboard_said {
+                        self.system_clipboard_said = true;
+                        self.app.announce_queued(
+                            "Copied with the system clipboard, because this terminal cannot take copied text.",
+                            Priority::Polite,
+                        );
+                    }
+                }
+                Err(e) => {
+                    osc = true;
+                    log::warn!("system clipboard: {e}");
+                    self.app.announce_queued(
+                        &format!(
+                            "Could not copy with the system clipboard: {e}. Sent to the terminal instead."
+                        ),
+                        Priority::Assertive,
+                    );
+                }
+            }
+        }
+        if osc {
+            self.clipboard_out = Some(textweaver_app::osc52(text));
+        }
+    }
+
     fn apply(&mut self, effects: Vec<Effect>) {
         if let Some(text) = self.app.take_clipboard() {
-            self.clipboard_out = Some(textweaver_app::osc52(&text));
+            self.send_to_clipboard(&text);
         }
         // Prompts and lists are the app's own models (Wave 3): the app
         // adopted them, and said a list's focused item, before returning

@@ -269,6 +269,14 @@ sha1 = "0.10"
 # XML and XPath forks without unsafe code.
 mathcat = { version = "=0.7.6-rc.3", default-features = false, features = ["include-zip", "no-unsafe"] }
 
+# Wave 4, Agent W4g: authoring extras (ADR-0032). Each is behind a
+# feature of the crate that uses it, and the lean reader links none.
+# The system clipboard where the terminal cannot take OSC 52. Default
+# features off: `image-data` would bring the image crate. Linux adds
+# `wayland-data-control` in textweaver-tui (x11rb and wl-clipboard-rs,
+# both pure Rust).
+arboard = { version = "3.6.1", default-features = false }
+
 # tests
 proptest = "1.11"
 insta = { version = "1.48", features = ["json", "yaml"] }

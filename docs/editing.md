@@ -225,7 +225,8 @@ The copies are in the `recovery` folder of the data folder. The [library guide](
 
 ## Copy, cut, and paste
 
-- **Ctrl+C** copies the selection. **Ctrl+X** cuts it; the cut is one undo step. textweaver sends the text to the terminal, which puts it on your computer's clipboard (the OSC 52 sequence; it works over SSH too). Windows Terminal, iTerm2, kitty, WezTerm, foot, Alacritty, and xterm pass it on. The old Windows console window and macOS Terminal do not.
+- **Ctrl+C** copies the selection. **Ctrl+X** cuts it; the cut is one undo step. textweaver sends the text to the terminal, which puts it on your computer's clipboard (the OSC 52 sequence; it works over SSH too). Windows Terminal, iTerm2, kitty, WezTerm, foot, Alacritty, and xterm pass it on.
+- The old Windows console window, macOS Terminal, and terminals built on VTE (GNOME Terminal, Tilix) do not take text that way, so there textweaver puts it on the system clipboard itself. The first time, it says "Copied with the system clipboard, because this terminal cannot take copied text." In Konsole it does both. Over SSH and in tmux it always uses the terminal, because the system clipboard there belongs to the other computer.
 - To paste from your computer's clipboard, use your terminal's paste command, such as **Ctrl+V** or **Ctrl+Shift+V** in Windows Terminal, or right-click.
 - When the terminal passes **Ctrl+V** to textweaver instead of pasting, textweaver pastes the text you last copied or cut in textweaver. When there is none, it says "Nothing copied in textweaver yet. Use your terminal's paste, for example Control Shift V."
 

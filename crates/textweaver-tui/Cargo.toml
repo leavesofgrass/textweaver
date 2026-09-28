@@ -14,12 +14,15 @@ name = "textweaver"
 path = "src/main.rs"
 
 [features]
-default = ["publish", "lint"]
+default = ["publish", "lint", "clipboard"]
 # In-reader export, preview, and citations (textweaver-app's `publish`).
 # `--no-default-features` builds the lean reader without them.
 publish = ["textweaver-app/publish"]
 # Markdown lint in edit mode (textweaver-app's `lint`).
 lint = ["textweaver-app/lint"]
+# The system clipboard (arboard) where the terminal cannot take OSC 52:
+# the old Windows console, macOS Terminal, VTE terminals (ADR-0032).
+clipboard = ["dep:arboard"]
 # Speech engines, passed through to textweaver-speech.
 espeak = ["textweaver-app/espeak", "textweaver-engines/espeak"]
 omnivox = ["textweaver-app/omnivox", "textweaver-engines/omnivox"]
@@ -37,6 +40,12 @@ anyhow.workspace = true
 clap.workspace = true
 ctrlc.workspace = true
 log.workspace = true
+
+arboard = { workspace = true, optional = true }
+
+# Wayland as well as X11 for the system clipboard.
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+arboard = { workspace = true, optional = true, features = ["wayland-data-control"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { workspace = true, features = ["Win32_Foundation", "Win32_System_Console", "Win32_System_Threading"] }
