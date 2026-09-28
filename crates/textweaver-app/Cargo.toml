@@ -28,6 +28,8 @@ publish = [
 espeak = ["textweaver-engines/espeak"]
 omnivox = ["textweaver-engines/omnivox"]
 speechd = ["textweaver-engines/speechd"]
+# MathCAT math speech (ADR-0029), passed through to textweaver-engines.
+mathcat = ["textweaver-engines/mathcat"]
 
 [dependencies]
 textweaver-core.workspace = true

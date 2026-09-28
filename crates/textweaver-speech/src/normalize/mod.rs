@@ -12,7 +12,7 @@
 //!
 //! | # | Transform | Setting | Star |
 //! |---|---|---|---|
-//! | 1 | [`Math`] (`textweaver-math`, ADR-0018) | `math`, `math_verbosity`, `asciimath_delimiter` | step 4 |
+//! | 1 | [`Math`] (`textweaver-math`, ADR-0018; MathCAT, ADR-0029) | `math`, `math_verbosity`, `asciimath_delimiter`, `math_engine` | step 4 |
 //! | 2 | [`MarkdownResidue`] (and table narration) | `markdown` (off by default) | `_strip_markdown_for_tts`, load time |
 //! | 3 | [`Pronunciations`] | `use_pronunciations` + lexicon | step 1 |
 //! | 4 | [`CommunityLexicon`] (IBMTTS community dictionaries) | `community_lexicon.enabled` (off by default) | new |
@@ -58,7 +58,7 @@ pub use abbreviations::{
 };
 pub use community::{CommunityLexicon, CommunityLexiconConfig};
 pub use markdown::{MarkdownResidue, TableMode, strip_markdown, tables_to_narration};
-pub use math::{Math, normalize_math};
+pub use math::{Math, MathEngine, mathcat_available, normalize_math};
 pub use numbers::{Numbers, normalize_numbers};
 pub use punctuation::{Punctuation, SplitCaps, char_name};
 use serde::{Deserialize, Serialize};
@@ -113,6 +113,14 @@ pub struct NormalizeConfig {
     /// The character around ASCIIMath (usually a backtick). `None`, the
     /// default, reads no ASCIIMath, because in Markdown a backtick is code.
     pub asciimath_delimiter: Option<char>,
+    /// Which engine speaks math: textweaver's own (the default) or MathCAT
+    /// (ADR-0029). MathCAT needs a build with the `mathcat` feature;
+    /// without it, math is read by textweaver's own engine.
+    pub math_engine: MathEngine,
+    /// The document's language (a tag such as `fr` or `en-GB`), for
+    /// MathCAT's rules. `None` is English. textweaver's own math speech
+    /// is English only.
+    pub math_language: Option<String>,
     /// The IBMTTS community pronunciation dictionaries as a lexicon, for
     /// engines that do not normalize natively (off by default; see
     /// [`community`]).
@@ -133,6 +141,8 @@ impl Default for NormalizeConfig {
             math: true,
             math_verbosity: Verbosity::Normal,
             asciimath_delimiter: None,
+            math_engine: MathEngine::Builtin,
+            math_language: None,
             community_lexicon: CommunityLexiconConfig::default(),
         }
     }
@@ -154,6 +164,8 @@ impl NormalizeConfig {
             math: false,
             math_verbosity: Verbosity::Normal,
             asciimath_delimiter: None,
+            math_engine: MathEngine::Builtin,
+            math_language: None,
             community_lexicon: CommunityLexiconConfig::default(),
         }
     }
@@ -188,7 +200,9 @@ impl Pipeline {
     ) -> Self {
         let mut p = Pipeline::new();
         if config.math {
-            p.push(Box::new(Math::from_config(config)));
+            let math = Math::from_config(config).with_punctuation(punctuation);
+            math.warm_up();
+            p.push(Box::new(math));
         }
         if config.markdown {
             p.push(Box::new(MarkdownResidue::new(

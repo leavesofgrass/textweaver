@@ -7490,6 +7490,7 @@ dependencies = [
  "tempfile",
  "textweaver-core",
  "textweaver-math",
+ "textweaver-mathcat",
  "thiserror 2.0.21",
 ]
 

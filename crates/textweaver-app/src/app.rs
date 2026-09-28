@@ -849,6 +849,7 @@ impl App {
         self.close_preview();
         self.math_explore = None;
         self.session = Some(s);
+        self.follow_document_language();
         self.stats_open();
         self.view.top_line = 0;
         self.scroll_to_cursor();
@@ -873,6 +874,26 @@ impl App {
             self.read_from_cursor();
         }
         vec![Effect::Redraw]
+    }
+
+    /// The speech pipeline's settings, with the open document's language
+    /// for MathCAT's rules (ADR-0029).
+    pub(crate) fn speech_normalization(&self) -> textweaver_speech::NormalizeConfig {
+        let mut n = textweaver_engines::service_config(&self.settings).normalize;
+        n.math_language = self
+            .session
+            .as_ref()
+            .and_then(|s| s.doc.meta.language.clone());
+        n
+    }
+
+    /// MathCAT reads math in the document's language: a newly opened
+    /// document passes its language to the speech pipeline. Nothing
+    /// changes with textweaver's own math speech, which is English only.
+    fn follow_document_language(&mut self) {
+        if self.settings.reading.math_engine != textweaver_store::MathEngine::Builtin {
+            self.speech.set_normalization(self.speech_normalization());
+        }
     }
 
     pub(crate) fn state_store(&self) -> Option<StateStore> {

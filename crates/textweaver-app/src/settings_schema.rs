@@ -560,6 +560,16 @@ pub const INFO: &[Info] = &[
             ("paddle", "PaddleOCR (experimental)"),
         ],
     ),
+    choice(
+        "reading.math_engine",
+        "Math speech",
+        "Which engine reads math aloud: textweaver's own, or MathCAT in ClearSpeak or SimpleSpeak, in the document's language. MathCAT needs a build that includes it; otherwise textweaver's own is used.",
+        &[
+            ("builtin", "textweaver"),
+            ("mathcat", "MathCAT ClearSpeak"),
+            ("mathcat_simplespeak", "MathCAT SimpleSpeak"),
+        ],
+    ),
     // [display]
     open_choice("display.theme", "Theme", "The colour theme.", &[]),
     toggle(
@@ -1538,9 +1548,9 @@ impl App {
     /// the keys, the accessibility mode, the theme, the library.
     pub(crate) fn settings_changed(&mut self, old: &Settings, path: &str) {
         let top = path.split('.').next().unwrap_or_default();
-        if matches!(top, "speech" | "normalization" | "highlight") {
+        if matches!(top, "speech" | "normalization" | "highlight") || path == "reading.math_engine" {
             let config = textweaver_engines::service_config(&self.settings);
-            self.speech.set_normalization(config.normalize);
+            self.speech.set_normalization(self.speech_normalization());
             self.speech.set_pacing(config.pacing);
             self.apply_voice_settings();
             if self.settings.speech.voice != old.speech.voice {
