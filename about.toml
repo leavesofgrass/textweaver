@@ -42,3 +42,8 @@ ignore-dev-dependencies = true
 private = { ignore = true }
 # Known licence layouts of widely used crates.
 workarounds = ["ring", "rustls"]
+
+# One licence for one crate, approved by the owner on Sunday, September 27,
+# 2026 (W4c1). Mirrors the exception in deny.toml.
+[libbz2-rs-sys]
+accepted = ["bzip2-1.0.6"]

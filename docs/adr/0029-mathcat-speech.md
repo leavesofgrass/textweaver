@@ -116,11 +116,17 @@ Two checks cannot pass with MathCAT 0.7.6-rc.3 as it is, and both need the owner
 
 `cargo deny` itself is not installed on the development machine, and installing it is a download that was not approved, so it was not run.
 
+**The owner's decisions (Sunday, September 27, 2026):**
+- **yaml-rust:** accepted for now. `deny.toml` ignores RUSTSEC-2024-0320 with a reason; the entry goes when MathCAT moves to a maintained YAML parser.
+- **bzip2 licence:** accepted for libbz2-rs-sys only, as a one-crate exception in `deny.toml` and in `about.toml`. The general lists are unchanged.
+- **cargo-deny:** approved for install, and run at integration.
+- **Default engine:** the built-in engine stays the default and is the owner's preference. MathCAT is an option for students who want their screen reader's wording.
+
 ## Consequences
 
 - Students can hear math in the wording their screen reader uses, in the document's language, with textweaver's own speech as a safe fallback.
 - The highlight inside a MathCAT formula is the whole formula, not the word. The built-in engine stays word-exact.
-- The feature is off by default. Until the owner decides on the two dependency checks, builds with it are for testing.
+- The feature is off by default, and `math_engine` defaults to `builtin`, the owner's preference. The two dependency checks pass with the exceptions the owner approved.
 - MathCAT's panic hook is contained; any future call into MathCAT must go through the thread.
 - Upgrading MathCAT means reading the recorded wording again, and checking whether #827 and the yaml-rust dependency are resolved.
 
