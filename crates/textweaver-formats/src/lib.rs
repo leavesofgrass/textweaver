@@ -15,6 +15,7 @@
 //! | [`EpubLoader`] | `epub` | [`NATIVE_PRIORITY`] (10) |
 //! | [`DocxLoader`], with comments and tracked changes | `docx`, `docm` | [`NATIVE_PRIORITY`] (10) |
 //! | [`RtfLoader`]: Rich Text Format | `rtf` | [`NATIVE_PRIORITY`] (10) |
+//! | [`OdtLoader`]: OpenDocument text, with comments and tracked changes | `odt`, `ott`, `fodt` | [`NATIVE_PRIORITY`] (10) |
 //! | `PdfLoader` (feature `pdf`, on by default; ADR-0010), with OCR of scanned pages (feature `ocr`; ADR-0026) | `pdf` | [`NATIVE_PRIORITY`] (10) |
 //! | `ImageLoader` (feature `ocr`): OCR of an image file | `png`, `jpg`, `jpeg` | [`NATIVE_PRIORITY`] (10) |
 //! | [`DaisyLoader`]: DAISY 3 books and DTBook files | `opf`, `xml`, `dtbook` | [`NATIVE_PRIORITY`] (10) |
@@ -67,6 +68,7 @@ pub mod fulltext;
 pub mod html;
 pub mod markdown;
 mod mathml;
+pub mod odt;
 mod omml;
 mod package;
 #[cfg(feature = "pandoc")]
@@ -98,6 +100,7 @@ pub use export::{
 pub use fulltext::{FullTextIndex, IndexedDocument, RefreshReport, SearchHit};
 pub use html::HtmlLoader;
 pub use markdown::MarkdownLoader;
+pub use odt::OdtLoader;
 #[cfg(feature = "pandoc")]
 pub use pandoc::PandocLoader;
 #[cfg(feature = "pdf")]
@@ -416,6 +419,7 @@ impl Registry {
         r.register(Box::new(EpubLoader));
         r.register(Box::new(DocxLoader));
         r.register(Box::new(RtfLoader));
+        r.register(Box::new(OdtLoader));
         #[cfg(feature = "pdf")]
         r.register(Box::new(PdfLoader));
         #[cfg(feature = "ocr")]
@@ -686,7 +690,7 @@ mod tests {
             assert!(!r.extensions().contains(&not), "{not}");
         }
         assert!(r.extensions().contains(&"opf"));
-        let mut ids = vec!["text", "markdown", "html", "epub", "docx", "rtf"];
+        let mut ids = vec!["text", "markdown", "html", "epub", "docx", "rtf", "odt"];
         if cfg!(feature = "pdf") {
             ids.push("pdf");
         }
