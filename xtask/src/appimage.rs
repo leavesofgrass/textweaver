@@ -73,7 +73,7 @@ fn parse(args: &[String]) -> anyhow::Result<Args> {
 }
 
 /// The machine name the AppImage tools use (`x86_64`, `aarch64`).
-fn arch() -> &'static str {
+pub(crate) fn arch() -> &'static str {
     std::env::consts::ARCH
 }
 
@@ -111,6 +111,25 @@ fn find_program(var: &str, name: &str) -> Option<PathBuf> {
         .find(|p| p.is_file())
 }
 
+/// `appimagetool`: `APPIMAGETOOL`, else `PATH`.
+pub(crate) fn find_tool() -> Option<PathBuf> {
+    find_program("APPIMAGETOOL", "appimagetool")
+}
+
+/// The pinned type 2 runtime: `APPIMAGE_RUNTIME`, else `runtime-ARCH`
+/// beside `tool` (where docker/appimage/fetch-tools.sh puts it). Never the
+/// unpinned runtime appimagetool would download by itself.
+pub(crate) fn find_runtime(tool: &Path) -> anyhow::Result<PathBuf> {
+    match std::env::var_os("APPIMAGE_RUNTIME").filter(|v| !v.is_empty()) {
+        Some(r) => Ok(PathBuf::from(r)),
+        None => tool
+            .parent()
+            .map(|d| d.join(format!("runtime-{}", arch())))
+            .filter(|p| p.is_file())
+            .context("the AppImage runtime was not found: set APPIMAGE_RUNTIME, or keep runtime-ARCH beside appimagetool (docker/appimage/fetch-tools.sh)"),
+    }
+}
+
 /// `cargo xtask appimage`.
 pub fn run() -> anyhow::Result<()> {
     let args = parse(&std::env::args().skip(2).collect::<Vec<_>>())?;
@@ -122,17 +141,10 @@ pub fn run() -> anyhow::Result<()> {
             "the AppImage is built on Linux; on this system run `cargo xtask appimage --docker` (it needs Docker)"
         );
     }
-    let tool = find_program("APPIMAGETOOL", "appimagetool").context(
+    let tool = find_tool().context(
         "appimagetool was not found: run docker/appimage/fetch-tools.sh DIR and set APPIMAGETOOL=DIR/appimagetool, or use --docker",
     )?;
-    let runtime = match std::env::var_os("APPIMAGE_RUNTIME").filter(|v| !v.is_empty()) {
-        Some(r) => PathBuf::from(r),
-        None => tool
-            .parent()
-            .map(|d| d.join(format!("runtime-{}", arch())))
-            .filter(|p| p.is_file())
-            .context("the AppImage runtime was not found: set APPIMAGE_RUNTIME, or keep runtime-ARCH beside appimagetool (docker/appimage/fetch-tools.sh)")?,
-    };
+    let runtime = find_runtime(&tool)?;
 
     let root = eci::root();
     let staged = dist::stage(args.out.clone(), false)?;
@@ -217,14 +229,14 @@ fn build_appdir(root: &Path, package: &Path, appdir: &Path) -> anyhow::Result<()
 }
 
 #[cfg(unix)]
-fn executable(path: &Path) -> anyhow::Result<()> {
+pub(crate) fn executable(path: &Path) -> anyhow::Result<()> {
     use std::os::unix::fs::PermissionsExt;
     fs::set_permissions(path, fs::Permissions::from_mode(0o755))
         .with_context(|| format!("making {} executable", path.display()))
 }
 
 #[cfg(not(unix))]
-fn executable(_: &Path) -> anyhow::Result<()> {
+pub(crate) fn executable(_: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 

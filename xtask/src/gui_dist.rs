@@ -1,17 +1,37 @@
 //! `cargo xtask gui-dist [--out DIR]`: the Xilem GUI's own package
-//! (ADR-0027, "Packaging").
+//! (ADR-0027, "Packaging"; docs/dev/releasing.md).
 //!
-//! Builds `textweaver-xilem` with the `dist` profile and stages it as
-//! `textweaver-gui` with the licence, the third-party notices, the font
-//! licences, the quick start, and the window's guide (`docs/gui.md`), in
-//! `target/dist/textweaver-gui-VERSION-PLATFORM/`, then packages it:
+//! Builds `textweaver-xilem` with the `dist` profile, as `cargo xtask dist`
+//! builds the terminal programs (the static C runtime on Windows, in the
+//! same build folder, so the two share their compiled dependencies), and
+//! stages it as `textweaver-gui` in
+//! `target/dist/textweaver-VERSION-PLATFORM-gui/` with what it needs to
+//! speak and to be shared:
+//!
+//! - the engine hosts for the platform (Eloquence, SAPI 5, and DECtalk on
+//!   Windows; Eloquence for Voxin and DECtalk on Linux) and the IBMTTS
+//!   community dictionaries, beside the program, where the engines look;
+//! - the define-word dictionary (`lexicon/`);
+//! - the licence, the third-party notices, and every data licence file the
+//!   terminal package carries (the check fails if one is missing), and the
+//!   vendored Xilem's licence;
+//! - the quick start and the window's guide (`GUI.md`).
+//!
+//! Then it packages the folder:
 //!
 //! - Windows: a `.zip`;
 //! - macOS: `textweaver.app` (the binary in `Contents/MacOS`, an
 //!   `Info.plist`, signed ad hoc as Apple silicon requires) inside a
-//!   `.zip`;
-//! - Linux: a `.tar.gz`, and an AppImage of its own when `appimagetool`
-//!   and its runtime are found (as `cargo xtask appimage` finds them).
+//!   `.zip`, for this Mac's architecture;
+//! - Linux: a `.tar.gz`, and an AppImage of its own (with its `.zsync`)
+//!   when `appimagetool` and its pinned runtime are found, as
+//!   `cargo xtask appimage` finds them.
+//!
+//! The names end in `-gui` (`textweaver-0.1.0-linux-x86_64-gui.AppImage`)
+//! so that no pattern for the terminal packages matches them: not the
+//! release workflow's, not the install scripts', and not the update
+//! information inside AppImages already released
+//! (`textweaver-*-linux-ARCH.AppImage.zsync`).
 //!
 //! The GUI needs no GTK or wxWidgets: winit and Vello use the system's
 //! graphics stack (Direct3D 12 or Vulkan on Windows, Metal on macOS,
@@ -23,35 +43,24 @@ use std::process::Command;
 
 use anyhow::{Context, bail};
 
-use crate::eci;
+use crate::{appimage, dist, eci};
 
 /// The package the GUI is built from, and its binary.
 const PACKAGE: (&str, &str) = ("textweaver-xilem", "textweaver-xilem");
 /// The name the binary is installed under.
 const INSTALLED: &str = "textweaver-gui";
-/// The cargo profile (root `Cargo.toml`, `[profile.dist]`).
-const PROFILE: &str = "dist";
-/// Files copied into the package: (source, path in the package).
-const FILES: [(&str, &str); 8] = [
+/// Files copied into the package besides the notices and data licences
+/// (`dist::stage_notices`): (source, path in the package).
+const FILES: [(&str, &str); 4] = [
     ("LICENSE", "LICENSE"),
-    ("THIRD-PARTY-NOTICES.md", "THIRD-PARTY-NOTICES.md"),
     ("docs/quickstart.md", "QUICKSTART.md"),
     // How to start the window, its keys, and its settings.
     ("docs/gui.md", "GUI.md"),
-    (
-        "third_party/fonts/atkinson-hyperlegible-next/OFL.txt",
-        "licenses/fonts/atkinson-hyperlegible-next/OFL.txt",
-    ),
-    (
-        "third_party/fonts/atkinson-hyperlegible-mono/OFL.txt",
-        "licenses/fonts/atkinson-hyperlegible-mono/OFL.txt",
-    ),
-    (
-        "third_party/fonts/opendyslexic/OFL.txt",
-        "licenses/fonts/opendyslexic/OFL.txt",
-    ),
     ("third_party/xilem/LICENSE", "licenses/xilem/LICENSE"),
 ];
+/// The GitHub owner and repository the AppImage's update information
+/// points at.
+const GITHUB: (&str, &str) = ("leavesofgrass", "textweaver");
 
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Args {
@@ -70,12 +79,22 @@ fn parse(args: &[String]) -> anyhow::Result<Args> {
     Ok(out)
 }
 
-/// The package folder name.
+/// The package folder name: the terminal package's name with `-gui` at the
+/// end, so the terminal packages' patterns never match it.
 fn package_name(version: &str) -> String {
     format!(
-        "textweaver-gui-{version}-{}-{}",
+        "textweaver-{version}-{}-{}-gui",
         std::env::consts::OS,
         std::env::consts::ARCH
+    )
+}
+
+/// The update information embedded in the GUI's AppImage: the newest
+/// release or pre-release's GUI AppImage for this architecture.
+fn update_information(arch: &str) -> String {
+    format!(
+        "gh-releases-zsync|{}|{}|latest-all|textweaver-*-linux-{arch}-gui.AppImage.zsync",
+        GITHUB.0, GITHUB.1
     )
 }
 
@@ -110,26 +129,23 @@ fn desktop_entry() -> &'static str {
      Categories=Utility;Accessibility;TextTools;\n"
 }
 
-/// The AppImage's entry point: starts the GUI beside it.
-const APPRUN: &str = "#!/bin/sh\nhere=\"$(dirname \"$(readlink -f \"$0\")\")\"\nexec \"$here/usr/bin/textweaver-gui\" \"$@\"\n";
+/// Where the package folder sits inside the AppImage. The program runs
+/// from there, so it finds the engine hosts and dictionaries beside it, as
+/// in the tarball.
+const APPDIR_LIB: &str = "usr/lib/textweaver-gui";
 
-fn run_tool(cmd: &mut Command) -> anyhow::Result<()> {
-    let status = cmd
-        .status()
-        .with_context(|| format!("running {:?}", cmd.get_program()))?;
-    if !status.success() {
-        bail!("{:?} failed ({status})", cmd.get_program());
-    }
-    Ok(())
-}
+/// The AppImage's entry point: starts the GUI in its package folder.
+const APPRUN: &str = "#!/bin/sh\nhere=\"$(dirname \"$(readlink -f \"$0\")\")\"\nexec \"$here/usr/lib/textweaver-gui/textweaver-gui\" \"$@\"\n";
 
 /// `cargo xtask gui-dist`.
 pub fn run() -> anyhow::Result<()> {
     let args = parse(&std::env::args().skip(2).collect::<Vec<_>>())?;
     let root = eci::root();
     let version = env!("CARGO_PKG_VERSION");
-    let target = eci::target_dir(&root);
-    let out = args.out.unwrap_or_else(|| target.join("dist"));
+    let build_dir = dist::build_dir(&root);
+    let out = args
+        .out
+        .unwrap_or_else(|| eci::target_dir(&root).join("dist"));
     let name = package_name(version);
     let stage = out.join(&name);
     if stage.exists() {
@@ -137,12 +153,11 @@ pub fn run() -> anyhow::Result<()> {
     }
     fs::create_dir_all(&stage)?;
 
-    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-    run_tool(Command::new(cargo).current_dir(&root).args([
+    dist::run_tool(dist::cargo(&root, &build_dir).args([
         "build",
         "--locked",
         "--profile",
-        PROFILE,
+        dist::PROFILE,
         "-p",
         PACKAGE.0,
         "--bin",
@@ -150,12 +165,31 @@ pub fn run() -> anyhow::Result<()> {
     ]))
     .context("building the GUI")?;
     let exe = std::env::consts::EXE_SUFFIX;
-    let built = target.join(PROFILE).join(format!("{}{exe}", PACKAGE.1));
+    let built = build_dir
+        .join(dist::PROFILE)
+        .join(format!("{}{exe}", PACKAGE.1));
     let bin = stage.join(format!("{INSTALLED}{exe}"));
     eci::copy(&built, &bin)?;
-    for (src, dest) in FILES {
+
+    // The engine hosts and the dictionaries, as in the terminal package:
+    // the engines look for them beside the program. macOS speaks through
+    // Apple's own voices in process.
+    if !cfg!(target_os = "macos") {
+        let hosts = eci::all_hosts();
+        dist::build_hosts(&root, &build_dir, &hosts)?;
+        for h in &hosts {
+            eci::copy(
+                &h.built(&build_dir, dist::PROFILE),
+                &stage.join(h.installed_name()),
+            )?;
+        }
+        eci::copy_dictionaries(&root, &stage)?;
+    }
+    for (src, dest) in FILES.iter().chain(dist::DATA_FILES.iter()) {
         eci::copy(&root.join(src), &stage.join(dest))?;
     }
+    dist::stage_notices(&root, &stage)?;
+    dist::check_notices(&stage)?;
 
     if cfg!(target_os = "macos") {
         let app = stage.join("textweaver.app");
@@ -163,13 +197,14 @@ pub fn run() -> anyhow::Result<()> {
         fs::create_dir_all(contents.join("MacOS"))?;
         fs::rename(&bin, contents.join("MacOS").join(INSTALLED))?;
         fs::write(contents.join("Info.plist"), info_plist(version))?;
-        run_tool(
+        dist::run_tool(
             Command::new("codesign")
                 .args(["--force", "--deep", "--sign", "-"])
                 .arg(&app),
         )?;
         let zip = out.join(format!("{name}.zip"));
-        run_tool(
+        let _ = fs::remove_file(&zip);
+        dist::run_tool(
             Command::new("ditto")
                 .args(["-c", "-k", "--keepParent"])
                 .arg(&stage)
@@ -178,19 +213,11 @@ pub fn run() -> anyhow::Result<()> {
         println!("package {}", zip.display());
     } else if cfg!(windows) {
         let zip = out.join(format!("{name}.zip"));
-        run_tool(
-            Command::new("tar")
-                .arg("-a")
-                .arg("-cf")
-                .arg(&zip)
-                .arg("-C")
-                .arg(&out)
-                .arg(&name),
-        )?;
+        dist::zip_dir(&stage, &name, &zip)?;
         println!("package {}", zip.display());
     } else {
         let tgz = out.join(format!("{name}.tar.gz"));
-        run_tool(
+        dist::run_tool(
             Command::new("tar")
                 .arg("-czf")
                 .arg(&tgz)
@@ -199,56 +226,83 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(&name),
         )?;
         println!("package {}", tgz.display());
-        appimage(&root, &stage, &out, &name)?;
+        build_appimage(&root, &stage, &out, &name)?;
     }
     Ok(())
 }
 
-/// The GUI's own AppImage, when appimagetool is available.
-fn appimage(root: &Path, stage: &Path, out: &Path, name: &str) -> anyhow::Result<()> {
-    let Some(tool) = std::env::var_os("APPIMAGETOOL").map(PathBuf::from) else {
-        println!("no AppImage: set APPIMAGETOOL (docker/appimage/fetch-tools.sh fetches it)");
+/// Lays out the GUI's AppDir: the package under [`APPDIR_LIB`], `AppRun`,
+/// the desktop entry, and the icon.
+fn build_appdir(root: &Path, package: &Path, appdir: &Path) -> anyhow::Result<()> {
+    if appdir.exists() {
+        fs::remove_dir_all(appdir).with_context(|| format!("clearing {}", appdir.display()))?;
+    }
+    dist::copy_tree(package, &appdir.join(APPDIR_LIB))?;
+    let apprun = appdir.join("AppRun");
+    fs::write(&apprun, APPRUN)?;
+    appimage::executable(&apprun)?;
+    appimage::executable(&appdir.join(APPDIR_LIB).join(INSTALLED))?;
+    for dest in [
+        appdir.join("textweaver-gui.desktop"),
+        appdir.join("usr/share/applications/textweaver-gui.desktop"),
+    ] {
+        if let Some(parent) = dest.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&dest, desktop_entry()).with_context(|| format!("writing {}", dest.display()))?;
+    }
+    let icon = root.join("scripts/linux/textweaver.svg");
+    for dest in [
+        appdir.join("textweaver.svg"),
+        appdir.join(".DirIcon"),
+        appdir.join("usr/share/icons/hicolor/scalable/apps/textweaver.svg"),
+    ] {
+        eci::copy(&icon, &dest)?;
+    }
+    Ok(())
+}
+
+/// The GUI's own AppImage, when appimagetool is available (the release
+/// workflow builds in the `docker/appimage` image, which has it).
+fn build_appimage(root: &Path, stage: &Path, out: &Path, name: &str) -> anyhow::Result<()> {
+    let Some(tool) = appimage::find_tool() else {
+        println!(
+            "no AppImage: set APPIMAGETOOL (docker/appimage/fetch-tools.sh fetches it and its runtime)"
+        );
         return Ok(());
     };
+    let runtime = appimage::find_runtime(&tool)?;
     let appdir = out.join("textweaver-gui.AppDir");
-    if appdir.exists() {
-        fs::remove_dir_all(&appdir)?;
-    }
-    crate::dist::copy_tree(
-        stage,
-        &appdir.join("usr").join("share").join("textweaver-gui"),
-    )?;
-    eci::copy(
-        &stage.join(INSTALLED),
-        &appdir.join("usr").join("bin").join(INSTALLED),
-    )?;
-    fs::write(appdir.join("AppRun"), APPRUN)?;
-    fs::write(appdir.join("textweaver-gui.desktop"), desktop_entry())?;
-    eci::copy(
-        &root.join("scripts/linux/textweaver.svg"),
-        &appdir.join("textweaver.svg"),
-    )?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        for f in [
-            appdir.join("AppRun"),
-            appdir.join("usr/bin").join(INSTALLED),
-        ] {
-            fs::set_permissions(&f, fs::Permissions::from_mode(0o755))?;
-        }
-    }
+    build_appdir(root, stage, &appdir)?;
     let image = out.join(format!("{name}.AppImage"));
-    let mut cmd = Command::new(tool);
-    if let Some(rt) = std::env::var_os("APPIMAGE_RUNTIME") {
-        cmd.arg("--runtime-file").arg(rt);
-    }
-    run_tool(
-        cmd.env("ARCH", std::env::consts::ARCH)
+    let _ = fs::remove_file(&image);
+    let zsync = out.join(format!("{name}.AppImage.zsync"));
+    let _ = fs::remove_file(&zsync);
+    let arch = appimage::arch();
+    dist::run_tool(
+        Command::new(&tool)
+            .arg("--no-appstream")
+            .arg("--runtime-file")
+            .arg(&runtime)
+            .arg("--updateinformation")
+            .arg(update_information(arch))
             .arg(&appdir)
-            .arg(&image),
-    )?;
+            .arg(&image)
+            .current_dir(out)
+            .env("ARCH", arch)
+            .env("VERSION", env!("CARGO_PKG_VERSION"))
+            // appimagetool is itself an AppImage; without FUSE
+            // (containers) it extracts itself and runs.
+            .env("APPIMAGE_EXTRACT_AND_RUN", "1"),
+    )
+    .context("appimagetool")?;
+    if !image.is_file() {
+        bail!("appimagetool did not write {}", image.display());
+    }
     println!("package {}", image.display());
+    if zsync.is_file() {
+        println!("package {}", zsync.display());
+    }
     Ok(())
 }
 
@@ -274,17 +328,110 @@ mod tests {
 
     #[test]
     fn names_and_entries() {
-        assert!(package_name("0.1.0").starts_with("textweaver-gui-0.1.0-"));
+        let name = package_name("0.1.0");
+        assert!(name.starts_with("textweaver-0.1.0-"), "{name}");
+        assert!(name.ends_with("-gui"), "{name}");
         assert!(desktop_entry().contains("Exec=textweaver-gui %f"));
         assert!(desktop_entry().contains("Terminal=false"));
-        assert!(APPRUN.contains("usr/bin/textweaver-gui"));
+        assert!(APPRUN.contains("usr/lib/textweaver-gui/textweaver-gui"));
+        assert!(
+            update_information("aarch64")
+                .ends_with("textweaver-*-linux-aarch64-gui.AppImage.zsync")
+        );
+    }
+
+    /// A shell or glob pattern with `*` wildcards only.
+    fn glob(pattern: &str, name: &str) -> bool {
+        let parts: Vec<&str> = pattern.split('*').collect();
+        let (first, last) = (parts[0], parts[parts.len() - 1]);
+        if !name.starts_with(first)
+            || !name.ends_with(last)
+            || name.len() < first.len() + last.len()
+        {
+            return false;
+        }
+        let mut rest = &name[first.len()..name.len() - last.len()];
+        for p in &parts[1..parts.len() - 1] {
+            match rest.find(p) {
+                Some(i) => rest = &rest[i + p.len()..],
+                None => return false,
+            }
+        }
+        true
+    }
+
+    /// The patterns that pick the terminal packages (the release workflow,
+    /// the distribution check, the update information in released
+    /// AppImages) never pick a GUI package.
+    #[test]
+    fn terminal_patterns_never_match_the_gui_packages() {
+        let terminal = [
+            "textweaver-*-windows-x86_64.zip",
+            "textweaver-*-macos-universal.tar.gz",
+            "textweaver-*-linux-x86_64.AppImage",
+            "textweaver-*-linux-x86_64.AppImage.zsync",
+            "textweaver-*-linux-x86_64.tar.gz",
+            "textweaver-*-linux-aarch64.AppImage",
+            "textweaver-*-linux-aarch64.tar.gz",
+        ];
+        let v = "0.1.0-alpha.5";
+        let gui = [
+            format!("textweaver-{v}-windows-x86_64-gui.zip"),
+            format!("textweaver-{v}-macos-aarch64-gui.zip"),
+            format!("textweaver-{v}-linux-x86_64-gui.AppImage"),
+            format!("textweaver-{v}-linux-x86_64-gui.AppImage.zsync"),
+            format!("textweaver-{v}-linux-x86_64-gui.tar.gz"),
+            format!("textweaver-{v}-linux-aarch64-gui.AppImage"),
+            format!("textweaver-{v}-linux-aarch64-gui.tar.gz"),
+        ];
+        for t in terminal {
+            for g in &gui {
+                assert!(!glob(t, g), "{t} matches {g}");
+            }
+            // The pattern still picks its own package.
+            let own = t.replace('*', v);
+            assert!(glob(t, &own), "{t} misses {own}");
+        }
+        // The checksums cover both: tools/release-upload.sh sums textweaver-*.
+        for g in &gui {
+            assert!(glob("textweaver-*", g));
+        }
+        assert!(glob(
+            "textweaver-*-linux-x86_64-gui.AppImage.zsync",
+            &gui[3]
+        ));
     }
 
     #[test]
     fn packaged_files_exist() {
         let root = eci::root();
-        for (src, _) in FILES {
+        for (src, _) in FILES.iter().chain(dist::DATA_FILES.iter()) {
             assert!(root.join(src).is_file(), "{src}");
         }
+    }
+
+    #[test]
+    fn the_appdir_runs_the_program_beside_its_hosts() {
+        let root = eci::root();
+        let tmp = std::env::temp_dir().join(format!("tw-gui-appdir-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&tmp);
+        let package = tmp.join("pkg");
+        fs::create_dir_all(&package).unwrap();
+        fs::write(package.join(INSTALLED), "gui").unwrap();
+        fs::write(package.join("eci-host"), "host").unwrap();
+        let appdir = tmp.join("textweaver-gui.AppDir");
+        build_appdir(&root, &package, &appdir).unwrap();
+        for f in [
+            "AppRun",
+            "textweaver-gui.desktop",
+            "textweaver.svg",
+            ".DirIcon",
+            "usr/lib/textweaver-gui/textweaver-gui",
+            "usr/lib/textweaver-gui/eci-host",
+            "usr/share/applications/textweaver-gui.desktop",
+        ] {
+            assert!(appdir.join(f).is_file(), "{f} is missing");
+        }
+        let _ = fs::remove_dir_all(&tmp);
     }
 }
