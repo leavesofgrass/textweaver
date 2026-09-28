@@ -6,7 +6,10 @@
 //! either dialect: BibTeX (`journal`, `year`/`month`, `address`, `school`)
 //! or BibLaTeX (`journaltitle`, `date`, `location`, `institution`).
 
-use biblatex::{Bibliography, ChunksExt, DateValue, EntryType, PermissiveType, Person};
+use biblatex::{
+    Bibliography, ChunksExt, DateValue, EntryType, PermissiveType, Person, RawBibliography,
+    RawChunk,
+};
 
 use crate::error::{CiteError, Result};
 use crate::reference::{CslDate, Name, Reference, non_empty};
@@ -24,11 +27,127 @@ pub enum Dialect {
 /// ids.
 pub fn parse(text: &str) -> Result<Vec<Reference>> {
     let text = text.trim_start_matches('\u{feff}');
-    let bib = Bibliography::parse(text).map_err(|e| {
+    let error = |e: biblatex::ParseError| {
         let line = text[..e.span.start.min(text.len())].matches('\n').count() + 1;
         CiteError::parse("BibTeX", Some(line), e.kind.to_string())
-    })?;
+    };
+    let mut raw = RawBibliography::parse(text).map_err(error)?;
+    untangle(&mut raw);
+    let bib = Bibliography::from_raw(raw).map_err(error)?;
     Ok(bib.iter().map(entry_to_reference).collect())
+}
+
+/// The longest chain of `crossref` and `xdata` links followed. Real files
+/// rarely chain more than two.
+const MAX_LINK_CHAIN: usize = 8;
+
+/// Removes the `crossref` and `xdata` links that would loop, or chain
+/// deeper than [`MAX_LINK_CHAIN`], before `biblatex` resolves them. It
+/// follows links by recursion, so an entry that names itself, or two that
+/// name each other, overflowed the stack and took the whole program down.
+/// The entries stay; only the offending links go, with a warning in the
+/// log naming the entry.
+fn untangle(raw: &mut RawBibliography<'_>) {
+    use std::collections::HashMap;
+
+    let abbreviations: HashMap<&str, String> = raw
+        .abbreviations
+        .iter()
+        .map(|p| (p.key.v, field_text(&p.value.v, &HashMap::new())))
+        .collect();
+    let index: HashMap<&str, usize> = raw
+        .entries
+        .iter()
+        .enumerate()
+        .map(|(i, e)| (e.v.key.v, i))
+        .collect();
+    // Every entry a link could name. Braces are stripped and commas split,
+    // so a key is found however biblatex reads the field.
+    let edges: Vec<Vec<usize>> = raw
+        .entries
+        .iter()
+        .map(|e| {
+            let mut out = Vec::new();
+            for pair in &e.v.fields {
+                if !is_link(pair.key.v) {
+                    continue;
+                }
+                let value = field_text(&pair.value.v, &abbreviations);
+                for key in value.split(',') {
+                    let key: String = key.chars().filter(|c| !matches!(c, '{' | '}')).collect();
+                    if let Some(&j) = index.get(key.trim()) {
+                        out.push(j);
+                    }
+                }
+            }
+            out
+        })
+        .collect();
+
+    // Depth-first, without recursion: a link back to an entry still being
+    // walked closes a loop, and cuts the linking entry's links.
+    let n = edges.len();
+    let (mut state, mut depth, mut cut) = (vec![0u8; n], vec![0usize; n], vec![false; n]);
+    for start in 0..n {
+        if state[start] != 0 {
+            continue;
+        }
+        let mut stack = vec![(start, 0usize)];
+        state[start] = 1;
+        while let Some(&mut (node, ref mut next)) = stack.last_mut() {
+            if !cut[node]
+                && let Some(&child) = edges[node].get(*next)
+            {
+                *next += 1;
+                match state[child] {
+                    0 => {
+                        state[child] = 1;
+                        stack.push((child, 0));
+                    }
+                    1 => cut[node] = true,
+                    _ => {}
+                }
+                continue;
+            }
+            stack.pop();
+            state[node] = 2;
+            let deepest = if cut[node] {
+                0
+            } else {
+                edges[node].iter().map(|&c| depth[c]).max().unwrap_or(0)
+            };
+            depth[node] = deepest + 1;
+            if depth[node] > MAX_LINK_CHAIN {
+                cut[node] = true;
+                depth[node] = 1;
+            }
+        }
+    }
+    for (entry, _) in raw.entries.iter_mut().zip(&cut).filter(|(_, c)| **c) {
+        log::warn!(
+            "BibTeX: the crossref or xdata links of {} loop or chain too deep; ignored",
+            entry.v.key.v
+        );
+        entry.v.fields.retain(|p| !is_link(p.key.v));
+    }
+}
+
+fn is_link(field: &str) -> bool {
+    field.eq_ignore_ascii_case("crossref") || field.eq_ignore_ascii_case("xdata")
+}
+
+/// A raw field's text, with `@string` abbreviations filled in.
+fn field_text(
+    field: &[biblatex::Spanned<RawChunk<'_>>],
+    abbreviations: &std::collections::HashMap<&str, String>,
+) -> String {
+    field
+        .iter()
+        .map(|c| match c.v {
+            RawChunk::Normal(t) => t.to_owned(),
+            RawChunk::Abbreviation(a) => abbreviations.get(a).cloned().unwrap_or_default(),
+        })
+        .collect()
 }
 
 fn field(entry: &biblatex::Entry, names: &[&str]) -> Option<String> {
@@ -458,6 +577,44 @@ fn escape_verbatim(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn crossref_loops_are_cut_not_followed() {
+        // Found by the bibtex fuzz target: a crossref to itself overflowed
+        // the stack inside biblatex.
+        let refs = parse("@book{a, title = {A}, crossref = {a}}\n").unwrap();
+        assert_eq!(refs.len(), 1);
+        let refs = parse(
+            "@string{b = \"b\"}\n@book{a, title = {A}, crossref = b}\n\
+             @book{b, title = {B}, xdata = {c, a}}\n@xdata{c, publisher = {P}}\n",
+        )
+        .unwrap();
+        assert_eq!(refs.len(), 3);
+    }
+
+    #[test]
+    fn long_crossref_chains_are_cut() {
+        let mut bib = String::new();
+        for i in 0..5000 {
+            bib.push_str(&format!(
+                "@book{{k{i}, title = {{T{i}}}, crossref = {{k{}}}}}\n",
+                i + 1
+            ));
+        }
+        let refs = parse(&bib).unwrap();
+        assert_eq!(refs.len(), 5000);
+    }
+
+    #[test]
+    fn a_short_crossref_still_resolves() {
+        let refs = parse(
+            "@inbook{c, title = {Chapter}, crossref = {b}}\n\
+             @book{b, title = {Book}, publisher = {Press}, year = 2001}\n",
+        )
+        .unwrap();
+        let c = refs.iter().find(|r| r.id == "c").unwrap();
+        assert_eq!(c.publisher.as_deref(), Some("Press"));
+    }
 
     #[test]
     fn star_basic_entry_parses() {
