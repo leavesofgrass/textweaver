@@ -277,7 +277,7 @@ fn in_docker(args: &Args) -> anyhow::Result<()> {
     }
     println!(
         "The packages are in {}",
-        eci::target_dir(&root).join("dist").display()
+        root.join("target").join("dist").display()
     );
     Ok(())
 }
