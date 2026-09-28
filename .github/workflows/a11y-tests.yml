@@ -125,3 +125,46 @@ jobs:
           path: nvda/
           if-no-files-found: warn
 
+  orca:
+    if: github.event_name != 'workflow_dispatch' || inputs.session == 'all' || inputs.session == 'orca'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: a11y-tests
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Libraries (X11, the AT-SPI bus, Mesa's software Vulkan, xdotool, Orca)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            libasound2-dev libespeak-ng-dev libspeechd-dev libfontconfig1-dev \
+            xvfb xauth dbus dbus-x11 at-spi2-core python3-pyatspi python3-gi gir1.2-atspi-2.0 \
+            mesa-vulkan-drivers libvulkan1 libgl1-mesa-dri libegl1 \
+            libxkbcommon-x11-0 libxcursor1 libxrandr2 libxi6 libx11-xcb1 \
+            xdotool orca
+      - name: Build the GUI (hybrid renderer, which suits Mesa's software GPU)
+        run: cargo build --locked -p textweaver-xilem --no-default-features --features screenshot,renderer-hybrid
+      - name: AT-SPI reading session, with Orca
+        run: bash tools/a11y/orca-session.sh orca
+      - name: Report in the run summary
+        if: always()
+        run: |
+          if [ -s orca/atspi-session.md ]; then
+            cat orca/atspi-session.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Fail: the AT-SPI session wrote no report." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: a11y-orca
+          path: |
+            orca/*.md
+            orca/*.log
+            orca/*.txt
+          if-no-files-found: warn
+
