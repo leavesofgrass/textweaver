@@ -836,6 +836,14 @@ Wave 4 starts only after this pass is done. It has four steps.
 
 **W4s status (Sunday, September 27, 2026):** done on `wave4/s-gui-session-prep`, main merged in; awaiting integration and Jon's session 1. `--announce uia` (and `[gui] announce` in `settings.toml`, read from the store's extra tables; the store and schema entries are proposed) raises UI Automation Notification events from a server-side provider; every list option and setting scrolled out of view is now in the tree (AccessKit's filter kept 13 of 40 and 12 of 20 before), with "1 of 15" positions and rows drawn after scrolling; the UI Automation report passes with `-Announce live` and `-Announce uia` and checks a 194-option list scrolled to its end; memory attributed in ADR-0028 (draft): the app with every engine is about 11 MB, the window's 170 MB is the GPU stack, and Wave 3's 98 MB was read before the renderer finished starting.
 
+**Session 1 (Jon, Sunday, September 27, 2026):** his first checks with a screen reader and the Braille display were good.
+- **GUI announcements:** the live region stays the default; `--announce uia` stays an option.
+- **GUI highlight:** the background color stays the default; `--select-spoken` stays an option.
+- **Terminal keys:** keep `z` and Alt+End (say status), and `'` and Alt+' (repeat the last message).
+- **Math speech:** the built-in engine stays the default and is his preference; MathCAT is an option.
+- **Dependencies:** the yaml-rust advisory ignored with a reason; the bzip2-1.0.6 licence allowed for libbz2-rs-sys only; cargo-deny installed.
+- **Downloads for release builds are approved,** including the 32-bit Windows target for the 32-bit SAPI voices and the Eloquence host.
+
 **W4a3: GUI edit mode (sub-wave 4c, P1; ADR 0033).**
 - **Edit mode in `DocumentView`,** using `Command::ReplaceRange`, and keeping structure while editing as the terminal reader does.
 - **Based on Parley's `examples/editor`,** on the vendored Parley 0.8.0. Don't upgrade it.
