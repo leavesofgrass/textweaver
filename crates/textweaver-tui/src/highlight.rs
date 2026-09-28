@@ -129,19 +129,18 @@ pub fn tokens(language: &str, code: &str) -> Option<Vec<(usize, usize, Token)>> 
     Some(out)
 }
 
+/// A block's tokens, shared between draws.
+pub type Tokens = std::rc::Rc<Vec<(usize, usize, Token)>>;
+
 /// Tokens by language and block text, so a block is tokenized once.
 #[derive(Debug, Default)]
 pub struct Cache {
-    blocks: HashMap<(String, String), Option<std::rc::Rc<Vec<(usize, usize, Token)>>>>,
+    blocks: HashMap<(String, String), Option<Tokens>>,
 }
 
 impl Cache {
     /// The tokens of a block, from the cache when it was seen before.
-    pub fn tokens(
-        &mut self,
-        language: &str,
-        code: &str,
-    ) -> Option<std::rc::Rc<Vec<(usize, usize, Token)>>> {
+    pub fn tokens(&mut self, language: &str, code: &str) -> Option<Tokens> {
         let key = (language.to_owned(), code.to_owned());
         if let Some(found) = self.blocks.get(&key) {
             return found.clone();
