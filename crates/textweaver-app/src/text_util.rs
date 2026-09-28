@@ -3,6 +3,8 @@
 //! the unit rules.
 
 use textweaver_core::{CharPos, CharRange, Direction, Unit};
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 use textweaver_text::units::unit_at;
 use textweaver_text::{Document, NavOptions, navigate};
 
@@ -154,11 +156,36 @@ pub fn selection_change_message(text: &str, what: &str) -> String {
     format!("{} {what}", spoken_fragment(text))
 }
 
+/// [`selection_change_message`] in the language of `c`: `selected` is
+/// true when the selection grew by `text`, false when it shrank.
+pub fn selection_change_text(c: &Catalog, text: &str, selected: bool) -> String {
+    let what = c.tr(if selected {
+        "text-selected"
+    } else {
+        "text-unselected"
+    });
+    if let Some(summary) = textweaver_editor::echo::summarize(text, &what) {
+        return summary;
+    }
+    c.fmt(
+        "text-selection-change",
+        &args![
+            "text" => spoken_fragment_text(c, text),
+            "change" => if selected { "selected" } else { "unselected" }
+        ],
+    )
+}
+
 /// A short piece of text as spoken: trimmed, or the name of its first
 /// character when it is only white space ("space", "new line").
 pub fn spoken_fragment(text: &str) -> String {
+    spoken_fragment_text(&Catalog::english(), text)
+}
+
+/// [`spoken_fragment`] in the language of `c`.
+pub fn spoken_fragment_text(c: &Catalog, text: &str) -> String {
     if text.trim().is_empty() {
-        char_name(text.chars().next().unwrap_or(' '))
+        char_name_text(c, text.chars().next().unwrap_or(' '))
     } else {
         text.trim().to_owned()
     }
@@ -166,14 +193,21 @@ pub fn spoken_fragment(text: &str) -> String {
 
 /// A spoken name for a character read on its own.
 pub fn char_name(c: char) -> String {
-    match c {
-        ' ' => "space".into(),
-        '\n' => "new line".into(),
-        '\t' => "tab".into(),
-        '\u{a0}' => "no-break space".into(),
-        c if c.is_whitespace() => "white space".into(),
-        c => c.to_string(),
-    }
+    char_name_text(&Catalog::english(), c)
+}
+
+/// [`char_name`] in the language of `c`: white space by name ("space",
+/// "new line"), any other character as itself.
+pub fn char_name_text(c: &Catalog, ch: char) -> String {
+    let key = match ch {
+        ' ' => "space",
+        '\n' => "new-line",
+        '\t' => "tab",
+        '\u{a0}' => "no-break-space",
+        ch if ch.is_whitespace() => "white-space",
+        ch => return ch.to_string(),
+    };
+    c.fmt("text-char-name", &args!["name" => key])
 }
 
 #[cfg(test)]

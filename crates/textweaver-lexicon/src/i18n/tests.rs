@@ -89,7 +89,10 @@ fn built_in_languages_by_tag_and_region() {
     assert_eq!(normalize_tag("POSIX"), "en");
     assert_eq!(language("de-AT").map(|l| l.tag), Some("de"));
     assert!(language("ja").is_none());
-    assert_eq!(Catalog::for_language("ar", None).0.direction(), Direction::RightToLeft);
+    assert_eq!(
+        Catalog::for_language("ar", None).0.direction(),
+        Direction::RightToLeft
+    );
 }
 
 /// A file in the settings folder goes over the built-in translation, which
@@ -129,9 +132,7 @@ fn built_in_translations_are_valid() {
                 "{tag}.ftl: {id} uses {extra:?}, which the code does not give it"
             );
         }
-        let allowed: BTreeSet<&str> = (0..200)
-            .map(|n| plural::category(tag, n).name())
-            .collect();
+        let allowed: BTreeSet<&str> = (0..200).map(|n| plural::category(tag, n).name()).collect();
         for (id, parts) in &c.messages {
             check_keys(tag, id, parts, &allowed);
         }

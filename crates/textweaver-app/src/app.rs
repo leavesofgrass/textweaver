@@ -8,11 +8,11 @@ use textweaver_core::{CharPos, CharRange};
 use textweaver_editor::autosave::RecoverySnapshot;
 use textweaver_formats::{LoadError, Registry, Source};
 use textweaver_keymap::{ActionId, Frontend, Keymap, Layer, Platform};
+use textweaver_lexicon::args;
 use textweaver_speech::{SayMode, SpeechService};
 use textweaver_store::{
     Bookmark, DocKey, DocState, Note, Paths, Settings, SettingsStore, StateStore, StoreError,
 };
-use textweaver_lexicon::args;
 use textweaver_text::{Document, History, SearchQuery};
 
 use crate::command::{Command, Effect, NoteCommand, PromptPurpose};
@@ -271,6 +271,8 @@ pub(crate) enum ListKind {
     Study(crate::study::StudyList),
     /// The settings screen (crate::settings_schema).
     Settings,
+    /// The interface languages, by tag (crate::language).
+    Languages(Vec<String>),
 }
 
 /// The application: the only owner of mutable state.
@@ -282,6 +284,9 @@ pub struct App {
     pub(crate) keymap: Keymap,
     pub(crate) settings: Settings,
     pub(crate) settings_dirty: bool,
+    /// What an interface language change did to the voice, said with the
+    /// change (crate::language).
+    pub(crate) language_note: Option<String>,
     pub(crate) paths: Option<Paths>,
     pub(crate) registry: Registry,
     pub(crate) mode: Mode,
@@ -431,6 +436,7 @@ impl App {
             keymap,
             settings: config.settings,
             settings_dirty: false,
+            language_note: None,
             paths: config.paths,
             registry: Registry::with_builtins(),
             mode: Mode::Browse,
@@ -820,7 +826,7 @@ impl App {
             if let Some(now) = &s.text_stamp
                 && crate::relocate::needs_relocation(state, now, &s.doc)
             {
-                relocated = crate::relocate::relocate(state, &s.doc).message();
+                relocated = crate::relocate::relocate(state, &s.doc).message(self.cat());
                 changed = true;
             }
             if changed && let Some(store) = self.state_store() {
@@ -1242,7 +1248,10 @@ impl App {
         {
             // The drawn label stays one word; what is said teaches the
             // palette (usability pass, item 4).
-            let msg = self.msg_args("prompt-command-palette-intro", &args!["label" => label.as_str()]);
+            let msg = self.msg_args(
+                "prompt-command-palette-intro",
+                &args!["label" => label.as_str()],
+            );
             self.tell(&msg);
         } else {
             self.tell(&label);
@@ -1347,6 +1356,7 @@ impl App {
             Some(ListKind::Authoring(l)) => return self.choose_authoring(l, n),
             Some(ListKind::Study(l)) => return self.choose_study(l, n),
             Some(ListKind::Settings) => return self.choose_setting(n),
+            Some(ListKind::Languages(tags)) => return self.choose_language(&tags, n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -1360,10 +1370,10 @@ impl App {
             // Deleting a note or highlight asks first, as the delete_note
             // action does: a stray Delete in the list cannot lose one.
             Some(kind @ (ListKind::Notes | ListKind::Highlights)) => {
-                let question = list_delete_question(&kind);
+                let question = self.msg(list_delete_question(&kind));
                 self.list = None;
                 self.pending_list_delete = Some((kind, n));
-                self.ask(question);
+                self.ask(&question);
                 vec![Effect::Redraw]
             }
             Some(ListKind::Study(l)) => self.delete_study_item(l, n),

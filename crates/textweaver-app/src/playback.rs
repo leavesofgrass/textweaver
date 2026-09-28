@@ -530,10 +530,14 @@ impl App {
                     self.speech.speak_char(c, Some(pos));
                 }
                 if route.status {
-                    self.show(&text_util::char_name(c));
+                    let name = text_util::char_name_text(self.cat(), c);
+                    self.show(&name);
                 }
             }
-            Some(c) => self.speak_content(Channel::Caret, &text_util::char_name(c)),
+            Some(c) => {
+                let name = text_util::char_name_text(self.cat(), c);
+                self.speak_content(Channel::Caret, &name);
+            }
             None => {
                 let text = self.msg("playback-end-of-document-content");
                 self.speak_content(Channel::Caret, &text);
@@ -645,9 +649,7 @@ impl App {
             crate::app::App::line_kind(&s.doc, text_util::line_of(&s.doc, range.start)),
             Some(MarkerKind::Heading | MarkerKind::TableRow)
         );
-        let lead = structure
-            .as_deref()
-            .filter(|_| !narrated && !first_item);
+        let lead = structure.as_deref().filter(|_| !narrated && !first_item);
         let lead = lead.map(str::to_owned);
         self.stop_speech();
         if blank || !self.read_range_led(range, ReadKind::InPlace, lead.as_deref()) {
@@ -775,7 +777,10 @@ impl App {
         let mut chars = text.chars();
         match (chars.next(), chars.next()) {
             (Some(c), None) if !c.is_whitespace() => self.speech.speak_char(c, None),
-            (Some(c), None) => self.speech.say(text_util::char_name(c), SayMode::Interrupt),
+            (Some(c), None) => {
+                let name = text_util::char_name_text(self.cat(), c);
+                self.speech.say(name, SayMode::Interrupt);
+            }
             (Some(_), Some(_)) => self.speech.say(text, SayMode::Interrupt),
             (None, _) => {}
         }
@@ -847,7 +852,8 @@ impl App {
                 // The service restarted the engine and reads on from the
                 // last word; the reading (and the highlight) go on.
                 if self.track.is_current(generation) && self.playback == Playback::Reading {
-                    let msg = self.msg_args("playback-speech-restarted", &args!["reason" => reason]);
+                    let msg =
+                        self.msg_args("playback-speech-restarted", &args!["reason" => reason]);
                     self.say_at(&msg, Verbosity::Low, Priority::Assertive);
                     return true;
                 }

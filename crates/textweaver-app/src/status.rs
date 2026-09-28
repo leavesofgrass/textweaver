@@ -88,22 +88,28 @@ impl App {
         parts
     }
 
-    /// The Say Status action: the last message, then the title line's
-    /// parts. In a list, the list's introduction and the focused item.
-    pub(crate) fn say_status(&mut self) -> Vec<Effect> {
-        if self.list_model.is_some() {
-            return self.repeat_list_introduction();
-        }
+    /// The title line as it is said: "essay: Speech Cursor mode, Reading,
+    /// line 3 of 40, 7%, self-voicing, 265 words per minute, eSpeak NG."
+    pub(crate) fn status_sentence(&self) -> String {
         let position = self.title_position();
         let title = match self.session.as_ref() {
             Some(s) => s.title.clone(),
             None => self.msg("status-no-document"),
         };
         let parts = self.status_parts(position.as_deref(), true);
-        let status = self.msg_args(
+        self.msg_args(
             "status-said",
             &args!["title" => title, "parts" => parts.join(", ")],
-        );
+        )
+    }
+
+    /// The Say Status action: the last message, then the title line's
+    /// parts. In a list, the list's introduction and the focused item.
+    pub(crate) fn say_status(&mut self) -> Vec<Effect> {
+        if self.list_model.is_some() {
+            return self.repeat_list_introduction();
+        }
+        let status = self.status_sentence();
         let msg = match self.last_message.as_deref() {
             Some(last) if !last.trim().is_empty() => format!("{} {status}", with_stop(last)),
             _ => status,
@@ -146,7 +152,7 @@ impl App {
                 &args!["title" => list.title.as_str(), "n" => list.items.len()],
             )
         });
-        let msg = match list.spoken_item() {
+        let msg = match list.spoken_item_text(self.cat()) {
             Some(item) => format!("{} {item}.", with_stop(&intro)),
             None => with_stop(&intro),
         };

@@ -5,6 +5,7 @@
 
 use textweaver_a11y::Verbosity;
 use textweaver_core::{CharPos, CharRange, Direction, MarkerKind};
+use textweaver_lexicon::args;
 use textweaver_speech::Earcon;
 use textweaver_text::{Document, Marker};
 
@@ -102,7 +103,8 @@ impl App {
         let doc = &s.doc;
         let Some(grid) = TableGrid::at(doc, pos) else {
             self.speech.earcon(Earcon::Boundary);
-            self.tell("Not in a table.");
+            let msg = self.msg("tables-not-in-table");
+            self.tell(&msg);
             return;
         };
         let (row, col) = grid.locate(pos);
@@ -113,10 +115,11 @@ impl App {
         };
         let Some(trow) = target else {
             self.speech.earcon(Earcon::Boundary);
-            self.tell(match dir {
-                Direction::Forward => "End of table.",
-                Direction::Backward => "Start of table.",
-            });
+            let msg = self.msg_args(
+                "tables-edge-of-table",
+                &args!["dir" => crate::words::dir_key(dir)],
+            );
+            self.tell(&msg);
             return;
         };
         let cells = &grid.cells[trow];
@@ -129,16 +132,22 @@ impl App {
         };
         let Some(tcol) = tcol.filter(|&c| c < cells.len()) else {
             self.speech.earcon(Earcon::Boundary);
-            self.tell(match dir {
-                Direction::Forward => "End of row.",
-                Direction::Backward => "Start of row.",
-            });
+            let msg = self.msg_args(
+                "tables-edge-of-row",
+                &args!["dir" => crate::words::dir_key(dir)],
+            );
+            self.tell(&msg);
             return;
         };
         let cell = cells[tcol];
         let content = doc.slice(cell);
         let content = content.trim();
-        let content = if content.is_empty() { "blank" } else { content };
+        let blank = self.msg("nav-blank");
+        let content = if content.is_empty() {
+            blank.as_str()
+        } else {
+            content
+        };
         let header = if grid.header[trow] {
             None
         } else {
@@ -149,18 +158,25 @@ impl App {
             None => content.to_owned(),
         };
         let mut msg = match step {
-            TableStep::Row if grid.header[trow] => format!("Header row, {column}"),
-            TableStep::Row => format!("Row {}, {column}", trow + 1),
+            TableStep::Row if grid.header[trow] => {
+                self.msg_args("tables-header-row", &args!["cell" => column])
+            }
+            TableStep::Row => {
+                self.msg_args("tables-row", &args!["row" => trow + 1, "cell" => column])
+            }
             TableStep::Column => column,
         };
         if self.settings.speech.verbosity >= Verbosity::High {
-            msg.push_str(&format!(
-                ". Row {} of {}, column {} of {}",
-                trow + 1,
-                grid.row_count(),
-                tcol + 1,
-                cells.len()
-            ));
+            msg = self.msg_args(
+                "tables-with-position",
+                &args![
+                    "message" => msg,
+                    "row" => trow + 1,
+                    "rows" => grid.row_count(),
+                    "col" => tcol + 1,
+                    "cols" => cells.len()
+                ],
+            );
         }
         self.caret_to(cell.start);
         self.speak_content(textweaver_a11y::Channel::Caret, &msg);
@@ -173,11 +189,14 @@ impl App {
         let grid = TableGrid::at(&s.doc, pos)?;
         let (row, col) = grid.locate(pos);
         let cols = grid.cells[row].len();
-        Some(format!(
-            "Table, row {} of {}, column {} of {cols}.",
-            row + 1,
-            grid.row_count(),
-            col + 1
+        Some(self.msg_args(
+            "tables-position",
+            &args![
+                "row" => row + 1,
+                "rows" => grid.row_count(),
+                "col" => col + 1,
+                "cols" => cols
+            ],
         ))
     }
 }

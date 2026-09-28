@@ -51,6 +51,7 @@ use textweaver_cite::{
 pub(crate) use textweaver_cite::{HttpClient, Reference};
 use textweaver_core::{CharPos, CharRange, MarkerKind};
 use textweaver_editor::Selection;
+use textweaver_lexicon::args;
 use textweaver_store::CitationReading;
 use textweaver_text::{Document, InlineSpeech};
 
@@ -233,10 +234,10 @@ impl App {
         };
         self.settings.reading.citations = next;
         self.settings_dirty = true;
-        let msg = match next {
-            CitationReading::Words => "Citations on.",
-            CitationReading::Off => "Citations off.",
-        };
+        let msg = self.msg(match next {
+            CitationReading::Words => "citations-on",
+            CitationReading::Off => "citations-off",
+        });
         let continuous = self.playback == crate::Playback::Reading
             && self.reading == crate::playback::ReadKind::Continuous
             && self.route(textweaver_a11y::Channel::Reading).speak;
@@ -244,7 +245,7 @@ impl App {
         match (continuous, from) {
             (true, Some(pos)) => {
                 self.stop_speech();
-                self.show(msg);
+                self.show(&msg);
                 let Some(s) = self.session.as_ref() else {
                     return;
                 };
@@ -253,14 +254,14 @@ impl App {
                 if self.read_range_led(
                     CharRange::new(start, end),
                     crate::playback::ReadKind::Continuous,
-                    Some(msg),
+                    Some(msg.as_str()),
                 ) {
                     self.continue_from = (end < doc_end).then_some(end);
                 } else {
-                    self.tell(msg);
+                    self.tell(&msg);
                 }
             }
-            _ => self.tell(msg),
+            _ => self.tell(&msg),
         }
     }
 
@@ -288,23 +289,20 @@ impl App {
     /// Alt+C: the citation picker.
     pub(crate) fn insert_citation(&mut self) -> Vec<Effect> {
         if self.edit.is_none() {
-            return self.not_editing("insert a citation");
+            return self.not_editing("citation");
         }
         let (folder, user) = self.libraries();
         let entries = picker_entries(folder.as_ref(), &user);
         if entries.is_empty() {
             let add = self.keys(textweaver_keymap::ActionId::AddReference);
-            self.tell(&format!(
-                "Your reference library is empty. Add a reference by DOI or ISBN with {add}, or run import references from the command palette."
-            ));
+            let msg = self.msg_args("citations-library-empty", &args!["key" => add]);
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let n = entries.len();
         self.authoring.filter.clear();
-        self.tell(&format!(
-            "Insert citation, {n} {}. Type to filter, Enter chooses, Escape cancels.",
-            crate::lists::plural(n, "reference", "references")
-        ));
+        let msg = self.msg_args("citations-picker-intro", &args!["n" => n]);
+        self.tell(&msg);
         let shown = (0..n).collect();
         self.show_authoring_list(AuthoringList::Citations { entries, shown })
     }
@@ -326,10 +324,11 @@ impl App {
             match parse_locator(text) {
                 Some(l) => Some(l),
                 None => {
-                    self.error(&format!(
-                        "Could not read the locator {}. Type a page such as 12, pages such as 3-5, or chapter 2; Enter alone for none.",
-                        text.trim()
-                    ));
+                    let msg = self.msg_args(
+                        "citations-locator-unreadable",
+                        &args!["text" => text.trim()],
+                    );
+                    self.error(&msg);
                     self.authoring.citing = Some(key);
                     let mut e = self.prompt(PromptPurpose::CitationLocator);
                     e.push(Effect::Redraw);
@@ -390,7 +389,11 @@ impl App {
                 self.after_edit(&before, &[o]);
                 self.tell(&said);
             }
-            Err(e) => self.error(&format!("Could not insert the citation: {e}")),
+            Err(e) => {
+                let msg =
+                    self.msg_args("citations-insert-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
         }
         vec![Effect::Redraw]
     }
@@ -405,7 +408,8 @@ impl App {
     pub(crate) fn answer_identifier(&mut self, text: &str) -> Vec<Effect> {
         let input = text.trim().to_owned();
         if input.is_empty() {
-            self.note("Cancelled.");
+            let msg = self.msg("common-cancelled");
+            self.note(&msg);
             return vec![Effect::Redraw];
         }
         let id = match textweaver_cite::Identifier::parse(&input) {
@@ -440,9 +444,16 @@ impl App {
                     input: input.clone(),
                     rx,
                 });
-                self.tell(&format!("Looking up {what}."));
+                let msg = self.msg_args("citations-looking-up", &args!["what" => what]);
+                self.tell(&msg);
             }
-            Err(e) => self.error(&format!("Could not start the lookup: {e}")),
+            Err(e) => {
+                let msg = self.msg_args(
+                    "citations-lookup-not-started",
+                    &args!["error" => e.to_string()],
+                );
+                self.error(&msg);
+            }
         }
         vec![Effect::Redraw]
     }
@@ -453,26 +464,29 @@ impl App {
             Ok(r) => r,
             Err(e) => {
                 self.speech.earcon(textweaver_speech::Earcon::Error);
-                self.error(&format!("Could not look up {input}: {e}"));
+                let msg = self.msg_args(
+                    "citations-lookup-failed",
+                    &args!["input" => input, "error" => e],
+                );
+                self.error(&msg);
                 return;
             }
         };
         let (folder, user) = self.libraries();
         let mut lib = match folder {
             Some(f) => f,
-            None => {
-                match self.user_library_file() {
-                    Some(p) => {
-                        let mut u = user;
-                        u.set_path(p);
-                        u
-                    }
-                    None => {
-                        self.error("There is no library to add to: textweaver keeps no files in this session.");
-                        return;
-                    }
+            None => match self.user_library_file() {
+                Some(p) => {
+                    let mut u = user;
+                    u.set_path(p);
+                    u
                 }
-            }
+                None => {
+                    let msg = self.msg("citations-no-library-to-add-to");
+                    self.error(&msg);
+                    return;
+                }
+            },
         };
         self.authoring.cite_cache = None;
         let outcome = lib.add(reference);
@@ -485,7 +499,13 @@ impl App {
         }
         match lib.save() {
             Ok(()) => self.tell(&format!("{} {label}", outcome.announcement())),
-            Err(e) => self.error(&format!("Could not save the library: {e}")),
+            Err(e) => {
+                let msg = self.msg_args(
+                    "citations-library-save-failed",
+                    &args!["error" => e.to_string()],
+                );
+                self.error(&msg);
+            }
         }
     }
 
@@ -510,10 +530,8 @@ impl App {
             .filter(|p| p.is_file());
         let Some(library) = folder.clone().or(user.clone()) else {
             let n = find_citations(&text).len();
-            self.tell(&format!(
-                "{n} {} found. textweaver keeps no library in this session.",
-                crate::lists::plural(n, "citation", "citations")
-            ));
+            let msg = self.msg_args("citations-found-no-library", &args!["n" => n]);
+            self.tell(&msg);
             return;
         };
         let offline = textweaver_cite::RecordedClient::new();
@@ -525,7 +543,10 @@ impl App {
         };
         match textweaver_cite::commands::check(&ctx, &text) {
             Ok(msg) => self.tell(&msg),
-            Err(e) => self.error(&format!("Could not check the citations: {e}")),
+            Err(e) => {
+                let msg = self.msg_args("citations-check-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
         }
     }
 
@@ -533,13 +554,13 @@ impl App {
     pub(crate) fn answer_import_references(&mut self, text: &str) -> Vec<Effect> {
         let file = text.trim().trim_matches('"');
         if file.is_empty() {
-            self.note("Cancelled.");
+            let msg = self.msg("common-cancelled");
+            self.note(&msg);
             return vec![Effect::Redraw];
         }
         let Some(library) = self.user_library_file() else {
-            self.error(
-                "There is no library to import into: textweaver keeps no files in this session.",
-            );
+            let msg = self.msg("citations-no-library-to-import-into");
+            self.error(&msg);
             return vec![Effect::Redraw];
         };
         let mut path = PathBuf::from(file);
@@ -562,7 +583,13 @@ impl App {
         self.authoring.cite_cache = None;
         match textweaver_cite::commands::import(&ctx, &path) {
             Ok(msg) => self.tell(&msg),
-            Err(e) => self.error(&format!("Could not import {}: {e}", path.display())),
+            Err(e) => {
+                let msg = self.msg_args(
+                    "citations-import-failed",
+                    &args!["file" => path.display().to_string(), "error" => e.to_string()],
+                );
+                self.error(&msg);
+            }
         }
         vec![Effect::Redraw]
     }
@@ -582,7 +609,11 @@ impl App {
         let style = match CitationStyle::resolve(&style_name) {
             Ok(s) => s,
             Err(e) => {
-                self.error(&format!("Cannot use the citation style {style_name}: {e}"));
+                let msg = self.msg_args(
+                    "citations-style-unusable",
+                    &args!["style" => style_name.as_str(), "error" => e.to_string()],
+                );
+                self.error(&msg);
                 return None;
             }
         };
@@ -592,7 +623,9 @@ impl App {
         match fmt.document(&cites, &Layered { layers: &layers }) {
             Ok(doc) => Some((cites, doc, style_name)),
             Err(e) => {
-                self.error(&format!("Could not format the citations: {e}"));
+                let msg =
+                    self.msg_args("citations-format-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
                 None
             }
         }
@@ -602,7 +635,7 @@ impl App {
     /// formatted, at the caret.
     pub(crate) fn insert_bibliography(&mut self) -> Vec<Effect> {
         if self.edit.is_none() {
-            return self.not_editing("insert a bibliography");
+            return self.not_editing("bibliography");
         }
         let Some(text) = self.citation_text() else {
             return vec![Effect::Redraw];
@@ -610,14 +643,14 @@ impl App {
         let Some((_, doc, style)) = self.format_citations(&text, CiteFormat::Markdown) else {
             if find_citations(&text).is_empty() {
                 let insert = self.keys(textweaver_keymap::ActionId::InsertCitation);
-                self.tell(&format!(
-                    "The document has no citations yet. Insert one with {insert}."
-                ));
+                let msg = self.msg_args("citations-none-yet", &args!["key" => insert]);
+                self.tell(&msg);
             }
             return vec![Effect::Redraw];
         };
         if doc.bibliography.is_empty() {
-            self.tell("None of the cited works is in your library, so there is nothing to list.");
+            let msg = self.msg("citations-nothing-to-list");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let entries: Vec<String> = doc.bibliography.iter().map(|e| e.text.clone()).collect();
@@ -634,17 +667,28 @@ impl App {
         match ed.insert_text(&block) {
             Ok(o) => {
                 self.after_edit(&before, &[o]);
-                let missing = if doc.missing.is_empty() {
-                    String::new()
+                let inserted = self.msg_args(
+                    "citations-bibliography-inserted",
+                    &args!["n" => n, "style" => style.as_str()],
+                );
+                let msg = if doc.missing.is_empty() {
+                    inserted
                 } else {
-                    format!(" Not in the library: {}.", doc.missing.join(", "))
+                    let missing = self.msg_args(
+                        "citations-not-in-library",
+                        &args!["keys" => doc.missing.join(", ")],
+                    );
+                    format!("{inserted} {missing}")
                 };
-                self.tell(&format!(
-                    "Inserted the bibliography, {n} {}, {style} style.{missing}",
-                    crate::lists::plural(n, "entry", "entries")
-                ));
+                self.tell(&msg);
             }
-            Err(e) => self.error(&format!("Could not insert the bibliography: {e}")),
+            Err(e) => {
+                let msg = self.msg_args(
+                    "citations-bibliography-insert-failed",
+                    &args!["error" => e.to_string()],
+                );
+                self.error(&msg);
+            }
         }
         vec![Effect::Redraw]
     }

@@ -21,6 +21,8 @@ use harper_core::spell::FstDictionary;
 use harper_core::{Dialect, Document};
 use textweaver_core::{CharRange, Direction};
 use textweaver_editor::Selection;
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 use textweaver_speech::Earcon;
 
 use crate::app::App;
@@ -137,16 +139,17 @@ impl GrammarChecker {
 
 /// "grammar: Use an before a vowel. the words: a apple." with the first
 /// fix after it when there is one.
-pub(crate) fn describe(p: &GrammarProblem) -> String {
+pub(crate) fn describe(c: &Catalog, p: &GrammarProblem) -> String {
     let mut msg = p.message.trim_end_matches('.').to_owned();
     msg.push('.');
     let words = p.words.split_whitespace().collect::<Vec<_>>().join(" ");
-    let mut out = format!("Grammar: {msg} The words: {words}.");
+    let mut out = c.fmt("grammar-said", &args!["message" => msg, "words" => words]);
     if let Some(f) = p.fixes.first() {
+        out.push(' ');
         if f.trim().is_empty() {
-            out.push_str(" Fix: remove them.");
+            out.push_str(&c.tr("grammar-fix-remove"));
         } else {
-            out.push_str(&format!(" Fix: {f}."));
+            out.push_str(&c.fmt("grammar-fix", &args!["fix" => f]));
         }
     }
     out
@@ -189,16 +192,16 @@ impl App {
         let Some(p) = found else {
             self.speech.earcon(Earcon::Boundary);
             let msg = if all.is_empty() {
-                "No grammar problems found.".to_owned()
+                self.msg("grammar-none")
             } else {
-                format!(
-                    "No {} grammar problem. {} in all.",
+                let n = all.len();
+                self.msg_args(
                     if dir == Direction::Forward {
-                        "more"
+                        "grammar-no-more"
                     } else {
-                        "earlier"
+                        "grammar-no-earlier"
                     },
-                    problems_phrase(all.len())
+                    &args!["n" => n, "count" => textweaver_editor::echo::thousands(n)],
                 )
             };
             self.tell(&msg);
@@ -214,17 +217,19 @@ impl App {
             s.selection_anchor = Some(p.range.start);
         }
         self.scroll_to_cursor();
-        let mut msg = describe(&p);
+        let mut msg = describe(self.cat(), &p);
         if !p.fixes.is_empty() {
             let k = self.keys(textweaver_keymap::ActionId::SpellingSuggestions);
-            msg.push_str(&format!(" {k} lists fixes."));
+            msg.push(' ');
+            msg.push_str(&self.msg_args("grammar-lists-fixes", &args!["key" => k]));
         }
         if self.settings.speech.verbosity >= textweaver_a11y::Verbosity::High {
             let line = self
                 .session
                 .as_ref()
                 .map_or(0, |s| text_util::line_of(&s.doc, p.range.start) + 1);
-            msg.push_str(&format!(" Line {line}."));
+            msg.push(' ');
+            msg.push_str(&self.msg_args("grammar-line", &args!["line" => line]));
         }
         self.tell(&msg);
     }
@@ -246,23 +251,28 @@ impl App {
     /// Alt+J on a grammar problem: its fixes, then "Leave it as it is".
     pub(crate) fn grammar_fixes(&mut self, p: GrammarProblem) -> Vec<Effect> {
         if p.fixes.is_empty() {
-            self.tell(&format!(
-                "{} No fix to offer.",
-                describe(&p).trim_end_matches('.')
-            ));
+            let described = describe(self.cat(), &p);
+            let msg = self.msg_args(
+                "grammar-no-fix",
+                &args!["described" => described.trim_end_matches('.')],
+            );
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let n = p.fixes.len();
-        let tail = if self.edit.is_some() {
-            " Enter makes the change."
+        let id = if self.edit.is_some() {
+            "grammar-fixes-edit"
         } else {
-            ""
+            "grammar-fixes"
         };
-        self.tell(&format!(
-            "{}: {n} {}.{tail}",
-            p.words.split_whitespace().collect::<Vec<_>>().join(" "),
-            crate::lists::plural(n, "fix", "fixes")
-        ));
+        let msg = self.msg_args(
+            id,
+            &args![
+                "words" => p.words.split_whitespace().collect::<Vec<_>>().join(" "),
+                "n" => n
+            ],
+        );
+        self.tell(&msg);
         self.show_authoring_list(AuthoringList::Grammar {
             words: p.words,
             range: p.range,
@@ -279,15 +289,20 @@ impl App {
         n: usize,
     ) -> Vec<Effect> {
         let Some(fix) = fixes.get(n) else {
-            self.note("Left as it is.");
+            let msg = self.msg("grammar-left-as-is");
+            self.note(&msg);
             return vec![Effect::Redraw];
         };
         if self.edit.is_none() {
             let k = self.keys(textweaver_keymap::ActionId::ToggleEditMode);
-            self.tell(&format!(
-                "{}. Turn on edit mode with {k} to change the text.",
-                crate::authoring::grammar_fix_label(fix)
-            ));
+            let msg = self.msg_args(
+                "grammar-fix-not-editing",
+                &args![
+                    "fix" => crate::authoring::grammar_fix_label(self.cat(), fix),
+                    "key" => k
+                ],
+            );
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let Some(ed) = self.edit.as_mut().and_then(|e| e.session.editor_mut()) else {
@@ -299,24 +314,19 @@ impl App {
         match ed.insert_text(fix) {
             Ok(o) => {
                 self.after_edit(&before, &[o]);
-                if fix.is_empty() {
-                    self.tell("Removed.");
+                let msg = if fix.is_empty() {
+                    self.msg("grammar-removed")
                 } else {
-                    self.tell(&format!("Changed to {fix}."));
-                }
+                    self.msg_args("grammar-changed", &args!["fix" => fix.as_str()])
+                };
+                self.tell(&msg);
             }
-            Err(e) => self.error(&format!("Could not change the text: {e}")),
+            Err(e) => {
+                let msg = self.msg_args("grammar-change-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
         }
         vec![Effect::Redraw]
-    }
-}
-
-/// "1 grammar problem", "3 grammar problems".
-fn problems_phrase(n: usize) -> String {
-    if n == 1 {
-        "1 grammar problem".to_owned()
-    } else {
-        format!("{} grammar problems", textweaver_editor::echo::thousands(n))
     }
 }
 
@@ -334,7 +344,7 @@ mod tests {
             .unwrap_or_else(|| panic!("{found:?}"));
         assert!(!p.message.is_empty());
         assert!(p.fixes.iter().any(|f| f.contains("an")), "{p:?}");
-        let said = describe(p);
+        let said = describe(&Catalog::english(), p);
         assert!(said.starts_with("Grammar: "), "{said}");
         assert!(said.contains("The words: "), "{said}");
         assert!(said.contains(" Fix: "), "{said}");
@@ -360,7 +370,8 @@ mod tests {
     #[test]
     fn fix_labels() {
         use crate::authoring::grammar_fix_label;
-        assert_eq!(grammar_fix_label(""), "Remove the words");
-        assert_eq!(grammar_fix_label("an"), "an");
+        let c = Catalog::english();
+        assert_eq!(grammar_fix_label(&c, ""), "Remove the words");
+        assert_eq!(grammar_fix_label(&c, "an"), "an");
     }
 }

@@ -3,6 +3,7 @@
 //! folder's `themes/`, the `next_theme` cycle, and following the system's
 //! light, dark, or high-contrast setting at startup.
 
+use textweaver_lexicon::args;
 use textweaver_theme::os::{self, OsScheme};
 use textweaver_theme::{Registry, Theme};
 
@@ -33,7 +34,11 @@ impl App {
         let (theme, fell_back) = self.themes.resolve(&name);
         if fell_back {
             let used = theme.meta.display_name.clone();
-            self.tell(&format!("There is no theme called {name}; using {used}."));
+            let msg = self.msg_args(
+                "themes-unknown",
+                &args!["name" => name.as_str(), "used" => used.as_str()],
+            );
+            self.tell(&msg);
         }
     }
 
@@ -118,7 +123,8 @@ impl App {
         self.settings.display.theme = name;
         self.settings.display.theme_explicit = true;
         self.settings_dirty = true;
-        self.tell(&format!("Theme {spoken}."));
+        let msg = self.msg_args("themes-next", &args!["theme" => spoken.as_str()]);
+        self.tell(&msg);
         self.check_reading_colors();
     }
 }

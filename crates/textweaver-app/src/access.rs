@@ -29,6 +29,8 @@ use textweaver_a11y::{
     AccessMode, Announcer, Channel, CursorPlacement, Priority, Route, RouteContext,
 };
 use textweaver_core::{CharPos, CharRange, Direction, Unit};
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 use textweaver_speech::normalize::{Math, Transform};
 use textweaver_text::units::unit_at;
 use textweaver_text::{NavOptions, navigate};
@@ -201,7 +203,8 @@ impl App {
     /// listening hears it.
     pub(crate) fn cycle_access_mode(&mut self) {
         let new = self.access_mode.next();
-        self.tell(&format!("{} mode. {}", new.name(), new.description()));
+        let msg = self.msg_args("access-mode-changed", &args!["mode" => new.id()]);
+        self.tell(&msg);
         if self.playback != Playback::Idle {
             self.stop_speech();
         }
@@ -231,7 +234,7 @@ impl App {
         if !self.hybrid_offer_due() {
             return false;
         }
-        self.pending_hybrid = Some(hybrid_question(found));
+        self.pending_hybrid = Some(hybrid_question(self.cat(), found));
         let q = self.pending_hybrid.clone().unwrap_or_default();
         self.ask(&q);
         true
@@ -243,8 +246,7 @@ impl App {
     pub fn pending_question(&self) -> Option<String> {
         self.pending_hybrid.clone().or_else(|| {
             self.pending_confirm
-                .and_then(textweaver_keymap::ActionId::confirmation_prompt)
-                .map(str::to_owned)
+                .and_then(|a| self.confirmation_question(a))
         })
     }
 
@@ -258,18 +260,15 @@ impl App {
                 self.settings.accessibility.mode = textweaver_store::AccessMode::Hybrid;
                 self.settings.accessibility.hybrid_offered = true;
                 self.settings_dirty = true;
-                self.tell(&format!(
-                    "Hybrid mode. {} {key} changes the mode.",
-                    AccessMode::Hybrid.description()
-                ));
+                let msg = self.msg_args("access-hybrid-chosen", &args!["key" => key.as_str()]);
+                self.tell(&msg);
             }
             Confirm::No => {
                 self.pending_hybrid = None;
                 self.settings.accessibility.hybrid_offered = true;
                 self.settings_dirty = true;
-                self.tell(&format!(
-                    "Staying in self-voicing mode. {key} changes the mode."
-                ));
+                let msg = self.msg_args("access-hybrid-declined", &args!["key" => key.as_str()]);
+                self.tell(&msg);
             }
             Confirm::Repeat => {
                 let q = self.pending_hybrid.clone().unwrap_or_default();
@@ -327,7 +326,7 @@ impl App {
     fn show_screen_sentence(&mut self, sentence: CharRange, now: Instant) {
         let text = self.narrated(sentence);
         let text = if text.is_empty() {
-            "blank".to_owned()
+            self.msg("nav-blank")
         } else {
             text
         };
@@ -375,7 +374,8 @@ impl App {
                     s.spoken = None;
                     s.spoken_sentence = None;
                 }
-                self.tell("End of document.");
+                let msg = self.msg("nav-end-of-document-stop");
+                self.tell(&msg);
             }
         }
         true
@@ -394,7 +394,8 @@ impl App {
             s.spoken = None;
             s.spoken_sentence = None;
         }
-        self.note("Paused.");
+        let msg = self.msg("playback-paused");
+        self.note(&msg);
         true
     }
 
@@ -405,11 +406,12 @@ impl App {
 }
 
 /// The first-run question, worded to be read aloud.
-fn hybrid_question(found: &Detected) -> String {
-    format!(
-        "{} is running. Use hybrid mode, where textweaver reads documents aloud and your screen reader speaks messages and typing? y or n",
-        found.spoken_name()
-    )
+fn hybrid_question(c: &Catalog, found: &Detected) -> String {
+    let reader = found
+        .name
+        .clone()
+        .unwrap_or_else(|| c.tr("access-a-screen-reader"));
+    c.fmt("access-hybrid-question", &args!["reader" => reader])
 }
 
 #[cfg(test)]
@@ -429,9 +431,12 @@ mod tests {
 
     #[test]
     fn the_question_names_the_screen_reader() {
-        let q = hybrid_question(&Detected {
-            name: Some("NVDA".into()),
-        });
+        let q = hybrid_question(
+            &Catalog::english(),
+            &Detected {
+                name: Some("NVDA".into()),
+            },
+        );
         assert!(q.starts_with("NVDA is running. Use hybrid mode"), "{q}");
         assert!(q.ends_with("y or n"));
     }

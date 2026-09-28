@@ -44,6 +44,8 @@ use textweaver_editor::{
 };
 use textweaver_formats::Source;
 use textweaver_keymap::ActionId;
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Arg;
 use textweaver_speech::{Earcon, SayMode};
 use textweaver_store::{Bookmark, DocKey};
 use textweaver_text::{Document, History, NavOptions, navigate};
@@ -202,14 +204,6 @@ fn carry_marks(marks: &Marks, from: &Document, to: &Document, into_source: bool)
     }
 }
 
-fn count_words(n: usize, one: &str) -> String {
-    if n == 1 {
-        format!("1 {one}")
-    } else {
-        format!("{n} {one}s")
-    }
-}
-
 /// Parses a table size: `3 by 2`, `3x2`, `3 2` (columns, then rows).
 fn parse_table_size(s: &str) -> Option<(u16, u16)> {
     let s = s.trim().to_lowercase();
@@ -338,7 +332,8 @@ impl App {
         };
         let Some(s) = self.session.as_mut() else {
             let new = self.key(ActionId::NewDocument);
-            self.tell(&format!("No document to edit. Press {new} for a new one."));
+            let msg = self.msg_args("edit-no-document", &args!["key" => new]);
+            self.tell(&msg);
             return;
         };
         let recovered = source.is_some();
@@ -428,8 +423,11 @@ impl App {
                 .map(|s| echo::line_for_echo(s.doc.text(), s.line()))
                 .unwrap_or_default();
             let msg = match self.settings.speech.verbosity {
-                Verbosity::Low => format!("Edit mode on. {line}"),
-                _ => format!("Edit mode on. Save: {save}. Finish: {finish}. {line}"),
+                Verbosity::Low => self.msg_args("edit-mode-on-brief", &args!["line" => line]),
+                _ => self.msg_args(
+                    "edit-mode-on",
+                    &args!["save" => save, "finish" => finish, "line" => line],
+                ),
             };
             self.tell(&msg);
         }
@@ -442,7 +440,8 @@ impl App {
         }
         if self.session.is_none() {
             let new = self.key(ActionId::NewDocument);
-            self.tell(&format!("No document to edit. Press {new} for a new one."));
+            let msg = self.msg_args("edit-no-document", &args!["key" => new]);
+            self.tell(&msg);
         } else {
             self.enter_edit(None);
         }
@@ -477,21 +476,22 @@ impl App {
                 self.continue_after(after)
             }
             Ok(LeaveOutcome::Stayed) => {
-                self.tell("Still editing.");
+                let msg = self.msg("edit-still-editing");
+                self.tell(&msg);
                 vec![Effect::Redraw]
             }
             Ok(LeaveOutcome::NeedsChoice) => {
                 let title = self.edit_title();
                 self.list = Some(ListKind::SaveChoice(after));
-                self.tell(&format!(
-                    "{title} has unsaved changes. Save, discard, or cancel? Press s, d, or c, or Up and Down and Enter. Escape cancels."
-                ));
+                let msg = self.msg_args("edit-unsaved-question", &args!["title" => title.as_str()]);
+                self.tell(&msg);
                 vec![Effect::ShowList {
-                    title: format!("Save changes to {title}?"),
+                    title: self
+                        .msg_args("edit-save-changes-title", &args!["title" => title.as_str()]),
                     items: vec![
-                        "Save, then continue".into(),
-                        "Discard the changes".into(),
-                        "Cancel, keep editing".into(),
+                        self.msg("edit-choice-save"),
+                        self.msg("edit-choice-discard"),
+                        self.msg("edit-choice-cancel"),
                     ],
                 }]
             }
@@ -499,7 +499,8 @@ impl App {
                 self.ask_save_path(suggested, SaveThen::Leave(after))
             }
             Err(e) => {
-                self.error(&format!("Could not save: {e}. Still editing."));
+                let msg = self.msg_args("edit-save-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
                 vec![Effect::Redraw]
             }
         }
@@ -526,7 +527,10 @@ impl App {
             _ => suggested,
         };
         self.save_then = Some(then);
-        let label = format!("Save as, Enter for {}", suggested.display());
+        let label = self.msg_args(
+            "edit-save-as-label",
+            &args!["path" => suggested.display().to_string()],
+        );
         self.suggested_path = Some(suggested);
         if !self.mode.is_prompt() {
             self.return_mode = self.mode;
@@ -555,7 +559,8 @@ impl App {
             })
         };
         let Some(path) = path else {
-            self.note("Cancelled.");
+            let msg = self.msg("common-cancelled");
+            self.note(&msg);
             return vec![Effect::Redraw];
         };
         self.save_as_to(path, then, false)
@@ -587,7 +592,8 @@ impl App {
                 then,
             });
             self.list = None;
-            self.ask(&format!("{name} already exists. Replace it? y or n."));
+            let msg = self.msg_args("edit-file-exists-question", &args!["name" => name]);
+            self.ask(&msg);
             return vec![Effect::Redraw];
         }
         match then {
@@ -716,12 +722,12 @@ impl App {
         if let Err(e) = self.save_position() {
             log::warn!("cannot save position: {e}");
         }
-        let msg = if discarded {
-            "Changes discarded. Edit mode off."
+        let msg = self.msg(if discarded {
+            "edit-mode-off-discarded"
         } else {
-            "Edit mode off."
-        };
-        self.tell(msg);
+            "edit-mode-off"
+        });
+        self.tell(&msg);
         // Ready for the next Ctrl+E on a large Markdown file.
         self.prefetch_structure();
     }
@@ -752,13 +758,15 @@ impl App {
             .wrapping_add(self.untitled);
         let mut doc = Document::from_plain_text("");
         doc.meta.format = "markdown".into();
-        self.open_document(doc, DocKey::untitled(n), "Untitled".into());
+        let untitled = self.msg("edit-untitled");
+        self.open_document(doc, DocKey::untitled(n), untitled);
         self.enter_edit(Some(String::new()));
         if let Some(ed) = self.edit.as_mut().and_then(|e| e.session.editor_mut()) {
             // A new document is clean until typed into.
             ed.mark_saved();
         }
-        self.tell("New document ready for editing.");
+        let msg = self.msg("edit-new-document");
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 
@@ -767,9 +775,8 @@ impl App {
     pub(crate) fn save(&mut self, save_as: Option<PathBuf>) -> Vec<Effect> {
         if self.edit.is_none() {
             let k = self.keys(ActionId::ToggleEditMode);
-            self.tell(&format!(
-                "Nothing to save. Turn on edit mode with {k} to make changes."
-            ));
+            let msg = self.msg_args("edit-nothing-to-save", &args!["key" => k]);
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         // Written on the writer; "Saved" is said when it reports.
@@ -897,13 +904,17 @@ impl App {
             };
             match e {
                 EchoEvent::Typed(c) if !c.is_whitespace() => self.speech.speak_char(c, None),
-                EchoEvent::Typed(c) => self.speech.say(text_util::char_name(c), mode),
+                EchoEvent::Typed(c) => self
+                    .speech
+                    .say(text_util::char_name_text(self.cat(), c), mode),
                 EchoEvent::WordCompleted(w) => self.speech.say(w, mode),
                 EchoEvent::Deleted(t) => {
                     let mut chars = t.chars();
                     match (chars.next(), chars.next()) {
                         (Some(c), None) if !c.is_whitespace() => self.speech.speak_char(c, None),
-                        (Some(c), None) => self.speech.say(text_util::char_name(c), mode),
+                        (Some(c), None) => self
+                            .speech
+                            .say(text_util::char_name_text(self.cat(), c), mode),
                         _ => self.speech.say(t, mode),
                     }
                 }
@@ -920,9 +931,12 @@ impl App {
         }
     }
 
+    /// Says how to turn on edit mode to do `what`, a key of the message
+    /// edit-not-editing ("type", "cut-text", "format", ...).
     pub(crate) fn not_editing(&mut self, what: &str) -> Vec<Effect> {
         let k = self.keys(ActionId::ToggleEditMode);
-        self.tell(&format!("Turn on edit mode with {k} to {what}."));
+        let msg = self.msg_args("edit-not-editing", &args!["key" => k, "what" => what]);
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 
@@ -982,16 +996,22 @@ impl App {
                         let more = text.split_whitespace().nth(6).is_some();
                         let start = format!("{}{}", words.join(" "), if more { "…" } else { "" });
                         let msg = if start.is_empty() {
-                            format!("Pasted {}.", count_words(n, "character"))
+                            self.msg_args("edit-pasted", &args!["n" => n])
                         } else {
-                            format!("Pasted {}: {start}", count_words(n, "character"))
+                            self.msg_args(
+                                "edit-pasted-start",
+                                &args!["n" => n, "start" => start.as_str()],
+                            )
                         };
                         self.show(&msg);
                         self.speak_edit_feedback(&msg);
                     }
                 }
             }
-            Err(e) => self.error(&format!("Could not insert: {e}")),
+            Err(e) => {
+                let msg = self.msg_args("edit-insert-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
         }
         vec![Effect::Redraw]
     }
@@ -1007,12 +1027,12 @@ impl App {
             .and_then(|e| e.session.editor())
             .map(|ed| ed.text().len_chars())
         else {
-            return self.not_editing("change the text");
+            return self.not_editing("change-text");
         };
         if range.start.0 > len || range.end.0 > len || range.start > range.end {
-            let msg = format!(
-                "Cannot change characters {} to {}: the text has {len}.",
-                range.start.0, range.end.0
+            let msg = self.msg_args(
+                "edit-range-out-of-text",
+                &args!["start" => range.start.0, "end" => range.end.0, "len" => len],
             );
             self.error(&msg);
             return vec![Effect::Redraw];
@@ -1033,7 +1053,10 @@ impl App {
         };
         match result {
             Ok(o) => self.after_edit(&before, &[o]),
-            Err(e) => self.error(&format!("Could not change the text: {e}")),
+            Err(e) => {
+                let msg = self.msg_args("edit-change-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
         }
         vec![Effect::Redraw]
     }
@@ -1059,10 +1082,11 @@ impl App {
     fn markdown_echo(&self) -> Option<String> {
         let (text, col, _) = self.editor_caret_line()?;
         let before: String = text.chars().take(col).collect();
-        let said = crate::mdline::markdown_echo(&before)?;
-        let mut c = said.chars();
-        c.next()
-            .map(|f| f.to_uppercase().chain(c).collect::<String>())
+        let said = crate::mdline::markdown_echo(self.cat(), &before)?;
+        let mut chars = said.chars();
+        chars
+            .next()
+            .map(|f| f.to_uppercase().chain(chars).collect::<String>())
     }
 
     /// The first word completed on a heading line is said with the heading:
@@ -1077,6 +1101,7 @@ impl App {
         }
         let before: String = text.chars().take(col).collect();
         let content = before.trim_start().trim_start_matches('#');
+        let heading = self.msg_args("nav-label-heading-level", &args!["level" => level]);
         for e in &mut events {
             if let EchoEvent::WordCompleted(w) = e {
                 let first = content
@@ -1084,7 +1109,7 @@ impl App {
                     .next()
                     .is_some_and(|f| f.trim_matches(|c: char| !c.is_alphanumeric()) == w.as_str());
                 if first {
-                    *w = format!("Heading level {level}, {w}");
+                    *w = format!("{heading}, {w}");
                 }
             }
         }
@@ -1107,19 +1132,21 @@ impl App {
             return None;
         }
         let content_empty = text[m.content_start.min(text.len())..].trim().is_empty();
+        // What to say, before the editor is borrowed.
+        let ended = self.msg("edit-list-ended");
+        let prefix = m.next_prefix();
+        let next = crate::mdline::list_marker(prefix.trim_end())
+            .or_else(|| crate::mdline::list_marker(&prefix))
+            .map_or_else(|| self.msg("edit-bullet"), |n| n.spoken(self.cat()));
         let ed = self.edit.as_mut()?.session.editor_mut()?;
         let before = ed.text().clone();
         let (result, said) = if content_empty {
             ed.set_selection(Selection::new(range.start, range.end));
             (
                 ed.backspace().map(|o| o.into_iter().collect::<Vec<_>>()),
-                "List ended.".to_owned(),
+                ended,
             )
         } else {
-            let prefix = m.next_prefix();
-            let next = crate::mdline::list_marker(prefix.trim_end())
-                .or_else(|| crate::mdline::list_marker(&prefix))
-                .map_or_else(|| "bullet".to_owned(), |n| n.spoken());
             (
                 ed.insert_text(&format!("\n{prefix}")).map(|o| vec![o]),
                 capitalize_first(&next),
@@ -1131,7 +1158,10 @@ impl App {
                 self.show(&said);
                 self.speak_edit_feedback(&said);
             }
-            Err(e) => self.error(&format!("Could not insert: {e}")),
+            Err(e) => {
+                let msg = self.msg_args("edit-insert-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
         }
         Some(vec![Effect::Redraw])
     }
@@ -1145,7 +1175,10 @@ impl App {
         match ed.backspace() {
             Ok(Some(o)) => self.after_edit(&before, &[o]),
             Ok(None) => {}
-            Err(e) => self.error(&format!("Could not delete: {e}")),
+            Err(e) => {
+                let msg = self.msg_args("edit-delete-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
         }
     }
 
@@ -1156,22 +1189,28 @@ impl App {
         let s = self.session.as_ref()?;
         let text = text_util::line_text(&s.doc, line);
         if text.trim().is_empty() {
-            return Some(echo::BLANK.to_owned());
+            return Some(self.msg("nav-blank"));
         }
         let level = crate::mdline::heading_level(&text);
         if level > 0 {
             let body = text.trim_start().trim_start_matches('#').trim();
             let body = body.trim_end_matches('#').trim_end();
-            return Some(format!("heading level {level}, {body}"));
+            let heading = self.msg_args("nav-line-heading", &args!["level" => level]);
+            return Some(format!("{heading}, {body}"));
         }
         if let Some(m) = crate::mdline::list_marker(&text) {
             let body = text[m.content_start.min(text.len())..].trim();
-            let body = if body.is_empty() { echo::BLANK } else { body };
-            return Some(format!("{}, {body}", m.spoken()));
+            let blank = self.msg("nav-blank");
+            let body = if body.is_empty() {
+                blank.as_str()
+            } else {
+                body
+            };
+            return Some(format!("{}, {body}", m.spoken(self.cat())));
         }
         if crate::mdline::is_table_row(&text) {
             if crate::mdline::is_table_delimiter(&text) {
-                return Some("table header divider".to_owned());
+                return Some(self.msg("edit-table-divider"));
             }
             let mut first = line;
             while first > 0 && crate::mdline::is_table_row(&text_util::line_text(&s.doc, first - 1))
@@ -1186,15 +1225,16 @@ impl App {
                 .map(|r| {
                     let c = &text[r];
                     if c.is_empty() {
-                        echo::BLANK.to_owned()
+                        self.msg("nav-blank")
                     } else {
                         c.to_owned()
                     }
                 })
                 .collect();
-            return Some(format!("row {row}, {}", cells.join(", ")));
+            let row = self.msg_args("nav-line-row", &args!["n" => row]);
+            return Some(format!("{row}, {}", cells.join(", ")));
         }
-        match crate::mdline::structure_of(&text) {
+        match crate::mdline::structure_of(self.cat(), &text) {
             Some(kind) => {
                 let body = text.trim_start().trim_start_matches(['>', ' ']);
                 Some(format!("{kind}, {body}"))
@@ -1206,7 +1246,7 @@ impl App {
     /// Backspace and Delete.
     pub(crate) fn delete(&mut self, forward: bool) -> Vec<Effect> {
         if self.edit.is_none() {
-            return self.not_editing("delete text");
+            return self.not_editing("delete-text");
         }
         self.stop_speech();
         let policy = self.echo_policy();
@@ -1228,13 +1268,17 @@ impl App {
             }
             Ok(None) => {
                 self.speech.earcon(Earcon::Boundary);
-                self.tell(if forward {
-                    "End of document."
+                let msg = self.msg(if forward {
+                    "nav-end-of-document-stop"
                 } else {
-                    "Top of document."
+                    "nav-top-of-document-stop"
                 });
+                self.tell(&msg);
             }
-            Err(e) => self.error(&format!("Could not delete: {e}")),
+            Err(e) => {
+                let msg = self.msg_args("edit-delete-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
         }
         vec![Effect::Redraw]
     }
@@ -1351,13 +1395,13 @@ impl App {
         };
         let Some(target) = target else {
             self.speech.earcon(Earcon::Boundary);
-            let msg = match (by, dir) {
-                (CaretMove::LineEdge, Direction::Forward) => "End of line.",
-                (CaretMove::LineEdge, Direction::Backward) => "Start of line.",
-                (_, Direction::Forward) => "End of document.",
-                (_, Direction::Backward) => "Top of document.",
-            };
-            self.tell(msg);
+            let msg = self.msg(match (by, dir) {
+                (CaretMove::LineEdge, Direction::Forward) => "edit-end-of-line-stop",
+                (CaretMove::LineEdge, Direction::Backward) => "edit-start-of-line-stop",
+                (_, Direction::Forward) => "nav-end-of-document-stop",
+                (_, Direction::Backward) => "nav-top-of-document-stop",
+            });
+            self.tell(&msg);
             return vec![Effect::Redraw];
         };
         let keep_goal = matches!(by, CaretMove::Line | CaretMove::Page);
@@ -1376,17 +1420,21 @@ impl App {
         } else {
             match by {
                 CaretMove::Char | CaretMove::LineEdge => Some(match doc.char_at(target) {
-                    Some('\n') | None if target == doc.end() => "end of document".to_owned(),
-                    Some('\n') => "end of line".to_owned(),
+                    Some('\n') | None if target == doc.end() => {
+                        self.msg("playback-end-of-document-content")
+                    }
+                    Some('\n') => self.msg("edit-end-of-line-content"),
                     Some(c) => text_util::char_name(c),
-                    None => "end of document".to_owned(),
+                    None => self.msg("playback-end-of-document-content"),
                 }),
                 CaretMove::Word => Some(
                     text_util::word_containing(doc, target)
                         .map(|w| doc.slice(w))
                         .unwrap_or_else(|| {
-                            doc.char_at(target)
-                                .map_or_else(|| "end of document".into(), text_util::char_name)
+                            doc.char_at(target).map_or_else(
+                                || self.msg("playback-end-of-document-content"),
+                                text_util::char_name,
+                            )
                         }),
                 ),
                 CaretMove::Line | CaretMove::Page | CaretMove::DocumentEdge => {
@@ -1447,11 +1495,9 @@ impl App {
             let what = match a {
                 A::Undo => "undo",
                 A::Redo => "redo",
-                A::Replace => "replace text",
-                A::InsertTable | A::InsertImage | A::HorizontalRule | A::AddTableRow => {
-                    "insert into the text"
-                }
-                _ => "format text",
+                A::Replace => "replace-text",
+                A::InsertTable | A::InsertImage | A::HorizontalRule | A::AddTableRow => "insert",
+                _ => "format",
             };
             return self.not_editing(what);
         }
@@ -1464,28 +1510,31 @@ impl App {
             A::Replace => return self.prompt(PromptPurpose::ReplaceFind),
             _ => {}
         }
-        let (op, name) = match a {
-            A::Bold => (MarkdownOp::Bold, "Bold"),
-            A::Italic => (MarkdownOp::Italic, "Italic"),
-            A::Underline => (MarkdownOp::Underline, "Underline"),
-            A::Strikethrough => (MarkdownOp::Strikethrough, "Strikethrough"),
-            A::InlineCode => (MarkdownOp::InlineCode, "Code"),
-            A::CodeBlock => (MarkdownOp::CodeBlock, "Code block"),
-            A::InsertLink => (MarkdownOp::Link, "Link"),
-            A::BulletList => (MarkdownOp::BulletList, "Bulleted list"),
-            A::NumberedList => (MarkdownOp::NumberedList, "Numbered list"),
-            A::BlockQuote => (MarkdownOp::Quote, "Block quote"),
-            A::HorizontalRule => (MarkdownOp::HorizontalRule, "Horizontal rule inserted"),
-            A::AddTableRow => (MarkdownOp::AddTableRow, "Table row added"),
+        // Keys of the edit-format-* messages.
+        let (op, what) = match a {
+            A::Bold => (MarkdownOp::Bold, "bold"),
+            A::Italic => (MarkdownOp::Italic, "italic"),
+            A::Underline => (MarkdownOp::Underline, "underline"),
+            A::Strikethrough => (MarkdownOp::Strikethrough, "strikethrough"),
+            A::InlineCode => (MarkdownOp::InlineCode, "code"),
+            A::CodeBlock => (MarkdownOp::CodeBlock, "code-block"),
+            A::InsertLink => (MarkdownOp::Link, "link"),
+            A::BulletList => (MarkdownOp::BulletList, "bulleted-list"),
+            A::NumberedList => (MarkdownOp::NumberedList, "numbered-list"),
+            A::BlockQuote => (MarkdownOp::Quote, "block-quote"),
+            A::HorizontalRule => (MarkdownOp::HorizontalRule, "horizontal-rule"),
+            A::AddTableRow => (MarkdownOp::AddTableRow, "table-row"),
             A::Heading => return self.cycle_heading(),
             _ => return vec![Effect::Redraw],
         };
-        self.format(op, name)
+        self.format(op, &args!["what" => what])
     }
 
     /// Applies a formatting command and announces it: "Bold." when markup
-    /// was added, "Bold removed." when the command toggled it off.
-    fn format(&mut self, op: MarkdownOp, name: &str) -> Vec<Effect> {
+    /// was added, "Bold removed." when the command toggled it off. `args`
+    /// are the values of the edit-format-* messages: `what` names the
+    /// command, with `level`, `cols` and `rows` where it needs them.
+    fn format(&mut self, op: MarkdownOp, args: &[(&str, Arg)]) -> Vec<Effect> {
         let Some(edit) = self.edit.as_mut() else {
             return vec![Effect::Redraw];
         };
@@ -1495,7 +1544,8 @@ impl App {
         match edit.session.format(op) {
             Ok(outcomes) => {
                 if outcomes.is_empty() {
-                    self.tell(&format!("{name}: nothing changed."));
+                    let msg = self.msg_args("edit-format-unchanged", args);
+                    self.tell(&msg);
                     return vec![Effect::Redraw];
                 }
                 self.after_edit(&before, &outcomes);
@@ -1510,12 +1560,14 @@ impl App {
                     .as_ref()
                     .and_then(|s| s.selection.map(|r| text_util::preview(&s.doc, r, 6)));
                 let mut msg = if removed {
-                    format!("{name} removed.")
+                    self.msg_args("edit-format-removed", args)
                 } else {
-                    format!("{name}.")
+                    self.msg_args("edit-format-done", args)
                 };
                 if let Some(sel) = selected.filter(|t| !t.is_empty()) {
-                    msg.push_str(&format!(" Selected: {sel}"));
+                    let selected = self.msg_args("edit-format-selected", &args!["text" => sel]);
+                    msg.push(' ');
+                    msg.push_str(&selected);
                 }
                 self.tell(&msg);
             }
@@ -1535,15 +1587,19 @@ impl App {
             .map(|s| heading_level(&text_util::line_text(&s.doc, s.line())))
             .unwrap_or(0);
         let next = if level == 0 { 1 } else { (level + 1).min(6) };
-        let name = if level == 6 {
-            "Heading".to_owned()
+        let what = if level == 6 {
+            "heading"
         } else {
-            format!("Heading level {next}")
+            "heading-level"
         };
-        let effects = self.format(MarkdownOp::Heading(next), &name);
+        let effects = self.format(
+            MarkdownOp::Heading(next),
+            &args!["what" => what, "level" => next],
+        );
         if level > 0 && level < 6 {
             // Changing the level shortens nothing; say the new level only.
-            self.tell(&format!("Heading level {next}."));
+            let msg = self.msg_args("edit-heading-level-now", &args!["level" => next]);
+            self.tell(&msg);
         }
         effects
     }
@@ -1562,20 +1618,24 @@ impl App {
                     .as_ref()
                     .map(|s| echo::line_for_echo(s.doc.text(), s.line()))
                     .unwrap_or_default();
-                let word = if undo { "Undo" } else { "Redo" };
+                let what = if undo { "undo" } else { "redo" };
                 let msg = match self.settings.speech.verbosity {
-                    Verbosity::Low => format!("{word}."),
-                    _ => format!("{word}. {line}"),
+                    Verbosity::Low => self.msg_args("edit-undo-redo", &args!["what" => what]),
+                    _ => self.msg_args(
+                        "edit-undo-redo-line",
+                        &args!["what" => what, "line" => line],
+                    ),
                 };
                 self.tell(&msg);
             }
             None => {
                 self.speech.earcon(Earcon::Boundary);
-                self.tell(if undo {
-                    "Nothing to undo."
+                let msg = self.msg(if undo {
+                    "edit-nothing-to-undo"
                 } else {
-                    "Nothing to redo."
+                    "edit-nothing-to-redo"
                 });
+                self.tell(&msg);
             }
         }
         vec![Effect::Redraw]
@@ -1584,14 +1644,13 @@ impl App {
     /// The table-size prompt's answer.
     pub(crate) fn answer_table(&mut self, text: &str) -> Vec<Effect> {
         match parse_table_size(text) {
-            Some((cols, rows)) => {
-                let name = format!("Inserted a table, {cols} columns by {rows} rows");
-                self.format(MarkdownOp::InsertTable { rows, cols }, &name)
-            }
+            Some((cols, rows)) => self.format(
+                MarkdownOp::InsertTable { rows, cols },
+                &args!["what" => "table", "cols" => cols, "rows" => rows],
+            ),
             None => {
-                self.error(&format!(
-                    "Not a table size: {text}. Type columns and rows, for example 3 by 2."
-                ));
+                let msg = self.msg_args("edit-not-a-table-size", &args!["text" => text]);
+                self.error(&msg);
                 vec![Effect::Redraw]
             }
         }
@@ -1601,7 +1660,8 @@ impl App {
     pub(crate) fn answer_image(&mut self, text: &str) -> Vec<Effect> {
         let path = text.trim().trim_matches('"');
         if path.is_empty() {
-            self.note("Cancelled.");
+            let msg = self.msg("common-cancelled");
+            self.note(&msg);
             return vec![Effect::Redraw];
         }
         let path = PathBuf::from(path);
@@ -1618,11 +1678,13 @@ impl App {
                     || path.display().to_string(),
                     |n| n.to_string_lossy().into(),
                 );
-                self.tell(&format!(
-                    "Inserted image {name}. Its description is selected; type to replace it."
-                ));
+                let msg = self.msg_args("edit-image-inserted", &args!["name" => name]);
+                self.tell(&msg);
             }
-            Err(e) => self.error(&format!("Could not insert the image: {e}.")),
+            Err(e) => {
+                let msg = self.msg_args("edit-image-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
         }
         vec![Effect::Redraw]
     }
@@ -1632,7 +1694,8 @@ impl App {
     pub(crate) fn answer_replace(&mut self, text: &str, with: bool) -> Vec<Effect> {
         if !with {
             if text.is_empty() {
-                self.note("Cancelled.");
+                let msg = self.msg("common-cancelled");
+                self.note(&msg);
                 return vec![Effect::Redraw];
             }
             let n = self
@@ -1644,15 +1707,14 @@ impl App {
                 });
             if n == 0 {
                 self.speech.earcon(Earcon::Error);
-                self.tell(&format!("No matches for {text}."));
+                let msg = self.msg_args("edit-no-matches", &args!["query" => text]);
+                self.tell(&msg);
                 return vec![Effect::Redraw];
             }
             self.replace_query = Some(text.to_owned());
             let mut e = self.prompt(PromptPurpose::ReplaceWith);
-            self.tell(&format!(
-                "{} for {text}. Replace with?",
-                count_words(n, "match").replace("matchs", "matches")
-            ));
+            let msg = self.msg_args("edit-replace-with", &args!["n" => n, "query" => text]);
+            self.tell(&msg);
             e.push(Effect::Redraw);
             return e;
         }
@@ -1676,15 +1738,17 @@ impl App {
                 // Said once per run of failures; the session backs off
                 // between attempts, and the log keeps every one.
                 if failures == 1 {
-                    let msg = format!(
-                        "Could not write the recovery copy: {e}. Save soon; textweaver will keep trying."
+                    let msg = self.msg_args(
+                        "edit-recovery-write-failed",
+                        &args!["error" => e.to_string()],
                     );
                     self.say_at(&msg, Verbosity::Low, Priority::Polite);
                 }
                 self.snapshot_trouble = true;
             }
             Ok(true) if std::mem::take(&mut self.snapshot_trouble) => {
-                self.note("The recovery copy is being written again.");
+                let msg = self.msg("edit-recovery-writing-again");
+                self.note(&msg);
             }
             Ok(_) => {}
         }
@@ -1728,14 +1792,16 @@ impl App {
         let title = snap.display_title();
         let when = textweaver_store::time::human(snap.ts);
         self.list = Some(ListKind::Recovery);
-        self.tell(&format!(
-            "textweaver closed with unsaved changes to {title}, saved {when}. Recover them now? Up and Down choose, Enter confirms."
-        ));
+        let msg = self.msg_args(
+            "edit-recovery-offer",
+            &args!["title" => title.as_str(), "when" => when],
+        );
+        self.tell(&msg);
         vec![Effect::ShowList {
-            title: format!("Recover unsaved work in {title}?"),
+            title: self.msg_args("edit-recovery-title", &args!["title" => title.as_str()]),
             items: vec![
-                format!("Yes, recover {title} and keep editing"),
-                "No, discard the unsaved changes".into(),
+                self.msg_args("edit-recovery-yes", &args!["title" => title.as_str()]),
+                self.msg("edit-recovery-no"),
             ],
         }]
     }
@@ -1755,10 +1821,11 @@ impl App {
         if let Err(e) = autosave::delete_snapshot(&file) {
             log::warn!("cannot delete {}: {e}", file.display());
         }
-        self.tell(&format!(
-            "Discarded the unsaved changes to {}.",
-            snap.display_title()
-        ));
+        let msg = self.msg_args(
+            "edit-recovery-discarded",
+            &args!["title" => snap.display_title()],
+        );
+        self.tell(&msg);
         let mut e = self.show_recovery_offer();
         e.push(Effect::Redraw);
         e
@@ -1804,9 +1871,8 @@ impl App {
             .map_or_else(|| title.clone(), |n| n.to_string_lossy().into_owned());
         self.open_document(doc, key, doc_title);
         self.enter_edit(Some(snap.text.clone()));
-        self.tell(&format!(
-            "Recovered unsaved work in {title}. Remember to save."
-        ));
+        let msg = self.msg_args("edit-recovered", &args!["title" => title.as_str()]);
+        self.tell(&msg);
     }
 
     /// Cancelling the recovery list keeps the snapshots for next time.
@@ -1814,7 +1880,8 @@ impl App {
         let n = self.recovery.len();
         self.recovery.clear();
         if n > 0 {
-            self.tell("Recovery postponed. The unsaved work will be offered again next time.");
+            let msg = self.msg("edit-recovery-postponed");
+            self.tell(&msg);
         }
     }
 

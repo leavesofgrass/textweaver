@@ -11,6 +11,7 @@
 
 use textweaver_core::{CharPos, CharRange, Edit, EditOutcome};
 use textweaver_editor::{FindOptions, Selection};
+use textweaver_lexicon::args;
 use textweaver_speech::Earcon;
 
 use crate::app::App;
@@ -35,10 +36,6 @@ pub(crate) struct ReplaceSession {
     /// The current match's number and the total, from the one search each
     /// step makes (Agent P2a: no search per announcement).
     pub(crate) position: Option<(usize, usize)>,
-}
-
-fn on_off(b: bool) -> &'static str {
-    if b { "on" } else { "off" }
 }
 
 impl App {
@@ -134,19 +131,18 @@ impl App {
         }
         self.after_edit(&ropey::Rope::new(), &[]);
         let title = self.replace_title();
-        self.tell(&format!(
-            "{title}. Press r to replace, s to skip, a to replace all, Escape to stop."
-        ));
+        let msg = self.msg_args("replace-match-question", &args!["title" => title]);
+        self.tell(&msg);
         self.show_authoring_list(AuthoringList::Replace)
     }
 
     /// "Match 2 of 5, line 12: … the context …".
     pub(crate) fn replace_title(&self) -> String {
         let (Some(r), Some(s)) = (self.authoring.replace.as_ref(), self.session.as_ref()) else {
-            return "Replace".to_owned();
+            return self.msg("replace-title");
         };
         let Some(m) = r.current else {
-            return "Replace".to_owned();
+            return self.msg("replace-title");
         };
         let (i, total) = r.position.unwrap_or_else(|| {
             let hits = self.replace_hits();
@@ -156,7 +152,15 @@ impl App {
         let line_no = text_util::line_of(&s.doc, m.start);
         let line = text_util::line_range(&s.doc, line_no);
         let context = crate::lists::one_line(&s.doc.slice(line), 80);
-        format!("Match {i} of {total}, line {}: {context}", line_no + 1)
+        self.msg_args(
+            "replace-match-title",
+            &args![
+                "n" => i,
+                "total" => total,
+                "line" => line_no + 1,
+                "context" => context
+            ],
+        )
     }
 
     /// The choices, with the options' states.
@@ -164,12 +168,19 @@ impl App {
         let (case, whole) = self.authoring.replace.as_ref().map_or((false, false), |r| {
             (r.options.case_sensitive, r.options.whole_word)
         });
+        let c = self.cat();
         vec![
-            "Replace this one".to_owned(),
-            "Skip this one".to_owned(),
-            "Replace all the rest".to_owned(),
-            format!("Match case: {}", on_off(case)),
-            format!("Whole words only: {}", on_off(whole)),
+            c.tr("replace-item-this"),
+            c.tr("replace-item-skip"),
+            c.tr("replace-item-rest"),
+            c.fmt(
+                "replace-item-match-case",
+                &args!["state" => crate::words::on_off(c, case)],
+            ),
+            c.fmt(
+                "replace-item-whole-words",
+                &args!["state" => crate::words::on_off(c, whole)],
+            ),
         ]
     }
 
@@ -198,7 +209,8 @@ impl App {
                         self.next_replace_match(end)
                     }
                     Err(e) => {
-                        self.error(&format!("Could not replace: {e}"));
+                        let msg = self.msg_args("replace-failed", &args!["error" => e.to_string()]);
+                        self.error(&msg);
                         vec![Effect::Redraw]
                     }
                 }
@@ -222,15 +234,14 @@ impl App {
                 let (case, whole) = self.authoring.replace.as_ref().map_or((false, false), |r| {
                     (r.options.case_sensitive, r.options.whole_word)
                 });
-                let what = if n == 3 {
-                    format!("Match case {}", on_off(case))
+                let (id, on) = if n == 3 {
+                    ("replace-match-case-now", case)
                 } else {
-                    format!("Whole words only {}", on_off(whole))
+                    ("replace-whole-words-now", whole)
                 };
-                self.tell(&format!(
-                    "{what}. {hits} {}.",
-                    crate::lists::plural(hits, "match", "matches")
-                ));
+                let state = crate::words::on_off(self.cat(), on);
+                let msg = self.msg_args(id, &args!["state" => state, "n" => hits]);
+                self.tell(&msg);
                 self.next_replace_match(m.start)
             }
             _ => vec![Effect::Redraw],
@@ -288,7 +299,8 @@ impl App {
                 self.replace_done()
             }
             Err(e) => {
-                self.error(&format!("Could not replace: {e}"));
+                let msg = self.msg_args("replace-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
                 vec![Effect::Redraw]
             }
         }
@@ -301,12 +313,9 @@ impl App {
         };
         self.list = None;
         let msg = match (r.replaced, r.skipped) {
-            (0, 0) => format!("No matches for {}.", r.query),
-            (n, 0) => format!(
-                "Replaced {n} {}.",
-                crate::lists::plural(n, "match", "matches")
-            ),
-            (n, k) => format!("Replaced {n}, skipped {k}."),
+            (0, 0) => self.msg_args("replace-no-matches", &args!["query" => r.query.as_str()]),
+            (n, 0) => self.msg_args("replace-replaced", &args!["n" => n]),
+            (n, k) => self.msg_args("replace-replaced-skipped", &args!["n" => n, "skipped" => k]),
         };
         if r.replaced == 0 && r.skipped == 0 {
             self.speech.earcon(Earcon::Error);
@@ -318,10 +327,11 @@ impl App {
     /// Escape in the replace list.
     pub(crate) fn replace_stopped(&mut self) {
         if let Some(r) = self.authoring.replace.take() {
-            self.tell(&format!(
-                "Stopped. Replaced {}, skipped {}.",
-                r.replaced, r.skipped
-            ));
+            let msg = self.msg_args(
+                "replace-stopped",
+                &args!["n" => r.replaced, "skipped" => r.skipped],
+            );
+            self.tell(&msg);
         }
     }
 }

@@ -256,10 +256,8 @@ pub fn named_key(keymap: &Keymap, action: ActionId) -> String {
 
 /// [`named_key`] in the catalog's language ([`App::catalog`]).
 pub fn named_key_in(c: &Catalog, keymap: &Keymap, action: ActionId) -> String {
-    main_chord(keymap, action).map_or_else(
-        || c.tr("help-the-command-palette"),
-        |ch| mark_chord(c, &ch),
-    )
+    main_chord(keymap, action)
+        .map_or_else(|| c.tr("help-the-command-palette"), |ch| mark_chord(c, &ch))
 }
 
 /// Every chord bound to `action`, marked for a message and joined with
@@ -556,17 +554,26 @@ impl App {
         use ActionId as A;
         let items = vec![
             c.tr("help-about"),
-            line("help-open", &[("open", k(A::Open)), ("library", k(A::OpenLibrary))]),
+            line(
+                "help-open",
+                &[("open", k(A::Open)), ("library", k(A::OpenLibrary))],
+            ),
             line("help-play", &[("key", k(A::PlayPause))]),
             line("help-read-from-cursor", &[("key", k(A::ReadFromCursor))]),
             line("help-stop", &[("key", k(A::Stop))]),
             line(
                 "help-sentences",
-                &[("next", k(A::NextSentence)), ("previous", k(A::PreviousSentence))],
+                &[
+                    ("next", k(A::NextSentence)),
+                    ("previous", k(A::PreviousSentence)),
+                ],
             ),
             line(
                 "help-paragraphs",
-                &[("next", k(A::NextParagraph)), ("previous", k(A::PreviousParagraph))],
+                &[
+                    ("next", k(A::NextParagraph)),
+                    ("previous", k(A::PreviousParagraph)),
+                ],
             ),
             line(
                 "help-headings",
@@ -579,7 +586,10 @@ impl App {
             ),
             line(
                 "help-read-headings",
-                &[("next", k(A::NextHeading)), ("previous", k(A::PreviousHeading))],
+                &[
+                    ("next", k(A::NextHeading)),
+                    ("previous", k(A::PreviousHeading)),
+                ],
             ),
             line(
                 "help-quick-keys",
@@ -599,9 +609,15 @@ impl App {
             line("help-bookmark", &[("key", k(A::AddBookmark))]),
             line(
                 "help-history",
-                &[("back", k(A::HistoryBack)), ("forward", k(A::HistoryForward))],
+                &[
+                    ("back", k(A::HistoryBack)),
+                    ("forward", k(A::HistoryForward)),
+                ],
             ),
-            line("help-rate", &[("faster", k(A::RateUp)), ("slower", k(A::RateDown))]),
+            line(
+                "help-rate",
+                &[("faster", k(A::RateUp)), ("slower", k(A::RateDown))],
+            ),
             line("help-where", &[("key", k(A::SayPosition))]),
             line(
                 "help-repeat",
@@ -636,7 +652,11 @@ impl App {
             ),
             line(
                 "help-editing",
-                &[("undo", k(A::Undo)), ("redo", k(A::Redo)), ("bold", k(A::Bold))],
+                &[
+                    ("undo", k(A::Undo)),
+                    ("redo", k(A::Redo)),
+                    ("bold", k(A::Bold)),
+                ],
             ),
             line(
                 "help-outline",
@@ -671,12 +691,18 @@ impl App {
             ),
             line(
                 "help-voice",
-                &[("voice", k(A::ChooseVoice)), ("restart", k(A::RestartSpeech))],
+                &[
+                    ("voice", k(A::ChooseVoice)),
+                    ("restart", k(A::RestartSpeech)),
+                ],
             ),
             line("help-access", &[("key", k(A::CycleAccessMode))]),
             line(
                 "help-character-keys",
-                &[("keys", k(A::ToggleCharacterKeys)), ("settings", k(A::Settings))],
+                &[
+                    ("keys", k(A::ToggleCharacterKeys)),
+                    ("settings", k(A::Settings)),
+                ],
             ),
             line("help-all-shortcuts", &[("key", k(A::KeyboardHelp))]),
             line("help-palette", &[("key", k(A::CommandPalette))]),
@@ -769,7 +795,10 @@ mod tests {
         );
         // Spanish help finds commands by its own words too.
         let es = Catalog::builtin("es").unwrap();
-        assert_eq!(resolve_command_in(&es, "next_sentence"), Some(ActionId::NextSentence));
+        assert_eq!(
+            resolve_command_in(&es, "next_sentence"),
+            Some(ActionId::NextSentence)
+        );
     }
 
     #[test]

@@ -24,6 +24,8 @@
 
 use ropey::Rope;
 use textweaver_core::{CharPos, CharRange};
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 use textweaver_store::notes as store_notes;
 use textweaver_store::{Anchor, DocState, TextStamp};
 use textweaver_text::Document;
@@ -294,26 +296,26 @@ impl Relocated {
     }
 
     /// The sentence said once on open, or `None` when nothing moved.
-    pub(crate) fn message(&self) -> Option<String> {
+    pub(crate) fn message(&self, c: &Catalog) -> Option<String> {
         if self.is_empty() {
             return None;
         }
         let kinds = [
-            (self.bookmarks, "bookmark", "bookmarks"),
-            (self.notes, "note", "notes"),
-            (self.highlights, "highlight", "highlights"),
+            (self.bookmarks, "relocate-bookmarks"),
+            (self.notes, "relocate-notes"),
+            (self.highlights, "relocate-highlights"),
         ];
         let list = |pick: fn(&Tally) -> usize, position: bool| -> (Vec<String>, usize) {
             let mut parts = Vec::new();
             let mut total = 0;
             if position {
-                parts.push("your reading position".to_owned());
+                parts.push(c.tr("relocate-reading-position"));
                 total += 1;
             }
-            for (t, one, many) in kinds {
+            for (t, id) in kinds {
                 let n = pick(&t);
                 if n > 0 {
-                    parts.push(format!("{n} {}", if n == 1 { one } else { many }));
+                    parts.push(c.fmt(id, &args!["n" => n]));
                     total += n;
                 }
             }
@@ -323,28 +325,31 @@ impl Relocated {
         let (lost, lost_n) = list(|t| t.lost, self.position.lost > 0);
         let mut clauses = Vec::new();
         if !moved.is_empty() {
-            let verb = if moved_n == 1 { "was" } else { "were" };
-            clauses.push(format!("{} {verb} moved to match", join(&moved)));
+            clauses.push(c.fmt(
+                "relocate-moved",
+                &args!["items" => join(c, &moved), "n" => moved_n],
+            ));
         }
         if !lost.is_empty() {
-            let (verb, state) = if lost_n == 1 {
-                ("could", "is marked")
-            } else {
-                ("could", "are marked")
-            };
-            clauses.push(format!("{} {verb} not be found and {state}", join(&lost)));
+            clauses.push(c.fmt(
+                "relocate-lost",
+                &args!["items" => join(c, &lost), "n" => lost_n],
+            ));
         }
-        Some(format!("The file changed; {}.", clauses.join(", ")))
+        Some(c.fmt("relocate-changed", &args!["clauses" => clauses.join(", ")]))
     }
 }
 
 /// "a", "a and b", "a, b, and c".
-fn join(parts: &[String]) -> String {
+fn join(c: &Catalog, parts: &[String]) -> String {
     match parts {
         [] => String::new(),
         [a] => a.clone(),
-        [a, b] => format!("{a} and {b}"),
-        [rest @ .., last] => format!("{}, and {last}", rest.join(", ")),
+        [a, b] => c.fmt("relocate-join-two", &args!["a" => a, "b" => b]),
+        [rest @ .., last] => c.fmt(
+            "relocate-join-more",
+            &args!["rest" => rest.join(", "), "last" => last],
+        ),
     }
 }
 
@@ -540,7 +545,7 @@ mod tests {
             ..Relocated::default()
         };
         assert_eq!(
-            r.message().unwrap(),
+            r.message(&Catalog::english()).unwrap(),
             "The file changed; 3 bookmarks were moved to match, 1 bookmark could not be found and is marked."
         );
         let r = Relocated {
@@ -550,10 +555,10 @@ mod tests {
             ..Relocated::default()
         };
         assert_eq!(
-            r.message().unwrap(),
+            r.message(&Catalog::english()).unwrap(),
             "The file changed; your reading position and 2 notes were moved to match, 2 highlights could not be found and are marked."
         );
-        assert_eq!(Relocated::default().message(), None);
+        assert_eq!(Relocated::default().message(&Catalog::english()), None);
     }
 
     #[test]

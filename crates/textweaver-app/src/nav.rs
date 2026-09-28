@@ -584,7 +584,10 @@ impl App {
             CharRange::new(pos, text_util::line_range(&s.doc, line).end),
             PREVIEW_WORDS,
         );
-        let label = self.msg_args("nav-label-line", &args!["label" => label, "line" => line + 1]);
+        let label = self.msg_args(
+            "nav-label-line",
+            &args!["label" => label, "line" => line + 1],
+        );
         self.nav_message(Some(&label), pos, &content)
     }
 

@@ -32,6 +32,8 @@
 use pulldown_cmark::{BrokenLink, Event, LinkType, Parser, Tag, TagEnd};
 use textweaver_core::{CharRange, Direction};
 use textweaver_editor::Selection;
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 use textweaver_speech::Earcon;
 
 use crate::app::App;
@@ -57,8 +59,15 @@ struct Found {
     message: String,
 }
 
-/// Every lint problem of Markdown `source`, in order.
+/// Every lint problem of Markdown `source`, in order, with messages in
+/// English.
 pub fn lint_markdown(source: &str) -> Vec<LintProblem> {
+    lint_markdown_in(&Catalog::english(), source)
+}
+
+/// Every lint problem of Markdown `source`, in order, with messages from
+/// catalog `c`.
+pub fn lint_markdown_in(c: &Catalog, source: &str) -> Vec<LintProblem> {
     let mut found: Vec<Found> = Vec::new();
     let mut broken: Vec<(usize, usize, String)> = Vec::new();
     // Byte ranges of code blocks, math, front matter, and HTML blocks.
@@ -86,9 +95,9 @@ pub fn lint_markdown(source: &str) -> Vec<LintProblem> {
                             rule: "heading-level",
                             start: range.start,
                             end: heading_line_end(source, range.start, range.end),
-                            message: format!(
-                                "heading level {level} after level {prev}; use level {}.",
-                                prev + 1
+                            message: c.fmt(
+                                "lint-heading-level",
+                                &args!["level" => level, "prev" => prev, "use" => prev + 1],
                             ),
                         });
                     }
@@ -105,7 +114,7 @@ pub fn lint_markdown(source: &str) -> Vec<LintProblem> {
                 Event::End(TagEnd::Link | TagEnd::Image) => in_link = in_link.saturating_sub(1),
                 Event::DisplayMath(_) => code.push((range.start, range.end)),
                 Event::Text(text) if skip == 0 && in_link == 0 => {
-                    bare_urls(&text, range.start, source, &mut found);
+                    bare_urls(c, &text, range.start, source, &mut found);
                 }
                 _ => {}
             }
@@ -116,11 +125,11 @@ pub fn lint_markdown(source: &str) -> Vec<LintProblem> {
             rule: "link-reference",
             start,
             end,
-            message: format!("link reference {reference} has no definition."),
+            message: c.fmt("lint-link-reference", &args!["reference" => reference]),
         });
     }
-    list_markers(source, &code, &mut found);
-    trailing_spaces(source, &code, &mut found);
+    list_markers(c, source, &code, &mut found);
+    trailing_spaces(c, source, &code, &mut found);
     found.sort_by_key(|f| (f.start, f.end));
     found.dedup_by(|b, a| a.start == b.start && a.rule == b.rule);
     let conv = ByteToChar::new(
@@ -154,7 +163,7 @@ fn inside(ranges: &[(usize, usize)], at: usize) -> bool {
 /// Bare web addresses in a text event starting at byte `base`. The event's
 /// text is the source's own when it matches; otherwise (entities, escapes)
 /// nothing is reported, since its offsets would not line up.
-fn bare_urls(text: &str, base: usize, source: &str, out: &mut Vec<Found>) {
+fn bare_urls(c: &Catalog, text: &str, base: usize, source: &str, out: &mut Vec<Found>) {
     if source.get(base..base + text.len()) != Some(text) {
         return;
     }
@@ -186,9 +195,7 @@ fn bare_urls(text: &str, base: usize, source: &str, out: &mut Vec<Found>) {
                 rule: "bare-url",
                 start: base + start,
                 end: base + end,
-                message:
-                    "bare web address; put it in angle brackets or make it a link with a name."
-                        .to_owned(),
+                message: c.tr("lint-bare-url"),
             });
         }
         from = end.max(start + 1);
@@ -220,7 +227,7 @@ fn bullet(line: &str) -> Option<(char, usize)> {
 /// Bullet items that change their marker within one list: consecutive
 /// item lines at the same indent, with only blank lines, deeper lines, or
 /// continuation text between them.
-fn list_markers(source: &str, code: &[(usize, usize)], out: &mut Vec<Found>) {
+fn list_markers(c: &Catalog, source: &str, code: &[(usize, usize)], out: &mut Vec<Found>) {
     // (indent, marker) of the current item at each indent.
     let mut open: Vec<(usize, char)> = Vec::new();
     let mut at = 0usize;
@@ -243,10 +250,12 @@ fn list_markers(source: &str, code: &[(usize, usize)], out: &mut Vec<Found>) {
                             rule: "list-marker",
                             start: start + indent,
                             end: start + indent + 1,
-                            message: format!(
-                                "list marker {}; this list uses {}.",
-                                marker_name(marker),
-                                marker_name(m)
+                            message: c.fmt(
+                                "lint-list-marker",
+                                &args![
+                                    "marker" => marker_name(c, marker),
+                                    "used" => marker_name(c, m)
+                                ],
                             ),
                         });
                     }
@@ -266,19 +275,19 @@ fn list_markers(source: &str, code: &[(usize, usize)], out: &mut Vec<Found>) {
 }
 
 /// A bullet's spoken name.
-fn marker_name(c: char) -> &'static str {
-    match c {
-        '-' => "dash",
-        '*' => "star",
-        '+' => "plus",
-        _ => "other",
-    }
+fn marker_name(c: &Catalog, marker: char) -> String {
+    c.tr(match marker {
+        '-' => "lint-marker-dash",
+        '*' => "lint-marker-star",
+        '+' => "lint-marker-plus",
+        _ => "lint-marker-other",
+    })
 }
 
 /// Spaces or tabs at the end of lines, outside code blocks. Exactly two
 /// spaces before a line of text is a Markdown line break and is left
 /// alone.
-fn trailing_spaces(source: &str, code: &[(usize, usize)], out: &mut Vec<Found>) {
+fn trailing_spaces(c: &Catalog, source: &str, code: &[(usize, usize)], out: &mut Vec<Found>) {
     let lines: Vec<&str> = source.split_inclusive('\n').collect();
     let mut at = 0usize;
     for (i, line) in lines.iter().enumerate() {
@@ -298,16 +307,13 @@ fn trailing_spaces(source: &str, code: &[(usize, usize)], out: &mut Vec<Found>) 
         if spaces == "  " && !trimmed.trim().is_empty() && next_has_text {
             continue;
         }
-        let what = match (spaces.contains('\t'), n) {
-            (true, _) => "tabs or spaces".to_owned(),
-            (false, 1) => "1 space".to_owned(),
-            (false, n) => format!("{n} spaces"),
+        let id = match (spaces.contains('\t'), trimmed.trim().is_empty()) {
+            (true, true) => "lint-trailing-tabs-empty-line",
+            (true, false) => "lint-trailing-tabs-line-end",
+            (false, true) => "lint-trailing-spaces-empty-line",
+            (false, false) => "lint-trailing-spaces-line-end",
         };
-        let message = if trimmed.trim().is_empty() {
-            format!("{what} on an empty line.")
-        } else {
-            format!("{what} at the end of the line.")
-        };
+        let message = c.fmt(id, &args!["n" => n]);
         out.push(Found {
             rule: "trailing-space",
             start: start + trimmed.len(),
@@ -322,7 +328,7 @@ impl App {
     fn lint_problems(&self) -> Vec<LintProblem> {
         self.session
             .as_ref()
-            .map(|s| lint_markdown(&s.doc.text().to_string()))
+            .map(|s| lint_markdown_in(self.cat(), &s.doc.text().to_string()))
             .unwrap_or_default()
     }
 
@@ -331,13 +337,13 @@ impl App {
     pub(crate) fn lint_step(&mut self, dir: Direction) {
         if self.edit.is_none() {
             let k = self.keys(textweaver_keymap::ActionId::ToggleEditMode);
-            self.tell(&format!(
-                "Lint checks the Markdown you write. Turn on edit mode with {k} first."
-            ));
+            let msg = self.msg_args("lint-not-editing", &args!["key" => k]);
+            self.tell(&msg);
             return;
         }
         if !self.authoring.structure.markdown {
-            self.tell("Lint checks Markdown, and this document is not Markdown.");
+            let msg = self.msg("lint-not-markdown");
+            self.tell(&msg);
             return;
         }
         let Some(pos) = self.session.as_ref().map(|s| s.cursor) else {
@@ -362,16 +368,16 @@ impl App {
         let Some(p) = found else {
             self.speech.earcon(Earcon::Boundary);
             let msg = if all.is_empty() {
-                "No lint problems.".to_owned()
+                self.msg("lint-none")
             } else {
-                format!(
-                    "No {} lint problem. {} in all.",
+                let n = all.len();
+                self.msg_args(
                     if dir == Direction::Forward {
-                        "more"
+                        "lint-no-more"
                     } else {
-                        "earlier"
+                        "lint-no-earlier"
                     },
-                    problems_phrase(all.len())
+                    &args!["n" => n, "count" => textweaver_editor::echo::thousands(n)],
                 )
             };
             self.tell(&msg);
@@ -392,20 +398,12 @@ impl App {
             .session
             .as_ref()
             .map_or(0, |s| text_util::line_of(&s.doc, p.range.start) + 1);
-        let mut msg = format!("Lint: {}", p.message);
+        let mut msg = self.msg_args("lint-said", &args!["message" => p.message.as_str()]);
         if self.settings.speech.verbosity >= textweaver_a11y::Verbosity::High {
-            msg.push_str(&format!(" Line {line}."));
+            msg.push(' ');
+            msg.push_str(&self.msg_args("lint-line", &args!["line" => line]));
         }
         self.tell(&msg);
-    }
-}
-
-/// "1 lint problem", "3 lint problems".
-fn problems_phrase(n: usize) -> String {
-    if n == 1 {
-        "1 lint problem".to_owned()
-    } else {
-        format!("{} lint problems", textweaver_editor::echo::thousands(n))
     }
 }
 

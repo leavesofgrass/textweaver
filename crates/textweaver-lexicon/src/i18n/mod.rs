@@ -354,7 +354,10 @@ impl Catalog {
                 })
                 .collect()
         });
-        built.iter().find(|(t, _)| *t == tag).map(|(_, c)| c.clone())
+        built
+            .iter()
+            .find(|(t, _)| *t == tag)
+            .map(|(_, c)| c.clone())
     }
 
     fn empty(lang: &str) -> Catalog {

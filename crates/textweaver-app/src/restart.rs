@@ -27,6 +27,8 @@ use textweaver_speech::SayMode;
 use textweaver_speech::SpeechService;
 use textweaver_store::Settings;
 
+use textweaver_lexicon::args;
+
 use crate::app::App;
 use crate::command::Effect;
 use crate::playback::{Playback, SpeechTrack};
@@ -138,31 +140,34 @@ impl App {
         let keys = self.keys(textweaver_keymap::ActionId::RestartSpeech);
         if self.restart.starter.is_none() {
             return if voiced {
-                "textweaver is silent now; restart it to hear speech again.".into()
+                self.msg("restart-silent-now")
             } else {
                 String::new()
             };
         }
         if std::mem::replace(&mut self.restart.auto_used, true) {
-            return format!("textweaver is silent now. Restart speech with {keys}.");
+            return self.msg_args("restart-silent-use-key", &args!["keys" => keys]);
         }
         self.begin_restart();
-        "Restarting speech.".into()
+        self.msg("restart-restarting")
     }
 
     /// The Restart Speech command.
     pub(crate) fn restart_speech_command(&mut self) -> Vec<Effect> {
         if self.restart.starter.is_none() {
-            self.tell("Speech cannot be restarted here.");
+            let msg = self.msg("restart-not-here");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         if self.restart.pending.is_some() {
-            self.tell("Speech is already restarting.");
+            let msg = self.msg("restart-already");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         self.stop_speech();
         self.restart.voiced |= self.self_voicing;
-        self.show("Restarting speech.");
+        let msg = self.msg("restart-restarting");
+        self.show(&msg);
         self.begin_restart();
         vec![Effect::Redraw]
     }
@@ -196,7 +201,10 @@ impl App {
             });
         match spawned {
             Ok(_) => self.restart.pending = Some(rx),
-            Err(e) => self.error(&format!("Could not restart speech: {e}.")),
+            Err(e) => {
+                let msg = self.msg_args("restart-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
         }
     }
 
@@ -211,7 +219,8 @@ impl App {
             Err(TryRecvError::Empty) => return Vec::new(),
             Err(TryRecvError::Disconnected) => {
                 self.restart.pending = None;
-                self.error("Could not restart speech: starting it failed.");
+                let msg = self.msg("restart-start-failed");
+                self.error(&msg);
                 return vec![Effect::Redraw];
             }
         };
@@ -248,7 +257,8 @@ impl App {
             let early = std::mem::take(&mut self.restart.early);
             self.restart.hold = false;
             if silent {
-                self.tell("No speech engine is available; textweaver stays silent.");
+                let msg = self.msg("restart-no-engine");
+                self.tell(&msg);
             } else if let Some(pos) = reading_from {
                 // Reading started meanwhile: it goes on, and is what is
                 // heard; the messages stay on the status line.
@@ -262,13 +272,12 @@ impl App {
             }
             return vec![Effect::Redraw];
         }
-        if silent {
-            self.tell(
-                "Speech restarted, but no speech engine is available; textweaver stays silent.",
-            );
+        let msg = if silent {
+            self.msg("restart-done-silent")
         } else {
-            self.tell("Speech restarted.");
-        }
+            self.msg("restart-done")
+        };
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 }

@@ -34,6 +34,8 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
+use textweaver_lexicon::i18n::Catalog;
+
 /// How long a request may take to arrive.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -49,6 +51,9 @@ struct State {
     folder: PathBuf,
     /// Open event streams.
     listeners: Vec<TcpStream>,
+    /// The interface's messages, for the words a page shows; English
+    /// until [`PreviewServer::set_catalog`].
+    catalog: Option<Arc<Catalog>>,
 }
 
 #[derive(Debug, Default)]
@@ -131,6 +136,12 @@ impl PreviewServer {
     /// The secret the paths start with.
     pub fn token(&self) -> &str {
         &self.token
+    }
+
+    /// The interface's messages, for the words the server's own pages
+    /// show.
+    pub fn set_catalog(&self, catalog: Arc<Catalog>) {
+        self.shared.state().catalog = Some(catalog);
     }
 
     /// Serves another page and folder from now on.
@@ -273,12 +284,20 @@ fn handle(stream: TcpStream, shared: &Shared, token: &str) -> io::Result<()> {
                         body.as_bytes(),
                     )
                 }
-                Err(_) => respond(
-                    &stream,
-                    "503 Service Unavailable",
-                    "text/plain; charset=utf-8",
-                    b"The preview is being written. Reload in a moment.",
-                ),
+                Err(_) => {
+                    let catalog = shared
+                        .state()
+                        .catalog
+                        .clone()
+                        .unwrap_or_else(Catalog::english);
+                    let text = catalog.tr("preview-being-written");
+                    respond(
+                        &stream,
+                        "503 Service Unavailable",
+                        "text/plain; charset=utf-8",
+                        text.as_bytes(),
+                    )
+                }
             }
         }
         "events" => {
