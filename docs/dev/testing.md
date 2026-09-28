@@ -29,6 +29,7 @@ The steps, in order:
 - **test**: `cargo test --workspace` with the same features.
 - **doc**: `cargo doc --workspace --no-deps` with `RUSTDOCFLAGS="-D warnings"`. The usual failures are a redundant link target (write ``[`X`]``, not ``[`X`](crate::X)``), a link to a private item from public docs, and square brackets in prose (put `[mm:ss]` or `[@key]` in backticks).
 - **keyboard**: `cargo xtask keyboard --check`. It fails when [docs/keyboard.md](../keyboard.md) is out of date. Regenerate it with `cargo xtask keyboard`; never edit it by hand.
+- **pseudo**: `cargo test -p textweaver-app --test pseudo_locale`. The interface in the pseudo-locales en-XA and ar-XB: it fails on any message that does not come from the translation catalog ([ADR-0030](../adr/0030-interface-translations.md)). CI runs it in the docs job.
 The Python checks are written `python3` below. On Windows, run them with `py -3` instead (`py -3 tools/check_links.py`): `python` and `python3` there may be the Microsoft Store stub.
 
 - **links**: `python3 tools/check_links.py`. Every relative link and anchor in the Markdown docs and in `docs/site` must resolve.
