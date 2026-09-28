@@ -673,8 +673,7 @@ impl App {
         self.announcer.announce(&written, priority);
         let reading = matches!(self.playback, Playback::Reading);
         if route.speak && (!reading || priority == Priority::Assertive) {
-            self.speech
-                .say(crate::help::spoken_text(text), SayMode::Queue);
+            self.voice_message(crate::help::spoken_text(text).into_owned(), SayMode::Queue);
         }
     }
 
@@ -697,8 +696,10 @@ impl App {
         self.announcer.announce(&written, priority);
         let reading = matches!(self.playback, Playback::Reading);
         if route.speak && (!reading || priority == Priority::Assertive) {
-            self.speech
-                .say(crate::help::spoken_text(text), SayMode::Announce);
+            self.voice_message(
+                crate::help::spoken_text(text).into_owned(),
+                SayMode::Announce,
+            );
         }
     }
 
