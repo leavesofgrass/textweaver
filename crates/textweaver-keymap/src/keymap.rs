@@ -867,8 +867,15 @@ mod tests {
             ("Space", ActionId::PlayPause),
             ("Escape", ActionId::Stop),
             ("Ctrl+Space", ActionId::ReadFromCursor),
-            ("Ctrl+=", ActionId::RateUp),
-            ("Ctrl+-", ActionId::RateDown),
+            // Star's Ctrl+= and Ctrl+- for the rate became the text size
+            // keys (the owner's session 2); the rate is on F11.
+            ("F11", ActionId::RateUp),
+            ("Shift+F11", ActionId::RateDown),
+            ("Ctrl+=", ActionId::TextLarger),
+            ("Ctrl+-", ActionId::TextSmaller),
+            ("Ctrl+0", ActionId::TextSizeReset),
+            ("Ctrl+D", ActionId::ChooseFont),
+            ("Ctrl+Shift+G", ActionId::OpenPath),
             ("Alt+.", ActionId::NextSentence),
             ("Alt+,", ActionId::PreviousSentence),
             ("Alt+;", ActionId::ReplaySentence),

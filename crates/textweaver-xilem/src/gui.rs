@@ -46,6 +46,7 @@ use textweaver_app::{
 use crate::dialog::{self, ChoiceList, DialogAction, Modal};
 use crate::document::{DocAction, DocAids, DocFont, DocModel, DocState, DocumentView};
 use crate::file_chooser::{self, FileChosen};
+use crate::font_chooser::Step;
 use crate::keys;
 use crate::rsvp::{RsvpShown, RsvpView};
 use crate::settings_dialog::{self, FormAction, FormChange, SettingsForm, SettingsGrid};
@@ -181,6 +182,8 @@ struct Shown {
     aid_spans: Option<AidSpansKey>,
     aids: DocAids,
     rsvp: Option<RsvpShown>,
+    /// The document font, from `[reading_aids.font]`.
+    font: Option<DocFont>,
 }
 
 /// What the reading aids' spans depend on: bionic reading (and its
@@ -215,10 +218,8 @@ enum OpenDialog {
     List,
     /// The command palette: the actions its list shows, in order.
     Palette(Vec<ActionId>),
-    /// The font chooser's family list.
+    /// The font list.
     FontFamily(Vec<crate::font_chooser::Choice>),
-    /// The font chooser's size list, for this family.
-    FontSize(String),
     /// The system's file chooser, open on its own thread; the app's Open
     /// prompt (labelled with this) waits for its answer.
     FileChooser(String),
@@ -227,8 +228,6 @@ enum OpenDialog {
 /// The widget tree's toolbar buttons and what they do.
 struct Buttons {
     by_id: HashMap<WidgetId, ActionId>,
-    /// View, Fonts: the font chooser (not a keymap action).
-    fonts: Option<WidgetId>,
 }
 
 /// The driver: the app and the window's state.
@@ -365,16 +364,11 @@ pub fn build_tree(
 
     // Header: the document's title and the commands.
     let title = NewWidget::new(label("textweaver", 18.0, true)).with_tag(TITLE);
-    let fonts_button = NewWidget::new(
-        ActionButton::new("Fonts…")
-            .with_description("Choose the font and size of the document text"),
-    );
-    let fonts_id = fonts_button.id();
     let header = Flex::row()
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .with(title, 1.0)
         .with_fixed(button("Open…", ActionId::Open, app, &mut ids))
-        .with_fixed(fonts_button)
+        .with_fixed(button("Font…", ActionId::ChooseFont, app, &mut ids))
         .with_fixed(button("Settings…", ActionId::Settings, app, &mut ids))
         .with_fixed(button("Commands…", ActionId::CommandPalette, app, &mut ids));
     let header = NewWidget::new(Region::new(NewWidget::new(header), Role::Banner, ""))
@@ -464,10 +458,7 @@ pub fn build_tree(
     let root = NewWidget::new(Root::new(main, full_passes)).with_tag(ROOT);
     Tree {
         root,
-        buttons: Buttons {
-            by_id: ids,
-            fonts: Some(fonts_id),
-        },
+        buttons: Buttons { by_id: ids },
     }
 }
 
@@ -738,6 +729,12 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             shown.window = Some(w);
         }
     }
+    // The font and size: the keys, the font list, or the settings dialog.
+    let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
+    if shown.font.as_ref() != Some(&font) {
+        host.edit(DOC, |mut d| DocumentView::set_font(&mut d, font.clone()));
+        shown.font = Some(font);
+    }
     // Text spacing and the ruler, drawn by the view.
     let aids = DocAids {
         spacing: (&app.settings().reading_aids.spacing).into(),
@@ -866,6 +863,21 @@ impl Gui {
         }
         if !self.settings_list && cmd == Command::Action(ActionId::Settings) {
             self.open_settings(ctx, None);
+            return;
+        }
+        // The window's own commands: the text size and the font.
+        let step = match &cmd {
+            Command::Action(ActionId::TextLarger) => Some(Step::Larger),
+            Command::Action(ActionId::TextSmaller) => Some(Step::Smaller),
+            Command::Action(ActionId::TextSizeReset) => Some(Step::Reset),
+            _ => None,
+        };
+        if let Some(step) = step {
+            self.text_size(ctx, step);
+            return;
+        }
+        if cmd == Command::Action(ActionId::ChooseFont) {
+            self.open_fonts(ctx);
             return;
         }
         // Open Path (a key, or chosen in the palette) is the app's Open,
@@ -1309,7 +1321,8 @@ impl Gui {
         }
     }
 
-    /// View, Fonts: the family list (bundled first).
+    /// The font list (Ctrl+D, the Font button): the families, bundled
+    /// first, starting on the current one.
     fn open_fonts(&mut self, ctx: &mut DriverCtx<'_>) {
         let choices = crate::font_chooser::choices(self.installed.names());
         let current = crate::fonts::doc_font(&self.app.settings().reading_aids.font);
@@ -1318,23 +1331,26 @@ impl Gui {
             .iter()
             .position(|c| current.family.starts_with(&format!("\"{}\"", c.family)))
             .unwrap_or(0);
-        let (modal, list_id) = list_dialog(&self.palette, "Font family", items, selected, false);
+        let title = self.app.catalog().tr("gui-font-list");
+        let (modal, list_id) = list_dialog(&self.palette, &title, items, selected, false);
         let root = ctx.render_root(self.window_id);
         root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
         root.focus_on(Some(list_id));
         self.dialog = Some(OpenDialog::FontFamily(choices));
         if self.log {
-            crate::log::line("dialog: font family");
+            crate::log::line("dialog: font list");
         }
     }
 
-    /// The font chooser's answers. Returns false when the open dialog is
-    /// not the font chooser.
+    /// The font list's answer: the family applies at once, keeping the
+    /// size, and is said ("Font: OpenDyslexic."). Returns false when the
+    /// open dialog is not the font list.
     fn font_answer(&mut self, ctx: &mut DriverCtx<'_>, d: &DialogAction) -> bool {
         match (&self.dialog, d) {
-            (Some(OpenDialog::FontFamily(_) | OpenDialog::FontSize(_)), DialogAction::Cancel) => {
+            (Some(OpenDialog::FontFamily(_)), DialogAction::Cancel) => {
                 self.close_dialog(ctx);
-                self.app.announce("Font unchanged.", Priority::Polite);
+                let said = self.app.catalog().tr("gui-font-unchanged");
+                self.app.announce(&said, Priority::Polite);
                 self.refresh(ctx);
                 true
             }
@@ -1343,45 +1359,13 @@ impl Gui {
                     return true;
                 };
                 self.close_dialog(ctx);
-                let size = self.app.settings().reading_aids.font.size_pt;
-                let (items, selected) = crate::font_chooser::sizes(size);
-                let title = format!("Size for {family}");
-                let (modal, list_id) = list_dialog(&self.palette, &title, items, selected, false);
-                let root = ctx.render_root(self.window_id);
-                root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
-                root.focus_on(Some(list_id));
-                self.dialog = Some(OpenDialog::FontSize(family));
-                true
-            }
-            (Some(OpenDialog::FontSize(family)), DialogAction::Choose(i)) => {
-                let family = family.clone();
-                let size = crate::font_chooser::SIZES
-                    .get(*i)
-                    .copied()
-                    .unwrap_or(crate::font_chooser::SIZES[4]);
-                self.close_dialog(ctx);
-                let new = crate::font_chooser::chosen(
+                let new = crate::font_chooser::with_family(
                     &self.app.settings().reading_aids.font,
                     &family,
-                    size,
                 );
-                let bold = new.weight >= 600;
-                if let Err(e) = self
-                    .app
-                    .update_settings(|s| s.reading_aids.font = new.clone())
-                {
-                    self.app.announce(
-                        &format!("The font was applied but could not be saved: {e}."),
-                        Priority::Assertive,
-                    );
-                }
-                let font = crate::fonts::doc_font(&new);
-                ctx.render_root(self.window_id)
-                    .edit_widget_with_tag(DOC, |mut d| DocumentView::set_font(&mut d, font));
-                self.app.announce(
-                    &crate::font_chooser::announcement(&family, size, bold),
-                    Priority::Polite,
-                );
+                self.save_font(new);
+                let said = crate::font_chooser::font_message(&self.app.catalog(), &family);
+                self.app.announce(&said, Priority::Polite);
                 self.refresh(ctx);
                 true
             }
@@ -1389,6 +1373,26 @@ impl Gui {
         }
     }
 
+    /// Ctrl+Plus, Ctrl+Minus, Ctrl+0: the next text size, saved and said
+    /// ("Text size 18 points."). The next refresh lays the text out again.
+    fn text_size(&mut self, ctx: &mut DriverCtx<'_>, step: Step) {
+        let now = self.app.settings().reading_aids.font.clone();
+        let (size, limit) = crate::font_chooser::stepped(now.size_pt, step);
+        self.save_font(crate::font_chooser::with_size(&now, size));
+        if self.log {
+            crate::log::line(&format!("text size {step:?}: {size} points"));
+        }
+        let said = crate::font_chooser::size_message(&self.app.catalog(), size, limit);
+        // Assertive: a held key says only the latest size.
+        self.app.announce(&said, Priority::Assertive);
+        self.refresh(ctx);
+    }
+
+    /// Saves the document font in `[reading_aids.font]` (the writer thread
+    /// saves it; a failure is said on a later tick).
+    fn save_font(&mut self, new: textweaver_app::store::reading_aids::FontSettings) {
+        let _ = self.app.update_settings(|s| s.reading_aids.font = new);
+    }
     /// The palette's filter changed: show the matches and say how many.
     fn filter_palette(&mut self, ctx: &mut DriverCtx<'_>, query: &str) {
         let (ids, items): (Vec<ActionId>, Vec<String>) =
@@ -1470,18 +1474,23 @@ impl Gui {
         if self.dialog.is_none() {
             return;
         }
-        // Settings chosen in the command palette opens the dialog.
+        // Commands the window runs itself, chosen in the command palette:
+        // Settings opens the dialog; the text size and font keys.
         let palette = matches!(self.dialog, Some(OpenDialog::Palette(_)));
         self.close_dialog(ctx);
-        if palette
-            && !self.settings_list
-            && cmd == Command::Answer(ActionId::Settings.id().to_owned())
-        {
+        let own = match &cmd {
+            Command::Answer(id) if palette => ActionId::from_id(id).filter(|a| {
+                (*a == ActionId::Settings && !self.settings_list)
+                    || (a.is_window_only() && *a != ActionId::OpenPath)
+            }),
+            _ => None,
+        };
+        if let Some(a) = own {
             self.muted.set(true);
             let effects = self.app.dispatch(Command::Cancel);
             self.muted.set(false);
             self.run_effects(ctx, effects);
-            self.open_settings(ctx, None);
+            self.dispatch(ctx, Command::Action(a));
             self.refresh(ctx);
             return;
         }
@@ -1626,8 +1635,6 @@ impl AppDriver for Gui {
                 && open.close == widget_id
             {
                 self.settings_dialog_action(ctx, &DialogAction::Cancel);
-            } else if self.buttons.fonts == Some(widget_id) {
-                self.open_fonts(ctx);
             } else if let Some(a) = self.buttons.by_id.get(&widget_id).copied() {
                 self.dispatch(ctx, Command::Action(a));
             }

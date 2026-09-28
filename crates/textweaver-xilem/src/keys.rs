@@ -55,7 +55,9 @@ pub fn chord(event: &KeyboardEvent, platform: Platform) -> Option<KeyChord> {
                 } else {
                     // The character already carries Shift.
                     mods.remove(Modifiers::SHIFT);
-                    TwKey::Char(c)
+                    // Ctrl+Plus, from the number pad or with Shift on the
+                    // equals key, is the keymap's Ctrl+= (text larger).
+                    TwKey::Char(if c == '+' { '=' } else { c })
                 }
             } else {
                 if c.is_control() {
@@ -184,6 +186,20 @@ mod tests {
         assert_eq!(
             chord(&ev(c("."), Mods::ALT), WIN),
             Some("Alt+.".parse().unwrap())
+        );
+    }
+
+    #[test]
+    fn control_plus_is_control_equals() {
+        let want = Some("Ctrl+=".parse().unwrap());
+        // The number pad's plus, and Shift with the equals key.
+        assert_eq!(chord(&ev(c("+"), Mods::CONTROL), WIN), want);
+        assert_eq!(chord(&ev(c("+"), Mods::CONTROL | Mods::SHIFT), WIN), want);
+        assert_eq!(chord(&ev(c("="), Mods::CONTROL), WIN), want);
+        // Without a command modifier, plus stays plus (faster, in browse).
+        assert_eq!(
+            chord(&ev(c("+"), Mods::SHIFT), WIN),
+            Some("+".parse().unwrap())
         );
     }
 

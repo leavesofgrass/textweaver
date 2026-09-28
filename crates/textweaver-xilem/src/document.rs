@@ -410,6 +410,11 @@ impl DocumentView {
         this.ctx.request_render();
     }
 
+    /// The reading font in use.
+    pub fn font(&self) -> &DocFont {
+        &self.font
+    }
+
     /// The reading aids in use.
     pub fn aids(&self) -> DocAids {
         self.aids

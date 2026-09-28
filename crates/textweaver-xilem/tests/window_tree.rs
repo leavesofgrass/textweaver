@@ -84,6 +84,31 @@ fn every_control_has_a_role_and_a_name() {
 }
 
 #[test]
+fn the_text_size_and_font_follow_the_settings() {
+    use textweaver_xilem::font_chooser::{self, Step};
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let before = h.get_widget(DOC).inner().font().clone();
+    // Ctrl+Plus twice, as the window does it, then a family from the list.
+    for _ in 0..2 {
+        let now = app.settings().reading_aids.font.clone();
+        let (size, _) = font_chooser::stepped(now.size_pt, Step::Larger);
+        let _ = app.update_settings(|s| s.reading_aids.font = font_chooser::with_size(&now, size));
+    }
+    let now = app.settings().reading_aids.font.clone();
+    let _ = app.update_settings(|s| {
+        s.reading_aids.font = font_chooser::with_family(&now, "OpenDyslexic");
+    });
+    gui::refresh_for_tests(&app, &mut h);
+    let after = h.get_widget(DOC).inner().font().clone();
+    assert!(after.size > before.size, "{before:?} to {after:?}");
+    // 16 points in CSS pixels.
+    assert!((after.size - 16.0 * 96.0 / 72.0).abs() < 0.01, "{after:?}");
+    assert!(after.family.starts_with("\"OpenDyslexic\""), "{after:?}");
+}
+
+#[test]
 fn keys_the_document_does_not_use_go_to_the_keymap() {
     let dir = tempfile::tempdir().unwrap();
     let app = app_with_sample(dir.path());

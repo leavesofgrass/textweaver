@@ -1671,6 +1671,11 @@ impl App {
             A::RulerCycle => self.ruler_cycle(),
             A::SyllablesToggle => self.syllables_toggle(),
             A::DifficultWordsToggle => self.difficult_words_toggle(),
+            // The window's text size and font (the GUI handles them first).
+            A::TextLarger | A::TextSmaller | A::TextSizeReset | A::ChooseFont => {
+                let msg = self.msg("app-window-only");
+                self.note(&msg);
+            }
             A::CommandPalette => return self.prompt(PromptPurpose::CommandPalette),
             A::Settings => return self.open_settings_screen(),
             A::KeyboardHelp => return self.keyboard_help(),

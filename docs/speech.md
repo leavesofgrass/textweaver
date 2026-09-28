@@ -156,7 +156,7 @@ The rate is in words per minute, from 50 to 900. The default is 265.
 - **+** or **=**: faster by 20.
 - **-**: slower by 20.
 
-The GUI also has **Ctrl+=** and **Ctrl+-**. You hear the new rate, for example "285 words per minute." At the limits you hear "Fastest rate." or "Slowest rate." Each engine turns words per minute into its own scale, so the same rate sounds about the same on every engine.
+The GUI also has **F11** and **Shift+F11**; there, **Ctrl+=** and **Ctrl+-** change the text size. You hear the new rate, for example "285 words per minute." At the limits you hear "Fastest rate." or "Slowest rate." Each engine turns words per minute into its own scale, so the same rate sounds about the same on every engine.
 
 ### Speed presets: F8
 
