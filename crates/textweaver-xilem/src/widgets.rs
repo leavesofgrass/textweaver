@@ -728,14 +728,50 @@ pub mod notify {
     #[allow(unsafe_code)]
     mod imp {
         use windows::Win32::Foundation::HWND;
+        use windows::Win32::System::Variant::VARIANT;
         use windows::Win32::UI::Accessibility::{
-            NotificationKind_Other, NotificationProcessing_All,
-            NotificationProcessing_ImportantMostRecent, UiaHostProviderFromHwnd,
-            UiaRaiseNotificationEvent,
+            IRawElementProviderSimple, IRawElementProviderSimple_Impl, NotificationKind_Other,
+            NotificationProcessing_All, NotificationProcessing_ImportantMostRecent,
+            ProviderOptions, ProviderOptions_ServerSideProvider, ProviderOptions_UseComThreading,
+            UIA_PATTERN_ID, UIA_PROPERTY_ID, UiaHostProviderFromHwnd, UiaRaiseNotificationEvent,
         };
-        use windows::core::BSTR;
+        use windows::core::{BSTR, Error, IUnknown, Result, implement};
 
-        pub(super) fn raise(hwnd: isize, text: &str, important: bool) -> Result<(), String> {
+        /// The window as a server-side provider with no properties of its
+        /// own: UI Automation merges it with the window's element (whose
+        /// provider is AccessKit's), so the event comes from the window.
+        /// The host provider on its own is a client-side provider, and UI
+        /// Automation does not pass on events raised on it.
+        #[implement(IRawElementProviderSimple)]
+        struct WindowSource {
+            hwnd: isize,
+        }
+
+        impl IRawElementProviderSimple_Impl for WindowSource_Impl {
+            fn ProviderOptions(&self) -> Result<ProviderOptions> {
+                Ok(ProviderOptions_ServerSideProvider | ProviderOptions_UseComThreading)
+            }
+
+            fn GetPatternProvider(&self, _pattern: UIA_PATTERN_ID) -> Result<IUnknown> {
+                Err(Error::empty())
+            }
+
+            fn GetPropertyValue(&self, _property: UIA_PROPERTY_ID) -> Result<VARIANT> {
+                Ok(VARIANT::default())
+            }
+
+            fn HostRawElementProvider(&self) -> Result<IRawElementProviderSimple> {
+                // SAFETY: the handle is this process's own live window (see
+                // `raise`); the call only reads it.
+                unsafe { UiaHostProviderFromHwnd(HWND(self.hwnd as *mut core::ffi::c_void)) }
+            }
+        }
+
+        pub(super) fn raise(
+            hwnd: isize,
+            text: &str,
+            important: bool,
+        ) -> std::result::Result<(), String> {
             if hwnd == 0 {
                 return Err("no window handle".into());
             }
@@ -746,18 +782,17 @@ pub mod notify {
             };
             let display = BSTR::from(text);
             let activity = BSTR::from(super::ACTIVITY);
+            let source: IRawElementProviderSimple = WindowSource { hwnd }.into();
             // SAFETY: `hwnd` is the handle of this process's own window,
             // read from winit on the event loop's thread, and the window
-            // outlives this call (the driver owns it). Both functions only
-            // read their arguments: the host provider is a reference-counted
-            // COM object that the `windows` crate releases when it drops, and
+            // outlives this call (the driver owns it). The function only
+            // reads its arguments: the provider is a reference-counted COM
+            // object that the `windows` crate releases when it drops, and
             // the two BSTRs live until the call returns. The call is made on
             // the window's own thread, which winit initialized for COM (OLE).
             unsafe {
-                let provider = UiaHostProviderFromHwnd(HWND(hwnd as *mut core::ffi::c_void))
-                    .map_err(|e| format!("UiaHostProviderFromHwnd: {e}"))?;
                 UiaRaiseNotificationEvent(
-                    &provider,
+                    &source,
                     NotificationKind_Other,
                     processing,
                     &display,
