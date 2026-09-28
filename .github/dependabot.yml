@@ -24,6 +24,20 @@ updates:
       # HTML parser is linked (root Cargo.toml). Lift this with scraper.
       - dependency-name: ammonia
         versions: ['>=4.2']
+      # The GUI stack is pinned as a whole (ADR-0027) and moves together,
+      # by hand: a single upgrade would link two graphics stacks.
+      - dependency-name: 'wgpu*'
+      - dependency-name: 'vello*'
+      - dependency-name: 'imaging_vello*'
+      - dependency-name: 'masonry*'
+      - dependency-name: 'parley'
+      - dependency-name: 'accesskit*'
+      # MathCAT is pinned to a release candidate on purpose (ADR-0029);
+      # its development builds are not wanted.
+      - dependency-name: mathcat
+      # sha1 0.11 needs digest 0.11 while sha2 is on 0.10.
+      - dependency-name: sha1
+        versions: ['>=0.11']
     groups:
       # Patch and minor updates of every crate together.
       cargo-minor:
