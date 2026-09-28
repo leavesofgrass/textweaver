@@ -3,7 +3,7 @@
 //!
 //! Builds `textweaver-xilem` with the `dist` profile and stages it as
 //! `textweaver-gui` with the licence, the third-party notices, the font
-//! licences, and the quick start, in
+//! licences, the quick start, and the window's guide (`docs/gui.md`), in
 //! `target/dist/textweaver-gui-VERSION-PLATFORM/`, then packages it:
 //!
 //! - Windows: a `.zip`;
@@ -32,10 +32,12 @@ const INSTALLED: &str = "textweaver-gui";
 /// The cargo profile (root `Cargo.toml`, `[profile.dist]`).
 const PROFILE: &str = "dist";
 /// Files copied into the package: (source, path in the package).
-const FILES: [(&str, &str); 7] = [
+const FILES: [(&str, &str); 8] = [
     ("LICENSE", "LICENSE"),
     ("THIRD-PARTY-NOTICES.md", "THIRD-PARTY-NOTICES.md"),
     ("docs/quickstart.md", "QUICKSTART.md"),
+    // How to start the window, its keys, and its settings.
+    ("docs/gui.md", "GUI.md"),
     (
         "third_party/fonts/atkinson-hyperlegible-next/OFL.txt",
         "licenses/fonts/atkinson-hyperlegible-next/OFL.txt",
