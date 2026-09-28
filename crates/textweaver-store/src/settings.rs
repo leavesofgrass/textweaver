@@ -471,6 +471,10 @@ pub struct ReadingSettings {
     /// or MathCAT (`mathcat` for ClearSpeak, `mathcat_simplespeak`) in
     /// builds with MathCAT (ADR-0029).
     pub math_engine: MathEngine,
+    /// How math looks in the reading view: its source (`source`, the
+    /// default: `$x^2$`), or Unicode (`unicode`: `x²`, `√2`, `1⁄2`), as
+    /// Star showed it. Speech and edit mode always use the source.
+    pub math_display: MathDisplay,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -504,6 +508,7 @@ impl Default for ReadingSettings {
             ocr_lang: String::new(),
             ocr_engine: OcrEngine::Auto,
             math_engine: MathEngine::Builtin,
+            math_display: MathDisplay::Source,
             extra: toml::Table::new(),
         }
     }
@@ -523,6 +528,17 @@ pub enum MathEngine {
     /// MathCAT in SimpleSpeak.
     #[serde(rename = "mathcat_simplespeak")]
     MathCatSimpleSpeak,
+}
+
+/// `[reading] math_display`: how math looks in the reading view (W4g).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MathDisplay {
+    /// The source as written (`$x^2$`).
+    #[default]
+    Source,
+    /// One line of Unicode (`x²`, `√2`, `1⁄2`).
+    Unicode,
 }
 
 /// `[reading] citations`: what continuous reading does with a citation.
@@ -1618,6 +1634,39 @@ mod tests {
         assert_eq!(s.reading.math_engine, MathEngine::Builtin);
         assert!(s.reading.wrap_navigation);
         assert!(err.unwrap_or_default().contains("reading.math_engine"));
+    }
+
+    /// Unicode math in the reading view (W4g): the source by default,
+    /// stored only when changed, and a bad value costs only itself.
+    #[test]
+    fn math_display_default_round_trip_and_bad_value() {
+        let s = Settings::default();
+        assert_eq!(s.reading.math_display, MathDisplay::Source);
+        assert!(!s.to_minimal_toml().unwrap().contains("math_display"));
+        let (_d, store) = store();
+        write(
+            &store,
+            "[reading]
+math_display = \"unicode\"
+",
+        );
+        let (s, err) = store.load();
+        assert!(err.is_none(), "{err:?}");
+        assert_eq!(s.reading.math_display, MathDisplay::Unicode);
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("math_display = \"unicode\""), "{text}");
+        write(
+            &store,
+            "[reading]
+math_display = \"pretty\"
+wrap_navigation = true
+",
+        );
+        let (s, err) = store.load();
+        assert_eq!(s.reading.math_display, MathDisplay::Source);
+        assert!(s.reading.wrap_navigation);
+        assert!(err.unwrap_or_default().contains("reading.math_display"));
     }
 
     #[test]

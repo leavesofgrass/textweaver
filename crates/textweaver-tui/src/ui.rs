@@ -9,7 +9,7 @@ use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph};
-use textweaver_app::a11y::CursorPlacement;
+use textweaver_app::a11y::{CursorPlacement, Priority};
 use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
 use textweaver_app::keymap::{ActionId, Key, KeyChord, Layer, Modifiers};
 use textweaver_app::text_util::line_count;
@@ -100,6 +100,8 @@ struct RowAids<'a> {
     breaks: &'a [CharPos],
     /// The syllable separator.
     sep: &'a str,
+    /// Ranges drawn as other text (Unicode math), in order.
+    shown: &'a [(CharRange, String)],
 }
 
 /// The math exploration move for a key, if it is one: arrows, Home, End,
@@ -147,6 +149,12 @@ pub struct Tui {
     /// Copied text as an OSC 52 sequence, waiting to be written to the
     /// terminal ([`Tui::take_clipboard_sequence`]).
     clipboard_out: Option<String>,
+    /// Where copied text goes ([`crate::clipboard`]).
+    clipboard_route: crate::clipboard::Route,
+    /// The system clipboard, for terminals that cannot take OSC 52.
+    system_clipboard: crate::clipboard::SystemClipboard,
+    /// Set once the listener was told that the system clipboard is used.
+    system_clipboard_said: bool,
     /// The title line's position while it is frozen (`[accessibility]
     /// quiet_screen` during continuous reading).
     frozen_position: Option<String>,
@@ -168,9 +176,12 @@ pub struct Areas {
 }
 
 impl Tui {
-    /// Wraps an app.
+    /// Wraps an app, with the terminal's color level and clipboard route
+    /// detected ([`crate::clipboard::detect`]).
     pub fn new(app: App) -> Self {
-        Self::with_color_support(app, ColorSupport::detect())
+        let mut tui = Self::with_color_support(app, ColorSupport::detect());
+        tui.clipboard_route = crate::clipboard::detect_here();
+        tui
     }
 
     /// Wraps an app, drawing at a given color level (tests; at run time
@@ -188,6 +199,9 @@ impl Tui {
             status_shown: (0, String::new()),
             status_blank_until: None,
             clipboard_out: None,
+            clipboard_route: crate::clipboard::Route::Osc52,
+            system_clipboard: crate::clipboard::SystemClipboard::default(),
+            system_clipboard_said: false,
             frozen_position: None,
             digits: crate::physical::DigitKeys::default(),
         }
@@ -302,9 +316,55 @@ impl Tui {
         self.clipboard_out.take()
     }
 
+    /// Where copied text goes: OSC 52 (the default for a `Tui` made with
+    /// [`Tui::with_color_support`]), the system clipboard, or both.
+    pub fn set_clipboard_route(&mut self, route: crate::clipboard::Route) {
+        self.clipboard_route = route;
+    }
+
+    /// Where copied text goes.
+    pub fn clipboard_route(&self) -> crate::clipboard::Route {
+        self.clipboard_route
+    }
+
+    /// Sends copied text on its route. The first use of the system
+    /// clipboard is said once; if it fails, the text goes to the terminal
+    /// instead, and the failure is said.
+    fn send_to_clipboard(&mut self, text: &str) {
+        use crate::clipboard::Route;
+        let route = self.clipboard_route;
+        let mut osc = route != Route::System;
+        if route != Route::Osc52 {
+            match self.system_clipboard.set_text(text) {
+                Ok(()) => {
+                    if route == Route::System && !self.system_clipboard_said {
+                        self.system_clipboard_said = true;
+                        self.app.announce_queued(
+                            "Copied with the system clipboard, because this terminal cannot take copied text.",
+                            Priority::Polite,
+                        );
+                    }
+                }
+                Err(e) => {
+                    osc = true;
+                    log::warn!("system clipboard: {e}");
+                    self.app.announce_queued(
+                        &format!(
+                            "Could not copy with the system clipboard: {e}. Sent to the terminal instead."
+                        ),
+                        Priority::Assertive,
+                    );
+                }
+            }
+        }
+        if osc {
+            self.clipboard_out = Some(textweaver_app::osc52(text));
+        }
+    }
+
     fn apply(&mut self, effects: Vec<Effect>) {
         if let Some(text) = self.app.take_clipboard() {
-            self.clipboard_out = Some(textweaver_app::osc52(&text));
+            self.send_to_clipboard(&text);
         }
         // Prompts and lists are the app's own models (Wave 3): the app
         // adopted them, and said a list's focused item, before returning
@@ -746,10 +806,33 @@ impl Tui {
         let focus = self.app.focus();
         let top = self.app.viewport().top_line;
         let syllables = settings.reading_aids.syllables;
-        let line_breaks = |r: CharRange| self.app.syllable_breaks(r);
-        let decor = syllables.then(|| layout::Decor {
+        let line_breaks = |r: CharRange| {
+            if syllables {
+                self.app.syllable_breaks(r)
+            } else {
+                Vec::new()
+            }
+        };
+        // Unicode math (`[reading] math_display`): the formulas from the
+        // top line to as far as the layout may go.
+        let shown = {
+            let lines = textweaver_app::text_util::line_count(doc);
+            let last = top
+                .saturating_add(rows_wanted.saturating_mul(4).max(512))
+                .min(lines.saturating_sub(1));
+            let from = textweaver_app::text_util::line_range(doc, top.min(last)).start;
+            let to = textweaver_app::text_util::line_range(doc, last).end;
+            self.app
+                .math_display(CharRange::new(from, to.saturating_add(1)))
+        };
+        let decor = (syllables || !shown.is_empty()).then(|| layout::Decor {
             breaks: &line_breaks,
-            text: self.app.syllable_separator().to_owned(),
+            text: if syllables {
+                self.app.syllable_separator().to_owned()
+            } else {
+                String::new()
+            },
+            shown: &shown,
         });
         let sep_width = decor.as_ref().map_or(0, layout::Decor::width);
         let rows = layout::window_decor(
@@ -816,6 +899,7 @@ impl Tui {
                 difficult: &difficult,
                 breaks: row_breaks,
                 sep: &sep,
+                shown: &shown,
             };
             let mut text = self.row_spans(doc, row, &highlights, &aids, theme, cells);
             let extra = ruler_modifier(mark);
@@ -828,7 +912,7 @@ impl Tui {
             if let Some(fp) = focus.filter(|&p| row.holds(p))
                 && cursor.is_none()
             {
-                let col = layout::column_decor(doc, row, fp, cells, row_breaks, sep_width)
+                let col = layout::column_shown(doc, row, fp, cells, row_breaks, sep_width, &shown)
                     .min(width.saturating_sub(1));
                 let x = area.x + gutter + u16::try_from(col).unwrap_or(0);
                 let y = area.y + u16::try_from(lines.len()).unwrap_or(0);
@@ -945,7 +1029,11 @@ impl Tui {
             if i > 0 && aids.breaks.binary_search(&pos).is_ok() {
                 run.push_str(aids.sep);
             }
-            run.push_str(&cells.text(c));
+            match layout::shown_at(aids.shown, pos) {
+                Some(Some(text)) => run.push_str(text),
+                Some(None) => {}
+                None => run.push_str(&cells.text(c)),
+            }
         }
         if let Some(st) = run_style {
             spans.push(Span::styled(run, st));

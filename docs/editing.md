@@ -225,7 +225,8 @@ The copies are in the `recovery` folder of the data folder. The [library guide](
 
 ## Copy, cut, and paste
 
-- **Ctrl+C** copies the selection. **Ctrl+X** cuts it; the cut is one undo step. textweaver sends the text to the terminal, which puts it on your computer's clipboard (the OSC 52 sequence; it works over SSH too). Windows Terminal, iTerm2, kitty, WezTerm, foot, Alacritty, and xterm pass it on. The old Windows console window and macOS Terminal do not.
+- **Ctrl+C** copies the selection. **Ctrl+X** cuts it; the cut is one undo step. textweaver sends the text to the terminal, which puts it on your computer's clipboard (the OSC 52 sequence; it works over SSH too). Windows Terminal, iTerm2, kitty, WezTerm, foot, Alacritty, and xterm pass it on.
+- The old Windows console window, macOS Terminal, and terminals built on VTE (GNOME Terminal, Tilix) do not take text that way, so there textweaver puts it on the system clipboard itself. The first time, it says "Copied with the system clipboard, because this terminal cannot take copied text." In Konsole it does both. Over SSH and in tmux it always uses the terminal, because the system clipboard there belongs to the other computer.
 - To paste from your computer's clipboard, use your terminal's paste command, such as **Ctrl+V** or **Ctrl+Shift+V** in Windows Terminal, or right-click.
 - When the terminal passes **Ctrl+V** to textweaver instead of pasting, textweaver pastes the text you last copied or cut in textweaver. When there is none, it says "Nothing copied in textweaver yet. Use your terminal's paste, for example Control Shift V."
 
@@ -252,6 +253,28 @@ textweaver checks spelling against a list of 225,038 English words (SCOWL, sizes
 These are never checked: code, math, link addresses, web and e-mail addresses, citation keys such as `[@doe2020]`, raw HTML, front matter, words with digits, words in capitals (acronyms such as NASA), words with capitals inside (such as iPhone), and single letters.
 
 Your word list is `words.txt` in the data folder, one word per line; you can edit it in any text editor. The [library guide](library.md) says where the data folder is.
+
+## Markdown lint
+
+Some Markdown problems are plain to see and easy to miss by ear. In edit mode on a Markdown file, textweaver finds them for you:
+
+- **Ctrl+F8**: the next problem. **Ctrl+Shift+F8**: the previous one. The problem is selected and you hear what it is, starting with "Lint": "Lint: heading level 3 after level 1; use level 2." At high verbosity you also hear the line number.
+
+It checks five things:
+
+- **Heading levels.** A heading more than one level below the one before it, such as a level 3 heading right after a level 1, leaves a gap in the outline and in a screen reader's list of headings.
+- **List markers.** A bullet list that changes from `-` to `*` or `+` partway through. Markdown starts a new list there.
+- **Trailing spaces.** Spaces or tabs at the end of a line, which you cannot hear. Exactly two spaces before more text are left alone, because they make a line break.
+- **Link references.** `[text][intro]` or `[intro][]` with no `[intro]: address` line anywhere, which shows as plain brackets.
+- **Bare web addresses.** An address typed into a sentence. Put it in angle brackets, `<https://example.org>`, or make it a link with a name, `[the course page](https://example.org)`.
+
+Code blocks, inline code, math, front matter, and HTML are not checked, except for trailing spaces outside code blocks.
+
+To check files from the command line, use `tw lint`. It prints each file, how many problems it has, and one line per problem, for example `Line 3: heading level 3 after level 1; use level 2.` It ends with status 1 when there are problems, so a script can check. `--json` prints them as JSON.
+
+```bash
+tw lint essay.md notes.md
+```
 
 ## Listen to the rendered text
 

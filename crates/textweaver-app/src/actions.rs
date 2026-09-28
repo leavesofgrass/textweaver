@@ -26,6 +26,8 @@ impl App {
             A::NextMisspelling => self.misspelling_step(Direction::Forward),
             A::PreviousMisspelling => self.misspelling_step(Direction::Backward),
             A::SpellingSuggestions => return self.spelling_suggestions(),
+            A::NextLintProblem => self.lint_action(Direction::Forward),
+            A::PreviousLintProblem => self.lint_action(Direction::Backward),
             A::ExportStudySheet => return self.export_study_sheet(),
             A::NewFromTemplate => return self.new_from_template(),
             A::ExportHtml => return self.export_to(OutputFormat::Html),
@@ -48,6 +50,17 @@ impl App {
             _ => {}
         }
         vec![Effect::Redraw]
+    }
+
+    /// The next or previous Markdown lint problem (the `lint` feature).
+    fn lint_action(&mut self, dir: Direction) {
+        #[cfg(feature = "lint")]
+        self.lint_step(dir);
+        #[cfg(not(feature = "lint"))]
+        {
+            let _ = dir;
+            self.tell("Markdown lint is not in this build.");
+        }
     }
 
     /// The answers of the authoring prompts.

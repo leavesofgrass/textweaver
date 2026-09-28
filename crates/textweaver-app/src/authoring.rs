@@ -10,10 +10,10 @@
 //! frontend sends it to the terminal as an OSC 52 sequence
 //! ([`osc52`]), which Windows Terminal, iTerm2, kitty, WezTerm, foot,
 //! Alacritty, and xterm (when allowed) pass to the system clipboard, over
-//! SSH too, as Star did. There is no native fallback: the `arboard` crate
-//! would add an X11 client library on Linux for a feature the terminal
-//! already provides, so terminals without OSC 52 (the old Windows console
-//! host, macOS Terminal.app) cannot copy yet.
+//! SSH too, as Star did. Where the terminal cannot take OSC 52 (the old
+//! Windows console, macOS Terminal.app, VTE terminals), the terminal
+//! frontend puts the text on the system clipboard itself with `arboard`
+//! (its `clipboard` feature, Agent W4g), and says so once.
 
 use textweaver_a11y::Verbosity;
 use textweaver_core::{CharPos, CharRange, Direction, MarkerKind, PunctuationLevel, Unit};
@@ -85,6 +85,72 @@ fn base64(bytes: &[u8]) -> String {
         }
     }
     out
+}
+
+/// What a line of a code block is called on caret and Speech Cursor moves
+/// (Agent W4g): "code, Python" on the block's first line (`line`) when the
+/// block names its language, "code" otherwise.
+pub(crate) fn code_structure(block: &textweaver_text::Marker, line: CharRange) -> String {
+    match block
+        .label
+        .as_deref()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+    {
+        Some(lang) if line.contains(block.range.start) || line.start == block.range.start => {
+            format!("code, {}", language_name(lang))
+        }
+        _ => "code".to_owned(),
+    }
+}
+
+/// A code block language as it is said: the usual name for common fence
+/// words (`py` is "Python", `sh` is "shell"), otherwise the word itself.
+pub(crate) fn language_name(fence: &str) -> String {
+    let name = match fence.to_ascii_lowercase().as_str() {
+        "py" | "python" | "python3" => "Python",
+        "rs" | "rust" => "Rust",
+        "js" | "javascript" | "mjs" => "JavaScript",
+        "ts" | "typescript" => "TypeScript",
+        "jsx" => "JavaScript with JSX",
+        "tsx" => "TypeScript with JSX",
+        "sh" | "bash" | "shell" | "zsh" | "console" => "shell",
+        "ps1" | "powershell" | "pwsh" => "PowerShell",
+        "bat" | "cmd" | "batch" => "Windows batch",
+        "c" => "C",
+        "h" => "C header",
+        "cpp" | "c++" | "cc" | "cxx" | "hpp" => "C plus plus",
+        "cs" | "csharp" | "c#" => "C sharp",
+        "java" => "Java",
+        "kt" | "kotlin" => "Kotlin",
+        "go" | "golang" => "Go",
+        "rb" | "ruby" => "Ruby",
+        "php" => "PHP",
+        "swift" => "Swift",
+        "r" => "R",
+        "sql" => "SQL",
+        "html" | "htm" => "HTML",
+        "css" => "CSS",
+        "json" => "JSON",
+        "yaml" | "yml" => "YAML",
+        "toml" => "TOML",
+        "xml" => "XML",
+        "md" | "markdown" => "Markdown",
+        "tex" | "latex" => "LaTeX",
+        "diff" | "patch" => "diff",
+        "text" | "txt" | "plain" | "plaintext" => "plain text",
+        "hs" | "haskell" => "Haskell",
+        "lua" => "Lua",
+        "pl" | "perl" => "Perl",
+        "scala" => "Scala",
+        "m" | "matlab" => "MATLAB",
+        "jl" | "julia" => "Julia",
+        "dockerfile" | "docker" => "Dockerfile",
+        "makefile" | "make" => "Makefile",
+        "ini" => "INI",
+        _ => return fence.to_owned(),
+    };
+    name.to_owned()
 }
 
 /// The typing echo settings in cycle order: characters and words,

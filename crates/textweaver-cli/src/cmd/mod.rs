@@ -10,6 +10,7 @@ pub mod eloquence;
 pub mod export_audio;
 pub mod info;
 pub mod library;
+pub mod lint;
 pub mod marks;
 pub mod migrate;
 pub mod ocr;

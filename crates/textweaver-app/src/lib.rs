@@ -169,10 +169,13 @@ mod goto;
 mod help;
 mod library;
 mod links;
+#[cfg(feature = "lint")]
+pub mod lint;
 pub mod list_model;
 mod lists;
 pub mod logfile;
 mod marks;
+mod math_display;
 mod math_explore;
 mod mdline;
 mod nav;
@@ -233,6 +236,8 @@ pub use help::{
 };
 pub use list_model::{ListKey, ListModel, PromptKey, PromptModel};
 pub use math_explore::MathMove;
+#[cfg(feature = "publish")]
+pub use notes::{NotesRecords, export_notes, notes_references};
 pub use notes::{UserHighlight, parse_tags};
 pub use opening::{open_failure_message, open_failure_reason};
 pub use playback::{Playback, load_options, narration_policy};

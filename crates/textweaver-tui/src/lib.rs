@@ -45,6 +45,7 @@
 //!
 //! Owner: Agent D.
 
+pub mod clipboard;
 pub mod layout;
 pub mod paths;
 pub mod physical;

@@ -570,6 +570,12 @@ pub const INFO: &[Info] = &[
             ("mathcat_simplespeak", "MathCAT SimpleSpeak"),
         ],
     ),
+    choice(
+        "reading.math_display",
+        "Math on screen",
+        "How math looks in the reading view: as its source, such as x^2, or as Unicode, such as x with a superscript 2. Speech and edit mode always use the source.",
+        &[("source", "source"), ("unicode", "Unicode")],
+    ),
     // [display]
     open_choice("display.theme", "Theme", "The colour theme.", &[]),
     toggle(

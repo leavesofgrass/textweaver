@@ -177,6 +177,24 @@ tw marks essay.md --json
 
 The JSON also has the document's state key and its history of jumps.
 
+## Export notes as references: tw marks --export
+
+Your notes and highlights can go into a reference manager such as Zotero, or into a BibTeX file, as Star's notes export did. Each note and each highlight becomes one record:
+
+- the title and author are the document's;
+- the passage you noted or highlighted is the record's abstract;
+- your note is the record's note, followed by "Cites doe2020." when the note has a citation key; a highlight's note is its color, for example "Highlighted, yellow.";
+- your tags are its keywords;
+- its date is the day you made the note.
+
+Choose the format after `--export`: `bibtex`, `biblatex`, `ris`, or `json` (CSL-JSON, which Zotero and Pandoc read):
+
+```bash
+tw marks essay.md --export ris --output essay-notes.ris
+```
+
+Without `--output`, the records are printed. Keys are made from the file name: `essay-note-1`, `essay-note-2`, `essay-highlight-1`. In CSL-JSON each record also says where it is, for example "34 percent".
+
 ## Export to an Obsidian vault
 
 `tw vault export` writes a document's notes and highlights into an Obsidian vault as Markdown notes. Name each document with `--document`:

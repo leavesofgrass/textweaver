@@ -10,7 +10,10 @@ authors.workspace = true
 publish.workspace = true
 
 [features]
-default = ["publish"]
+default = ["publish", "lint"]
+# Markdown lint in edit mode (Agent W4g, ADR-0032): textweaver's own
+# rules on the parser the app already uses; no dependencies.
+lint = []
 # In-reader export (HTML, PDF, DOCX, EPUB, BRF), the browser preview, and
 # citations (insert, look up, check, read aloud). On by default and in
 # releases. Off, the app links none of the conversion and citation stack

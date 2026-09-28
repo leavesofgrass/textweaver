@@ -396,6 +396,12 @@ actions! {
     SpellingSuggestions = "spelling_suggestions", Search,
         "List suggestions for the misspelled word at the cursor, or add it to your word list",
         gui ["g:Alt+J"], term ["g:Alt+J"], shared [];
+    NextLintProblem = "next_lint_problem", Search,
+        "In edit mode, move to the next Markdown lint problem, and say it",
+        gui ["g:Ctrl+F8"], term ["g:Ctrl+F8"], shared [];
+    PreviousLintProblem = "previous_lint_problem", Search,
+        "In edit mode, move to the previous Markdown lint problem, and say it",
+        gui ["g:Ctrl+Shift+F8"], term ["g:Ctrl+Shift+F8"], shared [];
 
     // Bookmarks
     AddBookmark = "add_bookmark", Bookmarks, "Add a bookmark at the cursor",

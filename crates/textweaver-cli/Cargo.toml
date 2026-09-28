@@ -23,7 +23,7 @@ speechd = ["textweaver-app/speechd", "textweaver-engines/speechd"]
 mathcat = ["textweaver-app/mathcat", "textweaver-engines/mathcat"]
 
 [dependencies]
-textweaver-app = { workspace = true, features = ["publish"] }
+textweaver-app = { workspace = true, features = ["publish", "lint"] }
 # The speech backend registry (`tw backends`, `speak`, `voices`, `export-audio`).
 textweaver-engines.workspace = true
 # In-process `tw open` and `tw serve`.
