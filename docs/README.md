@@ -73,6 +73,7 @@ The developer documents are in [dev/](dev/), the decision records in [adr/](adr/
 ### History
 
 - [Tasks and ownership](history/tasks.md): the briefs and status of every agent, wave by wave.
+- [Reservations for the Cloud Agent](history/reservations.md): work reserved for the Cloud Agent's pull requests, so the local waves never duplicate it.
 - [Implementation plan](history/plan.md): the original plan and the Phase 0 amendments.
 - [Audit, September 2026](history/audit-2026-09.md): findings, fixes, and benchmark numbers.
 - [Star parity reference](history/star-parity.md): what Star does, in detail.
@@ -109,6 +110,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0025: Define word offline, and the message catalog](adr/0025-lexicon-and-message-catalog.md): Open English WordNet and CMUdict in an fst and zstd file, and a Fluent-subset catalog with pseudo-locales.
 - [ADR-0026: OCR, and formats for students](adr/0026-ocr-and-student-formats.md): OCR of scanned pages (ocrs in process, Tesseract as the fallback), DAISY, PowerPoint, spreadsheets, archives, and web pages.
 - [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, and the accessibility checks.
+- [ADR-0028: The Xilem GUI after Jon's session](adr/0028-xilem-gui-after-the-session.md): two ways to announce, every list option in the tree, and where the GUI's memory goes (a draft until the session).
 
 ## Interactive pages
 

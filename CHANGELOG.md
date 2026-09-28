@@ -28,6 +28,13 @@ The default keys are now the quick navigation keys of NVDA's and JAWS's browse m
 
 See [docs/keyboard.md](docs/keyboard.md#what-changed).
 
+### W4s: the Xilem GUI before Jon's listening session
+
+- `textweaver-xilem --announce uia` (Windows) announces with UI Automation Notification events instead of the live region, for comparing the two in NVDA and JAWS. `announce = "uia"` in a `[gui]` table of `settings.toml` does the same. The default is still the live region.
+- List options and settings scrolled out of view are now in the accessibility tree, so a screen reader's object navigation reaches them: all 15 settings sections, and every option of a long list.
+- Lists and the settings form say "1 of 15" (they said "2 of" with no total), and rows scrolled into view are drawn instead of blank.
+- The UI Automation report checks both announcement paths and a long list scrolled to its end. See [ADR-0028](docs/adr/0028-xilem-gui-after-the-session.md), which also records where the GUI's memory goes (the graphics stack; the app itself is about 11 MB).
+
 ### Usability pass: the terminal reader and `tw`
 
 - A yes-or-no question ("Quit textweaver? y or n", "Delete this note? y or n", "Reload it? y or n", the Piper download and every other one) is now spoken even while textweaver is reading aloud. It went to the status line only, so a self-voicing user heard the reading go on and the next key press vanished into the question.
@@ -39,6 +46,17 @@ See [docs/keyboard.md](docs/keyboard.md#what-changed).
 - `textweaver --help` describes the reader and its first keys instead of "self-voicing ratatui frontend".
 - `tw text big.pdf | head` no longer panics when the pipe closes; `tw define` no longer prints its failure twice; `tw marks` takes `--home` like the other commands.
 - Docs: lists no longer close on `q` (a letter jumps to the next item), and Delete in the notes and highlights lists asks first. The findings and what is left are in [docs/research/usability-terminal.md](docs/research/usability-terminal.md).
+
+### Terminal polish (Wave 4, Agent W4h)
+
+- The title line says "Ready" until something is read, then "Stopped". A screen reader reading it at startup heard "Stopped".
+- Keys named in messages are spoken by name by textweaver's own voice ("Control S", "Alt period"), so they are heard at every punctuation level; the status line and the screen reader keep the written form ("Ctrl+S"). Every key named in a message comes from the keymap.
+- New: **Repeat message** (`'`, or `Alt+'` anywhere) says the last message again. **Say status** (`z`, or `Alt+End` anywhere) says the last message, then the mode, the reading state, the position, the rate, and the speech engine. Both are in the command palette and heard over the reading.
+- In a list, **F1** or **Alt+End** says the list's introduction again (its name, how many items, the keys it takes), then the item you are on.
+- **Escape** in edit mode with nothing being read says "Still editing. Ctrl+E finishes."
+- The command palette says "Command. Type part of a name; Tab completes, Up and Down list matches." when it opens.
+- Messages said while the speech engine starts ("Opened", a settings warning, the welcome) are said once it is ready, in order, instead of being lost.
+- `tw` with no arguments prints a two-line hint and exits 0; `tw --help` keeps the full list. `tw search --json` and `tw info` no longer panic when a pipe closes.
 
 ### Added
 

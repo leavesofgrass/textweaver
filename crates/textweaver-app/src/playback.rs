@@ -185,6 +185,25 @@ impl App {
         self.playback
     }
 
+    /// True once anything has been read aloud in this run (continuously or
+    /// in place).
+    pub fn has_read(&self) -> bool {
+        self.has_read
+    }
+
+    /// The reading state in one word, as the title line shows it:
+    /// "Reading", "Paused", "Ready" before anything has been read in this
+    /// run, and "Stopped" after. A screen reader reading the title line at
+    /// startup hears "Ready", not "Stopped" (usability pass, item 2).
+    pub fn reading_state(&self) -> &'static str {
+        match self.playback {
+            Playback::Reading => "Reading",
+            Playback::Paused { .. } => "Paused",
+            Playback::Idle if self.has_read => "Stopped",
+            Playback::Idle => "Ready",
+        }
+    }
+
     /// The speech backend's capabilities as last reported (they follow the
     /// selected voice).
     pub fn speech_capabilities(&self) -> Caps {
@@ -268,6 +287,7 @@ impl App {
         let generation = self.speech.read(utterances);
         self.track.follow(generation);
         self.playback = Playback::Reading;
+        self.has_read = true;
         self.reading = kind;
         self.planned_end = Some(range.end);
         true
@@ -289,6 +309,7 @@ impl App {
         let generation = self.speech.read(utterances);
         self.track.follow(generation);
         self.playback = Playback::Reading;
+        self.has_read = true;
         self.reading = ReadKind::InPlace;
         self.continue_from = None;
         self.planned_end = None;
@@ -324,6 +345,9 @@ impl App {
             return;
         };
         let start = text_util::word_start(&s.doc, pos);
+        // Reading was asked for, even in screen-reader mode or when the
+        // rest is blank: the title line says "Stopped" from now on.
+        self.has_read = true;
         if self.screen_say_all_wanted() {
             // Screen-reader mode: a sentence at a time on the status line.
             if !self.start_screen_say_all(start, std::time::Instant::now()) {
@@ -464,6 +488,11 @@ impl App {
         {
             s.selection = None;
             self.note("Search cleared.");
+        } else if self.mode == Mode::Edit {
+            // Escape is Stop everywhere; in an editor people expect it to
+            // leave, so say how to (usability pass, item 5).
+            let finish = self.key(textweaver_keymap::ActionId::ToggleEditMode);
+            self.tell(&format!("Still editing. {finish} finishes."));
         }
     }
 

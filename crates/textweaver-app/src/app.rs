@@ -287,6 +287,18 @@ pub struct App {
     pub(crate) return_mode: Mode,
     pub(crate) list: Option<ListKind>,
     pub(crate) playback: Playback,
+    /// Something was read aloud since the app started (the title line says
+    /// "Ready" until then, "Stopped" after).
+    pub(crate) has_read: bool,
+    /// The last message, as the status line shows it, with keys in both
+    /// forms (crate::status: Repeat Message and Say Status).
+    pub(crate) last_message: Option<String>,
+    /// How many messages have been said (to tell a list's introduction,
+    /// said as the list was shown, from an older message).
+    pub(crate) messages_said: u64,
+    /// The introduction of the list shown ("Notes, 12 notes. Enter goes
+    /// to a note..."), repeated on request (crate::status).
+    pub(crate) list_intro: Option<String>,
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
     pub(crate) track: SpeechTrack,
@@ -424,6 +436,10 @@ impl App {
             return_mode: Mode::Browse,
             list: None,
             playback: Playback::Idle,
+            has_read: false,
+            last_message: None,
+            messages_said: 0,
+            list_intro: None,
             pause_origin: None,
             reading: ReadKind::Continuous,
             track: SpeechTrack::default(),
@@ -641,19 +657,23 @@ impl App {
         if text.is_empty() {
             return;
         }
+        // Keys named in the message: written for the status line and the
+        // screen reader, spoken for textweaver's voice (crate::help).
+        self.remember_message(text, true);
+        let written = crate::help::written_text(text);
         let route = self.route(Channel::Message);
         if route.status {
-            let text = self.screen_text(text);
+            let text = self.screen_text(&written);
             let shown = match self.status.current.as_deref() {
                 Some(before) if !before.is_empty() => format!("{before} {text}"),
                 _ => text,
             };
             self.status.announce(&shown, priority);
         }
-        self.announcer.announce(text, priority);
+        self.announcer.announce(&written, priority);
         let reading = matches!(self.playback, Playback::Reading);
         if route.speak && (!reading || priority == Priority::Assertive) {
-            self.speech.say(text, SayMode::Queue);
+            self.voice_message(crate::help::spoken_text(text).into_owned(), SayMode::Queue);
         }
     }
 
@@ -666,15 +686,20 @@ impl App {
         if current < min || text.is_empty() {
             return;
         }
+        self.remember_message(text, false);
+        let written = crate::help::written_text(text);
         let route = self.route(Channel::Message);
         if route.status {
-            let shown = self.screen_text(text);
+            let shown = self.screen_text(&written);
             self.status.announce(&shown, priority);
         }
-        self.announcer.announce(text, priority);
+        self.announcer.announce(&written, priority);
         let reading = matches!(self.playback, Playback::Reading);
         if route.speak && (!reading || priority == Priority::Assertive) {
-            self.speech.say(text, SayMode::Announce);
+            self.voice_message(
+                crate::help::spoken_text(text).into_owned(),
+                SayMode::Announce,
+            );
         }
     }
 
@@ -704,9 +729,11 @@ impl App {
     /// Shows `text` on the status line only (used while reading, when the
     /// reading itself is the audible feedback).
     pub(crate) fn show(&mut self, text: &str) {
-        let shown = self.screen_text(text);
+        self.remember_message(text, false);
+        let written = crate::help::written_text(text);
+        let shown = self.screen_text(&written);
         self.status.announce(&shown, Priority::Polite);
-        self.announcer.announce(text, Priority::Polite);
+        self.announcer.announce(&written, Priority::Polite);
     }
 
     /// Opens a document and makes it current. The previous document's
@@ -991,12 +1018,15 @@ impl App {
 
     /// Runs a public entry point: the list and prompt models adopt the
     /// effects once, at the outermost call (entry points call each other).
+    /// Keys named in list items reach the frontend in their written form.
     pub(crate) fn entry(&mut self, f: impl FnOnce(&mut Self) -> Vec<Effect>) -> Vec<Effect> {
         self.depth += 1;
+        let said_before = self.messages_said;
         let effects = f(self);
         self.depth -= 1;
         if self.depth == 0 {
-            self.adopt(&effects);
+            self.adopt(&effects, self.messages_said != said_before);
+            return crate::list_model::without_key_marks(effects);
         }
         effects
     }
@@ -1168,7 +1198,17 @@ impl App {
         self.prompt_purpose = purpose;
         let label = crate::study::prompt_label(&self.study.catalog, purpose)
             .unwrap_or_else(|| purpose.label().to_owned());
-        self.tell(&label);
+        if purpose == PromptPurpose::CommandPalette
+            && self.settings.speech.verbosity >= Verbosity::Normal
+        {
+            // The drawn label stays one word; what is said teaches the
+            // palette (usability pass, item 4).
+            self.tell(&format!(
+                "{label}. Type part of a name; Tab completes, Up and Down list matches."
+            ));
+        } else {
+            self.tell(&label);
+        }
         vec![Effect::Prompt { label, purpose }]
     }
 
@@ -1363,7 +1403,7 @@ impl App {
     /// Runs an action (after its confirmation, if it needs one).
     fn run_action(&mut self, a: ActionId) -> Vec<Effect> {
         if self.session.is_none() && needs_document(a) {
-            let open = crate::help::spoken_key(&self.keymap, ActionId::Open);
+            let open = self.key(ActionId::Open);
             self.tell(&format!("No document is open. Press {open} to open one."));
             return vec![Effect::Redraw];
         }
@@ -1397,6 +1437,8 @@ impl App {
             A::ReadParagraph => self.read_current_unit(textweaver_core::Unit::Paragraph),
             A::ReadSelection => self.read_selection(),
             A::SayPosition => self.say_position(),
+            A::SayStatus => return self.say_status(),
+            A::RepeatMessage => return self.repeat_message(),
             A::WordCount => self.word_count(),
             A::LinkAddress => self.link_address(),
             A::ReplaySentence => self.replay_sentence(),
@@ -1657,9 +1699,11 @@ fn list_delete_question(kind: &ListKind) -> &'static str {
 /// Actions that do nothing useful without a document.
 fn needs_document(a: ActionId) -> bool {
     use textweaver_keymap::Category as C;
-    !matches!(a, ActionId::Stop | ActionId::DefineWord)
-        && matches!(
-            a.category(),
-            C::Reading | C::Navigation | C::SpeechCursor | C::Search | C::Bookmarks
-        )
+    !matches!(
+        a,
+        ActionId::Stop | ActionId::DefineWord | ActionId::SayStatus | ActionId::RepeatMessage
+    ) && matches!(
+        a.category(),
+        C::Reading | C::Navigation | C::SpeechCursor | C::Search | C::Bookmarks
+    )
 }

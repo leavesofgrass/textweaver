@@ -54,7 +54,7 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 
 **Git.** Work on your branch in your worktree. Commit in small steps with clear messages; end each commit message with the line `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Do not push, merge, rebase onto `main`, or tag; the orchestrator integrates.
 
-**Dates.** Never write a date or weekday from memory. Get today's date from the machine (`python -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"`) before it goes into any file or commit.
+**Dates.** Never write a date or weekday from memory. Get today's date from the machine before it goes into any file or commit: on Windows `py -3 -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"` (`python` there is the Microsoft Store stub), on Linux and macOS the same with `python3`.
 
 **Report format** (your final message):
 1. Summary (five lines).
@@ -812,6 +812,8 @@ Wave 4 starts only after this pass is done. It has four steps.
 
 ## Wave 4 (refined 2026-09-26; starts when Wave 3 is merged and Docker is restarted)
 
+**Reservations for the Cloud Agent:** see [reservations.md](reservations.md). Reserved items and files are not any local agent's, in Wave 4 or Wave 5.
+
 **ADOPTED PLAN, Sunday, September 27, 2026.** This supersedes everything else in this section, including the "Refined plan" and the "Earlier layout" below; those are kept as history. The plan, the ready-to-paste briefs and the orchestrator's runbook are in `docs/research/wave4-orchestration.md`, with these decisions from Jon.
 
 **Shape:** three sub-waves, with at most three agents building at once. Memory limits this, not disk: Docker's machine has about 31 GB.
@@ -832,6 +834,8 @@ Wave 4 starts only after this pass is done. It has four steps.
 4. **The wxDragon spike (`crates/textweaver-gui`) is removed** once Jon's session 2 on the Xilem GUI passes. The orchestrator does this as its own commit, with the file list shown first.
 5. **Unbound keys in the reader are silent,** as in NVDA's browse mode. W4h adds no tone.
 
+**W4s status (Sunday, September 27, 2026):** done on `wave4/s-gui-session-prep`, main merged in; awaiting integration and Jon's session 1. `--announce uia` (and `[gui] announce` in `settings.toml`, read from the store's extra tables; the store and schema entries are proposed) raises UI Automation Notification events from a server-side provider; every list option and setting scrolled out of view is now in the tree (AccessKit's filter kept 13 of 40 and 12 of 20 before), with "1 of 15" positions and rows drawn after scrolling; the UI Automation report passes with `-Announce live` and `-Announce uia` and checks a 194-option list scrolled to its end; memory attributed in ADR-0028 (draft): the app with every engine is about 11 MB, the window's 170 MB is the GPU stack, and Wave 3's 98 MB was read before the renderer finished starting.
+
 **W4a3: GUI edit mode (sub-wave 4c, P1; ADR 0033).**
 - **Edit mode in `DocumentView`,** using `Command::ReplaceRange`, and keeping structure while editing as the terminal reader does.
 - **Based on Parley's `examples/editor`,** on the vendored Parley 0.8.0. Don't upgrade it.
@@ -847,6 +851,8 @@ Wave 4 starts only after this pass is done. It has four steps.
 - **Uses the highlight and announcement designs** decided in Jon's sessions 1 and 2.
 - **Owns:** `textweaver-xilem`'s editing code. Don't touch `textweaver-app` beyond one-line hooks, `.github/`, or the workspace members.
 - **Report checklist,** at most five items: type and hear each character; select a word and hear it; undo; a citation while writing; spell check on a misspelled word.
+
+**Status (Agent W4h, terminal polish, Sunday, September 27, 2026):** all ten deliverables done on `wave4/h-terminal-polish`, one commit each, merged with `main` at cda644b; awaiting integration. "Ready" on the title line until the first reading; `tw search --json` and `tw info` through `print_all`; `tw` alone prints a two-line hint; keys in messages spoken by name ("Control S") and written on the status line ("Ctrl+S"), all from the keymap, with a test that scans the app's and the reader's strings; `say_status` (`z`, `Alt+End`) and `repeat_message` (`'`, `Alt+'`) in both frontends' keymaps; Escape in edit mode says how to finish; the palette's opening sentence; F1 or `Alt+End` in a list repeats its introduction; messages said before the engine is ready are said once it is, in order. Unbound keys stay silent, as decided for Wave 4. Native: 2,174 workspace tests pass; container, the four owned crates with all features: 473 pass. `cargo xtask listen` fails when `CARGO_TARGET_DIR` is set (it looks for `tw` under the worktree's `target`); run by hand, only eSpeak NG was available here.
 
 
 **Lessons from Waves 2 and 3.** Every Wave 4 agent follows these. They come from what went wrong or cost time.

@@ -8,6 +8,11 @@ use std::time::Duration;
 use clap::Parser;
 use textweaver_xilem::gui::{self, GuiOptions};
 use textweaver_xilem::setup::Options;
+use textweaver_xilem::widgets::AnnounceMode;
+
+fn parse_announce(s: &str) -> Result<AnnounceMode, String> {
+    AnnounceMode::parse(s).ok_or_else(|| format!("use {}", AnnounceMode::NAMES.join(" or ")))
+}
 
 /// Read documents aloud in a window.
 #[derive(Parser, Debug)]
@@ -63,6 +68,11 @@ struct Args {
     /// it, instead of the settings dialog (for comparison).
     #[arg(long)]
     settings_list: bool,
+    /// How announcements reach the screen reader: `live` (a live region;
+    /// the default) or `uia` (UI Automation Notification events, Windows
+    /// only). Overrides the `[gui] announce` setting.
+    #[arg(long, value_name = "HOW", value_parser = parse_announce)]
+    announce: Option<AnnounceMode>,
     /// Use this theme instead of the saved one.
     #[arg(long)]
     theme: Option<String>,
@@ -150,6 +160,7 @@ fn main() {
             edit_role: args.edit_role,
             app_list_announcements: args.app_list_announcements,
             settings_list: args.settings_list,
+            announce: args.announce,
         },
         theme: args.theme,
     };

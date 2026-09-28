@@ -90,6 +90,23 @@ pub fn run() -> anyhow::Result<()> {
     } else {
         args.engines
     };
+    // The Eloquence, SAPI 5, and DECtalk backends run their engine in a
+    // host program next to `tw`; without the hosts they report "not
+    // available". A host that cannot be built only costs its engine.
+    println!("Building the engine hosts.");
+    // Native hosts first, then the 32-bit ones, so a missing 32-bit
+    // target does not stop the 64-bit hosts being installed.
+    let (native, cross): (Vec<_>, Vec<_>) = crate::eci::all_hosts()
+        .into_iter()
+        .partition(|h| h.target.is_none());
+    for hosts in [native, cross] {
+        if hosts.is_empty() {
+            continue;
+        }
+        if let Err(e) = crate::eci::build_and_install(&hosts, &[]) {
+            println!("Some engine hosts were not built ({e:#}); their engines will be skipped.");
+        }
+    }
     println!("Building tw.");
     let status = Command::new(env!("CARGO"))
         .current_dir(&root)
@@ -98,8 +115,8 @@ pub fn run() -> anyhow::Result<()> {
     if !status.success() {
         bail!("building tw failed");
     }
-    let tw = root
-        .join("target")
+    // Where cargo put it: CARGO_TARGET_DIR when set, else target/.
+    let tw = crate::eci::target_dir(&root)
         .join("debug")
         .join(format!("tw{}", std::env::consts::EXE_SUFFIX));
     let mut written = 0;

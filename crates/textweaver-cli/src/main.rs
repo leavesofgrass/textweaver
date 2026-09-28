@@ -16,9 +16,17 @@ mod cmd;
 #[derive(Parser, Debug)]
 #[command(name = "tw", version, about, propagate_version = true)]
 struct Cli {
+    /// The command; with none, `tw` prints [`NO_COMMAND_HINT`].
     #[command(subcommand)]
-    command: Cmd,
+    command: Option<Cmd>,
 }
+
+/// What `tw` with no arguments prints, on standard output, before exiting
+/// with status 0: two lines instead of the whole command list as an error
+/// (usability pass, item 6). `tw --help` still lists every command.
+const NO_COMMAND_HINT: &str = "tw open FILE reads a document aloud in the terminal reader.
+tw --help lists every command.
+";
 
 #[derive(Subcommand, Debug)]
 enum Cmd {
@@ -69,7 +77,10 @@ enum Cmd {
 }
 
 fn main() -> Result<()> {
-    match Cli::parse().command {
+    let Some(command) = Cli::parse().command else {
+        return cmd::print_all(NO_COMMAND_HINT);
+    };
+    match command {
         Cmd::Open(a) => cmd::open::run(a),
         Cmd::Text(a) => cmd::text::run(a),
         Cmd::Info(a) => cmd::info::run(a),
@@ -91,5 +102,17 @@ fn main() -> Result<()> {
         Cmd::Stats(a) => cmd::stats::run(a),
         Cmd::Serve(a) => cmd::serve::run(a),
         Cmd::Ocr(a) => cmd::ocr::run(a),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser as _;
+
+    #[test]
+    fn no_arguments_is_not_an_error() {
+        let cli = super::Cli::try_parse_from(["tw"]).unwrap();
+        assert!(cli.command.is_none());
+        assert_eq!(super::NO_COMMAND_HINT.lines().count(), 2);
     }
 }

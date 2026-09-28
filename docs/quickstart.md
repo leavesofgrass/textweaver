@@ -109,7 +109,8 @@ Once the document is open:
 - **Tab** turns Speech Cursor mode on and off. In it, the Up and Down arrows read one line at a time.
 - **Shift+W** says where you are: the line, the percentage, and the heading.
 - **?** lists every key. **F1** opens the help.
-- **Ctrl+Q** quits. textweaver asks "Quit textweaver? y or n". Press **y** to quit, or **n** to stay.
+- **Ctrl+Q** quits. textweaver asks "Quit textweaver? y or n". Press **y** to quit, or **n** to stay. With the classic keys (`[keyboard] preset = "classic"`), **q** quits too, after the same question.
+- **'** says the last message again, and **z** says the status: the mode, "Ready" or "Reading", the position, the rate, and the voice.
 
 textweaver remembers your place. Open the same file again and it picks up where you left off.
 

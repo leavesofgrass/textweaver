@@ -55,8 +55,12 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             "count": hits.len(),
             "matches": hits.iter().map(|h| hit_json(&doc, *h)).collect::<Vec<_>>(),
         });
-        println!("{}", serde_json::to_string_pretty(&v)?);
-        return Ok(());
+        // A closed pipe (`tw search --json ... | head`) ends quietly.
+        return super::print_all(&format!(
+            "{}
+",
+            serde_json::to_string_pretty(&v)?
+        ));
     }
     let lines: String = hits
         .iter()

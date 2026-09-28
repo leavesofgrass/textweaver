@@ -365,6 +365,21 @@ impl SettingsGrid {
         }
     }
 
+    /// True when the next layout pass has text to build: a row scrolled
+    /// into view with no text layout yet, or the help of a newly selected
+    /// setting. Text is laid out in `layout`, not in `paint`, so without
+    /// one the rows are drawn blank and the help stays the old setting's.
+    fn needs_text(&self) -> bool {
+        let last = (self.top + self.visible_rows + 1).min(self.rows.len());
+        let rows = (self.top..last).any(|i| {
+            self.labels.get(i).is_some_and(Option::is_none)
+                || self.values.get(i).is_some_and(Option::is_none)
+        });
+        let help =
+            !self.rows.is_empty() && self.help.as_ref().is_none_or(|(r, _)| *r != self.selected);
+        rows || help
+    }
+
     fn first_letter(&self, c: char) -> Option<usize> {
         let c = c.to_lowercase().next()?;
         let n = self.rows.len();
@@ -553,6 +568,9 @@ impl Widget for SettingsGrid {
         if let Some(a) = action {
             ctx.submit_action::<FormAction>(a);
         }
+        if self.needs_text() {
+            ctx.request_layout();
+        }
         ctx.request_render();
         ctx.request_accessibility_update();
         ctx.set_handled();
@@ -579,6 +597,9 @@ impl Widget for SettingsGrid {
                     {
                         ctx.submit_action::<FormAction>(a);
                     }
+                    if self.needs_text() {
+                        ctx.request_layout();
+                    }
                     ctx.request_render();
                     ctx.request_accessibility_update();
                 }
@@ -594,6 +615,9 @@ impl Widget for SettingsGrid {
                 let rows = (-y / ROW_H).round() as isize;
                 let max_top = self.rows.len().saturating_sub(self.visible_rows);
                 self.top = (self.top as isize + rows).clamp(0, max_top as isize) as usize;
+                if self.needs_text() {
+                    ctx.request_layout();
+                }
                 ctx.request_render();
                 ctx.request_accessibility_update();
                 ctx.set_handled();
@@ -654,6 +678,9 @@ impl Widget for SettingsGrid {
         };
         if let Some(a) = action {
             ctx.submit_action::<FormAction>(a);
+        }
+        if self.needs_text() {
+            ctx.request_layout();
         }
         ctx.request_render();
         ctx.request_accessibility_update();
@@ -886,6 +913,10 @@ impl Widget for SettingsGrid {
         );
         node.add_action(Action::Increment);
         node.add_action(Action::Decrement);
+        // As in the dialogs' lists: the form clips its painting, but it
+        // must not tell AccessKit it clips its rows, or the rows below the
+        // fold are left out of the tree until they scroll into view.
+        node.clear_clips_children();
         while self.node_ids.len() < self.rows.len() {
             self.node_ids.push(AccessCtx::next_node_id());
         }
@@ -943,14 +974,15 @@ impl Widget for SettingsGrid {
             }
             o.add_action(Action::Focus);
             o.add_action(Action::ScrollIntoView);
-            o.set_position_in_set(i + 1);
-            o.set_size_of_set(n);
+            // Zero-based in AccessKit; the size is set on the form.
+            o.set_position_in_set(i);
             o.set_selected(i == self.selected);
             let y = (i as f64 - self.top as f64) * ROW_H;
             o.set_bounds(masonry::accesskit::Rect::new(0.0, y, self.width, y + ROW_H));
             ctx.tree_update().nodes.push((self.node_ids[i], o));
         }
         node.set_children(self.node_ids[..n].to_vec());
+        node.set_size_of_set(n);
         if let Some(id) = self.node_ids.get(self.selected).filter(|_| n > 0) {
             node.set_active_descendant(*id);
         }

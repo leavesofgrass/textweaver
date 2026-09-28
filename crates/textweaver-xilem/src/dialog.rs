@@ -304,6 +304,9 @@ impl ChoiceList {
     /// Moves the selection (for the driver and tests).
     pub fn select(this: &mut WidgetMut<'_, Self>, i: usize) {
         this.widget.set_selected(i);
+        if this.widget.needs_text() {
+            this.ctx.request_layout();
+        }
         this.ctx.request_render();
     }
 
@@ -317,6 +320,16 @@ impl ChoiceList {
         } else if self.selected >= self.top + self.visible_rows {
             self.top = self.selected + 1 - self.visible_rows;
         }
+    }
+
+    /// True when a row in view has no text layout yet: the list scrolled,
+    /// and the next layout pass must build them, or the rows are drawn
+    /// blank (text layouts are built in `layout`, not in `paint`).
+    fn needs_text(&self) -> bool {
+        let last = (self.top + self.visible_rows + 1).min(self.items.len());
+        self.layouts
+            .get(self.top..last)
+            .is_some_and(|rows| rows.iter().any(Option::is_none))
     }
 
     fn first_letter(&self, c: char) -> Option<usize> {
@@ -410,6 +423,9 @@ impl Widget for ChoiceList {
         if let Some(i) = new {
             let moved = i != self.selected;
             self.set_selected(i);
+            if self.needs_text() {
+                ctx.request_layout();
+            }
             ctx.request_render();
             if moved && self.focus_actions {
                 ctx.submit_action::<DialogAction>(DialogAction::Focus(self.selected));
@@ -457,6 +473,9 @@ impl Widget for ChoiceList {
                 let rows = (-y / self.row_h).round() as isize;
                 let max_top = self.items.len().saturating_sub(self.visible_rows);
                 self.top = (self.top as isize + rows).clamp(0, max_top as isize) as usize;
+                if self.needs_text() {
+                    ctx.request_layout();
+                }
                 ctx.request_render();
                 ctx.set_handled();
             }
@@ -489,6 +508,9 @@ impl Widget for ChoiceList {
             return;
         }
         self.set_selected(row);
+        if self.needs_text() {
+            ctx.request_layout();
+        }
         ctx.request_render();
         if self.app_keys || self.focus_actions {
             ctx.submit_action::<DialogAction>(DialogAction::Focus(self.selected));
@@ -628,6 +650,12 @@ impl Widget for ChoiceList {
         node: &mut Node,
     ) {
         node.set_label(self.label.as_str());
+        // The list clips its painting, and Masonry tells AccessKit so, but
+        // then AccessKit's filter leaves out the options scrolled out of the
+        // box (all but the first one past each edge), and a screen reader's
+        // object navigation cannot reach them. Every option is a node with
+        // its scrolled bounds, so the list does not claim to clip them.
+        node.clear_clips_children();
         while self.option_ids.len() < self.items.len() {
             self.option_ids.push(AccessCtx::next_node_id());
         }
@@ -638,8 +666,10 @@ impl Widget for ChoiceList {
             o.set_selected(i == self.selected);
             o.add_action(Action::Focus);
             o.add_action(Action::Click);
-            o.set_position_in_set(i + 1);
-            o.set_size_of_set(n);
+            o.add_action(Action::ScrollIntoView);
+            // AccessKit's position is zero-based (the adapters add one), and
+            // the size belongs on the list, not on each option.
+            o.set_position_in_set(i);
             let y = (i as f64 - self.top as f64) * self.row_h;
             o.set_bounds(masonry::accesskit::Rect::new(
                 0.0,
@@ -650,6 +680,7 @@ impl Widget for ChoiceList {
             ctx.tree_update().nodes.push((self.option_ids[i], o));
         }
         node.set_children(self.option_ids[..n].to_vec());
+        node.set_size_of_set(n);
         if let Some(id) = self.option_ids.get(self.selected) {
             node.set_active_descendant(*id);
         }

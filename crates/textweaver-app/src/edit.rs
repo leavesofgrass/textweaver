@@ -51,7 +51,6 @@ use textweaver_text::{Document, History, NavOptions, navigate};
 use crate::align::Aligner;
 use crate::app::{App, ListKind, Mode, Session};
 use crate::command::{CaretMove, Effect, PromptPurpose};
-use crate::help::chords_text;
 use crate::notes::{UserHighlight, shift_marks};
 use crate::text_util;
 use textweaver_store::Note;
@@ -338,7 +337,8 @@ impl App {
             None
         };
         let Some(s) = self.session.as_mut() else {
-            self.tell("No document to edit. Press Control N for a new one.");
+            let new = self.key(ActionId::NewDocument);
+            self.tell(&format!("No document to edit. Press {new} for a new one."));
             return;
         };
         let recovered = source.is_some();
@@ -420,8 +420,8 @@ impl App {
         self.return_mode = Mode::Edit;
         self.scroll_to_cursor();
         if !recovered {
-            let save = chords_text(&self.keymap, ActionId::Save);
-            let finish = chords_text(&self.keymap, ActionId::ToggleEditMode);
+            let save = self.keys(ActionId::Save);
+            let finish = self.keys(ActionId::ToggleEditMode);
             let line = self
                 .session
                 .as_ref()
@@ -441,7 +441,8 @@ impl App {
             return self.leave_edit(None, None, AfterLeave::Finish);
         }
         if self.session.is_none() {
-            self.tell("No document to edit. Press Control N for a new one.");
+            let new = self.key(ActionId::NewDocument);
+            self.tell(&format!("No document to edit. Press {new} for a new one."));
         } else {
             self.enter_edit(None);
         }
@@ -765,7 +766,7 @@ impl App {
     /// documents). Stays in edit mode.
     pub(crate) fn save(&mut self, save_as: Option<PathBuf>) -> Vec<Effect> {
         if self.edit.is_none() {
-            let k = chords_text(&self.keymap, ActionId::ToggleEditMode);
+            let k = self.keys(ActionId::ToggleEditMode);
             self.tell(&format!(
                 "Nothing to save. Turn on edit mode with {k} to make changes."
             ));
@@ -920,7 +921,7 @@ impl App {
     }
 
     pub(crate) fn not_editing(&mut self, what: &str) -> Vec<Effect> {
-        let k = chords_text(&self.keymap, ActionId::ToggleEditMode);
+        let k = self.keys(ActionId::ToggleEditMode);
         self.tell(&format!("Turn on edit mode with {k} to {what}."));
         vec![Effect::Redraw]
     }

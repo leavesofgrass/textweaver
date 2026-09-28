@@ -9,13 +9,12 @@ use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph};
-use textweaver_app::a11y::{AccessMode, CursorPlacement};
+use textweaver_app::a11y::CursorPlacement;
 use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
-use textweaver_app::keymap::{ActionId, Key, KeyChord, Modifiers};
+use textweaver_app::keymap::{ActionId, Key, KeyChord, Layer, Modifiers};
 use textweaver_app::text_util::line_count;
 use textweaver_app::{
-    App, CaretMove, Command, Confirm, Effect, ListKey, Mode, Playback, PromptKey, chords_text,
-    extra_lookup,
+    App, CaretMove, Command, Confirm, Effect, ListKey, Mode, PromptKey, chords_text, extra_lookup,
 };
 
 use crate::layout::{self, Cells, Row};
@@ -455,6 +454,23 @@ impl Tui {
         let plain = !k
             .modifiers
             .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT);
+        // The Help and Say Status keys repeat the list's introduction; the
+        // Repeat Message key says the last message. Only chords and
+        // function keys: plain keys move, filter, and jump in the list, and
+        // F2 renames.
+        if (!plain || matches!(k.code, KeyCode::F(_))) && k.code != KeyCode::F(2) {
+            match chord(&k).and_then(|c| self.app.keymap().lookup(&c, Layer::Global)) {
+                Some(ActionId::Help | ActionId::SayStatus) => {
+                    self.dispatch(Command::ListKey(ListKey::Introduce));
+                    return;
+                }
+                Some(ActionId::RepeatMessage) => {
+                    self.dispatch(Command::Action(ActionId::RepeatMessage));
+                    return;
+                }
+                _ => {}
+            }
+        }
         let key = match k.code {
             KeyCode::Char(c) if plain && !c.is_control() => ListKey::Char(c),
             KeyCode::Up => ListKey::Up,
@@ -637,13 +653,7 @@ impl Tui {
     /// [`App::quiet_screen_active`], so a screen reader that reads the
     /// changing screen does not hear it tick over as textweaver reads.
     fn title_position(&mut self) -> Option<String> {
-        let s = self.app.session()?;
-        let now = format!(
-            "line {} of {}, {}%",
-            s.line() + 1,
-            line_count(&s.doc),
-            s.percent()
-        );
+        let now = self.app.title_position()?;
         if self.app.quiet_screen_active() {
             Some(self.frozen_position.get_or_insert(now).clone())
         } else {
@@ -656,30 +666,10 @@ impl Tui {
         let app = &self.app;
         let title = app.session().map_or("no document", |s| s.title.as_str());
         let left = format!(" textweaver: {title}");
-        let state = match app.playback() {
-            Playback::Reading => "Reading",
-            Playback::Paused { .. } => "Paused",
-            Playback::Idle => "Stopped",
-        };
         // Most important first; trailing parts are dropped when narrow.
-        let mut parts = Vec::new();
-        if app.mode() != Mode::Browse {
-            parts.push(app.mode().name().to_owned());
-        }
-        if app.is_dirty() {
-            parts.push("modified".to_owned());
-        }
-        parts.push(state.to_owned());
-        if let Some(p) = position {
-            parts.push(p.to_owned());
-        }
-        match app.access_mode() {
-            AccessMode::SelfVoicing => {}
-            AccessMode::Hybrid => parts.push("hybrid".to_owned()),
-            AccessMode::ScreenReader => parts.push("screen reader mode".to_owned()),
-        }
-        parts.push(format!("{} wpm", app.settings().speech.rate.wpm()));
-        parts.push(app.backend_name().to_owned());
+        // The app gives them ("Ready" until the first reading, then
+        // "Stopped"), so Say Status speaks the same parts.
+        let mut parts = app.title_parts(position);
         let width = usize::from(area.width);
         let lw = Span::raw(&left).width();
         let mut right = format!("{} ", parts.join(", "));

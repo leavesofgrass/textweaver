@@ -250,8 +250,7 @@ impl App {
 
     /// The answer to the first-run question.
     pub(crate) fn confirm_hybrid(&mut self, answer: Confirm) -> Vec<Effect> {
-        let key =
-            crate::help::chords_text(&self.keymap, textweaver_keymap::ActionId::CycleAccessMode);
+        let key = self.keys(textweaver_keymap::ActionId::CycleAccessMode);
         match answer {
             Confirm::Yes => {
                 self.pending_hybrid = None;

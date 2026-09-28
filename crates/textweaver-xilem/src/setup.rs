@@ -86,6 +86,40 @@ pub fn service_config(settings: &Settings) -> ServiceConfig {
     }
 }
 
+/// The settings table only the GUI reads, `[gui]`.
+pub const GUI_TABLE: &str = "gui";
+
+/// The `announce` key of the `[gui]` table: `"live"` or `"uia"`
+/// ([`AnnounceMode`](crate::widgets::AnnounceMode)). `None` when it is not
+/// set; an error message for the user when it is set to something else.
+///
+/// The store keeps tables it does not know in `Settings::extra`, and writes
+/// them back unchanged, so the GUI can read `[gui]` without a store type.
+/// Until the store and the app's settings schema list it (ADR-0028), it is
+/// set by editing `settings.toml` and is not in the settings dialog.
+pub fn announce_setting(
+    settings: &Settings,
+) -> Result<Option<crate::widgets::AnnounceMode>, String> {
+    let Some(value) = settings
+        .extra
+        .get(GUI_TABLE)
+        .and_then(|t| t.as_table())
+        .and_then(|t| t.get("announce"))
+    else {
+        return Ok(None);
+    };
+    value
+        .as_str()
+        .and_then(crate::widgets::AnnounceMode::parse)
+        .map(Some)
+        .ok_or_else(|| {
+            format!(
+                "gui.announce should be {}; using the live region",
+                crate::widgets::AnnounceMode::NAMES.join(" or ")
+            )
+        })
+}
+
 /// Milliseconds per word at `rate`, for the paced backend.
 fn ms_per_word(rate: Rate) -> u32 {
     let Rate::Wpm(wpm) = rate;
@@ -221,6 +255,29 @@ mod tests {
         assert_eq!(app.backend_name(), "silent");
         assert_eq!(app.paths(), Some(&Paths::under(&dir)));
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn announce_setting_reads_the_gui_table() {
+        use crate::widgets::AnnounceMode;
+        let read = |toml_text: &str| {
+            let table: toml::Table = toml_text.parse().expect("toml");
+            let (settings, _) = Settings::from_table(table);
+            announce_setting(&settings)
+        };
+        assert_eq!(read(""), Ok(None));
+        assert_eq!(read("[gui]\n"), Ok(None));
+        assert_eq!(
+            read("[gui]\nannounce = \"uia\"\n"),
+            Ok(Some(AnnounceMode::Uia))
+        );
+        assert_eq!(
+            read("[gui]\nannounce = \"Live\"\n"),
+            Ok(Some(AnnounceMode::Live))
+        );
+        let err = read("[gui]\nannounce = \"loud\"\n").unwrap_err();
+        assert!(err.contains("live or uia"), "{err}");
+        assert!(read("[gui]\nannounce = 3\n").is_err());
     }
 
     #[test]

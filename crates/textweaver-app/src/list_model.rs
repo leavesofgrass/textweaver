@@ -32,6 +32,8 @@
 //! [`Command::ListFocus`]: crate::Command::ListFocus
 //! [`Command::PromptKey`]: crate::Command::PromptKey
 
+use std::borrow::Cow;
+
 use textweaver_a11y::Priority;
 use textweaver_keymap::ActionId;
 
@@ -49,19 +51,36 @@ pub const LIST_PAGE: usize = 10;
 pub struct ListModel {
     /// Title.
     pub title: String,
-    /// Items, as shown and spoken.
+    /// Items, as shown (and spoken by a screen reader).
     pub items: Vec<String>,
     /// The focused item (0 in an empty list).
     pub selected: usize,
+    /// Items as textweaver's voice says them: keys named in an item
+    /// ("Open a document: Ctrl+O") keep both forms (crate::help), so the
+    /// voice says "Control O". Empty when no item names a key.
+    said: Vec<String>,
 }
 
 impl ListModel {
     /// A list focused on its first item.
     pub fn new(title: impl Into<String>, items: Vec<String>) -> Self {
+        let marked = items
+            .iter()
+            .any(|i| matches!(crate::help::written_text(i), Cow::Owned(_)));
+        let (items, said) = if marked {
+            let shown = items
+                .iter()
+                .map(|i| crate::help::written_text(i).into_owned())
+                .collect();
+            (shown, items)
+        } else {
+            (items, Vec::new())
+        };
         ListModel {
             title: title.into(),
             items,
             selected: 0,
+            said,
         }
     }
 
@@ -103,13 +122,32 @@ impl ListModel {
     /// The focused item as spoken: its text and where it is in the list
     /// ("Chapter two, 2 of 5").
     pub fn spoken_item(&self) -> Option<String> {
-        let item = self.current()?;
+        let item = self
+            .said
+            .get(self.selected)
+            .map(String::as_str)
+            .or_else(|| self.current())?;
         Some(format!(
             "{item}, {} of {}",
             self.selected + 1,
             self.items.len()
         ))
     }
+}
+
+/// Effects as a frontend gets them: keys named in list items in their
+/// written form only (crate::help). The list model keeps both.
+pub(crate) fn without_key_marks(mut effects: Vec<Effect>) -> Vec<Effect> {
+    for e in &mut effects {
+        if let Effect::ShowList { items, .. } = e {
+            for item in items.iter_mut() {
+                if let Cow::Owned(plain) = crate::help::written_text(item) {
+                    *item = plain;
+                }
+            }
+        }
+    }
+    effects
 }
 
 /// A key pressed in a list ([`Command::ListKey`]).
@@ -147,6 +185,10 @@ pub enum ListKey {
     Delete,
     /// F2: renames or edits the focused item.
     Rename,
+    /// Says the list's introduction again (its title, how many items it
+    /// has, and the keys it takes), then the focused item. The terminal
+    /// sends it for F1 and the Say Status key.
+    Introduce,
 }
 
 /// A key pressed in a prompt ([`Command::PromptKey`]).
@@ -367,7 +409,11 @@ impl App {
     /// after the list's introduction, without interrupting it (the first
     /// item was never heard unless the user pressed Up,
     /// docs/history/audit-2026-09.md, finding A4).
-    pub(crate) fn adopt(&mut self, effects: &[Effect]) {
+    ///
+    /// `fresh_message` says a message was said while the effects were
+    /// made: for a list shown, its introduction, kept for
+    /// [`ListKey::Introduce`].
+    pub(crate) fn adopt(&mut self, effects: &[Effect], fresh_message: bool) {
         for e in effects {
             match e {
                 Effect::Prompt { label, purpose } => {
@@ -385,6 +431,12 @@ impl App {
                         .as_ref()
                         .filter(|l| &l.title == title)
                         .map(|l| l.selected);
+                    let same_list = self.list_model.as_ref().is_some_and(|l| &l.title == title);
+                    if fresh_message {
+                        self.list_intro = self.last_message.clone();
+                    } else if !same_list {
+                        self.list_intro = None;
+                    }
                     let mut view = ListModel::new(title.clone(), items.clone());
                     if let Some(i) = keep.or(self.pending_list_focus.take()) {
                         view.selected = i.min(view.items.len().saturating_sub(1));
@@ -478,6 +530,7 @@ impl App {
                 return self.dispatch_inner(Command::Cancel);
             }
             ListKey::Delete => return self.list_item_command(Command::DeleteItem(n)),
+            ListKey::Introduce => return self.repeat_list_introduction(),
             ListKey::Rename => return self.list_item_command(Command::RenameItem(n)),
             ListKey::Up => -1,
             ListKey::Down => 1,
@@ -638,9 +691,10 @@ impl App {
                 Some(i) => (i as isize + delta).rem_euclid(n as isize) as usize,
             };
             mb.candidate = Some(i);
-            let (action, desc) = mb.candidates[i].clone();
+            let action = mb.candidates[i].0;
             mb.set_text(action.id());
-            self.announce(&desc, Priority::Assertive);
+            let said = self.palette_said(action);
+            self.announce(&said, Priority::Assertive);
             return;
         }
         let hist = self.answers.get(&purpose).cloned().unwrap_or_default();
@@ -697,12 +751,12 @@ impl App {
         let cands = self.palette_candidates(&typed);
         match cands.as_slice() {
             [] => self.announce("No matching commands.", Priority::Polite),
-            [(a, desc)] => {
+            [(a, _)] => {
                 if let Some(mb) = self.prompt_model.as_mut() {
                     mb.set_text(a.id());
                 }
-                let desc = desc.clone();
-                self.announce(&desc, Priority::Assertive);
+                let said = self.palette_said(*a);
+                self.announce(&said, Priority::Assertive);
             }
             many => {
                 let ids: Vec<&str> = many.iter().map(|(a, _)| a.id()).collect();
