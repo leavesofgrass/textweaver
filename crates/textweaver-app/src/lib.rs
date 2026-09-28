@@ -219,6 +219,7 @@ pub mod voice_manager;
 pub mod wake;
 pub mod window;
 mod writer;
+mod words;
 mod writes;
 
 pub use access::{
@@ -246,6 +247,7 @@ pub use playback::{Playback, load_options, narration_policy};
 pub use restart::SpeechStarter;
 pub use settings_schema::{Setting, SettingKind, SettingsSchema};
 pub use templates::local_date;
+pub use words::system_language;
 pub use textweaver_engines::{
     CODE_FACTORY_LIBRARY, apple_preference, dectalk_config, eci_config, piper_config, sapi_config,
     service_config, speech_registry, speech_registry_for,

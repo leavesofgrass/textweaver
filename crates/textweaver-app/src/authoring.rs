@@ -90,7 +90,11 @@ fn base64(bytes: &[u8]) -> String {
 /// What a line of a code block is called on caret and Speech Cursor moves
 /// (Agent W4g): "code, Python" on the block's first line (`line`) when the
 /// block names its language, "code" otherwise.
-pub(crate) fn code_structure(block: &textweaver_text::Marker, line: CharRange) -> String {
+pub(crate) fn code_structure(
+    c: &textweaver_lexicon::i18n::Catalog,
+    block: &textweaver_text::Marker,
+    line: CharRange,
+) -> String {
     match block
         .label
         .as_deref()
@@ -98,9 +102,12 @@ pub(crate) fn code_structure(block: &textweaver_text::Marker, line: CharRange) -
         .filter(|l| !l.is_empty())
     {
         Some(lang) if line.contains(block.range.start) || line.start == block.range.start => {
-            format!("code, {}", language_name(lang))
+            c.fmt(
+                "nav-line-code-language",
+                &textweaver_lexicon::args!["language" => language_name(lang)],
+            )
         }
-        _ => "code".to_owned(),
+        _ => crate::words::kind_name(c, textweaver_core::MarkerKind::Code),
     }
 }
 

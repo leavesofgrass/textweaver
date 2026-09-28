@@ -12,6 +12,7 @@ use textweaver_speech::{SayMode, SpeechService};
 use textweaver_store::{
     Bookmark, DocKey, DocState, Note, Paths, Settings, SettingsStore, StateStore, StoreError,
 };
+use textweaver_lexicon::args;
 use textweaver_text::{Document, History, SearchQuery};
 
 use crate::command::{Command, Effect, NoteCommand, PromptPurpose};
@@ -566,14 +567,16 @@ impl App {
                 }
                 Confirm::No => {
                     self.pending_list_delete = None;
-                    self.tell("Kept.");
+                    let msg = self.msg("common-kept");
+                    self.tell(&msg);
                     match kind {
                         ListKind::Highlights => self.list_highlights(),
                         _ => self.notes_command(NoteCommand::List),
                     }
                 }
                 Confirm::Repeat => {
-                    self.ask(list_delete_question(&kind));
+                    let question = self.msg(list_delete_question(&kind));
+                    self.ask(&question);
                     vec![Effect::Redraw]
                 }
             };
@@ -588,11 +591,15 @@ impl App {
             }
             Confirm::No => {
                 self.pending_confirm = None;
-                self.tell("Cancelled.");
+                let msg = self.msg("common-cancelled");
+                self.tell(&msg);
                 vec![Effect::Redraw]
             }
             Confirm::Repeat => {
-                self.ask(a.confirmation_prompt().unwrap_or("Press y or n."));
+                let question = self
+                    .confirmation_question(a)
+                    .unwrap_or_else(|| self.msg("common-press-y-or-n"));
+                self.ask(&question);
                 vec![Effect::Redraw]
             }
         }
@@ -883,14 +890,19 @@ impl App {
         // A large Markdown file's source structure, for a quick Ctrl+E.
         self.prefetch_structure();
         let msg = match resumed {
-            Some((p, r)) if r.synced => {
-                format!("Opened {title}. Resumed at {p} percent, from another device.")
-            }
-            Some((p, r)) if r.unresolved => format!(
-                "Opened {title}. Resumed at {p} percent. Another device is at a different place; kept this device's."
+            Some((p, r)) if r.synced => self.msg_args(
+                "open-resumed-synced",
+                &args!["title" => title.as_str(), "pct" => p],
             ),
-            Some((p, _)) => format!("Opened {title}. Resumed at {p} percent."),
-            None => format!("Opened {title}."),
+            Some((p, r)) if r.unresolved => self.msg_args(
+                "open-resumed-conflict",
+                &args!["title" => title.as_str(), "pct" => p],
+            ),
+            Some((p, _)) => self.msg_args(
+                "open-resumed",
+                &args!["title" => title.as_str(), "pct" => p],
+            ),
+            None => self.msg_args("open-opened", &args!["title" => title.as_str()]),
         };
         let msg = match relocated {
             Some(moved) => format!("{msg} {moved}"),
@@ -1030,7 +1042,8 @@ impl App {
             if app.settings_dirty
                 && let Err(e) = app.save_settings()
             {
-                app.error(&format!("Could not save settings: {e}"));
+                let msg = app.msg_args("settings-save-failed", &args!["error" => e.to_string()]);
+                app.error(&msg);
             }
             app.send_snapshot_ops();
             effects
@@ -1141,9 +1154,15 @@ impl App {
                     match list {
                         Some(ListKind::Settings) => self.close_settings_screen(),
                         Some(ListKind::Recovery) => self.postpone_recovery(),
-                        Some(ListKind::SaveChoice(_)) => self.tell("Still editing."),
+                        Some(ListKind::SaveChoice(_)) => {
+                            let msg = self.msg("edit-still-editing");
+                            self.tell(&msg);
+                        }
                         Some(ListKind::Authoring(l)) => self.cancel_authoring_list(l),
-                        _ => self.note("Cancelled."),
+                        _ => {
+                            let msg = self.msg("common-cancelled");
+                            self.note(&msg);
+                        }
                     }
                 }
                 vec![Effect::Redraw]
@@ -1217,16 +1236,14 @@ impl App {
         }
         self.mode = Mode::for_prompt(purpose);
         self.prompt_purpose = purpose;
-        let label = crate::study::prompt_label(&self.study.catalog, purpose)
-            .unwrap_or_else(|| purpose.label().to_owned());
+        let label = crate::study::prompt_label(&self.study.catalog, purpose);
         if purpose == PromptPurpose::CommandPalette
             && self.settings.speech.verbosity >= Verbosity::Normal
         {
             // The drawn label stays one word; what is said teaches the
             // palette (usability pass, item 4).
-            self.tell(&format!(
-                "{label}. Type part of a name; Tab completes, Up and Down list matches."
-            ));
+            let msg = self.msg_args("prompt-command-palette-intro", &args!["label" => label.as_str()]);
+            self.tell(&msg);
         } else {
             self.tell(&label);
         }
@@ -1250,14 +1267,16 @@ impl App {
             Mode::Find => self.run_find(&text),
             Mode::GoTo => match crate::goto::parse_go_to(&text) {
                 Some(t) => self.go_to(t),
-                None => self.error(&format!(
-                    "Not a go-to target: {text}. Type a line number, a percentage such as 50%, start, or end."
-                )),
+                None => {
+                    let msg = self.msg_args("goto-not-a-target", &args!["text" => text.as_str()]);
+                    self.error(&msg);
+                }
             },
             Mode::Open => {
                 let trimmed = text.trim().trim_matches('"');
                 if trimmed.is_empty() {
-                    self.note("Cancelled.");
+                    let msg = self.msg("common-cancelled");
+                    self.note(&msg);
                 } else {
                     return self.dispatch(Command::Open(trimmed.into()));
                 }
@@ -1349,7 +1368,8 @@ impl App {
             }
             Some(ListKind::Study(l)) => self.delete_study_item(l, n),
             _ => {
-                self.tell("Nothing to delete in this list.");
+                let msg = self.msg("study-nothing-to-delete");
+                self.tell(&msg);
                 vec![Effect::Redraw]
             }
         }
@@ -1375,7 +1395,8 @@ impl App {
         match self.list.clone() {
             Some(ListKind::Voices) => self.toggle_favourite_voice(n),
             _ => {
-                self.tell("Nothing to mark in this list.");
+                let msg = self.msg("list-nothing-to-mark");
+                self.tell(&msg);
                 vec![Effect::Redraw]
             }
         }
@@ -1397,25 +1418,27 @@ impl App {
                 self.list = None;
                 self.pending_item = Some(n);
                 let mut e = self.prompt(PromptPurpose::EditNote);
-                self.tell(&format!("Editing note: {text}"));
+                let msg = self.msg_args("notes-editing", &args!["text" => text]);
+                self.tell(&msg);
                 e.push(Effect::Redraw);
                 e
             }
             Some(ListKind::Study(l)) => self.rename_study_item(l, n),
             _ => {
-                self.tell("Nothing to rename in this list.");
+                let msg = self.msg("study-nothing-to-rename");
+                self.tell(&msg);
                 vec![Effect::Redraw]
             }
         }
     }
 
     pub(crate) fn action(&mut self, a: ActionId) -> Vec<Effect> {
-        if let Some(question) = a.confirmation_prompt() {
+        if let Some(question) = self.confirmation_question(a) {
             if self.mode.is_prompt() {
                 self.leave_prompt();
             }
             self.pending_confirm = Some(a);
-            self.ask(question);
+            self.ask(&question);
             return vec![Effect::Redraw];
         }
         self.run_action(a)
@@ -1425,7 +1448,8 @@ impl App {
     fn run_action(&mut self, a: ActionId) -> Vec<Effect> {
         if self.session.is_none() && needs_document(a) {
             let open = self.key(ActionId::Open);
-            self.tell(&format!("No document is open. Press {open} to open one."));
+            let msg = self.msg_args("app-no-document-open", &args!["key" => open]);
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         if self.mode.is_prompt() {
@@ -1713,11 +1737,12 @@ impl App {
     }
 }
 
-/// The question asked before deleting from the notes or highlights list.
+/// The question asked before deleting from the notes or highlights list:
+/// its message id.
 fn list_delete_question(kind: &ListKind) -> &'static str {
     match kind {
-        ListKind::Highlights => "Remove this highlight? y or n",
-        _ => "Delete this note? y or n",
+        ListKind::Highlights => "notes-remove-highlight-question",
+        _ => "notes-delete-note-question",
     }
 }
 

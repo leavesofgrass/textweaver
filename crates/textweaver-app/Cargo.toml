@@ -66,7 +66,7 @@ log.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 # GetLocalTime, for the local date in new documents from templates.
-windows = { workspace = true, features = ["Win32_Foundation", "Win32_System_SystemInformation"] }
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_Globalization", "Win32_System_SystemInformation"] }
 
 # Export, preview, and citations are tested with the feature on.
 [[test]]
