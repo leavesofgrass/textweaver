@@ -63,6 +63,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `reading.ocr`: default on (`true`). Recognize scanned pages. Read the text of scanned PDFs and pictures by recognizing it (OCR). On or off: `true` or `false`.
 - `reading.ocr_lang`: default the document's (`""`). Scanned text language. The language of scanned text, as Tesseract codes such as fra or deu+eng; empty means the document's own language, else English. Choices: `""` (the document's), `"eng"` (English), `"fra"` (French), `"deu"` (German), `"spa"` (Spanish). Other values may be written too.
 - `reading.ocr_engine`: default automatic (`"auto"`). OCR engine. Which engine recognizes scanned pages: ocrs for English and Tesseract for other languages, or one of them always. Choices: `"auto"` (automatic), `"ocrs"`, `"tesseract"` (Tesseract), `"paddle"` (PaddleOCR (experimental)).
+- `reading.math_engine`: default textweaver (`"builtin"`). Math speech. Which engine reads math aloud: textweaver's own, or MathCAT in ClearSpeak or SimpleSpeak, in the document's language. MathCAT needs a build that includes it; otherwise textweaver's own is used. Choices: `"builtin"` (textweaver), `"mathcat"` (MathCAT ClearSpeak), `"mathcat_simplespeak"` (MathCAT SimpleSpeak).
 
 ## Display: the `[display]` section
 
