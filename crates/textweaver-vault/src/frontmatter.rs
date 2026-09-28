@@ -110,7 +110,7 @@ impl FrontMatter {
     pub fn render(&self) -> String {
         let mut out = String::from("---\n");
         for (key, value) in &self.entries {
-            out.push_str(key);
+            out.push_str(&key_text(key));
             out.push(':');
             match value {
                 FmValue::Text(s) => {
@@ -369,6 +369,17 @@ fn scalar(s: &str, in_flow: bool) -> String {
     }
 }
 
+/// A key as written: in double quotes when it starts with a character
+/// YAML gives a meaning (a key read from `"#tag": x` would otherwise be
+/// written as a comment, and `"- a": x` as a list item). Reading strips
+/// the quotes again.
+fn key_text(key: &str) -> String {
+    match key.chars().next() {
+        Some(first) if !"-?:,[]{}#&*!|>'\"%@`".contains(first) => key.to_owned(),
+        _ => format!("\"{key}\""),
+    }
+}
+
 fn needs_quotes(s: &str, in_flow: bool) -> bool {
     let Some(first) = s.chars().next() else {
         return true;
@@ -471,6 +482,20 @@ mod tests {
     fn scalar_tags_split_on_commas_and_spaces() {
         let fm = parse("tags: exam, reading  chapter-1\n");
         assert_eq!(fm.list("tags"), vec!["exam", "reading", "chapter-1"]);
+    }
+
+    #[test]
+    fn keys_that_start_with_yaml_syntax_round_trip() {
+        // Found by the vault_import fuzz target: a key read from a quoted
+        // `"#tag"` was written bare and read back as a comment.
+        let fm = parse("\"#tag\": one\n'- item': two\nplain: three\n");
+        let text = fm.render();
+        assert!(text.contains("\"#tag\": one\n"), "{text}");
+        assert!(text.contains("\"- item\": two\n"), "{text}");
+        assert!(text.contains("\nplain: three\n"), "{text}");
+        let (again, rest) = split(&text);
+        assert_eq!(again, fm);
+        assert_eq!(rest, "");
     }
 
     #[test]
