@@ -49,7 +49,7 @@ imaging = "0.0.1"
 imaging_wgpu = { version = "0.0.1", features = ["wgpu-28"] }
 imaging_skia = { version = "0.0.1", features = ["gpu"] }
 imaging_vello = "0.0.1"
-imaging_vello_hybrid = "0.0.1"
+imaging_vello_hybrid = "0.0.2"
 imaging_vello_cpu = "0.0.1"
 vello = { version = "0.8.0", default-features = false, features = ["wgpu"] }
 wgpu = "28.0.0"
