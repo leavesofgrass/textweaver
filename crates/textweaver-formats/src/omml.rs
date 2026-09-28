@@ -62,7 +62,7 @@ fn toggle(pr: Option<Node<'_, '_>>, name: &str) -> bool {
 
 /// Appends `piece`, with a space when it would otherwise run into the
 /// command `out` ends with (`\alpha` then `x`).
-fn push(out: &mut String, piece: &str) {
+pub(crate) fn push(out: &mut String, piece: &str) {
     if piece.starts_with(|c: char| c.is_ascii_alphabetic()) && ends_with_command(out) {
         out.push(' ');
     }
@@ -124,7 +124,7 @@ const LIMIT_COMMANDS: &[&str] = &[
 
 /// A function name as LaTeX: `\sin` for a name LaTeX knows,
 /// `\operatorname{name}` for another word, anything else as it is.
-fn function_name(name: &str) -> String {
+pub(crate) fn function_name(name: &str) -> String {
     let name = name.trim();
     if name.len() > 1 && name.chars().all(|c| c.is_ascii_alphabetic()) {
         if FUNCTIONS.contains(&name) {
@@ -139,7 +139,7 @@ fn function_name(name: &str) -> String {
 
 /// Whether `s` is a command that takes limits, maybe with a limit already
 /// attached (`\sum_{i=1}` before its upper limit).
-fn takes_limits(s: &str) -> bool {
+pub(crate) fn takes_limits(s: &str) -> bool {
     let Some(rest) = s.strip_prefix('\\') else {
         return false;
     };
@@ -149,7 +149,7 @@ fn takes_limits(s: &str) -> bool {
 }
 
 /// The LaTeX command for an n-ary operator character.
-fn nary_command(chr: &str) -> String {
+pub(crate) fn nary_command(chr: &str) -> String {
     let cmd = match chr {
         "∑" => "\\sum",
         "∏" => "\\prod",
@@ -176,7 +176,7 @@ fn nary_command(chr: &str) -> String {
 
 /// A delimiter after `\left` or `\right`; `None` for one LaTeX cannot
 /// stretch.
-fn delimiter(chr: &str) -> Option<&'static str> {
+pub(crate) fn delimiter(chr: &str) -> Option<&'static str> {
     Some(match chr {
         "" => ".",
         "(" => "(",
@@ -199,7 +199,7 @@ fn delimiter(chr: &str) -> Option<&'static str> {
 }
 
 /// The accent command for an accent character (combining or spacing).
-fn accent_command(chr: &str) -> Option<&'static str> {
+pub(crate) fn accent_command(chr: &str) -> Option<&'static str> {
     Some(match chr {
         "\u{0302}" | "^" | "ˆ" => "\\hat",
         "\u{0304}" | "\u{0305}" | "¯" | "‾" => "\\bar",
@@ -368,7 +368,7 @@ fn symbol(c: char) -> Option<&'static str> {
 
 /// Math run text as LaTeX. `aligned`: `&` is an alignment point (in an
 /// equation array) rather than an ampersand.
-fn math_text(text: &str, aligned: bool) -> String {
+pub(crate) fn math_text(text: &str, aligned: bool) -> String {
     let mut out = String::new();
     for c in text.chars() {
         match c {
@@ -391,7 +391,7 @@ fn math_text(text: &str, aligned: bool) -> String {
 }
 
 /// Text for `\text{…}`, with text-mode specials escaped.
-fn text_mode(text: &str) -> String {
+pub(crate) fn text_mode(text: &str) -> String {
     let mut out = String::new();
     for c in text.chars() {
         match c {
@@ -411,7 +411,7 @@ fn text_mode(text: &str) -> String {
 
 /// Whether `s` is one token a script can attach to without braces: one
 /// character or one command.
-fn is_atom(s: &str) -> bool {
+pub(crate) fn is_atom(s: &str) -> bool {
     let mut chars = s.chars();
     match (chars.next(), chars.next()) {
         (Some(_), None) => true,

@@ -27,6 +27,8 @@ ignore = [
     { id = "RUSTSEC-2024-0436", reason = "paste is unmaintained: a proc-macro used at build time by biblatex and hayagriva; no code of it runs in textweaver." },
     { id = "RUSTSEC-2026-0206", reason = "rustybuzz is unmaintained: text shaping in krilla 0.8, the PDF writer. Move when krilla does." },
     { id = "RUSTSEC-2026-0192", reason = "ttf-parser is unmaintained: through rustybuzz in krilla 0.8, as above." },
+    # Approved by the owner on Sunday, September 27, 2026 (W4c1).
+    { id = "RUSTSEC-2024-0320", reason = "yaml-rust 0.4 is unmaintained: MathCAT 0.7.6-rc.3 reads its embedded speech rules with it, behind the optional mathcat feature. The rules are MathCAT's own, never user files. Remove when MathCAT moves to a maintained YAML parser." },
 ]
 
 [licenses]
@@ -51,6 +53,14 @@ allow = [
     "Zlib",
 ]
 confidence-threshold = 0.9
+
+# One licence for one crate, approved by the owner on Sunday, September 27,
+# 2026 (W4c1): libbz2-rs-sys, pure-Rust bzip2 that MathCAT's zip feature
+# needs. The bzip2-1.0.6 licence is permissive (BSD style). Mirrored in
+# about.toml.
+[[licenses.exceptions]]
+crate = "libbz2-rs-sys"
+allow = ["bzip2-1.0.6"]
 
 [licenses.private]
 # textweaver's own crates (publish = false) are covered by LICENSE.

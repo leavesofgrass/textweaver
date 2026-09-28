@@ -17,6 +17,12 @@
 //!   shallower depth starts. So "next chapter" follows the book's own table
 //!   of contents, and nested entries nest. Without a table of contents,
 //!   every spine item is a level-1 section labeled by its first heading.
+//! - MathML is read as math (EPUB 3; ADR-0029): each `<math>` becomes LaTeX
+//!   with its delimiters under a `Math` marker, as in the Markdown and DOCX
+//!   loaders, so speech reads it as math (through MathCAT when the math
+//!   engine setting asks) and writers typeset it. Without any math, its
+//!   `alttext` is read. An `epub:switch` reads its MathML case, else its
+//!   default.
 //! - A book whose content documents are encrypted (DRM) is refused with a
 //!   clear error rather than read as noise; obfuscated fonts are fine.
 
@@ -375,7 +381,7 @@ fn convert(
                 }
             }
         };
-        crate::html::walk_into(&mut b, &text, options, &mut scratch, Some(&mut hook));
+        crate::html::walk_epub_into(&mut b, &text, options, &mut scratch, Some(&mut hook));
         for w in crate::warnings(&scratch) {
             crate::add_warning(meta, &w);
         }

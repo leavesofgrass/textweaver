@@ -160,7 +160,7 @@ impl App {
         if !self.access_mode.uses_screen_reader() || !norm.math || !has_math {
             return text.to_owned();
         }
-        let config = textweaver_engines::service_config(&self.settings).normalize;
+        let config = self.speech_normalization();
         Math::from_config(&config).apply(text).0
     }
 

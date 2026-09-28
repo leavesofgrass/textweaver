@@ -151,6 +151,57 @@ Where these settings apply, in this version:
 - The terminal reader (`textweaver` and `tw open`), `tw speak`, and `tw export-audio` follow all three settings.
 - The experimental window app (`textweaver-gui`) follows `math`, but not yet `math_verbosity` or `asciimath_delimiter`. It always uses normal verbosity and no ASCIIMath.
 
+## Hear math with MathCAT
+
+MathCAT is the math engine NVDA and JAWS use. textweaver can speak math with it instead of its own wording, in two styles:
+
+- ClearSpeak: the style of the ClearSpeak rules used in classrooms and on tests. For example, `\sqrt{x}` is "the square root of x".
+- SimpleSpeak: shorter, with "end fraction" and "end root" where the structure needs them.
+
+MathCAT is in builds made with the `mathcat` feature (see "Build it" below). To use it, add this to `settings.toml`, in the `[reading]` section:
+
+```toml
+[reading]
+math_engine = "mathcat"
+```
+
+The values:
+
+- `"builtin"`: textweaver's own math speech. This is the default.
+- `"mathcat"`: MathCAT in ClearSpeak.
+- `"mathcat_simplespeak"`: MathCAT in SimpleSpeak.
+
+You can also change it in the settings screen (`Shift+F10`): "Math speech". The change applies from the next sentence read.
+
+What stays the same:
+
+- `math_verbosity` still sets how much is said. Low is MathCAT's "Terse", normal is "Medium", and high is "Verbose", which adds end words such as "end fraction".
+- Math is found the same way, so prices are still not math.
+- A formula MathCAT cannot read is read by textweaver's own speech.
+
+What is different:
+
+- MathCAT reads the whole formula at once, so the highlight covers the whole formula while you hear any part of it.
+- MathCAT speaks in the document's language when it has rules for it: German, Greek, English, Spanish, Finnish, French, Hungarian, Indonesian, Norwegian (Bokmål), Polish, Russian, Swedish, Vietnamese, and Chinese. Any other language is read in English. textweaver's own math speech is English only.
+- MathCAT spells the letter "a" as "eigh", so the speech engine says the letter and not the word "a".
+- With `punctuation = "all"`, MathCAT's pauses are left out, so you do not hear "comma" inside a formula.
+
+Some examples in ClearSpeak at normal verbosity, with the words exactly as MathCAT sends them to the speech engine:
+
+- `\frac{a}{b}` is "eigh over b".
+- `x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}` is "x is equal to; the fraction with numerator; negative b plus or minus; the square root of b squared minus 4 eigh c; and denominator 2 eigh".
+- `\sin^2 x + \cos^2 x = 1` is "sine squared of x, plus cosine squared of x; is equal to 1".
+
+To compare the two engines, open `fixtures/c1/quadratic.md` and read it with each setting.
+
+### Build it
+
+```powershell
+cargo build --release -p textweaver-tui --features mathcat
+```
+
+This builds the reader with MathCAT. MathCAT's rules are built into the program, so nothing is downloaded when it runs. Without the feature, `math_engine = "mathcat"` changes nothing and math is read by textweaver's own speech.
+
 ## Check what textweaver will say
 
 ```powershell
@@ -263,7 +314,7 @@ These outputs typeset math from Markdown too, and never print the dollar signs:
 - EPUB: MathML, as in HTML, with the LaTeX as its text alternative.
 - Word (`docx`): Word's own equations (Office Math), with real fractions, scripts, roots, and matrices. Word draws them and can read them aloud.
 - PDF: the formula in print form, such as πr² or (a + b)/2, tagged as a formula whose text alternative is how it is read aloud, for example "pi r squared".
-- Braille (`brf`): the formula as it is read aloud, for example "pi r squared", which grade 1 braille spells out. Nemeth and UEB technical notation are not written yet.
+- Braille (`brf`): the formula as it is read aloud, for example "pi r squared", which grade 1 braille spells out. Nemeth and UEB technical notation are not written yet. They are planned through MathCAT, once a MathCAT release fixes a known problem in its braille (see ADR-0029).
 
 Plain text (`txt`) keeps the LaTeX source with its dollar signs, as textweaver reads it.
 
@@ -277,7 +328,9 @@ Open the HTML page in a web browser. How you hear the math depends on your scree
 
 A screen reader that does not understand MathML may read the text alternative instead, which is your LaTeX source.
 
-textweaver itself does not yet read MathML well. If you open a converted HTML page in textweaver, a formula is read as its symbols run together, followed by its LaTeX, such as "x2x^2" for `x^2`. Open the Markdown source in textweaver instead.
+In EPUB books, textweaver reads MathML as math. Each formula becomes LaTeX in the text, as in a Markdown file, and is spoken as math, by MathCAT if you chose it. The book's own TeX is used when the formula carries it. A formula with no math inside, only a text alternative (`alttext`), is read as that text.
+
+In a web page, textweaver does not yet read MathML well. If you open a converted HTML page in textweaver, a formula is read as its symbols run together, followed by its LaTeX, such as "x2x^2" for `x^2`. Open the Markdown source in textweaver instead.
 
 ## Write math in Markdown
 
@@ -388,5 +441,6 @@ You can also explore a formula in your screen reader: convert the document to HT
 - [Audio export](audio-export.md): `tw export-audio`, which reads a document with math into an audio file.
 - [Using textweaver with a screen reader](screen-readers.md): JAWS, NVDA, VoiceOver, and Orca.
 - [ADR-0018: Math](adr/0018-math.md): the design decision behind math reading and MathML.
+- [ADR-0029: MathCAT speech](adr/0029-mathcat-speech.md): MathCAT as a second math engine, and what waits for braille.
 - [ADR-0005: Narration and the OffsetMap](adr/0005-narration-and-offset-map.md): how spoken words are mapped back to your text for highlighting.
 - [Documentation index](README.md)

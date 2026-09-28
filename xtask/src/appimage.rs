@@ -45,7 +45,9 @@ const GITHUB: (&str, &str) = ("leavesofgrass", "textweaver");
 const IMAGE: &str = "textweaver-appimage:latest";
 /// Named volumes shared with the dev container (compose project
 /// `textweaver`): build output and the cargo registry.
-const TARGET_VOLUME: &str = "textweaver_textweaver-target";
+/// The build volume: one `tw-target-*` volume, which
+/// `tools/build-hygiene.ps1 -RemoveVolume` can list and clear.
+const TARGET_VOLUME: &str = "tw-target-appimage";
 const REGISTRY_VOLUME: &str = "textweaver_textweaver-cargo-registry";
 
 /// Parsed arguments.
@@ -243,7 +245,10 @@ fn in_docker(args: &Args) -> anyhow::Result<()> {
         println!("note: --out is ignored with --docker; the packages go to target/dist");
     }
     let mut cmd = Command::new(&docker);
-    cmd.args(["run", "--rm"])
+    // The same limits as compose.yaml, so a release build cannot take all
+    // of Docker's memory while agents build.
+    cmd.args(["run", "--rm", "--memory", "6g", "--cpus", "4"])
+        .args(["-e", "CARGO_BUILD_JOBS=4"])
         .arg("-v")
         .arg(format!("{}:/work", root.display()))
         .args(["-v", &format!("{TARGET_VOLUME}:/target")])
