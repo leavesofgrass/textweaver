@@ -371,12 +371,18 @@ fn scalar(s: &str, in_flow: bool) -> String {
 
 /// A key as written: in double quotes when it starts with a character
 /// YAML gives a meaning (a key read from `"#tag": x` would otherwise be
-/// written as a comment, and `"- a": x` as a list item). Reading strips
-/// the quotes again.
+/// written as a comment, and `"- a": x` as a list item), or starts or ends
+/// with whitespace, which reading trims. Reading strips the quotes again.
 fn key_text(key: &str) -> String {
-    match key.chars().next() {
-        Some(first) if !"-?:,[]{}#&*!|>'\"%@`".contains(first) => key.to_owned(),
-        _ => format!("\"{key}\""),
+    let plain = key.trim() == key
+        && key
+            .chars()
+            .next()
+            .is_some_and(|first| !"-?:,[]{}#&*!|>'\"%@`".contains(first));
+    if plain {
+        key.to_owned()
+    } else {
+        format!("\"{key}\"")
     }
 }
 
@@ -488,11 +494,12 @@ mod tests {
     fn keys_that_start_with_yaml_syntax_round_trip() {
         // Found by the vault_import fuzz target: a key read from a quoted
         // `"#tag"` was written bare and read back as a comment.
-        let fm = parse("\"#tag\": one\n'- item': two\nplain: three\n");
+        let fm = parse("\"#tag\": one\n'- item': two\nplain: three\n\"\u{b}tab\": four\n");
         let text = fm.render();
         assert!(text.contains("\"#tag\": one\n"), "{text}");
         assert!(text.contains("\"- item\": two\n"), "{text}");
         assert!(text.contains("\nplain: three\n"), "{text}");
+        assert!(text.contains("\"\u{b}tab\": four\n"), "{text}");
         let (again, rest) = split(&text);
         assert_eq!(again, fm);
         assert_eq!(rest, "");
