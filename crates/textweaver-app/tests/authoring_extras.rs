@@ -104,3 +104,24 @@ fn lint_says_so_for_plain_text() {
         "Lint checks Markdown, and this document is not Markdown."
     );
 }
+
+/// Entering a code block names its language; its other lines say "code".
+#[test]
+fn a_code_block_names_its_language_on_its_first_line() {
+    let mut r = Rig::new();
+    r.open(
+        "code.md",
+        "Before the code.\n\n```py\nprint(1)\nprint(2)\n```\n\nAfter.\n",
+    );
+    r.act(ActionId::DocumentStart);
+    r.act(ActionId::CaretNextLine);
+    let mut said = r.status();
+    // A blank line may come first.
+    if !said.starts_with("code") {
+        r.act(ActionId::CaretNextLine);
+        said = r.status();
+    }
+    assert_eq!(said, "code, Python, print(1)");
+    r.act(ActionId::CaretNextLine);
+    assert_eq!(r.status(), "code, print(2)");
+}

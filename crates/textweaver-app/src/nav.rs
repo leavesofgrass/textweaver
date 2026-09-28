@@ -407,11 +407,12 @@ impl App {
                 "list item".to_owned()
             });
         }
-        if index
+        if let Some(m) = index
             .enclosing(MarkerKind::Code, at)
-            .is_some_and(|m| m.level == 1)
+            .filter(|m| m.level == 1)
         {
-            return Some("code".to_owned());
+            // W4g: the block's first line names its language.
+            return Some(crate::authoring::code_structure(m, r));
         }
         if index.enclosing(MarkerKind::Quote, at).is_some() {
             return Some("block quote".to_owned());

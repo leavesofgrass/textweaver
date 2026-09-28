@@ -87,6 +87,72 @@ fn base64(bytes: &[u8]) -> String {
     out
 }
 
+/// What a line of a code block is called on caret and Speech Cursor moves
+/// (Agent W4g): "code, Python" on the block's first line (`line`) when the
+/// block names its language, "code" otherwise.
+pub(crate) fn code_structure(block: &textweaver_text::Marker, line: CharRange) -> String {
+    match block
+        .label
+        .as_deref()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+    {
+        Some(lang) if line.contains(block.range.start) || line.start == block.range.start => {
+            format!("code, {}", language_name(lang))
+        }
+        _ => "code".to_owned(),
+    }
+}
+
+/// A code block language as it is said: the usual name for common fence
+/// words (`py` is "Python", `sh` is "shell"), otherwise the word itself.
+pub(crate) fn language_name(fence: &str) -> String {
+    let name = match fence.to_ascii_lowercase().as_str() {
+        "py" | "python" | "python3" => "Python",
+        "rs" | "rust" => "Rust",
+        "js" | "javascript" | "mjs" => "JavaScript",
+        "ts" | "typescript" => "TypeScript",
+        "jsx" => "JavaScript with JSX",
+        "tsx" => "TypeScript with JSX",
+        "sh" | "bash" | "shell" | "zsh" | "console" => "shell",
+        "ps1" | "powershell" | "pwsh" => "PowerShell",
+        "bat" | "cmd" | "batch" => "Windows batch",
+        "c" => "C",
+        "h" => "C header",
+        "cpp" | "c++" | "cc" | "cxx" | "hpp" => "C plus plus",
+        "cs" | "csharp" | "c#" => "C sharp",
+        "java" => "Java",
+        "kt" | "kotlin" => "Kotlin",
+        "go" | "golang" => "Go",
+        "rb" | "ruby" => "Ruby",
+        "php" => "PHP",
+        "swift" => "Swift",
+        "r" => "R",
+        "sql" => "SQL",
+        "html" | "htm" => "HTML",
+        "css" => "CSS",
+        "json" => "JSON",
+        "yaml" | "yml" => "YAML",
+        "toml" => "TOML",
+        "xml" => "XML",
+        "md" | "markdown" => "Markdown",
+        "tex" | "latex" => "LaTeX",
+        "diff" | "patch" => "diff",
+        "text" | "txt" | "plain" | "plaintext" => "plain text",
+        "hs" | "haskell" => "Haskell",
+        "lua" => "Lua",
+        "pl" | "perl" => "Perl",
+        "scala" => "Scala",
+        "m" | "matlab" => "MATLAB",
+        "jl" | "julia" => "Julia",
+        "dockerfile" | "docker" => "Dockerfile",
+        "makefile" | "make" => "Makefile",
+        "ini" => "INI",
+        _ => return fence.to_owned(),
+    };
+    name.to_owned()
+}
+
 /// The typing echo settings in cycle order: characters and words,
 /// characters, words, none.
 const ECHO_CYCLE: [(bool, bool, &str); 4] = [
