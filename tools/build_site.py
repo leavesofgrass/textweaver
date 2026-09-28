@@ -3,6 +3,8 @@
 
 Steps:
 
+0. Check that every Markdown file under docs/ is in zensical.toml's
+   navigation, so the site never silently leaves a guide out.
 1. Run `zensical build --clean --strict` with zensical.toml, with
    tools/zensical_ext on PYTHONPATH so the textweaver_site_links extension
    loads. The site goes to target/docs-site/.
@@ -155,6 +157,35 @@ def place_interactive_pages() -> None:
         print(f"Placed site/{page.name}, {n} links pointed at the built site.")
 
 
+def nav_entries(items) -> list[str]:
+    out: list[str] = []
+    for item in items:
+        if isinstance(item, str):
+            out.append(item)
+        elif isinstance(item, dict):
+            for value in item.values():
+                out.extend(nav_entries([value]) if isinstance(value, str) else nav_entries(value))
+        elif isinstance(item, list):
+            out.extend(nav_entries(item))
+    return out
+
+
+def check_nav() -> list[str]:
+    """Every Markdown file under docs/ must be in zensical.toml's navigation."""
+    import tomllib
+
+    with open(ROOT / "zensical.toml", "rb") as f:
+        nav = set(nav_entries(tomllib.load(f)["project"].get("nav", [])))
+    # docs/site/README.md is published as site/about.html.
+    nav.add("site/README.md")
+    missing = sorted(
+        p.relative_to(DOCS).as_posix()
+        for p in DOCS.rglob("*.md")
+        if p.relative_to(DOCS).as_posix() not in nav
+    )
+    return missing
+
+
 def fix_not_found_page() -> None:
     """The theme's 404 page has a skip link to #__skip but no such id."""
     page = OUT / "404.html"
@@ -176,6 +207,14 @@ def main(argv=None) -> int:
     # Keep this script's lines in order with Zensical's own output.
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(line_buffering=True)
+
+    missing = check_nav()
+    if missing:
+        print("These guides are not in zensical.toml's navigation; add them where "
+              "docs/README.md lists them:", file=sys.stderr)
+        for name in missing:
+            print(f"  - {name}", file=sys.stderr)
+        return 1
 
     code = run_zensical()
     if code != 0:
