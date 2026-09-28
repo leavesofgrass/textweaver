@@ -102,7 +102,8 @@ pub(crate) enum AuthoringList {
         choices: Vec<SpellChoice>,
     },
     /// Fixes for the grammar problem at `range` (Agent W4g), then "Leave
-    /// it as it is".
+    /// it as it is". Only built with the `grammar` feature, off by default.
+    #[cfg_attr(not(feature = "grammar"), allow(dead_code))]
     Grammar {
         words: String,
         range: textweaver_core::CharRange,
