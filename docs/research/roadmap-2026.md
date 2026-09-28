@@ -295,7 +295,9 @@ At most eight, each a decision only he can make, each with a recommended default
 ## The owner's changes to the feature-complete list (Monday, September 28, 2026)
 
 - **Streaming dictation is on the list** ("if at all possible"). It gets its own agent in Wave 6, W6d, whether or not document translation runs, building on the in-process Whisper dictation. Wave 5's recalibration adds a short research step on live, low-latency speech-to-text in pure Rust, so W6d starts from findings. It is no longer among the items not required.
-- The rest of the list is under review by the owner before the Wave 5 briefs are written.
+- **The APA and AMA publishing templates** (with real Word footnotes, W6g) and **speed presets** (skim, normal, study, slow, cycled by one key, W6x) are on the list.
+- PDF links, annotations and forms with rotated scans (W6c5), and the Braille extras (W6b), stay planned for Wave 6 but are not required for the final alpha.
+- The rest of the list stands as proposed until the owner changes it.
 
 ## See also
 
