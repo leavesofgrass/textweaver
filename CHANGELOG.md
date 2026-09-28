@@ -76,7 +76,8 @@ See [docs/keyboard.md](docs/keyboard.md#what-changed).
 - Copying works in terminals without OSC 52 (the old Windows console, macOS Terminal, GNOME Terminal and other VTE terminals): textweaver puts the text on the system clipboard itself and says so the first time. Over SSH and in tmux it still uses the terminal.
 - Notes and highlights export as BibTeX, BibLaTeX, RIS, or CSL-JSON records for Zotero or Pandoc: `tw marks FILE --export ris --output notes.ris`.
 - Moving the caret onto a code block's first line names its language: "code, Python".
-- Held for the owner's decision on RUSTSEC-2025-0141 (bincode unmaintained): grammar checking with Harper (Ctrl+F7, branch `wave4/g-grammar-harper`) and code highlighting with syntect (branch `wave4/g-highlight-syntect`).
+- Code blocks are highlighted in the terminal view (syntect with bat's syntaxes), with colors from the theme and never color alone.
+- Grammar checking with Harper, offline, in edit mode (Ctrl+F7 and Ctrl+Shift+F7; Alt+J lists fixes). It adds about 10 MB, so it is built only with `--features grammar` and is not in the packages.
 
 ### Languages
 
