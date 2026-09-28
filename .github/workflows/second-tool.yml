@@ -1,0 +1,248 @@
+# Second-tool checks of the writers' output (ADR-0017): the EPUB files
+# checked by epubcheck and the PDF files by veraPDF with the PDF/UA-1
+# profile, the tools libraries and publishers use, on top of textweaver's
+# own checks.
+#
+# `tw` converts fixtures/sample.md and the other Markdown fixtures below,
+# one file at a time, to EPUB and to PDF. A conversion that fails, an
+# epubcheck error or fatal, and a veraPDF failed rule each fail the job,
+# unless tools/second_tool_allowlist.txt names it with a reason. Warnings
+# are reported, not failed. The reports are uploaded as the artifact
+# "second-tool-reports".
+#
+# Both tools come from Maven Central at pinned versions, and their files
+# are checked against the SHA-256 values below; no third-party action and
+# no secret is used. The runner's own Java and Maven run them.
+
+name: Second-tool checks
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Tuesdays at 05:23 UTC.
+    - cron: '23 5 * * 2'
+  pull_request:
+    paths:
+      - .github/workflows/second-tool.yml
+      - tools/second_tool_allowlist.txt
+      - crates/textweaver-writers/**
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  EPUBCHECK_VERSION: 5.4.0
+  EPUBCHECK_SHA256: 261cd3ba8f841b4a64ebb6ea9c8aa30ed2801e8764a1000123c66bf38bfe4066
+  VERAPDF_VERSION: 1.30.2
+  VERAPDF_SHA256: dfe2bab9f6a5cd5b603093c3ede98aa285348dbaa4d2e5e4b4c1428973f6dab0
+
+jobs:
+  check:
+    name: epubcheck and veraPDF
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: System libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: second-tool
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build tw
+        run: cargo build --locked --release -p textweaver-cli --bin tw
+
+      # Each fixture on its own, so one failure names its file and the
+      # others still convert.
+      - name: Convert the fixtures to EPUB and PDF
+        run: |
+          set -u
+          out="$RUNNER_TEMP/out"
+          mkdir -p "$out/epub" "$out/pdf" "$out/reports" "$out/src"
+          : > "$out/reports/conversion.txt"
+          for src in fixtures/sample.md fixtures/m/sample.md fixtures/o/math-sample.md \
+                     fixtures/l/flavors/gfm.md fixtures/l/flavors/obsidian.md fixtures/l/flavors/pandoc.md; do
+            name="$(echo "$src" | sed 's|^fixtures/||; s|/|-|g; s|\.md$||')"
+            # --out is a folder; the file keeps its name, so each fixture
+            # is copied under a name of its own first.
+            cp "$src" "$out/src/$name.md"
+            for to in epub pdf; do
+              if target/release/tw convert "$out/src/$name.md" --to "$to" --out "$out/$to" --no-pandoc \
+                   > "$out/reports/convert-$name-$to.log" 2>&1; then
+                echo "Pass: convert $name to $to" >> "$out/reports/conversion.txt"
+              else
+                echo "Fail: convert $name to $to, exit status $?" >> "$out/reports/conversion.txt"
+              fi
+            done
+          done
+          cat "$out/reports/conversion.txt"
+
+      - name: epubcheck
+        run: |
+          set -u
+          dir="$RUNNER_TEMP/epubcheck"
+          mkdir -p "$dir"
+          cat > "$dir/pom.xml" <<EOF
+          <project xmlns="http://maven.apache.org/POM/4.0.0">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>local</groupId>
+            <artifactId>epubcheck-runner</artifactId>
+            <version>1</version>
+            <dependencies>
+              <dependency>
+                <groupId>org.w3c</groupId>
+                <artifactId>epubcheck</artifactId>
+                <version>$EPUBCHECK_VERSION</version>
+              </dependency>
+            </dependencies>
+          </project>
+          EOF
+          # -C: fail on a checksum mismatch for every file Maven fetches.
+          (cd "$dir" && mvn -B -q -C \
+            org.apache.maven.plugins:maven-dependency-plugin:3.8.1:copy-dependencies \
+            -DoutputDirectory=lib)
+          echo "$EPUBCHECK_SHA256  $dir/lib/epubcheck-$EPUBCHECK_VERSION.jar" | sha256sum -c -
+          out="$RUNNER_TEMP/out"
+          for f in "$out"/epub/*.epub; do
+            [ -e "$f" ] || continue
+            name="$(basename "$f" .epub)"
+            java -cp "$dir/lib/*" com.adobe.epubcheck.tool.Checker "$f" \
+              > "$out/reports/epubcheck-$name.txt" 2>&1 || true
+          done
+
+      - name: veraPDF
+        run: |
+          set -u
+          dir="$RUNNER_TEMP/verapdf"
+          mkdir -p "$dir"
+          zip="$dir/installer.zip"
+          curl -sSfL -A "textweaver-research (+https://github.com/leavesofgrass/textweaver)" -o "$zip" \
+            "https://repo1.maven.org/maven2/org/verapdf/apps/installer/$VERAPDF_VERSION/installer-$VERAPDF_VERSION-installer.zip"
+          echo "$VERAPDF_SHA256  $zip" | sha256sum -c -
+          unzip -q "$zip" -d "$dir"
+          cat > "$dir/auto-install.xml" <<EOF
+          <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+          <AutomatedInstallation langpack="eng">
+            <com.izforge.izpack.panels.htmlhello.HTMLHelloPanel id="welcome"/>
+            <com.izforge.izpack.panels.target.TargetPanel id="install_dir">
+              <installpath>$dir/app</installpath>
+            </com.izforge.izpack.panels.target.TargetPanel>
+            <com.izforge.izpack.panels.packs.PacksPanel id="sdk_pack_select">
+              <pack index="0" name="veraPDF GUI" selected="true"/>
+              <pack index="1" name="veraPDF Batch files" selected="true"/>
+              <pack index="2" name="veraPDF Validation model" selected="false"/>
+              <pack index="3" name="veraPDF Documentation" selected="false"/>
+              <pack index="4" name="veraPDF Sample Plugins" selected="false"/>
+            </com.izforge.izpack.panels.packs.PacksPanel>
+            <com.izforge.izpack.panels.install.InstallPanel id="install"/>
+            <com.izforge.izpack.panels.finish.FinishPanel id="finish"/>
+          </AutomatedInstallation>
+          EOF
+          java -jar "$dir/verapdf-greenfield-$VERAPDF_VERSION/verapdf-izpack-installer-$VERAPDF_VERSION.jar" \
+            "$dir/auto-install.xml"
+          out="$RUNNER_TEMP/out"
+          for f in "$out"/pdf/*.pdf; do
+            [ -e "$f" ] || continue
+            name="$(basename "$f" .pdf)"
+            "$dir/app/verapdf" -f ua1 --format mrr "$f" \
+              > "$out/reports/verapdf-$name.xml" 2> "$out/reports/verapdf-$name.log" || true
+          done
+
+      # One line per finding, meaning first: "Fail" or "Allowed" or
+      # "Warning", the tool, the rule, the fixture, then the message.
+      - name: Results
+        run: |
+          python3 - <<'EOF'
+          import glob, os, re, sys
+          import xml.etree.ElementTree as ET
+
+          out = os.path.join(os.environ["RUNNER_TEMP"], "out", "reports")
+          allowed = []
+          with open("tools/second_tool_allowlist.txt", encoding="utf-8") as f:
+              for line in f:
+                  line = line.strip()
+                  if line and not line.startswith("#"):
+                      tool, rule, fixture = line.split()[:3]
+                      allowed.append((tool, rule, fixture))
+
+          def is_allowed(tool, rule, fixture):
+              return any(t == tool and r == rule and x in ("*", fixture) for t, r, x in allowed)
+
+          lines, failures = [], 0
+          def finding(kind, tool, rule, fixture, message):
+              global failures
+              if kind == "Fail" and is_allowed(tool, rule, fixture):
+                  kind = "Allowed"
+              if kind == "Fail":
+                  failures += 1
+              lines.append(f"{kind}: {tool} {rule}, {fixture}: {message}")
+
+          for line in open(os.path.join(out, "conversion.txt"), encoding="utf-8"):
+              if line.startswith("Fail: convert "):
+                  fixture = line.split()[2]
+                  finding("Fail", "tw", "convert", fixture, line.strip())
+
+          pattern = re.compile(r"^(FATAL|ERROR|WARNING)\(([A-Z]+-\d+[a-z]?)\): (.*)$")
+          for path in sorted(glob.glob(os.path.join(out, "epubcheck-*.txt"))):
+              fixture = os.path.basename(path)[len("epubcheck-"):-len(".txt")]
+              text = open(path, encoding="utf-8", errors="replace").read()
+              # A report without epubcheck's closing count never passes.
+              if "Messages:" not in text and "No errors or warnings" not in text:
+                  finding("Fail", "epubcheck", "report", fixture, "epubcheck did not finish")
+              for line in text.splitlines():
+                  m = pattern.match(line.strip())
+                  if not m:
+                      continue
+                  severity, rule, message = m.groups()
+                  message = message.split("): ", 1)[-1][:200]
+                  kind = "Warning" if severity == "WARNING" else "Fail"
+                  finding(kind, "epubcheck", rule, fixture, message)
+
+          for path in sorted(glob.glob(os.path.join(out, "verapdf-*.xml"))):
+              fixture = os.path.basename(path)[len("verapdf-"):-len(".xml")]
+              try:
+                  root = ET.parse(path).getroot()
+              except ET.ParseError as e:
+                  finding("Fail", "veraPDF", "report", fixture, f"the report could not be read: {e}")
+                  continue
+              for rule in root.iter("rule"):
+                  if rule.get("status") != "failed":
+                      continue
+                  rid = f"{rule.get('clause')}-{rule.get('testNumber')}"
+                  desc = (rule.findtext("description") or "").strip()[:200]
+                  finding("Fail", "veraPDF", rid, fixture, desc)
+              if not any(True for _ in root.iter("validationReport")):
+                  finding("Fail", "veraPDF", "report", fixture, "no validation report")
+
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          text = "\n".join(lines) or "No findings."
+          verdict = f"Fail: {failures} findings" if failures else "Pass: no findings outside the allowlist"
+          print(text)
+          print(verdict)
+          if summary:
+              with open(summary, "a", encoding="utf-8") as s:
+                  s.write("## Second-tool checks\n\n")
+                  for line in lines or ["No findings."]:
+                      s.write(f"- {line}\n")
+                  s.write(f"\n{verdict}\n")
+          sys.exit(1 if failures else 0)
+          EOF
+
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: second-tool-reports
+          path: |
+            ${{ runner.temp }}/out/reports
+            ${{ runner.temp }}/out/epub
+            ${{ runner.temp }}/out/pdf
+          if-no-files-found: ignore

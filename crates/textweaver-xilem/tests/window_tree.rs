@@ -412,6 +412,12 @@ fn outline_notes_access_modes_tables_and_links_work_from_the_document() {
     use masonry::core::keyboard::Modifiers;
     use textweaver_app::keymap::ActionId;
     use textweaver_app::{Command, Effect, ListKey};
+    // The GUI keymap on macOS turns every Ctrl chord into Cmd.
+    let ctrl = if cfg!(target_os = "macos") {
+        Modifiers::META
+    } else {
+        Modifiers::CONTROL
+    };
     let dir = tempfile::tempdir().unwrap();
     let mut app = app_with_sample(dir.path());
     let mut h = harness(&app);
@@ -449,7 +455,7 @@ fn outline_notes_access_modes_tables_and_links_work_from_the_document() {
 
     // t and Shift+T: tables (browse keys); Ctrl+T in any layer.
     let _ = app.dispatch(Command::SetCursor(textweaver_app::core::CharPos::ZERO));
-    let a = press(&mut h, &app, Key::Character("t".into()), Modifiers::CONTROL);
+    let a = press(&mut h, &app, Key::Character("t".into()), ctrl);
     assert_eq!(a, Some(ActionId::NextTable));
     let _ = app.dispatch(Command::Action(ActionId::NextTable));
     assert!(at_cursor(&app, 4) == "Name", "{:?}", at_cursor(&app, 20));
@@ -458,7 +464,7 @@ fn outline_notes_access_modes_tables_and_links_work_from_the_document() {
         &mut h,
         &app,
         Key::Named(NamedKey::ArrowDown),
-        Modifiers::CONTROL | Modifiers::ALT,
+        ctrl | Modifiers::ALT,
     );
     assert_eq!(a, Some(ActionId::TableNextRow));
     let _ = app.dispatch(Command::Action(ActionId::TableNextRow));
@@ -494,7 +500,7 @@ fn outline_notes_access_modes_tables_and_links_work_from_the_document() {
         &mut h,
         &app,
         Key::Character("N".into()),
-        Modifiers::CONTROL | Modifiers::SHIFT,
+        ctrl | Modifiers::SHIFT,
     );
     assert_eq!(a, Some(ActionId::ListNotes));
     let effects = app.dispatch(Command::Action(ActionId::ListNotes));

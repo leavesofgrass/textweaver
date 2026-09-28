@@ -1,0 +1,17 @@
+{"jsonrpc":"2.0","id":1,"method":"initialize"}
+{"jsonrpc":"2.0","id":2,"method":"status"}
+{"jsonrpc":"2.0","id":3,"method":"navigate","params":{"action":"next_sentence"}}
+{"jsonrpc":"2.0","id":4,"method":"navigate","params":{"goto":"50%"}}
+{"jsonrpc":"2.0","id":5,"method":"position"}
+{"jsonrpc":"2.0","id":6,"method":"search","params":{"pattern":"sentence","regex":false}}
+{"jsonrpc":"2.0","id":7,"method":"search","params":{"pattern":"S[a-z]+","regex":true}}
+{"jsonrpc":"2.0","id":8,"method":"text","params":{"start":2,"end":40}}
+{"jsonrpc":"2.0","id":9,"method":"read","params":{"what":"sentence"}}
+{"jsonrpc":"2.0","id":10,"method":"pause"}
+{"jsonrpc":"2.0","id":11,"method":"resume"}
+{"jsonrpc":"2.0","id":12,"method":"stop"}
+{"jsonrpc":"2.0","id":13,"method":"get_setting","params":{"path":"speech.rate"}}
+{"jsonrpc":"2.0","id":14,"method":"list_state"}
+{"jsonrpc":"2.0","id":15,"method":"prompt_state"}
+{"jsonrpc":"2.0","method":"cancel"}
+[{"jsonrpc":"2.0","id":16,"method":"status"},{"jsonrpc":"2.0","id":17,"method":"nothing"}]

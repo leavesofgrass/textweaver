@@ -4,9 +4,7 @@
 
 use std::io::{Cursor, Write};
 
-use textweaver_formats::{
-    FootnoteMode, HtmlOptions, LoadOptions, OcrOptions, Registry, Source,
-};
+use textweaver_formats::{FootnoteMode, HtmlOptions, LoadOptions, OcrOptions, Registry, Source};
 use textweaver_text::Document;
 use zip::write::SimpleFileOptions;
 
@@ -160,7 +158,8 @@ pub fn daisy(data: &[u8]) -> Vec<u8> {
     }
     let (book, ncx) = split(data);
     let opf = br#"<package><manifest><item id="n" href="nav.ncx" media-type="application/x-dtbncx+xml"/><item id="s" href="a.smil" media-type="application/smil"/><item id="d" href="book.xml" media-type="application/x-dtbook+xml"/></manifest><spine><itemref idref="s"/></spine></package>"#;
-    let smil = br#"<smil><body><seq><par id="p1"><text src="book.xml#x1"/></par></seq></body></smil>"#;
+    let smil =
+        br#"<smil><body><seq><par id="p1"><text src="book.xml#x1"/></par></seq></body></smil>"#;
     zip(&[
         ("b/package.opf", opf),
         ("b/a.smil", smil),
@@ -203,5 +202,94 @@ fn split(data: &[u8]) -> (&[u8], &[u8]) {
     match data.iter().position(|&b| b == 0) {
         Some(i) => (&data[..i], &data[i + 1..]),
         None => (data, b""),
+    }
+}
+
+/// Checks a parsed math expression (ADR-0018): every node's span and every
+/// diagnostic's span lies inside the source, with no span running
+/// backwards, and each node's children sit inside it in source order.
+/// Speech at every verbosity keeps a valid offset map, and MathML and
+/// part-by-part navigation do not panic.
+pub fn check_math(math: &textweaver_math::Math) {
+    use textweaver_core::Verbosity;
+    use textweaver_math::{MathMlOptions, Navigator, SpeechOptions};
+
+    let len = math.source.chars().count();
+    check_node(&math.root, len);
+    for d in &math.diagnostics {
+        assert!(d.span.start <= d.span.end, "{d:?} runs backwards");
+        assert!(d.span.end.0 <= len, "{d:?} past the end ({len})");
+    }
+    for verbosity in [Verbosity::Low, Verbosity::Normal, Verbosity::High] {
+        let opts = SpeechOptions::new(verbosity);
+        let spoken = textweaver_math::speak(math, &opts);
+        if let Err(e) = spoken.map.check_invariants(&spoken.text) {
+            panic!("speech map for {:?}: {e}", math.source);
+        }
+        let mut nav = Navigator::new(math, opts);
+        let _ = nav.current().announcement();
+        for _ in 0..64 {
+            let Some(step) = nav.next_part() else { break };
+            let _ = step.announcement();
+        }
+        let _ = nav.first_part();
+    }
+    for display in [false, true] {
+        let _ = textweaver_math::to_mathml(math, &MathMlOptions::new(display));
+    }
+}
+
+fn check_node(node: &textweaver_math::Node, len: usize) {
+    let span = node.span;
+    assert!(span.start <= span.end, "{node:?} runs backwards");
+    assert!(span.end.0 <= len, "{node:?} past the end ({len})");
+    let mut last = span.start;
+    for child in node.children() {
+        assert!(
+            child.span.start >= span.start && child.span.end <= span.end,
+            "{child:?} outside its parent {span:?}"
+        );
+        assert!(child.span.start >= last, "{child:?} out of order");
+        last = child.span.start;
+        check_node(child, len);
+    }
+}
+
+/// Checks references a citation importer returned: each formats as a
+/// bibliography entry and as a citation without panicking, and every
+/// format writes them. What the CSL-JSON writer writes must read back as
+/// the same number of references, since it is the library's own format.
+pub fn check_references(refs: &[textweaver_cite::Reference]) {
+    use std::sync::OnceLock;
+    use textweaver_cite::{CitationStyle, Format, Formatter, OutputFormat, formats};
+
+    static STYLE: OnceLock<Option<CitationStyle>> = OnceLock::new();
+    // Cap the work per input: rendering goes through hayagriva, and the
+    // importers are what is under test.
+    let refs = &refs[..refs.len().min(16)];
+    if let Some(style) = STYLE.get_or_init(|| CitationStyle::builtin("apa").ok()) {
+        for format in [OutputFormat::Plain, OutputFormat::Html] {
+            let f = Formatter::new(style, format);
+            for r in refs {
+                let _ = f.entry(r);
+                let _ = f.cite(r);
+            }
+            let all: Vec<&textweaver_cite::Reference> = refs.iter().collect();
+            let _ = f.bibliography(&all);
+        }
+    }
+    for format in Format::ALL {
+        let Ok(text) = formats::write(refs, format) else {
+            continue;
+        };
+        let again = formats::parse(&text, format);
+        if format == Format::CslJson {
+            let again = again.expect("written CSL-JSON reads back");
+            assert_eq!(
+                again.len(),
+                refs.len(),
+                "CSL-JSON round trip lost references"
+            );
+        }
     }
 }

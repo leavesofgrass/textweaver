@@ -6,7 +6,7 @@ The [interactive architecture page](../site/architecture.html) shows the same cr
 
 ## The big picture
 
-textweaver is one Cargo workspace with 30 crates and a maintenance crate, `xtask`. Two programs come out of it:
+textweaver is one Cargo workspace with 34 crates and a maintenance crate, `xtask`. Two programs come out of it:
 
 - `textweaver`, the terminal reader, built from `crates/textweaver-tui`;
 - `tw`, the command-line tool, built from `crates/textweaver-cli`.

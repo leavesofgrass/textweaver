@@ -14,15 +14,9 @@ Sizes:
 - **M**: a few days.
 - **L**: one to two weeks.
 
-## Status (Saturday, September 26, 2026)
+## Status (Monday, September 28, 2026)
 
-- **Phase 1 is done.** Agents P1a (speech stability), P1b (app safety and authoring quick wins), P1c (CI, releases, and notices), and P1d (loaders and command-line tools) are merged. Two housekeeping items are left: pruning merged branches, and merging through pull requests with required checks.
-- **Phase 2 is done, with a few items moved to Wave 3.** Agents P2a (reliability), P2b (authoring), P2c (screen reader modes), and P2d (releases, quality gates, and binary size) are merged. Agent P2e (the remaining gaps, and keys that follow NVDA and JAWS habits) is still running.
-- **Tests:** 1,854 pass natively on Windows and 1,861 in Docker with all features, at the end of P2a.
-- **Releases:** 0.1.0-alpha.3 (Friday, September 25, 2026) is the newest. The next release is the first with the Linux AppImage. The owner decides when it happens; there is no alpha.4 until he says so.
-- **Wave 3 is planned** in [tasks.md](history/tasks.md), with six agents: W3a (app core for the GUI), W3b (the Xilem GUI), W3c (architecture), W3d (formats for students), W3e (language and study aids), and W3f (voices and speech). It starts after P2e merges.
-- **The GUI is Xilem.** the owner chose Linebender's all-Rust toolkit on Saturday, September 26, 2026, to keep as much of textweaver in Rust as he can. The wxDragon spike stays as a fallback until the Xilem GUI passes the same accessibility checks.
-- **Wave 3 is pure Rust first.** textweaver is an experimental alpha, for the owner's own use first. Wave 3 prefers pure-Rust, in-process solutions over subprocesses and C or C++ libraries: `ocrs` for OCR, Piper voices through `tract` or `candle`, and Whisper through `candle`. It accepts alpha crates and API churn, keeps the tests and CI gates, and records each bold choice and its fallback in an ADR.
+This roadmap covers Phases 1 and 2 and Wave 3 as they were planned in September 2026, and it is kept as a record. Phases 1 and 2 and Wave 3 are done. The current plans, and the status of every agent, are in [tasks.md](history/tasks.md) and in the research documents: [the 2026 roadmap](research/roadmap-2026.md), [the Wave 5 plan](research/wave5-plan.md), [what is left](research/whats-left.md), and [the Cloud Agent plan](research/cloud-agent-plan.md).
 
 Each phase below has its own dated status note. Items marked **done** are on `main`; items marked **left** say where they went.
 

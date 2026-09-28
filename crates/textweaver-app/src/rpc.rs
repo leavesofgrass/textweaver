@@ -4,7 +4,8 @@
 //! Messages are JSON-RPC 2.0 objects, one per line (newline-delimited
 //! JSON). A client may instead frame messages with LSP-style
 //! `Content-Length` headers; the server answers in the framing of the last
-//! message it received. Requests are answered in order. While speech is
+//! message it received. A line or a message body over 16 MiB ends the
+//! session, as if the client had closed. Requests are answered in order. While speech is
 //! active the server sends notifications on its own: `position` as the
 //! spoken word moves, `playback` when reading starts, pauses, or stops,
 //! and `announcement` for every message the app announces (what a screen
@@ -45,7 +46,7 @@
 //! `{label, purpose}`, `list` `{title, items}`, and `quit`.
 
 use std::collections::VecDeque;
-use std::io::{BufRead, Write};
+use std::io::{BufRead, Read, Write};
 use std::path::PathBuf;
 use std::sync::mpsc::{RecvTimeoutError, channel};
 use std::sync::{Arc, Mutex};
@@ -858,14 +859,33 @@ enum Incoming {
     Closed,
 }
 
+/// The largest message the server reads, in bytes: a line, a header
+/// line, or a `Content-Length` body. A client that sends more is broken or
+/// hostile, and reading on would take all the memory it asks for, so the
+/// server stops reading and shuts down as if the client had closed.
+const MAX_MESSAGE_BYTES: usize = 16 * 1024 * 1024;
+
+/// Reads one line into `line`, at most [`MAX_MESSAGE_BYTES`] of it.
+/// `None` at the end of the input, on a read error, or on a longer line.
+fn read_line_capped<R: BufRead>(reader: &mut R, line: &mut String) -> Option<usize> {
+    let limit = MAX_MESSAGE_BYTES as u64 + 1;
+    match reader.by_ref().take(limit).read_line(line) {
+        Ok(0) | Err(_) => None,
+        Ok(n) if n > MAX_MESSAGE_BYTES => {
+            log::warn!("JSON-RPC: a line longer than {MAX_MESSAGE_BYTES} bytes; closing");
+            None
+        }
+        Ok(n) => Some(n),
+    }
+}
+
 /// Reads messages from `reader`, one per line or `Content-Length` framed.
 fn read_messages<R: BufRead>(mut reader: R, tx: &std::sync::mpsc::Sender<Incoming>) {
     let mut line = String::new();
     loop {
         line.clear();
-        match reader.read_line(&mut line) {
-            Ok(0) | Err(_) => return,
-            Ok(_) => {}
+        if read_line_capped(&mut reader, &mut line).is_none() {
+            return;
         }
         let trimmed = line.trim();
         if trimmed.is_empty() {
@@ -877,13 +897,19 @@ fn read_messages<R: BufRead>(mut reader: R, tx: &std::sync::mpsc::Sender<Incomin
             .and_then(|(_, v)| v.trim().parse::<usize>().ok());
         let msg = match header {
             Some(len) => {
+                if len > MAX_MESSAGE_BYTES {
+                    log::warn!(
+                        "JSON-RPC: Content-Length {len} is over {MAX_MESSAGE_BYTES} bytes; closing"
+                    );
+                    return;
+                }
                 // Skip other headers up to the blank line, then the body.
                 loop {
                     line.clear();
-                    match reader.read_line(&mut line) {
-                        Ok(0) | Err(_) => return,
-                        Ok(_) if line.trim().is_empty() => break,
-                        Ok(_) => {}
+                    match read_line_capped(&mut reader, &mut line) {
+                        None => return,
+                        Some(_) if line.trim().is_empty() => break,
+                        Some(_) => {}
                     }
                 }
                 let mut body = vec![0u8; len];
@@ -981,6 +1007,57 @@ mod tests {
         assert_eq!(
             purpose_name(PromptPurpose::CommandPalette),
             "command_palette"
+        );
+    }
+
+    /// The messages `read_messages` passes on for `input`, with their
+    /// framing.
+    fn messages(input: &[u8]) -> Vec<(Framing, String)> {
+        let (tx, rx) = channel();
+        read_messages(std::io::Cursor::new(input.to_vec()), &tx);
+        drop(tx);
+        rx.into_iter()
+            .filter_map(|m| match m {
+                Incoming::Message(f, text) => Some((f, text)),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_huge_content_length_closes_without_allocating() {
+        // Before the cap, this asked for a terabyte and aborted the process.
+        let input =
+            b"{\"jsonrpc\":\"2.0\",\"method\":\"exit\"}\nContent-Length: 1099511627776\r\n\r\n{}";
+        let got = messages(input);
+        assert_eq!(got.len(), 1, "only the message before the header: {got:?}");
+        assert_eq!(got[0].0, Framing::Line);
+        let max = format!("Content-Length: {}\r\n\r\n", usize::MAX);
+        assert!(messages(max.as_bytes()).is_empty());
+    }
+
+    #[test]
+    fn a_line_over_the_cap_closes() {
+        let mut input = vec![b' '; MAX_MESSAGE_BYTES + 10];
+        input.push(b'\n');
+        input.extend_from_slice(b"{}\n");
+        assert!(messages(&input).is_empty());
+    }
+
+    #[test]
+    fn messages_under_the_cap_still_read() {
+        let body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"status\"}";
+        let input = format!(
+            "Content-Length: {}\r\nX-Other: 1\r\n\r\n{body}{body}\n",
+            body.len()
+        );
+        let got = messages(input.as_bytes());
+        assert_eq!(
+            got,
+            vec![
+                (Framing::Header, body.to_owned()),
+                (Framing::Line, body.to_owned())
+            ]
         );
     }
 

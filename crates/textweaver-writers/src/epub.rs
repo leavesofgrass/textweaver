@@ -832,7 +832,10 @@ fn nav_document(facts: &Facts, toc: &[TocNode], pages: &[(String, String)]) -> S
         xml::text(&facts.title)
     ));
     s.push_str(
-        "<nav epub:type=\"toc\" role=\"doc-toc\" id=\"toc\" aria-labelledby=\"toc-title\">\n<h1 id=\"toc-title\">Contents</h1>\n",
+        // No aria-labelledby: epubcheck's schema for the navigation document
+        // allows no naming attribute on this nav (RSC-005). The heading
+        // inside it is the first thing a screen reader hears there.
+        "<nav epub:type=\"toc\" role=\"doc-toc\" id=\"toc\">\n<h1 id=\"toc-title\">Contents</h1>\n",
     );
     nav_list(toc, &mut s);
     s.push_str("</nav>\n");
@@ -1000,6 +1003,9 @@ fn package_document(
         ));
         spine.push_str(&format!("    <itemref idref=\"chapter-{}\"/>\n", n + 1));
     }
+    // The landmarks link to the contents in nav.xhtml, and a link must
+    // point into the spine (epubcheck RSC-011). Outside the reading order.
+    spine.push_str("    <itemref idref=\"nav\" linear=\"no\"/>\n");
     for (n, (href, res)) in images.files.iter().enumerate() {
         manifest.push_str(&format!(
             "    <item id=\"image-{}\" href=\"{}\" media-type=\"{}\"/>\n",
