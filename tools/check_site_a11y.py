@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Offline static accessibility check for the pages in docs/site/.
+"""Offline static accessibility check for the pages in docs/site/, and for
+the built documentation site.
 
 It reads each page's HTML as written (before any script runs) and reports:
 
@@ -24,9 +25,26 @@ It reads each page's HTML as written (before any script runs) and reports:
 Content that a page's script builds at run time is not seen here; check it
 in a browser. Standard library only.
 
+With `--built DIR` it checks the documentation site that
+tools/build_site.py builds (target/docs-site/) instead. Every built page is
+checked for:
+
+- a lang on <html>, a title, exactly one <h1>, and no skipped heading level;
+- a skip link as the first thing Tab reaches, pointing at an id on the page;
+- landmarks: header, a labelled nav, main, footer;
+- controls and buttons with a name (text, aria-label, or title), images with
+  alt, and no duplicate ids;
+- scripts, styles, fonts, and images loaded from this site only, so reading
+  the site makes no request to another host;
+- relative links and #anchors that lead to a built page and an id on it.
+
+The interactive pages in the built site/ folder also get the full docs/site/
+checks above.
+
 Usage:
 
     python tools/check_site_a11y.py
+    python tools/check_site_a11y.py --built target/docs-site
 
 Exit status 0 when every page passes, 1 when a problem was found.
 Links to files that do not exist are problems too; `--allow-missing FILE`
@@ -265,11 +283,196 @@ def check_page(path: Path, allow_missing: set[str]) -> tuple[list[str], list[str
     return problems, notes
 
 
+# --- The built documentation site ---------------------------------------
+
+# Elements the theme hides with CSS (display: none) before any script runs,
+# so they never take focus: the check boxes behind its menus.
+HIDDEN_TOGGLE = re.compile(r"\bmd-toggle\b")
+
+
+class BuiltPage(Page):
+    """The same parser, plus what the built-site checks need."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.resources: list[tuple[str, str]] = []  # (tag, url)
+        self.named_controls: list[tuple[str, dict]] = []
+        self.anchor_texts: list[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        a = {k: (v if v is not None else "") for k, v in attrs}
+        if tag == "input" and HIDDEN_TOGGLE.search(a.get("class", "")):
+            # Not focusable and not a control a reader meets.
+            if "id" in a:
+                self.ids[a["id"]] = self.ids.get(a["id"], 0) + 1
+            return
+        if tag == "script" and a.get("src"):
+            self.resources.append((tag, a["src"]))
+        if tag == "link" and "stylesheet" in a.get("rel", "") and a.get("href"):
+            self.resources.append((tag, a["href"]))
+        if tag == "link" and "preconnect" in a.get("rel", ""):
+            self.resources.append((tag, a.get("href", "")))
+        if tag == "img" and a.get("src"):
+            self.resources.append((tag, a["src"]))
+        super().handle_starttag(tag, attrs)
+
+
+def _is_external(url: str) -> bool:
+    return bool(re.match(r"^(?:[a-z][a-z0-9+.-]*:)?//", url, re.I))
+
+
+def _base_path() -> str:
+    """The site's path on its host, from site_url in zensical.toml ("/textweaver/")."""
+    try:
+        import tomllib
+        with open(ROOT / "zensical.toml", "rb") as f:
+            url = tomllib.load(f)["project"].get("site_url", "")
+    except (OSError, KeyError, ImportError, ValueError):
+        return "/"
+    m = re.match(r"^[a-z]+://[^/]+(/.*)?$", url, re.I)
+    path = (m.group(1) if m else None) or "/"
+    return path if path.endswith("/") else path + "/"
+
+
+BASE_PATH = _base_path()
+
+
+def _built_target(page: Path, href: str, root: Path) -> Path | None:
+    """The file a link leads to in the built site, or None."""
+    path_part = href.split("#", 1)[0].split("?", 1)[0]
+    if not path_part:
+        return page
+    if path_part.startswith("/"):
+        # Absolute on the host: only the site's own path is ours.
+        if not path_part.startswith(BASE_PATH):
+            return None
+        target = (root / path_part[len(BASE_PATH):]).resolve()
+    else:
+        target = (page.parent / path_part).resolve()
+    if target.is_dir():
+        target = target / "index.html"
+    return target if target.is_file() else None
+
+
+_ids_cache: dict[Path, set[str]] = {}
+
+
+def _ids_of(path: Path) -> set[str]:
+    if path not in _ids_cache:
+        p = BuiltPage()
+        try:
+            p.feed(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError):
+            pass
+        _ids_cache[path] = set(p.ids)
+    return _ids_cache[path]
+
+
+def check_built_page(path: Path, root: Path) -> list[str]:
+    html = path.read_text(encoding="utf-8")
+    p = BuiltPage()
+    p.feed(html)
+    problems: list[str] = []
+
+    if not p.html_lang:
+        problems.append("<html> has no lang attribute.")
+    if not p.title.strip():
+        problems.append("The page has no <title>, or it is empty.")
+    if p.headings.count(1) != 1:
+        problems.append(f"The page has {p.headings.count(1)} h1 headings; it needs exactly one.")
+    prev = 0
+    for level in p.headings:
+        if prev and level > prev + 1:
+            problems.append(f"A heading skips from h{prev} to h{level}.")
+        prev = level
+
+    ff = p.first_focusable
+    if ff is None or ff[0] != "a" or not ff[1].get("href", "").startswith("#"):
+        problems.append("The first focusable element is not a skip link.")
+    else:
+        target = ff[1]["href"][1:]
+        if target and target not in p.ids:
+            problems.append(f"The skip link points at #{target}, which is not on the page.")
+    if len(p.landmarks["main"]) != 1:
+        problems.append(f"The page has {len(p.landmarks['main'])} <main> elements; it needs one.")
+    for lm in ("header", "nav", "footer"):
+        if not p.landmarks[lm]:
+            problems.append(f"The page has no <{lm}>.")
+    if p.landmarks["nav"] and not any(n.get("aria-label") or n.get("aria-labelledby")
+                                      for n in p.landmarks["nav"]):
+        problems.append("No <nav> has an aria-label.")
+
+    for c in p.controls:
+        a = c["attrs"]
+        if not (c["wrapped"] or a.get("id") in p.label_for or a.get("aria-label")
+                or a.get("aria-labelledby") or a.get("title")):
+            problems.append(f"A <{c['tag']}> (id {a.get('id', 'none')}) has no label.")
+    for b in p.buttons:
+        a = b["attrs"]
+        if not (b["text"].strip() or a.get("aria-label") or a.get("aria-labelledby") or a.get("title")):
+            problems.append(f"A button (class {a.get('class', 'none')}) has no text or label.")
+    for img in p.imgs:
+        if "alt" not in img:
+            problems.append(f"An <img> ({img.get('src', '?')}) has no alt.")
+    for ident, n in p.ids.items():
+        if n > 1:
+            problems.append(f"The id {ident!r} is used {n} times.")
+
+    for tag, url in p.resources:
+        if _is_external(url):
+            problems.append(f"A <{tag}> loads {url} from another host.")
+
+    for href in sorted(set(p.links)):
+        if not href or _is_external(href) or re.match(r"^[a-z][a-z0-9+.-]*:", href, re.I):
+            continue
+        target = _built_target(path, href, root)
+        if target is None:
+            problems.append(f"The link {href} leads to no page in the built site.")
+            continue
+        if "#" in href:
+            frag = href.split("#", 1)[1]
+            if frag and target.suffix == ".html" and frag not in _ids_of(target):
+                problems.append(f"The link {href} leads to an anchor that is not on that page.")
+    return problems
+
+
+def check_built_site(root: Path) -> int:
+    root = root.resolve()
+    pages = sorted(root.rglob("*.html"))
+    if not pages:
+        print(f"No pages found in {root}.", file=sys.stderr)
+        return 1
+    interactive = {page.name for page in SITE.glob("*.html")}
+    failed = 0
+    passed = 0
+    for page in pages:
+        rel = page.relative_to(root).as_posix()
+        if page.parent.name == "site" and page.parent.parent == root and page.name in interactive:
+            problems, notes = check_page(page, set())
+        else:
+            problems, notes = check_built_page(page, root), []
+        if problems:
+            failed += 1
+            print(f"{rel}: {len(problems)} problems.")
+            for msg in problems:
+                print(f"  - {msg}")
+        else:
+            passed += 1
+        for msg in notes:
+            print(f"  note ({rel}): {msg}")
+    print(f"Built site: {passed} pages pass, {failed} have problems.")
+    return 1 if failed else 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Check the docs/site/ pages for accessibility basics.")
     parser.add_argument("--allow-missing", action="append", default=[], metavar="FILE",
                         help="a file under docs/ that may be missing for now (repeatable)")
+    parser.add_argument("--built", metavar="DIR",
+                        help="check the built documentation site in DIR instead")
     args = parser.parse_args(argv)
+    if args.built:
+        return check_built_site(Path(args.built))
     allow = set(args.allow_missing)
     pages = sorted(SITE.glob("*.html"))
     if not pages:

@@ -1,0 +1,84 @@
+/* Accessibility fixes for the textweaver documentation site (Zensical).
+   Loaded after the theme's own styles, from zensical.toml's extra_css.
+   Each rule says what it fixes. See tools/build_site.py and
+   docs/dev/building.md for how the site is built and checked. */
+
+:root {
+  /* Focus ring: a dark line inside a light ring, so it shows on white
+     pages, on the indigo header, and on dark pages alike. */
+  --tw-focus-inner: #000;
+  --tw-focus-outer: #fff;
+  /* The current page in the navigation, at 4.5:1 or better. */
+  --tw-current: #283593;
+}
+
+[data-md-color-scheme="slate"] {
+  --tw-focus-inner: #fff;
+  --tw-focus-outer: #000;
+  --tw-current: #b3bcff;
+}
+
+/* A thick, visible focus outline on everything that takes focus. The
+   theme's own is a thin browser default. */
+:focus-visible,
+.md-option:focus-visible + label {
+  outline: 3px solid var(--tw-focus-inner) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 6px var(--tw-focus-outer) !important;
+}
+
+/* Links in the text and in the breadcrumb are underlined, so they never
+   depend on color. */
+.md-typeset a,
+.md-path__link,
+.md-footer a .md-footer__title {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* The theme turns a focused breadcrumb link near-black, which vanishes on
+   the dark scheme; keep the normal text color. */
+.md-path__link:is(:focus, :focus-visible, :hover) {
+  color: var(--md-default-fg-color) !important;
+}
+
+/* The current page in the navigation: dark enough to read, and marked by
+   weight and a bar as well as by color. The script also sets
+   aria-current="page" on it. */
+.md-nav__link--active,
+.md-nav__link--active:is(:focus, :hover) {
+  color: var(--tw-current) !important;
+  font-weight: 700;
+}
+.md-nav--primary .md-nav__link--active {
+  box-shadow: inset 3px 0 0 0 currentColor;
+  padding-inline-start: 0.4rem;
+}
+[dir="rtl"] .md-nav--primary .md-nav__link--active {
+  box-shadow: inset -3px 0 0 0 currentColor;
+}
+
+/* Text only screen readers need. */
+.tw-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Honor a request for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
