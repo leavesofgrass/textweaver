@@ -1,4 +1,4 @@
-# ADR-0028: The Xilem GUI after Jon's session
+# ADR-0028: The Xilem GUI after the owner's session
 
 - Status: accepted (Wave 4: drafted by Agent W4s; finished by Agent W4a2 after the owner's session 1, Sunday, September 27, 2026)
 - Date: 2026-09-27
@@ -6,13 +6,13 @@
 
 ## Context
 
-ADR-0027 left three questions for Jon's first NVDA and JAWS session on the Xilem GUI:
+ADR-0027 left three questions for the owner's first NVDA and JAWS session on the Xilem GUI:
 
 - Do announcements reach JAWS? AccessKit raises only UI Automation's LiveRegionChanged, which NVDA speaks and JAWS has handled inconsistently.
 - Can a screen reader reach list options and settings that are scrolled out of view? The UI Automation report saw 13 of 15 settings sections.
 - Why did the GUI's memory grow from 98 MB to 172 to 187 MB during Wave 3?
 
-This draft records what W4s changed before the session, what it measured, and the two questions the session decides. W4a2 records Jon's answers and the decisions here.
+This draft records what W4s changed before the session, what it measured, and the two questions the session decides. W4a2 records the owner's answers and the decisions here.
 
 ## Two ways to announce
 
@@ -27,7 +27,7 @@ W4s read the `[gui]` table from the store's preserved unknown tables (`Settings:
 
 **Checked:** the UI Automation report (`tools/uia-report.ps1 -Announce live` and `-Announce uia`, Sunday, September 27, 2026, Windows 11 26200) passes both ways. With `live`, LiveRegionChanged events arrive for each message (10 in the run) and no Notification events. With `uia`, Notification events arrive with their text and activity id (10) and no LiveRegionChanged events. Managed UI Automation gained LiveRegionChanged in .NET Framework 4.7.1, so the report now subscribes to it instead of only watching for new elements.
 
-**Found:** both paths lose the announcements made at startup, before any UI Automation client has asked for the window: "Opened Sample Markdown Document." and "Reading at 265 words per minute." in the report's runs. The report's client connects about two seconds after launch. A screen reader that is already running asks sooner, when the window appears, so Jon may hear them; the session checks it.
+**Found:** both paths lose the announcements made at startup, before any UI Automation client has asked for the window: "Opened Sample Markdown Document." and "Reading at 265 words per minute." in the report's runs. The report's client connects about two seconds after launch. A screen reader that is already running asks sooner, when the window appears, so the owner may hear them; the session checks it.
 
 ## Clipped options
 
@@ -75,12 +75,12 @@ Nothing inside `textweaver-xilem` accounts for more than a few megabytes, so not
 
 ## The two questions the session decides
 
-1. **Announcements: `live` or `uia`?** Jon tries Pause, Stop, and a rate key with each, in NVDA and then in JAWS, and says which is heard once, reliably, without cutting off the reading. The default follows his choice. If JAWS needs `uia` and NVDA works with both, `uia` becomes the Windows default, and the store and schema get the `[gui] announce` setting properly.
-2. **The highlight: selection or background?** While reading, the caret sits on the spoken word, which has its own background color (the default), or `--select-spoken` selects the word. Jon says which reads better in NVDA and JAWS, with speech and with the Braille display. That decides the document view's design, which W4a2 then builds on.
+1. **Announcements: `live` or `uia`?** the owner tries Pause, Stop, and a rate key with each, in NVDA and then in JAWS, and says which is heard once, reliably, without cutting off the reading. The default follows his choice. If JAWS needs `uia` and NVDA works with both, `uia` becomes the Windows default, and the store and schema get the `[gui] announce` setting properly.
+2. **The highlight: selection or background?** While reading, the caret sits on the spoken word, which has its own background color (the default), or `--select-spoken` selects the word. The owner says which reads better in NVDA and JAWS, with speech and with the Braille display. That decides the document view's design, which W4a2 then builds on.
 
-W4a2 records the answers here, changes the status to accepted, and removes whichever option is not kept, or keeps it as a setting if Jon prefers.
+W4a2 records the answers here, changes the status to accepted, and removes whichever option is not kept, or keeps it as a setting if the owner prefers.
 
-**Jon's answers (Sunday, September 27, 2026, after his first screen reader and Braille display checks):**
+**The owner's answers (Sunday, September 27, 2026, after his first screen reader and Braille display checks):**
 1. **Announcements:** the live region stays the default. `uia` stays available as an option.
 2. **The highlight:** the background color stays the default, and the caret is not moved by selection. `--select-spoken` stays available as an option.
 
@@ -92,7 +92,7 @@ The owner's first checks with NVDA, JAWS, and a Braille display were good, so th
 
 - **Announcements:** the live region is the default everywhere. UI Automation notifications stay as an option, `[gui] announce = "uia"` in the settings (the settings dialog, under "Window") or `--announce uia` for one run. The command line wins over the setting.
 - **The highlight:** the spoken word has its own background color, and the caret (the document's text selection, collapsed) sits at its start. The word is not selected. `--select-spoken` stays as an option for anyone who prefers the word selected. Everything later in the document view builds on this design: the window slide, the reading aids, and edit mode (W4a3).
-- **The hybrid renderer** stays a build option (`--no-default-features --features screenshot,renderer-hybrid`), not the default. The session did not raise memory, and the hybrid renderer's cost in drawing speed on large windows has not been measured with the reading aids drawn. Revisit it with Jon's second session.
+- **The hybrid renderer** stays a build option (`--no-default-features --features screenshot,renderer-hybrid`), not the default. The session did not raise memory, and the hybrid renderer's cost in drawing speed on large windows has not been measured with the reading aids drawn. Revisit it with the owner's second session.
 
 The key named in "No document is open" now comes from the keymap (`named_key`), and the list introduction (`ListKey::Introduce`) and the title line's parts (`App::title_parts`) reach the GUI as they reach the terminal reader.
 

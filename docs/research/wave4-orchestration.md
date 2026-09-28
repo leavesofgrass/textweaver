@@ -1,6 +1,6 @@
 # Wave 4 orchestration plan
 
-Written on Sunday, September 27, 2026, by the second Wave 4 planning review (Fable 5.1), for the orchestrator and Jon. It re-plans Wave 4 from first principles. It changes nothing by itself: Jon adopts it, or parts of it, and the orchestrator applies it to `docs/history/tasks.md`.
+Written on Sunday, September 27, 2026, by the second Wave 4 planning review (Fable 5.1), for the orchestrator and the owner. It re-plans Wave 4 from first principles. It changes nothing by itself: the owner adopts it, or parts of it, and the orchestrator applies it to `docs/history/tasks.md`.
 
 What it is built on: the Wave 4 section of `docs/history/tasks.md` (the refined plan of this morning, the folded-in first review, and the lessons list), every Wave 4 brief, the Wave 2 and Wave 3 status lines, `docs/research/wave4.md`, `docs/research/wave4-plan-review.md`, `docs/research/usability-terminal.md`, `docs/roadmap.md`, ADRs 0001 to 0027, `docs/dev/docker.md`, `compose.yaml`, `tools/build-hygiene.ps1`, the root `Cargo.toml`, the wiki (the textweaver hub, the Wave 4 planning page, the deletion incident knowledge base, the lessons page, and the global rules), the git history of `main` (the last 80 commits, and the file lists of the six Wave 3 merges), and measurements taken on this machine today. Crate versions were checked on crates.io today with the tool's default User-Agent; no personal identifier was sent.
 
@@ -8,7 +8,7 @@ Nothing was built, run in Docker, downloaded, or deleted for this review.
 
 ## The short version
 
-- **Shape: three sub-waves of three agents, not two groups of five.** Each sub-wave has one goal, one merge point, and one thing for Jon to hear. At most three agents run at once, and at most two of them build heavily at the same moment.
+- **Shape: three sub-waves of three agents, not two groups of five.** Each sub-wave has one goal, one merge point, and one thing for the owner to hear. At most three agents run at once, and at most two of them build heavily at the same moment.
 - **The binding limit is memory, not disk.** D: has 872 GB free today, so even five agents fit on disk. But Docker's virtual machine has 31.3 GB in all, and the host has 40 GB free with Docker idle. Five containers at 8 GB each cannot run at once. Two or three can.
 - **Cut W4e (offline intelligence) from Wave 4.** Defer GUI edit mode, the LaTeX subset, EML and MHTML, and automated screen-reader tests to Wave 5. Trim W4f to what works without a Mac.
 - **Sequence by shared files.** Every Wave 3 agent touched `textweaver-app`; that crate is the hotspot. Each sub-wave has at most one agent that rewrites the app's messages or keys.
@@ -19,7 +19,7 @@ Nothing was built, run in Docker, downloaded, or deleted for this review.
 ### 1.1 What the current plan gets right
 
 - W4h first, small, terminal-only, merged before W4g.
-- The GUI split around Jon's listening session.
+- The GUI split around the owner's listening session.
 - Rope changes, TLS changes, and branch pruning removed.
 - Per-agent Docker volumes, the shared cache, and the leaner profiles.
 - The privacy, deleting, and escape-sequence rules carried into every brief.
@@ -35,8 +35,8 @@ Wave 4 as written is ten agents covering eight unrelated areas: terminal polish,
 
 ### 1.3 Gates
 
-- The current plan has one gate, between Group 1 and Group 2, and it is a disk flush. It is not tied to what Jon needs to hear.
-- Jon's NVDA and JAWS session decides two designs (highlight as selection or background; live regions or a UIA notification). W4a1 in Group 1 builds reading aids and edit mode on top of those designs before the session decides them. The first review saw this and trimmed W4a1; the trimmed order still has one agent go on to edit mode inside Group 1 while the session waits on the orchestrator's build.
+- The current plan has one gate, between Group 1 and Group 2, and it is a disk flush. It is not tied to what the owner needs to hear.
+- The owner's NVDA and JAWS session decides two designs (highlight as selection or background; live regions or a UIA notification). W4a1 in Group 1 builds reading aids and edit mode on top of those designs before the session decides them. The first review saw this and trimmed W4a1; the trimmed order still has one agent go on to edit mode inside Group 1 while the session waits on the orchestrator's build.
 - Nothing gates on measurements. W4b measures ropes and allocations; nothing says what a good result looks like or who reads it.
 
 ### 1.4 Ordering
@@ -52,14 +52,14 @@ Measured this morning (Sunday, September 27, 2026, 10:20 to 10:27):
 - D: 871.8 GB free of 1,862 GB. Floor 200 GB.
 - `D:\textweaver\target`: orch 35.5 GB (debug 35.5, of which PDB files 20.7, 324 test and tool executables 7.9, rlib and rmeta 5.4), ux1 9.3, release 4.6, debug 3.3, dist-build 1.0, the rest under 1 GB each. Every worktree's own `target` folder is empty (0 GB, twelve worktrees).
 - `D:\sccache`: 5.4 GB.
-- Docker: images 55.2 GB (47.4 reclaimable, mostly Jon's other projects: never touch), volumes 26.4 GB, build cache 37.4 GB, virtual disk 125.6 GB. `textweaver-dev:latest` is 3.9 GB. The `textweaver-sccache` volume holds 4 MB: the container cache is cold. `tw-target-orch` holds 22 MB.
+- Docker: images 55.2 GB (47.4 reclaimable, mostly the owner's other projects: never touch), volumes 26.4 GB, build cache 37.4 GB, virtual disk 125.6 GB. `textweaver-dev:latest` is 3.9 GB. The `textweaver-sccache` volume holds 4 MB: the container cache is cold. `tw-target-orch` holds 22 MB.
 - Docker's virtual machine: 12 CPUs and 33.6 GB (31.3 GiB) in all. That is the budget every container shares.
-- RAM: 63.8 GB, 40.3 GB free, with Docker idle (2.4 GB), two Claude sessions, and Jon's usual programs. So the baseline is about 24 GB in use before any build.
+- RAM: 63.8 GB, 40.3 GB free, with Docker idle (2.4 GB), two Claude sessions, and the owner's usual programs. So the baseline is about 24 GB in use before any build.
 
 Two conclusions the current plan does not draw:
 
 1. **Five containers at 8 GB cannot run at once.** `compose.yaml` and `docs/dev/docker.md` say "five agents stay near 40 GB, leaving 20 GB free on the 64 GB host". Docker's machine has 31.3 GB. Five containers would exceed it, and on the host 24 GB baseline plus 40 GB of containers leaves 0 GB, not 20. Two 8 GB containers plus the baseline leave 24 GB free; three leave 16 GB, under the floor.
-2. **Disk is not the limit this week.** After the cleanup that reclaimed 500 GB, the 200 GB floor is 670 GB away. The plan's "two groups of five to protect the disk" solves last week's problem. The limit is memory, merge conflicts, and Jon's attention.
+2. **Disk is not the limit this week.** After the cleanup that reclaimed 500 GB, the 200 GB floor is 670 GB away. The plan's "two groups of five to protect the disk" solves last week's problem. The limit is memory, merge conflicts, and the owner's attention.
 
 The 107 GB (W3d) and 60 GB (W3b) figures from Wave 3 were reported by the orchestrator; the folders are gone, so they cannot be re-measured. They were built with full debug info, incremental data, and repeated release builds. The orch folder measured today was built before the lean profile commit (its newest files are from 00:43 on September 27, the same minute as commit a589d2b), so it too is an old-profile number.
 
@@ -78,11 +78,11 @@ Estimated full native workspace test build: **13 to 16 GB**, about 60 percent sm
 
 ## 2. The proposed shape
 
-Three sub-waves. Each has three agents, one merge point, and one thing for Jon to hear. A fourth, light agent may join a sub-wave only when it builds nothing heavy.
+Three sub-waves. Each has three agents, one merge point, and one thing for the owner to hear. A fourth, light agent may join a sub-wave only when it builds nothing heavy.
 
 ### Sub-wave 4a: hear it first
 
-**Goal.** Fix what Jon hears on every run, and prepare the GUI so his one listening session decides both designs.
+**Goal.** Fix what the owner hears on every run, and prepare the GUI so his one listening session decides both designs.
 
 **Agents.**
 
@@ -90,12 +90,12 @@ Three sub-waves. Each has three agents, one merge point, and one thing for Jon t
 - **W4s, GUI session prep** (the first three items of the old W4a1). The direct `UiaRaiseNotificationEvent` option, the clipped-options fix in `ChoiceList` and `SettingsGrid`, and the GUI's memory growth attributed. Small commits, `textweaver-xilem` only.
 - **W4c1, MathCAT speech.** A new crate behind a feature, speech only, on 0.7.6-rc.3. It touches the math and speech crates, which nobody else in this sub-wave touches.
 
-Why together: W4h and W4s are what Jon must hear before anything else is designed. W4c1 is independent of both and fills the third slot without touching the app's messages (its app edits are one setting and one hook).
+Why together: W4h and W4s are what the owner must hear before anything else is designed. W4c1 is independent of both and fills the third slot without touching the app's messages (its app edits are one setting and one hook).
 
 **Gates.**
 
-- W4h and W4s merge first, in that order. The orchestrator builds `textweaver.exe` and `textweaver-xilem.exe` in release mode and gives Jon one checklist (terminal first, GUI second).
-- **Jon's session 1** (NVDA, then JAWS): the W4h items, W3b's checklist for the Xilem GUI, and the two designs. His findings become fixes in W4a2's brief.
+- W4h and W4s merge first, in that order. The orchestrator builds `textweaver.exe` and `textweaver-xilem.exe` in release mode and gives the owner one checklist (terminal first, GUI second).
+- **The owner's session 1** (NVDA, then JAWS): the W4h items, W3b's checklist for the Xilem GUI, and the two designs. His findings become fixes in W4a2's brief.
 - W4c1 merges when its checks pass; it does not wait for the session.
 
 **Merge point and checks.** Each merge: the native workspace checks, the Docker all-features check (one at a time, by the orchestrator), `keyboard --check`, `deps --check`, `notices --check` when `Cargo.lock` changed, the link and site checks, and the GUI crate built with `-p textweaver-xilem` whenever a GUI branch merges (it is not a default member, so the workspace commands skip it). Then the flush of the merged agents' volumes and folders (runbook step 6).
@@ -108,14 +108,14 @@ Why together: W4h and W4s are what Jon must hear before anything else is designe
 
 - **W4g, authoring extras.** From merged main after W4h: harper grammar, rumdl lint (or our own), syntect highlighting, arboard, Unicode math in the plain view, notes export.
 - **W4b, speed and memory.** Text search and segmentation, the zip features in one early commit, allocation cuts with the bench gate, startup time, binary size, and the rope measurements (no rope change).
-- **W4a2, the GUI after the session.** The session's fixes first, then the window slide during reading, the reading aids, the essential parity items, ADR-0028. The wxDragon removal is the last commit and only if Jon says so (open question 4).
+- **W4a2, the GUI after the session.** The session's fixes first, then the window slide during reading, the reading aids, the essential parity items, ADR-0028. The wxDragon removal is the last commit and only if the owner says so (open question 4).
 
 Why together: three different crates most of the time (app authoring and editor; text, formats, and the app's opening path; xilem). W4g and W4b both touch the app, but W4g in authoring and W4b in opening and playback. Both merge main weekly at least.
 
 **Gates.**
 
 - W4b's zip commit merges to main within its first day, so W4c2 in 4c starts from it.
-- **Jon's session 2**, on the GUI only, after W4a2 merges: the window slide, the reading aids, and the session-1 fixes. It decides whether the wx spike goes and whether GUI edit mode gets a slot in 4c (open questions 2 and 4).
+- **The owner's session 2**, on the GUI only, after W4a2 merges: the window slide, the reading aids, and the session-1 fixes. It decides whether the wx spike goes and whether GUI edit mode gets a slot in 4c (open questions 2 and 4).
 - W4b's report gives numbers against a baseline: startup of `tw --version` and `textweaver --help`, peak heap on the 10 MB corpus, and the binary sizes. The orchestrator writes the before-and-after into `docs/roadmap.md`.
 
 **Merge point and checks.** As in 4a, plus a build with the reader's `publish` feature off (W4b and W4g both touch the app), and the bench gate compared with main's artifact.
@@ -128,21 +128,21 @@ Why together: three different crates most of the time (app authoring and editor;
 
 - **W4c2, documents.** RTF and ODT natively, DOCX comments and tracked changes, fuzz targets and hostile-input limits. LaTeX subset and EML/MHTML deferred (section 8).
 - **W4d, translations.** The five catalogs on W3e's Fluent subset, right-to-left display behind a setting, the first-run language choice, per-language default voices, the pseudo-locale check in CI. It is the only agent in the app's messages.
-- **W4f, platforms and CI** (light: it builds little on this machine). The six fuzz targets if not done at launch, the aarch64 AppImage, the Orca check in CI, the release checks, the doc pass, the release notes. The merge-gate rulesets only with Jon's approval (open question 3).
+- **W4f, platforms and CI** (light: it builds little on this machine). The six fuzz targets if not done at launch, the aarch64 AppImage, the Orca check in CI, the release checks, the doc pass, the release notes. The merge-gate rulesets only with the owner's approval (open question 3).
 
 Why together: formats, strings, and workflows are disjoint. W4d needs an app nobody else is changing, and this is the only sub-wave where that is true.
 
 **Gates.**
 
 - W4d merges last in the sub-wave, after W4c2, so its catalog covers W4c2's new messages.
-- **Jon's check 3**: the terminal reader in Spanish or French for five minutes with NVDA, and the pseudo-locale run. Nothing to hear from W4c2 and W4f beyond "nothing to hear" lines.
-- After the last merge: the Docker disk is compacted with Jon (one administrator prompt), and Wave 5 planning starts from the measurements.
+- **The owner's check 3**: the terminal reader in Spanish or French for five minutes with NVDA, and the pseudo-locale run. Nothing to hear from W4c2 and W4f beyond "nothing to hear" lines.
+- After the last merge: the Docker disk is compacted with the owner (one administrator prompt), and Wave 5 planning starts from the measurements.
 
 **Merge point and checks.** As in 4b, plus the release workflow run by hand on a branch (W4f) and `cargo xtask release --dry-run`.
 
 ### Timeline
 
-Durations, not promises. Sub-wave 4a about two days, 4b about three, 4c about three, plus a day for each of Jon's sessions and the merges. If 4a starts on Monday, September 28, 2026, the wave ends around Wednesday, October 7, 2026. Sub-waves do not overlap: 4b's agents launch only after 4a's last merge and flush, because the flush and the memory check are what keep the floors.
+Durations, not promises. Sub-wave 4a about two days, 4b about three, 4c about three, plus a day for each of the owner's sessions and the merges. If 4a starts on Monday, September 28, 2026, the wave ends around Wednesday, October 7, 2026. Sub-waves do not overlap: 4b's agents launch only after 4a's last merge and flush, because the flush and the memory check are what keep the floors.
 
 ## 3. Dependency map
 
@@ -153,7 +153,7 @@ Durations, not promises. Sub-wave 4a about two days, 4b about three, 4c about th
 - **W4c1:** owns a new `crates/textweaver-mathcat`, the `mathcat` feature and one call site in `textweaver-speech/src/normalize/` (the math transform), one call in `textweaver-math` (the tree to MathML, which exists), the EPUB MathML path in `textweaver-formats` (the EPUB loader only), the `[reading] math_engine` setting (four places), `docs/math.md`, ADR-0029. Does not touch: the BRF writer (braille waits for MathCAT issue #827), `textweaver-app` beyond the setting and the schema entry.
 - **W4g:** owns `textweaver-app` authoring (`authoring.rs`, `spell.rs` neighbors, `notes.rs` export, a new `grammar.rs` and `lint.rs`), `textweaver-editor` where the grammar and lint hooks need it, `textweaver-tui` (code highlighting in the view; clipboard fallback), `textweaver-cli` (`tw lint` if added), new workspace dependencies (harper-core, rumdl, syntect, two-face, arboard), `docs/editing.md`, ADR-0032. Does not touch: `opening.rs`, `playback.rs`, `launch`, `textweaver-text`, `textweaver-formats`.
 - **W4b:** owns `textweaver-text` (segmentation, find), the zip features in the root `Cargo.toml` and `textweaver-formats`' archive code, `textweaver-app/src/{opening,playback,window}.rs` for measured hotspots, startup in `textweaver-tui/src/setup.rs` (after W4h's launch changes; announcements stay W4h's), `xtask/src/bench.rs`, the new dependencies icu_segmenter, memchr, aho-corasick, and the measurement write-up in `docs/dev/testing.md`. Does not touch: `textweaver-xilem`, the authoring modules, the rope.
-- **W4a2:** owns `crates/textweaver-xilem`, `crates/textweaver-xilem/tools/uia-report.ps1`, `xtask/src` GUI packaging, `docs/screenshots/xilem-gui/`, ADR-0028 (final). The wx removal (workspace members, `crates/textweaver-gui`, `.github/workflows/gui.yml`, docs) is the orchestrator's after Jon's yes.
+- **W4a2:** owns `crates/textweaver-xilem`, `crates/textweaver-xilem/tools/uia-report.ps1`, `xtask/src` GUI packaging, `docs/screenshots/xilem-gui/`, ADR-0028 (final). The wx removal (workspace members, `crates/textweaver-gui`, `.github/workflows/gui.yml`, docs) is the orchestrator's after the owner's yes.
 - **W4c2:** owns `textweaver-formats` (new `rtf.rs`, `odt.rs`, the DOCX reader's comments and revisions), `fuzz/`, `fixtures/c2/`, the notes mapping from DOCX comments (through `textweaver-store` `Note` types, no store change), `docs/converting.md`, ADR-0031. Does not touch: the EPUB loader, `textweaver-app` beyond one open-failure message per format.
 - **W4d:** owns `textweaver-lexicon/src/i18n`, the catalog files under `crates/textweaver-lexicon/locales/` (or wherever ADR-0025 put them), the message call sites across `textweaver-app` and `textweaver-tui` (the wide edit), the `[interface] language`, `[interface] rtl` and `[speech] voices_by_language` settings (four places each), `textweaver-engines` for the per-language voice choice, `textweaver-cli` (`tw settings language`), the pseudo-locale check in `scripts/dev-check`, `docs/settings.md`, ADR-0030. Does not touch: `.github/` (asks W4f or the orchestrator for the CI line).
 - **W4f:** owns `.github/`, `xtask/src/release.rs` and `appimage.rs`, `docker/appimage/`, `scripts/`, `docs/dev/releasing.md`, `CHANGELOG.md`'s release section, the doc pass (a list of files in its brief). Does not touch: any crate's Rust code beyond a compile fix it reports.
@@ -235,7 +235,7 @@ This plan uses option 2, plus the rule that **the orchestrator's native integrat
 - Disk: five fit (5 × 45 = 225 GB of 670 available).
 - RAM: three containers at 6 GB, or two at 8 GB.
 - Merges: three, with one app-message agent per sub-wave.
-- Jon's attention: one session per sub-wave, one checklist of at most five items per agent.
+- The owner's attention: one session per sub-wave, one checklist of at most five items per agent.
 
 **Three at once.** A fourth is allowed only if it runs no container and no native workspace build (W4f qualifies in 4c).
 
@@ -248,8 +248,8 @@ This plan uses option 2, plus the rule that **the orchestrator's native integrat
 
 1. **Before launch:** list and remove `target/ux1` (its branch is merged) and `target/orch` (old profile; rebuilt lean in step 2). `build-hygiene.ps1 -Flush -IncludeShared` lists them; `-Apply` removes exactly the listed folders. Routine project build output; no owner prompt needed, but the list is read first.
 2. **After each sub-wave's last merge:** for each merged agent, `build-hygiene.ps1 -RemoveVolume tw-target-<agent>` (list), then `-Apply`; then `build-hygiene.ps1 -Flush` (worktree folders of merged branches), then `-Apply`. Volumes and folders of an unmerged branch are never candidates, and the script refuses anything else.
-3. **When the virtual disk passes 300 GB, and after 4c:** compact it with Docker Desktop stopped from its menu (never force-quit), following `D:\recovery\work\compact-docker-vhdx.ps1`, with Jon at the administrator prompt.
-4. **Never** inside a volume from a container, never `docker system prune` (Jon's other projects share the daemon), never a worktree's folder while its branch is unmerged.
+3. **When the virtual disk passes 300 GB, and after 4c:** compact it with Docker Desktop stopped from its menu (never force-quit), following `D:\recovery\work\compact-docker-vhdx.ps1`, with the owner at the administrator prompt.
+4. **Never** inside a volume from a container, never `docker system prune` (the owner's other projects share the daemon), never a worktree's folder while its branch is unmerged.
 
 ## 5. Research gaps filled
 
@@ -284,7 +284,7 @@ Each brief is self-contained. Every agent also reads the shared preamble and the
 - **Code rules.** Announcements through `textweaver_a11y::route`. Writes through the writer thread. Speech on its thread, no async. New settings touch four places (store type and default, export fixture, schema, a reader). New keys pass the conflict, reachability, and WCAG 2.1.4 tests and avoid Windows Terminal's taken keys.
 - **Merging.** Merge `main` into your branch at least every second day and before reporting. Regenerate generated files after merging; never hand-merge them. New dependencies go in a block in the root `Cargo.toml` headed with your agent's name. Do not commit `THIRD-PARTY-NOTICES.md`. `CHANGELOG.md` lines go under a heading with your agent's name.
 - **Dates** from the machine: `py -3 -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"`.
-- **Report** (plain sentences, headings and lists, no tables): summary in five lines; files changed by crate; the check result lines, native and container; contract change requests or "none"; open issues; measured build output size (native `target` and the volume, from `build-hygiene.ps1`); what the next agent should do first; **a checklist of at most five things for Jon to try with NVDA and JAWS, or "nothing to hear"**. Add one status line under your heading in `docs/history/tasks.md`.
+- **Report** (plain sentences, headings and lists, no tables): summary in five lines; files changed by crate; the check result lines, native and container; contract change requests or "none"; open issues; measured build output size (native `target` and the volume, from `build-hygiene.ps1`); what the next agent should do first; **a checklist of at most five things for the owner to try with NVDA and JAWS, or "nothing to hear"**. Add one status line under your heading in `docs/history/tasks.md`.
 
 ### W4h: terminal polish (sub-wave 4a, P1)
 
@@ -309,11 +309,11 @@ Each brief is self-contained. Every agent also reads the shared preamble and the
 9. Announcements made before the speech engine is ready are queued and said once it reports, in order, after "Opened". Run `cargo xtask listen` afterwards and put the result in the report.
 10. Docs: the quick start's `q` line for the classic preset; `py -3` on Windows in `CONTRIBUTING.md`, `docs/dev/testing.md`, `docs/dev/building.md`, and the preamble's date command; `docs/keyboard.md` and the site data regenerated.
 
-**Checks:** the common set. **Jon's checklist (five):** first run with NVDA: the welcome once; "Ready" on the title line; Alt+Shift+A cycled and `say_status`; a question asked while reading heard over the voice; Escape in edit mode.
+**Checks:** the common set. **The owner's checklist (five):** first run with NVDA: the welcome once; "Ready" on the title line; Alt+Shift+A cycled and `say_status`; a question asked while reading heard over the voice; Escape in edit mode.
 
 ### W4s: GUI session prep (sub-wave 4a, P1)
 
-**Branch** `wave4/s-gui-session-prep`. **ADR-0028** (first draft: "The Xilem GUI after Jon's session"; W4a2 finishes it).
+**Branch** `wave4/s-gui-session-prep`. **ADR-0028** (first draft: "The Xilem GUI after the owner's session"; W4a2 finishes it).
 
 **Owns:** `crates/textweaver-xilem/src/{widgets,dialog,settings_dialog,setup,log,main}.rs`, `crates/textweaver-xilem/tools/uia-report.ps1`, `docs/adr/0028-xilem-gui-after-the-session.md`.
 
@@ -331,7 +331,7 @@ Each brief is self-contained. Every agent also reads the shared preamble and the
 
 **Checks:** the common set plus `cargo clippy -p textweaver-xilem` and its tests, the UI Automation report in `--background`, screenshots at 100 and 200 percent. Never take the foreground. Never play audio.
 
-**Jon's checklist (five):** with NVDA then JAWS: (1) Space reads; does the caret follow the word? (2) Pause, Stop, and a rate key: each announcement once, first with `--announce live`, then with `--announce uia`; (3) Ctrl+Comma, arrow to a setting below the fold, then object-navigate to it; (4) a bookmarks list with more options than fit; End, then Home; (5) the highlight: selection or background, which reads better?
+**The owner's checklist (five):** with NVDA then JAWS: (1) Space reads; does the caret follow the word? (2) Pause, Stop, and a rate key: each announcement once, first with `--announce live`, then with `--announce uia`; (3) Ctrl+Comma, arrow to a setting below the fold, then object-navigate to it; (4) a bookmarks list with more options than fit; End, then Home; (5) the highlight: selection or background, which reads better?
 
 ### W4c1: MathCAT speech (sub-wave 4a, P2)
 
@@ -354,7 +354,7 @@ Each brief is self-contained. Every agent also reads the shared preamble and the
 
 **Checks:** the common set, plus the tests with `--features mathcat` natively and in the container, and the binary size before and after (`cargo xtask dist --dry-run` or a release build of `textweaver-tui`, reported in bytes).
 
-**Jon's checklist (three):** open `fixtures/c1/quadratic.md`; read the formula with `math_engine = "builtin"`, then `"mathcat"`; say which wording is clearer at each verbosity.
+**The owner's checklist (three):** open `fixtures/c1/quadratic.md`; read the formula with `math_engine = "builtin"`, then `"mathcat"`; say which wording is clearer at each verbosity.
 
 ### W4g: authoring extras (sub-wave 4b, P1)
 
@@ -377,7 +377,7 @@ Each brief is self-contained. Every agent also reads the shared preamble and the
 
 **Checks:** the common set, each feature on and off, `cargo deny` after the new crates, `cargo xtask deps --check` (the lean reader links none of these).
 
-**Jon's checklist (four):** in edit mode, Alt+G (or the chosen key) to the next grammar problem; a lint problem; Enter a code block and hear its language; the Unicode math view on `fixtures/g/math.md`.
+**The owner's checklist (four):** in edit mode, Alt+G (or the chosen key) to the next grammar problem; a lint problem; Enter a code block and hear its language; the Unicode math view on `fixtures/g/math.md`.
 
 ### W4b: speed and memory (sub-wave 4b, P1)
 
@@ -401,22 +401,22 @@ Each brief is self-contained. Every agent also reads the shared preamble and the
 
 **Checks:** the common set; the bench gate against main's artifact; new timing tests 40 times under load; the `publish`-off build.
 
-**Jon's checklist:** nothing to hear, unless step 5 changed the order of startup messages; then: "Opened" and the first-run welcome once, with NVDA.
+**The owner's checklist:** nothing to hear, unless step 5 changed the order of startup messages; then: "Opened" and the first-run welcome once, with NVDA.
 
 ### W4a2: the GUI after the session (sub-wave 4b, P1)
 
-**Branch** `wave4/a2-gui-after-session`, from `main` after W4s merged and Jon's session 1 is written up. **ADR-0028** (finish W4s's draft).
+**Branch** `wave4/a2-gui-after-session`, from `main` after W4s merged and the owner's session 1 is written up. **ADR-0028** (finish W4s's draft).
 
 **Owns:** `crates/textweaver-xilem` (all of it now, including `document.rs` and `runs.rs`), its UI Automation report, `xtask/src` GUI packaging, `docs/screenshots/xilem-gui/`, `docs/gui.md` (create it if missing: how to start, the keys, the settings).
 
-**Not to touch:** the vendored Parley (no upgrade; edit mode is Wave 5), `textweaver-app` beyond one-line hooks, `.github/` and the workspace members (the orchestrator removes the wx spike after Jon's yes), `textweaver-gui`.
+**Not to touch:** the vendored Parley (no upgrade; edit mode is Wave 5), `textweaver-app` beyond one-line hooks, `.github/` and the workspace members (the orchestrator removes the wx spike after the owner's yes), `textweaver-gui`.
 
-**Read first:** the write-up of Jon's session 1, ADR-0027, ADR-0028 draft, ADR-0022 (reading aids), `docs/research/wave4.md` (RSVP overlays, announcements on Windows).
+**Read first:** the write-up of the owner's session 1, ADR-0027, ADR-0028 draft, ADR-0022 (reading aids), `docs/research/wave4.md` (RSVP overlays, announcements on Windows).
 
 **Deliverables, in order:**
 
 1. The session's fixes, one commit each, with the decision on highlight and announcements recorded in ADR-0028.
-2. **A window slide during reading keeps the screen reader's place:** when `DocWindow` slides or recentres, the caret stays in a valid range, the selection is re-sent, and no announcement is lost. Checked in the UI Automation report (read past a window edge in `--background`). First on Jon's second checklist.
+2. **A window slide during reading keeps the screen reader's place:** when `DocWindow` slides or recentres, the caret stays in a valid range, the selection is re-sent, and no announcement is lost. Checked in the UI Automation report (read past a window edge in `--background`). First on the owner's second checklist.
 3. Reading aids: text spacing, the reading ruler and current-line band, bionic reading, difficult words (from `textweaver-aids`), and an RSVP panel that never covers the caret. The RSVP word node is hidden and never live and never focused; a quiet status node ("RSVP paused, word 120 of 900") with `Live::Off`. A test for both.
 4. Parity essentials with the terminal reader: outline, notes list, the access modes, tables and links by key. Parity means Star's features, not Star's bugs (the Phase 0 inventory lists the bugs). Citations while writing, export, preview, and spell check wait for edit mode (Wave 5).
 5. A test that the first nine themes keep their cycle order.
@@ -424,23 +424,23 @@ Each brief is self-contained. Every agent also reads the shared preamble and the
 
 **Checks:** the common set plus the GUI crate's clippy and tests, the UI Automation report, the AT-SPI dump if Docker has Xvfb (else CI), never the foreground, never audio.
 
-**Jon's checklist (five):** (1) read past the window edge on a long document: does NVDA keep its place? (2) RSVP on: is anything spoken by NVDA? (it must not be); (3) the reading ruler with a theme change; (4) Alt+O outline and Enter; (5) the notes list.
+**The owner's checklist (five):** (1) read past the window edge on a long document: does NVDA keep its place? (2) RSVP on: is anything spoken by NVDA? (it must not be); (3) the reading ruler with a theme change; (4) Alt+O outline and Enter; (5) the notes list.
 
-**Update for sub-wave 4c (Sunday, September 27, 2026, 11:23 PM).** These changes override the three briefs below. They follow Jon's answers and the Cloud Agent's reservations in `docs/history/reservations.md`:
+**Update for sub-wave 4c (Sunday, September 27, 2026, 11:23 PM).** These changes override the three briefs below. They follow the owner's answers and the Cloud Agent's reservations in `docs/history/reservations.md`:
 - **W4c2 and fuzzing.** The Cloud Agent's task 1 owns `fuzz/Cargo.toml`, `fuzz/src/lib.rs`, `fuzz/README.md` and the nightly matrix while its pull request is open. W4c2 writes its three fuzz targets (`rtf`, `odt`, `docx_revisions`) and their seeds last:
   - If the Cloud Agent's pull request has merged, W4c2 merges main first, then appends its targets.
   - If the pull request is still open, W4c2 puts the targets and their `[[bin]]` lines in its report for the orchestrator to add after the merge.
 - **W4f: deliverable 1 is dropped.** The six W3d targets were added at launch (`132382f`), and the nightly matrix is the Cloud Agent's while task 1 is open.
 - **W4f: two steps in `ci.yml`'s docs job are the Cloud Agent's** (task 2). W4f leaves those steps alone.
-- **W4f: deliverable 6.** It writes release notes for the next alpha (`0.1.0-alpha.4`), not a beta. Jon keeps iterating alphas until a feature-complete final alpha.
-- **W4f: deliverable 7 is dropped.** Jon decided on no merge gate for now, so there are no rulesets and no auto-merge.
+- **W4f: deliverable 6.** It writes release notes for the next alpha (`0.1.0-alpha.4`), not a beta. The owner keeps iterating alphas until a feature-complete final alpha.
+- **W4f: deliverable 7 is dropped.** the owner decided on no merge gate for now, so there are no rulesets and no auto-merge.
 - **W4f: the doc pass skips files the Cloud Agent's task 2 owns** while it is open:
   - `docs/settings-reference.md`;
   - the Decisions list, crate count and Roadmap line in `docs/README.md`;
   - the index lines in `docs/adr/README.md`;
   - the status block in `docs/roadmap.md`;
   - the crate count in `docs/dev/architecture.md`.
-- **W4d: one extra check.** It confirms Spanish and French with the voices Jon has. The built-in engines come first. Eloquence is his preference, through the ECI host, with Voxin only.
+- **W4d: one extra check.** It confirms Spanish and French with the voices the owner has. The built-in engines come first. Eloquence is his preference, through the ECI host, with Voxin only.
 
 ### W4c2: documents (sub-wave 4c, P2)
 
@@ -462,7 +462,7 @@ Each brief is self-contained. Every agent also reads the shared preamble and the
 
 **Checks:** the common set, plus `cargo fuzz build` for the new targets and ten minutes of each locally (nightly Rust in the container, not natively: the toolchain lives on D:).
 
-**Jon's checklist (two):** open `fixtures/c2/handout.rtf` and `fixtures/c2/notes.odt` in the reader; a DOCX with a comment: is the note announced while reading?
+**The owner's checklist (two):** open `fixtures/c2/handout.rtf` and `fixtures/c2/notes.odt` in the reader; a DOCX with a comment: is the note announced while reading?
 
 ### W4d: translations (sub-wave 4c, P3)
 
@@ -485,7 +485,7 @@ Each brief is self-contained. Every agent also reads the shared preamble and the
 
 **Checks:** the common set; the four-places tests for the three settings; `cargo xtask keyboard --check` (help strings come from the catalog now).
 
-**Jon's checklist (four):** first run with `--home` fresh: the language list; Spanish for five minutes with NVDA (Eloquence has no Spanish voice: the "kept the current voice" message); Alt+Shift+A in French; `en-XA` for one minute to hear the bracketed strings.
+**The owner's checklist (four):** first run with `--home` fresh: the language list; Spanish for five minutes with NVDA (Eloquence has no Spanish voice: the "kept the current voice" message); Alt+Shift+A in French; `en-XA` for one minute to hear the bracketed strings.
 
 ### W4f: platforms and CI (sub-wave 4c, P3, light)
 
@@ -504,12 +504,12 @@ Each brief is self-contained. Every agent also reads the shared preamble and the
 3. The Orca check: the AT-SPI dump under Xvfb in `gui.yml` for `textweaver-xilem`; the macOS smoke test kept. VoiceOver by a person is out of scope (no Mac).
 4. `cargo xtask release` checks that the listening checklist in `docs/dev/releasing.md` is dated; the changelog grouped by area from the agents' headings.
 5. The doc pass, file by file against `--help` output and the code, with one commit per file and a list in the report of every passage changed.
-6. Release notes for `0.1.0-beta.1` in `CHANGELOG.md`'s "Unreleased" section, for Jon to release when he says so.
-7. If Jon approves (open question 3): the rulesets (pull request required, 0 approvals, required status checks, force pushes blocked), auto-merge on, and `gh pr merge --auto --squash --delete-branch` documented in `CONTRIBUTING.md`.
+6. Release notes for `0.1.0-beta.1` in `CHANGELOG.md`'s "Unreleased" section, for the owner to release when he says so.
+7. If the owner approves (open question 3): the rulesets (pull request required, 0 approvals, required status checks, force pushes blocked), auto-merge on, and `gh pr merge --auto --squash --delete-branch` documented in `CONTRIBUTING.md`.
 
 **Checks:** actionlint, shellcheck, the PowerShell lint, the link and site checks, a manual run of `release.yml` on the branch (`workflow_dispatch`, no tag).
 
-**Jon's checklist:** nothing to hear.
+**The owner's checklist:** nothing to hear.
 
 ## 7. Execution runbook
 
@@ -520,7 +520,7 @@ Every step names its checks. "Free memory" means `FreePhysicalMemory` from `Get-
 1. Apply the brief changes above to `docs/history/tasks.md`: the three sub-waves, the agents' names, the ADR numbers (0028 W4s and W4a2, 0029 W4c1, 0030 W4d, 0031 W4c2, 0032 W4g), the common rules.
 2. `compose.yaml`: `mem_limit: ${TW_MEM:-8g}`, `cpus: ${TW_CPUS:-6}`, `CARGO_BUILD_JOBS: ${TW_JOBS:-6}`; fix the comment about five agents and 40 GB. `docs/dev/docker.md`: the same correction; the cache is 30 GB in both places; `docs/history/tasks.md` line "SCCACHE_CACHE_SIZE=50G" becomes 30G.
 3. `.github/workflows/nightly.yml`: add `daisy, pptx, sheet, archive, image, web` to the fuzz matrix, with corpus lines.
-4. Commit on main. Tell Jon the plan is in place and ask the open questions (section 9).
+4. Commit on main. Tell the owner the plan is in place and ask the open questions (section 9).
 
 ### Step 1: flush before launch
 
@@ -530,7 +530,7 @@ Every step names its checks. "Free memory" means `FreePhysicalMemory` from `Get-
 
 ### Step 2: warm the cache and measure the lean build (about one hour of machine time)
 
-1. Free memory must be at least 30 GB. Docker Desktop running (restarted from its menu since Wave 3, per the rule; ask Jon if unsure).
+1. Free memory must be at least 30 GB. Docker Desktop running (restarted from its menu since Wave 3, per the rule; ask the owner if unsure).
 2. Native, from `D:\textweaver` on main, with the sccache variables: `cargo test --workspace --no-run --features textweaver-speech/omnivox` then `cargo build -p textweaver-xilem`. Record the time and `target\debug`'s size from `build-hygiene.ps1`. **This is the measured lean native size**; write it into section 4 of this document as a status update and into `docs/dev/building.md`.
 3. In the container, `TW_AGENT=orch MSYS_NO_PATHCONV=1 docker compose -p textweaver run --rm -T dev cargo test --workspace --all-features --no-run`. Record the time and `tw-target-orch`'s size, and `textweaver-sccache`'s size. **This is the measured lean container size.**
 4. Replace the allowances in section 4.1 with 1.5 times the measured numbers. If the measured container size is over 40 GB, stop and re-plan the volume allowance before launching three agents.
@@ -541,7 +541,7 @@ Every step names its checks. "Free memory" means `FreePhysicalMemory` from `Get-
 1. Checks: D: free at least 400 GB (expected about 850); free memory at least 32 GB (three agents at 6 GB); `docker system df` recorded.
 2. Create three worktrees from main: `wave4/h-terminal-polish`, `wave4/s-gui-session-prep`, `wave4/c1-mathcat`. Set `TW_AGENT=w4h`, `w4s`, `w4c1`; `TW_MEM=6g`, `TW_CPUS=4`, `TW_JOBS=4`.
 3. Give each agent its brief from section 6, with the common rules pasted in.
-4. Twice a day: `build-hygiene.ps1` and free memory, into a one-line log in `docs/history/tasks.md` under the sub-wave heading (date and time from the machine, D: free, memory free, volumes' sizes). Tell Jon only when a number crosses a threshold (section 7, "if a floor is reached").
+4. Twice a day: `build-hygiene.ps1` and free memory, into a one-line log in `docs/history/tasks.md` under the sub-wave heading (date and time from the machine, D: free, memory free, volumes' sizes). Tell the owner only when a number crosses a threshold (section 7, "if a floor is reached").
 
 ### Step 4: integrate, in the order W4h, W4s, W4c1
 
@@ -551,13 +551,13 @@ For each agent that reports:
 2. Free memory at least 30 GB and at most one agent container building (ask the other agents to pause builds for the check if needed, or wait).
 3. Merge main into the branch (the agent did; verify), then run on the branch, natively: fmt, workspace clippy, workspace tests with `--no-fail-fast`, rustdoc, `keyboard --check`, `deps --check`, the link and site checks, `notices --check` if `Cargo.lock` changed, the `publish`-off build if the app changed, `-p textweaver-xilem` clippy and tests if the GUI changed.
 4. In the container, one at a time: the all-features clippy and tests. Never two Docker checks at once.
-5. Merge to main, regenerate the site and the notices, commit. Push only if Jon's rules for pushes allow it (they did for Wave 3).
+5. Merge to main, regenerate the site and the notices, commit. Push only if the owner's rules for pushes allow it (they did for Wave 3).
 6. Flush that agent: `build-hygiene.ps1 -RemoveVolume tw-target-<agent>`, read, then `-Apply`; `build-hygiene.ps1 -Flush`, read (the worktree's `target` is a candidate once its branch is merged), then `-Apply`. Record D: free after.
-7. After W4h and W4s: build the release binaries (`cargo build --release -p textweaver-tui -p textweaver-cli` and `-p textweaver-xilem` with the sccache variables) and hand Jon the combined checklist: W4h's five items, then W4s's five, then W3b's ten. Say which binary and which command line for each.
+7. After W4h and W4s: build the release binaries (`cargo build --release -p textweaver-tui -p textweaver-cli` and `-p textweaver-xilem` with the sccache variables) and hand the owner the combined checklist: W4h's five items, then W4s's five, then W3b's ten. Say which binary and which command line for each.
 
-### Step 5: Jon's session 1
+### Step 5: the owner's session 1
 
-1. Jon tests when he chooses. The orchestrator writes his findings into `docs/history/tasks.md` under "Session 1", one line each: what he heard, what he expected, which design he picked (highlight; announcements).
+1. The owner tests when he chooses. The orchestrator writes his findings into `docs/history/tasks.md` under "Session 1", one line each: what he heard, what he expected, which design he picked (highlight; announcements).
 2. The findings become the first items of W4a2's brief. Nothing in 4b launches before the write-up exists, except W4b and W4g, which do not depend on it: they may start as soon as W4h and W4c1 are merged and flushed, to keep two agents busy.
 
 ### Step 6: sub-wave 4b
@@ -565,25 +565,25 @@ For each agent that reports:
 1. Same checks as step 3. W4g and W4b start from main after W4h's merge; W4a2 after the session write-up.
 2. W4b's zip commit: merge it to main as its own integration (steps 4.2 to 4.5, small) within a day of its report.
 3. Integrate in the order W4g, W4b, W4a2 (or W4b first if it reports first: W4g then merges main once more).
-4. After W4a2: release build of the GUI, Jon's checklist (W4a2's five). **Session 2.** Write up. Ask Jon about the wx spike (question 4) and GUI edit mode (question 2).
-5. Flush each merged agent as in step 4.6. Check the Docker virtual disk size; compact with Jon if over 300 GB.
+4. After W4a2: release build of the GUI, the owner's checklist (W4a2's five). **Session 2.** Write up. Ask the owner about the wx spike (question 4) and GUI edit mode (question 2).
+5. Flush each merged agent as in step 4.6. Check the Docker virtual disk size; compact with the owner if over 300 GB.
 
 ### Step 7: sub-wave 4c
 
 1. Same checks. W4c2 and W4f start from main after 4b's last merge. W4d starts at the same time but merges last; tell it to merge main after W4c2 lands.
 2. Integrate W4c2, then W4f (workflows: run `ci.yml` and the manual release workflow once on the branch before merging), then W4d (its catalog must cover W4c2's messages; the checker fails otherwise).
-3. Jon's check 3 (W4d's four items).
-4. Flush everything merged. Compact Docker's disk with Jon. Record the final numbers in `docs/history/tasks.md` and hand the wiki page `meta/textweaver-releases/textweaver Wave 4 planning.md` its results section (the orchestrator edits the wiki; agents never do).
+3. The owner's check 3 (W4d's four items).
+4. Flush everything merged. Compact Docker's disk with the owner. Record the final numbers in `docs/history/tasks.md` and hand the wiki page `meta/textweaver-releases/textweaver Wave 4 planning.md` its results section (the orchestrator edits the wiki; agents never do).
 5. Wave 5 planning starts from: the measured build sizes, W4b's numbers, the two sessions' write-ups, and section 8's deferred list.
 
 ### If a floor is reached
 
-- **D: under 300 GB free:** no new heavy process. Flush every merged agent (step 4.6) and the shared native folders (`-Flush -IncludeShared`). If still under 300 GB, ask the running agents to stop builds, and measure each volume; the largest unmerged one is paused (its agent works on tests and docs) until an integration frees space. Under 250 GB: Docker's disk is compacted with Jon before anything else runs. Under 200 GB is the failure condition: every build stops, and Jon is told in one line what happened and what is being removed.
+- **D: under 300 GB free:** no new heavy process. Flush every merged agent (step 4.6) and the shared native folders (`-Flush -IncludeShared`). If still under 300 GB, ask the running agents to stop builds, and measure each volume; the largest unmerged one is paused (its agent works on tests and docs) until an integration frees space. Under 250 GB: Docker's disk is compacted with the owner before anything else runs. Under 200 GB is the failure condition: every build stops, and the owner is told in one line what happened and what is being removed.
 - **Free memory under 20 GB:** whoever sees it (the orchestrator's twice-daily check, or an agent's pre-build check) stops starting anything. Running builds finish. The orchestrator finds the cause (`Get-Process` sorted by working set): a container over its cap cannot happen (Docker enforces it), so it is a native process, usually a workspace test link or a runaway `cargo doc`. It is allowed to finish; the next heavy process waits until 26 GB is free.
 - **Docker's virtual disk over 300 GB:** compact at the next merge point, not mid-build.
 - **A container fails with an out-of-memory kill:** lower `TW_JOBS` to 2 for that agent, not the cap; if it still fails, that agent runs its container builds only when no other container is building.
 
-### Keeping Jon informed
+### Keeping the owner informed
 
 - One line per merge in the chat: agent, what merged, test count, D: free, memory free, what he can test now.
 - One message per sub-wave end: the sub-wave's goal met or not, the numbers, the next gate, and his checklist as a numbered list, at most five items per agent, in the order to try them.
@@ -592,18 +592,18 @@ For each agent that reports:
 
 ## 8. What to cut or defer
 
-- **W4e, offline intelligence: defer to Wave 5.** It is the furthest from the goal, it is the only agent that downloads models (110 MB per language pair, each needing Jon's approval), it adds a third tokenizer, and its no-model half (LexRank) is a half-day item that can join any later agent. Nothing in Wave 4 depends on it.
-- **GUI edit mode: defer to Wave 5** unless session 2 is clean and Jon wants it in 4c (question 2). It is the riskiest GUI item (no Rust app has good screen-reader editing of multi-line text yet), it needs the highlight design settled, and it competes with W4a2 for the same crate.
+- **W4e, offline intelligence: defer to Wave 5.** It is the furthest from the goal, it is the only agent that downloads models (110 MB per language pair, each needing the owner's approval), it adds a third tokenizer, and its no-model half (LexRank) is a half-day item that can join any later agent. Nothing in Wave 4 depends on it.
+- **GUI edit mode: defer to Wave 5** unless session 2 is clean and the owner wants it in 4c (question 2). It is the riskiest GUI item (no Rust app has good screen-reader editing of multi-line text yet), it needs the highlight design settled, and it competes with W4a2 for the same crate.
 - **W4c2's LaTeX subset and EML/MHTML: defer to Wave 5.** Course notes as LaTeX and email archives are rarer for students than RTF and ODT handouts and Word comments. Both need their own parsers and fuzz targets; W4c2 is large enough without them.
-- **W4f's Guidepup automated screen-reader tests: defer to a Wave 5 spike.** Its use with native apps is unverified, and its setup action was archived. Jon's own sessions are the test this wave.
+- **W4f's Guidepup automated screen-reader tests: defer to a Wave 5 spike.** Its use with native apps is unverified, and its setup action was archived. The owner's own sessions are the test this wave.
 - **W4f's VoiceOver by a person: out of scope.** No Mac. Keep the CI smoke test and the accessibility dump.
 - **MathCAT braille and formula navigation through MathCAT: wait for issue #827** and a tagged release; speech now.
 - **The rope change and TLS: already removed. Keep them removed.**
 - **W4a's "citations while writing, export and preview, spell check" in the GUI: wait for edit mode** (Wave 5). Reading-side parity (outline, notes, access modes, tables, links) stays in W4a2.
-- **The wxDragon removal: only after session 2 and Jon's yes** (question 4). Until then it costs nothing: it is not a default member and CI builds it on its own job.
+- **The wxDragon removal: only after session 2 and the owner's yes** (question 4). Until then it costs nothing: it is not a default member and CI builds it on its own job.
 - **Not cut, but shrunk:** W4b keeps measurements and the pure-Rust zip change, drops nothing else; W4g keeps all six items because each is small and behind a feature.
 
-## 9. Open questions for Jon
+## 9. Open questions for the owner
 
 1. **Defer W4e (offline translation and summaries) to Wave 5?** If not, it takes the fourth slot in sub-wave 4c and needs your approval for each model download.
 2. **GUI edit mode: Wave 5, or a slot in sub-wave 4c if session 2 goes well?** It would replace W4f's slot in the machine's budget (W4f would then run as a fourth, light agent).
@@ -611,7 +611,7 @@ For each agent that reports:
 4. **Remove the wxDragon spike after session 2 passes,** or keep it as a fallback through Wave 4?
 5. **Unbound keys in the reader: silent, as NVDA's browse mode is, or a short tone at high verbosity?** (UX-1's item 7.) W4h implements whichever you choose.
 
-## Jon's answers (Sunday, September 27, 2026)
+## The owner's answers (Sunday, September 27, 2026)
 
 1. **W4e is deferred to Wave 5.**
 2. **GUI edit mode stays in Wave 4,** as a new agent, W4a3, in sub-wave 4c after session 2 (ADR 0033). It takes 4c's heavy slot, and W4f runs as a light fourth agent. Its brief is in `docs/history/tasks.md`, under "Adopted plan".

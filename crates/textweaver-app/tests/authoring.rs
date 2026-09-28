@@ -597,7 +597,7 @@ fn preview_opens_the_browser_and_saving_rewrites_it() {
     assert_eq!(r.opened().len(), 1);
     let page = std::fs::read_to_string(&opened[0]).unwrap();
     assert!(page.contains("Note: The area"), "{page}");
-    // Jon's decision: say it, and do not reload by itself.
+    // The owner's decision: say it, and do not reload by itself.
     assert!(
         r.said.any("Preview updated. Press F5 in the browser."),
         "{:?}",

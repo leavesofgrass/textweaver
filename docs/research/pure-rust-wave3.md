@@ -52,7 +52,7 @@ Researched on Saturday, September 26, 2026, for Agents W3d (OCR), W3e (define wo
 ### Speed
 
 - Published real-time factors on ONNX Runtime are 0.12 to 0.22 on small CPUs.
-- The estimate for rten on Jon's desktop is 0.1 to 0.3.
+- The estimate for rten on the owner's desktop is 0.1 to 0.3.
 - First audio should come 100 to 300 ms after starting, if the first clause is spoken as its own chunk and the model stays loaded.
 - W3f must measure these.
 
@@ -138,7 +138,7 @@ Researched on Saturday, September 26, 2026, for Agents W3d (OCR), W3e (define wo
 
 Every licence is permissive or GPL-compatible. `icu_segmenter` is Unicode-3.0, and `espeak-ng` is GPL-3.0-or-later, the same as textweaver.
 
-## Downloads that need Jon's approval
+## Downloads that need the owner's approval
 
 - **Build time:** crates from crates.io. The largest is `icu_segmenter`, at 4.2 MB compressed.
 - **Run time:** users confirm each download in the app, and every file is checked by SHA-256.

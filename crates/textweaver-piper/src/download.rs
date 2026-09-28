@@ -197,7 +197,7 @@ fn agent() -> ureq::Agent {
         .timeout_connect(Some(Duration::from_secs(20)))
         .timeout_recv_body(Some(Duration::from_secs(60)))
         // Neutral on purpose: no user, machine, or account names ever go
-        // out with a request (Jon's rule).
+        // out with a request (the owner's rule).
         .user_agent(USER_AGENT)
         .build()
         .into()

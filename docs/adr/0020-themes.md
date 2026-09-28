@@ -7,13 +7,13 @@
 
 ## Context
 
-Star shipped 23 color palettes (`star/themes.py`), user CSS themes, and OS light/dark following. Its themes serve low-vision and dyslexic readers, so their colors are an accessibility feature, not decoration, and three audits in Jon's wiki measured how they fell short:
+Star shipped 23 color palettes (`star/themes.py`), user CSS themes, and OS light/dark following. Its themes serve low-vision and dyslexic readers, so their colors are an accessibility feature, not decoration, and three audits in the owner's wiki measured how they fell short:
 
 - "star TUI palette contrast audit": the terminal UI kept its own, different palette table with no contrast test. On 256-color terminals 6 of 18 themes were clean; on 16-color terminals none were, and `sepia`, `gruvbox-light`, and `solarized-light` drew headings bright yellow on white (1.00:1). Five GUI themes had no terminal entry, including the default `galaxy`, so the terminal silently ran another theme. On a colorless terminal every attribute was dropped with the colors. In `phosphor` the current search match looked like body text.
 - "Color Contrast Algorithms and Checking Tools": WCAG 2.x is the enforceable formula; APCA is informative; base-8 terminal colors have no fixed RGB and cannot be guaranteed; do not rely on dim text.
 - "Platform Accessibility Settings and Application Theme Engines (Section 508 §503.2)": warn about, never block, a user theme that fails contrast; share one ratio function between the runtime warning and the test gate; honor `NO_COLOR` and never change the terminal's palette; keep a light/dark pair per theme so the system setting can be followed inside the theme engine.
 
-Jon reads in Galaxy, Star's Obsidian-style dark theme, and asked that it be the default.
+The owner reads in Galaxy, Star's Obsidian-style dark theme, and asked that it be the default.
 
 ## Decision
 
@@ -92,7 +92,7 @@ Quotes use the dim-text color (Star's `muted`), so each `dim_text` change applie
 - A GUI `system` theme built from the platform palette (503.2's follow-system mode) belongs to the GUI in wave 3; the terminal's equivalent is the no-color level, which uses the terminal's own colors.
 
 
-**Status update (Saturday, September 26, 2026).** Jon's decision: not every theme has to meet WCAG AA, as long as some do. The contrast check becomes a label for most themes, not a gate. Each theme reports whether it meets AA, and the theme list and `docs/themes.md` say so. These themes must still pass:
+**Status update (Saturday, September 26, 2026).** the owner's decision: not every theme has to meet WCAG AA, as long as some do. The contrast check becomes a label for most themes, not a gate. Each theme reports whether it meets AA, and the theme list and `docs/themes.md` say so. These themes must still pass:
 - Galaxy (the default) and Galaxy Light;
 - the high-contrast themes (`contrast`, `high-contrast`), at 7:1.
 

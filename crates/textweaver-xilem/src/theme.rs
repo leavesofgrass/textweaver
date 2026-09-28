@@ -1,7 +1,7 @@
 //! textweaver's themes on Masonry's widgets.
 //!
 //! The layout, spacing, and corner radii follow Masonry's default look (the
-//! one Xilem's `to_do_mvc` example shows, which Jon liked); the colours come
+//! one Xilem's `to_do_mvc` example shows, which the owner liked); the colours come
 //! from a textweaver theme ([`Theme::rgb_table`]'s roles), Galaxy by
 //! default. Every derived colour is checked: text 4.5 to 1 on its surface
 //! (7 to 1 in high-contrast themes) and the focus ring 3 to 1 against both

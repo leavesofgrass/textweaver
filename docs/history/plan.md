@@ -1,6 +1,6 @@
 # textweaver — implementation plan (4-subagent execution)
 
-> Approved by Jon on 2026-09-25 (Friday). Approval started Phase 0 only; each later wave is reported before the next begins. Phase 0 amendments are recorded at the end of this document ("Phase 0 amendments") and in the ADRs; where they differ, the amendments and ADRs win.
+> Approved by the owner on 2026-09-25 (Friday). Approval started Phase 0 only; each later wave is reported before the next begins. Phase 0 amendments are recorded at the end of this document ("Phase 0 amendments") and in the ADRs; where they differ, the amendments and ADRs win.
 
 > **Status update (Saturday, September 26, 2026).** This plan is kept as it was approved. Phase 0, Wave 1, and Wave 2 are done and merged on `main`; releases `v0.1.0-alpha.1` to `v0.1.0-alpha.3` are tagged. Wave 2 grew well beyond the four agents in section 7: formats and PDF, speech and audio export, state and library, app wiring, the shared engine host, the Obsidian vault and dictation, a GUI spike, rendering and bulk conversion, native writers, math, citations, themes, reading aids, DECtalk, settings import and export, scripts, bundled fonts, and an audit with its fixes. `docs/history/tasks.md` is the record of who did what. The `paperback` feature in section 6.2 is reserved and does nothing, because PDF is read natively ([ADR-0010](../adr/0010-pdf-loader.md)). Wave 3 (the GUI) has not started. For the system as built, read [the architecture guide](../dev/architecture.md) and the [documentation index](../README.md).
 
@@ -21,8 +21,8 @@ textweaver is a Rust-native reimplementation of Star's core: read documents alou
 | Formats | Own `Document` model and loader trait; built-in txt, Markdown, HTML, EPUB, DOCX; optional cargo feature `paperback` wrapping `paperback-core` for PDF and the long tail; optional `pandoc` subprocess loader. |
 | Parity roadmap after core | Voice typing / dictation; audio and document exports; library and full-text search (incl. Obsidian vault import/export). Study tools are out of scope for now. |
 | Execution | The orchestrating session writes the interface contract, briefs and merges four Opus subagents working in parallel git worktrees with disjoint crate ownership. |
-| Development environment | Docker container (`docker/Dockerfile`, `compose.yaml`) for Linux builds and tests on Jon's Windows machine with Docker Desktop; native Windows builds alongside (added by Jon at approval). |
-| Documentation | Everything documented in the Obsidian wiki (`D:\star\wiki`, domain page `textweaver`) as well as in `docs/` (added by Jon at approval). |
+| Development environment | Docker container (`docker/Dockerfile`, `compose.yaml`) for Linux builds and tests on the owner's Windows machine with Docker Desktop; native Windows builds alongside (added by the owner at approval). |
+| Documentation | Everything documented in the Obsidian wiki (`D:\star\wiki`, domain page `textweaver`) as well as in `docs/` (added by the owner at approval). |
 
 **Assumptions:** Rust edition 2024 on current stable (1.96 at Phase 0, pinned in `rust-toolchain.toml`); `tw` is the CLI binary and `textweaver` the TUI binary; US English strings with an i18n hook, no catalogs yet.
 
@@ -130,7 +130,7 @@ Undo / redo of grouped `core::Edit`s over a `Rope`; Markdown ops as pure `(text,
 3. `textweaver-core` complete and tested.
 4. Contract stubs in each owned crate, `todo!()`-free.
 5. ADRs 0001–0006, `docs/history/star-parity.md`, `docs/history/tasks.md`, fixtures, `fixtures/star-parity/`.
-6. Push `main`. Report to Jon; **Wave 1 starts only after that report**.
+6. Push `main`. Report to the owner; **Wave 1 starts only after that report**.
 
 ### Wave 1 — four subagents in parallel (M1–M3 scope)
 
@@ -151,7 +151,7 @@ Merge A → B → C → D, resolve contract change requests, run the full matrix
 
 Integration 2, tag `v0.1.0-beta.1`, report.
 
-### Wave 3 (after Jon reviews the beta)
+### Wave 3 (after the owner reviews the beta)
 
 GUI on wxDragon (with the `live-region` announcer), native word-boundary backends for Windows and macOS, batch convert and hot-folder watch, Star parity audit and docs.
 
@@ -177,7 +177,7 @@ GUI on wxDragon (with the `live-region` announcer), native word-boundary backend
 - `cargo fmt --check`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `cargo test --workspace --all-features`, `cargo doc --workspace --no-deps` natively on Windows and in the Docker image.
 - `tw text fixtures/sample.md`, `tw info fixtures/sample.html`, `tw backends`, `tw speak --backend null --json "test"`.
 - The scripted TUI test in the Agent D acceptance row.
-- Manual on a desktop with audio (Jon): `tw speak --backend espeak`, `textweaver README.md` with `docs/keyboard.md`; with Omnivox installed, `tw speak --backend omnivox`.
+- Manual on a desktop with audio (the owner): `tw speak --backend espeak`, `textweaver README.md` with `docs/keyboard.md`; with Omnivox installed, `tw speak --backend omnivox`.
 
 ## 11. Risks
 
@@ -192,7 +192,7 @@ GUI on wxDragon (with the `live-region` announcer), native word-boundary backend
 
 Decisions taken while writing the contract. Each is reflected in the code and the named ADR.
 
-1. **Environment.** Phase 0 ran on Jon's Windows 11 machine, not a Linux container. Linux builds use the Docker image (`docker/Dockerfile`: Rust 1.96 on Debian trixie with espeak-ng 1.52, ALSA, speech-dispatcher, clang, Python 3.13, pandoc). Toolchain pinned to 1.96 (ADR-0001).
+1. **Environment.** Phase 0 ran on the owner's Windows 11 machine, not a Linux container. Linux builds use the Docker image (`docker/Dockerfile`: Rust 1.96 on Debian trixie with espeak-ng 1.52, ALSA, speech-dispatcher, clang, Python 3.13, pandoc). Toolchain pinned to 1.96 (ADR-0001).
 2. **`live-region` is GUI-only.** The crate depends on wxDragon, so it cannot be part of the terminal build. The TUI announces through speech and its status line; the live-region announcer arrives with the GUI in wave 3 behind the `textweaver-a11y/live-region` feature (ADR-0006).
 3. **`Utterance`, `UtteranceId`, `UtteranceKind`, `MarkerKind`, and the preference enums live in core** (`Verbosity`, `PunctuationLevel`, `HighlightGranularity`, `CapsIndication`), so `text` can produce utterances, `speech` can consume them, and `store` can hold settings, without cross-dependencies (ADR-0001).
 4. **Backend timing contract.** `speak` returns without waiting for audio; events after that arrive through `SpeechBackend::poll`, which the service calls while speech is active. This is how `stop` and `pause` reach a backend mid-utterance on the same thread (ADR-0003).
@@ -201,9 +201,9 @@ Decisions taken while writing the contract. Each is reflected in the code and th
 7. **Keymap layers.** Bindings belong to a layer (Global, Browse, SpeechCursor, Edit). Browse-layer single keys are shared by both frontends; terminal chords avoid keys terminals cannot distinguish (`Ctrl+H`, `Ctrl+I`, `Ctrl+M`) (ADR-0006).
 8. **Settings format.** Sectioned TOML (`[speech]`, `[highlight]`, `[normalization]`, `[reading]`, `[display]`, `[editing]`, `[library]`), with unknown keys preserved in every table.
 9. **Document keys.** One key for every per-document store: file name plus a 64-bit FNV-1a hash of the absolute path (Star used three different keys).
-10. **Eloquence (added during Wave 1 at Jon's request).** A fifth Wave 1 agent (E) builds `textweaver-eci`: ETI-Eloquence through its ECI library in a separate host process (32-bit on Windows), with audio-clock word timing from index marks. SAPI5 was measured and rejected for highlighting: Eloquence reports one word event per sentence through it (ADR-0007).
-11. **Apple speech on macOS (added during Wave 1 at Jon's request).** A sixth Wave 1 agent (F) builds `textweaver-apple` with two selectable backends, `nsspeech` (NSSpeechSynthesizer, most responsive) and `avspeech` (AVSpeechSynthesizer into buffers with per-word sample offsets); Apple's bundled Eloquence voices, Reed by default. No Mac is available: testing runs on GitHub's macOS runners (ADR-0008).
-12. **SAPI5 voices (added during Wave 1 at Jon's request).** A seventh Wave 1 agent (G) builds `textweaver-sapi`: SAPI5 voices in x64 and x86 host processes (32-bit-only voices such as VW Paul, Kate, James and eSpeak), synthesized to memory with per-word audio offsets; every non-Eloquence voice on the development machine reports word timing (ADR-0009).
+10. **Eloquence (added during Wave 1 at the owner's request).** A fifth Wave 1 agent (E) builds `textweaver-eci`: ETI-Eloquence through its ECI library in a separate host process (32-bit on Windows), with audio-clock word timing from index marks. SAPI5 was measured and rejected for highlighting: Eloquence reports one word event per sentence through it (ADR-0007).
+11. **Apple speech on macOS (added during Wave 1 at the owner's request).** A sixth Wave 1 agent (F) builds `textweaver-apple` with two selectable backends, `nsspeech` (NSSpeechSynthesizer, most responsive) and `avspeech` (AVSpeechSynthesizer into buffers with per-word sample offsets); Apple's bundled Eloquence voices, Reed by default. No Mac is available: testing runs on GitHub's macOS runners (ADR-0008).
+12. **SAPI5 voices (added during Wave 1 at the owner's request).** A seventh Wave 1 agent (G) builds `textweaver-sapi`: SAPI5 voices in x64 and x86 host processes (32-bit-only voices such as VW Paul, Kate, James and eSpeak), synthesized to memory with per-word audio offsets; every non-Eloquence voice on the development machine reports word timing (ADR-0009).
 
 ## See also
 

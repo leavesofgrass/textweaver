@@ -8,7 +8,7 @@
 
 ## Context
 
-Jon asked for conversion and bulk conversion that are lightning fast, native Rust, and memory safe, even at the cost of custom parsers, with Pandoc only as a fallback. His choices: Markdown flavors GFM, Obsidian, and Pandoc Markdown; LaTeX math as MathML; MiniJinja templates; outputs Markdown, HTML, text, EPUB, DOCX, BRF, and PDF; folders converted by mirroring the tree and skipping outputs newer than their source.
+The owner asked for conversion and bulk conversion that are lightning fast, native Rust, and memory safe, even at the cost of custom parsers, with Pandoc only as a fallback. His choices: Markdown flavors GFM, Obsidian, and Pandoc Markdown; LaTeX math as MathML; MiniJinja templates; outputs Markdown, HTML, text, EPUB, DOCX, BRF, and PDF; folders converted by mirroring the tree and skipping outputs newer than their source.
 
 Star converted one file at a time on one thread, preferred Pandoc when installed (inheriting its table and escaping problems, and decoding its output with the Windows ANSI code page), wrote flat output folders with `name (2).md` collisions, and had no HTML renderer of its own (`docs/history/star-parity.md` Part 1 §1.5, `star/convert.py`, `star/watch.py`).
 
@@ -64,7 +64,7 @@ Hot-path changes from profiling: text runs are merged in one linear pass and onl
 
 - **Two separate renderers** (pulldown-cmark's writer and comrak's formatter, with extensions implemented twice): rejected; output would differ between engines and every accessibility fix would be made twice.
 - **comrak only:** complete GFM, but it allocates a full AST per document; pulldown-cmark streams and is faster, so it stays the default.
-- **Pandoc for everything:** rejected by Jon's direction (speed, native code) and by Star's experience (tables, escaping, encoding).
+- **Pandoc for everything:** rejected by the owner's direction (speed, native code) and by Star's experience (tables, escaping, encoding).
 - **KaTeX or MathJax output:** needs JavaScript or fonts at reading time; MathML is native in browsers and read by screen readers.
 - **Direct (non-atomic) writes:** about half the write cost per file on both systems, but a crash would leave a partial output newer than its source, which the next run would skip. Correctness wins.
 - **Parallel up-to-date checks:** measured 3.5 times slower than serial on NTFS with 12 threads.

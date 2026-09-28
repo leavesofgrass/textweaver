@@ -180,7 +180,7 @@ fn title_page_and_table_of_contents() {
     assert!(pages(&bytes) >= 3);
     if let Some(t) = page_text(&bytes, 1, 1) {
         assert!(t.contains("Reading Guide"), "{t}");
-        assert!(t.contains("Jon Pielaet"), "{t}");
+        assert!(t.contains("Ada Example"), "{t}");
         assert!(t.contains("September 25, 2026"), "{t}");
         assert!(
             !t.contains("Page 1 of"),

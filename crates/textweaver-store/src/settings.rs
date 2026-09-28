@@ -2211,7 +2211,7 @@ wrap_navigation = true
         assert_eq!(store.load_keymap().unwrap(), o);
     }
 
-    /// Jon's decisions of 2026-09-26: the screen-reader preset became the
+    /// The owner's decisions of 2026-09-26: the screen-reader preset became the
     /// default (its id still reads), citations are skipped in continuous
     /// reading by default, and the preview does not reload by itself.
     #[test]

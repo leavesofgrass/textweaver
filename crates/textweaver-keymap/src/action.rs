@@ -1,7 +1,7 @@
 //! Every user command, with its help text and default keys.
 //!
 //! The browse layer mirrors the quick navigation keys of NVDA's and
-//! JAWS's browse mode (Jon's decision, 2026-09-26): `h` headings, `1` to
+//! JAWS's browse mode (the owner's decision, 2026-09-26): `h` headings, `1` to
 //! `6` heading levels, `l` lists, `i` list items, `t` tables, `k` links,
 //! `q` block quotes, `s` separators, `g` graphics, and `d` sections or
 //! chapters, each with Shift for the previous one; `Backspace` goes back.

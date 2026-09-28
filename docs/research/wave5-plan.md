@@ -1,32 +1,32 @@
 # Wave 5 plan
 
-Written on Sunday, September 27, 2026, by the Wave 5 planner (Fable 5.1), for the orchestrator and Jon. Wave 4 has not run yet. This plan treats Wave 4's outcomes as gates and branches, never as guesses. It changes nothing by itself: Jon adopts it, or parts of it, and the orchestrator applies it to `docs/history/tasks.md` after Wave 4 ends.
+Written on Sunday, September 27, 2026, by the Wave 5 planner (Fable 5.1), for the orchestrator and the owner. Wave 4 has not run yet. This plan treats Wave 4's outcomes as gates and branches, never as guesses. It changes nothing by itself: the owner adopts it, or parts of it, and the orchestrator applies it to `docs/history/tasks.md` after Wave 4 ends.
 
-What it is built on: `CLAUDE.md`; the Wave 4 adopted plan, its lessons, and the Wave 2 and Wave 3 status lines in `docs/history/tasks.md`; `docs/research/wave4-orchestration.md` (the adopted shape, budget, runbook, cuts, and Jon's answers); `docs/research/wave4-plan-review.md`; `docs/research/wave4.md`; `docs/research/usability-terminal.md`; `docs/roadmap.md`; `docs/star-gaps.md`; `docs/research/pure-rust-wave3.md`; `docs/research/xilem-gui.md`; every ADR (0001 to 0027); `docs/dev/docker.md`, `docs/dev/releasing.md`, and `compose.yaml`; the wiki (the textweaver and Star hubs, the Wave 4 and Wave 5 planning pages, the deletion incident knowledge base, and the global rules); Star's code at `D:\star` (read only); the git log; and measurements taken on this machine today. Crate versions were checked on crates.io and GitHub today with the tool's default User-Agent. No personal identifier was sent.
+What it is built on: `CLAUDE.md`; the Wave 4 adopted plan, its lessons, and the Wave 2 and Wave 3 status lines in `docs/history/tasks.md`; `docs/research/wave4-orchestration.md` (the adopted shape, budget, runbook, cuts, and the owner's answers); `docs/research/wave4-plan-review.md`; `docs/research/wave4.md`; `docs/research/usability-terminal.md`; `docs/roadmap.md`; `docs/star-gaps.md`; `docs/research/pure-rust-wave3.md`; `docs/research/xilem-gui.md`; every ADR (0001 to 0027); `docs/dev/docker.md`, `docs/dev/releasing.md`, and `compose.yaml`; the wiki (the textweaver and Star hubs, the Wave 4 and Wave 5 planning pages, the deletion incident knowledge base, and the global rules); Star's code at `D:\star` (read only); the git log; and measurements taken on this machine today. Crate versions were checked on crates.io and GitHub today with the tool's default User-Agent. No personal identifier was sent.
 
 Nothing was built, run in Docker, downloaded, or deleted for this plan.
 
 ## The short version
 
-- **Wave 5 has one purpose: get textweaver ready for `0.1.0-beta.1`.** Every agent either removes a way to stall or lose your place, finishes a reading or authoring feature students need, or makes the release machinery and its checks trustworthy. Jon decides when the release happens; the wave makes it possible.
-- **Shape: three sub-waves of three agents, plus one light fourth in the last.** Same method as Wave 4: one goal per sub-wave, one merge point, one thing for Jon to hear, at most three agents building at once.
-- **Sub-wave 5a settles the foundations:** the rope decision as an ADR from W4b's numbers, memory and fuzz coverage, and the Star leftovers plus a Braille display pass. Gate: Jon's first Braille session.
-- **Sub-wave 5b is documents and math:** the LaTeX subset with EML and MHTML, math braille and formula navigation on MathCAT (or on a patched copy if issue #827 is still open), and no-model summaries. Gate: Jon's check by ear and on the display.
-- **Sub-wave 5c is the GUI's third pass, automated screen-reader tests, offline translation if Jon approves the models, and beta readiness.** Gate: Jon's session 3, then a beta readiness review.
+- **Wave 5 has one purpose: get textweaver ready for `0.1.0-beta.1`.** Every agent either removes a way to stall or lose your place, finishes a reading or authoring feature students need, or makes the release machinery and its checks trustworthy. The owner decides when the release happens; the wave makes it possible.
+- **Shape: three sub-waves of three agents, plus one light fourth in the last.** Same method as Wave 4: one goal per sub-wave, one merge point, one thing for the owner to hear, at most three agents building at once.
+- **Sub-wave 5a settles the foundations:** the rope decision as an ADR from W4b's numbers, memory and fuzz coverage, and the Star leftovers plus a Braille display pass. Gate: the owner's first Braille session.
+- **Sub-wave 5b is documents and math:** the LaTeX subset with EML and MHTML, math braille and formula navigation on MathCAT (or on a patched copy if issue #827 is still open), and no-model summaries. Gate: the owner's check by ear and on the display.
+- **Sub-wave 5c is the GUI's third pass, automated screen-reader tests, offline translation if the owner approves the models, and beta readiness.** Gate: the owner's session 3, then a beta readiness review.
 - **Five things depend on Wave 4 in ways that change the plan.** They are branches, not guesses: the rope numbers (W4b), the GUI memory result (W4s, W4a2), MathCAT issue #827, whether W4a3 (GUI edit mode) lands, and the translation catalog (W4d). Section 3 spells each out.
-- **Memory remains the binding limit,** not disk: three containers at 6 GB each, 26 GB of host RAM free before any build. Model downloads for translation total about 450 MB for four language pairs and each needs Jon's approval.
+- **Memory remains the binding limit,** not disk: three containers at 6 GB each, 26 GB of host RAM free before any build. Model downloads for translation total about 450 MB for four language pairs and each needs the owner's approval.
 
 ## 1. Goals for Wave 5, ranked
 
-Jon's goal, as the brief states it: terminal-first Markdown reading and authoring, with speech, Braille, and highlighting that never stall or lose your place. Everything below is ranked against that.
+The owner's goal, as the brief states it: terminal-first Markdown reading and authoring, with speech, Braille, and highlighting that never stall or lose your place. Everything below is ranked against that.
 
 1. **Never stall, never lose your place, on every frontend.** The rope decision (ADR-0034) is settled from measurements, so the text model stops being an open question before the beta. The GUI's memory growth is either fixed in Wave 4 or finished here. Fuzz coverage reaches every parser a student's file can hit, so a hostile file cannot take the reader down.
-2. **Braille is first class.** Jon reads on a Braille display, and `docs/screen-readers.md` says the display has "not been tested yet". Wave 5 gives the display its own pass in the terminal reader (meaning first on every status line, short messages, the status-line cursor), a Braille session as a gate, and math braille (Nemeth or UEB) in the BRF writer and, through MathCAT, for the display.
-3. **Beta readiness.** The release pipeline builds every package, including the GUI's, in CI; the docs are checked against the code by a tool, not by memory; the beta release notes exist; the listening checklist is dated. Jon decides the release; the wave removes every reason to wait.
+2. **Braille is first class.** the owner reads on a Braille display, and `docs/screen-readers.md` says the display has "not been tested yet". Wave 5 gives the display its own pass in the terminal reader (meaning first on every status line, short messages, the status-line cursor), a Braille session as a gate, and math braille (Nemeth or UEB) in the BRF writer and, through MathCAT, for the display.
+3. **Beta readiness.** The release pipeline builds every package, including the GUI's, in CI; the docs are checked against the code by a tool, not by memory; the beta release notes exist; the listening checklist is dated. The owner decides the release; the wave removes every reason to wait.
 4. **Reading the documents students bring.** The LaTeX subset (course notes), EML and MHTML (emails and saved pages), and math braille. Each with hostile-input limits and a fuzz target.
-5. **Automated screen-reader tests that complement Jon's sessions.** A spike, not a promise: Guidepup for NVDA on a Windows runner against the GUI, accessibility-tree dumps on all three systems, an Orca script under Xvfb. Whether it works with a native app is the first thing the spike answers.
+5. **Automated screen-reader tests that complement the owner's sessions.** A spike, not a promise: Guidepup for NVDA on a Windows runner against the GUI, accessibility-tree dumps on all three systems, an Orca script under Xvfb. Whether it works with a native app is the first thing the spike answers.
 6. **The GUI's third pass.** The Parley upgrade with a measurement (deferred by name from Wave 4), syllables and difficult words drawn, the voice manager, the catalog's languages in the drawn labels, and whatever sessions 2 and 3 leave.
-7. **Offline intelligence.** No-model summaries first (LexRank in-house, a half-day item). Translation on rten only with Jon's approval of each model download.
+7. **Offline intelligence.** No-model summaries first (LexRank in-house, a half-day item). Translation on rten only with the owner's approval of each model download.
 8. **Star parity leftovers that are cheap.** Library search by DOI, ISBN, and author; Star profiles imported; the lexicon loaded off the input thread; study lists on the list model. The rest of Star's peripheral list stays dropped (section 10).
 
 ## 2. Research
@@ -58,7 +58,7 @@ Checked today, Sunday, September 27, 2026. "Unchanged" means Wave 4's research s
 - **mathcat** (`https://crates.io/crates/mathcat`, MIT): stable 0.7.5; 0.7.6-rc.3 (August 23, 2026) is what W4c1 pins; 0.7.7-alpha.1 (September 23, 2026) is newest. No 0.7.6 final today.
 - **Issue #827** (`https://github.com/daisy/MathCAT/issues/827`, "GetNavigationBraille panics in no-unsafe builds due to cross-document node insertion"): **open**, created September 26, 2026, in the project's triage column, no assignee, no linked pull request. The workspace has `unsafe_code = "deny"` (root `Cargo.toml` line 261), so this is the gate for braille and for navigation through MathCAT. The issue itself describes the fix (copy subtrees into the destination document rather than inserting nodes across documents).
 - **Branch if #827 is still open when 5b launches:** vendor `mathcat` 0.7.6-rc.3 under `third_party/mathcat` with the described fix as a patch, the way Xilem, Masonry, and Parley are vendored and patched (ADR-0027, `third_party/xilem/textweaver.patch`), and offer the patch upstream. That keeps the workspace on safe Rust and the wave on schedule. It costs about a day and a 9.6 MB rules tree already in the crate.
-- **Braille codes.** MathCAT produces Nemeth and UEB (and other codes). The BRF writer today is UEB grade 1 for text (ADR-0017, pure Rust tables), with grade 2 only through the optional `liblouis` feature. Which math code goes first is Jon's decision (open question 3); the plan builds both behind one setting, `[braille] math_code = "nemeth" | "ueb"`, and defaults to the one he names.
+- **Braille codes.** MathCAT produces Nemeth and UEB (and other codes). The BRF writer today is UEB grade 1 for text (ADR-0017, pure Rust tables), with grade 2 only through the optional `liblouis` feature. Which math code goes first is the owner's decision (open question 3); the plan builds both behind one setting, `[braille] math_code = "nemeth" | "ueb"`, and defaults to the one he names.
 - **Navigation.** MathCAT's navigate calls give the spoken text and braille for the current node. The terminal reader's math exploration (Alt+Shift+X, P2e) runs on our own tree; W4c1's brief asks it to propose the MathCAT navigation API in its report. W5c4 wires it as a second engine behind `[reading] math_engine`, with the built-in tree as the fallback.
 
 ### 2.5 Summaries and translation (W5s, W5e)
@@ -87,8 +87,8 @@ Checked today, Sunday, September 27, 2026. "Unchanged" means Wave 4's research s
 ### 2.8 Beta readiness and packaging (W5p)
 
 - **Release pipeline today** (`docs/dev/releasing.md`): `release.yml` builds Windows, macOS universal (ad hoc signed, not notarized), and the Linux AppImage plus tarball on Ubuntu 22.04, with one checksums job and provenance attestations. `cargo xtask release X.Y.Z` sets the version, dates the changelog from the clock, and tags. W4f adds the aarch64 AppImage, the dated listening-checklist check, and the beta release notes.
-- **The GUI's packages:** `cargo xtask gui-dist` makes the Windows zip (13.8 MB holding a 32.8 MB `textweaver-gui.exe`), and the GUI workflow uploads the macOS `.app` zip and the Linux tarball and AppImage on main and by hand (ADR-0027). None of them is in `release.yml` yet. W5p adds them, after Jon decides whether the GUI ships in the beta (open question 4).
-- **Signing:** Windows Authenticode and Apple notarization both need paid certificates or an Apple Developer ID; `docs/dev/releasing.md` says "when funding allows". The beta can ship unsigned with the Gatekeeper and SmartScreen notes in `docs/install.md`, as the alphas did. Jon's decision (open question 5).
+- **The GUI's packages:** `cargo xtask gui-dist` makes the Windows zip (13.8 MB holding a 32.8 MB `textweaver-gui.exe`), and the GUI workflow uploads the macOS `.app` zip and the Linux tarball and AppImage on main and by hand (ADR-0027). None of them is in `release.yml` yet. W5p adds them, after the owner decides whether the GUI ships in the beta (open question 4).
+- **Signing:** Windows Authenticode and Apple notarization both need paid certificates or an Apple Developer ID; `docs/dev/releasing.md` says "when funding allows". The beta can ship unsigned with the Gatekeeper and SmartScreen notes in `docs/install.md`, as the alphas did. The owner's decision (open question 5).
 - **Documentation drift, measured today:** `docs/README.md` lists ADR-0027 out of order and omits ADR-0023 from its Decisions list; it says "29 crates" while `crates/` holds 33 folders (32 default members plus the two GUI crates); `docs/roadmap.md`'s status is dated September 26 and still says "Wave 3 is planned" and "Agent P2e is still running". W4f's doc pass covers a listed set of user guides, not these. The cure is a tool: `cargo xtask settings-doc --check` (the settings reference generated from `SettingsSchema`) and a `docs-check` that compares the ADR index, `docs/README.md`, and the crate count with the tree.
 
 ### 2.9 What could not be verified today
@@ -115,21 +115,21 @@ Each item names the Wave 4 outcome it depends on, and what changes if Wave 4 fin
 3. **W5c4 (math braille and navigation) depends on two things.**
    - **MathCAT issue #827.** Closed and in a tagged release: pin that release, no vendoring. Open: vendor 0.7.6-rc.3 with the fix as a patch (section 2.4) and offer it upstream; ADR-0036 records both paths.
    - **W4c1 landing.** If W4c1 slipped or was cut, W5c4 does W4c1's brief first (speech, EPUB MathML, the `[reading] math_engine` setting, ADR-0029) and braille second; the sub-wave's gate then hears speech, and braille moves to 5c.
-4. **W5a4 (the GUI's third pass) depends on W4a3 (GUI edit mode) and on Jon's sessions 1 and 2.**
+4. **W5a4 (the GUI's third pass) depends on W4a3 (GUI edit mode) and on the owner's sessions 1 and 2.**
    - **W4a3 landed and session 2 passed:** W5a4 starts with the Parley upgrade and the measurement, then syllables and difficult words, the voice manager, and the drawn labels from the catalog.
    - **W4a3 slipped:** edit mode comes first in W5a4 (ADR-0033 keeps its number and W4a3's brief), the Parley upgrade waits for edit mode to be measured on 0.8, and the voice manager moves to Wave 6.
-   - **The wxDragon spike:** Jon said it goes after session 2. If it is still there at Wave 5's start, the orchestrator removes it in step 0 after showing the file list, and `gui.yml` with it; W5t and W5p never touch `crates/textweaver-gui`.
+   - **The wxDragon spike:** the owner said it goes after session 2. If it is still there at Wave 5's start, the orchestrator removes it in step 0 after showing the file list, and `gui.yml` with it; W5t and W5p never touch `crates/textweaver-gui`.
 5. **W5x and every agent that adds a message depend on W4d (translations).**
    - **W4d landed:** every new message is a catalog id in `en` with the five other languages falling back to English and listed by the checker as "needs translation". W4d's checker must allow a fallback with a list, not fail; if it fails on a missing translation, step 0 adds the fallback list to the checker before any Wave 5 agent starts. No Wave 5 agent writes a `format!` message the catalog does not know.
    - **W4d slipped:** messages stay `format!` strings as in Wave 4, and W4d's brief moves to Wave 5's sub-wave 5c as the only app-message agent there (displacing W5e, which then waits for Wave 6). Section 10 lists this as a cut.
-6. **W5e (translation) depends on W4d's language list and on Jon's model approval** (open question 1). Without approval it is cut; without W4d, it still works but its prompts are English.
+6. **W5e (translation) depends on W4d's language list and on the owner's model approval** (open question 1). Without approval it is cut; without W4d, it still works but its prompts are English.
 7. **W5c3 (LaTeX, EML, MHTML) depends on W4c2's hostile-input patterns and its three fuzz targets** being in the nightly matrix (W4f). If they are not, W5m adds them with its own.
 8. **W5p (beta readiness) depends on W4f's** aarch64 AppImage, dated listening check, and beta release notes. Anything W4f left undone is W5p's first item. W5p also depends on open questions 4 and 5.
 9. **Every budget number depends on Wave 4's runbook step 2,** the measured lean build. Section 6 uses Wave 4's allowances and says where the measured numbers replace them.
 
 ## 4. The proposed shape
 
-Three sub-waves of three agents, one light fourth in 5c. Each sub-wave has one goal, one merge point, and one thing for Jon to hear or feel on the display. At most three agents run at once, and at most two build heavily at the same moment. A sub-wave launches only after the previous one's last merge, flush, and memory check.
+Three sub-waves of three agents, one light fourth in 5c. Each sub-wave has one goal, one merge point, and one thing for the owner to hear or feel on the display. At most three agents run at once, and at most two build heavily at the same moment. A sub-wave launches only after the previous one's last merge, flush, and memory check.
 
 ### Sub-wave 5a: settle the foundations, and the Braille pass
 
@@ -146,8 +146,8 @@ Why together: three different crates most of the time (app messages and store; f
 **Gates.**
 
 - W5x merges first, W5m second, W5r last (its `textweaver-text` change is the widest).
-- **Jon's Braille session (session B1):** the terminal reader with NVDA, then JAWS, on his display: the status line in screen-reader mode with `cursor = "status"`, a list, a prompt, a position report, the outline, a math formula in grade 1, and "read current line" on the title line. His findings become fixes in W5c4's and W5a4's briefs.
-- W5r's ADR is the second gate: Jon reads it and says stay or go (open question 2 if it is "go").
+- **The owner's Braille session (session B1):** the terminal reader with NVDA, then JAWS, on his display: the status line in screen-reader mode with `cursor = "status"`, a list, a prompt, a position report, the outline, a math formula in grade 1, and "read current line" on the title line. His findings become fixes in W5c4's and W5a4's briefs.
+- W5r's ADR is the second gate: the owner reads it and says stay or go (open question 2 if it is "go").
 
 **Merge point and checks.** The Wave 4 common set (native workspace checks, the Docker all-features check one at a time by the orchestrator, `keyboard --check`, `deps --check`, `notices --check` when `Cargo.lock` changed, the link and site checks, the `publish`-off build for app changes, `-p textweaver-xilem` for GUI changes), plus the bench gate against main's artifact for W5r, and the catalog checker for W5x. Then the flush.
 
@@ -166,34 +166,34 @@ Why together: formats, math plus writers, and a new crate: disjoint. W5c4 is the
 **Gates.**
 
 - W5c4 merges first (its app changes are widest), then W5c3, then W5s.
-- **Jon's check 2:** open `fixtures/c3/notes.tex` and `fixtures/c3/message.eml`; read a formula and hear MathCAT's navigation; `tw convert --to brf` of `fixtures/c4/quadratic.md` on the display in the code he chose; `tw summarize` of a chapter, then the Summarize command in the reader.
+- **The owner's check 2:** open `fixtures/c3/notes.tex` and `fixtures/c3/message.eml`; read a formula and hear MathCAT's navigation; `tw convert --to brf` of `fixtures/c4/quadratic.md` on the display in the code he chose; `tw summarize` of a chapter, then the Summarize command in the reader.
 
 **Merge point and checks.** As in 5a, plus `cargo fuzz build` for the new targets and ten minutes of each in the container, and the BRF snapshot tests on the display's line length.
 
 ### Sub-wave 5c: the GUI's third pass, automated screen-reader tests, translation, and beta readiness
 
-**Goal.** Make the GUI ready to ship if Jon says it ships, put automated screen-reader checks beside his sessions, and remove the last reasons the beta waits.
+**Goal.** Make the GUI ready to ship if the owner says it ships, put automated screen-reader checks beside his sessions, and remove the last reasons the beta waits.
 
 **Agents.**
 
 - **W5a4, the GUI's third pass.** The Parley upgrade with the ADR-0027 measurements repeated; syllables and difficult words drawn; the voice manager dialog on the app's list model; the catalog's languages in drawn labels (W4d left them English); session findings. `textweaver-xilem` only. Status updates on ADR-0027 and ADR-0033; ADR-0040 only if the upgrade changes the accessibility bridge's design.
 - **W5t, automated screen-reader tests.** A spike with a written answer first: does Guidepup drive `textweaver-xilem.exe` on a Windows runner? Then the accessibility-cli tree dump on three systems, an Orca script under Xvfb built on `tools/atspi-dump.py`, and a VoiceOver attempt on the macOS runner. It builds only in CI; on this machine it writes scripts and workflows. ADR-0039 if any of it becomes a standing check. Light on this machine.
-- **W5e, offline translation.** Only with Jon's approval of the models (open question 1). A new crate, `textweaver-translate`, on rten-generate with kitoken; the document or the selection, in a background job with progress and cancel; downloads after a yes with the license said and SHA-256 checked. ADR-0038. Heavy to build (rten is already in the tree, so mostly its own code).
-- **W5p, beta readiness (light fourth).** The GUI packages in `release.yml` if Jon says the GUI ships; `cargo xtask settings-doc --check` and a docs consistency check; the doc pass over the files W4f did not list (`docs/README.md`, `docs/roadmap.md`, `docs/star-gaps.md`, `docs/dev/architecture.md`, the ADR index); the beta checklist in `docs/dev/releasing.md`; the signing note. No crate code. No ADR.
+- **W5e, offline translation.** Only with the owner's approval of the models (open question 1). A new crate, `textweaver-translate`, on rten-generate with kitoken; the document or the selection, in a background job with progress and cancel; downloads after a yes with the license said and SHA-256 checked. ADR-0038. Heavy to build (rten is already in the tree, so mostly its own code).
+- **W5p, beta readiness (light fourth).** The GUI packages in `release.yml` if the owner says the GUI ships; `cargo xtask settings-doc --check` and a docs consistency check; the doc pass over the files W4f did not list (`docs/README.md`, `docs/roadmap.md`, `docs/star-gaps.md`, `docs/dev/architecture.md`, the ADR index); the beta checklist in `docs/dev/releasing.md`; the signing note. No crate code. No ADR.
 
 Why together: xilem, workflows and tools, a new crate, and docs: disjoint. W5t and W5p both touch `.github/`: W5t owns `gui-xilem.yml` and a new `a11y-tests.yml`; W5p owns `release.yml`, `ci.yml`, and `nightly.yml`. W5e's app edits are one palette command and one settings section (four places); it is the app-message agent of 5c by default, with W5a4 confined to xilem.
 
 **Gates.**
 
 - Merge order: W5e (app and store), then W5a4, then W5t, then W5p last (its docs describe the merged state).
-- **Jon's session 3 (GUI):** NVDA, then JAWS, on the display: the upgraded view reads the same as before (his session 2 checklist repeated), syllables on, the voice manager, a translated selection if W5e ran.
-- **The beta readiness review:** the orchestrator gives Jon one page: every package built by the release workflow on a branch (`workflow_dispatch`, no tag), the listening checklist dated, the docs checks green, the fuzz run clean for a week, the open issues list. Jon decides the release. Nothing tags.
+- **The owner's session 3 (GUI):** NVDA, then JAWS, on the display: the upgraded view reads the same as before (his session 2 checklist repeated), syllables on, the voice manager, a translated selection if W5e ran.
+- **The beta readiness review:** the orchestrator gives the owner one page: every package built by the release workflow on a branch (`workflow_dispatch`, no tag), the listening checklist dated, the docs checks green, the fuzz run clean for a week, the open issues list. The owner decides the release. Nothing tags.
 
 **Merge point and checks.** As in 5b, plus the release workflow run by hand on W5p's branch, `cargo xtask release --dry-run`, the GUI workflow on all three systems, and W5t's new workflow green or its failures explained.
 
 ### Timeline
 
-Durations, not promises. Wave 4 is planned to end around Wednesday, October 7, 2026 if it starts on Monday, September 28. Wave 5 then needs Wave 4's numbers written up, a Docker restart, and the plan files fixed, so the earliest realistic start is **Monday, October 12, 2026**. Sub-wave 5a about three days (to Wednesday, October 14), the Braille session Thursday, October 15; 5b about three days (Friday, October 16 to Tuesday, October 20), Jon's check Wednesday, October 21; 5c about four days (Thursday, October 22 to Tuesday, October 27), session 3 Wednesday, October 28, and the beta readiness review around **Thursday, October 29, 2026**. If Wave 4 slips a week, every date slips a week; nothing in Wave 5 is tied to a calendar date.
+Durations, not promises. Wave 4 is planned to end around Wednesday, October 7, 2026 if it starts on Monday, September 28. Wave 5 then needs Wave 4's numbers written up, a Docker restart, and the plan files fixed, so the earliest realistic start is **Monday, October 12, 2026**. Sub-wave 5a about three days (to Wednesday, October 14), the Braille session Thursday, October 15; 5b about three days (Friday, October 16 to Tuesday, October 20), the owner's check Wednesday, October 21; 5c about four days (Thursday, October 22 to Tuesday, October 27), session 3 Wednesday, October 28, and the beta readiness review around **Thursday, October 29, 2026**. If Wave 4 slips a week, every date slips a week; nothing in Wave 5 is tied to a calendar date.
 
 ## 5. The dependency and conflict map
 
@@ -236,7 +236,7 @@ Within each sub-wave the merge order is the agent with the widest app change fir
 
 ## 6. Resource budget
 
-Measured today, Sunday, September 27, 2026, at 11:48: D: 871.7 GB free of 1,862 GB (floor 200 GB); host RAM 63.8 GB with 40.3 GB free and Docker idle (so about 24 GB in use before any build); Docker's machine 12 CPUs and 33.6 GB (31.3 GiB); Docker images 55.2 GB (47.4 reclaimable, Jon's other projects, never touched), volumes 26.4 GB, build cache 37.4 GB, virtual disk 125.6 GB; `D:\sccache` 5.4 GB; `tw-target-orch` 22 MB (the container cache is cold until Wave 4's step 2 warms it); native build folders 55 GB (`target\orch` 35.5, `ux1` 9.3, `release` 4.6, `debug` 3.3, `dist-build` 1.0), all from before the lean profiles, and all flushed in Wave 4's step 1.
+Measured today, Sunday, September 27, 2026, at 11:48: D: 871.7 GB free of 1,862 GB (floor 200 GB); host RAM 63.8 GB with 40.3 GB free and Docker idle (so about 24 GB in use before any build); Docker's machine 12 CPUs and 33.6 GB (31.3 GiB); Docker images 55.2 GB (47.4 reclaimable, the owner's other projects, never touched), volumes 26.4 GB, build cache 37.4 GB, virtual disk 125.6 GB; `D:\sccache` 5.4 GB; `tw-target-orch` 22 MB (the container cache is cold until Wave 4's step 2 warms it); native build folders 55 GB (`target\orch` 35.5, `ux1` 9.3, `release` 4.6, `debug` 3.3, `dist-build` 1.0), all from before the lean profiles, and all flushed in Wave 4's step 1.
 
 The numbers Wave 5 starts from come from Wave 4's end (runbook step 7.4): the measured lean build sizes and the Docker disk after compaction. Until then, Wave 4's allowances hold.
 
@@ -252,7 +252,7 @@ The numbers Wave 5 starts from come from Wave 4's end (runbook step 7.4): the me
 - `D:\sccache`: cap 30 GB. The container cache `textweaver-sccache`: cap 30 GB, warm after Wave 4.
 - The orchestrator's own build output: about 40 GB (15 native, 25 container).
 - Docker's other data: about 120 GB, unchanged.
-- Model downloads (each needs Jon's approval; none happen without it):
+- Model downloads (each needs the owner's approval; none happen without it):
   - OPUS-MT quantized pairs, one direction each, four languages: about **450 MB** (113.1 MB each, measured on en-es today). Both directions: about 900 MB. Into the data folder, outside git.
   - all-MiniLM-L6-v2 for embedding summaries: 23 MB, optional, off by default. Not planned; listed so nobody adds it silently.
   - MathCAT's rules tree: 9.6 MB, inside the crate, no download.
@@ -278,17 +278,17 @@ Peak use about 375 GB against about 850 GB free after Wave 4's flush and compact
 - The orchestrator's native integration check (8 to 10 GB at the link peak) runs only when at most one container is building.
 - **Before any heavy process, free memory must be at least 26 GB** (20 plus a 6 GB container), or 30 GB for the native check. Same rule as Wave 4.
 - rten translation at run time: about 300 to 500 MB per loaded pair (the two quantized models plus the KV cache); W5e measures it and unloads a pair after ten minutes idle.
-- W5t runs no NVDA on this machine. Jon's own NVDA and JAWS must never be driven by a script here (they are his working tools; a script taking them over would take his screen reader away). That is a rule in W5t's brief.
+- W5t runs no NVDA on this machine. The owner's own NVDA and JAWS must never be driven by a script here (they are his working tools; a script taking them over would take his screen reader away). That is a rule in W5t's brief.
 
 ### 6.5 How many agents at once
 
-Three building, plus one light fourth (5c). Same as Wave 4: disk allows five, memory allows three at 6 GB, merges allow one message agent per sub-wave, Jon's attention allows one session per sub-wave.
+Three building, plus one light fourth (5c). Same as Wave 4: disk allows five, memory allows three at 6 GB, merges allow one message agent per sub-wave, the owner's attention allows one session per sub-wave.
 
 ### 6.6 Flush points
 
 1. **Before 5a:** Wave 4's step 7.4 flush and compaction; `build-hygiene.ps1` must show every `tw-target-w4*` volume gone and D: near 850 GB.
 2. **After each sub-wave's last merge:** `build-hygiene.ps1 -RemoveVolume tw-target-<agent>` (list, then `-Apply`) and `-Flush` (list, then `-Apply`) for each merged agent, as in Wave 4. Never inside a volume from a container, never `docker system prune`, never an unmerged branch's folder.
-3. **Models:** never deleted by an agent. A model Jon approved stays in the data folder; removing one is his choice, through the app's own "remove" with a listing first.
+3. **Models:** never deleted by an agent. A model the owner approved stays in the data folder; removing one is his choice, through the app's own "remove" with a listing first.
 
 ## 7. Quick wins
 
@@ -301,14 +301,14 @@ Each is under half a day for one agent. Sizes: tiny is under an hour, small is u
 5. **A docs consistency check** (small; W5p, in the same xtask): the ADR index against `docs/adr/`, `docs/README.md`'s Decisions list against the index, the crate count against `crates/`, every `docs/*.md` ending with "See also". Runs in the `docs` CI job.
 6. **Fuzz targets for the math parsers and the citation importers** (small; W5m): `latex_math`, `asciimath`, `bibtex`, `ris`, `csl_json`, each with a seed corpus from `fixtures/o/` and `fixtures/p/`. Value: the parsers a student's own writing goes through.
 7. **Fuzz targets for the theme reader, the lexicon file, the vault importer, and the JSON-RPC decoder** (small; W5m). Same pattern.
-8. **The status line: meaning first** (small; W5x): audit every composed status-line string so the position or the count comes before the label ("Line 12 of 400, Reading" rather than "Reading, line 12 of 400"), and no message runs past 80 cells without the key fact in the first 40. Value: this is what Jon's display shows.
-9. **A tested "Braille displays" section in `docs/screen-readers.md`** (small; W5x writes it, Jon tests it in session B1): which mode, which cursor setting, which NVDA and JAWS braille settings, and a five-item checklist.
+8. **The status line: meaning first** (small; W5x): audit every composed status-line string so the position or the count comes before the label ("Line 12 of 400, Reading" rather than "Reading, line 12 of 400"), and no message runs past 80 cells without the key fact in the first 40. Value: this is what the owner's display shows.
+9. **A tested "Braille displays" section in `docs/screen-readers.md`** (small; W5x writes it, the owner tests it in session B1): which mode, which cursor setting, which NVDA and JAWS braille settings, and a five-item checklist.
 10. **Library search by DOI, ISBN, and author** (small; W5x): Star's `discovery.py` on the library index and the document metadata, in `tw library --search` and the library list's filter.
 11. **Star profiles imported by `tw migrate-star`** (tiny; W5x): W3e's leftover; the format is Star's `gui/mixin_presets.py` JSON.
 12. **The lexicon loaded off the input thread** (small; W5x, or W5m in branch 2): the 9.9 MB `lexicon-en.twlex` opens on first "define word" on a helper thread, with "still loading" once. W3e's leftover; also a memory item.
 13. **`y` and `n` in the export and citation "Open it?" lists** (tiny; W5x): UX-1's item 9, the last untaken finding.
 14. **EML text-only on day one** (small; W5c3): headers as a heading block and the `text/plain` part as the body through mail-parser, before HTML parts and MHTML. Value: an email is readable on the first commit.
-15. **The GUI packages uploaded by `release.yml`** (small; W5p, if Jon says the GUI ships): `cargo xtask gui-dist` already builds them; the release job only needs to call it and upload.
+15. **The GUI packages uploaded by `release.yml`** (small; W5p, if the owner says the GUI ships): `cargo xtask gui-dist` already builds them; the release job only needs to call it and upload.
 16. **The accessibility-cli tree dump as a CI artifact** (small; W5t): one job on each system that dumps the GUI's tree with `--background` and uploads it, before any Guidepup work. Value: a diff of the tree between merges is a regression check nobody has today.
 17. **`cargo xtask fuzz-seed`** (tiny; W5m): copies the fixtures into each target's corpus folder, so the nightly workflow's hand-written `cp` lines go away.
 18. **The Parley upgrade's measurement harness first** (tiny; W5a4): run `large_documents_open_and_highlight_quickly` and the `--log` numbers on main before touching Parley, and put them in the report as the baseline. Value: the upgrade cannot regress silently.
@@ -323,14 +323,14 @@ Each brief is self-contained. Every agent also reads the shared preamble and the
 - **Privacy.** No personal identifier in any request, header, URL, commit, or file. The neutral User-Agent only.
 - **Where you work.** Your own worktree and branch `wave5/<agent>-<topic>`, your own `target`, your own `tw-target-<agent>` volume (`TW_AGENT=<agent>`). Never write outside them. Never write to drive C.
 - **Deleting.** Delete nothing but your own build output, with PowerShell `Remove-Item -LiteralPath` after listing it. Never from Bash. Never inside a Docker volume. Never chain a delete. Never type an escaped file name (rule 1a). `MSYS_NO_PATHCONV=1` on every Docker command in Git Bash.
-- **Downloads.** Only what Jon approved, from the official source, SHA-256 recorded, license in `about/data-files.md`, then `cargo xtask notices`. Models stay out of git. Never bundle a non-commercial model.
+- **Downloads.** Only what the owner approved, from the official source, SHA-256 recorded, license in `about/data-files.md`, then `cargo xtask notices`. Models stay out of git. Never bundle a non-commercial model.
 - **Building.** `RUSTC_WRAPPER=sccache`, `SCCACHE_DIR=D:\sccache`, `SCCACHE_CACHE_SIZE=30G`. Build only the crates you work on. The all-features workspace test in the container is the orchestrator's. Before any container run or native test of more than one crate: free memory at least 26 GB (`Get-CimInstance Win32_OperatingSystem`, `FreePhysicalMemory`), else wait ten minutes. `powershell -File D:\textweaver\tools\build-hygiene.ps1` once a day; stop and report under 300 GB free.
 - **Checks before reporting,** natively: `cargo fmt --all --check`; clippy `-D warnings` on your crates and the workspace; your crates' tests and the workspace tests with `--no-fail-fast`; rustdoc with `-D warnings`; `cargo xtask keyboard --check`; `cargo xtask deps --check`; `py -3 tools/check_links.py`; `py -3 tools/gen_site_data.py --check`; the catalog checker (after W4d); a `-p textweaver-tui --no-default-features` build if you touched the app. In the container: your own crates' tests with `--all-features`. New timing tests run 40 times while another build runs.
 - **Code rules.** Announcements through `textweaver_a11y::route`. Messages are catalog ids after W4d. Writes through the writer thread. Speech on its thread, no async. New settings touch four places. New keys pass the conflict, reachability, and WCAG 2.1.4 tests and avoid Windows Terminal's taken keys.
 - **Braille.** Every message you add is read once as a Braille line: the meaning first, words not symbols, under 80 cells with the key fact in the first 40. Every list item and status line you compose follows the same rule.
 - **Merging.** Merge `main` into your branch at least every second day and before reporting. Regenerate generated files; never hand-merge them. New dependencies in a block headed with your agent's name. Do not commit `THIRD-PARTY-NOTICES.md`. `CHANGELOG.md` lines under a heading with your agent's name.
 - **Dates** from the machine: `py -3 -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"`.
-- **Report** (plain sentences, headings and lists, no tables): summary in five lines; files changed by crate; the check result lines, native and container; contract change requests or "none"; open issues; measured build output size; what the next agent should do first; **a checklist of at most five things for Jon to try with NVDA, JAWS, and the Braille display, or "nothing to hear"**. One status line under your heading in `docs/history/tasks.md`.
+- **Report** (plain sentences, headings and lists, no tables): summary in five lines; files changed by crate; the check result lines, native and container; contract change requests or "none"; open issues; measured build output size; what the next agent should do first; **a checklist of at most five things for the owner to try with NVDA, JAWS, and the Braille display, or "nothing to hear"**. One status line under your heading in `docs/history/tasks.md`.
 
 ### The NVDA, JAWS, and Braille checklist (every agent that changes what is heard or shown)
 
@@ -355,7 +355,7 @@ Each report's checklist follows this order, and drops what does not apply:
 **Deliverables, in order, one commit each:**
 
 1. **The status line, meaning first.** Audit every string the status line and the title line compose (a test lists them). Reorder so the position, count, or result comes before its label, and no message's key fact sits past cell 40. Keep the spoken form the same where it already reads well; the display and the voice may differ in order only where a test shows both.
-2. **The Braille section of `docs/screen-readers.md`,** written to be tested: which mode and cursor setting to use with a display, the NVDA and JAWS braille settings to try (braille tethered to focus or to review, message timeout, "show messages"), and a five-item checklist. Mark each setting "to verify" until Jon's session B1.
+2. **The Braille section of `docs/screen-readers.md`,** written to be tested: which mode and cursor setting to use with a display, the NVDA and JAWS braille settings to try (braille tethered to focus or to review, message timeout, "show messages"), and a five-item checklist. Mark each setting "to verify" until the owner's session B1.
 3. **`y` and `n` in the "Open it?" lists** after an export and a citation check, consistent with the save list's letters.
 4. **Library search by DOI, ISBN, and author:** metadata on the library entry (from the document's front matter, DOCX and EPUB metadata, and `tw cite`'s record when a DOI is known), `tw library --search` matching title, path, text, DOI, ISBN, and author, and the library list's filter using the same matcher.
 5. **Star profiles imported** by `tw migrate-star`, with the report line per profile.
@@ -364,7 +364,7 @@ Each report's checklist follows this order, and drops what does not apply:
 
 **Checks:** the common set; a test that every composed status-line string keeps its key fact in the first 40 cells; the catalog checker.
 
-**Jon's checklist (five, session B1, on the display):** (1) screen-reader mode with `cursor = "status"`: open a document and read the status line by cells; is "Opened" and the title in the first 40? (2) Alt+O outline: does each item show "3 of 12" before its text? (3) a Find prompt: label, then typed text? (4) Shift+W position: position first? (5) `tw library --search 10.1000/xyz` finds the paper by DOI.
+**The owner's checklist (five, session B1, on the display):** (1) screen-reader mode with `cursor = "status"`: open a document and read the status line by cells; is "Opened" and the title in the first 40? (2) Alt+O outline: does each item show "3 of 12" before its text? (3) a Find prompt: label, then typed text? (4) Shift+W position: position first? (5) `tw library --search 10.1000/xyz` finds the paper by DOI.
 
 ### W5m: memory and fuzz (sub-wave 5a, P1)
 
@@ -386,7 +386,7 @@ Each report's checklist follows this order, and drops what does not apply:
 
 **Checks:** the common set plus `cargo fuzz build` for every target, the bench gate against main's artifact (branch 2 changes startup).
 
-**Jon's checklist:** nothing to hear, unless branch 2 changed the order of startup messages; then: "Opened" first, "Dictionary still loading" once on the first define, with NVDA.
+**The owner's checklist:** nothing to hear, unless branch 2 changed the order of startup messages; then: "Opened" first, "Dictionary still loading" once on the first define, with NVDA.
 
 ### W5r: the rope decision (sub-wave 5a, P1)
 
@@ -408,7 +408,7 @@ Each report's checklist follows this order, and drops what does not apply:
 
 **Checks:** the common set; the bench gate; the parity report still with zero unexplained deltas (`cargo xtask parity`); the 40-run rule on every timing test.
 
-**Jon's checklist:** nothing to hear. Jon reads ADR-0034 and says stay or go.
+**The owner's checklist:** nothing to hear. The owner reads ADR-0034 and says stay or go.
 
 ### W5c3: LaTeX, EML, and MHTML (sub-wave 5b, P2)
 
@@ -431,7 +431,7 @@ Each report's checklist follows this order, and drops what does not apply:
 
 **Checks:** the common set, `cargo fuzz build` for the two targets and ten minutes of each in the container, the parity report unchanged.
 
-**Jon's checklist (three):** open `fixtures/c3/notes.tex`: the sections by `h`, a table by `t`, a formula read by the math engine; open `fixtures/c3/message.eml`: the headers, then the body; `fixtures/c3/page.mhtml` reads as the page.
+**The owner's checklist (three):** open `fixtures/c3/notes.tex`: the sections by `h`, a table by `t`, a formula read by the math engine; open `fixtures/c3/message.eml`: the headers, then the body; `fixtures/c3/page.mhtml` reads as the page.
 
 ### W5c4: math braille and navigation on MathCAT (sub-wave 5b, P1)
 
@@ -441,7 +441,7 @@ Each report's checklist follows this order, and drops what does not apply:
 
 **Not to touch:** `textweaver-math`'s parsers (ask W5c3's or your own contract change), the EPUB loader, `textweaver-xilem`, the BRF text tables (UEB grade 1 text stays as it is; grade 2 stays behind `liblouis`).
 
-**Read first:** ADR-0018, ADR-0029 (W4c1) and its report (the proposed navigation API), ADR-0017 (the BRF writer), `docs/research/wave4.md` (MathCAT), `docs/research/wave4-plan-review.md` (MathCAT), MathCAT issue #827 as it stands on launch day, P2e's status line (math exploration), Jon's session B1 write-up.
+**Read first:** ADR-0018, ADR-0029 (W4c1) and its report (the proposed navigation API), ADR-0017 (the BRF writer), `docs/research/wave4.md` (MathCAT), `docs/research/wave4-plan-review.md` (MathCAT), MathCAT issue #827 as it stands on launch day, P2e's status line (math exploration), the owner's session B1 write-up.
 
 **Deliverables, in order:**
 
@@ -453,7 +453,7 @@ Each report's checklist follows this order, and drops what does not apply:
 
 **Checks:** the common set plus `--features mathcat` natively and in the container, the BRF snapshots, `cargo deny` (no second zip, no yaml-rust), the binary size before and after.
 
-**Jon's checklist (five):** (1) `tw convert fixtures/c4/quadratic.md --to brf` on the display: is the formula in the code you chose? (2) In the reader, Alt+Shift+X on the same formula with `math_engine = "mathcat"`: Right through the terms; is each step's braille on the display and its speech once? (3) the same with `"builtin"`; which is clearer? (4) `[braille] math_code` switched: the BRF changes and the summary says which code; (5) a formula MathCAT cannot parse: the fallback is announced once, not silent.
+**The owner's checklist (five):** (1) `tw convert fixtures/c4/quadratic.md --to brf` on the display: is the formula in the code you chose? (2) In the reader, Alt+Shift+X on the same formula with `math_engine = "mathcat"`: Right through the terms; is each step's braille on the display and its speech once? (3) the same with `"builtin"`; which is clearer? (4) `[braille] math_code` switched: the BRF changes and the summary says which code; (5) a formula MathCAT cannot parse: the fallback is announced once, not silent.
 
 ### W5s: summaries, no model (sub-wave 5b, P2, light)
 
@@ -475,22 +475,22 @@ Each report's checklist follows this order, and drops what does not apply:
 
 **Checks:** the common set; a test that a summary's ranges lie inside the document and are in order; the 40-run rule on the timing test.
 
-**Jon's checklist (two):** `tw summarize fixtures/sample.md`; then Summarize in the reader on a chapter, Down through the list, Enter: does the reader land on the sentence and say it?
+**The owner's checklist (two):** `tw summarize fixtures/sample.md`; then Summarize in the reader on a chapter, Down through the list, Enter: does the reader land on the sentence and say it?
 
 ### W5a4: the GUI's third pass (sub-wave 5c, P1)
 
-**Branch** `wave5/a4-gui-third-pass`, from `main` after 5b and Jon's session 3 write-up of sub-wave 4c (W4a3). **ADR:** status updates on ADR-0027 and ADR-0033; **ADR-0040** reserved, used only if the Parley upgrade changes the accessibility bridge's design.
+**Branch** `wave5/a4-gui-third-pass`, from `main` after 5b and the owner's session 3 write-up of sub-wave 4c (W4a3). **ADR:** status updates on ADR-0027 and ADR-0033; **ADR-0040** reserved, used only if the Parley upgrade changes the accessibility bridge's design.
 
 **Owns:** `crates/textweaver-xilem` (all of it), `third_party/xilem/parley` (the upgrade to 0.11.1, with `textweaver.patch` and `TEXTWEAVER.md` updated), `crates/textweaver-xilem/tools/uia-report.ps1`, `docs/gui.md`, `docs/screenshots/xilem-gui/`.
 
 **Not to touch:** `textweaver-app` beyond one-line hooks, `.github/` (W5t's and W5p's), the workspace members, `third_party/xilem/masonry*` beyond what the Parley bump forces (say what).
 
-**Read first:** ADR-0027 (the measurements), ADR-0028 and ADR-0033 and their reports, the write-ups of Jon's sessions 1, 2, and 3 (Wave 4), `docs/research/wave4.md` (Parley 0.11, AccessKit), `docs/research/wave4-plan-review.md` (the Parley advice), W4d's status line (drawn labels), W5x's report (study lists on the list model).
+**Read first:** ADR-0027 (the measurements), ADR-0028 and ADR-0033 and their reports, the write-ups of the owner's sessions 1, 2, and 3 (Wave 4), `docs/research/wave4.md` (Parley 0.11, AccessKit), `docs/research/wave4-plan-review.md` (the Parley advice), W4d's status line (drawn labels), W5x's report (study lists on the list model).
 
 **Deliverables, in order:**
 
 1. **Baseline first (tiny):** on main before any change, the harness numbers (open 10 million characters, highlight move median and worst) and the `--log` memory numbers, in the report.
-2. **If W4a3 slipped:** edit mode first, per W4a3's brief and ADR-0033; then stop and hand Jon the W4a3 checklist; the rest of this brief waits for his session.
+2. **If W4a3 slipped:** edit mode first, per W4a3's brief and ADR-0033; then stop and hand the owner the W4a3 checklist; the rest of this brief waits for his session.
 3. **The Parley upgrade** to 0.11.1: the AccessKit bridge moves into `DocumentView` (Parley main dropped its feature), ranged styles through `RangedBuilder::push` for the spoken word, bionic reading, and difficult words; edit mode kept on `PlainEditor`'s successor or our own editor state; the same measurements repeated; the UI Automation report and the harness tests unchanged and green. If the upgrade regresses a measurement by more than 20 percent or breaks a screen-reader action, revert to 0.8.0 and write why in the ADR-0027 status update.
 4. **Syllables and difficult words drawn** (Alt+Shift+Z and Alt+Shift+J in the GUI), as the terminal draws them, never changing the accessible text (the syllable dots are paint only; the text runs stay the words).
 5. **The voice manager** dialog on the app's list model (W3f's terminal one), with the language and engine filters as rows, and the download after a yes with the license said.
@@ -499,7 +499,7 @@ Each report's checklist follows this order, and drops what does not apply:
 
 **Checks:** the common set plus the GUI crate's clippy and tests, the UI Automation report in `--background`, the AT-SPI dump in CI, screenshots at 100 and 200 percent, never the foreground, never audio.
 
-**Jon's checklist (five, session 3, with the display on the caret line):** (1) read past the window edge: does the caret and the display stay on the spoken word? (2) syllables on: does NVDA still read whole words? (3) Alt+V: the voice manager, a filter row, Enter; (4) the settings dialog in Spanish (`[interface] language = "es"`): are the drawn labels Spanish and the announcements once? (5) edit mode: type a word, select it, undo (repeated from W4a3, on the upgraded Parley).
+**The owner's checklist (five, session 3, with the display on the caret line):** (1) read past the window edge: does the caret and the display stay on the spoken word? (2) syllables on: does NVDA still read whole words? (3) Alt+V: the voice manager, a filter row, Enter; (4) the settings dialog in Spanish (`[interface] language = "es"`): are the drawn labels Spanish and the announcements once? (5) edit mode: type a word, select it, undo (repeated from W4a3, on the upgraded Parley).
 
 ### W5t: automated screen-reader tests (sub-wave 5c, P2, light on this machine)
 
@@ -509,23 +509,23 @@ Each report's checklist follows this order, and drops what does not apply:
 
 **Not to touch:** any crate's Rust code (a `--script FILE` flag for the GUI, if needed, is a proposal in the report for W5a4 to add), `release.yml`, `ci.yml`, `nightly.yml` (W5p's), `crates/textweaver-gui` (removed or leaving).
 
-**Rules of its own:** builds and runs only on CI runners. **Never drive NVDA or JAWS on this machine**: they are Jon's working screen readers. Nothing is downloaded here; `@guidepup/setup` and NVDA are installed on the runner. No personal identifier in any workflow, log, or artifact name.
+**Rules of its own:** builds and runs only on CI runners. **Never drive NVDA or JAWS on this machine**: they are the owner's working screen readers. Nothing is downloaded here; `@guidepup/setup` and NVDA are installed on the runner. No personal identifier in any workflow, log, or artifact name.
 
-**Read first:** `docs/research/wave4.md` (automated screen-reader tests), `docs/research/xilem-gui.md` (acceptance tests), ADR-0027 (the checks that exist), `crates/textweaver-xilem/tools/uia-report.ps1`, `tools/atspi-check.sh`, `tools/atspi-dump.py`, the write-ups of Jon's sessions.
+**Read first:** `docs/research/wave4.md` (automated screen-reader tests), `docs/research/xilem-gui.md` (acceptance tests), ADR-0027 (the checks that exist), `crates/textweaver-xilem/tools/uia-report.ps1`, `tools/atspi-check.sh`, `tools/atspi-dump.py`, the write-ups of the owner's sessions.
 
 **Deliverables, in order, each a written answer before the next starts:**
 
 1. **The tree dump on three systems** (small): accessibility-cli built from source on each runner (pinned to a commit, checked out by hash), the GUI opened with `--background` on a fixture, the tree dumped and uploaded as an artifact; a diff against the previous run's artifact posted in the job summary. This is the regression check that exists after day one whatever the spike finds.
-2. **The Guidepup question:** on a `windows-latest` runner with `npx @guidepup/setup setup --ci`, can Guidepup's NVDA API focus `textweaver-xilem.exe`, press Space, and return the spoken phrases? Write the answer with the log. If yes: a script that opens a fixture, reads three sentences, pauses, moves by heading, opens Settings, and asserts the phrases NVDA spoke against Jon's session 1 write-up (the design he chose). If no: record why, and stop the Guidepup line.
+2. **The Guidepup question:** on a `windows-latest` runner with `npx @guidepup/setup setup --ci`, can Guidepup's NVDA API focus `textweaver-xilem.exe`, press Space, and return the spoken phrases? Write the answer with the log. If yes: a script that opens a fixture, reads three sentences, pauses, moves by heading, opens Settings, and asserts the phrases NVDA spoke against the owner's session 1 write-up (the design he chose). If no: record why, and stop the Guidepup line.
 3. **Orca under Xvfb:** extend `tools/atspi-dump.py` to a scripted session (open, read, move by heading, open a list) and assert the AT-SPI events and announcements; run it in `a11y-tests.yml`. Do not assume Collection (AccessKit PR #758 is a draft).
 4. **VoiceOver on `macos-14`:** try `@guidepup/setup` for VoiceOver; if the runner cannot enable it, record that and keep the macOS tree dump only.
-5. ADR-0039 if any of 2 to 4 becomes a standing check: what it checks, what only Jon can check, and the rule that a green run never replaces his session.
+5. ADR-0039 if any of 2 to 4 becomes a standing check: what it checks, what only the owner can check, and the rule that a green run never replaces his session.
 
 **Checks:** actionlint, shellcheck, the PowerShell lint, the new workflow green on the branch or its failures explained with logs.
 
-**Jon's checklist:** nothing to hear. Jon reads the spoken phrases the NVDA script recorded and says whether they match what he heard in his session.
+**The owner's checklist:** nothing to hear. The owner reads the spoken phrases the NVDA script recorded and says whether they match what he heard in his session.
 
-### W5e: offline translation on rten (sub-wave 5c, P3, only with Jon's model approval)
+### W5e: offline translation on rten (sub-wave 5c, P3, only with the owner's model approval)
 
 **Branch** `wave5/e-translate`. **ADR-0038** ("Offline translation on rten with OPUS-MT").
 
@@ -533,7 +533,7 @@ Each report's checklist follows this order, and drops what does not apply:
 
 **Not to touch:** `textweaver-lexicon`, engines, `textweaver-xilem`, `textweaver-piper` and `textweaver-ocr` (share their download and hash-check code through `textweaver-engines` or a contract change request, not a copy).
 
-**Read first:** `docs/research/wave4.md` (W4e), ADR-0023 (rten, the download and hash pattern, the license prompt), `docs/research/pure-rust-wave3.md` (rten), `rten-examples`' Whisper and any translation example, W4d's status line (the language list and the catalog), Jon's answer to open question 1 (which pairs).
+**Read first:** `docs/research/wave4.md` (W4e), ADR-0023 (rten, the download and hash pattern, the license prompt), `docs/research/pure-rust-wave3.md` (rten), `rten-examples`' Whisper and any translation example, W4d's status line (the language list and the catalog), the owner's answer to open question 1 (which pairs).
 
 **Deliverables:**
 
@@ -545,7 +545,7 @@ Each report's checklist follows this order, and drops what does not apply:
 
 **Checks:** the common set; the crate's tests with a tiny recorded model stub (no real model in tests); the real-model test `#[ignore]`d behind `TEXTWEAVER_TRANSLATE=1`, run once locally with output in the report.
 
-**Jon's checklist (three):** (1) the download prompt for one pair: size and license said, "no" once, "yes" once; (2) Translate a chapter to Spanish: progress every 2 seconds, Escape cancels; (3) the result opens beside the original and reads with the Spanish voice W4d chose, or says the current voice was kept.
+**The owner's checklist (three):** (1) the download prompt for one pair: size and license said, "no" once, "yes" once; (2) Translate a chapter to Spanish: progress every 2 seconds, Escape cancels; (3) the result opens beside the original and reads with the Spanish voice W4d chose, or says the current voice was kept.
 
 ### W5p: beta readiness (sub-wave 5c, P2, light fourth)
 
@@ -553,23 +553,23 @@ Each report's checklist follows this order, and drops what does not apply:
 
 **Owns:** `.github/workflows/{release,ci,nightly}.yml`, `xtask/src/{release,dist}.rs` and a new `xtask/src/docs_check.rs` (`cargo xtask settings-doc --check`, `cargo xtask docs --check`), `docs/README.md`, `docs/roadmap.md`, `docs/star-gaps.md`, `docs/dev/{architecture,releasing,building}.md`, `docs/adr/README.md` (index lines), `docs/settings.md` (the generated section), `docs/install.md` (signing notes), `CHANGELOG.md`'s "Unreleased" section.
 
-**Not to touch:** any crate's Rust code beyond a compile fix it reports; repository settings (Jon said no merge gate); branches (no pruning); `gui-xilem.yml` and `a11y-tests.yml` (W5t's).
+**Not to touch:** any crate's Rust code beyond a compile fix it reports; repository settings (the owner said no merge gate); branches (no pruning); `gui-xilem.yml` and `a11y-tests.yml` (W5t's).
 
-**Read first:** `docs/dev/releasing.md`, W4f's report and status line, `docs/README.md`, `docs/roadmap.md`, `docs/star-gaps.md`, ADR-0027 (the GUI packages), Jon's answers to open questions 4 and 5.
+**Read first:** `docs/dev/releasing.md`, W4f's report and status line, `docs/README.md`, `docs/roadmap.md`, `docs/star-gaps.md`, ADR-0027 (the GUI packages), the owner's answers to open questions 4 and 5.
 
 **Deliverables:**
 
 1. Whatever W4f left undone from its brief (the aarch64 AppImage, the dated listening check, the release notes).
 2. **`cargo xtask settings-doc --check`:** the settings reference generated from `SettingsSchema` into a marked section of `docs/settings.md`; the check fails when the file and the schema differ; run in the `docs` CI job.
 3. **`cargo xtask docs --check`:** the ADR index against `docs/adr/`, `docs/README.md`'s Decisions list against the index, the crate count against `crates/`, every guide ending with "See also", every `docs/*.md` linked from the index. Fix what it finds (quick wins 1 and 2).
-4. **The GUI packages in `release.yml`** if Jon says the GUI ships (question 4): `cargo xtask gui-dist` on the three package jobs, the artifacts uploaded, the checksums job covering them, `docs/install.md` describing them and Gatekeeper and SmartScreen for unsigned binaries (question 5).
+4. **The GUI packages in `release.yml`** if the owner says the GUI ships (question 4): `cargo xtask gui-dist` on the three package jobs, the artifacts uploaded, the checksums job covering them, `docs/install.md` describing them and Gatekeeper and SmartScreen for unsigned binaries (question 5).
 5. **The beta checklist** in `docs/dev/releasing.md`: the release workflow run on a branch with `workflow_dispatch`, every package downloaded and started, the listening checklist dated within a week, `docs --check` and `settings-doc --check` green, the nightly fuzz clean for seven days, the open issues list, the sessions' write-ups linked. `cargo xtask release --dry-run` checks the dated items.
 6. The doc pass over the files listed under "owns", one commit per file, with a list in the report of every passage changed.
 7. The beta release notes finished in `CHANGELOG.md`'s "Unreleased" section, grouped by area, with the "Keys: what changed" section kept at the top.
 
 **Checks:** actionlint, shellcheck, the PowerShell lint, the link and site checks, the two new checks, a manual run of `release.yml` on the branch (no tag), `cargo xtask release --dry-run`.
 
-**Jon's checklist:** nothing to hear. Jon reads the beta readiness page and decides.
+**The owner's checklist:** nothing to hear. The owner reads the beta readiness page and decides.
 
 ## 9. Execution runbook outline
 
@@ -577,13 +577,13 @@ Every step names its checks. "Free memory" is `FreePhysicalMemory` from `Get-Cim
 
 ### Step 0: close Wave 4 and fix the plan files
 
-1. Wave 4's runbook step 7.4 is done: everything merged is flushed, Docker's disk compacted with Jon, the final numbers in `docs/history/tasks.md`, the wiki's Wave 4 page filled in.
+1. Wave 4's runbook step 7.4 is done: everything merged is flushed, Docker's disk compacted with the owner, the final numbers in `docs/history/tasks.md`, the wiki's Wave 4 page filled in.
 2. Read the five Wave 4 outcomes this plan branches on (section 3) and write each branch taken into `docs/history/tasks.md` under a "Wave 5" heading: the rope numbers and W5r's branch; W4s's memory table and W5m's branch; #827's state and W5c4's path; W4a3's state and W5a4's first item; W4d's state and the message rule.
 3. Apply the briefs to `docs/history/tasks.md`: the three sub-waves, the agents, the ADR numbers (0034 W5r, 0035 W5c3, 0036 W5c4, 0037 W5s, 0038 W5e, 0039 W5t, 0040 reserved for W5a4), the common rules, the Braille checklist order.
 4. If W4d landed, confirm the catalog checker allows English fallback with a "needs translation" list; if it fails on a missing translation, add the fallback before any agent starts.
-5. If the wxDragon spike is still in the tree, remove it now as its own commit, after showing Jon the file list (his decision from Wave 4).
+5. If the wxDragon spike is still in the tree, remove it now as its own commit, after showing the owner the file list (his decision from Wave 4).
 6. Fix `docs/README.md`'s ADR list (quick win 1) if W5p is not to do it.
-7. Ask Jon the five open questions (section 11). Restart Docker Desktop from its menu (Jon does it; never force-quit).
+7. Ask the owner the five open questions (section 11). Restart Docker Desktop from its menu (the owner does it; never force-quit).
 
 ### Step 1: measure and check the floors
 
@@ -600,56 +600,56 @@ Every step names its checks. "Free memory" is `FreePhysicalMemory` from `Get-Cim
 
 ### Step 3: integrate 5a, in the order W5x, W5m, W5r
 
-For each report: check the measured sizes against the allowance; free memory at least 30 GB and at most one container building; the native checks on the branch; the container all-features check, one at a time; merge, regenerate the site and the notices, commit; flush that agent (volume, then folder, each listed then applied); one line to Jon.
+For each report: check the measured sizes against the allowance; free memory at least 30 GB and at most one container building; the native checks on the branch; the container all-features check, one at a time; merge, regenerate the site and the notices, commit; flush that agent (volume, then folder, each listed then applied); one line to the owner.
 
-After W5x: build the release terminal reader and hand Jon session B1's checklist (W5x's five items plus the "Braille displays" section's five). After W5r: hand Jon ADR-0034 and ask stay or go.
+After W5x: build the release terminal reader and hand the owner session B1's checklist (W5x's five items plus the "Braille displays" section's five). After W5r: hand the owner ADR-0034 and ask stay or go.
 
-### Step 4: Jon's session B1 and the rope answer
+### Step 4: the owner's session B1 and the rope answer
 
-1. Jon tests when he chooses. The orchestrator writes his findings into `docs/history/tasks.md` under "Session B1", one line each, and the settings he verified into `docs/screen-readers.md` (removing "to verify").
+1. The owner tests when he chooses. The orchestrator writes his findings into `docs/history/tasks.md` under "Session B1", one line each, and the settings he verified into `docs/screen-readers.md` (removing "to verify").
 2. His findings become the first items of W5c4's and W5a4's briefs. Nothing in 5b launches before the write-up exists, except W5c3 and W5s, which do not depend on it.
 3. Rope: "stay" closes it; "go" with branch B implemented is already merged; "go" with the migration deferred goes into Wave 6's list.
 
 ### Step 5: sub-wave 5b
 
 1. Same checks as step 2. Launch W5c4, W5c3, W5s from main after 5a's last merge and flush.
-2. W5c4's day-one gate (issue #827) is reported to Jon in one line: pinned release, or vendored with the patch.
-3. Integrate W5c4, then W5c3, then W5s. After W5c4: Jon's check 2 (its five items plus W5c3's three and W5s's two, in that order).
-4. Flush each merged agent. Check Docker's disk; compact with Jon if over 300 GB.
+2. W5c4's day-one gate (issue #827) is reported to the owner in one line: pinned release, or vendored with the patch.
+3. Integrate W5c4, then W5c3, then W5s. After W5c4: the owner's check 2 (its five items plus W5c3's three and W5s's two, in that order).
+4. Flush each merged agent. Check Docker's disk; compact with the owner if over 300 GB.
 
 ### Step 6: sub-wave 5c
 
-1. Same checks. Launch W5e (only if Jon approved the models; else the slot stays empty and W5p may build the GUI packages natively in it), W5a4, W5t; W5p as the light fourth.
+1. Same checks. Launch W5e (only if the owner approved the models; else the slot stays empty and W5p may build the GUI packages natively in it), W5a4, W5t; W5p as the light fourth.
 2. W5t builds nothing here; its workflow runs must never take a runner while the release workflow's manual run (W5p) needs one: sequence them through the orchestrator.
-3. Integrate W5e, then W5a4 (release build of the GUI, Jon's session 3), then W5t, then W5p last.
-4. Session 3 write-up. Then the beta readiness page (W5p's checklist filled in) to Jon in one message.
-5. Flush everything merged. Compact Docker's disk with Jon. Record the final numbers in `docs/history/tasks.md` and hand the wiki's Wave 5 page its results section (the orchestrator edits the wiki; agents never do).
+3. Integrate W5e, then W5a4 (release build of the GUI, the owner's session 3), then W5t, then W5p last.
+4. Session 3 write-up. Then the beta readiness page (W5p's checklist filled in) to the owner in one message.
+5. Flush everything merged. Compact Docker's disk with the owner. Record the final numbers in `docs/history/tasks.md` and hand the wiki's Wave 5 page its results section (the orchestrator edits the wiki; agents never do).
 6. Wave 6 planning starts from: the beta decision, ADR-0034's branch, W5t's answers, and section 10's deferred list.
 
 ### If a floor is reached
 
-Same as Wave 4: D: under 300 GB, no new heavy process and a flush; under 250 GB, compaction with Jon; under 200 GB, every build stops and Jon is told in one line. Free memory under 20 GB: nothing starts; the next heavy process waits for 26 GB. An out-of-memory kill in a container: `TW_JOBS=2` for that agent, then serialized container builds.
+Same as Wave 4: D: under 300 GB, no new heavy process and a flush; under 250 GB, compaction with the owner; under 200 GB, every build stops and the owner is told in one line. Free memory under 20 GB: nothing starts; the next heavy process waits for 26 GB. An out-of-memory kill in a container: `TW_JOBS=2` for that agent, then serialized container builds.
 
-### Keeping Jon informed
+### Keeping the owner informed
 
 One line per merge; one message per sub-wave end with the gate's checklist as a numbered list; a message the moment a floor is crossed; nothing for routine passes. Everything he decides goes into `docs/history/tasks.md` with the machine's date and weekday, and the orchestrator mirrors it to the wiki.
 
 ## 10. What to cut or defer to Wave 6
 
-- **W5e (translation): the first to cut.** It needs model approval, about 450 MB of downloads, and a fourth tokenizer path; nothing depends on it. Cut it if Jon says no to question 1, if 5c is short of memory, or if W4d slipped and takes its slot (section 3, item 5).
+- **W5e (translation): the first to cut.** It needs model approval, about 450 MB of downloads, and a fourth tokenizer path; nothing depends on it. Cut it if the owner says no to question 1, if 5c is short of memory, or if W4d slipped and takes its slot (section 3, item 5).
 - **W5t beyond the tree dump: cut to the spike's written answer** if the runners cannot drive a native window. The tree dump stays either way.
 - **The rope migration (W5r branch B) if `CharPos` must change meaning:** Wave 6, after the beta (question 2).
 - **The Parley upgrade (W5a4 item 3):** revert and defer if it regresses a measurement or a screen-reader action; edit mode on 0.8 is enough for the beta.
 - **The voice manager in the GUI (W5a4 item 5):** Wave 6 if W4a3 slipped and edit mode takes W5a4's slot.
-- **Embedding summaries (MiniLM):** not planned; Wave 6 only if the no-model summary proves too weak on Jon's documents.
+- **Embedding summaries (MiniLM):** not planned; Wave 6 only if the no-model summary proves too weak on the owner's documents.
 - **Grade 2 (contracted) braille in pure Rust:** Wave 6. It is a table-driven translator with many rules; `liblouis` behind the feature covers it now. Math braille (W5c4) is the higher-value braille item.
 - **Star's peripheral list stays dropped:** karaoke video export, feeds, Wikipedia and PubMed quick open, SSML pauses, OGG export and the M4B cover, plugins, an update checker inside the program, a guided tour, a key-code inspector, tapping Ctrl to pause (a terminal cannot see key-up), study tools, the knowledge graph exports. Star's publishing templates (Word APA and AMA templates, the EPUB cover, the publish stylesheets) are worth a Wave 6 agent if students ask; not before the beta.
 - **VoiceOver by a person:** out of scope until there is a Mac or a tester.
-- **Signing:** a Wave 6 item once funding and question 5's answer exist; the beta ships as the alphas did if Jon says so.
-- **A merge gate:** Jon said no in Wave 4; not raised again unless he raises it.
-- **Branch pruning:** only after the wave, only with Jon's approval, never by an agent.
+- **Signing:** a Wave 6 item once funding and question 5's answer exist; the beta ships as the alphas did if the owner says so.
+- **A merge gate:** the owner said no in Wave 4; not raised again unless he raises it.
+- **Branch pruning:** only after the wave, only with the owner's approval, never by an agent.
 
-## 11. Open questions for Jon
+## 11. Open questions for the owner
 
 1. **Translation models.** May W5e download the OPUS-MT quantized pairs from Hugging Face (about 113 MB each; English to Spanish, French, German, and Arabic, one direction each, about 450 MB in all), after each download's license is shown? Or is translation deferred to Wave 6, keeping only the no-model summaries in Wave 5?
 2. **The rope before the beta.** If W4b's numbers show a gain of two times or more, may Wave 5 change the rope (ADR-0034, branch B) before `0.1.0-beta.1`, or does the text model freeze until after the beta ships?

@@ -16,7 +16,7 @@
 //! `-able`, `-ability`, `-ness`, `-ment`, `-ful`, `-less`, `-ly`) split off
 //! whole. It is an approximation: good enough to help decode long words,
 //! not a dictionary. TeX-pattern hyphenation (for example the `hypher`
-//! crate) is a follow-up if Jon wants dictionary-quality splits.
+//! crate) is a follow-up if the owner wants dictionary-quality splits.
 //!
 //! In the map, every original char is a `Literal` span and every inserted
 //! separator an `Inserted` span anchored at the syllable that follows it.

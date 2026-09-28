@@ -114,7 +114,7 @@ fn metadata_declares_accessibility() {
     for needle in [
         "<dc:title>Reading Guide</dc:title>",
         "<dc:language>en-US</dc:language>",
-        "<dc:creator>Jon Pielaet</dc:creator>",
+        "<dc:creator>Ada Example</dc:creator>",
         "<meta property=\"dcterms:modified\">2026-09-25T12:34:56Z</meta>",
         "<meta property=\"schema:accessMode\">textual</meta>",
         "<meta property=\"schema:accessMode\">visual</meta>",

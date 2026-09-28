@@ -79,7 +79,7 @@ edition = "2024"
 rust-version = "1.92"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/leavesofgrass/textweaver"
-authors = ["Jon Pielaet"]
+authors = ["The textweaver authors"]
 publish = false
 
 # Every dependency any crate may use is declared here (ADR-0001). Crates opt in

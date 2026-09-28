@@ -28,7 +28,7 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ### Keys: what changed
 
-The default keys are now the quick navigation keys of NVDA's and JAWS's browse mode (Jon's decision). `preset = "classic"` under `[keyboard]` keeps the earlier keys; `preset = "screen-reader"` now means the default. Old key, then where its command went (terminal):
+The default keys are now the quick navigation keys of NVDA's and JAWS's browse mode (the owner's decision). `preset = "classic"` under `[keyboard]` keeps the earlier keys; `preset = "screen-reader"` now means the default. Old key, then where its command went (terminal):
 
 - `.` next sentence: `Alt+Down` or `Alt+.`. `.` now says the sentence.
 - `,` previous sentence: `Alt+Up` or `Alt+,`. `,` now says the paragraph.
@@ -50,7 +50,7 @@ The default keys are now the quick navigation keys of NVDA's and JAWS's browse m
 
 See [docs/keyboard.md](docs/keyboard.md#what-changed).
 
-### W4s: the Xilem GUI before Jon's listening session
+### W4s: the Xilem GUI before the owner's listening session
 
 - `textweaver-xilem --announce uia` (Windows) announces with UI Automation Notification events instead of the live region, for comparing the two in NVDA and JAWS. `announce = "uia"` in a `[gui]` table of `settings.toml` does the same. The default is still the live region.
 - List options and settings scrolled out of view are now in the accessibility tree, so a screen reader's object navigation reaches them: all 15 settings sections, and every option of a long list.

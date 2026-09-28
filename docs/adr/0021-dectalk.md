@@ -11,7 +11,7 @@ DECtalk is the formant synthesizer many blind users grew up with ("Perfect Paul"
 
 DECtalk is proprietary. The community source tree on GitHub is Fonix's code; its own licence file says it may be used only under a written licence from Fonix. A DECtalk someone bought (DECtalk Software from DEC, Force Computers, or Fonix; the Access Solutions runtime; an SDK licence) is a different matter: it is theirs to use.
 
-Jon asked for DECtalk "like we did in star". textweaver already runs two proprietary engines out of process on the shared engine host (ETI-Eloquence, ADR-0007; SAPI5, ADR-0009; the host protocol, ADR-0012).
+The owner asked for DECtalk "like we did in star". textweaver already runs two proprietary engines out of process on the shared engine host (ETI-Eloquence, ADR-0007; SAPI5, ADR-0009; the host protocol, ADR-0012).
 
 ## Decision
 

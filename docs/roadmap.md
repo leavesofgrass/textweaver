@@ -7,7 +7,7 @@ Written on Saturday, September 26, 2026, from four planning reviews of `main` at
 3. **Markdown reading and authoring.** Realistic student sessions, and how textweaver coexists with screen readers.
 4. **Architecture, CI, releases, and GUI readiness.**
 
-The goal is Jon's: terminal-first Markdown reading and authoring, with speech and word highlighting that never stall, drift, or lose your place. It should be fast on large files, work the same on Windows, macOS, and Linux, and have a GUI for the many users who want one.
+The goal is the owner's: terminal-first Markdown reading and authoring, with speech and word highlighting that never stall, drift, or lose your place. It should be fast on large files, work the same on Windows, macOS, and Linux, and have a GUI for the many users who want one.
 
 Sizes:
 - **S**: under a day.
@@ -19,10 +19,10 @@ Sizes:
 - **Phase 1 is done.** Agents P1a (speech stability), P1b (app safety and authoring quick wins), P1c (CI, releases, and notices), and P1d (loaders and command-line tools) are merged. Two housekeeping items are left: pruning merged branches, and merging through pull requests with required checks.
 - **Phase 2 is done, with a few items moved to Wave 3.** Agents P2a (reliability), P2b (authoring), P2c (screen reader modes), and P2d (releases, quality gates, and binary size) are merged. Agent P2e (the remaining gaps, and keys that follow NVDA and JAWS habits) is still running.
 - **Tests:** 1,854 pass natively on Windows and 1,861 in Docker with all features, at the end of P2a.
-- **Releases:** 0.1.0-alpha.3 (Friday, September 25, 2026) is the newest. The next release is the first with the Linux AppImage. Jon decides when it happens; there is no alpha.4 until he says so.
+- **Releases:** 0.1.0-alpha.3 (Friday, September 25, 2026) is the newest. The next release is the first with the Linux AppImage. The owner decides when it happens; there is no alpha.4 until he says so.
 - **Wave 3 is planned** in [tasks.md](history/tasks.md), with six agents: W3a (app core for the GUI), W3b (the Xilem GUI), W3c (architecture), W3d (formats for students), W3e (language and study aids), and W3f (voices and speech). It starts after P2e merges.
-- **The GUI is Xilem.** Jon chose Linebender's all-Rust toolkit on Saturday, September 26, 2026, to keep as much of textweaver in Rust as he can. The wxDragon spike stays as a fallback until the Xilem GUI passes the same accessibility checks.
-- **Wave 3 is pure Rust first.** textweaver is an experimental alpha, for Jon's own use first. Wave 3 prefers pure-Rust, in-process solutions over subprocesses and C or C++ libraries: `ocrs` for OCR, Piper voices through `tract` or `candle`, and Whisper through `candle`. It accepts alpha crates and API churn, keeps the tests and CI gates, and records each bold choice and its fallback in an ADR.
+- **The GUI is Xilem.** the owner chose Linebender's all-Rust toolkit on Saturday, September 26, 2026, to keep as much of textweaver in Rust as he can. The wxDragon spike stays as a fallback until the Xilem GUI passes the same accessibility checks.
+- **Wave 3 is pure Rust first.** textweaver is an experimental alpha, for the owner's own use first. Wave 3 prefers pure-Rust, in-process solutions over subprocesses and C or C++ libraries: `ocrs` for OCR, Piper voices through `tract` or `candle`, and Whisper through `candle`. It accepts alpha crates and API churn, keeps the tests and CI gates, and records each bold choice and its fallback in an ADR.
 
 Each phase below has its own dated status note. Items marked **done** are on `main`; items marked **left** say where they went.
 
@@ -145,7 +145,7 @@ Star's lesson: a stored setting must work.
 
 ## Phase 2: reliability and authoring depth (next two to three weeks)
 
-**Status (Saturday, September 26, 2026): done, a day after Phase 1, except the items marked left below.** P2a did the stability items, P2b the authoring items, P2c the screen reader items, and P2d CI, quality gates, binary size, and releases. The architecture items were not started in Phase 2; they are Agent W3c's brief in Wave 3. Agent P2e, running on this date, closes remaining gaps and moves the default keys toward NVDA and JAWS habits. Jon's decisions for it: citations are skipped in continuous reading by default, with a toggle, and spoken in words; and "preview in browser" says when it updates, with an optional automatic reload.
+**Status (Saturday, September 26, 2026): done, a day after Phase 1, except the items marked left below.** P2a did the stability items, P2b the authoring items, P2c the screen reader items, and P2d CI, quality gates, binary size, and releases. The architecture items were not started in Phase 2; they are Agent W3c's brief in Wave 3. Agent P2e, running on this date, closes remaining gaps and moves the default keys toward NVDA and JAWS habits. The owner's decisions for it: citations are skipped in continuous reading by default, with a toggle, and spoken in words; and "preview in browser" says when it updates, with an optional automatic reload.
 
 ### Stability
 
@@ -199,7 +199,7 @@ Star's lesson: a stored setting must work.
 
 ### Screen reader coexistence
 
-**Status: done (P2c).** Screen reader detection covers NVDA, JAWS, and Narrator on Windows, VoiceOver, and Orca. Left: Jon's check by ear of the NVDA and JAWS settings in [the screen reader guide](screen-readers.md), each marked there to verify.
+**Status: done (P2c).** Screen reader detection covers NVDA, JAWS, and Narrator on Windows, VoiceOver, and Orca. Left: the owner's check by ear of the NVDA and JAWS settings in [the screen reader guide](screen-readers.md), each marked there to verify.
 
 - **An accessibility mode setting,** with three choices:
   - **self-voicing**: textweaver speaks everything;
@@ -210,7 +210,7 @@ Star's lesson: a stored setting must work.
   - A "quiet screen while reading" option.
   - A cursor setting: follow focus, or park on the status line so "read current line" repeats the last message.
 - **Keymap preset.** An optional preset matching screen reader habits: h for heading, 1 to 6 for heading levels, l for list. Since 2026-09-26 this is the default keymap (Agent P2e), and the earlier keys are the `classic` preset.
-- **The guide.** `docs/screen-readers.md` gives NVDA and JAWS settings for use with textweaver. Each setting is marked to verify on Jon's machine.
+- **The guide.** `docs/screen-readers.md` gives NVDA and JAWS settings for use with textweaver. Each setting is marked to verify on the owner's machine.
 
 ### CI and quality gates
 
@@ -270,7 +270,7 @@ Steps:
 
 - **Windows in CI.** Build the Windows package in `release.yml`, keeping the local build as a fallback.
 - **Checksums.** A final job that writes them once.
-- **Linux: an AppImage** (Jon's choice, 2026-09-26).
+- **Linux: an AppImage** (the owner's choice, 2026-09-26).
   - One file that runs on Debian, Fedora, Arch, and most other distributions without installing anything.
   - Built on an older base (Ubuntu 22.04 era glibc) for x86_64, and aarch64 when practical.
   - It bundles `textweaver`, `tw`, the engine hosts, and the dictionaries. `tw` and `textweaver` are reached through the AppImage's own name, or through symlinks that `--install` creates in `~/.local/bin`.
@@ -283,13 +283,13 @@ Steps:
 
 ## Phase 3: the GUI (Wave 3)
 
-**Status (Saturday, September 26, 2026): planned for Wave 3.** Jon chose Xilem, Linebender's all-Rust toolkit, for the GUI on every platform: Xilem and Masonry for the widgets, Vello for drawing, Parley for text layout, AccessKit for accessibility, and winit for windows. The steps below were written for the wxDragon spike, which stays as a fallback until the Xilem GUI passes the same accessibility checks. In [tasks.md](history/tasks.md):
+**Status (Saturday, September 26, 2026): planned for Wave 3.** the owner chose Xilem, Linebender's all-Rust toolkit, for the GUI on every platform: Xilem and Masonry for the widgets, Vello for drawing, Parley for text layout, AccessKit for accessibility, and winit for windows. The steps below were written for the wxDragon spike, which stays as a fallback until the Xilem GUI passes the same accessibility checks. In [tasks.md](history/tasks.md):
 
 - **Agent W3a** builds the app-core pieces listed first below: the document window model, list and prompt state in the app, the waker, `Command::ReplaceRange`, the settings schema (with a new terminal settings screen), and opening in the background. It also takes Phase 2's leftovers off the input thread.
 - **Agent W3b** builds the GUI in a new crate, `textweaver-xilem`, and writes ADR-0027, which supersedes ADR-0014: the main window, the dialogs, themes and fonts loaded straight into Parley, accessibility checks on every OS (UI Automation, AT-SPI under Xvfb, and a macOS smoke test), the large-document targets, and packaging with no GTK or wxWidgets.
-- **After Wave 3:** Jon's NVDA and JAWS listening session, the GUI's edit mode and reading aids, VoiceOver and Orca testing, and signing when funding allows.
+- **After Wave 3:** the owner's NVDA and JAWS listening session, the GUI's edit mode and reading aids, VoiceOver and Orca testing, and signing when funding allows.
 
-Many users will want a GUI, even though Jon works in the terminal. The wxDragon spike is accessible on Windows (ADR-0014). The app core still needs these pieces first:
+Many users will want a GUI, even though the owner works in the terminal. The wxDragon spike is accessible on Windows (ADR-0014). The app core still needs these pieces first:
 
 1. **A document window model** in the app: about 500,000 UTF-16 units at a time, aligned to paragraphs, with positions mapped through `DisplayIndex`. Today the GUI loads the whole document, which takes 9.3 s for 10 million characters.
 2. **List and prompt state** in the app, shared by the TUI, the GUI dialogs, and JSON-RPC.
@@ -303,7 +303,7 @@ Then the GUI steps, in order:
 
 1. **Fix the macOS smoke test,** and accept ADR-0014.
 2. **Window slicing.** 10 million characters show in under 300 ms, and the highlight moves in under 30 ms per word.
-3. **A listening session with Jon on NVDA and JAWS.** It decides whether the highlight stays the selection or becomes a background colour.
+3. **A listening session with the owner on NVDA and JAWS.** It decides whether the highlight stays the selection or becomes a background colour.
 4. **Native labelled dialogs** for find, go to, bookmarks, notes, voices, library, the command palette, and help.
 5. **A settings dialog** from the schema, themes through `rgb_table`, and a system theme that respects Windows High Contrast.
 6. **Reading aids in the GUI:** text spacing, the ruler, and an RSVP panel that never covers the caret. The font chooser already exists.
