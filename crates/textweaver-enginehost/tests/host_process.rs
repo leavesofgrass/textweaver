@@ -326,6 +326,16 @@ fn process_alive(pid: u32) -> bool {
             .output()
             .expect("tasklist runs");
         String::from_utf8_lossy(&out.stdout).contains(&format!("\"{pid}\""))
+    } else if !cfg!(target_os = "linux") {
+        // macOS has no /proc: ask ps for the state, which is empty when the
+        // process is gone and starts with Z for a zombie.
+        let out = Command::new("ps")
+            .args(["-o", "stat=", "-p", &pid.to_string()])
+            .output()
+            .expect("ps runs");
+        let state = String::from_utf8_lossy(&out.stdout);
+        let state = state.trim();
+        !state.is_empty() && !state.starts_with('Z')
     } else {
         match std::fs::read_to_string(format!("/proc/{pid}/stat")) {
             // The state follows the command name in parentheses.
