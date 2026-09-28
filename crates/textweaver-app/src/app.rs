@@ -258,8 +258,9 @@ pub(crate) enum ListKind {
     Highlights,
     SaveChoice(AfterLeave),
     Recovery,
-    /// The library: the documents listed, in order.
-    Library(Vec<PathBuf>),
+    /// The library: the documents, the filter, and those shown
+    /// (crate::library).
+    Library(crate::library::LibraryList),
     /// The voice manager; its rows are in `App::voices`
     /// (`crate::voice_manager`).
     Voices,
@@ -778,7 +779,7 @@ impl App {
         });
         let key = DocKey::for_path(path);
         // The recent list and the bookshelf, on the writer.
-        self.record_library_open(path, &title, &doc.meta.format);
+        self.record_library_open_doc(path, &title, &doc);
         let effects = self.open_document(doc, key, title);
         if let Some(s) = self.session.as_mut() {
             s.disk = stamp;
@@ -1349,11 +1350,7 @@ impl App {
             Some(ListKind::Highlights) => self.go_to_highlight(n),
             Some(ListKind::SaveChoice(after)) => return self.answer_save_choice(n, after),
             Some(ListKind::Recovery) => return self.answer_recovery(n),
-            Some(ListKind::Library(paths)) => {
-                if let Some(path) = paths.get(n).cloned() {
-                    return self.open_command(path);
-                }
-            }
+            Some(ListKind::Library(l)) => return self.choose_library(&l, n),
             Some(ListKind::Voices) => return self.choose_voice_row(n),
             Some(ListKind::Authoring(l)) => return self.choose_authoring(l, n),
             Some(ListKind::Study(l)) => return self.choose_study(l, n),

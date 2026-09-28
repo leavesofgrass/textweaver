@@ -4,13 +4,14 @@ This guide covers textweaver's library: the folders of documents you read from, 
 
 ## Open the library in the reader: Alt+L
 
-Press **Alt+L** in the terminal reader. The GUI uses **Ctrl+Shift+B**. You hear "Library", the number of documents, then "Enter opens one."
+Press **Alt+L** in the terminal reader. The GUI uses **Ctrl+Shift+B**. You hear "Library", the number of documents, then "Type to filter, Enter opens one."
 
 The folders are read in the background, so a large library (up to 20,000 files) never holds up the keyboard. While it is read you may hear "Scanning the library.", and the status line counts the documents found every second; the list opens when the scan is done. Pressing **Alt+L** again meanwhile says how many have been found so far.
 
 The list has every document in your library folders, then the files you opened recently that are not in those folders, newest first. Each item says:
 
 - the title;
+- "by", then the author, when textweaver knows it;
 - how far you have read, as a percentage, when you have a saved place;
 - "in", then the folder's name, for a document in a library folder, or "recent" for a recent file.
 
@@ -18,7 +19,23 @@ For example: "Cells, 25 percent, in Readings".
 
 Use **Up** and **Down** to move, **Enter** to open, and **Escape** to close. With nothing to show you hear: "The library is empty. Add a folder with tw library --add, or open a file with Ctrl+O."
 
-Type a letter to move to the next item that starts with it. The list has no search box yet. To search, use `tw library --search`, below.
+### Filter the list as you type
+
+Type in the list to filter it. Each word you type must be in a document's title, path, author, DOI, or ISBN, or in its text. You hear how many documents match, such as "2 documents match.", and the list shows only those. **Backspace** removes a letter; with the filter empty you hear "Filter cleared", then the number of documents. When nothing matches you hear "No documents match", then what you typed.
+
+A DOI or an ISBN matches however it is written: `10.1000/xyz`, `doi:10.1000/XYZ`, a `https://doi.org/` link, `978-0-306-40615-7`, or the same book's ten-digit ISBN.
+
+The text of a document counts once `tw library --search` has read it (below); the list uses what that search keeps in the cache, and never reads documents itself.
+
+## Search by author, DOI, and ISBN
+
+textweaver learns a document's author, DOI, and ISBN in three ways:
+
+- **When you open it.** The author comes from the document's own details: Markdown front matter (`author`, `doi`, `isbn`), a Word or EPUB file's author, or a web page's `<meta>` tags (`citation_doi`, `dc.identifier`). A DOI or an ISBN printed near the start of the text counts too, such as a paper's DOI on its first page or a book's ISBN on its copyright page. An ISBN counts only after the word "ISBN". These go on the bookshelf, below.
+- **From its text,** once `tw library --search` has read it, for documents you have not opened yet.
+- **From your reference library.** When `tw cite` has a record of the same work (the same DOI or ISBN, or the same title when it is at least twelve letters long), its authors, DOI, and ISBN fill in what the document lacks. Both your personal `references.json` and each library folder's `references.json` count.
+
+Word and EPUB files keep their DOI or ISBN in an identifier field that textweaver does not read yet; a DOI or ISBN printed in the text is found.
 
 ## Library folders
 
@@ -67,7 +84,7 @@ Every document you open goes to the front of the recent list, `recent.json` in t
 
 ## The bookshelf
 
-Every document you open is also recorded on the bookshelf, `library.json` in the data folder. Each entry holds the document's full path, its title, the kind of file, when you first opened it, and when you last opened it. The bookshelf keeps up to 500 documents; past that, the ones opened longest ago are dropped. `tw migrate-star` fills it from Star's library.
+Every document you open is also recorded on the bookshelf, `library.json` in the data folder. Each entry holds the document's full path, its title, the kind of file, when you first opened it, when you last opened it, and its author, DOI, and ISBN when known. The bookshelf keeps up to 500 documents; past that, the ones opened longest ago are dropped. `tw migrate-star` fills it from Star's library.
 
 ## Search every document: tw library --search
 
@@ -77,7 +94,7 @@ tw library --search mitochondria
 
 `--search` looks in two places:
 
-- titles and paths: "Titles matching", then the documents whose title or path contains the words;
+- titles, paths, authors, DOIs, and ISBNs: the number of documents "matching" your words "by title, author, DOI, or ISBN", then each one. For example, `tw library --search 10.1000/xyz` finds the paper with that DOI;
 - the text of every document in the library folders and every recent file that still exists: "Text matches in", the number of documents, then each document with its number of matches and a short passage. The documents with the most matches come first. At most 50 are listed.
 
 The first search reads every document, which takes a while for a large library. textweaver keeps what it read in `fulltext.json` in the cache folder, and later searches read only the documents that changed. If a document cannot be read, the search says how many were skipped.

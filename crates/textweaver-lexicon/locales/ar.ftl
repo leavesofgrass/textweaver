@@ -1368,11 +1368,11 @@ library-scan-stopped = توقّف فحص المكتبة بخطأ داخلي.
 library-empty = المكتبة فارغة. أضف مجلدًا بـ{ $command }، أو افتح ملفًا بـ{ $key }.
 library-intro =
     { $n ->
-        [one] المكتبة، مستند واحد. Enter لفتح واحد.
-        [two] المكتبة، مستندان. Enter لفتح واحد.
-        [few] المكتبة، { $n } مستندات. Enter لفتح واحد.
-        [many] المكتبة، { $n } مستندًا. Enter لفتح واحد.
-       *[other] المكتبة، { $n } مستند. Enter لفتح واحد.
+        [one] المكتبة، مستند واحد. اكتب للتصفية، Enter لفتح واحد.
+        [two] المكتبة، مستندان. اكتب للتصفية، Enter لفتح واحد.
+        [few] المكتبة، { $n } مستندات. اكتب للتصفية، Enter لفتح واحد.
+        [many] المكتبة، { $n } مستندًا. اكتب للتصفية، Enter لفتح واحد.
+       *[other] المكتبة، { $n } مستند. اكتب للتصفية، Enter لفتح واحد.
     }
 library-title = المكتبة
 
@@ -2791,3 +2791,28 @@ gui-text-size-smallest = حجم النص { $size } نقطة، وهو الأصغ�
 gui-font = الخط: { $family }.
 gui-font-unchanged = لم يتغير الخط.
 gui-font-list = الخط
+
+## Wave 5 (W5y): تصفية المكتبة والقاموس والسرعات.
+
+# The library list filtered: $shown of $n documents match $filter.
+library-title-filtered = المكتبة، { $shown } من { $n } يطابق { $filter }
+# The filter was emptied: $n documents are shown.
+library-filter-cleared =
+    { $n ->
+        [one] مُسحت التصفية، مستند واحد.
+        [two] مُسحت التصفية، مستندان.
+        [few] مُسحت التصفية، { $n } مستندات.
+        [many] مُسحت التصفية، { $n } مستندًا.
+       *[other] مُسحت التصفية، { $n } مستند.
+    }
+# No document matches the filter $query.
+library-filter-none = لا مستندات تطابق { $query }. Backspace لحذف الحروف.
+# $n documents match the filter.
+library-filter-matched =
+    { $n ->
+        [one] مستند واحد مطابق.
+        [two] مستندان مطابقان.
+        [few] { $n } مستندات مطابقة.
+        [many] { $n } مستندًا مطابقًا.
+       *[other] { $n } مستند مطابق.
+    }

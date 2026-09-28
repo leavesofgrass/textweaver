@@ -1263,8 +1263,8 @@ library-scan-stopped = Die Bibliotheksdurchsuchung wurde durch einen internen Fe
 library-empty = Die Bibliothek ist leer. Fügen Sie einen Ordner hinzu mit { $command }, oder öffnen Sie eine Datei mit { $key }.
 library-intro =
     { $n ->
-        [one] Bibliothek, { $n } Dokument. Eingabetaste öffnet eines.
-       *[other] Bibliothek, { $n } Dokumente. Eingabetaste öffnet eines.
+        [one] Bibliothek, { $n } Dokument. Tippen filtert, Eingabetaste öffnet eines.
+       *[other] Bibliothek, { $n } Dokumente. Tippen filtert, Eingabetaste öffnet eines.
     }
 library-title = Bibliothek
 
@@ -2605,3 +2605,22 @@ gui-text-size-smallest = Textgröße { $size } Punkt, die kleinste.
 gui-font = Schriftart: { $family }.
 gui-font-unchanged = Schriftart unverändert.
 gui-font-list = Schriftart
+
+## Wave 5 (W5y): der Bibliotheksfilter, das Wörterbuch und die Geschwindigkeiten.
+
+# The library list filtered: $shown of $n documents match $filter.
+library-title-filtered = Bibliothek, { $shown } von { $n } stimmen mit { $filter } überein
+# The filter was emptied: $n documents are shown.
+library-filter-cleared =
+    { $n ->
+        [one] Filter gelöscht, { $n } Dokument.
+       *[other] Filter gelöscht, { $n } Dokumente.
+    }
+# No document matches the filter $query.
+library-filter-none = Kein Dokument stimmt mit { $query } überein. Rücktaste entfernt Buchstaben.
+# $n documents match the filter.
+library-filter-matched =
+    { $n ->
+        [one] { $n } Dokument stimmt überein.
+       *[other] { $n } Dokumente stimmen überein.
+    }

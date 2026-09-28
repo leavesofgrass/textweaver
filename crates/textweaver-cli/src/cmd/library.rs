@@ -1,19 +1,28 @@
 //! `tw library`: the library's folders and documents, adding and removing
-//! folders, and searching titles and text. Owner: Agent C.
+//! folders, and searching titles, authors, DOIs, ISBNs, and text. Owner:
+//! Agent C; search by metadata, Wave 5 (W5y).
+//!
+//! A document's author, DOI, and ISBN come from the bookshelf (recorded
+//! when it opens), from a DOI or ISBN near the start of its indexed text,
+//! and from `tw cite`'s record of the same work: a reference in the
+//! personal library or a library folder's `references.json` with the same
+//! DOI, ISBN, or title fills what the document lacks.
 
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 use textweaver_app::store::fulltext::{FullTextIndex, SearchHit, SimpleIndex};
-use textweaver_app::store::library::{self, LibraryItem, ScannedDoc};
+use textweaver_app::store::library::{self, DocMetadata, LibraryItem, ScannedDoc};
 use textweaver_app::store::{
     DocKey, Library, Paths, Recent, Settings, SettingsStore, StateStore, sync::SidecarStore,
 };
+use textweaver_cite::Reference;
 
 /// Arguments for `tw library`.
 #[derive(clap::Args, Debug)]
 pub struct Args {
-    /// Search text across the library: titles, paths, and document text.
+    /// Search the library: titles, paths, authors, DOIs, ISBNs, and
+    /// document text.
     #[arg(long)]
     pub search: Option<String>,
     /// Add a folder to the library.
@@ -116,7 +125,13 @@ fn listing(paths: &Paths, settings: &Settings) -> (Listing, Vec<ScannedDoc>) {
             .filter(|s| s.has_position())
             .map(|s| s.pct)
     };
-    let items = library::library_view(&scanned, &lib, &recent, &sidecars, &local);
+    let mut items = library::library_view(&scanned, &lib, &recent, &sidecars, &local);
+    let refs = references(paths, &settings.library.folders);
+    enrich(
+        &mut items,
+        &SimpleIndex::load(&paths.fulltext_file()),
+        &refs,
+    );
     (
         Listing {
             folders: settings.library.folders.clone(),
@@ -137,11 +152,7 @@ struct SearchReport {
 }
 
 fn search(paths: &Paths, settings: &Settings, query: &str) -> SearchReport {
-    let (list, scanned) = listing(paths, settings);
-    let titles = library::filter_items(&list.items, query)
-        .into_iter()
-        .cloned()
-        .collect();
+    let (mut list, scanned) = listing(paths, settings);
     // Index the folder documents and the recent ones that still exist.
     let mut docs = scanned;
     for item in &list.items {
@@ -175,12 +186,97 @@ fn search(paths: &Paths, settings: &Settings, query: &str) -> SearchReport {
         // Only a cache: a failed write costs a slower next search.
         let _ = index.save(&cache);
     }
+    // A DOI or ISBN in text indexed just now counts too.
+    enrich(&mut list.items, &index, &[]);
+    let titles = library::filter_items(&list.items, query)
+        .into_iter()
+        .cloned()
+        .collect();
     SearchReport {
         query: query.to_owned(),
         titles,
         text: index.search(query, SEARCH_LIMIT),
         indexed: index.len(),
         unreadable: refresh.failed,
+    }
+}
+
+/// The references `tw cite` keeps: the personal library, then each
+/// library folder's `references.json`. Unreadable files are skipped.
+fn references(paths: &Paths, folders: &[PathBuf]) -> Vec<Reference> {
+    std::iter::once(textweaver_cite::user_library_path(&paths.data_dir))
+        .chain(
+            folders
+                .iter()
+                .map(|f| textweaver_cite::folder_library_path(f)),
+        )
+        .filter_map(|p| textweaver_cite::Library::load(&p).ok())
+        .flat_map(|l| l.references().to_vec())
+        .collect()
+}
+
+/// A title reduced to lowercase letters and digits, for matching a
+/// document to its reference.
+fn title_key(title: &str) -> String {
+    title
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
+/// Titles shorter than this (in letters and digits) are too common to
+/// match a document to a reference by title alone ("Notes", "Chapter 1").
+const TITLE_MATCH_MIN: usize = 12;
+
+/// What a reference says: its authors, DOI, and ISBN.
+fn reference_meta(r: &Reference) -> DocMetadata {
+    let authors: Vec<String> = r
+        .author
+        .iter()
+        .map(|n| n.natural_form())
+        .filter(|n| !n.is_empty())
+        .collect();
+    DocMetadata {
+        author: (!authors.is_empty()).then(|| authors.join(", ")),
+        doi: r.doi.as_deref().and_then(library::normalize_doi),
+        isbn: r.isbn.as_deref().and_then(library::normalize_isbn),
+    }
+}
+
+/// True when `r` is the work `item` is: the same DOI or ISBN, or the same
+/// title when it is long enough to be distinctive.
+fn same_work(item: &LibraryItem, r: &Reference, meta: &DocMetadata) -> bool {
+    if let (Some(a), Some(b)) = (&item.meta.doi, &meta.doi) {
+        return a == b;
+    }
+    if let (Some(a), Some(b)) = (&item.meta.isbn, &meta.isbn) {
+        return library::isbn13(a) == library::isbn13(b);
+    }
+    let mine = title_key(&item.title);
+    mine.len() >= TITLE_MATCH_MIN
+        && r.title
+            .as_deref()
+            .is_some_and(|t| title_key(&textweaver_cite::text::plain_title(t)) == mine)
+}
+
+/// Fills each item's missing author, DOI, and ISBN: first a DOI or ISBN
+/// near the start of its indexed text, then `tw cite`'s record of the same
+/// work.
+fn enrich(items: &mut [LibraryItem], index: &SimpleIndex, refs: &[Reference]) {
+    let metas: Vec<DocMetadata> = refs.iter().map(reference_meta).collect();
+    for item in items {
+        if let Some(e) = index.entries.get(&item.path) {
+            let head: String = e.text.chars().take(library::METADATA_SCAN_CHARS).collect();
+            item.meta.fill_from(&DocMetadata::from_document(
+                None,
+                &Default::default(),
+                &head,
+            ));
+        }
+        if let Some((_, m)) = refs.iter().zip(&metas).find(|(r, m)| same_work(item, r, m)) {
+            item.meta.fill_from(m);
+        }
     }
 }
 
@@ -221,9 +317,16 @@ fn documents(n: usize) -> String {
 fn render_search(r: &SearchReport) -> String {
     let mut out = String::new();
     if r.titles.is_empty() {
-        out.push_str(&format!("No titles match {}.\n", r.query));
+        out.push_str(&format!(
+            "No titles, authors, DOIs, or ISBNs match {}.\n",
+            r.query
+        ));
     } else {
-        out.push_str(&format!("Titles matching {}:\n", r.query));
+        out.push_str(&format!(
+            "{} matching {} by title, author, DOI, or ISBN:\n",
+            documents(r.titles.len()),
+            r.query
+        ));
         for i in &r.titles {
             out.push_str(&format!("  {}\n    {}\n", i.describe(), i.path.display()));
         }
@@ -394,7 +497,10 @@ mod tests {
             &paths,
         )
         .unwrap();
-        assert!(found.contains("No titles match ENERGY."), "{found}");
+        assert!(
+            found.contains("No titles, authors, DOIs, or ISBNs match ENERGY."),
+            "{found}"
+        );
         assert!(
             found.contains("Text matches in 2 of 2 documents:"),
             "{found}"
@@ -432,6 +538,82 @@ mod tests {
         assert!(lib.join("cells.md").exists());
         let empty = run_with(&args(), &paths).unwrap();
         assert!(empty.contains("No library folders."), "{empty}");
+    }
+
+    /// Wave 5 (W5y): search by DOI, ISBN, and author, from the text and
+    /// from `tw cite`'s record of the same work.
+    #[test]
+    fn search_by_doi_isbn_and_author() {
+        let dir = TempDir::new("meta");
+        let paths = Paths::under(&dir.0.join("tw"));
+        let lib = dir.0.join("Papers");
+        std::fs::create_dir_all(&lib).unwrap();
+        std::fs::write(
+            lib.join("paper.md"),
+            "# Cells and Energy\n\nPublished as https://doi.org/10.1000/XYZ.\n",
+        )
+        .unwrap();
+        std::fs::write(
+            lib.join("book.txt"),
+            "A Long Book About Reading\n\nISBN 978-0-306-40615-7\n",
+        )
+        .unwrap();
+        // tw cite's record of the book, by its ISBN.
+        std::fs::create_dir_all(&paths.data_dir).unwrap();
+        std::fs::write(
+            textweaver_cite::user_library_path(&paths.data_dir),
+            r#"[{"id": "example2020", "type": "book", "title": "A Long Book About Reading",
+                "author": [{"family": "Example", "given": "Ada"}], "ISBN": "0-306-40615-2"}]"#,
+        )
+        .unwrap();
+        run_with(
+            &Args {
+                add: Some(lib.clone()),
+                ..args()
+            },
+            &paths,
+        )
+        .unwrap();
+        let search = |q: &str| {
+            run_with(
+                &Args {
+                    search: Some(q.into()),
+                    ..args()
+                },
+                &paths,
+            )
+            .unwrap()
+        };
+        let found = search("10.1000/xyz");
+        assert!(
+            found.contains("1 document matching 10.1000/xyz by title, author, DOI, or ISBN:"),
+            "{found}"
+        );
+        assert!(found.contains("paper"), "{found}");
+        let found = search("doi:10.1000/XYZ");
+        assert!(found.contains("1 document matching"), "{found}");
+        let found = search("9780306406157");
+        assert!(found.contains("book, by Ada Example"), "{found}");
+        let found = search("Ada Example");
+        assert!(found.contains("1 document matching"), "{found}");
+        assert!(found.contains("book, by Ada Example"), "{found}");
+        let listed = run_with(&args(), &paths).unwrap();
+        assert!(
+            listed.contains("book, by Ada Example, in Papers"),
+            "{listed}"
+        );
+        let json = run_with(
+            &Args {
+                search: Some("0306406152".into()),
+                json: true,
+                ..args()
+            },
+            &paths,
+        )
+        .unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["search"]["titles"][0]["isbn"], "9780306406157");
+        assert_eq!(v["search"]["titles"][0]["author"], "Ada Example");
     }
 
     #[test]

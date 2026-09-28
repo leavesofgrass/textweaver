@@ -1243,8 +1243,8 @@ library-scan-stopped = O exame da biblioteca parou com um erro interno.
 library-empty = A biblioteca está vazia. Adicione uma pasta com { $command }, ou abra um arquivo com { $key }.
 library-intro =
     { $n ->
-        [one] Biblioteca, { $n } documento. Enter abre um.
-       *[other] Biblioteca, { $n } documentos. Enter abre um.
+        [one] Biblioteca, { $n } documento. Digite para filtrar, Enter abre um.
+       *[other] Biblioteca, { $n } documentos. Digite para filtrar, Enter abre um.
     }
 library-title = Biblioteca
 
@@ -2585,3 +2585,22 @@ gui-text-size-smallest = Tamanho do texto { $size } pontos, o menor.
 gui-font = Fonte: { $family }.
 gui-font-unchanged = Fonte sem alterações.
 gui-font-list = Fonte
+
+## Wave 5 (W5y): o filtro da biblioteca, o dicionário e as velocidades.
+
+# The library list filtered: $shown of $n documents match $filter.
+library-title-filtered = Biblioteca, { $shown } de { $n } correspondem a { $filter }
+# The filter was emptied: $n documents are shown.
+library-filter-cleared =
+    { $n ->
+        [one] Filtro limpo, { $n } documento.
+       *[other] Filtro limpo, { $n } documentos.
+    }
+# No document matches the filter $query.
+library-filter-none = Nenhum documento corresponde a { $query }. Backspace remove letras.
+# $n documents match the filter.
+library-filter-matched =
+    { $n ->
+        [one] { $n } documento corresponde.
+       *[other] { $n } documentos correspondem.
+    }

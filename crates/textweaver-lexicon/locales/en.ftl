@@ -1232,8 +1232,8 @@ library-scan-stopped = The library scan stopped with an internal error.
 library-empty = The library is empty. Add a folder with { $command }, or open a file with { $key }.
 library-intro =
     { $n ->
-        [one] Library, { $n } document. Enter opens one.
-       *[other] Library, { $n } documents. Enter opens one.
+        [one] Library, { $n } document. Type to filter, Enter opens one.
+       *[other] Library, { $n } documents. Type to filter, Enter opens one.
     }
 library-title = Library
 
@@ -2581,3 +2581,22 @@ gui-text-size-smallest = Text size { $size } points, the smallest.
 gui-font = Font: { $family }.
 gui-font-unchanged = Font unchanged.
 gui-font-list = Font
+
+## Wave 5 (W5y): the library's filter, the dictionary, and speed presets.
+
+# The library list filtered: $shown of $n documents match $filter.
+library-title-filtered = Library, { $shown } of { $n } match { $filter }
+# The filter was emptied: $n documents are shown.
+library-filter-cleared =
+    { $n ->
+        [one] Filter cleared, { $n } document.
+       *[other] Filter cleared, { $n } documents.
+    }
+# No document matches the filter $query.
+library-filter-none = No documents match { $query }. Backspace removes letters.
+# $n documents match the filter.
+library-filter-matched =
+    { $n ->
+        [one] { $n } document matches.
+       *[other] { $n } documents match.
+    }

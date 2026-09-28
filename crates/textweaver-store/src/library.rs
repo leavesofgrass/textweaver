@@ -264,6 +264,244 @@ pub fn scan_library_with(
     out
 }
 
+/// How far into a document's text [`DocMetadata::from_document`] looks for a
+/// DOI or an ISBN (a paper prints its DOI on the first page, a book its
+/// ISBN on the copyright page).
+pub const METADATA_SCAN_CHARS: usize = 20_000;
+
+/// Longest stored author, in chars.
+pub const AUTHOR_MAX_CHARS: usize = 200;
+
+/// A document's bibliographic facts, for searching the library by them
+/// (Star's `discovery.py`): the author, the DOI, and the ISBN. Each comes
+/// from the document's own metadata (front matter, DOCX and EPUB
+/// properties, HTML `<meta>`), from the start of its text, or from the
+/// reference library's record of the same work (`tw cite`).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DocMetadata {
+    /// The author or authors, as the document gives them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+    /// The DOI, lowercase, without `doi:` or a `doi.org` link
+    /// (`10.1000/xyz`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub doi: Option<String>,
+    /// The ISBN, digits only (and a final `X` for an ISBN-10).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub isbn: Option<String>,
+}
+
+/// Property names that carry a DOI: Markdown front matter, HTML `<meta>`
+/// (Highwire, Dublin Core, PRISM), and DOCX and EPUB identifiers.
+const DOI_PROPERTIES: [&str; 7] = [
+    "doi",
+    "citation_doi",
+    "dc.identifier",
+    "dc.identifier.doi",
+    "prism.doi",
+    "identifier",
+    "dcterms.identifier",
+];
+
+/// Property names that carry an ISBN.
+const ISBN_PROPERTIES: [&str; 5] = [
+    "isbn",
+    "citation_isbn",
+    "dc.identifier",
+    "identifier",
+    "dcterms.identifier",
+];
+
+/// Property names that carry an author when the loader has not set one.
+const AUTHOR_PROPERTIES: [&str; 4] = ["author", "authors", "citation_author", "dc.creator"];
+
+impl DocMetadata {
+    /// True when nothing is known.
+    pub fn is_empty(&self) -> bool {
+        self.author.is_none() && self.doi.is_none() && self.isbn.is_none()
+    }
+
+    /// The metadata of a loaded document: `author` and `properties` as the
+    /// loader found them, and `text` searched (its first
+    /// [`METADATA_SCAN_CHARS`] chars) for a DOI or ISBN the properties
+    /// lack.
+    pub fn from_document(
+        author: Option<&str>,
+        properties: &std::collections::BTreeMap<String, String>,
+        text: &str,
+    ) -> Self {
+        let prop = |names: &[&str], parse: fn(&str) -> Option<String>| {
+            properties
+                .iter()
+                .filter(|(k, _)| names.iter().any(|n| k.eq_ignore_ascii_case(n)))
+                .find_map(|(_, v)| parse(v))
+        };
+        let author = author
+            .map(str::to_owned)
+            .or_else(|| prop(&AUTHOR_PROPERTIES, |v| Some(v.to_owned())))
+            .map(|a| clean_author(&a))
+            .filter(|a| !a.is_empty());
+        let head: String = text.chars().take(METADATA_SCAN_CHARS).collect();
+        DocMetadata {
+            author,
+            doi: prop(&DOI_PROPERTIES, find_doi).or_else(|| find_doi(&head)),
+            isbn: prop(&ISBN_PROPERTIES, find_isbn_value).or_else(|| find_isbn(&head)),
+        }
+    }
+
+    /// Fills what `self` lacks from `other`; returns true when anything
+    /// changed.
+    pub fn fill_from(&mut self, other: &DocMetadata) -> bool {
+        let mut changed = false;
+        for (mine, theirs) in [
+            (&mut self.author, &other.author),
+            (&mut self.doi, &other.doi),
+            (&mut self.isbn, &other.isbn),
+        ] {
+            if mine.is_none() && theirs.is_some() {
+                mine.clone_from(theirs);
+                changed = true;
+            }
+        }
+        changed
+    }
+}
+
+/// Whitespace collapsed, at most [`AUTHOR_MAX_CHARS`] chars.
+fn clean_author(a: &str) -> String {
+    a.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .chars()
+        .take(AUTHOR_MAX_CHARS)
+        .collect()
+}
+
+/// `s` as a DOI when it is one: `10.` and a registrant of four to nine
+/// digits, a slash, and a suffix; a `doi:` prefix or a `doi.org` link is
+/// removed. Lowercase, since DOIs are case-insensitive.
+pub fn normalize_doi(s: &str) -> Option<String> {
+    let t = s.trim();
+    let lower = t.to_lowercase();
+    let mut rest = lower.as_str();
+    for prefix in [
+        "https://doi.org/",
+        "http://doi.org/",
+        "https://dx.doi.org/",
+        "http://dx.doi.org/",
+        "doi.org/",
+        "doi:",
+        "doi ",
+        "urn:doi:",
+    ] {
+        if let Some(r) = rest.strip_prefix(prefix) {
+            rest = r.trim_start();
+            break;
+        }
+    }
+    let rest = rest.trim_end_matches(['.', ',', ';', ':', ')', ']', '"', '\'']);
+    let (registrant, suffix) = rest.strip_prefix("10.")?.split_once('/')?;
+    let registrant_ok = (4..=9).contains(&registrant.len())
+        && registrant
+            .split('.')
+            .all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()));
+    let suffix_ok = !suffix.is_empty() && !suffix.chars().any(char::is_whitespace);
+    (registrant_ok && suffix_ok).then(|| format!("10.{registrant}/{suffix}"))
+}
+
+/// The first DOI in `text` ([`normalize_doi`]).
+pub fn find_doi(text: &str) -> Option<String> {
+    text.split(|c: char| c.is_whitespace() || matches!(c, '<' | '>' | '"' | '(' | '['))
+        .filter(|w| w.contains("10."))
+        .find_map(|w| {
+            let at = w.find("10.")?;
+            normalize_doi(&w[at..])
+        })
+}
+
+/// `s` as an ISBN when it is one: ten or thirteen digits (a final `X` for
+/// ISBN-10), hyphens and spaces ignored, with a valid check digit. An
+/// `ISBN` or `urn:isbn:` prefix is removed. Returns the digits only.
+pub fn normalize_isbn(s: &str) -> Option<String> {
+    let t = s.trim();
+    let lower = t.to_ascii_lowercase();
+    let body = ["urn:isbn:", "isbn-13:", "isbn-10:", "isbn:", "isbn"]
+        .iter()
+        .find_map(|p| lower.strip_prefix(p))
+        .unwrap_or(&lower);
+    let digits: String = body
+        .chars()
+        .filter(|c| !matches!(c, '-' | ' ' | '\u{2010}' | '\u{2011}'))
+        .map(|c| c.to_ascii_uppercase())
+        .collect();
+    isbn_checks(&digits).then_some(digits)
+}
+
+/// True when `d` is a valid ISBN-10 or ISBN-13.
+fn isbn_checks(d: &str) -> bool {
+    let b = d.as_bytes();
+    match b.len() {
+        10 => {
+            if !b[..9].iter().all(u8::is_ascii_digit) || !(b[9].is_ascii_digit() || b[9] == b'X') {
+                return false;
+            }
+            let sum: u32 = b
+                .iter()
+                .enumerate()
+                .map(|(i, &c)| {
+                    let v = if c == b'X' { 10 } else { u32::from(c - b'0') };
+                    v * (10 - i as u32)
+                })
+                .sum();
+            sum.is_multiple_of(11)
+        }
+        13 => {
+            if !b.iter().all(u8::is_ascii_digit)
+                || !(b.starts_with(b"978") || b.starts_with(b"979"))
+            {
+                return false;
+            }
+            let sum: u32 = b
+                .iter()
+                .enumerate()
+                .map(|(i, &c)| u32::from(c - b'0') * if i % 2 == 0 { 1 } else { 3 })
+                .sum();
+            sum.is_multiple_of(10)
+        }
+        _ => false,
+    }
+}
+
+/// An ISBN in a property value (which may hold other identifiers).
+fn find_isbn_value(v: &str) -> Option<String> {
+    normalize_isbn(v).or_else(|| find_isbn(v))
+}
+
+/// The first ISBN in `text` that follows the word "ISBN" (a bare number
+/// is too often something else).
+pub fn find_isbn(text: &str) -> Option<String> {
+    let lower = text.to_ascii_lowercase();
+    let mut from = 0;
+    while let Some(at) = lower[from..].find("isbn") {
+        let start = from + at + 4;
+        let candidate: String = text[start..]
+            .chars()
+            .skip_while(|c| !c.is_ascii_digit())
+            .take_while(|c| c.is_ascii_digit() || matches!(c, '-' | ' ' | 'X' | 'x'))
+            .take(20)
+            .collect();
+        // The longest valid prefix: "978-0-306-40615-7 (paper)".
+        let parts: Vec<&str> = candidate.trim().split(' ').collect();
+        for n in (1..=parts.len()).rev() {
+            if let Some(i) = normalize_isbn(&parts[..n].join(" ")) {
+                return Some(i);
+            }
+        }
+        from = start;
+    }
+    None
+}
+
 /// One bookshelf entry (Star's `library[path]`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LibraryEntry {
@@ -280,6 +518,9 @@ pub struct LibraryEntry {
     /// When it was last opened (Unix seconds, UTC).
     #[serde(default)]
     pub last_opened: i64,
+    /// Author, DOI, and ISBN, when known.
+    #[serde(flatten)]
+    pub meta: DocMetadata,
     /// Unknown fields, preserved.
     #[serde(flatten)]
     pub extra: serde_json::Map<String, Value>,
@@ -350,6 +591,7 @@ impl Library {
                 format: String::new(),
                 added: when,
                 last_opened: when,
+                meta: DocMetadata::default(),
                 extra: serde_json::Map::new(),
             },
         };
@@ -374,6 +616,28 @@ impl Library {
         recorded
     }
 
+    /// Stores what a document's own metadata says about `path` (an entry
+    /// recorded before): each field `meta` has replaces the stored one, and
+    /// a field it lacks keeps its value. Returns true when anything
+    /// changed; false too when `path` has no entry.
+    pub fn record_metadata(&mut self, path: &Path, meta: &DocMetadata) -> bool {
+        let key = resolve_path(path);
+        let Some(entry) = self.entries.iter_mut().find(|e| e.path == key) else {
+            return false;
+        };
+        let before = entry.meta.clone();
+        for (mine, new) in [
+            (&mut entry.meta.author, &meta.author),
+            (&mut entry.meta.doi, &meta.doi),
+            (&mut entry.meta.isbn, &meta.isbn),
+        ] {
+            if new.is_some() {
+                mine.clone_from(new);
+            }
+        }
+        entry.meta != before
+    }
+
     /// Removes `path`. Returns whether it was there.
     pub fn remove(&mut self, path: &Path) -> bool {
         let key = resolve_path(path);
@@ -394,7 +658,7 @@ pub enum ItemSource {
 }
 
 /// One row of the library view.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LibraryItem {
     /// The document.
     pub path: PathBuf,
@@ -415,12 +679,20 @@ pub struct LibraryItem {
     pub last_opened: Option<i64>,
     /// Folder or recent.
     pub source: ItemSource,
+    /// Author, DOI, and ISBN, when known (from the bookshelf).
+    #[serde(flatten)]
+    pub meta: DocMetadata,
 }
 
 impl LibraryItem {
-    /// One line for lists and speech: "Chapter 3, 42 percent, in Readings".
+    /// One line for lists and speech: "Chapter 3, by Ada Example, 42
+    /// percent, in Readings". The title comes first, so it is in the first
+    /// cells of a Braille line.
     pub fn describe(&self) -> String {
         let mut s = self.title.clone();
+        if let Some(a) = &self.meta.author {
+            s.push_str(&format!(", by {a}"));
+        }
         if let Some(p) = self.pct {
             s.push_str(&format!(", {p} percent"));
         }
@@ -474,6 +746,7 @@ pub fn library_view(
             pct: synced.or_else(|| local_pct(&doc.path)),
             last_opened: entry.map(|e| e.last_opened),
             source: ItemSource::Folder,
+            meta: entry.map(|e| e.meta.clone()).unwrap_or_default(),
         });
     }
     let mut recents: Vec<LibraryItem> = Vec::new();
@@ -491,6 +764,7 @@ pub fn library_view(
                 pct: local_pct(&e.path),
                 last_opened: Some(e.last_opened),
                 source: ItemSource::Recent,
+                meta: e.meta.clone(),
             });
         }
     }
@@ -504,6 +778,7 @@ pub fn library_view(
                 pct: local_pct(&r.path),
                 last_opened: Some(r.opened),
                 source: ItemSource::Recent,
+                meta: DocMetadata::default(),
             });
         }
     }
@@ -518,20 +793,60 @@ fn stem(p: &Path) -> String {
         .unwrap_or_else(|| p.display().to_string())
 }
 
-/// Items whose title or path contains every word of `query`,
-/// case-insensitively (the library's filter box).
+/// True when every word of `query` is in `item`'s title, path, author,
+/// DOI, or ISBN, or in `text` (the document's text, when the caller has
+/// it), ignoring case (Star's `discovery.py` search). A word that is a DOI
+/// or an ISBN matches however it is written: `doi:10.1000/XYZ`, a
+/// `doi.org` link, `978-0-306-40615-7`, or `0306406152` for the same
+/// book's ISBN-13.
+pub fn item_matches(item: &LibraryItem, query: &str, text: Option<&str>) -> bool {
+    let hay = format!(
+        "{} {} {} {} {}",
+        item.title,
+        item.path.to_string_lossy(),
+        item.meta.author.as_deref().unwrap_or(""),
+        item.meta.doi.as_deref().unwrap_or(""),
+        item.meta.isbn.as_deref().unwrap_or(""),
+    )
+    .to_lowercase();
+    let text = text.map(str::to_lowercase);
+    query.split_whitespace().all(|word| {
+        let w = word.to_lowercase();
+        if hay.contains(&w) || text.as_deref().is_some_and(|t| t.contains(&w)) {
+            return true;
+        }
+        if let Some(doi) = normalize_doi(word) {
+            return item.meta.doi.as_deref() == Some(doi.as_str())
+                || text.as_deref().is_some_and(|t| t.contains(&doi));
+        }
+        if let (Some(isbn), Some(have)) = (normalize_isbn(word), item.meta.isbn.as_deref()) {
+            return isbn13(&isbn) == isbn13(have);
+        }
+        false
+    })
+}
+
+/// An ISBN ([`normalize_isbn`]'s form) in its 13-digit form, so an ISBN-10
+/// and its ISBN-13 compare equal.
+pub fn isbn13(isbn: &str) -> String {
+    if isbn.len() != 10 {
+        return isbn.to_owned();
+    }
+    let body = format!("978{}", &isbn[..9]);
+    let sum: u32 = body
+        .bytes()
+        .enumerate()
+        .map(|(i, c)| u32::from(c - b'0') * if i % 2 == 0 { 1 } else { 3 })
+        .sum();
+    format!("{body}{}", (10 - sum % 10) % 10)
+}
+
+/// Items matching `query` by title, path, author, DOI, or ISBN
+/// ([`item_matches`]; the library's filter without document text).
 pub fn filter_items<'a>(items: &'a [LibraryItem], query: &str) -> Vec<&'a LibraryItem> {
-    let terms: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
     items
         .iter()
-        .filter(|i| {
-            let hay = format!(
-                "{} {}",
-                i.title.to_lowercase(),
-                i.path.to_string_lossy().to_lowercase()
-            );
-            terms.iter().all(|t| hay.contains(t.as_str()))
-        })
+        .filter(|i| item_matches(i, query, None))
         .collect()
 }
 
@@ -857,6 +1172,132 @@ mod tests {
                 .unwrap()
                 .is_none()
         );
+    }
+
+    #[test]
+    fn dois_and_isbns_are_recognized_however_written() {
+        for s in [
+            "10.1000/xyz",
+            "doi:10.1000/XYZ",
+            "https://doi.org/10.1000/xyz",
+            "DOI 10.1000/xyz.",
+        ] {
+            assert_eq!(normalize_doi(s).as_deref(), Some("10.1000/xyz"), "{s}");
+        }
+        for s in ["10.10/xyz", "10.1000/", "11.1000/x", "10.1000 /x"] {
+            assert_eq!(normalize_doi(s), None, "{s}");
+        }
+        assert_eq!(
+            find_doi("Published as https://doi.org/10.1038/nature12373. Read it.").as_deref(),
+            Some("10.1038/nature12373")
+        );
+        assert_eq!(
+            normalize_isbn("978-0-306-40615-7").as_deref(),
+            Some("9780306406157")
+        );
+        assert_eq!(
+            normalize_isbn("ISBN 0-306-40615-2").as_deref(),
+            Some("0306406152")
+        );
+        assert_eq!(
+            normalize_isbn("urn:isbn:080442957X").as_deref(),
+            Some("080442957X")
+        );
+        assert_eq!(normalize_isbn("978-0-306-40615-8"), None, "check digit");
+        assert_eq!(
+            find_isbn("Copyright 2020.\nISBN: 978-0-306-40615-7 (paperback)").as_deref(),
+            Some("9780306406157")
+        );
+        assert_eq!(find_isbn("Call 978-0-306-40615-7"), None, "no ISBN label");
+        assert_eq!(isbn13("0306406152"), "9780306406157");
+    }
+
+    #[test]
+    fn metadata_comes_from_properties_then_text() {
+        let mut props = std::collections::BTreeMap::new();
+        props.insert("citation_doi".to_owned(), "doi:10.5555/ABC".to_owned());
+        let m = DocMetadata::from_document(
+            Some("  Ada   Example "),
+            &props,
+            "ISBN 978-0-306-40615-7 and 10.9999/other",
+        );
+        assert_eq!(m.author.as_deref(), Some("Ada Example"));
+        assert_eq!(m.doi.as_deref(), Some("10.5555/abc"), "the property wins");
+        assert_eq!(m.isbn.as_deref(), Some("9780306406157"), "from the text");
+        let none = DocMetadata::from_document(None, &Default::default(), "Plain text.");
+        assert!(none.is_empty());
+        let mut a = DocMetadata {
+            doi: Some("10.1/x".into()),
+            ..DocMetadata::default()
+        };
+        assert!(a.fill_from(&m));
+        assert_eq!(
+            a.doi.as_deref(),
+            Some("10.1/x"),
+            "filling keeps what is known"
+        );
+        assert_eq!(a.author.as_deref(), Some("Ada Example"));
+        assert!(!a.fill_from(&m));
+    }
+
+    #[test]
+    fn bookshelf_keeps_metadata_and_the_filter_finds_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("library.json");
+        let paper = dir.path().join("paper.pdf");
+        let mut lib = Library::default();
+        assert!(
+            !lib.record_metadata(&paper, &DocMetadata::default()),
+            "no entry yet"
+        );
+        lib.record_open_at(&paper, "A Paper", "pdf", 5);
+        let meta = DocMetadata {
+            author: Some("Ada Example".into()),
+            doi: Some("10.1000/xyz".into()),
+            isbn: Some("0306406152".into()),
+        };
+        assert!(lib.record_metadata(&paper, &meta));
+        assert!(
+            !lib.record_metadata(&paper, &DocMetadata::default()),
+            "nothing new"
+        );
+        // Opening again keeps the metadata.
+        lib.record_open_at(&paper, "A Paper", "pdf", 6);
+        lib.save(&file).unwrap();
+        let text = std::fs::read_to_string(&file).unwrap();
+        assert!(text.contains("\"doi\": \"10.1000/xyz\""), "{text}");
+        let back = Library::load(&file).unwrap();
+        assert_eq!(back, lib);
+        assert_eq!(back.entries[0].meta, meta);
+        assert!(back.entries[0].extra.is_empty(), "not duplicated in extra");
+
+        let items = library_view(
+            &[],
+            &back,
+            &Recent::default(),
+            &SidecarStore::new(ConflictPolicy::Newest),
+            &|_| None,
+        );
+        assert_eq!(items[0].describe(), "A Paper, by Ada Example, recent");
+        for q in [
+            "10.1000/xyz",
+            "https://doi.org/10.1000/XYZ",
+            "978-0-306-40615-7",
+            "0-306-40615-2",
+            "example",
+            "paper ada",
+        ] {
+            assert_eq!(filter_items(&items, q).len(), 1, "{q}");
+        }
+        for q in ["10.1000/other", "9780306406164", "grace"] {
+            assert!(filter_items(&items, q).is_empty(), "{q}");
+        }
+        assert!(item_matches(
+            &items[0],
+            "mitochondria",
+            Some("The Mitochondria.")
+        ));
+        assert!(!item_matches(&items[0], "mitochondria", None));
     }
 
     #[test]
