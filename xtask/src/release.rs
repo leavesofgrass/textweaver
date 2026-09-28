@@ -807,7 +807,14 @@ mod tests {
     #[test]
     fn the_real_changelog_can_be_dated() {
         let text = fs::read_to_string(crate::eci::root().join("CHANGELOG.md")).unwrap();
-        let out = date_changelog(&text, "99.0.0", "2026-09-26").unwrap();
+        // Right after a release, `[Unreleased]` is empty on purpose, and
+        // `cargo xtask release` runs this very test in its checks; dating
+        // an empty section is refused, as it should be.
+        let out = match date_changelog(&text, "99.0.0", "2026-09-26") {
+            Ok(out) => out,
+            Err(e) if e.to_string().contains("is empty") => return,
+            Err(e) => panic!("{e}"),
+        };
         assert!(out.contains("## [Unreleased]\n\n## [99.0.0] - 2026-09-26\n"));
         assert!(out.contains("[99.0.0]: "));
     }
