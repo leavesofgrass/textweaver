@@ -208,3 +208,29 @@ fn say_status_needs_no_document() {
         log.texts()
     );
 }
+
+/// Deliverable 6: Escape in edit mode with nothing playing says how to
+/// finish, with the key from the keymap: spoken by name, written on the
+/// status line.
+#[test]
+fn escape_in_edit_mode_says_how_to_finish() {
+    let (mut tui, log) = voiced(
+        "Some text to edit.
+",
+    );
+    tui.handle_key(with(KeyCode::Char('e'), KeyModifiers::CONTROL));
+    assert_eq!(tui.app().mode(), textweaver_app::Mode::Edit);
+    log.clear();
+    tui.handle_key(key(KeyCode::Esc));
+    assert_eq!(tui.app().mode(), textweaver_app::Mode::Edit);
+    assert_eq!(
+        heard(&log, "Still editing").as_deref(),
+        Some("Still editing. Control E finishes.")
+    );
+    assert_eq!(tui.app().status_text(), "Still editing. Ctrl+E finishes.");
+    // Out of edit mode, Escape says nothing of the kind.
+    tui.handle_key(with(KeyCode::Char('e'), KeyModifiers::CONTROL));
+    assert_eq!(tui.app().mode(), textweaver_app::Mode::Browse);
+    tui.handle_key(key(KeyCode::Esc));
+    assert!(!tui.app().status_text().contains("Still editing"));
+}

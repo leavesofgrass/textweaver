@@ -488,6 +488,11 @@ impl App {
         {
             s.selection = None;
             self.note("Search cleared.");
+        } else if self.mode == Mode::Edit {
+            // Escape is Stop everywhere; in an editor people expect it to
+            // leave, so say how to (usability pass, item 5).
+            let finish = self.key(textweaver_keymap::ActionId::ToggleEditMode);
+            self.tell(&format!("Still editing. {finish} finishes."));
         }
     }
 
