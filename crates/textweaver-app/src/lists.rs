@@ -16,8 +16,9 @@ use textweaver_lexicon::i18n::Catalog;
 use textweaver_text::Document;
 
 use crate::app::{App, ListKind};
-use crate::authoring_state::{AuthoringList, OutlineItem, SpellChoice};
-use crate::command::Effect;
+use crate::authoring_state::{AuthoringList, OutlineItem, Question, SpellChoice};
+use crate::command::{Confirm, Effect};
+use crate::list_model::ListKey;
 use crate::nav::ReadAfter;
 
 /// True when `text` holds every word of `query`, ignoring case.
@@ -97,6 +98,24 @@ impl App {
         match &self.list {
             Some(ListKind::Authoring(l)) if l.filterable() => Some(&self.authoring.filter),
             Some(ListKind::Settings) => self.settings_filter(),
+            _ => None,
+        }
+    }
+
+    /// `y` or `n` while an "Open it? y or n" question waits (after an
+    /// export, a study sheet, or a web link) and a list is shown: the
+    /// answer, as the save list's `s`, `d`, and `c` choose at once. Every
+    /// frontend sends list keys through the app's list model, so the
+    /// window and JSON-RPC answer as the terminal does; other letters
+    /// still move in the list.
+    pub(crate) fn open_question_answer(&self, key: ListKey) -> Option<Confirm> {
+        if !matches!(self.authoring.question, Some(Question::Open(_))) {
+            return None;
+        }
+        match key {
+            ListKey::Char(c) if matches!(c.to_ascii_lowercase(), 'y' | 'n') => {
+                Some(Confirm::from_char(c))
+            }
             _ => None,
         }
     }

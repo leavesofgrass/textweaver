@@ -1081,7 +1081,10 @@ impl App {
 
     pub(crate) fn dispatch_inner(&mut self, cmd: Command) -> Vec<Effect> {
         match cmd {
-            Command::ListKey(key) => self.list_key(key),
+            Command::ListKey(key) => match self.open_question_answer(key) {
+                Some(answer) => self.confirm(answer),
+                None => self.list_key(key),
+            },
             Command::ListFocus(n) => self.list_focus(n),
             Command::PromptKey(key) => self.prompt_key(key),
             Command::ReplaceRange { range, text } => self.replace_range(range, &text),

@@ -530,6 +530,40 @@ fn a_reference_is_added_by_doi_off_the_ui_thread() {
 
 // Export and preview.
 
+/// Wave 5, W5x: `y` and `n` answer "Open it? y or n" while a list is
+/// shown, through the app's list model (the window and JSON-RPC send list
+/// keys there), as the save list's letters choose at once. The list stays
+/// open, and other letters still move in it.
+#[test]
+fn y_and_n_answer_open_it_while_a_list_is_shown() {
+    let mut r = Rig::new();
+    let path = r.open("essay.md", ESSAY);
+    r.act(ActionId::ExportHtml);
+    r.wait();
+    assert!(r.app.confirmation_pending());
+    r.act(ActionId::Outline);
+    assert!(r.app.list_model().is_some());
+    r.send(Command::ListKey(textweaver_app::ListKey::Char('n')));
+    assert!(!r.app.confirmation_pending());
+    assert!(r.opened().is_empty());
+    assert!(r.app.list_model().is_some(), "the list stays open");
+    r.send(Command::ListKey(textweaver_app::ListKey::Escape));
+
+    r.act(ActionId::ExportHtml);
+    r.wait();
+    r.act(ActionId::Outline);
+    // Another letter moves in the list; the question still waits.
+    r.send(Command::ListKey(textweaver_app::ListKey::Char('m')));
+    assert!(r.app.confirmation_pending());
+    r.send(Command::ListKey(textweaver_app::ListKey::Char('Y')));
+    assert!(!r.app.confirmation_pending());
+    assert_eq!(
+        r.opened(),
+        [path.with_extension("html").display().to_string()]
+    );
+    assert!(r.app.list_model().is_some(), "the list stays open");
+}
+
 #[test]
 fn exports_go_next_to_the_document_and_offer_to_open() {
     let mut r = Rig::new();
