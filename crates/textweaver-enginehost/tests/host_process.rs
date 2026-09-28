@@ -18,7 +18,7 @@ use textweaver_enginehost::protocol::{
     self, EndStatus, FrameReader, FrameWriter, MAX_FRAME, ProtocolError, ReadyHeader, encode_audio,
     encode_end, tag,
 };
-use textweaver_enginehost::serve::{AtEnd, Incoming, RequestReader, log_line};
+use textweaver_enginehost::serve::{AtEnd, Incoming, RequestReader, exit_with_parent, log_line};
 use textweaver_enginehost::{Ended, HostMsg, HostProcess, Message};
 
 /// How long any test waits for something that should happen at once.
@@ -101,6 +101,8 @@ impl Message for Reply {
 // ---------------------------------------------------------------- host side
 
 fn run_host(mode: &str) -> ExitCode {
+    // What every host does first; some modes below never start a reader.
+    exit_with_parent();
     let mut out = std::io::stdout().lock();
     let ready = Reply::Ready(ReadyHeader {
         protocol: if mode == "old" {
@@ -302,7 +304,8 @@ fn end_of_input_ends_a_stuck_host() {
 }
 
 fn hosts_die_with_their_parent() {
-    // Before: killing textweaver left its hosts running.
+    // Before: killing textweaver left its hosts running (on macOS, until
+    // hosts watched their parent, whenever the engine was stuck).
     let mut parent = host("parent");
     ready(&mut parent);
     let pid = match next(&mut parent) {
