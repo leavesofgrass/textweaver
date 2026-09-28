@@ -200,10 +200,35 @@ nav-message-at = Ligne { $line }, { $pct } pour cent : { $content }
 nav-message-labelled = { $label } : { $content }
 # $message is the navigation message after wrapping around.
 nav-wrapped = Bouclé. { $message }
-nav-no-unit =
-    { $dir ->
-        [next] Pas de { $what } suivant.
-       *[previous] Pas de { $what } précédent.
+nav-no-next =
+    { $unit ->
+        [list] Pas de { $what } suivante.
+        [row] Pas de { $what } suivante.
+        [cell] Pas de { $what } suivante.
+        [graphic] Pas de { $what } suivante.
+        [quote] Pas de { $what } suivante.
+        [page] Pas de { $what } suivante.
+        [section] Pas de { $what } suivante.
+        [footnote] Pas de { $what } suivante.
+        [math] Pas de { $what } suivante.
+        [sentence] Pas de { $what } suivante.
+        [line] Pas de { $what } suivante.
+       *[other] Pas de { $what } suivant.
+    }
+nav-no-previous =
+    { $unit ->
+        [list] Pas de { $what } précédente.
+        [row] Pas de { $what } précédente.
+        [cell] Pas de { $what } précédente.
+        [graphic] Pas de { $what } précédente.
+        [quote] Pas de { $what } précédente.
+        [page] Pas de { $what } précédente.
+        [section] Pas de { $what } précédente.
+        [footnote] Pas de { $what } précédente.
+        [math] Pas de { $what } précédente.
+        [sentence] Pas de { $what } précédente.
+        [line] Pas de { $what } précédente.
+       *[other] Pas de { $what } précédent.
     }
 nav-nothing-to-read = Pas de { $what } à lire.
 nav-label-heading-level = Titre de niveau { $level }

@@ -843,10 +843,11 @@ impl App {
     /// `unit` in `dir`.
     pub(crate) fn no_unit_message(&self, unit: Unit, dir: Direction) -> String {
         let what = unit_name(self.cat(), unit);
-        self.msg_args(
-            "nav-no-unit",
-            &args!["dir" => dir_key(dir), "what" => what, "unit" => unit_key(unit)],
-        )
+        let id = match dir {
+            Direction::Forward => "nav-no-next",
+            Direction::Backward => "nav-no-previous",
+        };
+        self.msg_args(id, &args!["what" => what, "unit" => unit_key(unit)])
     }
 
     /// "End of document." or "Top of document.": a caret or page move

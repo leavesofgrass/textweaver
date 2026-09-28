@@ -245,10 +245,31 @@ nav-message-at = السطر { $line }، { $pct } بالمئة: { $content }
 nav-message-labelled = { $label }: { $content }
 # $message is the navigation message after wrapping around.
 nav-wrapped = تم الالتفاف. { $message }
-nav-no-unit =
-    { $dir ->
-        [next] لا يوجد { $what } تالٍ.
-       *[previous] لا يوجد { $what } سابق.
+nav-no-next =
+    { $unit ->
+        [paragraph] لا توجد { $what } تالية.
+        [list] لا توجد { $what } تالية.
+        [cell] لا توجد { $what } تالية.
+        [graphic] لا توجد { $what } تالية.
+        [code] لا توجد { $what } تالية.
+        [page] لا توجد { $what } تالية.
+        [footnote] لا توجد { $what } تالية.
+        [word] لا توجد { $what } تالية.
+        [sentence] لا توجد { $what } تالية.
+       *[other] لا يوجد { $what } تالٍ.
+    }
+nav-no-previous =
+    { $unit ->
+        [paragraph] لا توجد { $what } سابقة.
+        [list] لا توجد { $what } سابقة.
+        [cell] لا توجد { $what } سابقة.
+        [graphic] لا توجد { $what } سابقة.
+        [code] لا توجد { $what } سابقة.
+        [page] لا توجد { $what } سابقة.
+        [footnote] لا توجد { $what } سابقة.
+        [word] لا توجد { $what } سابقة.
+        [sentence] لا توجد { $what } سابقة.
+       *[other] لا يوجد { $what } سابق.
     }
 nav-nothing-to-read = لا يوجد { $what } لقراءته.
 nav-label-heading-level = مستوى العنوان { $level }

@@ -200,10 +200,43 @@ nav-message-at = Zeile { $line }, { $pct } Prozent: { $content }
 nav-message-labelled = { $label }: { $content }
 # $message is the navigation message after wrapping around.
 nav-wrapped = Von vorn begonnen. { $message }
-nav-no-unit =
-    { $dir ->
-        [next] { $what }: nichts Weiteres.
-       *[previous] { $what }: nichts davor.
+nav-no-next =
+    { $unit ->
+        [heading] Keine nächste { $what }.
+        [list] Keine nächste { $what }.
+        [table] Keine nächste { $what }.
+        [row] Keine nächste { $what }.
+        [cell] Keine nächste { $what }.
+        [graphic] Keine nächste { $what }.
+        [page] Keine nächste { $what }.
+        [footnote] Keine nächste { $what }.
+        [math] Keine nächste { $what }.
+        [line] Keine nächste { $what }.
+        [list-item] Kein nächstes { $what }.
+        [quote] Kein nächstes { $what }.
+        [character] Kein nächstes { $what }.
+        [word] Kein nächstes { $what }.
+        [document] Kein nächstes { $what }.
+       *[other] Kein nächster { $what }.
+    }
+nav-no-previous =
+    { $unit ->
+        [heading] Keine vorherige { $what }.
+        [list] Keine vorherige { $what }.
+        [table] Keine vorherige { $what }.
+        [row] Keine vorherige { $what }.
+        [cell] Keine vorherige { $what }.
+        [graphic] Keine vorherige { $what }.
+        [page] Keine vorherige { $what }.
+        [footnote] Keine vorherige { $what }.
+        [math] Keine vorherige { $what }.
+        [line] Keine vorherige { $what }.
+        [list-item] Kein vorheriges { $what }.
+        [quote] Kein vorheriges { $what }.
+        [character] Kein vorheriges { $what }.
+        [word] Kein vorheriges { $what }.
+        [document] Kein vorheriges { $what }.
+       *[other] Kein vorheriger { $what }.
     }
 nav-nothing-to-read = { $what }: nichts zu lesen.
 nav-label-heading-level = Überschriftsebene { $level }

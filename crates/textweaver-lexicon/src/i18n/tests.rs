@@ -149,7 +149,11 @@ fn built_in_translations_are_valid() {
 fn en_passes_unit(id: &str) -> bool {
     matches!(
         id,
-        "nav-no-unit" | "nav-nothing-to-read" | "playback-no-unit-here" | "unit-with-level"
+        "nav-no-next"
+            | "nav-no-previous"
+            | "nav-nothing-to-read"
+            | "playback-no-unit-here"
+            | "unit-with-level"
     )
 }
 

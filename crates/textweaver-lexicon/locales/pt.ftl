@@ -200,11 +200,24 @@ nav-message-at = Linha { $line }, { $pct } por cento: { $content }
 nav-message-labelled = { $label }: { $content }
 # $message is the navigation message after wrapping around.
 nav-wrapped = Voltou ao início. { $message }
-nav-no-unit =
-    { $dir ->
-        [next] Sem próximo { $what }.
-       *[previous] Sem { $what } anterior.
+nav-no-next =
+    { $unit ->
+        [list] Sem próxima { $what }.
+        [table] Sem próxima { $what }.
+        [row] Sem próxima { $what }.
+        [cell] Sem próxima { $what }.
+        [graphic] Sem próxima { $what }.
+        [quote] Sem próxima { $what }.
+        [page] Sem próxima { $what }.
+        [section] Sem próxima { $what }.
+        [footnote] Sem próxima { $what }.
+        [math] Sem próxima { $what }.
+        [word] Sem próxima { $what }.
+        [sentence] Sem próxima { $what }.
+        [line] Sem próxima { $what }.
+       *[other] Sem próximo { $what }.
     }
+nav-no-previous = Sem { $what } anterior.
 nav-nothing-to-read = Nenhum { $what } para ler.
 nav-label-heading-level = Nível de cabeçalho { $level }
 nav-label-list =
