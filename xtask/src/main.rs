@@ -34,7 +34,9 @@ mod appimage;
 mod bench;
 mod deps;
 mod dist;
+mod docs_check;
 mod eci;
+mod fuzz_seed;
 mod gui_dist;
 mod keyboard;
 mod listen;
@@ -57,13 +59,16 @@ fn main() -> anyhow::Result<()> {
         "bench-run" => bench::run_inner(),
         "deps" => deps::run(),
         "dist" => dist::run(),
+        "docs" => docs_check::run(),
         "hosts" => eci::hosts(),
         "eci-host" => eci::run(),
+        "fuzz-seed" => fuzz_seed::run(),
         "gui-dist" => gui_dist::run(),
         "keyboard" => keyboard::run(),
         "listen" => listen::run(),
         "notices" => notices::run(),
         "sapi-host" => sapi::run(),
+        "settings-doc" => docs_check::settings_doc(),
         "parity" => parity::run(),
         "release" => release::run(),
         "soak" => soak::run(),

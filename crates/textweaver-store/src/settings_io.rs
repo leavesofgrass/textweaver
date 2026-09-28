@@ -955,6 +955,7 @@ pub fn reset_sections(current: &Settings) -> Vec<String> {
         "lexicon",
         "stats",
         "interface",
+        "gui",
         "keymap",
     ]
     .iter()

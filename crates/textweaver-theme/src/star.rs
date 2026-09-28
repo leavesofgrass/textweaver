@@ -12,7 +12,7 @@
 //! tables used (magenta, avoiding red and green, for `dark`, `light` and
 //! `contrast`; green for the monochrome `phosphor`) or the scheme's own red.
 //!
-//! Jon's policy (2026-09-26): not every theme has to meet WCAG AA, as long
+//! The owner's policy (2026-09-26): not every theme has to meet WCAG AA, as long
 //! as some do. The themes in [`MUST_MEET_AA`] (Galaxy, Galaxy Light, and the
 //! two high-contrast themes) keep every value that already meets the
 //! contrast floor and nudge only the ones that fail, by the smallest

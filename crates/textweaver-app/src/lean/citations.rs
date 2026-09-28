@@ -11,10 +11,6 @@ use textweaver_text::InlineSpeech;
 use crate::app::App;
 use crate::command::Effect;
 
-/// What the citation commands say in this build.
-pub(crate) const NOT_IN_BUILD: &str =
-    "Citations are not in this build of textweaver. It was built without the publish feature.";
-
 /// Makes HTTP requests for reference lookups (the full build's is
 /// `textweaver_cite::HttpClient`); nothing uses it in this build.
 pub trait HttpClient {}
@@ -42,24 +38,28 @@ impl App {
 
     /// `toggle_citations`.
     pub(crate) fn toggle_citations(&mut self) {
-        self.tell(NOT_IN_BUILD);
+        let msg = self.msg("lean-citations-not-in-build");
+        self.tell(&msg);
     }
 
     /// `insert_citation`.
     pub(crate) fn insert_citation(&mut self) -> Vec<Effect> {
-        self.tell(NOT_IN_BUILD);
+        let msg = self.msg("lean-citations-not-in-build");
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 
     /// A reference chosen in the picker (never shown in this build).
     pub(crate) fn citation_chosen(&mut self, _key: String) -> Vec<Effect> {
-        self.tell(NOT_IN_BUILD);
+        let msg = self.msg("lean-citations-not-in-build");
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 
     /// The locator prompt (never asked in this build).
     pub(crate) fn answer_locator(&mut self, _text: &str) -> Vec<Effect> {
-        self.tell(NOT_IN_BUILD);
+        let msg = self.msg("lean-citations-not-in-build");
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 
@@ -70,7 +70,8 @@ impl App {
 
     /// The DOI or ISBN prompt (never asked in this build).
     pub(crate) fn answer_identifier(&mut self, _text: &str) -> Vec<Effect> {
-        self.tell(NOT_IN_BUILD);
+        let msg = self.msg("lean-citations-not-in-build");
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 
@@ -79,18 +80,21 @@ impl App {
 
     /// `check_citations`.
     pub(crate) fn check_citations(&mut self) {
-        self.tell(NOT_IN_BUILD);
+        let msg = self.msg("lean-citations-not-in-build");
+        self.tell(&msg);
     }
 
     /// The import prompt (never asked in this build).
     pub(crate) fn answer_import_references(&mut self, _text: &str) -> Vec<Effect> {
-        self.tell(NOT_IN_BUILD);
+        let msg = self.msg("lean-citations-not-in-build");
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 
     /// `insert_bibliography`.
     pub(crate) fn insert_bibliography(&mut self) -> Vec<Effect> {
-        self.tell(NOT_IN_BUILD);
+        let msg = self.msg("lean-citations-not-in-build");
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 

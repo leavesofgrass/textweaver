@@ -1,0 +1,20 @@
+[package]
+name = "textweaver-mathcat"
+description = "textweaver math speech through MathCAT (ClearSpeak and SimpleSpeak), on one dedicated thread, with textweaver-math as the fallback"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+textweaver-core.workspace = true
+textweaver-math.workspace = true
+mathcat.workspace = true
+thiserror.workspace = true
+log.workspace = true
+
+[lints]
+workspace = true

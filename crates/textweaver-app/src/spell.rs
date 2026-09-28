@@ -24,6 +24,8 @@ use pulldown_cmark::{Event, Parser, Tag, TagEnd};
 use textweaver_aids::ScowlList;
 use textweaver_core::{CharPos, CharRange, Direction, MarkerKind};
 use textweaver_editor::Selection;
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 use textweaver_speech::Earcon;
 use textweaver_text::Document;
 
@@ -214,11 +216,11 @@ pub(crate) fn suggestions(list: &ScowlList, word: &str) -> Vec<String> {
 }
 
 /// "r e c i e v e": a word's letters, for spelling aloud.
-pub(crate) fn spelled(word: &str) -> String {
+pub(crate) fn spelled(cat: &Catalog, word: &str) -> String {
     word.chars()
         .map(|c| {
             if is_apostrophe(c) {
-                "apostrophe".to_owned()
+                cat.tr("spell-apostrophe")
             } else {
                 c.to_string()
             }
@@ -278,7 +280,8 @@ impl App {
     /// Alt+M and Alt+Shift+M: the next or previous misspelled word.
     pub(crate) fn misspelling_step(&mut self, dir: Direction) {
         if ScowlList::builtin().is_none() {
-            self.tell("Spell checking is not available: this build has no word list.");
+            let msg = self.msg("spell-not-available");
+            self.tell(&msg);
             return;
         }
         let Some(pos) = self.session.as_ref().map(|s| s.cursor) else {
@@ -293,16 +296,16 @@ impl App {
         let Some(w) = found else {
             self.speech.earcon(Earcon::Boundary);
             let msg = if all.is_empty() {
-                "No misspellings found.".to_owned()
+                self.msg("spell-none-found")
             } else {
-                format!(
-                    "No {} misspelling. {} in all.",
+                let n = all.len();
+                self.msg_args(
                     if dir == Direction::Forward {
-                        "more"
+                        "spell-no-more"
                     } else {
-                        "earlier"
+                        "spell-no-earlier"
                     },
-                    count_phrase(all.len())
+                    &args!["n" => n, "count" => textweaver_editor::echo::thousands(n)],
                 )
             };
             self.tell(&msg);
@@ -322,9 +325,10 @@ impl App {
             .session
             .as_ref()
             .map_or(0, |s| text_util::line_of(&s.doc, w.range.start) + 1);
-        let mut msg = format!("{}. {}.", w.text, spelled(&w.text));
+        let mut msg = format!("{}. {}.", w.text, spelled(self.cat(), &w.text));
         if self.settings.speech.verbosity >= textweaver_a11y::Verbosity::High {
-            msg.push_str(&format!(" Line {line}."));
+            msg.push(' ');
+            msg.push_str(&self.msg_args("spell-line", &args!["line" => line]));
         }
         self.tell(&msg);
     }
@@ -346,11 +350,18 @@ impl App {
     /// Alt+J: suggestions for the misspelled word at the cursor.
     pub(crate) fn spelling_suggestions(&mut self) -> Vec<Effect> {
         let Some(list) = ScowlList::builtin() else {
-            self.tell("Spell checking is not available: this build has no word list.");
+            let msg = self.msg("spell-not-available");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         };
         let Some(w) = self.misspelled_here() else {
-            self.tell("No misspelled word at the cursor.");
+            // A grammar problem there instead: its fixes (Agent W4g).
+            #[cfg(feature = "grammar")]
+            if let Some(p) = self.grammar_here() {
+                return self.grammar_fixes(p);
+            }
+            let msg = self.msg("spell-no-misspelled-word");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         };
         let found = suggestions(list, &w.text);
@@ -358,22 +369,13 @@ impl App {
             found.iter().cloned().map(SpellChoice::Replace).collect();
         choices.push(SpellChoice::Add);
         choices.push(SpellChoice::Ignore);
-        let intro = if found.is_empty() {
-            format!("{}: no suggestions.", w.text)
+        let id = if self.edit.is_some() {
+            "spell-suggestions-edit"
         } else {
-            format!(
-                "{}: {} {}.",
-                w.text,
-                found.len(),
-                crate::lists::plural(found.len(), "suggestion", "suggestions")
-            )
+            "spell-suggestions"
         };
-        let tail = if self.edit.is_some() {
-            " Enter replaces the word."
-        } else {
-            ""
-        };
-        self.tell(&format!("{intro}{tail}"));
+        let msg = self.msg_args(id, &args!["word" => w.text.as_str(), "n" => found.len()]);
+        self.tell(&msg);
         self.show_authoring_list(AuthoringList::Spelling {
             word: w.text,
             range: w.range,
@@ -392,9 +394,11 @@ impl App {
             SpellChoice::Replace(new) => {
                 if self.edit.is_none() {
                     let k = self.keys(textweaver_keymap::ActionId::ToggleEditMode);
-                    self.tell(&format!(
-                        "{new}. Turn on edit mode with {k} to change the text."
-                    ));
+                    let msg = self.msg_args(
+                        "spell-replace-not-editing",
+                        &args!["word" => new.as_str(), "key" => k],
+                    );
+                    self.tell(&msg);
                     return vec![Effect::Redraw];
                 }
                 let Some(ed) = self.edit.as_mut().and_then(|e| e.session.editor_mut()) else {
@@ -405,13 +409,21 @@ impl App {
                 match ed.insert_text(&new) {
                     Ok(o) => {
                         self.after_edit(&before, &[o]);
-                        self.tell(&format!("Replaced with {new}."));
+                        let msg = self.msg_args("spell-replaced", &args!["word" => new.as_str()]);
+                        self.tell(&msg);
                     }
-                    Err(e) => self.error(&format!("Could not replace: {e}")),
+                    Err(e) => {
+                        let msg =
+                            self.msg_args("spell-replace-failed", &args!["error" => e.to_string()]);
+                        self.error(&msg);
+                    }
                 }
             }
             SpellChoice::Add => self.add_word(word),
-            SpellChoice::Ignore => self.note("Left as it is."),
+            SpellChoice::Ignore => {
+                let msg = self.msg("spell-left-as-is");
+                self.note(&msg);
+            }
         }
         vec![Effect::Redraw]
     }
@@ -424,7 +436,8 @@ impl App {
             words.insert(lower);
         }
         let Some(file) = self.words_file() else {
-            self.tell(&format!("Added {word} to your word list for this session."));
+            let msg = self.msg_args("spell-added-for-session", &args!["word" => word]);
+            self.tell(&msg);
             return;
         };
         let text: String = self
@@ -436,8 +449,14 @@ impl App {
             .collect();
         let written = textweaver_store::atomic_write(&file, text.as_bytes());
         match written {
-            Ok(()) => self.tell(&format!("Added {word} to your word list.")),
-            Err(e) => self.error(&format!("Could not save your word list: {e}")),
+            Ok(()) => {
+                let msg = self.msg_args("spell-added", &args!["word" => word]);
+                self.tell(&msg);
+            }
+            Err(e) => {
+                let msg = self.msg_args("spell-save-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
         }
     }
 
@@ -490,10 +509,10 @@ impl App {
         if n == 0 && self.settings.speech.verbosity < textweaver_a11y::Verbosity::High {
             return Vec::new();
         }
-        let summary = match n {
-            0 => "No misspellings.".to_owned(),
-            n => format!("{}.", count_phrase(n)),
-        };
+        let summary = self.msg_args(
+            "spell-count",
+            &args!["n" => n, "count" => textweaver_editor::echo::thousands(n)],
+        );
         self.announce_queued(&summary, textweaver_a11y::Priority::Polite);
         vec![Effect::Redraw]
     }
@@ -548,18 +567,6 @@ fn misspelled_words(
         .collect()
 }
 
-/// "1 possible misspelling", "3 possible misspellings".
-fn count_phrase(n: usize) -> String {
-    if n == 1 {
-        "1 possible misspelling".to_owned()
-    } else {
-        format!(
-            "{} possible misspellings",
-            textweaver_editor::echo::thousands(n)
-        )
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -600,7 +607,7 @@ mod tests {
         assert_eq!(distance(&c("recieve"), &c("receive"), 2), Some(1));
         assert_eq!(distance(&c("kitten"), &c("sitting"), 2), None);
         assert_eq!(distance(&c("abc"), &c("abc"), 0), Some(0));
-        assert_eq!(spelled("don't"), "d o n apostrophe t");
+        assert_eq!(spelled(&Catalog::english(), "don't"), "d o n apostrophe t");
         assert_eq!(match_case("Teh", "the"), "The");
         if let Some(list) = ScowlList::builtin() {
             let s = suggestions(list, "recieve");

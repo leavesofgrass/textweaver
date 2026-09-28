@@ -31,6 +31,9 @@ struct Open {
     start: Option<usize>,
     /// Keep the marker even when it has no content (table cells).
     keep_empty: bool,
+    /// An anchor (see [`Builder::open_anchor`]): its range is recorded
+    /// under this key instead of becoming a marker.
+    anchor: Option<String>,
 }
 
 /// Canonical text under construction.
@@ -46,6 +49,11 @@ pub(crate) struct Builder {
     /// Empty markers waiting for the next content (a horizontal rule is
     /// placed where the block after it starts).
     points: Vec<Marker>,
+    /// Closed anchors: a key and the range it covered.
+    anchors: Vec<(String, CharRange)>,
+    /// The pending space was requested by [`close_punct`](Self::close_punct):
+    /// it is dropped if the next word starts with closing punctuation.
+    soft_space: bool,
 }
 
 impl Builder {
@@ -102,19 +110,49 @@ impl Builder {
         for c in s.chars() {
             if c.is_whitespace() {
                 if !word.is_empty() {
-                    self.flush();
-                    self.push_raw(&word);
+                    self.word(&word);
                     word.clear();
                 }
                 self.request(Break::Space);
+                self.soft_space = false;
             } else {
                 word.push(c);
             }
         }
         if !word.is_empty() {
-            self.flush();
-            self.push_raw(&word);
+            self.word(&word);
         }
+    }
+
+    fn word(&mut self, word: &str) {
+        if self.soft_space
+            && self.pending == Some(Break::Space)
+            && word.starts_with(['.', ',', ';', ':', '!', '?', ')', ']'])
+        {
+            self.pending = None;
+        }
+        self.soft_space = false;
+        self.flush();
+        self.push_raw(word);
+    }
+
+    /// Closing text such as `")"` joined to the text before it (a pending
+    /// space is dropped), then a space that is left out if the next word
+    /// starts with punctuation: "(deleted by Ada Example: old) new", and
+    /// "(inserted by Ada Example: s)." after a word.
+    pub(crate) fn close_punct(&mut self, s: &str) {
+        if self.pending == Some(Break::Space) {
+            self.pending = None;
+        }
+        self.literal(s);
+        self.soft_space();
+    }
+
+    /// A space that is left out if the next word starts with closing
+    /// punctuation (after an image's alt text: "a crow." not "a crow .").
+    pub(crate) fn soft_space(&mut self) {
+        self.request(Break::Space);
+        self.soft_space = true;
     }
 
     /// Text written exactly as given (after any pending separator): used for
@@ -194,8 +232,34 @@ impl Builder {
             marker,
             start,
             keep_empty,
+            anchor: None,
         });
         OpenId(id)
+    }
+
+    /// Opens an anchor: a range that starts at the next content and is
+    /// kept, under `key`, when closed (empty at the close point when no
+    /// content came). Anchors are not markers: loaders use them for
+    /// comments, which travel in the document's properties.
+    pub(crate) fn open_anchor(&mut self, key: String) -> OpenId {
+        let id = self.next_id;
+        self.next_id += 1;
+        self.open.push(Open {
+            id,
+            marker: Marker::new(MarkerKind::Paragraph, CharRange::empty(0)),
+            start: None,
+            keep_empty: true,
+            anchor: Some(key),
+        });
+        OpenId(id)
+    }
+
+    /// The open anchor with `key`, if any.
+    pub(crate) fn open_anchor_id(&self, key: &str) -> Option<OpenId> {
+        self.open
+            .iter()
+            .find(|o| o.anchor.as_deref() == Some(key))
+            .map(|o| OpenId(o.id))
     }
 
     /// The innermost open marker of `kind`, to add to its label (a task
@@ -220,8 +284,13 @@ impl Builder {
             (None, true) => self.len,
             (None, false) => return,
         };
+        let range = CharRange::new(start, self.len.max(start));
+        if let Some(key) = o.anchor {
+            self.anchors.push((key, range));
+            return;
+        }
         let mut marker = o.marker;
-        marker.range = CharRange::new(start, self.len.max(start));
+        marker.range = range;
         self.markers.push(marker);
     }
 
@@ -274,7 +343,13 @@ impl Builder {
     }
 
     /// The canonical text and its markers; open markers are closed.
-    pub(crate) fn finish(mut self) -> (String, Vec<Marker>) {
+    pub(crate) fn finish(self) -> (String, Vec<Marker>) {
+        let (text, markers, _) = self.finish_with_anchors();
+        (text, markers)
+    }
+
+    /// [`finish`](Self::finish), and every anchor's range by key.
+    pub(crate) fn finish_with_anchors(mut self) -> (String, Vec<Marker>, Vec<(String, CharRange)>) {
         while let Some(o) = self.open.last() {
             let id = OpenId(o.id);
             self.close(id);
@@ -283,7 +358,7 @@ impl Builder {
             m.range = CharRange::empty(self.len);
             self.markers.push(m);
         }
-        (self.text, self.markers)
+        (self.text, self.markers, self.anchors)
     }
 }
 

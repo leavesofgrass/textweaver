@@ -16,6 +16,7 @@ use net::DownloadPlan;
 use textweaver_a11y::{Announcement, Verbosity};
 use textweaver_core::{Pitch, Rate, Volume};
 use textweaver_engines::piper::{Catalog, InstalledVoice, PiperError};
+use textweaver_lexicon::args;
 use textweaver_speech::Earcon;
 
 use crate::app::App;
@@ -76,9 +77,6 @@ mod net {
         Err(missing())
     }
 }
-
-/// What a chosen voice says as its sample.
-pub const VOICE_SAMPLE: &str = "The quick brown fox jumps over the lazy dog.";
 
 /// A question the voice manager is waiting on (y or n).
 #[derive(Debug)]
@@ -169,9 +167,6 @@ fn list_other_engines(
     Some(rx)
 }
 
-/// The title of the voice list.
-const TITLE: &str = "Choose a voice";
-
 impl App {
     /// The Piper voices folder: `[speech.piper] voices` or
     /// `TEXTWEAVER_PIPER_VOICES` when set, else `piper/voices` in this
@@ -231,11 +226,13 @@ impl App {
                 // The frontend is woken when they arrive (crate::wake).
                 let wake = self.waker_slot();
                 self.speech.voice_cache().on_ready(move || wake.wake());
-                self.tell("The voices are still loading. The list opens when they are ready.");
+                let msg = self.msg("voice-still-loading");
+                self.tell(&msg);
                 return vec![Effect::Redraw];
             }
             textweaver_speech::VoiceList::Failed(e) => {
-                self.error(&format!("Could not list the voices: {e}."));
+                let msg = self.msg_args("voice-list-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
                 Vec::new()
             }
         };
@@ -252,11 +249,9 @@ impl App {
         let favourites = self.settings.speech.favorite_voices.clone();
         self.voices.manager.offer_catalog = self.piper_store().is_some();
         self.voices.manager.set_entries(entries, &favourites);
-        let shown = self.voices.manager.shown_sentence();
-        self.tell(&format!(
-            "Voice manager. {shown} Enter uses a voice and speaks a sample, or downloads one; \
-             Space marks a favourite; Delete removes a downloaded voice; Escape closes."
-        ));
+        let shown = self.voices.manager.shown_sentence_in(self.cat());
+        let msg = self.msg_args("voice-manager-intro", &args!["shown" => shown]);
+        self.tell(&msg);
         // Focus the voice in use, else the first voice; the filter rows
         // are above it.
         let (engine, voice) = self.current_voice();
@@ -278,13 +273,14 @@ impl App {
     /// Shows the voice list again, as it is now.
     fn show_voice_list(&mut self) -> Vec<Effect> {
         let (engine, voice) = self.current_voice();
-        let items = self.voices.manager.labels(
+        let items = self.voices.manager.labels_in(
+            self.cat(),
             &self.settings.speech.favorite_voices,
             (&engine, voice.as_deref()),
         );
         self.list = Some(crate::app::ListKind::Voices);
         vec![Effect::ShowList {
-            title: TITLE.into(),
+            title: self.msg("voice-list-title"),
             items,
         }]
     }
@@ -302,9 +298,8 @@ impl App {
             let n = others.len();
             self.voices.others = Some(others);
             if n > 0 && self.list == Some(crate::app::ListKind::Voices) {
-                self.tell(&format!(
-                    "{n} more voices from other engines are ready. Press Escape and open the voice manager again to see them."
-                ));
+                let msg = self.msg_args("voice-more-ready", &args!["n" => n]);
+                self.tell(&msg);
                 effects.push(Effect::Redraw);
             }
         }
@@ -314,7 +309,8 @@ impl App {
         self.voices_pending = false;
         if self.list.is_some() || self.mode.is_prompt() || self.confirmation_pending() {
             let keys = self.keys(textweaver_keymap::ActionId::ChooseVoice);
-            self.tell(&format!("The voices are ready. {keys} lists them."));
+            let msg = self.msg_args("voice-ready", &args!["keys" => keys]);
+            self.tell(&msg);
             effects.push(Effect::Redraw);
             return effects;
         }
@@ -327,22 +323,23 @@ impl App {
         let favourites = self.settings.speech.favorite_voices.clone();
         match self.voices.manager.row(n).cloned() {
             Some(VoiceRow::LanguageFilter) => {
-                let s = self.voices.manager.next_language(&favourites);
+                let cat = self.catalog();
+                let s = self.voices.manager.next_language_in(&cat, &favourites);
                 self.tell(&s);
                 self.pending_list_focus = Some(n);
                 self.show_voice_list()
             }
             Some(VoiceRow::EngineFilter) => {
-                let s = self.voices.manager.next_engine(&favourites);
+                let cat = self.catalog();
+                let s = self.voices.manager.next_engine_in(&cat, &favourites);
                 self.tell(&s);
                 self.pending_list_focus = Some(n);
                 self.show_voice_list()
             }
             Some(VoiceRow::FetchCatalog) => {
                 self.voices.question = Some(VoiceQuestion::FetchCatalog);
-                self.ask(
-                    "Download the list of Piper voices, about 250 kilobytes, from Hugging Face? y or n",
-                );
+                let question = self.msg("voice-fetch-catalog-question");
+                self.ask(&question);
                 vec![Effect::Redraw]
             }
             Some(VoiceRow::Voice(_)) => {
@@ -372,10 +369,11 @@ impl App {
         self.settings_dirty = true;
         self.restore_voice_params(&e.key());
         textweaver_speech::forget_probes();
-        self.tell(&format!(
-            "Voice {}, on {}. Switching engine.",
-            e.voice.name, e.engine_name
-        ));
+        let msg = self.msg_args(
+            "voice-switching-engine",
+            &args!["voice" => e.voice.name.as_str(), "engine" => e.engine_name.as_str()],
+        );
+        self.tell(&msg);
         self.restart_speech_command()
     }
 
@@ -383,16 +381,19 @@ impl App {
     /// licence (a few kilobytes), then asks the user.
     fn plan_download(&mut self, e: &VoiceEntry) -> Vec<Effect> {
         if self.voices.job.is_some() {
-            self.tell("A voice download is already in progress.");
+            let msg = self.msg("voice-download-in-progress");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let Some(store) = self.piper_store() else {
-            self.error("There is no data folder to keep Piper voices in.");
+            let msg = self.msg("voice-no-data-folder");
+            self.error(&msg);
             return vec![Effect::Redraw];
         };
         let Some(voice) = cached_catalog(store.dir()).and_then(|c| c.get(&e.voice.id).cloned())
         else {
-            self.error("That voice is not in the Piper voice list any more.");
+            let msg = self.msg("voice-not-in-list");
+            self.error(&msg);
             return vec![Effect::Redraw];
         };
         let (tx, rx) = std::sync::mpsc::channel();
@@ -402,12 +403,17 @@ impl App {
                 let _ = tx.send(net::plan(&voice));
             });
         if spawned.is_err() {
-            self.error("Could not start the download.");
+            let msg = self.msg("voice-download-start-failed");
+            self.error(&msg);
             return vec![Effect::Redraw];
         }
         self.voices.job = Some(VoiceJob::Plan(rx));
         self.list = None;
-        self.tell(&format!("Reading the licence of {}.", e.voice.name));
+        let msg = self.msg_args(
+            "voice-reading-licence",
+            &args!["voice" => e.voice.name.as_str()],
+        );
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 
@@ -420,9 +426,16 @@ impl App {
                     e.voice.id.clone(),
                     e.voice.name.clone(),
                 ));
-                self.ask(&format!("Remove the voice {}? y or n", e.voice.name));
+                let question = self.msg_args(
+                    "voice-remove-question",
+                    &args!["voice" => e.voice.name.as_str()],
+                );
+                self.ask(&question);
             }
-            _ => self.tell("Only downloaded Piper voices can be removed."),
+            _ => {
+                let msg = self.msg("voice-only-piper-removable");
+                self.tell(&msg);
+            }
         }
         vec![Effect::Redraw]
     }
@@ -435,18 +448,21 @@ impl App {
         match (answer, q) {
             (Confirm::Repeat, q) => {
                 let text = match &q {
-                    VoiceQuestion::Download(p) => format!("{} y or n", p.describe()),
-                    VoiceQuestion::Remove(_, name) => format!("Remove the voice {name}? y or n"),
-                    VoiceQuestion::FetchCatalog => {
-                        "Download the list of Piper voices? y or n".into()
+                    VoiceQuestion::Download(p) => {
+                        self.msg_args("voice-download-question", &args!["plan" => p.describe()])
                     }
+                    VoiceQuestion::Remove(_, name) => {
+                        self.msg_args("voice-remove-question", &args!["voice" => name.as_str()])
+                    }
+                    VoiceQuestion::FetchCatalog => self.msg("voice-fetch-catalog-question-short"),
                 };
                 self.voices.question = Some(q);
                 self.ask(&text);
                 vec![Effect::Redraw]
             }
             (Confirm::No, _) => {
-                self.tell("Cancelled.");
+                let msg = self.msg("common-cancelled");
+                self.tell(&msg);
                 vec![Effect::Redraw]
             }
             (Confirm::Yes, VoiceQuestion::Download(plan)) => self.start_download(*plan),
@@ -454,9 +470,8 @@ impl App {
                 if self.speech.backend_id() == PIPER
                     && self.settings.speech.voice.as_deref() == Some(key.as_str())
                 {
-                    self.tell(&format!(
-                        "{name} is the voice in use. Choose another voice first."
-                    ));
+                    let msg = self.msg_args("voice-in-use", &args!["voice" => name.as_str()]);
+                    self.tell(&msg);
                     return vec![Effect::Redraw];
                 }
                 let removed = match self.piper_store() {
@@ -468,15 +483,23 @@ impl App {
                 match removed {
                     Ok(()) => {
                         textweaver_speech::forget_probes();
-                        self.tell(&format!("{name} removed."));
+                        let msg = self.msg_args("voice-removed", &args!["voice" => name.as_str()]);
+                        self.tell(&msg);
                     }
-                    Err(e) => self.error(&format!("Could not remove {name}: {e}.")),
+                    Err(e) => {
+                        let msg = self.msg_args(
+                            "voice-remove-failed",
+                            &args!["voice" => name.as_str(), "error" => e.to_string()],
+                        );
+                        self.error(&msg);
+                    }
                 }
                 vec![Effect::Redraw]
             }
             (Confirm::Yes, VoiceQuestion::FetchCatalog) => {
                 let Some(store) = self.piper_store() else {
-                    self.error("There is no data folder to keep Piper voices in.");
+                    let msg = self.msg("voice-no-data-folder");
+                    self.error(&msg);
                     return vec![Effect::Redraw];
                 };
                 let (tx, rx) = std::sync::mpsc::channel();
@@ -493,10 +516,12 @@ impl App {
                         let _ = tx.send(r);
                     });
                 if spawned.is_err() {
-                    self.error("Could not start the download.");
+                    let msg = self.msg("voice-download-start-failed");
+                    self.error(&msg);
                 } else {
                     self.voices.job = Some(VoiceJob::Catalog(rx));
-                    self.tell("Downloading the Piper voice list.");
+                    let msg = self.msg("voice-downloading-catalog");
+                    self.tell(&msg);
                 }
                 vec![Effect::Redraw]
             }
@@ -505,7 +530,8 @@ impl App {
 
     fn start_download(&mut self, plan: DownloadPlan) -> Vec<Effect> {
         let Some(store) = self.piper_store() else {
-            self.error("There is no data folder to keep Piper voices in.");
+            let msg = self.msg("voice-no-data-folder");
+            self.error(&msg);
             return vec![Effect::Redraw];
         };
         let name = plan.voice.describe();
@@ -529,7 +555,8 @@ impl App {
                 let _ = tx.send(r);
             });
         if spawned.is_err() {
-            self.error("Could not start the download.");
+            let msg = self.msg("voice-download-start-failed");
+            self.error(&msg);
             return vec![Effect::Redraw];
         }
         self.voices.job = Some(VoiceJob::Download {
@@ -540,7 +567,8 @@ impl App {
             told: 0,
             cancel,
         });
-        self.tell(&format!("Downloading {name}."));
+        let msg = self.msg_args("voice-downloading", &args!["voice" => name]);
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 
@@ -552,22 +580,40 @@ impl App {
         match job {
             VoiceJob::Plan(rx) => match rx.try_recv() {
                 Ok(Ok(plan)) => {
-                    self.ask(&format!("{} y or n", plan.describe()));
+                    let question =
+                        self.msg_args("voice-download-question", &args!["plan" => plan.describe()]);
+                    self.ask(&question);
                     self.voices.question = Some(VoiceQuestion::Download(Box::new(plan)));
                 }
-                Ok(Err(e)) => self.error(&format!("Could not read the voice's details: {e}.")),
+                Ok(Err(e)) => {
+                    let msg =
+                        self.msg_args("voice-details-failed", &args!["error" => e.to_string()]);
+                    self.error(&msg);
+                }
                 Err(TryRecvError::Empty) => self.voices.job = Some(VoiceJob::Plan(rx)),
-                Err(TryRecvError::Disconnected) => self.error("The download stopped."),
+                Err(TryRecvError::Disconnected) => {
+                    let msg = self.msg("voice-download-stopped");
+                    self.error(&msg);
+                }
             },
             VoiceJob::Catalog(rx) => match rx.try_recv() {
-                Ok(Ok(c)) => self.tell(&format!(
-                    "The Piper voice list has {} voices in {} languages. Choose Voice lists them.",
-                    c.voices.len(),
-                    c.languages().len()
-                )),
-                Ok(Err(e)) => self.error(&format!("Could not download the voice list: {e}.")),
+                Ok(Ok(c)) => {
+                    let msg = self.msg_args(
+                        "voice-catalog-fetched",
+                        &args!["voices" => c.voices.len(), "languages" => c.languages().len()],
+                    );
+                    self.tell(&msg);
+                }
+                Ok(Err(e)) => {
+                    let msg =
+                        self.msg_args("voice-catalog-failed", &args!["error" => e.to_string()]);
+                    self.error(&msg);
+                }
                 Err(TryRecvError::Empty) => self.voices.job = Some(VoiceJob::Catalog(rx)),
-                Err(TryRecvError::Disconnected) => self.error("The download stopped."),
+                Err(TryRecvError::Disconnected) => {
+                    let msg = self.msg("voice-download-stopped");
+                    self.error(&msg);
+                }
             },
             VoiceJob::Download {
                 name,
@@ -579,12 +625,19 @@ impl App {
             } => match rx.try_recv() {
                 Ok(Ok(v)) => {
                     textweaver_speech::forget_probes();
-                    self.tell(&format!(
-                        "{name} is installed. {} Choose Voice lists it.",
-                        v.licence.describe()
-                    ));
+                    let msg = self.msg_args(
+                        "voice-installed",
+                        &args!["voice" => name, "licence" => v.licence.describe()],
+                    );
+                    self.tell(&msg);
                 }
-                Ok(Err(e)) => self.error(&format!("Could not download {name}: {e}.")),
+                Ok(Err(e)) => {
+                    let msg = self.msg_args(
+                        "voice-download-failed",
+                        &args!["voice" => name, "error" => e.to_string()],
+                    );
+                    self.error(&msg);
+                }
                 Err(TryRecvError::Empty) => {
                     // Say how it is going at each quarter.
                     let quarter = (done.load(Ordering::Relaxed) * 4)
@@ -593,7 +646,11 @@ impl App {
                     let mut told = told;
                     if quarter > told && quarter < 4 {
                         told = quarter;
-                        self.show(&format!("Downloading {name}, {} percent.", quarter * 25));
+                        let msg = self.msg_args(
+                            "voice-downloading-percent",
+                            &args!["voice" => name.as_str(), "pct" => quarter * 25],
+                        );
+                        self.show(&msg);
                     }
                     self.voices.job = Some(VoiceJob::Download {
                         name,
@@ -605,7 +662,10 @@ impl App {
                     });
                     return Vec::new();
                 }
-                Err(TryRecvError::Disconnected) => self.error("The download stopped."),
+                Err(TryRecvError::Disconnected) => {
+                    let msg = self.msg("voice-download-stopped");
+                    self.error(&msg);
+                }
             },
         }
         vec![Effect::Redraw]
@@ -616,24 +676,33 @@ impl App {
     /// stays open, in the same order, with the item relabelled.
     pub(crate) fn toggle_favourite_voice(&mut self, n: usize) -> Vec<Effect> {
         let Some(e) = self.voices.manager.entry_at(n).cloned() else {
-            self.tell("Only a voice can be a favourite.");
+            let msg = self.msg("voice-only-voice-favourite");
+            self.tell(&msg);
             return self.show_voice_list();
         };
         let v = &e.voice;
         let favs = &mut self.settings.speech.favorite_voices;
-        let msg = match favs
+        let added = match favs
             .iter()
             .position(|f| *f == v.id || f.eq_ignore_ascii_case(&v.name))
         {
             Some(i) => {
                 favs.remove(i);
-                format!("{} removed from favourites.", v.name)
+                false
             }
             None => {
                 favs.push(v.id.clone());
-                format!("{} added to favourites.", v.name)
+                true
             }
         };
+        let msg = self.msg_args(
+            if added {
+                "voice-favourite-added"
+            } else {
+                "voice-favourite-removed"
+            },
+            &args!["voice" => v.name.as_str()],
+        );
         self.settings_dirty = true;
         self.tell(&msg);
         self.show_voice_list()
@@ -649,12 +718,13 @@ impl App {
         self.settings_dirty = true;
         self.speech.set_voice(Some(id.to_owned()));
         let restored = self.restore_voice_params(&params_key(self.speech.backend_id(), id));
-        match restored {
-            Some(wpm) => self.tell(&format!("Voice {name}, {wpm} words per minute.")),
-            None => self.tell(&format!("Voice {name}.")),
-        }
-        self.speech
-            .say(VOICE_SAMPLE, textweaver_speech::SayMode::Queue);
+        let msg = match restored {
+            Some(wpm) => self.msg_args("voice-chosen-rate", &args!["voice" => name, "wpm" => wpm]),
+            None => self.msg_args("voice-chosen", &args!["voice" => name]),
+        };
+        self.tell(&msg);
+        let sample = self.msg("voice-sample");
+        self.speech.say(sample, textweaver_speech::SayMode::Queue);
     }
 
     /// Saves the current rate and pitch as the current voice's own.
@@ -704,15 +774,17 @@ impl App {
         let new = old.step(delta);
         if new == old {
             self.speech.earcon(Earcon::Boundary);
-            self.tell(if delta > 0 {
-                "Fastest rate."
+            let msg = self.msg(if delta > 0 {
+                "voice-fastest-rate"
             } else {
-                "Slowest rate."
+                "voice-slowest-rate"
             });
+            self.tell(&msg);
             return;
         }
         self.set_rate(new);
-        self.tell(&format!("{} words per minute.", new.wpm()));
+        let msg = self.msg_args("voice-rate", &args!["wpm" => new.wpm()]);
+        self.tell(&msg);
     }
 
     pub(crate) fn change_pitch(&mut self, delta: i8) {
@@ -720,18 +792,20 @@ impl App {
         let new = old.step(delta);
         if new == old {
             self.speech.earcon(Earcon::Boundary);
-            self.tell(if delta > 0 {
-                "Highest pitch."
+            let msg = self.msg(if delta > 0 {
+                "voice-highest-pitch"
             } else {
-                "Lowest pitch."
+                "voice-lowest-pitch"
             });
+            self.tell(&msg);
             return;
         }
         self.settings.speech.pitch = new;
         self.settings_dirty = true;
         self.speech.set_pitch(new);
         self.remember_voice_params();
-        self.tell(&pitch_words(new));
+        let msg = pitch_words(self.cat(), new);
+        self.tell(&msg);
     }
 
     pub(crate) fn change_volume(&mut self, delta: i16) {
@@ -739,17 +813,19 @@ impl App {
         let new = old.step(delta);
         if new == old {
             self.speech.earcon(Earcon::Boundary);
-            self.tell(if delta > 0 {
-                "Full volume."
+            let msg = self.msg(if delta > 0 {
+                "voice-full-volume"
             } else {
-                "Volume off."
+                "voice-volume-off"
             });
+            self.tell(&msg);
             return;
         }
         self.settings.speech.volume = new;
         self.settings_dirty = true;
         self.speech.set_volume(new);
-        self.tell(&volume_words(new));
+        let msg = volume_words(self.cat(), new);
+        self.tell(&msg);
     }
 
     /// Cycles the speed presets from fastest to slowest (Star's order: skim,
@@ -763,7 +839,8 @@ impl App {
             .map(|(k, v)| (k.clone(), *v))
             .collect();
         if presets.is_empty() {
-            self.tell("No speed presets.");
+            let msg = self.msg("voice-no-speed-presets");
+            self.tell(&msg);
             return;
         }
         presets.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
@@ -774,22 +851,23 @@ impl App {
         };
         let (name, w) = presets[next].clone();
         self.set_rate(Rate::Wpm(w).clamped());
-        self.tell(&format!(
-            "{} speed, {} words per minute.",
-            capitalize(&name),
-            Rate::Wpm(w).clamped().wpm()
-        ));
+        let msg = self.msg_args(
+            "voice-speed-preset",
+            &args!["name" => capitalize(&name), "wpm" => Rate::Wpm(w).clamped().wpm()],
+        );
+        self.tell(&msg);
     }
 
     pub(crate) fn toggle_line_numbers(&mut self) {
         let on = !self.settings.display.show_line_numbers;
         self.settings.display.show_line_numbers = on;
         self.settings_dirty = true;
-        self.tell(if on {
-            "Line numbers on."
+        let msg = self.msg(if on {
+            "voice-line-numbers-on"
         } else {
-            "Line numbers off."
+            "voice-line-numbers-off"
         });
+        self.tell(&msg);
     }
 
     /// F9: single-key shortcuts on or off (`[keyboard] character_keys`), so
@@ -801,23 +879,31 @@ impl App {
         self.settings_dirty = true;
         let a = Announcement::CharacterKeys { on };
         let verbosity = self.settings.speech.verbosity;
-        if let Some(text) = a.text(verbosity) {
-            self.say_at(&format!("{text}."), Verbosity::Low, a.priority());
+        if a.text(verbosity).is_some() {
+            let text = self.msg(if on {
+                "voice-character-keys-on"
+            } else {
+                "voice-character-keys-off"
+            });
+            self.say_at(&text, Verbosity::Low, a.priority());
         }
     }
 }
 
 /// "Pitch plus 2", "Pitch minus 1", "Normal pitch".
-fn pitch_words(p: Pitch) -> String {
+fn pitch_words(c: &textweaver_lexicon::i18n::Catalog, p: Pitch) -> String {
     match p.semitones() {
-        0 => "Normal pitch.".into(),
-        s if s > 0 => format!("Pitch plus {s}."),
-        s => format!("Pitch minus {}.", s.unsigned_abs()),
+        0 => c.tr("voice-pitch-normal"),
+        s if s > 0 => c.fmt(
+            "voice-pitch-plus",
+            &args!["n" => u8::try_from(s).unwrap_or(0)],
+        ),
+        s => c.fmt("voice-pitch-minus", &args!["n" => s.unsigned_abs()]),
     }
 }
 
-fn volume_words(v: Volume) -> String {
-    format!("Volume {} percent.", v.percent())
+fn volume_words(c: &textweaver_lexicon::i18n::Catalog, v: Volume) -> String {
+    c.fmt("voice-volume", &args!["pct" => v.percent()])
 }
 
 fn capitalize(s: &str) -> String {
@@ -834,8 +920,9 @@ mod tests {
 
     #[test]
     fn voice_words_read_well() {
-        assert_eq!(pitch_words(Pitch::Semitones(-2)), "Pitch minus 2.");
-        assert_eq!(pitch_words(Pitch::Semitones(0)), "Normal pitch.");
-        assert_eq!(volume_words(Volume::new(90)), "Volume 90 percent.");
+        let c = textweaver_lexicon::i18n::Catalog::english();
+        assert_eq!(pitch_words(&c, Pitch::Semitones(-2)), "Pitch minus 2.");
+        assert_eq!(pitch_words(&c, Pitch::Semitones(0)), "Normal pitch.");
+        assert_eq!(volume_words(&c, Volume::new(90)), "Volume 90 percent.");
     }
 }

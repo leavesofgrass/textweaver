@@ -8,7 +8,7 @@
 
 ## Context
 
-Jon writes academic work by keyboard and speech. Citations have to be added, found, inserted, checked, and formatted without looking at anything: every step must be announceable, and every formatted string must read well aloud.
+The owner writes academic work by keyboard and speech. Citations have to be added, found, inserted, checked, and formatted without looking at anything: every step must be announceable, and every formatted string must read well aloud.
 
 Star (`star/citations.py`, `star/gui/mixin_citations.py`, `star/publish.py`) kept a list of dicts in `settings.json` with eight flat fields (`id`, `type`, `title`, `author` as one "A and B" string, `year`, `journal`, `doi`, `url`, `publisher`). It parsed BibTeX with regular expressions, read and wrote RIS and CSL-JSON, looked up DOIs through the Crossref API and ISBNs through Open Library's Books API, inserted Pandoc `[@key]` markers, and formatted only at publish time, by handing a CSL-JSON export and one of three bundled `.csl` files to Pandoc's citeproc.
 

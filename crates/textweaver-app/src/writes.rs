@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 
 use textweaver_a11y::{Priority, Verbosity};
 use textweaver_editor::{SaveOutcome, SaveStart};
+use textweaver_lexicon::args;
 use textweaver_speech::Earcon;
 
 use crate::app::App;
@@ -82,10 +83,12 @@ impl App {
         self.send_snapshot_ops();
         let started = Instant::now();
         if !self.writer.flush(QUIET_WAIT) {
-            self.tell("Still saving. Please wait.");
+            let msg = self.msg("writes-still-saving");
+            self.tell(&msg);
             let left = Writer::QUIT_WAIT.saturating_sub(started.elapsed());
             if !self.writer.flush(left) {
-                self.error("Some changes could not be written in time: the disk is not answering.");
+                let msg = self.msg("writes-not-written-in-time");
+                self.error(&msg);
             }
         }
         for report in self.writer.reports() {
@@ -184,7 +187,8 @@ impl App {
             }
             Ok(SaveStart::NeedsPath { suggested }) => self.ask_save_path(suggested, then),
             Err(e) => {
-                self.error(&format!("Could not save: {e}. Still editing."));
+                let msg = self.msg_args("writes-save-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
                 vec![Effect::Redraw]
             }
         }
@@ -223,7 +227,9 @@ impl App {
             }
             Report::Settings { result } => {
                 if let Err(e) = result {
-                    self.error(&format!("Could not save settings: {e}"));
+                    let msg =
+                        self.msg_args("settings-save-failed", &args!["error" => e.to_string()]);
+                    self.error(&msg);
                 }
                 vec![Effect::Redraw]
             }
@@ -233,16 +239,20 @@ impl App {
     fn state_saved(&mut self, note: StateNote, result: Result<(), String>) {
         match (note, result) {
             (StateNote::Bookmark { name, pct }, Ok(())) => {
-                self.tell(&format!("Bookmark {name} set at {pct} percent."));
+                let msg =
+                    self.msg_args("writes-bookmark-set", &args!["name" => name, "pct" => pct]);
+                self.tell(&msg);
             }
             (StateNote::Bookmark { name, .. }, Err(e)) => {
                 // Kept for this session and saved again with the position;
                 // the user must not believe it is safe on disk.
                 log::warn!("cannot save bookmarks: {e}");
                 self.speech.earcon(Earcon::Error);
-                self.error(&format!(
-                    "Bookmark {name} is set for now, but could not be saved: {e}."
-                ));
+                let msg = self.msg_args(
+                    "writes-bookmark-not-saved",
+                    &args!["name" => name, "error" => e],
+                );
+                self.error(&msg);
             }
             (_, Err(e)) => log::warn!("cannot save the reading position: {e}"),
             (_, Ok(())) => {}
@@ -265,15 +275,17 @@ impl App {
                 // Said once per run of failures; the session backs off
                 // between attempts, and the log keeps every one.
                 if failures == 1 {
-                    let msg = format!(
-                        "Could not write the recovery copy: {e}. Save soon; textweaver will keep trying."
+                    let msg = self.msg_args(
+                        "writes-recovery-copy-failed",
+                        &args!["error" => e.to_string()],
                     );
                     self.say_at(&msg, Verbosity::Low, Priority::Polite);
                 }
                 self.snapshot_trouble = true;
             }
             Ok(true) if std::mem::take(&mut self.snapshot_trouble) => {
-                self.note("The recovery copy is being written again.");
+                let msg = self.msg("writes-recovery-copy-resumed");
+                self.note(&msg);
             }
             Ok(_) => {}
         }
@@ -313,7 +325,8 @@ impl App {
                             || path.display().to_string(),
                             |n| n.to_string_lossy().into(),
                         );
-                        self.tell(&format!("Saved {name}. Still editing."));
+                        let msg = self.msg_args("writes-saved", &args!["name" => name]);
+                        self.tell(&msg);
                         // The misspelling count and the preview (Agent P2b).
                         self.on_saved();
                         vec![Effect::Redraw]
@@ -332,7 +345,8 @@ impl App {
             }
             Err(SaveFailure::Io(e)) => {
                 self.speech.earcon(Earcon::Error);
-                self.error(&format!("Could not save: {e}. Still editing."));
+                let msg = self.msg_args("writes-save-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
                 vec![Effect::Redraw]
             }
         }

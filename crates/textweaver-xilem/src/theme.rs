@@ -1,7 +1,7 @@
 //! textweaver's themes on Masonry's widgets.
 //!
 //! The layout, spacing, and corner radii follow Masonry's default look (the
-//! one Xilem's `to_do_mvc` example shows, which Jon liked); the colours come
+//! one Xilem's `to_do_mvc` example shows, which the owner liked); the colours come
 //! from a textweaver theme ([`Theme::rgb_table`]'s roles), Galaxy by
 //! default. Every derived colour is checked: text 4.5 to 1 on its surface
 //! (7 to 1 in high-contrast themes) and the focus ring 3 to 1 against both
@@ -83,6 +83,12 @@ pub struct Palette {
     pub find_hit: (Rgb, Rgb),
     /// The caret.
     pub caret: Rgb,
+    /// The reading ruler's band on the reading line (a tint of the focus
+    /// colour the text stays readable on; a bar at the line's start marks
+    /// it too, so colour is not the only cue).
+    pub ruler_focus: Rgb,
+    /// The ruler's band on the lines around the reading line.
+    pub ruler_band: Rgb,
 }
 
 /// `c` as a Masonry colour.
@@ -164,6 +170,8 @@ impl Palette {
             selection: (selection.foreground, selection.background),
             find_hit: (find.foreground, find.background),
             caret: text,
+            ruler_focus: ensure(background.mix(focus, 0.22), &[text], text_min),
+            ruler_band: ensure(background.mix(focus, 0.10), &[text], text_min),
         }
     }
 

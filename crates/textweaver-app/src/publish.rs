@@ -34,6 +34,7 @@ pub(crate) use textweaver_convert::OutputFormat;
 use textweaver_convert::{ConvertOptions, Converter, Job as ConvertJob, Status};
 use textweaver_core::{CharRange, Utterance};
 use textweaver_formats::{Loader, MarkdownLoader, Source};
+use textweaver_lexicon::args;
 use textweaver_speech::ReadingGeneration;
 
 use crate::app::App;
@@ -204,7 +205,10 @@ impl App {
     /// What to export: the file itself while reading it, else the live
     /// text written to a temporary file.
     fn export_source(&self) -> Result<ExportSource, String> {
-        let s = self.session.as_ref().ok_or("No document is open.")?;
+        let s = self
+            .session
+            .as_ref()
+            .ok_or_else(|| self.msg("publish-no-document"))?;
         let (path, folder, stem) = self.doc_place();
         let editing = self.edit.is_some();
         if !editing && let Some(p) = path.as_ref().filter(|p| p.is_file()) {
@@ -228,11 +232,19 @@ impl App {
         let dir = cache
             .join("export")
             .join(format!("{}-{n}", std::process::id()));
-        std::fs::create_dir_all(&dir)
-            .map_err(|e| format!("cannot write to {}: {e}", dir.display()))?;
+        std::fs::create_dir_all(&dir).map_err(|e| {
+            self.msg_args(
+                "publish-cannot-write-to",
+                &args!["path" => dir.display().to_string(), "error" => e.to_string()],
+            )
+        })?;
         let file = dir.join(format!("{stem}.md"));
-        std::fs::write(&file, &text)
-            .map_err(|e| format!("cannot write {}: {e}", file.display()))?;
+        std::fs::write(&file, &text).map_err(|e| {
+            self.msg_args(
+                "publish-cannot-write",
+                &args!["path" => file.display().to_string(), "error" => e.to_string()],
+            )
+        })?;
         let bibliography = front_matter_bibliography(&text, &folder)
             .filter(|p| p.is_file())
             .or_else(|| {
@@ -329,7 +341,10 @@ impl App {
                 rx,
                 progress: Progress::new(std::time::Instant::now()),
             }),
-            Err(e) => self.error(&format!("Could not start the export: {e}")),
+            Err(e) => {
+                let msg = self.msg_args("publish-start-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
         }
     }
 
@@ -337,13 +352,15 @@ impl App {
     pub(crate) fn export_to(&mut self, to: OutputFormat) -> Vec<Effect> {
         if self.session.is_none() {
             let open = self.key(textweaver_keymap::ActionId::Open);
-            self.tell(&format!("No document is open. Press {open} to open one."));
+            let msg = self.msg_args("app-no-document-open", &args!["key" => open]);
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let src = match self.export_source() {
             Ok(s) => s,
             Err(e) => {
-                self.error(&format!("Could not export: {e}"));
+                let msg = self.msg_args("publish-export-error", &args!["error" => e]);
+                self.error(&msg);
                 return vec![Effect::Redraw];
             }
         };
@@ -355,9 +372,10 @@ impl App {
         }
         let options = self.convert_options(to, &src);
         let label = to.label();
-        self.tell(&format!("Exporting to {label}."));
+        let msg = self.msg_args("publish-exporting", &args!["format" => label]);
+        self.tell(&msg);
         self.spawn_export(
-            format!("Exported to {label}"),
+            label.to_owned(),
             ExportKind::Export,
             src,
             options,
@@ -372,10 +390,12 @@ impl App {
     pub(crate) fn preview_in_browser(&mut self) -> Vec<Effect> {
         if self.session.is_none() {
             let open = self.key(textweaver_keymap::ActionId::Open);
-            self.tell(&format!("No document is open. Press {open} to open one."));
+            let msg = self.msg_args("app-no-document-open", &args!["key" => open]);
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
-        self.tell("Writing the preview.");
+        let msg = self.msg("publish-writing-preview");
+        self.tell(&msg);
         self.write_preview(ExportKind::PreviewOpen);
         vec![Effect::Redraw]
     }
@@ -384,7 +404,8 @@ impl App {
         let src = match self.export_source() {
             Ok(s) => s,
             Err(e) => {
-                self.error(&format!("Could not write the preview: {e}"));
+                let msg = self.msg_args("publish-preview-error", &args!["error" => e]);
+                self.error(&msg);
                 return;
             }
         };
@@ -401,19 +422,24 @@ impl App {
             server.set_page(output.clone(), src.folder.clone());
         }
         self.authoring.preview_folder = Some(src.folder.clone());
-        self.spawn_export("Preview".into(), kind, src, options, output, base);
+        self.spawn_export(String::new(), kind, src, options, output, base);
     }
 
     /// Says how a long export is getting on (at most every ten seconds).
     pub(crate) fn export_progress(&mut self, kind: ExportKind, what: &str, secs: u64) {
-        let doing = match kind {
-            ExportKind::Export => what.replacen("Exported", "exporting", 1),
-            ExportKind::PreviewOpen => "writing the preview".to_owned(),
+        // `what` is the export's format label ("PDF").
+        let msg = match kind {
+            ExportKind::Export => self.msg_args(
+                "publish-still-exporting",
+                &args!["format" => what, "secs" => secs],
+            ),
+            ExportKind::PreviewOpen => {
+                self.msg_args("publish-still-previewing", &args!["secs" => secs])
+            }
             // Rewriting the preview is quiet.
             ExportKind::PreviewRefresh | ExportKind::PreviewLive => return,
         };
-        let unit = if secs == 1 { "second" } else { "seconds" };
-        self.note(&format!("Still {doing}, {secs} {unit}."));
+        self.note(&msg);
     }
 
     /// Stops the preview's reload server, if one runs, and forgets the
@@ -455,19 +481,19 @@ impl App {
         self.settings.preview.auto_reload = on;
         self.settings_dirty = true;
         if on {
-            let more = if self.authoring.preview.is_some() {
-                " Run preview in browser again to use it."
+            let again = if self.authoring.preview.is_some() {
+                "yes"
             } else {
-                ""
+                "no"
             };
-            self.tell(&format!(
-                "Automatic preview reloading on: after each save the browser reloads the page by itself.{more}"
-            ));
+            let msg = self.msg_args("publish-auto-reload-on", &args!["again" => again]);
+            self.tell(&msg);
         } else {
             if let Some(mut server) = self.preview_server.take() {
                 server.stop();
             }
-            self.tell("Automatic preview reloading off: press F5 in the browser after a save.");
+            let msg = self.msg("publish-auto-reload-off");
+            self.tell(&msg);
         }
     }
 
@@ -476,13 +502,12 @@ impl App {
         let on = !self.settings.preview.live;
         self.settings.preview.live = on;
         self.settings_dirty = true;
-        self.tell(match (on, self.settings.preview.auto_reload) {
-            (true, true) => "Live preview on: the preview also reloads when typing pauses.",
-            (true, false) => {
-                "Live preview on. It works with automatic reloading, which is off; turn it on with toggle preview auto reload."
-            }
-            (false, _) => "Live preview off: the preview reloads after saves only.",
+        let msg = self.msg(match (on, self.settings.preview.auto_reload) {
+            (true, true) => "publish-live-on",
+            (true, false) => "publish-live-on-needs-reload",
+            (false, _) => "publish-live-off",
         });
+        self.tell(&msg);
     }
 
     /// `[preview] live`: rewrites the preview a second after typing stops.
@@ -525,14 +550,30 @@ impl App {
             Ok(x) => x,
             Err(e) => {
                 self.speech.earcon(textweaver_speech::Earcon::Error);
-                self.error(&format!("{what} failed: {e}"));
+                // `what` is the export's format label ("PDF"), empty for a
+                // preview.
+                let msg = if kind == ExportKind::Export {
+                    self.msg_args(
+                        "publish-export-failed",
+                        &args!["format" => what, "error" => e],
+                    )
+                } else {
+                    self.msg_args("publish-preview-failed", &args!["error" => e])
+                };
+                self.error(&msg);
                 return;
             }
         };
-        let warned = match warnings.len() {
-            0 => String::new(),
-            1 => format!(" 1 warning: {}", warnings[0]),
-            n => format!(" {n} warnings; the first: {}", warnings[0]),
+        // A sentence of its own, with a space before it, or nothing.
+        let warned = match warnings.first() {
+            None => String::new(),
+            Some(first) => format!(
+                " {}",
+                self.msg_args(
+                    "publish-warnings",
+                    &args!["n" => warnings.len(), "first" => first.as_str()],
+                )
+            ),
         };
         match kind {
             ExportKind::Export => {
@@ -540,13 +581,16 @@ impl App {
                     .parent()
                     .map_or_else(String::new, |p| p.display().to_string());
                 let target = path.display().to_string();
-                self.offer_open(
-                    target,
-                    &format!(
-                        "{what}: {} in {folder}.{warned} Open it? y or n.",
-                        file_name(&path)
-                    ),
+                let question = self.msg_args(
+                    "publish-exported",
+                    &args![
+                        "format" => what,
+                        "file" => file_name(&path),
+                        "folder" => folder,
+                        "warned" => warned
+                    ],
                 );
+                self.offer_open(target, &question);
             }
             ExportKind::PreviewOpen => {
                 let served = if self.settings.preview.auto_reload {
@@ -556,15 +600,15 @@ impl App {
                 };
                 match served {
                     Some(url) => {
-                        self.tell(&format!(
-                            "Preview written. Opening it in the browser. It reloads by itself after each save.{warned}"
-                        ));
+                        let msg = self
+                            .msg_args("publish-preview-written-served", &args!["warned" => warned]);
+                        self.tell(&msg);
                         self.launch(&url);
                     }
                     None => {
-                        self.tell(&format!(
-                            "Preview written. Opening it in the browser. Saving writes it again; then press F5 in the browser.{warned}"
-                        ));
+                        let msg =
+                            self.msg_args("publish-preview-written", &args!["warned" => warned]);
+                        self.tell(&msg);
                         let target = path.display().to_string();
                         self.launch(&target);
                     }
@@ -575,13 +619,17 @@ impl App {
                 match &self.preview_server {
                     Some(server) => {
                         server.reload(anchor.as_deref());
+                        let msg = self.msg("publish-preview-updated");
                         if kind == ExportKind::PreviewRefresh {
-                            self.tell("Preview updated.");
+                            self.tell(&msg);
                         } else {
-                            self.show("Preview updated.");
+                            self.show(&msg);
                         }
                     }
-                    None => self.tell("Preview updated. Press F5 in the browser."),
+                    None => {
+                        let msg = self.msg("publish-preview-updated-press-f5");
+                        self.tell(&msg);
+                    }
                 }
             }
         }
@@ -601,14 +649,14 @@ impl App {
         }
         match crate::preview_server::PreviewServer::start(page.to_owned(), folder) {
             Ok(server) => {
+                server.set_catalog(self.catalog());
                 let url = server.url();
                 self.preview_server = Some(server);
                 Some(url)
             }
             Err(e) => {
-                self.error(&format!(
-                    "Could not start the preview's reload server ({e}); opening the file instead."
-                ));
+                let msg = self.msg_args("publish-server-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
                 None
             }
         }
@@ -648,7 +696,8 @@ impl App {
         let rendered = match loaded {
             Ok(d) => d,
             Err(e) => {
-                self.error(&format!("Could not render the text: {e}"));
+                let msg = self.msg_args("publish-render-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
                 return vec![Effect::Redraw];
             }
         };
@@ -683,7 +732,8 @@ impl App {
         let utterances: Vec<Utterance> =
             textweaver_text::plan_with(&rendered, range, &policy, &citations);
         let Some(generation) = self.read_planned(utterances) else {
-            self.tell("Nothing to read after the caret.");
+            let msg = self.msg("publish-nothing-after-caret");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         };
         self.authoring.listening = Some(Listening {
@@ -691,7 +741,8 @@ impl App {
             rendered,
             map,
         });
-        self.show("Listening to the rendered text.");
+        let msg = self.msg("publish-listening");
+        self.show(&msg);
         vec![Effect::Redraw]
     }
 
@@ -745,7 +796,7 @@ mod tests {
         let (tx, rx) = std::sync::mpsc::channel();
         let t0 = Instant::now();
         app.authoring.jobs.push(Job::Export {
-            what: "Exported to PDF".into(),
+            what: "PDF".into(),
             kind: ExportKind::Export,
             rx,
             progress: Progress::new(t0),

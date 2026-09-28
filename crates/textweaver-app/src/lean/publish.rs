@@ -12,9 +12,6 @@ use crate::app::App;
 use crate::authoring_state::{ExportDone, ExportKind};
 use crate::command::Effect;
 
-/// What the export and preview commands say in this build.
-pub(crate) const NOT_IN_BUILD: &str = "Export and preview are not in this build of textweaver. It was built without the publish feature; tw convert still converts.";
-
 /// The formats the reader exports to (the full build's is
 /// `textweaver_convert::OutputFormat`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -34,13 +31,15 @@ pub(crate) enum OutputFormat {
 impl App {
     /// `export_html`, `export_pdf`, and the rest.
     pub(crate) fn export_to(&mut self, _to: OutputFormat) -> Vec<Effect> {
-        self.tell(NOT_IN_BUILD);
+        let msg = self.msg("lean-publish-not-in-build");
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 
     /// `preview_in_browser`.
     pub(crate) fn preview_in_browser(&mut self) -> Vec<Effect> {
-        self.tell(NOT_IN_BUILD);
+        let msg = self.msg("lean-publish-not-in-build");
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 
@@ -55,12 +54,14 @@ impl App {
 
     /// `toggle_preview_auto_reload`.
     pub(crate) fn toggle_preview_auto_reload(&mut self) {
-        self.tell(NOT_IN_BUILD);
+        let msg = self.msg("lean-publish-not-in-build");
+        self.tell(&msg);
     }
 
     /// `toggle_preview_live`.
     pub(crate) fn toggle_preview_live(&mut self) {
-        self.tell(NOT_IN_BUILD);
+        let msg = self.msg("lean-publish-not-in-build");
+        self.tell(&msg);
     }
 
     /// No live preview in this build.
@@ -83,7 +84,8 @@ impl App {
 
     /// `listen_rendered`.
     pub(crate) fn listen_rendered(&mut self) -> Vec<Effect> {
-        self.tell(NOT_IN_BUILD);
+        let msg = self.msg("lean-publish-not-in-build");
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 

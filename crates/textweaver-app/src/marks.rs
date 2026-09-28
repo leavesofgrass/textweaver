@@ -8,6 +8,7 @@
 
 use textweaver_a11y::Verbosity;
 use textweaver_core::{CharPos, CharRange, Direction, Unit};
+use textweaver_lexicon::args;
 use textweaver_speech::Earcon;
 use textweaver_store::Bookmark;
 use textweaver_text::{NavOptions, SearchQuery, navigate};
@@ -22,7 +23,8 @@ impl App {
     /// Runs a new search from the cursor.
     pub(crate) fn run_find(&mut self, pattern: &str) {
         if pattern.is_empty() {
-            self.note("Cancelled.");
+            let msg = self.msg("common-cancelled");
+            self.note(&msg);
             return;
         }
         let (text, regex) = match pattern.strip_prefix('/').and_then(|p| p.strip_suffix('/')) {
@@ -49,7 +51,8 @@ impl App {
         ) {
             Ok(a) => a,
             Err(e) => {
-                self.error(&format!("Cannot search: {e}."));
+                let msg = self.msg_args("marks-cannot-search", &args!["error" => e.to_string()]);
+                self.error(&msg);
                 return;
             }
         };
@@ -64,7 +67,8 @@ impl App {
         });
         if count == 0 {
             self.speech.earcon(Earcon::Error);
-            self.tell(&format!("No matches for {pattern}."));
+            let msg = self.msg_args("marks-no-matches", &args!["pattern" => pattern]);
+            self.tell(&msg);
             return;
         }
         match first {
@@ -104,7 +108,10 @@ impl App {
             return self.prompt(PromptPurpose::Find);
         };
         if f.total == 0 || f.hits.is_empty() {
-            let msg = format!("No matches for {}.", f.query.pattern);
+            let msg = self.msg_args(
+                "marks-no-matches",
+                &args!["pattern" => f.query.pattern.as_str()],
+            );
             self.tell(&msg);
             return vec![Effect::Redraw];
         }
@@ -189,15 +196,14 @@ impl App {
         let number = f.first_index + i + 1;
         let line = text_util::line_of(&s.doc, hit.start);
         let context = preview(&s.doc, text_util::line_range(&s.doc, line), 12);
-        let label = format!("Match {number} of {n}");
+        let label = self.msg_args("marks-match-label", &args!["number" => number, "n" => n]);
         let mut msg = self.nav_message(Some(&label), hit.start, &context);
         if let Some(dir) = wrapped {
             self.speech.earcon(Earcon::Wrap);
-            let edge = match dir {
-                Direction::Forward => "Wrapped to top.",
-                Direction::Backward => "Wrapped to bottom.",
-            };
-            msg = format!("{edge} {msg}");
+            msg = self.msg_args(
+                "marks-find-wrapped",
+                &args!["dir" => crate::words::dir_key(dir), "message" => msg],
+            );
         }
         self.jump(hit.start, true, ReadAfter::Follow, &msg);
     }
@@ -213,7 +219,8 @@ impl App {
         };
         let pos = text_util::word_start(&s.doc, pos);
         if let Some(b) = s.bookmarks.iter().find(|b| b.pos == pos) {
-            let msg = format!("Bookmark {} is already here.", b.name);
+            let name = b.name.clone();
+            let msg = self.msg_args("marks-bookmark-already-here", &args!["name" => name]);
             self.tell(&msg);
             return;
         }
@@ -239,21 +246,21 @@ impl App {
             pct,
         };
         if !self.save_state(note) {
-            self.tell(&format!("Bookmark {name} set at {pct} percent."));
+            let msg = self.msg_args("marks-bookmark-set", &args!["name" => name, "pct" => pct]);
+            self.tell(&msg);
         }
     }
 
     pub(crate) fn list_bookmarks(&mut self) -> Vec<Effect> {
         let n = self.session.as_ref().map_or(0, |s| s.bookmarks.len());
         if n == 0 {
-            self.tell("No bookmarks.");
+            let msg = self.msg("marks-no-bookmarks");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let effects = self.list_bookmarks_quiet();
-        self.tell(&format!(
-            "Bookmarks, {n} {}. Enter goes to one, Delete deletes it, F2 renames it.",
-            if n == 1 { "item" } else { "items" }
-        ));
+        let msg = self.msg_args("marks-bookmarks-intro", &args!["n" => n]);
+        self.tell(&msg);
         effects
     }
 
@@ -269,22 +276,21 @@ impl App {
                 let line = text_util::line_of(&s.doc, b.pos);
                 let end = text_util::line_range(&s.doc, line).end.max(b.pos);
                 let text = preview(&s.doc, CharRange::new(b.pos, end), 6);
-                let lost = if b.not_found {
-                    " (not found after the file changed)"
-                } else {
-                    ""
-                };
-                format!(
-                    "{}{lost}, line {}, {} percent: {text}",
-                    b.name,
-                    line + 1,
-                    text_util::percent(&s.doc, b.pos)
+                self.msg_args(
+                    "marks-bookmark-item",
+                    &args![
+                        "lost" => if b.not_found { "yes" } else { "no" },
+                        "name" => b.name.as_str(),
+                        "line" => line + 1,
+                        "pct" => text_util::percent(&s.doc, b.pos),
+                        "text" => text
+                    ],
                 )
             })
             .collect();
         self.list = Some(ListKind::Bookmarks);
         vec![Effect::ShowList {
-            title: "Bookmarks".into(),
+            title: self.msg("marks-bookmarks-title"),
             items,
         }]
     }
@@ -294,7 +300,8 @@ impl App {
             return;
         };
         if s.bookmarks.is_empty() {
-            self.tell("No bookmarks.");
+            let msg = self.msg("marks-no-bookmarks");
+            self.tell(&msg);
             return;
         }
         let cursor = s.cursor;
@@ -330,10 +337,10 @@ impl App {
         let line = text_util::line_of(&s.doc, target);
         let end = text_util::line_range(&s.doc, line).end.max(target);
         let content = preview(&s.doc, CharRange::new(target, end), 8);
-        let label = format!("Bookmark {}", b.name);
+        let label = self.msg_args("marks-bookmark-label", &args!["name" => b.name.as_str()]);
         let mut msg = self.nav_message(Some(&label), target, &content);
         if wrapped {
-            msg = format!("Wrapped. {msg}");
+            msg = self.msg_args("nav-wrapped", &args!["message" => msg]);
         }
         self.jump(target, true, ReadAfter::Follow, &msg);
     }
@@ -347,7 +354,8 @@ impl App {
         if range.is_empty() {
             s.selection = None;
             s.selection_anchor = None;
-            self.note("Selection cleared.");
+            let msg = self.msg("marks-selection-cleared");
+            self.note(&msg);
             return;
         }
         s.selection = Some(range);
@@ -356,7 +364,7 @@ impl App {
         let text = preview(&s.doc, range, 8);
         let msg = match self.settings.speech.verbosity {
             Verbosity::Low => text,
-            _ => format!("Selected {text}"),
+            _ => self.msg_args("marks-selected", &args!["text" => text]),
         };
         self.tell(&msg);
     }
@@ -405,10 +413,11 @@ impl App {
         };
         if new_head == head {
             self.speech.earcon(Earcon::Boundary);
-            self.tell(match dir {
-                Direction::Forward => "End of document.",
-                Direction::Backward => "Top of document.",
+            let msg = self.msg(match dir {
+                Direction::Forward => "nav-end-of-document-stop",
+                Direction::Backward => "nav-top-of-document-stop",
             });
+            self.tell(&msg);
             return;
         }
         let changed = CharRange::new(head, new_head);
@@ -419,13 +428,13 @@ impl App {
         s.selection = (!sel.is_empty()).then_some(sel);
         s.cursor = new_head;
         let what = if grew { "selected" } else { "unselected" };
-        let msg = match textweaver_editor::echo::summarize(&text, what) {
+        let msg = match text_util::summary_text(self.cat(), &text, what) {
             Some(summary) => summary,
             // Low says the text alone.
             None if self.settings.speech.verbosity == Verbosity::Low => {
-                text_util::spoken_fragment(&text)
+                text_util::spoken_fragment_text(self.cat(), &text)
             }
-            None => text_util::selection_change_message(&text, what),
+            None => text_util::selection_change_text(self.cat(), &text, grew),
         };
         self.scroll_to_cursor();
         self.tell(&msg);

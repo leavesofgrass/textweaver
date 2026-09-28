@@ -197,13 +197,13 @@ The [themes guide](themes.md) explains themes and how to make your own.
 
 ### "is not a text file"
 
-textweaver refuses a file that is not text, such as a program, an image, an audio file, a zip archive, an old Word `.doc`, or an RTF file. The message says what the file looks like.
+textweaver refuses a file that is not text, such as a program, an image, an audio file, or an old Word `.doc`. The message says what the file looks like. RTF and OpenDocument text files open directly.
 
 1. Check that you opened the file you meant.
-2. For an OpenDocument, RTF, LaTeX, or similar file, convert it to Markdown, then open the Markdown. This needs Pandoc:
+2. For a LaTeX, reStructuredText, or similar file, convert it to Markdown, then open the Markdown. This needs Pandoc:
 
    ```bash
-   tw convert report.odt --to md
+   tw convert report.rst --to md
    ```
 
 The [converting guide](converting.md) explains `tw convert`.

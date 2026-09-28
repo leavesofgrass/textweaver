@@ -1,14 +1,14 @@
 # Wave 4 plan review
 
-Written on Sunday, September 27, 2026, by the Wave 4 planning researcher, for the orchestrator and Jon. It is a proposal. It changes nothing in the plan itself. The plan it reviews is the refined Wave 4 plan of Sunday, September 27, 2026, in `docs/history/tasks.md`: two groups of five agents, W4h, W4a1, W4b, W4g, and W4c1 first, then W4a2, W4c2, W4f, W4d, and W4e.
+Written on Sunday, September 27, 2026, by the Wave 4 planning researcher, for the orchestrator and the owner. It is a proposal. It changes nothing in the plan itself. The plan it reviews is the refined Wave 4 plan of Sunday, September 27, 2026, in `docs/history/tasks.md`: two groups of five agents, W4h, W4a1, W4b, W4g, and W4c1 first, then W4a2, W4c2, W4f, W4d, and W4e.
 
-Sources: `docs/history/tasks.md` (the Wave 4 section, its lessons, the briefs, and the Wave 3 status lines), `docs/research/wave4.md`, `docs/research/usability-terminal.md`, `docs/roadmap.md`, `docs/research/pure-rust-wave3.md`, ADRs 0023 to 0027, the last sixty commits on `main`, Jon's wiki (the Star hub and its audits, the textweaver hub, the deletion incident pages, and the global rules), and crates.io and GitHub on the day of writing, read with the neutral User-Agent. Every version below was checked on Sunday, September 27, 2026.
+Sources: `docs/history/tasks.md` (the Wave 4 section, its lessons, the briefs, and the Wave 3 status lines), `docs/research/wave4.md`, `docs/research/usability-terminal.md`, `docs/roadmap.md`, `docs/research/pure-rust-wave3.md`, ADRs 0023 to 0027, the last sixty commits on `main`, the owner's wiki (the Star hub and its audits, the textweaver hub, the deletion incident pages, and the global rules), and crates.io and GitHub on the day of writing, read with the neutral User-Agent. Every version below was checked on Sunday, September 27, 2026.
 
-Jon's goal, as the brief states it: terminal-first Markdown reading and authoring, with speech and highlighting that never stall or lose your place. Everything below is measured against that.
+The owner's goal, as the brief states it: terminal-first Markdown reading and authoring, with speech and highlighting that never stall or lose your place. Everything below is measured against that.
 
 ## The short version
 
-- The order is close to right. Two changes would serve the goal better: trim W4a1 so Jon's listening session can happen early in Group 1, and start W4g only after W4h merges, because both rewrite the same messages and keys.
+- The order is close to right. Two changes would serve the goal better: trim W4a1 so the owner's listening session can happen early in Group 1, and start W4g only after W4h merges, because both rewrite the same messages and keys.
 - The biggest hidden risk is not disk. It is five agents finishing at once and each running the Docker all-features check on one shared Docker Desktop memory budget. Serialize those runs.
 - Six quick wins are worth doing before Group 1 launches: the six fuzz targets in the nightly matrix, `py -3` in the docs, "Ready" on the title line, the JSON closed-pipe panic, the `tw` no-arguments hint, and the AccessKit clipped-options mitigation.
 - Three research corrections: syntect's default features build C code, so W4g must turn them off; MathCAT 0.7.6 is still a release candidate with an open braille panic; and W4d's brief names `fluent-bundle`, but W3e already shipped its own Fluent-subset catalog by design (ADR-0025), so W4d should extend that first.
@@ -18,15 +18,15 @@ Jon's goal, as the brief states it: terminal-first Markdown reading and authorin
 
 ### What the order gets right
 
-- W4h first is right. It is small, it is all terminal, and every item is something Jon hears on every run. Nothing else in Group 1 touches a user as often.
+- W4h first is right. It is small, it is all terminal, and every item is something the owner hears on every run. Nothing else in Group 1 touches a user as often.
 - W4b in Group 1 is right. Startup time, allocations, and the memory growth are the "never stall" half of the goal.
 - W4g in Group 1 is right for "authoring". Grammar, lint, clipboard, and code highlighting are the terminal-first writing items.
-- W4a2 waiting for Jon's session is right. Parity work built before the session risks rework if the session changes the highlight or announcement design.
+- W4a2 waiting for the owner's session is right. Parity work built before the session risks rework if the session changes the highlight or announcement design.
 - Removing branch pruning from W4f is right, and matches the wiki's rules after the deletion incident.
 
 ### What I would change
 
-**Trim W4a1 so the session can happen early.** W4a1 is the largest brief in Group 1, and edit mode in `DocumentView` is the riskiest piece of GUI work in the wave: no Rust app has good screen-reader editing of multi-line text yet (`docs/research/wave4.md`). Jon's session needs only three small things from W4a1 first: the direct UI Automation notification option, the clipped-options mitigation in lists and the settings form, and the memory growth attributed. Put those first in W4a1's brief, in small commits, and ask the orchestrator to build the GUI for Jon's session as soon as they merge, while W4a1 goes on to reading aids and edit mode. That way W4a2 can start in Group 2 with the session's findings in hand, instead of waiting on all of W4a1.
+**Trim W4a1 so the session can happen early.** W4a1 is the largest brief in Group 1, and edit mode in `DocumentView` is the riskiest piece of GUI work in the wave: no Rust app has good screen-reader editing of multi-line text yet (`docs/research/wave4.md`). The owner's session needs only three small things from W4a1 first: the direct UI Automation notification option, the clipped-options mitigation in lists and the settings form, and the memory growth attributed. Put those first in W4a1's brief, in small commits, and ask the orchestrator to build the GUI for the owner's session as soon as they merge, while W4a1 goes on to reading aids and edit mode. That way W4a2 can start in Group 2 with the session's findings in hand, instead of waiting on all of W4a1.
 
 **Start W4g after W4h merges, not beside it.** Both agents edit the app's message building, the keymap, `docs/keyboard.md`, the site data, and `CHANGELOG.md`. W4h is a day or two of work. Let it finish, merge it, then launch W4g from the merged main. If the orchestrator wants five agents busy from the first hour, W4c1 (MathCAT) is independent of every other Group 1 agent and can take the fifth slot from the start.
 
@@ -34,11 +34,11 @@ Jon's goal, as the brief states it: terminal-first Markdown reading and authorin
 
 **Clarify who owns startup announcements.** UX-1 suggested that "queue announcements until the engine is ready" go to W4b, since W4b owns startup. The refined plan gives it to W4h. Keep it in W4h, and say so in W4b's brief, so W4b does not also touch `launch`.
 
-**Keep W4c1 at P2, and let it slip if MathCAT is not ready.** MathCAT's stable release is still 0.7.5. 0.7.6 has three release candidates (the last on August 23, 2026) and no final; 0.7.7-alpha.1 came on September 23, 2026. An open issue (#827, updated September 26, 2026) reports a panic in `GetNavigationBraille` in no-unsafe builds, and another (#817) a test failure on Windows. Math matters for students, but it is not on the path to Jon's goal. If 0.7.6 is not final when Group 1 starts, W4c1 should build on 0.7.6-rc.3 behind the feature, keep speech only, and leave braille for Wave 5.
+**Keep W4c1 at P2, and let it slip if MathCAT is not ready.** MathCAT's stable release is still 0.7.5. 0.7.6 has three release candidates (the last on August 23, 2026) and no final; 0.7.7-alpha.1 came on September 23, 2026. An open issue (#827, updated September 26, 2026) reports a panic in `GetNavigationBraille` in no-unsafe builds, and another (#817) a test failure on Windows. Math matters for students, but it is not on the path to the owner's goal. If 0.7.6 is not final when Group 1 starts, W4c1 should build on 0.7.6-rc.3 behind the feature, keep speech only, and leave braille for Wave 5.
 
 **Consider dropping or shrinking W4e.** Offline translation and summaries are the furthest from the goal, they download about 110 MB per language pair, and they add a third tokenizer. If Group 2 needs the disk or the attention, W4e is the one to cut. If it runs, the no-model LexRank summary is the useful half; translation can wait.
 
-**Do not split further.** Two agents in one crate cost more in merges than they gain. The W4a1 and W4a2 split (view against dialogs) is the only one that pays, because Jon's session sits between them.
+**Do not split further.** Two agents in one crate cost more in merges than they gain. The W4a1 and W4a2 split (view against dialogs) is the only one that pays, because the owner's session sits between them.
 
 ### Proposed order, for comparison
 
@@ -64,7 +64,7 @@ Each is under half a day for one agent. Sizes: tiny is under an hour, small is u
 
 8. **The six new fuzz targets in the nightly workflow** (tiny; the orchestrator, before Group 1, or W4f). `fuzz/Cargo.toml` has fifteen targets; `.github/workflows/nightly.yml` runs nine. Missing: `daisy`, `pptx`, `sheet`, `archive`, `image`, and `web`. Add them to the matrix and add their corpus lines (`fixtures/` has DAISY, PPTX, and sheet files from W3d). Only the orchestrator or W4f may edit `.github/`, so do it before launch rather than waiting for Group 2.
 9. **`py -3` in the docs** (tiny; W4h). `python` on this machine's PATH is the Windows Store stub since the profile was wiped, and `py -3` is what works. `CONTRIBUTING.md`, `docs/dev/testing.md`, `docs/dev/building.md`, and the tasks preamble's date command say `python` or `python3`. Add one line: on Windows, use `py -3`. Also update the date command in the shared preamble, since every agent copies it.
-10. **AccessKit leaves out clipped options** (small; W4a1, before the session, as a listed exception to the "W4a2 owns dialogs" rule). The UI Automation report sees 13 of 15 settings sections, and options scrolled out of a list are not in the tree. Jon's checklist item 9 tests this. The mitigation to try first: do not mark the list box and the settings form as clipping their children, so every option node stays in the tree with its scrolled bounds. If AccessKit still drops them, record it for the upstream issue. Half a day, and it answers a checklist question before Jon spends time on it.
+10. **AccessKit leaves out clipped options** (small; W4a1, before the session, as a listed exception to the "W4a2 owns dialogs" rule). The UI Automation report sees 13 of 15 settings sections, and options scrolled out of a list are not in the tree. The owner's checklist item 9 tests this. The mitigation to try first: do not mark the list box and the settings form as clipping their children, so every option node stays in the tree with its scrolled bounds. If AccessKit still drops them, record it for the upstream issue. Half a day, and it answers a checklist question before the owner spends time on it.
 11. **`cargo xtask notices` after W3d** (tiny; the orchestrator). W3d's status line says cargo-about was not installed there and the notices were merged by hand. Run `cargo xtask notices --check` on main once, since the toolchain was reinstalled on D:.
 12. **GUI memory: a first measurement with engines off** (small; W4a1). Before hunting, run the GUI with `--log` and the `publish` and voice features off, and with each new engine crate excluded in turn. If the working set drops back near 98 MB, the growth is startup loading that should be lazy, and that is a small fix.
 
@@ -144,14 +144,14 @@ Checked against crates.io and GitHub on Sunday, September 27, 2026, with the neu
 
 ### Screen-reader checks
 
-- Only Jon hears anything. Every agent that changes an announcement should end its report with a checklist of at most five things for Jon to try, in the order of his checklist under W3b.
-- Star's most expensive regression was a silent default engine that a fully green suite let through, because the GUI tests stubbed the speech manager (wiki, the qtspeech lesson). W4h's "queue announcements until the engine is ready" and W4b's startup changes both sit exactly there. Both briefs should say: after the change, run `cargo xtask listen` and put the result in the report, and Jon confirms by ear before the item is called done.
+- Only the owner hears anything. Every agent that changes an announcement should end its report with a checklist of at most five things for the owner to try, in the order of his checklist under W3b.
+- Star's most expensive regression was a silent default engine that a fully green suite let through, because the GUI tests stubbed the speech manager (wiki, the qtspeech lesson). W4h's "queue announcements until the engine is ready" and W4b's startup changes both sit exactly there. Both briefs should say: after the change, run `cargo xtask listen` and put the result in the report, and the owner confirms by ear before the item is called done.
 - The GUI session decides two designs: the highlight as selection or as a background attribute, and live regions or a direct UIA notification. Nothing that depends on either should be built before the session. Reading aids and edit mode in W4a1 depend on the highlight design. That is the reason for trimming W4a1 (section 1).
 
 ### Lessons from Star that bear on planned items
 
 - **RSVP must not talk.** Star's RSVP overlay carried no accessibility metadata, and its audit warned that a word change every 200 ms reaching a screen reader would make it unusable (wiki, the 502.3 audit, fix 2). W4a1's plan, a hidden flashing node and a quiet labelled status node with `Live::Off`, is the right answer. Add a test that the RSVP word node never gains a live setting and never takes focus.
-- **A window swap must not go silent.** Star's pagination replaced the whole accessible text object mid-read with no event. `DocWindow` slides and recentres in the same way. W4a2's parity work should check, with the UI Automation report, that a slide during reading keeps the caret in a valid range and that NVDA does not lose its place. That is item 2 on Jon's checklist; make it item 1 for the second session.
+- **A window swap must not go silent.** Star's pagination replaced the whole accessible text object mid-read with no event. `DocWindow` slides and recentres in the same way. W4a2's parity work should check, with the UI Automation report, that a slide during reading keeps the caret in a valid range and that NVDA does not lose its place. That is item 2 on the owner's checklist; make it item 1 for the second session.
 - **The highlight must be the thing, not a picture of it.** Star painted the karaoke highlight with an extra selection, invisible to assistive technology. textweaver's GUI exposes it as a background attribute and moves the caret. Keep both, whichever the session picks for the visual.
 - **Character keys need an off switch.** Star's TUI had 44 single-character keys with no way to turn them off. textweaver has F9 and the WCAG 2.1.4 test. W4h's new "say status" key and W4g's new keys go through that test, and the JAWS and NVDA conventions, before they are chosen.
 - **Automatic choice must fall back and say so.** W4d's "each language gets a default voice for that language" is exactly the kind of automatic engine choice that went silent in Star. The rule: if the voice for the language is missing, keep the current voice and say so, never go quiet.
@@ -163,9 +163,9 @@ Checked against crates.io and GitHub on Sunday, September 27, 2026, with the neu
 
 ### Lessons from the deletion incident that bear on the wave
 
-- The refined plan already has the rules: only Jon overrides; Bash deletes need approval; PowerShell `Remove-Item -LiteralPath` with a plain path; work only in your worktree.
+- The refined plan already has the rules: only the owner overrides; Bash deletes need approval; PowerShell `Remove-Item -LiteralPath` with a plain path; work only in your worktree.
 - Two more from the wiki's knowledge base are worth adding to the preamble: never chain a delete onto another command, and never hand-type an escaped file name. The incident's command did both.
-- "Don't make Jon approve every step" is also a rule. The guard covers the dangerous cases; the briefs should not add approval prompts for ordinary work.
+- "Don't make the owner approve every step" is also a rule. The guard covers the dangerous cases; the briefs should not add approval prompts for ordinary work.
 
 ## 5. Concrete brief changes
 
@@ -176,10 +176,10 @@ Exact wording to add or change. Additions are marked "add"; replacements quote t
 - Under "Dates", replace the command with: `py -3 -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"` on Windows, `python3 -c ...` elsewhere. Add: "`python` on this machine is the Windows Store stub; use `py -3`."
 - Under "Disk and memory", add: "The Docker all-features check is run one agent at a time. Take the lock file `D:\textweaver\.cache\docker.lock` before you start it and remove it after; if the file exists, wait." Or: "The orchestrator runs the Docker check at integration; agents run only the native checks." Choose one.
 - Under "Disk and memory", add: "Never delete inside the Docker target volume. The orchestrator flushes merged agents' folders after listing them."
-- Under "Deleting", add: "Never chain a delete onto another command. Never hand-type an escaped file name; use `git rm` or `git clean` and show Jon first."
+- Under "Deleting", add: "Never chain a delete onto another command. Never hand-type an escaped file name; use `git rm` or `git clean` and show the owner first."
 - Under "Merging with other agents", add: "Your ADR number is in your brief. `CHANGELOG.md` entries go under a heading with your agent's name."
 - Add: "The next free ADR number is 0028. W4a1 takes 0028, W4c1 0029, W4d 0030, and W4e 0031."
-- Add: "Every report ends with a checklist of at most five things for Jon to try with NVDA and JAWS, or the line 'nothing to hear'."
+- Add: "Every report ends with a checklist of at most five things for the owner to try with NVDA and JAWS, or the line 'nothing to hear'."
 
 ### W4h: terminal polish
 
@@ -191,11 +191,11 @@ Exact wording to add or change. Additions are marked "add"; replacements quote t
 
 ### W4a1: GUI edit mode and reading aids
 
-- Replace the opening with an order: "1. The direct `UiaRaiseNotificationEvent` option. 2. The clipped-options mitigation in `ChoiceList` and `SettingsGrid` (a listed exception: you may edit these two dialog widgets). 3. The GUI's memory growth, measured first with engines and `publish` off. Merge these three and tell the orchestrator, so Jon's session can be built. 4. Then the reading aids. 5. Then edit mode."
+- Replace the opening with an order: "1. The direct `UiaRaiseNotificationEvent` option. 2. The clipped-options mitigation in `ChoiceList` and `SettingsGrid` (a listed exception: you may edit these two dialog widgets). 3. The GUI's memory growth, measured first with engines and `publish` off. Merge these three and tell the orchestrator, so the owner's session can be built. 4. Then the reading aids. 5. Then edit mode."
 - Add: "Do not upgrade the vendored Parley. Edit mode is built on 0.8.0 as vendored."
 - Add: "The RSVP word node never has a live setting and never takes focus; test it."
 - Add: "Your ADR is 0028."
-- Add: "Parity with the terminal reader and the wxDragon removal are W4a2's, after Jon's session."
+- Add: "Parity with the terminal reader and the wxDragon removal are W4a2's, after the owner's session."
 
 ### W4b: speed and memory
 
@@ -223,7 +223,7 @@ Exact wording to add or change. Additions are marked "add"; replacements quote t
 
 ### W4a2: GUI parity and wx removal
 
-- Add: "First item after the session: a window slide during reading keeps the screen reader's place. Check it with the UI Automation report and put it first on Jon's second checklist."
+- Add: "First item after the session: a window slide during reading keeps the screen reader's place. Check it with the UI Automation report and put it first on the owner's second checklist."
 - Add: "Parity means Star's features, not Star's bugs. The Phase 0 inventory lists the bugs."
 - Add: "A test that the first nine themes keep their cycle order."
 
@@ -249,7 +249,7 @@ Exact wording to add or change. Additions are marked "add"; replacements quote t
 ### W4e: offline intelligence
 
 - Add: "Pin `tokenizers` to 0.23; 1.0 is at release candidate."
-- Add: "The no-model LexRank summary first. Translation only if Group 2 has the disk, and only models Jon has approved."
+- Add: "The no-model LexRank summary first. Translation only if Group 2 has the disk, and only models the owner has approved."
 - Add: "Your ADR is 0031."
 
 ## What I could not verify

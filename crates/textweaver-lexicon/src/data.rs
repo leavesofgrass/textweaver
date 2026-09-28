@@ -325,6 +325,11 @@ impl Lexicon {
             range: ranges[1].clone(),
         })
         .map_err(|_| LexiconError::Corrupt("headword map"))?;
+        // The map's own checksum: fst trusts its node addresses, and a
+        // damaged map made it panic on an overflow (the lexicon fuzz target).
+        map.as_fst()
+            .verify()
+            .map_err(|_| LexiconError::Corrupt("headword map checksum"))?;
         let words = StoreReader::new(&data[ranges[2].clone()])?;
         let synsets = StoreReader::new(&data[ranges[3].clone()])?;
         Ok(Lexicon {
@@ -595,6 +600,26 @@ pub(crate) mod tests {
         );
         let bytes = build(&wn, &cmu, vec![SourceInfo::default()]).unwrap();
         Lexicon::from_bytes(bytes).unwrap()
+    }
+
+    #[test]
+    fn a_damaged_headword_map_is_refused() {
+        // The lexicon fuzz target found a damaged map that made fst panic
+        // on an overflow. Every byte of the map, flipped, with the file's
+        // own checksum made right again, is refused at open.
+        let good = tiny().data.to_vec();
+        let at = |i: usize| u64::from_le_bytes(good[i..i + 8].try_into().unwrap()) as usize;
+        let (meta, map) = ((at(16), at(24)), (at(32), at(40)));
+        for i in map.0..map.0 + map.1 {
+            let mut bytes = good.clone();
+            bytes[i] ^= 0xff;
+            let sum = checksum(&[
+                &bytes[meta.0..meta.0 + meta.1],
+                &bytes[map.0..map.0 + map.1],
+            ]);
+            bytes[12..16].copy_from_slice(&sum.to_le_bytes());
+            assert!(Lexicon::from_bytes(bytes).is_err(), "byte {i} flipped");
+        }
     }
 
     #[test]

@@ -1,7 +1,7 @@
 //! Every user command, with its help text and default keys.
 //!
 //! The browse layer mirrors the quick navigation keys of NVDA's and
-//! JAWS's browse mode (Jon's decision, 2026-09-26): `h` headings, `1` to
+//! JAWS's browse mode (the owner's decision, 2026-09-26): `h` headings, `1` to
 //! `6` heading levels, `l` lists, `i` list items, `t` tables, `k` links,
 //! `q` block quotes, `s` separators, `g` graphics, and `d` sections or
 //! chapters, each with Shift for the previous one; `Backspace` goes back.
@@ -396,6 +396,18 @@ actions! {
     SpellingSuggestions = "spelling_suggestions", Search,
         "List suggestions for the misspelled word at the cursor, or add it to your word list",
         gui ["g:Alt+J"], term ["g:Alt+J"], shared [];
+    NextGrammarProblem = "next_grammar_problem", Search,
+        "Move to the next grammar problem, and say it and its fix",
+        gui ["g:Ctrl+F7"], term ["g:Ctrl+F7"], shared [];
+    PreviousGrammarProblem = "previous_grammar_problem", Search,
+        "Move to the previous grammar problem, and say it and its fix",
+        gui ["g:Ctrl+Shift+F7"], term ["g:Ctrl+Shift+F7"], shared [];
+    NextLintProblem = "next_lint_problem", Search,
+        "In edit mode, move to the next Markdown lint problem, and say it",
+        gui ["g:Ctrl+F8"], term ["g:Ctrl+F8"], shared [];
+    PreviousLintProblem = "previous_lint_problem", Search,
+        "In edit mode, move to the previous Markdown lint problem, and say it",
+        gui ["g:Ctrl+Shift+F8"], term ["g:Ctrl+Shift+F8"], shared [];
 
     // Bookmarks
     AddBookmark = "add_bookmark", Bookmarks, "Add a bookmark at the cursor",

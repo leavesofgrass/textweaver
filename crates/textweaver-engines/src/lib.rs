@@ -37,6 +37,69 @@ use textweaver_speech::{
 };
 use textweaver_store::{EciDictionaries, Settings, TableMode as StoreTableMode};
 
+/// The language part of a tag, lowercase: `es` for `es-MX` or `es_ES`.
+fn language_of(tag: &str) -> String {
+    tag.trim()
+        .split(['-', '_', '.'])
+        .next()
+        .unwrap_or("")
+        .to_ascii_lowercase()
+}
+
+/// True when `voice` speaks `lang` (a tag such as `es` or `pt-BR`,
+/// compared by language, not region).
+pub fn voice_speaks(voice: &textweaver_speech::Voice, lang: &str) -> bool {
+    let want = language_of(lang);
+    !want.is_empty() && voice.languages.iter().any(|l| language_of(l) == want)
+}
+
+/// The voice to use for the interface language `lang` (Wave 4, W4d), from
+/// `voices` (one engine's list):
+///
+/// 1. the voice `[speech] voices_by_language` names for the tag or its
+///    language, when the engine has it;
+/// 2. the current voice, when it already speaks the language;
+/// 3. the first voice for the language whose name contains
+///    `prefer_voice` (`eloquence` by default: the owner's preference);
+/// 4. the first voice tagged Eloquence for it, then the first voice for it.
+///
+/// `None` when the engine has no voice for the language: the caller keeps
+/// the current voice and says so, and never goes silent.
+pub fn voice_for_language<'a>(
+    voices: &'a [textweaver_speech::Voice],
+    lang: &str,
+    settings: &Settings,
+    current: Option<&str>,
+) -> Option<&'a textweaver_speech::Voice> {
+    let by_language = &settings.speech.voices_by_language;
+    let named = by_language
+        .get(lang)
+        .or_else(|| by_language.get(&language_of(lang)));
+    if let Some(v) = named.and_then(|id| voices.iter().find(|v| &v.id == id)) {
+        return Some(v);
+    }
+    let speaking: Vec<&textweaver_speech::Voice> =
+        voices.iter().filter(|v| voice_speaks(v, lang)).collect();
+    if let Some(v) = current.and_then(|id| speaking.iter().find(|v| v.id == id)) {
+        return Some(v);
+    }
+    let prefer = settings
+        .speech
+        .prefer_voice
+        .as_deref()
+        .map(str::to_lowercase)
+        .filter(|p| !p.is_empty());
+    prefer
+        .and_then(|p| {
+            speaking
+                .iter()
+                .find(|v| v.name.to_lowercase().contains(&p) || v.id.to_lowercase().contains(&p))
+        })
+        .or_else(|| speaking.iter().find(|v| v.has_tag("Eloquence")))
+        .or_else(|| speaking.first())
+        .copied()
+}
+
 /// Where Code Factory's "Eloquence for Windows" installs its engine. It is
 /// used only when `[speech.eci] code_factory = true` (off by default: an
 /// installed copy is not necessarily licensed for other programs,
@@ -211,6 +274,17 @@ pub fn apple_preference(settings: &Settings) -> Option<&'static str> {
     settings.speech.apple.backend.backend_id()
 }
 
+/// The speech crate's math engine for `[reading] math_engine`.
+fn math_engine(engine: textweaver_store::MathEngine) -> textweaver_speech::normalize::MathEngine {
+    use textweaver_speech::normalize::MathEngine as Speech;
+    use textweaver_store::MathEngine as Store;
+    match engine {
+        Store::Builtin => Speech::Builtin,
+        Store::MathCat => Speech::MathCatClearSpeak,
+        Store::MathCatSimpleSpeak => Speech::MathCatSimpleSpeak,
+    }
+}
+
 /// The speech service configuration the settings describe.
 pub fn service_config(settings: &Settings) -> ServiceConfig {
     let sp = &settings.speech;
@@ -245,6 +319,7 @@ pub fn service_config(settings: &Settings) -> ServiceConfig {
             math: norm.math,
             math_verbosity: norm.math_verbosity,
             asciimath_delimiter: norm.asciimath_delimiter,
+            math_engine: math_engine(settings.reading.math_engine),
             community_lexicon: CommunityLexiconConfig {
                 enabled: lexicon.enabled,
                 dir: lexicon.dir.clone(),
@@ -353,6 +428,58 @@ mod tests {
         );
     }
 
+    fn voice(id: &str, name: &str, langs: &[&str], tags: &[&str]) -> textweaver_speech::Voice {
+        textweaver_speech::Voice {
+            id: id.into(),
+            name: name.into(),
+            languages: langs.iter().map(|s| (*s).to_owned()).collect(),
+            gender: None,
+            tags: tags.iter().map(|s| (*s).to_owned()).collect(),
+        }
+    }
+
+    /// A voice for the interface language: the one named in the
+    /// settings, else the current one when it speaks the language, else
+    /// the preferred (Eloquence) one, else the first; none when the engine
+    /// has no voice for it, so the caller keeps the current voice.
+    #[test]
+    fn a_voice_for_each_interface_language() {
+        let voices = vec![
+            voice("en", "Reed (Eloquence)", &["en-US"], &["Eloquence"]),
+            voice("es1", "Mónica", &["es-ES"], &[]),
+            voice(
+                "es2",
+                "Reed (Spanish, Eloquence)",
+                &["es-MX"],
+                &["Eloquence"],
+            ),
+            voice("fr", "Hortense", &["fr-FR"], &[]),
+        ];
+        let mut s = Settings::default();
+        let pick = |s: &Settings, lang: &str, current: Option<&str>| {
+            voice_for_language(&voices, lang, s, current).map(|v| v.id.clone())
+        };
+        // Eloquence first (prefer_voice), by language, not region.
+        assert_eq!(pick(&s, "es", Some("en")).as_deref(), Some("es2"));
+        assert_eq!(pick(&s, "es-AR", None).as_deref(), Some("es2"));
+        // The current voice stays when it speaks the language.
+        assert_eq!(pick(&s, "es", Some("es1")).as_deref(), Some("es1"));
+        assert_eq!(pick(&s, "fr", Some("en")).as_deref(), Some("fr"));
+        // No German voice: none, and the caller keeps the current one.
+        assert_eq!(pick(&s, "de", Some("en")), None);
+        // Named in the settings.
+        s.speech
+            .voices_by_language
+            .insert("es".into(), "es1".into());
+        assert_eq!(pick(&s, "es-MX", Some("en")).as_deref(), Some("es1"));
+        // A named voice the engine does not have falls back to the rules.
+        s.speech
+            .voices_by_language
+            .insert("fr".into(), "gone".into());
+        assert_eq!(pick(&s, "fr", None).as_deref(), Some("fr"));
+        assert!(voice_speaks(&voices[1], "es") && !voice_speaks(&voices[1], "e"));
+    }
+
     #[test]
     fn dectalk_is_registered_below_sapi_and_eloquence() {
         let list = speech_registry().list();
@@ -380,5 +507,11 @@ mod tests {
         let c = service_config(&s);
         assert_eq!(c.normalize.math_verbosity, textweaver_core::Verbosity::Low);
         assert_eq!(c.normalize.asciimath_delimiter, Some('`'));
+        assert_eq!(c.normalize.math_engine, speech_defaults.math_engine);
+        s.reading.math_engine = textweaver_store::MathEngine::MathCatSimpleSpeak;
+        assert_eq!(
+            service_config(&s).normalize.math_engine,
+            textweaver_speech::normalize::MathEngine::MathCatSimpleSpeak
+        );
     }
 }

@@ -18,7 +18,7 @@ use textweaver_enginehost::protocol::{
     self, EndStatus, FrameReader, FrameWriter, MAX_FRAME, ProtocolError, ReadyHeader, encode_audio,
     encode_end, tag,
 };
-use textweaver_enginehost::serve::{AtEnd, Incoming, RequestReader, log_line};
+use textweaver_enginehost::serve::{AtEnd, Incoming, RequestReader, exit_with_parent, log_line};
 use textweaver_enginehost::{Ended, HostMsg, HostProcess, Message};
 
 /// How long any test waits for something that should happen at once.
@@ -101,6 +101,8 @@ impl Message for Reply {
 // ---------------------------------------------------------------- host side
 
 fn run_host(mode: &str) -> ExitCode {
+    // What every host does first; some modes below never start a reader.
+    exit_with_parent();
     let mut out = std::io::stdout().lock();
     let ready = Reply::Ready(ReadyHeader {
         protocol: if mode == "old" {
@@ -302,7 +304,8 @@ fn end_of_input_ends_a_stuck_host() {
 }
 
 fn hosts_die_with_their_parent() {
-    // Before: killing textweaver left its hosts running.
+    // Before: killing textweaver left its hosts running (on macOS, until
+    // hosts watched their parent, whenever the engine was stuck).
     let mut parent = host("parent");
     ready(&mut parent);
     let pid = match next(&mut parent) {
@@ -326,6 +329,16 @@ fn process_alive(pid: u32) -> bool {
             .output()
             .expect("tasklist runs");
         String::from_utf8_lossy(&out.stdout).contains(&format!("\"{pid}\""))
+    } else if !cfg!(target_os = "linux") {
+        // macOS has no /proc: ask ps for the state, which is empty when the
+        // process is gone and starts with Z for a zombie.
+        let out = Command::new("ps")
+            .args(["-o", "stat=", "-p", &pid.to_string()])
+            .output()
+            .expect("ps runs");
+        let state = String::from_utf8_lossy(&out.stdout);
+        let state = state.trim();
+        !state.is_empty() && !state.starts_with('Z')
     } else {
         match std::fs::read_to_string(format!("/proc/{pid}/stat")) {
             // The state follows the command name in parentheses.

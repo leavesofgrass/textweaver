@@ -3,6 +3,9 @@
 //! list continuation, table cells, links, and the structure spoken on caret
 //! moves come from the line itself. Pure functions, tested here.
 
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
+
 /// A list item's marker at the start of a line.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct ListMarker {
@@ -41,14 +44,14 @@ impl ListMarker {
     }
 
     /// How the item is said: "bullet", "3.", "task, done".
-    pub(crate) fn spoken(&self) -> String {
+    pub(crate) fn spoken(&self, c: &Catalog) -> String {
         let base = match (self.bullet, self.number) {
-            (_, Some(n)) => format!("item {n}"),
-            _ => "bullet".to_owned(),
+            (_, Some(n)) => c.fmt("mdline-item", &args!["n" => n]),
+            _ => c.tr("mdline-bullet"),
         };
         match self.task {
-            Some(true) => format!("{base}, task done"),
-            Some(false) => format!("{base}, task not done"),
+            Some(true) => c.fmt("mdline-task-done", &args!["item" => base]),
+            Some(false) => c.fmt("mdline-task-not-done", &args!["item" => base]),
             None => base,
         }
     }
@@ -221,23 +224,23 @@ pub(crate) fn link_at(line: &str, col: usize) -> Option<(String, String)> {
 /// The structure of a source line, as said before its text on a caret
 /// move in edit mode: "heading level 2", "bullet", "item 3", "row 2",
 /// "quote", "code fence". `None` for a plain line.
-pub(crate) fn structure_of(line: &str) -> Option<String> {
+pub(crate) fn structure_of(c: &Catalog, line: &str) -> Option<String> {
     let level = heading_level(line);
     if level > 0 {
-        return Some(format!("heading level {level}"));
+        return Some(c.fmt("mdline-heading-level", &args!["level" => level]));
     }
     if let Some(m) = list_marker(line) {
-        return Some(m.spoken());
+        return Some(m.spoken(c));
     }
     if is_table_row(line) {
-        return Some("table row".to_owned());
+        return Some(c.tr("mdline-table-row"));
     }
     let t = line.trim_start();
     if t.starts_with('>') {
-        return Some("quote".to_owned());
+        return Some(c.tr("mdline-quote"));
     }
     if t.starts_with("```") || t.starts_with("~~~") {
-        return Some("code fence".to_owned());
+        return Some(c.tr("mdline-code-fence"));
     }
     None
 }
@@ -247,19 +250,19 @@ pub(crate) fn structure_of(line: &str) -> Option<String> {
 /// line has text; `- ` as "bullet"; `1. ` as "numbered item"; `> ` as
 /// "quote"; `- [ ] ` as "task". `before` is the line up to the caret, after
 /// the typed character.
-pub(crate) fn markdown_echo(before: &str) -> Option<String> {
+pub(crate) fn markdown_echo(c: &Catalog, before: &str) -> Option<String> {
     let trimmed = before.trim_start_matches(' ');
     // A space just typed after a marker.
     if before.ends_with(' ') {
         let head = trimmed.trim_end();
         let level = head.chars().take_while(|&c| c == '#').count();
         if level == head.len() && (1..=6).contains(&level) {
-            return Some(format!("heading level {level}"));
+            return Some(c.fmt("mdline-heading-level", &args!["level" => level]));
         }
         match head {
-            "-" | "*" | "+" => return Some("bullet".to_owned()),
-            ">" => return Some("quote".to_owned()),
-            "- [ ]" | "* [ ]" | "+ [ ]" => return Some("task".to_owned()),
+            "-" | "*" | "+" => return Some(c.tr("mdline-bullet")),
+            ">" => return Some(c.tr("mdline-quote")),
+            "- [ ]" | "* [ ]" | "+ [ ]" => return Some(c.tr("mdline-task")),
             _ => {}
         }
         if let Some(n) = head.strip_suffix(['.', ')'])
@@ -267,7 +270,7 @@ pub(crate) fn markdown_echo(before: &str) -> Option<String> {
             && n.chars().all(|c| c.is_ascii_digit())
             && n.len() <= 9
         {
-            return Some(format!("numbered item {n}"));
+            return Some(c.fmt("mdline-numbered-item", &args!["n" => n]));
         }
     }
     None
@@ -284,7 +287,7 @@ mod tests {
         assert_eq!(m.content_start, 2);
         let m = list_marker("  3. eggs").unwrap();
         assert_eq!(m.next_prefix(), "  4. ");
-        assert_eq!(m.spoken(), "item 3");
+        assert_eq!(m.spoken(&Catalog::english()), "item 3");
         assert_eq!(list_marker("9) nine").unwrap().next_prefix(), "10) ");
         let t = list_marker("- [x] done").unwrap();
         assert_eq!(t.task, Some(true));
@@ -319,10 +322,19 @@ mod tests {
         let line = "|  | x \\| y | last";
         let cells: Vec<&str> = table_cells(line).into_iter().map(|r| &line[r]).collect();
         assert_eq!(cells, ["", "x \\| y", "last"]);
-        assert_eq!(structure_of("### Deep").as_deref(), Some("heading level 3"));
-        assert_eq!(structure_of("2. two").as_deref(), Some("item 2"));
-        assert_eq!(structure_of("> said").as_deref(), Some("quote"));
-        assert_eq!(structure_of("plain"), None);
+        assert_eq!(
+            structure_of(&Catalog::english(), "### Deep").as_deref(),
+            Some("heading level 3")
+        );
+        assert_eq!(
+            structure_of(&Catalog::english(), "2. two").as_deref(),
+            Some("item 2")
+        );
+        assert_eq!(
+            structure_of(&Catalog::english(), "> said").as_deref(),
+            Some("quote")
+        );
+        assert_eq!(structure_of(&Catalog::english(), "plain"), None);
     }
 
     #[test]
@@ -345,14 +357,32 @@ mod tests {
 
     #[test]
     fn markdown_is_echoed_as_structure() {
-        assert_eq!(markdown_echo("## ").as_deref(), Some("heading level 2"));
-        assert_eq!(markdown_echo("- ").as_deref(), Some("bullet"));
-        assert_eq!(markdown_echo("  * ").as_deref(), Some("bullet"));
-        assert_eq!(markdown_echo("12. ").as_deref(), Some("numbered item 12"));
-        assert_eq!(markdown_echo("> ").as_deref(), Some("quote"));
-        assert_eq!(markdown_echo("- [ ] ").as_deref(), Some("task"));
-        assert_eq!(markdown_echo("word "), None);
-        assert_eq!(markdown_echo("##"), None);
-        assert_eq!(markdown_echo("#hash "), None);
+        assert_eq!(
+            markdown_echo(&Catalog::english(), "## ").as_deref(),
+            Some("heading level 2")
+        );
+        assert_eq!(
+            markdown_echo(&Catalog::english(), "- ").as_deref(),
+            Some("bullet")
+        );
+        assert_eq!(
+            markdown_echo(&Catalog::english(), "  * ").as_deref(),
+            Some("bullet")
+        );
+        assert_eq!(
+            markdown_echo(&Catalog::english(), "12. ").as_deref(),
+            Some("numbered item 12")
+        );
+        assert_eq!(
+            markdown_echo(&Catalog::english(), "> ").as_deref(),
+            Some("quote")
+        );
+        assert_eq!(
+            markdown_echo(&Catalog::english(), "- [ ] ").as_deref(),
+            Some("task")
+        );
+        assert_eq!(markdown_echo(&Catalog::english(), "word "), None);
+        assert_eq!(markdown_echo(&Catalog::english(), "##"), None);
+        assert_eq!(markdown_echo(&Catalog::english(), "#hash "), None);
     }
 }

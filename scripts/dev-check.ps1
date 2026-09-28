@@ -12,6 +12,9 @@
     doc       cargo doc --workspace --exclude textweaver-gui --no-deps
               --features textweaver-speech/omnivox, with RUSTDOCFLAGS=-D warnings
     keyboard  cargo xtask keyboard --check
+    pseudo    cargo test -p textweaver-app --test pseudo_locale (every
+              message comes from the catalog: bracketed in en-XA, direction
+              marks closed in ar-XB)
     hosts32   cargo build -p textweaver-eci -p textweaver-sapi --bins
               --target i686-pc-windows-msvc (the 32-bit engine hosts)
     scripts   PSScriptAnalyzer on scripts\*.ps1, when the module is installed
@@ -86,7 +89,8 @@ if ($Help) {
     Write-Line 'Usage: scripts\dev-check.ps1 [-Only STEP,...] [-FailFast] [-Docker] [-DryRun] [-Help]'
     Write-Line
     Write-Line 'Runs the checks CI runs: fmt, clippy, test, doc (rustdoc with -D warnings),'
-    Write-Line 'keyboard (cargo xtask keyboard --check), hosts32 (the 32-bit engine hosts),'
+    Write-Line 'keyboard (cargo xtask keyboard --check), pseudo (the pseudo-locale check),'
+    Write-Line 'hosts32 (the 32-bit engine hosts),'
     Write-Line 'links (tools\check_links.py: links and anchors in the docs resolve), site'
     Write-Line '(tools\gen_site_data.py --check: the docs\site data is current), site-a11y'
     Write-Line '(tools\check_site_a11y.py: static accessibility checks of docs\site), and'
@@ -183,6 +187,7 @@ Invoke-CheckStep 'clippy' 'lints, warnings are errors' (@('cargo', 'clippy', '--
 Invoke-CheckStep 'test' 'tests' (@('cargo', 'test', '--workspace', '--exclude', 'textweaver-gui') + $features)
 Invoke-CheckStep 'doc' 'API documentation, warnings are errors' (@('cargo', 'doc', '--workspace', '--exclude', 'textweaver-gui', '--no-deps') + $features) @{ RUSTDOCFLAGS = '-D warnings' }
 Invoke-CheckStep 'keyboard' 'docs/keyboard.md is current' @('cargo', 'xtask', 'keyboard', '--check')
+Invoke-CheckStep 'pseudo' 'the interface in the pseudo-locales en-XA and ar-XB' @('cargo', 'test', '-p', 'textweaver-app', '--test', 'pseudo_locale')
 $python = $null
 foreach ($candidate in @('python', 'python3')) {
     if (Get-Command $candidate -ErrorAction SilentlyContinue) { $python = $candidate; break }

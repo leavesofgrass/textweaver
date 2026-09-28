@@ -14,14 +14,28 @@ name = "textweaver"
 path = "src/main.rs"
 
 [features]
-default = ["publish"]
+default = ["publish", "lint", "clipboard", "highlight"]
 # In-reader export, preview, and citations (textweaver-app's `publish`).
 # `--no-default-features` builds the lean reader without them.
 publish = ["textweaver-app/publish"]
+# Markdown lint in edit mode (textweaver-app's `lint`).
+lint = ["textweaver-app/lint"]
+# The system clipboard (arboard) where the terminal cannot take OSC 52:
+# the old Windows console, macOS Terminal, VTE terminals (ADR-0032).
+clipboard = ["dep:arboard"]
+# Code blocks highlighted with syntect and bat's syntaxes (two-face);
+# colors from the theme's roles, never color alone (ADR-0032).
+highlight = ["dep:syntect", "dep:two-face"]
+# Grammar checking with harper-core (textweaver-app's `grammar`). Off by
+# default (the owner's decision): it adds about 10 MB and the burn
+# framework. Build with `--features grammar` to try it.
+grammar = ["textweaver-app/grammar"]
 # Speech engines, passed through to textweaver-speech.
 espeak = ["textweaver-app/espeak", "textweaver-engines/espeak"]
 omnivox = ["textweaver-app/omnivox", "textweaver-engines/omnivox"]
 speechd = ["textweaver-app/speechd", "textweaver-engines/speechd"]
+# MathCAT math speech (ADR-0029).
+mathcat = ["textweaver-app/mathcat", "textweaver-engines/mathcat"]
 
 [dependencies]
 textweaver-app.workspace = true
@@ -33,6 +47,15 @@ anyhow.workspace = true
 clap.workspace = true
 ctrlc.workspace = true
 log.workspace = true
+unicode-bidi.workspace = true
+
+arboard = { workspace = true, optional = true }
+syntect = { workspace = true, optional = true }
+two-face = { workspace = true, optional = true }
+
+# Wayland as well as X11 for the system clipboard.
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+arboard = { workspace = true, optional = true, features = ["wayland-data-control"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { workspace = true, features = ["Win32_Foundation", "Win32_System_Console", "Win32_System_Threading"] }

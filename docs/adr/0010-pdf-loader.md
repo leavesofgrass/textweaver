@@ -8,7 +8,7 @@
 
 ## Context
 
-Jon reads most course material as PDF, and wants to read PDFs as Markdown with text-to-speech. So PDF support must be on by default in `tw` and `textweaver` on Windows, macOS, and Linux, and the loader must recover Markdown-quality structure (headings, paragraphs, lists, tables, reading order in columns, no running headers or page numbers, page navigation), not just a stream of text. Star's column-aware reconstruction (`star/documents/pdf.py`, on pdfminer.six's layout boxes; `docs/history/star-parity.md`) is the quality bar.
+The owner reads most course material as PDF, and wants to read PDFs as Markdown with text-to-speech. So PDF support must be on by default in `tw` and `textweaver` on Windows, macOS, and Linux, and the loader must recover Markdown-quality structure (headings, paragraphs, lists, tables, reading order in columns, no running headers or page numbers, page navigation), not just a stream of text. Star's column-aware reconstruction (`star/documents/pdf.py`, on pdfminer.six's layout boxes; `docs/history/star-parity.md`) is the quality bar.
 
 The workspace table offered three crates: `lopdf` (a PDF object model and content-stream parser), `pdf-extract` (text extraction on lopdf), and `pdfium-render` (bindings to Google's PDFium, loaded as a shared library at run time).
 
@@ -30,7 +30,7 @@ Fixtures (all generated here, none copyrighted): `fixtures/a/single.pdf` (one co
 | Peak memory, `tw info` on 300 pages | about 20 MB working set (whole process) | not measured | not measured |
 | Dependencies | lopdf 0.45 (already in the table) | pins lopdf 0.42 (a second lopdf), `euclid`, `adobe-cmap-parser`, `cff-parser`, `type1-encoding-parser`, `postscript` | `pdfium-render`, plus the library |
 
-pdfium-render could not be measured: no PDFium library exists on this machine, and downloading one needs Jon's permission. Its text and glyph boxes are the best of the three, but it cannot be a default that "just works": the library must be found or shipped for every platform.
+pdfium-render could not be measured: no PDFium library exists on this machine, and downloading one needs the owner's permission. Its text and glyph boxes are the best of the three, but it cannot be a default that "just works": the library must be found or shipped for every platform.
 
 ## Decision
 

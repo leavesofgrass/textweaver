@@ -15,7 +15,11 @@
 //!   2). Only peak heap and allocation counts are gated: they barely vary
 //!   from run to run, while times depend on the machine and its load, so
 //!   times are reported for information only. Numbers too small to matter
-//!   (under 1 MB of peak heap, under 5,000 allocations) are not gated.
+//!   (under 1 MB of peak heap, under 5,000 allocations) are not gated, and
+//!   neither is growth too small to matter (less than 1 MB, or fewer than
+//!   5,000 allocations, more than the baseline), however large its ratio.
+//!   Allocation counts are the measuring thread's own; peak heap is the
+//!   whole process's.
 //! - `--no-startup`: skip the startup timings.
 //!
 //! Startup timings (also `cargo xtask startup` on its own): the release
@@ -273,8 +277,9 @@ pub fn startup() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Numbers below these are not gated: too small to matter, and relatively
-/// noisy.
+/// Numbers below these, and growth below these, are not gated: too small
+/// to matter, and relatively noisy. A fixed cost of a few megabytes added
+/// to every document would otherwise fail every tiny one.
 const PEAK_FLOOR_MB: f64 = 1.0;
 const ALLOC_FLOOR: f64 = 5_000.0;
 
@@ -339,7 +344,7 @@ pub(crate) fn compare(current: &Value, baseline: &Value, max_ratio: f64) -> Comp
                     if worst.as_ref().is_none_or(|(r, _)| ratio > *r) {
                         worst = Some((ratio, key.clone()));
                     }
-                    if ratio > max_ratio {
+                    if ratio > max_ratio && now - then >= floor {
                         c.failures.push(format!(
                             "{doc}: {key} grew from {then:.1} to {now:.1}, {ratio:.2} times the baseline (the limit is {max_ratio})."
                         ));
@@ -632,9 +637,14 @@ pub use inner::run_inner;
 #[cfg(feature = "bench")]
 #[allow(unsafe_code)]
 pub mod alloc {
-    //! A counting global allocator: current and peak heap bytes.
+    //! A counting global allocator: current and peak heap bytes, for the
+    //! whole process, and allocation calls, for the calling thread only.
+    //! Threads left over from earlier work (a previous document's readers
+    //! and parsers) would otherwise add their allocations to whatever is
+    //! being measured, so the counts drifted from run to run.
 
     use std::alloc::{GlobalAlloc, Layout, System};
+    use std::cell::Cell;
     use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
 
     /// Wraps the system allocator and counts live bytes.
@@ -642,10 +652,23 @@ pub mod alloc {
 
     static CURRENT: AtomicUsize = AtomicUsize::new(0);
     static PEAK: AtomicUsize = AtomicUsize::new(0);
-    /// Allocation calls (alloc, alloc_zeroed, realloc) since the start.
-    static ALLOCS: AtomicUsize = AtomicUsize::new(0);
-    /// [`ALLOCS`] at the last [`reset_peak`].
-    static ALLOCS_AT_RESET: AtomicUsize = AtomicUsize::new(0);
+    thread_local! {
+        /// This thread's allocation calls (alloc, alloc_zeroed, realloc)
+        /// since the start. A const `Cell` never allocates, so it is safe
+        /// to touch from inside the allocator.
+        static ALLOCS: Cell<usize> = const { Cell::new(0) };
+        /// [`ALLOCS`] at this thread's last [`reset_peak`].
+        static ALLOCS_AT_RESET: Cell<usize> = const { Cell::new(0) };
+    }
+
+    /// Allocation calls on every thread, for [`wait_quiet`] only.
+    static ANY_ALLOCS: AtomicUsize = AtomicUsize::new(0);
+
+    fn counted() {
+        ANY_ALLOCS.fetch_add(1, Relaxed);
+        // `try_with`: a thread being torn down may still free and allocate.
+        let _ = ALLOCS.try_with(|n| n.set(n.get() + 1));
+    }
 
     fn grew(by: usize) {
         let now = CURRENT.fetch_add(by, Relaxed) + by;
@@ -661,7 +684,7 @@ pub mod alloc {
             let p = unsafe { System.alloc(layout) };
             if !p.is_null() {
                 grew(layout.size());
-                ALLOCS.fetch_add(1, Relaxed);
+                counted();
             }
             p
         }
@@ -671,7 +694,7 @@ pub mod alloc {
             let p = unsafe { System.alloc_zeroed(layout) };
             if !p.is_null() {
                 grew(layout.size());
-                ALLOCS.fetch_add(1, Relaxed);
+                counted();
             }
             p
         }
@@ -686,7 +709,7 @@ pub mod alloc {
             // SAFETY: forwarded unchanged; `ptr` came from this allocator.
             let q = unsafe { System.realloc(ptr, layout, new_size) };
             if !q.is_null() {
-                ALLOCS.fetch_add(1, Relaxed);
+                counted();
                 if new_size >= layout.size() {
                     grew(new_size - layout.size());
                 } else {
@@ -706,7 +729,8 @@ pub mod alloc {
     /// of allocations.
     pub fn reset_peak() {
         PEAK.store(CURRENT.load(Relaxed), Relaxed);
-        ALLOCS_AT_RESET.store(ALLOCS.load(Relaxed), Relaxed);
+        let now = ALLOCS.with(Cell::get);
+        ALLOCS_AT_RESET.with(|r| r.set(now));
     }
 
     /// The highest live heap since the last [`reset_peak`].
@@ -714,11 +738,33 @@ pub mod alloc {
         PEAK.load(Relaxed)
     }
 
-    /// Allocation calls since the last [`reset_peak`].
+    /// The calling thread's allocation calls since its last
+    /// [`reset_peak`].
     pub fn allocs() -> usize {
         ALLOCS
-            .load(Relaxed)
-            .saturating_sub(ALLOCS_AT_RESET.load(Relaxed))
+            .with(Cell::get)
+            .saturating_sub(ALLOCS_AT_RESET.with(Cell::get))
+    }
+
+    /// Waits until no thread has allocated for `quiet`, or `limit` has
+    /// passed; true when it went quiet. Peak heap counts every thread, so
+    /// work a previous document left running (its speech and structure
+    /// threads) would otherwise be counted against the next one.
+    pub fn wait_quiet(quiet: std::time::Duration, limit: std::time::Duration) -> bool {
+        let start = std::time::Instant::now();
+        let mut seen = ANY_ALLOCS.load(Relaxed);
+        let mut since = std::time::Instant::now();
+        while start.elapsed() < limit {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            let now = ANY_ALLOCS.load(Relaxed);
+            if now != seen {
+                seen = now;
+                since = std::time::Instant::now();
+            } else if since.elapsed() >= quiet {
+                return true;
+            }
+        }
+        false
     }
 }
 
@@ -1022,6 +1068,11 @@ mod inner {
         r.peak("open_peak_mb", "open and read");
         app.dispatch(Command::Action(ActionId::Stop));
         app.poll_speech();
+        // Opening starts background work (the structure parse of a large
+        // document); it finishes before the steady-state numbers below, or
+        // its allocations land in whichever step it overlaps (one step's
+        // count varied 30 times between two runs of the same code).
+        alloc::wait_quiet(Duration::from_millis(300), Duration::from_secs(30));
 
         // Navigation from the middle, idle then reading.
         let middle = parse_go_to("50%").expect("50% is a go-to target");
@@ -1087,6 +1138,7 @@ mod inner {
         // finished first: the peak heap counts every thread.
         app.wait_for_background(Duration::from_secs(60));
         app.wait_for_writes();
+        alloc::wait_quiet(Duration::from_millis(300), Duration::from_secs(30));
         app.dispatch(Command::GoTo(parse_go_to("start").expect("start")));
         for (key, label, pattern) in [
             ("find_word", "find \"the\"", "the"),
@@ -1238,6 +1290,7 @@ mod inner {
                 &written,
             );
             r.peak("autosave_peak_mb", "autosave");
+            alloc::wait_quiet(Duration::from_millis(300), Duration::from_secs(30));
             alloc::reset_peak();
             let t = Instant::now();
             app.dispatch(Command::Action(ActionId::ToggleEditMode));
@@ -1377,6 +1430,12 @@ mod inner {
             docs.len()
         );
         for (name, path) in &docs {
+            // The previous document's threads finish before this one is
+            // measured (under load they ran on for seconds and multiplied
+            // some allocation counts by up to seven).
+            if !alloc::wait_quiet(Duration::from_millis(300), Duration::from_secs(30)) {
+                println!("(other threads were still allocating after 30 s)");
+            }
             let _ = std::fs::remove_dir_all(&home);
             let rep = bench_doc(name, path, &home);
             println!();
@@ -1496,6 +1555,13 @@ mod tests {
         // Below the floor nothing is gated, however large the ratio.
         let tiny = json!({"md-1mb.md": {"plan_all_peak_mb": 0.9}});
         assert!(compare(&tiny, &base, 2.0).failures.is_empty());
+        // Growth below the floor is not gated either: 0.2 MB to 1.1 MB is
+        // over the ratio, but only 0.9 MB more.
+        let small = json!({"md-1mb.md": {"plan_all_peak_mb": 1.1}});
+        assert!(compare(&small, &base, 2.0).failures.is_empty());
+        // Growth over the floor is: 0.2 MB to 4.2 MB.
+        let fixed = json!({"md-1mb.md": {"plan_all_peak_mb": 4.2}});
+        assert_eq!(compare(&fixed, &base, 2.0).failures.len(), 1);
     }
 
     #[test]

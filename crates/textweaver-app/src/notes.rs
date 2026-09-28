@@ -10,9 +10,15 @@
 //! They are the store's typed [`Note`] and [`Highlight`]
 //! (`DocState::notes` and `DocState::highlights`), the one model the vault
 //! (`textweaver-vault`), `tw marks`, and sidecar sync use too.
+//!
+//! With the `publish` feature, [`notes_references`] and [`export_notes`]
+//! write them as reference records (BibTeX, BibLaTeX, RIS, CSL-JSON),
+//! as Star's notes export did (Agent W4g; `tw marks --export`).
 
 use textweaver_a11y::Verbosity;
 use textweaver_core::{CharPos, CharRange, Direction, EditOutcome, Unit};
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 use textweaver_speech::Earcon;
 use textweaver_store::notes::{self as store_notes, color_name, highlight_color};
 use textweaver_store::{DocState, Highlight, Note};
@@ -95,12 +101,58 @@ pub(crate) fn shift_marks(
     *bookmarks = state.bookmarks;
 }
 
+/// The note id of a comment the document carries.
+fn comment_note_id(c: &textweaver_formats::DocumentComment) -> String {
+    format!("comment-{}", c.id)
+}
+
+/// Adds a note for each comment the document carries (Word comments and
+/// OpenDocument annotations, with their replies) that `notes` does not
+/// have yet, matched by id, so a comment becomes a note once and keeps any
+/// edit made to it. The note reads "Comment by Ada Example: ..." and is
+/// tagged `comment` (and `resolved` when it is), so reading passes it with
+/// the note signal. Returns how many were added.
+pub(crate) fn add_document_comments(notes: &mut Vec<Note>, doc: &Document) -> usize {
+    let comments = textweaver_formats::comments(&doc.meta);
+    if comments.is_empty() {
+        return 0;
+    }
+    let len = doc.len_chars();
+    let now = textweaver_store::now_ts();
+    let mut added = 0;
+    for c in &comments {
+        let id = comment_note_id(c);
+        if notes.iter().any(|n| n.id == id) {
+            continue;
+        }
+        let range = c.range.clamp_to(len);
+        let mut tags = vec!["comment".to_owned()];
+        if c.resolved {
+            tags.push("resolved".to_owned());
+        }
+        notes.push(Note {
+            id,
+            range,
+            anchor: store_notes::collapse(&doc.slice(range), ANCHOR_CHARS),
+            note: c.spoken(),
+            tags,
+            created: now,
+            ts: now,
+            ..Note::default()
+        });
+        added += 1;
+    }
+    notes.sort_by_key(|n| (n.range.start, n.range.end));
+    added
+}
+
 impl App {
     /// Runs a notes, highlights, or bookmark management command.
     pub(crate) fn notes_command(&mut self, c: NoteCommand) -> Vec<Effect> {
         if self.session.is_none() {
             let open = self.key(textweaver_keymap::ActionId::Open);
-            self.tell(&format!("No document is open. Press {open} to open one."));
+            let msg = self.msg_args("app-no-document-open", &args!["key" => open]);
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         match c {
@@ -132,11 +184,13 @@ impl App {
     pub(crate) fn add_note(&mut self, text: &str) {
         let text = text.trim();
         if text.is_empty() {
-            self.note("Cancelled.");
+            let msg = self.msg("common-cancelled");
+            self.note(&msg);
             return;
         }
         let Some(range) = self.note_target() else {
-            self.tell("Nothing here to attach a note to.");
+            let msg = self.msg("notes-nothing-to-attach");
+            self.tell(&msg);
             return;
         };
         let Some(s) = self.session.as_mut() else {
@@ -160,9 +214,12 @@ impl App {
         self.persist_marks();
         let on = collapse(&anchor, 40);
         let msg = if tags.is_empty() {
-            format!("Note added on: {on}")
+            self.msg_args("notes-added", &args!["on" => on])
         } else {
-            format!("Note added with tags {} on: {on}", tags.join(", "))
+            self.msg_args(
+                "notes-added-with-tags",
+                &args!["tags" => tags.join(", "), "on" => on],
+            )
         };
         self.tell(&msg);
     }
@@ -172,31 +229,34 @@ impl App {
         let n = s.notes.get(i)?;
         let line = text_util::line_of(&s.doc, n.range.start) + 1;
         let lost = if crate::relocate::is_marked(&n.extra) {
-            " Not found after the file changed."
+            "yes"
         } else {
-            ""
+            "no"
         };
-        Some(format!(
-            "{}, line {line}. On: {}{lost}",
-            n.note,
-            collapse(&n.anchor, 60)
+        Some(self.msg_args(
+            "notes-item",
+            &args![
+                "note" => n.note.as_str(),
+                "line" => line,
+                "anchor" => collapse(&n.anchor, 60),
+                "lost" => lost
+            ],
         ))
     }
 
     pub(crate) fn list_notes(&mut self) -> Vec<Effect> {
         let n = self.session.as_ref().map_or(0, |s| s.notes.len());
         if n == 0 {
-            self.tell("No notes.");
+            let msg = self.msg("notes-none");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let items: Vec<String> = (0..n).filter_map(|i| self.note_item(i)).collect();
         self.list = Some(ListKind::Notes);
-        self.tell(&format!(
-            "Notes, {n} {}. Enter goes to a note, Delete deletes it, F2 edits it.",
-            if n == 1 { "item" } else { "items" }
-        ));
+        let msg = self.msg_args("notes-list-intro", &args!["n" => n]);
+        self.tell(&msg);
         vec![Effect::ShowList {
-            title: "Notes".into(),
+            title: self.msg("notes-list-title"),
             items,
         }]
     }
@@ -210,11 +270,17 @@ impl App {
             return;
         };
         let target = n.range.start;
-        let content = format!("{}. On: {}", n.note, collapse(&n.anchor, 60));
-        let label = format!("Note {} of {}", i + 1, s.notes.len());
+        let content = self.msg_args(
+            "notes-note-content",
+            &args!["note" => n.note.as_str(), "anchor" => collapse(&n.anchor, 60)],
+        );
+        let label = self.msg_args(
+            "notes-note-label",
+            &args!["i" => i + 1, "n" => s.notes.len()],
+        );
         let mut msg = self.nav_message(Some(&label), target, &content);
         if wrapped {
-            msg = format!("Wrapped. {msg}");
+            msg = self.msg_args("nav-wrapped", &args!["message" => msg]);
         }
         self.jump(target, true, ReadAfter::Follow, &msg);
     }
@@ -224,7 +290,8 @@ impl App {
             return;
         };
         if s.notes.is_empty() {
-            self.tell("No notes.");
+            let msg = self.msg("notes-none");
+            self.tell(&msg);
             return;
         }
         let cursor = s.cursor;
@@ -254,7 +321,8 @@ impl App {
         let n = s.notes.remove(i);
         let left = s.notes.len();
         self.persist_marks();
-        self.tell(&format!("Note deleted: {}.", collapse(&n.note, 40)));
+        let msg = self.msg_args("notes-deleted", &args!["text" => collapse(&n.note, 40)]);
+        self.tell(&msg);
         if left > 0 {
             // Keep the list open, one item shorter, on the next item.
             let mut effects = self.list_notes_quiet();
@@ -287,7 +355,8 @@ impl App {
             effects.retain(|e| !matches!(e, Effect::ShowList { .. }));
             return effects;
         }
-        self.tell("No note or highlight here.");
+        let msg = self.msg("notes-none-here");
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 
@@ -296,7 +365,7 @@ impl App {
         let items: Vec<String> = (0..n).filter_map(|i| self.note_item(i)).collect();
         self.list = Some(ListKind::Notes);
         vec![Effect::ShowList {
-            title: "Notes".into(),
+            title: self.msg("notes-list-title"),
             items,
         }]
     }
@@ -305,7 +374,8 @@ impl App {
     pub(crate) fn edit_note(&mut self, i: usize, text: &str) {
         let text = text.trim();
         if text.is_empty() {
-            self.note("Note unchanged.");
+            let msg = self.msg("notes-unchanged");
+            self.note(&msg);
             return;
         }
         let Some(n) = self.session.as_mut().and_then(|s| s.notes.get_mut(i)) else {
@@ -315,12 +385,14 @@ impl App {
         n.tags = parse_tags(text);
         n.ts = textweaver_store::now_ts();
         self.persist_marks();
-        self.tell("Note updated.");
+        let msg = self.msg("notes-updated");
+        self.tell(&msg);
     }
 
     fn toggle_highlight(&mut self) {
         let Some(range) = self.note_target() else {
-            self.tell("Nothing here to highlight.");
+            let msg = self.msg("notes-nothing-to-highlight");
+            self.tell(&msg);
             return;
         };
         let Some(s) = self.session.as_mut() else {
@@ -343,7 +415,8 @@ impl App {
             let h = s.highlights.remove(i);
             let text = preview(&s.doc, h.range, 8);
             self.persist_marks();
-            self.tell(&format!("Highlight removed: {text}"));
+            let msg = self.msg_args("notes-highlight-removed", &args!["text" => text]);
+            self.tell(&msg);
             return;
         }
         let text = preview(&s.doc, range, 8);
@@ -362,8 +435,10 @@ impl App {
         let pct = text_util::percent(&s.doc, pos);
         self.persist_marks();
         let msg = match self.settings.speech.verbosity {
-            Verbosity::High => format!("Highlighted at {pct} percent: {text}"),
-            _ => format!("Highlighted: {text}"),
+            Verbosity::High => {
+                self.msg_args("notes-highlighted-at", &args!["pct" => pct, "text" => text])
+            }
+            _ => self.msg_args("notes-highlighted", &args!["text" => text]),
         };
         self.tell(&msg);
     }
@@ -377,14 +452,18 @@ impl App {
             .map(|h| {
                 let line = text_util::line_of(&s.doc, h.range.start) + 1;
                 let lost = if crate::relocate::is_marked(&h.extra) {
-                    ", not found after the file changed"
+                    "yes"
                 } else {
-                    ""
+                    "no"
                 };
-                format!(
-                    "{}, line {line}, {}{lost}",
-                    preview(&s.doc, h.range, 10),
-                    color_name(&h.color)
+                self.msg_args(
+                    "notes-highlight-item",
+                    &args![
+                        "text" => preview(&s.doc, h.range, 10),
+                        "line" => line,
+                        "color" => color_name(&h.color),
+                        "lost" => lost
+                    ],
                 )
             })
             .collect()
@@ -394,16 +473,15 @@ impl App {
         let items = self.highlight_items();
         let n = items.len();
         if n == 0 {
-            self.tell("No highlights.");
+            let msg = self.msg("notes-no-highlights");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         self.list = Some(ListKind::Highlights);
-        self.tell(&format!(
-            "Highlights, {n} {}. Enter goes to one, Delete removes it.",
-            if n == 1 { "item" } else { "items" }
-        ));
+        let msg = self.msg_args("notes-highlights-intro", &args!["n" => n]);
+        self.tell(&msg);
         vec![Effect::ShowList {
-            title: "Highlights".into(),
+            title: self.msg("notes-highlights-title"),
             items,
         }]
     }
@@ -417,7 +495,8 @@ impl App {
         };
         let target = h.range.start;
         let content = preview(&s.doc, h.range, 10);
-        let msg = self.nav_message(Some("Highlight"), target, &content);
+        let label = self.msg("notes-highlight-label");
+        let msg = self.nav_message(Some(&label), target, &content);
         self.jump(target, true, ReadAfter::Follow, &msg);
     }
 
@@ -431,7 +510,8 @@ impl App {
         let h = s.highlights.remove(i);
         let text = preview(&s.doc, h.range, 8);
         self.persist_marks();
-        self.tell(&format!("Highlight removed: {text}"));
+        let msg = self.msg_args("notes-highlight-removed", &args!["text" => text]);
+        self.tell(&msg);
         let items = self.highlight_items();
         if items.is_empty() {
             self.list = None;
@@ -440,7 +520,7 @@ impl App {
         self.list = Some(ListKind::Highlights);
         vec![
             Effect::ShowList {
-                title: "Highlights".into(),
+                title: self.msg("notes-highlights-title"),
                 items,
             },
             Effect::Redraw,
@@ -460,11 +540,12 @@ impl App {
             (None, _) => {
                 let mut effects = self.list_bookmarks();
                 if self.list == Some(ListKind::Bookmarks) {
-                    let verb = if delete { "Delete" } else { "F2" };
-                    self.tell(&format!(
-                        "Choose a bookmark and press {verb}{}.",
-                        if delete { "" } else { " to rename it" }
-                    ));
+                    let msg = self.msg(if delete {
+                        "notes-choose-bookmark-delete"
+                    } else {
+                        "notes-choose-bookmark-rename"
+                    });
+                    self.tell(&msg);
                 }
                 effects.push(Effect::Redraw);
                 effects
@@ -482,7 +563,8 @@ impl App {
         let b = s.bookmarks.remove(i);
         let left = s.bookmarks.len();
         self.persist_marks();
-        self.tell(&format!("Bookmark {} deleted.", b.name));
+        let msg = self.msg_args("notes-bookmark-deleted", &args!["name" => b.name.as_str()]);
+        self.tell(&msg);
         if left > 0 && self.list == Some(ListKind::Bookmarks) {
             let mut e = self.list_bookmarks_quiet();
             e.push(Effect::Redraw);
@@ -504,7 +586,8 @@ impl App {
         self.list = None;
         self.pending_item = Some(i);
         let mut e = self.prompt(PromptPurpose::RenameBookmark);
-        self.tell(&format!("Renaming bookmark {name}."));
+        let msg = self.msg_args("notes-renaming-bookmark", &args!["name" => name]);
+        self.tell(&msg);
         e.push(Effect::Redraw);
         e
     }
@@ -520,20 +603,27 @@ impl App {
             return;
         };
         if name.is_empty() || name == old {
-            self.note("Bookmark unchanged.");
+            let msg = self.msg("notes-bookmark-unchanged");
+            self.note(&msg);
             return;
         }
         if s.bookmarks.iter().any(|b| b.name == name) {
-            self.error(&format!(
-                "There is already a bookmark called {name}. Bookmark {old} unchanged."
-            ));
+            let msg = self.msg_args(
+                "notes-bookmark-name-taken",
+                &args!["name" => name, "old" => old],
+            );
+            self.error(&msg);
             return;
         }
         if let Some(b) = s.bookmarks.get_mut(i) {
             b.name = name.to_owned();
         }
         self.persist_marks();
-        self.tell(&format!("Bookmark {old} renamed to {name}."));
+        let msg = self.msg_args(
+            "notes-bookmark-renamed",
+            &args!["old" => old, "name" => name],
+        );
+        self.tell(&msg);
     }
 
     /// Saves bookmarks, notes, and highlights now (not while editing, when
@@ -580,7 +670,8 @@ impl App {
             self.speech.tone(1320.0, 60);
         }
         if self.settings.speech.verbosity >= Verbosity::Normal {
-            self.show(&format!("Note: {text}"));
+            let msg = self.msg_args("notes-signal", &args!["text" => text]);
+            self.show(&msg);
         }
     }
 
@@ -591,7 +682,7 @@ impl App {
             return None;
         }
         self.note_at(pos)
-            .map(|n| format!("Has a note: {}", collapse(&n.note, 60)))
+            .map(|n| self.msg_args("notes-has-note", &args!["text" => collapse(&n.note, 60)]))
     }
 
     /// Where files made from a document that has no file yet go (exports,
@@ -614,11 +705,12 @@ impl App {
             return vec![Effect::Redraw];
         };
         if s.notes.is_empty() && s.highlights.is_empty() {
-            self.tell("No notes or highlights to export.");
+            let msg = self.msg("notes-nothing-to-export");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let date = crate::templates::local_date();
-        let sheet = study_sheet(&s.doc, &s.title, &s.notes, &s.highlights, &date);
+        let sheet = study_sheet(self.cat(), &s.doc, &s.title, &s.notes, &s.highlights, &date);
         let path = s.doc.meta.path.clone();
         let folder = path
             .as_ref()
@@ -633,25 +725,27 @@ impl App {
         match textweaver_store::atomic_write(&out, sheet.as_bytes()) {
             Ok(()) => {
                 let (n, h) = (s_count(&self.session, true), s_count(&self.session, false));
-                let what = match (n, h) {
-                    (n, 0) => format!("{n} {}", plural_word(n, "note")),
-                    (0, h) => format!("{h} {}", plural_word(h, "highlight")),
-                    (n, h) => format!(
-                        "{n} {} and {h} {}",
-                        plural_word(n, "note"),
-                        plural_word(h, "highlight")
-                    ),
+                let id = match (n, h) {
+                    (_, 0) => "notes-study-sheet-saved-notes",
+                    (0, _) => "notes-study-sheet-saved-highlights",
+                    _ => "notes-study-sheet-saved-both",
                 };
-                self.offer_open(
-                    out.display().to_string(),
-                    &format!(
-                        "Study sheet with {what} saved as {} in {}. Open it? y or n.",
-                        crate::authoring_state::file_name(&out),
-                        folder.display()
-                    ),
+                let question = self.msg_args(
+                    id,
+                    &args![
+                        "n" => n,
+                        "h" => h,
+                        "file" => crate::authoring_state::file_name(&out),
+                        "folder" => folder.display().to_string()
+                    ],
                 );
+                self.offer_open(out.display().to_string(), &question);
             }
-            Err(e) => self.error(&format!("Could not write the study sheet: {e}")),
+            Err(e) => {
+                let msg =
+                    self.msg_args("notes-study-sheet-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
         }
         vec![Effect::Redraw]
     }
@@ -667,19 +761,12 @@ fn s_count(s: &Option<crate::app::Session>, notes: bool) -> usize {
     })
 }
 
-fn plural_word(n: usize, one: &str) -> String {
-    if n == 1 {
-        one.to_owned()
-    } else {
-        format!("{one}s")
-    }
-}
-
 /// The study sheet: a title, then one section per heading that has notes
 /// or highlights under it (in document order, at the heading's level less
 /// one, so the sheet's own title stays level 1), each passage quoted with
 /// its note after it.
 pub(crate) fn study_sheet(
+    c: &Catalog,
     doc: &Document,
     title: &str,
     notes: &[Note],
@@ -704,7 +791,10 @@ pub(crate) fn study_sheet(
         };
         let mut entry = format!("- > {passage}\n\n  {}", n.note.trim());
         if !n.tags.is_empty() {
-            entry.push_str(&format!(" (tags: {})", n.tags.join(", ")));
+            entry.push_str(&format!(
+                " {}",
+                c.fmt("notes-sheet-tags", &args!["tags" => n.tags.join(", ")])
+            ));
         }
         items.push((n.range.start, under(n.range.start), entry));
     }
@@ -714,11 +804,18 @@ pub(crate) fn study_sheet(
         items.push((
             h.range.start,
             under(h.range.start),
-            format!("- > {passage}\n\n  Highlighted, {color}."),
+            format!(
+                "- > {passage}\n\n  {}",
+                c.fmt("notes-sheet-highlighted", &args!["color" => color])
+            ),
         ));
     }
     items.sort_by_key(|i| i.0);
-    let mut out = format!("# Study sheet: {title}\n\nExported from textweaver on {date}.\n");
+    let mut out = format!(
+        "# {}\n\n{}\n",
+        c.fmt("notes-sheet-title", &args!["title" => title]),
+        c.fmt("notes-sheet-exported", &args!["date" => date])
+    );
     let mut current: Option<Option<usize>> = None;
     for (_, h, entry) in items {
         if current != Some(h) {
@@ -729,7 +826,10 @@ pub(crate) fn study_sheet(
                     let hashes = "#".repeat(usize::from((*level).clamp(1, 5)) + 1);
                     out.push_str(&format!("\n{hashes} {text}\n"));
                 }
-                None => out.push_str("\n## Before the first heading\n"),
+                None => out.push_str(&format!(
+                    "\n## {}\n",
+                    c.tr("notes-sheet-before-first-heading")
+                )),
             }
         }
         out.push('\n');
@@ -739,11 +839,174 @@ pub(crate) fn study_sheet(
     out
 }
 
+/// What [`notes_references`] needs to know about the document.
+#[cfg(feature = "publish")]
+#[derive(Clone, Debug, Default)]
+pub struct NotesRecords<'a> {
+    /// The document's title: every record's title.
+    pub title: &'a str,
+    /// The document's author, when known.
+    pub author: Option<&'a str>,
+    /// The start of every key (`book` gives `book-note-1`); letters,
+    /// digits, and dashes are kept, and `notes` is used when none are left.
+    pub key: &'a str,
+    /// The document's web address, when it came from the web.
+    pub url: Option<&'a str>,
+    /// The document's length in chars, for each record's percentage (in
+    /// CSL-JSON's `textweaver-position`).
+    pub doc_len: Option<usize>,
+}
+
+/// A key made of `s`'s letters and digits, lowercase, dashes between
+/// words.
+#[cfg(feature = "publish")]
+fn key_part(s: &str) -> String {
+    let mut out = String::new();
+    for c in s.chars() {
+        if c.is_ascii_alphanumeric() {
+            out.push(c.to_ascii_lowercase());
+        } else if !out.is_empty() && !out.ends_with('-') {
+            out.push('-');
+        }
+    }
+    let out = out.trim_end_matches('-').to_owned();
+    if out.is_empty() {
+        "notes".to_owned()
+    } else {
+        out
+    }
+}
+
+/// Notes, then highlights, as reference records of the citation crate
+/// (type `document`, BibTeX `@misc`, RIS `GEN`), one per note or
+/// highlight, in document order: the document's title and author, the
+/// noted passage as the abstract, the note as the note (with the key it
+/// cites), the tags as keywords, and the date it was made.
+#[cfg(feature = "publish")]
+pub fn notes_references(
+    notes: &[Note],
+    highlights: &[Highlight],
+    opts: &NotesRecords<'_>,
+) -> Vec<textweaver_cite::Reference> {
+    use textweaver_cite::{CslDate, Name, Reference};
+    let prefix = key_part(opts.key);
+    let base = |id: String, ts: i64, start: CharPos| {
+        let mut r = Reference::new(&id, "document");
+        r.title = (!opts.title.trim().is_empty()).then(|| opts.title.trim().to_owned());
+        r.author = opts
+            .author
+            .filter(|a| !a.trim().is_empty())
+            .map(|a| vec![Name::parse(a)])
+            .unwrap_or_default();
+        r.url = opts.url.map(str::to_owned);
+        if ts > 0 {
+            let day: String = textweaver_store::time::rfc3339(ts)
+                .chars()
+                .take(10)
+                .collect();
+            r.issued = CslDate::parse(&day);
+        }
+        if let Some(len) = opts.doc_len {
+            r.extra.insert(
+                "textweaver-position".into(),
+                format!("{} percent", textweaver_store::percent(start, len)).into(),
+            );
+        }
+        r
+    };
+    let mut out = Vec::with_capacity(notes.len() + highlights.len());
+    for (i, n) in notes.iter().enumerate() {
+        let mut r = base(
+            format!("{prefix}-note-{}", i + 1),
+            n.created.max(n.ts),
+            n.range.start,
+        );
+        let passage = collapse(&n.anchor, 2000);
+        r.abstract_text = (!passage.is_empty()).then_some(passage);
+        let mut note = n.note.trim().to_owned();
+        if !n.cite.trim().is_empty() {
+            if !note.is_empty() {
+                note.push(' ');
+            }
+            note.push_str(&format!("Cites {}.", n.cite.trim()));
+        }
+        r.note = (!note.is_empty()).then_some(note);
+        r.keyword = (!n.tags.is_empty()).then(|| n.tags.join(", "));
+        out.push(r);
+    }
+    for (i, h) in highlights.iter().enumerate() {
+        let mut r = base(format!("{prefix}-highlight-{}", i + 1), h.ts, h.range.start);
+        let passage = collapse(&h.text, 2000);
+        r.abstract_text = (!passage.is_empty()).then_some(passage);
+        r.note = Some(format!("Highlighted, {}.", color_name(&h.color)));
+        out.push(r);
+    }
+    out
+}
+
+/// [`notes_references`] written in `format`.
+///
+/// # Errors
+///
+/// When CSL-JSON cannot be written (it always can for these records).
+#[cfg(feature = "publish")]
+pub fn export_notes(
+    notes: &[Note],
+    highlights: &[Highlight],
+    opts: &NotesRecords<'_>,
+    format: textweaver_cite::Format,
+) -> textweaver_cite::Result<String> {
+    textweaver_cite::formats::write(&notes_references(notes, highlights, opts), format)
+}
+
 #[cfg(test)]
 mod tests {
     use textweaver_core::Edit;
 
     use super::*;
+
+    #[test]
+    fn document_comments_become_notes_once() {
+        use textweaver_formats::{COMMENTS_PROPERTY, CommentReply, DocumentComment};
+        let mut doc = Document::from_plain_text("Read chapter two first.");
+        let comments = vec![DocumentComment {
+            id: "0".into(),
+            range: CharRange::new(5, 16),
+            author: "Ada Example".into(),
+            text: "Check this date.".into(),
+            replies: vec![CommentReply {
+                author: "Bo Example".into(),
+                text: "Fixed.".into(),
+                ..CommentReply::default()
+            }],
+            resolved: true,
+            ..DocumentComment::default()
+        }];
+        doc.meta.properties.insert(
+            COMMENTS_PROPERTY.to_owned(),
+            serde_json::to_string(&comments).unwrap_or_default(),
+        );
+        let mut notes = vec![Note {
+            id: "mine".into(),
+            range: CharRange::new(0, 4),
+            note: "My own note".into(),
+            ..Note::default()
+        }];
+        assert_eq!(add_document_comments(&mut notes, &doc), 1);
+        assert_eq!(notes.len(), 2);
+        let n = &notes[1];
+        assert_eq!(n.id, "comment-0");
+        assert_eq!(n.anchor, "chapter two");
+        assert_eq!(
+            n.note,
+            "Comment by Ada Example: Check this date. Reply by Bo Example: Fixed. Resolved."
+        );
+        assert_eq!(n.tags, vec!["comment", "resolved"]);
+        // Opening again adds nothing, and an edited comment note is kept.
+        notes[1].note = "Edited".into();
+        assert_eq!(add_document_comments(&mut notes, &doc), 0);
+        assert_eq!(notes[1].note, "Edited");
+    }
 
     #[test]
     fn tags_come_from_hash_words() {
@@ -778,6 +1041,71 @@ mod tests {
         );
         assert_eq!(notes[0].range, CharRange::new(13, 23));
         assert!(highlights.is_empty(), "deleted text drops its highlight");
+    }
+
+    #[cfg(feature = "publish")]
+    #[test]
+    fn notes_become_reference_records() {
+        use textweaver_cite::Format;
+        let notes = vec![Note {
+            id: "n1".into(),
+            range: CharRange::new(10, 20),
+            anchor: "the  noted\npassage".into(),
+            note: "Look here".into(),
+            tags: vec!["exam".into(), "ch2".into()],
+            cite: "doe2020".into(),
+            created: 1_790_344_987,
+            ts: 1_790_344_987,
+            ..Note::default()
+        }];
+        let highlights = vec![Highlight {
+            id: "h1".into(),
+            range: CharRange::new(30, 40),
+            color: "#ffff00".into(),
+            text: "bright words".into(),
+            ts: 1_790_344_987,
+            ..Highlight::default()
+        }];
+        let opts = NotesRecords {
+            title: "Cell Biology",
+            author: Some("Ada Lovelace"),
+            key: "Cell Biology (2nd ed.)",
+            url: None,
+            doc_len: Some(100),
+        };
+        let refs = notes_references(&notes, &highlights, &opts);
+        assert_eq!(refs.len(), 2);
+        assert_eq!(refs[0].id, "cell-biology-2nd-ed-note-1");
+        assert_eq!(refs[1].id, "cell-biology-2nd-ed-highlight-1");
+        assert_eq!(refs[0].abstract_text.as_deref(), Some("the noted passage"));
+        assert_eq!(refs[0].note.as_deref(), Some("Look here Cites doe2020."));
+        assert_eq!(refs[0].keyword.as_deref(), Some("exam, ch2"));
+        assert_eq!(refs[1].note.as_deref(), Some("Highlighted, yellow."));
+        assert_eq!(
+            refs[0].issued.as_ref().and_then(|d| d.iso()).as_deref(),
+            Some("2026-09-25")
+        );
+
+        let bib = export_notes(&notes, &highlights, &opts, Format::BibTex).unwrap();
+        assert!(bib.contains("@misc{cell-biology-2nd-ed-note-1,"), "{bib}");
+        assert!(bib.contains("Look here Cites doe2020."), "{bib}");
+        let ris = export_notes(&notes, &highlights, &opts, Format::Ris).unwrap();
+        assert!(ris.contains("TY  - GEN"), "{ris}");
+        assert!(ris.contains("KW  - exam"), "{ris}");
+        assert!(ris.contains("N1  - Highlighted, yellow."), "{ris}");
+        let json = export_notes(&notes, &highlights, &opts, Format::CslJson).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v[0]["type"], "document");
+        assert_eq!(v[0]["title"], "Cell Biology");
+        assert_eq!(v[0]["textweaver-position"], "10 percent");
+        // Each format reads back as the same records.
+        for f in [Format::BibTex, Format::Ris, Format::CslJson] {
+            let text = export_notes(&notes, &highlights, &opts, f).unwrap();
+            let back = textweaver_cite::formats::parse(&text, f).unwrap();
+            assert_eq!(back.len(), 2, "{f:?}");
+            assert_eq!(back[0].note.as_deref(), Some("Look here Cites doe2020."));
+        }
+        assert_eq!(key_part("  "), "notes");
     }
 
     #[test]

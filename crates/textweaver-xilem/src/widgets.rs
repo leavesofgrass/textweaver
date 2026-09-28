@@ -692,7 +692,7 @@ impl Widget for Announcer {
 /// UI Automation Notification events, raised directly on the window
 /// ([`AnnounceMode::Uia`]). AccessKit raises only LiveRegionChanged, which
 /// JAWS has handled inconsistently; NVDA (2018.1 and later) and JAWS both
-/// handle Notification events. Jon compares the two by ear in the
+/// handle Notification events. The owner compares the two by ear in the
 /// listening session (ADR-0028).
 pub mod notify {
     use super::Message;

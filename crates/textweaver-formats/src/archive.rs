@@ -15,7 +15,8 @@
 //! member only when it does not exist and the part before a `!` is a file.
 //!
 //! Limits, so a hostile archive cannot exhaust memory or time: a member is
-//! read up to [`MAX_MEMBER_BYTES`]; finding a member in a tar or solid 7z
+//! read up to [`MAX_MEMBER_BYTES`] (a zip member declaring more is refused
+//! before it is decompressed); finding a member in a tar or solid 7z
 //! archive decompresses at most [`MAX_SCAN_BYTES`]; 7z dictionaries over
 //! [`MAX_DICTIONARY`] are refused; listings stop at [`MAX_LISTED`]
 //! entries; archives nest at most [`MAX_NESTING`] deep.
@@ -231,6 +232,11 @@ pub fn read_member<R: Read + Seek>(kind: ArchiveKind, r: R, name: &str) -> io::R
             };
             let real = real.ok_or_else(|| not_found(&want))?;
             let f = zip.by_name(&real).map_err(io_err)?;
+            // Refused before decompressing: LZMA sizes its dictionary from
+            // the declared size, so a huge claim would cost that memory.
+            if f.size() > MAX_MEMBER_BYTES {
+                return Err(io::Error::other(format!("{want} is too large to open")));
+            }
             read_capped(f, &want)
         }
         #[cfg(feature = "archives")]
@@ -771,6 +777,23 @@ mod tests {
             .unwrap();
         assert_eq!(doc.text().to_string(), "Inside.");
         assert_eq!(doc.meta.title.as_deref(), Some("Zipped"));
+    }
+
+    /// Every compression method a zip member may use is read, all in pure
+    /// Rust (LZMA cannot be written by the zip crate, so it is not here).
+    #[test]
+    fn members_in_every_compression_method_open() {
+        use zip::CompressionMethod::{Bzip2, Deflated, Ppmd, Stored, Xz};
+        let body = b"Pure Rust reads this member. ".repeat(40);
+        for method in [Stored, Deflated, Bzip2, Xz, Ppmd] {
+            let mut z = zip::ZipWriter::new(Cursor::new(Vec::new()));
+            let options = SimpleFileOptions::default().compression_method(method);
+            z.start_file("notes.txt", options).unwrap();
+            z.write_all(&body).unwrap();
+            let data = z.finish().unwrap().into_inner();
+            let read = read_member(ArchiveKind::Zip, Cursor::new(data), "notes.txt");
+            assert_eq!(read.unwrap(), body, "{method:?}");
+        }
     }
 
     #[test]

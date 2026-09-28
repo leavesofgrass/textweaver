@@ -52,6 +52,29 @@ pub struct Theme {
     pub list: Style,
     /// The focused list item.
     pub list_selected: Style,
+    /// Code blocks and their tokens.
+    pub code: CodeStyles,
+}
+
+/// Styles for code blocks (Agent W4g): the theme's code colors, and for
+/// each token kind a color from another role plus, for most, an attribute,
+/// so no kind is told apart by color alone.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CodeStyles {
+    /// Code on the code background (`code`, `code_background`).
+    pub plain: Style,
+    /// Comments: dim text, italic.
+    pub comment: Style,
+    /// Keywords: heading 2 color, bold.
+    pub keyword: Style,
+    /// Strings: the quote color (strings keep their quote marks).
+    pub string: Style,
+    /// Numbers and constants: heading 4 color.
+    pub number: Style,
+    /// Function names: heading 1 color.
+    pub function: Style,
+    /// Type names: heading 3 color.
+    pub kind: Style,
 }
 
 fn color(c: TermColor) -> Color {
@@ -121,6 +144,7 @@ impl Theme {
             note: style(t.style(StyleRole::Note)),
             list: panel,
             list_selected: style(t.style(StyleRole::Focus)),
+            code: CodeStyles::from_terminal(&t),
         }
     }
 
@@ -147,6 +171,30 @@ impl Theme {
             HighlightKind::SpokenSentence => self.spoken_sentence,
             HighlightKind::CurrentFindHit => self.current_hit,
             HighlightKind::SpokenWord => self.spoken_word,
+        }
+    }
+}
+
+impl CodeStyles {
+    /// The code styles of a resolved theme.
+    fn from_terminal(t: &TerminalTheme) -> Self {
+        let plain = style(t.color(ColorRole::CodeBackground));
+        // A role's foreground over the code background, with an attribute.
+        let fg = |role: ColorRole, m: Modifier| {
+            let mut s = plain.add_modifier(m);
+            if let Some(c) = t.color(role).fg {
+                s = s.fg(color(c));
+            }
+            s
+        };
+        CodeStyles {
+            plain,
+            comment: fg(ColorRole::DimText, Modifier::ITALIC),
+            keyword: fg(ColorRole::Heading2, Modifier::BOLD),
+            string: fg(ColorRole::Quote, Modifier::empty()).remove_modifier(Modifier::ITALIC),
+            number: fg(ColorRole::Heading4, Modifier::empty()),
+            function: fg(ColorRole::Heading1, Modifier::empty()),
+            kind: fg(ColorRole::Heading3, Modifier::empty()),
         }
     }
 }

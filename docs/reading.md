@@ -44,15 +44,17 @@ The reader opens these formats itself:
 - Markdown: `.md`, `.markdown`, `.mdown`, `.mkd`, `.mkdn`, `.mdwn`, `.mdtxt`, `.rmd`.
 - HTML: `.html`, `.htm`, `.xhtml`, `.xht`.
 - EPUB: `.epub`.
-- Word: `.docx`, `.docm`.
+- Word: `.docx`, `.docm`, with comments as notes.
+- RTF: `.rtf`.
+- OpenDocument text: `.odt`, `.ott`, `.fodt`, with comments as notes.
 - PDF: `.pdf`.
 
-A file with any other extension is read as plain text. A file that is not text at all is refused: a program, an image, an audio file, a zip archive (an OpenDocument file is one), an old Word `.doc`, or an RTF file. The message says what the file looks like, for example: "report.odt is not a text file; it looks like a zip archive (such as a Word document or an EPUB). textweaver cannot read it as text."
+A file with any other extension is read as plain text. A file that is not text at all is refused: a program, an image, an audio file, or an old Word `.doc`. The message says what the file looks like, for example: "report.bin is not a text file; it looks like a program. textweaver cannot read it as text."
 
-The reader does not use Pandoc. To read an OpenDocument, RTF, LaTeX, or other such file, convert it to Markdown first, then open the Markdown. `tw convert` uses Pandoc for these formats, so Pandoc must be installed:
+The reader does not use Pandoc. To read a LaTeX, reStructuredText, or other such file, convert it to Markdown first, then open the Markdown. `tw convert` uses Pandoc for these formats, so Pandoc must be installed:
 
 ```bash
-tw convert essay.odt --to md
+tw convert essay.rst --to md
 ```
 
 The [converting guide](converting.md) explains `tw convert`.
@@ -71,6 +73,8 @@ The screen has four parts, from top to bottom.
 The terminal's cursor always sits where your attention is: on the word being spoken while reading, on the Speech Cursor line, on the prompt, on the chosen item of a list, or else on the reading cursor. Screen readers and screen magnifiers follow it.
 
 Lists, such as the help, bookmarks, notes, and the library, appear in a box over the document.
+
+Code blocks are drawn in the theme's code colors. When a block names its language (```` ```python ````), its keywords, strings, comments, numbers, and names get colors from the theme too, and the kinds differ by more than color: keywords are bold and comments italic. The text itself never changes. Moving the caret onto the block's first line says its language, for example "code, Python".
 
 ## Read aloud
 

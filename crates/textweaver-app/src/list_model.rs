@@ -36,6 +36,8 @@ use std::borrow::Cow;
 
 use textweaver_a11y::Priority;
 use textweaver_keymap::ActionId;
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 
 use crate::app::App;
 use crate::command::{Command, Effect, PromptPurpose};
@@ -122,15 +124,20 @@ impl ListModel {
     /// The focused item as spoken: its text and where it is in the list
     /// ("Chapter two, 2 of 5").
     pub fn spoken_item(&self) -> Option<String> {
+        self.spoken_item_text(&Catalog::english())
+    }
+
+    /// The focused item as spoken ([`spoken_item`](Self::spoken_item)), in
+    /// the language of `c`.
+    pub fn spoken_item_text(&self, c: &Catalog) -> Option<String> {
         let item = self
             .said
             .get(self.selected)
             .map(String::as_str)
             .or_else(|| self.current())?;
-        Some(format!(
-            "{item}, {} of {}",
-            self.selected + 1,
-            self.items.len()
+        Some(c.fmt(
+            "listmodel-item-position",
+            &args!["item" => item, "k" => self.selected + 1, "n" => self.items.len()],
         ))
     }
 }
@@ -442,7 +449,7 @@ impl App {
                         view.selected = i.min(view.items.len().saturating_sub(1));
                     }
                     if self.announce_list_focus
-                        && let Some(item) = view.spoken_item()
+                        && let Some(item) = view.spoken_item_text(self.cat())
                     {
                         self.announce_queued(&item, Priority::Polite);
                     }
@@ -514,11 +521,17 @@ impl App {
                         let text = self
                             .list_model
                             .as_ref()
-                            .and_then(ListModel::spoken_item)
+                            .and_then(|l| l.spoken_item_text(self.cat()))
                             .unwrap_or_default();
                         self.announce(&text, Priority::Assertive);
                     }
-                    _ => self.announce(&format!("No item starts with {c}."), Priority::Polite),
+                    _ => {
+                        let msg = self.msg_args(
+                            "listmodel-no-item-starts",
+                            &args!["letter" => c.to_string()],
+                        );
+                        self.announce(&msg, Priority::Polite);
+                    }
                 }
                 return vec![Effect::Redraw];
             }
@@ -543,16 +556,20 @@ impl App {
             return vec![Effect::Redraw];
         };
         let moved = list.step(delta);
-        let text = list.spoken_item().unwrap_or_default();
+        let text = self
+            .list_model
+            .as_ref()
+            .and_then(|l| l.spoken_item_text(self.cat()))
+            .unwrap_or_default();
         if moved {
             self.announce(&text, Priority::Assertive);
         } else {
-            let edge = if delta < 0 {
-                "Top of list."
+            let edge = self.msg(if delta < 0 {
+                "listmodel-top-of-list"
             } else {
-                "End of list."
-            };
-            self.announce(edge, Priority::Polite);
+                "listmodel-end-of-list"
+            });
+            self.announce(&edge, Priority::Polite);
         }
         vec![Effect::Redraw]
     }
@@ -681,7 +698,8 @@ impl App {
                 mb.candidates = c;
             }
             if mb.candidates.is_empty() {
-                self.announce("No matching commands.", Priority::Polite);
+                let msg = self.msg("listmodel-no-matching-commands");
+                self.announce(&msg, Priority::Polite);
                 return;
             }
             let n = mb.candidates.len();
@@ -702,7 +720,8 @@ impl App {
             return;
         };
         if hist.is_empty() {
-            self.announce("No earlier entries.", Priority::Polite);
+            let msg = self.msg("listmodel-no-earlier-entries");
+            self.announce(&msg, Priority::Polite);
             return;
         }
         let n = hist.len();
@@ -717,7 +736,7 @@ impl App {
         let text = i.map_or_else(String::new, |i| hist[i].clone());
         mb.set_text(&text);
         let spoken = if text.is_empty() {
-            "blank".to_owned()
+            self.msg("nav-blank")
         } else {
             text
         };
@@ -738,7 +757,7 @@ impl App {
             PromptPurpose::Open | PromptPurpose::SaveAs | PromptPurpose::ImagePath
         ) {
             let cwd = std::env::current_dir().unwrap_or_default();
-            let (done, spoken) = crate::path_complete::complete(&typed, &cwd);
+            let (done, spoken) = crate::path_complete::complete_in(self.cat(), &typed, &cwd);
             if let (Some(text), Some(mb)) = (done, self.prompt_model.as_mut()) {
                 mb.set_text(&text);
             }
@@ -750,7 +769,10 @@ impl App {
         }
         let cands = self.palette_candidates(&typed);
         match cands.as_slice() {
-            [] => self.announce("No matching commands.", Priority::Polite),
+            [] => {
+                let msg = self.msg("listmodel-no-matching-commands");
+                self.announce(&msg, Priority::Polite);
+            }
             [(a, _)] => {
                 if let Some(mb) = self.prompt_model.as_mut() {
                     mb.set_text(a.id());
@@ -768,7 +790,10 @@ impl App {
                     mb.set_text(&prefix);
                 }
                 let first: Vec<String> = ids.iter().take(5).map(|i| i.replace('_', " ")).collect();
-                let msg = format!("{} matches: {}.", many.len(), first.join(", "));
+                let msg = self.msg_args(
+                    "listmodel-command-matches",
+                    &args!["n" => many.len(), "names" => first.join(", ")],
+                );
                 self.announce(&msg, Priority::Assertive);
             }
         }

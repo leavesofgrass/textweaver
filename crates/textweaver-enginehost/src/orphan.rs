@@ -13,7 +13,12 @@
 //!   (`prctl(PR_SET_PDEATHSIG)`), set between `fork` and `exec`. The signal
 //!   follows the *thread* that started the host, so a host must be started
 //!   on the thread that keeps it (the speech thread does).
-//! - **Elsewhere** (macOS): only the end-of-input exit applies.
+//! - **Elsewhere** (macOS and the BSDs), which have neither: each host
+//!   watches its own parent, and exits when the parent is gone (the host is
+//!   handed to another parent, such as launchd). The watch starts when the
+//!   host starts its request reader with [`crate::serve::AtEnd::Exit`], or
+//!   when it calls [`crate::serve::exit_with_parent`], and it runs on its
+//!   own thread, so it works while the engine is stuck.
 
 #![allow(unsafe_code)]
 
@@ -131,4 +136,36 @@ mod win {
         // process, and `child` owns its process handle for this call.
         unsafe { AssignProcessToJobObject(job, process) }.map_err(|e| e.to_string())
     }
+}
+
+/// How often a host checks that its parent is still there (macOS and the
+/// BSDs).
+#[cfg(all(unix, not(target_os = "linux")))]
+const PARENT_POLL: std::time::Duration = std::time::Duration::from_millis(200);
+
+/// Starts, once per process, a thread that exits this host when its
+/// parent is gone (macOS and the BSDs, which have no parent-death signal).
+#[cfg(all(unix, not(target_os = "linux")))]
+pub(crate) fn watch_parent() {
+    use std::os::unix::process::parent_id;
+    static STARTED: std::sync::Once = std::sync::Once::new();
+    STARTED.call_once(|| {
+        let parent = parent_id();
+        let spawned = std::thread::Builder::new()
+            .name("parent-watch".to_owned())
+            .spawn(move || {
+                // Parent 1 is launchd or init: the parent died before this
+                // thread started.
+                while parent != 1 && parent_id() == parent {
+                    std::thread::sleep(PARENT_POLL);
+                }
+                crate::serve::log_line("engine host: textweaver is gone, so the host exits");
+                std::process::exit(1);
+            });
+        if let Err(e) = spawned {
+            crate::serve::log_line(&format!(
+                "engine host: cannot watch for textweaver exiting: {e}"
+            ));
+        }
+    });
 }

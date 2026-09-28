@@ -11,6 +11,8 @@
 //! [`Command::FilterList`]: crate::Command::FilterList
 
 use textweaver_core::MarkerKind;
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 use textweaver_text::Document;
 
 use crate::app::{App, ListKind};
@@ -63,9 +65,16 @@ pub(crate) fn headings(doc: &Document) -> Vec<OutlineItem> {
         .collect()
 }
 
-fn outline_label(h: &OutlineItem) -> String {
-    let text = if h.text.is_empty() { "blank" } else { &h.text };
-    format!("{text}, level {}", h.level)
+fn outline_label(c: &Catalog, h: &OutlineItem) -> String {
+    let text = if h.text.is_empty() {
+        c.tr("nav-blank")
+    } else {
+        h.text.clone()
+    };
+    c.fmt(
+        "lists-outline-item",
+        &args!["text" => text, "level" => h.level],
+    )
 }
 
 impl App {
@@ -89,24 +98,30 @@ impl App {
             AuthoringList::Outline { items, shown } => {
                 let n = items.len();
                 let title = if filter.is_empty() {
-                    format!("Outline, {n} {}", plural(n, "heading", "headings"))
+                    self.msg_args("lists-outline-title", &args!["n" => n])
                 } else {
-                    format!("Outline, {} of {n} match {filter}", shown.len())
+                    self.msg_args(
+                        "lists-outline-title-filtered",
+                        &args!["shown" => shown.len(), "n" => n, "filter" => filter.as_str()],
+                    )
                 };
                 (
                     title,
-                    shown.iter().map(|&i| outline_label(&items[i])).collect(),
+                    shown
+                        .iter()
+                        .map(|&i| outline_label(self.cat(), &items[i]))
+                        .collect(),
                 )
             }
             AuthoringList::Citations { entries, shown } => {
                 let n = entries.len();
                 let title = if filter.is_empty() {
-                    format!(
-                        "Insert citation, {n} {}",
-                        plural(n, "reference", "references")
-                    )
+                    self.msg_args("lists-citations-title", &args!["n" => n])
                 } else {
-                    format!("Insert citation, {} of {n} match {filter}", shown.len())
+                    self.msg_args(
+                        "lists-citations-title-filtered",
+                        &args!["shown" => shown.len(), "n" => n, "filter" => filter.as_str()],
+                    )
                 };
                 (
                     title,
@@ -114,20 +129,33 @@ impl App {
                 )
             }
             AuthoringList::Spelling { word, choices, .. } => (
-                format!("Spelling of {word}"),
+                self.msg_args("lists-spelling-title", &args!["word" => word]),
                 choices
                     .iter()
                     .map(|c| match c {
                         SpellChoice::Replace(w) => w.clone(),
-                        SpellChoice::Add => format!("Add {word} to your word list"),
-                        SpellChoice::Ignore => "Leave it as it is".to_owned(),
+                        SpellChoice::Add => {
+                            self.msg_args("lists-spelling-add", &args!["word" => word])
+                        }
+                        SpellChoice::Ignore => self.msg("lists-leave-as-is"),
                     })
+                    .collect(),
+            ),
+            AuthoringList::Grammar { words, fixes, .. } => (
+                self.msg_args(
+                    "lists-grammar-title",
+                    &args!["words" => words.split_whitespace().collect::<Vec<_>>().join(" ")],
+                ),
+                fixes
+                    .iter()
+                    .map(|f| crate::authoring::grammar_fix_label(self.cat(), f))
+                    .chain([self.msg("lists-leave-as-is")])
                     .collect(),
             ),
             AuthoringList::Replace => (self.replace_title(), self.replace_items()),
             AuthoringList::Templates(t) => (
-                format!("New document from a template, {} templates", t.len()),
-                t.iter().map(|t| t.label()).collect(),
+                self.msg_args("lists-templates-title", &args!["n" => t.len()]),
+                t.iter().map(|t| t.label(self.cat())).collect(),
             ),
         };
         self.list = Some(ListKind::Authoring(list));
@@ -140,42 +168,62 @@ impl App {
             return self.filter_settings(query);
         }
         let Some(ListKind::Authoring(mut list)) = self.list.clone() else {
-            self.tell("This list does not filter.");
+            let msg = self.msg("lists-no-filter");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         };
         if !list.filterable() {
-            self.tell("This list does not filter.");
+            let msg = self.msg("lists-no-filter");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
-        let (n, noun) = match &mut list {
+        // The messages for this list: filter cleared, nothing matches, and
+        // how many match.
+        let (n, ids) = match &mut list {
             AuthoringList::Outline { items, shown } => {
                 *shown = (0..items.len())
                     .filter(|&i| matches(&items[i].text, &query))
                     .collect();
-                (shown.len(), ("heading", "headings"))
+                (
+                    shown.len(),
+                    (
+                        "lists-filter-cleared-headings",
+                        "lists-filter-none-headings",
+                        "lists-filter-matched-headings",
+                    ),
+                )
             }
             AuthoringList::Citations { entries, shown } => {
                 *shown = (0..entries.len())
                     .filter(|&i| matches(&entries[i].label, &query))
                     .collect();
-                (shown.len(), ("reference", "references"))
+                (
+                    shown.len(),
+                    (
+                        "lists-filter-cleared-references",
+                        "lists-filter-none-references",
+                        "lists-filter-matched-references",
+                    ),
+                )
             }
-            _ => (0, ("item", "items")),
+            _ => (
+                0,
+                (
+                    "lists-filter-cleared-items",
+                    "lists-filter-none-items",
+                    "lists-filter-matched-items",
+                ),
+            ),
         };
         self.authoring.filter = query.clone();
-        if query.trim().is_empty() {
-            self.tell(&format!(
-                "Filter cleared, {n} {}.",
-                plural(n, noun.0, noun.1)
-            ));
+        let msg = if query.trim().is_empty() {
+            self.msg_args(ids.0, &args!["n" => n])
         } else if n == 0 {
-            self.tell(&format!(
-                "No {} match {query}. Backspace removes letters.",
-                noun.1
-            ));
+            self.msg_args(ids.1, &args!["query" => query.as_str()])
         } else {
-            self.tell(&format!("{n} {} match.", plural(n, noun.0, noun.1)));
-        }
+            self.msg_args(ids.2, &args!["n" => n])
+        };
+        self.tell(&msg);
         self.show_authoring_list(list)
     }
 
@@ -203,6 +251,9 @@ impl App {
                 Some(c) => self.spelling_chosen(&word, range, c.clone()),
                 None => vec![Effect::Redraw],
             },
+            AuthoringList::Grammar { range, fixes, .. } => {
+                self.grammar_fix_action(range, &fixes, n)
+            }
             AuthoringList::Replace => self.replace_choice(n),
             AuthoringList::Templates(t) => match t.get(n) {
                 Some(t) => self.template_chosen(t.clone()),
@@ -216,7 +267,10 @@ impl App {
         self.authoring.filter.clear();
         match list {
             AuthoringList::Replace => self.replace_stopped(),
-            _ => self.note("Cancelled."),
+            _ => {
+                let msg = self.msg("common-cancelled");
+                self.note(&msg);
+            }
         }
     }
 
@@ -228,7 +282,8 @@ impl App {
         };
         let items = headings(&s.doc);
         if items.is_empty() {
-            self.tell("This document has no headings.");
+            let msg = self.msg("lists-no-headings");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let cursor = s.cursor;
@@ -238,12 +293,10 @@ impl App {
             .find(|h| h.pos <= cursor)
             .map(|h| h.text.clone());
         let n = items.len();
-        let mut intro = format!(
-            "Outline, {n} {}. Type to filter, Enter goes to a heading, Escape closes.",
-            plural(n, "heading", "headings")
-        );
+        let mut intro = self.msg_args("lists-outline-intro", &args!["n" => n]);
         if let Some(h) = here {
-            intro.push_str(&format!(" You are under {h}."));
+            intro.push(' ');
+            intro.push_str(&self.msg_args("lists-outline-here", &args!["heading" => h]));
         }
         self.authoring.filter.clear();
         self.tell(&intro);
@@ -253,15 +306,10 @@ impl App {
 
     /// Jumps to a heading chosen in the outline (recorded in history).
     fn go_to_heading(&mut self, h: &OutlineItem) {
-        let label = format!("Heading level {}", h.level);
+        let label = self.msg_args("nav-label-heading-level", &args!["level" => h.level]);
         let msg = self.nav_message(Some(&label), h.pos, &h.text);
         self.jump(h.pos, true, ReadAfter::Follow, &msg);
     }
-}
-
-/// `one` for 1, else `many`.
-pub(crate) fn plural<'a>(n: usize, one: &'a str, many: &'a str) -> &'a str {
-    if n == 1 { one } else { many }
 }
 
 #[cfg(test)]

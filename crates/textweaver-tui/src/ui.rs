@@ -9,12 +9,14 @@ use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph};
-use textweaver_app::a11y::CursorPlacement;
+use textweaver_app::a11y::{CursorPlacement, Priority};
 use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
 use textweaver_app::keymap::{ActionId, Key, KeyChord, Layer, Modifiers};
+use textweaver_app::lexicon::args;
 use textweaver_app::text_util::line_count;
 use textweaver_app::{
-    App, CaretMove, Command, Confirm, Effect, ListKey, Mode, PromptKey, chords_text, extra_lookup,
+    App, CaretMove, Command, Confirm, Effect, ListKey, Mode, PromptKey, chords_text_in,
+    extra_lookup,
 };
 
 use crate::layout::{self, Cells, Row};
@@ -100,6 +102,11 @@ struct RowAids<'a> {
     breaks: &'a [CharPos],
     /// The syllable separator.
     sep: &'a str,
+    /// Ranges drawn as other text (Unicode math), in order.
+    shown: &'a [(CharRange, String)],
+    /// Code blocks and their tokens: the style under highlights, in
+    /// order, not overlapping.
+    code: &'a [(CharRange, Style)],
 }
 
 /// The math exploration move for a key, if it is one: arrows, Home, End,
@@ -147,11 +154,20 @@ pub struct Tui {
     /// Copied text as an OSC 52 sequence, waiting to be written to the
     /// terminal ([`Tui::take_clipboard_sequence`]).
     clipboard_out: Option<String>,
+    /// Where copied text goes ([`crate::clipboard`]).
+    clipboard_route: crate::clipboard::Route,
+    /// The system clipboard, for terminals that cannot take OSC 52.
+    system_clipboard: crate::clipboard::SystemClipboard,
+    /// Set once the listener was told that the system clipboard is used.
+    system_clipboard_said: bool,
     /// The title line's position while it is frozen (`[accessibility]
     /// quiet_screen` during continuous reading).
     frozen_position: Option<String>,
     /// Physical keys peeked from the Windows console, for the digit row.
     digits: crate::physical::DigitKeys,
+    /// Code block tokens already found ([`crate::highlight`]).
+    #[cfg(feature = "highlight")]
+    code_cache: std::cell::RefCell<crate::highlight::Cache>,
 }
 
 /// Screen areas of the last draw.
@@ -168,9 +184,12 @@ pub struct Areas {
 }
 
 impl Tui {
-    /// Wraps an app.
+    /// Wraps an app, with the terminal's color level and clipboard route
+    /// detected ([`crate::clipboard::detect`]).
     pub fn new(app: App) -> Self {
-        Self::with_color_support(app, ColorSupport::detect())
+        let mut tui = Self::with_color_support(app, ColorSupport::detect());
+        tui.clipboard_route = crate::clipboard::detect_here();
+        tui
     }
 
     /// Wraps an app, drawing at a given color level (tests; at run time
@@ -188,8 +207,13 @@ impl Tui {
             status_shown: (0, String::new()),
             status_blank_until: None,
             clipboard_out: None,
+            clipboard_route: crate::clipboard::Route::Osc52,
+            system_clipboard: crate::clipboard::SystemClipboard::default(),
+            system_clipboard_said: false,
             frozen_position: None,
             digits: crate::physical::DigitKeys::default(),
+            #[cfg(feature = "highlight")]
+            code_cache: std::cell::RefCell::default(),
         }
     }
 
@@ -289,6 +313,13 @@ impl Tui {
         self.apply(effects);
     }
 
+    /// Shows the interface language list ([`App::language_list`]): on the
+    /// first run, and for `--choose-language`.
+    pub fn choose_language(&mut self) {
+        let effects = self.app.language_list();
+        self.apply(effects);
+    }
+
     /// Dispatches a command and acts on its effects.
     pub fn dispatch(&mut self, cmd: Command) {
         let effects = self.app.dispatch(cmd);
@@ -302,9 +333,53 @@ impl Tui {
         self.clipboard_out.take()
     }
 
+    /// Where copied text goes: OSC 52 (the default for a `Tui` made with
+    /// [`Tui::with_color_support`]), the system clipboard, or both.
+    pub fn set_clipboard_route(&mut self, route: crate::clipboard::Route) {
+        self.clipboard_route = route;
+    }
+
+    /// Where copied text goes.
+    pub fn clipboard_route(&self) -> crate::clipboard::Route {
+        self.clipboard_route
+    }
+
+    /// Sends copied text on its route. The first use of the system
+    /// clipboard is said once; if it fails, the text goes to the terminal
+    /// instead, and the failure is said.
+    fn send_to_clipboard(&mut self, text: &str) {
+        use crate::clipboard::Route;
+        let route = self.clipboard_route;
+        let mut osc = route != Route::System;
+        if route != Route::Osc52 {
+            let c = self.app.catalog();
+            match self.system_clipboard.set_text(&c, text) {
+                Ok(()) => {
+                    if route == Route::System && !self.system_clipboard_said {
+                        self.system_clipboard_said = true;
+                        let msg = c.tr("tui-clip-system");
+                        self.app.announce_queued(&msg, Priority::Polite);
+                    }
+                }
+                Err(e) => {
+                    osc = true;
+                    log::warn!("system clipboard: {e}");
+                    let msg = c.fmt(
+                        "tui-clip-failed",
+                        &textweaver_app::lexicon::args!["error" => e.as_str()],
+                    );
+                    self.app.announce_queued(&msg, Priority::Assertive);
+                }
+            }
+        }
+        if osc {
+            self.clipboard_out = Some(textweaver_app::osc52(text));
+        }
+    }
+
     fn apply(&mut self, effects: Vec<Effect>) {
         if let Some(text) = self.app.take_clipboard() {
-            self.clipboard_out = Some(textweaver_app::osc52(&text));
+            self.send_to_clipboard(&text);
         }
         // Prompts and lists are the app's own models (Wave 3): the app
         // adopted them, and said a list's focused item, before returning
@@ -629,6 +704,11 @@ impl Tui {
         let cursor = self.draw_body(f, areas.body, &theme);
         self.draw_rsvp(f, areas.body, &theme, cursor.map(|p| p.y));
         let status = self.status_to_draw(now);
+        let status = if self.rtl() {
+            crate::bidi::visual(&status).into_owned()
+        } else {
+            status
+        };
         f.render_widget(
             Paragraph::new(status)
                 .wrap(ratatui::widgets::Wrap { trim: false })
@@ -649,6 +729,15 @@ impl Tui {
         f.set_cursor_position(cursor.unwrap_or(Position::new(areas.body.x, areas.body.y)));
     }
 
+    /// True when right-to-left text is reordered for display
+    /// (`[interface] rtl`; see [`crate::bidi`]).
+    fn rtl(&self) -> bool {
+        crate::bidi::reorders(
+            self.app.settings().interface.rtl,
+            self.app.access_mode().uses_screen_reader(),
+        )
+    }
+
     /// The title line's "line 3 of 40, 7%": frozen while
     /// [`App::quiet_screen_active`], so a screen reader that reads the
     /// changing screen does not hear it tick over as textweaver reads.
@@ -664,18 +753,29 @@ impl Tui {
 
     fn draw_title(&self, f: &mut Frame<'_>, area: Rect, theme: &Theme, position: Option<&str>) {
         let app = &self.app;
-        let title = app.session().map_or("no document", |s| s.title.as_str());
-        let left = format!(" textweaver: {title}");
+        let c = app.catalog();
+        let title = app
+            .session()
+            .map_or_else(|| c.tr("tui-title-no-document"), |s| s.title.clone());
+        let rtl = self.rtl();
+        let shown = |s: String| {
+            if rtl {
+                crate::bidi::visual(&s).into_owned()
+            } else {
+                s
+            }
+        };
+        let left = shown(format!(" {}", c.fmt("tui-title", &args!["title" => title])));
         // Most important first; trailing parts are dropped when narrow.
         // The app gives them ("Ready" until the first reading, then
         // "Stopped"), so Say Status speaks the same parts.
         let mut parts = app.title_parts(position);
         let width = usize::from(area.width);
         let lw = Span::raw(&left).width();
-        let mut right = format!("{} ", parts.join(", "));
+        let mut right = shown(format!("{} ", parts.join(", ")));
         while parts.len() > 1 && lw + Span::raw(&right).width() + 2 > width {
             parts.pop();
-            right = format!("{} ", parts.join(", "));
+            right = shown(format!("{} ", parts.join(", ")));
         }
         let rw = Span::raw(&right).width();
         let line = if lw + rw < width {
@@ -719,19 +819,24 @@ impl Tui {
     fn draw_body(&self, f: &mut Frame<'_>, area: Rect, theme: &Theme) -> Option<Position> {
         f.render_widget(Block::new().style(theme.text), area);
         let Some(s) = self.app.session() else {
-            let k = |a| chords_text(self.app.keymap(), a);
+            let c = self.app.catalog();
+            let k = |a| chords_text_in(&c, self.app.keymap(), a);
+            let line = |id: &str, a: ActionId| {
+                Line::from(format!(" {}", c.fmt(id, &args!["keys" => k(a)])))
+            };
             let lines = vec![
                 Line::from(""),
-                Line::from(" No document is open."),
-                Line::from(format!(" Open one: {}.", k(ActionId::Open))),
-                Line::from(format!(" Help: {}.", k(ActionId::Help))),
-                Line::from(format!(" Quit: {}.", k(ActionId::Quit))),
+                Line::from(format!(" {}", c.tr("tui-empty-no-document"))),
+                line("tui-empty-open", ActionId::Open),
+                line("tui-empty-help", ActionId::Help),
+                line("tui-empty-quit", ActionId::Quit),
             ];
             f.render_widget(Paragraph::new(lines).style(theme.text), area);
             return Some(Position::new(area.x + 1, area.y + 1));
         };
         let doc = &s.doc;
         let settings = self.app.settings();
+        let rtl = self.rtl();
         let cells = self.cells();
         let spacing = self.app.terminal_spacing();
         let numbers = self.number_width();
@@ -746,10 +851,33 @@ impl Tui {
         let focus = self.app.focus();
         let top = self.app.viewport().top_line;
         let syllables = settings.reading_aids.syllables;
-        let line_breaks = |r: CharRange| self.app.syllable_breaks(r);
-        let decor = syllables.then(|| layout::Decor {
+        let line_breaks = |r: CharRange| {
+            if syllables {
+                self.app.syllable_breaks(r)
+            } else {
+                Vec::new()
+            }
+        };
+        // Unicode math (`[reading] math_display`): the formulas from the
+        // top line to as far as the layout may go.
+        let shown = {
+            let lines = textweaver_app::text_util::line_count(doc);
+            let last = top
+                .saturating_add(rows_wanted.saturating_mul(4).max(512))
+                .min(lines.saturating_sub(1));
+            let from = textweaver_app::text_util::line_range(doc, top.min(last)).start;
+            let to = textweaver_app::text_util::line_range(doc, last).end;
+            self.app
+                .math_display(CharRange::new(from, to.saturating_add(1)))
+        };
+        let decor = (syllables || !shown.is_empty()).then(|| layout::Decor {
             breaks: &line_breaks,
-            text: self.app.syllable_separator().to_owned(),
+            text: if syllables {
+                self.app.syllable_separator().to_owned()
+            } else {
+                String::new()
+            },
+            shown: &shown,
         });
         let sep_width = decor.as_ref().map_or(0, layout::Decor::width);
         let rows = layout::window_decor(
@@ -767,6 +895,7 @@ impl Tui {
             _ => CharRange::empty(0),
         };
         let highlights = self.app.highlights(window);
+        let code = self.code_styles(doc, window, theme);
         let bold = self.app.bionic_ranges(window);
         let difficult = self.app.difficult_ranges(window);
         // The syllable breaks of each line shown, as the layout used them.
@@ -816,8 +945,20 @@ impl Tui {
                 difficult: &difficult,
                 breaks: row_breaks,
                 sep: &sep,
+                shown: &shown,
+                code: &code,
             };
             let mut text = self.row_spans(doc, row, &highlights, &aids, theme, cells);
+            // Right-to-left text in display order; the cursor follows its
+            // character there.
+            let mut logical = None;
+            let mut bidi_map = None;
+            if rtl {
+                logical = Some(text.clone());
+                let (shown, map) = crate::bidi::visual_spans(text);
+                text = shown;
+                bidi_map = map;
+            }
             let extra = ruler_modifier(mark);
             if !extra.is_empty() {
                 for sp in &mut text {
@@ -828,8 +969,12 @@ impl Tui {
             if let Some(fp) = focus.filter(|&p| row.holds(p))
                 && cursor.is_none()
             {
-                let col = layout::column_decor(doc, row, fp, cells, row_breaks, sep_width)
-                    .min(width.saturating_sub(1));
+                let col = layout::column_shown(doc, row, fp, cells, row_breaks, sep_width, &shown);
+                let col = match &logical {
+                    Some(l) => crate::bidi::visual_column(l, bidi_map.as_deref(), col),
+                    None => col,
+                }
+                .min(width.saturating_sub(1));
                 let x = area.x + gutter + u16::try_from(col).unwrap_or(0);
                 let y = area.y + u16::try_from(lines.len()).unwrap_or(0);
                 cursor = Some(Position::new(x, y));
@@ -849,6 +994,73 @@ impl Tui {
         }
         f.render_widget(Paragraph::new(lines).style(theme.text), area);
         cursor
+    }
+
+    /// The styles of the code blocks in `window` (the `highlight`
+    /// feature): each block in the theme's code colors, and its tokens in
+    /// theirs, as ranges in order that do not overlap. Empty without the
+    /// feature.
+    fn code_styles(
+        &self,
+        doc: &textweaver_app::text::Document,
+        window: CharRange,
+        theme: &Theme,
+    ) -> Vec<(CharRange, Style)> {
+        #[cfg(feature = "highlight")]
+        {
+            use crate::highlight::Token;
+            use textweaver_app::core::MarkerKind;
+            let styles = &theme.code;
+            let mut out = Vec::new();
+            let mut blocks: Vec<&textweaver_app::text::Marker> = doc
+                .markers()
+                .iter()
+                .filter(|m| {
+                    m.kind == MarkerKind::Code
+                        && m.level == 1
+                        && m.range.start < window.end
+                        && window.start < m.range.end
+                })
+                .collect();
+            blocks.sort_by_key(|m| m.range.start);
+            let mut cache = self.code_cache.borrow_mut();
+            for m in blocks {
+                let start = m.range.start.0;
+                let tokens = m
+                    .label
+                    .as_deref()
+                    .filter(|l| !l.is_empty())
+                    .and_then(|lang| cache.tokens(lang, &doc.slice(m.range)));
+                let mut at = start;
+                for &(a, b, t) in tokens.iter().flat_map(|t| t.iter()) {
+                    let (a, b) = (start + a, start + b);
+                    if a > at {
+                        out.push((CharRange::new(at, a), styles.plain));
+                    }
+                    let st = match t {
+                        Token::Plain => styles.plain,
+                        Token::Comment => styles.comment,
+                        Token::Keyword => styles.keyword,
+                        Token::String => styles.string,
+                        Token::Number => styles.number,
+                        Token::Function => styles.function,
+                        Token::Type => styles.kind,
+                    };
+                    out.push((CharRange::new(a, b), st));
+                    at = b;
+                }
+                if at < m.range.end.0 {
+                    out.push((CharRange::new(at, m.range.end.0), styles.plain));
+                }
+            }
+            out.retain(|(r, _)| !r.is_empty());
+            out
+        }
+        #[cfg(not(feature = "highlight"))]
+        {
+            let _ = (doc, window, theme);
+            Vec::new()
+        }
     }
 
     /// Draws the RSVP word in a box over the document (never over the
@@ -916,12 +1128,20 @@ impl Tui {
         let difficult = aids.difficult;
         let mut b = bold.partition_point(|r| r.end <= row.range.start);
         let mut d = difficult.partition_point(|r| r.end <= row.range.start);
+        let mut k = aids.code.partition_point(|(r, _)| r.end <= row.range.start);
         for (i, c) in chars.enumerate() {
             let pos = CharPos(row.range.start.0 + i);
+            while k < aids.code.len() && aids.code[k].0.end <= pos {
+                k += 1;
+            }
+            let base = match aids.code.get(k) {
+                Some((r, st)) if r.contains(pos) => *st,
+                _ => theme.text,
+            };
             let mut style = highlights
                 .iter()
                 .filter(|h| h.range.contains(pos))
-                .fold(theme.text, |st, h| st.patch(theme.highlight(h.kind)));
+                .fold(base, |st, h| st.patch(theme.highlight(h.kind)));
             while b < bold.len() && bold[b].end <= pos {
                 b += 1;
             }
@@ -945,7 +1165,11 @@ impl Tui {
             if i > 0 && aids.breaks.binary_search(&pos).is_ok() {
                 run.push_str(aids.sep);
             }
-            run.push_str(&cells.text(c));
+            match layout::shown_at(aids.shown, pos) {
+                Some(Some(text)) => run.push_str(text),
+                Some(None) => {}
+                None => run.push_str(&cells.text(c)),
+            }
         }
         if let Some(st) = run_style {
             spans.push(Span::styled(run, st));
@@ -971,54 +1195,63 @@ impl Tui {
                     .min(area.width.saturating_sub(1));
             return Some(Position::new(x, area.y));
         }
-        f.render_widget(
-            Paragraph::new(self.hints(area.width)).style(theme.hints),
-            area,
-        );
+        let hints = self.hints(area.width);
+        let hints = if self.rtl() {
+            crate::bidi::visual(&hints).into_owned()
+        } else {
+            hints
+        };
+        f.render_widget(Paragraph::new(hints).style(theme.hints), area);
         None
     }
 
     /// Key hints for the current mode, from the keymap, fitted to `width`.
     pub fn hints(&self, width: u16) -> String {
+        let c = self.app.catalog();
         if self.app.confirmation_pending() {
-            return " y yes  n or a no  Escape no".to_owned();
+            let escape = KeyChord::new(Key::Escape, Modifiers::empty()).to_string();
+            return format!(
+                " {}",
+                c.fmt("tui-hints-confirm", &args!["escape" => escape])
+            );
         }
+        // Each label is a message id.
         let rsvp_hints: &[(ActionId, &str)] = &[
-            (ActionId::RsvpPlayPause, "play"),
-            (ActionId::NextSentence, "sentence"),
-            (ActionId::RsvpFaster, "faster"),
-            (ActionId::RsvpSlower, "slower"),
-            (ActionId::RsvpToggle, "close RSVP"),
-            (ActionId::Quit, "quit"),
+            (ActionId::RsvpPlayPause, "tui-hint-play"),
+            (ActionId::NextSentence, "tui-hint-sentence"),
+            (ActionId::RsvpFaster, "tui-hint-faster"),
+            (ActionId::RsvpSlower, "tui-hint-slower"),
+            (ActionId::RsvpToggle, "tui-hint-close-rsvp"),
+            (ActionId::Quit, "tui-hint-quit"),
         ];
         let hints: &[(ActionId, &str)] = match self.app.mode() {
             _ if self.app.rsvp().is_some() => rsvp_hints,
             Mode::Edit => &[
-                (ActionId::Save, "save"),
-                (ActionId::ToggleEditMode, "finish"),
-                (ActionId::Undo, "undo"),
-                (ActionId::Bold, "bold"),
-                (ActionId::Heading, "heading"),
-                (ActionId::CommandPalette, "commands"),
-                (ActionId::Quit, "quit"),
+                (ActionId::Save, "tui-hint-save"),
+                (ActionId::ToggleEditMode, "tui-hint-finish"),
+                (ActionId::Undo, "tui-hint-undo"),
+                (ActionId::Bold, "tui-hint-bold"),
+                (ActionId::Heading, "tui-hint-heading"),
+                (ActionId::CommandPalette, "tui-hint-commands"),
+                (ActionId::Quit, "tui-hint-quit"),
             ],
             Mode::SpeechCursor => &[
-                (ActionId::SpeechCursorNextLine, "next line"),
-                (ActionId::SpeechCursorPreviousLine, "previous line"),
-                (ActionId::SpeechCursorRereadLine, "again"),
-                (ActionId::SpeechCursorExitAndRead, "read on"),
-                (ActionId::SpeechCursorToggle, "leave"),
+                (ActionId::SpeechCursorNextLine, "tui-hint-next-line"),
+                (ActionId::SpeechCursorPreviousLine, "tui-hint-previous-line"),
+                (ActionId::SpeechCursorRereadLine, "tui-hint-again"),
+                (ActionId::SpeechCursorExitAndRead, "tui-hint-read-on"),
+                (ActionId::SpeechCursorToggle, "tui-hint-leave"),
             ],
             _ => &[
-                (ActionId::PlayPause, "play"),
-                (ActionId::NextSentence, "sentence"),
-                (ActionId::NextParagraph, "paragraph"),
-                (ActionId::SkipNextHeading, "heading"),
-                (ActionId::Find, "find"),
-                (ActionId::AddBookmark, "mark"),
-                (ActionId::SpeechCursorToggle, "lines"),
-                (ActionId::KeyboardHelp, "keys"),
-                (ActionId::Quit, "quit"),
+                (ActionId::PlayPause, "tui-hint-play"),
+                (ActionId::NextSentence, "tui-hint-sentence"),
+                (ActionId::NextParagraph, "tui-hint-paragraph"),
+                (ActionId::SkipNextHeading, "tui-hint-heading"),
+                (ActionId::Find, "tui-hint-find"),
+                (ActionId::AddBookmark, "tui-hint-mark"),
+                (ActionId::SpeechCursorToggle, "tui-hint-lines"),
+                (ActionId::KeyboardHelp, "tui-hint-keys"),
+                (ActionId::Quit, "tui-hint-quit"),
             ],
         };
         let keymap = self.app.keymap();
@@ -1034,7 +1267,7 @@ impl Tui {
                     .iter()
                     .find(|c| c.is_text_input() || c.mods.is_empty())
                     .or(chords.first())?;
-                Some(format!("{best} {label}"))
+                Some(format!("{best} {}", c.tr(label)))
             })
             .collect();
         // Keep what fits, always ending with the last two (help and quit
@@ -1068,13 +1301,22 @@ impl Tui {
             body
         };
         f.render_widget(Clear, area);
+        let rtl = self.rtl();
+        let title = self.app.catalog().fmt(
+            "tui-list-title",
+            &args![
+                "title" => list.title.as_str(),
+                "n" => list.selected + 1,
+                "count" => list.items.len()
+            ],
+        );
+        let title = if rtl {
+            crate::bidi::visual(&title).into_owned()
+        } else {
+            title
+        };
         let block = Block::bordered()
-            .title(format!(
-                " {} ({} of {}) ",
-                list.title,
-                list.selected + 1,
-                list.items.len()
-            ))
+            .title(format!(" {title} "))
             .style(theme.list);
         let inner = block.inner(area);
         f.render_widget(block, area);
@@ -1105,6 +1347,11 @@ impl Tui {
                     theme.list_selected
                 } else {
                     theme.list
+                };
+                let t = if rtl {
+                    crate::bidi::visual(t)
+                } else {
+                    std::borrow::Cow::Borrowed(t.as_str())
                 };
                 Line::from(Span::styled(format!("{t:<width$}"), style))
             })

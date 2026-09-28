@@ -25,6 +25,7 @@
 //! on, as a question is.
 
 use textweaver_a11y::{AccessMode, Priority, Verbosity};
+use textweaver_lexicon::args;
 
 use crate::app::{App, Mode};
 use crate::command::Effect;
@@ -34,11 +35,13 @@ impl App {
     /// without a document.
     pub fn title_position(&self) -> Option<String> {
         let s = self.session.as_ref()?;
-        Some(format!(
-            "line {} of {}, {}%",
-            s.line() + 1,
-            crate::text_util::line_count(&s.doc),
-            s.percent()
+        Some(self.msg_args(
+            "status-position",
+            &args![
+                "line" => s.line() + 1,
+                "lines" => crate::text_util::line_count(&s.doc),
+                "pct" => s.percent()
+            ],
         ))
     }
 
@@ -56,32 +59,48 @@ impl App {
     /// self-voicing too) and says the rate in words.
     fn status_parts(&self, position: Option<&str>, spoken: bool) -> Vec<String> {
         let mut parts = Vec::new();
+        let mode = crate::words::mode_name(self.cat(), self.mode);
         if spoken {
-            parts.push(format!("{} mode", self.mode.name()));
+            parts.push(self.msg_args("status-mode", &args!["mode" => mode]));
         } else if self.mode != Mode::Browse {
-            parts.push(self.mode.name().to_owned());
+            parts.push(mode);
         }
         if self.is_dirty() {
-            parts.push("modified".to_owned());
+            parts.push(self.msg("status-modified"));
         }
-        parts.push(self.reading_state().to_owned());
+        parts.push(self.reading_state_text());
         if let Some(p) = position {
             parts.push(p.to_owned());
         }
         match self.access_mode {
-            AccessMode::SelfVoicing if spoken => parts.push("self-voicing".to_owned()),
+            AccessMode::SelfVoicing if spoken => parts.push(self.msg("status-self-voicing")),
             AccessMode::SelfVoicing => {}
-            AccessMode::Hybrid => parts.push("hybrid".to_owned()),
-            AccessMode::ScreenReader => parts.push("screen reader mode".to_owned()),
+            AccessMode::Hybrid => parts.push(self.msg("status-hybrid")),
+            AccessMode::ScreenReader => parts.push(self.msg("status-screen-reader")),
         }
         let wpm = self.settings.speech.rate.wpm();
         parts.push(if spoken {
-            format!("{wpm} words per minute")
+            self.msg_args("status-rate-spoken", &args!["wpm" => wpm])
         } else {
-            format!("{wpm} wpm")
+            self.msg_args("status-rate", &args!["wpm" => wpm])
         });
         parts.push(self.backend_name.clone());
         parts
+    }
+
+    /// The title line as it is said: "essay: Speech Cursor mode, Reading,
+    /// line 3 of 40, 7%, self-voicing, 265 words per minute, eSpeak NG."
+    pub(crate) fn status_sentence(&self) -> String {
+        let position = self.title_position();
+        let title = match self.session.as_ref() {
+            Some(s) => s.title.clone(),
+            None => self.msg("status-no-document"),
+        };
+        let parts = self.status_parts(position.as_deref(), true);
+        self.msg_args(
+            "status-said",
+            &args!["title" => title, "parts" => parts.join(", ")],
+        )
     }
 
     /// The Say Status action: the last message, then the title line's
@@ -90,14 +109,7 @@ impl App {
         if self.list_model.is_some() {
             return self.repeat_list_introduction();
         }
-        let position = self.title_position();
-        let title = self
-            .session
-            .as_ref()
-            .map_or("No document", |s| s.title.as_str())
-            .to_owned();
-        let parts = self.status_parts(position.as_deref(), true);
-        let status = format!("{title}: {}.", parts.join(", "));
+        let status = self.status_sentence();
         let msg = match self.last_message.as_deref() {
             Some(last) if !last.trim().is_empty() => format!("{} {status}", with_stop(last)),
             _ => status,
@@ -110,7 +122,10 @@ impl App {
     pub(crate) fn repeat_message(&mut self) -> Vec<Effect> {
         match self.last_message.clone().filter(|m| !m.trim().is_empty()) {
             Some(last) => self.say_unremembered(&last),
-            None => self.say_unremembered("No message yet."),
+            None => {
+                let msg = self.msg("status-no-message");
+                self.say_unremembered(&msg);
+            }
         }
         vec![Effect::Redraw]
     }
@@ -132,14 +147,12 @@ impl App {
             return vec![Effect::Redraw];
         };
         let intro = self.list_intro.clone().unwrap_or_else(|| {
-            let n = list.items.len();
-            let items = if n == 1 { "item" } else { "items" };
-            format!(
-                "{}, {n} {items}. Up and Down move, Enter chooses, Escape closes.",
-                list.title
+            self.msg_args(
+                "status-list-intro",
+                &args!["title" => list.title.as_str(), "n" => list.items.len()],
             )
         });
-        let msg = match list.spoken_item() {
+        let msg = match list.spoken_item_text(self.cat()) {
             Some(item) => format!("{} {item}.", with_stop(&intro)),
             None => with_stop(&intro),
         };
@@ -163,7 +176,7 @@ impl App {
 /// sentence when spoken.
 fn with_stop(text: &str) -> String {
     let t = text.trim_end();
-    if t.ends_with(['.', '?', '!']) {
+    if t.ends_with(['.', '?', '!', '\u{061f}', '\u{3002}']) {
         t.to_owned()
     } else {
         format!("{t}.")

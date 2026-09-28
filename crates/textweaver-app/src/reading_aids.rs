@@ -29,13 +29,15 @@
 use std::time::{Duration, Instant};
 
 use textweaver_aids::{
-    BionicOptions, DifficultOptions, Millis, Rsvp, RsvpEvent, RsvpPosition, RsvpSettings,
-    RulerMode, RulerSettings, ScowlList, SplitText, TerminalSpacing, TextSpacing, WordTrack,
-    bionic_range, difficult_range, reading_level, split_range,
+    BionicOptions, DifficultOptions, GradeBand, Millis, ReadingLevel, Rsvp, RsvpEvent,
+    RsvpPosition, RsvpSettings, RulerMode, RulerSettings, ScowlList, SplitText, TerminalSpacing,
+    TextSpacing, WordTrack, bionic_range, difficult_range, reading_level, split_range,
 };
 use textweaver_core::SpanKind;
 use textweaver_core::{CharPos, CharRange};
 use textweaver_keymap::ActionId;
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 
 use crate::app::{App, Mode};
 use crate::playback::Playback;
@@ -117,11 +119,13 @@ impl App {
     /// `rsvp_toggle`: shows RSVP at the cursor, or hides it.
     pub(crate) fn rsvp_toggle(&mut self, now: Instant) {
         if self.rsvp.take().is_some() {
-            self.tell("RSVP off.");
+            let msg = self.msg("aids-rsvp-off");
+            self.tell(&msg);
             return;
         }
         if self.mode == Mode::Edit {
-            self.tell("Leave edit mode to use RSVP.");
+            let msg = self.msg("aids-rsvp-leave-edit");
+            self.tell(&msg);
             return;
         }
         let Some(pos) = self.reading_position() else {
@@ -130,13 +134,14 @@ impl App {
         self.rsvp_build(pos, now);
         match self.rsvp.as_ref().map(|s| &s.rsvp) {
             Some(r) if !r.is_empty() => {
-                let msg = format!("RSVP on. {}", r.status());
+                let msg = self.msg_args("aids-rsvp-on", &args!["status" => r.status()]);
                 self.sync_cursor_to_rsvp();
                 self.tell(&msg);
             }
             _ => {
                 self.rsvp = None;
-                self.tell("No words to show.");
+                let msg = self.msg("aids-rsvp-no-words");
+                self.tell(&msg);
             }
         }
     }
@@ -168,11 +173,12 @@ impl App {
             textweaver_aids::rsvp::MAX_WPM,
         );
         if new == old {
-            self.tell(if faster {
-                "Fastest RSVP rate."
+            let msg = self.msg(if faster {
+                "aids-rsvp-fastest"
             } else {
-                "Slowest RSVP rate."
+                "aids-rsvp-slowest"
             });
+            self.tell(&msg);
             return;
         }
         rate.wpm = new;
@@ -180,7 +186,8 @@ impl App {
         if let Some(st) = self.rsvp.as_mut() {
             st.rsvp.set_wpm(new);
         }
-        self.tell(&format!("RSVP {new} words per minute."));
+        let msg = self.msg_args("aids-rsvp-rate", &args!["wpm" => new]);
+        self.tell(&msg);
     }
 
     /// Moves the RSVP word to the next of Star's nine places; saved.
@@ -188,20 +195,21 @@ impl App {
         let rs = &mut self.settings.reading_aids.rsvp;
         let position = RsvpPosition::from(rs.position).next();
         rs.position = position.into();
-        let label = position.label();
         let settings = RsvpSettings::from(&*rs);
         self.settings_dirty = true;
         if let Some(st) = self.rsvp.as_mut() {
             st.rsvp.set_settings(settings);
         }
-        self.tell(&format!("RSVP at the {label}."));
+        let msg = self.msg_args("aids-rsvp-position", &args!["position" => position.key()]);
+        self.tell(&msg);
     }
 
     /// Announces what an RSVP call changed (nothing for a plain move: the
     /// word itself is what changed).
     fn rsvp_announce(&mut self, e: RsvpEvent) {
-        if let Some(m) = e.message() {
-            self.tell(&format!("{m}."));
+        if let Some(id) = rsvp_event_message(e) {
+            let msg = self.msg(id);
+            self.tell(&msg);
         }
     }
 
@@ -239,7 +247,8 @@ impl App {
             A::Stop => {
                 self.rsvp = None;
                 self.stop_speech();
-                self.tell("RSVP off.");
+                let msg = self.msg("aids-rsvp-off");
+                self.tell(&msg);
                 return true;
             }
             _ => return false,
@@ -318,11 +327,12 @@ impl App {
         let on = !self.settings.reading_aids.bionic;
         self.settings.reading_aids.bionic = on;
         self.settings_dirty = true;
-        self.tell(if on {
-            "Bionic reading on."
+        let msg = self.msg(if on {
+            "aids-bionic-on"
         } else {
-            "Bionic reading off."
+            "aids-bionic-off"
         });
+        self.tell(&msg);
     }
 
     /// The ranges to draw in bold for bionic reading within `range`, or
@@ -343,11 +353,12 @@ impl App {
         let on = !self.settings.reading_aids.syllables;
         self.settings.reading_aids.syllables = on;
         self.settings_dirty = true;
-        self.tell(if on {
-            "Syllables shown."
+        let msg = self.msg(if on {
+            "aids-syllables-shown"
         } else {
-            "Syllables hidden."
+            "aids-syllables-hidden"
         });
+        self.tell(&msg);
     }
 
     /// The syllable display of `range` (text and offset map), or `None`
@@ -385,12 +396,12 @@ impl App {
         let on = !self.settings.reading_aids.difficult_words;
         self.settings.reading_aids.difficult_words = on;
         self.settings_dirty = true;
-        let msg = match (on, ScowlList::builtin().is_some()) {
-            (true, true) => "Difficult words underlined.",
-            (true, false) => "Difficult words on, but the word list is missing from this build.",
-            (false, _) => "Difficult words not marked.",
-        };
-        self.tell(msg);
+        let msg = self.msg(match (on, ScowlList::builtin().is_some()) {
+            (true, true) => "aids-difficult-on",
+            (true, false) => "aids-difficult-no-list",
+            (false, _) => "aids-difficult-off",
+        });
+        self.tell(&msg);
     }
 
     /// The difficult words in `range`, to underline; none when the setting
@@ -407,14 +418,14 @@ impl App {
 
     /// ", difficult word" for a word move onto `word` at high verbosity
     /// with difficult words marked.
-    pub(crate) fn difficult_word_note(&self, word: CharRange) -> Option<&'static str> {
+    pub(crate) fn difficult_word_note(&self, word: CharRange) -> Option<String> {
         let high = self.settings.speech.verbosity >= textweaver_a11y::Verbosity::High;
         (high
             && self
                 .difficult_ranges(word)
                 .iter()
                 .any(|r| r.start == word.start))
-        .then_some(", difficult word")
+        .then(|| format!(", {}", self.msg("aids-difficult-word")))
     }
 
     /// `ruler_cycle`: off, current line, ruler; saved.
@@ -426,13 +437,13 @@ impl App {
             RulerMode::Ruler => RulerMode::Off,
         };
         r.mode = mode.into();
-        let msg = match mode {
-            RulerMode::Off => "Reading ruler off.",
-            RulerMode::CurrentLine => "Current line marked.",
-            RulerMode::Ruler => "Reading ruler on.",
-        };
+        let msg = self.msg(match mode {
+            RulerMode::Off => "aids-ruler-off",
+            RulerMode::CurrentLine => "aids-ruler-current-line",
+            RulerMode::Ruler => "aids-ruler-on",
+        });
         self.settings_dirty = true;
-        self.tell(msg);
+        self.tell(&msg);
     }
 
     /// The reading ruler settings.
@@ -452,14 +463,61 @@ impl App {
         let Some(s) = self.session.as_ref() else {
             return;
         };
-        let (range, what) = match s.selection.filter(|r| !r.is_empty()) {
-            Some(r) => (r, "Selection"),
-            None => (CharRange::new(CharPos::ZERO, s.doc.end()), "Document"),
+        let (range, scope) = match s.selection.filter(|r| !r.is_empty()) {
+            Some(r) => (r, "selection"),
+            None => (CharRange::new(CharPos::ZERO, s.doc.end()), "document"),
         };
         let msg = match reading_level(&s.doc, range) {
-            Some(level) => format!("{what}: {}", level.summary()),
-            None => "Not enough text to measure the reading level.".to_owned(),
+            Some(level) => self.msg_args(
+                "aids-reading-level",
+                &args!["scope" => scope, "summary" => reading_level_summary(self.cat(), &level)],
+            ),
+            None => self.msg("aids-reading-level-too-short"),
         };
         self.tell(&msg);
     }
+}
+
+/// The message id for what an RSVP event says, or `None` for events the
+/// word display itself conveys.
+fn rsvp_event_message(e: RsvpEvent) -> Option<&'static str> {
+    match e {
+        RsvpEvent::Playing => Some("aids-rsvp-playing"),
+        RsvpEvent::Paused => Some("aids-rsvp-paused"),
+        RsvpEvent::Finished | RsvpEvent::AtEnd => Some("aids-rsvp-end-of-text"),
+        RsvpEvent::AtStart => Some("aids-rsvp-start-of-text"),
+        RsvpEvent::Empty => Some("aids-rsvp-no-words"),
+        RsvpEvent::Moved | RsvpEvent::RateChanged => None,
+    }
+}
+
+/// The reading level as it is said: "Grade 8.2, middle school. Reading
+/// ease 64 out of 100. 120 words in 7 sentences."
+fn reading_level_summary(c: &Catalog, level: &ReadingLevel) -> String {
+    let band = c.tr(match level.band() {
+        GradeBand::Elementary => "aids-band-elementary",
+        GradeBand::MiddleSchool => "aids-band-middle-school",
+        GradeBand::HighSchool => "aids-band-high-school",
+        GradeBand::College => "aids-band-college",
+        GradeBand::Graduate => "aids-band-graduate",
+    });
+    let thousands = textweaver_editor::echo::thousands;
+    let words = c.fmt(
+        "aids-level-words",
+        &args!["n" => level.words, "count" => thousands(level.words)],
+    );
+    let sentences = c.fmt(
+        "aids-level-sentences",
+        &args!["n" => level.sentences, "count" => thousands(level.sentences)],
+    );
+    c.fmt(
+        "aids-level-summary",
+        &args![
+            "grade" => format!("{:.1}", level.display_grade()),
+            "band" => band,
+            "ease" => format!("{:.0}", level.display_ease()),
+            "words" => words,
+            "sentences" => sentences
+        ],
+    )
 }

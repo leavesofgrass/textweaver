@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-26
+- Status update (2026-09-28, Wave 4, W4d): the subset was enough for Spanish, French, German, Portuguese, and Arabic, so `fluent-bundle` was not adopted. The whole interface now uses the catalog; see [ADR-0030](0030-interface-translations.md).
 
 ## Context
 

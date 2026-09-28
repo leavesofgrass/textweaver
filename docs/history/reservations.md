@@ -27,6 +27,7 @@ Work reserved for the Cloud Agent, which contributes by pull request from a sepa
 - **Status:**
   - Sunday, September 27, 2026, 9:59 PM: reserved. The owner has started a Cloud Agent session.
   - Sunday, September 27, 2026, 10:03 PM: the owner passed these reservations to the Cloud Agent session, which is recalibrating its work to them.
+  - Monday, September 28, 2026, 9:40 AM: merged in [pull request 1](https://github.com/leavesofgrass/textweaver/pull/1), from the branch `claude/awesome-maxwell-i7rt6p` (the owner chose the session branch over `cloud/`). Done; struck from the plan.
 
 ## Task 2: the generated settings reference and the docs consistency check
 
@@ -44,6 +45,7 @@ Work reserved for the Cloud Agent, which contributes by pull request from a sepa
 - **Budget:** expected $22, high $40. Stop point $32.
 - **Status:**
   - Sunday, September 27, 2026, 9:59 PM: reserved. Recommended to run during the pause after Wave 4.
+  - Monday, September 28, 2026, 9:40 AM: merged in [pull request 1](https://github.com/leavesofgrass/textweaver/pull/1), from the branch `claude/awesome-maxwell-i7rt6p` (the owner chose the session branch over `cloud/`). Done; struck from the plan.
 
 ## Task 3 (optional): epubcheck and veraPDF on the writers' output
 
@@ -54,6 +56,11 @@ Work reserved for the Cloud Agent, which contributes by pull request from a sepa
 - **Budget:** expected $18, high $32. Stop point $24. **Runs only if tasks 1 and 2 cost $80 or less.**
 - **Status:**
   - Sunday, September 27, 2026, 9:59 PM: reserved, conditional. Not started.
+  - Monday, September 28, 2026, 9:40 AM: merged in [pull request 1](https://github.com/leavesofgrass/textweaver/pull/1), from the branch `claude/awesome-maxwell-i7rt6p` (the owner chose the session branch over `cloud/`). Done; struck from the plan.
+
+## Outcome
+
+All three tasks were done in one pull request, within the budget the owner set. Nothing is reserved any longer, so Wave 5 drops these items: W5m's fuzz deliverables 1 to 3, W5p's deliverables 2 and 3 with quick wins 1, 2, 4 and 5, and the EPUB and PDF part of W6t. The W4c2 fuzz targets (`rtf`, `odt`, `docx_revisions`) were added beside the Cloud Agent's after the merge.
 
 ## See also
 

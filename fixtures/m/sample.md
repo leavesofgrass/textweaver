@@ -1,6 +1,6 @@
 ---
 title: Reading Guide
-author: Jon Pielaet
+author: Ada Example
 lang: en-US
 ---
 

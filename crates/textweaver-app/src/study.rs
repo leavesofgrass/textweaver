@@ -142,15 +142,34 @@ impl Study {
     }
 }
 
-/// The label of a study prompt, from the catalog; `None` for other prompts.
-pub(crate) fn prompt_label(c: &Catalog, purpose: PromptPurpose) -> Option<String> {
-    Some(match purpose {
-        PromptPurpose::DefineWord => c.tr("prompt-define-word"),
-        PromptPurpose::ProfileName => c.tr("prompt-profile-name"),
-        PromptPurpose::RenameProfile => c.tr("prompt-profile-rename"),
-        PromptPurpose::ImportProfiles => c.tr("prompt-profiles-import"),
-        PromptPurpose::ExportProfiles => c.tr("prompt-profiles-export"),
-        _ => return None,
+/// A prompt's label, from the catalog: shown, and said when it opens.
+pub(crate) fn prompt_label(c: &Catalog, purpose: PromptPurpose) -> String {
+    use PromptPurpose as P;
+    c.tr(match purpose {
+        P::Find => "prompt-find",
+        P::GoTo => "prompt-go-to",
+        P::Open => "prompt-open",
+        P::CommandPalette => "prompt-command",
+        P::SaveAs => "prompt-save-as",
+        P::TableSize => "prompt-table-size",
+        P::ImagePath => "prompt-image-path",
+        P::ReplaceFind => "prompt-replace-find",
+        P::ReplaceWith => "prompt-replace-with",
+        P::NoteText => "prompt-note",
+        P::EditNote => "prompt-edit-note",
+        P::RenameBookmark => "prompt-rename-bookmark",
+        P::ExportSettings => "prompt-export-settings",
+        P::ImportSettings => "prompt-import-settings",
+        P::CitationLocator => "prompt-citation-locator",
+        P::ReferenceIdentifier => "prompt-reference-identifier",
+        P::ImportReferences => "prompt-import-references",
+        P::TemplateTitle => "prompt-template-title",
+        P::DefineWord => "prompt-define-word",
+        P::ProfileName => "prompt-profile-name",
+        P::RenameProfile => "prompt-profile-rename",
+        P::ImportProfiles => "prompt-profiles-import",
+        P::ExportProfiles => "prompt-profiles-export",
+        P::SettingValue => "prompt-setting-value",
     })
 }
 
@@ -158,6 +177,22 @@ impl App {
     /// The interface's message catalog, for frontends' own strings.
     pub fn catalog(&self) -> Arc<Catalog> {
         self.study.catalog.clone()
+    }
+
+    /// The catalog, borrowed: for helpers that take a `&Catalog`.
+    pub(crate) fn cat(&self) -> &Catalog {
+        &self.study.catalog
+    }
+
+    /// The yes-or-no question asked before `a` runs, in the interface's
+    /// language; `None` for actions that run at once.
+    pub(crate) fn confirmation_question(&self, a: textweaver_keymap::ActionId) -> Option<String> {
+        use textweaver_keymap::ActionId as A;
+        a.confirmation_prompt()?;
+        Some(self.msg(match a {
+            A::Quit => "confirm-quit",
+            _ => "confirm-delete-note",
+        }))
     }
 
     /// A message from the catalog.

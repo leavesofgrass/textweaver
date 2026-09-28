@@ -8,7 +8,9 @@
 //! the syllable separators of the syllable display (`read·a·bil·i·ty`).
 //! A separator takes columns before its char, so wrapping and the
 //! cursor's column count it, while every highlight and the cursor stay on
-//! the document's own positions.
+//! the document's own positions. It also draws some ranges as other text
+//! (Unicode math, `x²` for `$x^2$`): the range's first char shows the
+//! text and takes its columns, and the rest of the range takes none.
 
 use ratatui::text::Span;
 use textweaver_app::core::{CharPos, CharRange};
@@ -71,14 +73,16 @@ pub fn display_text(c: char, tab: usize) -> String {
     }
 }
 
-/// Text drawn before some chars without changing positions: the syllable
-/// separators.
+/// Text drawn before some chars without changing positions (the syllable
+/// separators), and ranges drawn as other text (Unicode math).
 pub struct Decor<'a> {
     /// The positions in a line (given as its range) that get the text
     /// before them, in order.
     pub breaks: &'a dyn Fn(CharRange) -> Vec<CharPos>,
     /// The text drawn at each break.
     pub text: String,
+    /// Ranges drawn as other text, in document order, not overlapping.
+    pub shown: &'a [(CharRange, String)],
 }
 
 impl Decor<'_> {
@@ -86,6 +90,28 @@ impl Decor<'_> {
     pub fn width(&self) -> usize {
         Span::raw(self.text.as_str()).width()
     }
+
+    /// How the char at `pos` is drawn when a range of [`Decor::shown`]
+    /// holds it: `Some(Some(text))` on the range's first char,
+    /// `Some(None)` (nothing) on the others, `None` outside them.
+    pub fn shown_at(&self, pos: CharPos) -> Option<Option<&str>> {
+        shown_at(self.shown, pos)
+    }
+}
+
+/// [`Decor::shown_at`] over `shown`.
+pub fn shown_at(shown: &[(CharRange, String)], pos: CharPos) -> Option<Option<&str>> {
+    let i = shown.partition_point(|(r, _)| r.end <= pos);
+    let (r, text) = shown.get(i)?;
+    if !r.contains(pos) {
+        return None;
+    }
+    Some((pos == r.start).then_some(text.as_str()))
+}
+
+/// Display width of `text`.
+pub fn text_width(text: &str) -> usize {
+    Span::raw(text).width()
 }
 
 /// Word-wraps `chars` to `width` columns. Returns `(start, end)` char
@@ -108,28 +134,36 @@ pub fn wrap_extra(
     cells: Cells,
     extra: impl Fn(usize) -> usize,
 ) -> Vec<(usize, usize)> {
+    wrap_by(chars, width, |i| cells.width(chars[i]) + extra(i))
+}
+
+/// Word-wraps `chars` to `width` columns, char `i` taking `cols(i)`
+/// columns (zero for a char drawn as part of the one before it).
+pub fn wrap_by(chars: &[char], width: usize, cols: impl Fn(usize) -> usize) -> Vec<(usize, usize)> {
     let width = width.max(1);
     let mut rows = Vec::new();
     let mut start = 0;
     let mut used = 0;
     let mut last_break: Option<usize> = None;
     for (i, &c) in chars.iter().enumerate() {
-        let w = cells.width(c) + extra(i);
-        if used + w > width && i > start && !c.is_whitespace() {
+        let w = cols(i);
+        if used + w > width && i > start && w > 0 && !c.is_whitespace() {
             let brk = match last_break {
                 Some(b) if b > start && b <= i => b,
                 _ => i,
             };
             rows.push((start, brk));
             start = brk;
-            used = (start..i).map(|j| cells.width(chars[j]) + extra(j)).sum();
+            used = (start..i).map(&cols).sum();
             last_break = chars[start..i]
                 .iter()
                 .rposition(|c| c.is_whitespace())
                 .map(|p| start + p + 1);
         }
         used += w;
-        if c.is_whitespace() {
+        // A space drawn as part of other text (inside a formula) is no
+        // place to break.
+        if c.is_whitespace() && w > 0 {
             last_break = Some(i + 1);
         }
     }
@@ -215,11 +249,17 @@ pub fn window_decor(
             Some(d) => {
                 let breaks = (d.breaks)(line_range(doc, line));
                 let w = d.width();
-                wrap_extra(&chars, width, cells, |i| {
-                    if breaks.binary_search(&CharPos(base + i)).is_ok() {
+                wrap_by(&chars, width, |i| {
+                    let pos = CharPos(base + i);
+                    let sep = if breaks.binary_search(&pos).is_ok() {
                         w
                     } else {
                         0
+                    };
+                    match d.shown_at(pos) {
+                        Some(Some(text)) => sep + text_width(text),
+                        Some(None) => 0,
+                        None => sep + cells.width(chars[i]),
                     }
                 })
             }
@@ -274,12 +314,37 @@ pub fn column_decor(
     breaks: &[CharPos],
     sep_width: usize,
 ) -> usize {
+    column_shown(doc, row, pos, cells, breaks, sep_width, &[])
+}
+
+/// [`column_decor`] with ranges drawn as other text ([`Decor::shown`]): a
+/// position inside such a range is at the range's start.
+pub fn column_shown(
+    doc: &Document,
+    row: &Row,
+    pos: CharPos,
+    cells: Cells,
+    breaks: &[CharPos],
+    sep_width: usize,
+    shown: &[(CharRange, String)],
+) -> usize {
+    let pos = match shown.iter().find(|(r, _)| r.contains(pos)) {
+        Some((r, _)) => r.start,
+        None => pos,
+    };
     let end = pos.clamp_to(row.range.end.0).max(row.range.start);
     let text: usize = doc
         .text()
         .slice(row.range.start.0..end.0)
         .chars()
-        .map(|c| cells.width(c))
+        .enumerate()
+        .map(
+            |(i, c)| match shown_at(shown, CharPos(row.range.start.0 + i)) {
+                Some(Some(t)) => text_width(t),
+                Some(None) => 0,
+                None => cells.width(c),
+            },
+        )
         .sum();
     let seps = breaks
         .iter()
@@ -347,6 +412,7 @@ mod tests {
         let decor = Decor {
             breaks: &breaks,
             text: "\u{b7}".into(),
+            shown: &[],
         };
         let rows = window_decor(&doc, 0, 40, 1, Cells::tab(4), Some(&decor), None, 0);
         assert_eq!(rows[0].range, CharRange::new(0, 16));
@@ -364,6 +430,30 @@ mod tests {
         // Narrow: the separators count toward the width.
         let rows = window_decor(&doc, 0, 14, 2, Cells::tab(4), Some(&decor), None, 0);
         assert_eq!(rows[0].range, CharRange::new(0, 12));
+    }
+
+    #[test]
+    fn shown_ranges_take_their_texts_width() {
+        // "a $x^2$ b c": the formula (2 to 7) is drawn as "x²".
+        let doc = Document::from_plain_text("a $x^2$ b c");
+        let none = |_: CharRange| Vec::new();
+        let shown = vec![(CharRange::new(2, 7), "x\u{b2}".to_owned())];
+        let decor = Decor {
+            breaks: &none,
+            text: String::new(),
+            shown: &shown,
+        };
+        assert_eq!(decor.shown_at(CharPos(2)), Some(Some("x\u{b2}")));
+        assert_eq!(decor.shown_at(CharPos(4)), Some(None));
+        assert_eq!(decor.shown_at(CharPos(7)), None);
+        // 11 chars drawn in 2 + 2 + 4 = 8 columns: one row.
+        let rows = window_decor(&doc, 0, 8, 2, Cells::tab(4), Some(&decor), None, 0);
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        // "b" (8) is at column 5: "a " + "x²" + " ".
+        let col = |p| column_shown(&doc, &rows[0], CharPos(p), Cells::tab(4), &[], 0, &shown);
+        assert_eq!(col(8), 5);
+        // Inside the formula: at its start.
+        assert_eq!(col(5), 2);
     }
 
     #[test]

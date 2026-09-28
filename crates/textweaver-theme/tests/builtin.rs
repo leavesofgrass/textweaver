@@ -31,7 +31,7 @@ fn shipped_files_match_the_generator() {
 
 #[test]
 fn the_required_themes_pass_every_check() {
-    // Jon's policy: only Galaxy, Galaxy Light, and the high-contrast themes
+    // The owner's policy: only Galaxy, Galaxy Light, and the high-contrast themes
     // must meet WCAG AA; the others keep Star's colors and are labelled.
     let mut failures = Vec::new();
     for t in builtin::all()
@@ -196,7 +196,7 @@ fn adjustments_table_lists_every_change() {
 
 #[test]
 fn galaxy_is_the_default_and_faithful_to_star() {
-    // Jon's theme: Star's default, modeled on Obsidian's dark palette.
+    // The owner's theme: Star's default, modeled on Obsidian's dark palette.
     let g = builtin::default_theme();
     assert_eq!(g.name(), "galaxy");
     assert_eq!(textweaver_theme::DEFAULT_THEME, "galaxy");

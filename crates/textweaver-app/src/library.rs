@@ -17,6 +17,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::{Duration, Instant};
 
+use textweaver_lexicon::args;
 use textweaver_store::library::{self, LibraryItem, ResumeSource};
 use textweaver_store::sync::Resolution;
 use textweaver_store::{DocKey, DocState, Library, LibrarySync, Recent};
@@ -130,7 +131,8 @@ impl App {
     pub(crate) fn open_library(&mut self) -> Vec<Effect> {
         if let Some(scan) = &self.library_scan {
             let n = scan.found.load(Ordering::Relaxed);
-            self.tell(&format!("Still scanning the library: {n} found so far."));
+            let msg = self.msg_args("library-still-scanning", &args!["n" => n]);
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let inputs = self.library_inputs();
@@ -146,7 +148,8 @@ impl App {
                 wake.wake();
             });
         if let Err(e) = spawned {
-            self.error(&format!("Could not scan the library: {e}."));
+            let msg = self.msg_args("library-scan-failed", &args!["error" => e.to_string()]);
+            self.error(&msg);
             return vec![Effect::Redraw];
         }
         self.library_scan = Some(LibraryScan {
@@ -154,7 +157,8 @@ impl App {
             found,
             shown_at: Instant::now(),
         });
-        self.note("Scanning the library.");
+        let msg = self.msg("library-scanning");
+        self.note(&msg);
         vec![Effect::Redraw]
     }
 
@@ -170,14 +174,16 @@ impl App {
                 if scan.shown_at.elapsed() >= PROGRESS_EVERY {
                     scan.shown_at = Instant::now();
                     let n = scan.found.load(Ordering::Relaxed);
-                    self.show(&format!("Scanning the library: {n} found so far."));
+                    let msg = self.msg_args("library-scan-progress", &args!["n" => n]);
+                    self.show(&msg);
                     return vec![Effect::Redraw];
                 }
                 return Vec::new();
             }
             Err(TryRecvError::Disconnected) => {
                 self.library_scan = None;
-                self.error("The library scan stopped with an internal error.");
+                let msg = self.msg("library-scan-stopped");
+                self.error(&msg);
                 return vec![Effect::Redraw];
             }
         };
@@ -189,21 +195,21 @@ impl App {
     fn show_library(&mut self, items: Vec<LibraryItem>) -> Vec<Effect> {
         if items.is_empty() {
             let open = self.key(textweaver_keymap::ActionId::Open);
-            self.tell(&format!(
-                "The library is empty. Add a folder with tw library --add, or open a file with {open}."
-            ));
+            let msg = self.msg_args(
+                "library-empty",
+                &args!["command" => "tw library --add", "key" => open],
+            );
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let n = items.len();
         let paths: Vec<PathBuf> = items.iter().map(|i| i.path.clone()).collect();
         let lines: Vec<String> = items.iter().map(LibraryItem::describe).collect();
         self.list = Some(ListKind::Library(paths));
-        self.tell(&format!(
-            "Library, {n} {}. Enter opens one.",
-            if n == 1 { "document" } else { "documents" }
-        ));
+        let msg = self.msg_args("library-intro", &args!["n" => n]);
+        self.tell(&msg);
         vec![Effect::ShowList {
-            title: "Library".into(),
+            title: self.msg("library-title"),
             items: lines,
         }]
     }

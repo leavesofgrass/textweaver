@@ -51,6 +51,16 @@ impl AtEnd {
     }
 }
 
+/// Exits this host process when textweaver, its parent, is gone, even while
+/// the engine is stuck. Windows and Linux do this for every host already
+/// (a kill-on-close job, a parent-death signal); on macOS and the BSDs this
+/// starts a thread that watches the parent. A reader started with
+/// [`AtEnd::Exit`] calls it; a host that starts no reader calls it first.
+pub fn exit_with_parent() {
+    #[cfg(all(unix, not(target_os = "linux")))]
+    crate::orphan::watch_parent();
+}
+
 /// Writes one line to stderr, ignoring every error. Hosts log with this
 /// instead of `eprintln!`, which panics when stderr is closed; a panic in
 /// an engine callback called from C aborts the host.
@@ -120,6 +130,9 @@ impl<R: Message + Send + 'static> RequestReader<R> {
         name: &str,
         at_end: AtEnd,
     ) -> io::Result<Self> {
+        if matches!(at_end, AtEnd::Exit(_)) {
+            exit_with_parent();
+        }
         let epoch = StopEpoch::new();
         let (tx, rx) = mpsc::channel();
         let e = epoch.clone();

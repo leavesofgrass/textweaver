@@ -4,9 +4,63 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### The Cloud Agent (pull request 1)
+
+- Nine new fuzz targets: LaTeX math, ASCIIMath, BibTeX, RIS, CSL-JSON, themes, the lexicon, vault import, and JSON-RPC, with `cargo xtask fuzz-seed`.
+- A settings reference generated from the settings schema (`docs/settings-reference.md`, `cargo xtask settings-doc`), and `cargo xtask docs --check` for the ADR index, crate counts, "See also" sections, and index links.
+- epubcheck and veraPDF check the writers' EPUB and PDF output (`second-tool.yml`).
+- Fixed: a BibTeX crossref loop overflowed the stack; loops, and chains deeper than 8, are cut.
+- Fixed: a damaged lexicon file could crash textweaver; its headword map's checksum is checked when it opens.
+- Fixed: front matter keys that start with YAML syntax or with spaces were lost in vault export; they are quoted.
+- Fixed: exporting Markdown with a nested list to EPUB, PDF, DOCX, or braille crashed. A one-item list, and a list that is an item's only content, keep their nesting too, and lists nested past 64 levels are written as paragraphs instead of overflowing the stack.
+- Fixed: every EPUB failed two epubcheck rules (RSC-011 and RSC-005).
+- Fixed: `tw serve` could be made to allocate a terabyte; a message over 16 MiB now ends the session.
+- Fixed: on macOS, an engine host could outlive a crashed textweaver; each host now exits when textweaver is gone.
+
+### W4c2: documents
+
+- RTF and OpenDocument text (ODT, OTT, and flat FODT) open in the reader and in `tw` without Pandoc: headings, lists with their numbers, tables with header rows, footnotes, links, and pictures' descriptions. RTF in older code pages, such as Cyrillic and Japanese, reads correctly. Try `fixtures/c2/handout.rtf` and `fixtures/c2/notes.odt` (ADR-0031).
+- Comments in Word and ODT files, with their replies and whether they are resolved, become notes on the text they are about when the document opens, so reading tells you when you reach one: "Note: Comment by Ada Example: say how salty." Try `fixtures/c2/comments.docx`.
+- Tracked changes in Word, ODT, and RTF files: `[reading] revisions = "marked"` says each change where it is, "(deleted by Ada Example: three) (inserted by Ada Example: five)"; `"final"` reads the text with every change accepted, as before; `"auto"`, the default, says them at high verbosity.
+- Word, OpenDocument, EPUB, and PowerPoint files with more than 50,000 files inside, overlapping files, or a file that claims to unpack to more than 1,000 times its size are refused, and no package unpacks past 1 gigabyte.
+- A damaged RTF or ODT file is named plainly: "Could not open notes.odt: it is not a readable OpenDocument text file; it may be damaged."
+
+### W4d: interface translations
+
+- textweaver speaks and shows its own words in English, Spanish, French, German, Portuguese, or Arabic: messages, lists, help, keyboard shortcuts, the command palette, and the settings screen. `[interface] language`, "Interface language" on the settings screen, or `tw settings language es` (ADR-0030).
+- The language changes at once: the change is said in the new language, then the title line.
+- The voice follows the language when the speech engine has one for it. When it has none, the current voice keeps speaking and textweaver says so; it never goes silent. `[speech.voices_by_language]` picks a voice per language.
+- The first run starts with the list of languages, your system's language first.
+- Right-to-left text is reordered for display in terminals that do not do it themselves, and never for screen readers: `[interface] rtl`.
+- textweaver's own voice says key names in the interface's language; the status line keeps their written names.
+- The command palette also finds commands by their help in your language.
+- For translators and developers: every message is in `crates/textweaver-lexicon/locales/*.ftl`; `en-XA` shows each one bracketed, and the new `pseudo` step of `scripts/dev-check` fails on any that was missed.
+
+### W4g: authoring extras
+
+- Markdown lint in edit mode: Ctrl+F8 and Ctrl+Shift+F8 select the next or previous problem and say it, "Lint: heading level 3 after level 1; use level 2." Five rules: heading levels, list markers, trailing spaces, link references without a definition, and bare web addresses. `tw lint FILE...` checks files and exits 1 when there are problems. textweaver's own rules, not rumdl (ADR-0032).
+- Copying works in terminals without OSC 52 (the old Windows console, macOS Terminal, GNOME Terminal and other VTE terminals): textweaver puts the text on the system clipboard itself and says so the first time. Over SSH and in tmux it still uses the terminal.
+- Math as Unicode in the reading view (`x²`, `√2`, `1⁄2`), as Star showed it: `[reading] math_display = "unicode"`, or "Math on screen" in the settings list. Speech, edit mode, and math exploration use the source. Try `fixtures/g/math.md`.
+- Notes and highlights export as BibTeX, BibLaTeX, RIS, or CSL-JSON records for Zotero or Pandoc: `tw marks FILE --export ris --output notes.ris`.
+- Moving the caret onto a code block's first line names its language: "code, Python".
+- Held for the owner's decision on RUSTSEC-2025-0141 (bincode unmaintained): grammar checking with Harper (Ctrl+F7, branch `wave4/g-grammar-harper`) and code highlighting with syntect (branch `wave4/g-highlight-syntect`).
+
+### W4c1: MathCAT speech
+
+- Math can be spoken by MathCAT, the engine NVDA and JAWS use, in ClearSpeak or SimpleSpeak, at the math verbosity, in the document's language: `[reading] math_engine = "mathcat"` or `"mathcat_simplespeak"` ("Math speech" in the settings screen). It needs a build with the new `mathcat` feature, which is off by default; textweaver's own math speech stays the default and the fallback. The highlight covers the whole formula while MathCAT reads it (ADR-0029).
+- EPUB 3 books: MathML is read as math, using the book's TeX when a formula carries it; a formula with only `alttext` is read as that text, and an `epub:switch` is read once.
+- New crate `textweaver-mathcat` on MathCAT 0.7.6-rc.3, pinned exactly. Braille (Nemeth and UEB) waits for MathCAT issue #827 to be fixed in a release.
+
+### W4b: speed and memory
+
+- Zip archives, and the EPUB and Word files built on zip, open whatever compression their members use: deflate, bzip2, LZMA, XZ, and PPMd, all in pure Rust. A member that says it is larger than 256 MB is refused before it is unpacked.
+- Words and sentences are found two to three times as fast (ICU4X's segmenters), with the same boundaries. Planning a whole 10 MB document for reading takes about half the time it did.
+- The reader asks the system for its light or dark setting only when that can change the theme, and no longer waits for the answer before building the reader.
+- `--log debug` records how long the reader took to start.
+
 ### Keys: what changed
 
-The default keys are now the quick navigation keys of NVDA's and JAWS's browse mode (Jon's decision). `preset = "classic"` under `[keyboard]` keeps the earlier keys; `preset = "screen-reader"` now means the default. Old key, then where its command went (terminal):
+The default keys are now the quick navigation keys of NVDA's and JAWS's browse mode (the owner's decision). `preset = "classic"` under `[keyboard]` keeps the earlier keys; `preset = "screen-reader"` now means the default. Old key, then where its command went (terminal):
 
 - `.` next sentence: `Alt+Down` or `Alt+.`. `.` now says the sentence.
 - `,` previous sentence: `Alt+Up` or `Alt+,`. `,` now says the paragraph.
@@ -28,12 +82,20 @@ The default keys are now the quick navigation keys of NVDA's and JAWS's browse m
 
 See [docs/keyboard.md](docs/keyboard.md#what-changed).
 
-### W4s: the Xilem GUI before Jon's listening session
+### W4s: the Xilem GUI before the owner's listening session
 
 - `textweaver-xilem --announce uia` (Windows) announces with UI Automation Notification events instead of the live region, for comparing the two in NVDA and JAWS. `announce = "uia"` in a `[gui]` table of `settings.toml` does the same. The default is still the live region.
 - List options and settings scrolled out of view are now in the accessibility tree, so a screen reader's object navigation reaches them: all 15 settings sections, and every option of a long list.
 - Lists and the settings form say "1 of 15" (they said "2 of" with no total), and rows scrolled into view are drawn instead of blank.
 - The UI Automation report checks both announcement paths and a long list scrolled to its end. See [ADR-0028](docs/adr/0028-xilem-gui-after-the-session.md), which also records where the GUI's memory goes (the graphics stack; the app itself is about 11 MB).
+
+### W4a2: the Xilem GUI after the first screen reader session
+
+- The live region stays the default for announcements, and the spoken word's background color stays the highlight. `[gui] announce = "uia"` is now a real setting, in the settings dialog under "Window"; `--announce` and `--select-spoken` stay as options. ADR-0028 is accepted.
+- A long document's window slides while reading without losing the screen reader's place: the text that stays keeps its nodes, and the caret stays on the spoken word.
+- The reading aids in the window: text spacing, the reading ruler and current line, bionic reading, difficult words, and RSVP in its own strip under the document. The RSVP word is never spoken by itself; a quiet status beside it says where you are.
+- In a list, F1 and Alt+End repeat the list's introduction, as in the terminal. The status bar shows the terminal's title line: the reading state, the line, the mode, the rate, and the engine. "No document is open" names the Open key from the keymap.
+- New guide: [docs/gui.md](docs/gui.md), also shipped in the GUI package as `GUI.md`.
 
 ### Usability pass: the terminal reader and `tw`
 
@@ -141,7 +203,6 @@ See [docs/keyboard.md](docs/keyboard.md#what-changed).
 
 ### Fixed
 
-- `tw convert` to EPUB, DOCX, BRF and PDF no longer crashes on a Markdown list with a nested list or a single item. Nested lists keep their nesting in every format.
 - An engine that keeps failing no longer floods you with errors: reading stops after three failures in a row.
 - A damaged per-document state file or recent-files list is set aside as a `.bak` file instead of being overwritten, so notes and bookmarks are not lost.
 - Saving writes through symbolic links, keeps file permissions, and refuses read-only and non-UTF-8 files (use Save As).

@@ -388,6 +388,10 @@ impl TreeBuilder<'_> {
         let mut i = idx.start;
         while i < idx.end {
             let m = &self.markers[i];
+            // A container being built is never its own child: the Markdown
+            // loader gives a list and its only item the same range, and
+            // taking the list again as the item's child built it forever,
+            // until the stack overflowed.
             if Some(i) == this
                 || self.open.contains(&i)
                 || (!range.contains_range(m.range) && !is_break(m))

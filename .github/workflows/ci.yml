@@ -30,7 +30,7 @@ jobs:
   docs:
     name: docs (links and site data)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -49,6 +49,18 @@ jobs:
       # headings, labels, text alternatives, and references.
       - name: Site accessibility checks
         run: python tools/check_site_a11y.py
+      # The ADR index and the Decisions list match docs/adr, the crate
+      # counts match crates/, and every guide ends with See also and is
+      # linked from docs/README.md (xtask/src/docs_check.rs).
+      - name: Docs indexes and crate counts
+        run: cargo xtask docs --check
+      # docs/settings-reference.md matches the settings schema. The app
+      # crate links the audio output, which needs the ALSA headers.
+      - name: Settings reference is current
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
+          cargo xtask settings-doc --check
 
   # Generated files and repository rules that need no build of the
   # workspace's dependencies: the keyboard reference, the dependency

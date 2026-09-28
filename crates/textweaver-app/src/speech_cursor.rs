@@ -8,6 +8,7 @@
 //! commands used in this mode move the Speech Cursor to the line of their
 //! target and read that line.
 
+use textweaver_lexicon::args;
 use textweaver_speech::Earcon;
 
 use crate::app::{App, Mode};
@@ -18,7 +19,8 @@ impl App {
         if self.mode == Mode::SpeechCursor {
             self.stop_speech();
             self.leave_speech_cursor();
-            self.note("Speech Cursor off.");
+            let msg = self.msg("speechcursor-off");
+            self.note(&msg);
         } else {
             self.enter_speech_cursor();
         }
@@ -42,15 +44,15 @@ impl App {
         // The line read is on the status line too, for screen readers that
         // follow it (with `--no-speech` nothing else is heard), unless
         // textweaver reads it aloud to a screen reader user (hybrid).
-        let text = if self.route(textweaver_a11y::Channel::Line).status {
-            format!(": {}", self.status_text())
+        let msg = if self.route(textweaver_a11y::Channel::Line).status {
+            self.msg_args(
+                "speechcursor-on-with-text",
+                &args!["line" => line + 1, "text" => self.status_text()],
+            )
         } else {
-            String::new()
+            self.msg_args("speechcursor-on", &args!["line" => line + 1])
         };
-        self.show(&format!(
-            "Speech Cursor on, line {}{text}. Up and Down read lines, Enter reads on, Tab or Escape leaves.",
-            line + 1
-        ));
+        self.show(&msg);
     }
 
     /// Leaves the mode, putting the cursor on the first word at or after the
@@ -95,11 +97,12 @@ impl App {
         let next = line.saturating_add_signed(delta).min(last);
         if next == line {
             self.speech.earcon(Earcon::Boundary);
-            self.tell(if delta < 0 {
-                "Top of document."
+            let msg = self.msg(if delta < 0 {
+                "nav-top-of-document-stop"
             } else {
-                "End of document."
+                "nav-end-of-document-stop"
             });
+            self.tell(&msg);
             return;
         }
         s.speech_cursor_line = Some(next);

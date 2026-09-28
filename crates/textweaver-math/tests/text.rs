@@ -189,3 +189,32 @@ fn fixture_document() {
         assert!(out.contains("It costs $5 and $10 to enter."), "{out}");
     }
 }
+
+/// Another engine asked first (MathCAT, ADR-0029): its words replace the
+/// whole formula as one expanded span; `None` or blanks fall back to this
+/// crate's speech; prose around the math stays literal.
+#[test]
+fn speak_text_with_another_engine() {
+    use textweaver_math::speak_text_with;
+    let text = "so $x^2$ and $y$ end";
+    let opts = TextOptions::default();
+    let (out, map) = speak_text_with(text, &opts, &mut |r, math| {
+        (math.source == "x^2").then(|| format!("  the {:?}  power ", r.delimiter))
+    });
+    check(text, &out, &map);
+    assert_eq!(out, "so the Dollar power and y end");
+    let expanded: Vec<_> = map
+        .spans()
+        .iter()
+        .filter(|s| s.kind == SpanKind::Expanded)
+        .collect();
+    assert_eq!(expanded.len(), 1);
+    assert_eq!(expanded[0].source.to_range(), 4..7);
+    // Blank words fall back.
+    let (out, map) = speak_text_with(text, &opts, &mut |_, _| Some("   ".into()));
+    check(text, &out, &map);
+    assert_eq!(out, say(text));
+    // A formula touching a word stays a separate word.
+    let (out, _) = speak_text_with("a$x$b", &opts, &mut |_, _| Some("ex".into()));
+    assert_eq!(out, "a ex b");
+}

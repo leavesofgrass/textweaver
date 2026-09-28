@@ -168,6 +168,10 @@ The voice and how it speaks. [Speech engines and voices](speech.md) explains the
 
 Named rates for F8, which cycles through them. The defaults are `skim = 350`, `normal = 265`, `study = 200`, and `slow = 150`. Importing this table replaces all of it.
 
+### [speech.voices_by_language]
+
+The voice to use for each interface language, by language tag, such as `es = "eci:es"`. When `[interface] language` changes to a language listed here, its voice is used. A language not listed keeps the current voice if it speaks the language, else takes the engine's voice for it (one whose name contains `prefer_voice` first, so Eloquence when you have it). Empty by default. `tw voices` lists the voice ids.
+
 ### [speech.eci]
 
 ETI-Eloquence. See [the Eloquence guide](eloquence.md).
@@ -243,6 +247,9 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `ocr`, default `true`: recognize the text of scanned pages and pictures (OCR). See [Scanned pages](converting.md#scanned-pages-ocr).
 - `ocr_lang`, default `""`: the language of scanned text, as Tesseract codes (`"fra"`, `"deu+eng"`) or language tags (`"fr"`). Empty means the document's own language, else English. English is read by ocrs; other languages need Tesseract.
 - `ocr_engine`, default `"auto"`: `"ocrs"`, `"tesseract"`, or `"paddle"` (experimental) to use one engine only.
+- `math_engine`, default `"builtin"`: which engine reads math aloud. `"builtin"` is textweaver's own; `"mathcat"` is MathCAT in ClearSpeak and `"mathcat_simplespeak"` MathCAT in SimpleSpeak, in the document's language. MathCAT needs a build with the `mathcat` feature; without it, textweaver's own is used. See [Hear math with MathCAT](math.md#hear-math-with-mathcat).
+- `math_display`, default `"source"`: how math looks in the reading view. `"source"` shows it as written (`$x^2$`); `"unicode"` draws each formula as one line of Unicode (`x²`, `√2`, `1⁄2`), as Star did. Speech, edit mode, and exploring a formula always use the source. See [See math as Unicode](math.md#see-math-as-unicode).
+- `revisions`, default `"auto"`: how tracked changes in Word, OpenDocument, and RTF files are read. `"auto"` says each change in place ("deleted by Ada Example: three") at high verbosity and reads the final text otherwise; `"marked"` always says them; `"final"` never does. It applies when a document is opened. See [Converting documents](converting.md).
 
 ### [display]
 
@@ -385,7 +392,14 @@ Reading statistics (see [the reading guide](reading.md#reading-statistics-ctrlsh
 
 ### [interface]
 
-- `language`, default `"en"`: the language of textweaver's own words. Only English is complete so far. `en-XA` shows every message accented and in `⟦ ⟧` brackets, and `ar-XB` shows them right to left: both are for testing. A `<language>.ftl` file in the `locales` folder of the settings folder adds a language; messages it lacks stay in English. The define-word, profile, and statistics messages use it; the rest of the interface follows in later versions.
+- `language`, default `"en"`: the language of textweaver's own words: messages, lists, help, and the settings screen, not your documents. Built in: `"en"` English, `"es"` Spanish, `"fr"` French, `"de"` German, `"pt"` Portuguese (Brazilian), and `"ar"` Arabic. A tag with a region, such as `"es-MX"` or `"pt-BR"`, uses its language. A change on the settings screen takes effect at once: the change is said in the new language, then the title line. The voice follows the language when the speech engine has a voice for it; when it has none, the current voice keeps speaking and textweaver says so. `en-XA` shows every message accented and in `⟦ ⟧` brackets, and `ar-XB` shows them right to left: both are for testing. A `<language>.ftl` file in the `locales` folder of the settings folder adds a language, or goes over a built-in one message by message; messages it lacks come from the built-in translation, then English. `tw settings language` lists the languages, and `tw settings language es` sets one. The first run starts with the list of languages, your system's language first.
+- `rtl`, default `"auto"`: whether the terminal reader reorders right-to-left text (Arabic, Hebrew) for display. `"auto"` reorders only where it helps: not in terminals that do it themselves (GNOME Terminal and other VTE terminals, Konsole, mlterm, macOS Terminal), not on Windows (Windows Terminal and the console do not support right-to-left text), and not in hybrid or screen reader mode, since a screen reader reads the terminal's cells and would get reordered text backwards. `"on"` always reorders, `"off"` never. The document, speech, and your screen reader always get the text in reading order.
+
+### [gui]
+
+Settings only the window (`textweaver-xilem`) reads. In the settings dialog they are under "Window".
+
+- `announce`, default `"live"`: how the window's messages reach the screen reader, from the next start. `"live"` uses a live region, which NVDA and JAWS both speak. `"uia"` raises UI Automation notifications instead (Windows only; elsewhere the live region is used). `--announce live` or `--announce uia` on the command line wins over the setting for one run.
 
 ## Settings profiles
 

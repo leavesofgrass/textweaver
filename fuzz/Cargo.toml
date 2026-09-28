@@ -27,6 +27,20 @@ textweaver-sapi = { path = "../crates/textweaver-sapi", default-features = false
 serde_json = "1"
 toml = "1.1"
 zip = { version = "8.6", default-features = false, features = ["deflate"] }
+# Cloud Agent task 1: the parsers a student's own writing goes through.
+textweaver-math = { path = "../crates/textweaver-math" }
+textweaver-cite = { path = "../crates/textweaver-cite" }
+textweaver-theme = { path = "../crates/textweaver-theme" }
+textweaver-lexicon = { path = "../crates/textweaver-lexicon" }
+textweaver-vault = { path = "../crates/textweaver-vault" }
+# The JSON-RPC server, without the conversion and citation stack. It links
+# the audio output, which needs the ALSA headers (libasound2-dev) on Linux,
+# so it is behind the `rpc` feature and the other targets build without it.
+textweaver-app = { path = "../crates/textweaver-app", default-features = false, optional = true }
+
+[features]
+# The `rpc` target: `cargo +nightly fuzz run rpc --features rpc`.
+rpc = ["dep:textweaver-app"]
 
 # Its own workspace, so the root workspace never builds it.
 [workspace]
@@ -136,6 +150,91 @@ bench = false
 [[bin]]
 name = "web"
 path = "fuzz_targets/web.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "latex_math"
+path = "fuzz_targets/latex_math.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "asciimath"
+path = "fuzz_targets/asciimath.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bibtex"
+path = "fuzz_targets/bibtex.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ris"
+path = "fuzz_targets/ris.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "csl_json"
+path = "fuzz_targets/csl_json.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "theme"
+path = "fuzz_targets/theme.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lexicon"
+path = "fuzz_targets/lexicon.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "vault_import"
+path = "fuzz_targets/vault_import.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "rpc"
+path = "fuzz_targets/rpc.rs"
+required-features = ["rpc"]
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "rtf"
+path = "fuzz_targets/rtf.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "odt"
+path = "fuzz_targets/odt.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "docx_revisions"
+path = "fuzz_targets/docx_revisions.rs"
 test = false
 doc = false
 bench = false

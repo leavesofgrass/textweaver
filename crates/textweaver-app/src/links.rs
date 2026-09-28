@@ -13,6 +13,7 @@
 use std::path::{Path, PathBuf};
 
 use textweaver_core::{CharPos, MarkerKind, Unit};
+use textweaver_lexicon::args;
 use textweaver_speech::Earcon;
 use textweaver_text::Document;
 use textweaver_text::units::unit_at;
@@ -141,12 +142,14 @@ impl App {
             .and_then(|m| m.reference.clone().map(|r| (s.doc.slice(m.range), r)));
         let Some((text, target)) = link else {
             self.speech.earcon(Earcon::Boundary);
-            self.tell("No link or footnote at the cursor.");
+            let msg = self.msg("links-none-here");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         };
         let target = target.trim().to_owned();
         if target.is_empty() {
-            self.tell(&format!("The link {} has no address.", text.trim()));
+            let msg = self.msg_args("links-no-address", &args!["text" => text.trim()]);
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         if let Some(anchor) = target.strip_prefix('#') {
@@ -164,14 +167,15 @@ impl App {
                 return self.follow_local(&path);
             }
             let kind = if lower.starts_with("mailto:") {
-                "Mail link"
+                "mail"
             } else {
-                "Web link"
+                "web"
             };
-            self.offer_open(
-                target.clone(),
-                &format!("{kind}: {target}. Open it? y or n."),
+            let question = self.msg_args(
+                "links-open-question",
+                &args!["kind" => kind, "target" => target.as_str()],
             );
+            self.offer_open(target.clone(), &question);
             return vec![Effect::Redraw];
         }
         self.follow_local(&percent_decode(&target))
@@ -196,12 +200,14 @@ impl App {
                         )
                     })
                     .unwrap_or_default();
-                let msg = self.nav_message(Some("Heading"), pos, &text);
+                let label = self.msg("links-heading-label");
+                let msg = self.nav_message(Some(&label), pos, &text);
                 self.jump(pos, true, ReadAfter::Follow, &msg);
             }
             None => {
                 self.speech.earcon(Earcon::Error);
-                self.tell(&format!("No heading called {anchor} in this document."));
+                let msg = self.msg_args("links-no-heading", &args!["anchor" => anchor]);
+                self.tell(&msg);
             }
         }
     }
@@ -229,7 +235,8 @@ impl App {
         }
         let Some(path) = resolve_local(&folder, file) else {
             self.speech.earcon(Earcon::Error);
-            self.tell(&format!("The link goes to {file}, which was not found."));
+            let msg = self.msg_args("links-file-not-found", &args!["file" => file]);
+            self.tell(&msg);
             return vec![Effect::Redraw];
         };
         let same = here
@@ -276,10 +283,11 @@ impl App {
                     history_len,
                 });
                 let back = self.keys(textweaver_keymap::ActionId::HistoryBack);
-                self.tell(&format!(
-                    "Followed the link to {}. Back: {back}.",
-                    file_name(&path)
-                ));
+                let msg = self.msg_args(
+                    "links-followed",
+                    &args!["file" => file_name(&path), "key" => back],
+                );
+                self.tell(&msg);
             }
         }
         effects
@@ -310,7 +318,8 @@ impl App {
                 s.cursor = top.pos.clamp_to(s.doc.len_chars());
             }
             self.scroll_to_cursor();
-            self.tell(&format!("Back in {}.", file_name(&top.from)));
+            let msg = self.msg_args("links-back-in", &args!["file" => file_name(&top.from)]);
+            self.tell(&msg);
         }
         true
     }
@@ -362,17 +371,28 @@ impl App {
                     let line = text_util::line_of(doc, p) + 1;
                     (
                         p,
-                        format!("Back to footnote reference {label}, line {line}."),
+                        self.msg_args(
+                            "links-back-to-footnote-reference",
+                            &args!["label" => label.as_str(), "line" => line],
+                        ),
                     )
                 }
                 // Read in place: the note is here; say it.
                 None if inline => {
                     let text = text_util::preview(doc, b.range, 40);
-                    self.tell(&format!("Footnote {label}: {text}"));
+                    let msg = self.msg_args(
+                        "links-footnote",
+                        &args!["label" => label.as_str(), "text" => text],
+                    );
+                    self.tell(&msg);
                     return Some(vec![Effect::Redraw]);
                 }
                 None => {
-                    self.tell(&format!("No reference to footnote {label} in the text."));
+                    let msg = self.msg_args(
+                        "links-footnote-unreferenced",
+                        &args!["label" => label.as_str()],
+                    );
+                    self.tell(&msg);
                     return Some(vec![Effect::Redraw]);
                 }
             }
@@ -383,10 +403,18 @@ impl App {
             match note {
                 Some(m) => {
                     let text = text_util::preview(doc, m.range, 20);
-                    (m.range.start, format!("Footnote {label}: {text}"))
+                    (
+                        m.range.start,
+                        self.msg_args(
+                            "links-footnote",
+                            &args!["label" => label.as_str(), "text" => text],
+                        ),
+                    )
                 }
                 None => {
-                    self.tell(&format!("Footnote {label} has no note."));
+                    let msg =
+                        self.msg_args("links-footnote-no-note", &args!["label" => label.as_str()]);
+                    self.tell(&msg);
                     return Some(vec![Effect::Redraw]);
                 }
             }

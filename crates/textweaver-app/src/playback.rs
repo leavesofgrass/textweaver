@@ -7,6 +7,9 @@ use textweaver_speech::{Caps, ReadingGeneration, SayMode, SpeechStatus};
 use textweaver_text::narrate::NarrationPolicy;
 use textweaver_text::units::unit_at;
 
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
+
 use crate::app::{App, Mode};
 use crate::command::Effect;
 use crate::text_util;
@@ -139,7 +142,27 @@ pub fn load_options(settings: &textweaver_store::Settings) -> textweaver_formats
             FootnoteMode::Skip => Load::Skip,
         },
         ocr: ocr_options(&settings.reading),
+        revisions: revision_mode(settings),
         ..textweaver_formats::LoadOptions::default()
+    }
+}
+
+/// `[reading] revisions`: how tracked changes in Word, OpenDocument, and
+/// RTF files are read. `auto` (the default) says each change in place
+/// ("deleted by Ada Example: ...") at high verbosity and reads the final
+/// text otherwise; `marked` always says them; `final` never does. Read
+/// A document already open keeps the way it was loaded until it is opened
+/// again.
+fn revision_mode(settings: &textweaver_store::Settings) -> textweaver_formats::RevisionMode {
+    use textweaver_formats::RevisionMode;
+    use textweaver_store::RevisionReading;
+    match settings.reading.revisions {
+        RevisionReading::Marked => RevisionMode::Marked,
+        RevisionReading::Final => RevisionMode::Final,
+        RevisionReading::Auto if settings.speech.verbosity >= Verbosity::High => {
+            RevisionMode::Marked
+        }
+        RevisionReading::Auto => RevisionMode::Final,
     }
 }
 
@@ -161,20 +184,20 @@ fn ocr_options(reading: &textweaver_store::ReadingSettings) -> textweaver_format
 
 /// What a capability change means for the listener, or `None` when nothing
 /// they would notice changed.
-pub(crate) fn capability_message(old: Caps, new: Caps) -> Option<String> {
-    let mut parts: Vec<&str> = Vec::new();
-    let lost = |c: Caps| old.contains(c) && !new.contains(c);
-    let gained = |c: Caps| !old.contains(c) && new.contains(c);
+pub(crate) fn capability_message(c: &Catalog, old: Caps, new: Caps) -> Option<String> {
+    let mut parts: Vec<String> = Vec::new();
+    let lost = |x: Caps| old.contains(x) && !new.contains(x);
+    let gained = |x: Caps| !old.contains(x) && new.contains(x);
     if lost(Caps::WORD_EVENTS) {
-        parts.push("This voice does not report words, so the word highlight is estimated.");
+        parts.push(c.tr("playback-caps-no-words"));
     } else if gained(Caps::WORD_EVENTS) {
-        parts.push("This voice reports each word, so the highlight follows it exactly.");
+        parts.push(c.tr("playback-caps-words"));
     }
     if lost(Caps::PITCH) {
-        parts.push("Pitch cannot be changed with this voice.");
+        parts.push(c.tr("playback-caps-no-pitch"));
     }
     if lost(Caps::VOLUME) {
-        parts.push("Volume cannot be changed with this voice.");
+        parts.push(c.tr("playback-caps-no-volume"));
     }
     (!parts.is_empty()).then(|| parts.join(" "))
 }
@@ -202,6 +225,16 @@ impl App {
             Playback::Idle if self.has_read => "Stopped",
             Playback::Idle => "Ready",
         }
+    }
+
+    /// [`reading_state`](Self::reading_state) in the interface's language.
+    pub fn reading_state_text(&self) -> String {
+        self.msg(match self.playback {
+            Playback::Reading => "state-reading",
+            Playback::Paused { .. } => "state-paused",
+            Playback::Idle if self.has_read => "state-stopped",
+            Playback::Idle => "state-ready",
+        })
     }
 
     /// The speech backend's capabilities as last reported (they follow the
@@ -351,7 +384,8 @@ impl App {
         if self.screen_say_all_wanted() {
             // Screen-reader mode: a sentence at a time on the status line.
             if !self.start_screen_say_all(start, std::time::Instant::now()) {
-                self.tell("End of document.");
+                let msg = self.msg("nav-end-of-document-stop");
+                self.tell(&msg);
             }
             return;
         }
@@ -362,10 +396,12 @@ impl App {
                 && !self.settings.accessibility.quiet_screen
             {
                 let rate = self.settings.speech.rate.wpm();
-                self.show(&format!("Reading at {rate} words per minute."));
+                let msg = self.msg_args("playback-reading-at", &args!["rate" => rate]);
+                self.show(&msg);
             }
         } else {
-            self.tell("End of document.");
+            let msg = self.msg("nav-end-of-document-stop");
+            self.tell(&msg);
         }
     }
 
@@ -431,7 +467,8 @@ impl App {
                 self.track.pause();
                 self.playback = Playback::Paused { resume_at };
                 self.pause_origin = resume_at;
-                self.note("Paused.");
+                let msg = self.msg("playback-paused");
+                self.note(&msg);
             }
             Playback::Paused { resume_at } => {
                 // Resume by re-reading from the last confirmed word: may
@@ -478,21 +515,25 @@ impl App {
         self.stop_speech();
         if self.mode == Mode::SpeechCursor {
             self.leave_speech_cursor();
-            self.note("Stopped. Speech Cursor off.");
+            let msg = self.msg("playback-stopped-speech-cursor-off");
+            self.note(&msg);
             return;
         }
         if was_active {
-            self.note("Stopped.");
+            let msg = self.msg("playback-stopped");
+            self.note(&msg);
         } else if let Some(s) = self.session.as_mut()
             && s.find.take().is_some()
         {
             s.selection = None;
-            self.note("Search cleared.");
+            let msg = self.msg("playback-search-cleared");
+            self.note(&msg);
         } else if self.mode == Mode::Edit {
             // Escape is Stop everywhere; in an editor people expect it to
             // leave, so say how to (usability pass, item 5).
             let finish = self.key(textweaver_keymap::ActionId::ToggleEditMode);
-            self.tell(&format!("Still editing. {finish} finishes."));
+            let msg = self.msg_args("playback-still-editing", &args!["key" => finish]);
+            self.tell(&msg);
         }
     }
 
@@ -509,11 +550,18 @@ impl App {
                     self.speech.speak_char(c, Some(pos));
                 }
                 if route.status {
-                    self.show(&text_util::char_name(c));
+                    let name = text_util::char_name_text(self.cat(), c);
+                    self.show(&name);
                 }
             }
-            Some(c) => self.speak_content(Channel::Caret, &text_util::char_name(c)),
-            None => self.speak_content(Channel::Caret, "end of document"),
+            Some(c) => {
+                let name = text_util::char_name_text(self.cat(), c);
+                self.speak_content(Channel::Caret, &name);
+            }
+            None => {
+                let text = self.msg("playback-end-of-document-content");
+                self.speak_content(Channel::Caret, &text);
+            }
         }
     }
 
@@ -537,12 +585,18 @@ impl App {
             return;
         };
         let Some(range) = unit_at(&s.doc, s.cursor, unit) else {
-            self.tell(&format!("No {} here.", unit.spoken_name()));
+            let what = crate::words::unit_name(self.cat(), unit);
+            let msg = self.msg_args(
+                "playback-no-unit-here",
+                &args!["what" => what, "unit" => crate::words::unit_key(unit)],
+            );
+            self.tell(&msg);
             return;
         };
         self.stop_speech();
         if !self.read_range(range, ReadKind::InPlace) {
-            self.speak_content(Channel::Caret, "blank");
+            let blank = self.msg("nav-blank");
+            self.speak_content(Channel::Caret, &blank);
         } else {
             self.show_read_text(range, false);
         }
@@ -571,7 +625,7 @@ impl App {
             text_util::preview(&s.doc, range, 80)
         };
         let text = if text.is_empty() {
-            "blank".to_owned()
+            self.msg("nav-blank")
         } else {
             text
         };
@@ -596,7 +650,11 @@ impl App {
         };
         let blank = text_util::is_blank(&s.doc, range);
         let structure = if self.settings.speech.verbosity >= textweaver_a11y::Verbosity::Normal {
-            crate::app::App::line_structure(&s.doc, text_util::line_of(&s.doc, range.start))
+            crate::app::App::line_structure(
+                self.cat(),
+                &s.doc,
+                text_util::line_of(&s.doc, range.start),
+            )
         } else {
             None
         };
@@ -607,13 +665,16 @@ impl App {
             .marker_index()
             .enclosing(MarkerKind::List, range.start)
             .is_some_and(|l| l.range.start == range.start);
-        let lead = structure
-            .as_deref()
-            .filter(|k| !k.starts_with("heading") && !k.starts_with("row") && !first_item);
+        let narrated = matches!(
+            crate::app::App::line_kind(&s.doc, text_util::line_of(&s.doc, range.start)),
+            Some(MarkerKind::Heading | MarkerKind::TableRow)
+        );
+        let lead = structure.as_deref().filter(|_| !narrated && !first_item);
         let lead = lead.map(str::to_owned);
         self.stop_speech();
         if blank || !self.read_range_led(range, ReadKind::InPlace, lead.as_deref()) {
-            self.speak_content(Channel::Line, "blank");
+            let blank = self.msg("nav-blank");
+            self.speak_content(Channel::Line, &blank);
         } else {
             self.show_read_text(range, true);
             if let Some(kind) = structure.filter(|_| self.route(Channel::Line).status) {
@@ -633,12 +694,16 @@ impl App {
             Some(r) => {
                 self.stop_speech();
                 if !self.read_range(r, ReadKind::InPlace) {
-                    self.speak_content(Channel::Caret, "blank");
+                    let blank = self.msg("nav-blank");
+                    self.speak_content(Channel::Caret, &blank);
                 } else {
                     self.show_read_text(r, false);
                 }
             }
-            None => self.tell("No selection."),
+            None => {
+                let msg = self.msg("playback-no-selection");
+                self.tell(&msg);
+            }
         }
     }
 
@@ -665,11 +730,11 @@ impl App {
         // Restarted automatically once, when the frontend said how
         // (crate::restart); the new service is swapped in on a tick.
         let next = self.restart_after_death(voiced);
-        let msg = if next.is_empty() {
-            format!("Speech stopped working ({reason}).")
-        } else {
-            format!("Speech stopped working ({reason}). {next}")
-        };
+        let msg = self.msg_args(
+            "playback-speech-died",
+            &args!["reason" => reason, "next" => next],
+        );
+        let msg = msg.trim_end().to_owned();
         self.error(&msg);
     }
 
@@ -732,7 +797,10 @@ impl App {
         let mut chars = text.chars();
         match (chars.next(), chars.next()) {
             (Some(c), None) if !c.is_whitespace() => self.speech.speak_char(c, None),
-            (Some(c), None) => self.speech.say(text_util::char_name(c), SayMode::Interrupt),
+            (Some(c), None) => {
+                let name = text_util::char_name_text(self.cat(), c);
+                self.speech.say(name, SayMode::Interrupt);
+            }
             (Some(_), Some(_)) => self.speech.say(text, SayMode::Interrupt),
             (None, _) => {}
         }
@@ -793,7 +861,8 @@ impl App {
                         s.spoken = None;
                         s.spoken_sentence = None;
                     }
-                    self.say_at("Done reading.", Verbosity::High, Priority::Polite);
+                    let msg = self.msg("playback-done-reading");
+                    self.say_at(&msg, Verbosity::High, Priority::Polite);
                     return true;
                 }
                 false
@@ -803,18 +872,16 @@ impl App {
                 // The service restarted the engine and reads on from the
                 // last word; the reading (and the highlight) go on.
                 if self.track.is_current(generation) && self.playback == Playback::Reading {
-                    self.say_at(
-                        &format!("Speech restarted: {reason}. Reading on from the last word."),
-                        Verbosity::Low,
-                        Priority::Assertive,
-                    );
+                    let msg =
+                        self.msg_args("playback-speech-restarted", &args!["reason" => reason]);
+                    self.say_at(&msg, Verbosity::Low, Priority::Assertive);
                     return true;
                 }
                 false
             }
             SpeechStatus::Capabilities { caps } => {
                 let old = std::mem::replace(&mut self.speech_caps, caps);
-                if let Some(msg) = capability_message(old, caps) {
+                if let Some(msg) = capability_message(self.cat(), old, caps) {
                     self.tell(&msg);
                     return true;
                 }
@@ -823,7 +890,8 @@ impl App {
             SpeechStatus::BackendError(e) => {
                 self.track.clear();
                 self.playback = Playback::Idle;
-                self.error(&format!("Speech error: {e}"));
+                let msg = self.msg_args("playback-speech-error", &args!["error" => e.to_string()]);
+                self.error(&msg);
                 true
             }
         }
@@ -860,6 +928,32 @@ impl App {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn revisions_follow_the_setting_and_verbosity() {
+        use textweaver_formats::RevisionMode;
+        let mut settings = textweaver_store::Settings::default();
+        assert_eq!(
+            super::load_options(&settings).revisions,
+            RevisionMode::Final
+        );
+        settings.speech.verbosity = textweaver_a11y::Verbosity::High;
+        assert_eq!(
+            super::load_options(&settings).revisions,
+            RevisionMode::Marked
+        );
+        settings.reading.revisions = textweaver_store::RevisionReading::Final;
+        assert_eq!(
+            super::load_options(&settings).revisions,
+            RevisionMode::Final
+        );
+        settings.speech.verbosity = textweaver_a11y::Verbosity::Low;
+        settings.reading.revisions = textweaver_store::RevisionReading::Marked;
+        assert_eq!(
+            super::load_options(&settings).revisions,
+            RevisionMode::Marked
+        );
+    }
+
+    #[test]
     fn ocr_settings_come_from_the_reading_section() {
         let mut settings = textweaver_store::Settings::default();
         assert_eq!(
@@ -893,21 +987,22 @@ mod tests {
 
     #[test]
     fn capability_changes_read_well() {
+        let en = Catalog::english();
         let full = Caps::WORD_EVENTS | Caps::PITCH | Caps::VOLUME;
         assert_eq!(
-            capability_message(full, Caps::PITCH | Caps::VOLUME).as_deref(),
+            capability_message(&en, full, Caps::PITCH | Caps::VOLUME).as_deref(),
             Some("This voice does not report words, so the word highlight is estimated.")
         );
         assert_eq!(
-            capability_message(Caps::VOLUME, full).as_deref(),
+            capability_message(&en, Caps::VOLUME, full).as_deref(),
             Some("This voice reports each word, so the highlight follows it exactly.")
         );
         assert_eq!(
-            capability_message(full, Caps::WORD_EVENTS).as_deref(),
+            capability_message(&en, full, Caps::WORD_EVENTS).as_deref(),
             Some(
                 "Pitch cannot be changed with this voice. Volume cannot be changed with this voice."
             )
         );
-        assert_eq!(capability_message(full, full | Caps::TONES), None);
+        assert_eq!(capability_message(&en, full, full | Caps::TONES), None);
     }
 }

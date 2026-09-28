@@ -1,4 +1,4 @@
-//! Citations in continuous reading (Jon's decision, 2026-09-26): skipped
+//! Citations in continuous reading (the owner's decision, 2026-09-26): skipped
 //! by default, said in words when turned on (Alt+Shift+Q), with the
 //! highlight exact both ways; word moves say them in words either way.
 

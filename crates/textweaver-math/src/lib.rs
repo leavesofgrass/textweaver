@@ -39,6 +39,7 @@ mod nav;
 mod speech;
 mod symbols;
 mod tree;
+mod unicode;
 
 use serde::{Deserialize, Serialize};
 use textweaver_core::{CharPos, CharRange, OffsetMap, SpokenBuilder};
@@ -53,6 +54,7 @@ pub use speech::{SpeechOptions, Spoken, speak, speak_node};
 pub use tree::{
     AccentKind, Diagnostic, Enclosure, Math, Node, NodeKind, Notation, OpClass, TableKind, Variant,
 };
+pub use unicode::to_unicode;
 
 /// Parses `src` in the given notation.
 pub fn parse(src: &str, notation: Notation) -> Math {
@@ -91,6 +93,22 @@ pub struct TextOptions {
 /// normalization transform's must (ADR-0005). Text without math comes back
 /// unchanged with an identity map.
 pub fn speak_text(text: &str, opts: &TextOptions) -> (String, OffsetMap) {
+    speak_text_with(text, opts, &mut |_, _| None)
+}
+
+/// [`speak_text`] with another math speech engine asked first.
+///
+/// For each region, `speaker` gets the region and its parsed tree. When it
+/// returns words, they replace the region's content as one expanded span
+/// (ADR-0005 allows a span-level map: any word of it highlights the whole
+/// formula). When it returns `None`, or only blanks, the region is spoken
+/// by this crate, word by word, as [`speak_text`] does. MathCAT is such an
+/// engine (ADR-0029).
+pub fn speak_text_with(
+    text: &str,
+    opts: &TextOptions,
+    speaker: &mut dyn FnMut(&MathRegion, &Math) -> Option<String>,
+) -> (String, OffsetMap) {
     let chars: Vec<char> = text.chars().collect();
     let regions = detect::find_math_chars(&chars, &opts.detect);
     if regions.is_empty() {
@@ -110,8 +128,18 @@ pub fn speak_text(text: &str, opts: &TextOptions) -> (String, OffsetMap) {
         if start > 0 && chars[start - 1].is_alphanumeric() {
             b.push_inserted(" ", r.content.start);
         }
-        let spoke =
-            speech::speak_node_into(&math, &math.root, &opts.speech, &mut b, r.content.start.0);
+        let other = speaker(&r, &math)
+            .map(|w| w.split_whitespace().collect::<Vec<_>>().join(" "))
+            .filter(|w| !w.is_empty());
+        let spoke = match other {
+            Some(words) => {
+                b.push_expanded(&words, r.content);
+                true
+            }
+            None => {
+                speech::speak_node_into(&math, &math.root, &opts.speech, &mut b, r.content.start.0)
+            }
+        };
         if !spoke {
             b.push_elided(r.content);
         } else if chars.get(end).is_some_and(|c| c.is_alphanumeric()) {

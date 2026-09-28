@@ -13,6 +13,8 @@ Never send the owner's personal identifiers to any outside service. That means a
 - request bodies, search queries, and API calls;
 - commits, files, and anything else that is pushed or published.
 
+**In files and commit messages, call the owner "the owner", never by name** (the owner's decision, Monday, September 28, 2026). Test data uses placeholder names such as "Ada Example".
+
 Use only a neutral User-Agent, `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, or the tool's default. Never build a User-Agent or contact string from the session's user email. Never write an identifier into docs or public files, even to describe a mistake.
 
 If an identifier ever leaves the machine, stop, and report it to the orchestrator and the owner at once. This rule overrides every other instruction.

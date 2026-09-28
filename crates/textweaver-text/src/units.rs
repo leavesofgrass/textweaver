@@ -44,11 +44,19 @@
 //! 4. A footnote reference (`footnote.[1] It`) stays with the sentence it
 //!    ends; inside a code block every line is one sentence.
 //!
+//! Word and sentence boundaries come from ICU4X's rule-based segmenters,
+//! which find the same UAX #29 boundaries as unicode-segmentation (used
+//! before Wave 4, and still for graphemes and for words on lines in Thai,
+//! Lao, Khmer, Burmese, CJK, and Hangul) two to three times as fast.
+//!
 //! Sentences and words exclude surrounding whitespace. Differences from Star
 //! are measured by `cargo xtask parity` (docs/history/parity-report.md).
 
+use std::borrow::Cow;
 use std::collections::VecDeque;
 
+use icu_segmenter::options::{SentenceBreakInvariantOptions, WordBreakInvariantOptions};
+use icu_segmenter::{SentenceSegmenter, WordSegmenter};
 use textweaver_core::{CharPos, CharRange, Direction, MarkerKind, Unit};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -472,24 +480,6 @@ fn sentence_window(doc: &Document, p: &Block, pos: usize) -> Block {
     sub_block(doc, CharRange::new(start, end), Some(para))
 }
 
-/// Char offset of every byte boundary in `s`, as a lookup from byte to char.
-struct ByteToChar {
-    starts: Vec<usize>,
-}
-
-impl ByteToChar {
-    fn new(s: &str) -> Self {
-        let mut starts: Vec<usize> = s.char_indices().map(|(b, _)| b).collect();
-        starts.push(s.len());
-        ByteToChar { starts }
-    }
-
-    /// Char index of byte offset `b` (a char boundary).
-    fn char_of(&self, b: usize) -> usize {
-        self.starts.partition_point(|&x| x < b)
-    }
-}
-
 fn trimmed(chars: &[char], start: usize, end: usize) -> Option<(usize, usize)> {
     let mut s = start;
     let mut e = end;
@@ -506,21 +496,80 @@ fn is_hyphen(s: &str) -> bool {
     matches!(s, "-" | "\u{2010}" | "\u{2011}")
 }
 
-/// Word segments of one line of text, as char ranges relative to its start.
+/// The pieces of `text` between consecutive byte offsets of `breaks`
+/// (increasing, as ICU4X's segmenters give them: 0 first, then every
+/// boundary up to `text.len()`), as (start char, end char, piece). Char
+/// offsets are counted as the pieces go by rather than looked up, and an
+/// ASCII text needs no counting at all.
+fn pieces(
+    text: &str,
+    breaks: impl Iterator<Item = usize>,
+) -> impl Iterator<Item = (usize, usize, &str)> {
+    let ascii = text.is_ascii();
+    let (mut byte, mut char) = (0usize, 0usize);
+    breaks.filter_map(move |b| {
+        if b <= byte {
+            return None;
+        }
+        let piece = text.get(byte..b)?;
+        let n = if ascii {
+            piece.len()
+        } else {
+            piece.chars().count()
+        };
+        let out = (char, char + n, piece);
+        byte = b;
+        char += n;
+        Some(out)
+    })
+}
+
+/// True for a char of a script that ICU4X's rule-based word segmenter keeps
+/// in one run where UAX #29's default rules (and unicode-segmentation, used
+/// before Wave 4) break after every char: Thai, Lao, Tibetan, Myanmar,
+/// Khmer, Tai scripts, CJK, kana, and Hangul. Lines with these keep the
+/// old segmenter, so word steps there are unchanged (property-tested).
+fn joined_by_icu(c: char) -> bool {
+    matches!(
+        u32::from(c),
+        0x0E00..=0x109F
+            | 0x1780..=0x19FF
+            | 0x1A20..=0x1AAF
+            | 0x2E80..=0xA4CF
+            | 0xA960..=0xAAFF
+            | 0xAC00..=0xD7FF
+            | 0xF900..=0xFAFF
+            | 0xFE30..=0xFE4F
+            | 0xFF00..=0xFFEF
+            | 0x16FE0..=0x18DFF
+            | 0x1AFF0..=0x1B2FF
+            | 0x20000..=0x3FFFF
+    )
+}
+
+/// (start, end, is_word, is_hyphen) for each word-boundary piece.
+fn classify<'t>(
+    pieces: impl Iterator<Item = (usize, usize, &'t str)>,
+) -> Vec<(usize, usize, bool, bool)> {
+    pieces
+        .map(|(a, z, s)| (a, z, s.chars().any(char::is_alphanumeric), is_hyphen(s)))
+        .collect()
+}
+
+/// Word segments of one line of text, as char ranges relative to its start:
+/// UAX #29 word boundaries, through ICU4X (about twice as fast) except on
+/// lines with the scripts [`joined_by_icu`] names.
 fn words_in(text: &str) -> Vec<(usize, usize)> {
-    let map = ByteToChar::new(text);
-    // (start, end, is_word) for every UAX #29 word-boundary segment.
-    let segs: Vec<(usize, usize, bool, bool)> = text
-        .split_word_bound_indices()
-        .map(|(b, s)| {
-            (
-                map.char_of(b),
-                map.char_of(b + s.len()),
-                s.chars().any(char::is_alphanumeric),
-                is_hyphen(s),
-            )
-        })
-        .collect();
+    // (start, end, is_word, is_hyphen) for every word-boundary segment.
+    let segs: Vec<(usize, usize, bool, bool)> =
+        if text.is_ascii() || !text.chars().any(joined_by_icu) {
+            let segmenter =
+                WordSegmenter::new_for_non_complex_scripts(WordBreakInvariantOptions::default());
+            classify(pieces(text, segmenter.segment_str(text)))
+        } else {
+            let ends = text.split_word_bound_indices().map(|(b, s)| b + s.len());
+            classify(pieces(text, ends))
+        };
     let mut out: Vec<(usize, usize)> = Vec::new();
     let mut i = 0;
     while i < segs.len() {
@@ -540,20 +589,23 @@ fn words_in(text: &str) -> Vec<(usize, usize)> {
     out
 }
 
-fn is_abbreviation(token: &str, list: &[&str]) -> bool {
-    list.contains(&token)
+fn is_abbreviation(token: &[char], list: &[&str]) -> bool {
+    list.iter().any(|a| a.chars().eq(token.iter().copied()))
 }
 
-/// The last whitespace-separated token of `chars`, without leading openers.
-fn last_token(chars: &[char]) -> String {
+/// The last whitespace-separated token of `chars`, without leading openers
+/// (a slice of `chars`, so checking every sentence end allocates nothing).
+fn last_token(chars: &[char]) -> &[char] {
     let start = chars
         .iter()
         .rposition(|c| c.is_whitespace())
         .map_or(0, |i| i + 1);
-    chars[start..]
+    let token = &chars[start..];
+    let openers = token
         .iter()
-        .skip_while(|c| matches!(c, '(' | '[' | '"' | '\'' | '\u{201c}' | '\u{2018}'))
-        .collect()
+        .take_while(|c| matches!(c, '(' | '[' | '"' | '\'' | '\u{201c}' | '\u{2018}'))
+        .count();
+    &token[openers..]
 }
 
 /// Sentence segments of one paragraph, as char ranges relative to its start.
@@ -566,22 +618,28 @@ fn sentences_in(
     atomic: &[(usize, usize)],
 ) -> Vec<(usize, usize)> {
     let chars: Vec<char> = text.chars().collect();
-    // Soft line breaks become spaces (char for char, so offsets hold).
-    let prepared: String = chars
-        .iter()
-        .enumerate()
-        .map(|(i, &c)| {
-            if is_line_break(c) && !hard_break(i) {
-                ' '
-            } else {
-                c
-            }
-        })
-        .collect();
-    let map = ByteToChar::new(&prepared);
+    // Soft line breaks become spaces (char for char, so offsets hold); a
+    // paragraph on one line is segmented as it is.
+    let prepared: Cow<'_, str> = if chars.iter().any(|&c| is_line_break(c)) {
+        Cow::Owned(
+            chars
+                .iter()
+                .enumerate()
+                .map(|(i, &c)| {
+                    if is_line_break(c) && !hard_break(i) {
+                        ' '
+                    } else {
+                        c
+                    }
+                })
+                .collect(),
+        )
+    } else {
+        Cow::Borrowed(text)
+    };
+    let segmenter = SentenceSegmenter::new(SentenceBreakInvariantOptions::default());
     let mut raw: Vec<(usize, usize)> = Vec::new();
-    for (b, s) in prepared.split_sentence_bound_indices() {
-        let (a, z) = (map.char_of(b), map.char_of(b + s.len()));
+    for (a, z, _) in pieces(&prepared, segmenter.segment_str(&prepared)) {
         split_at_ellipses(&chars, a, z, &mut raw);
     }
     // Trim, then merge across abbreviations.
@@ -598,7 +656,7 @@ fn sentences_in(
                 .find(|c| c.is_alphanumeric())
                 .is_some_and(|c| c.is_uppercase());
             let token = last_token(&chars[prev.0..prev.1]);
-            let always = is_abbreviation(&token, ABBREVIATIONS);
+            let always = is_abbreviation(token, ABBREVIATIONS);
             if !gap_has_break && (always || !next_upper) {
                 prev.1 = e;
                 joinable = ends_with_abbreviation(&chars[prev.0..prev.1]);
@@ -643,7 +701,7 @@ fn keep_atomic_ranges_whole(
 
 fn ends_with_abbreviation(chars: &[char]) -> bool {
     let token = last_token(chars);
-    is_abbreviation(&token, ABBREVIATIONS) || is_abbreviation(&token, AMBIGUOUS_ABBREVIATIONS)
+    is_abbreviation(token, ABBREVIATIONS) || is_abbreviation(token, AMBIGUOUS_ABBREVIATIONS)
 }
 
 /// Splits `a..z` after every `…` that is followed by whitespace and a capital.
@@ -706,6 +764,16 @@ fn in_code_block(doc: &Document, block: &Block) -> bool {
             .is_some_and(|m| m.level == 1 && block.range.end <= m.range.end)
 }
 
+/// The text of `range`: borrowed from the rope when it lies in one chunk
+/// (most lines and short paragraphs), copied otherwise.
+fn block_text(doc: &Document, range: CharRange) -> Cow<'_, str> {
+    let slice = doc.text().slice(range.clamp_to(doc.len_chars()).to_range());
+    match slice.as_str() {
+        Some(s) => Cow::Borrowed(s),
+        None => Cow::Owned(slice.to_string()),
+    }
+}
+
 /// The segments of `unit` inside one block, as absolute ranges, in order.
 fn segment_block(doc: &Document, unit: Unit, block: &Block) -> Vec<CharRange> {
     let base = block.range.start.0;
@@ -713,13 +781,11 @@ fn segment_block(doc: &Document, unit: Unit, block: &Block) -> Vec<CharRange> {
     match unit {
         Unit::Line | Unit::Paragraph | Unit::Document => vec![block.range],
         Unit::Grapheme => {
-            let text = doc.slice(block.range);
-            let map = ByteToChar::new(&text);
-            text.grapheme_indices(true)
-                .map(|(b, g)| abs((map.char_of(b), map.char_of(b + g.len()))))
-                .collect()
+            let text = block_text(doc, block.range);
+            let ends = text.grapheme_indices(true).map(|(b, g)| b + g.len());
+            pieces(&text, ends).map(|(a, z, _)| abs((a, z))).collect()
         }
-        Unit::Word => words_in(&doc.slice(block.range))
+        Unit::Word => words_in(&block_text(doc, block.range))
             .into_iter()
             .map(abs)
             .collect(),
@@ -748,7 +814,7 @@ fn segment_block(doc: &Document, unit: Unit, block: &Block) -> Vec<CharRange> {
                     })
                     .collect()
             };
-            let text = doc.slice(block.range);
+            let text = block_text(doc, block.range);
             sentences_in(&text, |i| breaks.contains(&CharPos(base + i)), &atomic)
                 .into_iter()
                 .map(abs)
@@ -1126,7 +1192,63 @@ mod props {
         v.windows(2).all(|w| w[0].end <= w[1].start) && v.iter().all(|r| r.end.0 <= len)
     }
 
+    /// Text for comparing ICU4X's UAX #29 boundaries with
+    /// unicode-segmentation's: the document pieces plus quotes, apostrophes,
+    /// numbers, other scripts, and emoji sequences.
+    fn mixed_text() -> impl Strategy<Value = String> {
+        proptest::collection::vec(
+            prop_oneof![
+                doc_text(),
+                Just("don't ".to_owned()),
+                Just("\u{2019}s ".to_owned()),
+                Just("\"Quoted.\" ".to_owned()),
+                Just("(aside) ".to_owned()),
+                Just("3.14 ".to_owned()),
+                Just("$1,000.50 ".to_owned()),
+                Just("x_y ".to_owned()),
+                Just("Ελληνικά. ".to_owned()),
+                Just("Привет мир. ".to_owned()),
+                Just("עברית ".to_owned()),
+                Just("Ünïcödé ".to_owned()),
+                Just("日本語の文。".to_owned()),
+                Just("カタカナ ".to_owned()),
+                Just("ไทย ".to_owned()),
+                Just("한국어 ".to_owned()),
+                Just("👩\u{200d}💻 ".to_owned()),
+                Just("? ".to_owned()),
+                Just("\t".to_owned()),
+            ],
+            0..12,
+        )
+        .prop_map(|v| v.concat())
+    }
+
     proptest! {
+        /// ICU4X (used since Wave 4 for speed) finds the same sentence
+        /// boundaries as unicode-segmentation (used before), and the same
+        /// word boundaries on every line `words_in` gives it.
+        #[test]
+        fn icu_boundaries_match_unicode_segmentation(text in mixed_text()) {
+            if !text.chars().any(joined_by_icu) {
+                let words = WordSegmenter::new_for_non_complex_scripts(
+                    WordBreakInvariantOptions::default(),
+                );
+                let icu: Vec<usize> = words.segment_str(&text).filter(|&b| b > 0).collect();
+                let old: Vec<usize> = text
+                    .split_word_bound_indices()
+                    .map(|(b, s)| b + s.len())
+                    .collect();
+                prop_assert_eq!(icu, old, "words in {:?}", text);
+            }
+            let sentences = SentenceSegmenter::new(SentenceBreakInvariantOptions::default());
+            let icu: Vec<usize> = sentences.segment_str(&text).filter(|&b| b > 0).collect();
+            let old: Vec<usize> = text
+                .split_sentence_bound_indices()
+                .map(|(b, s)| b + s.len())
+                .collect();
+            prop_assert_eq!(icu, old, "sentences in {:?}", text);
+        }
+
         #[test]
         fn graphemes_tile_the_text(text in doc_text()) {
             let d = Document::from_plain_text(&text);
@@ -1177,10 +1299,10 @@ mod props {
             }
             prop_assert_eq!(segments(&d, Unit::Word), words);
             let whole = d.text().to_string();
-            let map = ByteToChar::new(&whole);
+            let char_of = |b: usize| whole[..b].chars().count();
             let graphemes: Vec<CharRange> = whole
                 .grapheme_indices(true)
-                .map(|(b, g)| CharRange::new(map.char_of(b), map.char_of(b + g.len())))
+                .map(|(b, g)| CharRange::new(char_of(b), char_of(b + g.len())))
                 .collect();
             prop_assert_eq!(segments(&d, Unit::Grapheme), graphemes);
         }

@@ -12,6 +12,9 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime};
 
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
+
 use crate::app::{App, Mode};
 use crate::command::{Confirm, Effect};
 use crate::edit::AfterLeave;
@@ -87,7 +90,8 @@ impl App {
         };
         self.pending_disk = Some(DiskQuestion::Overwrite { leaving });
         self.list = None;
-        self.ask(&overwrite_question(&path));
+        let question = overwrite_question(self.cat(), &path);
+        self.ask(&question);
         vec![Effect::Redraw]
     }
 
@@ -99,20 +103,21 @@ impl App {
         match (answer, question) {
             (Confirm::Repeat, DiskQuestion::Overwrite { .. }) => {
                 if let Some(p) = self.edited_path() {
-                    self.ask(&overwrite_question(&p));
+                    let question = overwrite_question(self.cat(), &p);
+                    self.ask(&question);
                 }
                 vec![Effect::Redraw]
             }
             (Confirm::Repeat, DiskQuestion::Reload { path: p, .. }) => {
-                self.ask(&reload_question(&p));
+                let question = reload_question(self.cat(), &p);
+                self.ask(&question);
                 vec![Effect::Redraw]
             }
             (Confirm::Repeat, DiskQuestion::SaveAsOver { path, .. }) => {
                 let dest = textweaver_editor::autosave::save_as_path(&path);
-                self.ask(&format!(
-                    "{} already exists. Replace it? y or n.",
-                    file_name(&dest)
-                ));
+                let question =
+                    self.msg_args("disk-replace-question", &args!["name" => file_name(&dest)]);
+                self.ask(&question);
                 vec![Effect::Redraw]
             }
             (Confirm::Yes, DiskQuestion::SaveAsOver { path, then }) => {
@@ -123,7 +128,7 @@ impl App {
                 self.pending_disk = None;
                 // A relative name typed next goes in the same folder.
                 self.suggested_path = Some(path);
-                let label = "Not replaced. Type another name";
+                let label = self.msg("disk-not-replaced");
                 self.save_then = Some(then);
                 if !self.mode.is_prompt() {
                     self.return_mode = self.mode;
@@ -132,7 +137,7 @@ impl App {
                 self.prompt_purpose = crate::command::PromptPurpose::SaveAs;
                 self.tell(&format!("{label}."));
                 vec![Effect::Prompt {
-                    label: label.to_owned(),
+                    label,
                     purpose: crate::command::PromptPurpose::SaveAs,
                 }]
             }
@@ -149,9 +154,8 @@ impl App {
             (Confirm::No, DiskQuestion::Overwrite { .. }) => {
                 self.pending_disk = None;
                 let save_as = self.keys(textweaver_keymap::ActionId::SaveAs);
-                self.tell(&format!(
-                    "Not saved. Still editing. Save As, {save_as}, keeps both versions."
-                ));
+                let msg = self.msg_args("disk-not-saved", &args!["key" => save_as]);
+                self.tell(&msg);
                 vec![Effect::Redraw]
             }
             (Confirm::Yes, DiskQuestion::Reload { path, .. }) => {
@@ -164,7 +168,8 @@ impl App {
                 if let (Some(s), Some(stamp)) = (self.session.as_mut(), stamp) {
                     s.disk = Some(stamp);
                 }
-                self.tell("Kept the open version.");
+                let msg = self.msg("disk-kept-open-version");
+                self.tell(&msg);
                 vec![Effect::Redraw]
             }
         }
@@ -241,7 +246,8 @@ impl App {
                     path: path.clone(),
                     stamp: Some(now),
                 });
-                self.error(&reload_question(&path));
+                let question = reload_question(self.cat(), &path);
+                self.error(&question);
                 vec![Effect::Redraw]
             }
             _ => Vec::new(),
@@ -255,13 +261,10 @@ impl App {
     }
 }
 
-fn overwrite_question(path: &Path) -> String {
-    format!(
-        "{} changed on disk since you opened it. Save over those changes? y or n.",
-        file_name(path)
-    )
+fn overwrite_question(c: &Catalog, path: &Path) -> String {
+    c.fmt("disk-overwrite-question", &args!["name" => file_name(path)])
 }
 
-fn reload_question(path: &Path) -> String {
-    format!("{} changed on disk. Reload it? y or n.", file_name(path))
+fn reload_question(c: &Catalog, path: &Path) -> String {
+    c.fmt("disk-reload-question", &args!["name" => file_name(path)])
 }

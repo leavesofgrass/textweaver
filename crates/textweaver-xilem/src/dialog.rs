@@ -45,6 +45,11 @@ pub enum DialogAction {
     Recall(bool),
     /// Tab in a prompt for a path: complete it (`PromptKey::Tab`).
     Complete,
+    /// A chord with Ctrl or Alt, or a function key, in an app list: the
+    /// driver looks it up in the keymap, so the Help and Say Status keys
+    /// repeat the list's introduction (`ListKey::Introduce`) and the
+    /// Repeat Message key says the last message, as in the terminal.
+    Chord(textweaver_app::keymap::KeyChord),
 }
 
 // --- Modal.
@@ -371,7 +376,20 @@ impl Widget for ChoiceList {
         let TextEvent::Keyboard(k) = event else {
             return;
         };
-        if k.state != KeyState::Down || k.modifiers.ctrl() || k.modifiers.alt() {
+        if k.state != KeyState::Down {
+            return;
+        }
+        let command = k.modifiers.ctrl() || k.modifiers.alt();
+        let function = matches!(&k.key, Key::Named(n) if *n != NamedKey::F2 && crate::keys::is_function_key(n));
+        if self.app_keys
+            && (command || function)
+            && let Some(chord) = crate::keys::chord(k, textweaver_app::keymap::Platform::current())
+        {
+            ctx.submit_action::<DialogAction>(DialogAction::Chord(chord));
+            ctx.set_handled();
+            return;
+        }
+        if command {
             return;
         }
         if self.app_keys {

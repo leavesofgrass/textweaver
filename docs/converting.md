@@ -182,6 +182,8 @@ For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the 
 textweaver reads these formats itself:
 
 - Markdown, HTML, plain text, EPUB, Word (DOCX), and PDF.
+- RTF (Rich Text Format): headings, lists, tables, footnotes, links, pictures' descriptions, and text in older code pages such as Cyrillic and Japanese.
+- OpenDocument text (ODT, OTT, and flat FODT), as LibreOffice and Google Docs save it: headings, numbered and bulleted lists, tables, footnotes, links, and pictures' descriptions.
 - Scanned PDFs and pictures (PNG, JPEG), by recognizing their text. See [Scanned pages](#scanned-pages-ocr).
 - DAISY 3 books and DTBook files, including Bookshare zips.
 - PowerPoint (PPTX): slides in order, each with its speaker notes.
@@ -189,18 +191,30 @@ textweaver reads these formats itself:
 - Archives (ZIP, TAR, TAR.GZ, and 7Z): opening one lists the files inside that textweaver can read, each a link. To open a file inside an archive directly, write its name after a `!`, as in `tw text course.zip!week1/notes.md`.
 - Web pages: `tw open https://example.org/page` and `tw text https://...` fetch the page and read it. A PDF or other file at the address is saved in the cache and opened from there.
 
-For other formats, such as OpenDocument text, RTF, reStructuredText, Org, and LaTeX, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself. `--no-pandoc` turns it off.
+For other formats, such as reStructuredText, Org, and LaTeX, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself, and RTF and OpenDocument text no longer need it. `--no-pandoc` turns it off.
 
 Equations in a Word document are read as math. textweaver turns them into LaTeX between dollar signs, as in Markdown, so they are spoken as formulas.
 
+### Comments and tracked changes
+
+Comments in Word and OpenDocument files, with their replies and whether they are resolved, come with the document. When you open it in the reader, each comment becomes a note on the text it is about, tagged `comment`, so reading tells you when you reach it ("Note: Comment by Ada Example: say how salty. Reply by Bo Example: added. Resolved."), and the notes list has them all. A comment you edit or keep stays as you left it when the document opens again.
+
+Tracked changes in Word, OpenDocument, and RTF files are read as the final text by default: insertions as ordinary text, deletions left out. The reading setting `revisions` changes that:
+
+- `auto`, the default, says each change where it is when announcements are set to high verbosity, and reads the final text otherwise.
+- `marked` always says them: "The quiz is on (deleted by Bo Example: Tuesday) (inserted by Ada Example: Thursday)."
+- `final` never does.
+
+Set it in `settings.toml` under `[reading]`, for example `revisions = "marked"`. A document already open keeps the way it was read until you open it again. `tw convert` and `tw text` read the final text.
+
 Pandoc runs in its sandbox, so a document cannot make it read other files on your computer (a LaTeX `\input`, for example); this needs Pandoc 2.19 or later. A file Pandoc takes more than two minutes on is stopped and counted as failed, with the reason "pandoc took longer than 2 minutes and was stopped", and the other files go on. Change the limit with `--pandoc-timeout SECONDS` or the `TEXTWEAVER_PANDOC_TIMEOUT` environment variable. To use a Pandoc that is not on your `PATH`, set `TEXTWEAVER_PANDOC` to its full path.
 
-A damaged or deliberately odd file cannot stop a batch either. Content nested thousands of levels deep, in a web page, EPUB, or Word document, is read as plain text below 256 levels, with the warning "Some content was nested too deeply to keep its structure, so it is read as plain text." List and page numbers that claim impossible values are capped. A file that is really a picture, a program, or another binary file is refused after its first 8 kilobytes, however large it is.
+A damaged or deliberately odd file cannot stop a batch either. Content nested thousands of levels deep, in a web page, EPUB, Word, OpenDocument, or RTF document, is read as plain text below 256 levels, with the warning "Some content was nested too deeply to keep its structure, so it is read as plain text." List and page numbers that claim impossible values are capped. A file that is really a picture, a program, or another binary file is refused after its first 8 kilobytes, however large it is. Word, OpenDocument, EPUB, and PowerPoint files are zip packages; one with more than 50,000 files inside, with files that overlap, or with a file that claims to unpack to more than 1,000 times its size is refused, and no package is unpacked past 1 gigabyte.
 
-The reader, `textweaver`, does not use Pandoc. To read an OpenDocument or RTF file aloud, convert it to Markdown first, then open the Markdown:
+The reader, `textweaver`, does not use Pandoc. It opens RTF and OpenDocument text itself. For a format only Pandoc reads, such as reStructuredText, convert it to Markdown first, then open the Markdown:
 
 ```bash
-tw convert essay.odt --to md
+tw convert essay.rst --to md
 ```
 
 ```bash
@@ -246,7 +260,7 @@ While you edit, each save (**Ctrl+S**) writes the preview again and you hear "Pr
 
 ## When something fails
 
-A file that cannot be converted never stops the others. After the summary, each failure is read out with its reason, for example "Failed: old.rtf: no native reader for .rtf files, and Pandoc is not installed". When any file fails, `tw convert` ends with exit status 1, so scripts can tell.
+A file that cannot be converted never stops the others. After the summary, each failure is read out with its reason, for example "Failed: old.rst: no native reader for .rst files, and Pandoc is not installed". When any file fails, `tw convert` ends with exit status 1, so scripts can tell.
 
 Two cases are refused before converting:
 

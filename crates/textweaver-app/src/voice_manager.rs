@@ -33,6 +33,8 @@
 
 use textweaver_core::{Pitch, Rate};
 use textweaver_engines::piper::{Catalog, Licence, LicenceKind, VoiceStore};
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog as Messages;
 use textweaver_speech::Voice;
 use textweaver_store::Settings;
 
@@ -93,47 +95,52 @@ pub fn primary_language(tag: &str) -> String {
 /// A language's English name, for the filter row ("English"), or the
 /// code itself when it is not one of the common ones.
 pub fn language_name(code: &str) -> String {
-    let name = match code {
-        "ar" => "Arabic",
-        "ca" => "Catalan",
-        "cs" => "Czech",
-        "cy" => "Welsh",
-        "da" => "Danish",
-        "de" => "German",
-        "el" => "Greek",
-        "en" => "English",
-        "es" => "Spanish",
-        "fa" => "Persian",
-        "fi" => "Finnish",
-        "fr" => "French",
-        "hi" => "Hindi",
-        "hu" => "Hungarian",
-        "is" => "Icelandic",
-        "it" => "Italian",
-        "ja" => "Japanese",
-        "ka" => "Georgian",
-        "kk" => "Kazakh",
-        "ko" => "Korean",
-        "lb" => "Luxembourgish",
-        "lv" => "Latvian",
-        "nl" => "Dutch",
-        "no" | "nb" => "Norwegian",
-        "pl" => "Polish",
-        "pt" => "Portuguese",
-        "ro" => "Romanian",
-        "ru" => "Russian",
-        "sk" => "Slovak",
-        "sl" => "Slovenian",
-        "sr" => "Serbian",
-        "sv" => "Swedish",
-        "sw" => "Swahili",
-        "tr" => "Turkish",
-        "uk" => "Ukrainian",
-        "vi" => "Vietnamese",
-        "zh" => "Chinese",
+    language_name_in(&Messages::english(), code)
+}
+
+/// [`language_name`] in the catalog's language.
+pub fn language_name_in(c: &Messages, code: &str) -> String {
+    let id = match code {
+        "ar" => "voices-language-ar",
+        "ca" => "voices-language-ca",
+        "cs" => "voices-language-cs",
+        "cy" => "voices-language-cy",
+        "da" => "voices-language-da",
+        "de" => "voices-language-de",
+        "el" => "voices-language-el",
+        "en" => "voices-language-en",
+        "es" => "voices-language-es",
+        "fa" => "voices-language-fa",
+        "fi" => "voices-language-fi",
+        "fr" => "voices-language-fr",
+        "hi" => "voices-language-hi",
+        "hu" => "voices-language-hu",
+        "is" => "voices-language-is",
+        "it" => "voices-language-it",
+        "ja" => "voices-language-ja",
+        "ka" => "voices-language-ka",
+        "kk" => "voices-language-kk",
+        "ko" => "voices-language-ko",
+        "lb" => "voices-language-lb",
+        "lv" => "voices-language-lv",
+        "nl" => "voices-language-nl",
+        "no" | "nb" => "voices-language-no",
+        "pl" => "voices-language-pl",
+        "pt" => "voices-language-pt",
+        "ro" => "voices-language-ro",
+        "ru" => "voices-language-ru",
+        "sk" => "voices-language-sk",
+        "sl" => "voices-language-sl",
+        "sr" => "voices-language-sr",
+        "sv" => "voices-language-sv",
+        "sw" => "voices-language-sw",
+        "tr" => "voices-language-tr",
+        "uk" => "voices-language-uk",
+        "vi" => "voices-language-vi",
+        "zh" => "voices-language-zh",
         other => return other.to_owned(),
     };
-    name.to_owned()
+    c.tr(id)
 }
 
 /// One row of the list.
@@ -260,6 +267,12 @@ impl VoiceManager {
     /// Moves the language filter to the next language (after the last,
     /// back to all) and says what is shown.
     pub fn next_language(&mut self, favourites: &[String]) -> String {
+        self.next_language_in(&Messages::english(), favourites)
+    }
+
+    /// [`next_language`](Self::next_language), saying it in the catalog's
+    /// language.
+    pub fn next_language_in(&mut self, c: &Messages, favourites: &[String]) -> String {
         let langs = self.languages();
         let next = match &self.language {
             None => langs.first().cloned(),
@@ -269,11 +282,17 @@ impl VoiceManager {
                 .and_then(|i| langs.get(i + 1).cloned()),
         };
         self.set_language(next, favourites);
-        self.shown_sentence()
+        self.shown_sentence_in(c)
     }
 
     /// Moves the engine filter to the next engine and says what is shown.
     pub fn next_engine(&mut self, favourites: &[String]) -> String {
+        self.next_engine_in(&Messages::english(), favourites)
+    }
+
+    /// [`next_engine`](Self::next_engine), saying it in the catalog's
+    /// language.
+    pub fn next_engine_in(&mut self, c: &Messages, favourites: &[String]) -> String {
         let engines = self.engines();
         let next = match &self.engine {
             None => engines.first().map(|(id, _)| id.clone()),
@@ -283,34 +302,41 @@ impl VoiceManager {
                 .and_then(|i| engines.get(i + 1).map(|(id, _)| id.clone())),
         };
         self.set_engine(next, favourites);
-        self.shown_sentence()
+        self.shown_sentence_in(c)
     }
 
     /// "12 voices: English, all engines."
     pub fn shown_sentence(&self) -> String {
+        self.shown_sentence_in(&Messages::english())
+    }
+
+    /// [`shown_sentence`](Self::shown_sentence) in the catalog's language.
+    pub fn shown_sentence_in(&self, c: &Messages) -> String {
         let n = self
             .rows
             .iter()
             .filter(|r| matches!(r, VoiceRow::Voice(_)))
             .count();
-        format!(
-            "{n} {}: {}, {}.",
-            if n == 1 { "voice" } else { "voices" },
-            self.language_label(),
-            self.engine_label()
+        c.fmt(
+            "voices-shown",
+            &args![
+                "n" => n,
+                "language" => self.language_label(c),
+                "engine" => self.engine_label(c)
+            ],
         )
     }
 
-    fn language_label(&self) -> String {
+    fn language_label(&self, c: &Messages) -> String {
         match &self.language {
-            None => "all languages".into(),
-            Some(l) => language_name(l),
+            None => c.tr("voices-all-languages"),
+            Some(l) => language_name_in(c, l),
         }
     }
 
-    fn engine_label(&self) -> String {
+    fn engine_label(&self, c: &Messages) -> String {
         match &self.engine {
-            None => "all engines".into(),
+            None => c.tr("voices-all-engines"),
             Some(id) => self
                 .entries
                 .iter()
@@ -349,14 +375,30 @@ impl VoiceManager {
     /// The row labels, to read and show. `current` is the engine and voice
     /// in use.
     pub fn labels(&self, favourites: &[String], current: (&str, Option<&str>)) -> Vec<String> {
+        self.labels_in(&Messages::english(), favourites, current)
+    }
+
+    /// [`labels`](Self::labels) in the catalog's language.
+    pub fn labels_in(
+        &self,
+        c: &Messages,
+        favourites: &[String],
+        current: (&str, Option<&str>),
+    ) -> Vec<String> {
         // The engine is named only when the list holds more than one.
         let several = self.engines().len() > 1;
         self.rows
             .iter()
             .map(|r| match r {
-                VoiceRow::LanguageFilter => format!("Language: {}", self.language_label()),
-                VoiceRow::EngineFilter => format!("Engine: {}", self.engine_label()),
-                VoiceRow::FetchCatalog => "Fetch the Piper voice list from the internet".into(),
+                VoiceRow::LanguageFilter => c.fmt(
+                    "voices-language-row",
+                    &args!["language" => self.language_label(c)],
+                ),
+                VoiceRow::EngineFilter => c.fmt(
+                    "voices-engine-row",
+                    &args!["engine" => self.engine_label(c)],
+                ),
+                VoiceRow::FetchCatalog => c.tr("voices-fetch-row"),
                 VoiceRow::Voice(i) => {
                     let e = &self.entries[*i];
                     let fav = favourites
@@ -366,7 +408,7 @@ impl VoiceManager {
                         && current.1.is_some_and(|c| {
                             c == e.voice.id || c.eq_ignore_ascii_case(&e.voice.name)
                         });
-                    entry_label(e, several, fav, is_current)
+                    entry_label_in(c, e, several, fav, is_current)
                 }
             })
             .collect()
@@ -377,6 +419,17 @@ impl VoiceManager {
 /// download "Amy (low), en-US, Piper, download 63 MB, non-commercial".
 /// `engine` names the engine (when the list has several).
 pub fn entry_label(e: &VoiceEntry, engine: bool, favourite: bool, current: bool) -> String {
+    entry_label_in(&Messages::english(), e, engine, favourite, current)
+}
+
+/// [`entry_label`] in the catalog's language.
+pub fn entry_label_in(
+    c: &Messages,
+    e: &VoiceEntry,
+    engine: bool,
+    favourite: bool,
+    current: bool,
+) -> String {
     let mut parts = vec![e.voice.name.clone()];
     if let Some(l) = e.voice.languages.first() {
         parts.push(l.clone());
@@ -393,26 +446,23 @@ pub fn entry_label(e: &VoiceEntry, engine: bool, favourite: bool, current: bool)
     }
     parts.extend(e.voice.tags.iter().cloned());
     if let VoiceStatus::Downloadable { bytes, licence } = &e.status {
-        parts.push(format!(
-            "download {}",
-            textweaver_engines::piper::catalog::megabytes(*bytes)
+        parts.push(c.fmt(
+            "voices-download-size",
+            &args!["size" => textweaver_engines::piper::catalog::megabytes(*bytes)],
         ));
-        parts.push(
-            match licence.kind {
-                LicenceKind::PublicDomain => "public domain",
-                LicenceKind::Attribution => "free with credit",
-                LicenceKind::ShareAlike => "free with credit, share alike",
-                LicenceKind::NonCommercial => "non-commercial",
-                LicenceKind::Unknown => "licence shown before download",
-            }
-            .into(),
-        );
+        parts.push(c.tr(match licence.kind {
+            LicenceKind::PublicDomain => "voices-licence-public-domain",
+            LicenceKind::Attribution => "voices-licence-attribution",
+            LicenceKind::ShareAlike => "voices-licence-share-alike",
+            LicenceKind::NonCommercial => "voices-licence-non-commercial",
+            LicenceKind::Unknown => "voices-licence-unknown",
+        }));
     }
     if favourite {
-        parts.push("favourite".into());
+        parts.push(c.tr("voices-favourite"));
     }
     if current {
-        parts.push("current".into());
+        parts.push(c.tr("voices-current"));
     }
     parts.join(", ")
 }

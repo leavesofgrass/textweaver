@@ -55,6 +55,12 @@ pub struct SpeechSettings {
     pub skip_code: bool,
     /// Named rate presets.
     pub speed_presets: BTreeMap<String, u16>,
+    /// The voice to use for each interface language, by language tag
+    /// (`es = "eci:es"`): when `[interface] language` changes to a
+    /// language listed here, its voice is used. A language not listed
+    /// takes the engine's first voice for it, and with none the current
+    /// voice stays (Wave 4, W4d).
+    pub voices_by_language: BTreeMap<String, String>,
     /// Latency offset for audio-clock word events, in ms (Star 120).
     pub latency_offset_ms: u32,
     /// Announcement verbosity.
@@ -219,6 +225,7 @@ impl Default for SpeechSettings {
             .into_iter()
             .map(|(k, v)| (k.to_owned(), v))
             .collect(),
+            voices_by_language: BTreeMap::new(),
             latency_offset_ms: 120,
             verbosity: Verbosity::default(),
             eci: EciSettings::default(),
@@ -467,6 +474,18 @@ pub struct ReadingSettings {
     pub ocr_lang: String,
     /// Which OCR engine reads scanned pages.
     pub ocr_engine: OcrEngine,
+    /// Which engine speaks math: textweaver's own (`builtin`, the default)
+    /// or MathCAT (`mathcat` for ClearSpeak, `mathcat_simplespeak`) in
+    /// builds with MathCAT (ADR-0029).
+    pub math_engine: MathEngine,
+    /// How math looks in the reading view: its source (`source`, the
+    /// default: `$x^2$`), or Unicode (`unicode`: `x²`, `√2`, `1⁄2`), as
+    /// Star showed it. Speech and edit mode always use the source.
+    pub math_display: MathDisplay,
+    /// How tracked changes in Word, OpenDocument, and RTF files are read
+    /// (W4c2): `auto` says them in place at high verbosity and reads the
+    /// final text otherwise; `marked` always says them; `final` never.
+    pub revisions: RevisionReading,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -499,9 +518,52 @@ impl Default for ReadingSettings {
             ocr: true,
             ocr_lang: String::new(),
             ocr_engine: OcrEngine::Auto,
+            math_engine: MathEngine::Builtin,
+            math_display: MathDisplay::Source,
+            revisions: RevisionReading::Auto,
             extra: toml::Table::new(),
         }
     }
+}
+
+/// `[reading] math_engine`: which engine speaks math (ADR-0029).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MathEngine {
+    /// textweaver's own math speech (ClearSpeak-style English, ADR-0018).
+    #[default]
+    #[serde(rename = "builtin")]
+    Builtin,
+    /// MathCAT in ClearSpeak, in the document's language. Needs a build
+    /// with MathCAT; otherwise textweaver's own speech is used.
+    #[serde(rename = "mathcat")]
+    MathCat,
+    /// MathCAT in SimpleSpeak.
+    #[serde(rename = "mathcat_simplespeak")]
+    MathCatSimpleSpeak,
+}
+
+/// `[reading] math_display`: how math looks in the reading view (W4g).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MathDisplay {
+    /// The source as written (`$x^2$`).
+    #[default]
+    Source,
+    /// One line of Unicode (`x²`, `√2`, `1⁄2`).
+    Unicode,
+}
+
+/// `[reading] revisions`: how tracked changes are read (W4c2, ADR-0031).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RevisionReading {
+    /// Said in place at high verbosity; the final text otherwise.
+    #[default]
+    Auto,
+    /// Always said in place ("deleted by Ada Example: three").
+    Marked,
+    /// Never said: the final text only.
+    Final,
 }
 
 /// `[reading] citations`: what continuous reading does with a citation.
@@ -858,11 +920,17 @@ impl Default for StatsSettings {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct InterfaceSettings {
-    /// A language tag such as `en`. Only English is complete; `en-XA` and
-    /// `ar-XB` are test languages (accented, and right to left). A
+    /// A language tag such as `en` or `es`. English, Spanish, French,
+    /// German, Portuguese, and Arabic are built in; `en-XA` and `ar-XB`
+    /// are test languages (accented, and right to left). A
     /// `<language>.ftl` file in the `locales` folder of the configuration
-    /// folder adds a language.
+    /// folder adds a language or goes over a built-in one.
     pub language: String,
+    /// Whether the terminal reader reorders right-to-left text for display
+    /// (Wave 4, W4d): `auto` does it where the terminal does not,
+    /// `on` always, `off` never. The text itself, speech, and the
+    /// screen reader always get it in logical order.
+    pub rtl: RtlDisplay,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -872,9 +940,52 @@ impl Default for InterfaceSettings {
     fn default() -> Self {
         InterfaceSettings {
             language: "en".into(),
+            rtl: RtlDisplay::Auto,
             extra: toml::Table::new(),
         }
     }
+}
+
+/// Whether right-to-left text is reordered for display in the terminal
+/// (`[interface] rtl`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RtlDisplay {
+    /// Reorder where the terminal does not do it itself: not in VTE
+    /// terminals (GNOME Terminal and others), Konsole, mlterm, or macOS
+    /// Terminal, which reorder on their own.
+    #[default]
+    Auto,
+    /// Always reorder.
+    On,
+    /// Never reorder.
+    Off,
+}
+
+/// How the windowed reader's announcements reach the screen reader
+/// (`[gui] announce`, ADR-0028).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GuiAnnounce {
+    /// A live region: each message is a new node the screen reader speaks
+    /// (UI Automation's LiveRegionChanged, AT-SPI's Announcement).
+    #[default]
+    Live,
+    /// UI Automation Notification events (Windows only; elsewhere the
+    /// live region is used).
+    Uia,
+}
+
+/// `[gui]`: settings only the windowed reader (`textweaver-xilem`) reads.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct GuiSettings {
+    /// How announcements reach the screen reader. The live region is the
+    /// default, chosen in the owner's first screen reader session.
+    pub announce: GuiAnnounce,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
 }
 
 /// All settings, one TOML table per group.
@@ -911,6 +1022,8 @@ pub struct Settings {
     pub stats: StatsSettings,
     /// `[interface]`
     pub interface: InterfaceSettings,
+    /// `[gui]`
+    pub gui: GuiSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1034,6 +1147,7 @@ impl Settings {
             lexicon: lenient_section("lexicon", table.remove("lexicon"), &mut w),
             stats: lenient_section("stats", table.remove("stats"), &mut w),
             interface: lenient_section("interface", table.remove("interface"), &mut w),
+            gui: lenient_section("gui", table.remove("gui"), &mut w),
             extra: table,
         };
         (s, w)
@@ -1218,12 +1332,13 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 25] = [
+pub(crate) const STRUCT_TABLES: [&str; 26] = [
     "keyboard",
     "preview",
     "lexicon",
     "stats",
     "interface",
+    "gui",
     "accessibility",
     "reading_aids",
     "reading_aids.rsvp",
@@ -1558,6 +1673,78 @@ mod tests {
         let err = err.unwrap_or_default();
         assert!(err.contains("normalization.math_verbosity"), "{err}");
         assert!(err.contains("normalization.asciimath_delimiter"), "{err}");
+    }
+
+    /// The math engine (W4c1): textweaver's own by default, stored only
+    /// when changed, and a bad value costs only itself.
+    #[test]
+    fn math_engine_default_round_trip_and_bad_value() {
+        let s = Settings::default();
+        assert_eq!(s.reading.math_engine, MathEngine::Builtin);
+        assert!(!s.to_minimal_toml().unwrap().contains("math_engine"));
+
+        let (_d, store) = store();
+        for (value, engine) in [
+            ("mathcat", MathEngine::MathCat),
+            ("mathcat_simplespeak", MathEngine::MathCatSimpleSpeak),
+            ("builtin", MathEngine::Builtin),
+        ] {
+            write(&store, &format!("[reading]\nmath_engine = \"{value}\"\n"));
+            let (s, err) = store.load();
+            assert!(err.is_none(), "{err:?}");
+            assert_eq!(s.reading.math_engine, engine);
+        }
+        write(
+            &store,
+            "[reading]\nmath_engine = \"mathcat\"\nwrap_navigation = true\n",
+        );
+        let (s, _) = store.load();
+        store.save(&s).unwrap();
+        assert_eq!(store.load().0, s);
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("math_engine = \"mathcat\""), "{text}");
+
+        write(
+            &store,
+            "[reading]\nmath_engine = \"eloquent\"\nwrap_navigation = true\n",
+        );
+        let (s, err) = store.load();
+        assert_eq!(s.reading.math_engine, MathEngine::Builtin);
+        assert!(s.reading.wrap_navigation);
+        assert!(err.unwrap_or_default().contains("reading.math_engine"));
+    }
+
+    /// Unicode math in the reading view (W4g): the source by default,
+    /// stored only when changed, and a bad value costs only itself.
+    #[test]
+    fn math_display_default_round_trip_and_bad_value() {
+        let s = Settings::default();
+        assert_eq!(s.reading.math_display, MathDisplay::Source);
+        assert!(!s.to_minimal_toml().unwrap().contains("math_display"));
+        let (_d, store) = store();
+        write(
+            &store,
+            "[reading]
+math_display = \"unicode\"
+",
+        );
+        let (s, err) = store.load();
+        assert!(err.is_none(), "{err:?}");
+        assert_eq!(s.reading.math_display, MathDisplay::Unicode);
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("math_display = \"unicode\""), "{text}");
+        write(
+            &store,
+            "[reading]
+math_display = \"pretty\"
+wrap_navigation = true
+",
+        );
+        let (s, err) = store.load();
+        assert_eq!(s.reading.math_display, MathDisplay::Source);
+        assert!(s.reading.wrap_navigation);
+        assert!(err.unwrap_or_default().contains("reading.math_display"));
     }
 
     #[test]
@@ -2072,7 +2259,7 @@ mod tests {
         assert_eq!(store.load_keymap().unwrap(), o);
     }
 
-    /// Jon's decisions of 2026-09-26: the screen-reader preset became the
+    /// The owner's decisions of 2026-09-26: the screen-reader preset became the
     /// default (its id still reads), citations are skipped in continuous
     /// reading by default, and the preview does not reload by itself.
     #[test]
@@ -2126,5 +2313,52 @@ mod tests {
         );
         let (_, w) = Settings::from_table("[stats]\nenabled = 3\n".parse().unwrap());
         assert_eq!(w, ["stats.enabled has an invalid value"]);
+    }
+
+    /// `[interface] rtl` and `[speech] voices_by_language` (W4d): `auto`
+    /// and no voices by default, kept when set, and a bad value warns.
+    #[test]
+    fn interface_rtl_and_voices_by_language() {
+        let d = Settings::default();
+        assert_eq!(d.interface.rtl, RtlDisplay::Auto);
+        assert!(d.speech.voices_by_language.is_empty());
+        let (s, w) = Settings::from_table(
+            "[interface]\nlanguage = \"es\"\nrtl = \"on\"\n\
+             [speech.voices_by_language]\nes = \"eci:es\"\nfr = \"sapi:Hortense\"\n"
+                .parse()
+                .unwrap(),
+        );
+        assert!(w.is_empty(), "{w:?}");
+        assert_eq!(s.interface.rtl, RtlDisplay::On);
+        assert_eq!(s.speech.voices_by_language["es"], "eci:es");
+        assert_eq!(s.speech.voices_by_language.len(), 2);
+        let text = s.to_minimal_toml().unwrap();
+        assert!(
+            text.contains("rtl = \"on\"") && text.contains("es = \"eci:es\""),
+            "{text}"
+        );
+        let (s, w) = Settings::from_table("[interface]\nrtl = \"sideways\"\n".parse().unwrap());
+        assert_eq!(w, ["interface.rtl has an invalid value"]);
+        assert_eq!(s.interface.rtl, RtlDisplay::Auto);
+    }
+
+    /// `[gui] announce` (ADR-0028): the live region by default, `uia` when
+    /// set, and a bad value warns and keeps the live region.
+    #[test]
+    fn gui_section() {
+        let d = Settings::default();
+        assert_eq!(d.gui.announce, GuiAnnounce::Live);
+        assert!(!d.to_minimal_toml().unwrap().contains("[gui]"));
+        let (s, w) = Settings::from_table("[gui]\nannounce = \"uia\"\n".parse().unwrap());
+        assert!(w.is_empty(), "{w:?}");
+        assert_eq!(s.gui.announce, GuiAnnounce::Uia);
+        let text = s.to_minimal_toml().unwrap();
+        assert!(
+            text.contains("[gui]") && text.contains("announce = \"uia\""),
+            "{text}"
+        );
+        let (s, w) = Settings::from_table("[gui]\nannounce = \"loud\"\n".parse().unwrap());
+        assert_eq!(w, ["gui.announce has an invalid value"]);
+        assert_eq!(s.gui.announce, GuiAnnounce::Live);
     }
 }

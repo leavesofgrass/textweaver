@@ -57,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [markdown, html, epub, docx, pdf, settings, keymap, state, frame, daisy, pptx, sheet, archive, image, web]
+        target: [markdown, html, epub, docx, pdf, settings, keymap, state, frame, daisy, pptx, sheet, archive, image, web, latex_math, asciimath, bibtex, ris, csl_json, theme, lexicon, vault_import, rpc, rtf, odt, docx_revisions]
     steps:
       - uses: actions/checkout@v7
       - name: Nightly Rust (this job only)
@@ -65,28 +65,28 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-fuzz
+      # The toolchain in rust-toolchain.toml, for `cargo xtask`.
+      - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: fuzz
+          workspaces: |
+            fuzz
+            .
           key: fuzz-${{ matrix.target }}
-      # Real files are a better start than nothing (fuzz/README.md).
+      # Real files are a better start than nothing (fuzz/README.md); the
+      # fixtures for each target are listed in xtask/src/fuzz_seed.rs.
       - name: Seed the corpus
+        run: cargo xtask fuzz-seed --target ${{ matrix.target }}
+      # The rpc target links the app, whose audio output needs ALSA.
+      - name: System libraries (rpc only)
+        if: matrix.target == 'rpc'
         run: |
-          mkdir -p fuzz/corpus/${{ matrix.target }}
-          case ${{ matrix.target }} in
-            markdown) cp fixtures/*.md fuzz/corpus/markdown/ ;;
-            html) cp fixtures/*.html fuzz/corpus/html/ ;;
-            pdf) cp fixtures/a/*.pdf fuzz/corpus/pdf/ ;;
-            docx) cp fixtures/a/*.docx fuzz/corpus/docx/ ;;
-            epub) cp fixtures/a/*.epub fuzz/corpus/epub/ ;;
-            archive) cp fixtures/w3d/*.7z fuzz/corpus/archive/ ;;
-            image) cp fixtures/w3d/*.png fixtures/m/*.png fuzz/corpus/image/ ;;
-            web) cp fixtures/*.html fixtures/w/*.html fuzz/corpus/web/ ;;
-            # daisy, pptx, and sheet have no small fixtures yet and start
-            # from an empty corpus.
-          esac 2> /dev/null || true
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
       - name: Fuzz for 10 minutes
-        run: cargo +nightly fuzz run ${{ matrix.target }} -- -max_total_time=600 -rss_limit_mb=4096 -timeout=30
+        env:
+          FEATURES: ${{ matrix.target == 'rpc' && '--features rpc' || '' }}
+        run: cargo +nightly fuzz run ${{ matrix.target }} $FEATURES -- -max_total_time=600 -rss_limit_mb=4096 -timeout=30
       - name: Upload the crash
         if: failure()
         uses: actions/upload-artifact@v7
