@@ -258,7 +258,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
 <script type="application/json" id="site-data">
 {
  "counts": {
-  "done": 48,
+  "done": 49,
   "not yet": 3,
   "partial": 7
  },
@@ -382,7 +382,17 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
-     "description": "OpenDocument, RTF, reStructuredText, Org, and LaTeX convert through Pandoc in tw convert when Pandoc is installed.",
+     "description": "RTF and ODT open directly, and comments in Word and ODT files become notes; tracked changes read as the final text or are said in place.",
+     "guide": {
+      "href": "../converting.md",
+      "title": "Converting documents guide"
+     },
+     "name": "RTF and OpenDocument text, with comments and tracked changes",
+     "note": "Built in; the reading setting revisions says changes.",
+     "status": "done"
+    },
+    {
+     "description": "reStructuredText, Org, and LaTeX convert through Pandoc in tw convert when Pandoc is installed.",
      "guide": {
       "href": "../converting.md",
       "title": "Converting documents guide"
@@ -916,7 +926,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "title": "Reading aids"
   }
  ],
- "total": 58
+ "total": 59
 }
 </script>
 <!-- END generated: site-data -->
