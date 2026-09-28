@@ -140,6 +140,7 @@ nav = [
     { "ADR-0031: Native RTF, ODT, and Word revisions" = "adr/0031-native-rtf-odt-and-word-revisions.md" },
     { "ADR-0032: Grammar, lint, highlighting, and clipboard crates" = "adr/0032-grammar-lint-highlighting-clipboard.md" },
     { "ADR-0033: The GUI after the second session, and edit mode" = "adr/0033-gui-session-2-and-edit-mode.md" },
+    { "ADR-0039: Automated screen-reader checks beside the listening sessions" = "adr/0039-automated-screen-reader-checks.md" },
   ] },
   { "Interactive pages" = [
     { "Overview (interactive)" = "site/index.html" },

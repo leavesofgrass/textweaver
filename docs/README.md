@@ -118,6 +118,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0031: Native RTF, ODT, and Word revisions](adr/0031-native-rtf-odt-and-word-revisions.md): RTF and OpenDocument without Pandoc, comments as notes, tracked changes, and limits for zip packages.
 - [ADR-0032: Grammar, lint, highlighting, and clipboard crates](adr/0032-grammar-lint-highlighting-clipboard.md): the authoring extras' crates, and the two held for the owner.
 - [ADR-0033: The GUI after the second session, and edit mode](adr/0033-gui-session-2-and-edit-mode.md): the file chooser, text size and font keys, a key on every button, and edit mode in the window.
+- [ADR-0039: Automated screen-reader checks beside the listening sessions](adr/0039-automated-screen-reader-checks.md): the accessibility tree on three systems, and NVDA, Orca, and VoiceOver sessions on CI runners.
 
 ## Interactive pages
 
