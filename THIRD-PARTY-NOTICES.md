@@ -562,7 +562,7 @@ textweaver is built from these Rust crates. Each licence below lists the crates 
 Licences, with the number of crates under each:
 
 - Apache License 2.0: 538
-- MIT License: 184
+- MIT License: 185
 - Unicode License v3: 27
 - ISC License: 24
 - BSD 3-Clause "New" or "Revised" License: 10
@@ -15731,6 +15731,7 @@ limitations under the License.
 
 Used by:
 
+- accesskit_windows 0.35.1, https://github.com/AccessKit/accesskit
 - linebender_include_doc_path 0.1.0, https://github.com/linebender/xilem
 - masonry 0.4.0, https://github.com/linebender/xilem
 - masonry_core 0.4.0, https://github.com/linebender/xilem
@@ -15744,7 +15745,6 @@ Used by:
 - accesskit_consumer 0.39.1, https://github.com/AccessKit/accesskit
 - accesskit_macos 0.27.1, https://github.com/AccessKit/accesskit
 - accesskit_unix 0.24.0, https://github.com/AccessKit/accesskit
-- accesskit_windows 0.35.1, https://github.com/AccessKit/accesskit
 - accesskit_winit 0.34.1, https://github.com/AccessKit/accesskit
 - allocator-api2 0.2.21, https://github.com/zakarumych/allocator-api2
 - alsa 0.11.0, https://github.com/diwic/alsa-rs
@@ -17849,7 +17849,6 @@ THE SOFTWARE.
 Used by:
 
 - new_debug_unreachable 1.0.6, https://github.com/mbrubeck/rust-debug-unreachable
-- ordered-float 4.6.0, https://github.com/reem/rust-ordered-float
 - ordered-float 5.5.0, https://github.com/reem/rust-ordered-float
 
 ```text
@@ -19151,6 +19150,37 @@ SOFTWARE.
 
 Used by:
 
+- rfd 0.17.2, https://github.com/PolyMeilex/rfd
+
+```text
+MIT License
+
+Copyright (c) 2020 Bilal Elmoussaoui
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+```
+
+### MIT License (MIT)
+
+Used by:
+
 - xcursor 0.3.11, https://github.com/esposm03/xcursor-rs
 
 ```text
@@ -19338,6 +19368,7 @@ SOFTWARE.
 
 Used by:
 
+- rfd 0.17.2, https://github.com/PolyMeilex/rfd
 - sctk-adwaita 0.10.1, https://github.com/PolyMeilex/sctk-adwaita
 
 ```text
