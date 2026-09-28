@@ -85,14 +85,20 @@ jobs:
       # The accessibility tree, dumped with accessibility-cli and compared
       # with main's last run (ADR-0039). Report-only for now: a failure here
       # does not fail the job until the dump has been green on main.
+      # Restored and saved as separate steps, so the build (about eight
+      # minutes) is kept even when a later step fails or the run is
+      # cancelled, which skips actions/cache's end-of-job save.
       - name: accessibility-cli (pinned by commit, cached)
         id: a11y-cli
-        uses: actions/cache@v6
+        # The tree is dumped even when a test above failed: it checks
+        # something else, and the build it needs is already done.
+        if: ${{ !cancelled() }}
+        uses: actions/cache/restore@v6
         with:
           path: a11y-cli
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
       - name: Build accessibility-cli
-        if: steps.a11y-cli.outputs.cache-hit != 'true'
+        if: ${{ !cancelled() && steps.a11y-cli.outputs.cache-hit != 'true' }}
         shell: bash
         env:
           # Its warnings are not ours to deny.
@@ -100,7 +106,14 @@ jobs:
         run: |
           cargo install --locked --git https://github.com/DioxusLabs/accessibility-cli \
             --rev "$A11Y_CLI_REV" accessibility-cli --root a11y-cli
+      - name: Save accessibility-cli
+        if: ${{ !cancelled() && steps.a11y-cli.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6
+        with:
+          path: a11y-cli
+          key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
       - name: Accessibility tree dump
+        if: ${{ !cancelled() }}
         continue-on-error: true
         shell: pwsh
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/a11y/tree-dump.ps1 -Out a11y-tree -Cli a11y-cli/bin/accessibility-cli.exe
@@ -162,14 +175,20 @@ jobs:
       # The accessibility tree, dumped with accessibility-cli and compared
       # with main's last run (ADR-0039). Report-only for now: a failure here
       # does not fail the job until the dump has been green on main.
+      # Restored and saved as separate steps, so the build (about eight
+      # minutes) is kept even when a later step fails or the run is
+      # cancelled, which skips actions/cache's end-of-job save.
       - name: accessibility-cli (pinned by commit, cached)
         id: a11y-cli
-        uses: actions/cache@v6
+        # The tree is dumped even when a test above failed: it checks
+        # something else, and the build it needs is already done.
+        if: ${{ !cancelled() }}
+        uses: actions/cache/restore@v6
         with:
           path: a11y-cli
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
       - name: Build accessibility-cli
-        if: steps.a11y-cli.outputs.cache-hit != 'true'
+        if: ${{ !cancelled() && steps.a11y-cli.outputs.cache-hit != 'true' }}
         shell: bash
         env:
           # Its warnings are not ours to deny.
@@ -177,7 +196,14 @@ jobs:
         run: |
           cargo install --locked --git https://github.com/DioxusLabs/accessibility-cli \
             --rev "$A11Y_CLI_REV" accessibility-cli --root a11y-cli
+      - name: Save accessibility-cli
+        if: ${{ !cancelled() && steps.a11y-cli.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6
+        with:
+          path: a11y-cli
+          key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
       - name: Accessibility tree dump
+        if: ${{ !cancelled() }}
         continue-on-error: true
         env:
           A11Y_CLI: a11y-cli/bin/accessibility-cli
@@ -250,14 +276,20 @@ jobs:
       # The accessibility tree, dumped with accessibility-cli and compared
       # with main's last run (ADR-0039). Report-only for now: a failure here
       # does not fail the job until the dump has been green on main.
+      # Restored and saved as separate steps, so the build (about eight
+      # minutes) is kept even when a later step fails or the run is
+      # cancelled, which skips actions/cache's end-of-job save.
       - name: accessibility-cli (pinned by commit, cached)
         id: a11y-cli
-        uses: actions/cache@v6
+        # The tree is dumped even when a test above failed: it checks
+        # something else, and the build it needs is already done.
+        if: ${{ !cancelled() }}
+        uses: actions/cache/restore@v6
         with:
           path: a11y-cli
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
       - name: Build accessibility-cli
-        if: steps.a11y-cli.outputs.cache-hit != 'true'
+        if: ${{ !cancelled() && steps.a11y-cli.outputs.cache-hit != 'true' }}
         shell: bash
         env:
           # Its warnings are not ours to deny.
@@ -265,7 +297,14 @@ jobs:
         run: |
           cargo install --locked --git https://github.com/DioxusLabs/accessibility-cli \
             --rev "$A11Y_CLI_REV" accessibility-cli --root a11y-cli
+      - name: Save accessibility-cli
+        if: ${{ !cancelled() && steps.a11y-cli.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6
+        with:
+          path: a11y-cli
+          key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
       - name: Accessibility tree dump
+        if: ${{ !cancelled() }}
         continue-on-error: true
         env:
           A11Y_CLI: a11y-cli/bin/accessibility-cli

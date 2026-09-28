@@ -37,13 +37,22 @@ dump() {
   mkdir -p "$out"
   local home gui found=0 deadline
   home="$(mktemp -d)"
+  local background=(--background)
   if [[ $platform == linux ]]; then
     export NO_AT_BRIDGE=0
     export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-$(mktemp -d)}"
     /usr/libexec/at-spi-bus-launcher --launch-immediately >/dev/null 2>&1 &
     sleep 1
+    # The registry daemon, started the way accessibility-cli's own CI starts
+    # it, so the desktop lists applications before anything else asks.
+    /usr/libexec/at-spi2-registryd >/dev/null 2>&1 &
+    sleep 1
+    # Xvfb is a private display with no one at it, so the window opens as
+    # it does in the AT-SPI check, without --background (the first run
+    # found no application by the GUI's process id with it).
+    background=()
   fi
-  "$exe" "$doc" --backend paced --background --exit-after $((wait_seconds + 30)) \
+  "$exe" "$doc" --backend paced "${background[@]}" --exit-after $((wait_seconds + 30)) \
     --home "$home" --log-file "$out/gui.log" &
   gui=$!
   deadline=$((SECONDS + wait_seconds))
@@ -61,11 +70,32 @@ dump() {
     fi
   done
   "$cli" --platform "$platform" --pid "$gui" >"$out/raw-tree.txt" 2>&1 || true
+  if [[ $found == 0 ]]; then
+    # What accessibility-cli can see while the GUI still runs, to compare
+    # with the GUI's process id.
+    echo "GUI process id: $gui" >"$out/windows.txt"
+    "$cli" --platform "$platform" --list-windows >>"$out/windows.txt" 2>&1 || true
+    if [[ $platform == linux ]]; then
+      # And what pyatspi sees on the same bus, as the AT-SPI check reads it.
+      "$python" - >>"$out/windows.txt" 2>&1 <<'EOF' || true
+import pyatspi
+desktop = pyatspi.Registry.getDesktop(0)
+print("pyatspi sees:")
+for i in range(desktop.childCount):
+    app = desktop.getChildAtIndex(i)
+    try:
+        print(f"- {app.name!r} process {app.get_process_id()}")
+    except Exception as e:
+        print(f"- (unreadable: {e})")
+EOF
+    fi
+  fi
   kill "$gui" 2>/dev/null || true
   wait "$gui" 2>/dev/null || true
   if [[ $found == 0 ]]; then
     echo "Fail: no tree with the document in ${wait_seconds} seconds. accessibility-cli said:"
     cat "$out/cli-errors.txt" 2>/dev/null || true
+    cat "$out/windows.txt" 2>/dev/null || true
     return 1
   fi
   "$python" "$here/tree_report.py" normalize "$out/raw.json" "$out/tree.txt"
