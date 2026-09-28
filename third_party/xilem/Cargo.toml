@@ -46,7 +46,7 @@ include_doc_path = { version = "0.1.0", path = "include_doc_path", package = "li
 
 anymore = "1.0.0"
 imaging = "0.0.1"
-imaging_wgpu = { version = "0.0.1", features = ["wgpu-28"] }
+imaging_wgpu = { version = "0.0.2", features = ["wgpu-28"] }
 imaging_skia = { version = "0.0.1", features = ["gpu"] }
 imaging_vello = "0.0.1"
 imaging_vello_hybrid = "0.0.1"
