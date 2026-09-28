@@ -127,7 +127,12 @@ unicode-segmentation = "1.13"
 regex = "1.13"
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 scraper = "0.27"
-zip = { version = "8.6", default-features = false, features = ["deflate"] }
+# Wave 4, Agent W4b: every compression method a zip member may use, all in
+# pure Rust: deflate through zlib-rs, LZMA and XZ through lzma-rust2, bzip2
+# through libbz2-rs-sys (the `bzip2` feature; `bzip2-rs` is the C library),
+# and PPMd through ppmd-rust. calamine and mathcat still turn on `deflate`,
+# which adds the pure-Rust zopfli compressor.
+zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs", "lzma", "xz", "bzip2", "ppmd"] }
 roxmltree = "0.21"
 
 # persistence

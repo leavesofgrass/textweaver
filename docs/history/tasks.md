@@ -1068,6 +1068,8 @@ A draft, so the next wave can start the moment Wave 3 lands. It follows the same
 
 ### Agent W4b: Speed, round two
 
+**Status (Agent W4b, speed and memory, Sunday, September 27, 2026):** in progress on `wave4/b-speed`. **The zip feature commit is done and ready to merge to main now** (the first commit on the branch): zip reads every member compression in pure Rust (deflate through zlib-rs, LZMA and XZ through lzma-rust2, bzip2 through libbz2-rs-sys, PPMd through ppmd-rust); `cargo deny check` passes (one new duplicate warning: lzma-rust2 0.16.5 for zip beside 0.21.0 for 7z); a zip member declaring more than 256 MB is refused before it is decompressed. W4c2 can start from it.
+
 - **Faster text search and segmentation.**
   - Adopt `icu_segmenter` for word and sentence boundaries, measured against `unicode-segmentation`.
   - Use `memchr::memmem` for literal find.
