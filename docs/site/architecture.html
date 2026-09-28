@@ -434,36 +434,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "adr_note": null,
    "adrs": [
     {
-     "href": "../adr/0014-gui-toolkit.md",
-     "number": "0014",
-     "title": "ADR-0014: GUI toolkit (wxDragon)"
-    }
-   ],
-   "bins": [
-    "textweaver-gui"
-   ],
-   "build_deps": [],
-   "default_member": false,
-   "dependents": [],
-   "deps": [
-    "textweaver-aids",
-    "textweaver-app",
-    "textweaver-fonts"
-   ],
-   "description": "textweaver native GUI on wxDragon: the Wave 2 feasibility spike (ADR-0014), not built by default",
-   "dev_deps": [],
-   "job": "The native GUI reader window on wxDragon; a feasibility spike, not built by default, kept as a fallback while Wave 3 builds the GUI on Xilem.",
-   "layer": "frontends",
-   "name": "textweaver-gui",
-   "path": "crates/textweaver-gui",
-   "short": "gui",
-   "tool": false,
-   "version": "0.1.0-alpha.3"
-  },
-  {
-   "adr_note": null,
-   "adrs": [
-    {
      "href": "../adr/0027-xilem-gui.md",
      "number": "0027",
      "title": "ADR-0027: Xilem GUI"
@@ -514,7 +484,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "default_member": true,
    "dependents": [
     "textweaver-cli",
-    "textweaver-gui",
     "textweaver-tui",
     "textweaver-xilem",
     "xtask"
@@ -670,7 +639,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "default_member": true,
    "dependents": [
     "textweaver-aids",
-    "textweaver-gui",
     "textweaver-writers",
     "textweaver-xilem"
    ],
@@ -727,7 +695,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "default_member": true,
    "dependents": [
     "textweaver-app",
-    "textweaver-gui",
     "textweaver-tui"
    ],
    "deps": [
@@ -1548,7 +1515,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "crates": [
     "textweaver-tui",
     "textweaver-cli",
-    "textweaver-gui",
     "textweaver-xilem"
    ],
    "id": "frontends",

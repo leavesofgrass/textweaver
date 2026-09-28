@@ -51,7 +51,6 @@ The full check, as CI runs it on Linux. `scripts/dev-check.sh` runs formatting, 
 docker compose run --rm -T dev bash scripts/dev-check.sh
 ```
 
-The GUI crate (`textweaver-gui`) is left out, as in CI: it builds wxWidgets, which the image does not carry.
 
 An interactive shell in `/work`:
 

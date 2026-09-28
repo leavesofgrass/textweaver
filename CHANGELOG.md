@@ -115,7 +115,7 @@ Found by the new fuzz targets and the second-tool checks:
 - Fixed: a BibTeX crossref loop overflowed the stack; loops, and chains deeper than 8, are cut.
 - Fixed: a damaged lexicon file could crash textweaver; its headword map's checksum is checked when it opens.
 - Fixed: front matter keys that start with YAML syntax or with spaces were lost in vault export; they are quoted.
-- Fixed: exporting Markdown with a nested list to EPUB, PDF, DOCX, or braille crashed.
+- Fixed: exporting Markdown with a nested list to EPUB, PDF, DOCX, or braille crashed. A one-item list, and a list that is an item's only content, keep their nesting too, and lists nested past 64 levels are written as paragraphs instead of overflowing the stack.
 - Fixed: every EPUB failed two epubcheck rules (RSC-011 and RSC-005).
 - Fixed: `tw serve` could be made to allocate a terabyte; a message over 16 MiB now ends the session.
 - Fixed: on macOS, an engine host could outlive a crashed textweaver; each host now exits when textweaver is gone.
