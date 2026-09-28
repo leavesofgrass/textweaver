@@ -168,3 +168,41 @@ jobs:
             orca/*.txt
           if-no-files-found: warn
 
+  voiceover:
+    if: github.event_name != 'workflow_dispatch' || inputs.session == 'all' || inputs.session == 'voiceover'
+    # The macOS version Guidepup's VoiceOver support names (Sonoma).
+    runs-on: macos-14
+    timeout-minutes: 90
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: a11y-tests
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo build --locked -p textweaver-xilem
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: tools/a11y/package-lock.json
+      - name: Guidepup (locked)
+        working-directory: tools/a11y
+        run: npm ci --omit=optional --ignore-scripts
+      # Lets AppleScript drive VoiceOver and turns off prompts, on this
+      # runner only. If the runner cannot allow it, the session says so.
+      - name: VoiceOver setup (guidepup setup --ci)
+        working-directory: tools/a11y
+        run: npx --no guidepup setup --ci 2>&1 | tee ../../voiceover-setup.log
+      - name: VoiceOver session
+        if: always()
+        run: node tools/a11y/voiceover-session.mjs --exe target/debug/textweaver-xilem --out voiceover
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: a11y-voiceover
+          path: |
+            voiceover/
+            voiceover-setup.log
+          if-no-files-found: warn
