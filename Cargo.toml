@@ -272,7 +272,7 @@ sha1 = "0.10"
 # `include-zip` embeds MathCAT's rules, zipped at build time from the
 # crate's own Rules folder (nothing is downloaded). `no-unsafe` builds its
 # XML and XPath forks without unsafe code.
-mathcat = { version = "=0.7.6-rc.3", default-features = false, features = ["include-zip", "no-unsafe"] }
+mathcat = { version = "=0.7.7-alpha.1", default-features = false, features = ["include-zip", "no-unsafe"] }
 
 # Wave 4, Agent W4g: authoring extras (ADR-0032). Each is behind a
 # feature of the crate that uses it, and the lean reader links none.
