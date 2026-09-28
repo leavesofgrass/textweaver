@@ -82,6 +82,39 @@ fn math_is_drawn_as_unicode_only_when_asked() {
     );
 }
 
+/// Code blocks: keywords bold and comments italic, so the kinds differ by
+/// more than color; the text itself is unchanged.
+#[cfg(feature = "highlight")]
+#[test]
+fn code_blocks_are_highlighted_with_attributes() {
+    use ratatui::style::Modifier;
+    let file = fixture("code.md");
+    let h = open(&file, Settings::default());
+    let screen = h.screen();
+    let buf = h.term.backend().buffer();
+    let find = |needle: &str| -> (u16, u16) {
+        for (y, line) in screen.lines().enumerate() {
+            if let Some(x) = line.find(needle) {
+                let x = line[..x].chars().count();
+                return (x as u16, y as u16);
+            }
+        }
+        panic!("{needle} not in\n{screen}");
+    };
+    let (x, y) = find("def add");
+    assert!(buf[(x, y)].modifier.contains(Modifier::BOLD), "def is bold");
+    let (x, y) = find("# Add two");
+    assert!(
+        buf[(x, y)].modifier.contains(Modifier::ITALIC),
+        "the comment is italic"
+    );
+    let (x, y) = find("fn add");
+    assert!(buf[(x, y)].modifier.contains(Modifier::BOLD), "fn is bold");
+    // Prose is not touched.
+    let (x, y) = find("Move the caret");
+    assert!(!buf[(x, y)].modifier.contains(Modifier::BOLD));
+}
+
 #[test]
 fn edit_mode_shows_the_source() {
     let file = fixture("math.md");

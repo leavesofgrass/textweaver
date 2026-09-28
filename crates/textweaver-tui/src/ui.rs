@@ -102,6 +102,9 @@ struct RowAids<'a> {
     sep: &'a str,
     /// Ranges drawn as other text (Unicode math), in order.
     shown: &'a [(CharRange, String)],
+    /// Code blocks and their tokens: the style under highlights, in
+    /// order, not overlapping.
+    code: &'a [(CharRange, Style)],
 }
 
 /// The math exploration move for a key, if it is one: arrows, Home, End,
@@ -160,6 +163,9 @@ pub struct Tui {
     frozen_position: Option<String>,
     /// Physical keys peeked from the Windows console, for the digit row.
     digits: crate::physical::DigitKeys,
+    /// Code block tokens already found ([`crate::highlight`]).
+    #[cfg(feature = "highlight")]
+    code_cache: std::cell::RefCell<crate::highlight::Cache>,
 }
 
 /// Screen areas of the last draw.
@@ -204,6 +210,8 @@ impl Tui {
             system_clipboard_said: false,
             frozen_position: None,
             digits: crate::physical::DigitKeys::default(),
+            #[cfg(feature = "highlight")]
+            code_cache: std::cell::RefCell::default(),
         }
     }
 
@@ -850,6 +858,7 @@ impl Tui {
             _ => CharRange::empty(0),
         };
         let highlights = self.app.highlights(window);
+        let code = self.code_styles(doc, window, theme);
         let bold = self.app.bionic_ranges(window);
         let difficult = self.app.difficult_ranges(window);
         // The syllable breaks of each line shown, as the layout used them.
@@ -900,6 +909,7 @@ impl Tui {
                 breaks: row_breaks,
                 sep: &sep,
                 shown: &shown,
+                code: &code,
             };
             let mut text = self.row_spans(doc, row, &highlights, &aids, theme, cells);
             let extra = ruler_modifier(mark);
@@ -933,6 +943,73 @@ impl Tui {
         }
         f.render_widget(Paragraph::new(lines).style(theme.text), area);
         cursor
+    }
+
+    /// The styles of the code blocks in `window` (the `highlight`
+    /// feature): each block in the theme's code colors, and its tokens in
+    /// theirs, as ranges in order that do not overlap. Empty without the
+    /// feature.
+    fn code_styles(
+        &self,
+        doc: &textweaver_app::text::Document,
+        window: CharRange,
+        theme: &Theme,
+    ) -> Vec<(CharRange, Style)> {
+        #[cfg(feature = "highlight")]
+        {
+            use crate::highlight::Token;
+            use textweaver_app::core::MarkerKind;
+            let styles = &theme.code;
+            let mut out = Vec::new();
+            let mut blocks: Vec<&textweaver_app::text::Marker> = doc
+                .markers()
+                .iter()
+                .filter(|m| {
+                    m.kind == MarkerKind::Code
+                        && m.level == 1
+                        && m.range.start < window.end
+                        && window.start < m.range.end
+                })
+                .collect();
+            blocks.sort_by_key(|m| m.range.start);
+            let mut cache = self.code_cache.borrow_mut();
+            for m in blocks {
+                let start = m.range.start.0;
+                let tokens = m
+                    .label
+                    .as_deref()
+                    .filter(|l| !l.is_empty())
+                    .and_then(|lang| cache.tokens(lang, &doc.slice(m.range)));
+                let mut at = start;
+                for &(a, b, t) in tokens.iter().flat_map(|t| t.iter()) {
+                    let (a, b) = (start + a, start + b);
+                    if a > at {
+                        out.push((CharRange::new(at, a), styles.plain));
+                    }
+                    let st = match t {
+                        Token::Plain => styles.plain,
+                        Token::Comment => styles.comment,
+                        Token::Keyword => styles.keyword,
+                        Token::String => styles.string,
+                        Token::Number => styles.number,
+                        Token::Function => styles.function,
+                        Token::Type => styles.kind,
+                    };
+                    out.push((CharRange::new(a, b), st));
+                    at = b;
+                }
+                if at < m.range.end.0 {
+                    out.push((CharRange::new(at, m.range.end.0), styles.plain));
+                }
+            }
+            out.retain(|(r, _)| !r.is_empty());
+            out
+        }
+        #[cfg(not(feature = "highlight"))]
+        {
+            let _ = (doc, window, theme);
+            Vec::new()
+        }
     }
 
     /// Draws the RSVP word in a box over the document (never over the
@@ -1000,12 +1077,20 @@ impl Tui {
         let difficult = aids.difficult;
         let mut b = bold.partition_point(|r| r.end <= row.range.start);
         let mut d = difficult.partition_point(|r| r.end <= row.range.start);
+        let mut k = aids.code.partition_point(|(r, _)| r.end <= row.range.start);
         for (i, c) in chars.enumerate() {
             let pos = CharPos(row.range.start.0 + i);
+            while k < aids.code.len() && aids.code[k].0.end <= pos {
+                k += 1;
+            }
+            let base = match aids.code.get(k) {
+                Some((r, st)) if r.contains(pos) => *st,
+                _ => theme.text,
+            };
             let mut style = highlights
                 .iter()
                 .filter(|h| h.range.contains(pos))
-                .fold(theme.text, |st, h| st.patch(theme.highlight(h.kind)));
+                .fold(base, |st, h| st.patch(theme.highlight(h.kind)));
             while b < bold.len() && bold[b].end <= pos {
                 b += 1;
             }
