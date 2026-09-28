@@ -123,6 +123,14 @@ fn quadratic_formula_by_style_and_verbosity() {
     }
 }
 
+/// The LaTeX the EPUB loader writes for MathML (no spaces, braced
+/// scripts, display delimiters) reads as the same formula.
+#[test]
+fn epub_mathml_latex_reads_the_same() {
+    let from_epub = r"$$x=\frac{-b\pm\sqrt{b^{2}-4ac}}{2a}$$";
+    assert_eq!(say(from_epub), say(QUADRATIC));
+}
+
 /// Formulas a student meets, in ClearSpeak at normal verbosity.
 #[test]
 fn student_formulas() {

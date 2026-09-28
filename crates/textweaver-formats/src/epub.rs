@@ -375,7 +375,7 @@ fn convert(
                 }
             }
         };
-        crate::html::walk_into(&mut b, &text, options, &mut scratch, Some(&mut hook));
+        crate::html::walk_epub_into(&mut b, &text, options, &mut scratch, Some(&mut hook));
         for w in crate::warnings(&scratch) {
             crate::add_warning(meta, &w);
         }

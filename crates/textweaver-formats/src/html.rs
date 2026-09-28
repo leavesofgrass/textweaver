@@ -116,6 +116,30 @@ pub(crate) fn walk_into<'a>(
     meta: &mut DocumentMeta,
     on_anchor: Option<AnchorHook<'a>>,
 ) {
+    walk(b, source, options, meta, on_anchor, false);
+}
+
+/// [`walk_into`] for an EPUB 3 chapter: MathML is read as math (a `Math`
+/// marker over LaTeX, see `mathml.rs`), and an `epub:switch` reads its
+/// MathML case, or else its default.
+pub(crate) fn walk_epub_into<'a>(
+    b: &'a mut Builder,
+    source: &str,
+    options: &'a LoadOptions,
+    meta: &mut DocumentMeta,
+    on_anchor: Option<AnchorHook<'a>>,
+) {
+    walk(b, source, options, meta, on_anchor, true);
+}
+
+fn walk<'a>(
+    b: &'a mut Builder,
+    source: &str,
+    options: &'a LoadOptions,
+    meta: &mut DocumentMeta,
+    on_anchor: Option<AnchorHook<'a>>,
+    mathml: bool,
+) {
     let html = Html::parse_document(source);
     let root = html.root_element();
     if let Some(lang) = root.attr("lang").or_else(|| root.attr("xml:lang"))
@@ -131,6 +155,7 @@ pub(crate) fn walk_into<'a>(
         on_anchor,
         depth: 0,
         flattened: false,
+        mathml,
     };
     for child in root.child_elements() {
         if child.value().name() == "head" {
@@ -207,6 +232,8 @@ struct Walker<'a> {
     depth: usize,
     /// Set once content past the nesting limit was flattened.
     flattened: bool,
+    /// Read MathML as math (EPUB 3).
+    mathml: bool,
 }
 
 fn marker(kind: MarkerKind) -> Marker {
@@ -319,6 +346,13 @@ impl Walker<'_> {
         if SKIP.contains(&name) || is_hidden(&el) {
             return;
         }
+        if self.mathml {
+            match crate::mathml::local(name) {
+                "math" => return self.math(el),
+                "switch" if name.starts_with("epub:") => return self.switch(el),
+                _ => {}
+            }
+        }
         match name {
             "head" | "title" | "caption" => {}
             "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
@@ -385,6 +419,51 @@ impl Walker<'_> {
                 self.paragraph_break();
             }
             _ => self.children(el),
+        }
+    }
+
+    /// MathML (EPUB 3): LaTeX with its delimiters under a `Math` marker,
+    /// as the Markdown and DOCX loaders write math: `$…$` at level 0, or
+    /// display math `$$…$$` at level 1 on a line of its own (in a table
+    /// cell, between spaces). Without any math, the `alttext` or an
+    /// image's alt text, as plain text.
+    fn math(&mut self, el: ElementRef<'_>) {
+        let m = crate::mathml::read(el);
+        let Some(latex) = m.latex else {
+            if let Some(text) = m.fallback {
+                self.b.text(&text);
+            }
+            return;
+        };
+        if m.display {
+            self.line_break();
+        }
+        let text = if m.display {
+            format!("$${latex}$$")
+        } else {
+            format!("${latex}$")
+        };
+        let id = self
+            .b
+            .open(marker(MarkerKind::Math).with_level(u8::from(m.display)));
+        self.b.text(&text);
+        self.b.close(id);
+        if m.display {
+            self.line_break();
+        }
+    }
+
+    /// `epub:switch`: the first `epub:case` that holds MathML, else
+    /// `epub:default`, never both.
+    fn switch(&mut self, el: ElementRef<'_>) {
+        let local = |e: &ElementRef<'_>| crate::mathml::local(e.value().name()).to_owned();
+        let parts: Vec<ElementRef<'_>> = el.child_elements().collect();
+        let case = parts.iter().find(|c| {
+            local(c) == "case" && c.descendent_elements().any(|d| local(&d) == "math")
+        });
+        let chosen = case.or_else(|| parts.iter().find(|c| local(c) == "default"));
+        if let Some(c) = chosen {
+            self.children(*c);
         }
     }
 

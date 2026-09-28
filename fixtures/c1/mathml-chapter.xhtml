@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xmlns:m="http://www.w3.org/1998/Math/MathML" xml:lang="en">
+<head><title>Math in an EPUB 3 chapter</title></head>
+<body>
+<h1>Math in an EPUB 3 chapter</h1>
+<p>Presentation MathML: <math xmlns="http://www.w3.org/1998/Math/MathML" alttext="x squared plus 1"><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></math> grows.</p>
+<p>The quadratic formula:</p>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mi>x</mi><mo>=</mo>
+  <mfrac>
+    <mrow><mo>-</mo><mi>b</mi><mo>±</mo><msqrt><msup><mi>b</mi><mn>2</mn></msup><mo>-</mo><mn>4</mn><mi>a</mi><mi>c</mi></msqrt></mrow>
+    <mrow><mn>2</mn><mi>a</mi></mrow>
+  </mfrac>
+</math>
+<p>With a TeX annotation: <math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">\frac{1}{2}</annotation></semantics></math> of it.</p>
+<p>A prefixed element: <m:math><m:msqrt><m:mi>z</m:mi></m:msqrt></m:math> here.</p>
+<p>Only alternative text: <math xmlns="http://www.w3.org/1998/Math/MathML" alttext="the area of the circle"></math> ends.</p>
+<p>A switch: <epub:switch id="s1"><epub:case required-namespace="http://www.w3.org/1998/Math/MathML"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>n</mi><mo>!</mo></math></epub:case><epub:default><img src="n-factorial.png" alt="n factorial"/></epub:default></epub:switch> once.</p>
+<p>A switch without MathML: <epub:switch id="s2"><epub:case required-namespace="http://www.w3.org/2001/SMIL20/"><span>smil</span></epub:case><epub:default><img src="e.png" alt="E equals m c squared"/></epub:default></epub:switch> done.</p>
+</body>
+</html>
