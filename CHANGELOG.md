@@ -10,6 +10,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - EPUB 3 books: MathML is read as math, using the book's TeX when a formula carries it; a formula with only `alttext` is read as that text, and an `epub:switch` is read once.
 - New crate `textweaver-mathcat` on MathCAT 0.7.6-rc.3, pinned exactly. Braille (Nemeth and UEB) waits for MathCAT issue #827 to be fixed in a release.
 
+### W4b: speed and memory
+
+- Zip archives, and the EPUB and Word files built on zip, open whatever compression their members use: deflate, bzip2, LZMA, XZ, and PPMd, all in pure Rust. A member that says it is larger than 256 MB is refused before it is unpacked.
+- Words and sentences are found two to three times as fast (ICU4X's segmenters), with the same boundaries. Planning a whole 10 MB document for reading takes about half the time it did.
+- The reader asks the system for its light or dark setting only when that can change the theme, and no longer waits for the answer before building the reader.
+- `--log debug` records how long the reader took to start.
+
 ### Keys: what changed
 
 The default keys are now the quick navigation keys of NVDA's and JAWS's browse mode (Jon's decision). `preset = "classic"` under `[keyboard]` keeps the earlier keys; `preset = "screen-reader"` now means the default. Old key, then where its command went (terminal):
