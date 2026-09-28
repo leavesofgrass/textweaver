@@ -1015,7 +1015,7 @@ This plan folds in the Fable review (`docs/research/wave4-plan-review.md`), adop
 **Build speed for many agents.** Every agent builds through the shared compile cache, so dependencies compile once for all worktrees. Set these environment variables for every cargo command on Windows:
 - `RUSTC_WRAPPER=sccache`
 - `SCCACHE_DIR=D:\sccache`
-- `SCCACHE_CACHE_SIZE=50G`
+- `SCCACHE_CACHE_SIZE=50G` on the Windows host (`D:\sccache`); the container's shared cache is capped at 30 GB (`compose.yaml`)
 
 In Docker, keep your own target directory: `-e CARGO_TARGET_DIR=/target/<agent>`. Build only what you need while working, and run the full workspace checks at the end.
 

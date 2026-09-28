@@ -57,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [markdown, html, epub, docx, pdf, settings, keymap, state, frame]
+        target: [markdown, html, epub, docx, pdf, settings, keymap, state, frame, daisy, pptx, sheet, archive, image, web]
     steps:
       - uses: actions/checkout@v7
       - name: Nightly Rust (this job only)
@@ -79,6 +79,11 @@ jobs:
             pdf) cp fixtures/a/*.pdf fuzz/corpus/pdf/ ;;
             docx) cp fixtures/a/*.docx fuzz/corpus/docx/ ;;
             epub) cp fixtures/a/*.epub fuzz/corpus/epub/ ;;
+            archive) cp fixtures/w3d/*.7z fuzz/corpus/archive/ ;;
+            image) cp fixtures/w3d/*.png fixtures/m/*.png fuzz/corpus/image/ ;;
+            web) cp fixtures/*.html fixtures/w/*.html fuzz/corpus/web/ ;;
+            # daisy, pptx, and sheet have no small fixtures yet and start
+            # from an empty corpus.
           esac 2> /dev/null || true
       - name: Fuzz for 10 minutes
         run: cargo +nightly fuzz run ${{ matrix.target }} -- -max_total_time=600 -rss_limit_mb=4096 -timeout=30
