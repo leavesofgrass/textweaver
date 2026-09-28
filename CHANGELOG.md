@@ -4,6 +4,14 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### W4c2: documents
+
+- RTF and OpenDocument text (ODT, OTT, and flat FODT) open in the reader and in `tw` without Pandoc: headings, lists with their numbers, tables with header rows, footnotes, links, and pictures' descriptions. RTF in older code pages, such as Cyrillic and Japanese, reads correctly. Try `fixtures/c2/handout.rtf` and `fixtures/c2/notes.odt` (ADR-0031).
+- Comments in Word and ODT files, with their replies and whether they are resolved, become notes on the text they are about when the document opens, so reading tells you when you reach one: "Note: Comment by Ada Example: say how salty." Try `fixtures/c2/comments.docx`.
+- Tracked changes in Word, ODT, and RTF files: `[reading] revisions = "marked"` says each change where it is, "(deleted by Ada Example: three) (inserted by Ada Example: five)"; `"final"` reads the text with every change accepted, as before; `"auto"`, the default, says them at high verbosity.
+- Word, OpenDocument, EPUB, and PowerPoint files with more than 50,000 files inside, overlapping files, or a file that claims to unpack to more than 1,000 times its size are refused, and no package unpacks past 1 gigabyte.
+- A damaged RTF or ODT file is named plainly: "Could not open notes.odt: it is not a readable OpenDocument text file; it may be damaged."
+
 ### W4g: authoring extras
 
 - Markdown lint in edit mode: Ctrl+F8 and Ctrl+Shift+F8 select the next or previous problem and say it, "Lint: heading level 3 after level 1; use level 2." Five rules: heading levels, list markers, trailing spaces, link references without a definition, and bare web addresses. `tw lint FILE...` checks files and exits 1 when there are problems. textweaver's own rules, not rumdl (ADR-0032).
