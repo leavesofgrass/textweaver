@@ -222,6 +222,7 @@ tw migrate-star
 - For each document: the reading position, bookmarks, notes, and highlights.
 - Recent files and the bookshelf.
 - Each library folder's Star sync file, `.star/progress.json`, converted to `.textweaver/progress.json` and merged with any textweaver one.
+- Star's settings profiles, into `profiles.toml`, one report line each. A profile keeps the settings textweaver keeps in profiles and has an equivalent for: the voice, rate, and volume, the theme, and the highlight. The report line names each setting and its value, such as "Settings profiles: Study: speech.rate 200, display.theme nord", then what was left out, such as Star's line height. Switch to one with **Ctrl+Shift+U** or **Alt+U** ([settings.md](settings.md#settings-profiles)). A textweaver profile of the same name is kept.
 
 ### What is skipped
 
@@ -230,6 +231,7 @@ Each skipped item is listed with the reason. The usual reasons:
 - a document that no longer exists, a web page, or an untitled document;
 - a document textweaver cannot open;
 - a setting with no textweaver equivalent (listed together);
+- a profile none of whose settings has a textweaver equivalent;
 - a key textweaver cannot read, or a Star shortcut for a command textweaver does not have;
 - Star's saved note searches, because textweaver does not keep those yet. (Star's reading statistics are imported, into `stats.json`.)
 

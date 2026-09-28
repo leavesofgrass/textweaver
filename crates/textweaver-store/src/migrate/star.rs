@@ -427,8 +427,8 @@ fn rules() -> Vec<Rule> {
 }
 
 /// Star keys handled elsewhere in the migration (documents, library,
-/// keys), not by [`apply_settings`].
-pub const STATE_KEYS: [&str; 11] = [
+/// keys, profiles), not by [`apply_settings`].
+pub const STATE_KEYS: [&str; 12] = [
     "reading_positions",
     "bookmarks",
     "annotations",
@@ -440,6 +440,7 @@ pub const STATE_KEYS: [&str; 11] = [
     "last_path",
     "keybindings",
     "annotation_filter_presets",
+    "profiles",
 ];
 
 /// Applies the Star settings textweaver understands to `settings`. Values
@@ -475,6 +476,44 @@ pub fn apply_settings(
         .collect();
     unknown.sort();
     (out, unknown)
+}
+
+/// What one of Star's settings profiles became ([`apply_profile`]).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ProfileValues {
+    /// textweaver settings the profile sets, as dotted keys
+    /// (`speech.rate`).
+    pub set: Vec<String>,
+    /// Star keys left out: no textweaver equivalent, or a value textweaver
+    /// rejects (`qt_line_height`, `tts_rate: not a number`).
+    pub left_out: Vec<String>,
+}
+
+/// Applies one of Star's settings profiles (a map of Star settings keys,
+/// as in `settings.json`) onto `settings`. Unlike [`apply_settings`], a
+/// value equal to Star's default is applied too: a profile sets what it
+/// names.
+pub fn apply_profile(values: &Map<String, Value>, settings: &mut Settings) -> ProfileValues {
+    let rules = rules();
+    let mut out = ProfileValues::default();
+    for (key, v) in values {
+        let Some(rule) = rules.iter().find(|r| r.key == key.as_str()) else {
+            out.left_out.push(key.clone());
+            continue;
+        };
+        match (rule.apply)(v, settings) {
+            Ok(desc) => {
+                // Each rule's description starts with the textweaver key.
+                let set = desc.split([' ', '=']).next().unwrap_or_default().to_owned();
+                if !set.is_empty() {
+                    out.set.push(set);
+                }
+            }
+            Err(why) => out.left_out.push(format!("{key}: {why}")),
+        }
+    }
+    out.left_out.sort();
+    out
 }
 
 /// Star's GUI default shortcuts (the keys of its `keybindings` remaps)
