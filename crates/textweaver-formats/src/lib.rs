@@ -13,7 +13,9 @@
 //! | [`MarkdownLoader`] | `md`, `markdown`, `mdown`, `mkd`, `mkdn`, `mdwn`, `mdtxt`, `rmd` | [`NATIVE_PRIORITY`] (10) |
 //! | [`HtmlLoader`] | `html`, `htm`, `xhtml`, `xht` | [`NATIVE_PRIORITY`] (10) |
 //! | [`EpubLoader`] | `epub` | [`NATIVE_PRIORITY`] (10) |
-//! | [`DocxLoader`] | `docx`, `docm` | [`NATIVE_PRIORITY`] (10) |
+//! | [`DocxLoader`], with comments and tracked changes | `docx`, `docm` | [`NATIVE_PRIORITY`] (10) |
+//! | [`RtfLoader`]: Rich Text Format | `rtf` | [`NATIVE_PRIORITY`] (10) |
+//! | [`OdtLoader`]: OpenDocument text, with comments and tracked changes | `odt`, `ott`, `fodt` | [`NATIVE_PRIORITY`] (10) |
 //! | `PdfLoader` (feature `pdf`, on by default; ADR-0010), with OCR of scanned pages (feature `ocr`; ADR-0026) | `pdf` | [`NATIVE_PRIORITY`] (10) |
 //! | `ImageLoader` (feature `ocr`): OCR of an image file | `png`, `jpg`, `jpeg` | [`NATIVE_PRIORITY`] (10) |
 //! | [`DaisyLoader`]: DAISY 3 books and DTBook files | `opf`, `xml`, `dtbook` | [`NATIVE_PRIORITY`] (10) |
@@ -33,13 +35,17 @@
 //!   file it is. See `web`.
 //!
 //! Every built-in loader is native Rust. The Pandoc loader (feature
-//! `pandoc`; `odt`, `rtf`, `rst`, `org`, `tex`, `dbk`, `textile`,
+//! `pandoc`; `rst`, `org`, `tex`, `dbk`, `textile`,
 //! `mediawiki`, `fb2`, `opml`, `ipynb`, and more; priority 5) is not among
 //! the built-ins: a caller that wants Pandoc registers it
 //! ([`Registry::with_pandoc`]), as `tw convert` does, so the reader never
 //! runs a subprocess to open a file. It ranks below the native loaders, so
 //! it never displaces one (Star preferred Pandoc for HTML and DOCX and
 //! inherited its bugs).
+//!
+//! Word comments and ODT annotations travel with the document as
+//! [`DocumentComment`]s (see [`comments`]); tracked changes are read as
+//! the final text, or said in place with [`RevisionMode::Marked`].
 //!
 //! Owner: Agent A.
 
@@ -48,6 +54,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use textweaver_text::{Document, DocumentMeta};
 
+pub mod annotations;
 pub mod archive;
 mod builder;
 pub mod cache;
@@ -61,6 +68,7 @@ pub mod fulltext;
 pub mod html;
 pub mod markdown;
 mod mathml;
+pub mod odt;
 mod omml;
 mod package;
 #[cfg(feature = "pandoc")]
@@ -69,12 +77,17 @@ pub mod pandoc;
 pub mod pdf;
 pub mod pptx;
 pub mod progress;
+mod revision;
+pub mod rtf;
 pub mod sheet;
 mod text;
 #[cfg(feature = "url")]
 pub mod web;
 mod xmldepth;
 
+pub use annotations::{
+    COMMENTS_PROPERTY, CommentReply, DocumentComment, REVISIONS_PROPERTY, comments, revision_count,
+};
 pub use archive::ArchiveLoader;
 pub use cache::{CacheKey, DocumentCache};
 pub use daisy::DaisyLoader;
@@ -87,6 +100,7 @@ pub use export::{
 pub use fulltext::{FullTextIndex, IndexedDocument, RefreshReport, SearchHit};
 pub use html::HtmlLoader;
 pub use markdown::MarkdownLoader;
+pub use odt::OdtLoader;
 #[cfg(feature = "pandoc")]
 pub use pandoc::PandocLoader;
 #[cfg(feature = "pdf")]
@@ -95,6 +109,7 @@ pub use pdf::PdfLoader;
 pub use pdf::image::ImageLoader;
 pub use pptx::PptxLoader;
 pub use progress::{Progress, ProgressReport};
+pub use rtf::RtfLoader;
 pub use sheet::SheetLoader;
 pub use text::TextLoader;
 
@@ -151,7 +166,7 @@ pub fn warnings(meta: &DocumentMeta) -> Vec<String> {
 
 /// Version of the canonical text the loaders produce. Bumped whenever a
 /// loader's output changes, which invalidates cached documents.
-pub const CANONICAL_VERSION: u32 = 4;
+pub const CANONICAL_VERSION: u32 = 5;
 
 /// Where a document comes from.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -246,6 +261,24 @@ pub enum FootnoteMode {
     Skip,
 }
 
+/// How tracked changes are read: Word insertions and deletions, OpenDocument
+/// change regions, and RTF revision marks.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RevisionMode {
+    /// The text as it reads with every change accepted: insertions are
+    /// plain text, deletions are left out.
+    #[default]
+    Final,
+    /// Each change is said where it is: "(inserted by Ada Example: new
+    /// words)" with the new words under an `Underline` marker, "(deleted by
+    /// Ada Example: old words)" with the old words under a `Strikethrough`
+    /// marker, and moves as "moved here" and "moved away". The marker's
+    /// label is the phrase, and its reference the change's date when there
+    /// is one.
+    Marked,
+}
+
 /// Options that affect how a document is loaded (part of the cache key,
 /// except [`progress`](Self::progress)).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -258,6 +291,8 @@ pub struct LoadOptions {
     pub footnotes: FootnoteMode,
     /// Text recognition for scanned pages and images.
     pub ocr: OcrOptions,
+    /// How tracked changes are read.
+    pub revisions: RevisionMode,
     /// Progress reports and cancelling (not part of the cache key).
     #[serde(skip)]
     pub progress: Progress,
@@ -383,6 +418,8 @@ impl Registry {
         r.register(Box::new(HtmlLoader));
         r.register(Box::new(EpubLoader));
         r.register(Box::new(DocxLoader));
+        r.register(Box::new(RtfLoader));
+        r.register(Box::new(OdtLoader));
         #[cfg(feature = "pdf")]
         r.register(Box::new(PdfLoader));
         #[cfg(feature = "ocr")]
@@ -653,7 +690,7 @@ mod tests {
             assert!(!r.extensions().contains(&not), "{not}");
         }
         assert!(r.extensions().contains(&"opf"));
-        let mut ids = vec!["text", "markdown", "html", "epub", "docx"];
+        let mut ids = vec!["text", "markdown", "html", "epub", "docx", "rtf", "odt"];
         if cfg!(feature = "pdf") {
             ids.push("pdf");
         }

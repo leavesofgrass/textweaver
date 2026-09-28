@@ -989,6 +989,7 @@ This plan folds in the Fable review (`docs/research/wave4-plan-review.md`), adop
    - Parity means Star's features, not Star's bugs; the Phase 0 inventory lists the bugs.
    - A test that the first nine themes keep their cycle order.
 7. **W4c2, documents (P2).** Merge main after W4b's zip commit lands. Leave the EPUB loader alone.
+   - **Status (W4c2, Monday, September 28, 2026):** done on `wave4/c2-documents` (from main at fdde0dd, which has 4a and 4b), not merged. Native RTF (iterative parser, explicit group stack, capped depth, `\bin`, and `\uc`; code pages through encoding_rs) and ODT, OTT, and FODT (ODF 1.4 on roxmltree); Word and ODT comments with replies and resolved state carried as `textweaver.comments` and made notes (`comment-N`, tagged `comment`) when a document opens; tracked changes in all three as `RevisionMode::Final` or `Marked`, chosen by `[reading] revisions` (auto, marked, final; read from the reading table's extra keys, store and schema entries requested); zip packages capped at 50,000 members, no overlaps, ratio 1,000 above 1 MiB, 1 GiB in all, and XML at 16 million nodes; `fixtures/c2/`; ADR-0031. Native: 2,225 workspace tests pass. The three fuzz targets (`rtf`, `odt`, `docx_revisions`) are in the report for the orchestrator, since the Cloud Agent's fuzz pull request is not open yet.
 8. **W4f, platforms and CI (P3).**
    - Do the six fuzz targets, if they weren't done before launch.
    - The first GUI packages for macOS and Linux.

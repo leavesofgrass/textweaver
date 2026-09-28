@@ -452,6 +452,9 @@ expression: view(&doc)
     "format": "docx",
     "language": "en-USen-US",
     "path": null,
+    "properties": {
+      "textweaver.revisions": "2"
+    },
     "title": "Sample Word DocumentSample Word Document"
   },
   "text": "Sample Word Document\n\nIntroduction\n\nThis paragraph has bold text, italic text, underlined words, strong style, not bold, and a link to the example site. Dr. Jones arrived at 3:30 p.m.[1] It ends here.\n\nTab separated\nsecond line with well-known words, inserted 7 and a field.\n\nLists\n\nFirst bullet item\nSecond bullet item with emphasis\nNested bullet under the second\nThird bullet item\n\nStep one of the procedure.\nStep two costs $5.25.\nSub-step a.\nSub-step b.\nStep three.\n\nA Table\n\nName | Role | Score\nAda | Engineer and poet | 98\nGrace | Admiral | \n\nA diagram of the reading pipeline\n\nOutline Heading\n\nInside a content control.\n\nThe final paragraph mentions an endnote.[2] Does it end with a question?\n\nFootnotes\n\n[1] The footnote text lives here.\n[2] An endnote at the very end."

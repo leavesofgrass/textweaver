@@ -99,6 +99,51 @@ pub(crate) fn shift_marks(
     *bookmarks = state.bookmarks;
 }
 
+/// The note id of a comment the document carries.
+fn comment_note_id(c: &textweaver_formats::DocumentComment) -> String {
+    format!("comment-{}", c.id)
+}
+
+/// Adds a note for each comment the document carries (Word comments and
+/// OpenDocument annotations, with their replies) that `notes` does not
+/// have yet, matched by id, so a comment becomes a note once and keeps any
+/// edit made to it. The note reads "Comment by Ada Example: ..." and is
+/// tagged `comment` (and `resolved` when it is), so reading passes it with
+/// the note signal. Returns how many were added.
+pub(crate) fn add_document_comments(notes: &mut Vec<Note>, doc: &Document) -> usize {
+    let comments = textweaver_formats::comments(&doc.meta);
+    if comments.is_empty() {
+        return 0;
+    }
+    let len = doc.len_chars();
+    let now = textweaver_store::now_ts();
+    let mut added = 0;
+    for c in &comments {
+        let id = comment_note_id(c);
+        if notes.iter().any(|n| n.id == id) {
+            continue;
+        }
+        let range = c.range.clamp_to(len);
+        let mut tags = vec!["comment".to_owned()];
+        if c.resolved {
+            tags.push("resolved".to_owned());
+        }
+        notes.push(Note {
+            id,
+            range,
+            anchor: store_notes::collapse(&doc.slice(range), ANCHOR_CHARS),
+            note: c.spoken(),
+            tags,
+            created: now,
+            ts: now,
+            ..Note::default()
+        });
+        added += 1;
+    }
+    notes.sort_by_key(|n| (n.range.start, n.range.end));
+    added
+}
+
 impl App {
     /// Runs a notes, highlights, or bookmark management command.
     pub(crate) fn notes_command(&mut self, c: NoteCommand) -> Vec<Effect> {
@@ -868,6 +913,49 @@ mod tests {
     use textweaver_core::Edit;
 
     use super::*;
+
+    #[test]
+    fn document_comments_become_notes_once() {
+        use textweaver_formats::{COMMENTS_PROPERTY, CommentReply, DocumentComment};
+        let mut doc = Document::from_plain_text("Read chapter two first.");
+        let comments = vec![DocumentComment {
+            id: "0".into(),
+            range: CharRange::new(5, 16),
+            author: "Ada Example".into(),
+            text: "Check this date.".into(),
+            replies: vec![CommentReply {
+                author: "Bo Example".into(),
+                text: "Fixed.".into(),
+                ..CommentReply::default()
+            }],
+            resolved: true,
+            ..DocumentComment::default()
+        }];
+        doc.meta.properties.insert(
+            COMMENTS_PROPERTY.to_owned(),
+            serde_json::to_string(&comments).unwrap_or_default(),
+        );
+        let mut notes = vec![Note {
+            id: "mine".into(),
+            range: CharRange::new(0, 4),
+            note: "My own note".into(),
+            ..Note::default()
+        }];
+        assert_eq!(add_document_comments(&mut notes, &doc), 1);
+        assert_eq!(notes.len(), 2);
+        let n = &notes[1];
+        assert_eq!(n.id, "comment-0");
+        assert_eq!(n.anchor, "chapter two");
+        assert_eq!(
+            n.note,
+            "Comment by Ada Example: Check this date. Reply by Bo Example: Fixed. Resolved."
+        );
+        assert_eq!(n.tags, vec!["comment", "resolved"]);
+        // Opening again adds nothing, and an edited comment note is kept.
+        notes[1].note = "Edited".into();
+        assert_eq!(add_document_comments(&mut notes, &doc), 0);
+        assert_eq!(notes[1].note, "Edited");
+    }
 
     #[test]
     fn tags_come_from_hash_words() {
