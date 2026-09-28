@@ -1,0 +1,81 @@
+# The documentation site on GitHub Pages: docs/ built with Zensical
+# (zensical.toml), the interactive pages in docs/site/ placed beside it, and
+# every built page checked for accessibility basics and working links
+# (tools/build_site.py, which runs tools/check_site_a11y.py --built).
+#
+# Pull requests build and check the site without publishing it. A push to
+# main publishes it with actions/deploy-pages. Zensical and everything it
+# needs are pinned with hashes in tools/site-requirements.txt.
+#
+# GitHub Pages must be set to "GitHub Actions" in the repository settings
+# before the first deploy succeeds.
+
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'zensical.toml'
+      - 'tools/build_site.py'
+      - 'tools/check_site_a11y.py'
+      - 'tools/site-requirements.txt'
+      - 'tools/zensical_ext/**'
+      - '.github/workflows/pages.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'zensical.toml'
+      - 'tools/build_site.py'
+      - 'tools/check_site_a11y.py'
+      - 'tools/site-requirements.txt'
+      - 'tools/zensical_ext/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install Zensical (pinned, hashes checked)
+        run: |
+          python -m venv .venv-site
+          .venv-site/bin/python -m pip install --disable-pip-version-check --require-hashes -r tools/site-requirements.txt
+          .venv-site/bin/zensical --version
+      - name: Build and check the site
+        env:
+          ZENSICAL: .venv-site/bin/zensical
+        run: python tools/build_site.py
+      - name: Check the interactive pages' sources
+        run: python tools/check_site_a11y.py
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: target/docs-site
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
