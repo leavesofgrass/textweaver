@@ -26,6 +26,7 @@ Work reserved for the Cloud Agent, which contributes by pull request from a sepa
 - **Budget:** expected $32, high $58. Stop point $44.
 - **Status:**
   - Sunday, September 27, 2026, 9:59 PM: reserved. The owner has started a Cloud Agent session.
+  - Sunday, September 27, 2026, 10:03 PM: the owner passed these reservations to the Cloud Agent session, which is recalibrating its work to them.
 
 ## Task 2: the generated settings reference and the docs consistency check
 
