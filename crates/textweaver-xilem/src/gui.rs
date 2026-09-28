@@ -1669,14 +1669,9 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
     let (mut app, mut messages) = setup::build_app(&opts.app, Box::new(announcer));
     app.set_announce_list_focus(opts.experiments.app_list_announcements);
     let mut experiments = opts.experiments;
-    let wanted = match experiments.announce {
-        Some(mode) => Some(mode),
-        None => setup::announce_setting(app.settings()).unwrap_or_else(|e| {
-            messages.push(format!("{e}."));
-            None
-        }),
-    }
-    .unwrap_or_default();
+    let wanted = experiments
+        .announce
+        .unwrap_or_else(|| setup::announce_setting(app.settings()));
     let announce = wanted.effective();
     if announce != wanted {
         messages.push(

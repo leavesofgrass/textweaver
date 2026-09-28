@@ -38,6 +38,7 @@ const SECTIONS: &[(&str, &str)] = &[
     ("LexiconSettings", "lexicon"),
     ("StatsSettings", "stats"),
     ("InterfaceSettings", "interface"),
+    ("GuiSettings", "gui"),
 ];
 
 fn workspace() -> PathBuf {

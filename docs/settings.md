@@ -387,6 +387,12 @@ Reading statistics (see [the reading guide](reading.md#reading-statistics-ctrlsh
 
 - `language`, default `"en"`: the language of textweaver's own words. Only English is complete so far. `en-XA` shows every message accented and in `⟦ ⟧` brackets, and `ar-XB` shows them right to left: both are for testing. A `<language>.ftl` file in the `locales` folder of the settings folder adds a language; messages it lacks stay in English. The define-word, profile, and statistics messages use it; the rest of the interface follows in later versions.
 
+### [gui]
+
+Settings only the window (`textweaver-xilem`) reads. In the settings dialog they are under "Window".
+
+- `announce`, default `"live"`: how the window's messages reach the screen reader, from the next start. `"live"` uses a live region, which NVDA and JAWS both speak. `"uia"` raises UI Automation notifications instead (Windows only; elsewhere the live region is used). `--announce live` or `--announce uia` on the command line wins over the setting for one run.
+
 ## Settings profiles
 
 A profile is a named set of the settings you change together: the speech engine, voice, rate, pitch, and volume; the theme; the font and text spacing; bionic reading and the ruler; the highlight; and the access mode. Keep one for studying and one for skimming, or one for each person who shares the computer.
