@@ -583,6 +583,16 @@ pub const INFO: &[Info] = &[
         "How math looks in the reading view: as its source, such as x^2, or as Unicode, such as x with a superscript 2. Speech and edit mode always use the source.",
         &[("source", "source"), ("unicode", "Unicode")],
     ),
+    choice(
+        "reading.revisions",
+        "Tracked changes",
+        "How tracked changes in Word, OpenDocument, and RTF files are read: said in place at high verbosity (automatic), always said, or never said, reading the final text. Applies when a document is opened.",
+        &[
+            ("auto", "automatic"),
+            ("marked", "always say them"),
+            ("final", "final text only"),
+        ],
+    ),
     // [display]
     open_choice("display.theme", "Theme", "The colour theme.", &[]),
     toggle(

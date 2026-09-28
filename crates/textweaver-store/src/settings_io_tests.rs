@@ -84,6 +84,7 @@ fn everything_changed() -> Settings {
     r.ocr_engine = crate::OcrEngine::Tesseract;
     r.math_engine = crate::MathEngine::MathCatSimpleSpeak;
     r.math_display = crate::MathDisplay::Unicode;
+    r.revisions = crate::RevisionReading::Marked;
     let d = &mut s.display;
     d.theme = "nord".into();
     d.wrap_width = 100;

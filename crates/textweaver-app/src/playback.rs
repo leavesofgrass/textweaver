@@ -151,22 +151,18 @@ pub fn load_options(settings: &textweaver_store::Settings) -> textweaver_formats
 /// RTF files are read. `auto` (the default) says each change in place
 /// ("deleted by Ada Example: ...") at high verbosity and reads the final
 /// text otherwise; `marked` always says them; `final` never does. Read
-/// from the reading table's extra keys until the store has the field
-/// (W4c2's contract change request). A document already open keeps the
-/// way it was loaded until it is opened again.
+/// A document already open keeps the way it was loaded until it is opened
+/// again.
 fn revision_mode(settings: &textweaver_store::Settings) -> textweaver_formats::RevisionMode {
     use textweaver_formats::RevisionMode;
-    let value = settings
-        .reading
-        .extra
-        .get("revisions")
-        .and_then(|v| v.as_str())
-        .map(|v| v.trim().to_ascii_lowercase());
-    match value.as_deref() {
-        Some("marked" | "show" | "on") => RevisionMode::Marked,
-        Some("final" | "hide" | "off") => RevisionMode::Final,
-        _ if settings.speech.verbosity >= Verbosity::High => RevisionMode::Marked,
-        _ => RevisionMode::Final,
+    use textweaver_store::RevisionReading;
+    match settings.reading.revisions {
+        RevisionReading::Marked => RevisionMode::Marked,
+        RevisionReading::Final => RevisionMode::Final,
+        RevisionReading::Auto if settings.speech.verbosity >= Verbosity::High => {
+            RevisionMode::Marked
+        }
+        RevisionReading::Auto => RevisionMode::Final,
     }
 }
 
@@ -944,19 +940,13 @@ mod tests {
             super::load_options(&settings).revisions,
             RevisionMode::Marked
         );
-        settings
-            .reading
-            .extra
-            .insert("revisions".into(), toml::Value::String("final".into()));
+        settings.reading.revisions = textweaver_store::RevisionReading::Final;
         assert_eq!(
             super::load_options(&settings).revisions,
             RevisionMode::Final
         );
         settings.speech.verbosity = textweaver_a11y::Verbosity::Low;
-        settings
-            .reading
-            .extra
-            .insert("revisions".into(), toml::Value::String("Marked".into()));
+        settings.reading.revisions = textweaver_store::RevisionReading::Marked;
         assert_eq!(
             super::load_options(&settings).revisions,
             RevisionMode::Marked

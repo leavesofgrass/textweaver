@@ -482,6 +482,10 @@ pub struct ReadingSettings {
     /// default: `$x^2$`), or Unicode (`unicode`: `x²`, `√2`, `1⁄2`), as
     /// Star showed it. Speech and edit mode always use the source.
     pub math_display: MathDisplay,
+    /// How tracked changes in Word, OpenDocument, and RTF files are read
+    /// (W4c2): `auto` says them in place at high verbosity and reads the
+    /// final text otherwise; `marked` always says them; `final` never.
+    pub revisions: RevisionReading,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -516,6 +520,7 @@ impl Default for ReadingSettings {
             ocr_engine: OcrEngine::Auto,
             math_engine: MathEngine::Builtin,
             math_display: MathDisplay::Source,
+            revisions: RevisionReading::Auto,
             extra: toml::Table::new(),
         }
     }
@@ -546,6 +551,19 @@ pub enum MathDisplay {
     Source,
     /// One line of Unicode (`x²`, `√2`, `1⁄2`).
     Unicode,
+}
+
+/// `[reading] revisions`: how tracked changes are read (W4c2, ADR-0031).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RevisionReading {
+    /// Said in place at high verbosity; the final text otherwise.
+    #[default]
+    Auto,
+    /// Always said in place ("deleted by Ada Example: three").
+    Marked,
+    /// Never said: the final text only.
+    Final,
 }
 
 /// `[reading] citations`: what continuous reading does with a citation.

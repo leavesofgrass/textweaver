@@ -113,11 +113,11 @@ pub fn open_failure_reason_in(c: &Catalog, path: &Path, err: &LoadError) -> Stri
         },
         LoadError::Parse(detail) if matches!(extension(path).as_str(), "rtf") => {
             log::warn!("{name}: {detail}");
-            "it is not a readable RTF file; it may be damaged.".to_owned()
+            c.tr("opening-damaged-rtf")
         }
         LoadError::Parse(detail) if matches!(extension(path).as_str(), "odt" | "ott" | "fodt") => {
             log::warn!("{name}: {detail}");
-            "it is not a readable OpenDocument text file; it may be damaged.".to_owned()
+            c.tr("opening-damaged-odt")
         }
         other => other.to_string(),
     }
