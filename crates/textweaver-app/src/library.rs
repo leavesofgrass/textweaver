@@ -188,9 +188,10 @@ impl App {
     /// Shows a scanned library as a list.
     fn show_library(&mut self, items: Vec<LibraryItem>) -> Vec<Effect> {
         if items.is_empty() {
-            self.tell(
-                "The library is empty. Add a folder with tw library --add, or open a file with Control O.",
-            );
+            let open = self.key(textweaver_keymap::ActionId::Open);
+            self.tell(&format!(
+                "The library is empty. Add a folder with tw library --add, or open a file with {open}."
+            ));
             return vec![Effect::Redraw];
         }
         let n = items.len();

@@ -99,7 +99,8 @@ impl App {
     /// Runs a notes, highlights, or bookmark management command.
     pub(crate) fn notes_command(&mut self, c: NoteCommand) -> Vec<Effect> {
         if self.session.is_none() {
-            self.tell("No document is open. Press Control O to open one.");
+            let open = self.key(textweaver_keymap::ActionId::Open);
+            self.tell(&format!("No document is open. Press {open} to open one."));
             return vec![Effect::Redraw];
         }
         match c {

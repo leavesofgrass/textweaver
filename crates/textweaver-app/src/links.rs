@@ -275,10 +275,7 @@ impl App {
                     to: path.clone(),
                     history_len,
                 });
-                let back = crate::help::chords_text(
-                    &self.keymap,
-                    textweaver_keymap::ActionId::HistoryBack,
-                );
+                let back = self.keys(textweaver_keymap::ActionId::HistoryBack);
                 self.tell(&format!(
                     "Followed the link to {}. Back: {back}.",
                     file_name(&path)

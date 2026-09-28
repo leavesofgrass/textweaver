@@ -54,7 +54,7 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 
 **Git.** Work on your branch in your worktree. Commit in small steps with clear messages; end each commit message with the line `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Do not push, merge, rebase onto `main`, or tag; the orchestrator integrates.
 
-**Dates.** Never write a date or weekday from memory. Get today's date from the machine (`python -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"`) before it goes into any file or commit.
+**Dates.** Never write a date or weekday from memory. Get today's date from the machine before it goes into any file or commit: on Windows `py -3 -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"` (`python` there is the Microsoft Store stub), on Linux and macOS the same with `python3`.
 
 **Report format** (your final message):
 1. Summary (five lines).
@@ -849,6 +849,8 @@ Wave 4 starts only after this pass is done. It has four steps.
 - **Uses the highlight and announcement designs** decided in Jon's sessions 1 and 2.
 - **Owns:** `textweaver-xilem`'s editing code. Don't touch `textweaver-app` beyond one-line hooks, `.github/`, or the workspace members.
 - **Report checklist,** at most five items: type and hear each character; select a word and hear it; undo; a citation while writing; spell check on a misspelled word.
+
+**Status (Agent W4h, terminal polish, Sunday, September 27, 2026):** all ten deliverables done on `wave4/h-terminal-polish`, one commit each, merged with `main` at cda644b; awaiting integration. "Ready" on the title line until the first reading; `tw search --json` and `tw info` through `print_all`; `tw` alone prints a two-line hint; keys in messages spoken by name ("Control S") and written on the status line ("Ctrl+S"), all from the keymap, with a test that scans the app's and the reader's strings; `say_status` (`z`, `Alt+End`) and `repeat_message` (`'`, `Alt+'`) in both frontends' keymaps; Escape in edit mode says how to finish; the palette's opening sentence; F1 or `Alt+End` in a list repeats its introduction; messages said before the engine is ready are said once it is, in order. Unbound keys stay silent, as decided for Wave 4. Native: 2,174 workspace tests pass; container, the four owned crates with all features: 473 pass. `cargo xtask listen` fails when `CARGO_TARGET_DIR` is set (it looks for `tw` under the worktree's `target`); run by hand, only eSpeak NG was available here.
 
 
 **Lessons from Waves 2 and 3.** Every Wave 4 agent follows these. They come from what went wrong or cost time.

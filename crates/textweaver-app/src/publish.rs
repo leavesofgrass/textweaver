@@ -336,7 +336,8 @@ impl App {
     /// Exports the document to `to`, next to it.
     pub(crate) fn export_to(&mut self, to: OutputFormat) -> Vec<Effect> {
         if self.session.is_none() {
-            self.tell("No document is open. Press Control O to open one.");
+            let open = self.key(textweaver_keymap::ActionId::Open);
+            self.tell(&format!("No document is open. Press {open} to open one."));
             return vec![Effect::Redraw];
         }
         let src = match self.export_source() {
@@ -370,7 +371,8 @@ impl App {
     /// reload server with `[preview] auto_reload`).
     pub(crate) fn preview_in_browser(&mut self) -> Vec<Effect> {
         if self.session.is_none() {
-            self.tell("No document is open. Press Control O to open one.");
+            let open = self.key(textweaver_keymap::ActionId::Open);
+            self.tell(&format!("No document is open. Press {open} to open one."));
             return vec![Effect::Redraw];
         }
         self.tell("Writing the preview.");

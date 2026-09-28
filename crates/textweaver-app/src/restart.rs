@@ -12,9 +12,17 @@
 //! to start), and the old one is shut down on another, so neither holds
 //! up the keyboard; [`App::tick`] swaps the new service in when it is
 //! ready.
+//!
+//! At startup (Wave 4, W4h) the messages said before the first engine is
+//! ready ("Opened essay.", a settings warning, the welcome) are kept and
+//! said once it is, in order and without cutting each other off, followed
+//! by any message from starting the engine. Before, the silent service
+//! swallowed them and only the status line's latest text was said.
 
 use std::sync::Arc;
+
 use std::sync::mpsc::{self, Receiver, TryRecvError};
+use textweaver_speech::SayMode;
 
 use textweaver_speech::SpeechService;
 use textweaver_store::Settings;
@@ -45,7 +53,16 @@ pub(crate) struct Restart {
     /// The service being started is the first one
     /// (`App::start_speech_in_background`).
     first: bool,
+    /// Messages for the voice are kept in `early` until the first engine
+    /// is ready.
+    hold: bool,
+    /// Messages said before the first engine was ready, oldest first.
+    early: Vec<String>,
 }
+
+/// Most messages kept while the first engine starts; later ones are only
+/// shown (the status line has them all).
+pub(crate) const EARLY_MESSAGES: usize = 16;
 
 impl std::fmt::Debug for Restart {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -82,15 +99,16 @@ impl App {
     /// it (Wave 3): the app starts with a silent service (pass
     /// `SpeechService::null()` in `AppConfig`), and [`App::tick`] swaps
     /// the engine in when it is ready, ringing the waker. Messages said
-    /// meanwhile are shown; the latest is spoken once the engine is ready,
-    /// and a reading started meanwhile goes on from where it is. The
-    /// starter is also kept for Restart Speech, as with
+    /// meanwhile are shown at once and spoken once the engine is ready, in
+    /// order (at most 16); a reading started meanwhile goes on from where
+    /// it is instead. The starter is also kept for Restart Speech, as with
     /// [`set_speech_starter`](Self::set_speech_starter).
     ///
     /// [`App::tick`]: crate::App::tick
     pub fn start_speech_in_background(&mut self, starter: SpeechStarter) {
         self.restart.starter = Some(starter);
         self.restart.first = true;
+        self.restart.hold = true;
         self.restart.voiced = self.self_voicing;
         self.begin_restart();
     }
@@ -117,8 +135,7 @@ impl App {
     /// message saying speech stopped.
     pub(crate) fn restart_after_death(&mut self, voiced: bool) -> String {
         self.restart.voiced |= voiced;
-        let keys =
-            crate::help::chords_text(&self.keymap, textweaver_keymap::ActionId::RestartSpeech);
+        let keys = self.keys(textweaver_keymap::ActionId::RestartSpeech);
         if self.restart.starter.is_none() {
             return if voiced {
                 "textweaver is silent now; restart it to hear speech again.".into()
@@ -148,6 +165,19 @@ impl App {
         self.show("Restarting speech.");
         self.begin_restart();
         vec![Effect::Redraw]
+    }
+
+    /// Says a message (keys already in their spoken form) with
+    /// textweaver's voice; while the first engine is starting, keeps it to
+    /// say once the engine is ready (at most [`EARLY_MESSAGES`]).
+    pub(crate) fn voice_message(&mut self, spoken: String, mode: SayMode) {
+        if self.restart.hold {
+            if self.restart.early.len() < EARLY_MESSAGES {
+                self.restart.early.push(spoken);
+            }
+            return;
+        }
+        self.speech.say(spoken, mode);
     }
 
     /// Starts the new service on a helper thread.
@@ -209,20 +239,26 @@ impl App {
         self.backend_name = name;
         self.self_voicing = std::mem::take(&mut self.restart.voiced) && !silent;
         self.apply_voice_settings();
+        // At the first start, messages from starting the engine join the
+        // ones held meanwhile, after them.
         for m in messages {
             self.error(&m);
         }
         if first {
+            let early = std::mem::take(&mut self.restart.early);
+            self.restart.hold = false;
             if silent {
                 self.tell("No speech engine is available; textweaver stays silent.");
             } else if let Some(pos) = reading_from {
+                // Reading started meanwhile: it goes on, and is what is
+                // heard; the messages stay on the status line.
                 self.read_from(pos);
-            } else if self.self_voicing
-                && let Some(last) = self.status.current.clone().filter(|s| !s.is_empty())
-            {
-                // Say the latest message, spoken to no one while the engine
-                // started ("Opened report.").
-                self.speech.say(last, textweaver_speech::SayMode::Queue);
+            } else if self.self_voicing {
+                // Said in order, each after the one before ("Opened
+                // report." first), so none cuts another off.
+                for m in early {
+                    self.speech.say(m, SayMode::Queue);
+                }
             }
             return vec![Effect::Redraw];
         }

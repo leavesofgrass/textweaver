@@ -502,7 +502,7 @@ fn large_files_open_in_the_background_and_escape_cancels() {
 // Speech starting in the background.
 
 #[test]
-fn speech_starts_in_the_background_and_says_the_last_message() {
+fn speech_starts_in_the_background_and_says_what_was_said_meanwhile() {
     let (speech_log_tx, speech_log_rx) = std::sync::mpsc::channel();
     let said = Said::default();
     let mut app = App::new(AppConfig {

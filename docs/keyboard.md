@@ -87,7 +87,7 @@ Put overrides in `keymap.toml` in the configuration directory. Each line replace
 
 ```toml
 next_sentence = ["Alt+.", "x"]
-stop = ["Escape", "b:z"]
+stop = ["Escape", "b:Shift+Z"]
 bold = []
 ```
 
@@ -118,6 +118,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Say the paragraph at the cursor without moving | `,` (browse) | `,` (browse) | `read_paragraph` |
 | Read the selected text | `v` (browse) | `v` (browse) | `read_selection` |
 | Say the position: line, percentage, word number, and heading | `Alt+Shift+Y`, `Shift+W` (browse) | `Alt+Shift+Y`, `Shift+W` (browse) | `say_position` |
+| Say the last message again, then the status: mode, reading state, position, rate, and speech engine; in a list, the list's introduction | `Alt+End`, `z` (browse) | `Alt+End`, `z` (browse) | `say_status` |
+| Say the last message again | `Alt+'`, `'` (browse) | `Alt+'`, `'` (browse) | `repeat_message` |
 | Say how many words are in the document, or in the selection | `Alt+Shift+T` | `Alt+Shift+T` | `word_count` |
 | Say the address of the link at the cursor | `Alt+Shift+K` | `Alt+Shift+K` | `link_address` |
 | Read again from the start of the current sentence | `Alt+;`, `;` (browse) | `Alt+;`, `;` (browse) | `replay_sentence` |

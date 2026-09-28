@@ -47,12 +47,17 @@ pub(crate) const SENTENCE_LIMIT: usize = 1_000_000;
 pub fn run(args: Args) -> anyhow::Result<()> {
     let doc = load_document(&args.file)?;
     let facts = facts_with(&doc, &args.file, args.exact);
+    // Through `print_all`, so a closed pipe (`tw info --json x | head`)
+    // ends quietly instead of panicking.
     if args.json {
-        println!("{}", serde_json::to_string_pretty(&facts)?);
+        super::print_all(&format!(
+            "{}
+",
+            serde_json::to_string_pretty(&facts)?
+        ))
     } else {
-        print!("{}", describe(&facts));
+        super::print_all(&describe(&facts))
     }
-    Ok(())
 }
 
 /// Structure counts reported, as (JSON key, marker kind, block level filter).

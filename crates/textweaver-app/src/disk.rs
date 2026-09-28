@@ -148,8 +148,7 @@ impl App {
             }
             (Confirm::No, DiskQuestion::Overwrite { .. }) => {
                 self.pending_disk = None;
-                let save_as =
-                    crate::help::chords_text(&self.keymap, textweaver_keymap::ActionId::SaveAs);
+                let save_as = self.keys(textweaver_keymap::ActionId::SaveAs);
                 self.tell(&format!(
                     "Not saved. Still editing. Save As, {save_as}, keeps both versions."
                 ));

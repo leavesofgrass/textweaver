@@ -158,15 +158,27 @@ fn the_help_names_the_keys_a_new_user_needs() {
     );
 }
 
-/// Without a document, a reading key names the open key from the keymap,
-/// in its spoken form.
+/// Without a document, a reading key names the open key from the keymap:
+/// written on the status line, spoken by name by textweaver's voice
+/// (Wave 4, W4h).
 #[test]
 fn the_no_document_message_names_the_open_key() {
-    let app = App::new(AppConfig::for_tests());
+    let (speech, log) = recording_service().unwrap();
+    let app = App::new(AppConfig {
+        speech,
+        self_voicing: true,
+        backend_name: "test-recording".into(),
+        ..AppConfig::for_tests()
+    });
     let mut tui = Tui::with_color_support(app, ColorSupport::NoColor);
     tui.handle_key(plain('m'));
     assert_eq!(
         tui.app().status_text(),
-        "No document is open. Press Control O to open one."
+        "No document is open. Press Ctrl+O to open one."
+    );
+    assert!(
+        spoken(&log, "No document is open. Press Control O to open one."),
+        "{:?}",
+        log.texts()
     );
 }

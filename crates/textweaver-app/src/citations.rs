@@ -293,8 +293,7 @@ impl App {
         let (folder, user) = self.libraries();
         let entries = picker_entries(folder.as_ref(), &user);
         if entries.is_empty() {
-            let add =
-                crate::help::chords_text(&self.keymap, textweaver_keymap::ActionId::AddReference);
+            let add = self.keys(textweaver_keymap::ActionId::AddReference);
             self.tell(&format!(
                 "Your reference library is empty. Add a reference by DOI or ISBN with {add}, or run import references from the command palette."
             ));
@@ -610,7 +609,10 @@ impl App {
         };
         let Some((_, doc, style)) = self.format_citations(&text, CiteFormat::Markdown) else {
             if find_citations(&text).is_empty() {
-                self.tell("The document has no citations yet. Insert one with Alt+C.");
+                let insert = self.keys(textweaver_keymap::ActionId::InsertCitation);
+                self.tell(&format!(
+                    "The document has no citations yet. Insert one with {insert}."
+                ));
             }
             return vec![Effect::Redraw];
         };

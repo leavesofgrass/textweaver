@@ -10,7 +10,9 @@ Open a document, then press **Ctrl+E**. textweaver stops reading and says "Edit 
 
 Press **Ctrl+E** again to finish. textweaver says "Edit mode off." If you have unsaved changes, it asks first; see [Leaving with unsaved changes](#leaving-with-unsaved-changes).
 
-With no document open, **Ctrl+E** says "No document to edit. Press Control N for a new one."
+**Escape** stops reading, as everywhere. When nothing is being read, it leaves you in edit mode and says how to finish: "Still editing. Ctrl+E finishes." textweaver's own voice says the key as "Control E".
+
+With no document open, **Ctrl+E** says "No document to edit. Press Ctrl+N for a new one." (textweaver's own voice says "Control N").
 
 ### What changes in edit mode
 

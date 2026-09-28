@@ -205,7 +205,7 @@ Put overrides in `keymap.toml` in the configuration directory. Each line replace
 
 ```toml
 next_sentence = [\"Alt+.\", \"x\"]
-stop = [\"Escape\", \"b:z\"]
+stop = [\"Escape\", \"b:Shift+Z\"]
 bold = []
 ```
 

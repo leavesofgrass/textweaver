@@ -49,10 +49,16 @@ textweaver is built by an orchestrator and parallel agents, each in its own git 
 - The subject line starts with the area, in lower case, then a colon and a short summary in plain words: `speech: find speech-dispatcher without XDG_RUNTIME_DIR`, `docs: changelog and quick start`, `app: every action is wired`.
 - The body says why, and anything a reviewer needs to know: a measurement, a Star bug fixed, a test added.
 - Commits made by an AI agent end with the attribution line the session gives, for example `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- Never write a date or a weekday from memory. Get today's date from the machine before it goes into a commit, a doc, or a report:
+- Never write a date or a weekday from memory. Get today's date from the machine before it goes into a commit, a doc, or a report. On Windows use `py -3` (the Python launcher; `python` may be the Microsoft Store stub):
+
+  ```powershell
+  py -3 -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"
+  ```
+
+  On Linux and macOS use `python3`:
 
   ```bash
-  python -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"
+  python3 -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"
   ```
 
 ## Documentation
@@ -62,7 +68,7 @@ textweaver is built by an orchestrator and parallel agents, each in its own git 
 - Every doc ends with a "See also" section linking related docs and the [documentation index](docs/README.md). Guides link to the ADRs that decided them, and ADRs link back to the guides.
 - Keep links relative. `tools/check_links.py` must pass.
 - ADRs keep their decisions. When later work changes one, add a dated "Status update" line under its date instead of rewriting it.
-- Generated files are never edited by hand: `docs/keyboard.md` (`cargo xtask keyboard`), `docs/history/parity-report.md` (`cargo xtask parity`), and the data in `docs/site/*.html` (`python3 tools/gen_site_data.py`).
+- Generated files are never edited by hand: `docs/keyboard.md` (`cargo xtask keyboard`), `docs/history/parity-report.md` (`cargo xtask parity`), and the data in `docs/site/*.html` (`python3 tools/gen_site_data.py`, or `py -3 tools/gen_site_data.py` on Windows).
 - Add a line to `CHANGELOG.md` under "Unreleased" for anything a user would notice.
 
 ## Releases
