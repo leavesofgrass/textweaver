@@ -15,7 +15,9 @@
 //!   2). Only peak heap and allocation counts are gated: they barely vary
 //!   from run to run, while times depend on the machine and its load, so
 //!   times are reported for information only. Numbers too small to matter
-//!   (under 1 MB of peak heap, under 5,000 allocations) are not gated.
+//!   (under 1 MB of peak heap, under 5,000 allocations) are not gated, and
+//!   neither is growth too small to matter (less than 1 MB, or fewer than
+//!   5,000 allocations, more than the baseline), however large its ratio.
 //! - `--no-startup`: skip the startup timings.
 //!
 //! Startup timings (also `cargo xtask startup` on its own): the release
@@ -273,8 +275,9 @@ pub fn startup() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Numbers below these are not gated: too small to matter, and relatively
-/// noisy.
+/// Numbers below these, and growth below these, are not gated: too small
+/// to matter, and relatively noisy. A fixed cost of a few megabytes added
+/// to every document would otherwise fail every tiny one.
 const PEAK_FLOOR_MB: f64 = 1.0;
 const ALLOC_FLOOR: f64 = 5_000.0;
 
@@ -339,7 +342,7 @@ pub(crate) fn compare(current: &Value, baseline: &Value, max_ratio: f64) -> Comp
                     if worst.as_ref().is_none_or(|(r, _)| ratio > *r) {
                         worst = Some((ratio, key.clone()));
                     }
-                    if ratio > max_ratio {
+                    if ratio > max_ratio && now - then >= floor {
                         c.failures.push(format!(
                             "{doc}: {key} grew from {then:.1} to {now:.1}, {ratio:.2} times the baseline (the limit is {max_ratio})."
                         ));
@@ -1496,6 +1499,13 @@ mod tests {
         // Below the floor nothing is gated, however large the ratio.
         let tiny = json!({"md-1mb.md": {"plan_all_peak_mb": 0.9}});
         assert!(compare(&tiny, &base, 2.0).failures.is_empty());
+        // Growth below the floor is not gated either: 0.2 MB to 1.1 MB is
+        // over the ratio, but only 0.9 MB more.
+        let small = json!({"md-1mb.md": {"plan_all_peak_mb": 1.1}});
+        assert!(compare(&small, &base, 2.0).failures.is_empty());
+        // Growth over the floor is: 0.2 MB to 4.2 MB.
+        let fixed = json!({"md-1mb.md": {"plan_all_peak_mb": 4.2}});
+        assert_eq!(compare(&fixed, &base, 2.0).failures.len(), 1);
     }
 
     #[test]
