@@ -11,6 +11,9 @@
 //!   description, which Masonry's `Button` cannot carry.
 //! - [`Announcer`]: the live region. Each message is a fresh AccessKit node,
 //!   so saying the same thing twice is still announced.
+//! - [`AnnounceMode`] and [`notify`]: the second way to announce on
+//!   Windows, a UI Automation Notification event raised directly
+//!   (`--announce uia`), for comparing by ear with the live region.
 
 use std::cell::Cell;
 use std::collections::VecDeque;
@@ -494,15 +497,77 @@ pub type MessageQueue = Rc<std::cell::RefCell<VecDeque<Message>>>;
 /// burst is not cut short by the next update.
 const KEEP: usize = 3;
 
+/// How announcements reach the screen reader: `--announce live|uia`, or
+/// the `announce` key of the `[gui]` settings table.
+///
+/// Both keep the messages in the tree as the announcer's children, so a
+/// screen reader's object navigation and the UI Automation report find
+/// them. Only the event that makes a screen reader speak differs.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum AnnounceMode {
+    /// The live region (the default): each message is a new node with its
+    /// live setting, and AccessKit raises UI Automation's LiveRegionChanged
+    /// (AT-SPI's Announcement on Linux). NVDA speaks it; JAWS has been
+    /// inconsistent.
+    #[default]
+    Live,
+    /// Windows only: a UI Automation Notification event, raised directly
+    /// with `UiaRaiseNotificationEvent` on the window, for each message
+    /// (Windows 10 1709 or later). The message nodes stay in the tree with
+    /// their live setting off, so the screen reader is not told twice. On
+    /// other systems this is the same as [`Live`](Self::Live).
+    Uia,
+}
+
+impl AnnounceMode {
+    /// The names `--announce` and the setting take.
+    pub const NAMES: [&'static str; 2] = ["live", "uia"];
+
+    /// Reads a name: `live` or `uia`, in any case.
+    pub fn parse(name: &str) -> Option<Self> {
+        match name.trim().to_ascii_lowercase().as_str() {
+            "live" => Some(AnnounceMode::Live),
+            "uia" => Some(AnnounceMode::Uia),
+            _ => None,
+        }
+    }
+
+    /// The name, as [`parse`](Self::parse) reads it.
+    pub fn name(self) -> &'static str {
+        match self {
+            AnnounceMode::Live => "live",
+            AnnounceMode::Uia => "uia",
+        }
+    }
+
+    /// The mode this system can use: [`Uia`](Self::Uia) is Windows only,
+    /// and becomes [`Live`](Self::Live) elsewhere.
+    pub fn effective(self) -> Self {
+        if cfg!(windows) {
+            self
+        } else {
+            AnnounceMode::Live
+        }
+    }
+
+    /// True when message nodes carry a live setting.
+    pub fn uses_live_region(self) -> bool {
+        self.effective() == AnnounceMode::Live
+    }
+}
+
 /// The live region: an invisible widget whose children are the latest
 /// messages, each a new AccessKit node with `live` set, so every message
 /// raises UI Automation's LiveRegionChanged and AT-SPI's Announcement, even
-/// when the same words are repeated.
+/// when the same words are repeated. With [`AnnounceMode::Uia`] the nodes
+/// are kept with their live setting off, and the driver raises a
+/// Notification event for each message instead ([`notify`]).
 pub struct Announcer {
     pending: VecDeque<Message>,
     shown: VecDeque<(NodeId, Message)>,
     full_passes: Rc<Cell<u64>>,
     seen_full: u64,
+    mode: AnnounceMode,
     /// Every message announced, for the log and the tests.
     pub announced: usize,
 }
@@ -518,8 +583,20 @@ impl Announcer {
             shown: VecDeque::new(),
             full_passes,
             seen_full,
+            mode: AnnounceMode::Live,
             announced: 0,
         }
+    }
+
+    /// The same announcer, announcing the `mode` way.
+    pub fn with_mode(mut self, mode: AnnounceMode) -> Self {
+        self.mode = mode;
+        self
+    }
+
+    /// How messages are announced.
+    pub fn mode(&self) -> AnnounceMode {
+        self.mode
     }
 
     /// Queues `messages` to be announced on the next accessibility pass.
@@ -537,13 +614,14 @@ impl Announcer {
     }
 }
 
-fn message_node(m: &Message) -> Node {
+fn message_node(m: &Message, live: bool) -> Node {
     // A Label's name comes from its value in AccessKit.
     let mut n = Node::new(Role::Label);
     n.set_value(m.text.as_str());
-    n.set_live(match m.priority {
-        Priority::Polite => Live::Polite,
-        Priority::Assertive => Live::Assertive,
+    n.set_live(match (live, m.priority) {
+        (false, _) => Live::Off,
+        (true, Priority::Polite) => Live::Polite,
+        (true, Priority::Assertive) => Live::Assertive,
     });
     n
 }
@@ -597,13 +675,158 @@ impl Widget for Announcer {
         }
         // Every shown node goes in every update: unchanged ones raise no
         // event, and a rebuilt tree still finds each child.
+        let live = self.mode.uses_live_region();
         for (id, m) in &self.shown {
-            ctx.tree_update().nodes.push((*id, message_node(m)));
+            ctx.tree_update().nodes.push((*id, message_node(m, live)));
         }
         node.set_children(self.shown.iter().map(|(id, _)| *id).collect::<Vec<_>>());
     }
 
     fn children_ids(&self) -> ChildrenIds {
         ChildrenIds::new()
+    }
+}
+
+// --- UI Automation notifications.
+
+/// UI Automation Notification events, raised directly on the window
+/// ([`AnnounceMode::Uia`]). AccessKit raises only LiveRegionChanged, which
+/// JAWS has handled inconsistently; NVDA (2018.1 and later) and JAWS both
+/// handle Notification events. Jon compares the two by ear in the
+/// listening session (ADR-0028).
+pub mod notify {
+    use super::Message;
+    #[cfg(windows)]
+    use textweaver_app::a11y::Priority;
+
+    /// The activity id sent with each notification. Screen readers may use
+    /// it to group or configure an application's notifications.
+    pub const ACTIVITY: &str = "textweaver.announcement";
+
+    /// Raises one Notification event on the window `hwnd` (a Win32 window
+    /// handle) saying `message`. Assertive messages are sent as "important,
+    /// most recent" (they may cut off the one before); polite ones as "all"
+    /// (queued). The kind is "other".
+    ///
+    /// # Errors
+    /// The error from UI Automation, or, on other systems, that there is no
+    /// UI Automation.
+    pub fn raise(hwnd: isize, message: &Message) -> Result<(), String> {
+        #[cfg(windows)]
+        {
+            let important = message.priority == Priority::Assertive;
+            imp::raise(hwnd, &message.text, important)
+        }
+        #[cfg(not(windows))]
+        {
+            let _ = (hwnd, message);
+            Err("UI Automation notifications exist only on Windows".into())
+        }
+    }
+
+    #[cfg(windows)]
+    #[allow(unsafe_code)]
+    mod imp {
+        use windows::Win32::Foundation::HWND;
+        use windows::Win32::UI::Accessibility::{
+            NotificationKind_Other, NotificationProcessing_All,
+            NotificationProcessing_ImportantMostRecent, UiaHostProviderFromHwnd,
+            UiaRaiseNotificationEvent,
+        };
+        use windows::core::BSTR;
+
+        pub(super) fn raise(hwnd: isize, text: &str, important: bool) -> Result<(), String> {
+            if hwnd == 0 {
+                return Err("no window handle".into());
+            }
+            let processing = if important {
+                NotificationProcessing_ImportantMostRecent
+            } else {
+                NotificationProcessing_All
+            };
+            let display = BSTR::from(text);
+            let activity = BSTR::from(super::ACTIVITY);
+            // SAFETY: `hwnd` is the handle of this process's own window,
+            // read from winit on the event loop's thread, and the window
+            // outlives this call (the driver owns it). Both functions only
+            // read their arguments: the host provider is a reference-counted
+            // COM object that the `windows` crate releases when it drops, and
+            // the two BSTRs live until the call returns. The call is made on
+            // the window's own thread, which winit initialized for COM (OLE).
+            unsafe {
+                let provider = UiaHostProviderFromHwnd(HWND(hwnd as *mut core::ffi::c_void))
+                    .map_err(|e| format!("UiaHostProviderFromHwnd: {e}"))?;
+                UiaRaiseNotificationEvent(
+                    &provider,
+                    NotificationKind_Other,
+                    processing,
+                    &display,
+                    &activity,
+                )
+                .map_err(|e| format!("UiaRaiseNotificationEvent: {e}"))
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use masonry::core::WidgetTag;
+    use masonry_testing::TestHarness;
+
+    #[test]
+    fn announce_modes_have_names() {
+        for name in AnnounceMode::NAMES {
+            let mode = AnnounceMode::parse(name).expect("known name");
+            assert_eq!(mode.name(), name);
+        }
+        assert_eq!(AnnounceMode::parse(" UIA "), Some(AnnounceMode::Uia));
+        assert_eq!(AnnounceMode::parse("aria"), None);
+        assert_eq!(AnnounceMode::default(), AnnounceMode::Live);
+        assert!(AnnounceMode::Live.uses_live_region());
+        assert_eq!(AnnounceMode::Uia.uses_live_region(), !cfg!(windows));
+    }
+
+    /// With UI Automation notifications, the messages stay in the tree
+    /// (object navigation and the report find them) but are not live, so a
+    /// screen reader is not told twice.
+    #[test]
+    fn uia_mode_keeps_messages_without_a_live_setting() {
+        let p = crate::theme::Palette::galaxy();
+        let tag: WidgetTag<Announcer> = WidgetTag::named("ann");
+        let announcer = Announcer::new(Rc::new(Cell::new(0))).with_mode(AnnounceMode::Uia);
+        let mut h = TestHarness::create(
+            crate::theme::default_properties(&p),
+            NewWidget::new(announcer).with_tag(tag),
+        );
+        h.edit_root_widget(|mut a| {
+            Announcer::say(
+                &mut a,
+                [Message {
+                    text: "Paused.".into(),
+                    priority: Priority::Assertive,
+                }],
+            );
+        });
+        let _ = h.redraw();
+        let node = h.access_node(h.root_id()).expect("the announcer");
+        let last = node.children().last().expect("a message node");
+        assert_eq!(last.value().as_deref(), Some("Paused."));
+        let expected = if cfg!(windows) {
+            Live::Off
+        } else {
+            Live::Assertive
+        };
+        assert_eq!(last.live(), expected);
+    }
+
+    #[test]
+    fn a_notification_needs_a_window() {
+        let m = Message {
+            text: "Stopped.".into(),
+            priority: Priority::Polite,
+        };
+        assert!(notify::raise(0, &m).is_err());
     }
 }

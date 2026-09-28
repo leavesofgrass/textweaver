@@ -39,9 +39,19 @@ unicode-segmentation.workspace = true
 serde_json.workspace = true
 clap.workspace = true
 
+# `--announce uia` (W4s): UI Automation Notification events raised directly.
+# The same `windows` crate and features AccessKit's Windows adapter already
+# builds, so nothing new is compiled.
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_UI_Accessibility",
+] }
+
 [dev-dependencies]
 masonry_testing.workspace = true
 tempfile.workspace = true
+toml.workspace = true
 
 [lints]
 workspace = true

@@ -7290,7 +7290,9 @@ dependencies = [
  "textweaver-app",
  "textweaver-fonts",
  "textweaver-theme",
+ "toml",
  "unicode-segmentation",
+ "windows",
 ]
 
 [[package]]
