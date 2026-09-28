@@ -62,7 +62,8 @@ Options:
   --from-source          Build from source (the default).
   --release TAG          Install the published release TAG, such as
                          v0.1.0-alpha.4, or "latest" for the newest one
-                         (pre-releases included). x86_64 only.
+                         (pre-releases included). For x86_64 and
+                         aarch64 (arm64) computers.
   --tarball              With --release: install the tarball, not the
                          AppImage (the default when FUSE is missing).
   --appimage             With --release: install the AppImage even when
@@ -1026,9 +1027,17 @@ install_release() {
   section "Release"
   local arch
   arch="$(uname -m)"
-  if [ "$arch" != x86_64 ] && [ "$DRY_RUN" = 0 ]; then
-    die "Release packages are built for x86_64, and this machine is $arch. Build from source instead: run this script without --release."
-  fi
+  case $arch in
+    x86_64 | aarch64) ;;
+    arm64) arch=aarch64 ;;
+    *)
+      if [ "$DRY_RUN" = 0 ]; then
+        die "Release packages are built for x86_64 and aarch64, and this machine is $arch. Build from source instead: run this script without --release."
+      fi
+      say "Would stop: release packages are built for x86_64 and aarch64, and this machine is $arch. Showing the x86_64 steps."
+      arch=x86_64
+      ;;
+  esac
   if [ -z "$RELEASE_URL" ]; then
     resolve_tag
   fi
@@ -1036,7 +1045,7 @@ install_release() {
   local version="${RELEASE_TAG#v}"
   local base="${RELEASE_URL:-$RELEASE_BASE/$RELEASE_TAG}"
   base="${base%/}"
-  local name="textweaver-$version-linux-x86_64"
+  local name="textweaver-$version-linux-$arch"
 
   local kind="$PACKAGE"
   if [ "$kind" = auto ]; then

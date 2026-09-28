@@ -29,7 +29,7 @@ With `--release TAG` (a tag such as `v0.1.0-alpha.4`, or `latest` for the newest
 - It downloads the AppImage and `SHA256SUMS.txt` from the release with curl (or wget), and checks the AppImage against its line there. A mismatch stops the install.
 - It installs the AppImage as `~/.local/bin/textweaver.AppImage` (or under `--prefix DIR`), links `textweaver` and `tw` to it, and adds a menu entry, an icon, and the quick start.
 - Where FUSE is missing, so AppImages cannot run, it installs the plain tarball instead, checked the same way, into `lib/textweaver/` with `textweaver` and `tw` linked from `bin/`. `--tarball` asks for the tarball anyway; `--appimage` asks for the AppImage anyway.
-- It is for x86_64 computers. Elsewhere, build from source.
+- It is for x86_64 and aarch64 (arm64) computers. Elsewhere, build from source. The first aarch64 packages come with the same release as the first Linux packages.
 - It needs a release with Linux packages. The first is the release after 0.1.0-alpha.3, which has Windows and macOS packages only; until then, build from source.
 - `--uninstall` removes either kind of install; `scripts/update.sh` installs the newest release of the same kind.
 
