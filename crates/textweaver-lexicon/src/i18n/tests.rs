@@ -58,12 +58,13 @@ fn reports_errors_with_lines() {
 #[test]
 fn languages_fall_back_to_english() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("es.ftl"), "pos-noun = sustantivo\n").unwrap();
+    std::fs::write(dir.path().join("it.ftl"), "pos-noun = sostantivo\n").unwrap();
     std::fs::write(dir.path().join("xx.ftl"), "broken = {\n").unwrap();
-    let (es, warn) = Catalog::for_language("es", Some(dir.path()));
+    let (it, warn) = Catalog::for_language("it", Some(dir.path()));
     assert!(warn.is_none());
-    assert_eq!(es.tr("pos-noun"), "sustantivo");
-    assert_eq!(es.tr("pos-verb"), "verb");
+    assert_eq!(it.lang(), "it");
+    assert_eq!(it.tr("pos-noun"), "sostantivo");
+    assert_eq!(it.tr("pos-verb"), "verb");
     let (xx, warn) = Catalog::for_language("xx", Some(dir.path()));
     assert_eq!(xx.lang(), "en");
     assert!(warn.unwrap().contains("problems"));
@@ -122,9 +123,13 @@ fn built_in_translations_are_valid() {
         let c = Catalog::parse(tag, text).unwrap_or_else(|e| panic!("{tag}.ftl: {e:?}"));
         for id in c.ids() {
             assert!(en.has(id), "{tag}.ftl has {id}, which en.ftl does not");
+            // `$unit` is the key of the noun a message names (heading,
+            // sentence), which the code passes beside it so a language can
+            // make words agree with it; English does not need it.
             let extra: Vec<String> = c
                 .variables(id)
                 .difference(&en.variables(id))
+                .filter(|v| v.as_str() != "unit" || !en_passes_unit(id))
                 .cloned()
                 .collect();
             assert!(
@@ -137,6 +142,15 @@ fn built_in_translations_are_valid() {
             check_keys(tag, id, parts, &allowed);
         }
     }
+}
+
+/// Messages the code gives `$unit` though English does not use it: the
+/// ones that name a unit or a kind of structure through `$what`.
+fn en_passes_unit(id: &str) -> bool {
+    matches!(
+        id,
+        "nav-no-unit" | "nav-nothing-to-read" | "playback-no-unit-here" | "unit-with-level"
+    )
 }
 
 /// A variant keyed by a plural category the language never produces (a
@@ -155,6 +169,27 @@ fn check_keys(tag: &str, id: &str, parts: &[parse::Part], allowed: &BTreeSet<&st
                 check_keys(tag, id, v, allowed);
             }
         }
+    }
+}
+
+/// Every built-in translation is complete: a message added to en.ftl needs
+/// its translations too (ADR-0030 says how), so no one hears English in
+/// the middle of their language.
+#[test]
+fn built_in_translations_are_complete() {
+    let en = Catalog::english();
+    for (tag, text) in BUILTIN {
+        let c = Catalog::parse(tag, text).unwrap_or_else(|e| panic!("{tag}.ftl: {e:?}"));
+        let missing: Vec<&str> = en
+            .ids()
+            .into_iter()
+            .filter(|id| !c.messages.contains_key(*id))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "{tag}.ftl lacks {} messages: {missing:?}",
+            missing.len()
+        );
     }
 }
 
