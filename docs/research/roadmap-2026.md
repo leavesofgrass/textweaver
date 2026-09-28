@@ -292,6 +292,11 @@ At most eight, each a decision only he can make, each with a recommended default
   - Wave 5 and the Cloud Agent run in parallel.
 - **Before Wave 5 launches,** this roadmap and `wave5-plan.md` are recalibrated to account for what the Cloud Agent covers.
 
+## The owner's changes to the feature-complete list (Monday, September 28, 2026)
+
+- **Streaming dictation is on the list** ("if at all possible"). It gets its own agent in Wave 6, W6d, whether or not document translation runs, building on the in-process Whisper dictation. Wave 5's recalibration adds a short research step on live, low-latency speech-to-text in pure Rust, so W6d starts from findings. It is no longer among the items not required.
+- The rest of the list is under review by the owner before the Wave 5 briefs are written.
+
 ## See also
 
 - [What is left](whats-left.md): the inventory behind this roadmap.
