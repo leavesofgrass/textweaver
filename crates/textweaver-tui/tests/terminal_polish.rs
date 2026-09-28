@@ -234,3 +234,24 @@ fn escape_in_edit_mode_says_how_to_finish() {
     tui.handle_key(key(KeyCode::Esc));
     assert!(!tui.app().status_text().contains("Still editing"));
 }
+
+/// Deliverable 7: the command palette's opening sentence says how to use
+/// it; the label drawn on the bottom line stays one word.
+#[test]
+fn the_command_palette_says_how_to_use_it() {
+    let (mut tui, log) = voiced("Text.\n");
+    tui.handle_key(key(KeyCode::F(2)));
+    let said = heard(&log, "Command.").expect("the palette's sentence");
+    assert_eq!(
+        said,
+        "Command. Type part of a name; Tab completes, Up and Down list matches."
+    );
+    let prompt = tui.app().prompt_model().expect("the palette is open");
+    assert_eq!(prompt.label, "Command");
+    let mut term = Terminal::new(TestBackend::new(100, 10)).unwrap();
+    term.draw(|f| tui.draw(f)).unwrap();
+    let buf = term.backend().buffer();
+    let bottom: String = (0..100).map(|x| buf[(x, 9)].symbol()).collect();
+    assert!(bottom.trim_start().starts_with("Command"), "{bottom}");
+    assert!(!bottom.contains("Tab completes"), "{bottom}");
+}

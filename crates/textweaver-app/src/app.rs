@@ -1188,7 +1188,17 @@ impl App {
         self.prompt_purpose = purpose;
         let label = crate::study::prompt_label(&self.study.catalog, purpose)
             .unwrap_or_else(|| purpose.label().to_owned());
-        self.tell(&label);
+        if purpose == PromptPurpose::CommandPalette
+            && self.settings.speech.verbosity >= Verbosity::Normal
+        {
+            // The drawn label stays one word; what is said teaches the
+            // palette (usability pass, item 4).
+            self.tell(&format!(
+                "{label}. Type part of a name; Tab completes, Up and Down list matches."
+            ));
+        } else {
+            self.tell(&label);
+        }
         vec![Effect::Prompt { label, purpose }]
     }
 

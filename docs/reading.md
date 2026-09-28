@@ -454,7 +454,7 @@ Statistics are saved every 30 seconds while reading, and when a document closes.
 
 ## The command palette: F2
 
-Press **F2** to run any command by name. **Alt+X** and **:** open it too. The GUI uses **F2** and **:**.
+Press **F2** to run any command by name. **Alt+X** and **:** open it too. The GUI uses **F2** and **:**. You hear "Command. Type part of a name; Tab completes, Up and Down list matches." (at low verbosity, just "Command"); the bottom line shows "Command".
 
 1. Type part of a command's name, such as `next head`.
 2. Press **Tab** to complete it. You hear how many commands match and the first few names.
