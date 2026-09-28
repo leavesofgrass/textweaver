@@ -58,7 +58,7 @@ The developer documents are in [dev/](dev/), the decision records in [adr/](adr/
 ### Building and working on textweaver
 
 - [CONTRIBUTING.md](../CONTRIBUTING.md): the code rules, the agent and worktree workflow, commit style, and how to write docs.
-- [Building](dev/building.md): Rust, Python, what each system needs, Docker, the GUI, and the lean reader.
+- [Building](dev/building.md): Rust, Python, what each system needs, Docker, the GUI, the lean reader, the helper scripts, and the repository layout.
 - [Testing](dev/testing.md): the checks every change must pass, the tests, and the [benchmarks](dev/testing.md#benchmarks).
 - [Architecture](dev/architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.
 - [The crates](dev/architecture.md#the-crates): what each of the 33 crates does, with its ADRs.
@@ -66,6 +66,7 @@ The developer documents are in [dev/](dev/), the decision records in [adr/](adr/
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
 - [Fuzzing](../fuzz/README.md): the 27 cargo-fuzz targets, run every night: the document loaders (RTF, ODT, and Word revisions among them), the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, and the engine-host protocol.
 - [Releasing](dev/releasing.md): making a release, the Linux AppImage, and what the packages hold.
+- [Third-party data](dev/third-party-data.md): the bundled pronunciation dictionaries, fonts, and word lists, and their licences.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
 - [Roadmap](roadmap.md): Phases 1 and 2 and Wave 3, as planned in September 2026. The current plans are in [history/tasks.md](history/tasks.md) and [research/](#research).
 - [Star features not yet planned](star-gaps.md): Star features with their status in textweaver.

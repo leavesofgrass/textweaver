@@ -94,5 +94,6 @@ The workflows in `.github/workflows/`:
 - [Building](docs/dev/building.md) and [testing](docs/dev/testing.md).
 - [Architecture](docs/dev/architecture.md): the crates, the threads, and the path from a file to a spoken word.
 - [Docker development container](docs/dev/docker.md): Linux builds and Voxin on any machine.
+- [Third-party data](docs/dev/third-party-data.md): the bundled dictionaries, fonts, and word lists, and their licences.
 - [Tasks and ownership](docs/history/tasks.md): the agents' briefs and status.
 - [scripts/README.md](scripts/README.md): dev-check and the other scripts.
