@@ -26,7 +26,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ca-certificates curl git file \
-      build-essential pkg-config libasound2-dev \
+      build-essential pkg-config libasound2-dev libfontconfig1-dev \
       desktop-file-utils zsync \
  && rm -rf /var/lib/apt/lists/*
 
