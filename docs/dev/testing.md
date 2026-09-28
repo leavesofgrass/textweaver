@@ -25,9 +25,9 @@ scripts/dev-check.sh --docker
 The steps, in order:
 
 - **fmt**: `cargo fmt --all --check`. Formatting follows `rustfmt.toml`.
-- **clippy**: `cargo clippy --workspace --exclude textweaver-gui --all-targets` with the features for your system, and `-D warnings`. Every warning is an error.
-- **test**: `cargo test --workspace --exclude textweaver-gui` with the same features.
-- **doc**: `cargo doc --workspace --exclude textweaver-gui --no-deps` with `RUSTDOCFLAGS="-D warnings"`. The usual failures are a redundant link target (write ``[`X`]``, not ``[`X`](crate::X)``), a link to a private item from public docs, and square brackets in prose (put `[mm:ss]` or `[@key]` in backticks).
+- **clippy**: `cargo clippy --workspace --all-targets` with the features for your system, and `-D warnings`. Every warning is an error.
+- **test**: `cargo test --workspace` with the same features.
+- **doc**: `cargo doc --workspace --no-deps` with `RUSTDOCFLAGS="-D warnings"`. The usual failures are a redundant link target (write ``[`X`]``, not ``[`X`](crate::X)``), a link to a private item from public docs, and square brackets in prose (put `[mm:ss]` or `[@key]` in backticks).
 - **keyboard**: `cargo xtask keyboard --check`. It fails when [docs/keyboard.md](../keyboard.md) is out of date. Regenerate it with `cargo xtask keyboard`; never edit it by hand.
 The Python checks are written `python3` below. On Windows, run them with `py -3` instead (`py -3 tools/check_links.py`): `python` and `python3` there may be the Microsoft Store stub.
 

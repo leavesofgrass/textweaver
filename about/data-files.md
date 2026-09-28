@@ -60,5 +60,4 @@ Packages also carry the licence files themselves, under `licenses/`.
 
 ### wxWidgets (the GUI only)
 
-- The GUI (`textweaver-gui`, not yet in the packages) links wxWidgets 3.3, built from source by the `wxdragon-sys` crate.
 - Licence: the wxWindows Library Licence, version 3.1 (the GNU LGPL, version 2 or later, with an exception that allows distributing binaries under the user's own terms). https://www.wxwidgets.org/about/licence/
