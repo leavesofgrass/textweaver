@@ -141,6 +141,7 @@ See [docs/keyboard.md](docs/keyboard.md#what-changed).
 
 ### Fixed
 
+- `tw convert` to EPUB, DOCX, BRF and PDF no longer crashes on a Markdown list with a nested list or a single item. Nested lists keep their nesting in every format.
 - An engine that keeps failing no longer floods you with errors: reading stops after three failures in a row.
 - A damaged per-document state file or recent-files list is set aside as a `.bak` file instead of being overwritten, so notes and bookmarks are not lost.
 - Saving writes through symbolic links, keeps file permissions, and refuses read-only and non-UTF-8 files (use Save As).
