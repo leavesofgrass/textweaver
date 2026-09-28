@@ -869,6 +869,13 @@ Wave 4 starts only after this pass is done. It has four steps.
 7. **Docker:** no restart unless memory falls below the floor; then building agents pause and the owner gets a note to restart Docker Desktop.
 8. **Dependabot:** ignore rules for the pinned GUI stack (wgpu, Vello, Masonry, Parley, AccessKit) and MathCAT pre-releases.
 
+**Wave 5 launch decisions (Monday, September 28, 2026, the defaults in `docs/research/wave5-recalibrated.md`, taken under the owner's standing decisions so nothing waits):**
+- The publishing templates and speed presets are pulled into Wave 5's free slots (W5g, and W5y's last item).
+- The streaming dictation spike (W5d) measures Whisper only; no Moonshine download in Wave 5.
+- W5c4 writes the MathCAT #827 fix as pull request text; the owner files it upstream from their own account.
+- Translations: the catalog test stays strict, so every agent that adds a message writes it in all six languages and lists the new ids for the owner to spot-check.
+- Wave 5 launches when the documentation sweep has merged.
+
 **Follow-ups found in Wave 4, for Wave 5:**
 - The fuzz crate still compiles the ocrs engine through the formats crate's `ocr` feature (45 minutes under the sanitizer). The fix: the formats crate takes `textweaver-ocr` with `default-features = false`, its `ocr` feature adds `textweaver-ocr/ocrs`, and a new feature gives the image and PDF loaders without the engine, for fuzzing (W5m).
 - `[editing] author` is read from the extra keys and documented, but is not in the store, the schema, or the settings reference.
