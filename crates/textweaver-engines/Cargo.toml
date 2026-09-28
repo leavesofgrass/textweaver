@@ -18,6 +18,8 @@ piper-download = ["textweaver-piper/download"]
 espeak = ["textweaver-speech/espeak"]
 omnivox = ["textweaver-speech/omnivox"]
 speechd = ["textweaver-speech/speechd"]
+# MathCAT math speech (ADR-0029), passed through to textweaver-speech.
+mathcat = ["textweaver-speech/mathcat"]
 
 [dependencies]
 textweaver-core.workspace = true

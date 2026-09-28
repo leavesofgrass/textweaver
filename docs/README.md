@@ -111,6 +111,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0026: OCR, and formats for students](adr/0026-ocr-and-student-formats.md): OCR of scanned pages (ocrs in process, Tesseract as the fallback), DAISY, PowerPoint, spreadsheets, archives, and web pages.
 - [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, and the accessibility checks.
 - [ADR-0028: The Xilem GUI after Jon's session](adr/0028-xilem-gui-after-the-session.md): two ways to announce, every list option in the tree, and where the GUI's memory goes (a draft until the session).
+- [ADR-0029: MathCAT speech](adr/0029-mathcat-speech.md): MathCAT as a second math speech engine, EPUB 3 MathML read as math, and what waits for math braille.
 
 ## Interactive pages
 

@@ -544,6 +544,96 @@ fn settings() -> NormalizeConfig {
     NormalizeConfig::default()
 }
 
+/// The math engine setting: textweaver's own speech by default, and, in a
+/// build without the `mathcat` feature, whatever it says (ADR-0029).
+#[test]
+fn math_engine_defaults_to_builtin_and_changes_nothing_without_mathcat() {
+    assert_eq!(settings().math_engine, MathEngine::Builtin);
+    assert_eq!(settings().math_language, None);
+    let text = r"So $\frac{a}{b} + x^2$ and \(\sqrt{y}\) end.";
+    let builtin = pipeline_utterance(text, &settings());
+    assert_eq!(
+        builtin.text,
+        "So a over b plus x squared and square root of y end."
+    );
+    for engine in [
+        MathEngine::MathCatClearSpeak,
+        MathEngine::MathCatSimpleSpeak,
+    ] {
+        let cfg = NormalizeConfig {
+            math_engine: engine,
+            math_language: Some("fr".into()),
+            ..settings()
+        };
+        let u = pipeline_utterance(text, &cfg);
+        if mathcat_available() {
+            assert_ne!(u.text, builtin.text, "{engine:?}");
+        } else {
+            assert_eq!(u, builtin, "{engine:?}");
+            assert_eq!(Math::from_config(&cfg).engine(), MathEngine::Builtin);
+        }
+    }
+}
+
+#[test]
+fn math_engine_names_in_settings_files() {
+    for (engine, name) in [
+        (MathEngine::Builtin, "builtin"),
+        (MathEngine::MathCatClearSpeak, "mathcat"),
+        (MathEngine::MathCatSimpleSpeak, "mathcat_simplespeak"),
+    ] {
+        assert_eq!(
+            serde_json::to_string(&engine).unwrap(),
+            format!("\"{name}\"")
+        );
+    }
+}
+
+/// With MathCAT: its words (digits left for the engine, as with the
+/// built-in speech), one highlight over the whole formula, pauses dropped
+/// when punctuation is read.
+#[cfg(feature = "mathcat")]
+#[test]
+fn mathcat_speaks_through_the_pipeline() {
+    let cfg = NormalizeConfig {
+        math_engine: MathEngine::MathCatClearSpeak,
+        ..settings()
+    };
+    let text = r"We know $\frac{1}{2} + x^2$ now.";
+    let u = pipeline_utterance(text, &cfg);
+    assert_eq!(u.text, "We know 1 half plus x squared now.");
+    assert_eq!(highlighted(text, &u, "plus"), r"\frac{1}{2} + x^2");
+    assert_eq!(highlighted(text, &u, "now"), "now");
+
+    let simple = NormalizeConfig {
+        math_engine: MathEngine::MathCatSimpleSpeak,
+        math_verbosity: Verbosity::Low,
+        ..settings()
+    };
+    assert_eq!(
+        pipeline_utterance(r"$|x|$", &simple).text,
+        "absolute value x"
+    );
+
+    let french = NormalizeConfig {
+        math_language: Some("fr-CA".into()),
+        ..cfg.clone()
+    };
+    assert_eq!(
+        pipeline_utterance(r"$\frac{a}{b}$", &french).text,
+        "a sur b"
+    );
+
+    let text = r"$a \times b \leq c$";
+    let some = Pipeline::for_settings(&cfg, PunctuationLevel::Some, false, false)
+        .apply(Utterance::literal(text, CharPos::ZERO));
+    assert_eq!(some.text, "eigh times b, is less than or equal to c");
+    let all = Pipeline::for_settings(&cfg, PunctuationLevel::All, false, false)
+        .apply(Utterance::literal(text, CharPos::ZERO));
+    assert_eq!(all.text, "eigh times b is less than or equal to c");
+    all.offset_map.check_invariants(&all.text).unwrap();
+}
+
 #[test]
 fn preprocess_vectors() {
     // tests/test_ttstext.py:425-455

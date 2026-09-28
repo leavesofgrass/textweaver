@@ -94,6 +94,7 @@ CRATE_ADRS = {
     "convert": ["0016"],
     "writers": ["0017"],
     "math": ["0018"],
+    "mathcat": ["0029", "0018"],
     "cite": ["0019"],
     "theme": ["0020"],
     "aids": ["0022"],
@@ -129,7 +130,7 @@ LAYERS = [
     ("speech", "Speech", "The speech service, its backends, and audio export.",
      ["speech", "engines", "enginehost", "eci", "sapi", "apple", "dectalk", "piper", "export"]),
     ("document", "Document", "The document model and what loads, speaks, and cites it.",
-     ["text", "formats", "ocr", "math", "cite"]),
+     ["text", "formats", "ocr", "math", "mathcat", "cite"]),
     ("foundation", "Foundation", "Shared types that everything else builds on.", ["core"]),
 ]
 

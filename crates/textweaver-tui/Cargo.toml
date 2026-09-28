@@ -22,6 +22,8 @@ publish = ["textweaver-app/publish"]
 espeak = ["textweaver-app/espeak", "textweaver-engines/espeak"]
 omnivox = ["textweaver-app/omnivox", "textweaver-engines/omnivox"]
 speechd = ["textweaver-app/speechd", "textweaver-engines/speechd"]
+# MathCAT math speech (ADR-0029).
+mathcat = ["textweaver-app/mathcat", "textweaver-engines/mathcat"]
 
 [dependencies]
 textweaver-app.workspace = true

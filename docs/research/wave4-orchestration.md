@@ -426,6 +426,22 @@ Each brief is self-contained. Every agent also reads the shared preamble and the
 
 **Jon's checklist (five):** (1) read past the window edge on a long document: does NVDA keep its place? (2) RSVP on: is anything spoken by NVDA? (it must not be); (3) the reading ruler with a theme change; (4) Alt+O outline and Enter; (5) the notes list.
 
+**Update for sub-wave 4c (Sunday, September 27, 2026, 11:23 PM).** These changes override the three briefs below. They follow Jon's answers and the Cloud Agent's reservations in `docs/history/reservations.md`:
+- **W4c2 and fuzzing.** The Cloud Agent's task 1 owns `fuzz/Cargo.toml`, `fuzz/src/lib.rs`, `fuzz/README.md` and the nightly matrix while its pull request is open. W4c2 writes its three fuzz targets (`rtf`, `odt`, `docx_revisions`) and their seeds last:
+  - If the Cloud Agent's pull request has merged, W4c2 merges main first, then appends its targets.
+  - If the pull request is still open, W4c2 puts the targets and their `[[bin]]` lines in its report for the orchestrator to add after the merge.
+- **W4f: deliverable 1 is dropped.** The six W3d targets were added at launch (`132382f`), and the nightly matrix is the Cloud Agent's while task 1 is open.
+- **W4f: two steps in `ci.yml`'s docs job are the Cloud Agent's** (task 2). W4f leaves those steps alone.
+- **W4f: deliverable 6.** It writes release notes for the next alpha (`0.1.0-alpha.4`), not a beta. Jon keeps iterating alphas until a feature-complete final alpha.
+- **W4f: deliverable 7 is dropped.** Jon decided on no merge gate for now, so there are no rulesets and no auto-merge.
+- **W4f: the doc pass skips files the Cloud Agent's task 2 owns** while it is open:
+  - `docs/settings-reference.md`;
+  - the Decisions list, crate count and Roadmap line in `docs/README.md`;
+  - the index lines in `docs/adr/README.md`;
+  - the status block in `docs/roadmap.md`;
+  - the crate count in `docs/dev/architecture.md`.
+- **W4d: one extra check.** It confirms Spanish and French with the voices Jon has. The built-in engines come first. Eloquence is his preference, through the ECI host, with Voxin only.
+
 ### W4c2: documents (sub-wave 4c, P2)
 
 **Branch** `wave4/c2-documents`, from `main` after W4b's zip commit and 4b's merges. **ADR-0031** ("Native RTF, ODT, and Word revisions").
