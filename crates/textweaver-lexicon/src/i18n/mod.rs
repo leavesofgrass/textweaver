@@ -38,8 +38,13 @@
 //!   they are for every right-to-left language, so a word or number in a
 //!   message cannot reorder the text around it. [`bidi_problems`] checks
 //!   that a rendered string's direction marks are balanced.
-//! - Other languages load from `<code>.ftl` files, falling back to English
-//!   for any message they lack.
+//! - Built in ([`LANGUAGES`], Wave 4, W4d): Spanish, French, German,
+//!   Portuguese, and Arabic, complete (a test checks), each falling back
+//!   to English for a message it lacks. A regional tag uses its language
+//!   (`es-MX`, `pt-BR`).
+//! - Other languages load from `<code>.ftl` files in the settings folder's
+//!   `locales`, falling back to English for any message they lack; a file
+//!   named for a built-in language goes over it, message by message.
 //!
 //! [Project Fluent]: https://projectfluent.org/
 
@@ -58,6 +63,102 @@ use pseudo::pseudo_text;
 
 /// The English catalog's source.
 const ENGLISH: &str = include_str!("../../locales/en.ftl");
+
+/// The built-in translations' sources, by language tag.
+const BUILTIN: &[(&str, &str)] = &[
+    ("es", include_str!("../../locales/es.ftl")),
+    ("fr", include_str!("../../locales/fr.ftl")),
+    ("de", include_str!("../../locales/de.ftl")),
+    ("pt", include_str!("../../locales/pt.ftl")),
+    ("ar", include_str!("../../locales/ar.ftl")),
+];
+
+/// A language the interface is built with.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Language {
+    /// Its tag, such as `es`.
+    pub tag: &'static str,
+    /// Its name in itself, such as "Español": what a speaker of it looks
+    /// for in a list.
+    pub name: &'static str,
+    /// Its name in English, such as "Spanish".
+    pub english: &'static str,
+}
+
+/// The interface's built-in languages, English first. Other languages
+/// load from `<tag>.ftl` files in the settings folder's `locales`.
+pub const LANGUAGES: &[Language] = &[
+    Language {
+        tag: "en",
+        name: "English",
+        english: "English",
+    },
+    Language {
+        tag: "es",
+        name: "Español",
+        english: "Spanish",
+    },
+    Language {
+        tag: "fr",
+        name: "Français",
+        english: "French",
+    },
+    Language {
+        tag: "de",
+        name: "Deutsch",
+        english: "German",
+    },
+    Language {
+        tag: "pt",
+        name: "Português",
+        english: "Portuguese",
+    },
+    Language {
+        tag: "ar",
+        name: "العربية",
+        english: "Arabic",
+    },
+];
+
+/// A language tag as the catalogs spell it: `pt_BR.UTF-8` and `pt-br`
+/// become `pt-BR`, `C` and `POSIX` become `en`, and space around it goes.
+pub fn normalize_tag(tag: &str) -> String {
+    let tag = tag.trim();
+    let tag = tag.split(['.', '@']).next().unwrap_or("");
+    if tag.eq_ignore_ascii_case("c") || tag.eq_ignore_ascii_case("posix") {
+        return "en".into();
+    }
+    let mut out = String::with_capacity(tag.len());
+    for (i, part) in tag.split(['-', '_']).filter(|p| !p.is_empty()).enumerate() {
+        if i > 0 {
+            out.push('-');
+        }
+        if i == 0 {
+            out.push_str(&part.to_ascii_lowercase());
+        } else if part.len() == 2 {
+            out.push_str(&part.to_ascii_uppercase());
+        } else {
+            out.push_str(part);
+        }
+    }
+    out
+}
+
+/// The language part of a tag, lowercase: `pt` for `pt-BR`.
+pub fn primary(tag: &str) -> String {
+    tag.trim()
+        .split(['-', '_'])
+        .next()
+        .unwrap_or("")
+        .to_ascii_lowercase()
+}
+
+/// The built-in language for a tag, by its language part (`es` for
+/// `es-MX`); `None` for a language textweaver has no translation of.
+pub fn language(tag: &str) -> Option<&'static Language> {
+    let p = primary(&normalize_tag(tag));
+    LANGUAGES.iter().find(|l| l.tag == p)
+}
 
 /// The accented pseudo-locale.
 pub const PSEUDO_ACCENTED: &str = "en-XA";
@@ -166,63 +267,103 @@ impl Catalog {
                 for e in &errors {
                     log::error!("en.ftl: {e}");
                 }
-                Catalog {
-                    lang: "en".into(),
-                    messages: HashMap::new(),
-                    terms: HashMap::new(),
-                    fallback: None,
-                    pseudo: None,
-                }
+                Catalog::empty("en")
             }))
         })
         .clone()
     }
 
-    /// The catalog for `lang`: English, a pseudo-locale, or `<lang>.ftl`
-    /// from `dir` over English. An unknown or unreadable language gives
-    /// English and a message saying why.
+    /// The catalog for `lang`: English, a pseudo-locale, a built-in
+    /// translation ([`LANGUAGES`]), or `<lang>.ftl` from `dir`. A file in
+    /// `dir` goes over the built-in translation of the same language, which
+    /// goes over English, message by message. A regional tag uses its
+    /// language's catalog (`es-MX` gives `es`, `pt_BR.UTF-8` gives `pt`).
+    /// An unknown or unreadable language gives English and a message
+    /// saying why (in English: the catalog it would come from is the one
+    /// that failed).
     pub fn for_language(lang: &str, dir: Option<&Path>) -> (Arc<Catalog>, Option<String>) {
-        let lang = lang.trim();
+        let lang = normalize_tag(lang);
+        let lang = lang.as_str();
         let en = Catalog::english();
-        if lang.is_empty()
-            || lang.eq_ignore_ascii_case("en")
-            || lang.starts_with("en-") && !is_pseudo(lang)
-        {
-            return (en, None);
-        }
         if lang.eq_ignore_ascii_case(PSEUDO_ACCENTED) {
             return (Arc::new(en.pseudo(pseudo::Kind::Accented)), None);
         }
         if lang.eq_ignore_ascii_case(PSEUDO_RTL) {
             return (Arc::new(en.pseudo(pseudo::Kind::Bidi)), None);
         }
-        let Some(dir) = dir else {
-            return (
-                en,
-                Some(format!("No translation for {lang} yet; using English.")),
-            );
-        };
-        let path = dir.join(format!("{lang}.ftl"));
-        match std::fs::read_to_string(&path) {
-            Ok(text) => match Catalog::parse(lang, &text) {
+        if lang.is_empty() || primary(lang) == "en" {
+            return (en, None);
+        }
+        let builtin = Catalog::builtin(lang);
+        let base = builtin.clone().unwrap_or_else(|| en.clone());
+        let file = dir.map(|d| d.join(format!("{lang}.ftl")));
+        let text = file.as_ref().and_then(|p| std::fs::read_to_string(p).ok());
+        match (text, file) {
+            (Some(text), Some(path)) => match Catalog::parse(lang, &text) {
                 Ok(mut c) => {
-                    c.fallback = Some(en);
+                    c.fallback = Some(base);
                     (Arc::new(c), None)
                 }
                 Err(errors) => (
-                    en,
+                    base,
                     Some(format!(
-                        "{} has {} problems, the first: {}; using English.",
+                        "{} has {} problems, the first: {}; using {}.",
                         path.display(),
                         errors.len(),
-                        errors[0]
+                        errors[0],
+                        if builtin.is_some() {
+                            "the built-in translation"
+                        } else {
+                            "English"
+                        }
                     )),
                 ),
             },
-            Err(_) => (
-                en,
-                Some(format!("No translation for {lang} yet; using English.")),
-            ),
+            _ => match builtin {
+                Some(b) => (b, None),
+                None => (
+                    en,
+                    Some(format!("No translation for {lang} yet; using English.")),
+                ),
+            },
+        }
+    }
+
+    /// The built-in translation for `lang` (or for its language, without
+    /// the region), over English; `None` when there is none. Each is
+    /// parsed once.
+    pub fn builtin(lang: &str) -> Option<Arc<Catalog>> {
+        static BUILT: OnceLock<Vec<(&'static str, Arc<Catalog>)>> = OnceLock::new();
+        let tag = language(lang)?.tag;
+        if tag == "en" {
+            return Some(Catalog::english());
+        }
+        let built = BUILT.get_or_init(|| {
+            BUILTIN
+                .iter()
+                .map(|(tag, text)| {
+                    let mut c = Catalog::parse(tag, text).unwrap_or_else(|errors| {
+                        // A test keeps every built-in catalog valid.
+                        for e in &errors {
+                            log::error!("{tag}.ftl: {e}");
+                        }
+                        Catalog::empty(tag)
+                    });
+                    c.fallback = Some(Catalog::english());
+                    (*tag, Arc::new(c))
+                })
+                .collect()
+        });
+        built.iter().find(|(t, _)| *t == tag).map(|(_, c)| c.clone())
+    }
+
+    fn empty(lang: &str) -> Catalog {
+        Catalog {
+            lang: lang.to_owned(),
+            messages: HashMap::new(),
+            terms: HashMap::new(),
+            fallback: None,
+            pseudo: None,
         }
     }
 
@@ -379,10 +520,6 @@ pub fn duration(c: &Catalog, seconds: f64) -> String {
     } else {
         c.fmt("duration-seconds", &[("s", s.into())])
     }
-}
-
-fn is_pseudo(lang: &str) -> bool {
-    lang.eq_ignore_ascii_case(PSEUDO_ACCENTED) || lang.eq_ignore_ascii_case(PSEUDO_RTL)
 }
 
 /// Builds the argument list for [`Catalog::fmt`]:

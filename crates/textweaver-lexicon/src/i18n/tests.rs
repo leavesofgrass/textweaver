@@ -67,10 +67,112 @@ fn languages_fall_back_to_english() {
     let (xx, warn) = Catalog::for_language("xx", Some(dir.path()));
     assert_eq!(xx.lang(), "en");
     assert!(warn.unwrap().contains("problems"));
-    let (de, warn) = Catalog::for_language("de", None);
-    assert_eq!(de.lang(), "en");
-    assert!(warn.unwrap().contains("No translation for de"));
+    let (ja, warn) = Catalog::for_language("ja", None);
+    assert_eq!(ja.lang(), "en");
+    assert!(warn.unwrap().contains("No translation for ja"));
     assert!(Catalog::for_language("en-GB", None).1.is_none());
+    assert!(Catalog::for_language("C", None).1.is_none());
+}
+
+#[test]
+fn built_in_languages_by_tag_and_region() {
+    for l in LANGUAGES {
+        let (c, warn) = Catalog::for_language(l.tag, None);
+        assert!(warn.is_none(), "{}: {warn:?}", l.tag);
+        assert_eq!(c.lang(), l.tag);
+    }
+    assert_eq!(Catalog::for_language("es-MX", None).0.lang(), "es");
+    assert_eq!(Catalog::for_language("pt_BR.UTF-8", None).0.lang(), "pt");
+    assert_eq!(Catalog::for_language("fr_CA@euro", None).0.lang(), "fr");
+    assert_eq!(normalize_tag(" pt_br.UTF-8 "), "pt-BR");
+    assert_eq!(normalize_tag("zh-Hant-tw"), "zh-Hant-TW");
+    assert_eq!(normalize_tag("POSIX"), "en");
+    assert_eq!(language("de-AT").map(|l| l.tag), Some("de"));
+    assert!(language("ja").is_none());
+    assert_eq!(Catalog::for_language("ar", None).0.direction(), Direction::RightToLeft);
+}
+
+/// A file in the settings folder goes over the built-in translation, which
+/// goes over English.
+#[test]
+fn a_user_file_goes_over_the_built_in_translation() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("fr.ftl"), "pos-noun = NOM\n").unwrap();
+    let (fr, warn) = Catalog::for_language("fr", Some(dir.path()));
+    assert!(warn.is_none());
+    assert_eq!(fr.tr("pos-noun"), "NOM");
+    let builtin = Catalog::builtin("fr").unwrap();
+    assert_eq!(fr.tr("pos-verb"), builtin.tr("pos-verb"));
+    std::fs::write(dir.path().join("fr.ftl"), "broken = {\n").unwrap();
+    let (fr, warn) = Catalog::for_language("fr", Some(dir.path()));
+    assert_eq!(fr.lang(), "fr");
+    assert!(warn.unwrap().contains("the built-in translation"));
+}
+
+/// Every built-in translation is valid Fluent in the subset, has only
+/// messages English has, uses only the values English's message is given,
+/// and chooses variants by keys its language can produce.
+#[test]
+fn built_in_translations_are_valid() {
+    let en = Catalog::english();
+    for (tag, text) in BUILTIN {
+        let c = Catalog::parse(tag, text).unwrap_or_else(|e| panic!("{tag}.ftl: {e:?}"));
+        for id in c.ids() {
+            assert!(en.has(id), "{tag}.ftl has {id}, which en.ftl does not");
+            let extra: Vec<String> = c
+                .variables(id)
+                .difference(&en.variables(id))
+                .cloned()
+                .collect();
+            assert!(
+                extra.is_empty(),
+                "{tag}.ftl: {id} uses {extra:?}, which the code does not give it"
+            );
+        }
+        let allowed: BTreeSet<&str> = (0..200)
+            .map(|n| plural::category(tag, n).name())
+            .collect();
+        for (id, parts) in &c.messages {
+            check_keys(tag, id, parts, &allowed);
+        }
+    }
+}
+
+/// A variant keyed by a plural category the language never produces (a
+/// `[few]` in Spanish, a `[zero]` in English: a count of 0 is `[0]`) is
+/// never chosen. Keys that are words (`[next]`, `[sentence]`) choose by a
+/// text value and are fine.
+fn check_keys(tag: &str, id: &str, parts: &[parse::Part], allowed: &BTreeSet<&str>) {
+    const CATEGORIES: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
+    for p in parts {
+        if let parse::Part::Select { variants, .. } = p {
+            for (key, v) in variants {
+                assert!(
+                    !CATEGORIES.contains(&key.as_str()) || allowed.contains(key.as_str()),
+                    "{tag}.ftl: {id} has a variant [{key}] that {tag} never chooses"
+                );
+                check_keys(tag, id, v, allowed);
+            }
+        }
+    }
+}
+
+/// Arabic, a built-in right-to-left language: every message closes the
+/// direction marks it opens and isolates every value.
+#[test]
+fn arabic_isolates_values() {
+    let c = Catalog::builtin("ar").unwrap();
+    assert_eq!(c.direction(), Direction::RightToLeft);
+    let en = Catalog::english();
+    for id in en.ids() {
+        let vars = en.variables(id);
+        let args: Vec<(&str, Arg)> = vars
+            .iter()
+            .map(|v| (v.as_str(), Arg::Str("\u{e000}".into())))
+            .collect();
+        let s = c.fmt(id, &args);
+        assert!(bidi_problems(&s).is_empty(), "{id}: {s:?}");
+    }
 }
 
 #[test]
