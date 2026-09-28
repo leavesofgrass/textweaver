@@ -35,6 +35,7 @@ mod bench;
 mod deps;
 mod dist;
 mod eci;
+mod fuzz_seed;
 mod gui_dist;
 mod keyboard;
 mod listen;
@@ -59,6 +60,7 @@ fn main() -> anyhow::Result<()> {
         "dist" => dist::run(),
         "hosts" => eci::hosts(),
         "eci-host" => eci::run(),
+        "fuzz-seed" => fuzz_seed::run(),
         "gui-dist" => gui_dist::run(),
         "keyboard" => keyboard::run(),
         "listen" => listen::run(),
