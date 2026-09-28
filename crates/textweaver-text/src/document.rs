@@ -111,6 +111,16 @@ pub struct Document {
     tables: OnceCell<MarkerTables>,
     /// Sorted numbers of the blank (whitespace-only) lines.
     blank_lines: OnceCell<Vec<usize>>,
+    /// The text ends with a line break (which starts no line of its own).
+    /// Kept up to date by `new` and `apply`, so counting lines, which every
+    /// line lookup does, costs no rope lookup.
+    ends_with_break: bool,
+}
+
+/// True when `text` ends with a line break.
+fn ends_with_break(text: &Rope) -> bool {
+    let len = text.len_chars();
+    len > 0 && is_line_break(text.char(len - 1))
 }
 
 /// The serialized shape of a [`Document`].
@@ -157,6 +167,7 @@ impl Document {
         markers.sort_by_key(Marker::sort_key);
         Document {
             meta,
+            ends_with_break: ends_with_break(&text),
             text,
             markers,
             display: OnceCell::new(),
@@ -237,13 +248,7 @@ impl Document {
     /// Number of lines. A final line break does not start another line, and
     /// an empty document has one (empty) line.
     pub fn line_count(&self) -> usize {
-        let n = self.text.len_lines();
-        let len = self.len_chars();
-        if len > 0 && is_line_break(self.text.char(len - 1)) {
-            n - 1
-        } else {
-            n
-        }
+        self.text.len_lines() - usize::from(self.ends_with_break)
     }
 
     /// The 0-based line containing `pos` (clamped to the last line).
@@ -261,18 +266,56 @@ impl Document {
             return CharRange::empty(self.len_chars());
         }
         let start = self.text.line_to_char(line);
-        let mut end = if line + 1 < self.text.len_lines() {
+        let next = if line + 1 < self.text.len_lines() {
             self.text.line_to_char(line + 1)
         } else {
             self.len_chars()
         };
+        CharRange::new(start, self.content_end(start, next))
+    }
+
+    /// `line_range(line).start`, at one rope lookup instead of two.
+    pub(crate) fn line_start(&self, line: usize) -> CharPos {
+        if line >= self.line_count() {
+            return CharPos(self.len_chars());
+        }
+        CharPos(self.text.line_to_char(line))
+    }
+
+    /// The end of a line's chars without its break, for the line starting
+    /// at `start` whose next line starts at `next` (or the text ends there).
+    fn content_end(&self, start: usize, next: usize) -> usize {
+        let mut end = next;
         if end > start && is_line_break(self.text.char(end - 1)) {
             end -= 1;
             if end > start && self.text.char(end) == '\n' && self.text.char(end - 1) == '\r' {
                 end -= 1;
             }
         }
-        CharRange::new(start, end)
+        end
+    }
+
+    /// The line break positions (the end of each line's chars) of lines
+    /// `first..last`, with the start of the line after each: what
+    /// [`line_range`](Self::line_range) gives for line `l` and `l + 1`, at
+    /// one rope lookup per line instead of four. `last` must be a line of
+    /// the document.
+    pub(crate) fn line_breaks(
+        &self,
+        first: usize,
+        last: usize,
+    ) -> impl Iterator<Item = (CharPos, CharPos)> + '_ {
+        let mut start = if first < last {
+            self.text.line_to_char(first)
+        } else {
+            0
+        };
+        (first..last).map(move |line| {
+            let next = self.text.line_to_char(line + 1);
+            let brk = self.content_end(start, next);
+            start = next;
+            (CharPos(brk), CharPos(next))
+        })
     }
 
     /// Line and column (both 0-based, column in chars) of `pos`.
@@ -334,6 +377,7 @@ impl Document {
         self.display = OnceCell::new();
         self.tables = OnceCell::new();
         self.blank_lines = OnceCell::new();
+        self.ends_with_break = ends_with_break(&self.text);
         Ok(outcome)
     }
 }
@@ -481,6 +525,42 @@ mod props {
                 for kind in MarkerKind::ALL {
                     let scan = d.markers().iter().filter(|m| m.kind == kind).count();
                     prop_assert_eq!(d.marker_index().count(kind, None), scan);
+                }
+            }
+        }
+
+        /// The line count kept by `new` and `apply`, and the quicker line
+        /// lookups the segmenter uses, agree with the rope and with
+        /// `line_range`, for every kind of line break, before and after
+        /// edits.
+        #[test]
+        fn line_lookups_agree_with_line_range(
+            text in "[ab\\n\\r\\u{2028}\\u{85} ]{0,40}",
+            edits in proptest::collection::vec((0usize..45, 0usize..45, "[a\\n\\r\\u{2029}]{0,4}"), 0..4),
+        ) {
+            let mut d = Document::new(DocumentMeta::default(), Rope::from_str(&text), Vec::new());
+            for step in 0..=edits.len() {
+                let rope = d.text().clone();
+                let len = rope.len_chars();
+                let ends = len > 0 && is_line_break(rope.char(len - 1));
+                prop_assert_eq!(d.line_count(), rope.len_lines() - usize::from(ends));
+                let n = d.line_count();
+                for line in 0..n + 2 {
+                    prop_assert_eq!(d.line_start(line), d.line_range(line).start);
+                }
+                for first in 0..n {
+                    for last in first..n {
+                        let got: Vec<(CharPos, CharPos)> = d.line_breaks(first, last).collect();
+                        let want: Vec<(CharPos, CharPos)> = (first..last)
+                            .map(|l| (d.line_range(l).end, d.line_range(l + 1).start))
+                            .collect();
+                        prop_assert_eq!(got, want);
+                    }
+                }
+                if let Some((a, b, ins)) = edits.get(step) {
+                    let len = d.len_chars();
+                    let edit = Edit::replace(CharRange::new((*a).min(len), (*b).min(len)), ins.clone());
+                    d.apply(&edit).unwrap();
                 }
             }
         }
