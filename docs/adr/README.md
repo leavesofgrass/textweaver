@@ -60,6 +60,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted.
 - [ADR-0027: Xilem GUI](0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, the accessibility checks, and what to send upstream.
   - Status: accepted.
+- [ADR-0028: The Xilem GUI after Jon's session](0028-xilem-gui-after-the-session.md): two ways to announce (a live region, or UI Automation notifications), every list option in the tree, and where the GUI's memory goes.
+  - Status: proposed (a first draft; finished after Jon's NVDA and JAWS session).
 
 ## Writing a new ADR
 
