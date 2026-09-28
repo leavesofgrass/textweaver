@@ -12,7 +12,15 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
 ## Steps
 
-1. **Prepare.** Before you start, run the checks CI runs, locally: `scripts/dev-check.sh` on Linux or macOS (`--docker` for the full Linux set), or `scripts\dev-check.ps1` on Windows. They include the link check and the site data check. Then, on `main`, with a clean tree and CI green, try the release without changing anything:
+1. **Listen.** A person listens on real hardware before every release. Tests that fake the engine cannot hear a silent one, and tests never play audio. Go through [the listening checklist](#listening-checklist) below, then record it with the machine's date:
+
+   ```bash
+   cargo xtask release 0.1.0-alpha.3 --listened
+   ```
+
+   This writes today's date and the version on the "Last listening check" line of this guide, and changes nothing else. Commit it. The release in the next step stops unless that line names the version being released and is at most 14 days old.
+
+2. **Prepare.** Before you start, run the checks CI runs, locally: `scripts/dev-check.sh` on Linux or macOS (`--docker` for the full Linux set), or `scripts\dev-check.ps1` on Windows. They include the link check and the site data check. Then, on `main`, with a clean tree and CI green, try the release without changing anything:
 
    ```bash
    cargo xtask release 0.1.0-alpha.3 --dry-run
@@ -26,7 +34,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
    This:
 
-   - stops unless the tree is clean and on `main`;
+   - stops unless the tree is clean and on `main`, the listening check is recorded for this version, and the changelog is grouped by area (below);
    - sets `version` in `[workspace.package]` in the root `Cargo.toml` and runs `cargo update -w`;
    - turns `## [Unreleased]` in `CHANGELOG.md` into `## [0.1.0-alpha.3] - YYYY-MM-DD`, keeps an empty `[Unreleased]` above it, and adds the release link. The date comes from the machine's clock in local time, and the weekday is computed and printed so you can check it. It is never typed in;
    - updates the version examples in this guide, `docs/install.md`, and the workflows;
@@ -35,7 +43,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
    Before a release, also run `cargo xtask notices` (it needs `cargo install --locked cargo-about`) and commit `THIRD-PARTY-NOTICES.md` if it changed. CI fails when it is out of date.
 
-2. **Listen.** Before pushing, a person listens on real hardware. Tests that fake the engine cannot hear a silent one, and tests never play audio. See [the listening checklist](#listening-checklist) below.
+   **The changelog, grouped by area.** While a wave runs, each agent writes its `CHANGELOG.md` lines under a heading with its own name, such as `### W4c2: documents`. Before a release, move those lines under area headings (reading and speech, documents, writing, the GUI, languages, packages) and add a short summary at the top of the section. `cargo xtask release` names any agent heading still in `[Unreleased]` and stops.
 
 3. **Try the packages (optional).** Start the `Release` workflow from the Actions tab on `main`, with the tag left empty. That is a dry run: it builds and checks every package, keeps them as workflow artifacts, and creates no release, tag, or attestation.
 
@@ -64,7 +72,9 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
 ## Listening checklist
 
-Do this before each release, on the machine you use every day, with Eloquence, SAPI 5, and Piper (and DECtalk if it is installed).
+Do this before each release, on the machine you use every day, with Eloquence, SAPI 5, and Piper (and DECtalk if it is installed). Then record it with `cargo xtask release VERSION --listened`, which rewrites this line from the machine's clock:
+
+**Last listening check:** not yet recorded.
 
 1. **Write the samples.**
 

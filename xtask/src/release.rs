@@ -1,7 +1,10 @@
 //! `cargo xtask release X.Y.Z [--dry-run] [--no-checks]`: prepare a release
 //! commit and tag (docs/dev/releasing.md).
 //!
-//! 1. Checks that the working tree is clean and on `main`.
+//! 1. Checks that the working tree is clean and on `main`; that the
+//!    listening checklist in the release guide is dated, for this version,
+//!    within the last 14 days; and that the changelog's `[Unreleased]`
+//!    section is grouped by area, with no agent's heading left in it.
 //! 2. Sets `version` in `[workspace.package]` and runs `cargo update -w`.
 //! 3. Turns `## [Unreleased]` in `CHANGELOG.md` into
 //!    `## [X.Y.Z] - YYYY-MM-DD`, dated from this machine's clock in local
@@ -13,8 +16,13 @@
 //! 6. Commits and makes the annotated tag `vX.Y.Z`. Nothing is pushed.
 //!
 //! `--dry-run` changes nothing: it prints what the release would do and the
-//! date it would use, and reports a dirty tree or another branch without
-//! stopping.
+//! date it would use, and reports a dirty tree, another branch, or an
+//! undated listening check without stopping.
+//!
+//! `cargo xtask release X.Y.Z --listened` records the listening check
+//! instead: it writes today's date, from the machine, and the version on
+//! the "Last listening check" line of the release guide, and does nothing
+//! else. Run it after listening, and commit the guide.
 //!
 //! The date is never typed in or guessed: it comes from the machine
 //! (`date` or PowerShell's `Get-Date`), and the weekday is computed from it.
@@ -36,24 +44,35 @@ const EXAMPLE_FILES: [&str; 4] = [
 /// The repository, for the changelog link.
 const REPO_URL: &str = "https://github.com/leavesofgrass/textweaver";
 
+/// The release guide, which holds the listening checklist.
+const GUIDE: &str = "docs/dev/releasing.md";
+/// The line in the release guide that records the last listening check.
+const LISTENED: &str = "**Last listening check:**";
+/// How old a listening check may be, in days, for a release.
+const LISTENED_MAX_DAYS: i64 = 14;
+
 /// Parsed arguments.
 #[derive(Debug, PartialEq, Eq)]
 struct Args {
     version: String,
     dry_run: bool,
     checks: bool,
+    listened: bool,
 }
 
-const USAGE: &str = "usage: cargo xtask release X.Y.Z[-PRE] [--dry-run] [--no-checks]";
+const USAGE: &str =
+    "usage: cargo xtask release X.Y.Z[-PRE] [--dry-run] [--no-checks] | X.Y.Z[-PRE] --listened";
 
 fn parse(args: &[String]) -> anyhow::Result<Args> {
     let mut version = None;
     let mut dry_run = false;
     let mut checks = true;
+    let mut listened = false;
     for a in args {
         match a.as_str() {
             "--dry-run" => dry_run = true,
             "--no-checks" => checks = false,
+            "--listened" => listened = true,
             s if s.starts_with('-') => bail!("unknown option {s} ({USAGE})"),
             s if version.is_none() => version = Some(s.trim_start_matches('v').to_owned()),
             s => bail!("unexpected argument {s} ({USAGE})"),
@@ -63,10 +82,14 @@ fn parse(args: &[String]) -> anyhow::Result<Args> {
     if !valid_version(&version) {
         bail!("{version} is not a version like 0.2.0 or 0.2.0-alpha.1");
     }
+    if listened && (dry_run || !checks) {
+        bail!("--listened only records the listening check; run it on its own ({USAGE})");
+    }
     Ok(Args {
         version,
         dry_run,
         checks,
+        listened,
     })
 }
 
@@ -102,6 +125,18 @@ pub fn run() -> anyhow::Result<()> {
     let spoken = spoken_date(y, m, d);
     let tag = format!("v{}", args.version);
 
+    if args.listened {
+        let path = root.join(GUIDE);
+        let text = fs::read_to_string(&path).with_context(|| format!("reading {GUIDE}"))?;
+        let text = record_listening(&text, &args.version, &date, &spoken)?;
+        fs::write(&path, text).with_context(|| format!("writing {GUIDE}"))?;
+        println!(
+            "Recorded: listening check for {} on {spoken}, in {GUIDE}. Commit it, then run cargo xtask release {}.",
+            args.version, args.version
+        );
+        return Ok(());
+    }
+
     println!(
         "release {} (from {old}), dated {date} ({spoken})",
         args.version
@@ -125,6 +160,17 @@ pub fn run() -> anyhow::Result<()> {
     }
     if args.version == old {
         problems.push(format!("the workspace is already at {old}"));
+    }
+    let guide = fs::read_to_string(root.join(GUIDE)).with_context(|| format!("reading {GUIDE}"))?;
+    if let Err(e) = check_listening(&guide, &args.version, (y, m, d)) {
+        problems.push(e);
+    }
+    let headings = agent_headings(&fs::read_to_string(root.join("CHANGELOG.md"))?);
+    if !headings.is_empty() {
+        problems.push(format!(
+            "the [Unreleased] section of CHANGELOG.md still has agents' headings; group their lines by area first: {}",
+            headings.join("; ")
+        ));
     }
     if !problems.is_empty() {
         if args.dry_run {
@@ -322,6 +368,103 @@ fn date_changelog(text: &str, version: &str, date: &str) -> anyhow::Result<Strin
     Ok(out)
 }
 
+/// Checks the "Last listening check" line of the release guide: it must
+/// hold a date no later than `today` and at most [`LISTENED_MAX_DAYS`] old,
+/// and name `version`. The error says what to do, meaning first.
+fn check_listening(guide: &str, version: &str, today: (i64, u32, u32)) -> Result<(), String> {
+    let how = format!(
+        "listen through the checklist in {GUIDE}, then run cargo xtask release {version} --listened"
+    );
+    let Some(rest) = guide
+        .lines()
+        .find_map(|l| l.trim_start().strip_prefix(LISTENED))
+    else {
+        return Err(format!(
+            "listening check missing: {GUIDE} has no \"{LISTENED}\" line"
+        ));
+    };
+    let rest = rest.trim();
+    let Some((y, m, d)) = rest.get(..10).and_then(parse_date) else {
+        return Err(format!("listening check not dated: {how}"));
+    };
+    let age = days_from_civil(today.0, today.1, today.2) - days_from_civil(y, m, d);
+    if age < 0 {
+        return Err(format!(
+            "listening check dated in the future ({}): {how}",
+            &rest[..10]
+        ));
+    }
+    if age > LISTENED_MAX_DAYS {
+        return Err(format!(
+            "listening check is {age} days old, more than {LISTENED_MAX_DAYS}: {how}"
+        ));
+    }
+    let listened_for = rest
+        .rsplit_once(" for ")
+        .map(|(_, v)| v.trim().trim_end_matches('.').trim_start_matches('v'));
+    if listened_for != Some(version) {
+        return Err(format!(
+            "listening check was for {}, not {version}: {how}",
+            listened_for.unwrap_or("no version")
+        ));
+    }
+    Ok(())
+}
+
+/// Rewrites the "Last listening check" line with `date` (and its spoken
+/// form) and `version`.
+fn record_listening(
+    guide: &str,
+    version: &str,
+    date: &str,
+    spoken: &str,
+) -> anyhow::Result<String> {
+    let mut out = String::with_capacity(guide.len() + 64);
+    let mut done = false;
+    for line in guide.split_inclusive('\n') {
+        if !done && line.trim_start().starts_with(LISTENED) {
+            let eol = if line.ends_with("\r\n") {
+                "\r\n"
+            } else if line.ends_with('\n') {
+                "\n"
+            } else {
+                ""
+            };
+            out.push_str(&format!(
+                "{LISTENED} {date} ({spoken}), for {version}.{eol}"
+            ));
+            done = true;
+        } else {
+            out.push_str(line);
+        }
+    }
+    if !done {
+        bail!("{GUIDE} has no \"{LISTENED}\" line to record the listening check on");
+    }
+    Ok(out)
+}
+
+/// Headings in the `[Unreleased]` section that name an agent rather than
+/// an area: `### W4c2: documents`, `### Agent ...`, `### ... (Wave 4, Agent
+/// W4h)`, `### The Cloud Agent ...`. Agents write under their own heading;
+/// before a release their lines are grouped by area.
+fn agent_headings(changelog: &str) -> Vec<String> {
+    let Some(at) = changelog.find("## [Unreleased]") else {
+        return Vec::new();
+    };
+    let rest = &changelog[at + "## [Unreleased]".len()..];
+    let body = &rest[..rest.find("\n## ").unwrap_or(rest.len())];
+    body.lines()
+        .filter_map(|l| l.strip_prefix("### "))
+        .filter(|h| {
+            let b = h.as_bytes();
+            let wave_agent = b.len() > 1 && b[0] == b'W' && b[1].is_ascii_digit();
+            wave_agent || h.contains("Agent")
+        })
+        .map(str::to_owned)
+        .collect()
+}
+
 /// The byte offset of the first `[x.y.z]: http...` link definition line.
 fn first_link_line(text: &str) -> Option<usize> {
     let mut offset = 0;
@@ -480,9 +623,16 @@ mod tests {
             Args {
                 version: "0.2.0".into(),
                 dry_run: true,
-                checks: true
+                checks: true,
+                listened: false,
             }
         );
+        assert!(
+            parse(&["0.2.0".into(), "--listened".into()])
+                .unwrap()
+                .listened
+        );
+        assert!(parse(&["0.2.0".into(), "--listened".into(), "--dry-run".into()]).is_err());
         assert!(
             !parse(&["0.2.0".into(), "--no-checks".into()])
                 .unwrap()
@@ -562,6 +712,96 @@ mod tests {
         assert!(date_changelog("## [Unreleased]\n\n## [0.1.0]\n", "0.2.0", "2026-09-26").is_err());
         assert!(date_changelog("# Changelog\n", "0.2.0", "2026-09-26").is_err());
         assert!(date_changelog(text, "0.1.0", "2026-09-26").is_err());
+    }
+
+    #[test]
+    fn the_listening_check_is_dated_recent_and_for_this_version() {
+        let today = (2026, 9, 28);
+        let line = |rest: &str| format!("# Guide\n\n{LISTENED} {rest}\n\nMore.\n");
+        let ok = line("2026-09-27 (Sunday, September 27, 2026), for 0.1.0-alpha.4.");
+        assert_eq!(check_listening(&ok, "0.1.0-alpha.4", today), Ok(()));
+        // Not dated, missing, from the future, too old, another version.
+        let e = check_listening(&line("not yet recorded."), "0.1.0-alpha.4", today).unwrap_err();
+        assert!(e.starts_with("listening check not dated"), "{e}");
+        assert!(e.contains("--listened"), "{e}");
+        let e = check_listening("# Guide\n", "0.1.0-alpha.4", today).unwrap_err();
+        assert!(e.starts_with("listening check missing"), "{e}");
+        let e = check_listening(
+            &line("2026-09-29, for 0.1.0-alpha.4."),
+            "0.1.0-alpha.4",
+            today,
+        )
+        .unwrap_err();
+        assert!(e.contains("future"), "{e}");
+        let e = check_listening(
+            &line("2026-09-13, for 0.1.0-alpha.4."),
+            "0.1.0-alpha.4",
+            today,
+        )
+        .unwrap_err();
+        assert!(e.starts_with("listening check is 15 days old"), "{e}");
+        assert_eq!(
+            check_listening(
+                &line("2026-09-14, for 0.1.0-alpha.4."),
+                "0.1.0-alpha.4",
+                today
+            ),
+            Ok(())
+        );
+        let e = check_listening(
+            &line("2026-09-27, for 0.1.0-alpha.3."),
+            "0.1.0-alpha.4",
+            today,
+        )
+        .unwrap_err();
+        assert!(
+            e.starts_with("listening check was for 0.1.0-alpha.3"),
+            "{e}"
+        );
+    }
+
+    #[test]
+    fn recording_the_listening_check_writes_the_machine_date() {
+        let guide = format!("# Guide\r\n\r\n{LISTENED} not yet recorded.\r\n\r\nMore.\r\n");
+        let out = record_listening(
+            &guide,
+            "0.1.0-alpha.4",
+            "2026-09-28",
+            "Monday, September 28, 2026",
+        )
+        .unwrap();
+        assert_eq!(
+            out,
+            format!(
+                "# Guide\r\n\r\n{LISTENED} 2026-09-28 (Monday, September 28, 2026), for 0.1.0-alpha.4.\r\n\r\nMore.\r\n"
+            )
+        );
+        assert_eq!(
+            check_listening(&out, "0.1.0-alpha.4", (2026, 9, 28)),
+            Ok(())
+        );
+        assert!(record_listening("# Guide\n", "0.1.0-alpha.4", "2026-09-28", "x").is_err());
+    }
+
+    #[test]
+    fn the_real_guide_has_the_listening_line() {
+        let guide = fs::read_to_string(crate::eci::root().join(GUIDE)).unwrap();
+        let e = check_listening(&guide, "99.0.0", (2026, 9, 28)).unwrap_err();
+        assert!(!e.starts_with("listening check missing"), "{e}");
+    }
+
+    #[test]
+    fn agents_headings_are_found_in_unreleased_only() {
+        let text = "# Changelog\n\n## [Unreleased]\n\n### Reading and speech\n\n- A.\n\n### W4a3: GUI edit mode\n\n- B.\n\n### Terminal polish (Wave 4, Agent W4h)\n\n### The Cloud Agent (pull request 1)\n\n### Windows\n\n## [0.1.0] - 2026-09-25\n\n### W3a: old\n";
+        assert_eq!(
+            agent_headings(text),
+            [
+                "W4a3: GUI edit mode",
+                "Terminal polish (Wave 4, Agent W4h)",
+                "The Cloud Agent (pull request 1)"
+            ]
+        );
+        assert!(agent_headings("## [Unreleased]\n\n### Added\n").is_empty());
     }
 
     #[test]
