@@ -107,6 +107,8 @@ To write a whole document to an audio file with subtitles, use `tw export-audio`
 
 Press **Alt+V**. The GUI uses **Ctrl+Shift+V**. This opens the voice manager. You hear "Voice manager", how many voices are shown and which language and engine, then "Enter uses a voice and speaks a sample, or downloads one; Space marks a favourite; Delete removes a downloaded voice; Escape closes."
 
+This is the voice for reading documents. textweaver's own words (messages, lists, help, and settings) have a separate choice, the interface language, in six languages: English, Spanish, French, German, Brazilian Portuguese, and Arabic. `[speech.voices_by_language]` picks which voice speaks each interface language, so switching the interface to Spanish can switch to a Spanish voice automatically. See [`[interface] language`](settings.md#interface) in the settings guide for how to choose it and how textweaver falls back when no voice exists for it.
+
 The list holds:
 
 - **Language: all languages.** Press Enter to show only the next language, then the next, and back to all. You hear, for example, "3 voices: English, all engines."
@@ -419,6 +421,7 @@ setx TEXTWEAVER_ECI_CODE_FACTORY 1
 
 - [Getting ETI-Eloquence](eloquence.md): Eloquence on Windows, macOS, and Linux.
 - [DECtalk](dectalk.md): using an installed DECtalk.
+- [Settings](settings.md): `[interface] language`, the six built-in interface languages, and `[speech.voices_by_language]`.
 - [Troubleshooting](troubleshooting.md): no speech, wrong voice, and other problems.
 - [ADR-0003: Speech threading and event timing](adr/0003-speech-threading-and-event-timing.md): how the highlight follows speech.
 - [ADR-0004: Rate, pitch, and volume](adr/0004-rate-pitch-volume.md): the engine-independent voice settings.
