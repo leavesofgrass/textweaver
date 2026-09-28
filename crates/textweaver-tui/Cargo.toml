@@ -47,6 +47,7 @@ anyhow.workspace = true
 clap.workspace = true
 ctrlc.workspace = true
 log.workspace = true
+unicode-bidi.workspace = true
 
 arboard = { workspace = true, optional = true }
 syntect = { workspace = true, optional = true }

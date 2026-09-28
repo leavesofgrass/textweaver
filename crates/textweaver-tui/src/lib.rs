@@ -45,6 +45,7 @@
 //!
 //! Owner: Agent D.
 
+pub mod bidi;
 pub mod clipboard;
 #[cfg(feature = "highlight")]
 pub mod highlight;
@@ -150,7 +151,7 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
             if let Err(e) = tui.app_mut().open(file) {
                 let msg = match e {
                     textweaver_app::AppError::Load(e) => {
-                        textweaver_app::open_failure_message(file, &e)
+                        textweaver_app::open_failure_message_in(&tui.app().catalog(), file, &e)
                     }
                     other => tui.app().catalog().fmt(
                         "tui-could-not-open",
@@ -176,11 +177,19 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
         tui.app_mut().announce_queued(&m, Priority::Assertive);
     }
     let catalog = tui.app().catalog();
-    if let Some(welcome) = setup::first_run_message(&catalog, opts, tui.app().keymap()) {
+    let welcome = setup::first_run_message(&catalog, opts, tui.app().keymap());
+    let first_run = welcome.is_some();
+    if let Some(welcome) = welcome {
         tui.app_mut().announce_queued(&welcome, Priority::Polite);
     }
-    // First run with a screen reader: offer hybrid mode (once).
-    setup::offer_hybrid_if_screen_reader(tui.app_mut(), opts);
+    if first_run {
+        // The first run starts with the language list, the system's
+        // language first; the hybrid mode question waits for the next run.
+        tui.choose_language();
+    } else {
+        // With a screen reader: offer hybrid mode (once).
+        setup::offer_hybrid_if_screen_reader(tui.app_mut(), opts);
+    }
     tui.offer_recovery();
     if let Some(msg) = signals::install() {
         log::warn!("{msg}");

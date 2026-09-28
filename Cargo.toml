@@ -301,6 +301,13 @@ harper-core = { version = "=2.11.0", default-features = false }
 # Lao, Khmer, Burmese, Chinese, or Japanese words), about 58 KB.
 icu_segmenter = { version = "2.3", default-features = false, features = ["compiled_data"] }
 
+# Wave 4, Agent W4d: right-to-left text reordered for display in the
+# terminal reader (the Unicode Bidirectional Algorithm, UAX #9), behind
+# `[interface] rtl` (ADR-0030). Already in the tree through url's idna;
+# pure Rust, MIT or Apache-2.0. The model, speech, and the screen reader
+# keep the logical order.
+unicode-bidi = "0.3.18"
+
 # tests
 proptest = "1.11"
 insta = { version = "1.48", features = ["json", "yaml"] }

@@ -313,6 +313,13 @@ impl Tui {
         self.apply(effects);
     }
 
+    /// Shows the interface language list ([`App::language_list`]): on the
+    /// first run, and for `--choose-language`.
+    pub fn choose_language(&mut self) {
+        let effects = self.app.language_list();
+        self.apply(effects);
+    }
+
     /// Dispatches a command and acts on its effects.
     pub fn dispatch(&mut self, cmd: Command) {
         let effects = self.app.dispatch(cmd);
@@ -697,6 +704,11 @@ impl Tui {
         let cursor = self.draw_body(f, areas.body, &theme);
         self.draw_rsvp(f, areas.body, &theme, cursor.map(|p| p.y));
         let status = self.status_to_draw(now);
+        let status = if self.rtl() {
+            crate::bidi::visual(&status).into_owned()
+        } else {
+            status
+        };
         f.render_widget(
             Paragraph::new(status)
                 .wrap(ratatui::widgets::Wrap { trim: false })
@@ -715,6 +727,15 @@ impl Tui {
             cursor
         };
         f.set_cursor_position(cursor.unwrap_or(Position::new(areas.body.x, areas.body.y)));
+    }
+
+    /// True when right-to-left text is reordered for display
+    /// (`[interface] rtl`; see [`crate::bidi`]).
+    fn rtl(&self) -> bool {
+        crate::bidi::reorders(
+            self.app.settings().interface.rtl,
+            self.app.access_mode().uses_screen_reader(),
+        )
     }
 
     /// The title line's "line 3 of 40, 7%": frozen while
@@ -736,17 +757,25 @@ impl Tui {
         let title = app
             .session()
             .map_or_else(|| c.tr("tui-title-no-document"), |s| s.title.clone());
-        let left = format!(" {}", c.fmt("tui-title", &args!["title" => title]));
+        let rtl = self.rtl();
+        let shown = |s: String| {
+            if rtl {
+                crate::bidi::visual(&s).into_owned()
+            } else {
+                s
+            }
+        };
+        let left = shown(format!(" {}", c.fmt("tui-title", &args!["title" => title])));
         // Most important first; trailing parts are dropped when narrow.
         // The app gives them ("Ready" until the first reading, then
         // "Stopped"), so Say Status speaks the same parts.
         let mut parts = app.title_parts(position);
         let width = usize::from(area.width);
         let lw = Span::raw(&left).width();
-        let mut right = format!("{} ", parts.join(", "));
+        let mut right = shown(format!("{} ", parts.join(", ")));
         while parts.len() > 1 && lw + Span::raw(&right).width() + 2 > width {
             parts.pop();
-            right = format!("{} ", parts.join(", "));
+            right = shown(format!("{} ", parts.join(", ")));
         }
         let rw = Span::raw(&right).width();
         let line = if lw + rw < width {
@@ -807,6 +836,7 @@ impl Tui {
         };
         let doc = &s.doc;
         let settings = self.app.settings();
+        let rtl = self.rtl();
         let cells = self.cells();
         let spacing = self.app.terminal_spacing();
         let numbers = self.number_width();
@@ -919,6 +949,16 @@ impl Tui {
                 code: &code,
             };
             let mut text = self.row_spans(doc, row, &highlights, &aids, theme, cells);
+            // Right-to-left text in display order; the cursor follows its
+            // character there.
+            let mut logical = None;
+            let mut bidi_map = None;
+            if rtl {
+                logical = Some(text.clone());
+                let (shown, map) = crate::bidi::visual_spans(text);
+                text = shown;
+                bidi_map = map;
+            }
             let extra = ruler_modifier(mark);
             if !extra.is_empty() {
                 for sp in &mut text {
@@ -929,8 +969,12 @@ impl Tui {
             if let Some(fp) = focus.filter(|&p| row.holds(p))
                 && cursor.is_none()
             {
-                let col = layout::column_shown(doc, row, fp, cells, row_breaks, sep_width, &shown)
-                    .min(width.saturating_sub(1));
+                let col = layout::column_shown(doc, row, fp, cells, row_breaks, sep_width, &shown);
+                let col = match &logical {
+                    Some(l) => crate::bidi::visual_column(l, bidi_map.as_deref(), col),
+                    None => col,
+                }
+                .min(width.saturating_sub(1));
                 let x = area.x + gutter + u16::try_from(col).unwrap_or(0);
                 let y = area.y + u16::try_from(lines.len()).unwrap_or(0);
                 cursor = Some(Position::new(x, y));
@@ -1151,10 +1195,13 @@ impl Tui {
                     .min(area.width.saturating_sub(1));
             return Some(Position::new(x, area.y));
         }
-        f.render_widget(
-            Paragraph::new(self.hints(area.width)).style(theme.hints),
-            area,
-        );
+        let hints = self.hints(area.width);
+        let hints = if self.rtl() {
+            crate::bidi::visual(&hints).into_owned()
+        } else {
+            hints
+        };
+        f.render_widget(Paragraph::new(hints).style(theme.hints), area);
         None
     }
 
@@ -1254,18 +1301,22 @@ impl Tui {
             body
         };
         f.render_widget(Clear, area);
+        let rtl = self.rtl();
+        let title = self.app.catalog().fmt(
+            "tui-list-title",
+            &args![
+                "title" => list.title.as_str(),
+                "n" => list.selected + 1,
+                "count" => list.items.len()
+            ],
+        );
+        let title = if rtl {
+            crate::bidi::visual(&title).into_owned()
+        } else {
+            title
+        };
         let block = Block::bordered()
-            .title(format!(
-                " {} ",
-                self.app.catalog().fmt(
-                    "tui-list-title",
-                    &args![
-                        "title" => list.title.as_str(),
-                        "n" => list.selected + 1,
-                        "count" => list.items.len()
-                    ],
-                )
-            ))
+            .title(format!(" {title} "))
             .style(theme.list);
         let inner = block.inner(area);
         f.render_widget(block, area);
@@ -1296,6 +1347,11 @@ impl Tui {
                     theme.list_selected
                 } else {
                     theme.list
+                };
+                let t = if rtl {
+                    crate::bidi::visual(t)
+                } else {
+                    std::borrow::Cow::Borrowed(t.as_str())
                 };
                 Line::from(Span::styled(format!("{t:<width$}"), style))
             })
