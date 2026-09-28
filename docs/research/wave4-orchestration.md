@@ -189,6 +189,11 @@ All numbers are from today's measurements (section 1.5) and the estimates in sec
 - GUI agents (W4s, W4a2): add 10 GB to each figure; allowance **30 GB native, 35 GB Docker**.
 - Per agent allowance, in one number: **45 GB** (GUI agents **65 GB**).
 
+**Status update, Sunday, September 27, 2026 (runbook step 2, measured).** The lean profiles work.
+- **Native** (`cargo test --workspace --exclude textweaver-gui --no-run` with `omnivox`, plus `cargo build -p textweaver-xilem`): **16 GB**, down from 35.5 GB with the old profiles. That took 13 minutes cold, 2 minutes warm, and 4 minutes for the GUI.
+- **Container** (`--workspace --exclude textweaver-gui --all-features --no-run`, 6 GB and 4 jobs): **8.5 GB** in `tw-target-orch`, in 15 minutes cold. The shared container cache is 0.5 GB after one run.
+- **New allowances,** at 1.5 times measured: **24 GB native and 13 GB per container volume** for every agent. GUI agents get the same, since the GUI build is included.
+
 ### 4.2 Shared
 
 - `D:\sccache`: 5.4 GB today; cap **30 GB** (one number, the same as the container's; `tasks.md` says 50G and `compose.yaml` 30G: pick 30 and write it in `docs/dev/building.md`).
