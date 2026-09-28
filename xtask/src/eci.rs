@@ -194,7 +194,7 @@ pub(crate) fn copy_dictionaries(root: &Path, dest: &Path) -> anyhow::Result<()> 
 
 /// Builds `hosts` (release) and installs them with the dictionaries into
 /// `target/debug`, `target/release`, and each of `extra`.
-fn build_and_install(hosts: &[HostBuild], extra: &[PathBuf]) -> anyhow::Result<()> {
+pub(crate) fn build_and_install(hosts: &[HostBuild], extra: &[PathBuf]) -> anyhow::Result<()> {
     let root = root();
     let target = target_dir(&root);
     build(&root, hosts, true)?;
