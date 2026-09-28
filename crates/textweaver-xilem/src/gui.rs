@@ -50,7 +50,7 @@ use crate::settings_dialog::{self, FormAction, FormChange, SettingsForm, Setting
 use crate::setup::{self, Options};
 use crate::theme::{self, Palette};
 use crate::widgets::{
-    ActionButton, Announcer, KeyAction, Message, MessageQueue, Pressed, Region, Root,
+    ActionButton, AnnounceMode, Announcer, KeyAction, Message, MessageQueue, Pressed, Region, Root,
 };
 use crate::window::{self, WINDOW_UNITS};
 
@@ -128,6 +128,9 @@ pub struct Experiments {
     /// Settings opens the app's settings list (as the terminal reader
     /// shows it) instead of the settings dialog.
     pub settings_list: bool,
+    /// How announcements reach the screen reader (`--announce`); `None`
+    /// follows the `[gui] announce` setting, and then the live region.
+    pub announce: Option<AnnounceMode>,
 }
 
 /// Wakes the event loop.
@@ -234,6 +237,11 @@ pub struct Gui {
     /// The ticker starts once the window exists (in `on_start`).
     ticker: Option<EventLoopProxy>,
     closed: bool,
+    /// How announcements reach the screen reader.
+    announce: AnnounceMode,
+    /// The window's Win32 handle, for UI Automation notifications (read
+    /// on first use; 0 until then or when there is none).
+    hwnd: isize,
     /// Load and highlight timings, for `--log` and the measurements.
     pub timings: Timings,
 }
@@ -401,7 +409,9 @@ pub fn build_tree(
         .with_tag(STATUS_BAR)
         .with_props(panel(p, 8.0, 16.0));
 
-    let announcer = NewWidget::new(Announcer::new(Rc::clone(&full_passes))).with_tag(ANNOUNCER);
+    let mode = experiments.announce.unwrap_or_default().effective();
+    let announcer =
+        NewWidget::new(Announcer::new(Rc::clone(&full_passes)).with_mode(mode)).with_tag(ANNOUNCER);
 
     let column = Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
@@ -719,6 +729,23 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
 }
 
 impl Gui {
+    /// `--announce uia`: raises a UI Automation Notification event on the
+    /// window for each message (the live region's nodes stay, not live).
+    fn notify(&mut self, ctx: &mut DriverCtx<'_>, messages: &[Message]) {
+        if self.hwnd == 0 {
+            self.hwnd = window_hwnd(ctx.window(self.window_id).handle());
+        }
+        for m in messages {
+            let result = crate::widgets::notify::raise(self.hwnd, m);
+            if self.log {
+                match result {
+                    Ok(()) => crate::log::line(&format!("notify uia: {}", m.text)),
+                    Err(e) => crate::log::line(&format!("notify uia failed ({e}): {}", m.text)),
+                }
+            }
+        }
+    }
+
     fn refresh(&mut self, ctx: &mut DriverCtx<'_>) {
         let root = ctx.render_root(self.window_id);
         let before = self.shown.state;
@@ -733,6 +760,10 @@ impl Gui {
         }
         let messages: Vec<Message> = self.queue.borrow_mut().drain(..).collect();
         if !messages.is_empty() {
+            if self.announce == AnnounceMode::Uia {
+                self.notify(ctx, &messages);
+            }
+            let root = ctx.render_root(self.window_id);
             root.edit_widget_with_tag(ANNOUNCER, |mut a| Announcer::say(&mut a, messages));
         }
         // The theme changed (a key, the palette, or the settings).
@@ -1635,8 +1666,27 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         muted: Rc::clone(&muted),
         log: opts.log,
     };
-    let (mut app, messages) = setup::build_app(&opts.app, Box::new(announcer));
+    let (mut app, mut messages) = setup::build_app(&opts.app, Box::new(announcer));
     app.set_announce_list_focus(opts.experiments.app_list_announcements);
+    let mut experiments = opts.experiments;
+    let wanted = match experiments.announce {
+        Some(mode) => Some(mode),
+        None => setup::announce_setting(app.settings()).unwrap_or_else(|e| {
+            messages.push(format!("{e}."));
+            None
+        }),
+    }
+    .unwrap_or_default();
+    let announce = wanted.effective();
+    if announce != wanted {
+        messages.push(
+            "UI Automation notifications exist only on Windows; using the live region.".into(),
+        );
+    }
+    experiments.announce = Some(announce);
+    if opts.log {
+        crate::log::line(&format!("announce: {}", announce.name()));
+    }
     if opts.theme.is_none() {
         // The system's light, dark, or high-contrast setting, when the
         // settings ask to follow it (`display.follow_os_theme`).
@@ -1648,7 +1698,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
     };
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
     let full_passes = Rc::new(Cell::new(0));
-    let tree = build_tree(&palette, font, Some(&app), full_passes, opts.experiments);
+    let tree = build_tree(&palette, font, Some(&app), full_passes, experiments);
 
     let mut attrs = WinitWindow::default_attributes()
         .with_title("textweaver")
@@ -1698,7 +1748,9 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         )),
         ticker: Some(proxy),
         fixed_theme: opts.theme.is_some(),
-        settings_list: opts.experiments.settings_list,
+        settings_list: experiments.settings_list,
+        announce,
+        hwnd: 0,
         installed: crate::font_chooser::Installed::scan_in_background(),
         window_title: String::new(),
         closed: false,
@@ -1707,6 +1759,15 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
     let default_props = theme::default_properties(&gui.palette);
     masonry_winit::app::run_with(event_loop, vec![window], gui, default_props)
         .map_err(|e| format!("the event loop failed: {e}"))
+}
+
+/// The window's Win32 handle, or 0 (another system, or no handle yet).
+fn window_hwnd(window: &WinitWindow) -> isize {
+    use masonry_winit::winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+    match window.window_handle().map(|h| h.as_raw()) {
+        Ok(RawWindowHandle::Win32(h)) => h.hwnd.get(),
+        _ => 0,
+    }
 }
 
 /// Ticks for the app's own timers (autosave, the position save, RSVP),

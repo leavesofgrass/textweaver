@@ -834,6 +834,8 @@ Wave 4 starts only after this pass is done. It has four steps.
 4. **The wxDragon spike (`crates/textweaver-gui`) is removed** once Jon's session 2 on the Xilem GUI passes. The orchestrator does this as its own commit, with the file list shown first.
 5. **Unbound keys in the reader are silent,** as in NVDA's browse mode. W4h adds no tone.
 
+**W4s status (Sunday, September 27, 2026):** done on `wave4/s-gui-session-prep`, main merged in; awaiting integration and Jon's session 1. `--announce uia` (and `[gui] announce` in `settings.toml`, read from the store's extra tables; the store and schema entries are proposed) raises UI Automation Notification events from a server-side provider; every list option and setting scrolled out of view is now in the tree (AccessKit's filter kept 13 of 40 and 12 of 20 before), with "1 of 15" positions and rows drawn after scrolling; the UI Automation report passes with `-Announce live` and `-Announce uia` and checks a 194-option list scrolled to its end; memory attributed in ADR-0028 (draft): the app with every engine is about 11 MB, the window's 170 MB is the GPU stack, and Wave 3's 98 MB was read before the renderer finished starting.
+
 **W4a3: GUI edit mode (sub-wave 4c, P1; ADR 0033).**
 - **Edit mode in `DocumentView`,** using `Command::ReplaceRange`, and keeping structure while editing as the terminal reader does.
 - **Based on Parley's `examples/editor`,** on the vendored Parley 0.8.0. Don't upgrade it.

@@ -141,6 +141,88 @@ fn a_list_dialog_is_modal_and_hides_the_window_behind_it() {
     assert_eq!(names_of(&h, Role::Toolbar), vec!["Reading".to_owned()]);
 }
 
+/// Options scrolled out of a list's box stay in the tree a screen reader
+/// gets, with their scrolled bounds: AccessKit's own filter (the one the
+/// UI Automation and AT-SPI adapters use) keeps every one, at the top and
+/// after End. Before W4s, the list said it clipped its children, and the
+/// filter left out every option past the first one beyond each edge.
+#[test]
+fn every_option_of_a_long_list_stays_in_the_tree() {
+    use accesskit_consumer::common_filter;
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let p = Palette::galaxy();
+    let items: Vec<String> = (1..=40).map(|i| format!("Bookmark {i}")).collect();
+    let (modal, list_id) = gui::list_dialog(&p, "Bookmarks", items, 0, false);
+    h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+    h.focus_on(Some(list_id));
+    let _ = h.redraw();
+    let check = |h: &TestHarness<Root>, when: &str| {
+        let list = h.access_node(h.get_widget(LIST).id()).unwrap();
+        let all: Vec<String> = list
+            .children()
+            .map(|o| o.label().unwrap_or_default())
+            .collect();
+        assert_eq!(all.len(), 40, "{when}");
+        let kept: Vec<String> = list
+            .filtered_children(common_filter)
+            .map(|o| o.label().unwrap_or_default())
+            .collect();
+        assert_eq!(kept, all, "{when}: AccessKit's filter keeps every option");
+        assert!(!list.clips_children(), "{when}: the list claims to clip");
+        let list_box = list.bounding_box().expect("the list has bounds");
+        let outside = list
+            .children()
+            .filter(|o| {
+                o.bounding_box()
+                    .is_some_and(|b| b.intersect(list_box).is_empty())
+            })
+            .count();
+        assert!(
+            outside > 20,
+            "{when}: most options are scrolled out of view"
+        );
+    };
+    check(&h, "at the top");
+    h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::End)));
+    let _ = h.redraw();
+    let list = h.access_node(h.get_widget(LIST).id()).unwrap();
+    let last = list.children().last().unwrap();
+    assert!(
+        last.is_selected() == Some(true),
+        "End selects the last option"
+    );
+    assert_eq!(list.active_descendant().map(|n| n.id()), Some(last.id()));
+    // "40 of 40": AccessKit's position is zero-based (the adapters add
+    // one), and the adapters read the size from the list.
+    assert_eq!(last.position_in_set(), Some(39));
+    assert_eq!(last.size_of_set_from_container(&common_filter), Some(40));
+    check(&h, "after End");
+    // The rows scrolled into view are drawn with their text, not blank:
+    // the option before the last has more than its background's colors.
+    let list = h.access_node(h.get_widget(LIST).id()).unwrap();
+    let row = list
+        .children()
+        .nth(38)
+        .and_then(|o| o.bounding_box())
+        .expect("option 39 has bounds");
+    let img = h.render();
+    let mut colors = std::collections::HashSet::new();
+    for y in row.y0.ceil() as u32..row.y1.floor() as u32 {
+        for x in row.x0.ceil() as u32..(row.x0 + 120.0) as u32 {
+            if x < img.width() && y < img.height() {
+                colors.insert(img.get_pixel(x, y).0);
+            }
+        }
+    }
+    assert!(
+        colors.len() > 4,
+        "option 39 is drawn with its text after End ({} colors)",
+        colors.len()
+    );
+}
+
 #[test]
 fn screenshots_are_written_at_both_scales() {
     let dir = tempfile::tempdir().unwrap();

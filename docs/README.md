@@ -108,6 +108,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0024: App core for the GUI](adr/0024-app-core-for-the-gui.md): the document window, shared list and prompt state, the waker, the replace-range edit, the settings schema, and work moved off the input thread.
 - [ADR-0025: Define word offline, and the message catalog](adr/0025-lexicon-and-message-catalog.md): Open English WordNet and CMUdict in an fst and zstd file, and a Fluent-subset catalog with pseudo-locales.
 - [ADR-0026: OCR, and formats for students](adr/0026-ocr-and-student-formats.md): OCR of scanned pages (ocrs in process, Tesseract as the fallback), DAISY, PowerPoint, spreadsheets, archives, and web pages.
+- [ADR-0028: The Xilem GUI after Jon's session](adr/0028-xilem-gui-after-the-session.md): two ways to announce, every list option in the tree, and where the GUI's memory goes (a draft until the session).
 
 ## Interactive pages
 

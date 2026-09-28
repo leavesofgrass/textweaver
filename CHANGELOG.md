@@ -28,6 +28,13 @@ The default keys are now the quick navigation keys of NVDA's and JAWS's browse m
 
 See [docs/keyboard.md](docs/keyboard.md#what-changed).
 
+### W4s: the Xilem GUI before Jon's listening session
+
+- `textweaver-xilem --announce uia` (Windows) announces with UI Automation Notification events instead of the live region, for comparing the two in NVDA and JAWS. `announce = "uia"` in a `[gui]` table of `settings.toml` does the same. The default is still the live region.
+- List options and settings scrolled out of view are now in the accessibility tree, so a screen reader's object navigation reaches them: all 15 settings sections, and every option of a long list.
+- Lists and the settings form say "1 of 15" (they said "2 of" with no total), and rows scrolled into view are drawn instead of blank.
+- The UI Automation report checks both announcement paths and a long list scrolled to its end. See [ADR-0028](docs/adr/0028-xilem-gui-after-the-session.md), which also records where the GUI's memory goes (the graphics stack; the app itself is about 11 MB).
+
 ### Usability pass: the terminal reader and `tw`
 
 - A yes-or-no question ("Quit textweaver? y or n", "Delete this note? y or n", "Reload it? y or n", the Piper download and every other one) is now spoken even while textweaver is reading aloud. It went to the status line only, so a self-voicing user heard the reading go on and the next key press vanished into the question.
