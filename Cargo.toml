@@ -34,6 +34,7 @@ members = [
     "crates/textweaver-engines",
     "crates/textweaver-piper",
     "crates/textweaver-ocr",
+    "crates/textweaver-mathcat",
     "xtask",
 ]
 # The vendored Xilem and Masonry snapshot is its own workspace (ADR-0027).
@@ -118,6 +119,7 @@ textweaver-lexicon = { path = "crates/textweaver-lexicon" }
 textweaver-engines = { path = "crates/textweaver-engines" }
 textweaver-piper = { path = "crates/textweaver-piper", default-features = false }
 textweaver-ocr = { path = "crates/textweaver-ocr" }
+textweaver-mathcat = { path = "crates/textweaver-mathcat" }
 
 # text and formats
 ropey = "1.6"
@@ -259,6 +261,13 @@ rubato = "5.0"
 # for the small files kept in git.
 sha2 = "0.10"
 sha1 = "0.10"
+
+# Wave 4, Agent W4c1: MathCAT math speech (ADR-0029), behind the speech
+# crate's `mathcat` feature. Pinned exactly: 0.7.6 has no final release.
+# `include-zip` embeds MathCAT's rules, zipped at build time from the
+# crate's own Rules folder (nothing is downloaded). `no-unsafe` builds its
+# XML and XPath forks without unsafe code.
+mathcat = { version = "=0.7.6-rc.3", default-features = false, features = ["include-zip", "no-unsafe"] }
 
 # tests
 proptest = "1.11"

@@ -61,7 +61,9 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
 - [ADR-0027: Xilem GUI](0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, the accessibility checks, and what to send upstream.
   - Status: accepted.
 - [ADR-0028: The Xilem GUI after Jon's session](0028-xilem-gui-after-the-session.md): two ways to announce (a live region, or UI Automation notifications), every list option in the tree, and where the GUI's memory goes.
-  - Status: proposed (a first draft; finished after Jon's NVDA and JAWS session).
+  - Status: proposed (Jon's session answers recorded; W4a2 finishes it).
+- [ADR-0029: MathCAT speech](0029-mathcat-speech.md): MathCAT 0.7.6-rc.3 as a second math speech engine on its own thread, EPUB 3 MathML read as math, and braille waiting for MathCAT issue #827.
+  - Status: accepted, behind the `mathcat` feature; the owner approved its two dependency exceptions.
 
 ## Writing a new ADR
 

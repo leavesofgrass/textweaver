@@ -467,6 +467,10 @@ pub struct ReadingSettings {
     pub ocr_lang: String,
     /// Which OCR engine reads scanned pages.
     pub ocr_engine: OcrEngine,
+    /// Which engine speaks math: textweaver's own (`builtin`, the default)
+    /// or MathCAT (`mathcat` for ClearSpeak, `mathcat_simplespeak`) in
+    /// builds with MathCAT (ADR-0029).
+    pub math_engine: MathEngine,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -499,9 +503,26 @@ impl Default for ReadingSettings {
             ocr: true,
             ocr_lang: String::new(),
             ocr_engine: OcrEngine::Auto,
+            math_engine: MathEngine::Builtin,
             extra: toml::Table::new(),
         }
     }
+}
+
+/// `[reading] math_engine`: which engine speaks math (ADR-0029).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MathEngine {
+    /// textweaver's own math speech (ClearSpeak-style English, ADR-0018).
+    #[default]
+    #[serde(rename = "builtin")]
+    Builtin,
+    /// MathCAT in ClearSpeak, in the document's language. Needs a build
+    /// with MathCAT; otherwise textweaver's own speech is used.
+    #[serde(rename = "mathcat")]
+    MathCat,
+    /// MathCAT in SimpleSpeak.
+    #[serde(rename = "mathcat_simplespeak")]
+    MathCatSimpleSpeak,
 }
 
 /// `[reading] citations`: what continuous reading does with a citation.
@@ -1558,6 +1579,45 @@ mod tests {
         let err = err.unwrap_or_default();
         assert!(err.contains("normalization.math_verbosity"), "{err}");
         assert!(err.contains("normalization.asciimath_delimiter"), "{err}");
+    }
+
+    /// The math engine (W4c1): textweaver's own by default, stored only
+    /// when changed, and a bad value costs only itself.
+    #[test]
+    fn math_engine_default_round_trip_and_bad_value() {
+        let s = Settings::default();
+        assert_eq!(s.reading.math_engine, MathEngine::Builtin);
+        assert!(!s.to_minimal_toml().unwrap().contains("math_engine"));
+
+        let (_d, store) = store();
+        for (value, engine) in [
+            ("mathcat", MathEngine::MathCat),
+            ("mathcat_simplespeak", MathEngine::MathCatSimpleSpeak),
+            ("builtin", MathEngine::Builtin),
+        ] {
+            write(&store, &format!("[reading]\nmath_engine = \"{value}\"\n"));
+            let (s, err) = store.load();
+            assert!(err.is_none(), "{err:?}");
+            assert_eq!(s.reading.math_engine, engine);
+        }
+        write(
+            &store,
+            "[reading]\nmath_engine = \"mathcat\"\nwrap_navigation = true\n",
+        );
+        let (s, _) = store.load();
+        store.save(&s).unwrap();
+        assert_eq!(store.load().0, s);
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("math_engine = \"mathcat\""), "{text}");
+
+        write(
+            &store,
+            "[reading]\nmath_engine = \"eloquent\"\nwrap_navigation = true\n",
+        );
+        let (s, err) = store.load();
+        assert_eq!(s.reading.math_engine, MathEngine::Builtin);
+        assert!(s.reading.wrap_navigation);
+        assert!(err.unwrap_or_default().contains("reading.math_engine"));
     }
 
     #[test]

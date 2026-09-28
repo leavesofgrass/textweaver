@@ -36,10 +36,15 @@ omnivox = []
 speechd = []
 # Wave 2: the `tts` crate (WinRT, AVSpeech, speech-dispatcher).
 tts-crate = []
+# Math spoken by MathCAT (ClearSpeak and SimpleSpeak) when the math engine
+# setting asks for it (ADR-0029). Off, that setting reads math with
+# textweaver-math, as always.
+mathcat = ["dep:textweaver-mathcat"]
 
 [dependencies]
 textweaver-core.workspace = true
 textweaver-math.workspace = true
+textweaver-mathcat = { workspace = true, optional = true }
 bitflags.workspace = true
 serde.workspace = true
 thiserror.workspace = true

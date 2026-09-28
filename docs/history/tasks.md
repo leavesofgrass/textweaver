@@ -951,6 +951,7 @@ This plan folds in the Fable review (`docs/research/wave4-plan-review.md`), adop
    - Do speech first. Add braille only if MathCAT issue #827 (a panic in `GetNavigationBraille` in no-unsafe builds) is closed, because this workspace denies unsafe code.
    - EPUB 3 MathML is W4c1's; W4c2 leaves the EPUB loader alone.
    - ADR 0029.
+   - **Status (W4c1, Sunday, September 27, 2026):** done on `wave4/c1-mathcat`, not merged. MathCAT 0.7.6-rc.3 speech (ClearSpeak and SimpleSpeak) behind the off-by-default `mathcat` feature and `[reading] math_engine`, EPUB 3 MathML read as math, ADR-0029. Braille waits for #827. Two dependency checks need Jon's decision before merge: the `bzip2-1.0.6` licence (libbz2-rs-sys) and the unmaintained yaml-rust, both from MathCAT itself.
 4. **W4a1, GUI accessibility first, then reading aids and edit mode (P1).** In this order:
    1. The direct `UiaRaiseNotificationEvent` option for JAWS.
    2. The fix for clipped options in `ChoiceList` and `SettingsGrid`, so options scrolled out of view stay in the accessibility tree. This is a listed exception to W4a2 owning the dialogs.

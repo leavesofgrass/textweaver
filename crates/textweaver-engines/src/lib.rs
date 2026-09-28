@@ -211,6 +211,17 @@ pub fn apple_preference(settings: &Settings) -> Option<&'static str> {
     settings.speech.apple.backend.backend_id()
 }
 
+/// The speech crate's math engine for `[reading] math_engine`.
+fn math_engine(engine: textweaver_store::MathEngine) -> textweaver_speech::normalize::MathEngine {
+    use textweaver_speech::normalize::MathEngine as Speech;
+    use textweaver_store::MathEngine as Store;
+    match engine {
+        Store::Builtin => Speech::Builtin,
+        Store::MathCat => Speech::MathCatClearSpeak,
+        Store::MathCatSimpleSpeak => Speech::MathCatSimpleSpeak,
+    }
+}
+
 /// The speech service configuration the settings describe.
 pub fn service_config(settings: &Settings) -> ServiceConfig {
     let sp = &settings.speech;
@@ -245,6 +256,7 @@ pub fn service_config(settings: &Settings) -> ServiceConfig {
             math: norm.math,
             math_verbosity: norm.math_verbosity,
             asciimath_delimiter: norm.asciimath_delimiter,
+            math_engine: math_engine(settings.reading.math_engine),
             community_lexicon: CommunityLexiconConfig {
                 enabled: lexicon.enabled,
                 dir: lexicon.dir.clone(),
@@ -380,5 +392,11 @@ mod tests {
         let c = service_config(&s);
         assert_eq!(c.normalize.math_verbosity, textweaver_core::Verbosity::Low);
         assert_eq!(c.normalize.asciimath_delimiter, Some('`'));
+        assert_eq!(c.normalize.math_engine, speech_defaults.math_engine);
+        s.reading.math_engine = textweaver_store::MathEngine::MathCatSimpleSpeak;
+        assert_eq!(
+            service_config(&s).normalize.math_engine,
+            textweaver_speech::normalize::MathEngine::MathCatSimpleSpeak
+        );
     }
 }
