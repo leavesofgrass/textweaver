@@ -461,8 +461,8 @@ public static class TwXUia
         ((TogglePattern)e.GetCurrentPattern(TogglePattern.Pattern)).Toggle();
     }
 
-    /// Presses the button named `name`, or `name` followed by its key
-    /// ("Play, Space": each button's name ends with its shortcut).
+    /// Presses the button named `name` (or, for older builds, `name`
+    /// followed by its key, as in "Play, Space").
     public static bool Press(AutomationElement root, string name)
     {
         var b = Find(root, ControlType.Button, name);
@@ -479,7 +479,8 @@ public static class TwXUia
         return true;
     }
 
-    /// Buttons whose name does not say their key ("Open, Control O").
+    /// Buttons with no AcceleratorKey (their keyboard shortcut from the
+    /// keymap), or whose name carries the key too.
     public static List<string> WithoutKeys(AutomationElement root)
     {
         var missing = new List<string>();
@@ -489,7 +490,9 @@ public static class TwXUia
             var n = e.Current.Name;
             // The window frame's own buttons are the system's.
             if (n == "Minimize" || n == "Maximize" || n == "Restore" || n == "Close" || n == "System") continue;
-            if (!n.Contains(", ")) missing.Add(n);
+            var key = e.Current.AcceleratorKey;
+            if (string.IsNullOrEmpty(key)) missing.Add(n + " (no AcceleratorKey)");
+            else if (n.Contains(", ")) missing.Add(n + " (the key is in the name)");
         }
         return missing;
     }
@@ -682,13 +685,14 @@ try {
     Say "### Controls (UIA control view; the document's text runs are left out)"
     Say ""
     Fence ([TwXUia]::Tree($window))
-    # Every button says its key with its name ("Open, Control O").
+    # Every button has its key from the keymap as its AcceleratorKey, and a
+    # name that is its label only.
     $noKeys = [TwXUia]::WithoutKeys($window)
     if ($noKeys.Count -gt 0) {
-        Say "- Buttons that do not name their key: $($noKeys -join '; ')"
-        $failures.Add('a button does not name its key')
+        Say "- Buttons without their key as AcceleratorKey: $($noKeys -join '; ')"
+        $failures.Add('a button has no AcceleratorKey')
     } else {
-        Say "- Every button names its key."
+        Say "- Every button has its key as its AcceleratorKey, and its label as its name."
     }
     Say ""
 

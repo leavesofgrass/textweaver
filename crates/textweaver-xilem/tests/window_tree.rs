@@ -65,21 +65,19 @@ fn every_control_has_a_role_and_a_name() {
     let h = harness(&app);
     let buttons = names_of(&h, Role::Button);
     for b in [
-        "Play, ",
-        "Stop, ",
-        "Next sentence, ",
-        "Previous sentence, ",
-        "Open, ",
-        "Font, ",
-        "Settings, ",
-        "Commands, ",
-        "Slower, ",
-        "Faster, ",
+        "Play",
+        "Stop",
+        "Next sentence",
+        "Previous sentence",
+        "Open",
+        "Font",
+        "Edit",
+        "Settings",
+        "Commands",
+        "Slower",
+        "Faster",
     ] {
-        assert!(
-            buttons.iter().any(|n| n.starts_with(b)),
-            "{b} in {buttons:?}"
-        );
+        assert!(buttons.contains(&b.to_owned()), "{b} in {buttons:?}");
     }
     assert_eq!(names_of(&h, Role::Toolbar), vec!["Reading".to_owned()]);
     assert_eq!(names_of(&h, Role::Document), vec!["Document".to_owned()]);
@@ -90,17 +88,29 @@ fn every_control_has_a_role_and_a_name() {
     assert!(status[0].contains("wpm"), "{status:?}");
 }
 
-/// Every button names its key from the keymap, spoken in its name and
-/// written on screen (the owner's session 2): "Open, Control O" and
-/// "Open… (Ctrl+O)".
+/// Every button's key comes from the keymap: its keyboard shortcut
+/// property (UI Automation's AcceleratorKey), which NVDA and JAWS say when
+/// their "report shortcut keys" setting is on, and the text on screen,
+/// "Open… (Ctrl+O)". The name is the label only: the owner found the key in
+/// the name wordy.
 #[test]
-fn every_button_names_its_key_from_the_keymap() {
+fn every_button_has_its_key_from_the_keymap() {
     use textweaver_app::keymap::ActionId;
     use textweaver_xilem::widgets::ActionButton;
     let dir = tempfile::tempdir().unwrap();
     let app = app_with_sample(dir.path());
     let h = harness(&app);
-    let buttons = names_of(&h, Role::Button);
+    let mut shortcuts = std::collections::HashMap::new();
+    let mut stack = vec![h.access_tree().state().root()];
+    while let Some(n) = stack.pop() {
+        stack.extend(n.children());
+        if n.role() == Role::Button {
+            shortcuts.insert(
+                n.label().unwrap_or_default(),
+                n.data().keyboard_shortcut().map(str::to_owned),
+            );
+        }
+    }
     for (name, action) in [
         ("Open", ActionId::Open),
         ("Font", ActionId::ChooseFont),
@@ -114,22 +124,21 @@ fn every_button_names_its_key_from_the_keymap() {
         ("Slower", ActionId::RateDown),
         ("Faster", ActionId::RateUp),
     ] {
-        let (written, spoken) = gui::shortcut_for(&app, action);
-        assert!(!written.is_empty() && !spoken.is_empty(), "{action:?}");
+        let written = gui::shortcut_for(&app, action);
+        assert!(!written.is_empty(), "{action:?}");
         // Never "the command palette": each has a key of its own.
         assert!(!app.keymap().chords_for(action).is_empty(), "{action:?}");
-        let want = format!("{name}, {spoken}");
-        assert!(buttons.contains(&want), "{want} in {buttons:?}");
+        assert_eq!(
+            shortcuts.get(name),
+            Some(&Some(written.clone())),
+            "{name}: {shortcuts:?}"
+        );
     }
-    // Spoken as words, not symbols, for speech and the Braille display.
-    assert!(
-        buttons.contains(&"Open, Control O".to_owned()),
-        "{buttons:?}"
-    );
-    // On screen, the written form.
-    let b = ActionButton::new("Open…").with_shortcut("Ctrl+O", "Control O");
+    assert_eq!(shortcuts.get("Open"), Some(&Some("Ctrl+O".to_owned())));
+    // On screen, the written form; the name is the label alone.
+    let b = ActionButton::new("Open…").with_shortcut("Ctrl+O");
     assert_eq!(b.shown_text(), "Open… (Ctrl+O)");
-    assert_eq!(b.name(), "Open, Control O");
+    assert_eq!(b.name(), "Open");
 }
 
 #[test]

@@ -51,14 +51,19 @@ The existing `[reading_aids.font]` settings (family, size in points, weight) alr
 
 ### A shortcut on every control
 
-Every button names its key from the keymap (`named_key_in`, then `written_text` and `spoken_text`), never a fixed string:
+Every button has its key from the keymap (`named_key_in`, then `written_text`), never a fixed string:
 
-- **In its name, spoken:** "Open, Control O", "Faster, plus". The name leaves out the label's ellipsis. Screen readers do not all read UI Automation's accelerator key property, so the key is in the name, and the property is no longer set, so NVDA does not say it twice.
-- **On screen, written:** "Open… (Ctrl+O)".
-- It is the app's main key: the single key while single-key shortcuts are on ("Play, Space"), a chord while they are off ("Play, Control Shift Space"). F9 renames the buttons at once.
-- The Font button is now the `choose_font` command, so it has a key like the others. The settings dialog's Close button names Escape, the dialog's own key.
+- **In the node's keyboard shortcut property:** "Ctrl+O", which is UI Automation's AcceleratorKey and AT-SPI's equivalent. NVDA and JAWS say it after the name when their "report shortcut keys" setting is on, so each listener chooses whether to hear it.
+- **The name is the label only:** "Open", "Faster", without the label's ellipsis.
+- **On screen, written:** "Open… (Ctrl+O)". F1 help and the command palette list every key too.
+- It is the app's main key: the single key while single-key shortcuts are on ("Space" for Play), a chord while they are off ("Ctrl+Shift+Space"). F9 updates every button at once.
+- The Font button is now the `choose_font` command, so it has a key like the others. The settings dialog's Close button has Escape, the dialog's own key.
 
-The new keys pass the keymap's conflict, reachability, layout, and WCAG 2.1.4 tests (all are chords). The UI Automation report fails if a button's name does not include its key.
+**Changed after the first version (the owner, Monday, September 28, 2026).** The first version put the key in the name, spoken ("Open, Control O"), because not every screen reader reads the accelerator key property, and left the property unset so NVDA would not say the key twice. The owner found the key in the name wordy. The property leaves it to the screen reader's setting, so the name is the label again.
+
+**AccessKit did not pass the property on.** AccessKit has the keyboard shortcut property, but its Windows adapter (0.35.1) never gave it to UI Automation, and its AT-SPI and macOS adapters do not either. So `third_party/accesskit_windows` is a vendored copy of the Windows adapter that answers UI Automation's AcceleratorKey with it (two lines in its property table; see its `TEXTWEAVER.md` and `textweaver.patch`), patched in through `[patch.crates-io]` in the root `Cargo.toml`. It is meant to go upstream; on Linux and macOS the key is on screen but not yet in the accessibility tree.
+
+The new keys pass the keymap's conflict, reachability, layout, and WCAG 2.1.4 tests (all are chords). The UI Automation report fails if a button has no AcceleratorKey, or has its key in its name; it passes, with "Open" having AcceleratorKey "Ctrl+O".
 
 ## Edit mode
 
@@ -87,6 +92,7 @@ Tested in the harness (`tests/edit_mode.rs`): the role and read-only state in an
 
 - One small `unsafe` module more in the GUI crate (`console`), with three console calls and one message box; Windows only.
 - `rfd` joins the dependencies, in a "W4a3" block in the root `Cargo.toml`.
+- A vendored `accesskit_windows` with one change, until AccessKit gives the keyboard shortcut to UI Automation itself.
 - Five window-only commands, and the GUI's rate chords moved to F11 and Shift+F11.
 - The GUI links the app's `publish` stack (citations, export, preview), for writing.
 - `DocAction` is no longer `Copy`: it carries typed text.

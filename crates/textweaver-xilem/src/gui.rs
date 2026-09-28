@@ -329,13 +329,13 @@ fn styled_button(
     ids: &mut HashMap<WidgetId, ActionId>,
     text_color: Option<masonry::peniko::Color>,
 ) -> NewWidget<ActionButton> {
-    let (written, spoken) = app.map(|a| shortcut_for(a, action)).unwrap_or_default();
+    let shortcut = app.map(|a| shortcut_for(a, action)).unwrap_or_default();
     let help = app.map_or_else(
         || action.help().to_owned(),
         |a| textweaver_app::action_help(&a.catalog(), action),
     );
     let mut b = ActionButton::new(text)
-        .with_shortcut(written, spoken)
+        .with_shortcut(shortcut)
         .with_description(help);
     if let Some(c) = text_color {
         b = b.with_text_color(c);
@@ -345,16 +345,13 @@ fn styled_button(
     w
 }
 
-/// A control's shortcut for `action`, from the keymap (`named_key`): as
-/// written for the screen ("Ctrl+O") and as spoken for its name ("Control
-/// O"). The main key, which is the single key while single-key shortcuts
-/// are on ("Space" for Play) and a chord while they are off.
-pub fn shortcut_for(app: &App, action: ActionId) -> (String, String) {
+/// A control's shortcut for `action`, from the keymap (`named_key`), as
+/// written ("Ctrl+O"): the button's keyboard shortcut and its text on
+/// screen. The main key, which is the single key while single-key
+/// shortcuts are on ("Space" for Play) and a chord while they are off.
+pub fn shortcut_for(app: &App, action: ActionId) -> String {
     let named = textweaver_app::named_key_in(&app.catalog(), app.keymap(), action);
-    (
-        textweaver_app::written_text(&named).into_owned(),
-        textweaver_app::spoken_text(&named).into_owned(),
-    )
+    textweaver_app::written_text(&named).into_owned()
 }
 
 fn panel(p: &Palette, pad_v: f64, pad_h: f64) -> PropertySet {
@@ -552,7 +549,7 @@ pub fn settings_dialog(
     );
     let close = NewWidget::new(
         ActionButton::new("Close")
-            .with_shortcut(escape.to_string(), escape.spoken())
+            .with_shortcut(escape.to_string())
             .with_description("Close the settings. Every change is already saved."),
     );
     let close_id = close.id();
@@ -884,10 +881,10 @@ impl Gui {
             self.char_keys = Some(char_keys);
             let root = ctx.render_root(self.window_id);
             for (id, action) in &self.buttons.by_id {
-                let (written, spoken) = shortcut_for(&self.app, *action);
+                let shortcut = shortcut_for(&self.app, *action);
                 root.edit_widget(*id, |mut w| {
                     let mut b = w.downcast::<ActionButton>();
-                    ActionButton::set_shortcut(&mut b, written, spoken);
+                    ActionButton::set_shortcut(&mut b, shortcut);
                 });
             }
         }

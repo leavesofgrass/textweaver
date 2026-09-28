@@ -271,18 +271,16 @@ pub struct Pressed;
 /// The visible text is a label child hidden from screen readers, so the
 /// name is said once.
 ///
-/// The shortcut is part of the name, spoken ("Open, Control O"), and of the
-/// text on screen, written ("Open… (Ctrl+O)"): the owner's session 2 asked
-/// for every control's key to be heard with its name, and a keyboard
-/// shortcut property alone is not read by every screen reader. It is not
-/// also set as the node's keyboard shortcut, so NVDA does not say it twice.
+/// The shortcut is the node's keyboard shortcut property (UI Automation's
+/// AcceleratorKey, AT-SPI's), which NVDA and JAWS say when their "report
+/// shortcut keys" setting is on, and it is on screen, written ("Open…
+/// (Ctrl+O)"). The name is the label only ("Open"): the owner found the key
+/// in the name wordy (Monday, September 28, 2026).
 pub struct ActionButton {
     child: WidgetPod<Label>,
     label: String,
-    /// The shortcut as written ("Ctrl+O"), for the screen.
+    /// The shortcut as written ("Ctrl+O").
     shortcut: String,
-    /// The shortcut as spoken ("Control O"), for the name.
-    spoken: String,
     description: String,
 }
 
@@ -294,7 +292,6 @@ impl ActionButton {
             child: NewWidget::new(button_text(label.clone())).to_pod(),
             label,
             shortcut: String::new(),
-            spoken: String::new(),
             description: String::new(),
         }
     }
@@ -308,15 +305,9 @@ impl ActionButton {
         }
     }
 
-    /// The accessible name: the label without a trailing ellipsis, then
-    /// the shortcut as spoken ("Open, Control O").
+    /// The accessible name: the label without a trailing ellipsis ("Open").
     pub fn name(&self) -> String {
-        let base = self.label.trim_end_matches('…').trim_end();
-        if self.spoken.is_empty() {
-            base.to_owned()
-        } else {
-            format!("{base}, {}", self.spoken)
-        }
+        self.label.trim_end_matches('…').trim_end().to_owned()
     }
 
     /// Draws the text in `color` (the primary button's text on the
@@ -335,28 +326,22 @@ impl ActionButton {
         child.insert_prop(masonry::properties::ContentColor::new(color));
     }
 
-    /// Adds the keyboard shortcut, as written ("Ctrl+O", shown) and as
-    /// spoken ("Control O", in the name). Call it before
+    /// Adds the keyboard shortcut, as written ("Ctrl+O"): the node's
+    /// keyboard shortcut, and on screen. Call it before
     /// [`with_text_color`](Self::with_text_color).
-    pub fn with_shortcut(mut self, written: impl Into<String>, spoken: impl Into<String>) -> Self {
-        self.shortcut = written.into();
-        self.spoken = spoken.into();
+    pub fn with_shortcut(mut self, shortcut: impl Into<String>) -> Self {
+        self.shortcut = shortcut.into();
         self.child = NewWidget::new(button_text(self.shown_text())).to_pod();
         self
     }
 
     /// Changes the shortcut (single-key shortcuts turned on or off).
-    pub fn set_shortcut(
-        this: &mut WidgetMut<'_, Self>,
-        written: impl Into<String>,
-        spoken: impl Into<String>,
-    ) {
-        let (written, spoken) = (written.into(), spoken.into());
-        if this.widget.shortcut == written && this.widget.spoken == spoken {
+    pub fn set_shortcut(this: &mut WidgetMut<'_, Self>, shortcut: impl Into<String>) {
+        let shortcut = shortcut.into();
+        if this.widget.shortcut == shortcut {
             return;
         }
-        this.widget.shortcut = written;
-        this.widget.spoken = spoken;
+        this.widget.shortcut = shortcut;
         let text = this.widget.shown_text();
         {
             let mut child = this.ctx.get_mut(&mut this.widget.child);
@@ -503,6 +488,9 @@ impl Widget for ActionButton {
         node: &mut Node,
     ) {
         node.set_label(self.name());
+        if !self.shortcut.is_empty() {
+            node.set_keyboard_shortcut(self.shortcut.as_str());
+        }
         if !self.description.is_empty() {
             node.set_description(self.description.as_str());
         }

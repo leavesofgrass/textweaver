@@ -36,8 +36,9 @@ members = [
     "crates/textweaver-mathcat",
     "xtask",
 ]
-# The vendored Xilem and Masonry snapshot is its own workspace (ADR-0027).
-exclude = ["third_party/xilem"]
+# The vendored Xilem and Masonry snapshot is its own workspace (ADR-0027);
+# the vendored accesskit_windows is patched in below (ADR-0033).
+exclude = ["third_party/xilem", "third_party/accesskit_windows"]
 default-members = [
     "crates/textweaver-core",
     "crates/textweaver-text",
@@ -389,3 +390,7 @@ lto = "fat"
 # vendored Masonry (ADR-0027). No other crate in the workspace uses Parley.
 [patch.crates-io]
 parley = { path = "third_party/xilem/parley" }
+# Wave 4, Agent W4a3: AccessKit's Windows adapter 0.35.1 with the keyboard
+# shortcut given to UI Automation as AcceleratorKey, so screen readers can
+# say a button's key (ADR-0033, third_party/accesskit_windows/TEXTWEAVER.md).
+accesskit_windows = { path = "third_party/accesskit_windows" }
