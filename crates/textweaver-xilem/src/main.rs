@@ -132,6 +132,7 @@ fn main() {
                 list: None,
                 settings: false,
                 home: args.home.clone(),
+                aids: false,
             };
             if let Err(e) = screenshot(&o) {
                 eprintln!("textweaver-xilem: {e}");

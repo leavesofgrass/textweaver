@@ -44,8 +44,9 @@ use textweaver_app::{
 };
 
 use crate::dialog::{self, ChoiceList, DialogAction, Modal};
-use crate::document::{DocAction, DocFont, DocModel, DocState, DocumentView};
+use crate::document::{DocAction, DocAids, DocFont, DocModel, DocState, DocumentView};
 use crate::keys;
+use crate::rsvp::{RsvpShown, RsvpView};
 use crate::settings_dialog::{self, FormAction, FormChange, SettingsForm, SettingsGrid};
 use crate::setup::{self, Options};
 use crate::theme::{self, Palette};
@@ -84,6 +85,8 @@ pub const LIST: WidgetTag<ChoiceList> = WidgetTag::named("tw-list");
 pub const SECTIONS: WidgetTag<ChoiceList> = WidgetTag::named("tw-settings-sections");
 /// The settings dialog's form.
 pub const FORM: WidgetTag<SettingsGrid> = WidgetTag::named("tw-settings-form");
+/// The RSVP panel, under the document.
+pub const RSVP: WidgetTag<RsvpView> = WidgetTag::named("tw-rsvp");
 
 /// The first wait between ticks, before the app says (`App::tick_interval`).
 const FIRST_TICK: Duration = Duration::from_millis(250);
@@ -173,6 +176,23 @@ struct Shown {
     position: String,
     reading: bool,
     title: String,
+    /// The reading aids' settings the model's spans were built with.
+    aid_spans: Option<AidSpansKey>,
+    aids: DocAids,
+    rsvp: Option<RsvpShown>,
+}
+
+/// What the reading aids' spans depend on: bionic reading (and its
+/// options) and difficult words.
+type AidSpansKey = (
+    bool,
+    textweaver_app::store::reading_aids::BionicOptions,
+    bool,
+);
+
+fn aid_spans_key(app: &App) -> AidSpansKey {
+    let a = &app.settings().reading_aids;
+    (a.bionic, a.bionic_options.clone(), a.difficult_words)
 }
 
 /// The settings dialog while it is open.
@@ -359,6 +379,9 @@ pub fn build_tree(
             .with_edit_role(experiments.edit_role),
     )
     .with_tag(DOC);
+    // RSVP, hidden until it is turned on: its own strip under the document,
+    // so the word never covers the text or the caret.
+    let rsvp = NewWidget::new(RsvpView::new(p.clone())).with_tag(RSVP);
 
     // Toolbar: Play/Pause is the primary action.
     let play = styled_button(
@@ -418,6 +441,7 @@ pub fn build_tree(
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .with_fixed(header)
         .with(doc, 1.0)
+        .with_fixed(rsvp)
         .with_fixed(toolbar)
         .with_fixed(status)
         .with_fixed(announcer);
@@ -567,6 +591,7 @@ pub fn apply_palette(host: &mut impl Host, p: &Palette) {
         ActionButton::set_text_color(&mut b, theme::color(p.on_accent));
     });
     host.edit(DOC, |mut d| DocumentView::set_palette(&mut d, p.clone()));
+    host.edit(RSVP, |mut r| RsvpView::set_palette(&mut r, p.clone()));
 }
 
 /// Where the driver edits widgets: the live window or the test harness.
@@ -603,9 +628,11 @@ impl<RW: Widget> Host for masonry_testing::TestHarness<RW> {
 /// The document view's model for the window `w` of the session's document.
 pub fn model_for(app: &App, w: CharRange) -> Option<DocModel> {
     let s = app.session()?;
+    let mut spans = window::window_spans(&s.doc, w);
+    spans.extend(window::aid_spans(app, w));
     Some(DocModel {
         paragraphs: window::window_paragraphs(&s.doc, w),
-        spans: window::window_spans(&s.doc, w),
+        spans,
         doc_len: s.doc.len_chars(),
         title: s.title.clone(),
     })
@@ -663,14 +690,21 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             // The app's window follows the focus: it slides while reading
             // and recentres on jumps or when the text changed.
             let change = w.follow_session(s, focus);
-            if new_doc || change != WindowChange::Unchanged {
+            // Bionic reading or difficult words turned on or off: the same
+            // text with new spans.
+            let key = aid_spans_key(app);
+            let aids_changed = shown.aid_spans.as_ref() != Some(&key);
+            if new_doc || aids_changed || change != WindowChange::Unchanged {
                 // A slide keeps the runs that stay (and the screen reader's
                 // place on them); a new document or a jump replaces them.
                 let slide = !new_doc
                     && matches!(
                         change,
-                        WindowChange::Forward { .. } | WindowChange::Backward { .. }
+                        WindowChange::Forward { .. }
+                            | WindowChange::Backward { .. }
+                            | WindowChange::Unchanged
                     );
+                shown.aid_spans = Some(key);
                 if let Some(model) = model_for(app, w.range()) {
                     host.edit(DOC, |mut d| {
                         if slide {
@@ -694,6 +728,21 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             }
             shown.window = Some(w);
         }
+    }
+    // Text spacing and the ruler, drawn by the view.
+    let aids = DocAids {
+        spacing: (&app.settings().reading_aids.spacing).into(),
+        ruler: app.ruler(),
+    };
+    if aids != shown.aids {
+        host.edit(DOC, |mut d| DocumentView::set_aids(&mut d, aids));
+        shown.aids = aids;
+    }
+    // RSVP: the panel under the document.
+    let rsvp = RsvpShown::from_app(app);
+    if rsvp != shown.rsvp {
+        host.edit(RSVP, |mut r| RsvpView::set_shown(&mut r, rsvp.clone()));
+        shown.rsvp = rsvp;
     }
     let state = state_for(app);
     if state != shown.state {

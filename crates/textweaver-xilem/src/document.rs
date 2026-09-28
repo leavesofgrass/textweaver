@@ -38,6 +38,7 @@ use masonry::kurbo::{Affine, Axis, Point, Rect, RoundedRect, Size, Stroke, Vec2}
 use masonry::layout::{LenReq, Length};
 use masonry::parley::style::{FontFamily, FontStyle, FontWeight, LineHeight};
 use masonry::parley::{Affinity, Cursor, FontContext, Layout, LayoutContext, Selection};
+use textweaver_app::aids::{RowMark, RulerMode, RulerSettings, TextSpacing, ViewRow, ruler_rows};
 use textweaver_app::core::{CharPos, CharRange};
 
 use crate::caret;
@@ -82,6 +83,19 @@ impl Default for DocFont {
             bold: false,
         }
     }
+}
+
+/// The reading aids the view draws itself (ADR-0022): text spacing and the
+/// reading ruler. Bionic reading and difficult words arrive as styled
+/// spans in the model. All of them are drawn only; the text runs a screen
+/// reader gets do not change.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct DocAids {
+    /// Line height, paragraph, letter, and word spacing, in multiples of
+    /// the font size.
+    pub spacing: TextSpacing,
+    /// Off, the current line, or the ruler band (and the mask around it).
+    pub ruler: RulerSettings,
 }
 
 /// What the document view shows: the window's text and its styles.
@@ -137,6 +151,7 @@ struct ParaLayout {
 pub struct DocumentView {
     palette: Palette,
     font: DocFont,
+    aids: DocAids,
     model: DocModel,
     state: DocState,
     /// Speech-cursor style: select the spoken word instead of a caret.
@@ -203,6 +218,7 @@ impl DocumentView {
         DocumentView {
             palette,
             font,
+            aids: DocAids::default(),
             model: DocModel::default(),
             state: DocState::default(),
             select_spoken: false,
@@ -377,6 +393,28 @@ impl DocumentView {
         }
     }
 
+    /// Changes the reading aids: new spacing lays the text out again; a
+    /// new ruler is only drawn.
+    pub fn set_aids(this: &mut WidgetMut<'_, Self>, aids: DocAids) {
+        let w = &mut *this.widget;
+        if w.aids == aids {
+            return;
+        }
+        let relayout = w.aids.spacing != aids.spacing;
+        w.aids = aids;
+        if relayout {
+            w.reset_caches();
+            w.follow = true;
+            this.ctx.request_layout();
+        }
+        this.ctx.request_render();
+    }
+
+    /// The reading aids in use.
+    pub fn aids(&self) -> DocAids {
+        self.aids
+    }
+
     /// The current state.
     pub fn state(&self) -> DocState {
         self.state
@@ -420,13 +458,24 @@ impl DocumentView {
     ) -> ParaLayout {
         let p = &self.model.paragraphs[i];
         let size = self.font.size;
+        let sp = self.aids.spacing;
         let text = p.text.as_str();
         let mut b = lcx.ranged_builder(fcx, text, 1.0, true);
         b.push_default(StyleProperty::FontFamily(FontFamily::Source(
             self.font.family.clone().into(),
         )));
         b.push_default(StyleProperty::FontSize(size));
-        b.push_default(StyleProperty::LineHeight(LineHeight::FontSizeRelative(1.5)));
+        b.push_default(StyleProperty::LineHeight(LineHeight::FontSizeRelative(
+            sp.line_height,
+        )));
+        // Letter and word spacing are extra space in multiples of the size
+        // (WCAG 1.4.12), so they grow with headings too.
+        if sp.letter_spacing > 0.0 {
+            b.push_default(StyleProperty::LetterSpacing(size * sp.letter_spacing));
+        }
+        if sp.word_spacing > 0.0 {
+            b.push_default(StyleProperty::WordSpacing(size * sp.word_spacing));
+        }
         b.push_default(StyleProperty::Brush(BrushIndex(B_TEXT)));
         if self.font.bold {
             b.push_default(StyleProperty::FontWeight(FontWeight::BOLD));
@@ -434,8 +483,9 @@ impl DocumentView {
         if let Some(level) = p.heading {
             b.push_default(StyleProperty::FontSize(size * Self::heading_scale(level)));
             b.push_default(StyleProperty::FontWeight(FontWeight::BOLD));
+            // Headings are set tighter than body text, in proportion.
             b.push_default(StyleProperty::LineHeight(LineHeight::FontSizeRelative(
-                1.25,
+                sp.line_height * 1.25 / 1.5,
             )));
             b.push_default(StyleProperty::Brush(BrushIndex(
                 B_H1 + usize::from(level - 1),
@@ -474,6 +524,13 @@ impl DocumentView {
                 SpanStyle::Italic => b.push(StyleProperty::FontStyle(FontStyle::Italic), a..e),
                 SpanStyle::Underline => b.push(StyleProperty::Underline(true), a..e),
                 SpanStyle::Strikethrough => b.push(StyleProperty::Strikethrough(true), a..e),
+                SpanStyle::Bionic => b.push(StyleProperty::FontWeight(FontWeight::BOLD), a..e),
+                SpanStyle::Difficult => {
+                    // A thicker underline than a link's, in the text's own
+                    // colour: the shape carries the meaning, not a colour.
+                    b.push(StyleProperty::Underline(true), a..e);
+                    b.push(StyleProperty::UnderlineSize(Some(size * 0.1)), a..e);
+                }
             }
         }
         let mut layout = b.build(text);
@@ -489,7 +546,12 @@ impl DocumentView {
         } else {
             0.0
         };
-        let after = if text.is_empty() { 0.0 } else { em * 0.45 };
+        // Paragraph spacing, in multiples of the size.
+        let after = if text.is_empty() {
+            0.0
+        } else {
+            em * f64::from(sp.paragraph_spacing)
+        };
         ParaLayout {
             layout,
             height: top_gap + text_h + after,
@@ -536,12 +598,13 @@ impl DocumentView {
                 // An estimate: average glyph width about half the size.
                 let p = &self.model.paragraphs[i];
                 let em = f64::from(self.font.size);
+                let sp = self.aids.spacing;
                 let per_line = (self.column / (em * 0.5)).max(10.0);
                 let lines = (p.len_chars() as f64 / per_line).ceil().max(1.0);
                 if p.text.is_empty() {
                     em * 0.6
                 } else {
-                    lines * em * 1.5 + em * 0.45
+                    lines * em * f64::from(sp.line_height) + em * f64::from(sp.paragraph_spacing)
                 }
             }
         }
@@ -669,6 +732,68 @@ impl DocumentView {
         }
     }
 
+    /// The visual lines on screen, as the reading ruler counts rows: each
+    /// line's chars (document positions) and paragraph, and its top and
+    /// bottom in the view.
+    fn rows_on_screen(&self) -> Vec<(ViewRow, f64, f64)> {
+        let mut rows = Vec::new();
+        for &(i, y) in &self.visible {
+            let Some(pl) = self.layouts.get(&i) else {
+                continue;
+            };
+            let p = &self.model.paragraphs[i];
+            let top = y + pl.top_gap;
+            let mut any = false;
+            for line in pl.layout.lines() {
+                let tr = line.text_range();
+                let a = p.start.0 + caret::char_of(&p.text, tr.start);
+                let b = p.start.0 + caret::char_of(&p.text, tr.end);
+                let m = line.metrics();
+                rows.push((
+                    ViewRow {
+                        range: CharRange::new(a, b),
+                        line: i,
+                    },
+                    top + f64::from(m.min_coord),
+                    top + f64::from(m.max_coord),
+                ));
+                any = true;
+            }
+            if !any {
+                // A blank line: one empty row at its position.
+                let h = f64::from(self.font.size) * 1.2;
+                rows.push((
+                    ViewRow {
+                        range: CharRange::new(p.start.0, p.start.0),
+                        line: i,
+                    },
+                    top,
+                    top + h,
+                ));
+            }
+        }
+        rows
+    }
+
+    /// The reading ruler's marks for the rows on screen (empty when it is
+    /// off): the reading line, the band around it, and the masked rows.
+    pub fn ruler_marks(&self) -> Vec<(RowMark, f64, f64)> {
+        if self.aids.ruler.mode == RulerMode::Off || self.model.paragraphs.is_empty() {
+            return Vec::new();
+        }
+        let rows = self.rows_on_screen();
+        let focus = match (self.state.reading, self.state.spoken) {
+            (true, Some(r)) => r.start,
+            _ => self.state.caret,
+        };
+        let view: Vec<ViewRow> = rows.iter().map(|r| r.0).collect();
+        ruler_rows(&view, focus, &self.aids.ruler)
+            .into_iter()
+            .zip(rows)
+            .map(|(mark, (_, y0, y1))| (mark, y0, y1))
+            .collect()
+    }
+
     // --- Caret movement that needs layout.
 
     /// Visual line move within and across paragraphs.
@@ -750,7 +875,7 @@ impl DocumentView {
         lcx: &mut LayoutContext<BrushIndex>,
     ) -> CharPos {
         let view = (self.size.height - 2.0 * INSET).max(100.0);
-        let line = f64::from(self.font.size) * 1.5;
+        let line = f64::from(self.font.size) * f64::from(self.aids.spacing.line_height);
         let lines = ((view / line).floor() as isize - 1).max(1);
         let pos = self.move_lines(if down { lines } else { -lines }, fcx, lcx);
         // Scroll by the same page, so the caret keeps its place on screen.
@@ -1121,6 +1246,30 @@ impl Widget for DocumentView {
             .anchor
             .map(|a| CharRange::new(a.0.min(caret_pos.0), a.0.max(caret_pos.0)));
 
+        // The reading ruler under the text: a band on the reading line,
+        // with a bar at its start, and a paler band on the rows around it.
+        let marks = self.ruler_marks();
+        let band_x0 = (self.column_x - 12.0).max(2.0);
+        let band_x1 = (self.column_x + self.column + 12.0).min(size.width - 2.0);
+        for &(mark, y0, y1) in &marks {
+            let r = Rect::new(band_x0, y0, band_x1, y1);
+            match mark {
+                RowMark::Focus => {
+                    painter
+                        .fill(RoundedRect::from_rect(r, 4.0), theme::color(p.ruler_focus))
+                        .draw();
+                    painter
+                        .fill(
+                            Rect::new(band_x0, y0, band_x0 + 4.0, y1),
+                            theme::color(p.focus),
+                        )
+                        .draw();
+                }
+                RowMark::Band => painter.fill(r, theme::color(p.ruler_band)).draw(),
+                RowMark::Normal | RowMark::Masked => {}
+            }
+        }
+
         for &(i, y) in &self.visible {
             let Some(pl) = self.layouts.get(&i) else {
                 continue;
@@ -1220,6 +1369,18 @@ impl Widget for DocumentView {
                 };
                 let r = Rect::new(bb.x0, bb.y0, bb.x0 + 2.0, bb.y0 + h) + origin;
                 painter.fill(r, theme::color(p.caret)).draw();
+            }
+        }
+
+        // The ruler's mask (a typoscope): the rows outside the band dimmed.
+        for &(mark, y0, y1) in &marks {
+            if mark == RowMark::Masked {
+                painter
+                    .fill(
+                        Rect::new(0.0, y0, size.width, y1),
+                        theme::with_alpha(p.background, 0.72),
+                    )
+                    .draw();
             }
         }
 

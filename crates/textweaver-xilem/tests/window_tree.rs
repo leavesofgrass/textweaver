@@ -192,6 +192,197 @@ fn help_and_say_status_keys_in_a_list_reach_the_keymap() {
     assert_eq!(a, DialogAction::Key(textweaver_app::ListKey::Rename));
 }
 
+/// What a screen reader would learn from one node.
+#[derive(Debug)]
+struct Seen {
+    role: Role,
+    value: Option<String>,
+    label: Option<String>,
+    hidden: bool,
+    live: masonry::accesskit::Live,
+    focused: bool,
+}
+
+/// Every node in the tree, depth first.
+fn all_nodes(h: &TestHarness<Root>) -> Vec<Seen> {
+    let mut out = Vec::new();
+    let mut stack = vec![h.access_tree().state().root()];
+    while let Some(n) = stack.pop() {
+        stack.extend(n.children());
+        out.push(Seen {
+            role: n.role(),
+            value: n.value(),
+            label: n.label(),
+            hidden: n.is_hidden(),
+            live: n.live(),
+            focused: n.is_focused(),
+        });
+    }
+    out
+}
+
+/// RSVP's flashing word is a hidden node that is never live and never
+/// focused; its status is a quiet node (live off) a screen reader finds by
+/// review. Nothing RSVP adds speaks by itself, and the document keeps the
+/// focus. The panel is under the document, so it never covers the caret.
+#[test]
+fn rsvp_is_quiet_for_screen_readers_and_never_covers_the_caret() {
+    use masonry::accesskit::Live;
+    use textweaver_app::Command;
+    use textweaver_app::keymap::ActionId;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let doc = h.get_widget(DOC).id();
+    h.focus_on(Some(doc));
+    let mut refresher = gui::Refresher::default();
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    // Off: the panel is hidden and takes no room.
+    let panel = h.get_widget(gui::RSVP);
+    assert!(panel.inner().shown().is_none());
+    assert_eq!(panel.ctx().bounding_box().height(), 0.0);
+    let _ = app.dispatch(Command::Action(ActionId::RsvpToggle));
+    let _ = app.dispatch(Command::Action(ActionId::CaretNextWord));
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let shown = h
+        .get_widget(gui::RSVP)
+        .inner()
+        .shown()
+        .cloned()
+        .expect("RSVP shows");
+    let word = shown.word();
+    assert!(!word.is_empty());
+    assert!(
+        shown.status.starts_with("RSVP paused, word 2 of "),
+        "{}",
+        shown.status
+    );
+    let nodes = all_nodes(&h);
+    // The word: hidden, not live, not focusable.
+    let word_nodes: Vec<_> = nodes
+        .iter()
+        .filter(|n| n.value.as_deref() == Some(word.as_str()) && n.role == Role::Label)
+        .collect();
+    assert_eq!(word_nodes.len(), 1, "one word node");
+    let w = word_nodes[0];
+    assert!(w.hidden, "the RSVP word is hidden");
+    assert_eq!(w.live, Live::Off, "the RSVP word is never live");
+    assert!(!w.focused);
+    // The status: a quiet node with its text.
+    let status: Vec<_> = nodes
+        .iter()
+        .filter(|n| n.role == Role::Status && n.label.as_deref() == Some(shown.status.as_str()))
+        .collect();
+    assert_eq!(status.len(), 1, "one RSVP status node");
+    assert_eq!(status[0].live, Live::Off, "the RSVP status is quiet");
+    assert!(!status[0].hidden);
+    // Nothing RSVP added is live; the document keeps the focus.
+    let panel_id = h.get_widget(gui::RSVP).id();
+    let panel_node = h.access_node(panel_id).unwrap();
+    for c in panel_node.children() {
+        assert_eq!(c.live(), Live::Off);
+    }
+    assert_eq!(h.focused_widget_id(), Some(doc));
+    // The panel is its own strip under the document: it never overlaps it.
+    let doc_rect = h.get_widget(DOC).ctx().bounding_box();
+    let panel_rect = h.get_widget(gui::RSVP).ctx().bounding_box();
+    assert!(panel_rect.height() > 40.0, "{panel_rect:?}");
+    assert!(
+        // (The document's focus ring is drawn a few pixels outside it.)
+        panel_rect.y0 >= doc_rect.y1 - 6.0,
+        "the panel {panel_rect:?} is below the document {doc_rect:?}"
+    );
+    // Off again: hidden.
+    let _ = app.dispatch(Command::Action(ActionId::RsvpToggle));
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let panel_node = h.access_node(h.get_widget(gui::RSVP).id()).unwrap();
+    assert!(panel_node.is_hidden());
+    assert_eq!(panel_node.children().count(), 0);
+}
+
+/// The reading aids the view draws: bionic reading and difficult words as
+/// spans (the text runs a screen reader gets do not change), text spacing
+/// through the layout, and the ruler's marks, which follow the caret and a
+/// theme change.
+#[test]
+fn reading_aids_are_drawn_and_leave_the_text_alone() {
+    use textweaver_app::Command;
+    use textweaver_app::aids::RowMark;
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::window::SpanStyle;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let mut refresher = gui::Refresher::default();
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let text_before = h
+        .access_node(h.get_widget(DOC).id())
+        .unwrap()
+        .document_range()
+        .text();
+    let tall_before = h.get_widget(DOC).inner().visible_paragraphs().to_vec();
+    // Bionic reading: bold word starts as spans.
+    let _ = app.dispatch(Command::Action(ActionId::BionicToggle));
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let spans = gui::model_for(&app, app.session().unwrap().doc.full_range())
+        .unwrap()
+        .spans;
+    assert!(spans.iter().any(|s| s.style == SpanStyle::Bionic));
+    let text_after = h
+        .access_node(h.get_widget(DOC).id())
+        .unwrap()
+        .document_range()
+        .text();
+    assert_eq!(text_after, text_before, "bionic reading changes no text");
+    // Text spacing: WCAG's values spread the paragraphs out.
+    app.update_settings(|s| {
+        s.reading_aids.spacing.line_height = 2.0;
+        s.reading_aids.spacing.paragraph_spacing = 2.0;
+        s.reading_aids.spacing.letter_spacing = 0.12;
+        s.reading_aids.spacing.word_spacing = 0.16;
+    })
+    .unwrap();
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let aids = h.get_widget(DOC).inner().aids();
+    assert_eq!(aids.spacing.line_height, 2.0);
+    let tall_after = h.get_widget(DOC).inner().visible_paragraphs().to_vec();
+    assert!(
+        tall_after.len() < tall_before.len()
+            || tall_after.last().map(|p| p.1) > tall_before.last().map(|p| p.1),
+        "more spacing shows less: {tall_before:?} then {tall_after:?}"
+    );
+    // The ruler: off, then the current line, then the band.
+    assert!(h.get_widget(DOC).inner().ruler_marks().is_empty());
+    let _ = app.dispatch(Command::Action(ActionId::RulerCycle));
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let marks = h.get_widget(DOC).inner().ruler_marks();
+    let focus: Vec<_> = marks.iter().filter(|m| m.0 == RowMark::Focus).collect();
+    assert!(!focus.is_empty(), "the current line is marked: {marks:?}");
+    let first_focus_y = focus[0].1;
+    let _ = app.dispatch(Command::Action(ActionId::RulerCycle));
+    let _ = app.dispatch(Command::Action(ActionId::NextParagraph));
+    let _ = app.dispatch(Command::Action(ActionId::NextParagraph));
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let marks = h.get_widget(DOC).inner().ruler_marks();
+    assert!(marks.iter().any(|m| m.0 == RowMark::Band), "{marks:?}");
+    let focus_y = marks.iter().find(|m| m.0 == RowMark::Focus).unwrap().1;
+    assert!(focus_y > first_focus_y, "the ruler follows the caret");
+    // A theme change keeps the ruler and redraws it in the new colours.
+    let light = Palette::named("galaxy-light");
+    gui::apply_palette(&mut h, &light);
+    let _ = h.redraw();
+    assert_eq!(h.get_widget(DOC).inner().ruler_marks(), marks);
+    assert_ne!(light.ruler_focus, Palette::galaxy().ruler_focus);
+}
+
 /// Options scrolled out of a list's box stay in the tree a screen reader
 /// gets, with their scrolled bounds: AccessKit's own filter (the one the
 /// UI Automation and AT-SPI adapters use) keeps every one, at the top and
@@ -289,6 +480,7 @@ fn screenshots_are_written_at_both_scales() {
             list: None,
             settings: false,
             home: Some(dir.path().join("home")),
+            aids: false,
         };
         textweaver_xilem::screenshot::screenshot(&o).unwrap();
         let bytes = std::fs::read(dir.path().join(name)).unwrap();

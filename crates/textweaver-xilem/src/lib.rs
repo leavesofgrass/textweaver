@@ -6,7 +6,9 @@
 //! screen readers.
 //!
 //! - [`gui`]: the window's widget tree and the driver.
-//! - [`document`]: the `DocumentView` widget.
+//! - [`document`]: the `DocumentView` widget, with the reading aids it
+//!   draws (text spacing, the ruler, bionic reading, difficult words).
+//! - [`rsvp`]: the RSVP panel, one word at a time under the document.
 //! - [`widgets`]: the root, panels, buttons, and the live-region announcer.
 //! - [`dialog`]: in-window dialogs: prompts and lists.
 //! - [`settings_dialog`]: the settings dialog, built from the app's schema.
@@ -30,6 +32,7 @@ pub mod fonts;
 pub mod gui;
 pub mod keys;
 pub mod log;
+pub mod rsvp;
 pub mod runs;
 #[cfg(feature = "screenshot")]
 pub mod screenshot;
