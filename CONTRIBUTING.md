@@ -80,7 +80,8 @@ textweaver is built by an orchestrator and parallel agents, each in its own git 
 The workflows in `.github/workflows/`:
 
 - `ci.yml`: formatting; the docs job (links and site data); and clippy, tests, and rustdoc on Ubuntu (all features), macOS, and Windows (Omnivox), with the Apple voice tests on macOS and the 32-bit hosts on Windows.
-- `gui-xilem.yml`: the Xilem GUI on Windows, macOS, and Linux: build, clippy, tests, and the accessibility checks (the UI Automation report on Windows, an AT-SPI check on Linux, a silent smoke run on macOS).
+- `gui-xilem.yml`: the Xilem GUI on Windows, macOS, and Linux: build, clippy, tests, and the accessibility checks (the UI Automation report on Windows, an AT-SPI check on Linux, a silent smoke run on macOS, and on all three the accessibility tree compared with main's; see [ADR-0039](docs/adr/0039-automated-screen-reader-checks.md)).
+- `a11y-tests.yml`: screen-reader sessions on CI runners, by hand: NVDA through Guidepup on Windows, an AT-SPI session with Orca under Xvfb, and VoiceOver on macOS (see [Testing](docs/dev/testing.md#automated-screen-reader-checks)).
 - `scripts.yml`: lints and dry runs of the scripts in `scripts/`.
 - `apple.yml`: extra macOS voice measurements.
 - `ci.yml` also has the real-engine jobs, marked "Real engine" in their names: espeak-ng on Linux and Microsoft's SAPI5 voices on Windows, silent (WAV files and a silent output).
