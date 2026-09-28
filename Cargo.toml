@@ -274,6 +274,13 @@ sha1 = "0.10"
 # XML and XPath forks without unsafe code.
 mathcat = { version = "=0.7.6-rc.3", default-features = false, features = ["include-zip", "no-unsafe"] }
 
+# Wave 4, Agent W4b: word and sentence boundaries through ICU4X, about
+# twice (words) and three times (sentences) as fast as
+# unicode-segmentation on the bench corpus, with the same boundaries there.
+# Only the rule-based data is linked (no LSTM or dictionaries for Thai,
+# Lao, Khmer, Burmese, Chinese, or Japanese words), about 58 KB.
+icu_segmenter = { version = "2.3", default-features = false, features = ["compiled_data"] }
+
 # tests
 proptest = "1.11"
 insta = { version = "1.48", features = ["json", "yaml"] }

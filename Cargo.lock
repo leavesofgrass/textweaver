@@ -7528,6 +7528,7 @@ dependencies = [
 name = "textweaver-text"
 version = "0.1.0-alpha.3"
 dependencies = [
+ "icu_segmenter",
  "proptest",
  "regex",
  "ropey",
