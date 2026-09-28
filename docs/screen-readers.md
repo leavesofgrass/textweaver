@@ -1,6 +1,6 @@
 # Using textweaver with a screen reader
 
-This guide is for people who use a screen reader, such as JAWS, NVDA, VoiceOver, or Orca, and want to use textweaver's terminal reader alongside it. It explains the three accessibility modes, how to stop hearing things twice, what your screen reader can read, the settings to try in NVDA and JAWS, which terminals to use, and which keys may clash. It also covers braille displays and the GUI preview, and ends with a checklist for trying each mode.
+This guide is for people who use a screen reader, such as JAWS, NVDA, VoiceOver, or Orca, and want to use textweaver's terminal reader alongside it. It explains the three accessibility modes, how to stop hearing things twice, what your screen reader can read, the settings to try in NVDA and JAWS, which terminals to use, and which keys may clash. It also covers braille displays, with a checklist for a 40-cell display, and the GUI, and ends with a checklist for trying each mode.
 
 textweaver's keys are the same in every mode. See [Reading and moving around](reading.md) and the [keyboard reference](keyboard.md).
 
@@ -220,26 +220,69 @@ textweaver's own words (messages, lists, help, and settings) are in English, Spa
 
 ## Braille displays
 
-textweaver draws no braille of its own, in the terminal or in the GUI. A braille display shows what your screen reader shows: the line at the terminal's cursor, and new text as it appears. In screen-reader mode, the status line and the cursor are what reach the display; with `cursor = "status"`, the display rests on the latest message.
+textweaver draws no braille of its own, in the terminal or in the GUI. A braille display shows what your screen reader shows: the line at the terminal's cursor, and new text as it appears. This section is written for a 40-cell display, the HumanWare Mantis Q40, with NVDA or JAWS on Windows.
 
-- **Tested:** a 40-cell display (a HumanWare Mantis Q40) through NVDA and JAWS on Windows, reading the status line, messages, and moving by unit in the terminal reader; and, in the GUI, the document control, the settings dialog, and edit mode, in the owner's two sessions (see [The GUI](#the-gui) above).
-- **Not tested:** other cell widths, other display models, Orca's braille on Linux, and VoiceOver's on macOS.
-- **What to expect on a 40-cell line:** textweaver puts the meaning first in every message and status line, so the important word is near the start rather than after decoration; a line that runs past 40 cells still reads correctly panned, just not all at once. Fenced code blocks and settings tables keep plain text and real column headers, with no box-drawing characters, so they should not come through as noise, but this has not been checked line by line against every table in every doc; report any that does.
+### Set up textweaver for the display
+
+- **Use screen-reader mode**: `--mode screen-reader`, or `mode = "screen-reader"` under `[accessibility]`. Hybrid mode lays lines out the same way.
+- **Park the cursor on the status line**: `cursor = "status"` under `[accessibility]`. The display then rests on the latest message, and your screen reader's read-current-line key repeats it. At a prompt the cursor moves to what you type, and comes back when the prompt closes.
+
+```toml
+[accessibility]
+mode = "screen-reader"
+cursor = "status"
+```
+
+### What a 40-cell line shows
+
+Every status line, title line, list line, and prompt line puts its key fact in the first 40 cells. A test walks a document in screen-reader mode with `cursor = "status"` and checks each line against 40 cells (`crates/textweaver-tui/tests/braille.rs`).
+
+- **Messages** start with what happened: "Opened essay.", "Page 12, line 400: ..." A question comes before what it is about: "Exported essay.html. Open it? y or n." and "Open web link? y or n." then the address.
+- **The title line** starts with where you are, then the reading state: "Line 12 of 400, 3%, Reading". In a PDF it names the page: "Page 12 of 30, 40%". The mode, rate, and engine follow, then the document's name. In screen-reader and hybrid modes the line starts at the first cell, with no padding.
+- **Lists** say the place first: "3 of 12, Chapter two, level 2". The list's first line is its place and title: "3 of 12, Outline, 12 headings". In screen-reader and hybrid modes a list covers the whole window with no border, so no border or document text comes before an item.
+- **Prompts** show a short label, then what you type: "Find: chapter", "Go to page: 12". A long label is cut to its first part on that line ("Export settings to file"); the whole label is said, and shown on the status line, when the prompt opens.
+- **Pages in a PDF.** Say Position (**Shift+W**) starts with the page: "Page 12 of 30. Line 400 of 2000, 20 percent." Go To (**Ctrl+G**) takes a page: in a PDF a plain number is a page, and `line 12` is a line. `p 12` and `page iv` work in any document with pages, and the printed page label wins, so `p 1` is the page printed "1" even after pages i to x. A PDF with no headings lists its pages in the outline (**Alt+O**).
+- Keys keep their written names (Ctrl+S) on the display; symbols such as arrows and box drawing are not used as the only signal anywhere.
+- A line that runs past 40 cells still reads correctly when you pan; only the start is guaranteed.
+
+### NVDA braille settings to try
+
+In NVDA's Settings, Braille category. **Every item here: to verify on the owner's Mantis Q40.**
+
+- **Tether braille**: "automatically" or "to focus", so the display follows the terminal's cursor, which `cursor = "status"` keeps on the status line. "To review" leaves the display where you moved it. To verify.
+- **Show messages** and **Message timeout**: NVDA's own messages (such as "focus mode") cover the line for a few seconds. "Use timeout" with a short timeout, or "Disabled", keeps textweaver's status line in view. To verify.
+- **Word wrap**: on, so a line longer than 40 cells breaks between words when you pan. To verify.
+- **Focus context presentation**: "fill display for context changes" is NVDA's default; try it if the start of a line is not what you expect. To verify.
+- **Interrupt speech while scrolling**: on, if you read by braille and do not want speech to go on while you pan. To verify.
+
+### JAWS braille settings to try
+
+In Settings Center (**Insert+6**), Braille group. **Every item here: to verify on the owner's Mantis Q40.**
+
+- **Braille mode**: Line mode shows the line at the cursor, which is what textweaver's layout is designed for. Structured mode adds control type words. To verify.
+- **Braille follows active cursor**: on, so the display follows the terminal's cursor (the PC cursor), which `cursor = "status"` keeps on the status line. To verify.
+- **Flash messages**: JAWS shows its own messages for a while (**Flash message time**). A shorter time, or messages off, keeps textweaver's status line in view. To verify.
+- **Word wrap**: on, so panning breaks between words. To verify.
+- **Status cells**: off on a 40-cell display, so all 40 cells show the line. To verify.
+
+### Checklist for the Mantis Q40
+
+1. Open a document in screen-reader mode with `cursor = "status"`. Are "Opened" and the document's title in the first 40 cells?
+2. Press **Alt+O**. Does "3 of 12" come before each heading's text as you move?
+3. Open Find (**Ctrl+F**). Does the display show the label, then what you type?
+4. Press **Shift+W**, then go to page 12 of a PDF (**Ctrl+G**, `12`, Enter). Do the position and the page come first?
+5. Try the NVDA and JAWS settings above. Which ones work, and which do you keep?
+
+### What has been tried
+
+- **Tried by the owner:** a 40-cell Mantis Q40 through NVDA and JAWS on Windows, reading the status line, messages, and moving by unit in the terminal reader, before this layout; and, in the GUI, the document control, the settings dialog, and edit mode, in the owner's two sessions. The layout above waits for the checklist.
+- **Not tried:** other cell widths, other display models, Orca's braille on Linux, and VoiceOver's on macOS.
 - **The BRF writer** (`tw convert --to brf`, see [Converting documents](converting.md)) is a separate feature: a grade 1, or grade 2 with the `liblouis` feature, braille file you save and read on a notetaker or emboss, not the live display output above.
 - If your combination behaves differently from this, add it to the checklist below and let the project know what you found.
 
 ## The GUI
 
-textweaver also has a window, `textweaver-xilem`, written entirely in Rust with AccessKit for screen readers. It shares the documents, keys, settings, notes, and voices with the terminal reader; [the GUI guide](gui.md) covers it. It is built on its own, not by a plain `cargo build`, and it has an edit mode: **Ctrl+E**, or the Edit button, turns the document into a multi-line edit that NVDA and JAWS switch to focus mode for by themselves; Ctrl+E again finishes, asking to save if there are changes.
-
-- The document is one control your screen reader reads as a document, and the browse keys of NVDA and JAWS (`h`, `t`, `k`, and the rest) work in it, as in the terminal.
-- Opening a document (**Ctrl+O**) shows your system's own file chooser, which NVDA and JAWS know; **Ctrl+Shift+G** types a path instead.
-- Messages reach your screen reader through a live region by default. `--announce uia` (or `announce = "uia"` under `[gui]`) sends UI Automation notifications on Windows instead.
-- While reading, the spoken word gets a background color and the caret moves to it. `--select-spoken` selects the word instead, for a screen reader that follows the selection.
-- It reads `[accessibility] mode` from the same settings file, and Alt+Shift+A changes it, as in the terminal.
-- Every button's key, including Edit's, comes from the keymap and is on screen as the button's accelerator key, so NVDA and JAWS say it when their setting for reporting shortcut keys is on.
-
-The owner checked the window with NVDA, JAWS, and a braille display on Windows in two sessions, with Eloquence reading and the words highlighted correctly, including edit mode after the second session. On Linux, CI checks what Orca would read through AT-SPI. VoiceOver has not been tried on a real Mac. [ADR-0027](adr/0027-xilem-gui.md), [ADR-0028](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033](adr/0033-gui-session-2-and-edit-mode.md) record what was checked.
+textweaver also has a window, written entirely in Rust with AccessKit for screen readers. It shares documents, keys, settings, notes, and voices with the terminal reader, and the owner has checked it with NVDA, JAWS, and a braille display on Windows. [The GUI guide](gui.md) covers it in full: starting it, the file chooser, edit mode, how messages reach your screen reader (a live region, or UI Automation notifications), and the spoken word's highlight. [ADR-0027](adr/0027-xilem-gui.md), [ADR-0028](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033](adr/0033-gui-session-2-and-edit-mode.md) record what was checked.
 
 ## Checklist: try each mode with JAWS and NVDA
 
