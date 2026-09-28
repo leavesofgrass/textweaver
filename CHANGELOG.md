@@ -4,15 +4,31 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### W4g: authoring extras
+
+- Markdown lint in edit mode: Ctrl+F8 and Ctrl+Shift+F8 select the next or previous problem and say it, "Lint: heading level 3 after level 1; use level 2." Five rules: heading levels, list markers, trailing spaces, link references without a definition, and bare web addresses. `tw lint FILE...` checks files and exits 1 when there are problems. textweaver's own rules, not rumdl (ADR-0032).
+- Copying works in terminals without OSC 52 (the old Windows console, macOS Terminal, GNOME Terminal and other VTE terminals): textweaver puts the text on the system clipboard itself and says so the first time. Over SSH and in tmux it still uses the terminal.
+- Math as Unicode in the reading view (`x²`, `√2`, `1⁄2`), as Star showed it: `[reading] math_display = "unicode"`, or "Math on screen" in the settings list. Speech, edit mode, and math exploration use the source. Try `fixtures/g/math.md`.
+- Notes and highlights export as BibTeX, BibLaTeX, RIS, or CSL-JSON records for Zotero or Pandoc: `tw marks FILE --export ris --output notes.ris`.
+- Moving the caret onto a code block's first line names its language: "code, Python".
+- Held for the owner's decision on RUSTSEC-2025-0141 (bincode unmaintained): grammar checking with Harper (Ctrl+F7, branch `wave4/g-grammar-harper`) and code highlighting with syntect (branch `wave4/g-highlight-syntect`).
+
 ### W4c1: MathCAT speech
 
 - Math can be spoken by MathCAT, the engine NVDA and JAWS use, in ClearSpeak or SimpleSpeak, at the math verbosity, in the document's language: `[reading] math_engine = "mathcat"` or `"mathcat_simplespeak"` ("Math speech" in the settings screen). It needs a build with the new `mathcat` feature, which is off by default; textweaver's own math speech stays the default and the fallback. The highlight covers the whole formula while MathCAT reads it (ADR-0029).
 - EPUB 3 books: MathML is read as math, using the book's TeX when a formula carries it; a formula with only `alttext` is read as that text, and an `epub:switch` is read once.
 - New crate `textweaver-mathcat` on MathCAT 0.7.6-rc.3, pinned exactly. Braille (Nemeth and UEB) waits for MathCAT issue #827 to be fixed in a release.
 
+### W4b: speed and memory
+
+- Zip archives, and the EPUB and Word files built on zip, open whatever compression their members use: deflate, bzip2, LZMA, XZ, and PPMd, all in pure Rust. A member that says it is larger than 256 MB is refused before it is unpacked.
+- Words and sentences are found two to three times as fast (ICU4X's segmenters), with the same boundaries. Planning a whole 10 MB document for reading takes about half the time it did.
+- The reader asks the system for its light or dark setting only when that can change the theme, and no longer waits for the answer before building the reader.
+- `--log debug` records how long the reader took to start.
+
 ### Keys: what changed
 
-The default keys are now the quick navigation keys of NVDA's and JAWS's browse mode (Jon's decision). `preset = "classic"` under `[keyboard]` keeps the earlier keys; `preset = "screen-reader"` now means the default. Old key, then where its command went (terminal):
+The default keys are now the quick navigation keys of NVDA's and JAWS's browse mode (the owner's decision). `preset = "classic"` under `[keyboard]` keeps the earlier keys; `preset = "screen-reader"` now means the default. Old key, then where its command went (terminal):
 
 - `.` next sentence: `Alt+Down` or `Alt+.`. `.` now says the sentence.
 - `,` previous sentence: `Alt+Up` or `Alt+,`. `,` now says the paragraph.
@@ -34,12 +50,20 @@ The default keys are now the quick navigation keys of NVDA's and JAWS's browse m
 
 See [docs/keyboard.md](docs/keyboard.md#what-changed).
 
-### W4s: the Xilem GUI before Jon's listening session
+### W4s: the Xilem GUI before the owner's listening session
 
 - `textweaver-xilem --announce uia` (Windows) announces with UI Automation Notification events instead of the live region, for comparing the two in NVDA and JAWS. `announce = "uia"` in a `[gui]` table of `settings.toml` does the same. The default is still the live region.
 - List options and settings scrolled out of view are now in the accessibility tree, so a screen reader's object navigation reaches them: all 15 settings sections, and every option of a long list.
 - Lists and the settings form say "1 of 15" (they said "2 of" with no total), and rows scrolled into view are drawn instead of blank.
 - The UI Automation report checks both announcement paths and a long list scrolled to its end. See [ADR-0028](docs/adr/0028-xilem-gui-after-the-session.md), which also records where the GUI's memory goes (the graphics stack; the app itself is about 11 MB).
+
+### W4a2: the Xilem GUI after the first screen reader session
+
+- The live region stays the default for announcements, and the spoken word's background color stays the highlight. `[gui] announce = "uia"` is now a real setting, in the settings dialog under "Window"; `--announce` and `--select-spoken` stay as options. ADR-0028 is accepted.
+- A long document's window slides while reading without losing the screen reader's place: the text that stays keeps its nodes, and the caret stays on the spoken word.
+- The reading aids in the window: text spacing, the reading ruler and current line, bionic reading, difficult words, and RSVP in its own strip under the document. The RSVP word is never spoken by itself; a quiet status beside it says where you are.
+- In a list, F1 and Alt+End repeat the list's introduction, as in the terminal. The status bar shows the terminal's title line: the reading state, the line, the mode, the rate, and the engine. "No document is open" names the Open key from the keymap.
+- New guide: [docs/gui.md](docs/gui.md), also shipped in the GUI package as `GUI.md`.
 
 ### Usability pass: the terminal reader and `tw`
 

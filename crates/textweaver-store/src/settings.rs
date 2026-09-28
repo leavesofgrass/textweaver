@@ -471,6 +471,10 @@ pub struct ReadingSettings {
     /// or MathCAT (`mathcat` for ClearSpeak, `mathcat_simplespeak`) in
     /// builds with MathCAT (ADR-0029).
     pub math_engine: MathEngine,
+    /// How math looks in the reading view: its source (`source`, the
+    /// default: `$x^2$`), or Unicode (`unicode`: `x²`, `√2`, `1⁄2`), as
+    /// Star showed it. Speech and edit mode always use the source.
+    pub math_display: MathDisplay,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -504,6 +508,7 @@ impl Default for ReadingSettings {
             ocr_lang: String::new(),
             ocr_engine: OcrEngine::Auto,
             math_engine: MathEngine::Builtin,
+            math_display: MathDisplay::Source,
             extra: toml::Table::new(),
         }
     }
@@ -523,6 +528,17 @@ pub enum MathEngine {
     /// MathCAT in SimpleSpeak.
     #[serde(rename = "mathcat_simplespeak")]
     MathCatSimpleSpeak,
+}
+
+/// `[reading] math_display`: how math looks in the reading view (W4g).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MathDisplay {
+    /// The source as written (`$x^2$`).
+    #[default]
+    Source,
+    /// One line of Unicode (`x²`, `√2`, `1⁄2`).
+    Unicode,
 }
 
 /// `[reading] citations`: what continuous reading does with a citation.
@@ -898,6 +914,32 @@ impl Default for InterfaceSettings {
     }
 }
 
+/// How the windowed reader's announcements reach the screen reader
+/// (`[gui] announce`, ADR-0028).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GuiAnnounce {
+    /// A live region: each message is a new node the screen reader speaks
+    /// (UI Automation's LiveRegionChanged, AT-SPI's Announcement).
+    #[default]
+    Live,
+    /// UI Automation Notification events (Windows only; elsewhere the
+    /// live region is used).
+    Uia,
+}
+
+/// `[gui]`: settings only the windowed reader (`textweaver-xilem`) reads.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct GuiSettings {
+    /// How announcements reach the screen reader. The live region is the
+    /// default, chosen in the owner's first screen reader session.
+    pub announce: GuiAnnounce,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
 /// All settings, one TOML table per group.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -932,6 +974,8 @@ pub struct Settings {
     pub stats: StatsSettings,
     /// `[interface]`
     pub interface: InterfaceSettings,
+    /// `[gui]`
+    pub gui: GuiSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1055,6 +1099,7 @@ impl Settings {
             lexicon: lenient_section("lexicon", table.remove("lexicon"), &mut w),
             stats: lenient_section("stats", table.remove("stats"), &mut w),
             interface: lenient_section("interface", table.remove("interface"), &mut w),
+            gui: lenient_section("gui", table.remove("gui"), &mut w),
             extra: table,
         };
         (s, w)
@@ -1239,12 +1284,13 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 25] = [
+pub(crate) const STRUCT_TABLES: [&str; 26] = [
     "keyboard",
     "preview",
     "lexicon",
     "stats",
     "interface",
+    "gui",
     "accessibility",
     "reading_aids",
     "reading_aids.rsvp",
@@ -1618,6 +1664,39 @@ mod tests {
         assert_eq!(s.reading.math_engine, MathEngine::Builtin);
         assert!(s.reading.wrap_navigation);
         assert!(err.unwrap_or_default().contains("reading.math_engine"));
+    }
+
+    /// Unicode math in the reading view (W4g): the source by default,
+    /// stored only when changed, and a bad value costs only itself.
+    #[test]
+    fn math_display_default_round_trip_and_bad_value() {
+        let s = Settings::default();
+        assert_eq!(s.reading.math_display, MathDisplay::Source);
+        assert!(!s.to_minimal_toml().unwrap().contains("math_display"));
+        let (_d, store) = store();
+        write(
+            &store,
+            "[reading]
+math_display = \"unicode\"
+",
+        );
+        let (s, err) = store.load();
+        assert!(err.is_none(), "{err:?}");
+        assert_eq!(s.reading.math_display, MathDisplay::Unicode);
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("math_display = \"unicode\""), "{text}");
+        write(
+            &store,
+            "[reading]
+math_display = \"pretty\"
+wrap_navigation = true
+",
+        );
+        let (s, err) = store.load();
+        assert_eq!(s.reading.math_display, MathDisplay::Source);
+        assert!(s.reading.wrap_navigation);
+        assert!(err.unwrap_or_default().contains("reading.math_display"));
     }
 
     #[test]
@@ -2132,7 +2211,7 @@ mod tests {
         assert_eq!(store.load_keymap().unwrap(), o);
     }
 
-    /// Jon's decisions of 2026-09-26: the screen-reader preset became the
+    /// The owner's decisions of 2026-09-26: the screen-reader preset became the
     /// default (its id still reads), citations are skipped in continuous
     /// reading by default, and the preview does not reload by itself.
     #[test]
@@ -2186,5 +2265,25 @@ mod tests {
         );
         let (_, w) = Settings::from_table("[stats]\nenabled = 3\n".parse().unwrap());
         assert_eq!(w, ["stats.enabled has an invalid value"]);
+    }
+
+    /// `[gui] announce` (ADR-0028): the live region by default, `uia` when
+    /// set, and a bad value warns and keeps the live region.
+    #[test]
+    fn gui_section() {
+        let d = Settings::default();
+        assert_eq!(d.gui.announce, GuiAnnounce::Live);
+        assert!(!d.to_minimal_toml().unwrap().contains("[gui]"));
+        let (s, w) = Settings::from_table("[gui]\nannounce = \"uia\"\n".parse().unwrap());
+        assert!(w.is_empty(), "{w:?}");
+        assert_eq!(s.gui.announce, GuiAnnounce::Uia);
+        let text = s.to_minimal_toml().unwrap();
+        assert!(
+            text.contains("[gui]") && text.contains("announce = \"uia\""),
+            "{text}"
+        );
+        let (s, w) = Settings::from_table("[gui]\nannounce = \"loud\"\n".parse().unwrap());
+        assert_eq!(w, ["gui.announce has an invalid value"]);
+        assert_eq!(s.gui.announce, GuiAnnounce::Live);
     }
 }

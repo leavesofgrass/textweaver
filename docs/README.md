@@ -23,6 +23,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 - [Reading and moving around](reading.md): opening files, reading aloud, moving by unit, Speech Cursor, find, go to, and history.
 - [Keyboard reference](keyboard.md): every key in the terminal and the GUI, generated from the keymap.
+- [The textweaver window (GUI)](gui.md): starting it, what is in the window, its keys, announcements, and the reading aids it draws.
 - [Bookmarks, notes, and highlights](notes.md): marking your place and your thoughts.
 - [Reading aids](reading-aids.md): RSVP, bionic reading, the reading ruler, text spacing, fonts, and reading level.
 - [Themes](themes.md): the 23 built-in colour themes, following your system, and writing your own.
@@ -110,8 +111,9 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0025: Define word offline, and the message catalog](adr/0025-lexicon-and-message-catalog.md): Open English WordNet and CMUdict in an fst and zstd file, and a Fluent-subset catalog with pseudo-locales.
 - [ADR-0026: OCR, and formats for students](adr/0026-ocr-and-student-formats.md): OCR of scanned pages (ocrs in process, Tesseract as the fallback), DAISY, PowerPoint, spreadsheets, archives, and web pages.
 - [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, and the accessibility checks.
-- [ADR-0028: The Xilem GUI after Jon's session](adr/0028-xilem-gui-after-the-session.md): two ways to announce, every list option in the tree, and where the GUI's memory goes (a draft until the session).
+- [ADR-0028: The Xilem GUI after the owner's session](adr/0028-xilem-gui-after-the-session.md): two ways to announce, every list option in the tree, and where the GUI's memory goes.
 - [ADR-0029: MathCAT speech](adr/0029-mathcat-speech.md): MathCAT as a second math speech engine, EPUB 3 MathML read as math, and what waits for math braille.
+- [ADR-0032: Grammar, lint, highlighting, and clipboard crates](adr/0032-grammar-lint-highlighting-clipboard.md): the authoring extras' crates, and the two held for the owner.
 
 ## Interactive pages
 
@@ -133,9 +135,9 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 - [Usability pass: the terminal reader and tw](research/usability-terminal.md): what a screen reader user meets, what was fixed, what is left, ranked (September 2026).
 - [Wave 4 plan review](research/wave4-plan-review.md): the first review of the Wave 4 plan, with quick wins and research updates (September 2026).
 - [Wave 4 orchestration plan](research/wave4-orchestration.md): three sub-waves of three agents, the dependency map, the disk and memory budget, revised briefs, and the runbook (September 2026).
-- [Wave 5 plan](research/wave5-plan.md): goals ranked for the beta, research, the branches that depend on Wave 4's outcomes, three sub-waves with a Braille session as a gate, the budget, quick wins, draft briefs, the runbook, and the questions for Jon (September 2026).
+- [Wave 5 plan](research/wave5-plan.md): goals ranked for the beta, research, the branches that depend on Wave 4's outcomes, three sub-waves with a Braille session as a gate, the budget, quick wins, draft briefs, the runbook, and the questions for the owner (September 2026).
 - [What is left](research/whats-left.md): the inventory of what remains, by area, with each item's status, source, value, and size; the Star features still lacking; and the items no plan covers (September 2026).
-- [The 2026 roadmap](research/roadmap-2026.md): the milestones from Wave 4 to the feature-complete final alpha and beyond, the critical path, Wave 5 refined, a first sketch of Wave 6, and eight questions for Jon (September 2026).
+- [The 2026 roadmap](research/roadmap-2026.md): the milestones from Wave 4 to the feature-complete final alpha and beyond, the critical path, Wave 5 refined, a first sketch of Wave 6, and eight questions for the owner (September 2026).
 - [Cloud Agent plan](research/cloud-agent-plan.md): three pull-request tasks for a Claude Cloud Agent beside Wave 4 and Wave 5 (fuzz targets, the generated settings reference and docs check, a second-tool check of the writers), the budget within $125, the pull-request workflow, the effect on Wave 5, the reservation mechanism, and the ready-to-paste brief (September 2026).
 
 ## See also

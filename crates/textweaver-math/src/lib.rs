@@ -39,6 +39,7 @@ mod nav;
 mod speech;
 mod symbols;
 mod tree;
+mod unicode;
 
 use serde::{Deserialize, Serialize};
 use textweaver_core::{CharPos, CharRange, OffsetMap, SpokenBuilder};
@@ -53,6 +54,7 @@ pub use speech::{SpeechOptions, Spoken, speak, speak_node};
 pub use tree::{
     AccentKind, Diagnostic, Enclosure, Math, Node, NodeKind, Notation, OpClass, TableKind, Variant,
 };
+pub use unicode::to_unicode;
 
 /// Parses `src` in the given notation.
 pub fn parse(src: &str, notation: Notation) -> Math {

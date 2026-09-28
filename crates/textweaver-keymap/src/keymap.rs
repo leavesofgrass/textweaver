@@ -589,7 +589,7 @@ mod tests {
     }
 
     /// The default keys mirror NVDA's and JAWS's browse-mode quick
-    /// navigation (Jon's decision, 2026-09-26).
+    /// navigation (the owner's decision, 2026-09-26).
     #[test]
     fn default_keys_mirror_screen_reader_quick_navigation() {
         for platform in Platform::ALL {

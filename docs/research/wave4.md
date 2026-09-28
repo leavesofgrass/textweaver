@@ -53,7 +53,7 @@ Researched on Saturday, September 26, 2026, by four research threads, for the Wa
 
 - AccessKit raises only UIA LiveRegionChanged, and only when `Live` is not Off and the node has a name. It never raises `UiaRaiseNotificationEvent`.
 - NVDA honours UIA notifications (since 2018.1). JAWS handling of LiveRegionChanged has been inconsistent.
-- **Option:** a direct `UiaRaiseNotificationEvent` call for announcements, which needs Windows 10 1709 or later. Jon compares the two by ear.
+- **Option:** a direct `UiaRaiseNotificationEvent` call for announcements, which needs Windows 10 1709 or later. The owner compares the two by ear.
 
 ### Reference apps
 
@@ -224,7 +224,7 @@ Researched on Saturday, September 26, 2026, by four research threads, for the Wa
 
 ### Automated screen-reader tests
 
-- **Guidepup** 0.34.0 (MIT) drives VoiceOver and NVDA in CI and returns the spoken phrases. They complement Jon's manual testing.
+- **Guidepup** 0.34.0 (MIT) drives VoiceOver and NVDA in CI and returns the spoken phrases. They complement the owner's manual testing.
   - `guidepup/setup-action` was archived on 2026-09-26. Use `npx @guidepup/setup setup --ci` instead.
   - Whether it works with native apps and with Orca is unverified.
 - **Other tools:**

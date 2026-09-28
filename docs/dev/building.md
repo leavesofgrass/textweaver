@@ -59,7 +59,7 @@ docker compose build dev
 
 ## The GUI
 
-The GUI moves to Xilem in Wave 3 (Jon's choice, Saturday, September 26, 2026), in a new crate; the wxDragon spike stays as a fallback until then. `textweaver-gui` builds wxWidgets from source through wxDragon. The first build takes several minutes and needs CMake, Ninja, and libclang. On Windows, `crates/textweaver-gui/tools/build-windows.ps1` finds Visual Studio's own CMake and Ninja and sets up the build. [ADR-0014](../adr/0014-gui-toolkit.md) has the details.
+The GUI moves to Xilem in Wave 3 (the owner's choice, Saturday, September 26, 2026), in a new crate; the wxDragon spike stays as a fallback until then. `textweaver-gui` builds wxWidgets from source through wxDragon. The first build takes several minutes and needs CMake, Ninja, and libclang. On Windows, `crates/textweaver-gui/tools/build-windows.ps1` finds Visual Studio's own CMake and Ninja and sets up the build. [ADR-0014](../adr/0014-gui-toolkit.md) has the details.
 
 A lean reader, without in-reader export, preview, and citations (the `publish` feature, on by default), builds with:
 

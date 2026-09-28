@@ -33,7 +33,7 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
 - [ADR-0013: Dictation through a Whisper program](0013-dictation.md): voice typing with a Whisper subprocess.
   - Status: accepted, with 3 status updates; in part superseded by ADR-0023 (Whisper in-process).
 - [ADR-0014: GUI toolkit (wxDragon)](0014-gui-toolkit.md): the GUI spike's findings. Wave 3 moves the GUI to Xilem, and the spike stays as a fallback.
-  - Status: superseded by [ADR-0027](0027-xilem-gui.md); the wxDragon spike stays as a fallback until the Xilem GUI passes the same checks and Jon's NVDA and JAWS session. It has 3 status updates.
+  - Status: superseded by [ADR-0027](0027-xilem-gui.md); the wxDragon spike stays as a fallback until the Xilem GUI passes the same checks and the owner's NVDA and JAWS session. It has 3 status updates.
 - [ADR-0015: JSON-RPC server (`tw serve --stdio`)](0015-json-rpc.md): `tw serve --stdio`, its methods, and notifications.
   - Status: accepted, with 2 status updates.
 - [ADR-0016: Rendering and bulk conversion](0016-rendering-and-conversion.md): Markdown to accessible HTML, and fast, incremental conversion.
@@ -60,10 +60,12 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted.
 - [ADR-0027: Xilem GUI](0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, the accessibility checks, and what to send upstream.
   - Status: accepted.
-- [ADR-0028: The Xilem GUI after Jon's session](0028-xilem-gui-after-the-session.md): two ways to announce (a live region, or UI Automation notifications), every list option in the tree, and where the GUI's memory goes.
-  - Status: proposed (Jon's session answers recorded; W4a2 finishes it).
+- [ADR-0028: The Xilem GUI after the owner's session](0028-xilem-gui-after-the-session.md): two ways to announce (a live region, or UI Automation notifications), every list option in the tree, and where the GUI's memory goes.
+  - Status: accepted (the owner's session 1 answers: the live region and the background highlight stay the defaults).
 - [ADR-0029: MathCAT speech](0029-mathcat-speech.md): MathCAT 0.7.6-rc.3 as a second math speech engine on its own thread, EPUB 3 MathML read as math, and braille waiting for MathCAT issue #827.
   - Status: accepted, behind the `mathcat` feature; the owner approved its two dependency exceptions.
+- [ADR-0032: Grammar, lint, highlighting, and clipboard crates](0032-grammar-lint-highlighting-clipboard.md): our own Markdown lint instead of rumdl, arboard where OSC 52 cannot reach, Unicode math and notes export without new crates, and harper-core and syntect held on one advisory.
+  - Status: accepted for lint, the clipboard, Unicode math, and notes export; proposed for grammar and highlighting.
 
 ## Writing a new ADR
 

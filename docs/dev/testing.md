@@ -78,6 +78,41 @@ The comparison fails when a peak heap or an allocation count grew more than `--m
 
 `cargo xtask soak --minutes N` reads the 10 MB corpus with random navigation, pauses, rate changes, and edits, then from the top to the end, while a second reader's engine host is killed at random. It checks that the highlight only moves forward, reading finishes, memory stays level, and no engine host is left running. The nightly job runs it for 10 minutes.
 
+### Measurements, Wave 4 (Monday, September 28, 2026)
+
+Taken by Agent W4b on Windows (x86_64, 64 GB) while other agents were building, so times move by 30 percent or more from run to run; each is a median, repeated, and the spread is given where it matters. Allocation counts do not move once the harness waits for other threads (below).
+
+**How they were taken.**
+
+- Binaries: `cargo build --release -p textweaver-tui --bin textweaver`, then `cargo build --release -p textweaver-cli --bin tw`, each on its own (built together, cargo would give the reader `tw`'s features). `--no-default-features` on the first gives the reader without `publish`.
+- Start-up: each command once to warm up, then 15 timed runs from PowerShell: `tw --version`, `textweaver --help`, and `tw info` on the 10 MB corpus. A program that does nothing takes 16 to 28 ms to start the same way.
+- The reading paths: `cargo xtask bench --no-startup --json FILE`, on main and on the branch, with the same harness.
+- Segmentation, find, and ropes: a standalone probe outside the workspace, on the bench corpora (numbers here; the ropes are in [ADR-0002](../adr/0002-text-model.md)).
+
+**Binary size (release profile, bytes).**
+
+- Before Wave 4b (main at c737694): `textweaver.exe` 46,827,520; `tw.exe` 52,799,488.
+- After: `textweaver.exe` 47,332,864 (505,344 more); `tw.exe` 53,294,592 (495,104 more); `textweaver.exe` without `publish` 28,704,256, so export, preview, and citations are 18.6 MB of the reader.
+- What the zip features cost, in a small program that reads and writes one member: deflate alone 549,376; with bzip2 644,096; with LZMA 575,488; with XZ 716,800 (lzma-rust2 0.16, a second copy beside sevenz-rust2's 0.21); with PPMd 590,848; all five 867,840. ICU4X's word and sentence data and code add about 58 KB.
+- The bundled fonts (1.4 MB) are in the reader only with `publish`; the SCOWL list (692 KB) is always in it.
+
+**Start-up.** `tw --version` and `textweaver --help` start in 23 to 35 ms, 7 to 10 ms above a program that does nothing, before and after. `tw info` on 10 MB takes 580 to 700 ms, mostly loading, unchanged. Before its first announcement the reader reads its settings and keys, builds the app (the speech engine already starts on a helper thread), asks the system for its color scheme, and opens the document on the command line. The color-scheme question was two `reg query` processes on every launch (35 to 90 ms); it is now asked only when it can change the theme, on a helper thread while the app is built. `--log debug` writes how long the settings and the whole build took.
+
+**Segmentation and find, 10 MB of Markdown, per whole document.**
+
+- Words: unicode-segmentation 265 to 430 ms, ICU4X 128 to 193 ms; sentences: 300 to 366 ms against 96 to 126 ms. Same boundaries on the corpus. textweaver now uses ICU4X (see `crates/textweaver-text/src/units.rs` for the lines that keep unicode-segmentation).
+- Literal find of "the": regex 1.5 ms, memchr's `memmem` 1.3 ms. regex already searches literals with memchr, and the reader's find is case-insensitive by default, where `memmem` does not apply; not adopted.
+- Many terms at once (19 words, whole words, any case): a regex alternation 656 ms, aho-corasick 43 ms. textweaver has no many-term highlighting yet; use aho-corasick when it does (the speech crate's abbreviation expansion is a candidate).
+
+**The reading paths, `cargo xtask bench`, main then branch.**
+
+- Narration plan of the whole document: 10 MB 1,155 to 631 ms, 1,141,829 to 844,757 allocations; 1 MB 102 to 66 ms; the one-line 1 MB file 95 to 53 ms; the 50,000-item list 738 to 577 ms.
+- Open to first speech, 10 MB: 470 to 353 ms (loading moved as much between runs; the plan of the first window is the part that changed).
+- Next sentence, idle, on the one-line file and the list: half the allocations (6,909 to 3,449; 7,266 to 3,660).
+- Nothing grew past the gate except autosave on 10 MB, whose count moves between 11,163 and 75,386 in runs of the same code (the writer thread).
+
+The harness now waits until no thread has allocated for 300 ms before each document, after the first speech, before search, and before leaving edit mode. Before that, background work from opening a document landed in whichever step it overlapped: one step gave 1,267 and 38,773 allocations in two runs of the same code.
+
 Bulk conversion has its own benchmark:
 
 ```bash

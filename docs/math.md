@@ -264,6 +264,17 @@ The dollar signs and other delimiters are never highlighted on their own, becaus
 
 Some words have no part of the formula of their own. "power" in "x raised to the n plus 1 power" is one. Such a word has nothing of its own to highlight.
 
+## See math as Unicode
+
+The reading view shows math as it is written, `$x^2$`. To see it drawn instead, set `math_display = "unicode"` under `[reading]` in `settings.toml`, or choose "Math on screen" in the settings list. Each formula is then shown on one line in Unicode characters, as Star did:
+
+- scripts become raised or lowered characters where Unicode has them: `x²`, `aᵢ`, `x₁₀`. Where it has none, the script is written out: `x^(1⁄y)`;
+- fractions use the fraction slash: `1⁄2`, and `(a + b)⁄c` for longer parts;
+- roots use the root signs: `√2`, `∛8`;
+- `\mathbb{R}` and the other math fonts use their Unicode letters: `ℝ`.
+
+Only the screen changes. textweaver still reads the formula from its source, the highlight and the cursor stay on the formula, and edit mode and exploring a formula show the source. A screen reader reading the screen hears the Unicode characters, which some voices say well and some do not, and a Braille display shows them as its table allows; the source is often clearer there. Try it on `fixtures/g/math.md`.
+
 ## Turn math into MathML for a web page
 
 ```powershell

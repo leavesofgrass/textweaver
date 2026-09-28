@@ -98,7 +98,7 @@ fn sample_is_tagged_and_passes_pdf_ua_validation() {
     // Five headings, five outline entries.
     assert_eq!(count(&bytes, "/S /H"), 5);
     assert!(has(&bytes, "/Title (Reading Guide)"));
-    assert!(has(&bytes, "/Author (Jon Pielaet)"));
+    assert!(has(&bytes, "/Author (Ada Example)"));
     // The one image is embedded.
     assert!(has(&bytes, "/Subtype /Image"));
 }

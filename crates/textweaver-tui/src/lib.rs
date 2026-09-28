@@ -45,6 +45,9 @@
 //!
 //! Owner: Agent D.
 
+pub mod clipboard;
+#[cfg(feature = "highlight")]
+pub mod highlight;
 pub mod layout;
 pub mod paths;
 pub mod physical;

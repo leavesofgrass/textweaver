@@ -1,18 +1,18 @@
-# ADR-0028: The Xilem GUI after Jon's session
+# ADR-0028: The Xilem GUI after the owner's session
 
-- Status: proposed (first draft, Wave 4, Agent W4s; Agent W4a2 finishes it after Jon's session 1)
+- Status: accepted (Wave 4: drafted by Agent W4s; finished by Agent W4a2 after the owner's session 1, Sunday, September 27, 2026)
 - Date: 2026-09-27
 - Builds on: [ADR-0027](0027-xilem-gui.md) (the Xilem GUI)
 
 ## Context
 
-ADR-0027 left three questions for Jon's first NVDA and JAWS session on the Xilem GUI:
+ADR-0027 left three questions for the owner's first NVDA and JAWS session on the Xilem GUI:
 
 - Do announcements reach JAWS? AccessKit raises only UI Automation's LiveRegionChanged, which NVDA speaks and JAWS has handled inconsistently.
 - Can a screen reader reach list options and settings that are scrolled out of view? The UI Automation report saw 13 of 15 settings sections.
 - Why did the GUI's memory grow from 98 MB to 172 to 187 MB during Wave 3?
 
-This draft records what W4s changed before the session, what it measured, and the two questions the session decides. W4a2 records Jon's answers and the decisions here.
+This draft records what W4s changed before the session, what it measured, and the two questions the session decides. W4a2 records the owner's answers and the decisions here.
 
 ## Two ways to announce
 
@@ -23,11 +23,11 @@ The GUI now has two announcement paths, chosen with `--announce live|uia` or, in
 
 How it is raised matters. Raised on the window's host provider (`UiaHostProviderFromHwnd`), the events never reached a client, because the host provider is a client-side provider. They are raised from a small server-side provider (`widgets::notify`) whose host is the window; UI Automation merges it with the window's element, whose provider is AccessKit's.
 
-The `[gui]` table is read from the store's preserved unknown tables (`Settings::extra`), so no store type, export fixture, or schema entry was added: those are in `textweaver-store` and `textweaver-app`, which W4s may not change. Until they are, the setting is not in the settings dialog. The four-place change is proposed in W4s's report.
+W4s read the `[gui]` table from the store's preserved unknown tables (`Settings::extra`), because the store and the schema were outside its brief. **Update (W4a2):** the setting is now a proper one in the four places: `GuiSettings { announce }` in `textweaver-store` (default `"live"`; a bad value warns with the other settings and keeps the default), the export fixture, a `gui.announce` choice in the settings schema (the settings dialog shows it under "Window"), and the GUI reading `settings.gui.announce`.
 
 **Checked:** the UI Automation report (`tools/uia-report.ps1 -Announce live` and `-Announce uia`, Sunday, September 27, 2026, Windows 11 26200) passes both ways. With `live`, LiveRegionChanged events arrive for each message (10 in the run) and no Notification events. With `uia`, Notification events arrive with their text and activity id (10) and no LiveRegionChanged events. Managed UI Automation gained LiveRegionChanged in .NET Framework 4.7.1, so the report now subscribes to it instead of only watching for new elements.
 
-**Found:** both paths lose the announcements made at startup, before any UI Automation client has asked for the window: "Opened Sample Markdown Document." and "Reading at 265 words per minute." in the report's runs. The report's client connects about two seconds after launch. A screen reader that is already running asks sooner, when the window appears, so Jon may hear them; the session checks it.
+**Found:** both paths lose the announcements made at startup, before any UI Automation client has asked for the window: "Opened Sample Markdown Document." and "Reading at 265 words per minute." in the report's runs. The report's client connects about two seconds after launch. A screen reader that is already running asks sooner, when the window appears, so the owner may hear them; the session checks it.
 
 ## Clipped options
 
@@ -75,16 +75,39 @@ Nothing inside `textweaver-xilem` accounts for more than a few megabytes, so not
 
 ## The two questions the session decides
 
-1. **Announcements: `live` or `uia`?** Jon tries Pause, Stop, and a rate key with each, in NVDA and then in JAWS, and says which is heard once, reliably, without cutting off the reading. The default follows his choice. If JAWS needs `uia` and NVDA works with both, `uia` becomes the Windows default, and the store and schema get the `[gui] announce` setting properly.
-2. **The highlight: selection or background?** While reading, the caret sits on the spoken word, which has its own background color (the default), or `--select-spoken` selects the word. Jon says which reads better in NVDA and JAWS, with speech and with the Braille display. That decides the document view's design, which W4a2 then builds on.
+1. **Announcements: `live` or `uia`?** the owner tries Pause, Stop, and a rate key with each, in NVDA and then in JAWS, and says which is heard once, reliably, without cutting off the reading. The default follows his choice. If JAWS needs `uia` and NVDA works with both, `uia` becomes the Windows default, and the store and schema get the `[gui] announce` setting properly.
+2. **The highlight: selection or background?** While reading, the caret sits on the spoken word, which has its own background color (the default), or `--select-spoken` selects the word. The owner says which reads better in NVDA and JAWS, with speech and with the Braille display. That decides the document view's design, which W4a2 then builds on.
 
-W4a2 records the answers here, changes the status to accepted, and removes whichever option is not kept, or keeps it as a setting if Jon prefers.
+W4a2 records the answers here, changes the status to accepted, and removes whichever option is not kept, or keeps it as a setting if the owner prefers.
 
-**Jon's answers (Sunday, September 27, 2026, after his first screen reader and Braille display checks):**
+**The owner's answers (Sunday, September 27, 2026, after his first screen reader and Braille display checks):**
 1. **Announcements:** the live region stays the default. `uia` stays available as an option.
 2. **The highlight:** the background color stays the default, and the caret is not moved by selection. `--select-spoken` stays available as an option.
 
 W4a2 builds on these, adds `[gui] announce` to the store and schema so it appears in the settings dialog, and changes the status to accepted.
+
+## Decision
+
+The owner's first checks with NVDA, JAWS, and a Braille display were good, so the designs W4s prepared stay as they are:
+
+- **Announcements:** the live region is the default everywhere. UI Automation notifications stay as an option, `[gui] announce = "uia"` in the settings (the settings dialog, under "Window") or `--announce uia` for one run. The command line wins over the setting.
+- **The highlight:** the spoken word has its own background color, and the caret (the document's text selection, collapsed) sits at its start. The word is not selected. `--select-spoken` stays as an option for anyone who prefers the word selected. Everything later in the document view builds on this design: the window slide, the reading aids, and edit mode (W4a3).
+- **The hybrid renderer** stays a build option (`--no-default-features --features screenshot,renderer-hybrid`), not the default. The session did not raise memory, and the hybrid renderer's cost in drawing speed on large windows has not been measured with the reading aids drawn. Revisit it with the owner's second session.
+
+The key named in "No document is open" now comes from the keymap (`named_key`), and the list introduction (`ListKey::Introduce`) and the title line's parts (`App::title_parts`) reach the GUI as they reach the terminal reader.
+
+## Built on the decision (W4a2)
+
+**A window slide keeps the screen reader's place.** The GUI holds a window of about 120,000 UTF-16 units around the focus (ADR-0027). When reading reaches its edge, the window slides (`WindowChange::Forward` or `Backward`). Before, the view replaced every text run on any change, so every node a screen reader was on vanished mid-read, the problem Star's pagination had. Now a slide keeps the runs that stay: the same node ids with the same text, their layouts and visual lines carried over, and the ids of runs that left the window dropped after the next accessibility pass. The caret, the collapsed text selection on the spoken word, is sent again on the new tree. A new document or a jump still replaces every run. Checked in the harness and in the UI Automation report's `-WindowEdge` probe (reading at 900 words per minute through a slide, in `--background`: the caret stays on the spoken word, and the Pause announcement after the slide arrives).
+
+**Reading aids** (ADR-0022), all drawn only, so the text runs a screen reader gets never change:
+
+- Text spacing sets Parley's line height, letter spacing, and word spacing, and the paragraph gap, in multiples of the font size (WCAG 1.4.12's units). The terminal rounds them; the window uses them exactly.
+- The reading ruler builds the aids crate's `ViewRow`s from the visual lines on screen and draws `ruler_rows`' marks: a band on the reading line with a bar at its start (a shape, so color is not the only cue), a paler band around it, and a dimming mask outside when asked. The band colors are tints of the theme's focus color, adjusted until the text keeps its contrast on them.
+- Bionic reading and difficult words are spans from the app (`App::bionic_ranges`, `App::difficult_ranges`); difficult words get a thick underline in the text's own color.
+- RSVP is its own strip in the window's column, between the document and the toolbar, so it can never cover the text or the caret. The flashing word is a hidden node, never live and never focusable; beside it a status node ("RSVP paused, word 2 of 109") has its live setting off. The app announces what RSVP does (on, off, paused) once, through the announcer. RSVP's nine positions move the word left, center, or right in the strip; the words before and after sit to its left and right.
+
+**Parity with the terminal reader** needed no new GUI code: the outline (Alt+O), the notes list (Ctrl+Shift+N), the access modes (Alt+Shift+A), and tables and links by key reach the app through the keymap, and the lists open as the GUI's list dialogs through `Effect::ShowList`. A test drives each from the document. In a list, F1 and Say Status (Alt+End) now repeat the list's introduction, as in the terminal.
 
 ## Consequences
 

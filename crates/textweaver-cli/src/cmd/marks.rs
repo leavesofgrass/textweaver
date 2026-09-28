@@ -1,14 +1,19 @@
 //! `tw marks`: a document's saved reading position, bookmarks, notes,
 //! highlights, and synced sidecar position. Reads only; never writes state.
+//! With `--export FORMAT`, the notes and highlights as reference records
+//! instead: BibTeX, BibLaTeX, RIS, or CSL-JSON (Agent W4g), to the terminal
+//! or to `--output FILE`.
 //! Owner: Agent C.
 
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
+use textweaver_app::cite::Format;
 use textweaver_app::core::CharPos;
 use textweaver_app::store::notes::{Annotation, color_name};
 use textweaver_app::store::sync::{self, ProgressEntry, SidecarStore};
 use textweaver_app::store::{DocKey, Paths, SettingsStore, StateStore, time};
+use textweaver_app::{NotesRecords, export_notes};
 
 /// Arguments for `tw marks`.
 #[derive(clap::Args, Debug)]
@@ -21,6 +26,13 @@ pub struct Args {
     /// Read the state under this directory (like `TEXTWEAVER_HOME`).
     #[arg(long, value_name = "DIR")]
     pub home: Option<PathBuf>,
+    /// Write the notes and highlights as reference records: bibtex,
+    /// biblatex, ris, or json (CSL-JSON).
+    #[arg(long, value_name = "FORMAT", conflicts_with = "json")]
+    pub export: Option<String>,
+    /// With --export: write to this file instead of the terminal.
+    #[arg(long, value_name = "FILE", requires = "export")]
+    pub output: Option<PathBuf>,
 }
 
 /// One position with where it falls in the document.
@@ -278,12 +290,63 @@ fn render(r: &Report) -> String {
     out
 }
 
+/// The notes and highlights of `file` as reference records in `format`,
+/// and how many there were.
+fn export(file: &Path, paths: &Paths, format: Format) -> anyhow::Result<(String, usize)> {
+    let state = StateStore::new(paths.state_dir())
+        .load(&DocKey::for_path(file))
+        .unwrap_or_default();
+    let doc = textweaver_app::formats::load_path(file).ok();
+    let meta = doc.as_ref().map(|d| &d.meta);
+    let stem = file
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let title = meta
+        .and_then(|m| m.title.clone())
+        .filter(|t| !t.trim().is_empty())
+        .unwrap_or_else(|| stem.clone());
+    let opts = NotesRecords {
+        title: &title,
+        author: meta.and_then(|m| m.author.as_deref()),
+        key: &stem,
+        url: None,
+        doc_len: doc.as_ref().map(|d| d.len_chars()),
+    };
+    let text = export_notes(&state.notes, &state.highlights, &opts, format)?;
+    Ok((text, state.notes.len() + state.highlights.len()))
+}
+
 /// Runs `tw marks`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     let paths = match &args.home {
         Some(home) => Paths::under(home),
         None => Paths::platform()?,
     };
+    if let Some(name) = &args.export {
+        let Some(format) = Format::from_name(name) else {
+            anyhow::bail!("Unknown export format {name}. Use bibtex, biblatex, ris, or json.");
+        };
+        let (text, n) = export(&args.file, &paths, format)?;
+        match &args.output {
+            Some(out) => {
+                std::fs::write(out, text.as_bytes())
+                    .map_err(|e| anyhow::anyhow!("Could not write {}: {e}", out.display()))?;
+                let what = if n == 1 {
+                    "1 note or highlight".to_owned()
+                } else {
+                    format!("{n} notes and highlights")
+                };
+                println!(
+                    "Wrote {what} as {} to {}.",
+                    format.display_name(),
+                    out.display()
+                );
+            }
+            None => super::print_all(&text)?,
+        }
+        return Ok(());
+    }
     let report = build(&args.file, &paths);
     if args.json {
         println!("{}", serde_json::to_string_pretty(&report)?);
@@ -376,6 +439,34 @@ mod tests {
         assert_eq!(json["notes"][0]["end"], 17);
         assert_eq!(json["highlights"][0]["color"], "yellow");
         assert!(json["sidecar"].is_null());
+    }
+
+    #[test]
+    fn exports_notes_as_reference_records() {
+        let dir = TempDir::new("export");
+        let paths = Paths::under(&dir.0);
+        let doc = dir.0.join("cell biology.txt");
+        std::fs::write(&doc, "first line\nsecond line here\nthird\n").unwrap();
+        let mut st = DocState::default();
+        st.add_note(CharRange::new(11, 17), "second", "Look here", "#exam");
+        st.add_highlight(CharRange::new(28, 33), "yellow", "third");
+        StateStore::new(paths.state_dir())
+            .save(&DocKey::for_path(&doc), &st)
+            .unwrap();
+        let (bib, n) = export(&doc, &paths, Format::BibTex).unwrap();
+        assert_eq!(n, 2);
+        assert!(bib.contains("@misc{cell-biology-note-1,"), "{bib}");
+        assert!(bib.contains("@misc{cell-biology-highlight-1,"), "{bib}");
+        let (ris, _) = export(&doc, &paths, Format::Ris).unwrap();
+        assert!(ris.contains("KW  - exam"), "{ris}");
+        let (json, _) = export(&doc, &paths, Format::CslJson).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v[0]["note"], "Look here");
+        assert_eq!(v[1]["abstract"], "third");
+        // Nothing saved: no records, and nothing written.
+        let other = dir.0.join("none.txt");
+        let (json, n) = export(&other, &paths, Format::CslJson).unwrap();
+        assert_eq!((json.trim(), n), ("[]", 0));
     }
 
     #[test]

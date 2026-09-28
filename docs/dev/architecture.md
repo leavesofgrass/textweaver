@@ -11,7 +11,7 @@ textweaver is one Cargo workspace with 34 crates and a maintenance crate, `xtask
 - `textweaver`, the terminal reader, built from `crates/textweaver-tui`;
 - `tw`, the command-line tool, built from `crates/textweaver-cli`.
 
-A third program, `textweaver-gui`, is a feasibility spike for the native GUI on wxDragon ([ADR-0014](../adr/0014-gui-toolkit.md)). It is not built by default. On Saturday, September 26, 2026, Jon chose Xilem, Linebender's all-Rust toolkit, for the real GUI: Wave 3 builds it in a new crate, `textweaver-xilem`, and the wxDragon spike stays as a fallback until the new GUI passes the same accessibility checks. The plan is Agent W3b's brief in [tasks.md](../history/tasks.md).
+A third program, `textweaver-gui`, is a feasibility spike for the native GUI on wxDragon ([ADR-0014](../adr/0014-gui-toolkit.md)). It is not built by default. On Saturday, September 26, 2026, the owner chose Xilem, Linebender's all-Rust toolkit, for the real GUI: Wave 3 builds it in a new crate, `textweaver-xilem`, and the wxDragon spike stays as a fallback until the new GUI passes the same accessibility checks. The plan is Agent W3b's brief in [tasks.md](../history/tasks.md).
 
 Three helper programs run speech engines in their own processes: `textweaver-eci-host` (Eloquence), `textweaver-sapi-host` (SAPI5 voices), and `textweaver-dectalk-host` (DECtalk), each in a 64-bit build and, on Windows, a 32-bit `-x86` build. `cargo xtask hosts` builds them.
 

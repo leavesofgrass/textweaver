@@ -38,8 +38,18 @@
 .EXAMPLE
   powershell -File crates/textweaver-xilem/tools/uia-report.ps1 -Out uia-xilem.md
 
+  - With -WindowEdge, instead of the commands, the settings, and the list:
+    a generated document three windows long, read at 900 words per minute
+    from just before the point where the GUI's document window slides. The
+    caret must stay on the spoken word through the slide, the GUI's log
+    must show the slide, and the Pause announcement made after it must
+    arrive.
+
 .EXAMPLE
   powershell -File crates/textweaver-xilem/tools/uia-report.ps1 -Announce uia -Out uia-notify.md
+
+.EXAMPLE
+  powershell -File crates/textweaver-xilem/tools/uia-report.ps1 -WindowEdge -Out uia-edge.md
 #>
 param(
     [string] $Exe = '',
@@ -49,7 +59,11 @@ param(
     [ValidateSet('live', 'uia')] [string] $Announce = 'live',
     [string] $Out = '',
     # More arguments for the GUI, such as --edit-role or --select-spoken.
-    [string] $GuiArgs = ''
+    [string] $GuiArgs = '',
+    # Read past the document window's edge instead of the usual checks: a
+    # generated document three windows long, read at 900 words per minute
+    # from just before the point where the window slides (W4a2).
+    [switch] $WindowEdge
 )
 
 $ErrorActionPreference = 'Stop'
@@ -519,6 +533,35 @@ public static class TwXUia
         r.Select();
     }
 
+    /// Puts the caret `units` characters before the end of the document's
+    /// text (the GUI's window) through TextPattern.
+    public static void PutCaretBeforeEnd(AutomationElement doc, int units)
+    {
+        var tp = (TextPattern)doc.GetCurrentPattern(TextPattern.Pattern);
+        var r = tp.DocumentRange.Clone();
+        r.MoveEndpointByRange(TextPatternRangeEndpoint.Start, r, TextPatternRangeEndpoint.End);
+        r.Move(TextUnit.Character, -units);
+        r.MoveEndpointByRange(TextPatternRangeEndpoint.End, r, TextPatternRangeEndpoint.Start);
+        r.Select();
+    }
+
+    /// The first `n` units of the document's text: where the window starts.
+    public static string Head(AutomationElement doc, int n)
+    {
+        for (int i = 0; ; i++)
+        {
+            try
+            {
+                var tp = (TextPattern)doc.GetCurrentPattern(TextPattern.Pattern);
+                // The provider may return more than asked for.
+                string s = tp.DocumentRange.GetText(n);
+                return s.Length > n ? s.Substring(0, n) : s;
+            }
+            catch (ElementNotAvailableException) { if (i >= 5) return "(unavailable)"; }
+            Thread.Sleep(20);
+        }
+    }
+
     /// Lines of the document as UIA's line unit gives them (the first `n`).
     public static List<string> Lines(AutomationElement doc, int n)
     {
@@ -560,6 +603,25 @@ Say ""
 $scratch = Join-Path ([IO.Path]::GetTempPath()) ("tw-xuia-" + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Force $scratch | Out-Null
 $logFile = Join-Path $scratch 'gui.log'
+if ($WindowEdge) {
+    # Three GUI windows (120,000 units each) of plain paragraphs, about 240
+    # characters each, and the fastest rate, so the paced reading reaches
+    # the slide point in seconds.
+    $edgeDoc = Join-Path $scratch 'long.md'
+    $sentence = 'Reading on and on, sentence after sentence, past the edge of the window. '
+    $sb = New-Object System.Text.StringBuilder
+    $n = 0
+    while ($sb.Length -lt 360000) {
+        $n++
+        [void]$sb.Append("Paragraph $n. ").Append($sentence).Append($sentence).Append($sentence).Append("`n`n")
+    }
+    [IO.File]::WriteAllText($edgeDoc, $sb.ToString())
+    $Document = $edgeDoc
+    New-Item -ItemType Directory -Force (Join-Path $scratch 'config') | Out-Null
+    [IO.File]::WriteAllText((Join-Path $scratch 'config\settings.toml'), "[speech]`nrate = 900`n")
+    Say "- Window edge probe: $Document ($($sb.Length) characters, $n paragraphs), read at 900 words per minute"
+    Say ""
+}
 $guiArgs = "`"$Document`" --backend $Backend --home `"$scratch`" --read --background --log-file `"$logFile`" --exit-after 90 --announce $Announce $GuiArgs"
 $foregroundBefore = [TwXUia]::GetForegroundWindow()
 [TwXUia]::ListenFor(0)
@@ -624,7 +686,55 @@ try {
         $moving = ($samples | Select-Object -Unique).Count -gt 2
         if (-not $moving) { $failures.Add('the caret did not follow the reading') }
         if (-not ($samples -match 'background #')) { $failures.Add('no background colour on the spoken word') }
+    }
 
+    if ($doc -and $WindowEdge) {
+        Say "### Reading past the window's edge (caret put 15,600 units before the window's end with TextPattern; Play pressed)"
+        Say ""
+        [void][TwXUia]::Press($window, 'Stop')
+        Start-Sleep -Milliseconds 500
+        $headBefore = [TwXUia]::Head($doc, 40)
+        $lengthBefore = ([TwXUia]::DocumentText($doc)).Length
+        [TwXUia]::PutCaretBeforeEnd($doc, 15600)
+        Start-Sleep -Milliseconds 500
+        $startCaret = [TwXUia]::Caret($doc)
+        Say "- Before: the window starts $([TwXUia]::Q($headBefore)), $lengthBefore units; caret: $startCaret"
+        [void][TwXUia]::Press($window, 'Play')
+        $edgeLines = @()
+        $slidAt = -1
+        for ($i = 0; $i -lt 60; $i++) {
+            Start-Sleep -Milliseconds 300
+            $head = [TwXUia]::Head($doc, 40)
+            $caret = [TwXUia]::Caret($doc)
+            $mark = if ($head -ne $headBefore) { 'slid' } else { 'same' }
+            $edgeLines += ("{0,5} ms  window {1}  {2}" -f (($i + 1) * 300), $mark, $caret)
+            if ($mark -eq 'slid' -and $slidAt -lt 0) { $slidAt = $i }
+            # Five more samples after the slide.
+            if ($slidAt -ge 0 -and $i -ge $slidAt + 5) { break }
+        }
+        Fence $edgeLines
+        if ($slidAt -lt 0) {
+            $failures.Add('the window did not slide while reading past its edge')
+        } else {
+            $after = $edgeLines[$slidAt..($edgeLines.Count - 1)]
+            $lost = @($after | Where-Object { $_ -match 'no selection|the text changed' })
+            if ($lost.Count -gt 0) { $failures.Add("the caret was lost after the slide: $($lost[0])") }
+            if (-not ($after -match 'word "[A-Za-z]')) { $failures.Add('no word at the caret after the slide') }
+            if (($after | Select-Object -Unique).Count -lt 3) { $failures.Add('the caret did not keep following the reading after the slide') }
+            $headAfter = [TwXUia]::Head($doc, 40)
+            $lengthAfter = ([TwXUia]::DocumentText($doc)).Length
+            Say "- After: the window starts $([TwXUia]::Q($headAfter)), $lengthAfter units"
+            # An announcement after the slide still arrives.
+            [void][TwXUia]::Press($window, 'Pause')
+            Start-Sleep -Milliseconds 800
+            Say "- Pause pressed after the slide: caret $([TwXUia]::Caret($doc))"
+            [void][TwXUia]::Press($window, 'Stop')
+            Start-Sleep -Milliseconds 500
+        }
+        Say ""
+    }
+
+    if ($doc -and -not $WindowEdge) {
         Say "### Commands (buttons pressed with InvokePattern; caret moved with TextPattern)"
         Say ""
         $steps = @(
@@ -655,9 +765,13 @@ try {
         Fence $cmdLines
     }
 
-    Say "### Settings dialog (Settings button pressed; settings changed with RangeValuePattern and TogglePattern)"
-    Say ""
-    if (-not [TwXUia]::PressStartingWith($window, 'Settings')) {
+    # The edge probe checks only the document and the announcements.
+    if (-not $WindowEdge) {
+        Say "### Settings dialog (Settings button pressed; settings changed with RangeValuePattern and TogglePattern)"
+        Say ""
+    }
+    if ($WindowEdge) {
+    } elseif (-not [TwXUia]::PressStartingWith($window, 'Settings')) {
         Say "No Settings button."
         $failures.Add('no Settings button')
     } else {
@@ -729,9 +843,12 @@ try {
 
     # Last, because a list dialog has no Close button (Escape closes it,
     # and the report types no keys); the window is closed with it open.
-    Say "### A long list (Fonts button; the last option scrolled into view with ScrollItemPattern)"
-    Say ""
-    if (-not [TwXUia]::PressStartingWith($window, 'Fonts')) {
+    if (-not $WindowEdge) {
+        Say "### A long list (Fonts button; the last option scrolled into view with ScrollItemPattern)"
+        Say ""
+    }
+    if ($WindowEdge) {
+    } elseif (-not [TwXUia]::PressStartingWith($window, 'Fonts')) {
         Say "No Fonts button."
         $failures.Add('no Fonts button')
     } else {
@@ -824,6 +941,15 @@ Say ""
 if ($events.Count -eq 0) { $events = @('(none)') }
 Fence $events
 $guiLog = if (Test-Path -LiteralPath $logFile) { @(Get-Content -LiteralPath $logFile) } else { @() }
+if ($WindowEdge) {
+    # The window slid (the GUI's log says so), and the announcement made
+    # after it (Pause) reached UI Automation.
+    $slides = @($guiLog | Where-Object { $_ -match '\((Forward|Backward)' })
+    Say "- Window slides in the GUI's log: $($slides.Count)"
+    Say ""
+    if ($slides.Count -eq 0) { $failures.Add('the GUI log shows no window slide') }
+    if (-not ($events -match 'Paused')) { $failures.Add('the announcement after the slide (Paused) did not arrive') }
+}
 if ($Announce -eq 'uia') {
     $raisedTexts = @($guiLog | Where-Object { $_ -match '^notify uia: ' } | ForEach-Object { $_.Substring(12) })
     $notifyFailed = @($guiLog | Where-Object { $_ -match '^notify uia failed' })

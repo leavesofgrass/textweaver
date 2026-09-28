@@ -1,6 +1,6 @@
 # Research: a Xilem GUI for textweaver
 
-Researched on Saturday, September 26, 2026, for Agent W3b. The sources are listed at the end. Jon chose Xilem, Linebender's all-Rust toolkit, so that as much of the GUI as possible is Rust. This page says what that needs.
+Researched on Saturday, September 26, 2026, for Agent W3b. The sources are listed at the end. The owner chose Xilem, Linebender's all-Rust toolkit, so that as much of the GUI as possible is Rust. This page says what that needs.
 
 ## Summary
 
@@ -133,7 +133,7 @@ Then a person tests with Orca: arrow reading, say-all, the text-attributes comma
 ## Other options, briefly
 
 - **GTK 4 through gtk4-rs.** It has an announce call (4.14), and recent Orca text-view fixes: wrapping issue #8140 in 4.23.1, and Orca 51's say-all fix. It would mean a second GUI codebase. Ubuntu 24.04's screen-reader help still suggests GTK 3 apps over GTK 4 ones.
-- **Qt 6.** It has an announcement event (6.8). Jon's wiki notes the accessible-name quirks. Its Rust bindings (cxx-qt 0.10) are early and have no Qt Widgets. It is heavy.
+- **Qt 6.** It has an announcement event (6.8). The owner's wiki notes the accessible-name quirks. Its Rust bindings (cxx-qt 0.10) are early and have no Qt Widgets. It is heavy.
 - **Other AccessKit toolkits.**
   - egui has no live regions (issue #2647 is open).
   - Iced 0.14 has no AccessKit support.

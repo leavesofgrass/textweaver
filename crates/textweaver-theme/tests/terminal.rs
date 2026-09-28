@@ -61,7 +61,7 @@ fn truecolor_and_256_keep_the_floor() {
                     }
                 }
                 // Only the themes that must meet WCAG AA are held to the
-                // floor; the others keep Star's colors (Jon, 2026-09-26).
+                // floor; the others keep Star's colors (the owner, 2026-09-26).
                 if textweaver_theme::star::must_meet_aa(t.name()) {
                     let base = REFERENCE_PALETTES[0];
                     let r = contrast_ratio(fg.rgb(base), bg.rgb(base));

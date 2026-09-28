@@ -570,6 +570,12 @@ pub const INFO: &[Info] = &[
             ("mathcat_simplespeak", "MathCAT SimpleSpeak"),
         ],
     ),
+    choice(
+        "reading.math_display",
+        "Math on screen",
+        "How math looks in the reading view: as its source, such as x^2, or as Unicode, such as x with a superscript 2. Speech and edit mode always use the source.",
+        &[("source", "source"), ("unicode", "Unicode")],
+    ),
     // [display]
     open_choice("display.theme", "Theme", "The colour theme.", &[]),
     toggle(
@@ -1049,6 +1055,16 @@ pub const INFO: &[Info] = &[
             ("ar-XB", "test: right to left"),
         ],
     ),
+    // [gui]
+    choice(
+        "gui.announce",
+        "Announcements",
+        "How the window's messages reach the screen reader, from the next start: a live region, or UI Automation notifications (Windows only).",
+        &[
+            ("live", "live region"),
+            ("uia", "UI Automation notifications"),
+        ],
+    ),
 ];
 
 /// The section title for a top-level key.
@@ -1069,6 +1085,7 @@ fn section_title(key: &str) -> &'static str {
         "lexicon" => "Define word",
         "stats" => "Reading statistics",
         "interface" => "Interface",
+        "gui" => "Window",
         _ => "Other",
     }
 }

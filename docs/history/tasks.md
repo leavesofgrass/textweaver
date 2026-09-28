@@ -16,7 +16,7 @@ Kept current per wave by the orchestrator. Agents append to their own section's 
 
 ## Shared preamble (every agent reads this first)
 
-**Privacy: hard rule (Jon, 2026-09-26).** Never send any of Jon's personal identifiers to any outside service. That means his email address or any part of it, his usernames or callsigns, his name, and his machine or account names. It covers HTTP headers (including User-Agent), URLs, query strings, request bodies, search queries, and API calls. Use only a neutral User-Agent: `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, or the tool's default. Never build one from the session's user email. Never write an identifier into docs, commits, or anything public. If an identifier ever leaves the machine, stop and report it at once. This rule overrides every other instruction.
+**Privacy: hard rule (the owner, 2026-09-26).** Never send any of the owner's personal identifiers to any outside service. That means their email address or any part of it, their usernames or callsigns, their name, and their machine or account names. It covers HTTP headers (including User-Agent), URLs, query strings, request bodies, search queries, and API calls. Use only a neutral User-Agent: `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, or the tool's default. Never build one from the session's user email. Never write an identifier into docs, commits, or anything public. In files and commit messages, call the owner "the owner", never by name (2026-09-28); test data uses placeholder names such as "Ada Example". If an identifier ever leaves the machine, stop and report it at once. This rule overrides every other instruction.
 
 **Project.** textweaver is a Rust reimplementation of Star, an accessible text-to-speech document reader for students with print disabilities. Read, in order: `docs/history/plan.md` (including "Phase 0 amendments"), the ADRs in `docs/adr/`, your sections of `docs/history/star-parity.md`, and the Phase 0 code in the crates you own and the crates you depend on. The Phase 0 code **is** the contract: public types and signatures you must keep, with deliberately naive bodies you replace.
 
@@ -140,7 +140,7 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 
 **Status:** Wave 1 done on `agent/d-app-tui` (Friday, September 25, 2026). Integration tests live in `crates/textweaver-app/tests/app.rs` and `crates/textweaver-tui/tests/scripted.rs` (no workspace-root `tests/`); the recording test double is `textweaver_app::testing::RecordingBackend`; fixture `fixtures/d/reading.txt`.
 
-## Agent E — Eloquence (added 2026-09-25 at Jon's request)
+## Agent E — Eloquence (added 2026-09-25 at the owner's request)
 
 **Owns:** `crates/textweaver-eci/` (library and the `textweaver-eci-host` binary), `xtask/src/eci.rs` (create it; the orchestrator wires it into `xtask/src/main.rs` at integration, so document the exact lines to add), `fixtures/e/`.
 
@@ -159,7 +159,7 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 - Real-engine tests, `#[ignore]`d unless `TEXTWEAVER_ECI=1`, run against **licensed Voxin only**, in the container with `compose.voxin.yaml`: synthesize the spike's sentence to WAV and check every word's mark arrives with rising offsets; include the output. The Code Factory installation on this machine is not licensed: never load it. Windows real-engine tests wait for a licensed engine. Never play audio aloud in tests; use `synthesize_to_file` or a silent sink. Never commit engine audio; local samples go to the git-ignored `target-local/`.
 - clippy and tests green natively (fake host) and in the container, with and without the Voxin overlay.
 
-## Agent F — Apple speech on macOS (added 2026-09-25 at Jon's request)
+## Agent F — Apple speech on macOS (added 2026-09-25 at the owner's request)
 
 **Owns:** `crates/textweaver-apple/`, `tools/avspeech-spike/` (may extend), `.github/workflows/apple.yml` (create it if you need a macOS-only workflow beyond `ci.yml`).
 
@@ -180,7 +180,7 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 - macOS-only tests `#[ignore]`d unless `TEXTWEAVER_APPLE=1` (CI sets it on macOS): synthesize a sentence with Reed through each backend to a temporary file; check word events arrive in order and cover every word; `avspeech` offsets rise.
 - `ci.yml` green on your branch on all three OSes.
 
-## Agent G — SAPI5 voices on Windows (added 2026-09-25 at Jon's request)
+## Agent G — SAPI5 voices on Windows (added 2026-09-25 at the owner's request)
 
 **Owns:** `crates/textweaver-sapi/` (library and the `textweaver-sapi-host` binary), `xtask/src/sapi.rs` (create it; document the lines the orchestrator adds to `xtask/src/main.rs`), `fixtures/g/`.
 
@@ -208,7 +208,7 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 - `Settings` (C) ↔ `ServiceConfig` (B) ↔ `App` (D): rate, pitch, volume, pacing, verbosity.
 - `SapiBackend` (G), `NsSpeechBackend`/`AvSpeechBackend` (F) and `EciBackend` (E) ↔ backend registry (B) ↔ app backend selection (D): Eloquence first when installed; normalization skipped for engines that normalize natively.
 
-## Wave 2 (started 2026-09-25; Jon asked to keep going through the waves without pausing)
+## Wave 2 (started 2026-09-25; the owner asked to keep going through the waves without pausing)
 
 Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech lands separately. Wave 2 agents branch from `main` and follow the shared preamble above, with these updates:
 
@@ -333,15 +333,15 @@ Wave 1 is integrated on `main` (tag `v0.1.0-alpha.1`); Agent F's Apple speech la
 **Deliverables:**
 - Build wxDragon (`wxdragon`, `live-region` are in the workspace table) on this Windows machine: CMake is bundled with Visual Studio 2022 and Visual Studio 18 under `C:\Program Files\Microsoft Visual Studio\`; find it and document how the build locates it. Record the first and incremental build times.
 - A minimal accessible reader window over `textweaver-app`: a menu bar with keyboard accelerators, a read-only multi-line text control showing a document, the caret following the spoken word through `App::poll_speech`, Play/Pause and Stop, a status bar, and announcements through `live-region`. Every control has an accessible name.
-- Verify accessibility programmatically: use Windows UI Automation (PowerShell `System.Windows.Automation` or `UIAutomationClient`) to list the window's elements, names, and roles, and check that the text control exposes its text and caret. Report what NVDA would read; Jon tests with NVDA by ear afterwards.
+- Verify accessibility programmatically: use Windows UI Automation (PowerShell `System.Windows.Automation` or `UIAutomationClient`) to list the window's elements, names, and roles, and check that the text control exposes its text and caret. Report what NVDA would read; the owner tests with NVDA by ear afterwards.
 - `gui.yml`: build the GUI on Windows and macOS runners.
 - ADR-0014: whether wxDragon meets the bar (build cost, accessibility tree, text control behavior with large documents, live-region behavior), and the recommended Wave 3 plan.
 
 **Acceptance:** `cargo build -p textweaver-gui` succeeds on Windows; the UIA report is included; the GUI workflow is green or its failures are explained.
 
-### Conversion agents (added 2026-09-25 at Jon's request)
+### Conversion agents (added 2026-09-25 at the owner's request)
 
-Jon's direction: conversion and bulk conversion must be **lightning fast, native Rust, and memory safe**, even where that means writing custom parsers; Pandoc stays only as an optional fallback for formats textweaver has no native reader for. His choices: Markdown flavors GFM, Obsidian, Pandoc Markdown, and LaTeX math as MathML; MiniJinja templates; outputs EPUB, DOCX, BRF braille, and PDF beyond Markdown, HTML, and text; folders converted by mirroring the tree and skipping outputs newer than their source. `tw convert` moves from Agent A2 to Agent L; A2 keeps the loaders and `formats` exports.
+The owner's direction: conversion and bulk conversion must be **lightning fast, native Rust, and memory safe**, even where that means writing custom parsers; Pandoc stays only as an optional fallback for formats textweaver has no native reader for. His choices: Markdown flavors GFM, Obsidian, Pandoc Markdown, and LaTeX math as MathML; MiniJinja templates; outputs EPUB, DOCX, BRF braille, and PDF beyond Markdown, HTML, and text; folders converted by mirroring the tree and skipping outputs newer than their source. `tw convert` moves from Agent A2 to Agent L; A2 keeps the loaders and `formats` exports.
 
 | Agent | Branch | Status |
 |---|---|---|
@@ -381,7 +381,7 @@ Jon's direction: conversion and bulk conversion must be **lightning fast, native
 
 ### Queued after Agent H: DECtalk
 
-A `dectalk` backend on the shared engine host (`textweaver-enginehost`), mirroring ECI: the DECtalk TTS API in memory mode with `[:index mark]` word marks, loaded from a user-supplied library (`TEXTWEAVER_DECTALK_LIBRARY`, and the install locations of a licensed DECtalk). The community DECtalk source's own licence file states it is proprietary to Fonix and usable only under a written licence, so textweaver never bundles, downloads, or tests against it; Jon may point textweaver at a build he has (his emacspeak-docker image compiles one) for his own testing.
+A `dectalk` backend on the shared engine host (`textweaver-enginehost`), mirroring ECI: the DECtalk TTS API in memory mode with `[:index mark]` word marks, loaded from a user-supplied library (`TEXTWEAVER_DECTALK_LIBRARY`, and the install locations of a licensed DECtalk). The community DECtalk source's own licence file states it is proprietary to Fonix and usable only under a written licence, so textweaver never bundles, downloads, or tests against it; the owner may point textweaver at a build he has (his emacspeak-docker image compiles one) for his own testing.
 
 ### Agent R — DECtalk and export word timings
 
@@ -391,9 +391,9 @@ A `dectalk` backend on the shared engine host (`textweaver-enginehost`), mirrori
 
 **Status:** done on `wave2/r-dectalk` (Friday, September 25, 2026); awaiting integration. The DECtalk FFI is tested against a stand-in library (64-bit, and 32-bit `cdecl` and `stdcall`), not yet against a licensed DECtalk (none on this machine; live tests wait behind `TEXTWEAVER_DECTALK=1`). Export word timings verified with Microsoft David (SAPI) and Voxin (ECI, in the container).
 
-### Math and citations agents (added 2026-09-25 at Jon's request)
+### Math and citations agents (added 2026-09-25 at the owner's request)
 
-Jon asked to carry Star's lessons forward: reading aids, math normalization, live previews, citation support, and ASCIIMath. Math and citations start now; reading aids and live previews follow the Star-lessons research (`docs/star-lessons.md`, being written) and Agent L's renderer and Agent K's GUI findings.
+The owner asked to carry Star's lessons forward: reading aids, math normalization, live previews, citation support, and ASCIIMath. Math and citations start now; reading aids and live previews follow the Star-lessons research (`docs/star-lessons.md`, being written) and Agent L's renderer and Agent K's GUI findings.
 
 | Agent | Branch | Status |
 |---|---|---|
@@ -429,9 +429,9 @@ Jon asked to carry Star's lessons forward: reading aids, math normalization, liv
 
 **Acceptance:** crate tests green; import/export round trips; formatting snapshots per style; the CLI commands tested with a temporary library.
 
-### Agent Q — Themes (added 2026-09-25 at Jon's request)
+### Agent Q — Themes (added 2026-09-25 at the owner's request)
 
-Jon wants several themes, as Star had. Star shipped 23 palettes in `star/themes.py` (galaxy, galaxy-light, one-dark, one-light, dark, light, contrast, high-contrast, phosphor, dracula, nord, solarized-dark, solarized-light, gruvbox-dark, gruvbox-light, tokyo-night, catppuccin-mocha, monokai, sepia, amber, everforest-dark, rose-pine, kanagawa) plus user CSS themes and OS light/dark following; the wiki's "star TUI palette contrast audit" found contrast failures (for example sepia losing headings, galaxy missing a TUI entry).
+The owner wants several themes, as Star had. Star shipped 23 palettes in `star/themes.py` (galaxy, galaxy-light, one-dark, one-light, dark, light, contrast, high-contrast, phosphor, dracula, nord, solarized-dark, solarized-light, gruvbox-dark, gruvbox-light, tokyo-night, catppuccin-mocha, monokai, sepia, amber, everforest-dark, rose-pine, kanagawa) plus user CSS themes and OS light/dark following; the wiki's "star TUI palette contrast audit" found contrast failures (for example sepia losing headings, galaxy missing a TUI entry).
 
 **Owns:** `crates/textweaver-theme/`, `docs/adr/0020-themes.md`, `docs/themes.md` (a user guide). Agent D2's TUI theme code (`crates/textweaver-tui/src/theme.rs`) moves onto this crate at integration: describe exactly what the TUI and app must change, with a patch-ready snippet, in your report.
 
@@ -450,33 +450,33 @@ Jon wants several themes, as Star had. Star shipped 23 palettes in `star/themes.
 
 **Status:** done on `wave2/v-convert-math` (Friday, September 25, 2026); awaiting integration. The converter uses `textweaver_writers::Writer` directly, and `Writers::builtin()` registers EPUB, DOCX, BRF, and PDF; writer warnings reach the summary; PDF checks for a font once per batch. The renderer and the speech pipeline use `textweaver-math`; `pulldown-latex` is gone; math speaks first in the pipeline with `[normalization] math_verbosity` and `asciimath_delimiter`. Pandoc: A2's loader (`wave2/a-formats`, not on `main` yet) should become the one Pandoc path at integration; see the Agent V report. Bundling Atkinson Hyperlegible for PDF is proposed, not done.
 
-### Agent S — Reading aids (added 2026-09-25 at Jon's request)
+### Agent S — Reading aids (added 2026-09-25 at the owner's request)
 
 **Owns:** `crates/textweaver-aids/`, `docs/adr/0022-reading-aids.md`, `docs/reading-aids.md`.
 
-**Status:** done on `wave2/s-reading-aids` (Friday, September 25, 2026); awaiting integration. `textweaver-aids` holds RSVP (clock-driven state machine, recognition point, WPM pauses, nine positions, terminal box), bionic reading, WCAG 1.4.12 text spacing with CSS, font settings with Star's three OFL reading fonts (not bundled; fetched by the GUI after asking), the reading ruler and current-line marks, difficult-word marking (no word list vendored: licences need Jon's decision), reading level, and rule-based syllable display with an offset map. One workspace dependency added: `unicode-width` (already in the tree through ratatui). Integration steps for Agents D3 (TUI) and K (GUI) are in the Agent S report and ADR-0022.
-### Agent U — Settings import and export (added 2026-09-25 at Jon's request)
+**Status:** done on `wave2/s-reading-aids` (Friday, September 25, 2026); awaiting integration. `textweaver-aids` holds RSVP (clock-driven state machine, recognition point, WPM pauses, nine positions, terminal box), bionic reading, WCAG 1.4.12 text spacing with CSS, font settings with Star's three OFL reading fonts (not bundled; fetched by the GUI after asking), the reading ruler and current-line marks, difficult-word marking (no word list vendored: licences need the owner's decision), reading level, and rule-based syllable display with an offset map. One workspace dependency added: `unicode-width` (already in the tree through ratatui). Integration steps for Agents D3 (TUI) and K (GUI) are in the Agent S report and ADR-0022.
+### Agent U — Settings import and export (added 2026-09-25 at the owner's request)
 
-Jon asked for an easy way to import and export settings, preferring JSON. TOML stays the on-disk format.
+The owner asked for an easy way to import and export settings, preferring JSON. TOML stays the on-disk format.
 
 **Owns:** `crates/textweaver-store/src/settings_io.rs` (and its tests), the settings validation hooks in `settings.rs`, `crates/textweaver-cli/src/cmd/settings.rs`, `docs/settings.md`, `fixtures/u/`.
 
 **Status:** done on `wave2/u-settings-io`, not yet integrated. `tw settings export|import|path|reset` work; import validates, merges or replaces, backs up, and writes atomically; export then import changes nothing (tested with every setting non-default). The app's palette actions `export_settings` and `import_settings` are a verified patch for Agent D3 in `fixtures/u/d3-settings-palette.patch`.
-### Agent T — Audit and quick fixes (added 2026-09-25 at Jon's request)
+### Agent T — Audit and quick fixes (added 2026-09-25 at the owner's request)
 
 **Owns:** `docs/history/audit-2026-09.md`, `docs/history/audit-2026-09/` (suggested patches for owned areas), `xtask/src/bench.rs`; small fixes in `textweaver-text`, `-speech`, `-core`, `-store`, `-editor`, and CI, each in its own commit with a test.
 
 **Status:** done on `wave2/t-audit` (Friday, September 25, 2026); awaiting integration. Findings ranked in `docs/history/audit-2026-09.md`, with a low-hanging-fruit list. Fixed here: quadratic sentence segmentation and marker lookups in narration (a 10 MB document went from 13 s to 1.2 s to first speech, 0.23 s with the app patches; next sentence in a 50,000-item list from 4.6 s to 0.03 ms), a failing engine flooding and looping errors, rate changes heard sentences late on Eloquence and SAPI, corrupt state files overwritten, saves replacing links and read-only or non-UTF-8 files, reversed ranges panicking, recent paths, CI triggers and Omnivox on Windows and macOS. `cargo xtask bench` measures the hot paths. Seven tested patches for `textweaver-app` and `textweaver-tui` (D3) in `docs/history/audit-2026-09/`, also as one file: reading generations (S1), windowed planning (S3), single-key shortcuts and missing actions (S2), highlight latency in the terminal loop (S4), quit after save (S5), table mode (S6), ordered list items (S7). Checks: native Windows fmt, clippy, and tests (916 passed); Docker Linux with all features (922 passed).
 
-### Agent X — Scripts and tools (added 2026-09-25 at Jon's request)
+### Agent X — Scripts and tools (added 2026-09-25 at the owner's request)
 
-Jon asked for install scripts for Linux (any distribution: he uses Debian, Arch, and Fedora) and macOS, and for speech tools and other helpers.
+The owner asked for install scripts for Linux (any distribution: he uses Debian, Arch, and Fedora) and macOS, and for speech tools and other helpers.
 
 **Owns:** `scripts/` (with `scripts/README.md` and `scripts/linux/textweaver.desktop`), `.github/workflows/scripts.yml`, the `-Skip` parameter of `tools/sapi_probe.ps1`, and the "install with a script" lines in `README.md`, `docs/install.md`, `docs/quickstart.md`, and `docs/dev/releasing.md`.
 
 **Status:** done on `wave2/x-scripts` (Friday, September 25, 2026); awaiting integration. Installers for Linux (apt, dnf, pacman, zypper, apk; source build), macOS (release or source), and Windows (release or source), plus update, speech-check, doctor, dev-check, convert-folder, and voxin-docker. Real source installs pass in `debian:stable`, `fedora:latest`, and `archlinux:latest`; package names are also checked on openSUSE Tumbleweed, Alpine, and Ubuntu 24.04. On Fedora 44 and current Arch, `espeakng-sys` 0.3.0 does not build (its bindgen layout test for `_IO_FILE` fails), so the installer falls back to building without the `espeak` feature; that needs a fix in the speech crate.
 
-### Agent W — Bundled fonts, PDF options, GUI font chooser, SCOWL (added 2026-09-25 at Jon's request)
+### Agent W — Bundled fonts, PDF options, GUI font chooser, SCOWL (added 2026-09-25 at the owner's request)
 
 **Owns:** `crates/textweaver-fonts/` (new), `third_party/fonts/`, `third_party/scowl/`, `tools/scowl_levels.py`, the fonts and PDF-option parts of `crates/textweaver-writers/`, `crates/textweaver-aids/src/{fonts,difficult}.rs`, `crates/textweaver-cli/src/cmd/convert_layout.rs`, the Fonts dialog in `crates/textweaver-gui/` (`fonts.rs`, `font_dialog.rs`, `tools/font-dialog-report.ps1`).
 
@@ -487,7 +487,7 @@ Jon asked for install scripts for Linux (any distribution: he uses Debian, Arch,
 
 **Status:** done on `wave2/d4-audit-fixes` (Saturday, September 26, 2026); awaiting integration. S1 and S2 were already fixed by D3 (T's tests pass on `main`); S3 to S7 applied, adapted. Also: the first list item and "k of n" spoken, repeated status messages repeated, a rotating log file with `--log`, AltGr typing, a warning before saving over a file changed on disk and a reload offer, binary files refused and UTF-16 without a BOM decoded, GFM task lists and HTML text, engine crash resume and a stall watchdog, flaky timing tests fixed, `tw export-audio` reading the settings, `SpeechService::voices()` and Choose voice (Alt+V), speech-dispatcher found without `XDG_RUNTIME_DIR`, and `espeakng-sys` replaced by hand-written declarations (the `espeak` feature builds on Fedora 44 and current Arch, without clang). Bench on a 10 MB file: next sentence while reading 248 ms to 2 ms, open to first speech 705 ms to 226 ms, entering edit mode 462 ms to 151 ms. Notes for integration: the root `Cargo.toml` still lists `espeakng-sys` (unused now; remove it); Agent X's installers can drop clang and their no-espeak fallback.
 
-### Agent Y — Documentation sweep and interactive pages (added 2026-09-26 at Jon's request)
+### Agent Y — Documentation sweep and interactive pages (added 2026-09-26 at the owner's request)
 
 **Status:** done on `wave2/y-docs` (Saturday, September 26, 2026), merged with `main` at 89f270e (the roadmap); awaiting integration. Every doc checked against the code and the programs' help: README, changelog (every merge since 0.1.0-alpha.3), quick start, install, the existing guides, scripts README, Docker, releasing, a dated status update in every ADR, status notes on the plan, audit, and Star references, and a status per item in `docs/star-gaps.md`. New: `docs/README.md` (index), `docs/dev/architecture.md`, `CONTRIBUTING.md`, a full settings reference in `docs/settings.md`, and guides for reading, editing, notes, the library, speech, math, citations, audio export, the vault, dictation, JSON-RPC, troubleshooting, and screen readers; every doc ends with See also. Six accessible pages in `docs/site/` with `tools/gen_site_data.py` (data from cargo metadata, `docs/keyboard.md`, and the themes); `tools/check_links.py` and `tools/check_site_a11y.py`; all three run in `scripts/dev-check` and a new CI `docs` job. Code changes are doc comments and Cargo descriptions only. Not changed: `docs/keyboard.md` and `docs/history/parity-report.md` (generated; no See also), and this log's history.
 
@@ -509,7 +509,7 @@ Jon asked for install scripts for Linux (any distribution: he uses Debian, Arch,
 
 ### Agent P2c — Screen reader coexistence (Phase 2)
 
-**Status:** done on `phase2/c-screen-readers` (Saturday, September 26, 2026); awaiting integration. `[accessibility] mode` (self-voicing, hybrid, screen-reader) routes every message, echo, caret move, and piece of read text through `textweaver_a11y::route`, so nothing is spoken and shown at once with a screen reader; Alt+Shift+A cycles and saves it, `--mode` sets it for a run, `--no-speech` is screen-reader mode (the JSON-RPC server stays self-voicing). Screen-reader mode never speaks: read text goes to the status line narrated (math in words), and Space steps a sentence at a time on the status line (`say_all = "voice"` uses the voice). Hybrid voices reading and leaves messages, echo, and caret moves to the screen reader. `quiet_screen` freezes the title line's position and keeps read text off the status line; `cursor = "status"` parks the cursor there. Screen reader detection (`textweaver_a11y::detect`: Windows flag and processes, VoiceOver, Orca) offers hybrid once on the first run. `[keyboard] preset = "screen-reader"` (`h`, `l`, `k` keys) with `cargo xtask keyboard` documenting it. Store keeps its own setting enums (store depends only on core); the app maps them. `docs/screen-readers.md` has the modes, NVDA and JAWS settings (to verify on Jon's machine), Windows Terminal clashes checked against 1.24, and a checklist. `docs/site/` regenerated (it was stale on main). New action `cycle_access_mode` (P2b adds actions too: expect a merge in `action.rs` and `app.rs`'s match). Tests: 1,746 pass natively on Windows, 1,752 in Docker with all features; clippy, rustdoc, `cargo xtask keyboard --check`, and the link check are clean.
+**Status:** done on `phase2/c-screen-readers` (Saturday, September 26, 2026); awaiting integration. `[accessibility] mode` (self-voicing, hybrid, screen-reader) routes every message, echo, caret move, and piece of read text through `textweaver_a11y::route`, so nothing is spoken and shown at once with a screen reader; Alt+Shift+A cycles and saves it, `--mode` sets it for a run, `--no-speech` is screen-reader mode (the JSON-RPC server stays self-voicing). Screen-reader mode never speaks: read text goes to the status line narrated (math in words), and Space steps a sentence at a time on the status line (`say_all = "voice"` uses the voice). Hybrid voices reading and leaves messages, echo, and caret moves to the screen reader. `quiet_screen` freezes the title line's position and keeps read text off the status line; `cursor = "status"` parks the cursor there. Screen reader detection (`textweaver_a11y::detect`: Windows flag and processes, VoiceOver, Orca) offers hybrid once on the first run. `[keyboard] preset = "screen-reader"` (`h`, `l`, `k` keys) with `cargo xtask keyboard` documenting it. Store keeps its own setting enums (store depends only on core); the app maps them. `docs/screen-readers.md` has the modes, NVDA and JAWS settings (to verify on the owner's machine), Windows Terminal clashes checked against 1.24, and a checklist. `docs/site/` regenerated (it was stale on main). New action `cycle_access_mode` (P2b adds actions too: expect a merge in `action.rs` and `app.rs`'s match). Tests: 1,746 pass natively on Windows, 1,752 in Docker with all features; clippy, rustdoc, `cargo xtask keyboard --check`, and the link check are clean.
 
 ### Agent P2b — Authoring and navigation (Phase 2)
 
@@ -533,7 +533,7 @@ Jon asked for install scripts for Linux (any distribution: he uses Debian, Arch,
 
 ## Wave 3 (planned 2026-09-26; starts after Agent P2e merges and Docker is restarted)
 
-Jon asked to go "full steam ahead" with six agents.
+The owner asked to go "full steam ahead" with six agents.
 
 **Setup:** each agent works in its own worktree and branch, `wave3/<letter>-<name>`, from `main`. Each reads the shared preamble above, `docs/roadmap.md`, `docs/dev/architecture.md`, and the ADRs for its area.
 
@@ -545,7 +545,7 @@ Jon asked to go "full steam ahead" with six agents.
 - `cargo xtask keyboard --check` and `cargo xtask deps --check`;
 - `python tools/check_links.py` and `python tools/gen_site_data.py --check`.
 
-Also run the Docker all-features clippy and tests once, at the end (Jon's memory rule).
+Also run the Docker all-features clippy and tests once, at the end (the owner's memory rule).
 
 **Rules for new code:**
 - Route every new announcement through `textweaver_a11y::route`.
@@ -556,7 +556,7 @@ Also run the Docker all-features clippy and tests once, at the end (Jon's memory
 
 Areas are split to keep merges small.
 
-**Spirit of Wave 3 (Jon, 2026-09-26).** textweaver is an experimental alpha, for Jon's own use first. The aim is to push the envelope with Rust, not to be conservative.
+**Spirit of Wave 3 (the owner, 2026-09-26).** textweaver is an experimental alpha, for the owner's own use first. The aim is to push the envelope with Rust, not to be conservative.
 - Prefer pure-Rust, in-process solutions over subprocesses and C or C++ dependencies whenever they are viable.
 - Accept alpha crates and API churn.
 - Keep the tests and CI gates: they are what let us move fast.
@@ -584,11 +584,11 @@ Areas are split to keep merges small.
    - Move P2b's misspelling count on save (0.6 s on 10 MB).
    - Make an engine's first start non-blocking, not just restarts.
 
-### Agent W3b — The Xilem GUI (Phase 3; Jon chose Xilem on 2026-09-26)
+### Agent W3b — The Xilem GUI (Phase 3; the owner chose Xilem on 2026-09-26)
 
-**Status (Saturday, September 26, 2026):** done on `worktree-agent-a7c54b19d90c611c7` (W3b's work continued by W3b-3 from `wave3/b-xilem-gui`), main merged in (W3a, W3c, W3e, W3f); awaiting integration and Jon's session. The record is ADR-0027 (renumbered from 0023). `textweaver-xilem` has `DocumentView` (text runs with stable ids, the spoken word as a background-colour attribute, the caret as the selection), the live-region announcer, in-window dialogs on W3a's list and prompt models (prompts keep the app's history, Tab completes paths), a settings dialog built from W3a's schema (check boxes, sliders, combo boxes, edit fields, per section), the command palette, the font chooser, Galaxy by default with Galaxy Light and high contrast, windowing through `DocWindow`, and `cargo xtask gui-dist`. A Masonry patch sends screen-reader actions on text runs, list options, and settings rows to the widget that owns them (they were a debug panic). The UI Automation report passes on Windows 11, settings dialog included; the AT-SPI check and the macOS smoke run are CI's (Docker is off). 10 million characters open in about 78 ms; a highlight move takes 0.27 ms (median). Screenshots at 100% and 200% are in `docs/screenshots/xilem-gui/`. wxDragon stays until Jon's NVDA and JAWS session passes. `THIRD-PARTY-NOTICES.md` was regenerated with GPL-3.0-or-later accepted for the run only: main's `about.toml` and `deny.toml` need it for W3f's espeak-ng crates.
+**Status (Saturday, September 26, 2026):** done on `worktree-agent-a7c54b19d90c611c7` (W3b's work continued by W3b-3 from `wave3/b-xilem-gui`), main merged in (W3a, W3c, W3e, W3f); awaiting integration and the owner's session. The record is ADR-0027 (renumbered from 0023). `textweaver-xilem` has `DocumentView` (text runs with stable ids, the spoken word as a background-colour attribute, the caret as the selection), the live-region announcer, in-window dialogs on W3a's list and prompt models (prompts keep the app's history, Tab completes paths), a settings dialog built from W3a's schema (check boxes, sliders, combo boxes, edit fields, per section), the command palette, the font chooser, Galaxy by default with Galaxy Light and high contrast, windowing through `DocWindow`, and `cargo xtask gui-dist`. A Masonry patch sends screen-reader actions on text runs, list options, and settings rows to the widget that owns them (they were a debug panic). The UI Automation report passes on Windows 11, settings dialog included; the AT-SPI check and the macOS smoke run are CI's (Docker is off). 10 million characters open in about 78 ms; a highlight move takes 0.27 ms (median). Screenshots at 100% and 200% are in `docs/screenshots/xilem-gui/`. wxDragon stays until the owner's NVDA and JAWS session passes. `THIRD-PARTY-NOTICES.md` was regenerated with GPL-3.0-or-later accepted for the run only: main's `about.toml` and `deny.toml` need it for W3f's espeak-ng crates.
 
-**Jon's checklist for the Xilem GUI** (NVDA, then JAWS; the release binary is `textweaver-xilem.exe`):
+**The owner's checklist for the Xilem GUI** (NVDA, then JAWS; the release binary is `textweaver-xilem.exe`):
 
 1. Open a document: `textweaver-xilem.exe path\to\file.md`. The window title and "Document" are read, and the arrows read by character, word, and line.
 2. Press Space to read. Does the screen reader's caret follow the spoken word? With NVDA's formatting reports on, is the word's background colour reported?
@@ -605,7 +605,7 @@ Areas are split to keep merges small.
 9. NVDA object navigation inside the settings form and a long list: are settings below the fold reachable? (AccessKit leaves out clipped rows until they scroll into view.)
 10. Compare by ear: `--select-spoken`, `--edit-role`, `--app-list-announcements`, and `--settings-list`.
 
-Jon chose Xilem, from Linebender, for the GUI on every platform, to "keep as much of it Rust as I can". The stack is:
+The owner chose Xilem, from Linebender, for the GUI on every platform, to "keep as much of it Rust as I can". The stack is:
 - Xilem and Masonry for the widgets;
 - Vello for rendering;
 - Parley for text layout;
@@ -624,10 +624,10 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 - Depend on Masonry more than on Xilem.
 - Keep wxDragon working on Windows until the UI Automation report passes.
 - Propose upstream PRs for the gaps.
-- **Visual starting point (Jon, 2026-09-26):** Jon likes the dark look of Xilem's `to_do_mvc` example (github.com/linebender/xilem, the `examples` folder). Use its layout, spacing, and dark styling as the base for the main window and dialogs.
-  - Map textweaver's Galaxy theme onto it. Not every theme needs to meet WCAG AA (Jon, 2026-09-26), but Galaxy, Galaxy Light, and the high-contrast themes must.
+- **Visual starting point (the owner, 2026-09-26):** the owner likes the dark look of Xilem's `to_do_mvc` example (github.com/linebender/xilem, the `examples` folder). Use its layout, spacing, and dark styling as the base for the main window and dialogs.
+  - Map textweaver's Galaxy theme onto it. Not every theme needs to meet WCAG AA (the owner, 2026-09-26), but Galaxy, Galaxy Light, and the high-contrast themes must.
   - Keep the same structure for Galaxy Light and high contrast.
-- **Look and feel (Jon, 2026-09-26): a highly polished, modern, dark-mode look is a goal in its own right.**
+- **Look and feel (the owner, 2026-09-26): a highly polished, modern, dark-mode look is a goal in its own right.**
   - Galaxy is the default.
   - Keep the spacing, type scale, and alignment consistent.
   - Use subtle surfaces and elevation for panels, dialogs, and the status bar.
@@ -635,7 +635,7 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
   - Crisp text rendering at every DPI, with good default fonts from the bundled set.
   - No clutter.
   - Produce screenshots (`--background --screenshot PATH` or a test helper) at 100% and 200% scale for review.
-- **Manual accessibility testing:** Jon tests with screen readers himself. Automated checks (the UI Automation report, AT-SPI dumps) still run in CI. After each milestone, write down exactly what Jon should try, with a short checklist.
+- **Manual accessibility testing:** the owner tests with screen readers himself. Automated checks (the UI Automation report, AT-SPI dumps) still run in CI. After each milestone, write down exactly what the owner should try, with a short checklist.
 
 1. **ADR-0027, "Xilem GUI"** (planned as ADR-0023; renumbered because main took 0023 to 0026). It supersedes ADR-0014 and records:
    - the choice;
@@ -665,7 +665,7 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 
 ### Agent W3c — Architecture consolidation
 
-**Status:** done on `wave3/c-architecture` (Saturday, September 26, 2026), main merged in at 782b455 (W3a); awaiting integration. Store depends only on core: the `[reading_aids]` settings are plain data in `textweaver_store::reading_aids`, and aids converts them (`From` both ways, tested for defaults, round trips, and identical TOML). Font choice and resolution moved to `textweaver-fonts` (`choice`, and `system::installed`, one scan per process, used by the PDF writer); aids re-exports it and keeps `describe_font` and `font_css`. One notes model: the vault uses the store's `Note`, `Highlight`, and `Relation`; `RelationType` moved to store; the app's `app_notes` shim is gone. New crate `textweaver-engines` holds the backend registry, engine options, `service_config`, and the engine features; the app re-exports them. In-reader export, preview, and citations are the app feature `publish` (on by default, forwarded by the reader, asked for by `tw`, the GUI spike, and the benchmarks); without it `src/lean/` stand-ins say "not in this build". The workspace table declares `textweaver-app` with default features off. `cargo xtask deps --check` resolves features and refuses the conversion and citation edges for the reader built with `--no-default-features`; no store exception is left. Docs: `dev/` (architecture, building, testing, docker, releasing), `adr/README.md` index, `history/` (plan, tasks, audit, star-parity, parity report). Tests: 1,933 pass natively (24 ignored), 235 app tests with `publish` off, 1,940 in Docker with all features (19 ignored); fmt, clippy (both feature sets), rustdoc, `keyboard --check`, `deps --check`, and the site check clean. Links: one broken, `CLAUDE.md` still names `docs/tasks.md` (now `docs/history/tasks.md`), left for Jon. Not built here: the wxDragon GUI spike (its `fonts.rs` changed; needs libclang and the wxWidgets download).
+**Status:** done on `wave3/c-architecture` (Saturday, September 26, 2026), main merged in at 782b455 (W3a); awaiting integration. Store depends only on core: the `[reading_aids]` settings are plain data in `textweaver_store::reading_aids`, and aids converts them (`From` both ways, tested for defaults, round trips, and identical TOML). Font choice and resolution moved to `textweaver-fonts` (`choice`, and `system::installed`, one scan per process, used by the PDF writer); aids re-exports it and keeps `describe_font` and `font_css`. One notes model: the vault uses the store's `Note`, `Highlight`, and `Relation`; `RelationType` moved to store; the app's `app_notes` shim is gone. New crate `textweaver-engines` holds the backend registry, engine options, `service_config`, and the engine features; the app re-exports them. In-reader export, preview, and citations are the app feature `publish` (on by default, forwarded by the reader, asked for by `tw`, the GUI spike, and the benchmarks); without it `src/lean/` stand-ins say "not in this build". The workspace table declares `textweaver-app` with default features off. `cargo xtask deps --check` resolves features and refuses the conversion and citation edges for the reader built with `--no-default-features`; no store exception is left. Docs: `dev/` (architecture, building, testing, docker, releasing), `adr/README.md` index, `history/` (plan, tasks, audit, star-parity, parity report). Tests: 1,933 pass natively (24 ignored), 235 app tests with `publish` off, 1,940 in Docker with all features (19 ignored); fmt, clippy (both feature sets), rustdoc, `keyboard --check`, `deps --check`, and the site check clean. Links: one broken, `CLAUDE.md` still names `docs/tasks.md` (now `docs/history/tasks.md`), left for the owner. Not built here: the wxDragon GUI spike (its `fonts.rs` changed; needs libclang and the wxWidgets download).
 
 **Owns:** crate manifests and module moves across `store`, `aids`, `vault`, `fonts`, and a new `textweaver-engines`. Keep app edits to imports and registry wiring, to avoid conflicts with W3a.
 
@@ -724,7 +724,7 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
 1. **Define word, offline.**
    - Look up the user's own glossary first, then **Open English WordNet 2025** (CC BY 4.0; Princeton WordNet 3.1 is the alternative), then CMUdict pronunciations (BSD). See `docs/research/pure-rust-wave3.md`.
    - Use `fst` plus `ruzstd` for the compact data file, and add a "morphy" step that reduces inflected forms.
-   - **Jon approved on 2026-09-26** downloading Open English WordNet 2025 (the WNDB zip) and CMUdict, from their official GitHub releases only, for the one-time data build. Record the SHA-256 sums and add the licences to the notices.
+   - **The owner approved on 2026-09-26** downloading Open English WordNet 2025 (the WNDB zip) and CMUdict, from their official GitHub releases only, for the one-time data build. Record the SHA-256 sums and add the licences to the notices.
    - Build a compact derived data file with a script in `tools/`.
    - Record licences and SHA-256 sums in `third_party/`, and add them to the notices.
    - Ask the orchestrator before downloading the source data.
@@ -764,26 +764,26 @@ The wxDragon spike (`crates/textweaver-gui`, ADR-0014) stays as a fallback. It i
    - Preview, favourites, download (Piper), and remove.
    - Build it in the terminal on the app's list model (W3a), and in the GUI later.
 3. **In-process dictation.** Move Whisper dictation into the process with **rten** (the ONNX int8 models from onnx-community, following `rten-examples/src/whisper.rs`). The research found rten purer than candle, which builds a C library.
-   - Jon approved rten over candle on 2026-09-26. Record the switch from candle in an ADR.
+   - The owner approved rten over candle on 2026-09-26. Record the switch from candle in an ADR.
    - Capture audio with rodio's `recording` feature, resample with `rubato`, and detect speech with `earshot`.
    - Keep candle behind a feature, and the whisper.cpp subprocess as the fallback.
    - Measure latency on the CPU with `base.en`.
 4. **Rate and pitch per voice.** Remember them for each voice, as screen readers do.
 5. **Real-engine listening checklist.**
-   - Add steps to `docs/dev/releasing.md` for Jon to hear Eloquence, SAPI, and Piper before each release.
+   - Add steps to `docs/dev/releasing.md` for the owner to hear Eloquence, SAPI, and Piper before each release.
    - Add `cargo xtask` helpers that write sample WAV files to listen to.
    - Never play audio in tests.
 
 ### After Wave 3
 
-- Jon's NVDA and JAWS listening session for the Xilem GUI.
+- The owner's NVDA and JAWS listening session for the Xilem GUI.
 - The GUI's edit mode and reading aids.
 - VoiceOver and Orca testing.
 - The aarch64 AppImage, on GitHub's arm64 runners.
 - Signing, when funding allows.
-- Release `0.1.0-alpha.4` or `beta.1` when Jon says so.
+- Release `0.1.0-alpha.4` or `beta.1` when the owner says so.
 
-## Usability pass (between Wave 3 and Wave 4; Jon, 2026-09-26)
+## Usability pass (between Wave 3 and Wave 4; the owner, 2026-09-26)
 
 Wave 4 starts only after this pass is done. It has four steps.
 
@@ -807,42 +807,46 @@ Wave 4 starts only after this pass is done. It has four steps.
 
    **Status (Agent UX-1, terminal reader and `tw`, 2026-09-26):** audit done and the quick wins fixed on branch `ux/terminal-pass`; findings, the ranked remainder, and Wave 4 suggestions in [docs/research/usability-terminal.md](../research/usability-terminal.md). Fixed: questions spoken while reading aloud, a first-run welcome, plain open failures in the reader and `tw`, a fuller F1 help with at most two keys per line, startup warnings that no longer cut off "Opened", `tw text | head` no longer panics, `tw define` no longer reports twice, `tw marks --home`, and three stale doc passages.
 2. **Fold in the quick wins.** One or two agents fix every quick win, with tests. Larger items go into the Wave 4 briefs.
-3. **Jon's check.** The orchestrator builds the terminal reader and the GUI in release mode and opens them for Jon. He gets a short checklist for NVDA and JAWS: the GUI, the modes, and the main flows. His findings become fixes or Wave 4 items.
+3. **The owner's check.** The orchestrator builds the terminal reader and the GUI in release mode and opens them for the owner. He gets a short checklist for NVDA and JAWS: the GUI, the modes, and the main flows. His findings become fixes or Wave 4 items.
 4. **Then Wave 4.** Restart Docker, then launch the nine Wave 4 agents.
 
 ## Wave 4 (refined 2026-09-26; starts when Wave 3 is merged and Docker is restarted)
 
 **Reservations for the Cloud Agent:** see [reservations.md](reservations.md). Reserved items and files are not any local agent's, in Wave 4 or Wave 5.
 
-**ADOPTED PLAN, Sunday, September 27, 2026.** This supersedes everything else in this section, including the "Refined plan" and the "Earlier layout" below; those are kept as history. The plan, the ready-to-paste briefs and the orchestrator's runbook are in `docs/research/wave4-orchestration.md`, with these decisions from Jon.
+**ADOPTED PLAN, Sunday, September 27, 2026.** This supersedes everything else in this section, including the "Refined plan" and the "Earlier layout" below; those are kept as history. The plan, the ready-to-paste briefs and the orchestrator's runbook are in `docs/research/wave4-orchestration.md`, with these decisions from the owner.
 
 **Shape:** three sub-waves, with at most three agents building at once. Memory limits this, not disk: Docker's machine has about 31 GB.
-- **Wave 4a, "hear it first":** W4h (terminal polish), W4s (GUI session prep), W4c1 (MathCAT speech). Gate: Jon's NVDA and JAWS session 1.
-- **Wave 4b:** W4g (authoring extras), W4b (speed), W4a2 (the GUI after the session). Gate: Jon's session 2.
+- **Wave 4a, "hear it first":** W4h (terminal polish), W4s (GUI session prep), W4c1 (MathCAT speech). Gate: the owner's NVDA and JAWS session 1.
+- **Wave 4b:** W4g (authoring extras), W4b (speed), W4a2 (the GUI after the session). Gate: the owner's session 2.
 - **Wave 4c:**
   - W4c2 (documents);
   - W4d (translations);
   - **W4a3 (GUI edit mode, new, below);**
   - W4f (platforms and CI), running as a light fourth agent.
 
-  Gate: Jon's check in Spanish or French, then compacting Docker's disk.
+  Gate: the owner's check in Spanish or French, then compacting Docker's disk.
 
-**Jon's decisions (September 27, 2026):**
+**The owner's decisions (September 27, 2026):**
 1. **W4e (offline intelligence) is deferred to Wave 5.**
 2. **GUI edit mode stays in Wave 4,** as W4a3 in sub-wave 4c after session 2.
 3. **No merge gate for now.** W4f doesn't change any repository settings (no rulesets, no required checks, no auto-merge).
-4. **The wxDragon spike (`crates/textweaver-gui`) is removed** once Jon's session 2 on the Xilem GUI passes. The orchestrator does this as its own commit, with the file list shown first.
+4. **The wxDragon spike (`crates/textweaver-gui`) is removed** once the owner's session 2 on the Xilem GUI passes. The orchestrator does this as its own commit, with the file list shown first.
 5. **Unbound keys in the reader are silent,** as in NVDA's browse mode. W4h adds no tone.
 
-**W4s status (Sunday, September 27, 2026):** done on `wave4/s-gui-session-prep`, main merged in; awaiting integration and Jon's session 1. `--announce uia` (and `[gui] announce` in `settings.toml`, read from the store's extra tables; the store and schema entries are proposed) raises UI Automation Notification events from a server-side provider; every list option and setting scrolled out of view is now in the tree (AccessKit's filter kept 13 of 40 and 12 of 20 before), with "1 of 15" positions and rows drawn after scrolling; the UI Automation report passes with `-Announce live` and `-Announce uia` and checks a 194-option list scrolled to its end; memory attributed in ADR-0028 (draft): the app with every engine is about 11 MB, the window's 170 MB is the GPU stack, and Wave 3's 98 MB was read before the renderer finished starting.
+**W4s status (Sunday, September 27, 2026):** done on `wave4/s-gui-session-prep`, main merged in; awaiting integration and the owner's session 1. `--announce uia` (and `[gui] announce` in `settings.toml`, read from the store's extra tables; the store and schema entries are proposed) raises UI Automation Notification events from a server-side provider; every list option and setting scrolled out of view is now in the tree (AccessKit's filter kept 13 of 40 and 12 of 20 before), with "1 of 15" positions and rows drawn after scrolling; the UI Automation report passes with `-Announce live` and `-Announce uia` and checks a 194-option list scrolled to its end; memory attributed in ADR-0028 (draft): the app with every engine is about 11 MB, the window's 170 MB is the GPU stack, and Wave 3's 98 MB was read before the renderer finished starting.
 
-**Session 1 (Jon, Sunday, September 27, 2026):** his first checks with a screen reader and the Braille display were good.
+**Session 1 (the owner, Sunday, September 27, 2026):** his first checks with a screen reader and the Braille display were good.
 - **GUI announcements:** the live region stays the default; `--announce uia` stays an option.
 - **GUI highlight:** the background color stays the default; `--select-spoken` stays an option.
 - **Terminal keys:** keep `z` and Alt+End (say status), and `'` and Alt+' (repeat the last message).
 - **Math speech:** the built-in engine stays the default and is his preference; MathCAT is an option.
 - **Dependencies:** the yaml-rust advisory ignored with a reason; the bzip2-1.0.6 licence allowed for libbz2-rs-sys only; cargo-deny installed.
 - **Downloads for release builds are approved,** including the 32-bit Windows target for the 32-bit SAPI voices and the Eloquence host.
+
+**W4a2 status (Monday, September 28, 2026):** done on `wave4/a2-gui-after-session`, main merged in; awaiting integration and session 2. ADR-0028 accepted with session 1's answers (live region and background highlight stay the defaults; `uia` and `--select-spoken` stay options); `[gui] announce` in the four places (store `GuiSettings`, export fixture, schema under "Window", the GUI); GUI hooks to `named_key`, `ListKey::Introduce` (F1, Alt+End in lists) and `title_parts` (status bar); a window slide keeps the runs that stay and the caret on the spoken word (harness test, and the UI Automation report's new `-WindowEdge` probe passes in `--background`); reading aids drawn (spacing, ruler and current line, bionic, difficult words) and RSVP in its own strip under the document, word node hidden and never live, status node live off (tests); parity test for outline, notes, access modes, tables, links; theme F5 order test; `gui-dist` builds and ships `GUI.md`; new `docs/gui.md`; 16 review screenshots. Native: 2,288 workspace tests and the GUI's pass; container (store and GUI, all features): pass.
+
+**Sub-wave 4c started early (Monday, September 28, 2026):** at the owner's request, W4c2 (documents) and W4d (translations) started before session 2, since neither depends on it. W4d still merges last. W4a3 and W4f wait for session 2. The owner confirmed that the wxDragon spike is removed after session 2, as planned.
 
 **W4a3: GUI edit mode (sub-wave 4c, P1; ADR 0033).**
 - **Edit mode in `DocumentView`,** using `Command::ReplaceRange`, and keeping structure while editing as the terminal reader does.
@@ -856,11 +860,13 @@ Wave 4 starts only after this pass is done. It has four steps.
   - citations while writing;
   - export and preview;
   - spell check.
-- **Uses the highlight and announcement designs** decided in Jon's sessions 1 and 2.
+- **Uses the highlight and announcement designs** decided in the owner's sessions 1 and 2.
 - **Owns:** `textweaver-xilem`'s editing code. Don't touch `textweaver-app` beyond one-line hooks, `.github/`, or the workspace members.
 - **Report checklist,** at most five items: type and hear each character; select a word and hear it; undo; a citation while writing; spell check on a misspelled word.
 
 **Status (Agent W4h, terminal polish, Sunday, September 27, 2026):** all ten deliverables done on `wave4/h-terminal-polish`, one commit each, merged with `main` at cda644b; awaiting integration. "Ready" on the title line until the first reading; `tw search --json` and `tw info` through `print_all`; `tw` alone prints a two-line hint; keys in messages spoken by name ("Control S") and written on the status line ("Ctrl+S"), all from the keymap, with a test that scans the app's and the reader's strings; `say_status` (`z`, `Alt+End`) and `repeat_message` (`'`, `Alt+'`) in both frontends' keymaps; Escape in edit mode says how to finish; the palette's opening sentence; F1 or `Alt+End` in a list repeats its introduction; messages said before the engine is ready are said once it is, in order. Unbound keys stay silent, as decided for Wave 4. Native: 2,174 workspace tests pass; container, the four owned crates with all features: 473 pass. `cargo xtask listen` fails when `CARGO_TARGET_DIR` is set (it looks for `tw` under the worktree's `target`); run by hand, only eSpeak NG was available here.
+
+**Status (Agent W4g, authoring extras, Monday, September 28, 2026):** on `wave4/g-authoring-extras`, main merged in; awaiting integration. In: Markdown lint (our own five rules, not rumdl; Ctrl+F8, `tw lint`), the system clipboard with arboard where OSC 52 cannot reach, Unicode math in the reading view (`[reading] math_display`), notes export as BibTeX, BibLaTeX, RIS and CSL-JSON (`tw marks --export`), and a code block's language said when the caret enters it. Held for the owner, each one commit on its own branch: grammar with harper-core (`wave4/g-grammar-harper`, +10.6 MB, brings burn) and code highlighting with syntect and two-face (`wave4/g-highlight-syntect`, +1.4 MB); both fail `cargo deny` on RUSTSEC-2025-0141 (bincode unmaintained). ADR-0032.
 
 
 **Lessons from Waves 2 and 3.** Every Wave 4 agent follows these. They come from what went wrong or cost time.
@@ -903,11 +909,11 @@ Wave 4 starts only after this pass is done. It has four steps.
   - The backend registry is in `crates/textweaver-engines`, and font resolution in `crates/textweaver-fonts`.
   - Export, preview, and citations are behind the app's `publish` feature.
 - **GUI and audio.**
-  - Automated GUI runs use `--background` and never take the foreground. A dialog once stole focus from Jon.
+  - Automated GUI runs use `--background` and never take the foreground. A dialog once stole focus from the owner.
   - Never play audio.
-  - Jon tests with screen readers himself. Give him a short checklist.
+  - The owner tests with screen readers himself. Give him a short checklist.
 - **Downloads.**
-  - Only download what Jon approved: official sources, SHA-256 recorded, licence added to the notices (`about/data-files.md`, then `cargo xtask notices`).
+  - Only download what the owner approved: official sources, SHA-256 recorded, licence added to the notices (`about/data-files.md`, then `cargo xtask notices`).
   - Never bundle non-commercial models or voices.
   - Keep models out of git, in an ignored cache.
 - **Privacy.** The hard rule in the shared preamble: no personal identifiers in any request, header, URL, or public file, and a neutral User-Agent. Two research threads broke this once.
@@ -924,13 +930,13 @@ Wave 4 starts only after this pass is done. It has four steps.
 
 Run it in **two groups of five**, with a listed flush of merged build output between them. At Wave 3's measured sizes, nine agents' build folders could take up to about 360 GB and push D: through its 200 GB floor.
 
-This plan folds in the Fable review (`docs/research/wave4-plan-review.md`), adopted by Jon on Sunday, September 27, 2026. Where a brief below disagrees with this plan, this plan wins.
+This plan folds in the Fable review (`docs/research/wave4-plan-review.md`), adopted by the owner on Sunday, September 27, 2026. Where a brief below disagrees with this plan, this plan wins.
 
 **Before Group 1 (orchestrator):**
 - Add the six W3d fuzz targets (`daisy`, `pptx`, `sheet`, `archive`, `image`, `web`) to the nightly workflow, with their corpus lines. Only the orchestrator or W4f may edit `.github/`.
 - Confirm `cargo xtask notices --check` passes on main.
 
-**Group 1 (starts when Jon says go):**
+**Group 1 (starts when the owner says go):**
 1. **W4h, terminal polish (P1, new).** Small commits, merged first; W4g starts from W4h's merged work.
    - UX-1's top findings from `docs/research/usability-terminal.md`:
      - key names in spoken form for textweaver's own voice;
@@ -959,12 +965,12 @@ This plan folds in the Fable review (`docs/research/wave4-plan-review.md`), adop
    - Do speech first. Add braille only if MathCAT issue #827 (a panic in `GetNavigationBraille` in no-unsafe builds) is closed, because this workspace denies unsafe code.
    - EPUB 3 MathML is W4c1's; W4c2 leaves the EPUB loader alone.
    - ADR 0029.
-   - **Status (W4c1, Sunday, September 27, 2026):** done on `wave4/c1-mathcat`, not merged. MathCAT 0.7.6-rc.3 speech (ClearSpeak and SimpleSpeak) behind the off-by-default `mathcat` feature and `[reading] math_engine`, EPUB 3 MathML read as math, ADR-0029. Braille waits for #827. Two dependency checks need Jon's decision before merge: the `bzip2-1.0.6` licence (libbz2-rs-sys) and the unmaintained yaml-rust, both from MathCAT itself.
+   - **Status (W4c1, Sunday, September 27, 2026):** done on `wave4/c1-mathcat`, not merged. MathCAT 0.7.6-rc.3 speech (ClearSpeak and SimpleSpeak) behind the off-by-default `mathcat` feature and `[reading] math_engine`, EPUB 3 MathML read as math, ADR-0029. Braille waits for #827. Two dependency checks need the owner's decision before merge: the `bzip2-1.0.6` licence (libbz2-rs-sys) and the unmaintained yaml-rust, both from MathCAT itself.
 4. **W4a1, GUI accessibility first, then reading aids and edit mode (P1).** In this order:
    1. The direct `UiaRaiseNotificationEvent` option for JAWS.
    2. The fix for clipped options in `ChoiceList` and `SettingsGrid`, so options scrolled out of view stay in the accessibility tree. This is a listed exception to W4a2 owning the dialogs.
    3. The GUI's memory growth (98 to 172–187 MB), first measured with the engines and `publish` off, using W4b's tools. The likely cause is engines and data loaded at startup instead of on first use.
-   4. **Merge 1 to 3 and tell the orchestrator,** who builds the GUI for Jon's NVDA and JAWS session while W4a1 continues.
+   4. **Merge 1 to 3 and tell the orchestrator,** who builds the GUI for the owner's NVDA and JAWS session while W4a1 continues.
    5. The reading aids.
    6. Edit mode, on the vendored Parley 0.8.0. Don't upgrade it.
 
@@ -978,8 +984,8 @@ This plan folds in the Fable review (`docs/research/wave4-plan-review.md`), adop
    - Notes export to BibTeX, RIS and JSON, using the citation crate's record types.
 
 **Group 2** (after a listed flush of Group 1's merged build volumes):
-6. **W4a2, GUI parity and wx removal (P2).** Starts only after Jon's session.
-   - First: a window slide during reading keeps the screen reader's place. Check it with the UI Automation report, and put it first on Jon's second checklist.
+6. **W4a2, GUI parity and wx removal (P2).** Starts only after the owner's session.
+   - First: a window slide during reading keeps the screen reader's place. Check it with the UI Automation report, and put it first on the owner's second checklist.
    - Parity means Star's features, not Star's bugs; the Phase 0 inventory lists the bugs.
    - A test that the first nine themes keep their cycle order.
 7. **W4c2, documents (P2).** Merge main after W4b's zip commit lands. Leave the EPUB loader alone.
@@ -987,7 +993,7 @@ This plan folds in the Fable review (`docs/research/wave4-plan-review.md`), adop
    - Do the six fuzz targets, if they weren't done before launch.
    - The first GUI packages for macOS and Linux.
    - A doc pass against the code, file by file, before release notes.
-   - **Branch pruning is removed.** It happens only after a wave is complete, and only with Jon's approval.
+   - **Branch pruning is removed.** It happens only after a wave is complete, and only with the owner's approval.
 9. **W4d, translations (P3).**
    - Extend W3e's Fluent-subset catalog (`textweaver_lexicon::i18n`, ADR-0025) first. Switch to `fluent-bundle` only if a language needs attributes, functions or number formatting, and record that as a status update on ADR-0025.
    - A missing voice for a language keeps the current voice and says so; never go silent.
@@ -996,7 +1002,7 @@ This plan folds in the Fable review (`docs/research/wave4-plan-review.md`), adop
    - ADR 0030.
 10. **W4e, offline intelligence (P3, experimental; the first to cut if Group 2 needs the disk or attention).**
     - The no-model LexRank summary first.
-    - Translation only if there's disk to spare, and only with models Jon has approved.
+    - Translation only if there's disk to spare, and only with models the owner has approved.
     - Pin `tokenizers` to 0.23, since 1.0 is at release candidate.
     - ADR 0031.
 
@@ -1014,11 +1020,11 @@ This plan folds in the Fable review (`docs/research/wave4-plan-review.md`), adop
 - **The heavy all-features Docker check is the orchestrator's,** run one agent at a time at integration. Agents run the native checks, plus their own crates' tests in the container.
 - **ADR numbers:** W4a1 0028, W4c1 0029, W4d 0030, W4e 0031. `CHANGELOG.md` entries go under a heading with your agent's name.
 - **Dates:** on Windows, run `py -3 -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"`. `python` on this machine is the Windows Store stub.
-- **Every report ends with a checklist** of at most five things for Jon to try with NVDA and JAWS, or the line "nothing to hear".
+- **Every report ends with a checklist** of at most five things for the owner to try with NVDA and JAWS, or the line "nothing to hear".
 
-**Earlier layout: nine agents (Jon, 2026-09-26: use more resources), superseded by the refined plan above.** The briefs below were split like this:
+**Earlier layout: nine agents (the owner, 2026-09-26: use more resources), superseded by the refined plan above.** The briefs below were split like this:
 1. **W4a1, GUI edit mode and reading aids.** From W4a: edit mode in `DocumentView`, the reading aids in the GUI, and the research notes on editable text, RSVP overlays, and announcements.
-2. **W4a2, GUI parity and wx removal.** From W4a: parity with the terminal reader, fixes from Jon's listening session, and removing the wxDragon spike. This agent owns the dialogs, W4a1 owns `DocumentView`, and they coordinate through small commits.
+2. **W4a2, GUI parity and wx removal.** From W4a: parity with the terminal reader, fixes from the owner's listening session, and removing the wxDragon spike. This agent owns the dialogs, W4a1 owns `DocumentView`, and they coordinate through small commits.
 3. **W4b, speed.** As written.
 4. **W4c1, MathCAT.** From W4c: MathCAT for math speech, navigating inside formulas, Nemeth and UEB braille in the BRF writer, and EPUB 3 MathML.
 5. **W4c2, documents.** From W4c: native RTF and ODT, DOCX comments and tracked changes, the LaTeX subset, EML and MHTML, and fuzz targets with hostile-input limits.
@@ -1036,7 +1042,7 @@ In Docker, keep your own target directory: `-e CARGO_TARGET_DIR=/target/<agent>`
 
 **Every Wave 4 agent reads `docs/research/wave4.md` first.** It records the research behind these briefs: crate versions, licences, APIs, and risks. The privacy hard rule in the shared preamble applies to every request.
 
-A draft, so the next wave can start the moment Wave 3 lands. It follows the same rules and spirit as Wave 3: pure-Rust first, experimental, and Jon's own use first. The orchestrator will refine these briefs from Wave 3's reports before launch.
+A draft, so the next wave can start the moment Wave 3 lands. It follows the same rules and spirit as Wave 3: pure-Rust first, experimental, and the owner's own use first. The orchestrator will refine these briefs from Wave 3's reports before launch.
 
 ### Agent W4a: The Xilem GUI, part two
 
@@ -1055,18 +1061,20 @@ A draft, so the next wave can start the moment Wave 3 lands. It follows the same
   - tables and links;
   - notes;
   - the access modes.
-- **Fixes from Jon's NVDA and JAWS listening session.** Where AccessKit falls short, write the changes and send them upstream.
-- **Remove the wxDragon spike** once the Xilem GUI passes the UI Automation report and Jon's session.
+- **Fixes from the owner's NVDA and JAWS listening session.** Where AccessKit falls short, write the changes and send them upstream.
+- **Remove the wxDragon spike** once the Xilem GUI passes the UI Automation report and the owner's session.
 - **From the research.**
   - Base the editable text on Parley's `examples/editor`, which uses accesskit 0.25 and accesskit_winit 0.34. Parley main removed its AccessKit feature.
   - Use `MultilineTextInput` in edit mode, and handle `SetTextSelection`, `SetValue`, and `ReplaceSelectedText`.
   - Draw backgrounds yourself; Parley has no background style.
   - Undo comes from textweaver's editor crate.
   - For the RSVP overlay, hide the flashing word node, and expose a quiet labelled status node with `Live::Off`.
-  - Offer a direct `UiaRaiseNotificationEvent` on Windows as an announcement option, for Jon to compare with the live regions.
+  - Offer a direct `UiaRaiseNotificationEvent` on Windows as an announcement option, for the owner to compare with the live regions.
   - Use Slint's AccessKit integration as a reference.
 
 ### Agent W4b: Speed, round two
+
+**Status (Agent W4b, speed and memory, Monday, September 28, 2026):** done on `wave4/b-speed`, main merged in; awaiting integration. **The zip commit (3be7682, the first on the branch) can go to main on its own for W4c2:** zip reads deflate, bzip2, LZMA, XZ, and PPMd members in pure Rust, `cargo deny` passes (new duplicate warning: lzma-rust2 0.16.5 for zip beside 0.21.0 for 7z), and a member declaring more than 256 MB is refused before it is unpacked. Words and sentences go through ICU4X (twice and three times as fast, same boundaries; lines in Thai, Lao, Khmer, Burmese, CJK, and Hangul keep unicode-segmentation for words, property-tested); sentence and word segmentation allocate less; the whole-document narration plan on 10 MB went from 1,155 to 631 ms and 1,141,829 to 844,757 allocations. Start-up: the OS color-scheme probe (two `reg query` processes, 35 to 90 ms) runs only when it can change the theme, on a helper thread; `--log debug` gives start-up times. Sizes (release): `textweaver.exe` 46,827,520 to 47,332,864 bytes (the zip features are most of it), `tw.exe` 52,799,488 to 53,294,592; without `publish` the reader is 28,704,256. No size cut in owned files; proposals in the report. memchr and aho-corasick measured, not adopted (no hot path yet). The bench harness now waits for other threads before counting, which made the gate repeatable. Ropes measured in an ADR-0002 status update, no change. All numbers in `docs/dev/testing.md`. Native: 2,219 workspace tests pass (the wx spike excluded: its libclang does not load here); clippy, rustdoc, fmt, keyboard, deps, links, site data, the `publish`-off build, and `cargo deny` pass. Container, the three owned crates with all features: 277 pass.
 
 - **Faster text search and segmentation.**
   - Adopt `icu_segmenter` for word and sentence boundaries, measured against `unicode-segmentation`.
@@ -1133,10 +1141,10 @@ A draft, so the next wave can start the moment Wave 3 lands. It follows the same
 - **The pull-request merge gate.** Integrations go through pull requests with required checks.
   - Merge queue is for organisations only. Use rulesets instead: require a pull request with 0 approvals, require status checks, and block force pushes.
   - Turn on auto-merge, then use `gh pr merge --auto --squash --delete-branch`.
-  - Changing repository settings needs Jon's approval.
-- **Automated screen-reader tests** complement Jon's manual testing. Guidepup drives NVDA and VoiceOver in CI; use `npx @guidepup/setup setup --ci`, because the action was archived. Also try DioxusLabs accessibility-cli for tree dumps.
-- **Prune merged branches.** 85 of the 91 are merged. Use git-delete-merged-branches with `--effort=3` to catch squash merges, run a dry run first, back up refs, and ask Jon before deleting remote branches.
-- **Release notes.** Prepare `0.1.0-beta.1` notes, for when Jon asks for a release.
+  - Changing repository settings needs the owner's approval.
+- **Automated screen-reader tests** complement the owner's manual testing. Guidepup drives NVDA and VoiceOver in CI; use `npx @guidepup/setup setup --ci`, because the action was archived. Also try DioxusLabs accessibility-cli for tree dumps.
+- **Prune merged branches.** 85 of the 91 are merged. Use git-delete-merged-branches with `--effort=3` to catch squash merges, run a dry run first, back up refs, and ask the owner before deleting remote branches.
+- **Release notes.** Prepare `0.1.0-beta.1` notes, for when the owner asks for a release.
 
 ### Also for Wave 4, for the first free agent or for Wave 5
 

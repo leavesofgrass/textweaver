@@ -64,6 +64,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `reading.ocr_lang`: default the document's (`""`). Scanned text language. The language of scanned text, as Tesseract codes such as fra or deu+eng; empty means the document's own language, else English. Choices: `""` (the document's), `"eng"` (English), `"fra"` (French), `"deu"` (German), `"spa"` (Spanish). Other values may be written too.
 - `reading.ocr_engine`: default automatic (`"auto"`). OCR engine. Which engine recognizes scanned pages: ocrs for English and Tesseract for other languages, or one of them always. Choices: `"auto"` (automatic), `"ocrs"`, `"tesseract"` (Tesseract), `"paddle"` (PaddleOCR (experimental)).
 - `reading.math_engine`: default textweaver (`"builtin"`). Math speech. Which engine reads math aloud: textweaver's own, or MathCAT in ClearSpeak or SimpleSpeak, in the document's language. MathCAT needs a build that includes it; otherwise textweaver's own is used. Choices: `"builtin"` (textweaver), `"mathcat"` (MathCAT ClearSpeak), `"mathcat_simplespeak"` (MathCAT SimpleSpeak).
+- `reading.math_display`: default `"source"`. Math on screen. How math looks in the reading view: as its source, such as x^2, or as Unicode, such as x with a superscript 2. Speech and edit mode always use the source. Choices: `"source"`, `"unicode"` (Unicode).
 
 ## Display: the `[display]` section
 
@@ -169,6 +170,10 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 ## Interface: the `[interface]` section
 
 - `interface.language`: default English (`"en"`). Interface language. The language of textweaver's own words, from the next start. Only English is complete; the others are for testing. Choices: `"en"` (English), `"en-XA"` (test: accented), `"ar-XB"` (test: right to left). Other values may be written too.
+
+## Window: the `[gui]` section
+
+- `gui.announce`: default live region (`"live"`). Announcements. How the window's messages reach the screen reader, from the next start: a live region, or UI Automation notifications (Windows only). Choices: `"live"` (live region), `"uia"` (UI Automation notifications).
 
 ## Kept by textweaver
 

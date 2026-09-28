@@ -2,7 +2,7 @@
 
 A pass over `textweaver` (the terminal reader) and `tw` (the command line) from a screen reader user's point of view, on Saturday, September 26, 2026, between Wave 3 and Wave 4 (Agent UX-1, branch `ux/terminal-pass`). The GUI has its own pass.
 
-How it was done: the code that produces every announcement, prompt, list, and error was read against the docs (`quickstart.md`, `reading.md`, `editing.md`, `notes.md`, `screen-readers.md`, `keyboard.md`, `troubleshooting.md`); the reader was driven headlessly on ratatui's test backend with the recording speech backend, so nothing was played aloud; and `tw` was run with a throwaway `--home` and the silent backend. Nothing was tried by ear with NVDA or JAWS: that is Jon's check, step 3 of the pass.
+How it was done: the code that produces every announcement, prompt, list, and error was read against the docs (`quickstart.md`, `reading.md`, `editing.md`, `notes.md`, `screen-readers.md`, `keyboard.md`, `troubleshooting.md`); the reader was driven headlessly on ratatui's test backend with the recording speech backend, so nothing was played aloud; and `tw` was run with a throwaway `--home` and the silent backend. Nothing was tried by ear with NVDA or JAWS: that is the owner's check, step 3 of the pass.
 
 Each finding below has its evidence, its size, and whether it was a quick win. The quick wins are fixed on the branch, with tests. The rest is ranked by its impact on a blind user.
 
@@ -30,12 +30,12 @@ Sizes: small is under half a day, medium a day or two, large more.
 4. **The command palette's prompt is one word, "Command"** (small). A first-time user does not learn that Tab completes, Up and Down list matches, and part of a name is enough. Say it once when the palette opens: "Command. Type part of a name; Tab completes, Up and Down list matches." The label drawn on the bottom line can stay short.
 5. **Escape in edit mode does nothing a user can hear** (small). Escape is Stop everywhere; in edit mode with nothing playing it is silent, and users used to editors expect it to leave. Either say "Still editing. Ctrl+E finishes." on Escape in edit mode, or leave edit mode when there are no unsaved changes.
 6. **`tw` with no arguments prints the whole command list as an error** (small). Twenty-one commands scroll past a screen reader with exit status 2. A two-line hint ("tw open FILE reads a document aloud; tw --help lists every command") would be kinder; clap's `arg_required_else_help` is the current behaviour.
-7. **Unbound keys are silent** (small, but a decision). Pressing a letter that does nothing gives no feedback, as in NVDA's browse mode. A short tone (the `Error` earcon exists) at high verbosity would tell a user the key reached textweaver and meant nothing. NVDA is silent here too, so this is a choice for Jon.
+7. **Unbound keys are silent** (small, but a decision). Pressing a letter that does nothing gives no feedback, as in NVDA's browse mode. A short tone (the `Error` earcon exists) at high verbosity would tell a user the key reached textweaver and meant nothing. NVDA is silent here too, so this is a choice for the owner.
 8. **A long list's introduction is not repeatable** (small). "Notes, 12 notes. Enter goes to a note, Delete deletes it, F2 edits it." is heard once; there is no key to hear the list's title and count again while it is open. Home already says the first item; a key for "where am I in this list" would help.
 9. **The saved-changes list and the recovery list are the only lists with letter accelerators** (medium). Other lists jump by first letter, which is right; but the export and citation lists could take `y` and `n` for "Open it?" questions consistently. The wording is consistent already.
 10. **`tw search` and `tw info` still panic on a closed pipe for JSON output** (small). `print_all` covers the text output; the `--json` branches use `println!`.
 11. **Startup is silent while the speech engine starts** (medium). The engine starts on a helper thread and the reader is "silent until the engine is ready"; "Opened" is announced before the engine is up, so with a slow engine the first announcements are lost to the null service. The status line has them, so a screen reader user is fine; a self-voicing user hears nothing until the engine reports. Queue the announcements made before the engine is ready and say them once it is.
-12. **Docs say `q` quits in the classic preset but the quick start says only `Ctrl+Q`** (small). Both are true; the quick start could say "with the classic keys, `q` too". Jon's decision (q asks first; y quits; n or a cancel) is what the code does for `Ctrl+Q` and for `q` in the classic preset.
+12. **Docs say `q` quits in the classic preset but the quick start says only `Ctrl+Q`** (small). Both are true; the quick start could say "with the classic keys, `q` too". The owner's decision (q asks first; y quits; n or a cancel) is what the code does for `Ctrl+Q` and for `q` in the classic preset.
 
 ## Suggested items for Wave 4
 
@@ -43,12 +43,12 @@ Sizes: small is under half a day, medium a day or two, large more.
 - A "say status" action and a "repeat last message" action (item 3), with browse keys, in both frontends.
 - "Ready" on the title line before the first play, and Escape in edit mode saying how to finish (items 2 and 5).
 - Queue announcements made before the speech engine is ready (item 11) in W4b (speed), which owns startup.
-- Jon's check, step 3: the first-run question with NVDA and JAWS, whether the welcome comes through once, and whether a question asked during reading is now heard over the voice in Windows Terminal and the classic console.
+- The owner's check, step 3: the first-run question with NVDA and JAWS, whether the welcome comes through once, and whether a question asked during reading is now heard over the voice in Windows Terminal and the classic console.
 - A friendlier `tw` with no arguments (item 6).
 
 ## See also
 
-- [Using textweaver with a screen reader](../screen-readers.md): the three modes and the checklist Jon runs.
+- [Using textweaver with a screen reader](../screen-readers.md): the three modes and the checklist the owner runs.
 - [Reading and moving around](../reading.md) and [Writing and editing](../editing.md): the flows this pass walked.
-- [Tasks and ownership](../history/tasks.md#usability-pass-between-wave-3-and-wave-4-jon-2026-09-26): the brief.
+- [Tasks and ownership](../history/tasks.md#usability-pass-between-wave-3-and-wave-4-the-owner-2026-09-26): the brief.
 - [Documentation index](../README.md)

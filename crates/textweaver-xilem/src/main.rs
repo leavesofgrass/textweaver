@@ -53,7 +53,8 @@ struct Args {
     #[arg(long)]
     background: bool,
     /// While reading, select the spoken word instead of placing the caret
-    /// on it (an experiment for listening sessions).
+    /// at its start. The default, kept after the first screen reader
+    /// session, is a background color on the word (ADR-0028).
     #[arg(long)]
     select_spoken: bool,
     /// Expose the document as a read-only multi-line edit instead of a
@@ -131,6 +132,7 @@ fn main() {
                 list: None,
                 settings: false,
                 home: args.home.clone(),
+                aids: false,
             };
             if let Err(e) = screenshot(&o) {
                 eprintln!("textweaver-xilem: {e}");

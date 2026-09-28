@@ -39,6 +39,33 @@ pub enum SpanStyle {
     Underline,
     /// Struck-through text.
     Strikethrough,
+    /// The start of a word drawn bold for bionic reading (a reading aid,
+    /// drawn only: screen readers are not told it is bold).
+    Bionic,
+    /// A difficult word (rare in SCOWL): underlined, never marked by
+    /// colour alone.
+    Difficult,
+}
+
+/// The reading aids' spans over `window` from the app (ADR-0022): bionic
+/// reading's bold word starts and the difficult words, each empty when its
+/// aid is off.
+pub fn aid_spans(app: &textweaver_app::App, window: CharRange) -> Vec<StyledSpan> {
+    let bionic = app
+        .bionic_ranges(window)
+        .into_iter()
+        .map(|range| StyledSpan {
+            range,
+            style: SpanStyle::Bionic,
+        });
+    let difficult = app
+        .difficult_ranges(window)
+        .into_iter()
+        .map(|range| StyledSpan {
+            range,
+            style: SpanStyle::Difficult,
+        });
+    bionic.chain(difficult).collect()
 }
 
 /// A styled range (document positions).

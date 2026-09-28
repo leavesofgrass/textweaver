@@ -244,6 +244,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `ocr_lang`, default `""`: the language of scanned text, as Tesseract codes (`"fra"`, `"deu+eng"`) or language tags (`"fr"`). Empty means the document's own language, else English. English is read by ocrs; other languages need Tesseract.
 - `ocr_engine`, default `"auto"`: `"ocrs"`, `"tesseract"`, or `"paddle"` (experimental) to use one engine only.
 - `math_engine`, default `"builtin"`: which engine reads math aloud. `"builtin"` is textweaver's own; `"mathcat"` is MathCAT in ClearSpeak and `"mathcat_simplespeak"` MathCAT in SimpleSpeak, in the document's language. MathCAT needs a build with the `mathcat` feature; without it, textweaver's own is used. See [Hear math with MathCAT](math.md#hear-math-with-mathcat).
+- `math_display`, default `"source"`: how math looks in the reading view. `"source"` shows it as written (`$x^2$`); `"unicode"` draws each formula as one line of Unicode (`x²`, `√2`, `1⁄2`), as Star did. Speech, edit mode, and exploring a formula always use the source. See [See math as Unicode](math.md#see-math-as-unicode).
 
 ### [display]
 
@@ -387,6 +388,12 @@ Reading statistics (see [the reading guide](reading.md#reading-statistics-ctrlsh
 ### [interface]
 
 - `language`, default `"en"`: the language of textweaver's own words. Only English is complete so far. `en-XA` shows every message accented and in `⟦ ⟧` brackets, and `ar-XB` shows them right to left: both are for testing. A `<language>.ftl` file in the `locales` folder of the settings folder adds a language; messages it lacks stay in English. The define-word, profile, and statistics messages use it; the rest of the interface follows in later versions.
+
+### [gui]
+
+Settings only the window (`textweaver-xilem`) reads. In the settings dialog they are under "Window".
+
+- `announce`, default `"live"`: how the window's messages reach the screen reader, from the next start. `"live"` uses a live region, which NVDA and JAWS both speak. `"uia"` raises UI Automation notifications instead (Windows only; elsewhere the live region is used). `--announce live` or `--announce uia` on the command line wins over the setting for one run.
 
 ## Settings profiles
 

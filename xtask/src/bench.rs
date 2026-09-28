@@ -661,7 +661,11 @@ pub mod alloc {
         static ALLOCS_AT_RESET: Cell<usize> = const { Cell::new(0) };
     }
 
+    /// Allocation calls on every thread, for [`wait_quiet`] only.
+    static ANY_ALLOCS: AtomicUsize = AtomicUsize::new(0);
+
     fn counted() {
+        ANY_ALLOCS.fetch_add(1, Relaxed);
         // `try_with`: a thread being torn down may still free and allocate.
         let _ = ALLOCS.try_with(|n| n.set(n.get() + 1));
     }
@@ -740,6 +744,27 @@ pub mod alloc {
         ALLOCS
             .with(Cell::get)
             .saturating_sub(ALLOCS_AT_RESET.with(Cell::get))
+    }
+
+    /// Waits until no thread has allocated for `quiet`, or `limit` has
+    /// passed; true when it went quiet. Peak heap counts every thread, so
+    /// work a previous document left running (its speech and structure
+    /// threads) would otherwise be counted against the next one.
+    pub fn wait_quiet(quiet: std::time::Duration, limit: std::time::Duration) -> bool {
+        let start = std::time::Instant::now();
+        let mut seen = ANY_ALLOCS.load(Relaxed);
+        let mut since = std::time::Instant::now();
+        while start.elapsed() < limit {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            let now = ANY_ALLOCS.load(Relaxed);
+            if now != seen {
+                seen = now;
+                since = std::time::Instant::now();
+            } else if since.elapsed() >= quiet {
+                return true;
+            }
+        }
+        false
     }
 }
 
@@ -1043,6 +1068,11 @@ mod inner {
         r.peak("open_peak_mb", "open and read");
         app.dispatch(Command::Action(ActionId::Stop));
         app.poll_speech();
+        // Opening starts background work (the structure parse of a large
+        // document); it finishes before the steady-state numbers below, or
+        // its allocations land in whichever step it overlaps (one step's
+        // count varied 30 times between two runs of the same code).
+        alloc::wait_quiet(Duration::from_millis(300), Duration::from_secs(30));
 
         // Navigation from the middle, idle then reading.
         let middle = parse_go_to("50%").expect("50% is a go-to target");
@@ -1108,6 +1138,7 @@ mod inner {
         // finished first: the peak heap counts every thread.
         app.wait_for_background(Duration::from_secs(60));
         app.wait_for_writes();
+        alloc::wait_quiet(Duration::from_millis(300), Duration::from_secs(30));
         app.dispatch(Command::GoTo(parse_go_to("start").expect("start")));
         for (key, label, pattern) in [
             ("find_word", "find \"the\"", "the"),
@@ -1259,6 +1290,7 @@ mod inner {
                 &written,
             );
             r.peak("autosave_peak_mb", "autosave");
+            alloc::wait_quiet(Duration::from_millis(300), Duration::from_secs(30));
             alloc::reset_peak();
             let t = Instant::now();
             app.dispatch(Command::Action(ActionId::ToggleEditMode));
@@ -1398,6 +1430,12 @@ mod inner {
             docs.len()
         );
         for (name, path) in &docs {
+            // The previous document's threads finish before this one is
+            // measured (under load they ran on for seconds and multiplied
+            // some allocation counts by up to seven).
+            if !alloc::wait_quiet(Duration::from_millis(300), Duration::from_secs(30)) {
+                println!("(other threads were still allocating after 30 s)");
+            }
             let _ = std::fs::remove_dir_all(&home);
             let rep = bench_doc(name, path, &home);
             println!();

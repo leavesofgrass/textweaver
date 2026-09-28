@@ -7,7 +7,7 @@
 
 ## Context
 
-Jon asked for conversion that is fast, native Rust, and memory safe, with EPUB, DOCX, braille (BRF), and PDF outputs beyond Markdown, HTML, and text. Star exported PDF and DOCX through Pandoc or Qt and BRF through its own grade 1 table (`star/braille.py`) or liblouis. Star's grade 1 table has wrong UEB symbols (both parentheses as dots 2-3-5-6, the slash as dots 3-4, straight double quotes always as the opening quote) and drops accented letters it cannot fold. Students with print disabilities use these files with screen readers, braille displays, and embossers, so structure and accessibility metadata matter as much as the text.
+The owner asked for conversion that is fast, native Rust, and memory safe, with EPUB, DOCX, braille (BRF), and PDF outputs beyond Markdown, HTML, and text. Star exported PDF and DOCX through Pandoc or Qt and BRF through its own grade 1 table (`star/braille.py`) or liblouis. Star's grade 1 table has wrong UEB symbols (both parentheses as dots 2-3-5-6, the slash as dots 3-4, straight double quotes always as the opening quote) and drops accented letters it cannot fold. Students with print disabilities use these files with screen readers, braille displays, and embossers, so structure and accessibility metadata matter as much as the text.
 
 The workspace offers `zip`, `krilla` (PDF with tagging and PDF/UA validation), and `roxmltree`; no XML writer, font, or braille crate.
 
@@ -52,7 +52,7 @@ What krilla's validator does not check, and textweaver does not yet do: a veraPD
 
 ## Amendment: bundled fonts and PDF options (2026-09-25, Agent W)
 
-Jon asked for bundled fonts and quick wins for PDF export.
+The owner asked for bundled fonts and quick wins for PDF export.
 
 - **Fonts.** The new `textweaver-fonts` crate embeds Atkinson Hyperlegible Next and Mono and OpenDyslexic (SIL OFL 1.1, `third_party/fonts/`, 1.35 MB) behind the cargo feature `bundled-fonts`, on by default here. PDF text defaults to Atkinson Hyperlegible Next and code to Atkinson Hyperlegible Mono, so PDFs look the same everywhere and never fail for lack of a font. `PdfOptions::font_family` and `code_font_family` choose a bundled or installed family by name (installed fonts are found by scanning the font folders for `name`-table family names), or a font file; a name that is neither is an error, reported once before a batch through `pdf::check_fonts`. Installed fonts still serve as per-character fallbacks for other scripts.
 - **Layout.** `PageSize::parse` (letter, a4, a5, legal, `6x9in`) and `parse_length` (`1in`, `20mm`); margin and line spacing as before; `large_print` (18 points or more, 1.5 or more line spacing, more paragraph space, heading sizes 1.5 to 1 times the text, code at full size), and `PdfOptions::large_print()` as a preset (with 1.6 spacing and three-quarter-inch margins).

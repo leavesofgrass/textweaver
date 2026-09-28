@@ -350,6 +350,11 @@ impl App {
             return vec![Effect::Redraw];
         };
         let Some(w) = self.misspelled_here() else {
+            // A grammar problem there instead: its fixes (Agent W4g).
+            #[cfg(feature = "grammar")]
+            if let Some(p) = self.grammar_here() {
+                return self.grammar_fixes(p);
+            }
             self.tell("No misspelled word at the cursor.");
             return vec![Effect::Redraw];
         };

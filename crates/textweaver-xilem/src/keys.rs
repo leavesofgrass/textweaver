@@ -101,6 +101,11 @@ fn function_number(k: &NamedKey) -> Option<u8> {
     Some(n)
 }
 
+/// True for F1 to F24.
+pub fn is_function_key(k: &NamedKey) -> bool {
+    function_number(k).is_some()
+}
+
 /// True for chords the document view keeps: caret movement and selection
 /// (with Shift or Ctrl), and Tab.
 pub fn is_native(chord: &KeyChord) -> bool {

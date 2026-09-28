@@ -1685,6 +1685,10 @@ impl App {
             | A::NextMisspelling
             | A::PreviousMisspelling
             | A::SpellingSuggestions
+            | A::NextGrammarProblem
+            | A::PreviousGrammarProblem
+            | A::NextLintProblem
+            | A::PreviousLintProblem
             | A::ExportStudySheet
             | A::NewFromTemplate
             | A::ExportHtml

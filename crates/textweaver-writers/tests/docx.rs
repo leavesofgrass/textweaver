@@ -160,7 +160,7 @@ fn package_parts_are_well_formed_and_related() {
     }
     let core = part(&files, "docProps/core.xml");
     assert!(core.contains("<dc:title>Reading Guide</dc:title>"));
-    assert!(core.contains("<dc:creator>Jon Pielaet</dc:creator>"));
+    assert!(core.contains("<dc:creator>Ada Example</dc:creator>"));
     assert!(core.contains("<dc:language>en-US</dc:language>"));
     assert!(core.contains("2026-09-25T12:34:56Z"));
     assert!(part(&files, "word/styles.xml").contains("<w:lang w:val=\"en-US\""));

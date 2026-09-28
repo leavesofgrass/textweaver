@@ -4,7 +4,7 @@
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): Implemented for audio files. Microphone dictation is still not available: `cpal` is only in the build as a dependency of rodio, and nothing records with it. As built: openai-whisper needs ffmpeg on `PATH` to decode audio; for whisper.cpp, a file is converted with ffmpeg unless its name ends in `.wav`; a program named `main` counts as whisper.cpp; and the spoken commands also accept "next paragraph", "next line", "newline", "fullstop", "semi colon", "begin quote", "end quote", "unquote", "left paren", and "right paren".
 - Status update (Saturday, September 26, 2026, Wave 3 plan): Agent W3f is to move Whisper into the process with `candle`, keeping this subprocess design as the fallback, and to measure its latency on the CPU.
-- Status update (Saturday, September 26, 2026, Agent W3f): Whisper now runs in-process on RTen instead of candle, with Jon's approval; see [ADR-0023](0023-in-process-neural-speech.md). This subprocess design is the fallback. Microphone capture is rodio's `recording` feature (`MicCapture`), resampled with rubato; `tw dictate` without `--file` records until Enter when the in-process model is installed.
+- Status update (Saturday, September 26, 2026, Agent W3f): Whisper now runs in-process on RTen instead of candle, with the owner's approval; see [ADR-0023](0023-in-process-neural-speech.md). This subprocess design is the fallback. Microphone capture is rodio's `recording` feature (`MicCapture`), resampled with rubato; `tw dictate` without `--file` records until Enter when the in-process model is installed.
 
 ## Context
 

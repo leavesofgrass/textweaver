@@ -72,6 +72,8 @@ The terminal's cursor always sits where your attention is: on the word being spo
 
 Lists, such as the help, bookmarks, notes, and the library, appear in a box over the document.
 
+Code blocks are drawn in the theme's code colors. When a block names its language (```` ```python ````), its keywords, strings, comments, numbers, and names get colors from the theme too, and the kinds differ by more than color: keywords are bold and comments italic. The text itself never changes. Moving the caret onto the block's first line says its language, for example "code, Python".
+
 ## Read aloud
 
 ### Play and pause: Space

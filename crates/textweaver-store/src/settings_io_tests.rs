@@ -83,6 +83,7 @@ fn everything_changed() -> Settings {
     r.ocr_lang = "fra+eng".into();
     r.ocr_engine = crate::OcrEngine::Tesseract;
     r.math_engine = crate::MathEngine::MathCatSimpleSpeak;
+    r.math_display = crate::MathDisplay::Unicode;
     let d = &mut s.display;
     d.theme = "nord".into();
     d.wrap_width = 100;
@@ -181,6 +182,7 @@ fn everything_changed() -> Settings {
     s.lexicon.data_file = Some("lexicon-en.twlex".into());
     s.stats.enabled = false;
     s.interface.language = "en-XA".into();
+    s.gui.announce = crate::GuiAnnounce::Uia;
     s.extra.insert("future_key".into(), toml::Value::Integer(1));
     let future: toml::Table = "a = 1\nwhen = 2026-09-25T14:03:07Z\n".parse().unwrap();
     s.extra

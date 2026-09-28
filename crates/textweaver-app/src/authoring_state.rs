@@ -101,6 +101,14 @@ pub(crate) enum AuthoringList {
         range: textweaver_core::CharRange,
         choices: Vec<SpellChoice>,
     },
+    /// Fixes for the grammar problem at `range` (Agent W4g), then "Leave
+    /// it as it is". Only built with the `grammar` feature, off by default.
+    #[cfg_attr(not(feature = "grammar"), allow(dead_code))]
+    Grammar {
+        words: String,
+        range: textweaver_core::CharRange,
+        fixes: Vec<String>,
+    },
     /// What to do with the current match of find and replace.
     Replace,
     /// Templates for a new document.
@@ -209,6 +217,9 @@ pub(crate) struct Authoring {
     pub(crate) citing: Option<String>,
     /// The personal word list, loaded on first use.
     pub(crate) words: Option<std::collections::BTreeSet<String>>,
+    /// Harper's dictionary and rules, loaded on the first grammar check.
+    #[cfg(feature = "grammar")]
+    pub(crate) grammar: Option<crate::grammar::GrammarChecker>,
     /// Find and replace, one match at a time.
     pub(crate) replace: Option<crate::replace::ReplaceSession>,
     /// The template chosen for a new document, waiting for its title.
