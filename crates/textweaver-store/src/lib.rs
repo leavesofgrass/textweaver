@@ -62,11 +62,11 @@ pub use recent::{Recent, RecentEntry};
 pub use settings::{
     AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, CitationReading,
     CommunityLexiconSettings, CursorPlacement, DigitRow, DisplaySettings, EciDictionaries,
-    EciSettings, EditingSettings, ExportSettings, FootnoteMode, HighlightSettings,
-    InterfaceSettings, KeyboardSettings, KeymapOverrides, KeymapPreset, LexiconSettings,
-    LibrarySettings, MathDisplay, MathEngine, NormalizationSettings, OcrEngine, PreviewSettings,
-    RESERVED_SETTINGS, ReadingSettings, SapiSettings, SayAll, Settings, SettingsLoad,
-    SettingsStore, SpeechSettings, StatsSettings, SubtitleFormat, TableMode,
+    EciSettings, EditingSettings, ExportSettings, FootnoteMode, GuiAnnounce, GuiSettings,
+    HighlightSettings, InterfaceSettings, KeyboardSettings, KeymapOverrides, KeymapPreset,
+    LexiconSettings, LibrarySettings, MathDisplay, MathEngine, NormalizationSettings, OcrEngine,
+    PreviewSettings, RESERVED_SETTINGS, ReadingSettings, SapiSettings, SayAll, Settings,
+    SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, SubtitleFormat, TableMode,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,

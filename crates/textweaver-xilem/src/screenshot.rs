@@ -42,6 +42,33 @@ pub struct ShotOptions {
     pub settings: bool,
     /// Keep settings under this directory.
     pub home: Option<PathBuf>,
+    /// Turn the reading aids on first (bionic reading, difficult words,
+    /// the ruler with its band, WCAG's text spacing, and RSVP). They are
+    /// saved like any setting, so this needs `home`.
+    pub aids: bool,
+}
+
+/// Every reading aid on, for review: bionic reading, difficult words, the
+/// ruler band, WCAG 1.4.12's text spacing, and RSVP on the cursor's word.
+fn turn_on_aids(app: &mut textweaver_app::App) -> Result<(), String> {
+    use textweaver_app::Command;
+    use textweaver_app::keymap::ActionId;
+    use textweaver_app::store::reading_aids::{RulerMode, TextSpacing};
+    app.update_settings(|s| {
+        let a = &mut s.reading_aids;
+        a.bionic = true;
+        a.difficult_words = true;
+        a.ruler.mode = RulerMode::Ruler;
+        a.spacing = TextSpacing {
+            line_height: 1.5,
+            paragraph_spacing: 2.0,
+            letter_spacing: 0.12,
+            word_spacing: 0.16,
+        };
+    })
+    .map_err(|e| format!("cannot save the reading aids: {e}"))?;
+    let _ = app.dispatch(Command::Action(ActionId::RsvpToggle));
+    Ok(())
 }
 
 /// Draws the window into `opts.path`.
@@ -51,10 +78,16 @@ pub fn screenshot(opts: &ShotOptions) -> Result<(), String> {
         home: opts.home.clone(),
         ..Options::default()
     };
+    if opts.aids && opts.home.is_none() {
+        return Err("the reading aids screenshot needs a home folder, so its settings are not saved into yours".into());
+    }
     let (mut app, _) = setup::build_app(&app_opts, Box::new(LogAnnouncer::default()));
     if let Some(file) = &opts.file {
         app.open(file)
             .map_err(|e| format!("cannot open {}: {e}", file.display()))?;
+    }
+    if opts.aids {
+        turn_on_aids(&mut app)?;
     }
     let palette = match &opts.theme {
         Some(name) => Palette::named(name),
@@ -137,11 +170,14 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         list: None,
         settings: false,
         home: Some(dir.join("home")),
+        aids: false,
     };
     // What each shot shows over the window: nothing, a list, or settings.
     const WINDOW: u8 = 0;
     const LIST: u8 = 1;
     const SETTINGS: u8 = 2;
+    // The reading aids on, with RSVP under the document.
+    const AIDS: u8 = 3;
     let shots = [
         ("galaxy-100.png", "galaxy", 1.0, WINDOW),
         ("galaxy-200.png", "galaxy", 2.0, WINDOW),
@@ -165,6 +201,10 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
             1.0,
             SETTINGS,
         ),
+        ("galaxy-aids-100.png", "galaxy", 1.0, AIDS),
+        ("galaxy-aids-200.png", "galaxy", 2.0, AIDS),
+        ("galaxy-light-aids-100.png", "galaxy-light", 1.0, AIDS),
+        ("high-contrast-aids-100.png", "high-contrast", 1.0, AIDS),
     ];
     for (name, theme, scale, over) in shots {
         let mut o = base.clone();
@@ -172,6 +212,9 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         o.theme = Some(theme.into());
         o.scale = scale;
         o.settings = over == SETTINGS;
+        o.aids = over == AIDS;
+        // Each shot starts from the defaults; the aids shots save theirs.
+        o.home = Some(dir.join(if o.aids { "home-aids" } else { "home" }));
         if over == LIST {
             o.list = Some((
                 "Bookmarks".into(),

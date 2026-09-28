@@ -83,6 +83,12 @@ pub struct Palette {
     pub find_hit: (Rgb, Rgb),
     /// The caret.
     pub caret: Rgb,
+    /// The reading ruler's band on the reading line (a tint of the focus
+    /// colour the text stays readable on; a bar at the line's start marks
+    /// it too, so colour is not the only cue).
+    pub ruler_focus: Rgb,
+    /// The ruler's band on the lines around the reading line.
+    pub ruler_band: Rgb,
 }
 
 /// `c` as a Masonry colour.
@@ -164,6 +170,8 @@ impl Palette {
             selection: (selection.foreground, selection.background),
             find_hit: (find.foreground, find.background),
             caret: text,
+            ruler_focus: ensure(background.mix(focus, 0.22), &[text], text_min),
+            ruler_band: ensure(background.mix(focus, 0.10), &[text], text_min),
         }
     }
 

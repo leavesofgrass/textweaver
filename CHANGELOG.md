@@ -57,6 +57,14 @@ See [docs/keyboard.md](docs/keyboard.md#what-changed).
 - Lists and the settings form say "1 of 15" (they said "2 of" with no total), and rows scrolled into view are drawn instead of blank.
 - The UI Automation report checks both announcement paths and a long list scrolled to its end. See [ADR-0028](docs/adr/0028-xilem-gui-after-the-session.md), which also records where the GUI's memory goes (the graphics stack; the app itself is about 11 MB).
 
+### W4a2: the Xilem GUI after the first screen reader session
+
+- The live region stays the default for announcements, and the spoken word's background color stays the highlight. `[gui] announce = "uia"` is now a real setting, in the settings dialog under "Window"; `--announce` and `--select-spoken` stay as options. ADR-0028 is accepted.
+- A long document's window slides while reading without losing the screen reader's place: the text that stays keeps its nodes, and the caret stays on the spoken word.
+- The reading aids in the window: text spacing, the reading ruler and current line, bionic reading, difficult words, and RSVP in its own strip under the document. The RSVP word is never spoken by itself; a quiet status beside it says where you are.
+- In a list, F1 and Alt+End repeat the list's introduction, as in the terminal. The status bar shows the terminal's title line: the reading state, the line, the mode, the rate, and the engine. "No document is open" names the Open key from the keymap.
+- New guide: [docs/gui.md](docs/gui.md), also shipped in the GUI package as `GUI.md`.
+
 ### Usability pass: the terminal reader and `tw`
 
 - A yes-or-no question ("Quit textweaver? y or n", "Delete this note? y or n", "Reload it? y or n", the Piper download and every other one) is now spoken even while textweaver is reading aloud. It went to the status line only, so a self-voicing user heard the reading go on and the next key press vanished into the question.

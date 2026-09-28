@@ -86,38 +86,17 @@ pub fn service_config(settings: &Settings) -> ServiceConfig {
     }
 }
 
-/// The settings table only the GUI reads, `[gui]`.
-pub const GUI_TABLE: &str = "gui";
-
-/// The `announce` key of the `[gui]` table: `"live"` or `"uia"`
-/// ([`AnnounceMode`](crate::widgets::AnnounceMode)). `None` when it is not
-/// set; an error message for the user when it is set to something else.
-///
-/// The store keeps tables it does not know in `Settings::extra`, and writes
-/// them back unchanged, so the GUI can read `[gui]` without a store type.
-/// Until the store and the app's settings schema list it (ADR-0028), it is
-/// set by editing `settings.toml` and is not in the settings dialog.
-pub fn announce_setting(
-    settings: &Settings,
-) -> Result<Option<crate::widgets::AnnounceMode>, String> {
-    let Some(value) = settings
-        .extra
-        .get(GUI_TABLE)
-        .and_then(|t| t.as_table())
-        .and_then(|t| t.get("announce"))
-    else {
-        return Ok(None);
-    };
-    value
-        .as_str()
-        .and_then(crate::widgets::AnnounceMode::parse)
-        .map(Some)
-        .ok_or_else(|| {
-            format!(
-                "gui.announce should be {}; using the live region",
-                crate::widgets::AnnounceMode::NAMES.join(" or ")
-            )
-        })
+/// The `[gui] announce` setting ([`AnnounceMode`](crate::widgets::AnnounceMode)):
+/// the live region (the default, ADR-0028) or UI Automation notifications.
+/// The store checks the value; a bad one is reported with the other
+/// settings warnings and reads as the live region.
+pub fn announce_setting(settings: &Settings) -> crate::widgets::AnnounceMode {
+    use crate::widgets::AnnounceMode;
+    use textweaver_app::store::GuiAnnounce;
+    match settings.gui.announce {
+        GuiAnnounce::Live => AnnounceMode::Live,
+        GuiAnnounce::Uia => AnnounceMode::Uia,
+    }
 }
 
 /// Milliseconds per word at `rate`, for the paced backend.
@@ -262,22 +241,22 @@ mod tests {
         use crate::widgets::AnnounceMode;
         let read = |toml_text: &str| {
             let table: toml::Table = toml_text.parse().expect("toml");
-            let (settings, _) = Settings::from_table(table);
-            announce_setting(&settings)
+            let (settings, warnings) = Settings::from_table(table);
+            (announce_setting(&settings), warnings.len())
         };
-        assert_eq!(read(""), Ok(None));
-        assert_eq!(read("[gui]\n"), Ok(None));
+        assert_eq!(read(""), (AnnounceMode::Live, 0));
+        assert_eq!(read("[gui]\n"), (AnnounceMode::Live, 0));
+        assert_eq!(read("[gui]\nannounce = \"uia\"\n"), (AnnounceMode::Uia, 0));
         assert_eq!(
-            read("[gui]\nannounce = \"uia\"\n"),
-            Ok(Some(AnnounceMode::Uia))
+            read("[gui]\nannounce = \"live\"\n"),
+            (AnnounceMode::Live, 0)
         );
+        // A bad value warns (with the other settings) and keeps the default.
         assert_eq!(
-            read("[gui]\nannounce = \"Live\"\n"),
-            Ok(Some(AnnounceMode::Live))
+            read("[gui]\nannounce = \"loud\"\n"),
+            (AnnounceMode::Live, 1)
         );
-        let err = read("[gui]\nannounce = \"loud\"\n").unwrap_err();
-        assert!(err.contains("live or uia"), "{err}");
-        assert!(read("[gui]\nannounce = 3\n").is_err());
+        assert_eq!(read("[gui]\nannounce = 3\n"), (AnnounceMode::Live, 1));
     }
 
     #[test]

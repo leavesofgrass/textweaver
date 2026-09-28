@@ -844,6 +844,8 @@ Wave 4 starts only after this pass is done. It has four steps.
 - **Dependencies:** the yaml-rust advisory ignored with a reason; the bzip2-1.0.6 licence allowed for libbz2-rs-sys only; cargo-deny installed.
 - **Downloads for release builds are approved,** including the 32-bit Windows target for the 32-bit SAPI voices and the Eloquence host.
 
+**W4a2 status (Monday, September 28, 2026):** done on `wave4/a2-gui-after-session`, main merged in; awaiting integration and session 2. ADR-0028 accepted with session 1's answers (live region and background highlight stay the defaults; `uia` and `--select-spoken` stay options); `[gui] announce` in the four places (store `GuiSettings`, export fixture, schema under "Window", the GUI); GUI hooks to `named_key`, `ListKey::Introduce` (F1, Alt+End in lists) and `title_parts` (status bar); a window slide keeps the runs that stay and the caret on the spoken word (harness test, and the UI Automation report's new `-WindowEdge` probe passes in `--background`); reading aids drawn (spacing, ruler and current line, bionic, difficult words) and RSVP in its own strip under the document, word node hidden and never live, status node live off (tests); parity test for outline, notes, access modes, tables, links; theme F5 order test; `gui-dist` builds and ships `GUI.md`; new `docs/gui.md`; 16 review screenshots. Native: 2,288 workspace tests and the GUI's pass; container (store and GUI, all features): pass.
+
 **W4a3: GUI edit mode (sub-wave 4c, P1; ADR 0033).**
 - **Edit mode in `DocumentView`,** using `Command::ReplaceRange`, and keeping structure while editing as the terminal reader does.
 - **Based on Parley's `examples/editor`,** on the vendored Parley 0.8.0. Don't upgrade it.

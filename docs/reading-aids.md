@@ -14,6 +14,8 @@ Every aid can be turned on and off, and textweaver says when it changes. The key
 - **Alt+Shift+Z**: syllables shown or hidden.
 - **Alt+Shift+J**: difficult words marked or not.
 
+In the window (`textweaver-xilem`), RSVP has its own strip under the document, so it never covers the text, and the words before and after sit to its left and right; see [The textweaver window](gui.md#reading-aids).
+
 The [keyboard reference](keyboard.md) lists every key. Each aid's settings are in the `[reading_aids]` sections of `settings.toml`; [Settings](settings.md#reading_aids) lists them.
 
 To try RSVP, bionic reading, and the ruler in a web browser first, open the [reading aids demo page](site/reading-aids.html) in `docs/site/`.

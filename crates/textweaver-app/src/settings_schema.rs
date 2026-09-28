@@ -1055,6 +1055,16 @@ pub const INFO: &[Info] = &[
             ("ar-XB", "test: right to left"),
         ],
     ),
+    // [gui]
+    choice(
+        "gui.announce",
+        "Announcements",
+        "How the window's messages reach the screen reader, from the next start: a live region, or UI Automation notifications (Windows only).",
+        &[
+            ("live", "live region"),
+            ("uia", "UI Automation notifications"),
+        ],
+    ),
 ];
 
 /// The section title for a top-level key.
@@ -1075,6 +1085,7 @@ fn section_title(key: &str) -> &'static str {
         "lexicon" => "Define word",
         "stats" => "Reading statistics",
         "interface" => "Interface",
+        "gui" => "Window",
         _ => "Other",
     }
 }

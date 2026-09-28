@@ -914,6 +914,32 @@ impl Default for InterfaceSettings {
     }
 }
 
+/// How the windowed reader's announcements reach the screen reader
+/// (`[gui] announce`, ADR-0028).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GuiAnnounce {
+    /// A live region: each message is a new node the screen reader speaks
+    /// (UI Automation's LiveRegionChanged, AT-SPI's Announcement).
+    #[default]
+    Live,
+    /// UI Automation Notification events (Windows only; elsewhere the
+    /// live region is used).
+    Uia,
+}
+
+/// `[gui]`: settings only the windowed reader (`textweaver-xilem`) reads.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct GuiSettings {
+    /// How announcements reach the screen reader. The live region is the
+    /// default, chosen in the owner's first screen reader session.
+    pub announce: GuiAnnounce,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
 /// All settings, one TOML table per group.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -948,6 +974,8 @@ pub struct Settings {
     pub stats: StatsSettings,
     /// `[interface]`
     pub interface: InterfaceSettings,
+    /// `[gui]`
+    pub gui: GuiSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1071,6 +1099,7 @@ impl Settings {
             lexicon: lenient_section("lexicon", table.remove("lexicon"), &mut w),
             stats: lenient_section("stats", table.remove("stats"), &mut w),
             interface: lenient_section("interface", table.remove("interface"), &mut w),
+            gui: lenient_section("gui", table.remove("gui"), &mut w),
             extra: table,
         };
         (s, w)
@@ -1255,12 +1284,13 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 25] = [
+pub(crate) const STRUCT_TABLES: [&str; 26] = [
     "keyboard",
     "preview",
     "lexicon",
     "stats",
     "interface",
+    "gui",
     "accessibility",
     "reading_aids",
     "reading_aids.rsvp",
@@ -2235,5 +2265,25 @@ wrap_navigation = true
         );
         let (_, w) = Settings::from_table("[stats]\nenabled = 3\n".parse().unwrap());
         assert_eq!(w, ["stats.enabled has an invalid value"]);
+    }
+
+    /// `[gui] announce` (ADR-0028): the live region by default, `uia` when
+    /// set, and a bad value warns and keeps the live region.
+    #[test]
+    fn gui_section() {
+        let d = Settings::default();
+        assert_eq!(d.gui.announce, GuiAnnounce::Live);
+        assert!(!d.to_minimal_toml().unwrap().contains("[gui]"));
+        let (s, w) = Settings::from_table("[gui]\nannounce = \"uia\"\n".parse().unwrap());
+        assert!(w.is_empty(), "{w:?}");
+        assert_eq!(s.gui.announce, GuiAnnounce::Uia);
+        let text = s.to_minimal_toml().unwrap();
+        assert!(
+            text.contains("[gui]") && text.contains("announce = \"uia\""),
+            "{text}"
+        );
+        let (s, w) = Settings::from_table("[gui]\nannounce = \"loud\"\n".parse().unwrap());
+        assert_eq!(w, ["gui.announce has an invalid value"]);
+        assert_eq!(s.gui.announce, GuiAnnounce::Live);
     }
 }

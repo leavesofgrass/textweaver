@@ -239,6 +239,135 @@ fn large_documents_open_and_highlight_quickly() {
     assert!(median < 1_000.0, "{median} ms");
 }
 
+/// The runs' ids and text, in the document node's order.
+fn runs(h: &TestHarness<DocumentView>) -> Vec<(String, String)> {
+    let node = h.access_node(h.root_id()).unwrap();
+    node.children()
+        .map(|c| {
+            (
+                format!("{:?}", c.id()),
+                c.data().value().unwrap_or_default().to_owned(),
+            )
+        })
+        .collect()
+}
+
+/// Reading past the window's edge: the window slides, and the screen
+/// reader keeps its place. The runs that stay keep their nodes and text,
+/// the caret (the collapsed selection on the spoken word) is sent again on
+/// a node that is in the tree, and it points at the spoken word.
+#[test]
+fn a_window_slide_while_reading_keeps_the_screen_readers_place() {
+    let para = "Reading on and on, sentence after sentence, past the edge. ";
+    let mut text = String::new();
+    let mut i = 0;
+    while text.len() < WINDOW_UNITS * 3 {
+        text.push_str(para);
+        i += 1;
+        if i % 4 == 0 {
+            text.push('\n');
+        }
+    }
+    let doc = Document::from_plain_text(&text);
+    let (mut h, mut w) = harness_with(&doc, CharPos::ZERO);
+    // The text is ASCII, so bytes and chars agree.
+    let word_at = |pos: usize| {
+        let start = text[pos..]
+            .find(|c: char| c.is_ascii_alphabetic())
+            .map_or(pos, |b| pos + b);
+        CharRange::new(start, start + 4)
+    };
+    let reading = |r: CharRange| DocState {
+        caret: r.start,
+        anchor: None,
+        spoken: Some(r),
+        sentence: None,
+        reading: true,
+    };
+    // Reading near the window's end, before it slides.
+    let before_edge = word_at(w.range().end.0 - WINDOW_UNITS / 6);
+    assert_eq!(
+        w.follow(&doc, before_edge.start),
+        textweaver_app::WindowChange::Unchanged
+    );
+    h.edit_root_widget(|mut d| DocumentView::set_state(&mut d, reading(before_edge)));
+    let _ = h.redraw();
+    let before = runs(&h);
+    // The next word is past the slide point: the window slides forward.
+    let old = w.range();
+    let spoken = word_at(w.range().end.0 - WINDOW_UNITS / 16);
+    let change = w.follow(&doc, spoken.start);
+    assert!(
+        matches!(change, textweaver_app::WindowChange::Forward { .. }),
+        "{change:?}"
+    );
+    assert!(w.range().start > old.start);
+    let model = DocModel {
+        paragraphs: window::window_paragraphs(&doc, w.range()),
+        spans: window::window_spans(&doc, w.range()),
+        doc_len: doc.len_chars(),
+        title: "Test".into(),
+    };
+    h.edit_root_widget(|mut d| {
+        DocumentView::slide_model(&mut d, model);
+        DocumentView::set_state(&mut d, reading(spoken));
+    });
+    let _ = h.redraw();
+    let after = runs(&h);
+    // The text is the new window's.
+    assert_eq!(doc_text(&h), doc.slice(w.range()));
+    // The runs that stayed kept their nodes and their text: all but those
+    // around the spoken word, before and after, and the paragraphs now on
+    // screen, which split at their visual lines once laid out, as they do
+    // when scrolled to. Before the slide kept ids, none stayed.
+    let stayed: Vec<_> = before
+        .iter()
+        .filter(|(id, _)| after.iter().any(|(a, _)| a == id))
+        .collect();
+    let kept = stayed.iter().filter(|r| after.contains(r)).count();
+    assert!(stayed.len() > 100, "{} runs stayed", stayed.len());
+    assert!(
+        kept * 100 >= stayed.len() * 85,
+        "{kept} of {} runs that stayed kept their text",
+        stayed.len()
+    );
+    // No node that left the window is still there.
+    let ids: std::collections::HashSet<_> = after.iter().map(|(id, _)| id).collect();
+    assert_eq!(ids.len(), after.len(), "every run has its own node");
+    // The caret is on the spoken word, on a node in the tree.
+    let node = h.access_node(h.root_id()).unwrap();
+    let focus = node
+        .text_selection_focus()
+        .expect("the caret is sent again");
+    assert_eq!(
+        w.range().start.0 + focus.to_global_usv_index(),
+        spoken.start.0,
+        "the caret is on the spoken word"
+    );
+    // A jump replaces every run.
+    let far = word_at(doc.len_chars() - 1000);
+    assert_eq!(
+        w.follow(&doc, far.start),
+        textweaver_app::WindowChange::Recentred
+    );
+    let model = DocModel {
+        paragraphs: window::window_paragraphs(&doc, w.range()),
+        spans: window::window_spans(&doc, w.range()),
+        doc_len: doc.len_chars(),
+        title: "Test".into(),
+    };
+    h.edit_root_widget(|mut d| {
+        DocumentView::set_model(&mut d, model);
+        DocumentView::set_state(&mut d, reading(far));
+    });
+    let _ = h.redraw();
+    let jumped = runs(&h);
+    assert!(jumped.iter().all(|r| !after.contains(r)));
+    let node = h.access_node(h.root_id()).unwrap();
+    let focus = node.text_selection_focus().unwrap();
+    assert_eq!(w.range().start.0 + focus.to_global_usv_index(), far.start.0);
+}
+
 #[test]
 fn the_edit_role_experiment_is_a_readonly_multiline_edit() {
     let p = Palette::galaxy();
