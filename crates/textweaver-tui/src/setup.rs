@@ -209,10 +209,12 @@ pub fn is_first_run(paths: &Paths) -> bool {
 }
 
 /// The welcome said once, on the first run: the five keys that get a new
-/// user reading, named from the keymap in effect.
+/// user reading, named from the keymap in effect. The keys are marked
+/// ([`textweaver_app::named_key`]): the status line shows "Ctrl+Q", the
+/// voice says "Control Q".
 pub fn welcome_text(keymap: &Keymap) -> String {
     use textweaver_app::keymap::ActionId;
-    let k = |a| textweaver_app::spoken_key(keymap, a);
+    let k = |a| textweaver_app::named_key(keymap, a);
     format!(
         "Welcome to textweaver. {} reads aloud and pauses, {} stops, {} moves to the next heading, {} opens the help, and {} quits.",
         k(ActionId::PlayPause),
@@ -235,10 +237,10 @@ pub fn first_run_message(opts: &Options, keymap: &Keymap) -> Option<String> {
 }
 
 /// What the reader says when it starts without a document, naming the
-/// keys from the keymap in effect.
+/// keys from the keymap in effect (marked, as in [`welcome_text`]).
 pub fn no_document_text(keymap: &Keymap) -> String {
     use textweaver_app::keymap::ActionId;
-    let k = |a| textweaver_app::spoken_key(keymap, a);
+    let k = |a| textweaver_app::named_key(keymap, a);
     format!(
         "No document is open. Press {} to open one, {} for a new one, or {} for help.",
         k(ActionId::Open),
@@ -382,13 +384,25 @@ mod tests {
         };
         let (app, _) = build_app(&opts);
         let welcome = first_run_message(&opts, app.keymap()).expect("a welcome on the first run");
+        // Spoken by textweaver's voice, and written on the status line.
+        let spoken = textweaver_app::spoken_text;
+        let written = textweaver_app::written_text;
         assert_eq!(
-            welcome,
+            spoken(&welcome),
             "Welcome to textweaver. Space reads aloud and pauses, Escape stops, H moves to the next heading, F1 opens the help, and Control Q quits."
         );
         assert_eq!(
-            no_document_text(app.keymap()),
+            written(&welcome),
+            "Welcome to textweaver. Space reads aloud and pauses, Escape stops, h moves to the next heading, F1 opens the help, and Ctrl+Q quits."
+        );
+        let none = no_document_text(app.keymap());
+        assert_eq!(
+            spoken(&none),
             "No document is open. Press Control O to open one, Control N for a new one, or F1 for help."
+        );
+        assert_eq!(
+            written(&none),
+            "No document is open. Press Ctrl+O to open one, Ctrl+N for a new one, or F1 for help."
         );
         // A saved document state means a run happened before.
         let state = Paths::under(dir.path()).state_dir();

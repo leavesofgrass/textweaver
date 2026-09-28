@@ -1,7 +1,23 @@
 //! Keyboard help, the command palette, and the help screen, all generated
 //! from the keymap so they cannot drift from the real bindings (ADR-0006).
+//!
+//! # Keys in messages: written and spoken (Wave 4, W4h)
+//!
+//! A message that names a key carries it in both forms, between private
+//! use characters: `Ctrl+S` for the status line, the screen reader, and
+//! the lists drawn on screen, and `Control S` for textweaver's own voice
+//! ([`KeyChord::spoken`]), which names punctuation, so "Alt period" is
+//! heard even with punctuation off, where `Alt+.` was heard as "alt".
+//! [`App::key`] and [`App::keys`] build such keys from the keymap; the
+//! announcement paths ([`written_text`] and [`spoken_text`]) pick the form
+//! for each destination, and lists and effects handed to a frontend never
+//! carry the marks.
+//!
+//! [`KeyChord::spoken`]: textweaver_keymap::KeyChord::spoken
 
-use textweaver_keymap::{ActionId, Category, Keymap};
+use std::borrow::Cow;
+
+use textweaver_keymap::{ActionId, Category, KeyChord, Keymap};
 
 use crate::app::{App, ListKind};
 use crate::command::{Effect, NoteCommand};
@@ -89,14 +105,111 @@ pub fn key_text(keymap: &Keymap, action: ActionId) -> String {
     main_chord(keymap, action).map_or_else(|| "the command palette".to_owned(), |c| c.to_string())
 }
 
+/// Opens a key named in a message: the written form follows.
+const KEY_OPEN: char = '\u{E000}';
+/// Between a key's written and spoken forms.
+const KEY_SPLIT: char = '\u{E001}';
+/// Closes a key named in a message.
+const KEY_CLOSE: char = '\u{E002}';
+
+/// `chord` for a message, in both forms (see the module notes).
+pub(crate) fn mark_chord(chord: &KeyChord) -> String {
+    format!("{KEY_OPEN}{chord}{KEY_SPLIT}{}{KEY_CLOSE}", chord.spoken())
+}
+
+/// One key for `action`, marked for a message: the main chord (the single
+/// key while single-key shortcuts are on), else "the command palette".
+/// Frontends pass messages built with it to [`App::announce`]; the status
+/// line shows "Ctrl+O" and textweaver's voice says "Control O".
+pub fn named_key(keymap: &Keymap, action: ActionId) -> String {
+    main_chord(keymap, action).map_or_else(|| "the command palette".to_owned(), |c| mark_chord(&c))
+}
+
+/// Every chord bound to `action`, marked for a message and joined with
+/// "or" (as [`chords_text`], which gives the written form only).
+pub(crate) fn named_keys(keymap: &Keymap, action: ActionId) -> String {
+    let mut chords: Vec<KeyChord> = Vec::new();
+    for c in keymap.chords_for(action) {
+        if !chords.contains(&c) {
+            chords.push(c);
+        }
+    }
+    if chords.is_empty() {
+        return chords_text(keymap, action);
+    }
+    chords
+        .iter()
+        .map(mark_chord)
+        .collect::<Vec<_>>()
+        .join(" or ")
+}
+
+/// At most two keys for `action`, marked ([`short_chords_text`]).
+fn named_short_keys(keymap: &Keymap, action: ActionId) -> String {
+    let Some(main) = main_chord(keymap, action) else {
+        return chords_text(keymap, action);
+    };
+    if !keymap.character_keys() && main.is_text_input() {
+        return "the command palette".to_owned();
+    }
+    let chords = keymap.chords_for(action);
+    let other = chords.iter().find(|c| **c != main && !c.is_text_input());
+    match other {
+        Some(o) => format!("{} or {}", mark_chord(&main), mark_chord(o)),
+        None => mark_chord(&main),
+    }
+}
+
+/// Keeps one form of each marked key: the written one, or the spoken one.
+fn pick_form(text: &str, spoken: bool) -> Cow<'_, str> {
+    if !text.contains(KEY_OPEN) {
+        return Cow::Borrowed(text);
+    }
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(open) = rest.find(KEY_OPEN) {
+        out.push_str(&rest[..open]);
+        let inner = &rest[open + KEY_OPEN.len_utf8()..];
+        let Some(close) = inner.find(KEY_CLOSE) else {
+            // An unclosed mark (never built here): keep the text as it is.
+            out.push_str(inner);
+            return Cow::Owned(out);
+        };
+        let key = &inner[..close];
+        let (written, said) = key.split_once(KEY_SPLIT).unwrap_or((key, key));
+        out.push_str(if spoken { said } else { written });
+        rest = &inner[close + KEY_CLOSE.len_utf8()..];
+    }
+    out.push_str(rest);
+    Cow::Owned(out)
+}
+
+/// `text` for the status line, the screen reader, and the screen: keys
+/// in their written form ("Ctrl+S").
+pub fn written_text(text: &str) -> Cow<'_, str> {
+    pick_form(text, false)
+}
+
+/// `text` for textweaver's own voice: keys in their spoken form
+/// ("Control S", "Alt period").
+pub fn spoken_text(text: &str) -> Cow<'_, str> {
+    pick_form(text, true)
+}
+
 /// Every action with its category and keys, in help order.
 pub fn help_entries(keymap: &Keymap) -> Vec<(ActionId, String)> {
+    entries_with(keymap, chords_text)
+}
+
+/// [`help_entries`] with the keys named by `keys` (written, or marked for
+/// the keyboard shortcuts list, whose focused item is spoken).
+fn entries_with(keymap: &Keymap, keys: fn(&Keymap, ActionId) -> String) -> Vec<(ActionId, String)> {
     let mut out = Vec::new();
     for cat in CATEGORIES {
         for &a in ActionId::ALL.iter().filter(|a| a.category() == cat) {
             out.push((
                 a,
-                format!("{}: {}. {}", cat.title(), a.help(), chords_text(keymap, a)),
+                format!("{}: {}. {}", cat.title(), a.help(), keys(keymap, a)),
             ));
         }
     }
@@ -109,7 +222,7 @@ pub fn help_entries(keymap: &Keymap) -> Vec<(ActionId, String)> {
                     "{}: {}. {}",
                     a.category().title(),
                     a.help(),
-                    chords_text(keymap, a)
+                    keys(keymap, a)
                 ),
             ));
         }
@@ -162,6 +275,23 @@ pub fn resolve_command(text: &str) -> Option<ActionId> {
 }
 
 impl App {
+    /// One key for `action` in a message ([`named_key`]): written on the
+    /// status line, spoken by textweaver's voice.
+    pub(crate) fn key(&self, action: ActionId) -> String {
+        named_key(&self.keymap, action)
+    }
+
+    /// Every key for `action` in a message ([`named_keys`]).
+    pub(crate) fn keys(&self, action: ActionId) -> String {
+        named_keys(&self.keymap, action)
+    }
+
+    /// What is said for a command palette candidate, with its keys marked
+    /// ([`App::palette_candidates`] gives the written form, to show).
+    pub(crate) fn palette_said(&self, a: ActionId) -> String {
+        format!("{}: {}. {}", a.id(), a.help(), self.keys(a))
+    }
+
     /// Candidates for the command palette as `(id, "id: help")` pairs.
     pub fn palette_candidates(&self, query: &str) -> Vec<(ActionId, String)> {
         palette_matches(query)
@@ -194,7 +324,7 @@ impl App {
     }
 
     pub(crate) fn keyboard_help(&mut self) -> Vec<Effect> {
-        let entries = help_entries(&self.keymap);
+        let entries = entries_with(&self.keymap, named_keys);
         let (actions, items): (Vec<ActionId>, Vec<String>) = entries.into_iter().unzip();
         let n = items.len();
         self.list = Some(ListKind::Actions(actions));
@@ -208,12 +338,14 @@ impl App {
     }
 
     pub(crate) fn help(&mut self) -> Vec<Effect> {
-        let k = |a| short_chords_text(&self.keymap, a);
-        let one = |a| key_text(&self.keymap, a);
+        // Keys are marked: the list shows "Ctrl+O", the voice says
+        // "Control O".
+        let k = |a| named_short_keys(&self.keymap, a);
+        let one = |a| named_key(&self.keymap, a);
         let x = |c: NoteCommand| {
             let chords: Vec<String> = crate::extra::extra_chords(c)
                 .iter()
-                .map(ToString::to_string)
+                .map(mark_chord)
                 .collect();
             if chords.is_empty() {
                 format!("the command {}", c.name().replace('_', " "))

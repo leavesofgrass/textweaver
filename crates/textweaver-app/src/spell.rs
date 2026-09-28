@@ -391,12 +391,9 @@ impl App {
         match choice {
             SpellChoice::Replace(new) => {
                 if self.edit.is_none() {
+                    let k = self.keys(textweaver_keymap::ActionId::ToggleEditMode);
                     self.tell(&format!(
-                        "{new}. Turn on edit mode with {} to change the text.",
-                        crate::help::chords_text(
-                            &self.keymap,
-                            textweaver_keymap::ActionId::ToggleEditMode
-                        )
+                        "{new}. Turn on edit mode with {k} to change the text."
                     ));
                     return vec![Effect::Redraw];
                 }

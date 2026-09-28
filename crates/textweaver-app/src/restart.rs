@@ -117,8 +117,7 @@ impl App {
     /// message saying speech stopped.
     pub(crate) fn restart_after_death(&mut self, voiced: bool) -> String {
         self.restart.voiced |= voiced;
-        let keys =
-            crate::help::chords_text(&self.keymap, textweaver_keymap::ActionId::RestartSpeech);
+        let keys = self.keys(textweaver_keymap::ActionId::RestartSpeech);
         if self.restart.starter.is_none() {
             return if voiced {
                 "textweaver is silent now; restart it to hear speech again.".into()

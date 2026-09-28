@@ -645,19 +645,23 @@ impl App {
         if text.is_empty() {
             return;
         }
+        // Keys named in the message: written for the status line and the
+        // screen reader, spoken for textweaver's voice (crate::help).
+        let written = crate::help::written_text(text);
         let route = self.route(Channel::Message);
         if route.status {
-            let text = self.screen_text(text);
+            let text = self.screen_text(&written);
             let shown = match self.status.current.as_deref() {
                 Some(before) if !before.is_empty() => format!("{before} {text}"),
                 _ => text,
             };
             self.status.announce(&shown, priority);
         }
-        self.announcer.announce(text, priority);
+        self.announcer.announce(&written, priority);
         let reading = matches!(self.playback, Playback::Reading);
         if route.speak && (!reading || priority == Priority::Assertive) {
-            self.speech.say(text, SayMode::Queue);
+            self.speech
+                .say(crate::help::spoken_text(text), SayMode::Queue);
         }
     }
 
@@ -670,15 +674,17 @@ impl App {
         if current < min || text.is_empty() {
             return;
         }
+        let written = crate::help::written_text(text);
         let route = self.route(Channel::Message);
         if route.status {
-            let shown = self.screen_text(text);
+            let shown = self.screen_text(&written);
             self.status.announce(&shown, priority);
         }
-        self.announcer.announce(text, priority);
+        self.announcer.announce(&written, priority);
         let reading = matches!(self.playback, Playback::Reading);
         if route.speak && (!reading || priority == Priority::Assertive) {
-            self.speech.say(text, SayMode::Announce);
+            self.speech
+                .say(crate::help::spoken_text(text), SayMode::Announce);
         }
     }
 
@@ -708,9 +714,10 @@ impl App {
     /// Shows `text` on the status line only (used while reading, when the
     /// reading itself is the audible feedback).
     pub(crate) fn show(&mut self, text: &str) {
-        let shown = self.screen_text(text);
+        let written = crate::help::written_text(text);
+        let shown = self.screen_text(&written);
         self.status.announce(&shown, Priority::Polite);
-        self.announcer.announce(text, Priority::Polite);
+        self.announcer.announce(&written, Priority::Polite);
     }
 
     /// Opens a document and makes it current. The previous document's
@@ -995,12 +1002,14 @@ impl App {
 
     /// Runs a public entry point: the list and prompt models adopt the
     /// effects once, at the outermost call (entry points call each other).
+    /// Keys named in list items reach the frontend in their written form.
     pub(crate) fn entry(&mut self, f: impl FnOnce(&mut Self) -> Vec<Effect>) -> Vec<Effect> {
         self.depth += 1;
         let effects = f(self);
         self.depth -= 1;
         if self.depth == 0 {
             self.adopt(&effects);
+            return crate::list_model::without_key_marks(effects);
         }
         effects
     }
@@ -1367,7 +1376,7 @@ impl App {
     /// Runs an action (after its confirmation, if it needs one).
     fn run_action(&mut self, a: ActionId) -> Vec<Effect> {
         if self.session.is_none() && needs_document(a) {
-            let open = crate::help::spoken_key(&self.keymap, ActionId::Open);
+            let open = self.key(ActionId::Open);
             self.tell(&format!("No document is open. Press {open} to open one."));
             return vec![Effect::Redraw];
         }

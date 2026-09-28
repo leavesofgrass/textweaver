@@ -313,8 +313,7 @@ impl App {
         }
         self.voices_pending = false;
         if self.list.is_some() || self.mode.is_prompt() || self.confirmation_pending() {
-            let keys =
-                crate::help::chords_text(&self.keymap, textweaver_keymap::ActionId::ChooseVoice);
+            let keys = self.keys(textweaver_keymap::ActionId::ChooseVoice);
             self.tell(&format!("The voices are ready. {keys} lists them."));
             effects.push(Effect::Redraw);
             return effects;
