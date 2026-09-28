@@ -863,6 +863,8 @@ impl App {
             s.highlights.sort_by_key(|h| (h.range.start, h.range.end));
             s.saved = state;
         }
+        // Word comments and ODT annotations become notes (W4c2).
+        crate::notes::add_document_comments(&mut s.notes, &s.doc);
         let mut resumed = None;
         if let Some(r) =
             resume.filter(|r| self.settings.reading.auto_resume && r.pos > CharPos::ZERO)
