@@ -46,9 +46,13 @@ clap.workspace = true
 windows = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_System_Com",
+    # W4a3: no console window; attach to the terminal it was started from.
+    "Win32_System_Console",
     "Win32_System_Ole",
     "Win32_System_Variant",
     "Win32_UI_Accessibility",
+    # W4a3: a startup error with no terminal is shown in a message box.
+    "Win32_UI_WindowsAndMessaging",
 ] }
 windows-core.workspace = true
 

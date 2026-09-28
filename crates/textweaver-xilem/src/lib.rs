@@ -20,11 +20,13 @@
 //! - [`fonts`]: the bundled fonts and the reader's font setting.
 //! - [`font_chooser`]: the font chooser's lists, ported from the spike.
 //! - [`setup`]: building the app for the GUI.
+//! - [`console`]: the terminal the program was started from, on Windows.
 //! - `screenshot` (feature `screenshot`): the window drawn to a PNG.
 //!
 //! Owner: Agent W3b.
 
 pub mod caret;
+pub mod console;
 pub mod dialog;
 pub mod document;
 pub mod font_chooser;
