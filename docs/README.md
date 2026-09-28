@@ -58,7 +58,7 @@ The developer documents are in [dev/](dev/), the decision records in [adr/](adr/
 ### Building and working on textweaver
 
 - [CONTRIBUTING.md](../CONTRIBUTING.md): the code rules, the agent and worktree workflow, commit style, and how to write docs.
-- [Building](dev/building.md): Rust, Python, what each system needs, Docker, the GUI, and the lean reader.
+- [Building](dev/building.md): Rust, Python, what each system needs, Docker, the GUI, the lean reader, the helper scripts, and the repository layout.
 - [Testing](dev/testing.md): the checks every change must pass, the tests, and the [benchmarks](dev/testing.md#benchmarks).
 - [Architecture](dev/architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.
 - [The crates](dev/architecture.md#the-crates): what each of the 33 crates does, with its ADRs.
@@ -66,6 +66,7 @@ The developer documents are in [dev/](dev/), the decision records in [adr/](adr/
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
 - [Fuzzing](../fuzz/README.md): the 27 cargo-fuzz targets, run every night: the document loaders (RTF, ODT, and Word revisions among them), the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, and the engine-host protocol.
 - [Releasing](dev/releasing.md): making a release, the Linux AppImage, and what the packages hold.
+- [Third-party data](dev/third-party-data.md): the bundled pronunciation dictionaries, fonts, and word lists, and their licences.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
 - [Roadmap](roadmap.md): Phases 1 and 2 and Wave 3, as planned in September 2026. The current plans are in [history/tasks.md](history/tasks.md) and [research/](#research).
 - [Star features not yet planned](star-gaps.md): Star features with their status in textweaver.
@@ -142,6 +143,8 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 - [What is left](research/whats-left.md): the inventory of what remains, by area, with each item's status, source, value, and size; the Star features still lacking; and the items no plan covers (September 2026).
 - [The 2026 roadmap](research/roadmap-2026.md): the milestones from Wave 4 to the feature-complete final alpha and beyond, the critical path, Wave 5 refined, a first sketch of Wave 6, and eight questions for the owner (September 2026).
 - [Cloud Agent plan](research/cloud-agent-plan.md): three pull-request tasks for a Claude Cloud Agent beside Wave 4 and Wave 5 (fuzz targets, the generated settings reference and docs check, a second-tool check of the writers), the budget within $125, the pull-request workflow, the effect on Wave 5, the reservation mechanism, and the ready-to-paste brief (September 2026).
+- [Documentation sweep plan](research/docs-sweep-plan.md): the Zensical site on GitHub Pages, a short README, and five agents in parallel (September 2026).
+- [Wave 5, recalibrated](research/wave5-recalibrated.md): Wave 5 after Wave 4 and the Cloud Agent, eleven agents in overlapping batches, streaming dictation research, and the briefs (September 2026).
 
 ## See also
 

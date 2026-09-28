@@ -16,7 +16,7 @@ Sizes:
 
 ## Status (Monday, September 28, 2026)
 
-This roadmap covers Phases 1 and 2 and Wave 3 as they were planned in September 2026, and it is kept as a record. Phases 1 and 2 and Wave 3 are done. The current plans, and the status of every agent, are in [tasks.md](history/tasks.md) and in the research documents: [the 2026 roadmap](research/roadmap-2026.md), [the Wave 5 plan](research/wave5-plan.md), [what is left](research/whats-left.md), and [the Cloud Agent plan](research/cloud-agent-plan.md).
+This roadmap covers Phases 1 and 2 and Wave 3 as they were planned in September 2026, and it is kept as a record. Phases 1 and 2 and Wave 3 are done. Wave 4 is done too, and released as `0.1.0-alpha.4`. The current plans, and the status of every agent, are in [tasks.md](history/tasks.md) and in the research documents: [the 2026 roadmap](research/roadmap-2026.md), [the Wave 5 plan](research/wave5-plan.md), [what is left](research/whats-left.md), and [the Cloud Agent plan](research/cloud-agent-plan.md).
 
 Each phase below has its own dated status note. Items marked **done** are on `main`; items marked **left** say where they went.
 
@@ -260,7 +260,7 @@ Steps:
 
 ### Releases
 
-**Status: done (P1c and P2d), except the aarch64 AppImage.** `release.yml` builds Windows, macOS, and Linux, with one checksums job and provenance attestations. `cargo xtask appimage` builds `textweaver-VERSION-linux-x86_64.AppImage` (17.5 MB, with a `.zsync` file) and the tarball on Ubuntu 22.04; both pass on Debian stable, Fedora, and Arch, with and without espeak-ng. The AppImage is checked by its published checksum, not signed. No release has carried it yet: 0.1.0-alpha.3 came before it. Left: the aarch64 AppImage, on GitHub's arm64 runners, after Wave 3.
+**Status: done (P1c, P2d, and Wave 4).** `release.yml` builds Windows, macOS, and Linux, with one checksums job and provenance attestations. `cargo xtask appimage` builds `textweaver-VERSION-linux-x86_64.AppImage` (17.5 MB, with a `.zsync` file) and the tarball on Ubuntu 22.04; both pass on Debian stable, Fedora, and Arch, with and without espeak-ng. The AppImage is checked by its published checksum, not signed. `0.1.0-alpha.4` is the first release to carry it, and Wave 4 added the aarch64 (arm64) AppImage and tarball too, built on GitHub's arm64 runner and checked on Debian and Fedora.
 
 - **Windows in CI.** Build the Windows package in `release.yml`, keeping the local build as a fallback.
 - **Checksums.** A final job that writes them once.
