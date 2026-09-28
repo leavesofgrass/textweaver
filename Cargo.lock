@@ -9614,6 +9614,7 @@ dependencies = [
  "textweaver-engines",
  "textweaver-theme",
  "two-face",
+ "unicode-bidi",
  "windows 0.62.2",
 ]
 

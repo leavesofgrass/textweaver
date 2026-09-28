@@ -168,6 +168,10 @@ The voice and how it speaks. [Speech engines and voices](speech.md) explains the
 
 Named rates for F8, which cycles through them. The defaults are `skim = 350`, `normal = 265`, `study = 200`, and `slow = 150`. Importing this table replaces all of it.
 
+### [speech.voices_by_language]
+
+The voice to use for each interface language, by language tag, such as `es = "eci:es"`. When `[interface] language` changes to a language listed here, its voice is used. A language not listed keeps the current voice if it speaks the language, else takes the engine's voice for it (one whose name contains `prefer_voice` first, so Eloquence when you have it). Empty by default. `tw voices` lists the voice ids.
+
 ### [speech.eci]
 
 ETI-Eloquence. See [the Eloquence guide](eloquence.md).
@@ -387,7 +391,8 @@ Reading statistics (see [the reading guide](reading.md#reading-statistics-ctrlsh
 
 ### [interface]
 
-- `language`, default `"en"`: the language of textweaver's own words. Only English is complete so far. `en-XA` shows every message accented and in `⟦ ⟧` brackets, and `ar-XB` shows them right to left: both are for testing. A `<language>.ftl` file in the `locales` folder of the settings folder adds a language; messages it lacks stay in English. The define-word, profile, and statistics messages use it; the rest of the interface follows in later versions.
+- `language`, default `"en"`: the language of textweaver's own words: messages, lists, help, and the settings screen, not your documents. Built in: `"en"` English, `"es"` Spanish, `"fr"` French, `"de"` German, `"pt"` Portuguese (Brazilian), and `"ar"` Arabic. A tag with a region, such as `"es-MX"` or `"pt-BR"`, uses its language. A change on the settings screen takes effect at once: the change is said in the new language, then the title line. The voice follows the language when the speech engine has a voice for it; when it has none, the current voice keeps speaking and textweaver says so. `en-XA` shows every message accented and in `⟦ ⟧` brackets, and `ar-XB` shows them right to left: both are for testing. A `<language>.ftl` file in the `locales` folder of the settings folder adds a language, or goes over a built-in one message by message; messages it lacks come from the built-in translation, then English. `tw settings language` lists the languages, and `tw settings language es` sets one. The first run starts with the list of languages, your system's language first.
+- `rtl`, default `"auto"`: whether the terminal reader reorders right-to-left text (Arabic, Hebrew) for display. `"auto"` reorders only where it helps: not in terminals that do it themselves (GNOME Terminal and other VTE terminals, Konsole, mlterm, macOS Terminal), not on Windows (Windows Terminal and the console do not support right-to-left text), and not in hybrid or screen reader mode, since a screen reader reads the terminal's cells and would get reordered text backwards. `"on"` always reorders, `"off"` never. The document, speech, and your screen reader always get the text in reading order.
 
 ### [gui]
 

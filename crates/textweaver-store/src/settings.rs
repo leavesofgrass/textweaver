@@ -55,6 +55,12 @@ pub struct SpeechSettings {
     pub skip_code: bool,
     /// Named rate presets.
     pub speed_presets: BTreeMap<String, u16>,
+    /// The voice to use for each interface language, by language tag
+    /// (`es = "eci:es"`): when `[interface] language` changes to a
+    /// language listed here, its voice is used. A language not listed
+    /// takes the engine's first voice for it, and with none the current
+    /// voice stays (Wave 4, W4d).
+    pub voices_by_language: BTreeMap<String, String>,
     /// Latency offset for audio-clock word events, in ms (Star 120).
     pub latency_offset_ms: u32,
     /// Announcement verbosity.
@@ -219,6 +225,7 @@ impl Default for SpeechSettings {
             .into_iter()
             .map(|(k, v)| (k.to_owned(), v))
             .collect(),
+            voices_by_language: BTreeMap::new(),
             latency_offset_ms: 120,
             verbosity: Verbosity::default(),
             eci: EciSettings::default(),
@@ -895,11 +902,17 @@ impl Default for StatsSettings {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct InterfaceSettings {
-    /// A language tag such as `en`. Only English is complete; `en-XA` and
-    /// `ar-XB` are test languages (accented, and right to left). A
+    /// A language tag such as `en` or `es`. English, Spanish, French,
+    /// German, Portuguese, and Arabic are built in; `en-XA` and `ar-XB`
+    /// are test languages (accented, and right to left). A
     /// `<language>.ftl` file in the `locales` folder of the configuration
-    /// folder adds a language.
+    /// folder adds a language or goes over a built-in one.
     pub language: String,
+    /// Whether the terminal reader reorders right-to-left text for display
+    /// (Wave 4, W4d): `auto` does it where the terminal does not,
+    /// `on` always, `off` never. The text itself, speech, and the
+    /// screen reader always get it in logical order.
+    pub rtl: RtlDisplay,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -909,9 +922,26 @@ impl Default for InterfaceSettings {
     fn default() -> Self {
         InterfaceSettings {
             language: "en".into(),
+            rtl: RtlDisplay::Auto,
             extra: toml::Table::new(),
         }
     }
+}
+
+/// Whether right-to-left text is reordered for display in the terminal
+/// (`[interface] rtl`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RtlDisplay {
+    /// Reorder where the terminal does not do it itself: not in VTE
+    /// terminals (GNOME Terminal and others), Konsole, mlterm, or macOS
+    /// Terminal, which reorder on their own.
+    #[default]
+    Auto,
+    /// Always reorder.
+    On,
+    /// Never reorder.
+    Off,
 }
 
 /// How the windowed reader's announcements reach the screen reader
@@ -2265,6 +2295,33 @@ wrap_navigation = true
         );
         let (_, w) = Settings::from_table("[stats]\nenabled = 3\n".parse().unwrap());
         assert_eq!(w, ["stats.enabled has an invalid value"]);
+    }
+
+    /// `[interface] rtl` and `[speech] voices_by_language` (W4d): `auto`
+    /// and no voices by default, kept when set, and a bad value warns.
+    #[test]
+    fn interface_rtl_and_voices_by_language() {
+        let d = Settings::default();
+        assert_eq!(d.interface.rtl, RtlDisplay::Auto);
+        assert!(d.speech.voices_by_language.is_empty());
+        let (s, w) = Settings::from_table(
+            "[interface]\nlanguage = \"es\"\nrtl = \"on\"\n\
+             [speech.voices_by_language]\nes = \"eci:es\"\nfr = \"sapi:Hortense\"\n"
+                .parse()
+                .unwrap(),
+        );
+        assert!(w.is_empty(), "{w:?}");
+        assert_eq!(s.interface.rtl, RtlDisplay::On);
+        assert_eq!(s.speech.voices_by_language["es"], "eci:es");
+        assert_eq!(s.speech.voices_by_language.len(), 2);
+        let text = s.to_minimal_toml().unwrap();
+        assert!(
+            text.contains("rtl = \"on\"") && text.contains("es = \"eci:es\""),
+            "{text}"
+        );
+        let (s, w) = Settings::from_table("[interface]\nrtl = \"sideways\"\n".parse().unwrap());
+        assert_eq!(w, ["interface.rtl has an invalid value"]);
+        assert_eq!(s.interface.rtl, RtlDisplay::Auto);
     }
 
     /// `[gui] announce` (ADR-0028): the live region by default, `uia` when

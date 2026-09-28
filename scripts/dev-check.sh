@@ -25,6 +25,9 @@ Runs every check CI runs, so you can see CI's answer before you push:
   doc        cargo doc --workspace --exclude textweaver-gui --no-deps
              FEATURES, with RUSTDOCFLAGS="-D warnings"
   keyboard   cargo xtask keyboard --check (docs/keyboard.md is current)
+  pseudo     cargo test -p textweaver-app --test pseudo_locale (every
+             message comes from the catalog: bracketed in en-XA, direction
+             marks closed in ar-XB)
   links      python3 tools/check_links.py (relative links and anchors in the
              docs resolve)
   site       python3 tools/gen_site_data.py --check (the data in the
@@ -200,6 +203,7 @@ step clippy "lints, warnings are errors" cargo clippy --workspace --exclude text
 step test "tests" cargo test --workspace --exclude textweaver-gui ${FEATURES[@]+"${FEATURES[@]}"}
 step doc "API documentation, warnings are errors" env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --exclude textweaver-gui --no-deps ${FEATURES[@]+"${FEATURES[@]}"}
 step keyboard "docs/keyboard.md is current" cargo xtask keyboard --check
+step pseudo "the interface in the pseudo-locales en-XA and ar-XB" cargo test -p textweaver-app --test pseudo_locale
 PYTHON=""
 if have python3; then
   PYTHON=python3

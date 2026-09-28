@@ -29,6 +29,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use textweaver_formats::{LoadError, Progress, Registry, Source};
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 use textweaver_text::Document;
 
 use crate::app::App;
@@ -79,9 +81,14 @@ fn file_name(path: &Path) -> String {
 /// operating system's error code is left out. Shared by the reader and
 /// `tw`, so both say the same thing.
 pub fn open_failure_reason(path: &Path, err: &LoadError) -> String {
+    open_failure_reason_in(&Catalog::english(), path, err)
+}
+
+/// [`open_failure_reason`] in the catalog's language.
+pub fn open_failure_reason_in(c: &Catalog, path: &Path, err: &LoadError) -> String {
     let name = file_name(path);
     if path.is_dir() {
-        return format!("{name} is a folder, not a document. Give the name of a file in it.");
+        return c.fmt("opening-is-folder", &args!["name" => name]);
     }
     match err {
         LoadError::Io(_, io) => match io.kind() {
@@ -91,13 +98,11 @@ pub fn open_failure_reason(path: &Path, err: &LoadError) -> String {
                     .filter(|p| !p.as_os_str().is_empty())
                     .map(|p| p.display().to_string());
                 match folder {
-                    Some(f) => format!("there is no file named {name} in {f}. Check the name."),
-                    None => format!("there is no file named {name} here. Check the name."),
+                    Some(f) => c.fmt("opening-no-file-in", &args!["name" => name, "folder" => f]),
+                    None => c.fmt("opening-no-file-here", &args!["name" => name]),
                 }
             }
-            std::io::ErrorKind::PermissionDenied => {
-                "you do not have permission to read it.".to_owned()
-            }
+            std::io::ErrorKind::PermissionDenied => c.tr("opening-no-permission"),
             _ => {
                 let text = io.to_string();
                 // "The system cannot find the path specified. (os error 3)":
@@ -127,10 +132,17 @@ fn extension(path: &Path) -> String {
 
 /// "Could not open NAME: REASON", for announcements.
 pub fn open_failure_message(path: &Path, err: &LoadError) -> String {
-    format!(
-        "Could not open {}: {}",
-        file_name(path),
-        open_failure_reason(path, err)
+    open_failure_message_in(&Catalog::english(), path, err)
+}
+
+/// [`open_failure_message`] in the catalog's language.
+pub fn open_failure_message_in(c: &Catalog, path: &Path, err: &LoadError) -> String {
+    c.fmt(
+        "opening-failed",
+        &args![
+            "name" => file_name(path),
+            "reason" => open_failure_reason_in(c, path, err)
+        ],
     )
 }
 
@@ -171,11 +183,16 @@ impl App {
         match self.open(path) {
             Ok(e) => e,
             Err(crate::app::AppError::Load(e)) => {
-                self.error(&open_failure_message(path, &e));
+                let msg = open_failure_message_in(self.cat(), path, &e);
+                self.error(&msg);
                 vec![Effect::Redraw]
             }
             Err(e) => {
-                self.error(&format!("Could not open {}: {e}", file_name(path)));
+                let msg = self.msg_args(
+                    "opening-failed",
+                    &args!["name" => file_name(path), "reason" => e.to_string()],
+                );
+                self.error(&msg);
                 vec![Effect::Redraw]
             }
         }
@@ -186,7 +203,8 @@ impl App {
         if let Some(o) = self.opening.take() {
             // A newer open replaces one still loading.
             o.progress.cancel();
-            self.note(&format!("Stopped opening {}.", o.name));
+            let msg = self.msg_args("opening-stopped", &args!["name" => o.name.as_str()]);
+            self.note(&msg);
         }
         let (tx, rx) = channel::<Loaded>();
         let mut options = self.load_options();
@@ -218,7 +236,8 @@ impl App {
         }
         let now = Instant::now();
         let name = file_name(path);
-        self.tell(&format!("Opening {name}. Escape cancels."));
+        let msg = self.msg_args("opening-started", &args!["name" => name.as_str()]);
+        self.tell(&msg);
         self.opening = Some(Opening {
             path: path.to_owned(),
             name,
@@ -235,7 +254,8 @@ impl App {
     pub(crate) fn cancel_opening(&mut self) -> Vec<Effect> {
         if let Some(o) = self.opening.take() {
             o.progress.cancel();
-            self.tell(&format!("Stopped opening {}.", o.name));
+            let msg = self.msg_args("opening-stopped", &args!["name" => o.name.as_str()]);
+            self.tell(&msg);
         }
         vec![Effect::Redraw]
     }
@@ -243,6 +263,7 @@ impl App {
     /// From [`App::tick`]: makes a loaded document current, or says how
     /// the loading is getting on.
     pub(crate) fn opening_tick(&mut self, now: Instant) -> Vec<Effect> {
+        let cat = self.catalog();
         let Some(o) = self.opening.as_mut() else {
             return Vec::new();
         };
@@ -261,9 +282,15 @@ impl App {
                                 .next()
                                 .map(|c| c.to_lowercase().chain(chars).collect())
                                 .unwrap_or_default();
-                            format!("Still opening {}: {lower}", o.name)
+                            cat.fmt(
+                                "opening-still-step",
+                                &args!["name" => o.name.as_str(), "step" => lower],
+                            )
                         }
-                        None => format!("Still opening {}, {secs} seconds.", o.name),
+                        None => cat.fmt(
+                            "opening-still",
+                            &args!["name" => o.name.as_str(), "secs" => secs],
+                        ),
                     };
                     self.show(&msg);
                 }
@@ -272,9 +299,8 @@ impl App {
             Err(TryRecvError::Disconnected) => {
                 let name = o.name.clone();
                 self.opening = None;
-                self.error(&format!(
-                    "Could not open {name}: loading stopped unexpectedly."
-                ));
+                let msg = self.msg_args("opening-stopped-unexpectedly", &args!["name" => name]);
+                self.error(&msg);
                 return vec![Effect::Redraw];
             }
         };
@@ -284,7 +310,8 @@ impl App {
         match result {
             Ok((doc, stamp)) => self.adopt_loaded(&o.path, doc, stamp),
             Err(e) => {
-                self.error(&open_failure_message(&o.path, &e));
+                let msg = open_failure_message_in(self.cat(), &o.path, &e);
+                self.error(&msg);
                 vec![Effect::Redraw]
             }
         }

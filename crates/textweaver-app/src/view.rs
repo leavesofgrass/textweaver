@@ -7,6 +7,7 @@
 use textweaver_a11y::Priority;
 use textweaver_a11y::Verbosity;
 use textweaver_core::{CharPos, CharRange, Direction, HighlightGranularity, Unit};
+use textweaver_lexicon::args;
 use textweaver_text::units::unit_at;
 use textweaver_text::{NavOptions, navigate};
 
@@ -116,20 +117,17 @@ impl App {
         let last = text_util::line_count(&s.doc).saturating_sub(1);
         let top = self.view.top_line.saturating_add_signed(delta).min(last);
         if top == self.view.top_line {
-            let edge = if delta < 0 { "Top" } else { "Bottom" };
-            self.say_at(
-                &format!("{edge} of document."),
-                Verbosity::Normal,
-                Priority::Polite,
-            );
+            let msg = self.msg(if delta < 0 {
+                "nav-top-of-document-stop"
+            } else {
+                "view-bottom-of-document"
+            });
+            self.say_at(&msg, Verbosity::Normal, Priority::Polite);
             return;
         }
         self.view.top_line = top;
-        self.say_at(
-            &format!("Line {} at top.", top + 1),
-            Verbosity::High,
-            Priority::Polite,
-        );
+        let msg = self.msg_args("view-line-at-top", &args!["line" => top + 1]);
+        self.say_at(&msg, Verbosity::High, Priority::Polite);
     }
 
     /// Words the highlight is drawn ahead of (positive) or behind (negative)

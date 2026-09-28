@@ -5,6 +5,8 @@
 
 use std::time::{Duration, Instant};
 
+use textweaver_lexicon::args;
+
 use crate::app::App;
 use crate::authoring_state::{Job, Launcher, Question};
 use crate::command::{Confirm, Effect};
@@ -53,7 +55,8 @@ impl App {
                     }
                     Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                         done = true;
-                        self.error(&format!("{what} stopped unexpectedly."));
+                        let msg = self.msg_args("tasks-stopped", &args!["what" => what]);
+                        self.error(&msg);
                     }
                 },
                 Job::Lookup { input, rx } => match rx.try_recv() {
@@ -66,7 +69,8 @@ impl App {
                     }
                     Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                         done = true;
-                        self.error(&format!("Looking up {input} stopped unexpectedly."));
+                        let msg = self.msg_args("tasks-lookup-stopped", &args!["input" => input]);
+                        self.error(&msg);
                     }
                 },
             }
@@ -111,13 +115,20 @@ impl App {
         let result = match (self.authoring.launcher.clone(), &self.paths) {
             (Some(launcher), _) => launcher(target),
             (None, Some(_)) => crate::authoring_state::open_with_system(target),
-            (None, None) => Err(std::io::Error::other(
-                "opening other programs is off in a session that keeps no files",
-            )),
+            (None, None) => Err(std::io::Error::other(self.msg("tasks-launch-off"))),
         };
         match result {
-            Ok(()) => self.note("Opening."),
-            Err(e) => self.error(&format!("Could not open {target}: {e}")),
+            Ok(()) => {
+                let msg = self.msg("tasks-opening");
+                self.note(&msg);
+            }
+            Err(e) => {
+                let msg = self.msg_args(
+                    "tasks-could-not-open",
+                    &args!["target" => target, "error" => e.to_string()],
+                );
+                self.error(&msg);
+            }
         }
     }
 
@@ -133,9 +144,13 @@ impl App {
             }
             (Question::Open(_), Confirm::No) => {
                 self.authoring.question = None;
-                self.note("Not opened.");
+                let msg = self.msg("tasks-not-opened");
+                self.note(&msg);
             }
-            (Question::Open(_), Confirm::Repeat) => self.ask("Open it? y or n."),
+            (Question::Open(_), Confirm::Repeat) => {
+                let question = self.msg("tasks-open-it-question");
+                self.ask(&question);
+            }
         }
         vec![Effect::Redraw]
     }

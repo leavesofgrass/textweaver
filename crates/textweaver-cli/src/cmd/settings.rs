@@ -1,7 +1,8 @@
 //! `tw settings`: export settings and key overrides to JSON or TOML, import
 //! them (validated, backed up, merged or replaced), show where the files
 //! are, and reset them to the defaults. Owner: Agent U. `tw settings
-//! profile` (settings profiles) is in `profiles.rs` (Agent W3e).
+//! profile` (settings profiles) is in `profiles.rs` (Agent W3e). `tw
+//! settings language` lists or sets the interface language (Wave 4, W4d).
 
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
@@ -41,6 +42,18 @@ pub enum Command {
     /// highlight, and access-mode settings to switch between.
     #[command(subcommand)]
     Profile(super::profiles::ProfileCommand),
+    /// The interface language: list the languages, or choose one by its
+    /// tag (es, fr, de, pt, ar, en).
+    Language(LanguageArgs),
+}
+
+/// Arguments for `tw settings language`.
+#[derive(clap::Args, Debug)]
+pub struct LanguageArgs {
+    /// The language to use, by tag: en, es, fr, de, pt, ar, or a tag with
+    /// a region such as pt-BR. Without it, the languages are listed and
+    /// the one in use is named.
+    pub tag: Option<String>,
 }
 
 /// Arguments for `tw settings export`.
@@ -120,7 +133,52 @@ fn execute(
         Command::Path => show_paths(store, out),
         Command::Reset(a) => reset(store, &a, input, out),
         Command::Profile(p) => super::profiles::execute(store, p, input, out),
+        Command::Language(a) => language(store, &a, out),
     }
+}
+
+/// `tw settings language [TAG]`: lists the built-in languages, the one in
+/// use first said, or sets `[interface] language`. A tag with no built-in
+/// translation is taken only when the settings folder has its
+/// `locales/<tag>.ftl` file.
+fn language(store: &SettingsStore, a: &LanguageArgs, out: &mut dyn Write) -> anyhow::Result<()> {
+    use textweaver_app::lexicon::i18n::{self, LANGUAGES, PSEUDO_ACCENTED, PSEUDO_RTL};
+    let (mut settings, _) = store.load();
+    let current = settings.interface.language.clone();
+    let Some(tag) = a.tag.as_deref().map(i18n::normalize_tag) else {
+        let name = i18n::language(&current).map_or(current.as_str(), |l| l.name);
+        writeln!(out, "Interface language: {name} ({current})")?;
+        writeln!(out, "Built-in languages:")?;
+        for l in LANGUAGES {
+            writeln!(out, "{}: {}, {}", l.tag, l.name, l.english)?;
+        }
+        writeln!(
+            out,
+            "Test languages: {PSEUDO_ACCENTED} (accented), {PSEUDO_RTL} (right to left)"
+        )?;
+        return Ok(());
+    };
+    let pseudo = tag.eq_ignore_ascii_case(PSEUDO_ACCENTED) || tag.eq_ignore_ascii_case(PSEUDO_RTL);
+    let file = store.paths().locales_dir().join(format!("{tag}.ftl"));
+    if tag.is_empty() || (!pseudo && i18n::language(&tag).is_none() && !file.exists()) {
+        anyhow::bail!(
+            "No translation for {tag}. The built-in languages are {}; another needs {}.",
+            LANGUAGES
+                .iter()
+                .map(|l| l.tag)
+                .collect::<Vec<_>>()
+                .join(", "),
+            file.display()
+        );
+    }
+    settings.interface.language = tag.clone();
+    store.save(&settings)?;
+    let name = i18n::language(&tag).map_or(tag.as_str(), |l| l.name);
+    writeln!(
+        out,
+        "Interface language: {name} ({tag}). The reader uses it from its next start; in the reader, the settings screen changes it at once."
+    )?;
+    Ok(())
 }
 
 fn export(store: &SettingsStore, a: &ExportArgs, out: &mut dyn Write) -> anyhow::Result<()> {
@@ -393,6 +451,27 @@ mod tests {
         assert_eq!(r.section.as_deref(), Some("speech"));
         assert!(r.yes);
         assert!(matches!(parse(&["path"]).command, Command::Path));
+        let Command::Language(l) = parse(&["language", "es"]).command else {
+            panic!()
+        };
+        assert_eq!(l.tag.as_deref(), Some("es"));
+    }
+
+    /// `tw settings language` lists the languages; with a tag it sets one
+    /// that is built in or has a file, and refuses others.
+    #[test]
+    fn language_lists_and_sets() {
+        let dir = TempDir::new("language");
+        let store = dir.store();
+        let list = tw(&store, &["language"], "").unwrap();
+        assert!(list.contains("Interface language: English (en)"), "{list}");
+        assert!(list.contains("es: Español, Spanish"), "{list}");
+        let said = tw(&store, &["language", "pt_BR"], "").unwrap();
+        assert!(said.contains("Português (pt-BR)"), "{said}");
+        assert_eq!(store.load().0.interface.language, "pt-BR");
+        let err = tw(&store, &["language", "ja"], "").unwrap_err().to_string();
+        assert!(err.contains("No translation for ja"), "{err}");
+        assert_eq!(store.load().0.interface.language, "pt-BR");
     }
 
     #[test]

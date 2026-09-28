@@ -17,7 +17,9 @@
 
 use std::borrow::Cow;
 
-use textweaver_keymap::{ActionId, Category, KeyChord, Keymap};
+use textweaver_keymap::{ActionId, Category, Key, KeyChord, Keymap, Modifiers};
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 
 use crate::app::{App, ListKind};
 use crate::command::{Effect, NoteCommand};
@@ -39,20 +41,37 @@ const CATEGORIES: [Category; 9] = [
 /// A key bound in two layers (Tab in browse and in Speech Cursor mode) is
 /// named once, not "Tab or Tab".
 pub fn chords_text(keymap: &Keymap, action: ActionId) -> String {
+    chords_text_in(&Catalog::english(), keymap, action)
+}
+
+/// [`chords_text`] in the catalog's language.
+pub fn chords_text_in(c: &Catalog, keymap: &Keymap, action: ActionId) -> String {
     let mut chords: Vec<String> = Vec::new();
-    for c in keymap.chords_for(action) {
-        let s = c.to_string();
+    for ch in keymap.chords_for(action) {
+        let s = ch.to_string();
         if !chords.contains(&s) {
             chords.push(s);
         }
     }
     if chords.is_empty() && action.is_palette_command() {
-        "the command palette".into()
+        c.tr("help-the-command-palette")
     } else if chords.is_empty() {
-        "not bound".into()
+        c.tr("help-not-bound")
     } else {
-        chords.join(" or ")
+        join_or(c, chords)
     }
+}
+
+/// Keys joined with "or": "a or b or c".
+fn join_or(c: &Catalog, items: Vec<String>) -> String {
+    let mut items = items.into_iter().rev();
+    let Some(mut out) = items.next() else {
+        return String::new();
+    };
+    for before in items {
+        out = c.fmt("help-or", &args!["a" => before, "b" => out]);
+    }
+    out
 }
 
 /// The one key that best stands for `action`: its single key (a browse
@@ -75,17 +94,18 @@ fn main_chord(keymap: &Keymap, action: ActionId) -> Option<textweaver_keymap::Ke
 /// off, such as "Space or Alt+P" and "h or Alt+H". The `?` list has every
 /// key; five of them in a row cannot be followed by ear.
 pub fn short_chords_text(keymap: &Keymap, action: ActionId) -> String {
+    let c = Catalog::english();
     let Some(main) = main_chord(keymap, action) else {
         return chords_text(keymap, action);
     };
     if !keymap.character_keys() && main.is_text_input() {
         // Only single keys, and they are off: the palette is the way.
-        return "the command palette".to_owned();
+        return c.tr("help-the-command-palette");
     }
     let chords = keymap.chords_for(action);
-    let other = chords.iter().find(|c| **c != main && !c.is_text_input());
+    let other = chords.iter().find(|x| **x != main && !x.is_text_input());
     match other {
-        Some(o) => format!("{main} or {o}"),
+        Some(o) => join_or(&c, vec![main.to_string(), o.to_string()]),
         None => main.to_string(),
     }
 }
@@ -95,14 +115,119 @@ pub fn short_chords_text(keymap: &Keymap, action: ActionId) -> String {
 /// For messages that name a key in prose, such as "Press Control O to open
 /// one."
 pub fn spoken_key(keymap: &Keymap, action: ActionId) -> String {
-    main_chord(keymap, action).map_or_else(|| "the command palette".to_owned(), |c| c.spoken())
+    main_chord(keymap, action).map_or_else(
+        || Catalog::english().tr("help-the-command-palette"),
+        |c| c.spoken(),
+    )
 }
 
 /// One key for `action`, written: "Ctrl+O", "h", "1" (the main chord);
 /// "the command palette" for an action without keys. For help lines that
 /// list many keys, where every chord of each would be too much.
 pub fn key_text(keymap: &Keymap, action: ActionId) -> String {
-    main_chord(keymap, action).map_or_else(|| "the command palette".to_owned(), |c| c.to_string())
+    main_chord(keymap, action).map_or_else(
+        || Catalog::english().tr("help-the-command-palette"),
+        |c| c.to_string(),
+    )
+}
+
+/// How textweaver's own voice says `chord` in the catalog's language:
+/// "Control O", "Alt period". English gives [`KeyChord::spoken`]'s words.
+pub fn spoken_chord(c: &Catalog, chord: &KeyChord) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if chord.mods.contains(Modifiers::CTRL) {
+        parts.push(c.tr("keyname-control"));
+    }
+    if chord.mods.contains(Modifiers::META) {
+        parts.push(c.tr("keyname-command"));
+    }
+    if chord.mods.contains(Modifiers::ALT) {
+        parts.push(c.tr("keyname-alt"));
+    }
+    let key = match chord.key {
+        Key::Char(ch) if ch.is_ascii_uppercase() => {
+            parts.push(c.tr("keyname-shift"));
+            ch.to_string()
+        }
+        Key::Char(ch) if ch.is_ascii_lowercase() => ch.to_ascii_uppercase().to_string(),
+        Key::Char(ch) => match punctuation_key(ch) {
+            Some(id) => c.tr(&format!("keyname-{id}")),
+            None => ch.to_string(),
+        },
+        k => {
+            if chord.mods.contains(Modifiers::SHIFT) {
+                parts.push(c.tr("keyname-shift"));
+            }
+            match k {
+                Key::F(n) => format!("F{n}"),
+                Key::Char(ch) => ch.to_string(),
+                other => c.tr(&format!("keyname-{}", named_key_id(other))),
+            }
+        }
+    };
+    parts.push(key);
+    parts.join(" ")
+}
+
+/// The id part of a punctuation key's spoken name (`keyname-period`).
+fn punctuation_key(ch: char) -> Option<&'static str> {
+    Some(match ch {
+        '.' => "period",
+        ',' => "comma",
+        ';' => "semicolon",
+        ':' => "colon",
+        '\'' => "apostrophe",
+        '"' => "quote",
+        '`' => "grave-accent",
+        '~' => "tilde",
+        '!' => "exclamation-mark",
+        '?' => "question-mark",
+        '@' => "at-sign",
+        '#' => "number-sign",
+        '$' => "dollar-sign",
+        '%' => "percent",
+        '^' => "caret",
+        '&' => "ampersand",
+        '*' => "asterisk",
+        '(' => "left-parenthesis",
+        ')' => "right-parenthesis",
+        '[' => "left-bracket",
+        ']' => "right-bracket",
+        '{' => "left-brace",
+        '}' => "right-brace",
+        '<' => "less-than",
+        '>' => "greater-than",
+        '+' => "plus",
+        '-' => "minus",
+        '=' => "equals",
+        '_' => "underscore",
+        '/' => "slash",
+        '\\' => "backslash",
+        '|' => "vertical-bar",
+        _ => return None,
+    })
+}
+
+/// The id part of a named key's spoken name (`keyname-page-up`).
+fn named_key_id(k: Key) -> &'static str {
+    match k {
+        Key::PageUp => "page-up",
+        Key::PageDown => "page-down",
+        Key::Up => "up-arrow",
+        Key::Down => "down-arrow",
+        Key::Left => "left-arrow",
+        Key::Right => "right-arrow",
+        Key::Escape => "escape",
+        Key::Space => "space",
+        Key::Enter => "enter",
+        Key::Tab => "tab",
+        Key::Backspace => "backspace",
+        Key::Delete => "delete",
+        Key::Insert => "insert",
+        Key::Home => "home",
+        Key::End => "end",
+        Key::F(_) | Key::Char(_) => "space",
+    }
 }
 
 /// Opens a key named in a message: the written form follows.
@@ -112,9 +237,13 @@ const KEY_SPLIT: char = '\u{E001}';
 /// Closes a key named in a message.
 const KEY_CLOSE: char = '\u{E002}';
 
-/// `chord` for a message, in both forms (see the module notes).
-pub(crate) fn mark_chord(chord: &KeyChord) -> String {
-    format!("{KEY_OPEN}{chord}{KEY_SPLIT}{}{KEY_CLOSE}", chord.spoken())
+/// `chord` for a message, in both forms (see the module notes), spoken in
+/// the catalog's language.
+pub(crate) fn mark_chord(c: &Catalog, chord: &KeyChord) -> String {
+    format!(
+        "{KEY_OPEN}{chord}{KEY_SPLIT}{}{KEY_CLOSE}",
+        spoken_chord(c, chord)
+    )
 }
 
 /// One key for `action`, marked for a message: the main chord (the single
@@ -122,42 +251,71 @@ pub(crate) fn mark_chord(chord: &KeyChord) -> String {
 /// Frontends pass messages built with it to [`App::announce`]; the status
 /// line shows "Ctrl+O" and textweaver's voice says "Control O".
 pub fn named_key(keymap: &Keymap, action: ActionId) -> String {
-    main_chord(keymap, action).map_or_else(|| "the command palette".to_owned(), |c| mark_chord(&c))
+    named_key_in(&Catalog::english(), keymap, action)
+}
+
+/// [`named_key`] in the catalog's language ([`App::catalog`]).
+pub fn named_key_in(c: &Catalog, keymap: &Keymap, action: ActionId) -> String {
+    main_chord(keymap, action)
+        .map_or_else(|| c.tr("help-the-command-palette"), |ch| mark_chord(c, &ch))
 }
 
 /// Every chord bound to `action`, marked for a message and joined with
 /// "or" (as [`chords_text`], which gives the written form only).
-pub(crate) fn named_keys(keymap: &Keymap, action: ActionId) -> String {
+pub(crate) fn named_keys(c: &Catalog, keymap: &Keymap, action: ActionId) -> String {
     let mut chords: Vec<KeyChord> = Vec::new();
-    for c in keymap.chords_for(action) {
-        if !chords.contains(&c) {
-            chords.push(c);
+    for ch in keymap.chords_for(action) {
+        if !chords.contains(&ch) {
+            chords.push(ch);
         }
     }
     if chords.is_empty() {
-        return chords_text(keymap, action);
+        return chords_text_in(c, keymap, action);
     }
-    chords
-        .iter()
-        .map(mark_chord)
-        .collect::<Vec<_>>()
-        .join(" or ")
+    join_or(c, chords.iter().map(|ch| mark_chord(c, ch)).collect())
 }
 
 /// At most two keys for `action`, marked ([`short_chords_text`]).
-fn named_short_keys(keymap: &Keymap, action: ActionId) -> String {
+fn named_short_keys(c: &Catalog, keymap: &Keymap, action: ActionId) -> String {
     let Some(main) = main_chord(keymap, action) else {
-        return chords_text(keymap, action);
+        return chords_text_in(c, keymap, action);
     };
     if !keymap.character_keys() && main.is_text_input() {
-        return "the command palette".to_owned();
+        return c.tr("help-the-command-palette");
     }
     let chords = keymap.chords_for(action);
-    let other = chords.iter().find(|c| **c != main && !c.is_text_input());
+    let other = chords.iter().find(|x| **x != main && !x.is_text_input());
     match other {
-        Some(o) => format!("{} or {}", mark_chord(&main), mark_chord(o)),
-        None => mark_chord(&main),
+        Some(o) => join_or(c, vec![mark_chord(c, &main), mark_chord(c, o)]),
+        None => mark_chord(c, &main),
     }
+}
+
+/// An action's one-line help in the catalog's language (`action-*`
+/// messages; English is the keymap's own [`ActionId::help`]).
+pub fn action_help(c: &Catalog, a: ActionId) -> String {
+    let id = format!("action-{}", a.id().replace('_', "-"));
+    if c.has(&id) {
+        c.tr(&id)
+    } else {
+        a.help().to_owned()
+    }
+}
+
+/// A help category's title in the catalog's language.
+pub fn category_title(c: &Catalog, cat: Category) -> String {
+    let key = match cat {
+        Category::Reading => "reading",
+        Category::Navigation => "navigation",
+        Category::SpeechCursor => "speech-cursor",
+        Category::Voice => "voice",
+        Category::Search => "search",
+        Category::Bookmarks => "bookmarks",
+        Category::File => "file",
+        Category::Editing => "editing",
+        Category::View => "view",
+    };
+    c.tr(&format!("category-{key}"))
 }
 
 /// Keeps one form of each marked key: the written one, or the spoken one.
@@ -198,33 +356,36 @@ pub fn spoken_text(text: &str) -> Cow<'_, str> {
 
 /// Every action with its category and keys, in help order.
 pub fn help_entries(keymap: &Keymap) -> Vec<(ActionId, String)> {
-    entries_with(keymap, chords_text)
+    entries_with(&Catalog::english(), keymap, chords_text_in)
 }
 
 /// [`help_entries`] with the keys named by `keys` (written, or marked for
 /// the keyboard shortcuts list, whose focused item is spoken).
-fn entries_with(keymap: &Keymap, keys: fn(&Keymap, ActionId) -> String) -> Vec<(ActionId, String)> {
+fn entries_with(
+    c: &Catalog,
+    keymap: &Keymap,
+    keys: fn(&Catalog, &Keymap, ActionId) -> String,
+) -> Vec<(ActionId, String)> {
+    let entry = |a: ActionId| {
+        c.fmt(
+            "help-entry",
+            &args![
+                "category" => category_title(c, a.category()),
+                "help" => action_help(c, a),
+                "keys" => keys(c, keymap, a)
+            ],
+        )
+    };
     let mut out = Vec::new();
     for cat in CATEGORIES {
         for &a in ActionId::ALL.iter().filter(|a| a.category() == cat) {
-            out.push((
-                a,
-                format!("{}: {}. {}", cat.title(), a.help(), keys(keymap, a)),
-            ));
+            out.push((a, entry(a)));
         }
     }
     // Categories added later still appear.
     for &a in ActionId::ALL {
         if !CATEGORIES.contains(&a.category()) {
-            out.push((
-                a,
-                format!(
-                    "{}: {}. {}",
-                    a.category().title(),
-                    a.help(),
-                    keys(keymap, a)
-                ),
-            ));
+            out.push((a, entry(a)));
         }
     }
     out
@@ -241,6 +402,11 @@ fn normalize(s: &str) -> String {
 /// Actions matching a palette query: ids that start with it first, then
 /// ids or help texts containing every word of it.
 pub fn palette_matches(query: &str) -> Vec<ActionId> {
+    palette_matches_in(&Catalog::english(), query)
+}
+
+/// [`palette_matches`], also matching the help in the catalog's language.
+pub fn palette_matches_in(c: &Catalog, query: &str) -> Vec<ActionId> {
     let q = normalize(query);
     if q.is_empty() {
         return ActionId::ALL.to_vec();
@@ -255,12 +421,16 @@ pub fn palette_matches(query: &str) -> Vec<ActionId> {
     for &a in ActionId::ALL {
         let id = a.id();
         let help = a.help().to_lowercase();
-        if id.starts_with(&q) {
+        let translated = action_help(c, a).to_lowercase();
+        let palette_name = normalize(&translated);
+        if id.starts_with(&q) || palette_name.starts_with(&q) {
             prefix.push(a);
         } else if id.contains(&q)
-            || words
-                .iter()
-                .all(|w| help.contains(w.as_str()) || id.contains(w.as_str()))
+            || words.iter().all(|w| {
+                help.contains(w.as_str())
+                    || translated.contains(w.as_str())
+                    || id.contains(w.as_str())
+            })
         {
             other.push(a);
         }
@@ -271,35 +441,51 @@ pub fn palette_matches(query: &str) -> Vec<ActionId> {
 
 /// The action a palette answer names: an exact id, else the best match.
 pub fn resolve_command(text: &str) -> Option<ActionId> {
-    ActionId::from_id(&normalize(text)).or_else(|| palette_matches(text).first().copied())
+    resolve_command_in(&Catalog::english(), text)
+}
+
+/// [`resolve_command`], also by the help in the catalog's language.
+pub fn resolve_command_in(c: &Catalog, text: &str) -> Option<ActionId> {
+    ActionId::from_id(&normalize(text)).or_else(|| palette_matches_in(c, text).first().copied())
 }
 
 impl App {
     /// One key for `action` in a message ([`named_key`]): written on the
     /// status line, spoken by textweaver's voice.
     pub(crate) fn key(&self, action: ActionId) -> String {
-        named_key(&self.keymap, action)
+        named_key_in(self.cat(), &self.keymap, action)
     }
 
     /// Every key for `action` in a message ([`named_keys`]).
     pub(crate) fn keys(&self, action: ActionId) -> String {
-        named_keys(&self.keymap, action)
+        named_keys(self.cat(), &self.keymap, action)
     }
 
     /// What is said for a command palette candidate, with its keys marked
     /// ([`App::palette_candidates`] gives the written form, to show).
     pub(crate) fn palette_said(&self, a: ActionId) -> String {
-        format!("{}: {}. {}", a.id(), a.help(), self.keys(a))
+        self.msg_args(
+            "help-palette-item",
+            &args!["id" => a.id(), "help" => action_help(self.cat(), a), "keys" => self.keys(a)],
+        )
     }
 
     /// Candidates for the command palette as `(id, "id: help")` pairs.
     pub fn palette_candidates(&self, query: &str) -> Vec<(ActionId, String)> {
-        palette_matches(query)
+        let c = self.cat();
+        palette_matches_in(c, query)
             .into_iter()
             .map(|a| {
                 (
                     a,
-                    format!("{}: {}. {}", a.id(), a.help(), chords_text(&self.keymap, a)),
+                    c.fmt(
+                        "help-palette-item",
+                        &args![
+                            "id" => a.id(),
+                            "help" => action_help(c, a),
+                            "keys" => chords_text_in(c, &self.keymap, a)
+                        ],
+                    ),
                 )
             })
             .collect()
@@ -307,32 +493,33 @@ impl App {
 
     pub(crate) fn run_named_command(&mut self, text: &str) -> Vec<Effect> {
         if text.trim().is_empty() {
-            self.note("Cancelled.");
+            let msg = self.msg("common-cancelled");
+            self.note(&msg);
             return vec![Effect::Redraw];
         }
         if let Some(c) = crate::command::NoteCommand::from_name(text) {
             return self.notes_command(c);
         }
-        match resolve_command(text) {
+        match resolve_command_in(self.cat(), text) {
             Some(ActionId::CommandPalette) => vec![Effect::Redraw],
             Some(a) => self.action(a),
             None => {
-                self.error(&format!("Unknown command: {text}."));
+                let msg = self.msg_args("help-unknown-command", &args!["text" => text]);
+                self.error(&msg);
                 vec![Effect::Redraw]
             }
         }
     }
 
     pub(crate) fn keyboard_help(&mut self) -> Vec<Effect> {
-        let entries = entries_with(&self.keymap, named_keys);
+        let entries = entries_with(self.cat(), &self.keymap, named_keys);
         let (actions, items): (Vec<ActionId>, Vec<String>) = entries.into_iter().unzip();
         let n = items.len();
         self.list = Some(ListKind::Actions(actions));
-        self.tell(&format!(
-            "Keyboard shortcuts, {n} commands. Up and Down move, Enter runs, Escape closes."
-        ));
+        let msg = self.msg_args("help-shortcuts-intro", &args!["n" => n]);
+        self.tell(&msg);
         vec![Effect::ShowList {
-            title: "Keyboard shortcuts".into(),
+            title: self.msg("help-shortcuts-title"),
             items,
         }]
     }
@@ -340,164 +527,192 @@ impl App {
     pub(crate) fn help(&mut self) -> Vec<Effect> {
         // Keys are marked: the list shows "Ctrl+O", the voice says
         // "Control O".
-        let k = |a| named_short_keys(&self.keymap, a);
-        let one = |a| named_key(&self.keymap, a);
-        let x = |c: NoteCommand| {
-            let chords: Vec<String> = crate::extra::extra_chords(c)
+        let c = self.cat();
+        let k = |a| named_short_keys(c, &self.keymap, a);
+        let one = |a| named_key_in(c, &self.keymap, a);
+        let x = |cmd: NoteCommand| {
+            let chords: Vec<String> = crate::extra::extra_chords(cmd)
                 .iter()
-                .map(mark_chord)
+                .map(|ch| mark_chord(c, ch))
                 .collect();
             if chords.is_empty() {
-                format!("the command {}", c.name().replace('_', " "))
+                c.fmt(
+                    "help-the-command",
+                    &args!["name" => cmd.name().replace('_', " ")],
+                )
             } else {
-                chords.join(" or ")
+                join_or(c, chords)
             }
         };
+        let line = |id: &str, keys: &[(&str, String)]| {
+            let values: Vec<(&str, textweaver_lexicon::i18n::Arg)> = keys
+                .iter()
+                .map(|(n, v)| (*n, textweaver_lexicon::i18n::Arg::from(v.as_str())))
+                .collect();
+            c.fmt(id, &values)
+        };
+        use ActionId as A;
         let items = vec![
-            "textweaver reads documents aloud. Keys below are the current bindings.".to_owned(),
-            format!(
-                "Open a document: {}. Library and recent files: {}.",
-                k(ActionId::Open),
-                k(ActionId::OpenLibrary)
+            c.tr("help-about"),
+            line(
+                "help-open",
+                &[("open", k(A::Open)), ("library", k(A::OpenLibrary))],
             ),
-            format!("Play or pause: {}.", k(ActionId::PlayPause)),
-            format!("Read from the cursor: {}.", k(ActionId::ReadFromCursor)),
-            format!("Stop: {}.", k(ActionId::Stop)),
-            format!(
-                "Next and previous sentence: {} and {}.",
-                k(ActionId::NextSentence),
-                k(ActionId::PreviousSentence)
+            line("help-play", &[("key", k(A::PlayPause))]),
+            line("help-read-from-cursor", &[("key", k(A::ReadFromCursor))]),
+            line("help-stop", &[("key", k(A::Stop))]),
+            line(
+                "help-sentences",
+                &[
+                    ("next", k(A::NextSentence)),
+                    ("previous", k(A::PreviousSentence)),
+                ],
             ),
-            format!(
-                "Next and previous paragraph: {} and {}.",
-                k(ActionId::NextParagraph),
-                k(ActionId::PreviousParagraph)
+            line(
+                "help-paragraphs",
+                &[
+                    ("next", k(A::NextParagraph)),
+                    ("previous", k(A::PreviousParagraph)),
+                ],
             ),
-            format!(
-                "Next and previous heading: {} and {}. Heading at a level: {} to {}, with Shift for the previous one.",
-                k(ActionId::SkipNextHeading),
-                k(ActionId::SkipPreviousHeading),
-                one(ActionId::NextHeadingLevel1),
-                one(ActionId::NextHeadingLevel6)
+            line(
+                "help-headings",
+                &[
+                    ("next", k(A::SkipNextHeading)),
+                    ("previous", k(A::SkipPreviousHeading)),
+                    ("first", one(A::NextHeadingLevel1)),
+                    ("last", one(A::NextHeadingLevel6)),
+                ],
             ),
-            format!(
-                "Read from the next and previous heading: {} and {}.",
-                k(ActionId::NextHeading),
-                k(ActionId::PreviousHeading)
+            line(
+                "help-read-headings",
+                &[
+                    ("next", k(A::NextHeading)),
+                    ("previous", k(A::PreviousHeading)),
+                ],
             ),
-            format!(
-                "Quick keys, as in NVDA and JAWS: list {}, list item {}, table {}, link {}, block quote {}, separator {}, graphic {}, section {}. Shift with the key goes to the previous one.",
-                one(ActionId::NextList),
-                one(ActionId::NextListItem),
-                one(ActionId::NextTable),
-                one(ActionId::NextLink),
-                one(ActionId::NextBlockQuote),
-                one(ActionId::NextSeparator),
-                one(ActionId::NextGraphic),
-                one(ActionId::NextChapter)
+            line(
+                "help-quick-keys",
+                &[
+                    ("list", one(A::NextList)),
+                    ("item", one(A::NextListItem)),
+                    ("table", one(A::NextTable)),
+                    ("link", one(A::NextLink)),
+                    ("quote", one(A::NextBlockQuote)),
+                    ("separator", one(A::NextSeparator)),
+                    ("graphic", one(A::NextGraphic)),
+                    ("section", one(A::NextChapter)),
+                ],
             ),
-            format!(
-                "Speech Cursor, line by line: {}.",
-                k(ActionId::SpeechCursorToggle)
+            line("help-speech-cursor", &[("key", k(A::SpeechCursorToggle))]),
+            line("help-find", &[("key", k(A::Find))]),
+            line("help-bookmark", &[("key", k(A::AddBookmark))]),
+            line(
+                "help-history",
+                &[
+                    ("back", k(A::HistoryBack)),
+                    ("forward", k(A::HistoryForward)),
+                ],
             ),
-            format!("Find: {}.", k(ActionId::Find)),
-            format!("Add a bookmark: {}.", k(ActionId::AddBookmark)),
-            format!(
-                "Back and forward through your jumps: {} and {}.",
-                k(ActionId::HistoryBack),
-                k(ActionId::HistoryForward)
+            line(
+                "help-rate",
+                &[("faster", k(A::RateUp)), ("slower", k(A::RateDown))],
             ),
-            format!(
-                "Faster and slower: {} and {}.",
-                k(ActionId::RateUp),
-                k(ActionId::RateDown)
+            line("help-where", &[("key", k(A::SayPosition))]),
+            line(
+                "help-repeat",
+                &[("repeat", k(A::RepeatMessage)), ("status", k(A::SayStatus))],
             ),
-            format!("Where am I: {}.", k(ActionId::SayPosition)),
-            format!(
-                "Hear the last message again: {}. The last message and the status: mode, rate, engine, and position: {}.",
-                k(ActionId::RepeatMessage),
-                k(ActionId::SayStatus)
+            line(
+                "help-notes",
+                &[
+                    ("add", k(A::AddNote)),
+                    ("list", k(A::ListNotes)),
+                    ("next", k(A::NextNote)),
+                    ("previous", k(A::PreviousNote)),
+                    ("delete", k(A::DeleteNote)),
+                ],
             ),
-            format!(
-                "Notes: add {}, list {}, next and previous {} and {}, delete the one at the cursor {}. In the list, Delete deletes and F2 edits.",
-                k(ActionId::AddNote),
-                k(ActionId::ListNotes),
-                k(ActionId::NextNote),
-                k(ActionId::PreviousNote),
-                k(ActionId::DeleteNote)
+            line(
+                "help-highlights",
+                &[
+                    ("highlight", k(A::HighlightSelection)),
+                    ("list", x(NoteCommand::ListHighlights)),
+                ],
             ),
-            format!(
-                "Highlight the selection or sentence, or remove a highlight: {}. List highlights: {}.",
-                k(ActionId::HighlightSelection),
-                x(NoteCommand::ListHighlights)
+            c.tr("help-bookmarks-list"),
+            line(
+                "help-edit",
+                &[
+                    ("edit", k(A::ToggleEditMode)),
+                    ("save", k(A::Save)),
+                    ("saveas", k(A::SaveAs)),
+                    ("new", k(A::NewDocument)),
+                ],
             ),
-            "Bookmarks list: Delete deletes a bookmark, F2 renames it.".to_owned(),
-            format!(
-                "Edit the document: {}. Save: {}. Save as: {}. New document: {}.",
-                k(ActionId::ToggleEditMode),
-                k(ActionId::Save),
-                k(ActionId::SaveAs),
-                k(ActionId::NewDocument)
+            line(
+                "help-editing",
+                &[
+                    ("undo", k(A::Undo)),
+                    ("redo", k(A::Redo)),
+                    ("bold", k(A::Bold)),
+                ],
             ),
-            format!(
-                "While editing: undo {}, redo {}, bold {}. Every formatting command is in the keyboard shortcuts.",
-                k(ActionId::Undo),
-                k(ActionId::Redo),
-                k(ActionId::Bold)
+            line(
+                "help-outline",
+                &[("outline", k(A::Outline)), ("follow", k(A::FollowLink))],
             ),
-            format!(
-                "Outline of the headings, type to filter: {}. Follow a link or footnote: {}.",
-                k(ActionId::Outline),
-                k(ActionId::FollowLink)
+            line(
+                "help-tables",
+                &[
+                    ("nextrow", k(A::TableNextRow)),
+                    ("previousrow", k(A::TablePreviousRow)),
+                    ("nextcell", k(A::TableNextColumn)),
+                    ("previouscell", k(A::TablePreviousColumn)),
+                ],
             ),
-            format!(
-                "Tables: {} and {} move by row, {} and {} by cell.",
-                k(ActionId::TableNextRow),
-                k(ActionId::TablePreviousRow),
-                k(ActionId::TableNextColumn),
-                k(ActionId::TablePreviousColumn)
+            line(
+                "help-citations",
+                &[
+                    ("insert", k(A::InsertCitation)),
+                    ("reference", k(A::AddReference)),
+                    ("next", k(A::NextMisspelling)),
+                    ("previous", k(A::PreviousMisspelling)),
+                    ("suggestions", k(A::SpellingSuggestions)),
+                ],
             ),
-            format!(
-                "Citations while editing: insert {}, add a reference by DOI or ISBN {}. Spelling: next and previous misspelling {} and {}, suggestions {}.",
-                k(ActionId::InsertCitation),
-                k(ActionId::AddReference),
-                k(ActionId::NextMisspelling),
-                k(ActionId::PreviousMisspelling),
-                k(ActionId::SpellingSuggestions)
+            c.tr("help-export"),
+            line(
+                "help-verbosity",
+                &[
+                    ("verbosity", k(A::CycleVerbosity)),
+                    ("punctuation", k(A::CyclePunctuation)),
+                ],
             ),
-            "Export to HTML, PDF, Word, EPUB, or braille, preview in the browser, and start from a template: type export, preview, or template in the command palette.".to_owned(),
-            format!(
-                "How much is said: {}. How much punctuation: {}.",
-                k(ActionId::CycleVerbosity),
-                k(ActionId::CyclePunctuation)
+            line(
+                "help-voice",
+                &[
+                    ("voice", k(A::ChooseVoice)),
+                    ("restart", k(A::RestartSpeech)),
+                ],
             ),
-            format!(
-                "Choose a voice: {}. Restart speech if it stops: {}.",
-                k(ActionId::ChooseVoice),
-                k(ActionId::RestartSpeech)
+            line("help-access", &[("key", k(A::CycleAccessMode))]),
+            line(
+                "help-character-keys",
+                &[
+                    ("keys", k(A::ToggleCharacterKeys)),
+                    ("settings", k(A::Settings)),
+                ],
             ),
-            format!(
-                "With a screen reader, who speaks: {} cycles self-voicing, hybrid, and screen reader mode.",
-                k(ActionId::CycleAccessMode)
-            ),
-            format!(
-                "Single-key shortcuts on or off, for dictation: {}. Settings: {}.",
-                k(ActionId::ToggleCharacterKeys),
-                k(ActionId::Settings)
-            ),
-            format!("All keyboard shortcuts: {}.", k(ActionId::KeyboardHelp)),
-            format!("Run any command by name: {}.", k(ActionId::CommandPalette)),
-            format!(
-                "Quit, saving your place: {}, then y to confirm; n, a, or Escape cancels.",
-                k(ActionId::Quit)
-            ),
+            line("help-all-shortcuts", &[("key", k(A::KeyboardHelp))]),
+            line("help-palette", &[("key", k(A::CommandPalette))]),
+            line("help-quit", &[("key", k(A::Quit))]),
         ];
+        let intro = c.tr("help-intro");
+        let title = c.tr("help-title");
         self.list = Some(ListKind::Info);
-        self.tell("Help. Up and Down move, Escape closes.");
-        vec![Effect::ShowList {
-            title: "Help".into(),
-            items,
-        }]
+        self.tell(&intro);
+        vec![Effect::ShowList { title, items }]
     }
 }
 
@@ -545,6 +760,44 @@ mod tests {
         assert_eq!(
             short_chords_text(&off, ActionId::AddBookmark),
             "the command palette"
+        );
+    }
+
+    /// English help, categories, and spoken key names are the keymap's
+    /// own, so the catalog cannot drift from them (and `cargo xtask
+    /// keyboard` stays as it was).
+    #[test]
+    fn english_catalog_matches_the_keymap() {
+        use textweaver_keymap::{Frontend, Platform};
+        let c = Catalog::english();
+        for &a in ActionId::ALL {
+            let id = format!("action-{}", a.id().replace('_', "-"));
+            assert!(c.has(&id), "en.ftl has no {id}");
+            assert_eq!(action_help(&c, a), a.help(), "{id}");
+        }
+        for cat in CATEGORIES {
+            assert_eq!(category_title(&c, cat), cat.title());
+        }
+        for platform in [Platform::Linux, Platform::Windows, Platform::MacOs] {
+            for frontend in [Frontend::Terminal, Frontend::Gui] {
+                let map = Keymap::defaults(platform, frontend);
+                for &a in ActionId::ALL {
+                    for ch in map.chords_for(a) {
+                        assert_eq!(spoken_chord(&c, &ch), ch.spoken(), "{ch}");
+                    }
+                }
+            }
+        }
+        let map = Keymap::defaults(Platform::Linux, Frontend::Terminal);
+        assert_eq!(
+            help_entries(&map)[0].1,
+            "Reading: Play or pause reading from the current word. Alt+P or Space"
+        );
+        // Spanish help finds commands by its own words too.
+        let es = Catalog::builtin("es").unwrap();
+        assert_eq!(
+            resolve_command_in(&es, "next_sentence"),
+            Some(ActionId::NextSentence)
         );
     }
 

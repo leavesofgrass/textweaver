@@ -5,6 +5,9 @@
 
 use std::path::{MAIN_SEPARATOR, Path};
 
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
+
 /// Most names read out when several match.
 const SPOKEN_NAMES: usize = 5;
 
@@ -13,6 +16,11 @@ const SPOKEN_NAMES: usize = 5;
 /// matches: a, b, c", or that nothing matches. A folder gets a separator
 /// after it, so the next Tab lists what is inside.
 pub fn complete(typed: &str, cwd: &Path) -> (Option<String>, String) {
+    complete_in(&Catalog::english(), typed, cwd)
+}
+
+/// [`complete`], saying what it found in the catalog's language.
+pub fn complete_in(c: &Catalog, typed: &str, cwd: &Path) -> (Option<String>, String) {
     let unquoted = typed.trim_start_matches('"');
     // The folder part (with its separator) and the name being typed.
     let cut = unquoted.rfind(['/', '\\']).map_or(0, |i| i + 1);
@@ -25,7 +33,13 @@ pub fn complete(typed: &str, cwd: &Path) -> (Option<String>, String) {
         cwd.join(dir_part)
     };
     let Ok(entries) = std::fs::read_dir(&dir) else {
-        return (None, format!("There is no folder {}.", dir.display()));
+        return (
+            None,
+            c.fmt(
+                "pathc-no-folder",
+                &args!["folder" => dir.display().to_string()],
+            ),
+        );
     };
     let fold = |s: &str| {
         if cfg!(any(windows, target_os = "macos")) {
@@ -46,14 +60,17 @@ pub fn complete(typed: &str, cwd: &Path) -> (Option<String>, String) {
         .collect();
     names.sort_by_key(|(n, _)| fold(n));
     match names.as_slice() {
-        [] => (None, format!("No file or folder starts with {prefix}.")),
+        [] => (None, c.fmt("pathc-no-match", &args!["prefix" => prefix])),
         [(name, is_dir)] => {
             let mut text = format!("{dir_part}{name}");
             if *is_dir {
                 text.push(MAIN_SEPARATOR);
             }
-            let what = if *is_dir { "folder" } else { "file" };
-            (Some(text), format!("{name}, {what}"))
+            let kind = if *is_dir { "folder" } else { "file" };
+            (
+                Some(text),
+                c.fmt("pathc-one", &args!["name" => name.as_str(), "kind" => kind]),
+            )
         }
         many => {
             let common = common_prefix(many.iter().map(|(n, _)| n.as_str()));
@@ -65,13 +82,16 @@ pub fn complete(typed: &str, cwd: &Path) -> (Option<String>, String) {
                 .map(|(n, _)| n.as_str())
                 .collect();
             let more = if many.len() > SPOKEN_NAMES {
-                ", and more"
+                "yes"
             } else {
-                ""
+                "no"
             };
             (
                 text,
-                format!("{} matches: {}{more}.", many.len(), shown.join(", ")),
+                c.fmt(
+                    "pathc-many",
+                    &args!["n" => many.len(), "names" => shown.join(", "), "more" => more],
+                ),
             )
         }
     }

@@ -20,6 +20,7 @@
 
 use textweaver_a11y::Channel;
 use textweaver_core::{CharPos, CharRange, MarkerKind};
+use textweaver_lexicon::args;
 use textweaver_math::{DetectOptions, Math, NavStep, Navigator, Notation, SpeechOptions};
 use textweaver_speech::Earcon;
 
@@ -146,7 +147,8 @@ impl App {
         let pos = s.cursor;
         let Some((content, notation)) = math_at(&s.doc, pos, asciimath) else {
             self.speech.earcon(Earcon::Boundary);
-            self.tell("No math here. Move to a formula, then try again.");
+            let msg = self.msg("mathx-no-math");
+            self.tell(&msg);
             return;
         };
         let source = s.doc.slice(content);
@@ -161,12 +163,14 @@ impl App {
         let step = explore.navigator(self.math_speech_options()).current();
         explore.span = self.doc_span(&explore, &step);
         self.math_explore = Some(explore);
-        let hint = if step.has_children {
-            " Down goes in, arrows move, Escape leaves."
-        } else {
-            " Escape leaves."
-        };
-        self.math_say(&format!("Exploring math: {}.{hint}", step.announcement()));
+        let msg = self.msg_args(
+            "mathx-exploring",
+            &args![
+                "math" => step.announcement(),
+                "parts" => if step.has_children { "yes" } else { "no" }
+            ],
+        );
+        self.math_say(&msg);
         self.math_follow();
     }
 
@@ -177,7 +181,8 @@ impl App {
         };
         if mv == MathMove::Leave {
             self.stop_speech();
-            self.math_say("Left math.");
+            let msg = self.msg("mathx-left");
+            self.math_say(&msg);
             return vec![Effect::Redraw];
         }
         let opts = self.math_speech_options();
@@ -205,13 +210,14 @@ impl App {
             None => {
                 self.math_explore = Some(explore);
                 self.speech.earcon(Earcon::Boundary);
-                self.math_say(match mv {
-                    MathMove::Next => "Last term.",
-                    MathMove::Previous => "First term.",
-                    MathMove::Enter => "No parts inside.",
-                    MathMove::Exit => "Whole expression.",
-                    _ => "Nothing here.",
+                let msg = self.msg(match mv {
+                    MathMove::Next => "mathx-last-term",
+                    MathMove::Previous => "mathx-first-term",
+                    MathMove::Enter => "mathx-no-parts",
+                    MathMove::Exit => "mathx-whole-expression",
+                    _ => "mathx-nothing-here",
                 });
+                self.math_say(&msg);
             }
         }
         vec![Effect::Redraw]

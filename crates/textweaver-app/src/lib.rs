@@ -169,6 +169,7 @@ mod goto;
 #[cfg(feature = "grammar")]
 mod grammar;
 mod help;
+mod language;
 mod library;
 mod links;
 #[cfg(feature = "lint")]
@@ -218,6 +219,7 @@ mod voice;
 pub mod voice_manager;
 pub mod wake;
 pub mod window;
+mod words;
 mod writer;
 mod writes;
 
@@ -233,15 +235,18 @@ pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_lookup};
 pub use goto::parse_go_to;
 pub use help::{
-    chords_text, help_entries, key_text, named_key, palette_matches, resolve_command,
-    short_chords_text, spoken_key, spoken_text, written_text,
+    action_help, category_title, chords_text, chords_text_in, help_entries, key_text, named_key,
+    named_key_in, palette_matches, palette_matches_in, resolve_command, resolve_command_in,
+    short_chords_text, spoken_chord, spoken_key, spoken_text, written_text,
 };
 pub use list_model::{ListKey, ListModel, PromptKey, PromptModel};
 pub use math_explore::MathMove;
 #[cfg(feature = "publish")]
 pub use notes::{NotesRecords, export_notes, notes_references};
 pub use notes::{UserHighlight, parse_tags};
-pub use opening::{open_failure_message, open_failure_reason};
+pub use opening::{
+    open_failure_message, open_failure_message_in, open_failure_reason, open_failure_reason_in,
+};
 pub use playback::{Playback, load_options, narration_policy};
 pub use restart::SpeechStarter;
 pub use settings_schema::{Setting, SettingKind, SettingsSchema};
@@ -254,6 +259,7 @@ pub use textweaver_store::Note;
 pub use view::{Highlight, HighlightKind, Viewport};
 pub use wake::{Waker, channel_waker};
 pub use window::{DocWindow, Units, WINDOW_UNITS, WindowChange};
+pub use words::system_language;
 
 pub use reading_aids::{RSVP_STEP, RSVP_WINDOW};
 pub use textweaver_a11y as a11y;

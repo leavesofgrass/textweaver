@@ -325,12 +325,12 @@ fn an_unknown_language_falls_back_to_english() {
     let paths = Paths::under(dir.path());
     std::fs::create_dir_all(paths.locales_dir()).unwrap();
     std::fs::write(
-        paths.locales_dir().join("es.ftl"),
-        "define-copied = Copiado.\n",
+        paths.locales_dir().join("it.ftl"),
+        "define-copied = Copiato.\n",
     )
     .unwrap();
-    let app = app_in(Some(dir.path()), None, "es");
-    assert_eq!(app.catalog().tr("define-copied"), "Copiado.");
+    let app = app_in(Some(dir.path()), None, "it");
+    assert_eq!(app.catalog().tr("define-copied"), "Copiato.");
     assert_eq!(
         app.catalog().tr("define-nothing-here"),
         "There is no word at the cursor."

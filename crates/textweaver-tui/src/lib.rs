@@ -45,6 +45,7 @@
 //!
 //! Owner: Agent D.
 
+pub mod bidi;
 pub mod clipboard;
 #[cfg(feature = "highlight")]
 pub mod highlight;
@@ -65,6 +66,7 @@ use ratatui::crossterm::event::{self, DisableBracketedPaste, EnableBracketedPast
 use ratatui::crossterm::execute;
 use ratatui::{DefaultTerminal, Terminal};
 use textweaver_app::a11y::Priority;
+use textweaver_app::lexicon::args;
 
 pub use setup::{Options, build_app, build_app_with};
 pub use textweaver_app::a11y::AccessMode;
@@ -149,15 +151,21 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
             if let Err(e) = tui.app_mut().open(file) {
                 let msg = match e {
                     textweaver_app::AppError::Load(e) => {
-                        textweaver_app::open_failure_message(file, &e)
+                        textweaver_app::open_failure_message_in(&tui.app().catalog(), file, &e)
                     }
-                    other => format!("Could not open {}: {other}", file.display()),
+                    other => tui.app().catalog().fmt(
+                        "tui-could-not-open",
+                        &args![
+                            "name" => file.display().to_string(),
+                            "error" => other.to_string()
+                        ],
+                    ),
                 };
                 tui.app_mut().announce(&msg, Priority::Assertive);
             }
         }
         None => {
-            let msg = setup::no_document_text(tui.app().keymap());
+            let msg = setup::no_document_text(&tui.app().catalog(), tui.app().keymap());
             tui.app_mut().announce(&msg, Priority::Polite);
         }
     }
@@ -168,11 +176,20 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
     for m in messages {
         tui.app_mut().announce_queued(&m, Priority::Assertive);
     }
-    if let Some(welcome) = setup::first_run_message(opts, tui.app().keymap()) {
+    let catalog = tui.app().catalog();
+    let welcome = setup::first_run_message(&catalog, opts, tui.app().keymap());
+    let first_run = welcome.is_some();
+    if let Some(welcome) = welcome {
         tui.app_mut().announce_queued(&welcome, Priority::Polite);
     }
-    // First run with a screen reader: offer hybrid mode (once).
-    setup::offer_hybrid_if_screen_reader(tui.app_mut(), opts);
+    if first_run {
+        // The first run starts with the language list, the system's
+        // language first; the hybrid mode question waits for the next run.
+        tui.choose_language();
+    } else {
+        // With a screen reader: offer hybrid mode (once).
+        setup::offer_hybrid_if_screen_reader(tui.app_mut(), opts);
+    }
     tui.offer_recovery();
     if let Some(msg) = signals::install() {
         log::warn!("{msg}");

@@ -12,6 +12,17 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - Word, OpenDocument, EPUB, and PowerPoint files with more than 50,000 files inside, overlapping files, or a file that claims to unpack to more than 1,000 times its size are refused, and no package unpacks past 1 gigabyte.
 - A damaged RTF or ODT file is named plainly: "Could not open notes.odt: it is not a readable OpenDocument text file; it may be damaged."
 
+### W4d: interface translations
+
+- textweaver speaks and shows its own words in English, Spanish, French, German, Portuguese, or Arabic: messages, lists, help, keyboard shortcuts, the command palette, and the settings screen. `[interface] language`, "Interface language" on the settings screen, or `tw settings language es` (ADR-0030).
+- The language changes at once: the change is said in the new language, then the title line.
+- The voice follows the language when the speech engine has one for it. When it has none, the current voice keeps speaking and textweaver says so; it never goes silent. `[speech.voices_by_language]` picks a voice per language.
+- The first run starts with the list of languages, your system's language first.
+- Right-to-left text is reordered for display in terminals that do not do it themselves, and never for screen readers: `[interface] rtl`.
+- textweaver's own voice says key names in the interface's language; the status line keeps their written names.
+- The command palette also finds commands by their help in your language.
+- For translators and developers: every message is in `crates/textweaver-lexicon/locales/*.ftl`; `en-XA` shows each one bracketed, and the new `pseudo` step of `scripts/dev-check` fails on any that was missed.
+
 ### W4g: authoring extras
 
 - Markdown lint in edit mode: Ctrl+F8 and Ctrl+Shift+F8 select the next or previous problem and say it, "Lint: heading level 3 after level 1; use level 2." Five rules: heading levels, list markers, trailing spaces, link references without a definition, and bare web addresses. `tw lint FILE...` checks files and exits 1 when there are problems. textweaver's own rules, not rumdl (ADR-0032).

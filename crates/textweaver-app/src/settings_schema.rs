@@ -33,6 +33,8 @@
 //! per minute."
 
 use serde_json::{Map, Value};
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 use textweaver_store::Settings;
 use textweaver_store::settings_io::settings_to_json;
 
@@ -330,6 +332,11 @@ pub const INFO: &[Info] = &[
         "speech.speed_presets",
         "Speed presets",
         "Named rates that F8 cycles through.",
+    ),
+    table(
+        "speech.voices_by_language",
+        "Voices by language",
+        "The voice for each interface language, by language tag, such as es = the voice's id. A language not listed uses the engine's first voice for it.",
     ),
     number(
         "speech.latency_offset_ms",
@@ -1048,12 +1055,23 @@ pub const INFO: &[Info] = &[
     open_choice(
         "interface.language",
         "Interface language",
-        "The language of textweaver's own words, from the next start. Only English is complete; the others are for testing.",
+        "The language of textweaver's own words, changed at once. The voice follows it when the engine has one for it; otherwise the voice stays.",
         &[
             ("en", "English"),
+            ("es", "Español"),
+            ("fr", "Français"),
+            ("de", "Deutsch"),
+            ("pt", "Português"),
+            ("ar", "العربية"),
             ("en-XA", "test: accented"),
             ("ar-XB", "test: right to left"),
         ],
+    ),
+    choice(
+        "interface.rtl",
+        "Right-to-left display",
+        "Whether the terminal reader reorders right-to-left text for display: automatic leaves it to terminals that do it themselves. Speech and the screen reader always get the text in reading order.",
+        &[("auto", "automatic"), ("on", "on"), ("off", "off")],
     ),
     // [gui]
     choice(
@@ -1281,36 +1299,105 @@ fn number_text(n: f64) -> String {
     }
 }
 
+/// A path or value as part of a message id: `speech-rate` for
+/// `speech.rate`, `say-cap` for `say_cap`.
+fn slug(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch.to_ascii_lowercase());
+        } else if !out.ends_with('-') {
+            out.push('-');
+        }
+    }
+    out.trim_matches('-').to_owned()
+}
+
+/// A choice's value as part of its message id: `true` for a boolean
+/// choice (the Eloquence dictionaries), the text otherwise.
+fn value_key(v: &Value) -> String {
+    match v {
+        Value::Bool(b) => b.to_string(),
+        other => plain(other),
+    }
+}
+
+/// Message `id` in `c`, or `english` when no catalog has it (a theme or
+/// font name, a setting added without a message).
+fn lookup(c: &Catalog, id: &str, english: &str) -> String {
+    if c.has(id) {
+        c.tr(id)
+    } else {
+        english.to_owned()
+    }
+}
+
 impl Setting {
+    /// The label in the catalog's language ("Rate"; `setting-*`).
+    pub fn label_in(&self, c: &Catalog) -> String {
+        lookup(c, &format!("setting-{}", slug(&self.path)), self.label)
+    }
+
+    /// The help in the catalog's language (`setting-*-help`).
+    pub fn help_in(&self, c: &Catalog) -> String {
+        if self.help.is_empty() {
+            return String::new();
+        }
+        lookup(c, &format!("setting-{}-help", slug(&self.path)), self.help)
+    }
+
+    /// The section title in the catalog's language (`section-*`).
+    pub fn section_in(&self, c: &Catalog) -> String {
+        let top = self.path.split('.').next().unwrap_or_default();
+        lookup(c, &format!("section-{}", slug(top)), self.section)
+    }
+
+    /// A choice's label in the catalog's language (`choice-*`).
+    pub fn choice_label_in(&self, c: &Catalog, choice: &Choice) -> String {
+        lookup(
+            c,
+            &format!(
+                "choice-{}-{}",
+                slug(&self.path),
+                slug(&value_key(&choice.value))
+            ),
+            &choice.label,
+        )
+    }
+
     /// `value` as said and shown: "on", "300 words per minute", "the
     /// sentence", "not set", "3 entries".
     pub fn describe(&self, value: &Value) -> String {
+        self.describe_in(&Catalog::english(), value)
+    }
+
+    /// [`describe`](Self::describe) in the catalog's language.
+    pub fn describe_in(&self, c: &Catalog, value: &Value) -> String {
         match (&self.kind, value) {
-            (_, Value::Null) => "not set".to_owned(),
-            (SettingKind::Toggle, Value::Bool(b)) => if *b { "on" } else { "off" }.to_owned(),
+            (_, Value::Null) => c.tr("settings-not-set"),
+            (SettingKind::Toggle, Value::Bool(b)) => crate::words::on_off(c, *b),
             (SettingKind::Number { unit, .. }, Value::Number(n)) => {
                 let n = number_text(n.as_f64().unwrap_or_default());
                 if unit.is_empty() {
                     n
                 } else {
-                    format!("{n} {unit}")
+                    let unit = lookup(c, &format!("settings-unit-{}", slug(unit)), unit);
+                    c.fmt("settings-number-unit", &args!["n" => n, "unit" => unit])
                 }
             }
             (SettingKind::Choice { choices, .. }, v) => choices
                 .iter()
-                .find(|c| &c.value == v)
-                .map(|c| c.label.clone())
+                .find(|x| &x.value == v)
+                .map(|x| self.choice_label_in(c, x))
                 .unwrap_or_else(|| plain(v)),
-            (SettingKind::List, Value::Array(items)) if items.is_empty() => "none".to_owned(),
+            (SettingKind::List, Value::Array(items)) if items.is_empty() => c.tr("settings-none"),
             (SettingKind::List, Value::Array(items)) => {
                 items.iter().map(plain).collect::<Vec<_>>().join(", ")
             }
-            (SettingKind::Table, Value::Object(m)) => match m.len() {
-                0 => "none".to_owned(),
-                1 => "1 entry".to_owned(),
-                n => format!("{n} entries"),
-            },
-            (_, Value::String(s)) if s.is_empty() => "empty".to_owned(),
+            (SettingKind::Table, Value::Object(m)) => {
+                c.fmt("settings-entries", &args!["n" => m.len()])
+            }
+            (_, Value::String(s)) if s.is_empty() => c.tr("settings-empty"),
             (_, v) => plain(v),
         }
     }
@@ -1328,43 +1415,65 @@ impl Setting {
     /// Parses text typed for this setting into a value: a number, on or
     /// off, a choice (by value or label), text, or a comma-separated list.
     pub fn parse(&self, text: &str) -> Result<Value, String> {
+        self.parse_in(&Catalog::english(), text)
+    }
+
+    /// [`parse`](Self::parse), also taking on, off, and the choices in
+    /// the catalog's language, and saying what is wrong in it.
+    pub fn parse_in(&self, c: &Catalog, text: &str) -> Result<Value, String> {
         let t = text.trim();
         match &self.kind {
-            SettingKind::Toggle => match t.to_lowercase().as_str() {
-                "on" | "yes" | "true" | "1" => Ok(Value::Bool(true)),
-                "off" | "no" | "false" | "0" => Ok(Value::Bool(false)),
-                _ => Err("Type on or off.".to_owned()),
-            },
+            SettingKind::Toggle => {
+                let lower = t.to_lowercase();
+                if matches!(lower.as_str(), "on" | "yes" | "true" | "1")
+                    || lower == c.tr("common-on").to_lowercase()
+                {
+                    Ok(Value::Bool(true))
+                } else if matches!(lower.as_str(), "off" | "no" | "false" | "0")
+                    || lower == c.tr("common-off").to_lowercase()
+                {
+                    Ok(Value::Bool(false))
+                } else {
+                    Err(c.tr("settings-type-on-or-off"))
+                }
+            }
             SettingKind::Number { min, max, step, .. } => {
-                let n: f64 = t.parse().map_err(|_| {
-                    format!(
-                        "Type a number from {} to {}.",
-                        number_text(*min),
-                        number_text(*max)
+                let n: f64 = t.replace(',', ".").parse().map_err(|_| {
+                    c.fmt(
+                        "settings-type-a-number",
+                        &args!["min" => number_text(*min), "max" => number_text(*max)],
                     )
                 })?;
                 if n < *min || n > *max {
-                    return Err(format!(
-                        "{} is outside {} to {}.",
-                        number_text(n),
-                        number_text(*min),
-                        number_text(*max)
+                    return Err(c.fmt(
+                        "settings-outside",
+                        &args![
+                            "n" => number_text(n),
+                            "min" => number_text(*min),
+                            "max" => number_text(*max)
+                        ],
                     ));
                 }
                 Ok(number_value(n, *step, &self.default))
             }
             SettingKind::Choice { choices, open } => {
                 let lower = t.to_lowercase();
-                if let Some(c) = choices.iter().find(|c| {
-                    plain(&c.value).to_lowercase() == lower || c.label.to_lowercase() == lower
+                if let Some(x) = choices.iter().find(|x| {
+                    plain(&x.value).to_lowercase() == lower
+                        || x.label.to_lowercase() == lower
+                        || self.choice_label_in(c, x).to_lowercase() == lower
                 }) {
-                    return Ok(c.value.clone());
+                    return Ok(x.value.clone());
                 }
                 if *open && !t.is_empty() {
                     return Ok(Value::String(t.to_owned()));
                 }
-                let names: Vec<&str> = choices.iter().map(|c| c.label.as_str()).collect();
-                Err(format!("Choose one of: {}.", names.join(", ")))
+                let names: Vec<String> =
+                    choices.iter().map(|x| self.choice_label_in(c, x)).collect();
+                Err(c.fmt(
+                    "settings-choose-one-of",
+                    &args!["names" => names.join(", ")],
+                ))
             }
             SettingKind::Text { optional } => {
                 if t.is_empty() && *optional {
@@ -1380,10 +1489,9 @@ impl Setting {
                     .map(|s| Value::String(s.to_owned()))
                     .collect(),
             )),
-            SettingKind::Table => Err(format!(
-                "Edit {} in settings.toml; it holds names and values.",
-                self.label
-            )),
+            SettingKind::Table => {
+                Err(c.fmt("settings-edit-table", &args!["label" => self.label_in(c)]))
+            }
         }
     }
 
@@ -1534,7 +1642,7 @@ impl App {
         let schema = self.settings_schema();
         let setting = schema
             .get(path)
-            .ok_or_else(|| format!("There is no setting {path}."))?;
+            .ok_or_else(|| self.msg_args("settings-no-such-setting", &args!["path" => path]))?;
         let value =
             if value.is_null() && !matches!(setting.kind, SettingKind::Text { optional: true }) {
                 setting.default.clone()
@@ -1543,20 +1651,41 @@ impl App {
             };
         let mut tree = json(&self.settings);
         set(&mut tree, path, value);
-        let mut new: Settings = serde_json::from_value(Value::Object(tree))
-            .map_err(|e| format!("{} cannot be that: {e}.", setting.label))?;
+        let mut new: Settings = serde_json::from_value(Value::Object(tree)).map_err(|e| {
+            self.msg_args(
+                "settings-cannot-be",
+                &args!["label" => setting.label_in(self.cat()), "error" => e.to_string()],
+            )
+        })?;
         let clamped = new.validate();
         let old = std::mem::replace(&mut self.settings, new);
         self.settings_dirty = true;
         self.settings_changed(&old, path);
         let now = self.setting_value(path).unwrap_or(Value::Null);
-        let mut said = format!("{}, {}.", setting.label, setting.describe(&now));
+        // Said in the language now in effect (a language change is heard
+        // in the new language).
+        let c = self.catalog();
+        let mut said = c.fmt(
+            "settings-changed",
+            &args!["label" => setting.label_in(&c), "value" => setting.describe_in(&c, &now)],
+        );
         if !clamped.is_empty() {
-            said.push_str(" Out of range, so the nearest value is used.");
+            said.push(' ');
+            said.push_str(&c.tr("settings-clamped"));
         }
         if let Some(extra) = restart_note(path) {
             said.push(' ');
-            said.push_str(extra);
+            said.push_str(&c.tr(extra));
+        }
+        if path == "interface.language" {
+            // In the new language: what happened to the voice, then the
+            // title line, so the change is heard to have worked.
+            if let Some(note) = self.language_note.take() {
+                said.push(' ');
+                said.push_str(&note);
+            }
+            said.push(' ');
+            said.push_str(&self.status_sentence());
         }
         Ok(said)
     }
@@ -1590,6 +1719,9 @@ impl App {
         if top == "highlight" || self.settings.display.theme != old.display.theme {
             self.check_reading_colors();
         }
+        if self.settings.interface.language != old.interface.language {
+            self.apply_interface_language();
+        }
         if self.settings.library.folders != old.library.folders
             || self.settings.reading.sync_conflict_policy != old.reading.sync_conflict_policy
         {
@@ -1619,9 +1751,8 @@ impl App {
             filter: String::new(),
             editing: None,
         });
-        self.tell(&format!(
-            "Settings, {n} settings. Type to filter. Left and Right change a value, Enter changes or types one, Delete puts the default back, Escape closes."
-        ));
+        let msg = self.msg_args("settings-intro", &args!["n" => n]);
+        self.tell(&msg);
         self.show_settings_list()
     }
 
@@ -1631,19 +1762,26 @@ impl App {
             return vec![Effect::Redraw];
         };
         let tree = json(&self.settings);
+        let c = self.cat();
         let items: Vec<String> = screen
             .shown
             .iter()
             .map(|&i| {
                 let s = &screen.schema.settings[i];
                 let v = get(&tree, &s.path).cloned().unwrap_or(Value::Null);
-                format!("{}: {}", s.label, s.describe(&v))
+                c.fmt(
+                    "settings-item",
+                    &args!["label" => s.label_in(c), "value" => s.describe_in(c, &v)],
+                )
             })
             .collect();
         let title = if screen.filter.is_empty() {
-            "Settings".to_owned()
+            c.tr("settings-title")
         } else {
-            format!("Settings matching {}", screen.filter)
+            c.fmt(
+                "settings-title-matching",
+                &args!["filter" => screen.filter.as_str()],
+            )
         };
         self.list = Some(ListKind::Settings);
         vec![Effect::ShowList { title, items }]
@@ -1661,7 +1799,8 @@ impl App {
     /// Escape on the settings screen.
     pub(crate) fn close_settings_screen(&mut self) {
         self.settings_screen = None;
-        self.note("Settings closed.");
+        let msg = self.msg("settings-closed");
+        self.note(&msg);
     }
 
     /// The filter of the settings screen, when it is showing.
@@ -1674,6 +1813,7 @@ impl App {
 
     /// The settings screen's filter changed to `query`.
     pub(crate) fn filter_settings(&mut self, query: String) -> Vec<Effect> {
+        let c = self.catalog();
         let Some(screen) = self.settings_screen.as_mut() else {
             return vec![Effect::Redraw];
         };
@@ -1684,25 +1824,33 @@ impl App {
                     SettingKind::Number { unit, .. } => unit,
                     _ => "",
                 };
+                // English and the interface's language both match.
                 !s.internal
                     && crate::lists::matches(
-                        &format!("{} {} {} {} {unit}", s.label, s.section, s.path, s.help),
+                        &format!(
+                            "{} {} {} {} {unit} {} {} {}",
+                            s.label,
+                            s.section,
+                            s.path,
+                            s.help,
+                            s.label_in(&c),
+                            s.section_in(&c),
+                            s.help_in(&c)
+                        ),
                         &query,
                     )
             })
             .collect();
         screen.filter = query.clone();
         let n = screen.shown.len();
-        let noun = if n == 1 { "setting" } else { "settings" };
-        if query.trim().is_empty() {
-            self.tell(&format!("Filter cleared, {n} {noun}."));
+        let msg = if query.trim().is_empty() {
+            c.fmt("settings-filter-cleared", &args!["n" => n])
         } else if n == 0 {
-            self.tell(&format!(
-                "No settings match {query}. Backspace removes letters."
-            ));
+            c.fmt("settings-filter-none", &args!["query" => query.as_str()])
         } else {
-            self.tell(&format!("{n} {noun} match."));
-        }
+            c.fmt("settings-filter-match", &args!["n" => n])
+        };
+        self.tell(&msg);
         self.show_settings_list()
     }
 
@@ -1740,13 +1888,22 @@ impl App {
         match s.stepped(&now, forward) {
             Some(v) if v == now => {
                 self.speech.earcon(textweaver_speech::Earcon::Boundary);
-                let edge = if forward { "Largest" } else { "Smallest" };
-                self.tell(&format!("{edge} value, {}.", s.describe(&now)));
+                let id = if forward {
+                    "settings-largest"
+                } else {
+                    "settings-smallest"
+                };
+                let msg = self.msg_args(id, &args!["value" => s.describe_in(self.cat(), &now)]);
+                self.tell(&msg);
                 vec![Effect::Redraw]
             }
             Some(v) => self.set_setting_command(&s.path, v),
             None => {
-                self.tell(&format!("{}: press Enter to type a new value.", s.label));
+                let msg = self.msg_args(
+                    "settings-press-enter",
+                    &args!["label" => s.label_in(self.cat())],
+                );
+                self.tell(&msg);
                 vec![Effect::Redraw]
             }
         }
@@ -1780,11 +1937,11 @@ impl App {
                 None => self.show_settings_list(),
             },
             SettingKind::Table => {
-                self.tell(&format!(
-                    "{}: {}. Edit it in settings.toml.",
-                    s.label,
-                    s.describe(&now)
-                ));
+                let msg = self.msg_args(
+                    "settings-table-item",
+                    &args!["label" => s.label_in(self.cat()), "value" => s.describe_in(self.cat(), &now)],
+                );
+                self.tell(&msg);
                 self.show_settings_list()
             }
             _ => {
@@ -1794,14 +1951,18 @@ impl App {
                 self.list = None;
                 let mut effects = self.prompt(PromptPurpose::SettingValue);
                 let current = s.edit_text(&now);
-                self.tell(&format!(
-                    "{}, now {}. {}",
-                    s.label,
-                    s.describe(&now),
-                    s.help
-                ));
+                let c = self.catalog();
+                let msg = c.fmt(
+                    "settings-editing",
+                    &args![
+                        "label" => s.label_in(&c),
+                        "value" => s.describe_in(&c, &now),
+                        "help" => s.help_in(&c)
+                    ],
+                );
+                self.tell(&msg);
                 if let Some(Effect::Prompt { label, .. }) = effects.first_mut() {
-                    *label = format!("{} ({})", label, s.label);
+                    *label = format!("{} ({})", label, s.label_in(&c));
                 }
                 self.pending_prompt_text = Some(current);
                 effects
@@ -1825,10 +1986,11 @@ impl App {
         let now = self.setting_value(&s.path).unwrap_or(Value::Null);
         let may_unset = matches!(s.kind, SettingKind::Text { optional: true });
         if text.trim() == s.edit_text(&now).trim() || (text.trim().is_empty() && !may_unset) {
-            self.note("Kept.");
+            let msg = self.msg("common-kept");
+            self.note(&msg);
             return self.show_settings_list();
         }
-        match s.parse(text) {
+        match s.parse_in(self.cat(), text) {
             Ok(v) => {
                 let said = self.set_setting(&s.path, v);
                 match said {
@@ -1846,12 +2008,13 @@ impl App {
         if let Some((_, item)) = self.settings_screen.as_mut().and_then(|s| s.editing.take()) {
             self.pending_list_focus = Some(item);
         }
-        self.note("Kept.");
+        let msg = self.msg("common-kept");
+        self.note(&msg);
         self.show_settings_list()
     }
 }
 
-/// What to add when a setting takes effect only later.
+/// What to add when a setting takes effect only later: a message id.
 fn restart_note(path: &str) -> Option<&'static str> {
     match path {
         "speech.backend"
@@ -1859,8 +2022,8 @@ fn restart_note(path: &str) -> Option<&'static str> {
         | "speech.eci.library"
         | "speech.eci.code_factory"
         | "speech.sapi.onecore"
-        | "speech.apple.backend" => Some("Restart speech to use it."),
-        "keyboard.preset" | "keyboard.digit_row" => Some("Used from the next start."),
+        | "speech.apple.backend" => Some("settings-restart-speech"),
+        "keyboard.preset" | "keyboard.digit_row" => Some("settings-next-start"),
         _ => None,
     }
 }
@@ -1871,6 +2034,48 @@ mod tests {
 
     /// Every key of `settings.toml` has an [`INFO`] entry, and every entry
     /// names a key that exists.
+    /// Every label, help, section, choice, and unit shown on the settings
+    /// screen is in en.ftl, as INFO words it, so the catalog cannot drift
+    /// from the schema (W4d).
+    #[test]
+    fn english_catalog_matches_the_schema() {
+        let c = Catalog::english();
+        for s in SettingsSchema::generate().visible() {
+            let id = format!("setting-{}", slug(&s.path));
+            assert!(c.has(&id), "en.ftl has no {id}");
+            assert_eq!(s.label_in(&c), s.label, "{id}");
+            assert_eq!(s.help_in(&c), s.help, "{id}-help");
+            assert_eq!(s.section_in(&c), s.section, "{}", s.path);
+            match &s.kind {
+                SettingKind::Choice { choices, .. } => {
+                    for x in choices {
+                        assert_eq!(
+                            s.choice_label_in(&c, x),
+                            x.label,
+                            "{} {:?}",
+                            s.path,
+                            x.value
+                        );
+                    }
+                }
+                SettingKind::Number { unit, .. } if !unit.is_empty() => {
+                    assert!(c.has(&format!("settings-unit-{}", slug(unit))), "{unit}");
+                }
+                _ => {}
+            }
+        }
+        // Spanish on the settings screen, and a Spanish answer is taken.
+        let es = Catalog::builtin("es").unwrap();
+        let schema = SettingsSchema::generate();
+        let toggle = schema.get("speech.auto_play").unwrap();
+        assert_eq!(
+            toggle.parse_in(&es, &es.tr("common-on")),
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(slug("reading_aids.rsvp.wpm"), "reading-aids-rsvp-wpm");
+        assert_eq!(value_key(&Value::Bool(true)), "true");
+    }
+
     #[test]
     fn the_schema_covers_every_setting() {
         let defaults = json(&Settings::default());

@@ -13,6 +13,8 @@
 
 use std::path::Path;
 
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 use textweaver_store::DocKey;
 use textweaver_text::Document;
 
@@ -34,9 +36,9 @@ pub(crate) struct Template {
 
 impl Template {
     /// The name as listed.
-    pub(crate) fn label(&self) -> String {
+    pub(crate) fn label(&self, c: &Catalog) -> String {
         if self.user {
-            format!("{}, your template", self.name)
+            c.fmt("templates-yours", &args!["name" => self.name.as_str()])
         } else {
             self.name.clone()
         }
@@ -56,24 +58,24 @@ impl Template {
 
 const FRONT: &str = "---\ntitle: \"{{title}}\"\nauthor: \"{{author}}\"\ndate: {{date}}\n---\n\n";
 
-/// The built-in templates.
-pub(crate) fn builtin() -> Vec<Template> {
-    let t = |name: &str, body: &str| Template {
-        name: name.to_owned(),
+/// The built-in templates, named in the catalog's language.
+pub(crate) fn builtin(c: &Catalog) -> Vec<Template> {
+    let t = |id: &str, body: &str| Template {
+        name: c.tr(id),
         text: format!("{FRONT}{body}"),
         user: false,
     };
     vec![
         t(
-            "Essay",
+            "templates-essay",
             "# {{title}}\n\n## Introduction\n\n\n\n## Discussion\n\n\n\n## Conclusion\n\n\n\n## References\n",
         ),
         t(
-            "Report",
+            "templates-report",
             "# {{title}}\n\n## Summary\n\n\n\n## Background\n\n\n\n## Method\n\n\n\n## Results\n\n\n\n## Recommendations\n\n\n\n## References\n",
         ),
         t(
-            "Notes",
+            "templates-notes",
             "# {{title}}\n\n## Key points\n\n- \n\n## Questions\n\n- \n\n## References\n",
         ),
     ]
@@ -157,7 +159,7 @@ fn utc_date() -> String {
 impl App {
     /// The templates: built-in, then the user's.
     fn templates(&self) -> Vec<Template> {
-        let mut all = builtin();
+        let mut all = builtin(self.cat());
         if let Some(p) = &self.paths {
             all.extend(user_templates(&p.config_dir.join("templates")));
         }
@@ -177,9 +179,8 @@ impl App {
             .as_ref()
             .map(|p| p.config_dir.join("templates").display().to_string())
             .unwrap_or_default();
-        self.tell(&format!(
-            "New document from a template, {n} templates. Enter chooses. Your own templates go in {folder}."
-        ));
+        let msg = self.msg_args("templates-intro", &args!["n" => n, "folder" => folder]);
+        self.tell(&msg);
         self.show_authoring_list(AuthoringList::Templates(all))
     }
 
@@ -196,7 +197,7 @@ impl App {
             return vec![Effect::Redraw];
         };
         let title = match text.trim() {
-            "" => "Untitled".to_owned(),
+            "" => self.msg("templates-untitled"),
             t => t.to_owned(),
         };
         let author = self
@@ -224,10 +225,11 @@ impl App {
             ed.set_selection(textweaver_editor::Selection::caret(start));
         }
         self.after_edit(&ropey::Rope::new(), &[]);
-        self.tell(&format!(
-            "New document from the {} template: {title}. Dated {date}. The caret is where the writing starts. Remember to save.",
-            t.name
-        ));
+        let msg = self.msg_args(
+            "templates-created",
+            &args!["template" => t.name.as_str(), "title" => title.as_str(), "date" => date.as_str()],
+        );
+        self.tell(&msg);
         vec![Effect::Redraw]
     }
 }
@@ -259,7 +261,7 @@ mod tests {
 
     #[test]
     fn templates_fill_their_placeholders() {
-        let essay = &builtin()[0];
+        let essay = &builtin(&Catalog::english())[0];
         let text = essay.fill("On Bees", "A. Writer", "2026-09-26");
         assert!(text.starts_with(
             "---\ntitle: \"On Bees\"\nauthor: \"A. Writer\"\ndate: 2026-09-26\n---\n"
@@ -272,7 +274,7 @@ mod tests {
             user: true,
         };
         assert_eq!(custom.fill("T", "A", "D"), "T by A");
-        assert_eq!(custom.label(), "x, your template");
+        assert_eq!(custom.label(&Catalog::english()), "x, your template");
     }
 
     #[test]
@@ -285,7 +287,7 @@ mod tests {
 
     #[test]
     fn writing_starts_under_the_first_section() {
-        let text = builtin()[0].fill("T", "", "2026-09-26");
+        let text = builtin(&Catalog::english())[0].fill("T", "", "2026-09-26");
         let at = first_writing_line(&text).0;
         let before: String = text.chars().take(at).collect();
         assert!(before.ends_with("## Introduction\n\n"), "{before:?}");

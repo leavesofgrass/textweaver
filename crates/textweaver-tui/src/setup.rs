@@ -1,10 +1,13 @@
 //! Building the app for the terminal: paths, settings, keymap, speech.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Instant;
 
 use textweaver_app::a11y::{AccessMode, Announcer, RingAnnouncer};
 use textweaver_app::keymap::{Frontend, Keymap, Platform};
+use textweaver_app::lexicon::args;
+use textweaver_app::lexicon::i18n::Catalog;
 use textweaver_app::speech::{ServiceConfig, SpeechService};
 use textweaver_app::store::{Paths, Settings, SettingsStore};
 use textweaver_app::{App, AppConfig};
@@ -49,6 +52,23 @@ pub fn start_log(opts: &Options) -> Option<String> {
     message
 }
 
+/// The interface's catalog for `settings` before the app exists (the app
+/// builds the same one from the same language and locales folder), so
+/// startup messages are in the listener's language.
+fn startup_catalog(settings: &Settings, paths: Option<&Paths>) -> Arc<Catalog> {
+    let dir = paths.map(Paths::locales_dir);
+    Catalog::for_language(&settings.interface.language, dir.as_deref()).0
+}
+
+/// [`startup_catalog`] under the state folder `opts` chooses.
+fn options_catalog(settings: &Settings, opts: &Options) -> Arc<Catalog> {
+    let paths = match &opts.home {
+        Some(home) => Some(Paths::under(home)),
+        None => Paths::platform().ok(),
+    };
+    startup_catalog(settings, paths.as_ref())
+}
+
 /// The speech configuration the settings describe (the app's
 /// [`textweaver_engines::service_config`], shared by every frontend).
 pub fn service_config(settings: &Settings) -> ServiceConfig {
@@ -75,21 +95,26 @@ pub fn start_speech(settings: &Settings, opts: &Options) -> (SpeechService, Stri
     if let Some(p) = preference
         && info.id != p
     {
-        messages.push(format!(
-            "Speech backend {p} is not available; using {}.",
-            info.id
+        let c = options_catalog(settings, opts);
+        messages.push(c.fmt(
+            "tui-setup-backend-unavailable",
+            &args!["wanted" => p, "backend" => info.id],
         ));
     }
     let spawned = registry
         .factory(info.id)
-        .ok_or_else(|| format!("backend {} is not compiled in", info.id))
+        .ok_or_else(|| {
+            options_catalog(settings, opts)
+                .fmt("tui-setup-backend-not-built", &args!["backend" => info.id])
+        })
         .and_then(|factory| {
             SpeechService::spawn(factory, service_config(settings)).map_err(|e| e.to_string())
         });
     match spawned {
         Ok(service) => (service, info.id.to_owned(), messages),
         Err(e) => {
-            messages.push(format!("Speech could not start ({e}); running silently."));
+            let c = options_catalog(settings, opts);
+            messages.push(c.fmt("tui-setup-speech-failed", &args!["error" => e]));
             (SpeechService::null(), "silent".into(), messages)
         }
     }
@@ -110,12 +135,14 @@ pub fn build_app(opts: &Options) -> (App, Vec<String>) {
 pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<String>) {
     let started = Instant::now();
     let mut messages = Vec::new();
+    // Said once the settings (and so the language) are known.
+    let mut paths_error = None;
     let paths = match &opts.home {
         Some(home) => Some(Paths::under(home)),
         None => match Paths::platform() {
             Ok(p) => Some(p),
             Err(e) => {
-                messages.push(format!("Cannot save settings or positions: {e}."));
+                paths_error = Some(e.to_string());
                 None
             }
         },
@@ -126,7 +153,8 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
             let (settings, msg) = store.load();
             messages.extend(msg);
             let overrides = store.load_keymap().unwrap_or_else(|e| {
-                messages.push(format!("Keymap file ignored: {e}."));
+                let c = startup_catalog(&settings, Some(p));
+                messages.push(c.fmt("tui-setup-keymap-ignored", &args!["error" => e.to_string()]));
                 Default::default()
             });
             let (keymap, warnings) = Keymap::with_preset_and_overrides(
@@ -140,6 +168,10 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
         }
         None => {
             let settings = Settings::default();
+            if let Some(e) = paths_error {
+                let c = startup_catalog(&settings, None);
+                messages.push(c.fmt("tui-setup-cannot-save", &args!["error" => e]));
+            }
             let keymap = Keymap::with_preset(
                 Platform::current(),
                 Frontend::Terminal,
@@ -238,42 +270,46 @@ pub fn is_first_run(paths: &Paths) -> bool {
 
 /// The welcome said once, on the first run: the five keys that get a new
 /// user reading, named from the keymap in effect. The keys are marked
-/// ([`textweaver_app::named_key`]): the status line shows "Ctrl+Q", the
+/// ([`textweaver_app::named_key_in`]): the status line shows "Ctrl+Q", the
 /// voice says "Control Q".
-pub fn welcome_text(keymap: &Keymap) -> String {
+pub fn welcome_text(c: &Catalog, keymap: &Keymap) -> String {
     use textweaver_app::keymap::ActionId;
-    let k = |a| textweaver_app::named_key(keymap, a);
-    format!(
-        "Welcome to textweaver. {} reads aloud and pauses, {} stops, {} moves to the next heading, {} opens the help, and {} quits.",
-        k(ActionId::PlayPause),
-        k(ActionId::Stop),
-        k(ActionId::SkipNextHeading),
-        k(ActionId::Help),
-        k(ActionId::Quit)
+    let k = |a| textweaver_app::named_key_in(c, keymap, a);
+    c.fmt(
+        "tui-setup-welcome",
+        &args![
+            "play" => k(ActionId::PlayPause),
+            "stop" => k(ActionId::Stop),
+            "heading" => k(ActionId::SkipNextHeading),
+            "help" => k(ActionId::Help),
+            "quit" => k(ActionId::Quit)
+        ],
     )
 }
 
 /// The welcome for this run, when it is the first one under the state
 /// folder `opts` chooses ([`is_first_run`]); `None` otherwise, and when
 /// nothing is persisted.
-pub fn first_run_message(opts: &Options, keymap: &Keymap) -> Option<String> {
+pub fn first_run_message(c: &Catalog, opts: &Options, keymap: &Keymap) -> Option<String> {
     let paths = match &opts.home {
         Some(home) => Paths::under(home),
         None => Paths::platform().ok()?,
     };
-    is_first_run(&paths).then(|| welcome_text(keymap))
+    is_first_run(&paths).then(|| welcome_text(c, keymap))
 }
 
 /// What the reader says when it starts without a document, naming the
 /// keys from the keymap in effect (marked, as in [`welcome_text`]).
-pub fn no_document_text(keymap: &Keymap) -> String {
+pub fn no_document_text(c: &Catalog, keymap: &Keymap) -> String {
     use textweaver_app::keymap::ActionId;
-    let k = |a| textweaver_app::named_key(keymap, a);
-    format!(
-        "No document is open. Press {} to open one, {} for a new one, or {} for help.",
-        k(ActionId::Open),
-        k(ActionId::NewDocument),
-        k(ActionId::Help)
+    let k = |a| textweaver_app::named_key_in(c, keymap, a);
+    c.fmt(
+        "tui-setup-no-document",
+        &args![
+            "open" => k(ActionId::Open),
+            "new" => k(ActionId::NewDocument),
+            "help" => k(ActionId::Help)
+        ],
     )
 }
 
@@ -431,7 +467,8 @@ mod tests {
             ..Options::default()
         };
         let (app, _) = build_app(&opts);
-        let welcome = first_run_message(&opts, app.keymap()).expect("a welcome on the first run");
+        let welcome = first_run_message(&app.catalog(), &opts, app.keymap())
+            .expect("a welcome on the first run");
         // Spoken by textweaver's voice, and written on the status line.
         let spoken = textweaver_app::spoken_text;
         let written = textweaver_app::written_text;
@@ -443,7 +480,7 @@ mod tests {
             written(&welcome),
             "Welcome to textweaver. Space reads aloud and pauses, Escape stops, h moves to the next heading, F1 opens the help, and Ctrl+Q quits."
         );
-        let none = no_document_text(app.keymap());
+        let none = no_document_text(&app.catalog(), app.keymap());
         assert_eq!(
             spoken(&none),
             "No document is open. Press Control O to open one, Control N for a new one, or F1 for help."
@@ -456,7 +493,7 @@ mod tests {
         let state = Paths::under(dir.path()).state_dir();
         std::fs::create_dir_all(&state).unwrap();
         std::fs::write(state.join("essay.md-0123.json"), "{}").unwrap();
-        assert_eq!(first_run_message(&opts, app.keymap()), None);
+        assert_eq!(first_run_message(&app.catalog(), &opts, app.keymap()), None);
         // So does a settings file on its own.
         let dir = tempfile::tempdir().unwrap();
         let paths = Paths::under(dir.path());
@@ -468,6 +505,7 @@ mod tests {
         // Nothing persisted: no welcome.
         assert_eq!(
             first_run_message(
+                &app.catalog(),
                 &Options {
                     home: Some(dir.path().to_owned()),
                     ..Options::default()

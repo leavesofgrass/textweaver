@@ -14,9 +14,13 @@ use textweaver_speech::Earcon;
 use textweaver_text::units::unit_at;
 use textweaver_text::{Document, GoTo, NavOptions, navigate};
 
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
+
 use crate::app::{App, Mode};
 use crate::playback::Playback;
 use crate::text_util::{self, preview};
+use crate::words::{dir_key, kind_name, unit_key, unit_name};
 
 /// What happens to speech after a jump.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -29,13 +33,6 @@ pub(crate) enum ReadAfter {
 
 /// Words of preview spoken for a sentence or paragraph jump.
 const PREVIEW_WORDS: usize = 8;
-
-fn dir_word(dir: Direction) -> &'static str {
-    match dir {
-        Direction::Forward => "next",
-        Direction::Backward => "previous",
-    }
-}
 
 impl App {
     fn nav_opts(&self) -> NavOptions {
@@ -54,8 +51,10 @@ impl App {
         content: &str,
     ) -> String {
         let v = self.settings.speech.verbosity;
+        let blank;
         let content = if content.trim().is_empty() {
-            "blank"
+            blank = self.msg("nav-blank");
+            blank.as_str()
         } else {
             content
         };
@@ -71,12 +70,21 @@ impl App {
                 })
                 .unwrap_or_default();
             return match label {
-                Some(l) => format!("{l}, line {line}, {pct} percent: {content}"),
-                None => format!("Line {line}, {pct} percent: {content}"),
+                Some(l) => self.msg_args(
+                    "nav-message-at-labelled",
+                    &args!["label" => l, "line" => line, "pct" => pct, "content" => content],
+                ),
+                None => self.msg_args(
+                    "nav-message-at",
+                    &args!["line" => line, "pct" => pct, "content" => content],
+                ),
             };
         }
         match (v, label) {
-            (Verbosity::Normal, Some(l)) => format!("{l}: {content}"),
+            (Verbosity::Normal, Some(l)) => self.msg_args(
+                "nav-message-labelled",
+                &args!["label" => l, "content" => content],
+            ),
             _ => content.to_owned(),
         }
     }
@@ -160,14 +168,15 @@ impl App {
                 let content = preview(doc, t.range, PREVIEW_WORDS);
                 let mut msg = self.nav_message(None, t.range.start, &content);
                 if t.wrapped {
-                    msg = format!("Wrapped. {msg}");
+                    msg = self.msg_args("nav-wrapped", &args!["message" => msg]);
                     self.speech.earcon(Earcon::Wrap);
                 }
                 self.jump(t.range.start, true, ReadAfter::Follow, &msg);
             }
             None => {
                 self.speech.earcon(Earcon::Boundary);
-                self.tell(&format!("No {} {}.", dir_word(dir), unit.spoken_name()));
+                let missing = self.no_unit_message(unit, dir);
+                self.tell(&missing);
             }
         }
     }
@@ -199,7 +208,7 @@ impl App {
                 let content = preview(doc, t.range, PREVIEW_WORDS);
                 let mut msg = self.nav_message(None, t.range.start, &content);
                 if t.wrapped {
-                    msg = format!("Wrapped. {msg}");
+                    msg = self.msg_args("nav-wrapped", &args!["message" => msg]);
                     self.speech.earcon(Earcon::Wrap);
                 }
                 self.jump(t.range.start, true, ReadAfter::Follow, &msg);
@@ -212,7 +221,8 @@ impl App {
                 }
                 None => {
                     self.speech.earcon(Earcon::Boundary);
-                    self.tell("No previous sentence.");
+                    let missing = self.no_unit_message(Unit::Sentence, Direction::Backward);
+                    self.tell(&missing);
                 }
             },
         }
@@ -237,7 +247,14 @@ impl App {
                 let msg = self.nav_message(None, r.start, &content);
                 self.jump(r.start, true, ReadAfter::Always, &msg);
             }
-            None => self.tell(&format!("No {} to read.", unit.spoken_name())),
+            None => {
+                let what = unit_name(self.cat(), unit);
+                let msg = self.msg_args(
+                    "nav-nothing-to-read",
+                    &args!["what" => what, "unit" => unit_key(unit)],
+                );
+                self.tell(&msg);
+            }
         }
     }
 
@@ -279,10 +296,12 @@ impl App {
         }
     }
 
-    fn marker_label(doc: &Document, kind: MarkerKind, range: CharRange) -> String {
+    fn marker_label(c: &Catalog, doc: &Document, kind: MarkerKind, range: CharRange) -> String {
         let level = Self::marker_at(doc, kind, range).map_or(0, |m| m.level);
         match kind {
-            MarkerKind::Heading if level > 0 => format!("Heading level {level}"),
+            MarkerKind::Heading if level > 0 => {
+                c.fmt("nav-label-heading-level", &args!["level" => level])
+            }
             MarkerKind::List | MarkerKind::Table => {
                 let inner = if kind == MarkerKind::List {
                     MarkerKind::ListItem
@@ -294,20 +313,17 @@ impl App {
                     .iter()
                     .filter(|m| m.kind == inner && range.contains_range(m.range))
                     .count();
-                let noun = if kind == MarkerKind::List {
-                    "item"
+                let id = if kind == MarkerKind::List {
+                    "nav-label-list"
                 } else {
-                    "row"
+                    "nav-label-table"
                 };
-                let name = capitalize(kind.spoken_name());
-                match n {
-                    0 => name,
-                    1 => format!("{name}, 1 {noun}"),
-                    n => format!("{name}, {n} {noun}s"),
-                }
+                c.fmt(id, &args!["n" => n])
             }
-            MarkerKind::ListItem if level > 1 => format!("List item, level {level}"),
-            _ => capitalize(kind.spoken_name()),
+            MarkerKind::ListItem if level > 1 => {
+                c.fmt("nav-label-list-item-level", &args!["level" => level])
+            }
+            _ => capitalize(&kind_name(c, kind)),
         }
     }
 
@@ -330,11 +346,11 @@ impl App {
         let unit = Unit::Marker { kind, level };
         match navigate(doc, pos, unit, dir, opts) {
             Some(t) => {
-                let label = Self::marker_label(doc, kind, t.range);
+                let label = Self::marker_label(self.cat(), doc, kind, t.range);
                 let content = Self::marker_content(doc, kind, t.range);
                 let mut msg = self.nav_message(Some(&label), t.range.start, &content);
                 if t.wrapped {
-                    msg = format!("Wrapped. {msg}");
+                    msg = self.msg_args("nav-wrapped", &args!["message" => msg]);
                     self.speech.earcon(Earcon::Wrap);
                 }
                 self.jump(t.range.start, true, read, &msg);
@@ -355,14 +371,17 @@ impl App {
         } else {
             ReadAfter::Follow
         };
-        let missing = format!("No {} heading.", dir_word(dir));
+        let missing = self.no_unit_message(Unit::marker(MarkerKind::Heading), dir);
         self.structure_jump(MarkerKind::Heading, None, dir, read, &missing);
     }
 
     /// Keys 1 to 6 (and Shift with them): the next or previous heading at
     /// `level`, moving without reading (reading follows if it was on).
     pub(crate) fn heading_level_jump(&mut self, level: u8, dir: Direction) {
-        let missing = format!("No {} heading at level {level}.", dir_word(dir));
+        let missing = self.msg_args(
+            "nav-no-heading-level",
+            &args!["dir" => dir_key(dir), "level" => level],
+        );
         self.structure_jump(
             MarkerKind::Heading,
             Some(level),
@@ -376,7 +395,7 @@ impl App {
     /// caret and Speech Cursor moves: "heading level 2", "list item",
     /// "list item, level 2", "row 3", "code", "block quote". `None` for
     /// plain text.
-    pub(crate) fn line_structure(doc: &Document, line: usize) -> Option<String> {
+    pub(crate) fn line_structure(c: &Catalog, doc: &Document, line: usize) -> Option<String> {
         let r = text_util::line_range(doc, line);
         let index = doc.marker_index();
         let at = r.start;
@@ -385,7 +404,7 @@ impl App {
             .iter()
             .find(|m| m.kind == MarkerKind::Heading)
         {
-            return Some(format!("heading level {}", h.level));
+            return Some(c.fmt("nav-line-heading", &args!["level" => h.level]));
         }
         if let Some(row) = index.enclosing(MarkerKind::TableRow, at) {
             let n = index.enclosing(MarkerKind::Table, at).map_or(1, |t| {
@@ -398,13 +417,13 @@ impl App {
                     })
                     .count()
             });
-            return Some(format!("row {n}"));
+            return Some(c.fmt("nav-line-row", &args!["n" => n]));
         }
         if let Some(item) = index.enclosing(MarkerKind::ListItem, at) {
             return Some(if item.level > 1 {
-                format!("list item, level {}", item.level)
+                c.fmt("nav-line-list-item-level", &args!["level" => item.level])
             } else {
-                "list item".to_owned()
+                kind_name(c, MarkerKind::ListItem)
             });
         }
         if let Some(m) = index
@@ -412,17 +431,45 @@ impl App {
             .filter(|m| m.level == 1)
         {
             // W4g: the block's first line names its language.
-            return Some(crate::authoring::code_structure(m, r));
+            return Some(crate::authoring::code_structure(c, m, r));
         }
         if index.enclosing(MarkerKind::Quote, at).is_some() {
-            return Some("block quote".to_owned());
+            return Some(kind_name(c, MarkerKind::Quote));
         }
         None
     }
 
+    /// Which structure [`line_structure`](Self::line_structure) names for
+    /// line `line`, in the same order: a heading, a table row, a list item,
+    /// code, or a block quote.
+    pub(crate) fn line_kind(doc: &Document, line: usize) -> Option<MarkerKind> {
+        let r = text_util::line_range(doc, line);
+        let index = doc.marker_index();
+        let at = r.start;
+        if index
+            .starting_in(CharRange::new(at, r.end.max(at.saturating_add(1))))
+            .iter()
+            .any(|m| m.kind == MarkerKind::Heading)
+        {
+            return Some(MarkerKind::Heading);
+        }
+        [
+            MarkerKind::TableRow,
+            MarkerKind::ListItem,
+            MarkerKind::Code,
+            MarkerKind::Quote,
+        ]
+        .into_iter()
+        .find(|&k| {
+            index
+                .enclosing(k, at)
+                .is_some_and(|m| k != MarkerKind::Code || m.level == 1)
+        })
+    }
+
     /// Next or previous table, list, list item, or link.
     pub(crate) fn marker_jump(&mut self, kind: MarkerKind, dir: Direction) {
-        let missing = format!("No {} {}.", dir_word(dir), kind.spoken_name());
+        let missing = self.no_unit_message(Unit::marker(kind), dir);
         self.structure_jump(kind, None, dir, ReadAfter::Follow, &missing);
     }
 
@@ -444,7 +491,8 @@ impl App {
         } else if has(MarkerKind::Heading, Some(1)) {
             (MarkerKind::Heading, Some(1))
         } else {
-            self.tell("This document has no chapters.");
+            let msg = self.msg("nav-no-chapters");
+            self.tell(&msg);
             return;
         };
         let unit = Unit::Marker { kind, level };
@@ -470,15 +518,17 @@ impl App {
         match target {
             Some(t) => {
                 let content = Self::marker_content(doc, kind, t.range);
-                let mut msg = self.nav_message(Some("Chapter"), t.range.start, &content);
+                let label = self.msg("nav-chapter");
+                let mut msg = self.nav_message(Some(&label), t.range.start, &content);
                 if t.wrapped {
-                    msg = format!("Wrapped. {msg}");
+                    msg = self.msg_args("nav-wrapped", &args!["message" => msg]);
                 }
                 self.jump(t.range.start, true, ReadAfter::Follow, &msg);
             }
             None => {
                 self.speech.earcon(Earcon::Boundary);
-                self.tell(&format!("No {} chapter.", dir_word(dir)));
+                let missing = self.msg_args("nav-no-chapter", &args!["dir" => dir_key(dir)]);
+                self.tell(&missing);
             }
         }
     }
@@ -497,10 +547,13 @@ impl App {
         };
         match s.history.back(current) {
             Some(p) => {
-                let msg = self.position_message("Back", p);
+                let msg = self.position_message(&self.msg("nav-back"), p);
                 self.jump(p, false, ReadAfter::Follow, &msg);
             }
-            None => self.tell("No earlier history."),
+            None => {
+                let msg = self.msg("nav-no-earlier-history");
+                self.tell(&msg);
+            }
         }
     }
 
@@ -510,10 +563,13 @@ impl App {
         };
         match s.history.forward() {
             Some(p) => {
-                let msg = self.position_message("Forward", p);
+                let msg = self.position_message(&self.msg("nav-forward"), p);
                 self.jump(p, false, ReadAfter::Follow, &msg);
             }
-            None => self.tell("No forward history."),
+            None => {
+                let msg = self.msg("nav-no-forward-history");
+                self.tell(&msg);
+            }
         }
     }
 
@@ -528,7 +584,10 @@ impl App {
             CharRange::new(pos, text_util::line_range(&s.doc, line).end),
             PREVIEW_WORDS,
         );
-        let label = format!("{label}, line {}", line + 1);
+        let label = self.msg_args(
+            "nav-label-line",
+            &args!["label" => label, "line" => line + 1],
+        );
         self.nav_message(Some(&label), pos, &content)
     }
 
@@ -543,7 +602,7 @@ impl App {
             _ => pos,
         };
         let pct = text_util::percent(&s.doc, pos);
-        let msg = self.position_message(&format!("{pct} percent"), pos);
+        let msg = self.position_message(&self.msg_args("nav-percent", &args!["pct" => pct]), pos);
         self.jump(pos, true, ReadAfter::Follow, &msg);
     }
 
@@ -553,10 +612,10 @@ impl App {
             return;
         };
         let (pos, label) = match dir {
-            Direction::Backward => (CharPos::ZERO, "Top of document"),
+            Direction::Backward => (CharPos::ZERO, "nav-top-of-document"),
             Direction::Forward => (
                 text_util::last_start(&s.doc, Unit::Word).unwrap_or(s.doc.end()),
-                "End of document",
+                "nav-end-of-document",
             ),
         };
         let line = text_util::line_of(&s.doc, pos);
@@ -565,7 +624,10 @@ impl App {
             CharRange::new(pos, text_util::line_range(&s.doc, line).end),
             PREVIEW_WORDS,
         );
-        let msg = format!("{label}. {content}");
+        let msg = self.msg_args(
+            "nav-edge-message",
+            &args!["edge" => self.msg(label), "content" => content],
+        );
         self.jump(pos, true, ReadAfter::Follow, &msg);
     }
 
@@ -595,11 +657,8 @@ impl App {
             }
             None => {
                 self.speech.earcon(Earcon::Boundary);
-                let edge = match dir {
-                    Direction::Forward => "End of document.",
-                    Direction::Backward => "Top of document.",
-                };
-                self.tell(edge);
+                let edge = self.edge_message(dir);
+                self.tell(&edge);
             }
         }
     }
@@ -643,11 +702,8 @@ impl App {
         };
         let Some(r) = found else {
             self.speech.earcon(Earcon::Boundary);
-            let edge = match dir {
-                Direction::Forward => "End of document.",
-                Direction::Backward => "Top of document.",
-            };
-            self.tell(edge);
+            let edge = self.edge_message(dir);
+            self.tell(&edge);
             return;
         };
         let at = CharPos(r.start.0 + goal.min(r.len()));
@@ -672,7 +728,7 @@ impl App {
             .unwrap_or(r.start);
         let text = doc.slice(r);
         // Structure first: "heading level 2, Methods" (Normal and above).
-        let text = match Self::line_structure(doc, text_util::line_of(doc, r.start)) {
+        let text = match Self::line_structure(self.cat(), doc, text_util::line_of(doc, r.start)) {
             Some(kind) if self.settings.speech.verbosity >= Verbosity::Normal => {
                 format!("{kind}, {text}")
             }
@@ -707,10 +763,8 @@ impl App {
         };
         if target_line == line {
             self.speech.earcon(Earcon::Boundary);
-            self.tell(match dir {
-                Direction::Forward => "End of document.",
-                Direction::Backward => "Top of document.",
-            });
+            let edge = self.edge_message(dir);
+            self.tell(&edge);
             return;
         }
         let start = text_util::line_range(&s.doc, target_line).start;
@@ -720,7 +774,7 @@ impl App {
             let w = text_util::first_word_at_or_after(&s.doc, start);
             if w < start { start } else { w }
         };
-        let msg = self.position_message("Page", target);
+        let msg = self.position_message(&self.msg("nav-page"), target);
         self.jump(target, false, ReadAfter::Follow, &msg);
     }
 
@@ -738,14 +792,20 @@ impl App {
         let line = text_util::line_of(doc, pos) + 1;
         let lines = text_util::line_count(doc);
         let pct = text_util::percent(doc, pos);
-        let mut msg = format!("Line {line} of {lines}, {pct} percent.");
+        let mut msg = self.msg_args(
+            "nav-position",
+            &args!["line" => line, "lines" => lines, "pct" => pct],
+        );
         if self.settings.speech.verbosity >= Verbosity::Normal
             && let Some((word, words)) = self.word_position(pos)
         {
-            msg.push_str(&format!(
-                " Word {} of {}.",
-                textweaver_editor::echo::thousands(word),
-                textweaver_editor::echo::thousands(words)
+            msg.push(' ');
+            msg.push_str(&self.msg_args(
+                "nav-position-word",
+                &args![
+                    "word" => textweaver_editor::echo::thousands(word),
+                    "words" => textweaver_editor::echo::thousands(words)
+                ],
             ));
         }
         if let Some(t) = self.table_position(pos) {
@@ -762,16 +822,41 @@ impl App {
             );
             if let Some(h) = heading {
                 let text = Self::marker_content(doc, MarkerKind::Heading, h.range);
-                msg.push_str(&format!(" Under heading {text}."));
+                msg.push(' ');
+                msg.push_str(&self.msg_args("nav-position-heading", &args!["heading" => text]));
             }
         }
         if self.settings.speech.verbosity >= Verbosity::High {
             msg.push_str(&format!(" {}.", s.title));
             if self.mode != Mode::Browse {
-                msg.push_str(&format!(" {} mode.", self.mode.name()));
+                let mode = crate::words::mode_name(self.cat(), self.mode);
+                msg.push(' ');
+                msg.push_str(&self.msg_args("nav-position-mode", &args!["mode" => mode]));
             }
         }
         self.tell(&msg);
+    }
+}
+
+impl App {
+    /// "No next heading.", "No previous sentence.": nothing further by
+    /// `unit` in `dir`.
+    pub(crate) fn no_unit_message(&self, unit: Unit, dir: Direction) -> String {
+        let what = unit_name(self.cat(), unit);
+        let id = match dir {
+            Direction::Forward => "nav-no-next",
+            Direction::Backward => "nav-no-previous",
+        };
+        self.msg_args(id, &args!["what" => what, "unit" => unit_key(unit)])
+    }
+
+    /// "End of document." or "Top of document.": a caret or page move
+    /// that cannot go further.
+    pub(crate) fn edge_message(&self, dir: Direction) -> String {
+        self.msg(match dir {
+            Direction::Forward => "nav-end-of-document-stop",
+            Direction::Backward => "nav-top-of-document-stop",
+        })
     }
 }
 

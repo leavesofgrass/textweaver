@@ -8,6 +8,8 @@
 use std::path::PathBuf;
 
 use textweaver_keymap::{Frontend, Keymap, Platform};
+use textweaver_lexicon::args;
+use textweaver_lexicon::i18n::Catalog;
 use textweaver_store::{
     ExportFormat, ExportOptions, ImportMode, ImportPlan, SettingsStore, atomic_write,
 };
@@ -22,10 +24,12 @@ fn answer_path(text: &str) -> Option<PathBuf> {
 }
 
 /// The question asked before an import.
-fn import_question(plan: &ImportPlan, name: &str) -> String {
+fn import_question(c: &Catalog, plan: &ImportPlan, name: &str) -> String {
     let n = plan.change_count().max(1);
-    let noun = if n == 1 { "setting" } else { "settings" };
-    format!("Import {n} changed {noun} from {name}? y or n")
+    c.fmt(
+        "settingsio-import-question",
+        &args!["n" => n, "name" => name],
+    )
 }
 
 impl App {
@@ -42,13 +46,13 @@ impl App {
     /// match what is in effect. `None` (announced) without persistence.
     fn settings_store_for_io(&mut self) -> Option<SettingsStore> {
         let Some(paths) = self.paths.clone() else {
-            self.error(
-                "Settings are not saved in this session, so they cannot be exported or imported.",
-            );
+            let msg = self.msg("settingsio-no-persistence");
+            self.error(&msg);
             return None;
         };
         if let Err(e) = self.save_settings() {
-            self.error(&format!("Could not save settings: {e}"));
+            let msg = self.msg_args("settings-save-failed", &args!["error" => e.to_string()]);
+            self.error(&msg);
             return None;
         }
         // The save is on the writer: the file must be current before it is
@@ -61,7 +65,8 @@ impl App {
     /// override to the file, as TOML when its name ends in `.toml`.
     pub(crate) fn answer_export_settings(&mut self, text: &str) -> Vec<Effect> {
         let Some(path) = answer_path(text) else {
-            self.note("Cancelled.");
+            let msg = self.msg("common-cancelled");
+            self.note(&msg);
             return vec![Effect::Redraw];
         };
         let Some(store) = self.settings_store_for_io() else {
@@ -76,8 +81,17 @@ impl App {
             .map_err(|e| e.to_string())
             .and_then(|t| atomic_write(&path, t.as_bytes()).map_err(|e| e.to_string()));
         match written {
-            Ok(()) => self.tell(&format!("Settings exported to {}.", path.display())),
-            Err(e) => self.error(&format!("Could not export settings: {e}")),
+            Ok(()) => {
+                let msg = self.msg_args(
+                    "settingsio-exported",
+                    &args!["path" => path.display().to_string()],
+                );
+                self.tell(&msg);
+            }
+            Err(e) => {
+                let msg = self.msg_args("settingsio-export-failed", &args!["error" => e]);
+                self.error(&msg);
+            }
         }
         vec![Effect::Redraw]
     }
@@ -86,7 +100,8 @@ impl App {
     /// asks for a yes or no. Nothing changes until the answer is yes.
     pub(crate) fn answer_import_settings(&mut self, text: &str) -> Vec<Effect> {
         let Some(path) = answer_path(text) else {
-            self.note("Cancelled.");
+            let msg = self.msg("common-cancelled");
+            self.note(&msg);
             return vec![Effect::Redraw];
         };
         let Some(store) = self.settings_store_for_io() else {
@@ -95,7 +110,11 @@ impl App {
         let content = match std::fs::read_to_string(&path) {
             Ok(c) => c,
             Err(e) => {
-                self.error(&format!("Could not read {}: {e}.", path.display()));
+                let msg = self.msg_args(
+                    "settingsio-read-failed",
+                    &args!["path" => path.display().to_string(), "error" => e.to_string()],
+                );
+                self.error(&msg);
                 return vec![Effect::Redraw];
             }
         };
@@ -107,14 +126,15 @@ impl App {
             }
         };
         if plan.is_empty() {
-            self.tell("Nothing to import: your settings already match that file.");
+            let msg = self.msg("settingsio-nothing-to-import");
+            self.tell(&msg);
             return vec![Effect::Redraw];
         }
         let name = path.file_name().map_or_else(
             || path.display().to_string(),
             |n| n.to_string_lossy().into_owned(),
         );
-        let question = import_question(&plan, &name);
+        let question = import_question(self.cat(), &plan, &name);
         self.pending_import = Some((plan, name));
         self.ask(&question);
         vec![Effect::Redraw]
@@ -130,11 +150,12 @@ impl App {
             }
             Confirm::No => {
                 self.pending_import = None;
-                self.tell("Cancelled. Nothing was changed.");
+                let msg = self.msg("settingsio-cancelled-unchanged");
+                self.tell(&msg);
             }
             Confirm::Repeat => {
                 if let Some((plan, name)) = &self.pending_import {
-                    let q = import_question(plan, name);
+                    let q = import_question(self.cat(), plan, name);
                     self.ask(&q);
                 }
             }
@@ -151,7 +172,9 @@ impl App {
         let applied = match store.apply(&plan) {
             Ok(a) => a,
             Err(e) => {
-                self.error(&format!("Could not import settings: {e}"));
+                let msg =
+                    self.msg_args("settingsio-import-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
                 return;
             }
         };
@@ -177,16 +200,18 @@ impl App {
         for w in plan.warnings.iter().chain(&key_warnings) {
             self.note(w);
         }
-        let mut msg = format!("Settings imported. {}", plan.summary());
+        let mut msg = self.msg_args("settingsio-imported", &args!["summary" => plan.summary()]);
         if plan
             .changes
             .iter()
             .any(|c| c.path.starts_with("speech.backend"))
         {
-            msg.push_str(" The new speech backend is used from the next start.");
+            msg.push(' ');
+            msg.push_str(&self.msg("settingsio-backend-next-start"));
         }
         if !applied.backups.is_empty() {
-            msg.push_str(" The old settings were backed up.");
+            msg.push(' ');
+            msg.push_str(&self.msg("settingsio-backed-up"));
         }
         self.tell(&msg);
     }
