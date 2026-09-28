@@ -458,9 +458,9 @@ impl Walker<'_> {
     fn switch(&mut self, el: ElementRef<'_>) {
         let local = |e: &ElementRef<'_>| crate::mathml::local(e.value().name()).to_owned();
         let parts: Vec<ElementRef<'_>> = el.child_elements().collect();
-        let case = parts.iter().find(|c| {
-            local(c) == "case" && c.descendent_elements().any(|d| local(&d) == "math")
-        });
+        let case = parts
+            .iter()
+            .find(|c| local(c) == "case" && c.descendent_elements().any(|d| local(&d) == "math"));
         let chosen = case.or_else(|| parts.iter().find(|c| local(c) == "default"));
         if let Some(c) = chosen {
             self.children(*c);

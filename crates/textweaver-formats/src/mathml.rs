@@ -25,8 +25,8 @@
 use scraper::ElementRef;
 
 use crate::omml::{
-    accent_command, delimiter, function_name, is_atom, math_text, nary_command, push,
-    takes_limits, text_mode,
+    accent_command, delimiter, function_name, is_atom, math_text, nary_command, push, takes_limits,
+    text_mode,
 };
 
 /// Deeper MathML is read as its text, without structure.
@@ -78,10 +78,7 @@ pub(crate) fn read(math: ElementRef<'_>) -> MathMl {
             Some(collapse(&c.children(math)))
         })
         .filter(|l| !l.trim().is_empty());
-    let fallback = math
-        .attr("alttext")
-        .map(collapse)
-        .filter(|a| !a.is_empty());
+    let fallback = math.attr("alttext").map(collapse).filter(|a| !a.is_empty());
     MathMl {
         latex,
         display,
@@ -237,11 +234,7 @@ impl Conv {
                 format!("{}^{{{}}}", arg(&base), sup.trim())
             }
             "msubsup" => {
-                let (base, sub, sup) = (
-                    self.nth(&kids, 0),
-                    self.nth(&kids, 1),
-                    self.nth(&kids, 2),
-                );
+                let (base, sub, sup) = (self.nth(&kids, 0), self.nth(&kids, 1), self.nth(&kids, 2));
                 format!("{}_{{{}}}^{{{}}}", arg(&base), sub.trim(), sup.trim())
             }
             "munder" => {
@@ -282,11 +275,8 @@ impl Conv {
                 }
             }
             "munderover" => {
-                let (base, under, over) = (
-                    self.nth(&kids, 0),
-                    self.nth(&kids, 1),
-                    self.nth(&kids, 2),
-                );
+                let (base, under, over) =
+                    (self.nth(&kids, 0), self.nth(&kids, 1), self.nth(&kids, 2));
                 if takes_limits(base.trim()) {
                     format!("{}_{{{}}}^{{{}}}", base.trim(), under.trim(), over.trim())
                 } else {
@@ -412,18 +402,12 @@ mod tests {
 
     #[test]
     fn tokens_rows_and_fractions() {
-        assert_eq!(
-            latex("<mfrac><mi>a</mi><mi>b</mi></mfrac>"),
-            r"\frac{a}{b}"
-        );
+        assert_eq!(latex("<mfrac><mi>a</mi><mi>b</mi></mfrac>"), r"\frac{a}{b}");
         assert_eq!(
             latex("<mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>1</mn></mrow>"),
             "x^{2}+1"
         );
-        assert_eq!(
-            latex("<mi>sin</mi><mo>&#x2061;</mo><mi>x</mi>"),
-            r"\sin x"
-        );
+        assert_eq!(latex("<mi>sin</mi><mo>&#x2061;</mo><mi>x</mi>"), r"\sin x");
         assert_eq!(latex("<mi>α</mi><mo>≤</mo><mi>β</mi>"), r"\alpha\leq\beta");
         assert_eq!(
             latex(r#"<mfrac linethickness="0"><mi>n</mi><mi>k</mi></mfrac>"#),
@@ -436,19 +420,20 @@ mod tests {
     #[test]
     fn roots_scripts_and_limits() {
         assert_eq!(
-            latex("<msqrt><msup><mi>b</mi><mn>2</mn></msup><mo>-</mo><mn>4</mn><mi>a</mi><mi>c</mi></msqrt>"),
+            latex(
+                "<msqrt><msup><mi>b</mi><mn>2</mn></msup><mo>-</mo><mn>4</mn><mi>a</mi><mi>c</mi></msqrt>"
+            ),
             r"\sqrt{b^{2}-4ac}"
         );
-        assert_eq!(
-            latex("<mroot><mi>x</mi><mn>3</mn></mroot>"),
-            r"\sqrt[3]{x}"
-        );
+        assert_eq!(latex("<mroot><mi>x</mi><mn>3</mn></mroot>"), r"\sqrt[3]{x}");
         assert_eq!(
             latex("<msubsup><mi>x</mi><mi>i</mi><mn>2</mn></msubsup>"),
             "x_{i}^{2}"
         );
         assert_eq!(
-            latex("<munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><mi>i</mi>"),
+            latex(
+                "<munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><mi>i</mi>"
+            ),
             r"\sum_{i=1}^{n}i"
         );
         assert_eq!(
@@ -458,7 +443,9 @@ mod tests {
         assert_eq!(latex("<mover><mi>x</mi><mo>^</mo></mover>"), r"\hat{x}");
         assert_eq!(latex("<mover><mi>x</mi><mo>¯</mo></mover>"), r"\bar{x}");
         assert_eq!(
-            latex("<mmultiscripts><mi>C</mi><none/><none/><mprescripts/><mn>1</mn><mn>2</mn></mmultiscripts>"),
+            latex(
+                "<mmultiscripts><mi>C</mi><none/><none/><mprescripts/><mn>1</mn><mn>2</mn></mmultiscripts>"
+            ),
             r"{}_{1}^{2}C"
         );
     }
@@ -466,7 +453,9 @@ mod tests {
     #[test]
     fn tables_fences_and_semantics() {
         assert_eq!(
-            latex("<mfenced><mtable><mtr><mtd><mi>a</mi></mtd><mtd><mi>b</mi></mtd></mtr><mtr><mtd><mi>c</mi></mtd><mtd><mi>d</mi></mtd></mtr></mtable></mfenced>"),
+            latex(
+                "<mfenced><mtable><mtr><mtd><mi>a</mi></mtd><mtd><mi>b</mi></mtd></mtr><mtr><mtd><mi>c</mi></mtd><mtd><mi>d</mi></mtd></mtr></mtable></mfenced>"
+            ),
             r"\left( \begin{matrix} a & b \\ c & d \end{matrix} \right)"
         );
         assert_eq!(
@@ -475,12 +464,16 @@ mod tests {
         );
         // A TeX annotation wins over the presentation markup.
         assert_eq!(
-            latex(r#"<semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">\frac{1}{2}</annotation></semantics>"#),
+            latex(
+                r#"<semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">\frac{1}{2}</annotation></semantics>"#
+            ),
             r"\frac{1}{2}"
         );
         // Other annotations are left out.
         assert_eq!(
-            latex(r#"<semantics><mi>y</mi><annotation encoding="text/plain">why</annotation></semantics>"#),
+            latex(
+                r#"<semantics><mi>y</mi><annotation encoding="text/plain">why</annotation></semantics>"#
+            ),
             "y"
         );
         assert_eq!(latex("<mphantom><mi>z</mi></mphantom><mi>w</mi>"), "w");
@@ -488,7 +481,9 @@ mod tests {
 
     #[test]
     fn display_alttext_and_image_fallbacks() {
-        let m = read_first(r#"<math display="block" alttext="x squared"><msup><mi>x</mi><mn>2</mn></msup></math>"#);
+        let m = read_first(
+            r#"<math display="block" alttext="x squared"><msup><mi>x</mi><mn>2</mn></msup></math>"#,
+        );
         assert!(m.display);
         assert_eq!(m.latex.as_deref(), Some("x^{2}"));
         assert_eq!(m.fallback.as_deref(), Some("x squared"));

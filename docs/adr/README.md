@@ -60,6 +60,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted.
 - [ADR-0027: Xilem GUI](0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, the accessibility checks, and what to send upstream.
   - Status: accepted.
+- [ADR-0029: MathCAT speech](0029-mathcat-speech.md): MathCAT 0.7.6-rc.3 as a second math speech engine on its own thread, EPUB 3 MathML read as math, and braille waiting for MathCAT issue #827.
+  - Status: accepted, behind the `mathcat` feature; two dependency checks wait for the owner.
 
 ## Writing a new ADR
 

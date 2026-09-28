@@ -980,7 +980,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ],
    "deps": [
     "textweaver-core",
-    "textweaver-math"
+    "textweaver-math",
+    "textweaver-mathcat"
    ],
    "description": "textweaver speech: backend trait, speech service, pacing, queue, normalization, engines",
    "dev_deps": [],
@@ -1395,6 +1396,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "default_member": true,
    "dependents": [
     "textweaver-app",
+    "textweaver-mathcat",
     "textweaver-render",
     "textweaver-speech",
     "textweaver-writers"
@@ -1409,6 +1411,40 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "name": "textweaver-math",
    "path": "crates/textweaver-math",
    "short": "math",
+   "tool": false,
+   "version": "0.1.0-alpha.3"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0029-mathcat-speech.md",
+     "number": "0029",
+     "title": "ADR-0029: MathCAT speech"
+    },
+    {
+     "href": "../adr/0018-math.md",
+     "number": "0018",
+     "title": "ADR-0018: Math"
+    }
+   ],
+   "bins": [],
+   "build_deps": [],
+   "default_member": false,
+   "dependents": [
+    "textweaver-speech"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-math"
+   ],
+   "description": "textweaver math speech through MathCAT (ClearSpeak and SimpleSpeak), on one dedicated thread, with textweaver-math as the fallback",
+   "dev_deps": [],
+   "job": "Math speech through MathCAT: ClearSpeak and SimpleSpeak, the wording NVDA and JAWS use, with textweaver-math as the fallback.",
+   "layer": "document",
+   "name": "textweaver-mathcat",
+   "path": "crates/textweaver-mathcat",
+   "short": "mathcat",
    "tool": false,
    "version": "0.1.0-alpha.3"
   },
@@ -1476,6 +1512,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-formats",
     "textweaver-keymap",
     "textweaver-math",
+    "textweaver-mathcat",
     "textweaver-piper",
     "textweaver-sapi",
     "textweaver-speech",
@@ -1575,6 +1612,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-formats",
     "textweaver-ocr",
     "textweaver-math",
+    "textweaver-mathcat",
     "textweaver-cite"
    ],
    "id": "document",

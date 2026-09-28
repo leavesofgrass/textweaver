@@ -106,7 +106,11 @@ pub fn language_for(tag: Option<&str>) -> &'static str {
         .next()
         .unwrap_or_default()
         .to_ascii_lowercase();
-    let primary = if primary == "no" { "nb".into() } else { primary };
+    let primary = if primary == "no" {
+        "nb".into()
+    } else {
+        primary
+    };
     LANGUAGES
         .iter()
         .find(|l| **l == primary)
@@ -252,7 +256,11 @@ fn check_mathml(mathml: &str) -> Result<(), Error> {
 /// refuses, or one the parser had to repair, is spoken by
 /// `textweaver-math` at `text_options.speech`. The map points from the
 /// output's bytes to `text`'s chars, as every transform's must (ADR-0005).
-pub fn speak_text(text: &str, text_options: &TextOptions, options: &Options) -> (String, OffsetMap) {
+pub fn speak_text(
+    text: &str,
+    text_options: &TextOptions,
+    options: &Options,
+) -> (String, OffsetMap) {
     textweaver_math::speak_text_with(text, text_options, &mut |region, math| {
         if !math.diagnostics.is_empty() {
             return None;

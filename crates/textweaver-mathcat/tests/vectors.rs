@@ -162,7 +162,10 @@ fn student_formulas() {
 #[test]
 fn high_verbosity_adds_end_words() {
     let high = options(Style::ClearSpeak, Verbosity::High);
-    assert_eq!(say_with(r"$\frac{a}{b}$", &high), "eigh over b, end fraction");
+    assert_eq!(
+        say_with(r"$\frac{a}{b}$", &high),
+        "eigh over b, end fraction"
+    );
     assert_eq!(
         say_with(r"$|x|$", &high),
         "the absolute value of x, end absolute value"
@@ -208,7 +211,11 @@ fn span_level_map() {
     let text = "so $x^2$ ok";
     let (out, map) = speak_text(text, &TextOptions::default(), &Options::default());
     assert_eq!(out, "so x squared ok");
-    let kinds: Vec<_> = map.spans().iter().map(|s| (s.kind, s.source.to_range())).collect();
+    let kinds: Vec<_> = map
+        .spans()
+        .iter()
+        .map(|s| (s.kind, s.source.to_range()))
+        .collect();
     assert_eq!(
         kinds,
         [

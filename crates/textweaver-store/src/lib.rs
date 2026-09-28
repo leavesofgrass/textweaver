@@ -65,9 +65,8 @@ pub use settings::{
     EciSettings, EditingSettings, ExportSettings, FootnoteMode, HighlightSettings,
     InterfaceSettings, KeyboardSettings, KeymapOverrides, KeymapPreset, LexiconSettings,
     LibrarySettings, MathEngine, NormalizationSettings, OcrEngine, PreviewSettings,
-    RESERVED_SETTINGS,
-    ReadingSettings, SapiSettings, SayAll, Settings, SettingsLoad, SettingsStore, SpeechSettings,
-    StatsSettings, SubtitleFormat, TableMode,
+    RESERVED_SETTINGS, ReadingSettings, SapiSettings, SayAll, Settings, SettingsLoad,
+    SettingsStore, SpeechSettings, StatsSettings, SubtitleFormat, TableMode,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,

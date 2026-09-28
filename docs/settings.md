@@ -243,6 +243,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `ocr`, default `true`: recognize the text of scanned pages and pictures (OCR). See [Scanned pages](converting.md#scanned-pages-ocr).
 - `ocr_lang`, default `""`: the language of scanned text, as Tesseract codes (`"fra"`, `"deu+eng"`) or language tags (`"fr"`). Empty means the document's own language, else English. English is read by ocrs; other languages need Tesseract.
 - `ocr_engine`, default `"auto"`: `"ocrs"`, `"tesseract"`, or `"paddle"` (experimental) to use one engine only.
+- `math_engine`, default `"builtin"`: which engine reads math aloud. `"builtin"` is textweaver's own; `"mathcat"` is MathCAT in ClearSpeak and `"mathcat_simplespeak"` MathCAT in SimpleSpeak, in the document's language. MathCAT needs a build with the `mathcat` feature; without it, textweaver's own is used. See [Hear math with MathCAT](math.md#hear-math-with-mathcat).
 
 ### [display]
 

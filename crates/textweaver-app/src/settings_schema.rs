@@ -1548,7 +1548,8 @@ impl App {
     /// the keys, the accessibility mode, the theme, the library.
     pub(crate) fn settings_changed(&mut self, old: &Settings, path: &str) {
         let top = path.split('.').next().unwrap_or_default();
-        if matches!(top, "speech" | "normalization" | "highlight") || path == "reading.math_engine" {
+        if matches!(top, "speech" | "normalization" | "highlight") || path == "reading.math_engine"
+        {
             let config = textweaver_engines::service_config(&self.settings);
             self.speech.set_normalization(self.speech_normalization());
             self.speech.set_pacing(config.pacing);

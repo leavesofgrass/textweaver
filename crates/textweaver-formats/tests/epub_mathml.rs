@@ -59,10 +59,7 @@ fn epub_mathml_is_math() {
         math_texts(&doc),
         [
             ("$x^{2}+1$".to_owned(), 0),
-            (
-                r"$$x=\frac{-b\pm\sqrt{b^{2}-4ac}}{2a}$$".to_owned(),
-                1
-            ),
+            (r"$$x=\frac{-b\pm\sqrt{b^{2}-4ac}}{2a}$$".to_owned(), 1),
             (r"$\frac{1}{2}$".to_owned(), 0),
             (r"$\sqrt{z}$".to_owned(), 0),
             ("$n!$".to_owned(), 0),
@@ -70,7 +67,10 @@ fn epub_mathml_is_math() {
         "{text}"
     );
     // Text around inline math stays in its sentence.
-    assert!(text.contains("Presentation MathML: $x^{2}+1$ grows."), "{text}");
+    assert!(
+        text.contains("Presentation MathML: $x^{2}+1$ grows."),
+        "{text}"
+    );
     // Display math is on a line of its own.
     assert!(
         text.contains("\n$$x=\\frac{-b\\pm\\sqrt{b^{2}-4ac}}{2a}$$\n"),

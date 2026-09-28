@@ -30,7 +30,10 @@ fn hostile_inputs_are_answered() {
         "<math><mtext>{}</mtext></math>",
         "x".repeat(MAX_MATHML_BYTES + 1)
     );
-    let wide = format!("<math><mrow>{}</mrow></math>", "<mi>x</mi><mo>+</mo>".repeat(2_000));
+    let wide = format!(
+        "<math><mrow>{}</mrow></math>",
+        "<mi>x</mi><mo>+</mo>".repeat(2_000)
+    );
     let long_but_allowed = format!(
         "<math><mrow>{}<mi>x</mi></mrow></math>",
         "<mi>x</mi><mo>+</mo>".repeat(200)
@@ -40,7 +43,8 @@ fn hostile_inputs_are_answered() {
         r#"<!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">]>"#,
         "<math><mi>&lol2;</mi></math>"
     );
-    let inputs: Vec<(&str, String)> = vec![
+    let inputs: Vec<(&str, String)> =
+        vec![
         ("empty", String::new()),
         ("not xml", "<<<>>>&&&".into()),
         ("unclosed", "<math><mfrac><mi>a</mi>".into()),
@@ -78,10 +82,7 @@ fn hostile_inputs_are_answered() {
             "{name}: {result:?}"
         );
         if let Ok(words) = &result {
-            assert!(
-                !words.chars().any(|c| c.is_control()),
-                "{name}: {words:?}"
-            );
+            assert!(!words.chars().any(|c| c.is_control()), "{name}: {words:?}");
         }
         still_speaks();
     }
@@ -94,7 +95,11 @@ fn oversized_and_deep_input_is_refused() {
         speak_mathml(&huge, &Options::default()),
         Err(Error::Rejected(_))
     ));
-    let deep = format!("<math>{}{}</math>", "<mrow>".repeat(500), "</mrow>".repeat(500));
+    let deep = format!(
+        "<math>{}{}</math>",
+        "<mrow>".repeat(500),
+        "</mrow>".repeat(500)
+    );
     assert!(matches!(
         speak_mathml(&deep, &Options::default()),
         Err(Error::Rejected(_))

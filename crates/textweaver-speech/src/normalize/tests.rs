@@ -556,7 +556,10 @@ fn math_engine_defaults_to_builtin_and_changes_nothing_without_mathcat() {
         builtin.text,
         "So a over b plus x squared and square root of y end."
     );
-    for engine in [MathEngine::MathCatClearSpeak, MathEngine::MathCatSimpleSpeak] {
+    for engine in [
+        MathEngine::MathCatClearSpeak,
+        MathEngine::MathCatSimpleSpeak,
+    ] {
         let cfg = NormalizeConfig {
             math_engine: engine,
             math_language: Some("fr".into()),
@@ -607,13 +610,19 @@ fn mathcat_speaks_through_the_pipeline() {
         math_verbosity: Verbosity::Low,
         ..settings()
     };
-    assert_eq!(pipeline_utterance(r"$|x|$", &simple).text, "absolute value x");
+    assert_eq!(
+        pipeline_utterance(r"$|x|$", &simple).text,
+        "absolute value x"
+    );
 
     let french = NormalizeConfig {
         math_language: Some("fr-CA".into()),
         ..cfg.clone()
     };
-    assert_eq!(pipeline_utterance(r"$\frac{a}{b}$", &french).text, "a sur b");
+    assert_eq!(
+        pipeline_utterance(r"$\frac{a}{b}$", &french).text,
+        "a sur b"
+    );
 
     let text = r"$a \times b \leq c$";
     let some = Pipeline::for_settings(&cfg, PunctuationLevel::Some, false, false)
