@@ -13,9 +13,8 @@
 //! - [`MultiAnnouncer`]: several of the above at once;
 //! - [`Shared`]: a clonable handle, so the app can own an announcer while
 //!   the TUI draws the status line from it and tests read the log;
-//! - the GUI's live-region announcer, which lives in the GUI spike
-//!   (`crates/textweaver-gui`, ADR-0014) until the Wave 3 GUI moves it
-//!   here behind the reserved `live-region` feature.
+//! - the GUI's live-region announcer, which lives in `textweaver-xilem`
+//!   (ADR-0027); the `live-region` feature here is reserved for it.
 //!
 //! The [`Announcement`] catalog gives some state changes fixed wording, a
 //! [`Priority`], and a text for each [`Verbosity`] level; the application

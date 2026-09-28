@@ -854,6 +854,12 @@ Wave 4 starts only after this pass is done. It has four steps.
 3. **Font and print size.** The owner wants to change the font and the size of the text on screen, from the keyboard.
 4. **Every control needs a keyboard shortcut.** The owner likes the simple controls; each one gets a shortcut from the keymap, shown and spoken with its name (for example "Open, Control O").
 
+**After Wave 4 (the owner, Monday, September 28, 2026): release `0.1.0-alpha.4`, then pause, then a documentation sweep.**
+- The owner asked for a new alpha release to be pushed when Wave 4 is done.
+- The docs are comprehensive and checked against the code.
+- The README is short: what textweaver is, then the quick start first, so people can start quickly. The roadmap leaves the README.
+- The docs are published on GitHub Pages. MkDocs worked well before (in Star); another approach is fine if it is better.
+
 **W4a3: GUI edit mode (sub-wave 4c, P1; ADR 0033).**
 - **Edit mode in `DocumentView`,** using `Command::ReplaceRange`, and keeping structure while editing as the terminal reader does.
 - **Based on Parley's `examples/editor`,** on the vendored Parley 0.8.0. Don't upgrade it.

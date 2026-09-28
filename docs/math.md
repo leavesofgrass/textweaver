@@ -149,7 +149,6 @@ If a value is wrong, for example `math_verbosity = "loud"`, only that setting fa
 Where these settings apply, in this version:
 
 - The terminal reader (`textweaver` and `tw open`), `tw speak`, and `tw export-audio` follow all three settings.
-- The experimental window app (`textweaver-gui`) follows `math`, but not yet `math_verbosity` or `asciimath_delimiter`. It always uses normal verbosity and no ASCIIMath.
 
 ## Hear math with MathCAT
 

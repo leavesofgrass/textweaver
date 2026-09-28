@@ -19,10 +19,10 @@ Usage: scripts/dev-check.sh [--docker] [--only STEP,...] [--fail-fast] [--dry-ru
 Runs every check CI runs, so you can see CI's answer before you push:
 
   fmt        cargo fmt --all --check
-  clippy     cargo clippy --workspace --exclude textweaver-gui --all-targets
+  clippy     cargo clippy --workspace --all-targets
              FEATURES -- -D warnings
-  test       cargo test --workspace --exclude textweaver-gui FEATURES
-  doc        cargo doc --workspace --exclude textweaver-gui --no-deps
+  test       cargo test --workspace FEATURES
+  doc        cargo doc --workspace --no-deps
              FEATURES, with RUSTDOCFLAGS="-D warnings"
   keyboard   cargo xtask keyboard --check (docs/keyboard.md is current)
   pseudo     cargo test -p textweaver-app --test pseudo_locale (every
@@ -199,9 +199,9 @@ else
 fi
 
 step fmt "formatting" cargo fmt --all --check
-step clippy "lints, warnings are errors" cargo clippy --workspace --exclude textweaver-gui --all-targets ${FEATURES[@]+"${FEATURES[@]}"} -- -D warnings
-step test "tests" cargo test --workspace --exclude textweaver-gui ${FEATURES[@]+"${FEATURES[@]}"}
-step doc "API documentation, warnings are errors" env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --exclude textweaver-gui --no-deps ${FEATURES[@]+"${FEATURES[@]}"}
+step clippy "lints, warnings are errors" cargo clippy --workspace --all-targets ${FEATURES[@]+"${FEATURES[@]}"} -- -D warnings
+step test "tests" cargo test --workspace ${FEATURES[@]+"${FEATURES[@]}"}
+step doc "API documentation, warnings are errors" env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps ${FEATURES[@]+"${FEATURES[@]}"}
 step keyboard "docs/keyboard.md is current" cargo xtask keyboard --check
 step pseudo "the interface in the pseudo-locales en-XA and ar-XB" cargo test -p textweaver-app --test pseudo_locale
 PYTHON=""
