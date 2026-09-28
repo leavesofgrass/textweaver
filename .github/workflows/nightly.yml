@@ -9,7 +9,7 @@
 #   AddressSanitizer on Linux;
 # - release: the workspace tests in release mode, and the loaders'
 #   property tests with many more cases;
-# - msrv: `cargo check` with Rust 1.92, the rust-version in Cargo.toml;
+# - msrv: `cargo check` with Rust 1.94, the rust-version in Cargo.toml;
 # - docker: the development image built from docker/Dockerfile, and the
 #   tests run in it with every feature;
 # - soak: `cargo xtask soak`, ten minutes of randomized reading with engine
@@ -83,13 +83,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
+      # --target: the prebuilt cargo-fuzz that install-action fetches is a
+      # musl build, and cargo-fuzz defaults to the triple it was built for;
+      # AddressSanitizer cannot link against musl's static libc. Every
+      # night from September 27, 2026 failed that way before a fuzz target
+      # ran.
       - name: Fuzz for 10 minutes
         env:
           FEATURES: ${{ matrix.target == 'rpc' && '--features rpc' || '' }}
         run: |
           # $FEATURES is empty or one flag and its value: split on purpose.
           # shellcheck disable=SC2086
-          cargo +nightly fuzz run ${{ matrix.target }} $FEATURES -- -max_total_time=600 -rss_limit_mb=4096 -timeout=30
+          cargo +nightly fuzz run --target x86_64-unknown-linux-gnu ${{ matrix.target }} $FEATURES -- -max_total_time=600 -rss_limit_mb=4096 -timeout=30
       - name: Upload the crash
         if: failure()
         uses: actions/upload-artifact@v7
@@ -158,7 +163,10 @@ jobs:
   release:
     name: tests in release mode
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # A cold release build of the whole workspace with every feature took
+    # more than 90 minutes (September 28, 2026), so the job never finished
+    # and its cache was never saved.
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
       - name: System libraries
@@ -178,7 +186,7 @@ jobs:
         run: cargo test --locked --release -p textweaver-formats --test positions --test hostile
 
   msrv:
-    name: MSRV (Rust 1.92)
+    name: MSRV (Rust 1.94)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -187,9 +195,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
-      - run: rustup toolchain install 1.92 --profile minimal
-      # rust-version is 1.92 because krilla 0.8 (the PDF writer) needs it.
-      - run: cargo +1.92 check --locked --workspace --exclude textweaver-xilem
+      - run: rustup toolchain install 1.94 --profile minimal
+      # rust-version is 1.94 because rten 0.26 (Piper, Whisper, OCR) needs
+      # it. The GUI needs 1.96 (its own rust-version) and is left out.
+      - run: cargo +1.94 check --locked --workspace --exclude textweaver-xilem
 
   docker:
     name: Docker image and tests
