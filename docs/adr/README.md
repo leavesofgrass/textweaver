@@ -64,6 +64,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: proposed (Jon's session answers recorded; W4a2 finishes it).
 - [ADR-0029: MathCAT speech](0029-mathcat-speech.md): MathCAT 0.7.6-rc.3 as a second math speech engine on its own thread, EPUB 3 MathML read as math, and braille waiting for MathCAT issue #827.
   - Status: accepted, behind the `mathcat` feature; the owner approved its two dependency exceptions.
+- [ADR-0032: Grammar, lint, highlighting, and clipboard crates](0032-grammar-lint-highlighting-clipboard.md): our own Markdown lint instead of rumdl, arboard where OSC 52 cannot reach, Unicode math and notes export without new crates, and harper-core and syntect held on one advisory.
+  - Status: accepted for lint, the clipboard, Unicode math, and notes export; proposed for grammar and highlighting.
 
 ## Writing a new ADR
 
