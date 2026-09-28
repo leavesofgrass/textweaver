@@ -379,7 +379,12 @@ impl TreeBuilder<'_> {
         let mut i = idx.start;
         while i < idx.end {
             let m = &self.markers[i];
-            if Some(i) == this || (!range.contains_range(m.range) && !is_break(m)) {
+            // A container with exactly this range that sorts before `this`
+            // encloses it: the Markdown loader gives a nested list and its
+            // only item the same range. Taking it as a child built that
+            // list again, forever, until the stack overflowed.
+            let encloses = this.is_some_and(|t| i < t) && m.range == range;
+            if Some(i) == this || encloses || (!range.contains_range(m.range) && !is_break(m)) {
                 i += 1;
                 continue;
             }
