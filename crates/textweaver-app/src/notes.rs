@@ -10,6 +10,10 @@
 //! They are the store's typed [`Note`] and [`Highlight`]
 //! (`DocState::notes` and `DocState::highlights`), the one model the vault
 //! (`textweaver-vault`), `tw marks`, and sidecar sync use too.
+//!
+//! With the `publish` feature, [`notes_references`] and [`export_notes`]
+//! write them as reference records (BibTeX, BibLaTeX, RIS, CSL-JSON),
+//! as Star's notes export did (Agent W4g; `tw marks --export`).
 
 use textweaver_a11y::Verbosity;
 use textweaver_core::{CharPos, CharRange, Direction, EditOutcome, Unit};
@@ -739,6 +743,126 @@ pub(crate) fn study_sheet(
     out
 }
 
+/// What [`notes_references`] needs to know about the document.
+#[cfg(feature = "publish")]
+#[derive(Clone, Debug, Default)]
+pub struct NotesRecords<'a> {
+    /// The document's title: every record's title.
+    pub title: &'a str,
+    /// The document's author, when known.
+    pub author: Option<&'a str>,
+    /// The start of every key (`book` gives `book-note-1`); letters,
+    /// digits, and dashes are kept, and `notes` is used when none are left.
+    pub key: &'a str,
+    /// The document's web address, when it came from the web.
+    pub url: Option<&'a str>,
+    /// The document's length in chars, for each record's percentage (in
+    /// CSL-JSON's `textweaver-position`).
+    pub doc_len: Option<usize>,
+}
+
+/// A key made of `s`'s letters and digits, lowercase, dashes between
+/// words.
+#[cfg(feature = "publish")]
+fn key_part(s: &str) -> String {
+    let mut out = String::new();
+    for c in s.chars() {
+        if c.is_ascii_alphanumeric() {
+            out.push(c.to_ascii_lowercase());
+        } else if !out.is_empty() && !out.ends_with('-') {
+            out.push('-');
+        }
+    }
+    let out = out.trim_end_matches('-').to_owned();
+    if out.is_empty() {
+        "notes".to_owned()
+    } else {
+        out
+    }
+}
+
+/// Notes, then highlights, as reference records of the citation crate
+/// (type `document`, BibTeX `@misc`, RIS `GEN`), one per note or
+/// highlight, in document order: the document's title and author, the
+/// noted passage as the abstract, the note as the note (with the key it
+/// cites), the tags as keywords, and the date it was made.
+#[cfg(feature = "publish")]
+pub fn notes_references(
+    notes: &[Note],
+    highlights: &[Highlight],
+    opts: &NotesRecords<'_>,
+) -> Vec<textweaver_cite::Reference> {
+    use textweaver_cite::{CslDate, Name, Reference};
+    let prefix = key_part(opts.key);
+    let base = |id: String, ts: i64, start: CharPos| {
+        let mut r = Reference::new(&id, "document");
+        r.title = (!opts.title.trim().is_empty()).then(|| opts.title.trim().to_owned());
+        r.author = opts
+            .author
+            .filter(|a| !a.trim().is_empty())
+            .map(|a| vec![Name::parse(a)])
+            .unwrap_or_default();
+        r.url = opts.url.map(str::to_owned);
+        if ts > 0 {
+            let day: String = textweaver_store::time::rfc3339(ts)
+                .chars()
+                .take(10)
+                .collect();
+            r.issued = CslDate::parse(&day);
+        }
+        if let Some(len) = opts.doc_len {
+            r.extra.insert(
+                "textweaver-position".into(),
+                format!("{} percent", textweaver_store::percent(start, len)).into(),
+            );
+        }
+        r
+    };
+    let mut out = Vec::with_capacity(notes.len() + highlights.len());
+    for (i, n) in notes.iter().enumerate() {
+        let mut r = base(
+            format!("{prefix}-note-{}", i + 1),
+            n.created.max(n.ts),
+            n.range.start,
+        );
+        let passage = collapse(&n.anchor, 2000);
+        r.abstract_text = (!passage.is_empty()).then_some(passage);
+        let mut note = n.note.trim().to_owned();
+        if !n.cite.trim().is_empty() {
+            if !note.is_empty() {
+                note.push(' ');
+            }
+            note.push_str(&format!("Cites {}.", n.cite.trim()));
+        }
+        r.note = (!note.is_empty()).then_some(note);
+        r.keyword = (!n.tags.is_empty()).then(|| n.tags.join(", "));
+        out.push(r);
+    }
+    for (i, h) in highlights.iter().enumerate() {
+        let mut r = base(format!("{prefix}-highlight-{}", i + 1), h.ts, h.range.start);
+        let passage = collapse(&h.text, 2000);
+        r.abstract_text = (!passage.is_empty()).then_some(passage);
+        r.note = Some(format!("Highlighted, {}.", color_name(&h.color)));
+        out.push(r);
+    }
+    out
+}
+
+/// [`notes_references`] written in `format`.
+///
+/// # Errors
+///
+/// When CSL-JSON cannot be written (it always can for these records).
+#[cfg(feature = "publish")]
+pub fn export_notes(
+    notes: &[Note],
+    highlights: &[Highlight],
+    opts: &NotesRecords<'_>,
+    format: textweaver_cite::Format,
+) -> textweaver_cite::Result<String> {
+    textweaver_cite::formats::write(&notes_references(notes, highlights, opts), format)
+}
+
 #[cfg(test)]
 mod tests {
     use textweaver_core::Edit;
@@ -778,6 +902,71 @@ mod tests {
         );
         assert_eq!(notes[0].range, CharRange::new(13, 23));
         assert!(highlights.is_empty(), "deleted text drops its highlight");
+    }
+
+    #[cfg(feature = "publish")]
+    #[test]
+    fn notes_become_reference_records() {
+        use textweaver_cite::Format;
+        let notes = vec![Note {
+            id: "n1".into(),
+            range: CharRange::new(10, 20),
+            anchor: "the  noted\npassage".into(),
+            note: "Look here".into(),
+            tags: vec!["exam".into(), "ch2".into()],
+            cite: "doe2020".into(),
+            created: 1_790_344_987,
+            ts: 1_790_344_987,
+            ..Note::default()
+        }];
+        let highlights = vec![Highlight {
+            id: "h1".into(),
+            range: CharRange::new(30, 40),
+            color: "#ffff00".into(),
+            text: "bright words".into(),
+            ts: 1_790_344_987,
+            ..Highlight::default()
+        }];
+        let opts = NotesRecords {
+            title: "Cell Biology",
+            author: Some("Ada Lovelace"),
+            key: "Cell Biology (2nd ed.)",
+            url: None,
+            doc_len: Some(100),
+        };
+        let refs = notes_references(&notes, &highlights, &opts);
+        assert_eq!(refs.len(), 2);
+        assert_eq!(refs[0].id, "cell-biology-2nd-ed-note-1");
+        assert_eq!(refs[1].id, "cell-biology-2nd-ed-highlight-1");
+        assert_eq!(refs[0].abstract_text.as_deref(), Some("the noted passage"));
+        assert_eq!(refs[0].note.as_deref(), Some("Look here Cites doe2020."));
+        assert_eq!(refs[0].keyword.as_deref(), Some("exam, ch2"));
+        assert_eq!(refs[1].note.as_deref(), Some("Highlighted, yellow."));
+        assert_eq!(
+            refs[0].issued.as_ref().and_then(|d| d.iso()).as_deref(),
+            Some("2026-09-25")
+        );
+
+        let bib = export_notes(&notes, &highlights, &opts, Format::BibTex).unwrap();
+        assert!(bib.contains("@misc{cell-biology-2nd-ed-note-1,"), "{bib}");
+        assert!(bib.contains("Look here Cites doe2020."), "{bib}");
+        let ris = export_notes(&notes, &highlights, &opts, Format::Ris).unwrap();
+        assert!(ris.contains("TY  - GEN"), "{ris}");
+        assert!(ris.contains("KW  - exam"), "{ris}");
+        assert!(ris.contains("N1  - Highlighted, yellow."), "{ris}");
+        let json = export_notes(&notes, &highlights, &opts, Format::CslJson).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v[0]["type"], "document");
+        assert_eq!(v[0]["title"], "Cell Biology");
+        assert_eq!(v[0]["textweaver-position"], "10 percent");
+        // Each format reads back as the same records.
+        for f in [Format::BibTex, Format::Ris, Format::CslJson] {
+            let text = export_notes(&notes, &highlights, &opts, f).unwrap();
+            let back = textweaver_cite::formats::parse(&text, f).unwrap();
+            assert_eq!(back.len(), 2, "{f:?}");
+            assert_eq!(back[0].note.as_deref(), Some("Look here Cites doe2020."));
+        }
+        assert_eq!(key_part("  "), "notes");
     }
 
     #[test]
