@@ -441,7 +441,11 @@ fn outline_notes_access_modes_tables_and_links_work_from_the_document() {
     let _ = app.dispatch(Command::ListFocus(table));
     let _ = app.dispatch(Command::ListKey(ListKey::Enter));
     assert!(app.list_model().is_none(), "Enter closes the outline");
-    assert!(at_cursor(&app, 7).starts_with("A Table"), "{}", at_cursor(&app, 20));
+    assert!(
+        at_cursor(&app, 7).starts_with("A Table"),
+        "{}",
+        at_cursor(&app, 20)
+    );
 
     // t and Shift+T: tables (browse keys); Ctrl+T in any layer.
     let _ = app.dispatch(Command::SetCursor(textweaver_app::core::CharPos::ZERO));
@@ -607,6 +611,41 @@ fn screenshots_are_written_at_both_scales() {
     let a = std::fs::metadata(dir.path().join("a.png")).unwrap().len();
     let b = std::fs::metadata(dir.path().join("b.png")).unwrap().len();
     assert!(b > a, "the 200% screenshot is larger");
+}
+
+/// Star's rule since 0.1.31: new themes go after the existing ones, so the
+/// F5 cycle a reader knows never changes. The first nine, from Galaxy, in
+/// the app and in the window's palettes.
+#[test]
+fn the_first_nine_themes_keep_their_f5_order() {
+    use textweaver_app::Command;
+    use textweaver_app::keymap::ActionId;
+    const FIRST_NINE: [&str; 9] = [
+        "galaxy",
+        "galaxy-light",
+        "one-dark",
+        "one-light",
+        "dark",
+        "light",
+        "contrast",
+        "high-contrast",
+        "phosphor",
+    ];
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut seen = vec![app.current_theme().name().to_owned()];
+    for _ in 1..FIRST_NINE.len() {
+        let _ = app.dispatch(Command::Action(ActionId::NextTheme));
+        seen.push(app.current_theme().name().to_owned());
+    }
+    assert_eq!(seen, FIRST_NINE);
+    // The window draws each one: its palette carries the theme's name.
+    for name in FIRST_NINE {
+        assert_eq!(Palette::named(name).name, name);
+    }
+    // F5 is the key in the window, as in the terminal.
+    let f5 = app.keymap().chords_for(ActionId::NextTheme);
+    assert!(f5.iter().any(|c| c.to_string() == "F5"), "{f5:?}");
 }
 
 #[test]
