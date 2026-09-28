@@ -1,7 +1,7 @@
-//! `tw search --json` and `tw info --json` on a closed pipe (usability
-//! pass, item 10): `tw search x --json | head` panicked with "failed
-//! printing to stdout" once `head` closed the pipe. Output goes through
-//! `print_all`, which ends quietly on a closed pipe.
+//! `tw` with no arguments, and `tw search --json` and `tw info --json` on
+//! a closed pipe (usability pass, items 6 and 10). `tw search x --json |
+//! head` panicked with "failed printing to stdout" once `head` closed the
+//! pipe; output goes through `print_all` now, which ends quietly.
 
 use std::io::Read as _;
 use std::process::{Command, Stdio};
@@ -61,5 +61,30 @@ fn info_ends_quietly_on_a_closed_pipe() {
         let (status, err) = run_with_closed_stdout(&args);
         assert!(!err.contains("panicked"), "{args:?}: {err}");
         assert!(status.success(), "{args:?}: {status:?}: {err}");
+    }
+}
+
+/// `tw` with no arguments prints a two-line hint and succeeds (usability
+/// pass, item 6); `tw --help` keeps the full list.
+#[test]
+fn no_arguments_prints_a_short_hint() {
+    let out = Command::new(env!("CARGO_BIN_EXE_tw")).output().unwrap();
+    assert!(out.status.success(), "{:?}", out.status);
+    let text = String::from_utf8(out.stdout).unwrap();
+    assert_eq!(
+        text.lines().collect::<Vec<_>>(),
+        [
+            "tw open FILE reads a document aloud in the terminal reader.",
+            "tw --help lists every command."
+        ]
+    );
+    assert!(out.stderr.is_empty());
+    let help = Command::new(env!("CARGO_BIN_EXE_tw"))
+        .arg("--help")
+        .output()
+        .unwrap();
+    let help = String::from_utf8(help.stdout).unwrap();
+    for command in ["open", "search", "info", "convert", "serve"] {
+        assert!(help.contains(command), "{command}: {help}");
     }
 }
