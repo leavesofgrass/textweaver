@@ -55,6 +55,12 @@ jobs:
       - run: cargo test --locked -p textweaver-xilem
       - name: UI Automation report
         shell: pwsh
+        # The runner has no graphics card, so wgpu renders through WARP
+        # (d3d10warp.dll), which crashed on Vello's shaders compiled with
+        # DXC (access violation 0xC0000005). FXC, the older compiler, is
+        # read by masonry_winit's vello_util from this variable.
+        env:
+          WGPU_DX12_COMPILER: fxc
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File crates/textweaver-xilem/tools/uia-report.ps1 -Out uia-xilem.md
           Get-Content uia-xilem.md | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
