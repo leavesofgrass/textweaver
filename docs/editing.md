@@ -254,6 +254,15 @@ These are never checked: code, math, link addresses, web and e-mail addresses, c
 
 Your word list is `words.txt` in the data folder, one word per line; you can edit it in any text editor. The [library guide](library.md) says where the data folder is.
 
+## Grammar
+
+textweaver checks grammar offline with Harper, which knows American English. It looks for things such as "a apple", "the results was", a word typed twice, and a missing capital letter. Spelling is left to the spelling keys above, so a misspelled word is not reported twice.
+
+- **Ctrl+F7**: the next grammar problem. **Ctrl+Shift+F7**: the previous one. The words are selected. You hear "Grammar:" and Harper's description of the problem, then "The words:" and the words, then the first fix when there is one, for example "Fix: an. Alt J lists fixes." At high verbosity you also hear the line number.
+- **Alt+J** on a grammar problem lists its fixes, then "Leave it as it is". In edit mode, **Enter** on a fix makes the change; that is one undo step.
+
+In edit mode on a Markdown file, textweaver checks the Markdown you write and leaves out code, math, and link addresses. While reading, it checks the document's text. These keys work in both.
+
 ## Markdown lint
 
 Some Markdown problems are plain to see and easy to miss by ear. In edit mode on a Markdown file, textweaver finds them for you:

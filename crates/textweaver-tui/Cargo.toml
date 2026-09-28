@@ -14,7 +14,7 @@ name = "textweaver"
 path = "src/main.rs"
 
 [features]
-default = ["publish", "lint", "clipboard"]
+default = ["publish", "lint", "clipboard", "grammar"]
 # In-reader export, preview, and citations (textweaver-app's `publish`).
 # `--no-default-features` builds the lean reader without them.
 publish = ["textweaver-app/publish"]
@@ -23,6 +23,8 @@ lint = ["textweaver-app/lint"]
 # The system clipboard (arboard) where the terminal cannot take OSC 52:
 # the old Windows console, macOS Terminal, VTE terminals (ADR-0032).
 clipboard = ["dep:arboard"]
+# Grammar checking with harper-core (textweaver-app's `grammar`).
+grammar = ["textweaver-app/grammar"]
 # Speech engines, passed through to textweaver-speech.
 espeak = ["textweaver-app/espeak", "textweaver-engines/espeak"]
 omnivox = ["textweaver-app/omnivox", "textweaver-engines/omnivox"]

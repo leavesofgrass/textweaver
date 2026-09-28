@@ -153,6 +153,48 @@ pub(crate) fn language_name(fence: &str) -> String {
     name.to_owned()
 }
 
+/// A grammar fix as the fixes list says it: the new words, or "Remove the
+/// words" for a fix that removes them.
+pub(crate) fn grammar_fix_label(fix: &str) -> String {
+    if fix.trim().is_empty() {
+        "Remove the words".to_owned()
+    } else {
+        fix.to_owned()
+    }
+}
+
+impl App {
+    /// Ctrl+F7 and Ctrl+Shift+F7: grammar problems (the `grammar`
+    /// feature, [`crate::grammar`]).
+    pub(crate) fn grammar_action(&mut self, dir: Direction) {
+        #[cfg(feature = "grammar")]
+        self.grammar_step(dir);
+        #[cfg(not(feature = "grammar"))]
+        {
+            let _ = dir;
+            self.tell("Grammar checking is not in this build.");
+        }
+    }
+
+    /// A choice from the grammar fixes list.
+    pub(crate) fn grammar_fix_action(
+        &mut self,
+        range: CharRange,
+        fixes: &[String],
+        n: usize,
+    ) -> Vec<Effect> {
+        #[cfg(feature = "grammar")]
+        {
+            self.grammar_fix_chosen(range, fixes, n)
+        }
+        #[cfg(not(feature = "grammar"))]
+        {
+            let _ = (range, fixes, n);
+            vec![Effect::Redraw]
+        }
+    }
+}
+
 /// The typing echo settings in cycle order: characters and words,
 /// characters, words, none.
 const ECHO_CYCLE: [(bool, bool, &str); 4] = [

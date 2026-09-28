@@ -124,6 +124,17 @@ impl App {
                     })
                     .collect(),
             ),
+            AuthoringList::Grammar { words, fixes, .. } => (
+                format!(
+                    "Grammar fixes for {}",
+                    words.split_whitespace().collect::<Vec<_>>().join(" ")
+                ),
+                fixes
+                    .iter()
+                    .map(|f| crate::authoring::grammar_fix_label(f))
+                    .chain(["Leave it as it is".to_owned()])
+                    .collect(),
+            ),
             AuthoringList::Replace => (self.replace_title(), self.replace_items()),
             AuthoringList::Templates(t) => (
                 format!("New document from a template, {} templates", t.len()),
@@ -203,6 +214,9 @@ impl App {
                 Some(c) => self.spelling_chosen(&word, range, c.clone()),
                 None => vec![Effect::Redraw],
             },
+            AuthoringList::Grammar { range, fixes, .. } => {
+                self.grammar_fix_action(range, &fixes, n)
+            }
             AuthoringList::Replace => self.replace_choice(n),
             AuthoringList::Templates(t) => match t.get(n) {
                 Some(t) => self.template_chosen(t.clone()),
