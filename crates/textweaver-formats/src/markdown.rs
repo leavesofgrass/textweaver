@@ -115,12 +115,21 @@ pub fn convert(
     options: &LoadOptions,
     meta: &mut DocumentMeta,
 ) -> (String, Vec<Marker>) {
-    let footnotes = collect_footnotes(source);
+    // Only inline footnotes need every definition before the text that
+    // refers to it, so only they parse the source twice. Deferred notes are
+    // gathered from the one pass that builds the text, and skipped notes
+    // need none.
+    let footnotes = if options.footnotes == FootnoteMode::Inline {
+        collect_footnotes(source)
+    } else {
+        Vec::new()
+    };
+    let mut gather = (options.footnotes == FootnoteMode::Deferred).then(FootnoteCollector::default);
     let mut c = Converter {
         b: Builder::new(),
         options,
         meta,
-        footnotes: &footnotes,
+        footnotes,
         stack: Vec::new(),
         lists: Vec::new(),
         cell_index: 0,
@@ -133,58 +142,81 @@ pub fn convert(
         alert: None,
     };
     for event in Parser::new_ext(source, parser_options()) {
+        if let Some(g) = gather.as_mut() {
+            g.event(&event);
+        }
         c.event(event);
+    }
+    if let Some(g) = gather {
+        c.footnotes = g.out;
     }
     c.deferred_footnotes();
     c.b.finish()
 }
 
-/// Footnote definitions as plain text, in source order.
+/// Footnote definitions as plain text, in source order: a pass of its own,
+/// for inline footnotes.
 fn collect_footnotes(source: &str) -> Vec<(String, String)> {
-    let mut out: Vec<(String, String)> = Vec::new();
-    let mut current: Option<(String, String)> = None;
-    let mut depth = 0usize;
+    // A definition starts with `[^`; without one there is nothing to find.
+    if !source.contains("[^") {
+        return Vec::new();
+    }
+    let mut g = FootnoteCollector::default();
     for event in Parser::new_ext(source, parser_options()) {
+        g.event(&event);
+    }
+    g.out
+}
+
+/// Gathers footnote definitions as plain text from a stream of events.
+#[derive(Default)]
+struct FootnoteCollector {
+    out: Vec<(String, String)>,
+    current: Option<(String, String)>,
+    depth: usize,
+}
+
+impl FootnoteCollector {
+    fn event(&mut self, event: &Event<'_>) {
         match event {
             Event::Start(Tag::FootnoteDefinition(label)) => {
-                depth += 1;
-                if depth == 1 {
-                    current = Some((label.to_string(), String::new()));
+                self.depth += 1;
+                if self.depth == 1 {
+                    self.current = Some((label.to_string(), String::new()));
                 }
             }
             Event::End(TagEnd::FootnoteDefinition) => {
-                depth = depth.saturating_sub(1);
-                if depth == 0
-                    && let Some((label, text)) = current.take()
+                self.depth = self.depth.saturating_sub(1);
+                if self.depth == 0
+                    && let Some((label, text)) = self.current.take()
                 {
                     let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
-                    out.push((label, text));
+                    self.out.push((label, text));
                 }
             }
             Event::Text(t) | Event::Code(t) => {
-                if let Some((_, text)) = current.as_mut() {
-                    text.push_str(&t);
+                if let Some((_, text)) = self.current.as_mut() {
+                    text.push_str(t);
                 }
             }
             Event::InlineMath(t) => {
-                if let Some((_, text)) = current.as_mut() {
-                    text.push_str(&delimited_math(&t, false));
+                if let Some((_, text)) = self.current.as_mut() {
+                    text.push_str(&delimited_math(t, false));
                 }
             }
             Event::DisplayMath(t) => {
-                if let Some((_, text)) = current.as_mut() {
-                    text.push_str(&delimited_math(&t, true));
+                if let Some((_, text)) = self.current.as_mut() {
+                    text.push_str(&delimited_math(t, true));
                 }
             }
             Event::SoftBreak | Event::HardBreak | Event::End(TagEnd::Paragraph) => {
-                if let Some((_, text)) = current.as_mut() {
+                if let Some((_, text)) = self.current.as_mut() {
                     text.push(' ');
                 }
             }
             _ => {}
         }
     }
-    out
 }
 
 struct ListState {
@@ -196,7 +228,9 @@ struct Converter<'a> {
     b: Builder,
     options: &'a LoadOptions,
     meta: &'a mut DocumentMeta,
-    footnotes: &'a [(String, String)],
+    /// Footnote definitions: every one from the start for inline notes,
+    /// gathered by the end of the pass for deferred ones.
+    footnotes: Vec<(String, String)>,
     /// Open markers, one per open tag that has one (None for tags without).
     stack: Vec<Option<OpenId>>,
     lists: Vec<ListState>,
@@ -744,7 +778,7 @@ impl Converter<'_> {
         if self.options.footnotes != FootnoteMode::Deferred || self.footnotes.is_empty() {
             return;
         }
-        self.b.footnotes_section(self.footnotes);
+        self.b.footnotes_section(&self.footnotes);
     }
 }
 
