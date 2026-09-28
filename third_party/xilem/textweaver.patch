@@ -654,3 +654,18 @@ index 584f31d..53db137 100644
      }
  
      /// Returns `true` if this layout would be the result for `max_advance`.
+diff --git a/parley/src/bidi.rs b/parley/src/bidi.rs
+index 1229a32..369abd0 100644
+--- a/parley/src/bidi.rs
++++ b/parley/src/bidi.rs
+@@ -889,6 +889,10 @@ impl BracketStack {
+     }
+ }
+ 
++#[allow(
++    deprecated,
++    reason = "textweaver: icu_properties 2.3 deprecated to_icu4c_value; CI builds with -D warnings"
++)]
+ const fn mask(t: BidiClass) -> u32 {
+     1 << (t.to_icu4c_value() as u32)
+ }

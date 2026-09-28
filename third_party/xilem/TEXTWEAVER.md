@@ -18,7 +18,7 @@ It is its own Cargo workspace. The root workspace excludes it (`exclude = ["thir
 1. **AccessKit 0.25.1 and accesskit_winit 0.34.1** (from 0.24 and 0.32.2), and accesskit_consumer 0.39.1 (from 0.35). This brings the Orca-detection fix (`accesskit_unix` 0.22 and later) that Xilem issue #1733 is about, plus text attributes on macOS and the AT-SPI EditableText and Document interfaces.
 2. `masonry_core`: `accesskit::Tree` became `TreeInfo` in AccessKit 0.25.
 3. `masonry_testing`: `accesskit_consumer::Node` became `NodeRef`. `TestHarness::access_node` now uses `node_by_tree_local_id` (AccessKit PR #707) instead of an `unsafe` write into a private `NodeId`, which closes the workaround for AccessKit issue #701.
-4. **Parley 0.11.1**: its optional `accesskit` dependency moved from 0.24.0 to 0.25.1 (`parley/Cargo.toml`, the published manifest; `Cargo.toml.orig` is left as published). No source changes were needed.
+4. **Parley 0.11.1**: its optional `accesskit` dependency moved from 0.24.0 to 0.25.1 (`parley/Cargo.toml`, the published manifest; `Cargo.toml.orig` is left as published). One source change: `bidi.rs` allows the deprecation of `BidiClass::to_icu4c_value` in icu_properties 2.3 (the workspace resolves 2.3; Parley asks for 2.1), because CI builds with `-D warnings`.
 5. Manifests: the removed crates, examples, tests, and benches are gone from the workspace member list and the crate manifests, so the copy builds without them.
 
 These are small enough to send upstream as one pull request: "Update to AccessKit 0.25 and accesskit_winit 0.34". See ADR-0027, "Upstream".
