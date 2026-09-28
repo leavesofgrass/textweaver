@@ -15,7 +15,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 1. **Listen.** A person listens on real hardware before every release. Tests that fake the engine cannot hear a silent one, and tests never play audio. Go through [the listening checklist](#listening-checklist) below, then record it with the machine's date:
 
    ```bash
-   cargo xtask release 0.1.0-alpha.3 --listened
+   cargo xtask release 0.1.0-alpha.4 --listened
    ```
 
    This writes today's date and the version on the "Last listening check" line of this guide, and changes nothing else. Commit it. The release in the next step stops unless that line names the version being released and is at most 14 days old.
@@ -23,23 +23,23 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 2. **Prepare.** Before you start, run the checks CI runs, locally: `scripts/dev-check.sh` on Linux or macOS (`--docker` for the full Linux set), or `scripts\dev-check.ps1` on Windows. They include the link check and the site data check. Then, on `main`, with a clean tree and CI green, try the release without changing anything:
 
    ```bash
-   cargo xtask release 0.1.0-alpha.3 --dry-run
+   cargo xtask release 0.1.0-alpha.4 --dry-run
    ```
 
    It prints the date it will use, the files it will change, and the checks it will run. Then run it for real:
 
    ```bash
-   cargo xtask release 0.1.0-alpha.3
+   cargo xtask release 0.1.0-alpha.4
    ```
 
    This:
 
    - stops unless the tree is clean and on `main`, the listening check is recorded for this version, and the changelog is grouped by area (below);
    - sets `version` in `[workspace.package]` in the root `Cargo.toml` and runs `cargo update -w`;
-   - turns `## [Unreleased]` in `CHANGELOG.md` into `## [0.1.0-alpha.3] - YYYY-MM-DD`, keeps an empty `[Unreleased]` above it, and adds the release link. The date comes from the machine's clock in local time, and the weekday is computed and printed so you can check it. It is never typed in;
+   - turns `## [Unreleased]` in `CHANGELOG.md` into `## [0.1.0-alpha.4] - YYYY-MM-DD`, keeps an empty `[Unreleased]` above it, and adds the release link. The date comes from the machine's clock in local time, and the weekday is computed and printed so you can check it. It is never typed in;
    - updates the version examples in this guide, `docs/install.md`, and the workflows;
    - runs the checks CI runs: fmt, clippy, the tests, `cargo xtask keyboard --check`, and `cargo xtask deps --check` (`--no-checks` skips them, for a rerun after a failure you have fixed);
-   - commits "Release 0.1.0-alpha.3" and makes the annotated tag `v0.1.0-alpha.3`. It pushes nothing.
+   - commits "Release 0.1.0-alpha.4" and makes the annotated tag `v0.1.0-alpha.4`. It pushes nothing.
 
    Before a release, also run `cargo xtask notices` (it needs `cargo install --locked cargo-about`) and commit `THIRD-PARTY-NOTICES.md` if it changed. CI fails when it is out of date.
 
@@ -54,7 +54,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    ```
 
    ```bash
-   git push origin v0.1.0-alpha.3
+   git push origin v0.1.0-alpha.4
    ```
 
    Pushing the tag starts the `Release` workflow:
@@ -67,7 +67,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 5. **Check.** Read the release page. It should have every package and `SHA256SUMS.txt`, with the pre-release flag set. Anyone can check where a package was built:
 
    ```bash
-   gh attestation verify textweaver-0.1.0-alpha.3-windows-x86_64.zip --repo leavesofgrass/textweaver
+   gh attestation verify textweaver-0.1.0-alpha.4-windows-x86_64.zip --repo leavesofgrass/textweaver
    ```
 
 ## Listening checklist
@@ -156,7 +156,7 @@ cargo xtask dist --universal
 Then upload it and refresh the checksums. `tools/release-upload.sh` does both (it needs `gh`, logged in):
 
 ```bash
-tools/release-upload.sh v0.1.0-alpha.3 target/dist/textweaver-0.1.0-alpha.3-windows-x86_64.zip
+tools/release-upload.sh v0.1.0-alpha.4 target/dist/textweaver-0.1.0-alpha.4-windows-x86_64.zip
 ```
 
 If the release does not exist yet, the script creates it. A package uploaded this way has no provenance attestation.

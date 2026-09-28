@@ -4,6 +4,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+## [0.1.0-alpha.4] - 2026-09-28
+
 The fourth alpha. The keys follow NVDA's and JAWS's browse mode; textweaver speaks and shows its words in six languages; RTF and OpenDocument files open without Pandoc; Word comments and tracked changes are read; the Xilem GUI passed the owner's two screen reader sessions and draws the reading aids; and Linux gets AppImages for x86_64 and aarch64 (arm64), the first Linux packages. Changes from Wave 4 come first, by area; the additions since 0.1.0-alpha.3 from the earlier waves follow under Added, Changed, and Fixed.
 
 ### Testing
@@ -278,6 +280,7 @@ The first release with downloadable packages: Windows (x86_64) and macOS (univer
 - `tw`, the command-line tool: `text`, `info`, `search`, `speak`, `voices`, and `backends`.
 - Speech backends: espeak-ng (Linux), Omnivox, and a silent backend.
 
+[0.1.0-alpha.4]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.4
 [0.1.0-alpha.3]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.3
 [0.1.0-alpha.2]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.2
 [0.1.0-alpha.1]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.1

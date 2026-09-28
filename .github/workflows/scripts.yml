@@ -132,10 +132,10 @@ jobs:
         shell: bash
         run: |
           bash scripts/install-linux.sh --dry-run --yes --uninstall
-          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.3 | tee release.txt
-          grep -F 'textweaver-0.1.0-alpha.3-linux-x86_64' release.txt
+          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.4 | tee release.txt
+          grep -F 'textweaver-0.1.0-alpha.4-linux-x86_64' release.txt
           grep -F 'SHA256SUMS.txt' release.txt
-          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.3 --appimage | grep -F 'linux-x86_64.AppImage'
+          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.4 --appimage | grep -F 'linux-x86_64.AppImage'
           bash scripts/install-linux.sh --dry-run --yes --release latest | grep -F 'api.github.com'
           bash scripts/doctor.sh --dry-run
           bash scripts/speech-check.sh --dry-run
@@ -151,7 +151,7 @@ jobs:
         run: |
           /bin/bash --version | head -n 1
           /bin/bash scripts/install-macos.sh --dry-run --yes
-          /bin/bash scripts/install-macos.sh --dry-run --yes --release v0.1.0-alpha.3
+          /bin/bash scripts/install-macos.sh --dry-run --yes --release v0.1.0-alpha.4
           /bin/bash scripts/install-macos.sh --dry-run --yes --from-source
           /bin/bash scripts/install-macos.sh --dry-run --yes --uninstall
           /bin/bash scripts/doctor.sh

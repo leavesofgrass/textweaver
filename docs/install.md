@@ -2,7 +2,7 @@
 
 In a hurry? The [quick start](quickstart.md) is the short version.
 
-textweaver is in alpha. The newest release is 0.1.0-alpha.3. A release on GitHub has these packages:
+textweaver is in alpha. The newest release is 0.1.0-alpha.4. A release on GitHub has these packages:
 
 - `textweaver-VERSION-windows-x86_64.zip`
 - `textweaver-VERSION-macos-universal.tar.gz`, for Apple silicon and Intel Macs
@@ -10,7 +10,7 @@ textweaver is in alpha. The newest release is 0.1.0-alpha.3. A release on GitHub
 - `textweaver-VERSION-linux-x86_64.tar.gz`, the same programs as a plain folder, for Linux systems where AppImages cannot run
 - `textweaver-VERSION-linux-aarch64.AppImage` and `textweaver-VERSION-linux-aarch64.tar.gz`, the same for 64-bit ARM (arm64) computers
 
-The Linux packages start with the next release. 0.1.0-alpha.3 has the Windows and macOS packages only; on Linux, build it from source with the install script (see [Install with a script](#install-with-a-script)).
+The Linux packages start with the next release. 0.1.0-alpha.4 has the Windows and macOS packages only; on Linux, build it from source with the install script (see [Install with a script](#install-with-a-script)).
 
 Every package contains two programs:
 
@@ -35,7 +35,7 @@ On macOS, this downloads the newest release, checks it, and installs `textweaver
 bash scripts/install-macos.sh
 ```
 
-On Linux, this builds textweaver from source: it installs the build dependencies with apt, dnf, pacman, zypper, or apk, builds textweaver, and installs it in `~/.local`. This is the way to install 0.1.0-alpha.3, which has no Linux package:
+On Linux, this builds textweaver from source: it installs the build dependencies with apt, dnf, pacman, zypper, or apk, builds textweaver, and installs it in `~/.local`. This is the way to install 0.1.0-alpha.4, which has no Linux package:
 
 ```bash
 bash scripts/install-linux.sh
@@ -122,7 +122,7 @@ The macOS build is not notarized by Apple yet, because notarization needs a paid
 2. Remove the quarantine flag that the browser added. Replace the folder name with the one you extracted:
 
    ```bash
-   xattr -dr com.apple.quarantine textweaver-0.1.0-alpha.3-macos-universal
+   xattr -dr com.apple.quarantine textweaver-0.1.0-alpha.4-macos-universal
    ```
 
    If you skip this, macOS says the program "cannot be opened because Apple cannot check it for malicious software". In that case open System Settings, go to Privacy & Security, and choose "Open Anyway" next to the message about `tw` or `textweaver`. Then run the program again.
@@ -139,7 +139,7 @@ tw voices
 
 The Linux package is an AppImage: one file that holds `textweaver`, `tw`, the engine hosts for Eloquence (Voxin) and DECtalk, the pronunciation dictionaries, the guides, and the licences. It is built on Ubuntu 22.04, so it runs on distributions from 2022 on, including Debian 12 and 13, Ubuntu 22.04 and later, Fedora, Arch, and openSUSE. There is one for x86_64 computers and one for 64-bit ARM (aarch64) computers; the install script picks the one for your computer. In the steps below, write `aarch64` where they say `x86_64` if `uname -m` says `aarch64`.
 
-The first release with the AppImage is the one after 0.1.0-alpha.3. Until it is out, build from source with `bash scripts/install-linux.sh`, as described at the end of this section.
+The first release with the AppImage is the one after 0.1.0-alpha.4. Until it is out, build from source with `bash scripts/install-linux.sh`, as described at the end of this section.
 
 The easiest way is the install script, which checks the download for you (see [Install with a script](#install-with-a-script)):
 
@@ -197,13 +197,13 @@ To build from source instead, run the install script without `--release`; it wor
 Each release has a `SHA256SUMS.txt` file. To check a download on Windows:
 
 ```powershell
-certutil -hashfile textweaver-0.1.0-alpha.3-windows-x86_64.zip SHA256
+certutil -hashfile textweaver-0.1.0-alpha.4-windows-x86_64.zip SHA256
 ```
 
 On macOS:
 
 ```bash
-shasum -a 256 textweaver-0.1.0-alpha.3-macos-universal.tar.gz
+shasum -a 256 textweaver-0.1.0-alpha.4-macos-universal.tar.gz
 ```
 
 On Linux:
