@@ -437,6 +437,8 @@ actions! {
     // File
     Open = "open", File, "Open a document",
         gui ["g:Ctrl+O"], term ["g:Ctrl+O"], shared [];
+    OpenPath = "open_path", File, "Open a document by typing its path",
+        gui ["g:Ctrl+Shift+G"], term [], shared [];
     OpenLibrary = "open_library", File, "Open the library: documents in your library folders and recent files",
         gui ["g:Ctrl+Shift+B"], term ["g:Alt+L"], shared [];
     NewDocument = "new_document", File, "Start a new document in edit mode",
@@ -656,6 +658,14 @@ impl ActionId {
     pub fn is_palette_command(self) -> bool {
         let d = self.defaults();
         d.gui.is_empty() && d.terminal.is_empty() && d.shared.is_empty()
+    }
+
+    /// True for commands only the window has: its text size and font, and
+    /// Open by typed path (the terminal's Open is a typed path already).
+    /// They have GUI keys and no terminal keys; the terminal's palette still
+    /// lists them, and says where they work.
+    pub fn is_window_only(self) -> bool {
+        matches!(self, ActionId::OpenPath)
     }
 
     /// The command palette name: the id with spaces, e.g. `next sentence`.

@@ -38,6 +38,7 @@ masonry_testing = { workspace = true, optional = true }
 unicode-segmentation.workspace = true
 serde_json.workspace = true
 clap.workspace = true
+rfd.workspace = true
 
 # `--announce uia` (W4s): UI Automation Notification events raised directly.
 # The same `windows` crate and features AccessKit's Windows adapter already

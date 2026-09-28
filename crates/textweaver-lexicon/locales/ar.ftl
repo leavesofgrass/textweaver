@@ -719,6 +719,7 @@ action-delete-note = حذف الملاحظة أو التمييز عند المؤ
 action-highlight-selection = تمييز التحديد، أو الجملة عند المؤشر
 action-export-study-sheet = تصدير الملاحظات والتمييزات كورقة دراسة بصيغة ماركداون، مجمّعة حسب العنوان
 action-open = فتح مستند
+action-open-path = فتح مستند بكتابة مساره
 action-open-library = فتح المكتبة: مستندات مجلدات مكتبتك والملفات الأخيرة
 action-new-document = بدء مستند جديد في وضع التحرير
 action-save = حفظ (ماركداون والنص في مكانه؛ الصيغ الأخرى كماركداون)
@@ -2772,3 +2773,10 @@ goto-word-start = start
 goto-word-end = end
 
 language-voices-loading = لا تزال قائمة الأصوات قيد التحميل، لذا يستمر الصوت الحالي في التحدث.
+
+## The window (GUI)
+
+gui-open-title = فتح مستند
+gui-open-documents = المستندات التي يقرؤها textweaver
+gui-open-all-files = كل الملفات
+gui-open-no-dialog = لم يُفتح منتقي الملفات في النظام. اكتب مسار المستند بدلًا من ذلك.

@@ -308,6 +308,13 @@ icu_segmenter = { version = "2.3", default-features = false, features = ["compil
 # keep the logical order.
 unicode-bidi = "0.3.18"
 
+# Wave 4, Agent W4a3: the system's own file chooser for Open in the GUI
+# (ADR-0033): the common item dialog (IFileOpenDialog) on Windows, the open
+# panel on macOS, and on Linux the XDG desktop portal over D-Bus, loaded at
+# run time. No GTK, and not its Wayland feature (it links libwayland-client
+# at build time for the parent window's handle). MIT.
+rfd = { version = "0.17.2", default-features = false, features = ["xdg-portal"] }
+
 # tests
 proptest = "1.11"
 insta = { version = "1.48", features = ["json", "yaml"] }

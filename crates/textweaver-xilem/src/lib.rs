@@ -11,6 +11,7 @@
 //! - [`rsvp`]: the RSVP panel, one word at a time under the document.
 //! - [`widgets`]: the root, panels, buttons, and the live-region announcer.
 //! - [`dialog`]: in-window dialogs: prompts and lists.
+//! - [`file_chooser`]: Open with the system's own file chooser.
 //! - [`settings_dialog`]: the settings dialog, built from the app's schema.
 //! - [`runs`]: the document as AccessKit text runs, with stable ids.
 //! - [`window`]: the part of a large document the view holds.
@@ -29,6 +30,7 @@ pub mod caret;
 pub mod console;
 pub mod dialog;
 pub mod document;
+pub mod file_chooser;
 pub mod font_chooser;
 pub mod fonts;
 pub mod gui;

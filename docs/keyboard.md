@@ -261,6 +261,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Action | Terminal | GUI | Id |
 |---|---|---|---|
 | Open a document | `Ctrl+O` | `Ctrl+O` | `open` |
+| Open a document by typing its path | none | `Ctrl+Shift+G` | `open_path` |
 | Open the library: documents in your library folders and recent files | `Alt+L` | `Ctrl+Shift+B` | `open_library` |
 | Start a new document in edit mode | `Ctrl+N` | `Ctrl+N` | `new_document` |
 | Save (Markdown and text in place; other formats as Markdown) | `Ctrl+S` | `Ctrl+S` | `save` |
@@ -444,6 +445,7 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | Move to the previous bookmark | palette | palette | `previous_bookmark` |
 | List notes | palette | has a chord | `list_notes` |
 | Highlight the selection, or the sentence at the cursor | palette | palette | `highlight_selection` |
+| Open a document by typing its path | palette | has a chord | `open_path` |
 | List keyboard shortcuts | palette | has a chord | `keyboard_help` |
 
 ## Commands without keys

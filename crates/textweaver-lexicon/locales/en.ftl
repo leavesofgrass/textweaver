@@ -647,6 +647,7 @@ action-delete-note = Delete the note or highlight at the cursor
 action-highlight-selection = Highlight the selection, or the sentence at the cursor
 action-export-study-sheet = Export the notes and highlights as a Markdown study sheet, grouped by heading
 action-open = Open a document
+action-open-path = Open a document by typing its path
 action-open-library = Open the library: documents in your library folders and recent files
 action-new-document = Start a new document in edit mode
 action-save = Save (Markdown and text in place; other formats as Markdown)
@@ -2562,3 +2563,10 @@ goto-word-start = start
 goto-word-end = end
 
 language-voices-loading = The voice list is still loading, so the current voice keeps speaking.
+
+## The window (GUI)
+
+gui-open-title = Open a document
+gui-open-documents = Documents textweaver reads
+gui-open-all-files = All files
+gui-open-no-dialog = The system's file chooser did not open. Type the path of the document instead.

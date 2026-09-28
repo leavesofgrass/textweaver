@@ -45,6 +45,7 @@ use textweaver_app::{
 
 use crate::dialog::{self, ChoiceList, DialogAction, Modal};
 use crate::document::{DocAction, DocAids, DocFont, DocModel, DocState, DocumentView};
+use crate::file_chooser::{self, FileChosen};
 use crate::keys;
 use crate::rsvp::{RsvpShown, RsvpView};
 use crate::settings_dialog::{self, FormAction, FormChange, SettingsForm, SettingsGrid};
@@ -218,6 +219,9 @@ enum OpenDialog {
     FontFamily(Vec<crate::font_chooser::Choice>),
     /// The font chooser's size list, for this family.
     FontSize(String),
+    /// The system's file chooser, open on its own thread; the app's Open
+    /// prompt (labelled with this) waits for its answer.
+    FileChooser(String),
 }
 
 /// The widget tree's toolbar buttons and what they do.
@@ -257,6 +261,11 @@ pub struct Gui {
     window_title: String,
     /// The ticker starts once the window exists (in `on_start`).
     ticker: Option<EventLoopProxy>,
+    /// Posts answers from other threads (the file chooser's).
+    proxy: EventLoopProxy,
+    /// The next Open prompt is the typed one (the Open Path key), not the
+    /// system's file chooser.
+    typed_open: bool,
     closed: bool,
     /// How announcements reach the screen reader.
     announce: AnnounceMode,
@@ -859,8 +868,16 @@ impl Gui {
             self.open_settings(ctx, None);
             return;
         }
+        // Open Path (a key, or chosen in the palette) is the app's Open,
+        // answered by typing.
+        self.typed_open = match &cmd {
+            Command::Action(a) => *a == ActionId::OpenPath,
+            Command::Answer(id) => id == ActionId::OpenPath.id(),
+            _ => false,
+        };
         let effects = self.app.dispatch(cmd);
         self.run_effects(ctx, effects);
+        self.typed_open = false;
         self.refresh(ctx);
     }
 
@@ -877,6 +894,12 @@ impl Gui {
                     label,
                     purpose: PromptPurpose::CommandPalette,
                 } => self.open_palette(ctx, &label),
+                // Open: the system's file chooser, unless Open Path asked
+                // for the typed prompt.
+                Effect::Prompt {
+                    label,
+                    purpose: PromptPurpose::Open,
+                } if !self.typed_open => self.open_file_chooser(ctx, &label),
                 Effect::Prompt { label, purpose } => self.open_prompt(ctx, &label, purpose),
                 // The open list changed (filtered, a setting changed): show
                 // it in place, keeping focus in the dialog.
@@ -910,6 +933,73 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("dialog: prompt {label_text:?}"));
         }
+    }
+
+    /// Open: the system's file chooser, on its own thread and modal to the
+    /// window. Its answer comes back as a [`FileChosen`] action; until
+    /// then the app's Open prompt waits, labelled `label_text`.
+    fn open_file_chooser(&mut self, ctx: &mut DriverCtx<'_>, label_text: &str) {
+        let c = self.app.catalog();
+        let registry = textweaver_app::formats::Registry::with_builtins();
+        let filters = file_chooser::filters(
+            &registry.extensions(),
+            &c.tr("gui-open-documents"),
+            &c.tr("gui-open-all-files"),
+        );
+        let folder = file_chooser::start_folder(self.app.session().map(|s| s.key.0.as_str()));
+        let chooser = file_chooser::Chooser::new(
+            ctx.window(self.window_id).handle(),
+            &c.tr("gui-open-title"),
+            &filters,
+            folder.as_deref(),
+        );
+        let proxy = self.proxy.clone();
+        let window_id = self.window_id;
+        chooser.show(move |chosen| {
+            let _ = proxy.send_event(MasonryUserEvent::AsyncAction(window_id, Box::new(chosen)));
+        });
+        self.dialog = Some(OpenDialog::FileChooser(label_text.to_owned()));
+        if self.log {
+            crate::log::line("dialog: system file chooser");
+        }
+    }
+
+    /// The file chooser's answer: the file opens through the app's Open
+    /// prompt (so it joins the prompt's history), a cancel cancels it, and
+    /// a chooser that never appeared gives way to the typed prompt. The
+    /// focus goes back to the document either way.
+    fn file_chosen(&mut self, ctx: &mut DriverCtx<'_>, chosen: &FileChosen) {
+        let Some(OpenDialog::FileChooser(label_text)) = self.dialog.take() else {
+            return;
+        };
+        let outcome = file_chooser::outcome(chosen.path.clone(), chosen.elapsed);
+        if self.log {
+            crate::log::line(&format!(
+                "file chooser: {outcome:?} after {} ms",
+                chosen.elapsed.as_millis()
+            ));
+        }
+        self.close_dialog(ctx);
+        let key = match outcome {
+            file_chooser::Outcome::Chosen(path) => {
+                let text = path.to_string_lossy().into_owned();
+                let _ = self
+                    .app
+                    .dispatch(Command::PromptKey(PromptKey::SetText(text)));
+                PromptKey::Enter
+            }
+            file_chooser::Outcome::Cancelled => PromptKey::Escape,
+            file_chooser::Outcome::Failed => {
+                let said = self.app.catalog().tr("gui-open-no-dialog");
+                self.app.announce(&said, Priority::Assertive);
+                self.open_prompt(ctx, &label_text, PromptPurpose::Open);
+                self.refresh(ctx);
+                return;
+            }
+        };
+        let effects = self.app.dispatch(Command::PromptKey(key));
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
     }
 
     /// Shows a one-field prompt labelled `label_text`, starting with
@@ -1685,7 +1775,14 @@ impl AppDriver for Gui {
         ctx: &mut DriverCtx<'_>,
         action: ErasedAction,
     ) {
-        if action.downcast_ref::<Tick>().is_none() || self.closed {
+        if self.closed {
+            return;
+        }
+        if let Some(chosen) = action.downcast_ref::<FileChosen>() {
+            self.file_chosen(ctx, chosen);
+            return;
+        }
+        if action.downcast_ref::<Tick>().is_none() {
             return;
         }
         self.wake_pending.store(false, Ordering::Release);
@@ -1836,7 +1933,9 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         tick_ms: Arc::new(AtomicU64::new(
             u64::try_from(FIRST_TICK.as_millis()).unwrap_or(250),
         )),
-        ticker: Some(proxy),
+        ticker: Some(proxy.clone()),
+        proxy,
+        typed_open: false,
         fixed_theme: opts.theme.is_some(),
         settings_list: experiments.settings_list,
         announce,

@@ -678,6 +678,7 @@ action-delete-note = Die Notiz oder Hervorhebung am Cursor löschen
 action-highlight-selection = Die Auswahl oder den Satz am Cursor hervorheben
 action-export-study-sheet = Die Notizen und Hervorhebungen als Markdown-Lernblatt exportieren, gruppiert nach Überschrift
 action-open = Ein Dokument öffnen
+action-open-path = Ein Dokument öffnen, indem Sie seinen Pfad eingeben
 action-open-library = Die Bibliothek öffnen: Dokumente in Ihren Bibliotheksordnern und zuletzt verwendete Dateien
 action-new-document = Ein neues Dokument im Bearbeitungsmodus beginnen
 action-save = Speichern (Markdown und Text an Ort und Stelle; andere Formate als Markdown)
@@ -2586,3 +2587,10 @@ goto-word-start = start
 goto-word-end = end
 
 language-voices-loading = Die Stimmenliste wird noch geladen, daher spricht die aktuelle Stimme weiter.
+
+## The window (GUI)
+
+gui-open-title = Ein Dokument öffnen
+gui-open-documents = Dokumente, die textweaver liest
+gui-open-all-files = Alle Dateien
+gui-open-no-dialog = Die Dateiauswahl des Systems hat sich nicht geöffnet. Geben Sie stattdessen den Pfad des Dokuments ein.

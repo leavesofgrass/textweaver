@@ -1658,7 +1658,7 @@ impl App {
             A::NextBookmark => self.bookmark_step(textweaver_core::Direction::Forward),
             A::PreviousBookmark => self.bookmark_step(textweaver_core::Direction::Backward),
             // File
-            A::Open => return self.prompt(PromptPurpose::Open),
+            A::Open | A::OpenPath => return self.prompt(PromptPurpose::Open),
             A::OpenLibrary => return self.open_library(),
             A::ExportSettings => return self.settings_file_prompt(false),
             A::ImportSettings => return self.settings_file_prompt(true),

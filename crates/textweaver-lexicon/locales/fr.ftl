@@ -670,6 +670,7 @@ action-delete-note = Supprimer la note ou le surlignage au curseur
 action-highlight-selection = Surligner la sélection, ou la phrase au curseur
 action-export-study-sheet = Exporter les notes et surlignages en fiche d'étude Markdown, groupés par titre
 action-open = Ouvrir un document
+action-open-path = Ouvrir un document en tapant son chemin
 action-open-library = Ouvrir la bibliothèque : documents dans vos dossiers de bibliothèque et fichiers récents
 action-new-document = Commencer un nouveau document en mode édition
 action-save = Enregistrer (Markdown et texte sur place ; autres formats en Markdown)
@@ -2578,3 +2579,10 @@ goto-word-start = start
 goto-word-end = end
 
 language-voices-loading = La liste des voix se charge encore, donc la voix actuelle continue de parler.
+
+## The window (GUI)
+
+gui-open-title = Ouvrir un document
+gui-open-documents = Documents que textweaver lit
+gui-open-all-files = Tous les fichiers
+gui-open-no-dialog = Le sélecteur de fichiers du système ne s'est pas ouvert. Tapez plutôt le chemin du document.
