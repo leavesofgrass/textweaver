@@ -854,6 +854,11 @@ Wave 4 starts only after this pass is done. It has four steps.
 3. **Font and print size.** The owner wants to change the font and the size of the text on screen, from the keyboard.
 4. **Every control needs a keyboard shortcut.** The owner likes the simple controls; each one gets a shortcut from the keymap, shown and spoken with its name (for example "Open, Control O").
 
+**Pace after Wave 4 (the owner, Monday, September 28, 2026): use multiple agents to get as much of the roadmap done as possible.**
+- The documentation sweep runs as several agents at once, each owning its own files (README and quick start, user guides, developer guides, the GitHub Pages site, then a reviewer).
+- Waves 5 and 6: agents that don't build (research, docs, planning) run alongside the building ones; sub-waves overlap where their files don't conflict; the next sub-wave's briefs are written while the current one runs. Memory still caps building agents at about three at once, and the disk and memory floors still hold.
+- The owner's sessions gate only the work that depends on their findings.
+
 **Follow-ups found in Wave 4, for Wave 5:**
 - The fuzz crate still compiles the ocrs engine through the formats crate's `ocr` feature (45 minutes under the sanitizer). The fix: the formats crate takes `textweaver-ocr` with `default-features = false`, its `ocr` feature adds `textweaver-ocr/ocrs`, and a new feature gives the image and PDF loaders without the engine, for fuzzing (W5m).
 - `[editing] author` is read from the extra keys and documented, but is not in the store, the schema, or the settings reference.
