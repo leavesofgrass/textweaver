@@ -80,13 +80,16 @@ textweaver is built by an orchestrator and parallel agents, each in its own git 
 The workflows in `.github/workflows/`:
 
 - `ci.yml`: formatting; the docs job (links and site data); and clippy, tests, and rustdoc on Ubuntu (all features), macOS, and Windows (Omnivox), with the Apple voice tests on macOS and the 32-bit hosts on Windows.
-- `gui.yml`: the GUI spike on Windows and macOS, with a UI Automation report.
+- `gui-xilem.yml`: the Xilem GUI on Windows, macOS, and Linux: build, clippy, tests, and the accessibility checks (the UI Automation report on Windows, an AT-SPI check on Linux, a silent smoke run on macOS, and on all three the accessibility tree compared with main's; see [ADR-0039](docs/adr/0039-automated-screen-reader-checks.md)).
+- `a11y-tests.yml`: screen-reader sessions on CI runners, by hand: NVDA through Guidepup on Windows, an AT-SPI session with Orca under Xvfb, and VoiceOver on macOS (see [Testing](docs/dev/testing.md#automated-screen-reader-checks)).
 - `scripts.yml`: lints and dry runs of the scripts in `scripts/`.
 - `apple.yml`: extra macOS voice measurements.
 - `ci.yml` also has the real-engine jobs, marked "Real engine" in their names: espeak-ng on Linux and Microsoft's SAPI5 voices on Windows, silent (WAV files and a silent output).
 - `bench.yml`: the benchmark gate on pull requests and main (see [benchmarks](docs/dev/testing.md#benchmarks)).
-- `nightly.yml`: every night, the fuzz targets for 10 minutes each (`fuzz/README.md`), Miri on core, text, and the engine-host protocol, AddressSanitizer on the FFI crates, the tests in release mode, an MSRV check with Rust 1.92, the Docker image and its tests, and the soak test; on Mondays, `cargo hack --each-feature` on the speech, formats, and writers crates. Nightly Rust is used only for fuzzing, Miri, and the sanitizer.
-- `release.yml`: the release job, started by pushing a tag. It builds the Windows, macOS, and Linux packages (the AppImage in `docker/appimage`).
+- `second-tool.yml`: checks the writers' EPUB and PDF output with epubcheck and veraPDF.
+- `pages.yml`: builds the documentation site with Zensical and deploys it to GitHub Pages (see [Documentation site](docs/dev/building.md#documentation-site)).
+- `nightly.yml`: every night, the fuzz targets for 10 minutes each (`fuzz/README.md`), Miri on core, text, and the engine-host protocol, AddressSanitizer on the FFI crates, the tests in release mode, an MSRV check with Rust 1.94, the Docker image and its tests, and the soak test; on Mondays, `cargo hack --each-feature` on the speech, formats, and writers crates. Nightly Rust is used only for fuzzing, Miri, and the sanitizer.
+- `release.yml`: the release job, started by pushing a tag. It builds the Windows, macOS, and Linux packages (the AppImage in `docker/appimage`), the terminal reader's and the GUI's.
 
 ## See also
 

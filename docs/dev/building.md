@@ -4,7 +4,7 @@ How to set up a machine to build textweaver: Rust, Python, and what each system 
 
 ## Everyone
 
-1. Install Rust with [rustup](https://rustup.rs). You do not need to pick a version: `rust-toolchain.toml` pins Rust 1.96, and rustup installs it the first time you build. The minimum supported version is 1.92 (`rust-version` in `Cargo.toml`).
+1. Install Rust with [rustup](https://rustup.rs). You do not need to pick a version: `rust-toolchain.toml` pins Rust 1.96, and rustup installs it the first time you build. The minimum supported version is 1.94 (`rust-version` in `Cargo.toml`); the GUI needs 1.96.
 2. Install Python 3. The link checker and the site data generator need it; they use only the standard library. On Windows, install it from python.org with the `py` launcher, and run the tools with `py -3`, for example `py -3 tools/check_links.py`: `python` there may be the Microsoft Store stub, which opens the Store instead of running Python.
 3. Get the code:
 
@@ -93,6 +93,38 @@ The `scripts/` folder has installers and helpers for every system. Each script h
 - `fixtures/`: sample documents for tests, and Star's reference output for them.
 - `third_party/`: pronunciation dictionaries, fonts, and word lists, each with its licence. See [third-party data](third-party-data.md).
 - `docker/`, `compose.yaml`, `compose.voxin.yaml`: the Linux development container.
+
+## Documentation site
+
+`docs/` builds into the site at <https://leavesofgrass.github.io/textweaver/>, with [Zensical](https://zensical.dev), pinned at 0.0.66. Install it into a virtual environment, never into the system Python, and keep the environment and pip's cache on `D:`:
+
+```powershell
+py -3 -m venv D:\textweaver\.claude\tmp\zensical-venv
+$env:PIP_CACHE_DIR = "D:\textweaver\.claude\tmp\pip-cache"
+D:\textweaver\.claude\tmp\zensical-venv\Scripts\pip install --require-hashes -r tools\site-requirements.txt
+```
+
+On Linux or macOS:
+
+```bash
+python3 -m venv .venv-site
+.venv-site/bin/pip install --require-hashes -r tools/site-requirements.txt
+```
+
+Build with `tools/build_site.py`, which finds Zensical through the `ZENSICAL` environment variable when it is not on `PATH`:
+
+```powershell
+$env:ZENSICAL = "D:\textweaver\.claude\tmp\zensical-venv\Scripts\zensical.exe"
+py -3 tools/build_site.py
+```
+
+```bash
+python3 tools/build_site.py
+```
+
+The script runs Zensical against `zensical.toml`, places the interactive pages from `docs/site/` beside the built guides, and checks every built page with `tools/check_site_a11y.py`. It must report 0 pages with problems.
+
+**Every new doc must be added to `zensical.toml`'s navigation**, which mirrors `docs/README.md`'s groupings; the build stops if a Markdown file under `docs/` is missing from it. `.github/workflows/pages.yml` runs the same build on push to `main` when `docs/` or `zensical.toml` changes, and deploys it with `actions/deploy-pages`.
 
 ## See also
 
