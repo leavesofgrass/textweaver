@@ -1,0 +1,234 @@
+# The textweaver documentation site, built with Zensical from docs/.
+#
+# Build it with:  py -3 tools/build_site.py      (Windows)
+#                 python3 tools/build_site.py    (Linux, macOS)
+# The script runs Zensical, places the interactive pages, and checks the
+# result for accessibility. The Zensical version is pinned in
+# tools/site-requirements.txt. See docs/dev/building.md for more.
+#
+# The navigation below mirrors docs/README.md: users, contributors, and
+# decisions, then the interactive pages. When a guide or an ADR is added to
+# docs/README.md, add it here too.
+
+[project]
+site_name = "textweaver"
+site_description = "textweaver, an accessible document reader and writer, in Rust."
+site_url = "https://leavesofgrass.github.io/textweaver/"
+repo_url = "https://github.com/leavesofgrass/textweaver"
+repo_name = "leavesofgrass/textweaver"
+edit_uri = "blob/main/docs/"
+docs_dir = "docs"
+site_dir = "target/docs-site"
+copyright = "textweaver is free software. The documentation is part of the textweaver repository."
+
+# Styles that fix accessibility details of the theme: focus outlines,
+# underlined links, and text labels that do not depend on color.
+extra_css = ["assets/textweaver-site.css"]
+# Names, states, and announcements the theme leaves out: button roles and
+# expanded states in the navigation, aria-current, one navigation landmark,
+# and a labeled search box that announces its result count.
+extra_javascript = ["assets/textweaver-site.js"]
+
+nav = [
+  { "Home" = "README.md" },
+  { "For users" = [
+    { "Getting started" = [
+      { "Quick start" = "quickstart.md" },
+      { "Installing textweaver" = "install.md" },
+      { "Using textweaver with a screen reader" = "screen-readers.md" },
+      { "Troubleshooting" = "troubleshooting.md" },
+    ] },
+    { "Reading" = [
+      { "Reading and moving around" = "reading.md" },
+      { "Keyboard reference" = "keyboard.md" },
+      { "The textweaver window (GUI)" = "gui.md" },
+      { "Bookmarks, notes, and highlights" = "notes.md" },
+      { "Reading aids" = "reading-aids.md" },
+      { "Themes" = "themes.md" },
+      { "Math" = "math.md" },
+    ] },
+    { "Writing" = [
+      { "Writing and editing" = "editing.md" },
+      { "Citations" = "citations.md" },
+      { "Dictation" = "dictation.md" },
+    ] },
+    { "Speech" = [
+      { "Speech engines and voices" = "speech.md" },
+      { "Getting ETI-Eloquence" = "eloquence.md" },
+      { "Using DECtalk" = "dectalk.md" },
+      { "Audio export" = "audio-export.md" },
+    ] },
+    { "Files, the library, and settings" = [
+      { "Converting documents" = "converting.md" },
+      { "The library" = "library.md" },
+      { "The Obsidian vault" = "vault.md" },
+      { "Settings" = "settings.md" },
+      { "Settings reference" = "settings-reference.md" },
+      { "Scripts (on GitHub)" = "https://github.com/leavesofgrass/textweaver/tree/main/scripts" },
+    ] },
+  ] },
+  { "For contributors" = [
+    { "Building and working on textweaver" = [
+      { "Contributing (on GitHub)" = "https://github.com/leavesofgrass/textweaver/blob/main/CONTRIBUTING.md" },
+      { "Building" = "dev/building.md" },
+      { "Testing" = "dev/testing.md" },
+      { "Architecture" = "dev/architecture.md" },
+      { "Docker development container" = "dev/docker.md" },
+      { "Fuzzing (on GitHub)" = "https://github.com/leavesofgrass/textweaver/tree/main/fuzz" },
+      { "Releasing" = "dev/releasing.md" },
+      { "JSON-RPC" = "json-rpc.md" },
+      { "Roadmap" = "roadmap.md" },
+      { "Star features not yet planned" = "star-gaps.md" },
+      { "Changelog (on GitHub)" = "https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md" },
+    ] },
+    { "History" = [
+      { "Tasks and ownership" = "history/tasks.md" },
+      { "Reservations for the Cloud Agent" = "history/reservations.md" },
+      { "Implementation plan" = "history/plan.md" },
+      { "Audit, September 2026" = "history/audit-2026-09.md" },
+      { "Star parity reference" = "history/star-parity.md" },
+      { "Star parity report" = "history/parity-report.md" },
+    ] },
+    { "Research" = [
+      { "A Xilem GUI for textweaver" = "research/xilem-gui.md" },
+      { "Pure-Rust choices for Wave 3" = "research/pure-rust-wave3.md" },
+      { "Research for Wave 4" = "research/wave4.md" },
+      { "Usability pass: the terminal reader and tw" = "research/usability-terminal.md" },
+      { "Wave 4 plan review" = "research/wave4-plan-review.md" },
+      { "Wave 4 orchestration plan" = "research/wave4-orchestration.md" },
+      { "Wave 5 plan" = "research/wave5-plan.md" },
+      { "What is left" = "research/whats-left.md" },
+      { "The 2026 roadmap" = "research/roadmap-2026.md" },
+      { "Cloud Agent plan" = "research/cloud-agent-plan.md" },
+      { "Documentation sweep plan" = "research/docs-sweep-plan.md" },
+    ] },
+  ] },
+  { "Decisions" = [
+    { "The ADR index" = "adr/README.md" },
+    { "ADR-0001: Workspace layout and dependency policy" = "adr/0001-workspace-and-dependencies.md" },
+    { "ADR-0002: Text model" = "adr/0002-text-model.md" },
+    { "ADR-0003: Speech threading and event timing" = "adr/0003-speech-threading-and-event-timing.md" },
+    { "ADR-0004: Rate, pitch, and volume" = "adr/0004-rate-pitch-volume.md" },
+    { "ADR-0005: Narration and the OffsetMap" = "adr/0005-narration-and-offset-map.md" },
+    { "ADR-0006: Keymap, actions, and announcements" = "adr/0006-keymap-and-actions.md" },
+    { "ADR-0007: ETI-Eloquence through an ECI host process" = "adr/0007-eloquence-via-eci-host.md" },
+    { "ADR-0008: Apple speech on macOS" = "adr/0008-apple-speech.md" },
+    { "ADR-0009: SAPI5 voices on Windows" = "adr/0009-sapi5-voices.md" },
+    { "ADR-0010: PDF loader" = "adr/0010-pdf-loader.md" },
+    { "ADR-0011: Audio export" = "adr/0011-audio-export.md" },
+    { "ADR-0012: One engine-host protocol and playback client" = "adr/0012-engine-host.md" },
+    { "ADR-0013: Dictation through a Whisper program" = "adr/0013-dictation.md" },
+    { "ADR-0014: GUI toolkit (wxDragon)" = "adr/0014-gui-toolkit.md" },
+    { "ADR-0015: JSON-RPC server" = "adr/0015-json-rpc.md" },
+    { "ADR-0016: Rendering and bulk conversion" = "adr/0016-rendering-and-conversion.md" },
+    { "ADR-0017: Native writers" = "adr/0017-writers.md" },
+    { "ADR-0018: Math" = "adr/0018-math.md" },
+    { "ADR-0019: Citations" = "adr/0019-citations.md" },
+    { "ADR-0020: Themes" = "adr/0020-themes.md" },
+    { "ADR-0021: DECtalk through a host process" = "adr/0021-dectalk.md" },
+    { "ADR-0022: Reading aids" = "adr/0022-reading-aids.md" },
+    { "ADR-0023: Piper voices and Whisper dictation in-process on RTen" = "adr/0023-in-process-neural-speech.md" },
+    { "ADR-0024: App core for the GUI" = "adr/0024-app-core-for-the-gui.md" },
+    { "ADR-0025: Define word offline, and the message catalog" = "adr/0025-lexicon-and-message-catalog.md" },
+    { "ADR-0026: OCR, and formats for students" = "adr/0026-ocr-and-student-formats.md" },
+    { "ADR-0027: Xilem GUI" = "adr/0027-xilem-gui.md" },
+    { "ADR-0028: The Xilem GUI after the owner's session" = "adr/0028-xilem-gui-after-the-session.md" },
+    { "ADR-0029: MathCAT speech" = "adr/0029-mathcat-speech.md" },
+    { "ADR-0030: Interface translations" = "adr/0030-interface-translations.md" },
+    { "ADR-0031: Native RTF, ODT, and Word revisions" = "adr/0031-native-rtf-odt-and-word-revisions.md" },
+    { "ADR-0032: Grammar, lint, highlighting, and clipboard crates" = "adr/0032-grammar-lint-highlighting-clipboard.md" },
+    { "ADR-0033: The GUI after the second session, and edit mode" = "adr/0033-gui-session-2-and-edit-mode.md" },
+  ] },
+  { "Interactive pages" = [
+    { "Overview (interactive)" = "site/index.html" },
+    { "Architecture (interactive)" = "site/architecture.html" },
+    { "Speech pipeline (interactive)" = "site/speech-pipeline.html" },
+    { "Keyboard (interactive)" = "site/keyboard.html" },
+    { "Features (interactive)" = "site/features.html" },
+    { "Reading aids (interactive)" = "site/reading-aids.html" },
+    { "About the interactive pages" = "site/about.html" },
+  ] },
+]
+
+# Zensical checks links in the Markdown sources, before the
+# textweaver_site_links extension below points links outside docs/ at
+# GitHub, so it reports every link to CONTRIBUTING.md, CHANGELOG.md, and
+# scripts/ as broken. tools/check_site_a11y.py --built checks every link and
+# anchor in the built site instead, and tools/check_links.py checks the
+# sources.
+[project.validation]
+invalid_links = false
+invalid_link_anchors = false
+
+[project.theme]
+language = "en"
+# No web fonts: the site uses the reader's own system fonts and makes no
+# request to a font service.
+font = false
+features = [
+  # Copy buttons on code blocks, with a spoken name.
+  "content.code.copy",
+  # Previous and next links at the foot of each page.
+  "navigation.footer",
+  # Every section of the navigation starts open, so nothing is hidden
+  # behind a collapsed group.
+  "navigation.expand",
+  # Section index pages, and the breadcrumb path above each title.
+  "navigation.indexes",
+  "navigation.path",
+  "navigation.sections",
+  # A "Back to top" button.
+  "navigation.top",
+]
+# Left out on purpose, for screen readers and the keyboard:
+# navigation.instant (page changes without a real page load, which some
+# screen readers do not announce), navigation.tracking (rewrites the
+# address while you read), search.highlight and content.tooltips.
+
+# Light and dark follow the system first; the toggle cycles through
+# system, light, and dark. Each toggle has a spoken name.
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Color theme: follow the system. Switch to light"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "indigo"
+accent = "indigo"
+toggle.icon = "lucide/sun"
+toggle.name = "Color theme: light. Switch to dark"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "indigo"
+accent = "indigo"
+toggle.icon = "lucide/moon"
+toggle.name = "Color theme: dark. Switch to follow the system"
+
+[project.markdown_extensions]
+abbr = {}
+admonition = {}
+attr_list = {}
+def_list = {}
+footnotes = {}
+md_in_html = {}
+tables = {}
+# Headings keep their ids, without a pilcrow link after each one: screen
+# readers announce those as a stream of unnamed "link" stops.
+toc.permalink = false
+# Heading ids as GitHub makes them, so links written for GitHub work here.
+toc.slugify.object = "pymdownx.slugs.slugify"
+toc.slugify.kwds.case = "lower"
+pymdownx.betterem = {}
+pymdownx.details = {}
+pymdownx.highlight.pygments_lang_class = true
+pymdownx.inlinehilite = {}
+pymdownx.keys = {}
+pymdownx.superfences = {}
+# Task lists stay real, labeled check boxes, not drawn icons.
+pymdownx.tasklist.custom_checkbox = false
+textweaver_site_links.repo_blob = "https://github.com/leavesofgrass/textweaver/blob/main/"
+textweaver_site_links.repo_tree = "https://github.com/leavesofgrass/textweaver/tree/main/"
