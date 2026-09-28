@@ -1,6 +1,6 @@
 # Fuzzing textweaver
 
-This folder holds [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html) targets for the document loaders, the settings and keyboard files, the saved state, and the engine-host protocol. It is its own Cargo workspace, so the main build, `cargo test`, and CI never build it.
+This folder holds [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html) targets for the document loaders, the settings and keyboard files, the saved state, the engine-host protocol, and the parsers a student's own writing goes through: math, citations, themes, the lexicon, Obsidian vaults, and JSON-RPC requests. It is its own Cargo workspace, so the main build, `cargo test`, and CI never build it.
 
 Each target feeds random input to one part of textweaver. A loader may refuse the input with an error, but it must never panic, and a document it returns must have every marker inside its text, in order. The checks are in `src/lib.rs`.
 
@@ -21,6 +21,15 @@ Each target feeds random input to one part of textweaver. A loader may refuse th
 - `keymap`: `keymap.toml`, the keyboard overrides, applied to every platform's and frontend's defaults; each line is also parsed as a key chord, which must print and parse back to itself.
 - `state`: a document's saved state (position, history, bookmarks), which must write back and read again, and a folder's sidecar (`.textweaver/progress.json`), merged with itself and with nothing under every policy.
 - `frame`: the engine-host frame decoder. The input is read as a stream of frames, as the app reads a host's output, and each frame is decoded as every engine's requests and replies. A message that decodes must encode to one that decodes the same.
+- `latex_math`: the LaTeX math parser. Every node and diagnostic lies inside the source, children in order inside their parent; speech at every verbosity keeps a valid offset map; MathML and navigation do not panic. The text is also read as prose with `$...$` math in it, as speech reads a document.
+- `asciimath`: the ASCIIMath parser, with the same checks as `latex_math`.
+- `bibtex`: the BibTeX and BibLaTeX importer. The references it returns format in APA as entries and citations, and write in every format, without panicking.
+- `ris`: the RIS importer, with the same checks as `bibtex`.
+- `csl_json`: the CSL-JSON importer, with the same checks; written back as CSL-JSON, the references read again, as many as before.
+- `theme`: the theme file reader. A file that reads writes back as TOML that reads again and writes the same text. Resolved, on its own and on a built-in theme, it goes through the contrast check, CSS, and terminal styles without panicking.
+- `lexicon`: the lexicon data file reader. Input that starts with the file's magic bytes is a whole file, read as it is and with its checksum made right. Any other input is a list of patches (a four-byte little-endian offset, a length byte, the bytes) to a small valid lexicon the target builds. A damaged file is refused with an error; a file that opens is looked up, completed, and defined.
+- `vault_import`: the Obsidian vault importer. The bytes are two notes, split at the first NUL. Each is parsed, and its front matter, written back, reads again the same. The two notes are also written to a folder of their own under the system's temporary folder and read as a vault in both import modes.
+- `rpc`: the JSON-RPC server behind `tw serve`. Each line is one message to a server with a small document open in memory, silent speech, and nothing saved. Every reply is a JSON-RPC 2.0 object that encodes and decodes the same, and a request with an id gets exactly one response. Messages naming a method that can open, write, or save a file (`open`, `action`, `answer`, `choose`, `list_key`, `prompt_key`, `set_setting`, `shutdown`, `exit`) are skipped. This target links the app, whose audio output needs the ALSA headers on Linux (`libasound2-dev`), so it builds only with `--features rpc`.
 
 CI runs every target for 10 minutes each night (`.github/workflows/nightly.yml`) and keeps any crash as an artifact named `fuzz-crash-TARGET`. Download it from the run's page and replay it as below.
 
@@ -45,6 +54,12 @@ It runs until it finds a crash or you press Control C. To run for a set time, fo
 cargo +nightly fuzz run docx -- -max_total_time=300
 ```
 
+The `rpc` target needs its feature, and on Linux the ALSA headers:
+
+```bash
+cargo +nightly fuzz run rpc --features rpc
+```
+
 To list the targets:
 
 ```bash
@@ -59,19 +74,19 @@ docker compose -p textweaver run --rm dev bash -c "rustup toolchain install nigh
 
 ## Seed the corpus
 
-The fuzzer finds its way faster when it starts from real files. Copy some fixtures into the target's corpus folder before the first run:
+The fuzzer finds its way faster when it starts from real files. Copy the fixtures that suit each target into its corpus folder before the first run:
 
 ```bash
-mkdir -p fuzz/corpus/markdown fuzz/corpus/html fuzz/corpus/pdf fuzz/corpus/docx fuzz/corpus/epub
-cp fixtures/sample.md fuzz/corpus/markdown/
-cp fixtures/sample.html fuzz/corpus/html/
-cp fixtures/a/*.pdf fuzz/corpus/pdf/
-cp fixtures/a/*.docx fuzz/corpus/docx/
-cp fixtures/a/*.epub fuzz/corpus/epub/
-mkdir -p fuzz/corpus/archive fuzz/corpus/image
-cp fixtures/w3d/course.7z fuzz/corpus/archive/
-cp fixtures/w3d/*.png fuzz/corpus/image/
+cargo xtask fuzz-seed
 ```
+
+Or for one target:
+
+```bash
+cargo xtask fuzz-seed --target bibtex
+```
+
+It only creates folders and copies files into `fuzz/corpus/`. Which fixtures go to which target is listed in `xtask/src/fuzz_seed.rs`; the small seeds for the math and JSON-RPC targets are in `fixtures/cloud/`. The nightly workflow seeds every target this way.
 
 The `corpus`, `artifacts`, and `target` folders are not committed.
 

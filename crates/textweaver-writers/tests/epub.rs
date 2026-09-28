@@ -280,6 +280,10 @@ fn round_trips_through_the_html_loader() {
     let opf = std::str::from_utf8(&files["OEBPS/content.opf"]).unwrap();
     let mut got = Vec::new();
     for part in opf.split("<itemref idref=\"").skip(1) {
+        // The navigation document is in the spine, outside the reading order.
+        if part.split('>').next().unwrap().contains("linear=\"no\"") {
+            continue;
+        }
         let id = part.split('"').next().unwrap();
         let href = opf
             .split(&format!("<item id=\"{id}\" href=\""))
@@ -418,4 +422,21 @@ fn passes_epubcheck_when_available() {
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
     );
+}
+
+/// epubcheck: a landmark link must point into the spine (RSC-011), and the
+/// navigation document's nav takes no naming attribute (RSC-005).
+#[test]
+fn the_navigation_document_passes_epubcheck_rules() {
+    let doc = sample();
+    let files = entries(&epub(&doc, &options()));
+    let opf = std::str::from_utf8(&files["OEBPS/content.opf"]).unwrap();
+    assert!(
+        opf.contains("<itemref idref=\"nav\" linear=\"no\"/>"),
+        "the nav is in the spine, outside the reading order: {opf}"
+    );
+    let nav = std::str::from_utf8(&files["OEBPS/nav.xhtml"]).unwrap();
+    let toc = nav.split("<nav").nth(1).unwrap().split('>').next().unwrap();
+    assert!(!toc.contains("aria-label"), "{toc}");
+    assert!(nav.contains("<h1 id=\"toc-title\">Contents</h1>"), "{nav}");
 }

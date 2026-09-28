@@ -53,6 +53,13 @@ jobs:
       - run: cargo build --locked -p textweaver-xilem
       - run: cargo clippy --locked -p textweaver-xilem --all-targets -- -D warnings
       - run: cargo test --locked -p textweaver-xilem
+      # The runner has no graphics card, so wgpu renders through WARP
+      # (d3d10warp.dll), which crashed on Vello's compute shaders (access
+      # violation 0xC0000005, with DXC or FXC alike). The report runs the
+      # hybrid renderer (CPU strips, simple shaders), as the Linux AT-SPI
+      # check does on Mesa's software GPU.
+      - name: Build with the hybrid renderer for the report
+        run: cargo build --locked -p textweaver-xilem --no-default-features --features screenshot,renderer-hybrid
       - name: UI Automation report
         shell: pwsh
         run: |
@@ -121,7 +128,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends \
-            libasound2-dev libespeak-ng-dev libspeechd-dev \
+            libasound2-dev libespeak-ng-dev libspeechd-dev libfontconfig1-dev \
             xvfb xauth dbus dbus-x11 at-spi2-core python3-pyatspi python3-gi gir1.2-atspi-2.0 \
             mesa-vulkan-drivers libvulkan1 libgl1-mesa-dri libegl1 \
             libxkbcommon-x11-0 libxcursor1 libxrandr2 libxi6 libx11-xcb1

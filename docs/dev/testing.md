@@ -34,6 +34,8 @@ The Python checks are written `python3` below. On Windows, run them with `py -3`
 - **links**: `python3 tools/check_links.py`. Every relative link and anchor in the Markdown docs and in `docs/site` must resolve.
 - **site**: `python3 tools/gen_site_data.py --check`. The data embedded in the `docs/site` pages must match `cargo metadata`, the keymap, and the theme files. Regenerate it with `python3 tools/gen_site_data.py`.
 - **site-a11y**: `python3 tools/check_site_a11y.py`. Static accessibility checks of the `docs/site` pages: language, title, one level-1 heading and no skipped levels, the skip link, landmarks, a label for every control, text alternatives, and references that resolve.
+- **docs** (in CI, not yet in dev-check): `cargo xtask docs --check`. The ADR index and the Decisions list in [docs/README.md](../README.md#decisions) list every ADR once, in number order; the crate counts match `crates/`; every guide ends with a "See also" section and is linked from the index.
+- **settings-doc** (in CI, not yet in dev-check): `cargo xtask settings-doc --check`. [The settings reference](../settings-reference.md) matches the settings schema. After adding or changing a setting, regenerate it with `cargo xtask settings-doc`; never edit it by hand.
 - **hosts32** (Windows only): the 32-bit engine hosts build.
 - **scripts**: shellcheck on the shell scripts, or PSScriptAnalyzer on the PowerShell scripts, when installed.
 

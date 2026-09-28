@@ -8,7 +8,10 @@ use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {
     let (content_type, body) = textweaver_fuzz::web_response(data);
-    for url in ["https://example.org/page", "https://example.org/file.pdf?x=1"] {
+    for url in [
+        "https://example.org/page",
+        "https://example.org/file.pdf?x=1",
+    ] {
         if let Ok(doc) = textweaver_formats::web::read_response(
             url,
             &content_type,

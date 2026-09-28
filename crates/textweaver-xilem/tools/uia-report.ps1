@@ -628,6 +628,11 @@ $foregroundBefore = [TwXUia]::GetForegroundWindow()
 $guiPid = [TwXUia]::LaunchInactive($Exe, $guiArgs, $repo)
 [TwXUia]::ListenFor($guiPid)
 $failures = New-Object System.Collections.Generic.List[string]
+$launchedAt = Get-Date
+# Held from the start, so the exit code can still be read if the GUI ends
+# early; reading Handle now keeps the process handle open.
+$guiProc = Get-Process -Id $guiPid -ErrorAction SilentlyContinue
+if ($guiProc) { $null = $guiProc.Handle }
 
 try {
     $window = [TwXUia]::WaitForWindow($guiPid, 30000)
@@ -888,6 +893,33 @@ try {
     Start-Sleep -Milliseconds 300
     [TwXUia]::StopLivePolling()
     [TwXUia]::Close($frame)
+} catch {
+    # The probe stopped early, most often because the GUI exited. Say why,
+    # then carry on so the GUI log below is still printed.
+    $failures.Add("the probe stopped: $($_.Exception.Message)")
+    Say ""
+    Say "### The probe stopped early"
+    Say ""
+    Say "- Error: $($_.Exception.Message)"
+    if ($guiProc -and $guiProc.HasExited) {
+        $code = $guiProc.ExitCode
+        Say "- The GUI had exited, exit code $code (hexadecimal 0x$('{0:X8}' -f $code)), $([int]((Get-Date) - $launchedAt).TotalMilliseconds) ms or less after launch"
+    } elseif ($guiProc) {
+        Say "- The GUI was still running"
+    } else {
+        Say "- The GUI process was not found just after launch"
+    }
+    $crashes = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $launchedAt } -ErrorAction SilentlyContinue |
+        Where-Object { $_.ProviderName -in @('Application Error', 'Windows Error Reporting', '.NET Runtime') -and $_.Message -match 'textweaver' } |
+        Select-Object -First 3)
+    if ($crashes.Count -gt 0) {
+        Say "- Windows recorded a crash:"
+        Say ""
+        Fence @($crashes | ForEach-Object { ($_.Message -split "`r?`n" | Select-Object -First 12) -join "`n" })
+    } else {
+        Say "- Windows recorded no crash for textweaver in the Application log"
+    }
+    Say ""
 } finally {
     $p = Get-Process -Id $guiPid -ErrorAction SilentlyContinue
     if ($p -and -not $p.WaitForExit(15000)) {

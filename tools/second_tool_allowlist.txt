@@ -1,0 +1,15 @@
+# Known findings of the second-tool checks (.github/workflows/second-tool.yml)
+# that do not fail the job.
+#
+# One finding per line: the tool, the rule, the fixture (or * for every
+# fixture), then the reason, in words, with a link to the issue that tracks
+# it. The tool is tw (for a conversion), epubcheck, or veraPDF. The rule is
+# the epubcheck message id (such as RSC-005), the veraPDF clause and test
+# number (such as 7.1-3), or "convert". The fixture is the file's path under
+# fixtures/ with slashes as hyphens and no extension (such as l-flavors-gfm).
+#
+# Add a line only for a finding that is not a defect, or one that is
+# accepted for now with a tracking issue. Remove it when the cause is gone.
+#
+# Example:
+# epubcheck RSC-011 * The landmarks list links to the navigation document; issue link here.
