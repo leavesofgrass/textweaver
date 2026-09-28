@@ -664,8 +664,21 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             // and recentres on jumps or when the text changed.
             let change = w.follow_session(s, focus);
             if new_doc || change != WindowChange::Unchanged {
+                // A slide keeps the runs that stay (and the screen reader's
+                // place on them); a new document or a jump replaces them.
+                let slide = !new_doc
+                    && matches!(
+                        change,
+                        WindowChange::Forward { .. } | WindowChange::Backward { .. }
+                    );
                 if let Some(model) = model_for(app, w.range()) {
-                    host.edit(DOC, |mut d| DocumentView::set_model(&mut d, model));
+                    host.edit(DOC, |mut d| {
+                        if slide {
+                            DocumentView::slide_model(&mut d, model);
+                        } else {
+                            DocumentView::set_model(&mut d, model);
+                        }
+                    });
                 }
                 let ms = started.elapsed().as_secs_f64() * 1000.0;
                 if log {
@@ -1832,4 +1845,21 @@ fn exit_watchdog(after: Duration) {
 pub fn refresh_for_tests(app: &App, host: &mut impl Host) {
     let mut shown = Shown::default();
     let _ = refresh_host(app, &mut shown, host, false);
+}
+
+/// Keeps a test harness in step with an app across refreshes, as the
+/// window does: the document window slides or recentres, and only what
+/// changed is sent.
+#[derive(Default)]
+pub struct Refresher {
+    shown: Shown,
+}
+
+impl Refresher {
+    /// Brings `host` up to date with `app`. Returns the document window's
+    /// range when the view's text was replaced or slid.
+    pub fn refresh(&mut self, app: &App, host: &mut impl Host) -> Option<CharRange> {
+        refresh_host(app, &mut self.shown, host, false)?;
+        self.shown.window.map(|w| w.range())
+    }
 }

@@ -168,6 +168,9 @@ pub struct DocumentView {
     dirty_paras: Vec<bool>,
     run_ids: HashMap<CharPos, NodeId>,
     ids_to_pos: HashMap<NodeId, CharPos>,
+    /// The window slid: forget the ids of runs no longer shown after the
+    /// next accessibility pass.
+    prune_ids: bool,
     full_passes: Rc<Cell<u64>>,
     seen_full: u64,
     /// Nodes sent in the last pass, when measuring.
@@ -219,6 +222,7 @@ impl DocumentView {
             dirty_paras: Vec::new(),
             run_ids: HashMap::new(),
             ids_to_pos: HashMap::new(),
+            prune_ids: false,
             full_passes,
             seen_full: u64::MAX,
             last_nodes_sent: 0,
@@ -272,15 +276,58 @@ impl DocumentView {
 
     // --- Mutation from the driver.
 
-    /// Replaces the window's text (a new document or a moved window).
+    /// Replaces the window's text: a new document, or a new window around
+    /// a jump. Every text run is a new node.
     pub fn set_model(this: &mut WidgetMut<'_, Self>, model: DocModel) {
+        Self::replace_model(this, model, false);
+    }
+
+    /// The window slid while reading or moving (`WindowChange::Forward` or
+    /// `Backward`): the text that stays keeps its run nodes, so a screen
+    /// reader's place and the caret stay on the same nodes; runs that left
+    /// the window are dropped after the next accessibility pass, and the
+    /// caret (the text selection) is sent again with it.
+    pub fn slide_model(this: &mut WidgetMut<'_, Self>, model: DocModel) {
+        Self::replace_model(this, model, true);
+    }
+
+    fn replace_model(this: &mut WidgetMut<'_, Self>, model: DocModel, keep_ids: bool) {
         let w = &mut *this.widget;
         // Keep the scroll anchor on the same text when the window moves.
         let anchor_pos = w.model.paragraphs.get(w.top.0).map(|p| p.start);
-        w.model = model;
+        let old = std::mem::replace(&mut w.model, model);
+        let mut old_layouts = std::mem::take(&mut w.layouts);
+        let mut old_lines = std::mem::take(&mut w.line_starts);
         w.reset_caches();
-        w.run_ids.clear();
-        w.ids_to_pos.clear();
+        if keep_ids {
+            w.prune_ids = true;
+            // Paragraphs that stay keep their layout and visual lines, so
+            // their runs, split at the same lines, keep their text.
+            let by_start: HashMap<CharPos, usize> = old
+                .paragraphs
+                .iter()
+                .enumerate()
+                .map(|(i, p)| (p.start, i))
+                .collect();
+            for (j, p) in w.model.paragraphs.iter().enumerate().skip(1) {
+                let Some(&i) = by_start.get(&p.start) else {
+                    continue;
+                };
+                let q = &old.paragraphs[i];
+                if q.text != p.text || q.heading != p.heading {
+                    continue;
+                }
+                if let Some(lines) = old_lines.get_mut(i).and_then(Option::take) {
+                    w.line_starts[j] = Some(lines);
+                }
+                if let Some(l) = old_layouts.remove(&i) {
+                    w.layouts.insert(j, l);
+                }
+            }
+        } else {
+            w.run_ids.clear();
+            w.ids_to_pos.clear();
+        }
         w.top = (
             anchor_pos.map_or(0, |pos| caret::paragraph_at(&w.model.paragraphs, pos)),
             0.0,
@@ -1285,6 +1332,13 @@ impl Widget for DocumentView {
             if let Some(k) = self.ids_to_pos.remove(&id) {
                 self.run_ids.remove(&k);
             }
+        }
+        if std::mem::take(&mut self.prune_ids) {
+            // After a slide: runs that left the window are gone from the
+            // tree; forget their ids so they are not reused.
+            let shown: std::collections::HashSet<NodeId> = children.iter().copied().collect();
+            self.ids_to_pos.retain(|id, _| shown.contains(id));
+            self.run_ids.retain(|_, id| shown.contains(id));
         }
         ctx.tree_update().nodes.extend(out);
         node.set_children(children);
