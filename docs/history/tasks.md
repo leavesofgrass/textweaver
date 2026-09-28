@@ -812,6 +812,8 @@ Wave 4 starts only after this pass is done. It has four steps.
 
 ## Wave 4 (refined 2026-09-26; starts when Wave 3 is merged and Docker is restarted)
 
+**Reservations for the Cloud Agent:** see [reservations.md](reservations.md). Reserved items and files are not any local agent's, in Wave 4 or Wave 5.
+
 **ADOPTED PLAN, Sunday, September 27, 2026.** This supersedes everything else in this section, including the "Refined plan" and the "Earlier layout" below; those are kept as history. The plan, the ready-to-paste briefs and the orchestrator's runbook are in `docs/research/wave4-orchestration.md`, with these decisions from Jon.
 
 **Shape:** three sub-waves, with at most three agents building at once. Memory limits this, not disk: Docker's machine has about 31 GB.
