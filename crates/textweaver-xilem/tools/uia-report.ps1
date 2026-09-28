@@ -18,9 +18,18 @@
     screen reader's review cursor or a click would), which the app follows.
   - Buttons are pressed with InvokePattern; no keys are typed, no focus is
     needed.
-  - Announcements are UIA LiveRegionChanged events from the live region's
-    message nodes (AccessKit raises them; the report prints the element's
-    name). UIA Notification events are listened to as well.
+  - Announcements, the two ways the GUI offers (-Announce, passed on as
+    --announce). With `live` (the default) they are UIA LiveRegionChanged
+    events from the live region's message nodes (AccessKit raises them; the
+    report prints each new element's name and live setting). With `uia` the
+    GUI raises a UIA Notification event for each message and keeps the
+    message nodes with their live setting off; the report subscribes to
+    Notification events, and checks that each one arrived and that no
+    message node is live.
+  - A long list: the Fonts button opens the font family list (every
+    installed family, at least 40 on Windows). Every option must be in the
+    tree, not only those in view; the report scrolls the last one into view
+    with ScrollItemPattern and checks the whole list again.
   - The GUI starts with --background (never activated, off screen, no
     taskbar button) and SW_SHOWNOACTIVATE; the report checks the foreground
     window did not change. It plays no audio (`paced` times words like an
@@ -28,11 +37,16 @@
 
 .EXAMPLE
   powershell -File crates/textweaver-xilem/tools/uia-report.ps1 -Out uia-xilem.md
+
+.EXAMPLE
+  powershell -File crates/textweaver-xilem/tools/uia-report.ps1 -Announce uia -Out uia-notify.md
 #>
 param(
     [string] $Exe = '',
     [string] $Document = '',
     [ValidateSet('paced', 'null')] [string] $Backend = 'paced',
+    # How the GUI announces: a live region, or UIA Notification events.
+    [ValidateSet('live', 'uia')] [string] $Announce = 'live',
     [string] $Out = '',
     # More arguments for the GUI, such as --edit-role or --select-spoken.
     [string] $GuiArgs = ''
@@ -172,12 +186,12 @@ public static class TwXUia
     static Thread poller;
     static volatile bool polling;
 
-    /// Watches the window's live-region messages. Managed UI Automation
-    /// cannot subscribe to UIA_LiveRegionChangedEventId (it predates it),
-    /// so the report polls every 50 ms for new Text elements: in this GUI
-    /// the only Text elements screen readers see are the announcer's
-    /// messages, each a new element with its live setting (AccessKit raises
-    /// LiveRegionChanged when such a node appears).
+    /// Watches the window's announcer messages by polling every 50 ms for
+    /// new Text elements: in this GUI the only Text elements screen readers
+    /// see are the announcer's messages, each a new element. The
+    /// LiveRegionChanged events themselves are subscribed to in Listen
+    /// (managed UI Automation has them since .NET Framework 4.7.1; it
+    /// cannot read the LiveSetting property, which shows as unknown).
     public static void StartLivePolling(AutomationElement window)
     {
         polling = true;
@@ -194,7 +208,7 @@ public static class TwXUia
                         string id = string.Join(".", Array.ConvertAll(t.GetRuntimeId(), x => x.ToString()));
                         if (seen.Add(id))
                         {
-                            Add("live-region", Q(t.Current.Name) + LiveOf(t));
+                            Add("message", Q(t.Current.Name) + LiveOf(t));
                         }
                     }
                 }
@@ -208,13 +222,81 @@ public static class TwXUia
 
     public static void StopLivePolling() { polling = false; if (poller != null) poller.Join(2000); }
 
-    static string LiveOf(AutomationElement t) { return ""; }
+    /// The element's live setting, as " live=off", " live=polite", or
+    /// " live=assertive" (UIA_LiveSettingPropertyId).
+    public static string LiveOf(AutomationElement t)
+    {
+        int v = IntProperty(t, AutomationElementIdentifiers.LiveSettingProperty);
+        return v < 0 ? " live=(unknown)" : (v == 0 ? " live=off" : (v == 1 ? " live=polite" : " live=assertive"));
+    }
 
     static void OnNotification(object sender, AutomationEventArgs e)
     {
         var n = e as NotificationEventArgs;
         if (n == null || !Ours(sender)) return;
-        Add("notification", string.Format("[{0}, {1}] {2}", n.NotificationKind, n.NotificationProcessing, Q(n.DisplayString)));
+        Add("notification", string.Format("[{0}, {1}, activity {2}] {3}", n.NotificationKind,
+            n.NotificationProcessing, Q(n.ActivityId), Q(n.DisplayString)));
+    }
+
+    static void OnLiveRegion(object sender, AutomationEventArgs e)
+    {
+        if (!Ours(sender)) return;
+        string name = "(unknown)";
+        try { name = Q(((AutomationElement)sender).Current.Name); } catch (Exception) { }
+        Add("live-changed", name);
+    }
+
+    /// An integer (or enum) property, such as SizeOfSet or LiveSetting
+    /// (managed UIA has them since .NET Framework 4.7.1 and 4.8), or -1.
+    public static int IntProperty(AutomationElement e, AutomationProperty prop)
+    {
+        try
+        {
+            object v = e.GetCurrentPropertyValue(prop, true);
+            if (v is int) return (int)v;
+            if (v is Enum) return Convert.ToInt32(v);
+            return -1;
+        }
+        catch (Exception) { return -1; }
+    }
+
+    /// The list's options as a screen reader's object navigation finds
+    /// them (every ListItem under the list).
+    public static AutomationElement[] Options(AutomationElement list)
+    {
+        var found = list.FindAll(TreeScope.Children,
+            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.ListItem));
+        var items = new AutomationElement[found.Count];
+        found.CopyTo(items, 0);
+        return items;
+    }
+
+    /// One option: its name, position, selection, and whether UIA says it
+    /// is off screen.
+    public static string OptionLine(AutomationElement o)
+    {
+        object p;
+        bool selected = o.TryGetCurrentPattern(SelectionItemPattern.Pattern, out p)
+            && ((SelectionItemPattern)p).Current.IsSelected;
+        return string.Format("{0}, {1} of {2}{3}{4}", Q(o.Current.Name),
+            IntProperty(o, AutomationElement.PositionInSetProperty), IntProperty(o, AutomationElement.SizeOfSetProperty),
+            selected ? ", selected" : "", o.Current.IsOffscreen ? ", offscreen" : "");
+    }
+
+    /// SizeOfSet: how many options the list says it has.
+    public static int SizeOfSet(AutomationElement o)
+    {
+        return IntProperty(o, AutomationElement.SizeOfSetProperty);
+    }
+
+    /// Scrolls an option into view with ScrollItemPattern (a screen
+    /// reader's object navigation does this).
+    public static bool ScrollIntoView(AutomationElement o)
+    {
+        object p;
+        if (!o.TryGetCurrentPattern(ScrollItemPattern.Pattern, out p)) return false;
+        ((ScrollItemPattern)p).ScrollIntoView();
+        return true;
     }
 
     static void OnSelection(object sender, AutomationEventArgs e)
@@ -229,6 +311,14 @@ public static class TwXUia
     {
         Automation.AddAutomationEventHandler(AutomationElement.NotificationEvent, AutomationElement.RootElement,
             TreeScope.Subtree, OnNotification);
+        // LiveRegionChanged, where managed UIA supports it (.NET Framework
+        // 4.7.1 and later); the message polling stays as the fallback.
+        try
+        {
+            Automation.AddAutomationEventHandler(AutomationElementIdentifiers.LiveRegionChangedEvent,
+                AutomationElement.RootElement, TreeScope.Subtree, OnLiveRegion);
+        }
+        catch (Exception) { }
     }
 
     public static void ListenFor(int pid) { lock (Events) Events.Clear(); listenPid = pid; }
@@ -250,14 +340,8 @@ public static class TwXUia
         string help = string.IsNullOrEmpty(c.HelpText) ? "" : " help=" + Q(c.HelpText);
         string focus = c.HasKeyboardFocus ? " FOCUSED" : (c.IsKeyboardFocusable ? " focusable" : "");
         string off = c.IsOffscreen ? " offscreen" : "";
-        string live = "";
-        try
-        {
-            var prop = AutomationProperty.LookupById(30135); // UIA_LiveSettingPropertyId
-            object lv = prop == null ? null : e.GetCurrentPropertyValue(prop, true);
-            if (lv is int && (int)lv != 0) live = " live=" + ((int)lv == 1 ? "polite" : "assertive");
-        }
-        catch (Exception) { }
+        int lv = IntProperty(e, AutomationElementIdentifiers.LiveSettingProperty);
+        string live = lv > 0 ? " live=" + (lv == 1 ? "polite" : "assertive") : "";
         return string.Format("{0} name={1}{2}{3}{4}{5}{6} patterns=[{7}]",
             c.ControlType.ProgrammaticName.Replace("ControlType.", ""), Q(c.Name),
             accel, help, focus, off, live, Patterns(e));
@@ -397,6 +481,13 @@ public static class TwXUia
         var word = sel[0].Clone();
         word.ExpandToEnclosingUnit(TextUnit.Word);
         string wordText = word.GetText(40).Trim();
+        // UIA's word unit takes in the spaces after the word, which the
+        // highlight does not cover ("mixed"): read the colour of the word
+        // alone.
+        string raw = word.GetText(40);
+        int trailing = raw.Length - raw.TrimEnd().Length;
+        if (trailing > 0 && trailing < raw.Length)
+            word.MoveEndpointByUnit(TextPatternRangeEndpoint.End, TextUnit.Character, -trailing);
         object bg = word.GetAttributeValue(TextPattern.BackgroundColorAttribute);
         // UIA colours are 0x00BBGGRR; show them as #rrggbb.
         string bgText = bg is int ? string.Format("#{0:x2}{1:x2}{2:x2}", (int)bg & 0xff, ((int)bg >> 8) & 0xff, ((int)bg >> 16) & 0xff) : (bg == TextPattern.MixedAttributeValue ? "mixed" : "none");
@@ -460,6 +551,7 @@ Say "- Windows: $([Environment]::OSVersion.VersionString)"
 Say "- Executable: $Exe"
 Say "- Document: $Document"
 Say "- Backend: $Backend (silent: no audio output)"
+Say "- Announcements: --announce $Announce ($(if ($Announce -eq 'uia') { 'UIA Notification events' } else { 'a live region' }))"
 Say "- Extra GUI arguments: $(if ($GuiArgs) { $GuiArgs } else { '(none)' })"
 Say "- Launch: --background (never activated, off screen, no taskbar button) with SW_SHOWNOACTIVATE; closed when the probe ends"
 Say ""
@@ -468,7 +560,7 @@ Say ""
 $scratch = Join-Path ([IO.Path]::GetTempPath()) ("tw-xuia-" + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Force $scratch | Out-Null
 $logFile = Join-Path $scratch 'gui.log'
-$guiArgs = "`"$Document`" --backend $Backend --home `"$scratch`" --read --background --log-file `"$logFile`" --exit-after 90 $GuiArgs"
+$guiArgs = "`"$Document`" --backend $Backend --home `"$scratch`" --read --background --log-file `"$logFile`" --exit-after 90 --announce $Announce $GuiArgs"
 $foregroundBefore = [TwXUia]::GetForegroundWindow()
 [TwXUia]::ListenFor(0)
 $guiPid = [TwXUia]::LaunchInactive($Exe, $guiArgs, $repo)
@@ -630,6 +722,52 @@ try {
     }
     Say ""
 
+    # Last, because a list dialog has no Close button (Escape closes it,
+    # and the report types no keys); the window is closed with it open.
+    Say "### A long list (Fonts button; the last option scrolled into view with ScrollItemPattern)"
+    Say ""
+    if (-not [TwXUia]::PressStartingWith($window, 'Fonts')) {
+        Say "No Fonts button."
+        $failures.Add('no Fonts button')
+    } else {
+        Start-Sleep -Milliseconds 800
+        $list = [TwXUia]::Find($window, [System.Windows.Automation.ControlType]::List, $null)
+        if (-not $list) {
+            Say "No list opened."
+            $failures.Add('the Fonts button opened no list')
+        } else {
+            Say "- List: $([TwXUia]::Describe($list))"
+            $opts = [TwXUia]::Options($list)
+            $size = if ($opts.Count -gt 0) { [TwXUia]::SizeOfSet($opts[$opts.Count - 1]) } else { 0 }
+            $off = @($opts | Where-Object { $_.Current.IsOffscreen }).Count
+            Say "- Before scrolling: $($opts.Count) options in the tree, of $size in the list; $off of them off screen"
+            if ($opts.Count -lt 40) { $failures.Add("the list has fewer than 40 options in the tree ($($opts.Count))") }
+            if ($opts.Count -ne $size) { $failures.Add("options left out of the tree before scrolling: $($opts.Count) of $size") }
+            if ($opts.Count -gt 0) {
+                $lastName = $opts[$opts.Count - 1].Current.Name
+                $scrolled = [TwXUia]::ScrollIntoView($opts[$opts.Count - 1])
+                if (-not $scrolled) { $failures.Add('the last option has no ScrollItemPattern') }
+                Start-Sleep -Milliseconds 600
+                $opts = [TwXUia]::Options($list)
+                $off = @($opts | Where-Object { $_.Current.IsOffscreen }).Count
+                Say "- After scrolling the last option ($([TwXUia]::Q($lastName))) into view: $($opts.Count) options in the tree, of $size; $off of them off screen"
+                if ($opts.Count -ne $size) { $failures.Add("options left out of the tree after scrolling: $($opts.Count) of $size") }
+                $sample = @()
+                foreach ($i in @(0, 1, 2)) { if ($i -lt $opts.Count) { $sample += [TwXUia]::OptionLine($opts[$i]) } }
+                $sample += '...'
+                foreach ($i in @(3, 2, 1)) { if ($opts.Count -ge $i) { $sample += [TwXUia]::OptionLine($opts[$opts.Count - $i]) } }
+                Say ""
+                Say "The first and last options, as a screen reader finds them:"
+                Say ""
+                Fence $sample
+                $last = $opts[$opts.Count - 1]
+                if ([TwXUia]::OptionLine($last) -notmatch ', selected') { $failures.Add('the last option was not selected after ScrollIntoView') }
+                if ($last.Current.IsOffscreen) { $failures.Add('the last option is still off screen after ScrollIntoView') }
+            }
+        }
+    }
+    Say ""
+
     Start-Sleep -Milliseconds 300
     [TwXUia]::StopLivePolling()
     [TwXUia]::Close($frame)
@@ -642,15 +780,48 @@ try {
     }
 }
 
-Say "### Live-region messages (new live Text elements, polled every 50 ms) and notification events"
+Say "### Announcements: message elements (new Text elements, polled every 50 ms, with their live setting) and Notification events"
 Say ""
 $events = [TwXUia]::TakeEvents()
-if ($events.Count -eq 0) { $events = @('(none)'); $failures.Add('no live-region events') }
+$messages = @($events | Where-Object { $_ -match '\bmessage\b' })
+$liveMessages = @($messages | Where-Object { $_ -match 'live=(polite|assertive)' })
+$notifications = @($events | Where-Object { $_ -match '\bnotification\b' })
+$liveChanged = @($events | Where-Object { $_ -match '\blive-changed\b' })
+Say "- $($messages.Count) message elements, $($liveMessages.Count) of them live; $($liveChanged.Count) LiveRegionChanged events; $($notifications.Count) Notification events"
+Say ""
+if ($events.Count -eq 0) { $events = @('(none)') }
 Fence $events
+$guiLog = if (Test-Path -LiteralPath $logFile) { @(Get-Content -LiteralPath $logFile) } else { @() }
+if ($Announce -eq 'uia') {
+    $raisedTexts = @($guiLog | Where-Object { $_ -match '^notify uia: ' } | ForEach-Object { $_.Substring(12) })
+    $notifyFailed = @($guiLog | Where-Object { $_ -match '^notify uia failed' })
+    if ($notifications.Count -eq 0) { $failures.Add('no Notification events with --announce uia') }
+    else {
+        # Notifications raised before any UI Automation client has asked
+        # for the window (at startup) reach nobody; count from the first
+        # one received.
+        $first = ([regex]::Match($notifications[0], '\] "(.*)"$')).Groups[1].Value
+        $start = [Array]::IndexOf($raisedTexts, $first)
+        if ($start -lt 0) { $start = 0 }
+        $expected = $raisedTexts.Count - $start
+        Say "- The GUI raised $($raisedTexts.Count) notifications; $start at startup, before the first one received: $(if ($start -gt 0) { ($raisedTexts[0..($start - 1)] | ForEach-Object { [TwXUia]::Q($_) }) -join ', ' } else { 'none' })"
+        Say ""
+        if ($notifications.Count -lt $expected) { $failures.Add("the GUI raised $expected notifications after the first one received, and the report received $($notifications.Count)") }
+    }
+    if ($notifyFailed.Count -gt 0) { $failures.Add("a notification could not be raised: $($notifyFailed[0])") }
+    if ($liveMessages.Count -gt 0 -or $liveChanged.Count -gt 0) { $failures.Add('LiveRegionChanged or a live message element with --announce uia (a screen reader would hear it twice)') }
+    if ($messages.Count -eq 0) { $failures.Add('no message elements in the tree') }
+} else {
+    if ($liveChanged.Count -eq 0 -and $liveMessages.Count -eq 0) { $failures.Add('no LiveRegionChanged events and no live message elements') }
+    if ($notifications.Count -gt 0) { $failures.Add('Notification events with --announce live (a screen reader would hear messages twice)') }
+}
 Say "### GUI log (announcements, commands, load timing)"
 Say ""
-if (Test-Path $logFile) { Fence (Get-Content $logFile) } else { Fence @('(no log)') }
-Remove-Item -Recurse -Force $scratch -ErrorAction SilentlyContinue
+if ($guiLog.Count -gt 0) { Fence $guiLog } else { Fence @('(no log)') }
+# The scratch folder this run made under the temporary folder.
+if ($scratch -and (Split-Path -Leaf $scratch) -like 'tw-xuia-*') {
+    Remove-Item -LiteralPath $scratch -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 Say "### Result"
 Say ""
