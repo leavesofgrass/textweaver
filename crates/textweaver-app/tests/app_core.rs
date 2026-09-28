@@ -83,9 +83,9 @@ fn lists_keep_their_focus_and_say_k_of_n() {
     assert_eq!(list.items.len(), 2);
     assert_eq!(list.selected, 0);
     // The focused item is said after the list's introduction.
-    assert!(said.last().ends_with("1 of 2"), "{}", said.last());
+    assert!(said.last().starts_with("1 of 2, "), "{}", said.last());
     list_key(&mut app, ListKey::Down);
-    assert!(said.last().ends_with("2 of 2"), "{}", said.last());
+    assert!(said.last().starts_with("2 of 2, "), "{}", said.last());
     list_key(&mut app, ListKey::Down);
     assert_eq!(said.last(), "End of list.");
     list_key(&mut app, ListKey::Home);
@@ -120,7 +120,7 @@ fn the_first_item_can_be_left_to_the_screen_reader() {
     assert!(app.list_model().is_some());
     assert!(!said.last().contains(" of "), "{}", said.last());
     list_key(&mut app, ListKey::Down);
-    assert!(said.last().contains(", 2 of "), "{}", said.last());
+    assert!(said.last().starts_with("2 of "), "{}", said.last());
 }
 
 #[test]

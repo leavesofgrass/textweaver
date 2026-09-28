@@ -985,7 +985,7 @@ publish-warnings =
     }
 # $file is the file's name, $folder its folder; $warned is empty or a
 # space and publish-warnings.
-publish-exported = Exported to { $format }: { $file } in { $folder }.{ $warned } Open it? y or n.
+publish-exported = Exported { $file }. Open it? y or n. Format { $format }, in { $folder }.{ $warned }
 publish-preview-written-served = Preview written. Opening it in the browser. It reloads by itself after each save.{ $warned }
 publish-preview-written = Preview written. Opening it in the browser. Saving writes it again; then press F5 in the browser.{ $warned }
 publish-preview-updated = Preview updated.
@@ -1073,12 +1073,12 @@ notes-study-sheet-saved-notes =
     Study sheet with { $n ->
         [one] 1 note
        *[other] { $n } notes
-    } saved as { $file } in { $folder }. Open it? y or n.
+    } saved as { $file }. Open it? y or n. In { $folder }.
 notes-study-sheet-saved-highlights =
     Study sheet with { $h ->
         [one] 1 highlight
        *[other] { $h } highlights
-    } saved as { $file } in { $folder }. Open it? y or n.
+    } saved as { $file }. Open it? y or n. In { $folder }.
 notes-study-sheet-saved-both =
     Study sheet with { $n ->
         [one] 1 note
@@ -1086,7 +1086,7 @@ notes-study-sheet-saved-both =
     } and { $h ->
         [one] 1 highlight
        *[other] { $h } highlights
-    } saved as { $file } in { $folder }. Open it? y or n.
+    } saved as { $file }. Open it? y or n. In { $folder }.
 notes-study-sheet-failed = Could not write the study sheet: { $error }
 # The study sheet file's own text (Markdown; the # marks stay in the code).
 notes-sheet-title = Study sheet: { $title }
@@ -1210,7 +1210,7 @@ lists-outline-here = You are under { $heading }.
 ## Lists and prompts shared by every frontend.
 
 # The focused list item: $item is its text, $k its place, $n the number of items.
-listmodel-item-position = { $item }, { $k } of { $n }
+listmodel-item-position = { $k } of { $n }, { $item }
 # $letter is the letter or digit typed.
 listmodel-no-item-starts = No item starts with { $letter }.
 listmodel-top-of-list = Top of list.
@@ -1245,8 +1245,8 @@ links-no-address = The link { $text } has no address.
 # $kind is mail or web; $target is the link's address.
 links-open-question =
     { $kind ->
-        [mail] Mail link: { $target }. Open it? y or n.
-       *[web] Web link: { $target }. Open it? y or n.
+        [mail] Open mail link? y or n. { $target }
+       *[web] Open web link? y or n. { $target }
     }
 # The label of a heading reached by a link, at high verbosity.
 links-heading-label = Heading
@@ -2537,7 +2537,7 @@ tui-hint-lines = lines
 tui-hint-keys = keys
 # The list overlay's border: $n is the focused item's number, $count
 # the number of items.
-tui-list-title = { $title } ({ $n } of { $count })
+tui-list-title = { $n } of { $count }, { $title }
 
 ## Long texts are summarized. $count is a number of characters, $first and
 ## $last the words at each end; $change says what happened to the text.

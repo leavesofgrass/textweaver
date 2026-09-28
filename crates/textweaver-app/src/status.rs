@@ -46,11 +46,13 @@ impl App {
     }
 
     /// The parts of the title line after the document's name, most
-    /// important first: the mode (unless browse), "modified", the reading
-    /// state ([`App::reading_state`]), `position`, the accessibility mode
-    /// (unless self-voicing), the rate, and the speech engine. Frontends
-    /// draw them joined with commas and drop trailing parts when narrow;
-    /// "say status" speaks them.
+    /// important first, so a 40-cell Braille display shows the meaning
+    /// (the Braille pass, Wave 5): `position`, the reading state
+    /// ([`App::reading_state`]), the mode (unless browse), "modified", the
+    /// accessibility mode (unless self-voicing), the rate, and the speech
+    /// engine: "line 12 of 400, 3%, Reading". Frontends draw them joined
+    /// with commas and drop trailing parts when narrow; "say status"
+    /// speaks them.
     pub fn title_parts(&self, position: Option<&str>) -> Vec<String> {
         self.status_parts(position, false)
     }
@@ -59,6 +61,10 @@ impl App {
     /// self-voicing too) and says the rate in words.
     fn status_parts(&self, position: Option<&str>, spoken: bool) -> Vec<String> {
         let mut parts = Vec::new();
+        if let Some(p) = position {
+            parts.push(p.to_owned());
+        }
+        parts.push(self.reading_state_text());
         let mode = crate::words::mode_name(self.cat(), self.mode);
         if spoken {
             parts.push(self.msg_args("status-mode", &args!["mode" => mode]));
@@ -67,10 +73,6 @@ impl App {
         }
         if self.is_dirty() {
             parts.push(self.msg("status-modified"));
-        }
-        parts.push(self.reading_state_text());
-        if let Some(p) = position {
-            parts.push(p.to_owned());
         }
         match self.access_mode {
             AccessMode::SelfVoicing if spoken => parts.push(self.msg("status-self-voicing")),
@@ -88,8 +90,8 @@ impl App {
         parts
     }
 
-    /// The title line as it is said: "essay: Speech Cursor mode, Reading,
-    /// line 3 of 40, 7%, self-voicing, 265 words per minute, eSpeak NG."
+    /// The title line as it is said: "essay: line 3 of 40, 7%, Reading,
+    /// Speech Cursor mode, self-voicing, 265 words per minute, eSpeak NG."
     pub(crate) fn status_sentence(&self) -> String {
         let position = self.title_position();
         let title = match self.session.as_ref() {
@@ -197,7 +199,7 @@ mod tests {
         app.repeat_list_introduction();
         assert_eq!(
             app.status_text(),
-            "Things, 2 items. Up and Down move, Enter chooses, Escape closes. a, 1 of 2."
+            "Things, 2 items. Up and Down move, Enter chooses, Escape closes. 1 of 2, a."
         );
         // Repeating it is not a new message to repeat.
         assert_eq!(app.last_message, None);

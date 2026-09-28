@@ -1073,7 +1073,7 @@ publish-warnings =
     }
 # $file is the file's name, $folder its folder; $warned is empty or a
 # space and publish-warnings.
-publish-exported = صُدِّر إلى { $format }: { $file } في { $folder }.{ $warned } فتحه؟ y أو n.
+publish-exported = صُدِّر إلى { $format }: { $file }. فتحه؟ y أو n. في { $folder }.{ $warned }
 publish-preview-written-served = كُتبت المعاينة. يجري فتحها في المتصفح. تُعاد تلقائيًا بعد كل حفظ.{ $warned }
 publish-preview-written = كُتبت المعاينة. يجري فتحها في المتصفح. الحفظ يكتبها مجددًا؛ ثم اضغط F5 في المتصفح.{ $warned }
 publish-preview-updated = تحدّثت المعاينة.
@@ -1170,7 +1170,7 @@ notes-study-sheet-saved-notes =
         [few] { $n } ملاحظات
         [many] { $n } ملاحظة
        *[other] { $n } ملاحظة
-    } حُفظت باسم { $file } في { $folder }. فتحها؟ y أو n.
+    } حُفظت باسم { $file }. فتحها؟ y أو n. في { $folder }.
 notes-study-sheet-saved-highlights =
     ورقة دراسة تحتوي { $h ->
         [one] تمييزًا واحدًا
@@ -1178,7 +1178,7 @@ notes-study-sheet-saved-highlights =
         [few] { $h } تمييزات
         [many] { $h } تمييزًا
        *[other] { $h } تمييز
-    } حُفظت باسم { $file } في { $folder }. فتحها؟ y أو n.
+    } حُفظت باسم { $file }. فتحها؟ y أو n. في { $folder }.
 notes-study-sheet-saved-both =
     ورقة دراسة تحتوي { $n ->
         [one] ملاحظة واحدة
@@ -1192,7 +1192,7 @@ notes-study-sheet-saved-both =
         [few] { $h } تمييزات
         [many] { $h } تمييزًا
        *[other] { $h } تمييز
-    } حُفظت باسم { $file } في { $folder }. فتحها؟ y أو n.
+    } حُفظت باسم { $file }. فتحها؟ y أو n. في { $folder }.
 notes-study-sheet-failed = تعذّرت كتابة ورقة الدراسة: { $error }
 # The study sheet file's own text (Markdown; the # marks stay in the code).
 notes-sheet-title = ورقة دراسة: { $title }
@@ -1346,7 +1346,7 @@ lists-outline-here = أنت تحت { $heading }.
 ## القوائم والطلبات المشتركة بين كل واجهة.
 
 # The focused list item: $item is its text, $k its place, $n the number of items.
-listmodel-item-position = { $item }، { $k } من { $n }
+listmodel-item-position = { $k } من { $n }، { $item }
 # $letter is the letter or digit typed.
 listmodel-no-item-starts = لا عنصر يبدأ بـ{ $letter }.
 listmodel-top-of-list = أعلى القائمة.
@@ -1384,8 +1384,8 @@ links-no-address = الرابط { $text } بلا عنوان.
 # $kind is mail or web; $target is the link's address.
 links-open-question =
     { $kind ->
-        [mail] رابط بريد: { $target }. فتحه؟ y أو n.
-       *[web] رابط ويب: { $target }. فتحه؟ y أو n.
+        [mail] فتح رابط البريد؟ y أو n. { $target }
+       *[web] فتح رابط الويب؟ y أو n. { $target }
     }
 # The label of a heading reached by a link, at high verbosity.
 links-heading-label = عنوان
@@ -2754,7 +2754,7 @@ tui-hint-lines = أسطر
 tui-hint-keys = مفاتيح
 # The list overlay's border: $n is the focused item's number, $count
 # the number of items.
-tui-list-title = { $title } ({ $n } من { $count })
+tui-list-title = { $n } من { $count }، { $title }
 
 text-summary =
     { $change ->

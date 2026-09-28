@@ -544,12 +544,14 @@ fn exports_go_next_to_the_document_and_offer_to_open() {
         r.wait();
         let out = path.with_extension(ext);
         assert!(out.is_file(), "{}", out.display());
+        // The question before the folder, for a 40-cell Braille display
+        // (Wave 5, the Braille pass).
         assert!(
-            r.status().contains(&format!("essay.{ext} in ")),
+            r.status()
+                .starts_with(&format!("Exported essay.{ext}. Open it? y or n. ")),
             "{}",
             r.status()
         );
-        assert!(r.status().ends_with("Open it? y or n."), "{}", r.status());
         assert!(r.app.confirmation_pending());
         r.send(Command::Confirm(Confirm::No));
     }
@@ -837,10 +839,7 @@ fn links_open_local_files_and_come_back() {
     // A web link asks first.
     r.go("web");
     r.act(ActionId::FollowLink);
-    assert_eq!(
-        r.status(),
-        "Web link: https://example.org. Open it? y or n."
-    );
+    assert_eq!(r.status(), "Open web link? y or n. https://example.org");
     r.send(Command::Confirm(Confirm::Yes));
     assert_eq!(r.opened(), ["https://example.org"]);
     // A wiki link finds b.md by name.

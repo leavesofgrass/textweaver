@@ -1008,7 +1008,7 @@ publish-warnings =
     }
 # $file is the file's name, $folder its folder; $warned is empty or a
 # space and publish-warnings.
-publish-exported = Exporté vers { $format } : { $file } dans { $folder }.{ $warned } L'ouvrir ? y ou n.
+publish-exported = Exporté vers { $format } : { $file }. L'ouvrir ? y ou n. Dans { $folder }.{ $warned }
 publish-preview-written-served = Aperçu écrit. Ouverture dans le navigateur. Il se recharge tout seul après chaque enregistrement.{ $warned }
 publish-preview-written = Aperçu écrit. Ouverture dans le navigateur. Un enregistrement le réécrit ; appuyez ensuite sur F5 dans le navigateur.{ $warned }
 publish-preview-updated = Aperçu mis à jour.
@@ -1096,12 +1096,12 @@ notes-study-sheet-saved-notes =
     Fiche d'étude avec { $n ->
         [one] 1 note
        *[other] { $n } notes
-    } enregistrée sous { $file } dans { $folder }. L'ouvrir ? y ou n.
+    } enregistrée sous { $file }. L'ouvrir ? y ou n. Dans { $folder }.
 notes-study-sheet-saved-highlights =
     Fiche d'étude avec { $h ->
         [one] 1 surlignage
        *[other] { $h } surlignages
-    } enregistrée sous { $file } dans { $folder }. L'ouvrir ? y ou n.
+    } enregistrée sous { $file }. L'ouvrir ? y ou n. Dans { $folder }.
 notes-study-sheet-saved-both =
     Fiche d'étude avec { $n ->
         [one] 1 note
@@ -1109,7 +1109,7 @@ notes-study-sheet-saved-both =
     } et { $h ->
         [one] 1 surlignage
        *[other] { $h } surlignages
-    } enregistrée sous { $file } dans { $folder }. L'ouvrir ? y ou n.
+    } enregistrée sous { $file }. L'ouvrir ? y ou n. Dans { $folder }.
 notes-study-sheet-failed = Impossible d'écrire la fiche d'étude : { $error }
 # The study sheet file's own text (Markdown; the # marks stay in the code).
 notes-sheet-title = Fiche d'étude : { $title }
@@ -1233,7 +1233,7 @@ lists-outline-here = Vous êtes sous { $heading }.
 ## Lists and prompts shared by every frontend.
 
 # The focused list item: $item is its text, $k its place, $n the number of items.
-listmodel-item-position = { $item }, { $k } sur { $n }
+listmodel-item-position = { $k } sur { $n }, { $item }
 # $letter is the letter or digit typed.
 listmodel-no-item-starts = Aucun élément ne commence par { $letter }.
 listmodel-top-of-list = Haut de la liste.
@@ -1268,8 +1268,8 @@ links-no-address = Le lien { $text } n'a pas d'adresse.
 # $kind is mail or web; $target is the link's address.
 links-open-question =
     { $kind ->
-        [mail] Lien de messagerie : { $target }. L'ouvrir ? y ou n.
-       *[web] Lien web : { $target }. L'ouvrir ? y ou n.
+        [mail] Ouvrir le lien de messagerie ? y ou n. { $target }
+       *[web] Ouvrir le lien web ? y ou n. { $target }
     }
 # The label of a heading reached by a link, at high verbosity.
 links-heading-label = Titre
@@ -2560,7 +2560,7 @@ tui-hint-lines = lignes
 tui-hint-keys = touches
 # The list overlay's border: $n is the focused item's number, $count
 # the number of items.
-tui-list-title = { $title } ({ $n } sur { $count })
+tui-list-title = { $n } sur { $count }, { $title }
 
 text-summary =
     { $change ->

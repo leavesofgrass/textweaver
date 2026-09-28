@@ -394,7 +394,9 @@ fn scripted_session_with_restore() {
     );
     h.press(key(KeyCode::Down));
     let item = h.tui.list().unwrap().current().unwrap().to_owned();
-    assert!(h.status().starts_with(&item[..20]), "{}", h.status());
+    // "2 of 90, the item": the place first (Wave 5, the Braille pass).
+    assert!(h.status().starts_with("2 of "), "{}", h.status());
+    assert!(h.status().contains(&item[..20]), "{}", h.status());
     let p = h.screen_cursor();
     assert!(h.row_text(p.y).contains(&item[..20]), "cursor on the item");
     h.press(key(KeyCode::Esc));
