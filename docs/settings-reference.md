@@ -19,6 +19,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `speech.auto_play`: default off (`false`). Read on opening. Start reading when a document opens. On or off: `true` or `false`.
 - `speech.skip_code`: default on (`true`). Skip code blocks. Do not speak code blocks. On or off: `true` or `false`.
 - `speech.speed_presets`: default 4 entries. Speed presets. Named rates that F8 cycles through. A table of names and values, edited in the file.
+- `speech.voices_by_language`: default none. Voices by language. The voice for each interface language, by language tag, such as es = the voice's id. A language not listed uses the engine's first voice for it. A table of names and values, edited in the file.
 - `speech.latency_offset_ms`: default 120 milliseconds. Highlight delay. How long after an engine reports a word the highlight moves, for engines timed by their audio clock. From 0 to 1000 milliseconds, in steps of 10.
 - `speech.verbosity`: default `"normal"`. Verbosity. How much textweaver says about what it does. Choices: `"low"`, `"normal"`, `"high"`.
 - `speech.eci.dictionaries`: default on (`true`). Eloquence dictionaries. The community pronunciation dictionaries for Eloquence: on, off, or a folder of your own. Choices: `true` (on), `false` (off). Other values may be written too.
@@ -65,6 +66,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `reading.ocr_engine`: default automatic (`"auto"`). OCR engine. Which engine recognizes scanned pages: ocrs for English and Tesseract for other languages, or one of them always. Choices: `"auto"` (automatic), `"ocrs"`, `"tesseract"` (Tesseract), `"paddle"` (PaddleOCR (experimental)).
 - `reading.math_engine`: default textweaver (`"builtin"`). Math speech. Which engine reads math aloud: textweaver's own, or MathCAT in ClearSpeak or SimpleSpeak, in the document's language. MathCAT needs a build that includes it; otherwise textweaver's own is used. Choices: `"builtin"` (textweaver), `"mathcat"` (MathCAT ClearSpeak), `"mathcat_simplespeak"` (MathCAT SimpleSpeak).
 - `reading.math_display`: default `"source"`. Math on screen. How math looks in the reading view: as its source, such as x^2, or as Unicode, such as x with a superscript 2. Speech and edit mode always use the source. Choices: `"source"`, `"unicode"` (Unicode).
+- `reading.revisions`: default automatic (`"auto"`). Tracked changes. How tracked changes in Word, OpenDocument, and RTF files are read: said in place at high verbosity (automatic), always said, or never said, reading the final text. Applies when a document is opened. Choices: `"auto"` (automatic), `"marked"` (always say them), `"final"` (final text only).
 
 ## Display: the `[display]` section
 
@@ -169,7 +171,8 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 ## Interface: the `[interface]` section
 
-- `interface.language`: default English (`"en"`). Interface language. The language of textweaver's own words, from the next start. Only English is complete; the others are for testing. Choices: `"en"` (English), `"en-XA"` (test: accented), `"ar-XB"` (test: right to left). Other values may be written too.
+- `interface.language`: default English (`"en"`). Interface language. The language of textweaver's own words, changed at once. The voice follows it when the engine has one for it; otherwise the voice stays. Choices: `"en"` (English), `"es"` (Español), `"fr"` (Français), `"de"` (Deutsch), `"pt"` (Português), `"ar"` (العربية), `"en-XA"` (test: accented), `"ar-XB"` (test: right to left). Other values may be written too.
+- `interface.rtl`: default automatic (`"auto"`). Right-to-left display. Whether the terminal reader reorders right-to-left text for display: automatic leaves it to terminals that do it themselves. Speech and the screen reader always get the text in reading order. Choices: `"auto"` (automatic), `"on"`, `"off"`.
 
 ## Window: the `[gui]` section
 

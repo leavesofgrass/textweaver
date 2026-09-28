@@ -64,10 +64,12 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted (the owner's session 1 answers: the live region and the background highlight stay the defaults).
 - [ADR-0029: MathCAT speech](0029-mathcat-speech.md): MathCAT 0.7.6-rc.3 as a second math speech engine on its own thread, EPUB 3 MathML read as math, and braille waiting for MathCAT issue #827.
   - Status: accepted, behind the `mathcat` feature; the owner approved its two dependency exceptions.
+- [ADR-0030: Interface translations](0030-interface-translations.md): the Fluent-subset catalog extended to every message, Spanish, French, German, Brazilian Portuguese, and Arabic built in, right-to-left display, a voice per language, and never going silent.
+  - Status: accepted.
 - [ADR-0031: Native RTF, ODT, and Word revisions](0031-native-rtf-odt-and-word-revisions.md): our own iterative RTF parser, ODT on roxmltree, Word and ODT comments as notes, tracked changes read as the final text or said in place, and limits for zip packages.
   - Status: accepted.
 - [ADR-0032: Grammar, lint, highlighting, and clipboard crates](0032-grammar-lint-highlighting-clipboard.md): our own Markdown lint instead of rumdl, arboard where OSC 52 cannot reach, Unicode math and notes export without new crates, and harper-core and syntect held on one advisory.
-  - Status: accepted for lint, the clipboard, Unicode math, and notes export; proposed for grammar and highlighting.
+  - Status: accepted; grammar is built only with the `grammar` feature, and highlighting is on by default.
 
 ## Writing a new ADR
 

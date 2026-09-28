@@ -217,3 +217,24 @@ required-features = ["rpc"]
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "rtf"
+path = "fuzz_targets/rtf.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "odt"
+path = "fuzz_targets/odt.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "docx_revisions"
+path = "fuzz_targets/docx_revisions.rs"
+test = false
+doc = false
+bench = false

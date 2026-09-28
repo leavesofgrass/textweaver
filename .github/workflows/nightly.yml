@@ -57,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [markdown, html, epub, docx, pdf, settings, keymap, state, frame, daisy, pptx, sheet, archive, image, web, latex_math, asciimath, bibtex, ris, csl_json, theme, lexicon, vault_import, rpc]
+        target: [markdown, html, epub, docx, pdf, settings, keymap, state, frame, daisy, pptx, sheet, archive, image, web, latex_math, asciimath, bibtex, ris, csl_json, theme, lexicon, vault_import, rpc, rtf, odt, docx_revisions]
     steps:
       - uses: actions/checkout@v7
       - name: Nightly Rust (this job only)

@@ -55,6 +55,16 @@ const TARGETS: &[(&str, &[Seeds])] = &[
         ],
     ),
     ("web", &[seeds("fixtures", &["html"], false)]),
+    // W4c2's documents.
+    ("rtf", &[seeds("fixtures/c2", &["rtf"], false)]),
+    ("odt", &[seeds("fixtures/c2", &["odt"], false)]),
+    (
+        "docx_revisions",
+        &[
+            seeds("fixtures/c2", &["docx"], false),
+            seeds("fixtures/a", &["docx"], false),
+        ],
+    ),
     (
         "latex_math",
         &[seeds("fixtures/cloud/latex_math", &["txt"], false)],

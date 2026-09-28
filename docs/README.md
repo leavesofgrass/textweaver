@@ -64,7 +64,7 @@ The developer documents are in [dev/](dev/), the decision records in [adr/](adr/
 - [The crates](dev/architecture.md#the-crates): what each of the 34 crates does, with its ADRs.
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
-- [Fuzzing](../fuzz/README.md): the cargo-fuzz targets for the loaders, the settings and state files, and the engine-host protocol, run every night.
+- [Fuzzing](../fuzz/README.md): the 27 cargo-fuzz targets, run every night: the document loaders (RTF, ODT, and Word revisions among them), the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, and the engine-host protocol.
 - [Releasing](dev/releasing.md): making a release, the Linux AppImage, and what the packages hold.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
 - [Roadmap](roadmap.md): Phases 1 and 2 and Wave 3, as planned in September 2026. The current plans are in [history/tasks.md](history/tasks.md) and [research/](#research).
@@ -113,6 +113,8 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, and the accessibility checks.
 - [ADR-0028: The Xilem GUI after the owner's session](adr/0028-xilem-gui-after-the-session.md): two ways to announce, every list option in the tree, and where the GUI's memory goes.
 - [ADR-0029: MathCAT speech](adr/0029-mathcat-speech.md): MathCAT as a second math speech engine, EPUB 3 MathML read as math, and what waits for math braille.
+- [ADR-0030: Interface translations](adr/0030-interface-translations.md): every message from the catalog, five built-in languages, right-to-left display, and a voice per language.
+- [ADR-0031: Native RTF, ODT, and Word revisions](adr/0031-native-rtf-odt-and-word-revisions.md): RTF and OpenDocument without Pandoc, comments as notes, tracked changes, and limits for zip packages.
 - [ADR-0032: Grammar, lint, highlighting, and clipboard crates](adr/0032-grammar-lint-highlighting-clipboard.md): the authoring extras' crates, and the two held for the owner.
 
 ## Interactive pages

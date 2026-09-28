@@ -4,6 +4,19 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### The Cloud Agent (pull request 1)
+
+- Nine new fuzz targets: LaTeX math, ASCIIMath, BibTeX, RIS, CSL-JSON, themes, the lexicon, vault import, and JSON-RPC, with `cargo xtask fuzz-seed`.
+- A settings reference generated from the settings schema (`docs/settings-reference.md`, `cargo xtask settings-doc`), and `cargo xtask docs --check` for the ADR index, crate counts, "See also" sections, and index links.
+- epubcheck and veraPDF check the writers' EPUB and PDF output (`second-tool.yml`).
+- Fixed: a BibTeX crossref loop overflowed the stack; loops, and chains deeper than 8, are cut.
+- Fixed: a damaged lexicon file could crash textweaver; its headword map's checksum is checked when it opens.
+- Fixed: front matter keys that start with YAML syntax or with spaces were lost in vault export; they are quoted.
+- Fixed: exporting Markdown with a nested list to EPUB, PDF, DOCX, or braille crashed.
+- Fixed: every EPUB failed two epubcheck rules (RSC-011 and RSC-005).
+- Fixed: `tw serve` could be made to allocate a terabyte; a message over 16 MiB now ends the session.
+- Fixed: on macOS, an engine host could outlive a crashed textweaver; each host now exits when textweaver is gone.
+
 ### W4c2: documents
 
 - RTF and OpenDocument text (ODT, OTT, and flat FODT) open in the reader and in `tw` without Pandoc: headings, lists with their numbers, tables with header rows, footnotes, links, and pictures' descriptions. RTF in older code pages, such as Cyrillic and Japanese, reads correctly. Try `fixtures/c2/handout.rtf` and `fixtures/c2/notes.odt` (ADR-0031).

@@ -11,6 +11,9 @@ Each target feeds random input to one part of textweaver. A loader may refuse th
 - `epub`: the EPUB loader. A zip archive is loaded as it is. Anything else becomes the book's one chapter, and, after a NUL byte, its navigation document.
 - `docx`: the Word loader. A zip archive is loaded as it is. Anything else becomes `word/document.xml`, and, after a NUL byte, `word/numbering.xml`.
 - `pdf`: the PDF loader.
+- `rtf`: the RTF loader, our own iterative parser with its limits on nesting, `\bin`, and `\uc`, loaded with the default options and with tracked changes said in place.
+- `odt`: the OpenDocument text loader. A zip archive is loaded as it is. Anything else becomes `content.xml`, and, after a NUL byte, `meta.xml`, in a minimal package, and is also loaded as flat `.fodt` XML. Every comment must lie inside the text.
+- `docx_revisions`: Word's comments and tracked changes. A zip archive is loaded as it is. Anything else is split at NUL bytes into `word/document.xml`, `word/comments.xml`, and `word/commentsExtended.xml`. Every comment must lie inside the text, and replies must not loop.
 - `daisy`: the DAISY loader. A zip archive is loaded as it is. Anything else becomes a book's DTBook file, and, after a NUL byte, its NCX; the bytes are also loaded as a DTBook file on their own.
 - `pptx`: the PowerPoint loader. A zip archive is loaded as it is. Anything else becomes the one slide, and, after a NUL byte, its speaker notes.
 - `sheet`: the spreadsheet loader. The first byte picks CSV, TSV, OpenDocument, or Excel; the rest is the file, or the sheet's XML in a minimal package.
