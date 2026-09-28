@@ -52,6 +52,8 @@ The title line shows `hybrid` or `screen reader mode` when one of those is in ef
 
 ### The first run with a screen reader
 
+The very first run starts with the list of interface languages instead (see [Language](#language)); the question below comes on the next start.
+
 When textweaver starts, the mode has never been chosen, and a screen reader is running, it asks once: "NVDA is running. Use hybrid mode, where textweaver reads documents aloud and your screen reader speaks messages and typing? y or n". The question stays on the status line until you answer. **y** switches to hybrid and saves it. **n** or **Escape** keeps self-voicing. Either way it is not asked again; set `hybrid_offered = false` under `[accessibility]` to be asked again.
 
 How textweaver notices a screen reader:
@@ -203,6 +205,18 @@ See [VoiceOver](#voiceover-macos) and [Orca](#orca-linux) above.
 - **Windows Terminal**: see [the keys it keeps](#windows-terminal-keys-that-clash).
 
 Any key can be changed in `keymap.toml`. The [keyboard reference](keyboard.md) explains how, and lists what terminals cannot send.
+
+## Language
+
+textweaver's own words (messages, lists, help, and settings) are in English, Spanish, French, German, Portuguese, or Arabic. Your documents are read in their own language whatever you choose.
+
+- **The first run** shows a list of languages, each in its own name ("Español", "Français"), your system's language first. Up and Down move, Enter chooses, Escape keeps English.
+- **Later**, open the settings screen (Shift+F10), type `language`, and press Enter or Right on "Interface language". The change is immediate: you hear it confirmed in the new language, then the title line. From the command line: `tw settings language es`.
+- **The voice follows the language** when the speech engine has a voice for it: a Spanish voice for Spanish. **When the engine has no voice for the language, the current voice keeps speaking, and textweaver says so.** It never goes silent. For example, if your Eloquence has English only, choosing Spanish keeps Eloquence and says that no Spanish voice was found. `[speech.voices_by_language]` in the [settings](settings.md) chooses the voice per language.
+- **Keys keep their written names** (Ctrl+S) on the status line and on your Braille display; textweaver's own voice says them in your language.
+- **Answers to yes-or-no questions stay y and n** in every language, since they are the keys that answer.
+- **Right-to-left languages.** Arabic messages are sent to your screen reader in reading order. On screen, Windows Terminal and the classic console do not support right-to-left text, so sighted helpers may see Arabic reversed there; your screen reader and Braille display are not affected. On Linux and macOS, `[interface] rtl` reorders it for the screen where the terminal does not.
+- **To check a translation's coverage**, `en-XA` is a test language: every message comes out accented and in brackets, so anything plain was missed.
 
 ## Braille displays
 
