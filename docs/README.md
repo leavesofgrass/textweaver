@@ -130,6 +130,8 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 - [Wave 4 plan review](research/wave4-plan-review.md): the first review of the Wave 4 plan, with quick wins and research updates (September 2026).
 - [Wave 4 orchestration plan](research/wave4-orchestration.md): three sub-waves of three agents, the dependency map, the disk and memory budget, revised briefs, and the runbook (September 2026).
 - [Wave 5 plan](research/wave5-plan.md): goals ranked for the beta, research, the branches that depend on Wave 4's outcomes, three sub-waves with a Braille session as a gate, the budget, quick wins, draft briefs, the runbook, and the questions for Jon (September 2026).
+- [What is left](research/whats-left.md): the inventory of what remains, by area, with each item's status, source, value, and size; the Star features still lacking; and the items no plan covers (September 2026).
+- [The 2026 roadmap](research/roadmap-2026.md): the milestones from Wave 4 to the feature-complete final alpha and beyond, the critical path, Wave 5 refined, a first sketch of Wave 6, and eight questions for Jon (September 2026).
 
 ## See also
 
