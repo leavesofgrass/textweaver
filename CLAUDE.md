@@ -13,7 +13,7 @@ Never send the owner's personal identifiers to any outside service. That means a
 - request bodies, search queries, and API calls;
 - commits, files, and anything else that is pushed or published.
 
-**In files and commit messages, call the owner "the owner", never by name** (the owner's decision, Monday, September 28, 2026). Test data uses placeholder names such as "Ada Example".
+**In files and commit messages, call the owner "the owner", never by name** (the owner's decision, Monday, September 28, 2026). Test data uses placeholder names such as "Ada Example". **One exception, by the owner:** the `authors` field in the root `Cargo.toml` carries the owner's full name, as the GitHub account already does. Don't change it. Never guess the owner's pronouns; write "the owner" or "they".
 
 Use only a neutral User-Agent, `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, or the tool's default. Never build a User-Agent or contact string from the session's user email. Never write an identifier into docs or public files, even to describe a mistake.
 
