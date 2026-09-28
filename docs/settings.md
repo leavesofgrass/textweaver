@@ -244,6 +244,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `ocr_lang`, default `""`: the language of scanned text, as Tesseract codes (`"fra"`, `"deu+eng"`) or language tags (`"fr"`). Empty means the document's own language, else English. English is read by ocrs; other languages need Tesseract.
 - `ocr_engine`, default `"auto"`: `"ocrs"`, `"tesseract"`, or `"paddle"` (experimental) to use one engine only.
 - `math_engine`, default `"builtin"`: which engine reads math aloud. `"builtin"` is textweaver's own; `"mathcat"` is MathCAT in ClearSpeak and `"mathcat_simplespeak"` MathCAT in SimpleSpeak, in the document's language. MathCAT needs a build with the `mathcat` feature; without it, textweaver's own is used. See [Hear math with MathCAT](math.md#hear-math-with-mathcat).
+- `math_display`, default `"source"`: how math looks in the reading view. `"source"` shows it as written (`$x^2$`); `"unicode"` draws each formula as one line of Unicode (`x²`, `√2`, `1⁄2`), as Star did. Speech, edit mode, and exploring a formula always use the source. See [See math as Unicode](math.md#see-math-as-unicode).
 
 ### [display]
 

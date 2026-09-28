@@ -173,6 +173,7 @@ pub mod list_model;
 mod lists;
 pub mod logfile;
 mod marks;
+mod math_display;
 mod math_explore;
 mod mdline;
 mod nav;

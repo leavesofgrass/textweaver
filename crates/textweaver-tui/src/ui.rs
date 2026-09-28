@@ -100,6 +100,8 @@ struct RowAids<'a> {
     breaks: &'a [CharPos],
     /// The syllable separator.
     sep: &'a str,
+    /// Ranges drawn as other text (Unicode math), in order.
+    shown: &'a [(CharRange, String)],
 }
 
 /// The math exploration move for a key, if it is one: arrows, Home, End,
@@ -746,10 +748,33 @@ impl Tui {
         let focus = self.app.focus();
         let top = self.app.viewport().top_line;
         let syllables = settings.reading_aids.syllables;
-        let line_breaks = |r: CharRange| self.app.syllable_breaks(r);
-        let decor = syllables.then(|| layout::Decor {
+        let line_breaks = |r: CharRange| {
+            if syllables {
+                self.app.syllable_breaks(r)
+            } else {
+                Vec::new()
+            }
+        };
+        // Unicode math (`[reading] math_display`): the formulas from the
+        // top line to as far as the layout may go.
+        let shown = {
+            let lines = textweaver_app::text_util::line_count(doc);
+            let last = top
+                .saturating_add(rows_wanted.saturating_mul(4).max(512))
+                .min(lines.saturating_sub(1));
+            let from = textweaver_app::text_util::line_range(doc, top.min(last)).start;
+            let to = textweaver_app::text_util::line_range(doc, last).end;
+            self.app
+                .math_display(CharRange::new(from, to.saturating_add(1)))
+        };
+        let decor = (syllables || !shown.is_empty()).then(|| layout::Decor {
             breaks: &line_breaks,
-            text: self.app.syllable_separator().to_owned(),
+            text: if syllables {
+                self.app.syllable_separator().to_owned()
+            } else {
+                String::new()
+            },
+            shown: &shown,
         });
         let sep_width = decor.as_ref().map_or(0, layout::Decor::width);
         let rows = layout::window_decor(
@@ -816,6 +841,7 @@ impl Tui {
                 difficult: &difficult,
                 breaks: row_breaks,
                 sep: &sep,
+                shown: &shown,
             };
             let mut text = self.row_spans(doc, row, &highlights, &aids, theme, cells);
             let extra = ruler_modifier(mark);
@@ -828,7 +854,7 @@ impl Tui {
             if let Some(fp) = focus.filter(|&p| row.holds(p))
                 && cursor.is_none()
             {
-                let col = layout::column_decor(doc, row, fp, cells, row_breaks, sep_width)
+                let col = layout::column_shown(doc, row, fp, cells, row_breaks, sep_width, &shown)
                     .min(width.saturating_sub(1));
                 let x = area.x + gutter + u16::try_from(col).unwrap_or(0);
                 let y = area.y + u16::try_from(lines.len()).unwrap_or(0);
@@ -945,7 +971,11 @@ impl Tui {
             if i > 0 && aids.breaks.binary_search(&pos).is_ok() {
                 run.push_str(aids.sep);
             }
-            run.push_str(&cells.text(c));
+            match layout::shown_at(aids.shown, pos) {
+                Some(Some(text)) => run.push_str(text),
+                Some(None) => {}
+                None => run.push_str(&cells.text(c)),
+            }
         }
         if let Some(st) = run_style {
             spans.push(Span::styled(run, st));
