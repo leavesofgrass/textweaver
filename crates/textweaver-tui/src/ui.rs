@@ -14,8 +14,7 @@ use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
 use textweaver_app::keymap::{ActionId, Key, KeyChord, Modifiers};
 use textweaver_app::text_util::line_count;
 use textweaver_app::{
-    App, CaretMove, Command, Confirm, Effect, ListKey, Mode, Playback, PromptKey, chords_text,
-    extra_lookup,
+    App, CaretMove, Command, Confirm, Effect, ListKey, Mode, PromptKey, chords_text, extra_lookup,
 };
 
 use crate::layout::{self, Cells, Row};
@@ -656,11 +655,8 @@ impl Tui {
         let app = &self.app;
         let title = app.session().map_or("no document", |s| s.title.as_str());
         let left = format!(" textweaver: {title}");
-        let state = match app.playback() {
-            Playback::Reading => "Reading",
-            Playback::Paused { .. } => "Paused",
-            Playback::Idle => "Stopped",
-        };
+        // "Ready" until the first reading, then "Stopped".
+        let state = app.reading_state();
         // Most important first; trailing parts are dropped when narrow.
         let mut parts = Vec::new();
         if app.mode() != Mode::Browse {

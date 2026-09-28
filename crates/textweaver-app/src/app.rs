@@ -287,6 +287,9 @@ pub struct App {
     pub(crate) return_mode: Mode,
     pub(crate) list: Option<ListKind>,
     pub(crate) playback: Playback,
+    /// Something was read aloud since the app started (the title line says
+    /// "Ready" until then, "Stopped" after).
+    pub(crate) has_read: bool,
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
     pub(crate) track: SpeechTrack,
@@ -424,6 +427,7 @@ impl App {
             return_mode: Mode::Browse,
             list: None,
             playback: Playback::Idle,
+            has_read: false,
             pause_origin: None,
             reading: ReadKind::Continuous,
             track: SpeechTrack::default(),
