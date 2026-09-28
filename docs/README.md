@@ -47,6 +47,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 - [The library](library.md): library folders, recent files, sync between computers, and importing from Star.
 - [The Obsidian vault](vault.md): exporting notes and highlights to a vault, and importing them back.
 - [Settings](settings.md): where settings live, every setting, and export, import, and reset.
+- [Settings reference](settings-reference.md): every setting with its default, label, help, and values, generated from the settings schema.
 - [Scripts](../scripts/README.md): install, update, speech check, doctor, and folder conversion.
 
 ## For contributors
@@ -59,13 +60,13 @@ The developer documents are in [dev/](dev/), the decision records in [adr/](adr/
 - [Building](dev/building.md): Rust, Python, what each system needs, Docker, the GUI, and the lean reader.
 - [Testing](dev/testing.md): the checks every change must pass, the tests, and the [benchmarks](dev/testing.md#benchmarks).
 - [Architecture](dev/architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.
-- [The crates](dev/architecture.md#the-crates): what each of the 29 crates does, with its ADRs.
+- [The crates](dev/architecture.md#the-crates): what each of the 33 crates does, with its ADRs.
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
 - [Fuzzing](../fuzz/README.md): the cargo-fuzz targets for the loaders, the settings and state files, and the engine-host protocol, run every night.
 - [Releasing](dev/releasing.md): making a release, the Linux AppImage, and what the packages hold.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
-- [Roadmap](roadmap.md): Phases 1 and 2 (done), and Wave 3.
+- [Roadmap](roadmap.md): Phases 1 and 2 and Wave 3, as planned in September 2026. The current plans are in [history/tasks.md](history/tasks.md) and [research/](#research).
 - [Star features not yet planned](star-gaps.md): Star features with their status in textweaver.
 - [CHANGELOG.md](../CHANGELOG.md): what changed in each release.
 
@@ -103,10 +104,11 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0020: Themes](adr/0020-themes.md): Star's palettes, contrast rules, and output for every frontend.
 - [ADR-0021: DECtalk through a host process](adr/0021-dectalk.md): DECtalk with word timing, and its licensing.
 - [ADR-0022: Reading aids](adr/0022-reading-aids.md): RSVP, bionic reading, spacing, fonts, the ruler, and more, as pure data.
-- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, and the accessibility checks.
+- [ADR-0023: Piper voices and Whisper dictation in-process on RTen](adr/0023-in-process-neural-speech.md): neural voices with word timing from the model, and in-process dictation, on a pure-Rust ONNX runtime.
 - [ADR-0024: App core for the GUI](adr/0024-app-core-for-the-gui.md): the document window, shared list and prompt state, the waker, the replace-range edit, the settings schema, and work moved off the input thread.
 - [ADR-0025: Define word offline, and the message catalog](adr/0025-lexicon-and-message-catalog.md): Open English WordNet and CMUdict in an fst and zstd file, and a Fluent-subset catalog with pseudo-locales.
 - [ADR-0026: OCR, and formats for students](adr/0026-ocr-and-student-formats.md): OCR of scanned pages (ocrs in process, Tesseract as the fallback), DAISY, PowerPoint, spreadsheets, archives, and web pages.
+- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, and the accessibility checks.
 
 ## Interactive pages
 
