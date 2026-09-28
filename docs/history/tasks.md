@@ -854,6 +854,11 @@ Wave 4 starts only after this pass is done. It has four steps.
 3. **Font and print size.** The owner wants to change the font and the size of the text on screen, from the keyboard.
 4. **Every control needs a keyboard shortcut.** The owner likes the simple controls; each one gets a shortcut from the keymap, shown and spoken with its name (for example "Open, Control O").
 
+**Follow-ups found in Wave 4, for Wave 5:**
+- The fuzz crate still compiles the ocrs engine through the formats crate's `ocr` feature (45 minutes under the sanitizer). The fix: the formats crate takes `textweaver-ocr` with `default-features = false`, its `ocr` feature adds `textweaver-ocr/ocrs`, and a new feature gives the image and PDF loaders without the engine, for fuzzing (W5m).
+- `[editing] author` is read from the extra keys and documented, but is not in the store, the schema, or the settings reference.
+- The aarch64 AppImage has not been built yet; the first Release dry run (workflow_dispatch, no tag) tests it.
+
 **After Wave 4 (the owner, Monday, September 28, 2026): release `0.1.0-alpha.4`, then pause, then a documentation sweep.**
 - The owner asked for a new alpha release to be pushed when Wave 4 is done.
 - The docs are comprehensive and checked against the code.
