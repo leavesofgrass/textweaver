@@ -165,7 +165,15 @@ pub fn run() -> anyhow::Result<()> {
     if let Err(e) = check_listening(&guide, &args.version, (y, m, d)) {
         problems.push(e);
     }
-    let headings = agent_headings(&fs::read_to_string(root.join("CHANGELOG.md"))?);
+    let changelog_path = root.join("CHANGELOG.md");
+    let changelog = fs::read_to_string(&changelog_path)?;
+    // An empty or already-dated section is a problem like the others, so a
+    // dry run reports it and goes on.
+    let dated = date_changelog(&changelog, &args.version, &date);
+    if let Err(e) = &dated {
+        problems.push(e.to_string());
+    }
+    let headings = agent_headings(&changelog);
     if !headings.is_empty() {
         problems.push(format!(
             "the [Unreleased] section of CHANGELOG.md still has agents' headings; group their lines by area first: {}",
@@ -186,13 +194,11 @@ pub fn run() -> anyhow::Result<()> {
     let cargo_toml = root.join("Cargo.toml");
     let manifest = fs::read_to_string(&cargo_toml)?;
     let manifest = set_workspace_version(&manifest, &args.version)?;
-    let changelog_path = root.join("CHANGELOG.md");
-    let changelog = fs::read_to_string(&changelog_path)?;
-    let changelog = date_changelog(&changelog, &args.version, &date)?;
-    let mut writes = vec![
-        (cargo_toml.clone(), manifest),
-        (changelog_path.clone(), changelog),
-    ];
+    let mut writes = vec![(cargo_toml.clone(), manifest)];
+    // Only a dry run gets here with an undatable changelog (reported above).
+    if let Ok(changelog) = dated {
+        writes.push((changelog_path.clone(), changelog));
+    }
     for rel in EXAMPLE_FILES {
         let path = root.join(rel);
         let Ok(text) = fs::read_to_string(&path) else {
