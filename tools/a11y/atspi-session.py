@@ -114,9 +114,22 @@ def find_roles(acc, roles, depth=0, found=None):
 
 
 def line_at_caret(doc):
+    """The caret offset and the text of its line.
+
+    AccessKit's AT-SPI adapter answers GetStringAtOffset but not the older
+    GetTextAtOffset (the first run failed with "Unknown method
+    'GetTextAtOffset'"), and pyatspi's wrapper for the newer call varies
+    between versions, so the line is cut from the whole text instead.
+    """
     t = doc.queryText()
     off = t.caretOffset
-    return off, t.getTextAtOffset(off, pyatspi.TEXT_BOUNDARY_LINE_START)[0].strip()
+    text = t.getText(0, -1)
+    start = text.rfind("\n", 0, off) + 1
+    end = text.find("\n", off)
+    line = text[start:end if end >= 0 else len(text)].strip()
+    # If the document has no line breaks between paragraphs, the text from
+    # the caret on still says where it is.
+    return off, line if len(line) < 200 else text[off:off + 60].strip()
 
 
 def orca_tail(path, start):
@@ -203,9 +216,11 @@ def main():
         focus = events("list", "object:state-changed:focused")
         lists = find_roles(state["window"], ("list", "list box", "dialog")) if state["window"] else []
         ok("list", bool(lists), f"the outline opened as a dialog or list ({len(lists)} found)")
-        items = [e for e in focus if "heading" in e[3].lower()]
+        # The outline's items are the headings' text with their level
+        # ("Reading check, level 1"), as the first run showed.
+        items = [e for e in focus if re.search(r"Reading check|Second heading|Third heading|level \d", e[3])]
         ok("list", bool(focus), f"the focus moved into the outline ({len(focus)} focus events)")
-        ok("list", bool(items), "a focused item names a heading", must=False)
+        ok("list", bool(items), "a focused item names a heading and its level", must=False)
 
     def check_close():
         lists = find_roles(state["window"], ("dialog",)) if state["window"] else []

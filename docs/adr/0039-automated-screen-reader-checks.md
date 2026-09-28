@@ -62,12 +62,15 @@ A session becomes standing (its job no longer `continue-on-error`) only when its
 
 ## The answers
 
-Filled in from the first runs; until then, each is "not yet run".
+From the first runs on main, Monday, September 28, 2026 (commit 61d7374: "Screen-reader checks" run 36494179002, "GUI (Xilem)" run 36494179017). Where a run did not reach the question, it says why and what was fixed.
 
-1. **The tree dump:** not yet run. Look for three artifacts (`a11y-tree-windows`, `-macos`, `-linux`), each with a `tree.txt` holding the window, the document, the toolbar, and the status bar, and "No baseline" in the summary on the first run.
-2. **Guidepup and NVDA:** not yet run. Look for "Answer: yes" or "Answer: no" in the `nvda` job's summary, the foreground note, and the phrases under "open" and "settings".
-3. **Orca under Xvfb:** not yet run. Look for the AT-SPI must checks, and whether Orca said anything ("Orca said: N phrases").
-4. **VoiceOver on `macos-14`:** not yet run. Look at `voiceover-setup.log` for whether AppleScript control was allowed, then the answer line.
+1. **The tree dump.**
+   - **Windows: yes.** accessibility-cli read the window through UI Automation in the background: 24 elements, the window with its title bar, the header's label and five buttons (Open, Font, Edit, Settings, Commands), the document, the "Reading" toolbar's six buttons, the status bar with its text, and the live region's "Opened Reading check." Building accessibility-cli took about eight and a half minutes; the cache is now saved right after the build, because the first run was cancelled by a newer push before the end-of-job save.
+   - **Linux: not yet.** accessibility-cli said "Application with PID ... not found" for 40 seconds, while the AT-SPI check in the same job found the window. The dump now opens the window without `--background` under Xvfb (a private display, as the AT-SPI check does), starts the AT-SPI registry daemon as accessibility-cli's own CI does, and on failure writes `windows.txt`: what accessibility-cli and pyatspi each see on the bus, next to the GUI's process id. The next run answers it.
+   - **macOS: not reached.** The job stopped at the GUI crate's test `every_button_has_its_key_from_the_keymap` (another agent's), so the dump steps were skipped. They now run whenever the run is not cancelled, since the build they need is done before the tests.
+2. **Guidepup and NVDA: not reached.** `npm ci` refused the lock file ("Missing: @guidepup/record@0.2.0 from lock file"): the npm that comes with Node 24 on the runner wants every optional dependency in the lock, even with `--omit=optional`, and `@guidepup/setup`'s optional `@guidepup/record` (screen recording, with ffmpeg-static) and its 14 dependencies were missing. They are now in the lock, marked optional, and still not installed (`--omit=optional --ignore-scripts`).
+3. **Orca under Xvfb: yes, Orca reads the GUI.** With AccessKit's AT-SPI adapter and no Collection, Orca said, in order: "Reading check - textweaver frame.", "Document document frame Reading check.", "Reading at 265 words per minute." on Play, "Paused." once on Pause, "Heading level 2: Second heading" on h, "Outline, 3 headings dialog" and "Reading check, level 1." in the outline. Orca also echoed the keys pressed ("left control", "space"), its default key echo. The AT-SPI checks passed except one: AccessKit answers `GetStringAtOffset` but not the older `GetTextAtOffset`, so the heading check raised "Unknown method"; it now reads the caret's line from the whole text. The Opened announcement came before the session listened, as ADR-0028 found on Windows, and stays a warning.
+4. **VoiceOver on `macos-14`: not reached,** for the same lock file reason as NVDA. `guidepup setup --ci` did not run either.
 
 ## Consequences
 
