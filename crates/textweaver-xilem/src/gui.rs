@@ -115,7 +115,8 @@ pub struct GuiOptions {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Experiments {
     /// While reading, select the spoken word instead of placing the caret
-    /// on it.
+    /// at its start. Off by default: session 1 kept the background color
+    /// (ADR-0028); this stays as an option.
     pub select_spoken: bool,
     /// Expose the document as a read-only multi-line edit instead of a
     /// Document.

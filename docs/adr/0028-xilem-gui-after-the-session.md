@@ -1,6 +1,6 @@
 # ADR-0028: The Xilem GUI after Jon's session
 
-- Status: proposed (first draft, Wave 4, Agent W4s; Agent W4a2 finishes it after Jon's session 1)
+- Status: accepted (Wave 4: drafted by Agent W4s; finished by Agent W4a2 after Jon's session 1, Sunday, September 27, 2026)
 - Date: 2026-09-27
 - Builds on: [ADR-0027](0027-xilem-gui.md) (the Xilem GUI)
 
@@ -23,7 +23,7 @@ The GUI now has two announcement paths, chosen with `--announce live|uia` or, in
 
 How it is raised matters. Raised on the window's host provider (`UiaHostProviderFromHwnd`), the events never reached a client, because the host provider is a client-side provider. They are raised from a small server-side provider (`widgets::notify`) whose host is the window; UI Automation merges it with the window's element, whose provider is AccessKit's.
 
-The `[gui]` table is read from the store's preserved unknown tables (`Settings::extra`), so no store type, export fixture, or schema entry was added: those are in `textweaver-store` and `textweaver-app`, which W4s may not change. Until they are, the setting is not in the settings dialog. The four-place change is proposed in W4s's report.
+W4s read the `[gui]` table from the store's preserved unknown tables (`Settings::extra`), because the store and the schema were outside its brief. **Update (W4a2):** the setting is now a proper one in the four places: `GuiSettings { announce }` in `textweaver-store` (default `"live"`; a bad value warns with the other settings and keeps the default), the export fixture, a `gui.announce` choice in the settings schema (the settings dialog shows it under "Window"), and the GUI reading `settings.gui.announce`.
 
 **Checked:** the UI Automation report (`tools/uia-report.ps1 -Announce live` and `-Announce uia`, Sunday, September 27, 2026, Windows 11 26200) passes both ways. With `live`, LiveRegionChanged events arrive for each message (10 in the run) and no Notification events. With `uia`, Notification events arrive with their text and activity id (10) and no LiveRegionChanged events. Managed UI Automation gained LiveRegionChanged in .NET Framework 4.7.1, so the report now subscribes to it instead of only watching for new elements.
 
@@ -85,6 +85,16 @@ W4a2 records the answers here, changes the status to accepted, and removes which
 2. **The highlight:** the background color stays the default, and the caret is not moved by selection. `--select-spoken` stays available as an option.
 
 W4a2 builds on these, adds `[gui] announce` to the store and schema so it appears in the settings dialog, and changes the status to accepted.
+
+## Decision
+
+Jon's first checks with NVDA, JAWS, and his Braille display were good, so the designs W4s prepared stay as they are:
+
+- **Announcements:** the live region is the default everywhere. UI Automation notifications stay as an option, `[gui] announce = "uia"` in the settings (the settings dialog, under "Window") or `--announce uia` for one run. The command line wins over the setting.
+- **The highlight:** the spoken word has its own background color, and the caret (the document's text selection, collapsed) sits at its start. The word is not selected. `--select-spoken` stays as an option for anyone who prefers the word selected. Everything later in the document view builds on this design: the window slide, the reading aids, and edit mode (W4a3).
+- **The hybrid renderer** stays a build option (`--no-default-features --features screenshot,renderer-hybrid`), not the default. The session did not raise memory, and the hybrid renderer's cost in drawing speed on large windows has not been measured with the reading aids drawn. Revisit it with Jon's second session.
+
+The key named in "No document is open" now comes from the keymap (`named_key`), and the list introduction (`ListKey::Introduce`) and the title line's parts (`App::title_parts`) reach the GUI as they reach the terminal reader.
 
 ## Consequences
 
