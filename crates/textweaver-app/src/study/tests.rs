@@ -284,11 +284,26 @@ fn reading_time_is_counted_and_listed() {
     let stats = ReadingStats::load(&Paths::under(&home)).unwrap();
     assert_eq!(stats.documents.len(), 1);
 
-    // Turning statistics off stops the counting.
+    // Enter on an information row keeps the list, on that row.
+    let e = app.dispatch(Command::Choose(1));
+    assert!(list(&e).is_some(), "{e:?}");
+    assert_eq!(app.list_model().map(|l| l.selected), Some(1));
+
+    // Turning statistics off stops the counting; the list stays, on the
+    // row, which now says how to turn them on.
     let toggle = items.len() - 1;
-    app.dispatch(Command::Choose(toggle));
+    let e = app.dispatch(Command::Choose(toggle));
     assert!(app.status_text().starts_with("Reading statistics are off."));
     assert!(!app.settings().stats.enabled);
+    let (_, shown) = list(&e).expect("the list stays");
+    let model = app.list_model().expect("on the list model");
+    assert_eq!(model.selected, toggle);
+    assert_eq!(model.current(), Some(shown[toggle].as_str()));
+    assert!(
+        shown[toggle].starts_with("Statistics are off."),
+        "{shown:?}"
+    );
+    app.dispatch(Command::Cancel);
     app.playback = Playback::Reading;
     app.stats_tick(t0 + Duration::from_secs(61));
     app.stats_tick(t0 + Duration::from_secs(63));

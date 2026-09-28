@@ -19,9 +19,12 @@
 //! - **Messages**: every string these features say or show comes from the
 //!   catalog for `[interface] language` ([`App::catalog`]).
 //!
-//! These lists use the app's list model as it is (`ListKind`); when the
-//! list and prompt model moves into its own module (Agent W3a), the
-//! `StudyList` choices move with it.
+//! These lists are shown on the app's list model (`crate::list_model`,
+//! Agent W3a), so every frontend moves through them, announces "k of n",
+//! and jumps by letter the same way; `StudyList` says what Enter, Delete,
+//! and F2 do on each item. Since Wave 5 (W5y), Enter on the statistics
+//! list's information rows or on its on-and-off row keeps the list open,
+//! on the same row, with the row's new text, instead of closing it.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -813,8 +816,19 @@ impl App {
         }
     }
 
-    /// `reading_statistics`: the list.
+    /// `reading_statistics`: the list, after its introduction.
     pub(crate) fn reading_statistics(&mut self) -> Vec<Effect> {
+        let intro = self.msg(if self.settings.stats.enabled {
+            "stats-intro"
+        } else {
+            "stats-off"
+        });
+        self.tell(&intro);
+        self.statistics_list()
+    }
+
+    /// The statistics list, built again from `stats.json`.
+    fn statistics_list(&mut self) -> Vec<Effect> {
         self.stats_flush();
         self.writer.flush(Duration::from_secs(2));
         let stats = match &self.paths {
@@ -883,12 +897,6 @@ impl App {
             "stats-toggle-off"
         }));
         let title = c.tr("stats-title");
-        let intro = c.tr(if self.settings.stats.enabled {
-            "stats-intro"
-        } else {
-            "stats-off"
-        });
-        self.tell(&intro);
         self.list = Some(ListKind::Study(StudyList::Statistics(entries)));
         vec![Effect::ShowList { title, items }]
     }
@@ -933,9 +941,17 @@ impl App {
                         "stats-turned-off"
                     });
                     self.tell(&m);
-                    vec![Effect::Redraw]
+                    // The list stays, on the same row, which now says the
+                    // other state.
+                    self.pending_list_focus = Some(n);
+                    self.statistics_list()
                 }
-                _ => vec![Effect::Redraw],
+                // An information row: nothing to do, so the list stays.
+                Some(StatsEntry::Info) => {
+                    self.pending_list_focus = Some(n);
+                    self.statistics_list()
+                }
+                None => vec![Effect::Redraw],
             },
         }
     }
