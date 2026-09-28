@@ -12,9 +12,11 @@ use ratatui::widgets::{Block, Clear, Paragraph};
 use textweaver_app::a11y::{CursorPlacement, Priority};
 use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
 use textweaver_app::keymap::{ActionId, Key, KeyChord, Layer, Modifiers};
+use textweaver_app::lexicon::args;
 use textweaver_app::text_util::line_count;
 use textweaver_app::{
-    App, CaretMove, Command, Confirm, Effect, ListKey, Mode, PromptKey, chords_text, extra_lookup,
+    App, CaretMove, Command, Confirm, Effect, ListKey, Mode, PromptKey, chords_text_in,
+    extra_lookup,
 };
 
 use crate::layout::{self, Cells, Row};
@@ -343,25 +345,23 @@ impl Tui {
         let route = self.clipboard_route;
         let mut osc = route != Route::System;
         if route != Route::Osc52 {
-            match self.system_clipboard.set_text(text) {
+            let c = self.app.catalog();
+            match self.system_clipboard.set_text(&c, text) {
                 Ok(()) => {
                     if route == Route::System && !self.system_clipboard_said {
                         self.system_clipboard_said = true;
-                        self.app.announce_queued(
-                            "Copied with the system clipboard, because this terminal cannot take copied text.",
-                            Priority::Polite,
-                        );
+                        let msg = c.tr("tui-clip-system");
+                        self.app.announce_queued(&msg, Priority::Polite);
                     }
                 }
                 Err(e) => {
                     osc = true;
                     log::warn!("system clipboard: {e}");
-                    self.app.announce_queued(
-                        &format!(
-                            "Could not copy with the system clipboard: {e}. Sent to the terminal instead."
-                        ),
-                        Priority::Assertive,
+                    let msg = c.fmt(
+                        "tui-clip-failed",
+                        &textweaver_app::lexicon::args!["error" => e.as_str()],
                     );
+                    self.app.announce_queued(&msg, Priority::Assertive);
                 }
             }
         }
@@ -732,8 +732,11 @@ impl Tui {
 
     fn draw_title(&self, f: &mut Frame<'_>, area: Rect, theme: &Theme, position: Option<&str>) {
         let app = &self.app;
-        let title = app.session().map_or("no document", |s| s.title.as_str());
-        let left = format!(" textweaver: {title}");
+        let c = app.catalog();
+        let title = app
+            .session()
+            .map_or_else(|| c.tr("tui-title-no-document"), |s| s.title.clone());
+        let left = format!(" {}", c.fmt("tui-title", &args!["title" => title]));
         // Most important first; trailing parts are dropped when narrow.
         // The app gives them ("Ready" until the first reading, then
         // "Stopped"), so Say Status speaks the same parts.
@@ -787,13 +790,17 @@ impl Tui {
     fn draw_body(&self, f: &mut Frame<'_>, area: Rect, theme: &Theme) -> Option<Position> {
         f.render_widget(Block::new().style(theme.text), area);
         let Some(s) = self.app.session() else {
-            let k = |a| chords_text(self.app.keymap(), a);
+            let c = self.app.catalog();
+            let k = |a| chords_text_in(&c, self.app.keymap(), a);
+            let line = |id: &str, a: ActionId| {
+                Line::from(format!(" {}", c.fmt(id, &args!["keys" => k(a)])))
+            };
             let lines = vec![
                 Line::from(""),
-                Line::from(" No document is open."),
-                Line::from(format!(" Open one: {}.", k(ActionId::Open))),
-                Line::from(format!(" Help: {}.", k(ActionId::Help))),
-                Line::from(format!(" Quit: {}.", k(ActionId::Quit))),
+                Line::from(format!(" {}", c.tr("tui-empty-no-document"))),
+                line("tui-empty-open", ActionId::Open),
+                line("tui-empty-help", ActionId::Help),
+                line("tui-empty-quit", ActionId::Quit),
             ];
             f.render_widget(Paragraph::new(lines).style(theme.text), area);
             return Some(Position::new(area.x + 1, area.y + 1));
@@ -1153,45 +1160,51 @@ impl Tui {
 
     /// Key hints for the current mode, from the keymap, fitted to `width`.
     pub fn hints(&self, width: u16) -> String {
+        let c = self.app.catalog();
         if self.app.confirmation_pending() {
-            return " y yes  n or a no  Escape no".to_owned();
+            let escape = KeyChord::new(Key::Escape, Modifiers::empty()).to_string();
+            return format!(
+                " {}",
+                c.fmt("tui-hints-confirm", &args!["escape" => escape])
+            );
         }
+        // Each label is a message id.
         let rsvp_hints: &[(ActionId, &str)] = &[
-            (ActionId::RsvpPlayPause, "play"),
-            (ActionId::NextSentence, "sentence"),
-            (ActionId::RsvpFaster, "faster"),
-            (ActionId::RsvpSlower, "slower"),
-            (ActionId::RsvpToggle, "close RSVP"),
-            (ActionId::Quit, "quit"),
+            (ActionId::RsvpPlayPause, "tui-hint-play"),
+            (ActionId::NextSentence, "tui-hint-sentence"),
+            (ActionId::RsvpFaster, "tui-hint-faster"),
+            (ActionId::RsvpSlower, "tui-hint-slower"),
+            (ActionId::RsvpToggle, "tui-hint-close-rsvp"),
+            (ActionId::Quit, "tui-hint-quit"),
         ];
         let hints: &[(ActionId, &str)] = match self.app.mode() {
             _ if self.app.rsvp().is_some() => rsvp_hints,
             Mode::Edit => &[
-                (ActionId::Save, "save"),
-                (ActionId::ToggleEditMode, "finish"),
-                (ActionId::Undo, "undo"),
-                (ActionId::Bold, "bold"),
-                (ActionId::Heading, "heading"),
-                (ActionId::CommandPalette, "commands"),
-                (ActionId::Quit, "quit"),
+                (ActionId::Save, "tui-hint-save"),
+                (ActionId::ToggleEditMode, "tui-hint-finish"),
+                (ActionId::Undo, "tui-hint-undo"),
+                (ActionId::Bold, "tui-hint-bold"),
+                (ActionId::Heading, "tui-hint-heading"),
+                (ActionId::CommandPalette, "tui-hint-commands"),
+                (ActionId::Quit, "tui-hint-quit"),
             ],
             Mode::SpeechCursor => &[
-                (ActionId::SpeechCursorNextLine, "next line"),
-                (ActionId::SpeechCursorPreviousLine, "previous line"),
-                (ActionId::SpeechCursorRereadLine, "again"),
-                (ActionId::SpeechCursorExitAndRead, "read on"),
-                (ActionId::SpeechCursorToggle, "leave"),
+                (ActionId::SpeechCursorNextLine, "tui-hint-next-line"),
+                (ActionId::SpeechCursorPreviousLine, "tui-hint-previous-line"),
+                (ActionId::SpeechCursorRereadLine, "tui-hint-again"),
+                (ActionId::SpeechCursorExitAndRead, "tui-hint-read-on"),
+                (ActionId::SpeechCursorToggle, "tui-hint-leave"),
             ],
             _ => &[
-                (ActionId::PlayPause, "play"),
-                (ActionId::NextSentence, "sentence"),
-                (ActionId::NextParagraph, "paragraph"),
-                (ActionId::SkipNextHeading, "heading"),
-                (ActionId::Find, "find"),
-                (ActionId::AddBookmark, "mark"),
-                (ActionId::SpeechCursorToggle, "lines"),
-                (ActionId::KeyboardHelp, "keys"),
-                (ActionId::Quit, "quit"),
+                (ActionId::PlayPause, "tui-hint-play"),
+                (ActionId::NextSentence, "tui-hint-sentence"),
+                (ActionId::NextParagraph, "tui-hint-paragraph"),
+                (ActionId::SkipNextHeading, "tui-hint-heading"),
+                (ActionId::Find, "tui-hint-find"),
+                (ActionId::AddBookmark, "tui-hint-mark"),
+                (ActionId::SpeechCursorToggle, "tui-hint-lines"),
+                (ActionId::KeyboardHelp, "tui-hint-keys"),
+                (ActionId::Quit, "tui-hint-quit"),
             ],
         };
         let keymap = self.app.keymap();
@@ -1207,7 +1220,7 @@ impl Tui {
                     .iter()
                     .find(|c| c.is_text_input() || c.mods.is_empty())
                     .or(chords.first())?;
-                Some(format!("{best} {label}"))
+                Some(format!("{best} {}", c.tr(label)))
             })
             .collect();
         // Keep what fits, always ending with the last two (help and quit
@@ -1243,10 +1256,15 @@ impl Tui {
         f.render_widget(Clear, area);
         let block = Block::bordered()
             .title(format!(
-                " {} ({} of {}) ",
-                list.title,
-                list.selected + 1,
-                list.items.len()
+                " {} ",
+                self.app.catalog().fmt(
+                    "tui-list-title",
+                    &args![
+                        "title" => list.title.as_str(),
+                        "n" => list.selected + 1,
+                        "count" => list.items.len()
+                    ],
+                )
             ))
             .style(theme.list);
         let inner = block.inner(area);

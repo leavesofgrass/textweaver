@@ -21,6 +21,8 @@
 //! once: "Copied with the system clipboard, because this terminal cannot
 //! take copied text."
 
+use textweaver_app::lexicon::i18n::Catalog;
+
 /// Where copied text is sent.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Route {
@@ -120,7 +122,7 @@ impl SystemClipboard {
     ///
     /// A message for the listener when the clipboard cannot be opened or
     /// written, or when this build has no system clipboard.
-    pub fn set_text(&mut self, text: &str) -> Result<(), String> {
+    pub fn set_text(&mut self, c: &Catalog, text: &str) -> Result<(), String> {
         #[cfg(feature = "clipboard")]
         {
             if self.inner.is_none() {
@@ -128,13 +130,13 @@ impl SystemClipboard {
             }
             match self.inner.as_mut() {
                 Some(c) => c.set_text(text.to_owned()).map_err(|e| e.to_string()),
-                None => Err("the system clipboard is not available".to_owned()),
+                None => Err(c.tr("tui-clip-not-available")),
             }
         }
         #[cfg(not(feature = "clipboard"))]
         {
             let _ = text;
-            Err("this build has no system clipboard".to_owned())
+            Err(c.tr("tui-clip-not-built"))
         }
     }
 }
