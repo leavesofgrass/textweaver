@@ -265,7 +265,7 @@ rubato = "5.0"
 # Download checks: SHA-256 for Hugging Face LFS files, the git blob SHA-1
 # for the small files kept in git.
 sha2 = "0.10"
-sha1 = "0.10"
+sha1 = "0.11"
 
 # Wave 4, Agent W4c1: MathCAT math speech (ADR-0029), behind the speech
 # crate's `mathcat` feature. Pinned exactly: 0.7.6 has no final release.
