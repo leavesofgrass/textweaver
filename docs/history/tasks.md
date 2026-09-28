@@ -54,7 +54,7 @@ Agent B must also build `--features espeak` in the container (espeak-ng is insta
 
 **Git.** Work on your branch in your worktree. Commit in small steps with clear messages; end each commit message with the line `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Do not push, merge, rebase onto `main`, or tag; the orchestrator integrates.
 
-**Dates.** Never write a date or weekday from memory. Get today's date from the machine (`python -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"`) before it goes into any file or commit.
+**Dates.** Never write a date or weekday from memory. Get today's date from the machine before it goes into any file or commit: on Windows `py -3 -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"` (`python` there is the Microsoft Store stub), on Linux and macOS the same with `python3`.
 
 **Report format** (your final message):
 1. Summary (five lines).

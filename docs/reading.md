@@ -20,7 +20,7 @@ textweaver essay.md
 tw open essay.md
 ```
 
-`tw open` refuses a file that does not exist ("no such file"). Plain `textweaver` with no file starts with no document open. It says: "No document is open. Press Control O to open one, Control N for a new one, or F1 for help."
+`tw open` refuses a file that does not exist ("no such file"). Plain `textweaver` with no file starts with no document open. It says: "No document is open. Press Ctrl+O to open one, Ctrl+N for a new one, or F1 for help." Keys named in messages are written this way on the status line; textweaver's own voice says them by name, such as "Control O" and "Alt period", so they are heard whatever the punctuation level.
 
 ### From inside the reader: Ctrl+O
 

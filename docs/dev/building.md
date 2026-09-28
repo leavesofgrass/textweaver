@@ -5,7 +5,7 @@ How to set up a machine to build textweaver: Rust, Python, and what each system 
 ## Everyone
 
 1. Install Rust with [rustup](https://rustup.rs). You do not need to pick a version: `rust-toolchain.toml` pins Rust 1.96, and rustup installs it the first time you build. The minimum supported version is 1.92 (`rust-version` in `Cargo.toml`).
-2. Install Python 3. The link checker and the site data generator need it; they use only the standard library.
+2. Install Python 3. The link checker and the site data generator need it; they use only the standard library. On Windows, install it from python.org with the `py` launcher, and run the tools with `py -3`, for example `py -3 tools/check_links.py`: `python` there may be the Microsoft Store stub, which opens the Store instead of running Python.
 3. Get the code:
 
    ```bash

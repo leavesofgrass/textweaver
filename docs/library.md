@@ -16,7 +16,7 @@ The list has every document in your library folders, then the files you opened r
 
 For example: "Cells, 25 percent, in Readings".
 
-Use **Up** and **Down** to move, **Enter** to open, and **Escape** to close. With nothing to show you hear: "The library is empty. Add a folder with tw library --add, or open a file with Control O."
+Use **Up** and **Down** to move, **Enter** to open, and **Escape** to close. With nothing to show you hear: "The library is empty. Add a folder with tw library --add, or open a file with Ctrl+O."
 
 Type a letter to move to the next item that starts with it. The list has no search box yet. To search, use `tw library --search`, below.
 
