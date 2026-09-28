@@ -349,7 +349,7 @@ impl App {
         } else {
             "authoring-copied-sentence"
         };
-        let spoken = textweaver_editor::echo::summarize(&text, "copied").unwrap_or_else(|| {
+        let spoken = text_util::summary_text(self.cat(), &text, "copied").unwrap_or_else(|| {
             self.msg_args(id, &args!["text" => text_util::preview(&s.doc, range, 8)])
         });
         self.authoring.copied = Some(text.clone());
@@ -378,7 +378,7 @@ impl App {
             return vec![Effect::Redraw];
         };
         let text = s.doc.slice(range);
-        let spoken = textweaver_editor::echo::summarize(&text, "cut").unwrap_or_else(|| {
+        let spoken = text_util::summary_text(self.cat(), &text, "cut").unwrap_or_else(|| {
             self.msg_args(
                 "authoring-cut",
                 &args!["text" => text_util::preview(&s.doc, range, 8)],
@@ -618,7 +618,7 @@ impl App {
             ed.set_selection(Selection::new(range.start, range.end));
         }
         self.delete_quietly();
-        let said = textweaver_editor::echo::summarize(&removed, "deleted").unwrap_or_else(|| {
+        let said = text_util::summary_text(self.cat(), &removed, "deleted").unwrap_or_else(|| {
             let t = removed.trim();
             if t.is_empty() {
                 self.msg("authoring-space-deleted")

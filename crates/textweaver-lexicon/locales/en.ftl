@@ -1458,9 +1458,6 @@ text-selection-change =
         [selected] { $text } selected
        *[unselected] { $text } unselected
     }
-# The word for a long selection's summary ("3,412 characters selected").
-text-selected = selected
-text-unselected = unselected
 
 ## The settings screen. $label is a setting-* label, $value its value as
 ## described below.
@@ -2530,3 +2527,33 @@ tui-hint-keys = keys
 # The list overlay's border: $n is the focused item's number, $count
 # the number of items.
 tui-list-title = { $title } ({ $n } of { $count })
+
+## Long texts are summarized. $count is a number of characters, $first and
+## $last the words at each end; $change says what happened to the text.
+
+text-summary =
+    { $change ->
+        [selected] { $count } characters selected
+        [unselected] { $count } characters unselected
+        [copied] { $count } characters copied
+        [cut] { $count } characters cut
+       *[deleted] { $count } characters deleted
+    }
+text-summary-range =
+    { $change ->
+        [selected] { $count } characters selected, from { $first } to { $last }
+        [unselected] { $count } characters unselected, from { $first } to { $last }
+        [copied] { $count } characters copied, from { $first } to { $last }
+        [cut] { $count } characters cut, from { $first } to { $last }
+       *[deleted] { $count } characters deleted, from { $first } to { $last }
+    }
+voice-character-keys-on = Single-key shortcuts on.
+voice-character-keys-off = Single-key shortcuts off.
+
+## Words typed at the go-to prompt, besides a number: they must be the
+## words prompt-go-to and goto-not-a-target tell the user to type.
+
+goto-word-start = start
+goto-word-end = end
+
+language-voices-loading = The voice list is still loading, so the current voice keeps speaking.

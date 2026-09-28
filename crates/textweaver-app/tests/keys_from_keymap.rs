@@ -273,6 +273,23 @@ fn no_message_names_a_key_in_a_fixed_string() {
             }
         }
     }
+    // The messages themselves live in the catalog now (W4d): a key there
+    // must be a value such as `{ $key }`, filled from the keymap.
+    let catalog = crates
+        .join("textweaver-lexicon")
+        .join("locales")
+        .join("en.ftl");
+    let text = std::fs::read_to_string(&catalog).unwrap();
+    for line in text.lines().filter(|l| !l.trim_start().starts_with('#')) {
+        for chord in chords_in(line) {
+            let allowed = ALLOWED
+                .iter()
+                .any(|(f, t)| *f == "en.ftl" && line.contains(t) && t.contains(chord.as_str()));
+            if !allowed {
+                fixed.push(format!("en.ftl: {chord} in {line:?}"));
+            }
+        }
+    }
     assert!(
         fixed.is_empty(),
         "keys named in fixed strings; take them from the keymap (App::key, App::keys, named_key):\n{}",

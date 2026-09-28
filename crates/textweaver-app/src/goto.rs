@@ -3,6 +3,21 @@
 use textweaver_core::CharPos;
 use textweaver_text::GoTo;
 
+/// [`parse_go_to`], also taking the words for the start and the end in
+/// the catalog's language (`goto-word-start`, `goto-word-end`), which
+/// the go-to prompt tells the user to type.
+pub fn parse_go_to_in(c: &textweaver_lexicon::i18n::Catalog, input: &str) -> Option<GoTo> {
+    let s = input.trim().to_lowercase();
+    let word = |id: &str| c.tr(id).trim().to_lowercase();
+    if s == word("goto-word-start") {
+        return Some(GoTo::Start);
+    }
+    if s == word("goto-word-end") {
+        return Some(GoTo::End);
+    }
+    parse_go_to(input)
+}
+
 /// Parses a go-to answer: `42` or `line 42` (a line), `50%` or
 /// `50 percent`, `char 120` (a character position), or `start`, `top`,
 /// `beginning`, `end`, `bottom`.

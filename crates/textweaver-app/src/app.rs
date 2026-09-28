@@ -1274,7 +1274,7 @@ impl App {
         }
         match mode {
             Mode::Find => self.run_find(&text),
-            Mode::GoTo => match crate::goto::parse_go_to(&text) {
+            Mode::GoTo => match crate::goto::parse_go_to_in(self.cat(), &text) {
                 Some(t) => self.go_to(t),
                 None => {
                     let msg = self.msg_args("goto-not-a-target", &args!["text" => text.as_str()]);

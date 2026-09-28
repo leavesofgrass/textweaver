@@ -428,13 +428,13 @@ impl App {
         s.selection = (!sel.is_empty()).then_some(sel);
         s.cursor = new_head;
         let what = if grew { "selected" } else { "unselected" };
-        let msg = match textweaver_editor::echo::summarize(&text, what) {
+        let msg = match text_util::summary_text(self.cat(), &text, what) {
             Some(summary) => summary,
             // Low says the text alone.
             None if self.settings.speech.verbosity == Verbosity::Low => {
-                text_util::spoken_fragment(&text)
+                text_util::spoken_fragment_text(self.cat(), &text)
             }
-            None => text_util::selection_change_message(&text, what),
+            None => text_util::selection_change_text(self.cat(), &text, grew),
         };
         self.scroll_to_cursor();
         self.tell(&msg);

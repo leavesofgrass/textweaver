@@ -1264,6 +1264,19 @@ impl App {
                 let edit = Edit::delete(o.removed);
                 self.after_edit(&before, &[o]);
                 let ev = echo::for_edit(&policy, &before, &edit);
+                // A long deletion's summary in the interface's language.
+                let removed = before
+                    .slice(edit.range.clamp_to(before.len_chars()).to_range())
+                    .to_string();
+                let ev = ev
+                    .into_iter()
+                    .map(|e| match e {
+                        echo::EchoEvent::Deleted(t) => echo::EchoEvent::Deleted(
+                            text_util::summary_text(self.cat(), &removed, "deleted").unwrap_or(t),
+                        ),
+                        other => other,
+                    })
+                    .collect();
                 self.speak_echo(ev);
             }
             Ok(None) => {
@@ -1415,8 +1428,7 @@ impl App {
             let changed = CharRange::new(head, target);
             let text = doc.slice(changed);
             let grew = new_sel.range().contains_range(changed);
-            let what = if grew { "selected" } else { "unselected" };
-            Some(text_util::selection_change_message(&text, what))
+            Some(text_util::selection_change_text(self.cat(), &text, grew))
         } else {
             match by {
                 CaretMove::Char | CaretMove::LineEdge => Some(match doc.char_at(target) {

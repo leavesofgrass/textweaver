@@ -70,7 +70,18 @@ impl App {
         if lang.eq_ignore_ascii_case(PSEUDO_ACCENTED) || lang.eq_ignore_ascii_case(PSEUDO_RTL) {
             return None;
         }
-        let voices = self.speech.voices().ok()?;
+        // Most engines list their voices in milliseconds; SAPI can take
+        // longer, in the background. A language change is rare, so it may
+        // wait a moment for the list; if it is still coming, the voice
+        // stays and that is said.
+        let list = self
+            .speech
+            .voice_cache()
+            .wait(std::time::Duration::from_millis(1500));
+        if list.is_loading() {
+            return Some(self.msg("language-voices-loading"));
+        }
+        let voices = list.into_result().ok()?;
         if voices.is_empty() {
             return None;
         }

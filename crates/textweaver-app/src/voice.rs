@@ -879,8 +879,13 @@ impl App {
         self.settings_dirty = true;
         let a = Announcement::CharacterKeys { on };
         let verbosity = self.settings.speech.verbosity;
-        if let Some(text) = a.text(verbosity) {
-            self.say_at(&format!("{text}."), Verbosity::Low, a.priority());
+        if a.text(verbosity).is_some() {
+            let text = self.msg(if on {
+                "voice-character-keys-on"
+            } else {
+                "voice-character-keys-off"
+            });
+            self.say_at(&text, Verbosity::Low, a.priority());
         }
     }
 }

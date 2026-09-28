@@ -156,15 +156,40 @@ pub fn selection_change_message(text: &str, what: &str) -> String {
     format!("{} {what}", spoken_fragment(text))
 }
 
+/// Words kept at each end of a long text's summary.
+const SUMMARY_WORDS: usize = 4;
+
+/// A long text's spoken summary in the language of `c`, instead of the
+/// text: "3,412 characters selected, from The first words to the last
+/// words" (as [`textweaver_editor::echo::summarize`] says it in English).
+/// `change` is what happened to the text: `selected`, `unselected`,
+/// `deleted`, `copied`, or `cut`. `None` for text of
+/// [`SUMMARY_THRESHOLD`](textweaver_editor::echo::SUMMARY_THRESHOLD)
+/// characters or fewer, which is read as it is.
+pub fn summary_text(c: &Catalog, text: &str, change: &str) -> Option<String> {
+    let n = text.chars().count();
+    if n <= textweaver_editor::echo::SUMMARY_THRESHOLD {
+        return None;
+    }
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let count = textweaver_editor::echo::thousands(n);
+    if words.len() <= SUMMARY_WORDS {
+        // A few very long tokens (a URL, a base64 blob): the count alone.
+        return Some(c.fmt("text-summary", &args!["count" => count, "change" => change]));
+    }
+    let first = words[..SUMMARY_WORDS].join(" ");
+    let last = words[words.len() - SUMMARY_WORDS..].join(" ");
+    Some(c.fmt(
+        "text-summary-range",
+        &args!["count" => count, "change" => change, "first" => first, "last" => last],
+    ))
+}
+
 /// [`selection_change_message`] in the language of `c`: `selected` is
 /// true when the selection grew by `text`, false when it shrank.
 pub fn selection_change_text(c: &Catalog, text: &str, selected: bool) -> String {
-    let what = c.tr(if selected {
-        "text-selected"
-    } else {
-        "text-unselected"
-    });
-    if let Some(summary) = textweaver_editor::echo::summarize(text, &what) {
+    let change = if selected { "selected" } else { "unselected" };
+    if let Some(summary) = summary_text(c, text, change) {
         return summary;
     }
     c.fmt(
