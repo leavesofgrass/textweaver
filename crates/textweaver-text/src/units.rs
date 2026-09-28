@@ -52,6 +52,7 @@
 //! Sentences and words exclude surrounding whitespace. Differences from Star
 //! are measured by `cargo xtask parity` (docs/history/parity-report.md).
 
+use std::borrow::Cow;
 use std::collections::VecDeque;
 
 use icu_segmenter::options::{SentenceBreakInvariantOptions, WordBreakInvariantOptions};
@@ -588,20 +589,23 @@ fn words_in(text: &str) -> Vec<(usize, usize)> {
     out
 }
 
-fn is_abbreviation(token: &str, list: &[&str]) -> bool {
-    list.contains(&token)
+fn is_abbreviation(token: &[char], list: &[&str]) -> bool {
+    list.iter().any(|a| a.chars().eq(token.iter().copied()))
 }
 
-/// The last whitespace-separated token of `chars`, without leading openers.
-fn last_token(chars: &[char]) -> String {
+/// The last whitespace-separated token of `chars`, without leading openers
+/// (a slice of `chars`, so checking every sentence end allocates nothing).
+fn last_token(chars: &[char]) -> &[char] {
     let start = chars
         .iter()
         .rposition(|c| c.is_whitespace())
         .map_or(0, |i| i + 1);
-    chars[start..]
+    let token = &chars[start..];
+    let openers = token
         .iter()
-        .skip_while(|c| matches!(c, '(' | '[' | '"' | '\'' | '\u{201c}' | '\u{2018}'))
-        .collect()
+        .take_while(|c| matches!(c, '(' | '[' | '"' | '\'' | '\u{201c}' | '\u{2018}'))
+        .count();
+    &token[openers..]
 }
 
 /// Sentence segments of one paragraph, as char ranges relative to its start.
@@ -614,18 +618,25 @@ fn sentences_in(
     atomic: &[(usize, usize)],
 ) -> Vec<(usize, usize)> {
     let chars: Vec<char> = text.chars().collect();
-    // Soft line breaks become spaces (char for char, so offsets hold).
-    let prepared: String = chars
-        .iter()
-        .enumerate()
-        .map(|(i, &c)| {
-            if is_line_break(c) && !hard_break(i) {
-                ' '
-            } else {
-                c
-            }
-        })
-        .collect();
+    // Soft line breaks become spaces (char for char, so offsets hold); a
+    // paragraph on one line is segmented as it is.
+    let prepared: Cow<'_, str> = if chars.iter().any(|&c| is_line_break(c)) {
+        Cow::Owned(
+            chars
+                .iter()
+                .enumerate()
+                .map(|(i, &c)| {
+                    if is_line_break(c) && !hard_break(i) {
+                        ' '
+                    } else {
+                        c
+                    }
+                })
+                .collect(),
+        )
+    } else {
+        Cow::Borrowed(text)
+    };
     let segmenter = SentenceSegmenter::new(SentenceBreakInvariantOptions::default());
     let mut raw: Vec<(usize, usize)> = Vec::new();
     for (a, z, _) in pieces(&prepared, segmenter.segment_str(&prepared)) {
@@ -645,7 +656,7 @@ fn sentences_in(
                 .find(|c| c.is_alphanumeric())
                 .is_some_and(|c| c.is_uppercase());
             let token = last_token(&chars[prev.0..prev.1]);
-            let always = is_abbreviation(&token, ABBREVIATIONS);
+            let always = is_abbreviation(token, ABBREVIATIONS);
             if !gap_has_break && (always || !next_upper) {
                 prev.1 = e;
                 joinable = ends_with_abbreviation(&chars[prev.0..prev.1]);
@@ -690,7 +701,7 @@ fn keep_atomic_ranges_whole(
 
 fn ends_with_abbreviation(chars: &[char]) -> bool {
     let token = last_token(chars);
-    is_abbreviation(&token, ABBREVIATIONS) || is_abbreviation(&token, AMBIGUOUS_ABBREVIATIONS)
+    is_abbreviation(token, ABBREVIATIONS) || is_abbreviation(token, AMBIGUOUS_ABBREVIATIONS)
 }
 
 /// Splits `a..z` after every `…` that is followed by whitespace and a capital.
@@ -753,6 +764,16 @@ fn in_code_block(doc: &Document, block: &Block) -> bool {
             .is_some_and(|m| m.level == 1 && block.range.end <= m.range.end)
 }
 
+/// The text of `range`: borrowed from the rope when it lies in one chunk
+/// (most lines and short paragraphs), copied otherwise.
+fn block_text(doc: &Document, range: CharRange) -> Cow<'_, str> {
+    let slice = doc.text().slice(range.clamp_to(doc.len_chars()).to_range());
+    match slice.as_str() {
+        Some(s) => Cow::Borrowed(s),
+        None => Cow::Owned(slice.to_string()),
+    }
+}
+
 /// The segments of `unit` inside one block, as absolute ranges, in order.
 fn segment_block(doc: &Document, unit: Unit, block: &Block) -> Vec<CharRange> {
     let base = block.range.start.0;
@@ -760,11 +781,11 @@ fn segment_block(doc: &Document, unit: Unit, block: &Block) -> Vec<CharRange> {
     match unit {
         Unit::Line | Unit::Paragraph | Unit::Document => vec![block.range],
         Unit::Grapheme => {
-            let text = doc.slice(block.range);
+            let text = block_text(doc, block.range);
             let ends = text.grapheme_indices(true).map(|(b, g)| b + g.len());
             pieces(&text, ends).map(|(a, z, _)| abs((a, z))).collect()
         }
-        Unit::Word => words_in(&doc.slice(block.range))
+        Unit::Word => words_in(&block_text(doc, block.range))
             .into_iter()
             .map(abs)
             .collect(),
@@ -793,7 +814,7 @@ fn segment_block(doc: &Document, unit: Unit, block: &Block) -> Vec<CharRange> {
                     })
                     .collect()
             };
-            let text = doc.slice(block.range);
+            let text = block_text(doc, block.range);
             sentences_in(&text, |i| breaks.contains(&CharPos(base + i)), &atomic)
                 .into_iter()
                 .map(abs)
