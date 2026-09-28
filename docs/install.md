@@ -10,8 +10,6 @@ textweaver is in alpha. The newest release is 0.1.0-alpha.4. A release on GitHub
 - `textweaver-VERSION-linux-x86_64.tar.gz`, the same programs as a plain folder, for Linux systems where AppImages cannot run
 - `textweaver-VERSION-linux-aarch64.AppImage` and `textweaver-VERSION-linux-aarch64.tar.gz`, the same for 64-bit ARM (arm64) computers
 
-The Linux packages start with the next release. 0.1.0-alpha.4 has the Windows and macOS packages only; on Linux, build it from source with the install script (see [Install with a script](#install-with-a-script)).
-
 Every package contains two programs:
 
 - `textweaver`, the terminal reader. Run `textweaver FILE`.
@@ -35,16 +33,16 @@ On macOS, this downloads the newest release, checks it, and installs `textweaver
 bash scripts/install-macos.sh
 ```
 
-On Linux, this builds textweaver from source: it installs the build dependencies with apt, dnf, pacman, zypper, or apk, builds textweaver, and installs it in `~/.local`. This is the way to install 0.1.0-alpha.4, which has no Linux package:
-
-```bash
-bash scripts/install-linux.sh
-```
-
-From the next release on, `--release` downloads a release instead, checks it, and installs it in `~/.local`: the AppImage, with `textweaver` and `tw` in `~/.local/bin`, or the tarball where AppImages cannot run:
+On Linux, `--release` downloads a release, checks it, and installs it in `~/.local`: the AppImage, with `textweaver` and `tw` in `~/.local/bin`, or the tarball where AppImages cannot run:
 
 ```bash
 bash scripts/install-linux.sh --release latest
+```
+
+Without `--release`, it builds textweaver from source instead: it installs the build dependencies with apt, dnf, pacman, zypper, or apk, builds textweaver, and installs it in `~/.local`:
+
+```bash
+bash scripts/install-linux.sh
 ```
 
 The scripts are in a copy of the repository. To get one:
@@ -138,8 +136,6 @@ tw voices
 ## Linux
 
 The Linux package is an AppImage: one file that holds `textweaver`, `tw`, the engine hosts for Eloquence (Voxin) and DECtalk, the pronunciation dictionaries, the guides, and the licences. It is built on Ubuntu 22.04, so it runs on distributions from 2022 on, including Debian 12 and 13, Ubuntu 22.04 and later, Fedora, Arch, and openSUSE. There is one for x86_64 computers and one for 64-bit ARM (aarch64) computers; the install script picks the one for your computer. In the steps below, write `aarch64` where they say `x86_64` if `uname -m` says `aarch64`.
-
-The first release with the AppImage is the one after 0.1.0-alpha.4. Until it is out, build from source with `bash scripts/install-linux.sh`, as described at the end of this section.
 
 The easiest way is the install script, which checks the download for you (see [Install with a script](#install-with-a-script)):
 

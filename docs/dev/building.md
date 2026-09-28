@@ -73,7 +73,7 @@ cargo build -p textweaver-tui --no-default-features
 
 The `scripts/` folder has installers and helpers for every system. Each script has `--help` and `--dry-run`. It says what it will do before it does it, and asks before it uses sudo or changes your PATH. The full list is in [scripts/README.md](../../scripts/README.md).
 
-- `install-linux.sh`: install a release (the AppImage, for x86_64 or aarch64), or build and install from source on Debian, Ubuntu, Fedora, Arch, openSUSE, or Alpine.
+- `install-linux.sh`: install a release (the AppImage or tarball, for x86_64 or aarch64), or build and install from source on Debian, Ubuntu, Fedora, Arch, openSUSE, or Alpine.
 - `install-macos.sh`: install the newest macOS release, or build from source.
 - `install-windows.ps1`: install the newest Windows release, or build from source.
 - `update.sh` and `update.ps1`: update an installed textweaver.

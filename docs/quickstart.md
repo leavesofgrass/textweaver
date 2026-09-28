@@ -48,19 +48,7 @@ bash scripts/install-macos.sh
 
 ## Linux
 
-The current release, 0.1.0-alpha.3, has no Linux package. Until the next release, build textweaver from source with the install script. From a copy of the repository (`git clone https://github.com/leavesofgrass/textweaver`):
-
-```bash
-bash scripts/install-linux.sh
-```
-
-It installs what the build needs, builds textweaver, and installs it in `~/.local`. Then run:
-
-```bash
-textweaver ~/.local/share/doc/textweaver/QUICKSTART.md
-```
-
-From the next release on, there is an AppImage: one file that runs on most distributions from 2022 on, for x86_64 or for 64-bit ARM (aarch64) computers. `uname -m` says which yours is.
+There is an AppImage: one file that runs on most distributions from 2022 on, for x86_64 or for 64-bit ARM (aarch64) computers. `uname -m` says which yours is.
 
 1. Download the Linux `.AppImage` from the [releases page](https://github.com/leavesofgrass/textweaver/releases).
 2. Open a terminal in the folder you saved it to, and make it executable:
