@@ -104,6 +104,37 @@ fn settings_and_sections_below_the_fold_stay_in_the_tree() {
     }
 }
 
+/// Settings scrolled into view are drawn with their text, not blank.
+#[test]
+fn settings_scrolled_into_view_are_drawn() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    let (mut h, _form) = harness_with_dialog(&app);
+    h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::End)));
+    let _ = h.redraw();
+    let grid = h.access_node(h.get_widget(FORM).id()).unwrap();
+    let n = grid.children().count();
+    let row = grid
+        .children()
+        .nth(n - 2)
+        .and_then(|o| o.bounding_box())
+        .expect("the row before the last has bounds");
+    let img = h.render();
+    let mut colors = std::collections::HashSet::new();
+    for y in row.y0.ceil() as u32..row.y1.floor() as u32 {
+        for x in row.x0.ceil() as u32..(row.x0 + 160.0) as u32 {
+            if x < img.width() && y < img.height() {
+                colors.insert(img.get_pixel(x, y).0);
+            }
+        }
+    }
+    assert!(
+        colors.len() > 4,
+        "the setting before the last is drawn with its text after End ({} colors)",
+        colors.len()
+    );
+}
+
 #[test]
 fn the_dialog_names_its_sections_and_settings_with_their_roles() {
     let dir = tempfile::tempdir().unwrap();

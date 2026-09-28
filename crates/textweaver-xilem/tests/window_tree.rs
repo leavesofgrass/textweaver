@@ -195,6 +195,28 @@ fn every_option_of_a_long_list_stays_in_the_tree() {
     );
     assert_eq!(list.active_descendant().map(|n| n.id()), Some(last.id()));
     check(&h, "after End");
+    // The rows scrolled into view are drawn with their text, not blank:
+    // the option before the last has more than its background's colors.
+    let list = h.access_node(h.get_widget(LIST).id()).unwrap();
+    let row = list
+        .children()
+        .nth(38)
+        .and_then(|o| o.bounding_box())
+        .expect("option 39 has bounds");
+    let img = h.render();
+    let mut colors = std::collections::HashSet::new();
+    for y in row.y0.ceil() as u32..row.y1.floor() as u32 {
+        for x in row.x0.ceil() as u32..(row.x0 + 120.0) as u32 {
+            if x < img.width() && y < img.height() {
+                colors.insert(img.get_pixel(x, y).0);
+            }
+        }
+    }
+    assert!(
+        colors.len() > 4,
+        "option 39 is drawn with its text after End ({} colors)",
+        colors.len()
+    );
 }
 
 #[test]

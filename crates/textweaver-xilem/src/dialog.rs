@@ -304,6 +304,9 @@ impl ChoiceList {
     /// Moves the selection (for the driver and tests).
     pub fn select(this: &mut WidgetMut<'_, Self>, i: usize) {
         this.widget.set_selected(i);
+        if this.widget.needs_text() {
+            this.ctx.request_layout();
+        }
         this.ctx.request_render();
     }
 
@@ -317,6 +320,16 @@ impl ChoiceList {
         } else if self.selected >= self.top + self.visible_rows {
             self.top = self.selected + 1 - self.visible_rows;
         }
+    }
+
+    /// True when a row in view has no text layout yet: the list scrolled,
+    /// and the next layout pass must build them, or the rows are drawn
+    /// blank (text layouts are built in `layout`, not in `paint`).
+    fn needs_text(&self) -> bool {
+        let last = (self.top + self.visible_rows + 1).min(self.items.len());
+        self.layouts
+            .get(self.top..last)
+            .is_some_and(|rows| rows.iter().any(Option::is_none))
     }
 
     fn first_letter(&self, c: char) -> Option<usize> {
@@ -410,6 +423,9 @@ impl Widget for ChoiceList {
         if let Some(i) = new {
             let moved = i != self.selected;
             self.set_selected(i);
+            if self.needs_text() {
+                ctx.request_layout();
+            }
             ctx.request_render();
             if moved && self.focus_actions {
                 ctx.submit_action::<DialogAction>(DialogAction::Focus(self.selected));
@@ -457,6 +473,9 @@ impl Widget for ChoiceList {
                 let rows = (-y / self.row_h).round() as isize;
                 let max_top = self.items.len().saturating_sub(self.visible_rows);
                 self.top = (self.top as isize + rows).clamp(0, max_top as isize) as usize;
+                if self.needs_text() {
+                    ctx.request_layout();
+                }
                 ctx.request_render();
                 ctx.set_handled();
             }
@@ -489,6 +508,9 @@ impl Widget for ChoiceList {
             return;
         }
         self.set_selected(row);
+        if self.needs_text() {
+            ctx.request_layout();
+        }
         ctx.request_render();
         if self.app_keys || self.focus_actions {
             ctx.submit_action::<DialogAction>(DialogAction::Focus(self.selected));
