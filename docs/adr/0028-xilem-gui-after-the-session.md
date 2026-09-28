@@ -80,6 +80,12 @@ Nothing inside `textweaver-xilem` accounts for more than a few megabytes, so not
 
 W4a2 records the answers here, changes the status to accepted, and removes whichever option is not kept, or keeps it as a setting if Jon prefers.
 
+**Jon's answers (Sunday, September 27, 2026, after his first screen reader and Braille display checks):**
+1. **Announcements:** the live region stays the default. `uia` stays available as an option.
+2. **The highlight:** the background color stays the default, and the caret is not moved by selection. `--select-spoken` stays available as an option.
+
+W4a2 builds on these, adds `[gui] announce` to the store and schema so it appears in the settings dialog, and changes the status to accepted.
+
 ## Consequences
 
 - The GUI has a small, reviewed `unsafe` block for the Notification event (one COM call and one COM object), the first in the crate. It is Windows-only and needs `windows` and `windows-core`, which AccessKit already brings.
