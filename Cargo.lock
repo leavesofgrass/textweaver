@@ -3069,15 +3069,15 @@ dependencies = [
 
 [[package]]
 name = "imaging_vello_cpu"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd411d3ad5f4b8271a45b4bc69df7f88bb4236b71fbd4e5a5177c6e93eb67f44"
+checksum = "d978b62a30f095ccdcd54546f3f1a972e3f4a14f9bafd3cccfb0f3e573202724"
 dependencies = [
  "imaging",
  "kurbo",
  "peniko",
- "vello_common 0.0.7",
- "vello_cpu 0.0.7",
+ "vello_common 0.0.9",
+ "vello_cpu 0.0.9",
 ]
 
 [[package]]
@@ -8452,18 +8452,6 @@ dependencies = [
 
 [[package]]
 name = "vello_cpu"
-version = "0.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a678f91c7524a3a9ac9a19df9f83552866ec70b2ca26441b916a6b219b6aa2de"
-dependencies = [
- "bytemuck",
- "hashbrown 0.16.1",
- "vello_api",
- "vello_common 0.0.7",
-]
-
-[[package]]
-name = "vello_cpu"
 version = "0.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6d8ded630e8316bb94a55881256506d1f3b9947b5f66db8a7d32ca7ba02decd0"
@@ -8473,6 +8461,19 @@ dependencies = [
  "hashbrown 0.17.1",
  "png",
  "vello_common 0.0.8",
+]
+
+[[package]]
+name = "vello_cpu"
+version = "0.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "588691169aed86b5c8fb487266afee01323234e6fd0a3f2aaec0eaa8e4007f23"
+dependencies = [
+ "bytemuck",
+ "glifo",
+ "hashbrown 0.17.1",
+ "png",
+ "vello_common 0.0.9",
 ]
 
 [[package]]
