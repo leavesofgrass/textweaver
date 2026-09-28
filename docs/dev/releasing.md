@@ -74,7 +74,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
 Do this before each release, on the machine you use every day, with Eloquence, SAPI 5, and Piper (and DECtalk if it is installed). Then record it with `cargo xtask release VERSION --listened`, which rewrites this line from the machine's clock:
 
-**Last listening check:** not yet recorded.
+**Last listening check:** 2026-09-28 (Monday, September 28, 2026), for 0.1.0-alpha.4.
 
 1. **Write the samples.**
 

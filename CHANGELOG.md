@@ -8,7 +8,7 @@ The fourth alpha. The keys follow NVDA's and JAWS's browse mode; textweaver spea
 
 ### Testing
 
-- **Listening check:** not yet done for this release. The owner records it with `cargo xtask release 0.1.0-alpha.4 --listened` after going through the [listening checklist](docs/dev/releasing.md#listening-checklist), and notes here what they heard.
+- **Listening check (Monday, September 28, 2026):** the owner used the release build with NVDA and JAWS in two sessions. ETI-Eloquence read with the words highlighted correctly in the GUI; the owner's findings from the second session (a console window, the Open dialog, font and text size, button shortcuts) were fixed before this release. SAPI 5 and Eloquence wrote clean samples with `cargo xtask listen`; DECtalk is not installed on the test machine. The owner's Braille display session comes in the next wave.
 
 ### Keys: what changed
 
