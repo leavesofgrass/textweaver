@@ -1,6 +1,7 @@
 //! Building the app for the terminal: paths, settings, keymap, speech.
 
 use std::path::PathBuf;
+use std::time::Instant;
 
 use textweaver_app::a11y::{AccessMode, Announcer, RingAnnouncer};
 use textweaver_app::keymap::{Frontend, Keymap, Platform};
@@ -107,6 +108,7 @@ pub fn build_app(opts: &Options) -> (App, Vec<String>) {
 /// [`build_app`] with a chosen announcer (the JSON-RPC server passes one
 /// that forwards announcements to its client).
 pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<String>) {
+    let started = Instant::now();
     let mut messages = Vec::new();
     let paths = match &opts.home {
         Some(home) => Some(Paths::under(home)),
@@ -149,6 +151,21 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
     if let Some(t) = &opts.theme {
         settings.display.theme = t.clone();
     }
+    log::debug!(
+        "startup: settings and keys read in {} ms",
+        started.elapsed().as_millis()
+    );
+    // Reading the system's light, dark, or high-contrast setting starts
+    // two small processes on Windows (35 to 90 ms measured): only when it
+    // can change the theme, and on a helper thread while the app is built.
+    let os_scheme = follows_os_theme(&settings, opts)
+        .then(|| {
+            std::thread::Builder::new()
+                .name("os-theme".into())
+                .spawn(textweaver_app::theme::os::probe)
+                .ok()
+        })
+        .flatten();
     // The engine starts on a helper thread (Wave 3): the reader is usable at
     // once, silent until the engine is ready, and `App::tick` swaps it in.
     // Messages about the engine (one that is not available) come then.
@@ -189,13 +206,24 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
     } else {
         app.set_speech_starter(starter);
     }
-    if opts.theme.is_none() {
-        // Follow the system's light, dark, or high-contrast setting unless
-        // the user picked a theme (display.follow_os_theme and
-        // display.theme_explicit); the probe gives up after 500 ms.
-        app.apply_startup_theme(textweaver_app::theme::os::probe());
+    // Follow the system's light, dark, or high-contrast setting unless the
+    // user picked a theme (display.follow_os_theme and
+    // display.theme_explicit); the probe gives up after 500 ms.
+    if let Some(scheme) = os_scheme.and_then(|probe| probe.join().ok()) {
+        app.apply_startup_theme(scheme);
     }
+    log::debug!(
+        "startup: reader built in {} ms",
+        started.elapsed().as_millis()
+    );
     (app, messages)
+}
+
+/// True when the system's color scheme can choose the theme at startup:
+/// no `--theme` for this run, `[display] follow_os_theme` on, and no theme
+/// picked by the user (`theme_explicit`). Otherwise the probe is skipped.
+fn follows_os_theme(settings: &Settings, opts: &Options) -> bool {
+    opts.theme.is_none() && settings.display.follow_os_theme && !settings.display.theme_explicit
 }
 
 /// True on the first run under these paths: no settings or keymap file,
@@ -288,6 +316,26 @@ mod tests {
         assert_eq!(app.backend_name(), "silent");
         assert_eq!(app.settings().display.theme, "light");
         assert_eq!(app.paths(), Some(&Paths::under(dir.path())));
+    }
+
+    /// The system's color scheme is read only when it can choose the theme.
+    #[test]
+    fn the_os_theme_is_probed_only_when_it_can_apply() {
+        let mut s = Settings::default();
+        let none = Options::default();
+        s.display.follow_os_theme = true;
+        s.display.theme_explicit = false;
+        assert!(follows_os_theme(&s, &none));
+        let theme = Options {
+            theme: Some("light".into()),
+            ..Options::default()
+        };
+        assert!(!follows_os_theme(&s, &theme));
+        s.display.theme_explicit = true;
+        assert!(!follows_os_theme(&s, &none));
+        s.display.theme_explicit = false;
+        s.display.follow_os_theme = false;
+        assert!(!follows_os_theme(&s, &none));
     }
 
     /// `[keyboard] character_keys = false` is in effect from the first key
