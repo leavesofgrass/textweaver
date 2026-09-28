@@ -798,8 +798,8 @@ impl DocumentView {
                         range: CharRange::new(a, b),
                         line: i,
                     },
-                    top + f64::from(m.min_coord),
-                    top + f64::from(m.max_coord),
+                    top + f64::from(m.block_min_coord),
+                    top + f64::from(m.block_max_coord),
                 ));
                 any = true;
             }
@@ -881,7 +881,7 @@ impl DocumentView {
         let pl = &self.layouts[&pi];
         let p = &self.model.paragraphs[pi];
         let y = pl.layout.get(line).map_or(0.0, |l| {
-            (l.metrics().min_coord + l.metrics().max_coord) / 2.0
+            (l.metrics().block_min_coord + l.metrics().block_max_coord) / 2.0
         });
         let c = Cursor::from_point(&pl.layout, x, y);
         CharPos(p.start.0 + caret::char_of(&p.text, c.index()))

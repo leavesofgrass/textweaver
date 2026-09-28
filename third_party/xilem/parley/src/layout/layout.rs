@@ -7,6 +7,7 @@ use crate::layout::alignment::unjustify;
 use crate::layout::data::LayoutData;
 use crate::style::Brush;
 use core::cmp::Ordering;
+use core::fmt;
 
 use crate::IndentOptions;
 use crate::layout::{
@@ -15,9 +16,31 @@ use crate::layout::{
 };
 
 /// Text layout.
+///
+/// The [`Debug`] implementation prints a compact summary by default.
+/// The alternate form (`{:#?}`) formats the full underlying data.
+///
+/// [`Debug`]: core::fmt::Debug
 #[derive(Clone)]
 pub struct Layout<B: Brush> {
     pub(crate) data: LayoutData<B>,
+}
+
+impl<B: Brush> fmt::Debug for Layout<B> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if f.alternate() {
+            f.debug_struct("Layout").field("data", &self.data).finish()
+        } else {
+            f.debug_struct("Layout")
+                .field("text_len", &self.data.text_len)
+                .field("width", &self.data.width)
+                .field("height", &self.data.height)
+                .field("lines", &self.data.lines.len())
+                .field("runs", &self.data.runs.len())
+                .field("styles", &self.data.styles.len())
+                .finish_non_exhaustive()
+        }
+    }
 }
 
 impl<B: Brush> Layout<B> {
@@ -36,13 +59,17 @@ impl<B: Brush> Layout<B> {
         &self.data.styles
     }
 
-    /// Returns the width of the layout.
+    /// The `max_advance` that was used to line break the `Layout`
+    pub fn layout_max_advance(&self) -> f32 {
+        self.data.layout_max_advance
+    }
+
+    /// Returns the computed width of the layout excluding the width of trailing whitespace.
     pub fn width(&self) -> f32 {
         self.data.width
     }
 
-    /// Returns the width of the layout, including the width of any trailing
-    /// whitespace.
+    /// Returns the computed width of the layout including the width of trailing whitespace.
     pub fn full_width(&self) -> f32 {
         self.data.full_width
     }
@@ -136,20 +163,20 @@ impl<B: Brush> Layout<B> {
             .break_remaining(max_advance.unwrap_or(f32::MAX));
     }
 
-    /// Apply alignment to the layout relative to the specified container width or full layout
-    /// width.
+    /// Apply alignment to the layout.
     ///
     /// You must perform line breaking prior to aligning, through [`Layout::break_lines`] or
-    /// [`Layout::break_all_lines`]. If `container_width` is not specified, the layout's
-    /// [`Layout::width`] is used.
-    pub fn align(
-        &mut self,
-        container_width: Option<f32>,
-        alignment: Alignment,
-        options: AlignmentOptions,
-    ) {
+    /// [`Layout::break_all_lines`].
+    ///
+    /// If a finite `max_advance` is supplied to `Layout::break_all_lines` then that width will be applied
+    /// relative to that width. Otherwise alignment will be applied relative to the width of the
+    /// longest line as computed by line breaking.
+    ///
+    /// If line-specific `offset` and `max_advance` are set using the advanced methods on the `BreakLines`
+    /// struct then each line will be aligned individually within its line box.
+    pub fn align(&mut self, alignment: Alignment, options: AlignmentOptions) {
         unjustify(&mut self.data);
-        align(&mut self.data, container_width, alignment, options);
+        align(&mut self.data, alignment, options);
     }
 
     /// Returns the index and `Line` object for the line containing the
@@ -182,9 +209,9 @@ impl<B: Brush> Layout<B> {
             return Some((0, self.get(0)?));
         }
         let maybe_line_index = self.data.lines.binary_search_by(|line| {
-            if offset < line.metrics.min_coord {
+            if offset < line.metrics.block_min_coord {
                 Ordering::Greater
-            } else if offset >= line.metrics.max_coord {
+            } else if offset >= line.metrics.block_max_coord {
                 Ordering::Less
             } else {
                 Ordering::Equal

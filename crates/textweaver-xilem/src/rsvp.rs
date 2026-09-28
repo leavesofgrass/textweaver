@@ -180,7 +180,7 @@ impl RsvpView {
         }
         let mut layout = b.build(text);
         layout.break_all_lines(None);
-        layout.align(None, Alignment::Start, AlignmentOptions::default());
+        layout.align(Alignment::Start, AlignmentOptions::default());
         layout
     }
 }
