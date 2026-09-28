@@ -16,6 +16,11 @@ pub fn to_file(path: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// True when log lines go to a `--log-file`.
+pub fn to_file_active() -> bool {
+    FILE.get().is_some()
+}
+
 /// Writes one line.
 pub fn line(text: &str) {
     match FILE.get() {

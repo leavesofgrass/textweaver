@@ -70,6 +70,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted.
 - [ADR-0032: Grammar, lint, highlighting, and clipboard crates](0032-grammar-lint-highlighting-clipboard.md): our own Markdown lint instead of rumdl, arboard where OSC 52 cannot reach, Unicode math and notes export without new crates, and harper-core and syntect held on one advisory.
   - Status: accepted; grammar is built only with the `grammar` feature, and highlighting is on by default.
+- [ADR-0033: The GUI after the second session, and edit mode](0033-gui-session-2-and-edit-mode.md): no console window, the system's file chooser for Open, text size and font keys, every button naming its key, and edit mode in the document view.
+  - Status: accepted.
 
 ## Writing a new ADR
 

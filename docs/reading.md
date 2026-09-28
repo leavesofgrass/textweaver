@@ -403,7 +403,7 @@ For more help reading, such as one word at a time (RSVP), bionic reading, and a 
 
 ## Faster, slower, and the voice
 
-- **+** or **=**: faster. **-**: slower. Each step is 20 words per minute. The GUI also has **Ctrl+=** and **Ctrl+-**.
+- **+** or **=**: faster. **-**: slower. Each step is 20 words per minute. The GUI also has **F11** and **Shift+F11**; there, **Ctrl+=** and **Ctrl+-** change the text size.
 - **F8**: cycle the speed presets: skim, normal, study, slow.
 - **Alt+V**: choose a voice. The GUI uses **Ctrl+Shift+V**.
 

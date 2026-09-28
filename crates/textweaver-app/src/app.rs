@@ -1658,7 +1658,7 @@ impl App {
             A::NextBookmark => self.bookmark_step(textweaver_core::Direction::Forward),
             A::PreviousBookmark => self.bookmark_step(textweaver_core::Direction::Backward),
             // File
-            A::Open => return self.prompt(PromptPurpose::Open),
+            A::Open | A::OpenPath => return self.prompt(PromptPurpose::Open),
             A::OpenLibrary => return self.open_library(),
             A::ExportSettings => return self.settings_file_prompt(false),
             A::ImportSettings => return self.settings_file_prompt(true),
@@ -1671,6 +1671,11 @@ impl App {
             A::RulerCycle => self.ruler_cycle(),
             A::SyllablesToggle => self.syllables_toggle(),
             A::DifficultWordsToggle => self.difficult_words_toggle(),
+            // The window's text size and font (the GUI handles them first).
+            A::TextLarger | A::TextSmaller | A::TextSizeReset | A::ChooseFont => {
+                let msg = self.msg("app-window-only");
+                self.note(&msg);
+            }
             A::CommandPalette => return self.prompt(PromptPurpose::CommandPalette),
             A::Settings => return self.open_settings_screen(),
             A::KeyboardHelp => return self.keyboard_help(),

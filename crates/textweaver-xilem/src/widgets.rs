@@ -270,9 +270,16 @@ pub struct Pressed;
 /// A button with an explicit accessible name, shortcut, and description.
 /// The visible text is a label child hidden from screen readers, so the
 /// name is said once.
+///
+/// The shortcut is the node's keyboard shortcut property (UI Automation's
+/// AcceleratorKey, AT-SPI's), which NVDA and JAWS say when their "report
+/// shortcut keys" setting is on, and it is on screen, written ("Open…
+/// (Ctrl+O)"). The name is the label only ("Open"): the owner found the key
+/// in the name wordy (Monday, September 28, 2026).
 pub struct ActionButton {
     child: WidgetPod<Label>,
     label: String,
+    /// The shortcut as written ("Ctrl+O").
     shortcut: String,
     description: String,
 }
@@ -289,11 +296,25 @@ impl ActionButton {
         }
     }
 
+    /// The text on screen: the label, then the shortcut as written.
+    pub fn shown_text(&self) -> String {
+        if self.shortcut.is_empty() {
+            self.label.clone()
+        } else {
+            format!("{} ({})", self.label, self.shortcut)
+        }
+    }
+
+    /// The accessible name: the label without a trailing ellipsis ("Open").
+    pub fn name(&self) -> String {
+        self.label.trim_end_matches('…').trim_end().to_owned()
+    }
+
     /// Draws the text in `color` (the primary button's text on the
     /// accent).
     pub fn with_text_color(mut self, color: masonry::peniko::Color) -> Self {
-        let label = self.label.clone();
-        self.child = NewWidget::new(button_text(label))
+        let text = self.shown_text();
+        self.child = NewWidget::new(button_text(text))
             .with_props(masonry::properties::ContentColor::new(color))
             .to_pod();
         self
@@ -305,10 +326,34 @@ impl ActionButton {
         child.insert_prop(masonry::properties::ContentColor::new(color));
     }
 
-    /// Adds the keyboard shortcut screen readers read after the name.
+    /// Adds the keyboard shortcut, as written ("Ctrl+O"): the node's
+    /// keyboard shortcut, and on screen. Call it before
+    /// [`with_text_color`](Self::with_text_color).
     pub fn with_shortcut(mut self, shortcut: impl Into<String>) -> Self {
         self.shortcut = shortcut.into();
+        self.child = NewWidget::new(button_text(self.shown_text())).to_pod();
         self
+    }
+
+    /// Changes the shortcut (single-key shortcuts turned on or off).
+    pub fn set_shortcut(this: &mut WidgetMut<'_, Self>, shortcut: impl Into<String>) {
+        let shortcut = shortcut.into();
+        if this.widget.shortcut == shortcut {
+            return;
+        }
+        this.widget.shortcut = shortcut;
+        let text = this.widget.shown_text();
+        {
+            let mut child = this.ctx.get_mut(&mut this.widget.child);
+            Label::set_text(&mut child, text);
+        }
+        this.ctx.request_layout();
+        this.ctx.request_accessibility_update();
+    }
+
+    /// The shortcut as written, or empty.
+    pub fn shortcut(&self) -> &str {
+        &self.shortcut
     }
 
     /// Adds a description (read after a pause, or on request).
@@ -323,10 +368,11 @@ impl ActionButton {
         if this.widget.label == label {
             return;
         }
-        this.widget.label = label.clone();
+        this.widget.label = label;
+        let text = this.widget.shown_text();
         {
             let mut child = this.ctx.get_mut(&mut this.widget.child);
-            Label::set_text(&mut child, label);
+            Label::set_text(&mut child, text);
         }
         this.ctx.request_accessibility_update();
     }
@@ -441,7 +487,7 @@ impl Widget for ActionButton {
         _props: &PropertiesRef<'_>,
         node: &mut Node,
     ) {
-        node.set_label(self.label.as_str());
+        node.set_label(self.name());
         if !self.shortcut.is_empty() {
             node.set_keyboard_shortcut(self.shortcut.as_str());
         }

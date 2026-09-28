@@ -545,11 +545,13 @@ mod tests {
             let what = format!("{platform:?} {frontend:?} {:?}", map.preset());
             assert!(map.conflicts().is_empty(), "{what}: {:#?}", map.conflicts());
             // Palette commands have no keys by design, and a preset may
-            // give some actions' keys back to its own commands.
-            for a in ActionId::ALL
-                .iter()
-                .filter(|a| !a.is_palette_command() && !map.preset().palette_only().contains(a))
-            {
+            // give some actions' keys back to its own commands. Window-only
+            // commands have no terminal keys.
+            for a in ActionId::ALL.iter().filter(|a| {
+                !a.is_palette_command()
+                    && !map.preset().palette_only().contains(a)
+                    && (!a.is_window_only() || frontend != Frontend::Terminal)
+            }) {
                 let reachable = Layer::ALL
                     .iter()
                     .any(|m| !map.chords_in_mode(*a, *m).is_empty());
@@ -761,9 +763,12 @@ mod tests {
     #[test]
     fn every_action_has_a_default() {
         // Palette commands (exports, templates) have no default keys by
-        // design; every other action has one on each frontend.
+        // design, nor window-only commands in the terminal; every other
+        // action has one on each frontend.
         for (platform, frontend, map) in all_maps() {
-            for a in ActionId::ALL.iter().filter(|a| !a.is_palette_command()) {
+            for a in ActionId::ALL.iter().filter(|a| {
+                !a.is_palette_command() && (!a.is_window_only() || frontend != Frontend::Terminal)
+            }) {
                 assert!(
                     !map.chords_for(*a).is_empty(),
                     "{a:?} unbound on {platform:?} {frontend:?}"
@@ -777,11 +782,25 @@ mod tests {
         // Each action has a chord that actually triggers it in at least one
         // mode (not fully shadowed).
         for (platform, frontend, map) in all_maps() {
-            for a in ActionId::ALL.iter().filter(|a| !a.is_palette_command()) {
+            for a in ActionId::ALL.iter().filter(|a| {
+                !a.is_palette_command() && (!a.is_window_only() || frontend != Frontend::Terminal)
+            }) {
                 let reachable = Layer::ALL
                     .iter()
                     .any(|m| !map.chords_in_mode(*a, *m).is_empty());
                 assert!(reachable, "{a:?} unreachable on {platform:?} {frontend:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn window_only_commands_have_window_keys_only() {
+        for platform in Platform::ALL {
+            let gui = Keymap::defaults(platform, Frontend::Gui);
+            let term = Keymap::defaults(platform, Frontend::Terminal);
+            for a in ActionId::ALL.iter().filter(|a| a.is_window_only()) {
+                assert!(!gui.chords_for(*a).is_empty(), "{a:?} on {platform:?}");
+                assert!(term.chords_for(*a).is_empty(), "{a:?} on {platform:?}");
             }
         }
     }
@@ -848,8 +867,15 @@ mod tests {
             ("Space", ActionId::PlayPause),
             ("Escape", ActionId::Stop),
             ("Ctrl+Space", ActionId::ReadFromCursor),
-            ("Ctrl+=", ActionId::RateUp),
-            ("Ctrl+-", ActionId::RateDown),
+            // Star's Ctrl+= and Ctrl+- for the rate became the text size
+            // keys (the owner's session 2); the rate is on F11.
+            ("F11", ActionId::RateUp),
+            ("Shift+F11", ActionId::RateDown),
+            ("Ctrl+=", ActionId::TextLarger),
+            ("Ctrl+-", ActionId::TextSmaller),
+            ("Ctrl+0", ActionId::TextSizeReset),
+            ("Ctrl+D", ActionId::ChooseFont),
+            ("Ctrl+Shift+G", ActionId::OpenPath),
             ("Alt+.", ActionId::NextSentence),
             ("Alt+,", ActionId::PreviousSentence),
             ("Alt+;", ActionId::ReplaySentence),

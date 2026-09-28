@@ -373,6 +373,7 @@ list-nothing-to-mark = Nada para marcar nesta lista.
 notes-editing = Editando nota: { $text }
 # $key opens a document.
 app-no-document-open = Nenhum documento está aberto. Pressione { $key } para abrir um.
+app-window-only = Este comando funciona na janela do textweaver.
 settings-save-failed = Não foi possível salvar as configurações: { $error }
 edit-still-editing = Ainda editando.
 goto-not-a-target = Não é um destino válido: { $text }. Digite um número de linha, uma porcentagem como 50%, início ou fim.
@@ -658,6 +659,7 @@ action-delete-note = Excluir a nota ou o realce no cursor
 action-highlight-selection = Realçar a seleção, ou a frase no cursor
 action-export-study-sheet = Exportar as notas e realces como uma folha de estudo em Markdown, agrupada por cabeçalho
 action-open = Abrir um documento
+action-open-path = Abrir um documento digitando o caminho
 action-open-library = Abrir a biblioteca: documentos nas suas pastas de biblioteca e arquivos recentes
 action-new-document = Iniciar um novo documento no modo de edição
 action-save = Salvar (Markdown e texto no lugar; outros formatos como Markdown)
@@ -717,6 +719,10 @@ action-bionic-toggle = Ligar ou desligar a leitura biônica: o início de cada p
 action-ruler-cycle = Alternar a régua de leitura: desligada, linha atual, régua
 action-syllables-toggle = Mostrar ou ocultar sílabas: palavras divididas com um ponto médio
 action-difficult-words-toggle = Ligar ou desligar a marcação de palavras difíceis: sublinhadas, e nomeadas ao mover entre palavras com verbosidade alta
+action-text-larger = Aumentar o texto do documento
+action-text-smaller = Diminuir o texto do documento
+action-text-size-reset = Voltar o texto do documento ao tamanho padrão
+action-choose-font = Escolher a fonte do texto do documento
 action-command-palette = Executar qualquer comando pelo nome
 action-settings = Abrir as configurações: cada opção com sua ajuda, filtrada conforme você digita; Esquerda e Direita mudam um valor
 action-keyboard-help = Listar atalhos de teclado
@@ -2566,3 +2572,16 @@ goto-word-start = início
 goto-word-end = fim
 
 language-voices-loading = A lista de vozes ainda está carregando, então a voz atual continua falando.
+
+## The window (GUI)
+
+gui-open-title = Abrir um documento
+gui-open-documents = Documentos que o textweaver lê
+gui-open-all-files = Todos os arquivos
+gui-open-no-dialog = O seletor de arquivos do sistema não abriu. Digite o caminho do documento.
+gui-text-size = Tamanho do texto { $size } pontos.
+gui-text-size-largest = Tamanho do texto { $size } pontos, o maior.
+gui-text-size-smallest = Tamanho do texto { $size } pontos, o menor.
+gui-font = Fonte: { $family }.
+gui-font-unchanged = Fonte sem alterações.
+gui-font-list = Fonte

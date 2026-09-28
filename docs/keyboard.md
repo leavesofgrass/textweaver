@@ -213,8 +213,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 
 | Action | Terminal | GUI | Id |
 |---|---|---|---|
-| Speak faster | `+` (browse), `=` (browse) | `Ctrl+=`, `+` (browse), `=` (browse) | `rate_up` |
-| Speak slower | `-` (browse) | `Ctrl+-`, `-` (browse) | `rate_down` |
+| Speak faster | `+` (browse), `=` (browse) | `F11`, `+` (browse), `=` (browse) | `rate_up` |
+| Speak slower | `-` (browse) | `Shift+F11`, `-` (browse) | `rate_down` |
 | Raise the pitch | `Alt+=`, `)` (browse) | `Alt+=`, `)` (browse) | `pitch_up` |
 | Lower the pitch | `Alt+-`, `(` (browse) | `Alt+-`, `(` (browse) | `pitch_down` |
 | Louder | `F7`, `0` (browse) | `F7`, `0` (browse) | `volume_up` |
@@ -261,6 +261,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Action | Terminal | GUI | Id |
 |---|---|---|---|
 | Open a document | `Ctrl+O` | `Ctrl+O` | `open` |
+| Open a document by typing its path | none | `Ctrl+Shift+G` | `open_path` |
 | Open the library: documents in your library folders and recent files | `Alt+L` | `Ctrl+Shift+B` | `open_library` |
 | Start a new document in edit mode | `Ctrl+N` | `Ctrl+N` | `new_document` |
 | Save (Markdown and text in place; other formats as Markdown) | `Ctrl+S` | `Ctrl+S` | `save` |
@@ -330,6 +331,10 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Cycle the reading ruler: off, current line, ruler | `Alt+Shift+U` | `Alt+Shift+U` | `ruler_cycle` |
 | Show or hide syllables: words split with a middle dot | `Alt+Shift+Z` | `Alt+Shift+Z` | `syllables_toggle` |
 | Mark difficult words on or off: underlined, and named on word moves at high verbosity | `Alt+Shift+J` | `Alt+Shift+J` | `difficult_words_toggle` |
+| Make the document text larger | none | `Ctrl+=` | `text_larger` |
+| Make the document text smaller | none | `Ctrl+-` | `text_smaller` |
+| Return the document text to its standard size | none | `Ctrl+0` | `text_size_reset` |
+| Choose the font of the document text | none | `Ctrl+D` | `choose_font` |
 | Run any command by name | `F2`, `Alt+X`, `:` (browse) | `F2`, `:` (browse) | `command_palette` |
 | Open the settings: every option with its help, filtered as you type; Left and Right change a value | `Shift+F10` | `Ctrl+,` | `settings` |
 | List keyboard shortcuts | `?` (browse) | `F3`, `?` (browse) | `keyboard_help` |
@@ -444,6 +449,11 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | Move to the previous bookmark | palette | palette | `previous_bookmark` |
 | List notes | palette | has a chord | `list_notes` |
 | Highlight the selection, or the sentence at the cursor | palette | palette | `highlight_selection` |
+| Open a document by typing its path | palette | has a chord | `open_path` |
+| Make the document text larger | palette | has a chord | `text_larger` |
+| Make the document text smaller | palette | has a chord | `text_smaller` |
+| Return the document text to its standard size | palette | has a chord | `text_size_reset` |
+| Choose the font of the document text | palette | has a chord | `choose_font` |
 | List keyboard shortcuts | palette | has a chord | `keyboard_help` |
 
 ## Commands without keys

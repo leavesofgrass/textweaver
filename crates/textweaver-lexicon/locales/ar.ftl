@@ -434,6 +434,7 @@ list-nothing-to-mark = لا شيء لتحديده في هذه القائمة.
 notes-editing = تحرير ملاحظة: { $text }
 # $key opens a document.
 app-no-document-open = لا يوجد مستند مفتوح. اضغط { $key } لفتح واحد.
+app-window-only = يعمل هذا الأمر في نافذة textweaver.
 settings-save-failed = تعذّر حفظ الإعدادات: { $error }
 edit-still-editing = ما زلت في وضع التحرير.
 goto-not-a-target = ليس هدف انتقال: { $text }. اكتب رقم سطر، أو نسبة مئوية مثل 50%، أو start، أو end.
@@ -719,6 +720,7 @@ action-delete-note = حذف الملاحظة أو التمييز عند المؤ
 action-highlight-selection = تمييز التحديد، أو الجملة عند المؤشر
 action-export-study-sheet = تصدير الملاحظات والتمييزات كورقة دراسة بصيغة ماركداون، مجمّعة حسب العنوان
 action-open = فتح مستند
+action-open-path = فتح مستند بكتابة مساره
 action-open-library = فتح المكتبة: مستندات مجلدات مكتبتك والملفات الأخيرة
 action-new-document = بدء مستند جديد في وضع التحرير
 action-save = حفظ (ماركداون والنص في مكانه؛ الصيغ الأخرى كماركداون)
@@ -778,6 +780,10 @@ action-bionic-toggle = تشغيل أو إيقاف القراءة البيوني�
 action-ruler-cycle = التنقل بين مسطرة القراءة: إيقاف، السطر الحالي، مسطرة
 action-syllables-toggle = إظهار أو إخفاء المقاطع: تُقسَّم الكلمات بنقطة وسطى
 action-difficult-words-toggle = تشغيل أو إيقاف وسم الكلمات الصعبة: تُسطَّر، وتُذكر عند التنقل بين الكلمات في مستوى التفصيل المرتفع
+action-text-larger = تكبير نص المستند
+action-text-smaller = تصغير نص المستند
+action-text-size-reset = إعادة نص المستند إلى حجمه العادي
+action-choose-font = اختيار خط نص المستند
 action-command-palette = تشغيل أي أمر بالاسم
 action-settings = فتح الإعدادات: كل خيار مع مساعدته، تُصفّى أثناء الكتابة؛ يسار ويمين لتغيير قيمة
 action-keyboard-help = سرد اختصارات لوحة المفاتيح
@@ -2772,3 +2778,16 @@ goto-word-start = start
 goto-word-end = end
 
 language-voices-loading = لا تزال قائمة الأصوات قيد التحميل، لذا يستمر الصوت الحالي في التحدث.
+
+## The window (GUI)
+
+gui-open-title = فتح مستند
+gui-open-documents = المستندات التي يقرؤها textweaver
+gui-open-all-files = كل الملفات
+gui-open-no-dialog = لم يُفتح منتقي الملفات في النظام. اكتب مسار المستند بدلًا من ذلك.
+gui-text-size = حجم النص { $size } نقطة.
+gui-text-size-largest = حجم النص { $size } نقطة، وهو الأكبر.
+gui-text-size-smallest = حجم النص { $size } نقطة، وهو الأصغر.
+gui-font = الخط: { $family }.
+gui-font-unchanged = لم يتغير الخط.
+gui-font-list = الخط

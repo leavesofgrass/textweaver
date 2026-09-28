@@ -1,11 +1,20 @@
 //! `textweaver-xilem`: the textweaver GUI on Masonry, Vello, Parley,
 //! AccessKit, and winit (ADR-0027). It becomes `textweaver-gui` once it
 //! passes the UI Automation report the wxDragon spike passes.
+//!
+//! On Windows it is a GUI-subsystem program, so no console window opens
+//! beside it (the owner's session 2, ADR-0033). Started from a terminal,
+//! it attaches to that terminal to print `--help`, `--version`, and
+//! errors ([`textweaver_xilem::console`]).
+
+#![windows_subsystem = "windows"]
 
 use std::path::PathBuf;
 use std::time::Duration;
 
 use clap::Parser;
+use clap::error::ErrorKind;
+use textweaver_xilem::console;
 use textweaver_xilem::gui::{self, GuiOptions};
 use textweaver_xilem::setup::Options;
 use textweaver_xilem::widgets::AnnounceMode;
@@ -93,12 +102,50 @@ struct Args {
     review_screenshots: Option<PathBuf>,
 }
 
+/// Parses the command line. Help and the version go to the terminal the
+/// program was started from; a mistake goes there too, or to a message
+/// box when there is none.
+fn parse_args() -> Args {
+    match Args::try_parse() {
+        Ok(args) => args,
+        Err(e) => match e.kind() {
+            ErrorKind::DisplayHelp
+            | ErrorKind::DisplayVersion
+            | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => e.exit(),
+            _ => {
+                let background = std::env::args_os().any(|a| a == "--background");
+                console::report_error(e.to_string().trim_end(), background);
+                std::process::exit(2);
+            }
+        },
+    }
+}
+
+/// A panic is written to the `--log-file` log, and to the terminal the
+/// program was started from.
+fn log_panics() {
+    let default = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        if textweaver_xilem::log::to_file_active() {
+            textweaver_xilem::log::line(&format!("panic: {info}"));
+        }
+        console::attach();
+        default(info);
+    }));
+}
+
 fn main() {
-    let args = Args::parse();
+    // Before anything is printed: connect to the terminal, if any.
+    console::attach();
+    let args = parse_args();
+    log_panics();
     if let Some(path) = &args.log_file
         && let Err(e) = textweaver_xilem::log::to_file(path)
     {
-        eprintln!("textweaver-xilem: cannot write {}: {e}", path.display());
+        console::report_error(
+            &format!("cannot write {}: {e}", path.display()),
+            args.background,
+        );
     }
     #[cfg(feature = "screenshot")]
     {
@@ -116,7 +163,7 @@ fn main() {
                     return;
                 }
                 Err(e) => {
-                    eprintln!("textweaver-xilem: {e}");
+                    console::report_error(&e.to_string(), true);
                     std::process::exit(1);
                 }
             }
@@ -135,11 +182,17 @@ fn main() {
                 aids: false,
             };
             if let Err(e) = screenshot(&o) {
-                eprintln!("textweaver-xilem: {e}");
+                console::report_error(&e.to_string(), true);
                 std::process::exit(1);
             }
             return;
         }
+    }
+    let background = args.background;
+    // `--log` with no file writes to the terminal for the whole run; else
+    // let go of the terminal, so Control C there leaves the window open.
+    if !(args.log && args.log_file.is_none()) {
+        console::detach();
     }
     let opts = GuiOptions {
         app: Options {
@@ -167,7 +220,7 @@ fn main() {
         theme: args.theme,
     };
     if let Err(e) = gui::run(opts) {
-        eprintln!("textweaver-xilem: {e}");
+        console::report_error(&e, background);
         std::process::exit(1);
     }
 }

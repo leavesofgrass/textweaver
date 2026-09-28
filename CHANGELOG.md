@@ -101,6 +101,8 @@ See [docs/keyboard.md](docs/keyboard.md#what-changed).
 - In a list, F1 and Alt+End repeat the list's introduction, as in the terminal. The status bar shows the terminal's title line: the reading state, the line, the mode, the rate, and the engine. "No document is open" names the Open key from the keymap.
 - New guide: [docs/gui.md](docs/gui.md), also shipped in the GUI package as `GUI.md`.
 - The wxDragon GUI spike (`textweaver-gui`, ADR-0014) is removed now that the Xilem GUI has passed the owner's second screen reader session; the Xilem GUI (`textweaver-xilem`) is textweaver's GUI.
+- After the second session: no console window opens with the GUI on Windows (`--help`, `--version`, and errors still reach the terminal it was started from, or a message box); Open shows the system's own file chooser, and Ctrl+Shift+G types a path instead; Ctrl+Plus, Ctrl+Minus, and Ctrl+0 size the text and Ctrl+D chooses the font, each said and saved; every button has its key from the keymap as its shortcut key, which screen readers say when set to, and shows it ("Open… (Ctrl+O)"). In the GUI the rate moved from Ctrl+= and Ctrl+- to F11 and Shift+F11. See [ADR-0033](docs/adr/0033-gui-session-2-and-edit-mode.md).
+- Edit mode in the GUI: Ctrl+E or the Edit button makes the document a multi-line edit. Typing, undo, formatting, and saving are the terminal's; the screen reader echoes typing (textweaver does in the self-voicing mode). Spell check, citations while writing, export, and the browser preview work in the window.
 
 ### Speed and memory
 

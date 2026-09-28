@@ -2,7 +2,7 @@
 
 textweaver has two readers: the terminal reader, `textweaver`, and a window, `textweaver-xilem`. They share everything that matters: the documents, the keys, the settings, the notes, and the voices. This page covers what is different about the window.
 
-The window is written entirely in Rust (Xilem's Masonry widgets, Vello drawing, Parley text, and AccessKit for screen readers). It is new in this alpha, and edit mode comes in a later version. For writing, use the terminal reader for now.
+The window is written entirely in Rust (Xilem's Masonry widgets, Vello drawing, Parley text, and AccessKit for screen readers). It is new in this alpha. It reads, and since this alpha it edits too; see [Editing](#editing).
 
 ## Starting it
 
@@ -25,17 +25,36 @@ Useful options:
 
 `textweaver-xilem --help` lists every option.
 
+On Windows the window opens with no console window beside it. Started from a terminal, `--help`, `--version`, and errors still appear in that terminal. PowerShell does not wait for a windowed program, so its output may come after the next prompt; `textweaver-xilem --help | Out-Host` waits for it. Started from a shortcut or File Explorer, a startup error is shown in a message box, and `--log-file PATH` keeps it in a file too.
+
 ## What is in the window
 
 From top to bottom:
 
-1. **The header,** a banner with the document's title and four buttons: Open, Fonts, Settings, and Commands. Each button says its key.
+1. **The header,** a banner with the document's title and five buttons: Open, Font, Edit (or Finish editing), Settings, and Commands.
 2. **The document,** one control your screen reader reads as a document. Arrow keys, Home, End, Page Up, and Page Down move the caret, with Shift to select and Ctrl for words, paragraphs, and the document's ends. Ctrl+C copies the selection. Every other key goes to textweaver's keymap, so the browse keys of NVDA and JAWS work here too: `h` for the next heading, `t` for the next table, `k` for the next link, and so on.
 3. **The RSVP strip,** only while RSVP is on (Alt+Shift+R). It shows one word at a time under the document, so it never covers the text or the caret.
 4. **The toolbar,** named "Reading": Play or Pause, Stop, Previous sentence, Next sentence, Slower, and Faster.
 5. **The status bar:** the last message, then what the terminal's title line shows: the reading state, "line 3 of 40, 7%", the accessibility mode, the rate, and the speech engine.
 
-Tab and Shift+Tab move between the document and the buttons. Dialogs (Open, settings, lists, the command palette) open inside the window and take the focus; Escape closes them and puts you back in the document.
+Every button has a key, shown on screen with its name, for example "Open… (Ctrl+O)". Your screen reader reads it as the button's shortcut key: NVDA and JAWS say it after the name when their setting for reporting shortcut keys is on (in NVDA, Object Presentation, "Report object shortcut keys"). The name itself is only the label, "Open", so it stays short. The key comes from the keymap, so a key you change in `keymap.toml` shows here too, and F1 and the command palette list every key. While single-key shortcuts are on, a button shows its single key ("Play (Space)"); press F9 to turn them off, and the buttons show their chords instead ("Play (Ctrl+Shift+Space)").
+
+Tab and Shift+Tab move between the document and the buttons. Dialogs (settings, lists, the command palette) open inside the window and take the focus; Escape closes them and puts you back in the document.
+
+## Opening a document
+
+Open (Ctrl+O) shows your system's own file chooser: on Windows the standard Open dialog, which NVDA and JAWS know. It lists the documents textweaver reads; choose "All files" in the file type list to see everything. It starts in the folder of the document you have open. When you choose a file, the dialog closes, textweaver says "Opened" and the title, and the focus is back in the document. Escape cancels.
+
+To type a path instead, press Ctrl+Shift+G (Open Path): a one-line prompt where Tab completes the path and Up and Down recall earlier ones. If the system's file chooser cannot open (on Linux it needs the XDG desktop portal), textweaver says so and shows this prompt instead.
+
+## Text size and font
+
+- **Ctrl+Plus** (Ctrl+=, or the plus key on the number pad): larger text.
+- **Ctrl+Minus**: smaller text.
+- **Ctrl+0**: back to the standard size, 14 points.
+- **Ctrl+D**, or the Font button: the font list. The fonts that come with textweaver are first, marked "built in": Atkinson Hyperlegible Next, Atkinson Hyperlegible Mono, and OpenDyslexic. Then your installed fonts. Enter uses the font at once.
+
+Each change is said, for example "Text size 18 points." or "Font: OpenDyslexic.", and saved in `[reading_aids.font]` (see [Settings](settings.md)). The size steps one point at a time around the usual sizes and more quickly above 16 points, from 8 up to 72 points. The Settings dialog changes the same settings, under "Reading aids".
 
 ## Keys
 
@@ -44,7 +63,9 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **Space** (browse) or **Ctrl+Shift+Space**: play or pause.
 - **Escape**: stop.
 - **Alt+Down** and **Alt+Up**: next and previous sentence.
-- **Ctrl+O**: open a document.
+- **Ctrl+O**: open a document with the system's file chooser. **Ctrl+Shift+G**: type its path instead.
+- **Ctrl+Plus**, **Ctrl+Minus**, **Ctrl+0**: text size. **Ctrl+D**: the font list.
+- **F11** and **Shift+F11**: faster and slower (or **+** and **-** in browse). In the window, Ctrl+= and Ctrl+- size the text instead of the rate.
 - **Ctrl+,**: settings.
 - **F2**: the command palette, every command by name.
 - **F1**: help. In a list, F1 repeats the list's introduction.
@@ -57,6 +78,20 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **Alt+Shift+A**: the accessibility mode: self-voicing, hybrid, or screen reader.
 - **F5**: the next color theme.
 - **F9**: single-key shortcuts off or on.
+
+## Editing
+
+Ctrl+E, or the Edit button, turns edit mode on, as in the terminal reader: you edit the document's source (a Markdown file's Markdown; for other formats, the Markdown made from them, which Save stores as a new `.md` file). Ctrl+E again finishes, asking to save if there are changes.
+
+In edit mode the document is a multi-line edit, so NVDA and JAWS switch to focus mode by themselves.
+
+- **Typing** goes in at the caret, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
+- **Your screen reader echoes** what you type, and reads the caret and the selection as they move. In the self-voicing mode, textweaver echoes typing as the typing echo setting says (Shift+F9 cycles it).
+- **Undo** is Ctrl+Z, **redo** Ctrl+Y or Ctrl+Shift+Z, and each says what it undid. The editing keys are the terminal's: Ctrl+B bold, Ctrl+I italic, Ctrl+K a link, Ctrl+Alt+1 a heading, and the rest in the [keyboard reference](keyboard.md). Ctrl+S saves.
+- **Spell check:** Alt+M moves to the next misspelled word and selects it, so your screen reader says it and textweaver spells it. Type to replace it, or press Alt+J for suggestions. Alt+Shift+M goes back.
+- **Citations while writing:** Alt+C opens the citation picker. Type part of an author or title to filter, Enter inserts it, and textweaver asks for a page or other locator. Alt+Shift+D adds a reference by DOI or ISBN.
+- **Export and preview:** the command palette (F2) has Export as a web page, PDF, Word, EPUB, and braille (BRF), each written next to the document, and Preview in the browser, which reloads when you save.
+- Tab still moves between the document and the buttons, so you are never trapped in the edit; Ctrl+E is always the way out of edit mode.
 
 ## The spoken word
 
@@ -101,4 +136,4 @@ Settings (Ctrl+,) opens a dialog: the sections on the left, the chosen section's
 - [Keyboard reference](keyboard.md)
 - [Reading aids](reading-aids.md)
 - [Using textweaver with a screen reader](screen-readers.md)
-- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md) and [ADR-0028: the GUI after the first screen reader session](adr/0028-xilem-gui-after-the-session.md)
+- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md), [ADR-0028: the GUI after the first screen reader session](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033: the GUI after the second session, and edit mode](adr/0033-gui-session-2-and-edit-mode.md)

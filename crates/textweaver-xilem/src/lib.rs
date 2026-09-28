@@ -11,6 +11,7 @@
 //! - [`rsvp`]: the RSVP panel, one word at a time under the document.
 //! - [`widgets`]: the root, panels, buttons, and the live-region announcer.
 //! - [`dialog`]: in-window dialogs: prompts and lists.
+//! - [`file_chooser`]: Open with the system's own file chooser.
 //! - [`settings_dialog`]: the settings dialog, built from the app's schema.
 //! - [`runs`]: the document as AccessKit text runs, with stable ids.
 //! - [`window`]: the part of a large document the view holds.
@@ -20,13 +21,16 @@
 //! - [`fonts`]: the bundled fonts and the reader's font setting.
 //! - [`font_chooser`]: the font chooser's lists, ported from the spike.
 //! - [`setup`]: building the app for the GUI.
+//! - [`console`]: the terminal the program was started from, on Windows.
 //! - `screenshot` (feature `screenshot`): the window drawn to a PNG.
 //!
 //! Owner: Agent W3b.
 
 pub mod caret;
+pub mod console;
 pub mod dialog;
 pub mod document;
+pub mod file_chooser;
 pub mod font_chooser;
 pub mod fonts;
 pub mod gui;

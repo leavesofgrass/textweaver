@@ -362,6 +362,7 @@ list-nothing-to-mark = Nothing to mark in this list.
 notes-editing = Editing note: { $text }
 # $key opens a document.
 app-no-document-open = No document is open. Press { $key } to open one.
+app-window-only = This command works in the textweaver window.
 settings-save-failed = Could not save settings: { $error }
 edit-still-editing = Still editing.
 goto-not-a-target = Not a go-to target: { $text }. Type a line number, a percentage such as 50%, start, or end.
@@ -647,6 +648,7 @@ action-delete-note = Delete the note or highlight at the cursor
 action-highlight-selection = Highlight the selection, or the sentence at the cursor
 action-export-study-sheet = Export the notes and highlights as a Markdown study sheet, grouped by heading
 action-open = Open a document
+action-open-path = Open a document by typing its path
 action-open-library = Open the library: documents in your library folders and recent files
 action-new-document = Start a new document in edit mode
 action-save = Save (Markdown and text in place; other formats as Markdown)
@@ -706,6 +708,10 @@ action-bionic-toggle = Turn bionic reading on or off: the start of each word in 
 action-ruler-cycle = Cycle the reading ruler: off, current line, ruler
 action-syllables-toggle = Show or hide syllables: words split with a middle dot
 action-difficult-words-toggle = Mark difficult words on or off: underlined, and named on word moves at high verbosity
+action-text-larger = Make the document text larger
+action-text-smaller = Make the document text smaller
+action-text-size-reset = Return the document text to its standard size
+action-choose-font = Choose the font of the document text
 action-command-palette = Run any command by name
 action-settings = Open the settings: every option with its help, filtered as you type; Left and Right change a value
 action-keyboard-help = List keyboard shortcuts
@@ -2562,3 +2568,16 @@ goto-word-start = start
 goto-word-end = end
 
 language-voices-loading = The voice list is still loading, so the current voice keeps speaking.
+
+## The window (GUI)
+
+gui-open-title = Open a document
+gui-open-documents = Documents textweaver reads
+gui-open-all-files = All files
+gui-open-no-dialog = The system's file chooser did not open. Type the path of the document instead.
+gui-text-size = Text size { $size } points.
+gui-text-size-largest = Text size { $size } points, the largest.
+gui-text-size-smallest = Text size { $size } points, the smallest.
+gui-font = Font: { $family }.
+gui-font-unchanged = Font unchanged.
+gui-font-list = Font

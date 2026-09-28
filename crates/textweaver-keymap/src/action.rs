@@ -41,7 +41,10 @@
 //! and nothing in the terminal (Star's TUI used it for the voice picker,
 //! Part 1 §7 item 37); `Ctrl+S` saves in both (Star's TUI exported);
 //! Redo also answers to `Ctrl+Shift+Z` in the GUI (Star used that chord for
-//! its preview pane, which textweaver does not have).
+//! its preview pane, which textweaver does not have); in the GUI, `Ctrl+=`
+//! (Ctrl+Plus), `Ctrl+-`, and `Ctrl+0` size the text, as screen reader users
+//! expect (the owner's session 2, 2026-09-28), so Star's rate chords moved
+//! from them to `F11` and `Shift+F11`, beside volume on `F7`.
 
 use serde::{Deserialize, Serialize};
 
@@ -359,9 +362,9 @@ actions! {
 
     // Voice
     RateUp = "rate_up", Voice, "Speak faster",
-        gui ["g:Ctrl+="], term [], shared ["b:+", "b:="];
+        gui ["g:F11"], term [], shared ["b:+", "b:="];
     RateDown = "rate_down", Voice, "Speak slower",
-        gui ["g:Ctrl+-"], term [], shared ["b:-"];
+        gui ["g:Shift+F11"], term [], shared ["b:-"];
     PitchUp = "pitch_up", Voice, "Raise the pitch",
         gui ["g:Alt+="], term ["g:Alt+="], shared ["b:)"];
     PitchDown = "pitch_down", Voice, "Lower the pitch",
@@ -437,6 +440,8 @@ actions! {
     // File
     Open = "open", File, "Open a document",
         gui ["g:Ctrl+O"], term ["g:Ctrl+O"], shared [];
+    OpenPath = "open_path", File, "Open a document by typing its path",
+        gui ["g:Ctrl+Shift+G"], term [], shared [];
     OpenLibrary = "open_library", File, "Open the library: documents in your library folders and recent files",
         gui ["g:Ctrl+Shift+B"], term ["g:Alt+L"], shared [];
     NewDocument = "new_document", File, "Start a new document in edit mode",
@@ -576,6 +581,14 @@ actions! {
     DifficultWordsToggle = "difficult_words_toggle", View,
         "Mark difficult words on or off: underlined, and named on word moves at high verbosity",
         gui ["g:Alt+Shift+J"], term ["g:Alt+Shift+J"], shared [];
+    TextLarger = "text_larger", View, "Make the document text larger",
+        gui ["g:Ctrl+="], term [], shared [];
+    TextSmaller = "text_smaller", View, "Make the document text smaller",
+        gui ["g:Ctrl+-"], term [], shared [];
+    TextSizeReset = "text_size_reset", View, "Return the document text to its standard size",
+        gui ["g:Ctrl+0"], term [], shared [];
+    ChooseFont = "choose_font", View, "Choose the font of the document text",
+        gui ["g:Ctrl+D"], term [], shared [];
     CommandPalette = "command_palette", View, "Run any command by name",
         gui ["g:F2"], term ["g:F2", "g:Alt+X"], shared ["b::"];
     Settings = "settings", View,
@@ -656,6 +669,21 @@ impl ActionId {
     pub fn is_palette_command(self) -> bool {
         let d = self.defaults();
         d.gui.is_empty() && d.terminal.is_empty() && d.shared.is_empty()
+    }
+
+    /// True for commands only the window has: its text size and font, and
+    /// Open by typed path (the terminal's Open is a typed path already).
+    /// They have GUI keys and no terminal keys; the terminal's palette still
+    /// lists them, and says where they work.
+    pub fn is_window_only(self) -> bool {
+        matches!(
+            self,
+            ActionId::OpenPath
+                | ActionId::TextLarger
+                | ActionId::TextSmaller
+                | ActionId::TextSizeReset
+                | ActionId::ChooseFont
+        )
     }
 
     /// The command palette name: the id with spaces, e.g. `next sentence`.

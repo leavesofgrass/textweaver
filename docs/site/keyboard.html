@@ -2455,7 +2455,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Voice",
    "gui": [
     {
-     "key": "Ctrl+=",
+     "key": "F11",
      "layer": "global"
     },
     {
@@ -2489,7 +2489,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Voice",
    "gui": [
     {
-     "key": "Ctrl+-",
+     "key": "Shift+F11",
      "layer": "global"
     },
     {
@@ -3192,6 +3192,23 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "global"
     }
    ]
+  },
+  {
+   "action": "Open a document by typing its path",
+   "category": "File",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+G",
+     "layer": "global"
+    }
+   ],
+   "id": "open_path",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": []
   },
   {
    "action": "Open the library: documents in your library folders and recent files",
@@ -4197,6 +4214,74 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "global"
     }
    ]
+  },
+  {
+   "action": "Make the document text larger",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Ctrl+=",
+     "layer": "global"
+    }
+   ],
+   "id": "text_larger",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Make the document text smaller",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Ctrl+-",
+     "layer": "global"
+    }
+   ],
+   "id": "text_smaller",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Return the document text to its standard size",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Ctrl+0",
+     "layer": "global"
+    }
+   ],
+   "id": "text_size_reset",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Choose the font of the document text",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Ctrl+D",
+     "layer": "global"
+    }
+   ],
+   "id": "choose_font",
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": []
   },
   {
    "action": "Run any command by name",

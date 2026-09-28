@@ -69,8 +69,13 @@ fn every_control_has_a_role_and_a_name() {
         "Stop",
         "Next sentence",
         "Previous sentence",
-        "Open…",
-        "Commands…",
+        "Open",
+        "Font",
+        "Edit",
+        "Settings",
+        "Commands",
+        "Slower",
+        "Faster",
     ] {
         assert!(buttons.contains(&b.to_owned()), "{b} in {buttons:?}");
     }
@@ -81,6 +86,84 @@ fn every_control_has_a_role_and_a_name() {
     // The terminal's title line parts, from the app (`App::title_parts`).
     assert!(status[0].contains("line 1 of"), "{status:?}");
     assert!(status[0].contains("wpm"), "{status:?}");
+}
+
+/// Every button's key comes from the keymap: its keyboard shortcut
+/// property (UI Automation's AcceleratorKey), which NVDA and JAWS say when
+/// their "report shortcut keys" setting is on, and the text on screen,
+/// "Open… (Ctrl+O)". The name is the label only: the owner found the key in
+/// the name wordy.
+#[test]
+fn every_button_has_its_key_from_the_keymap() {
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::widgets::ActionButton;
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    let h = harness(&app);
+    let mut shortcuts = std::collections::HashMap::new();
+    let mut stack = vec![h.access_tree().state().root()];
+    while let Some(n) = stack.pop() {
+        stack.extend(n.children());
+        if n.role() == Role::Button {
+            shortcuts.insert(
+                n.label().unwrap_or_default(),
+                n.data().keyboard_shortcut().map(str::to_owned),
+            );
+        }
+    }
+    for (name, action) in [
+        ("Open", ActionId::Open),
+        ("Font", ActionId::ChooseFont),
+        ("Edit", ActionId::ToggleEditMode),
+        ("Settings", ActionId::Settings),
+        ("Commands", ActionId::CommandPalette),
+        ("Play", ActionId::PlayPause),
+        ("Stop", ActionId::Stop),
+        ("Previous sentence", ActionId::PreviousSentence),
+        ("Next sentence", ActionId::NextSentence),
+        ("Slower", ActionId::RateDown),
+        ("Faster", ActionId::RateUp),
+    ] {
+        let written = gui::shortcut_for(&app, action);
+        assert!(!written.is_empty(), "{action:?}");
+        // Never "the command palette": each has a key of its own.
+        assert!(!app.keymap().chords_for(action).is_empty(), "{action:?}");
+        assert_eq!(
+            shortcuts.get(name),
+            Some(&Some(written.clone())),
+            "{name}: {shortcuts:?}"
+        );
+    }
+    assert_eq!(shortcuts.get("Open"), Some(&Some("Ctrl+O".to_owned())));
+    // On screen, the written form; the name is the label alone.
+    let b = ActionButton::new("Open…").with_shortcut("Ctrl+O");
+    assert_eq!(b.shown_text(), "Open… (Ctrl+O)");
+    assert_eq!(b.name(), "Open");
+}
+
+#[test]
+fn the_text_size_and_font_follow_the_settings() {
+    use textweaver_xilem::font_chooser::{self, Step};
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let before = h.get_widget(DOC).inner().font().clone();
+    // Ctrl+Plus twice, as the window does it, then a family from the list.
+    for _ in 0..2 {
+        let now = app.settings().reading_aids.font.clone();
+        let (size, _) = font_chooser::stepped(now.size_pt, Step::Larger);
+        let _ = app.update_settings(|s| s.reading_aids.font = font_chooser::with_size(&now, size));
+    }
+    let now = app.settings().reading_aids.font.clone();
+    let _ = app.update_settings(|s| {
+        s.reading_aids.font = font_chooser::with_family(&now, "OpenDyslexic");
+    });
+    gui::refresh_for_tests(&app, &mut h);
+    let after = h.get_widget(DOC).inner().font().clone();
+    assert!(after.size > before.size, "{before:?} to {after:?}");
+    // 16 points in CSS pixels.
+    assert!((after.size - 16.0 * 96.0 / 72.0).abs() < 0.01, "{after:?}");
+    assert!(after.family.starts_with("\"OpenDyslexic\""), "{after:?}");
 }
 
 #[test]

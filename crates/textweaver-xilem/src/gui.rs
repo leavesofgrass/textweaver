@@ -45,6 +45,8 @@ use textweaver_app::{
 
 use crate::dialog::{self, ChoiceList, DialogAction, Modal};
 use crate::document::{DocAction, DocAids, DocFont, DocModel, DocState, DocumentView};
+use crate::file_chooser::{self, FileChosen};
+use crate::font_chooser::Step;
 use crate::keys;
 use crate::rsvp::{RsvpShown, RsvpView};
 use crate::settings_dialog::{self, FormAction, FormChange, SettingsForm, SettingsGrid};
@@ -63,6 +65,8 @@ pub const ANNOUNCER: WidgetTag<Announcer> = WidgetTag::named("tw-announcer");
 pub const ROOT: WidgetTag<Root> = WidgetTag::named("tw-root");
 /// The Play/Pause button.
 pub const PLAY: WidgetTag<ActionButton> = WidgetTag::named("tw-play");
+/// The Edit button (edit mode on or off).
+pub const EDIT: WidgetTag<ActionButton> = WidgetTag::named("tw-edit");
 /// The status text.
 pub const STATUS: WidgetTag<Label> = WidgetTag::named("tw-status");
 /// The status bar region (named by its text).
@@ -180,6 +184,12 @@ struct Shown {
     aid_spans: Option<AidSpansKey>,
     aids: DocAids,
     rsvp: Option<RsvpShown>,
+    /// The document font, from `[reading_aids.font]`.
+    font: Option<DocFont>,
+    /// Edit mode, as the view shows it.
+    editing: bool,
+    /// Edit mode, as the Edit button says it.
+    edit_button: bool,
 }
 
 /// What the reading aids' spans depend on: bionic reading (and its
@@ -214,17 +224,16 @@ enum OpenDialog {
     List,
     /// The command palette: the actions its list shows, in order.
     Palette(Vec<ActionId>),
-    /// The font chooser's family list.
+    /// The font list.
     FontFamily(Vec<crate::font_chooser::Choice>),
-    /// The font chooser's size list, for this family.
-    FontSize(String),
+    /// The system's file chooser, open on its own thread; the app's Open
+    /// prompt (labelled with this) waits for its answer.
+    FileChooser(String),
 }
 
 /// The widget tree's toolbar buttons and what they do.
 struct Buttons {
     by_id: HashMap<WidgetId, ActionId>,
-    /// View, Fonts: the font chooser (not a keymap action).
-    fonts: Option<WidgetId>,
 }
 
 /// The driver: the app and the window's state.
@@ -257,6 +266,14 @@ pub struct Gui {
     window_title: String,
     /// The ticker starts once the window exists (in `on_start`).
     ticker: Option<EventLoopProxy>,
+    /// Posts answers from other threads (the file chooser's).
+    proxy: EventLoopProxy,
+    /// The next Open prompt is the typed one (the Open Path key), not the
+    /// system's file chooser.
+    typed_open: bool,
+    /// Whether single-key shortcuts were on when the buttons' shortcuts
+    /// were last shown (F9 changes which key each button names).
+    char_keys: Option<bool>,
     closed: bool,
     /// How announcements reach the screen reader.
     announce: AnnounceMode,
@@ -312,22 +329,29 @@ fn styled_button(
     ids: &mut HashMap<WidgetId, ActionId>,
     text_color: Option<masonry::peniko::Color>,
 ) -> NewWidget<ActionButton> {
-    let shortcut = app
-        .map(|a| {
-            a.keymap()
-                .chords_in_mode(action, textweaver_app::keymap::Layer::Browse)
-        })
-        .and_then(|c| c.first().map(keys::shortcut_text))
-        .unwrap_or_default();
+    let shortcut = app.map(|a| shortcut_for(a, action)).unwrap_or_default();
+    let help = app.map_or_else(
+        || action.help().to_owned(),
+        |a| textweaver_app::action_help(&a.catalog(), action),
+    );
     let mut b = ActionButton::new(text)
         .with_shortcut(shortcut)
-        .with_description(action.help());
+        .with_description(help);
     if let Some(c) = text_color {
         b = b.with_text_color(c);
     }
     let w = NewWidget::new(b);
     ids.insert(w.id(), action);
     w
+}
+
+/// A control's shortcut for `action`, from the keymap (`named_key`), as
+/// written ("Ctrl+O"): the button's keyboard shortcut and its text on
+/// screen. The main key, which is the single key while single-key
+/// shortcuts are on ("Space" for Play) and a chord while they are off.
+pub fn shortcut_for(app: &App, action: ActionId) -> String {
+    let named = textweaver_app::named_key_in(&app.catalog(), app.keymap(), action);
+    textweaver_app::written_text(&named).into_owned()
 }
 
 fn panel(p: &Palette, pad_v: f64, pad_h: f64) -> PropertySet {
@@ -356,16 +380,12 @@ pub fn build_tree(
 
     // Header: the document's title and the commands.
     let title = NewWidget::new(label("textweaver", 18.0, true)).with_tag(TITLE);
-    let fonts_button = NewWidget::new(
-        ActionButton::new("Fonts…")
-            .with_description("Choose the font and size of the document text"),
-    );
-    let fonts_id = fonts_button.id();
     let header = Flex::row()
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .with(title, 1.0)
         .with_fixed(button("Open…", ActionId::Open, app, &mut ids))
-        .with_fixed(fonts_button)
+        .with_fixed(button("Font…", ActionId::ChooseFont, app, &mut ids))
+        .with_fixed(button("Edit", ActionId::ToggleEditMode, app, &mut ids).with_tag(EDIT))
         .with_fixed(button("Settings…", ActionId::Settings, app, &mut ids))
         .with_fixed(button("Commands…", ActionId::CommandPalette, app, &mut ids));
     let header = NewWidget::new(Region::new(NewWidget::new(header), Role::Banner, ""))
@@ -455,10 +475,7 @@ pub fn build_tree(
     let root = NewWidget::new(Root::new(main, full_passes)).with_tag(ROOT);
     Tree {
         root,
-        buttons: Buttons {
-            by_id: ids,
-            fonts: Some(fonts_id),
-        },
+        buttons: Buttons { by_id: ids },
     }
 }
 
@@ -525,9 +542,14 @@ pub fn settings_dialog(
     )
     .with_tag(FORM);
     let form_id = grid.id();
+    // The dialog's own key (not a keymap command): Escape closes it.
+    let escape = textweaver_app::keymap::KeyChord::new(
+        textweaver_app::keymap::Key::Escape,
+        textweaver_app::keymap::Modifiers::empty(),
+    );
     let close = NewWidget::new(
         ActionButton::new("Close")
-            .with_shortcut("Escape")
+            .with_shortcut(escape.to_string())
             .with_description("Close the settings. Every change is already saved."),
     );
     let close_id = close.id();
@@ -683,6 +705,12 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             };
             let started = Instant::now();
             let new_doc = shown.doc.as_ref() != Some(&id);
+            // Edit mode: the same document with its text changed (a key,
+            // undo, a command): the paragraphs that stay keep their nodes,
+            // as in a slide, so the screen reader keeps its place.
+            let edited = app.is_editing()
+                && shown.editing
+                && shown.doc.as_ref().is_some_and(|(k, _)| *k == s.key);
             let mut w = match shown.window {
                 Some(w) if !new_doc => w,
                 _ => DocWindow::with_budget(&s.doc, focus, WINDOW_UNITS),
@@ -697,13 +725,14 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             if new_doc || aids_changed || change != WindowChange::Unchanged {
                 // A slide keeps the runs that stay (and the screen reader's
                 // place on them); a new document or a jump replaces them.
-                let slide = !new_doc
-                    && matches!(
-                        change,
-                        WindowChange::Forward { .. }
-                            | WindowChange::Backward { .. }
-                            | WindowChange::Unchanged
-                    );
+                let slide = edited
+                    || (!new_doc
+                        && matches!(
+                            change,
+                            WindowChange::Forward { .. }
+                                | WindowChange::Backward { .. }
+                                | WindowChange::Unchanged
+                        ));
                 shown.aid_spans = Some(key);
                 if let Some(model) = model_for(app, w.range()) {
                     host.edit(DOC, |mut d| {
@@ -728,6 +757,18 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             }
             shown.window = Some(w);
         }
+    }
+    // Edit mode: a multi-line edit that takes typing.
+    let editing = app.is_editing();
+    if editing != shown.editing {
+        host.edit(DOC, |mut d| DocumentView::set_editing(&mut d, editing));
+        shown.editing = editing;
+    }
+    // The font and size: the keys, the font list, or the settings dialog.
+    let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
+    if shown.font.as_ref() != Some(&font) {
+        host.edit(DOC, |mut d| DocumentView::set_font(&mut d, font.clone()));
+        shown.font = Some(font);
     }
     // Text spacing and the ruler, drawn by the view.
     let aids = DocAids {
@@ -760,6 +801,12 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             ActionButton::set_label(&mut b, if reading { "Pause" } else { "Play" });
         });
         shown.reading = reading;
+    }
+    if editing != shown.edit_button {
+        host.edit(EDIT, |mut b| {
+            ActionButton::set_label(&mut b, if editing { "Finish editing" } else { "Edit" });
+        });
+        shown.edit_button = editing;
     }
     let status = app.status_text().to_owned();
     if status != shown.status {
@@ -828,6 +875,19 @@ impl Gui {
             let root = ctx.render_root(self.window_id);
             root.edit_widget_with_tag(ANNOUNCER, |mut a| Announcer::say(&mut a, messages));
         }
+        // Single-key shortcuts turned on or off: each button names its key.
+        let char_keys = self.app.keymap().character_keys();
+        if self.char_keys != Some(char_keys) {
+            self.char_keys = Some(char_keys);
+            let root = ctx.render_root(self.window_id);
+            for (id, action) in &self.buttons.by_id {
+                let shortcut = shortcut_for(&self.app, *action);
+                root.edit_widget(*id, |mut w| {
+                    let mut b = w.downcast::<ActionButton>();
+                    ActionButton::set_shortcut(&mut b, shortcut);
+                });
+            }
+        }
         // The theme changed (a key, the palette, or the settings).
         if !self.fixed_theme && self.app.current_theme().name() != self.palette.name {
             self.palette = Palette::from_theme(self.app.current_theme());
@@ -859,8 +919,31 @@ impl Gui {
             self.open_settings(ctx, None);
             return;
         }
+        // The window's own commands: the text size and the font.
+        let step = match &cmd {
+            Command::Action(ActionId::TextLarger) => Some(Step::Larger),
+            Command::Action(ActionId::TextSmaller) => Some(Step::Smaller),
+            Command::Action(ActionId::TextSizeReset) => Some(Step::Reset),
+            _ => None,
+        };
+        if let Some(step) = step {
+            self.text_size(ctx, step);
+            return;
+        }
+        if cmd == Command::Action(ActionId::ChooseFont) {
+            self.open_fonts(ctx);
+            return;
+        }
+        // Open Path (a key, or chosen in the palette) is the app's Open,
+        // answered by typing.
+        self.typed_open = match &cmd {
+            Command::Action(a) => *a == ActionId::OpenPath,
+            Command::Answer(id) => id == ActionId::OpenPath.id(),
+            _ => false,
+        };
         let effects = self.app.dispatch(cmd);
         self.run_effects(ctx, effects);
+        self.typed_open = false;
         self.refresh(ctx);
     }
 
@@ -877,6 +960,12 @@ impl Gui {
                     label,
                     purpose: PromptPurpose::CommandPalette,
                 } => self.open_palette(ctx, &label),
+                // Open: the system's file chooser, unless Open Path asked
+                // for the typed prompt.
+                Effect::Prompt {
+                    label,
+                    purpose: PromptPurpose::Open,
+                } if !self.typed_open => self.open_file_chooser(ctx, &label),
                 Effect::Prompt { label, purpose } => self.open_prompt(ctx, &label, purpose),
                 // The open list changed (filtered, a setting changed): show
                 // it in place, keeping focus in the dialog.
@@ -910,6 +999,73 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("dialog: prompt {label_text:?}"));
         }
+    }
+
+    /// Open: the system's file chooser, on its own thread and modal to the
+    /// window. Its answer comes back as a [`FileChosen`] action; until
+    /// then the app's Open prompt waits, labelled `label_text`.
+    fn open_file_chooser(&mut self, ctx: &mut DriverCtx<'_>, label_text: &str) {
+        let c = self.app.catalog();
+        let registry = textweaver_app::formats::Registry::with_builtins();
+        let filters = file_chooser::filters(
+            &registry.extensions(),
+            &c.tr("gui-open-documents"),
+            &c.tr("gui-open-all-files"),
+        );
+        let folder = file_chooser::start_folder(self.app.session().map(|s| s.key.0.as_str()));
+        let chooser = file_chooser::Chooser::new(
+            ctx.window(self.window_id).handle(),
+            &c.tr("gui-open-title"),
+            &filters,
+            folder.as_deref(),
+        );
+        let proxy = self.proxy.clone();
+        let window_id = self.window_id;
+        chooser.show(move |chosen| {
+            let _ = proxy.send_event(MasonryUserEvent::AsyncAction(window_id, Box::new(chosen)));
+        });
+        self.dialog = Some(OpenDialog::FileChooser(label_text.to_owned()));
+        if self.log {
+            crate::log::line("dialog: system file chooser");
+        }
+    }
+
+    /// The file chooser's answer: the file opens through the app's Open
+    /// prompt (so it joins the prompt's history), a cancel cancels it, and
+    /// a chooser that never appeared gives way to the typed prompt. The
+    /// focus goes back to the document either way.
+    fn file_chosen(&mut self, ctx: &mut DriverCtx<'_>, chosen: &FileChosen) {
+        let Some(OpenDialog::FileChooser(label_text)) = self.dialog.take() else {
+            return;
+        };
+        let outcome = file_chooser::outcome(chosen.path.clone(), chosen.elapsed);
+        if self.log {
+            crate::log::line(&format!(
+                "file chooser: {outcome:?} after {} ms",
+                chosen.elapsed.as_millis()
+            ));
+        }
+        self.close_dialog(ctx);
+        let key = match outcome {
+            file_chooser::Outcome::Chosen(path) => {
+                let text = path.to_string_lossy().into_owned();
+                let _ = self
+                    .app
+                    .dispatch(Command::PromptKey(PromptKey::SetText(text)));
+                PromptKey::Enter
+            }
+            file_chooser::Outcome::Cancelled => PromptKey::Escape,
+            file_chooser::Outcome::Failed => {
+                let said = self.app.catalog().tr("gui-open-no-dialog");
+                self.app.announce(&said, Priority::Assertive);
+                self.open_prompt(ctx, &label_text, PromptPurpose::Open);
+                self.refresh(ctx);
+                return;
+            }
+        };
+        let effects = self.app.dispatch(Command::PromptKey(key));
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
     }
 
     /// Shows a one-field prompt labelled `label_text`, starting with
@@ -1219,7 +1375,8 @@ impl Gui {
         }
     }
 
-    /// View, Fonts: the family list (bundled first).
+    /// The font list (Ctrl+D, the Font button): the families, bundled
+    /// first, starting on the current one.
     fn open_fonts(&mut self, ctx: &mut DriverCtx<'_>) {
         let choices = crate::font_chooser::choices(self.installed.names());
         let current = crate::fonts::doc_font(&self.app.settings().reading_aids.font);
@@ -1228,23 +1385,26 @@ impl Gui {
             .iter()
             .position(|c| current.family.starts_with(&format!("\"{}\"", c.family)))
             .unwrap_or(0);
-        let (modal, list_id) = list_dialog(&self.palette, "Font family", items, selected, false);
+        let title = self.app.catalog().tr("gui-font-list");
+        let (modal, list_id) = list_dialog(&self.palette, &title, items, selected, false);
         let root = ctx.render_root(self.window_id);
         root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
         root.focus_on(Some(list_id));
         self.dialog = Some(OpenDialog::FontFamily(choices));
         if self.log {
-            crate::log::line("dialog: font family");
+            crate::log::line("dialog: font list");
         }
     }
 
-    /// The font chooser's answers. Returns false when the open dialog is
-    /// not the font chooser.
+    /// The font list's answer: the family applies at once, keeping the
+    /// size, and is said ("Font: OpenDyslexic."). Returns false when the
+    /// open dialog is not the font list.
     fn font_answer(&mut self, ctx: &mut DriverCtx<'_>, d: &DialogAction) -> bool {
         match (&self.dialog, d) {
-            (Some(OpenDialog::FontFamily(_) | OpenDialog::FontSize(_)), DialogAction::Cancel) => {
+            (Some(OpenDialog::FontFamily(_)), DialogAction::Cancel) => {
                 self.close_dialog(ctx);
-                self.app.announce("Font unchanged.", Priority::Polite);
+                let said = self.app.catalog().tr("gui-font-unchanged");
+                self.app.announce(&said, Priority::Polite);
                 self.refresh(ctx);
                 true
             }
@@ -1253,45 +1413,13 @@ impl Gui {
                     return true;
                 };
                 self.close_dialog(ctx);
-                let size = self.app.settings().reading_aids.font.size_pt;
-                let (items, selected) = crate::font_chooser::sizes(size);
-                let title = format!("Size for {family}");
-                let (modal, list_id) = list_dialog(&self.palette, &title, items, selected, false);
-                let root = ctx.render_root(self.window_id);
-                root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
-                root.focus_on(Some(list_id));
-                self.dialog = Some(OpenDialog::FontSize(family));
-                true
-            }
-            (Some(OpenDialog::FontSize(family)), DialogAction::Choose(i)) => {
-                let family = family.clone();
-                let size = crate::font_chooser::SIZES
-                    .get(*i)
-                    .copied()
-                    .unwrap_or(crate::font_chooser::SIZES[4]);
-                self.close_dialog(ctx);
-                let new = crate::font_chooser::chosen(
+                let new = crate::font_chooser::with_family(
                     &self.app.settings().reading_aids.font,
                     &family,
-                    size,
                 );
-                let bold = new.weight >= 600;
-                if let Err(e) = self
-                    .app
-                    .update_settings(|s| s.reading_aids.font = new.clone())
-                {
-                    self.app.announce(
-                        &format!("The font was applied but could not be saved: {e}."),
-                        Priority::Assertive,
-                    );
-                }
-                let font = crate::fonts::doc_font(&new);
-                ctx.render_root(self.window_id)
-                    .edit_widget_with_tag(DOC, |mut d| DocumentView::set_font(&mut d, font));
-                self.app.announce(
-                    &crate::font_chooser::announcement(&family, size, bold),
-                    Priority::Polite,
-                );
+                self.save_font(new);
+                let said = crate::font_chooser::font_message(&self.app.catalog(), &family);
+                self.app.announce(&said, Priority::Polite);
                 self.refresh(ctx);
                 true
             }
@@ -1299,6 +1427,26 @@ impl Gui {
         }
     }
 
+    /// Ctrl+Plus, Ctrl+Minus, Ctrl+0: the next text size, saved and said
+    /// ("Text size 18 points."). The next refresh lays the text out again.
+    fn text_size(&mut self, ctx: &mut DriverCtx<'_>, step: Step) {
+        let now = self.app.settings().reading_aids.font.clone();
+        let (size, limit) = crate::font_chooser::stepped(now.size_pt, step);
+        self.save_font(crate::font_chooser::with_size(&now, size));
+        if self.log {
+            crate::log::line(&format!("text size {step:?}: {size} points"));
+        }
+        let said = crate::font_chooser::size_message(&self.app.catalog(), size, limit);
+        // Assertive: a held key says only the latest size.
+        self.app.announce(&said, Priority::Assertive);
+        self.refresh(ctx);
+    }
+
+    /// Saves the document font in `[reading_aids.font]` (the writer thread
+    /// saves it; a failure is said on a later tick).
+    fn save_font(&mut self, new: textweaver_app::store::reading_aids::FontSettings) {
+        let _ = self.app.update_settings(|s| s.reading_aids.font = new);
+    }
     /// The palette's filter changed: show the matches and say how many.
     fn filter_palette(&mut self, ctx: &mut DriverCtx<'_>, query: &str) {
         let (ids, items): (Vec<ActionId>, Vec<String>) =
@@ -1380,18 +1528,23 @@ impl Gui {
         if self.dialog.is_none() {
             return;
         }
-        // Settings chosen in the command palette opens the dialog.
+        // Commands the window runs itself, chosen in the command palette:
+        // Settings opens the dialog; the text size and font keys.
         let palette = matches!(self.dialog, Some(OpenDialog::Palette(_)));
         self.close_dialog(ctx);
-        if palette
-            && !self.settings_list
-            && cmd == Command::Answer(ActionId::Settings.id().to_owned())
-        {
+        let own = match &cmd {
+            Command::Answer(id) if palette => ActionId::from_id(id).filter(|a| {
+                (*a == ActionId::Settings && !self.settings_list)
+                    || (a.is_window_only() && *a != ActionId::OpenPath)
+            }),
+            _ => None,
+        };
+        if let Some(a) = own {
             self.muted.set(true);
             let effects = self.app.dispatch(Command::Cancel);
             self.muted.set(false);
             self.run_effects(ctx, effects);
-            self.open_settings(ctx, None);
+            self.dispatch(ctx, Command::Action(a));
             self.refresh(ctx);
             return;
         }
@@ -1519,11 +1672,22 @@ impl AppDriver for Gui {
         {
             let caret = *caret;
             let app_cursor = self.app.session().map(|s| s.cursor);
-            if app_cursor != Some(caret) {
+            // In edit mode, a selection the app holds (from a command) is
+            // let go when the view moves the caret, so typing goes to the
+            // caret; the view keeps its own selection and sends it with
+            // each edit.
+            let app_selection =
+                self.app.is_editing() && self.app.session().is_some_and(|s| s.selection.is_some());
+            if app_cursor != Some(caret) || app_selection {
                 if self.log {
                     crate::log::line(&format!("caret sync: {caret:?}"));
                 }
                 self.muted.set(true);
+                if app_selection {
+                    let _ = self
+                        .app
+                        .dispatch(Command::Select(CharRange::new(caret.0, caret.0)));
+                }
                 let effects = self.app.dispatch(Command::SetCursor(caret));
                 self.muted.set(false);
                 self.run_effects(ctx, effects);
@@ -1531,13 +1695,27 @@ impl AppDriver for Gui {
                 self.shown.state.caret = caret;
                 self.refresh(ctx);
             }
+        } else if let Some(edit) = action.downcast_ref::<DocAction>() {
+            // Edit mode: typing and deleting go through the app, which
+            // keeps the undo history and echoes as the access mode says.
+            let cmd = match edit.clone() {
+                DocAction::Typed(text) => Command::Insert(text),
+                DocAction::Delete { forward: true } => Command::DeleteForward,
+                DocAction::Delete { forward: false } => Command::DeleteBack,
+                DocAction::Replace { range, text } => Command::ReplaceRange { range, text },
+                DocAction::CaretMoved { .. } => return,
+            };
+            if self.log {
+                crate::log::line(&format!("edit: {cmd:?}"));
+            }
+            let effects = self.app.dispatch(cmd);
+            self.run_effects(ctx, effects);
+            self.refresh(ctx);
         } else if action.downcast_ref::<Pressed>().is_some() {
             if let Some(OpenDialog::Settings(open)) = &self.dialog
                 && open.close == widget_id
             {
                 self.settings_dialog_action(ctx, &DialogAction::Cancel);
-            } else if self.buttons.fonts == Some(widget_id) {
-                self.open_fonts(ctx);
             } else if let Some(a) = self.buttons.by_id.get(&widget_id).copied() {
                 self.dispatch(ctx, Command::Action(a));
             }
@@ -1685,7 +1863,14 @@ impl AppDriver for Gui {
         ctx: &mut DriverCtx<'_>,
         action: ErasedAction,
     ) {
-        if action.downcast_ref::<Tick>().is_none() || self.closed {
+        if self.closed {
+            return;
+        }
+        if let Some(chosen) = action.downcast_ref::<FileChosen>() {
+            self.file_chosen(ctx, chosen);
+            return;
+        }
+        if action.downcast_ref::<Tick>().is_none() {
             return;
         }
         self.wake_pending.store(false, Ordering::Release);
@@ -1836,7 +2021,10 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         tick_ms: Arc::new(AtomicU64::new(
             u64::try_from(FIRST_TICK.as_millis()).unwrap_or(250),
         )),
-        ticker: Some(proxy),
+        ticker: Some(proxy.clone()),
+        proxy,
+        typed_open: false,
+        char_keys: None,
         fixed_theme: opts.theme.is_some(),
         settings_list: experiments.settings_list,
         announce,
