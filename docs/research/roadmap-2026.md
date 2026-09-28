@@ -268,6 +268,19 @@ At most eight, each a decision only he can make, each with a recommended default
 7. **What "feature complete" leaves out.** Section 3 proposes that document translation, grade 2 braille in pure Rust, streaming dictation, signing, and the peripheral Star list are not required for the final alpha. Do you want any of them in, or anything else out (for example the aarch64 AppImage, or Arabic)? **Default: the list as written.**
 8. **macOS and Linux by ear.** You have no Mac and no Linux desktop tester on record. For the final alpha, should macOS be marked "built and checked by tool, not heard by a person", or should we look for a tester (a VoiceOver user, and an Orca user) before the final alpha? **Default: mark it,** with the tree dumps and the smoke test as the evidence, and look for testers during the beta.
 
+## Jon's answers (Sunday, September 27, 2026)
+
+1. **Translation models:** wait until Wave 6. W5e is not run in Wave 5; the no-model summaries stay in Wave 5.
+2. **The text engine may change during the alphas,** and probably the betas too. W5r may change the rope on a clear gain, and a later wave may change `CharPos` with a state migration. The formats freeze no earlier than the final alpha.
+3. **Math Braille:** Nemeth first. Jon's everyday display is the **HumanWare Mantis Q40, 40 cells**. Session B1 uses it, and Braille output is checked against a 40-cell line.
+4. **The GUI doesn't wait for the final alpha.** It ships as a supported part of the alpha releases as soon as it's ready, on Windows first. macOS and Linux are marked "built and tool-checked, not yet heard" until someone listens to them.
+5. **An alpha after each wave:** alpha.4 after Wave 4, alpha.5 after Wave 5, and so on, each released only when Jon says.
+6. **A readiness page for each wave.**
+7. **Defaults accepted for the rest:**
+   - the alphas ship unsigned;
+   - "feature complete" leaves out document translation, grade 2 in pure Rust, streaming dictation, signing, and the peripheral Star list;
+   - macOS and Linux are marked "built, checked by tool, not heard", with testers sought during the beta.
+
 ## See also
 
 - [What is left](whats-left.md): the inventory behind this roadmap.
