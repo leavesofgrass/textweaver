@@ -1,4 +1,4 @@
-//! Image files (PNG and JPEG) read by OCR (feature `ocr`; ADR-0026): a
+//! Image files (PNG and JPEG) read by OCR (feature `images`; ADR-0026): a
 //! photographed handout, a screenshot of a slide, a scanned page saved as
 //! a picture.
 //!
