@@ -88,9 +88,9 @@ The workspace builds MathCAT with `no-unsafe`, the configuration the issue is ab
 
 Measured on Windows (x86_64-pc-windows-msvc), release profile, `cargo build --release -p textweaver-tui`:
 
-- without the feature: SIZE_BEFORE bytes;
-- with `--features mathcat`: SIZE_AFTER bytes;
-- added: SIZE_ADDED bytes.
+- without the feature: 46,809,088 bytes;
+- with `--features mathcat`: 49,980,416 bytes;
+- added: 3,171,328 bytes (about 3.0 MiB). The embedded rules archive is 799,278 bytes of that; the rest is MathCAT's code and its XML, XPath, YAML, and bzip2 libraries.
 
 ### Dependencies
 
