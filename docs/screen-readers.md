@@ -220,18 +220,26 @@ textweaver's own words (messages, lists, help, and settings) are in English, Spa
 
 ## Braille displays
 
-textweaver draws no braille of its own. A braille display shows what your screen reader shows: the line at the terminal's cursor, and new text as it appears. In screen-reader mode, the status line and the cursor are what reach the display; with `cursor = "status"`, the display rests on the latest message. Which screen reader and display combinations work well has not been tested yet.
+textweaver draws no braille of its own, in the terminal or in the GUI. A braille display shows what your screen reader shows: the line at the terminal's cursor, and new text as it appears. In screen-reader mode, the status line and the cursor are what reach the display; with `cursor = "status"`, the display rests on the latest message.
+
+- **Tested:** a 40-cell display (a HumanWare Mantis Q40) through NVDA and JAWS on Windows, reading the status line, messages, and moving by unit in the terminal reader; and, in the GUI, the document control, the settings dialog, and edit mode, in the owner's two sessions (see [The GUI](#the-gui) above).
+- **Not tested:** other cell widths, other display models, Orca's braille on Linux, and VoiceOver's on macOS.
+- **What to expect on a 40-cell line:** textweaver puts the meaning first in every message and status line, so the important word is near the start rather than after decoration; a line that runs past 40 cells still reads correctly panned, just not all at once. Fenced code blocks and settings tables keep plain text and real column headers, with no box-drawing characters, so they should not come through as noise, but this has not been checked line by line against every table in every doc; report any that does.
+- **The BRF writer** (`tw convert --to brf`, see [Converting documents](converting.md)) is a separate feature: a grade 1, or grade 2 with the `liblouis` feature, braille file you save and read on a notetaker or emboss, not the live display output above.
+- If your combination behaves differently from this, add it to the checklist below and let the project know what you found.
 
 ## The GUI
 
-textweaver also has a window, `textweaver-xilem`, written entirely in Rust with AccessKit for screen readers. It shares the documents, keys, settings, notes, and voices with the terminal reader; [the GUI guide](gui.md) covers it. It is built on its own, not by a plain `cargo build`, and it has no edit mode yet.
+textweaver also has a window, `textweaver-xilem`, written entirely in Rust with AccessKit for screen readers. It shares the documents, keys, settings, notes, and voices with the terminal reader; [the GUI guide](gui.md) covers it. It is built on its own, not by a plain `cargo build`, and it has an edit mode: **Ctrl+E**, or the Edit button, turns the document into a multi-line edit that NVDA and JAWS switch to focus mode for by themselves; Ctrl+E again finishes, asking to save if there are changes.
 
 - The document is one control your screen reader reads as a document, and the browse keys of NVDA and JAWS (`h`, `t`, `k`, and the rest) work in it, as in the terminal.
+- Opening a document (**Ctrl+O**) shows your system's own file chooser, which NVDA and JAWS know; **Ctrl+Shift+G** types a path instead.
 - Messages reach your screen reader through a live region by default. `--announce uia` (or `announce = "uia"` under `[gui]`) sends UI Automation notifications on Windows instead.
 - While reading, the spoken word gets a background color and the caret moves to it. `--select-spoken` selects the word instead, for a screen reader that follows the selection.
 - It reads `[accessibility] mode` from the same settings file, and Alt+Shift+A changes it, as in the terminal.
+- Every button's key, including Edit's, comes from the keymap and is on screen as the button's accelerator key, so NVDA and JAWS say it when their setting for reporting shortcut keys is on.
 
-The owner checked the window with NVDA, JAWS, and a braille display on Windows in two sessions, with Eloquence reading and the words highlighted correctly. On Linux, CI checks what Orca would read through AT-SPI. VoiceOver has not been tried on a real Mac. [ADR-0027](adr/0027-xilem-gui.md) and [ADR-0028](adr/0028-xilem-gui-after-the-session.md) record what was checked.
+The owner checked the window with NVDA, JAWS, and a braille display on Windows in two sessions, with Eloquence reading and the words highlighted correctly, including edit mode after the second session. On Linux, CI checks what Orca would read through AT-SPI. VoiceOver has not been tried on a real Mac. [ADR-0027](adr/0027-xilem-gui.md), [ADR-0028](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033](adr/0033-gui-session-2-and-edit-mode.md) record what was checked.
 
 ## Checklist: try each mode with JAWS and NVDA
 
@@ -295,6 +303,8 @@ Please note which steps did not behave as expected, with the screen reader, its 
 - [Reading and moving around](reading.md): every reading key, and the command line options.
 - [Keyboard reference](keyboard.md): every key, what changed, the classic preset, and what terminals cannot send.
 - [Settings](settings.md): the `[accessibility]` settings and `[keyboard] preset`.
+- [Converting documents](converting.md): the `brf` braille output, and the other formats `tw convert` writes.
+- [The GUI guide](gui.md): the window in full, including edit mode and the file chooser.
 - [Troubleshooting](troubleshooting.md): common problems and how to report a bug.
 - [ADR-0006: Keymap, actions, and announcements](adr/0006-keymap-and-actions.md): how announcements reach the status line.
 - [ADR-0014: GUI toolkit](adr/0014-gui-toolkit.md): the GUI preview and what was checked.
