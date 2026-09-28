@@ -60,7 +60,7 @@ It installs what the build needs, builds textweaver, and installs it in `~/.loca
 textweaver ~/.local/share/doc/textweaver/QUICKSTART.md
 ```
 
-From the next release on, there is an AppImage: one file that runs on most distributions from 2022 on, on x86_64 computers.
+From the next release on, there is an AppImage: one file that runs on most distributions from 2022 on, for x86_64 or for 64-bit ARM (aarch64) computers. `uname -m` says which yours is.
 
 1. Download the Linux `.AppImage` from the [releases page](https://github.com/leavesofgrass/textweaver/releases).
 2. Open a terminal in the folder you saved it to, and make it executable:
@@ -128,6 +128,7 @@ textweaver remembers your place. Open the same file again and it picks up where 
 - **F9** turns single-key shortcuts off, so dictation or typing never triggers a command. Chords such as **Alt+P** (play or pause) still work.
 - If you use a screen reader, **Alt+Shift+A** chooses who speaks: textweaver alone (self-voicing), both (hybrid: textweaver reads documents aloud and your screen reader speaks the rest), or your screen reader alone. `textweaver --no-speech FILE` starts silent. [Using textweaver with a screen reader](screen-readers.md) explains the modes.
 - If speech stops, **Shift+F8** restarts it.
+- textweaver speaks and shows its own words in English, Spanish, French, German, Portuguese, or Arabic. The first run starts with the list of languages; later, choose "Interface language" in the settings screen (**Shift+F10**), or run `tw settings language es`.
 - `tw speak "Hello"` checks your voice. `tw voices` lists your voices, and `tw backends` lists the speech engines textweaver found. In the reader, **Alt+V** lists the voices; Enter chooses one and speaks a sample.
 - Something went wrong? Warnings and errors are written to `textweaver.log` in the state folder (next to your reading positions). Start with `textweaver --log debug FILE` to log more, or `--log off` to log nothing. [Troubleshooting](troubleshooting.md) covers the common problems.
 

@@ -19,7 +19,6 @@ members = [
     "crates/textweaver-export",
     "crates/textweaver-vault",
     "crates/textweaver-dictation",
-    "crates/textweaver-gui",
     "crates/textweaver-xilem",
     "crates/textweaver-render",
     "crates/textweaver-convert",
@@ -79,7 +78,7 @@ edition = "2024"
 rust-version = "1.92"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/leavesofgrass/textweaver"
-authors = ["The textweaver authors"]
+authors = ["Jon Pielaet"]
 publish = false
 
 # Every dependency any crate may use is declared here (ADR-0001). Crates opt in
@@ -191,9 +190,7 @@ krilla = "0.8"
 hayagriva = "0.10"
 biblatex = "0.12"
 ureq = { version = "3.4", default-features = false, features = ["rustls"] }
-# GUI (wave 3 spike; the textweaver-gui crate only). wxdragon has no default
-# features today; they are off so none arrive unnoticed in an update.
-wxdragon = { version = "0.9", default-features = false }
+# Live-region announcements for the platform accessibility APIs.
 live-region = "0.3"
 # The Xilem GUI (Wave 3, textweaver-xilem only; ADR-0027). Masonry is
 # vendored from Xilem at revision 271a27a6d4a9 (Monday, September 14, 2026)

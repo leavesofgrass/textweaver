@@ -266,6 +266,7 @@ pub fn blocks(doc: &Document) -> Vec<Block> {
         doc,
         markers: doc.markers(),
         emitted: vec![false; doc.markers().len()],
+        open: Vec::new(),
     };
     let mut out = b.blocks_in(doc.full_range(), None);
     // Breaks at the very end (a closing rule) start at no char of the text.
@@ -283,7 +284,15 @@ struct TreeBuilder<'a> {
     markers: &'a [Marker],
     /// Break markers already emitted, by index.
     emitted: Vec<bool>,
+    /// The containers (lists, items, quotes) being built, outermost first.
+    /// A container is never entered twice on one path: a list and its only
+    /// item share a range, so each finds the other inside itself.
+    open: Vec<usize>,
 }
+
+/// Containers nested deeper than this are read as plain paragraphs, so
+/// hostile input cannot overflow the stack.
+const MAX_DEPTH: usize = 64;
 
 fn is_break(m: &Marker) -> bool {
     matches!(
@@ -379,12 +388,14 @@ impl TreeBuilder<'_> {
         let mut i = idx.start;
         while i < idx.end {
             let m = &self.markers[i];
-            // A container with exactly this range that sorts before `this`
-            // encloses it: the Markdown loader gives a nested list and its
-            // only item the same range. Taking it as a child built that
-            // list again, forever, until the stack overflowed.
-            let encloses = this.is_some_and(|t| i < t) && m.range == range;
-            if Some(i) == this || encloses || (!range.contains_range(m.range) && !is_break(m)) {
+            // A container being built is never its own child: the Markdown
+            // loader gives a list and its only item the same range, and
+            // taking the list again as the item's child built it forever,
+            // until the stack overflowed.
+            if Some(i) == this
+                || self.open.contains(&i)
+                || (!range.contains_range(m.range) && !is_break(m))
+            {
                 i += 1;
                 continue;
             }
@@ -500,12 +511,25 @@ impl TreeBuilder<'_> {
                 language: m.label.clone().filter(|l| !l.is_empty()),
                 text: self.doc.slice(range),
             },
-            MarkerKind::Quote => Block::Quote(self.blocks_in(range, Some(i))),
+            MarkerKind::Quote | MarkerKind::List if self.open.len() >= MAX_DEPTH => {
+                self.paragraph(range)
+            }
+            MarkerKind::Quote => {
+                self.open.push(i);
+                let blocks = self.blocks_in(range, Some(i));
+                self.open.pop();
+                Block::Quote(blocks)
+            }
             MarkerKind::Footnote => Block::Footnote {
                 id: m.reference.clone().unwrap_or_default(),
                 content: trim_inlines(self.inlines(range)),
             },
-            MarkerKind::List => Block::List(self.list(i)),
+            MarkerKind::List => {
+                self.open.push(i);
+                let list = self.list(i);
+                self.open.pop();
+                Block::List(list)
+            }
             MarkerKind::Table => Block::Table(self.table(i)),
             // Handled by the callers.
             _ => Block::Paragraph(self.inlines(range)),
@@ -520,6 +544,7 @@ impl TreeBuilder<'_> {
         for j in self.starting_in(range) {
             let m = &self.markers[j];
             if j == i
+                || self.open.contains(&j)
                 || m.kind != MarkerKind::ListItem
                 || m.range.start < cursor
                 || !range.contains_range(m.range)
@@ -538,7 +563,7 @@ impl TreeBuilder<'_> {
             let item_range = m.range;
             items.push(ListItem {
                 label,
-                blocks: self.blocks_in(item_range, Some(j)),
+                blocks: self.item_blocks(j),
             });
             cursor = item_range.end;
         }
@@ -561,7 +586,7 @@ impl TreeBuilder<'_> {
             if m.range.start >= within.end {
                 break;
             }
-            if m.range.start < cursor {
+            if m.range.start < cursor || self.open.contains(&j) {
                 j += 1;
                 continue;
             }
@@ -581,12 +606,26 @@ impl TreeBuilder<'_> {
             let label = m.label.clone();
             items.push(ListItem {
                 label,
-                blocks: self.blocks_in(r, Some(j)),
+                blocks: self.item_blocks(j),
             });
             cursor = r.end;
             j += 1;
         }
         (list_from_items(items), j.max(first + 1))
+    }
+
+    /// The blocks of list item `j`, entered at most once per path.
+    fn item_blocks(&mut self, j: usize) -> Vec<Block> {
+        let range = self.markers[j].range;
+        if self.open.len() >= MAX_DEPTH {
+            let mut out = Vec::new();
+            self.gap(range, &mut out);
+            return out;
+        }
+        self.open.push(j);
+        let blocks = self.blocks_in(range, Some(j));
+        self.open.pop();
+        blocks
     }
 
     fn orphan_rows(&mut self, first: usize, within: CharRange) -> (Table, usize) {

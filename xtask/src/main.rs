@@ -24,7 +24,8 @@
 //! - `parity`: compare word and sentence segmentation with the Star corpus
 //!   in `fixtures/star-parity/` and write the report (Agent A).
 //! - `release X.Y.Z [--dry-run] [--no-checks]`: set the version, date the
-//!   changelog, run the checks, commit, and tag (see `release.rs`).
+//!   changelog, run the checks, commit, and tag (see `release.rs`);
+//!   `release X.Y.Z --listened` records the listening check.
 //! - `soak [--minutes N]`: read the 10 MB corpus to the end with random
 //!   navigation, edits, rate changes, and engine-host kills (see `soak.rs`).
 //! - `startup [--baseline FILE --max-ratio R]`: time `tw --version`,

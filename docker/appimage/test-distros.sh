@@ -4,8 +4,13 @@
 #
 #   docker/appimage/test-distros.sh DIST_DIR [IMAGE...]
 #
-# DIST_DIR holds textweaver-*-linux-x86_64.AppImage and the matching
-# .tar.gz (target/dist after `cargo xtask appimage`). Containers have no
+# DIST_DIR holds textweaver-*-linux-ARCH.AppImage and the matching
+# .tar.gz (target/dist after `cargo xtask appimage`). ARCH is this
+# machine's (`uname -m`: x86_64 or aarch64) unless the ARCH variable names
+# another; the images run natively, so check aarch64 packages on an arm64
+# machine (the release workflow uses GitHub's ubuntu-22.04-arm runner, and
+# checks there on Debian and Fedora: Arch has no official arm64 image).
+# Containers have no
 # FUSE, so the AppImage runs with --appimage-extract-and-run (and, through
 # the tw link, with APPIMAGE_EXTRACT_AND_RUN=1), as it does on a system
 # without FUSE.
@@ -39,34 +44,42 @@ case "$(uname -s)" in
     ;;
 esac
 dist="$(abs "$dist")"
+arch="${ARCH:-$(uname -m)}"
+case $arch in
+  x86_64 | aarch64) ;;
+  *)
+    echo "Release packages are built for x86_64 and aarch64, not $arch." >&2
+    exit 1
+    ;;
+esac
 here="$(cd "$(dirname "$0")" && pwd)"
 fixtures="$(abs "$here/../../fixtures")"
 scripts="$(abs "$here/../../scripts")"
 
 appimage=""
 tarball=""
-for f in "$dist"/textweaver-*-linux-x86_64.AppImage; do
+for f in "$dist"/textweaver-*-linux-"$arch".AppImage; do
   [ -e "$f" ] && appimage="$(basename "$f")"
 done
-for f in "$dist"/textweaver-*-linux-x86_64.tar.gz; do
+for f in "$dist"/textweaver-*-linux-"$arch".tar.gz; do
   [ -e "$f" ] && tarball="$(basename "$f")"
 done
 [ -n "$appimage" ] || {
-  echo "No AppImage in $dist." >&2
+  echo "No $arch AppImage in $dist." >&2
   exit 1
 }
 
 # The checksums install-linux.sh checks against, as the release has them.
 made_sums=0
 if [ ! -f "$dist/SHA256SUMS.txt" ]; then
-  (cd "$dist" && sha256sum textweaver-*-linux-x86_64.AppImage textweaver-*-linux-x86_64.tar.gz > SHA256SUMS.txt)
+  (cd "$dist" && sha256sum textweaver-*-linux-"$arch".AppImage textweaver-*-linux-"$arch".tar.gz > SHA256SUMS.txt)
   made_sums=1
 fi
 
 # The check, run inside each container as root.
 cat > "$dist/.distro-check.sh" << 'EOF'
 set -eu
-image="$1" appimage="$2" tarball="$3"
+image="$1" appimage="$2" tarball="$3" arch="$4"
 pm_install() {
   if command -v apt-get > /dev/null; then
     export DEBIAN_FRONTEND=noninteractive
@@ -169,7 +182,7 @@ install_round() {
   echo "$image, install-linux.sh --release ($kind):"
   home="$(mktemp -d)"
   version="${appimage#textweaver-}"
-  version="${version%-linux-x86_64.AppImage}"
+  version="${version%-linux-"$arch".AppImage}"
   flag=""
   [ "$kind" = appimage ] && flag="--appimage"
   # shellcheck disable=SC2086
@@ -202,13 +215,13 @@ EOF
 
 status=0
 for image in "$@"; do
-  echo "== $image =="
+  echo "== $image, $arch =="
   if ! docker run --rm -v "$dist:/pkg:ro" -v "$fixtures:/fixtures:ro" -v "$scripts:/scripts:ro" "$image" \
-    sh /pkg/.distro-check.sh "$image" "$appimage" "$tarball"; then
-    echo "$image: FAILED"
+    sh /pkg/.distro-check.sh "$image" "$appimage" "$tarball" "$arch"; then
+    echo "Fail: $image, $arch"
     status=1
   else
-    echo "$image: passed"
+    echo "Pass: $image, $arch"
   fi
 done
 rm -f "$dist/.distro-check.sh"

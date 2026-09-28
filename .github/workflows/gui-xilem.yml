@@ -135,8 +135,18 @@ jobs:
       - run: cargo build --locked -p textweaver-xilem
       - run: cargo clippy --locked -p textweaver-xilem --all-targets -- -D warnings
       - run: cargo test --locked -p textweaver-xilem
+      # The AT-SPI dump is what Orca reads: roles, names, the live region,
+      # and the text interface, under Xvfb with no screen reader running.
       - name: AT-SPI check (hybrid renderer, which suits Mesa's software GPU)
         run: bash crates/textweaver-xilem/tools/atspi-check.sh | tee atspi-xilem.md
+      - name: AT-SPI report in the run summary
+        if: always()
+        run: |
+          if [ -s atspi-xilem.md ]; then
+            cat atspi-xilem.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Fail: the AT-SPI check wrote no report." >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Review screenshots (100% and 200%)
         run: ./target/debug/textweaver-xilem --review-screenshots screenshots fixtures/sample.md
       - uses: actions/upload-artifact@v7

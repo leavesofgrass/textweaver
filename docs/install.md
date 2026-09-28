@@ -8,8 +8,9 @@ textweaver is in alpha. The newest release is 0.1.0-alpha.3. A release on GitHub
 - `textweaver-VERSION-macos-universal.tar.gz`, for Apple silicon and Intel Macs
 - `textweaver-VERSION-linux-x86_64.AppImage`, one file that runs on most Linux distributions
 - `textweaver-VERSION-linux-x86_64.tar.gz`, the same programs as a plain folder, for Linux systems where AppImages cannot run
+- `textweaver-VERSION-linux-aarch64.AppImage` and `textweaver-VERSION-linux-aarch64.tar.gz`, the same for 64-bit ARM (arm64) computers
 
-The two Linux packages start with the next release. 0.1.0-alpha.3 has the Windows and macOS packages only; on Linux, build it from source with the install script (see [Install with a script](#install-with-a-script)).
+The Linux packages start with the next release. 0.1.0-alpha.3 has the Windows and macOS packages only; on Linux, build it from source with the install script (see [Install with a script](#install-with-a-script)).
 
 Every package contains two programs:
 
@@ -136,7 +137,7 @@ tw voices
 
 ## Linux
 
-The Linux package is an AppImage: one file that holds `textweaver`, `tw`, the engine hosts for Eloquence (Voxin) and DECtalk, the pronunciation dictionaries, the guides, and the licences. It is built on Ubuntu 22.04, so it runs on distributions from 2022 on, including Debian 12 and 13, Ubuntu 22.04 and later, Fedora, Arch, and openSUSE. It is for x86_64 computers.
+The Linux package is an AppImage: one file that holds `textweaver`, `tw`, the engine hosts for Eloquence (Voxin) and DECtalk, the pronunciation dictionaries, the guides, and the licences. It is built on Ubuntu 22.04, so it runs on distributions from 2022 on, including Debian 12 and 13, Ubuntu 22.04 and later, Fedora, Arch, and openSUSE. There is one for x86_64 computers and one for 64-bit ARM (aarch64) computers; the install script picks the one for your computer. In the steps below, write `aarch64` where they say `x86_64` if `uname -m` says `aarch64`.
 
 The first release with the AppImage is the one after 0.1.0-alpha.3. Until it is out, build from source with `bash scripts/install-linux.sh`, as described at the end of this section.
 
@@ -183,7 +184,7 @@ To install it by hand:
 
 - **espeak-ng** speaks inside textweaver when it is installed: install the `espeak-ng` package. Without it, the same AppImage still works and speaks through the other engines.
 - **speech-dispatcher** works when its server is installed and running, as it is on most desktops.
-- **Eloquence** through Voxin, and a licensed **DECtalk**, work through the bundled engine hosts; see [the Eloquence guide](eloquence.md) and [the DECtalk guide](dectalk.md).
+- **Eloquence** through Voxin, and a licensed **DECtalk**, work through the bundled engine hosts; see [the Eloquence guide](eloquence.md) and [the DECtalk guide](dectalk.md). A host loads the engine's library for its own architecture, so on an aarch64 computer it needs an aarch64 build of the engine.
 
 Run `tw backends` to see which engines textweaver found.
 

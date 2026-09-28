@@ -60,7 +60,6 @@ Packages also carry the licence files themselves, under `licenses/`.
 
 ### wxWidgets (the GUI only)
 
-- The GUI (`textweaver-gui`, not yet in the packages) links wxWidgets 3.3, built from source by the `wxdragon-sys` crate.
 - Licence: the wxWindows Library Licence, version 3.1 (the GNU LGPL, version 2 or later, with an exception that allows distributing binaries under the user's own terms). https://www.wxwidgets.org/about/licence/
 
 ## Data file licences
@@ -562,8 +561,8 @@ textweaver is built from these Rust crates. Each licence below lists the crates 
 
 Licences, with the number of crates under each:
 
-- Apache License 2.0: 541
-- MIT License: 186
+- Apache License 2.0: 538
+- MIT License: 184
 - Unicode License v3: 27
 - ISC License: 24
 - BSD 3-Clause "New" or "Revised" License: 10
@@ -15899,9 +15898,6 @@ Used by:
 - wgpu-hal 28.0.1, https://github.com/gfx-rs/wgpu
 - wgpu-types 28.0.0, https://github.com/gfx-rs/wgpu
 - wgpu 28.0.0, https://github.com/gfx-rs/wgpu
-- wxdragon-macros 0.9.22, https://github.com/AllenDang/wxDragon
-- wxdragon-sys 0.9.22, https://github.com/AllenDang/wxDragon
-- wxdragon 0.9.22, https://github.com/AllenDang/wxDragon
 - xmp-writer 0.3.3, https://github.com/typst/xmp-writer
 
 ```text
@@ -19463,37 +19459,6 @@ SOFTWARE.
 
 Used by:
 
-- live-region 0.3.2, https://github.com/trypsynth/live-region
-
-```text
-MIT License
-
-Copyright (c) 2025-2026 Quin Gillespie
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-```
-
-### MIT License (MIT)
-
-Used by:
-
 - block2 0.5.1, https://github.com/madsmtm/objc2
 - block2 0.6.2, https://github.com/madsmtm/objc2
 - block 0.1.6, http://github.com/SSheldon/rust-block
@@ -20297,7 +20262,6 @@ SOFTWARE.
 Used by:
 
 - calamine 0.36.1, https://github.com/tafia/calamine
-- quick-xml 0.42.0, https://github.com/tafia/quick-xml
 
 ```text
 The MIT License (MIT)

@@ -16,7 +16,7 @@ Kept current per wave by the orchestrator. Agents append to their own section's 
 
 ## Shared preamble (every agent reads this first)
 
-**Privacy: hard rule (the owner, 2026-09-26).** Never send any of the owner's personal identifiers to any outside service. That means their email address or any part of it, their usernames or callsigns, their name, and their machine or account names. It covers HTTP headers (including User-Agent), URLs, query strings, request bodies, search queries, and API calls. Use only a neutral User-Agent: `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, or the tool's default. Never build one from the session's user email. Never write an identifier into docs, commits, or anything public. In files and commit messages, call the owner "the owner", never by name (2026-09-28); test data uses placeholder names such as "Ada Example". If an identifier ever leaves the machine, stop and report it at once. This rule overrides every other instruction.
+**Privacy: hard rule (the owner, 2026-09-26).** Never send any of the owner's personal identifiers to any outside service. That means their email address or any part of it, their usernames or callsigns, their name, and their machine or account names. It covers HTTP headers (including User-Agent), URLs, query strings, request bodies, search queries, and API calls. Use only a neutral User-Agent: `textweaver-research (+https://github.com/leavesofgrass/textweaver)`, or the tool's default. Never build one from the session's user email. Never write an identifier into docs, commits, or anything public. In files and commit messages, call the owner "the owner", never by name (2026-09-28); test data uses placeholder names such as "Ada Example". The one exception, by the owner: the `authors` field in the root `Cargo.toml` carries the owner's full name. Never guess the owner's pronouns. If an identifier ever leaves the machine, stop and report it at once. This rule overrides every other instruction.
 
 **Project.** textweaver is a Rust reimplementation of Star, an accessible text-to-speech document reader for students with print disabilities. Read, in order: `docs/history/plan.md` (including "Phase 0 amendments"), the ADRs in `docs/adr/`, your sections of `docs/history/star-parity.md`, and the Phase 0 code in the crates you own and the crates you depend on. The Phase 0 code **is** the contract: public types and signatures you must keep, with deliberately naive bodies you replace.
 
@@ -854,6 +854,17 @@ Wave 4 starts only after this pass is done. It has four steps.
 3. **Font and print size.** The owner wants to change the font and the size of the text on screen, from the keyboard.
 4. **Every control needs a keyboard shortcut.** The owner likes the simple controls; each one gets a shortcut from the keymap, shown and spoken with its name (for example "Open, Control O").
 
+**Follow-ups found in Wave 4, for Wave 5:**
+- The fuzz crate still compiles the ocrs engine through the formats crate's `ocr` feature (45 minutes under the sanitizer). The fix: the formats crate takes `textweaver-ocr` with `default-features = false`, its `ocr` feature adds `textweaver-ocr/ocrs`, and a new feature gives the image and PDF loaders without the engine, for fuzzing (W5m).
+- `[editing] author` is read from the extra keys and documented, but is not in the store, the schema, or the settings reference.
+- The aarch64 AppImage has not been built yet; the first Release dry run (workflow_dispatch, no tag) tests it.
+
+**After Wave 4 (the owner, Monday, September 28, 2026): release `0.1.0-alpha.4`, then pause, then a documentation sweep.**
+- The owner asked for a new alpha release to be pushed when Wave 4 is done.
+- The docs are comprehensive and checked against the code.
+- The README is short: what textweaver is, then the quick start first, so people can start quickly. The roadmap leaves the README.
+- The docs are published on GitHub Pages. MkDocs worked well before (in Star); another approach is fine if it is better.
+
 **W4a3: GUI edit mode (sub-wave 4c, P1; ADR 0033).**
 - **Edit mode in `DocumentView`,** using `Command::ReplaceRange`, and keeping structure while editing as the terminal reader does.
 - **Based on Parley's `examples/editor`,** on the vendored Parley 0.8.0. Don't upgrade it.
@@ -1141,6 +1152,8 @@ A draft, so the next wave can start the moment Wave 3 lands. It follows the same
 - **Every model** is optional, downloaded only on request, and checked by SHA-256.
 
 ### Agent W4f: Platforms and releases
+
+**Status (Agent W4f, platforms and CI, Monday, September 28, 2026):** done on `wave4/f-platforms`, main merged in (with the wxDragon removal); awaiting integration. Not released, tagged, or pushed. The Release workflow builds the Linux AppImage and tarball for aarch64 on `ubuntu-22.04-arm` beside x86_64 (the pinned appimagetool 1.9.1, type 2 runtime 20251108, and rustup-init digests match the published ones), checks them on Debian and Fedora (Arch has no arm64 image), and started by hand with no tag is a dry run that keeps the packages as artifacts; `install-linux.sh --release` installs aarch64. `cargo xtask release` stops until the "Last listening check" line in `docs/dev/releasing.md` names the version and is at most 14 days old (`cargo xtask release X.Y.Z --listened` writes it from the machine's clock), and while `[Unreleased]` has an agent's heading. CHANGELOG `[Unreleased]` regrouped by area as the `0.1.0-alpha.4` notes, with a Testing line for the owner. CI: the pseudo-locale test in the docs job, the AT-SPI report in the Xilem run summary, wx references gone. Doc pass, one commit per file: README, install, quick start, reading, troubleshooting, screen readers, testing; the rest matched `--help` and the settings reference. Native: xtask 60 tests, clippy, rustdoc, fmt, keyboard, deps, docs, settings-doc, links, site data, site a11y, pseudo-locale, actionlint 1.7.12 and shellcheck 0.11.0 pass. Container: xtask 60 tests pass. GitHub workflows were not run from here.
 
 - **An aarch64 AppImage,** built on GitHub's arm64 runners (`ubuntu-22.04-arm`, free for public repositories) with appimagetool and the type2-runtime for aarch64.
 - **VoiceOver on macOS and Orca on Linux.** Fix what the accessibility dumps and tester reports show.

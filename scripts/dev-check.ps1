@@ -5,11 +5,11 @@
 .DESCRIPTION
   Steps, in order:
     fmt       cargo fmt --all --check
-    clippy    cargo clippy --workspace --exclude textweaver-gui --all-targets
+    clippy    cargo clippy --workspace --all-targets
               --features textweaver-speech/omnivox -- -D warnings
-    test      cargo test --workspace --exclude textweaver-gui
+    test      cargo test --workspace
               --features textweaver-speech/omnivox
-    doc       cargo doc --workspace --exclude textweaver-gui --no-deps
+    doc       cargo doc --workspace --no-deps
               --features textweaver-speech/omnivox, with RUSTDOCFLAGS=-D warnings
     keyboard  cargo xtask keyboard --check
     pseudo    cargo test -p textweaver-app --test pseudo_locale (every
@@ -183,9 +183,9 @@ Write-Line "Running the CI checks in $Root."
 Write-Line "Features: $($features -join ' ') (the espeak feature needs libespeak-ng, which Windows does not have)."
 
 Invoke-CheckStep 'fmt' 'formatting' @('cargo', 'fmt', '--all', '--check')
-Invoke-CheckStep 'clippy' 'lints, warnings are errors' (@('cargo', 'clippy', '--workspace', '--exclude', 'textweaver-gui', '--all-targets') + $features + @('--', '-D', 'warnings'))
-Invoke-CheckStep 'test' 'tests' (@('cargo', 'test', '--workspace', '--exclude', 'textweaver-gui') + $features)
-Invoke-CheckStep 'doc' 'API documentation, warnings are errors' (@('cargo', 'doc', '--workspace', '--exclude', 'textweaver-gui', '--no-deps') + $features) @{ RUSTDOCFLAGS = '-D warnings' }
+Invoke-CheckStep 'clippy' 'lints, warnings are errors' (@('cargo', 'clippy', '--workspace', '--all-targets') + $features + @('--', '-D', 'warnings'))
+Invoke-CheckStep 'test' 'tests' (@('cargo', 'test', '--workspace') + $features)
+Invoke-CheckStep 'doc' 'API documentation, warnings are errors' (@('cargo', 'doc', '--workspace', '--no-deps') + $features) @{ RUSTDOCFLAGS = '-D warnings' }
 Invoke-CheckStep 'keyboard' 'docs/keyboard.md is current' @('cargo', 'xtask', 'keyboard', '--check')
 Invoke-CheckStep 'pseudo' 'the interface in the pseudo-locales en-XA and ar-XB' @('cargo', 'test', '-p', 'textweaver-app', '--test', 'pseudo_locale')
 $python = $null

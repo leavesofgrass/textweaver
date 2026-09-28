@@ -11,8 +11,8 @@ publish.workspace = true
 
 [features]
 default = []
-# Wave 3: a live-region announcer for the wxDragon GUI (the `live-region`
-# crate depends on wxDragon, so it cannot be part of the terminal build).
+# Reserved for a live-region announcer in this crate; the GUI's own
+# announcer lives in textweaver-xilem.
 live-region = []
 
 [dependencies]

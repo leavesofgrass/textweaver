@@ -61,6 +61,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
           cargo xtask settings-doc --check
+      # Every message the app says or shows comes from the catalog: under
+      # the en-XA pseudo-locale each one is bracketed, and the test fails
+      # on any that was missed (ADR-0030). The ALSA headers are installed
+      # by the step above.
+      - name: Every message is in the catalog (pseudo-locale)
+        run: cargo test --locked -p textweaver-app --test pseudo_locale
 
   # Generated files and repository rules that need no build of the
   # workspace's dependencies: the keyboard reference, the dependency
@@ -122,7 +128,7 @@ jobs:
       - uses: actions/checkout@v7
       # espeak-ng is linked through hand-written declarations and
       # speech-dispatcher through its socket, so no clang or bindgen is
-      # needed here (the GUI's wxdragon-sys still needs libclang; gui.yml).
+      # needed here. The Xilem GUI has its own workflow (gui-xilem.yml).
       - name: System libraries
         if: runner.os == 'Linux'
         run: |
@@ -134,9 +140,9 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Clippy
-        run: cargo clippy --locked --workspace --exclude textweaver-gui --exclude textweaver-xilem --all-targets ${{ matrix.features }}
+        run: cargo clippy --locked --workspace --exclude textweaver-xilem --all-targets ${{ matrix.features }}
       - name: Test
-        run: cargo test --locked --workspace --exclude textweaver-gui --exclude textweaver-xilem ${{ matrix.features }}
+        run: cargo test --locked --workspace --exclude textweaver-xilem ${{ matrix.features }}
       - name: Apple voice tests (macOS; synthesis only, no playback)
         if: runner.os == 'macOS'
         env:
@@ -160,7 +166,7 @@ jobs:
             cargo test --locked -p textweaver-eci --test fake_host
           cargo test --locked --target i686-pc-windows-msvc -p textweaver-sapi -p textweaver-dectalk --test fake_host
       - name: Docs
-        run: cargo doc --locked --workspace --exclude textweaver-gui --exclude textweaver-xilem --no-deps ${{ matrix.features }}
+        run: cargo doc --locked --workspace --exclude textweaver-xilem --no-deps ${{ matrix.features }}
 
   # Real engines, where a hosted runner has one. Nothing is ever heard:
   # audio goes to WAV files in temporary folders or to a silent output that
