@@ -869,6 +869,10 @@ Wave 4 starts only after this pass is done. It has four steps.
 7. **Docker:** no restart unless memory falls below the floor; then building agents pause and the owner gets a note to restart Docker Desktop.
 8. **Dependabot:** ignore rules for the pinned GUI stack (wgpu, Vello, Masonry, Parley, AccessKit) and MathCAT pre-releases.
 
+## Wave 5 (launched Monday, September 28, 2026)
+
+The plan is `docs/research/wave5-recalibrated.md`. The five branches taken from Wave 4's outcomes: the rope stays on ropey 1.6 (W5r writes ADR-0034); W5m is struck (the GUI's memory is the graphics stack); MathCAT #827 is open, so W5c4 vendors and patches 0.7.6-rc.3; W4a3 landed, so W5a4 starts with the Parley upgrade; W4d landed, so every new message is written in all six languages. ADR numbers: 0034 W5r, 0035 W5c3, 0036 W5c4, 0037 W5s, 0038 reserved for W6e, 0039 W5t, 0040 W5a4, 0041 W5g, 0042 reserved for W6d. Batch 1 launched while the docs sweep's reviewer finished (docs only, no overlap with code): W5x, W5y, W5a4 building; W5r writing; W5t and W5p not building here. D: had 780 GB free and 40 GB of memory was free.
+
 **Wave 5 launch decisions (Monday, September 28, 2026, the defaults in `docs/research/wave5-recalibrated.md`, taken under the owner's standing decisions so nothing waits):**
 - The publishing templates and speed presets are pulled into Wave 5's free slots (W5g, and W5y's last item).
 - The streaming dictation spike (W5d) measures Whisper only; no Moonshine download in Wave 5.
