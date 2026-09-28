@@ -283,9 +283,14 @@ At most eight, each a decision only he can make, each with a recommended default
 
 ## Pause after Wave 4, and recalibration (Jon, Sunday, September 27, 2026)
 
-- **After all of Wave 4 is done, work pauses.** Wave 5 doesn't launch until Jon says so.
+- **After all of Wave 4 is done, there's a short recalibration pause.** Wave 5 launches when Jon says, and doesn't wait for the Cloud Agent.
 - **A Cloud Agent contribution is planned** in `docs/research/cloud-agent-plan.md`: tasks chosen to run in a separate cloud session, delivered by pull request, within a $125 budget.
-- **Before Wave 5 launches,** this roadmap and `wave5-plan.md` are recalibrated to account for what the Cloud Agent's pull requests cover: agents' scopes shrink, and items it finishes are removed.
+- **No duplicate work** (Jon, the same afternoon).
+  - The Cloud Agent's tasks are listed in a reservation list in the repository, with their items and files.
+  - Wave 5 briefs mark them "reserved, not yours".
+  - Before each Wave 5 sub-wave, the orchestrator checks the open pull requests: merged tasks come off Wave 5's list, and open ones stay reserved.
+  - Wave 5 and the Cloud Agent run in parallel.
+- **Before Wave 5 launches,** this roadmap and `wave5-plan.md` are recalibrated to account for what the Cloud Agent covers.
 
 ## See also
 
