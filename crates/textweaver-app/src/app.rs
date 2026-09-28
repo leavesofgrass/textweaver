@@ -1200,6 +1200,7 @@ impl App {
         effects.extend(self.spell_count_tick());
         effects.extend(self.restart_tick());
         effects.extend(self.library_tick());
+        effects.extend(self.define_tick());
         effects.extend(self.voices_tick());
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
         effects.extend(self.authoring_tick(now));

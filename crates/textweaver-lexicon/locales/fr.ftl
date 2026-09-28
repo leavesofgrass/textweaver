@@ -2616,3 +2616,5 @@ library-filter-matched =
         [one] { $n } document correspond.
        *[other] { $n } documents correspondent.
     }
+# Said once when define word is used while the dictionary file is still opening.
+define-still-loading = Le dictionnaire est encore en cours de chargement.

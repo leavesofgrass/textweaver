@@ -2588,3 +2588,5 @@ library-filter-matched =
         [one] { $n } documento coincide.
        *[other] { $n } documentos coinciden.
     }
+# Said once when define word is used while the dictionary file is still opening.
+define-still-loading = El diccionario aún se está cargando.

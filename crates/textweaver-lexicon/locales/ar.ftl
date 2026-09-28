@@ -2816,3 +2816,5 @@ library-filter-matched =
         [many] { $n } مستندًا مطابقًا.
        *[other] { $n } مستند مطابق.
     }
+# Said once when define word is used while the dictionary file is still opening.
+define-still-loading = ما زال القاموس قيد التحميل.

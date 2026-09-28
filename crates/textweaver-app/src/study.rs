@@ -5,7 +5,10 @@
 //!   `define word` in the palette): the selected words, or the word at the
 //!   cursor, looked up in the user's glossary and then Open English
 //!   WordNet (`textweaver-lexicon`). The senses show in a list; Enter
-//!   copies one. With no word to look up, it asks for one.
+//!   copies one. With no word to look up, it asks for one. The dictionary
+//!   file (about 10 MB) opens on a helper thread the first time (Wave 5,
+//!   W5y): "Dictionary still loading." is said once, and the list opens
+//!   when it is ready ([`App::define_tick`]).
 //! - **Settings profiles** (Ctrl+Shift+U, Alt+U): a list of the profiles in
 //!   `profiles.toml`; Enter switches, F2 renames, Delete deletes after a
 //!   yes or no, and the last items save, import, and export.
@@ -22,10 +25,11 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::{Duration, Instant, SystemTime};
 
 use textweaver_lexicon::i18n::{Arg, Catalog, duration};
-use textweaver_lexicon::{Dictionary, Glossary, args};
+use textweaver_lexicon::{Dictionary, Glossary, Lexicon, args};
 use textweaver_store::profiles::{self, ProfileError};
 use textweaver_store::{Profiles, ReadingStats, StatsDelta};
 
@@ -94,6 +98,23 @@ struct StatsTracker {
     furthest_char: u64,
 }
 
+/// What opening the dictionary file on the helper thread found.
+enum LexiconFound {
+    /// The file, opened.
+    Opened(Arc<Lexicon>),
+    /// No dictionary file is installed.
+    Missing,
+    /// The file could not be read: why.
+    Damaged(String),
+}
+
+/// The dictionary file opening on a helper thread, and the word to define
+/// when it is ready.
+struct LexiconLoad {
+    found: Receiver<LexiconFound>,
+    word: String,
+}
+
 /// The study features' state in the app.
 pub(crate) struct Study {
     /// The interface messages.
@@ -103,6 +124,8 @@ pub(crate) struct Study {
     /// edited glossary is read again.
     glossary_stamp: Option<(PathBuf, Option<SystemTime>)>,
     lexicon_missing: bool,
+    /// The dictionary file opening on a helper thread.
+    lexicon_load: Option<LexiconLoad>,
     profiles: Option<Profiles>,
     /// The profile a rename or delete is for.
     pending_profile: Option<String>,
@@ -132,6 +155,7 @@ impl Study {
                 dictionary: None,
                 glossary_stamp: None,
                 lexicon_missing: false,
+                lexicon_load: None,
                 profiles: None,
                 pending_profile: None,
                 question: None,
@@ -229,8 +253,94 @@ impl App {
         }
     }
 
-    /// The glossary and dictionary, loaded on first use and when the
-    /// glossary file changes. Problems are announced once.
+    /// Starts opening the dictionary file on a helper thread, to define
+    /// `word` when it is ready ([`define_tick`](Self::define_tick)).
+    /// "Dictionary still loading." is said once, when the load starts; a
+    /// word asked for meanwhile replaces the waiting one.
+    fn load_lexicon(&mut self, word: &str) -> Vec<Effect> {
+        if let Some(load) = self.study.lexicon_load.as_mut() {
+            word.clone_into(&mut load.word);
+            return vec![Effect::Redraw];
+        }
+        let explicit = self.settings.lexicon.data_file.clone();
+        let data_dir = self.paths.as_ref().map(|p| p.data_dir.clone());
+        let (tx, rx) = mpsc::channel();
+        let wake = self.waker_slot();
+        let spawned = std::thread::Builder::new()
+            .name("textweaver-lexicon".into())
+            .spawn(move || {
+                let found = match textweaver_lexicon::find_lexicon(
+                    explicit.as_deref(),
+                    data_dir.as_deref(),
+                ) {
+                    Ok(Some((path, l))) => {
+                        log::info!("dictionary: {} ({} bytes)", path.display(), l.size());
+                        LexiconFound::Opened(Arc::new(l))
+                    }
+                    Ok(None) => LexiconFound::Missing,
+                    Err(e) => LexiconFound::Damaged(e.to_string()),
+                };
+                let _ = tx.send(found);
+                wake.wake();
+            });
+        if let Err(e) = spawned {
+            // No thread: open it here, as before.
+            log::warn!("cannot start the dictionary thread: {e}");
+            self.study.dictionary = Some(Dictionary::default());
+            self.study.lexicon_missing = true;
+            return self.define(word);
+        }
+        self.study.lexicon_load = Some(LexiconLoad {
+            found: rx,
+            word: word.to_owned(),
+        });
+        let msg = self.msg("define-still-loading");
+        self.tell(&msg);
+        vec![Effect::Redraw]
+    }
+
+    /// Takes the dictionary file from the helper thread once it is open,
+    /// and defines the word that was waiting (from [`App::tick`]).
+    pub(crate) fn define_tick(&mut self) -> Vec<Effect> {
+        let Some(load) = &self.study.lexicon_load else {
+            return Vec::new();
+        };
+        let found = match load.found.try_recv() {
+            Ok(found) => found,
+            Err(TryRecvError::Empty) => return Vec::new(),
+            Err(TryRecvError::Disconnected) => {
+                LexiconFound::Damaged("the dictionary thread stopped without an answer".into())
+            }
+        };
+        let Some(load) = self.study.lexicon_load.take() else {
+            return Vec::new();
+        };
+        self.install_lexicon(found);
+        self.define(&load.word)
+    }
+
+    /// Keeps what the dictionary thread found; a damaged file is said.
+    fn install_lexicon(&mut self, found: LexiconFound) {
+        let lexicon = match found {
+            LexiconFound::Opened(l) => Some(l),
+            LexiconFound::Missing => {
+                self.study.lexicon_missing = true;
+                None
+            }
+            LexiconFound::Damaged(error) => {
+                self.study.lexicon_missing = true;
+                let m = self.msg_args("define-dictionary-damaged", &args!["error" => error]);
+                self.error(&m);
+                None
+            }
+        };
+        let glossary = self.study.dictionary.take().and_then(|d| d.glossary);
+        self.study.dictionary = Some(Dictionary { glossary, lexicon });
+    }
+
+    /// The glossary and dictionary: the glossary loaded on first use and
+    /// when its file changes, the dictionary file as the helper thread
+    /// left it (none before it is open). Problems are announced once.
     fn dictionary(&mut self) -> Dictionary {
         let glossary_path = self.settings.lexicon.glossary.clone().or_else(|| {
             self.paths
@@ -242,33 +352,7 @@ impl App {
             (p.clone(), t)
         });
         if self.study.dictionary.is_none() {
-            let data_dir = self.paths.as_ref().map(|p| p.data_dir.clone());
-            let lexicon = match textweaver_lexicon::find_lexicon(
-                self.settings.lexicon.data_file.as_deref(),
-                data_dir.as_deref(),
-            ) {
-                Ok(Some((path, l))) => {
-                    log::info!("dictionary: {} ({} bytes)", path.display(), l.size());
-                    Some(Arc::new(l))
-                }
-                Ok(None) => {
-                    self.study.lexicon_missing = true;
-                    None
-                }
-                Err(e) => {
-                    self.study.lexicon_missing = true;
-                    let m = self.msg_args(
-                        "define-dictionary-damaged",
-                        &args!["error" => e.to_string()],
-                    );
-                    self.error(&m);
-                    None
-                }
-            };
-            self.study.dictionary = Some(Dictionary {
-                glossary: None,
-                lexicon,
-            });
+            self.study.dictionary = Some(Dictionary::default());
         }
         if stamp != self.study.glossary_stamp {
             self.study.glossary_stamp = stamp.clone();
@@ -300,8 +384,13 @@ impl App {
         self.study.dictionary.clone().unwrap_or_default()
     }
 
-    /// Looks `word` up and shows the senses.
+    /// Looks `word` up and shows the senses. The first time, the
+    /// dictionary file opens on a helper thread first
+    /// ([`load_lexicon`](Self::load_lexicon)).
     pub(crate) fn define(&mut self, word: &str) -> Vec<Effect> {
+        if self.study.lexicon_load.is_some() || !self.lexicon_tried() {
+            return self.load_lexicon(word);
+        }
         let dict = self.dictionary();
         let shown = textweaver_lexicon::normalize(word);
         match dict.define(word) {
@@ -332,6 +421,15 @@ impl App {
                 vec![Effect::Redraw]
             }
         }
+    }
+
+    /// True once the dictionary file has been looked for (found or not).
+    fn lexicon_tried(&self) -> bool {
+        self.study
+            .dictionary
+            .as_ref()
+            .is_some_and(|d| d.lexicon.is_some())
+            || self.study.lexicon_missing
     }
 
     // ----- Profiles --------------------------------------------------------
