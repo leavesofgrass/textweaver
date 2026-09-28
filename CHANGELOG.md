@@ -8,7 +8,7 @@ The fourth alpha. The keys follow NVDA's and JAWS's browse mode; textweaver spea
 
 ### Testing
 
-- **Listening check:** not yet done for this release. The owner records it with `cargo xtask release 0.1.0-alpha.4 --listened` after going through the [listening checklist](docs/dev/releasing.md#listening-checklist), and notes here what he heard.
+- **Listening check:** not yet done for this release. The owner records it with `cargo xtask release 0.1.0-alpha.4 --listened` after going through the [listening checklist](docs/dev/releasing.md#listening-checklist), and notes here what they heard.
 
 ### Keys: what changed
 
