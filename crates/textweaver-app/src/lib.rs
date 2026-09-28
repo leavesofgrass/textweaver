@@ -234,8 +234,9 @@ pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_lookup};
 pub use goto::parse_go_to;
 pub use help::{
-    chords_text, help_entries, key_text, named_key, palette_matches, resolve_command,
-    short_chords_text, spoken_key, spoken_text, written_text,
+    action_help, category_title, chords_text, chords_text_in, help_entries, key_text, named_key,
+    named_key_in, palette_matches, palette_matches_in, resolve_command, resolve_command_in,
+    short_chords_text, spoken_chord, spoken_key, spoken_text, written_text,
 };
 pub use list_model::{ListKey, ListModel, PromptKey, PromptModel};
 pub use math_explore::MathMove;
