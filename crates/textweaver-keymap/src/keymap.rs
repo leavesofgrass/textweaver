@@ -550,7 +550,7 @@ mod tests {
             for a in ActionId::ALL.iter().filter(|a| {
                 !a.is_palette_command()
                     && !map.preset().palette_only().contains(a)
-                    && !(a.is_window_only() && frontend == Frontend::Terminal)
+                    && (!a.is_window_only() || frontend != Frontend::Terminal)
             }) {
                 let reachable = Layer::ALL
                     .iter()
@@ -767,7 +767,7 @@ mod tests {
         // action has one on each frontend.
         for (platform, frontend, map) in all_maps() {
             for a in ActionId::ALL.iter().filter(|a| {
-                !a.is_palette_command() && !(a.is_window_only() && frontend == Frontend::Terminal)
+                !a.is_palette_command() && (!a.is_window_only() || frontend != Frontend::Terminal)
             }) {
                 assert!(
                     !map.chords_for(*a).is_empty(),
@@ -783,7 +783,7 @@ mod tests {
         // mode (not fully shadowed).
         for (platform, frontend, map) in all_maps() {
             for a in ActionId::ALL.iter().filter(|a| {
-                !a.is_palette_command() && !(a.is_window_only() && frontend == Frontend::Terminal)
+                !a.is_palette_command() && (!a.is_window_only() || frontend != Frontend::Terminal)
             }) {
                 let reachable = Layer::ALL
                     .iter()
