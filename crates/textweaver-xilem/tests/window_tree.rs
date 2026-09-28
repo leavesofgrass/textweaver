@@ -194,6 +194,10 @@ fn every_option_of_a_long_list_stays_in_the_tree() {
         "End selects the last option"
     );
     assert_eq!(list.active_descendant().map(|n| n.id()), Some(last.id()));
+    // "40 of 40": AccessKit's position is zero-based (the adapters add
+    // one), and the adapters read the size from the list.
+    assert_eq!(last.position_in_set(), Some(39));
+    assert_eq!(last.size_of_set_from_container(&common_filter), Some(40));
     check(&h, "after End");
     // The rows scrolled into view are drawn with their text, not blank:
     // the option before the last has more than its background's colors.

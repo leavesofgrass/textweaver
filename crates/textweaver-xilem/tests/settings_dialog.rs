@@ -101,6 +101,14 @@ fn settings_and_sections_below_the_fold_stay_in_the_tree() {
             "AccessKit's filter keeps every row of the {name}"
         );
         assert!(!node.clips_children(), "the {name} claims to clip");
+        // "1 of 20": zero-based positions, the size on the container.
+        let first = node.children().next().unwrap();
+        assert_eq!(first.position_in_set(), Some(0), "the {name}");
+        assert_eq!(
+            first.size_of_set_from_container(&common_filter),
+            Some(all),
+            "the {name}"
+        );
     }
 }
 

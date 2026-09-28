@@ -974,14 +974,15 @@ impl Widget for SettingsGrid {
             }
             o.add_action(Action::Focus);
             o.add_action(Action::ScrollIntoView);
-            o.set_position_in_set(i + 1);
-            o.set_size_of_set(n);
+            // Zero-based in AccessKit; the size is set on the form.
+            o.set_position_in_set(i);
             o.set_selected(i == self.selected);
             let y = (i as f64 - self.top as f64) * ROW_H;
             o.set_bounds(masonry::accesskit::Rect::new(0.0, y, self.width, y + ROW_H));
             ctx.tree_update().nodes.push((self.node_ids[i], o));
         }
         node.set_children(self.node_ids[..n].to_vec());
+        node.set_size_of_set(n);
         if let Some(id) = self.node_ids.get(self.selected).filter(|_| n > 0) {
             node.set_active_descendant(*id);
         }

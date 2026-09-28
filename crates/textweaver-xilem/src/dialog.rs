@@ -667,8 +667,9 @@ impl Widget for ChoiceList {
             o.add_action(Action::Focus);
             o.add_action(Action::Click);
             o.add_action(Action::ScrollIntoView);
-            o.set_position_in_set(i + 1);
-            o.set_size_of_set(n);
+            // AccessKit's position is zero-based (the adapters add one), and
+            // the size belongs on the list, not on each option.
+            o.set_position_in_set(i);
             let y = (i as f64 - self.top as f64) * self.row_h;
             o.set_bounds(masonry::accesskit::Rect::new(
                 0.0,
@@ -679,6 +680,7 @@ impl Widget for ChoiceList {
             ctx.tree_update().nodes.push((self.option_ids[i], o));
         }
         node.set_children(self.option_ids[..n].to_vec());
+        node.set_size_of_set(n);
         if let Some(id) = self.option_ids.get(self.selected) {
             node.set_active_descendant(*id);
         }
