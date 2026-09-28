@@ -186,7 +186,7 @@ actions! {
         "Say the position: line, percentage, word number, and heading",
         gui ["g:Alt+Shift+Y"], term ["g:Alt+Shift+Y"], shared ["b:Shift+W"];
     SayStatus = "say_status", Reading,
-        "Say the last message again, then the status: mode, reading state, position, rate, and speech engine",
+        "Say the last message again, then the status: mode, reading state, position, rate, and speech engine; in a list, the list's introduction",
         gui ["g:Alt+End"], term ["g:Alt+End"], shared ["b:z"];
     RepeatMessage = "repeat_message", Reading, "Say the last message again",
         gui ["g:Alt+'"], term ["g:Alt+'"], shared ["b:'"];

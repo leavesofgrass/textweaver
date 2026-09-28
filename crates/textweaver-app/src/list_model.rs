@@ -185,6 +185,10 @@ pub enum ListKey {
     Delete,
     /// F2: renames or edits the focused item.
     Rename,
+    /// Says the list's introduction again (its title, how many items it
+    /// has, and the keys it takes), then the focused item. The terminal
+    /// sends it for F1 and the Say Status key.
+    Introduce,
 }
 
 /// A key pressed in a prompt ([`Command::PromptKey`]).
@@ -405,7 +409,11 @@ impl App {
     /// after the list's introduction, without interrupting it (the first
     /// item was never heard unless the user pressed Up,
     /// docs/history/audit-2026-09.md, finding A4).
-    pub(crate) fn adopt(&mut self, effects: &[Effect]) {
+    ///
+    /// `fresh_message` says a message was said while the effects were
+    /// made: for a list shown, its introduction, kept for
+    /// [`ListKey::Introduce`].
+    pub(crate) fn adopt(&mut self, effects: &[Effect], fresh_message: bool) {
         for e in effects {
             match e {
                 Effect::Prompt { label, purpose } => {
@@ -423,6 +431,12 @@ impl App {
                         .as_ref()
                         .filter(|l| &l.title == title)
                         .map(|l| l.selected);
+                    let same_list = self.list_model.as_ref().is_some_and(|l| &l.title == title);
+                    if fresh_message {
+                        self.list_intro = self.last_message.clone();
+                    } else if !same_list {
+                        self.list_intro = None;
+                    }
                     let mut view = ListModel::new(title.clone(), items.clone());
                     if let Some(i) = keep.or(self.pending_list_focus.take()) {
                         view.selected = i.min(view.items.len().saturating_sub(1));
@@ -516,6 +530,7 @@ impl App {
                 return self.dispatch_inner(Command::Cancel);
             }
             ListKey::Delete => return self.list_item_command(Command::DeleteItem(n)),
+            ListKey::Introduce => return self.repeat_list_introduction(),
             ListKey::Rename => return self.list_item_command(Command::RenameItem(n)),
             ListKey::Up => -1,
             ListKey::Down => 1,

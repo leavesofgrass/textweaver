@@ -350,7 +350,7 @@ Press **Shift+W**, or **Alt+Shift+Y** from any mode. You hear the line, the numb
 ## Hear it again: ' and z
 
 - **Repeat message**: **'** (apostrophe), or **Alt+'** from any mode, says the last message again, as the status line shows it.
-- **Say status**: **z**, or **Alt+End** from any mode, says the last message, then the status the title line shows: the mode, whether the document is modified, "Ready", "Reading", "Paused", or "Stopped", the line and percentage, the accessibility mode, the rate, and the speech engine.
+- **Say status**: **z**, or **Alt+End** from any mode, says the last message, then the status the title line shows: the mode, whether the document is modified, "Ready", "Reading", "Paused", or "Stopped", the line and percentage, the accessibility mode, the rate, and the speech engine. In an open list it says the list's introduction and the item you are on instead.
 
 Both are heard over the reading, which then goes on. They are in the command palette as "say status" and "repeat message". With a screen reader, its own "read current line" key (NVDA+Up, Insert+Up in JAWS) reads the status line too.
 
@@ -475,7 +475,7 @@ These keys work in every prompt, including Find, Go to, and Open file:
 - **?**: list every keyboard shortcut with its current keys, including your own changes. Up and Down move, **Enter** runs the command, **Escape** closes. The GUI also opens this list with **F3**.
 - **F1**: open the help, a short list of the most useful keys.
 
-In any list: **Up** and **Down** move, **PageUp** and **PageDown** move ten items, **Home** and **End** go to the first and last, a letter jumps to the next item starting with it, **Enter** chooses, and **Escape** or **Backspace** closes. At the ends you hear "Top of list." or "End of list."
+In any list: **Up** and **Down** move, **PageUp** and **PageDown** move ten items, **Home** and **End** go to the first and last, a letter jumps to the next item starting with it, **Enter** chooses, and **Escape** or **Backspace** closes. At the ends you hear "Top of list." or "End of list." **F1** or **Alt+End** says the list's introduction again (its name, how many items it has, and the keys it takes), then the item you are on, such as "3 of 12". **Alt+'** says the last message again.
 
 ## Turn single-key shortcuts off: F9
 

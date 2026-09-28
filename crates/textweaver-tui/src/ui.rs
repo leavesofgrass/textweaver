@@ -11,7 +11,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph};
 use textweaver_app::a11y::CursorPlacement;
 use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
-use textweaver_app::keymap::{ActionId, Key, KeyChord, Modifiers};
+use textweaver_app::keymap::{ActionId, Key, KeyChord, Layer, Modifiers};
 use textweaver_app::text_util::line_count;
 use textweaver_app::{
     App, CaretMove, Command, Confirm, Effect, ListKey, Mode, PromptKey, chords_text, extra_lookup,
@@ -454,6 +454,23 @@ impl Tui {
         let plain = !k
             .modifiers
             .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT);
+        // The Help and Say Status keys repeat the list's introduction; the
+        // Repeat Message key says the last message. Only chords and
+        // function keys: plain keys move, filter, and jump in the list, and
+        // F2 renames.
+        if (!plain || matches!(k.code, KeyCode::F(_))) && k.code != KeyCode::F(2) {
+            match chord(&k).and_then(|c| self.app.keymap().lookup(&c, Layer::Global)) {
+                Some(ActionId::Help | ActionId::SayStatus) => {
+                    self.dispatch(Command::ListKey(ListKey::Introduce));
+                    return;
+                }
+                Some(ActionId::RepeatMessage) => {
+                    self.dispatch(Command::Action(ActionId::RepeatMessage));
+                    return;
+                }
+                _ => {}
+            }
+        }
         let key = match k.code {
             KeyCode::Char(c) if plain && !c.is_control() => ListKey::Char(c),
             KeyCode::Up => ListKey::Up,

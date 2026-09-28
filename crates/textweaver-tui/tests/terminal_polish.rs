@@ -255,3 +255,38 @@ fn the_command_palette_says_how_to_use_it() {
     assert!(bottom.trim_start().starts_with("Command"), "{bottom}");
     assert!(!bottom.contains("Tab completes"), "{bottom}");
 }
+
+/// Deliverable 8: in an open list, F1 or the Say Status key repeats the
+/// list's introduction (title, count, keys), then the focused item; the
+/// Repeat Message key says the last message.
+#[test]
+fn a_key_in_a_list_repeats_its_introduction() {
+    let (mut tui, log) = voiced("Text.\n");
+    tui.handle_key(key(KeyCode::Char('?')));
+    let intro = heard(&log, "Keyboard shortcuts,").expect("the list's introduction");
+    assert!(
+        intro.contains("Up and Down move, Enter runs, Escape closes."),
+        "{intro}"
+    );
+    tui.handle_key(key(KeyCode::Down));
+    tui.handle_key(key(KeyCode::Down));
+    let n = tui.app().list_model().unwrap().items.len();
+    for k in [key(KeyCode::F(1)), with(KeyCode::End, KeyModifiers::ALT)] {
+        log.clear();
+        tui.handle_key(k);
+        let again = heard(&log, "Keyboard shortcuts,")
+            .unwrap_or_else(|| panic!("{k:?}: {:?}", log.texts()));
+        assert!(again.starts_with(&intro), "{again}");
+        assert!(again.ends_with(&format!("3 of {n}.")), "{again}");
+        // The list is still open, on the same item.
+        assert_eq!(tui.app().list_model().unwrap().selected, 2);
+    }
+    log.clear();
+    tui.handle_key(with(KeyCode::Char('\''), KeyModifiers::ALT));
+    assert!(
+        heard(&log, &format!("3 of {n}")).is_some(),
+        "{:?}",
+        log.texts()
+    );
+    assert!(tui.app().list_model().is_some());
+}

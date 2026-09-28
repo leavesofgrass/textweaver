@@ -11,6 +11,15 @@
 //! - **Say status** says the last message, then the title line's parts:
 //!   the mode, whether the document is modified, the reading state, the
 //!   position, the accessibility mode, the rate, and the speech engine.
+//!   In an open list it says the list's introduction instead.
+//!
+//! In a list, [`ListKey::Introduce`] (F1 and the Say Status key in the
+//! terminal) repeats the list's introduction: its title, how many items it
+//! has, and the keys it takes, then the focused item ("3 of 12"). The
+//! introduction is the message said when the list was shown; a list shown
+//! without one gets "Title, 12 items." and the keys every list takes.
+//!
+//! [`ListKey::Introduce`]: crate::ListKey::Introduce
 //!
 //! Both are assertive, so they are heard over the reading, which then goes
 //! on, as a question is.
@@ -78,6 +87,9 @@ impl App {
     /// The Say Status action: the last message, then the title line's
     /// parts. In a list, the list's introduction and the focused item.
     pub(crate) fn say_status(&mut self) -> Vec<Effect> {
+        if self.list_model.is_some() {
+            return self.repeat_list_introduction();
+        }
         let position = self.title_position();
         let title = self
             .session
@@ -113,10 +125,33 @@ impl App {
         self.last_message = last;
     }
 
+    /// The list's introduction, then its focused item, heard over the
+    /// reading.
+    pub(crate) fn repeat_list_introduction(&mut self) -> Vec<Effect> {
+        let Some(list) = self.list_model.as_ref() else {
+            return vec![Effect::Redraw];
+        };
+        let intro = self.list_intro.clone().unwrap_or_else(|| {
+            let n = list.items.len();
+            let items = if n == 1 { "item" } else { "items" };
+            format!(
+                "{}, {n} {items}. Up and Down move, Enter chooses, Escape closes.",
+                list.title
+            )
+        });
+        let msg = match list.spoken_item() {
+            Some(item) => format!("{} {item}.", with_stop(&intro)),
+            None => with_stop(&intro),
+        };
+        self.say_unremembered(&msg);
+        vec![Effect::Redraw]
+    }
+
     /// Remembers `text` as the last message ([`App::repeat_message`]);
     /// `queued` adds it after the one before, as the status line shows a
     /// queued announcement.
     pub(crate) fn remember_message(&mut self, text: &str, queued: bool) {
+        self.messages_said = self.messages_said.wrapping_add(1);
         self.last_message = Some(match self.last_message.take() {
             Some(before) if queued && !before.is_empty() => format!("{before} {text}"),
             _ => text.to_owned(),
@@ -137,6 +172,24 @@ fn with_stop(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::{App, AppConfig, ListModel};
+
+    /// A list shown without an introduction still has one to repeat: its
+    /// title, count, and the keys every list takes.
+    #[test]
+    fn a_list_without_an_introduction_gets_a_plain_one() {
+        let mut app = App::new(AppConfig::for_tests());
+        app.list_model = Some(ListModel::new("Things", vec!["a".into(), "b".into()]));
+        app.list_intro = None;
+        app.repeat_list_introduction();
+        assert_eq!(
+            app.status_text(),
+            "Things, 2 items. Up and Down move, Enter chooses, Escape closes. a, 1 of 2."
+        );
+        // Repeating it is not a new message to repeat.
+        assert_eq!(app.last_message, None);
+    }
+
     #[test]
     fn a_message_ends_with_a_stop() {
         assert_eq!(super::with_stop("Opened essay"), "Opened essay.");

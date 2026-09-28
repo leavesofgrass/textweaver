@@ -293,6 +293,12 @@ pub struct App {
     /// The last message, as the status line shows it, with keys in both
     /// forms (crate::status: Repeat Message and Say Status).
     pub(crate) last_message: Option<String>,
+    /// How many messages have been said (to tell a list's introduction,
+    /// said as the list was shown, from an older message).
+    pub(crate) messages_said: u64,
+    /// The introduction of the list shown ("Notes, 12 notes. Enter goes
+    /// to a note..."), repeated on request (crate::status).
+    pub(crate) list_intro: Option<String>,
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
     pub(crate) track: SpeechTrack,
@@ -432,6 +438,8 @@ impl App {
             playback: Playback::Idle,
             has_read: false,
             last_message: None,
+            messages_said: 0,
+            list_intro: None,
             pause_origin: None,
             reading: ReadKind::Continuous,
             track: SpeechTrack::default(),
@@ -1012,10 +1020,11 @@ impl App {
     /// Keys named in list items reach the frontend in their written form.
     pub(crate) fn entry(&mut self, f: impl FnOnce(&mut Self) -> Vec<Effect>) -> Vec<Effect> {
         self.depth += 1;
+        let said_before = self.messages_said;
         let effects = f(self);
         self.depth -= 1;
         if self.depth == 0 {
-            self.adopt(&effects);
+            self.adopt(&effects, self.messages_said != said_before);
             return crate::list_model::without_key_marks(effects);
         }
         effects
