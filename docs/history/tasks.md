@@ -1121,6 +1121,8 @@ A draft, so the next wave can start the moment Wave 3 lands. It follows the same
 - **Speech in the same language.** Each language gets a default voice for that language.
 - **A pseudo-locale in CI,** to catch strings that were never translated.
 
+**Status (Agent W4d, interface translations, Monday, September 28, 2026):** done on `wave4/d-translations`, main merged in; awaiting integration (merges last). About 1,540 messages in `en.ftl` cover the app and the terminal reader (messages, lists, help, every command's help, the settings screen, spoken key names), English unchanged; Spanish, French, German, Brazilian Portuguese, and Arabic built in and complete (Star's overlapping strings converted as hints), checked by tests for validity, values, plurals, completeness, and Arabic direction marks. The Fluent subset sufficed, so no `fluent-bundle` (status update on ADR-0025; ADR-0030). Language changes live (said in the new language, then the title line); the voice follows the language, and with no voice for it the current voice stays and says so. `[interface] rtl` (unicode-bidi display reordering, off for screen readers and on Windows) and `[speech] voices_by_language` in the four places; first-run language list; `tw settings language`; `pseudo` step in `scripts/dev-check`. GUI drawn labels in its settings dialog stay English (its messages come through the app). Native: workspace 2,286 tests pass after the fix, clippy, rustdoc, fmt, keyboard, deps, links, site data, `cargo deny`, and the `--no-default-features` reader build pass.
+
 ### Agent W4e: Offline intelligence on rten (experimental)
 
 - **Offline translation of a document or selection.** OPUS-MT or Marian models in ONNX, run on rten. The user confirms any model download, and sees its licence.
