@@ -383,6 +383,124 @@ fn reading_aids_are_drawn_and_leave_the_text_alone() {
     assert_ne!(light.ruler_focus, Palette::galaxy().ruler_focus);
 }
 
+/// A key typed in the document, as the window's driver sees it: the view
+/// leaves it for the keymap (a `KeyAction` from the root), and the keymap's
+/// layer for the app's mode names the action.
+fn press(
+    h: &mut TestHarness<Root>,
+    app: &textweaver_app::App,
+    key: Key,
+    mods: masonry::core::keyboard::Modifiers,
+) -> Option<textweaver_app::keymap::ActionId> {
+    let mut e = masonry::core::keyboard::KeyboardEvent {
+        key,
+        ..Default::default()
+    };
+    e.modifiers = mods;
+    h.process_text_event(TextEvent::Keyboard(e));
+    let (KeyAction(k), _) = h.pop_action::<KeyAction>()?;
+    let chord = textweaver_xilem::keys::chord(&k, textweaver_app::keymap::Platform::current())?;
+    app.keymap().lookup(&chord, app.mode().layer())
+}
+
+/// Parity with the terminal reader: the outline, the notes list, the
+/// access modes, and tables and links by key reach the app from the
+/// document, and do what they do in the terminal (the lists open as the
+/// GUI's list dialogs, through `Effect::ShowList`).
+#[test]
+fn outline_notes_access_modes_tables_and_links_work_from_the_document() {
+    use masonry::core::keyboard::Modifiers;
+    use textweaver_app::keymap::ActionId;
+    use textweaver_app::{Command, Effect, ListKey};
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let doc = h.get_widget(DOC).id();
+    h.focus_on(Some(doc));
+    let text = app.session().unwrap().doc.text().to_string();
+    let at_cursor = |app: &textweaver_app::App, n: usize| -> String {
+        let s = app.session().unwrap();
+        text.chars().skip(s.cursor.0).take(n).collect()
+    };
+    let list_of = |effects: &[Effect]| {
+        effects.iter().find_map(|e| match e {
+            Effect::ShowList { title, items } => Some((title.clone(), items.clone())),
+            _ => None,
+        })
+    };
+
+    // Alt+O: the outline, as a list; Enter jumps to a heading.
+    let a = press(&mut h, &app, Key::Character("o".into()), Modifiers::ALT);
+    assert_eq!(a, Some(ActionId::Outline));
+    let effects = app.dispatch(Command::Action(ActionId::Outline));
+    let (_, items) = list_of(&effects).expect("the outline is a list");
+    let table = items
+        .iter()
+        .position(|i| i.contains("A Table"))
+        .expect("the outline lists the headings");
+    let _ = app.dispatch(Command::ListFocus(table));
+    let _ = app.dispatch(Command::ListKey(ListKey::Enter));
+    assert!(app.list_model().is_none(), "Enter closes the outline");
+    assert!(at_cursor(&app, 7).starts_with("A Table"), "{}", at_cursor(&app, 20));
+
+    // t and Shift+T: tables (browse keys); Ctrl+T in any layer.
+    let _ = app.dispatch(Command::SetCursor(textweaver_app::core::CharPos::ZERO));
+    let a = press(&mut h, &app, Key::Character("t".into()), Modifiers::CONTROL);
+    assert_eq!(a, Some(ActionId::NextTable));
+    let _ = app.dispatch(Command::Action(ActionId::NextTable));
+    assert!(at_cursor(&app, 4) == "Name", "{:?}", at_cursor(&app, 20));
+    // In a table, Ctrl+Alt+Down moves down a row in the same column.
+    let a = press(
+        &mut h,
+        &app,
+        Key::Named(NamedKey::ArrowDown),
+        Modifiers::CONTROL | Modifiers::ALT,
+    );
+    assert_eq!(a, Some(ActionId::TableNextRow));
+    let _ = app.dispatch(Command::Action(ActionId::TableNextRow));
+    assert!(at_cursor(&app, 3) == "Ada", "{:?}", at_cursor(&app, 20));
+
+    // k: the next link (a browse key, from the start).
+    let _ = app.dispatch(Command::SetCursor(textweaver_app::core::CharPos::ZERO));
+    let a = press(&mut h, &app, Key::Character("k".into()), Modifiers::empty());
+    assert_eq!(a, Some(ActionId::NextLink));
+    let _ = app.dispatch(Command::Action(ActionId::NextLink));
+    assert!(at_cursor(&app, 4) == "link", "{:?}", at_cursor(&app, 20));
+
+    // Alt+Shift+A: the access modes, as in the terminal.
+    let a = press(
+        &mut h,
+        &app,
+        Key::Character("A".into()),
+        Modifiers::ALT | Modifiers::SHIFT,
+    );
+    assert_eq!(a, Some(ActionId::CycleAccessMode));
+    let before = app.access_mode();
+    let _ = app.dispatch(Command::Action(ActionId::CycleAccessMode));
+    assert_ne!(app.access_mode(), before);
+
+    // Ctrl+Shift+N: the notes list, after adding a note.
+    let effects = app.dispatch(Command::Action(ActionId::AddNote));
+    assert!(
+        effects.iter().any(|e| matches!(e, Effect::Prompt { .. })),
+        "{effects:?}"
+    );
+    let _ = app.dispatch(Command::Answer("Check this link".into()));
+    let a = press(
+        &mut h,
+        &app,
+        Key::Character("N".into()),
+        Modifiers::CONTROL | Modifiers::SHIFT,
+    );
+    assert_eq!(a, Some(ActionId::ListNotes));
+    let effects = app.dispatch(Command::Action(ActionId::ListNotes));
+    let (_, items) = list_of(&effects).expect("the notes list");
+    assert!(
+        items.iter().any(|i| i.contains("Check this link")),
+        "{items:?}"
+    );
+}
+
 /// Options scrolled out of a list's box stay in the tree a screen reader
 /// gets, with their scrolled bounds: AccessKit's own filter (the one the
 /// UI Automation and AT-SPI adapters use) keeps every one, at the top and
