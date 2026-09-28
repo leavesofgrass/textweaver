@@ -86,7 +86,10 @@ jobs:
       - name: Fuzz for 10 minutes
         env:
           FEATURES: ${{ matrix.target == 'rpc' && '--features rpc' || '' }}
-        run: cargo +nightly fuzz run ${{ matrix.target }} $FEATURES -- -max_total_time=600 -rss_limit_mb=4096 -timeout=30
+        run: |
+          # $FEATURES is empty or one flag and its value: split on purpose.
+          # shellcheck disable=SC2086
+          cargo +nightly fuzz run ${{ matrix.target }} $FEATURES -- -max_total_time=600 -rss_limit_mb=4096 -timeout=30
       - name: Upload the crash
         if: failure()
         uses: actions/upload-artifact@v7

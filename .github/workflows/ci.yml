@@ -61,6 +61,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
           cargo xtask settings-doc --check
+      # Every message the app says or shows comes from the catalog: under
+      # the en-XA pseudo-locale each one is bracketed, and the test fails
+      # on any that was missed (ADR-0030). The ALSA headers are installed
+      # by the step above.
+      - name: Every message is in the catalog (pseudo-locale)
+        run: cargo test --locked -p textweaver-app --test pseudo_locale
 
   # Generated files and repository rules that need no build of the
   # workspace's dependencies: the keyboard reference, the dependency
