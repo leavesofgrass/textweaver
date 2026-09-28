@@ -859,6 +859,16 @@ Wave 4 starts only after this pass is done. It has four steps.
 - Waves 5 and 6: agents that don't build (research, docs, planning) run alongside the building ones; sub-waves overlap where their files don't conflict; the next sub-wave's briefs are written while the current one runs. Memory still caps building agents at about three at once, and the disk and memory floors still hold.
 - The owner's sessions gate only the work that depends on their findings.
 
+**Standing decisions for today (the owner, Monday, September 28, 2026), so work continues while the owner is away:**
+1. **Listening check:** the owner's session 2 today (Eloquence reading with correct word highlighting) is recorded as the check for `0.1.0-alpha.4`; the release is tagged and pushed without asking again.
+2. **Docs site tool:** the docs-sweep plan's recommendation is used; the orchestrator tells the owner what was picked and why.
+3. **GitHub Pages:** the orchestrator may set the repository's Pages source to GitHub Actions once the site builds.
+4. **Wave 5 starts after the docs sweep** without waiting: recalibrate, write briefs, launch in parallel; the owner's sessions gate only dependent work, and their checklists are queued.
+5. **Downloads:** crates from crates.io and tools from official releases, pinned and checked by digest, are approved for Waves 5 and 6; `cargo deny` must pass, and a new licence or advisory still waits for the owner. Machine-learning models still need the owner's yes.
+6. **Branch cleanup:** merged branches (local and on GitHub) and their worktrees may be deleted after listing them; unmerged ones are kept and listed.
+7. **Docker:** no restart unless memory falls below the floor; then building agents pause and the owner gets a note to restart Docker Desktop.
+8. **Dependabot:** ignore rules for the pinned GUI stack (wgpu, Vello, Masonry, Parley, AccessKit) and MathCAT pre-releases.
+
 **Follow-ups found in Wave 4, for Wave 5:**
 - The fuzz crate still compiles the ocrs engine through the formats crate's `ocr` feature (45 minutes under the sanitizer). The fix: the formats crate takes `textweaver-ocr` with `default-features = false`, its `ocr` feature adds `textweaver-ocr/ocrs`, and a new feature gives the image and PDF loaders without the engine, for fuzzing (W5m).
 - `[editing] author` is read from the extra keys and documented, but is not in the store, the schema, or the settings reference.
