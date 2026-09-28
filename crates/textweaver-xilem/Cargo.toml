@@ -18,7 +18,7 @@ name = "textweaver-xilem"
 path = "src/main.rs"
 
 [features]
-default = ["screenshot", "renderer-vello"]
+default = ["screenshot", "renderer-vello", "publish"]
 # The renderer: Vello's GPU compute renderer (the default), or Vello's
 # hybrid renderer (CPU strips, simple GPU shaders), which suits software
 # GPUs such as Mesa's llvmpipe under Xvfb in CI. With both, Vello wins.
@@ -27,6 +27,10 @@ renderer-hybrid = ["masonry_winit/imaging_vello_hybrid"]
 # `--screenshot PATH`: render the window with the Vello CPU renderer, with no
 # window on screen (masonry_testing's harness).
 screenshot = ["dep:masonry_testing"]
+# Citations while writing, export (HTML, PDF, DOCX, EPUB, BRF), and the
+# browser preview, from the app (ADR-0033). On by default since edit mode:
+# they are what writing in the window needs.
+publish = ["textweaver-app/publish"]
 
 [dependencies]
 textweaver-app.workspace = true

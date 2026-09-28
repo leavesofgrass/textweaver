@@ -62,13 +62,34 @@ The new keys pass the keymap's conflict, reachability, layout, and WCAG 2.1.4 te
 
 ## Edit mode
 
-To be written with the edit mode work in this branch.
+The brief asked for edit mode in `DocumentView`, based on Parley's `examples/editor`. It is built on the view the reading mode already has instead, because that view already holds what an editor needs and Parley's editor would duplicate it: the text as paragraphs with their layouts, the caret and selection as the node's text selection, caret keys that need layout (lines, Home, End, pages), the selection drawn by the view itself (Parley has no background style), and text runs with stable ids. The vendored Parley 0.8.0 is unchanged. What edit mode adds:
+
+- **The app is the editor.** Ctrl+E (or the new Edit button, which becomes "Finish editing") enters the app's edit mode, as in the terminal: the session's document becomes the source text, and every edit goes through `textweaver-editor`, so undo and redo, formatting, autosave, and Save / Discard / Cancel are the terminal's.
+- **The view becomes a multi-line edit.** Its role is `MultilineTextInput`, not read-only, with the `ReplaceSelectedText` and `SetValue` actions besides `SetTextSelection`; NVDA and JAWS switch to focus mode by themselves. Outside edit mode it is the read-only Document it was.
+- **Keys.** A printable key (and Space), Enter (a new line), and an input method's text are typed; Backspace and Delete delete. Keys with Ctrl, Alt, or Command go on to the keymap, so the editing commands work as in the terminal, except AltGr (Ctrl with Alt) typing a symbol. Tab still moves the focus, so the edit never traps the keyboard.
+- **How an edit reaches the app** (`DocAction`):
+  - text typed at a collapsed caret is `Command::Insert`, and Backspace or Delete there is `Command::DeleteBack` or `DeleteForward`, so the typing echo follows the access mode as in the terminal: textweaver's voice echoes in the self-voicing mode, and the screen reader echoes in the other two, with nothing said twice;
+  - typing or deleting over the view's selection, and a screen reader's or dictation's `ReplaceSelectedText` or `SetValue`, is `Command::ReplaceRange` with the view's range, which is quiet (the screen reader already said it) and does not depend on the app's own selection.
+- **The caret and selection.** The view moves the caret and selection itself and tells the app the caret (`SetCursor`, quietly), which also moves the editor's caret; a selection the app holds (from a command) is dropped when the view moves the caret. A selection the app makes, such as the next misspelling, reaches the view as its selection, so the screen reader reads it and typing replaces it.
+- **Keeping the screen reader's place.** An edit changes the document's revision. In edit mode the view takes the new text as it takes a window slide: paragraphs that start at the same place with the same text keep their layouts and their run nodes, so only the edited paragraph and the ones after it are sent again. Entering or leaving edit mode replaces every run.
+- **What waited for edit mode now works in the window**, through the app: spell check (Alt+M selects the next misspelling, Alt+J suggests), citations while writing (Alt+C opens the picker, a list dialog filtered as you type), and export and the browser preview (in the command palette). The GUI now builds the app with its `publish` feature (the crate's own `publish` feature, on by default). W4b measured that feature at about 18.6 MB in the terminal reader's release build (28,704,256 bytes without it, 47,332,864 with); the GUI's own size was not measured here.
+
+Tested in the harness (`tests/edit_mode.rs`): the role and read-only state in and out of edit mode; typing, Enter, Backspace, and Space through the app, the caret following, and undo; typing and deleting over a selection; `ReplaceSelectedText` ignored while reading and applied while editing; a misspelling selected and corrected by typing; and the citation picker. What the harness cannot show (what NVDA and JAWS say while typing, and focus mode) is on the owner's checklist.
+
+**Not done yet:**
+
+- In the self-voicing mode, caret moves and selections made in the view are not spoken by textweaver, as in reading; typing and deleting are.
+- Each edit rebuilds the window's paragraphs from the document (about 120,000 characters at most), which is quick for notes and papers; a very long single paragraph is the slow case, not measured.
+- Tab does not type a tab or move between table cells in the window (it moves the focus); `next_table_cell` stays on its key in the terminal.
+- Misspelled words are not marked on screen (neither are they in the terminal); Alt+M finds them.
 
 ## Consequences
 
 - One small `unsafe` module more in the GUI crate (`console`), with three console calls and one message box; Windows only.
 - `rfd` joins the dependencies, in a "W4a3" block in the root `Cargo.toml`.
 - Five window-only commands, and the GUI's rate chords moved to F11 and Shift+F11.
+- The GUI links the app's `publish` stack (citations, export, preview), for writing.
+- `DocAction` is no longer `Copy`: it carries typed text.
 
 ## See also
 

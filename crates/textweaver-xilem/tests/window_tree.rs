@@ -104,6 +104,7 @@ fn every_button_names_its_key_from_the_keymap() {
     for (name, action) in [
         ("Open", ActionId::Open),
         ("Font", ActionId::ChooseFont),
+        ("Edit", ActionId::ToggleEditMode),
         ("Settings", ActionId::Settings),
         ("Commands", ActionId::CommandPalette),
         ("Play", ActionId::PlayPause),

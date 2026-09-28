@@ -127,7 +127,7 @@ pub struct DocState {
 }
 
 /// What the document view tells the driver.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DocAction {
     /// The user moved the caret (keys, pointer, or a screen reader).
     CaretMoved {
@@ -135,6 +135,26 @@ pub enum DocAction {
         caret: CharPos,
         /// The selection, if any.
         selection: Option<CharRange>,
+    },
+    /// Edit mode: text typed at the caret, with no selection (a key, Enter
+    /// as a new line, or an input method's text). The driver sends it as
+    /// `Command::Insert`, so it is echoed as the access mode says.
+    Typed(String),
+    /// Edit mode: Backspace (`forward` false) or Delete with no selection.
+    /// The driver sends `Command::DeleteBack` or `DeleteForward`.
+    Delete {
+        /// Delete, not Backspace.
+        forward: bool,
+    },
+    /// Edit mode: replace `range` with `text`: typing or deleting over a
+    /// selection, or a screen reader's or dictation's edit
+    /// (`ReplaceSelectedText`, `SetValue`). The driver sends it as
+    /// `Command::ReplaceRange`, which is quiet: the screen reader says it.
+    Replace {
+        /// The chars replaced (document positions).
+        range: CharRange,
+        /// Their replacement.
+        text: String,
     },
 }
 
@@ -160,6 +180,8 @@ pub struct DocumentView {
     /// Document (an experiment: screen readers may treat a Document as a
     /// web-style page in browse mode and keep single-letter keys).
     edit_role: bool,
+    /// Edit mode (ADR-0033): a multi-line edit that takes typing.
+    editing: bool,
     focused: bool,
 
     // Layout.
@@ -223,6 +245,7 @@ impl DocumentView {
             state: DocState::default(),
             select_spoken: false,
             edit_role: false,
+            editing: false,
             focused: false,
             layouts: HashMap::new(),
             line_starts: Vec::new(),
@@ -373,6 +396,22 @@ impl DocumentView {
             this.ctx.request_layout();
         }
         this.ctx.request_render();
+    }
+
+    /// Edit mode on or off: the view becomes a multi-line edit that takes
+    /// typed text, and back to a read-only document.
+    pub fn set_editing(this: &mut WidgetMut<'_, Self>, on: bool) {
+        if this.widget.editing != on {
+            this.widget.editing = on;
+            this.widget.state.anchor = None;
+            this.ctx.request_accessibility_update();
+            this.ctx.request_render();
+        }
+    }
+
+    /// True in edit mode.
+    pub fn editing(&self) -> bool {
+        self.editing
     }
 
     /// Changes the colours.
@@ -945,6 +984,71 @@ impl DocumentView {
         });
     }
 
+    /// The selection, when there is one.
+    fn selection(&self) -> Option<CharRange> {
+        let a = self.state.anchor?;
+        let c = self.state.caret;
+        (a != c).then(|| CharRange::new(a.0.min(c.0), a.0.max(c.0)))
+    }
+
+    /// Edit mode: `text` typed, over the selection when there is one.
+    fn type_text(&mut self, ctx: &mut EventCtx<'_>, text: &str) {
+        if text.is_empty() {
+            return;
+        }
+        let action = match self.selection() {
+            Some(range) => DocAction::Replace {
+                range,
+                text: text.to_owned(),
+            },
+            None => DocAction::Typed(text.to_owned()),
+        };
+        self.goal_x = None;
+        ctx.submit_action::<DocAction>(action);
+    }
+
+    /// Edit mode: Backspace or Delete, of the selection when there is one.
+    fn delete_text(&mut self, ctx: &mut EventCtx<'_>, forward: bool) {
+        let action = match self.selection() {
+            Some(range) => DocAction::Replace {
+                range,
+                text: String::new(),
+            },
+            None => DocAction::Delete { forward },
+        };
+        self.goal_x = None;
+        ctx.submit_action::<DocAction>(action);
+    }
+
+    /// Edit mode: a key that types or deletes. Returns true when it did.
+    /// Keys with Ctrl, Alt, or Command are commands and go on to the keymap,
+    /// except AltGr (Ctrl with Alt) typing a symbol, as on many layouts.
+    fn edit_key(
+        &mut self,
+        ctx: &mut EventCtx<'_>,
+        k: &masonry::core::keyboard::KeyboardEvent,
+    ) -> bool {
+        let m = k.modifiers;
+        let command = m.ctrl() || m.alt() || m.meta();
+        let altgr = m.ctrl() && m.alt() && !m.meta();
+        match &k.key {
+            Key::Named(NamedKey::Enter) if !command => self.type_text(ctx, "\n"),
+            Key::Named(NamedKey::Backspace) if !command => self.delete_text(ctx, false),
+            Key::Named(NamedKey::Delete) if !command => self.delete_text(ctx, true),
+            Key::Character(s)
+                if !command || (altgr && s.chars().all(|c| !c.is_ascii_alphanumeric())) =>
+            {
+                if s.chars().any(char::is_control) {
+                    return false;
+                }
+                let s = s.clone();
+                self.type_text(ctx, &s);
+            }
+            _ => return false,
+        }
+        true
+    }
+
     fn copy_selection(&self, ctx: &mut EventCtx<'_>) {
         if let Some(a) = self.state.anchor {
             let text = caret::text_between(&self.model.paragraphs, a, self.state.caret);
@@ -1126,10 +1230,22 @@ impl Widget for DocumentView {
         _props: &mut PropertiesMut<'_>,
         event: &TextEvent,
     ) {
+        if self.editing
+            && let TextEvent::Ime(masonry::core::Ime::Commit(text)) = event
+        {
+            let text = text.clone();
+            self.type_text(ctx, &text);
+            ctx.set_handled();
+            return;
+        }
         let TextEvent::Keyboard(k) = event else {
             return;
         };
         if k.state != KeyState::Down {
+            return;
+        }
+        if self.editing && !k.is_composing && self.edit_key(ctx, k) {
+            ctx.set_handled();
             return;
         }
         let m = k.modifiers;
@@ -1168,6 +1284,28 @@ impl Widget for DocumentView {
                     self.state.anchor = None;
                     self.state.caret = a;
                     self.move_caret(ctx, f, a != f);
+                    ctx.set_handled();
+                }
+            }
+            // A screen reader's or dictation's edit (edit mode only).
+            Action::ReplaceSelectedText if self.editing => {
+                if let Some(ActionData::Value(text)) = &event.data {
+                    let range = self
+                        .selection()
+                        .unwrap_or(CharRange::new(self.state.caret.0, self.state.caret.0));
+                    ctx.submit_action::<DocAction>(DocAction::Replace {
+                        range,
+                        text: text.to_string(),
+                    });
+                    ctx.set_handled();
+                }
+            }
+            Action::SetValue if self.editing => {
+                if let Some(ActionData::Value(text)) = &event.data {
+                    ctx.submit_action::<DocAction>(DocAction::Replace {
+                        range: CharRange::new(0, self.model.doc_len),
+                        text: text.to_string(),
+                    });
                     ctx.set_handled();
                 }
             }
@@ -1431,8 +1569,14 @@ impl Widget for DocumentView {
         }
     }
 
+    fn accepts_text_input(&self) -> bool {
+        // Cached when the widget is made, so always: typing and input
+        // methods are taken only in edit mode.
+        true
+    }
+
     fn accessibility_role(&self) -> Role {
-        if self.edit_role {
+        if self.edit_role || self.editing {
             Role::MultilineTextInput
         } else {
             Role::Document
@@ -1447,7 +1591,14 @@ impl Widget for DocumentView {
     ) {
         let full = self.full_passes.get() != self.seen_full;
         self.seen_full = self.full_passes.get();
-        node.set_read_only();
+        if self.editing {
+            // A multi-line edit: typing, and edits from a screen reader or
+            // dictation, which the driver makes through the app.
+            node.add_action(Action::ReplaceSelectedText);
+            node.add_action(Action::SetValue);
+        } else {
+            node.set_read_only();
+        }
         node.set_label("Document");
         if !self.model.title.is_empty() {
             node.set_description(self.model.title.as_str());

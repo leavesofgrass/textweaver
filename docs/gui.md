@@ -2,7 +2,7 @@
 
 textweaver has two readers: the terminal reader, `textweaver`, and a window, `textweaver-xilem`. They share everything that matters: the documents, the keys, the settings, the notes, and the voices. This page covers what is different about the window.
 
-The window is written entirely in Rust (Xilem's Masonry widgets, Vello drawing, Parley text, and AccessKit for screen readers). It is new in this alpha, and edit mode comes in a later version. For writing, use the terminal reader for now.
+The window is written entirely in Rust (Xilem's Masonry widgets, Vello drawing, Parley text, and AccessKit for screen readers). It is new in this alpha. It reads, and since this alpha it edits too; see [Editing](#editing).
 
 ## Starting it
 
@@ -31,7 +31,7 @@ On Windows the window opens with no console window beside it. Started from a ter
 
 From top to bottom:
 
-1. **The header,** a banner with the document's title and four buttons: Open, Font, Settings, and Commands.
+1. **The header,** a banner with the document's title and five buttons: Open, Font, Edit (or Finish editing), Settings, and Commands.
 2. **The document,** one control your screen reader reads as a document. Arrow keys, Home, End, Page Up, and Page Down move the caret, with Shift to select and Ctrl for words, paragraphs, and the document's ends. Ctrl+C copies the selection. Every other key goes to textweaver's keymap, so the browse keys of NVDA and JAWS work here too: `h` for the next heading, `t` for the next table, `k` for the next link, and so on.
 3. **The RSVP strip,** only while RSVP is on (Alt+Shift+R). It shows one word at a time under the document, so it never covers the text or the caret.
 4. **The toolbar,** named "Reading": Play or Pause, Stop, Previous sentence, Next sentence, Slower, and Faster.
@@ -78,6 +78,20 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **Alt+Shift+A**: the accessibility mode: self-voicing, hybrid, or screen reader.
 - **F5**: the next color theme.
 - **F9**: single-key shortcuts off or on.
+
+## Editing
+
+Ctrl+E, or the Edit button, turns edit mode on, as in the terminal reader: you edit the document's source (a Markdown file's Markdown; for other formats, the Markdown made from them, which Save stores as a new `.md` file). Ctrl+E again finishes, asking to save if there are changes.
+
+In edit mode the document is a multi-line edit, so NVDA and JAWS switch to focus mode by themselves.
+
+- **Typing** goes in at the caret, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
+- **Your screen reader echoes** what you type, and reads the caret and the selection as they move. In the self-voicing mode, textweaver echoes typing as the typing echo setting says (Shift+F9 cycles it).
+- **Undo** is Ctrl+Z, **redo** Ctrl+Y or Ctrl+Shift+Z, and each says what it undid. The editing keys are the terminal's: Ctrl+B bold, Ctrl+I italic, Ctrl+K a link, Ctrl+Alt+1 a heading, and the rest in the [keyboard reference](keyboard.md). Ctrl+S saves.
+- **Spell check:** Alt+M moves to the next misspelled word and selects it, so your screen reader says it and textweaver spells it. Type to replace it, or press Alt+J for suggestions. Alt+Shift+M goes back.
+- **Citations while writing:** Alt+C opens the citation picker. Type part of an author or title to filter, Enter inserts it, and textweaver asks for a page or other locator. Alt+Shift+D adds a reference by DOI or ISBN.
+- **Export and preview:** the command palette (F2) has Export as a web page, PDF, Word, EPUB, and braille (BRF), each written next to the document, and Preview in the browser, which reloads when you save.
+- Tab still moves between the document and the buttons, so you are never trapped in the edit; Ctrl+E is always the way out of edit mode.
 
 ## The spoken word
 

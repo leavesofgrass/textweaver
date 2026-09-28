@@ -145,7 +145,9 @@ fn arrow_keys_move_the_caret_and_tell_the_driver() {
     ));
     h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::ArrowDown)));
     let (action, _) = h.pop_action::<DocAction>().expect("line down");
-    let DocAction::CaretMoved { caret, .. } = action;
+    let DocAction::CaretMoved { caret, .. } = action else {
+        panic!("not a caret move: {action:?}");
+    };
     assert_eq!(
         caret,
         CharPos(7),

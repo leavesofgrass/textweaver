@@ -65,6 +65,8 @@ pub const ANNOUNCER: WidgetTag<Announcer> = WidgetTag::named("tw-announcer");
 pub const ROOT: WidgetTag<Root> = WidgetTag::named("tw-root");
 /// The Play/Pause button.
 pub const PLAY: WidgetTag<ActionButton> = WidgetTag::named("tw-play");
+/// The Edit button (edit mode on or off).
+pub const EDIT: WidgetTag<ActionButton> = WidgetTag::named("tw-edit");
 /// The status text.
 pub const STATUS: WidgetTag<Label> = WidgetTag::named("tw-status");
 /// The status bar region (named by its text).
@@ -184,6 +186,10 @@ struct Shown {
     rsvp: Option<RsvpShown>,
     /// The document font, from `[reading_aids.font]`.
     font: Option<DocFont>,
+    /// Edit mode, as the view shows it.
+    editing: bool,
+    /// Edit mode, as the Edit button says it.
+    edit_button: bool,
 }
 
 /// What the reading aids' spans depend on: bionic reading (and its
@@ -382,6 +388,7 @@ pub fn build_tree(
         .with(title, 1.0)
         .with_fixed(button("Open…", ActionId::Open, app, &mut ids))
         .with_fixed(button("Font…", ActionId::ChooseFont, app, &mut ids))
+        .with_fixed(button("Edit", ActionId::ToggleEditMode, app, &mut ids).with_tag(EDIT))
         .with_fixed(button("Settings…", ActionId::Settings, app, &mut ids))
         .with_fixed(button("Commands…", ActionId::CommandPalette, app, &mut ids));
     let header = NewWidget::new(Region::new(NewWidget::new(header), Role::Banner, ""))
@@ -701,6 +708,12 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             };
             let started = Instant::now();
             let new_doc = shown.doc.as_ref() != Some(&id);
+            // Edit mode: the same document with its text changed (a key,
+            // undo, a command): the paragraphs that stay keep their nodes,
+            // as in a slide, so the screen reader keeps its place.
+            let edited = app.is_editing()
+                && shown.editing
+                && shown.doc.as_ref().is_some_and(|(k, _)| *k == s.key);
             let mut w = match shown.window {
                 Some(w) if !new_doc => w,
                 _ => DocWindow::with_budget(&s.doc, focus, WINDOW_UNITS),
@@ -715,13 +728,14 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             if new_doc || aids_changed || change != WindowChange::Unchanged {
                 // A slide keeps the runs that stay (and the screen reader's
                 // place on them); a new document or a jump replaces them.
-                let slide = !new_doc
-                    && matches!(
-                        change,
-                        WindowChange::Forward { .. }
-                            | WindowChange::Backward { .. }
-                            | WindowChange::Unchanged
-                    );
+                let slide = edited
+                    || (!new_doc
+                        && matches!(
+                            change,
+                            WindowChange::Forward { .. }
+                                | WindowChange::Backward { .. }
+                                | WindowChange::Unchanged
+                        ));
                 shown.aid_spans = Some(key);
                 if let Some(model) = model_for(app, w.range()) {
                     host.edit(DOC, |mut d| {
@@ -746,6 +760,12 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             }
             shown.window = Some(w);
         }
+    }
+    // Edit mode: a multi-line edit that takes typing.
+    let editing = app.is_editing();
+    if editing != shown.editing {
+        host.edit(DOC, |mut d| DocumentView::set_editing(&mut d, editing));
+        shown.editing = editing;
     }
     // The font and size: the keys, the font list, or the settings dialog.
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
@@ -784,6 +804,12 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
             ActionButton::set_label(&mut b, if reading { "Pause" } else { "Play" });
         });
         shown.reading = reading;
+    }
+    if editing != shown.edit_button {
+        host.edit(EDIT, |mut b| {
+            ActionButton::set_label(&mut b, if editing { "Finish editing" } else { "Edit" });
+        });
+        shown.edit_button = editing;
     }
     let status = app.status_text().to_owned();
     if status != shown.status {
@@ -1649,11 +1675,22 @@ impl AppDriver for Gui {
         {
             let caret = *caret;
             let app_cursor = self.app.session().map(|s| s.cursor);
-            if app_cursor != Some(caret) {
+            // In edit mode, a selection the app holds (from a command) is
+            // let go when the view moves the caret, so typing goes to the
+            // caret; the view keeps its own selection and sends it with
+            // each edit.
+            let app_selection =
+                self.app.is_editing() && self.app.session().is_some_and(|s| s.selection.is_some());
+            if app_cursor != Some(caret) || app_selection {
                 if self.log {
                     crate::log::line(&format!("caret sync: {caret:?}"));
                 }
                 self.muted.set(true);
+                if app_selection {
+                    let _ = self
+                        .app
+                        .dispatch(Command::Select(CharRange::new(caret.0, caret.0)));
+                }
                 let effects = self.app.dispatch(Command::SetCursor(caret));
                 self.muted.set(false);
                 self.run_effects(ctx, effects);
@@ -1661,6 +1698,22 @@ impl AppDriver for Gui {
                 self.shown.state.caret = caret;
                 self.refresh(ctx);
             }
+        } else if let Some(edit) = action.downcast_ref::<DocAction>() {
+            // Edit mode: typing and deleting go through the app, which
+            // keeps the undo history and echoes as the access mode says.
+            let cmd = match edit.clone() {
+                DocAction::Typed(text) => Command::Insert(text),
+                DocAction::Delete { forward: true } => Command::DeleteForward,
+                DocAction::Delete { forward: false } => Command::DeleteBack,
+                DocAction::Replace { range, text } => Command::ReplaceRange { range, text },
+                DocAction::CaretMoved { .. } => return,
+            };
+            if self.log {
+                crate::log::line(&format!("edit: {cmd:?}"));
+            }
+            let effects = self.app.dispatch(cmd);
+            self.run_effects(ctx, effects);
+            self.refresh(ctx);
         } else if action.downcast_ref::<Pressed>().is_some() {
             if let Some(OpenDialog::Settings(open)) = &self.dialog
                 && open.close == widget_id
