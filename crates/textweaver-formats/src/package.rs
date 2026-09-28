@@ -55,6 +55,11 @@ impl Package {
             .zip
             .by_name(&real)
             .map_err(|e| LoadError::Parse(format!("{real}: {e}")))?;
+        // Refused before decompressing: LZMA sizes its dictionary from the
+        // declared size, so a huge claim would cost that memory.
+        if file.size() > MAX_MEMBER_BYTES {
+            return Err(LoadError::Parse(format!("{real} is too large")));
+        }
         let mut out = Vec::new();
         file.take(MAX_MEMBER_BYTES + 1)
             .read_to_end(&mut out)

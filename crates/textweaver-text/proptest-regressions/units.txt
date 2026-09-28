@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc 424cc310afb8746bf01cac1d76cbceac34eb3087a62ffcc44a01dd4a20f4f57a # shrinks to text = "\n\nwell-known \n🇫🇷\u{2028}. Dr. ", items = [], code = Some(3)
+cc 59d83b579d4ad261aeaa2b17c3cbc83eb04059b929a80125b4a66fcd61e89c55 # shrinks to text = "日本語。"

@@ -127,7 +127,12 @@ unicode-segmentation = "1.13"
 regex = "1.13"
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 scraper = "0.27"
-zip = { version = "8.6", default-features = false, features = ["deflate"] }
+# Wave 4, Agent W4b: every compression method a zip member may use, all in
+# pure Rust: deflate through zlib-rs, LZMA and XZ through lzma-rust2, bzip2
+# through libbz2-rs-sys (the `bzip2` feature; `bzip2-rs` is the C library),
+# and PPMd through ppmd-rust. calamine and mathcat still turn on `deflate`,
+# which adds the pure-Rust zopfli compressor.
+zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs", "lzma", "xz", "bzip2", "ppmd"] }
 roxmltree = "0.21"
 
 # persistence
@@ -288,6 +293,13 @@ two-face = { version = "0.5.2", default-features = false, features = ["syntect-f
 # exactly: it releases about every two weeks. Default features off:
 # `thesaurus` (a large word list) and `concurrent` are not used.
 harper-core = { version = "=2.11.0", default-features = false }
+
+# Wave 4, Agent W4b: word and sentence boundaries through ICU4X, about
+# twice (words) and three times (sentences) as fast as
+# unicode-segmentation on the bench corpus, with the same boundaries there.
+# Only the rule-based data is linked (no LSTM or dictionaries for Thai,
+# Lao, Khmer, Burmese, Chinese, or Japanese words), about 58 KB.
+icu_segmenter = { version = "2.3", default-features = false, features = ["compiled_data"] }
 
 # tests
 proptest = "1.11"
