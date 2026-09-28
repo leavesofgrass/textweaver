@@ -235,6 +235,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Move to the next misspelled word, and spell it | `Alt+M` | `Alt+M` | `next_misspelling` |
 | Move to the previous misspelled word, and spell it | `Alt+Shift+M` | `Alt+Shift+M` | `previous_misspelling` |
 | List suggestions for the misspelled word at the cursor, or add it to your word list | `Alt+J` | `Alt+J` | `spelling_suggestions` |
+| Move to the next grammar problem, and say it and its fix | `Ctrl+F7` | `Ctrl+F7` | `next_grammar_problem` |
+| Move to the previous grammar problem, and say it and its fix | `Ctrl+Shift+F7` | `Ctrl+Shift+F7` | `previous_grammar_problem` |
 | In edit mode, move to the next Markdown lint problem, and say it | `Ctrl+F8` | `Ctrl+F8` | `next_lint_problem` |
 | In edit mode, move to the previous Markdown lint problem, and say it | `Ctrl+Shift+F8` | `Ctrl+Shift+F8` | `previous_lint_problem` |
 

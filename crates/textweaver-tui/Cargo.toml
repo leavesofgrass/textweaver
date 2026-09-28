@@ -26,6 +26,10 @@ clipboard = ["dep:arboard"]
 # Code blocks highlighted with syntect and bat's syntaxes (two-face);
 # colors from the theme's roles, never color alone (ADR-0032).
 highlight = ["dep:syntect", "dep:two-face"]
+# Grammar checking with harper-core (textweaver-app's `grammar`). Off by
+# default (the owner's decision): it adds about 10 MB and the burn
+# framework. Build with `--features grammar` to try it.
+grammar = ["textweaver-app/grammar"]
 # Speech engines, passed through to textweaver-speech.
 espeak = ["textweaver-app/espeak", "textweaver-engines/espeak"]
 omnivox = ["textweaver-app/omnivox", "textweaver-engines/omnivox"]

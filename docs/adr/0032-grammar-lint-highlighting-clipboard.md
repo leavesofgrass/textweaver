@@ -1,6 +1,6 @@
 # ADR-0032: Grammar, lint, highlighting, and clipboard crates
 
-- Status: accepted for lint, the clipboard, Unicode math, and notes export; proposed for grammar and highlighting, which wait for the owner's decision on one advisory (see "Held for the owner")
+- Status: accepted. Grammar is built only with the `grammar` feature, off by default; highlighting is on by default (the owner's decision, Monday, September 28, 2026)
 - Date: 2026-09-28
 
 ## Context
@@ -45,6 +45,8 @@ Both held features fail `cargo deny` on the same advisory: RUSTSEC-2025-0141, "b
 - harper-core brings the burn machine-learning framework (through harper-brill and harper-pos-utils, for part-of-speech tagging), 260 crates in all, and burn-core uses bincode 2.0.1.
 
 Both are on their own branches, `wave4/g-highlight-syntect` and `wave4/g-grammar-harper`, each a single commit on top of the other extras, ready to merge if the owner adds an ignore for RUSTSEC-2025-0141 with a reason. Nothing that fails `cargo deny` is on the main W4g branch.
+
+**The owner's decision (Monday, September 28, 2026):** `deny.toml` ignores RUSTSEC-2025-0141 with a reason. Highlighting is merged and on by default. Grammar is merged behind the `grammar` feature, off by default, because of its size and the burn framework.
 
 ## Measurements
 

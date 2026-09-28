@@ -396,6 +396,12 @@ actions! {
     SpellingSuggestions = "spelling_suggestions", Search,
         "List suggestions for the misspelled word at the cursor, or add it to your word list",
         gui ["g:Alt+J"], term ["g:Alt+J"], shared [];
+    NextGrammarProblem = "next_grammar_problem", Search,
+        "Move to the next grammar problem, and say it and its fix",
+        gui ["g:Ctrl+F7"], term ["g:Ctrl+F7"], shared [];
+    PreviousGrammarProblem = "previous_grammar_problem", Search,
+        "Move to the previous grammar problem, and say it and its fix",
+        gui ["g:Ctrl+Shift+F7"], term ["g:Ctrl+Shift+F7"], shared [];
     NextLintProblem = "next_lint_problem", Search,
         "In edit mode, move to the next Markdown lint problem, and say it",
         gui ["g:Ctrl+F8"], term ["g:Ctrl+F8"], shared [];

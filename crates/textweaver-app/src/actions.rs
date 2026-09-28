@@ -26,6 +26,8 @@ impl App {
             A::NextMisspelling => self.misspelling_step(Direction::Forward),
             A::PreviousMisspelling => self.misspelling_step(Direction::Backward),
             A::SpellingSuggestions => return self.spelling_suggestions(),
+            A::NextGrammarProblem => self.grammar_action(Direction::Forward),
+            A::PreviousGrammarProblem => self.grammar_action(Direction::Backward),
             A::NextLintProblem => self.lint_action(Direction::Forward),
             A::PreviousLintProblem => self.lint_action(Direction::Backward),
             A::ExportStudySheet => return self.export_study_sheet(),

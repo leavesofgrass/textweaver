@@ -14,6 +14,8 @@ default = ["publish", "lint"]
 # Markdown lint in edit mode (Agent W4g, ADR-0032): textweaver's own
 # rules on the parser the app already uses; no dependencies.
 lint = []
+# Grammar checking in edit mode with harper-core (Agent W4g, ADR-0032).
+grammar = ["dep:harper-core"]
 # In-reader export (HTML, PDF, DOCX, EPUB, BRF), the browser preview, and
 # citations (insert, look up, check, read aloud). On by default and in
 # releases. Off, the app links none of the conversion and citation stack
@@ -54,6 +56,7 @@ textweaver-render = { workspace = true, optional = true }
 # Agent W3e: define word and the message catalog.
 textweaver-lexicon.workspace = true
 pulldown-cmark.workspace = true
+harper-core = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true

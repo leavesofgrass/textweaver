@@ -166,6 +166,8 @@ mod export;
 mod extra;
 mod find_scan;
 mod goto;
+#[cfg(feature = "grammar")]
+mod grammar;
 mod help;
 mod library;
 mod links;
