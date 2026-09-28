@@ -23,8 +23,16 @@
 //! - **Runs**: bold, italic, and underline (direct formatting or a character
 //!   style) become `Bold`, `Italic`, and `Underline` markers spanning runs
 //!   with the same setting; tabs read as spaces, line breaks break the line,
-//!   non-breaking hyphens are hyphens, deleted revisions and field codes are
-//!   not read, inserted revisions are.
+//!   non-breaking hyphens are hyphens, field codes are not read.
+//! - **Tracked changes** (`w:ins`, `w:del` with its `w:delText`,
+//!   `w:moveFrom`, `w:moveTo`) follow [`LoadOptions::revisions`]: read as
+//!   the final text by default, or said in place with their author and
+//!   date. They are counted under
+//!   [`REVISIONS_PROPERTY`](crate::REVISIONS_PROPERTY).
+//! - **Comments** (`w:comment` in `word/comments.xml`, anchored by
+//!   `w:commentRangeStart` and `w:commentRangeEnd`, or at their
+//!   `w:commentReference`; replies and resolved state from `w15:commentEx`
+//!   in `word/commentsExtended.xml`) become [`DocumentComment`]s.
 //! - **Hyperlinks** become `Link` markers with the relationship's target (or
 //!   `#bookmark`).
 //! - **Images** (`w:drawing`) read as their alt text (`wp:docPr` `descr`,
@@ -45,16 +53,20 @@
 //! - **Metadata** from `docProps/core.xml` (title, creator, language); the
 //!   title falls back to the first level-1 heading, then the file name.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use ropey::Rope;
 use roxmltree::Node;
 use textweaver_core::{CharRange, MarkerKind};
 use textweaver_text::{Document, HEADER_ROW_LABEL, Marker};
 
+use crate::annotations::{CommentReply, DocumentComment, clean_text};
 use crate::builder::{Builder, OpenId};
 use crate::package::{Package, child, parse_xml};
-use crate::{FootnoteMode, LoadError, LoadOptions, Loader, Source, meta_for, title_from_path};
+use crate::revision::{self, ChangeKind};
+use crate::{
+    FootnoteMode, LoadError, LoadOptions, Loader, RevisionMode, Source, meta_for, title_from_path,
+};
 
 /// Loads Word documents (`.docx`, and macro-enabled `.docm`).
 #[derive(Clone, Copy, Debug, Default)]
@@ -100,6 +112,8 @@ impl Loader for DocxLoader {
                 read_notes(&t, kind, &mut notes)?;
             }
         }
+        let comments_xml = part(&mut pkg, "word/comments.xml")?;
+        let extended_xml = part(&mut pkg, "word/commentsExtended.xml")?;
         let mut meta = meta_for(source, self.id());
         if let Some(core) = part(&mut pkg, "docProps/core.xml")? {
             let xml = parse_xml(&core)?;
@@ -138,6 +152,9 @@ impl Loader for DocxLoader {
             note_count: 0,
             depth: 0,
             flattened: false,
+            in_del: 0,
+            revisions: 0,
+            comment_starts: HashSet::new(),
         };
         c.blocks(body);
         c.close_code();
@@ -145,10 +162,16 @@ impl Loader for DocxLoader {
         let deferred = std::mem::take(&mut c.deferred);
         c.b.footnotes_section(&deferred);
         let flattened = c.flattened || pkg.flattened();
-        let (text, markers) = c.b.finish();
+        let revisions = c.revisions;
+        let (text, markers, anchors) = c.b.finish_with_anchors();
+        let comments = match comments_xml {
+            Some(xml) => read_comments(&xml, extended_xml.as_deref(), &anchors)?,
+            None => Vec::new(),
+        };
         if flattened {
             crate::add_warning(&mut meta, crate::NESTING_WARNING);
         }
+        crate::annotations::record(&mut meta, comments, revisions);
         if meta.title.is_none() {
             meta.title = markers
                 .iter()
@@ -438,6 +461,133 @@ fn read_notes(text: &str, kind: &str, out: &mut HashMap<String, String>) -> Resu
     Ok(())
 }
 
+/// The anchor key of comment `id`.
+fn comment_key(id: &str) -> String {
+    format!("comment:{id}")
+}
+
+/// The comments in `word/comments.xml` that have an anchor in the text,
+/// with replies and resolved state from `commentsExtended.xml`.
+fn read_comments(
+    text: &str,
+    extended: Option<&str>,
+    anchors: &[(String, CharRange)],
+) -> Result<Vec<DocumentComment>, LoadError> {
+    let ranges: HashMap<&str, CharRange> = anchors.iter().map(|(k, r)| (k.as_str(), *r)).collect();
+    // The paraId of a comment's last paragraph, to its parent's paraId and
+    // whether it is done.
+    let mut ext: HashMap<String, (Option<String>, bool)> = HashMap::new();
+    if let Some(e) = extended {
+        let xml = parse_xml(e)?;
+        for n in xml
+            .descendants()
+            .filter(|n| n.tag_name().name() == "commentEx")
+        {
+            if let Some(p) = attr(n, "paraId") {
+                let parent = attr(n, "paraIdParent").map(str::to_owned);
+                let done = matches!(attr(n, "done"), Some("1" | "true" | "on"));
+                ext.insert(p.to_owned(), (parent, done));
+            }
+        }
+    }
+    let xml = parse_xml(text)?;
+    let mut all: Vec<(Option<String>, DocumentComment)> = Vec::new();
+    for c in xml
+        .descendants()
+        .filter(|n| n.tag_name().name() == "comment")
+    {
+        if all.len() >= crate::annotations::MAX_COMMENTS {
+            break;
+        }
+        let Some(id) = attr(c, "id") else {
+            continue;
+        };
+        let paras: Vec<Node<'_, '_>> = c
+            .descendants()
+            .filter(|n| n.tag_name().name() == "p")
+            .collect();
+        let body = paras
+            .iter()
+            .map(|p| {
+                collapse(
+                    &p.descendants()
+                        .filter(|n| n.tag_name().name() == "t" && !in_deletion(*n))
+                        .filter_map(|n| n.text())
+                        .collect::<String>(),
+                )
+            })
+            .filter(|t| !t.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ");
+        let para_id = paras.last().and_then(|p| attr(*p, "paraId"));
+        all.push((
+            para_id.map(str::to_owned),
+            DocumentComment {
+                id: id.to_owned(),
+                range: ranges
+                    .get(comment_key(id).as_str())
+                    .copied()
+                    .unwrap_or_default(),
+                author: attr(c, "author").unwrap_or("").trim().to_owned(),
+                date: attr(c, "date").unwrap_or("").trim().to_owned(),
+                text: clean_text(&body),
+                replies: Vec::new(),
+                resolved: false,
+            },
+        ));
+    }
+    // Replies go under the comment they answer, in order.
+    let owner: HashMap<String, usize> = all
+        .iter()
+        .enumerate()
+        .filter_map(|(i, (p, _))| Some((p.clone()?, i)))
+        .collect();
+    let mut parent_of: Vec<Option<usize>> = vec![None; all.len()];
+    for (i, (p, _)) in all.iter().enumerate() {
+        if let Some((Some(parent), _)) = p.as_ref().and_then(|p| ext.get(p))
+            && let Some(&j) = owner.get(parent)
+            && j != i
+        {
+            parent_of[i] = Some(j);
+        }
+    }
+    let mut top: Vec<Option<DocumentComment>> = Vec::with_capacity(all.len());
+    let mut replies: Vec<(usize, CommentReply)> = Vec::new();
+    for (i, (p, mut c)) in all.into_iter().enumerate() {
+        c.resolved = p.as_ref().and_then(|p| ext.get(p)).is_some_and(|e| e.1);
+        match parent_of[i] {
+            // Replies to replies go to the thread's first comment.
+            Some(mut j) => {
+                let mut hops = 0;
+                while let Some(k) = parent_of[j].filter(|_| hops < 16) {
+                    j = k;
+                    hops += 1;
+                }
+                replies.push((
+                    j,
+                    CommentReply {
+                        author: c.author,
+                        date: c.date,
+                        text: c.text,
+                    },
+                ));
+                top.push(None);
+            }
+            None => top.push(Some(c)),
+        }
+    }
+    for (j, r) in replies {
+        if let Some(Some(parent)) = top.get_mut(j) {
+            parent.replies.push(r);
+        }
+    }
+    Ok(top
+        .into_iter()
+        .flatten()
+        .filter(|c| ranges.contains_key(comment_key(&c.id).as_str()))
+        .collect())
+}
+
 fn in_deletion(n: Node<'_, '_>) -> bool {
     n.ancestors()
         .any(|a| matches!(a.tag_name().name(), "del" | "moveFrom"))
@@ -467,6 +617,14 @@ struct Conv<'a> {
     depth: usize,
     /// Set once content past the nesting limit was flattened.
     flattened: bool,
+    /// Inside a deletion being said ([`RevisionMode::Marked`]): its
+    /// `w:delText` is read.
+    in_del: usize,
+    /// Tracked changes seen.
+    revisions: usize,
+    /// Comments whose range has started (their `w:commentReference` then
+    /// adds nothing).
+    comment_starts: HashSet<String>,
 }
 
 const FMT_KINDS: [MarkerKind; 4] = [
@@ -540,9 +698,73 @@ impl Conv<'_> {
                         self.blocks(choice);
                     }
                 }
+                "commentRangeStart" => self.comment_start(c),
+                "commentRangeEnd" => self.comment_end(c),
                 _ => {}
             }
         }
+    }
+
+    /// The start of a comment's range.
+    fn comment_start(&mut self, c: Node<'_, '_>) {
+        let Some(id) = attr(c, "id") else {
+            return;
+        };
+        if self.comment_starts.len() < crate::annotations::MAX_COMMENTS
+            && self.comment_starts.insert(id.to_owned())
+        {
+            self.b.open_anchor(comment_key(id));
+        }
+    }
+
+    /// The end of a comment's range.
+    fn comment_end(&mut self, c: Node<'_, '_>) {
+        if let Some(id) = attr(c, "id").and_then(|id| self.b.open_anchor_id(&comment_key(id))) {
+            self.b.close(id);
+        }
+    }
+
+    /// A comment's reference: the comment's point, when it has no range.
+    fn comment_reference(&mut self, c: Node<'_, '_>) {
+        let Some(id) = attr(c, "id") else {
+            return;
+        };
+        if self.comment_starts.len() < crate::annotations::MAX_COMMENTS
+            && self.comment_starts.insert(id.to_owned())
+        {
+            let open = self.b.open_anchor(comment_key(id));
+            self.b.close(open);
+        }
+    }
+
+    /// A tracked change (`w:ins`, `w:del`, `w:moveFrom`, `w:moveTo`):
+    /// counted, and read as the final text or said in place.
+    fn change(&mut self, c: Node<'_, '_>, kind: ChangeKind) {
+        let has_text = c.descendants().any(|n| {
+            matches!(n.tag_name().name(), "t" | "delText")
+                && n.text().is_some_and(|t| !t.trim().is_empty())
+        });
+        if has_text {
+            self.revisions += 1;
+        }
+        let deleted = matches!(kind, ChangeKind::Deleted | ChangeKind::MovedAway);
+        if self.options.revisions != RevisionMode::Marked || !has_text {
+            if !deleted {
+                self.inline(c);
+            }
+            return;
+        }
+        self.set_fmt([false; 4]);
+        let open = revision::open(&mut self.b, kind, attr(c, "author"), attr(c, "date"));
+        if deleted {
+            self.in_del += 1;
+        }
+        self.inline(c);
+        if deleted {
+            self.in_del -= 1;
+        }
+        self.set_fmt([false; 4]);
+        revision::close(&mut self.b, open);
     }
 
     fn close_lists(&mut self) {
@@ -745,8 +967,15 @@ impl Conv<'_> {
                         None => self.inline(c),
                     }
                 }
-                "fldSimple" | "smartTag" | "ins" | "moveTo" | "customXml" | "sdtContent"
-                | "dir" | "bdo" => self.inline(c),
+                "fldSimple" | "smartTag" | "customXml" | "sdtContent" | "dir" | "bdo" => {
+                    self.inline(c);
+                }
+                "ins" => self.change(c, ChangeKind::Inserted),
+                "moveTo" => self.change(c, ChangeKind::MovedHere),
+                "del" => self.change(c, ChangeKind::Deleted),
+                "moveFrom" => self.change(c, ChangeKind::MovedAway),
+                "commentRangeStart" => self.comment_start(c),
+                "commentRangeEnd" => self.comment_end(c),
                 "oMath" => self.math(c, false),
                 // Display math: each equation of the paragraph on its own.
                 "oMathPara" => {
@@ -792,6 +1021,11 @@ impl Conv<'_> {
                     self.set_fmt(fmt);
                     self.b.text(c.text().unwrap_or(""));
                 }
+                "delText" if self.in_del > 0 => {
+                    self.set_fmt(fmt);
+                    self.b.text(c.text().unwrap_or(""));
+                }
+                "commentReference" => self.comment_reference(c),
                 "tab" | "ptab" => self.b.space(),
                 "br" | "cr" => {
                     // Page and column breaks are layout; in a cell a line
@@ -1245,6 +1479,115 @@ mod tests {
             assert_eq!(doc.text().to_string(), want, "for {omml}");
             assert_eq!(math(&doc), vec![(want.clone(), 0)], "for {omml}");
         }
+    }
+
+    /// A Word document with this body and these other parts, loaded.
+    fn load_parts(body: &str, parts: &[(&str, &str)], options: &LoadOptions) -> Document {
+        let xml = format!(
+            r#"<?xml version="1.0"?><w:document xmlns:w="{W}" xmlns:m="{M}"><w:body>{body}</w:body></w:document>"#
+        );
+        let mut z = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let opts = zip::write::SimpleFileOptions::default();
+        z.start_file("word/document.xml", opts).expect("zip entry");
+        z.write_all(xml.as_bytes()).expect("zip write");
+        for (name, text) in parts {
+            z.start_file(*name, opts).expect("zip entry");
+            z.write_all(text.as_bytes()).expect("zip write");
+        }
+        let data = z.finish().expect("zip finish").into_inner();
+        DocxLoader
+            .load(
+                &Source::Bytes {
+                    data,
+                    hint: "docx".into(),
+                },
+                options,
+            )
+            .expect("the document loads")
+    }
+
+    #[test]
+    fn comments_become_document_comments_with_replies() {
+        const W14: &str = "http://schemas.microsoft.com/office/word/2010/wordml";
+        const W15: &str = "http://schemas.microsoft.com/office/word/2012/wordml";
+        let comments = format!(
+            r#"<w:comments xmlns:w="{W}" xmlns:w14="{W14}"><w:comment w:id="0" w:author="Ada Example" w:date="2026-09-01T10:00:00Z"><w:p w14:paraId="00000001"><w:r><w:annotationRef/></w:r><w:r><w:t>Check this date.</w:t></w:r></w:p></w:comment><w:comment w:id="1" w:author="Bo Example"><w:p w14:paraId="00000002"><w:r><w:t>Fixed.</w:t></w:r></w:p></w:comment><w:comment w:id="2" w:author="Bo Example"><w:p w14:paraId="00000003"><w:r><w:t>A point.</w:t></w:r></w:p></w:comment><w:comment w:id="3"><w:p><w:r><w:t>Never anchored.</w:t></w:r></w:p></w:comment></w:comments>"#
+        );
+        let extended = format!(
+            r#"<w15:commentsEx xmlns:w15="{W15}"><w15:commentEx w15:paraId="00000001" w15:done="1"/><w15:commentEx w15:paraId="00000002" w15:paraIdParent="00000001" w15:done="0"/></w15:commentsEx>"#
+        );
+        let body = format!(
+            r#"<w:p>{}<w:commentRangeStart w:id="0"/><w:commentRangeStart w:id="1"/>{}<w:commentRangeEnd w:id="0"/><w:commentRangeEnd w:id="1"/><w:r><w:commentReference w:id="0"/></w:r>{}<w:r><w:commentReference w:id="2"/></w:r></w:p>"#,
+            wr("Read "),
+            wr("chapter two"),
+            wr(" first.")
+        );
+        let doc = load_parts(
+            &body,
+            &[
+                ("word/comments.xml", &comments),
+                ("word/commentsExtended.xml", &extended),
+            ],
+            &LoadOptions::default(),
+        );
+        assert_eq!(doc.text().to_string(), "Read chapter two first.");
+        let cs = crate::comments(&doc.meta);
+        assert_eq!(cs.len(), 2, "{cs:?}");
+        assert_eq!(doc.slice(cs[0].range).to_string(), "chapter two");
+        assert_eq!(cs[0].author, "Ada Example");
+        assert_eq!(cs[0].date, "2026-09-01T10:00:00Z");
+        assert!(cs[0].resolved);
+        assert_eq!(
+            cs[0].spoken(),
+            "Comment by Ada Example: Check this date. Reply by Bo Example: Fixed. Resolved."
+        );
+        assert!(cs[1].range.is_empty());
+        assert_eq!(
+            cs[1].range.start.0,
+            "Read chapter two first.".chars().count()
+        );
+        assert_eq!(cs[1].text, "A point.");
+    }
+
+    #[test]
+    fn tracked_changes_are_final_text_or_said_in_place() {
+        let body = format!(
+            r#"<w:p>{}<w:del w:id="5" w:author="Bo Example" w:date="2026-09-02T00:00:00Z"><w:r><w:delText xml:space="preserve">old </w:delText></w:r></w:del><w:ins w:id="6" w:author="Ada Example" w:date="2026-09-01T00:00:00Z">{}</w:ins>{}</w:p><w:p><w:moveFrom w:author="Ada Example">{}</w:moveFrom>{}<w:moveTo w:author="Ada Example">{}</w:moveTo></w:p>"#,
+            wr("The "),
+            wr("new "),
+            wr("plan."),
+            wr("Moved"),
+            wr(" text "),
+            wr("moved")
+        );
+        let doc = load_parts(&body, &[], &LoadOptions::default());
+        assert_eq!(doc.text().to_string(), "The new plan.\n\ntext moved");
+        assert_eq!(crate::revision_count(&doc.meta), 4);
+        let marked = load_parts(
+            &body,
+            &[],
+            &LoadOptions {
+                revisions: RevisionMode::Marked,
+                ..LoadOptions::default()
+            },
+        );
+        assert_eq!(
+            marked.text().to_string(),
+            "The (deleted by Bo Example: old) (inserted by Ada Example: new) plan.\n\n(moved away by Ada Example: Moved) text (moved here by Ada Example: moved)"
+        );
+        let struck: Vec<(String, Option<String>)> = marked
+            .markers()
+            .iter()
+            .filter(|m| m.kind == MarkerKind::Strikethrough)
+            .map(|m| (marked.slice(m.range).to_string(), m.reference.clone()))
+            .collect();
+        assert_eq!(
+            struck,
+            vec![
+                ("old".to_owned(), Some("2026-09-02T00:00:00Z".to_owned())),
+                ("Moved".to_owned(), None)
+            ]
+        );
     }
 
     #[test]
