@@ -78,6 +78,32 @@ fn every_visible_setting_is_in_one_section() {
     );
 }
 
+/// Settings below the fold, and sections below the list's edge, stay in
+/// the tree a screen reader gets: AccessKit's own filter (the one the
+/// platform adapters use) keeps every row. Before W4s the UI Automation
+/// report found 13 of 15 sections.
+#[test]
+fn settings_and_sections_below_the_fold_stay_in_the_tree() {
+    use accesskit_consumer::common_filter;
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    let (h, _form) = harness_with_dialog(&app);
+    for (name, id) in [
+        ("form", h.get_widget(FORM).id()),
+        ("sections", h.get_widget(SECTIONS).id()),
+    ] {
+        let node = h.access_node(id).unwrap();
+        let all = node.children().count();
+        let kept = node.filtered_children(common_filter).count();
+        assert!(all > 12, "the {name} has more rows than fit: {all}");
+        assert_eq!(
+            kept, all,
+            "AccessKit's filter keeps every row of the {name}"
+        );
+        assert!(!node.clips_children(), "the {name} claims to clip");
+    }
+}
+
 #[test]
 fn the_dialog_names_its_sections_and_settings_with_their_roles() {
     let dir = tempfile::tempdir().unwrap();

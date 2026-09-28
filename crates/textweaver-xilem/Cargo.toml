@@ -49,6 +49,7 @@ windows = { workspace = true, features = [
 ] }
 
 [dev-dependencies]
+accesskit_consumer.workspace = true
 masonry_testing.workspace = true
 tempfile.workspace = true
 toml.workspace = true

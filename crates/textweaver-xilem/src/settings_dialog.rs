@@ -886,6 +886,10 @@ impl Widget for SettingsGrid {
         );
         node.add_action(Action::Increment);
         node.add_action(Action::Decrement);
+        // As in the dialogs' lists: the form clips its painting, but it
+        // must not tell AccessKit it clips its rows, or the rows below the
+        // fold are left out of the tree until they scroll into view.
+        node.clear_clips_children();
         while self.node_ids.len() < self.rows.len() {
             self.node_ids.push(AccessCtx::next_node_id());
         }

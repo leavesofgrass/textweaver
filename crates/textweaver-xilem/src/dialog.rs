@@ -628,6 +628,12 @@ impl Widget for ChoiceList {
         node: &mut Node,
     ) {
         node.set_label(self.label.as_str());
+        // The list clips its painting, and Masonry tells AccessKit so, but
+        // then AccessKit's filter leaves out the options scrolled out of the
+        // box (all but the first one past each edge), and a screen reader's
+        // object navigation cannot reach them. Every option is a node with
+        // its scrolled bounds, so the list does not claim to clip them.
+        node.clear_clips_children();
         while self.option_ids.len() < self.items.len() {
             self.option_ids.push(AccessCtx::next_node_id());
         }
@@ -638,6 +644,7 @@ impl Widget for ChoiceList {
             o.set_selected(i == self.selected);
             o.add_action(Action::Focus);
             o.add_action(Action::Click);
+            o.add_action(Action::ScrollIntoView);
             o.set_position_in_set(i + 1);
             o.set_size_of_set(n);
             let y = (i as f64 - self.top as f64) * self.row_h;

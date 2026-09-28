@@ -7281,6 +7281,7 @@ dependencies = [
 name = "textweaver-xilem"
 version = "0.1.0-alpha.3"
 dependencies = [
+ "accesskit_consumer",
  "clap",
  "masonry",
  "masonry_testing",

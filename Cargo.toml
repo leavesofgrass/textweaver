@@ -196,6 +196,10 @@ live-region = "0.3"
 masonry = { path = "third_party/xilem/masonry", default-features = false }
 masonry_winit = { path = "third_party/xilem/masonry_winit", default-features = false }
 masonry_testing = { path = "third_party/xilem/masonry_testing" }
+# W4s (GUI session prep): the xilem crate's tests check options against
+# AccessKit's own filter, the one the platform adapters use. Already in the
+# tree through masonry_testing; a dev-dependency only.
+accesskit_consumer = "0.39.1"
 
 # Reading aids (Agent S): terminal cell widths for the RSVP box (already in
 # the tree through ratatui).
