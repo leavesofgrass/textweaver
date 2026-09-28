@@ -703,10 +703,9 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
         host.edit(STATUS, |mut l| Label::set_text(&mut l, status.clone()));
         shown.status = status;
     }
-    let position = app
-        .session()
-        .map(|s| format!("Line {}, {}%", s.line() + 1, s.percent()))
-        .unwrap_or_default();
+    // The terminal's title line, from the app: the mode, the reading
+    // state, "line 3 of 40, 7%", the access mode, the rate, the engine.
+    let position = app.title_parts(app.title_position().as_deref()).join(", ");
     if position != shown.position {
         host.edit(POSITION, |mut l| Label::set_text(&mut l, position.clone()));
         shown.position = position;
@@ -1266,6 +1265,28 @@ impl Gui {
         self.refresh(ctx);
     }
 
+    /// A chord in an app list: the Help and Say Status keys repeat the
+    /// list's introduction, and the Repeat Message key says the last
+    /// message, as in the terminal reader. Other chords do nothing there.
+    fn list_chord(&mut self, ctx: &mut DriverCtx<'_>, chord: textweaver_app::keymap::KeyChord) {
+        let action = self
+            .app
+            .keymap()
+            .lookup(&chord, textweaver_app::keymap::Layer::Global);
+        if self.log {
+            crate::log::line(&format!("list chord {chord} -> {action:?}"));
+        }
+        match action {
+            Some(ActionId::Help | ActionId::SayStatus) => {
+                self.list_key(ctx, textweaver_app::ListKey::Introduce);
+            }
+            Some(ActionId::RepeatMessage) => {
+                self.dispatch(ctx, Command::Action(ActionId::RepeatMessage));
+            }
+            _ => {}
+        }
+    }
+
     /// Shows the app's list model in the open list dialog, or closes the
     /// dialog when the app's list is gone.
     fn sync_list(&mut self, ctx: &mut DriverCtx<'_>) {
@@ -1394,10 +1415,15 @@ impl Gui {
                     ));
                 }
             }
-            None => self.app.announce(
-                "No document is open. Press Control O to open one.",
-                Priority::Polite,
-            ),
+            None => {
+                // The key from the keymap, written for the screen reader
+                // ("Ctrl+O") and spoken for textweaver's voice.
+                let open = textweaver_app::named_key(self.app.keymap(), ActionId::Open);
+                self.app.announce(
+                    &format!("No document is open. Press {open} to open one."),
+                    Priority::Polite,
+                );
+            }
         }
         for m in &messages {
             self.app.announce(m, Priority::Assertive);
@@ -1514,6 +1540,11 @@ impl AppDriver for Gui {
                     }
                     return;
                 }
+                DialogAction::Chord(c) => {
+                    let c = *c;
+                    self.list_chord(ctx, c);
+                    return;
+                }
                 DialogAction::Cancel
                     if matches!(self.dialog, Some(OpenDialog::SettingEdit(..))) =>
                 {
@@ -1538,7 +1569,8 @@ impl AppDriver for Gui {
                     DialogAction::Key(_)
                     | DialogAction::Focus(_)
                     | DialogAction::Recall(_)
-                    | DialogAction::Complete,
+                    | DialogAction::Complete
+                    | DialogAction::Chord(_),
                     _,
                 ) => return,
             };

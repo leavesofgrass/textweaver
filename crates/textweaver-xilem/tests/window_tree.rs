@@ -78,7 +78,9 @@ fn every_control_has_a_role_and_a_name() {
     assert_eq!(names_of(&h, Role::Document), vec!["Document".to_owned()]);
     let status = names_of(&h, Role::Status);
     assert_eq!(status.len(), 1);
-    assert!(status[0].contains("Line 1"), "{status:?}");
+    // The terminal's title line parts, from the app (`App::title_parts`).
+    assert!(status[0].contains("line 1 of"), "{status:?}");
+    assert!(status[0].contains("wpm"), "{status:?}");
 }
 
 #[test]
@@ -139,6 +141,55 @@ fn a_list_dialog_is_modal_and_hides_the_window_behind_it() {
         "the status bar is back"
     );
     assert_eq!(names_of(&h, Role::Toolbar), vec!["Reading".to_owned()]);
+}
+
+/// In an app list, F1 and the Say Status chord reach the driver as chords
+/// the keymap knows, so they repeat the list's introduction
+/// (`ListKey::Introduce`), as in the terminal reader. F2 still renames.
+#[test]
+fn help_and_say_status_keys_in_a_list_reach_the_keymap() {
+    use masonry::core::keyboard::Modifiers;
+    use textweaver_app::keymap::{ActionId, Layer};
+    use textweaver_xilem::dialog::DialogAction;
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let p = Palette::galaxy();
+    let (modal, list_id) =
+        gui::list_dialog(&p, "Bookmarks", vec!["One".into(), "Two".into()], 0, true);
+    h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+    h.focus_on(Some(list_id));
+    let _ = h.redraw();
+    let lookup = |a: DialogAction| match a {
+        DialogAction::Chord(c) => app.keymap().lookup(&c, Layer::Global),
+        other => panic!("expected a chord, got {other:?}"),
+    };
+    h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::F1)));
+    let (a, _) = h
+        .pop_action::<DialogAction>()
+        .expect("F1 reaches the driver");
+    assert_eq!(lookup(a), Some(ActionId::Help));
+    let say_status = app
+        .keymap()
+        .chords_for(ActionId::SayStatus)
+        .into_iter()
+        .find(|c| !c.is_text_input())
+        .expect("Say Status has a chord");
+    assert_eq!(say_status.to_string(), "Alt+End");
+    let mut alt_end = masonry::core::keyboard::KeyboardEvent {
+        key: Key::Named(NamedKey::End),
+        ..Default::default()
+    };
+    alt_end.modifiers = Modifiers::ALT;
+    h.process_text_event(TextEvent::Keyboard(alt_end));
+    let (a, _) = h
+        .pop_action::<DialogAction>()
+        .expect("Alt+End reaches the driver");
+    assert_eq!(lookup(a), Some(ActionId::SayStatus));
+    // F2 is the list's own key.
+    h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::F2)));
+    let (a, _) = h.pop_action::<DialogAction>().expect("F2");
+    assert_eq!(a, DialogAction::Key(textweaver_app::ListKey::Rename));
 }
 
 /// Options scrolled out of a list's box stay in the tree a screen reader
