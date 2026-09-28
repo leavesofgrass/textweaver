@@ -848,6 +848,12 @@ Wave 4 starts only after this pass is done. It has four steps.
 
 **Sub-wave 4c started early (Monday, September 28, 2026):** at the owner's request, W4c2 (documents) and W4d (translations) started before session 2, since neither depends on it. W4d still merges last. W4a3 and W4f wait for session 2. The owner confirmed that the wxDragon spike is removed after session 2, as planned.
 
+**Session 2 (the owner, Monday, September 28, 2026):** the release GUI works, and Eloquence reads with the words highlighted correctly. The session passes, so the wxDragon spike is removed. Findings, which become W4a3's first deliverables, before edit mode:
+1. **A console window opens with the GUI** and stays behind it, so two windows are active. The GUI must start with no console (the Windows GUI subsystem), while `--help` and errors still reach a terminal it was started from.
+2. **Open is only a line for a file path.** It needs a real file chooser: the system's own dialog (on Windows the common file dialog, which screen readers know), with the typed path kept as a fallback.
+3. **Font and print size.** The owner wants to change the font and the size of the text on screen, from the keyboard.
+4. **Every control needs a keyboard shortcut.** The owner likes the simple controls; each one gets a shortcut from the keymap, shown and spoken with its name (for example "Open, Control O").
+
 **W4a3: GUI edit mode (sub-wave 4c, P1; ADR 0033).**
 - **Edit mode in `DocumentView`,** using `Command::ReplaceRange`, and keeping structure while editing as the terminal reader does.
 - **Based on Parley's `examples/editor`,** on the vendored Parley 0.8.0. Don't upgrade it.
