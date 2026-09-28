@@ -18,6 +18,8 @@
 //!   (under 1 MB of peak heap, under 5,000 allocations) are not gated, and
 //!   neither is growth too small to matter (less than 1 MB, or fewer than
 //!   5,000 allocations, more than the baseline), however large its ratio.
+//!   Allocation counts are the measuring thread's own; peak heap is the
+//!   whole process's.
 //! - `--no-startup`: skip the startup timings.
 //!
 //! Startup timings (also `cargo xtask startup` on its own): the release
@@ -635,9 +637,14 @@ pub use inner::run_inner;
 #[cfg(feature = "bench")]
 #[allow(unsafe_code)]
 pub mod alloc {
-    //! A counting global allocator: current and peak heap bytes.
+    //! A counting global allocator: current and peak heap bytes, for the
+    //! whole process, and allocation calls, for the calling thread only.
+    //! Threads left over from earlier work (a previous document's readers
+    //! and parsers) would otherwise add their allocations to whatever is
+    //! being measured, so the counts drifted from run to run.
 
     use std::alloc::{GlobalAlloc, Layout, System};
+    use std::cell::Cell;
     use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
 
     /// Wraps the system allocator and counts live bytes.
@@ -645,10 +652,19 @@ pub mod alloc {
 
     static CURRENT: AtomicUsize = AtomicUsize::new(0);
     static PEAK: AtomicUsize = AtomicUsize::new(0);
-    /// Allocation calls (alloc, alloc_zeroed, realloc) since the start.
-    static ALLOCS: AtomicUsize = AtomicUsize::new(0);
-    /// [`ALLOCS`] at the last [`reset_peak`].
-    static ALLOCS_AT_RESET: AtomicUsize = AtomicUsize::new(0);
+    thread_local! {
+        /// This thread's allocation calls (alloc, alloc_zeroed, realloc)
+        /// since the start. A const `Cell` never allocates, so it is safe
+        /// to touch from inside the allocator.
+        static ALLOCS: Cell<usize> = const { Cell::new(0) };
+        /// [`ALLOCS`] at this thread's last [`reset_peak`].
+        static ALLOCS_AT_RESET: Cell<usize> = const { Cell::new(0) };
+    }
+
+    fn counted() {
+        // `try_with`: a thread being torn down may still free and allocate.
+        let _ = ALLOCS.try_with(|n| n.set(n.get() + 1));
+    }
 
     fn grew(by: usize) {
         let now = CURRENT.fetch_add(by, Relaxed) + by;
@@ -664,7 +680,7 @@ pub mod alloc {
             let p = unsafe { System.alloc(layout) };
             if !p.is_null() {
                 grew(layout.size());
-                ALLOCS.fetch_add(1, Relaxed);
+                counted();
             }
             p
         }
@@ -674,7 +690,7 @@ pub mod alloc {
             let p = unsafe { System.alloc_zeroed(layout) };
             if !p.is_null() {
                 grew(layout.size());
-                ALLOCS.fetch_add(1, Relaxed);
+                counted();
             }
             p
         }
@@ -689,7 +705,7 @@ pub mod alloc {
             // SAFETY: forwarded unchanged; `ptr` came from this allocator.
             let q = unsafe { System.realloc(ptr, layout, new_size) };
             if !q.is_null() {
-                ALLOCS.fetch_add(1, Relaxed);
+                counted();
                 if new_size >= layout.size() {
                     grew(new_size - layout.size());
                 } else {
@@ -709,7 +725,8 @@ pub mod alloc {
     /// of allocations.
     pub fn reset_peak() {
         PEAK.store(CURRENT.load(Relaxed), Relaxed);
-        ALLOCS_AT_RESET.store(ALLOCS.load(Relaxed), Relaxed);
+        let now = ALLOCS.with(Cell::get);
+        ALLOCS_AT_RESET.with(|r| r.set(now));
     }
 
     /// The highest live heap since the last [`reset_peak`].
@@ -717,11 +734,12 @@ pub mod alloc {
         PEAK.load(Relaxed)
     }
 
-    /// Allocation calls since the last [`reset_peak`].
+    /// The calling thread's allocation calls since its last
+    /// [`reset_peak`].
     pub fn allocs() -> usize {
         ALLOCS
-            .load(Relaxed)
-            .saturating_sub(ALLOCS_AT_RESET.load(Relaxed))
+            .with(Cell::get)
+            .saturating_sub(ALLOCS_AT_RESET.with(Cell::get))
     }
 }
 
