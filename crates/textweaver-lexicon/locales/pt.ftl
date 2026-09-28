@@ -2585,3 +2585,44 @@ gui-text-size-smallest = Tamanho do texto { $size } pontos, o menor.
 gui-font = Fonte: { $family }.
 gui-font-unchanged = Fonte sem alterações.
 gui-font-list = Fonte
+
+## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
+## $page and $n are page numbers, $label a printed page label such as iv,
+## $pages the number of pages. Keep the page first: a 40-cell Braille
+## display shows the start of the line.
+
+status-page = página { $page } de { $pages }
+status-page-labelled = página { $label }, { $n } de { $pages }
+status-position-page = { $page }, { $pct }%
+pages-position = Página { $page } de { $pages }.
+pages-position-labelled = Página { $label }, { $n } de { $pages }.
+pages-none = Este documento não tem páginas.
+pages-no-such-page = Não há página { $page }. As páginas vão de 1 a { $pages }.
+pages-label = Página { $label }
+pages-outline-item = Página { $label }: { $text }
+lists-pages-title =
+    { $n ->
+        [one] Páginas, { $n } página
+       *[other] Páginas, { $n } páginas
+    }
+lists-pages-title-filtered = Páginas, { $shown } de { $n } correspondem a { $filter }
+lists-pages-intro =
+    { $n ->
+        [one] Páginas, { $n } página. Digite para filtrar, Enter vai até uma página, Escape fecha.
+       *[other] Páginas, { $n } páginas. Digite para filtrar, Enter vai até uma página, Escape fecha.
+    }
+lists-pages-here = Você está em { $heading }.
+lists-filter-cleared-pages =
+    { $n ->
+        [one] Filtro limpo, { $n } página.
+       *[other] Filtro limpo, { $n } páginas.
+    }
+lists-filter-none-pages = Nenhuma página corresponde a { $query }. Backspace remove letras.
+lists-filter-matched-pages =
+    { $n ->
+        [one] { $n } página corresponde.
+       *[other] { $n } páginas correspondem.
+    }
+prompt-go-to-pages = Ir para página, ou linha 12, porcentagem, início ou fim
+goto-not-a-target-pages = Não é um destino válido: { $text }. Digite um número de página, linha e um número, uma porcentagem como 50%, início ou fim.
+goto-word-page = página

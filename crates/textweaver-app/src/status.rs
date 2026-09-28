@@ -31,10 +31,18 @@ use crate::app::{App, Mode};
 use crate::command::Effect;
 
 impl App {
-    /// The position the title line shows: "line 3 of 40, 7%"; `None`
-    /// without a document.
+    /// The position the title line shows: "line 3 of 40, 7%", or in a
+    /// paged document (a PDF) "page 12 of 30, 40%"; `None` without a
+    /// document.
     pub fn title_position(&self) -> Option<String> {
         let s = self.session.as_ref()?;
+        if let Some(page) = self.page_of(s.cursor) {
+            let page = self.page_words(&page, "status-page", "status-page-labelled");
+            return Some(self.msg_args(
+                "status-position-page",
+                &args!["page" => page, "pct" => s.percent()],
+            ));
+        }
         Some(self.msg_args(
             "status-position",
             &args![

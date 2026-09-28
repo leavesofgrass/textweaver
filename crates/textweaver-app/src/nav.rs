@@ -796,6 +796,11 @@ impl App {
             "nav-position",
             &args!["line" => line, "lines" => lines, "pct" => pct],
         );
+        // A paged document (a PDF): the page first, "Page 12 of 30."
+        if let Some(page) = crate::pages::page_at(doc, pos) {
+            let page = self.page_words(&page, "pages-position", "pages-position-labelled");
+            msg = format!("{page} {msg}");
+        }
         if self.settings.speech.verbosity >= Verbosity::Normal
             && let Some((word, words)) = self.word_position(pos)
         {

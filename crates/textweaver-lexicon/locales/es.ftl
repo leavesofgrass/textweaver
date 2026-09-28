@@ -2569,3 +2569,44 @@ gui-text-size-smallest = Tamaño del texto { $size } puntos, el menor.
 gui-font = Fuente: { $family }.
 gui-font-unchanged = Fuente sin cambios.
 gui-font-list = Fuente
+
+## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
+## $page and $n are page numbers, $label a printed page label such as iv,
+## $pages the number of pages. Keep the page first: a 40-cell Braille
+## display shows the start of the line.
+
+status-page = página { $page } de { $pages }
+status-page-labelled = página { $label }, { $n } de { $pages }
+status-position-page = { $page }, { $pct }%
+pages-position = Página { $page } de { $pages }.
+pages-position-labelled = Página { $label }, { $n } de { $pages }.
+pages-none = Este documento no tiene páginas.
+pages-no-such-page = No hay página { $page }. Las páginas van de 1 a { $pages }.
+pages-label = Página { $label }
+pages-outline-item = Página { $label }: { $text }
+lists-pages-title =
+    { $n ->
+        [one] Páginas, { $n } página
+       *[other] Páginas, { $n } páginas
+    }
+lists-pages-title-filtered = Páginas, { $shown } de { $n } coinciden con { $filter }
+lists-pages-intro =
+    { $n ->
+        [one] Páginas, { $n } página. Escriba para filtrar, Intro va a una página, Escape cierra.
+       *[other] Páginas, { $n } páginas. Escriba para filtrar, Intro va a una página, Escape cierra.
+    }
+lists-pages-here = Está en { $heading }.
+lists-filter-cleared-pages =
+    { $n ->
+        [one] Filtro borrado, { $n } página.
+       *[other] Filtro borrado, { $n } páginas.
+    }
+lists-filter-none-pages = Ninguna página coincide con { $query }. Retroceso quita letras.
+lists-filter-matched-pages =
+    { $n ->
+        [one] { $n } página coincide.
+       *[other] { $n } páginas coinciden.
+    }
+prompt-go-to-pages = Ir a página, o línea 12, porcentaje, inicio o fin
+goto-not-a-target-pages = No es un destino válido: { $text }. Escriba un número de página, línea y un número, un porcentaje como 50%, inicio o fin.
+goto-word-page = página

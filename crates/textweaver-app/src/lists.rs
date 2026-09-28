@@ -65,7 +65,17 @@ pub(crate) fn headings(doc: &Document) -> Vec<OutlineItem> {
         .collect()
 }
 
+/// True when the outline lists pages (a paged document without
+/// headings): its items have level 0 ([`App::page_outline`]).
+fn lists_pages(items: &[OutlineItem]) -> bool {
+    items.first().is_some_and(|i| i.level == 0)
+}
+
 fn outline_label(c: &Catalog, h: &OutlineItem) -> String {
+    // A page ("Page 12: its first words") has no level to say.
+    if h.level == 0 {
+        return h.text.clone();
+    }
     let text = if h.text.is_empty() {
         c.tr("nav-blank")
     } else {
@@ -97,11 +107,16 @@ impl App {
         let (title, items) = match &list {
             AuthoringList::Outline { items, shown } => {
                 let n = items.len();
+                let (plain, filtered) = if lists_pages(items) {
+                    ("lists-pages-title", "lists-pages-title-filtered")
+                } else {
+                    ("lists-outline-title", "lists-outline-title-filtered")
+                };
                 let title = if filter.is_empty() {
-                    self.msg_args("lists-outline-title", &args!["n" => n])
+                    self.msg_args(plain, &args!["n" => n])
                 } else {
                     self.msg_args(
-                        "lists-outline-title-filtered",
+                        filtered,
                         &args!["shown" => shown.len(), "n" => n, "filter" => filter.as_str()],
                     )
                 };
@@ -184,14 +199,20 @@ impl App {
                 *shown = (0..items.len())
                     .filter(|&i| matches(&items[i].text, &query))
                     .collect();
-                (
-                    shown.len(),
+                let ids = if lists_pages(items) {
+                    (
+                        "lists-filter-cleared-pages",
+                        "lists-filter-none-pages",
+                        "lists-filter-matched-pages",
+                    )
+                } else {
                     (
                         "lists-filter-cleared-headings",
                         "lists-filter-none-headings",
                         "lists-filter-matched-headings",
-                    ),
-                )
+                    )
+                };
+                (shown.len(), ids)
             }
             AuthoringList::Citations { entries, shown } => {
                 *shown = (0..entries.len())
@@ -280,7 +301,13 @@ impl App {
         let Some(s) = self.session.as_ref() else {
             return vec![Effect::Redraw];
         };
-        let items = headings(&s.doc);
+        let mut items = headings(&s.doc);
+        // No headings: a paged document (a PDF) lists its pages instead
+        // (crate::pages).
+        let by_page = items.is_empty() && self.has_pages();
+        if by_page {
+            items = self.page_outline(&s.doc);
+        }
         if items.is_empty() {
             let msg = self.msg("lists-no-headings");
             self.tell(&msg);
@@ -293,10 +320,15 @@ impl App {
             .find(|h| h.pos <= cursor)
             .map(|h| h.text.clone());
         let n = items.len();
-        let mut intro = self.msg_args("lists-outline-intro", &args!["n" => n]);
+        let (intro_id, here_id) = if by_page {
+            ("lists-pages-intro", "lists-pages-here")
+        } else {
+            ("lists-outline-intro", "lists-outline-here")
+        };
+        let mut intro = self.msg_args(intro_id, &args!["n" => n]);
         if let Some(h) = here {
             intro.push(' ');
-            intro.push_str(&self.msg_args("lists-outline-here", &args!["heading" => h]));
+            intro.push_str(&self.msg_args(here_id, &args!["heading" => h]));
         }
         self.authoring.filter.clear();
         self.tell(&intro);
@@ -306,6 +338,13 @@ impl App {
 
     /// Jumps to a heading chosen in the outline (recorded in history).
     fn go_to_heading(&mut self, h: &OutlineItem) {
+        // A page in a paged document's outline.
+        if h.level == 0 {
+            if let Some(page) = self.page_of(h.pos) {
+                self.jump_to_page(&page);
+            }
+            return;
+        }
         let label = self.msg_args("nav-label-heading-level", &args!["level" => h.level]);
         let msg = self.nav_message(Some(&label), h.pos, &h.text);
         self.jump(h.pos, true, ReadAfter::Follow, &msg);

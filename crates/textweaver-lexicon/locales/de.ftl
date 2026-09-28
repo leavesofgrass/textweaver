@@ -2605,3 +2605,44 @@ gui-text-size-smallest = Textgröße { $size } Punkt, die kleinste.
 gui-font = Schriftart: { $family }.
 gui-font-unchanged = Schriftart unverändert.
 gui-font-list = Schriftart
+
+## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
+## $page and $n are page numbers, $label a printed page label such as iv,
+## $pages the number of pages. Keep the page first: a 40-cell Braille
+## display shows the start of the line.
+
+status-page = Seite { $page } von { $pages }
+status-page-labelled = Seite { $label }, { $n } von { $pages }
+status-position-page = { $page }, { $pct }%
+pages-position = Seite { $page } von { $pages }.
+pages-position-labelled = Seite { $label }, { $n } von { $pages }.
+pages-none = Dieses Dokument hat keine Seiten.
+pages-no-such-page = Keine Seite { $page }. Die Seiten gehen von 1 bis { $pages }.
+pages-label = Seite { $label }
+pages-outline-item = Seite { $label }: { $text }
+lists-pages-title =
+    { $n ->
+        [one] Seiten, { $n } Seite
+       *[other] Seiten, { $n } Seiten
+    }
+lists-pages-title-filtered = Seiten, { $shown } von { $n } stimmen mit { $filter } überein
+lists-pages-intro =
+    { $n ->
+        [one] Seiten, { $n } Seite. Tippen filtert, Eingabetaste springt zu einer Seite, Escape schließt.
+       *[other] Seiten, { $n } Seiten. Tippen filtert, Eingabetaste springt zu einer Seite, Escape schließt.
+    }
+lists-pages-here = Sie sind auf { $heading }.
+lists-filter-cleared-pages =
+    { $n ->
+        [one] Filter gelöscht, { $n } Seite.
+       *[other] Filter gelöscht, { $n } Seiten.
+    }
+lists-filter-none-pages = Keine Seite stimmt mit { $query } überein. Rücktaste entfernt Buchstaben.
+lists-filter-matched-pages =
+    { $n ->
+        [one] { $n } Seite stimmt überein.
+       *[other] { $n } Seiten stimmen überein.
+    }
+prompt-go-to-pages = Gehe zu Seite, oder Zeile 12, Prozent, start oder end
+goto-not-a-target-pages = Kein Sprungziel: { $text }. Geben Sie eine Seitenzahl ein, Zeile und eine Zahl, einen Prozentwert wie 50%, start oder end.
+goto-word-page = Seite

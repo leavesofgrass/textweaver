@@ -2791,3 +2791,56 @@ gui-text-size-smallest = حجم النص { $size } نقطة، وهو الأصغ�
 gui-font = الخط: { $family }.
 gui-font-unchanged = لم يتغير الخط.
 gui-font-list = الخط
+
+## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
+## $page and $n are page numbers, $label a printed page label such as iv,
+## $pages the number of pages. Keep the page first: a 40-cell Braille
+## display shows the start of the line.
+
+status-page = الصفحة { $page } من { $pages }
+status-page-labelled = الصفحة { $label }، { $n } من { $pages }
+status-position-page = { $page }، { $pct }%
+pages-position = الصفحة { $page } من { $pages }.
+pages-position-labelled = الصفحة { $label }، { $n } من { $pages }.
+pages-none = لا صفحات في هذا المستند.
+pages-no-such-page = لا توجد صفحة { $page }. الصفحات من 1 إلى { $pages }.
+pages-label = الصفحة { $label }
+pages-outline-item = الصفحة { $label }: { $text }
+lists-pages-title =
+    { $n ->
+        [one] الصفحات، صفحة واحدة
+        [two] الصفحات، صفحتان
+        [few] الصفحات، { $n } صفحات
+        [many] الصفحات، { $n } صفحةً
+       *[other] الصفحات، { $n } صفحة
+    }
+lists-pages-title-filtered = الصفحات، { $shown } من { $n } يطابق { $filter }
+lists-pages-intro =
+    { $n ->
+        [one] الصفحات، صفحة واحدة. اكتب للتصفية، Enter للانتقال إلى صفحة، Escape للإغلاق.
+        [two] الصفحات، صفحتان. اكتب للتصفية، Enter للانتقال إلى صفحة، Escape للإغلاق.
+        [few] الصفحات، { $n } صفحات. اكتب للتصفية، Enter للانتقال إلى صفحة، Escape للإغلاق.
+        [many] الصفحات، { $n } صفحةً. اكتب للتصفية، Enter للانتقال إلى صفحة، Escape للإغلاق.
+       *[other] الصفحات، { $n } صفحة. اكتب للتصفية، Enter للانتقال إلى صفحة، Escape للإغلاق.
+    }
+lists-pages-here = أنت في { $heading }.
+lists-filter-cleared-pages =
+    { $n ->
+        [one] مُسحت التصفية، صفحة واحدة.
+        [two] مُسحت التصفية، صفحتان.
+        [few] مُسحت التصفية، { $n } صفحات.
+        [many] مُسحت التصفية، { $n } صفحةً.
+       *[other] مُسحت التصفية، { $n } صفحة.
+    }
+lists-filter-none-pages = لا صفحات تطابق { $query }. Backspace لحذف الحروف.
+lists-filter-matched-pages =
+    { $n ->
+        [one] صفحة واحدة مطابقة.
+        [two] صفحتان مطابقتان.
+        [few] { $n } صفحات مطابقة.
+        [many] { $n } صفحةً مطابقة.
+       *[other] { $n } صفحة مطابقة.
+    }
+prompt-go-to-pages = الانتقال إلى صفحة، أو السطر 12، أو نسبة مئوية أو start أو end
+goto-not-a-target-pages = ليس هدف انتقال: { $text }. اكتب رقم صفحة، أو كلمة line ورقمًا، أو نسبة مئوية مثل 50%، أو start، أو end.
+goto-word-page = صفحة

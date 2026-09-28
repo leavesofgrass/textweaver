@@ -2581,3 +2581,51 @@ gui-text-size-smallest = Text size { $size } points, the smallest.
 gui-font = Font: { $family }.
 gui-font-unchanged = Font unchanged.
 gui-font-list = Font
+
+## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
+## $page and $n are page numbers, $label a printed page label such as iv,
+## $pages the number of pages. Keep the page first: a 40-cell Braille
+## display shows the start of the line.
+
+# On the title line, before the percentage.
+status-page = page { $page } of { $pages }
+status-page-labelled = page { $label }, { $n } of { $pages }
+# $page is status-page or status-page-labelled; % is shown, not said.
+status-position-page = { $page }, { $pct }%
+# Said first by the position report.
+pages-position = Page { $page } of { $pages }.
+pages-position-labelled = Page { $label }, { $n } of { $pages }.
+pages-none = This document has no pages.
+pages-no-such-page = No page { $page }. Pages go from 1 to { $pages }.
+pages-label = Page { $label }
+# An outline item: $text is the page's first words.
+pages-outline-item = Page { $label }: { $text }
+lists-pages-title =
+    { $n ->
+        [one] Pages, { $n } page
+       *[other] Pages, { $n } pages
+    }
+lists-pages-title-filtered = Pages, { $shown } of { $n } match { $filter }
+lists-pages-intro =
+    { $n ->
+        [one] Pages, { $n } page. Type to filter, Enter goes to a page, Escape closes.
+       *[other] Pages, { $n } pages. Type to filter, Enter goes to a page, Escape closes.
+    }
+# $heading is the outline item of the page the cursor is on.
+lists-pages-here = You are on { $heading }.
+lists-filter-cleared-pages =
+    { $n ->
+        [one] Filter cleared, { $n } page.
+       *[other] Filter cleared, { $n } pages.
+    }
+lists-filter-none-pages = No pages match { $query }. Backspace removes letters.
+lists-filter-matched-pages =
+    { $n ->
+        [one] { $n } page match.
+       *[other] { $n } pages match.
+    }
+# The go-to prompt in a paged document: a bare number is a page there.
+prompt-go-to-pages = Go to page, or line 12, percent, start, or end
+goto-not-a-target-pages = Not a go-to target: { $text }. Type a page number, line and a number, a percentage such as 50%, start, or end.
+# Typed before a page label at the go-to prompt; page and p always work.
+goto-word-page = page

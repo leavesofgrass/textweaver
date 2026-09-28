@@ -2597,3 +2597,44 @@ gui-text-size-smallest = Taille du texte { $size } points, la plus petite.
 gui-font = Police : { $family }.
 gui-font-unchanged = Police inchangée.
 gui-font-list = Police
+
+## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
+## $page and $n are page numbers, $label a printed page label such as iv,
+## $pages the number of pages. Keep the page first: a 40-cell Braille
+## display shows the start of the line.
+
+status-page = page { $page } sur { $pages }
+status-page-labelled = page { $label }, { $n } sur { $pages }
+status-position-page = { $page }, { $pct }%
+pages-position = Page { $page } sur { $pages }.
+pages-position-labelled = Page { $label }, { $n } sur { $pages }.
+pages-none = Ce document n'a pas de pages.
+pages-no-such-page = Pas de page { $page }. Les pages vont de 1 à { $pages }.
+pages-label = Page { $label }
+pages-outline-item = Page { $label } : { $text }
+lists-pages-title =
+    { $n ->
+        [one] Pages, { $n } page
+       *[other] Pages, { $n } pages
+    }
+lists-pages-title-filtered = Pages, { $shown } sur { $n } correspondent à { $filter }
+lists-pages-intro =
+    { $n ->
+        [one] Pages, { $n } page. Tapez pour filtrer, Entrée va à une page, Échap ferme.
+       *[other] Pages, { $n } pages. Tapez pour filtrer, Entrée va à une page, Échap ferme.
+    }
+lists-pages-here = Vous êtes sur { $heading }.
+lists-filter-cleared-pages =
+    { $n ->
+        [one] Filtre effacé, { $n } page.
+       *[other] Filtre effacé, { $n } pages.
+    }
+lists-filter-none-pages = Aucune page ne correspond à { $query }. Retour arrière retire des lettres.
+lists-filter-matched-pages =
+    { $n ->
+        [one] { $n } page correspond.
+       *[other] { $n } pages correspondent.
+    }
+prompt-go-to-pages = Aller à une page, ou ligne 12, un pourcentage, start, ou end
+goto-not-a-target-pages = Ce n'est pas une cible valide : { $text }. Tapez un numéro de page, ligne et un numéro, un pourcentage tel que 50%, start, ou end.
+goto-word-page = page

@@ -14,11 +14,11 @@ use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::text::Span;
-use textweaver_app::core::CharPos;
+use textweaver_app::core::{CharPos, CharRange, MarkerKind};
 use textweaver_app::keymap::ActionId;
-use textweaver_app::store::{AccessMode as ModeSetting, CursorPlacement, Settings};
+use textweaver_app::store::{AccessMode as ModeSetting, CursorPlacement, DocKey, Settings};
 use textweaver_app::testing::recording_service;
-use textweaver_app::text::GoTo;
+use textweaver_app::text::{Document, DocumentMeta, GoTo, Marker};
 use textweaver_app::theme::ColorSupport;
 use textweaver_app::{App, AppConfig, Command};
 use textweaver_tui::Tui;
@@ -289,4 +289,90 @@ fn an_export_asks_before_naming_the_folder() {
         "Exported essay.html. Open it? y or n.",
     );
     h.press(key(KeyCode::Char('n')));
+}
+
+/// A PDF with printed page labels i, 1, 2: the title line, go to page,
+/// and the position report name the page first.
+#[test]
+fn a_pdf_names_its_page_first() {
+    let mut h = launch();
+    h.open(&fixture(&["a", "running.pdf"]));
+    let t = h.row(0);
+    h.forty("PDF title line", &t, "Page i, 1 of 3, 0%");
+
+    // A bare number is a page in a PDF: the page printed "2", the third.
+    h.act(ActionId::GoTo);
+    let b = h.bottom_row();
+    h.forty("PDF go-to prompt", &b, "Go to page: ");
+    h.typed("2");
+    h.press(key(KeyCode::Enter));
+    let s = h.status_row();
+    h.forty("go to page", &s, "Page 2, line ");
+    let t = h.row(0);
+    h.forty("PDF title line on page 2", &t, "Page 2, 3 of 3, ");
+    h.act(ActionId::SayPosition);
+    let s = h.status_row();
+    h.forty("PDF position report", &s, "Page 2, 3 of 3. Line ");
+
+    // "p i" goes back to the first page; "line 1" is still a line.
+    h.act(ActionId::GoTo);
+    h.typed("p i");
+    h.press(key(KeyCode::Enter));
+    let t = h.row(0);
+    h.forty("PDF title line on page i", &t, "Page i, 1 of 3, ");
+    h.act(ActionId::GoTo);
+    h.typed("page 9");
+    h.press(key(KeyCode::Enter));
+    let s = h.status_row();
+    h.forty("no such page", &s, "No page 9.");
+}
+
+/// A paged document without headings: the outline lists its pages.
+#[test]
+fn the_outline_lists_pages_when_there_are_no_headings() {
+    let mut h = launch();
+    let text = "Preface words here.\nFirst page text.\nSecond page text.\n";
+    let doc = Document::new(
+        DocumentMeta::default(),
+        text.into(),
+        vec![
+            Marker::new(
+                MarkerKind::PageBreak,
+                CharRange::new(CharPos(0), CharPos(20)),
+            )
+            .with_label("ii"),
+            Marker::new(
+                MarkerKind::PageBreak,
+                CharRange::new(CharPos(20), CharPos(37)),
+            )
+            .with_label("1"),
+            Marker::new(
+                MarkerKind::PageBreak,
+                CharRange::new(CharPos(37), CharPos(55)),
+            ),
+        ],
+    );
+    h.tui
+        .app_mut()
+        .open_document(doc, DocKey::untitled(1), "Scan".into());
+    h.draw();
+    h.act(ActionId::Outline);
+    let list = h.tui.list().expect("the page list").clone();
+    assert_eq!(
+        list.items,
+        [
+            "Page ii: Preface words here.",
+            "Page 1: First page text.",
+            "Page 3: Second page text."
+        ]
+    );
+    let l = h.list_title_row();
+    h.forty("page list title line", &l, "1 of 3, Pages, 3 pages");
+    h.press(key(KeyCode::Down));
+    let s = h.status_row();
+    h.forty("page list item", &s, "2 of 3, Page 1: First page text.");
+    h.press(key(KeyCode::Enter));
+    let s = h.status_row();
+    h.forty("page chosen", &s, "Page 1, line 2");
+    assert_eq!(h.tui.app().session().unwrap().cursor, CharPos(20));
 }
