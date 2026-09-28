@@ -334,8 +334,7 @@ impl Planner<'_> {
 
     fn list_items(&self, list: &Marker) -> usize {
         self.index
-            .iter(MarkerKind::ListItem, Some(list.level))
-            .filter(|i| list.range.contains_range(i.range))
+            .iter_within(MarkerKind::ListItem, Some(list.level), list.range)
             .count()
     }
 
