@@ -53,14 +53,15 @@ jobs:
       - run: cargo build --locked -p textweaver-xilem
       - run: cargo clippy --locked -p textweaver-xilem --all-targets -- -D warnings
       - run: cargo test --locked -p textweaver-xilem
+      # The runner has no graphics card, so wgpu renders through WARP
+      # (d3d10warp.dll), which crashed on Vello's compute shaders (access
+      # violation 0xC0000005, with DXC or FXC alike). The report runs the
+      # hybrid renderer (CPU strips, simple shaders), as the Linux AT-SPI
+      # check does on Mesa's software GPU.
+      - name: Build with the hybrid renderer for the report
+        run: cargo build --locked -p textweaver-xilem --no-default-features --features screenshot,renderer-hybrid
       - name: UI Automation report
         shell: pwsh
-        # The runner has no graphics card, so wgpu renders through WARP
-        # (d3d10warp.dll), which crashed on Vello's shaders compiled with
-        # DXC (access violation 0xC0000005). FXC, the older compiler, is
-        # read by masonry_winit's vello_util from this variable.
-        env:
-          WGPU_DX12_COMPILER: fxc
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File crates/textweaver-xilem/tools/uia-report.ps1 -Out uia-xilem.md
           Get-Content uia-xilem.md | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
