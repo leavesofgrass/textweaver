@@ -6,7 +6,8 @@ A release is a git tag `vX.Y.Z[-pre]` and a GitHub release with these files:
 - the macOS package, `textweaver-VERSION-macos-universal.tar.gz`;
 - the Linux AppImages, `textweaver-VERSION-linux-x86_64.AppImage` and `textweaver-VERSION-linux-aarch64.AppImage`, each with its `.zsync` file for delta updates;
 - the Linux tarballs, `textweaver-VERSION-linux-x86_64.tar.gz` and `textweaver-VERSION-linux-aarch64.tar.gz`, for systems without FUSE;
-- `SHA256SUMS.txt`.
+- the GUI's packages, named like the terminal's with `-gui` at the end: `textweaver-VERSION-windows-x86_64-gui.zip`, `textweaver-VERSION-macos-aarch64-gui.zip` (`textweaver.app`, Apple silicon), and for x86_64 and aarch64 `textweaver-VERSION-linux-ARCH-gui.AppImage` (with its `.zsync` file) and `textweaver-VERSION-linux-ARCH-gui.tar.gz`;
+- `SHA256SUMS.txt`, covering every package.
 
 The `Release` workflow (`.github/workflows/release.yml`) builds the packages, attests their build provenance, and writes the checksums. Releases before 1.0 are marked as pre-releases.
 
@@ -45,7 +46,13 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
    **The changelog, grouped by area.** While a wave runs, each agent writes its `CHANGELOG.md` lines under a heading with its own name, such as `### W4c2: documents`. Before a release, move those lines under area headings (reading and speech, documents, writing, the GUI, languages, packages) and add a short summary at the top of the section. `cargo xtask release` names any agent heading still in `[Unreleased]` and stops.
 
-3. **Try the packages (optional).** Start the `Release` workflow from the Actions tab on `main`, with the tag left empty. That is a dry run: it builds and checks every package, keeps them as workflow artifacts, and creates no release, tag, or attestation.
+3. **Try the packages.** Start the `Release` workflow from the Actions tab on `main`, with the tag left empty. That is a dry run: it builds and checks every package, keeps them as workflow artifacts, and creates no release, tag, or attestation. It also works on a pushed branch, to try a change to the packaging before it merges:
+
+   ```bash
+   gh workflow run release.yml --ref BRANCH
+   ```
+
+   Download the artifacts from the run's page (or `gh run download RUN_ID`), and start each package once: the GUI with a screen reader on Windows, and the terminal reader on each system you use. Do this before every release that changes the packages, and at least once for a release with new packages.
 
 4. **Push.** Push the commit, then the tag:
 
@@ -62,6 +69,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    - **Create the release.** Checks that the version in `Cargo.toml` matches the tag, then creates the GitHub release as a pre-release, with notes taken from the matching `CHANGELOG.md` section.
    - **Windows package** (on `windows-latest`) and **macOS package** (on `macos-14`), in parallel. Each runs `cargo xtask dist`, checks the package (the binaries run, and the notices and licence files are inside), attests its build provenance, and uploads it to the release.
    - **Linux AppImage and tarball, x86_64 and aarch64** (on `ubuntu-latest` and `ubuntu-22.04-arm`, in parallel with the others). Each runs `cargo xtask appimage` in the `docker/appimage` image (Ubuntu 22.04), then `docker/appimage/test-distros.sh`, which runs both packages on Debian stable and Fedora, and on Arch for x86_64 (Arch has no official arm64 image): `tw --version`, `tw backends` without and with espeak-ng, `tw text`, `--install` and `--uninstall`, and `install-linux.sh --release` with each package. Then it attests and uploads the AppImage, its `.zsync` file, and the tarball.
+   - **The GUI**, in the same three jobs, after the terminal package: `cargo xtask gui-dist` (in the `docker/appimage` image on Linux), then a check of the files in the package, `textweaver-gui --version`, and `--screenshot`, which draws the window on the CPU with no display. On macOS it also reads a document silently with the paced backend in a background window, then closes. On Windows the checks start the program with `Start-Process -Wait`, since it is a GUI-subsystem program. The GUI's packages are attested and uploaded with the terminal's. The GUI is not yet run on other Linux distributions.
    - **SHA256SUMS.txt.** Once all the packages are uploaded, one job writes the checksums of every package on the release and attests the checksum file. The package jobs never write checksums, so they cannot race.
 
 5. **Check.** Read the release page. It should have every package and `SHA256SUMS.txt`, with the pre-release flag set. Anyone can check where a package was built:
@@ -120,6 +128,16 @@ Write down what you heard in the release notes' testing section, including anyth
 - in `docs/`, every user guide listed under "For users" in the [documentation index](../README.md), and the offline interactive pages in `docs/site/`;
 - the platform's helper scripts (doctor, speech check, update) and their README;
 - `THIRD-PARTY-NOTICES.md`, and under `licenses/`: each bundled font's `OFL.txt`, SCOWL's `Copyright`, and the IBMTTS dictionaries' licence. `cargo xtask dist` fails if any of these is missing.
+
+## The GUI packages
+
+`cargo xtask gui-dist` builds the GUI (`textweaver-xilem`, installed as `textweaver-gui`) with the `dist` profile, in the same build folder as `cargo xtask dist`, with the static C runtime on Windows. It stages the program with the same engine hosts, IBMTTS dictionaries, define-word dictionary, notices, and licence files as the terminal package (the same check fails if one is missing), plus Xilem's licence, the quick start, and `GUI.md`, in `target/dist/textweaver-VERSION-PLATFORM-gui/`, and then:
+
+- on Windows, zips it;
+- on macOS, puts the program in `textweaver.app` (signed ad hoc) and zips the folder with `ditto`. It is built for the Mac's own architecture, so the release's package is for Apple silicon;
+- on Linux, writes a tarball and, when `appimagetool` and the pinned runtime are found (as for `cargo xtask appimage`), an AppImage with the folder under `usr/lib/textweaver-gui/`, its own update information, and a `.zsync` file.
+
+The names end in `-gui` so that no pattern for the terminal packages matches them. That matters most for the update information inside the terminal AppImages already released (`textweaver-*-linux-ARCH.AppImage.zsync`): a GUI name matching it would be offered as an update to the terminal reader. A test in `xtask/src/gui_dist.rs` checks every such pattern against every GUI name.
 
 ## The Linux packages
 
