@@ -4,15 +4,23 @@ A release is a git tag `vX.Y.Z[-pre]` and a GitHub release with these files:
 
 - the Windows package, `textweaver-VERSION-windows-x86_64.zip`;
 - the macOS package, `textweaver-VERSION-macos-universal.tar.gz`;
-- the Linux AppImage, `textweaver-VERSION-linux-x86_64.AppImage`, and its `.zsync` file for delta updates;
-- the Linux tarball, `textweaver-VERSION-linux-x86_64.tar.gz`, for systems without FUSE;
+- the Linux AppImages, `textweaver-VERSION-linux-x86_64.AppImage` and `textweaver-VERSION-linux-aarch64.AppImage`, each with its `.zsync` file for delta updates;
+- the Linux tarballs, `textweaver-VERSION-linux-x86_64.tar.gz` and `textweaver-VERSION-linux-aarch64.tar.gz`, for systems without FUSE;
 - `SHA256SUMS.txt`.
 
 The `Release` workflow (`.github/workflows/release.yml`) builds the packages, attests their build provenance, and writes the checksums. Releases before 1.0 are marked as pre-releases.
 
 ## Steps
 
-1. **Prepare.** Before you start, run the checks CI runs, locally: `scripts/dev-check.sh` on Linux or macOS (`--docker` for the full Linux set), or `scripts\dev-check.ps1` on Windows. They include the link check and the site data check. Then, on `main`, with a clean tree and CI green, try the release without changing anything:
+1. **Listen.** A person listens on real hardware before every release. Tests that fake the engine cannot hear a silent one, and tests never play audio. Go through [the listening checklist](#listening-checklist) below, then record it with the machine's date:
+
+   ```bash
+   cargo xtask release 0.1.0-alpha.3 --listened
+   ```
+
+   This writes today's date and the version on the "Last listening check" line of this guide, and changes nothing else. Commit it. The release in the next step stops unless that line names the version being released and is at most 14 days old.
+
+2. **Prepare.** Before you start, run the checks CI runs, locally: `scripts/dev-check.sh` on Linux or macOS (`--docker` for the full Linux set), or `scripts\dev-check.ps1` on Windows. They include the link check and the site data check. Then, on `main`, with a clean tree and CI green, try the release without changing anything:
 
    ```bash
    cargo xtask release 0.1.0-alpha.3 --dry-run
@@ -26,7 +34,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
    This:
 
-   - stops unless the tree is clean and on `main`;
+   - stops unless the tree is clean and on `main`, the listening check is recorded for this version, and the changelog is grouped by area (below);
    - sets `version` in `[workspace.package]` in the root `Cargo.toml` and runs `cargo update -w`;
    - turns `## [Unreleased]` in `CHANGELOG.md` into `## [0.1.0-alpha.3] - YYYY-MM-DD`, keeps an empty `[Unreleased]` above it, and adds the release link. The date comes from the machine's clock in local time, and the weekday is computed and printed so you can check it. It is never typed in;
    - updates the version examples in this guide, `docs/install.md`, and the workflows;
@@ -35,9 +43,11 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
    Before a release, also run `cargo xtask notices` (it needs `cargo install --locked cargo-about`) and commit `THIRD-PARTY-NOTICES.md` if it changed. CI fails when it is out of date.
 
-2. **Listen.** Before pushing, a person listens on real hardware. Tests that fake the engine cannot hear a silent one, and tests never play audio. See [the listening checklist](#listening-checklist) below.
+   **The changelog, grouped by area.** While a wave runs, each agent writes its `CHANGELOG.md` lines under a heading with its own name, such as `### W4c2: documents`. Before a release, move those lines under area headings (reading and speech, documents, writing, the GUI, languages, packages) and add a short summary at the top of the section. `cargo xtask release` names any agent heading still in `[Unreleased]` and stops.
 
-3. **Push.** Push the commit, then the tag:
+3. **Try the packages (optional).** Start the `Release` workflow from the Actions tab on `main`, with the tag left empty. That is a dry run: it builds and checks every package, keeps them as workflow artifacts, and creates no release, tag, or attestation.
+
+4. **Push.** Push the commit, then the tag:
 
    ```bash
    git push origin main
@@ -51,10 +61,10 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
    - **Create the release.** Checks that the version in `Cargo.toml` matches the tag, then creates the GitHub release as a pre-release, with notes taken from the matching `CHANGELOG.md` section.
    - **Windows package** (on `windows-latest`) and **macOS package** (on `macos-14`), in parallel. Each runs `cargo xtask dist`, checks the package (the binaries run, and the notices and licence files are inside), attests its build provenance, and uploads it to the release.
-   - **Linux AppImage and tarball** (on `ubuntu-latest`, in parallel with the others). It runs `cargo xtask appimage` in the `docker/appimage` image (Ubuntu 22.04), then `docker/appimage/test-distros.sh`, which runs both packages on Debian stable, Fedora, and Arch: `tw --version`, `tw backends` without and with espeak-ng, `tw text`, `--install` and `--uninstall`, and `install-linux.sh --release` with each package. Then it attests and uploads the AppImage, its `.zsync` file, and the tarball.
+   - **Linux AppImage and tarball, x86_64 and aarch64** (on `ubuntu-latest` and `ubuntu-22.04-arm`, in parallel with the others). Each runs `cargo xtask appimage` in the `docker/appimage` image (Ubuntu 22.04), then `docker/appimage/test-distros.sh`, which runs both packages on Debian stable and Fedora, and on Arch for x86_64 (Arch has no official arm64 image): `tw --version`, `tw backends` without and with espeak-ng, `tw text`, `--install` and `--uninstall`, and `install-linux.sh --release` with each package. Then it attests and uploads the AppImage, its `.zsync` file, and the tarball.
    - **SHA256SUMS.txt.** Once all the packages are uploaded, one job writes the checksums of every package on the release and attests the checksum file. The package jobs never write checksums, so they cannot race.
 
-4. **Check.** Read the release page. It should have every package and `SHA256SUMS.txt`, with the pre-release flag set. Anyone can check where a package was built:
+5. **Check.** Read the release page. It should have every package and `SHA256SUMS.txt`, with the pre-release flag set. Anyone can check where a package was built:
 
    ```bash
    gh attestation verify textweaver-0.1.0-alpha.3-windows-x86_64.zip --repo leavesofgrass/textweaver
@@ -62,7 +72,9 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
 ## Listening checklist
 
-Do this before each release, on the machine you use every day, with Eloquence, SAPI 5, and Piper (and DECtalk if it is installed).
+Do this before each release, on the machine you use every day, with Eloquence, SAPI 5, and Piper (and DECtalk if it is installed). Then record it with `cargo xtask release VERSION --listened`, which rewrites this line from the machine's clock:
+
+**Last listening check:** not yet recorded.
 
 1. **Write the samples.**
 
@@ -113,13 +125,13 @@ Write down what you heard in the release notes' testing section, including anyth
 
 `cargo xtask appimage` stages the Linux package as `cargo xtask dist` does, writes the tarball, and then wraps the same folder in an AppImage with `appimagetool`. The folder sits whole under `usr/lib/textweaver/` inside the AppImage, so the programs find the hosts and dictionaries beside them, as in the tarball. `scripts/linux/AppRun` is the entry point: it starts `textweaver`, or `tw` when started through a link named `tw` or with `--tw` first, and it offers `--install` and `--uninstall`. The AppImage carries `gh-releases-zsync` update information pointing at the newest release or pre-release.
 
-Build on an old glibc, so the packages run on older distributions. The `docker/appimage` image is Ubuntu 22.04 (glibc 2.35), with Rust from rustup and the AppImage tools. `docker/appimage/fetch-tools.sh` downloads appimagetool 1.9.1 and the type 2 runtime from their GitHub releases and checks each against the SHA-256 digest GitHub publishes for it; a changed file stops the build. To build locally on any system with Docker:
+Build on an old glibc, so the packages run on older distributions. The `docker/appimage` image is Ubuntu 22.04 (glibc 2.35), with Rust from rustup and the AppImage tools. `docker/appimage/fetch-tools.sh` downloads appimagetool 1.9.1 and the type 2 runtime 20251108, for x86_64 or aarch64, from their GitHub releases, and checks each against the SHA-256 digest GitHub publishes for it; a changed file stops the build. The image builds for the machine it runs on, so the aarch64 packages are built on an arm64 machine: the release workflow uses GitHub's `ubuntu-22.04-arm` runner. To build locally on any system with Docker:
 
 ```bash
 cargo xtask appimage --docker
 ```
 
-The packages land in `target/dist/`. To check them on Debian, Fedora, and Arch, as the release job does (it needs Docker and bash):
+The packages land in `target/dist/`. To check them on Debian, Fedora, and Arch, as the release job does (it needs Docker and bash; `ARCH=aarch64` checks the aarch64 packages, on an arm64 machine, with `debian:stable fedora:latest` after the folder):
 
 ```bash
 bash docker/appimage/test-distros.sh target/dist
@@ -155,7 +167,7 @@ To rerun the workflow for an existing tag, start `Release` from the Actions tab 
 
 - **macOS signing.** The macOS binaries are universal (built with `lipo`) and signed ad hoc (`codesign -s -`). They are not notarized. `docs/install.md` tells users how to get past Gatekeeper. Notarizing needs an Apple Developer ID. When there is one, add `codesign --options runtime` with that identity and `xcrun notarytool submit --wait` to the workflow.
 - **No engines are bundled.** No speech engines are in the packages: no Eloquence, no DECtalk, no voices. The packages hold only textweaver's own programs and hosts, and the CC0 IBMTTS dictionaries.
-- **Linux.** The AppImage and the tarball are x86_64 only for now; an aarch64 build needs an arm64 runner. Other systems build from source with `scripts/install-linux.sh`.
+- **Linux.** The AppImage and the tarball are built for x86_64 and aarch64. Other systems build from source with `scripts/install-linux.sh`.
 
 ## See also
 

@@ -222,16 +222,16 @@ textweaver's own words (messages, lists, help, and settings) are in English, Spa
 
 textweaver draws no braille of its own. A braille display shows what your screen reader shows: the line at the terminal's cursor, and new text as it appears. In screen-reader mode, the status line and the cursor are what reach the display; with `cursor = "status"`, the display rests on the latest message. Which screen reader and display combinations work well has not been tested yet.
 
-## The GUI preview
+## The GUI
 
-textweaver also has an early native window, the GUI. It is a preview, not yet part of the release packages, and a plain `cargo build` does not build it. It is built on wxDragon today; Wave 3 moves the GUI to Xilem (see [the Xilem research](research/xilem-gui.md)), so what follows describes the preview as it is now.
+textweaver also has a window, `textweaver-xilem`, written entirely in Rust with AccessKit for screen readers. It shares the documents, keys, settings, notes, and voices with the terminal reader; [the GUI guide](gui.md) covers it. It is built on its own, not by a plain `cargo build`, and it has no edit mode yet.
 
-- It uses native controls: the document is in a read-only text box whose caret follows the spoken word, so your screen reader reads it with its usual keys.
-- Self-voicing is off by default in the GUI: your screen reader speaks the announcements. Start it with `--self-voicing` to have textweaver speak them too, for use without a screen reader. Reading aloud works either way; `--no-speech` turns that off too.
-- Announcements are sent to your screen reader as UI Automation notifications on Windows, as accessibility announcements on macOS, and as ATK notifications on Linux.
-- The GUI reads `[accessibility] mode` from the same settings file. In hybrid and screen-reader modes textweaver leaves messages to your screen reader even when the GUI was started with `--self-voicing`. The GUI has not been tried in those modes yet.
+- The document is one control your screen reader reads as a document, and the browse keys of NVDA and JAWS (`h`, `t`, `k`, and the rest) work in it, as in the terminal.
+- Messages reach your screen reader through a live region by default. `--announce uia` (or `announce = "uia"` under `[gui]`) sends UI Automation notifications on Windows instead.
+- While reading, the spoken word gets a background color and the caret moves to it. `--select-spoken` selects the word instead, for a screen reader that follows the selection.
+- It reads `[accessibility] mode` from the same settings file, and Alt+Shift+A changes it, as in the terminal.
 
-On Windows, the notifications and the text box were checked through UI Automation; NVDA speaks such notifications, and JAWS has not been tried. VoiceOver has not been tried on a real Mac, and the Linux version has not been built. [ADR-0014](adr/0014-gui-toolkit.md) records what was checked.
+The owner checked the window with NVDA, JAWS, and a braille display on Windows in two sessions, with Eloquence reading and the words highlighted correctly. On Linux, CI checks what Orca would read through AT-SPI. VoiceOver has not been tried on a real Mac. [ADR-0027](adr/0027-xilem-gui.md) and [ADR-0028](adr/0028-xilem-gui-after-the-session.md) record what was checked.
 
 ## Checklist: try each mode with JAWS and NVDA
 

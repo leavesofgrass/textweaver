@@ -8,9 +8,14 @@
 #   linked statically.
 # - macOS: universal binaries (Apple silicon and Intel), signed ad hoc, not
 #   notarized.
-# - Linux: an x86_64 AppImage (with a .zsync file for delta updates) and a
-#   plain tarball for systems without FUSE, built on Ubuntu 22.04's glibc
-#   and checked on Debian, Fedora, and Arch before upload.
+# - Linux: an AppImage (with a .zsync file for delta updates) and a plain
+#   tarball for systems without FUSE, for x86_64 and for aarch64 (on the
+#   ubuntu-22.04-arm runner), built on Ubuntu 22.04's glibc and checked on
+#   Debian and Fedora (and Arch on x86_64) before upload.
+#
+# Dry run: start the workflow by hand with the tag left empty. It builds and
+# checks every package from the chosen branch and keeps them as workflow
+# artifacts, and creates no release, attestation, or tag.
 name: Release
 
 on:
@@ -19,8 +24,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing tag to build and upload (for example v0.1.0-alpha.3)'
-        required: true
+        description: 'Existing tag to build and upload (for example v0.1.0-alpha.3). Leave empty for a dry run: packages as artifacts, no release.'
+        required: false
+        default: ''
 
 # Never two runs for one tag at once; never cancel a release half way.
 concurrency:
@@ -37,6 +43,8 @@ env:
   CARGO_TERM_COLOR: always
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
   GH_TOKEN: ${{ github.token }}
+  # 'true' for a hand-started run with no tag: build and check only.
+  DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag == '' }}
 
 jobs:
   release:
@@ -46,13 +54,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
       - run: rustup toolchain install
+      - name: Dry run (no release is created)
+        if: env.DRY_RUN == 'true'
+        run: echo "Dry run on ${{ github.ref_name }}. The packages are built and checked, then kept as workflow artifacts. No release, tag, or attestation." | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Version matches the tag
+        if: env.DRY_RUN != 'true'
         run: |
           version=$(cargo metadata --locked --no-deps --format-version 1 | python3 -c 'import json,sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="textweaver-tui"))')
           test "v$version" = "$TAG" || { echo "Cargo.toml version $version does not match tag $TAG"; exit 1; }
       - name: Create the release (notes from CHANGELOG.md)
+        if: env.DRY_RUN != 'true'
         run: tools/release-upload.sh --no-sums "$TAG"
 
   windows:
@@ -63,7 +76,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
       - run: rustup toolchain install
       - run: rustup target add i686-pc-windows-msvc
       - name: Build the package
@@ -83,11 +96,19 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'tw --version failed' }
           "Windows package: $($zip.Name), $([math]::Round($zip.Length / 1MB, 1)) MB" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
       - uses: actions/attest-build-provenance@v4
+        if: env.DRY_RUN != 'true'
         with:
           subject-path: target/dist/textweaver-*-windows-x86_64.zip
       - name: Upload to the release
+        if: env.DRY_RUN != 'true'
         shell: bash
         run: tools/release-upload.sh --no-sums "$TAG" target/dist/textweaver-*-windows-x86_64.zip
+      - name: Keep the package (dry run)
+        if: env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dry-run-windows
+          path: target/dist/textweaver-*-windows-x86_64.zip
 
   macos:
     name: macOS package
@@ -97,7 +118,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
       - run: rustup toolchain install
       - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
       - name: Build the package
@@ -113,62 +134,104 @@ jobs:
             grep -q "/$want\$" <<< "$listing" || { echo "the package lacks $want"; exit 1; }
           done
       - uses: actions/attest-build-provenance@v4
+        if: env.DRY_RUN != 'true'
         with:
           subject-path: target/dist/textweaver-*-macos-universal.tar.gz
       - name: Upload to the release
+        if: env.DRY_RUN != 'true'
         run: tools/release-upload.sh --no-sums "$TAG" target/dist/textweaver-*-macos-universal.tar.gz
+      - name: Keep the package (dry run)
+        if: env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dry-run-macos
+          path: target/dist/textweaver-*-macos-universal.tar.gz
 
   linux:
-    name: Linux AppImage and tarball
+    name: Linux AppImage and tarball, ${{ matrix.arch }}
     needs: release
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+            distros: debian:stable fedora:latest archlinux:latest
+          # GitHub's arm64 runner (free for public repositories). Arch
+          # Linux publishes no official arm64 image, so aarch64 is checked
+          # on Debian and Fedora.
+          - arch: aarch64
+            runner: ubuntu-22.04-arm
+            distros: debian:stable fedora:latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
+      - name: Runner architecture
+        run: |
+          test "$(uname -m)" = "${{ matrix.arch }}" || { echo "Fail: the runner is $(uname -m), not ${{ matrix.arch }}"; exit 1; }
       # Built in docker/appimage (Ubuntu 22.04, glibc 2.35), so the
       # packages run on older distributions too; the image downloads
-      # appimagetool and the AppImage runtime from their GitHub releases
-      # and checks their SHA-256 (docker/appimage/fetch-tools.sh).
+      # appimagetool and the AppImage runtime for this architecture from
+      # their GitHub releases and checks their SHA-256
+      # (docker/appimage/fetch-tools.sh).
       - name: Build the AppImage and the tarball
         run: |
           docker build -t textweaver-appimage docker/appimage
           docker run --rm -v "$PWD:/work" -w /work --user "$(id -u):$(id -g)" \
             -e HOME=/tmp -e CARGO_TARGET_DIR=/work/target/linux \
             textweaver-appimage cargo xtask appimage --out /work/target/dist
-      # Debian stable, Fedora, and Arch: tw --version, tw backends (espeak
-      # unavailable without libespeak-ng, available with it), tw text,
-      # --install and --uninstall, the tarball, and install-linux.sh
-      # --release with each package.
-      - name: Check the packages on Debian, Fedora, and Arch
-        run: bash docker/appimage/test-distros.sh target/dist
+      # tw --version, tw backends (espeak unavailable without libespeak-ng,
+      # available with it), tw text, --install and --uninstall, the
+      # tarball, and install-linux.sh --release with each package.
+      - name: Check the packages on ${{ matrix.distros }}
+        env:
+          DISTROS: ${{ matrix.distros }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          # One image per word.
+          # shellcheck disable=SC2086
+          bash docker/appimage/test-distros.sh target/dist $DISTROS
       - name: Package summary
         run: |
-          for f in target/dist/textweaver-*-linux-x86_64.*; do
+          for f in target/dist/textweaver-*-linux-${{ matrix.arch }}.*; do
             echo "Linux package: $(basename "$f"), $(du -m "$f" | cut -f1) MB" | tee -a "$GITHUB_STEP_SUMMARY"
           done
       - uses: actions/attest-build-provenance@v4
+        if: env.DRY_RUN != 'true'
         with:
           subject-path: |
-            target/dist/textweaver-*-linux-x86_64.AppImage
-            target/dist/textweaver-*-linux-x86_64.tar.gz
+            target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage
+            target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz
       - name: Upload to the release
+        if: env.DRY_RUN != 'true'
         run: |
           tools/release-upload.sh --no-sums "$TAG" \
-            target/dist/textweaver-*-linux-x86_64.AppImage \
-            target/dist/textweaver-*-linux-x86_64.AppImage.zsync \
-            target/dist/textweaver-*-linux-x86_64.tar.gz
+            target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage \
+            target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage.zsync \
+            target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz
+      - name: Keep the packages (dry run)
+        if: env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dry-run-linux-${{ matrix.arch }}
+          path: |
+            target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage
+            target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz
 
   checksums:
     name: SHA256SUMS.txt
     needs: [windows, macos, linux]
+    # Not in a dry run: there is no release to sum.
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.tag != ''
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.DRY_RUN != 'true' && env.TAG || '' }}
       # With no files, the script only rebuilds the checksums of every
       # package on the release, once, after all the packages are there.
       - name: Write the checksums

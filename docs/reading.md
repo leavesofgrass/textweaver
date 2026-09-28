@@ -47,9 +47,14 @@ The reader opens these formats itself:
 - Word: `.docx`, `.docm`, with comments as notes.
 - RTF: `.rtf`.
 - OpenDocument text: `.odt`, `.ott`, `.fodt`, with comments as notes.
-- PDF: `.pdf`.
+- PDF: `.pdf`, and scanned PDFs through text recognition (below).
+- Pictures of text: `.png`, `.jpg`, `.jpeg`, through text recognition.
+- DAISY 3 books and DTBook: `.opf`, `.xml`, `.dtbook`, and a DAISY book in a zip.
+- PowerPoint: `.pptx`, `.pptm`, `.ppsx`, `.potx`, with the speaker notes.
+- Spreadsheets, as tables: `.csv`, `.tsv`, `.tab`, `.ods`, `.xlsx`, `.xlsm`, `.xlsb`.
+- Archives: `.zip`, `.tar`, `.tgz`, `.gz`, `.7z`. Opening one lists the files inside that textweaver can read; `course.zip!week1/notes.md` opens one directly.
 
-A file with any other extension is read as plain text. A file that is not text at all is refused: a program, an image, an audio file, or an old Word `.doc`. The message says what the file looks like, for example: "report.bin is not a text file; it looks like a program. textweaver cannot read it as text."
+The [converting guide](converting.md#formats-textweaver-reads) says what is read from each format. A file with any other extension is read as plain text. A file that is not text at all is refused: a program, an audio file, or an old Word `.doc`. The message says what the file looks like, for example: "report.bin is not a text file; it looks like a program. textweaver cannot read it as text."
 
 The reader does not use Pandoc. To read a LaTeX, reStructuredText, or other such file, convert it to Markdown first, then open the Markdown. `tw convert` uses Pandoc for these formats, so Pandoc must be installed:
 
@@ -59,7 +64,7 @@ tw convert essay.rst --to md
 
 The [converting guide](converting.md) explains `tw convert`.
 
-A PDF must have a text layer. A scanned PDF is a picture of the pages, and textweaver has no text recognition (OCR) yet; it is planned for Wave 3. Such a PDF reads as one sentence: "This PDF has no text layer. It is probably a scanned image, so its text must be recognized (OCR) before it can be read aloud."
+A scanned PDF is a picture of the pages. textweaver recognizes its text (OCR) and reads it like any other PDF, and says that it did, since recognized text can contain mistakes. English needs a one-time download, `tw ocr download`, which asks first; other languages need Tesseract. Until an engine can run, such a PDF reads as one sentence that begins "This PDF has no text layer" and says what is missing. See [Scanned pages](converting.md#scanned-pages-ocr).
 
 ## What the screen shows
 

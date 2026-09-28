@@ -185,7 +185,7 @@ The [themes guide](themes.md) explains themes and how to make your own.
 
 ### A PDF reads in the wrong order, or says it has no text
 
-1. A scanned PDF is a picture of the pages. It reads as one sentence: "This PDF has no text layer. It is probably a scanned image, so its text must be recognized (OCR) before it can be read aloud." textweaver has no text recognition yet; it is planned for Wave 3 (see the [roadmap](roadmap.md)). Run the PDF through an OCR program first, then open the result.
+1. A scanned PDF is a picture of the pages, and textweaver recognizes its text (OCR). When it reads as one sentence that begins "This PDF has no text layer", no recognition engine could run, and the sentence says why. Run `tw ocr status` to see which engines are ready, and `tw ocr download` for the English models (it asks first); other languages need Tesseract. See [Scanned pages](converting.md#scanned-pages-ocr).
 2. textweaver rebuilds each page's reading order: columns left to right, and each column top to bottom, without running heads and page numbers. Unusual layouts can confuse it, such as three-column magazines, tables without aligned columns, or lists whose bullets are pictures. Tagged PDFs, such as those saved from Word with accessibility tags, read most reliably.
 3. To look at the text textweaver got, print it:
 
@@ -197,7 +197,7 @@ The [themes guide](themes.md) explains themes and how to make your own.
 
 ### "is not a text file"
 
-textweaver refuses a file that is not text, such as a program, an image, an audio file, or an old Word `.doc`. The message says what the file looks like. RTF and OpenDocument text files open directly.
+textweaver refuses a file that is not text, such as a program, an audio file, or an old Word `.doc`. The message says what the file looks like. RTF and OpenDocument text files open directly, and PNG and JPEG pictures are read by recognizing their text.
 
 1. Check that you opened the file you meant.
 2. For a LaTeX, reStructuredText, or similar file, convert it to Markdown, then open the Markdown. This needs Pandoc:

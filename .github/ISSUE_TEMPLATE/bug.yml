@@ -54,7 +54,7 @@ body:
     id: terminal
     attributes:
       label: Terminal
-      description: For the terminal reader. Or "GUI" for textweaver-gui.
+      description: For the terminal reader. Or "GUI" for the window, textweaver-xilem.
       placeholder: Windows Terminal 1.23, Terminal.app, GNOME Terminal
   - type: input
     id: engine
