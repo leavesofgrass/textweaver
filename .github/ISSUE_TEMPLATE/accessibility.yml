@@ -36,7 +36,7 @@ body:
       options:
         - The terminal reader (textweaver)
         - The command line (tw)
-        - The GUI (textweaver-gui)
+        - The GUI (textweaver-xilem)
         - Exported files (PDF, EPUB, DOCX, HTML, braille)
         - The documentation
     validations:

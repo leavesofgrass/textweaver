@@ -27,7 +27,7 @@ body:
       options:
         - The terminal reader (textweaver)
         - The command line (tw)
-        - The GUI (textweaver-gui)
+        - The GUI (textweaver-xilem)
         - Speech engines and voices
         - File formats and export
   - type: input

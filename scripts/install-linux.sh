@@ -343,7 +343,7 @@ detect_pm() {
 # Build dependencies for each package manager: a C toolchain, pkg-config,
 # ALSA headers (audio output), espeak-ng with its headers,
 # speech-dispatcher with its headers, and git and curl. No clang: nothing
-# in the terminal build uses bindgen (only the GUI's wxdragon-sys does).
+# in the terminal build uses bindgen.
 packages_for() {
   case $1 in
     apt)
