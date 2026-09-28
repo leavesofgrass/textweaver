@@ -265,6 +265,9 @@ pub struct Gui {
     /// The next Open prompt is the typed one (the Open Path key), not the
     /// system's file chooser.
     typed_open: bool,
+    /// Whether single-key shortcuts were on when the buttons' shortcuts
+    /// were last shown (F9 changes which key each button names).
+    char_keys: Option<bool>,
     closed: bool,
     /// How announcements reach the screen reader.
     announce: AnnounceMode,
@@ -320,22 +323,32 @@ fn styled_button(
     ids: &mut HashMap<WidgetId, ActionId>,
     text_color: Option<masonry::peniko::Color>,
 ) -> NewWidget<ActionButton> {
-    let shortcut = app
-        .map(|a| {
-            a.keymap()
-                .chords_in_mode(action, textweaver_app::keymap::Layer::Browse)
-        })
-        .and_then(|c| c.first().map(keys::shortcut_text))
-        .unwrap_or_default();
+    let (written, spoken) = app.map(|a| shortcut_for(a, action)).unwrap_or_default();
+    let help = app.map_or_else(
+        || action.help().to_owned(),
+        |a| textweaver_app::action_help(&a.catalog(), action),
+    );
     let mut b = ActionButton::new(text)
-        .with_shortcut(shortcut)
-        .with_description(action.help());
+        .with_shortcut(written, spoken)
+        .with_description(help);
     if let Some(c) = text_color {
         b = b.with_text_color(c);
     }
     let w = NewWidget::new(b);
     ids.insert(w.id(), action);
     w
+}
+
+/// A control's shortcut for `action`, from the keymap (`named_key`): as
+/// written for the screen ("Ctrl+O") and as spoken for its name ("Control
+/// O"). The main key, which is the single key while single-key shortcuts
+/// are on ("Space" for Play) and a chord while they are off.
+pub fn shortcut_for(app: &App, action: ActionId) -> (String, String) {
+    let named = textweaver_app::named_key_in(&app.catalog(), app.keymap(), action);
+    (
+        textweaver_app::written_text(&named).into_owned(),
+        textweaver_app::spoken_text(&named).into_owned(),
+    )
 }
 
 fn panel(p: &Palette, pad_v: f64, pad_h: f64) -> PropertySet {
@@ -525,9 +538,14 @@ pub fn settings_dialog(
     )
     .with_tag(FORM);
     let form_id = grid.id();
+    // The dialog's own key (not a keymap command): Escape closes it.
+    let escape = textweaver_app::keymap::KeyChord::new(
+        textweaver_app::keymap::Key::Escape,
+        textweaver_app::keymap::Modifiers::empty(),
+    );
     let close = NewWidget::new(
         ActionButton::new("Close")
-            .with_shortcut("Escape")
+            .with_shortcut(escape.to_string(), escape.spoken())
             .with_description("Close the settings. Every change is already saved."),
     );
     let close_id = close.id();
@@ -833,6 +851,19 @@ impl Gui {
             }
             let root = ctx.render_root(self.window_id);
             root.edit_widget_with_tag(ANNOUNCER, |mut a| Announcer::say(&mut a, messages));
+        }
+        // Single-key shortcuts turned on or off: each button names its key.
+        let char_keys = self.app.keymap().character_keys();
+        if self.char_keys != Some(char_keys) {
+            self.char_keys = Some(char_keys);
+            let root = ctx.render_root(self.window_id);
+            for (id, action) in &self.buttons.by_id {
+                let (written, spoken) = shortcut_for(&self.app, *action);
+                root.edit_widget(*id, |mut w| {
+                    let mut b = w.downcast::<ActionButton>();
+                    ActionButton::set_shortcut(&mut b, written, spoken);
+                });
+            }
         }
         // The theme changed (a key, the palette, or the settings).
         if !self.fixed_theme && self.app.current_theme().name() != self.palette.name {
@@ -1943,6 +1974,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         ticker: Some(proxy.clone()),
         proxy,
         typed_open: false,
+        char_keys: None,
         fixed_theme: opts.theme.is_some(),
         settings_list: experiments.settings_list,
         announce,

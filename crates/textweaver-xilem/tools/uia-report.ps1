@@ -26,7 +26,7 @@
     message nodes with their live setting off; the report subscribes to
     Notification events, and checks that each one arrived and that no
     message node is live.
-  - A long list: the Fonts button opens the font family list (every
+  - A long list: the Font button opens the font family list (every
     installed family, at least 40 on Windows). Every option must be in the
     tree, not only those in view; the report scrolls the last one into view
     with ScrollItemPattern and checks the whole list again.
@@ -461,12 +461,37 @@ public static class TwXUia
         ((TogglePattern)e.GetCurrentPattern(TogglePattern.Pattern)).Toggle();
     }
 
+    /// Presses the button named `name`, or `name` followed by its key
+    /// ("Play, Space": each button's name ends with its shortcut).
     public static bool Press(AutomationElement root, string name)
     {
         var b = Find(root, ControlType.Button, name);
+        if (b == null)
+        {
+            var cond = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button);
+            foreach (AutomationElement e in root.FindAll(TreeScope.Descendants, cond))
+            {
+                if (e.Current.Name.StartsWith(name + ", ", StringComparison.Ordinal)) { b = e; break; }
+            }
+        }
         if (b == null) return false;
         ((InvokePattern)b.GetCurrentPattern(InvokePattern.Pattern)).Invoke();
         return true;
+    }
+
+    /// Buttons whose name does not say their key ("Open, Control O").
+    public static List<string> WithoutKeys(AutomationElement root)
+    {
+        var missing = new List<string>();
+        var cond = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button);
+        foreach (AutomationElement e in root.FindAll(TreeScope.Descendants, cond))
+        {
+            var n = e.Current.Name;
+            // The window frame's own buttons are the system's.
+            if (n == "Minimize" || n == "Maximize" || n == "Restore" || n == "Close" || n == "System") continue;
+            if (!n.Contains(", ")) missing.Add(n);
+        }
+        return missing;
     }
 
     /// Caret offset (UTF-16 units), the selected text, the word at the
@@ -657,6 +682,15 @@ try {
     Say "### Controls (UIA control view; the document's text runs are left out)"
     Say ""
     Fence ([TwXUia]::Tree($window))
+    # Every button says its key with its name ("Open, Control O").
+    $noKeys = [TwXUia]::WithoutKeys($window)
+    if ($noKeys.Count -gt 0) {
+        Say "- Buttons that do not name their key: $($noKeys -join '; ')"
+        $failures.Add('a button does not name its key')
+    } else {
+        Say "- Every button names its key."
+    }
+    Say ""
 
     Say "### Document"
     Say ""
@@ -844,19 +878,19 @@ try {
     # Last, because a list dialog has no Close button (Escape closes it,
     # and the report types no keys); the window is closed with it open.
     if (-not $WindowEdge) {
-        Say "### A long list (Fonts button; the last option scrolled into view with ScrollItemPattern)"
+        Say "### A long list (Font button; the last option scrolled into view with ScrollItemPattern)"
         Say ""
     }
     if ($WindowEdge) {
-    } elseif (-not [TwXUia]::PressStartingWith($window, 'Fonts')) {
-        Say "No Fonts button."
-        $failures.Add('no Fonts button')
+    } elseif (-not [TwXUia]::PressStartingWith($window, 'Font')) {
+        Say "No Font button."
+        $failures.Add('no Font button')
     } else {
         Start-Sleep -Milliseconds 800
         $list = [TwXUia]::Find($window, [System.Windows.Automation.ControlType]::List, $null)
         if (-not $list) {
             Say "No list opened."
-            $failures.Add('the Fonts button opened no list')
+            $failures.Add('the Font button opened no list')
         } else {
             Say "- List: $([TwXUia]::Describe($list))"
             $opts = [TwXUia]::Options($list)

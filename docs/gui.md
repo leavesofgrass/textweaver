@@ -25,17 +25,36 @@ Useful options:
 
 `textweaver-xilem --help` lists every option.
 
+On Windows the window opens with no console window beside it. Started from a terminal, `--help`, `--version`, and errors still appear in that terminal. PowerShell does not wait for a windowed program, so its output may come after the next prompt; `textweaver-xilem --help | Out-Host` waits for it. Started from a shortcut or File Explorer, a startup error is shown in a message box, and `--log-file PATH` keeps it in a file too.
+
 ## What is in the window
 
 From top to bottom:
 
-1. **The header,** a banner with the document's title and four buttons: Open, Fonts, Settings, and Commands. Each button says its key.
+1. **The header,** a banner with the document's title and four buttons: Open, Font, Settings, and Commands.
 2. **The document,** one control your screen reader reads as a document. Arrow keys, Home, End, Page Up, and Page Down move the caret, with Shift to select and Ctrl for words, paragraphs, and the document's ends. Ctrl+C copies the selection. Every other key goes to textweaver's keymap, so the browse keys of NVDA and JAWS work here too: `h` for the next heading, `t` for the next table, `k` for the next link, and so on.
 3. **The RSVP strip,** only while RSVP is on (Alt+Shift+R). It shows one word at a time under the document, so it never covers the text or the caret.
 4. **The toolbar,** named "Reading": Play or Pause, Stop, Previous sentence, Next sentence, Slower, and Faster.
 5. **The status bar:** the last message, then what the terminal's title line shows: the reading state, "line 3 of 40, 7%", the accessibility mode, the rate, and the speech engine.
 
-Tab and Shift+Tab move between the document and the buttons. Dialogs (Open, settings, lists, the command palette) open inside the window and take the focus; Escape closes them and puts you back in the document.
+Every button says its key with its name, for example "Open, Control O", and shows it written on screen, "Open… (Ctrl+O)". The key comes from the keymap, so a key you change in `keymap.toml` shows here too. While single-key shortcuts are on, a button names its single key ("Play, Space"); press F9 to turn them off, and the buttons name their chords instead ("Play, Control Shift Space").
+
+Tab and Shift+Tab move between the document and the buttons. Dialogs (settings, lists, the command palette) open inside the window and take the focus; Escape closes them and puts you back in the document.
+
+## Opening a document
+
+Open (Ctrl+O) shows your system's own file chooser: on Windows the standard Open dialog, which NVDA and JAWS know. It lists the documents textweaver reads; choose "All files" in the file type list to see everything. It starts in the folder of the document you have open. When you choose a file, the dialog closes, textweaver says "Opened" and the title, and the focus is back in the document. Escape cancels.
+
+To type a path instead, press Ctrl+Shift+G (Open Path): a one-line prompt where Tab completes the path and Up and Down recall earlier ones. If the system's file chooser cannot open (on Linux it needs the XDG desktop portal), textweaver says so and shows this prompt instead.
+
+## Text size and font
+
+- **Ctrl+Plus** (Ctrl+=, or the plus key on the number pad): larger text.
+- **Ctrl+Minus**: smaller text.
+- **Ctrl+0**: back to the standard size, 14 points.
+- **Ctrl+D**, or the Font button: the font list. The fonts that come with textweaver are first, marked "built in": Atkinson Hyperlegible Next, Atkinson Hyperlegible Mono, and OpenDyslexic. Then your installed fonts. Enter uses the font at once.
+
+Each change is said, for example "Text size 18 points." or "Font: OpenDyslexic.", and saved in `[reading_aids.font]` (see [Settings](settings.md)). The size steps one point at a time around the usual sizes and more quickly above 16 points, from 8 up to 72 points. The Settings dialog changes the same settings, under "Reading aids".
 
 ## Keys
 
@@ -44,7 +63,9 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **Space** (browse) or **Ctrl+Shift+Space**: play or pause.
 - **Escape**: stop.
 - **Alt+Down** and **Alt+Up**: next and previous sentence.
-- **Ctrl+O**: open a document.
+- **Ctrl+O**: open a document with the system's file chooser. **Ctrl+Shift+G**: type its path instead.
+- **Ctrl+Plus**, **Ctrl+Minus**, **Ctrl+0**: text size. **Ctrl+D**: the font list.
+- **F11** and **Shift+F11**: faster and slower (or **+** and **-** in browse). In the window, Ctrl+= and Ctrl+- size the text instead of the rate.
 - **Ctrl+,**: settings.
 - **F2**: the command palette, every command by name.
 - **F1**: help. In a list, F1 repeats the list's introduction.
@@ -101,4 +122,4 @@ Settings (Ctrl+,) opens a dialog: the sections on the left, the chosen section's
 - [Keyboard reference](keyboard.md)
 - [Reading aids](reading-aids.md)
 - [Using textweaver with a screen reader](screen-readers.md)
-- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md) and [ADR-0028: the GUI after the first screen reader session](adr/0028-xilem-gui-after-the-session.md)
+- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md), [ADR-0028: the GUI after the first screen reader session](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033: the GUI after the second session, and edit mode](adr/0033-gui-session-2-and-edit-mode.md)

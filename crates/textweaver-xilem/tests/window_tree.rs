@@ -65,14 +65,21 @@ fn every_control_has_a_role_and_a_name() {
     let h = harness(&app);
     let buttons = names_of(&h, Role::Button);
     for b in [
-        "Play",
-        "Stop",
-        "Next sentence",
-        "Previous sentence",
-        "Open…",
-        "Commands…",
+        "Play, ",
+        "Stop, ",
+        "Next sentence, ",
+        "Previous sentence, ",
+        "Open, ",
+        "Font, ",
+        "Settings, ",
+        "Commands, ",
+        "Slower, ",
+        "Faster, ",
     ] {
-        assert!(buttons.contains(&b.to_owned()), "{b} in {buttons:?}");
+        assert!(
+            buttons.iter().any(|n| n.starts_with(b)),
+            "{b} in {buttons:?}"
+        );
     }
     assert_eq!(names_of(&h, Role::Toolbar), vec!["Reading".to_owned()]);
     assert_eq!(names_of(&h, Role::Document), vec!["Document".to_owned()]);
@@ -81,6 +88,47 @@ fn every_control_has_a_role_and_a_name() {
     // The terminal's title line parts, from the app (`App::title_parts`).
     assert!(status[0].contains("line 1 of"), "{status:?}");
     assert!(status[0].contains("wpm"), "{status:?}");
+}
+
+/// Every button names its key from the keymap, spoken in its name and
+/// written on screen (the owner's session 2): "Open, Control O" and
+/// "Open… (Ctrl+O)".
+#[test]
+fn every_button_names_its_key_from_the_keymap() {
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::widgets::ActionButton;
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    let h = harness(&app);
+    let buttons = names_of(&h, Role::Button);
+    for (name, action) in [
+        ("Open", ActionId::Open),
+        ("Font", ActionId::ChooseFont),
+        ("Settings", ActionId::Settings),
+        ("Commands", ActionId::CommandPalette),
+        ("Play", ActionId::PlayPause),
+        ("Stop", ActionId::Stop),
+        ("Previous sentence", ActionId::PreviousSentence),
+        ("Next sentence", ActionId::NextSentence),
+        ("Slower", ActionId::RateDown),
+        ("Faster", ActionId::RateUp),
+    ] {
+        let (written, spoken) = gui::shortcut_for(&app, action);
+        assert!(!written.is_empty() && !spoken.is_empty(), "{action:?}");
+        // Never "the command palette": each has a key of its own.
+        assert!(!app.keymap().chords_for(action).is_empty(), "{action:?}");
+        let want = format!("{name}, {spoken}");
+        assert!(buttons.contains(&want), "{want} in {buttons:?}");
+    }
+    // Spoken as words, not symbols, for speech and the Braille display.
+    assert!(
+        buttons.contains(&"Open, Control O".to_owned()),
+        "{buttons:?}"
+    );
+    // On screen, the written form.
+    let b = ActionButton::new("Open…").with_shortcut("Ctrl+O", "Control O");
+    assert_eq!(b.shown_text(), "Open… (Ctrl+O)");
+    assert_eq!(b.name(), "Open, Control O");
 }
 
 #[test]
