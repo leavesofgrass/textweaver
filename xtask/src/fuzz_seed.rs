@@ -221,10 +221,9 @@ mod tests {
     /// left out of the nightly run.
     #[test]
     fn the_nightly_workflow_fuzzes_every_target() {
-        let workflow = std::fs::read_to_string(
-            root().join(".github").join("workflows").join("nightly.yml"),
-        )
-        .expect(".github/workflows/nightly.yml exists");
+        let workflow =
+            std::fs::read_to_string(root().join(".github").join("workflows").join("nightly.yml"))
+                .expect(".github/workflows/nightly.yml exists");
         let line = workflow
             .lines()
             .map(str::trim)
