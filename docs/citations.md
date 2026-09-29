@@ -371,7 +371,7 @@ Full words work too, such as `page`, `chapter`, and `section`. Braces keep an un
 
 These are not citations:
 
-- An email address such as `jon@example.com`.
+- An email address such as `ada@example.com`.
 - An escaped bracket: `\[@doe2020]`.
 - A link: `[@doe2020](https://example.com)`.
 

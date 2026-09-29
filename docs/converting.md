@@ -19,7 +19,7 @@ The formats you can ask for with `--to`:
 - `txt`: plain text, the same text textweaver reads aloud.
 - `epub`: an EPUB 3 book with a table of contents, real headings, and accessibility metadata.
 - `docx`: a Word document with Word's own heading styles, numbered lists, and tables whose header row repeats.
-- `brf`: a braille file for a braille display or embosser, in uncontracted (grade 1) Unified English Braille, 40 cells by 25 lines. Contracted (grade 2) braille needs a textweaver built with the `liblouis` feature and liblouis installed; without them, the file is grade 1 and the summary says so.
+- `brf`: a braille file for a braille display or embosser, in uncontracted (grade 1) Unified English Braille, 40 cells by 25 lines. Contracted (grade 2) braille needs a textweaver built with the `liblouis` feature and liblouis installed; without them, the file is grade 1 and the summary says so. Math is in Nemeth braille, or UEB mathematics with `--math-code ueb`, in a build with MathCAT (see [Math in braille files](math.md#math-in-braille-files)).
 - `pdf`: a tagged PDF that screen readers can move through by heading, list, and table.
 
 Some outputs come with warnings, for example "The image cat.png was not found, so its description was written instead." Each warning is read out with its file name, and the summary says how many files had warnings.
@@ -90,7 +90,7 @@ The other outputs never print the dollar signs and LaTeX commands either:
 - EPUB: MathML, as in a web page. Reading apps draw it, and screen readers read it and let you explore it.
 - Word: Word's own equations. Word draws them, and Narrator, NVDA, and JAWS can read them.
 - PDF: the formula in print form, such as πr² or (a + b)/2, marked as a formula whose description is how it is read aloud, for example "pi r squared".
-- Braille: the formula as it is read aloud, "pi r squared", which grade 1 braille spells out.
+- Braille: math braille, Nemeth by default or UEB mathematics with `--math-code ueb`, in a build with MathCAT; otherwise the formula as it is read aloud, "pi r squared". See [Math in braille files](math.md#math-in-braille-files).
 
 [Math](math.md) explains how math is read aloud and how to write it.
 
@@ -136,6 +136,60 @@ HTML output is a complete web page made from a template. Three are built in; cho
 Use `--no-toc` to leave out the table of contents.
 
 You can write your own templates. They are HTML files with MiniJinja placeholders such as `{{ title }}` and `{{ content }}`. Put them in a folder and pass `--templates FOLDER --template NAME`, where the name is the file name without its extension, or give a file directly with `--template my-page.html`. Your template can start with `{% extends "default" %}` to reuse the built-in page. The placeholders are listed in the rustdoc of `textweaver_render::template`.
+
+## Publishing templates
+
+```bash
+tw convert essay.md --to docx --template apa
+```
+
+A publishing template gives an EPUB book, a Word document, or a PDF the look a kind of document needs. Choose one with `--template`:
+
+- `apa`: an APA 7 student paper. A title page, double spacing, paragraphs with a first-line indent, APA's heading levels, the page number at the top right of every page, and references with hanging indents.
+- `ama`: an AMA 11 manuscript. A title page with the word count, double spacing, and page numbers.
+- `large-print`: 18-point sans-serif text, generous spacing, and bold rather than italic for emphasis.
+- `dyslexia-friendly`: sans-serif text a little larger than usual, wider spacing between letters and lines, bold rather than italic or underline, and a cream page color in Word and EPUB.
+- `high-contrast`: in EPUB, white text on black with yellow, underlined links; in Word and PDF, heavy black text on white, because a page color does not print.
+- `manuscript`: standard manuscript format. A title page with a rounded word count, double spacing, a running head with your surname, the short title, and the page number, and a centered number sign for each scene break.
+
+A template changes how the document looks, never how it is read. Headings stay real headings at their levels, lists stay lists, tables keep their header rows, and images keep their descriptions, so a screen reader moves through a templated paper exactly as through any other. The layout options in the next section still apply on top of a template: `--template apa --line-spacing 1.5` keeps the APA look with one-and-a-half spacing.
+
+For HTML, `--template` still names a page template (see [Templates](#templates)); a publishing template name there uses the default page and says so. Braille keeps its own layout.
+
+### The title page
+
+The APA, AMA, and manuscript templates start with a title page made from the document's front matter:
+
+```yaml
+---
+title: Listening as a Study Skill
+author: Ada Example
+affiliation: Department of Education, Example State University
+course: EDU 501, Learning and Assistive Technology
+instructor: Dr. Grace Placeholder
+date: October 5, 2026
+---
+```
+
+- APA uses the title, author, affiliation, course, instructor, and date, in that order, each on its own line.
+- AMA uses the title, author, and affiliation, then `corresponding:` (the corresponding author) if you give one, and the word count of the running text. The count leaves out headings, tables, footnotes, and the abstract and reference sections.
+- Manuscript uses the title, "by" and the author, and the word count to the nearest hundred.
+
+`institution` or `university` can stand for `affiliation`, `professor` for `instructor`, and `due-date` for `date`. A field you leave out is left off the page. textweaver never guesses the date; `--date "October 5, 2026"` gives one on the command line.
+
+When a paper's only level 1 heading is its title, as in a Markdown file that starts with `# Title`, APA's first heading look goes to the level 2 headings, so your sections look like APA level 1 headings while a screen reader still hears the title as level 1 and each section as level 2.
+
+### Footnotes in Word
+
+Footnotes in a Word document are real Word footnotes, whatever the template. Word numbers them and prints them at the foot of the page; JAWS and NVDA announce the reference as a footnote and can read its text, and Word's footnote pane lists them all. A footnote referenced twice becomes one footnote, with a cross-reference to its number at the second place. A footnote nothing refers to stays where it is in the text. textweaver reads its own Word documents back with the footnotes in place.
+
+### The EPUB cover
+
+Every template adds a cover to an EPUB book: an image with the title and author in the template's colors. Its description is "Cover: " followed by the title and author, the book lists it as the cover in its landmarks, and it is the first thing in the reading order. The book's accessibility metadata says it has an image with a text description.
+
+### Print page numbers in PDF
+
+When a document has print page numbers, as a DAISY book, an EPUB with a page list, or a scanned PDF does, each page of the PDF is labelled with the print page its first line belongs to, the way a printed book numbers its pages. A PDF reader's "go to page" then takes the print page number and opens the page where that print page is under way, and "Page 3 of 20, print page 42" appears at the foot of the page. A title page and table of contents before the first print page are numbered i, ii, and so on.
 
 ## PDF and EPUB layout
 
@@ -184,6 +238,8 @@ textweaver reads these formats itself:
 - Markdown, HTML, plain text, EPUB, Word (DOCX), and PDF.
 - RTF (Rich Text Format): headings, lists, tables, footnotes, links, pictures' descriptions, and text in older code pages such as Cyrillic and Japanese.
 - OpenDocument text (ODT, OTT, and flat FODT), as LibreOffice and Google Docs save it: headings, numbered and bulleted lists, tables, footnotes, links, and pictures' descriptions.
+- LaTeX (TEX, LATEX, and LTX): sections, lists, tables, math, references, citations, and footnotes, and the files it includes from its own folder. See [LaTeX](#latex).
+- Email (EML) and web pages saved from a browser as one file (MHTML and MHT). See [Email and web archives](#email-and-web-archives).
 - Scanned PDFs and pictures (PNG, JPEG), by recognizing their text. See [Scanned pages](#scanned-pages-ocr).
 - DAISY 3 books and DTBook files, including Bookshare zips.
 - PowerPoint (PPTX): slides in order, each with its speaker notes.
@@ -191,9 +247,41 @@ textweaver reads these formats itself:
 - Archives (ZIP, TAR, TAR.GZ, and 7Z): opening one lists the files inside that textweaver can read, each a link. To open a file inside an archive directly, write its name after a `!`, as in `tw text course.zip!week1/notes.md`.
 - Web pages: `tw open https://example.org/page` and `tw text https://...` fetch the page and read it. A PDF or other file at the address is saved in the cache and opened from there.
 
-For other formats, such as reStructuredText, Org, and LaTeX, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself, and RTF and OpenDocument text no longer need it. `--no-pandoc` turns it off.
+For other formats, such as reStructuredText and Org, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself, and RTF, OpenDocument text, and LaTeX no longer need it. `--no-pandoc` turns it off.
 
-Equations in a Word document are read as math. textweaver turns them into LaTeX between dollar signs, as in Markdown, so they are spoken as formulas.
+Equations in a Word document are read as math. textweaver turns them into LaTeX between dollar signs, as in Markdown, so they are spoken as formulas. Math written in MathML, in a web page, a saved web page, or an EPUB book, is read as math the same way.
+
+### LaTeX
+
+```bash
+tw text "Chapter 3.tex"
+```
+
+textweaver reads LaTeX itself, the way course notes and papers use it, without Pandoc or a TeX installation:
+
+- Sections are headings, numbered as LaTeX numbers them, such as "2.1 Methods", so you can move by heading. The title, author, and date come from `\maketitle`, and the abstract is a section of its own.
+- Numbered, bulleted, and description lists; tables, with the first row as the header when a rule follows it; and captions, read as "Table 1: Cell counts". A figure's caption describes its picture.
+- Math between dollar signs, `\[ \]`, and in the `equation`, `align`, and `gather` environments is read as math, like math in Markdown, and numbered equations say their numbers.
+- `\ref` reads the number of what it names, and a reference to a section is a link to its heading. `\cite{doe2020}` is a citation, read and formatted as in Markdown (see [Citations](#citations)).
+- Footnotes, emphasis, links, code listings, accents, and theorems declared with `\newtheorem`.
+- Your own `\newcommand` shortcuts without arguments are expanded, in text and in math.
+- `\input` and `\include` read other `.tex` files from the document's folder and its subfolders, never from anywhere else. A file that is outside the folder, missing, or too large is left out, and textweaver tells you which.
+
+What textweaver does not know is never lost: a command it does not know is left out and its text is read. The document's warnings list those commands, for example "Some LaTeX commands are not supported, so only their text is read: \hl." The preamble, layout commands such as spacing and page breaks, and drawings made with TikZ are left out.
+
+A file over 16 megabytes is refused. A document that includes more than 8 levels of files, or is so long or so tangled that it passes textweaver's limits, is read up to that point, and the warning says the rest was left out.
+
+### Email and web archives
+
+```bash
+tw text "Lab notes.eml"
+```
+
+An email is read in this order: the subject as a heading; then From, To, Cc, and the date, one line each, with the weekday, such as "Date: Monday, September 28, 2026, 10:15, UTC minus 7"; then the message. Quoted lines from an earlier message, the ones that start with `>`, are read as a quote. A message sent only as HTML is read like a web page. Attachments are listed at the end under "Attachments", each with its size, such as "notes.pdf, 240 KB"; textweaver does not open them.
+
+A web page saved as one file (MHTML, or MHT) is read like the page itself: headings, lists, tables, math, and pictures' descriptions. Its links lead to the pages they named on the web, and a picture without a description of its own is described by the one the browser saved with it, when there is one.
+
+A file over 128 megabytes, or a message with more than 10,000 parts or parts nested more than 32 deep, is refused.
 
 ### Comments and tracked changes
 
@@ -248,7 +336,7 @@ You can also convert the document you have open without leaving textweaver. Pres
 
 The file goes next to the document, with the same name: exporting `essay.md` to PDF writes `essay.pdf` in the same folder, replacing an older export. In edit mode the text you are editing is exported, saved or not. Citations are formatted and a References section added, as with `tw convert`: from the bibliography your front matter names, the folder's `references.json`, and your own library.
 
-You hear "Exporting to PDF." and can go on reading or writing while it works. If it takes more than two seconds you hear "Still exporting to PDF, 2 seconds.", and then again every ten seconds, never more often. When it is done you hear where the file went and a question, for example "Exported to PDF: essay.pdf in C:\Users\jon\Essays. Open it? y or n." Press **y** to open it with your computer's program for that kind of file, or **n** to leave it. A warning, such as an image that was not found, is read out before the question.
+You hear "Exporting to PDF." and can go on reading or writing while it works. If it takes more than two seconds you hear "Still exporting to PDF, 2 seconds.", and then again every ten seconds, never more often. When it is done you hear where the file went and a question, for example "Exported to PDF: essay.pdf in C:\Users\ada\Essays. Open it? y or n." Press **y** to open it with your computer's program for that kind of file, or **n** to leave it. A warning, such as an image that was not found, is read out before the question.
 
 A new document that was never saved has no folder yet; its export goes to the folder textweaver was started in, like Save As suggests.
 

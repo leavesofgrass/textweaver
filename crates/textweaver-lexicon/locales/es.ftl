@@ -791,6 +791,9 @@ opening-no-file-here = no hay ningún archivo llamado { $name } aquí. Compruebe
 opening-no-permission = no tiene permiso para leerlo.
 opening-damaged-rtf = no es un archivo RTF legible; puede estar dañado.
 opening-damaged-odt = no es un archivo de texto OpenDocument legible; puede estar dañado.
+opening-damaged-latex = no es un archivo LaTeX legible; puede estar dañado o ser demasiado grande.
+opening-damaged-email = no es un mensaje de correo legible; puede estar dañado o ser demasiado grande.
+opening-damaged-mhtml = no es una página web archivada legible; puede estar dañada o ser demasiado grande.
 # $reason is one of the opening-no-* messages, or the loader's own words.
 opening-failed = No se pudo abrir { $name }: { $reason }
 opening-started = Abriendo { $name }. Escape cancela.
@@ -1351,6 +1354,8 @@ mathx-first-term = Primer término.
 mathx-no-parts = No hay partes dentro.
 mathx-whole-expression = Expresión completa.
 mathx-nothing-here = No hay nada aquí.
+# $speech is what was said for the step; $code is the math braille code's name (Nemeth or UEB); $braille is the part's braille in Unicode braille cells, for the Braille display.
+mathx-step-braille = { $speech } { $code }: { $braille }
 
 ## Reading aids: RSVP, bionic reading, syllables, difficult words, the ruler, and the reading level.
 
@@ -1670,6 +1675,10 @@ setting-reading-math-engine-help = Qué motor lee las matemáticas en voz alta: 
 choice-reading-math-engine-builtin = textweaver
 choice-reading-math-engine-mathcat = MathCAT ClearSpeak
 choice-reading-math-engine-mathcat-simplespeak = MathCAT SimpleSpeak
+setting-braille-math-code = Braille matemático
+setting-braille-math-code-help = El código braille para las matemáticas en archivos BRF y al explorar una fórmula con MathCAT: Nemeth o las matemáticas de UEB. Necesita una compilación que incluya MathCAT; si no, las matemáticas se escriben con sus palabras habladas.
+choice-braille-math-code-nemeth = Nemeth
+choice-braille-math-code-ueb = UEB
 setting-reading-math-display = Matemáticas en pantalla
 setting-reading-math-display-help = Cómo se ven las matemáticas en la vista de lectura: como su fuente, tal como x^2, o como Unicode, tal como x con un 2 en superíndice. La voz y el modo de edición siempre usan la fuente.
 choice-reading-math-display-source = fuente
@@ -1906,6 +1915,7 @@ section-library = Biblioteca
 section-keyboard = Teclado
 section-accessibility = Accesibilidad
 section-export = Exportar
+section-braille = Braille
 section-reading-aids = Ayudas de lectura
 section-preview = Vista previa
 section-lexicon = Definir palabra

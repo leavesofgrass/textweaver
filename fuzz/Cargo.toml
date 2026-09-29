@@ -247,3 +247,17 @@ path = "fuzz_targets/docx_revisions.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "latex"
+path = "fuzz_targets/latex.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "eml"
+path = "fuzz_targets/eml.rs"
+test = false
+doc = false
+bench = false

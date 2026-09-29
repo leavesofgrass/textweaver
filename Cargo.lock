@@ -3913,6 +3913,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "hashify"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd1246c0e5493286aeb2dde35b1f4eb9c4ce00e628641210a5e553fc001a1f26"
+dependencies = [
+ "indexmap",
+ "proc-macro2 1.0.107",
+ "quote 1.0.47",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "hayagriva"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5130,6 +5142,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mail-parser"
+version = "0.11.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ec00bda90c6e645a54506c630c2820cd6b1890cfd2b0a169b50f74b2b8c7c86"
+dependencies = [
+ "encoding_rs",
+ "hashify",
+]
+
+[[package]]
 name = "malloc_buf"
 version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5246,8 +5268,6 @@ dependencies = [
 [[package]]
 name = "mathcat"
 version = "0.7.6-rc.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e02ae55d13d1cab996bdb0ed0921011d1ba621868cf3d5d05afdd83d910b2bc8"
 dependencies = [
  "anyhow",
  "bitflags 2.13.2",
@@ -8996,6 +9016,7 @@ dependencies = [
  "textweaver-keymap",
  "textweaver-lexicon",
  "textweaver-math",
+ "textweaver-mathcat",
  "textweaver-render",
  "textweaver-speech",
  "textweaver-store",
@@ -9219,6 +9240,7 @@ dependencies = [
  "insta",
  "log",
  "lopdf",
+ "mail-parser",
  "proptest",
  "pulldown-cmark",
  "ropey",
@@ -9468,6 +9490,7 @@ dependencies = [
  "textweaver-fonts",
  "textweaver-formats",
  "textweaver-math",
+ "textweaver-mathcat",
  "textweaver-text",
  "thiserror 2.0.21",
  "zip 8.6.0",

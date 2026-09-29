@@ -827,6 +827,9 @@ opening-no-file-here = es gibt keine Datei namens { $name } hier. Prüfen Sie de
 opening-no-permission = Sie haben keine Berechtigung, sie zu lesen.
 opening-damaged-rtf = es ist keine lesbare RTF-Datei; sie ist möglicherweise beschädigt.
 opening-damaged-odt = es ist keine lesbare OpenDocument-Textdatei; sie ist möglicherweise beschädigt.
+opening-damaged-latex = es ist keine lesbare LaTeX-Datei; sie ist möglicherweise beschädigt oder zu groß.
+opening-damaged-email = es ist keine lesbare E-Mail-Nachricht; sie ist möglicherweise beschädigt oder zu groß.
+opening-damaged-mhtml = es ist kein lesbares Webarchiv; es ist möglicherweise beschädigt oder zu groß.
 # $reason is one of the opening-no-* messages, or the loader's own words.
 opening-failed = { $name } konnte nicht geöffnet werden: { $reason }
 opening-started = { $name } wird geöffnet. Escape bricht ab.
@@ -1387,6 +1390,8 @@ mathx-first-term = Erster Term.
 mathx-no-parts = Keine Teile darin.
 mathx-whole-expression = Ganzer Ausdruck.
 mathx-nothing-here = Nichts hier.
+# $speech is what was said for the step; $code is the math braille code's name (Nemeth or UEB); $braille is the part's braille in Unicode braille cells, for the Braille display.
+mathx-step-braille = { $speech } { $code }: { $braille }
 
 ## Reading aids: RSVP, bionic reading, syllables, difficult words, the ruler, and the reading level.
 
@@ -1706,6 +1711,10 @@ setting-reading-math-engine-help = Welche Engine Mathematik vorliest: die eigene
 choice-reading-math-engine-builtin = textweaver
 choice-reading-math-engine-mathcat = MathCAT ClearSpeak
 choice-reading-math-engine-mathcat-simplespeak = MathCAT SimpleSpeak
+setting-braille-math-code = Mathematik-Braille
+setting-braille-math-code-help = Der Braille-Code für Mathematik in BRF-Dateien und beim Erkunden einer Formel mit MathCAT: Nemeth oder UEB-Mathematik. Braucht eine Version, die MathCAT enthält; sonst wird Mathematik mit ihren gesprochenen Wörtern geschrieben.
+choice-braille-math-code-nemeth = Nemeth
+choice-braille-math-code-ueb = UEB
 setting-reading-math-display = Mathematik auf dem Bildschirm
 setting-reading-math-display-help = Wie Mathematik in der Leseansicht aussieht: als Quelltext, wie x^2, oder als Unicode, wie x mit hochgestellter 2. Sprache und Bearbeitungsmodus verwenden immer den Quelltext.
 choice-reading-math-display-source = Quelltext
@@ -1942,6 +1951,7 @@ section-library = Bibliothek
 section-keyboard = Tastatur
 section-accessibility = Zugänglichkeit
 section-export = Exportieren
+section-braille = Braille
 section-reading-aids = Lesehilfen
 section-preview = Vorschau
 section-lexicon = Wort definieren

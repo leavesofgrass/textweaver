@@ -17,6 +17,18 @@
 //! exploration and does what it usually does; the frontend sends
 //! [`Command::MathStep`](crate::Command::MathStep) while
 //! [`App::math_exploring`] is true.
+//!
+//! **With MathCAT** (the `mathcat` feature and `[reading] math_engine` set
+//! to a MathCAT style; ADR-0036), the same keys drive MathCAT's own
+//! navigation: Right and Left are `MoveNext` and `MovePrevious`, Down and
+//! Up zoom in and out, Home and End go to the start and end, Space and
+//! Enter read the part again. Each step's words are MathCAT's, spoken
+//! once, and the status line shows them followed by the braille of the
+//! part reached in `[braille] math_code` (Nemeth or UEB), for the Braille
+//! display. MathCAT gives no source positions, so the highlight covers the
+//! whole formula. A formula MathCAT cannot read is explored with
+//! textweaver's own navigator, as with `"builtin"`, which stays the
+//! default.
 
 use textweaver_a11y::Channel;
 use textweaver_core::{CharPos, CharRange, MarkerKind};
@@ -59,6 +71,9 @@ pub(crate) struct MathExplore {
     path: Vec<usize>,
     /// The part's chars in the document, highlighted.
     pub(crate) span: CharRange,
+    /// MathCAT keeps the place (ADR-0036); `path` is unused.
+    #[cfg_attr(not(feature = "mathcat"), allow(dead_code))]
+    mathcat: bool,
 }
 
 impl MathExplore {
@@ -154,11 +169,29 @@ impl App {
         let source = s.doc.slice(content);
         let math = textweaver_math::parse(&source, notation);
         self.stop_speech();
+        #[cfg(feature = "mathcat")]
+        if let Some(step) = self.mathcat_start(&math) {
+            self.math_explore = Some(MathExplore {
+                math,
+                content_start: content.start,
+                path: Vec::new(),
+                span: content,
+                mathcat: true,
+            });
+            let msg = self.msg_args(
+                "mathx-exploring",
+                &args!["math" => step.speech.as_str(), "parts" => "yes"],
+            );
+            self.math_say_braille(&msg, &step.braille);
+            self.math_follow();
+            return;
+        }
         let mut explore = MathExplore {
             math,
             content_start: content.start,
             path: Vec::new(),
             span: content,
+            mathcat: false,
         };
         let step = explore.navigator(self.math_speech_options()).current();
         explore.span = self.doc_span(&explore, &step);
@@ -183,6 +216,12 @@ impl App {
             self.stop_speech();
             let msg = self.msg("mathx-left");
             self.math_say(&msg);
+            return vec![Effect::Redraw];
+        }
+        #[cfg(feature = "mathcat")]
+        if explore.mathcat {
+            self.math_explore = Some(explore);
+            self.mathcat_step(mv);
             return vec![Effect::Redraw];
         }
         let opts = self.math_speech_options();
@@ -236,6 +275,27 @@ impl App {
         self.speak_content(Channel::Caret, text);
     }
 
+    /// Says a MathCAT step: `speech` spoken once (by textweaver's voice or,
+    /// through the status line, by the screen reader), and the status line
+    /// shows it with `braille`, the part's math braille, for the display.
+    #[cfg(feature = "mathcat")]
+    fn math_say_braille(&mut self, speech: &str, braille: &str) {
+        self.stop_speech();
+        if self.route(Channel::Caret).speak {
+            self.speech
+                .say(speech, textweaver_speech::SayMode::Interrupt);
+        }
+        let code = match self.settings.braille.math_code {
+            textweaver_store::MathBrailleCode::Nemeth => "Nemeth",
+            textweaver_store::MathBrailleCode::Ueb => "UEB",
+        };
+        let line = self.msg_args(
+            "mathx-step-braille",
+            &args!["speech" => speech, "code" => code, "braille" => braille],
+        );
+        self.show(&line);
+    }
+
     /// Moves the cursor to the part being explored.
     fn math_follow(&mut self) {
         let Some(span) = self.math_explore.as_ref().map(|m| m.span) else {
@@ -245,6 +305,107 @@ impl App {
             s.cursor = span.start.clamp_to(s.doc.len_chars());
         }
         self.scroll_to_cursor();
+    }
+}
+
+/// Exploring with MathCAT (ADR-0036).
+#[cfg(feature = "mathcat")]
+impl App {
+    /// MathCAT's speech and braille options, or `None` when the math
+    /// engine is textweaver's own.
+    fn mathcat_options(
+        &self,
+    ) -> Option<(
+        textweaver_mathcat::Options,
+        textweaver_mathcat::BrailleOptions,
+    )> {
+        use textweaver_mathcat::{BrailleCode, BrailleOptions, Options, Style, language_for};
+        use textweaver_store::{MathBrailleCode, MathEngine};
+        let style = match self.settings.reading.math_engine {
+            MathEngine::Builtin => return None,
+            MathEngine::MathCat => Style::ClearSpeak,
+            MathEngine::MathCatSimpleSpeak => Style::SimpleSpeak,
+        };
+        let language = language_for(
+            self.session
+                .as_ref()
+                .and_then(|s| s.doc.meta.language.as_deref()),
+        );
+        let options = Options {
+            style,
+            verbosity: self.settings.normalization.math_verbosity,
+            language,
+            pauses: self.settings.speech.punctuation != textweaver_core::PunctuationLevel::All,
+        };
+        let code = match self.settings.braille.math_code {
+            MathBrailleCode::Nemeth => BrailleCode::Nemeth,
+            MathBrailleCode::Ueb => BrailleCode::Ueb,
+        };
+        Some((
+            options,
+            BrailleOptions {
+                code,
+                grade2: false,
+            },
+        ))
+    }
+
+    /// Starts MathCAT's navigation on `math`: the whole expression's
+    /// words and braille. `None` when MathCAT is not the engine, the parser
+    /// had to repair the formula, or MathCAT cannot read it; textweaver's
+    /// own navigator explores it then.
+    fn mathcat_start(&self, math: &Math) -> Option<textweaver_mathcat::NavStep> {
+        let (options, braille) = self.mathcat_options()?;
+        if !math.diagnostics.is_empty() {
+            return None;
+        }
+        let mathml = textweaver_mathcat::mathml_for(math, false);
+        textweaver_mathcat::navigate_start(
+            &mathml,
+            textweaver_mathcat::NavMove::Current,
+            &options,
+            &braille,
+        )
+        .inspect_err(|e| log::debug!("MathCAT cannot explore {:?}: {e}", math.source))
+        .ok()
+    }
+
+    /// A step of MathCAT's navigation. A step that moves nothing plays
+    /// the boundary sound; MathCAT's words say why.
+    fn mathcat_step(&mut self, mv: MathMove) {
+        use textweaver_mathcat::NavMove;
+        let step = match mv {
+            MathMove::Next => NavMove::Next,
+            MathMove::Previous => NavMove::Previous,
+            MathMove::Enter => NavMove::ZoomIn,
+            MathMove::Exit => NavMove::ZoomOut,
+            MathMove::First => NavMove::Start,
+            MathMove::Last => NavMove::End,
+            MathMove::Repeat | MathMove::Leave => NavMove::Current,
+        };
+        let result = match self.mathcat_options() {
+            Some((options, braille)) => textweaver_mathcat::navigate(step, &options, &braille),
+            None => Err(textweaver_mathcat::Error::Unavailable),
+        };
+        match result {
+            Ok(s) => {
+                if step.moves() && !s.moved {
+                    self.speech.earcon(Earcon::Boundary);
+                }
+                if s.speech.is_empty() {
+                    let msg = self.msg("mathx-nothing-here");
+                    self.math_say_braille(&msg, &s.braille);
+                } else {
+                    self.math_say_braille(&s.speech, &s.braille);
+                }
+            }
+            Err(e) => {
+                log::debug!("MathCAT navigation: {e}");
+                self.speech.earcon(Earcon::Boundary);
+                let msg = self.msg("mathx-nothing-here");
+                self.math_say(&msg);
+            }
+        }
     }
 }
 
@@ -318,6 +479,46 @@ mod tests {
             hl.iter()
                 .any(|h| h.range == app.math_explore_span().unwrap())
         );
+        let left = step(&mut app, MathMove::Leave);
+        assert_eq!(left, "Left math.");
+        assert!(!app.math_exploring());
+    }
+
+    /// With MathCAT as the engine (ADR-0036): MathCAT's words, then the
+    /// code and the part's braille on the status line; a boundary moves
+    /// nothing; Escape leaves.
+    #[cfg(feature = "mathcat")]
+    #[test]
+    fn explores_with_mathcat_and_shows_braille() {
+        let text = "Here: $\\frac{a+b}{2}$ ends.\n";
+        let mut settings = textweaver_store::Settings::default();
+        settings.reading.math_engine = textweaver_store::MathEngine::MathCat;
+        let mut app = App::new(AppConfig {
+            settings,
+            ..AppConfig::for_tests()
+        });
+        let dir = std::env::temp_dir().join(format!("tw-math-mathcat-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("frac.md");
+        std::fs::write(&file, text).unwrap();
+        app.open(&file).unwrap();
+        app.set_cursor(CharPos(text.find("frac").unwrap()));
+        app.dispatch(Command::Action(textweaver_keymap::ActionId::ExploreMath));
+        assert!(app.math_exploring());
+        let start = app.status_text().to_owned();
+        assert!(start.starts_with("Exploring math:"), "{start}");
+        // The whole fraction's Nemeth braille follows the words.
+        assert!(start.contains("Nemeth: ⠹⠁⠬⠃⠌⠆⠼"), "{start}");
+        // The highlight is the whole formula (MathCAT gives no positions).
+        let whole = app.math_explore_span().unwrap();
+        assert_eq!(app.session().unwrap().doc.slice(whole), "\\frac{a+b}{2}");
+        let num = step(&mut app, MathMove::Enter);
+        assert!(num.contains("Nemeth: ⠁⠬⠃"), "{num}");
+        let den = step(&mut app, MathMove::Next);
+        assert!(den.ends_with("Nemeth: ⠼⠆"), "{den}");
+        let edge = step(&mut app, MathMove::Next);
+        assert!(edge.ends_with("Nemeth: ⠼⠆"), "{edge}");
+        assert_eq!(app.math_explore_span(), Some(whole));
         let left = step(&mut app, MathMove::Leave);
         assert_eq!(left, "Left math.");
         assert!(!app.math_exploring());

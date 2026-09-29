@@ -74,8 +74,14 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted.
 - [ADR-0034: The rope after measurement: stay on ropey 1.6](0034-rope-after-measurement.md): why ropey 2 and crop wait, measured on edit traces, and when to look again.
   - Status: accepted.
+- [ADR-0035: Native LaTeX subset, and email and web archives](0035-latex-email-and-web-archives.md): our own LaTeX tokenizer and two-pass parser with its limits, email and MHTML through mail-parser, and MathML read as math in every web page.
+  - Status: accepted.
+- [ADR-0036: Math braille and navigation on MathCAT](0036-math-braille-and-navigation.md): MathCAT 0.7.6-rc.3 vendored with the fix for issue #827, Nemeth (default) and UEB math in BRF files wrapped to 40 cells, and exploring a formula with MathCAT's navigation and its braille on the status line.
+  - Status: accepted, behind the `mathcat` feature; the status line's order waits for session B1.
 - [ADR-0039: Automated screen-reader checks beside the listening sessions](0039-automated-screen-reader-checks.md): the accessibility tree dumped on three systems and compared with main, and NVDA, Orca, and VoiceOver sessions on CI runners, which never replace the owner's sessions.
   - Status: proposed; every check reports and none fails a job. Answers so far: NVDA through Guidepup and Orca read the GUI; the tree dump works on Windows and macOS.
+- [ADR-0041: Publishing templates, real Word footnotes, and PDF page labels](0041-publishing-templates.md): APA, AMA, large print, dyslexia-friendly, high contrast, and manuscript templates for EPUB, Word, and PDF, real Word footnotes, an EPUB cover with alternative text, and PDF pages labelled with their print pages.
+  - Status: accepted; the owner's check with Word and JAWS is queued in session 3.
 
 ## Writing a new ADR
 

@@ -143,6 +143,7 @@ pub fn load_options(settings: &textweaver_store::Settings) -> textweaver_formats
         },
         ocr: ocr_options(&settings.reading),
         revisions: revision_mode(settings),
+        name_skipped_commands: settings.speech.verbosity >= Verbosity::High,
         ..textweaver_formats::LoadOptions::default()
     }
 }

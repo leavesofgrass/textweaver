@@ -223,7 +223,7 @@ mod tests {
     fn urls_and_emails() {
         assert!(is_url_like("https://example.org/a"));
         assert!(is_url_like("(www.example.org)."));
-        assert!(is_url_like("jon@example.org"));
+        assert!(is_url_like("ada@example.org"));
         assert!(is_url_like("example.org/path"));
         assert!(!is_url_like("and/or"));
         assert!(!is_url_like("e.g."));

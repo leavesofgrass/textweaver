@@ -819,6 +819,9 @@ opening-no-file-here = il n'y a aucun fichier nommé { $name } ici. Vérifiez le
 opening-no-permission = vous n'avez pas la permission de le lire.
 opening-damaged-rtf = ce n'est pas un fichier RTF lisible, il est peut-être endommagé.
 opening-damaged-odt = ce n'est pas un fichier texte OpenDocument lisible, il est peut-être endommagé.
+opening-damaged-latex = ce n'est pas un fichier LaTeX lisible, il est peut-être endommagé ou trop volumineux.
+opening-damaged-email = ce n'est pas un message électronique lisible, il est peut-être endommagé ou trop volumineux.
+opening-damaged-mhtml = ce n'est pas une archive web lisible, elle est peut-être endommagée ou trop volumineuse.
 # $reason is one of the opening-no-* messages, or the loader's own words.
 opening-failed = Impossible d'ouvrir { $name } : { $reason }
 opening-started = Ouverture de { $name }. Échap annule.
@@ -1379,6 +1382,8 @@ mathx-first-term = Premier terme.
 mathx-no-parts = Aucune partie à l'intérieur.
 mathx-whole-expression = Expression entière.
 mathx-nothing-here = Rien ici.
+# $speech is what was said for the step; $code is the math braille code's name (Nemeth or UEB); $braille is the part's braille in Unicode braille cells, for the Braille display.
+mathx-step-braille = { $speech } { $code } : { $braille }
 
 ## Reading aids: RSVP, bionic reading, syllables, difficult words, the ruler, and the reading level.
 
@@ -1698,6 +1703,10 @@ setting-reading-math-engine-help = Quel moteur lit les mathématiques à voix ha
 choice-reading-math-engine-builtin = textweaver
 choice-reading-math-engine-mathcat = MathCAT ClearSpeak
 choice-reading-math-engine-mathcat-simplespeak = MathCAT SimpleSpeak
+setting-braille-math-code = Braille mathématique
+setting-braille-math-code-help = Le code braille des mathématiques dans les fichiers BRF et pendant l'exploration d'une formule avec MathCAT : Nemeth, ou les mathématiques UEB. Il faut une version qui inclut MathCAT ; sinon, les mathématiques sont écrites avec leurs mots parlés.
+choice-braille-math-code-nemeth = Nemeth
+choice-braille-math-code-ueb = UEB
 setting-reading-math-display = Mathématiques à l'écran
 setting-reading-math-display-help = À quoi ressemblent les mathématiques dans la vue de lecture : comme leur source, tel que x^2, ou en Unicode, tel que x avec un 2 en exposant. La synthèse vocale et le mode édition utilisent toujours la source.
 choice-reading-math-display-source = source
@@ -1934,6 +1943,7 @@ section-library = Bibliothèque
 section-keyboard = Clavier
 section-accessibility = Accessibilité
 section-export = Exporter
+section-braille = Braille
 section-reading-aids = Aides à la lecture
 section-preview = Aperçu
 section-lexicon = Définir un mot

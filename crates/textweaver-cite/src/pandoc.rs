@@ -9,7 +9,7 @@
 //!   (the prefix) and after it (the locator and suffix). It is not a
 //!   citation if the `[` is escaped or the `]` starts a link (`](` or `][`).
 //! - An in-text citation is `@key` at the start of the text or after a
-//!   space or opening punctuation, so `jon@example.com` is never one,
+//!   space or opening punctuation, so `ada@example.com` is never one,
 //!   optionally followed by ` [locator]`.
 //! - Keys follow [`crate::key::is_valid_key`]; `@{odd key}` braces are
 //!   accepted. Trailing punctuation is not part of a key (`@doe2020.`).
@@ -763,7 +763,7 @@ mod tests {
 
     #[test]
     fn no_false_positives() {
-        assert!(keys("Mail jon@example.com or [a link](http://x) or \\[@not].").is_empty());
+        assert!(keys("Mail ada@example.com or [a link](http://x) or \\[@not].").is_empty());
         assert!(keys("[@doe](http://example.com)").is_empty());
         assert!(keys("[no citation here]").is_empty());
         assert_eq!(keys("Trailing @doe2020."), vec![vec!["doe2020"]]);

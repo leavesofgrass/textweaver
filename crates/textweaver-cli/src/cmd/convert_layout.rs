@@ -46,7 +46,8 @@ pub struct LayoutArgs {
     /// PDF: start with a title page (title, author, and date).
     #[arg(long)]
     pub title_page: bool,
-    /// PDF: the date for the title page, as it should be printed (default:
+    /// PDF and the apa, ama, and manuscript templates: the date for the
+    /// title page, as it should be printed (default:
     /// the document's own date, if it has one).
     #[arg(long, value_name = "TEXT")]
     pub date: Option<String>,

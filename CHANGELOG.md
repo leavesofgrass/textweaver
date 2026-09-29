@@ -4,6 +4,22 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### W5c3: LaTeX, email, web archives, and MathML in web pages
+
+- **LaTeX opens without Pandoc,** in the reader and in `tw`: numbered sections as headings, lists, tables with header rows, captions ("Table 1: ..."), math as math, `\ref` numbers and links to sections, `\cite` as citations, footnotes, code, your own `\newcommand` shortcuts, and `\input` files from the document's own folder only. A command textweaver does not know is left out and its text read, and the document's warnings name it ([ADR-0035](docs/adr/0035-latex-email-and-web-archives.md)).
+- **Email (EML):** the subject, then From, To, Cc, and the date with its weekday, then the message, with quoted lines read as a quote; attachments are listed with their sizes, not opened.
+- **Web pages saved as one file (MHTML, MHT)** read as the page, with links leading to the pages they named on the web and pictures described by the descriptions saved with them.
+- **Math written in MathML in a web page** is read as math, as it already was in EPUB books.
+- A picture's description in a web page no longer runs into the next word.
+- New messages, in all six languages: "it is not a readable LaTeX file", "... email message", and "... web archive", said after "Could not open".
+
+### W5g: the publishing templates
+
+- **Publishing templates** for EPUB, Word, and PDF: `tw convert --template apa` (an APA 7 student paper: title page, double spacing, APA headings, page numbers, hanging references), `ama` (an AMA 11 manuscript with a word count), `large-print`, `dyslexia-friendly`, `high-contrast`, and `manuscript`. Headings, lists, tables, and descriptions stay exactly as a screen reader expects; the layout options still apply on top ([ADR-0041](docs/adr/0041-publishing-templates.md)).
+- **Real Word footnotes.** Footnotes in Word documents are Word's own: numbered by Word, at the foot of the page, and announced as footnotes by JAWS and NVDA. textweaver reads them back.
+- **An EPUB cover** with every template: the title and author, described as "Cover: Title, by Author." and listed as the cover.
+- **Print page numbers in PDF.** A PDF made from a document with print pages (a DAISY book, an EPUB page list, a scanned PDF) labels each page with its print page, so "go to page 42" in a PDF reader finds print page 42.
+
 ### W5r: the rope decision and loading
 
 - The rope stays ropey 1.6, as measured in Wave 4 ([ADR-0034](docs/adr/0034-rope-after-measurement.md)).
@@ -34,6 +50,12 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **The statistics list** stays open on its row when Enter turns statistics on or off.
 - **Settings:** `[speech.dectalk]`, `[speech.piper]`, `[speech.voice_params]`, and `[editing] author` are typed settings, listed in the settings reference and the settings screen. `[reading_aids.font] fetch_missing`, which never did anything, was removed; an old `settings.toml` line is dropped. The "every setting is used" test now checks the reading aids' own tables too.
 - **Speed presets** (F8) are said preset first: "Study, rate 200."
+
+### W5c4: math braille and navigation on MathCAT
+
+- **Math in braille files.** In a build with MathCAT, `tw convert --to brf` and the reader's `export brf` write math in the Nemeth Code (the default), between the Nemeth switch indicators inside UEB text, or in UEB mathematics with `--math-code ueb` or `[braille] math_code = "ueb"`. Lines stay 40 cells, and an indicator never ends up on a different line from what it belongs to. A formula MathCAT cannot write is written as its spoken words, and the summary says so once. See [docs/math.md](docs/math.md#math-in-braille-files).
+- **Explore math with MathCAT.** With `math_engine = "mathcat"`, Alt+Shift+X moves through a formula with MathCAT's navigation; each step is said once, and the status line shows the braille of the part you reached, for a Braille display. `"builtin"` stays the default and is unchanged.
+- MathCAT 0.7.6-rc.3 is vendored with the fix for its issue #827, which made math braille while exploring impossible in textweaver's builds. The fix is written up for upstream.
 
 ## [0.1.0-alpha.4] - 2026-09-28
 

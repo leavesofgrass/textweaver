@@ -796,6 +796,9 @@ opening-no-file-here = there is no file named { $name } here. Check the name.
 opening-no-permission = you do not have permission to read it.
 opening-damaged-rtf = it is not a readable RTF file; it may be damaged.
 opening-damaged-odt = it is not a readable OpenDocument text file; it may be damaged.
+opening-damaged-latex = it is not a readable LaTeX file; it may be damaged or too large.
+opening-damaged-email = it is not a readable email message; it may be damaged or too large.
+opening-damaged-mhtml = it is not a readable web archive; it may be damaged or too large.
 # $reason is one of the opening-no-* messages, or the loader's own words.
 opening-failed = Could not open { $name }: { $reason }
 opening-started = Opening { $name }. Escape cancels.
@@ -1356,6 +1359,8 @@ mathx-first-term = First term.
 mathx-no-parts = No parts inside.
 mathx-whole-expression = Whole expression.
 mathx-nothing-here = Nothing here.
+# $speech is what was said for the step; $code is the math braille code's name (Nemeth or UEB); $braille is the part's braille in Unicode braille cells, for the Braille display.
+mathx-step-braille = { $speech } { $code }: { $braille }
 
 ## Reading aids: RSVP, bionic reading, syllables, difficult words, the ruler, and the reading level.
 
@@ -1675,6 +1680,10 @@ setting-reading-math-engine-help = Which engine reads math aloud: textweaver's o
 choice-reading-math-engine-builtin = textweaver
 choice-reading-math-engine-mathcat = MathCAT ClearSpeak
 choice-reading-math-engine-mathcat-simplespeak = MathCAT SimpleSpeak
+setting-braille-math-code = Math braille
+setting-braille-math-code-help = The braille code for math in BRF files and while exploring a formula with MathCAT: Nemeth, or UEB mathematics. It needs a build that includes MathCAT; otherwise math is written as its spoken words.
+choice-braille-math-code-nemeth = Nemeth
+choice-braille-math-code-ueb = UEB
 setting-reading-math-display = Math on screen
 setting-reading-math-display-help = How math looks in the reading view: as its source, such as x^2, or as Unicode, such as x with a superscript 2. Speech and edit mode always use the source.
 choice-reading-math-display-source = source
@@ -1911,6 +1920,7 @@ section-library = Library
 section-keyboard = Keyboard
 section-accessibility = Accessibility
 section-export = Export
+section-braille = Braille
 section-reading-aids = Reading aids
 section-preview = Preview
 section-lexicon = Define word

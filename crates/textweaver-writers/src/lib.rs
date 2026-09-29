@@ -36,6 +36,7 @@ mod math;
 pub mod model;
 pub mod pdf;
 mod resource;
+pub mod template;
 pub mod ueb;
 mod xml;
 
@@ -43,6 +44,7 @@ pub use brf::BrfWriter;
 pub use docx::DocxWriter;
 pub use epub::EpubWriter;
 pub use pdf::PdfWriter;
+pub use template::Template;
 
 /// Output formats with a native writer.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -162,6 +164,14 @@ pub struct WriteOptions {
     /// Embed images found on disk (EPUB, DOCX, PDF). Images that cannot be
     /// found are written as their alt text and reported.
     pub embed_images: bool,
+    /// A publishing template (ADR-0041): APA student paper, AMA
+    /// manuscript, large print, dyslexia-friendly, high contrast, or
+    /// manuscript. Set it with [`WriteOptions::with_template`] or
+    /// [`Template::apply`], which also set the template's PDF layout and
+    /// EPUB cover.
+    pub template: Option<Template>,
+    /// Word options.
+    pub docx: DocxOptions,
     /// EPUB options.
     pub epub: EpubOptions,
     /// Braille options.
@@ -179,9 +189,38 @@ impl Default for WriteOptions {
             timestamp: None,
             resource_dir: None,
             embed_images: true,
+            template: None,
+            docx: DocxOptions::default(),
             epub: EpubOptions::default(),
             braille: BrailleOptions::default(),
             pdf: PdfOptions::default(),
+        }
+    }
+}
+
+impl WriteOptions {
+    /// These options with `template` applied (see [`Template::apply`]).
+    pub fn with_template(mut self, template: Template) -> WriteOptions {
+        template.apply(&mut self);
+        self
+    }
+}
+
+/// Word (DOCX) options.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DocxOptions {
+    /// Footnotes as real Word footnotes (`footnotes.xml`), numbered by
+    /// Word and announced by screen readers as footnotes. Off keeps each
+    /// footnote's text where the document has it, with the reference
+    /// linked to it.
+    pub word_footnotes: bool,
+}
+
+impl Default for DocxOptions {
+    fn default() -> Self {
+        DocxOptions {
+            word_footnotes: true,
         }
     }
 }
@@ -202,6 +241,10 @@ pub struct EpubOptions {
     pub font: Option<String>,
     /// Embed a bundled font for code, as for [`EpubOptions::font`].
     pub code_font: Option<String>,
+    /// Start the book with a cover: an image of the title and author with
+    /// that text as its alternative text, marked as the cover image and
+    /// listed in the landmarks. Templates turn it on.
+    pub cover: bool,
 }
 
 impl Default for EpubOptions {
@@ -210,6 +253,7 @@ impl Default for EpubOptions {
             split_chapters: true,
             font: None,
             code_font: None,
+            cover: false,
         }
     }
 }
@@ -227,6 +271,30 @@ pub enum BrailleGrade {
     Two,
 }
 
+/// The braille code math is written in (ADR-0036). It takes effect with
+/// the `mathcat` feature; without it, math is written as its spoken
+/// words in uncontracted braille.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MathCode {
+    /// The Nemeth Code, between the Nemeth switch indicators of BANA's
+    /// guidance for Nemeth in UEB contexts.
+    #[default]
+    Nemeth,
+    /// Unified English Braille's own mathematics.
+    Ueb,
+}
+
+impl MathCode {
+    /// The code's name, as it is said: "Nemeth" or "UEB".
+    pub fn name(self) -> &'static str {
+        match self {
+            MathCode::Nemeth => "Nemeth",
+            MathCode::Ueb => "UEB",
+        }
+    }
+}
+
 /// Braille (BRF) options.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -241,6 +309,8 @@ pub struct BrailleOptions {
     pub grade: BrailleGrade,
     /// liblouis table for grade 2 (default `en-ueb-g2.ctb`).
     pub table: String,
+    /// The braille code for math (default Nemeth).
+    pub math_code: MathCode,
 }
 
 impl Default for BrailleOptions {
@@ -251,6 +321,7 @@ impl Default for BrailleOptions {
             page_numbers: true,
             grade: BrailleGrade::One,
             table: "en-ueb-g2.ctb".to_owned(),
+            math_code: MathCode::Nemeth,
         }
     }
 }

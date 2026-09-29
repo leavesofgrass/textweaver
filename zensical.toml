@@ -101,10 +101,12 @@ nav = [
       { "Wave 5 plan" = "research/wave5-plan.md" },
       { "Wave 5, recalibrated" = "research/wave5-recalibrated.md" },
       { "UI refinement pass: the list" = "research/ui-refinement.md" },
+      { "UI refinement plan" = "research/ui-refinement-plan.md" },
       { "What is left" = "research/whats-left.md" },
       { "The 2026 roadmap" = "research/roadmap-2026.md" },
       { "Cloud Agent plan" = "research/cloud-agent-plan.md" },
       { "Documentation sweep plan" = "research/docs-sweep-plan.md" },
+      { "MathCAT issue #827: pull request text" = "research/mathcat-827-pull-request.md" },
     ] },
   ] },
   { "Decisions" = [
@@ -143,7 +145,10 @@ nav = [
     { "ADR-0032: Grammar, lint, highlighting, and clipboard crates" = "adr/0032-grammar-lint-highlighting-clipboard.md" },
     { "ADR-0033: The GUI after the second session, and edit mode" = "adr/0033-gui-session-2-and-edit-mode.md" },
     { "ADR-0034: The rope after measurement: stay on ropey 1.6" = "adr/0034-rope-after-measurement.md" },
+    { "ADR-0035: Native LaTeX subset, and email and web archives" = "adr/0035-latex-email-and-web-archives.md" },
+    { "ADR-0036: Math braille and navigation on MathCAT" = "adr/0036-math-braille-and-navigation.md" },
     { "ADR-0039: Automated screen-reader checks beside the listening sessions" = "adr/0039-automated-screen-reader-checks.md" },
+    { "ADR-0041: Publishing templates and real Word footnotes" = "adr/0041-publishing-templates.md" },
   ] },
   { "Interactive pages" = [
     { "Overview (interactive)" = "site/index.html" },

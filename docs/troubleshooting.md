@@ -197,7 +197,7 @@ The [themes guide](themes.md) explains themes and how to make your own.
 
 ### "is not a text file"
 
-textweaver refuses a file that is not text, such as a program, an audio file, or an old Word `.doc`. The message says what the file looks like. RTF and OpenDocument text files open directly, and PNG and JPEG pictures are read by recognizing their text.
+textweaver refuses a file that is not text, such as a program, an audio file, or an old Word `.doc`. The message says what the file looks like. RTF, OpenDocument text, LaTeX, email, and saved web pages open directly, and PNG and JPEG pictures are read by recognizing their text.
 
 1. Check that you opened the file you meant.
 2. For a LaTeX, reStructuredText, or similar file, convert it to Markdown, then open the Markdown. This needs Pandoc:

@@ -96,6 +96,9 @@ const TARGETS: &[(&str, &[Seeds])] = &[
         ],
     ),
     ("rpc", &[seeds("fixtures/cloud/rpc", &["jsonl"], false)]),
+    // W5c3's documents.
+    ("latex", &[seeds("fixtures/c3", &["tex"], false)]),
+    ("eml", &[seeds("fixtures/c3", &["eml", "mhtml"], false)]),
 ];
 
 /// The repository root.
