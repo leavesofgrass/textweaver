@@ -8,20 +8,28 @@
 //! each finished segment arrives as a `Partial` event and the whole
 //! transcript as `Final`. The model loads on the first session and stays
 //! loaded, so later sessions start at once.
+//!
+//! **Live** ([`RtenConfig::live`], ADR-0042): with a capture that offers
+//! live audio, the worker transcribes while recording runs. Utterances
+//! are found as the audio arrives, words two runs agree on arrive as
+//! `Committed` events while the speaker talks, and each utterance is
+//! finished at its pause rather than when recording stops (see
+//! [`stream`](crate::stream)).
 
 use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use crate::audio::{MonoAudio, read_wav, to_whisper_rate};
-use crate::capture::{AudioCapture, WHISPER_SAMPLE_RATE};
+use crate::capture::{AudioCapture, LiveAudio, WHISPER_SAMPLE_RATE};
 use crate::rten_whisper::{RtenWhisper, RtenWhisperFiles, Timings, to_f32};
+use crate::stream::{ChannelFeed, Recognizer, Signals, StreamConfig, run_live, spawn_listener};
 use crate::transcript::{DictationEvent, Segment, Transcript};
-use crate::vad::{VadConfig, utterances};
+use crate::vad::{SpeechFinder, VadConfig, utterances};
 use crate::{Dictation, DictationError, DictationInput, DictationState};
 
 /// How to run in-process Whisper.
@@ -33,6 +41,10 @@ pub struct RtenConfig {
     pub language: Option<String>,
     /// Skip silence with the voice detector (on by default).
     pub vad: Option<VadConfig>,
+    /// Transcribe while recording, when the capture offers live audio
+    /// (off by default: the whole recording is transcribed after `stop`).
+    /// Needs the voice detector.
+    pub live: Option<StreamConfig>,
 }
 
 impl RtenConfig {
@@ -43,6 +55,7 @@ impl RtenConfig {
             model_dir: model_dir.into(),
             language: None,
             vad: Some(VadConfig::default()),
+            live: None,
         }
     }
 }
@@ -58,6 +71,16 @@ pub struct SessionTimings {
     pub model: Timings,
     /// Speech found by the voice detector.
     pub speech: Duration,
+    /// Live sessions: utterances found.
+    pub utterances: usize,
+    /// Live sessions: recognizer runs, partial and final.
+    pub runs: usize,
+    /// Live sessions: partial runs cancelled at a pause.
+    pub cancelled_runs: usize,
+    /// Live sessions: words committed before their utterance's pause.
+    pub early_words: usize,
+    /// Live sessions: words committed in all.
+    pub words: usize,
 }
 
 type Tagged = (u64, DictationEvent);
@@ -65,7 +88,26 @@ type Tagged = (u64, DictationEvent);
 enum Input {
     File(PathBuf),
     Audio(Vec<f32>),
+    Live {
+        live: LiveAudio,
+        signals: Arc<Signals>,
+        config: StreamConfig,
+    },
 }
+
+/// The worker thread: its job queue, its handle, and a channel that
+/// disconnects when it has finished.
+struct WorkerHandle {
+    jobs: Sender<Job>,
+    handle: JoinHandle<()>,
+    done: Receiver<()>,
+}
+
+/// How long dropping a backend waits for its worker (the writer thread's
+/// wait at quit is the same). A decode stops between tokens once
+/// cancelled, but the encoder runs to its end: about a second, several
+/// under load.
+pub const SHUTDOWN_WAIT: Duration = Duration::from_secs(10);
 
 /// Whisper on RTen.
 ///
@@ -77,8 +119,10 @@ pub struct RtenDictation {
     state: DictationState,
     generation: Arc<AtomicU64>,
     capture: Option<Box<dyn AudioCapture>>,
+    /// A live session's audio and signals.
+    session: Option<(LiveAudio, Arc<Signals>)>,
     cancel: Arc<AtomicBool>,
-    worker: Option<(Sender<Job>, JoinHandle<()>)>,
+    worker: Option<WorkerHandle>,
     tx: Sender<Tagged>,
     rx: Receiver<Tagged>,
     local: VecDeque<DictationEvent>,
@@ -87,10 +131,11 @@ pub struct RtenDictation {
 
 impl Drop for RtenDictation {
     fn drop(&mut self) {
-        self.cancel.store(true, Ordering::SeqCst);
-        if let Some((jobs, handle)) = self.worker.take() {
-            drop(jobs);
-            let _ = handle.join();
+        if !self.shutdown(SHUTDOWN_WAIT) {
+            log::warn!(
+                "dictation: the Whisper worker did not stop within {} seconds",
+                SHUTDOWN_WAIT.as_secs()
+            );
         }
     }
 }
@@ -116,6 +161,7 @@ impl RtenDictation {
             state: DictationState::Idle,
             generation: Arc::new(AtomicU64::new(0)),
             capture: None,
+            session: None,
             cancel: Arc::new(AtomicBool::new(false)),
             worker: None,
             tx,
@@ -130,7 +176,28 @@ impl RtenDictation {
         *self.timings.lock().unwrap_or_else(|e| e.into_inner())
     }
 
-    fn spawn(&mut self, input: Input) -> Result<(), DictationError> {
+    /// Ends any session (discarding it, as [`Dictation::cancel`] does)
+    /// and stops the worker, waiting at most `wait` for it. True when it
+    /// stopped in time; otherwise it is left to finish on its own. For
+    /// quitting and closing: nothing is lost without a `Cancelled` event.
+    pub fn shutdown(&mut self, wait: Duration) -> bool {
+        self.cancel();
+        self.cancel.store(true, Ordering::SeqCst);
+        let Some(w) = self.worker.take() else {
+            return true;
+        };
+        drop(w.jobs);
+        match w.done.recv_timeout(wait) {
+            Ok(()) | Err(RecvTimeoutError::Disconnected) => {
+                let _ = w.handle.join();
+                true
+            }
+            Err(RecvTimeoutError::Timeout) => false,
+        }
+    }
+
+    /// Sends a session to the worker, starting it the first time.
+    fn send_job(&mut self, input: Input) -> Result<(), DictationError> {
         self.cancel = Arc::new(AtomicBool::new(false));
         let job = Job {
             generation: self.generation.load(Ordering::SeqCst),
@@ -140,6 +207,7 @@ impl RtenDictation {
         };
         if self.worker.is_none() {
             let (jobs_tx, jobs_rx) = channel::<Job>();
+            let (done_tx, done_rx) = channel::<()>();
             let files = self.files.clone();
             let language = self.config.language.clone();
             let vad = self.config.vad;
@@ -148,6 +216,8 @@ impl RtenDictation {
             let handle = std::thread::Builder::new()
                 .name("textweaver-whisper-rten".into())
                 .spawn(move || {
+                    // Disconnects `done` when the thread ends, however.
+                    let _done = done_tx;
                     // Built here: the model never leaves this thread.
                     let mut worker = Worker {
                         files,
@@ -158,22 +228,32 @@ impl RtenDictation {
                         timings,
                     };
                     for job in jobs_rx {
-                        worker.run(&job);
+                        worker.run(job);
                     }
                 })
                 .map_err(|e| DictationError::Capture(e.to_string()))?;
-            self.worker = Some((jobs_tx, handle));
+            self.worker = Some(WorkerHandle {
+                jobs: jobs_tx,
+                handle,
+                done: done_rx,
+            });
         }
         let sent = self
             .worker
             .as_ref()
-            .is_some_and(|(jobs, _)| jobs.send(job).is_ok());
+            .is_some_and(|w| w.jobs.send(job).is_ok());
         if !sent {
             self.worker = None;
             return Err(DictationError::Capture(
                 "The dictation worker has stopped.".into(),
             ));
         }
+        Ok(())
+    }
+
+    /// Starts transcribing recorded input.
+    fn transcribe(&mut self, input: Input) -> Result<(), DictationError> {
+        self.send_job(input)?;
         self.state = DictationState::Transcribing;
         self.local.push_back(DictationEvent::Transcribing);
         Ok(())
@@ -182,20 +262,70 @@ impl RtenDictation {
     /// Blocks until the session ends and returns every event from now on
     /// (for the command line).
     pub fn wait(&mut self) -> Vec<DictationEvent> {
-        let mut events = self.poll();
+        let mut events = Vec::new();
+        self.wait_each(|e| events.push(e.clone()));
+        events
+    }
+
+    /// Blocks until the session ends, handing each event to `each` as it
+    /// arrives (for the command line's live output).
+    pub fn wait_each(&mut self, mut each: impl FnMut(&DictationEvent)) {
+        for e in self.poll() {
+            each(&e);
+        }
         while self.state != DictationState::Idle {
             match self.rx.recv() {
                 Ok((g, e)) if g == self.generation.load(Ordering::SeqCst) => {
                     if e.is_terminal() {
-                        self.state = DictationState::Idle;
+                        self.finished();
                     }
-                    events.push(e);
+                    each(&e);
                 }
                 Ok(_) => {}
                 Err(_) => break,
             }
         }
-        events
+    }
+
+    /// The session has ended (its final event has arrived).
+    fn finished(&mut self) {
+        self.state = DictationState::Idle;
+        self.session = None;
+        // A live session can end while recording: a paced file ran out, or
+        // the worker failed. The capture is released either way.
+        if let Some(mut c) = self.capture.take() {
+            c.cancel();
+        }
+    }
+
+    /// Starts a live session on `capture`, if the configuration and the
+    /// capture allow it. Hands the capture back otherwise.
+    fn start_live(
+        &mut self,
+        mut capture: Box<dyn AudioCapture>,
+    ) -> Result<Option<Box<dyn AudioCapture>>, DictationError> {
+        let Some(config) = self.config.live.filter(|_| self.config.vad.is_some()) else {
+            return Ok(Some(capture));
+        };
+        let Some(live) = capture.live() else {
+            return Ok(Some(capture));
+        };
+        let signals = Arc::new(Signals::default());
+        capture.start()?;
+        let sent = self.send_job(Input::Live {
+            live: live.clone(),
+            signals: Arc::clone(&signals),
+            config,
+        });
+        if let Err(e) = sent {
+            capture.cancel();
+            return Err(e);
+        }
+        self.capture = Some(capture);
+        self.session = Some((live, signals));
+        self.state = DictationState::Recording;
+        self.local.push_back(DictationEvent::Recording);
+        Ok(None)
     }
 }
 
@@ -217,9 +347,12 @@ impl Dictation for RtenDictation {
                         path,
                     });
                 }
-                self.spawn(Input::File(path))
+                self.transcribe(Input::File(path))
             }
-            DictationInput::Capture(mut capture) => {
+            DictationInput::Capture(capture) => {
+                let Some(mut capture) = self.start_live(capture)? else {
+                    return Ok(());
+                };
                 capture.start()?;
                 self.capture = Some(capture);
                 self.state = DictationState::Recording;
@@ -237,7 +370,25 @@ impl Dictation for RtenDictation {
             self.state = DictationState::Idle;
             return Ok(());
         };
-        let pcm = match capture.stop() {
+        let pcm = capture.stop();
+        if let Some((live, signals)) = &self.session {
+            // The worker has the audio already; it finishes what is left.
+            live.end();
+            if let Err(e) = pcm {
+                signals.cancel();
+                self.session = None;
+                self.generation.fetch_add(1, Ordering::SeqCst);
+                self.state = DictationState::Idle;
+                self.local.push_back(DictationEvent::Failed {
+                    message: format!("Recording failed: {e}"),
+                });
+                return Ok(());
+            }
+            self.state = DictationState::Transcribing;
+            self.local.push_back(DictationEvent::Transcribing);
+            return Ok(());
+        }
+        let pcm = match pcm {
             Ok(p) => p,
             Err(e) => {
                 self.state = DictationState::Idle;
@@ -250,7 +401,7 @@ impl Dictation for RtenDictation {
         if pcm.is_empty() {
             self.state = DictationState::Idle;
             self.local.push_back(DictationEvent::Failed {
-                message: "No audio was recorded. Check your microphone.".to_owned(),
+                message: NO_AUDIO.to_owned(),
             });
             return Ok(());
         }
@@ -263,13 +414,17 @@ impl Dictation for RtenDictation {
             };
             to_whisper_rate(&mono).map_err(DictationError::Capture)?
         };
-        self.spawn(Input::Audio(audio))
+        self.transcribe(Input::Audio(audio))
     }
 
     fn cancel(&mut self) {
         self.cancel.store(true, Ordering::SeqCst);
         if let Some(mut c) = self.capture.take() {
             c.cancel();
+        }
+        if let Some((live, signals)) = self.session.take() {
+            signals.cancel();
+            live.end();
         }
         if self.state != DictationState::Idle {
             self.generation.fetch_add(1, Ordering::SeqCst);
@@ -286,7 +441,7 @@ impl Dictation for RtenDictation {
                 continue;
             }
             if e.is_terminal() {
-                self.state = DictationState::Idle;
+                self.finished();
             }
             out.push(e);
         }
@@ -297,6 +452,9 @@ impl Dictation for RtenDictation {
         self.state
     }
 }
+
+/// Said when a recording has no audio at all.
+const NO_AUDIO: &str = "No audio was recorded. Check your microphone.";
 
 /// One session for the worker.
 struct Job {
@@ -316,29 +474,146 @@ struct Worker {
     timings: Arc<Mutex<Option<SessionTimings>>>,
 }
 
+/// Whisper as the live loop's recognizer, adding up its timings.
+struct WhisperRecognizer<'a> {
+    model: &'a RtenWhisper,
+    language: Option<&'a str>,
+    timings: Timings,
+    runs: usize,
+}
+
+impl Recognizer for WhisperRecognizer<'_> {
+    fn recognize(&mut self, audio: &[f32], cancel: &AtomicBool) -> Result<Vec<Segment>, String> {
+        self.runs += 1;
+        let (t, m) = self
+            .model
+            .transcribe(audio, self.language, cancel, &mut |_| {})
+            .map_err(|e| e.to_string())?;
+        self.timings.features += m.features;
+        self.timings.encode += m.encode;
+        self.timings.decode += m.decode;
+        self.timings.audio += m.audio;
+        Ok(t.segments)
+    }
+}
+
 impl Worker {
-    fn run(&mut self, job: &Job) {
-        let event = match self.transcribe(job) {
-            Ok(t) => DictationEvent::Final(t),
-            Err(message) => DictationEvent::Failed { message },
+    fn run(&mut self, job: Job) {
+        let generation = job.generation;
+        let event = match job.input {
+            Input::Live {
+                live,
+                signals,
+                config,
+            } => match self.live(generation, live, &signals, &config) {
+                Ok(Some(e)) => e,
+                // Cancelled: cancel() already said so.
+                Ok(None) => return,
+                Err(message) => DictationEvent::Failed { message },
+            },
+            input => match self.transcribe(&job.cancel, job.stopped, input, generation) {
+                Ok(t) => DictationEvent::Final(t),
+                Err(message) => DictationEvent::Failed { message },
+            },
         };
-        let _ = self.tx.send((job.generation, event));
+        let _ = self.tx.send((generation, event));
     }
 
-    fn transcribe(&mut self, job: &Job) -> Result<Transcript, String> {
-        let audio = match &job.input {
-            Input::File(p) => {
-                let bytes = std::fs::read(p).map_err(|e| format!("{}: {e}", p.display()))?;
-                to_whisper_rate(&read_wav(&bytes)?)?
-            }
-            Input::Audio(a) => a.clone(),
-        };
-        let mut timings = SessionTimings::default();
+    fn load(&mut self, timings: &mut SessionTimings) -> Result<(), String> {
         if self.model.is_none() {
             let t = Instant::now();
             self.model = Some(RtenWhisper::load(&self.files).map_err(|e| e.to_string())?);
             timings.load = t.elapsed();
         }
+        Ok(())
+    }
+
+    /// A live session: the listener finds utterances while the loop
+    /// transcribes them. Returns the final event, or `None` when
+    /// cancelled.
+    fn live(
+        &mut self,
+        generation: u64,
+        live: LiveAudio,
+        signals: &Arc<Signals>,
+        config: &StreamConfig,
+    ) -> Result<Option<DictationEvent>, String> {
+        let mut timings = SessionTimings::default();
+        let vad = self.vad.unwrap_or_default();
+        let (rx, listener) =
+            spawn_listener(live, Box::new(SpeechFinder::new(vad)), Arc::clone(signals))
+                .map_err(|e| format!("Dictation could not start listening: {e}"))?;
+        let mut feed = ChannelFeed::new(rx);
+        // The listener keeps finding speech while the model loads.
+        let loaded = self.load(&mut timings);
+        let result = loaded.and_then(|()| {
+            let Some(model) = &self.model else {
+                return Err("The Whisper model is not loaded.".to_owned());
+            };
+            let mut rec = WhisperRecognizer {
+                model,
+                language: self.language.as_deref(),
+                timings: Timings::default(),
+                runs: 0,
+            };
+            let tx = &self.tx;
+            let report = run_live(&mut rec, &mut feed, signals, config, &mut |e| {
+                let _ = tx.send((generation, e));
+            })?;
+            Ok(report.map(|r| (r, rec.timings, rec.runs)))
+        });
+        // However it ended, the listener stops and is joined.
+        let finished = matches!(result, Ok(Some(_)));
+        if !finished {
+            signals.cancel();
+        }
+        drop(feed);
+        let _ = listener.join();
+        let Some((report, model, runs)) = result? else {
+            return Ok(None);
+        };
+        if report.samples == 0 {
+            return Ok(Some(DictationEvent::Failed {
+                message: NO_AUDIO.to_owned(),
+            }));
+        }
+        timings.model = model;
+        timings.runs = runs;
+        timings.utterances = report.utterances;
+        timings.cancelled_runs = report.cancelled_runs;
+        timings.early_words = report.early_words;
+        timings.words = report.words;
+        timings.speech = report
+            .transcript
+            .segments
+            .iter()
+            .map(|s| Duration::from_millis(s.end_ms.saturating_sub(s.start_ms)))
+            .sum();
+        timings.latency = report
+            .ended_at
+            .map_or(Duration::ZERO, |end| report.finished_at.saturating_sub(end));
+        log::info!("whisper (rten, live): {timings:?}");
+        *self.timings.lock().unwrap_or_else(|e| e.into_inner()) = Some(timings);
+        Ok(Some(DictationEvent::Final(report.transcript)))
+    }
+
+    fn transcribe(
+        &mut self,
+        cancel: &AtomicBool,
+        stopped: Instant,
+        input: Input,
+        generation: u64,
+    ) -> Result<Transcript, String> {
+        let audio = match input {
+            Input::File(p) => {
+                let bytes = std::fs::read(&p).map_err(|e| format!("{}: {e}", p.display()))?;
+                to_whisper_rate(&read_wav(&bytes)?)?
+            }
+            Input::Audio(a) => a,
+            Input::Live { .. } => return Err("A live session reached the batch path.".into()),
+        };
+        let mut timings = SessionTimings::default();
+        self.load(&mut timings)?;
         let Some(model) = &self.model else {
             return Err("The Whisper model is not loaded.".into());
         };
@@ -349,7 +624,7 @@ impl Worker {
         let rate = u64::from(WHISPER_SAMPLE_RATE);
         let mut all = Transcript::default();
         for span in spans {
-            if job.cancel.load(Ordering::SeqCst) {
+            if cancel.load(Ordering::SeqCst) {
                 break;
             }
             timings.speech += Duration::from_millis(span.len() as u64 * 1000 / rate);
@@ -357,7 +632,7 @@ impl Worker {
             let tx = &self.tx;
             let mut on_segment = |s: &Segment| {
                 let _ = tx.send((
-                    job.generation,
+                    generation,
                     DictationEvent::Partial(Segment {
                         start_ms: s.start_ms + offset,
                         end_ms: s.end_ms + offset,
@@ -369,7 +644,7 @@ impl Worker {
                 .transcribe(
                     &audio[span],
                     self.language.as_deref(),
-                    &job.cancel,
+                    cancel,
                     &mut on_segment,
                 )
                 .map_err(|e| e.to_string())?;
@@ -383,7 +658,7 @@ impl Worker {
                 text: s.text,
             }));
         }
-        timings.latency = job.stopped.elapsed();
+        timings.latency = stopped.elapsed();
         log::info!("whisper (rten): {timings:?}");
         *self.timings.lock().unwrap_or_else(|e| e.into_inner()) = Some(timings);
         Ok(all)

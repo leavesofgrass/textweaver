@@ -20,8 +20,14 @@
 //! Whisper programs stay as the fallback. Feature `mic` adds
 //! [`MicCapture`], the default microphone through rodio.
 //!
+//! **Live dictation** (ADR-0042): with [`RtenConfig::live`] and a capture
+//! that offers [`LiveAudio`], words arrive as
+//! [`DictationEvent::Committed`] while the speaker talks, and each
+//! utterance is finished at its pause; see [`stream`] and
+//! [`vad::SpeechFinder`].
+//!
 //! Owners: Agent J (the trait and the subprocess backend), Agent W3f
-//! (in-process Whisper and the microphone).
+//! (in-process Whisper and the microphone), Agent W6d (live dictation).
 
 #[cfg(any(feature = "rten", feature = "mic"))]
 pub mod audio;
@@ -36,13 +42,14 @@ mod onnx_patch;
 mod rten_dictation;
 #[cfg(feature = "rten")]
 pub mod rten_whisper;
+pub mod stream;
 mod transcript;
 pub mod vad;
 mod whisper;
 
 use std::path::PathBuf;
 
-pub use capture::{AudioCapture, BufferCapture, Pcm, WHISPER_SAMPLE_RATE};
+pub use capture::{AudioCapture, BufferCapture, LiveAudio, PacedCapture, Pcm, WHISPER_SAMPLE_RATE};
 pub use commands::{apply_spoken_commands, command_phrases};
 pub use engine::{DetectedEngine, WhisperEngine, detect};
 #[cfg(feature = "mic")]
