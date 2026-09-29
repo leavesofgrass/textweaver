@@ -78,6 +78,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted.
 - [ADR-0036: Math braille and navigation on MathCAT](0036-math-braille-and-navigation.md): MathCAT 0.7.6-rc.3 vendored with the fix for issue #827, Nemeth (default) and UEB math in BRF files wrapped to 40 cells, and exploring a formula with MathCAT's navigation and its braille on the status line.
   - Status: accepted, behind the `mathcat` feature; the status line's order waits for session B1.
+- [ADR-0037: Offline intelligence, part 1: extractive summaries without a model](0037-extractive-summaries.md): LexRank in-house on TF-IDF, sampled long texts, `tw summarize` and Summarize, difficult-word definitions, the RSVP flash check, and why embeddings stay off.
+  - Status: accepted.
 - [ADR-0039: Automated screen-reader checks beside the listening sessions](0039-automated-screen-reader-checks.md): the accessibility tree dumped on three systems and compared with main, and NVDA, Orca, and VoiceOver sessions on CI runners, which never replace the owner's sessions.
   - Status: proposed; every check reports and none fails a job. Answers so far: NVDA through Guidepup and Orca read the GUI; the tree dump works on Windows and macOS.
 - [ADR-0041: Publishing templates, real Word footnotes, and PDF page labels](0041-publishing-templates.md): APA, AMA, large print, dyslexia-friendly, high contrast, and manuscript templates for EPUB, Word, and PDF, real Word footnotes, an EPUB cover with alternative text, and PDF pages labelled with their print pages.

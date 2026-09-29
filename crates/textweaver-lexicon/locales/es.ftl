@@ -2713,3 +2713,39 @@ gui-palette-count =
 gui-settings-form-help = Arriba y Abajo pasan de un ajuste a otro. Izquierda y Derecha cambian uno. Intro escribe un valor nuevo. Suprimir restablece el valor predeterminado. { $next } y { $previous } cambian de sección.
 gui-settings-press-enter = Pulse Intro para escribir un valor nuevo para { $label }.
 gui-font-built-in = { $family } (incluida)
+## Wave 5 (W5s): summaries and difficult-word definitions.
+
+action-summarize = Resumir la selección, el capítulo o el documento: sus oraciones más centrales en una lista; Intro va a una
+# The summary list's title: $n sentences of the whole document.
+summary-title =
+    { $n ->
+        [one] Resumen, { $n } oración
+       *[other] Resumen, { $n } oraciones
+    }
+# The summary of the chapter at the cursor.
+summary-title-chapter =
+    { $n ->
+        [one] Resumen del capítulo, { $n } oración
+       *[other] Resumen del capítulo, { $n } oraciones
+    }
+# The summary of the selection.
+summary-title-selection =
+    { $n ->
+        [one] Resumen de la selección, { $n } oración
+       *[other] Resumen de la selección, { $n } oraciones
+    }
+# Said when the summary list opens; $title is one of the titles above.
+summary-intro = { $title }. Intro va a la oración y la dice.
+# The same, when a long text was read in samples.
+summary-intro-sampled = { $title }, de muestras de este texto largo. Intro va a la oración y la dice.
+summary-none = Nada que resumir: ninguna oración de cuatro palabras o más.
+# tw summarize, on standard error, when a long text was read in samples: $read of $total characters.
+summary-sampled-cli = Un texto largo: el resumen sale de { $read } de sus { $total } caracteres, leídos en muestras.
+# After a difficult word at high verbosity, with definitions on: its first definition.
+aids-difficult-word-defined = palabra difícil: { $definition }
+setting-summary-sentences = Oraciones del resumen
+setting-summary-sentences-help = Cuántas oraciones dan Resumir y tw summarize, de 1 a 50.
+setting-reading-aids-difficult-definitions = Definiciones de palabras difíciles
+setting-reading-aids-difficult-definitions-help = Con las palabras difíciles marcadas, con verbosidad alta decir también la primera definición del diccionario de una palabra difícil.
+section-summary = Resúmenes
+settings-unit-sentences = oraciones

@@ -348,6 +348,37 @@ Put the cursor on a formula, such as `$\frac{a+b}{2}$`, and press **Alt+Shift+X*
 
 Each step says the part and its role, such as "numerator, a plus b", and highlights it; the cursor moves there. At an edge you hear "Last term.", "First term.", "No parts inside.", or "Whole expression." How much is said follows `[normalization] math_verbosity`. See [Math](math.md).
 
+## Summaries
+
+A summary is a short list of the sentences that best stand for a text: the ones that share the most words with the rest of it. textweaver picks them itself, on your computer, with no model and no download (the method is LexRank; see [ADR-0037](adr/0037-extractive-summaries.md)). The sentences are the document's own, word for word, in the order they appear.
+
+**In the reader**, open the command palette and choose **Summarize** (it has no key of its own; you can give it one in the key settings). What it summarizes:
+
+- the selection, when you have selected text;
+- else the chapter you are in, when the document has chapters (the same chapters Next Chapter moves between);
+- else the whole document.
+
+You hear, for example, "Chapter summary, 5 sentences. Enter goes to the sentence and says it." Then the list works like the others: Down and Up say "2 of 5" and the sentence, and **Enter** moves the cursor to that sentence and says it. Escape closes the list.
+
+Headings, tables, code, and footnotes are never summary sentences, and neither are sentences of fewer than four words. A text with none left says "Nothing to summarize". Very long texts (more than about 600,000 characters, some 100,000 words) are read in samples spread evenly through them, so a summary still takes a fraction of a second; the list's introduction then says "from samples of this long text".
+
+**From the command line**, `tw summarize` prints the sentences one per line, with nothing before them:
+
+```sh
+tw summarize essay.md
+tw summarize book.epub --sentences 10
+tw summarize notes.docx --json
+```
+
+`--json` adds each sentence's position, line number, and score. How many sentences both give is `[summary] sentences` in `settings.toml`, 5 unless you change it (1 to 50):
+
+```toml
+[summary]
+sentences = 7
+```
+
+The stop words the method leaves out ("the", "and", "of") are English. Documents in other languages still get a summary, a little less sharp.
+
 ## Go back and forward
 
 textweaver keeps a history of your jumps, like the Back button of a web browser.

@@ -181,6 +181,7 @@ fn everything_changed() -> Settings {
     };
     a.syllables = true;
     a.difficult_words = true;
+    a.difficult_definitions = true;
     a.syllable_options = crate::reading_aids::SyllableOptions {
         separator: "-".into(),
         left_min: 1,
@@ -194,6 +195,7 @@ fn everything_changed() -> Settings {
     s.lexicon.glossary = Some("glossary.txt".into());
     s.lexicon.data_file = Some("lexicon-en.twlex".into());
     s.stats.enabled = false;
+    s.summary.sentences = 7;
     s.interface.language = "en-XA".into();
     s.interface.rtl = crate::RtlDisplay::Off;
     s.speech

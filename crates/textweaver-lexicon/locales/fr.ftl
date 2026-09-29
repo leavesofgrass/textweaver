@@ -2741,3 +2741,39 @@ gui-palette-count =
 gui-settings-form-help = Haut et Bas passent d'un paramètre à l'autre. Gauche et Droite en changent un. Entrée tape une nouvelle valeur. Suppr remet la valeur par défaut. { $next } et { $previous } changent de section.
 gui-settings-press-enter = Appuyez sur Entrée pour taper une nouvelle valeur pour { $label }.
 gui-font-built-in = { $family } (intégrée)
+## Wave 5 (W5s): summaries and difficult-word definitions.
+
+action-summarize = Résumer la sélection, le chapitre ou le document : ses phrases les plus centrales dans une liste ; Entrée va à l'une d'elles
+# The summary list's title: $n sentences of the whole document.
+summary-title =
+    { $n ->
+        [one] Résumé, { $n } phrase
+       *[other] Résumé, { $n } phrases
+    }
+# The summary of the chapter at the cursor.
+summary-title-chapter =
+    { $n ->
+        [one] Résumé du chapitre, { $n } phrase
+       *[other] Résumé du chapitre, { $n } phrases
+    }
+# The summary of the selection.
+summary-title-selection =
+    { $n ->
+        [one] Résumé de la sélection, { $n } phrase
+       *[other] Résumé de la sélection, { $n } phrases
+    }
+# Said when the summary list opens; $title is one of the titles above.
+summary-intro = { $title }. Entrée va à la phrase et la dit.
+# The same, when a long text was read in samples.
+summary-intro-sampled = { $title }, d'après des extraits de ce long texte. Entrée va à la phrase et la dit.
+summary-none = Rien à résumer : aucune phrase de quatre mots ou plus.
+# tw summarize, on standard error, when a long text was read in samples: $read of $total characters.
+summary-sampled-cli = Un long texte : le résumé vient de { $read } de ses { $total } caractères, lus par extraits.
+# After a difficult word at high verbosity, with definitions on: its first definition.
+aids-difficult-word-defined = mot difficile : { $definition }
+setting-summary-sentences = Phrases du résumé
+setting-summary-sentences-help = Combien de phrases donnent Résumer et tw summarize, de 1 à 50.
+setting-reading-aids-difficult-definitions = Définitions des mots difficiles
+setting-reading-aids-difficult-definitions-help = Avec les mots difficiles marqués, en verbosité élevée, dire aussi la première définition du dictionnaire d'un mot difficile.
+section-summary = Résumés
+settings-unit-sentences = phrases

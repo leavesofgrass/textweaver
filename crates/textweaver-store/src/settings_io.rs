@@ -959,6 +959,7 @@ pub fn reset_sections(current: &Settings) -> Vec<String> {
         "preview",
         "lexicon",
         "stats",
+        "summary",
         "interface",
         "gui",
         "keymap",

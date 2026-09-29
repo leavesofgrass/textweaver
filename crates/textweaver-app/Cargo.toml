@@ -62,6 +62,8 @@ textweaver-convert = { workspace = true, optional = true }
 textweaver-render = { workspace = true, optional = true }
 # Agent W3e: define word and the message catalog.
 textweaver-lexicon.workspace = true
+# Agent W5s: summaries without a model (ADR-0037).
+textweaver-summary.workspace = true
 pulldown-cmark.workspace = true
 harper-core = { workspace = true, optional = true }
 serde.workspace = true

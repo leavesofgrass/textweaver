@@ -2749,3 +2749,39 @@ gui-palette-count =
 gui-settings-form-help = Pfeil nach oben und unten wechseln zwischen Einstellungen. Pfeil nach links und rechts ändern eine. Die Eingabetaste gibt einen neuen Wert ein. Entf stellt den Standard wieder her. { $next } und { $previous } wechseln den Bereich.
 gui-settings-press-enter = Drücken Sie die Eingabetaste, um einen neuen Wert für { $label } einzugeben.
 gui-font-built-in = { $family } (eingebaut)
+## Wave 5 (W5s): summaries and difficult-word definitions.
+
+action-summarize = Die Auswahl, das Kapitel oder das Dokument zusammenfassen: die zentralsten Sätze in einer Liste; Eingabe geht zu einem
+# The summary list's title: $n sentences of the whole document.
+summary-title =
+    { $n ->
+        [one] Zusammenfassung, { $n } Satz
+       *[other] Zusammenfassung, { $n } Sätze
+    }
+# The summary of the chapter at the cursor.
+summary-title-chapter =
+    { $n ->
+        [one] Kapitelzusammenfassung, { $n } Satz
+       *[other] Kapitelzusammenfassung, { $n } Sätze
+    }
+# The summary of the selection.
+summary-title-selection =
+    { $n ->
+        [one] Auswahlzusammenfassung, { $n } Satz
+       *[other] Auswahlzusammenfassung, { $n } Sätze
+    }
+# Said when the summary list opens; $title is one of the titles above.
+summary-intro = { $title }. Eingabe geht zum Satz und sagt ihn.
+# The same, when a long text was read in samples.
+summary-intro-sampled = { $title }, aus Stichproben dieses langen Textes. Eingabe geht zum Satz und sagt ihn.
+summary-none = Nichts zusammenzufassen: kein Satz mit vier oder mehr Wörtern.
+# tw summarize, on standard error, when a long text was read in samples: $read of $total characters.
+summary-sampled-cli = Ein langer Text: Die Zusammenfassung stammt aus { $read } seiner { $total } Zeichen, in Stichproben gelesen.
+# After a difficult word at high verbosity, with definitions on: its first definition.
+aids-difficult-word-defined = schwieriges Wort: { $definition }
+setting-summary-sentences = Sätze der Zusammenfassung
+setting-summary-sentences-help = Wie viele Sätze Zusammenfassen und tw summarize liefern, 1 bis 50.
+setting-reading-aids-difficult-definitions = Definitionen schwieriger Wörter
+setting-reading-aids-difficult-definitions-help = Bei markierten schwierigen Wörtern mit hoher Ausführlichkeit auch die erste Wörterbuchdefinition eines schwierigen Wortes sagen.
+section-summary = Zusammenfassungen
+settings-unit-sentences = Sätze

@@ -2960,3 +2960,48 @@ gui-palette-count =
 gui-settings-form-help = ينتقل السهمان لأعلى ولأسفل بين الإعدادات. ويغيّر السهمان لليسار ولليمين إعدادًا. ويكتب Enter قيمة جديدة. ويعيد Delete القيمة الافتراضية. ويغيّر { $next } و{ $previous } القسم.
 gui-settings-press-enter = اضغط Enter لكتابة قيمة جديدة لـ { $label }.
 gui-font-built-in = { $family } (مضمّن)
+## Wave 5 (W5s): summaries and difficult-word definitions.
+
+action-summarize = تلخيص التحديد أو الفصل أو المستند: أهم جمله في قائمة؛ Enter ينتقل إلى إحداها
+# The summary list's title: $n sentences of the whole document.
+summary-title =
+    { $n ->
+        [one] ملخص، جملة واحدة
+        [two] ملخص، جملتان
+        [few] ملخص، { $n } جمل
+        [many] ملخص، { $n } جملة
+       *[other] ملخص، { $n } جملة
+    }
+# The summary of the chapter at the cursor.
+summary-title-chapter =
+    { $n ->
+        [one] ملخص الفصل، جملة واحدة
+        [two] ملخص الفصل، جملتان
+        [few] ملخص الفصل، { $n } جمل
+        [many] ملخص الفصل، { $n } جملة
+       *[other] ملخص الفصل، { $n } جملة
+    }
+# The summary of the selection.
+summary-title-selection =
+    { $n ->
+        [one] ملخص التحديد، جملة واحدة
+        [two] ملخص التحديد، جملتان
+        [few] ملخص التحديد، { $n } جمل
+        [many] ملخص التحديد، { $n } جملة
+       *[other] ملخص التحديد، { $n } جملة
+    }
+# Said when the summary list opens; $title is one of the titles above.
+summary-intro = { $title }. Enter ينتقل إلى الجملة وينطقها.
+# The same, when a long text was read in samples.
+summary-intro-sampled = { $title }، من عينات من هذا النص الطويل. Enter ينتقل إلى الجملة وينطقها.
+summary-none = لا شيء للتلخيص: لا توجد جملة من أربع كلمات أو أكثر.
+# tw summarize, on standard error, when a long text was read in samples: $read of $total characters.
+summary-sampled-cli = نص طويل: الملخص مأخوذ من { $read } من أصل { $total } حرفًا، قُرئت في عينات.
+# After a difficult word at high verbosity, with definitions on: its first definition.
+aids-difficult-word-defined = كلمة صعبة: { $definition }
+setting-summary-sentences = جمل الملخص
+setting-summary-sentences-help = عدد الجمل التي يعطيها التلخيص و tw summarize، من 1 إلى 50.
+setting-reading-aids-difficult-definitions = تعريفات الكلمات الصعبة
+setting-reading-aids-difficult-definitions-help = عند تمييز الكلمات الصعبة، نطق التعريف الأول للكلمة الصعبة من القاموس أيضًا في مستوى التفصيل المرتفع.
+section-summary = الملخصات
+settings-unit-sentences = جمل

@@ -24,14 +24,17 @@
 //! **Difficult words** (`[reading_aids] difficult_words`, Alt+Shift+J) are
 //! words SCOWL ranks as rare. Frontends underline them (never colour
 //! alone), and at high verbosity a word move onto one adds "difficult
-//! word".
+//! word". With `[reading_aids] difficult_definitions` on (off by default),
+//! it adds the word's first definition from the define-word dictionary
+//! too, once the dictionary file has opened quietly (ADR-0037).
 
 use std::time::{Duration, Instant};
 
 use textweaver_aids::{
     BionicOptions, DifficultOptions, GradeBand, Millis, ReadingLevel, Rsvp, RsvpEvent,
     RsvpPosition, RsvpSettings, RulerMode, RulerSettings, ScowlList, SplitText, TerminalSpacing,
-    TextSpacing, WordTrack, bionic_range, difficult_range, reading_level, split_range,
+    TextSpacing, WordTrack, bionic_range, difficult_definition, difficult_range, reading_level,
+    split_range,
 };
 use textweaver_core::SpanKind;
 use textweaver_core::{CharPos, CharRange};
@@ -417,15 +420,38 @@ impl App {
     }
 
     /// ", difficult word" for a word move onto `word` at high verbosity
-    /// with difficult words marked.
-    pub(crate) fn difficult_word_note(&self, word: CharRange) -> Option<String> {
+    /// with difficult words marked; with `[reading_aids]
+    /// difficult_definitions` on, ", difficult word: " and its first
+    /// definition once the dictionary is open (ADR-0037).
+    pub(crate) fn difficult_word_note(&mut self, word: CharRange) -> Option<String> {
         let high = self.settings.speech.verbosity >= textweaver_a11y::Verbosity::High;
-        (high
+        let difficult = high
             && self
                 .difficult_ranges(word)
                 .iter()
-                .any(|r| r.start == word.start))
-        .then(|| format!(", {}", self.msg("aids-difficult-word")))
+                .any(|r| r.start == word.start);
+        if !difficult {
+            return None;
+        }
+        let definition = if self.settings.reading_aids.difficult_definitions {
+            self.definitions_dictionary().and_then(|dict| {
+                let (s, list) = (self.session.as_ref()?, ScowlList::builtin()?);
+                let first = |w: &str| {
+                    let d = dict.define(w).ok().flatten()?;
+                    Some(d.groups.first()?.senses.first()?.definition.clone())
+                };
+                difficult_definition(&s.doc, word, list, &DifficultOptions::default(), &first)
+            })
+        } else {
+            None
+        };
+        Some(match definition {
+            Some(d) => format!(
+                ", {}",
+                self.msg_args("aids-difficult-word-defined", &args!["definition" => d])
+            ),
+            None => format!(", {}", self.msg("aids-difficult-word")),
+        })
     }
 
     /// `ruler_cycle`: off, current line, ruler; saved.
@@ -521,3 +547,6 @@ fn reading_level_summary(c: &Catalog, level: &ReadingLevel) -> String {
         ],
     )
 }
+
+#[cfg(test)]
+mod tests;

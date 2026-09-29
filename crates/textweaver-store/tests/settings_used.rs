@@ -43,6 +43,7 @@ const SECTIONS: &[(&str, &str)] = &[
     ("PreviewSettings", "preview"),
     ("LexiconSettings", "lexicon"),
     ("StatsSettings", "stats"),
+    ("SummarySettings", "summary"),
     ("InterfaceSettings", "interface"),
     ("GuiSettings", "gui"),
     // `src/reading_aids.rs`.

@@ -216,6 +216,9 @@ actions! {
     DefineWord = "define_word", Reading,
         "Define the word at the cursor, or the selected words: senses, examples, synonyms, and pronunciation",
         gui ["g:Ctrl+Shift+D"], term ["g:Alt+E"], shared [];
+    Summarize = "summarize", Reading,
+        "Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one",
+        gui [], term [], shared [];
     ToggleCitations = "toggle_citations", Reading,
         "Turn citations on or off in continuous reading: off skips them, on says them in words",
         gui ["g:Alt+Shift+Q"], term ["g:Alt+Shift+Q"], shared [];
