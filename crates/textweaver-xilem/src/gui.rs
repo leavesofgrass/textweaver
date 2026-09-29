@@ -324,6 +324,8 @@ pub struct Gui {
     /// (`[interface] language` changes them live, as in the terminal).
     lang: String,
     closed: bool,
+    /// Where the focus was when the first dialog opened, to go back to.
+    return_focus: Option<WidgetId>,
     /// How announcements reach the screen reader.
     announce: AnnounceMode,
     /// UI Automation notifications waiting for a screen reader to ask for
@@ -1436,9 +1438,7 @@ impl Gui {
             Modal::new(card, label_text, p.clone()).with_tab_completion(tab_completes),
         )
         .erased();
-        let root = ctx.render_root(self.window_id);
-        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
-        root.focus_on(Some(field_id));
+        self.show_dialog(ctx, modal, field_id);
     }
 
     /// A key for the app's prompt: the app changes its text (history,
@@ -1466,9 +1466,7 @@ impl Gui {
         let (section, row) = at.unwrap_or_else(|| (0, form.first_plain_row(0)));
         let section = section.min(form.sections.len().saturating_sub(1));
         let d = settings_dialog(&self.palette, &form, &self.app, section, row);
-        let root = ctx.render_root(self.window_id);
-        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(d.modal)));
-        root.focus_on(Some(d.form));
+        self.show_dialog(ctx, d.modal, d.form);
         if self.log {
             crate::log::line(&format!(
                 "dialog: settings, {} sections, section {section}, row {row}",
@@ -1657,9 +1655,7 @@ impl Gui {
         let selected = self.app.list_model().map_or(0, |m| m.selected);
         let c = self.app.catalog();
         let (modal, list_id) = list_dialog(&self.palette, &c, title, items, selected, true);
-        let root = ctx.render_root(self.window_id);
-        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
-        root.focus_on(Some(list_id));
+        self.show_dialog(ctx, modal, list_id);
         self.dialog = Some(OpenDialog::List);
         if self.log {
             crate::log::line(&format!("dialog: list {title:?} with {count} items"));
@@ -1699,9 +1695,7 @@ impl Gui {
             ));
         let card = NewWidget::new(card).with_props(dialog::card_props(p));
         let modal = NewWidget::new(Modal::new(card, label_text, p.clone())).erased();
-        let root = ctx.render_root(self.window_id);
-        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
-        root.focus_on(Some(field_id));
+        self.show_dialog(ctx, modal, field_id);
         self.dialog = Some(OpenDialog::Palette(ids));
         if self.log {
             crate::log::line(&format!("dialog: command palette with {count} commands"));
@@ -1727,9 +1721,7 @@ impl Gui {
             selected,
             false,
         );
-        let root = ctx.render_root(self.window_id);
-        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
-        root.focus_on(Some(list_id));
+        self.show_dialog(ctx, modal, list_id);
         self.dialog = Some(OpenDialog::FontFamily(choices));
         if self.log {
             crate::log::line("dialog: font list");
@@ -1956,9 +1948,7 @@ impl Gui {
         if pending && !showing {
             let question = self.app.status_text().to_owned();
             let q = question_dialog(&self.palette, &self.app.catalog(), &question);
-            let root = ctx.render_root(self.window_id);
-            root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(q.modal)));
-            root.focus_on(Some(q.yes));
+            self.show_dialog(ctx, q.modal, q.yes);
             self.dialog = Some(OpenDialog::Question {
                 yes: q.yes,
                 no: q.no,
@@ -1985,12 +1975,38 @@ impl Gui {
         self.dispatch(ctx, Command::Confirm(answer));
     }
 
+    /// Shows `modal` over the window with the focus on `focus`. The first
+    /// dialog over the window remembers where the focus was, so closing it
+    /// puts the focus back there (a toolbar button, or the document).
+    fn show_dialog(
+        &mut self,
+        ctx: &mut DriverCtx<'_>,
+        modal: NewWidget<dyn Widget>,
+        focus: WidgetId,
+    ) {
+        let root = ctx.render_root(self.window_id);
+        let open = root
+            .get_widget_with_tag(ROOT)
+            .is_some_and(|r| r.inner().has_dialog());
+        if !open {
+            self.return_focus = root.focused_widget();
+        }
+        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+        root.focus_on(Some(focus));
+    }
+
+    /// Closes the dialog; the focus goes back where it was before the
+    /// dialog opened, or to the document.
     fn close_dialog(&mut self, ctx: &mut DriverCtx<'_>) {
         self.dialog = None;
         let root = ctx.render_root(self.window_id);
         root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, None));
+        let back = self
+            .return_focus
+            .take()
+            .filter(|id| root.get_widget(*id).is_some());
         let doc = root.get_widget_with_tag(DOC).map(|w| w.id());
-        root.focus_on(doc);
+        root.focus_on(back.or(doc));
     }
 
     fn answer(&mut self, ctx: &mut DriverCtx<'_>, cmd: Command) {
@@ -2598,6 +2614,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         settings_list: experiments.settings_list,
         announce,
         held_notices: Vec::new(),
+        return_focus: None,
         hwnd: 0,
         installed: crate::font_chooser::Installed::scan_in_background(),
         window_title: String::new(),
