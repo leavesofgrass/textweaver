@@ -885,6 +885,10 @@ The plan is `docs/research/wave5-recalibrated.md`. The five branches taken from 
 - `[editing] author` is read from the extra keys and documented, but is not in the store, the schema, or the settings reference.
 - The aarch64 AppImage has not been built yet; the first Release dry run (workflow_dispatch, no tag) tests it.
 
+### Agent W5r: the rope ADR and loading
+
+**Status (Agent W5r, Monday, September 28, 2026):** done on `wave5/r-rope`, main merged in; awaiting integration. ADR-0034: stay on ropey 1.6, look again when ropey 2.0 is final (ADR-0002 has a status update pointing to it). The fuzz follow-up: the formats crate takes `textweaver-ocr` without default features, a new `images` feature gives the picture and scanned-page loaders without the ocrs engine, `ocr` adds `textweaver-ocr/ocrs` (defaults unchanged), and the fuzz crate uses `images`, so `cargo tree` shows no ocrs or RTen without `--features rpc` (the rpc target still reaches them through the app). Hot spots, outside `textweaver-text` in `crates/textweaver-formats/src/{markdown,builder}.rs`: Markdown parses once (deferred footnotes gathered in the main pass), builder words are slices; line lookups at one rope call where four were made; a list's items counted near the list. On 10 MB (fastest of nine, main then branch): loading 420 to 275 ms with 376,819 to 61,022 allocations; the whole-document plan 770 to 610 ms. Bench gate passed against main's numbers. Numbers in `docs/dev/testing.md`.
+
 **After Wave 4 (the owner, Monday, September 28, 2026): release `0.1.0-alpha.4`, then pause, then a documentation sweep.**
 - The owner asked for a new alpha release to be pushed when Wave 4 is done.
 - The docs are comprehensive and checked against the code.
