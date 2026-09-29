@@ -122,6 +122,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0034: The rope after measurement](adr/0034-rope-after-measurement.md): stay on ropey 1.6; ropey 2 and crop measured, and when to look again.
 - [ADR-0036: Math braille and navigation on MathCAT](adr/0036-math-braille-and-navigation.md): Nemeth and UEB math in braille files, and exploring a formula with MathCAT and its braille.
 - [ADR-0039: Automated screen-reader checks beside the listening sessions](adr/0039-automated-screen-reader-checks.md): the accessibility tree on three systems, and NVDA, Orca, and VoiceOver sessions on CI runners.
+- [ADR-0041: Publishing templates, real Word footnotes, and PDF page labels](adr/0041-publishing-templates.md): APA, AMA, and reading templates for EPUB, Word, and PDF, Word footnotes, the EPUB cover, and print page labels.
 
 ## Interactive pages
 

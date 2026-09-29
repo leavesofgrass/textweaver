@@ -1,0 +1,25 @@
+/* textweaver template: large print (ADR-0041).
+   After the American Council of the Blind's large-print guidelines and
+   APH's: text of at least 18 points, a plain sans-serif face, generous line
+   and paragraph spacing, left-aligned text, bold rather than italic for
+   emphasis, and headings set apart by size and weight. Reading systems and
+   readers may still override every rule here. */
+body {
+  font-family: "Atkinson Hyperlegible Next", Verdana, Arial, sans-serif;
+  font-size: 1.5em;
+  line-height: 1.6;
+  text-align: left;
+  hyphens: none;
+  -epub-hyphens: none;
+}
+p { margin: 0 0 1em; }
+h1, h2, h3, h4, h5, h6 { font-weight: bold; line-height: 1.3; margin: 1.4em 0 0.6em; }
+h1 { font-size: 1.5em; }
+h2 { font-size: 1.35em; }
+h3 { font-size: 1.2em; }
+h4, h5, h6 { font-size: 1.1em; }
+em, i { font-style: normal; font-weight: bold; }
+a { text-decoration: underline; }
+th, td { padding: 0.4em 0.6em; }
+pre, code { font-size: 1em; }
+aside { font-size: 1em; }
