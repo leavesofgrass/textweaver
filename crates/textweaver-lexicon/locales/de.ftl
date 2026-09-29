@@ -2784,6 +2784,10 @@ setting-reading-aids-difficult-definitions-help = Bei markierten schwierigen Wö
 section-summary = Zusammenfassungen
 settings-unit-sentences = Sätze
 
+# W6a5: the GUI. Said in textweaver's own voice when the window takes the
+# focus; $title is the document's title.
+gui-window-focused = { $title }, { -brand }.
+
 ## W6u: menus, the command palette, interface announcements, colors, and settings
 
 ## Menu titles; the top menus mark their access key with &.

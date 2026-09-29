@@ -16,6 +16,8 @@ From a release package: `textweaver-gui path/to/document.md`.
 
 With no document, it opens empty and says which key opens one (Ctrl+O).
 
+The first time textweaver runs (no settings yet), the window says a short welcome with the five keys that get you reading, then shows the language list, as the terminal reader does. On a later run, if a screen reader is running and you have never chosen an accessibility mode, it asks once whether to use hybrid mode. If an earlier run left unsaved work, it offers it back. The speech engine starts in the background, so the window is ready at once; Restart Speech (Shift+F8) starts it again, and it restarts by itself once if it stops.
+
 Useful options:
 
 - `--read`: start reading once the document is open.
@@ -37,7 +39,7 @@ On Windows the window opens with no console window beside it. Started from a ter
 From top to bottom:
 
 1. **The header,** a banner with the document's title and five buttons: Open, Font, Edit (or Finish editing), Settings, and Commands.
-2. **The document,** one control your screen reader reads as a document. Arrow keys, Home, End, Page Up, and Page Down move the caret, with Shift to select and Ctrl for words, paragraphs, and the document's ends. Ctrl+C copies the selection. Every other key goes to textweaver's keymap, so the browse keys of NVDA and JAWS work here too: `h` for the next heading, `t` for the next table, `k` for the next link, and so on.
+2. **The document,** one control your screen reader reads as a document (on macOS, a read-only text area, which VoiceOver reads with its text commands). The caret keys are your system's own (see [Caret keys](#caret-keys)), with Shift to select. Ctrl+C (Command+C on macOS) copies the selection, and says what it copied. Every other key goes to textweaver's keymap, so the browse keys of NVDA and JAWS work here too: `h` for the next heading, `t` for the next table, `k` for the next link, and so on.
 3. **The RSVP strip,** only while RSVP is on (Alt+Shift+R). It shows one word at a time under the document, so it never covers the text or the caret.
 4. **The toolbar,** named "Reading": Play or Pause, Stop, Previous sentence, Next sentence, Slower, and Faster.
 5. **The status bar:** the last message, then what the terminal's title line shows: the reading state, "line 3 of 40, 7%", the accessibility mode, the rate, and the speech engine.
@@ -60,6 +62,15 @@ To type a path instead, press Ctrl+Shift+G (Open Path): a one-line prompt where 
 - **Ctrl+D**, or the Font button: the font list. The fonts that come with textweaver are first, marked "built in": Atkinson Hyperlegible Next, Atkinson Hyperlegible Mono, and OpenDyslexic. Then your installed fonts. Enter uses the font at once.
 
 Each change is said, for example "Text size 18 points." or "Font: OpenDyslexic.", and saved in `[reading_aids.font]` (see [Settings](settings.md)). The size steps one point at a time around the usual sizes and more quickly above 16 points, from 8 up to 72 points. The Settings dialog changes the same settings, under "Reading aids".
+
+## Caret keys
+
+The document moves its caret with your system's keys, and Shift with any of them selects:
+
+- **Windows and Linux:** Left and Right by character, Up and Down by line, Ctrl+Left and Ctrl+Right by word, Ctrl+Up and Ctrl+Down by paragraph, Home and End to the start and end of the line, Ctrl+Home and Ctrl+End to the start and end of the document, Page Up and Page Down by screen.
+- **macOS:** Left and Right by character, Up and Down by line, Option+Left and Option+Right by word, Option+Up and Option+Down by paragraph, Command+Left and Command+Right to the start and end of the line, Command+Up and Command+Down to the start and end of the document (Home and End too), Page Up and Page Down by screen. No caret key uses Control, so VoiceOver's keys (Control+Option) are never taken.
+
+In browse mode, Home and End go to the ends of the line, as in any document window; in the terminal they go to the ends of the document, which Ctrl+Home and Ctrl+End do here. In Speech Cursor mode (Tab), Up and Down read the next and previous line and Page Up and Page Down move by paragraph, as in the terminal.
 
 ## Keys
 
@@ -93,8 +104,10 @@ In edit mode the document is a multi-line edit, so NVDA and JAWS switch to focus
 
 - **Typing** goes in at the caret, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
 - **Your screen reader echoes** what you type, and reads the caret and the selection as they move. In the self-voicing mode, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the caret moves to, and what a Shift key added to the selection or took from it.
+- **Copy, cut, and paste:** Ctrl+C copies the selection and Ctrl+X cuts it, each saying what it took; Ctrl+V pastes what is on your system's clipboard at the caret (on macOS, Command with each).
 - **Undo** is Ctrl+Z, **redo** Ctrl+Y or Ctrl+Shift+Z, and each says what it undid. The editing keys are the terminal's: Ctrl+B bold, Ctrl+I italic, Ctrl+K a link, Ctrl+Alt+1 a heading, and the rest in the [keyboard reference](keyboard.md). Ctrl+S saves.
 - **Tab** types a tab, or in a table moves to the next cell (Shift+Tab to the previous one), as in the terminal. **Ctrl+Tab** moves the focus out of the document, to the buttons.
+- **Markdown lint:** Ctrl+F8 moves to the next lint problem (a skipped heading level, a mixed list marker, a bare web address) and says it; Ctrl+Shift+F8 goes back. Grammar checking (Ctrl+F7) is in builds made with the `grammar` feature, as in the terminal.
 - **Spell check:** Alt+M moves to the next misspelled word and selects it, so your screen reader says it and textweaver spells it. Type to replace it, or press Alt+J for suggestions. Alt+Shift+M goes back. Misspelled words are also marked on screen with a dotted underline, shortly after you stop typing (in documents up to a million characters).
 - **Citations while writing:** Alt+C opens the citation picker. Type part of an author or title to filter, Enter inserts it, and textweaver asks for a page or other locator. Alt+Shift+D adds a reference by DOI or ISBN.
 - **Export and preview:** the command palette (F2) has Export as a web page, PDF, Word, EPUB, and braille (BRF), each written next to the document, and Preview in the browser, which reloads when you save.
@@ -127,6 +140,10 @@ textweaver's messages ("Paused.", "Reading at 300 words per minute.") reach your
 
 The setting is `announce` in the `[gui]` section of `settings.toml`; see [Settings](settings.md#gui).
 
+Messages said while the window starts ("Opened", the title, "Reading at") wait until your screen reader has asked for the window's contents, then are said once. Before, they could be lost when the window was quicker than the screen reader.
+
+When the window takes the focus (Alt+Tab, a click), your screen reader says the window's title, which is the document's title and "textweaver", then the document. In the self-voicing mode, textweaver says the document's title and its name in its own voice.
+
 ## Reading aids
 
 The window draws the same [reading aids](reading-aids.md) as the terminal, with the same keys:
@@ -138,11 +155,32 @@ The window draws the same [reading aids](reading-aids.md) as the terminal, with 
 - **Syllables** (Alt+Shift+Z): long words drawn split into syllables with a middle dot, "read·a·bil·i·ty", as in the terminal. The dot is only drawn: the words keep their letters, so your screen reader and Braille display read "readability", and the caret and the spoken word stay where they were. The separator and when words are split are in `[reading_aids.syllable_options]`.
 - **RSVP** (Alt+Shift+R, then Alt+Shift+P to play): one word at a time in its own strip under the document. The word before and after sit to its left and right. The marked letter is bold and underlined as well as colored. RSVP's nine places move the word left, center, or right in the strip.
 
+**Notes, highlights, bookmarks, and search matches** are drawn too, each with a shape as well as a color, so no color carries it alone: your highlights have a solid line under them, text with a note a dashed line, a bookmark a bar before it, a search match a box around it, and the match at the caret a heavier box. The spoken word's and sentence's colors follow `[highlight] color` and `sentence_color`, as in the terminal.
+
+**Exploring a formula** (Alt+Shift+X) works as in the terminal: Right and Left move to the next and previous part, Down goes into a part and Up out of it, Home and End go to the first and last, Space or Enter says it again, and Escape leaves. Any other key leaves the formula and does what it usually does.
+
 All of these change only how text looks. Your screen reader reads the same text either way. The RSVP word is hidden from screen readers, so it is never spoken by itself. Beside it is a quiet status ("RSVP paused, word 120 of 900") that you can find with your screen reader's review or object navigation.
+
+## Colors and high contrast
+
+The window starts in the theme your settings choose, and follows your system's light or dark setting as the terminal reader does (`display.follow_os_theme`, on unless you picked a theme). F5 moves to the next theme.
+
+With Windows High Contrast on (Contrast themes in Windows 11), the window draws with your contrast theme's own colors: its page and text, its highlight for the spoken word, the selection, and the focus ring, and its link color. Turning it on or off applies at once. Marks that have a tint of their own in textweaver's themes (the reading ruler's band, notes, bookmarks, search matches) keep their shapes instead: the ruler's bar, the lines and boxes. The focus ring stays visible: when the highlight color is too close to the page, the ring is drawn in the text color. `--theme`, or `follow_os_theme = false` in `[display]`, keeps textweaver's own colors.
+
+On macOS and Linux, the system's increased-contrast setting chooses textweaver's high-contrast theme when the window starts.
 
 ## Settings
 
 Settings (Ctrl+,) opens a dialog: the sections on the left, the chosen section's settings on the right. Every change takes effect and is saved at once. It is built from the same list as the terminal's settings screen, so every setting is in both; [Settings](settings.md) describes each one.
+
+## What only the terminal reader does
+
+Every command works in the window as in the terminal reader, from the same keys and the command palette (F2), with the same lists, questions, and messages. A few commands only mean something in a terminal:
+
+- `scroll_down` and `scroll_up`: the terminal scrolls its screen by lines. The window scrolls with the mouse wheel and keeps the caret in view.
+- `toggle_line_numbers`: line numbers are the terminal's margin. In the window, the status bar says the line, and Say Position (Shift+W) says it too.
+
+The command-line tools (`tw vault`, `tw convert`, `tw library`, and the rest) are the same for both readers.
 
 ## For testers
 

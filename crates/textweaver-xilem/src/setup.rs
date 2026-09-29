@@ -6,21 +6,20 @@
 //! reader are the keymap frontend, the announcer (the live region, supplied
 //! by the caller), and the silent `paced` backend for automated runs.
 //!
-//! When Agent W3a's settings schema and non-blocking engine start land,
-//! `start_speech` should use them (ADR-0027, "Waiting on W3a").
+//! The speech configuration, the engines' options, the background start,
+//! and restarting speech are the terminal reader's (W6a5).
 
 use std::path::PathBuf;
-use std::time::Duration;
+
+use std::sync::Arc;
 
 use textweaver_app::a11y::Announcer;
 use textweaver_app::core::Rate;
 use textweaver_app::keymap::{Frontend, Keymap, Platform};
-use textweaver_app::speech::pacing::PacingConfig;
-use textweaver_app::speech::{
-    NormalizeConfig, RecordingBackend, RecordingMode, ServiceConfig, SpeechService, TableMode,
-    VoiceParams,
-};
-use textweaver_app::store::{Paths, Settings, SettingsStore, TableMode as StoreTableMode};
+use textweaver_app::lexicon::args;
+use textweaver_app::lexicon::i18n::Catalog;
+use textweaver_app::speech::{RecordingBackend, RecordingMode, ServiceConfig, SpeechService};
+use textweaver_app::store::{Paths, Settings, SettingsStore};
 use textweaver_app::{App, AppConfig};
 
 /// The id of the GUI's silent, paced backend: the speech crate's recording
@@ -46,44 +45,11 @@ pub struct Options {
     pub voice: Option<String>,
 }
 
-/// The speech configuration the settings describe (the same mapping as the
-/// terminal UI's).
+/// The speech configuration the settings describe: the engines crate's,
+/// shared by every frontend, so the window reads with the same settings as
+/// the terminal (the community lexicon, math, DECtalk's options).
 pub fn service_config(settings: &Settings) -> ServiceConfig {
-    let sp = &settings.speech;
-    let norm = &settings.normalization;
-    ServiceConfig {
-        params: VoiceParams {
-            voice: sp.voice.clone(),
-            rate: sp.rate,
-            pitch: sp.pitch,
-            volume: sp.volume,
-        },
-        pacing: PacingConfig {
-            latency_offset: Duration::from_millis(u64::from(sp.latency_offset_ms)),
-            highlight_speed: settings.highlight.speed,
-            ..PacingConfig::default()
-        },
-        punctuation: sp.punctuation,
-        split_caps: sp.split_caps,
-        normalize: NormalizeConfig {
-            skip_code: sp.skip_code,
-            table_mode: match norm.table_mode {
-                StoreTableMode::Structured => TableMode::Structured,
-                StoreTableMode::Flat => TableMode::Flat,
-                StoreTableMode::Skip => TableMode::Skip,
-            },
-            use_pronunciations: norm.use_pronunciations,
-            pronunciations: norm.pronunciations.clone(),
-            abbreviations: norm.abbreviations,
-            abbrev_expansions: norm.abbrev_expansions.clone(),
-            numbers: norm.numbers,
-            math: norm.math,
-            ..NormalizeConfig::default()
-        },
-        caps: sp.caps,
-        prefer_voice: sp.prefer_voice.clone().filter(|p| !p.is_empty()),
-        ..ServiceConfig::default()
-    }
+    textweaver_app::engines::service_config(settings)
 }
 
 /// The `[gui] announce` setting ([`AnnounceMode`](crate::widgets::AnnounceMode)):
@@ -105,9 +71,22 @@ fn ms_per_word(rate: Rate) -> u32 {
     60_000 / u32::from(wpm.max(1))
 }
 
+/// The interface catalog for messages made before the app exists: the
+/// settings' language, with the state folder's own catalogs.
+fn startup_catalog(settings: &Settings, opts: &Options) -> Arc<Catalog> {
+    let paths = match &opts.home {
+        Some(home) => Some(Paths::under(home)),
+        None => Paths::platform().ok(),
+    };
+    let dir = paths.as_ref().map(Paths::locales_dir);
+    Catalog::for_language(&settings.interface.language, dir.as_deref()).0
+}
+
 /// Starts the speech service: the paced backend when asked for, else the
-/// requested backend if available, else the automatic choice, else silence.
-/// Returns the service, the backend id, and messages for the user.
+/// requested backend if available (with the engines' options from
+/// `[speech.eci]`, `[speech.sapi]`, `[speech.apple]`), else the automatic
+/// choice, else silence. Returns the service, the backend id, and messages
+/// for the user, in the interface language.
 pub fn start_speech(settings: &Settings, opts: &Options) -> (SpeechService, String, Vec<String>) {
     let mut messages = Vec::new();
     if opts.no_speech {
@@ -127,40 +106,85 @@ pub fn start_speech(settings: &Settings, opts: &Options) -> (SpeechService, Stri
         return match SpeechService::spawn(backend.into_factory(), service_config(settings)) {
             Ok(service) => (service, PACED_BACKEND.into(), messages),
             Err(e) => {
-                messages.push(format!("Speech could not start ({e}); running silently."));
+                let c = startup_catalog(settings, opts);
+                messages.push(c.fmt("tui-setup-speech-failed", &args!["error" => e.to_string()]));
                 (SpeechService::null(), "silent".into(), messages)
             }
         };
     }
     let preference = (wanted != "auto" && !wanted.is_empty()).then_some(wanted.as_str());
-    let registry = textweaver_app::speech_registry();
+    let registry = textweaver_app::engines::speech_registry_for(settings);
     let info = registry.select(preference).backend;
     if let Some(p) = preference
         && info.id != p
     {
-        messages.push(format!(
-            "Speech backend {p} is not available; using {}.",
-            info.id
+        let c = startup_catalog(settings, opts);
+        messages.push(c.fmt(
+            "tui-setup-backend-unavailable",
+            &args!["wanted" => p, "backend" => info.id],
         ));
     }
     let spawned = registry
         .factory(info.id)
-        .ok_or_else(|| format!("backend {} is not compiled in", info.id))
+        .ok_or_else(|| {
+            startup_catalog(settings, opts)
+                .fmt("tui-setup-backend-not-built", &args!["backend" => info.id])
+        })
         .and_then(|factory| {
             SpeechService::spawn(factory, service_config(settings)).map_err(|e| e.to_string())
         });
     match spawned {
         Ok(service) => (service, info.id.to_owned(), messages),
         Err(e) => {
-            messages.push(format!("Speech could not start ({e}); running silently."));
+            let c = startup_catalog(settings, opts);
+            messages.push(c.fmt("tui-setup-speech-failed", &args!["error" => e]));
             (SpeechService::null(), "silent".into(), messages)
         }
     }
 }
 
+/// True when the state folder `opts` chooses has no settings, no keys, and
+/// no state yet: the first run, as the terminal reader decides it.
+pub fn is_first_run(opts: &Options) -> bool {
+    let paths = match &opts.home {
+        Some(home) => Paths::under(home),
+        None => match Paths::platform() {
+            Ok(p) => p,
+            Err(_) => return false,
+        },
+    };
+    let state_empty = std::fs::read_dir(paths.state_dir())
+        .map(|mut d| d.next().is_none())
+        .unwrap_or(true);
+    !paths.settings_file().exists() && !paths.keymap_file().exists() && state_empty
+}
+
+/// The welcome said once, on the first run: the five keys that get a new
+/// user reading, named from the keymap in effect, as the terminal says it.
+pub fn welcome_text(c: &Catalog, keymap: &Keymap) -> String {
+    use textweaver_app::keymap::ActionId;
+    let k = |a| textweaver_app::named_key_in(c, keymap, a);
+    c.fmt(
+        "tui-setup-welcome",
+        &args![
+            "play" => k(ActionId::PlayPause),
+            "stop" => k(ActionId::Stop),
+            "heading" => k(ActionId::SkipNextHeading),
+            "help" => k(ActionId::Help),
+            "quit" => k(ActionId::Quit)
+        ],
+    )
+}
+
 /// Builds the app: persistence paths, settings, the GUI keymap with the
 /// user's overrides, and speech. Announcements go to `announcer` (the live
 /// region). Returns messages to announce once the window is up.
+///
+/// As in the terminal reader, a real engine starts on a helper thread: the
+/// window is usable at once, silent until the engine is ready, and
+/// `App::tick` swaps it in. The same starter restarts speech in place
+/// (Restart Speech, and once by itself when the speech thread dies).
+/// `--no-speech` and the paced backend start at once.
 pub fn build_app(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<String>) {
     let mut messages = Vec::new();
     let platform = Platform::current();
@@ -169,7 +193,8 @@ pub fn build_app(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<Str
         None => match Paths::platform() {
             Ok(p) => Some(p),
             Err(e) => {
-                messages.push(format!("Cannot save settings or positions: {e}."));
+                let c = startup_catalog(&Settings::default(), opts);
+                messages.push(c.fmt("tui-setup-cannot-save", &args!["error" => e.to_string()]));
                 None
             }
         },
@@ -180,7 +205,8 @@ pub fn build_app(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<Str
             let (settings, msg) = store.load();
             messages.extend(msg);
             let overrides = store.load_keymap().unwrap_or_else(|e| {
-                messages.push(format!("Keymap file ignored: {e}."));
+                let c = startup_catalog(&settings, opts);
+                messages.push(c.fmt("tui-setup-keymap-ignored", &args!["error" => e.to_string()]));
                 Default::default()
             });
             let (keymap, warnings) = Keymap::with_overrides(platform, Frontend::Gui, &overrides);
@@ -195,10 +221,19 @@ pub fn build_app(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<Str
     if let Some(voice) = &opts.voice {
         settings.speech.voice = Some(voice.clone());
     }
-    let (speech, backend_name, speech_messages) = start_speech(&settings, opts);
+    let wanted = opts
+        .backend
+        .clone()
+        .unwrap_or_else(|| settings.speech.backend.clone());
+    let in_background = !opts.no_speech && wanted != PACED_BACKEND && wanted != "null";
+    let (speech, backend_name, speech_messages) = if in_background {
+        (SpeechService::null(), "starting".to_owned(), Vec::new())
+    } else {
+        start_speech(&settings, opts)
+    };
     messages.extend(speech_messages);
-    let self_voicing = opts.self_voicing && backend_name != "silent";
-    let app = App::new(AppConfig {
+    let self_voicing = opts.self_voicing && (in_background || backend_name != "silent");
+    let mut app = App::new(AppConfig {
         settings,
         keymap,
         speech,
@@ -207,6 +242,14 @@ pub fn build_app(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<Str
         self_voicing,
         backend_name,
     });
+    let run = opts.clone();
+    let starter: textweaver_app::SpeechStarter =
+        std::sync::Arc::new(move |s| start_speech(s, &run));
+    if in_background {
+        app.start_speech_in_background(starter);
+    } else {
+        app.set_speech_starter(starter);
+    }
     (app, messages)
 }
 

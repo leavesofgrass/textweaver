@@ -90,9 +90,13 @@ pub fn screenshot(opts: &ShotOptions) -> Result<(), String> {
     if opts.aids {
         turn_on_aids(&mut app)?;
     }
-    let palette = match &opts.theme {
+    let palette = match opts.theme.as_deref() {
+        // Windows High Contrast's own colors, as the window follows them.
+        Some(crate::system_colors::NIGHT_SKY_NAME) => {
+            crate::system_colors::palette(&crate::system_colors::NIGHT_SKY)
+        }
         Some(name) => Palette::named(name),
-        None => Palette::from_theme(app.current_theme()),
+        None => Palette::from_theme(&app.reading_theme()),
     };
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
     let tree = gui::build_tree(
@@ -162,9 +166,9 @@ fn render(
         .map_err(|e| format!("cannot write {}: {e}", opts.path.display()))
 }
 
-/// The screenshots for review: Galaxy, Galaxy Light, and high contrast at
-/// 100% and 200% with a spoken word, a list dialog, and the settings
-/// dialog. Returns the files.
+/// The screenshots for review: Galaxy, Galaxy Light, high contrast, and
+/// Windows High Contrast's own colors at 100% and 200% with a spoken word,
+/// a list dialog, and the settings dialog. Returns the files.
 pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
     std::fs::create_dir_all(dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
     let mut out = Vec::new();
@@ -186,6 +190,7 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
     const SETTINGS: u8 = 2;
     // The reading aids on, with RSVP under the document.
     const AIDS: u8 = 3;
+    const NIGHT_SKY: &str = crate::system_colors::NIGHT_SKY_NAME;
     let shots = [
         ("galaxy-100.png", "galaxy", 1.0, WINDOW),
         ("galaxy-200.png", "galaxy", 2.0, WINDOW),
@@ -213,6 +218,10 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         ("galaxy-aids-200.png", "galaxy", 2.0, AIDS),
         ("galaxy-light-aids-100.png", "galaxy-light", 1.0, AIDS),
         ("high-contrast-aids-100.png", "high-contrast", 1.0, AIDS),
+        // Windows High Contrast ("Night sky"): the system's colors.
+        ("system-contrast-100.png", NIGHT_SKY, 1.0, WINDOW),
+        ("system-contrast-200.png", NIGHT_SKY, 2.0, WINDOW),
+        ("system-contrast-aids-100.png", NIGHT_SKY, 1.0, AIDS),
     ];
     for (name, theme, scale, over) in shots {
         let mut o = base.clone();

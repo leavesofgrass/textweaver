@@ -125,6 +125,23 @@ The "Memory" section proposed three renderer options. The first two were measure
 
 **A fix on the way.** A reading aid turned on or off rebuilt the window's model as a slide, and a slide kept the old paragraph layouts wherever the text was the same, so bionic reading or difficult words switched on or off could keep their old drawing until the paragraph was laid out again. A slide now keeps a layout only when the paragraph's styles and syllable breaks are the same too; the run nodes (and the screen reader's place) are kept either way.
 
+## Status update: the memory proposals decided, and startup announcements (Tuesday, September 29, 2026)
+
+**The three memory proposals, decided.** Measured again on the same machine (NVIDIA GeForce RTX 3060), release builds of this branch, `--background` with the silent paced backend, the sample document, read 15 seconds after launch, three runs each, with other agents building (the first run of each was still settling and is left out):
+
+- **Vello (the default):** 179 to 181 MB working set, 118 to 120 MB private working set, 655 to 660 MB private bytes.
+- **The hybrid renderer** (`--no-default-features --features screenshot,renderer-hybrid,publish,lint`): 157 to 158 MB, 97 to 99 MB, 353 to 356 MB.
+
+1. **Vello with area antialiasing only: not pursued here.** It saved about 3 MB (2 percent) when measured in Wave 5. It is a one-line change in Vello's imaging crate upstream, proposed there; vendoring that crate for it is not worth the upkeep.
+2. **One wgpu backend: stays an opt-in** (`--graphics`, `[gui] graphics`). Its saving (26 MB with Vulkan on this machine, and a loss with Direct3D 12) depends on the graphics driver, and it has been measured on one machine only.
+3. **The hybrid renderer: stays a build option, not the default.** It saves about 22 MB of working set and 300 MB of private bytes, confirmed. But the review screenshots at 100 and 200 percent are drawn by Vello's CPU renderer in both builds, so they cannot show a difference, and the hybrid renderer's drawing speed on a large window with the reading aids drawn cannot be measured without a window on screen, which the automated runs never take. The private bytes are memory the graphics driver commits and never touches, and the working set difference is about 12 percent. The default changes only after a sighted check of the hybrid renderer's drawing at 200 percent and a frame-time measurement on screen.
+
+**Startup announcements wait for the screen reader.** "Opened" and "Reading at" could be lost when they came before a screen reader had asked for the window's tree: they were put in the first tree, and a live region already in the first tree is not announced. The announcer now holds such messages out of the first tree and says them once in the next pass (the driver looks again every 200 ms while they wait). A screen reader that restarts later does not hear them again. UI Automation notifications (`announce = "uia"`) wait the same way.
+
+**The window's name on focus.** When the window takes the focus with the document focused, the self-voicing mode says the document's title and the window's name in textweaver's own voice. With a screen reader, the window's title (the document's title and "textweaver") and the focused document are the platform's to say, and textweaver adds nothing, so they are heard once.
+
+**Windows High Contrast** is followed live: the window draws with the contrast theme's own colors, and marks that had a tint keep their shapes (see `docs/gui.md`).
+
 ## Consequences
 
 - The GUI has a small, reviewed `unsafe` block for the Notification event (one COM call and one COM object), the first in the crate. It is Windows-only and needs `windows` and `windows-core`, which AccessKit already brings.
