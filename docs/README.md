@@ -118,6 +118,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0031: Native RTF, ODT, and Word revisions](adr/0031-native-rtf-odt-and-word-revisions.md): RTF and OpenDocument without Pandoc, comments as notes, tracked changes, and limits for zip packages.
 - [ADR-0032: Grammar, lint, highlighting, and clipboard crates](adr/0032-grammar-lint-highlighting-clipboard.md): the authoring extras' crates, and the two held for the owner.
 - [ADR-0033: The GUI after the second session, and edit mode](adr/0033-gui-session-2-and-edit-mode.md): the file chooser, text size and font keys, a key on every button, and edit mode in the window.
+- [ADR-0036: Math braille and navigation on MathCAT](adr/0036-math-braille-and-navigation.md): Nemeth and UEB math in braille files, and exploring a formula with MathCAT and its braille.
 - [ADR-0039: Automated screen-reader checks beside the listening sessions](adr/0039-automated-screen-reader-checks.md): the accessibility tree on three systems, and NVDA, Orca, and VoiceOver sessions on CI runners.
 
 ## Interactive pages
@@ -146,6 +147,7 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 - [Cloud Agent plan](research/cloud-agent-plan.md): three pull-request tasks for a Claude Cloud Agent beside Wave 4 and Wave 5 (fuzz targets, the generated settings reference and docs check, a second-tool check of the writers), the budget within $125, the pull-request workflow, the effect on Wave 5, the reservation mechanism, and the ready-to-paste brief (September 2026).
 - [Documentation sweep plan](research/docs-sweep-plan.md): the Zensical site on GitHub Pages, a short README, and five agents in parallel (September 2026).
 - [Wave 5, recalibrated](research/wave5-recalibrated.md): Wave 5 after Wave 4 and the Cloud Agent, eleven agents in overlapping batches, streaming dictation research, and the briefs (September 2026).
+- [MathCAT issue #827: pull request text](research/mathcat-827-pull-request.md): the fix textweaver carries for MathCAT's navigation braille, and a test, ready for the owner to file upstream (September 2026).
 
 ## See also
 
