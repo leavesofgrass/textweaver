@@ -99,6 +99,12 @@ Three of the four "Not done yet" items above are done; edit mode is otherwise un
 
 **Questions in the window (found on the way).** The app's yes-or-no questions (a voice download after its size and licence are said, a removal, a file changed on disk, a settings import) had no answer in the window: it never sent `Command::Confirm`, so y and n went to the keymap. A question is now an in-window dialog named by the question, with Yes (focused) and No buttons whose keys are Y and N; y and n typed anywhere in it answer, Escape is no, and any other character asks again, as in the terminal.
 
+## Status update: edit mode at parity (Tuesday, September 29, 2026)
+
+- **A key costs one paragraph.** "Each edit rebuilds the window's paragraphs" was measured before it was changed: a release build, the 1 MB corpus, the caret mid-document, 40 keys, the app's edit, the window's refresh, and Masonry's layout and accessibility passes (`examples/edit_timing.rs`): 24.4 ms a key (median; Backspace 27.7 ms), with 1,236 AccessKit nodes sent per key, the whole window. Two causes: the view took every root pass for a full rebuild (ADR-0027's status update), and an edit slid the model, matching paragraphs by position, so every paragraph after the caret lost its layout and nodes. `DocumentView::edit_model` now keeps the paragraphs before and after the change, with their layouts, visual lines, and run nodes moved by the change's length, and rebuilds only the edited ones. After: 2.2 ms a key (Backspace 2.1 ms), 13 nodes sent, one of them a text run; the window's own model (1.5 ms) is now most of it. A test checks that the runs around an edit keep their ids, that only the edited paragraph's runs are sent, and that the text a screen reader reads stays the document's through new lines, joined paragraphs, undo, and redo.
+- **Copy, cut, and paste.** Copy and Cut are the keymap's, as in the terminal: the app's selection follows the view's, and what the app copies goes to the system clipboard. The platform's paste key, which Masonry reads for the window and delivers as clipboard text, types it at the caret (the view ignored it before).
+- **Markdown lint** works in the window (the `lint` feature, as in the terminal). Grammar stays behind the `grammar` feature in both.
+
 ## Consequences
 
 - One small `unsafe` module more in the GUI crate (`console`), with three console calls and one message box; Windows only.

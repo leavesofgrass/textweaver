@@ -129,6 +129,14 @@ The vendored Parley moved from 0.8.0 to 0.11.1 (August 16, 2026), the newest rel
 - **After (Parley 0.11.1):** 34.2 ms; 0.28 ms median, 0.81 ms worst. Memory: 171 MB (113 MB, 656 MB); 178 MB (117 MB, 654 MB); 194 MB (134 MB, 670 MB). `App::open` 46 to 50 ms.
 - **Verdict: kept.** Opening is 10 percent slower, the worst highlight move 12 percent, and memory within a megabyte or two, all inside the 20 percent allowed and inside the noise of a loaded machine. The GUI's tests (79) pass, and so does the UI Automation report (`-Announce live`).
 
+## Status update: GUI parity, Wave 6 (Tuesday, September 29, 2026)
+
+- **Keys by platform, not by build.** The document view took Ctrl for Cmd on macOS with a compile-time swap, so Cmd+Right moved by word where macOS means the end of the line, and Option did nothing. Widget code now takes a `Platform` (normally `Platform::current()`) and reads the caret keys from one table per platform (`keys::caret_keys`): Ctrl with the arrows by word and paragraph on Windows and Linux; on macOS Option by word and paragraph, Command to the line's and the document's ends, and no Control chord, which VoiceOver takes with Option. The tests press keys built from the same tables (`keys::press`, the inverse of `keys::chord`), and the macOS table is checked on every system. The keymap's own macOS column (a separate change) gives the application's commands; a test checks that no caret key hides a keymap command on any platform.
+- **The document is a text area on macOS.** AccessKit gives a Document to VoiceOver as an AXGroup, which VoiceOver does not read as text; on macOS the view is a read-only multi-line text input (AXTextArea). Windows and Linux keep the Document role that NVDA, JAWS, and Orca read in browse mode.
+- **A full accessibility pass, told apart.** The view resends all its runs on a pass that rebuilds every node. It used to count the root's passes, but Masonry rebuilds the root's node whenever anything in the window asks for layout, so every caret move and every key sent the whole window again. A zero-sized probe, the root's first child, is never laid out again, so its node is rebuilt only when all are.
+- **Masonry: a removed widget's tag is freed** (`third_party/xilem/TEXTWEAVER.md`, item 12). The tag kept pointing at the removed widget, so a second dialog with the same tags panicked on its first edit.
+- **AccessKit.** The adapters are already the September 25, 2026 releases (accesskit 0.25.1, accesskit_windows 0.35.1, accesskit_unix 0.24.0, accesskit_macos 0.27.1, accesskit_winit 0.34.1). The one vendored change, the keyboard shortcut as UI Automation's AcceleratorKey, is not upstream in 0.35.1, so the vendored copy stays. Nothing to drop.
+
 ## Consequences
 
 - The GUI is all Rust: no C++ toolkit, no CMake, no libclang. A cold build of the crate takes about 19 minutes on the development machine, most of it the app's own dependencies and wgpu; incremental builds take seconds.
