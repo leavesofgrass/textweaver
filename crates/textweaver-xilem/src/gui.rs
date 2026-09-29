@@ -193,16 +193,24 @@ struct Shown {
 }
 
 /// What the reading aids' spans depend on: bionic reading (and its
-/// options) and difficult words.
+/// options), difficult words, and syllables (and their options).
 type AidSpansKey = (
     bool,
     textweaver_app::store::reading_aids::BionicOptions,
     bool,
+    bool,
+    textweaver_app::store::reading_aids::SyllableOptions,
 );
 
 fn aid_spans_key(app: &App) -> AidSpansKey {
     let a = &app.settings().reading_aids;
-    (a.bionic, a.bionic_options.clone(), a.difficult_words)
+    (
+        a.bionic,
+        a.bionic_options.clone(),
+        a.difficult_words,
+        a.syllables,
+        a.syllable_options.clone(),
+    )
 }
 
 /// The settings dialog while it is open.
@@ -657,6 +665,10 @@ pub fn model_for(app: &App, w: CharRange) -> Option<DocModel> {
         spans,
         doc_len: s.doc.len_chars(),
         title: s.title.clone(),
+        // Syllables: drawn only, at the app's break positions (always
+        // between two chars of the document), as the terminal draws them.
+        breaks: app.syllable_breaks(w),
+        separator: app.syllable_separator().to_owned(),
     })
 }
 

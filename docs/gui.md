@@ -117,6 +117,7 @@ The window draws the same [reading aids](reading-aids.md) as the terminal, with 
 - **The reading ruler** (Alt+Shift+U): off, the current line, or the ruler. The reading line gets a band with a bar at its start, the lines around it a paler band, and with `mask_outside` the rest is dimmed. It follows the caret, and the spoken word while reading.
 - **Bionic reading** (Alt+Shift+B): the start of each word in bold.
 - **Difficult words** (Alt+Shift+J): underlined with a thick line, never marked by color alone.
+- **Syllables** (Alt+Shift+Z): long words drawn split into syllables with a middle dot, "read·a·bil·i·ty", as in the terminal. The dot is only drawn: the words keep their letters, so your screen reader and Braille display read "readability", and the caret and the spoken word stay where they were. The separator and when words are split are in `[reading_aids.syllable_options]`.
 - **RSVP** (Alt+Shift+R, then Alt+Shift+P to play): one word at a time in its own strip under the document. The word before and after sit to its left and right. The marked letter is bold and underlined as well as colored. RSVP's nine places move the word left, center, or right in the strip.
 
 All of these change only how text looks. Your screen reader reads the same text either way. The RSVP word is hidden from screen readers, so it is never spoken by itself. Beside it is a quiet status ("RSVP paused, word 120 of 900") that you can find with your screen reader's review or object navigation.

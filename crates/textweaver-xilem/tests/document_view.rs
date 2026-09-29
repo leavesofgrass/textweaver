@@ -40,6 +40,7 @@ fn harness_with(doc: &Document, focus: CharPos) -> (TestHarness<DocumentView>, D
         spans: window::window_spans(doc, w.range()),
         doc_len: doc.len_chars(),
         title: "Test".into(),
+        ..DocModel::default()
     };
     h.edit_root_widget(|mut d| DocumentView::set_model(&mut d, model));
     let _ = h.redraw();
@@ -309,6 +310,7 @@ fn a_window_slide_while_reading_keeps_the_screen_readers_place() {
         spans: window::window_spans(&doc, w.range()),
         doc_len: doc.len_chars(),
         title: "Test".into(),
+        ..DocModel::default()
     };
     h.edit_root_widget(|mut d| {
         DocumentView::slide_model(&mut d, model);
@@ -357,6 +359,7 @@ fn a_window_slide_while_reading_keeps_the_screen_readers_place() {
         spans: window::window_spans(&doc, w.range()),
         doc_len: doc.len_chars(),
         title: "Test".into(),
+        ..DocModel::default()
     };
     h.edit_root_widget(|mut d| {
         DocumentView::set_model(&mut d, model);
@@ -382,6 +385,7 @@ fn the_edit_role_experiment_is_a_readonly_multiline_edit() {
         spans: Vec::new(),
         doc_len: doc.len_chars(),
         title: String::new(),
+        ..DocModel::default()
     };
     h.edit_root_widget(|mut d| DocumentView::set_model(&mut d, model));
     let _ = h.redraw();

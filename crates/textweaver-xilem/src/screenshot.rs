@@ -58,6 +58,7 @@ fn turn_on_aids(app: &mut textweaver_app::App) -> Result<(), String> {
         let a = &mut s.reading_aids;
         a.bionic = true;
         a.difficult_words = true;
+        a.syllables = true;
         a.ruler.mode = RulerMode::Ruler;
         a.spacing = TextSpacing {
             line_height: 1.5,

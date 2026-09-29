@@ -109,6 +109,36 @@ pub struct DocModel {
     pub doc_len: usize,
     /// The document's title (the node's description).
     pub title: String,
+    /// Syllables (a reading aid): the separator is drawn before the char
+    /// at each of these positions, in order. Empty when syllables are off.
+    /// Drawn only: the text runs a screen reader gets stay the words.
+    pub breaks: Vec<CharPos>,
+    /// What is drawn between syllables (a middle dot by default).
+    pub separator: String,
+}
+
+impl DocModel {
+    /// The styles drawn on each paragraph: the spans that touch it and its
+    /// syllable breaks. A paragraph whose text and styles are the same in
+    /// two models can keep its layout.
+    fn styles_by_paragraph(&self) -> Vec<(Vec<StyledSpan>, Vec<CharPos>)> {
+        let paras = &self.paragraphs;
+        let mut out = vec![(Vec::new(), Vec::new()); paras.len()];
+        if paras.is_empty() {
+            return out;
+        }
+        for s in &self.spans {
+            let a = caret::paragraph_at(paras, s.range.start);
+            let b = caret::paragraph_at(paras, CharPos(s.range.end.0.saturating_sub(1)));
+            for slot in out.iter_mut().take(b.max(a) + 1).skip(a) {
+                slot.0.push(*s);
+            }
+        }
+        for &k in &self.breaks {
+            out[caret::paragraph_at(paras, k)].1.push(k);
+        }
+        out
+    }
 }
 
 /// The moving state: where the caret and the highlights are.
@@ -165,6 +195,24 @@ struct ParaLayout {
     height: f64,
     /// Space above the text (headings get more).
     top_gap: f64,
+    /// Syllable separators drawn in the paragraph, if any.
+    seps: Option<SepMarks>,
+}
+
+/// The syllable separators of a paragraph: the separator laid out once in
+/// the paragraph's font, and where it goes. The char before each break is
+/// laid out with extra letter spacing as wide as the separator, so the
+/// text keeps its own bytes (the caret, hit testing, and the screen
+/// reader's text are the words) and gains no line-break opportunity.
+struct SepMarks {
+    layout: Layout<BrushIndex>,
+    /// The separator's advance.
+    width: f32,
+    /// Its baseline within its own layout.
+    baseline: f32,
+    /// Byte offsets in the paragraph's text of the chars the separator is
+    /// drawn before.
+    at: Vec<usize>,
 }
 
 /// The document view widget. See the module documentation.
@@ -341,19 +389,28 @@ impl DocumentView {
         if keep_ids {
             w.prune_ids = true;
             // Paragraphs that stay keep their layout and visual lines, so
-            // their runs, split at the same lines, keep their text.
+            // their runs, split at the same lines, keep their text. Only
+            // when their styles are the same too: a reading aid turned on
+            // or off (bionic reading, difficult words, syllables) keeps the
+            // text and the run nodes but needs new layouts.
             let by_start: HashMap<CharPos, usize> = old
                 .paragraphs
                 .iter()
                 .enumerate()
                 .map(|(i, p)| (p.start, i))
                 .collect();
+            let old_styles = old.styles_by_paragraph();
+            let new_styles = w.model.styles_by_paragraph();
+            let same_sep = old.separator == w.model.separator;
             for (j, p) in w.model.paragraphs.iter().enumerate().skip(1) {
                 let Some(&i) = by_start.get(&p.start) else {
                     continue;
                 };
                 let q = &old.paragraphs[i];
                 if q.text != p.text || q.heading != p.heading {
+                    continue;
+                }
+                if !same_sep || old_styles[i] != new_styles[j] {
                     continue;
                 }
                 if let Some(lines) = old_lines.get_mut(i).and_then(Option::take) {
@@ -469,6 +526,16 @@ impl DocumentView {
         &self.visible
     }
 
+    /// How many syllable separators the paragraphs on screen draw, for
+    /// tests.
+    pub fn syllable_marks_on_screen(&self) -> usize {
+        self.visible
+            .iter()
+            .filter_map(|(i, _)| self.layouts.get(i))
+            .map(|pl| pl.seps.as_ref().map_or(0, |s| s.at.len()))
+            .sum()
+    }
+
     fn mark_dirty(&mut self, r: CharRange) {
         let paras = &self.model.paragraphs;
         if paras.is_empty() {
@@ -504,6 +571,35 @@ impl DocumentView {
         let size = self.font.size;
         let sp = self.aids.spacing;
         let text = p.text.as_str();
+        // Syllables: the separator in the paragraph's own font, laid out
+        // once, before the paragraph's builder takes the contexts.
+        let breaks = self.breaks_in(i);
+        let seps = (!breaks.is_empty() && !self.model.separator.is_empty()).then(|| {
+            let sep = self.model.separator.as_str();
+            let mut sb = lcx.ranged_builder(fcx, sep, 1.0, true);
+            sb.push_default(StyleProperty::FontFamily(FontFamily::Source(
+                self.font.family.clone().into(),
+            )));
+            sb.push_default(StyleProperty::FontSize(
+                size * p.heading.map_or(1.0, Self::heading_scale),
+            ));
+            if p.heading.is_some() || self.font.bold {
+                sb.push_default(StyleProperty::FontWeight(FontWeight::BOLD));
+            }
+            sb.push_default(StyleProperty::Brush(BrushIndex(
+                p.heading.map_or(B_TEXT, |l| B_H1 + usize::from(l - 1)),
+            )));
+            let mut layout = sb.build(sep);
+            layout.break_all_lines(None);
+            let width = layout.full_width();
+            let baseline = layout.lines().next().map_or(0.0, |l| l.metrics().baseline);
+            SepMarks {
+                layout,
+                width,
+                baseline,
+                at: breaks.iter().map(|&k| caret::byte_of(text, k)).collect(),
+            }
+        });
         let mut b = lcx.ranged_builder(fcx, text, 1.0, true);
         b.push_default(StyleProperty::FontFamily(FontFamily::Source(
             self.font.family.clone().into(),
@@ -577,6 +673,21 @@ impl DocumentView {
                 }
             }
         }
+        // Room for each separator: the char before a break gets extra
+        // letter spacing as wide as the separator (plus the spacing it
+        // already has), so no byte is added to the text.
+        if let Some(s) = &seps {
+            let base = if sp.letter_spacing > 0.0 {
+                size * sp.letter_spacing
+            } else {
+                0.0
+            };
+            for &k in &breaks {
+                let a = caret::byte_of(text, k - 1);
+                let e = caret::byte_of(text, k);
+                b.push(StyleProperty::LetterSpacing(base + s.width), a..e);
+            }
+        }
         let mut layout = b.build(text);
         layout.break_all_lines(Some(self.column as f32));
         let em = f64::from(size);
@@ -600,7 +711,22 @@ impl DocumentView {
             layout,
             height: top_gap + text_h + after,
             top_gap,
+            seps,
         }
+    }
+
+    /// Paragraph `i`'s syllable breaks, as char offsets inside it (never at
+    /// its start or end).
+    fn breaks_in(&self, i: usize) -> Vec<usize> {
+        let p = &self.model.paragraphs[i];
+        let (start, len) = (p.start.0, p.len_chars());
+        let all = &self.model.breaks;
+        let from = all.partition_point(|b| b.0 <= start);
+        all[from..]
+            .iter()
+            .take_while(|b| b.0 < start + len)
+            .map(|b| b.0 - start)
+            .collect()
     }
 
     /// Lays out paragraph `i` if it is not cached; records its lines.
@@ -1473,6 +1599,24 @@ impl Widget for DocumentView {
                     .draw();
             }
             render_text(painter, tf, &pl.layout, &brushes, false);
+            // Syllable separators, in the space left before each break,
+            // on the line's baseline.
+            if let Some(s) = &pl.seps {
+                for &b in &s.at {
+                    let Some(line) = pl.layout.lines().find(|l| l.text_range().contains(&b)) else {
+                        continue;
+                    };
+                    let x = Cursor::from_byte_index(&pl.layout, b, Affinity::Downstream)
+                        .geometry(&pl.layout, 1.0)
+                        .x0;
+                    let at = origin
+                        + Vec2::new(
+                            x - f64::from(s.width),
+                            f64::from(line.metrics().baseline - s.baseline),
+                        );
+                    render_text(painter, Affine::translate(at), &s.layout, &brushes, false);
+                }
+            }
             // The spoken word's text again, in its own colour, clipped to
             // its band (no relayout per word).
             if !word_rects.is_empty() {

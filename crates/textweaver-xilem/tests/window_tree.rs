@@ -466,6 +466,69 @@ fn reading_aids_are_drawn_and_leave_the_text_alone() {
     assert_ne!(light.ruler_focus, Palette::galaxy().ruler_focus);
 }
 
+/// Syllables (Alt+Shift+Z) are drawn between the chars of long words, as
+/// the terminal draws them, and the text runs a screen reader gets stay the
+/// words. Turning them off takes the marks away again: a reading aid turned
+/// on or off lays the paragraphs out again while keeping their run nodes.
+#[test]
+fn syllables_are_drawn_and_the_text_stays_the_words() {
+    use textweaver_app::Command;
+    use textweaver_app::keymap::ActionId;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let mut refresher = gui::Refresher::default();
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let doc_id = h.get_widget(DOC).id();
+    let text_before = h.access_node(doc_id).unwrap().document_range().text();
+    let runs_before: Vec<_> = h
+        .access_node(doc_id)
+        .unwrap()
+        .children()
+        .map(|c| c.id())
+        .collect();
+    assert_eq!(h.get_widget(DOC).inner().syllable_marks_on_screen(), 0);
+
+    // The key is the same as the terminal's, in the GUI's keymap.
+    let chord: textweaver_app::keymap::KeyChord = "Alt+Shift+Z".parse().expect("chord");
+    assert_eq!(
+        app.keymap().lookup(&chord, app.mode().layer()),
+        Some(ActionId::SyllablesToggle)
+    );
+    let _ = app.dispatch(Command::Action(ActionId::SyllablesToggle));
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let model = gui::model_for(&app, app.session().unwrap().doc.full_range()).unwrap();
+    assert!(!model.breaks.is_empty(), "the sample has long words");
+    assert_eq!(model.separator, "\u{b7}");
+    let marks = h.get_widget(DOC).inner().syllable_marks_on_screen();
+    assert!(marks > 0, "separators are drawn");
+    let text_after = h.access_node(doc_id).unwrap().document_range().text();
+    assert_eq!(text_after, text_before, "syllables change no text");
+    assert!(!text_after.contains('\u{b7}'));
+    // The run nodes that stay keep their ids, so a screen reader keeps its
+    // place (the paragraphs are laid out again underneath).
+    let runs_after: Vec<_> = h
+        .access_node(doc_id)
+        .unwrap()
+        .children()
+        .map(|c| c.id())
+        .collect();
+    assert!(
+        runs_after
+            .iter()
+            .filter(|id| runs_before.contains(id))
+            .count()
+            > runs_before.len() / 2
+    );
+
+    let _ = app.dispatch(Command::Action(ActionId::SyllablesToggle));
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    assert_eq!(h.get_widget(DOC).inner().syllable_marks_on_screen(), 0);
+}
+
 /// A key typed in the document, as the window's driver sees it: the view
 /// leaves it for the keymap (a `KeyAction` from the root), and the keymap's
 /// layer for the app's mode names the action.
