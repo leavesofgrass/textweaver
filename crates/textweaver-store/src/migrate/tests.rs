@@ -383,6 +383,106 @@ fn newer_textweaver_state_wins() {
     assert_eq!(back.notes.len(), 2, "notes still arrive");
 }
 
+/// Star's settings profiles (Wave 5, W5y): one report line per profile, the
+/// values with a textweaver equivalent kept, and textweaver's own profile
+/// of the same name kept.
+#[test]
+fn star_profiles_become_textweaver_profiles() {
+    let f = fixture();
+    let file = f.star.join("settings.json");
+    let mut star: Value = serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
+    star["profiles"] = json!({
+        "Study": {"tts_rate": 200, "theme": "nord", "highlight_color": "yellow", "qt_line_height": 2.0},
+        "Normal": {"tts_rate": 265},
+        "Fancy": {"qt_dyslexia_font": true},
+        "Mine": {"tts_rate": 150},
+        "Broken": 7
+    });
+    std::fs::write(&file, star.to_string()).unwrap();
+    // textweaver already has a profile named Mine.
+    let mut mine = Profiles::default();
+    let mut slow = Settings::default();
+    slow.speech.rate = textweaver_core::Rate::Wpm(120);
+    mine.save_current("Mine", &slow).unwrap();
+    mine.save(&f.paths).unwrap();
+
+    let dry = run(&f, true);
+    assert_eq!(
+        item(&dry, ItemKind::Profile, "Study").outcome,
+        Outcome::Imported
+    );
+    assert_eq!(Profiles::load(&f.paths).unwrap().names(), ["Mine"]);
+
+    let r = run(&f, false);
+    let study = item(&r, ItemKind::Profile, "Study");
+    assert_eq!(study.outcome, Outcome::Imported);
+    assert!(
+        study
+            .detail
+            .starts_with("speech.rate 200, display.theme nord, highlight.color yellow;"),
+        "{}",
+        study.detail
+    );
+    assert!(
+        study.detail.contains("display.theme nord"),
+        "{}",
+        study.detail
+    );
+    assert!(
+        study.detail.ends_with("left out: qt_line_height"),
+        "{}",
+        study.detail
+    );
+    let normal = item(&r, ItemKind::Profile, "Normal");
+    assert_eq!(normal.outcome, Outcome::Imported, "a default value counts");
+    assert_eq!(normal.detail, "speech.rate 265");
+    let fancy = item(&r, ItemKind::Profile, "Fancy");
+    assert_eq!(fancy.outcome, Outcome::Skipped);
+    assert!(
+        fancy.detail.contains("qt_dyslexia_font"),
+        "{}",
+        fancy.detail
+    );
+    assert_eq!(
+        item(&r, ItemKind::Profile, "Mine").outcome,
+        Outcome::Unchanged
+    );
+    assert_eq!(
+        item(&r, ItemKind::Profile, "Broken").outcome,
+        Outcome::Skipped
+    );
+    assert!(
+        !r.items
+            .iter()
+            .any(|i| i.subject.contains("without a textweaver equivalent")
+                && i.detail.contains("profiles")),
+        "profiles are not an unknown setting"
+    );
+    assert!(
+        r.render().contains("Settings profiles: 2 imported"),
+        "{}",
+        r.render()
+    );
+
+    let back = Profiles::load(&f.paths).unwrap();
+    assert_eq!(back.names(), ["Mine", "Normal", "Study"]);
+    let (s, dropped) = back.clone().apply("Study", &Settings::default()).unwrap();
+    assert!(dropped.is_empty(), "{dropped:?}");
+    assert_eq!(s.speech.rate.wpm(), 200);
+    assert_eq!(s.display.theme, "nord");
+    assert_eq!(
+        profiles::value_text(&back.profiles["Mine"], "speech.rate").as_deref(),
+        Some("120"),
+        "textweaver's own profile kept"
+    );
+    // A second run imports nothing new.
+    let again = run(&f, false);
+    assert_eq!(
+        item(&again, ItemKind::Profile, "Study").outcome,
+        Outcome::Unchanged
+    );
+}
+
 #[test]
 fn missing_star_settings_is_an_error() {
     let dir = tempfile::tempdir().unwrap();

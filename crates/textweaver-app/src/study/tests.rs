@@ -36,12 +36,36 @@ fn at(app: &mut App, pos: usize) {
     app.dispatch(Command::SetCursor(CharPos(pos)));
 }
 
+/// Dispatches `cmd`, then ticks until the dictionary file has opened on
+/// its helper thread (at most 30 seconds): the effects of both.
+fn defined(app: &mut App, cmd: Command) -> Vec<Effect> {
+    let mut effects = app.dispatch(cmd);
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while app.study.lexicon_load.is_some() && Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(2));
+        effects.extend(app.tick(Instant::now()));
+    }
+    assert!(
+        app.study.lexicon_load.is_none(),
+        "the dictionary never opened"
+    );
+    effects
+}
+
 #[test]
 fn defines_the_word_at_the_cursor_and_copies_a_sense() {
     let mut app = app_in(None, Some("The geese were running home."), "en");
     at(&mut app, 5);
     let e = app.dispatch(Command::Action(ActionId::DefineWord));
-    let (title, items) = list(&e).expect("a list");
+    assert!(list(&e).is_none(), "the dictionary opens first");
+    assert_eq!(app.status_text(), "Dictionary still loading.");
+    // Asking again meanwhile is not said twice (the result waits for a
+    // tick, so the file cannot have opened in between).
+    app.last_message = None;
+    assert!(list(&app.dispatch(Command::Action(ActionId::DefineWord))).is_none());
+    assert_eq!(app.last_message, None, "said once");
+    let again = defined(&mut app, Command::Action(ActionId::DefineWord));
+    let (title, items) = list(&again).expect("a list");
     assert!(title.starts_with("Definitions of geese, "), "{title}");
     assert!(title.ends_with("from Open English WordNet"), "{title}");
     assert!(
@@ -80,7 +104,7 @@ fn asks_for_a_word_when_there_is_none() {
         "{e:?}"
     );
     assert_eq!(app.status_text(), "Define which word?");
-    let (title, _) = list(&app.dispatch(Command::Answer("Photosynthesis".into()))).unwrap();
+    let (title, _) = list(&defined(&mut app, Command::Answer("Photosynthesis".into()))).unwrap();
     assert!(
         title.starts_with("Definitions of photosynthesis, 1 sense"),
         "{title}"
@@ -101,7 +125,7 @@ fn the_glossary_comes_first() {
     .unwrap();
     let mut app = app_in(None, Some("Cells divide."), "en");
     app.settings.lexicon.glossary = Some(glossary.clone());
-    let (title, items) = list(&app.dispatch(Command::Action(ActionId::DefineWord))).unwrap();
+    let (title, items) = list(&defined(&mut app, Command::Action(ActionId::DefineWord))).unwrap();
     assert!(title.ends_with("from your glossary"), "{title}");
     assert!(
         items
@@ -260,11 +284,26 @@ fn reading_time_is_counted_and_listed() {
     let stats = ReadingStats::load(&Paths::under(&home)).unwrap();
     assert_eq!(stats.documents.len(), 1);
 
-    // Turning statistics off stops the counting.
+    // Enter on an information row keeps the list, on that row.
+    let e = app.dispatch(Command::Choose(1));
+    assert!(list(&e).is_some(), "{e:?}");
+    assert_eq!(app.list_model().map(|l| l.selected), Some(1));
+
+    // Turning statistics off stops the counting; the list stays, on the
+    // row, which now says how to turn them on.
     let toggle = items.len() - 1;
-    app.dispatch(Command::Choose(toggle));
+    let e = app.dispatch(Command::Choose(toggle));
     assert!(app.status_text().starts_with("Reading statistics are off."));
     assert!(!app.settings().stats.enabled);
+    let (_, shown) = list(&e).expect("the list stays");
+    let model = app.list_model().expect("on the list model");
+    assert_eq!(model.selected, toggle);
+    assert_eq!(model.current(), Some(shown[toggle].as_str()));
+    assert!(
+        shown[toggle].starts_with("Statistics are off."),
+        "{shown:?}"
+    );
+    app.dispatch(Command::Cancel);
     app.playback = Playback::Reading;
     app.stats_tick(t0 + Duration::from_secs(61));
     app.stats_tick(t0 + Duration::from_secs(63));
@@ -280,7 +319,7 @@ fn every_study_message_comes_from_the_catalog() {
     let dir = tempfile::tempdir().unwrap();
     let mut app = app_in(Some(dir.path()), Some("The geese flew."), "en-XA");
     at(&mut app, 5);
-    let (title, items) = list(&app.dispatch(Command::Action(ActionId::DefineWord))).unwrap();
+    let (title, items) = list(&defined(&mut app, Command::Action(ActionId::DefineWord))).unwrap();
     for s in std::iter::once(&title).chain(&items) {
         assert!(s.starts_with('⟦') && s.ends_with('⟧'), "{s}");
     }
@@ -311,7 +350,7 @@ fn right_to_left_messages_keep_their_direction_marks_balanced() {
         textweaver_lexicon::i18n::Direction::RightToLeft
     );
     at(&mut app, 5);
-    let (title, items) = list(&app.dispatch(Command::Action(ActionId::DefineWord))).unwrap();
+    let (title, items) = list(&defined(&mut app, Command::Action(ActionId::DefineWord))).unwrap();
     for s in std::iter::once(&title).chain(&items) {
         assert!(bidi_problems(s).is_empty(), "{s:?}");
         assert!(s.contains('\u{2068}'), "values are isolated: {s:?}");

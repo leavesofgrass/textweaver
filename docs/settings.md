@@ -196,9 +196,23 @@ Apple's voices on macOS.
 
 ### [speech.dectalk]
 
-DECtalk. This table is not written by an export unless you set it. See [the DECtalk guide](dectalk.md).
+DECtalk. See [the DECtalk guide](dectalk.md).
 
 - `library`, not set by default: the DECtalk library to load. `TEXTWEAVER_DECTALK_LIBRARY` wins over it.
+
+### [speech.piper]
+
+Piper neural voices.
+
+- `voices`, not set by default: the folder of Piper voices. Unset, textweaver uses the `piper/voices` folder in its data folder. `TEXTWEAVER_PIPER_VOICES` wins over it.
+- `voice`, not set by default: the Piper voice to start with, by id, such as `"en_US-amy-medium"`. Unset, the first installed voice.
+- `phonemizer`, default `"auto"`: how Piper turns text into sounds. `"library"` uses the espeak-ng library, `"rust"` textweaver's own, and `"auto"` the library when it is installed.
+
+A change to `[speech.dectalk]` or `[speech.piper]` takes effect when speech restarts.
+
+### [speech.voice_params]
+
+The rate and pitch each voice was last used at, so choosing a voice again brings them back. textweaver writes this table when you change voices; you do not need to edit it. Each entry is keyed by engine and voice, such as `"sapi:David" = { rate = 310, pitch = -1 }`.
 
 ### [highlight]
 
@@ -273,7 +287,7 @@ Edit mode. See [Writing and editing](editing.md).
 - `echo_lines_on_move`, default `true`: speak the line when the cursor moves to another line.
 - `undo_steps`, default `1000`: the most undo steps kept while editing. The oldest are forgotten first. The smallest allowed value is 1.
 - `undo_memory_mb`, default `50`: the most memory, in megabytes, the undo steps may use. The oldest are forgotten first; the newest step is always kept. The smallest allowed value is 1.
-- `author`, not set by default: the author a new document from a template gets (`author = "Jo Writer"`). See [Start from a template](editing.md#start-from-a-template).
+- `author`, default `""`: the author a new document from a template gets (`author = "Jo Writer"`). Empty leaves the author blank. See [Start from a template](editing.md#start-from-a-template).
 
 Your spelling word list is not a setting: it is `words.txt` in the data folder, one word per line. See [Spelling](editing.md#spelling).
 
@@ -351,7 +365,8 @@ The font in the GUI. The terminal always uses its own font.
 - `family`, default `"sans"`: `"system-ui"`, `"sans"`, `"serif"`, `"monospace"`, a reading font (`"opendyslexic"`, `"atkinson"`, `"lexend"`), or the name of any installed font.
 - `size_pt`, default `14.0`: the size in points, from 6 to 144.
 - `weight`, default `400`: from 100 to 900. 700 is bold.
-- `fetch_missing`, default `true`: offer to download a reading font that is missing, asking first. Not used yet: no part of textweaver offers the download.
+
+`fetch_missing` was removed in Wave 5: textweaver never downloads fonts. A `fetch_missing` line in an older `settings.toml` is ignored and dropped at the next save.
 
 ### [reading_aids.ruler]
 

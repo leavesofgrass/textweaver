@@ -175,9 +175,9 @@ Run "Screen-reader checks" (`a11y-tests.yml`) from the Actions tab, and choose a
 
 - **nvda** (Windows): Guidepup starts NVDA and records its spoken phrases. The summary's first line answers "can Guidepup drive NVDA against the textweaver window?" with "Answer: yes" or "Answer: no".
 - **orca** (Ubuntu, under Xvfb): the session is checked through AT-SPI events: the caret, the announcements, the focus. Orca runs beside it, and the report lists what it said at each step.
-- **voiceover** (macOS 14): the same with VoiceOver, if Guidepup can enable it on the runner. If not, the setup log says why.
+- **voiceover** (macOS 14 and 15): the same with VoiceOver, if Guidepup can start it on the runner. If not, the setup log says why: the system version, System Integrity Protection, and whether AppleScript may drive VoiceOver.
 
-The sessions are report-only for now: a failure shows in the summary but does not fail the workflow. The phrases NVDA spoke are in the `a11y-nvda` artifact (`phrases.json` and `report.md`): the owner compares them with what they heard in their own session.
+The sessions and the tree dumps are report-only: a failure shows in the summary but does not fail the job, whose result comes from building the GUI and installing the tools. The phrases NVDA spoke are in the `a11y-nvda` artifact (`phrases.json` and `report.md`): the owner compares them with what they heard in their own session.
 
 Guidepup and its setup tool are locked, with integrity hashes, in `tools/a11y/package-lock.json`. To move to a new version, change `tools/a11y/package.json` and regenerate the lock file with `npm install --package-lock-only --ignore-scripts` in `tools/a11y`, in a container or on a machine with Node. Nothing else in the project needs Node.
 

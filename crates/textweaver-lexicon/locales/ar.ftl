@@ -1014,7 +1014,7 @@ voice-volume-off = الصوت متوقف.
 voice-volume = مستوى الصوت { $pct } بالمئة.
 voice-no-speed-presets = لا توجد إعدادات سرعة جاهزة.
 # $name is the preset's name from the settings, such as "Study".
-voice-speed-preset = سرعة { $name }، { $wpm } كلمة في الدقيقة.
+voice-speed-preset = { $name }، السرعة { $wpm }.
 voice-line-numbers-on = أرقام الأسطر مفعّلة.
 voice-line-numbers-off = أرقام الأسطر متوقفة.
 
@@ -1368,11 +1368,11 @@ library-scan-stopped = توقّف فحص المكتبة بخطأ داخلي.
 library-empty = المكتبة فارغة. أضف مجلدًا بـ{ $command }، أو افتح ملفًا بـ{ $key }.
 library-intro =
     { $n ->
-        [one] المكتبة، مستند واحد. Enter لفتح واحد.
-        [two] المكتبة، مستندان. Enter لفتح واحد.
-        [few] المكتبة، { $n } مستندات. Enter لفتح واحد.
-        [many] المكتبة، { $n } مستندًا. Enter لفتح واحد.
-       *[other] المكتبة، { $n } مستند. Enter لفتح واحد.
+        [one] المكتبة، مستند واحد. اكتب للتصفية، Enter لفتح واحد.
+        [two] المكتبة، مستندان. اكتب للتصفية، Enter لفتح واحد.
+        [few] المكتبة، { $n } مستندات. اكتب للتصفية، Enter لفتح واحد.
+        [many] المكتبة، { $n } مستندًا. اكتب للتصفية، Enter لفتح واحد.
+       *[other] المكتبة، { $n } مستند. اكتب للتصفية، Enter لفتح واحد.
     }
 library-title = المكتبة
 
@@ -1981,8 +1981,6 @@ setting-reading-aids-font-size-pt = حجم الخط
 setting-reading-aids-font-size-pt-help = حجم خط الواجهة الرسومية.
 setting-reading-aids-font-weight = وزن الخط
 setting-reading-aids-font-weight-help = 400 عادي، 700 عريض.
-setting-reading-aids-font-fetch-missing = عرض الخطوط المفقودة
-setting-reading-aids-font-fetch-missing-help = عرض تنزيل خط قراءة غير مثبَّت، بعد السؤال.
 setting-reading-aids-ruler-mode = مسطرة القراءة
 setting-reading-aids-ruler-mode-help = وسم السطر الحالي، أو شريط من الأسطر.
 choice-reading-aids-ruler-mode-off = إيقاف
@@ -2844,3 +2842,46 @@ lists-filter-matched-pages =
 prompt-go-to-pages = الانتقال إلى صفحة، أو السطر 12، أو نسبة مئوية أو start أو end
 goto-not-a-target-pages = ليس هدف انتقال: { $text }. اكتب رقم صفحة، أو كلمة line ورقمًا، أو نسبة مئوية مثل 50%، أو start، أو end.
 goto-word-page = صفحة
+
+## Wave 5 (W5y): تصفية المكتبة والقاموس والسرعات.
+
+# The library list filtered: $shown of $n documents match $filter.
+library-title-filtered = المكتبة، { $shown } من { $n } يطابق { $filter }
+# The filter was emptied: $n documents are shown.
+library-filter-cleared =
+    { $n ->
+        [one] مُسحت التصفية، مستند واحد.
+        [two] مُسحت التصفية، مستندان.
+        [few] مُسحت التصفية، { $n } مستندات.
+        [many] مُسحت التصفية، { $n } مستندًا.
+       *[other] مُسحت التصفية، { $n } مستند.
+    }
+# No document matches the filter $query.
+library-filter-none = لا مستندات تطابق { $query }. Backspace لحذف الحروف.
+# $n documents match the filter.
+library-filter-matched =
+    { $n ->
+        [one] مستند واحد مطابق.
+        [two] مستندان مطابقان.
+        [few] { $n } مستندات مطابقة.
+        [many] { $n } مستندًا مطابقًا.
+       *[other] { $n } مستند مطابق.
+    }
+# Said once when define word is used while the dictionary file is still opening.
+define-still-loading = ما زال القاموس قيد التحميل.
+# إعدادات أضافها W5y.
+setting-speech-dectalk-library = مكتبة DECtalk
+setting-speech-dectalk-library-help = مكتبة DECtalk المراد تحميلها؛ عدم الضبط يبحث في الأماكن المعتادة.
+setting-speech-piper-voices = مجلد أصوات Piper
+setting-speech-piper-voices-help = مجلد أصوات Piper؛ عدم الضبط يستخدم مجلد piper في مجلد بيانات textweaver.
+setting-speech-piper-voice = صوت Piper
+setting-speech-piper-voice-help = صوت Piper للبدء به، حسب المعرّف؛ عدم الضبط يأخذ أول صوت مثبَّت.
+setting-speech-piper-phonemizer = المحوِّل الصوتي لـ Piper
+setting-speech-piper-phonemizer-help = كيف يحوّل Piper النص إلى أصوات: مكتبة espeak-ng إن كانت مثبَّتة، أو تلك المكتبة، أو محوِّل textweaver.
+choice-speech-piper-phonemizer-auto = تلقائي
+choice-speech-piper-phonemizer-library = مكتبة espeak-ng
+choice-speech-piper-phonemizer-rust = محوِّل textweaver
+setting-speech-voice-params = السرعة وطبقة الصوت لكل صوت
+setting-speech-voice-params-help = السرعة وطبقة الصوت اللتان استُخدم بهما كل صوت آخر مرة؛ اختيار الصوت مجددًا يعيدهما.
+setting-editing-author = المؤلف
+setting-editing-author-help = المؤلف الذي يُكتب في المستندات الجديدة المنشأة من قالب؛ تركه فارغًا يبقيه خاليًا.

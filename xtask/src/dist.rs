@@ -232,7 +232,7 @@ pub(crate) fn stage(out: Option<PathBuf>, universal: bool) -> anyhow::Result<Sta
     let root = eci::root();
     let version = env!("CARGO_PKG_VERSION");
     let build_dir = build_dir(&root);
-    let out = out.unwrap_or_else(|| eci::target_dir(&root).join("dist"));
+    let out = absolute(out.unwrap_or_else(|| eci::target_dir(&root).join("dist")))?;
     let name = package_name(version, &platform(universal));
     let stage = out.join(&name);
     if stage.exists() {
@@ -339,6 +339,20 @@ pub(crate) fn build_dir(root: &Path) -> PathBuf {
         eci::target_dir(root).join("dist-build")
     } else {
         eci::target_dir(root)
+    }
+}
+
+/// `path` made absolute against the current folder. An `--out` folder is
+/// used from tools that run in another folder (appimagetool runs in the
+/// output folder), so a relative one would name the wrong place: the GUI
+/// workflow's `--out gui-dist` became `gui-dist/gui-dist/...`.
+pub(crate) fn absolute(path: PathBuf) -> anyhow::Result<PathBuf> {
+    if path.is_absolute() {
+        Ok(path)
+    } else {
+        Ok(std::env::current_dir()
+            .context("reading the current folder")?
+            .join(path))
     }
 }
 
@@ -518,6 +532,15 @@ mod tests {
         );
         assert!(platform(false).starts_with(std::env::consts::OS));
         assert!(platform(true).ends_with("-universal"));
+    }
+
+    #[test]
+    fn output_folders_are_made_absolute() {
+        let a = absolute(PathBuf::from("gui-dist")).unwrap();
+        assert!(a.is_absolute(), "{}", a.display());
+        assert!(a.ends_with("gui-dist"));
+        let here = std::env::current_dir().unwrap();
+        assert_eq!(absolute(here.clone()).unwrap(), here);
     }
 
     #[test]

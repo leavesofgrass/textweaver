@@ -147,6 +147,7 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 - [Cloud Agent plan](research/cloud-agent-plan.md): three pull-request tasks for a Claude Cloud Agent beside Wave 4 and Wave 5 (fuzz targets, the generated settings reference and docs check, a second-tool check of the writers), the budget within $125, the pull-request workflow, the effect on Wave 5, the reservation mechanism, and the ready-to-paste brief (September 2026).
 - [Documentation sweep plan](research/docs-sweep-plan.md): the Zensical site on GitHub Pages, a short README, and five agents in parallel (September 2026).
 - [Wave 5, recalibrated](research/wave5-recalibrated.md): Wave 5 after Wave 4 and the Cloud Agent, eleven agents in overlapping batches, streaming dictation research, and the briefs (September 2026).
+- [User interface refinement pass: the list](research/ui-refinement.md): everything to improve in the terminal reader, `tw`, and the GUI, gathered before the pass is planned (September 2026).
 
 ## See also
 

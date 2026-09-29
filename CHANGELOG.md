@@ -26,6 +26,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **`y` and `n` answer "Open it?"** while a list is shown, in the window and over JSON-RPC as in the terminal.
 - The screen reader guide's Braille section is written for the Mantis Q40, with NVDA and JAWS braille settings to try and a checklist.
 
+### Wave 5, W5y: Star leftovers, settings, speed presets
+
+- **Library search by author, DOI, and ISBN.** The library list (Alt+L, GUI Ctrl+Shift+B) now filters as you type, and it and `tw library --search` match the title, path, author, DOI, ISBN, and text. A DOI or ISBN matches however it is written. The author, DOI, and ISBN come from the document (front matter, Word and EPUB authors, web page meta tags, a DOI or ISBN near the start of the text) and from `tw cite`'s record of the same work.
+- **Star's settings profiles** are imported by `tw migrate-star`, one report line each.
+- **Define word** opens the dictionary file on a helper thread the first time, saying "Dictionary still loading." once; the list opens when it is ready.
+- **The statistics list** stays open on its row when Enter turns statistics on or off.
+- **Settings:** `[speech.dectalk]`, `[speech.piper]`, `[speech.voice_params]`, and `[editing] author` are typed settings, listed in the settings reference and the settings screen. `[reading_aids.font] fetch_missing`, which never did anything, was removed; an old `settings.toml` line is dropped. The "every setting is used" test now checks the reading aids' own tables too.
+- **Speed presets** (F8) are said preset first: "Study, rate 200."
+
 ## [0.1.0-alpha.4] - 2026-09-28
 
 The fourth alpha. The keys follow NVDA's and JAWS's browse mode; textweaver speaks and shows its words in six languages; RTF and OpenDocument files open without Pandoc; Word comments and tracked changes are read; the Xilem GUI passed the owner's two screen reader sessions and draws the reading aids; and Linux gets AppImages for x86_64 and aarch64 (arm64), the first Linux packages. Changes from Wave 4 come first, by area; the additions since 0.1.0-alpha.3 from the earlier waves follow under Added, Changed, and Fixed.
