@@ -79,6 +79,8 @@ Linux and macOS work best. On Windows, cargo-fuzz works with the MSVC toolchain,
 docker compose -p textweaver run --rm dev bash -c "rustup toolchain install nightly && cargo install cargo-fuzz && cargo +nightly fuzz run markdown -- -max_total_time=300"
 ```
 
+On Windows, give the fuzzer a corpus folder inside the container, such as a copy of `fuzz/corpus/markdown` in `/tmp`, as the first argument after the target. libFuzzer reads and writes its corpus folder all the time, and through the shared Windows folder the `latex` and `eml` targets managed 2 to 4 runs a second instead of 35 to 83 (Monday, September 28, 2026). Copy new finds back only if you want to keep them.
+
 ## Seed the corpus
 
 The fuzzer finds its way faster when it starts from real files. Copy the fixtures that suit each target into its corpus folder before the first run:
