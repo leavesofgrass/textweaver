@@ -16,6 +16,7 @@ To be added by the owner.
 - **Yes-or-no questions:** the GUI seems to have no way to answer a question outside a list (it never sends `Command::Confirm`). Found by W5x; sent to W5a4.
 - **The document on macOS:** the accessibility tree shows it as a group with its text as the value, not as a text area, which may change how VoiceOver reads it. Found by the tree dump in CI (W5t).
 - **Edit mode, left from W4a3:** caret and selection moves are not spoken in self-voicing mode; Tab moves focus instead of typing a tab or moving between table cells; misspellings are not marked on screen. W5a4 is working on these.
+- **The window's name on focus:** when the GUI's window takes the focus, NVDA says neither the window's nor the document's name (the NVDA check in CI, ADR-0039). A screen reader user should hear where they are.
 - **Startup announcements:** "Opened" and "Reading at ..." can be lost when they come before a screen reader has asked for the window (ADR-0028; seen again by the Orca and NVDA checks in CI).
 - **The GUI's own labels in six languages:** messages are translated, but the settings dialog's drawn labels and some of the GUI's own strings are still English (W4d's open issue).
 - **The GUI's rate keys:** moved to F11 and Shift+F11 when Ctrl+Plus and Ctrl+Minus became text size (W4a3). Worth checking that they are easy to find.

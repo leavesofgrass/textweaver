@@ -74,6 +74,10 @@ From the runs on main on Monday, September 28, 2026: first at commit 61d7374 ("S
 
 The sessions and the dumps are report-only on the step (`continue-on-error`), so the GUI workflow's result comes from its build and tests alone.
 
+**Status update (Monday, September 28, 2026, the run on main at `80d94be`):**
+- **NVDA: yes, again,** with the open step fixed: NVDA spoke 5 phrases from the textweaver window, 4 of the GUI's 5 announcements, and the window's name 0 times. When the window takes the focus, NVDA says neither the window's nor the document's name; that is on the UI refinement list.
+- **VoiceOver: no, on `macos-14` and `macos-15`.** "VoiceOver cannot be started" on both, after setup; `macos-14` also failed to turn on "Do not disturb". The macOS tree dump stays the macOS check, and VoiceOver waits for a person.
+
 ## Consequences
 
 - The GUI workflow takes a few minutes longer on each system the first time, while accessibility-cli builds; later runs restore it from the cache.
