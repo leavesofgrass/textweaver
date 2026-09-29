@@ -2768,3 +2768,7 @@ setting-reading-aids-difficult-definitions = Difficult word definitions
 setting-reading-aids-difficult-definitions-help = With difficult words marked, at high verbosity also say a difficult word's first definition from the dictionary.
 section-summary = Summaries
 settings-unit-sentences = sentences
+
+# W6a5: the GUI. Said in textweaver's own voice when the window takes the
+# focus; $title is the document's title.
+gui-window-focused = { $title }, { -brand }.

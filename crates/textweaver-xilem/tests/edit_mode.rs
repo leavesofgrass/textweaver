@@ -84,15 +84,30 @@ fn apply(app: &mut App, action: DocAction) {
         DocAction::Delete { forward: true } => Command::DeleteForward,
         DocAction::Delete { forward: false } => Command::DeleteBack,
         DocAction::Replace { range, text } => Command::ReplaceRange { range, text },
-        DocAction::CaretMoved { caret, .. } => Command::SetCursor(caret),
+        DocAction::CaretMoved {
+            caret, selection, ..
+        } => {
+            let _ = gui::sync_caret(app, caret, selection);
+            return;
+        }
         DocAction::TableCell { forward: true } => Command::Action(ActionId::NextTableCell),
         DocAction::TableCell { forward: false } => Command::Action(ActionId::PreviousTableCell),
+        DocAction::WindowFocused => return,
     };
     let _ = app.dispatch(cmd);
 }
 
 /// The document's node: its role, whether it is read-only, and its runs'
 /// text.
+/// The document's role on this platform: a Document, or on macOS a
+/// read-only text area (VoiceOver reads a Document as an AXGroup).
+fn doc_role() -> Role {
+    match textweaver_app::keymap::Platform::current() {
+        textweaver_app::keymap::Platform::MacOs => Role::MultilineTextInput,
+        _ => Role::Document,
+    }
+}
+
 fn doc_node(h: &TestHarness<Root>, doc: WidgetId) -> (Role, bool, String) {
     let node = h.access_node(doc).expect("the document's node");
     let text: String = node.children().filter_map(|c| c.value()).collect();
@@ -104,7 +119,7 @@ fn edit_mode_makes_the_document_a_multiline_edit() {
     let dir = tempfile::tempdir().unwrap();
     let (mut app, mut h, mut r, doc) = setup(dir.path());
     let (role, read_only, _) = doc_node(&h, doc);
-    assert_eq!(role, Role::Document);
+    assert_eq!(role, doc_role());
     assert!(read_only);
     let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
     assert!(app.is_editing());
@@ -168,12 +183,19 @@ fn keys_type_and_delete_through_the_app_and_undo_restores() {
         text_of(&app)
     );
 
-    // Command keys are not typed: Ctrl+Z goes on to the keymap.
-    h.process_text_event(key(Key::Character("z".into()), Modifiers::CONTROL));
+    // Command keys are not typed: Undo's key (Ctrl+Z, Cmd+Z on macOS, from
+    // the keymap) goes on to the keymap.
+    let platform = textweaver_app::keymap::Platform::current();
+    let undo = app
+        .keymap()
+        .chords_in_mode(ActionId::Undo, app.mode().layer())[0];
+    h.process_text_event(TextEvent::Keyboard(textweaver_xilem::keys::press(
+        &undo, platform,
+    )));
     let (KeyAction(k), _) = h
         .pop_action::<KeyAction>()
-        .expect("Ctrl+Z reaches the keymap, untyped");
-    assert!(k.modifiers.ctrl());
+        .expect("Undo's key reaches the keymap, untyped");
+    assert_eq!(textweaver_xilem::keys::chord(&k, platform), Some(undo));
     // Space types a space in edit mode (it plays in reading).
     h.process_text_event(key(Key::Character(" ".into()), Modifiers::empty()));
     let (action, _) = h.pop_action::<DocAction>().expect("space");
@@ -379,4 +401,157 @@ fn misspelled_words_are_marked_in_edit_mode() {
     let _ = h.redraw();
     assert_eq!(h.get_widget(DOC).inner().misspelled(), ranges.as_slice());
     assert_eq!(doc_node(&h, doc).2, before, "the marks are drawn only");
+}
+
+/// Copy and Cut are the keymap's, as in the terminal: the selection on
+/// screen is the app's too, so they take it, and what they took goes to
+/// the system clipboard. The platform's paste key arrives from the window
+/// as the clipboard's text, which types at the caret.
+#[test]
+fn copy_cut_and_paste_work_on_the_selection_on_screen() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut app, mut h, mut r, _doc) = setup(dir.path());
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let start = NOTES.find("First").unwrap();
+    let platform = textweaver_app::keymap::Platform::current();
+    // The caret at "First", then its select-by-word key (Ctrl+Shift+Right,
+    // Option+Shift+Right on macOS), from the platform's table.
+    let _ = app.dispatch(Command::SetCursor(CharPos(start)));
+    let _ = r.refresh(&app, &mut h);
+    let (word, _) = textweaver_xilem::keys::caret_keys(platform)
+        .into_iter()
+        .find(|(_, m)| {
+            *m == textweaver_xilem::keys::CaretMove {
+                step: textweaver_xilem::keys::CaretStep::Word,
+                forward: true,
+            }
+        })
+        .expect("a word key");
+    let shifted = textweaver_app::keymap::KeyChord::new(
+        word.key,
+        word.mods | textweaver_app::keymap::Modifiers::SHIFT,
+    );
+    h.process_text_event(TextEvent::Keyboard(textweaver_xilem::keys::press(
+        &shifted, platform,
+    )));
+    let (action, _) = h.pop_action::<DocAction>().expect("a selection");
+    let DocAction::CaretMoved {
+        caret, selection, ..
+    } = action
+    else {
+        panic!("not a caret move: {action:?}");
+    };
+    r.caret_moved(&mut app, caret, selection);
+    let selected = app
+        .session()
+        .and_then(|s| s.selection)
+        .expect("the app's too");
+    assert_eq!(selected.start, CharPos(start));
+    // Copy, by its key's action: the app takes the selection for the
+    // clipboard.
+    let _ = app.dispatch(Command::Action(ActionId::Copy));
+    let copied = app.take_clipboard().expect("copied for the clipboard");
+    assert!(copied.starts_with("First"), "{copied:?}");
+    // Cut takes it out, as one undo step.
+    let _ = app.dispatch(Command::Action(ActionId::Cut));
+    assert!(app.take_clipboard().is_some());
+    assert!(!text_of(&app).contains("First"), "{:?}", text_of(&app));
+    // The platform's paste key: the window hands the view the clipboard.
+    let _ = r.refresh(&app, &mut h);
+    h.process_text_event(TextEvent::ClipboardPaste("Second ".into()));
+    let (action, _) = h.pop_action::<DocAction>().expect("pasted");
+    assert_eq!(action, DocAction::Typed("Second ".into()));
+}
+
+/// A key in edit mode costs one paragraph: the runs of the paragraphs
+/// before and after the edit keep their nodes (the screen reader's place
+/// stays on them) and are not sent again; only the edited paragraph's are.
+/// Across many edits (typing, new lines, deletes that join paragraphs,
+/// undo), the text the screen reader reads stays the document's.
+#[test]
+fn an_edit_sends_only_the_edited_paragraph() {
+    let dir = tempfile::tempdir().unwrap();
+    let notes: String = (1..=30)
+        .map(|i| format!("Paragraph {i} of the notes, with a few words.\n\n"))
+        .collect();
+    let (mut app, mut h, mut r, doc) = setup_with(dir.path(), &notes);
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let ids = |h: &TestHarness<Root>| -> Vec<String> {
+        h.access_node(doc)
+            .expect("the document")
+            .children()
+            .map(|c| format!("{:?}", c.id()))
+            .collect()
+    };
+    let before = ids(&h);
+    let n = before.len();
+    // Type at the end of paragraph 10.
+    let at = notes.find("Paragraph 11").unwrap() - 2;
+    let _ = app.dispatch(Command::SetCursor(CharPos(at)));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let _ = app.dispatch(Command::Insert("!".into()));
+    let _ = r.refresh(&app, &mut h);
+    let (_, update) = h.redraw();
+    let after = ids(&h);
+    assert_eq!(after.len(), n);
+    let changed = before.iter().zip(&after).filter(|(a, b)| a != b).count();
+    assert!(changed <= 1, "{changed} runs got new nodes");
+    // The document node, and the edited paragraph's runs.
+    // Of the document's runs, only the edited paragraph's are sent (the
+    // rest of the update is the window's own containers and status bar).
+    let runs = update
+        .nodes
+        .iter()
+        .filter(|(_, n)| n.role() == Role::TextRun)
+        .count();
+    assert_eq!(runs, 1, "{} nodes sent", update.nodes.len());
+    let (_, _, text) = doc_node(&h, doc);
+    assert_eq!(
+        text.trim_end_matches('\n'),
+        text_of(&app).trim_end_matches('\n')
+    );
+
+    // Many edits: what the screen reader reads is the document every time.
+    let edits: Vec<Command> = vec![
+        Command::Insert("\n".into()),
+        Command::Insert("New words.".into()),
+        Command::DeleteBack,
+        Command::Insert("\n\n# A heading\n\n".into()),
+        Command::DeleteForward,
+        Command::Action(ActionId::Undo),
+        Command::Action(ActionId::Undo),
+        Command::Action(ActionId::Redo),
+    ];
+    for (k, e) in edits.into_iter().enumerate() {
+        let _ = app.dispatch(e);
+        let _ = r.refresh(&app, &mut h);
+        let _ = h.redraw();
+        let (_, _, text) = doc_node(&h, doc);
+        assert_eq!(
+            text.trim_end_matches('\n'),
+            text_of(&app).trim_end_matches('\n'),
+            "after edit {k}"
+        );
+        // Every run's position maps back: the caret is where the app has it.
+        let caret = app.session().map(|s| s.cursor).unwrap();
+        assert_eq!(h.get_widget(DOC).inner().state().caret, caret, "edit {k}");
+    }
+    // Deleting a paragraph break joins two paragraphs.
+    let at = text_of(&app).find("Paragraph 20").unwrap();
+    let _ = app.dispatch(Command::SetCursor(CharPos(at)));
+    for _ in 0..2 {
+        let _ = app.dispatch(Command::DeleteBack);
+        let _ = r.refresh(&app, &mut h);
+        let _ = h.redraw();
+    }
+    let (_, _, text) = doc_node(&h, doc);
+    assert_eq!(
+        text.trim_end_matches('\n'),
+        text_of(&app).trim_end_matches('\n')
+    );
 }

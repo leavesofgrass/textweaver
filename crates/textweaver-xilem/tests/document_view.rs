@@ -22,8 +22,18 @@ use textweaver_xilem::window::{self, WINDOW_UNITS};
 const DOC: WidgetTag<DocumentView> = WidgetTag::named("doc");
 
 fn harness_with(doc: &Document, focus: CharPos) -> (TestHarness<DocumentView>, DocWindow) {
+    harness_on(doc, focus, textweaver_app::keymap::Platform::current())
+}
+
+/// The view following `platform`'s caret keys.
+fn harness_on(
+    doc: &Document,
+    focus: CharPos,
+    platform: textweaver_app::keymap::Platform,
+) -> (TestHarness<DocumentView>, DocWindow) {
     let p = Palette::galaxy();
-    let view = DocumentView::new(p.clone(), DocFont::default(), Rc::new(Cell::new(0)));
+    let view = DocumentView::new(p.clone(), DocFont::default(), Rc::new(Cell::new(0)))
+        .with_platform(platform);
     let mut params = TestHarnessParams::default();
     params.window_size = (900, 600).into();
     let mut h = TestHarness::create_with(
@@ -55,7 +65,11 @@ fn doc_text(h: &TestHarness<DocumentView>) -> String {
 #[test]
 fn the_document_is_one_readonly_node_with_its_text() {
     let doc = Document::from_plain_text("First paragraph here.\n\nSecond one, a little longer.");
-    let (h, _) = harness_with(&doc, CharPos::ZERO);
+    let (h, _) = harness_on(
+        &doc,
+        CharPos::ZERO,
+        textweaver_app::keymap::Platform::Windows,
+    );
     let node = h.access_node(h.root_id()).unwrap();
     assert_eq!(node.role(), Role::Document);
     assert!(node.is_read_only());
@@ -396,83 +410,137 @@ fn the_edit_role_experiment_is_a_readonly_multiline_edit() {
     assert_eq!(node.document_range().text(), "Some text.");
 }
 
-/// A key event with modifiers.
-fn key_with(key: Key, mods: masonry::core::keyboard::Modifiers) -> TextEvent {
-    let mut e = masonry::core::keyboard::KeyboardEvent {
-        key,
-        ..Default::default()
-    };
-    e.modifiers = mods;
-    TextEvent::Keyboard(e)
-}
-
 /// Caret keys carry what textweaver's own voice says in the self-voicing
 /// mode, as the terminal's caret keys do: the char, the word, the line as
-/// drawn, the end of a line, and a selection growing or shrinking.
+/// drawn, the end of a line, and a selection growing or shrinking. Each
+/// platform's keys are pressed, built from its table (`keys::caret_keys`),
+/// on every system: the macOS keys are checked on Windows too.
 #[test]
 fn caret_keys_carry_what_the_self_voicing_mode_says() {
-    use masonry::core::keyboard::Modifiers;
+    use textweaver_app::keymap::{KeyChord, Modifiers, Platform};
     use textweaver_xilem::document::CaretEcho;
-    let doc = Document::from_plain_text("ab cd\nef");
+    use textweaver_xilem::keys::{self, CaretMove, CaretStep};
+    for platform in Platform::ALL {
+        let doc = Document::from_plain_text("ab cd\nef");
+        let (mut h, _) = harness_on(&doc, CharPos::ZERO, platform);
+        h.focus_on(Some(h.root_id()));
+        let key = |step, forward, shift: bool| -> TextEvent {
+            let (chord, _) = keys::caret_keys(platform)
+                .into_iter()
+                .find(|(_, m)| *m == CaretMove { step, forward })
+                .expect("every move has a key");
+            let chord = if shift {
+                KeyChord::new(chord.key, chord.mods | Modifiers::SHIFT)
+            } else {
+                chord
+            };
+            TextEvent::Keyboard(keys::press(&chord, platform))
+        };
+        let echo = |h: &mut TestHarness<DocumentView>, e: TextEvent| {
+            h.process_text_event(e);
+            match h.pop_action::<DocAction>() {
+                Some((DocAction::CaretMoved { echo, .. }, _)) => echo,
+                other => panic!("{platform:?}: not a caret move: {other:?}"),
+            }
+        };
+        assert_eq!(
+            echo(&mut h, key(CaretStep::Char, true, false)),
+            Some(CaretEcho::Char('b'))
+        );
+        assert_eq!(
+            echo(&mut h, key(CaretStep::Word, true, false)),
+            Some(CaretEcho::Word("cd".into())),
+            "{platform:?}"
+        );
+        assert_eq!(
+            echo(&mut h, key(CaretStep::LineEdge, true, false)),
+            Some(CaretEcho::LineEnd),
+            "{platform:?}"
+        );
+        assert_eq!(
+            echo(&mut h, key(CaretStep::Char, false, true)),
+            Some(CaretEcho::Selection {
+                text: "d".into(),
+                selected: true
+            })
+        );
+        assert_eq!(
+            echo(&mut h, key(CaretStep::Char, true, true)),
+            Some(CaretEcho::Selection {
+                text: "d".into(),
+                selected: false
+            })
+        );
+        assert_eq!(
+            echo(&mut h, key(CaretStep::Line, true, false)),
+            Some(CaretEcho::Line("ef".into()))
+        );
+        assert_eq!(
+            echo(&mut h, key(CaretStep::DocumentEdge, true, false)),
+            Some(CaretEcho::Line("ef".into())),
+            "{platform:?}"
+        );
+        assert_eq!(
+            echo(&mut h, key(CaretStep::DocumentEdge, false, false)),
+            Some(CaretEcho::Line("ab cd".into())),
+            "{platform:?}"
+        );
+    }
+}
+
+/// Down onto an empty line says the end of a line. An empty paragraph is
+/// laid out with a stand-in char, so its line reaches past its text; the
+/// echo once sliced the text by that line and panicked.
+#[test]
+fn a_caret_key_onto_an_empty_line_says_line_end() {
+    use textweaver_app::keymap::{Key as TwKey, KeyChord, Platform};
+    use textweaver_xilem::document::CaretEcho;
+    let doc = Document::from_plain_text("Title\n\nText after.");
     let (mut h, _) = harness_with(&doc, CharPos::ZERO);
     h.focus_on(Some(h.root_id()));
-    let echo = |h: &mut TestHarness<DocumentView>, e: TextEvent| {
-        h.process_text_event(e);
-        match h.pop_action::<DocAction>() {
-            Some((DocAction::CaretMoved { echo, .. }, _)) => echo,
-            other => panic!("not a caret move: {other:?}"),
+    let down = KeyChord::plain(TwKey::Down);
+    h.process_text_event(TextEvent::Keyboard(textweaver_xilem::keys::press(
+        &down,
+        Platform::current(),
+    )));
+    match h.pop_action::<DocAction>() {
+        Some((DocAction::CaretMoved { echo, .. }, _)) => {
+            assert_eq!(echo, Some(CaretEcho::LineEnd));
         }
-    };
-    let none = Modifiers::empty();
+        other => panic!("not a caret move: {other:?}"),
+    }
+}
+
+/// The window taking the focus with the document focused is told to the
+/// driver, which says the names in textweaver's own voice.
+#[test]
+fn the_window_taking_focus_is_reported() {
+    let doc = Document::from_plain_text("Text.");
+    let (mut h, _) = harness_with(&doc, CharPos::ZERO);
+    h.focus_on(Some(h.root_id()));
+    h.process_text_event(TextEvent::WindowFocusChange(true));
     assert_eq!(
-        echo(&mut h, key_with(Key::Named(NamedKey::ArrowRight), none)),
-        Some(CaretEcho::Char('b'))
+        h.pop_action::<DocAction>().map(|(a, _)| a),
+        Some(DocAction::WindowFocused)
     );
-    assert_eq!(
-        echo(
-            &mut h,
-            // The word key: Cmd on macOS, Ctrl elsewhere, as the view reads it.
-            key_with(
-                Key::Named(NamedKey::ArrowRight),
-                if cfg!(target_os = "macos") {
-                    Modifiers::META
-                } else {
-                    Modifiers::CONTROL
-                }
-            )
-        ),
-        Some(CaretEcho::Word("cd".into()))
-    );
-    assert_eq!(
-        echo(&mut h, key_with(Key::Named(NamedKey::End), none)),
-        Some(CaretEcho::LineEnd)
-    );
-    assert_eq!(
-        echo(
-            &mut h,
-            key_with(Key::Named(NamedKey::ArrowLeft), Modifiers::SHIFT)
-        ),
-        Some(CaretEcho::Selection {
-            text: "d".into(),
-            selected: true
-        })
-    );
-    assert_eq!(
-        echo(
-            &mut h,
-            key_with(Key::Named(NamedKey::ArrowRight), Modifiers::SHIFT)
-        ),
-        Some(CaretEcho::Selection {
-            text: "d".into(),
-            selected: false
-        })
-    );
-    assert_eq!(
-        echo(&mut h, key_with(Key::Named(NamedKey::ArrowDown), none)),
-        Some(CaretEcho::Line("ef".into()))
-    );
-    assert_eq!(
-        echo(&mut h, key_with(Key::Named(NamedKey::ArrowRight), none)),
-        Some(CaretEcho::DocEnd)
-    );
+    h.process_text_event(TextEvent::WindowFocusChange(false));
+    assert!(h.pop_action::<DocAction>().is_none());
+}
+
+/// On macOS the document is a read-only text area (AXTextArea), not a
+/// Document, which VoiceOver sees as an AXGroup; elsewhere a Document.
+#[test]
+fn on_macos_the_document_is_a_read_only_text_area() {
+    use textweaver_app::keymap::Platform;
+    let doc = Document::from_plain_text("Some text.");
+    let (h, _) = harness_on(&doc, CharPos::ZERO, Platform::MacOs);
+    let node = h.access_node(h.root_id()).expect("the document");
+    assert_eq!(node.role(), Role::MultilineTextInput);
+    assert!(node.is_read_only());
+    assert_eq!(node.document_range().text(), "Some text.");
+    for p in [Platform::Windows, Platform::Linux] {
+        let (h, _) = harness_on(&doc, CharPos::ZERO, p);
+        let node = h.access_node(h.root_id()).expect("the document");
+        assert_eq!(node.role(), Role::Document, "{p:?}");
+    }
 }

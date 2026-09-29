@@ -45,6 +45,15 @@ fn harness(app: &textweaver_app::App) -> TestHarness<Root> {
     h
 }
 
+/// The document's role on this platform: a Document, or on macOS a
+/// read-only text area (VoiceOver reads a Document as an AXGroup).
+fn doc_role() -> Role {
+    match textweaver_app::keymap::Platform::current() {
+        textweaver_app::keymap::Platform::MacOs => Role::MultilineTextInput,
+        _ => Role::Document,
+    }
+}
+
 fn names_of(h: &TestHarness<Root>, role: Role) -> Vec<String> {
     let mut out = Vec::new();
     let root = h.access_tree().state().root();
@@ -81,7 +90,7 @@ fn every_control_has_a_role_and_a_name() {
         assert!(buttons.contains(&b.to_owned()), "{b} in {buttons:?}");
     }
     assert_eq!(names_of(&h, Role::Toolbar), vec!["Reading".to_owned()]);
-    assert_eq!(names_of(&h, Role::Document), vec!["Document".to_owned()]);
+    assert_eq!(names_of(&h, doc_role()), vec!["Document".to_owned()]);
     let status = names_of(&h, Role::Status);
     assert_eq!(status.len(), 1);
     // The terminal's title line parts, from the app (`App::title_parts`).
@@ -137,10 +146,9 @@ fn every_button_has_its_key_from_the_keymap() {
     }
     // The platform's own modifier: Command on macOS (the keymap's Mac
     // layout), Control elsewhere.
-    let open = if cfg!(target_os = "macos") {
-        "Cmd+O"
-    } else {
-        "Ctrl+O"
+    let open = match textweaver_app::keymap::Platform::current() {
+        textweaver_app::keymap::Platform::MacOs => "Cmd+O",
+        _ => "Ctrl+O",
     };
     assert_eq!(shortcuts.get("Open"), Some(&Some(open.to_owned())));
     // On screen, the written form; the name is the label alone.
@@ -608,11 +616,11 @@ fn the_voice_manager_is_the_apps_list_with_its_keys() {
     use textweaver_xilem::dialog::DialogAction;
     let dir = tempfile::tempdir().unwrap();
     let mut app = app_with_sample(dir.path());
-    // The keymap's command key: Cmd on macOS, Ctrl elsewhere.
-    let chord: KeyChord = if cfg!(target_os = "macos") {
-        "Cmd+Shift+V"
-    } else {
-        "Ctrl+Shift+V"
+    // The keymap's command key for the platform: Cmd on macOS, Ctrl
+    // elsewhere.
+    let chord: KeyChord = match textweaver_app::keymap::Platform::current() {
+        textweaver_app::keymap::Platform::MacOs => "Cmd+Shift+V",
+        _ => "Ctrl+Shift+V",
     }
     .parse()
     .expect("chord");
@@ -661,24 +669,32 @@ fn the_voice_manager_is_the_apps_list_with_its_keys() {
     );
 }
 
-/// A key typed in the document, as the window's driver sees it: the view
-/// leaves it for the keymap (a `KeyAction` from the root), and the keymap's
-/// layer for the app's mode names the action.
+/// `action`'s key typed in the document, as the window's driver sees it:
+/// the key is the app's keymap's for this platform and the app's mode
+/// (never a key the platform does not use), pressed as the platform sends
+/// it (`keys::press`); the view leaves it for the keymap (a `KeyAction` from
+/// the root), and the keymap names the action it reaches.
 fn press(
     h: &mut TestHarness<Root>,
     app: &textweaver_app::App,
-    key: Key,
-    mods: masonry::core::keyboard::Modifiers,
+    action: textweaver_app::keymap::ActionId,
+    modified: bool,
 ) -> Option<textweaver_app::keymap::ActionId> {
-    let mut e = masonry::core::keyboard::KeyboardEvent {
-        key,
-        ..Default::default()
-    };
-    e.modifiers = mods;
-    h.process_text_event(TextEvent::Keyboard(e));
+    use textweaver_xilem::keys;
+    let platform = textweaver_app::keymap::Platform::current();
+    let layer = app.mode().layer();
+    let chord = app
+        .keymap()
+        .chords_in_mode(action, layer)
+        .into_iter()
+        // The view keeps its caret keys; `modified` asks for a chord with a
+        // modifier (one that works with single-key shortcuts off).
+        .find(|c| !keys::is_native(c, platform) && c.is_text_input() != modified)
+        .unwrap_or_else(|| panic!("{action:?} has a key in {layer:?}"));
+    h.process_text_event(TextEvent::Keyboard(keys::press(&chord, platform)));
     let (KeyAction(k), _) = h.pop_action::<KeyAction>()?;
-    let chord = textweaver_xilem::keys::chord(&k, textweaver_app::keymap::Platform::current())?;
-    app.keymap().lookup(&chord, app.mode().layer())
+    let chord = keys::chord(&k, platform)?;
+    app.keymap().lookup(&chord, layer)
 }
 
 /// Parity with the terminal reader: the outline, the notes list, the
@@ -687,15 +703,8 @@ fn press(
 /// GUI's list dialogs, through `Effect::ShowList`).
 #[test]
 fn outline_notes_access_modes_tables_and_links_work_from_the_document() {
-    use masonry::core::keyboard::Modifiers;
     use textweaver_app::keymap::ActionId;
     use textweaver_app::{Command, Effect, ListKey};
-    // The GUI keymap on macOS turns every Ctrl chord into Cmd.
-    let ctrl = if cfg!(target_os = "macos") {
-        Modifiers::META
-    } else {
-        Modifiers::CONTROL
-    };
     let dir = tempfile::tempdir().unwrap();
     let mut app = app_with_sample(dir.path());
     let mut h = harness(&app);
@@ -714,7 +723,7 @@ fn outline_notes_access_modes_tables_and_links_work_from_the_document() {
     };
 
     // Alt+O: the outline, as a list; Enter jumps to a heading.
-    let a = press(&mut h, &app, Key::Character("o".into()), Modifiers::ALT);
+    let a = press(&mut h, &app, ActionId::Outline, true);
     assert_eq!(a, Some(ActionId::Outline));
     let effects = app.dispatch(Command::Action(ActionId::Outline));
     let (_, items) = list_of(&effects).expect("the outline is a list");
@@ -731,37 +740,29 @@ fn outline_notes_access_modes_tables_and_links_work_from_the_document() {
         at_cursor(&app, 20)
     );
 
-    // t and Shift+T: tables (browse keys); Ctrl+T in any layer.
+    // t and Shift+T: tables (browse keys); Ctrl+T (Cmd+T) in any layer.
     let _ = app.dispatch(Command::SetCursor(textweaver_app::core::CharPos::ZERO));
-    let a = press(&mut h, &app, Key::Character("t".into()), ctrl);
+    let a = press(&mut h, &app, ActionId::NextTable, true);
+    assert_eq!(a, Some(ActionId::NextTable));
+    let a = press(&mut h, &app, ActionId::NextTable, false);
     assert_eq!(a, Some(ActionId::NextTable));
     let _ = app.dispatch(Command::Action(ActionId::NextTable));
     assert!(at_cursor(&app, 4) == "Name", "{:?}", at_cursor(&app, 20));
     // In a table, Ctrl+Alt+Down moves down a row in the same column.
-    let a = press(
-        &mut h,
-        &app,
-        Key::Named(NamedKey::ArrowDown),
-        ctrl | Modifiers::ALT,
-    );
+    let a = press(&mut h, &app, ActionId::TableNextRow, true);
     assert_eq!(a, Some(ActionId::TableNextRow));
     let _ = app.dispatch(Command::Action(ActionId::TableNextRow));
     assert!(at_cursor(&app, 3) == "Ada", "{:?}", at_cursor(&app, 20));
 
     // k: the next link (a browse key, from the start).
     let _ = app.dispatch(Command::SetCursor(textweaver_app::core::CharPos::ZERO));
-    let a = press(&mut h, &app, Key::Character("k".into()), Modifiers::empty());
+    let a = press(&mut h, &app, ActionId::NextLink, false);
     assert_eq!(a, Some(ActionId::NextLink));
     let _ = app.dispatch(Command::Action(ActionId::NextLink));
     assert!(at_cursor(&app, 4) == "link", "{:?}", at_cursor(&app, 20));
 
     // Alt+Shift+A: the access modes, as in the terminal.
-    let a = press(
-        &mut h,
-        &app,
-        Key::Character("A".into()),
-        Modifiers::ALT | Modifiers::SHIFT,
-    );
+    let a = press(&mut h, &app, ActionId::CycleAccessMode, true);
     assert_eq!(a, Some(ActionId::CycleAccessMode));
     let before = app.access_mode();
     let _ = app.dispatch(Command::Action(ActionId::CycleAccessMode));
@@ -774,12 +775,7 @@ fn outline_notes_access_modes_tables_and_links_work_from_the_document() {
         "{effects:?}"
     );
     let _ = app.dispatch(Command::Answer("Check this link".into()));
-    let a = press(
-        &mut h,
-        &app,
-        Key::Character("N".into()),
-        ctrl | Modifiers::SHIFT,
-    );
+    let a = press(&mut h, &app, ActionId::ListNotes, true);
     assert_eq!(a, Some(ActionId::ListNotes));
     let effects = app.dispatch(Command::Action(ActionId::ListNotes));
     let (_, items) = list_of(&effects).expect("the notes list");
@@ -942,11 +938,168 @@ fn themes_switch_in_place() {
     gui::apply_palette(&mut h, &light);
     let _ = h.redraw();
     // Still the same controls, now drawn light.
-    assert_eq!(names_of(&h, Role::Document), vec!["Document".to_owned()]);
+    assert_eq!(names_of(&h, doc_role()), vec!["Document".to_owned()]);
     let img = h.render();
     let px = img.get_pixel(4, 4);
     assert!(
         px[0] > 200 && px[1] > 200 && px[2] > 200,
         "a light page: {px:?}"
     );
+}
+
+/// Speech Cursor mode's own keys (Up and Down read the previous and next
+/// line) reach the keymap from the document, as in the terminal; in browse
+/// mode the same keys move the caret in the view.
+#[test]
+fn speech_cursor_line_keys_reach_the_keymap() {
+    use textweaver_app::Command;
+    use textweaver_app::keymap::{ActionId, Layer, Platform};
+    use textweaver_xilem::keys;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let doc = h.get_widget(DOC).id();
+    h.focus_on(Some(doc));
+    let platform = Platform::current();
+    let down = app
+        .keymap()
+        .chords_in_mode(ActionId::SpeechCursorNextLine, Layer::SpeechCursor)
+        .into_iter()
+        .find(|c| keys::is_native(c, platform))
+        .expect("a caret key reads the next line");
+    // Browse mode: the view moves its caret.
+    h.process_text_event(TextEvent::Keyboard(keys::press(&down, platform)));
+    let moved = h.pop_action::<textweaver_xilem::document::DocAction>();
+    assert!(
+        matches!(
+            moved,
+            Some((textweaver_xilem::document::DocAction::CaretMoved { .. }, _))
+        ),
+        "the view kept {down}: {moved:?}"
+    );
+    // Speech Cursor mode: the key goes on to the keymap.
+    let _ = app.dispatch(Command::Action(ActionId::SpeechCursorToggle));
+    assert_eq!(app.mode().layer(), Layer::SpeechCursor);
+    let mut r = gui::Refresher::default();
+    let _ = r.refresh(&app, &mut h);
+    h.process_text_event(TextEvent::Keyboard(keys::press(&down, platform)));
+    let (KeyAction(k), _) = h
+        .pop_action::<KeyAction>()
+        .expect("the key reaches the keymap");
+    let chord = keys::chord(&k, platform).expect("a chord");
+    assert_eq!(
+        app.keymap().lookup(&chord, app.mode().layer()),
+        Some(ActionId::SpeechCursorNextLine)
+    );
+}
+
+/// Parity with the terminal reader, the commands W6a5's brief names: reading
+/// statistics, settings profiles, summaries, and define word open the app's
+/// lists, which the window shows as list dialogs; Markdown lint works in
+/// edit mode (the window builds with the `lint` feature, as the terminal
+/// does).
+#[test]
+fn study_lists_summaries_profiles_and_lint_work_in_the_window() {
+    use textweaver_app::keymap::ActionId;
+    use textweaver_app::{Command, Effect};
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let list_of = |effects: Vec<Effect>| {
+        effects.into_iter().find_map(|e| match e {
+            Effect::ShowList { title, items } => Some((title, items)),
+            _ => None,
+        })
+    };
+    for action in [
+        ActionId::ReadingStatistics,
+        ActionId::SettingsProfiles,
+        ActionId::Summarize,
+        ActionId::Outline,
+    ] {
+        let effects = app.dispatch(Command::Action(action));
+        let (title, items) = list_of(effects).unwrap_or_else(|| panic!("{action:?}: a list"));
+        assert!(!items.is_empty(), "{action:?}");
+        // The window shows it as its list dialog, the app's keys in it.
+        let (modal, list_id) =
+            gui::list_dialog(&Palette::galaxy(), &app.catalog(), &title, items, 0, true);
+        h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+        h.focus_on(Some(list_id));
+        let _ = h.redraw();
+        assert!(h.get_widget(ROOT).inner().has_dialog(), "{action:?}");
+        let _ = app.dispatch(Command::Cancel);
+        h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, None));
+        let _ = h.redraw();
+    }
+    // Define word: the dictionary loads on a helper thread the first time
+    // ("Dictionary still loading"), then the list comes on a later tick.
+    let at = app
+        .session()
+        .unwrap()
+        .doc
+        .text()
+        .to_string()
+        .find("reader")
+        .map_or(0, |b| b);
+    let _ = app.dispatch(Command::SetCursor(textweaver_app::core::CharPos(at)));
+    let started = std::time::Instant::now();
+    let mut effects = app.dispatch(Command::Action(ActionId::DefineWord));
+    while list_of(effects.clone()).is_none() && started.elapsed().as_secs() < 30 {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        effects = app.tick(std::time::Instant::now());
+        if app.list_model().is_some() {
+            break;
+        }
+        if !app.status_text().to_lowercase().contains("loading") {
+            effects = app.dispatch(Command::Action(ActionId::DefineWord));
+        }
+    }
+    assert!(
+        app.list_model().is_some() || list_of(effects).is_some(),
+        "define word opened a list: {}",
+        app.status_text()
+    );
+    let _ = app.dispatch(Command::Cancel);
+
+    // Lint in edit mode: a problem is found, not "not in this build".
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    assert!(app.is_editing());
+    let _ = app.dispatch(Command::Action(ActionId::NextLintProblem));
+    let said = app.status_text().to_lowercase();
+    assert!(
+        said.contains("lint") && !said.contains("not in this build"),
+        "{said}"
+    );
+}
+
+/// Notes, the reader's highlights, and search matches are drawn in the
+/// window, as in the terminal, each with a shape as well as a color.
+#[test]
+fn notes_highlights_and_matches_are_drawn() {
+    use textweaver_app::keymap::ActionId;
+    use textweaver_app::{Command, core::CharRange};
+    use textweaver_xilem::document::DocMark;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let mut r = gui::Refresher::default();
+    let _ = r.refresh(&app, &mut h);
+    assert!(h.get_widget(DOC).inner().marks().is_empty());
+    // A highlight on a selection, and a note on it.
+    let _ = app.dispatch(Command::Select(CharRange::new(2, 8)));
+    let _ = app.dispatch(Command::Action(ActionId::HighlightSelection));
+    let _ = app.dispatch(Command::Action(ActionId::AddNote));
+    let _ = app.dispatch(Command::Answer("A note".into()));
+    let _ = r.refresh(&app, &mut h);
+    let marks: Vec<DocMark> = h
+        .get_widget(DOC)
+        .inner()
+        .marks()
+        .iter()
+        .map(|(_, m)| *m)
+        .collect();
+    assert!(marks.contains(&DocMark::Highlight), "{marks:?}");
+    assert!(marks.contains(&DocMark::Note), "{marks:?}");
+    // They are drawn without a panic.
+    let _ = h.render();
 }
