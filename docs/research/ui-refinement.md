@@ -15,6 +15,15 @@ Given on Monday, September 28, 2026. The owner notes some go beyond interface po
 
 5. **Batch conversion of a whole folder, from the reader and the GUI.** Convert a folder of documents in mixed formats (Word, PDF, EPUB, RTF, ODT, HTML, and the rest) into standard Markdown or a standard, accessible PDF in one go. Today `tw convert` already does folders: it mirrors the folder tree, uses every core, skips what is already converted, and has a hot folder (`--watch`). To add: the same from the menus (choose a folder, a target format, and where the results go), progress announced plainly and not too often, a summary at the end ("Converted 42 files; 2 failed, listed in ..."), and a check that every input format the loaders read converts cleanly to Markdown and to PDF.
 
+6. **More formats, and deeper parsers for the owner's most used ones.** Survey the document and data formats worth supporting, and write more comprehensive parsers for the formats the owner uses most:
+   - **Obsidian Markdown:** callouts, embeds, block references, properties (front matter), tags, and links between notes read as a reader expects.
+   - **LaTeX:** whole documents, beyond Wave 5's subset (W5c3): sections, lists, tables, figures with captions, citations, footnotes, and math.
+   - **MathML:** complete presentation and content MathML, spoken, explored, and brailled.
+   - **JSON:** read as navigable structure (objects and arrays as headings and lists, keys and values spoken plainly), not as a wall of punctuation.
+   - **SVG:** the title, description, and text of a drawing, and its structure, read aloud; figures with no description named as such.
+
+   Then the survey's other candidates, ranked by value to a student or writer.
+
 ## Found so far
 
 ### The GUI
