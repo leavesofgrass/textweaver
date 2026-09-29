@@ -58,6 +58,13 @@ mod la {
         /// Recognizes samples `start..end`; returns the segments and the
         /// seconds the work took.
         fn recognize(&mut self, start: usize, end: usize) -> (Vec<Seg>, f64);
+
+        /// The seconds of the last run that could not have been cancelled
+        /// (the spectrogram and the encoder; the decoder stops between
+        /// tokens).
+        fn last_fixed(&self) -> f64 {
+            0.0
+        }
     }
 
     /// A reference word: its text and times in seconds.
@@ -100,10 +107,23 @@ mod la {
         if common_prefix(cw, hyp) == cw.len() {
             return cw.len().min(hyp.len());
         }
-        match align(hyp, cw).1.last() {
-            Some(&(h, _)) => h + 1,
-            None => cw.len().min(hyp.len()),
+        // The prefix of the hypothesis closest to the committed words (the
+        // edit distance of all of `cw` against `hyp[..p]`, least `p` on a
+        // tie is the one nearest `cw.len()`).
+        let c: Vec<String> = cw.iter().map(|w| norm(w)).collect();
+        let h: Vec<String> = hyp.iter().map(|w| norm(w)).collect();
+        let mut prev: Vec<usize> = (0..=h.len()).collect();
+        for (i, cword) in c.iter().enumerate() {
+            let mut row = vec![i + 1; h.len() + 1];
+            for j in 1..=h.len() {
+                let sub = prev[j - 1] + usize::from(*cword != h[j - 1]);
+                row[j] = sub.min(prev[j] + 1).min(row[j - 1] + 1);
+            }
+            prev = row;
         }
+        (0..=h.len())
+            .min_by_key(|&p| (prev[p], p.abs_diff(c.len())))
+            .unwrap_or(0)
     }
 
     /// A committed word and when it was committed (virtual seconds).
@@ -129,6 +149,8 @@ mod la {
         /// Runs that returned no words after an earlier run had some
         /// (skipped for agreement).
         pub empty_runs: usize,
+        /// Runs cancelled because the pause came while they ran.
+        pub cancelled_runs: usize,
         /// Words a naive "show every hypothesis" display would have shown
         /// and then changed.
         pub rewrites_avoided: usize,
@@ -152,6 +174,8 @@ mod la {
         /// known: the detector's 600 ms minimum silence less its 200 ms
         /// padding.
         pub pause_after_end: f64,
+        /// Cancel a partial run still going when the pause is found.
+        pub cancel_at_pause: bool,
     }
 
     impl Default for StreamConfig {
@@ -160,6 +184,7 @@ mod la {
                 step: 0.7,
                 trim: false,
                 pause_after_end: 0.4,
+                cancel_at_pause: true,
             }
         }
     }
@@ -207,7 +232,15 @@ mod la {
                 let (segs, cost) = rec.recognize(buf_start, at_sample(avail));
                 out.runs += 1;
                 out.run_costs.push(cost);
+                let started = clock;
                 clock += cost;
+                if config.cancel_at_pause && clock > pause_known {
+                    // The pause came during this run: it is cancelled once
+                    // its encoder is done, and the final run starts.
+                    clock = pause_known.max(started + rec.last_fixed());
+                    out.cancelled_runs += 1;
+                    break;
+                }
                 let hyp = words(&segs);
                 if hyp.is_empty() && !prev.is_empty() {
                     // Whisper sometimes returns nothing for a buffer cut
@@ -403,6 +436,10 @@ mod la {
             let cost = self.encode + self.word * segs.len() as f64;
             (segs, cost)
         }
+
+        fn last_fixed(&self) -> f64 {
+            self.encode
+        }
     }
 
     /// Median and worst of some values.
@@ -495,6 +532,17 @@ mod la {
         }
 
         #[test]
+        fn a_changed_early_word_keeps_the_rest() {
+            let split = |s: &str| s.split(' ').map(String::from).collect::<Vec<_>>();
+            let cw = split("open until 9 in the evening and to");
+            let hyp = split("open until 9am in the evening and to add more lamps where people liked to sit");
+            assert_eq!(continuation(&cw, &hyp), 8);
+            assert_eq!(continuation(&cw[..2], &hyp), 2);
+            assert_eq!(continuation(&[], &hyp), 0);
+            assert_eq!(continuation(&cw, &[]), 0);
+        }
+
+        #[test]
         fn an_empty_run_is_skipped() {
             let mut rec = Flaky(
                 FakeRecognizer {
@@ -509,6 +557,28 @@ mod la {
             assert_eq!(r.empty_runs, 1);
             let text: Vec<&str> = r.commits.iter().map(|c| c.word.as_str()).collect();
             assert_eq!(text, ["Open", "the", "second", "chapter."]);
+        }
+
+        #[test]
+        fn a_run_going_at_the_pause_is_cancelled() {
+            let run = |cancel_at_pause: bool| {
+                let mut rec = FakeRecognizer {
+                    words: sentence(),
+                    encode: 0.3,
+                    word: 0.5,
+                };
+                let config = StreamConfig {
+                    cancel_at_pause,
+                    ..StreamConfig::default()
+                };
+                simulate(&mut rec, &[0..at_sample(2.2)], at_sample(4.0), &config)
+            };
+            let (with, without) = (run(true), run(false));
+            assert_eq!(with.cancelled_runs, 1);
+            assert_eq!(without.cancelled_runs, 0);
+            assert!(with.pause_to_final[0] < without.pause_to_final[0]);
+            let text = |r: &StreamResult| r.commits.iter().map(|c| norm(&c.word)).collect::<Vec<_>>();
+            assert_eq!(text(&with), text(&without));
         }
 
         #[test]
@@ -660,10 +730,22 @@ struct Opts {
     audio: Option<PathBuf>,
     step_ms: u32,
     trim: bool,
+    no_cancel: bool,
     repeat: usize,
     encode_ms: f64,
     word_ms: f64,
     files: Vec<PathBuf>,
+}
+
+impl Opts {
+    fn stream_config(&self) -> la::StreamConfig {
+        la::StreamConfig {
+            step: f64::from(self.step_ms) / 1000.0,
+            trim: self.trim,
+            cancel_at_pause: !self.no_cancel,
+            ..la::StreamConfig::default()
+        }
+    }
 }
 
 fn parse_args() -> Result<Opts, String> {
@@ -674,6 +756,7 @@ fn parse_args() -> Result<Opts, String> {
         audio: None,
         step_ms: 700,
         trim: false,
+        no_cancel: false,
         repeat: 1,
         encode_ms: 700.0,
         word_ms: 25.0,
@@ -691,6 +774,7 @@ fn parse_args() -> Result<Opts, String> {
             "--audio" => o.audio = Some(value(&mut args, &a)?.into()),
             "--step-ms" => o.step_ms = num(value(&mut args, &a)?, &a)? as u32,
             "--trim" => o.trim = true,
+            "--no-cancel" => o.no_cancel = true,
             "--repeat" => o.repeat = (num(value(&mut args, &a)?, &a)? as usize).max(1),
             "--encode-ms" => o.encode_ms = num(value(&mut args, &a)?, &a)?,
             "--word-ms" => o.word_ms = num(value(&mut args, &a)?, &a)?,
@@ -728,8 +812,8 @@ fn report_stream(
     let (bat_med, bat_worst) = la::median_worst(batch_waits);
     println!("File {name}");
     println!(
-        "  Runs {} ({} empty, skipped); run time median {costs_med:.2} s, worst {costs_worst:.2} s",
-        r.runs, r.empty_runs
+        "  Runs {} ({} empty, skipped; {} cancelled at the pause); run time median {costs_med:.2} s, worst {costs_worst:.2} s",
+        r.runs, r.empty_runs, r.cancelled_runs
     );
     println!(
         "  Words committed {} ({} by agreement, {} at the pause)",
@@ -810,11 +894,7 @@ fn run_fake(o: &Opts) -> Result<(), String> {
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        let config = la::StreamConfig {
-            step: f64::from(o.step_ms) / 1000.0,
-            trim: o.trim,
-            ..la::StreamConfig::default()
-        };
+        let config = o.stream_config();
         let mut rec = la::FakeRecognizer {
             words: reference.clone(),
             encode: o.encode_ms / 1000.0,
@@ -857,14 +937,23 @@ mod whisper {
     struct Real<'a> {
         w: &'a RtenWhisper,
         pcm: &'a [f32],
+        fixed: f64,
     }
 
     impl la::Recognizer for Real<'_> {
+        fn last_fixed(&self) -> f64 {
+            self.fixed
+        }
+
         fn recognize(&mut self, start: usize, end: usize) -> (Vec<la::Seg>, f64) {
             let cancel = AtomicBool::new(false);
             let t = Instant::now();
+            self.fixed = 0.0;
             let segs = match self.w.transcribe(&self.pcm[start..end], None, &cancel, &mut |_| {}) {
-                Ok((tr, _)) => tr
+                Ok((tr, tm)) => {
+                    self.fixed = (tm.features + tm.encode).as_secs_f64();
+                    tr
+                }
                     .segments
                     .into_iter()
                     .map(|s| la::Seg {
@@ -964,15 +1053,13 @@ mod whisper {
 
     pub fn stream(o: &Opts) -> Result<(), String> {
         let w = load(o)?;
-        let config = la::StreamConfig {
-            step: f64::from(o.step_ms) / 1000.0,
-            trim: o.trim,
-            ..la::StreamConfig::default()
-        };
+        let config = o.stream_config();
+        let on = |b: bool| if b { "on" } else { "off" };
         println!(
-            "Step {} ms, trimming {}",
+            "Step {} ms, trimming {}, cancel at the pause {}",
             o.step_ms,
-            if o.trim { "on" } else { "off" }
+            on(config.trim),
+            on(config.cancel_at_pause)
         );
         for wav in &o.files {
             let (pcm, spans, reference) = load_fixture(wav)?;
@@ -985,7 +1072,11 @@ mod whisper {
                     .join(", ")
             );
             for round in 0..o.repeat {
-                let mut rec = Real { w: &w, pcm: &pcm };
+                let mut rec = Real {
+                    w: &w,
+                    pcm: &pcm,
+                    fixed: 0.0,
+                };
                 let r = la::simulate(&mut rec, &spans, pcm.len(), &config);
                 let (bw, bwait) = la::batch(&mut rec, &spans, pcm.len(), &config);
                 report_stream(
