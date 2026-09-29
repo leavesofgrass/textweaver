@@ -157,6 +157,7 @@ These are the settings to look at in NVDA and JAWS for each mode. Names and keys
 
 - textweaver runs in GNOME Terminal and other terminals. Orca reads new text in terminals as it appears. Untested.
 - Orca's typing echo is in Orca Preferences, Echo: on for hybrid and screen-reader modes, off for self-voicing.
+- Orca also says each key you press by default, including modifiers ("left control", "space"), so every textweaver command is announced before textweaver answers. To hear only textweaver's answer, turn off key echo in Orca Preferences, Echo ("Enable key echo"), or leave only the kinds of keys you want spoken ticked. This is Orca's own setting; textweaver does not change it.
 
 ## Terminals
 

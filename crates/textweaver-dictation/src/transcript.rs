@@ -153,6 +153,28 @@ pub enum DictationEvent {
     /// A segment Whisper has finished (not yet final: a later segment may
     /// still arrive).
     Partial(Segment),
+    /// Live dictation: words committed while the speaker is still talking
+    /// (or at the pause that ends an utterance). Committed words are
+    /// stable: never withdrawn or changed, and the utterance's text in
+    /// the final transcript is exactly its committed words, in order.
+    /// Spoken commands are not applied to them; they apply to the final
+    /// text only.
+    Committed {
+        /// The newly committed words, joined with single spaces; never
+        /// empty.
+        text: String,
+        /// Which utterance of the session they belong to, from 0.
+        utterance: usize,
+        /// True for the words committed at the utterance's pause (its
+        /// last burst), false for words agreed on while it went on.
+        at_pause: bool,
+    },
+    /// Live dictation: an utterance was heard, but no words were
+    /// recognized in it. Said, so a phrase never vanishes in silence.
+    NoWords {
+        /// Which utterance of the session, from 0.
+        utterance: usize,
+    },
     /// The session finished with this transcript.
     Final(Transcript),
     /// The session was cancelled; nothing more follows.
@@ -165,13 +187,15 @@ pub enum DictationEvent {
 }
 
 impl DictationEvent {
-    /// What to announce for this event, if anything. Partial segments are
-    /// not announced (the app may speak or show them).
+    /// What to announce for this event, if anything. Partial segments and
+    /// committed words are not announced here (the app shows them, and
+    /// decides when to speak them).
     pub fn announcement(&self) -> Option<String> {
         match self {
             DictationEvent::Recording => Some("Recording".to_owned()),
             DictationEvent::Transcribing => Some("Transcribing, this may take a while".to_owned()),
-            DictationEvent::Partial(_) => None,
+            DictationEvent::Partial(_) | DictationEvent::Committed { .. } => None,
+            DictationEvent::NoWords { .. } => Some("No words recognized in that phrase".to_owned()),
             DictationEvent::Final(t) if t.is_empty() => {
                 Some("Dictation produced no text".to_owned())
             }
@@ -274,6 +298,22 @@ mod tests {
                 .announcement()
                 .is_none()
         );
+        assert_eq!(
+            DictationEvent::NoWords { utterance: 2 }
+                .announcement()
+                .as_deref(),
+            Some("No words recognized in that phrase")
+        );
+        assert!(
+            DictationEvent::Committed {
+                text: "Hello".into(),
+                utterance: 0,
+                at_pause: false
+            }
+            .announcement()
+            .is_none()
+        );
+        assert!(!DictationEvent::NoWords { utterance: 0 }.is_terminal());
         assert!(DictationEvent::Cancelled.is_terminal());
         assert!(!DictationEvent::Transcribing.is_terminal());
     }

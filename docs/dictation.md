@@ -358,6 +358,23 @@ Without `--file`, `tw dictate` records from your default microphone. You hear "R
 
 Without the in-process model, `tw dictate` says where to put it, and you can still record with any program you like and transcribe the file with `tw dictate --file`.
 
+### Seeing the words while you talk
+
+```text
+tw dictate --live
+```
+
+With `--live`, textweaver transcribes while you speak. Each phrase is finished at your pause, not when you press Enter, and in a long sentence the first words appear while you are still talking. Each group of words is printed on its own line as soon as it is certain, and is never changed afterwards, so your screen reader reads each word once. The finished text is still printed at the end, with spoken commands applied if you asked for them.
+
+What to expect:
+
+- **Short phrases,** under about three seconds, arrive at their pause, as quickly as without `--live`.
+- **A long sentence** shows its first words about four seconds in, then more every second or two, a few seconds behind your voice. The last words come at the pause.
+- **On a busy computer,** when Whisper takes longer than a second and a half, textweaver waits for your pause instead, so nothing arrives later than it would without `--live`.
+- **A phrase with no words recognized** says "No words recognized in that phrase", so nothing vanishes silently.
+
+`tw dictate --live --file note.wav` plays a recording in at speaking pace (silently) to show how it would go live. `--live` needs the in-process model.
+
 ### How long it takes
 
 `--timings` prints where the time went: loading the model (once), the spectrogram, the encoder, the decoder, and the time from pressing Enter to the text.

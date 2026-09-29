@@ -1,0 +1,22 @@
+# The braille second-tool check (.github/workflows/second-tool.yml): writes
+# a Markdown fixture as BRF in UEB grade 1 or grade 2, and the document's
+# text beside it, so compare.py can check the file against liblouis.
+#
+# Not part of textweaver and not a workspace member: its own empty
+# [workspace] keeps it out of the root workspace. It builds only the
+# Markdown loader and the writers, with the writers' `liblouis` feature
+# (grade 2 through `lou_translate`), which `tw` does not turn on. CI copies
+# the root Cargo.lock here before building, so every shared dependency
+# keeps the version the workspace locks.
+[package]
+name = "braille-check"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "GPL-3.0-or-later"
+
+[dependencies]
+textweaver-formats = { path = "../../crates/textweaver-formats", default-features = false }
+textweaver-writers = { path = "../../crates/textweaver-writers", default-features = false, features = ["liblouis"] }
+
+[workspace]
