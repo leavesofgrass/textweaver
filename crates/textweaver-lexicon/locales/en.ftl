@@ -1819,8 +1819,6 @@ setting-reading-aids-font-size-pt = Font size
 setting-reading-aids-font-size-pt-help = The GUI's font size.
 setting-reading-aids-font-weight = Font weight
 setting-reading-aids-font-weight-help = 400 is regular, 700 bold.
-setting-reading-aids-font-fetch-missing = Offer missing fonts
-setting-reading-aids-font-fetch-missing-help = Offer to download a reading font that is not installed, after asking.
 setting-reading-aids-ruler-mode = Reading ruler
 setting-reading-aids-ruler-mode-help = Mark the current line, or a band of lines.
 choice-reading-aids-ruler-mode-off = off
@@ -2602,3 +2600,19 @@ library-filter-matched =
     }
 # Said once when define word is used while the dictionary file is still opening.
 define-still-loading = Dictionary still loading.
+# Settings added by W5y: the DECtalk and Piper sections, the rate and pitch per voice, and the template author.
+setting-speech-dectalk-library = DECtalk library
+setting-speech-dectalk-library-help = The DECtalk library to load; not set searches the usual places.
+setting-speech-piper-voices = Piper voices folder
+setting-speech-piper-voices-help = The folder of Piper voices; not set uses the piper folder in textweaver's data folder.
+setting-speech-piper-voice = Piper voice
+setting-speech-piper-voice-help = The Piper voice to start with, by id; not set takes the first installed.
+setting-speech-piper-phonemizer = Piper phonemizer
+setting-speech-piper-phonemizer-help = How Piper turns text into sounds: the espeak-ng library when installed, that library, or textweaver's own.
+choice-speech-piper-phonemizer-auto = automatic
+choice-speech-piper-phonemizer-library = espeak-ng library
+choice-speech-piper-phonemizer-rust = textweaver's own
+setting-speech-voice-params = Rate and pitch per voice
+setting-speech-voice-params-help = The rate and pitch each voice was last used at; choosing a voice again brings them back.
+setting-editing-author = Author
+setting-editing-author-help = The author written into new documents made from a template; empty leaves it blank.

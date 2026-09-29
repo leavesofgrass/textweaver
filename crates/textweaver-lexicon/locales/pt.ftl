@@ -1830,8 +1830,6 @@ setting-reading-aids-font-size-pt = Tamanho da fonte
 setting-reading-aids-font-size-pt-help = O tamanho da fonte da interface gráfica.
 setting-reading-aids-font-weight = Peso da fonte
 setting-reading-aids-font-weight-help = 400 é regular, 700 é negrito.
-setting-reading-aids-font-fetch-missing = Oferecer fontes ausentes
-setting-reading-aids-font-fetch-missing-help = Oferecer para baixar uma fonte de leitura que não está instalada, depois de perguntar.
 setting-reading-aids-ruler-mode = Régua de leitura
 setting-reading-aids-ruler-mode-help = Marcar a linha atual, ou uma faixa de linhas.
 choice-reading-aids-ruler-mode-off = desligada
@@ -2606,3 +2604,19 @@ library-filter-matched =
     }
 # Said once when define word is used while the dictionary file is still opening.
 define-still-loading = O dicionário ainda está carregando.
+# Configurações adicionadas por W5y.
+setting-speech-dectalk-library = Biblioteca do DECtalk
+setting-speech-dectalk-library-help = A biblioteca do DECtalk a carregar; não definido procura nos locais de costume.
+setting-speech-piper-voices = Pasta de vozes do Piper
+setting-speech-piper-voices-help = A pasta de vozes do Piper; não definido usa a pasta piper na pasta de dados do textweaver.
+setting-speech-piper-voice = Voz do Piper
+setting-speech-piper-voice-help = A voz do Piper para começar, pelo id; não definido usa a primeira instalada.
+setting-speech-piper-phonemizer = Fonetizador do Piper
+setting-speech-piper-phonemizer-help = Como o Piper transforma texto em sons: a biblioteca espeak-ng se instalada, essa biblioteca ou o do textweaver.
+choice-speech-piper-phonemizer-auto = automático
+choice-speech-piper-phonemizer-library = biblioteca espeak-ng
+choice-speech-piper-phonemizer-rust = o do textweaver
+setting-speech-voice-params = Velocidade e tom por voz
+setting-speech-voice-params-help = A velocidade e o tom com que cada voz foi usada por último; escolher a voz de novo os traz de volta.
+setting-editing-author = Autor
+setting-editing-author-help = O autor escrito nos novos documentos feitos a partir de um modelo; vazio deixa em branco.

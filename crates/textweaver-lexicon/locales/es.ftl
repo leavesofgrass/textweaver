@@ -1814,8 +1814,6 @@ setting-reading-aids-font-size-pt = Tamaño de fuente
 setting-reading-aids-font-size-pt-help = El tamaño de fuente de la interfaz gráfica.
 setting-reading-aids-font-weight = Grosor de fuente
 setting-reading-aids-font-weight-help = 400 es normal, 700 negrita.
-setting-reading-aids-font-fetch-missing = Ofrecer fuentes que faltan
-setting-reading-aids-font-fetch-missing-help = Ofrecer descargar una fuente de lectura que no está instalada, tras preguntar.
 setting-reading-aids-ruler-mode = Regla de lectura
 setting-reading-aids-ruler-mode-help = Marcar la línea actual, o una banda de líneas.
 choice-reading-aids-ruler-mode-off = desactivada
@@ -2590,3 +2588,19 @@ library-filter-matched =
     }
 # Said once when define word is used while the dictionary file is still opening.
 define-still-loading = El diccionario aún se está cargando.
+# Ajustes añadidos por W5y.
+setting-speech-dectalk-library = Biblioteca de DECtalk
+setting-speech-dectalk-library-help = La biblioteca de DECtalk que se cargará; sin definir busca en los lugares habituales.
+setting-speech-piper-voices = Carpeta de voces de Piper
+setting-speech-piper-voices-help = La carpeta de voces de Piper; sin definir usa la carpeta piper de la carpeta de datos de textweaver.
+setting-speech-piper-voice = Voz de Piper
+setting-speech-piper-voice-help = La voz de Piper con la que empezar, por su id; sin definir toma la primera instalada.
+setting-speech-piper-phonemizer = Fonetizador de Piper
+setting-speech-piper-phonemizer-help = Cómo convierte Piper el texto en sonidos: la biblioteca espeak-ng si está instalada, esa biblioteca o el de textweaver.
+choice-speech-piper-phonemizer-auto = automático
+choice-speech-piper-phonemizer-library = biblioteca espeak-ng
+choice-speech-piper-phonemizer-rust = el de textweaver
+setting-speech-voice-params = Velocidad y tono por voz
+setting-speech-voice-params-help = La velocidad y el tono con que se usó cada voz por última vez; al elegir de nuevo una voz, vuelven.
+setting-editing-author = Autor
+setting-editing-author-help = El autor que se escribe en los documentos nuevos hechos con una plantilla; vacío lo deja en blanco.

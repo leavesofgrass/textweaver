@@ -1850,8 +1850,6 @@ setting-reading-aids-font-size-pt = Schriftgröße
 setting-reading-aids-font-size-pt-help = Die Schriftgröße der grafischen Oberfläche.
 setting-reading-aids-font-weight = Schriftstärke
 setting-reading-aids-font-weight-help = 400 ist regulär, 700 fett.
-setting-reading-aids-font-fetch-missing = Fehlende Schriften anbieten
-setting-reading-aids-font-fetch-missing-help = Anbieten, eine nicht installierte Leseschrift herunterzuladen, nach Rückfrage.
 setting-reading-aids-ruler-mode = Leselineal
 setting-reading-aids-ruler-mode-help = Die aktuelle Zeile markieren, oder ein Band von Zeilen.
 choice-reading-aids-ruler-mode-off = aus
@@ -2626,3 +2624,19 @@ library-filter-matched =
     }
 # Said once when define word is used while the dictionary file is still opening.
 define-still-loading = Das Wörterbuch wird noch geladen.
+# Von W5y hinzugefügte Einstellungen.
+setting-speech-dectalk-library = DECtalk-Bibliothek
+setting-speech-dectalk-library-help = Die zu ladende DECtalk-Bibliothek; nicht gesetzt sucht an den üblichen Orten.
+setting-speech-piper-voices = Ordner der Piper-Stimmen
+setting-speech-piper-voices-help = Der Ordner der Piper-Stimmen; nicht gesetzt nutzt den Ordner piper im Datenordner von textweaver.
+setting-speech-piper-voice = Piper-Stimme
+setting-speech-piper-voice-help = Die Piper-Stimme zum Start, nach ID; nicht gesetzt nimmt die erste installierte.
+setting-speech-piper-phonemizer = Piper-Phonemisierer
+setting-speech-piper-phonemizer-help = Wie Piper Text in Laute umwandelt: die espeak-ng-Bibliothek, wenn installiert, diese Bibliothek oder der von textweaver.
+choice-speech-piper-phonemizer-auto = automatisch
+choice-speech-piper-phonemizer-library = espeak-ng-Bibliothek
+choice-speech-piper-phonemizer-rust = der von textweaver
+setting-speech-voice-params = Tempo und Tonhöhe je Stimme
+setting-speech-voice-params-help = Tempo und Tonhöhe, mit denen jede Stimme zuletzt genutzt wurde; wird die Stimme wieder gewählt, kehren sie zurück.
+setting-editing-author = Autor
+setting-editing-author-help = Der Autor, der in neue Dokumente aus einer Vorlage geschrieben wird; leer lässt ihn frei.

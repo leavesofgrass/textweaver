@@ -1981,8 +1981,6 @@ setting-reading-aids-font-size-pt = حجم الخط
 setting-reading-aids-font-size-pt-help = حجم خط الواجهة الرسومية.
 setting-reading-aids-font-weight = وزن الخط
 setting-reading-aids-font-weight-help = 400 عادي، 700 عريض.
-setting-reading-aids-font-fetch-missing = عرض الخطوط المفقودة
-setting-reading-aids-font-fetch-missing-help = عرض تنزيل خط قراءة غير مثبَّت، بعد السؤال.
 setting-reading-aids-ruler-mode = مسطرة القراءة
 setting-reading-aids-ruler-mode-help = وسم السطر الحالي، أو شريط من الأسطر.
 choice-reading-aids-ruler-mode-off = إيقاف
@@ -2818,3 +2816,19 @@ library-filter-matched =
     }
 # Said once when define word is used while the dictionary file is still opening.
 define-still-loading = ما زال القاموس قيد التحميل.
+# إعدادات أضافها W5y.
+setting-speech-dectalk-library = مكتبة DECtalk
+setting-speech-dectalk-library-help = مكتبة DECtalk المراد تحميلها؛ عدم الضبط يبحث في الأماكن المعتادة.
+setting-speech-piper-voices = مجلد أصوات Piper
+setting-speech-piper-voices-help = مجلد أصوات Piper؛ عدم الضبط يستخدم مجلد piper في مجلد بيانات textweaver.
+setting-speech-piper-voice = صوت Piper
+setting-speech-piper-voice-help = صوت Piper للبدء به، حسب المعرّف؛ عدم الضبط يأخذ أول صوت مثبَّت.
+setting-speech-piper-phonemizer = المحوِّل الصوتي لـ Piper
+setting-speech-piper-phonemizer-help = كيف يحوّل Piper النص إلى أصوات: مكتبة espeak-ng إن كانت مثبَّتة، أو تلك المكتبة، أو محوِّل textweaver.
+choice-speech-piper-phonemizer-auto = تلقائي
+choice-speech-piper-phonemizer-library = مكتبة espeak-ng
+choice-speech-piper-phonemizer-rust = محوِّل textweaver
+setting-speech-voice-params = السرعة وطبقة الصوت لكل صوت
+setting-speech-voice-params-help = السرعة وطبقة الصوت اللتان استُخدم بهما كل صوت آخر مرة؛ اختيار الصوت مجددًا يعيدهما.
+setting-editing-author = المؤلف
+setting-editing-author-help = المؤلف الذي يُكتب في المستندات الجديدة المنشأة من قالب؛ تركه فارغًا يبقيه خاليًا.

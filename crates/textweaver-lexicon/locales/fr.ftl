@@ -1842,8 +1842,6 @@ setting-reading-aids-font-size-pt = Taille de police
 setting-reading-aids-font-size-pt-help = La taille de police de l'interface graphique.
 setting-reading-aids-font-weight = Graisse de police
 setting-reading-aids-font-weight-help = 400 est normal, 700 gras.
-setting-reading-aids-font-fetch-missing = Proposer les polices manquantes
-setting-reading-aids-font-fetch-missing-help = Proposer de télécharger une police de lecture non installée, après avoir demandé.
 setting-reading-aids-ruler-mode = Règle de lecture
 setting-reading-aids-ruler-mode-help = Marquer la ligne actuelle, ou une bande de lignes.
 choice-reading-aids-ruler-mode-off = désactivée
@@ -2618,3 +2616,19 @@ library-filter-matched =
     }
 # Said once when define word is used while the dictionary file is still opening.
 define-still-loading = Le dictionnaire est encore en cours de chargement.
+# Réglages ajoutés par W5y.
+setting-speech-dectalk-library = Bibliothèque DECtalk
+setting-speech-dectalk-library-help = La bibliothèque DECtalk à charger ; non défini cherche aux emplacements habituels.
+setting-speech-piper-voices = Dossier des voix Piper
+setting-speech-piper-voices-help = Le dossier des voix Piper ; non défini utilise le dossier piper du dossier de données de textweaver.
+setting-speech-piper-voice = Voix Piper
+setting-speech-piper-voice-help = La voix Piper de départ, par son id ; non défini prend la première installée.
+setting-speech-piper-phonemizer = Phonétiseur Piper
+setting-speech-piper-phonemizer-help = Comment Piper change le texte en sons : la bibliothèque espeak-ng si elle est installée, cette bibliothèque, ou celui de textweaver.
+choice-speech-piper-phonemizer-auto = automatique
+choice-speech-piper-phonemizer-library = bibliothèque espeak-ng
+choice-speech-piper-phonemizer-rust = celui de textweaver
+setting-speech-voice-params = Débit et hauteur par voix
+setting-speech-voice-params-help = Le débit et la hauteur de la dernière utilisation de chaque voix ; choisir à nouveau une voix les rétablit.
+setting-editing-author = Auteur
+setting-editing-author-help = L'auteur écrit dans les nouveaux documents créés à partir d'un modèle ; vide le laisse en blanc.

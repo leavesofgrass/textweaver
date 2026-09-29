@@ -1,7 +1,10 @@
 //! Star's lesson: a stored setting must work. This test fails when a field
-//! of a settings struct in `src/settings.rs` is read nowhere in the
-//! workspace's sources and is not listed in
+//! of a settings struct in `src/settings.rs` or `src/reading_aids.rs` is
+//! read nowhere in the workspace's sources and is not listed in
 //! [`RESERVED_SETTINGS`](textweaver_store::RESERVED_SETTINGS) with a reason.
+//! Since Wave 5 (W5y) the reading aids' own tables (`[reading_aids.font]`
+//! and the rest) are checked field by field too: `fetch_missing` was stored,
+//! shown on the settings screen, and read by nothing that acted on it.
 //!
 //! "Read" is found by text search, so it is a heuristic: a field counts as
 //! read when some source outside the settings files themselves says
@@ -23,6 +26,8 @@ const SECTIONS: &[(&str, &str)] = &[
     ("EciSettings", "eci"),
     ("SapiSettings", "sapi"),
     ("AppleSettings", "apple"),
+    ("DectalkSettings", "dectalk"),
+    ("PiperSettings", "piper"),
     ("HighlightSettings", "highlight"),
     ("NormalizationSettings", "normalization"),
     ("CommunityLexiconSettings", "community_lexicon"),
@@ -39,7 +44,29 @@ const SECTIONS: &[(&str, &str)] = &[
     ("StatsSettings", "stats"),
     ("InterfaceSettings", "interface"),
     ("GuiSettings", "gui"),
+    // `src/reading_aids.rs`.
+    ("RsvpSettings", "rsvp"),
+    ("BionicOptions", "bionic_options"),
+    ("TextSpacing", "spacing"),
+    ("FontSettings", "font"),
+    ("RulerSettings", "ruler"),
+    ("SyllableOptions", "syllable_options"),
 ];
+
+/// The files that define settings structs; they touch every field, so they
+/// do not count as readers.
+const SETTINGS_FILES: [&str; 2] = [
+    "crates/textweaver-store/src/settings.rs",
+    "crates/textweaver-store/src/reading_aids.rs",
+];
+
+/// `(struct, field)` for every settings field in [`SETTINGS_FILES`].
+fn all_fields(root: &Path) -> Vec<(String, String)> {
+    SETTINGS_FILES
+        .iter()
+        .flat_map(|f| fields(&std::fs::read_to_string(root.join(f)).unwrap()))
+        .collect()
+}
 
 fn workspace() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -84,7 +111,7 @@ fn sources(root: &Path, out: &mut Vec<(PathBuf, String)>) {
             sources(&p, out);
         } else if p.extension().is_some_and(|x| x == "rs") {
             let s = p.to_string_lossy().replace('\\', "/");
-            let excluded = s.ends_with("textweaver-store/src/settings.rs")
+            let excluded = SETTINGS_FILES.iter().any(|f| s.ends_with(f))
                 || s.contains("textweaver-store/src/settings_io")
                 || s.ends_with("textweaver-cli/src/cmd/settings.rs")
                 || s.contains("/tests/");
@@ -122,8 +149,6 @@ fn is_read(sources: &[(PathBuf, String)], strukt: &str, section: &str, field: &s
 #[test]
 fn every_setting_is_read_or_reserved() {
     let root = workspace();
-    let settings_rs =
-        std::fs::read_to_string(root.join("crates/textweaver-store/src/settings.rs")).unwrap();
     let sections: BTreeMap<&str, &str> = SECTIONS.iter().copied().collect();
     let mut srcs = Vec::new();
     sources(&root.join("crates"), &mut srcs);
@@ -131,11 +156,11 @@ fn every_setting_is_read_or_reserved() {
 
     let mut unread = Vec::new();
     let mut unmapped = Vec::new();
-    for (strukt, field) in fields(&settings_rs) {
+    for (strukt, field) in all_fields(&root) {
         if field == "extra" || strukt == "Settings" || strukt == "SettingsLoad" {
             continue;
         }
-        if !strukt.ends_with("Settings") {
+        if !strukt.ends_with("Settings") && !sections.contains_key(strukt.as_str()) {
             continue;
         }
         let Some(section) = sections.get(strukt.as_str()) else {
@@ -171,10 +196,8 @@ fn every_setting_is_read_or_reserved() {
 #[test]
 fn reserved_settings_are_real_and_still_unread() {
     let root = workspace();
-    let settings_rs =
-        std::fs::read_to_string(root.join("crates/textweaver-store/src/settings.rs")).unwrap();
     let sections: BTreeMap<&str, &str> = SECTIONS.iter().copied().collect();
-    let known: Vec<(String, String, String)> = fields(&settings_rs)
+    let known: Vec<(String, String, String)> = all_fields(&root)
         .into_iter()
         .filter_map(|(s, f)| {
             let section = sections.get(s.as_str())?;
@@ -194,4 +217,31 @@ fn reserved_settings_are_real_and_still_unread() {
             "{key} is read now; take it off RESERVED_SETTINGS"
         );
     }
+}
+
+/// The check itself: a field only its own settings file mentions is
+/// caught, and one read through the section or an alias is not.
+#[test]
+fn the_check_catches_a_setting_no_reader_touches() {
+    let settings =
+        "pub struct FontSettings {\n    pub family: String,\n    pub fetch_missing: bool,\n}\n";
+    let fields = fields(settings);
+    assert_eq!(
+        fields,
+        [
+            ("FontSettings".to_owned(), "family".to_owned()),
+            ("FontSettings".to_owned(), "fetch_missing".to_owned()),
+        ]
+    );
+    let reader = vec![(
+        PathBuf::from("reader.rs"),
+        "fn f(s: &Settings) { let font = &s.reading_aids.font; use_it(&font.family); }".to_owned(),
+    )];
+    assert!(is_read(&reader, "FontSettings", "font", "family"));
+    assert!(!is_read(&reader, "FontSettings", "font", "fetch_missing"));
+    let param = vec![(
+        PathBuf::from("reader.rs"),
+        "fn g(f: &FontSettings) -> bool { f.fetch_missing }".to_owned(),
+    )];
+    assert!(is_read(&param, "FontSettings", "font", "fetch_missing"));
 }

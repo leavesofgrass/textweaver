@@ -550,45 +550,22 @@ pub fn params_key(engine: &str, voice: &str) -> String {
 
 /// The rate and pitch remembered for `key`, from `[speech.voice_params]`.
 pub fn remembered_params(settings: &Settings, key: &str) -> Option<(Rate, Pitch)> {
-    let t = settings
-        .speech
-        .extra
-        .get("voice_params")?
-        .as_table()?
-        .get(key)?
-        .as_table()?;
-    let rate = t
-        .get("rate")
-        .and_then(toml::Value::as_integer)
-        .and_then(|r| u16::try_from(r).ok())
-        .map(|r| Rate::Wpm(r).clamped())?;
-    let pitch = t
-        .get("pitch")
-        .and_then(toml::Value::as_integer)
-        .and_then(|p| i8::try_from(p).ok())
-        .map_or(Pitch::default(), |p| Pitch::Semitones(p).clamped());
-    Some((rate, pitch))
+    let p = settings.speech.voice_params.get(key)?;
+    Some((
+        Rate::Wpm(p.rate).clamped(),
+        Pitch::Semitones(p.pitch).clamped(),
+    ))
 }
 
 /// Remembers `rate` and `pitch` for `key` in `[speech.voice_params]`.
 pub fn remember_params(settings: &mut Settings, key: &str, rate: Rate, pitch: Pitch) {
-    let table = settings
-        .speech
-        .extra
-        .entry("voice_params")
-        .or_insert_with(|| toml::Value::Table(toml::Table::new()));
-    if !table.is_table() {
-        *table = toml::Value::Table(toml::Table::new());
-    }
-    if let Some(t) = table.as_table_mut() {
-        let mut v = toml::Table::new();
-        v.insert("rate".into(), toml::Value::Integer(i64::from(rate.wpm())));
-        v.insert(
-            "pitch".into(),
-            toml::Value::Integer(i64::from(pitch.semitones())),
-        );
-        t.insert(key.to_owned(), toml::Value::Table(v));
-    }
+    settings.speech.voice_params.insert(
+        key.to_owned(),
+        textweaver_store::RememberedVoice {
+            rate: rate.wpm(),
+            pitch: pitch.semitones(),
+        },
+    );
 }
 
 #[cfg(test)]
