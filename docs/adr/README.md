@@ -76,6 +76,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted.
 - [ADR-0039: Automated screen-reader checks beside the listening sessions](0039-automated-screen-reader-checks.md): the accessibility tree dumped on three systems and compared with main, and NVDA, Orca, and VoiceOver sessions on CI runners, which never replace the owner's sessions.
   - Status: proposed; every check reports and none fails a job. Answers so far: NVDA through Guidepup and Orca read the GUI; the tree dump works on Windows and macOS.
+- [ADR-0041: Publishing templates, real Word footnotes, and PDF page labels](0041-publishing-templates.md): APA, AMA, large print, dyslexia-friendly, high contrast, and manuscript templates for EPUB, Word, and PDF, real Word footnotes, an EPUB cover with alternative text, and PDF pages labelled with their print pages.
+  - Status: accepted; the owner's check with Word and JAWS is queued in session 3.
 
 ## Writing a new ADR
 
