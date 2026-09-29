@@ -199,6 +199,7 @@ GUIDE_TITLES = {
     "install.md": "Installation guide",
     "screen-readers.md": "Screen reader guide",
     "roadmap.md": "Roadmap",
+    "gui.md": "The textweaver window (GUI)",
     "adr/0014-gui-toolkit.md": "ADR-0014: GUI toolkit (wxDragon)",
 }
 
@@ -314,7 +315,7 @@ FEATURES = [
          "done", "Shift+F8 restarts speech at any time.", "troubleshooting.md"),
         ("Piper neural voices and a voice manager",
          "Download and use Piper voices, and manage every engine's voices in one list.",
-         "not yet", "Planned for Wave 3, running Piper inside textweaver.", "roadmap.md"),
+         "done", "Alt+V in the terminal, Ctrl+Shift+V in the GUI; Piper voices download on request, with model-accurate word timing.", "speech.md"),
     ]),
     ("Math and citations", [
         ("Math read aloud",
@@ -350,10 +351,10 @@ FEATURES = [
          "done", "Try them on the reading aids page.", "reading-aids.md"),
         ("Difficult words and syllables",
          "Mark difficult words and show words split into syllables.",
-         "partial", "In the terminal reader: Alt+Shift+J and Alt+Shift+Z. Not in the GUI yet.", "reading-aids.md"),
+         "done", "Alt+Shift+J and Alt+Shift+Z, in the terminal and the GUI.", "reading-aids.md"),
         ("Font choice",
          "Choose a reading font such as Atkinson Hyperlegible or OpenDyslexic.",
-         "partial", "GUI spike only; a terminal uses its own font.", "reading-aids.md"),
+         "done", "In the GUI and HTML views; a terminal always uses its own font.", "reading-aids.md"),
     ]),
     ("Library and tools", [
         ("Library",
@@ -370,7 +371,7 @@ FEATURES = [
          "done", "Through tw dictate.", "dictation.md"),
         ("Dictation from the microphone",
          "Speak and have your words typed.",
-         "not yet", "Only audio files for now; Whisper inside textweaver is planned for Wave 3.", "dictation.md"),
+         "partial", "Through tw dictate, with the in-process Whisper model; not yet from inside the reader.", "dictation.md"),
         ("Define a word",
          "Definitions, examples, synonyms, and pronunciation for the word at the cursor, from your glossary and Open English WordNet, offline.",
          "done", "Ctrl+Shift+D in the GUI, Alt+E in the terminal; tw define on the command line.", "reading.md"),
@@ -382,7 +383,7 @@ FEATURES = [
          "done", "Ctrl+Shift+U or Alt+U; tw settings profile.", "settings.md"),
         ("Interface translations",
          "textweaver's own words in other languages, with right-to-left support.",
-         "partial", "The message catalog, English, and test languages are in; translations come in Wave 4.", "settings.md"),
+         "done", "Six interface languages, including right-to-left layout.", "settings.md"),
         ("Settings export and import",
          "Save your settings and key changes as JSON, and load them on another computer.",
          "done", "Alt+Shift+E exports; Alt+Shift+I imports.", "settings.md"),
@@ -405,7 +406,7 @@ FEATURES = [
          "partial", "Built by the release workflow; the first release with it is the one after 0.1.0-alpha.3.", "install.md"),
         ("Native GUI on Xilem",
          "A native window for people who prefer a GUI, in the all-Rust Xilem toolkit with AccessKit.",
-         "not yet", "Planned for Wave 3; a wxDragon spike stays as a fallback.", "roadmap.md"),
+         "done", "Runs on Windows, macOS, and Linux, and ships with every release.", "gui.md"),
     ]),
 ]
 
