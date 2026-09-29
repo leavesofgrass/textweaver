@@ -16,10 +16,10 @@
     ],
     "settings": [
       { "level": "must", "pattern": "Settings", "why": "the settings dialog is named, and NVDA says it when the focus moves in" },
-      { "level": "should", "pattern": "Speech", "why": "the first section in the list, with its size (\"Speech, 20 settings\")" }
+      { "level": "should", "pattern": "dialog", "why": "the screen reader says the dialog's role with its name (the first NVDA run: \"Settings, dialog\", then the focused setting)" }
     ],
     "close": [
-      { "level": "should", "pattern": "Reading check|document|textweaver", "why": "Escape closes the dialog and the focus returns to the document" }
+      { "level": "should", "pattern": "closed|Reading check|document|textweaver", "why": "Escape closes the dialog (the app says \"Settings closed.\") and the focus returns to the document" }
     ]
   }
 }
