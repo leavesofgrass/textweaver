@@ -1,25 +1,25 @@
-# ADR-0033: The GUI after the second session, and edit mode
+# ADR-0033: The GUI after further accessibility testing, and edit mode
 
-- Status: accepted (Wave 4, Agent W4a3, sub-wave 4c)
+- Status: accepted
 - Date: 2026-09-28
 - Builds on: [ADR-0027](0027-xilem-gui.md) (the Xilem GUI) and [ADR-0028](0028-xilem-gui-after-the-session.md) (the first session)
 
 ## Context
 
-The owner's second session with the Xilem GUI, on Monday, September 28, 2026, passed: the release build works, and Eloquence reads with the words highlighted in step. It found four things to fix before edit mode:
+A second accessibility test session with the Xilem GUI, on Monday, September 28, 2026, passed: the release build works, and Eloquence reads with the words highlighted in step. It found four things to fix before edit mode:
 
 1. A console window opened with the GUI and stayed behind it, so two windows were active.
 2. Open was only a line for a file path. It needs the system's own file chooser, with the typed path kept as a fallback.
-3. The owner wants to change the font and the size of the text on screen from the keyboard.
+3. The font and the size of the text on screen need to be changeable from the keyboard.
 4. Every control needs a keyboard shortcut, shown and spoken with its name, such as "Open, Control O".
 
-Then edit mode, which Wave 4 kept for the GUI (the owner's decision of September 27).
+Then edit mode, kept for the GUI (decided September 27).
 
 ## Decisions
 
 ### No console window
 
-`textweaver-xilem.exe` is a GUI-subsystem program (`#![windows_subsystem = "windows"]`) in every build, so debug runs behave as the owner's do. A GUI program is not connected to the terminal it is started from, so `console::attach` calls `AttachConsole(ATTACH_PARENT_PROCESS)` before anything is printed, when standard output and error are not already redirected. `--help`, `--version`, and argument errors reach that terminal. Once the window runs, the console is let go (`FreeConsole`, and the standard handles cleared), unless `--log` writes there, so Control C in that terminal cannot close the window. An error at the end attaches again to print.
+`textweaver-xilem.exe` is a GUI-subsystem program (`#![windows_subsystem = "windows"]`) in every build, so debug runs behave the same as release runs. A GUI program is not connected to the terminal it is started from, so `console::attach` calls `AttachConsole(ATTACH_PARENT_PROCESS)` before anything is printed, when standard output and error are not already redirected. `--help`, `--version`, and argument errors reach that terminal. Once the window runs, the console is let go (`FreeConsole`, and the standard handles cleared), unless `--log` writes there, so Control C in that terminal cannot close the window. An error at the end attaches again to print.
 
 With no terminal at all (a shortcut, File Explorer), a startup error is shown in a message box, which screen readers read like any dialog, except in `--background` runs, which never show one. Errors and panics also go to the `--log-file` log.
 
@@ -36,7 +36,7 @@ Open shows the system's own dialog through the `rfd` crate (0.17.2, MIT): the co
 
 Open Path, and the four commands below, are **window-only** (`ActionId::is_window_only`): they have GUI keys and no terminal keys, and a keymap test checks both. In the terminal Open is already a typed path, and its palette says the font and size commands work in the window.
 
-A native dialog cannot be driven in tests. The code around it (filters, the start folder, what an answer means) has unit tests; the dialog itself is on the owner's checklist.
+A native dialog cannot be driven in tests. The code around it (filters, the start folder, what an answer means) has unit tests; the dialog itself is on the manual test checklist.
 
 ### Text size and font
 
@@ -47,7 +47,7 @@ The existing `[reading_aids.font]` settings (family, size in points, weight) alr
 - Each change is saved and said, assertively for the size keys so a held key says only the latest size: "Text size 18 points.", "Text size 72 points, the largest.", "Font: OpenDyslexic." The messages are in all six catalogs.
 - The window now takes the font from the settings on every refresh, so a change made in the Settings dialog reaches the document too.
 
-`Ctrl+=` and `Ctrl+-` were Star's rate keys in the GUI. Text size is what screen reader users expect on them, as the owner asked, so the GUI's rate moved to **F11** and **Shift+F11**, beside volume on F7. The browse keys `+`, `=`, and `-` still change the rate, and the terminal is unchanged. The keymap test of Star's GUI chords records the change.
+`Ctrl+=` and `Ctrl+-` were Star's rate keys in the GUI. Text size is what screen reader users expect on them, so the GUI's rate moved to **F11** and **Shift+F11**, beside volume on F7. The browse keys `+`, `=`, and `-` still change the rate, and the terminal is unchanged. The keymap test of Star's GUI chords records the change.
 
 ### A shortcut on every control
 
@@ -59,7 +59,7 @@ Every button has its key from the keymap (`named_key_in`, then `written_text`), 
 - It is the app's main key: the single key while single-key shortcuts are on ("Space" for Play), a chord while they are off ("Ctrl+Shift+Space"). F9 updates every button at once.
 - The Font button is now the `choose_font` command, so it has a key like the others. The settings dialog's Close button has Escape, the dialog's own key.
 
-**Changed after the first version (the owner, Monday, September 28, 2026).** The first version put the key in the name, spoken ("Open, Control O"), because not every screen reader reads the accelerator key property, and left the property unset so NVDA would not say the key twice. The owner found the key in the name wordy. The property leaves it to the screen reader's setting, so the name is the label again.
+**Changed after the first version (Monday, September 28, 2026).** The first version put the key in the name, spoken ("Open, Control O"), because not every screen reader reads the accelerator key property, and left the property unset so NVDA would not say the key twice. The key in the name proved wordy. The property leaves it to the screen reader's setting, so the name is the label again.
 
 **AccessKit did not pass the property on.** AccessKit has the keyboard shortcut property, but its Windows adapter (0.35.1) never gave it to UI Automation, and its AT-SPI and macOS adapters do not either. So `third_party/accesskit_windows` is a vendored copy of the Windows adapter that answers UI Automation's AcceleratorKey with it (two lines in its property table; see its `TEXTWEAVER.md` and `textweaver.patch`), patched in through `[patch.crates-io]` in the root `Cargo.toml`. It is meant to go upstream; on Linux and macOS the key is on screen but not yet in the accessibility tree.
 
@@ -77,9 +77,9 @@ The brief asked for edit mode in `DocumentView`, based on Parley's `examples/edi
   - typing or deleting over the view's selection, and a screen reader's or dictation's `ReplaceSelectedText` or `SetValue`, is `Command::ReplaceRange` with the view's range, which is quiet (the screen reader already said it) and does not depend on the app's own selection.
 - **The caret and selection.** The view moves the caret and selection itself and tells the app the caret (`SetCursor`, quietly), which also moves the editor's caret; a selection the app holds (from a command) is dropped when the view moves the caret. A selection the app makes, such as the next misspelling, reaches the view as its selection, so the screen reader reads it and typing replaces it.
 - **Keeping the screen reader's place.** An edit changes the document's revision. In edit mode the view takes the new text as it takes a window slide: paragraphs that start at the same place with the same text keep their layouts and their run nodes, so only the edited paragraph and the ones after it are sent again. Entering or leaving edit mode replaces every run.
-- **What waited for edit mode now works in the window**, through the app: spell check (Alt+M selects the next misspelling, Alt+J suggests), citations while writing (Alt+C opens the picker, a list dialog filtered as you type), and export and the browser preview (in the command palette). The GUI now builds the app with its `publish` feature (the crate's own `publish` feature, on by default). W4b measured that feature at about 18.6 MB in the terminal reader's release build (28,704,256 bytes without it, 47,332,864 with); the GUI's own size was not measured here.
+- **What waited for edit mode now works in the window**, through the app: spell check (Alt+M selects the next misspelling, Alt+J suggests), citations while writing (Alt+C opens the picker, a list dialog filtered as you type), and export and the browser preview (in the command palette). The GUI now builds the app with its `publish` feature (the crate's own `publish` feature, on by default). Measurement showed that feature at about 18.6 MB in the terminal reader's release build (28,704,256 bytes without it, 47,332,864 with); the GUI's own size was not measured here.
 
-Tested in the harness (`tests/edit_mode.rs`): the role and read-only state in and out of edit mode; typing, Enter, Backspace, and Space through the app, the caret following, and undo; typing and deleting over a selection; `ReplaceSelectedText` ignored while reading and applied while editing; a misspelling selected and corrected by typing; and the citation picker. What the harness cannot show (what NVDA and JAWS say while typing, and focus mode) is on the owner's checklist.
+Tested in the harness (`tests/edit_mode.rs`): the role and read-only state in and out of edit mode; typing, Enter, Backspace, and Space through the app, the caret following, and undo; typing and deleting over a selection; `ReplaceSelectedText` ignored while reading and applied while editing; a misspelling selected and corrected by typing; and the citation picker. What the harness cannot show (what NVDA and JAWS say while typing, and focus mode) is on the manual test checklist.
 
 **Not done yet:**
 
@@ -88,7 +88,7 @@ Tested in the harness (`tests/edit_mode.rs`): the role and read-only state in an
 - Tab does not type a tab or move between table cells in the window (it moves the focus); `next_table_cell` stays on its key in the terminal.
 - Misspelled words are not marked on screen (neither are they in the terminal); Alt+M finds them.
 
-## Status update: what was left, done (Wave 5, Agent W5a4, Monday, September 28, 2026)
+## Status update: what was left, done (Monday, September 28, 2026)
 
 Three of the four "Not done yet" items above are done; edit mode is otherwise unchanged by the Parley upgrade (ADR-0027's status update), since it never used Parley's editor.
 
@@ -112,4 +112,4 @@ Three of the four "Not done yet" items above are done; edit mode is otherwise un
 
 - [The textweaver window](../gui.md)
 - [ADR-0027: Xilem GUI](0027-xilem-gui.md)
-- [ADR-0028: The Xilem GUI after the owner's session](0028-xilem-gui-after-the-session.md)
+- [ADR-0028: The Xilem GUI after the first accessibility session](0028-xilem-gui-after-the-session.md)

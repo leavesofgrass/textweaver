@@ -11,7 +11,7 @@ Students get course handouts as RTF and OpenDocument text (ODT) as often as Word
 - The Word reader read the final text (insertions kept, deletions dropped), but comments were lost and there was no way to hear what changed.
 - Word, OpenDocument, EPUB, and PowerPoint files are zip packages. The package reader capped one member at 256 MB, but not the number of members, overlapping members, compression ratios, or the total unpacked.
 
-The research for Wave 4 (kept outside the repository) found no crate worth adopting. rtf-parser 0.4.3 has no code pages, no tables, and a recursive lexer. The DOCX comment crates each bring a quick-xml stack beside our roxmltree reader.
+Research done for this work (kept outside the repository) found no crate worth adopting. rtf-parser 0.4.3 has no code pages, no tables, and a recursive lexer. The DOCX comment crates each bring a quick-xml stack beside our roxmltree reader.
 
 ## Decision
 
@@ -48,9 +48,9 @@ The reader turns each comment into a note of the store's existing `Note` type (n
 
 Every loader counts changes under `textweaver.revisions` either way.
 
-The reader's setting is `[reading] revisions = "auto" | "marked" | "final"`. `auto`, the default, is `Marked` at high verbosity and `Final` otherwise, so a student who wants every detail hears the changes, and one who wants the text does not. The choice is made when the document is loaded; a verbosity change applies the next time the document opens. The setting is read from the reading table's extra keys until the store type, export fixture, and schema entries land (a contract change request for the orchestrator; `[gui] announce` took the same path).
+The reader's setting is `[reading] revisions = "auto" | "marked" | "final"`. `auto`, the default, is `Marked` at high verbosity and `Final` otherwise, so a student who wants every detail hears the changes, and one who wants the text does not. The choice is made when the document is loaded; a verbosity change applies the next time the document opens. The setting is read from the reading table's extra keys until the store type, export fixture, and schema entries land (a follow-up schema change; `[gui] announce` took the same path).
 
-A `Revision` marker kind in core would let the reader skip or announce changes at speech time instead of load time. That is a core change, left for Wave 5.
+A `Revision` marker kind in core would let the reader skip or announce changes at speech time instead of load time. That is a core change, left for later.
 
 ### Package limits
 
@@ -64,7 +64,7 @@ For every zip package (DOCX, ODT, EPUB, PPTX, DAISY in a zip, ODS):
 
 ### Fuzzing
 
-Three cargo-fuzz targets: `rtf` (the RTF parser, final and marked), `odt` (a package built from the input, and the input as flat XML), and `docx_revisions` (document, comments, and extended comments from one input), each checking that markers and comment ranges stay inside the text. Their seeds are the fixtures in `fixtures/c2/`. The fuzz workspace was reserved for the Cloud Agent when they were written, so the targets are handed to the orchestrator to add after that work merges.
+Three cargo-fuzz targets: `rtf` (the RTF parser, final and marked), `odt` (a package built from the input, and the input as flat XML), and `docx_revisions` (document, comments, and extended comments from one input), each checking that markers and comment ranges stay inside the text. Their seeds are the fixtures in `fixtures/c2/`. The fuzz workspace was reserved for other work in progress when these targets were written, so they will be added once that work merges.
 
 ## Consequences
 

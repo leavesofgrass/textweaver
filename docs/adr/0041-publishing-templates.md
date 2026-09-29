@@ -1,12 +1,12 @@
 # ADR-0041: Publishing templates, real Word footnotes, and PDF page labels
 
-- Status: accepted (Wave 5, Agent W5g, pulled forward from W6g). The owner's check with Word and JAWS is queued in session 3.
+- Status: accepted, pulled forward from later work. A check with Word and JAWS is queued for a further test session.
 - Date: 2026-09-28
 - Builds on: [ADR-0017](0017-writers.md) (the native writers), [ADR-0016](0016-rendering-and-conversion.md) (the converter and `tw convert`), and [ADR-0019](0019-citations.md) (the References section a template styles)
 
 ## Context
 
-The owner put the APA and AMA publishing templates, with real Word footnotes, on the feature-complete list. Star shipped them in its publishing arc (0.1.30): four stylesheets for EPUB and HTML (large print, dyslexia-friendly, high contrast, academic manuscript) and Word reference documents (large print, dyslexia-friendly, APA student paper, AMA manuscript), all through Pandoc, with the Word reference documents generated at install time rather than kept as binary files. Two of Star's lessons carry over: Pandoc styled Word output by style name, so a template that did not define a style silently had no effect; and Star's DOCX still lacked page numbers and an APA title page.
+The APA and AMA publishing templates, with real Word footnotes, are on the feature-complete list. Star shipped them in its publishing arc (0.1.30): four stylesheets for EPUB and HTML (large print, dyslexia-friendly, high contrast, academic manuscript) and Word reference documents (large print, dyslexia-friendly, APA student paper, AMA manuscript), all through Pandoc, with the Word reference documents generated at install time rather than kept as binary files. Two of Star's lessons carry over: Pandoc styled Word output by style name, so a template that did not define a style silently had no effect; and Star's DOCX still lacked page numbers and an APA title page.
 
 textweaver writes EPUB, DOCX, and PDF natively (ADR-0017). ADR-0017 left three items open that this ADR closes: real Word footnotes, page labels in PDF from print page breaks, and templates beyond large-print PDF.
 
@@ -55,7 +55,7 @@ textweaver's DOCX loader already reads `footnotes.xml`, so its own Word files ro
 
 ### `tw convert --template`
 
-The existing `--template` option takes the six names (and aliases such as `apa-student-paper`, `dyslexia`, `contrast`). For HTML it still names a page template; a publishing template name there uses the default page and prints one sentence saying so, as it does for braille and plain text. The reader's own export keeps its settings for now; a template setting there is left for the GUI's parity wave.
+The existing `--template` option takes the six names (and aliases such as `apa-student-paper`, `dyslexia`, `contrast`). For HTML it still names a page template; a publishing template name there uses the default page and prints one sentence saying so, as it does for braille and plain text. The reader's own export keeps its settings for now; a template setting there is left for later GUI parity work.
 
 ## Checks
 

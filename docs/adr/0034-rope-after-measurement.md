@@ -1,12 +1,12 @@
 # ADR-0034: The rope after measurement: stay on ropey 1.6
 
-- Status: accepted (Wave 5, Agent W5r)
+- Status: accepted
 - Date: 2026-09-28
-- Builds on: [ADR-0002](0002-text-model.md) (the text model) and its status update of Monday, September 28, 2026 (Agent W4b's rope measurements)
+- Builds on: [ADR-0002](0002-text-model.md) (the text model) and its status update of Monday, September 28, 2026 (the rope measurements)
 
 ## Context
 
-ADR-0002 put the canonical text in a `ropey::Rope`, with positions as `CharPos`, a count of Unicode scalar values. Wave 4 asked whether a newer rope would be worth the move, and Agent W4b measured three on the bench corpora without changing anything:
+ADR-0002 put the canonical text in a `ropey::Rope`, with positions as `CharPos`, a count of Unicode scalar values. This work asked whether a newer rope would be worth the move, and measured three on the bench corpora without changing anything:
 
 - ropey 1.6.1, the one we use, with char offsets;
 - ropey 2.0.0-beta.1, with `metric_chars` on, fed byte offsets and also char offsets converted on each edit;
@@ -24,13 +24,13 @@ What the numbers say, on 10 MB:
 
 So crop is 2 to 3 times as fast as ropey 1 on edits, and ropey 2 about 1.3 to 1.8 times. But 20,000 keystrokes on 10 MB take 10.4 ms with ropey 1: one edit costs about half a microsecond with every rope measured. Nobody can hear or feel that difference.
 
-The same wave measured where the time does go. On 10 MB, `tw info` takes 580 to 700 ms, almost all of it loading, and the whole-document narration plan took 631 ms after W4b's work (1,155 ms before). The rope is not the bottleneck; loading and the narration plan are.
+The same measurement work looked at where the time does go. On 10 MB, `tw info` takes 580 to 700 ms, almost all of it loading, and the whole-document narration plan took 631 ms after that work (1,155 ms before). The rope is not the bottleneck; loading and the narration plan are.
 
 On crates.io today, ropey 2 is still `2.0.0-beta.1` (August 2, 2025), with no final release, and crop's newest is 0.4.3 (April 25, 2025).
 
 ## Decision
 
-**Stay on ropey 1.6.** Nothing in the text model changes: the rope, `CharPos`, the state file format, and the line model all stay as ADR-0002 describes. Wave 5 spends the rope's slot on loading and the narration plan instead (Agent W5r, deliverable 2).
+**Stay on ropey 1.6.** Nothing in the text model changes: the rope, `CharPos`, the state file format, and the line model all stay as ADR-0002 describes. This effort's time goes to loading and the narration plan instead.
 
 ### Why not ropey 2 now
 
@@ -62,12 +62,12 @@ This decision keeps what works, so its fallback is the measured alternative: if 
 
 - No change to the state file format, `CharPos`, the markers, or any crate's API. No migration.
 - ropey 1.6.1 (October 2023) stays pinned through `ropey = "1.6"` in the root `Cargo.toml`. It is mature, and its API has not changed since.
-- The rope is not where textweaver's time goes. Loading a document and planning its narration are, and W5r's bench numbers before and after each change to them are recorded in [Testing](../dev/testing.md#benchmarks).
-- The owner has nothing to decide or hear: "stay" needs no action.
+- The rope is not where textweaver's time goes. Loading a document and planning its narration are, and bench numbers before and after each change to them are recorded in [Testing](../dev/testing.md#benchmarks).
+- There is nothing to decide or announce here: "stay" needs no action.
 
 ## See also
 
-- [ADR-0002: Text model](0002-text-model.md): the rope, `CharPos`, and W4b's measurements.
+- [ADR-0002: Text model](0002-text-model.md): the rope, `CharPos`, and the rope measurements.
 - [ADR-0005: Narration and the OffsetMap](0005-narration-and-offset-map.md): the narration plan, now the hot spot.
 - [Testing](../dev/testing.md#benchmarks): the bench harness and its measurements.
 - [Architecture](../dev/architecture.md): where the text model sits.

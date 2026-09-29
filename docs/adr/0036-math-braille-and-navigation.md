@@ -1,13 +1,13 @@
 # ADR-0036: Math braille and navigation on MathCAT
 
-- Status: accepted, behind the `mathcat` feature; the order of the status line's words and braille waits for the owner's session B1 on the Braille display
+- Status: accepted, behind the `mathcat` feature; the order of the status line's words and braille waits for a further test session on the Braille display
 - Date: 2026-09-28
 
 ## Context
 
 ADR-0029 brought MathCAT (DAISY, MIT) in for math speech and left braille and navigation for later: MathCAT issue #827 made `get_navigation_braille` panic in builds with MathCAT's `no-unsafe` feature, which is how this workspace builds it, since it denies unsafe code. Until then the BRF writer wrote a formula as its spoken words, and exploring a formula (Alt+Shift+X) used textweaver's own navigator, with no braille.
 
-On Monday, September 28, 2026, issue #827 was still open, with no comments and no linked pull request. crates.io's newest versions were 0.7.7-alpha.1 (September 23, before the issue) and 0.7.6-rc.3 (August 23), with no 0.7.6 final. The owner chose Nemeth first, read on a HumanWare Mantis Q40 (40 cells), and kept textweaver's own math speech as the default.
+On Monday, September 28, 2026, issue #827 was still open, with no comments and no linked pull request. crates.io's newest versions were 0.7.7-alpha.1 (September 23, before the issue) and 0.7.6-rc.3 (August 23), with no 0.7.6 final. We chose Nemeth first, read on a HumanWare Mantis Q40 (40 cells), and kept textweaver's own math speech as the default.
 
 ## Decision
 
@@ -17,7 +17,7 @@ MathCAT 0.7.6-rc.3 is vendored under `third_party/mathcat`, byte for byte as its
 
 The fix is the one the issue describes. `get_navigation_braille` wraps the part being explored in a new `<math>` element in a temporary document; it copied the part in the original document and appended the copy to the new one, which the no-unsafe backend cannot do, because its nodes are indices into their own document. A new `copy_mathml_to(mathml, doc)` allocates the whole copy in the destination document, and `get_navigation_braille` uses it. `copy_mathml` is unchanged for its other callers. `third_party/mathcat/textweaver.patch` holds the change as a diff, and `TEXTWEAVER.md` says how to check the copy and when to drop it.
 
-The regression test is `crates/textweaver-mathcat/tests/navigation.rs`. Run against the crates.io package (with the patch line commented out), the step into a fraction answered "MathCAT crash"; with the vendored copy, every step in Nemeth and UEB passes. The pull request text for upstream is kept outside the repository, for the owner to file from their own account. When a MathCAT release fixes the issue, pin it and remove the folder and the patch line.
+The regression test is `crates/textweaver-mathcat/tests/navigation.rs`. Run against the crates.io package (with the patch line commented out), the step into a fraction answered "MathCAT crash"; with the vendored copy, every step in Nemeth and UEB passes. The pull request text for upstream is kept outside the repository, ready to file. When a MathCAT release fixes the issue, pin it and remove the folder and the patch line.
 
 ### The engine
 
@@ -53,7 +53,7 @@ A formula the parser had to repair, one MathCAT refuses, and every formula in a 
 
 With `[reading] math_engine` set to a MathCAT style, Alt+Shift+X and the same keys drive MathCAT's navigation. Each step is spoken once through the caret channel's route (textweaver's voice, or the status line for the screen reader), and the status line shows the words, then the code and the part's braille (`mathx-step-braille`: "numerator ... Nemeth: ⠁⠬⠃"), for the display with `cursor = "status"`. A step that moves nothing plays the boundary sound, and MathCAT's words say why. MathCAT gives no source positions, so the highlight and the cursor stay on the whole formula. A formula MathCAT cannot read is explored with the built-in navigator. `"builtin"` is unchanged and stays the default.
 
-Words first, then braille, is a first choice for session B1 to confirm: the status line is also what the screen reader speaks, and a screen reader may speak Unicode braille cells as symbols. Moving the braille first, or leaving it off in screen-reader mode, is a change to the one catalog message.
+Words first, then braille, is a first choice for a further test session to confirm: the status line is also what the screen reader speaks, and a screen reader may speak Unicode braille cells as symbols. Moving the braille first, or leaving it off in screen-reader mode, is a change to the one catalog message.
 
 ### Size
 
@@ -65,7 +65,7 @@ Measured on Windows (x86_64-pc-windows-msvc), release profile, `cargo build --re
 
 ### Dependencies
 
-No new crate. The vendored MathCAT has the same dependencies as the crates.io package, so ADR-0029's dependency checks and the owner's exceptions (yaml-rust's advisory, libbz2-rs-sys's licence) are unchanged. `cargo deny --all-features check` (cargo-deny 0.20.2): advisories ok, bans ok, licenses ok, sources ok.
+No new crate. The vendored MathCAT has the same dependencies as the crates.io package, so ADR-0029's dependency checks and its exceptions (yaml-rust's advisory, libbz2-rs-sys's licence) are unchanged. `cargo deny --all-features check` (cargo-deny 0.20.2): advisories ok, bans ok, licenses ok, sources ok.
 
 ## Consequences
 
