@@ -9363,6 +9363,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "textweaver-formats",
  "textweaver-math",
  "textweaver-text",
  "thiserror 2.0.21",

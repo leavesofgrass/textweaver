@@ -61,6 +61,7 @@ pub mod annotations;
 pub mod archive;
 mod builder;
 pub mod cache;
+pub mod callout;
 mod counter;
 pub mod daisy;
 pub mod docx;
@@ -173,7 +174,7 @@ pub fn warnings(meta: &DocumentMeta) -> Vec<String> {
 
 /// Version of the canonical text the loaders produce. Bumped whenever a
 /// loader's output changes, which invalidates cached documents.
-pub const CANONICAL_VERSION: u32 = 6;
+pub const CANONICAL_VERSION: u32 = 7;
 
 /// Where a document comes from.
 #[derive(Clone, Debug, PartialEq, Eq)]

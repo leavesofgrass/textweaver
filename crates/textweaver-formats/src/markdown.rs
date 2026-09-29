@@ -108,6 +108,16 @@ fn alert_label(kind: BlockQuoteKind) -> &'static str {
     }
 }
 
+/// A callout title as words: the emphasis, code, highlight, and wiki
+/// link marks a title may carry are not read.
+fn plain_title(title: &str) -> String {
+    let mut t = title.to_owned();
+    for mark in ["**", "__", "==", "~~", "[[", "]]", "`", "*"] {
+        t = t.replace(mark, "");
+    }
+    t.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 /// Converts Markdown source to canonical text and markers, filling `meta`
 /// from front matter and the first level-1 heading.
 pub fn convert(
@@ -140,12 +150,13 @@ pub fn convert(
         image: Vec::new(),
         html: HtmlState::default(),
         alert: None,
+        head_end: None,
     };
-    for event in Parser::new_ext(source, parser_options()) {
+    for (event, range) in Parser::new_ext(source, parser_options()).into_offset_iter() {
         if let Some(g) = gather.as_mut() {
             g.event(&event);
         }
-        c.event(event);
+        c.event_at(event, range, source);
     }
     if let Some(g) = gather {
         c.footnotes = g.out;
@@ -247,8 +258,12 @@ struct Converter<'a> {
     image: Vec<(String, usize)>,
     /// Raw HTML read so far (comments and scripts span events).
     html: HtmlState,
-    /// A GFM alert's label ("Note"), written before its first text.
-    alert: Option<&'static str>,
+    /// A callout's label ("Note:", "Tip, collapsed:"), written before its
+    /// first text.
+    alert: Option<String>,
+    /// While reading a callout's head line: where the line ends. Its text
+    /// (`[!tip] Title`) is not read; the label says it.
+    head_end: Option<usize>,
 }
 
 /// Where the reader is inside raw HTML, carried from one HTML event to the
@@ -402,7 +417,7 @@ impl Converter<'_> {
 
     fn text(&mut self, t: &str) {
         if let Some(label) = self.alert.take() {
-            self.b.text(&format!("{label}:"));
+            self.b.text(&label);
             self.b.space();
         }
         if let Some(h) = self.heading_text.as_mut() {
@@ -492,6 +507,68 @@ impl Converter<'_> {
             "td" | "th" => self.b.space(),
             n if HTML_BLOCK_TAGS.contains(&n) => self.b.line_break(),
             _ => {}
+        }
+    }
+
+    /// An event with where it is in the source: a block quote whose first
+    /// line is a callout head (`> [!tip]- Title`) becomes a callout.
+    fn event_at(&mut self, event: Event<'_>, range: std::ops::Range<usize>, source: &str) {
+        if let Some(end) = self.head_end {
+            if range.start < end {
+                if matches!(
+                    event,
+                    Event::Text(_)
+                        | Event::Code(_)
+                        | Event::InlineHtml(_)
+                        | Event::InlineMath(_)
+                        | Event::FootnoteReference(_)
+                        | Event::SoftBreak
+                        | Event::HardBreak
+                ) {
+                    return;
+                }
+            } else {
+                self.head_end = None;
+            }
+        }
+        if let Event::Start(Tag::BlockQuote(_)) = &event
+            && self.skip_depth == 0
+            && self.code.is_none()
+            && self.meta_text.is_none()
+        {
+            let rest = source.get(range.start..).unwrap_or("");
+            let line = rest.split('\n').next().unwrap_or(rest);
+            if let Some(head) = crate::callout::head(line, true) {
+                self.callout(&head);
+                self.head_end = Some(range.start + line.len());
+                return;
+            }
+        }
+        self.event(event);
+    }
+
+    /// Starts a callout: a block quote labeled with its type as written
+    /// (`tip`, `hint`), read as "Tip: Title" on a line of its own then its
+    /// body, or "Tip:"
+    /// before the body when it has no title of its own. A foldable one
+    /// says its state once, in the label ("Tip, collapsed:").
+    fn callout(&mut self, head: &crate::callout::CalloutHead) {
+        self.block_break();
+        let m = Self::marker(MarkerKind::Quote).with_label(head.kind.clone());
+        self.push(Some(m));
+        let fold = match head.fold {
+            Some(crate::callout::Fold::Collapsed) => ", collapsed",
+            Some(crate::callout::Fold::Expanded) => ", expanded",
+            None => "",
+        };
+        let label = format!("{}{fold}:", head.type_word());
+        let title = plain_title(&head.custom_title);
+        if title.is_empty() {
+            self.alert = Some(label);
+        } else {
+            self.alert = None;
+            self.b.text(&format!("{label} {title}"));
+            self.b.line_break();
         }
     }
 
@@ -586,7 +663,7 @@ impl Converter<'_> {
                 if let Some(kind) = kind {
                     let label = alert_label(kind);
                     m = m.with_label(label.to_lowercase());
-                    self.alert = Some(label);
+                    self.alert = Some(format!("{label}:"));
                 }
                 self.push(Some(m));
             }
@@ -707,6 +784,10 @@ impl Converter<'_> {
                 self.block_break();
             }
             TagEnd::BlockQuote(_) | TagEnd::Table => {
+                // A callout with no body still says its type.
+                if let Some(label) = self.alert.take() {
+                    self.b.text(label.trim_end_matches(':'));
+                }
                 self.pop();
                 self.block_break();
             }
@@ -931,6 +1012,35 @@ mod tests {
             vec![Some("Other page".into()), Some("Page#Part".into())]
         );
         assert_eq!(d.meta.title.as_deref(), Some("Title"));
+    }
+
+    #[test]
+    fn obsidian_callouts_of_any_type_say_their_type_first() {
+        let d = load(
+            "> [!tip] Remember\n> Drink water.\n\n> [!warning]- Hot **stove**\n> Careful.\n\n> [!my-box]\n> Custom.\n\n> [!faq]+\n\n> [!IMPORTANT]\n> GitHub kind.\n",
+            &LoadOptions::default(),
+        );
+        let text = d.text().to_string();
+        assert!(text.starts_with("Tip: Remember\n"), "{text}");
+        assert!(text.contains("Drink water."), "{text}");
+        assert!(text.contains("Warning, collapsed: Hot stove\n"), "{text}");
+        assert!(text.contains("My box: Custom."), "{text}");
+        assert!(text.contains("FAQ, expanded"), "{text}");
+        assert!(text.contains("Important: GitHub kind."), "{text}");
+        assert!(!text.contains("[!"), "{text}");
+        assert!(!text.contains("Remember Drink"), "{text}");
+        let labels: Vec<Option<String>> = d
+            .marker_index()
+            .iter(MarkerKind::Quote, None)
+            .map(|m| m.label.clone())
+            .collect();
+        assert_eq!(
+            labels,
+            ["tip", "warning", "my-box", "faq", "important"].map(|l| Some(l.to_owned()))
+        );
+        // A quote that only looks like one is still a quote.
+        let plain = load("> [not a callout]\n> text\n", &LoadOptions::default());
+        assert_eq!(plain.text().to_string(), "[not a callout] text");
     }
 
     #[test]

@@ -26,6 +26,9 @@ comrak = { workspace = true, optional = true }
 textweaver-math.workspace = true
 # Heading slugs, shared with the reader's link following.
 textweaver-text.workspace = true
+# The callout rules, shared with the reader's Markdown loader (ADR-0044).
+# Without its default features: no PDF, OCR, archive, or workbook loaders.
+textweaver-formats = { path = "../textweaver-formats", default-features = false }
 ammonia.workspace = true
 minijinja.workspace = true
 
