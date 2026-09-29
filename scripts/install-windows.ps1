@@ -17,8 +17,12 @@
   it again updates the install. It works in Windows PowerShell 5.1 and in
   PowerShell 7.
 
+  With -Gui it also installs the GUI, textweaver-gui, from the release's GUI
+  package (or builds it with cargo xtask gui-dist), in a gui folder inside
+  the install, and offers a second Start menu shortcut for it.
+
   GNU-style options work too: --help, --dry-run, --yes, --from-source,
-  --uninstall, --release TAG, --install-dir DIR.
+  --uninstall, --release TAG, --install-dir DIR, --gui, --no-gui.
 
 .PARAMETER Release
   Install this release tag, such as v0.1.0-alpha.3, instead of the newest.
@@ -32,6 +36,13 @@
 
 .PARAMETER InstallDir
   Where to install (default: %LOCALAPPDATA%\Programs\textweaver).
+
+.PARAMETER Gui
+  Also install the GUI, textweaver-gui. Running the script again keeps it
+  installed.
+
+.PARAMETER NoGui
+  Do not install the GUI, and remove it if an earlier run installed it.
 
 .PARAMETER NoShortcut
   Do not offer the Start menu shortcut.
@@ -63,6 +74,8 @@ param(
     [switch] $FromSource,
     [string] $Source,
     [string] $InstallDir,
+    [switch] $Gui,
+    [switch] $NoGui,
     [switch] $NoShortcut,
     [switch] $Uninstall,
     [switch] $DryRun,
@@ -139,6 +152,8 @@ while ($null -ne $Rest -and $i -lt $Rest.Count) {
         '^--from-source$' { $FromSource = $true }
         '^--uninstall$' { $Uninstall = $true }
         '^--no-shortcut$' { $NoShortcut = $true }
+        '^--gui$' { $Gui = $true }
+        '^--no-gui$' { $NoGui = $true }
         '^--release$' { $i++; $Release = $Rest[$i] }
         '^--source$' { $i++; $Source = $Rest[$i] }
         '^--(install-dir|prefix)$' { $i++; $InstallDir = $Rest[$i] }
@@ -161,7 +176,10 @@ if ($Help) {
     Write-Line '  -FromSource      Build from source (needs the MSVC build tools and rustup).'
     Write-Line '  -Source DIR      The checkout to build (default: the one this script is in).'
     Write-Line '  -InstallDir DIR  Where to install (default: %LOCALAPPDATA%\Programs\textweaver).'
-    Write-Line '  -NoShortcut      Do not offer the Start menu shortcut.'
+    Write-Line '  -Gui             Also install the GUI, textweaver-gui, with its own shortcut.'
+    Write-Line '                   Running the script again keeps the GUI installed.'
+    Write-Line '  -NoGui           Do not install the GUI; remove it if it was installed.'
+    Write-Line '  -NoShortcut      Do not offer the Start menu shortcuts.'
     Write-Line '  -Uninstall       Remove textweaver, its PATH entry, and its shortcut. Settings are kept.'
     Write-Line '  -DryRun          Print each step instead of doing it.'
     Write-Line '  -Yes             Answer yes to every question.'
@@ -175,7 +193,9 @@ if ($Help) {
 if (-not $InstallDir) { $InstallDir = Join-Path $env:LOCALAPPDATA 'Programs\textweaver' }
 $InstallDir = [IO.Path]::GetFullPath($InstallDir)
 $ShortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'textweaver.lnk'
+$GuiShortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'textweaver window.lnk'
 $Manifest = Join-Path $InstallDir 'install-manifest.txt'
+$GuiDir = Join-Path $InstallDir 'gui'
 $RepoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $env:CARGO_TERM_PROGRESS_WHEN = 'never'
 $env:RUSTUP_TERM_PROGRESS_WHEN = 'never'
@@ -262,6 +282,110 @@ function Add-StartMenuShortcut {
         $link.Description = 'Read documents aloud, with a highlight that follows the spoken word'
         $link.IconLocation = "$exe,0"
         $link.Save()
+    }
+}
+
+# ----------------------------------------------------------------- GUI --
+
+# Whether this run installs the GUI: -Gui or -NoGui, else what the manifest
+# of an earlier install says. Read before the install folder is replaced.
+function Get-GuiChoice {
+    if ($NoGui) { return $false }
+    if ($Gui) { return $true }
+    if (Test-Path -LiteralPath $Manifest) {
+        if (Select-String -LiteralPath $Manifest -Pattern '^gui=' -Quiet) {
+            Write-Line 'The GUI was installed before, so it is updated too. Use -NoGui to remove it.'
+            return $true
+        }
+    }
+    return $false
+}
+
+# Downloads and checks the release's GUI zip, next to the terminal package
+# (SHA256SUMS.txt is already there), and extracts it. Returns the staged
+# folder, or $null when the release has no GUI package.
+function Get-ReleaseGuiPackage($Package) {
+    Write-Section 'GUI download'
+    $name = "textweaver-$($Package.Version)-windows-x86_64-gui"
+    $base = "https://github.com/$Repo/releases/download/$($Package.Tag)"
+    $work = $Package.Work
+    $zip = Join-Path $work "$name.zip"
+    $sums = Join-Path $work 'SHA256SUMS.txt'
+    $want = $null
+    if (-not $DryRun) {
+        foreach ($line in (Get-Content -LiteralPath $sums)) {
+            $parts = $line -split '\s+', 2
+            if ($parts.Count -eq 2 -and $parts[1].TrimStart('*') -eq "$name.zip") { $want = $parts[0] }
+        }
+        if (-not $want) {
+            Write-Line "Release $($Package.Tag) has no $name.zip, so the GUI is not installed. Releases from 0.1.0-alpha.5 on have it."
+            return $null
+        }
+    }
+    Write-Line "Downloading $name.zip, the GUI, from release $($Package.Tag)."
+    Invoke-Step "download $base/$name.zip to $zip" {
+        Invoke-WebRequest -UseBasicParsing -Uri "$base/$name.zip" -OutFile $zip
+    }
+    Invoke-Step "check the SHA-256 of $name.zip against SHA256SUMS.txt" {
+        $got = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash
+        if ($got -ine $want) { throw "The GUI's checksum does not match (expected $want, got $got). The download may be damaged. The reader is installed; the GUI is not." }
+        Write-Line "The checksum matches: $($got.ToLower())."
+    }
+    Invoke-Step "extract $name.zip" {
+        Expand-Archive -LiteralPath $zip -DestinationPath $work -Force
+    }
+    return (Join-Path $work $name)
+}
+
+# Builds the GUI package with cargo xtask gui-dist, in the same build folder
+# as the terminal package. Returns the staged folder.
+function Build-GuiFromSource($Package) {
+    Write-Section 'GUI build'
+    Write-Line 'Building the GUI package with cargo xtask gui-dist. It shares most of the terminal build.'
+    Invoke-Native @('cargo', 'xtask', 'gui-dist') $Package.Source
+    $target = $env:CARGO_TARGET_DIR
+    if (-not $target) { $target = Join-Path $Package.Source 'target' }
+    return (Join-Path $target "dist\textweaver-$($Package.Version)-windows-x86_64-gui")
+}
+
+# Copies a staged GUI folder into the gui folder of the install.
+function Install-Gui([string] $Stage) {
+    Write-Section 'GUI install'
+    Write-Line "Installing the GUI, textweaver-gui, into $GuiDir."
+    if (-not $DryRun -and -not (Test-Path -LiteralPath (Join-Path $Stage 'textweaver-gui.exe'))) {
+        throw "$Stage\textweaver-gui.exe is missing, so the GUI cannot be installed. The reader is installed."
+    }
+    Invoke-Step "copy $Stage to $GuiDir" {
+        New-Item -ItemType Directory -Force -Path $GuiDir | Out-Null
+        Copy-Item -Path (Join-Path $Stage '*') -Destination $GuiDir -Recurse -Force
+        Get-ChildItem -LiteralPath $GuiDir -Recurse -File | Unblock-File
+    }
+    Invoke-Step "add gui=folder to $Manifest" {
+        Add-Content -LiteralPath $Manifest -Value 'gui=folder' -Encoding ascii
+    }
+}
+
+function Add-GuiShortcut {
+    if ($NoShortcut) { return }
+    Write-Section 'Start menu, GUI'
+    $exe = Join-Path $GuiDir 'textweaver-gui.exe'
+    Write-Line 'A Start menu shortcut named textweaver window can start the GUI.'
+    if (Test-Path -LiteralPath $GuiShortcutPath) { Write-Line 'The shortcut exists already; it will be updated.' }
+    if (-not (Confirm-Choice 'Create the Start menu shortcut for the GUI?')) { Write-Line 'No GUI shortcut created.'; return }
+    Invoke-Step "create the shortcut $GuiShortcutPath" {
+        $shell = New-Object -ComObject WScript.Shell
+        $link = $shell.CreateShortcut($GuiShortcutPath)
+        $link.TargetPath = $exe
+        $link.WorkingDirectory = $env:USERPROFILE
+        $link.Description = 'Read documents aloud in a window, with a highlight that follows the spoken word'
+        $link.IconLocation = "$exe,0"
+        $link.Save()
+    }
+}
+
+function Undo-GuiShortcut {
+    if (Test-Path -LiteralPath $GuiShortcutPath) {
+        Invoke-Step "remove the shortcut $GuiShortcutPath" { Remove-Item -LiteralPath $GuiShortcutPath -Force }
     }
 }
 
@@ -455,7 +579,7 @@ function Install-Stage($Package) {
 }
 
 function Uninstall-Textweaver {
-    Write-Line "This removes textweaver from $InstallDir, its user PATH entry, and its Start menu shortcut."
+    Write-Line "This removes textweaver from $InstallDir (the GUI too, if installed), its user PATH entry, and its Start menu shortcuts."
     Write-Line 'It keeps your settings, reading positions, and notes, and it does not remove Rust.'
     $installed = (Test-Path -LiteralPath $InstallDir) -or (Test-Path -LiteralPath $ShortcutPath) -or (Test-PathEntry (Get-UserPath) $InstallDir)
     if (-not $installed -and -not $DryRun) {
@@ -474,6 +598,9 @@ function Uninstall-Textweaver {
     if ((Test-Path -LiteralPath $ShortcutPath) -or $DryRun) {
         Invoke-Step "remove the shortcut $ShortcutPath" { Remove-Item -LiteralPath $ShortcutPath -Force }
     }
+    if ((Test-Path -LiteralPath $GuiShortcutPath) -or $DryRun) {
+        Invoke-Step "remove the shortcut $GuiShortcutPath" { Remove-Item -LiteralPath $GuiShortcutPath -Force }
+    }
     Write-Line
     Write-Line 'textweaver is removed.'
 }
@@ -491,6 +618,7 @@ try {
 # Errors end the script with one plain sentence, and the download folder
 # is always cleaned up.
 $package = $null
+$guiInstalled = $false
 try {
     if ($Uninstall) {
         Uninstall-Textweaver
@@ -503,9 +631,18 @@ try {
         Write-Line "This script downloads the newest textweaver release for Windows, checks it, and installs it in $InstallDir."
         $package = Get-ReleasePackage
     }
+    $withGui = Get-GuiChoice
     Install-Stage $package
+    if ($withGui) {
+        if ($FromSource) { $guiStage = Build-GuiFromSource $package } else { $guiStage = Get-ReleaseGuiPackage $package }
+        if ($guiStage) {
+            Install-Gui $guiStage
+            $guiInstalled = $true
+        }
+    }
     Add-ToUserPath
     Add-StartMenuShortcut
+    if ($guiInstalled) { Add-GuiShortcut } else { Undo-GuiShortcut }
 } catch {
     Write-Line
     Write-Line "Error: $($_.Exception.Message)"
@@ -523,4 +660,5 @@ if ($DryRun) {
 Write-Line "textweaver $($package.Version) is installed in $InstallDir."
 Write-Line "Check your speech engines: & `"$InstallDir\tw.exe`" backends"
 Write-Line "Read the quick start aloud: & `"$InstallDir\textweaver.exe`" `"$InstallDir\QUICKSTART.md`""
+if ($guiInstalled) { Write-Line "Start the GUI from the Start menu (textweaver window), or run $GuiDir\textweaver-gui.exe" }
 Write-Line 'To remove textweaver, run this script with -Uninstall.'

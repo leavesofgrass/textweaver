@@ -230,6 +230,32 @@ mod tests {
         assert_eq!(bins, ours);
     }
 
+    /// The nightly workflow fuzzes every target: its matrix line names
+    /// exactly the targets in `fuzz/Cargo.toml`, so a new target cannot be
+    /// left out of the nightly run.
+    #[test]
+    fn the_nightly_workflow_fuzzes_every_target() {
+        let workflow =
+            std::fs::read_to_string(root().join(".github").join("workflows").join("nightly.yml"))
+                .expect(".github/workflows/nightly.yml exists");
+        let line = workflow
+            .lines()
+            .map(str::trim)
+            .find_map(|l| l.strip_prefix("target: ["))
+            .and_then(|l| l.strip_suffix(']'))
+            .expect("nightly.yml has a `target: [...]` matrix line");
+        let mut matrix: Vec<&str> = line.split(',').map(str::trim).collect();
+        let mut ours: Vec<&str> = TARGETS.iter().map(|(n, _)| *n).collect();
+        matrix.sort_unstable();
+        ours.sort_unstable();
+        let missing: Vec<&&str> = ours.iter().filter(|t| !matrix.contains(t)).collect();
+        let extra: Vec<&&str> = matrix.iter().filter(|t| !ours.contains(t)).collect();
+        assert!(
+            missing.is_empty() && extra.is_empty(),
+            "nightly.yml's fuzz matrix: missing {missing:?}, not a target {extra:?}"
+        );
+    }
+
     /// Every target with seeds finds at least one file, so a moved fixture
     /// folder is noticed.
     #[test]

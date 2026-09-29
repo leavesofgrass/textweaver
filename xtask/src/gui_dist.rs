@@ -1,4 +1,4 @@
-//! `cargo xtask gui-dist [--out DIR]`: the Xilem GUI's own package
+//! `cargo xtask gui-dist [--universal] [--out DIR]`: the Xilem GUI's own package
 //! (ADR-0027, "Packaging"; docs/dev/releasing.md).
 //!
 //! Builds `textweaver-xilem` with the `dist` profile, as `cargo xtask dist`
@@ -17,12 +17,20 @@
 //!   vendored Xilem's licence;
 //! - the quick start and the window's guide (`GUI.md`).
 //!
+//! The GUI is built with the speech engines `cargo xtask dist` builds into
+//! the terminal programs for the platform (espeak-ng, speech-dispatcher,
+//! and Omnivox on Linux; Omnivox elsewhere), for each engine feature the GUI
+//! crate declares. A feature the crate does not declare yet is named in the
+//! output and left out, so the package still builds.
+//!
 //! Then it packages the folder:
 //!
 //! - Windows: a `.zip`;
 //! - macOS: `textweaver.app` (the binary in `Contents/MacOS`, an
 //!   `Info.plist`, signed ad hoc as Apple silicon requires) inside a
-//!   `.zip`, for this Mac's architecture;
+//!   `.zip`, for this Mac's architecture, or with `--universal` for Apple
+//!   silicon and Intel in one binary (joined with `lipo`, as
+//!   `cargo xtask dist --universal` does);
 //! - Linux: a `.tar.gz`, and an AppImage of its own (with its `.zsync`)
 //!   when `appimagetool` and its pinned runtime are found, as
 //!   `cargo xtask appimage` finds them.
@@ -62,8 +70,12 @@ const FILES: [(&str, &str); 4] = [
 /// points at.
 const GITHUB: (&str, &str) = ("leavesofgrass", "textweaver");
 
+/// The GUI crate's manifest, read for the engine features it declares.
+const MANIFEST: &str = "crates/textweaver-xilem/Cargo.toml";
+
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Args {
+    universal: bool,
     out: Option<PathBuf>,
 }
 
@@ -72,21 +84,64 @@ fn parse(args: &[String]) -> anyhow::Result<Args> {
     let mut it = args.iter();
     while let Some(a) = it.next() {
         match a.as_str() {
+            "--universal" => out.universal = true,
             "--out" => out.out = Some(PathBuf::from(it.next().context("--out needs a directory")?)),
-            other => bail!("unknown argument {other} (usage: cargo xtask gui-dist [--out DIR])"),
+            other => bail!(
+                "unknown argument {other} (usage: cargo xtask gui-dist [--universal] [--out DIR])"
+            ),
         }
+    }
+    if out.universal && !cfg!(target_os = "macos") {
+        bail!("--universal is for macOS");
     }
     Ok(out)
 }
 
+/// The feature names in a manifest's `[features]` table.
+fn declared_features(manifest: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut in_features = false;
+    for line in manifest.lines() {
+        let line = line.trim();
+        if line.starts_with('[') {
+            in_features = line == "[features]";
+            continue;
+        }
+        if !in_features || line.starts_with('#') {
+            continue;
+        }
+        if let Some((name, _)) = line.split_once('=') {
+            let name = name.trim();
+            if !name.is_empty() && !name.contains(char::is_whitespace) {
+                out.push(name.to_owned());
+            }
+        }
+    }
+    out
+}
+
+/// The platform's engines (as in the terminal package) split into those
+/// the GUI crate declares, as `--features` entries, and those it does not.
+fn engine_features(declared: &[String], engines: &[&str]) -> (Vec<String>, Vec<String>) {
+    let (on, missing): (Vec<&str>, Vec<&str>) = engines
+        .iter()
+        .copied()
+        .partition(|e| declared.iter().any(|d| d == e));
+    (
+        on.iter().map(|e| format!("{}/{e}", PACKAGE.0)).collect(),
+        missing.iter().map(|e| (*e).to_owned()).collect(),
+    )
+}
+
 /// The package folder name: the terminal package's name with `-gui` at the
 /// end, so the terminal packages' patterns never match it.
-fn package_name(version: &str) -> String {
-    format!(
-        "textweaver-{version}-{}-{}-gui",
-        std::env::consts::OS,
+fn package_name(version: &str, universal: bool) -> String {
+    let arch = if universal {
+        "universal"
+    } else {
         std::env::consts::ARCH
-    )
+    };
+    format!("textweaver-{version}-{}-{arch}-gui", std::env::consts::OS)
 }
 
 /// The update information embedded in the GUI's AppImage: the newest
@@ -147,30 +202,70 @@ pub fn run() -> anyhow::Result<()> {
         args.out
             .unwrap_or_else(|| eci::target_dir(&root).join("dist")),
     )?;
-    let name = package_name(version);
+    let name = package_name(version, args.universal);
     let stage = out.join(&name);
     if stage.exists() {
         fs::remove_dir_all(&stage).with_context(|| format!("clearing {}", stage.display()))?;
     }
     fs::create_dir_all(&stage)?;
 
-    dist::run_tool(dist::cargo(&root, &build_dir).args([
-        "build",
-        "--locked",
-        "--profile",
-        dist::PROFILE,
-        "-p",
-        PACKAGE.0,
-        "--bin",
-        PACKAGE.1,
-    ]))
-    .context("building the GUI")?;
+    let manifest =
+        fs::read_to_string(root.join(MANIFEST)).with_context(|| format!("reading {MANIFEST}"))?;
+    let (features, missing) = engine_features(&declared_features(&manifest), dist::engines());
+    if !features.is_empty() {
+        println!("GUI engines: {}", features.join(", "));
+    }
+    if !missing.is_empty() {
+        println!(
+            "Not in the GUI yet, left out: {} ({MANIFEST} declares no such feature)",
+            missing.join(", ")
+        );
+    }
+    let build = |target: Option<&str>| -> anyhow::Result<()> {
+        let mut cmd = dist::cargo(&root, &build_dir);
+        cmd.args([
+            "build",
+            "--locked",
+            "--profile",
+            dist::PROFILE,
+            "-p",
+            PACKAGE.0,
+            "--bin",
+            PACKAGE.1,
+        ]);
+        if !features.is_empty() {
+            cmd.arg("--features").arg(features.join(","));
+        }
+        if let Some(t) = target {
+            cmd.args(["--target", t]);
+        }
+        dist::run_tool(&mut cmd).context("building the GUI")
+    };
     let exe = std::env::consts::EXE_SUFFIX;
-    let built = build_dir
-        .join(dist::PROFILE)
-        .join(format!("{}{exe}", PACKAGE.1));
     let bin = stage.join(format!("{INSTALLED}{exe}"));
-    eci::copy(&built, &bin)?;
+    if args.universal {
+        for t in dist::MAC_TARGETS {
+            build(Some(t))?;
+        }
+        let parts: Vec<PathBuf> = dist::MAC_TARGETS
+            .iter()
+            .map(|t| build_dir.join(t).join(dist::PROFILE).join(PACKAGE.1))
+            .collect();
+        dist::run_tool(
+            Command::new("lipo")
+                .arg("-create")
+                .args(&parts)
+                .arg("-output")
+                .arg(&bin),
+        )?;
+        println!("installed {} (universal)", bin.display());
+    } else {
+        build(None)?;
+        let built = build_dir
+            .join(dist::PROFILE)
+            .join(format!("{}{exe}", PACKAGE.1));
+        eci::copy(&built, &bin)?;
+    }
 
     // The engine hosts and the dictionaries, as in the terminal package:
     // the engines look for them beside the program. macOS speaks through
@@ -317,6 +412,30 @@ mod tests {
         let a = parse(&["--out".into(), "x".into()]).unwrap();
         assert_eq!(a.out, Some(PathBuf::from("x")));
         assert!(parse(&["--nope".into()]).is_err());
+        assert_eq!(
+            parse(&["--universal".into()]).is_ok(),
+            cfg!(target_os = "macos")
+        );
+    }
+
+    #[test]
+    fn engine_features_follow_what_the_gui_declares() {
+        let manifest = "[package]\nname = \"x\"\n\n[features]\n# a comment\ndefault = [\"a\"]\nespeak = [\"textweaver-app/espeak\"]\nomnivox = []\n\n[dependencies]\nspeechd = \"1\"\n";
+        let declared = declared_features(manifest);
+        assert_eq!(declared, ["default", "espeak", "omnivox"]);
+        let (on, missing) = engine_features(&declared, &["omnivox", "speechd", "espeak"]);
+        assert_eq!(on, ["textweaver-xilem/omnivox", "textweaver-xilem/espeak"]);
+        assert_eq!(missing, ["speechd"]);
+        let (on, missing) = engine_features(&[], &["omnivox"]);
+        assert!(on.is_empty());
+        assert_eq!(missing, ["omnivox"]);
+    }
+
+    /// The real manifest parses, and its default features are found.
+    #[test]
+    fn the_gui_manifest_declares_features() {
+        let manifest = fs::read_to_string(eci::root().join(MANIFEST)).unwrap();
+        assert!(declared_features(&manifest).iter().any(|f| f == "default"));
     }
 
     #[test]
@@ -329,9 +448,10 @@ mod tests {
 
     #[test]
     fn names_and_entries() {
-        let name = package_name("0.1.0");
+        let name = package_name("0.1.0", false);
         assert!(name.starts_with("textweaver-0.1.0-"), "{name}");
         assert!(name.ends_with("-gui"), "{name}");
+        assert!(package_name("0.1.0", true).ends_with("-universal-gui"));
         assert!(desktop_entry().contains("Exec=textweaver-gui %f"));
         assert!(desktop_entry().contains("Terminal=false"));
         assert!(APPRUN.contains("usr/lib/textweaver-gui/textweaver-gui"));
@@ -379,6 +499,7 @@ mod tests {
         let gui = [
             format!("textweaver-{v}-windows-x86_64-gui.zip"),
             format!("textweaver-{v}-macos-aarch64-gui.zip"),
+            format!("textweaver-{v}-macos-universal-gui.zip"),
             format!("textweaver-{v}-linux-x86_64-gui.AppImage"),
             format!("textweaver-{v}-linux-x86_64-gui.AppImage.zsync"),
             format!("textweaver-{v}-linux-x86_64-gui.tar.gz"),
@@ -399,7 +520,7 @@ mod tests {
         }
         assert!(glob(
             "textweaver-*-linux-x86_64-gui.AppImage.zsync",
-            &gui[3]
+            &gui[4]
         ));
     }
 

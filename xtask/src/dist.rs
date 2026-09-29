@@ -32,7 +32,7 @@ const BINARIES: [(&str, &str); 2] = [("textweaver-tui", "textweaver"), ("textwea
 /// and espeak-ng is loaded at run time when it is installed. Linux gets all
 /// three (the AppImage and the tarball); Windows and macOS keep Omnivox
 /// and their own engines.
-fn engines() -> &'static [&'static str] {
+pub(crate) fn engines() -> &'static [&'static str] {
     if cfg!(target_os = "linux") {
         &["omnivox", "speechd", "espeak"]
     } else {
@@ -87,7 +87,7 @@ pub(crate) const DATA_FILES: [(&str, &str); 1] = [(
     "lexicon/lexicon-en.twlex",
 )];
 /// The two macOS targets joined by `--universal`.
-const MAC_TARGETS: [&str; 2] = ["aarch64-apple-darwin", "x86_64-apple-darwin"];
+pub(crate) const MAC_TARGETS: [&str; 2] = ["aarch64-apple-darwin", "x86_64-apple-darwin"];
 /// Documents copied into the package: (source, name in the package).
 const DOCS: [(&str, &str); 6] = [
     ("docs/quickstart.md", "QUICKSTART.md"),
@@ -523,6 +523,28 @@ fn collect(dir: &Path, out: &mut Vec<PathBuf>) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Packages keep full optimization whatever the everyday `release`
+    /// profile becomes: `[profile.dist]` in the root `Cargo.toml` sets fat
+    /// LTO and one codegen unit itself, not by inheritance.
+    #[test]
+    fn the_dist_profile_sets_full_optimization_itself() {
+        let toml = fs::read_to_string(eci::root().join("Cargo.toml")).unwrap();
+        let section: Vec<&str> = toml
+            .lines()
+            .skip_while(|l| l.trim() != format!("[profile.{PROFILE}]"))
+            .skip(1)
+            .take_while(|l| !l.trim_start().starts_with('['))
+            .map(str::trim)
+            .collect();
+        assert!(!section.is_empty(), "no [profile.{PROFILE}] in Cargo.toml");
+        for want in ["lto = \"fat\"", "codegen-units = 1"] {
+            assert!(
+                section.contains(&want),
+                "[profile.{PROFILE}] lacks `{want}`: {section:?}"
+            );
+        }
+    }
 
     #[test]
     fn names() {
