@@ -12,6 +12,13 @@
 //! terminal. So the thread wraps it: panics on this thread go to MathCAT's
 //! hook (quietly, since they are caught and reported here), and panics on
 //! any other thread go to the hook that was there before.
+//!
+//! MathCAT holds one expression at a time. Speech, braille, and navigation
+//! share it: the thread remembers which MathML is current and parses a new
+//! one only when it changes. Navigation keeps its expression and the moves
+//! made in it, so after another formula was spoken or brailled it parses
+//! the expression again and retraces the moves (setting MathML resets
+//! MathCAT's place, and its generated ids change).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::OnceLock;
@@ -19,7 +26,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::time::Duration;
 
-use crate::{Error, Options, mathcat_verbosity};
+use crate::{BrailleOptions, Error, NavMove, NavStep, Options, mathcat_verbosity};
 
 /// The thread's name, which the panic hook checks.
 pub(crate) const THREAD_NAME: &str = "textweaver-mathcat";
@@ -37,7 +44,21 @@ const RULES_DIR: &str = "Rules";
 /// What MathCAT's own panic guard puts at the start of its error message.
 const CRASH_PREFIX: &str = "MathCAT crash";
 
-type Reply = Sender<Result<String, Error>>;
+/// The most moves kept for retracing a navigation. Later moves are not
+/// recorded, so a retrace after that many moves (and another expression
+/// spoken in between) lands where the record ends.
+const MAX_MOVES: usize = 256;
+
+/// What the thread answers.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum Answer {
+    /// Words or braille.
+    Text(String),
+    /// A navigation step.
+    Step(NavStep),
+}
+
+type Reply = Sender<Result<Answer, Error>>;
 
 pub(crate) enum Job {
     /// Load the rules now.
@@ -46,6 +67,21 @@ pub(crate) enum Job {
     Speak {
         mathml: String,
         options: Options,
+        reply: Reply,
+    },
+    /// Braille for one MathML expression.
+    Braille {
+        mathml: String,
+        braille: BrailleOptions,
+        reply: Reply,
+    },
+    /// Start navigating an expression, or take a step in the current one.
+    Navigate {
+        /// The expression to start on; `None` steps in the current one.
+        start: Option<String>,
+        step: NavMove,
+        options: Options,
+        braille: BrailleOptions,
         reply: Reply,
     },
     /// Panic inside the request guard, as a MathCAT bug would.
@@ -96,14 +132,51 @@ pub(crate) fn speak(mathml: &str, options: &Options) -> Result<String, Error> {
         options: options.clone(),
         reply,
     })?;
-    wait(&answer)
+    text(wait(&answer)?)
+}
+
+pub(crate) fn braille(mathml: &str, braille: &BrailleOptions) -> Result<String, Error> {
+    let (reply, answer) = mpsc::channel();
+    send(Job::Braille {
+        mathml: mathml.to_owned(),
+        braille: *braille,
+        reply,
+    })?;
+    text(wait(&answer)?)
+}
+
+pub(crate) fn navigate(
+    start: Option<&str>,
+    step: NavMove,
+    options: &Options,
+    braille: &BrailleOptions,
+) -> Result<NavStep, Error> {
+    let (reply, answer) = mpsc::channel();
+    send(Job::Navigate {
+        start: start.map(str::to_owned),
+        step,
+        options: options.clone(),
+        braille: *braille,
+        reply,
+    })?;
+    match wait(&answer)? {
+        Answer::Step(step) => Ok(step),
+        Answer::Text(_) => Err(Error::Unavailable),
+    }
+}
+
+fn text(answer: Answer) -> Result<String, Error> {
+    match answer {
+        Answer::Text(t) => Ok(t),
+        Answer::Step(_) => Err(Error::Unavailable),
+    }
 }
 
 #[cfg(test)]
 pub(crate) fn panic_for_test() -> Result<String, Error> {
     let (reply, answer) = mpsc::channel();
     send(Job::Panic { reply })?;
-    wait(&answer)
+    text(wait(&answer)?)
 }
 
 fn send(job: Job) -> Result<(), Error> {
@@ -116,7 +189,7 @@ fn send(job: Job) -> Result<(), Error> {
         .map_err(|_| Error::Unavailable)
 }
 
-fn wait(answer: &Receiver<Result<String, Error>>) -> Result<String, Error> {
+fn wait(answer: &Receiver<Result<Answer, Error>>) -> Result<Answer, Error> {
     match answer.recv_timeout(TIMEOUT) {
         Ok(result) => result,
         Err(RecvTimeoutError::Timeout) => {
@@ -148,16 +221,40 @@ fn run(jobs: Receiver<Job>) {
                 mathml,
                 options,
                 reply,
-            } => (guarded(|| state.speak(&mathml, &options)), reply),
+            } => (
+                guarded(|| state.speak(&mathml, &options)).map(Answer::Text),
+                reply,
+            ),
+            Job::Braille {
+                mathml,
+                braille,
+                reply,
+            } => (
+                guarded(|| state.braille(&mathml, &braille)).map(Answer::Text),
+                reply,
+            ),
+            Job::Navigate {
+                start,
+                step,
+                options,
+                braille,
+                reply,
+            } => (
+                guarded(|| state.navigate(start, step, &options, &braille)).map(Answer::Step),
+                reply,
+            ),
             #[cfg(test)]
             Job::Panic { reply } => (
-                guarded(|| -> Result<String, Error> { panic!("a test panic in the engine") }),
+                guarded(|| -> Result<Answer, Error> { panic!("a test panic in the engine") }),
                 reply,
             ),
         };
         if result == Err(Error::Crashed) {
-            // Preferences are set again before the next expression.
+            // Preferences are set again, and the expression parsed again,
+            // before the next request.
             state.prefs = None;
+            state.braille_prefs = None;
+            state.current = None;
         }
         STALLED.store(false, Ordering::Release);
         let _ = reply.send(result);
@@ -223,8 +320,21 @@ fn first_line(s: &str) -> String {
 struct State {
     /// The result of loading the rules, once tried.
     rules: Option<Result<(), Error>>,
-    /// The preferences last set.
+    /// The speech preferences last set.
     prefs: Option<Options>,
+    /// The braille preferences last set.
+    braille_prefs: Option<BrailleOptions>,
+    /// The MathML MathCAT holds now (its current expression).
+    current: Option<String>,
+    /// The expression being navigated and the moves made in it.
+    nav: Option<Navigation>,
+}
+
+/// An expression being navigated.
+struct Navigation {
+    mathml: String,
+    /// MathCAT's commands since the start, in order.
+    moves: Vec<&'static str>,
 }
 
 impl State {
@@ -257,19 +367,137 @@ impl State {
         Ok(())
     }
 
+    fn apply_braille(&mut self, braille: &BrailleOptions) -> Result<(), Error> {
+        if self.braille_prefs.as_ref() == Some(braille) {
+            return Ok(());
+        }
+        self.braille_prefs = None;
+        set("BrailleCode", braille.code.mathcat_name())?;
+        // No dots 7 and 8: braille files and the status line are six-dot,
+        // and a navigation step shows only the part it reached.
+        set("BrailleNavHighlight", "Off")?;
+        // UEB's grade 1 indicators depend on the text around the math.
+        set(
+            "UEB_START_MODE",
+            if braille.grade2 { "Grade2" } else { "Grade1" },
+        )?;
+        self.braille_prefs = Some(*braille);
+        Ok(())
+    }
+
+    /// Makes `mathml` MathCAT's current expression, parsing it only when
+    /// another one is current.
+    fn set_current(&mut self, mathml: &str) -> Result<(), Error> {
+        if self.current.as_deref() == Some(mathml) {
+            return Ok(());
+        }
+        self.current = None;
+        libmathcat::set_mathml(mathml).map_err(|e| classify(&e))?;
+        self.current = Some(mathml.to_owned());
+        Ok(())
+    }
+
     fn speak(&mut self, mathml: &str, options: &Options) -> Result<String, Error> {
         self.ready()?;
         self.apply(options)?;
-        libmathcat::set_mathml(mathml).map_err(|e| classify(&e))?;
-        let mut words = libmathcat::get_spoken_text().map_err(|e| classify(&e))?;
-        // MathCAT passes control characters in the source through; an
-        // escape sequence must not reach the engine or the terminal.
-        words.retain(|c| !c.is_control() || c.is_whitespace());
-        if !options.pauses {
-            words = without_pauses(&words);
-        }
-        Ok(words.split_whitespace().collect::<Vec<_>>().join(" "))
+        self.set_current(mathml)?;
+        let words = libmathcat::get_spoken_text().map_err(|e| classify(&e))?;
+        Ok(clean_words(&words, options))
     }
+
+    fn braille(&mut self, mathml: &str, braille: &BrailleOptions) -> Result<String, Error> {
+        self.ready()?;
+        self.apply_braille(braille)?;
+        self.set_current(mathml)?;
+        let cells = libmathcat::get_braille("").map_err(|e| classify(&e))?;
+        Ok(clean_braille(&cells))
+    }
+
+    fn navigate(
+        &mut self,
+        start: Option<String>,
+        step: NavMove,
+        options: &Options,
+        braille: &BrailleOptions,
+    ) -> Result<NavStep, Error> {
+        self.ready()?;
+        self.apply(options)?;
+        self.apply_braille(braille)?;
+        if let Some(mathml) = start {
+            self.nav = None;
+            // Always parsed again: setting MathML is what resets the place.
+            self.current = None;
+            self.set_current(&mathml)?;
+            self.nav = Some(Navigation {
+                mathml,
+                moves: Vec::new(),
+            });
+        }
+        let Some(nav) = self.nav.as_ref() else {
+            return Err(Error::Rejected("no expression is being navigated".into()));
+        };
+        if self.current.as_deref() != Some(nav.mathml.as_str()) {
+            // Another expression was spoken since: parse this one again and
+            // retrace the moves.
+            let mathml = nav.mathml.clone();
+            let moves = nav.moves.clone();
+            self.set_current(&mathml)?;
+            for m in moves {
+                libmathcat::do_navigate_command(m).map_err(|e| classify(&e))?;
+            }
+        }
+        let before = libmathcat::get_navigation_mathml_id().map_err(|e| classify(&e))?;
+        let command = step.mathcat_command();
+        let words = libmathcat::do_navigate_command(command).map_err(|e| classify(&e))?;
+        let after = libmathcat::get_navigation_mathml_id().map_err(|e| classify(&e))?;
+        let moved = before != after;
+        if moved
+            && step.moves()
+            && let Some(nav) = self.nav.as_mut()
+            && nav.moves.len() < MAX_MOVES
+        {
+            nav.moves.push(command);
+        }
+        let cells = libmathcat::get_navigation_braille().map_err(|e| classify(&e))?;
+        Ok(NavStep {
+            speech: clean_words(&words, options),
+            braille: clean_braille(&cells),
+            moved,
+        })
+    }
+}
+
+/// MathCAT's words, cleaned: no control characters (MathCAT passes an
+/// escape sequence in the source through, and it must not reach the
+/// engine or the terminal), pauses removed when asked, single spaces.
+fn clean_words(words: &str, options: &Options) -> String {
+    let mut words = words.to_owned();
+    words.retain(|c| !c.is_control() || c.is_whitespace());
+    if !options.pauses {
+        words = without_pauses(&words);
+    }
+    words.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// MathCAT's braille as six-dot Unicode braille: dots 7 and 8 dropped, a
+/// space as the blank cell, anything that is not a braille cell left out,
+/// and no blank cells at either end.
+pub(crate) fn clean_braille(cells: &str) -> String {
+    cells
+        .chars()
+        .filter_map(|c| {
+            let v = u32::from(c);
+            if (0x2800..=0x28FF).contains(&v) {
+                char::from_u32(0x2800 + ((v - 0x2800) & 0x3F))
+            } else if c == ' ' {
+                Some(crate::BLANK_CELL)
+            } else {
+                None
+            }
+        })
+        .collect::<String>()
+        .trim_matches(crate::BLANK_CELL)
+        .to_owned()
 }
 
 /// `words` without the commas and semicolons MathCAT adds for pauses: those
