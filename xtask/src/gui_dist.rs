@@ -143,9 +143,10 @@ pub fn run() -> anyhow::Result<()> {
     let root = eci::root();
     let version = env!("CARGO_PKG_VERSION");
     let build_dir = dist::build_dir(&root);
-    let out = args
-        .out
-        .unwrap_or_else(|| eci::target_dir(&root).join("dist"));
+    let out = dist::absolute(
+        args.out
+            .unwrap_or_else(|| eci::target_dir(&root).join("dist")),
+    )?;
     let name = package_name(version);
     let stage = out.join(&name);
     if stage.exists() {
