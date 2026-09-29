@@ -10,8 +10,11 @@
 //! positions through that alignment.
 //!
 //! Every difference is classified by a rule that names its cause. The report
-//! is written to `docs/history/parity-report.md`; the task fails if any difference
-//! is left unexplained, so a change in segmentation cannot slip by.
+//! is written to `parity-report.md` in the Cargo target folder
+//! (`CARGO_TARGET_DIR`, or `target/` at the workspace root), or to the path
+//! given with `--out <path>`. It is build output, not a tracked document. The
+//! task fails if any difference is left unexplained, so a change in
+//! segmentation cannot slip by.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -64,13 +67,47 @@ pub fn run() -> Result<()> {
     out.push('\n');
     out.push_str(&report);
     out.push_str(FOOTER);
-    let path = root.join("docs").join("history").join("parity-report.md");
+    let path = report_path(&root, std::env::args().skip(2))?;
+    if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
+        std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+    }
     std::fs::write(&path, out).with_context(|| format!("writing {}", path.display()))?;
     println!("wrote {}", path.display());
     if unexplained > 0 {
-        bail!("{unexplained} unexplained parity deltas; see docs/history/parity-report.md");
+        bail!(
+            "{unexplained} unexplained parity deltas; see {}",
+            path.display()
+        );
     }
     Ok(())
+}
+
+/// Where the report goes: `--out <path>` (or `--out=<path>`) when given,
+/// otherwise `parity-report.md` in `CARGO_TARGET_DIR`, or in `target/` at the
+/// workspace root.
+fn report_path(root: &Path, mut args: impl Iterator<Item = String>) -> Result<PathBuf> {
+    let mut out = None;
+    while let Some(arg) = args.next() {
+        if arg == "--out" {
+            out = Some(PathBuf::from(args.next().context("--out needs a path")?));
+        } else if let Some(value) = arg.strip_prefix("--out=") {
+            out = Some(PathBuf::from(value));
+        } else {
+            bail!("unknown option for `cargo xtask parity`: {arg} (expected --out <path>)");
+        }
+    }
+    if let Some(out) = out {
+        return Ok(out);
+    }
+    let target = std::env::var_os("CARGO_TARGET_DIR")
+        .filter(|v| !v.is_empty())
+        .map_or_else(|| root.join("target"), PathBuf::from);
+    let target = if target.is_relative() {
+        root.join(target)
+    } else {
+        target
+    };
+    Ok(target.join("parity-report.md"))
 }
 
 const HEADER: &str = "# Star parity report
@@ -876,5 +913,37 @@ mod tests {
     #[test]
     fn first_words_at_offsets() {
         assert_eq!(first_words_at(&[0, 5, 6, 99], &[0, 4, 8]), [0, 2]);
+    }
+
+    #[test]
+    fn report_path_options() {
+        let root = Path::new("workspace");
+        let args = |v: &[&str]| {
+            v.iter()
+                .map(|s| (*s).to_owned())
+                .collect::<Vec<_>>()
+                .into_iter()
+        };
+        assert_eq!(
+            report_path(root, args(&["--out", "out/report.md"])).unwrap(),
+            PathBuf::from("out/report.md")
+        );
+        assert_eq!(
+            report_path(root, args(&["--out=r.md"])).unwrap(),
+            PathBuf::from("r.md")
+        );
+        assert!(report_path(root, args(&["--out"])).is_err());
+        assert!(report_path(root, args(&["--check"])).is_err());
+        let default = report_path(root, args(&[])).unwrap();
+        assert!(
+            default.ends_with("parity-report.md"),
+            "{}",
+            default.display()
+        );
+        assert!(
+            !default.starts_with("workspace/docs"),
+            "{}",
+            default.display()
+        );
     }
 }
