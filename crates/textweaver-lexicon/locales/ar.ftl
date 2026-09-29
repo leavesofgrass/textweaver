@@ -2906,6 +2906,6 @@ gui-palette-count =
         [many] { $n } أمرًا.
        *[other] { $n } أمر.
     }
-gui-settings-form-help = ينتقل السهمان لأعلى ولأسفل بين الإعدادات. ويغيّر السهمان لليسار ولليمين إعدادًا. ويكتب Enter قيمة جديدة. ويعيد Delete القيمة الافتراضية. ويغيّر Control Page Down وControl Page Up القسم.
+gui-settings-form-help = ينتقل السهمان لأعلى ولأسفل بين الإعدادات. ويغيّر السهمان لليسار ولليمين إعدادًا. ويكتب Enter قيمة جديدة. ويعيد Delete القيمة الافتراضية. ويغيّر { $next } و{ $previous } القسم.
 gui-settings-press-enter = اضغط Enter لكتابة قيمة جديدة لـ { $label }.
 gui-font-built-in = { $family } (مضمّن)

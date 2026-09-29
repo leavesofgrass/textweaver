@@ -2693,6 +2693,6 @@ gui-palette-count =
         [one] 1 commande.
        *[other] { $n } commandes.
     }
-gui-settings-form-help = Haut et Bas passent d'un paramètre à l'autre. Gauche et Droite en changent un. Entrée tape une nouvelle valeur. Suppr remet la valeur par défaut. Contrôle Page suivante et Contrôle Page précédente changent de section.
+gui-settings-form-help = Haut et Bas passent d'un paramètre à l'autre. Gauche et Droite en changent un. Entrée tape une nouvelle valeur. Suppr remet la valeur par défaut. { $next } et { $previous } changent de section.
 gui-settings-press-enter = Appuyez sur Entrée pour taper une nouvelle valeur pour { $label }.
 gui-font-built-in = { $family } (intégrée)

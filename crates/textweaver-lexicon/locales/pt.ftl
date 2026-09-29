@@ -2681,6 +2681,6 @@ gui-palette-count =
         [one] 1 comando.
        *[other] { $n } comandos.
     }
-gui-settings-form-help = Seta para cima e para baixo passam de uma configuração a outra. Seta para a esquerda e para a direita alteram uma. Enter digita um novo valor. Delete restaura o padrão. Control Page Down e Control Page Up mudam de seção.
+gui-settings-form-help = Seta para cima e para baixo passam de uma configuração a outra. Seta para a esquerda e para a direita alteram uma. Enter digita um novo valor. Delete restaura o padrão. { $next } e { $previous } mudam de seção.
 gui-settings-press-enter = Pressione Enter para digitar um novo valor para { $label }.
 gui-font-built-in = { $family } (incluída)

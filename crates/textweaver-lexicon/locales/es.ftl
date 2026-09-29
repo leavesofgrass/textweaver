@@ -2665,6 +2665,6 @@ gui-palette-count =
         [one] 1 comando.
        *[other] { $n } comandos.
     }
-gui-settings-form-help = Arriba y Abajo pasan de un ajuste a otro. Izquierda y Derecha cambian uno. Intro escribe un valor nuevo. Suprimir restablece el valor predeterminado. Control Avance de página y Control Retroceso de página cambian de sección.
+gui-settings-form-help = Arriba y Abajo pasan de un ajuste a otro. Izquierda y Derecha cambian uno. Intro escribe un valor nuevo. Suprimir restablece el valor predeterminado. { $next } y { $previous } cambian de sección.
 gui-settings-press-enter = Pulse Intro para escribir un valor nuevo para { $label }.
 gui-font-built-in = { $family } (incluida)

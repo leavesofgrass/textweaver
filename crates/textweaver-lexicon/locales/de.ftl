@@ -2701,6 +2701,6 @@ gui-palette-count =
         [one] 1 Befehl.
        *[other] { $n } Befehle.
     }
-gui-settings-form-help = Pfeil nach oben und unten wechseln zwischen Einstellungen. Pfeil nach links und rechts ändern eine. Die Eingabetaste gibt einen neuen Wert ein. Entf stellt den Standard wieder her. Strg+Bild ab und Strg+Bild auf wechseln den Bereich.
+gui-settings-form-help = Pfeil nach oben und unten wechseln zwischen Einstellungen. Pfeil nach links und rechts ändern eine. Die Eingabetaste gibt einen neuen Wert ein. Entf stellt den Standard wieder her. { $next } und { $previous } wechseln den Bereich.
 gui-settings-press-enter = Drücken Sie die Eingabetaste, um einen neuen Wert für { $label } einzugeben.
 gui-font-built-in = { $family } (eingebaut)

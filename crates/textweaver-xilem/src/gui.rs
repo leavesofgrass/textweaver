@@ -693,7 +693,16 @@ pub fn settings_dialog(
             form.rows(section, app),
             p.clone(),
         )
-        .with_help_text(c.tr("gui-settings-form-help"))
+        .with_help_text({
+            // The form's own section keys (not keymap commands).
+            use textweaver_app::keymap::{Key, KeyChord, Modifiers};
+            let next = KeyChord::new(Key::PageDown, Modifiers::CTRL).to_string();
+            let previous = KeyChord::new(Key::PageUp, Modifiers::CTRL).to_string();
+            c.fmt(
+                "gui-settings-form-help",
+                &args!["next" => next, "previous" => previous],
+            )
+        })
         .with_selected(row),
     )
     .with_tag(FORM);
