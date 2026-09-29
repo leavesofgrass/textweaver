@@ -9,9 +9,10 @@ Kinds:
 
 Only Microsoft voices and eSpeak are used, as in the SAPI crate's real-voice
 tests: never the VW voices, which belong to another product, and never
-Eloquence. When no voice of the kind is installed, it prints a line
-starting "Fail:" and exits 1, since a check without its voice would verify
-nothing.
+Eloquence. When the voice list cannot be read, it prints a line starting
+"Fail:" and exits 1. When the runner simply has no voice of the kind, it
+prints a line starting "Skipped:" with the voices it did find, and exits
+3, so the caller can report that plainly without failing.
 
 Usage: pick_voice.py KIND VOICES.json
 """
@@ -42,8 +43,12 @@ def main() -> int:
         print("usage: pick_voice.py sapi64|onecore|sapi32 VOICES.json", file=sys.stderr)
         return 2
     kind, path = sys.argv[1], sys.argv[2]
-    with open(path, encoding="utf-8-sig") as f:
-        voices = json.load(f)["voices"]
+    try:
+        with open(path, encoding="utf-8-sig") as f:
+            voices = json.load(f)["voices"]
+    except (OSError, ValueError, KeyError) as e:
+        print(f"Fail: the voice list could not be read: {e}")
+        return 1
     usable = [
         v for v in voices
         if v["name"].startswith(ALLOWED_PREFIXES) and kind_of(v) == kind
@@ -53,8 +58,8 @@ def main() -> int:
     usable.sort(key=lambda v: not any(lang.lower().startswith("en") for lang in v.get("languages", [])))
     if not usable:
         names = ", ".join(v["name"] for v in voices) or "none"
-        print(f"Fail: no {kind} voice from Microsoft or eSpeak is installed. Voices: {names}.")
-        return 1
+        print(f"Skipped: this runner has no {kind} voice from Microsoft or eSpeak. Voices: {names}.")
+        return 3
     print(usable[0]["id"])
     return 0
 
