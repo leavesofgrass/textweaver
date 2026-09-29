@@ -1,4 +1,4 @@
-# Agent M fixtures
+# Fixtures for the native writers
 
 - `sample.md`: headings, inline formatting, a link, a footnote, nested
   ordered and bulleted lists, an image, a table with a header row, a quote,

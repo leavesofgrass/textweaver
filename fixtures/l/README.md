@@ -1,4 +1,4 @@
-# Fixtures for rendering and conversion (Agent L)
+# Fixtures for rendering and conversion
 
 - `commonmark-spec.json`: the 652 examples of the CommonMark specification,
   version 0.31.2, as `{example, markdown, html}` objects. Extracted from the

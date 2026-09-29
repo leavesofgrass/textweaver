@@ -1,4 +1,4 @@
-# Publishing template fixtures (Agent W5g)
+# Publishing template fixtures
 
 - `apa-paper.md`: a short student paper with the front matter the APA,
   AMA, and manuscript title pages read (title, author, affiliation,
