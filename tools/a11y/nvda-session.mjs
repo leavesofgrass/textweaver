@@ -18,7 +18,7 @@
 import { execFileSync } from "node:child_process";
 import guidepup from "@guidepup/guidepup";
 import {
-  check, launchGui, loadExpected, parseArgs, report, requireRunner, sleep, withTimeout,
+  answerFor, check, launchGui, loadExpected, parseArgs, report, requireRunner, sleep, withTimeout,
 } from "./session-common.mjs";
 
 requireRunner("nvda-session.mjs");
@@ -82,7 +82,9 @@ async function phrases() {
 }
 
 async function runStep(step) {
-  await nvda.clearSpokenPhraseLog();
+  // The open step keeps what was said since the launch: the window's
+  // name is spoken when it takes the focus, before the step starts.
+  if (step.id !== "open") await nvda.clearSpokenPhraseLog();
   try {
     for (const key of step.keys) {
       await withTimeout(nvda.press(key), 15000, `pressing ${key}`);
@@ -121,11 +123,7 @@ try {
   steps.push(await runStep({ id: "settings", keys: ["Control+,"], wait: 3500 }));
   steps.push(await runStep({ id: "close", keys: ["Escape"], wait: 2500 }));
 
-  const fromWindow = steps.some((s) => s.phrases.some((p) => /Reading check|textweaver/i.test(p)));
-  const total = steps.reduce((n, s) => n + s.phrases.length, 0);
-  answer = fromWindow
-    ? `Answer: yes. Guidepup's NVDA spoke ${total} phrases in the session, some naming the textweaver window.`
-    : `Answer: no. NVDA spoke ${total} phrases, none naming the textweaver window; see the steps and gui.log.`;
+  answer = answerFor("NVDA", args, steps);
 } catch (e) {
   notes.push(`Stopped: ${e.message}.`);
 } finally {
