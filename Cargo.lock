@@ -9252,6 +9252,7 @@ dependencies = [
  "sevenz-rust2",
  "tar",
  "tempfile",
+ "textweaver-cite",
  "textweaver-core",
  "textweaver-ocr",
  "textweaver-text",
