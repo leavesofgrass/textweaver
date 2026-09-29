@@ -1,0 +1,283 @@
+# Real engines through the export path (ADR-0011), on hosted runners:
+# espeak-ng on Linux; SAPI 5, OneCore, and the 32-bit SAPI host on Windows;
+# AVSpeech on macOS 14 and 15. Each engine reads fixtures/t/reading.md into
+# a WAV file with `tw export-audio --json`, and tools/engines/check_export.py
+# checks the file: the backend asked for (no fallback), its length against
+# the timeline, its level, a plausible speed, and word events for at least
+# 90 percent of the words, rising and inside the audio. It also measures
+# where the word times fall against the audio's silences, reported without
+# failing (ADR-0039).
+#
+# Nothing is ever played: export writes files and opens no audio device.
+# A missing engine or voice fails its step, since a check without its
+# engine would verify nothing. Run by hand with "sanitizer" to add the
+# one-time Valgrind pass over the espeak-ng audio path.
+
+name: Real engines
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/textweaver-speech/**'
+      - 'crates/textweaver-sapi/**'
+      - 'crates/textweaver-apple/**'
+      - 'crates/textweaver-enginehost/**'
+      - 'crates/textweaver-export/**'
+      - 'crates/textweaver-engines/**'
+      - 'tools/engines/**'
+      - '.github/workflows/engines.yml'
+  pull_request:
+    paths:
+      - 'crates/textweaver-speech/**'
+      - 'crates/textweaver-sapi/**'
+      - 'crates/textweaver-apple/**'
+      - 'crates/textweaver-enginehost/**'
+      - 'crates/textweaver-export/**'
+      - 'crates/textweaver-engines/**'
+      - 'tools/engines/**'
+      - '.github/workflows/engines.yml'
+  schedule:
+    # Wednesdays at 04:41 UTC, so a runner image's change shows within a week.
+    - cron: '41 4 * * 3'
+  workflow_dispatch:
+    inputs:
+      sanitizer:
+        description: 'Also run the one-time Valgrind pass over the espeak-ng audio path'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  DOC: fixtures/t/reading.md
+
+jobs:
+  espeak:
+    name: 'espeak-ng (Linux)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      # Only the library and its data: textweaver loads libespeak-ng at run
+      # time, so no headers are needed.
+      - name: espeak-ng
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libespeak-ng1 espeak-ng-data libasound2-dev pkg-config
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: engines-linux
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build tw
+        run: cargo build --locked -p textweaver-cli --bin tw --features espeak
+      - name: espeak-ng writes a WAV file with word events
+        run: |
+          set -u
+          out="$RUNNER_TEMP/out"
+          mkdir -p "$out"
+          target/debug/tw export-audio "$DOC" --backend espeak --out "$out/espeak.wav" \
+            --json --quiet --home "$RUNNER_TEMP/tw-home" > "$out/espeak.json"
+          python3 tools/engines/check_export.py --engine "espeak-ng, Linux" --backend espeak \
+            --wav "$out/espeak.wav" --report "$out/espeak.json" --summary "$out/summary.txt"
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Real engines: espeak-ng on Linux"
+            echo
+            sed 's/^/- /' "$RUNNER_TEMP/out/summary.txt" 2>/dev/null || echo "- Fail: no results; see the log."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: engines-linux
+          path: |
+            ${{ runner.temp }}/out/*.json
+            ${{ runner.temp }}/out/summary.txt
+          if-no-files-found: ignore
+
+  # One-time check, by hand only (ADR-0039): Valgrind's memcheck over tw
+  # while espeak-ng synthesizes the fixture, the audio path that crosses
+  # the FFI boundary (buffers handed to and from libespeak-ng). Star found
+  # an espeak-ng buffer bug this way. Report-only: the result goes into
+  # ADR-0039, not a standing job.
+  sanitizer:
+    name: 'Valgrind over the espeak-ng audio path (one-time)'
+    if: github.event_name == 'workflow_dispatch' && inputs.sanitizer
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: espeak-ng and Valgrind
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libespeak-ng1 espeak-ng-data libasound2-dev pkg-config valgrind
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: engines-linux
+          save-if: false
+      - name: Build tw
+        run: cargo build --locked -p textweaver-cli --bin tw --features espeak
+      - name: Valgrind memcheck
+        run: |
+          set -u
+          out="$RUNNER_TEMP/out"
+          mkdir -p "$out"
+          status=0
+          valgrind --tool=memcheck --error-exitcode=99 --leak-check=no --track-origins=yes \
+            --num-callers=40 --log-file="$out/valgrind.log" \
+            target/debug/tw export-audio "$DOC" --backend espeak --out "$out/valgrind.wav" \
+            --quiet --home "$RUNNER_TEMP/tw-home" || status=$?
+          errors="$(grep -o 'ERROR SUMMARY: [0-9]*' "$out/valgrind.log" | tail -n 1 | grep -o '[0-9]*$' || echo unknown)"
+          # Where each error's first frames are: textweaver's code or the
+          # library's.
+          grep -E '^==[0-9]+==    (at|by) ' "$out/valgrind.log" | sed 's/^==[0-9]*== *//' | head -n 60 > "$out/frames.txt" || true
+          {
+            echo "## Valgrind over the espeak-ng audio path"
+            echo
+            if [ "$status" -eq 0 ] && [ "$errors" = "0" ]; then
+              echo "- Pass: memcheck found no errors while espeak-ng read the fixture."
+            else
+              echo "- Fail: memcheck reported $errors errors (exit status $status). The first frames are in the artifact."
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+      - name: Upload the log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: engines-valgrind
+          path: |
+            ${{ runner.temp }}/out/valgrind.log
+            ${{ runner.temp }}/out/frames.txt
+          if-no-files-found: ignore
+
+  windows:
+    name: 'SAPI 5, OneCore, and the 32-bit host (Windows)'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - run: rustup target add i686-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: engines-windows
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      # tw, the 64-bit host beside it, and the 32-bit host (for 32-bit SAPI
+      # voices), as the release packages them.
+      - name: Build tw and both SAPI hosts
+        run: |
+          cargo build --locked -p textweaver-cli --bin tw
+          cargo build --locked -p textweaver-sapi --bins
+          cargo build --locked -p textweaver-sapi --bins --target i686-pc-windows-msvc --no-default-features
+      - name: The 32-bit host starts and lists its voices
+        run: |
+          set -u
+          out="$RUNNER_TEMP/out"
+          mkdir -p "$out"
+          if target/i686-pc-windows-msvc/debug/textweaver-sapi-host.exe --list-voices > "$out/host32-voices.bin"; then
+            echo "Pass: the 32-bit SAPI host started and listed voices ($(wc -c < "$out/host32-voices.bin") bytes)." | tee -a "$out/summary.txt"
+          else
+            echo "Fail: the 32-bit SAPI host did not start (exit status $?)." | tee -a "$out/summary.txt"
+            exit 1
+          fi
+      - name: The voices tw sees
+        run: |
+          set -u
+          root="$(pwd -W)"
+          export TEXTWEAVER_SAPI_HOST="$root/target/debug/textweaver-sapi-host.exe"
+          export TEXTWEAVER_SAPI_HOST_X86="$root/target/i686-pc-windows-msvc/debug/textweaver-sapi-host.exe"
+          target/debug/tw voices --backend sapi --home "$RUNNER_TEMP/tw-home"
+          target/debug/tw voices --backend sapi --json --home "$RUNNER_TEMP/tw-home" > "$RUNNER_TEMP/out/voices.json"
+      # One step per kind of voice, each run even when one before failed,
+      # so the summary shows all three.
+      - name: A SAPI 5 voice in the 64-bit host
+        if: ${{ !cancelled() }}
+        run: bash tools/engines/windows-export.sh sapi64 "SAPI 5, 64-bit host"
+      - name: A OneCore voice through SAPI 5
+        if: ${{ !cancelled() }}
+        run: bash tools/engines/windows-export.sh onecore "OneCore through SAPI 5"
+      - name: A voice in the 32-bit host
+        if: ${{ !cancelled() }}
+        run: bash tools/engines/windows-export.sh sapi32 "SAPI 5, 32-bit host"
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Real engines: Windows"
+            echo
+            sed 's/^/- /' "$RUNNER_TEMP/out/summary.txt" 2>/dev/null || echo "- Fail: no results; see the log."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: engines-windows
+          path: |
+            ${{ runner.temp }}/out/*.json
+            ${{ runner.temp }}/out/summary.txt
+          if-no-files-found: ignore
+
+  macos:
+    name: AVSpeech (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: engines-${{ matrix.os }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build tw
+        run: cargo build --locked -p textweaver-cli --bin tw
+      # The word-offset lines are the point here: AVSpeech's word times come
+      # from interleaved callbacks, not markers, so this is where drift on a
+      # new macOS shows first.
+      - name: AVSpeech writes a WAV file with word events
+        run: |
+          set -u
+          out="$RUNNER_TEMP/out"
+          mkdir -p "$out"
+          sw_vers | tr '\n' ' ' | sed 's/^/Measured: /' >> "$out/summary.txt"
+          echo >> "$out/summary.txt"
+          target/debug/tw export-audio "$DOC" --backend avspeech --out "$out/avspeech.wav" \
+            --json --quiet --home "$RUNNER_TEMP/tw-home" > "$out/avspeech.json"
+          python3 tools/engines/check_export.py --engine "AVSpeech, ${{ matrix.os }}" --backend avspeech \
+            --wav "$out/avspeech.wav" --report "$out/avspeech.json" --summary "$out/summary.txt"
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Real engines: AVSpeech on ${{ matrix.os }}"
+            echo
+            sed 's/^/- /' "$RUNNER_TEMP/out/summary.txt" 2>/dev/null || echo "- Fail: no results; see the log."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: engines-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/out/*.json
+            ${{ runner.temp }}/out/summary.txt
+          if-no-files-found: ignore

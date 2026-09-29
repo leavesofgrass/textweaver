@@ -62,7 +62,7 @@ target/release/tw convert fixtures/sample.md --to pdf --out target/second-tool -
 Then, with Docker, fetch and run epubcheck 5.4.0 (checked against the SHA-256 in `.github/workflows/second-tool.yml`) against the EPUB:
 
 ```bash
-docker run --rm -v "$PWD/target/second-tool:/work" -w /work eclipse-temurin:21-jre sh -c '
+docker run --rm -v "$PWD/target/second-tool:/work" -w /work eclipse-temurin:21-jre@sha256:d7051a45dd955e4d5d1db4d3f4269fe13d1c6dff8cc6b7ef89fc8577b96c1982 sh -c '
   set -eu
   curl -sSfL -A "textweaver-research (+https://github.com/leavesofgrass/textweaver)" \
     -o epubcheck.jar https://repo1.maven.org/maven2/org/w3c/epubcheck/5.4.0/epubcheck-5.4.0.jar
@@ -74,7 +74,7 @@ docker run --rm -v "$PWD/target/second-tool:/work" -w /work eclipse-temurin:21-j
 And veraPDF 1.30.2 against the PDF, with the same profile CI uses (`-f ua1`):
 
 ```bash
-docker run --rm -v "$PWD/target/second-tool:/work" -w /work eclipse-temurin:21-jre sh -c '
+docker run --rm -v "$PWD/target/second-tool:/work" -w /work eclipse-temurin:21-jre@sha256:d7051a45dd955e4d5d1db4d3f4269fe13d1c6dff8cc6b7ef89fc8577b96c1982 sh -c '
   set -eu
   apt-get update -qq && apt-get install -y -qq unzip zip
   curl -sSfL -A "textweaver-research (+https://github.com/leavesofgrass/textweaver)" \
@@ -185,6 +185,53 @@ Bulk conversion has its own benchmark:
 cargo run --release -p textweaver-convert --example bench_convert
 ```
 
+## Braille, real engines, and timing
+
+These checks run on CI runners. Nothing in them plays audio or drives a screen reader.
+
+### Braille against liblouis
+
+The braille job in `second-tool.yml` checks BRF files with [liblouis](https://liblouis.io/), the translator most braille software uses. It builds liblouis from its release tarball, pinned by version and SHA-256 in `tools/braille-check/install-liblouis.sh`, and then:
+
+- runs the BRF writer's tests with `lou_translate` installed, so the grade 2 test takes its liblouis branch;
+- writes each Markdown fixture without math as BRF in UEB grade 1 (textweaver's own translator) and grade 2 (through liblouis), with `tools/braille-check`, a small program outside the workspace that turns on the writers' `liblouis` feature;
+- reads each file back to print with liblouis and compares its words with the document's, in order (`tools/braille-check/compare.py`).
+
+Words the writer adds on purpose, an ordered list's numbers and "checked" or "not checked" for task items, are reported as Allowed. Reading braille back is ambiguous, above all in grade 2 (a lone "m" reads back as "more"), so the limit is set by liblouis itself: the same text through liblouis alone, forward and back. A fixture fails when its file reads back more than 2 points worse than that, or below 90 percent. The job also reports, without failing, how many braille words match liblouis's own translation, and where they differ; for grade 1 that compares the two translators. `results.txt` in the `second-tool-braille` artifact has every line, the differences as Detail lines.
+
+To run it yourself, use the development container (liblouis builds in about a minute; the program takes a few more):
+
+```bash
+docker compose run --rm dev sh -c '
+  sh tools/braille-check/install-liblouis.sh /tmp/liblouis &&
+  PATH=/tmp/liblouis/bin:$PATH LD_LIBRARY_PATH=/tmp/liblouis/lib CARGO_TARGET_DIR=/tmp/bc \
+    sh tools/braille-check/run.sh target/braille'
+```
+
+The results are in `target/braille/results.txt`. Keep `CARGO_TARGET_DIR` inside the container: on Windows, a build folder on the shared drive is slow enough to stall a build script.
+
+### Real engines
+
+`engines.yml` reads `fixtures/t/reading.md` into a WAV file with `tw export-audio --json`, through each engine a hosted runner has:
+
+- **espeak-ng** on Linux;
+- on Windows, a **SAPI 5** voice in the 64-bit host, a **OneCore** voice through SAPI 5, and a voice in the **32-bit host**, which it also starts on its own to list its voices;
+- **AVSpeech** on macOS 14 and macOS 15.
+
+`tools/engines/check_export.py` checks each file: the export used the engine asked for, not a fallback; the file's length matches the timeline; it is not silent; the speed is plausible; and at least 90 percent of the words have a time, rising and inside the audio. A missing engine or voice fails its step, since a check without its engine would verify nothing. Only Microsoft voices and eSpeak are used on Windows (`tools/engines/pick_voice.py`).
+
+It also measures, without failing, where the word times fall against the audio's own silences: at each sentence start, how far the first word's time is from the end of the nearest silence, and how many word starts fall deep inside one. That is where drift between an engine's word events and its audio shows first; for AVSpeech, whose word times come from interleaved callbacks, a new macOS is where to look.
+
+The workflow runs on changes to the speech crates, weekly, and by hand. Started by hand with "sanitizer", it adds a one-time pass of Valgrind's memcheck over `tw` while espeak-ng reads the fixture: the audio path that crosses into a C library. It is a check to record in ADR-0039, not a standing job.
+
+### Tests that wait: order, not the clock
+
+A test that asserts how long something took fails on a loaded machine, however generous the limit. Check the order of events instead: that `speak` returned before the engine host was ready, that a cancelled utterance got Cancelled and never Started. When a test must wait, poll until the condition holds, with a long limit that only catches a hang, and say so in the test.
+
+Silent outputs that run faster than real time make a whole utterance last a fraction of a second, and a starved output thread then plays it in one burst. A test that must act in the middle of an utterance (a pause) runs at real time, or tries again when the machine held it off too long.
+
+To trust a fix to a flaky test, run it 40 times under load: fewer runs cannot tell a 10 percent flake from a fix. The fake-host suites were checked by running 8 copies of each at once, 5 times.
+
 ## Automated screen-reader checks
 
 The GUI's real test is a human listening session with NVDA, JAWS, and a Braille display. Between sessions, CI runs these checks ([ADR-0039](../adr/0039-automated-screen-reader-checks.md)). They never replace a session. Every line of their reports starts with a word: Pass, Fail, Warning, Changed, No baseline, or Heard.
@@ -198,7 +245,7 @@ The GUI workflow (`gui-xilem.yml`) dumps the window's accessibility tree on Wind
 - **Pass:** the same elements as main.
 - **Changed:** each added and removed line, in words. Check that every change was meant, such as a new button or a renamed setting.
 - **No baseline:** no earlier tree on main to compare with (the first run, or artifacts that expired).
-- **Fail:** no tree was dumped. The raw dump and the GUI's log are in the artifact.
+- **Fail:** no tree was dumped. The raw dump and the GUI's log are in the artifact. This one fails the job: the dump is a standing check ([ADR-0039](../adr/0039-automated-screen-reader-checks.md)). "Changed" never does.
 
 The artifacts are `a11y-tree-windows`, `a11y-tree-macos`, and `a11y-tree-linux`. Each holds `tree.txt` (the normalized tree), `raw.json`, `raw-tree.txt` (accessibility-cli's own text view), and `gui.log`. To compare two trees yourself:
 
@@ -216,7 +263,7 @@ Run "Screen-reader checks" (`a11y-tests.yml`) from the Actions tab, and choose a
 - **orca** (Ubuntu, under Xvfb): the session is checked through AT-SPI events: the caret, the announcements, the focus. Orca runs beside it, and the report lists what it said at each step.
 - **voiceover** (macOS 14 and 15): the same with VoiceOver, if Guidepup can start it on the runner. If not, the setup log says why: the system version, System Integrity Protection, and whether AppleScript may drive VoiceOver.
 
-The sessions and the tree dumps are report-only: a failure shows in the summary but does not fail the job, whose result comes from building the GUI and installing the tools. The phrases NVDA spoke are in the `a11y-nvda` artifact (`phrases.json` and `report.md`), for comparison with what a listener heard in their own session.
+The Orca session is standing: a failed must check fails its job. The NVDA and VoiceOver sessions are report-only: a failure shows in the summary but does not fail the job, whose result comes from building the GUI and installing the tools. ADR-0039 records why each check is standing or not. The phrases NVDA spoke are in the `a11y-nvda` artifact (`phrases.json` and `report.md`), for comparison with what a listener heard in their own session.
 
 Guidepup and its setup tool are locked, with integrity hashes, in `tools/a11y/package-lock.json`. To move to a new version, change `tools/a11y/package.json` and regenerate the lock file with `npm install --package-lock-only --ignore-scripts` in `tools/a11y`, in a container or on a machine with Node. Nothing else in the project needs Node.
 

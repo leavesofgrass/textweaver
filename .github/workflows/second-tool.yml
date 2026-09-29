@@ -13,6 +13,14 @@
 # Both tools come from Maven Central at pinned versions, and their files
 # are checked against the SHA-256 values below; no third-party action and
 # no secret is used. The runner's own Java and Maven run them.
+#
+# The braille job checks BRF output with liblouis, built from its release
+# tarball pinned by SHA-256 (tools/braille-check/install-liblouis.sh): the
+# Markdown fixtures in UEB grade 1 (textweaver's native translator) and
+# grade 2 (through liblouis), each read back to print by liblouis and
+# compared, word by word, with the document (tools/braille-check/). It
+# also runs the BRF writer's own tests with lou_translate installed, so
+# the grade 2 test takes its liblouis branch.
 
 name: Second-tool checks
 
@@ -25,6 +33,7 @@ on:
     paths:
       - .github/workflows/second-tool.yml
       - tools/second_tool_allowlist.txt
+      - tools/braille-check/**
       - crates/textweaver-writers/**
 
 concurrency:
@@ -250,7 +259,7 @@ jobs:
           sys.exit(1 if failures else 0)
           EOF
 
-      - name: Upload the reports
+      - name: Upload the EPUB and PDF reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
@@ -259,4 +268,51 @@ jobs:
             ${{ runner.temp }}/out/reports
             ${{ runner.temp }}/out/epub
             ${{ runner.temp }}/out/pdf
+          if-no-files-found: ignore
+
+  braille:
+    name: liblouis, BRF grades 1 and 2
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      # braille-check is its own workspace; its build shares this target.
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@v7
+      # liblouis's tables are built with m4.
+      - name: Build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends m4 libasound2-dev pkg-config
+      - name: liblouis, pinned by SHA-256
+        run: |
+          sh tools/braille-check/install-liblouis.sh "$RUNNER_TEMP/liblouis"
+          echo "$RUNNER_TEMP/liblouis/bin" >> "$GITHUB_PATH"
+          echo "LD_LIBRARY_PATH=$RUNNER_TEMP/liblouis/lib" >> "$GITHUB_ENV"
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: second-tool-braille
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: The BRF writer's tests, with liblouis installed
+        run: cargo test --locked -p textweaver-writers --features liblouis --lib brf
+      - name: BRF against liblouis
+        run: sh tools/braille-check/run.sh "$RUNNER_TEMP/braille"
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Braille against liblouis"
+            echo
+            grep -v '^Detail:' "$RUNNER_TEMP/braille/results.txt" 2>/dev/null | sed 's/^/- /' \
+              || echo "- Fail: no results; see the log."
+            echo
+            echo "Each place where the words differ is a Detail line in results.txt, in the artifact."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the braille files and results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: second-tool-braille
+          path: ${{ runner.temp }}/braille
           if-no-files-found: ignore

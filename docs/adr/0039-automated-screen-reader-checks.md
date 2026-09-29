@@ -1,7 +1,7 @@
 # ADR-0039: Automated screen-reader checks beside the listening sessions
 
-- Status: proposed. Every step runs on every GUI change or by hand and reports; none fails a job. The tree dump and each session become standing, failing their job, only once the answers below are confirmed.
-- Date: 2026-09-28
+- Status: accepted for the tree dump and the Orca session, which are standing checks, failing their job, since Tuesday, September 29, 2026; proposed for the NVDA and VoiceOver sessions, which still report only. The status update at the end has the evidence, and adds the braille and real-engine checks.
+- Date: 2026-09-28; updated 2026-09-29
 - Builds on: [ADR-0027](0027-xilem-gui.md) (the accessibility checks that exist), [ADR-0028](0028-xilem-gui-after-the-session.md) (the first accessibility session), and [ADR-0033](0033-gui-session-2-and-edit-mode.md) (the second session)
 
 ## Context
@@ -78,6 +78,22 @@ The sessions and the dumps are report-only on the step (`continue-on-error`), so
 - **NVDA: yes, again,** with the open step fixed: NVDA spoke 5 phrases from the textweaver window, 4 of the GUI's 5 announcements, and the window's name 0 times. When the window takes the focus, NVDA says neither the window's nor the document's name; that is on the UI refinement list.
 - **VoiceOver: no, on `macos-14` and `macos-15`.** "VoiceOver cannot be started" on both, after setup; `macos-14` also failed to turn on "Do not disturb". The macOS tree dump stays the macOS check, and VoiceOver waits for a person.
 
+**Status update (Tuesday, September 29, 2026): which checks are standing, and new ones.**
+
+A check becomes standing, failing its job, when it has given the same answer on consecutive runs on main and a failure would mean a regression rather than a flaky tool. The evidence, from the runs on main:
+
+- **The tree dump: standing on all three systems.** The Linux fix above worked: the dump now finds the window. Five GUI runs in a row dumped the same number of elements on each system: Linux 19, Windows 24, macOS 26, at 7971b5d, 28a864c, f5adb22, d0778dd, and f41ce4c ("GUI (Xilem)" runs 36580565643, 36591061058, 36601139882, 36603780384, 36617921982). The first four said "No baseline", because no earlier run on main had succeeded to compare with; the fifth compared with the fourth and said "Pass" on all three. So a run that dumps no tree now fails the job (`gui-xilem.yml`, the "Accessibility tree dump" steps). The comparison with main stays report-only: "Changed" is for a person to judge, and a new button is not a failure.
+- **Orca: standing.** Every must check passed in three runs in a row ("Screen-reader checks" runs 36499593368, 36507144175, and 36589983581, at 355f722, 80d94be, and f057f14): the window on the bus and named after the document, the Text interface with the document's text, the caret following the reading, Paused once, the caret on the next heading, the outline opening, taking the focus, naming a heading and its level, and closing. The Opened announcement stays a warning. A failed must check now fails the Orca job (`a11y-tests.yml`).
+- **NVDA: report-only still.** The answer is yes in the last two runs, but the same must check failed in all three: NVDA says neither the window's nor the document's name when the window takes the focus. That is the GUI's to fix (it is on the UI refinement list), not the check's; once it is fixed and three runs pass, the NVDA session can be made standing the same way.
+- **VoiceOver: no.** "VoiceOver cannot be started" on `macos-14` and `macos-15` in every run. The macOS tree dump stays the macOS check, and VoiceOver waits for a person.
+
+New checks, in their own jobs, beside these (see [Testing](../dev/testing.md#braille-real-engines-and-timing)):
+
+- **Braille against liblouis: standing from its first run** (`second-tool.yml`, the braille job). Liblouis 3.39.0, built from its tarball pinned by SHA-256, reads each BRF file back to print; a fixture fails when it reads back more than 2 points worse than liblouis's own round trip of the same text, or below 90 percent. Evidence before the first CI run, from the same script in the development container on Linux: in grade 1, all six fixtures read back 100 percent of their words in order (liblouis's own round trip: 94.6 to 100 percent); in grade 2, 90.5 to 100 percent (its own: 73.9 to 100 percent), the same figures as liblouis's Windows build gave. A seventh fixture, the Obsidian sample, is left out because it has math: without MathCAT the writer turns formulas into spoken words that are not in the document's text, and it read back 87 percent. Math braille has its own tests (ADR-0036). The words that differ are all layout the writer adds on purpose (list numbers, task states, bullets, table cell separators), plus one choice: a straight double quote is written as a closing quote chosen by position, where liblouis writes the nonspecific quote.
+- **Real engines: standing within their own workflow** (`engines.yml`, which no branch rule requires). espeak-ng on Linux; SAPI 5, OneCore, and the 32-bit host on Windows; AVSpeech on macOS 14 and 15, each writing a WAV file through `tw export-audio`. A missing engine or voice fails its step, so the check never passes by verifying nothing. Where the word times fall against the audio's silences is measured and reported, never failed, until a few runs show what is normal for each engine. No run has happened yet; the first push to main that touches the speech crates starts one.
+- **The sanitizer pass: one-time, by hand** (`engines.yml` with "sanitizer"): Valgrind's memcheck over `tw` while espeak-ng reads the fixture, the audio path that crosses into a C library. Its result will be recorded here; it is not a standing job.
+- **The fake-host timing tests** that failed under load (`textweaver-sapi` and `textweaver-eci`) now check the order of events, not the clock. Run 40 times each with eight copies of both suites at once, both whole suites passed every time. Under the same load, each suite's pause test, which ran at four times real time, had failed once in 40 runs; both now run at real time.
+
 ## Consequences
 
 - The GUI workflow takes a few minutes longer on each system the first time, while accessibility-cli builds; later runs restore it from the cache.
@@ -85,6 +101,7 @@ The sessions and the dumps are report-only on the step (`continue-on-error`), so
 - Node joins CI, for Guidepup only, in `tools/a11y`; no Node tool is part of the product or the build.
 - `atspi-session.py` imports the crate's `atspi-dump.py` rather than copying it, so a change there that renames `walk`, `find_app`, `ours`, or `bus_listing` must update the session too.
 - The session workflow builds the GUI from cold caches; its runs are sequenced with the release dry run, so runners are not contended.
+- With the dump standing, a failed build of accessibility-cli now turns the GUI job red, because the dump has no tool. It is pinned by commit and cached, so this should only happen when the pin is moved.
 
 ## See also
 
