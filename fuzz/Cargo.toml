@@ -13,7 +13,16 @@ cargo-fuzz = true
 libfuzzer-sys = "0.4"
 textweaver-core = { path = "../crates/textweaver-core" }
 # `url` for the web target: the response reader only, no requests.
-textweaver-formats = { path = "../crates/textweaver-formats", features = ["url"] }
+# `images`, not `ocr`: the picture and scanned-page loaders without the
+# in-process ocrs engine, which took 45 minutes to build under the
+# sanitizer and is never reached with OCR off.
+textweaver-formats = { path = "../crates/textweaver-formats", default-features = false, features = [
+    "pdf",
+    "images",
+    "archives",
+    "spreadsheets",
+    "url",
+] }
 textweaver-text = { path = "../crates/textweaver-text" }
 # The picture decoders only; no OCR engine.
 textweaver-ocr = { path = "../crates/textweaver-ocr", default-features = false }

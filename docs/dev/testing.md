@@ -116,6 +116,30 @@ Taken by Agent W4b on Windows (x86_64, 64 GB) while other agents were building, 
 
 The harness now waits until no thread has allocated for 300 ms before each document, after the first speech, before search, and before leaving edit mode. Before that, background work from opening a document landed in whichever step it overlapped: one step gave 1,267 and 38,773 allocations in two runs of the same code.
 
+### Measurements, Wave 5 (Monday, September 28, 2026)
+
+Taken by Agent W5r on the same machine while three other agents were building, so single runs moved by a factor of two or more. After [ADR-0034](../adr/0034-rope-after-measurement.md) kept the rope, W4b's two hot spots were measured part by part: loading a Markdown file, and planning the narration of a whole document.
+
+**How they were taken.**
+
+- Times: a standalone probe outside the workspace, built twice (main, then the branch) and run alternately on the bench corpora, reporting the fastest of nine runs. The fastest run is the one least disturbed by the other builds; medians moved too much to compare.
+- Allocations and peak heap: `cargo xtask bench --no-startup` on main, then on the branch with `--baseline` and the default `--max-ratio 2`. The gate passed: no memory number grew more than 1.26 times, and none of the reading paths' counts rose.
+
+**Where the time went, 10 MB of Markdown, before any change.**
+
+- Loading, 420 ms: reading the file 5 ms; pulldown-cmark's parse 71 to 93 ms, done twice (once only to collect footnote definitions); the rest of the conversion, building the canonical text and markers, about 170 ms; the rope 12 ms; sorting the markers under 40 ms.
+- The narration plan, 770 ms: finding the sentences 415 ms, of which walking the paragraphs was 100 ms and ICU4X's sentence segmentation 115 ms; the rest is per sentence (marker lookups, the spoken text and its map).
+- Rope calls: a `line_range` cost about 1 microsecond (a char read for the line count, two `line_to_char`, one or two char reads), and segmenting a paragraph made four per line.
+
+**What changed, and the numbers before and after.**
+
+- Markdown loads in one parse: deferred footnotes, the default, are gathered from the pass that builds the text, and the builder passes words as slices instead of copying them a char at a time. Conversion of 10 MB 450 to 240 ms; loading 420 to 275 ms; the 50,000-item list 286 to 195 ms; allocations while loading 376,819 to 61,022 on 10 MB, 218,035 to 22,884 on the list, 37,246 to 5,917 on 1 MB.
+- Line lookups: the document remembers whether its text ends with a line break, so counting lines reads nothing from the rope, and a paragraph's line breaks take one `line_to_char` per line. Walking every paragraph of 10 MB 100 to 35 ms; every sentence 415 to 295 ms.
+- A list's items are counted near the list (`MarkerIndex::iter_within`), not by walking every item of that depth in the document at every list.
+- Together, the whole-document plan: 10 MB 770 to 610 ms; the 50,000-item list 480 to 355 ms; 1 MB 61 to 57 ms. The plan's allocations did not change (844,757 on 10 MB).
+
+**What is left.** ICU4X's segmentation (115 ms on 10 MB) is the floor for finding sentences. The rest of the plan's time is per sentence: three `enclosing` lookups, a `String` for each literal piece, and the offset map. A table of line starts would make every line lookup a binary search, but it would have to be kept up to date on every edit, which costs typing more than it saves reading; it was not done.
+
 Bulk conversion has its own benchmark:
 
 ```bash

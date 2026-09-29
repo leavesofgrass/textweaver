@@ -106,21 +106,21 @@ impl Builder {
     /// Inline text: whitespace runs collapse to one space, dropped at line
     /// starts and ends.
     pub(crate) fn text(&mut self, s: &str) {
-        let mut word = String::new();
-        for c in s.chars() {
+        // Words are slices of `s`, not copies built a char at a time.
+        let mut start = None;
+        for (i, c) in s.char_indices() {
             if c.is_whitespace() {
-                if !word.is_empty() {
-                    self.word(&word);
-                    word.clear();
+                if let Some(from) = start.take() {
+                    self.word(&s[from..i]);
                 }
                 self.request(Break::Space);
                 self.soft_space = false;
-            } else {
-                word.push(c);
+            } else if start.is_none() {
+                start = Some(i);
             }
         }
-        if !word.is_empty() {
-            self.word(&word);
+        if let Some(from) = start {
+            self.word(&s[from..]);
         }
     }
 

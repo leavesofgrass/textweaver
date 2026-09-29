@@ -4,6 +4,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### W5r: the rope decision and loading
+
+- The rope stays ropey 1.6, as measured in Wave 4 ([ADR-0034](docs/adr/0034-rope-after-measurement.md)).
+- Large Markdown files open faster: 10 MB loads in about 275 ms instead of 420, with a sixth of the allocations, because the file is parsed once instead of twice.
+- Reading a whole document from the top plans its speech faster: 10 MB in about 610 ms instead of 770.
+- The formats crate has an `images` feature: the picture and scanned-page loaders without the in-process OCR engine. The fuzz targets use it, so they no longer compile that engine.
+
 ### W5p: alpha.5 readiness
 
 - **The GUI ships in the release:** `textweaver-VERSION-windows-x86_64-gui.zip`, `textweaver-VERSION-macos-aarch64-gui.zip` (`textweaver.app`, Apple silicon), and for Linux x86_64 and aarch64 an AppImage and a tarball whose names end in `-gui`. Supported on Windows; on macOS and Linux built and checked automatically, not yet heard with a screen reader. Each is attested and in `SHA256SUMS.txt`. See [docs/install.md](docs/install.md#the-gui).

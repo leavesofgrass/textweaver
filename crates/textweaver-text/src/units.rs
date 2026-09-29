@@ -245,8 +245,14 @@ fn window_block(doc: &Document, line: usize, pos: usize, with_break: bool) -> Bl
 }
 
 fn paragraph_block(doc: &Document, first: usize, last: usize) -> Block {
+    let start = if first == last {
+        None
+    } else {
+        Some(doc.line_start(first))
+    };
+    let end = doc.line_range(last);
     Block {
-        range: CharRange::new(doc.line_range(first).start, doc.line_range(last).end),
+        range: CharRange::new(start.unwrap_or(end.start), end.end),
         first_line: first,
         last_line: last,
         para: None,
@@ -737,12 +743,10 @@ fn hard_breaks(doc: &Document, block: &Block) -> Vec<CharPos> {
     }
     let index = doc.marker_index();
     let mut out = Vec::new();
-    for line in block.first_line..block.last_line {
-        let brk = doc.line_range(line).end;
+    for (brk, next_start) in doc.line_breaks(block.first_line, block.last_line) {
         if brk < block.range.start || brk >= block.range.end {
             continue;
         }
-        let next_start = doc.line_range(line + 1).start;
         let starts_block = index.starting_at(next_start).iter().any(|m| m.is_block());
         let in_code = index
             .enclosing(MarkerKind::Code, brk)

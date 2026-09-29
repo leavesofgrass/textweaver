@@ -15,7 +15,13 @@ default = ["pdf", "ocr", "archives", "spreadsheets"]
 pdf = ["dep:lopdf"]
 # OCR for scanned PDF pages and image files (ADR-0026): the pure-Rust ocrs
 # engine in process, Tesseract as a separate program for other languages.
-ocr = ["pdf", "dep:textweaver-ocr"]
+ocr = ["images", "textweaver-ocr/ocrs"]
+# The picture loader (PNG and JPEG) and the PDF loader's scanned-page path,
+# without the in-process ocrs engine: recognition goes to Tesseract when it
+# is installed, and otherwise the document says what is missing. For the
+# fuzz targets, which would otherwise compile the engine (and RTen) under
+# the sanitizer; `ocr` turns this on.
+images = ["pdf", "dep:textweaver-ocr"]
 # Tar, tar.gz, and 7z archives (zip is always read).
 archives = ["dep:tar", "dep:sevenz-rust2", "dep:flate2"]
 # Excel workbooks (XLSX, XLSM, XLSB) through calamine; CSV, TSV, and ODS
@@ -47,7 +53,10 @@ zip.workspace = true
 roxmltree.workspace = true
 directories.workspace = true
 lopdf = { workspace = true, optional = true }
-textweaver-ocr = { workspace = true, optional = true }
+# The engine only through the `ocr` feature (`textweaver-ocr/ocrs`). A path,
+# not `workspace = true`: the workspace entry keeps its default features
+# for the other crates, and Cargo does not let a member turn them off.
+textweaver-ocr = { path = "../textweaver-ocr", optional = true, default-features = false }
 tar = { workspace = true, optional = true }
 sevenz-rust2 = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }
