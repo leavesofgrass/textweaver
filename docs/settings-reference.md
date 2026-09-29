@@ -27,6 +27,11 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `speech.eci.code_factory`: default off (`false`). Search Code Factory's Eloquence. Also look for Code Factory's Eloquence for Windows. Its licence may not cover other programs. On or off: `true` or `false`.
 - `speech.sapi.onecore`: default on (`true`). OneCore voices. Also list the Windows OneCore voices through SAPI 5. On or off: `true` or `false`.
 - `speech.apple.backend`: default automatic (`"auto"`). Apple speech engine. Which of Apple's speech engines to use on macOS. Choices: `"auto"` (automatic), `"nsspeech"` (NSSpeechSynthesizer), `"avspeech"` (AVSpeechSynthesizer).
+- `speech.dectalk.library`: default not set. DECtalk library. The DECtalk library to load; not set searches the usual places. Text; empty means not set.
+- `speech.piper.voices`: default not set. Piper voices folder. The folder of Piper voices; not set uses the piper folder in textweaver's data folder. Text; empty means not set.
+- `speech.piper.voice`: default not set. Piper voice. The Piper voice to start with, by id; not set takes the first installed. Text; empty means not set.
+- `speech.piper.phonemizer`: default automatic (`"auto"`). Piper phonemizer. How Piper turns text into sounds: the espeak-ng library when installed, that library, or textweaver's own. Choices: `"auto"` (automatic), `"library"` (espeak-ng library), `"rust"` (textweaver's own).
+- `speech.voice_params`: default none. Rate and pitch per voice. The rate and pitch each voice was last used at; choosing a voice again brings them back. A table of names and values, edited in the file.
 
 ## Highlight: the `[highlight]` section
 
@@ -87,6 +92,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `editing.echo_lines_on_move`: default on (`true`). Echo lines. Say the line when the caret moves to another line. On or off: `true` or `false`.
 - `editing.undo_steps`: default 1000 steps. Undo steps. Most undo steps kept while editing. From 1 to 100000 steps, in steps of 100.
 - `editing.undo_memory_mb`: default 50 megabytes. Undo memory. Most memory the undo history may use. From 1 to 4096 megabytes, in steps of 16.
+- `editing.author`: default empty (`""`). Author. The author written into new documents made from a template; empty leaves it blank. Text.
 
 ## Library: the `[library]` section
 
@@ -140,7 +146,6 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `reading_aids.font.family`: default sans serif (`"sans"`). Font. The GUI's reading font; any installed family may be typed. Choices: `"system-ui"` (the system font), `"sans"` (sans serif), `"serif"`, `"monospace"`, `"atkinson"` (Atkinson Hyperlegible), `"opendyslexic"` (OpenDyslexic), `"lexend"` (Lexend). Other values may be written too.
 - `reading_aids.font.size_pt`: default 14 points. Font size. The GUI's font size. From 6 to 72 points, in steps of 1.
 - `reading_aids.font.weight`: default 400. Font weight. 400 is regular, 700 bold. From 100 to 900, in steps of 100.
-- `reading_aids.font.fetch_missing`: default on (`true`). Offer missing fonts. Offer to download a reading font that is not installed, after asking. On or off: `true` or `false`.
 - `reading_aids.ruler.mode`: default `"off"`. Reading ruler. Mark the current line, or a band of lines. Choices: `"off"`, `"current_line"` (current line), `"ruler"`.
 - `reading_aids.ruler.scope`: default the whole line (`"line"`). Ruler covers. A wrapped row, or the whole line. Choices: `"row"` (a row), `"line"` (the whole line).
 - `reading_aids.ruler.rows_above`: default 1 rows. Ruler rows above. Rows of the band above the current one. From 0 to 10 rows, in steps of 1.

@@ -38,13 +38,15 @@ use masonry_winit::winit::window::Window as WinitWindow;
 use textweaver_app::a11y::{Announcer as AppAnnouncer, Priority};
 use textweaver_app::core::CharRange;
 use textweaver_app::keymap::{ActionId, Platform};
+use textweaver_app::lexicon::args;
+use textweaver_app::lexicon::i18n::Catalog;
 use textweaver_app::store::DocKey;
 use textweaver_app::{
     App, Command, DocWindow, Effect, Playback, PromptKey, PromptPurpose, WindowChange, extra_lookup,
 };
 
 use crate::dialog::{self, ChoiceList, DialogAction, Modal};
-use crate::document::{DocAction, DocAids, DocFont, DocModel, DocState, DocumentView};
+use crate::document::{CaretEcho, DocAction, DocAids, DocFont, DocModel, DocState, DocumentView};
 use crate::file_chooser::{self, FileChosen};
 use crate::font_chooser::Step;
 use crate::keys;
@@ -96,6 +98,11 @@ pub const RSVP: WidgetTag<RsvpView> = WidgetTag::named("tw-rsvp");
 const FIRST_TICK: Duration = Duration::from_millis(250);
 /// Highlight moves slower than this are logged.
 const SLOW_HIGHLIGHT_MS: f64 = 30.0;
+/// Misspelled words are marked once typing pauses this long.
+const SPELL_PAUSE: Duration = Duration::from_millis(500);
+/// Misspelled words are marked in documents up to this many chars (about
+/// 50 ms to check on the development machine; 10 million took 0.6 s).
+const SPELL_LIMIT: usize = 1_000_000;
 
 /// Everything the window needs to start.
 #[derive(Debug, Default, Clone)]
@@ -193,16 +200,24 @@ struct Shown {
 }
 
 /// What the reading aids' spans depend on: bionic reading (and its
-/// options) and difficult words.
+/// options), difficult words, and syllables (and their options).
 type AidSpansKey = (
     bool,
     textweaver_app::store::reading_aids::BionicOptions,
     bool,
+    bool,
+    textweaver_app::store::reading_aids::SyllableOptions,
 );
 
 fn aid_spans_key(app: &App) -> AidSpansKey {
     let a = &app.settings().reading_aids;
-    (a.bionic, a.bionic_options.clone(), a.difficult_words)
+    (
+        a.bionic,
+        a.bionic_options.clone(),
+        a.difficult_words,
+        a.syllables,
+        a.syllable_options.clone(),
+    )
 }
 
 /// The settings dialog while it is open.
@@ -229,6 +244,13 @@ enum OpenDialog {
     /// The system's file chooser, open on its own thread; the app's Open
     /// prompt (labelled with this) waits for its answer.
     FileChooser(String),
+    /// A yes-or-no question from the app, with its two buttons.
+    Question {
+        /// The Yes button.
+        yes: WidgetId,
+        /// The No button.
+        no: WidgetId,
+    },
 }
 
 /// The widget tree's toolbar buttons and what they do.
@@ -274,6 +296,14 @@ pub struct Gui {
     /// Whether single-key shortcuts were on when the buttons' shortcuts
     /// were last shown (F9 changes which key each button names).
     char_keys: Option<bool>,
+    /// Misspelled words marked for this document and text revision, and
+    /// when a new revision was first seen (the marks wait for a pause in
+    /// typing).
+    spell_marked: Option<(DocKey, u64)>,
+    spell_seen: Option<((DocKey, u64), Instant)>,
+    /// The interface language the drawn labels were last written in
+    /// (`[interface] language` changes them live, as in the terminal).
+    lang: String,
     closed: bool,
     /// How announcements reach the screen reader.
     announce: AnnounceMode,
@@ -345,6 +375,36 @@ fn styled_button(
     w
 }
 
+/// The drawn label of the button for `action`, in the catalog's language
+/// (W4d's six languages): "Open…", or "Pause" while reading, or "Finish
+/// editing" in edit mode. The accessible name is the label without its
+/// ellipsis ([`ActionButton::name`]).
+pub fn button_label(c: &Catalog, action: ActionId, reading: bool, editing: bool) -> String {
+    let id = match action {
+        ActionId::Open => "gui-button-open",
+        ActionId::ChooseFont => "gui-button-font",
+        ActionId::ToggleEditMode if editing => "gui-button-finish-editing",
+        ActionId::ToggleEditMode => "gui-button-edit",
+        ActionId::Settings => "gui-button-settings",
+        ActionId::CommandPalette => "gui-button-commands",
+        ActionId::PlayPause if reading => "gui-button-pause",
+        ActionId::PlayPause => "gui-button-play",
+        ActionId::Stop => "gui-button-stop",
+        ActionId::PreviousSentence => "gui-button-previous-sentence",
+        ActionId::NextSentence => "gui-button-next-sentence",
+        ActionId::RateDown => "gui-button-slower",
+        ActionId::RateUp => "gui-button-faster",
+        _ => return action.id().to_owned(),
+    };
+    c.tr(id)
+}
+
+/// The catalog for drawn labels: the app's, or English with no app (the
+/// screenshot tool's tree before an app exists).
+fn catalog_of(app: Option<&App>) -> std::sync::Arc<Catalog> {
+    app.map_or_else(Catalog::english, App::catalog)
+}
+
 /// A control's shortcut for `action`, from the keymap (`named_key`), as
 /// written ("Ctrl+O"): the button's keyboard shortcut and its text on
 /// screen. The main key, which is the single key while single-key
@@ -377,17 +437,42 @@ pub fn build_tree(
 ) -> Tree {
     let mut ids = HashMap::new();
     let p = palette;
+    let c = catalog_of(app);
+    let l = |a| button_label(&c, a, false, false);
 
     // Header: the document's title and the commands.
     let title = NewWidget::new(label("textweaver", 18.0, true)).with_tag(TITLE);
     let header = Flex::row()
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .with(title, 1.0)
-        .with_fixed(button("Open…", ActionId::Open, app, &mut ids))
-        .with_fixed(button("Font…", ActionId::ChooseFont, app, &mut ids))
-        .with_fixed(button("Edit", ActionId::ToggleEditMode, app, &mut ids).with_tag(EDIT))
-        .with_fixed(button("Settings…", ActionId::Settings, app, &mut ids))
-        .with_fixed(button("Commands…", ActionId::CommandPalette, app, &mut ids));
+        .with_fixed(button(&l(ActionId::Open), ActionId::Open, app, &mut ids))
+        .with_fixed(button(
+            &l(ActionId::ChooseFont),
+            ActionId::ChooseFont,
+            app,
+            &mut ids,
+        ))
+        .with_fixed(
+            button(
+                &l(ActionId::ToggleEditMode),
+                ActionId::ToggleEditMode,
+                app,
+                &mut ids,
+            )
+            .with_tag(EDIT),
+        )
+        .with_fixed(button(
+            &l(ActionId::Settings),
+            ActionId::Settings,
+            app,
+            &mut ids,
+        ))
+        .with_fixed(button(
+            &l(ActionId::CommandPalette),
+            ActionId::CommandPalette,
+            app,
+            &mut ids,
+        ));
     let header = NewWidget::new(Region::new(NewWidget::new(header), Role::Banner, ""))
         .with_tag(HEADER)
         .with_props(panel(p, 10.0, 16.0));
@@ -396,7 +481,8 @@ pub fn build_tree(
     let doc = NewWidget::new(
         DocumentView::new(p.clone(), font, Rc::clone(&full_passes))
             .with_select_spoken(experiments.select_spoken)
-            .with_edit_role(experiments.edit_role),
+            .with_edit_role(experiments.edit_role)
+            .with_label(c.tr("gui-document")),
     )
     .with_tag(DOC);
     // RSVP, hidden until it is turned on: its own strip under the document,
@@ -405,7 +491,7 @@ pub fn build_tree(
 
     // Toolbar: Play/Pause is the primary action.
     let play = styled_button(
-        "Play",
+        &l(ActionId::PlayPause),
         ActionId::PlayPause,
         app,
         &mut ids,
@@ -416,26 +502,36 @@ pub fn build_tree(
     let toolbar = Flex::row()
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .with_fixed(play)
-        .with_fixed(button("Stop", ActionId::Stop, app, &mut ids))
+        .with_fixed(button(&l(ActionId::Stop), ActionId::Stop, app, &mut ids))
         .with_fixed(button(
-            "Previous sentence",
+            &l(ActionId::PreviousSentence),
             ActionId::PreviousSentence,
             app,
             &mut ids,
         ))
         .with_fixed(button(
-            "Next sentence",
+            &l(ActionId::NextSentence),
             ActionId::NextSentence,
             app,
             &mut ids,
         ))
         .with_spacer(1.0)
-        .with_fixed(button("Slower", ActionId::RateDown, app, &mut ids))
-        .with_fixed(button("Faster", ActionId::RateUp, app, &mut ids));
+        .with_fixed(button(
+            &l(ActionId::RateDown),
+            ActionId::RateDown,
+            app,
+            &mut ids,
+        ))
+        .with_fixed(button(
+            &l(ActionId::RateUp),
+            ActionId::RateUp,
+            app,
+            &mut ids,
+        ));
     let toolbar = NewWidget::new(Region::new(
         NewWidget::new(toolbar),
         Role::Toolbar,
-        "Reading",
+        c.tr("gui-toolbar-reading"),
     ))
     .with_tag(TOOLBAR)
     .with_props(panel(p, 10.0, 12.0));
@@ -483,6 +579,7 @@ pub fn build_tree(
 /// Returns the dialog and the list's id (to focus it).
 pub fn list_dialog(
     p: &Palette,
+    c: &Catalog,
     title: &str,
     items: Vec<String>,
     selected: usize,
@@ -502,12 +599,60 @@ pub fn list_dialog(
         ))
         .with_fixed(list)
         .with_fixed(NewWidget::new(
-            label("Enter chooses, Escape closes.", theme::UI_TEXT, false)
-                .accessibility_hidden(true),
+            label(&c.tr("gui-list-hint"), theme::UI_TEXT, false).accessibility_hidden(true),
         ));
     let card = NewWidget::new(card).with_props(dialog::card_props(p));
     let modal = NewWidget::new(Modal::new(card, title, p.clone())).erased();
     (modal, list_id)
+}
+
+/// A yes-or-no question from the app (a download, a removal, a file
+/// changed on disk), built by [`question_dialog()`].
+pub struct QuestionDialog {
+    /// The dialog, for [`Root::set_dialog`].
+    pub modal: NewWidget<dyn Widget>,
+    /// The Yes button, which takes the focus.
+    pub yes: WidgetId,
+    /// The No button.
+    pub no: WidgetId,
+}
+
+/// A question as a dialog: the question is the dialog's name (so a screen
+/// reader says it when the focus moves in), then Yes and No buttons whose
+/// keys are `Y` and `N`. Typing `y` or `n` anywhere in it answers, as in the
+/// terminal; Escape is no; any other character asks again.
+pub fn question_dialog(
+    p: &Palette,
+    c: &textweaver_app::lexicon::i18n::Catalog,
+    question: &str,
+) -> QuestionDialog {
+    let yes = NewWidget::new(ActionButton::new(c.tr("gui-yes")).with_shortcut("Y"));
+    let no = NewWidget::new(ActionButton::new(c.tr("gui-no")).with_shortcut("N"));
+    let (yes_id, no_id) = (yes.id(), no.id());
+    let buttons = Flex::row()
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .with_spacer(1.0)
+        .with_fixed(yes)
+        .with_fixed(no);
+    let card = Flex::column()
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .with_fixed(NewWidget::new(
+            label(question, 18.0, false).accessibility_hidden(true),
+        ))
+        .with_fixed_spacer(Length::px(10.0))
+        .with_fixed(NewWidget::new(
+            label(&c.tr("gui-question-hint"), theme::UI_TEXT, false).accessibility_hidden(true),
+        ))
+        .with_fixed_spacer(Length::px(14.0))
+        .with_fixed(NewWidget::new(buttons));
+    let card = NewWidget::new(card).with_props(dialog::card_props(p));
+    let modal =
+        NewWidget::new(Modal::new(card, question, p.clone()).with_answer_keys(true)).erased();
+    QuestionDialog {
+        modal,
+        yes: yes_id,
+        no: no_id,
+    }
 }
 
 /// The settings dialog, built by [`settings_dialog()`].
@@ -530,15 +675,35 @@ pub fn settings_dialog(
     section: usize,
     row: usize,
 ) -> SettingsDialog {
-    let title = form.sections.get(section).copied().unwrap_or("Settings");
+    let c = app.catalog();
+    let settings_title = c.tr("settings-title");
     let sections = NewWidget::new(
-        ChoiceList::new("Sections", form.section_items(), p.clone())
-            .with_selected(section)
-            .with_focus_actions(true),
+        ChoiceList::new(
+            c.tr("gui-settings-sections"),
+            form.section_items(&c),
+            p.clone(),
+        )
+        .with_selected(section)
+        .with_focus_actions(true),
     )
     .with_tag(SECTIONS);
     let grid = NewWidget::new(
-        SettingsGrid::new(title, form.rows(section, app), p.clone()).with_selected(row),
+        SettingsGrid::new(
+            form.form_label(section, &c),
+            form.rows(section, app),
+            p.clone(),
+        )
+        .with_help_text({
+            // The form's own section keys (not keymap commands).
+            use textweaver_app::keymap::{Key, KeyChord, Modifiers};
+            let next = KeyChord::new(Key::PageDown, Modifiers::CTRL).to_string();
+            let previous = KeyChord::new(Key::PageUp, Modifiers::CTRL).to_string();
+            c.fmt(
+                "gui-settings-form-help",
+                &args!["next" => next, "previous" => previous],
+            )
+        })
+        .with_selected(row),
     )
     .with_tag(FORM);
     let form_id = grid.id();
@@ -548,9 +713,9 @@ pub fn settings_dialog(
         textweaver_app::keymap::Modifiers::empty(),
     );
     let close = NewWidget::new(
-        ActionButton::new("Close")
+        ActionButton::new(c.tr("gui-button-close"))
             .with_shortcut(escape.to_string())
-            .with_description("Close the settings. Every change is already saved."),
+            .with_description(c.tr("gui-settings-close-help")),
     );
     let close_id = close.id();
     let body = Flex::row()
@@ -564,12 +729,8 @@ pub fn settings_dialog(
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .with(
             NewWidget::new(
-                label(
-                    "Changes take effect and are saved at once.",
-                    theme::UI_TEXT,
-                    false,
-                )
-                .accessibility_hidden(true),
+                label(&c.tr("gui-settings-saved-hint"), theme::UI_TEXT, false)
+                    .accessibility_hidden(true),
             ),
             1.0,
         )
@@ -577,7 +738,7 @@ pub fn settings_dialog(
     let card = Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .with_fixed(NewWidget::new(
-            label("Settings", 20.0, true).accessibility_hidden(true),
+            label(&settings_title, 20.0, true).accessibility_hidden(true),
         ))
         .with_fixed_spacer(Length::px(14.0))
         .with_fixed(NewWidget::new(body))
@@ -585,7 +746,7 @@ pub fn settings_dialog(
         .with_fixed(NewWidget::new(footer));
     let card = NewWidget::new(card).with_props(dialog::card_props(p));
     let modal =
-        NewWidget::new(Modal::new(card, "Settings", p.clone()).with_max_width(960.0)).erased();
+        NewWidget::new(Modal::new(card, settings_title, p.clone()).with_max_width(960.0)).erased();
     SettingsDialog {
         modal,
         form: form_id,
@@ -657,6 +818,10 @@ pub fn model_for(app: &App, w: CharRange) -> Option<DocModel> {
         spans,
         doc_len: s.doc.len_chars(),
         title: s.title.clone(),
+        // Syllables: drawn only, at the app's break positions (always
+        // between two chars of the document), as the terminal draws them.
+        breaks: app.syllable_breaks(w),
+        separator: app.syllable_separator().to_owned(),
     })
 }
 
@@ -797,15 +962,13 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
     }
     let reading = app.playback() == Playback::Reading;
     if reading != shown.reading {
-        host.edit(PLAY, |mut b| {
-            ActionButton::set_label(&mut b, if reading { "Pause" } else { "Play" });
-        });
+        let text = button_label(&app.catalog(), ActionId::PlayPause, reading, false);
+        host.edit(PLAY, |mut b| ActionButton::set_label(&mut b, text));
         shown.reading = reading;
     }
     if editing != shown.edit_button {
-        host.edit(EDIT, |mut b| {
-            ActionButton::set_label(&mut b, if editing { "Finish editing" } else { "Edit" });
-        });
+        let text = button_label(&app.catalog(), ActionId::ToggleEditMode, false, editing);
+        host.edit(EDIT, |mut b| ActionButton::set_label(&mut b, text));
         shown.edit_button = editing;
     }
     let status = app.status_text().to_owned();
@@ -888,6 +1051,35 @@ impl Gui {
                 });
             }
         }
+        // The interface language changed: every drawn label the window
+        // owns, in the new language (the app's own messages already are).
+        let c = self.app.catalog();
+        if c.lang() != self.lang {
+            let first = self.lang.is_empty();
+            self.lang = c.lang().to_owned();
+            if !first {
+                let (reading, editing) = (self.shown.reading, self.shown.edit_button);
+                let root = ctx.render_root(self.window_id);
+                for (id, action) in &self.buttons.by_id {
+                    let text = button_label(&c, *action, reading, editing);
+                    let help = textweaver_app::action_help(&c, *action);
+                    root.edit_widget(*id, |mut w| {
+                        let mut b = w.downcast::<ActionButton>();
+                        ActionButton::set_label(&mut b, text);
+                        ActionButton::set_description(&mut b, help);
+                    });
+                }
+                root.edit_widget_with_tag(TOOLBAR, |mut r| {
+                    Region::set_label(&mut r, c.tr("gui-toolbar-reading"));
+                });
+                root.edit_widget_with_tag(DOC, |mut d| {
+                    DocumentView::set_label(&mut d, c.tr("gui-document"));
+                });
+                if self.log {
+                    crate::log::line(&format!("labels: {}", self.lang));
+                }
+            }
+        }
         // The theme changed (a key, the palette, or the settings).
         if !self.fixed_theme && self.app.current_theme().name() != self.palette.name {
             self.palette = Palette::from_theme(self.app.current_theme());
@@ -898,6 +1090,8 @@ impl Gui {
                 crate::log::line(&format!("theme: {}", self.palette.name));
             }
         }
+        self.sync_question(ctx);
+        self.sync_misspellings(ctx);
         let title = self.app.session().map_or_else(
             || "textweaver".to_owned(),
             |s| format!("{} - textweaver", s.title),
@@ -984,17 +1178,17 @@ impl Gui {
             purpose,
             PromptPurpose::Open | PromptPurpose::SaveAs | PromptPurpose::ImagePath
         );
-        let hint = if paths {
-            "Type the path of a document, then press Enter. Tab completes it; Up and Down recall earlier ones."
+        let hint = self.app.catalog().tr(if paths {
+            "gui-prompt-path-hint"
         } else {
-            "Press Enter to accept, or Escape to cancel. Up and Down recall earlier answers."
-        };
+            "gui-prompt-hint"
+        });
         let initial = self
             .app
             .prompt_model()
             .map(textweaver_app::PromptModel::text)
             .unwrap_or_default();
-        self.show_prompt(ctx, label_text, hint, &initial, paths);
+        self.show_prompt(ctx, label_text, &hint, &initial, paths);
         self.dialog = Some(OpenDialog::Prompt);
         if self.log {
             crate::log::line(&format!("dialog: prompt {label_text:?}"));
@@ -1128,7 +1322,7 @@ impl Gui {
     /// The Settings command: the settings dialog, from the app's schema.
     fn open_settings(&mut self, ctx: &mut DriverCtx<'_>, at: Option<(usize, usize)>) {
         let form = SettingsForm::new(self.app.settings_schema());
-        let (section, row) = at.unwrap_or((0, 0));
+        let (section, row) = at.unwrap_or_else(|| (0, form.first_plain_row(0)));
         let section = section.min(form.sections.len().saturating_sub(1));
         let d = settings_dialog(&self.palette, &form, &self.app, section, row);
         let root = ctx.render_root(self.window_id);
@@ -1166,9 +1360,11 @@ impl Gui {
                 let Some(setting) = open.form.setting(section, row).cloned() else {
                     return;
                 };
+                let c = self.app.catalog();
+                let label = setting.label_in(&c);
                 if matches!(setting.kind, textweaver_app::SettingKind::Table) {
                     self.app.announce(
-                        &format!("{} is a table. Edit it in settings.toml.", setting.label),
+                        &c.fmt("gui-settings-table", &args!["label" => label.as_str()]),
                         Priority::Polite,
                     );
                     self.refresh(ctx);
@@ -1180,16 +1376,16 @@ impl Gui {
                 } else {
                     text
                 };
-                let label_text = format!("New value for {}", setting.label);
+                let label_text = c.fmt("gui-setting-new-value", &args!["label" => label.as_str()]);
                 let hint = if setting.help.is_empty() {
-                    "Press Enter to accept, or Escape to go back."
+                    c.tr("gui-setting-value-hint")
                 } else {
-                    setting.help
+                    setting.help_in(&c)
                 };
                 let Some(OpenDialog::Settings(open)) = self.dialog.take() else {
                     return;
                 };
-                self.show_prompt(ctx, &label_text, hint, &initial, false);
+                self.show_prompt(ctx, &label_text, &hint, &initial, false);
                 self.dialog = Some(OpenDialog::SettingEdit(open, row));
                 if self.log {
                     crate::log::line(&format!("dialog: {label_text}"));
@@ -1259,17 +1455,14 @@ impl Gui {
             return;
         }
         open.section = section;
-        let title = open
-            .form
-            .sections
-            .get(section)
-            .copied()
-            .unwrap_or("Settings");
+        let c = self.app.catalog();
+        let title = open.form.form_label(section, &c);
         let rows = open.form.rows(section, &self.app);
-        let item = open.form.section_items().get(section).cloned();
+        let item = open.form.section_items(&c).get(section).cloned();
+        let first = open.form.first_plain_row(section);
         let root = ctx.render_root(self.window_id);
         root.edit_widget_with_tag(FORM, |mut g| {
-            SettingsGrid::set_section(&mut g, title, rows, 0);
+            SettingsGrid::set_section(&mut g, title, rows, first);
         });
         root.edit_widget_with_tag(SECTIONS, |mut l| ChoiceList::select(&mut l, section));
         if say && let Some(item) = item {
@@ -1295,7 +1488,8 @@ impl Gui {
             }
             DialogAction::Cancel => {
                 self.close_dialog(ctx);
-                self.app.announce("Settings closed.", Priority::Polite);
+                let said = self.app.catalog().tr("gui-settings-closed");
+                self.app.announce(&said, Priority::Polite);
                 self.refresh(ctx);
             }
             _ => {}
@@ -1320,7 +1514,8 @@ impl Gui {
     fn open_list(&mut self, ctx: &mut DriverCtx<'_>, title: &str, items: Vec<String>) {
         let count = items.len();
         let selected = self.app.list_model().map_or(0, |m| m.selected);
-        let (modal, list_id) = list_dialog(&self.palette, title, items, selected, true);
+        let c = self.app.catalog();
+        let (modal, list_id) = list_dialog(&self.palette, &c, title, items, selected, true);
         let root = ctx.render_root(self.window_id);
         root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
         root.focus_on(Some(list_id));
@@ -1338,6 +1533,7 @@ impl Gui {
         let (ids, items): (Vec<ActionId>, Vec<String>) =
             self.app.palette_candidates("").into_iter().unzip();
         let count = items.len();
+        let c = self.app.catalog();
         let field = NewWidget::new(
             TextArea::new_editable("")
                 .with_accessible_label(label_text.to_owned())
@@ -1346,9 +1542,10 @@ impl Gui {
         .with_tag(PROMPT_FIELD);
         let field_id = field.id();
         let input = NewWidget::new(
-            TextInput::from_text_area(field).with_placeholder("Type to filter the commands"),
+            TextInput::from_text_area(field).with_placeholder(c.tr("gui-palette-filter")),
         );
-        let list = NewWidget::new(ChoiceList::new("Commands", items, p.clone())).with_tag(LIST);
+        let list = NewWidget::new(ChoiceList::new(c.tr("gui-palette-list"), items, p.clone()))
+            .with_tag(LIST);
         let card = Flex::column()
             .cross_axis_alignment(CrossAxisAlignment::Stretch)
             .with_fixed(NewWidget::new(
@@ -1357,12 +1554,7 @@ impl Gui {
             .with_fixed(input)
             .with_fixed(list)
             .with_fixed(NewWidget::new(
-                label(
-                    "Enter runs the first match; Tab moves to the list.",
-                    theme::UI_TEXT,
-                    false,
-                )
-                .accessibility_hidden(true),
+                label(&c.tr("gui-palette-hint"), theme::UI_TEXT, false).accessibility_hidden(true),
             ));
         let card = NewWidget::new(card).with_props(dialog::card_props(p));
         let modal = NewWidget::new(Modal::new(card, label_text, p.clone())).erased();
@@ -1378,7 +1570,7 @@ impl Gui {
     /// The font list (Ctrl+D, the Font button): the families, bundled
     /// first, starting on the current one.
     fn open_fonts(&mut self, ctx: &mut DriverCtx<'_>) {
-        let choices = crate::font_chooser::choices(self.installed.names());
+        let choices = crate::font_chooser::choices(&self.app.catalog(), self.installed.names());
         let current = crate::fonts::doc_font(&self.app.settings().reading_aids.font);
         let items: Vec<String> = choices.iter().map(|c| c.label.clone()).collect();
         let selected = choices
@@ -1386,7 +1578,14 @@ impl Gui {
             .position(|c| current.family.starts_with(&format!("\"{}\"", c.family)))
             .unwrap_or(0);
         let title = self.app.catalog().tr("gui-font-list");
-        let (modal, list_id) = list_dialog(&self.palette, &title, items, selected, false);
+        let (modal, list_id) = list_dialog(
+            &self.palette,
+            &self.app.catalog(),
+            &title,
+            items,
+            selected,
+            false,
+        );
         let root = ctx.render_root(self.window_id);
         root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
         root.focus_on(Some(list_id));
@@ -1455,11 +1654,10 @@ impl Gui {
         ctx.render_root(self.window_id)
             .edit_widget_with_tag(LIST, |mut l| ChoiceList::set_items(&mut l, items));
         self.dialog = Some(OpenDialog::Palette(ids));
-        let said = match n {
-            0 => "No commands match.".to_owned(),
-            1 => "1 command.".to_owned(),
-            n => format!("{n} commands."),
-        };
+        let said = self
+            .app
+            .catalog()
+            .fmt("gui-palette-count", &args!["n" => n]);
         self.app.announce(&said, Priority::Polite);
         self.refresh(ctx);
     }
@@ -1512,6 +1710,110 @@ impl Gui {
             }
             None => self.close_dialog(ctx),
         }
+    }
+
+    /// Edit mode: marks the misspelled words (Alt+M finds them), once the
+    /// text has not changed for [`SPELL_PAUSE`], for documents up to
+    /// [`SPELL_LIMIT`] chars (the check reads the whole document on the
+    /// input thread).
+    fn sync_misspellings(&mut self, ctx: &mut DriverCtx<'_>) {
+        let key = self
+            .app
+            .session()
+            .filter(|s| self.app.is_editing() && s.doc.len_chars() <= SPELL_LIMIT)
+            .map(|s| (s.key.clone(), s.revision));
+        let Some(key) = key else {
+            if self.spell_marked.take().is_some() {
+                ctx.render_root(self.window_id)
+                    .edit_widget_with_tag(DOC, |mut d| {
+                        DocumentView::set_misspelled(&mut d, Vec::new())
+                    });
+            }
+            self.spell_seen = None;
+            return;
+        };
+        if self.spell_marked.as_ref() == Some(&key) {
+            return;
+        }
+        match &self.spell_seen {
+            Some((k, at)) if *k == key && at.elapsed() >= SPELL_PAUSE => {}
+            Some((k, _)) if *k == key => return,
+            _ => {
+                self.spell_seen = Some((key, Instant::now()));
+                return;
+            }
+        }
+        let started = Instant::now();
+        let ranges = self.app.misspelled_ranges();
+        if self.log {
+            crate::log::line(&format!(
+                "misspellings: {} in {:.1} ms",
+                ranges.len(),
+                started.elapsed().as_secs_f64() * 1000.0
+            ));
+        }
+        ctx.render_root(self.window_id)
+            .edit_widget_with_tag(DOC, |mut d| DocumentView::set_misspelled(&mut d, ranges));
+        self.spell_marked = Some(key);
+        self.spell_seen = None;
+    }
+
+    /// A caret key in the view, said by textweaver's own voice as the
+    /// terminal says its caret keys: `App::echo` speaks only in the
+    /// self-voicing mode (and not while reading), since a screen reader
+    /// reads the caret and the selection itself.
+    fn echo_caret(&mut self, echo: CaretEcho) {
+        let c = self.app.catalog();
+        let text = match echo {
+            CaretEcho::Char(ch) => ch.to_string(),
+            CaretEcho::LineEnd => c.tr("edit-end-of-line-content"),
+            CaretEcho::DocEnd => c.tr("playback-end-of-document-content"),
+            CaretEcho::Word(w) | CaretEcho::Line(w) => w,
+            CaretEcho::Selection { text, selected } => {
+                textweaver_app::text_util::selection_change_text(&c, &text, selected)
+            }
+        };
+        if self.log {
+            crate::log::line(&format!("caret echo: {text}"));
+        }
+        self.app.echo(&text);
+    }
+
+    /// A yes-or-no question from the app shows as a dialog while it is
+    /// open (the app has already said it), and goes when it is answered.
+    fn sync_question(&mut self, ctx: &mut DriverCtx<'_>) {
+        let pending = self.app.confirmation_pending();
+        let showing = matches!(self.dialog, Some(OpenDialog::Question { .. }));
+        if pending && !showing {
+            let question = self.app.status_text().to_owned();
+            let q = question_dialog(&self.palette, &self.app.catalog(), &question);
+            let root = ctx.render_root(self.window_id);
+            root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(q.modal)));
+            root.focus_on(Some(q.yes));
+            self.dialog = Some(OpenDialog::Question {
+                yes: q.yes,
+                no: q.no,
+            });
+            if self.log {
+                crate::log::line(&format!("dialog: question {question:?}"));
+            }
+        } else if !pending && showing {
+            self.close_dialog(ctx);
+        }
+    }
+
+    /// An answer to the open question: Yes, No, or ask again.
+    fn answer_question(&mut self, ctx: &mut DriverCtx<'_>, answer: textweaver_app::Confirm) {
+        if !matches!(self.dialog, Some(OpenDialog::Question { .. })) {
+            return;
+        }
+        if answer != textweaver_app::Confirm::Repeat {
+            self.close_dialog(ctx);
+        }
+        if self.log {
+            crate::log::line(&format!("answer {answer:?}"));
+        }
+        self.dispatch(ctx, Command::Confirm(answer));
     }
 
     fn close_dialog(&mut self, ctx: &mut DriverCtx<'_>) {
@@ -1619,10 +1921,16 @@ impl Gui {
                 let started = Instant::now();
                 match self.app.open(path) {
                     Ok(e) => effects.extend(e),
-                    Err(e) => self.app.announce(
-                        &format!("Could not open {}: {e}", path.display()),
-                        Priority::Assertive,
-                    ),
+                    Err(e) => {
+                        let said = self.app.catalog().fmt(
+                            "gui-open-failed",
+                            &args![
+                                "path" => path.display().to_string(),
+                                "error" => e.to_string()
+                            ],
+                        );
+                        self.app.announce(&said, Priority::Assertive);
+                    }
                 }
                 if self.log {
                     crate::log::line(&format!(
@@ -1635,10 +1943,11 @@ impl Gui {
                 // The key from the keymap, written for the screen reader
                 // ("Ctrl+O") and spoken for textweaver's voice.
                 let open = textweaver_app::named_key(self.app.keymap(), ActionId::Open);
-                self.app.announce(
-                    &format!("No document is open. Press {open} to open one."),
-                    Priority::Polite,
-                );
+                let said = self
+                    .app
+                    .catalog()
+                    .fmt("gui-no-document", &args!["key" => open.as_str()]);
+                self.app.announce(&said, Priority::Polite);
             }
         }
         for m in &messages {
@@ -1668,9 +1977,11 @@ impl AppDriver for Gui {
         if let Some(KeyAction(k)) = action.downcast_ref::<KeyAction>() {
             let k = k.clone();
             self.on_key(ctx, &k);
-        } else if let Some(DocAction::CaretMoved { caret, .. }) = action.downcast_ref::<DocAction>()
+        } else if let Some(DocAction::CaretMoved { caret, echo, .. }) =
+            action.downcast_ref::<DocAction>()
         {
             let caret = *caret;
+            let echo = echo.clone();
             let app_cursor = self.app.session().map(|s| s.cursor);
             // In edit mode, a selection the app holds (from a command) is
             // let go when the view moves the caret, so typing goes to the
@@ -1695,6 +2006,16 @@ impl AppDriver for Gui {
                 self.shown.state.caret = caret;
                 self.refresh(ctx);
             }
+            if let Some(echo) = echo {
+                self.echo_caret(echo);
+            }
+        } else if let Some(DocAction::TableCell { forward }) = action.downcast_ref::<DocAction>() {
+            let a = if *forward {
+                ActionId::NextTableCell
+            } else {
+                ActionId::PreviousTableCell
+            };
+            self.dispatch(ctx, Command::Action(a));
         } else if let Some(edit) = action.downcast_ref::<DocAction>() {
             // Edit mode: typing and deleting go through the app, which
             // keeps the undo history and echoes as the access mode says.
@@ -1703,7 +2024,7 @@ impl AppDriver for Gui {
                 DocAction::Delete { forward: true } => Command::DeleteForward,
                 DocAction::Delete { forward: false } => Command::DeleteBack,
                 DocAction::Replace { range, text } => Command::ReplaceRange { range, text },
-                DocAction::CaretMoved { .. } => return,
+                DocAction::CaretMoved { .. } | DocAction::TableCell { .. } => return,
             };
             if self.log {
                 crate::log::line(&format!("edit: {cmd:?}"));
@@ -1712,7 +2033,18 @@ impl AppDriver for Gui {
             self.run_effects(ctx, effects);
             self.refresh(ctx);
         } else if action.downcast_ref::<Pressed>().is_some() {
-            if let Some(OpenDialog::Settings(open)) = &self.dialog
+            if let Some(OpenDialog::Question { yes, no }) = &self.dialog {
+                let answer = if *yes == widget_id {
+                    Some(textweaver_app::Confirm::Yes)
+                } else if *no == widget_id {
+                    Some(textweaver_app::Confirm::No)
+                } else {
+                    None
+                };
+                if let Some(a) = answer {
+                    self.answer_question(ctx, a);
+                }
+            } else if let Some(OpenDialog::Settings(open)) = &self.dialog
                 && open.close == widget_id
             {
                 self.settings_dialog_action(ctx, &DialogAction::Cancel);
@@ -1723,6 +2055,16 @@ impl AppDriver for Gui {
             let a = a.clone();
             self.settings_form_action(ctx, a);
         } else if let Some(d) = action.downcast_ref::<DialogAction>() {
+            if matches!(self.dialog, Some(OpenDialog::Question { .. })) {
+                match d {
+                    DialogAction::Answer(a) => self.answer_question(ctx, *a),
+                    DialogAction::Cancel => {
+                        self.answer_question(ctx, textweaver_app::Confirm::No);
+                    }
+                    _ => {}
+                }
+                return;
+            }
             if self.settings_dialog_action(ctx, d) || self.font_answer(ctx, d) {
                 return;
             }
@@ -1811,7 +2153,8 @@ impl AppDriver for Gui {
                     | DialogAction::Focus(_)
                     | DialogAction::Recall(_)
                     | DialogAction::Complete
-                    | DialogAction::Chord(_),
+                    | DialogAction::Chord(_)
+                    | DialogAction::Answer(_),
                     _,
                 ) => return,
             };
@@ -1896,7 +2239,11 @@ impl AppDriver for Gui {
         effects.extend(self.app.tick(now));
         self.run_effects(ctx, effects);
         self.refresh(ctx);
-        let wait = self.app.tick_interval(Instant::now());
+        let mut wait = self.app.tick_interval(Instant::now());
+        if self.spell_seen.is_some() {
+            // Come back when the pause is over, to mark the misspellings.
+            wait = wait.min(SPELL_PAUSE / 2);
+        }
         self.tick_ms.store(
             u64::try_from(wait.as_millis()).unwrap_or(u64::MAX).max(10),
             Ordering::Relaxed,
@@ -1954,9 +2301,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         .unwrap_or_else(|| setup::announce_setting(app.settings()));
     let announce = wanted.effective();
     if announce != wanted {
-        messages.push(
-            "UI Automation notifications exist only on Windows; using the live region.".into(),
-        );
+        messages.push(app.catalog().tr("gui-uia-unavailable"));
     }
     experiments.announce = Some(announce);
     if opts.log {
@@ -2025,6 +2370,9 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         proxy,
         typed_open: false,
         char_keys: None,
+        lang: String::new(),
+        spell_marked: None,
+        spell_seen: None,
         fixed_theme: opts.theme.is_some(),
         settings_list: experiments.settings_list,
         announce,

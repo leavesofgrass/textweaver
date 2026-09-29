@@ -155,9 +155,11 @@ impl Widget for Root {
     }
 }
 
-/// Tab and Shift+Tab move focus; the root leaves them to Masonry.
+/// Tab and Shift+Tab move focus, and so do Ctrl+Tab and Ctrl+Shift+Tab
+/// (which leave a multi-line edit, where Tab types, as in Windows' own
+/// edits); the root leaves them to Masonry.
 fn is_focus_key(k: &KeyboardEvent) -> bool {
-    k.key == Key::Named(NamedKey::Tab) && !k.modifiers.ctrl() && !k.modifiers.alt()
+    k.key == Key::Named(NamedKey::Tab) && !k.modifiers.alt()
 }
 
 // --- Region.
@@ -360,6 +362,12 @@ impl ActionButton {
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.description = description.into();
         self
+    }
+
+    /// Changes the description (the interface language changed).
+    pub fn set_description(this: &mut WidgetMut<'_, Self>, description: impl Into<String>) {
+        this.widget.description = description.into();
+        this.ctx.request_accessibility_update();
     }
 
     /// Changes the text and name (Play becomes Pause).

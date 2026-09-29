@@ -382,6 +382,36 @@ pub const INFO: &[Info] = &[
             ("avspeech", "AVSpeechSynthesizer"),
         ],
     ),
+    optional(
+        "speech.dectalk.library",
+        "DECtalk library",
+        "The DECtalk library to load; not set searches the usual places.",
+    ),
+    optional(
+        "speech.piper.voices",
+        "Piper voices folder",
+        "The folder of Piper voices; not set uses the piper folder in textweaver's data folder.",
+    ),
+    optional(
+        "speech.piper.voice",
+        "Piper voice",
+        "The Piper voice to start with, by id; not set takes the first installed.",
+    ),
+    choice(
+        "speech.piper.phonemizer",
+        "Piper phonemizer",
+        "How Piper turns text into sounds: the espeak-ng library when installed, that library, or textweaver's own.",
+        &[
+            ("auto", "automatic"),
+            ("library", "espeak-ng library"),
+            ("rust", "textweaver's own"),
+        ],
+    ),
+    table(
+        "speech.voice_params",
+        "Rate and pitch per voice",
+        "The rate and pitch each voice was last used at; choosing a voice again brings them back.",
+    ),
     // [highlight]
     toggle(
         "highlight.enabled",
@@ -674,6 +704,11 @@ pub const INFO: &[Info] = &[
         (1.0, 4096.0, 16.0),
         "megabytes",
     ),
+    text(
+        "editing.author",
+        "Author",
+        "The author written into new documents made from a template; empty leaves it blank.",
+    ),
     // [library]
     number(
         "library.recent_limit",
@@ -953,11 +988,6 @@ pub const INFO: &[Info] = &[
         "400 is regular, 700 bold.",
         (100.0, 900.0, 100.0),
         "",
-    ),
-    toggle(
-        "reading_aids.font.fetch_missing",
-        "Offer missing fonts",
-        "Offer to download a reading font that is not installed, after asking.",
     ),
     choice(
         "reading_aids.ruler.mode",
@@ -2040,7 +2070,11 @@ fn restart_note(path: &str) -> Option<&'static str> {
         | "speech.eci.library"
         | "speech.eci.code_factory"
         | "speech.sapi.onecore"
-        | "speech.apple.backend" => Some("settings-restart-speech"),
+        | "speech.apple.backend"
+        | "speech.dectalk.library"
+        | "speech.piper.voices"
+        | "speech.piper.voice"
+        | "speech.piper.phonemizer" => Some("settings-restart-speech"),
         "keyboard.preset" | "keyboard.digit_row" => Some("settings-next-start"),
         _ => None,
     }

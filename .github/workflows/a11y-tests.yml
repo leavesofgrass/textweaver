@@ -8,8 +8,10 @@
 # - voiceover: the same session with VoiceOver on a macOS runner, if the
 #   runner lets Guidepup enable it (tools/a11y/voiceover-session.mjs).
 # Each job's report is in the run summary: every line starts with Pass,
-# Fail, Warning, or Heard, in words. The sessions are report-only
-# (continue-on-error) until ADR-0039 records them as standing.
+# Fail, Warning, or Heard, in words. The session steps are report-only
+# (continue-on-error on the step), so a job fails only when the GUI or the
+# tools cannot be built or installed, until ADR-0039 records a session as
+# standing.
 #
 # NVDA and VoiceOver are installed and driven on the runners only. The
 # scripts refuse to run anywhere else, so no one's own screen reader is
@@ -88,7 +90,6 @@ jobs:
     if: github.event_name != 'workflow_dispatch' || inputs.session == 'all' || inputs.session == 'nvda'
     runs-on: windows-latest
     timeout-minutes: 90
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - run: rustup toolchain install
@@ -116,6 +117,7 @@ jobs:
         working-directory: tools/a11y
         run: npx --no guidepup install nvda
       - name: NVDA session
+        continue-on-error: true
         shell: pwsh
         run: node tools/a11y/nvda-session.mjs --exe target/debug/textweaver-xilem.exe --out nvda
       - uses: actions/upload-artifact@v7
@@ -129,7 +131,6 @@ jobs:
     if: github.event_name != 'workflow_dispatch' || inputs.session == 'all' || inputs.session == 'orca'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - run: rustup toolchain install
@@ -149,6 +150,7 @@ jobs:
       - name: Build the GUI (hybrid renderer, which suits Mesa's software GPU)
         run: cargo build --locked -p textweaver-xilem --no-default-features --features screenshot,renderer-hybrid
       - name: AT-SPI reading session, with Orca
+        continue-on-error: true
         run: bash tools/a11y/orca-session.sh orca
       - name: Report in the run summary
         if: always()
@@ -170,10 +172,14 @@ jobs:
 
   voiceover:
     if: github.event_name != 'workflow_dispatch' || inputs.session == 'all' || inputs.session == 'voiceover'
-    # The macOS version Guidepup's VoiceOver support names (Sonoma).
-    runs-on: macos-14
+    # macOS 14 (Sonoma) as the brief asked, and 15 (Sequoia), both named by
+    # Guidepup: on the first run VoiceOver could not be started on 14.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 90
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - run: rustup toolchain install
@@ -193,15 +199,30 @@ jobs:
       # Lets AppleScript drive VoiceOver and turns off prompts, on this
       # runner only. If the runner cannot allow it, the session says so.
       - name: VoiceOver setup (guidepup setup --ci)
+        continue-on-error: true
         working-directory: tools/a11y
         run: npx --no guidepup setup --ci 2>&1 | tee ../../voiceover-setup.log
+      # What decides whether VoiceOver can start: the system version, System
+      # Integrity Protection, and whether AppleScript may drive VoiceOver.
+      - name: VoiceOver diagnostics
+        if: always()
+        continue-on-error: true
+        run: |
+          {
+            echo "## Runner"
+            sw_vers
+            csrutil status || true
+            echo "SCREnableAppleScript (VoiceOver4 default): $(defaults read com.apple.VoiceOver4/default SCREnableAppleScript 2>&1 || true)"
+            echo "VoiceOver running before the session: $(pgrep -x VoiceOver >/dev/null && echo yes || echo no)"
+          } | tee -a voiceover-setup.log
       - name: VoiceOver session
         if: always()
+        continue-on-error: true
         run: node tools/a11y/voiceover-session.mjs --exe target/debug/textweaver-xilem --out voiceover
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: a11y-voiceover
+          name: a11y-voiceover-${{ matrix.os }}
           path: |
             voiceover/
             voiceover-setup.log

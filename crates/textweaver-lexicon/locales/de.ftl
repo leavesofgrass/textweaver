@@ -966,7 +966,7 @@ voice-volume-off = Lautstärke aus.
 voice-volume = Lautstärke { $pct } Prozent.
 voice-no-speed-presets = Keine Geschwindigkeitsvorgaben.
 # $name is the preset's name from the settings, such as "Study".
-voice-speed-preset = Geschwindigkeit { $name }, { $wpm } Wörter pro Minute.
+voice-speed-preset = { $name }, Tempo { $wpm }.
 voice-line-numbers-on = Zeilennummern an.
 voice-line-numbers-off = Zeilennummern aus.
 
@@ -1263,8 +1263,8 @@ library-scan-stopped = Die Bibliotheksdurchsuchung wurde durch einen internen Fe
 library-empty = Die Bibliothek ist leer. Fügen Sie einen Ordner hinzu mit { $command }, oder öffnen Sie eine Datei mit { $key }.
 library-intro =
     { $n ->
-        [one] Bibliothek, { $n } Dokument. Eingabetaste öffnet eines.
-       *[other] Bibliothek, { $n } Dokumente. Eingabetaste öffnet eines.
+        [one] Bibliothek, { $n } Dokument. Tippen filtert, Eingabetaste öffnet eines.
+       *[other] Bibliothek, { $n } Dokumente. Tippen filtert, Eingabetaste öffnet eines.
     }
 library-title = Bibliothek
 
@@ -1856,8 +1856,6 @@ setting-reading-aids-font-size-pt = Schriftgröße
 setting-reading-aids-font-size-pt-help = Die Schriftgröße der grafischen Oberfläche.
 setting-reading-aids-font-weight = Schriftstärke
 setting-reading-aids-font-weight-help = 400 ist regulär, 700 fett.
-setting-reading-aids-font-fetch-missing = Fehlende Schriften anbieten
-setting-reading-aids-font-fetch-missing-help = Anbieten, eine nicht installierte Leseschrift herunterzuladen, nach Rückfrage.
 setting-reading-aids-ruler-mode = Leselineal
 setting-reading-aids-ruler-mode-help = Die aktuelle Zeile markieren, oder ein Band von Zeilen.
 choice-reading-aids-ruler-mode-off = aus
@@ -2653,3 +2651,98 @@ lists-filter-matched-pages =
 prompt-go-to-pages = Gehe zu Seite, oder Zeile 12, Prozent, start oder end
 goto-not-a-target-pages = Kein Sprungziel: { $text }. Geben Sie eine Seitenzahl ein, Zeile und eine Zahl, einen Prozentwert wie 50%, start oder end.
 goto-word-page = Seite
+
+## Wave 5 (W5y): der Bibliotheksfilter, das Wörterbuch und die Geschwindigkeiten.
+
+# The library list filtered: $shown of $n documents match $filter.
+library-title-filtered = Bibliothek, { $shown } von { $n } stimmen mit { $filter } überein
+# The filter was emptied: $n documents are shown.
+library-filter-cleared =
+    { $n ->
+        [one] Filter gelöscht, { $n } Dokument.
+       *[other] Filter gelöscht, { $n } Dokumente.
+    }
+# No document matches the filter $query.
+library-filter-none = Kein Dokument stimmt mit { $query } überein. Rücktaste entfernt Buchstaben.
+# $n documents match the filter.
+library-filter-matched =
+    { $n ->
+        [one] { $n } Dokument stimmt überein.
+       *[other] { $n } Dokumente stimmen überein.
+    }
+# Said once when define word is used while the dictionary file is still opening.
+define-still-loading = Das Wörterbuch wird noch geladen.
+# Von W5y hinzugefügte Einstellungen.
+setting-speech-dectalk-library = DECtalk-Bibliothek
+setting-speech-dectalk-library-help = Die zu ladende DECtalk-Bibliothek; nicht gesetzt sucht an den üblichen Orten.
+setting-speech-piper-voices = Ordner der Piper-Stimmen
+setting-speech-piper-voices-help = Der Ordner der Piper-Stimmen; nicht gesetzt nutzt den Ordner piper im Datenordner von textweaver.
+setting-speech-piper-voice = Piper-Stimme
+setting-speech-piper-voice-help = Die Piper-Stimme zum Start, nach ID; nicht gesetzt nimmt die erste installierte.
+setting-speech-piper-phonemizer = Piper-Phonemisierer
+setting-speech-piper-phonemizer-help = Wie Piper Text in Laute umwandelt: die espeak-ng-Bibliothek, wenn installiert, diese Bibliothek oder der von textweaver.
+choice-speech-piper-phonemizer-auto = automatisch
+choice-speech-piper-phonemizer-library = espeak-ng-Bibliothek
+choice-speech-piper-phonemizer-rust = der von textweaver
+setting-speech-voice-params = Tempo und Tonhöhe je Stimme
+setting-speech-voice-params-help = Tempo und Tonhöhe, mit denen jede Stimme zuletzt genutzt wurde; wird die Stimme wieder gewählt, kehren sie zurück.
+setting-editing-author = Autor
+setting-editing-author-help = Der Autor, der in neue Dokumente aus einer Vorlage geschrieben wird; leer lässt ihn frei.
+
+## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
+## Keep the letters Y and N: they are the keys that answer.
+
+gui-yes = Ja
+gui-no = Nein
+gui-question-hint = Y antwortet ja, N antwortet nein, Escape antwortet nein.
+gui-button-open = Öffnen…
+gui-button-font = Schriftart…
+gui-button-edit = Bearbeiten
+gui-button-finish-editing = Bearbeiten beenden
+gui-button-settings = Einstellungen…
+gui-button-commands = Befehle…
+gui-button-play = Abspielen
+gui-button-pause = Pause
+gui-button-stop = Stopp
+gui-button-previous-sentence = Vorheriger Satz
+gui-button-next-sentence = Nächster Satz
+gui-button-slower = Langsamer
+gui-button-faster = Schneller
+gui-button-close = Schließen
+gui-toolbar-reading = Lesen
+gui-document = Dokument
+gui-list-hint = Eingabetaste wählt, Escape schließt.
+gui-settings-sections = Bereiche
+gui-settings-form = Einstellungen: { $section }
+gui-settings-saved-hint = Änderungen wirken sofort und werden sofort gespeichert.
+gui-settings-close-help = Die Einstellungen schließen. Jede Änderung ist bereits gespeichert.
+gui-settings-closed = Einstellungen geschlossen.
+gui-settings-table = { $label } ist eine Tabelle. Bearbeiten Sie sie in settings.toml.
+gui-setting-new-value = Neuer Wert für { $label }
+gui-setting-value-hint = Eingabetaste übernimmt, Escape geht zurück.
+gui-prompt-path-hint = Geben Sie den Pfad eines Dokuments ein und drücken Sie die Eingabetaste. Tab vervollständigt ihn; Pfeil nach oben und unten holen frühere zurück.
+gui-prompt-hint = Eingabetaste übernimmt, Escape bricht ab. Pfeil nach oben und unten holen frühere Antworten zurück.
+gui-palette-filter = Tippen, um die Befehle zu filtern
+gui-palette-list = Befehle
+gui-palette-hint = Eingabetaste führt den ersten Treffer aus; Tab wechselt zur Liste.
+gui-no-document = Kein Dokument ist geöffnet. Drücken Sie { $key }, um eines zu öffnen.
+gui-open-failed = { $path } konnte nicht geöffnet werden: { $error }
+gui-uia-unavailable = UI-Automation-Benachrichtigungen gibt es nur unter Windows; die Live-Region wird verwendet.
+gui-rsvp = RSVP
+gui-rsvp-playing = RSVP läuft, Wort { $n } von { $total }
+gui-rsvp-paused = RSVP pausiert, Wort { $n } von { $total }
+gui-rsvp-finished = RSVP beendet, Wort { $n } von { $total }
+gui-settings-section-item =
+    { $section }, { $n ->
+        [one] 1 Einstellung
+       *[other] { $n } Einstellungen
+    }
+gui-palette-count =
+    { $n ->
+        [0] Kein Befehl passt.
+        [one] 1 Befehl.
+       *[other] { $n } Befehle.
+    }
+gui-settings-form-help = Pfeil nach oben und unten wechseln zwischen Einstellungen. Pfeil nach links und rechts ändern eine. Die Eingabetaste gibt einen neuen Wert ein. Entf stellt den Standard wieder her. { $next } und { $previous } wechseln den Bereich.
+gui-settings-press-enter = Drücken Sie die Eingabetaste, um einen neuen Wert für { $label } einzugeben.
+gui-font-built-in = { $family } (eingebaut)

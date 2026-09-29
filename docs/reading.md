@@ -296,19 +296,25 @@ Press **Escape** when nothing is being read. You hear "Search cleared."
 tw search essay.md "mitochondria" --whole-word
 ```
 
-## Go to a line or a percentage: Ctrl+G
+## Go to a line, a page, or a percentage: Ctrl+G
 
-Press **Ctrl+G**. The prompt says "Go to line, percent, start, or end". Type one of these and press **Enter**:
+Press **Ctrl+G**. In a document with pages (a PDF, or any other paged format), the prompt says "Go to page, or line 12, percent, start, or end"; otherwise it says "Go to line, percent, start, or end". Type one of these and press **Enter**:
 
-- a line number, such as `42` or `line 42`;
+- in a paged document, a plain number, such as `12`, which is a page (`line 12` is still a line);
+- a page by its printed label, `page 12` or `p 12`, in any document with pages; a number that matches no printed label is the nth page; the printed label wins, so `p 1` is the page printed "1" even after pages numbered i to x;
+- a line number, such as `line 42` (or a plain number in a document with no pages);
 - a percentage, such as `50%` or `50 percent`;
 - a character position, counted from 0, such as `char 120` or `character 120`;
 - `start`, `top`, `beginning`, or `begin`;
 - `end` or `bottom`.
 
-You hear the percentage, the line, and a preview. Anything else gives: "Not a go-to target:", your text, then "Type a line number, a percentage such as 50%, start, or end."
+You hear the page or the percentage, the line, and a preview. Anything else gives, in a paged document: "Not a go-to target:", your text, then "Type a page number, line and a number, a percentage such as 50%, start, or end." Elsewhere: "Type a line number, a percentage such as 50%, start, or end."
 
-Line numbers are lines of the document's text, as in Speech Cursor mode. Press **F6** to show them on screen. There is no way to go to a printed page number yet.
+Line numbers are lines of the document's text, as in Speech Cursor mode. Press **F6** to show them on screen.
+
+### Pages in a PDF
+
+A PDF, and any other paged format, carries its printed page labels. **Say Position** (**Shift+W**) and the title line name the page first: "Page 12 of 30." When the document has no headings, the outline (**Alt+O**) lists its pages instead: "Page 12: its first words," one per page.
 
 ## Citations while reading
 
@@ -354,7 +360,7 @@ The history keeps the last 50 places. Change that with `[reading] nav_history_si
 
 ## Where am I: Shift+W or Alt+Shift+Y
 
-Press **Shift+W**, or **Alt+Shift+Y** from any mode. You hear the line, the number of lines, and the percentage, for example "Line 12 of 300, 4 percent." In a table you also hear where in it: "Table, row 2 of 5, column 3 of 4." At normal verbosity you also hear the word number and the heading above you: "Under heading Methods." At high verbosity you also hear the document's title and the mode, when it is not plain reading. This works in edit mode too, on the headings as you have written them.
+Press **Shift+W**, or **Alt+Shift+Y** from any mode. You hear the line, the number of lines, and the percentage, for example "Line 12 of 300, 4 percent." In a PDF, or any other paged format, the page comes first: "Page 12 of 30. Line 400 of 2000, 20 percent." In a table you also hear where in it: "Table, row 2 of 5, column 3 of 4." At normal verbosity you also hear the word number and the heading above you: "Under heading Methods." At high verbosity you also hear the document's title and the mode, when it is not plain reading. This works in edit mode too, on the headings as you have written them.
 
 ## Hear it again: ' and z
 

@@ -277,6 +277,12 @@ impl App {
         misspelled_words(&s.doc, markdown, list, &personal)
     }
 
+    /// Where the misspelled words are, for a frontend to mark them (the
+    /// window's dotted underline; W5a4).
+    pub fn misspelled_ranges(&mut self) -> Vec<CharRange> {
+        self.misspellings().into_iter().map(|w| w.range).collect()
+    }
+
     /// Alt+M and Alt+Shift+M: the next or previous misspelled word.
     pub(crate) fn misspelling_step(&mut self, dir: Direction) {
         if ScowlList::builtin().is_none() {

@@ -137,6 +137,33 @@ export function report(args, title, answer, steps, result, notes = []) {
   console.log(text);
 }
 
+/**
+ * The answer line: "yes" when the screen reader named the window or spoke
+ * one of the GUI's own announcements, which the GUI's log lists
+ * ("announce Polite: Paused."), so the phrase can only have come from it.
+ */
+export function answerFor(reader, args, steps) {
+  let announced = [];
+  try {
+    announced = fs
+      .readFileSync(path.join(args.out, "gui.log"), "utf8")
+      .split(/\r?\n/)
+      .map((l) => l.match(/^announce \w+: (.+)$/))
+      .filter(Boolean)
+      .map((m) => m[1].trim());
+  } catch {
+    // No log: only the window's name can answer.
+  }
+  const all = steps.flatMap((s) => s.phrases);
+  const named = all.filter((p) => /Reading check|textweaver/i.test(p)).length;
+  const spoken = announced.filter((a) => all.some((p) => p.includes(a.replace(/\.$/, "")))).length;
+  if (named || spoken) {
+    return `Answer: yes. ${reader} spoke ${all.length} phrases from the textweaver window: ` +
+      `${spoken} of its ${announced.length} announcements, and its name ${named} times.`;
+  }
+  return `Answer: no. ${reader} spoke ${all.length} phrases, none from the textweaver window; see the steps and gui.log.`;
+}
+
 /** Loads the expectations file. */
 export function loadExpected(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));

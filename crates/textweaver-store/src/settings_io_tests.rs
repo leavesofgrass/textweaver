@@ -54,6 +54,17 @@ fn everything_changed() -> Settings {
         .insert("future_eci".into(), toml::Value::Boolean(true));
     sp.sapi.onecore = false;
     sp.apple.backend = AppleBackend::AvSpeech;
+    sp.dectalk.library = Some("C:/dectalk/DECtalk.dll".into());
+    sp.piper.voices = Some("D:/voices".into());
+    sp.piper.voice = Some("en_US-amy-medium".into());
+    sp.piper.phonemizer = crate::PiperPhonemizer::Rust;
+    sp.voice_params = BTreeMap::from([(
+        "sapi:David".to_owned(),
+        crate::RememberedVoice {
+            rate: 310,
+            pitch: -1,
+        },
+    )]);
     sp.extra
         .insert("new_engine_option".into(), toml::Value::String("x".into()));
     let h = &mut s.highlight;
@@ -100,6 +111,7 @@ fn everything_changed() -> Settings {
     e.echo_lines_on_move = false;
     e.undo_steps = 200;
     e.undo_memory_mb = 10;
+    e.author = "Ada Example".into();
     s.library.recent_limit = 10;
     s.library.folders = vec!["C:/Books".into()];
     s.keyboard.character_keys = false;
@@ -159,7 +171,6 @@ fn everything_changed() -> Settings {
         family: "serif".into(),
         size_pt: 18.0,
         weight: 700,
-        fetch_missing: false,
     };
     a.ruler = crate::reading_aids::RulerSettings {
         mode: crate::reading_aids::RulerMode::Ruler,

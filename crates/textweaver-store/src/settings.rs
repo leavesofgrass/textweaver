@@ -71,6 +71,14 @@ pub struct SpeechSettings {
     pub sapi: SapiSettings,
     /// `[speech.apple]`: Apple speech on macOS (ADR-0008).
     pub apple: AppleSettings,
+    /// `[speech.dectalk]`: the DECtalk engine (ADR-0021).
+    pub dectalk: DectalkSettings,
+    /// `[speech.piper]`: Piper neural voices (ADR-0023).
+    pub piper: PiperSettings,
+    /// `[speech.voice_params]`: the rate and pitch each voice was last used
+    /// at, keyed `"engine:voice"` (`"sapi:David"`); choosing the voice again
+    /// brings them back. Written by the voice list, not by hand.
+    pub voice_params: BTreeMap<String, RememberedVoice>,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -201,6 +209,57 @@ pub struct AppleSettings {
     pub extra: toml::Table,
 }
 
+/// `[speech.dectalk]`: the DECtalk engine.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DectalkSettings {
+    /// The DECtalk library to load; unset searches the usual places
+    /// (`TEXTWEAVER_DECTALK_LIBRARY` still wins for one run).
+    pub library: Option<PathBuf>,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+/// How Piper turns text into phonemes.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PiperPhonemizer {
+    /// The espeak-ng library when it is installed, else the pure-Rust one.
+    #[default]
+    Auto,
+    /// The espeak-ng library.
+    Library,
+    /// The pure-Rust phonemizer.
+    Rust,
+}
+
+/// `[speech.piper]`: Piper neural voices.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PiperSettings {
+    /// The folder of Piper voices; unset uses `<data>/piper/voices`
+    /// (`TEXTWEAVER_PIPER_VOICES` still wins for one run).
+    pub voices: Option<PathBuf>,
+    /// The voice to start with, by id; unset takes the first installed.
+    pub voice: Option<String>,
+    /// How text becomes phonemes.
+    pub phonemizer: PiperPhonemizer,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+/// The rate and pitch a voice was last used at (`[speech.voice_params]`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RememberedVoice {
+    /// Words per minute.
+    pub rate: u16,
+    /// Semitones from the voice's own pitch.
+    #[serde(default)]
+    pub pitch: i8,
+}
+
 impl Default for SpeechSettings {
     fn default() -> Self {
         SpeechSettings {
@@ -231,6 +290,9 @@ impl Default for SpeechSettings {
             eci: EciSettings::default(),
             sapi: SapiSettings::default(),
             apple: AppleSettings::default(),
+            dectalk: DectalkSettings::default(),
+            piper: PiperSettings::default(),
+            voice_params: BTreeMap::new(),
             extra: toml::Table::new(),
         }
     }
@@ -257,6 +319,34 @@ mod empty_is_none {
 /// setting is read nowhere and is not listed here, and when a listed one is
 /// read after all (Star's lesson: a stored setting must work).
 pub const RESERVED_SETTINGS: &[(&str, &str)] = &[];
+
+/// Settings that were removed, as `(section.key, reason)`. Loading drops
+/// them from `settings.toml` (they are never kept as unknown keys), and the
+/// next save leaves them out.
+pub const REMOVED_SETTINGS: &[(&str, &str)] = &[(
+    "reading_aids.font.fetch_missing",
+    "textweaver never downloads fonts; a missing reading font is named, and the reading guide says where to get it",
+)];
+
+/// Drops the [`REMOVED_SETTINGS`] from a parsed `settings.toml`; returns
+/// the keys that were there.
+pub fn drop_removed_settings(table: &mut toml::Table) -> Vec<&'static str> {
+    let mut found = Vec::new();
+    for (path, _) in REMOVED_SETTINGS {
+        let mut parts: Vec<&str> = path.split('.').collect();
+        let Some(last) = parts.pop() else { continue };
+        let mut cur = Some(&mut *table);
+        for p in parts {
+            cur = cur
+                .and_then(|t| t.get_mut(p))
+                .and_then(toml::Value::as_table_mut);
+        }
+        if cur.and_then(|t| t.remove(last)).is_some() {
+            found.push(*path);
+        }
+    }
+    found
+}
 
 /// Reading highlight settings.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -655,6 +745,9 @@ pub struct EditingSettings {
     pub undo_steps: usize,
     /// Most memory the undo history may use, in megabytes (at least 1).
     pub undo_memory_mb: usize,
+    /// The author written into new documents made from a template (their
+    /// front matter's `author`); empty leaves it blank.
+    pub author: String,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -671,6 +764,7 @@ impl Default for EditingSettings {
             echo_lines_on_move: true,
             undo_steps: 1000,
             undo_memory_mb: 50,
+            author: String::new(),
             extra: toml::Table::new(),
         }
     }
@@ -1090,6 +1184,31 @@ impl SettingsLoad {
     }
 }
 
+/// `[speech.voice_params]` entry by entry: one bad entry is dropped and
+/// reported, the rest kept.
+fn voice_params_leniently(
+    value: Option<toml::Value>,
+    warnings: &mut Vec<String>,
+) -> BTreeMap<String, RememberedVoice> {
+    let mut out = BTreeMap::new();
+    let Some(value) = value else {
+        return out;
+    };
+    let toml::Value::Table(table) = value else {
+        warnings.push("[speech.voice_params] is not a table".to_owned());
+        return out;
+    };
+    for (key, v) in table {
+        match v.try_into::<RememberedVoice>() {
+            Ok(p) => {
+                out.insert(key, p);
+            }
+            Err(_) => warnings.push(format!("speech.voice_params.{key} has an invalid value")),
+        }
+    }
+    out
+}
+
 /// Deserializes one settings table leniently: the whole table when it is
 /// valid, otherwise key by key, dropping (and reporting) the keys whose
 /// values do not fit. Unknown keys always survive in the table's `extra`.
@@ -1138,6 +1257,9 @@ impl Settings {
     /// values, so an import can report them as errors instead.
     pub(crate) fn from_table_unclamped(mut table: toml::Table) -> (Settings, Vec<String>) {
         let mut w = Vec::new();
+        for key in drop_removed_settings(&mut table) {
+            log::info!("settings: {key} was removed and is dropped");
+        }
         // Engine sub-tables are read on their own, so one bad value in
         // `[speech.eci]` does not throw away the rest of `[speech]`.
         let mut speech_table = table.remove("speech");
@@ -1146,10 +1268,14 @@ impl Settings {
             _ => None,
         };
         let (eci, sapi, apple) = (sub("eci"), sub("sapi"), sub("apple"));
+        let (dectalk, piper, voice_params) = (sub("dectalk"), sub("piper"), sub("voice_params"));
         let mut speech: SpeechSettings = lenient_section("speech", speech_table, &mut w);
         speech.eci = lenient_section("speech.eci", eci, &mut w);
         speech.sapi = lenient_section("speech.sapi", sapi, &mut w);
         speech.apple = lenient_section("speech.apple", apple, &mut w);
+        speech.dectalk = lenient_section("speech.dectalk", dectalk, &mut w);
+        speech.piper = lenient_section("speech.piper", piper, &mut w);
+        speech.voice_params = voice_params_leniently(voice_params, &mut w);
         let mut normalization_table = table.remove("normalization");
         let lexicon = match &mut normalization_table {
             Some(toml::Value::Table(t)) => t.remove("community_lexicon"),
@@ -1361,7 +1487,7 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 27] = [
+pub(crate) const STRUCT_TABLES: [&str; 29] = [
     "keyboard",
     "preview",
     "lexicon",
@@ -1383,6 +1509,8 @@ pub(crate) const STRUCT_TABLES: [&str; 27] = [
     "speech.eci",
     "speech.sapi",
     "speech.apple",
+    "speech.dectalk",
+    "speech.piper",
     "highlight",
     "normalization",
     "reading",
@@ -2206,6 +2334,64 @@ wrap_navigation = true
         );
         write(&store, "[speech.eci]\ndictionaries = true\n");
         assert_eq!(store.load().0.speech.eci.dictionaries, EciDictionaries::On);
+    }
+
+    /// Wave 5 (W5y): DECtalk, Piper, the per-voice rate and pitch, and the
+    /// template author are typed settings; a removed setting is dropped.
+    #[test]
+    fn engine_sections_voice_params_author_and_removed_settings() {
+        let (_d, store) = store();
+        write(
+            &store,
+            "[speech]\nrate = 300\n\
+             [speech.dectalk]\nlibrary = \"C:/dectalk/DECtalk.dll\"\n\
+             [speech.piper]\nvoice = \"en_US-amy-medium\"\nphonemizer = \"rust\"\n\
+             [speech.voice_params]\n\"sapi:David\" = { rate = 310, pitch = -1 }\n\"piper:x\" = { rate = 250 }\nbad = { rate = \"fast\" }\n\
+             [reading_aids.font]\nsize_pt = 16\nfetch_missing = false\n\
+             [editing]\nauthor = \"Ada Example\"\n",
+        );
+        let loaded = store.load_detailed();
+        let s = &loaded.settings;
+        assert_eq!(s.speech.rate, Rate::Wpm(300));
+        assert_eq!(
+            s.speech.dectalk.library.as_deref(),
+            Some(std::path::Path::new("C:/dectalk/DECtalk.dll"))
+        );
+        assert_eq!(s.speech.piper.voice.as_deref(), Some("en_US-amy-medium"));
+        assert_eq!(s.speech.piper.phonemizer, PiperPhonemizer::Rust);
+        assert_eq!(s.speech.piper.voices, None);
+        assert_eq!(
+            s.speech.voice_params["sapi:David"],
+            RememberedVoice {
+                rate: 310,
+                pitch: -1
+            }
+        );
+        assert_eq!(s.speech.voice_params["piper:x"].pitch, 0);
+        assert!(!s.speech.voice_params.contains_key("bad"));
+        assert!(s.speech.extra.is_empty(), "{:?}", s.speech.extra);
+        assert_eq!(
+            loaded.warnings,
+            vec!["speech.voice_params.bad has an invalid value"]
+        );
+        assert_eq!(s.reading_aids.font.size_pt, 16.0);
+        assert_eq!(s.editing.author, "Ada Example");
+        assert!(s.editing.extra.is_empty());
+        store.save(s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(!text.contains("fetch_missing"), "{text}");
+        assert!(text.contains("[speech.voice_params"), "{text}");
+        assert_eq!(store.load().0, *s, "round trip");
+
+        let mut t: toml::Table = "[reading_aids.font]\nfetch_missing = true\n[x]\ny = 1\n"
+            .parse()
+            .unwrap();
+        assert_eq!(
+            drop_removed_settings(&mut t),
+            ["reading_aids.font.fetch_missing"]
+        );
+        assert!(t["reading_aids"]["font"].as_table().unwrap().is_empty());
+        assert!(drop_removed_settings(&mut t).is_empty());
     }
 
     /// `[accessibility]` and `[keyboard] preset` are stored by name, only

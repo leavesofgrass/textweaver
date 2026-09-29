@@ -930,7 +930,7 @@ voice-volume-off = Volumen desactivado.
 voice-volume = Volumen { $pct } por ciento.
 voice-no-speed-presets = No hay velocidades preestablecidas.
 # $name is the preset's name from the settings, such as "Study".
-voice-speed-preset = Velocidad { $name }, { $wpm } palabras por minuto.
+voice-speed-preset = { $name }, velocidad { $wpm }.
 voice-line-numbers-on = Números de línea activados.
 voice-line-numbers-off = Números de línea desactivados.
 
@@ -1227,8 +1227,8 @@ library-scan-stopped = La exploración de la biblioteca se detuvo por un error i
 library-empty = La biblioteca está vacía. Agregue una carpeta con { $command }, o abra un archivo con { $key }.
 library-intro =
     { $n ->
-        [one] Biblioteca, { $n } documento. Intro abre uno.
-       *[other] Biblioteca, { $n } documentos. Intro abre uno.
+        [one] Biblioteca, { $n } documento. Escriba para filtrar, Intro abre uno.
+       *[other] Biblioteca, { $n } documentos. Escriba para filtrar, Intro abre uno.
     }
 library-title = Biblioteca
 
@@ -1820,8 +1820,6 @@ setting-reading-aids-font-size-pt = Tamaño de fuente
 setting-reading-aids-font-size-pt-help = El tamaño de fuente de la interfaz gráfica.
 setting-reading-aids-font-weight = Grosor de fuente
 setting-reading-aids-font-weight-help = 400 es normal, 700 negrita.
-setting-reading-aids-font-fetch-missing = Ofrecer fuentes que faltan
-setting-reading-aids-font-fetch-missing-help = Ofrecer descargar una fuente de lectura que no está instalada, tras preguntar.
 setting-reading-aids-ruler-mode = Regla de lectura
 setting-reading-aids-ruler-mode-help = Marcar la línea actual, o una banda de líneas.
 choice-reading-aids-ruler-mode-off = desactivada
@@ -2617,3 +2615,98 @@ lists-filter-matched-pages =
 prompt-go-to-pages = Ir a página, o línea 12, porcentaje, inicio o fin
 goto-not-a-target-pages = No es un destino válido: { $text }. Escriba un número de página, línea y un número, un porcentaje como 50%, inicio o fin.
 goto-word-page = página
+
+## Wave 5 (W5y): el filtro de la biblioteca, el diccionario y las velocidades.
+
+# The library list filtered: $shown of $n documents match $filter.
+library-title-filtered = Biblioteca, { $shown } de { $n } coinciden con { $filter }
+# The filter was emptied: $n documents are shown.
+library-filter-cleared =
+    { $n ->
+        [one] Filtro borrado, { $n } documento.
+       *[other] Filtro borrado, { $n } documentos.
+    }
+# No document matches the filter $query.
+library-filter-none = Ningún documento coincide con { $query }. Retroceso quita letras.
+# $n documents match the filter.
+library-filter-matched =
+    { $n ->
+        [one] { $n } documento coincide.
+       *[other] { $n } documentos coinciden.
+    }
+# Said once when define word is used while the dictionary file is still opening.
+define-still-loading = El diccionario aún se está cargando.
+# Ajustes añadidos por W5y.
+setting-speech-dectalk-library = Biblioteca de DECtalk
+setting-speech-dectalk-library-help = La biblioteca de DECtalk que se cargará; sin definir busca en los lugares habituales.
+setting-speech-piper-voices = Carpeta de voces de Piper
+setting-speech-piper-voices-help = La carpeta de voces de Piper; sin definir usa la carpeta piper de la carpeta de datos de textweaver.
+setting-speech-piper-voice = Voz de Piper
+setting-speech-piper-voice-help = La voz de Piper con la que empezar, por su id; sin definir toma la primera instalada.
+setting-speech-piper-phonemizer = Fonetizador de Piper
+setting-speech-piper-phonemizer-help = Cómo convierte Piper el texto en sonidos: la biblioteca espeak-ng si está instalada, esa biblioteca o el de textweaver.
+choice-speech-piper-phonemizer-auto = automático
+choice-speech-piper-phonemizer-library = biblioteca espeak-ng
+choice-speech-piper-phonemizer-rust = el de textweaver
+setting-speech-voice-params = Velocidad y tono por voz
+setting-speech-voice-params-help = La velocidad y el tono con que se usó cada voz por última vez; al elegir de nuevo una voz, vuelven.
+setting-editing-author = Autor
+setting-editing-author-help = El autor que se escribe en los documentos nuevos hechos con una plantilla; vacío lo deja en blanco.
+
+## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
+## Keep the letters Y and N: they are the keys that answer.
+
+gui-yes = Sí
+gui-no = No
+gui-question-hint = Y responde sí, N responde no, Escape responde no.
+gui-button-open = Abrir…
+gui-button-font = Fuente…
+gui-button-edit = Editar
+gui-button-finish-editing = Terminar de editar
+gui-button-settings = Configuración…
+gui-button-commands = Comandos…
+gui-button-play = Reproducir
+gui-button-pause = Pausa
+gui-button-stop = Detener
+gui-button-previous-sentence = Frase anterior
+gui-button-next-sentence = Frase siguiente
+gui-button-slower = Más lento
+gui-button-faster = Más rápido
+gui-button-close = Cerrar
+gui-toolbar-reading = Lectura
+gui-document = Documento
+gui-list-hint = Intro elige, Escape cierra.
+gui-settings-sections = Secciones
+gui-settings-form = Configuración: { $section }
+gui-settings-saved-hint = Los cambios se aplican y se guardan al momento.
+gui-settings-close-help = Cerrar la configuración. Cada cambio ya está guardado.
+gui-settings-closed = Configuración cerrada.
+gui-settings-table = { $label } es una tabla. Edítela en settings.toml.
+gui-setting-new-value = Nuevo valor para { $label }
+gui-setting-value-hint = Pulse Intro para aceptar, o Escape para volver.
+gui-prompt-path-hint = Escriba la ruta de un documento y pulse Intro. Tab la completa; Arriba y Abajo recuperan las anteriores.
+gui-prompt-hint = Pulse Intro para aceptar, o Escape para cancelar. Arriba y Abajo recuperan respuestas anteriores.
+gui-palette-filter = Escriba para filtrar los comandos
+gui-palette-list = Comandos
+gui-palette-hint = Intro ejecuta la primera coincidencia; Tab pasa a la lista.
+gui-no-document = No hay ningún documento abierto. Pulse { $key } para abrir uno.
+gui-open-failed = No se pudo abrir { $path }: { $error }
+gui-uia-unavailable = Las notificaciones de UI Automation solo existen en Windows; se usa la región activa.
+gui-rsvp = RSVP
+gui-rsvp-playing = RSVP en marcha, palabra { $n } de { $total }
+gui-rsvp-paused = RSVP en pausa, palabra { $n } de { $total }
+gui-rsvp-finished = RSVP terminado, palabra { $n } de { $total }
+gui-settings-section-item =
+    { $section }, { $n ->
+        [one] 1 ajuste
+       *[other] { $n } ajustes
+    }
+gui-palette-count =
+    { $n ->
+        [0] Ningún comando coincide.
+        [one] 1 comando.
+       *[other] { $n } comandos.
+    }
+gui-settings-form-help = Arriba y Abajo pasan de un ajuste a otro. Izquierda y Derecha cambian uno. Intro escribe un valor nuevo. Suprimir restablece el valor predeterminado. { $next } y { $previous } cambian de sección.
+gui-settings-press-enter = Pulse Intro para escribir un valor nuevo para { $label }.
+gui-font-built-in = { $family } (incluida)

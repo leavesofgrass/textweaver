@@ -29,7 +29,7 @@ use accesskit::{Node, NodeId, TreeUpdate};
 // so wrapping is fine. This could only fail if exactly
 // `u32::MAX` generations happen between drawing
 // operations. This is implausible and so can be ignored.
-#[derive(PartialEq, Eq, Default, Clone, Copy)]
+#[derive(PartialEq, Eq, Default, Clone, Copy, Debug)]
 pub struct Generation(u32);
 
 impl Generation {
@@ -88,7 +88,7 @@ impl<'source> IntoIterator for SplitString<'source> {
 /// Internally, this is a wrapper around a string buffer and its corresponding [`Layout`],
 /// which is kept up-to-date as needed.
 /// This layout is invalidated by a number.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PlainEditor<T>
 where
     T: Brush + Clone + Debug + PartialEq + Default,
@@ -1238,7 +1238,7 @@ where
         self.layout = builder.build(&self.buffer);
         self.layout.break_all_lines(self.width);
         self.layout
-            .align(self.width, self.alignment, AlignmentOptions::default());
+            .align(self.alignment, AlignmentOptions::default());
         self.selection = self.selection.refresh(&self.layout);
         self.layout_dirty = false;
         self.generation.nudge();
