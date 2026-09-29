@@ -12,3 +12,5 @@ third_party/ibmtts-dictionaries/*.dic binary
 third_party/fonts/*/OFL.txt -text
 third_party/scowl/*.zip binary
 third_party/lexicon/*.twlex binary
+# The vendored MathCAT stays byte for byte as its crates.io package (CRLF).
+third_party/mathcat/** -text
