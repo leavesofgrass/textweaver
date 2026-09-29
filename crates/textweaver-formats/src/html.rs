@@ -628,34 +628,30 @@ impl Walker<'_> {
         self.b.soft_space();
     }
 
-    /// An inline `<svg>` drawing: one graphic, named by its `aria-label`,
-    /// else its own `<title>` (SVG-AAM). One with neither is decorative
-    /// and produces nothing, as an image without alternative text does.
+    /// An inline `<svg>` drawing, read as an SVG file is (see
+    /// [`crate::svg`]): a graphic named by its `aria-label` or `<title>`,
+    /// then its description, titled parts, and text. One with nothing to
+    /// read is decorative and produces nothing, as an image without
+    /// alternative text does.
     fn svg(&mut self, el: ElementRef<'_>) {
         if el.attr("role").is_some_and(|r| {
             r.eq_ignore_ascii_case("presentation") || r.eq_ignore_ascii_case("none")
         }) {
             return;
         }
-        let title = || {
-            el.child_elements()
-                .find(|c| c.value().name() == "title")
-                .map(|t| collapse(&t.text().collect::<String>()))
-        };
-        let Some(name) = el
-            .attr("aria-label")
-            .map(collapse)
-            .filter(|s| !s.is_empty())
-            .or_else(title)
-            .filter(|s| !s.is_empty())
-        else {
+        let reading = crate::svg::read(&crate::svg::from_html(el));
+        if self.in_cell > 0 {
+            // In a table cell, only the name: a cell stays one line.
+            if let Some(name) = reading.name {
+                self.b.space();
+                let id = self.b.open(marker(MarkerKind::Image));
+                self.b.text(&name);
+                self.b.close(id);
+                self.b.soft_space();
+            }
             return;
-        };
-        self.b.space();
-        let id = self.b.open(marker(MarkerKind::Image));
-        self.b.text(&name);
-        self.b.close(id);
-        self.b.soft_space();
+        }
+        crate::svg::write_inline(&mut *self.b, &reading);
     }
 
     fn table(&mut self, el: ElementRef<'_>) {
@@ -784,8 +780,9 @@ mod tests {
             ["Sales chart", "Logo of the club"]
         );
         let text = d.text().to_string();
-        assert!(text.contains("Before Sales chart after."), "{text}");
-        for gone in ["ignored", "9", "Deco", "Hidden"] {
+        // The chart's own text follows its name.
+        assert!(text.contains("Before Sales chart\n\n9\n\nafter."), "{text}");
+        for gone in ["ignored", "Deco", "Hidden"] {
             assert!(!text.contains(gone), "{gone} in {text}");
         }
     }

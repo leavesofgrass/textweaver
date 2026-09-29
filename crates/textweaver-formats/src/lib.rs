@@ -27,6 +27,7 @@
 //! | [`ArchiveLoader`]: a list of the files inside, or the DAISY book or EPUB it holds | `zip`, and (feature `archives`) `tar`, `tgz`, `gz`, `7z` | [`NATIVE_PRIORITY`] (10) |
 //! | [`JsonLoader`]: JSON with a heading per key, and JSON Lines with a heading per line | `json`, `jsonl`, `ndjson`, `geojson`, `webmanifest` | [`NATIVE_PRIORITY`] (10) |
 //! | [`NotebookLoader`]: Jupyter notebooks, cell by cell | `ipynb` | [`NATIVE_PRIORITY`] (10) |
+//! | [`SvgLoader`]: a drawing's title, description, titled parts, and text | `svg` | [`NATIVE_PRIORITY`] (10) |
 //! | [`TextLoader`] | `txt`, `text`, `log` (and the fallback for everything else) | 0 |
 //!
 //! Two kinds of path are not plain files:
@@ -90,6 +91,7 @@ pub mod progress;
 mod revision;
 pub mod rtf;
 pub mod sheet;
+pub mod svg;
 mod text;
 #[cfg(feature = "url")]
 pub mod web;
@@ -124,6 +126,7 @@ pub use pptx::PptxLoader;
 pub use progress::{Progress, ProgressReport};
 pub use rtf::RtfLoader;
 pub use sheet::SheetLoader;
+pub use svg::SvgLoader;
 pub use text::TextLoader;
 
 /// Priority of the built-in native loaders for their formats.
@@ -450,6 +453,7 @@ impl Registry {
         r.register(Box::new(ArchiveLoader));
         r.register(Box::new(JsonLoader));
         r.register(Box::new(NotebookLoader));
+        r.register(Box::new(SvgLoader));
         r
     }
 
@@ -708,7 +712,7 @@ mod tests {
         assert!(r.extensions().contains(&"html"));
         // Pictures, archives, and plain XML open by name but are not
         // documents to a folder scan.
-        for not in ["png", "zip", "xml"] {
+        for not in ["png", "zip", "xml", "json", "svg"] {
             assert!(!r.extensions().contains(&not), "{not}");
         }
         assert!(r.extensions().contains(&"opf"));
@@ -721,7 +725,9 @@ mod tests {
         if cfg!(feature = "images") {
             ids.push("image");
         }
-        ids.extend(["daisy", "pptx", "sheet", "archive", "json", "notebook"]);
+        ids.extend([
+            "daisy", "pptx", "sheet", "archive", "json", "notebook", "svg",
+        ]);
         // Pandoc is never a built-in (see `Registry::with_pandoc`).
         ids.extend(["low", "high"]);
         assert_eq!(r.ids(), ids);
