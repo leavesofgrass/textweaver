@@ -399,44 +399,128 @@ fn normalize(s: &str) -> String {
         .collect()
 }
 
-/// Actions matching a palette query: ids that start with it first, then
-/// ids or help texts containing every word of it.
+/// Actions matching a palette query, best first (Wave 6, W6u): an exact
+/// name or id; a name or id that starts with the query; the query's
+/// letters starting the name's words in order ("ep" finds "Export PDF",
+/// "exp pd" too); the query's letters in order anywhere in the name or id;
+/// then every word of the query in the help. Names and help match in the
+/// catalog's language and in English. Ties keep help order.
 pub fn palette_matches(query: &str) -> Vec<ActionId> {
     palette_matches_in(&Catalog::english(), query)
 }
 
-/// [`palette_matches`], also matching the help in the catalog's language.
+/// [`palette_matches`], also matching names and help in the catalog's
+/// language.
 pub fn palette_matches_in(c: &Catalog, query: &str) -> Vec<ActionId> {
-    let q = normalize(query);
+    let q = query.trim().to_lowercase();
     if q.is_empty() {
         return ActionId::ALL.to_vec();
     }
-    let words: Vec<String> = query
-        .to_lowercase()
-        .split_whitespace()
-        .map(str::to_owned)
-        .collect();
-    let mut prefix = Vec::new();
-    let mut other = Vec::new();
+    let english = Catalog::english();
+    let qid = normalize(&q);
+    let words: Vec<&str> = q.split_whitespace().collect();
+    let letters: String = q.chars().filter(|ch| !ch.is_whitespace()).collect();
+    let mut ranked: Vec<(u8, ActionId)> = Vec::new();
     for &a in ActionId::ALL {
         let id = a.id();
-        let help = a.help().to_lowercase();
-        let translated = action_help(c, a).to_lowercase();
-        let palette_name = normalize(&translated);
-        if id.starts_with(&q) || palette_name.starts_with(&q) {
-            prefix.push(a);
-        } else if id.contains(&q)
-            || words.iter().all(|w| {
-                help.contains(w.as_str())
-                    || translated.contains(w.as_str())
-                    || id.contains(w.as_str())
-            })
-        {
-            other.push(a);
+        let mut names = vec![crate::menu::action_name(c, a).to_lowercase()];
+        let en = crate::menu::action_name(&english, a).to_lowercase();
+        if !names.contains(&en) {
+            names.push(en);
         }
+        let tier = if names.iter().any(|n| *n == q) || id == qid {
+            0
+        } else if names.iter().any(|n| n.starts_with(&q)) || id.starts_with(&qid) {
+            1
+        } else if names.iter().any(|n| word_starts(n, &words, &letters))
+            || word_starts(&a.palette_name(), &words, &letters)
+        {
+            2
+        } else if names.iter().any(|n| in_order(n, &letters)) || in_order(id, &letters) {
+            3
+        } else {
+            let help = a.help().to_lowercase();
+            let translated = action_help(c, a).to_lowercase();
+            if words
+                .iter()
+                .all(|w| help.contains(w) || translated.contains(w) || id.contains(w))
+            {
+                4
+            } else {
+                continue;
+            }
+        };
+        ranked.push((tier, a));
     }
-    prefix.extend(other);
-    prefix
+    // A stable sort keeps help order within a tier.
+    ranked.sort_by_key(|(tier, _)| *tier);
+    ranked.into_iter().map(|(_, a)| a).collect()
+}
+
+/// The words of `name`, split at spaces, hyphens, and underscores.
+fn name_words(name: &str) -> Vec<&str> {
+    name.split(|ch: char| ch.is_whitespace() || ch == '-' || ch == '_' || ch == ',')
+        .filter(|w| !w.is_empty())
+        .collect()
+}
+
+/// True when the query starts the words of `name` in order: several
+/// query words each start a later word ("exp pd"), or one query's letters
+/// each start a later word ("ep" in "export pdf").
+fn word_starts(name: &str, query_words: &[&str], letters: &str) -> bool {
+    let words = name_words(name);
+    if query_words.len() > 1 {
+        let mut i = 0;
+        return query_words.iter().all(|q| {
+            while i < words.len() {
+                i += 1;
+                if words[i - 1].starts_with(q) {
+                    return true;
+                }
+            }
+            false
+        });
+    }
+    let mut i = 0;
+    letters.chars().all(|ch| {
+        while i < words.len() {
+            i += 1;
+            if words[i - 1].starts_with(ch) {
+                return true;
+            }
+        }
+        false
+    })
+}
+
+/// True when `letters` appear in `text` in order.
+fn in_order(text: &str, letters: &str) -> bool {
+    let mut chars = text.chars();
+    letters.chars().all(|l| chars.any(|t| t == l))
+}
+
+/// One palette line, name first: "Export PDF, File: Export the document
+/// as a tagged PDF next to it. Ctrl+E" (`keys` when it has any); `recent`
+/// adds "recent" after the name.
+fn palette_line(c: &Catalog, a: ActionId, keys: Option<String>, recent: bool) -> String {
+    let name = crate::menu::action_name(c, a);
+    let category = category_title(c, a.category());
+    let help = action_help(c, a);
+    let id = match (recent, keys.is_some()) {
+        (false, true) => "palette-item",
+        (false, false) => "palette-item-no-keys",
+        (true, true) => "palette-item-recent",
+        (true, false) => "palette-item-recent-no-keys",
+    };
+    c.fmt(
+        id,
+        &args![
+            "name" => name,
+            "category" => category,
+            "help" => help,
+            "keys" => keys.unwrap_or_default()
+        ],
+    )
 }
 
 /// The action a palette answer names: an exact id, else the best match.
@@ -462,33 +546,63 @@ impl App {
     }
 
     /// What is said for a command palette candidate, with its keys marked
-    /// ([`App::palette_candidates`] gives the written form, to show).
-    pub(crate) fn palette_said(&self, a: ActionId) -> String {
-        self.msg_args(
-            "help-palette-item",
-            &args!["id" => a.id(), "help" => action_help(self.cat(), a), "keys" => self.keys(a)],
-        )
+    /// ([`App::palette_candidates`] gives the written form, to show):
+    /// "Export PDF, File: Export the document as a tagged PDF next to it."
+    /// `recent` marks a recent command in words.
+    pub(crate) fn palette_said(&self, a: ActionId, recent: bool) -> String {
+        let keys = self.keymap.chords_for(a);
+        let keys = (!keys.is_empty()).then(|| self.keys(a));
+        palette_line(self.cat(), a, keys, recent)
     }
 
-    /// Candidates for the command palette as `(id, "id: help")` pairs.
+    /// Candidates for the command palette, best first ([`palette_matches`]),
+    /// each with its line, name first: "Export PDF, File: Export the
+    /// document as a tagged PDF next to it." With nothing typed, the
+    /// recent commands come first, each marked "recent". Commands whose
+    /// module is not in this version are left out ([`App::is_available`]).
     pub fn palette_candidates(&self, query: &str) -> Vec<(ActionId, String)> {
         let c = self.cat();
-        palette_matches_in(c, query)
-            .into_iter()
-            .map(|a| {
-                (
-                    a,
-                    c.fmt(
-                        "help-palette-item",
-                        &args![
-                            "id" => a.id(),
-                            "help" => action_help(c, a),
-                            "keys" => chords_text_in(c, &self.keymap, a)
-                        ],
-                    ),
-                )
-            })
-            .collect()
+        let line = |a: ActionId, recent: bool| {
+            let chords = self.keymap.chords_for(a);
+            let keys = (!chords.is_empty()).then(|| chords_text_in(c, &self.keymap, a));
+            (a, palette_line(c, a, keys, recent))
+        };
+        let recent: Vec<ActionId> = if query.trim().is_empty() {
+            self.recent_commands()
+                .iter()
+                .copied()
+                .filter(|a| self.is_available(*a))
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let mut out: Vec<(ActionId, String)> = recent.iter().map(|&a| line(a, true)).collect();
+        out.extend(
+            palette_matches_in(c, query)
+                .into_iter()
+                .filter(|a| self.is_available(*a) && !recent.contains(a))
+                .map(|a| line(a, false)),
+        );
+        out
+    }
+
+    /// Ctrl+L in the command palette: its matches as a list, to hear them
+    /// in context; Enter runs one.
+    pub(crate) fn palette_list(&mut self, query: &str) -> Vec<Effect> {
+        let cands = self.palette_candidates(query);
+        let (actions, items): (Vec<ActionId>, Vec<String>) = cands.into_iter().unzip();
+        let title = if query.trim().is_empty() {
+            self.msg("palette-list-title-all")
+        } else {
+            self.msg_args("palette-list-title", &args!["query" => query.trim()])
+        };
+        let intro = self.msg_args(
+            "palette-list-intro",
+            &args!["title" => title.as_str(), "n" => items.len()],
+        );
+        self.say_result(&intro);
+        self.list = Some(ListKind::Palette(actions));
+        vec![Effect::ShowList { title, items }]
     }
 
     pub(crate) fn run_named_command(&mut self, text: &str) -> Vec<Effect> {
@@ -502,7 +616,7 @@ impl App {
         }
         match resolve_command_in(self.cat(), text) {
             Some(ActionId::CommandPalette) => vec![Effect::Redraw],
-            Some(a) => self.action(a),
+            Some(a) => self.run_command(a),
             None => {
                 let msg = self.msg_args("help-unknown-command", &args!["text" => text]);
                 self.error(&msg);

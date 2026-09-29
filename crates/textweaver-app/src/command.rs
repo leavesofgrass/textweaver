@@ -9,6 +9,9 @@ use textweaver_text::GoTo;
 pub enum Command {
     /// A bound action (from the keymap or the command palette).
     Action(ActionId),
+    /// A command chosen from a menu or the command palette: runs as
+    /// [`Command::Action`] does, and becomes the most recent command.
+    RunCommand(ActionId),
     /// Open a document.
     Open(PathBuf),
     /// Text typed in edit mode (wave 2). Prompts send their whole answer

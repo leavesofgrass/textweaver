@@ -145,7 +145,7 @@ pub struct Tui {
     /// The styles of the theme in effect, rebuilt only when it changes.
     theme: Theme,
     /// The theme name and highlight colours `theme` was built for.
-    theme_key: (String, String, Option<String>),
+    theme_key: (String, String, Option<String>, Vec<String>),
     /// The status announcement last drawn: its sequence number and text.
     status_shown: (u64, String),
     /// While set, the status line is drawn blank until then (a repeated
@@ -196,7 +196,7 @@ impl Tui {
     /// [`ColorSupport::detect`] also honors `TEXTWEAVER_COLOR` and
     /// `NO_COLOR`).
     pub fn with_color_support(app: App, support: ColorSupport) -> Self {
-        let theme = Theme::from_theme(&app.reading_theme(), support);
+        let theme = Theme::from_theme(&app.reading_theme(), support).with_marks(&app.mark_colors());
         let theme_key = app.reading_theme_key();
         Tui {
             app,
@@ -292,7 +292,8 @@ impl Tui {
     fn refresh_theme(&mut self) {
         let key = self.app.reading_theme_key();
         if key != self.theme_key {
-            self.theme = Theme::from_theme(&self.app.reading_theme(), self.support);
+            self.theme = Theme::from_theme(&self.app.reading_theme(), self.support)
+                .with_marks(&self.app.mark_colors());
             self.theme_key = key;
         }
     }
@@ -543,6 +544,15 @@ impl Tui {
                     self.dispatch(Command::Action(ActionId::RepeatMessage));
                     return;
                 }
+                // F10 closes the menus, or opens them over another list.
+                Some(ActionId::Menu) => {
+                    if self.app.menu_path().is_some() {
+                        self.dispatch(Command::ListKey(ListKey::Escape));
+                    } else {
+                        self.dispatch(Command::Action(ActionId::Menu));
+                    }
+                    return;
+                }
                 _ => {}
             }
         }
@@ -578,6 +588,8 @@ impl Tui {
             KeyCode::Char('u') if ctrl => PromptKey::KillToStart,
             KeyCode::Char('k') if ctrl => PromptKey::KillToEnd,
             KeyCode::Char('w') if ctrl => PromptKey::DeleteWordBack,
+            // The command palette's matches as a list.
+            KeyCode::Char('l') if ctrl => PromptKey::ShowMatches,
             KeyCode::Char(c) if typed_char(&k).is_some() => PromptKey::Char(c),
             KeyCode::Backspace => PromptKey::Backspace,
             KeyCode::Delete => PromptKey::Delete,
@@ -976,8 +988,17 @@ impl Tui {
             }
             let extra = ruler_modifier(mark);
             if !extra.is_empty() {
+                // The reader's ruler color on the band's rows (never on
+                // the dimmed rows around it); the attributes stay.
+                let band = theme
+                    .marks
+                    .ruler
+                    .filter(|_| mark.bold || mark.underline || mark.reverse);
                 for sp in &mut text {
                     sp.style = sp.style.add_modifier(extra);
+                    if let Some(c) = band {
+                        sp.style = sp.style.bg(c);
+                    }
                 }
             }
             spans.extend(text);
@@ -1168,6 +1189,9 @@ impl Tui {
             }
             if difficult.get(d).is_some_and(|r| r.contains(pos)) {
                 style = style.add_modifier(Modifier::UNDERLINED);
+                if let Some(c) = theme.marks.difficult {
+                    style = style.underline_color(c);
+                }
             }
             if run_style != Some(style) {
                 if let Some(st) = run_style {
@@ -1178,7 +1202,15 @@ impl Tui {
             // A syllable separator takes the style of the char after it,
             // so a highlight over a word covers its separators too.
             if i > 0 && aids.breaks.binary_search(&pos).is_ok() {
-                run.push_str(aids.sep);
+                match theme.marks.syllables {
+                    // The reader's syllable color: the separator is its
+                    // own span, in that color over the same style.
+                    Some(c) => {
+                        spans.push(Span::styled(std::mem::take(&mut run), style));
+                        spans.push(Span::styled(aids.sep.to_owned(), style.fg(c)));
+                    }
+                    None => run.push_str(aids.sep),
+                }
             }
             match layout::shown_at(aids.shown, pos) {
                 Some(Some(text)) => run.push_str(text),

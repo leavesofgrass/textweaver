@@ -128,9 +128,11 @@ pub use textweaver_core::Verbosity;
 
 mod announce;
 pub mod detect;
+pub mod level;
 pub mod mode;
 
 pub use announce::{Announcement, verbosity_table};
+pub use level::{Importance, InterfaceLevel, lets_through};
 pub use mode::{AccessMode, Channel, CursorPlacement, Route, RouteContext, SayAll, route};
 
 /// How urgently an announcement should be delivered.
