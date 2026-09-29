@@ -156,7 +156,7 @@ fn alt_l_lists_the_library_and_enter_opens() {
     let list = h.tui.list().expect("library list");
     assert_eq!(list.title, "Library");
     assert_eq!(list.items.len(), 2);
-    assert!(h.screen().contains("Library (1 of 2)"), "{}", h.screen());
+    assert!(h.screen().contains("1 of 2, Library"), "{}", h.screen());
     assert!(
         h.status().starts_with("Library, 2 documents."),
         "{}",
@@ -164,7 +164,7 @@ fn alt_l_lists_the_library_and_enter_opens() {
     );
     h.press(key(KeyCode::Down));
     assert!(
-        h.status().starts_with("loose.txt, recent"),
+        h.status().starts_with("2 of 2, loose.txt, recent"),
         "{}",
         h.status()
     );

@@ -184,6 +184,7 @@ mod mdline;
 mod nav;
 mod notes;
 pub mod opening;
+mod pages;
 pub mod path_complete;
 mod playback;
 #[cfg(feature = "publish")]

@@ -93,8 +93,9 @@ fn lists_jump_by_first_letter_and_the_save_list_takes_s_d_c() {
         "{}",
         list.items[list.selected]
     );
+    // "12 of 90, Voice ...": the place first (Wave 5, the Braille pass).
     assert!(
-        tui.app().status_text().starts_with("Voice"),
+        tui.app().status_text().contains(" of ") && tui.app().status_text().contains(", Voice"),
         "{}",
         tui.app().status_text()
     );

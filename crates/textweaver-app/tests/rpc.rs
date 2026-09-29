@@ -355,7 +355,7 @@ fn lists_prompts_and_settings_over_json_rpc() {
     assert_eq!(list["selected"], 0);
     let r = s.result("list_key", json!({"key": "down"}));
     assert_eq!(r["list"]["selected"], 1);
-    assert!(r["status"].as_str().unwrap().ends_with("2 of 2"), "{r}");
+    assert!(r["status"].as_str().unwrap().starts_with("2 of 2, "), "{r}");
     let r = s.result("list_key", json!({"key": "down"}));
     assert_eq!(r["status"], "End of list.");
     let r = s.result("list_key", json!({"key": "escape"}));

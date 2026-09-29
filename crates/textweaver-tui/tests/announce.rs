@@ -91,7 +91,7 @@ fn a_list_says_its_first_item_after_the_introduction() {
     log.clear();
     tui.dispatch(Command::Action(ActionId::ListBookmarks));
     let list = tui.list().expect("the bookmark list is open").clone();
-    let first = format!("{}, 1 of 3", list.items[0]);
+    let first = format!("1 of 3, {}", list.items[0]);
     let all = said.all();
     let intro = all
         .iter()
@@ -118,7 +118,7 @@ fn a_list_says_its_first_item_after_the_introduction() {
     tui.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
     assert_eq!(
         said.all().last().cloned(),
-        Some(format!("{}, 2 of 3", list.items[1]))
+        Some(format!("2 of 3, {}", list.items[1]))
     );
 }
 

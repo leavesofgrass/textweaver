@@ -79,7 +79,10 @@ function Get-SizeGB([string]$path) {
   try {
     $bytes = [IO.Directory]::EnumerateFiles($path, '*', [IO.SearchOption]::AllDirectories) |
       ForEach-Object { ([IO.FileInfo]$_).Length } | Measure-Object -Sum | Select-Object -Expand Sum
-  } catch { }
+  } catch {
+    # A folder that vanished or cannot be read counts as what was summed so far.
+    Write-Verbose "Could not size ${path}: $($_.Exception.Message)"
+  }
   [math]::Round(($bytes / 1GB), 1)
 }
 

@@ -1008,7 +1008,7 @@ publish-warnings =
     }
 # $file is the file's name, $folder its folder; $warned is empty or a
 # space and publish-warnings.
-publish-exported = Exporté vers { $format } : { $file } dans { $folder }.{ $warned } L'ouvrir ? y ou n.
+publish-exported = Exporté vers { $format } : { $file }. L'ouvrir ? y ou n. Dans { $folder }.{ $warned }
 publish-preview-written-served = Aperçu écrit. Ouverture dans le navigateur. Il se recharge tout seul après chaque enregistrement.{ $warned }
 publish-preview-written = Aperçu écrit. Ouverture dans le navigateur. Un enregistrement le réécrit ; appuyez ensuite sur F5 dans le navigateur.{ $warned }
 publish-preview-updated = Aperçu mis à jour.
@@ -1096,12 +1096,12 @@ notes-study-sheet-saved-notes =
     Fiche d'étude avec { $n ->
         [one] 1 note
        *[other] { $n } notes
-    } enregistrée sous { $file } dans { $folder }. L'ouvrir ? y ou n.
+    } enregistrée sous { $file }. L'ouvrir ? y ou n. Dans { $folder }.
 notes-study-sheet-saved-highlights =
     Fiche d'étude avec { $h ->
         [one] 1 surlignage
        *[other] { $h } surlignages
-    } enregistrée sous { $file } dans { $folder }. L'ouvrir ? y ou n.
+    } enregistrée sous { $file }. L'ouvrir ? y ou n. Dans { $folder }.
 notes-study-sheet-saved-both =
     Fiche d'étude avec { $n ->
         [one] 1 note
@@ -1109,7 +1109,7 @@ notes-study-sheet-saved-both =
     } et { $h ->
         [one] 1 surlignage
        *[other] { $h } surlignages
-    } enregistrée sous { $file } dans { $folder }. L'ouvrir ? y ou n.
+    } enregistrée sous { $file }. L'ouvrir ? y ou n. Dans { $folder }.
 notes-study-sheet-failed = Impossible d'écrire la fiche d'étude : { $error }
 # The study sheet file's own text (Markdown; the # marks stay in the code).
 notes-sheet-title = Fiche d'étude : { $title }
@@ -1233,7 +1233,7 @@ lists-outline-here = Vous êtes sous { $heading }.
 ## Lists and prompts shared by every frontend.
 
 # The focused list item: $item is its text, $k its place, $n the number of items.
-listmodel-item-position = { $item }, { $k } sur { $n }
+listmodel-item-position = { $k } sur { $n }, { $item }
 # $letter is the letter or digit typed.
 listmodel-no-item-starts = Aucun élément ne commence par { $letter }.
 listmodel-top-of-list = Haut de la liste.
@@ -1268,8 +1268,8 @@ links-no-address = Le lien { $text } n'a pas d'adresse.
 # $kind is mail or web; $target is the link's address.
 links-open-question =
     { $kind ->
-        [mail] Lien de messagerie : { $target }. L'ouvrir ? y ou n.
-       *[web] Lien web : { $target }. L'ouvrir ? y ou n.
+        [mail] Ouvrir le lien de messagerie ? y ou n. { $target }
+       *[web] Ouvrir le lien web ? y ou n. { $target }
     }
 # The label of a heading reached by a link, at high verbosity.
 links-heading-label = Titre
@@ -2560,7 +2560,7 @@ tui-hint-lines = lignes
 tui-hint-keys = touches
 # The list overlay's border: $n is the focused item's number, $count
 # the number of items.
-tui-list-title = { $title } ({ $n } sur { $count })
+tui-list-title = { $n } sur { $count }, { $title }
 
 text-summary =
     { $change ->
@@ -2597,6 +2597,47 @@ gui-text-size-smallest = Taille du texte { $size } points, la plus petite.
 gui-font = Police : { $family }.
 gui-font-unchanged = Police inchangée.
 gui-font-list = Police
+
+## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
+## $page and $n are page numbers, $label a printed page label such as iv,
+## $pages the number of pages. Keep the page first: a 40-cell Braille
+## display shows the start of the line.
+
+status-page = page { $page } sur { $pages }
+status-page-labelled = page { $label }, { $n } sur { $pages }
+status-position-page = { $page }, { $pct }%
+pages-position = Page { $page } sur { $pages }.
+pages-position-labelled = Page { $label }, { $n } sur { $pages }.
+pages-none = Ce document n'a pas de pages.
+pages-no-such-page = Pas de page { $page }. Les pages vont de 1 à { $pages }.
+pages-label = Page { $label }
+pages-outline-item = Page { $label } : { $text }
+lists-pages-title =
+    { $n ->
+        [one] Pages, { $n } page
+       *[other] Pages, { $n } pages
+    }
+lists-pages-title-filtered = Pages, { $shown } sur { $n } correspondent à { $filter }
+lists-pages-intro =
+    { $n ->
+        [one] Pages, { $n } page. Tapez pour filtrer, Entrée va à une page, Échap ferme.
+       *[other] Pages, { $n } pages. Tapez pour filtrer, Entrée va à une page, Échap ferme.
+    }
+lists-pages-here = Vous êtes sur { $heading }.
+lists-filter-cleared-pages =
+    { $n ->
+        [one] Filtre effacé, { $n } page.
+       *[other] Filtre effacé, { $n } pages.
+    }
+lists-filter-none-pages = Aucune page ne correspond à { $query }. Retour arrière retire des lettres.
+lists-filter-matched-pages =
+    { $n ->
+        [one] { $n } page correspond.
+       *[other] { $n } pages correspondent.
+    }
+prompt-go-to-pages = Aller à une page, ou ligne 12, un pourcentage, start, ou end
+goto-not-a-target-pages = Ce n'est pas une cible valide : { $text }. Tapez un numéro de page, ligne et un numéro, un pourcentage tel que 50%, start, ou end.
+goto-word-page = page
 
 ## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
