@@ -12,13 +12,13 @@ To be added by the owner.
 
 ### The GUI
 
-- **Settings dialog focus:** it opens on a table setting, so NVDA reads "4 entries", "none", and the next setting's help all at once. Focus should start on a plain first setting, with the section named. Found by the NVDA check in CI (W5t, ADR-0039); sent to W5a4.
-- **Yes-or-no questions:** the GUI seems to have no way to answer a question outside a list (it never sends `Command::Confirm`). Found by W5x; sent to W5a4.
+- **Settings dialog focus:** it opened on a table setting, so NVDA read "4 entries", "none", and the next setting's help all at once. Fixed by W5a4 (it starts on a plain setting); to confirm in session 3.
+- **Yes-or-no questions:** the GUI had no way to answer a question outside a list. Fixed by W5a4: a dialog with Yes and No, keys Y and N, Escape for no; to confirm in session 3.
 - **The document on macOS:** the accessibility tree shows it as a group with its text as the value, not as a text area, which may change how VoiceOver reads it. Found by the tree dump in CI (W5t).
-- **Edit mode, left from W4a3:** caret and selection moves are not spoken in self-voicing mode; Tab moves focus instead of typing a tab or moving between table cells; misspellings are not marked on screen. W5a4 is working on these.
+- **Edit mode, left from W4a3:** caret and selection speech in self-voicing mode, Tab typing a tab (Ctrl+Tab leaves the document), and misspelling marks. Fixed by W5a4; to confirm in session 3. The marks are drawn only: AccessKit's spelling-error flag reaches no platform yet.
 - **The window's name on focus:** when the GUI's window takes the focus, NVDA says neither the window's nor the document's name (the NVDA check in CI, ADR-0039). A screen reader user should hear where they are.
 - **Startup announcements:** "Opened" and "Reading at ..." can be lost when they come before a screen reader has asked for the window (ADR-0028; seen again by the Orca and NVDA checks in CI).
-- **The GUI's own labels in six languages:** messages are translated, but the settings dialog's drawn labels and some of the GUI's own strings are still English (W4d's open issue).
+- **The GUI's own labels in six languages:** fixed by W5a4 (every drawn label from the catalog, changing live); the six languages still need a native speaker's review.
 - **The GUI's rate keys:** moved to F11 and Shift+F11 when Ctrl+Plus and Ctrl+Minus became text size (W4a3). Worth checking that they are easy to find.
 
 ### The terminal reader and `tw`
