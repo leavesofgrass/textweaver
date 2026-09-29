@@ -1,0 +1,208 @@
+# Automated screen-reader checks of the Xilem GUI (ADR-0039), beside the
+# owner's listening sessions and never in place of them:
+# - nvda: Guidepup starts NVDA on a Windows runner and records what it says
+#   while a script opens a fixture, reads, pauses, moves by heading, and
+#   opens Settings (tools/a11y/nvda-session.mjs);
+# - orca: the same session under Xvfb, checked through AT-SPI events, with
+#   Orca running beside it and what it said listed (tools/a11y/orca-session.sh);
+# - voiceover: the same session with VoiceOver on a macOS runner, if the
+#   runner lets Guidepup enable it (tools/a11y/voiceover-session.mjs).
+# Each job's report is in the run summary: every line starts with Pass,
+# Fail, Warning, or Heard, in words. The sessions are report-only
+# (continue-on-error) until ADR-0039 records them as standing.
+#
+# NVDA and VoiceOver are installed and driven on the runners only. The
+# scripts refuse to run anywhere else, so no one's own screen reader is
+# ever taken over. The tree dump on all three systems is in gui-xilem.yml.
+#
+# The GUI is built here from cold caches, so the workflow runs by hand
+# (Actions, "Screen-reader checks", Run workflow) and when its own files
+# change; runner time is sequenced with the release dry run.
+
+name: Screen-reader checks
+
+on:
+  workflow_dispatch:
+    inputs:
+      session:
+        description: Which session to run
+        type: choice
+        options: [all, nvda, orca, voiceover]
+        default: all
+  push:
+    branches: [main]
+    paths:
+      - 'tools/a11y/**'
+      - 'fixtures/t/**'
+      - '.github/workflows/a11y-tests.yml'
+  pull_request:
+    paths:
+      - 'tools/a11y/**'
+      - 'fixtures/t/**'
+      - '.github/workflows/a11y-tests.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+  NODE_VERSION: '24'
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: shellcheck
+        run: shellcheck tools/a11y/*.sh
+      - name: Python and JavaScript syntax
+        run: |
+          python3 -m py_compile tools/a11y/*.py
+          for f in tools/a11y/*.mjs; do node --check "$f"; done
+      - name: The lock file matches package.json (no install, no scripts)
+        working-directory: tools/a11y
+        run: npm ci --omit=optional --ignore-scripts --dry-run
+
+  lint-powershell:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: PSScriptAnalyzer (warnings fail)
+        shell: pwsh
+        run: |
+          $findings = @(Invoke-ScriptAnalyzer -Path tools/a11y -Recurse -Severity Warning, Error)
+          $findings | Format-Table -AutoSize ScriptName, Line, Severity, RuleName, Message | Out-String -Width 300
+          if ($findings.Count -gt 0) { throw "$($findings.Count) PSScriptAnalyzer findings" }
+
+  nvda:
+    if: github.event_name != 'workflow_dispatch' || inputs.session == 'all' || inputs.session == 'nvda'
+    runs-on: windows-latest
+    timeout-minutes: 90
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: a11y-tests
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      # The runner has no graphics card: WARP crashes on Vello's compute
+      # shaders, so the GUI is the hybrid renderer, as for the UIA report.
+      - name: Build the GUI (hybrid renderer)
+        run: cargo build --locked -p textweaver-xilem --no-default-features --features screenshot,renderer-hybrid
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: tools/a11y/package-lock.json
+      # Guidepup and its setup tool, exactly as locked (versions and
+      # integrity hashes in package-lock.json), with no install scripts.
+      - name: Guidepup (locked)
+        working-directory: tools/a11y
+        run: npm ci --omit=optional --ignore-scripts
+      # NVDA for Guidepup, downloaded and checked against its SHA-256 by
+      # @guidepup/setup, on this runner only.
+      - name: NVDA (guidepup install nvda)
+        working-directory: tools/a11y
+        run: npx --no guidepup install nvda
+      - name: NVDA session
+        shell: pwsh
+        run: node tools/a11y/nvda-session.mjs --exe target/debug/textweaver-xilem.exe --out nvda
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: a11y-nvda
+          path: nvda/
+          if-no-files-found: warn
+
+  orca:
+    if: github.event_name != 'workflow_dispatch' || inputs.session == 'all' || inputs.session == 'orca'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: a11y-tests
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Libraries (X11, the AT-SPI bus, Mesa's software Vulkan, xdotool, Orca)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            libasound2-dev libespeak-ng-dev libspeechd-dev libfontconfig1-dev \
+            xvfb xauth dbus dbus-x11 at-spi2-core python3-pyatspi python3-gi gir1.2-atspi-2.0 \
+            mesa-vulkan-drivers libvulkan1 libgl1-mesa-dri libegl1 \
+            libxkbcommon-x11-0 libxcursor1 libxrandr2 libxi6 libx11-xcb1 \
+            xdotool orca
+      - name: Build the GUI (hybrid renderer, which suits Mesa's software GPU)
+        run: cargo build --locked -p textweaver-xilem --no-default-features --features screenshot,renderer-hybrid
+      - name: AT-SPI reading session, with Orca
+        run: bash tools/a11y/orca-session.sh orca
+      - name: Report in the run summary
+        if: always()
+        run: |
+          if [ -s orca/atspi-session.md ]; then
+            cat orca/atspi-session.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Fail: the AT-SPI session wrote no report." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: a11y-orca
+          path: |
+            orca/*.md
+            orca/*.log
+            orca/*.txt
+          if-no-files-found: warn
+
+  voiceover:
+    if: github.event_name != 'workflow_dispatch' || inputs.session == 'all' || inputs.session == 'voiceover'
+    # The macOS version Guidepup's VoiceOver support names (Sonoma).
+    runs-on: macos-14
+    timeout-minutes: 90
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: a11y-tests
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo build --locked -p textweaver-xilem
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: tools/a11y/package-lock.json
+      - name: Guidepup (locked)
+        working-directory: tools/a11y
+        run: npm ci --omit=optional --ignore-scripts
+      # Lets AppleScript drive VoiceOver and turns off prompts, on this
+      # runner only. If the runner cannot allow it, the session says so.
+      - name: VoiceOver setup (guidepup setup --ci)
+        working-directory: tools/a11y
+        run: npx --no guidepup setup --ci 2>&1 | tee ../../voiceover-setup.log
+      - name: VoiceOver session
+        if: always()
+        run: node tools/a11y/voiceover-session.mjs --exe target/debug/textweaver-xilem --out voiceover
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: a11y-voiceover
+          path: |
+            voiceover/
+            voiceover-setup.log
+          if-no-files-found: warn

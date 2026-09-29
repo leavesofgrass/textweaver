@@ -1,0 +1,25 @@
+{
+  "about": "What the screen reader should say at each step of tools/a11y/nvda-session.mjs and voiceover-session.mjs with fixtures/t/reading.md open. The designs are the owner's choices from session 1 (ADR-0028): announcements through the live region, heard once; the spoken word marked by a background color, the caret at its start. A must entry fails the run when no phrase of that step matches its pattern (a case-insensitive regular expression); a should entry is a warning. once: true warns when the pattern is heard more than once in the step.",
+  "steps": {
+    "open": [
+      { "level": "must", "pattern": "Reading check|textweaver", "why": "NVDA names the window or the document when the window takes the focus" },
+      { "level": "should", "pattern": "Opened", "why": "the app's startup announcement; ADR-0028 found it can be lost before a client connects, but a running screen reader connects sooner" }
+    ],
+    "read": [
+      { "level": "should", "pattern": "Read|Play", "why": "Play is announced through the live region" }
+    ],
+    "pause": [
+      { "level": "must", "pattern": "Paused", "once": true, "why": "Pause is announced once, through the live region (session 1)" }
+    ],
+    "heading": [
+      { "level": "should", "pattern": "Second heading", "why": "h moves to the next heading; NVDA or the app says its text" }
+    ],
+    "settings": [
+      { "level": "must", "pattern": "Settings", "why": "the settings dialog is named, and NVDA says it when the focus moves in" },
+      { "level": "should", "pattern": "Speech", "why": "the first section in the list, with its size (\"Speech, 20 settings\")" }
+    ],
+    "close": [
+      { "level": "should", "pattern": "Reading check|document|textweaver", "why": "Escape closes the dialog and the focus returns to the document" }
+    ]
+  }
+}

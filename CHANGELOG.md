@@ -4,6 +4,14 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### W5p: alpha.5 readiness
+
+- **The GUI ships in the release:** `textweaver-VERSION-windows-x86_64-gui.zip`, `textweaver-VERSION-macos-aarch64-gui.zip` (`textweaver.app`, Apple silicon), and for Linux x86_64 and aarch64 an AppImage and a tarball whose names end in `-gui`. Supported on Windows; on macOS and Linux built and checked automatically, not yet heard with a screen reader. Each is attested and in `SHA256SUMS.txt`. See [docs/install.md](docs/install.md#the-gui).
+- The GUI package now speaks with every engine the terminal package does: it carries the Eloquence, SAPI 5, and DECtalk engine hosts and the pronunciation dictionaries (Windows and Linux), the define-word dictionary, and every licence file, and on Windows it needs no Visual C++ runtime.
+- The release workflow checks each GUI package before upload: the files, `--version`, and a screenshot drawn without a display; on macOS also a silent reading in a background window.
+- `cargo xtask release VERSION --dry-run` reports an empty changelog section with the other problems instead of stopping.
+- The nightly checks can pass again: the fuzz targets are built for glibc (the prebuilt cargo-fuzz defaulted to musl, where the sanitizer cannot link), the release-mode tests have time to finish, and the minimum Rust version is 1.94, what the dependencies need.
+
 ### Wave 5, W5y: Star leftovers, settings, speed presets
 
 - **Library search by author, DOI, and ISBN.** The library list (Alt+L, GUI Ctrl+Shift+B) now filters as you type, and it and `tw library --search` match the title, path, author, DOI, ISBN, and text. A DOI or ISBN matches however it is written. The author, DOI, and ISBN come from the document (front matter, Word and EPUB authors, web page meta tags, a DOI or ISBN near the start of the text) and from `tw cite`'s record of the same work.

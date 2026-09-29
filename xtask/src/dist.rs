@@ -49,7 +49,7 @@ pub(crate) fn features() -> String {
         .join(",")
 }
 /// The cargo profile for packages (root `Cargo.toml`, `[profile.dist]`).
-const PROFILE: &str = "dist";
+pub(crate) const PROFILE: &str = "dist";
 /// Where the licence files of bundled data go in the package: (source,
 /// path in the package). The notices file itself goes at the top.
 const LICENCE_FILES: [(&str, &str); 7] = [
@@ -82,7 +82,7 @@ const LICENCE_FILES: [(&str, &str); 7] = [
 /// Data files copied into the package: (source, path in the package). The
 /// define-word dictionary sits in `lexicon/` beside the programs, where
 /// `textweaver_lexicon::data_file_candidates` looks.
-const DATA_FILES: [(&str, &str); 1] = [(
+pub(crate) const DATA_FILES: [(&str, &str); 1] = [(
     "third_party/lexicon/lexicon-en.twlex",
     "lexicon/lexicon-en.twlex",
 )];
@@ -231,11 +231,7 @@ pub(crate) struct Staged {
 pub(crate) fn stage(out: Option<PathBuf>, universal: bool) -> anyhow::Result<Staged> {
     let root = eci::root();
     let version = env!("CARGO_PKG_VERSION");
-    let build_dir = if cfg!(windows) {
-        eci::target_dir(&root).join("dist-build")
-    } else {
-        eci::target_dir(&root)
-    };
+    let build_dir = build_dir(&root);
     let out = out.unwrap_or_else(|| eci::target_dir(&root).join("dist"));
     let name = package_name(version, &platform(universal));
     let stage = out.join(&name);
@@ -334,6 +330,18 @@ pub(crate) fn stage(out: Option<PathBuf>, universal: bool) -> anyhow::Result<Sta
     })
 }
 
+/// Where release builds go: `target/dist-build` on Windows, where the
+/// static C runtime would otherwise invalidate everyday builds, else the
+/// target directory. `cargo xtask gui-dist` builds there too, so the two
+/// packages share their compiled dependencies.
+pub(crate) fn build_dir(root: &Path) -> PathBuf {
+    if cfg!(windows) {
+        eci::target_dir(root).join("dist-build")
+    } else {
+        eci::target_dir(root)
+    }
+}
+
 /// Archives a staged package: a `.zip` on Windows, a `.tar.gz` elsewhere.
 pub(crate) fn archive(staged: &Staged) -> anyhow::Result<PathBuf> {
     let Staged { name, dir, out } = staged;
@@ -368,7 +376,7 @@ pub(crate) const LINUX_DESKTOP_FILES: [(&str, &str); 2] = [
 ];
 
 /// Copies the third-party notices and the data licence files into `stage`.
-fn stage_notices(root: &Path, stage: &Path) -> anyhow::Result<()> {
+pub(crate) fn stage_notices(root: &Path, stage: &Path) -> anyhow::Result<()> {
     eci::copy(
         &root.join(crate::notices::NOTICES),
         &stage.join(crate::notices::NOTICES),
@@ -381,7 +389,7 @@ fn stage_notices(root: &Path, stage: &Path) -> anyhow::Result<()> {
 
 /// Fails unless `stage` holds the licence, the notices, and every data
 /// licence file: a package must never ship without them.
-fn check_notices(stage: &Path) -> anyhow::Result<()> {
+pub(crate) fn check_notices(stage: &Path) -> anyhow::Result<()> {
     let required = ["LICENSE", crate::notices::NOTICES]
         .into_iter()
         .chain(LICENCE_FILES.iter().map(|(_, dest)| *dest));
@@ -394,7 +402,7 @@ fn check_notices(stage: &Path) -> anyhow::Result<()> {
 
 /// A cargo command for release builds into `build_dir`, with the static C
 /// runtime on Windows.
-fn cargo(root: &Path, build_dir: &Path) -> Command {
+pub(crate) fn cargo(root: &Path, build_dir: &Path) -> Command {
     let mut cmd = Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()));
     cmd.current_dir(root).env("CARGO_TARGET_DIR", build_dir);
     if cfg!(windows) {
@@ -420,7 +428,11 @@ fn build_binaries(root: &Path, build_dir: &Path, target: Option<&str>) -> anyhow
     run_tool(&mut cmd).context("building textweaver and tw")
 }
 
-fn build_hosts(root: &Path, build_dir: &Path, hosts: &[HostBuild]) -> anyhow::Result<()> {
+pub(crate) fn build_hosts(
+    root: &Path,
+    build_dir: &Path,
+    hosts: &[HostBuild],
+) -> anyhow::Result<()> {
     let mut targets: Vec<Option<&str>> = Vec::new();
     for h in hosts {
         if !targets.contains(&h.target) {
@@ -450,7 +462,7 @@ fn build_hosts(root: &Path, build_dir: &Path, hosts: &[HostBuild]) -> anyhow::Re
     Ok(())
 }
 
-fn run_tool(cmd: &mut Command) -> anyhow::Result<()> {
+pub(crate) fn run_tool(cmd: &mut Command) -> anyhow::Result<()> {
     let status = cmd
         .status()
         .with_context(|| format!("running {:?}", cmd.get_program()))?;
@@ -461,7 +473,7 @@ fn run_tool(cmd: &mut Command) -> anyhow::Result<()> {
 }
 
 /// Zips `dir` so its files sit under `prefix/` in the archive.
-fn zip_dir(dir: &Path, prefix: &str, zip_path: &Path) -> anyhow::Result<()> {
+pub(crate) fn zip_dir(dir: &Path, prefix: &str, zip_path: &Path) -> anyhow::Result<()> {
     use std::io::Write as _;
     use zip::write::SimpleFileOptions;
 
