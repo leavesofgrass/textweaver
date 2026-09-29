@@ -420,7 +420,14 @@ impl App {
             let line = self
                 .session
                 .as_ref()
-                .map(|s| echo::line_for_echo(s.doc.text(), s.line()))
+                .map(|s| echo::line_echo(s.doc.text(), s.line()))
+                .map(|(line, cut)| {
+                    if cut {
+                        self.with_line_continues(line)
+                    } else {
+                        line
+                    }
+                })
                 .unwrap_or_default();
             let msg = match self.settings.speech.verbosity {
                 Verbosity::Low => self.msg_args("edit-mode-on-brief", &args!["line" => line]),
@@ -918,7 +925,20 @@ impl App {
                         _ => self.speech.say(t, mode),
                     }
                 }
-                EchoEvent::CursorMoved(line) => self.speech.say(line, mode),
+                EchoEvent::CursorMoved(line) => {
+                    // The echo holds at most the line's first sentence.
+                    let long = self.session.as_ref().is_some_and(|s| {
+                        let l = s.line();
+                        l < s.doc.text().len_lines()
+                            && s.doc.text().line(l).len_chars() > echo::LINE_ECHO_MAX + 1
+                    });
+                    let line = if long {
+                        self.with_line_continues(line)
+                    } else {
+                        line
+                    };
+                    self.speech.say(line, mode);
+                }
             }
         }
     }
@@ -1187,7 +1207,34 @@ impl App {
     /// Methods", "bullet, milk", "row 2, Ada | 36").
     pub(crate) fn spoken_source_line(&self, line: usize) -> Option<String> {
         let s = self.session.as_ref()?;
-        let text = text_util::line_text(&s.doc, line);
+        // A long line is read only as far as the first sentence or the
+        // first 200 characters; its structure shows in its start (W6u).
+        let limit = 4 * echo::LINE_ECHO_MAX;
+        let long = line < s.doc.text().len_lines() && s.doc.text().line(line).len_chars() > limit;
+        let text = if long {
+            s.doc.text().line(line).chars().take(limit).collect()
+        } else {
+            text_util::line_text(&s.doc, line)
+        };
+        let said = self.spoken_line_text(line, text)?;
+        let (said, cut) = echo::cap_text(&said);
+        Some(if cut || long {
+            self.with_line_continues(said)
+        } else {
+            said
+        })
+    }
+
+    /// `said` followed by "line continues" in the interface's language.
+    pub(crate) fn with_line_continues(&self, said: String) -> String {
+        let more = self.msg("edit-line-continues");
+        format!("{said} {more}")
+    }
+
+    /// [`spoken_source_line`](Self::spoken_source_line) for the line's
+    /// `text` (or its start).
+    fn spoken_line_text(&self, line: usize, text: String) -> Option<String> {
+        let s = self.session.as_ref()?;
         if text.trim().is_empty() {
             return Some(self.msg("nav-blank"));
         }
@@ -1628,7 +1675,14 @@ impl App {
                 let line = self
                     .session
                     .as_ref()
-                    .map(|s| echo::line_for_echo(s.doc.text(), s.line()))
+                    .map(|s| echo::line_echo(s.doc.text(), s.line()))
+                    .map(|(line, cut)| {
+                        if cut {
+                            self.with_line_continues(line)
+                        } else {
+                            line
+                        }
+                    })
                     .unwrap_or_default();
                 let what = if undo { "undo" } else { "redo" };
                 let msg = match self.settings.speech.verbosity {

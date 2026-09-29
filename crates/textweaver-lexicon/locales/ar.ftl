@@ -3259,6 +3259,7 @@ menu-press-a-key = اضغط مفتاحًا لتسمع ما يفعله.
 menu-key-described = { $name }: { $help }. المفاتيح: { $keys }. في القوائم: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. المفاتيح: { $keys }.
 menu-keys = { $item }. يفتح Enter أو السهم الأيمن قائمة أو ينفذ أمرًا، وينتقل الحرف إلى عنصره، ويعود السهم الأيسر أو Backspace، ويغلق Escape.
+edit-line-continues = يستمر السطر
 menu-about = textweaver { $version }. الترخيص: { $license }.
 announce-level-changed = إعلانات الواجهة: { $level }.
 announce-level-off = متوقفة

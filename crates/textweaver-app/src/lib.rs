@@ -167,6 +167,7 @@ mod edit;
 mod export;
 mod extra;
 mod find_scan;
+mod frame_cache;
 mod goto;
 #[cfg(feature = "grammar")]
 mod grammar;

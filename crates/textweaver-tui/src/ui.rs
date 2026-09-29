@@ -136,6 +136,10 @@ fn math_move(k: &KeyEvent) -> Option<textweaver_app::MathMove> {
 /// hears the message again ("No next heading." twice in a row).
 pub const REPEAT_BLANK: std::time::Duration = std::time::Duration::from_millis(150);
 
+/// The longest the screen goes undrawn while nothing seems to change: a
+/// safety net for a change the loop could not see (W6u).
+pub const REDRAW_AT_LEAST: std::time::Duration = std::time::Duration::from_secs(1);
+
 /// The terminal frontend's state around the app.
 pub struct Tui {
     app: App,
@@ -165,6 +169,20 @@ pub struct Tui {
     frozen_position: Option<String>,
     /// Physical keys peeked from the Windows console, for the digit row.
     digits: crate::physical::DigitKeys,
+    /// How many times the screen was drawn ([`Tui::draws`]).
+    draws: u64,
+    /// Something happened that the screen must show: a key, a command, a
+    /// resize (W6u: the loop draws only then, not every pass).
+    needs_draw: bool,
+    /// What the screen showed when it was last drawn
+    /// ([`Tui::view_signature`]).
+    drawn_signature: u64,
+    /// When the screen was last drawn.
+    drawn_at: Option<Instant>,
+    /// The code styles of the window last drawn, by document revision,
+    /// window, and theme (W6u: they were worked out again every frame).
+    #[cfg(feature = "highlight")]
+    code_frame: std::cell::RefCell<Option<((u64, CharRange, String), Vec<(CharRange, Style)>)>>,
     /// Code block tokens already found ([`crate::highlight`]).
     #[cfg(feature = "highlight")]
     code_cache: std::cell::RefCell<crate::highlight::Cache>,
@@ -212,6 +230,12 @@ impl Tui {
             system_clipboard_said: false,
             frozen_position: None,
             digits: crate::physical::DigitKeys::default(),
+            draws: 0,
+            needs_draw: true,
+            drawn_signature: 0,
+            drawn_at: None,
+            #[cfg(feature = "highlight")]
+            code_frame: std::cell::RefCell::new(None),
             #[cfg(feature = "highlight")]
             code_cache: std::cell::RefCell::default(),
         }
@@ -323,6 +347,7 @@ impl Tui {
 
     /// Dispatches a command and acts on its effects.
     pub fn dispatch(&mut self, cmd: Command) {
+        self.needs_draw = true;
         let effects = self.app.dispatch(cmd);
         self.apply(effects);
     }
@@ -379,6 +404,9 @@ impl Tui {
     }
 
     fn apply(&mut self, effects: Vec<Effect>) {
+        if !effects.is_empty() {
+            self.needs_draw = true;
+        }
         if let Some(text) = self.app.take_clipboard() {
             self.send_to_clipboard(&text);
         }
@@ -392,6 +420,9 @@ impl Tui {
 
     /// Handles one terminal event.
     pub fn handle_event(&mut self, event: &Event) {
+        // Any event (a key, a paste, a resize, focus) may change the
+        // screen.
+        self.needs_draw = true;
         match event {
             Event::Key(k) if matches!(k.kind, KeyEventKind::Press | KeyEventKind::Repeat) => {
                 self.handle_key(*k);
@@ -696,9 +727,86 @@ impl Tui {
         self.draw_at(f, Instant::now());
     }
 
+    /// How many times the screen was drawn since the reader started (for
+    /// tests and the frame bench).
+    pub fn draws(&self) -> u64 {
+        self.draws
+    }
+
+    /// A number that changes whenever what the screen shows could have
+    /// changed: the status message, the text and its revision, the cursor,
+    /// the selection, the spoken word and sentence, the mode, reading,
+    /// the list or prompt, the viewport, and RSVP. Cheap: nothing is
+    /// copied.
+    pub fn view_signature(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        let app = &self.app;
+        app.status().seq.hash(&mut h);
+        app.status().current.as_ref().map(String::len).hash(&mut h);
+        (app.mode() as u8).hash(&mut h);
+        format!("{:?}", app.playback()).hash(&mut h);
+        let vp = app.viewport();
+        (vp.top_line, vp.width, vp.height).hash(&mut h);
+        if let Some(s) = app.session() {
+            s.revision.hash(&mut h);
+            s.cursor.0.hash(&mut h);
+            s.selection.map(|r| (r.start.0, r.end.0)).hash(&mut h);
+            s.spoken.map(|r| (r.start.0, r.end.0)).hash(&mut h);
+            s.spoken_sentence.map(|r| (r.start.0, r.end.0)).hash(&mut h);
+            s.speech_cursor_line.hash(&mut h);
+            s.notes.len().hash(&mut h);
+            s.bookmarks.len().hash(&mut h);
+            s.highlights.len().hash(&mut h);
+        }
+        if let Some(l) = app.list_model() {
+            (l.title.len(), l.items.len(), l.selected).hash(&mut h);
+        }
+        if let Some(p) = app.prompt_model() {
+            (p.label.len(), p.caret(), p.text().len()).hash(&mut h);
+        }
+        if let Some(r) = app.rsvp() {
+            (r.index(), r.is_playing()).hash(&mut h);
+        }
+        app.quiet_screen_active().hash(&mut h);
+        h.finish()
+    }
+
+    /// Whether the loop should draw now: something asked for it
+    /// (`changed`: speech status or a background job arrived), a key or
+    /// command was handled, what the screen shows changed, a blanked
+    /// status message is due, RSVP is playing, or a second has passed (a
+    /// safety net, so nothing stays stale longer).
+    pub fn wants_draw(&self, changed: bool, now: Instant) -> bool {
+        self.needs_draw
+            || changed
+            || self
+                .drawn_at
+                .is_none_or(|t| now.saturating_duration_since(t) >= REDRAW_AT_LEAST)
+            || self.status_blank_until.is_some_and(|t| now >= t)
+            || self.app.rsvp_wait(now).is_some()
+            || self.view_signature() != self.drawn_signature
+    }
+
+    /// How long the loop may wait before it must draw again whatever
+    /// happens: until a blanked status message is shown again, and at most
+    /// [`REDRAW_AT_LEAST`].
+    pub fn draw_due_in(&self, now: Instant) -> std::time::Duration {
+        let heartbeat = self.drawn_at.map_or(std::time::Duration::ZERO, |t| {
+            REDRAW_AT_LEAST.saturating_sub(now.saturating_duration_since(t))
+        });
+        match self.status_blank_until {
+            Some(t) => heartbeat.min(t.saturating_duration_since(now)),
+            None => heartbeat,
+        }
+    }
+
     /// [`draw`](Self::draw) as of `now`, which decides whether a repeated
     /// status message is still blanked (tests pass their own times).
     pub fn draw_at(&mut self, f: &mut Frame<'_>, now: Instant) {
+        self.draws += 1;
+        self.needs_draw = false;
+        self.drawn_at = Some(now);
         self.refresh_theme();
         let theme = self.theme.clone();
         let areas = self.areas(f.area());
@@ -739,6 +847,8 @@ impl Tui {
             cursor
         };
         f.set_cursor_position(cursor.unwrap_or(Position::new(areas.body.x, areas.body.y)));
+        // After drawing: drawing itself may scroll or size the view.
+        self.drawn_signature = self.view_signature();
     }
 
     /// True when lines are laid out for a screen reader's Braille display
@@ -1044,6 +1154,36 @@ impl Tui {
     ) -> Vec<(CharRange, Style)> {
         #[cfg(feature = "highlight")]
         {
+            let key = (
+                self.app.session().map_or(0, |s| s.revision),
+                window,
+                theme.name.clone(),
+            );
+            if let Some((k, v)) = self.code_frame.borrow().as_ref()
+                && *k == key
+            {
+                return v.clone();
+            }
+            let out = self.code_styles_now(doc, window, theme);
+            *self.code_frame.borrow_mut() = Some((key, out.clone()));
+            out
+        }
+        #[cfg(not(feature = "highlight"))]
+        {
+            let _ = (doc, window, theme);
+            Vec::new()
+        }
+    }
+
+    /// [`code_styles`](Self::code_styles) worked out anew.
+    #[cfg(feature = "highlight")]
+    fn code_styles_now(
+        &self,
+        doc: &textweaver_app::text::Document,
+        window: CharRange,
+        theme: &Theme,
+    ) -> Vec<(CharRange, Style)> {
+        {
             use crate::highlight::Token;
             use textweaver_app::core::MarkerKind;
             let styles = &theme.code;
@@ -1091,11 +1231,6 @@ impl Tui {
             }
             out.retain(|(r, _)| !r.is_empty());
             out
-        }
-        #[cfg(not(feature = "highlight"))]
-        {
-            let _ = (doc, window, theme);
-            Vec::new()
         }
     }
 

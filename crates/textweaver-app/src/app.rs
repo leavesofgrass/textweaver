@@ -419,6 +419,9 @@ pub struct App {
     pub(crate) menu: crate::menu::MenuState,
     /// Moves on when a list, prompt, or menu closes (crate::announce).
     pub(crate) dialog_generation: u64,
+    /// What frontends ask for every frame, kept per revision
+    /// (crate::frame_cache).
+    pub(crate) frame_cache: crate::frame_cache::FrameCaches,
 }
 
 impl App {
@@ -517,6 +520,7 @@ impl App {
             announce_list_focus: true,
             menu: crate::menu::MenuState::default(),
             dialog_generation: 0,
+            frame_cache: crate::frame_cache::FrameCaches::default(),
         };
         app.apply_voice_settings();
         app.load_themes();

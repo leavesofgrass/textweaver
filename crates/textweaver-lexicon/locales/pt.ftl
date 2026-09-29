@@ -3019,6 +3019,7 @@ menu-press-a-key = Pressione uma tecla para ouvir o que ela faz.
 menu-key-described = { $name }: { $help }. Teclas: { $keys }. Nos menus: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. Teclas: { $keys }.
 menu-keys = { $item }. Enter ou Direita abre um menu ou executa um comando, uma letra vai ao seu item, Esquerda ou Backspace volta, Esc fecha.
+edit-line-continues = a linha continua
 menu-about = textweaver { $version }. Licença: { $license }.
 announce-level-changed = Avisos da interface: { $level }.
 announce-level-off = desativados

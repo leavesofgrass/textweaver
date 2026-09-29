@@ -3031,6 +3031,7 @@ menu-press-a-key = Appuyez sur une touche pour entendre ce qu'elle fait.
 menu-key-described = { $name } : { $help }. Touches : { $keys }. Dans les menus : { $path }.
 menu-key-described-no-menu = { $name } : { $help }. Touches : { $keys }.
 menu-keys = { $item }. Entrée ou Droite ouvre un menu ou exécute une commande, une lettre va à son élément, Gauche ou Retour arrière revient, Échap ferme.
+edit-line-continues = la ligne continue
 menu-about = textweaver { $version }. Licence : { $license }.
 announce-level-changed = Annonces de l'interface : { $level }.
 announce-level-off = désactivées

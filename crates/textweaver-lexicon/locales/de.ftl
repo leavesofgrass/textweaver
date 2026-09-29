@@ -3039,6 +3039,7 @@ menu-press-a-key = Drücken Sie eine Taste, um zu hören, was sie tut.
 menu-key-described = { $name }: { $help }. Tasten: { $keys }. In den Menüs: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. Tasten: { $keys }.
 menu-keys = { $item }. Eingabe oder Rechts öffnet ein Menü oder führt einen Befehl aus, ein Buchstabe springt zu seinem Eintrag, Links oder Rücktaste geht zurück, Escape schließt.
+edit-line-continues = Zeile geht weiter
 menu-about = textweaver { $version }. Lizenz: { $license }.
 announce-level-changed = Oberflächenansagen: { $level }.
 announce-level-off = aus

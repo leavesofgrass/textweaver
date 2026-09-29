@@ -3022,6 +3022,7 @@ menu-press-a-key = Press a key to hear what it does.
 menu-key-described = { $name }: { $help }. Keys: { $keys }. In the menus: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. Keys: { $keys }.
 menu-keys = { $item }. Enter or Right opens a menu or runs a command, a letter moves to its item, Left or Backspace goes back, Escape closes.
+edit-line-continues = line continues
 menu-about = textweaver { $version }. License: { $license }.
 announce-level-changed = Interface announcements { $level }.
 announce-level-off = off
