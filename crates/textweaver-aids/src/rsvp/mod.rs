@@ -23,7 +23,11 @@
 //! Timing never skips a word: when ticks arrive late, the next word is
 //! shown at the next tick, and the rhythm catches up only by the lateness
 //! of one word.
+//!
+//! [`flash`] checks the schedule against WCAG 2.3.1 (three flashes a
+//! second) and gives the cap a frontend with very large words would use.
 
+pub mod flash;
 mod layout;
 mod track;
 

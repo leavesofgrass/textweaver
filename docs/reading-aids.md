@@ -35,7 +35,7 @@ RSVP shows one word at a time in the same place on the screen. Your eyes stay st
 - A word too long for the box ends with `…`, so you know part of it is hidden.
 - The status line says where you are: for example, "Word 12 of 300, 3 percent. Sentence 2 of 20. 300 words per minute. Paused."
 
-A note on safety: fast RSVP changes the screen many times a second. textweaver changes only the word, never the whole box. If flicker bothers you, slow down or use a smaller word size.
+A note on safety: fast RSVP changes the screen many times a second. textweaver changes only the word, never the whole box: the box never goes blank or moves between words. WCAG 2.3.1 allows at most three flashes a second over an area bigger than about a quarter of what the eye takes in at once. A test checks the fastest rate, 1,500 words a minute, against that limit: the terminal box (with a terminal font up to about 24 points) and the window's RSVP panel stay well under it, because only the letters change. A frontend that ever draws much larger words has a cap ready that slows those changes to three flashes a second ([ADR-0037](adr/0037-extractive-summaries.md)). If flicker bothers you, slow down or use a smaller word size.
 
 ## Bionic reading
 
@@ -143,6 +143,8 @@ In the terminal, the current line is underlined with a bar in the left margin. L
 textweaver can mark rare words, so you can look them up before you read. A word is rare when it is uncommon in everyday English.
 
 Press **Alt+Shift+J** (or run `difficult words toggle` from the palette) to mark them. You hear "Difficult words underlined." In the terminal, each difficult word is underlined, never shown by colour alone. When verbosity is high (**Alt+Shift+V**), moving onto one with the Right or Left arrow adds "difficult word" after it: "mitochondria, difficult word". The choice is saved as `difficult_words = true` under `[reading_aids]`. The GUI does not show the marks yet.
+
+To hear what a difficult word means as you move onto it, turn on `difficult_definitions` under `[reading_aids]` (off by default; it is also in the settings screen as "Difficult word definitions"). With difficult words marked and verbosity high, you then hear the first definition from the define-word dictionary, your glossary first: "mitochondria, difficult word: an organelle containing enzymes responsible for producing energy". Only the first part of the definition is said, at most about 100 characters. The dictionary opens quietly the first time; until it has, you hear "difficult word" alone. Without the dictionary file, nothing changes.
 
 textweaver has a word list built in, so this works with no download. The list comes from SCOWL (Spell Checker Oriented Word Lists), which sorts English words into sizes by the smallest dictionary they appear in:
 
