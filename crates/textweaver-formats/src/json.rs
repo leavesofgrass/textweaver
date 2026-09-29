@@ -139,7 +139,13 @@ struct JsonParser<'s> {
 
 impl JsonParser<'_> {
     fn error(&self, what: &'static str) -> JsonError {
-        let before = &self.s[..self.i.min(self.s.len())];
+        // The position may be inside a character (after `\` and a
+        // multi-byte letter): count from the character's start.
+        let mut at = self.i.min(self.s.len());
+        while !self.s.is_char_boundary(at) {
+            at -= 1;
+        }
+        let before = &self.s[..at];
         let line = before.matches('\n').count() + 1;
         let column = before.rsplit('\n').next().map_or(0, |l| l.chars().count()) + 1;
         JsonError { what, line, column }
@@ -906,6 +912,11 @@ mod tests {
             "01x",
             "[1] 2",
             "tru",
+            // A bad escape before a letter of more than one byte, and
+            // truncated escapes: an error, never a panic.
+            "\"\\\u{e9}\"",
+            "\"\\",
+            "\"\\u12\u{e9}\"",
         ] {
             assert!(parse(bad).is_err(), "{bad:?}");
         }
