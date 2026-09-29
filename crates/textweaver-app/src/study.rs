@@ -112,10 +112,11 @@ enum LexiconFound {
 }
 
 /// The dictionary file opening on a helper thread, and the word to define
-/// when it is ready.
+/// when it is ready (none when it opens quietly, for difficult-word
+/// definitions).
 struct LexiconLoad {
     found: Receiver<LexiconFound>,
-    word: String,
+    word: Option<String>,
 }
 
 /// The study features' state in the app.
@@ -258,11 +259,19 @@ impl App {
 
     /// Starts opening the dictionary file on a helper thread, to define
     /// `word` when it is ready ([`define_tick`](Self::define_tick)).
-    /// "Dictionary still loading." is said once, when the load starts; a
-    /// word asked for meanwhile replaces the waiting one.
-    fn load_lexicon(&mut self, word: &str) -> Vec<Effect> {
+    /// "Dictionary still loading." is said once, when a word first waits;
+    /// a word asked for meanwhile replaces the waiting one. With no word,
+    /// the file opens quietly (for difficult-word definitions).
+    fn load_lexicon(&mut self, word: Option<&str>) -> Vec<Effect> {
         if let Some(load) = self.study.lexicon_load.as_mut() {
-            word.clone_into(&mut load.word);
+            let Some(word) = word else {
+                return Vec::new();
+            };
+            let first = load.word.replace(word.to_owned()).is_none();
+            if first {
+                let msg = self.msg("define-still-loading");
+                self.tell(&msg);
+            }
             return vec![Effect::Redraw];
         }
         let explicit = self.settings.lexicon.data_file.clone();
@@ -291,15 +300,41 @@ impl App {
             log::warn!("cannot start the dictionary thread: {e}");
             self.study.dictionary = Some(Dictionary::default());
             self.study.lexicon_missing = true;
-            return self.define(word);
+            return match word {
+                Some(w) => self.define(w),
+                None => Vec::new(),
+            };
         }
         self.study.lexicon_load = Some(LexiconLoad {
             found: rx,
-            word: word.to_owned(),
+            word: word.map(str::to_owned),
         });
+        if word.is_none() {
+            return Vec::new();
+        }
         let msg = self.msg("define-still-loading");
         self.tell(&msg);
         vec![Effect::Redraw]
+    }
+
+    /// True while the dictionary file is opening on its helper thread.
+    #[cfg(test)]
+    pub(crate) fn lexicon_loading(&self) -> bool {
+        self.study.lexicon_load.is_some()
+    }
+
+    /// The glossary and dictionary for a difficult word's definition
+    /// (ADR-0037), once the dictionary file is open. The first call starts
+    /// opening it quietly and returns `None`; so do calls while it opens.
+    pub(crate) fn definitions_dictionary(&mut self) -> Option<Dictionary> {
+        if self.study.lexicon_load.is_some() {
+            return None;
+        }
+        if !self.lexicon_tried() {
+            self.load_lexicon(None);
+            return None;
+        }
+        Some(self.dictionary())
     }
 
     /// Takes the dictionary file from the helper thread once it is open,
@@ -319,7 +354,10 @@ impl App {
             return Vec::new();
         };
         self.install_lexicon(found);
-        self.define(&load.word)
+        match load.word {
+            Some(w) => self.define(&w),
+            None => vec![Effect::Redraw],
+        }
     }
 
     /// Keeps what the dictionary thread found; a damaged file is said.
@@ -392,7 +430,7 @@ impl App {
     /// ([`load_lexicon`](Self::load_lexicon)).
     pub(crate) fn define(&mut self, word: &str) -> Vec<Effect> {
         if self.study.lexicon_load.is_some() || !self.lexicon_tried() {
-            return self.load_lexicon(word);
+            return self.load_lexicon(Some(word));
         }
         let dict = self.dictionary();
         let shown = textweaver_lexicon::normalize(word);

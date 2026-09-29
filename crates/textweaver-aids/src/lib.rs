@@ -22,6 +22,8 @@
 //! - [`ruler`]: the reading ruler and current-line band as row marks.
 //! - [`difficult`]: rare-word marking, with SCOWL's word levels built in
 //!   (no download) or any word-frequency list.
+//! - [`definitions`]: a difficult word's first definition, short enough to
+//!   say after it, from any dictionary the caller passes (ADR-0037).
 //! - [`html`]: wraps ranges of text in HTML tags, escaping the rest.
 //! - [`settings`]: conversions from and to the saved `[reading_aids]`
 //!   settings (`textweaver_store::reading_aids`).
@@ -32,6 +34,7 @@
 //! See `docs/adr/0022-reading-aids.md` and `docs/reading-aids.md`.
 
 pub mod bionic;
+pub mod definitions;
 pub mod difficult;
 pub mod fonts;
 pub mod html;
@@ -44,6 +47,7 @@ pub mod syllables;
 mod util;
 
 pub use bionic::{BionicOptions, bionic_range, bionic_text, fixation_len};
+pub use definitions::{DEFINITION_MAX_CHARS, Definitions, difficult_definition, short_definition};
 pub use difficult::{
     Commonness, DifficultOptions, FrequencyList, ScowlList, WordList, difficult_range,
     difficult_text,
