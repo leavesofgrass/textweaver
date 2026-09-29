@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 1200 1800" width="1200" height="1800" role="img" aria-labelledby="cover-title">
+<title id="cover-title">{{alt}}</title>
+<rect x="0" y="0" width="1200" height="1800" fill="{{background}}"/>
+<rect x="60" y="60" width="1080" height="1680" fill="none" stroke="{{accent}}" stroke-width="8"/>
+<g font-family="{{font}}" fill="{{foreground}}" text-anchor="middle">
+{{title_lines}}
+{{author_lines}}
+</g>
+</svg>

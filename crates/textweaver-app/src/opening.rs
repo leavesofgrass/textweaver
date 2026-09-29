@@ -119,6 +119,18 @@ pub fn open_failure_reason_in(c: &Catalog, path: &Path, err: &LoadError) -> Stri
             log::warn!("{name}: {detail}");
             c.tr("opening-damaged-odt")
         }
+        LoadError::Parse(detail) if matches!(extension(path).as_str(), "tex" | "latex" | "ltx") => {
+            log::warn!("{name}: {detail}");
+            c.tr("opening-damaged-latex")
+        }
+        LoadError::Parse(detail) if extension(path) == "eml" => {
+            log::warn!("{name}: {detail}");
+            c.tr("opening-damaged-email")
+        }
+        LoadError::Parse(detail) if matches!(extension(path).as_str(), "mhtml" | "mht") => {
+            log::warn!("{name}: {detail}");
+            c.tr("opening-damaged-mhtml")
+        }
         other => other.to_string(),
     }
 }
@@ -377,6 +389,23 @@ mod tests {
         assert_eq!(
             open_failure_message(Path::new("notes.odt"), &parse()),
             "Could not open notes.odt: it is not a readable OpenDocument text file; it may be damaged."
+        );
+    }
+
+    #[test]
+    fn damaged_latex_email_and_web_archives_are_named_plainly() {
+        let parse = || LoadError::Parse("it has more than 10000 parts".into());
+        assert_eq!(
+            open_failure_message(Path::new("notes.tex"), &parse()),
+            "Could not open notes.tex: it is not a readable LaTeX file; it may be damaged or too large."
+        );
+        assert_eq!(
+            open_failure_message(Path::new("message.eml"), &parse()),
+            "Could not open message.eml: it is not a readable email message; it may be damaged or too large."
+        );
+        assert_eq!(
+            open_failure_message(Path::new("page.MHT"), &parse()),
+            "Could not open page.MHT: it is not a readable web archive; it may be damaged or too large."
         );
     }
 }

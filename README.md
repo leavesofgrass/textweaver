@@ -46,7 +46,7 @@ Once it opens, **Space** starts and pauses reading, **h** jumps to the next head
 
 ## What it does
 
-textweaver has two programs and a window. `textweaver FILE` is a self-voicing terminal reader: it opens text, Markdown, HTML, EPUB, Word, RTF, OpenDocument, PDF, DAISY, PowerPoint, spreadsheets, and archives, with OCR for scans and pictures, and an edit mode for writing Markdown. `tw` is a command-line tool for converting, speaking, exporting audio, citing sources, and managing your library from a terminal or a script. `textweaver-xilem FILE` is the window: a native, screen-reader-accessible GUI that shares documents, keys, settings, and voices with the terminal reader. [docs/README.md](docs/README.md) lists every guide, and the [roadmap](docs/roadmap.md) says what comes next.
+textweaver has two programs and a window. `textweaver FILE` is a self-voicing terminal reader: it opens text, Markdown, HTML, EPUB, Word, RTF, OpenDocument, LaTeX, email, saved web pages, PDF, DAISY, PowerPoint, spreadsheets, and archives, with OCR for scans and pictures, and an edit mode for writing Markdown. `tw` is a command-line tool for converting, speaking, exporting audio, citing sources, and managing your library from a terminal or a script. `textweaver-xilem FILE` is the window: a native, screen-reader-accessible GUI that shares documents, keys, settings, and voices with the terminal reader. [docs/README.md](docs/README.md) lists every guide, and the [roadmap](docs/roadmap.md) says what comes next.
 
 ## Building
 

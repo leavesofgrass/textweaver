@@ -17,7 +17,7 @@ const LIBRARY: &str = r#"[
    "publisher": "Example Press"}
 ]"#;
 
-const DOC: &str = "# Paper\n\nTesting matters [@doe2020, p. 3]. As @roe2021 shows, reading aloud helps.\nMail me at jon@example.com or ask @nobody. Code `[@doe2020]` stays.\n";
+const DOC: &str = "# Paper\n\nTesting matters [@doe2020, p. 3]. As @roe2021 shows, reading aloud helps.\nMail me at ada@example.com or ask @nobody. Code `[@doe2020]` stays.\n";
 
 fn setup() -> (tempfile::TempDir, PathBuf) {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -87,7 +87,7 @@ fn html_citations_link_to_references_that_exist() {
     }
     // Mentions, e-mail addresses, and code are left alone.
     assert!(html.contains("@nobody"), "{html}");
-    assert!(html.contains("jon@example.com"), "{html}");
+    assert!(html.contains("ada@example.com"), "{html}");
     assert!(html.contains("<code>[@doe2020]</code>"), "{html}");
 }
 

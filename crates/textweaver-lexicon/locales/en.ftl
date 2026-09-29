@@ -796,6 +796,9 @@ opening-no-file-here = there is no file named { $name } here. Check the name.
 opening-no-permission = you do not have permission to read it.
 opening-damaged-rtf = it is not a readable RTF file; it may be damaged.
 opening-damaged-odt = it is not a readable OpenDocument text file; it may be damaged.
+opening-damaged-latex = it is not a readable LaTeX file; it may be damaged or too large.
+opening-damaged-email = it is not a readable email message; it may be damaged or too large.
+opening-damaged-mhtml = it is not a readable web archive; it may be damaged or too large.
 # $reason is one of the opening-no-* messages, or the loader's own words.
 opening-failed = Could not open { $name }: { $reason }
 opening-started = Opening { $name }. Escape cancels.

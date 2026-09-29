@@ -64,7 +64,7 @@ The developer documents are in [dev/](dev/), the decision records in [adr/](adr/
 - [The crates](dev/architecture.md#the-crates): what each of the 34 crates does, with its ADRs.
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
-- [Fuzzing](../fuzz/README.md): the 27 cargo-fuzz targets, run every night: the document loaders (RTF, ODT, and Word revisions among them), the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, and the engine-host protocol.
+- [Fuzzing](../fuzz/README.md): the 29 cargo-fuzz targets, run every night: the document loaders (RTF, ODT, Word revisions, LaTeX, and email among them), the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, and the engine-host protocol.
 - [Releasing](dev/releasing.md): making a release, the Linux AppImage, and what the packages hold.
 - [Third-party data](dev/third-party-data.md): the bundled pronunciation dictionaries, fonts, and word lists, and their licences.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
@@ -120,9 +120,11 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0032: Grammar, lint, highlighting, and clipboard crates](adr/0032-grammar-lint-highlighting-clipboard.md): the authoring extras' crates, and the two held for the owner.
 - [ADR-0033: The GUI after the second session, and edit mode](adr/0033-gui-session-2-and-edit-mode.md): the file chooser, text size and font keys, a key on every button, and edit mode in the window.
 - [ADR-0034: The rope after measurement](adr/0034-rope-after-measurement.md): stay on ropey 1.6; ropey 2 and crop measured, and when to look again.
+- [ADR-0035: Native LaTeX subset, and email and web archives](adr/0035-latex-email-and-web-archives.md): LaTeX, email, and web archives read natively, and MathML in web pages.
 - [ADR-0036: Math braille and navigation on MathCAT](adr/0036-math-braille-and-navigation.md): Nemeth and UEB math in braille files, and exploring a formula with MathCAT and its braille.
 - [ADR-0037: Extractive summaries without a model](adr/0037-extractive-summaries.md): LexRank in-house, `tw summarize` and Summarize, difficult-word definitions, and the RSVP flash check.
 - [ADR-0039: Automated screen-reader checks beside the listening sessions](adr/0039-automated-screen-reader-checks.md): the accessibility tree on three systems, and NVDA, Orca, and VoiceOver sessions on CI runners.
+- [ADR-0041: Publishing templates, real Word footnotes, and PDF page labels](adr/0041-publishing-templates.md): APA, AMA, and reading templates for EPUB, Word, and PDF, Word footnotes, the EPUB cover, and print page labels.
 
 ## Interactive pages
 
@@ -151,6 +153,7 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 - [Documentation sweep plan](research/docs-sweep-plan.md): the Zensical site on GitHub Pages, a short README, and five agents in parallel (September 2026).
 - [Wave 5, recalibrated](research/wave5-recalibrated.md): Wave 5 after Wave 4 and the Cloud Agent, eleven agents in overlapping batches, streaming dictation research, and the briefs (September 2026).
 - [User interface refinement pass: the list](research/ui-refinement.md): everything to improve in the terminal reader, `tw`, and the GUI, gathered before the pass is planned (September 2026).
+- [User interface refinement plan](research/ui-refinement-plan.md): research and the plan for the owner's six items (menus, palette, file browser, audio export, batch conversion, formats), quick wins, and the agents that build them in Wave 6 (September 2026).
 - [MathCAT issue #827: pull request text](research/mathcat-827-pull-request.md): the fix textweaver carries for MathCAT's navigation braille, and a test, ready for the owner to file upstream (September 2026).
 
 ## See also

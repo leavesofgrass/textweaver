@@ -90,11 +90,17 @@ fn epub_mathml_is_math() {
     assert!(!text.contains("x2+1"), "{text}");
 }
 
-/// The HTML loader is unchanged: MathML there is read as before.
+/// Web pages read MathML as math too (W5c3, ADR-0035), with the same
+/// formulas as the EPUB chapter.
 #[test]
-fn html_loader_is_unchanged() {
+fn html_loader_reads_mathml_as_math() {
     let doc = load(CHAPTER.as_bytes().to_vec(), "xhtml");
-    assert!(math_texts(&doc).is_empty());
+    let math = math_texts(&doc);
+    assert!(!math.is_empty());
+    let book = load(epub(CHAPTER), "epub");
+    for formula in &math {
+        assert!(math_texts(&book).contains(formula), "{formula:?}");
+    }
 }
 
 /// Hostile MathML in a chapter loads without overflowing the stack.

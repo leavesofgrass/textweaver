@@ -1,0 +1,25 @@
+/* textweaver template: dyslexia-friendly (ADR-0041).
+   After the British Dyslexia Association's style guide: a plain
+   sans-serif face, text a little larger than usual, wider spacing between
+   letters, words, and lines, left-aligned text with no hyphenation, bold
+   rather than italic or underline for emphasis, a soft cream background
+   with dark text, and short, well-spaced paragraphs. OpenDyslexic is used
+   when the book embeds it (tw convert --font OpenDyslexic). */
+body {
+  font-family: "OpenDyslexic", "Atkinson Hyperlegible Next", Verdana, Arial, sans-serif;
+  font-size: 1.15em;
+  line-height: 1.6;
+  letter-spacing: 0.05em;
+  word-spacing: 0.16em;
+  text-align: left;
+  hyphens: none;
+  -epub-hyphens: none;
+  background-color: #fbf8ee;
+  color: #1a1a1a;
+}
+p { margin: 0 0 1.2em; max-width: 36em; }
+h1, h2, h3, h4, h5, h6 { font-weight: bold; margin: 1.5em 0 0.7em; }
+em, i { font-style: normal; font-weight: bold; }
+u { text-decoration: none; font-weight: bold; }
+a { color: #1a3f8f; text-decoration: underline; }
+pre, code { letter-spacing: 0; }

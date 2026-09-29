@@ -42,7 +42,7 @@ Star (`star/citations.py`, `star/gui/mixin_citations.py`, `star/publish.py`) kep
 
 **Accessibility of output.** Nothing relies on visual formatting alone. Superscript citation numbers (AMA, Nature) are bracketed in every output (`[1]`, `<sup>[1]</sup>`), so they are not heard as part of the word before them ("reported1"). Plain text carries no markup, entities, or terminal escapes. Missing keys are written into the text ("missing reference smith2020") rather than as a bare `?`. Reference labels for pickers and lists are sentences: "Doe and Roe, 2020. On X. Key doe2020." (Star's `[Doe2020] Doe  (2020)  On X` had brackets and double spaces that screen readers spell out or swallow). Three or more creators are "Doe and others".
 
-**Pandoc citation syntax.** `pandoc::find_citations` finds bracketed and in-text citations with Pandoc's rules (every `;` part holds exactly one key; `@` must follow a space or opening punctuation, so `jon@example.com` is never a citation; `[@x](url)` is a link; a bare number is a page; `{…}` braces delimit keys and locators) and returns byte and character ranges (ADR-0002). `write_citation` writes them back; the two round-trip.
+**Pandoc citation syntax.** `pandoc::find_citations` finds bracketed and in-text citations with Pandoc's rules (every `;` part holds exactly one key; `@` must follow a space or opening punctuation, so `ada@example.com` is never a citation; `[@x](url)` is a link; a bare number is a page; `{…}` braces delimit keys and locators) and returns byte and character ranges (ADR-0002). `write_citation` writes them back; the two round-trip.
 
 **API for the app and editor** (`insert`):
 

@@ -819,6 +819,9 @@ opening-no-file-here = il n'y a aucun fichier nommé { $name } ici. Vérifiez le
 opening-no-permission = vous n'avez pas la permission de le lire.
 opening-damaged-rtf = ce n'est pas un fichier RTF lisible, il est peut-être endommagé.
 opening-damaged-odt = ce n'est pas un fichier texte OpenDocument lisible, il est peut-être endommagé.
+opening-damaged-latex = ce n'est pas un fichier LaTeX lisible, il est peut-être endommagé ou trop volumineux.
+opening-damaged-email = ce n'est pas un message électronique lisible, il est peut-être endommagé ou trop volumineux.
+opening-damaged-mhtml = ce n'est pas une archive web lisible, elle est peut-être endommagée ou trop volumineuse.
 # $reason is one of the opening-no-* messages, or the loader's own words.
 opening-failed = Impossible d'ouvrir { $name } : { $reason }
 opening-started = Ouverture de { $name }. Échap annule.

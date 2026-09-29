@@ -34,13 +34,22 @@
 //! checks the PDF/UA-1 rules it can check while writing (title, language,
 //! tagging, alt text, heading titles, outline, character mappings, font
 //! embedding permissions) and the write fails if any is broken.
+//!
+//! Page labels (ADR-0041): when the document has print page breaks (from
+//! a DAISY book, an EPUB page list, or a scanned PDF), each PDF page is
+//! labelled with the print page its first line belongs to, as a printed
+//! book's running page number would be, so a viewer's "go to page 42" goes
+//! to the page where print page 42 is under way at the top. Pages
+//! before the first print page (a title page, the contents) are labelled
+//! i, ii, and so on. A publishing template's title page carries its fields
+//! (see [`Template`](crate::Template)).
 
 mod font;
 
 use crate::math::Formula;
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
-use std::num::NonZeroU16;
+use std::num::{NonZeroU16, NonZeroU32};
 use std::rc::Rc;
 
 use krilla::action::{Action, LinkAction};
@@ -51,7 +60,7 @@ use krilla::geom::{PathBuilder, Point, Rect, Size, Transform};
 use krilla::image::Image as KrillaImage;
 use krilla::metadata::{DateTime, Metadata};
 use krilla::outline::{Outline, OutlineNode};
-use krilla::page::PageSettings;
+use krilla::page::{NumberingStyle, PageLabel, PageSettings};
 use krilla::paint::{Fill, Stroke};
 use krilla::surface::Surface;
 use krilla::tagging::{
@@ -64,6 +73,7 @@ use textweaver_text::Document;
 
 use crate::model::{self, Block, Facts, Image, Inline, List, Style, Table};
 use crate::resource::{ImageKind, Resource, Resources};
+use crate::template::{self, TitlePage};
 use crate::{
     Format, LARGE_PRINT_MIN_SIZE, WriteError, WriteOptions, WriteReport, Writer, civil, timestamp,
 };
@@ -102,14 +112,20 @@ impl Writer for PdfWriter {
         let mut resources = Resources::new(doc, options);
         let mut layout = Layout::new(&fonts, options, &anchors, &mut report, &mut resources);
         if options.pdf.title_page {
-            let date = options
-                .pdf
-                .date
-                .clone()
-                .or_else(|| doc.meta.properties.get("date").cloned())
-                .map(|d| model::collapse_ws(&d))
-                .filter(|d| !d.is_empty());
-            layout.title_page(&facts, date.as_deref());
+            // A template's title page (APA, AMA, manuscript) has its own
+            // fields; otherwise the title, the author, and the date.
+            let page = options
+                .template
+                .and_then(|t| template::title_page(t, doc, options, &facts, &blocks))
+                .unwrap_or_else(|| {
+                    let mut lines: Vec<String> = facts.author.iter().cloned().collect();
+                    lines.extend(template::title_date(doc, options));
+                    TitlePage {
+                        title: facts.title.clone(),
+                        lines,
+                    }
+                });
+            layout.title_page(&page);
         }
         if options.pdf.toc && !anchors.headings.is_empty() {
             layout.contents(options.pdf.toc_depth.clamp(1, 6));
@@ -536,6 +552,9 @@ struct Laid {
     contents: Option<(usize, f32)>,
     /// Pages without a footer (the title page).
     no_footer: usize,
+    /// (PDF page, print page label, starts at the page's top) where each
+    /// print page starts.
+    print_pages: Vec<(usize, String, bool)>,
     page_w: f32,
     page_h: f32,
     margin: f32,
@@ -562,6 +581,12 @@ struct Layout<'a> {
     notes: HashMap<String, (usize, f32)>,
     contents: Option<(usize, f32)>,
     no_footer: usize,
+    /// (PDF page, print page label, starts at the page's top) where each
+    /// print page starts.
+    print_pages: Vec<(usize, String, bool)>,
+    /// A print page break waiting for the next line of text, which fixes
+    /// the PDF page it starts on.
+    pending_print: Option<String>,
     missing: Vec<char>,
     /// Images with no description, written as decorative.
     undescribed: usize,
@@ -618,6 +643,8 @@ impl<'a> Layout<'a> {
             notes: HashMap::new(),
             contents: None,
             no_footer: 0,
+            print_pages: Vec::new(),
+            pending_print: None,
             missing: Vec::new(),
             undescribed: 0,
             dangling: 0,
@@ -830,6 +857,10 @@ impl<'a> Layout<'a> {
             if self.y + lh > self.bottom && !self.at_top() {
                 self.new_page();
             }
+            if let Some(label) = self.pending_print.take() {
+                let top = self.at_top();
+                self.print_pages.push((self.pages.len() - 1, label, top));
+            }
             let baseline = self.baseline(size);
             // Merge neighbouring parts with the same look and link.
             let mut merged: Vec<(f32, Part)> = Vec::new();
@@ -1002,26 +1033,56 @@ impl<'a> Layout<'a> {
         }
     }
 
-    /// A title page: the title a third of the way down, then the author and
-    /// the date when known. It has no page number in its footer.
-    fn title_page(&mut self, facts: &Facts, date: Option<&str>) {
+    /// A title page: the title a third of the way down, then its lines
+    /// (the author and the date, or a template's fields; an empty line is
+    /// space). It has no page number in its footer.
+    fn title_page(&mut self, page: &TitlePage) {
         self.y = self.top() + (self.bottom - self.top()) * 0.3;
         let bold = Look {
             bold: true,
             ..Look::default()
         };
         let title_size = self.base * if self.large { 1.8 } else { 2.4 };
-        self.centred(&facts.title, bold, title_size);
+        self.centred(&page.title, bold, title_size);
         self.y += self.base * 1.5;
-        if let Some(author) = &facts.author {
-            self.centred(author, Look::default(), self.base * 1.25);
+        let mut first = true;
+        for line in &page.lines {
+            if line.is_empty() {
+                self.y += self.base;
+                continue;
+            }
+            // The first line (the author, usually) a little larger.
+            let size = if first { self.base * 1.25 } else { self.base };
+            first = false;
+            self.centred(line, Look::default(), size);
             self.y += self.base * 0.5;
-        }
-        if let Some(date) = date {
-            self.centred(date, Look::default(), self.base);
         }
         self.no_footer = 1;
         self.new_page();
+    }
+
+    /// A print page break: labelled as the source labels it, else one
+    /// more than the last numbered print page. The PDF page it starts on
+    /// is known when the next line of text is placed.
+    fn print_page(&mut self, label: Option<&str>) {
+        let label = label
+            .map(model::collapse_ws)
+            .filter(|l| !l.is_empty())
+            .unwrap_or_else(|| {
+                let last = self
+                    .pending_print
+                    .iter()
+                    .chain(self.print_pages.iter().map(|(_, l, _)| l).rev())
+                    .find_map(|l| l.parse::<u32>().ok());
+                last.map_or(self.print_pages.len() + 1, |n| n as usize + 1)
+                    .to_string()
+            });
+        if let Some(prev) = self.pending_print.replace(label) {
+            // Two breaks with no text between: the first print page is
+            // empty, and still starts here.
+            let top = self.at_top();
+            self.print_pages.push((self.pages.len() - 1, prev, top));
+        }
     }
 
     /// The table of contents: a "Contents" heading, then one entry per
@@ -1149,7 +1210,7 @@ impl<'a> Layout<'a> {
                     self.new_page();
                 }
             }
-            Block::PageBreak { .. } => {}
+            Block::PageBreak { label } => self.print_page(label.as_deref()),
             // A horizontal rule: a line across the text, as layout.
             Block::Rule => {
                 let size = self.base;
@@ -1473,7 +1534,11 @@ impl<'a> Layout<'a> {
         self.y += h + self.paragraph_gap(self.base);
     }
 
-    fn finish(self) -> Laid {
+    fn finish(mut self) -> Laid {
+        if let Some(label) = self.pending_print.take() {
+            let top = self.at_top();
+            self.print_pages.push((self.pages.len() - 1, label, top));
+        }
         if !self.missing.is_empty() {
             let list: Vec<String> = self
                 .missing
@@ -1512,12 +1577,68 @@ impl<'a> Layout<'a> {
             notes: self.notes,
             contents: self.contents,
             no_footer: self.no_footer,
+            print_pages: self.print_pages,
             page_w: self.page_w,
             page_h: self.page_h,
             margin: self.margin,
             base: self.base,
         }
     }
+}
+
+/// A PDF page's label.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum PrintLabel {
+    /// Before the first print page: i, ii, iii.
+    Front(u32),
+    /// A print page's label ("42", "xii", "A-3").
+    Print(String),
+}
+
+impl PrintLabel {
+    fn krilla(&self) -> PageLabel {
+        match self {
+            PrintLabel::Front(n) => {
+                PageLabel::new(Some(NumberingStyle::LowerRoman), None, NonZeroU32::new(*n))
+            }
+            PrintLabel::Print(p) => match p.parse::<u32>().ok().and_then(NonZeroU32::new) {
+                // A plain number keeps its numeric form.
+                Some(n) if !p.starts_with('0') => {
+                    PageLabel::new(Some(NumberingStyle::Arabic), None, Some(n))
+                }
+                _ => PageLabel::new(None, Some(p.clone()), None),
+            },
+        }
+    }
+}
+
+/// Labels for `total` PDF pages from where print pages start (PDF page,
+/// label, whether it starts at the page's top): each page takes the print
+/// page its first line belongs to, the last one started before that line.
+/// Print pages that start and end in the middle of one PDF page give no
+/// label (one page has one label). Pages before the first print page are
+/// numbered i, ii, iii. Empty when the document has no print pages.
+fn page_labels(print: &[(usize, String, bool)], total: usize) -> Vec<PrintLabel> {
+    if print.is_empty() {
+        return Vec::new();
+    }
+    let mut labels = Vec::with_capacity(total);
+    let mut current: Option<&str> = None;
+    let mut next = 0;
+    for page in 0..total {
+        // Breaks before this page's first line: earlier pages, or its top.
+        while let Some((p, l, top)) = print.get(next)
+            && (*p < page || (*p == page && *top))
+        {
+            current = Some(l.as_str());
+            next += 1;
+        }
+        labels.push(match current {
+            Some(l) => PrintLabel::Print(l.to_owned()),
+            None => PrintLabel::Front(u32::try_from(page + 1).unwrap_or(u32::MAX)),
+        });
+    }
+    labels
 }
 
 fn decode(res: &Resource) -> Option<KrillaImage> {
@@ -1622,9 +1743,14 @@ fn render(
     let size = Size::from_wh(laid.page_w, laid.page_h)
         .ok_or_else(|| WriteError::Pdf("invalid page size".to_owned()))?;
     let footer_face = fonts.family.regular;
+    let labels = page_labels(&laid.print_pages, total);
     let mut images: HashMap<*const Resource, KrillaImage> = HashMap::new();
     for (n, ops) in laid.pages.iter().enumerate() {
-        let mut page = document.start_page_with(PageSettings::new(size));
+        let mut settings = PageSettings::new(size);
+        if let Some(label) = labels.get(n) {
+            settings = settings.with_page_label(label.krilla());
+        }
+        let mut page = document.start_page_with(settings);
         {
             let mut surface = page.surface();
             surface.set_fill(Some(Fill::default()));
@@ -1633,7 +1759,12 @@ fn render(
             }
             // Page numbers are artifacts.
             if options.pdf.page_numbers && n >= laid.no_footer {
-                let label = format!("Page {} of {total}", n + 1);
+                let label = match labels.get(n) {
+                    Some(PrintLabel::Print(p)) => {
+                        format!("Page {} of {total}, print page {p}", n + 1)
+                    }
+                    _ => format!("Page {} of {total}", n + 1),
+                };
                 let fsize = (laid.base * 0.8).max(6.0);
                 let face = &fonts.faces[footer_face];
                 let w = face.width(&label, fsize);
@@ -1843,6 +1974,44 @@ fn describe(e: &krilla::error::KrillaError) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn page_labels_follow_print_pages() {
+        let p = |s: &str| PrintLabel::Print(s.to_owned());
+        assert!(page_labels(&[], 3).is_empty());
+        // A title page, then print page 7 at the top of PDF page 1, going
+        // on over page 2; 8 starts at the foot of page 2, so page 3 opens
+        // in 8; 9 starts at the top of page 4 and 10 in its middle, so
+        // page 4 is 9 and page 5 opens in 10.
+        let print = [
+            (1, "7".to_owned(), true),
+            (2, "8".to_owned(), false),
+            (4, "9".to_owned(), true),
+            (4, "10".to_owned(), false),
+        ];
+        assert_eq!(
+            page_labels(&print, 6),
+            [
+                PrintLabel::Front(1),
+                p("7"),
+                p("7"),
+                p("8"),
+                p("9"),
+                p("10")
+            ]
+        );
+        // Labels that are not numbers are kept as written.
+        let print = [(0, "xii".to_owned(), true), (1, "A-3".to_owned(), true)];
+        assert_eq!(page_labels(&print, 2), [p("xii"), p("A-3")]);
+        assert_eq!(
+            p("42").krilla(),
+            PageLabel::new(Some(NumberingStyle::Arabic), None, NonZeroU32::new(42))
+        );
+        assert_eq!(
+            p("042").krilla(),
+            PageLabel::new(None, Some("042".to_owned()), None)
+        );
+    }
 
     #[test]
     fn slugs_follow_markdown_renderers() {

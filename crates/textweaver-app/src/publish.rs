@@ -784,8 +784,8 @@ mod tests {
         assert!(out.contains("<head>\n<base href=\"file:///D:/notes/\"><title>"));
         assert_eq!(with_base(&out, "file:///elsewhere/"), out);
         assert_eq!(
-            folder_url(Path::new("/home/jon/my notes")),
-            "file:///home/jon/my%20notes/"
+            folder_url(Path::new("/home/ada/my notes")),
+            "file:///home/ada/my%20notes/"
         );
         assert_eq!(folder_url(Path::new("D:\\notes")), "file:///D:/notes/");
     }

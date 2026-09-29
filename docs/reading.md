@@ -47,6 +47,9 @@ The reader opens these formats itself:
 - Word: `.docx`, `.docm`, with comments as notes.
 - RTF: `.rtf`.
 - OpenDocument text: `.odt`, `.ott`, `.fodt`, with comments as notes.
+- LaTeX: `.tex`, `.latex`, `.ltx`, with the files it includes from its own folder.
+- Email: `.eml`, headers first, attachments listed.
+- Web pages saved as one file: `.mhtml`, `.mht`.
 - PDF: `.pdf`, and scanned PDFs through text recognition (below).
 - Pictures of text: `.png`, `.jpg`, `.jpeg`, through text recognition.
 - DAISY 3 books and DTBook: `.opf`, `.xml`, `.dtbook`, and a DAISY book in a zip.
@@ -56,7 +59,7 @@ The reader opens these formats itself:
 
 The [converting guide](converting.md#formats-textweaver-reads) says what is read from each format. A file with any other extension is read as plain text. A file that is not text at all is refused: a program, an audio file, or an old Word `.doc`. The message says what the file looks like, for example: "report.bin is not a text file; it looks like a program. textweaver cannot read it as text."
 
-The reader does not use Pandoc. To read a LaTeX, reStructuredText, or other such file, convert it to Markdown first, then open the Markdown. `tw convert` uses Pandoc for these formats, so Pandoc must be installed:
+The reader does not use Pandoc. To read a reStructuredText, Org, or other such file, convert it to Markdown first, then open the Markdown. `tw convert` uses Pandoc for these formats, so Pandoc must be installed:
 
 ```bash
 tw convert essay.rst --to md
