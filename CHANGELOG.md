@@ -4,6 +4,17 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### W6o: formats
+
+- **Obsidian notes read the way Obsidian shows them.** A callout of any type says its type first, in words ("Warning: Hot surface"), and a foldable one says once whether it starts collapsed; `[!type]` is never read. The reader and `tw convert` share one set of callout rules. Embedded notes (`![[note]]`, `![[note#Heading]]`, `![[note#^id]]`) are read in place between "Embedded from Note" and "End of embed", from the note's own folder only, two levels deep, cycles refused; embedded pictures are graphics named by their file; tags read "tag physics slash waves"; `==highlights==` are marked; `%%comments%%` are not read; block ids are kept as link targets.
+- **JSON files** read with a heading per key, so `h` moves by key, and no brackets, braces, or quotes; invalid JSON is read as plain text with a warning that says where it broke. **JSON Lines** give a heading per line.
+- **Jupyter notebooks** open natively, cell by cell: text cells as Markdown, code cells named by their language ("Python code"), and outputs as quotes and graphics.
+- **SVG drawings** read their title, description, titled parts, and text, or "Drawing with no description"; a drawing inside a web page is read the same way instead of being dropped.
+- **Content MathML** is read as math, and `.mml` files open as one formula.
+- **LaTeX:** macros with up to nine arguments and `\newenvironment` expand; `\bibliography` and `\printbibliography` list the cited works under "References"; `\multicolumn` and `\multirow` cells say what they span; `\includegraphics[alt=...]` is described by its alt text.
+- Text sent to Pandoc in an older encoding is converted to UTF-8 first.
+- New messages, in all six languages: "it is not a readable JSON file", "... Jupyter notebook", "... SVG drawing", and "... MathML formula", said after "Could not open".
+
 ## [0.1.0-alpha.5] - 2026-09-29
 
 The fifth alpha. Braille comes first: every status line, list, and prompt puts the meaning in the first 40 cells, and math can be written in Nemeth or UEB braille. LaTeX, email, and web archives open without Pandoc; documents can be summarized with no model; publishing templates make APA and AMA papers with real Word footnotes; and the GUI ships in the release on every system, with syllables, the voice manager, a question dialog, and its labels in six languages.
