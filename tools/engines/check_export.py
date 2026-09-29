@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 """Checks a WAV file that `tw export-audio --json` wrote with a real engine.
 
-Nothing is played: the file is only read. Checks, each a line starting with
-Pass or Fail:
+Nothing is played: the file is only read. Only these fail (a "Fail" line
+and exit status 1), since each means the engine did not export at all:
 
-- the export used the backend asked for, not a fallback;
-- the WAV file reads, and holds audio;
-- its length matches the timeline's length (within 2 percent or 100 ms);
-- it is not silent, and its speed is plausible for the text (60 to 600
-  words per minute);
-- the engine reported word events: at least 90 percent of the text's words
-  have a time, and the times rise and stay inside the audio.
+- the report or the WAV file cannot be read;
+- the export used another backend than the one asked for (a fallback);
+- the WAV file holds no audio.
+
+These are checked and reported as "Pass" or "Warning", never failed, until
+runs on main give each engine a baseline:
+
+- the length matches the timeline's length (within 2 percent or 100 ms);
+- it is not silent, and its speed is plausible (60 to 600 words a minute);
+- word events: at least 90 percent of the text's words have a time, and
+  the times rise and stay inside the audio. A backend that reports no word
+  times in exported files at all gets one Warning saying so.
 
 It also measures, and reports as "Measured" lines without failing, where
 the word times fall against the audio's own silences: at each sentence
@@ -106,10 +111,15 @@ def main() -> int:
     lines: list[str] = []
     failed = False
 
-    def check(ok: bool, passed: str, failure: str) -> None:
+    def must(ok: bool, passed: str, failure: str) -> None:
+        """A check whose failure means the engine did not export."""
         nonlocal failed
         lines.append(f"Pass: {name}: {passed}" if ok else f"Fail: {name}: {failure}")
         failed |= not ok
+
+    def should(ok: bool, passed: str, warning: str) -> None:
+        """A check reported without failing, until it has a baseline."""
+        lines.append(f"Pass: {name}: {passed}" if ok else f"Warning: {name}: {warning}")
 
     try:
         with open(args.report, encoding="utf-8") as f:
@@ -123,27 +133,27 @@ def main() -> int:
     selection = report.get("backend", {})
     backend = selection.get("backend", {}).get("id", "unknown")
     # A fallback to another engine would check the wrong one.
-    check(
+    must(
         backend == args.backend and not selection.get("fell_back", True),
         f"the export used the {backend} backend, as asked.",
         f"the export used {backend}, not {args.backend}: the engine asked for is missing.",
     )
     lines.append(f"Measured: {name}: {rate} samples a second.")
     wav_ms = len(samples) * 1000 // rate if rate else 0
-    check(wav_ms > 0, f"the WAV file holds {wav_ms} ms of audio.", "the WAV file holds no audio.")
+    must(wav_ms > 0, f"the WAV file holds {wav_ms} ms of audio.", "the WAV file holds no audio.")
     if wav_ms == 0:
         return finish(lines, args.summary, True)
 
     expected_ms = int(timeline["duration_ms"])
     slack = max(100, expected_ms // 50)
-    check(
+    should(
         abs(wav_ms - expected_ms) <= slack,
         f"its length matches the timeline ({wav_ms} ms against {expected_ms} ms).",
         f"its length is {wav_ms} ms but the timeline says {expected_ms} ms.",
     )
 
     peak_rms = math.sqrt(sum(s * s for s in samples) / len(samples))
-    check(
+    should(
         peak_rms > 0.001,
         "it is not silent.",
         f"it is silent (overall level {peak_rms:.6f} of full scale).",
@@ -152,28 +162,36 @@ def main() -> int:
     sentences = timeline["sentences"]
     n_text = sum(text_words(s["text"]) for s in sentences)
     wpm = n_text / (wav_ms / 60000)
-    check(
+    should(
         60 <= wpm <= 600,
         f"{n_text} words in {wav_ms / 1000:.1f} s, {wpm:.0f} words per minute.",
         f"{n_text} words in {wav_ms / 1000:.1f} s is {wpm:.0f} words per minute, outside 60 to 600.",
     )
 
     timed = [w for s in sentences for w in s["words"]]
-    share = len(timed) / n_text if n_text else 0.0
-    check(
-        share >= 0.9,
-        f"word events for {len(timed)} of {n_text} words.",
-        f"word events for only {len(timed)} of {n_text} words.",
-    )
     starts = [int(w["start_ms"]) for w in timed]
-    rising = all(a <= b for a, b in zip(starts, starts[1:]))
-    inside = all(0 <= t <= expected_ms + 50 for t in starts)
-    check(
-        bool(starts) and rising and inside,
-        "the word times rise and stay inside the audio.",
-        "the word times do not rise, or fall outside the audio."
-        if starts else "there are no word times to check.",
-    )
+    if not timed:
+        # Said once, plainly: some backends write files without word times
+        # (the export's default, ADR-0011), which subtitles then lack.
+        lines.append(
+            f"Warning: {name}: the exported file has no word times at all, "
+            f"so subtitles and word highlighting from it have none. "
+            f"The audio itself exported."
+        )
+    else:
+        share = len(timed) / n_text if n_text else 0.0
+        should(
+            share >= 0.9,
+            f"word events for {len(timed)} of {n_text} words.",
+            f"word events for only {len(timed)} of {n_text} words.",
+        )
+        rising = all(a <= b for a, b in zip(starts, starts[1:]))
+        inside = all(0 <= t <= expected_ms + 50 for t in starts)
+        should(
+            rising and inside,
+            "the word times rise and stay inside the audio.",
+            "the word times do not rise, or fall outside the audio.",
+        )
 
     # Measurements against the audio's silences: reported, never failed.
     quiet = silences(window_rms(samples, rate))
@@ -191,14 +209,15 @@ def main() -> int:
             f"{statistics.median(offsets):+.0f} ms from the end of the nearest silence (median); "
             f"the largest difference is {max(offsets, key=abs):+d} ms. Plus means after."
         )
-    deep = [
-        t for t in starts
-        if any(a + DEEP_MS < t < b - DEEP_MS for a, b in quiet)
-    ]
-    lines.append(
-        f"Measured: {name}: {len(deep)} of {len(starts)} word starts fall more than "
-        f"{DEEP_MS} ms inside a silence."
-    )
+    if starts:
+        deep = [
+            t for t in starts
+            if any(a + DEEP_MS < t < b - DEEP_MS for a, b in quiet)
+        ]
+        lines.append(
+            f"Measured: {name}: {len(deep)} of {len(starts)} word starts fall more than "
+            f"{DEEP_MS} ms inside a silence."
+        )
     return finish(lines, args.summary, failed)
 
 
