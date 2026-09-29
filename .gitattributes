@@ -14,3 +14,5 @@ third_party/scowl/*.zip binary
 third_party/lexicon/*.twlex binary
 # The vendored MathCAT stays byte for byte as its crates.io package (CRLF).
 third_party/mathcat/** -text
+# BRF snapshots keep their CR LF line ends and form feeds.
+*.brf binary

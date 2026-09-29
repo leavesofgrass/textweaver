@@ -33,8 +33,14 @@ publish = [
 espeak = ["textweaver-engines/espeak"]
 omnivox = ["textweaver-engines/omnivox"]
 speechd = ["textweaver-engines/speechd"]
-# MathCAT math speech (ADR-0029), passed through to textweaver-engines.
-mathcat = ["textweaver-engines/mathcat"]
+# MathCAT (ADR-0029, ADR-0036): math speech, passed through to
+# textweaver-engines; exploring a formula with MathCAT's navigation and
+# braille; and Nemeth or UEB math in exported BRF files.
+mathcat = [
+    "textweaver-engines/mathcat",
+    "dep:textweaver-mathcat",
+    "textweaver-convert?/mathcat",
+]
 
 [dependencies]
 textweaver-core.workspace = true
@@ -50,6 +56,7 @@ textweaver-engines.workspace = true
 textweaver-theme.workspace = true
 textweaver-aids.workspace = true
 textweaver-math.workspace = true
+textweaver-mathcat = { workspace = true, optional = true }
 textweaver-cite = { workspace = true, optional = true }
 textweaver-convert = { workspace = true, optional = true }
 textweaver-render = { workspace = true, optional = true }

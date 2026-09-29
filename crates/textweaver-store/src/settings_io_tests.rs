@@ -124,6 +124,7 @@ fn everything_changed() -> Settings {
     s.export.subtitle_format = crate::SubtitleFormat::Vtt;
     s.export.subtitle_word_level = true;
     s.export.subtitles_with_audio = true;
+    s.braille.math_code = crate::MathBrailleCode::Ueb;
     let a = &mut s.reading_aids;
     a.rsvp = crate::reading_aids::RsvpSettings {
         wpm: 450,

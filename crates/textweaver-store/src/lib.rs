@@ -60,14 +60,14 @@ pub use paths::Paths;
 pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
-    AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, CitationReading,
-    CommunityLexiconSettings, CursorPlacement, DigitRow, DisplaySettings, EciDictionaries,
-    EciSettings, EditingSettings, ExportSettings, FootnoteMode, GuiAnnounce, GuiSettings,
-    HighlightSettings, InterfaceSettings, KeyboardSettings, KeymapOverrides, KeymapPreset,
-    LexiconSettings, LibrarySettings, MathDisplay, MathEngine, NormalizationSettings, OcrEngine,
-    PreviewSettings, RESERVED_SETTINGS, ReadingSettings, RevisionReading, RtlDisplay, SapiSettings,
-    SayAll, Settings, SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, SubtitleFormat,
-    TableMode,
+    AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, BrailleSettings,
+    CitationReading, CommunityLexiconSettings, CursorPlacement, DigitRow, DisplaySettings,
+    EciDictionaries, EciSettings, EditingSettings, ExportSettings, FootnoteMode, GuiAnnounce,
+    GuiSettings, HighlightSettings, InterfaceSettings, KeyboardSettings, KeymapOverrides,
+    KeymapPreset, LexiconSettings, LibrarySettings, MathBrailleCode, MathDisplay, MathEngine,
+    NormalizationSettings, OcrEngine, PreviewSettings, RESERVED_SETTINGS, ReadingSettings,
+    RevisionReading, RtlDisplay, SapiSettings, SayAll, Settings, SettingsLoad, SettingsStore,
+    SpeechSettings, StatsSettings, SubtitleFormat, TableMode,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,
