@@ -4,7 +4,13 @@ textweaver reads documents that come from anywhere: course sites, email, shared 
 
 ## Reporting a vulnerability
 
-Report it privately through GitHub: on the repository's **Security** tab, choose **Report a vulnerability** (https://github.com/leavesofgrass/textweaver/security/advisories/new). Please do not open a public issue for it.
+Please do not open a public issue for a vulnerability. Report it privately through GitHub's private vulnerability reporting:
+
+1. Go to the repository's **Security** tab.
+2. Choose **Report a vulnerability**. The form is also at [the new advisory page](https://github.com/leavesofgrass/textweaver/security/advisories/new).
+3. Describe the problem. Only you and the maintainers can see the report.
+
+If the **Report a vulnerability** button is not there, open an ordinary issue that asks the maintainers for a private way to report a security problem. Leave out every detail of the problem itself.
 
 Include what you can:
 
@@ -18,7 +24,7 @@ You will get an answer within a week. textweaver is maintained by one person, so
 
 textweaver is in alpha. Only the newest release, and `main`, get security fixes.
 
-## Attack surface
+## In scope
 
 These are the parts that handle input textweaver does not control. Reports about any of them are welcome.
 
@@ -34,3 +40,9 @@ These are the parts that handle input textweaver does not control. Reports about
 
 - Problems that need an attacker who already controls the user's account or the textweaver settings folder.
 - Bugs in the speech engines themselves (Eloquence, SAPI voices, DECtalk, espeak-ng, speech-dispatcher), unless textweaver makes them reachable from a document. Please report those to their makers too.
+- Crashes or hangs on a document, when they lose no work and cannot be turned into anything worse. These are welcome as ordinary [bug reports](https://github.com/leavesofgrass/textweaver/issues/new/choose).
+
+## See also
+
+- [Contributing](CONTRIBUTING.md): how to report other problems, and how to send a fix.
+- [Code of conduct](CODE_OF_CONDUCT.md).

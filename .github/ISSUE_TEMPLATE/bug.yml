@@ -51,6 +51,12 @@ body:
       description: Or "none".
       placeholder: NVDA 2026.2, JAWS 2026, VoiceOver, Orca 48, none
   - type: input
+    id: braille
+    attributes:
+      label: Braille display
+      description: Its model and cell count, if you use one. Or "none".
+      placeholder: Focus 40, Brailliant BI 40X, Mantis Q40, none
+  - type: input
     id: terminal
     attributes:
       label: Terminal

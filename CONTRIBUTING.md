@@ -1,11 +1,90 @@
 # Contributing to textweaver
 
-Thank you for helping. textweaver is built first for screen-reader users and students with print disabilities, so accessibility is the product, not a feature. This guide covers the code rules, how the parallel agents work, and how to write commits and docs. [Building](docs/dev/building.md) and [testing](docs/dev/testing.md) have their own guides.
+Thank you for thinking about helping. This guide is for anyone who wants to fix a bug, add a feature, improve the docs, or report what does not work for them.
 
-## Building and testing
+## What textweaver is for
 
-- [Building](docs/dev/building.md): Rust, Python, what Windows, Linux, and macOS need, the Docker container, the GUI, and the lean reader.
-- [Testing](docs/dev/testing.md): the checks every change must pass (one script, `scripts/dev-check`, runs them), the tests, and the benchmarks.
+textweaver is an accessible document reader and writer for students with print disabilities. It is built by and for screen reader users. It reads documents aloud with a highlight that follows the spoken word, lets you move through a document by word, sentence, heading, table, and link, and helps you write Markdown while telling you what you type.
+
+Accessibility is the product, not a feature. A change that works with a mouse and a screen, but not with a screen reader, a Braille display, or the keyboard alone, is not finished.
+
+textweaver is a Rust reimplementation of [Star](https://github.com/leavesofgrass/star), an earlier reader written in Python. It is in alpha: it works, and it is changing quickly.
+
+## Ways to help
+
+You do not need to write Rust to help.
+
+- **Try it and report what gets in your way.** Reports from people who use screen readers, Braille displays, magnifiers, or the keyboard alone are the most valuable thing you can give. The [issue forms](https://github.com/leavesofgrass/textweaver/issues/new/choose) ask for what helps most.
+- **Improve the docs.** If a guide confused you, it will confuse someone else. The guides are plain Markdown in [docs/](docs/README.md).
+- **Pick a good first issue.** [Good first issues](docs/dev/good-first-issues.md) lists small, well-scoped tasks, each with where to look and how to check it.
+- **Fix a bug or add a feature.** For anything larger than a small fix, open an issue first, so we can agree on the approach before you spend your time.
+
+## Where to ask
+
+Open an [issue](https://github.com/leavesofgrass/textweaver/issues) on GitHub. Questions are welcome there; you do not need to have found a bug. If you are working on something, say so in its issue, so nobody else starts the same work.
+
+Security problems are different: please report them privately, as [SECURITY.md](SECURITY.md) explains.
+
+Everyone who takes part is asked to follow the [code of conduct](CODE_OF_CONDUCT.md).
+
+## Getting set up
+
+[Building](docs/dev/building.md) has the full setup for Windows, Linux, and macOS. The short version:
+
+1. Install Rust with [rustup](https://rustup.rs). You do not need to choose a version: `rust-toolchain.toml` pins it, and rustup installs it the first time you build.
+2. Install Python 3. A few checks use it, with the standard library only. On Windows, install it from python.org and run the tools with `py -3`, because `python` there may be the Microsoft Store stub.
+3. On Windows, install Visual Studio or the Build Tools with the "Desktop development with C++" workload. On Linux, install pkg-config and the ALSA development files (`libasound2-dev` on Debian and Ubuntu). On macOS, install the Xcode command line tools.
+4. Get the code, build it, and run the tests:
+
+   ```bash
+   git clone https://github.com/leavesofgrass/textweaver
+   ```
+
+   ```bash
+   cargo build --workspace
+   ```
+
+   ```bash
+   cargo test --workspace
+   ```
+
+5. Try the terminal reader on a document. Space starts and pauses reading, and `?` lists every key:
+
+   ```bash
+   cargo run -p textweaver-tui -- fixtures/sample.md
+   ```
+
+The Docker development container has every library the workspace can use, including the Linux speech engines, so you can test Linux features from any system. [Docker development container](docs/dev/docker.md) explains it.
+
+[Architecture](docs/dev/architecture.md) explains how the crates fit together, and is the best place to start reading the code.
+
+## The checks
+
+CI runs a set of checks on every change. Run them yourself before you open a pull request; one script runs them all:
+
+```bash
+scripts/dev-check.sh
+```
+
+On Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\dev-check.ps1
+```
+
+It runs formatting, clippy with warnings as errors, the tests, rustdoc, the keyboard reference check, the link checker, and the site checks, and ends with a summary that says, in words, which steps passed and which failed. `--only fmt,clippy` runs some of the steps, and `--docker` runs everything in the Linux container. [Testing](docs/dev/testing.md) describes each check and the few that CI runs but the script does not.
+
+If a check fails and you cannot see why, open the pull request anyway and say so. We would rather help than have you stuck.
+
+## Accessibility expectations
+
+Every change must work for people who do not look at the screen.
+
+- **Screen readers.** Every state change a user should know about is announced through the app's announcer, not only shown. Every string the user hears must read well aloud: no symbols a speech engine skips or spells out, and no meaning carried by layout alone.
+- **Braille displays.** Many users read one line of about 40 cells at a time. Put the meaning first on each line and message, prefer words to symbols (emoji, arrows, check marks, and box drawing often come through as noise), and keep messages short.
+- **Color never carries meaning alone.** Pair every color with text first, such as "Pass" and "Fail" in words, then symbols or patterns if they help. This covers themes, status lines, diffs, charts, and screenshots.
+- **The keyboard.** Everything works from the keyboard. Keys come from the keymap, never hard-coded: a new action gets a default key, a help string, and a category in `crates/textweaver-keymap/src/action.rs`, and then `cargo xtask keyboard` regenerates [docs/keyboard.md](docs/keyboard.md).
+- **Say how you checked.** In your pull request, say what you checked with a screen reader, which one, and which speech engine. If you could not check something by ear, say that too; a maintainer will.
 
 ## Code
 
@@ -13,49 +92,39 @@ Thank you for helping. textweaver is built first for screen-reader users and stu
 - No `unwrap()` or `expect()` on user input or I/O in library code. Libraries use `thiserror`; binaries (`tui`, `cli`, `xtask`) may use `anyhow`.
 - No `todo!()`, `unimplemented!()`, or `dbg!()` left behind.
 - `unsafe` is denied across the workspace. FFI modules opt out with `#[allow(unsafe_code)]` and a `// SAFETY:` comment on every block.
-- Every third-party crate is declared once, in `[workspace.dependencies]` in the root `Cargo.toml`, and used with `name.workspace = true`. Adding one is a decision for the orchestrator; ask for it in your report.
+- Every third-party crate is declared once, in `[workspace.dependencies]` in the root `Cargo.toml`, and used with `name.workspace = true`. A new dependency is a decision for the maintainers; propose it in the issue or pull request, with its license.
 - No async runtime in the speech path. Speech engines have thread affinity ([ADR-0003](docs/adr/0003-speech-threading-and-event-timing.md)).
-- Accessibility rules:
-  - Every user-visible state change is announced through the app's announcer, filtered by verbosity, and routed by the accessibility mode with `textweaver_a11y::route`, so a screen reader never hears it twice.
-  - Every file the app writes while it runs goes through the writer thread (`crates/textweaver-app/src/writer.rs`), never from the input thread.
-  - Every string the user hears must read well aloud: no symbols a speech engine skips or spells out, no visual-only formatting.
-  - Nothing is shown by colour alone.
-  - Keys come from the keymap, never hard-coded; a new action gets a default key, a help string, and a category in `crates/textweaver-keymap/src/action.rs`, and then `cargo xtask keyboard`.
+- Every state change is announced through the app's announcer, filtered by verbosity, and routed by the accessibility mode with `textweaver_a11y::route`, so a screen reader never hears it twice.
+- Every file the app writes while it runs goes through the writer thread (`crates/textweaver-app/src/writer.rs`), never from the input thread.
+- Tests never play audio aloud. Write audio to a temporary file, or use a silent output.
 - Fix Star's bugs rather than port them. If you keep a Star quirk on purpose, say so.
+- US English in code comments, docs, and messages ("color", "behavior").
 
-[docs/dev/architecture.md](docs/dev/architecture.md) explains how the crates fit together and which way dependencies may point.
+The [architecture decision records](docs/adr/README.md) (ADRs) explain why the code is built as it is. If a change goes against one, say so in the pull request.
 
-## The agent and worktree workflow
+## Proposing a change
 
-textweaver is built by an orchestrator and parallel agents, each in its own git worktree. Each agent gets a brief from the maintainer with the paths it owns, the acceptance criteria, and what to report. The rules:
+1. For anything beyond a small fix, open an issue first and describe what you want to change.
+2. Fork the repository and make a branch for your change.
+3. Make the change, with a test that fails without it.
+4. Run the checks.
+5. Add a line to `CHANGELOG.md` under "Unreleased" for anything a user would notice.
+6. Open a pull request. The template asks what changed, why, and how you checked it.
 
-- **Read first**: your brief, [CLAUDE.md](CLAUDE.md), and the ADRs your brief names.
-- **Branch**: work on your own branch, in your own worktree, from `main`. The brief names it: `phase2/<letter>-<topic>` in Phase 2, and `wave3/<letter>-<name>` in Wave 3.
-- **Ownership**: edit only the paths your brief lists. Never edit `crates/textweaver-core`, the root `Cargo.toml`, `rust-toolchain.toml`, `.github/`, `docker/`, `compose.yaml`, or another agent's paths unless your brief says so.
-- **Contract changes**: if a public type in core or in another agent's crate must change, work around it and write the exact change you need under "Contract change requests" in your report. The orchestrator decides at integration.
-- **Separate build directories**: parallel agents must not share a build lock. Give cargo your own target directory, and in Docker use a fixed project name with a private target directory:
-
-  ```bash
-  docker compose -p textweaver run --rm -T -e CARGO_TARGET_DIR=/target/agent-y dev cargo test -p textweaver-speech --all-features
-  ```
-
-  From Git Bash on Windows, set `MSYS_NO_PATHCONV=1` first, or Git Bash rewrites `/target/...` into a Windows path.
-- **Git**: commit in small steps. Do not push, merge, rebase onto `main`, or tag; the orchestrator integrates. Never use a bare `git stash` in a worktree, because the stash is shared with every other worktree.
-- **Report**: a summary, the files changed, the test results natively and in the container, contract change requests, open issues, and what the next wave should do first.
+A maintainer will review it. Reviews may ask for changes; that is normal, and not a judgment of you.
 
 ## Commits
 
 - One logical change per commit.
 - The subject line starts with the area, in lower case, then a colon and a short summary in plain words: `speech: find speech-dispatcher without XDG_RUNTIME_DIR`, `docs: changelog and quick start`, `app: every action is wired`.
 - The body says why, and anything a reviewer needs to know: a measurement, a Star bug fixed, a test added.
-- Commits made by an AI agent end with the attribution line the session gives, for example `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- Never write a date or a weekday from memory. Get today's date from the machine before it goes into a commit, a doc, or a report. On Windows use `py -3` (the Python launcher; `python` may be the Microsoft Store stub):
+- Check any date you write against your computer's clock, and compute the weekday rather than recalling it. On Windows:
 
   ```powershell
   py -3 -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"
   ```
 
-  On Linux and macOS use `python3`:
+  On Linux and macOS:
 
   ```bash
   python3 -c "import datetime as d; t=d.date.today(); print(t, t.strftime('%A'))"
@@ -64,39 +133,66 @@ textweaver is built by an orchestrator and parallel agents, each in its own git 
 ## Documentation
 
 - Every feature a user can reach has a guide, listed in [docs/README.md](docs/README.md).
-- Design records and plans are kept by the maintainer outside the repository. The ADRs in [docs/adr/](docs/adr/README.md) explain why the code is built as it is.
 - Write for listeners: plain language, short sentences, one idea per sentence, headings and lists. No tables in user guides; reference pages such as `docs/keyboard.md` may have them. Put every command in its own fenced block.
 - Every doc ends with a "See also" section linking related docs and the [documentation index](docs/README.md). Guides link to the ADRs that decided them, and ADRs link back to the guides.
 - Keep links relative. `tools/check_links.py` must pass.
 - ADRs keep their decisions. When later work changes one, add a dated "Status update" line under its date instead of rewriting it.
-- Generated files are never edited by hand: `docs/keyboard.md` (`cargo xtask keyboard`) and the data in `docs/site/*.html` (`python3 tools/gen_site_data.py`, or `py -3 tools/gen_site_data.py` on Windows). `cargo xtask parity` writes its Star parity report to `target/parity-report.md`, or to the path given with `--out`; it is build output and is not tracked.
-- Add a line to `CHANGELOG.md` under "Unreleased" for anything a user would notice.
+- Generated files are never edited by hand: `docs/keyboard.md` (`cargo xtask keyboard`), `docs/settings-reference.md` (`cargo xtask settings-doc`), and the data in `docs/site/*.html` (`py -3 tools/gen_site_data.py` on Windows, `python3 tools/gen_site_data.py` elsewhere).
+
+## Contributing with AI assistance
+
+Some of textweaver is written with AI coding assistants, and you may use one too. The same rules apply to that work as to any other, and you are responsible for what you submit.
+
+- Read and understand every change before you send it. Run the checks yourself.
+- Check accessibility claims by ear where you can; an assistant cannot hear the result.
+- Keep personal information out of prompts that leave your machine, and out of commits: no email addresses, user names, or machine names.
+- End each commit made with an assistant with the attribution line your tool gives, for example `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- If you run several assistants at once, give each its own git worktree and its own build directory, so they do not share a build lock:
+
+  ```bash
+  CARGO_TARGET_DIR=target/agent-a cargo test -p textweaver-speech
+  ```
+
+  In Docker, use a fixed project name with a private target directory. From Git Bash on Windows, set `MSYS_NO_PATHCONV=1` first, or Git Bash rewrites `/target/...` into a Windows path:
+
+  ```bash
+  docker compose -p textweaver run --rm -T -e CARGO_TARGET_DIR=/target/agent-a dev cargo test -p textweaver-speech --all-features
+  ```
+
+- Every worktree shares one git stash. Use a temporary commit to set work aside instead of a bare `git stash`.
+
+The repository's [CLAUDE.md](CLAUDE.md) holds the rules the maintainers give their own assistants.
 
 ## Releases
 
-[docs/dev/releasing.md](docs/dev/releasing.md) describes how a release is made and what the packages hold.
+[Releasing](docs/dev/releasing.md) describes how a release is made and what the packages hold. Releases are made by the maintainers.
 
 ## CI
 
 The workflows in `.github/workflows/`:
 
-- `ci.yml`: formatting; the docs job (links and site data); and clippy, tests, and rustdoc on Ubuntu (all features), macOS, and Windows (Omnivox), with the Apple voice tests on macOS and the 32-bit hosts on Windows.
+- `ci.yml`: formatting; the docs job (links and site data); and clippy, tests, and rustdoc on Ubuntu (all features), macOS, and Windows (Omnivox), with the Apple voice tests on macOS and the 32-bit hosts on Windows. It also has the real-engine jobs, marked "Real engine" in their names: espeak-ng on Linux and Microsoft's SAPI5 voices on Windows, silent (WAV files and a silent output).
 - `gui-xilem.yml`: the Xilem GUI on Windows, macOS, and Linux: build, clippy, tests, and the accessibility checks (the UI Automation report on Windows, an AT-SPI check on Linux, a silent smoke run on macOS, and on all three the accessibility tree compared with main's; see [ADR-0039](docs/adr/0039-automated-screen-reader-checks.md)).
-- `a11y-tests.yml`: screen-reader sessions on CI runners, by hand: NVDA through Guidepup on Windows, an AT-SPI session with Orca under Xvfb, and VoiceOver on macOS (see [Testing](docs/dev/testing.md#automated-screen-reader-checks)).
+- `a11y-tests.yml`: screen-reader sessions on CI runners, started by hand: NVDA through Guidepup on Windows, an AT-SPI session with Orca under Xvfb, and VoiceOver on macOS (see [Testing](docs/dev/testing.md#automated-screen-reader-checks)).
 - `scripts.yml`: lints and dry runs of the scripts in `scripts/`.
 - `apple.yml`: extra macOS voice measurements.
-- `ci.yml` also has the real-engine jobs, marked "Real engine" in their names: espeak-ng on Linux and Microsoft's SAPI5 voices on Windows, silent (WAV files and a silent output).
 - `bench.yml`: the benchmark gate on pull requests and main (see [benchmarks](docs/dev/testing.md#benchmarks)).
 - `second-tool.yml`: checks the writers' EPUB and PDF output with epubcheck and veraPDF.
 - `pages.yml`: builds the documentation site with Zensical and deploys it to GitHub Pages (see [Documentation site](docs/dev/building.md#documentation-site)).
-- `nightly.yml`: every night, the fuzz targets for 10 minutes each (`fuzz/README.md`), Miri on core, text, and the engine-host protocol, AddressSanitizer on the FFI crates, the tests in release mode, an MSRV check with Rust 1.94, the Docker image and its tests, and the soak test; on Mondays, `cargo hack --each-feature` on the speech, formats, and writers crates. Nightly Rust is used only for fuzzing, Miri, and the sanitizer.
+- `nightly.yml`: every night, the fuzz targets for 10 minutes each (`fuzz/README.md`), Miri on core, text, and the engine-host protocol, AddressSanitizer on the FFI crates, the tests in release mode, an MSRV check, the Docker image and its tests, and the soak test; on Mondays, `cargo hack --each-feature` on the speech, formats, and writers crates. Nightly Rust is used only for fuzzing, Miri, and the sanitizer.
 - `release.yml`: the release job, started by pushing a tag. It builds the Windows, macOS, and Linux packages (the AppImage in `docker/appimage`), the terminal reader's and the GUI's.
+
+## License
+
+textweaver is free software under the GNU General Public License, version 3 or later ([LICENSE](LICENSE)). By contributing, you agree that your contribution is licensed the same way.
 
 ## See also
 
 - [Documentation index](docs/README.md): every guide, grouped by audience.
+- [Good first issues](docs/dev/good-first-issues.md): small tasks to start with.
 - [Building](docs/dev/building.md) and [testing](docs/dev/testing.md).
 - [Architecture](docs/dev/architecture.md): the crates, the threads, and the path from a file to a spoken word.
 - [Docker development container](docs/dev/docker.md): Linux builds and Voxin on any machine.
-- [Third-party data](docs/dev/third-party-data.md): the bundled dictionaries, fonts, and word lists, and their licences.
+- [Third-party data](docs/dev/third-party-data.md): the bundled dictionaries, fonts, and word lists, and their licenses.
 - [scripts/README.md](scripts/README.md): dev-check and the other scripts.
+- [Code of conduct](CODE_OF_CONDUCT.md) and [security policy](SECURITY.md).
