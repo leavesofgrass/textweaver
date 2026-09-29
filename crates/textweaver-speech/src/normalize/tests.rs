@@ -1,4 +1,4 @@
-//! Star's `tests/test_ttstext.py` vectors (docs/history/star-parity.md Part 2
+//! Star's `tests/test_ttstext.py` vectors (the Star parity reference Part 2
 //! section 6.1), one assertion per line, plus the bug fixes of section 7.2.
 //! Every output also passes `check_invariants`, and literal spans reproduce
 //! their source.

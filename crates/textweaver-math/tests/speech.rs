@@ -50,7 +50,7 @@ fn check_am(cases: &[Case]) {
 }
 
 /// Star's `_normalize_math_inline` vectors (`tests/test_ttstext.py`,
-/// `docs/history/star-parity.md` Part 2 section 6.1). Delimited ones are in
+/// the Star parity reference Part 2 section 6.1). Delimited ones are in
 /// `tests/text.rs`; here each is spoken as math at normal verbosity.
 #[test]
 fn star_vectors() {

@@ -1,6 +1,6 @@
 //! A speech engine that crashes in the middle of a reading is restarted by
 //! the service, and the app keeps following the reading from the last word
-//! (docs/history/audit-2026-09.md, finding R4; Agent D4).
+//! (the September 2026 audit, finding R4; Agent D4).
 
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};

@@ -737,7 +737,7 @@ impl App {
     /// Asks a yes-or-no question ("Quit textweaver? y or n"). Assertive, so
     /// it is spoken even while textweaver is reading aloud: the next key
     /// press answers it, so the user must hear it (usability pass,
-    /// docs/research/usability-terminal.md).
+    /// the terminal usability research).
     pub(crate) fn ask(&mut self, question: &str) {
         self.say_at(question, Verbosity::Low, Priority::Assertive);
     }

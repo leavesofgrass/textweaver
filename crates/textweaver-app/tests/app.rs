@@ -890,7 +890,7 @@ fn stop_leaves_speech_cursor() {
     assert_eq!(r.said.last(), "Stopped. Speech Cursor off.");
 }
 
-// Ported from the September 2026 audit's patches (docs/history/audit-2026-09/) by
+// Ported from the September 2026 audit's patches by
 // Agent D4: S2 (single keys and missing actions), S6 (table mode), S7
 // (ordered list items).
 

@@ -4,7 +4,7 @@
 //! strings (`2026-09-25T14:03:07Z`) where a timestamp must compare as text,
 //! as in the sidecar, whose merge rules compare `ts` lexicographically like
 //! Star did. Star wrote zone-less local time (`2026-09-25T10:03:07`), which
-//! compares wrongly across time zones (docs/history/star-parity.md Part 3 §7 item 19).
+//! compares wrongly across time zones (the Star parity reference Part 3 §7 item 19).
 
 /// Days since 1970-01-01 to a proleptic Gregorian `(year, month, day)`.
 /// Howard Hinnant's `civil_from_days`.

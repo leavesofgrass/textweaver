@@ -3,7 +3,7 @@
 //! Failures that are not worth interrupting the reader for (a position
 //! save that failed, a corrupt state file set aside, a document out of step
 //! with the editor) go to `log::warn!`; without a logger they were lost
-//! (docs/history/audit-2026-09.md, finding D5). Frontends call [`init`] once: the
+//! (the September 2026 audit, finding D5). Frontends call [`init`] once: the
 //! log goes to `textweaver.log` in the state directory, rotated at
 //! [`MAX_BYTES`] with [`KEEP`] older files (`textweaver.log.1`, ...). The
 //! level is low by default (warnings and errors) and set by the `--log`

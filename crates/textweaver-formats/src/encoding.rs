@@ -1,7 +1,7 @@
 //! Character encodings: decoding source bytes to text.
 //!
 //! Star decoded everything as UTF-8 with replacement characters and never
-//! set `Document.encoding` (docs/history/star-parity.md, Part 1 §7, quirk 10), so a
+//! set `Document.encoding` (the Star parity reference, Part 1 §7, quirk 10), so a
 //! Windows-1252 text file or a Latin-1 web page lost every accented letter.
 //! textweaver decides the encoding in this order:
 //!
@@ -21,7 +21,7 @@
 //! ASCII letter) is recognized between steps 2 and 3. Bytes that are not
 //! text at all (a PDF, a zip archive, an image, a program) are recognized
 //! by [`binary_kind`], so the text loaders can refuse them instead of
-//! reading them aloud as garbage (docs/history/audit-2026-09.md, finding D3).
+//! reading them aloud as garbage (the September 2026 audit, finding D3).
 
 use encoding_rs::{Encoding, UTF_8, UTF_16BE, UTF_16LE, WINDOWS_1252};
 

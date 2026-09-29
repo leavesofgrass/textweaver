@@ -1,7 +1,7 @@
 //! The library: folders scanned for documents, the bookshelf in
 //! `library.json`, and the folder sidecars that carry reading positions
 //! between devices (Star's `star/library.py` and `star/stats.py`,
-//! docs/history/star-parity.md Part 3 §2.6 and §3).
+//! the Star parity reference Part 3 §2.6 and §3).
 //!
 //! A library folder is an ordinary directory; pointing textweaver at a
 //! folder synced by Dropbox, OneDrive, Syncthing, or iCloud makes the whole

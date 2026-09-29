@@ -1,5 +1,5 @@
 //! What the terminal says when a list opens and when a message repeats
-//! (docs/history/audit-2026-09.md, findings A4 and A5; Agent D4).
+//! (the September 2026 audit, findings A4 and A5; Agent D4).
 
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};

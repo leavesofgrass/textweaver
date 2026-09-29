@@ -1,5 +1,5 @@
 //! Notes and highlights: Star's annotations and user highlights
-//! (docs/history/star-parity.md Part 3 §2.3 and §2.4), stored in [`DocState`].
+//! (the Star parity reference Part 3 §2.3 and §2.4), stored in [`DocState`].
 //!
 //! Changes from Star, all deliberate:
 //!

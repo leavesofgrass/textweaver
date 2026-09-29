@@ -135,7 +135,7 @@ impl App {
     ///
     /// Star's setting counts from its playback manager's word, which lags
     /// the audio by one: its default of 1 paints the word being heard
-    /// (docs/history/star-parity.md Part 2 §1.11). textweaver's positions are the
+    /// (the Star parity reference Part 2 §1.11). textweaver's positions are the
     /// word being heard already, so the same numbers keep their meaning
     /// with an offset of `lead_words - 1`: 1 (the default) is exact, 2 is
     /// one word ahead, 0 one word behind.

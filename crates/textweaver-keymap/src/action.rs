@@ -10,7 +10,7 @@
 //! layout displaced keep chords, and the whole earlier layout is the
 //! `classic` preset ([`Preset::Classic`](crate::Preset::Classic)).
 //!
-//! GUI chords follow Star (docs/history/star-parity.md Part 1 §6), and new keys
+//! GUI chords follow Star (the Star parity reference Part 1 §6), and new keys
 //! cover what Star lacked (pitch, volume, read the current unit, list and
 //! link navigation, bookmark stepping).
 //!
