@@ -246,8 +246,14 @@ textweaver reads these formats itself:
 - Spreadsheets: CSV, TSV, OpenDocument (ODS), and Excel (XLSX, XLSM, XLSB), as tables. Old binary Excel files (XLS) are not read.
 - Archives (ZIP, TAR, TAR.GZ, and 7Z): opening one lists the files inside that textweaver can read, each a link. To open a file inside an archive directly, write its name after a `!`, as in `tw text course.zip!week1/notes.md`.
 - Web pages: `tw open https://example.org/page` and `tw text https://...` fetch the page and read it. A PDF or other file at the address is saved in the cache and opened from there.
+- Obsidian notes, with their callouts, embedded notes, tags, highlights, and block links. See [Obsidian notes](#obsidian-notes).
+- JSON and JSON Lines, as headings and lists you can move through by key, and Jupyter notebooks (IPYNB), cell by cell. See [JSON and notebooks](#json-and-notebooks).
+- SVG drawings, by their title, description, labeled parts, and text. See [Drawings and formulas](#drawings-and-formulas).
+- MathML formulas (MML), presentation or content MathML, as one formula.
 
-For other formats, such as reStructuredText and Org, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself, and RTF, OpenDocument text, and LaTeX no longer need it. `--no-pandoc` turns it off.
+For other formats, such as reStructuredText and Org, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself, and RTF, OpenDocument text, LaTeX, and notebooks no longer need it. `--no-pandoc` turns it off. Text sent to Pandoc in an older encoding, such as a Windows-1252 file, is converted to UTF-8 first, because Pandoc reads only UTF-8.
+
+JSON files and SVG drawings open when you name them, but a folder of them is not treated as a folder of documents: the library, `tw convert` on a folder, and a watched folder leave them out, as they leave out pictures and archives.
 
 Equations in a Word document are read as math. textweaver turns them into LaTeX between dollar signs, as in Markdown, so they are spoken as formulas. Math written in MathML, in a web page, a saved web page, or an EPUB book, is read as math the same way.
 
@@ -264,12 +270,56 @@ textweaver reads LaTeX itself, the way course notes and papers use it, without P
 - Math between dollar signs, `\[ \]`, and in the `equation`, `align`, and `gather` environments is read as math, like math in Markdown, and numbered equations say their numbers.
 - `\ref` reads the number of what it names, and a reference to a section is a link to its heading. `\cite{doe2020}` is a citation, read and formatted as in Markdown (see [Citations](#citations)).
 - Footnotes, emphasis, links, code listings, accents, and theorems declared with `\newtheorem`.
-- Your own `\newcommand` shortcuts without arguments are expanded, in text and in math.
+- Your own `\newcommand` and `\def` shortcuts are expanded, in text and in math, with up to nine arguments, such as `\newcommand{\vect}[1]{\mathbf{#1}}`. Your own environments made with `\newenvironment` work too.
+- A table cell made with `\multicolumn` or `\multirow` says what it spans after its text, such as "Totals (spans 3 columns)".
+- A picture is described by its figure's caption, or by the `alt` key of `\includegraphics[alt={A cell dividing}]{cell.png}`, or else named by its file.
+- `\bibliography{refs}`, or biblatex's `\addbibresource{refs.bib}` with `\printbibliography`, reads `refs.bib` from the document's folder and lists the works you cited under "References", formatted in the style `\bibliographystyle` names (numeric styles such as `plain` and `ieeetr` as IEEE, the others as APA). `\nocite{*}` lists every entry. The reader built without its publishing features does not read the bibliography, and says so in the document's warnings.
 - `\input` and `\include` read other `.tex` files from the document's folder and its subfolders, never from anywhere else. A file that is outside the folder, missing, or too large is left out, and textweaver tells you which.
 
 What textweaver does not know is never lost: a command it does not know is left out and its text is read. The document's warnings list those commands, for example "Some LaTeX commands are not supported, so only their text is read: \hl." The preamble, layout commands such as spacing and page breaks, and drawings made with TikZ are left out.
 
 A file over 16 megabytes is refused. A document that includes more than 8 levels of files, or is so long or so tangled that it passes textweaver's limits, is read up to that point, and the warning says the rest was left out.
+
+### Obsidian notes
+
+```bash
+tw text "Vault/Physics/Waves.md"
+```
+
+A note from an Obsidian vault reads the way Obsidian shows it:
+
+- A callout says its type first, in words: `> [!warning] Hot surface` reads "Warning: Hot surface", then its text. Any type works, including your own (`> [!recipe]` reads "Recipe:"). A foldable callout says whether it starts collapsed or expanded, once: "Tip, collapsed: A folded tip". Its text is always read.
+- An embedded note, `![[Other note]]`, is read in place, between "Embedded from Other note" and "End of embed". `![[Other note#Heading]]` reads only that section, and `![[Other note#^block]]` only that block. Embedded notes are found in the note's own folder and its subfolders, never anywhere else. An embed inside an embed is read too, but not deeper than that; a note that embeds itself, or one that embeds it, is not read again, and the text says so.
+- An embedded picture, `![[diagram.png|300]]`, is a graphic named by its file.
+- Tags read as words: `#physics/waves` is "tag physics slash waves". A number such as `#12` stays as it is.
+- `==highlighted text==` is marked as a highlight, and `%%comments%%` are not read.
+- Block ids such as `^key-point` are not read, but a link to `Note#^key-point` still finds the block.
+
+`tw convert` with the `obsidian` flavor writes the same callouts to HTML, with the same types, titles, and fold states, because the reader and the converter share one set of callout rules.
+
+### JSON and notebooks
+
+```bash
+tw text profile.json
+```
+
+A JSON file reads as a document you can move through by key with `h`: every top-level key is a heading, "name: Ada Example" for a plain value, or "address, object, 3 keys" before the values inside. Objects and arrays deeper down are headings one level lower, such as "courses, array, 2 entries" and then "item 1 of 2, object, 3 keys", down to heading level 6, and plain values inside them are list items, such as "city: Portland". Brackets, braces, commas, and quotes are never read. A file that is not valid JSON is read as plain text, and its warning says where the JSON broke, for example "at line 3, column 5".
+
+A JSON Lines file (JSONL or NDJSON) reads each line as a heading, such as "line 3, object, 4 keys", with its values below it.
+
+A Jupyter notebook (IPYNB) reads cell by cell: text cells as Markdown, with their headings, lists, and math; code cells as code after a line that names the language, such as "Python code"; and each code cell's results after an "Output" line: printed text as a quote, errors by name and message, and pictures as graphics, such as "Output picture, PNG". The notebook's title is its first heading.
+
+A JSON or notebook file over 64 megabytes, or nested more than 256 levels deep, is refused or read as plain text.
+
+### Drawings and formulas
+
+```bash
+tw text chart.svg
+```
+
+An SVG drawing is read the way screen readers read one on a web page: its title first, as a heading, then its description, then each part that has a title of its own, such as the bars of a chart, as a list, and then the text it shows, one line each. A drawing marked as one picture (`role="img"`) reads only its title and description. A drawing with no title, description, or text reads "Drawing with no description". The same reading applies to a drawing inside a web page, except that one with nothing to read stays silent, as a decorative picture does.
+
+A MathML file (MML) is one formula, read as math is anywhere else. Both kinds of MathML work: presentation MathML, which describes how a formula looks, and content MathML, which describes what it means (`<apply><plus/>...`). Content MathML becomes the same formula, with parentheses where its structure needs them; an operator textweaver does not know is read by its name.
 
 ### Email and web archives
 

@@ -25,6 +25,10 @@
 //! | [`PptxLoader`]: PowerPoint slides and speaker notes | `pptx`, `pptm`, `ppsx` | [`NATIVE_PRIORITY`] (10) |
 //! | [`SheetLoader`]: spreadsheets as tables | `csv`, `tsv`, `tab`, `ods`, and (feature `spreadsheets`) `xlsx`, `xlsm`, `xlsb` | [`NATIVE_PRIORITY`] (10) |
 //! | [`ArchiveLoader`]: a list of the files inside, or the DAISY book or EPUB it holds | `zip`, and (feature `archives`) `tar`, `tgz`, `gz`, `7z` | [`NATIVE_PRIORITY`] (10) |
+//! | [`JsonLoader`]: JSON with a heading per key, and JSON Lines with a heading per line | `json`, `jsonl`, `ndjson`, `geojson`, `webmanifest` | [`NATIVE_PRIORITY`] (10) |
+//! | [`NotebookLoader`]: Jupyter notebooks, cell by cell | `ipynb` | [`NATIVE_PRIORITY`] (10) |
+//! | [`SvgLoader`]: a drawing's title, description, titled parts, and text | `svg` | [`NATIVE_PRIORITY`] (10) |
+//! | [`MathMlLoader`]: one formula, presentation or content MathML | `mml`, `mathml` | [`NATIVE_PRIORITY`] (10) |
 //! | [`TextLoader`] | `txt`, `text`, `log` (and the fallback for everything else) | 0 |
 //!
 //! Two kinds of path are not plain files:
@@ -61,6 +65,7 @@ pub mod annotations;
 pub mod archive;
 mod builder;
 pub mod cache;
+pub mod callout;
 mod counter;
 pub mod daisy;
 pub mod docx;
@@ -70,9 +75,11 @@ pub mod epub;
 pub mod export;
 pub mod fulltext;
 pub mod html;
+pub mod json;
 pub mod latex;
 pub mod markdown;
 mod mathml;
+pub mod obsidian;
 pub mod odt;
 mod omml;
 mod package;
@@ -85,6 +92,7 @@ pub mod progress;
 mod revision;
 pub mod rtf;
 pub mod sheet;
+pub mod svg;
 mod text;
 #[cfg(feature = "url")]
 pub mod web;
@@ -105,8 +113,10 @@ pub use export::{
 };
 pub use fulltext::{FullTextIndex, IndexedDocument, RefreshReport, SearchHit};
 pub use html::HtmlLoader;
+pub use json::{JsonLoader, NotebookLoader};
 pub use latex::LatexLoader;
 pub use markdown::MarkdownLoader;
+pub use mathml::MathMlLoader;
 pub use odt::OdtLoader;
 #[cfg(feature = "pandoc")]
 pub use pandoc::PandocLoader;
@@ -118,6 +128,7 @@ pub use pptx::PptxLoader;
 pub use progress::{Progress, ProgressReport};
 pub use rtf::RtfLoader;
 pub use sheet::SheetLoader;
+pub use svg::SvgLoader;
 pub use text::TextLoader;
 
 /// Priority of the built-in native loaders for their formats.
@@ -173,7 +184,7 @@ pub fn warnings(meta: &DocumentMeta) -> Vec<String> {
 
 /// Version of the canonical text the loaders produce. Bumped whenever a
 /// loader's output changes, which invalidates cached documents.
-pub const CANONICAL_VERSION: u32 = 6;
+pub const CANONICAL_VERSION: u32 = 7;
 
 /// Where a document comes from.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -442,6 +453,10 @@ impl Registry {
         r.register(Box::new(PptxLoader));
         r.register(Box::new(SheetLoader));
         r.register(Box::new(ArchiveLoader));
+        r.register(Box::new(JsonLoader));
+        r.register(Box::new(NotebookLoader));
+        r.register(Box::new(SvgLoader));
+        r.register(Box::new(MathMlLoader));
         r
     }
 
@@ -700,7 +715,7 @@ mod tests {
         assert!(r.extensions().contains(&"html"));
         // Pictures, archives, and plain XML open by name but are not
         // documents to a folder scan.
-        for not in ["png", "zip", "xml"] {
+        for not in ["png", "zip", "xml", "json", "svg"] {
             assert!(!r.extensions().contains(&not), "{not}");
         }
         assert!(r.extensions().contains(&"opf"));
@@ -713,7 +728,9 @@ mod tests {
         if cfg!(feature = "images") {
             ids.push("image");
         }
-        ids.extend(["daisy", "pptx", "sheet", "archive"]);
+        ids.extend([
+            "daisy", "pptx", "sheet", "archive", "json", "notebook", "svg", "mathml",
+        ]);
         // Pandoc is never a built-in (see `Registry::with_pandoc`).
         ids.extend(["low", "high"]);
         assert_eq!(r.ids(), ids);

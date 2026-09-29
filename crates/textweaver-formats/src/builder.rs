@@ -272,6 +272,26 @@ impl Builder {
             .find(|m| m.kind == kind)
     }
 
+    /// Where the innermost open marker of one of `kinds` that has content
+    /// starts (a block id names the paragraph or list item it ends).
+    pub(crate) fn innermost_open_start(&self, kinds: &[MarkerKind]) -> Option<usize> {
+        self.open
+            .iter()
+            .rev()
+            .find(|o| o.anchor.is_none() && kinds.contains(&o.marker.kind) && o.start.is_some())
+            .and_then(|o| o.start)
+    }
+
+    /// Where the most recently closed marker of one of `kinds` starts (a
+    /// block id on a line of its own names the table or list before it).
+    pub(crate) fn last_closed_start(&self, kinds: &[MarkerKind]) -> Option<usize> {
+        self.markers
+            .iter()
+            .rev()
+            .find(|m| kinds.contains(&m.kind))
+            .map(|m| m.range.start.0)
+    }
+
     /// Closes a marker. Markers that received no content are dropped unless
     /// opened with [`open_here`](Self::open_here).
     pub(crate) fn close(&mut self, id: OpenId) {

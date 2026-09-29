@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120">
+  <title>Cells counted by hour</title>
+  <desc>A bar chart: the count doubles every hour, from 100 to 800.</desc>
+  <g>
+    <title>Hour 0: 100 cells</title>
+    <rect x="10" y="100" width="30" height="10"/>
+  </g>
+  <g>
+    <title>Hour 1: 200 cells</title>
+    <rect x="50" y="90" width="30" height="20"/>
+  </g>
+  <g>
+    <title>Hour 2: 400 cells</title>
+    <rect x="90" y="70" width="30" height="40"/>
+  </g>
+  <g>
+    <title>Hour 3: 800 cells</title>
+    <rect x="130" y="30" width="30" height="80"/>
+  </g>
+  <text x="10" y="118">Hours after the start</text>
+</svg>

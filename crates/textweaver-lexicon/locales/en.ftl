@@ -2772,3 +2772,10 @@ settings-unit-sentences = sentences
 # W6a5: the GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
 gui-window-focused = { $title }, { -brand }.
+
+## Wave 6 (W6o): opening the new formats. Said after "Could not open NAME:", so
+## each starts in lower case.
+opening-damaged-json = it is not a readable JSON file; it may be too large.
+opening-damaged-notebook = it is not a readable Jupyter notebook; it may be damaged or too large.
+opening-damaged-svg = it is not a readable SVG drawing; it may be damaged or too large.
+opening-damaged-mathml = it is not a readable MathML formula; it may be damaged or too large.

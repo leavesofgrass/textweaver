@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<link rel="stylesheet" href="style.css">
+<base href="https://example.org/">
+<title>Unclosed void elements</title>
+</head>
+<body>
+<h1>Still here</h1>
+<p>Every word after the unclosed meta, link, and base elements is read.</p>
+<p>A drawing: <svg role="img" aria-label="A small circle"><circle r="3"/></svg><br>and a line after a break.</p>
+<hr>
+<p>The end.<img src="dot.png" alt="A dot"><input type="text"></p>
+</body>
+</html>

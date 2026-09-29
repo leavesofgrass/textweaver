@@ -84,6 +84,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: proposed; every check reports and none fails a job. Answers so far: NVDA through Guidepup and Orca read the GUI; the tree dump works on Windows and macOS.
 - [ADR-0041: Publishing templates, real Word footnotes, and PDF page labels](0041-publishing-templates.md): APA, AMA, large print, dyslexia-friendly, high contrast, and manuscript templates for EPUB, Word, and PDF, real Word footnotes, an EPUB cover with alternative text, and PDF pages labelled with their print pages.
   - Status: accepted; a check with Word and JAWS is still queued.
+- [ADR-0044: Obsidian, JSON, SVG and content MathML in the reader](0044-obsidian-json-svg-and-content-mathml.md): Obsidian callouts, embeds, tags, and block ids read natively, with the callout rules shared with the renderer; JSON, JSON Lines, and notebooks; SVG drawings as SVG-AAM exposes them; content MathML; and LaTeX macros with arguments and bibliographies.
+  - Status: accepted; the owner's documents check is still queued.
 
 ## Writing a new ADR
 

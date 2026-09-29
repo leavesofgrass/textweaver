@@ -11,6 +11,8 @@
 //!
 //! Lines inside fenced code blocks are never touched.
 
+use textweaver_formats::callout::{self, CalloutHead, Fold};
+
 use crate::escape_html;
 
 /// Which rewrites to apply.
@@ -23,9 +25,6 @@ pub struct Blocks {
     /// Pandoc fenced divs.
     pub fenced_divs: bool,
 }
-
-/// GitHub's alert types.
-const ALERTS: [&str; 5] = ["note", "tip", "important", "warning", "caution"];
 
 /// Applies the enabled rewrites. Returns `None` when nothing changed, so
 /// the caller keeps borrowing the original text.
@@ -125,10 +124,14 @@ fn process(lines: &[&str], blocks: Blocks, out: &mut String, depth: usize) -> bo
                 j += 1;
             }
             let pad = " ".repeat(head.indent);
-            let title = escape_html(&head.title);
+            let title = escape_html(&head.title());
             let class = escape_html(&head.kind);
             if head.fold.is_some() {
-                let open = if head.fold == Some('+') { " open" } else { "" };
+                let open = if head.fold == Some(Fold::Expanded) {
+                    " open"
+                } else {
+                    ""
+                };
                 out.push_str(&format!(
                     "\n{pad}<details class=\"callout callout-{class}\"{open}>\n{pad}<summary class=\"callout-title\">{title}</summary>\n\n"
                 ));
@@ -195,56 +198,11 @@ fn fenced_div(line: &str) -> Option<Div> {
     Some(Div::Open { colons, attrs })
 }
 
-struct CalloutHead {
-    indent: usize,
-    kind: String,
-    fold: Option<char>,
-    title: String,
-}
-
-/// `> [!type]± Title` at up to three spaces of indent.
+/// `> [!type]± Title`, by the rules the reader shares ([`callout::head`]):
+/// any type with a title and folding for Obsidian, GitHub's five alerts
+/// otherwise.
 fn callout_head(line: &str, blocks: Blocks) -> Option<CalloutHead> {
-    let t = line.trim_start();
-    let indent = line.len() - t.len();
-    let rest = t.strip_prefix('>')?.trim_start().strip_prefix("[!")?;
-    let close = rest.find(']')?;
-    let kind = rest[..close].trim();
-    if kind.is_empty()
-        || !kind
-            .chars()
-            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
-    {
-        return None;
-    }
-    let lower = kind.to_lowercase();
-    let mut after = &rest[close + 1..];
-    let mut fold = None;
-    if blocks.callouts && (after.starts_with('+') || after.starts_with('-')) {
-        fold = after.chars().next();
-        after = &after[1..];
-    }
-    let title = after.trim();
-    if !blocks.callouts {
-        // GitHub alerts: fixed types, nothing after the marker.
-        if !ALERTS.contains(&lower.as_str()) || !title.is_empty() {
-            return None;
-        }
-    }
-    let title = if title.is_empty() {
-        let mut t = lower.clone();
-        if let Some(first) = t.get(..1) {
-            t = first.to_uppercase() + &t[1..];
-        }
-        t
-    } else {
-        title.to_owned()
-    };
-    Some(CalloutHead {
-        indent,
-        kind: lower,
-        fold,
-        title,
-    })
+    callout::head(line, blocks.callouts)
 }
 
 fn is_quote_line(line: &str, indent: usize) -> bool {

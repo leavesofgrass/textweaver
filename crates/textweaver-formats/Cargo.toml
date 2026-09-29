@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-formats"
-description = "textweaver document loaders: loader trait, registry, text, Markdown, HTML, EPUB, DOCX, RTF, ODT, LaTeX, email, web archives, PDF with OCR, DAISY, PowerPoint, spreadsheets, archives, web pages, and Pandoc for other formats"
+description = "textweaver document loaders: loader trait, registry, text, Markdown with Obsidian notes, HTML, EPUB, DOCX, RTF, ODT, LaTeX, email, web archives, PDF with OCR, DAISY, PowerPoint, spreadsheets, archives, JSON and notebooks, SVG, MathML, web pages, and Pandoc for other formats"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -36,6 +36,12 @@ url = ["dep:ureq"]
 paperback = []
 # Pandoc subprocess loader for the long tail (odt, rtf, rst, org, latex, ...).
 pandoc = []
+# LaTeX's `\bibliography` and `\printbibliography` read through
+# textweaver-cite: the cited entries of the `.bib` files, formatted. Off by
+# default: the citation stack stays out of the lean reader (`cargo xtask
+# deps`); textweaver-convert turns it on, so `tw` and the reader's publish
+# feature have it.
+bibliography = ["dep:textweaver-cite"]
 
 [dependencies]
 textweaver-core.workspace = true
@@ -63,6 +69,7 @@ sevenz-rust2 = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }
 calamine = { workspace = true, optional = true }
 ureq = { workspace = true, optional = true }
+textweaver-cite = { workspace = true, optional = true }
 
 [dev-dependencies]
 insta.workspace = true

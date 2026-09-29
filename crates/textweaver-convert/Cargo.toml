@@ -16,7 +16,7 @@ mathcat = ["textweaver-writers/mathcat"]
 [dependencies]
 textweaver-core.workspace = true
 textweaver-text.workspace = true
-textweaver-formats = { workspace = true, features = ["pandoc"] }
+textweaver-formats = { workspace = true, features = ["pandoc", "bibliography"] }
 textweaver-render.workspace = true
 textweaver-writers.workspace = true
 textweaver-cite.workspace = true
