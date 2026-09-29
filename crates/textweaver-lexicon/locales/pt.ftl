@@ -807,6 +807,9 @@ opening-no-file-here = não há nenhum arquivo chamado { $name } aqui. Verifique
 opening-no-permission = você não tem permissão para lê-lo.
 opening-damaged-rtf = não é um arquivo RTF legível; pode estar danificado.
 opening-damaged-odt = não é um arquivo de texto OpenDocument legível; pode estar danificado.
+opening-damaged-latex = não é um arquivo LaTeX legível; pode estar danificado ou ser grande demais.
+opening-damaged-email = não é uma mensagem de e-mail legível; pode estar danificada ou ser grande demais.
+opening-damaged-mhtml = não é uma página da web arquivada legível; pode estar danificada ou ser grande demais.
 # $reason is one of the opening-no-* messages, or the loader's own words.
 opening-failed = Não foi possível abrir { $name }: { $reason }
 opening-started = Abrindo { $name }. Escape cancela.
