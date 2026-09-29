@@ -37,7 +37,6 @@ mod rten_dictation;
 #[cfg(feature = "rten")]
 pub mod rten_whisper;
 mod transcript;
-#[cfg(any(feature = "rten", feature = "mic"))]
 pub mod vad;
 mod whisper;
 
