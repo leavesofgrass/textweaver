@@ -28,6 +28,7 @@
 //! | [`JsonLoader`]: JSON with a heading per key, and JSON Lines with a heading per line | `json`, `jsonl`, `ndjson`, `geojson`, `webmanifest` | [`NATIVE_PRIORITY`] (10) |
 //! | [`NotebookLoader`]: Jupyter notebooks, cell by cell | `ipynb` | [`NATIVE_PRIORITY`] (10) |
 //! | [`SvgLoader`]: a drawing's title, description, titled parts, and text | `svg` | [`NATIVE_PRIORITY`] (10) |
+//! | [`MathMlLoader`]: one formula, presentation or content MathML | `mml`, `mathml` | [`NATIVE_PRIORITY`] (10) |
 //! | [`TextLoader`] | `txt`, `text`, `log` (and the fallback for everything else) | 0 |
 //!
 //! Two kinds of path are not plain files:
@@ -115,6 +116,7 @@ pub use html::HtmlLoader;
 pub use json::{JsonLoader, NotebookLoader};
 pub use latex::LatexLoader;
 pub use markdown::MarkdownLoader;
+pub use mathml::MathMlLoader;
 pub use odt::OdtLoader;
 #[cfg(feature = "pandoc")]
 pub use pandoc::PandocLoader;
@@ -454,6 +456,7 @@ impl Registry {
         r.register(Box::new(JsonLoader));
         r.register(Box::new(NotebookLoader));
         r.register(Box::new(SvgLoader));
+        r.register(Box::new(MathMlLoader));
         r
     }
 
@@ -726,7 +729,7 @@ mod tests {
             ids.push("image");
         }
         ids.extend([
-            "daisy", "pptx", "sheet", "archive", "json", "notebook", "svg",
+            "daisy", "pptx", "sheet", "archive", "json", "notebook", "svg", "mathml",
         ]);
         // Pandoc is never a built-in (see `Registry::with_pandoc`).
         ids.extend(["low", "high"]);

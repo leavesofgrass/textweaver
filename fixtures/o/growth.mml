@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <apply>
+    <eq/>
+    <apply><ci>N</ci><ci>t</ci></apply>
+    <apply>
+      <times/>
+      <apply><selector/><ci>N</ci><cn>0</cn></apply>
+      <apply><power/><cn>2</cn><ci>t</ci></apply>
+    </apply>
+  </apply>
+</math>
