@@ -1,0 +1,61 @@
+% Course notes for the LaTeX loader (W5c3, ADR-0035). The owner's
+% checklist: sections by h, the table by t, a formula read as math.
+\documentclass[11pt]{article}
+\usepackage[english]{babel}
+\usepackage{amsmath,amsthm,booktabs,hyperref}
+\newcommand{\course}{Biology 101}
+\newcommand{\R}{\mathbb{R}}
+\newtheorem{definition}{Definition}
+\title{Cells and Growth}
+\author{Ada Example}
+\date{Fall term}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Notes for \course{} on how cells divide, and the arithmetic of growth.
+\end{abstract}
+
+\section{Cells}\label{sec:cells}
+Every living thing is made of cells.\footnote{Viruses are the usual exception.}
+A cell has three parts we care about:
+\begin{itemize}
+  \item the \emph{membrane}, which holds it together;
+  \item the \textbf{nucleus}, which holds the DNA;
+  \item the cytoplasm, everything else.
+\end{itemize}
+
+\begin{definition}[Mitosis]\label{def:mitosis}
+Mitosis is the division of one cell into two identical cells.
+\end{definition}
+
+\subsection{How fast they divide}
+A population that doubles every hour grows as
+\begin{equation}\label{eq:growth}
+  N(t) = N_0 \cdot 2^{t}
+\end{equation}
+where $t$ is the time in hours and $N_0 \in \R$ is the starting count.
+Equation~\eqref{eq:growth} is used again in Section~\ref{sec:data}.
+
+\section{Data}\label{sec:data}
+Table~\ref{tab:counts} gives the counts from the lab
+\cite[p.~12]{doe2020}.
+
+\begin{table}[h]
+  \centering
+  \caption{Cell counts by hour}\label{tab:counts}
+  \begin{tabular}{lr}
+    \toprule
+    Hour & Cells \\
+    \midrule
+    0 & 100 \\
+    1 & 200 \\
+    2 & 400 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\input{chapter-summary}
+
+\end{document}
