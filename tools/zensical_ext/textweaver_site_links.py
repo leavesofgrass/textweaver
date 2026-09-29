@@ -2,7 +2,7 @@
 
 The guides in docs/ link to files outside docs/ (CONTRIBUTING.md,
 CHANGELOG.md, scripts/README.md, fuzz/README.md, source folders) and to
-folders inside docs/ that have no index page (dev/, history/). Those links
+folders inside docs/ that have no index page (dev/). Those links
 work on GitHub, but a site built from docs/ alone has nothing to serve at
 them. This extension rewrites each such link to the same file or folder on
 GitHub, so no link on the published site is broken, and the Markdown sources

@@ -2,7 +2,7 @@
 //!
 //! Each command takes the text and the selection and returns the edits to
 //! apply (as one undo step) and the selection afterwards. Semantics follow
-//! Star's `star/gui/mixin_authoring.py` (docs/history/star-parity.md Part 3 §4.3)
+//! Star's `star/gui/mixin_authoring.py` (the Star parity reference Part 3 §4.3)
 //! with its listed bugs fixed (§7 items 30 to 33):
 //!
 //! | Command | Star | textweaver |

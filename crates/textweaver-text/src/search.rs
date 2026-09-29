@@ -1,6 +1,6 @@
 //! Find in document: plain or regex, case, whole word, wrap, direction.
 //!
-//! Decisions (each fixes a Star bug, docs/history/star-parity.md Part 1 §5):
+//! Decisions (each fixes a Star bug, the Star parity reference Part 1 §5):
 //!
 //! - **One haystack.** The whole canonical text is searched, so a match can
 //!   span a line break (Star's TUI searched each wrapped display line apart).

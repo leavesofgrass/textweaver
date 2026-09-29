@@ -1,6 +1,6 @@
 //! Wave 4, Agent W4h (terminal polish): what a screen reader user hears
 //! and reads in the terminal reader, from the usability pass's list
-//! (docs/research/usability-terminal.md).
+//! (the terminal usability research).
 
 use std::time::{Duration, Instant};
 

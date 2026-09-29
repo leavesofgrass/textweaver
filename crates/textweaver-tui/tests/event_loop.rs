@@ -1,5 +1,5 @@
 //! The event loop draws a highlight step as soon as it arrives
-//! (docs/history/audit-2026-09.md, finding R3; Agent D4).
+//! (the September 2026 audit, finding R3; Agent D4).
 
 use std::time::{Duration, Instant};
 

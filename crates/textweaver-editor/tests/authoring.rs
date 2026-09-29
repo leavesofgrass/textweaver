@@ -1,4 +1,4 @@
-//! Star's authoring tests, ported (docs/history/star-parity.md Part 3 §4.6): 31
+//! Star's authoring tests, ported (the Star parity reference Part 3 §4.6): 31
 //! from `tests/test_authoring.py` (`a01`..`a31`) and 25 from
 //! `tests/test_authoring_depth.py` (`d01`..`d25`). Tests of Qt widgets with
 //! no counterpart outside a GUI are listed here with the reason, and where

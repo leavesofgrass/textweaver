@@ -10,7 +10,7 @@
 
 Speech engines disagree about threads and timing. AVSpeechSynthesizer wants the main thread; WinRT speech is apartment-affine; espeak-ng is a process-wide singleton. Some engines report word boundaries with an audio-clock timestamp (espeak-ng `audio_position`), some report them as they happen, some (the Omnivox subprocess protocol, which is write-only) report nothing.
 
-Star's playback layer (`star/tts/manager/_playback.py`, inventoried in `docs/history/star-parity.md`) has hard-won rules, and some bugs: the `on_done` handler has no generation check, all timers share one stop event, and a late "done" from the previous sentence can kill the current highlight.
+Star's playback layer (`star/tts/manager/_playback.py`, inventoried in the Star parity reference, kept outside the repository) has hard-won rules, and some bugs: the `on_done` handler has no generation check, all timers share one stop event, and a late "done" from the previous sentence can kill the current highlight.
 
 ## Decision
 

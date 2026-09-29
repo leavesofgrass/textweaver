@@ -1392,11 +1392,7 @@ mod inner {
         let mut docs: Vec<(String, PathBuf)> = Vec::new();
         if files.is_empty() {
             let root = super::root();
-            for f in [
-                "fixtures/sample.md",
-                "README.md",
-                "docs/history/star-parity.md",
-            ] {
+            for f in ["fixtures/sample.md", "README.md", "docs/reading.md"] {
                 docs.push((f.to_owned(), root.join(f)));
             }
             let mut add = |name: &str, text: String| -> anyhow::Result<()> {

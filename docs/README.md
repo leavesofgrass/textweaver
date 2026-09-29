@@ -53,7 +53,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 ## For contributors
 
-The developer documents are in [dev/](dev/), the decision records in [adr/](adr/README.md), and the plans, briefs, and audits of past waves in [history/](history/).
+The developer documents are in [dev/](dev/), and the decision records in [adr/](adr/README.md).
 
 ### Building and working on textweaver
 
@@ -68,19 +68,9 @@ The developer documents are in [dev/](dev/), the decision records in [adr/](adr/
 - [Releasing](dev/releasing.md): making a release, the Linux AppImage, and what the packages hold.
 - [Third-party data](dev/third-party-data.md): the bundled pronunciation dictionaries, fonts, and word lists, and their licences.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
-- [Roadmap](roadmap.md): Phases 1 and 2 and Wave 3, as planned in September 2026. The current plans are in [history/tasks.md](history/tasks.md) and [research/](#research).
+- [Roadmap](roadmap.md): Phases 1 and 2 and Wave 3, as planned in September 2026, kept as a record.
 - [Star features not yet planned](star-gaps.md): Star features with their status in textweaver.
 - [CHANGELOG.md](../CHANGELOG.md): what changed in each release.
-
-### History
-
-- [Tasks and ownership](history/tasks.md): the briefs and status of every agent, wave by wave.
-- [Reservations for the Cloud Agent](history/reservations.md): work reserved for the Cloud Agent's pull requests, so the local waves never duplicate it.
-- [Readiness for 0.1.0-alpha.5](history/alpha5-readiness.md): what stands between `main` and the next release, and its checklists.
-- [Implementation plan](history/plan.md): the original plan and the Phase 0 amendments.
-- [Audit, September 2026](history/audit-2026-09.md): findings, fixes, and benchmark numbers.
-- [Star parity reference](history/star-parity.md): what Star does, in detail.
-- [Star parity report](history/parity-report.md): the generated comparison of segmentation with Star.
 
 ## Decisions
 
@@ -137,25 +127,6 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 - [Features](site/features.html): everything textweaver does, with its status.
 - [Reading aids](site/reading-aids.html): try RSVP, bionic reading, and the reading ruler.
 - [About the pages](site/README.md): how they are made and regenerated.
-
-## Research
-
-- [A Xilem GUI for textweaver](research/xilem-gui.md): findings on Xilem, Masonry, and AccessKit accessibility (September 2026).
-- [Pure-Rust choices for Wave 3](research/pure-rust-wave3.md): OCR, Piper voices, Whisper, define word, and other swaps (September 2026).
-- [Research for Wave 4](research/wave4.md): the GUI part two, speed, formats (MathCAT), translations, offline models, and releases (September 2026).
-- [Usability pass: the terminal reader and tw](research/usability-terminal.md): what a screen reader user meets, what was fixed, what is left, ranked (September 2026).
-- [Wave 4 plan review](research/wave4-plan-review.md): the first review of the Wave 4 plan, with quick wins and research updates (September 2026).
-- [Wave 4 orchestration plan](research/wave4-orchestration.md): three sub-waves of three agents, the dependency map, the disk and memory budget, revised briefs, and the runbook (September 2026).
-- [Wave 5 plan](research/wave5-plan.md): goals ranked for the beta, research, the branches that depend on Wave 4's outcomes, three sub-waves with a Braille session as a gate, the budget, quick wins, draft briefs, the runbook, and the questions for the owner (September 2026).
-- [What is left](research/whats-left.md): the inventory of what remains, by area, with each item's status, source, value, and size; the Star features still lacking; and the items no plan covers (September 2026).
-- [Streaming dictation: the Wave 5 spike](research/streaming-dictation.md): Whisper `base.en` on RTen per run and in a LocalAgreement-2 loop over recorded speech, the latency and memory, and a design for live dictation (September 2026).
-- [The 2026 roadmap](research/roadmap-2026.md): the milestones from Wave 4 to the feature-complete final alpha and beyond, the critical path, Wave 5 refined, a first sketch of Wave 6, and eight questions for the owner (September 2026).
-- [Cloud Agent plan](research/cloud-agent-plan.md): three pull-request tasks for a Claude Cloud Agent beside Wave 4 and Wave 5 (fuzz targets, the generated settings reference and docs check, a second-tool check of the writers), the budget within $125, the pull-request workflow, the effect on Wave 5, the reservation mechanism, and the ready-to-paste brief (September 2026).
-- [Documentation sweep plan](research/docs-sweep-plan.md): the Zensical site on GitHub Pages, a short README, and five agents in parallel (September 2026).
-- [Wave 5, recalibrated](research/wave5-recalibrated.md): Wave 5 after Wave 4 and the Cloud Agent, eleven agents in overlapping batches, streaming dictation research, and the briefs (September 2026).
-- [User interface refinement pass: the list](research/ui-refinement.md): everything to improve in the terminal reader, `tw`, and the GUI, gathered before the pass is planned (September 2026).
-- [User interface refinement plan](research/ui-refinement-plan.md): research and the plan for the owner's six items (menus, palette, file browser, audio export, batch conversion, formats), quick wins, and the agents that build them in Wave 6 (September 2026).
-- [MathCAT issue #827: pull request text](research/mathcat-827-pull-request.md): the fix textweaver carries for MathCAT's navigation braille, and a test, ready for the owner to file upstream (September 2026).
 
 ## See also
 

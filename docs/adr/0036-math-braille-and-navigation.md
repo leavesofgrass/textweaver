@@ -17,7 +17,7 @@ MathCAT 0.7.6-rc.3 is vendored under `third_party/mathcat`, byte for byte as its
 
 The fix is the one the issue describes. `get_navigation_braille` wraps the part being explored in a new `<math>` element in a temporary document; it copied the part in the original document and appended the copy to the new one, which the no-unsafe backend cannot do, because its nodes are indices into their own document. A new `copy_mathml_to(mathml, doc)` allocates the whole copy in the destination document, and `get_navigation_braille` uses it. `copy_mathml` is unchanged for its other callers. `third_party/mathcat/textweaver.patch` holds the change as a diff, and `TEXTWEAVER.md` says how to check the copy and when to drop it.
 
-The regression test is `crates/textweaver-mathcat/tests/navigation.rs`. Run against the crates.io package (with the patch line commented out), the step into a fraction answered "MathCAT crash"; with the vendored copy, every step in Nemeth and UEB passes. The pull request text for upstream is in [docs/research/mathcat-827-pull-request.md](../research/mathcat-827-pull-request.md), for the owner to file from their own account. When a MathCAT release fixes the issue, pin it and remove the folder and the patch line.
+The regression test is `crates/textweaver-mathcat/tests/navigation.rs`. Run against the crates.io package (with the patch line commented out), the step into a fraction answered "MathCAT crash"; with the vendored copy, every step in Nemeth and UEB passes. The pull request text for upstream is kept outside the repository, for the owner to file from their own account. When a MathCAT release fixes the issue, pin it and remove the folder and the patch line.
 
 ### The engine
 

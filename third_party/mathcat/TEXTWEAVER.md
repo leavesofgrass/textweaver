@@ -13,7 +13,7 @@ textweaver builds MathCAT with its `no-unsafe` feature, because the workspace de
 - `src/interface.rs`: a new public `copy_mathml_to(mathml, doc)` copies an element into a given document, allocating every node of the copy there. `get_navigation_braille` uses it for the part it wraps in a new `<math>` element. Before, the copy was made in the original document and then appended to the new one; the unsafe backend tolerates that, but the no-unsafe backend's nodes are indices into their own document, so it read past the end of the new document's storage. `copy_mathml` keeps its behavior (a copy in the element's own document).
 - `Cargo.toml`: the three `[[test]]` targets are removed, because their files are not vendored (see "Left out").
 
-The upstream pull request text is in [docs/research/mathcat-827-pull-request.md](../../docs/research/mathcat-827-pull-request.md), for the owner to file. The regression test is `crates/textweaver-mathcat/tests/navigation.rs`: it fails with the crates.io package (the step into the fraction answers "MathCAT crash") and passes with this copy.
+The upstream pull request text is kept outside the repository, for the owner to file. The regression test is `crates/textweaver-mathcat/tests/navigation.rs`: it fails with the crates.io package (the step into the fraction answers "MathCAT crash") and passes with this copy.
 
 ## Keeping it in step
 

@@ -415,7 +415,7 @@ impl App {
     /// same list shown again keeps its focus. The focused item is said
     /// after the list's introduction, without interrupting it (the first
     /// item was never heard unless the user pressed Up,
-    /// docs/history/audit-2026-09.md, finding A4).
+    /// the September 2026 audit, finding A4).
     ///
     /// `fresh_message` says a message was said while the effects were
     /// made: for a list shown, its introduction, kept for

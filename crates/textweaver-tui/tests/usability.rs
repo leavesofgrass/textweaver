@@ -1,4 +1,4 @@
-//! The terminal usability pass (docs/research/usability-terminal.md): a
+//! The terminal usability pass (the terminal usability research): a
 //! yes-or-no question is spoken even while textweaver reads aloud, open
 //! failures are plain sentences, the help names the keys a new user needs,
 //! and the "no document" message comes from the keymap.

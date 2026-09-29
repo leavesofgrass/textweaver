@@ -109,7 +109,7 @@ CRATE_ADRS = {
 
 # Where to read about a crate that has no ADR: (link text, path from docs/site).
 CRATE_NO_ADR_NOTE = {
-    "editor": ("Plan section 6.6: Editing", "../history/plan.md#66-editing-editor"),
+    "editor": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
 }
 
 # ---------------------------------------------------------------------------

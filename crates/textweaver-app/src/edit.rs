@@ -1904,7 +1904,7 @@ impl App {
         }
         // A save during this session changed the file: rebuild the reading
         // view from it, so the positions saved on the way out match what
-        // will be loaded next time (docs/history/audit-2026-09.md, finding D1).
+        // will be loaded next time (the September 2026 audit, finding D1).
         if let Some(rebuild) = self.edit.as_ref().map(|e| e.session.maps_stale()) {
             self.finish_leave(rebuild, false);
         }

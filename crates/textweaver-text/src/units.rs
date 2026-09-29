@@ -50,7 +50,7 @@
 //! Lao, Khmer, Burmese, CJK, and Hangul) two to three times as fast.
 //!
 //! Sentences and words exclude surrounding whitespace. Differences from Star
-//! are measured by `cargo xtask parity` (docs/history/parity-report.md).
+//! are measured by `cargo xtask parity` (the Star parity report).
 
 use std::borrow::Cow;
 use std::collections::VecDeque;

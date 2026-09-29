@@ -11,7 +11,7 @@ Students get course handouts as RTF and OpenDocument text (ODT) as often as Word
 - The Word reader read the final text (insertions kept, deletions dropped), but comments were lost and there was no way to hear what changed.
 - Word, OpenDocument, EPUB, and PowerPoint files are zip packages. The package reader capped one member at 256 MB, but not the number of members, overlapping members, compression ratios, or the total unpacked.
 
-The research for Wave 4 (`docs/research/wave4.md`) found no crate worth adopting. rtf-parser 0.4.3 has no code pages, no tables, and a recursive lexer. The DOCX comment crates each bring a quick-xml stack beside our roxmltree reader.
+The research for Wave 4 (kept outside the repository) found no crate worth adopting. rtf-parser 0.4.3 has no code pages, no tables, and a recursive lexer. The DOCX comment crates each bring a quick-xml stack beside our roxmltree reader.
 
 ## Decision
 

@@ -51,7 +51,7 @@ The crates are grouped here by the part of the system they serve. For each crate
 - **`textweaver-store`**: settings and key overrides, per-document state (position, history, bookmarks, notes, highlights), recent files, the library and its full-text index, folder sidecars and their merge rules, settings import and export, and the Star migration. It owns the one notes model (`Note`, `Highlight`, `Relation`, `RelationType`) and the saved form of the `[reading_aids]` settings (`reading_aids`). ADR: [0001](../adr/0001-workspace-and-dependencies.md). Depends on core.
 - **`textweaver-keymap`**: every action, key chords, layers, the default keys for the terminal and the GUI, overrides, conflict checks, and the generated help. ADR: [0006](../adr/0006-keymap-and-actions.md). Depends on core.
 - **`textweaver-a11y`**: the `Announcer` trait, the announcement catalogue, verbosity, the accessibility mode with `route` (which decides whether each message, echo, caret move, and piece of read text goes to the voice, the status line, or both), and screen reader detection (`detect`). ADR: [0006](../adr/0006-keymap-and-actions.md). Depends on core.
-- **`textweaver-editor`**: undo and redo over a rope, Markdown commands, find and replace, typing echo, autosave and recovery, and saving. Designed in section 6.6 of [the plan](../history/plan.md). Depends on core.
+- **`textweaver-editor`**: undo and redo over a rope, Markdown commands, find and replace, typing echo, autosave and recovery, and saving. Depends on core.
 
 ### Application
 
@@ -78,7 +78,7 @@ The crates are grouped here by the part of the system they serve. For each crate
 
 ### Tools
 
-- **`xtask`**: `cargo xtask bench` and `startup` (with a baseline gate), `soak`, `dist`, `appimage`, `release`, `hosts`, `eci-host`, `sapi-host`, `keyboard` (writes [keyboard.md](../keyboard.md)), `deps` (checks the dependency direction), `notices` (writes `THIRD-PARTY-NOTICES.md`), and `parity` (writes [the parity report](../history/parity-report.md)). Depends on formats, keymap, and text, and on app for the benchmarks.
+- **`xtask`**: `cargo xtask bench` and `startup` (with a baseline gate), `soak`, `dist`, `appimage`, `release`, `hosts`, `eci-host`, `sapi-host`, `keyboard` (writes [keyboard.md](../keyboard.md)), `deps` (checks the dependency direction), `notices` (writes `THIRD-PARTY-NOTICES.md`), and `parity` (writes the Star parity report to `target/parity-report.md`). Depends on formats, keymap, and text, and on app for the benchmarks.
 
 ## Dependency direction
 
@@ -236,7 +236,6 @@ A GUI does not lay out a whole document. It shows a `DocWindow` (`crates/textwea
 - [Interactive architecture page](../site/architecture.html): choose a crate to see its job, ADRs, dependencies, and dependents.
 - [Speech pipeline, step by step](../site/speech-pipeline.html): the data flow above, one stage at a time, with the offset map example.
 - [CONTRIBUTING.md](../../CONTRIBUTING.md): building, testing, and sending changes.
-- [Implementation plan](../history/plan.md): the original design, and the Phase 0 amendments.
 - [Roadmap](../roadmap.md): the planned changes to this architecture, including the GUI and the stability work.
 - [ADR-0001: Workspace and dependencies](../adr/0001-workspace-and-dependencies.md), [ADR-0003: Speech threading](../adr/0003-speech-threading-and-event-timing.md), and [ADR-0005: Narration and the OffsetMap](../adr/0005-narration-and-offset-map.md): the three decisions this guide leans on most.
 - [Documentation index](../README.md)

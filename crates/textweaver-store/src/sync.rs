@@ -4,7 +4,7 @@
 //! carries a sidecar keyed by each document's path relative to the folder,
 //! so reading progress travels with the files. Two devices can write the
 //! same sidecar; this module reconciles them. The merge rules are ported
-//! from `star/sync.py` with its 45 tests (docs/history/star-parity.md Part 3 §3):
+//! from `star/sync.py` with its 45 tests (the Star parity reference Part 3 §3):
 //!
 //! - per-document progress entries merge by [`ConflictPolicy`];
 //! - annotation and highlight lists merge by id (a union, newest per id);

@@ -20,7 +20,7 @@
     scripts   PSScriptAnalyzer on scripts\*.ps1, when the module is installed
 
   The espeak feature needs libespeak-ng, which Windows does not have, so the
-  checks use the omnivox feature instead of --all-features (docs/history/tasks.md).
+  checks use the omnivox feature instead of --all-features (the agent briefs).
   -Docker runs scripts/dev-check.sh in the development container for the
   full Linux set.
 

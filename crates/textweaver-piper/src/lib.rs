@@ -4,7 +4,7 @@
 //! exported to ONNX. textweaver runs them with RTen, Robert Knight's
 //! pure-Rust ONNX runtime, following `rten-examples/src/piper.rs`: no
 //! ONNX Runtime, no C++ and no subprocess. (tract and candle cannot run
-//! the VITS graphs yet; `docs/research/pure-rust-wave3.md`.)
+//! the VITS graphs yet; the Wave 3 pure-Rust research.)
 //!
 //! - [`config`]: a voice's `.onnx.json`.
 //! - [`text`]: clauses, words, and the chunks synthesized one at a time.

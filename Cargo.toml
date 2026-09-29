@@ -222,7 +222,7 @@ unicode-width = "0.2"
 # (the terminal reader saves and restores the terminal on each).
 ctrlc = { version = "3.4", features = ["termination"] }
 
-# Wave 3 formats and OCR (Agent W3d; docs/research/pure-rust-wave3.md, ADR-0026).
+# Wave 3 formats and OCR (Agent W3d; ADR-0026).
 # OCR in process: the ocrs engine on the RTen runtime (both pure Rust; rten
 # and rten-tensor are declared with W3f's entries below), with PDF pages
 # rendered by hayro. Models download at run time, after the user confirms,
@@ -244,11 +244,11 @@ flate2 = "1.1"
 tar = { version = "0.4.46", default-features = false }
 sevenz-rust2 = { version = "0.23.0", default-features = false }
 # Define word (Agent W3e): headwords in a finite-state map, entries in zstd
-# blocks, both pure Rust (docs/research/pure-rust-wave3.md).
+# blocks, both pure Rust (the Wave 3 research, kept outside the repository).
 fst = "0.4.7"
 ruzstd = "0.9"
 # Wave 3, Agent W3f: Piper voices and Whisper dictation in-process on RTen,
-# the pure-Rust ONNX runtime (ADR-0023, docs/research/pure-rust-wave3.md).
+# the pure-Rust ONNX runtime (ADR-0023).
 # `rten_format` (RTen's own model files) is off: the models are ONNX.
 # `random` is for the noise Piper's voice graphs draw (RandomNormalLike).
 rten = { version = "0.26", default-features = false, features = ["onnx_format", "contrib", "random"] }

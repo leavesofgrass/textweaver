@@ -6,7 +6,7 @@
 
 ## Context
 
-On Saturday, September 26, 2026, the owner chose Xilem, Linebender's all-Rust toolkit, for textweaver's GUI on every platform, to "keep as much of it Rust as I can". The stack is Masonry (Xilem's widget layer), Vello for rendering, Parley for text layout, AccessKit for accessibility, and winit for windows. The research is in [docs/research/xilem-gui.md](../research/xilem-gui.md). Its findings that shaped this record:
+On Saturday, September 26, 2026, the owner chose Xilem, Linebender's all-Rust toolkit, for textweaver's GUI on every platform, to "keep as much of it Rust as I can". The stack is Masonry (Xilem's widget layer), Vello for rendering, Parley for text layout, AccessKit for accessibility, and winit for windows. The research is in the Xilem GUI research, kept outside the repository. Its findings that shaped this record:
 
 - AccessKit is strong on all three platforms, but Xilem pinned AccessKit 0.24 and `accesskit_winit` 0.32.2, which miss the fix that lets Orca find an AccessKit app (Xilem issue #1733).
 - Masonry's read-only text cannot take focus, Parley's editor has one style for the whole text, there is no announcement API, and there are no menus.
@@ -68,7 +68,7 @@ A live region (`widgets.rs`, `Announcer`): an invisible widget whose children ar
 - **Linux:** `tools/atspi-check.sh` runs the GUI under Xvfb with a private D-Bus session and the AT-SPI bus, and `tools/atspi-dump.py` (pyatspi) checks the tree, the Text interface, the attributes at the caret, and the caret-moved and announcement events. It runs in CI (the GUI workflow's `linux` job, with the hybrid renderer on Mesa's software GPU). Docker is off on the development machine for now, so it was not run locally in this wave; its result is CI's.
 - **macOS:** a smoke test in CI launches the GUI with the paced backend and checks that it reads and exits; VoiceOver needs a person.
 - **Unit and harness tests** (`tests/document_view.rs`, `tests/window_tree.rs`, `tests/settings_dialog.rs`) check the same tree through `accesskit_consumer`, the crate the platform adapters use, including actions sent to a settings row and a list option.
-- **People:** the owner tests with NVDA and JAWS; his checklist is in the W3b report and in `docs/history/tasks.md`.
+- **People:** the owner tests with NVDA and JAWS; his checklist is in the W3b report and in the agent briefs, kept outside the repository.
 
 ## Measurements
 

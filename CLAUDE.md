@@ -69,10 +69,10 @@ The owner is also color-blind and struggles to tell red from green. In every the
 
 ## Everything else
 
-Read `docs/history/tasks.md` before starting. Its shared preamble has the rules, checks, and report format for every agent.
+Read `D:\textweaver-planning\history\tasks.md` before starting. Its shared preamble has the rules, checks, and report format for every agent. The owner's plans, briefs, and research live in that local planning repository, not in this one.
 
 ## See also
 
-- [Tasks and agent briefs](docs/history/tasks.md)
+- Tasks and agent briefs: `D:\textweaver-planning\history\tasks.md` (outside this repository)
 - [Contributing](CONTRIBUTING.md)
 - [Documentation index](docs/README.md)
