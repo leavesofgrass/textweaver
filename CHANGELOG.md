@@ -4,6 +4,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+## [0.1.0-alpha.5] - 2026-09-29
+
 The fifth alpha. Braille comes first: every status line, list, and prompt puts the meaning in the first 40 cells, and math can be written in Nemeth or UEB braille. LaTeX, email, and web archives open without Pandoc; documents can be summarized with no model; publishing templates make APA and AMA papers with real Word footnotes; and the GUI ships in the release on every system, with syllables, the voice manager, a question dialog, and its labels in six languages.
 
 ### Testing
@@ -359,6 +361,7 @@ The first release with downloadable packages: Windows (x86_64) and macOS (univer
 - `tw`, the command-line tool: `text`, `info`, `search`, `speak`, `voices`, and `backends`.
 - Speech backends: espeak-ng (Linux), Omnivox, and a silent backend.
 
+[0.1.0-alpha.5]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.5
 [0.1.0-alpha.4]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.4
 [0.1.0-alpha.3]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.3
 [0.1.0-alpha.2]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.2

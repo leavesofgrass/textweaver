@@ -2,7 +2,7 @@
 
 textweaver is an accessible, keyboard-first document reader and writer that speaks: it reads documents aloud with a highlight that follows the spoken word exactly, moves by character, word, sentence, heading, table, and more, and echoes what you type while you write Markdown. It is built first for screen-reader users and for students with print disabilities, and it is a Rust reimplementation of the core of [Star](https://github.com/leavesofgrass/star). It runs on Windows, macOS, and Linux.
 
-> **Status: alpha.** textweaver is ready for testing, not yet for daily reliance. The newest release is 0.1.0-alpha.4. See [CHANGELOG.md](CHANGELOG.md).
+> **Status: alpha.** textweaver is ready for testing, not yet for daily reliance. The newest release is 0.1.0-alpha.5. See [CHANGELOG.md](CHANGELOG.md).
 
 ## Quick start
 
