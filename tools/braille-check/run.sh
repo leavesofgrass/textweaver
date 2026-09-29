@@ -30,11 +30,14 @@ cargo build --release --manifest-path tools/braille-check/Cargo.toml
 target_dir="${CARGO_TARGET_DIR:-tools/braille-check/target}"
 tool="$target_dir/release/braille-check"
 
-# Markdown fixtures without math: this build has no MathCAT, and math
-# braille has its own tests (ADR-0036).
+# Markdown fixtures without math: this build has no MathCAT, so formulas
+# become spoken words that are not in the document's text, and math
+# braille has its own tests (ADR-0036). That leaves out
+# fixtures/l/flavors/obsidian.md, which has two formulas; with them its
+# grade 1 file read back 87 percent against a limit of 95.6.
 status=0
 for src in fixtures/sample.md fixtures/t/reading.md fixtures/m/sample.md \
-           fixtures/l/flavors/gfm.md fixtures/l/flavors/obsidian.md fixtures/l/flavors/pandoc.md \
+           fixtures/l/flavors/gfm.md fixtures/l/flavors/pandoc.md \
            fixtures/g2/apa-paper.md; do
   name="$(echo "$src" | sed 's|^fixtures/||; s|/|-|g; s|\.md$||')"
   for grade in $grades; do
