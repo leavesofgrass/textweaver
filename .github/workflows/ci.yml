@@ -147,6 +147,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
+      # TRIAL, not for main: link the 64-bit Windows tests with rust-lld
+      # (lld-link) instead of MSVC's link.exe, to time the Test step against
+      # main's runs. The 32-bit hosts and packages keep link.exe.
+      - name: Use rust-lld for x86_64 Windows (trial)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=rust-lld" >> "$GITHUB_ENV"
       - name: Clippy
         run: cargo clippy --locked --workspace --exclude textweaver-xilem --all-targets ${{ matrix.features }}
       - name: Test
