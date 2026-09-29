@@ -313,6 +313,13 @@ unicode-bidi = "0.3.18"
 # at build time for the parent window's handle). MIT.
 rfd = { version = "0.17.2", default-features = false, features = ["xdg-portal"] }
 
+# Wave 5, Agent W5c3: email (EML) and web archives (MHTML, RFC 2557) in the
+# formats crate (ADR-0035). mail-parser is safe Rust (`forbid(unsafe_code)`)
+# and fuzzed upstream, Apache-2.0 or MIT. Default features off; `encoding_rs`
+# decodes legacy charsets through the encoding_rs already in the tree. It
+# brings one small proc-macro crate, hashify (Apache-2.0 or MIT).
+mail-parser = { version = "0.11.9", default-features = false, features = ["encoding_rs"] }
+
 # tests
 proptest = "1.11"
 insta = { version = "1.48", features = ["json", "yaml"] }

@@ -16,6 +16,9 @@
 //! | [`DocxLoader`], with comments and tracked changes | `docx`, `docm` | [`NATIVE_PRIORITY`] (10) |
 //! | [`RtfLoader`]: Rich Text Format | `rtf` | [`NATIVE_PRIORITY`] (10) |
 //! | [`OdtLoader`]: OpenDocument text, with comments and tracked changes | `odt`, `ott`, `fodt` | [`NATIVE_PRIORITY`] (10) |
+//! | [`LatexLoader`]: a LaTeX subset, with math and `\input` inside the folder | `tex`, `latex`, `ltx` | [`NATIVE_PRIORITY`] (10) |
+//! | [`EmlLoader`]: email, headers then body, attachments listed | `eml` | [`NATIVE_PRIORITY`] (10) |
+//! | [`MhtmlLoader`]: web archives (RFC 2557) through the HTML loader | `mhtml`, `mht` | [`NATIVE_PRIORITY`] (10) |
 //! | `PdfLoader` (feature `pdf`, on by default; ADR-0010), with OCR of scanned pages (feature `images`, and `ocr` for the in-process engine; ADR-0026) | `pdf` | [`NATIVE_PRIORITY`] (10) |
 //! | `ImageLoader` (feature `images`; `ocr` adds the in-process engine): OCR of an image file | `png`, `jpg`, `jpeg` | [`NATIVE_PRIORITY`] (10) |
 //! | [`DaisyLoader`]: DAISY 3 books and DTBook files | `opf`, `xml`, `dtbook` | [`NATIVE_PRIORITY`] (10) |
@@ -61,11 +64,13 @@ pub mod cache;
 mod counter;
 pub mod daisy;
 pub mod docx;
+pub mod eml;
 pub mod encoding;
 pub mod epub;
 pub mod export;
 pub mod fulltext;
 pub mod html;
+pub mod latex;
 pub mod markdown;
 mod mathml;
 pub mod odt;
@@ -92,6 +97,7 @@ pub use archive::ArchiveLoader;
 pub use cache::{CacheKey, DocumentCache};
 pub use daisy::DaisyLoader;
 pub use docx::DocxLoader;
+pub use eml::{EmlLoader, MhtmlLoader};
 pub use epub::EpubLoader;
 pub use export::{
     ExportFormat, HtmlOptions, MarkdownOptions, TextOptions, export, to_html, to_markdown,
@@ -99,6 +105,7 @@ pub use export::{
 };
 pub use fulltext::{FullTextIndex, IndexedDocument, RefreshReport, SearchHit};
 pub use html::HtmlLoader;
+pub use latex::LatexLoader;
 pub use markdown::MarkdownLoader;
 pub use odt::OdtLoader;
 #[cfg(feature = "pandoc")]
@@ -166,7 +173,7 @@ pub fn warnings(meta: &DocumentMeta) -> Vec<String> {
 
 /// Version of the canonical text the loaders produce. Bumped whenever a
 /// loader's output changes, which invalidates cached documents.
-pub const CANONICAL_VERSION: u32 = 5;
+pub const CANONICAL_VERSION: u32 = 6;
 
 /// Where a document comes from.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -293,6 +300,10 @@ pub struct LoadOptions {
     pub ocr: OcrOptions,
     /// How tracked changes are read.
     pub revisions: RevisionMode,
+    /// Say the name of each command a loader leaves out, where it was
+    /// ("(command hl)" in LaTeX), for high verbosity. Off: only the
+    /// document's warnings name them.
+    pub name_skipped_commands: bool,
     /// Progress reports and cancelling (not part of the cache key).
     #[serde(skip)]
     pub progress: Progress,
@@ -420,6 +431,9 @@ impl Registry {
         r.register(Box::new(DocxLoader));
         r.register(Box::new(RtfLoader));
         r.register(Box::new(OdtLoader));
+        r.register(Box::new(LatexLoader));
+        r.register(Box::new(EmlLoader));
+        r.register(Box::new(MhtmlLoader));
         #[cfg(feature = "pdf")]
         r.register(Box::new(PdfLoader));
         #[cfg(feature = "images")]
@@ -690,7 +704,9 @@ mod tests {
             assert!(!r.extensions().contains(&not), "{not}");
         }
         assert!(r.extensions().contains(&"opf"));
-        let mut ids = vec!["text", "markdown", "html", "epub", "docx", "rtf", "odt"];
+        let mut ids = vec![
+            "text", "markdown", "html", "epub", "docx", "rtf", "odt", "latex", "eml", "mhtml",
+        ];
         if cfg!(feature = "pdf") {
             ids.push("pdf");
         }
