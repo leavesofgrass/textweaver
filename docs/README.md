@@ -152,6 +152,7 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 - [Documentation sweep plan](research/docs-sweep-plan.md): the Zensical site on GitHub Pages, a short README, and five agents in parallel (September 2026).
 - [Wave 5, recalibrated](research/wave5-recalibrated.md): Wave 5 after Wave 4 and the Cloud Agent, eleven agents in overlapping batches, streaming dictation research, and the briefs (September 2026).
 - [User interface refinement pass: the list](research/ui-refinement.md): everything to improve in the terminal reader, `tw`, and the GUI, gathered before the pass is planned (September 2026).
+- [User interface refinement plan](research/ui-refinement-plan.md): research and the plan for the owner's six items (menus, palette, file browser, audio export, batch conversion, formats), quick wins, and the agents that build them in Wave 6 (September 2026).
 - [MathCAT issue #827: pull request text](research/mathcat-827-pull-request.md): the fix textweaver carries for MathCAT's navigation braille, and a test, ready for the owner to file upstream (September 2026).
 
 ## See also

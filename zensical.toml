@@ -101,6 +101,7 @@ nav = [
       { "Wave 5 plan" = "research/wave5-plan.md" },
       { "Wave 5, recalibrated" = "research/wave5-recalibrated.md" },
       { "UI refinement pass: the list" = "research/ui-refinement.md" },
+      { "UI refinement plan" = "research/ui-refinement-plan.md" },
       { "What is left" = "research/whats-left.md" },
       { "The 2026 roadmap" = "research/roadmap-2026.md" },
       { "Cloud Agent plan" = "research/cloud-agent-plan.md" },
