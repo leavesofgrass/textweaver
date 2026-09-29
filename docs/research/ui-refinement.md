@@ -13,6 +13,8 @@ Given on Monday, September 28, 2026. The owner notes some go beyond interface po
 3. **A proper file manager and file chooser, with archives.** Browse folders and archives (zip, tar, 7z) to open reading material or import other formats, as abax did by following the Worker file manager. Today the GUI uses the system's Open dialog (W4a3) with a typed-path fallback, and the terminal reader takes a typed path; archives open through the archive loader (W3d) but cannot be browsed.
 4. **Export speech as WAV or MP3, and a better way than ffmpeg if there is one.** Today `tw export-audio` writes WAV itself and MP3 and M4B audiobooks through ffmpeg, which the user installs; Star also used ffmpeg. To research: encoding MP3 (and M4B's AAC, or Opus) without an outside program, ideally in pure Rust, with its licence and quality; and exporting from inside the reader and the GUI's menus, not only from `tw`.
 
+5. **Batch conversion of a whole folder, from the reader and the GUI.** Convert a folder of documents in mixed formats (Word, PDF, EPUB, RTF, ODT, HTML, and the rest) into standard Markdown or a standard, accessible PDF in one go. Today `tw convert` already does folders: it mirrors the folder tree, uses every core, skips what is already converted, and has a hot folder (`--watch`). To add: the same from the menus (choose a folder, a target format, and where the results go), progress announced plainly and not too often, a summary at the end ("Converted 42 files; 2 failed, listed in ..."), and a check that every input format the loaders read converts cleanly to Markdown and to PDF.
+
 ## Found so far
 
 ### The GUI
