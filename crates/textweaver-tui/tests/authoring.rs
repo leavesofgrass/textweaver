@@ -8,6 +8,7 @@ use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use textweaver_app::core::CharRange;
+use textweaver_app::keymap::ActionId;
 use textweaver_app::store::{Paths, Settings};
 use textweaver_app::testing::recording_service;
 use textweaver_app::theme::ColorSupport;
@@ -42,10 +43,6 @@ fn launch(home: &Path) -> Harness {
 
 fn key(code: KeyCode) -> KeyEvent {
     KeyEvent::new(code, KeyModifiers::NONE)
-}
-
-fn alt(c: char) -> KeyEvent {
-    KeyEvent::new(KeyCode::Char(c), KeyModifiers::ALT)
 }
 
 impl Harness {
@@ -89,7 +86,7 @@ fn alt_o_lists_headings_and_typing_filters_them() {
     let mut h = launch(&dir.path().join("home"));
     h.tui.app_mut().open(&file).unwrap();
     h.draw();
-    h.press(alt('o'));
+    h.press(h.tui.key_for(ActionId::Outline));
     let list = h.tui.list().expect("outline");
     assert_eq!(list.title, "Outline, 3 headings");
     assert_eq!(list.items.len(), 3);
@@ -115,25 +112,22 @@ fn edit_mode_has_heading_chords_and_the_editing_basics() {
     let mut h = launch(&dir.path().join("home"));
     h.tui.app_mut().open(&file).unwrap();
     h.draw();
-    h.press(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL));
+    h.press(h.tui.key_for(ActionId::ToggleEditMode));
     assert_eq!(h.tui.app().mode(), Mode::Edit);
     // Alt+H and Alt+Shift+H move by heading while editing (the caret
     // starts on the title's text).
     assert_eq!(h.at_cursor(5), "Essay");
-    h.press(alt('h'));
+    h.press(h.tui.key_for(ActionId::SkipNextHeading));
     assert_eq!(h.at_cursor(7), "Methods");
-    h.press(KeyEvent::new(
-        KeyCode::Char('H'),
-        KeyModifiers::ALT | KeyModifiers::SHIFT,
-    ));
+    h.press(h.tui.key_for(ActionId::SkipPreviousHeading));
     assert_eq!(h.at_cursor(5), "Essay");
     // Alt+Backspace deletes the word before the caret.
     h.press(KeyEvent::new(KeyCode::End, KeyModifiers::NONE));
-    h.press(KeyEvent::new(KeyCode::Backspace, KeyModifiers::ALT));
+    h.press(h.tui.key_for(ActionId::DeleteWordBefore));
     let text = h.tui.app().session().unwrap().doc.text().to_string();
     assert!(text.starts_with("# \n"), "{text:?}");
     // Ctrl+A selects everything.
-    h.press(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL));
+    h.press(h.tui.key_for(ActionId::SelectAll));
     let sel = h
         .tui
         .app()

@@ -97,12 +97,18 @@ fn the_title_line_says_ready_until_the_first_reading() {
 fn say_status_and_repeat_message_have_keys_everywhere() {
     for frontend in [Frontend::Terminal, Frontend::Gui] {
         let map = Keymap::defaults(Platform::current(), frontend);
-        for (action, chord, single) in [
-            (ActionId::SayStatus, "Alt+End", "z"),
-            (ActionId::RepeatMessage, "Alt+'", "'"),
-        ] {
-            let chord = chord.parse().unwrap();
-            let single = single.parse().unwrap();
+        for action in [ActionId::SayStatus, ActionId::RepeatMessage] {
+            // The platform's own keys, from the keymap: a chord that works
+            // with single keys off, and a single key.
+            let chords = map.chords_for(action);
+            let chord = *chords
+                .iter()
+                .find(|c| !c.is_text_input())
+                .unwrap_or_else(|| panic!("{action:?} has a chord on {frontend:?}"));
+            let single = *chords
+                .iter()
+                .find(|c| c.is_text_input())
+                .unwrap_or_else(|| panic!("{action:?} has a single key on {frontend:?}"));
             assert_eq!(
                 map.lookup(&chord, Layer::Browse),
                 Some(action),
@@ -151,7 +157,7 @@ fn say_status_and_repeat_message_are_heard() {
     let again = heard(&log, "Line 1 of").expect("the message again");
     assert_eq!(again, position);
     log.clear();
-    tui.handle_key(with(KeyCode::End, KeyModifiers::ALT));
+    tui.handle_key(tui.key_for(ActionId::SayStatus));
     let status = heard(&log, "Browse mode").expect("the status");
     assert!(status.starts_with(&position), "{status}");
     for part in [
@@ -170,13 +176,13 @@ fn say_status_and_repeat_message_are_heard() {
     let twice = heard(&log, "Browse mode").expect("the status again");
     assert_eq!(twice, status);
     log.clear();
-    tui.handle_key(with(KeyCode::Char('\''), KeyModifiers::ALT));
+    tui.handle_key(tui.key_for(ActionId::RepeatMessage));
     assert_eq!(heard(&log, "Line 1 of").as_deref(), Some(position.as_str()));
     // While reading: heard over the reading, which goes on.
     tui.handle_key(key(KeyCode::Char(' ')));
     assert_eq!(tui.app().playback(), Playback::Reading);
     log.clear();
-    tui.handle_key(with(KeyCode::End, KeyModifiers::ALT));
+    tui.handle_key(tui.key_for(ActionId::SayStatus));
     let reading = heard(&log, "Reading,").expect("the status while reading");
     assert!(reading.contains("Browse mode"), "{reading}");
     assert_eq!(tui.app().playback(), Playback::Reading);
@@ -193,7 +199,7 @@ fn say_status_needs_no_document() {
         ..AppConfig::for_tests()
     });
     let mut tui = Tui::with_color_support(app, ColorSupport::NoColor);
-    tui.handle_key(with(KeyCode::End, KeyModifiers::ALT));
+    tui.handle_key(tui.key_for(ActionId::SayStatus));
     let status = heard(&log, "No document").expect("the status");
     assert!(
         status.starts_with("No document: Ready, Browse mode"),
@@ -217,7 +223,7 @@ fn escape_in_edit_mode_says_how_to_finish() {
         "Some text to edit.
 ",
     );
-    tui.handle_key(with(KeyCode::Char('e'), KeyModifiers::CONTROL));
+    tui.handle_key(tui.key_for(ActionId::ToggleEditMode));
     assert_eq!(tui.app().mode(), textweaver_app::Mode::Edit);
     log.clear();
     tui.handle_key(key(KeyCode::Esc));
@@ -228,7 +234,7 @@ fn escape_in_edit_mode_says_how_to_finish() {
     );
     assert_eq!(tui.app().status_text(), "Still editing. Ctrl+E finishes.");
     // Out of edit mode, Escape says nothing of the kind.
-    tui.handle_key(with(KeyCode::Char('e'), KeyModifiers::CONTROL));
+    tui.handle_key(tui.key_for(ActionId::ToggleEditMode));
     assert_eq!(tui.app().mode(), textweaver_app::Mode::Browse);
     tui.handle_key(key(KeyCode::Esc));
     assert!(!tui.app().status_text().contains("Still editing"));
@@ -270,7 +276,7 @@ fn a_key_in_a_list_repeats_its_introduction() {
     tui.handle_key(key(KeyCode::Down));
     tui.handle_key(key(KeyCode::Down));
     let n = tui.app().list_model().unwrap().items.len();
-    for k in [key(KeyCode::F(1)), with(KeyCode::End, KeyModifiers::ALT)] {
+    for k in [key(KeyCode::F(1)), tui.key_for(ActionId::SayStatus)] {
         log.clear();
         tui.handle_key(k);
         let again = heard(&log, "Keyboard shortcuts,")
@@ -281,7 +287,7 @@ fn a_key_in_a_list_repeats_its_introduction() {
         assert_eq!(tui.app().list_model().unwrap().selected, 2);
     }
     log.clear();
-    tui.handle_key(with(KeyCode::Char('\''), KeyModifiers::ALT));
+    tui.handle_key(tui.key_for(ActionId::RepeatMessage));
     assert!(
         heard(&log, &format!("3 of {n}")).is_some(),
         "{:?}",

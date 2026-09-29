@@ -71,7 +71,7 @@ use textweaver_app::lexicon::args;
 pub use setup::{Options, build_app, build_app_with};
 pub use textweaver_app::a11y::AccessMode;
 pub use theme::{Theme, theme_help};
-pub use ui::{REDRAW_AT_LEAST, Tui, chord};
+pub use ui::{REDRAW_AT_LEAST, Tui, chord, key_event};
 
 /// How long the loop waits for a key while reading: a highlight step is
 /// drawn at most this long after its word is heard.

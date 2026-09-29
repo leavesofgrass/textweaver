@@ -18,6 +18,7 @@ use ratatui::backend::TestBackend;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::layout::Position;
 use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
+use textweaver_app::keymap::ActionId;
 use textweaver_app::store::{Paths, SettingsStore};
 use textweaver_app::testing::{SpeechLog, recording_service};
 use textweaver_app::text::units::unit_at;
@@ -273,14 +274,14 @@ fn scripted_session_with_restore() {
 
     // Sentences, with the key the keymap binds (Alt+Down, as in JAWS).
     let s2 = h.nav(alice, Unit::Sentence, Direction::Forward);
-    h.press(KeyEvent::new(KeyCode::Down, KeyModifiers::ALT));
+    h.press(h.tui.key_for(ActionId::NextSentence));
     assert_eq!(h.cursor(), s2);
     h.assert_cursor_on(s2);
     let s3 = h.nav(s2, Unit::Sentence, Direction::Forward);
-    h.press(KeyEvent::new(KeyCode::Down, KeyModifiers::ALT));
+    h.press(h.tui.key_for(ActionId::NextSentence));
     assert_eq!(h.cursor(), s3);
     // Previous at a sentence start goes to the previous sentence.
-    h.press(KeyEvent::new(KeyCode::Up, KeyModifiers::ALT));
+    h.press(h.tui.key_for(ActionId::PreviousSentence));
     assert_eq!(h.cursor(), s2);
 
     // Paragraphs.
@@ -300,11 +301,7 @@ fn scripted_session_with_restore() {
     // highlight on screen at every step.
     let mut read_since = h.log.spoken_ranges().len();
     // The word (w), the sentence (.), and the line (Alt+Shift+L).
-    for k in [
-        ch('w'),
-        ch('.'),
-        KeyEvent::new(KeyCode::Char('L'), KeyModifiers::ALT | KeyModifiers::SHIFT),
-    ] {
+    for k in [ch('w'), ch('.'), h.tui.key_for(ActionId::ReadCurrentLine)] {
         h.press(k);
         let seen = h.follow_speech();
         h.assert_highlights_match_speech(&seen, read_since);
@@ -419,17 +416,17 @@ fn scripted_session_with_restore() {
 
     // Quit saves the position.
     let saved = h.cursor();
-    h.press(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL));
+    h.press(h.tui.key_for(ActionId::Quit));
     assert!(!h.tui.should_quit());
     assert!(h.status().contains("Quit textweaver? y or n"));
     // n and a abort; y quits.
     h.press(ch('n'));
     assert!(!h.tui.should_quit());
     assert!(h.status().contains("Cancelled."));
-    h.press(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL));
+    h.press(h.tui.key_for(ActionId::Quit));
     h.press(ch('a'));
     assert!(!h.tui.should_quit());
-    h.press(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL));
+    h.press(h.tui.key_for(ActionId::Quit));
     h.press(ch('x'));
     // The question is asked again: the status line blanks for a moment so
     // a screen reader hears it again, then shows it.
@@ -474,7 +471,7 @@ fn prompts_cancel_and_recall() {
     assert_eq!(h.tui.minibuffer().unwrap().text(), "light");
     h.press(key(KeyCode::Esc));
     // Go to a line through the prompt (Ctrl+G).
-    h.press(KeyEvent::new(KeyCode::Char('g'), KeyModifiers::CONTROL));
+    h.press(h.tui.key_for(ActionId::GoTo));
     assert!(h.row_text(HEIGHT - 1).starts_with("Go to"));
     h.typed("7");
     h.press(key(KeyCode::Enter));
@@ -503,7 +500,7 @@ fn narrow_terminal_wraps_and_keeps_the_cursor_visible() {
     h.term.backend_mut().resize(30, 8);
     h.draw();
     for _ in 0..6 {
-        h.press(KeyEvent::new(KeyCode::Down, KeyModifiers::ALT));
+        h.press(h.tui.key_for(ActionId::NextSentence));
         let p = h.screen_cursor();
         let body = h.areas().body;
         assert!(

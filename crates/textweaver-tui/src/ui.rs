@@ -66,6 +66,41 @@ pub fn chord(k: &KeyEvent) -> Option<KeyChord> {
     Some(KeyChord::new(key, mods))
 }
 
+/// The key press a terminal sends for `chord`: the inverse of [`chord`].
+/// Tests and tools press keys built from the keymap with it, so they never
+/// press a key the running platform does not use for the command.
+pub fn key_event(chord: &KeyChord) -> KeyEvent {
+    let code = match chord.key {
+        Key::Char(c) => KeyCode::Char(c),
+        Key::Space => KeyCode::Char(' '),
+        Key::F(n) => KeyCode::F(n),
+        Key::Enter => KeyCode::Enter,
+        Key::Escape => KeyCode::Esc,
+        Key::Tab if chord.mods.contains(Modifiers::SHIFT) => KeyCode::BackTab,
+        Key::Tab => KeyCode::Tab,
+        Key::Backspace => KeyCode::Backspace,
+        Key::Delete => KeyCode::Delete,
+        Key::Insert => KeyCode::Insert,
+        Key::Home => KeyCode::Home,
+        Key::End => KeyCode::End,
+        Key::PageUp => KeyCode::PageUp,
+        Key::PageDown => KeyCode::PageDown,
+        Key::Up => KeyCode::Up,
+        Key::Down => KeyCode::Down,
+        Key::Left => KeyCode::Left,
+        Key::Right => KeyCode::Right,
+    };
+    let mut mods = KeyModifiers::empty();
+    mods.set(KeyModifiers::CONTROL, chord.mods.contains(Modifiers::CTRL));
+    mods.set(KeyModifiers::ALT, chord.mods.contains(Modifiers::ALT));
+    mods.set(KeyModifiers::SUPER, chord.mods.contains(Modifiers::META));
+    // A shifted letter arrives uppercase with Shift, as terminals send it.
+    let shifted = chord.mods.contains(Modifiers::SHIFT)
+        || matches!(chord.key, Key::Char(c) if c.is_ascii_uppercase());
+    mods.set(KeyModifiers::SHIFT, shifted && code != KeyCode::BackTab);
+    KeyEvent::new(code, mods)
+}
+
 /// The character a key press types, if it types one: a character key
 /// without Control or Alt, or with both when the character is not an ASCII
 /// letter or digit.
@@ -730,6 +765,25 @@ impl Tui {
     /// Draws the whole screen and parks the hardware cursor.
     pub fn draw(&mut self, f: &mut Frame<'_>) {
         self.draw_at(f, Instant::now());
+    }
+
+    /// The key press for `action` in the current mode, from the live
+    /// keymap: its first chord with a modifier (it works with single-key
+    /// shortcuts off), else its single key. For tests: they press what the
+    /// running platform binds, never a chord written into the test.
+    ///
+    /// # Panics
+    ///
+    /// When `action` has no key in the current mode.
+    pub fn key_for(&self, action: ActionId) -> KeyEvent {
+        let layer = self.app.mode().layer();
+        let chords = self.app.keymap().chords_in_mode(action, layer);
+        let chord = chords
+            .iter()
+            .find(|c| !c.is_text_input())
+            .or_else(|| chords.first())
+            .unwrap_or_else(|| panic!("{action:?} has no key in {layer:?}"));
+        key_event(chord)
     }
 
     /// How many times the screen was drawn since the reader started (for

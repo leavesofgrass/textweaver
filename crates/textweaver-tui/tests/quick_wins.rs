@@ -28,10 +28,6 @@ fn ch(c: char) -> KeyEvent {
     KeyEvent::new(KeyCode::Char(c), mods)
 }
 
-fn ctrl(c: char) -> KeyEvent {
-    KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL)
-}
-
 fn tui_with(text: &str) -> Tui {
     let mut app = App::new(AppConfig::for_tests());
     app.open_document(
@@ -52,7 +48,7 @@ fn tui_opening(file: &Path) -> Tui {
 fn copy_sends_the_text_to_the_terminal_clipboard() {
     let mut tui = tui_with("Copy me. Not me.\n");
     assert_eq!(tui.take_clipboard_sequence(), None);
-    tui.handle_key(ctrl('c'));
+    tui.handle_key(tui.key_for(ActionId::Copy));
     assert_eq!(
         tui.take_clipboard_sequence().as_deref(),
         Some("\u{1b}]52;c;Q29weSBtZS4=\u{7}")
@@ -66,7 +62,7 @@ fn tab_completes_paths_in_file_prompts() {
     std::fs::write(dir.path().join("chapter-one.md"), "One.\n").unwrap();
     std::fs::write(dir.path().join("notes.md"), "Notes.\n").unwrap();
     let mut tui = tui_with("Text.\n");
-    tui.handle_key(ctrl('o'));
+    tui.handle_key(tui.key_for(ActionId::Open));
     assert_eq!(tui.app().mode(), Mode::Open);
     let typed = format!("{}/chap", dir.path().display());
     for c in typed.chars() {
@@ -110,9 +106,9 @@ fn lists_jump_by_first_letter_and_the_save_list_takes_s_d_c() {
     let file = dir.path().join("s.md");
     std::fs::write(&file, "Start.\n").unwrap();
     let mut tui = tui_opening(&file);
-    tui.handle_key(ctrl('e'));
+    tui.handle_key(tui.key_for(ActionId::ToggleEditMode));
     tui.handle_key(ch('X'));
-    tui.handle_key(ctrl('e'));
+    tui.handle_key(tui.key_for(ActionId::ToggleEditMode));
     assert!(tui.list().is_some());
     tui.handle_key(ch('s'));
     assert!(tui.list().is_none());
@@ -124,12 +120,12 @@ fn lists_jump_by_first_letter_and_the_save_list_takes_s_d_c() {
     assert!(!tui.app().is_editing());
     assert_eq!(std::fs::read_to_string(&file).unwrap(), "XStart.\n");
     // d discards, c cancels.
-    tui.handle_key(ctrl('e'));
+    tui.handle_key(tui.key_for(ActionId::ToggleEditMode));
     tui.handle_key(ch('Y'));
-    tui.handle_key(ctrl('e'));
+    tui.handle_key(tui.key_for(ActionId::ToggleEditMode));
     tui.handle_key(ch('c'));
     assert!(tui.app().is_editing());
-    tui.handle_key(ctrl('e'));
+    tui.handle_key(tui.key_for(ActionId::ToggleEditMode));
     tui.handle_key(ch('d'));
     assert!(!tui.app().is_editing());
     assert_eq!(std::fs::read_to_string(&file).unwrap(), "XStart.\n");
@@ -145,16 +141,36 @@ fn key_hints_show_only_keys_that_work() {
     // only single keys drop out.
     tui.handle_key(key(KeyCode::F(9)));
     let off = tui.hints(200);
-    assert!(off.contains("Alt+P play"), "{off}");
-    assert!(off.contains("Alt+. sentence"), "{off}");
-    // Headings have a chord in the terminal since Phase 2 (Alt+H).
-    assert!(off.contains("Alt+H heading"), "{off}");
+    // The keys come from the keymap, as the hints take them.
+    let keymap = tui.app().keymap().clone();
+    let chord = |a: ActionId| {
+        keymap
+            .chords_for(a)
+            .into_iter()
+            .find(|c| !c.is_text_input())
+            .map(|c| c.to_string())
+            .unwrap_or_else(|| panic!("{a:?} has a chord"))
+    };
+    assert!(
+        off.contains(&format!("{} play", chord(ActionId::PlayPause))),
+        "{off}"
+    );
+    assert!(
+        off.contains(&format!("{} sentence", chord(ActionId::NextSentence))),
+        "{off}"
+    );
+    // Headings have a chord in the terminal since Phase 2.
+    assert!(
+        off.contains(&format!("{} heading", chord(ActionId::SkipNextHeading))),
+        "{off}"
+    );
     assert!(!off.contains("h heading"), "{off}");
     assert!(!off.contains("Space"), "{off}");
     // Edit mode shows edit keys, not browse keys.
-    tui.handle_key(ctrl('e'));
+    tui.handle_key(tui.key_for(ActionId::ToggleEditMode));
     let edit = tui.hints(200);
-    assert!(edit.contains("Ctrl+S save"), "{edit}");
+    let save = chord(ActionId::Save);
+    assert!(edit.contains(&format!("{save} save")), "{edit}");
     assert!(edit.contains("F2 commands"), "{edit}");
     assert!(!edit.contains("?"), "{edit}");
 }
@@ -206,7 +222,7 @@ fn narrow_widths_draw_cleanly() {
             tui.handle_key(key(KeyCode::Down));
         }
         // Edit mode draws the source at every width too.
-        tui.handle_key(ctrl('e'));
+        tui.handle_key(tui.key_for(ActionId::ToggleEditMode));
         term.draw(|f| tui.draw(f)).unwrap();
         let c = term.backend().cursor_position();
         assert!(c.x < width, "{width}: {c:?}");

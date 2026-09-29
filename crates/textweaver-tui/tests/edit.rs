@@ -11,6 +11,7 @@ use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use textweaver_app::core::CharPos;
+use textweaver_app::keymap::ActionId;
 use textweaver_app::store::{Paths, SettingsStore};
 use textweaver_app::testing::{SpeechLog, recording_service};
 use textweaver_app::theme::ColorSupport;
@@ -50,10 +51,6 @@ fn launch(home: &Path) -> Harness {
 
 fn key(code: KeyCode) -> KeyEvent {
     KeyEvent::new(code, KeyModifiers::NONE)
-}
-
-fn ctrl(c: char) -> KeyEvent {
-    KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL)
 }
 
 fn shift(code: KeyCode) -> KeyEvent {
@@ -170,7 +167,7 @@ fn type_format_undo_save_and_reopen_through_keys() {
     assert!(!h.screen().contains("# Notes"));
 
     // Ctrl+E: the source, the Edit mode in the title, the status line.
-    h.press(ctrl('e'));
+    h.press(h.tui.key_for(ActionId::ToggleEditMode));
     assert_eq!(h.app().mode(), Mode::Edit);
     assert!(h.screen().contains("# Notes"), "{}", h.screen());
     assert!(h.row_text(0).contains("Edit"));
@@ -199,18 +196,18 @@ fn type_format_undo_save_and_reopen_through_keys() {
         KeyModifiers::CONTROL | KeyModifiers::SHIFT,
     ));
     assert!(h.status().contains("text selected"), "{}", h.status());
-    h.press(ctrl('b'));
+    h.press(h.tui.key_for(ActionId::Bold));
     assert_eq!(h.text(), "# Notes\n\nPlain words here. More **text**\n");
     assert!(h.status().starts_with("Bold."), "{}", h.status());
     assert!(h.screen().contains("More **text**"));
 
     // Ctrl+Z undoes the bold; Ctrl+Y redoes it; Ctrl+Z again.
-    h.press(ctrl('z'));
+    h.press(h.tui.key_for(ActionId::Undo));
     assert_eq!(h.text(), "# Notes\n\nPlain words here. More text\n");
     assert!(h.status().starts_with("Undo."));
-    h.press(ctrl('y'));
+    h.press(h.tui.key_for(ActionId::Redo));
     assert!(h.text().contains("**text**"));
-    h.press(ctrl('z'));
+    h.press(h.tui.key_for(ActionId::Undo));
 
     // Backspace and Enter type as expected.
     h.press(key(KeyCode::End));
@@ -220,7 +217,7 @@ fn type_format_undo_save_and_reopen_through_keys() {
     assert_eq!(h.text(), "# Notes\n\nPlain words here. More tex\nLast.\n");
 
     // Ctrl+S saves in place and keeps editing.
-    h.press(ctrl('s'));
+    h.press(h.tui.key_for(ActionId::Save));
     assert_eq!(
         std::fs::read_to_string(&file).unwrap(),
         "# Notes\n\nPlain words here. More tex\nLast.\n"
@@ -229,14 +226,14 @@ fn type_format_undo_save_and_reopen_through_keys() {
     assert!(!h.row_text(0).contains("modified"));
 
     // Ctrl+E leaves; the reading view shows the new text without markup.
-    h.press(ctrl('e'));
+    h.press(h.tui.key_for(ActionId::ToggleEditMode));
     assert_eq!(h.app().mode(), Mode::Browse);
     assert!(h.status().contains("Edit mode off."));
     assert!(h.screen().contains("More tex"));
     assert!(!h.screen().contains("# Notes"));
 
     // Quit and relaunch: the saved text is what opens.
-    h.press(ctrl('q'));
+    h.press(h.tui.key_for(ActionId::Quit));
     assert!(!h.tui.should_quit());
     h.press(key(KeyCode::Char('y')));
     assert!(h.tui.should_quit());
@@ -252,9 +249,9 @@ fn quitting_with_unsaved_edits_asks_in_a_list() {
     let (_dir, file, home) = setup();
     let mut h = launch(&home);
     h.tui.app_mut().open(&file).unwrap();
-    h.press(ctrl('e'));
+    h.press(h.tui.key_for(ActionId::ToggleEditMode));
     h.typed("x");
-    h.press(ctrl('q'));
+    h.press(h.tui.key_for(ActionId::Quit));
     h.press(key(KeyCode::Char('y')));
     assert!(!h.tui.should_quit());
     let list = h.tui.list().expect("save choice list");
@@ -304,7 +301,7 @@ fn bracketed_paste_inserts_as_one_step() {
     let (_dir, file, home) = setup();
     let mut h = launch(&home);
     h.tui.app_mut().open(&file).unwrap();
-    h.press(ctrl('e'));
+    h.press(h.tui.key_for(ActionId::ToggleEditMode));
     h.tui.handle_event(&Event::Paste("Pasted\r\nlines ".into()));
     h.draw();
     // The caret was on "Notes" (after "# "); CRLF became one line break.
@@ -314,7 +311,7 @@ fn bracketed_paste_inserts_as_one_step() {
         "{}",
         h.status()
     );
-    h.press(ctrl('z'));
+    h.press(h.tui.key_for(ActionId::Undo));
     assert_eq!(h.text(), SOURCE);
     // Shift+Left in edit mode selects a character.
     h.press(shift(KeyCode::Left));
