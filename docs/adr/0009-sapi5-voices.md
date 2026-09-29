@@ -22,7 +22,7 @@ A probe on 2026-09-25 (`System.Speech`, 64-bit and 32-bit PowerShell, output to 
 ## Consequences
 
 - Windows builds produce two host binaries (`cargo xtask sapi-host`); CI builds the 32-bit host on the Windows runner.
-- The host protocol duplicates the ECI host's in Wave 1; the two are merged into one shared engine-host protocol at integration.
+- The host protocol duplicates the ECI host's from an earlier stage of the project; the two are merged into one shared engine-host protocol at integration.
 - Automated real-voice tests use Microsoft David, Zira, and eSpeak; voices bundled with other products are the user's to enable.
 
 ## See also

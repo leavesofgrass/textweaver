@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-09-25
-- Status update (Saturday, September 26, 2026): Implemented, with changes. The host protocol, process handling, and playback moved into `textweaver-enginehost` (ADR-0012). Code Factory's Eloquence is used only after the user opts in, with `TEXTWEAVER_ECI_CODE_FACTORY=1` or `[speech.eci] code_factory = true`, because an installed copy is not necessarily licensed for other programs; its SAPI voices are hidden the same way. The Apple backends (ADR-0008) and the SAPI5 backend (ADR-0009) that this ADR placed in wave 3 were built in Wave 1. The `[speech.eci]` settings (`library`, `dictionaries`, `code_factory`) sit beside the environment variables.
+- Status update (Saturday, September 26, 2026): Implemented, with changes. The host protocol, process handling, and playback moved into `textweaver-enginehost` (ADR-0012). Code Factory's Eloquence is used only after the user opts in, with `TEXTWEAVER_ECI_CODE_FACTORY=1` or `[speech.eci] code_factory = true`, because an installed copy is not necessarily licensed for other programs; its SAPI voices are hidden the same way. The Apple backends (ADR-0008) and the SAPI5 backend (ADR-0009), which this ADR placed later in the project, were in fact built earlier than planned. The `[speech.eci]` settings (`library`, `dictionaries`, `code_factory`) sit beside the environment variables.
 
 ## Context
 
@@ -27,7 +27,7 @@ vdaddons\openevv\synthDrivers\_openevv\lib_64\eci.dll`); Code Factory's `eci.
 - **No automatic installation of an unlicensed engine.** Fetching OpenEVV (or IBM's SDK) on the user's behalf at install or run time would make textweaver the means of distributing data no one can license, just later than bundling would; textweaver does not do it. It detects what the user installed and points to the licensed routes: Apple's built-in Eloquence voices on macOS, Voxin on Linux, and Code Factory on Windows.
 - **Community dictionaries.** The backend loads the community IBMTTS pronunciation dictionaries (github.com/eigencrow/IBMTTSDictionaries, CC0 1.0; main, root, and abbreviation dictionaries for US English and German), vendored at a pinned monthly release in `third_party/ibmtts-dictionaries/`, through ECI's dictionary calls (`eciNewDict`, `eciLoadDict` per volume, `eciSetDict`). On by default; the user can turn them off or point to their own directory. Hyphens reach the engine unchanged so hyphenated entries match.
 - Selection: on a machine with Eloquence installed, the `eci` backend is the highest-priority automatic choice, and `prefer_voice` defaults to "eloquence" (Star's default).
-- macOS ships Eloquence as system voices; those arrive through the native AVSpeech backend in wave 3. A SAPI5 backend (other SAPI voices, and Eloquence without the host) is also wave 3.
+- macOS ships Eloquence as system voices; those arrive through the native AVSpeech backend, planned for later. A SAPI5 backend (other SAPI voices, and Eloquence without the host) is also planned for later.
 
 ## Consequences
 

@@ -3,12 +3,12 @@
 - Status: accepted
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): Implemented as decided and on by default. The `PageBreak` markers exist, but the reader has no page navigation yet: go to does not take a page number. `pdf-extract` and `pdfium-render` remain in the workspace table although no crate uses them; removing them is still open. OCR is still out of scope.
-- Status update (Saturday, September 26, 2026, Phase 1): `pdf-extract` and `pdfium-render` are gone from the workspace table (Agent P1c), and hostile page labels and list counters are clamped (Agent P1d). OCR of pages with no text layer is planned for Wave 3 (Agent W3d): the pure-Rust `ocrs` engine in process first, with a Tesseract subprocess as a fallback.
-- Status update (Saturday, September 26, 2026, Wave 3): Pages with no text layer are now recognized by OCR (Agent W3d, [ADR-0026](0026-ocr-and-student-formats.md)): ocrs in process for English, Tesseract for other languages, and the words laid out by this loader's layout engine.
+- Status update (Saturday, September 26, 2026, Phase 1): `pdf-extract` and `pdfium-render` are gone from the workspace table, and hostile page labels and list counters are clamped. OCR of pages with no text layer is planned for later: the pure-Rust `ocrs` engine in process first, with a Tesseract subprocess as a fallback.
+- Status update (Saturday, September 26, 2026): Pages with no text layer are now recognized by OCR (see [ADR-0026](0026-ocr-and-student-formats.md)): ocrs in process for English, Tesseract for other languages, and the words laid out by this loader's layout engine.
 
 ## Context
 
-The owner reads most course material as PDF, and wants to read PDFs as Markdown with text-to-speech. So PDF support must be on by default in `tw` and `textweaver` on Windows, macOS, and Linux, and the loader must recover Markdown-quality structure (headings, paragraphs, lists, tables, reading order in columns, no running headers or page numbers, page navigation), not just a stream of text. Star's column-aware reconstruction (`star/documents/pdf.py`, on pdfminer.six's layout boxes; the Star parity reference, kept outside the repository) is the quality bar.
+Most course material is read as PDF, and the goal is to read PDFs as Markdown with text-to-speech. So PDF support must be on by default in `tw` and `textweaver` on Windows, macOS, and Linux, and the loader must recover Markdown-quality structure (headings, paragraphs, lists, tables, reading order in columns, no running headers or page numbers, page navigation), not just a stream of text. Star's column-aware reconstruction (`star/documents/pdf.py`, on pdfminer.six's layout boxes; the Star parity reference, kept outside the repository) is the quality bar.
 
 The workspace table offered three crates: `lopdf` (a PDF object model and content-stream parser), `pdf-extract` (text extraction on lopdf), and `pdfium-render` (bindings to Google's PDFium, loaded as a shared library at run time).
 
@@ -30,11 +30,11 @@ Fixtures (all generated here, none copyrighted): `fixtures/a/single.pdf` (one co
 | Peak memory, `tw info` on 300 pages | about 20 MB working set (whole process) | not measured | not measured |
 | Dependencies | lopdf 0.45 (already in the table) | pins lopdf 0.42 (a second lopdf), `euclid`, `adobe-cmap-parser`, `cff-parser`, `type1-encoding-parser`, `postscript` | `pdfium-render`, plus the library |
 
-pdfium-render could not be measured: no PDFium library exists on this machine, and downloading one needs the owner's permission. Its text and glyph boxes are the best of the three, but it cannot be a default that "just works": the library must be found or shipped for every platform.
+pdfium-render could not be measured: no PDFium library exists on this machine, and downloading one needs approval first. Its text and glyph boxes are the best of the three, but it cannot be a default that "just works": the library must be found or shipped for every platform.
 
 ## Decision
 
-**The default PDF loader is textweaver's own layout engine on `lopdf` 0.45**, behind the `pdf` feature of `textweaver-formats`, **on by default** (so `tw text file.pdf` and `textweaver file.pdf` work everywhere with no setup). `pdf-extract` and `pdfium-render` are not used; the orchestrator can remove them from the workspace table. A PDFium loader can return later as an optional second loader (lower priority, off by default) if a file shows the need; nothing in the design prevents it.
+**The default PDF loader is textweaver's own layout engine on `lopdf` 0.45**, behind the `pdf` feature of `textweaver-formats`, **on by default** (so `tw text file.pdf` and `textweaver file.pdf` work everywhere with no setup). `pdf-extract` and `pdfium-render` are not used; they can be removed from the workspace table. A PDFium loader can return later as an optional second loader (lower priority, off by default) if a file shows the need; nothing in the design prevents it.
 
 The loader (`crates/textweaver-formats/src/pdf/`):
 
@@ -57,7 +57,7 @@ A password-protected PDF (not openable with the empty password) and an unparseab
 - PDFs load by default with no native library, in a few milliseconds for articles and a fraction of a second for a 300-page book.
 - `tw text file.pdf --format markdown` prints Markdown from the recovered structure (tests check that it reads back with the same headings, list items, table rows, and paragraphs).
 - Layout heuristics can misjudge unusual pages (three-column magazines with irregular gutters, tables without aligned columns, lists whose bullets are images and whose PDF is untagged). Tagged PDFs are the most reliable, since headings and list items come from the tags.
-- Not yet done: vertical and right-to-left scripts, OCR, form fields and annotations (link targets are not recovered), and CJK predefined CMaps other than Identity. lopdf's default features (`chrono`, `jiff`, `time`, `rayon`) are not needed by the loader; the orchestrator can set `default-features = false` on `lopdf` in the workspace table.
+- Not yet done: vertical and right-to-left scripts, OCR, form fields and annotations (link targets are not recovered), and CJK predefined CMaps other than Identity. lopdf's default features (`chrono`, `jiff`, `time`, `rayon`) are not needed by the loader; `default-features = false` can be set on `lopdf` in the workspace table.
 
 ## See also
 

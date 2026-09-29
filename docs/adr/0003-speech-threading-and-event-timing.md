@@ -2,9 +2,9 @@
 
 - Status: accepted
 - Date: 2026-09-25
-- Status update (Saturday, September 26, 2026): Later work kept these rules and added to them. Statuses carry a reading generation, and the app follows the `ReadingGeneration` that each `read` returns, so a status from an earlier reading can never move the highlight (Agents B2 and D3). Continuous reading is planned in windows of about ten minutes, not to the end of the document (Agent D4). Engines that own playback declare `PLAYBACK_EVENTS`, so their word events fire on arrival (ADR-0012). An engine that keeps failing stops the reading after three failures in a row; a crashed or stalled engine host is restarted and reading goes on from the last word heard. The Apple `avspeech` backend needs the application's main run loop, which the terminal reader and `tw serve` pump (ADR-0008).
-- Status update (Saturday, September 26, 2026, Phase 2, Agent P2a): nothing on the speech thread waits for long. Engine hosts start inside `poll` (ADR-0012), speech-dispatcher's replies are read in `poll`, and each backend's voices are listed once when it starts into a `VoiceCache` (SAPI's in the background) that `SpeechService::voice_list` reads from any thread without a round trip; a voice asked for by name while the list loads is resolved when it arrives. `SpeechService::sync` is the round-trip barrier tests use. A dead speech thread is replaced in place: the app restarts speech once by itself, and on the Restart Speech command, with the current settings (`App::set_speech_starter`).
-- Status update (Saturday, September 26, 2026, Phase 1, Agent P1a): crash restarts are capped and a speech-thread panic is caught and reported; see **Failures (Phase 1)** below.
+- Status update (Saturday, September 26, 2026): Later work kept these rules and added to them. Statuses carry a reading generation, and the app follows the `ReadingGeneration` that each `read` returns, so a status from an earlier reading can never move the highlight. Continuous reading is planned in windows of about ten minutes, not to the end of the document. Engines that own playback declare `PLAYBACK_EVENTS`, so their word events fire on arrival (ADR-0012). An engine that keeps failing stops the reading after three failures in a row; a crashed or stalled engine host is restarted and reading goes on from the last word heard. The Apple `avspeech` backend needs the application's main run loop, which the terminal reader and `tw serve` pump (ADR-0008).
+- Status update (Saturday, September 26, 2026, Phase 2): nothing on the speech thread waits for long. Engine hosts start inside `poll` (ADR-0012), speech-dispatcher's replies are read in `poll`, and each backend's voices are listed once when it starts into a `VoiceCache` (SAPI's in the background) that `SpeechService::voice_list` reads from any thread without a round trip; a voice asked for by name while the list loads is resolved when it arrives. `SpeechService::sync` is the round-trip barrier tests use. A dead speech thread is replaced in place: the app restarts speech once by itself, and on the Restart Speech command, with the current settings (`App::set_speech_starter`).
+- Status update (Saturday, September 26, 2026, Phase 1): crash restarts are capped and a speech-thread panic is caught and reported; see **Failures (Phase 1)** below.
 
 ## Context
 
@@ -16,7 +16,7 @@ Star's playback layer (`star/tts/manager/_playback.py`, inventoried in the Star 
 
 **Threading.**
 - `SpeechBackend` has **no `Send` bound**. `SpeechService::spawn` takes a `Send` `BackendFactory` and creates the backend on the service's own speech thread, which calls every backend method.
-- Engines that must live on the main thread declare `Caps::REQUIRES_MAIN_THREAD`. The TUI cannot use them; the GUI (wave 3) hosts them by running the service loop on its main thread.
+- Engines that must live on the main thread declare `Caps::REQUIRES_MAIN_THREAD`. The TUI cannot use them; the GUI hosts them by running the service loop on its main thread.
 - The application talks to the service through a command channel and reads `SpeechStatus` from a status channel (`try_status`, `statuses`). Nothing blocks the UI thread.
 
 **Backend timing contract.**
