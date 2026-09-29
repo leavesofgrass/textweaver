@@ -295,7 +295,7 @@ pub struct Gui {
     installed: crate::font_chooser::Installed,
     /// The theme and the highlight colors the palette was made from
     /// (`App::reading_theme_key`).
-    theme_key: (String, String, Option<String>),
+    theme_key: (String, String, Option<String>, Vec<String>),
     /// The system's high contrast colors the palette was made from, when
     /// the window follows them.
     system: Option<crate::system_colors::SystemColors>,
