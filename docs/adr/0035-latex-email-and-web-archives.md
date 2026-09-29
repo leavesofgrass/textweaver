@@ -46,7 +46,7 @@ The parser runs twice. The first pass learns what the reader needs before it rea
 **Limits**, each a constant in `latex.rs`:
 
 - 16 MB for the document or one included file, 64 MB of included files in all;
-- 2,000,000 tokens read and made in one pass, 8,000,000 parser steps (every token taken counts, so arguments put back cost too);
+- tokens read and made in one pass: 8 for each byte of source (the document and the files it includes) plus 50,000, at most 2,000,000; parser steps: 32 for each byte plus 100,000, at most 8,000,000 (every token taken counts, so arguments put back cost too). Scaling with the source keeps a small file that expands without end cheap: the first fuzzing run, with a fixed budget, spent about half a second on each such input;
 - 10,000 macro expansions;
 - 256 levels of groups, environments, and arguments (`MAX_NESTING`); deeper ones are read without structure, with the nesting warning;
 - 8 levels of `\input`, 64 included files;
@@ -84,7 +84,7 @@ Two cargo-fuzz targets, `latex` (with skipped commands named, and with code skip
 - `CANONICAL_VERSION` is 6: HTML with MathML reads differently, so cached documents are loaded again once.
 - `LoadOptions` has a new field, `name_skipped_commands`; it is part of the cache key.
 - Not read: macros with arguments, `\newenvironment` bodies, BibTeX files named by `\bibliography` (citations stay Pandoc citations, which the libraries resolve), `\pageref` page numbers (it reads the label's number), equation numbers per section in books without chapters, and TeX primitives beyond `\def` and `\let`. A LaTeX document that relies on them reads its text, with the commands named.
-- A deliberately unbalanced document (thousands of unclosed arguments) costs time up to the step limit: about 5 seconds for a 50 KB file in a debug build, far less in release.
+- A deliberately unbalanced document (thousands of unclosed arguments) costs time up to its step allowance: under a second for a 50 KB file in a debug build (the fourteen hostile inputs in `tests/c3.rs` take 2.8 seconds together), far less in release.
 - An email's attachments are listed, not opened; opening one needs the attachment saved first.
 
 ## Alternatives considered

@@ -71,12 +71,28 @@ pub const MAX_SOURCE_BYTES: usize = 16 << 20;
 pub const MAX_INCLUDE_BYTES: usize = 64 << 20;
 
 /// Most tokens read from files and made by macros and arguments in one
-/// pass.
+/// pass. A pass is granted [`TOKENS_PER_BYTE`] for each byte of source
+/// (the document and its included files) on top of [`TOKENS_FLOOR`], up
+/// to this.
 pub const MAX_TOKENS: usize = 2_000_000;
 
 /// Most parser steps in one pass: every token taken counts, so a hostile
-/// document costs bounded time.
+/// document costs bounded time. A pass is granted [`STEPS_PER_BYTE`] for
+/// each byte of source on top of [`STEPS_FLOOR`], up to this, so a small
+/// file that expands without end stops early.
 pub const MAX_STEPS: usize = 8_000_000;
+
+/// Tokens a pass may make for each byte of source (see [`MAX_TOKENS`]).
+pub const TOKENS_PER_BYTE: usize = 8;
+
+/// Tokens a pass may make whatever the source's size.
+pub const TOKENS_FLOOR: usize = 50_000;
+
+/// Steps a pass may take for each byte of source (see [`MAX_STEPS`]).
+pub const STEPS_PER_BYTE: usize = 32;
+
+/// Steps a pass may take whatever the source's size.
+pub const STEPS_FLOOR: usize = 100_000;
 
 /// Most macro expansions in one pass.
 pub const MAX_EXPANSIONS: usize = 10_000;
@@ -898,8 +914,13 @@ struct Parser<'a> {
     learn: Knowledge,
 
     pending: Vec<Tok>,
+    /// Tokens this pass may still make.
     budget: usize,
+    /// Tokens granted so far (at most [`MAX_TOKENS`]).
+    granted: usize,
     steps: usize,
+    /// Steps granted so far (at most [`MAX_STEPS`]).
+    max_steps: usize,
     expansions: usize,
     next_id: usize,
     done: bool,
@@ -962,8 +983,18 @@ impl<'a> Parser<'a> {
         known: Knowledge,
         learning: bool,
     ) -> Self {
-        let (tokens, truncated) = lex(source, MAX_TOKENS);
-        let budget = MAX_TOKENS.saturating_sub(tokens.len());
+        let granted = source
+            .len()
+            .saturating_mul(TOKENS_PER_BYTE)
+            .saturating_add(TOKENS_FLOOR)
+            .min(MAX_TOKENS);
+        let max_steps = source
+            .len()
+            .saturating_mul(STEPS_PER_BYTE)
+            .saturating_add(STEPS_FLOOR)
+            .min(MAX_STEPS);
+        let (tokens, truncated) = lex(source, granted);
+        let budget = granted.saturating_sub(tokens.len());
         let preamble = source.contains("\\begin{document}");
         let chapters = known.chapters || source.contains("\\chapter");
         let mut pending = tokens;
@@ -976,7 +1007,9 @@ impl<'a> Parser<'a> {
             learn: Knowledge::default(),
             pending,
             budget,
+            granted,
             steps: 0,
+            max_steps,
             expansions: 0,
             next_id: 0,
             done: false,
@@ -1084,7 +1117,7 @@ impl<'a> Parser<'a> {
     // --- tokens -------------------------------------------------------
 
     fn pop(&mut self) -> Option<Tok> {
-        if self.steps >= MAX_STEPS {
+        if self.steps >= self.max_steps {
             self.cut = true;
             return None;
         }
@@ -2678,6 +2711,17 @@ impl<'a> Parser<'a> {
         }
         match self.read_include(&file) {
             Ok(text) => {
+                // An included file brings its own allowance.
+                let extra = text
+                    .len()
+                    .saturating_mul(TOKENS_PER_BYTE)
+                    .min(MAX_TOKENS - self.granted);
+                self.granted += extra;
+                self.budget += extra;
+                self.max_steps = self
+                    .max_steps
+                    .saturating_add(text.len().saturating_mul(STEPS_PER_BYTE))
+                    .min(MAX_STEPS);
                 let (mut toks, truncated) = lex(&text, self.budget);
                 if truncated {
                     self.cut = true;
