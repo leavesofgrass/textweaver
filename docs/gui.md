@@ -1,14 +1,18 @@
 # The textweaver window (GUI)
 
-textweaver has two readers: the terminal reader, `textweaver`, and a window, `textweaver-xilem`. They share everything that matters: the documents, the keys, the settings, the notes, and the voices. This page covers what is different about the window.
+textweaver has two readers: the terminal reader, `textweaver`, and a window. They share everything that matters: the documents, the keys, the settings, the notes, and the voices. This page covers what is different about the window.
 
 The window is written entirely in Rust (Xilem's Masonry widgets, Vello drawing, Parley text, and AccessKit for screen readers). It is new in this alpha. It reads, and since this alpha it edits too; see [Editing](#editing).
+
+Its crate and source binary are named `textweaver-xilem`; a downloaded [GUI package](install.md#the-gui) installs it as `textweaver-gui`. This guide uses `textweaver-xilem` for the command, since that is what `cargo build` produces; if you installed a release package, run `textweaver-gui` instead wherever this guide says `textweaver-xilem`.
 
 ## Starting it
 
 ```sh
 textweaver-xilem path/to/document.md
 ```
+
+From a release package: `textweaver-gui path/to/document.md`.
 
 With no document, it opens empty and says which key opens one (Ctrl+O).
 
