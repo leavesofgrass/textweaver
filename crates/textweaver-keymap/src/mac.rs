@@ -8,8 +8,8 @@
 //! - **Command moves to the ends**: Cmd+Left and Cmd+Right to the start and
 //!   end of the line, Cmd+Up and Cmd+Down to the start and end of the
 //!   document; Cmd+[ and Cmd+] go back and forward.
-//! - **Command runs commands**: Cmd+O, Cmd+S, Cmd+Comma, Cmd+Q. Ctrl is
-//!   used only where macOS itself uses it (Ctrl+A and Ctrl+E in text).
+//! - **Command runs commands**: Cmd+O, Cmd+S, Cmd+Comma, Cmd+Q. No
+//!   default key uses Ctrl in the Mac GUI.
 //! - **Option with a letter types a character** (Option+E is an accent,
 //!   Option+M a micro sign), so a command never takes Option with a
 //!   letter alone: the GUI's `Alt` chords with a letter or punctuation
@@ -95,10 +95,12 @@ pub(crate) fn gui_keys(action: ActionId) -> Option<&'static [&'static str]> {
 pub(crate) fn terminal_keys(action: ActionId) -> Option<&'static [&'static str]> {
     use ActionId as A;
     Some(match action {
-        A::TableNextRow => &["g:Ctrl+Shift+Down"],
-        A::TablePreviousRow => &["g:Ctrl+Shift+Up"],
-        A::TableNextColumn => &["g:Ctrl+Shift+Right"],
-        A::TablePreviousColumn => &["g:Ctrl+Shift+Left"],
+        // In reading mode only: in edit mode Ctrl+Shift with the arrows
+        // selects by word and paragraph, as it does in every terminal.
+        A::TableNextRow => &["b:Ctrl+Shift+Down"],
+        A::TablePreviousRow => &["b:Ctrl+Shift+Up"],
+        A::TableNextColumn => &["b:Ctrl+Shift+Right"],
+        A::TablePreviousColumn => &["b:Ctrl+Shift+Left"],
         A::NextParagraph => &["g:Ctrl+P", "b:p", "b:]", "s:PageDown"],
         A::PreviousParagraph => &["b:Shift+P", "b:[", "s:PageUp"],
         A::ReadFromCursor => &["b:Enter"],
@@ -233,13 +235,15 @@ impl TextMotion {
         match (platform, self) {
             (Platform::MacOs, T::WordLeft) => &["Alt+Left"],
             (Platform::MacOs, T::WordRight) => &["Alt+Right"],
-            // Ctrl+A and Ctrl+E are macOS's own, from its text system.
-            (Platform::MacOs, T::LineStart) => &["Cmd+Left", "Ctrl+A"],
-            (Platform::MacOs, T::LineEnd) => &["Cmd+Right", "Ctrl+E"],
+            // No Control chord: Control with Option is VoiceOver's.
+            (Platform::MacOs, T::LineStart) => &["Cmd+Left"],
+            (Platform::MacOs, T::LineEnd) => &["Cmd+Right"],
             (Platform::MacOs, T::ParagraphUp) => &["Alt+Up"],
             (Platform::MacOs, T::ParagraphDown) => &["Alt+Down"],
-            (Platform::MacOs, T::DocumentStart) => &["Cmd+Up"],
-            (Platform::MacOs, T::DocumentEnd) => &["Cmd+Down"],
+            // Home and End go to the document's ends, as Cocoa's text
+            // views scroll.
+            (Platform::MacOs, T::DocumentStart) => &["Cmd+Up", "Home"],
+            (Platform::MacOs, T::DocumentEnd) => &["Cmd+Down", "End"],
             (_, T::WordLeft) => &["Ctrl+Left"],
             (_, T::WordRight) => &["Ctrl+Right"],
             (_, T::LineStart) => &["Home"],
@@ -302,9 +306,10 @@ mod tests {
             Some((TextMotion::ParagraphDown, false))
         );
         assert_eq!(
-            text_motion(mac, &k("Ctrl+E")),
-            Some((TextMotion::LineEnd, false))
+            text_motion(mac, &k("End")),
+            Some((TextMotion::DocumentEnd, false))
         );
+        assert_eq!(text_motion(mac, &k("Ctrl+E")), None);
         // A Mac's Cmd+Right is the end of the line, never a word move.
         assert_ne!(
             text_motion(mac, &k("Cmd+Right")).map(|m| m.0),

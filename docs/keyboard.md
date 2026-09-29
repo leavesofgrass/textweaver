@@ -361,10 +361,10 @@ A terminal never passes the Command key, so on a Mac the terminal keeps the keys
 | Read continuously from the cursor | `Ctrl+Space`, `Enter` (browse) | `Enter` (browse) | `read_from_cursor` |
 | Move to the next paragraph | `Ctrl+P`, `p` (browse), `]` (browse), `Ctrl+Down` (browse), `PageDown` (speech cursor) | `Ctrl+P`, `p` (browse), `]` (browse), `PageDown` (speech cursor) | `next_paragraph` |
 | Move to the previous paragraph | `Shift+P` (browse), `[` (browse), `Ctrl+Up` (browse), `PageUp` (speech cursor) | `Shift+P` (browse), `[` (browse), `PageUp` (speech cursor) | `previous_paragraph` |
-| In a table, move down a row in the same column | `Ctrl+Alt+Down` | `Ctrl+Shift+Down` | `table_next_row` |
-| In a table, move up a row in the same column | `Ctrl+Alt+Up` | `Ctrl+Shift+Up` | `table_previous_row` |
-| In a table, move to the next cell in the row | `Ctrl+Alt+Right` | `Ctrl+Shift+Right` | `table_next_column` |
-| In a table, move to the previous cell in the row | `Ctrl+Alt+Left` | `Ctrl+Shift+Left` | `table_previous_column` |
+| In a table, move down a row in the same column | `Ctrl+Alt+Down` | `Ctrl+Shift+Down` (browse) | `table_next_row` |
+| In a table, move up a row in the same column | `Ctrl+Alt+Up` | `Ctrl+Shift+Up` (browse) | `table_previous_row` |
+| In a table, move to the next cell in the row | `Ctrl+Alt+Right` | `Ctrl+Shift+Right` (browse) | `table_next_column` |
+| In a table, move to the previous cell in the row | `Ctrl+Alt+Left` | `Ctrl+Shift+Left` (browse) | `table_previous_column` |
 | Move to the next grammar problem, and say it and its fix | `Ctrl+F7` | `Option+F7` | `next_grammar_problem` |
 | Move to the previous grammar problem, and say it and its fix | `Ctrl+Shift+F7` | `Option+Shift+F7` | `previous_grammar_problem` |
 | In edit mode, move to the next Markdown lint problem, and say it | `Ctrl+F8` | `Option+F8` | `next_lint_problem` |

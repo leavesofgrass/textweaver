@@ -1285,6 +1285,14 @@ mod tests {
                     ("Alt+Shift+PageUp", ActionId::RsvpFaster),
                     ("Alt+Shift+PageDown", ActionId::RsvpSlower),
                 ] {
+                    // In a Mac terminal the table keys are Ctrl+Shift with
+                    // the arrows, in reading mode only: in edit mode those
+                    // select by word (crate::mac).
+                    let mac_term = platform == Platform::MacOs && frontend == Frontend::Terminal;
+                    if mac_term && mode == Layer::Edit && chord.starts_with("Ctrl+Alt+") {
+                        assert!(map.chords_in_mode(action, mode).is_empty(), "{action:?}");
+                        continue;
+                    }
                     assert_eq!(
                         map.lookup(&c(chord), mode),
                         Some(action),

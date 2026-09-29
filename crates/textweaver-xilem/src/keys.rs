@@ -68,6 +68,7 @@ const fn mv(step: CaretStep, forward: bool) -> CaretMove {
 ///   No Control chord: Control with Option is VoiceOver's.
 pub fn caret_keys(platform: Platform) -> Vec<(KeyChord, CaretMove)> {
     use CaretStep::*;
+    use textweaver_app::keymap::TextMotion as T;
     let k = |key, mods| KeyChord::new(key, mods);
     let none = Modifiers::empty();
     let mut out = vec![
@@ -78,35 +79,24 @@ pub fn caret_keys(platform: Platform) -> Vec<(KeyChord, CaretMove)> {
         (k(TwKey::PageUp, none), mv(Page, false)),
         (k(TwKey::PageDown, none), mv(Page, true)),
     ];
-    match platform {
-        Platform::MacOs => {
-            let opt = Modifiers::ALT;
-            let cmd = Modifiers::META;
-            out.extend([
-                (k(TwKey::Left, opt), mv(Word, false)),
-                (k(TwKey::Right, opt), mv(Word, true)),
-                (k(TwKey::Up, opt), mv(Paragraph, false)),
-                (k(TwKey::Down, opt), mv(Paragraph, true)),
-                (k(TwKey::Left, cmd), mv(LineEdge, false)),
-                (k(TwKey::Right, cmd), mv(LineEdge, true)),
-                (k(TwKey::Up, cmd), mv(DocumentEdge, false)),
-                (k(TwKey::Down, cmd), mv(DocumentEdge, true)),
-                (k(TwKey::Home, none), mv(DocumentEdge, false)),
-                (k(TwKey::End, none), mv(DocumentEdge, true)),
-            ]);
-        }
-        Platform::Windows | Platform::Linux => {
-            let ctrl = Modifiers::CTRL;
-            out.extend([
-                (k(TwKey::Left, ctrl), mv(Word, false)),
-                (k(TwKey::Right, ctrl), mv(Word, true)),
-                (k(TwKey::Up, ctrl), mv(Paragraph, false)),
-                (k(TwKey::Down, ctrl), mv(Paragraph, true)),
-                (k(TwKey::Home, none), mv(LineEdge, false)),
-                (k(TwKey::End, none), mv(LineEdge, true)),
-                (k(TwKey::Home, ctrl), mv(DocumentEdge, false)),
-                (k(TwKey::End, ctrl), mv(DocumentEdge, true)),
-            ]);
+    // Words, paragraphs, and the ends: the keymap's table for the
+    // platform (`textweaver_keymap::text_motion`), so the keymap and the
+    // document view agree on every system.
+    for motion in T::ALL {
+        let m = match motion {
+            T::WordLeft => mv(Word, false),
+            T::WordRight => mv(Word, true),
+            T::LineStart => mv(LineEdge, false),
+            T::LineEnd => mv(LineEdge, true),
+            T::ParagraphUp => mv(Paragraph, false),
+            T::ParagraphDown => mv(Paragraph, true),
+            T::DocumentStart => mv(DocumentEdge, false),
+            T::DocumentEnd => mv(DocumentEdge, true),
+        };
+        for s in motion.chords(platform) {
+            if let Ok(chord) = s.parse::<KeyChord>() {
+                out.push((chord, m));
+            }
         }
     }
     out
