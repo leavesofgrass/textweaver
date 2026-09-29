@@ -50,6 +50,9 @@ fn para_text(p: roxmltree::Node<'_, '_>) -> String {
             s.push('\t');
         } else if n.has_tag_name((W, "br")) {
             s.push('\n');
+        } else if n.has_tag_name((W, "footnoteReference")) {
+            // Word shows the footnote's number.
+            s.push_str(n.attribute((W, "id")).unwrap_or(""));
         } else if n.has_tag_name((W, "drawing")) {
             let descr = n
                 .descendants()
@@ -198,7 +201,8 @@ fn headings_use_builtin_styles_with_outline_levels() {
         ("Heading2", "Getting started"),
         ("Heading3", "Shortcuts"),
         ("Heading2", "Notes"),
-        ("Heading2", "Footnotes"),
+        // The loader's "Footnotes" heading is left out: its footnote is a
+        // Word footnote, so the section would be empty (ADR-0041).
     ];
     assert_eq!(
         headings,
@@ -288,8 +292,9 @@ fn tables_have_header_rows_and_images_have_alt_text() {
     );
     let rels = part(&files, "word/_rels/document.xml.rels");
     assert!(rels.contains("Target=\"https://example.org/textweaver\" TargetMode=\"External\""));
-    assert!(document.contains("<w:hyperlink w:anchor=\"fn_1\""));
-    assert!(document.contains("w:name=\"fn_1\""));
+    // The footnote is a real Word footnote (ADR-0041).
+    assert!(document.contains("<w:footnoteReference w:id=\"1\"/>"));
+    assert!(part(&files, "word/footnotes.xml").contains("lists every release"));
     assert!(document.contains("<w:pStyle w:val=\"Quote\"/>"));
     assert!(document.contains("<w:pStyle w:val=\"SourceCode\"/>"));
 }
@@ -298,7 +303,29 @@ fn tables_have_header_rows_and_images_have_alt_text() {
 fn round_trip_keeps_every_word_in_order() {
     let doc = sample();
     let files = docx(&doc);
-    let body = read_body(part(&files, "word/document.xml"));
+    let mut body = read_body(part(&files, "word/document.xml"));
+    // Footnote bodies follow the text, as in the source.
+    let notes = xml(part(&files, "word/footnotes.xml")).unwrap();
+    for p in notes.descendants().filter(|n| n.has_tag_name((W, "p"))) {
+        // Word shows the footnote's number before its text.
+        let number = p
+            .ancestors()
+            .find(|a| a.has_tag_name((W, "footnote")))
+            .and_then(|f| f.attribute((W, "id")))
+            .unwrap_or("");
+        // The separators (ids -1 and 0) have no text.
+        if number.parse::<i32>().is_ok_and(|n| n <= 0) {
+            continue;
+        }
+        let text = format!("[{number}] {}", para_text(p));
+        if !text.trim().is_empty() {
+            body.push(Read::Para {
+                style: None,
+                num: None,
+                text,
+            });
+        }
+    }
     let mut text = String::new();
     for r in &body {
         match r {
@@ -314,7 +341,12 @@ fn round_trip_keeps_every_word_in_order() {
             }
         }
     }
-    assert_eq!(words(&text), words(&doc.text().to_string()));
+    // The source's "Footnotes" heading heads only a Word footnote now, so
+    // it is left out; every other word is kept, in order.
+    let mut expected = words(&doc.text().to_string());
+    let at = expected.iter().rposition(|w| w == "footnotes").unwrap();
+    expected.remove(at);
+    assert_eq!(words(&text), expected);
     // The code block keeps its indentation and lines.
     assert!(text.contains("fn main() {\n    println!(\"Hello, café!\");\n}"));
 }
