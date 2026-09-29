@@ -82,6 +82,9 @@ fn epub_writes_mathml_with_the_manifest_property() {
     assert!(item.contains("properties=\"mathml\""), "{item}");
 }
 
+/// Without MathCAT, braille reads math as it is spoken (with it, math is
+/// Nemeth or UEB: tests/math_braille.rs).
+#[cfg(not(feature = "mathcat"))]
 #[test]
 fn braille_reads_math_as_it_is_spoken() {
     let with_math = md("The area is $\\pi r^2$.\n");

@@ -19,7 +19,7 @@ The formats you can ask for with `--to`:
 - `txt`: plain text, the same text textweaver reads aloud.
 - `epub`: an EPUB 3 book with a table of contents, real headings, and accessibility metadata.
 - `docx`: a Word document with Word's own heading styles, numbered lists, and tables whose header row repeats.
-- `brf`: a braille file for a braille display or embosser, in uncontracted (grade 1) Unified English Braille, 40 cells by 25 lines. Contracted (grade 2) braille needs a textweaver built with the `liblouis` feature and liblouis installed; without them, the file is grade 1 and the summary says so.
+- `brf`: a braille file for a braille display or embosser, in uncontracted (grade 1) Unified English Braille, 40 cells by 25 lines. Contracted (grade 2) braille needs a textweaver built with the `liblouis` feature and liblouis installed; without them, the file is grade 1 and the summary says so. Math is in Nemeth braille, or UEB mathematics with `--math-code ueb`, in a build with MathCAT (see [Math in braille files](math.md#math-in-braille-files)).
 - `pdf`: a tagged PDF that screen readers can move through by heading, list, and table.
 
 Some outputs come with warnings, for example "The image cat.png was not found, so its description was written instead." Each warning is read out with its file name, and the summary says how many files had warnings.
@@ -90,7 +90,7 @@ The other outputs never print the dollar signs and LaTeX commands either:
 - EPUB: MathML, as in a web page. Reading apps draw it, and screen readers read it and let you explore it.
 - Word: Word's own equations. Word draws them, and Narrator, NVDA, and JAWS can read them.
 - PDF: the formula in print form, such as πr² or (a + b)/2, marked as a formula whose description is how it is read aloud, for example "pi r squared".
-- Braille: the formula as it is read aloud, "pi r squared", which grade 1 braille spells out.
+- Braille: math braille, Nemeth by default or UEB mathematics with `--math-code ueb`, in a build with MathCAT; otherwise the formula as it is read aloud, "pi r squared". See [Math in braille files](math.md#math-in-braille-files).
 
 [Math](math.md) explains how math is read aloud and how to write it.
 

@@ -118,6 +118,10 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `export.subtitle_word_level`: default off (`false`). Word subtitles. One subtitle per word instead of caption lines. On or off: `true` or `false`.
 - `export.subtitles_with_audio`: default off (`false`). Subtitles with audio. Always write subtitles beside exported audio. On or off: `true` or `false`.
 
+## Braille: the `[braille]` section
+
+- `braille.math_code`: default Nemeth (`"nemeth"`). Math braille. The braille code for math in BRF files and while exploring a formula with MathCAT: Nemeth, or UEB mathematics. It needs a build that includes MathCAT; otherwise math is written as its spoken words. Choices: `"nemeth"` (Nemeth), `"ueb"` (UEB).
+
 ## Reading aids: the `[reading_aids]` section
 
 - `reading_aids.rsvp.wpm`: default 300 words per minute. RSVP rate. Words per minute of rapid serial visual presentation. From 60 to 1500 words per minute, in steps of 20.

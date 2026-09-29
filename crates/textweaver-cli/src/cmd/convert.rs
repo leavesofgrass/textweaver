@@ -17,8 +17,8 @@ use std::time::Duration;
 
 use anyhow::{Context, bail};
 use textweaver_convert::{
-    CitationOptions, ConvertOptions, Converter, OutputFormat, PdfOptions, Status, WatchOptions,
-    WriteOptions, watch,
+    BrailleOptions, CitationOptions, ConvertOptions, Converter, MathCode, OutputFormat, PdfOptions,
+    Status, WatchOptions, WriteOptions, watch,
 };
 use textweaver_render::{EmbedMode, Engine, Flavor, RenderOptions, TemplateChoice};
 use textweaver_writers::Template;
@@ -113,6 +113,10 @@ pub struct Args {
     /// Hyperlegible Next, then an installed font).
     #[arg(long, value_name = "FILE")]
     pub pdf_font: Option<PathBuf>,
+    /// BRF: the braille code for math, nemeth (the default) or ueb. Needs
+    /// a build with MathCAT; otherwise math is written as spoken words.
+    #[arg(long, value_name = "CODE", default_value = "nemeth", value_parser = parse_math_code)]
+    pub math_code: MathCode,
     #[command(flatten)]
     pub layout: super::convert_layout::LayoutArgs,
     /// Watch: seconds a file's size must hold still before converting.
@@ -127,6 +131,24 @@ pub struct Args {
 fn parse_format(s: &str) -> Result<OutputFormat, String> {
     OutputFormat::parse(s)
         .ok_or_else(|| format!("unknown format {s:?}; use md, html, txt, epub, docx, brf, or pdf"))
+}
+
+fn parse_math_code(s: &str) -> Result<MathCode, String> {
+    match s.trim().to_ascii_lowercase().as_str() {
+        "nemeth" => Ok(MathCode::Nemeth),
+        "ueb" => Ok(MathCode::Ueb),
+        _ => Err(format!("unknown math code {s:?}; use nemeth or ueb")),
+    }
+}
+
+/// The line `tw convert` prints after converting to BRF: the math code, or
+/// that this build writes math as words.
+fn math_braille_line(code: MathCode) -> String {
+    if cfg!(feature = "mathcat") {
+        format!("Math braille: {}.", code.name())
+    } else {
+        "Math braille: none in this build; math is written as spoken words.".to_owned()
+    }
 }
 
 fn parse_engine(s: &str) -> Result<Engine, String> {
@@ -215,6 +237,10 @@ fn command_options(args: &Args) -> ConvertOptions {
                 font: args.pdf_font.clone(),
                 ..PdfOptions::default()
             },
+            braille: BrailleOptions {
+                math_code: args.math_code,
+                ..BrailleOptions::default()
+            },
             ..WriteOptions::default()
         }),
         ..ConvertOptions::default()
@@ -254,6 +280,9 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             }
         }
         println!("{}", summary.sentence());
+        if args.to == OutputFormat::Brf && summary.converted > 0 {
+            println!("{}", math_braille_line(args.math_code));
+        }
     }
     if summary.failed > 0 {
         bail!("{} of {} files failed", summary.failed, summary.total());
