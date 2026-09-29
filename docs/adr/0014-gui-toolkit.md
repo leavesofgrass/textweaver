@@ -1,10 +1,11 @@
 # ADR-0014: GUI toolkit (wxDragon)
 
-- Status: proposed (feasibility spike)
+- Status: superseded by [ADR-0027](0027-xilem-gui.md)
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): The spike is merged on `main` and stays out of `default-members` and CI's workspace commands. The View, Fonts dialog was added. Of the contract requests, `Command::SetCursor` now exists in the app. The keymap still binds the caret keys in the Browse layer for both frontends; the GUI passes them to the native control itself (`crates/textweaver-gui/src/keys.rs`). Self-voicing is off by default in the GUI and on with `--self-voicing`. The plan in this ADR has not started.
 - Status update (Saturday, September 26, 2026): superseded by [ADR-0027](0027-xilem-gui.md), the Xilem GUI. The spike stays as the fallback until the Xilem GUI passes the same checks and an NVDA and JAWS test session.
 - Status update (Saturday, September 26, 2026): We chose Xilem, Linebender's all-Rust toolkit (Xilem and Masonry, Vello, Parley, AccessKit, and winit), for the GUI on every platform. [ADR-0027](0027-xilem-gui.md) supersedes this record. The wxDragon spike stays as a fallback until the Xilem GUI passes the same accessibility checks. The macOS GUI hang in CI was addressed: wx's private-font registration opened a modal error box, so macOS skips it, and `--exit-after` has a watchdog.
+- Status update (Monday, September 28, 2026): the Xilem GUI passed its second NVDA and JAWS listening session, so the fallback condition in [ADR-0027](0027-xilem-gui.md) is met. The wxDragon spike (`crates/textweaver-gui`) is removed; `textweaver-xilem` is textweaver's only GUI.
 
 ## Context
 

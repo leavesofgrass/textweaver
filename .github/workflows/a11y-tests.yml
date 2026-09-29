@@ -172,8 +172,8 @@ jobs:
 
   voiceover:
     if: github.event_name != 'workflow_dispatch' || inputs.session == 'all' || inputs.session == 'voiceover'
-    # macOS 14 (Sonoma) as the brief asked, and 15 (Sequoia), both named by
-    # Guidepup: on the first run VoiceOver could not be started on 14.
+    # macOS 14 (Sonoma) and 15 (Sequoia), both named by Guidepup: on the
+    # first run VoiceOver could not be started on 14.
     strategy:
       fail-fast: false
       matrix:

@@ -15,7 +15,7 @@ A third program, `textweaver-xilem`, is the GUI, on Xilem, Linebender's all-Rust
 
 Three helper programs run speech engines in their own processes: `textweaver-eci-host` (Eloquence), `textweaver-sapi-host` (SAPI5 voices), and `textweaver-dectalk-host` (DECtalk), each in a 64-bit build and, on Windows, a 32-bit `-x86` build. `cargo xtask hosts` builds them.
 
-Everything a user does goes through one application core, `textweaver-app`. The terminal reader, the GUI spike, and the JSON-RPC server (`tw serve`) are thin frontends over it. They turn keys or messages into commands, and draw or send what the core returns. Lists and prompts are the core's too: a frontend sends list and prompt keys, and the core moves the focus, filters, completes, and says "item, 3 of 12", the same everywhere.
+Everything a user does goes through one application core, `textweaver-app`. The terminal reader, the GUI, and the JSON-RPC server (`tw serve`) are thin frontends over it. They turn keys or messages into commands, and draw or send what the core returns. Lists and prompts are the core's too: a frontend sends list and prompt keys, and the core moves the focus, filters, completes, and says "item, 3 of 12", the same everywhere.
 
 ## The crates
 
@@ -221,7 +221,7 @@ Every state change is announced through the `Announcer` trait in `textweaver-a11
 
 Before anything is spoken or written to the status line, the app asks `textweaver_a11y::route` where it goes. The answer depends on the kind of output (a message, typing echo, a caret move, read text, or a Speech Cursor line) and on `[accessibility] mode`: self-voicing, hybrid, or screen reader. So a screen reader that reads the status line never hears the same thing twice. New code must route its announcements the same way. [Using textweaver with a screen reader](../screen-readers.md) describes the modes for users.
 
-The GUI spike sends announcements to the screen reader as UI Automation notifications through the `live-region` crate.
+The GUI sends announcements to the screen reader as UI Automation notifications on Windows, and as a live region on macOS and Linux.
 
 ## The GUI's view of a document
 

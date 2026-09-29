@@ -32,8 +32,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted, with 3 status updates.
 - [ADR-0013: Dictation through a Whisper program](0013-dictation.md): voice typing with a Whisper subprocess.
   - Status: accepted, with 3 status updates; in part superseded by ADR-0023 (Whisper in-process).
-- [ADR-0014: GUI toolkit (wxDragon)](0014-gui-toolkit.md): the GUI spike's findings. The GUI later moved to Xilem, and the spike stays as a fallback.
-  - Status: superseded by [ADR-0027](0027-xilem-gui.md); the wxDragon spike stays as a fallback until the Xilem GUI passes the same checks and an NVDA and JAWS listening session. It has 3 status updates.
+- [ADR-0014: GUI toolkit (wxDragon)](0014-gui-toolkit.md): the GUI spike's findings. The GUI moved to Xilem; the wxDragon spike was removed once the Xilem GUI passed its second screen-reader session.
+  - Status: superseded by [ADR-0027](0027-xilem-gui.md). It has 4 status updates.
 - [ADR-0015: JSON-RPC server (`tw serve --stdio`)](0015-json-rpc.md): `tw serve --stdio`, its methods, and notifications.
   - Status: accepted, with 2 status updates.
 - [ADR-0016: Rendering and bulk conversion](0016-rendering-and-conversion.md): Markdown to accessible HTML, and fast, incremental conversion.
