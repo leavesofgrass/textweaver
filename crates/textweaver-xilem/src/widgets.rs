@@ -362,6 +362,12 @@ impl ActionButton {
         self
     }
 
+    /// Changes the description (the interface language changed).
+    pub fn set_description(this: &mut WidgetMut<'_, Self>, description: impl Into<String>) {
+        this.widget.description = description.into();
+        this.ctx.request_accessibility_update();
+    }
+
     /// Changes the text and name (Play becomes Pause).
     pub fn set_label(this: &mut WidgetMut<'_, Self>, label: impl Into<String>) {
         let label = label.into();

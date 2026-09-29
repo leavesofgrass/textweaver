@@ -37,6 +37,8 @@ use masonry::layout::{LenReq, Length};
 use masonry::parley::Layout;
 use masonry::parley::style::{FontFamily, FontWeight, LineHeight};
 use serde_json::Value;
+use textweaver_app::lexicon::args;
+use textweaver_app::lexicon::i18n::Catalog;
 use textweaver_app::{App, Setting, SettingKind, SettingsSchema};
 
 use crate::theme::{self, Palette};
@@ -83,8 +85,9 @@ pub struct FormRow {
 }
 
 impl FormRow {
-    /// The row for `setting` with its current `value`.
-    pub fn new(setting: &Setting, value: &Value) -> Self {
+    /// The row for `setting` with its current `value`, in the catalog's
+    /// language (W4d's labels, help, and values).
+    pub fn new(setting: &Setting, value: &Value, c: &Catalog) -> Self {
         let kind = match &setting.kind {
             SettingKind::Toggle => RowKind::Toggle(value.as_bool().unwrap_or(false)),
             SettingKind::Number { min, max, step, .. } => RowKind::Number {
@@ -99,10 +102,10 @@ impl FormRow {
         };
         FormRow {
             path: setting.path.clone(),
-            label: setting.label.to_owned(),
-            help: setting.help.to_owned(),
+            label: setting.label_in(c),
+            help: setting.help_in(c),
             kind,
-            value_text: setting.describe(value),
+            value_text: setting.describe_in(c, value),
         }
     }
 
@@ -164,19 +167,38 @@ impl SettingsForm {
 
     /// The rows of section `i`, with `app`'s current values.
     pub fn rows(&self, i: usize, app: &App) -> Vec<FormRow> {
+        let c = app.catalog();
         self.settings_in(i)
             .into_iter()
-            .map(|s| FormRow::new(s, &app.setting_value(&s.path).unwrap_or(Value::Null)))
+            .map(|s| FormRow::new(s, &app.setting_value(&s.path).unwrap_or(Value::Null), &c))
             .collect()
     }
 
+    /// Section `i`'s title in the catalog's language ("Speech").
+    pub fn section_title(&self, i: usize, c: &Catalog) -> String {
+        self.settings_in(i).first().map_or_else(
+            || self.sections.get(i).copied().unwrap_or_default().to_owned(),
+            |s| s.section_in(c),
+        )
+    }
+
+    /// The form's name for section `i`: "Speech settings".
+    pub fn form_label(&self, i: usize, c: &Catalog) -> String {
+        c.fmt(
+            "gui-settings-form",
+            &args!["section" => self.section_title(i, c)],
+        )
+    }
+
     /// The section list's items: each title with how many settings it has.
-    pub fn section_items(&self) -> Vec<String> {
+    pub fn section_items(&self, c: &Catalog) -> Vec<String> {
         (0..self.sections.len())
             .map(|i| {
                 let n = self.settings_in(i).len();
-                let noun = if n == 1 { "setting" } else { "settings" };
-                format!("{}, {n} {noun}", self.sections[i])
+                c.fmt(
+                    "gui-settings-section-item",
+                    &args!["section" => self.section_title(i, c), "n" => n],
+                )
             })
             .collect()
     }
@@ -195,22 +217,22 @@ impl SettingsForm {
 /// Makes `change` to `setting` through the app. Returns what the app says
 /// ("Rate, 300 words per minute."), or why it cannot be done.
 pub fn apply(app: &mut App, setting: &Setting, change: FormChange) -> Result<String, String> {
+    let c = app.catalog();
     let now = app.setting_value(&setting.path).unwrap_or(Value::Null);
+    let label = setting.label_in(&c);
     let value = match change {
         FormChange::Step(forward) => setting.stepped(&now, forward).ok_or_else(|| match setting
             .kind
         {
-            SettingKind::Table => {
-                format!("{} is a table. Edit it in settings.toml.", setting.label)
-            }
-            _ => format!(
-                "Press Enter to type a new {}.",
-                setting.label.to_lowercase()
+            SettingKind::Table => c.fmt("gui-settings-table", &args!["label" => label.as_str()]),
+            _ => c.fmt(
+                "gui-settings-press-enter",
+                &args!["label" => label.as_str()],
             ),
         })?,
         FormChange::Reset => Value::Null,
-        FormChange::Text(t) => setting.parse(&t)?,
-        FormChange::Number(n) => setting.parse(&n.to_string())?,
+        FormChange::Text(t) => setting.parse_in(&c, &t)?,
+        FormChange::Number(n) => setting.parse_in(&c, &n.to_string())?,
     };
     app.set_setting(&setting.path, value)
 }
@@ -257,7 +279,10 @@ const MAX_ROWS: usize = 9;
 /// The settings of one section as a form. See the module documentation.
 pub struct SettingsGrid {
     rows: Vec<FormRow>,
+    /// The form's name ("Speech settings").
     title: String,
+    /// How to use the form (its description).
+    help_text: String,
     selected: usize,
     top: usize,
     visible_rows: usize,
@@ -271,12 +296,14 @@ pub struct SettingsGrid {
 }
 
 impl SettingsGrid {
-    /// The settings of the section `title`.
+    /// A form named `title` ("Speech settings", from
+    /// [`SettingsForm::form_label`]) with `rows`.
     pub fn new(title: impl Into<String>, rows: Vec<FormRow>, palette: Palette) -> Self {
         let n = rows.len();
         SettingsGrid {
             rows,
             title: title.into(),
+            help_text: String::new(),
             selected: 0,
             top: 0,
             visible_rows: MAX_ROWS,
@@ -288,6 +315,12 @@ impl SettingsGrid {
             help: None,
             width: 0.0,
         }
+    }
+
+    /// How to use the form, said as its description (`gui-settings-form-help`).
+    pub fn with_help_text(mut self, text: impl Into<String>) -> Self {
+        self.help_text = text.into();
+        self
     }
 
     /// Starts on row `i`.
@@ -905,12 +938,10 @@ impl Widget for SettingsGrid {
         _props: &PropertiesRef<'_>,
         node: &mut Node,
     ) {
-        node.set_label(format!("{} settings", self.title));
-        node.set_description(
-            "Up and Down move between settings. Left and Right change one. \
-             Enter types a new value. Delete puts the default back. \
-             Control Page Down and Control Page Up change the section.",
-        );
+        node.set_label(self.title.as_str());
+        if !self.help_text.is_empty() {
+            node.set_description(self.help_text.as_str());
+        }
         node.add_action(Action::Increment);
         node.add_action(Action::Decrement);
         // As in the dialogs' lists: the form clips its painting, but it

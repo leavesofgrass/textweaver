@@ -50,6 +50,10 @@ pub enum DialogAction {
     /// repeat the list's introduction (`ListKey::Introduce`) and the
     /// Repeat Message key says the last message, as in the terminal.
     Chord(textweaver_app::keymap::KeyChord),
+    /// A key typed in a question (`Modal::with_answer_keys`): `y` is yes,
+    /// `n` and `a` are no, any other character asks again, as in the
+    /// terminal (`Command::Confirm`).
+    Answer(textweaver_app::Confirm),
 }
 
 // --- Modal.
@@ -63,6 +67,8 @@ pub struct Modal {
     max_width: f64,
     /// Tab completes the field (a path) instead of moving the focus.
     tab_completes: bool,
+    /// A question: typed characters answer it.
+    answer_keys: bool,
 }
 
 impl Modal {
@@ -79,7 +85,15 @@ impl Modal {
             palette,
             max_width: 600.0,
             tab_completes: false,
+            answer_keys: false,
         }
+    }
+
+    /// A yes-or-no question: `y` answers yes, `n` (or `a`) no, and any
+    /// other character asks again, as in the terminal. Escape is no.
+    pub fn with_answer_keys(mut self, on: bool) -> Self {
+        self.answer_keys = on;
+        self
     }
 
     /// Tab completes the prompt's text (a path) instead of moving the focus.
@@ -118,6 +132,12 @@ impl Widget for Modal {
             Key::Named(NamedKey::Tab) if self.tab_completes && !k.modifiers.shift() => {
                 DialogAction::Complete
             }
+            Key::Character(s) if self.answer_keys => match s.chars().next() {
+                Some(ch) if !ch.is_control() && !ch.is_whitespace() => {
+                    DialogAction::Answer(textweaver_app::Confirm::from_char(ch))
+                }
+                _ => return,
+            },
             _ => return,
         };
         ctx.submit_action::<DialogAction>(action);

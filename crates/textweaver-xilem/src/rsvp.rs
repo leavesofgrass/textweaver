@@ -28,6 +28,7 @@ use masonry::parley::{Alignment, AlignmentOptions, Layout};
 use textweaver_app::App;
 use textweaver_app::aids::RsvpPosition;
 use textweaver_app::aids::rsvp::PlayState;
+use textweaver_app::lexicon::args;
 
 use crate::theme::{self, Palette};
 
@@ -54,6 +55,8 @@ pub struct RsvpShown {
     pub next: Option<String>,
     /// The status node's text: "RSVP paused, word 120 of 900".
     pub status: String,
+    /// The panel's name ("RSVP"), in the interface language.
+    pub name: String,
     /// Where the word sits across the panel, 0 (left) to 1 (right).
     pub x: f64,
 }
@@ -63,11 +66,12 @@ impl RsvpShown {
     pub fn from_app(app: &App) -> Option<RsvpShown> {
         let r = app.rsvp()?;
         let f = r.frame()?;
-        let state = match r.state() {
-            PlayState::Playing { .. } => "playing",
-            PlayState::Paused => "paused",
-            PlayState::Finished => "finished",
+        let id = match r.state() {
+            PlayState::Playing { .. } => "gui-rsvp-playing",
+            PlayState::Paused => "gui-rsvp-paused",
+            PlayState::Finished => "gui-rsvp-finished",
         };
+        let c = app.catalog();
         let position = RsvpPosition::from(app.settings().reading_aids.rsvp.position);
         Some(RsvpShown {
             before: f.before.to_owned(),
@@ -75,7 +79,8 @@ impl RsvpShown {
             after: f.after.to_owned(),
             previous: f.previous.map(str::to_owned),
             next: f.next.map(str::to_owned),
-            status: format!("RSVP {state}, word {} of {}", f.index + 1, f.total),
+            status: c.fmt(id, &args!["n" => f.index + 1, "total" => f.total]),
+            name: c.tr("gui-rsvp"),
             x: position.fractions().0,
         })
     }
@@ -319,7 +324,7 @@ impl Widget for RsvpView {
         status.set_live(Live::Off);
         ctx.tree_update().nodes.push((self.word_id, word));
         ctx.tree_update().nodes.push((self.status_id, status));
-        node.set_label("RSVP");
+        node.set_label(s.name.as_str());
         node.set_children(vec![self.status_id, self.word_id]);
     }
 

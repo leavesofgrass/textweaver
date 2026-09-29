@@ -10,6 +10,7 @@ use masonry::core::TextEvent;
 use masonry::core::keyboard::{Key, NamedKey};
 use masonry_testing::{TestHarness, TestHarnessParams};
 use textweaver_app::a11y::LogAnnouncer;
+use textweaver_app::lexicon::i18n::Catalog;
 use textweaver_xilem::gui::{self, DOC, LIST, ROOT};
 use textweaver_xilem::setup::{self, Options};
 use textweaver_xilem::theme::{self, Palette};
@@ -187,8 +188,14 @@ fn a_list_dialog_is_modal_and_hides_the_window_behind_it() {
     let app = app_with_sample(dir.path());
     let mut h = harness(&app);
     let p = Palette::galaxy();
-    let (modal, list_id) =
-        gui::list_dialog(&p, "Bookmarks", vec!["One".into(), "Two".into()], 0, false);
+    let (modal, list_id) = gui::list_dialog(
+        &p,
+        &Catalog::english(),
+        "Bookmarks",
+        vec!["One".into(), "Two".into()],
+        0,
+        false,
+    );
     h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
     h.focus_on(Some(list_id));
     let _ = h.redraw();
@@ -238,8 +245,14 @@ fn help_and_say_status_keys_in_a_list_reach_the_keymap() {
     let app = app_with_sample(dir.path());
     let mut h = harness(&app);
     let p = Palette::galaxy();
-    let (modal, list_id) =
-        gui::list_dialog(&p, "Bookmarks", vec!["One".into(), "Two".into()], 0, true);
+    let (modal, list_id) = gui::list_dialog(
+        &p,
+        &Catalog::english(),
+        "Bookmarks",
+        vec!["One".into(), "Two".into()],
+        0,
+        true,
+    );
     h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
     h.focus_on(Some(list_id));
     let _ = h.redraw();
@@ -529,6 +542,111 @@ fn syllables_are_drawn_and_the_text_stays_the_words() {
     assert_eq!(h.get_widget(DOC).inner().syllable_marks_on_screen(), 0);
 }
 
+/// The app's yes-or-no questions (a voice download after its size and
+/// licence are said, a removal, a file changed on disk) are a dialog in the
+/// window: named by the question, with Yes and No buttons whose keys are Y
+/// and N, and typed answers as in the terminal.
+#[test]
+fn a_question_is_a_dialog_with_yes_and_no() {
+    use textweaver_app::Confirm;
+    use textweaver_xilem::dialog::DialogAction;
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let question = "Download Ada Example's voice, 63 megabytes, licence CC BY 4.0? y or n.";
+    let q = gui::question_dialog(&Palette::galaxy(), &app.catalog(), question);
+    let (yes, no) = (q.yes, q.no);
+    h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(q.modal)));
+    h.focus_on(Some(yes));
+    let _ = h.redraw();
+    let dialogs = names_of(&h, Role::Dialog);
+    assert_eq!(dialogs, [question.to_owned()]);
+    let buttons = names_of(&h, Role::Button);
+    assert!(buttons.contains(&"Yes".to_owned()) && buttons.contains(&"No".to_owned()));
+    for (id, key) in [(yes, "Y"), (no, "N")] {
+        let node = h.access_node(id).unwrap();
+        assert_eq!(node.data().keyboard_shortcut(), Some(key));
+    }
+    // Typed answers: y is yes, n is no, anything else asks again; Escape is no.
+    let answer = |h: &mut TestHarness<Root>, key: Key| {
+        h.process_text_event(TextEvent::key_down(key));
+        h.pop_action::<DialogAction>().map(|(a, _)| a)
+    };
+    assert_eq!(
+        answer(&mut h, Key::Character("y".into())),
+        Some(DialogAction::Answer(Confirm::Yes))
+    );
+    assert_eq!(
+        answer(&mut h, Key::Character("n".into())),
+        Some(DialogAction::Answer(Confirm::No))
+    );
+    assert_eq!(
+        answer(&mut h, Key::Character("q".into())),
+        Some(DialogAction::Answer(Confirm::Repeat))
+    );
+    assert_eq!(
+        answer(&mut h, Key::Named(NamedKey::Escape)),
+        Some(DialogAction::Cancel)
+    );
+}
+
+/// The voice manager (Ctrl+Shift+V in the window) is the app's list: the
+/// language and engine filter rows first, then the voices. In its dialog,
+/// Enter, Space (a favourite), and Delete (a downloaded voice) go to the
+/// app's list model, as in the terminal.
+#[test]
+fn the_voice_manager_is_the_apps_list_with_its_keys() {
+    use textweaver_app::keymap::{ActionId, KeyChord};
+    use textweaver_app::{Command, Effect, ListKey};
+    use textweaver_xilem::dialog::DialogAction;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let chord: KeyChord = "Ctrl+Shift+V".parse().expect("chord");
+    assert_eq!(
+        app.keymap().lookup(&chord, app.mode().layer()),
+        Some(ActionId::ChooseVoice)
+    );
+    let effects = app.dispatch(Command::Action(ActionId::ChooseVoice));
+    let (title, items) = effects
+        .into_iter()
+        .find_map(|e| match e {
+            Effect::ShowList { title, items } => Some((title, items)),
+            _ => None,
+        })
+        .expect("the voice list");
+    assert!(items[0].starts_with("Language: "), "{items:?}");
+    assert!(items[1].starts_with("Engine: "), "{items:?}");
+    let mut h = harness(&app);
+    let selected = app.list_model().map_or(0, |m| m.selected);
+    let (modal, list_id) = gui::list_dialog(
+        &Palette::galaxy(),
+        &app.catalog(),
+        &title,
+        items,
+        selected,
+        true,
+    );
+    h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+    h.focus_on(Some(list_id));
+    let _ = h.redraw();
+    let mut key = |k: Key| {
+        h.process_text_event(TextEvent::key_down(k));
+        h.pop_action::<DialogAction>().map(|(a, _)| a)
+    };
+    assert_eq!(
+        key(Key::Named(NamedKey::Enter)),
+        Some(DialogAction::Key(ListKey::Enter))
+    );
+    assert_eq!(
+        key(Key::Character(" ".into())),
+        Some(DialogAction::Key(ListKey::Char(' ')))
+    );
+    assert_eq!(
+        key(Key::Named(NamedKey::Delete)),
+        Some(DialogAction::Key(ListKey::Delete))
+    );
+}
+
 /// A key typed in the document, as the window's driver sees it: the view
 /// leaves it for the keymap (a `KeyAction` from the root), and the keymap's
 /// layer for the app's mode names the action.
@@ -670,7 +788,7 @@ fn every_option_of_a_long_list_stays_in_the_tree() {
     let mut h = harness(&app);
     let p = Palette::galaxy();
     let items: Vec<String> = (1..=40).map(|i| format!("Bookmark {i}")).collect();
-    let (modal, list_id) = gui::list_dialog(&p, "Bookmarks", items, 0, false);
+    let (modal, list_id) = gui::list_dialog(&p, &Catalog::english(), "Bookmarks", items, 0, false);
     h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
     h.focus_on(Some(list_id));
     let _ = h.redraw();

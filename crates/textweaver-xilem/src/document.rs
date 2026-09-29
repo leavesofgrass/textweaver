@@ -231,6 +231,8 @@ pub struct DocumentView {
     /// Edit mode (ADR-0033): a multi-line edit that takes typing.
     editing: bool,
     focused: bool,
+    /// The node's name, in the interface language ("Document").
+    label: String,
 
     // Layout.
     layouts: HashMap<usize, ParaLayout>,
@@ -295,6 +297,7 @@ impl DocumentView {
             edit_role: false,
             editing: false,
             focused: false,
+            label: "Document".to_owned(),
             layouts: HashMap::new(),
             line_starts: Vec::new(),
             column: 0.0,
@@ -321,6 +324,19 @@ impl DocumentView {
     pub fn with_select_spoken(mut self, on: bool) -> Self {
         self.select_spoken = on;
         self
+    }
+
+    /// Names the node for screen readers, in the interface language
+    /// (`gui-document`); "Document" until then.
+    pub fn with_label(mut self, label: impl Into<String>) -> Self {
+        self.label = label.into();
+        self
+    }
+
+    /// A new name for the node (the interface language changed).
+    pub fn set_label(this: &mut WidgetMut<'_, Self>, label: impl Into<String>) {
+        this.widget.label = label.into();
+        this.ctx.request_accessibility_update();
     }
 
     /// Exposes the view as a read-only multi-line edit (UI Automation's
@@ -1743,7 +1759,7 @@ impl Widget for DocumentView {
         } else {
             node.set_read_only();
         }
-        node.set_label("Document");
+        node.set_label(self.label.as_str());
         if !self.model.title.is_empty() {
             node.set_description(self.model.title.as_str());
         }
