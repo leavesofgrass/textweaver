@@ -739,12 +739,16 @@ fn plain(toks: &[Tok]) -> String {
 /// Tokens written back as LaTeX: for macro bodies used in math.
 fn to_source(toks: &[Tok]) -> String {
     let mut s = String::new();
-    for t in toks {
+    for (i, t) in toks.iter().enumerate() {
         match t {
             Tok::Cmd(n) => {
                 s.push('\\');
                 s.push_str(n);
-                s.push(' ');
+                // `\alpha x`, not `\alphax`; but `\mathbb{R}` as it was.
+                if matches!(toks.get(i + 1), Some(Tok::Text(x)) if x.starts_with(|c: char| c.is_ascii_alphabetic()))
+                {
+                    s.push(' ');
+                }
             }
             Tok::Sym(c) => {
                 s.push('\\');
@@ -3590,7 +3594,7 @@ mod tests {
         );
         let text = d.text().to_string();
         assert!(
-            text.starts_with("In Biology 101, $x \\in {\\mathbb {R}}$. ab"),
+            text.starts_with("In Biology 101, $x \\in {\\mathbb{R}}$. ab"),
             "{text}"
         );
         assert!(
