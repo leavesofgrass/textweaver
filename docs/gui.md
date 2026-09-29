@@ -156,4 +156,4 @@ Settings (Ctrl+,) opens a dialog: the sections on the left, the chosen section's
 - [Keyboard reference](keyboard.md)
 - [Reading aids](reading-aids.md)
 - [Using textweaver with a screen reader](screen-readers.md)
-- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md), [ADR-0028: the GUI after the first screen reader session](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033: the GUI after the second session, and edit mode](adr/0033-gui-session-2-and-edit-mode.md)
+- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md), [ADR-0028: the Xilem GUI after the first listening session](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033: the GUI after further accessibility testing, and edit mode](adr/0033-gui-session-2-and-edit-mode.md)
