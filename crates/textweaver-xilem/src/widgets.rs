@@ -608,6 +608,10 @@ pub type MessageQueue = Rc<std::cell::RefCell<VecDeque<Message>>>;
 /// burst is not cut short by the next update.
 const KEEP: usize = 3;
 
+/// How many messages wait for a screen reader to ask for the tree; older
+/// ones are dropped (no screen reader may ever ask).
+const HOLD: usize = 12;
+
 /// How announcements reach the screen reader: `--announce live|uia`, or
 /// the `announce` key of the `[gui]` settings table.
 ///
@@ -679,6 +683,11 @@ pub struct Announcer {
     full_passes: Rc<Cell<u64>>,
     seen_full: u64,
     mode: AnnounceMode,
+    /// A screen reader has asked for the tree (the first full pass).
+    tree_seen: bool,
+    /// Messages said before a screen reader asked for the tree wait in
+    /// `pending`; the first pass after the tree was sent says them, once.
+    release_due: bool,
     /// Every message announced, for the log and the tests.
     pub announced: usize,
 }
@@ -695,7 +704,37 @@ impl Announcer {
             full_passes,
             seen_full,
             mode: AnnounceMode::Live,
+            tree_seen: false,
+            release_due: false,
             announced: 0,
+        }
+    }
+
+    /// True once a screen reader has asked for the tree. Until then there
+    /// is no one to tell, so messages wait (see [`release`](Self::release)).
+    pub fn tree_seen(&self) -> bool {
+        self.tree_seen
+    }
+
+    /// True while messages wait for a screen reader to ask for the tree, or
+    /// to be released after it did: the driver comes back soon.
+    pub fn holding(&self) -> bool {
+        self.release_due || (!self.tree_seen && !self.pending.is_empty())
+    }
+
+    /// True when messages held until a screen reader asked for the tree are
+    /// waiting to be said: the driver then calls [`release`](Self::release).
+    pub fn release_due(&self) -> bool {
+        self.release_due
+    }
+
+    /// Says the messages held until a screen reader asked for the tree, in
+    /// the next accessibility pass: as new live nodes after the tree, so the
+    /// screen reader announces them (a live region already in the first
+    /// tree is not announced).
+    pub fn release(this: &mut WidgetMut<'_, Self>) {
+        if std::mem::take(&mut this.widget.release_due) {
+            this.ctx.request_accessibility_update();
         }
     }
 
@@ -714,6 +753,12 @@ impl Announcer {
     pub fn say(this: &mut WidgetMut<'_, Self>, messages: impl IntoIterator<Item = Message>) {
         let before = this.widget.pending.len();
         this.widget.pending.extend(messages);
+        if !this.widget.tree_seen {
+            // No screen reader has asked yet: keep the latest few.
+            while this.widget.pending.len() > HOLD {
+                this.widget.pending.pop_front();
+            }
+        }
         if this.widget.pending.len() != before {
             this.ctx.request_accessibility_update();
         }
@@ -775,6 +820,16 @@ impl Widget for Announcer {
         if self.full_passes.get() != self.seen_full {
             self.seen_full = self.full_passes.get();
             self.shown.clear();
+            if !self.tree_seen {
+                // The first tree a screen reader gets: what was said before
+                // it asked waits for the next pass, where it is new.
+                self.tree_seen = true;
+                if !self.pending.is_empty() {
+                    self.release_due = true;
+                    node.set_children(Vec::<NodeId>::new());
+                    return;
+                }
+            }
         }
         while let Some(m) = self.pending.pop_front() {
             let id = AccessCtx::next_node_id();
@@ -965,6 +1020,50 @@ mod tests {
             Live::Assertive
         };
         assert_eq!(last.live(), expected);
+    }
+
+    /// Messages said before a screen reader asked for the tree (startup's
+    /// "Opened", "Reading at") are not put in the first tree, where a live
+    /// region is not announced: they wait, and are said once in the pass
+    /// after it. A later full pass (the screen reader restarted) does not
+    /// say them again.
+    #[test]
+    fn startup_messages_wait_for_the_tree_and_are_said_once() {
+        let p = crate::theme::Palette::galaxy();
+        let tag: WidgetTag<Announcer> = WidgetTag::named("ann");
+        let passes = Rc::new(Cell::new(0));
+        let mut h = TestHarness::create(
+            crate::theme::default_properties(&p),
+            NewWidget::new(Announcer::new(Rc::clone(&passes))).with_tag(tag),
+        );
+        let said = |text: &str| Message {
+            text: text.into(),
+            priority: Priority::Polite,
+        };
+        h.edit_root_widget(|mut a| Announcer::say(&mut a, [said("Opened sample.")]));
+        // The screen reader asks for the tree: a full pass.
+        passes.set(passes.get() + 1);
+        h.edit_root_widget(|mut a| a.ctx.request_accessibility_update());
+        let _ = h.redraw();
+        let node = h.access_node(h.root_id()).expect("the announcer");
+        assert_eq!(node.children().count(), 0, "held out of the first tree");
+        assert!(h.root_widget().inner().release_due());
+        assert!(h.root_widget().inner().holding());
+        // The driver's next tick releases them.
+        h.edit_root_widget(|mut a| Announcer::release(&mut a));
+        let _ = h.redraw();
+        let node = h.access_node(h.root_id()).expect("the announcer");
+        let texts: Vec<String> = node.children().filter_map(|c| c.value()).collect();
+        assert_eq!(texts, vec!["Opened sample.".to_owned()]);
+        assert_eq!(node.children().last().map(|c| c.live()), Some(Live::Polite));
+        assert!(!h.root_widget().inner().holding());
+        // The screen reader restarts: nothing is said again.
+        passes.set(passes.get() + 1);
+        h.edit_root_widget(|mut a| a.ctx.request_accessibility_update());
+        let _ = h.redraw();
+        let node = h.access_node(h.root_id()).expect("the announcer");
+        assert_eq!(node.children().count(), 0);
+        assert_eq!(h.root_widget().inner().announced, 1);
     }
 
     #[test]

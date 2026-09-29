@@ -140,6 +140,10 @@ textweaver's messages ("Paused.", "Reading at 300 words per minute.") reach your
 
 The setting is `announce` in the `[gui]` section of `settings.toml`; see [Settings](settings.md#gui).
 
+Messages said while the window starts ("Opened", the title, "Reading at") wait until your screen reader has asked for the window's contents, then are said once. Before, they could be lost when the window was quicker than the screen reader.
+
+When the window takes the focus (Alt+Tab, a click), your screen reader says the window's title, which is the document's title and "textweaver", then the document. In the self-voicing mode, textweaver says the document's title and its name in its own voice.
+
 ## Reading aids
 
 The window draws the same [reading aids](reading-aids.md) as the terminal, with the same keys:

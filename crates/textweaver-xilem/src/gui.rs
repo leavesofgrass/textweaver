@@ -98,6 +98,9 @@ pub const RSVP: WidgetTag<RsvpView> = WidgetTag::named("tw-rsvp");
 const FIRST_TICK: Duration = Duration::from_millis(250);
 /// Highlight moves slower than this are logged.
 const SLOW_HIGHLIGHT_MS: f64 = 30.0;
+/// How often the window looks again while startup messages wait for a
+/// screen reader to ask for the tree.
+const HOLD_TICK: Duration = Duration::from_millis(200);
 /// Misspelled words are marked once typing pauses this long.
 const SPELL_PAUSE: Duration = Duration::from_millis(500);
 /// Misspelled words are marked in documents up to this many chars (about
@@ -320,6 +323,9 @@ pub struct Gui {
     closed: bool,
     /// How announcements reach the screen reader.
     announce: AnnounceMode,
+    /// UI Automation notifications waiting for a screen reader to ask for
+    /// the tree (`--announce uia`).
+    held_notices: Vec<Message>,
     /// The window's Win32 handle, for UI Automation notifications (read
     /// on first use; 0 until then or when there is none).
     hwnd: isize,
@@ -1134,12 +1140,33 @@ impl Gui {
                 .edit_widget_with_tag(DOC, |mut d| d.ctx.set_clipboard(text));
         }
         let messages: Vec<Message> = self.queue.borrow_mut().drain(..).collect();
-        if !messages.is_empty() {
-            if self.announce == AnnounceMode::Uia {
-                self.notify(ctx, &messages);
+        let (tree_seen, release_due) = ctx
+            .render_root(self.window_id)
+            .get_widget_with_tag(ANNOUNCER)
+            .map_or((true, false), |a| {
+                (a.inner().tree_seen(), a.inner().release_due())
+            });
+        if self.announce == AnnounceMode::Uia {
+            // Notifications, too, wait for a screen reader to ask for the
+            // tree: raised before, no one hears them.
+            self.held_notices.extend(messages.iter().cloned());
+            if tree_seen && !self.held_notices.is_empty() {
+                let notices = std::mem::take(&mut self.held_notices);
+                self.notify(ctx, &notices);
             }
+            let excess = self.held_notices.len().saturating_sub(12);
+            self.held_notices.drain(..excess);
+        }
+        if !messages.is_empty() {
             let root = ctx.render_root(self.window_id);
             root.edit_widget_with_tag(ANNOUNCER, |mut a| Announcer::say(&mut a, messages));
+        }
+        if release_due {
+            if self.log {
+                crate::log::line("announcements held until the tree was asked for: released");
+            }
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(ANNOUNCER, |mut a| Announcer::release(&mut a));
         }
         // Single-key shortcuts turned on or off: each button names its key.
         let char_keys = self.app.keymap().character_keys();
@@ -1884,6 +1911,25 @@ impl Gui {
         self.app.echo(&text);
     }
 
+    /// The window took the focus: the document's name and the window's, in
+    /// textweaver's own voice only (`App::echo` speaks only in the
+    /// self-voicing mode, and not while reading), since a screen reader says
+    /// the window's title and the focused document itself.
+    fn window_focused(&mut self) {
+        let title = self
+            .app
+            .session()
+            .map_or_else(|| "textweaver".to_owned(), |s| s.title.clone());
+        let said = self
+            .app
+            .catalog()
+            .fmt("gui-window-focused", &args!["title" => title]);
+        if self.log {
+            crate::log::line(&format!("window focused: {said}"));
+        }
+        self.app.echo(&said);
+    }
+
     /// A yes-or-no question from the app shows as a dialog while it is
     /// open (the app has already said it), and goes when it is answered.
     fn sync_question(&mut self, ctx: &mut DriverCtx<'_>) {
@@ -2138,6 +2184,8 @@ impl AppDriver for Gui {
             if let Some(echo) = echo {
                 self.echo_caret(echo);
             }
+        } else if let Some(DocAction::WindowFocused) = action.downcast_ref::<DocAction>() {
+            self.window_focused();
         } else if let Some(DocAction::TableCell { forward }) = action.downcast_ref::<DocAction>() {
             let a = if *forward {
                 ActionId::NextTableCell
@@ -2153,7 +2201,9 @@ impl AppDriver for Gui {
                 DocAction::Delete { forward: true } => Command::DeleteForward,
                 DocAction::Delete { forward: false } => Command::DeleteBack,
                 DocAction::Replace { range, text } => Command::ReplaceRange { range, text },
-                DocAction::CaretMoved { .. } | DocAction::TableCell { .. } => return,
+                DocAction::CaretMoved { .. }
+                | DocAction::TableCell { .. }
+                | DocAction::WindowFocused => return,
             };
             if self.log {
                 crate::log::line(&format!("edit: {cmd:?}"));
@@ -2373,6 +2423,15 @@ impl AppDriver for Gui {
             // Come back when the pause is over, to mark the misspellings.
             wait = wait.min(SPELL_PAUSE / 2);
         }
+        let holding = ctx
+            .render_root(self.window_id)
+            .get_widget_with_tag(ANNOUNCER)
+            .is_some_and(|a| a.inner().holding());
+        if holding {
+            // Messages wait for a screen reader to ask for the tree: come
+            // back soon, to say them once it has.
+            wait = wait.min(HOLD_TICK);
+        }
         self.tick_ms.store(
             u64::try_from(wait.as_millis()).unwrap_or(u64::MAX).max(10),
             Ordering::Relaxed,
@@ -2512,6 +2571,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         theme_key,
         settings_list: experiments.settings_list,
         announce,
+        held_notices: Vec::new(),
         hwnd: 0,
         installed: crate::font_chooser::Installed::scan_in_background(),
         window_title: String::new(),

@@ -212,6 +212,11 @@ pub enum DocAction {
         /// Delete, not Backspace.
         forward: bool,
     },
+    /// The window took the focus (Alt+Tab, a click) with the document
+    /// focused. The driver says the document's and the window's names in
+    /// textweaver's own voice (the self-voicing mode); a screen reader says
+    /// the window's title and the focused document itself.
+    WindowFocused,
     /// Edit mode: replace `range` with `text`: typing or deleting over a
     /// selection, or a screen reader's or dictation's edit
     /// (`ReplaceSelectedText`, `SetValue`). The driver sends it as
@@ -1745,6 +1750,10 @@ impl Widget for DocumentView {
             let text = text.clone();
             self.type_text(ctx, &text);
             ctx.set_handled();
+            return;
+        }
+        if let TextEvent::WindowFocusChange(true) = event {
+            ctx.submit_action::<DocAction>(DocAction::WindowFocused);
             return;
         }
         let TextEvent::Keyboard(k) = event else {

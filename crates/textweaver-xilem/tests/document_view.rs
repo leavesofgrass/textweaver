@@ -506,3 +506,19 @@ fn a_caret_key_onto_an_empty_line_says_line_end() {
         other => panic!("not a caret move: {other:?}"),
     }
 }
+
+/// The window taking the focus with the document focused is told to the
+/// driver, which says the names in textweaver's own voice.
+#[test]
+fn the_window_taking_focus_is_reported() {
+    let doc = Document::from_plain_text("Text.");
+    let (mut h, _) = harness_with(&doc, CharPos::ZERO);
+    h.focus_on(Some(h.root_id()));
+    h.process_text_event(TextEvent::WindowFocusChange(true));
+    assert_eq!(
+        h.pop_action::<DocAction>().map(|(a, _)| a),
+        Some(DocAction::WindowFocused)
+    );
+    h.process_text_event(TextEvent::WindowFocusChange(false));
+    assert!(h.pop_action::<DocAction>().is_none());
+}

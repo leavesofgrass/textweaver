@@ -92,6 +92,7 @@ fn apply(app: &mut App, action: DocAction) {
         }
         DocAction::TableCell { forward: true } => Command::Action(ActionId::NextTableCell),
         DocAction::TableCell { forward: false } => Command::Action(ActionId::PreviousTableCell),
+        DocAction::WindowFocused => return,
     };
     let _ = app.dispatch(cmd);
 }
