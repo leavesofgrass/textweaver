@@ -74,6 +74,7 @@ pub mod html;
 pub mod latex;
 pub mod markdown;
 mod mathml;
+pub mod obsidian;
 pub mod odt;
 mod omml;
 mod package;

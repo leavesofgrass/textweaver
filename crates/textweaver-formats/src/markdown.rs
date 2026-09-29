@@ -24,21 +24,34 @@
 //! - struck-through text is under a `Strikethrough` marker, and a horizontal
 //!   rule is an empty `Rule` marker where the next block starts, so both
 //!   can be heard;
-//! - a GFM alert (`> [!NOTE]`) is a block quote labeled `note` whose text
-//!   starts "Note:";
+//! - a GFM alert (`> [!NOTE]`) or an Obsidian callout of any type
+//!   (`> [!tip]- Remember`) is a block quote labeled with its type as
+//!   written, read "Tip, collapsed: Remember" before its body ("Note:"
+//!   when it has no title); the rules are shared with the renderer
+//!   ([`crate::callout`]);
 //! - wiki links (`[[Page]]`, `[[Page|shown]]`) are links to the page;
-//!   heading attributes (`# Title {#id .class}`) are not read.
+//!   heading attributes (`# Title {#id .class}`) are not read;
+//! - Obsidian's embeds (`![[note]]`, `![[note#Heading]]`,
+//!   `![[note#^id]]`) read the other note in place, from the note's own
+//!   folder or below, two levels deep at most; `![[picture.png|300]]` is a
+//!   graphic named by its file; tags (`#physics/waves`) are read "tag
+//!   physics slash waves"; `==highlights==` are under an `Underline`
+//!   marker labeled [`HIGHLIGHT_LABEL`]; `%%comments%%` are not read; and
+//!   block ids (`^id`) are not read but kept as link targets (see
+//!   [`crate::obsidian`]).
 
 use std::collections::BTreeMap;
+use std::path::Path;
 
 use pulldown_cmark::{
-    BlockQuoteKind, CodeBlockKind, Event, MetadataBlockKind, Options, Parser, Tag, TagEnd,
+    BlockQuoteKind, CodeBlockKind, Event, LinkType, MetadataBlockKind, Options, Parser, Tag, TagEnd,
 };
 use ropey::Rope;
 use textweaver_core::{CharRange, MarkerKind};
 use textweaver_text::{Document, DocumentMeta, HEADER_ROW_LABEL, Marker};
 
 use crate::builder::{Builder, OpenId};
+use crate::obsidian::{EmbedTarget, Embeds, Piece};
 use crate::{
     FootnoteMode, LoadError, LoadOptions, Loader, Source, decode_source, meta_for, note_encoding,
     title_from_path,
@@ -67,7 +80,11 @@ impl Loader for MarkdownLoader {
         let decoded = decode_source(source, None)?;
         let mut meta = meta_for(source, self.id());
         note_encoding(&mut meta, &decoded);
-        let (canonical, markers) = convert(&decoded.text, options, &mut meta);
+        let path = match source {
+            Source::Path(p) if p.is_file() => Some(p.as_path()),
+            _ => None,
+        };
+        let (canonical, markers) = convert_in(&decoded.text, path, options, &mut meta);
         if meta.title.is_none() {
             meta.title = title_from_path(source);
         }
@@ -119,9 +136,22 @@ fn plain_title(title: &str) -> String {
 }
 
 /// Converts Markdown source to canonical text and markers, filling `meta`
-/// from front matter and the first level-1 heading.
+/// from front matter and the first level-1 heading. Embedded notes
+/// (`![[note]]`) are links: without a folder there is nowhere to find them
+/// (see [`convert_in`]).
 pub fn convert(
     source: &str,
+    options: &LoadOptions,
+    meta: &mut DocumentMeta,
+) -> (String, Vec<Marker>) {
+    convert_in(source, None, options, meta)
+}
+
+/// [`convert`] for a note at `path`: notes it embeds are read in place
+/// from its folder or below it (see [`crate::obsidian`]).
+pub fn convert_in(
+    source: &str,
+    path: Option<&Path>,
     options: &LoadOptions,
     meta: &mut DocumentMeta,
 ) -> (String, Vec<Marker>) {
@@ -134,24 +164,12 @@ pub fn convert(
     } else {
         Vec::new()
     };
+    let embeds = path.and_then(|p| {
+        let folder = p.parent().filter(|f| !f.as_os_str().is_empty());
+        Embeds::new(folder.unwrap_or(Path::new(".")), Some(p))
+    });
     let mut gather = (options.footnotes == FootnoteMode::Deferred).then(FootnoteCollector::default);
-    let mut c = Converter {
-        b: Builder::new(),
-        options,
-        meta,
-        footnotes,
-        stack: Vec::new(),
-        lists: Vec::new(),
-        cell_index: 0,
-        skip_depth: 0,
-        code: None,
-        meta_text: None,
-        heading_text: None,
-        image: Vec::new(),
-        html: HtmlState::default(),
-        alert: None,
-        head_end: None,
-    };
+    let mut c = Converter::new(Builder::new(), options, meta, footnotes, embeds);
     for (event, range) in Parser::new_ext(source, parser_options()).into_offset_iter() {
         if let Some(g) = gather.as_mut() {
             g.event(&event);
@@ -162,6 +180,8 @@ pub fn convert(
         c.footnotes = g.out;
     }
     c.deferred_footnotes();
+    let ids = std::mem::take(&mut c.block_ids);
+    crate::obsidian::set_block_ids(c.meta, &ids);
     c.b.finish()
 }
 
@@ -264,6 +284,23 @@ struct Converter<'a> {
     /// While reading a callout's head line: where the line ends. Its text
     /// (`[!tip] Title`) is not read; the label says it.
     head_end: Option<usize>,
+    /// Where embedded notes come from, when the document has a folder.
+    embeds: Option<Embeds>,
+    /// Inside an Obsidian comment (`%%...%%`), which is not read.
+    in_comment: bool,
+    /// An open highlight (`==text==`).
+    highlight: Option<OpenId>,
+    /// How many `==` there are from the text being read to the end of its
+    /// block: one opens a highlight only when another follows it.
+    marks_ahead: usize,
+    /// The text being read starts after white space or at a line start,
+    /// where a `#` starts a tag.
+    boundary: bool,
+    /// Block ids (`^id`) and where their blocks start.
+    block_ids: Vec<(String, usize)>,
+    /// The stack depth of the open paragraph, if the innermost open tag is
+    /// one, so an embed can end it before reading another note.
+    paragraph_at: Option<usize>,
 }
 
 /// Where the reader is inside raw HTML, carried from one HTML event to the
@@ -387,9 +424,220 @@ fn html_attr(tag: &str, name: &str) -> Option<String> {
     None
 }
 
-impl Converter<'_> {
+/// The label of the `Underline` marker a highlight (`==text==`) is read
+/// under, until the core has a marker kind of its own for it.
+pub const HIGHLIGHT_LABEL: &str = "highlight";
+
+impl<'a> Converter<'a> {
+    fn new(
+        b: Builder,
+        options: &'a LoadOptions,
+        meta: &'a mut DocumentMeta,
+        footnotes: Vec<(String, String)>,
+        embeds: Option<Embeds>,
+    ) -> Self {
+        Converter {
+            b,
+            options,
+            meta,
+            footnotes,
+            stack: Vec::new(),
+            lists: Vec::new(),
+            cell_index: 0,
+            skip_depth: 0,
+            code: None,
+            meta_text: None,
+            heading_text: None,
+            image: Vec::new(),
+            html: HtmlState::default(),
+            alert: None,
+            head_end: None,
+            embeds,
+            in_comment: false,
+            highlight: None,
+            marks_ahead: 0,
+            boundary: true,
+            block_ids: Vec::new(),
+            paragraph_at: None,
+        }
+    }
+
     fn in_list(&self) -> bool {
         !self.lists.is_empty()
+    }
+
+    /// Text from the source: Obsidian's comments left out, tags read as
+    /// words, highlights marked, and a trailing block id kept aside.
+    fn source_text(&mut self, t: &str) {
+        let pieces = crate::obsidian::pieces(t, self.boundary);
+        let last = pieces.len().saturating_sub(1);
+        for (i, piece) in pieces.into_iter().enumerate() {
+            match piece {
+                Piece::Comment => self.in_comment = !self.in_comment,
+                _ if self.in_comment => {}
+                Piece::Text(s) => match crate::obsidian::trailing_block_id(s) {
+                    Some((before, id)) if i == last => {
+                        self.text(before);
+                        self.block_id(id);
+                    }
+                    _ => self.text(s),
+                },
+                Piece::Tag(words) => self.text(&words),
+                Piece::Mark => match self.highlight.take() {
+                    Some(id) => {
+                        self.marks_ahead = self.marks_ahead.saturating_sub(1);
+                        self.b.close(id);
+                    }
+                    None if self.marks_ahead >= 2 => {
+                        self.marks_ahead -= 1;
+                        let m = Self::marker(MarkerKind::Underline).with_label(HIGHLIGHT_LABEL);
+                        self.highlight = Some(self.b.open(m));
+                    }
+                    None => {
+                        self.marks_ahead = self.marks_ahead.saturating_sub(1);
+                        self.text("==");
+                    }
+                },
+            }
+        }
+    }
+
+    /// Records a block id where its block starts: the paragraph, item,
+    /// heading, or row it ends, or for an id alone on its line the table,
+    /// list, quote, or code block before it.
+    fn block_id(&mut self, id: &str) {
+        use MarkerKind as K;
+        const BLOCKS: [MarkerKind; 4] = [K::ListItem, K::Paragraph, K::Heading, K::TableRow];
+        const BEFORE: [MarkerKind; 5] = [K::Table, K::List, K::Quote, K::Code, K::Paragraph];
+        // A block with text of its own is the one the id ends; an id alone
+        // in its paragraph names the block before.
+        let at = self
+            .b
+            .innermost_open_start(&BLOCKS)
+            .or_else(|| self.b.last_closed_start(&BEFORE));
+        if let Some(at) = at
+            && !self.block_ids.iter().any(|(k, _)| k == id)
+        {
+            self.block_ids.push((id.to_owned(), at));
+        }
+    }
+
+    /// Ends an open highlight at the end of its block.
+    fn end_highlight(&mut self) {
+        if let Some(id) = self.highlight.take() {
+            self.b.close(id);
+        }
+    }
+
+    /// `![[...]]`: a picture by its file name, another note read in place,
+    /// or a link when it cannot be read.
+    fn embed(&mut self, target: &str) {
+        match crate::obsidian::embed_target(target) {
+            EmbedTarget::Image => {
+                let name = Path::new(target.split('#').next().unwrap_or(target))
+                    .file_name()
+                    .map_or_else(|| target.to_owned(), |n| n.to_string_lossy().into_owned());
+                let id = self
+                    .b
+                    .open(Self::marker(MarkerKind::Image).with_reference(target));
+                self.text(&name);
+                self.b.close(id);
+            }
+            EmbedTarget::Note { name, part } => {
+                let read = match &self.embeds {
+                    Some(e) => e.read(&name),
+                    None => Err(crate::obsidian::Refused::NotFound),
+                };
+                match read {
+                    Ok((path, text)) => self.embed_note(&name, part.as_deref(), path, &text),
+                    Err(why) => {
+                        let id = self
+                            .b
+                            .open(Self::marker(MarkerKind::Link).with_reference(target));
+                        self.text(&name);
+                        self.b.close(id);
+                        self.b.space();
+                        self.b.text(why.words());
+                    }
+                }
+            }
+            EmbedTarget::Other => {
+                let id = self
+                    .b
+                    .open(Self::marker(MarkerKind::Link).with_reference(target));
+                self.text(target);
+                self.b.close(id);
+            }
+        }
+    }
+
+    /// Reads another note (or its part under a heading or block id) in
+    /// place: "Embedded from Name" before it and "End of embed" after, the
+    /// whole under a block quote labeled `embed`.
+    fn embed_note(&mut self, name: &str, part: Option<&str>, path: std::path::PathBuf, text: &str) {
+        let body = match part {
+            Some(p) if p.starts_with('^') => {
+                crate::obsidian::block_section(text, p.trim_start_matches('^'))
+            }
+            Some(h) => crate::obsidian::heading_section(text, h).map(str::to_owned),
+            None => Some(text.to_owned()),
+        };
+        let shown = match part {
+            Some(p) => format!("{name}, {}", p.trim_start_matches('^')),
+            None => name.to_owned(),
+        };
+        let Some(body) = body else {
+            let id = self
+                .b
+                .open(Self::marker(MarkerKind::Link).with_reference(name));
+            self.text(&shown);
+            self.b.close(id);
+            self.b.space();
+            self.b.text("(part not found)");
+            return;
+        };
+        // A paragraph holding only the embed ends before the other note.
+        if let Some(at) = self.paragraph_at
+            && at + 1 == self.stack.len()
+            && let Some(Some(id)) = self.stack.last_mut().map(Option::take)
+        {
+            self.b.close(id);
+        }
+        self.end_highlight();
+        self.block_break();
+        let quote = self
+            .b
+            .open(Self::marker(MarkerKind::Quote).with_label("embed"));
+        self.b.text(&format!("Embedded from {shown}"));
+        self.b.paragraph_break();
+        let options = LoadOptions {
+            footnotes: match self.options.footnotes {
+                FootnoteMode::Deferred => FootnoteMode::Inline,
+                other => other,
+            },
+            ..self.options.clone()
+        };
+        let footnotes = if options.footnotes == FootnoteMode::Inline {
+            collect_footnotes(&body)
+        } else {
+            Vec::new()
+        };
+        let mut scratch = DocumentMeta::default();
+        let embeds = self.embeds.as_ref().map(|e| e.child(path));
+        let b = std::mem::take(&mut self.b);
+        let mut sub = Converter::new(b, &options, &mut scratch, footnotes, embeds);
+        for (event, range) in Parser::new_ext(&body, parser_options()).into_offset_iter() {
+            sub.event_at(event, range, &body);
+        }
+        sub.end_highlight();
+        while !sub.stack.is_empty() {
+            sub.pop();
+        }
+        self.b = std::mem::take(&mut sub.b);
+        self.b.paragraph_break();
+        self.b.text("End of embed");
+        self.b.close(quote);
+        self.block_break();
     }
 
     fn block_break(&mut self) {
@@ -531,6 +779,15 @@ impl Converter<'_> {
                 self.head_end = None;
             }
         }
+        if let Event::Text(t) = &event {
+            let before = source.get(..range.start).unwrap_or("");
+            self.boundary = before.is_empty() || before.ends_with(char::is_whitespace);
+            if t.contains("==") {
+                let rest = source.get(range.start..).unwrap_or("");
+                let block = rest.find("\n\n").map_or(rest, |end| &rest[..end]);
+                self.marks_ahead = block.matches("==").count();
+            }
+        }
         if let Event::Start(Tag::BlockQuote(_)) = &event
             && self.skip_depth == 0
             && self.code.is_none()
@@ -609,7 +866,15 @@ impl Converter<'_> {
         match event {
             Event::Start(tag) => self.start(tag),
             Event::End(tag) => self.end(tag),
-            Event::Text(t) => self.text(&t),
+            Event::Text(t) => self.source_text(&t),
+            // Nothing inside an Obsidian comment is read.
+            Event::Code(_)
+            | Event::InlineHtml(_)
+            | Event::Html(_)
+            | Event::InlineMath(_)
+            | Event::DisplayMath(_)
+            | Event::FootnoteReference(_)
+                if self.in_comment => {}
             Event::Code(t) => {
                 let id = self.b.open(Self::marker(MarkerKind::Code));
                 self.text(&t);
@@ -647,6 +912,7 @@ impl Converter<'_> {
             Tag::Paragraph => {
                 self.block_break();
                 let marker = (!self.in_list()).then(|| Self::marker(MarkerKind::Paragraph));
+                self.paragraph_at = Some(self.stack.len());
                 self.push(marker);
             }
             Tag::Heading { level, .. } => {
@@ -748,8 +1014,20 @@ impl Converter<'_> {
                 ));
             }
             Tag::Image {
-                dest_url, title, ..
+                link_type,
+                dest_url,
+                title,
+                ..
             } => {
+                if matches!(link_type, LinkType::WikiLink { .. }) {
+                    // `![[...]]`: an Obsidian embed; its text (a size or
+                    // an alias) is not read.
+                    if !self.in_comment {
+                        self.embed(&dest_url);
+                    }
+                    self.skip_depth = 1;
+                    return;
+                }
                 self.image.push((title.to_string(), 0));
                 self.push(Some(
                     Self::marker(MarkerKind::Image).with_reference(dest_url.to_string()),
@@ -768,8 +1046,19 @@ impl Converter<'_> {
     }
 
     fn end(&mut self, tag: TagEnd) {
+        if matches!(
+            tag,
+            TagEnd::Paragraph
+                | TagEnd::Heading(_)
+                | TagEnd::Item
+                | TagEnd::TableCell
+                | TagEnd::BlockQuote(_)
+        ) {
+            self.end_highlight();
+        }
         match tag {
             TagEnd::Paragraph => {
+                self.paragraph_at = None;
                 self.pop();
                 self.block_break();
             }
@@ -1041,6 +1330,111 @@ mod tests {
         // A quote that only looks like one is still a quote.
         let plain = load("> [not a callout]\n> text\n", &LoadOptions::default());
         assert_eq!(plain.text().to_string(), "[not a callout] text");
+    }
+
+    #[test]
+    fn obsidian_tags_highlights_comments_and_block_ids() {
+        let d = load(
+            "Waves #physics/waves and issue #12. Some ==bright **bold** words== here, a == b.\n\nHidden %%secret `code`%% gone. Next ^para-1\n\n- item one ^li\n- item two\n\n| a |\n|---|\n| 1 |\n\n^tbl\n",
+            &LoadOptions::default(),
+        );
+        let text = d.text().to_string();
+        assert!(
+            text.contains("Waves tag physics slash waves and issue #12."),
+            "{text}"
+        );
+        assert!(
+            text.contains("Some bright bold words here, a == b."),
+            "{text}"
+        );
+        assert!(text.contains("Hidden gone. Next\n"), "{text}");
+        for gone in ["secret", "code", "^", "%%"] {
+            assert!(!text.contains(gone), "{gone} in {text}");
+        }
+        let highlights: Vec<String> = d
+            .marker_index()
+            .iter(MarkerKind::Underline, None)
+            .filter(|m| m.label.as_deref() == Some(HIGHLIGHT_LABEL))
+            .map(|m| d.slice(m.range))
+            .collect();
+        assert_eq!(highlights, ["bright bold words"]);
+        let at = |id: &str| {
+            crate::obsidian::block_position(&d.meta, id)
+                .map(|p| d.slice(CharRange::new(p.0, p.0 + 4)))
+        };
+        assert_eq!(at("para-1").as_deref(), Some("Hidd"));
+        assert_eq!(at("^li").as_deref(), Some("item"));
+        assert_eq!(at("tbl").as_deref(), Some("a\n1"));
+        assert_eq!(at("nope"), None);
+    }
+
+    #[test]
+    fn obsidian_embeds_read_notes_in_place_inside_the_folder() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        std::fs::create_dir_all(root.join("sub")).unwrap();
+        std::fs::write(
+            root.join("main.md"),
+            "# Main\n\n![[Other]]\n\n![[sub/Deep#Part B]]\n\n![[Deep#^blk]]\n\n![[pic.png|300]]\n\n![[Missing]]\n\n![[main]]\n",
+        )
+        .unwrap();
+        std::fs::write(root.join("Other.md"), "Other text.\n\n![[Third]]\n").unwrap();
+        std::fs::write(root.join("Third.md"), "Third text.\n\n![[Fourth]]\n").unwrap();
+        std::fs::write(root.join("Fourth.md"), "Fourth text.\n").unwrap();
+        std::fs::write(
+            root.join("sub").join("Deep.md"),
+            "## Part A\n\nno\n\n## Part B\n\nyes\n\nA block ^blk\n",
+        )
+        .unwrap();
+        let d = MarkdownLoader
+            .load(&Source::Path(root.join("main.md")), &LoadOptions::default())
+            .unwrap();
+        let text = d.text().to_string();
+        let expect = [
+            "Embedded from Other\n\nOther text.",
+            "Embedded from Third\n\nThird text.",
+            // Two levels deep at most.
+            "Fourth (embedded too deeply to read here)",
+            "End of embed",
+            "Embedded from sub/Deep, Part B\n\nPart B\n\nyes",
+            "Embedded from Deep, blk\n\nA block\n\nEnd of embed",
+            "pic.png",
+            "Missing (embedded note not found)",
+            "main (embedded above, not repeated)",
+        ];
+        for e in expect {
+            assert!(text.contains(e), "{e:?} missing from {text:?}");
+        }
+        assert!(!text.contains("no\n"), "{text}");
+        assert!(!text.contains("300"), "{text}");
+        assert_eq!(text.matches("Embedded from").count(), 4, "{text}");
+        assert_eq!(text.matches("End of embed").count(), 4, "{text}");
+        let embeds = d
+            .marker_index()
+            .iter(MarkerKind::Quote, None)
+            .filter(|m| m.label.as_deref() == Some("embed"))
+            .count();
+        assert_eq!(embeds, 4);
+        assert_eq!(kinds(&d, MarkerKind::Image), ["pic.png"]);
+        // Outside the folder: never read.
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(outside.path().join("Secret.md"), "secret").unwrap();
+        let rel = format!(
+            "![[{}]]",
+            outside
+                .path()
+                .join("Secret")
+                .to_string_lossy()
+                .replace('\\', "/")
+        );
+        std::fs::write(root.join("escape.md"), format!("{rel}\n\n![[../Secret]]\n")).unwrap();
+        let e = MarkdownLoader
+            .load(
+                &Source::Path(root.join("escape.md")),
+                &LoadOptions::default(),
+            )
+            .unwrap();
+        assert!(!e.text().to_string().contains("secret"), "{}", e.text());
     }
 
     #[test]
