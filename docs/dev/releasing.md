@@ -44,7 +44,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
    Before a release, also run `cargo xtask notices` (it needs `cargo install --locked cargo-about`) and commit `THIRD-PARTY-NOTICES.md` if it changed. CI fails when it is out of date.
 
-   **The changelog, grouped by area.** While a wave runs, each agent writes its `CHANGELOG.md` lines under a heading with its own name, such as `### W4c2: documents`. Before a release, move those lines under area headings (reading and speech, documents, writing, the GUI, languages, packages) and add a short summary at the top of the section. `cargo xtask release` names any agent heading still in `[Unreleased]` and stops.
+   **The changelog, grouped by area.** During development, contributors may add their `CHANGELOG.md` lines under a scratch heading of their own, to keep unrelated changes from colliding. Before a release, move those lines under area headings (reading and speech, documents, writing, the GUI, languages, packages) and add a short summary at the top of the section. `cargo xtask release` names any scratch heading it still finds in `[Unreleased]` and stops.
 
 3. **Try the packages.** Start the `Release` workflow from the Actions tab on `main`, with the tag left empty. That is a dry run: it builds and checks every package, keeps them as workflow artifacts, and creates no release, tag, or attestation. It also works on a pushed branch, to try a change to the packaging before it merges:
 

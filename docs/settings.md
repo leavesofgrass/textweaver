@@ -366,7 +366,7 @@ The font in the GUI. The terminal always uses its own font.
 - `size_pt`, default `14.0`: the size in points, from 6 to 144.
 - `weight`, default `400`: from 100 to 900. 700 is bold.
 
-`fetch_missing` was removed in Wave 5: textweaver never downloads fonts. A `fetch_missing` line in an older `settings.toml` is ignored and dropped at the next save.
+`fetch_missing` was removed in 0.1.0-alpha.5: textweaver never downloads fonts. A `fetch_missing` line in an older `settings.toml` is ignored and dropped at the next save.
 
 ### [reading_aids.ruler]
 

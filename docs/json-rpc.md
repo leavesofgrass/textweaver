@@ -19,8 +19,6 @@ This starts the server and speaks, like the terminal reader:
 tw serve --stdio
 ```
 
-Some builds describe `serve` in `tw --help` as "Serve the app over JSON-RPC on stdio (wave 2)". The "(wave 2)" is out of date: the server is finished, and newer builds say "Serve the app over JSON-RPC 2.0 on stdin and stdout, for editors and other tools."
-
 Nothing is printed for a person to read. The server waits for JSON messages on standard input and writes only JSON messages on standard output. A person does not normally type at it. A program starts it.
 
 `--stdio` is required. Without it, `tw serve` stops at once with an error and exit code 1:

@@ -125,7 +125,7 @@ The choices in settings (and in HTML views) are:
 
 All three reading fonts are free, under the SIL Open Font License. OpenDyslexic comes with textweaver. For Atkinson Hyperlegible, textweaver uses the newer Atkinson Hyperlegible Next that comes with it, unless you have the original installed. Lexend does not come with textweaver. If you choose it and it is not installed, textweaver uses another reading font, or a plain font, so you can keep reading.
 
-textweaver never downloads fonts. When a reading font is missing, textweaver says so, names the font it uses instead, and says the missing one is free under the Open Font License. To use Lexend, install it yourself from its home page; textweaver finds it the next time it starts. (The `[reading_aids.font] fetch_missing` setting, which never did anything, was removed in Wave 5.)
+textweaver never downloads fonts. When a reading font is missing, textweaver says so, names the font it uses instead, and says the missing one is free under the Open Font License. To use Lexend, install it yourself from its home page; textweaver finds it the next time it starts. (The `[reading_aids.font] fetch_missing` setting, which never did anything, was removed in 0.1.0-alpha.5.)
 
 Font size is in points, from 6 to 144. The default is 14. Below 12, textweaver suggests a larger size.
 
