@@ -18,6 +18,7 @@ krilla.workspace = true
 zip.workspace = true
 textweaver-fonts.workspace = true
 textweaver-math.workspace = true
+textweaver-mathcat = { workspace = true, optional = true }
 
 [features]
 default = ["bundled-fonts"]
@@ -27,6 +28,9 @@ liblouis = []
 # Bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic): PDF
 # output needs no installed font, and EPUB can embed them.
 bundled-fonts = ["textweaver-fonts/bundled-fonts"]
+# Math in BRF files as Nemeth or UEB math braille through MathCAT
+# (ADR-0036); without it, math is written as its spoken words.
+mathcat = ["dep:textweaver-mathcat"]
 
 [dev-dependencies]
 ropey.workspace = true

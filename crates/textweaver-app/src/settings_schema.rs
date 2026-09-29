@@ -796,6 +796,13 @@ pub const INFO: &[Info] = &[
         "Subtitles with audio",
         "Always write subtitles beside exported audio.",
     ),
+    // [braille]
+    choice(
+        "braille.math_code",
+        "Math braille",
+        "The braille code for math in BRF files and while exploring a formula with MathCAT: Nemeth, or UEB mathematics. It needs a build that includes MathCAT; otherwise math is written as its spoken words.",
+        &[("nemeth", "Nemeth"), ("ueb", "UEB")],
+    ),
     // [reading_aids]
     number(
         "reading_aids.rsvp.wpm",
@@ -1151,6 +1158,7 @@ fn section_title(key: &str) -> &'static str {
         "keyboard" => "Keyboard",
         "accessibility" => "Accessibility",
         "export" => "Export",
+        "braille" => "Braille",
         "reading_aids" => "Reading aids",
         "preview" => "Preview",
         "lexicon" => "Define word",

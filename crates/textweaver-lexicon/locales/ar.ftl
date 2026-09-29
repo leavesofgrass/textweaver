@@ -1504,6 +1504,8 @@ mathx-first-term = الحد الأول.
 mathx-no-parts = لا أجزاء بداخله.
 mathx-whole-expression = التعبير كاملًا.
 mathx-nothing-here = لا شيء هنا.
+# $speech is what was said for the step; $code is the math braille code's name (Nemeth or UEB); $braille is the part's braille in Unicode braille cells, for the Braille display.
+mathx-step-braille = { $speech } { $code }: { $braille }
 
 ## أدوات القراءة: العرض السريع، والقراءة البيونية، والمقاطع، والكلمات الصعبة، والمسطرة، ومستوى القراءة.
 
@@ -1837,6 +1839,10 @@ setting-reading-math-engine-help = أي محرك يقرأ الرياضيات ب�
 choice-reading-math-engine-builtin = textweaver
 choice-reading-math-engine-mathcat = MathCAT ClearSpeak
 choice-reading-math-engine-mathcat-simplespeak = MathCAT SimpleSpeak
+setting-braille-math-code = برايل الرياضيات
+setting-braille-math-code-help = رمز برايل للرياضيات في ملفات BRF وعند استكشاف معادلة باستخدام MathCAT: نيميث أو رياضيات UEB. يحتاج إلى نسخة تتضمن MathCAT؛ وإلا تُكتب الرياضيات بكلماتها المنطوقة.
+choice-braille-math-code-nemeth = Nemeth
+choice-braille-math-code-ueb = UEB
 setting-reading-math-display = الرياضيات على الشاشة
 setting-reading-math-display-help = كيف تبدو الرياضيات في عرض القراءة: كمصدرها، مثل x^2، أو بيونيكود، مثل x بأس علوي 2. الكلام ووضع التحرير يستخدمان المصدر دائمًا.
 choice-reading-math-display-source = المصدر
@@ -2073,6 +2079,7 @@ section-library = المكتبة
 section-keyboard = لوحة المفاتيح
 section-accessibility = إمكانية الوصول
 section-export = التصدير
+section-braille = برايل
 section-reading-aids = أدوات القراءة
 section-preview = معاينة
 section-lexicon = تعريف كلمة
@@ -2886,6 +2893,70 @@ setting-speech-voice-params-help = السرعة وطبقة الصوت اللتا
 setting-editing-author = المؤلف
 setting-editing-author-help = المؤلف الذي يُكتب في المستندات الجديدة المنشأة من قالب؛ تركه فارغًا يبقيه خاليًا.
 
+## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
+## Keep the letters Y and N: they are the keys that answer.
+
+gui-yes = نعم
+gui-no = لا
+gui-question-hint = Y للإجابة بنعم، وN للإجابة بلا، وEscape للإجابة بلا.
+gui-button-open = فتح…
+gui-button-font = الخط…
+gui-button-edit = تحرير
+gui-button-finish-editing = إنهاء التحرير
+gui-button-settings = الإعدادات…
+gui-button-commands = الأوامر…
+gui-button-play = تشغيل
+gui-button-pause = إيقاف مؤقت
+gui-button-stop = إيقاف
+gui-button-previous-sentence = الجملة السابقة
+gui-button-next-sentence = الجملة التالية
+gui-button-slower = أبطأ
+gui-button-faster = أسرع
+gui-button-close = إغلاق
+gui-toolbar-reading = القراءة
+gui-document = المستند
+gui-list-hint = Enter للاختيار، وEscape للإغلاق.
+gui-settings-sections = الأقسام
+gui-settings-form = إعدادات { $section }
+gui-settings-saved-hint = تسري التغييرات وتُحفظ فورًا.
+gui-settings-close-help = إغلاق الإعدادات. كل تغيير محفوظ بالفعل.
+gui-settings-closed = أُغلقت الإعدادات.
+gui-settings-table = { $label } جدول. حرّره في settings.toml.
+gui-setting-new-value = قيمة جديدة لـ { $label }
+gui-setting-value-hint = اضغط Enter للقبول، أو Escape للرجوع.
+gui-prompt-path-hint = اكتب مسار مستند، ثم اضغط Enter. يكمله Tab، ويستعيد السهمان لأعلى ولأسفل المسارات السابقة.
+gui-prompt-hint = اضغط Enter للقبول، أو Escape للإلغاء. يستعيد السهمان لأعلى ولأسفل الإجابات السابقة.
+gui-palette-filter = اكتب لتصفية الأوامر
+gui-palette-list = الأوامر
+gui-palette-hint = يشغّل Enter أول نتيجة مطابقة، وينتقل Tab إلى القائمة.
+gui-no-document = لا يوجد مستند مفتوح. اضغط { $key } لفتح مستند.
+gui-open-failed = تعذّر فتح { $path }: { $error }
+gui-uia-unavailable = إشعارات UI Automation متاحة في Windows فقط؛ ستُستخدم المنطقة الحية.
+gui-rsvp = RSVP
+gui-rsvp-playing = RSVP قيد التشغيل، الكلمة { $n } من { $total }
+gui-rsvp-paused = RSVP متوقف مؤقتًا، الكلمة { $n } من { $total }
+gui-rsvp-finished = RSVP انتهى، الكلمة { $n } من { $total }
+gui-settings-section-item =
+    { $section }، { $n ->
+        [0] لا إعدادات
+        [one] إعداد واحد
+        [two] إعدادان
+        [few] { $n } إعدادات
+        [many] { $n } إعدادًا
+       *[other] { $n } إعداد
+    }
+gui-palette-count =
+    { $n ->
+        [0] لا يطابق أي أمر.
+        [one] أمر واحد.
+        [two] أمران.
+        [few] { $n } أوامر.
+        [many] { $n } أمرًا.
+       *[other] { $n } أمر.
+    }
+gui-settings-form-help = ينتقل السهمان لأعلى ولأسفل بين الإعدادات. ويغيّر السهمان لليسار ولليمين إعدادًا. ويكتب Enter قيمة جديدة. ويعيد Delete القيمة الافتراضية. ويغيّر { $next } و{ $previous } القسم.
+gui-settings-press-enter = اضغط Enter لكتابة قيمة جديدة لـ { $label }.
+gui-font-built-in = { $family } (مضمّن)
 ## Wave 5 (W5s): summaries and difficult-word definitions.
 
 action-summarize = تلخيص التحديد أو الفصل أو المستند: أهم جمله في قائمة؛ Enter ينتقل إلى إحداها

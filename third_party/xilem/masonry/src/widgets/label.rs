@@ -110,11 +110,11 @@ impl TextLayout {
         }
         self.alignment = alignment;
         self.alignment_width = alignment_width;
-        self.layout.align(
-            Some(self.alignment_width),
-            self.alignment,
-            TextAlignOptions::default(),
-        );
+        // textweaver (Parley 0.9 and later): `Layout::align` no longer takes
+        // a width; lines align within the `max_advance` given to
+        // `break_all_lines` (or the layout's own width without one).
+        self.layout
+            .align(self.alignment, TextAlignOptions::default());
     }
 
     /// Returns `true` if this layout would be the result for `max_advance`.

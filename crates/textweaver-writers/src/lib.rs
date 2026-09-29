@@ -227,6 +227,30 @@ pub enum BrailleGrade {
     Two,
 }
 
+/// The braille code math is written in (ADR-0036). It takes effect with
+/// the `mathcat` feature; without it, math is written as its spoken
+/// words in uncontracted braille.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MathCode {
+    /// The Nemeth Code, between the Nemeth switch indicators of BANA's
+    /// guidance for Nemeth in UEB contexts.
+    #[default]
+    Nemeth,
+    /// Unified English Braille's own mathematics.
+    Ueb,
+}
+
+impl MathCode {
+    /// The code's name, as it is said: "Nemeth" or "UEB".
+    pub fn name(self) -> &'static str {
+        match self {
+            MathCode::Nemeth => "Nemeth",
+            MathCode::Ueb => "UEB",
+        }
+    }
+}
+
 /// Braille (BRF) options.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -241,6 +265,8 @@ pub struct BrailleOptions {
     pub grade: BrailleGrade,
     /// liblouis table for grade 2 (default `en-ueb-g2.ctb`).
     pub table: String,
+    /// The braille code for math (default Nemeth).
+    pub math_code: MathCode,
 }
 
 impl Default for BrailleOptions {
@@ -251,6 +277,7 @@ impl Default for BrailleOptions {
             page_numbers: true,
             grade: BrailleGrade::One,
             table: "en-ueb-g2.ctb".to_owned(),
+            math_code: MathCode::Nemeth,
         }
     }
 }

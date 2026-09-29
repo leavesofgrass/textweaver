@@ -1351,6 +1351,8 @@ mathx-first-term = Primer término.
 mathx-no-parts = No hay partes dentro.
 mathx-whole-expression = Expresión completa.
 mathx-nothing-here = No hay nada aquí.
+# $speech is what was said for the step; $code is the math braille code's name (Nemeth or UEB); $braille is the part's braille in Unicode braille cells, for the Braille display.
+mathx-step-braille = { $speech } { $code }: { $braille }
 
 ## Reading aids: RSVP, bionic reading, syllables, difficult words, the ruler, and the reading level.
 
@@ -1670,6 +1672,10 @@ setting-reading-math-engine-help = Qué motor lee las matemáticas en voz alta: 
 choice-reading-math-engine-builtin = textweaver
 choice-reading-math-engine-mathcat = MathCAT ClearSpeak
 choice-reading-math-engine-mathcat-simplespeak = MathCAT SimpleSpeak
+setting-braille-math-code = Braille matemático
+setting-braille-math-code-help = El código braille para las matemáticas en archivos BRF y al explorar una fórmula con MathCAT: Nemeth o las matemáticas de UEB. Necesita una compilación que incluya MathCAT; si no, las matemáticas se escriben con sus palabras habladas.
+choice-braille-math-code-nemeth = Nemeth
+choice-braille-math-code-ueb = UEB
 setting-reading-math-display = Matemáticas en pantalla
 setting-reading-math-display-help = Cómo se ven las matemáticas en la vista de lectura: como su fuente, tal como x^2, o como Unicode, tal como x con un 2 en superíndice. La voz y el modo de edición siempre usan la fuente.
 choice-reading-math-display-source = fuente
@@ -1906,6 +1912,7 @@ section-library = Biblioteca
 section-keyboard = Teclado
 section-accessibility = Accesibilidad
 section-export = Exportar
+section-braille = Braille
 section-reading-aids = Ayudas de lectura
 section-preview = Vista previa
 section-lexicon = Definir palabra
@@ -2646,6 +2653,63 @@ setting-speech-voice-params-help = La velocidad y el tono con que se usó cada v
 setting-editing-author = Autor
 setting-editing-author-help = El autor que se escribe en los documentos nuevos hechos con una plantilla; vacío lo deja en blanco.
 
+## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
+## Keep the letters Y and N: they are the keys that answer.
+
+gui-yes = Sí
+gui-no = No
+gui-question-hint = Y responde sí, N responde no, Escape responde no.
+gui-button-open = Abrir…
+gui-button-font = Fuente…
+gui-button-edit = Editar
+gui-button-finish-editing = Terminar de editar
+gui-button-settings = Configuración…
+gui-button-commands = Comandos…
+gui-button-play = Reproducir
+gui-button-pause = Pausa
+gui-button-stop = Detener
+gui-button-previous-sentence = Frase anterior
+gui-button-next-sentence = Frase siguiente
+gui-button-slower = Más lento
+gui-button-faster = Más rápido
+gui-button-close = Cerrar
+gui-toolbar-reading = Lectura
+gui-document = Documento
+gui-list-hint = Intro elige, Escape cierra.
+gui-settings-sections = Secciones
+gui-settings-form = Configuración: { $section }
+gui-settings-saved-hint = Los cambios se aplican y se guardan al momento.
+gui-settings-close-help = Cerrar la configuración. Cada cambio ya está guardado.
+gui-settings-closed = Configuración cerrada.
+gui-settings-table = { $label } es una tabla. Edítela en settings.toml.
+gui-setting-new-value = Nuevo valor para { $label }
+gui-setting-value-hint = Pulse Intro para aceptar, o Escape para volver.
+gui-prompt-path-hint = Escriba la ruta de un documento y pulse Intro. Tab la completa; Arriba y Abajo recuperan las anteriores.
+gui-prompt-hint = Pulse Intro para aceptar, o Escape para cancelar. Arriba y Abajo recuperan respuestas anteriores.
+gui-palette-filter = Escriba para filtrar los comandos
+gui-palette-list = Comandos
+gui-palette-hint = Intro ejecuta la primera coincidencia; Tab pasa a la lista.
+gui-no-document = No hay ningún documento abierto. Pulse { $key } para abrir uno.
+gui-open-failed = No se pudo abrir { $path }: { $error }
+gui-uia-unavailable = Las notificaciones de UI Automation solo existen en Windows; se usa la región activa.
+gui-rsvp = RSVP
+gui-rsvp-playing = RSVP en marcha, palabra { $n } de { $total }
+gui-rsvp-paused = RSVP en pausa, palabra { $n } de { $total }
+gui-rsvp-finished = RSVP terminado, palabra { $n } de { $total }
+gui-settings-section-item =
+    { $section }, { $n ->
+        [one] 1 ajuste
+       *[other] { $n } ajustes
+    }
+gui-palette-count =
+    { $n ->
+        [0] Ningún comando coincide.
+        [one] 1 comando.
+       *[other] { $n } comandos.
+    }
+gui-settings-form-help = Arriba y Abajo pasan de un ajuste a otro. Izquierda y Derecha cambian uno. Intro escribe un valor nuevo. Suprimir restablece el valor predeterminado. { $next } y { $previous } cambian de sección.
+gui-settings-press-enter = Pulse Intro para escribir un valor nuevo para { $label }.
+gui-font-built-in = { $family } (incluida)
 ## Wave 5 (W5s): summaries and difficult-word definitions.
 
 action-summarize = Resumir la selección, el capítulo o el documento: sus oraciones más centrales en una lista; Intro va a una

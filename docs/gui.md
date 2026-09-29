@@ -21,6 +21,7 @@ Useful options:
 - `--announce live` or `--announce uia`: how messages reach your screen reader, for this run (see [Announcements](#announcements)).
 - `--select-spoken`: while reading, select the spoken word instead of only moving the caret to it (see [The spoken word](#the-spoken-word)).
 - `--home FOLDER`: keep settings and reading positions in this folder, as `TEXTWEAVER_HOME` does.
+- `--graphics API`: draw with one graphics API only: `vulkan`, `dx12` (Windows), `metal` (macOS), or `gl`; `auto`, the default, lets the graphics library use every one it finds. On the development machine `vulkan` used about 26 MB less memory, but this depends on your graphics driver. To keep a choice, put `graphics = "vulkan"` in the `[gui]` section of `settings.toml`.
 - `--log` or `--log-file PATH`: write what the window announces and does, for a bug report.
 
 `textweaver-xilem --help` lists every option.
@@ -66,6 +67,7 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **Ctrl+O**: open a document with the system's file chooser. **Ctrl+Shift+G**: type its path instead.
 - **Ctrl+Plus**, **Ctrl+Minus**, **Ctrl+0**: text size. **Ctrl+D**: the font list.
 - **F11** and **Shift+F11**: faster and slower (or **+** and **-** in browse). In the window, Ctrl+= and Ctrl+- size the text instead of the rate.
+- **Ctrl+Shift+V**: the voice manager (see [Voices](#voices)).
 - **Ctrl+,**: settings.
 - **F2**: the command palette, every command by name.
 - **F1**: help. In a list, F1 repeats the list's introduction.
@@ -86,18 +88,31 @@ Ctrl+E, or the Edit button, turns edit mode on, as in the terminal reader: you e
 In edit mode the document is a multi-line edit, so NVDA and JAWS switch to focus mode by themselves.
 
 - **Typing** goes in at the caret, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
-- **Your screen reader echoes** what you type, and reads the caret and the selection as they move. In the self-voicing mode, textweaver echoes typing as the typing echo setting says (Shift+F9 cycles it).
+- **Your screen reader echoes** what you type, and reads the caret and the selection as they move. In the self-voicing mode, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the caret moves to, and what a Shift key added to the selection or took from it.
 - **Undo** is Ctrl+Z, **redo** Ctrl+Y or Ctrl+Shift+Z, and each says what it undid. The editing keys are the terminal's: Ctrl+B bold, Ctrl+I italic, Ctrl+K a link, Ctrl+Alt+1 a heading, and the rest in the [keyboard reference](keyboard.md). Ctrl+S saves.
-- **Spell check:** Alt+M moves to the next misspelled word and selects it, so your screen reader says it and textweaver spells it. Type to replace it, or press Alt+J for suggestions. Alt+Shift+M goes back.
+- **Tab** types a tab, or in a table moves to the next cell (Shift+Tab to the previous one), as in the terminal. **Ctrl+Tab** moves the focus out of the document, to the buttons.
+- **Spell check:** Alt+M moves to the next misspelled word and selects it, so your screen reader says it and textweaver spells it. Type to replace it, or press Alt+J for suggestions. Alt+Shift+M goes back. Misspelled words are also marked on screen with a dotted underline, shortly after you stop typing (in documents up to a million characters).
 - **Citations while writing:** Alt+C opens the citation picker. Type part of an author or title to filter, Enter inserts it, and textweaver asks for a page or other locator. Alt+Shift+D adds a reference by DOI or ISBN.
 - **Export and preview:** the command palette (F2) has Export as a web page, PDF, Word, EPUB, and braille (BRF), each written next to the document, and Preview in the browser, which reloads when you save.
-- Tab still moves between the document and the buttons, so you are never trapped in the edit; Ctrl+E is always the way out of edit mode.
+- Ctrl+Tab and Ctrl+Shift+Tab move between the document and the buttons, so you are never trapped in the edit; Ctrl+E is always the way out of edit mode.
 
 ## The spoken word
 
 While textweaver reads, the spoken word has its own background color, and the caret sits at its start, so your screen reader and Braille display follow the reading. This is the default, chosen after the first screen reader session. `--select-spoken` selects the word instead, for anyone who prefers it.
 
 The document window: a very long document is shown a few hundred pages at a time, around where you are. When reading reaches the edge, the window moves on by itself. The text that stays keeps its place, so your screen reader does not lose it.
+
+## Questions
+
+When textweaver asks a yes-or-no question (a voice to download, after its size and licence; a voice to remove; a file changed on disk), the window shows it as a small dialog: the question is the dialog's name, so your screen reader says it, and the focus is on **Yes**. Press **Y** or **N**, as in the terminal, or Tab to **No** and press Enter. Escape answers no. Any other key asks the question again.
+
+## Voices
+
+**Ctrl+Shift+V** opens the voice manager, the same list as the terminal's. The first two rows filter it: Enter on "Language" or "Engine" cycles through the choices. Enter on a voice uses it and speaks a sample; on a voice you can download, textweaver reads its licence and size, then asks before downloading. Space marks a favourite; Delete removes a downloaded voice, after a yes.
+
+## Language
+
+The window's own labels (the buttons, the settings dialog, the hints) follow the interface language, `[interface] language` in `settings.toml`, as textweaver's messages do. Change it in Settings, under "Interface", and the window relabels itself at once.
 
 ## Announcements
 
@@ -116,6 +131,7 @@ The window draws the same [reading aids](reading-aids.md) as the terminal, with 
 - **The reading ruler** (Alt+Shift+U): off, the current line, or the ruler. The reading line gets a band with a bar at its start, the lines around it a paler band, and with `mask_outside` the rest is dimmed. It follows the caret, and the spoken word while reading.
 - **Bionic reading** (Alt+Shift+B): the start of each word in bold.
 - **Difficult words** (Alt+Shift+J): underlined with a thick line, never marked by color alone.
+- **Syllables** (Alt+Shift+Z): long words drawn split into syllables with a middle dot, "read·a·bil·i·ty", as in the terminal. The dot is only drawn: the words keep their letters, so your screen reader and Braille display read "readability", and the caret and the spoken word stay where they were. The separator and when words are split are in `[reading_aids.syllable_options]`.
 - **RSVP** (Alt+Shift+R, then Alt+Shift+P to play): one word at a time in its own strip under the document. The word before and after sit to its left and right. The marked letter is bold and underlined as well as colored. RSVP's nine places move the word left, center, or right in the strip.
 
 All of these change only how text looks. Your screen reader reads the same text either way. The RSVP word is hidden from screen readers, so it is never spoken by itself. Beside it is a quiet status ("RSVP paused, word 120 of 900") that you can find with your screen reader's review or object navigation.

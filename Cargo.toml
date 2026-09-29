@@ -38,8 +38,9 @@ members = [
     "xtask",
 ]
 # The vendored Xilem and Masonry snapshot is its own workspace (ADR-0027);
-# the vendored accesskit_windows is patched in below (ADR-0033).
-exclude = ["third_party/xilem", "third_party/accesskit_windows"]
+# the vendored accesskit_windows (ADR-0033) and MathCAT (ADR-0036) are
+# patched in below.
+exclude = ["third_party/xilem", "third_party/accesskit_windows", "third_party/mathcat"]
 default-members = [
     "crates/textweaver-core",
     "crates/textweaver-text",
@@ -389,7 +390,7 @@ strip = "symbols"
 inherits = "release"
 lto = "fat"
 
-# Parley 0.8.0 with its `accesskit` feature moved to AccessKit 0.25, for the
+# Parley 0.11.1 (Wave 5, W5a4; was 0.8.0) with its `accesskit` feature moved to AccessKit 0.25, for the
 # vendored Masonry (ADR-0027). No other crate in the workspace uses Parley.
 [patch.crates-io]
 parley = { path = "third_party/xilem/parley" }
@@ -397,3 +398,8 @@ parley = { path = "third_party/xilem/parley" }
 # shortcut given to UI Automation as AcceleratorKey, so screen readers can
 # say a button's key (ADR-0033, third_party/accesskit_windows/TEXTWEAVER.md).
 accesskit_windows = { path = "third_party/accesskit_windows" }
+# Wave 5, Agent W5c4: MathCAT 0.7.6-rc.3 with the fix for issue #827
+# (GetNavigationBraille panicked in no-unsafe builds), so math braille and
+# navigation work with `unsafe_code = "deny"` (ADR-0036,
+# third_party/mathcat/TEXTWEAVER.md). The version above stays pinned.
+mathcat = { path = "third_party/mathcat" }

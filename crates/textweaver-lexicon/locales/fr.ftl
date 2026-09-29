@@ -1379,6 +1379,8 @@ mathx-first-term = Premier terme.
 mathx-no-parts = Aucune partie à l'intérieur.
 mathx-whole-expression = Expression entière.
 mathx-nothing-here = Rien ici.
+# $speech is what was said for the step; $code is the math braille code's name (Nemeth or UEB); $braille is the part's braille in Unicode braille cells, for the Braille display.
+mathx-step-braille = { $speech } { $code } : { $braille }
 
 ## Reading aids: RSVP, bionic reading, syllables, difficult words, the ruler, and the reading level.
 
@@ -1698,6 +1700,10 @@ setting-reading-math-engine-help = Quel moteur lit les mathématiques à voix ha
 choice-reading-math-engine-builtin = textweaver
 choice-reading-math-engine-mathcat = MathCAT ClearSpeak
 choice-reading-math-engine-mathcat-simplespeak = MathCAT SimpleSpeak
+setting-braille-math-code = Braille mathématique
+setting-braille-math-code-help = Le code braille des mathématiques dans les fichiers BRF et pendant l'exploration d'une formule avec MathCAT : Nemeth, ou les mathématiques UEB. Il faut une version qui inclut MathCAT ; sinon, les mathématiques sont écrites avec leurs mots parlés.
+choice-braille-math-code-nemeth = Nemeth
+choice-braille-math-code-ueb = UEB
 setting-reading-math-display = Mathématiques à l'écran
 setting-reading-math-display-help = À quoi ressemblent les mathématiques dans la vue de lecture : comme leur source, tel que x^2, ou en Unicode, tel que x avec un 2 en exposant. La synthèse vocale et le mode édition utilisent toujours la source.
 choice-reading-math-display-source = source
@@ -1934,6 +1940,7 @@ section-library = Bibliothèque
 section-keyboard = Clavier
 section-accessibility = Accessibilité
 section-export = Exporter
+section-braille = Braille
 section-reading-aids = Aides à la lecture
 section-preview = Aperçu
 section-lexicon = Définir un mot
@@ -2674,6 +2681,63 @@ setting-speech-voice-params-help = Le débit et la hauteur de la dernière utili
 setting-editing-author = Auteur
 setting-editing-author-help = L'auteur écrit dans les nouveaux documents créés à partir d'un modèle ; vide le laisse en blanc.
 
+## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
+## Keep the letters Y and N: they are the keys that answer.
+
+gui-yes = Oui
+gui-no = Non
+gui-question-hint = Y répond oui, N répond non, Échap répond non.
+gui-button-open = Ouvrir…
+gui-button-font = Police…
+gui-button-edit = Modifier
+gui-button-finish-editing = Terminer la modification
+gui-button-settings = Paramètres…
+gui-button-commands = Commandes…
+gui-button-play = Lire
+gui-button-pause = Pause
+gui-button-stop = Arrêter
+gui-button-previous-sentence = Phrase précédente
+gui-button-next-sentence = Phrase suivante
+gui-button-slower = Plus lent
+gui-button-faster = Plus rapide
+gui-button-close = Fermer
+gui-toolbar-reading = Lecture
+gui-document = Document
+gui-list-hint = Entrée choisit, Échap ferme.
+gui-settings-sections = Sections
+gui-settings-form = Paramètres : { $section }
+gui-settings-saved-hint = Les modifications s'appliquent et sont enregistrées aussitôt.
+gui-settings-close-help = Fermer les paramètres. Chaque modification est déjà enregistrée.
+gui-settings-closed = Paramètres fermés.
+gui-settings-table = { $label } est un tableau. Modifiez-le dans settings.toml.
+gui-setting-new-value = Nouvelle valeur pour { $label }
+gui-setting-value-hint = Appuyez sur Entrée pour valider, ou sur Échap pour revenir.
+gui-prompt-path-hint = Tapez le chemin d'un document, puis appuyez sur Entrée. Tab le complète ; Haut et Bas rappellent les précédents.
+gui-prompt-hint = Appuyez sur Entrée pour valider, ou sur Échap pour annuler. Haut et Bas rappellent les réponses précédentes.
+gui-palette-filter = Tapez pour filtrer les commandes
+gui-palette-list = Commandes
+gui-palette-hint = Entrée exécute la première correspondance ; Tab passe à la liste.
+gui-no-document = Aucun document n'est ouvert. Appuyez sur { $key } pour en ouvrir un.
+gui-open-failed = Impossible d'ouvrir { $path } : { $error }
+gui-uia-unavailable = Les notifications UI Automation n'existent que sous Windows ; la région active est utilisée.
+gui-rsvp = RSVP
+gui-rsvp-playing = RSVP en cours, mot { $n } sur { $total }
+gui-rsvp-paused = RSVP en pause, mot { $n } sur { $total }
+gui-rsvp-finished = RSVP terminé, mot { $n } sur { $total }
+gui-settings-section-item =
+    { $section }, { $n ->
+        [one] 1 paramètre
+       *[other] { $n } paramètres
+    }
+gui-palette-count =
+    { $n ->
+        [0] Aucune commande ne correspond.
+        [one] 1 commande.
+       *[other] { $n } commandes.
+    }
+gui-settings-form-help = Haut et Bas passent d'un paramètre à l'autre. Gauche et Droite en changent un. Entrée tape une nouvelle valeur. Suppr remet la valeur par défaut. { $next } et { $previous } changent de section.
+gui-settings-press-enter = Appuyez sur Entrée pour taper une nouvelle valeur pour { $label }.
+gui-font-built-in = { $family } (intégrée)
 ## Wave 5 (W5s): summaries and difficult-word definitions.
 
 action-summarize = Résumer la sélection, le chapitre ou le document : ses phrases les plus centrales dans une liste ; Entrée va à l'une d'elles

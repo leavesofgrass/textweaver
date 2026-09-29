@@ -106,6 +106,265 @@ impl Formula {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Braille (ADR-0036).
+
+/// In braille ASCII from [`MathBraille`]: a space that must not end a line
+/// (it binds a Nemeth switch indicator to the math beside it).
+pub(crate) const BRAILLE_NBSP: char = '\u{1}';
+/// In braille ASCII from [`MathBraille`]: a place a long expression may be
+/// divided without an indicator (before an operation sign). No cell.
+pub(crate) const BRAILLE_BREAK: char = '\u{2}';
+/// In braille ASCII from [`MathBraille`]: the word is math, so a forced
+/// division gets no line continuation indicator and never follows an
+/// indicator. No cell.
+pub(crate) const BRAILLE_MATH: char = '\u{3}';
+
+/// Where a formula's braille goes in text before translation.
+const PLACEHOLDER_OPEN: char = '\u{E000}';
+const PLACEHOLDER_CLOSE: char = '\u{E001}';
+
+/// The Nemeth switch indicators in UEB text (BANA, Guidance for
+/// Transcription Using the Nemeth Code within UEB Contexts): the opening
+/// indicator (dots 456, 146) is followed by a space, the terminator (dots
+/// 456, 156) follows a space.
+const NEMETH_OPEN: &str = "_%";
+const NEMETH_CLOSE: &str = "_:";
+
+/// Braille for the formulas of one BRF file: each formula becomes a
+/// placeholder in the text, and its braille is spliced in after the text
+/// around it is translated ([`MathBraille::splice`]).
+///
+/// With the `mathcat` feature, formulas are written in the chosen math code
+/// by MathCAT. A formula MathCAT cannot write, one the parser had to
+/// repair, and every formula without the feature is written as its spoken
+/// words, translated with the text around it; [`MathBraille::summary`]
+/// says so once.
+pub(crate) struct MathBraille {
+    #[cfg_attr(not(feature = "mathcat"), allow(dead_code))]
+    code: crate::MathCode,
+    #[cfg_attr(not(feature = "mathcat"), allow(dead_code))]
+    grade2: bool,
+    /// Braille ASCII for each placeholder, in order.
+    cells: std::cell::RefCell<Vec<String>>,
+    /// Formulas written as their words.
+    words: std::cell::Cell<usize>,
+}
+
+impl MathBraille {
+    pub fn new(options: &crate::BrailleOptions) -> Self {
+        MathBraille {
+            code: options.math_code,
+            grade2: options.grade == crate::BrailleGrade::Two,
+            cells: std::cell::RefCell::new(Vec::new()),
+            words: std::cell::Cell::new(0),
+        }
+    }
+
+    /// The text `formula` stands as until translation: a placeholder for
+    /// its braille, or its spoken words.
+    pub fn text_for(&self, formula: &Formula) -> String {
+        match self.braille(formula) {
+            Some(ascii) => {
+                let mut cells = self.cells.borrow_mut();
+                let n = cells.len();
+                cells.push(ascii);
+                format!("{PLACEHOLDER_OPEN}{n}{PLACEHOLDER_CLOSE}")
+            }
+            None => {
+                self.words.set(self.words.get() + 1);
+                formula.spoken()
+            }
+        }
+    }
+
+    /// One sentence for the file's report when any formula was written as
+    /// its words, naming the code.
+    pub fn summary(&self) -> Option<String> {
+        let n = self.words.get();
+        if n == 0 {
+            return None;
+        }
+        let what = if n == 1 {
+            "1 formula is".to_owned()
+        } else {
+            format!("{n} formulas are")
+        };
+        Some(if cfg!(feature = "mathcat") {
+            format!(
+                "{what} in spoken words: MathCAT could not write {} in {} braille.",
+                if n == 1 { "it" } else { "them" },
+                self.code.name()
+            )
+        } else {
+            format!("{what} in spoken words: this build has no math braille.")
+        })
+    }
+
+    #[cfg(feature = "mathcat")]
+    fn braille(&self, formula: &Formula) -> Option<String> {
+        use textweaver_mathcat::{BrailleCode, BrailleOptions, braille_mathml, mathml_for};
+        if !formula.math.diagnostics.is_empty() {
+            return None;
+        }
+        let source = formula.math.source.trim();
+        // A number alone stays in UEB: BANA's guidance switches to Nemeth
+        // for math that is more than a single number.
+        if self.code == crate::MathCode::Nemeth
+            && !source.is_empty()
+            && source
+                .chars()
+                .all(|c| c.is_ascii_digit() || c == '.' || c == ',')
+        {
+            let t = crate::ueb::translate(source);
+            return t.unsupported.is_empty().then_some(t.braille);
+        }
+        let code = match self.code {
+            crate::MathCode::Nemeth => BrailleCode::Nemeth,
+            crate::MathCode::Ueb => BrailleCode::Ueb,
+        };
+        let options = BrailleOptions {
+            code,
+            grade2: self.grade2,
+        };
+        braille_mathml(&mathml_for(&formula.math, formula.display), &options)
+            .ok()
+            .map(|cells| self.layout(&crate::ueb::from_unicode(&cells)))
+    }
+
+    #[cfg(not(feature = "mathcat"))]
+    fn braille(&self, _formula: &Formula) -> Option<String> {
+        None
+    }
+
+    /// The braille ASCII of an expression, ready for the line wrapper:
+    /// every word marked as math, division points before operation signs,
+    /// and for Nemeth the switch indicators bound to the math beside them.
+    ///
+    /// Spaces inside math stand around comparison signs (and after a
+    /// function name). A short spaced word after the first (a comparison
+    /// sign such as `.K`, or a function name such as `SIN`) is bound to the
+    /// word after it, so a line divides before a comparison sign, never
+    /// right after one.
+    #[cfg_attr(not(feature = "mathcat"), allow(dead_code))]
+    fn layout(&self, ascii: &str) -> String {
+        /// The most cells a word bound to the next may have.
+        const SHORT: usize = 3;
+        let nemeth = self.code == crate::MathCode::Nemeth;
+        let mut out = String::with_capacity(ascii.len() + 16);
+        out.push(BRAILLE_MATH);
+        if nemeth {
+            out.push_str(NEMETH_OPEN);
+            out.push(BRAILLE_NBSP);
+        }
+        let words: Vec<Vec<char>> = ascii.split(' ').map(|w| w.chars().collect()).collect();
+        for (k, chars) in words.iter().enumerate() {
+            if k > 0 {
+                if k >= 2 && words[k - 1].len() <= SHORT {
+                    out.push(BRAILLE_NBSP);
+                } else {
+                    out.push(' ');
+                    out.push(BRAILLE_MATH);
+                }
+            }
+            for (i, &c) in chars.iter().enumerate() {
+                if i > 0 && division_before(chars, i, nemeth) {
+                    out.push(BRAILLE_BREAK);
+                }
+                out.push(c);
+            }
+        }
+        if nemeth {
+            out.push(BRAILLE_NBSP);
+            out.push_str(NEMETH_CLOSE);
+        }
+        out
+    }
+
+    /// `translated` (braille of text with placeholders) with each
+    /// placeholder replaced by its formula's braille.
+    pub fn splice(&self, translated: &str) -> String {
+        if !translated.contains(PLACEHOLDER_OPEN) {
+            return translated.to_owned();
+        }
+        let cells = self.cells.borrow();
+        let mut out = String::with_capacity(translated.len() + 32);
+        let mut rest = translated;
+        while let Some(at) = rest.find(PLACEHOLDER_OPEN) {
+            out.push_str(&rest[..at]);
+            let after = &rest[at + PLACEHOLDER_OPEN.len_utf8()..];
+            let Some(end) = after.find(PLACEHOLDER_CLOSE) else {
+                rest = after;
+                continue;
+            };
+            if let Some(b) = after[..end]
+                .parse::<usize>()
+                .ok()
+                .and_then(|n| cells.get(n))
+            {
+                out.push_str(b);
+            }
+            rest = &after[end + PLACEHOLDER_CLOSE.len_utf8()..];
+        }
+        out.push_str(rest);
+        out
+    }
+}
+
+/// Splits text with formula placeholders into the pieces to translate and
+/// the placeholders between them, so the placeholders never reach a
+/// translator. Each piece keeps a single space where it had space at
+/// either end (liblouis may trim it).
+pub(crate) fn split_placeholders(text: &str) -> Vec<Piece<'_>> {
+    let mut out = Vec::new();
+    let mut rest = text;
+    while let Some(at) = rest.find(PLACEHOLDER_OPEN) {
+        let Some(len) = rest[at..].find(PLACEHOLDER_CLOSE) else {
+            break;
+        };
+        let end = at + len + PLACEHOLDER_CLOSE.len_utf8();
+        if at > 0 {
+            out.push(Piece::Text(&rest[..at]));
+        }
+        out.push(Piece::Math(&rest[at..end]));
+        rest = &rest[end..];
+    }
+    if !rest.is_empty() {
+        out.push(Piece::Text(rest));
+    }
+    out
+}
+
+/// A piece of text around formula placeholders.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Piece<'a> {
+    /// Print text, to translate.
+    Text(&'a str),
+    /// A placeholder, kept as it is.
+    Math(&'a str),
+}
+
+/// Operation signs a long expression may be divided before (the sign
+/// starts the next line): plus and minus in Nemeth, with the baseline
+/// indicator (dot 5) that comes back from a superscript or subscript kept
+/// before the sign; plus, minus, times, and divided by (dot 5 and a second
+/// cell) in UEB. Never right after an indicator, so an indicator stays
+/// with the symbol it modifies.
+fn division_before(chars: &[char], i: usize, nemeth: bool) -> bool {
+    const INDICATORS: &str = ",;^\".#_@";
+    let prev = chars[i - 1];
+    if INDICATORS.contains(prev) {
+        return false;
+    }
+    let c = chars[i];
+    let sign = |c: Option<&char>| matches!(c, Some('+' | '-'));
+    if nemeth {
+        sign(Some(&c)) || (c == '"' && sign(chars.get(i + 1)))
+    } else {
+        c == '"' && matches!(chars.get(i + 1), Some('6' | '-' | '8' | '/'))
+    }
+}
+
 /// Replaces every math span in `blocks` with `text(formula)` as plain text
 /// (braille writes the spoken form).
 pub(crate) fn replace_spans(blocks: &mut [Block], text: &dyn Fn(&Formula) -> String) {

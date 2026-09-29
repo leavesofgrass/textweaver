@@ -32,6 +32,7 @@ use std::io::Write;
 
 use textweaver_text::Document;
 
+use crate::math::{BRAILLE_BREAK, BRAILLE_MATH, BRAILLE_NBSP};
 use crate::model::{self, Block, Inline, List, Table};
 use crate::ueb;
 use crate::{BrailleGrade, BrailleOptions, Format, WriteError, WriteOptions, WriteReport, Writer};
@@ -53,13 +54,18 @@ impl Writer for BrfWriter {
     ) -> Result<WriteReport, WriteError> {
         let mut report = WriteReport::default();
         let mut blocks = model::blocks(doc);
-        // Math is written as it is read aloud ("x squared"), which grade 1
-        // braille spells out readably.
-        crate::math::replace_spans(&mut blocks, &|f| f.spoken());
+        // Math is written in the math code (Nemeth or UEB) through MathCAT,
+        // or as it is read aloud ("x squared"), which braille spells out
+        // readably (ADR-0036).
+        let math = crate::math::MathBraille::new(&options.braille);
+        crate::math::replace_spans(&mut blocks, &|f| math.text_for(f));
+        if let Some(summary) = math.summary() {
+            report.warn(summary);
+        }
         let mut items = Vec::new();
         flatten(&blocks, 0, &mut items);
         let texts: Vec<&str> = items.iter().filter_map(Item::text).collect();
-        let translated = translate_all(&texts, &options.braille, &mut report)?;
+        let translated = translate_with_math(&texts, &math, &options.braille, &mut report)?;
         let brf = layout(&items, translated, &options.braille);
         out.write_all(brf.as_bytes())?;
         Ok(report)
@@ -228,6 +234,71 @@ fn flatten_table(table: &Table, indent: usize, out: &mut Vec<Item>) {
     }
 }
 
+/// Translates every text around its formulas' placeholders, then splices
+/// in each formula's braille. Texts without formulas are translated whole,
+/// as before.
+fn translate_with_math(
+    texts: &[&str],
+    math: &crate::math::MathBraille,
+    options: &BrailleOptions,
+    report: &mut WriteReport,
+) -> Result<Vec<String>, WriteError> {
+    use crate::math::{Piece, split_placeholders};
+    // Each text as pieces; `None` for a whole text translated as it is.
+    let plans: Vec<Option<Vec<Piece<'_>>>> = texts
+        .iter()
+        .map(|t| {
+            let pieces = split_placeholders(t);
+            pieces
+                .iter()
+                .any(|p| matches!(p, Piece::Math(_)))
+                .then_some(pieces)
+        })
+        .collect();
+    let mut prose: Vec<&str> = Vec::with_capacity(texts.len());
+    for (t, plan) in texts.iter().zip(&plans) {
+        match plan {
+            None => prose.push(t),
+            Some(pieces) => prose.extend(pieces.iter().filter_map(|p| match p {
+                Piece::Text(s) if !s.trim().is_empty() => Some(s.trim()),
+                _ => None,
+            })),
+        }
+    }
+    let mut done = translate_all(&prose, options, report)?.into_iter();
+    let mut out = Vec::with_capacity(texts.len());
+    for plan in &plans {
+        match plan {
+            None => out.push(done.next().unwrap_or_default()),
+            Some(pieces) => {
+                let mut s = String::new();
+                for p in pieces {
+                    match p {
+                        Piece::Math(placeholder) => s.push_str(placeholder),
+                        Piece::Text(t) if t.trim().is_empty() => push_space(&mut s, t),
+                        Piece::Text(t) => {
+                            push_space(&mut s, &t[..t.len() - t.trim_start().len()]);
+                            s.push_str(&done.next().unwrap_or_default());
+                            push_space(&mut s, &t[t.trim_end().len()..]);
+                        }
+                    }
+                }
+                out.push(math.splice(&s));
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Pushes the whitespace `ws` as one space, or a line break if it has one.
+fn push_space(s: &mut String, ws: &str) {
+    if ws.contains('\n') {
+        s.push('\n');
+    } else if !ws.is_empty() {
+        s.push(' ');
+    }
+}
+
 /// Translates every text, natively or through liblouis.
 fn translate_all(
     texts: &[&str],
@@ -356,17 +427,103 @@ impl Pages {
     }
 }
 
+/// Cells `s` takes on a line: the math markers take none.
+fn cells(s: &str) -> usize {
+    s.chars()
+        .filter(|&c| c != BRAILLE_BREAK && c != BRAILLE_MATH)
+        .count()
+}
+
+/// The byte index just after the first `n` cells of `s`.
+fn cell_index(s: &str, n: usize) -> usize {
+    let mut seen = 0;
+    for (i, c) in s.char_indices() {
+        if c != BRAILLE_BREAK && c != BRAILLE_MATH {
+            if seen == n {
+                return i;
+            }
+            seen += 1;
+        }
+    }
+    s.len()
+}
+
+/// A line as written: bound spaces become spaces, markers go.
+fn finish_line(s: &str) -> String {
+    s.chars()
+        .filter(|&c| c != BRAILLE_BREAK && c != BRAILLE_MATH)
+        .map(|c| if c == BRAILLE_NBSP { ' ' } else { c })
+        .collect()
+}
+
+/// Where to divide a word that does not fit in `room` cells: the byte
+/// index, and whether the line continuation indicator (dot 5) goes after
+/// the first part.
+///
+/// Print words divide after a hyphen when one fits, else with the
+/// indicator. Math divides before an operation sign when one fits; failing
+/// that, at the room's end but never right after an indicator or a bound
+/// space, and without the dot-5 indicator, which is a Nemeth symbol of its
+/// own (the baseline indicator).
+fn divide(word: &str, room: usize) -> Option<(usize, bool)> {
+    let limit = cell_index(word, room);
+    if word.contains(BRAILLE_MATH) {
+        let head = &word[..limit];
+        if let Some(b) = head.rfind(BRAILLE_BREAK).filter(|&b| cells(&head[..b]) > 0) {
+            return Some((b, false));
+        }
+        // Indicators stay with what follows them, and an operation sign
+        // starts the next line rather than ending this one.
+        const KEEP_WITH_NEXT: &str = ",;^\".#_@+-";
+        // A bound space holds both of its neighbors: no cut on either side.
+        let mut cut = limit;
+        while cut > 0 {
+            let prev = word[..cut].chars().next_back()?;
+            let next = word[cut..]
+                .chars()
+                .find(|&c| c != BRAILLE_BREAK && c != BRAILLE_MATH);
+            if prev == BRAILLE_NBSP
+                || KEEP_WITH_NEXT.contains(prev)
+                || prev == BRAILLE_MATH
+                || prev == BRAILLE_BREAK
+                || next == Some(BRAILLE_NBSP)
+            {
+                cut -= prev.len_utf8();
+            } else {
+                break;
+            }
+        }
+        return (cells(&word[..cut]) > 0).then_some((cut, false));
+    }
+    let cut = word[..limit]
+        .rfind('-')
+        .filter(|&h| h > 0)
+        .map(|h| h + 1)
+        .unwrap_or(cell_index(word, room.saturating_sub(1)));
+    Some((cut, !word[..cut].ends_with('-')))
+}
+
 /// Wraps braille into lines of `width` cells with the given indents.
+///
+/// Math from [`MathBraille`](crate::math::MathBraille) carries markers: a
+/// bound space ([`BRAILLE_NBSP`]) that never ends a line, so a Nemeth
+/// switch indicator stays with the math beside it; division points before
+/// operation signs ([`BRAILLE_BREAK`]); and the math mark
+/// ([`BRAILLE_MATH`]). The lines returned have none of them.
 fn wrap(braille: &str, width: usize, first: usize, runover: usize) -> Vec<String> {
     let mut lines = Vec::new();
     let mut line = " ".repeat(first.min(width / 2));
     let mut empty = true;
     let runover_pad = " ".repeat(runover.min(width / 2));
-    for word in braille.split(' ').filter(|w| !w.is_empty()) {
+    for word in braille.split(' ').filter(|w| cells(w) > 0) {
         let mut word = word.to_owned();
         loop {
-            let need = if empty { word.len() } else { word.len() + 1 };
-            if line.len() + need <= width {
+            let need = if empty {
+                cells(&word)
+            } else {
+                cells(&word) + 1
+            };
+            if cells(&line) + need <= width {
                 if !empty {
                     line.push(' ');
                 }
@@ -374,31 +531,34 @@ fn wrap(braille: &str, width: usize, first: usize, runover: usize) -> Vec<String
                 empty = false;
                 break;
             }
-            let room = width.saturating_sub(line.len() + usize::from(!empty));
-            // Divide after a hyphen when it fits, else with the line
-            // continuation indicator; move the word down when it would fit
-            // on a fresh line.
+            let room = width.saturating_sub(cells(&line) + usize::from(!empty));
+            // Move the word down when it would fit on a fresh line, else
+            // divide it.
             let fresh = width - runover_pad.len();
-            if !empty && word.len() <= fresh {
+            if !empty && cells(&word) <= fresh {
                 lines.push(std::mem::replace(&mut line, runover_pad.clone()));
                 empty = true;
                 continue;
             }
-            if room >= 3 {
-                let cut = word[..room]
-                    .rfind('-')
-                    .filter(|&h| h > 0)
-                    .map(|h| h + 1)
-                    .unwrap_or(room - 1);
+            let division = if room >= 3 { divide(&word, room) } else { None };
+            // On an empty line something must be written, so the loop ends.
+            let division =
+                division.or_else(|| empty.then(|| (cell_index(&word, room.max(1)), false)));
+            if let Some((cut, indicator)) = division {
                 let (head, tail) = word.split_at(cut);
                 if !empty {
                     line.push(' ');
                 }
                 line.push_str(head);
-                if !head.ends_with('-') {
+                if indicator {
                     line.push('"');
                 }
-                word = tail.to_owned();
+                let math = head.contains(BRAILLE_MATH);
+                let mut rest = tail.trim_start_matches(BRAILLE_BREAK).to_owned();
+                if math && !rest.starts_with(BRAILLE_MATH) {
+                    rest.insert(0, BRAILLE_MATH);
+                }
+                word = rest;
             }
             lines.push(std::mem::replace(&mut line, runover_pad.clone()));
             empty = true;
@@ -407,7 +567,7 @@ fn wrap(braille: &str, width: usize, first: usize, runover: usize) -> Vec<String
     if !empty || lines.is_empty() {
         lines.push(line);
     }
-    lines
+    lines.iter().map(|l| finish_line(l)).collect()
 }
 
 fn layout(items: &[Item], translated: Vec<String>, options: &BrailleOptions) -> String {
@@ -553,6 +713,27 @@ mod tests {
         let mut out = Vec::new();
         let report = BrfWriter.write(doc, options, &mut out).unwrap();
         (String::from_utf8(out).unwrap(), report)
+    }
+
+    /// Math markers: a bound space never ends a line, division points take
+    /// no cell and divide without dot 5, and no marker reaches the file.
+    #[test]
+    fn math_markers_bind_and_divide() {
+        let math = format!(
+            "{BRAILLE_MATH}_%{BRAILLE_NBSP}AAAA{BRAILLE_BREAK}+BBBB{BRAILLE_BREAK}+CCCC{BRAILLE_NBSP}_:"
+        );
+        let lines = wrap(&math, 12, 0, 0);
+        assert_eq!(lines, vec!["_% AAAA+BBBB", "+CCCC _:"]);
+        // Three cells are left after the print word: the opening indicator
+        // would fit, but it moves down with the math it is bound to.
+        let lines = wrap(&format!("XXXXXXXX {math}"), 12, 0, 0);
+        assert_eq!(lines, vec!["XXXXXXXX", "_% AAAA+BBBB", "+CCCC _:"]);
+        for l in &lines {
+            assert!(l.len() <= 12, "{lines:?}");
+            assert!(!l.ends_with("_%"), "{lines:?}");
+            assert!(!l.starts_with("_:"), "{lines:?}");
+            assert!(!l.contains(['\u{1}', '\u{2}', '\u{3}']), "{lines:?}");
+        }
     }
 
     #[test]
