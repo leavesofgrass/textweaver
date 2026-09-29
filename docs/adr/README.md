@@ -84,6 +84,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: proposed; every check reports and none fails a job. Answers so far: NVDA through Guidepup and Orca read the GUI; the tree dump works on Windows and macOS.
 - [ADR-0041: Publishing templates, real Word footnotes, and PDF page labels](0041-publishing-templates.md): APA, AMA, large print, dyslexia-friendly, high contrast, and manuscript templates for EPUB, Word, and PDF, real Word footnotes, an EPUB cover with alternative text, and PDF pages labelled with their print pages.
   - Status: accepted; a check with Word and JAWS is still queued.
+- [ADR-0043: Menus and the palette from one model](0043-menus-and-the-palette-from-one-model.md): the menus of both frontends from one model with catalog labels and live keys, the palette's names and ranking, interface announcements with levels, logical keys on macOS, and colors in the settings.
+  - Status: accepted; waiting for the terminal session and the GUI's native menus.
 
 ## Writing a new ADR
 

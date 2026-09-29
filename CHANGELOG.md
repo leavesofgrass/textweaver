@@ -4,6 +4,40 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### W6u: menus, the palette, interface announcements, and colors
+
+#### Keys: what changed
+
+- `F10` opens the menus in the terminal, in every preset, as in Windows programs. Previous chapter keeps `Alt+PageUp` and `Shift+D`.
+- New keys: `Ctrl+F9` cycles the interface announcements, `Ctrl+Shift+F9` starts and stops dictation (when it arrives), and `Shift+F1` says what the next key does.
+- On macOS the GUI uses Mac keys, not Ctrl renamed: Option with the arrows moves by word and paragraph, Command with the arrows goes to the ends, `Cmd+[` and `Cmd+]` go back and forward, Command runs commands, and chords with Alt and a letter are Command+Option. Nothing takes VoiceOver's Ctrl+Option. The keyboard reference has a GUI on macOS column.
+
+#### Menus and the palette
+
+- **Menus: F10.** File, Edit, View, Reading, Speech, Tools, and Help, with every command and its keys, in six languages. In the terminal they are a list: "Menus, 1 of 7, File"; Enter or Right opens, a letter moves to its item, Left goes back, Escape closes. Switches say "checked", choices their value. File, Recent documents lists what you opened last with your place in it.
+- **The command palette** says each command name first with its menu: "Export PDF, File: ...". `ep` finds Export PDF; the best matches come first. With nothing typed, your recent commands come first, said as recent. Ctrl+L lists the matches.
+- **What does this key do** (Shift+F1) and **About** in the Help menu.
+
+#### Interface announcements
+
+- **Say less about the interface:** `[accessibility] interface_announcements` (off, minimal, normal, full; Ctrl+F9) decides how much textweaver says about itself: lists opening and closing, progress, hints, and routine confirmations. Errors, questions, and answers to what you asked are always said. Automatic is minimal with a screen reader and normal when self-voicing.
+
+#### Colors and settings
+
+- **Colors** (View, Colors): a color for the reading ruler, difficult words, syllable marks, misspellings, lint marks, search matches, the selection, the focus, links, headings, the status bar, notes, and bookmarks, from named colors (blue and orange first) or `#rrggbb`, each with its contrast said ("contrast 6.2 to 1, good"). Every mark keeps its underline or bold whatever its color.
+- **The settings screen** lists the five settings you changed last at the top, says the default that Delete puts back, and says a setting's help on F1.
+- **Import settings** names the first changes before asking. A renamed setting keeps its value.
+- Numbers are grouped as your language writes them ("12.345" in German).
+
+#### Speed
+
+- Entering edit mode, and moving by line in it, says the line's first sentence or first 200 characters and "line continues", not the whole line (a 1 MB line held the first typed echo back by about a quarter of a second).
+- The terminal reader draws only when something changed, and keeps what each frame needs until the document or the view changes; the difficult-word list is no longer loaded while the aid is off.
+
+#### JSON-RPC
+
+- `insert` types text at the caret in edit mode, and is refused outside it.
+
 ## [0.1.0-alpha.5] - 2026-09-29
 
 The fifth alpha. Braille comes first: every status line, list, and prompt puts the meaning in the first 40 cells, and math can be written in Nemeth or UEB braille. LaTeX, email, and web archives open without Pandoc; documents can be summarized with no model; publishing templates make APA and AMA papers with real Word footnotes; and the GUI ships in the release on every system, with syllables, the voice manager, a question dialog, and its labels in six languages.

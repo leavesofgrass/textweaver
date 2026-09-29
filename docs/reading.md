@@ -214,9 +214,9 @@ On a footnote reference, **Alt+Shift+F** goes to the note; on the note, it goes 
 ### Chapters
 
 - **d**, **F11**, or **Alt+PageDown**: next chapter.
-- **Shift+D**, **F10**, or **Alt+PageUp**: previous chapter. More than five words into a chapter, this goes back to its start instead.
+- **Shift+D** or **Alt+PageUp**: previous chapter. More than five words into a chapter, this goes back to its start instead. (**F10** opens the menus since September 29, 2026.)
 
-Chapters are the book's sections when the document has them (EPUB chapters, Word sections, PDF bookmarks). Otherwise they are the level-1 headings. A document with neither says "This document has no chapters." Some terminal programs keep F10 and F11 for themselves; the Alt chords always work. The GUI uses only the Alt chords.
+Chapters are the book's sections when the document has them (EPUB chapters, Word sections, PDF bookmarks). Otherwise they are the level-1 headings. A document with neither says "This document has no chapters." Some terminal programs keep F11 for themselves; the Alt chords always work. The GUI uses only the Alt chords.
 
 ### Start and end
 
@@ -451,7 +451,7 @@ The [speech guide](speech.md) covers rate, pitch, volume, and voices.
 
 ## Announcements and verbosity
 
-textweaver tells you about every change: a move, a mode, a setting. How much it says is set by `[speech] verbosity`:
+textweaver tells you about every change: a move, a mode, a setting. How much it says is set by `[speech] verbosity` (below), and how much it says about itself by the interface announcements (the next section). `[speech] verbosity`:
 
 ```toml
 [speech]
@@ -469,6 +469,22 @@ Announcements never interrupt reading, except errors. While reading, they go to 
 Change the level while textweaver runs with **Alt+Shift+V**: low, normal, high, then low again. You hear the new level ("Verbosity: high."), and it is saved.
 
 **Alt+Shift+N** does the same for how much punctuation is spoken (`[speech] punctuation`): none, some, all. The change is heard at once and saved.
+
+### Interface announcements: Ctrl+F9
+
+Your screen reader and Braille display already tell you when a list opens or a dialog closes. The interface announcements decide how much textweaver says about itself on top of that: lists and menus opening and closing, progress, hints, tips, and confirmations of routine changes. Reading speech and math are not affected.
+
+- **Off**: only errors, questions waiting for your answer, and answers to what you asked (where you are, a count, the item you moved to).
+- **Minimal**: also the result of each command you run ("Bionic reading on", "Saved", the name of a list or menu you opened).
+- **Normal**: also routine confirmations, lists and dialogs closing, progress at a calm pace (at most every ten seconds), and tips.
+- **Full**: also hints about keys and counts in progress.
+
+An error, a question, and the answer to something you asked are said at every level. **Ctrl+F9** cycles off, minimal, normal, full, and the change is always said. With `automatic`, the default, it is minimal with a screen reader (screen-reader and hybrid modes) and normal when textweaver speaks for itself. It is also View, Interface announcements in the menus, and in `settings.toml`:
+
+```toml
+[accessibility]
+interface_announcements = "minimal"
+```
 
 ## Spelling
 
@@ -501,14 +517,37 @@ textweaver counts the time it spends reading each document aloud, the furthest p
 
 Statistics are saved every 30 seconds while reading, and when a document closes. `tw stats` prints them, `tw stats --json` prints everything, and `tw stats --clear` removes them. To stop recording, turn them off in the list or set `[stats] enabled = false` ([settings.md](settings.md#stats)). `tw migrate-star` brings Star's reading statistics over.
 
+## The menus: F10
+
+Press **F10** to open the menus: File, Edit, View, Reading, Speech, Tools, and Help. Every command is in them, with its keys. In the terminal they are a list, place first on the Braille display: "Menus, 1 of 7, File".
+
+- **Up** and **Down** move; **Enter** or **Right** opens a menu or runs a command.
+- A letter moves to the item with that access key, as in a Windows menu: **x** in the File menu lands on "Export as".
+- **Left** or **Backspace** goes back up; **Escape** closes the menus, and you are where you were.
+- Each item says its name, then its state for a switch ("Bionic reading, checked") or its value ("Reading ruler: current line"), then its keys ("Open, Ctrl+O").
+- **F1** says where you are and these keys.
+
+Some terminal programs keep F10 for themselves; then type `menu` in the command palette.
+
+File, Recent documents lists the last documents you opened, with your place in each ("essay.md, 43 percent"); the digits 1 to 8 choose them. File, Settings has the settings screen, Colors, Profiles, and Export settings and Import settings.
+
+## What does this key do: Shift+F1
+
+Press **Shift+F1**, then any key: you hear what the key does, its keys, and where the command is in the menus ("Export PDF: Export the document as a tagged PDF next to it. Keys: the command palette. In the menus: File, Export as, Export PDF."). The key is not run.
+
 ## The command palette: F2
 
 Press **F2** to run any command by name. **Alt+X** and **:** open it too. The GUI uses **F2** and **:**. You hear "Command. Type part of a name; Tab completes, Up and Down list matches." (at low verbosity, just "Command"); the bottom line shows "Command".
 
-1. Type part of a command's name, such as `next head`.
+1. Type part of a command's name, such as `next head`, or its first letters: `ep` finds Export PDF.
 2. Press **Tab** to complete it. You hear how many commands match and the first few names.
-3. Or press **Down** and **Up** to go through the matching commands. You hear each command's name, what it does, and its keys.
+3. Or press **Down** and **Up** to go through the matching commands. Each is said name first, then its menu category, what it does, and its keys: "Export PDF, File: Export the document as a tagged PDF next to it."
 4. Press **Enter** to run it.
+5. Or press **Ctrl+L** to hear the matches as a list, and choose one with **Enter**.
+
+With nothing typed, the commands you ran last from the palette or the menus come first, each said as "recent".
+
+Matches are ordered: the exact name, names that start with what you typed, names whose words start with your letters (`ep`, or `exp pd`), names with your letters in order, then commands whose help has every word you typed. Names match in your interface language and in English.
 
 An unknown name gives "Unknown command:" and your text.
 
