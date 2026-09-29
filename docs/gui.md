@@ -67,6 +67,7 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **Ctrl+O**: open a document with the system's file chooser. **Ctrl+Shift+G**: type its path instead.
 - **Ctrl+Plus**, **Ctrl+Minus**, **Ctrl+0**: text size. **Ctrl+D**: the font list.
 - **F11** and **Shift+F11**: faster and slower (or **+** and **-** in browse). In the window, Ctrl+= and Ctrl+- size the text instead of the rate.
+- **Ctrl+Shift+V**: the voice manager (see [Voices](#voices)).
 - **Ctrl+,**: settings.
 - **F2**: the command palette, every command by name.
 - **F1**: help. In a list, F1 repeats the list's introduction.
@@ -87,18 +88,31 @@ Ctrl+E, or the Edit button, turns edit mode on, as in the terminal reader: you e
 In edit mode the document is a multi-line edit, so NVDA and JAWS switch to focus mode by themselves.
 
 - **Typing** goes in at the caret, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
-- **Your screen reader echoes** what you type, and reads the caret and the selection as they move. In the self-voicing mode, textweaver echoes typing as the typing echo setting says (Shift+F9 cycles it).
+- **Your screen reader echoes** what you type, and reads the caret and the selection as they move. In the self-voicing mode, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the caret moves to, and what a Shift key added to the selection or took from it.
 - **Undo** is Ctrl+Z, **redo** Ctrl+Y or Ctrl+Shift+Z, and each says what it undid. The editing keys are the terminal's: Ctrl+B bold, Ctrl+I italic, Ctrl+K a link, Ctrl+Alt+1 a heading, and the rest in the [keyboard reference](keyboard.md). Ctrl+S saves.
-- **Spell check:** Alt+M moves to the next misspelled word and selects it, so your screen reader says it and textweaver spells it. Type to replace it, or press Alt+J for suggestions. Alt+Shift+M goes back.
+- **Tab** types a tab, or in a table moves to the next cell (Shift+Tab to the previous one), as in the terminal. **Ctrl+Tab** moves the focus out of the document, to the buttons.
+- **Spell check:** Alt+M moves to the next misspelled word and selects it, so your screen reader says it and textweaver spells it. Type to replace it, or press Alt+J for suggestions. Alt+Shift+M goes back. Misspelled words are also marked on screen with a dotted underline, shortly after you stop typing (in documents up to a million characters).
 - **Citations while writing:** Alt+C opens the citation picker. Type part of an author or title to filter, Enter inserts it, and textweaver asks for a page or other locator. Alt+Shift+D adds a reference by DOI or ISBN.
 - **Export and preview:** the command palette (F2) has Export as a web page, PDF, Word, EPUB, and braille (BRF), each written next to the document, and Preview in the browser, which reloads when you save.
-- Tab still moves between the document and the buttons, so you are never trapped in the edit; Ctrl+E is always the way out of edit mode.
+- Ctrl+Tab and Ctrl+Shift+Tab move between the document and the buttons, so you are never trapped in the edit; Ctrl+E is always the way out of edit mode.
 
 ## The spoken word
 
 While textweaver reads, the spoken word has its own background color, and the caret sits at its start, so your screen reader and Braille display follow the reading. This is the default, chosen after the first screen reader session. `--select-spoken` selects the word instead, for anyone who prefers it.
 
 The document window: a very long document is shown a few hundred pages at a time, around where you are. When reading reaches the edge, the window moves on by itself. The text that stays keeps its place, so your screen reader does not lose it.
+
+## Questions
+
+When textweaver asks a yes-or-no question (a voice to download, after its size and licence; a voice to remove; a file changed on disk), the window shows it as a small dialog: the question is the dialog's name, so your screen reader says it, and the focus is on **Yes**. Press **Y** or **N**, as in the terminal, or Tab to **No** and press Enter. Escape answers no. Any other key asks the question again.
+
+## Voices
+
+**Ctrl+Shift+V** opens the voice manager, the same list as the terminal's. The first two rows filter it: Enter on "Language" or "Engine" cycles through the choices. Enter on a voice uses it and speaks a sample; on a voice you can download, textweaver reads its licence and size, then asks before downloading. Space marks a favourite; Delete removes a downloaded voice, after a yes.
+
+## Language
+
+The window's own labels (the buttons, the settings dialog, the hints) follow the interface language, `[interface] language` in `settings.toml`, as textweaver's messages do. Change it in Settings, under "Interface", and the window relabels itself at once.
 
 ## Announcements
 

@@ -135,7 +135,14 @@ fn every_button_has_its_key_from_the_keymap() {
             "{name}: {shortcuts:?}"
         );
     }
-    assert_eq!(shortcuts.get("Open"), Some(&Some("Ctrl+O".to_owned())));
+    // The platform's own modifier: Command on macOS (the keymap's Mac
+    // layout), Control elsewhere.
+    let open = if cfg!(target_os = "macos") {
+        "Cmd+O"
+    } else {
+        "Ctrl+O"
+    };
+    assert_eq!(shortcuts.get("Open"), Some(&Some(open.to_owned())));
     // On screen, the written form; the name is the label alone.
     let b = ActionButton::new("Open…").with_shortcut("Ctrl+O");
     assert_eq!(b.shown_text(), "Open… (Ctrl+O)");

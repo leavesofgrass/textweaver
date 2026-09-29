@@ -165,6 +165,19 @@ pub enum DocAction {
         caret: CharPos,
         /// The selection, if any.
         selection: Option<CharRange>,
+        /// What textweaver's own voice says for a caret key (the driver
+        /// passes it to `App::echo`, which speaks only in the self-voicing
+        /// mode; a screen reader reads the caret itself). `None` for the
+        /// pointer and a screen reader's own moves.
+        echo: Option<CaretEcho>,
+    },
+    /// Edit mode: Tab (`forward`) or Shift+Tab. The driver runs the app's
+    /// `next_table_cell` or `previous_table_cell`, as the terminal does:
+    /// the next cell in a table, else a tab typed. Ctrl+Tab moves the
+    /// focus out instead, so the edit never traps the keyboard.
+    TableCell {
+        /// Tab, not Shift+Tab.
+        forward: bool,
     },
     /// Edit mode: text typed at the caret, with no selection (a key, Enter
     /// as a new line, or an input method's text). The driver sends it as
@@ -185,6 +198,31 @@ pub enum DocAction {
         range: CharRange,
         /// Their replacement.
         text: String,
+    },
+}
+
+/// What a caret key moved onto, for textweaver's own voice in the
+/// self-voicing mode (as the terminal's caret keys say it).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CaretEcho {
+    /// The character now at the caret (Left, Right, Home, End).
+    Char(char),
+    /// The caret is at the end of a line.
+    LineEnd,
+    /// The caret is at the end of the document.
+    DocEnd,
+    /// The word at the caret (Ctrl+Left, Ctrl+Right).
+    Word(String),
+    /// The line the caret is on, as drawn (Up, Down, the page keys,
+    /// Ctrl+Up, Ctrl+Down, Ctrl+Home, Ctrl+End).
+    Line(String),
+    /// Shift with a caret key: the text the selection gained (`selected`)
+    /// or lost.
+    Selection {
+        /// The text.
+        text: String,
+        /// True when the selection grew.
+        selected: bool,
     },
 }
 
@@ -233,6 +271,9 @@ pub struct DocumentView {
     focused: bool,
     /// The node's name, in the interface language ("Document").
     label: String,
+    /// Misspelled words (edit mode), drawn with a dotted underline. Paint
+    /// only: the text, its layout, and its runs do not change.
+    misspelled: Vec<CharRange>,
 
     // Layout.
     layouts: HashMap<usize, ParaLayout>,
@@ -298,6 +339,7 @@ impl DocumentView {
             editing: false,
             focused: false,
             label: "Document".to_owned(),
+            misspelled: Vec::new(),
             layouts: HashMap::new(),
             line_starts: Vec::new(),
             column: 0.0,
@@ -520,6 +562,21 @@ impl DocumentView {
             this.ctx.request_layout();
         }
         this.ctx.request_render();
+    }
+
+    /// The misspelled words to mark (edit mode; W4a3 left them unmarked).
+    /// Only drawn: a dotted underline, a shape unlike a link's line or a
+    /// difficult word's thick one, so no color carries it.
+    pub fn set_misspelled(this: &mut WidgetMut<'_, Self>, ranges: Vec<CharRange>) {
+        if this.widget.misspelled != ranges {
+            this.widget.misspelled = ranges;
+            this.ctx.request_render();
+        }
+    }
+
+    /// The misspelled words marked, for tests.
+    pub fn misspelled(&self) -> &[CharRange] {
+        &self.misspelled
     }
 
     /// The reading font in use.
@@ -1098,8 +1155,21 @@ impl DocumentView {
                 NamedKey::ArrowUp | NamedKey::ArrowDown | NamedKey::PageUp | NamedKey::PageDown
             )
         ) && !ctrl;
+        let echo = if shift {
+            self.selection_echo(new)
+        } else {
+            match key {
+                Key::Named(NamedKey::ArrowLeft | NamedKey::ArrowRight) if ctrl => {
+                    self.word_echo(new)
+                }
+                Key::Named(
+                    NamedKey::ArrowLeft | NamedKey::ArrowRight | NamedKey::Home | NamedKey::End,
+                ) if !ctrl => self.char_echo(new),
+                _ => self.line_echo(new),
+            }
+        };
         let goal = self.goal_x;
-        self.move_caret(ctx, new, shift);
+        self.move_caret_saying(ctx, new, shift, echo);
         if vertical {
             self.goal_x = goal;
         }
@@ -1107,6 +1177,16 @@ impl DocumentView {
     }
 
     fn move_caret(&mut self, ctx: &mut EventCtx<'_>, new: CharPos, extend: bool) {
+        self.move_caret_saying(ctx, new, extend, None);
+    }
+
+    fn move_caret_saying(
+        &mut self,
+        ctx: &mut EventCtx<'_>,
+        new: CharPos,
+        extend: bool,
+        echo: Option<CaretEcho>,
+    ) {
         let old = self.state;
         let anchor = if extend {
             Some(old.anchor.unwrap_or(old.caret))
@@ -1123,7 +1203,90 @@ impl DocumentView {
         ctx.submit_action::<DocAction>(DocAction::CaretMoved {
             caret: new,
             selection: anchor.map(|a| CharRange::new(a.0.min(new.0), a.0.max(new.0))),
+            echo,
         });
+    }
+
+    // --- What a caret key says (the self-voicing mode).
+
+    /// The paragraph holding `pos` and `pos`'s char offset in it.
+    fn para_offset(&self, pos: CharPos) -> Option<(usize, usize)> {
+        let paras = &self.model.paragraphs;
+        if paras.is_empty() {
+            return None;
+        }
+        let i = caret::paragraph_at(paras, pos);
+        Some((i, pos.0.saturating_sub(paras[i].start.0)))
+    }
+
+    /// The char at `pos`, or the end of its line or of the document.
+    fn char_echo(&self, pos: CharPos) -> Option<CaretEcho> {
+        let (i, off) = self.para_offset(pos)?;
+        let p = &self.model.paragraphs[i];
+        Some(match p.text.chars().nth(off) {
+            Some(ch) => CaretEcho::Char(ch),
+            None if pos.0 >= self.model.doc_len => CaretEcho::DocEnd,
+            None => CaretEcho::LineEnd,
+        })
+    }
+
+    /// The word at `pos` (from `pos` to the word's end), else its char.
+    fn word_echo(&self, pos: CharPos) -> Option<CaretEcho> {
+        use unicode_segmentation::UnicodeSegmentation;
+        let (i, off) = self.para_offset(pos)?;
+        let p = &self.model.paragraphs[i];
+        let b = caret::byte_of(&p.text, off);
+        let word = p
+            .text
+            .split_word_bound_indices()
+            .find(|(start, w)| *start <= b && b < start + w.len())
+            .map(|(start, w)| &p.text[b.max(start)..start + w.len()]);
+        match word {
+            Some(w) if w.chars().any(char::is_alphanumeric) => Some(CaretEcho::Word(w.to_owned())),
+            _ => self.char_echo(pos),
+        }
+    }
+
+    /// The visual line holding `pos`, as laid out (the paragraph when it
+    /// has not been laid out yet).
+    fn line_echo(&self, pos: CharPos) -> Option<CaretEcho> {
+        let (i, off) = self.para_offset(pos)?;
+        let p = &self.model.paragraphs[i];
+        let text = match self.layouts.get(&i) {
+            Some(pl) => {
+                let b = caret::byte_of(&p.text, off);
+                pl.layout
+                    .lines()
+                    .map(|l| l.text_range())
+                    .find(|r| r.contains(&b))
+                    .or_else(|| pl.layout.lines().last().map(|l| l.text_range()))
+                    .map_or(p.text.as_str(), |r| &p.text[r])
+            }
+            None => p.text.as_str(),
+        };
+        let text = text.trim_end();
+        if text.is_empty() {
+            return Some(if pos.0 >= self.model.doc_len {
+                CaretEcho::DocEnd
+            } else {
+                CaretEcho::LineEnd
+            });
+        }
+        Some(CaretEcho::Line(text.to_owned()))
+    }
+
+    /// Shift with a caret key: the text between the old caret and `new`,
+    /// and whether the selection grew by it.
+    fn selection_echo(&self, new: CharPos) -> Option<CaretEcho> {
+        let old = self.state.caret;
+        if old == new {
+            return None;
+        }
+        let anchor = self.state.anchor.unwrap_or(old);
+        let text = caret::text_between(&self.model.paragraphs, old, new);
+        let (lo, hi) = (old.0.min(new.0), old.0.max(new.0));
+        let selected = anchor.0.min(new.0) <= lo && hi <= anchor.0.max(new.0);
+        Some(CaretEcho::Selection { text, selected })
     }
 
     /// The selection, when there is one.
@@ -1175,6 +1338,12 @@ impl DocumentView {
         let altgr = m.ctrl() && m.alt() && !m.meta();
         match &k.key {
             Key::Named(NamedKey::Enter) if !command => self.type_text(ctx, "\n"),
+            Key::Named(NamedKey::Tab) if !command => {
+                self.goal_x = None;
+                ctx.submit_action::<DocAction>(DocAction::TableCell {
+                    forward: !m.shift(),
+                });
+            }
             Key::Named(NamedKey::Backspace) if !command => self.delete_text(ctx, false),
             Key::Named(NamedKey::Delete) if !command => self.delete_text(ctx, true),
             Key::Character(s)
@@ -1651,6 +1820,22 @@ impl Widget for DocumentView {
                     painter.push_fill_clip(r);
                     render_text(painter, tf, &pl.layout, &fg, false);
                     painter.pop_clip();
+                }
+            }
+            // Misspelled words: a dotted underline at the text's foot.
+            for &r in &self.misspelled {
+                if r.end.0 <= para.start.0 || r.start.0 >= p_end {
+                    continue;
+                }
+                for rect in band(r).unwrap_or_default() {
+                    let y = rect.y1 - 2.5;
+                    let mut x = rect.x0;
+                    while x + 2.0 <= rect.x1 {
+                        painter
+                            .fill(Rect::new(x, y, x + 2.0, y + 2.0), theme::color(p.focus))
+                            .draw();
+                        x += 4.0;
+                    }
                 }
             }
             // The caret, when the view has focus.

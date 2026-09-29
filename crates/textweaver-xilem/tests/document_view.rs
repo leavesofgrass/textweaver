@@ -395,3 +395,76 @@ fn the_edit_role_experiment_is_a_readonly_multiline_edit() {
     assert!(node.supports_text_ranges());
     assert_eq!(node.document_range().text(), "Some text.");
 }
+
+/// A key event with modifiers.
+fn key_with(key: Key, mods: masonry::core::keyboard::Modifiers) -> TextEvent {
+    let mut e = masonry::core::keyboard::KeyboardEvent {
+        key,
+        ..Default::default()
+    };
+    e.modifiers = mods;
+    TextEvent::Keyboard(e)
+}
+
+/// Caret keys carry what textweaver's own voice says in the self-voicing
+/// mode, as the terminal's caret keys do: the char, the word, the line as
+/// drawn, the end of a line, and a selection growing or shrinking.
+#[test]
+fn caret_keys_carry_what_the_self_voicing_mode_says() {
+    use masonry::core::keyboard::Modifiers;
+    use textweaver_xilem::document::CaretEcho;
+    let doc = Document::from_plain_text("ab cd\nef");
+    let (mut h, _) = harness_with(&doc, CharPos::ZERO);
+    h.focus_on(Some(h.root_id()));
+    let echo = |h: &mut TestHarness<DocumentView>, e: TextEvent| {
+        h.process_text_event(e);
+        match h.pop_action::<DocAction>() {
+            Some((DocAction::CaretMoved { echo, .. }, _)) => echo,
+            other => panic!("not a caret move: {other:?}"),
+        }
+    };
+    let none = Modifiers::empty();
+    assert_eq!(
+        echo(&mut h, key_with(Key::Named(NamedKey::ArrowRight), none)),
+        Some(CaretEcho::Char('b'))
+    );
+    assert_eq!(
+        echo(
+            &mut h,
+            key_with(Key::Named(NamedKey::ArrowRight), Modifiers::CONTROL)
+        ),
+        Some(CaretEcho::Word("cd".into()))
+    );
+    assert_eq!(
+        echo(&mut h, key_with(Key::Named(NamedKey::End), none)),
+        Some(CaretEcho::LineEnd)
+    );
+    assert_eq!(
+        echo(
+            &mut h,
+            key_with(Key::Named(NamedKey::ArrowLeft), Modifiers::SHIFT)
+        ),
+        Some(CaretEcho::Selection {
+            text: "d".into(),
+            selected: true
+        })
+    );
+    assert_eq!(
+        echo(
+            &mut h,
+            key_with(Key::Named(NamedKey::ArrowRight), Modifiers::SHIFT)
+        ),
+        Some(CaretEcho::Selection {
+            text: "d".into(),
+            selected: false
+        })
+    );
+    assert_eq!(
+        echo(&mut h, key_with(Key::Named(NamedKey::ArrowDown), none)),
+        Some(CaretEcho::Line("ef".into()))
+    );
+    assert_eq!(
+        echo(&mut h, key_with(Key::Named(NamedKey::ArrowRight), none)),
+        Some(CaretEcho::DocEnd)
+    );
+}

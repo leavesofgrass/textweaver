@@ -46,7 +46,7 @@ use textweaver_app::{
 };
 
 use crate::dialog::{self, ChoiceList, DialogAction, Modal};
-use crate::document::{DocAction, DocAids, DocFont, DocModel, DocState, DocumentView};
+use crate::document::{CaretEcho, DocAction, DocAids, DocFont, DocModel, DocState, DocumentView};
 use crate::file_chooser::{self, FileChosen};
 use crate::font_chooser::Step;
 use crate::keys;
@@ -98,6 +98,11 @@ pub const RSVP: WidgetTag<RsvpView> = WidgetTag::named("tw-rsvp");
 const FIRST_TICK: Duration = Duration::from_millis(250);
 /// Highlight moves slower than this are logged.
 const SLOW_HIGHLIGHT_MS: f64 = 30.0;
+/// Misspelled words are marked once typing pauses this long.
+const SPELL_PAUSE: Duration = Duration::from_millis(500);
+/// Misspelled words are marked in documents up to this many chars (about
+/// 50 ms to check on the development machine; 10 million took 0.6 s).
+const SPELL_LIMIT: usize = 1_000_000;
 
 /// Everything the window needs to start.
 #[derive(Debug, Default, Clone)]
@@ -291,6 +296,11 @@ pub struct Gui {
     /// Whether single-key shortcuts were on when the buttons' shortcuts
     /// were last shown (F9 changes which key each button names).
     char_keys: Option<bool>,
+    /// Misspelled words marked for this document and text revision, and
+    /// when a new revision was first seen (the marks wait for a pause in
+    /// typing).
+    spell_marked: Option<(DocKey, u64)>,
+    spell_seen: Option<((DocKey, u64), Instant)>,
     /// The interface language the drawn labels were last written in
     /// (`[interface] language` changes them live, as in the terminal).
     lang: String,
@@ -1072,6 +1082,7 @@ impl Gui {
             }
         }
         self.sync_question(ctx);
+        self.sync_misspellings(ctx);
         let title = self.app.session().map_or_else(
             || "textweaver".to_owned(),
             |s| format!("{} - textweaver", s.title),
@@ -1302,7 +1313,7 @@ impl Gui {
     /// The Settings command: the settings dialog, from the app's schema.
     fn open_settings(&mut self, ctx: &mut DriverCtx<'_>, at: Option<(usize, usize)>) {
         let form = SettingsForm::new(self.app.settings_schema());
-        let (section, row) = at.unwrap_or((0, 0));
+        let (section, row) = at.unwrap_or_else(|| (0, form.first_plain_row(0)));
         let section = section.min(form.sections.len().saturating_sub(1));
         let d = settings_dialog(&self.palette, &form, &self.app, section, row);
         let root = ctx.render_root(self.window_id);
@@ -1439,9 +1450,10 @@ impl Gui {
         let title = open.form.form_label(section, &c);
         let rows = open.form.rows(section, &self.app);
         let item = open.form.section_items(&c).get(section).cloned();
+        let first = open.form.first_plain_row(section);
         let root = ctx.render_root(self.window_id);
         root.edit_widget_with_tag(FORM, |mut g| {
-            SettingsGrid::set_section(&mut g, title, rows, 0);
+            SettingsGrid::set_section(&mut g, title, rows, first);
         });
         root.edit_widget_with_tag(SECTIONS, |mut l| ChoiceList::select(&mut l, section));
         if say && let Some(item) = item {
@@ -1691,6 +1703,73 @@ impl Gui {
         }
     }
 
+    /// Edit mode: marks the misspelled words (Alt+M finds them), once the
+    /// text has not changed for [`SPELL_PAUSE`], for documents up to
+    /// [`SPELL_LIMIT`] chars (the check reads the whole document on the
+    /// input thread).
+    fn sync_misspellings(&mut self, ctx: &mut DriverCtx<'_>) {
+        let key = self
+            .app
+            .session()
+            .filter(|s| self.app.is_editing() && s.doc.len_chars() <= SPELL_LIMIT)
+            .map(|s| (s.key.clone(), s.revision));
+        let Some(key) = key else {
+            if self.spell_marked.take().is_some() {
+                ctx.render_root(self.window_id)
+                    .edit_widget_with_tag(DOC, |mut d| {
+                        DocumentView::set_misspelled(&mut d, Vec::new())
+                    });
+            }
+            self.spell_seen = None;
+            return;
+        };
+        if self.spell_marked.as_ref() == Some(&key) {
+            return;
+        }
+        match &self.spell_seen {
+            Some((k, at)) if *k == key && at.elapsed() >= SPELL_PAUSE => {}
+            Some((k, _)) if *k == key => return,
+            _ => {
+                self.spell_seen = Some((key, Instant::now()));
+                return;
+            }
+        }
+        let started = Instant::now();
+        let ranges = self.app.misspelled_ranges();
+        if self.log {
+            crate::log::line(&format!(
+                "misspellings: {} in {:.1} ms",
+                ranges.len(),
+                started.elapsed().as_secs_f64() * 1000.0
+            ));
+        }
+        ctx.render_root(self.window_id)
+            .edit_widget_with_tag(DOC, |mut d| DocumentView::set_misspelled(&mut d, ranges));
+        self.spell_marked = Some(key);
+        self.spell_seen = None;
+    }
+
+    /// A caret key in the view, said by textweaver's own voice as the
+    /// terminal says its caret keys: `App::echo` speaks only in the
+    /// self-voicing mode (and not while reading), since a screen reader
+    /// reads the caret and the selection itself.
+    fn echo_caret(&mut self, echo: CaretEcho) {
+        let c = self.app.catalog();
+        let text = match echo {
+            CaretEcho::Char(ch) => ch.to_string(),
+            CaretEcho::LineEnd => c.tr("edit-end-of-line-content"),
+            CaretEcho::DocEnd => c.tr("playback-end-of-document-content"),
+            CaretEcho::Word(w) | CaretEcho::Line(w) => w,
+            CaretEcho::Selection { text, selected } => {
+                textweaver_app::text_util::selection_change_text(&c, &text, selected)
+            }
+        };
+        if self.log {
+            crate::log::line(&format!("caret echo: {text}"));
+        }
+        self.app.echo(&text);
+    }
+
     /// A yes-or-no question from the app shows as a dialog while it is
     /// open (the app has already said it), and goes when it is answered.
     fn sync_question(&mut self, ctx: &mut DriverCtx<'_>) {
@@ -1889,9 +1968,11 @@ impl AppDriver for Gui {
         if let Some(KeyAction(k)) = action.downcast_ref::<KeyAction>() {
             let k = k.clone();
             self.on_key(ctx, &k);
-        } else if let Some(DocAction::CaretMoved { caret, .. }) = action.downcast_ref::<DocAction>()
+        } else if let Some(DocAction::CaretMoved { caret, echo, .. }) =
+            action.downcast_ref::<DocAction>()
         {
             let caret = *caret;
+            let echo = echo.clone();
             let app_cursor = self.app.session().map(|s| s.cursor);
             // In edit mode, a selection the app holds (from a command) is
             // let go when the view moves the caret, so typing goes to the
@@ -1916,6 +1997,16 @@ impl AppDriver for Gui {
                 self.shown.state.caret = caret;
                 self.refresh(ctx);
             }
+            if let Some(echo) = echo {
+                self.echo_caret(echo);
+            }
+        } else if let Some(DocAction::TableCell { forward }) = action.downcast_ref::<DocAction>() {
+            let a = if *forward {
+                ActionId::NextTableCell
+            } else {
+                ActionId::PreviousTableCell
+            };
+            self.dispatch(ctx, Command::Action(a));
         } else if let Some(edit) = action.downcast_ref::<DocAction>() {
             // Edit mode: typing and deleting go through the app, which
             // keeps the undo history and echoes as the access mode says.
@@ -1924,7 +2015,7 @@ impl AppDriver for Gui {
                 DocAction::Delete { forward: true } => Command::DeleteForward,
                 DocAction::Delete { forward: false } => Command::DeleteBack,
                 DocAction::Replace { range, text } => Command::ReplaceRange { range, text },
-                DocAction::CaretMoved { .. } => return,
+                DocAction::CaretMoved { .. } | DocAction::TableCell { .. } => return,
             };
             if self.log {
                 crate::log::line(&format!("edit: {cmd:?}"));
@@ -2139,7 +2230,11 @@ impl AppDriver for Gui {
         effects.extend(self.app.tick(now));
         self.run_effects(ctx, effects);
         self.refresh(ctx);
-        let wait = self.app.tick_interval(Instant::now());
+        let mut wait = self.app.tick_interval(Instant::now());
+        if self.spell_seen.is_some() {
+            // Come back when the pause is over, to mark the misspellings.
+            wait = wait.min(SPELL_PAUSE / 2);
+        }
         self.tick_ms.store(
             u64::try_from(wait.as_millis()).unwrap_or(u64::MAX).max(10),
             Ordering::Relaxed,
@@ -2267,6 +2362,8 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         typed_open: false,
         char_keys: None,
         lang: String::new(),
+        spell_marked: None,
+        spell_seen: None,
         fixed_theme: opts.theme.is_some(),
         settings_list: experiments.settings_list,
         announce,

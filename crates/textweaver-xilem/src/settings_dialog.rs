@@ -203,6 +203,16 @@ impl SettingsForm {
             .collect()
     }
 
+    /// The row the form starts on in section `i`: its first setting that is
+    /// not a table. A table (edited in `settings.toml`) says only its size,
+    /// so starting on one read "4 entries" and little else (CI's NVDA run).
+    pub fn first_plain_row(&self, i: usize) -> usize {
+        self.settings_in(i)
+            .iter()
+            .position(|s| !matches!(s.kind, SettingKind::Table))
+            .unwrap_or(0)
+    }
+
     /// Where the setting at `path` is: its section and row.
     pub fn find(&self, path: &str) -> Option<(usize, usize)> {
         (0..self.sections.len()).find_map(|sec| {

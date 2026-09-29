@@ -155,9 +155,11 @@ impl Widget for Root {
     }
 }
 
-/// Tab and Shift+Tab move focus; the root leaves them to Masonry.
+/// Tab and Shift+Tab move focus, and so do Ctrl+Tab and Ctrl+Shift+Tab
+/// (which leave a multi-line edit, where Tab types, as in Windows' own
+/// edits); the root leaves them to Masonry.
 fn is_focus_key(k: &KeyboardEvent) -> bool {
-    k.key == Key::Named(NamedKey::Tab) && !k.modifiers.ctrl() && !k.modifiers.alt()
+    k.key == Key::Named(NamedKey::Tab) && !k.modifiers.alt()
 }
 
 // --- Region.

@@ -416,3 +416,25 @@ fn the_window_and_the_settings_dialog_speak_spanish() {
         settings_dialog::apply(&mut app, &setting, FormChange::Text("100000".into())).unwrap_err();
     assert!(why.contains("fuera de"), "{why}");
 }
+
+/// The dialog starts on a section's first setting that is not a table, so
+/// a screen reader does not start on "4 entries" (CI's NVDA run, Wave 5).
+#[test]
+fn the_form_starts_on_a_plain_setting() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    let form = SettingsForm::new(app.settings_schema());
+    for section in 0..form.sections.len() {
+        let row = form.first_plain_row(section);
+        let settings = form.settings_in(section);
+        if settings
+            .iter()
+            .any(|s| !matches!(s.kind, SettingKind::Table))
+        {
+            assert!(
+                !matches!(settings[row].kind, SettingKind::Table),
+                "section {section} starts on a table"
+            );
+        }
+    }
+}
