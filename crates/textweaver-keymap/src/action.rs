@@ -315,7 +315,7 @@ actions! {
     NextChapter = "next_chapter", Navigation, "Move to the next chapter or section",
         gui ["g:Alt+PageDown"], term ["g:F11", "g:Alt+PageDown"], shared ["b:d"];
     PreviousChapter = "previous_chapter", Navigation, "Move to the previous chapter or section",
-        gui ["g:Alt+PageUp"], term ["g:F10", "g:Alt+PageUp"], shared ["b:Shift+D"];
+        gui ["g:Alt+PageUp"], term ["g:Alt+PageUp"], shared ["b:Shift+D"];
     HistoryBack = "history_back", Navigation, "Go back to where you were before the last jump",
         gui ["g:Alt+Left"], term ["g:Alt+Left"], shared ["b:Backspace"];
     HistoryForward = "history_forward", Navigation, "Go forward again after going back",
@@ -482,6 +482,15 @@ actions! {
     TogglePreviewLive = "toggle_preview_live", File,
         "Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses",
         gui [], term [], shared [];
+    BrowseFiles = "browse_files", File,
+        "Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up",
+        gui [], term [], shared [];
+    BatchConvert = "batch_convert", File,
+        "Convert a folder of documents to another format, in the background",
+        gui [], term [], shared [];
+    ExportAudio = "export_audio", File,
+        "Export the document as spoken audio: MP3, FLAC, WAV, or an M4B audiobook",
+        gui [], term [], shared [];
     Quit = "quit", File, "Quit, saving the reading position",
         gui ["g:Ctrl+Q"], term ["g:Ctrl+Q"], shared [];
 
@@ -560,6 +569,9 @@ actions! {
     ImportReferences = "import_references", Editing,
         "Import references from a BibTeX, RIS, or CSL-JSON file into your library",
         gui [], term [], shared [];
+    Dictate = "dictate", Editing,
+        "Start or stop dictation: spoken words are typed at the cursor in edit mode",
+        gui ["g:Ctrl+Shift+F9"], term ["g:Ctrl+Shift+F9"], shared [];
 
     // View and help
     NextTheme = "next_theme", View, "Switch to the next color theme",
@@ -592,6 +604,14 @@ actions! {
         gui ["g:Ctrl+0"], term [], shared [];
     ChooseFont = "choose_font", View, "Choose the font of the document text",
         gui ["g:Ctrl+D"], term [], shared [];
+    ColorSettings = "color_settings", View,
+        "Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast",
+        gui [], term [], shared [];
+    CycleInterfaceAnnouncements = "cycle_interface_announcements", View,
+        "Cycle how much textweaver announces about itself: off, minimal, normal, or full; errors and answers are always said",
+        gui ["g:Ctrl+F9"], term ["g:Ctrl+F9"], shared [];
+    Menu = "menu", View, "Open the menus: File, Edit, View, Reading, Speech, Tools, and Help",
+        gui ["g:F10"], term ["g:F10"], shared [];
     CommandPalette = "command_palette", View, "Run any command by name",
         gui ["g:F2"], term ["g:F2", "g:Alt+X"], shared ["b::"];
     Settings = "settings", View,
@@ -599,6 +619,11 @@ actions! {
         gui ["g:Ctrl+,"], term ["g:Shift+F10"], shared [];
     KeyboardHelp = "keyboard_help", View, "List keyboard shortcuts",
         gui ["g:F3"], term [], shared ["b:?"];
+    WhatDoesThisKeyDo = "what_does_this_key_do", View,
+        "Press a key to hear what it does and where it is in the menus, without running it",
+        gui ["g:Shift+F1"], term ["g:Shift+F1"], shared [];
+    About = "about", View, "Say textweaver's version and license",
+        gui [], term [], shared [];
     Help = "help", View, "Open the help",
         gui ["g:F1"], term ["g:F1"], shared [];
 }

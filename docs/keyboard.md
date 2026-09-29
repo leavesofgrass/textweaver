@@ -5,6 +5,8 @@ The in-app keyboard help shows the same table with your own overrides applied.
 
 ## What changed
 
+On Tuesday, September 29, 2026 (Wave 6): **F10 opens the menus** in the terminal, as F10 does in Windows programs (File, Edit, View, Reading, Speech, Tools, and Help). Previous chapter keeps `Alt+PageUp` and `Shift+D`; next chapter keeps `F11`, `Alt+PageDown`, and `d`. **On macOS the GUI uses Mac keys**, not Ctrl renamed: Option with the arrows moves by word and paragraph, Command with the arrows goes to the ends of the line and the document, Command runs commands, and nothing takes VoiceOver's Ctrl+Option (see the GUI on macOS column). New keys: `Ctrl+F9` cycles the interface announcements (off, minimal, normal, full), `Ctrl+Shift+F9` starts and stops dictation, and `Shift+F1` says what the next key does.
+
 On Saturday, September 26, 2026, the default keys became the quick navigation keys of NVDA's and JAWS's browse mode. To keep the earlier keys, set `preset = "classic"` under `[keyboard]` in `settings.toml` (see [the classic preset](#the-classic-preset)). Old key, then where its command went, in the terminal:
 
 - `.` (next sentence): now `Alt+Down` or `Alt+.`. `.` says the current sentence.
@@ -68,7 +70,7 @@ Browse keys are single keys, like a screen reader's browse mode, and work the sa
 Global chords work in every mode. Speech Cursor keys take over browse keys with the same name while Speech Cursor is on (for example `j` reads the next line instead of scrolling).
 
 In the tables below a key without a note is global; the others name their layer.
-The GUI column shows Windows and Linux; on macOS the GUI uses Cmd wherever it shows Ctrl.
+The GUI column shows Windows and Linux. The GUI on macOS column shows the Mac's own keys: Command for commands, Option with the arrows for words and paragraphs, Command with the arrows for the ends, and Command+Option for the chords that use Alt with a letter elsewhere, because Option with a letter types a character on a Mac.
 
 ## Single-key shortcuts
 
@@ -98,248 +100,275 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 ## Terminal notes
 
 - Terminals cannot send `Ctrl+H` (it is Backspace), `Ctrl+I` (Tab), `Ctrl+M` or `Ctrl+J` (Enter), `Ctrl+Shift+` a letter (it arrives as `Ctrl+` the letter), or `Ctrl` with digits and most punctuation. The terminal defaults avoid all of them; the browse keys cover what the GUI does with those chords.
-- Some terminal programs keep F10 (menu) or F11 (full screen) for themselves. Chapters also move with `Alt+PageDown` and `Alt+PageUp`.
+- F10 opens textweaver's menus. Some terminal programs keep F10 or F11 (full screen) for themselves; then run `menu` from the command palette (F2), and move by chapter with `Alt+PageDown` and `Alt+PageUp`.
 - `Shift` with the arrow keys extends the selection in browse mode; most terminals send these keys, but some terminal programs keep `Shift+Up` and `Shift+Down` for scrolling their own window.
 - `Alt` chords work in the terminal. Star's terminal reader lost them to the Escape key; textweaver reads them directly.
 - The keys `1` to `6` move to the next heading of that level, and Shift with the digit to the previous one, as in a screen reader's browse mode. The tables show Shift with a digit as the character a US keyboard types (`!` `@` `#` `$` `%` `^`); textweaver matches the digit key itself, whatever your layout types. On Windows (Windows Terminal and the classic console) it reads the key from the console, so every layout works, including French AZERTY, where the digit row types `&` `é` `"` without Shift. Elsewhere terminals send only the character, so textweaver knows the shifted digits of the US, UK, German, Spanish, Nordic, and Italian layouts (`"` `£` `§` `·` `¤` and `&` as well as the US ones). French AZERTY types the digits only with Shift, so outside Windows set `digit_row = "azerty"` under `[keyboard]`: then `&` `é` `"` `'` `(` `-` are the digit keys 1 to 6, and the digits typed with Shift go back.
 
 ## Reading
 
-| Action | Terminal | GUI | Id |
-|---|---|---|---|
-| Play or pause reading from the current word | `Alt+P`, `Space` (browse) | `Ctrl+Shift+Space`, `Space` (browse) | `play_pause` |
-| Stop reading | `Escape`, `Ctrl+X` (browse) | `Escape` | `stop` |
-| Read continuously from the cursor | `Ctrl+Space`, `Enter` (browse) | `Ctrl+Space`, `Enter` (browse) | `read_from_cursor` |
-| Read the whole document from the start | `Shift+R` (browse) | `Shift+R` (browse) | `read_document` |
-| Say the character at the cursor | `Alt+Shift+C`, `c` (browse) | `Ctrl+Shift+C`, `c` (browse) | `read_current_character` |
-| Say the word at the cursor | `Alt+Shift+W`, `w` (browse) | `Ctrl+Shift+W`, `w` (browse) | `read_current_word` |
-| Say the sentence at the cursor without moving | `Alt+Shift+S`, `.` (browse) | `Ctrl+Shift+E`, `.` (browse) | `read_current_sentence` |
-| Say the line at the cursor | `Alt+Shift+L` | `Ctrl+L` | `read_current_line` |
-| Say the paragraph at the cursor without moving | `,` (browse) | `,` (browse) | `read_paragraph` |
-| Read the selected text | `v` (browse) | `v` (browse) | `read_selection` |
-| Say the position: line, percentage, word number, and heading | `Alt+Shift+Y`, `Shift+W` (browse) | `Alt+Shift+Y`, `Shift+W` (browse) | `say_position` |
-| Say the last message again, then the status: mode, reading state, position, rate, and speech engine; in a list, the list's introduction | `Alt+End`, `z` (browse) | `Alt+End`, `z` (browse) | `say_status` |
-| Say the last message again | `Alt+'`, `'` (browse) | `Alt+'`, `'` (browse) | `repeat_message` |
-| Say how many words are in the document, or in the selection | `Alt+Shift+T` | `Alt+Shift+T` | `word_count` |
-| Say the address of the link at the cursor | `Alt+Shift+K` | `Alt+Shift+K` | `link_address` |
-| Read again from the start of the current sentence | `Alt+;`, `;` (browse) | `Alt+;`, `;` (browse) | `replay_sentence` |
-| Read again from the start of the current paragraph | `Ctrl+R`, `r` (browse) | `Ctrl+R`, `r` (browse) | `replay_paragraph` |
-| Show or hide RSVP: one word at a time, from the cursor | `Alt+Shift+R` | `Alt+Shift+R` | `rsvp_toggle` |
-| Start or pause RSVP | `Alt+Shift+P` | `Alt+Shift+P` | `rsvp_play_pause` |
-| RSVP faster | `Alt+Shift+Up`, `Alt+Shift+PageUp` | `Alt+Shift+Up`, `Alt+Shift+PageUp` | `rsvp_faster` |
-| RSVP slower | `Alt+Shift+Down`, `Alt+Shift+PageDown` | `Alt+Shift+Down`, `Alt+Shift+PageDown` | `rsvp_slower` |
-| Move the RSVP word to the next place on the screen | `Alt+Shift+O` | `Alt+Shift+O` | `rsvp_position_next` |
-| Say the reading level of the document or the selection | `Alt+Shift+G` | `Alt+Shift+G` | `reading_level` |
-| Define the word at the cursor, or the selected words: senses, examples, synonyms, and pronunciation | `Alt+E` | `Ctrl+Shift+D` | `define_word` |
-| Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | palette | palette | `summarize` |
-| Turn citations on or off in continuous reading: off skips them, on says them in words | `Alt+Shift+Q` | `Alt+Shift+Q` | `toggle_citations` |
-| Explore the math at the cursor term by term: arrows move, Down goes into a part, Up comes out, Escape leaves | `Alt+Shift+X` | `Alt+Shift+X` | `explore_math` |
-| Listen to the document as it will render, without leaving edit mode | palette | palette | `listen_rendered` |
+| Action | Terminal | GUI | GUI on macOS | Id |
+|---|---|---|---|---|
+| Play or pause reading from the current word | `Alt+P`, `Space` (browse) | `Ctrl+Shift+Space`, `Space` (browse) | `Cmd+Shift+Space`, `Space` (browse) | `play_pause` |
+| Stop reading | `Escape`, `Ctrl+X` (browse) | `Escape` | `Escape` | `stop` |
+| Read continuously from the cursor | `Ctrl+Space`, `Enter` (browse) | `Ctrl+Space`, `Enter` (browse) | `Cmd+Enter`, `Enter` (browse) | `read_from_cursor` |
+| Read the whole document from the start | `Shift+R` (browse) | `Shift+R` (browse) | `Shift+R` (browse) | `read_document` |
+| Say the character at the cursor | `Alt+Shift+C`, `c` (browse) | `Ctrl+Shift+C`, `c` (browse) | `Cmd+Shift+C`, `c` (browse) | `read_current_character` |
+| Say the word at the cursor | `Alt+Shift+W`, `w` (browse) | `Ctrl+Shift+W`, `w` (browse) | `Cmd+Shift+W`, `w` (browse) | `read_current_word` |
+| Say the sentence at the cursor without moving | `Alt+Shift+S`, `.` (browse) | `Ctrl+Shift+E`, `.` (browse) | `Cmd+Shift+E`, `.` (browse) | `read_current_sentence` |
+| Say the line at the cursor | `Alt+Shift+L` | `Ctrl+L` | `Cmd+L` | `read_current_line` |
+| Say the paragraph at the cursor without moving | `,` (browse) | `,` (browse) | `,` (browse) | `read_paragraph` |
+| Read the selected text | `v` (browse) | `v` (browse) | `v` (browse) | `read_selection` |
+| Say the position: line, percentage, word number, and heading | `Alt+Shift+Y`, `Shift+W` (browse) | `Alt+Shift+Y`, `Shift+W` (browse) | `Cmd+Option+Shift+Y`, `Shift+W` (browse) | `say_position` |
+| Say the last message again, then the status: mode, reading state, position, rate, and speech engine; in a list, the list's introduction | `Alt+End`, `z` (browse) | `Alt+End`, `z` (browse) | `Option+End`, `z` (browse) | `say_status` |
+| Say the last message again | `Alt+'`, `'` (browse) | `Alt+'`, `'` (browse) | `Cmd+Option+'`, `'` (browse) | `repeat_message` |
+| Say how many words are in the document, or in the selection | `Alt+Shift+T` | `Alt+Shift+T` | `Cmd+Option+Shift+T` | `word_count` |
+| Say the address of the link at the cursor | `Alt+Shift+K` | `Alt+Shift+K` | `Cmd+Option+Shift+K` | `link_address` |
+| Read again from the start of the current sentence | `Alt+;`, `;` (browse) | `Alt+;`, `;` (browse) | `Cmd+Option+;`, `;` (browse) | `replay_sentence` |
+| Read again from the start of the current paragraph | `Ctrl+R`, `r` (browse) | `Ctrl+R`, `r` (browse) | `Cmd+R`, `r` (browse) | `replay_paragraph` |
+| Show or hide RSVP: one word at a time, from the cursor | `Alt+Shift+R` | `Alt+Shift+R` | `Cmd+Option+Shift+R` | `rsvp_toggle` |
+| Start or pause RSVP | `Alt+Shift+P` | `Alt+Shift+P` | `Cmd+Option+Shift+P` | `rsvp_play_pause` |
+| RSVP faster | `Alt+Shift+Up`, `Alt+Shift+PageUp` | `Alt+Shift+Up`, `Alt+Shift+PageUp` | `Option+Shift+Up`, `Option+Shift+PageUp` | `rsvp_faster` |
+| RSVP slower | `Alt+Shift+Down`, `Alt+Shift+PageDown` | `Alt+Shift+Down`, `Alt+Shift+PageDown` | `Option+Shift+Down`, `Option+Shift+PageDown` | `rsvp_slower` |
+| Move the RSVP word to the next place on the screen | `Alt+Shift+O` | `Alt+Shift+O` | `Cmd+Option+Shift+O` | `rsvp_position_next` |
+| Say the reading level of the document or the selection | `Alt+Shift+G` | `Alt+Shift+G` | `Cmd+Option+Shift+G` | `reading_level` |
+| Define the word at the cursor, or the selected words: senses, examples, synonyms, and pronunciation | `Alt+E` | `Ctrl+Shift+D` | `Cmd+Shift+D` | `define_word` |
+| Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | palette | palette | palette | `summarize` |
+| Turn citations on or off in continuous reading: off skips them, on says them in words | `Alt+Shift+Q` | `Alt+Shift+Q` | `Cmd+Option+Shift+C` | `toggle_citations` |
+| Explore the math at the cursor term by term: arrows move, Down goes into a part, Up comes out, Escape leaves | `Alt+Shift+X` | `Alt+Shift+X` | `Cmd+Option+Shift+X` | `explore_math` |
+| Listen to the document as it will render, without leaving edit mode | palette | palette | palette | `listen_rendered` |
 
 ## Navigation
 
-| Action | Terminal | GUI | Id |
-|---|---|---|---|
-| Move to the next sentence | `Alt+.`, `Alt+Down` | `Alt+.`, `Alt+Down` | `next_sentence` |
-| Move to the previous sentence, or to the start of this one when more than three words in | `Alt+,`, `Alt+Up` | `Alt+,`, `Alt+Up` | `previous_sentence` |
-| Move to the next paragraph | `Ctrl+P`, `p` (browse), `]` (browse), `Ctrl+Down` (browse), `PageDown` (speech cursor) | `Ctrl+P`, `p` (browse), `]` (browse), `Ctrl+Down` (browse), `PageDown` (speech cursor) | `next_paragraph` |
-| Move to the previous paragraph | `Shift+P` (browse), `[` (browse), `Ctrl+Up` (browse), `PageUp` (speech cursor) | `Ctrl+Shift+P`, `Shift+P` (browse), `[` (browse), `Ctrl+Up` (browse), `PageUp` (speech cursor) | `previous_paragraph` |
-| Read from the next heading | `>` (browse) | `Ctrl+H`, `>` (browse) | `next_heading` |
-| Read from the previous heading | `<` (browse) | `Ctrl+Shift+H`, `<` (browse) | `previous_heading` |
-| Move to the next heading without reading | `Alt+H`, `h` (browse), `}` (browse) | `h` (browse), `}` (browse) | `skip_next_heading` |
-| Move to the previous heading without reading | `Alt+Shift+H`, `Shift+H` (browse), `{` (browse) | `Shift+H` (browse), `{` (browse) | `skip_previous_heading` |
-| List the headings: type to filter, Enter jumps to one | `Alt+O` | `Alt+O` | `outline` |
-| Move to the next heading at level 1 | `1` (browse) | `1` (browse) | `next_heading_level_1` |
-| Move to the next heading at level 2 | `2` (browse) | `2` (browse) | `next_heading_level_2` |
-| Move to the next heading at level 3 | `3` (browse) | `3` (browse) | `next_heading_level_3` |
-| Move to the next heading at level 4 | `4` (browse) | `4` (browse) | `next_heading_level_4` |
-| Move to the next heading at level 5 | `5` (browse) | `5` (browse) | `next_heading_level_5` |
-| Move to the next heading at level 6 | `6` (browse) | `6` (browse) | `next_heading_level_6` |
-| Move to the previous heading at level 1 | `!` (browse) | `!` (browse) | `previous_heading_level_1` |
-| Move to the previous heading at level 2 | `@` (browse) | `@` (browse) | `previous_heading_level_2` |
-| Move to the previous heading at level 3 | `#` (browse) | `#` (browse) | `previous_heading_level_3` |
-| Move to the previous heading at level 4 | `$` (browse) | `$` (browse) | `previous_heading_level_4` |
-| Move to the previous heading at level 5 | `%` (browse) | `%` (browse) | `previous_heading_level_5` |
-| Move to the previous heading at level 6 | `^` (browse) | `^` (browse) | `previous_heading_level_6` |
-| Move to the next table | `t` (browse) | `Ctrl+T`, `t` (browse) | `next_table` |
-| Move to the previous table | `Shift+T` (browse) | `Ctrl+Shift+T`, `Shift+T` (browse) | `previous_table` |
-| Move to the next list | `l` (browse) | `l` (browse) | `next_list` |
-| Move to the previous list | `Shift+L` (browse) | `Shift+L` (browse) | `previous_list` |
-| Move to the next list item | `i` (browse) | `i` (browse) | `next_list_item` |
-| Move to the previous list item | `Shift+I` (browse) | `Shift+I` (browse) | `previous_list_item` |
-| Move to the next link | `k` (browse), `u` (browse) | `k` (browse), `u` (browse) | `next_link` |
-| Move to the previous link | `Shift+K` (browse), `Shift+U` (browse) | `Shift+K` (browse), `Shift+U` (browse) | `previous_link` |
-| Move to the next block quote | `q` (browse) | `q` (browse) | `next_block_quote` |
-| Move to the previous block quote | `Shift+Q` (browse) | `Shift+Q` (browse) | `previous_block_quote` |
-| Move to the next separator (horizontal rule) | `s` (browse) | `s` (browse) | `next_separator` |
-| Move to the previous separator (horizontal rule) | `Shift+S` (browse) | `Shift+S` (browse) | `previous_separator` |
-| Move to the next graphic (image) | `g` (browse) | `g` (browse) | `next_graphic` |
-| Move to the previous graphic (image) | `Shift+G` (browse) | `Shift+G` (browse) | `previous_graphic` |
-| Follow the link at the cursor, or go between a footnote and its note | `Alt+Shift+F` | `Alt+Shift+F` | `follow_link` |
-| In a table, move down a row in the same column | `Ctrl+Alt+Down` | `Ctrl+Alt+Down` | `table_next_row` |
-| In a table, move up a row in the same column | `Ctrl+Alt+Up` | `Ctrl+Alt+Up` | `table_previous_row` |
-| In a table, move to the next cell in the row | `Ctrl+Alt+Right` | `Ctrl+Alt+Right` | `table_next_column` |
-| In a table, move to the previous cell in the row | `Ctrl+Alt+Left` | `Ctrl+Alt+Left` | `table_previous_column` |
-| Move to the next chapter or section | `F11`, `Alt+PageDown`, `d` (browse) | `Alt+PageDown`, `d` (browse) | `next_chapter` |
-| Move to the previous chapter or section | `F10`, `Alt+PageUp`, `Shift+D` (browse) | `Alt+PageUp`, `Shift+D` (browse) | `previous_chapter` |
-| Go back to where you were before the last jump | `Alt+Left`, `Backspace` (browse) | `Alt+Left`, `Backspace` (browse) | `history_back` |
-| Go forward again after going back | `Alt+Right`, `\` (browse) | `Alt+Right`, `\` (browse) | `history_forward` |
-| Go to a line, percentage, or position | `Ctrl+G` | `Ctrl+G` | `go_to` |
-| Move to the start of the document | `Ctrl+Home`, `Home` (browse) | `Ctrl+Home`, `Home` (browse) | `document_start` |
-| Move to the end of the document | `Ctrl+End`, `End` (browse) | `Ctrl+End`, `End` (browse) | `document_end` |
-| Move the cursor to the next word | `Right` (browse) | `Right` (browse) | `caret_next_word` |
-| Move the cursor to the previous word | `Left` (browse) | `Left` (browse) | `caret_previous_word` |
-| Move the cursor to the next line | `Down` (browse) | `Down` (browse) | `caret_next_line` |
-| Move the cursor to the previous line | `Up` (browse) | `Up` (browse) | `caret_previous_line` |
-| Extend the selection to the next word | `Shift+Right` (browse) | `Shift+Right` (browse) | `select_next_word` |
-| Extend the selection to the previous word | `Shift+Left` (browse) | `Shift+Left` (browse) | `select_previous_word` |
-| Extend the selection to the next line | `Shift+Down` (browse) | `Shift+Down` (browse) | `select_next_line` |
-| Extend the selection to the previous line | `Shift+Up` (browse) | `Shift+Up` (browse) | `select_previous_line` |
-| Move down one screen | `PageDown` (browse) | `PageDown` (browse) | `page_down` |
-| Move up one screen | `PageUp` (browse) | `PageUp` (browse) | `page_up` |
-| Scroll down one line without moving the cursor | `j` (browse) | `j` (browse) | `scroll_down` |
-| Scroll up one line without moving the cursor | `Shift+J` (browse) | `Shift+J` (browse) | `scroll_up` |
+| Action | Terminal | GUI | GUI on macOS | Id |
+|---|---|---|---|---|
+| Move to the next sentence | `Alt+.`, `Alt+Down` | `Alt+.`, `Alt+Down` | `Cmd+Option+.` | `next_sentence` |
+| Move to the previous sentence, or to the start of this one when more than three words in | `Alt+,`, `Alt+Up` | `Alt+,`, `Alt+Up` | `Cmd+Option+,` | `previous_sentence` |
+| Move to the next paragraph | `Ctrl+P`, `p` (browse), `]` (browse), `Ctrl+Down` (browse), `PageDown` (speech cursor) | `Ctrl+P`, `p` (browse), `]` (browse), `Ctrl+Down` (browse), `PageDown` (speech cursor) | `Option+Down`, `p` (browse), `]` (browse), `PageDown` (speech cursor) | `next_paragraph` |
+| Move to the previous paragraph | `Shift+P` (browse), `[` (browse), `Ctrl+Up` (browse), `PageUp` (speech cursor) | `Ctrl+Shift+P`, `Shift+P` (browse), `[` (browse), `Ctrl+Up` (browse), `PageUp` (speech cursor) | `Option+Up`, `Shift+P` (browse), `[` (browse), `PageUp` (speech cursor) | `previous_paragraph` |
+| Read from the next heading | `>` (browse) | `Ctrl+H`, `>` (browse) | `Cmd+Option+PageDown`, `>` (browse) | `next_heading` |
+| Read from the previous heading | `<` (browse) | `Ctrl+Shift+H`, `<` (browse) | `Cmd+Shift+H`, `Cmd+Option+PageUp`, `<` (browse) | `previous_heading` |
+| Move to the next heading without reading | `Alt+H`, `h` (browse), `}` (browse) | `h` (browse), `}` (browse) | `h` (browse), `}` (browse) | `skip_next_heading` |
+| Move to the previous heading without reading | `Alt+Shift+H`, `Shift+H` (browse), `{` (browse) | `Shift+H` (browse), `{` (browse) | `Shift+H` (browse), `{` (browse) | `skip_previous_heading` |
+| List the headings: type to filter, Enter jumps to one | `Alt+O` | `Alt+O` | `Cmd+Option+O` | `outline` |
+| Move to the next heading at level 1 | `1` (browse) | `1` (browse) | `1` (browse) | `next_heading_level_1` |
+| Move to the next heading at level 2 | `2` (browse) | `2` (browse) | `2` (browse) | `next_heading_level_2` |
+| Move to the next heading at level 3 | `3` (browse) | `3` (browse) | `3` (browse) | `next_heading_level_3` |
+| Move to the next heading at level 4 | `4` (browse) | `4` (browse) | `4` (browse) | `next_heading_level_4` |
+| Move to the next heading at level 5 | `5` (browse) | `5` (browse) | `5` (browse) | `next_heading_level_5` |
+| Move to the next heading at level 6 | `6` (browse) | `6` (browse) | `6` (browse) | `next_heading_level_6` |
+| Move to the previous heading at level 1 | `!` (browse) | `!` (browse) | `!` (browse) | `previous_heading_level_1` |
+| Move to the previous heading at level 2 | `@` (browse) | `@` (browse) | `@` (browse) | `previous_heading_level_2` |
+| Move to the previous heading at level 3 | `#` (browse) | `#` (browse) | `#` (browse) | `previous_heading_level_3` |
+| Move to the previous heading at level 4 | `$` (browse) | `$` (browse) | `$` (browse) | `previous_heading_level_4` |
+| Move to the previous heading at level 5 | `%` (browse) | `%` (browse) | `%` (browse) | `previous_heading_level_5` |
+| Move to the previous heading at level 6 | `^` (browse) | `^` (browse) | `^` (browse) | `previous_heading_level_6` |
+| Move to the next table | `t` (browse) | `Ctrl+T`, `t` (browse) | `Cmd+Option+T`, `t` (browse) | `next_table` |
+| Move to the previous table | `Shift+T` (browse) | `Ctrl+Shift+T`, `Shift+T` (browse) | `Cmd+Shift+T`, `Shift+T` (browse) | `previous_table` |
+| Move to the next list | `l` (browse) | `l` (browse) | `l` (browse) | `next_list` |
+| Move to the previous list | `Shift+L` (browse) | `Shift+L` (browse) | `Shift+L` (browse) | `previous_list` |
+| Move to the next list item | `i` (browse) | `i` (browse) | `i` (browse) | `next_list_item` |
+| Move to the previous list item | `Shift+I` (browse) | `Shift+I` (browse) | `Shift+I` (browse) | `previous_list_item` |
+| Move to the next link | `k` (browse), `u` (browse) | `k` (browse), `u` (browse) | `k` (browse), `u` (browse) | `next_link` |
+| Move to the previous link | `Shift+K` (browse), `Shift+U` (browse) | `Shift+K` (browse), `Shift+U` (browse) | `Shift+K` (browse), `Shift+U` (browse) | `previous_link` |
+| Move to the next block quote | `q` (browse) | `q` (browse) | `q` (browse) | `next_block_quote` |
+| Move to the previous block quote | `Shift+Q` (browse) | `Shift+Q` (browse) | `Shift+Q` (browse) | `previous_block_quote` |
+| Move to the next separator (horizontal rule) | `s` (browse) | `s` (browse) | `s` (browse) | `next_separator` |
+| Move to the previous separator (horizontal rule) | `Shift+S` (browse) | `Shift+S` (browse) | `Shift+S` (browse) | `previous_separator` |
+| Move to the next graphic (image) | `g` (browse) | `g` (browse) | `g` (browse) | `next_graphic` |
+| Move to the previous graphic (image) | `Shift+G` (browse) | `Shift+G` (browse) | `Shift+G` (browse) | `previous_graphic` |
+| Follow the link at the cursor, or go between a footnote and its note | `Alt+Shift+F` | `Alt+Shift+F` | `Cmd+Option+Shift+F` | `follow_link` |
+| In a table, move down a row in the same column | `Ctrl+Alt+Down` | `Ctrl+Alt+Down` | `Cmd+Option+Down` | `table_next_row` |
+| In a table, move up a row in the same column | `Ctrl+Alt+Up` | `Ctrl+Alt+Up` | `Cmd+Option+Up` | `table_previous_row` |
+| In a table, move to the next cell in the row | `Ctrl+Alt+Right` | `Ctrl+Alt+Right` | `Cmd+Option+Right` | `table_next_column` |
+| In a table, move to the previous cell in the row | `Ctrl+Alt+Left` | `Ctrl+Alt+Left` | `Cmd+Option+Left` | `table_previous_column` |
+| Move to the next chapter or section | `F11`, `Alt+PageDown`, `d` (browse) | `Alt+PageDown`, `d` (browse) | `Option+PageDown`, `d` (browse) | `next_chapter` |
+| Move to the previous chapter or section | `Alt+PageUp`, `Shift+D` (browse) | `Alt+PageUp`, `Shift+D` (browse) | `Option+PageUp`, `Shift+D` (browse) | `previous_chapter` |
+| Go back to where you were before the last jump | `Alt+Left`, `Backspace` (browse) | `Alt+Left`, `Backspace` (browse) | `Cmd+[`, `Backspace` (browse) | `history_back` |
+| Go forward again after going back | `Alt+Right`, `\` (browse) | `Alt+Right`, `\` (browse) | `Cmd+]`, `\` (browse) | `history_forward` |
+| Go to a line, percentage, or position | `Ctrl+G` | `Ctrl+G` | `Cmd+G` | `go_to` |
+| Move to the start of the document | `Ctrl+Home`, `Home` (browse) | `Ctrl+Home`, `Home` (browse) | `Cmd+Up`, `Home` (browse) | `document_start` |
+| Move to the end of the document | `Ctrl+End`, `End` (browse) | `Ctrl+End`, `End` (browse) | `Cmd+Down`, `End` (browse) | `document_end` |
+| Move the cursor to the next word | `Right` (browse) | `Right` (browse) | `Right` (browse), `Option+Right` (browse) | `caret_next_word` |
+| Move the cursor to the previous word | `Left` (browse) | `Left` (browse) | `Left` (browse), `Option+Left` (browse) | `caret_previous_word` |
+| Move the cursor to the next line | `Down` (browse) | `Down` (browse) | `Down` (browse) | `caret_next_line` |
+| Move the cursor to the previous line | `Up` (browse) | `Up` (browse) | `Up` (browse) | `caret_previous_line` |
+| Extend the selection to the next word | `Shift+Right` (browse) | `Shift+Right` (browse) | `Shift+Right` (browse), `Option+Shift+Right` (browse) | `select_next_word` |
+| Extend the selection to the previous word | `Shift+Left` (browse) | `Shift+Left` (browse) | `Shift+Left` (browse), `Option+Shift+Left` (browse) | `select_previous_word` |
+| Extend the selection to the next line | `Shift+Down` (browse) | `Shift+Down` (browse) | `Shift+Down` (browse) | `select_next_line` |
+| Extend the selection to the previous line | `Shift+Up` (browse) | `Shift+Up` (browse) | `Shift+Up` (browse) | `select_previous_line` |
+| Move down one screen | `PageDown` (browse) | `PageDown` (browse) | `PageDown` (browse) | `page_down` |
+| Move up one screen | `PageUp` (browse) | `PageUp` (browse) | `PageUp` (browse) | `page_up` |
+| Scroll down one line without moving the cursor | `j` (browse) | `j` (browse) | `j` (browse) | `scroll_down` |
+| Scroll up one line without moving the cursor | `Shift+J` (browse) | `Shift+J` (browse) | `Shift+J` (browse) | `scroll_up` |
 
 ## Speech Cursor
 
-| Action | Terminal | GUI | Id |
-|---|---|---|---|
-| Enter or leave Speech Cursor (line) mode | `Tab` (browse), `Tab` (speech cursor) | `Tab` (browse), `Tab` (speech cursor) | `speech_cursor_toggle` |
-| Speech Cursor: read the next line | `Down` (speech cursor), `j` (speech cursor) | `Down` (speech cursor), `j` (speech cursor) | `speech_cursor_next_line` |
-| Speech Cursor: read the previous line | `Up` (speech cursor), `k` (speech cursor) | `Up` (speech cursor), `k` (speech cursor) | `speech_cursor_previous_line` |
-| Speech Cursor: read the current line again | `r` (speech cursor) | `r` (speech cursor) | `speech_cursor_reread_line` |
-| Speech Cursor: leave and read on from this line | `Enter` (speech cursor) | `Enter` (speech cursor) | `speech_cursor_exit_and_read` |
+| Action | Terminal | GUI | GUI on macOS | Id |
+|---|---|---|---|---|
+| Enter or leave Speech Cursor (line) mode | `Tab` (browse), `Tab` (speech cursor) | `Tab` (browse), `Tab` (speech cursor) | `Tab` (browse), `Tab` (speech cursor) | `speech_cursor_toggle` |
+| Speech Cursor: read the next line | `Down` (speech cursor), `j` (speech cursor) | `Down` (speech cursor), `j` (speech cursor) | `Down` (speech cursor), `j` (speech cursor) | `speech_cursor_next_line` |
+| Speech Cursor: read the previous line | `Up` (speech cursor), `k` (speech cursor) | `Up` (speech cursor), `k` (speech cursor) | `Up` (speech cursor), `k` (speech cursor) | `speech_cursor_previous_line` |
+| Speech Cursor: read the current line again | `r` (speech cursor) | `r` (speech cursor) | `r` (speech cursor) | `speech_cursor_reread_line` |
+| Speech Cursor: leave and read on from this line | `Enter` (speech cursor) | `Enter` (speech cursor) | `Enter` (speech cursor) | `speech_cursor_exit_and_read` |
 
 ## Voice
 
-| Action | Terminal | GUI | Id |
-|---|---|---|---|
-| Speak faster | `+` (browse), `=` (browse) | `F11`, `+` (browse), `=` (browse) | `rate_up` |
-| Speak slower | `-` (browse) | `Shift+F11`, `-` (browse) | `rate_down` |
-| Raise the pitch | `Alt+=`, `)` (browse) | `Alt+=`, `)` (browse) | `pitch_up` |
-| Lower the pitch | `Alt+-`, `(` (browse) | `Alt+-`, `(` (browse) | `pitch_down` |
-| Louder | `F7`, `0` (browse) | `F7`, `0` (browse) | `volume_up` |
-| Quieter | `Shift+F7`, `9` (browse) | `Shift+F7`, `9` (browse) | `volume_down` |
-| Cycle the speed presets (skim, normal, study, slow) | `F8` | `F8` | `cycle_speed_preset` |
-| Choose a voice | `Alt+V` | `Ctrl+Shift+V` | `choose_voice` |
-| Restart speech with the current settings (after the speech engine stopped working) | `Shift+F8` | `Shift+F8` | `restart_speech` |
-| Cycle how much textweaver says: low, normal, high | `Alt+Shift+V` | `Alt+Shift+V` | `cycle_verbosity` |
-| Cycle how much punctuation is spoken: none, some, all | `Alt+Shift+N` | `Alt+Shift+N` | `cycle_punctuation` |
+| Action | Terminal | GUI | GUI on macOS | Id |
+|---|---|---|---|---|
+| Speak faster | `+` (browse), `=` (browse) | `F11`, `+` (browse), `=` (browse) | `Cmd+Option+]`, `+` (browse), `=` (browse) | `rate_up` |
+| Speak slower | `-` (browse) | `Shift+F11`, `-` (browse) | `Cmd+Option+[`, `-` (browse) | `rate_down` |
+| Raise the pitch | `Alt+=`, `)` (browse) | `Alt+=`, `)` (browse) | `Cmd+Option+Shift+Up`, `)` (browse) | `pitch_up` |
+| Lower the pitch | `Alt+-`, `(` (browse) | `Alt+-`, `(` (browse) | `Cmd+Option+Shift+Down`, `(` (browse) | `pitch_down` |
+| Louder | `F7`, `0` (browse) | `F7`, `0` (browse) | `F7`, `0` (browse) | `volume_up` |
+| Quieter | `Shift+F7`, `9` (browse) | `Shift+F7`, `9` (browse) | `Shift+F7`, `9` (browse) | `volume_down` |
+| Cycle the speed presets (skim, normal, study, slow) | `F8` | `F8` | `F8` | `cycle_speed_preset` |
+| Choose a voice | `Alt+V` | `Ctrl+Shift+V` | `Cmd+Shift+V` | `choose_voice` |
+| Restart speech with the current settings (after the speech engine stopped working) | `Shift+F8` | `Shift+F8` | `Shift+F8` | `restart_speech` |
+| Cycle how much textweaver says: low, normal, high | `Alt+Shift+V` | `Alt+Shift+V` | `Cmd+Option+Shift+V` | `cycle_verbosity` |
+| Cycle how much punctuation is spoken: none, some, all | `Alt+Shift+N` | `Alt+Shift+N` | `Cmd+Option+Shift+N` | `cycle_punctuation` |
 
 ## Search
 
-| Action | Terminal | GUI | Id |
-|---|---|---|---|
-| Find text in the document | `Ctrl+F`, `/` (browse) | `Ctrl+F`, `/` (browse) | `find` |
-| Find the next match | `F3`, `n` (browse) | `n` (browse) | `find_next` |
-| Find the previous match | `F4`, `Shift+N` (browse) | `Shift+N` (browse) | `find_previous` |
-| Move to the next misspelled word, and spell it | `Alt+M` | `Alt+M` | `next_misspelling` |
-| Move to the previous misspelled word, and spell it | `Alt+Shift+M` | `Alt+Shift+M` | `previous_misspelling` |
-| List suggestions for the misspelled word at the cursor, or add it to your word list | `Alt+J` | `Alt+J` | `spelling_suggestions` |
-| Move to the next grammar problem, and say it and its fix | `Ctrl+F7` | `Ctrl+F7` | `next_grammar_problem` |
-| Move to the previous grammar problem, and say it and its fix | `Ctrl+Shift+F7` | `Ctrl+Shift+F7` | `previous_grammar_problem` |
-| In edit mode, move to the next Markdown lint problem, and say it | `Ctrl+F8` | `Ctrl+F8` | `next_lint_problem` |
-| In edit mode, move to the previous Markdown lint problem, and say it | `Ctrl+Shift+F8` | `Ctrl+Shift+F8` | `previous_lint_problem` |
+| Action | Terminal | GUI | GUI on macOS | Id |
+|---|---|---|---|---|
+| Find text in the document | `Ctrl+F`, `/` (browse) | `Ctrl+F`, `/` (browse) | `Cmd+F`, `/` (browse) | `find` |
+| Find the next match | `F3`, `n` (browse) | `n` (browse) | `n` (browse) | `find_next` |
+| Find the previous match | `F4`, `Shift+N` (browse) | `Shift+N` (browse) | `Shift+N` (browse) | `find_previous` |
+| Move to the next misspelled word, and spell it | `Alt+M` | `Alt+M` | `Cmd+;` | `next_misspelling` |
+| Move to the previous misspelled word, and spell it | `Alt+Shift+M` | `Alt+Shift+M` | `Cmd+Option+Shift+M` | `previous_misspelling` |
+| List suggestions for the misspelled word at the cursor, or add it to your word list | `Alt+J` | `Alt+J` | `Cmd+Option+J` | `spelling_suggestions` |
+| Move to the next grammar problem, and say it and its fix | `Ctrl+F7` | `Ctrl+F7` | `Cmd+F7` | `next_grammar_problem` |
+| Move to the previous grammar problem, and say it and its fix | `Ctrl+Shift+F7` | `Ctrl+Shift+F7` | `Cmd+Shift+F7` | `previous_grammar_problem` |
+| In edit mode, move to the next Markdown lint problem, and say it | `Ctrl+F8` | `Ctrl+F8` | `Cmd+F8` | `next_lint_problem` |
+| In edit mode, move to the previous Markdown lint problem, and say it | `Ctrl+Shift+F8` | `Ctrl+Shift+F8` | `Cmd+Shift+F8` | `previous_lint_problem` |
 
 ## Bookmarks and notes
 
-| Action | Terminal | GUI | Id |
-|---|---|---|---|
-| Add a bookmark at the cursor | `m` (browse) | `Ctrl+M`, `m` (browse) | `add_bookmark` |
-| List bookmarks | `Shift+M` (browse) | `Shift+M` (browse) | `list_bookmarks` |
-| Move to the next bookmark | `b` (browse) | `b` (browse) | `next_bookmark` |
-| Move to the previous bookmark | `Shift+B` (browse) | `Shift+B` (browse) | `previous_bookmark` |
-| Add a note to the selection or the sentence at the cursor | `Alt+N`, `a` (browse) | `Alt+N`, `a` (browse) | `add_note` |
-| List notes | `Shift+A` (browse) | `Ctrl+Shift+N`, `Shift+A` (browse) | `list_notes` |
-| Move to the next note | `F12`, `e` (browse) | `F12`, `e` (browse) | `next_note` |
-| Move to the previous note | `Shift+F12`, `Shift+E` (browse) | `Shift+F12`, `Shift+E` (browse) | `previous_note` |
-| Delete the note or highlight at the cursor | `Delete` (browse) | `Delete` (browse) | `delete_note` |
-| Highlight the selection, or the sentence at the cursor | `y` (browse) | `y` (browse) | `highlight_selection` |
-| Export the notes and highlights as a Markdown study sheet, grouped by heading | palette | palette | `export_study_sheet` |
+| Action | Terminal | GUI | GUI on macOS | Id |
+|---|---|---|---|---|
+| Add a bookmark at the cursor | `m` (browse) | `Ctrl+M`, `m` (browse) | `Cmd+D`, `m` (browse) | `add_bookmark` |
+| List bookmarks | `Shift+M` (browse) | `Shift+M` (browse) | `Shift+M` (browse) | `list_bookmarks` |
+| Move to the next bookmark | `b` (browse) | `b` (browse) | `b` (browse) | `next_bookmark` |
+| Move to the previous bookmark | `Shift+B` (browse) | `Shift+B` (browse) | `Shift+B` (browse) | `previous_bookmark` |
+| Add a note to the selection or the sentence at the cursor | `Alt+N`, `a` (browse) | `Alt+N`, `a` (browse) | `Cmd+Option+N`, `a` (browse) | `add_note` |
+| List notes | `Shift+A` (browse) | `Ctrl+Shift+N`, `Shift+A` (browse) | `Cmd+Shift+N`, `Shift+A` (browse) | `list_notes` |
+| Move to the next note | `F12`, `e` (browse) | `F12`, `e` (browse) | `F12`, `e` (browse) | `next_note` |
+| Move to the previous note | `Shift+F12`, `Shift+E` (browse) | `Shift+F12`, `Shift+E` (browse) | `Shift+F12`, `Shift+E` (browse) | `previous_note` |
+| Delete the note or highlight at the cursor | `Delete` (browse) | `Delete` (browse) | `Delete` (browse) | `delete_note` |
+| Highlight the selection, or the sentence at the cursor | `y` (browse) | `y` (browse) | `y` (browse) | `highlight_selection` |
+| Export the notes and highlights as a Markdown study sheet, grouped by heading | palette | palette | palette | `export_study_sheet` |
 
 ## File
 
-| Action | Terminal | GUI | Id |
-|---|---|---|---|
-| Open a document | `Ctrl+O` | `Ctrl+O` | `open` |
-| Open a document by typing its path | none | `Ctrl+Shift+G` | `open_path` |
-| Open the library: documents in your library folders and recent files | `Alt+L` | `Ctrl+Shift+B` | `open_library` |
-| Start a new document in edit mode | `Ctrl+N` | `Ctrl+N` | `new_document` |
-| Save (Markdown and text in place; other formats as Markdown) | `Ctrl+S` | `Ctrl+S` | `save` |
-| Save under a new name | `Alt+S` | `Ctrl+Shift+S` | `save_as` |
-| Export settings and key overrides to a JSON or TOML file | `Alt+Shift+E` | `Alt+Shift+E` | `export_settings` |
-| Import settings from a JSON or TOML file, after a yes or no | `Alt+Shift+I` | `Alt+Shift+I` | `import_settings` |
-| List reading statistics: time read, the furthest point, sessions, and the most read documents | `Alt+Y` | `Ctrl+Shift+Y` | `reading_statistics` |
-| Start a new document from a template, with a title, author, date, and References heading | palette | palette | `new_from_template` |
-| Export the document as a web page (HTML) next to it | palette | palette | `export_html` |
-| Export the document as a tagged PDF next to it | palette | palette | `export_pdf` |
-| Export the document as a Word file (DOCX) next to it | palette | palette | `export_docx` |
-| Export the document as an EPUB book next to it | palette | palette | `export_epub` |
-| Export the document as braille (BRF) next to it | palette | palette | `export_brf` |
-| Preview the document in the web browser, with math; each save rewrites the preview | palette | palette | `preview_in_browser` |
-| Turn automatic reloading of the browser preview on or off | palette | palette | `toggle_preview_auto_reload` |
-| Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses | palette | palette | `toggle_preview_live` |
-| Quit, saving the reading position | `Ctrl+Q` | `Ctrl+Q` | `quit` |
+| Action | Terminal | GUI | GUI on macOS | Id |
+|---|---|---|---|---|
+| Open a document | `Ctrl+O` | `Ctrl+O` | `Cmd+O` | `open` |
+| Open a document by typing its path | none | `Ctrl+Shift+G` | `Cmd+Shift+G` | `open_path` |
+| Open the library: documents in your library folders and recent files | `Alt+L` | `Ctrl+Shift+B` | `Cmd+Shift+B` | `open_library` |
+| Start a new document in edit mode | `Ctrl+N` | `Ctrl+N` | `Cmd+N` | `new_document` |
+| Save (Markdown and text in place; other formats as Markdown) | `Ctrl+S` | `Ctrl+S` | `Cmd+S` | `save` |
+| Save under a new name | `Alt+S` | `Ctrl+Shift+S` | `Cmd+Shift+S` | `save_as` |
+| Export settings and key overrides to a JSON or TOML file | `Alt+Shift+E` | `Alt+Shift+E` | `Cmd+Option+Shift+E` | `export_settings` |
+| Import settings from a JSON or TOML file, after a yes or no | `Alt+Shift+I` | `Alt+Shift+I` | `Cmd+Option+Shift+I` | `import_settings` |
+| List reading statistics: time read, the furthest point, sessions, and the most read documents | `Alt+Y` | `Ctrl+Shift+Y` | `Cmd+Option+Y` | `reading_statistics` |
+| Start a new document from a template, with a title, author, date, and References heading | palette | palette | palette | `new_from_template` |
+| Export the document as a web page (HTML) next to it | palette | palette | palette | `export_html` |
+| Export the document as a tagged PDF next to it | palette | palette | palette | `export_pdf` |
+| Export the document as a Word file (DOCX) next to it | palette | palette | palette | `export_docx` |
+| Export the document as an EPUB book next to it | palette | palette | palette | `export_epub` |
+| Export the document as braille (BRF) next to it | palette | palette | palette | `export_brf` |
+| Preview the document in the web browser, with math; each save rewrites the preview | palette | palette | palette | `preview_in_browser` |
+| Turn automatic reloading of the browser preview on or off | palette | palette | palette | `toggle_preview_auto_reload` |
+| Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses | palette | palette | palette | `toggle_preview_live` |
+| Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up | palette | palette | palette | `browse_files` |
+| Convert a folder of documents to another format, in the background | palette | palette | palette | `batch_convert` |
+| Export the document as spoken audio: MP3, FLAC, WAV, or an M4B audiobook | palette | palette | palette | `export_audio` |
+| Quit, saving the reading position | `Ctrl+Q` | `Ctrl+Q` | `Cmd+Q` | `quit` |
 
 ## Editing
 
-| Action | Terminal | GUI | Id |
-|---|---|---|---|
-| Switch between reading and editing | `Ctrl+E` | `Ctrl+E` | `toggle_edit_mode` |
-| Undo | `Ctrl+Z` (edit) | `Ctrl+Z` (edit) | `undo` |
-| Redo | `Ctrl+Y` (edit) | `Ctrl+Y` (edit), `Ctrl+Shift+Z` (edit) | `redo` |
-| Make the selection bold | `Ctrl+B` (edit) | `Ctrl+B` (edit) | `bold` |
-| Make the selection italic | `Alt+I` (edit) | `Ctrl+I` (edit) | `italic` |
-| Underline the selection | `Ctrl+U` (edit) | `Ctrl+U` (edit) | `underline` |
-| Strike through the selection | `Alt+D` (edit) | `Ctrl+Shift+X` (edit) | `strikethrough` |
-| Mark the selection as code | `` Alt+` `` (edit) | `` Ctrl+` `` (edit) | `inline_code` |
-| Make the selected lines a code block | `Alt+K` (edit) | `Ctrl+Shift+K` (edit) | `code_block` |
-| Make the selection a link | `Ctrl+K` (edit) | `Ctrl+K` (edit) | `insert_link` |
-| Make the current line a heading | `Alt+1` (edit) | `Ctrl+Alt+1` (edit) | `heading` |
-| Make the selected lines a bulleted list | `Alt+8` (edit) | `Ctrl+Shift+L` (edit) | `bullet_list` |
-| Make the selected lines a numbered list | `Alt+7` (edit) | `Ctrl+Shift+O` (edit) | `numbered_list` |
-| Make the selected lines a block quote | `Alt+9` (edit) | `Ctrl+Shift+Q` (edit) | `block_quote` |
-| Insert a horizontal rule | `Alt+R` (edit) | `Ctrl+Shift+R` (edit) | `horizontal_rule` |
-| Insert a table | `Alt+T` (edit) | `Ctrl+Shift+A` (edit) | `insert_table` |
-| Add a row to the table at the cursor | `Alt+W` (edit) | `Ctrl+Shift+Enter` (edit) | `add_table_row` |
-| Insert an image | `Alt+G` (edit) | `Ctrl+Shift+I` (edit) | `insert_image` |
-| Find and replace | `Alt+F` (edit) | `Ctrl+Shift+F` (edit) | `replace` |
-| Copy the selection, or the sentence at the cursor, to the clipboard | `Ctrl+C` | `Ctrl+C` | `copy` |
-| Cut the selection to the clipboard | `Ctrl+X` (edit) | `Ctrl+X` (edit) | `cut` |
-| In a table, move to the next cell and say its column; elsewhere, type a tab | `Tab` (edit) | `Tab` (edit) | `next_table_cell` |
-| In a table, move to the previous cell and say its column | `Shift+Tab` (edit) | `Shift+Tab` (edit) | `previous_table_cell` |
-| Cycle typing echo: characters and words, characters, words, or none | `Shift+F9` | `Shift+F9` | `cycle_typing_echo` |
-| Select all the text | `Ctrl+A` (edit) | `Ctrl+A` (edit) | `select_all` |
-| Delete the word before the cursor | `Alt+Backspace` (edit) | `Ctrl+Backspace` (edit) | `delete_word_before` |
-| Delete the word after the cursor | `Ctrl+Delete` (edit) | `Ctrl+Delete` (edit) | `delete_word_after` |
-| Paste the text last copied or cut in textweaver; the terminal paste works too | `Ctrl+V` (edit) | `Ctrl+V` (edit) | `paste` |
-| Insert a citation: pick a reference, then give a page or other locator | `Alt+C` (edit) | `Alt+C` (edit) | `insert_citation` |
-| Add a reference to your library by DOI or ISBN | `Alt+B` | `Alt+Shift+D` | `add_reference` |
-| Insert the bibliography of the works cited, at the cursor | palette | palette | `insert_bibliography` |
-| Check the citations: how many there are, and which keys are not in your library | palette | palette | `check_citations` |
-| Import references from a BibTeX, RIS, or CSL-JSON file into your library | palette | palette | `import_references` |
+| Action | Terminal | GUI | GUI on macOS | Id |
+|---|---|---|---|---|
+| Switch between reading and editing | `Ctrl+E` | `Ctrl+E` | `Cmd+E` | `toggle_edit_mode` |
+| Undo | `Ctrl+Z` (edit) | `Ctrl+Z` (edit) | `Cmd+Z` (edit) | `undo` |
+| Redo | `Ctrl+Y` (edit) | `Ctrl+Y` (edit), `Ctrl+Shift+Z` (edit) | `Cmd+Y` (edit), `Cmd+Shift+Z` (edit) | `redo` |
+| Make the selection bold | `Ctrl+B` (edit) | `Ctrl+B` (edit) | `Cmd+B` (edit) | `bold` |
+| Make the selection italic | `Alt+I` (edit) | `Ctrl+I` (edit) | `Cmd+I` (edit) | `italic` |
+| Underline the selection | `Ctrl+U` (edit) | `Ctrl+U` (edit) | `Cmd+U` (edit) | `underline` |
+| Strike through the selection | `Alt+D` (edit) | `Ctrl+Shift+X` (edit) | `Cmd+Shift+X` (edit) | `strikethrough` |
+| Mark the selection as code | `` Alt+` `` (edit) | `` Ctrl+` `` (edit) | `Cmd+Option+K` (edit) | `inline_code` |
+| Make the selected lines a code block | `Alt+K` (edit) | `Ctrl+Shift+K` (edit) | `Cmd+Shift+K` (edit) | `code_block` |
+| Make the selection a link | `Ctrl+K` (edit) | `Ctrl+K` (edit) | `Cmd+K` (edit) | `insert_link` |
+| Make the current line a heading | `Alt+1` (edit) | `Ctrl+Alt+1` (edit) | `Cmd+Option+1` (edit) | `heading` |
+| Make the selected lines a bulleted list | `Alt+8` (edit) | `Ctrl+Shift+L` (edit) | `Cmd+Shift+L` (edit) | `bullet_list` |
+| Make the selected lines a numbered list | `Alt+7` (edit) | `Ctrl+Shift+O` (edit) | `Cmd+Shift+O` (edit) | `numbered_list` |
+| Make the selected lines a block quote | `Alt+9` (edit) | `Ctrl+Shift+Q` (edit) | `Cmd+Option+Q` (edit) | `block_quote` |
+| Insert a horizontal rule | `Alt+R` (edit) | `Ctrl+Shift+R` (edit) | `Cmd+Shift+R` (edit) | `horizontal_rule` |
+| Insert a table | `Alt+T` (edit) | `Ctrl+Shift+A` (edit) | `Cmd+Shift+A` (edit) | `insert_table` |
+| Add a row to the table at the cursor | `Alt+W` (edit) | `Ctrl+Shift+Enter` (edit) | `Cmd+Shift+Enter` (edit) | `add_table_row` |
+| Insert an image | `Alt+G` (edit) | `Ctrl+Shift+I` (edit) | `Cmd+Shift+I` (edit) | `insert_image` |
+| Find and replace | `Alt+F` (edit) | `Ctrl+Shift+F` (edit) | `Cmd+Shift+F` (edit) | `replace` |
+| Copy the selection, or the sentence at the cursor, to the clipboard | `Ctrl+C` | `Ctrl+C` | `Cmd+C` | `copy` |
+| Cut the selection to the clipboard | `Ctrl+X` (edit) | `Ctrl+X` (edit) | `Cmd+X` (edit) | `cut` |
+| In a table, move to the next cell and say its column; elsewhere, type a tab | `Tab` (edit) | `Tab` (edit) | `Tab` (edit) | `next_table_cell` |
+| In a table, move to the previous cell and say its column | `Shift+Tab` (edit) | `Shift+Tab` (edit) | `Shift+Tab` (edit) | `previous_table_cell` |
+| Cycle typing echo: characters and words, characters, words, or none | `Shift+F9` | `Shift+F9` | `Shift+F9` | `cycle_typing_echo` |
+| Select all the text | `Ctrl+A` (edit) | `Ctrl+A` (edit) | `Cmd+A` (edit) | `select_all` |
+| Delete the word before the cursor | `Alt+Backspace` (edit) | `Ctrl+Backspace` (edit) | `Option+Backspace` (edit) | `delete_word_before` |
+| Delete the word after the cursor | `Ctrl+Delete` (edit) | `Ctrl+Delete` (edit) | `Option+Delete` (edit) | `delete_word_after` |
+| Paste the text last copied or cut in textweaver; the terminal paste works too | `Ctrl+V` (edit) | `Ctrl+V` (edit) | `Cmd+V` (edit) | `paste` |
+| Insert a citation: pick a reference, then give a page or other locator | `Alt+C` (edit) | `Alt+C` (edit) | `Cmd+Option+C` (edit) | `insert_citation` |
+| Add a reference to your library by DOI or ISBN | `Alt+B` | `Alt+Shift+D` | `Cmd+Option+Shift+D` | `add_reference` |
+| Insert the bibliography of the works cited, at the cursor | palette | palette | palette | `insert_bibliography` |
+| Check the citations: how many there are, and which keys are not in your library | palette | palette | palette | `check_citations` |
+| Import references from a BibTeX, RIS, or CSL-JSON file into your library | palette | palette | palette | `import_references` |
+| Start or stop dictation: spoken words are typed at the cursor in edit mode | `Ctrl+Shift+F9` | `Ctrl+Shift+F9` | `Cmd+Shift+F9` | `dictate` |
 
 ## View and help
 
-| Action | Terminal | GUI | Id |
+| Action | Terminal | GUI | GUI on macOS | Id |
+|---|---|---|---|---|
+| Switch to the next color theme | `F5` | `F5` | `F5` | `next_theme` |
+| Show or hide line numbers | `F6` | `F6` | `F6` | `toggle_line_numbers` |
+| Turn single-key shortcuts on or off, so dictation and typing never trigger commands | `F9` | `F9` | `F9` | `toggle_character_keys` |
+| Cycle the accessibility mode: self-voicing, hybrid, or screen reader | `Alt+Shift+A` | `Alt+Shift+A` | `Cmd+Option+Shift+A` | `cycle_access_mode` |
+| List settings profiles: switch to one, save the current settings as one, rename, delete, import, or export | `Alt+U` | `Ctrl+Shift+U` | `Cmd+Shift+U` | `settings_profiles` |
+| Turn bionic reading on or off: the start of each word in bold | `Alt+Shift+B` | `Alt+Shift+B` | `Cmd+Option+Shift+B` | `bionic_toggle` |
+| Cycle the reading ruler: off, current line, ruler | `Alt+Shift+U` | `Alt+Shift+U` | `Cmd+Option+Shift+U` | `ruler_cycle` |
+| Show or hide syllables: words split with a middle dot | `Alt+Shift+Z` | `Alt+Shift+Z` | `Cmd+Option+Shift+Z` | `syllables_toggle` |
+| Mark difficult words on or off: underlined, and named on word moves at high verbosity | `Alt+Shift+J` | `Alt+Shift+J` | `Cmd+Option+Shift+J` | `difficult_words_toggle` |
+| Make the document text larger | none | `Ctrl+=` | `Cmd+=` | `text_larger` |
+| Make the document text smaller | none | `Ctrl+-` | `Cmd+-` | `text_smaller` |
+| Return the document text to its standard size | none | `Ctrl+0` | `Cmd+0` | `text_size_reset` |
+| Choose the font of the document text | none | `Ctrl+D` | `Cmd+T` | `choose_font` |
+| Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast | palette | palette | palette | `color_settings` |
+| Cycle how much textweaver announces about itself: off, minimal, normal, or full; errors and answers are always said | `Ctrl+F9` | `Ctrl+F9` | `Cmd+F9` | `cycle_interface_announcements` |
+| Open the menus: File, Edit, View, Reading, Speech, Tools, and Help | `F10` | `F10` | `F10` | `menu` |
+| Run any command by name | `F2`, `Alt+X`, `:` (browse) | `F2`, `:` (browse) | `F2`, `:` (browse) | `command_palette` |
+| Open the settings: every option with its help, filtered as you type; Left and Right change a value | `Shift+F10` | `Ctrl+,` | `Cmd+,` | `settings` |
+| List keyboard shortcuts | `?` (browse) | `F3`, `?` (browse) | `F3`, `?` (browse) | `keyboard_help` |
+| Press a key to hear what it does and where it is in the menus, without running it | `Shift+F1` | `Shift+F1` | `Shift+F1` | `what_does_this_key_do` |
+| Say textweaver's version and license | palette | palette | palette | `about` |
+| Open the help | `F1` | `F1` | `F1` | `help` |
+
+## The terminal on macOS
+
+A terminal never passes the Command key, so on a Mac the terminal keeps the keys in the Terminal column, with Option as Alt (in Terminal, turn on "Use Option as Meta key"; in iTerm2, set the Option key to Esc+). These commands use other keys on a Mac, because VoiceOver keeps Ctrl+Option, Mission Control keeps Ctrl with the arrows, and macOS keeps Ctrl with F1 to F8 and Ctrl+Space:
+
+| Action | Terminal | Terminal on macOS | Id |
 |---|---|---|---|
-| Switch to the next color theme | `F5` | `F5` | `next_theme` |
-| Show or hide line numbers | `F6` | `F6` | `toggle_line_numbers` |
-| Turn single-key shortcuts on or off, so dictation and typing never trigger commands | `F9` | `F9` | `toggle_character_keys` |
-| Cycle the accessibility mode: self-voicing, hybrid, or screen reader | `Alt+Shift+A` | `Alt+Shift+A` | `cycle_access_mode` |
-| List settings profiles: switch to one, save the current settings as one, rename, delete, import, or export | `Alt+U` | `Ctrl+Shift+U` | `settings_profiles` |
-| Turn bionic reading on or off: the start of each word in bold | `Alt+Shift+B` | `Alt+Shift+B` | `bionic_toggle` |
-| Cycle the reading ruler: off, current line, ruler | `Alt+Shift+U` | `Alt+Shift+U` | `ruler_cycle` |
-| Show or hide syllables: words split with a middle dot | `Alt+Shift+Z` | `Alt+Shift+Z` | `syllables_toggle` |
-| Mark difficult words on or off: underlined, and named on word moves at high verbosity | `Alt+Shift+J` | `Alt+Shift+J` | `difficult_words_toggle` |
-| Make the document text larger | none | `Ctrl+=` | `text_larger` |
-| Make the document text smaller | none | `Ctrl+-` | `text_smaller` |
-| Return the document text to its standard size | none | `Ctrl+0` | `text_size_reset` |
-| Choose the font of the document text | none | `Ctrl+D` | `choose_font` |
-| Run any command by name | `F2`, `Alt+X`, `:` (browse) | `F2`, `:` (browse) | `command_palette` |
-| Open the settings: every option with its help, filtered as you type; Left and Right change a value | `Shift+F10` | `Ctrl+,` | `settings` |
-| List keyboard shortcuts | `?` (browse) | `F3`, `?` (browse) | `keyboard_help` |
-| Open the help | `F1` | `F1` | `help` |
+| Read continuously from the cursor | `Ctrl+Space`, `Enter` (browse) | `Enter` (browse) | `read_from_cursor` |
+| Move to the next paragraph | `Ctrl+P`, `p` (browse), `]` (browse), `Ctrl+Down` (browse), `PageDown` (speech cursor) | `Ctrl+P`, `p` (browse), `]` (browse), `PageDown` (speech cursor) | `next_paragraph` |
+| Move to the previous paragraph | `Shift+P` (browse), `[` (browse), `Ctrl+Up` (browse), `PageUp` (speech cursor) | `Shift+P` (browse), `[` (browse), `PageUp` (speech cursor) | `previous_paragraph` |
+| In a table, move down a row in the same column | `Ctrl+Alt+Down` | `Ctrl+Shift+Down` | `table_next_row` |
+| In a table, move up a row in the same column | `Ctrl+Alt+Up` | `Ctrl+Shift+Up` | `table_previous_row` |
+| In a table, move to the next cell in the row | `Ctrl+Alt+Right` | `Ctrl+Shift+Right` | `table_next_column` |
+| In a table, move to the previous cell in the row | `Ctrl+Alt+Left` | `Ctrl+Shift+Left` | `table_previous_column` |
+| Move to the next grammar problem, and say it and its fix | `Ctrl+F7` | `Option+F7` | `next_grammar_problem` |
+| Move to the previous grammar problem, and say it and its fix | `Ctrl+Shift+F7` | `Option+Shift+F7` | `previous_grammar_problem` |
+| In edit mode, move to the next Markdown lint problem, and say it | `Ctrl+F8` | `Option+F8` | `next_lint_problem` |
+| In edit mode, move to the previous Markdown lint problem, and say it | `Ctrl+Shift+F8` | `Option+Shift+F8` | `previous_lint_problem` |
 
 ## The classic preset
 
@@ -394,7 +423,7 @@ Where the default commands of those keys went, in the terminal:
 - Move to the next graphic (image): the command palette only.
 - Move to the previous graphic (image): the command palette only.
 - Move to the next chapter or section: `F11`, `Alt+PageDown`.
-- Move to the previous chapter or section: `F10`, `Alt+PageUp`.
+- Move to the previous chapter or section: `Alt+PageUp`.
 - Move to the next sentence: `Alt+.`, `.` (browse).
 - Move to the previous sentence, or to the start of this one when more than three words in: `Alt+,`, `,` (browse).
 
@@ -475,6 +504,11 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Preview the document in the web browser, with math; each save rewrites the preview | `preview_in_browser` |
 | Turn automatic reloading of the browser preview on or off | `toggle_preview_auto_reload` |
 | Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses | `toggle_preview_live` |
+| Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up | `browse_files` |
+| Convert a folder of documents to another format, in the background | `batch_convert` |
+| Export the document as spoken audio: MP3, FLAC, WAV, or an M4B audiobook | `export_audio` |
 | Insert the bibliography of the works cited, at the cursor | `insert_bibliography` |
 | Check the citations: how many there are, and which keys are not in your library | `check_citations` |
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | `import_references` |
+| Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast | `color_settings` |
+| Say textweaver's version and license | `about` |

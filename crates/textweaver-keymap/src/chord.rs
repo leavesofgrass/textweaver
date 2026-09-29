@@ -222,6 +222,30 @@ impl KeyChord {
     }
 }
 
+impl KeyChord {
+    /// The chord written as a Mac shows it: `Cmd+Option+N`, with Option
+    /// for Alt ([`Display`](fmt::Display) writes `Cmd+Alt+N`, which
+    /// `keymap.toml` also takes).
+    pub fn mac_text(&self) -> String {
+        let s = self.to_string();
+        let mut parts: Vec<&str> = s.split('+').collect();
+        // Every part but the key is a modifier name; `Ctrl++` ends in an
+        // empty part and a `+` key, which the rename leaves alone.
+        let modifiers = parts.len().saturating_sub(1);
+        for p in parts.iter_mut().take(modifiers) {
+            if *p == "Alt" {
+                *p = "Option";
+            }
+        }
+        parts.join("+")
+    }
+
+    /// The chord as a Mac user says it: "Command Option period".
+    pub fn mac_spoken(&self) -> String {
+        self.spoken().replacen("Alt", "Option", 1)
+    }
+}
+
 /// Spoken names for punctuation keys.
 fn char_name(c: char) -> Option<&'static str> {
     Some(match c {
