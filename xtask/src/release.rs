@@ -213,6 +213,20 @@ pub fn run() -> anyhow::Result<()> {
         }
     }
 
+    // Every other mention of the old version, so a file that should follow
+    // the release is seen before it, not after (the README's and the crate
+    // map's versions went stale that way). History lines stay as they are.
+    let grep = git_output(&root, &["grep", "-n", "-I", "-F", old]).unwrap_or_default();
+    let left = left_behind(&grep);
+    if !left.is_empty() {
+        println!(
+            "left as they are, still naming {old} (history, or a file to add to EXAMPLE_FILES in xtask/src/release.rs):"
+        );
+        for l in &left {
+            println!("  {l}");
+        }
+    }
+
     if args.dry_run {
         for (path, _) in &writes {
             println!("would update {}", rel(&root, path));
@@ -264,6 +278,26 @@ pub fn run() -> anyhow::Result<()> {
     println!("  git push origin main");
     println!("  git push origin {tag}");
     Ok(())
+}
+
+/// Files the release rewrites or that record history by design, never
+/// listed as left behind.
+const HANDLED: [&str; 3] = ["CHANGELOG.md", "Cargo.toml", "Cargo.lock"];
+
+/// The `git grep -n` lines (`path:line:text`) in files the release does
+/// not update, as `path, line N: text`.
+fn left_behind(grep: &str) -> Vec<String> {
+    grep.lines()
+        .filter_map(|l| {
+            let mut parts = l.splitn(3, ':');
+            let (path, line, text) = (parts.next()?, parts.next()?, parts.next()?);
+            if EXAMPLE_FILES.contains(&path) || HANDLED.contains(&path) {
+                return None;
+            }
+            let text: String = text.trim().chars().take(100).collect();
+            Some(format!("{path}, line {line}: {text}"))
+        })
+        .collect()
 }
 
 /// The checks CI runs, as cargo arguments.
@@ -630,6 +664,19 @@ fn cargo(root: &Path, args: &[&str]) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mentions_the_release_does_not_update_are_listed() {
+        let grep = "README.md:5:The newest release is 0.1.0.\n\
+                    CHANGELOG.md:9:## [0.1.0]\n\
+                    docs/settings.md:369:`x` was removed in 0.1.0: see: this\n\
+                    docs/site/architecture.html:3:v0.1.0\n";
+        assert_eq!(
+            left_behind(grep),
+            ["docs/settings.md, line 369: `x` was removed in 0.1.0: see: this"]
+        );
+        assert!(left_behind("").is_empty());
+    }
 
     #[test]
     fn arguments() {

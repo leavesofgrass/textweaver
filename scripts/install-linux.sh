@@ -33,6 +33,10 @@ DEPS_ONLY=0
 ESPEAK=1
 OPTIONAL="ask"
 UNINSTALL=0
+# The GUI (textweaver-gui), from the release's -gui package: "ask" keeps
+# what an earlier install chose (the manifest's gui= line), else leaves it
+# out.
+GUI="ask"
 
 usage() {
   cat <<'EOF'
@@ -69,6 +73,13 @@ Options:
   --appimage             With --release: install the AppImage even when
                          FUSE seems to be missing. It then runs with
                          APPIMAGE_EXTRACT_AND_RUN=1 set.
+  --gui                  With --release: also install the GUI,
+                         textweaver-gui, from the release's GUI package (the
+                         same kind as the reader: AppImage or tarball),
+                         with a menu entry. Running the script again keeps
+                         the GUI installed.
+  --no-gui               With --release: do not install the GUI, and remove
+                         it if an earlier run installed it.
   --source DIR           Use the textweaver checkout in DIR. Without it, the
                          checkout this script sits in is used, or the
                          repository is cloned to ~/.local/src/textweaver.
@@ -90,6 +101,7 @@ Options:
 
 Examples:
   scripts/install-linux.sh --release latest
+  scripts/install-linux.sh --release latest --gui
   scripts/install-linux.sh
   scripts/install-linux.sh --dry-run
   scripts/install-linux.sh --prefix /usr/local
@@ -196,6 +208,8 @@ while [ "$#" -gt 0 ]; do
       ;;
     --tarball) PACKAGE="tarball" ;;
     --appimage) PACKAGE="appimage" ;;
+    --gui) GUI=1 ;;
+    --no-gui) GUI=0 ;;
     --source)
       [ "$#" -ge 2 ] || die "--source needs a folder."
       SOURCE_DIR="$2"
@@ -238,6 +252,7 @@ APPDIR="$PREFIX/share/applications"
 ICONDIR="$PREFIX/share/icons/hicolor/scalable/apps"
 DATADIR="$PREFIX/share/textweaver"
 MANIFEST="$DATADIR/install-manifest.txt"
+GUILIBDIR="$PREFIX/lib/textweaver-gui"
 
 # The build honours NO_COLOR and never draws a progress bar.
 export CARGO_TERM_PROGRESS_WHEN=never RUSTUP_TERM_PROGRESS_WHEN=never
@@ -918,7 +933,7 @@ remove_path_line() {
 # ------------------------------------------------------------ uninstall --
 
 uninstall() {
-  say "This removes textweaver from $PREFIX: the programs (or the AppImage), engine hosts, dictionaries, guides, manual pages, menu entry, and icon."
+  say "This removes textweaver from $PREFIX: the programs (or the AppImage), the GUI if installed, engine hosts, dictionaries, guides, manual pages, menu entry, and icon."
   say "It keeps your settings, reading positions, and notes, and it does not remove system packages or Rust."
   local tw=""
   if [ -x "$LIBDIR/tw" ]; then
@@ -931,7 +946,8 @@ uninstall() {
     "$tw" settings path 2> /dev/null || true
   fi
   if [ ! -e "$LIBDIR" ] && [ ! -e "$DOCDIR" ] && [ ! -e "$DATADIR" ] && [ ! -L "$BINDIR/tw" ] \
-    && [ ! -e "$BINDIR/textweaver.AppImage" ] && [ "$DRY_RUN" = 0 ]; then
+    && [ ! -e "$BINDIR/textweaver.AppImage" ] && [ ! -e "$GUILIBDIR" ] \
+    && [ ! -e "$BINDIR/textweaver-gui.AppImage" ] && [ "$DRY_RUN" = 0 ]; then
     say "textweaver is not installed in $PREFIX, so there is nothing to remove."
     remove_path_line
     return 0
@@ -947,21 +963,21 @@ uninstall() {
     INSTALL_SUDO="$SUDO"
   fi
   local f
-  for f in textweaver tw; do
+  for f in textweaver tw textweaver-gui; do
     if [ "$DRY_RUN" = 1 ] && [ ! -L "$BINDIR/$f" ]; then
       ir rm -f "$BINDIR/$f"
     elif [ -L "$BINDIR/$f" ]; then
       case "$(readlink "$BINDIR/$f")" in
-        *lib/textweaver/* | textweaver.AppImage) ir rm -f "$BINDIR/$f" ;;
+        *lib/textweaver/* | textweaver.AppImage | *lib/textweaver-gui/* | textweaver-gui.AppImage) ir rm -f "$BINDIR/$f" ;;
         *) say "Leaving $BINDIR/$f: it does not point into this install." ;;
       esac
     fi
   done
-  for f in "$LIBDIR" "$DOCDIR" "$DATADIR"; do
+  for f in "$LIBDIR" "$GUILIBDIR" "$DOCDIR" "$DATADIR"; do
     if [ -e "$f" ] || [ "$DRY_RUN" = 1 ]; then ir rm -rf "$f"; fi
   done
-  for f in "$BINDIR/textweaver.AppImage" "$MANDIR/textweaver.1" "$MANDIR/tw.1" \
-    "$APPDIR/textweaver.desktop" "$ICONDIR/textweaver.svg"; do
+  for f in "$BINDIR/textweaver.AppImage" "$BINDIR/textweaver-gui.AppImage" "$MANDIR/textweaver.1" "$MANDIR/tw.1" \
+    "$APPDIR/textweaver.desktop" "$APPDIR/textweaver-gui.desktop" "$ICONDIR/textweaver.svg"; do
     if [ -e "$f" ] || [ "$DRY_RUN" = 1 ]; then ir rm -f "$f"; fi
   done
   remove_path_line
@@ -1021,6 +1037,100 @@ resolve_tag() {
     || die "Could not reach GitHub. Check your connection, or name a release with --release."
   [ -n "$RELEASE_TAG" ] || die "No release was found on https://github.com/$REPO/releases."
   say "The newest release is $RELEASE_TAG."
+}
+
+# Decides whether this run installs the GUI: --gui or --no-gui, else what
+# the manifest of an earlier install says.
+decide_gui() {
+  if [ "$GUI" = ask ]; then
+    GUI=0
+    if [ -f "$MANIFEST" ] && grep -q '^gui=' "$MANIFEST"; then
+      GUI=1
+      say "The GUI was installed before, so it is updated too. Use --no-gui to remove it."
+    fi
+  fi
+}
+
+# Removes an installed GUI (the AppImage or the folder, its link, and its
+# menu entry).
+remove_gui() {
+  local f="$BINDIR/textweaver-gui"
+  if [ -L "$f" ]; then
+    case "$(readlink "$f")" in
+      *lib/textweaver-gui/* | textweaver-gui.AppImage) ir rm -f "$f" ;;
+      *) say "Leaving $f: it does not point into this install." ;;
+    esac
+  elif [ -e "$f" ]; then
+    say "Leaving $f: it is not a link this script made."
+  fi
+  if [ -e "$BINDIR/textweaver-gui.AppImage" ]; then ir rm -f "$BINDIR/textweaver-gui.AppImage"; fi
+  if [ -e "$GUILIBDIR" ]; then ir rm -rf "$GUILIBDIR"; fi
+  if [ -e "$APPDIR/textweaver-gui.desktop" ]; then ir rm -f "$APPDIR/textweaver-gui.desktop"; fi
+}
+
+# Downloads, checks, and installs the GUI package: $1 the base URL, $2 the
+# package name without -gui, $3 appimage or tarball. SHA256SUMS.txt is
+# already in $WORK.
+install_gui() {
+  local base="$1" name="$2" kind="$3" file
+  case $kind in
+    appimage) file="$name-gui.AppImage" ;;
+    *) file="$name-gui.tar.gz" ;;
+  esac
+  section "GUI"
+  say "Downloading $file, the GUI, from $base."
+  if [ "$DRY_RUN" = 0 ] \
+    && ! awk -v f="$file" '$2 == f || $2 == "*" f { found = 1 } END { exit !found }' "$WORK/SHA256SUMS.txt"; then
+    warn "This release has no $file, so the GUI is not installed. Releases from 0.1.0-alpha.5 on have it."
+    return 0
+  fi
+  fetch "$base/$file" "$WORK/$file"
+  if [ "$DRY_RUN" = 1 ]; then
+    say "Would compare the SHA-256 of $file with its line in SHA256SUMS.txt"
+  else
+    local want got
+    want="$(awk -v f="$file" '$2 == f || $2 == "*" f { print $1 }' "$WORK/SHA256SUMS.txt" | head -n 1)"
+    got="$(sha256_of "$WORK/$file")"
+    if [ "$want" != "$got" ]; then
+      die "The GUI's checksum does not match (expected $want, got $got). The download may be damaged. The reader is installed; the GUI is not."
+    fi
+    say "The GUI's checksum matches: $got."
+  fi
+  local f="$BINDIR/textweaver-gui"
+  if [ -e "$f" ] && [ ! -L "$f" ]; then
+    die "$f is a file, not a link this script made. Move it away, then run this script again."
+  fi
+  local exe
+  if [ "$kind" = appimage ]; then
+    say "Installing the GUI as $BINDIR/textweaver-gui.AppImage, with textweaver-gui linked to it."
+    if [ -e "$GUILIBDIR" ] || [ "$DRY_RUN" = 1 ]; then ir rm -rf "$GUILIBDIR"; fi
+    ir install -m 0755 "$WORK/$file" "$BINDIR/textweaver-gui.AppImage"
+    ir ln -sfn textweaver-gui.AppImage "$f"
+  else
+    say "Installing the GUI into $GUILIBDIR, with textweaver-gui linked from $BINDIR."
+    if [ -e "$BINDIR/textweaver-gui.AppImage" ] || [ "$DRY_RUN" = 1 ]; then ir rm -f "$BINDIR/textweaver-gui.AppImage"; fi
+    if [ -e "$GUILIBDIR" ] || [ "$DRY_RUN" = 1 ]; then ir rm -rf "$GUILIBDIR"; fi
+    ir mkdir -p "$GUILIBDIR"
+    ir tar -xzf "$WORK/$file" -C "$GUILIBDIR" --strip-components=1
+    ir ln -sfn "../lib/textweaver-gui/textweaver-gui" "$f"
+  fi
+  exe="$f"
+  {
+    say "[Desktop Entry]"
+    say "Type=Application"
+    say "Name=textweaver window"
+    say "GenericName=Talking document reader"
+    say "Comment=Read documents aloud in a window, with a highlight that follows the spoken word"
+    say "Exec=\"$exe\" %f"
+    say "TryExec=$exe"
+    say "Terminal=false"
+    say "Icon=textweaver"
+    say "Categories=Utility;Accessibility;TextTools;"
+  } | iw "$APPDIR/textweaver-gui.desktop"
+  if have update-desktop-database && [ -z "$INSTALL_SUDO" ]; then
+    run update-desktop-database "$APPDIR" || true
+  fi
+  GUI_INSTALLED="$kind"
 }
 
 install_release() {
@@ -1143,6 +1253,14 @@ install_release() {
   fi
   install_desktop "$desktop" "$icon"
 
+  GUI_INSTALLED=""
+  decide_gui
+  if [ "$GUI" = 1 ]; then
+    install_gui "$base" "$name" "$kind"
+  else
+    remove_gui
+  fi
+
   {
     say "# textweaver install manifest, written by scripts/install-linux.sh."
     say "kind=release"
@@ -1150,6 +1268,9 @@ install_release() {
     say "tag=$RELEASE_TAG"
     say "prefix=$PREFIX"
     say "version=$version"
+    if [ -n "$GUI_INSTALLED" ]; then
+      say "gui=$GUI_INSTALLED"
+    fi
   } | iw "$MANIFEST"
   # The helper scripts, so update.sh and doctor.sh work after install.
   ir mkdir -p "$DATADIR/scripts"
@@ -1172,6 +1293,9 @@ install_release() {
   fi
   say "Check your speech engines: $BINDIR/tw backends"
   say "Read the quick start aloud: $BINDIR/textweaver $DOCDIR/QUICKSTART.md"
+  if [ -n "$GUI_INSTALLED" ]; then
+    say "Start the GUI from the menu entry textweaver window, or run $BINDIR/textweaver-gui"
+  fi
   if [ "$kind" = tarball ]; then
     say "The guides are in $LIBDIR/docs."
   fi
@@ -1192,6 +1316,10 @@ fi
 if [ "$MODE" = release ]; then
   install_release
   exit 0
+fi
+
+if [ "$GUI" = 1 ]; then
+  die "The GUI is installed from release packages: add --release latest (or a tag) to --gui. Building it from source is described in docs/gui.md."
 fi
 
 say "This script builds textweaver from source and installs it under $PREFIX."

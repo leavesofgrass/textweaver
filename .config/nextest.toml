@@ -1,0 +1,33 @@
+# cargo-nextest settings (https://nexte.st), used by the nightly workflow's
+# release-mode tests. `cargo test` keeps working as before; CI's per-push
+# tests still use it.
+
+# flaky-result needs 0.9.131; an older nextest stops with a clear message.
+nextest-version = { required = "0.9.131" }
+
+[profile.default]
+# Every test runs; one failure does not stop the others.
+fail-fast = false
+
+# The nightly profile: a failing test is run up to twice more. A test that
+# passes on a retry is reported by name as FLAKY and still fails the run
+# (flaky-result, nextest 0.9.131 or newer), so a timing test that fails
+# under load shows as that test, not as a red night with no name.
+[profile.nightly]
+fail-fast = false
+retries = 2
+flaky-result = "fail"
+slow-timeout = { period = "60s", terminate-after = 10 }
+
+[profile.nightly.junit]
+path = "junit.xml"
+
+# The engine-host suites start real child processes and time their
+# replies; more than two at once on a busy runner is what makes them
+# flaky. They run two at a time, beside the other tests.
+[test-groups]
+engine-hosts = { max-threads = 2 }
+
+[[profile.default.overrides]]
+filter = 'binary(fake_host) | binary(host_process)'
+test-group = 'engine-hosts'

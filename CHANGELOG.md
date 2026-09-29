@@ -4,6 +4,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### W6p
+
+- **Install the GUI with the scripts.** `install-windows.ps1 -Gui`, `install-macos.sh --gui`, and `install-linux.sh --release latest --gui` install the GUI beside the reader, with a shortcut or menu entry named "textweaver window". Running the script again, or the update script, keeps it; `--no-gui` removes it.
+- **One GUI package for every Mac.** The macOS GUI is universal (Apple silicon and Intel): `textweaver-VERSION-macos-universal-gui.zip`.
+- **The GUI speaks with the Linux engines** the terminal package has (espeak-ng, speech-dispatcher, Omnivox), as soon as the GUI crate offers them; `cargo xtask gui-dist` names any it leaves out.
+- **The documentation site:** every table is named by the heading above it, so NVDA's and JAWS's table keys say which table it is; Up and Down Arrow in search say the highlighted result's title and place; a code block or table wider than the page takes focus, so the arrow keys scroll it.
+- **Screen reader guide:** Orca says every key by default; how to turn that down.
+- **For contributors:** the nightly release-mode tests run under cargo-nextest, and a test that passes only on a retry is named as flaky; a test keeps the nightly fuzz list in step with the fuzz targets; `cargo xtask release` lists every other line still naming the old version; CI's docs job keeps a build cache.
+
 ## [0.1.0-alpha.5] - 2026-09-29
 
 The fifth alpha. Braille comes first: every status line, list, and prompt puts the meaning in the first 40 cells, and math can be written in Nemeth or UEB braille. LaTeX, email, and web archives open without Pandoc; documents can be summarized with no model; publishing templates make APA and AMA papers with real Word footnotes; and the GUI ships in the release on every system, with syllables, the voice manager, a question dialog, and its labels in six languages.

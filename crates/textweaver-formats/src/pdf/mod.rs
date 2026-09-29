@@ -133,6 +133,7 @@ fn convert(
     }
     // Pages with no text but a picture (a scan), or that could not be
     // interpreted; an empty page has nothing to recognize.
+    #[cfg(feature = "images")]
     let blank: Vec<usize> = (0..contents.len())
         .filter(|&i| {
             let c = &contents[i];
