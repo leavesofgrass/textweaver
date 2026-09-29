@@ -3,7 +3,7 @@
 - Status: accepted
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): Integrated. The backend is registered by the app, and `[speech.dectalk] library` is read from the settings. It has still not been tested against a licensed DECtalk.
-- Status update (Saturday, September 26, 2026, Phases 1 and 2): the DECtalk host synthesizes a long utterance a sentence at a time, so Stop takes effect quickly (Agent P2a), and CI builds the 32-bit DECtalk host and runs the fake-host tests against it (Agent P2d). It has still not been tested against a licensed DECtalk.
+- Status update (Saturday, September 26, 2026): the DECtalk host synthesizes a long utterance a sentence at a time, so Stop takes effect quickly, and CI builds the 32-bit DECtalk host and runs the fake-host tests against it. It has still not been tested against a licensed DECtalk.
 
 ## Context
 
@@ -11,7 +11,7 @@ DECtalk is the formant synthesizer many blind users grew up with ("Perfect Paul"
 
 DECtalk is proprietary. The community source tree on GitHub is Fonix's code; its own licence file says it may be used only under a written licence from Fonix. A DECtalk someone bought (DECtalk Software from DEC, Force Computers, or Fonix; the Access Solutions runtime; an SDK licence) is a different matter: it is theirs to use.
 
-The owner asked for DECtalk "like we did in star". textweaver already runs two proprietary engines out of process on the shared engine host (ETI-Eloquence, ADR-0007; SAPI5, ADR-0009; the host protocol, ADR-0012).
+DECtalk support was requested, "like we did in star". textweaver already runs two proprietary engines out of process on the shared engine host (ETI-Eloquence, ADR-0007; SAPI5, ADR-0009; the host protocol, ADR-0012).
 
 ## Decision
 

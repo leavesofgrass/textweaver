@@ -1,11 +1,11 @@
 # ADR-0032: Grammar, lint, highlighting, and clipboard crates
 
-- Status: accepted. Grammar is built only with the `grammar` feature, off by default; highlighting is on by default (the owner's decision, Monday, September 28, 2026)
+- Status: accepted. Grammar is built only with the `grammar` feature, off by default; highlighting is on by default (decided Monday, September 28, 2026)
 - Date: 2026-09-28
 
 ## Context
 
-Wave 4's authoring extras (Agent W4g) are six small features for a blind author working in the terminal: grammar checking, Markdown lint, code highlighting, a clipboard for terminals without OSC 52, math drawn as Unicode in the reading view, and notes exported as references. Each could bring a new crate. The workspace denies unsafe code, prefers pure Rust, keeps the lean reader (`textweaver-tui --no-default-features`) small, and runs `cargo deny` on every change. The research (the Wave 4 research and the Wave 4 plan review, section 3, kept outside the repository) named the candidates: harper-core 2.11.0, rumdl 0.2.77, syntect 5.3.0 with two-face 0.5.2, and arboard 3.6.1.
+The authoring extras are six small features for a blind author working in the terminal: grammar checking, Markdown lint, code highlighting, a clipboard for terminals without OSC 52, math drawn as Unicode in the reading view, and notes exported as references. Each could bring a new crate. The workspace denies unsafe code, prefers pure Rust, keeps the lean reader (`textweaver-tui --no-default-features`) small, and runs `cargo deny` on every change. The research (kept outside the repository) named the candidates: harper-core 2.11.0, rumdl 0.2.77, syntect 5.3.0 with two-face 0.5.2, and arboard 3.6.1.
 
 ## Decision
 
@@ -37,25 +37,25 @@ Notes and highlights become `textweaver_cite::Reference` records (type `document
 
 `syntect` 5.3.0 with default features off and only `parsing` and `regex-fancy`, and `two-face` 0.5.2 with `syntect-fancy`, behind the terminal's `highlight` feature. The research said `default-fancy`; this takes less of it: `default-fancy` adds YAML and plist loading (yaml-rust, RUSTSEC-2024-0320, which the workspace ignores only for MathCAT), HTML output, and syntect's own syntaxes and themes, none of which the reader uses. Token kinds take their colors from the theme's roles (dim text, headings, quote), and keywords are bold and comments italic, so the kinds differ by more than color. The caret names a block's language when it enters it ("code, Python"); that part needs no crate and is in.
 
-### Held for the owner
+### Held pending a decision
 
 Both held features fail `cargo deny` on the same advisory: RUSTSEC-2025-0141, "bincode is unmaintained".
 
 - syntect 5.3 loads its syntax dumps with bincode 1.3.3.
 - harper-core brings the burn machine-learning framework (through harper-brill and harper-pos-utils, for part-of-speech tagging), 260 crates in all, and burn-core uses bincode 2.0.1.
 
-Both are on their own branches, `wave4/g-highlight-syntect` and `wave4/g-grammar-harper`, each a single commit on top of the other extras, ready to merge if the owner adds an ignore for RUSTSEC-2025-0141 with a reason. Nothing that fails `cargo deny` is on the main W4g branch.
+Both are on their own branches, `wave4/g-highlight-syntect` and `wave4/g-grammar-harper`, each a single commit on top of the other extras, ready to merge once `deny.toml` gets an ignore for RUSTSEC-2025-0141 with a reason. Nothing that fails `cargo deny` is on the main authoring-extras branch.
 
-**The owner's decision (Monday, September 28, 2026):** `deny.toml` ignores RUSTSEC-2025-0141 with a reason. Highlighting is merged and on by default. Grammar is merged behind the `grammar` feature, off by default, because of its size and the burn framework.
+**Status update (Monday, September 28, 2026):** `deny.toml` ignores RUSTSEC-2025-0141 with a reason. Highlighting is merged and on by default. Grammar is merged behind the `grammar` feature, off by default, because of its size and the burn framework.
 
 ## Measurements
 
 Release builds of the terminal reader (`cargo build --release -p textweaver-tui --bin textweaver`, thin LTO, Windows x64):
 
-- `main` before W4g (9d54971): 46,827,520 bytes.
-- The W4g branch (lint, clipboard, Unicode math, notes export): 46,953,984 bytes, 126,464 more.
-- With code highlighting (`wave4/g-highlight-syntect`): 48,377,344 bytes, 1,423,360 more than the W4g branch (bat's syntaxes are most of it).
-- With grammar (`wave4/g-grammar-harper`): 57,558,016 bytes, 10,604,032 more than the W4g branch (Harper's dictionary, rules, and the burn tensor code for its part-of-speech tagger).
+- `main` before the authoring extras (9d54971): 46,827,520 bytes.
+- The authoring-extras branch (lint, clipboard, Unicode math, notes export): 46,953,984 bytes, 126,464 more.
+- With code highlighting (`wave4/g-highlight-syntect`): 48,377,344 bytes, 1,423,360 more than the authoring-extras branch (bat's syntaxes are most of it).
+- With grammar (`wave4/g-grammar-harper`): 57,558,016 bytes, 10,604,032 more than the authoring-extras branch (Harper's dictionary, rules, and the burn tensor code for its part-of-speech tagger).
 
 Building grammar also compiles burn: a clean release build of the reader took 18 minutes with it and 10 without.
 

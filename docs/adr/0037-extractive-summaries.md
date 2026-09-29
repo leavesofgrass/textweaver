@@ -1,14 +1,14 @@
 # ADR-0037: Offline intelligence, part 1: extractive summaries without a model
 
-- Status: accepted (Wave 5, Agent W5s)
+- Status: accepted
 - Date: 2026-09-28
 - Builds on: [ADR-0022](0022-reading-aids.md) (the reading aids: difficult words and RSVP), [ADR-0025](0025-lexicon-and-message-catalog.md) (define word), [ADR-0002](0002-text-model.md) (canonical positions)
 
 ## Context
 
-Star had a summary command: its `summarize.py` ran sumy's LexRank with an English stemmer and stop words, and printed the top sentences. textweaver had none. The Wave 4 research found no maintained LexRank crate for Rust and judged the method small enough to write in-house (the Wave 4 research, kept outside the repository, "Summaries"). The owner's standing decision for Wave 5 is that no machine-learning model is downloaded without the owner's approval, so the first part of "offline intelligence" had to work with no model at all.
+Star had a summary command: its `summarize.py` ran sumy's LexRank with an English stemmer and stop words, and printed the top sentences. textweaver had none. Research found no maintained LexRank crate for Rust and judged the method small enough to write in-house (kept outside the repository, "Summaries"). The standing decision is that no machine-learning model is downloaded without approval, so the first part of "offline intelligence" had to work with no model at all.
 
-The same wave carried two small items that touch the reading aids:
+The same round of work carried two small items that touch the reading aids:
 
 - Difficult words (ADR-0022) were marked and named ("difficult word"), but a reader who wanted to know what the word meant had to stop and use Define Word.
 - ADR-0022 left a follow-up: check RSVP at high rates against WCAG 2.3.1, Three Flashes or Below Threshold.
@@ -62,7 +62,7 @@ So no frontend needs the cap today, and none applies it. A frontend that draws w
 
 ### Embeddings: left off
 
-Sentence embeddings (all-MiniLM-L6-v2 is about 23 MB; potion-base-8M about 30 MB) would find sentences that say the same thing in different words, which TF-IDF misses. They are left off: each needs a model download, which waits for the owner; they would add a tokenizer and inference on RTen to a feature that works well enough without them; and the extractive summary has to stay instant on any machine. If the owner approves a model later, it slots in as another way to make the sentence vectors, behind the same `summarize` call.
+Sentence embeddings (all-MiniLM-L6-v2 is about 23 MB; potion-base-8M about 30 MB) would find sentences that say the same thing in different words, which TF-IDF misses. They are left off: each needs a model download, which waits for approval; they would add a tokenizer and inference on RTen to a feature that works well enough without them; and the extractive summary has to stay instant on any machine. If a model is approved later, it slots in as another way to make the sentence vectors, behind the same `summarize` call.
 
 ## Consequences
 
@@ -70,7 +70,7 @@ Sentence embeddings (all-MiniLM-L6-v2 is about 23 MB; potion-base-8M about 30 MB
 - The summary is only as good as sentence segmentation and word overlap: it picks representative sentences, not a rewritten abstract, and a document of short or list-like sentences may have few candidates ("Nothing to summarize" when none is four words long).
 - The stop list is English. Other languages still get a summary, because inverse document frequency weighs down their common words, but it is less sharp.
 - Difficult-word definitions depend on the dictionary file being installed; without it the word move says "difficult word" as before, and nothing is announced about the missing file.
-- The RSVP flash model is an estimate, not a photometric measurement of pixels: glyph coverage is a fixed upper bound, and the terminal's cell size is not known to the reader. The owner's check with a real display is still worth doing at the highest rate.
+- The RSVP flash model is an estimate, not a photometric measurement of pixels: glyph coverage is a fixed upper bound, and the terminal's cell size is not known to the reader. A check with a real display is still worth doing at the highest rate.
 
 ## See also
 

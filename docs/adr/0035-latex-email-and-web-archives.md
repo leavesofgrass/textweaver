@@ -1,7 +1,7 @@
 # ADR-0035: Native LaTeX subset, and email and web archives
 
 - Status: accepted
-- Date: 2026-09-28 (Monday, September 28, 2026; Agent W5c3, Wave 5)
+- Date: 2026-09-28 (Monday, September 28, 2026)
 
 ## Context
 
@@ -11,7 +11,7 @@ Students get course notes as LaTeX, instructors' announcements as saved emails, 
 - Email (`.eml`) and web archives (`.mhtml`, `.mht`) did not open at all.
 - MathML in a web page was read as a run of letters ("x2+1"); only EPUB 3 chapters read it as math (ADR-0029).
 
-The research for Wave 4 and the Wave 5 plan (section 2.3), both kept outside the repository, chose: our own LaTeX tokenizer, with mitex's grammar as a design reference only (no release since June 2024), our own math parser for the formulas (ADR-0018), and no tectonic (C libraries) or unicodeit (LPPL); mail-parser for MIME.
+The research behind this work (kept outside the repository) chose: our own LaTeX tokenizer, with mitex's grammar as a design reference only (no release since June 2024), our own math parser for the formulas (ADR-0018), and no tectonic (C libraries) or unicodeit (LPPL); mail-parser for MIME.
 
 ## Decision
 
@@ -41,7 +41,7 @@ The parser runs twice. The first pass learns what the reader needs before it rea
 - Macros: `\newcommand`, `\renewcommand`, `\providecommand`, and `\def` **without arguments** are expanded, in text and, written back as LaTeX, in math (`\R` for `\mathbb{R}`); `\DeclareMathOperator` in math. Macros with arguments are not expanded; they count as unknown commands.
 - `\input`, `\include`, `\subfile`, and `\import` read `.tex` files **from the document's folder or below it**. The path must be relative with no `..`, and the resolved file, symbolic links followed, must still be inside the folder. A file from bytes, or inside an archive, has no folder, so nothing is included. Each file skipped is named in the warnings with the reason.
 
-**What is skipped, and how it is announced.** The preamble's text is never read. Layout commands (spacing, page breaks, fonts, colors, counters, package options) are left out silently. Drawings (`tikzpicture`, `picture`) and `comment` are left out whole. Any other command is left out and its arguments read as text, so no words are lost. The document's warnings name the unknown commands and environments ("Some LaTeX commands are not supported, so only their text is read: \hl."). With the new `LoadOptions::name_skipped_commands`, each is also said where it was, "(command hl)". The reader should set it at high verbosity and leave it off otherwise, as it chooses `revisions`; that is one line in the app, requested of the orchestrator.
+**What is skipped, and how it is announced.** The preamble's text is never read. Layout commands (spacing, page breaks, fonts, colors, counters, package options) are left out silently. Drawings (`tikzpicture`, `picture`) and `comment` are left out whole. Any other command is left out and its arguments read as text, so no words are lost. The document's warnings name the unknown commands and environments ("Some LaTeX commands are not supported, so only their text is read: \hl."). With the new `LoadOptions::name_skipped_commands`, each is also said where it was, "(command hl)". The reader should set it at high verbosity and leave it off otherwise, as it chooses `revisions`; that is one line in the app, left as a follow-up.
 
 **Limits**, each a constant in `latex.rs`:
 
@@ -66,7 +66,7 @@ Past a limit the rest is left out and the document says so. A file over 16 MB, o
 
 ### MathML in web pages
 
-The HTML loader now reads `<math>` as math in every page, as W4c1's EPUB path does: LaTeX with its delimiters under a `Math` marker, from the page's TeX annotation or the presentation MathML (`mathml.rs`). `epub:switch` stays EPUB's. Web pages fetched by address and web archives get it too.
+The HTML loader now reads `<math>` as math in every page, as the EPUB path already does: LaTeX with its delimiters under a `Math` marker, from the page's TeX annotation or the presentation MathML (`mathml.rs`). `epub:switch` stays EPUB's. Web pages fetched by address and web archives get it too.
 
 While here: a picture's alternative text no longer runs into the words beside it ("a cell A nucleus", not "a cellA nucleus").
 

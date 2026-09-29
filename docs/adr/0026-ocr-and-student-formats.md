@@ -1,13 +1,13 @@
 # ADR-0026: OCR, and formats for students
 
 - Status: accepted
-- Date: 2026-09-26 (Saturday, September 26, 2026; Agent W3d, Wave 3)
+- Date: 2026-09-26 (Saturday, September 26, 2026)
 
 ## Context
 
-Students with print disabilities get course material in many shapes: scanned chapters (PDFs with no text layer), photos of handouts, DAISY books from Bookshare, slides, spreadsheets, zip files from a learning platform, and web pages. Before Wave 3, textweaver read a scanned PDF as one sentence saying it could not ("OCR is out of scope", ADR-0010), and refused the rest.
+Students with print disabilities get course material in many shapes: scanned chapters (PDFs with no text layer), photos of handouts, DAISY books from Bookshare, slides, spreadsheets, zip files from a learning platform, and web pages. Before this work, textweaver read a scanned PDF as one sentence saying it could not ("OCR is out of scope", ADR-0010), and refused the rest.
 
-Wave 3's spirit (in the agent briefs, kept outside the repository) is pure Rust and in process first, with a fallback for each bold choice. The research for this work is the Wave 3 pure-Rust research, kept outside the repository.
+The spirit of this work (in the project briefs, kept outside the repository) is pure Rust and in process first, with a fallback for each bold choice. The research for this work is kept outside the repository.
 
 ## Decisions
 
