@@ -45,6 +45,15 @@ fn harness(app: &textweaver_app::App) -> TestHarness<Root> {
     h
 }
 
+/// The document's role on this platform: a Document, or on macOS a
+/// read-only text area (VoiceOver reads a Document as an AXGroup).
+fn doc_role() -> Role {
+    match textweaver_app::keymap::Platform::current() {
+        textweaver_app::keymap::Platform::MacOs => Role::MultilineTextInput,
+        _ => Role::Document,
+    }
+}
+
 fn names_of(h: &TestHarness<Root>, role: Role) -> Vec<String> {
     let mut out = Vec::new();
     let root = h.access_tree().state().root();
@@ -81,7 +90,7 @@ fn every_control_has_a_role_and_a_name() {
         assert!(buttons.contains(&b.to_owned()), "{b} in {buttons:?}");
     }
     assert_eq!(names_of(&h, Role::Toolbar), vec!["Reading".to_owned()]);
-    assert_eq!(names_of(&h, Role::Document), vec!["Document".to_owned()]);
+    assert_eq!(names_of(&h, doc_role()), vec!["Document".to_owned()]);
     let status = names_of(&h, Role::Status);
     assert_eq!(status.len(), 1);
     // The terminal's title line parts, from the app (`App::title_parts`).
@@ -929,7 +938,7 @@ fn themes_switch_in_place() {
     gui::apply_palette(&mut h, &light);
     let _ = h.redraw();
     // Still the same controls, now drawn light.
-    assert_eq!(names_of(&h, Role::Document), vec!["Document".to_owned()]);
+    assert_eq!(names_of(&h, doc_role()), vec!["Document".to_owned()]);
     let img = h.render();
     let px = img.get_pixel(4, 4);
     assert!(

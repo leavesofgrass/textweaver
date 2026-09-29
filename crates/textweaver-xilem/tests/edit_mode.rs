@@ -99,6 +99,15 @@ fn apply(app: &mut App, action: DocAction) {
 
 /// The document's node: its role, whether it is read-only, and its runs'
 /// text.
+/// The document's role on this platform: a Document, or on macOS a
+/// read-only text area (VoiceOver reads a Document as an AXGroup).
+fn doc_role() -> Role {
+    match textweaver_app::keymap::Platform::current() {
+        textweaver_app::keymap::Platform::MacOs => Role::MultilineTextInput,
+        _ => Role::Document,
+    }
+}
+
 fn doc_node(h: &TestHarness<Root>, doc: WidgetId) -> (Role, bool, String) {
     let node = h.access_node(doc).expect("the document's node");
     let text: String = node.children().filter_map(|c| c.value()).collect();
@@ -110,7 +119,7 @@ fn edit_mode_makes_the_document_a_multiline_edit() {
     let dir = tempfile::tempdir().unwrap();
     let (mut app, mut h, mut r, doc) = setup(dir.path());
     let (role, read_only, _) = doc_node(&h, doc);
-    assert_eq!(role, Role::Document);
+    assert_eq!(role, doc_role());
     assert!(read_only);
     let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
     assert!(app.is_editing());

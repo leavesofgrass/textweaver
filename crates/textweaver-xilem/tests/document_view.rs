@@ -65,7 +65,11 @@ fn doc_text(h: &TestHarness<DocumentView>) -> String {
 #[test]
 fn the_document_is_one_readonly_node_with_its_text() {
     let doc = Document::from_plain_text("First paragraph here.\n\nSecond one, a little longer.");
-    let (h, _) = harness_with(&doc, CharPos::ZERO);
+    let (h, _) = harness_on(
+        &doc,
+        CharPos::ZERO,
+        textweaver_app::keymap::Platform::Windows,
+    );
     let node = h.access_node(h.root_id()).unwrap();
     assert_eq!(node.role(), Role::Document);
     assert!(node.is_read_only());
@@ -521,4 +525,22 @@ fn the_window_taking_focus_is_reported() {
     );
     h.process_text_event(TextEvent::WindowFocusChange(false));
     assert!(h.pop_action::<DocAction>().is_none());
+}
+
+/// On macOS the document is a read-only text area (AXTextArea), not a
+/// Document, which VoiceOver sees as an AXGroup; elsewhere a Document.
+#[test]
+fn on_macos_the_document_is_a_read_only_text_area() {
+    use textweaver_app::keymap::Platform;
+    let doc = Document::from_plain_text("Some text.");
+    let (h, _) = harness_on(&doc, CharPos::ZERO, Platform::MacOs);
+    let node = h.access_node(h.root_id()).expect("the document");
+    assert_eq!(node.role(), Role::MultilineTextInput);
+    assert!(node.is_read_only());
+    assert_eq!(node.document_range().text(), "Some text.");
+    for p in [Platform::Windows, Platform::Linux] {
+        let (h, _) = harness_on(&doc, CharPos::ZERO, p);
+        let node = h.access_node(h.root_id()).expect("the document");
+        assert_eq!(node.role(), Role::Document, "{p:?}");
+    }
 }

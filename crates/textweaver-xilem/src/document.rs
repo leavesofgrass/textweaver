@@ -2175,7 +2175,10 @@ impl Widget for DocumentView {
     }
 
     fn accessibility_role(&self) -> Role {
-        if self.edit_role || self.editing {
+        // On macOS a Document is an AXGroup, which VoiceOver does not read
+        // as text; a read-only multi-line text input is an AXTextArea, with
+        // the text, the caret, and the reading commands.
+        if self.edit_role || self.editing || self.platform == Platform::MacOs {
             Role::MultilineTextInput
         } else {
             Role::Document
