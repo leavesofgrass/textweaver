@@ -144,7 +144,12 @@ jobs:
             a11y-tree/gui.log
           if-no-files-found: warn
       # The GUI's own package (a zip), on main and by hand: the dist profile
-      # is a long build.
+      # is a long build. The package carries the 32-bit engine hosts (for
+      # 32-bit Eloquence, SAPI 5, and DECtalk), as release.yml's does, so
+      # it needs the i686 target.
+      - name: The 32-bit target for the engine hosts
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        run: rustup target add i686-pc-windows-msvc
       - name: Package (cargo xtask gui-dist)
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         run: cargo xtask gui-dist --out gui-dist
