@@ -393,7 +393,7 @@ strip = "symbols"
 inherits = "release"
 lto = "fat"
 
-# Parley 0.8.0 with its `accesskit` feature moved to AccessKit 0.25, for the
+# Parley 0.11.1 (Wave 5, W5a4; was 0.8.0) with its `accesskit` feature moved to AccessKit 0.25, for the
 # vendored Masonry (ADR-0027). No other crate in the workspace uses Parley.
 [patch.crates-io]
 parley = { path = "third_party/xilem/parley" }

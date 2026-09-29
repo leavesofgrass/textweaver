@@ -58,6 +58,7 @@ fn turn_on_aids(app: &mut textweaver_app::App) -> Result<(), String> {
         let a = &mut s.reading_aids;
         a.bionic = true;
         a.difficult_words = true;
+        a.syllables = true;
         a.ruler.mode = RulerMode::Ruler;
         a.spacing = TextSpacing {
             line_height: 1.5,
@@ -137,7 +138,14 @@ fn render(
         harness.edit_widget(DOC, |mut d| DocumentView::set_state(&mut d, state));
     }
     if let Some((title, items)) = &opts.list {
-        let (modal, list_id) = gui::list_dialog(palette, title, items.clone(), 1, false);
+        let (modal, list_id) = gui::list_dialog(
+            palette,
+            &textweaver_app::lexicon::i18n::Catalog::english(),
+            title,
+            items.clone(),
+            1,
+            false,
+        );
         harness.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
         harness.focus_on(Some(list_id));
     }

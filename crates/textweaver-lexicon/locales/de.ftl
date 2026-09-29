@@ -2684,3 +2684,61 @@ setting-speech-voice-params = Tempo und Tonhöhe je Stimme
 setting-speech-voice-params-help = Tempo und Tonhöhe, mit denen jede Stimme zuletzt genutzt wurde; wird die Stimme wieder gewählt, kehren sie zurück.
 setting-editing-author = Autor
 setting-editing-author-help = Der Autor, der in neue Dokumente aus einer Vorlage geschrieben wird; leer lässt ihn frei.
+
+## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
+## Keep the letters Y and N: they are the keys that answer.
+
+gui-yes = Ja
+gui-no = Nein
+gui-question-hint = Y antwortet ja, N antwortet nein, Escape antwortet nein.
+gui-button-open = Öffnen…
+gui-button-font = Schriftart…
+gui-button-edit = Bearbeiten
+gui-button-finish-editing = Bearbeiten beenden
+gui-button-settings = Einstellungen…
+gui-button-commands = Befehle…
+gui-button-play = Abspielen
+gui-button-pause = Pause
+gui-button-stop = Stopp
+gui-button-previous-sentence = Vorheriger Satz
+gui-button-next-sentence = Nächster Satz
+gui-button-slower = Langsamer
+gui-button-faster = Schneller
+gui-button-close = Schließen
+gui-toolbar-reading = Lesen
+gui-document = Dokument
+gui-list-hint = Eingabetaste wählt, Escape schließt.
+gui-settings-sections = Bereiche
+gui-settings-form = Einstellungen: { $section }
+gui-settings-saved-hint = Änderungen wirken sofort und werden sofort gespeichert.
+gui-settings-close-help = Die Einstellungen schließen. Jede Änderung ist bereits gespeichert.
+gui-settings-closed = Einstellungen geschlossen.
+gui-settings-table = { $label } ist eine Tabelle. Bearbeiten Sie sie in settings.toml.
+gui-setting-new-value = Neuer Wert für { $label }
+gui-setting-value-hint = Eingabetaste übernimmt, Escape geht zurück.
+gui-prompt-path-hint = Geben Sie den Pfad eines Dokuments ein und drücken Sie die Eingabetaste. Tab vervollständigt ihn; Pfeil nach oben und unten holen frühere zurück.
+gui-prompt-hint = Eingabetaste übernimmt, Escape bricht ab. Pfeil nach oben und unten holen frühere Antworten zurück.
+gui-palette-filter = Tippen, um die Befehle zu filtern
+gui-palette-list = Befehle
+gui-palette-hint = Eingabetaste führt den ersten Treffer aus; Tab wechselt zur Liste.
+gui-no-document = Kein Dokument ist geöffnet. Drücken Sie { $key }, um eines zu öffnen.
+gui-open-failed = { $path } konnte nicht geöffnet werden: { $error }
+gui-uia-unavailable = UI-Automation-Benachrichtigungen gibt es nur unter Windows; die Live-Region wird verwendet.
+gui-rsvp = RSVP
+gui-rsvp-playing = RSVP läuft, Wort { $n } von { $total }
+gui-rsvp-paused = RSVP pausiert, Wort { $n } von { $total }
+gui-rsvp-finished = RSVP beendet, Wort { $n } von { $total }
+gui-settings-section-item =
+    { $section }, { $n ->
+        [one] 1 Einstellung
+       *[other] { $n } Einstellungen
+    }
+gui-palette-count =
+    { $n ->
+        [0] Kein Befehl passt.
+        [one] 1 Befehl.
+       *[other] { $n } Befehle.
+    }
+gui-settings-form-help = Pfeil nach oben und unten wechseln zwischen Einstellungen. Pfeil nach links und rechts ändern eine. Die Eingabetaste gibt einen neuen Wert ein. Entf stellt den Standard wieder her. { $next } und { $previous } wechseln den Bereich.
+gui-settings-press-enter = Drücken Sie die Eingabetaste, um einen neuen Wert für { $label } einzugeben.
+gui-font-built-in = { $family } (eingebaut)

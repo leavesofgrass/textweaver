@@ -109,6 +109,36 @@ pub struct DocModel {
     pub doc_len: usize,
     /// The document's title (the node's description).
     pub title: String,
+    /// Syllables (a reading aid): the separator is drawn before the char
+    /// at each of these positions, in order. Empty when syllables are off.
+    /// Drawn only: the text runs a screen reader gets stay the words.
+    pub breaks: Vec<CharPos>,
+    /// What is drawn between syllables (a middle dot by default).
+    pub separator: String,
+}
+
+impl DocModel {
+    /// The styles drawn on each paragraph: the spans that touch it and its
+    /// syllable breaks. A paragraph whose text and styles are the same in
+    /// two models can keep its layout.
+    fn styles_by_paragraph(&self) -> Vec<(Vec<StyledSpan>, Vec<CharPos>)> {
+        let paras = &self.paragraphs;
+        let mut out = vec![(Vec::new(), Vec::new()); paras.len()];
+        if paras.is_empty() {
+            return out;
+        }
+        for s in &self.spans {
+            let a = caret::paragraph_at(paras, s.range.start);
+            let b = caret::paragraph_at(paras, CharPos(s.range.end.0.saturating_sub(1)));
+            for slot in out.iter_mut().take(b.max(a) + 1).skip(a) {
+                slot.0.push(*s);
+            }
+        }
+        for &k in &self.breaks {
+            out[caret::paragraph_at(paras, k)].1.push(k);
+        }
+        out
+    }
 }
 
 /// The moving state: where the caret and the highlights are.
@@ -135,6 +165,19 @@ pub enum DocAction {
         caret: CharPos,
         /// The selection, if any.
         selection: Option<CharRange>,
+        /// What textweaver's own voice says for a caret key (the driver
+        /// passes it to `App::echo`, which speaks only in the self-voicing
+        /// mode; a screen reader reads the caret itself). `None` for the
+        /// pointer and a screen reader's own moves.
+        echo: Option<CaretEcho>,
+    },
+    /// Edit mode: Tab (`forward`) or Shift+Tab. The driver runs the app's
+    /// `next_table_cell` or `previous_table_cell`, as the terminal does:
+    /// the next cell in a table, else a tab typed. Ctrl+Tab moves the
+    /// focus out instead, so the edit never traps the keyboard.
+    TableCell {
+        /// Tab, not Shift+Tab.
+        forward: bool,
     },
     /// Edit mode: text typed at the caret, with no selection (a key, Enter
     /// as a new line, or an input method's text). The driver sends it as
@@ -158,6 +201,31 @@ pub enum DocAction {
     },
 }
 
+/// What a caret key moved onto, for textweaver's own voice in the
+/// self-voicing mode (as the terminal's caret keys say it).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CaretEcho {
+    /// The character now at the caret (Left, Right, Home, End).
+    Char(char),
+    /// The caret is at the end of a line.
+    LineEnd,
+    /// The caret is at the end of the document.
+    DocEnd,
+    /// The word at the caret (Ctrl+Left, Ctrl+Right).
+    Word(String),
+    /// The line the caret is on, as drawn (Up, Down, the page keys,
+    /// Ctrl+Up, Ctrl+Down, Ctrl+Home, Ctrl+End).
+    Line(String),
+    /// Shift with a caret key: the text the selection gained (`selected`)
+    /// or lost.
+    Selection {
+        /// The text.
+        text: String,
+        /// True when the selection grew.
+        selected: bool,
+    },
+}
+
 /// A laid-out paragraph.
 struct ParaLayout {
     layout: Layout<BrushIndex>,
@@ -165,6 +233,24 @@ struct ParaLayout {
     height: f64,
     /// Space above the text (headings get more).
     top_gap: f64,
+    /// Syllable separators drawn in the paragraph, if any.
+    seps: Option<SepMarks>,
+}
+
+/// The syllable separators of a paragraph: the separator laid out once in
+/// the paragraph's font, and where it goes. The char before each break is
+/// laid out with extra letter spacing as wide as the separator, so the
+/// text keeps its own bytes (the caret, hit testing, and the screen
+/// reader's text are the words) and gains no line-break opportunity.
+struct SepMarks {
+    layout: Layout<BrushIndex>,
+    /// The separator's advance.
+    width: f32,
+    /// Its baseline within its own layout.
+    baseline: f32,
+    /// Byte offsets in the paragraph's text of the chars the separator is
+    /// drawn before.
+    at: Vec<usize>,
 }
 
 /// The document view widget. See the module documentation.
@@ -183,6 +269,11 @@ pub struct DocumentView {
     /// Edit mode (ADR-0033): a multi-line edit that takes typing.
     editing: bool,
     focused: bool,
+    /// The node's name, in the interface language ("Document").
+    label: String,
+    /// Misspelled words (edit mode), drawn with a dotted underline. Paint
+    /// only: the text, its layout, and its runs do not change.
+    misspelled: Vec<CharRange>,
 
     // Layout.
     layouts: HashMap<usize, ParaLayout>,
@@ -247,6 +338,8 @@ impl DocumentView {
             edit_role: false,
             editing: false,
             focused: false,
+            label: "Document".to_owned(),
+            misspelled: Vec::new(),
             layouts: HashMap::new(),
             line_starts: Vec::new(),
             column: 0.0,
@@ -273,6 +366,19 @@ impl DocumentView {
     pub fn with_select_spoken(mut self, on: bool) -> Self {
         self.select_spoken = on;
         self
+    }
+
+    /// Names the node for screen readers, in the interface language
+    /// (`gui-document`); "Document" until then.
+    pub fn with_label(mut self, label: impl Into<String>) -> Self {
+        self.label = label.into();
+        self
+    }
+
+    /// A new name for the node (the interface language changed).
+    pub fn set_label(this: &mut WidgetMut<'_, Self>, label: impl Into<String>) {
+        this.widget.label = label.into();
+        this.ctx.request_accessibility_update();
     }
 
     /// Exposes the view as a read-only multi-line edit (UI Automation's
@@ -341,19 +447,28 @@ impl DocumentView {
         if keep_ids {
             w.prune_ids = true;
             // Paragraphs that stay keep their layout and visual lines, so
-            // their runs, split at the same lines, keep their text.
+            // their runs, split at the same lines, keep their text. Only
+            // when their styles are the same too: a reading aid turned on
+            // or off (bionic reading, difficult words, syllables) keeps the
+            // text and the run nodes but needs new layouts.
             let by_start: HashMap<CharPos, usize> = old
                 .paragraphs
                 .iter()
                 .enumerate()
                 .map(|(i, p)| (p.start, i))
                 .collect();
+            let old_styles = old.styles_by_paragraph();
+            let new_styles = w.model.styles_by_paragraph();
+            let same_sep = old.separator == w.model.separator;
             for (j, p) in w.model.paragraphs.iter().enumerate().skip(1) {
                 let Some(&i) = by_start.get(&p.start) else {
                     continue;
                 };
                 let q = &old.paragraphs[i];
                 if q.text != p.text || q.heading != p.heading {
+                    continue;
+                }
+                if !same_sep || old_styles[i] != new_styles[j] {
                     continue;
                 }
                 if let Some(lines) = old_lines.get_mut(i).and_then(Option::take) {
@@ -449,6 +564,21 @@ impl DocumentView {
         this.ctx.request_render();
     }
 
+    /// The misspelled words to mark (edit mode; W4a3 left them unmarked).
+    /// Only drawn: a dotted underline, a shape unlike a link's line or a
+    /// difficult word's thick one, so no color carries it.
+    pub fn set_misspelled(this: &mut WidgetMut<'_, Self>, ranges: Vec<CharRange>) {
+        if this.widget.misspelled != ranges {
+            this.widget.misspelled = ranges;
+            this.ctx.request_render();
+        }
+    }
+
+    /// The misspelled words marked, for tests.
+    pub fn misspelled(&self) -> &[CharRange] {
+        &self.misspelled
+    }
+
     /// The reading font in use.
     pub fn font(&self) -> &DocFont {
         &self.font
@@ -467,6 +597,16 @@ impl DocumentView {
     /// The paragraphs on screen (index and top y), for tests.
     pub fn visible_paragraphs(&self) -> &[(usize, f64)] {
         &self.visible
+    }
+
+    /// How many syllable separators the paragraphs on screen draw, for
+    /// tests.
+    pub fn syllable_marks_on_screen(&self) -> usize {
+        self.visible
+            .iter()
+            .filter_map(|(i, _)| self.layouts.get(i))
+            .map(|pl| pl.seps.as_ref().map_or(0, |s| s.at.len()))
+            .sum()
     }
 
     fn mark_dirty(&mut self, r: CharRange) {
@@ -504,6 +644,35 @@ impl DocumentView {
         let size = self.font.size;
         let sp = self.aids.spacing;
         let text = p.text.as_str();
+        // Syllables: the separator in the paragraph's own font, laid out
+        // once, before the paragraph's builder takes the contexts.
+        let breaks = self.breaks_in(i);
+        let seps = (!breaks.is_empty() && !self.model.separator.is_empty()).then(|| {
+            let sep = self.model.separator.as_str();
+            let mut sb = lcx.ranged_builder(fcx, sep, 1.0, true);
+            sb.push_default(StyleProperty::FontFamily(FontFamily::Source(
+                self.font.family.clone().into(),
+            )));
+            sb.push_default(StyleProperty::FontSize(
+                size * p.heading.map_or(1.0, Self::heading_scale),
+            ));
+            if p.heading.is_some() || self.font.bold {
+                sb.push_default(StyleProperty::FontWeight(FontWeight::BOLD));
+            }
+            sb.push_default(StyleProperty::Brush(BrushIndex(
+                p.heading.map_or(B_TEXT, |l| B_H1 + usize::from(l - 1)),
+            )));
+            let mut layout = sb.build(sep);
+            layout.break_all_lines(None);
+            let width = layout.full_width();
+            let baseline = layout.lines().next().map_or(0.0, |l| l.metrics().baseline);
+            SepMarks {
+                layout,
+                width,
+                baseline,
+                at: breaks.iter().map(|&k| caret::byte_of(text, k)).collect(),
+            }
+        });
         let mut b = lcx.ranged_builder(fcx, text, 1.0, true);
         b.push_default(StyleProperty::FontFamily(FontFamily::Source(
             self.font.family.clone().into(),
@@ -577,6 +746,21 @@ impl DocumentView {
                 }
             }
         }
+        // Room for each separator: the char before a break gets extra
+        // letter spacing as wide as the separator (plus the spacing it
+        // already has), so no byte is added to the text.
+        if let Some(s) = &seps {
+            let base = if sp.letter_spacing > 0.0 {
+                size * sp.letter_spacing
+            } else {
+                0.0
+            };
+            for &k in &breaks {
+                let a = caret::byte_of(text, k - 1);
+                let e = caret::byte_of(text, k);
+                b.push(StyleProperty::LetterSpacing(base + s.width), a..e);
+            }
+        }
         let mut layout = b.build(text);
         layout.break_all_lines(Some(self.column as f32));
         let em = f64::from(size);
@@ -600,7 +784,22 @@ impl DocumentView {
             layout,
             height: top_gap + text_h + after,
             top_gap,
+            seps,
         }
+    }
+
+    /// Paragraph `i`'s syllable breaks, as char offsets inside it (never at
+    /// its start or end).
+    fn breaks_in(&self, i: usize) -> Vec<usize> {
+        let p = &self.model.paragraphs[i];
+        let (start, len) = (p.start.0, p.len_chars());
+        let all = &self.model.breaks;
+        let from = all.partition_point(|b| b.0 <= start);
+        all[from..]
+            .iter()
+            .take_while(|b| b.0 < start + len)
+            .map(|b| b.0 - start)
+            .collect()
     }
 
     /// Lays out paragraph `i` if it is not cached; records its lines.
@@ -798,8 +997,8 @@ impl DocumentView {
                         range: CharRange::new(a, b),
                         line: i,
                     },
-                    top + f64::from(m.min_coord),
-                    top + f64::from(m.max_coord),
+                    top + f64::from(m.block_min_coord),
+                    top + f64::from(m.block_max_coord),
                 ));
                 any = true;
             }
@@ -881,7 +1080,7 @@ impl DocumentView {
         let pl = &self.layouts[&pi];
         let p = &self.model.paragraphs[pi];
         let y = pl.layout.get(line).map_or(0.0, |l| {
-            (l.metrics().min_coord + l.metrics().max_coord) / 2.0
+            (l.metrics().block_min_coord + l.metrics().block_max_coord) / 2.0
         });
         let c = Cursor::from_point(&pl.layout, x, y);
         CharPos(p.start.0 + caret::char_of(&p.text, c.index()))
@@ -956,8 +1155,21 @@ impl DocumentView {
                 NamedKey::ArrowUp | NamedKey::ArrowDown | NamedKey::PageUp | NamedKey::PageDown
             )
         ) && !ctrl;
+        let echo = if shift {
+            self.selection_echo(new)
+        } else {
+            match key {
+                Key::Named(NamedKey::ArrowLeft | NamedKey::ArrowRight) if ctrl => {
+                    self.word_echo(new)
+                }
+                Key::Named(
+                    NamedKey::ArrowLeft | NamedKey::ArrowRight | NamedKey::Home | NamedKey::End,
+                ) if !ctrl => self.char_echo(new),
+                _ => self.line_echo(new),
+            }
+        };
         let goal = self.goal_x;
-        self.move_caret(ctx, new, shift);
+        self.move_caret_saying(ctx, new, shift, echo);
         if vertical {
             self.goal_x = goal;
         }
@@ -965,6 +1177,16 @@ impl DocumentView {
     }
 
     fn move_caret(&mut self, ctx: &mut EventCtx<'_>, new: CharPos, extend: bool) {
+        self.move_caret_saying(ctx, new, extend, None);
+    }
+
+    fn move_caret_saying(
+        &mut self,
+        ctx: &mut EventCtx<'_>,
+        new: CharPos,
+        extend: bool,
+        echo: Option<CaretEcho>,
+    ) {
         let old = self.state;
         let anchor = if extend {
             Some(old.anchor.unwrap_or(old.caret))
@@ -981,7 +1203,90 @@ impl DocumentView {
         ctx.submit_action::<DocAction>(DocAction::CaretMoved {
             caret: new,
             selection: anchor.map(|a| CharRange::new(a.0.min(new.0), a.0.max(new.0))),
+            echo,
         });
+    }
+
+    // --- What a caret key says (the self-voicing mode).
+
+    /// The paragraph holding `pos` and `pos`'s char offset in it.
+    fn para_offset(&self, pos: CharPos) -> Option<(usize, usize)> {
+        let paras = &self.model.paragraphs;
+        if paras.is_empty() {
+            return None;
+        }
+        let i = caret::paragraph_at(paras, pos);
+        Some((i, pos.0.saturating_sub(paras[i].start.0)))
+    }
+
+    /// The char at `pos`, or the end of its line or of the document.
+    fn char_echo(&self, pos: CharPos) -> Option<CaretEcho> {
+        let (i, off) = self.para_offset(pos)?;
+        let p = &self.model.paragraphs[i];
+        Some(match p.text.chars().nth(off) {
+            Some(ch) => CaretEcho::Char(ch),
+            None if pos.0 >= self.model.doc_len => CaretEcho::DocEnd,
+            None => CaretEcho::LineEnd,
+        })
+    }
+
+    /// The word at `pos` (from `pos` to the word's end), else its char.
+    fn word_echo(&self, pos: CharPos) -> Option<CaretEcho> {
+        use unicode_segmentation::UnicodeSegmentation;
+        let (i, off) = self.para_offset(pos)?;
+        let p = &self.model.paragraphs[i];
+        let b = caret::byte_of(&p.text, off);
+        let word = p
+            .text
+            .split_word_bound_indices()
+            .find(|(start, w)| *start <= b && b < start + w.len())
+            .map(|(start, w)| &p.text[b.max(start)..start + w.len()]);
+        match word {
+            Some(w) if w.chars().any(char::is_alphanumeric) => Some(CaretEcho::Word(w.to_owned())),
+            _ => self.char_echo(pos),
+        }
+    }
+
+    /// The visual line holding `pos`, as laid out (the paragraph when it
+    /// has not been laid out yet).
+    fn line_echo(&self, pos: CharPos) -> Option<CaretEcho> {
+        let (i, off) = self.para_offset(pos)?;
+        let p = &self.model.paragraphs[i];
+        let text = match self.layouts.get(&i) {
+            Some(pl) => {
+                let b = caret::byte_of(&p.text, off);
+                pl.layout
+                    .lines()
+                    .map(|l| l.text_range())
+                    .find(|r| r.contains(&b))
+                    .or_else(|| pl.layout.lines().last().map(|l| l.text_range()))
+                    .map_or(p.text.as_str(), |r| &p.text[r])
+            }
+            None => p.text.as_str(),
+        };
+        let text = text.trim_end();
+        if text.is_empty() {
+            return Some(if pos.0 >= self.model.doc_len {
+                CaretEcho::DocEnd
+            } else {
+                CaretEcho::LineEnd
+            });
+        }
+        Some(CaretEcho::Line(text.to_owned()))
+    }
+
+    /// Shift with a caret key: the text between the old caret and `new`,
+    /// and whether the selection grew by it.
+    fn selection_echo(&self, new: CharPos) -> Option<CaretEcho> {
+        let old = self.state.caret;
+        if old == new {
+            return None;
+        }
+        let anchor = self.state.anchor.unwrap_or(old);
+        let text = caret::text_between(&self.model.paragraphs, old, new);
+        let (lo, hi) = (old.0.min(new.0), old.0.max(new.0));
+        let selected = anchor.0.min(new.0) <= lo && hi <= anchor.0.max(new.0);
+        Some(CaretEcho::Selection { text, selected })
     }
 
     /// The selection, when there is one.
@@ -1033,6 +1338,12 @@ impl DocumentView {
         let altgr = m.ctrl() && m.alt() && !m.meta();
         match &k.key {
             Key::Named(NamedKey::Enter) if !command => self.type_text(ctx, "\n"),
+            Key::Named(NamedKey::Tab) if !command => {
+                self.goal_x = None;
+                ctx.submit_action::<DocAction>(DocAction::TableCell {
+                    forward: !m.shift(),
+                });
+            }
             Key::Named(NamedKey::Backspace) if !command => self.delete_text(ctx, false),
             Key::Named(NamedKey::Delete) if !command => self.delete_text(ctx, true),
             Key::Character(s)
@@ -1473,6 +1784,24 @@ impl Widget for DocumentView {
                     .draw();
             }
             render_text(painter, tf, &pl.layout, &brushes, false);
+            // Syllable separators, in the space left before each break,
+            // on the line's baseline.
+            if let Some(s) = &pl.seps {
+                for &b in &s.at {
+                    let Some(line) = pl.layout.lines().find(|l| l.text_range().contains(&b)) else {
+                        continue;
+                    };
+                    let x = Cursor::from_byte_index(&pl.layout, b, Affinity::Downstream)
+                        .geometry(&pl.layout, 1.0)
+                        .x0;
+                    let at = origin
+                        + Vec2::new(
+                            x - f64::from(s.width),
+                            f64::from(line.metrics().baseline - s.baseline),
+                        );
+                    render_text(painter, Affine::translate(at), &s.layout, &brushes, false);
+                }
+            }
             // The spoken word's text again, in its own colour, clipped to
             // its band (no relayout per word).
             if !word_rects.is_empty() {
@@ -1491,6 +1820,22 @@ impl Widget for DocumentView {
                     painter.push_fill_clip(r);
                     render_text(painter, tf, &pl.layout, &fg, false);
                     painter.pop_clip();
+                }
+            }
+            // Misspelled words: a dotted underline at the text's foot.
+            for &r in &self.misspelled {
+                if r.end.0 <= para.start.0 || r.start.0 >= p_end {
+                    continue;
+                }
+                for rect in band(r).unwrap_or_default() {
+                    let y = rect.y1 - 2.5;
+                    let mut x = rect.x0;
+                    while x + 2.0 <= rect.x1 {
+                        painter
+                            .fill(Rect::new(x, y, x + 2.0, y + 2.0), theme::color(p.focus))
+                            .draw();
+                        x += 4.0;
+                    }
                 }
             }
             // The caret, when the view has focus.
@@ -1599,7 +1944,7 @@ impl Widget for DocumentView {
         } else {
             node.set_read_only();
         }
-        node.set_label("Document");
+        node.set_label(self.label.as_str());
         if !self.model.title.is_empty() {
             node.set_description(self.model.title.as_str());
         }

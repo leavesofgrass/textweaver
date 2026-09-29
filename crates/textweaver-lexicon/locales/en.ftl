@@ -2667,3 +2667,61 @@ setting-speech-voice-params = Rate and pitch per voice
 setting-speech-voice-params-help = The rate and pitch each voice was last used at; choosing a voice again brings them back.
 setting-editing-author = Author
 setting-editing-author-help = The author written into new documents made from a template; empty leaves it blank.
+
+## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
+## Keep the letters Y and N: they are the keys that answer.
+
+gui-yes = Yes
+gui-no = No
+gui-question-hint = Y answers yes, N answers no, Escape answers no.
+gui-button-open = Open…
+gui-button-font = Font…
+gui-button-edit = Edit
+gui-button-finish-editing = Finish editing
+gui-button-settings = Settings…
+gui-button-commands = Commands…
+gui-button-play = Play
+gui-button-pause = Pause
+gui-button-stop = Stop
+gui-button-previous-sentence = Previous sentence
+gui-button-next-sentence = Next sentence
+gui-button-slower = Slower
+gui-button-faster = Faster
+gui-button-close = Close
+gui-toolbar-reading = Reading
+gui-document = Document
+gui-list-hint = Enter chooses, Escape closes.
+gui-settings-sections = Sections
+gui-settings-form = { $section } settings
+gui-settings-saved-hint = Changes take effect and are saved at once.
+gui-settings-close-help = Close the settings. Every change is already saved.
+gui-settings-closed = Settings closed.
+gui-settings-table = { $label } is a table. Edit it in settings.toml.
+gui-setting-new-value = New value for { $label }
+gui-setting-value-hint = Press Enter to accept, or Escape to go back.
+gui-prompt-path-hint = Type the path of a document, then press Enter. Tab completes it; Up and Down recall earlier ones.
+gui-prompt-hint = Press Enter to accept, or Escape to cancel. Up and Down recall earlier answers.
+gui-palette-filter = Type to filter the commands
+gui-palette-list = Commands
+gui-palette-hint = Enter runs the first match; Tab moves to the list.
+gui-no-document = No document is open. Press { $key } to open one.
+gui-open-failed = Could not open { $path }: { $error }
+gui-uia-unavailable = UI Automation notifications exist only on Windows; using the live region.
+gui-rsvp = RSVP
+gui-rsvp-playing = RSVP playing, word { $n } of { $total }
+gui-rsvp-paused = RSVP paused, word { $n } of { $total }
+gui-rsvp-finished = RSVP finished, word { $n } of { $total }
+gui-settings-section-item =
+    { $section }, { $n ->
+        [one] 1 setting
+       *[other] { $n } settings
+    }
+gui-palette-count =
+    { $n ->
+        [0] No commands match.
+        [one] 1 command.
+       *[other] { $n } commands.
+    }
+gui-settings-form-help = Up and Down move between settings. Left and Right change one. Enter types a new value. Delete puts the default back. { $next } and { $previous } change the section.
+gui-settings-press-enter = Press Enter to type a new value for { $label }.
+gui-font-built-in = { $family } (built in)
