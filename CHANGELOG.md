@@ -4,6 +4,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### W5c3: LaTeX, email, web archives, and MathML in web pages
+
+- **LaTeX opens without Pandoc,** in the reader and in `tw`: numbered sections as headings, lists, tables with header rows, captions ("Table 1: ..."), math as math, `\ref` numbers and links to sections, `\cite` as citations, footnotes, code, your own `\newcommand` shortcuts, and `\input` files from the document's own folder only. A command textweaver does not know is left out and its text read, and the document's warnings name it ([ADR-0035](docs/adr/0035-latex-email-and-web-archives.md)).
+- **Email (EML):** the subject, then From, To, Cc, and the date with its weekday, then the message, with quoted lines read as a quote; attachments are listed with their sizes, not opened.
+- **Web pages saved as one file (MHTML, MHT)** read as the page, with links leading to the pages they named on the web and pictures described by the descriptions saved with them.
+- **Math written in MathML in a web page** is read as math, as it already was in EPUB books.
+- A picture's description in a web page no longer runs into the next word.
+- New messages, in all six languages: "it is not a readable LaTeX file", "... email message", and "... web archive", said after "Could not open".
+
 ### W5g: the publishing templates
 
 - **Publishing templates** for EPUB, Word, and PDF: `tw convert --template apa` (an APA 7 student paper: title page, double spacing, APA headings, page numbers, hanging references), `ama` (an AMA 11 manuscript with a word count), `large-print`, `dyslexia-friendly`, `high-contrast`, and `manuscript`. Headings, lists, tables, and descriptions stay exactly as a screen reader expects; the layout options still apply on top ([ADR-0041](docs/adr/0041-publishing-templates.md)).

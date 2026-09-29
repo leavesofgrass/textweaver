@@ -1,0 +1,48 @@
+From: Ada Example <ada@example.org>
+To: Bo Example <bo@example.org>
+Cc: study-group@example.org
+Subject: Lab notes for Thursday
+Date: Mon, 28 Sep 2026 10:15:00 -0700
+Message-ID: <lab-notes-1@example.org>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="outer"
+
+--outer
+Content-Type: multipart/alternative; boundary="inner"
+
+--inner
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Hi Bo,
+
+The lab moved to Thursday. I attached the cell counts and the notes.
+Bring the caf=C3=A9 receipt for the reimbursement.
+
+> Is the lab still on Tuesday?
+
+Thanks,
+Ada
+
+--inner
+Content-Type: text/html; charset=utf-8
+
+<p>Hi Bo,</p><p>The lab moved to <b>Thursday</b>.</p>
+--inner--
+
+--outer
+Content-Type: text/csv; name="counts.csv"
+Content-Disposition: attachment; filename="counts.csv"
+
+Hour,Cells
+0,100
+1,200
+
+--outer
+Content-Type: application/pdf; name="notes.pdf"
+Content-Disposition: attachment; filename="notes.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJcTl8uXrp/Og0MTGCg==
+
+--outer--

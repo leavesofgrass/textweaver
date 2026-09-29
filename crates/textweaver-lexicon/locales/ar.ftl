@@ -873,6 +873,9 @@ opening-no-file-here = لا يوجد ملف باسم { $name } هنا. تحقّ�
 opening-no-permission = ليست لديك صلاحية قراءته.
 opening-damaged-rtf = ليس ملف RTF قابلًا للقراءة؛ قد يكون تالفًا.
 opening-damaged-odt = ليس ملف نص OpenDocument قابلًا للقراءة؛ قد يكون تالفًا.
+opening-damaged-latex = ليس ملف LaTeX قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
+opening-damaged-email = ليست رسالة بريد إلكتروني قابلة للقراءة؛ قد تكون تالفة أو كبيرة جدًا.
+opening-damaged-mhtml = ليس أرشيف ويب قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
 # $reason is one of the opening-no-* messages, or the loader's own words.
 opening-failed = تعذّر فتح { $name }: { $reason }
 opening-started = يجري فتح { $name }. Escape للإلغاء.

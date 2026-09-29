@@ -238,6 +238,8 @@ textweaver reads these formats itself:
 - Markdown, HTML, plain text, EPUB, Word (DOCX), and PDF.
 - RTF (Rich Text Format): headings, lists, tables, footnotes, links, pictures' descriptions, and text in older code pages such as Cyrillic and Japanese.
 - OpenDocument text (ODT, OTT, and flat FODT), as LibreOffice and Google Docs save it: headings, numbered and bulleted lists, tables, footnotes, links, and pictures' descriptions.
+- LaTeX (TEX, LATEX, and LTX): sections, lists, tables, math, references, citations, and footnotes, and the files it includes from its own folder. See [LaTeX](#latex).
+- Email (EML) and web pages saved from a browser as one file (MHTML and MHT). See [Email and web archives](#email-and-web-archives).
 - Scanned PDFs and pictures (PNG, JPEG), by recognizing their text. See [Scanned pages](#scanned-pages-ocr).
 - DAISY 3 books and DTBook files, including Bookshare zips.
 - PowerPoint (PPTX): slides in order, each with its speaker notes.
@@ -245,9 +247,41 @@ textweaver reads these formats itself:
 - Archives (ZIP, TAR, TAR.GZ, and 7Z): opening one lists the files inside that textweaver can read, each a link. To open a file inside an archive directly, write its name after a `!`, as in `tw text course.zip!week1/notes.md`.
 - Web pages: `tw open https://example.org/page` and `tw text https://...` fetch the page and read it. A PDF or other file at the address is saved in the cache and opened from there.
 
-For other formats, such as reStructuredText, Org, and LaTeX, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself, and RTF and OpenDocument text no longer need it. `--no-pandoc` turns it off.
+For other formats, such as reStructuredText and Org, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself, and RTF, OpenDocument text, and LaTeX no longer need it. `--no-pandoc` turns it off.
 
-Equations in a Word document are read as math. textweaver turns them into LaTeX between dollar signs, as in Markdown, so they are spoken as formulas.
+Equations in a Word document are read as math. textweaver turns them into LaTeX between dollar signs, as in Markdown, so they are spoken as formulas. Math written in MathML, in a web page, a saved web page, or an EPUB book, is read as math the same way.
+
+### LaTeX
+
+```bash
+tw text "Chapter 3.tex"
+```
+
+textweaver reads LaTeX itself, the way course notes and papers use it, without Pandoc or a TeX installation:
+
+- Sections are headings, numbered as LaTeX numbers them, such as "2.1 Methods", so you can move by heading. The title, author, and date come from `\maketitle`, and the abstract is a section of its own.
+- Numbered, bulleted, and description lists; tables, with the first row as the header when a rule follows it; and captions, read as "Table 1: Cell counts". A figure's caption describes its picture.
+- Math between dollar signs, `\[ \]`, and in the `equation`, `align`, and `gather` environments is read as math, like math in Markdown, and numbered equations say their numbers.
+- `\ref` reads the number of what it names, and a reference to a section is a link to its heading. `\cite{doe2020}` is a citation, read and formatted as in Markdown (see [Citations](#citations)).
+- Footnotes, emphasis, links, code listings, accents, and theorems declared with `\newtheorem`.
+- Your own `\newcommand` shortcuts without arguments are expanded, in text and in math.
+- `\input` and `\include` read other `.tex` files from the document's folder and its subfolders, never from anywhere else. A file that is outside the folder, missing, or too large is left out, and textweaver tells you which.
+
+What textweaver does not know is never lost: a command it does not know is left out and its text is read. The document's warnings list those commands, for example "Some LaTeX commands are not supported, so only their text is read: \hl." The preamble, layout commands such as spacing and page breaks, and drawings made with TikZ are left out.
+
+A file over 16 megabytes is refused. A document that includes more than 8 levels of files, or is so long or so tangled that it passes textweaver's limits, is read up to that point, and the warning says the rest was left out.
+
+### Email and web archives
+
+```bash
+tw text "Lab notes.eml"
+```
+
+An email is read in this order: the subject as a heading; then From, To, Cc, and the date, one line each, with the weekday, such as "Date: Monday, September 28, 2026, 10:15, UTC minus 7"; then the message. Quoted lines from an earlier message, the ones that start with `>`, are read as a quote. A message sent only as HTML is read like a web page. Attachments are listed at the end under "Attachments", each with its size, such as "notes.pdf, 240 KB"; textweaver does not open them.
+
+A web page saved as one file (MHTML, or MHT) is read like the page itself: headings, lists, tables, math, and pictures' descriptions. Its links lead to the pages they named on the web, and a picture without a description of its own is described by the one the browser saved with it, when there is one.
+
+A file over 128 megabytes, or a message with more than 10,000 parts or parts nested more than 32 deep, is refused.
 
 ### Comments and tracked changes
 

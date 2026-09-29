@@ -1,0 +1,54 @@
+From: <Saved by a web browser>
+Snapshot-Content-Location: https://example.org/biology/cells.html
+Subject: Cells
+Date: Mon, 28 Sep 2026 10:15:00 -0700
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="text/html";
+	boundary="----MultipartBoundary--example";
+	start="<page@example.org>"
+
+------MultipartBoundary--example
+Content-Type: text/html; charset=utf-8
+Content-ID: <page@example.org>
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://example.org/biology/cells.html
+
+<!DOCTYPE html><html lang=3D"en"><head><meta charset=3D"utf-8"><title>Cells=
+</title><link rel=3D"stylesheet" href=3D"style.css"></head><body>
+<nav><a href=3D"/">Home</a></nav>
+<main>
+<h1>Cells</h1>
+<p>Every living thing is made of cells. See the <a href=3D"../index.html">co=
+urse page</a>.</p>
+<p><img src=3D"cid:cell@example.org"></p>
+<h2>Growth</h2>
+<p>A population that doubles every hour has
+<math><mi>N</mi><mo>=3D</mo><msub><mi>N</mi><mn>0</mn></msub><mo>&#x22C5;<=
+/mo><msup><mn>2</mn><mi>t</mi></msup></math> cells after <var>t</var> hours=
+.</p>
+<table><caption>Cell counts</caption>
+<tr><th>Hour</th><th>Cells</th></tr>
+<tr><td>0</td><td>100</td></tr>
+<tr><td>1</td><td>200</td></tr>
+</table>
+</main>
+</body></html>
+
+------MultipartBoundary--example
+Content-Type: text/css
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://example.org/biology/style.css
+
+body { font-family: sans-serif; }
+
+------MultipartBoundary--example
+Content-Type: image/png
+Content-ID: <cell@example.org>
+Content-Description: A drawing of a cell with its nucleus in the middle
+Content-Transfer-Encoding: base64
+Content-Location: https://example.org/biology/cell.png
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==
+
+------MultipartBoundary--example--

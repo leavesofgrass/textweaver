@@ -21,6 +21,10 @@
 //! Also skipped: elements with the `hidden` attribute or `aria-hidden="true"`,
 //! and images with `role="presentation"`.
 //!
+//! MathML (`<math>`) is read as math, in web pages as in EPUB 3 (W5c3,
+//! ADR-0035): LaTeX with its delimiters under a `Math` marker, as
+//! `mathml.rs` describes.
+//!
 //! The charset comes from a byte order mark, a `<meta charset>` (or
 //! `http-equiv` content type, or XML declaration) in the first 1024 bytes,
 //! else UTF-8 when valid, else Windows-1252 (see [`crate::encoding`]).
@@ -102,6 +106,32 @@ pub fn convert(
     b.finish()
 }
 
+/// Where a link or picture in an archived page points (MHTML and email,
+/// ADR-0035): the address to use, and a description for a picture that
+/// has no alternative text of its own.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct Resolved {
+    /// The link target or picture address to record.
+    pub(crate) target: String,
+    /// The picture's description (its part's `Content-Description`).
+    pub(crate) description: Option<String>,
+}
+
+/// Resolves an `href` or `src` value.
+pub(crate) type Resolver<'a> = &'a dyn Fn(&str) -> Option<Resolved>;
+
+/// [`walk_into`] with links and pictures resolved by `resolve` (the parts
+/// of a web archive or an email).
+pub(crate) fn walk_resolved_into<'a>(
+    b: &'a mut Builder,
+    source: &str,
+    options: &'a LoadOptions,
+    meta: &mut DocumentMeta,
+    resolve: Resolver<'a>,
+) {
+    walk(b, source, options, meta, None, false, Some(resolve));
+}
+
 /// Called with each element `id` (and `<a name>`) as the walker reaches it,
 /// before the element's content, so a caller can open markers there (EPUB
 /// table-of-contents targets).
@@ -116,12 +146,11 @@ pub(crate) fn walk_into<'a>(
     meta: &mut DocumentMeta,
     on_anchor: Option<AnchorHook<'a>>,
 ) {
-    walk(b, source, options, meta, on_anchor, false);
+    walk(b, source, options, meta, on_anchor, false, None);
 }
 
-/// [`walk_into`] for an EPUB 3 chapter: MathML is read as math (a `Math`
-/// marker over LaTeX, see `mathml.rs`), and an `epub:switch` reads its
-/// MathML case, or else its default.
+/// [`walk_into`] for an EPUB 3 chapter: an `epub:switch` reads its MathML
+/// case, or else its default. (MathML is read as math in every page.)
 pub(crate) fn walk_epub_into<'a>(
     b: &'a mut Builder,
     source: &str,
@@ -129,7 +158,7 @@ pub(crate) fn walk_epub_into<'a>(
     meta: &mut DocumentMeta,
     on_anchor: Option<AnchorHook<'a>>,
 ) {
-    walk(b, source, options, meta, on_anchor, true);
+    walk(b, source, options, meta, on_anchor, true, None);
 }
 
 fn walk<'a>(
@@ -138,7 +167,8 @@ fn walk<'a>(
     options: &'a LoadOptions,
     meta: &mut DocumentMeta,
     on_anchor: Option<AnchorHook<'a>>,
-    mathml: bool,
+    epub: bool,
+    resolve: Option<Resolver<'a>>,
 ) {
     let html = Html::parse_document(source);
     let root = html.root_element();
@@ -155,7 +185,8 @@ fn walk<'a>(
         on_anchor,
         depth: 0,
         flattened: false,
-        mathml,
+        epub,
+        resolve,
     };
     for child in root.child_elements() {
         if child.value().name() == "head" {
@@ -232,8 +263,10 @@ struct Walker<'a> {
     depth: usize,
     /// Set once content past the nesting limit was flattened.
     flattened: bool,
-    /// Read MathML as math (EPUB 3).
-    mathml: bool,
+    /// An EPUB 3 chapter: `epub:switch` is read.
+    epub: bool,
+    /// Resolves links and pictures (web archives and email).
+    resolve: Option<Resolver<'a>>,
 }
 
 fn marker(kind: MarkerKind) -> Marker {
@@ -346,12 +379,10 @@ impl Walker<'_> {
         if SKIP.contains(&name) || is_hidden(&el) {
             return;
         }
-        if self.mathml {
-            match crate::mathml::local(name) {
-                "math" => return self.math(el),
-                "switch" if name.starts_with("epub:") => return self.switch(el),
-                _ => {}
-            }
+        match crate::mathml::local(name) {
+            "math" => return self.math(el),
+            "switch" if self.epub && name.starts_with("epub:") => return self.switch(el),
+            _ => {}
         }
         match name {
             "head" | "title" | "caption" => {}
@@ -400,7 +431,12 @@ impl Walker<'_> {
             "pre" => self.pre(el),
             "code" | "kbd" | "samp" | "tt" => self.wrapped(el, marker(MarkerKind::Code)),
             "a" => match el.attr("href") {
-                Some(href) => self.wrapped(el, marker(MarkerKind::Link).with_reference(href)),
+                Some(href) => {
+                    let target = self
+                        .resolved(href)
+                        .map_or_else(|| href.to_owned(), |r| r.target);
+                    self.wrapped(el, marker(MarkerKind::Link).with_reference(target));
+                }
                 None => self.children(el),
             },
             "strong" | "b" => self.wrapped(el, marker(MarkerKind::Bold)),
@@ -422,7 +458,12 @@ impl Walker<'_> {
         }
     }
 
-    /// MathML (EPUB 3): LaTeX with its delimiters under a `Math` marker,
+    /// An `href` or `src` through the resolver, when there is one.
+    fn resolved(&self, reference: &str) -> Option<Resolved> {
+        self.resolve.and_then(|r| r(reference))
+    }
+
+    /// MathML: LaTeX with its delimiters under a `Math` marker,
     /// as the Markdown and DOCX loaders write math: `$…$` at level 0, or
     /// display math `$$…$$` at level 1 on a line of its own (in a table
     /// cell, between spaces). Without any math, the `alttext` or an
@@ -541,18 +582,36 @@ impl Walker<'_> {
         }) {
             return;
         }
+        let resolved = el.attr("src").and_then(|src| self.resolved(src));
         let alt = ["alt", "title", "aria-label"]
             .iter()
             .filter_map(|a| el.attr(a))
             .map(collapse)
             .find(|s| !s.is_empty());
+        // An archived picture with no text of its own: its part's
+        // description (never for `alt=""`, which marks it decorative).
+        let alt = alt.or_else(|| {
+            if el.attr("alt").is_some() {
+                return None;
+            }
+            resolved
+                .as_ref()
+                .and_then(|r| r.description.as_deref())
+                .map(collapse)
+                .filter(|d| !d.is_empty())
+        });
         let Some(alt) = alt else {
             return;
         };
         let mut m = marker(MarkerKind::Image);
-        if let Some(src) = el.attr("src") {
+        if let Some(r) = &resolved {
+            m = m.with_reference(r.target.clone());
+        } else if let Some(src) = el.attr("src") {
             m = m.with_reference(src);
         }
+        // A picture's words never run into the words beside it
+        // ("a cell" and "A nucleus", not "a cellA nucleus").
+        self.b.space();
         let id = self.b.open(m);
         self.b.text(&alt);
         if let Some(desc) = el.attr("longdesc").filter(|d| !d.trim().is_empty()) {
@@ -560,6 +619,7 @@ impl Walker<'_> {
                 .text(&format!(" (long description: {})", desc.trim()));
         }
         self.b.close(id);
+        self.b.soft_space();
     }
 
     fn table(&mut self, el: ElementRef<'_>) {
@@ -748,6 +808,53 @@ mod tests {
         assert_eq!(d.text().to_string(), "A chart\n\nQuoted.\n\nTitled");
         assert_eq!(kinds(&d, MarkerKind::Image), ["A chart", "Titled"]);
         assert_eq!(kinds(&d, MarkerKind::Quote), ["Quoted."]);
+    }
+
+    #[test]
+    fn mathml_in_a_web_page_is_math() {
+        let d = load(
+            "<p>Area <math><mi>\u{3c0}</mi><msup><mi>r</mi><mn>2</mn></msup></math>.</p><math display=\"block\"><mi>x</mi></math><p>After.</p>",
+        );
+        let levels: Vec<u8> = d
+            .marker_index()
+            .iter(MarkerKind::Math, None)
+            .map(|m| m.level)
+            .collect();
+        assert_eq!(levels, [0, 1], "{}", d.text());
+        assert!(d.text().to_string().starts_with("Area $"), "{}", d.text());
+        // `epub:switch` is EPUB's; a web page reads its content as usual.
+        let d = load(
+            "<epub:switch><epub:case>a</epub:case><epub:default>b</epub:default></epub:switch>",
+        );
+        assert_eq!(d.text().to_string(), "ab");
+    }
+
+    #[test]
+    fn a_resolver_rewrites_links_and_describes_pictures() {
+        let resolve = |r: &str| {
+            r.starts_with("cid:").then(|| Resolved {
+                target: format!("https://example.org/{}", &r[4..]),
+                description: Some("The logo".into()),
+            })
+        };
+        let mut b = Builder::new();
+        let options = LoadOptions::default();
+        let mut meta = DocumentMeta::default();
+        walk_resolved_into(
+            &mut b,
+            "<p><img src=\"cid:a\"><img src=\"cid:b\" alt=\"\"><a href=\"cid:c\">link</a></p>",
+            &options,
+            &mut meta,
+            &resolve,
+        );
+        let (text, markers) = b.finish();
+        assert_eq!(text, "The logo link");
+        let refs: Vec<String> = markers.iter().filter_map(|m| m.reference.clone()).collect();
+        assert_eq!(
+            refs,
+            ["https://example.org/a", "https://example.org/c"],
+            "{markers:?}"
+        );
     }
 
     #[test]

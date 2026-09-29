@@ -64,7 +64,7 @@ The developer documents are in [dev/](dev/), the decision records in [adr/](adr/
 - [The crates](dev/architecture.md#the-crates): what each of the 33 crates does, with its ADRs.
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
-- [Fuzzing](../fuzz/README.md): the 27 cargo-fuzz targets, run every night: the document loaders (RTF, ODT, and Word revisions among them), the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, and the engine-host protocol.
+- [Fuzzing](../fuzz/README.md): the 29 cargo-fuzz targets, run every night: the document loaders (RTF, ODT, Word revisions, LaTeX, and email among them), the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, and the engine-host protocol.
 - [Releasing](dev/releasing.md): making a release, the Linux AppImage, and what the packages hold.
 - [Third-party data](dev/third-party-data.md): the bundled pronunciation dictionaries, fonts, and word lists, and their licences.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
@@ -120,6 +120,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0032: Grammar, lint, highlighting, and clipboard crates](adr/0032-grammar-lint-highlighting-clipboard.md): the authoring extras' crates, and the two held for the owner.
 - [ADR-0033: The GUI after the second session, and edit mode](adr/0033-gui-session-2-and-edit-mode.md): the file chooser, text size and font keys, a key on every button, and edit mode in the window.
 - [ADR-0034: The rope after measurement](adr/0034-rope-after-measurement.md): stay on ropey 1.6; ropey 2 and crop measured, and when to look again.
+- [ADR-0035: Native LaTeX subset, and email and web archives](adr/0035-latex-email-and-web-archives.md): LaTeX, email, and web archives read natively, and MathML in web pages.
 - [ADR-0036: Math braille and navigation on MathCAT](adr/0036-math-braille-and-navigation.md): Nemeth and UEB math in braille files, and exploring a formula with MathCAT and its braille.
 - [ADR-0039: Automated screen-reader checks beside the listening sessions](adr/0039-automated-screen-reader-checks.md): the accessibility tree on three systems, and NVDA, Orca, and VoiceOver sessions on CI runners.
 - [ADR-0041: Publishing templates, real Word footnotes, and PDF page labels](adr/0041-publishing-templates.md): APA, AMA, and reading templates for EPUB, Word, and PDF, Word footnotes, the EPUB cover, and print page labels.
