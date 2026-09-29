@@ -4,6 +4,11 @@
 //! onnx-community model is in `<data>/whisper/rten/<model>` (`base.en` by
 //! default) or `--engine rten` names it, and without `--file` it records
 //! from the microphone until Enter. The Whisper programs are the fallback.
+//!
+//! Wave 6 (Agent W6d, ADR-0042): `--live` transcribes while recording and
+//! prints the words as they are committed, one burst per line on standard
+//! error; the finished text still goes to standard output. With `--file`,
+//! the recording is played in at speaking pace, never aloud.
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -13,10 +18,11 @@ use anyhow::Context;
 use serde::Serialize;
 use textweaver_app::store::Paths;
 use textweaver_dictation::rten_whisper::RtenWhisperFiles;
+use textweaver_dictation::stream::StreamConfig;
 use textweaver_dictation::{
-    Dictation, DictationEvent, DictationInput, MicCapture, RtenConfig, RtenDictation, Transcript,
-    WHISPER_MODELS, WhisperConfig, WhisperDictation, WhisperEngine, WhisperModel,
-    apply_spoken_commands, detect,
+    AudioCapture, Dictation, DictationEvent, DictationInput, MicCapture, PacedCapture, RtenConfig,
+    RtenDictation, Transcript, WHISPER_MODELS, WhisperConfig, WhisperDictation, WhisperEngine,
+    WhisperModel, apply_spoken_commands, audio, detect,
 };
 
 /// Arguments for `tw dictate`.
@@ -42,6 +48,12 @@ pub struct Args {
     /// Print how long loading, the model, and the whole run took.
     #[arg(long)]
     pub timings: bool,
+    /// Transcribe while recording (in-process Whisper only): each burst of
+    /// words is printed on its own line as it is committed, and each
+    /// phrase is finished at its pause. With --file, the recording is
+    /// played in at speaking pace.
+    #[arg(long)]
+    pub live: bool,
     /// The Whisper program to run (its engine is guessed from the name,
     /// or given with --engine).
     #[arg(long)]
@@ -157,14 +169,82 @@ struct RtenReport<'a> {
     latency_ms: Option<u128>,
 }
 
+/// What one dictation event means for the command line: the transcript
+/// when it is final. Prints progress to standard error unless `json`.
+fn take_event(
+    event: &DictationEvent,
+    live: bool,
+    json: bool,
+) -> anyhow::Result<Option<Transcript>> {
+    match event {
+        DictationEvent::Final(t) => return Ok(Some(t.clone())),
+        DictationEvent::Failed { message } => anyhow::bail!("{message}"),
+        DictationEvent::Cancelled => anyhow::bail!("Dictation cancelled"),
+        _ if json => {}
+        // Live, the committed words are the progress; each phrase's
+        // segment would repeat them.
+        DictationEvent::Committed { text, .. } => eprintln!("{text}"),
+        DictationEvent::Partial(_) if live => {}
+        DictationEvent::Partial(seg) => eprintln!("{}", seg.text),
+        _ => {
+            if let Some(a) = event.announcement() {
+                eprintln!("{a}");
+            }
+        }
+    }
+    Ok(None)
+}
+
+/// A live session from the microphone: events are printed as they come,
+/// and Enter stops the recording.
+fn run_live_mic(d: &mut RtenDictation, args: &Args) -> anyhow::Result<Option<Transcript>> {
+    d.start(DictationInput::Capture(Box::new(MicCapture::new())))?;
+    eprintln!("Recording. Press Enter to stop.");
+    let (enter_tx, enter_rx) = std::sync::mpsc::channel();
+    // Left waiting on standard input if the session ends first; the
+    // process ends with it.
+    std::thread::spawn(move || {
+        let mut line = String::new();
+        let _ = std::io::stdin().read_line(&mut line);
+        let _ = enter_tx.send(());
+    });
+    loop {
+        for event in d.poll() {
+            if let Some(t) = take_event(&event, true, args.json)? {
+                return Ok(Some(t));
+            }
+        }
+        if enter_rx.try_recv().is_ok() {
+            d.stop()?;
+        }
+        if d.state() == textweaver_dictation::DictationState::Idle {
+            return Ok(None);
+        }
+        std::thread::sleep(Duration::from_millis(30));
+    }
+}
+
 /// `tw dictate` with Whisper in-process.
 fn run_rten(args: &Args, dir: PathBuf) -> anyhow::Result<()> {
     let mut config = RtenConfig::new(&dir);
     config.language = args.language.clone();
+    if args.live {
+        config.live = Some(StreamConfig::default());
+    }
     let mut d = RtenDictation::new(config)?;
-    match &args.file {
-        Some(f) => d.start(DictationInput::File(f.clone()))?,
-        None => {
+    let mut transcript = None;
+    match (&args.file, args.live) {
+        (Some(f), true) => {
+            let bytes = std::fs::read(f).with_context(|| f.display().to_string())?;
+            let samples = audio::read_wav(&bytes)
+                .and_then(|a| audio::to_whisper_rate(&a))
+                .map_err(|e| anyhow::anyhow!("{}: {e}", f.display()))?;
+            let capture: Box<dyn AudioCapture> = Box::new(PacedCapture::new(samples));
+            d.start(DictationInput::Capture(capture))?;
+        }
+        (Some(f), false) => d.start(DictationInput::File(f.clone()))?,
+        (None, true) => transcript = run_live_mic(&mut d, args)?,
+        (None, false) => {
             d.start(DictationInput::Capture(Box::new(MicCapture::new())))?;
             eprintln!("Recording. Press Enter to stop.");
             let mut line = String::new();
@@ -172,20 +252,15 @@ fn run_rten(args: &Args, dir: PathBuf) -> anyhow::Result<()> {
             d.stop()?;
         }
     }
-    let mut transcript = None;
-    for event in d.wait() {
-        match &event {
-            DictationEvent::Final(t) => transcript = Some(t.clone()),
-            DictationEvent::Failed { message } => anyhow::bail!("{message}"),
-            DictationEvent::Cancelled => anyhow::bail!("Dictation cancelled"),
-            DictationEvent::Partial(seg) if !args.json => eprintln!("{}", seg.text),
-            _ => {
-                if !args.json
-                    && let Some(a) = event.announcement()
-                {
-                    eprintln!("{a}");
-                }
-            }
+    if transcript.is_none() {
+        let mut failure = None;
+        d.wait_each(|event| match take_event(event, args.live, args.json) {
+            Ok(Some(t)) => transcript = Some(t),
+            Ok(None) => {}
+            Err(e) => failure = Some(e),
+        });
+        if let Some(e) = failure {
+            return Err(e);
         }
     }
     let transcript = transcript.unwrap_or_default();
@@ -203,6 +278,13 @@ fn run_rten(args: &Args, dir: PathBuf) -> anyhow::Result<()> {
             t.speech.as_millis(),
             t.latency.as_millis()
         );
+        if args.live {
+            eprintln!(
+                "Live: {} phrases, {} Whisper runs, {} cancelled at a pause, \
+                 {} of {} words before their pause.",
+                t.utterances, t.runs, t.cancelled_runs, t.early_words, t.words
+            );
+        }
     }
     let mut text = if args.timestamps {
         transcript.text_with_timestamps()
@@ -239,6 +321,11 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     }
     if let Some(dir) = rten_model_dir(&args) {
         return run_rten(&args, dir);
+    }
+    if args.live {
+        anyhow::bail!(
+            "Live dictation needs the in-process Whisper model; see --model-dir and --engine rten."
+        );
     }
     let Some(file) = args.file.clone() else {
         anyhow::bail!(

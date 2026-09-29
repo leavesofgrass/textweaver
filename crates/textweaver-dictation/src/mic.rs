@@ -3,7 +3,9 @@
 //! The input stream lives on its own thread (a `cpal` stream is not
 //! `Send` on every platform), which drains rodio's small ring buffer
 //! continuously and mixes the channels down to mono. When recording
-//! stops, the audio is resampled to Whisper's 16 kHz with rubato.
+//! stops, the audio is resampled to Whisper's 16 kHz with rubato. Live
+//! ([`AudioCapture::live`]), the thread also resamples as it records and
+//! hands the 16 kHz audio on in blocks of about a tenth of a second.
 //!
 //! Tests never open a microphone; [`MicCapture`] is exercised by hand
 //! (`tw dictate` without `--file`, and the listening checklist in
@@ -18,8 +20,8 @@ use rodio::Source;
 use rodio::microphone::MicrophoneBuilder;
 
 use crate::DictationError;
-use crate::audio::resample;
-use crate::capture::{AudioCapture, Pcm, WHISPER_SAMPLE_RATE};
+use crate::audio::{StreamResampler, resample};
+use crate::capture::{AudioCapture, LiveAudio, Pcm, WHISPER_SAMPLE_RATE};
 
 /// Recorded audio shared with the capture thread.
 #[derive(Default)]
@@ -36,6 +38,7 @@ pub struct MicCapture {
     shared: Arc<Mutex<Shared>>,
     thread: Option<JoinHandle<()>>,
     started: Option<Instant>,
+    live: Option<LiveAudio>,
 }
 
 impl std::fmt::Debug for MicCapture {
@@ -76,9 +79,15 @@ impl AudioCapture for MicCapture {
         let (ready_tx, ready_rx) = std::sync::mpsc::channel();
         let stop = Arc::clone(&self.stop);
         let shared = Arc::clone(&self.shared);
+        let live = self.live.clone();
         let thread = std::thread::Builder::new()
             .name("textweaver-microphone".into())
-            .spawn(move || record(&stop, &shared, &ready_tx))
+            .spawn(move || {
+                record(&stop, &shared, live.as_ref(), &ready_tx);
+                if let Some(live) = &live {
+                    live.end();
+                }
+            })
             .map_err(|e| DictationError::Capture(e.to_string()))?;
         match ready_rx.recv_timeout(Duration::from_secs(10)) {
             Ok(Ok(())) => {
@@ -124,6 +133,12 @@ impl AudioCapture for MicCapture {
     fn elapsed(&self) -> Duration {
         self.started.map_or(Duration::ZERO, |t| t.elapsed())
     }
+
+    fn live(&mut self) -> Option<LiveAudio> {
+        let live = LiveAudio::new();
+        self.live = Some(live.clone());
+        Some(live)
+    }
 }
 
 impl Drop for MicCapture {
@@ -136,10 +151,11 @@ impl Drop for MicCapture {
 }
 
 /// The capture thread: opens the default input, then collects mono
-/// samples until `stop`.
+/// samples until `stop`, and hands them on live at 16 kHz when asked.
 fn record(
     stop: &AtomicBool,
     shared: &Mutex<Shared>,
+    live: Option<&LiveAudio>,
     ready: &std::sync::mpsc::Sender<Result<(), String>>,
 ) {
     let opened = MicrophoneBuilder::new()
@@ -158,13 +174,35 @@ fn record(
         }
     };
     let channels = usize::from(mic.channels().get());
-    {
-        let mut s = shared.lock().unwrap_or_else(|e| e.into_inner());
-        s.rate = mic.sample_rate().get();
-    }
+    let rate = mic.sample_rate().get();
+    shared.lock().unwrap_or_else(|e| e.into_inner()).rate = rate;
+    let mut live = match live.map(|l| StreamResampler::new(rate).map(|r| (l, r))) {
+        None => None,
+        Some(Ok(l)) => Some(l),
+        Some(Err(e)) => {
+            let _ = ready.send(Err(e));
+            return;
+        }
+    };
     let _ = ready.send(Ok(()));
+    // Hands a block on live, resampled; a failure ends the live audio,
+    // and the recording still reaches `stop`.
+    let mut hand_on = |block: &[f32]| {
+        if let Some((l, r)) = &mut live {
+            match r.push(block) {
+                Ok(out) => l.push(&out),
+                Err(e) => {
+                    log::warn!("dictation: live resampling failed: {e}");
+                    l.end();
+                }
+            }
+        }
+    };
+    // About a tenth of a second at 44.1 or 48 kHz, so live dictation
+    // hears the audio soon after it is spoken.
+    let block_len = (rate as usize / 10).clamp(256, 4096);
     let mut frame = Vec::with_capacity(channels);
-    let mut block = Vec::with_capacity(4096);
+    let mut block = Vec::with_capacity(block_len);
     while !stop.load(Ordering::SeqCst) {
         // `next` waits for the device; it ends only on a stream error.
         let Some(sample) = mic.next() else {
@@ -177,7 +215,8 @@ fn record(
             block.push(frame.iter().sum::<f32>() / channels as f32);
             frame.clear();
         }
-        if block.len() >= 4096 {
+        if block.len() >= block_len {
+            hand_on(&block);
             shared
                 .lock()
                 .unwrap_or_else(|e| e.into_inner())
@@ -185,9 +224,16 @@ fn record(
                 .append(&mut block);
         }
     }
+    hand_on(&block);
     shared
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .samples
         .append(&mut block);
+    if let Some((l, r)) = &mut live {
+        match r.finish() {
+            Ok(out) => l.push(&out),
+            Err(e) => log::warn!("dictation: live resampling failed: {e}"),
+        }
+    }
 }
