@@ -365,3 +365,76 @@ fn screen_reader_actions_on_a_setting_reach_the_form() {
     });
     assert_eq!(h.get_widget(SECTIONS).inner().selected(), 1);
 }
+
+/// In Spanish (`[interface] language = "es"`), the window's drawn labels,
+/// the settings dialog's sections, labels, and values are Spanish, and a
+/// change is announced once: the form shows the new value, so the app's
+/// "Velocidad, ..." adds nothing to say (W4d's catalog, W5a4).
+#[test]
+fn the_window_and_the_settings_dialog_speak_spanish() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app(dir.path());
+    app.set_setting("interface.language", serde_json::json!("es"))
+        .expect("Spanish");
+    assert_eq!(app.catalog().lang(), "es");
+    let (mut h, form) = harness_with_dialog(&app);
+    let mut buttons = Vec::new();
+    let mut toolbars = Vec::new();
+    let mut stack = vec![h.access_tree().state().root()];
+    while let Some(n) = stack.pop() {
+        stack.extend(n.children());
+        match n.role() {
+            Role::Button => buttons.push(n.label().unwrap_or_default()),
+            Role::Toolbar => toolbars.push(n.label().unwrap_or_default()),
+            _ => {}
+        }
+    }
+    for name in ["Abrir", "Reproducir", "Detener", "Más rápido", "Cerrar"] {
+        assert!(buttons.iter().any(|b| b == name), "{name}: {buttons:?}");
+    }
+    assert!(toolbars.iter().any(|t| t == "Lectura"), "{toolbars:?}");
+    let c = app.catalog();
+    let items = form.section_items(&c);
+    assert!(items[0].starts_with("Voz, "), "{items:?}");
+    assert!(items[0].ends_with(" ajustes"), "{items:?}");
+    assert_eq!(form.form_label(0, &c), "Configuración: Voz");
+    let (section, row) = form.find("speech.rate").unwrap();
+    let rows = form.rows(section, &app);
+    assert_eq!(rows[row].label, "Velocidad");
+    let setting = form.setting(section, row).unwrap().clone();
+    let said = settings_dialog::apply(&mut app, &setting, FormChange::Step(true)).unwrap();
+    assert!(said.starts_with("Velocidad, "), "{said}");
+    let rows = form.rows(section, &app);
+    assert_eq!(
+        settings_dialog::extra_note(&said, &rows[row]),
+        None,
+        "{said}"
+    );
+    h.edit_widget(FORM, |mut g| SettingsGrid::update_rows(&mut g, rows));
+    let _ = h.redraw();
+    let why =
+        settings_dialog::apply(&mut app, &setting, FormChange::Text("100000".into())).unwrap_err();
+    assert!(why.contains("fuera de"), "{why}");
+}
+
+/// The dialog starts on a section's first setting that is not a table, so
+/// a screen reader does not start on "4 entries" (CI's NVDA run, Wave 5).
+#[test]
+fn the_form_starts_on_a_plain_setting() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    let form = SettingsForm::new(app.settings_schema());
+    for section in 0..form.sections.len() {
+        let row = form.first_plain_row(section);
+        let settings = form.settings_in(section);
+        if settings
+            .iter()
+            .any(|s| !matches!(s.kind, SettingKind::Table))
+        {
+            assert!(
+                !matches!(settings[row].kind, SettingKind::Table),
+                "section {section} starts on a table"
+            );
+        }
+    }
+}

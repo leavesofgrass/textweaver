@@ -88,6 +88,17 @@ Tested in the harness (`tests/edit_mode.rs`): the role and read-only state in an
 - Tab does not type a tab or move between table cells in the window (it moves the focus); `next_table_cell` stays on its key in the terminal.
 - Misspelled words are not marked on screen (neither are they in the terminal); Alt+M finds them.
 
+## Status update: what was left, done (Wave 5, Agent W5a4, Monday, September 28, 2026)
+
+Three of the four "Not done yet" items above are done; edit mode is otherwise unchanged by the Parley upgrade (ADR-0027's status update), since it never used Parley's editor.
+
+- **Caret and selection speech in the self-voicing mode.** A caret key in the view now carries what the terminal's caret keys say (`DocAction::CaretMoved`'s `echo`): the character at the caret (Left, Right, Home, End), the word (Ctrl+Left, Ctrl+Right), the line as drawn (Up, Down, the page keys, Ctrl+Up and Ctrl+Down, Ctrl+Home and Ctrl+End), the end of a line or of the document, and with Shift what the selection gained or lost ("cd selected"). The driver hands it to `App::echo`, which speaks only when the typing echo goes to textweaver's voice (the self-voicing mode), and not while reading; a screen reader reads the caret itself. The same keys speak in reading mode too, as the terminal's do. Pointer clicks and a screen reader's own moves say nothing.
+- **Tab.** In edit mode Tab and Shift+Tab run the app's `next_table_cell` and `previous_table_cell`, as the terminal's edit layer does: the next or previous cell in a table, else a tab typed (Shift+Tab outside a table says so). Ctrl+Tab and Ctrl+Shift+Tab now move the focus everywhere (as they leave a multi-line edit on Windows), so the edit still never traps the keyboard. Outside edit mode Tab moves the focus as before.
+- **Misspelled words are marked** with a dotted underline (a shape unlike a link's line or a difficult word's thick one, in the focus color, never color alone), in edit mode, once typing has paused for half a second, in documents up to a million characters (the check reads the whole document on the input thread: 0.6 s for 10 million). The app gained one small hook for it, `App::misspelled_ranges`. The marks are drawn only; AccessKit's `is_spelling_error` is not set, because no platform adapter passes it on yet (UI Automation would need the annotation attribute in the vendored adapter).
+- **Still open:** each edit rebuilds the window's paragraphs (a very long single paragraph is the slow case, not measured).
+
+**Questions in the window (found on the way).** The app's yes-or-no questions (a voice download after its size and licence are said, a removal, a file changed on disk, a settings import) had no answer in the window: it never sent `Command::Confirm`, so y and n went to the keymap. A question is now an in-window dialog named by the question, with Yes (focused) and No buttons whose keys are Y and N; y and n typed anywhere in it answer, Escape is no, and any other character asks again, as in the terminal.
+
 ## Consequences
 
 - One small `unsafe` module more in the GUI crate (`console`), with three console calls and one message box; Windows only.

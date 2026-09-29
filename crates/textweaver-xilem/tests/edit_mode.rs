@@ -85,6 +85,8 @@ fn apply(app: &mut App, action: DocAction) {
         DocAction::Delete { forward: false } => Command::DeleteBack,
         DocAction::Replace { range, text } => Command::ReplaceRange { range, text },
         DocAction::CaretMoved { caret, .. } => Command::SetCursor(caret),
+        DocAction::TableCell { forward: true } => Command::Action(ActionId::NextTableCell),
+        DocAction::TableCell { forward: false } => Command::Action(ActionId::PreviousTableCell),
     };
     let _ = app.dispatch(cmd);
 }
@@ -323,4 +325,58 @@ fn a_citation_while_writing_opens_the_picker() {
         .expect("the citation picker");
     assert!(title.starts_with("Insert citation, "), "{title}");
     assert_eq!(app.list_filter(), Some(""), "it filters as you type");
+}
+
+/// Tab in edit mode types a tab (or moves to the next table cell), as in
+/// the terminal, through the app's `next_table_cell`; Shift+Tab goes back
+/// a cell. Ctrl+Tab still moves the focus out of the edit, so the keyboard
+/// is never trapped; outside edit mode Tab moves the focus as before.
+#[test]
+fn tab_types_a_tab_in_edit_mode_and_ctrl_tab_leaves() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut app, mut h, mut r, _doc) = setup_with(dir.path(), "Ada Example\n");
+    // Reading: Tab is left to Masonry, which moves the focus.
+    h.process_text_event(key(Key::Named(NamedKey::Tab), Modifiers::empty()));
+    assert!(h.pop_action::<DocAction>().is_none());
+    assert!(h.pop_action::<KeyAction>().is_none());
+    let doc = h.get_widget(DOC).id();
+    h.focus_on(Some(doc));
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let _ = app.dispatch(Command::SetCursor(CharPos(3)));
+    h.process_text_event(key(Key::Named(NamedKey::Tab), Modifiers::empty()));
+    let (action, _) = h.pop_action::<DocAction>().expect("Tab is taken");
+    assert_eq!(action, DocAction::TableCell { forward: true });
+    apply(&mut app, action);
+    assert_eq!(text_of(&app), "Ada\t Example\n");
+    h.process_text_event(key(Key::Named(NamedKey::Tab), Modifiers::SHIFT));
+    let (action, _) = h.pop_action::<DocAction>().expect("Shift+Tab is taken");
+    assert_eq!(action, DocAction::TableCell { forward: false });
+    // Ctrl+Tab is not typed and not a command: it moves the focus.
+    h.process_text_event(key(Key::Named(NamedKey::Tab), Modifiers::CONTROL));
+    assert!(h.pop_action::<DocAction>().is_none());
+    assert!(h.pop_action::<KeyAction>().is_none());
+    assert_ne!(h.focused_widget_id(), Some(doc), "Ctrl+Tab left the edit");
+}
+
+/// Misspelled words are marked in edit mode (W4a3 left them unmarked):
+/// the app gives their places, the view draws a dotted underline under
+/// them, and the text and its runs stay as they are.
+#[test]
+fn misspelled_words_are_marked_in_edit_mode() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut app, mut h, mut r, doc) = setup_with(dir.path(), "I recieve the notes.\n");
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let before = doc_node(&h, doc).2;
+    let ranges = app.misspelled_ranges();
+    assert_eq!(ranges, vec![CharRange::new(2, 9)], "recieve");
+    h.edit_widget(DOC, |mut d| {
+        DocumentView::set_misspelled(&mut d, ranges.clone())
+    });
+    let _ = h.redraw();
+    assert_eq!(h.get_widget(DOC).inner().misspelled(), ranges.as_slice());
+    assert_eq!(doc_node(&h, doc).2, before, "the marks are drawn only");
 }

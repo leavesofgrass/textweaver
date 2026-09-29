@@ -634,3 +634,39 @@ index 62f6d42..d93a365 100644
  
          let id: NodeId = ctx.widget_state.id.into();
          if ctx.global_state.trace.access {
+diff --git a/masonry/src/widgets/label.rs b/masonry/src/widgets/label.rs
+index 584f31d..27a99aa 100644
+--- a/masonry/src/widgets/label.rs
++++ b/masonry/src/widgets/label.rs
+@@ -110,11 +110,11 @@ impl TextLayout {
+         }
+         self.alignment = alignment;
+         self.alignment_width = alignment_width;
+-        self.layout.align(
+-            Some(self.alignment_width),
+-            self.alignment,
+-            TextAlignOptions::default(),
+-        );
++        // textweaver (Parley 0.9 and later): `Layout::align` no longer takes
++        // a width; lines align within the `max_advance` given to
++        // `break_all_lines` (or the layout's own width without one).
++        self.layout
++            .align(self.alignment, TextAlignOptions::default());
+     }
+ 
+     /// Returns `true` if this layout would be the result for `max_advance`.
+diff --git a/parley/src/bidi.rs b/parley/src/bidi.rs
+index 1229a32..369abd0 100644
+--- a/parley/src/bidi.rs
++++ b/parley/src/bidi.rs
+@@ -889,6 +889,10 @@ impl BracketStack {
+     }
+ }
+ 
++#[allow(
++    deprecated,
++    reason = "textweaver: icu_properties 2.3 deprecated to_icu4c_value; CI builds with -D warnings"
++)]
+ const fn mask(t: BidiClass) -> u32 {
+     1 << (t.to_icu4c_value() as u32)
+ }

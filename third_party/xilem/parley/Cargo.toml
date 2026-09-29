@@ -13,7 +13,7 @@
 edition = "2021"
 rust-version = "1.88"
 name = "parley"
-version = "0.8.0"
+version = "0.11.1"
 build = false
 exclude = ["/tests"]
 autolib = false
@@ -39,9 +39,11 @@ all-features = true
 
 [features]
 accesskit = ["dep:accesskit"]
+complex-scripts = []
 default = ["system"]
 libm = [
     "fontique/libm",
+    "harfrust/libm",
     "peniko/libm",
     "skrifa/libm",
     "dep:core_maths",
@@ -71,15 +73,15 @@ version = "0.1.1"
 optional = true
 
 [dependencies.fontique]
-version = "0.8.0"
+version = "0.11.1"
 default-features = false
 
 [dependencies.harfrust]
-version = "0.5.2"
+version = "0.12.0"
 default-features = false
 
 [dependencies.hashbrown]
-version = "0.16.1"
+version = "0.17.0"
 features = [
     "default-hasher",
     "raw-entry",
@@ -110,20 +112,17 @@ version = "0.1.0"
 default-features = false
 
 [dependencies.parley_data]
-version = "0.8.0"
+version = "0.11.1"
 features = ["baked"]
 default-features = false
 
 [dependencies.skrifa]
-version = "0.40.0"
+version = "0.44.0"
 default-features = false
 
 [dev-dependencies.peniko]
 version = "0.6.0"
 default-features = false
-
-[dev-dependencies.tiny-skia]
-version = "0.11.4"
 
 [target.'cfg(not(target_os = "android"))'.dev-dependencies.oxipng]
 version = "9.1.5"

@@ -114,6 +114,21 @@ The GUI started with thin local adapters while Agent W3a built the app pieces, a
 - **Still local:** the command palette filters with `App::palette_candidates` and shows the matches in its own list; the font chooser's lists are the GUI's own.
 - **Not used yet:** `Command::ReplaceRange` (edit mode, Wave 4).
 
+## Status update: Parley 0.11.1 (Wave 5, Agent W5a4, Monday, September 28, 2026)
+
+The vendored Parley moved from 0.8.0 to 0.11.1 (August 16, 2026), the newest release. What the brief expected, and what was found:
+
+- **The accessibility bridge did not have to move.** Parley's main branch has removed its `accesskit` feature since 0.11 (its changelog's "Unreleased" section; the integration moved to an example), but 0.11.1 still has it. As with 0.8.0, only its optional AccessKit dependency moved to 0.25.1. Only Masonry's `TextArea` (the prompts' one-line fields) uses that feature. The document view never did: it has built its own text runs, caret, and selection since Wave 3. So ADR-0040, reserved for a changed bridge, is not needed. The next upgrade past 0.11 will need a bridge for `TextArea`.
+- **Ranged styles were already in use.** Bionic reading, difficult words, links, code, and headings are pushed as ranged styles when a paragraph is laid out. The spoken word stays a band painted under the text, with its text drawn again in its own color and clipped to the band. That needs no relayout per word, which a ranged style would.
+- **What changed in the code.** Two renames forced by Parley 0.9: `LineMetrics::min_coord` and `max_coord` became `block_min_coord` and `block_max_coord` (the document view's rows and line moves), and `Layout::align` no longer takes a width (the RSVP strip, and Masonry's `Label`: `third_party/xilem/TEXTWEAVER.md`, item 11). Nothing else in Masonry or the GUI changed. Edit mode (ADR-0033) is untouched, since it never used Parley's editor.
+- **New dependencies:** `harfrust` 0.12, `skrifa` 0.44, `read-fonts` 0.41, `fontique` 0.11.1, and `parley_data` 0.11.1, replacing the 0.8-era versions for Parley. `skrifa` and `read-fonts` now have three versions in the tree (Vello and the font crates keep theirs). `cargo deny` passes: the same licenses, duplicate warnings only.
+
+**Measured** on the development machine, release builds, with three other agents building at the same time, so single runs vary by a factor of three. The harness numbers are the medians of twelve interleaved runs of each build; the memory numbers are read 15 seconds after launch in `--background` with the silent paced backend, two or three runs each.
+
+- **Before (Parley 0.8.0, main at 0d049b5):** the view's first layout, runs, and tree for the 10-million-character document's window (120,725 characters) 31.2 ms; a highlight move 0.28 ms median, 0.72 ms worst (the median of the runs' worst moves). Memory: no document 169 MB working set (111 MB private working set, 645 MB private bytes); the sample document, reading, 179 MB (118 MB, 652 MB); the 10-million-character document, reading, 193 MB (133 MB, 665 MB). In the window's `--log`, the 10-million-character document opened in 64 ms (`App::open`).
+- **After (Parley 0.11.1):** 34.2 ms; 0.28 ms median, 0.81 ms worst. Memory: 171 MB (113 MB, 656 MB); 178 MB (117 MB, 654 MB); 194 MB (134 MB, 670 MB). `App::open` 46 to 50 ms.
+- **Verdict: kept.** Opening is 10 percent slower, the worst highlight move 12 percent, and memory within a megabyte or two, all inside the 20 percent the brief allows and inside the noise of a loaded machine. The GUI's tests (79) pass, and so does the UI Automation report (`-Announce live`).
+
 ## Consequences
 
 - The GUI is all Rust: no C++ toolkit, no CMake, no libclang. A cold build of the crate takes about 19 minutes on the development machine, most of it the app's own dependencies and wgpu; incremental builds take seconds.

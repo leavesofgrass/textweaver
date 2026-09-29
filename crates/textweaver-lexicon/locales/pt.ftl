@@ -2661,3 +2661,61 @@ setting-speech-voice-params = Velocidade e tom por voz
 setting-speech-voice-params-help = A velocidade e o tom com que cada voz foi usada por último; escolher a voz de novo os traz de volta.
 setting-editing-author = Autor
 setting-editing-author-help = O autor escrito nos novos documentos feitos a partir de um modelo; vazio deixa em branco.
+
+## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
+## Keep the letters Y and N: they are the keys that answer.
+
+gui-yes = Sim
+gui-no = Não
+gui-question-hint = Y responde sim, N responde não, Escape responde não.
+gui-button-open = Abrir…
+gui-button-font = Fonte…
+gui-button-edit = Editar
+gui-button-finish-editing = Concluir edição
+gui-button-settings = Configurações…
+gui-button-commands = Comandos…
+gui-button-play = Reproduzir
+gui-button-pause = Pausar
+gui-button-stop = Parar
+gui-button-previous-sentence = Frase anterior
+gui-button-next-sentence = Próxima frase
+gui-button-slower = Mais devagar
+gui-button-faster = Mais rápido
+gui-button-close = Fechar
+gui-toolbar-reading = Leitura
+gui-document = Documento
+gui-list-hint = Enter escolhe, Escape fecha.
+gui-settings-sections = Seções
+gui-settings-form = Configurações: { $section }
+gui-settings-saved-hint = As alterações entram em vigor e são salvas na hora.
+gui-settings-close-help = Fechar as configurações. Todas as alterações já estão salvas.
+gui-settings-closed = Configurações fechadas.
+gui-settings-table = { $label } é uma tabela. Edite-a em settings.toml.
+gui-setting-new-value = Novo valor para { $label }
+gui-setting-value-hint = Pressione Enter para aceitar, ou Escape para voltar.
+gui-prompt-path-hint = Digite o caminho de um documento e pressione Enter. Tab o completa; Seta para cima e para baixo recuperam os anteriores.
+gui-prompt-hint = Pressione Enter para aceitar, ou Escape para cancelar. Seta para cima e para baixo recuperam respostas anteriores.
+gui-palette-filter = Digite para filtrar os comandos
+gui-palette-list = Comandos
+gui-palette-hint = Enter executa a primeira correspondência; Tab vai para a lista.
+gui-no-document = Nenhum documento está aberto. Pressione { $key } para abrir um.
+gui-open-failed = Não foi possível abrir { $path }: { $error }
+gui-uia-unavailable = As notificações do UI Automation só existem no Windows; usando a região dinâmica.
+gui-rsvp = RSVP
+gui-rsvp-playing = RSVP em andamento, palavra { $n } de { $total }
+gui-rsvp-paused = RSVP em pausa, palavra { $n } de { $total }
+gui-rsvp-finished = RSVP concluído, palavra { $n } de { $total }
+gui-settings-section-item =
+    { $section }, { $n ->
+        [one] 1 configuração
+       *[other] { $n } configurações
+    }
+gui-palette-count =
+    { $n ->
+        [0] Nenhum comando corresponde.
+        [one] 1 comando.
+       *[other] { $n } comandos.
+    }
+gui-settings-form-help = Seta para cima e para baixo passam de uma configuração a outra. Seta para a esquerda e para a direita alteram uma. Enter digita um novo valor. Delete restaura o padrão. { $next } e { $previous } mudam de seção.
+gui-settings-press-enter = Pressione Enter para digitar um novo valor para { $label }.
+gui-font-built-in = { $family } (incluída)

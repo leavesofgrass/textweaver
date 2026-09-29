@@ -2673,3 +2673,61 @@ setting-speech-voice-params = Débit et hauteur par voix
 setting-speech-voice-params-help = Le débit et la hauteur de la dernière utilisation de chaque voix ; choisir à nouveau une voix les rétablit.
 setting-editing-author = Auteur
 setting-editing-author-help = L'auteur écrit dans les nouveaux documents créés à partir d'un modèle ; vide le laisse en blanc.
+
+## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
+## Keep the letters Y and N: they are the keys that answer.
+
+gui-yes = Oui
+gui-no = Non
+gui-question-hint = Y répond oui, N répond non, Échap répond non.
+gui-button-open = Ouvrir…
+gui-button-font = Police…
+gui-button-edit = Modifier
+gui-button-finish-editing = Terminer la modification
+gui-button-settings = Paramètres…
+gui-button-commands = Commandes…
+gui-button-play = Lire
+gui-button-pause = Pause
+gui-button-stop = Arrêter
+gui-button-previous-sentence = Phrase précédente
+gui-button-next-sentence = Phrase suivante
+gui-button-slower = Plus lent
+gui-button-faster = Plus rapide
+gui-button-close = Fermer
+gui-toolbar-reading = Lecture
+gui-document = Document
+gui-list-hint = Entrée choisit, Échap ferme.
+gui-settings-sections = Sections
+gui-settings-form = Paramètres : { $section }
+gui-settings-saved-hint = Les modifications s'appliquent et sont enregistrées aussitôt.
+gui-settings-close-help = Fermer les paramètres. Chaque modification est déjà enregistrée.
+gui-settings-closed = Paramètres fermés.
+gui-settings-table = { $label } est un tableau. Modifiez-le dans settings.toml.
+gui-setting-new-value = Nouvelle valeur pour { $label }
+gui-setting-value-hint = Appuyez sur Entrée pour valider, ou sur Échap pour revenir.
+gui-prompt-path-hint = Tapez le chemin d'un document, puis appuyez sur Entrée. Tab le complète ; Haut et Bas rappellent les précédents.
+gui-prompt-hint = Appuyez sur Entrée pour valider, ou sur Échap pour annuler. Haut et Bas rappellent les réponses précédentes.
+gui-palette-filter = Tapez pour filtrer les commandes
+gui-palette-list = Commandes
+gui-palette-hint = Entrée exécute la première correspondance ; Tab passe à la liste.
+gui-no-document = Aucun document n'est ouvert. Appuyez sur { $key } pour en ouvrir un.
+gui-open-failed = Impossible d'ouvrir { $path } : { $error }
+gui-uia-unavailable = Les notifications UI Automation n'existent que sous Windows ; la région active est utilisée.
+gui-rsvp = RSVP
+gui-rsvp-playing = RSVP en cours, mot { $n } sur { $total }
+gui-rsvp-paused = RSVP en pause, mot { $n } sur { $total }
+gui-rsvp-finished = RSVP terminé, mot { $n } sur { $total }
+gui-settings-section-item =
+    { $section }, { $n ->
+        [one] 1 paramètre
+       *[other] { $n } paramètres
+    }
+gui-palette-count =
+    { $n ->
+        [0] Aucune commande ne correspond.
+        [one] 1 commande.
+       *[other] { $n } commandes.
+    }
+gui-settings-form-help = Haut et Bas passent d'un paramètre à l'autre. Gauche et Droite en changent un. Entrée tape une nouvelle valeur. Suppr remet la valeur par défaut. { $next } et { $previous } changent de section.
+gui-settings-press-enter = Appuyez sur Entrée pour taper une nouvelle valeur pour { $label }.
+gui-font-built-in = { $family } (intégrée)

@@ -19,10 +19,6 @@ use textweaver_app::lexicon::i18n::Catalog;
 use textweaver_app::store::reading_aids::FontSettings as SavedFont;
 use textweaver_fonts::{BUNDLED, system};
 
-/// Said after a bundled family's name, so a listener knows it needs
-/// nothing installed.
-pub const BUILT_IN: &str = " (built in)";
-
 /// The text sizes Ctrl+Plus and Ctrl+Minus step through, in points: one
 /// point at a time around the usual reading sizes, then larger steps up to
 /// 72 points for low vision. The store accepts 6 to 144 points; a size set
@@ -122,12 +118,16 @@ pub struct Choice {
 
 /// The families to offer: bundled first, then installed ones
 /// alphabetically, each once.
-pub fn choices(installed: &[String]) -> Vec<Choice> {
+///
+/// A bundled family's label says so ("Atkinson Hyperlegible Next (built
+/// in)", `gui-font-built-in`), so a listener knows it needs nothing
+/// installed.
+pub fn choices(c: &Catalog, installed: &[String]) -> Vec<Choice> {
     let mut out: Vec<Choice> = BUNDLED
         .iter()
         .map(|f| Choice {
             family: f.name.to_owned(),
-            label: format!("{}{BUILT_IN}", f.name),
+            label: c.fmt("gui-font-built-in", &args!["family" => f.name]),
         })
         .collect();
     let mut seen: BTreeSet<String> = out.iter().map(|c| c.family.to_lowercase()).collect();
@@ -192,9 +192,9 @@ mod tests {
             "arial".to_owned(),
             "Atkinson Hyperlegible Next".to_owned(),
         ];
-        let c = choices(&installed);
+        let c = choices(&Catalog::english(), &installed);
         let n = BUNDLED.len();
-        assert!(c[..n].iter().all(|x| x.label.ends_with(BUILT_IN)));
+        assert!(c[..n].iter().all(|x| x.label.ends_with(" (built in)")));
         let names: Vec<&str> = c[n..].iter().map(|x| x.family.as_str()).collect();
         assert_eq!(names, vec!["arial", "Zapf"]);
     }
