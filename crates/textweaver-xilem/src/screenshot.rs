@@ -92,7 +92,7 @@ pub fn screenshot(opts: &ShotOptions) -> Result<(), String> {
     }
     let palette = match &opts.theme {
         Some(name) => Palette::named(name),
-        None => Palette::from_theme(app.current_theme()),
+        None => Palette::from_theme(&app.reading_theme()),
     };
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
     let tree = gui::build_tree(

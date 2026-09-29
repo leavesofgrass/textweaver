@@ -983,3 +983,114 @@ fn speech_cursor_line_keys_reach_the_keymap() {
         Some(ActionId::SpeechCursorNextLine)
     );
 }
+
+/// Parity with the terminal reader, the commands W6a5's brief names: reading
+/// statistics, settings profiles, summaries, and define word open the app's
+/// lists, which the window shows as list dialogs; Markdown lint works in
+/// edit mode (the window builds with the `lint` feature, as the terminal
+/// does).
+#[test]
+fn study_lists_summaries_profiles_and_lint_work_in_the_window() {
+    use textweaver_app::keymap::ActionId;
+    use textweaver_app::{Command, Effect};
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let list_of = |effects: Vec<Effect>| {
+        effects.into_iter().find_map(|e| match e {
+            Effect::ShowList { title, items } => Some((title, items)),
+            _ => None,
+        })
+    };
+    for action in [
+        ActionId::ReadingStatistics,
+        ActionId::SettingsProfiles,
+        ActionId::Summarize,
+        ActionId::Outline,
+    ] {
+        let effects = app.dispatch(Command::Action(action));
+        let (title, items) = list_of(effects).unwrap_or_else(|| panic!("{action:?}: a list"));
+        assert!(!items.is_empty(), "{action:?}");
+        // The window shows it as its list dialog, the app's keys in it.
+        let (modal, list_id) =
+            gui::list_dialog(&Palette::galaxy(), &app.catalog(), &title, items, 0, true);
+        h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+        h.focus_on(Some(list_id));
+        let _ = h.redraw();
+        assert!(h.get_widget(ROOT).inner().has_dialog(), "{action:?}");
+        let _ = app.dispatch(Command::Cancel);
+        h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, None));
+        let _ = h.redraw();
+    }
+    // Define word: the dictionary loads on a helper thread the first time
+    // ("Dictionary still loading"), then the list comes on a later tick.
+    let at = app
+        .session()
+        .unwrap()
+        .doc
+        .text()
+        .to_string()
+        .find("reader")
+        .map_or(0, |b| b);
+    let _ = app.dispatch(Command::SetCursor(textweaver_app::core::CharPos(at)));
+    let started = std::time::Instant::now();
+    let mut effects = app.dispatch(Command::Action(ActionId::DefineWord));
+    while list_of(effects.clone()).is_none() && started.elapsed().as_secs() < 30 {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        effects = app.tick(std::time::Instant::now());
+        if app.list_model().is_some() {
+            break;
+        }
+        if !app.status_text().to_lowercase().contains("loading") {
+            effects = app.dispatch(Command::Action(ActionId::DefineWord));
+        }
+    }
+    assert!(
+        app.list_model().is_some() || list_of(effects).is_some(),
+        "define word opened a list: {}",
+        app.status_text()
+    );
+    let _ = app.dispatch(Command::Cancel);
+
+    // Lint in edit mode: a problem is found, not "not in this build".
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    assert!(app.is_editing());
+    let _ = app.dispatch(Command::Action(ActionId::NextLintProblem));
+    let said = app.status_text().to_lowercase();
+    assert!(
+        said.contains("lint") && !said.contains("not in this build"),
+        "{said}"
+    );
+}
+
+/// Notes, the reader's highlights, and search matches are drawn in the
+/// window, as in the terminal, each with a shape as well as a color.
+#[test]
+fn notes_highlights_and_matches_are_drawn() {
+    use textweaver_app::keymap::ActionId;
+    use textweaver_app::{Command, core::CharRange};
+    use textweaver_xilem::document::DocMark;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let mut r = gui::Refresher::default();
+    let _ = r.refresh(&app, &mut h);
+    assert!(h.get_widget(DOC).inner().marks().is_empty());
+    // A highlight on a selection, and a note on it.
+    let _ = app.dispatch(Command::Select(CharRange::new(2, 8)));
+    let _ = app.dispatch(Command::Action(ActionId::HighlightSelection));
+    let _ = app.dispatch(Command::Action(ActionId::AddNote));
+    let _ = app.dispatch(Command::Answer("A note".into()));
+    let _ = r.refresh(&app, &mut h);
+    let marks: Vec<DocMark> = h
+        .get_widget(DOC)
+        .inner()
+        .marks()
+        .iter()
+        .map(|(_, m)| *m)
+        .collect();
+    assert!(marks.contains(&DocMark::Highlight), "{marks:?}");
+    assert!(marks.contains(&DocMark::Note), "{marks:?}");
+    // They are drawn without a panic.
+    let _ = h.render();
+}

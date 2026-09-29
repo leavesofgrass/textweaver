@@ -197,6 +197,8 @@ struct Shown {
     editing: bool,
     /// Edit mode, as the Edit button says it.
     edit_button: bool,
+    /// The notes, bookmarks, highlights, and search matches drawn.
+    marks: Vec<(CharRange, crate::document::DocMark)>,
     /// The caret keys the view leaves to the keymap in the app's mode.
     yielded: Option<Vec<textweaver_app::keymap::KeyChord>>,
 }
@@ -273,6 +275,12 @@ pub struct Gui {
     log: bool,
     started: bool,
     startup: Option<(Option<PathBuf>, bool, Vec<String>)>,
+    /// No settings, keys, or state existed under the state folder when the
+    /// window started: the welcome and the language list come first.
+    first_run: bool,
+    /// The startup questions (hybrid mode with a screen reader running)
+    /// may be asked: not in automated runs (`--background`).
+    startup_offers: bool,
     exit_at: Option<Instant>,
     /// The app's waker: speech statuses and finished background work post
     /// a tick at once (ADR-0024). Set when a tick is posted and not yet
@@ -282,6 +290,9 @@ pub struct Gui {
     tick_ms: Arc<AtomicU64>,
     /// Installed font families, for the font chooser.
     installed: crate::font_chooser::Installed,
+    /// The theme and the highlight colors the palette was made from
+    /// (`App::reading_theme_key`).
+    theme_key: (String, String, Option<String>),
     /// `--theme` was given: the saved theme is not followed.
     fixed_theme: bool,
     /// Settings opens the app's list instead of the dialog.
@@ -827,6 +838,28 @@ pub fn model_for(app: &App, w: CharRange) -> Option<DocModel> {
     })
 }
 
+/// The notes, bookmarks, the reader's highlights, and the search matches in
+/// `window`, as the document view draws them (the selection and the spoken
+/// word and sentence are its own).
+pub fn marks_in(app: &App, window: CharRange) -> Vec<(CharRange, crate::document::DocMark)> {
+    use crate::document::DocMark;
+    use textweaver_app::HighlightKind as K;
+    app.highlights(window)
+        .into_iter()
+        .filter_map(|h| {
+            let mark = match h.kind {
+                K::UserHighlight => DocMark::Highlight,
+                K::Note => DocMark::Note,
+                K::Bookmark => DocMark::Bookmark,
+                K::FindHit => DocMark::FindHit,
+                K::CurrentFindHit => DocMark::CurrentFindHit,
+                K::Selection | K::SpokenSentence | K::SpokenWord => return None,
+            };
+            Some((h.range, mark))
+        })
+        .collect()
+}
+
 /// The document view's state from the app.
 pub fn state_for(app: &App) -> DocState {
     let Some(s) = app.session() else {
@@ -971,8 +1004,19 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
         host.edit(DOC, |mut d| DocumentView::set_editing(&mut d, editing));
         shown.editing = editing;
     }
+    // The reader's marks and the search matches in the window.
+    let marks = shown
+        .window
+        .map(|w| marks_in(app, w.range()))
+        .unwrap_or_default();
+    if marks != shown.marks {
+        host.edit(DOC, |mut d| DocumentView::set_marks(&mut d, marks.clone()));
+        shown.marks = marks;
+    }
     // Speech Cursor mode's line keys go to the keymap, not the caret.
-    let yielded = keys::yielded_caret_keys(app.keymap(), app.mode().layer(), Platform::current());
+    let math = app.math_exploring() && !app.confirmation_pending();
+    let yielded =
+        keys::yielded_caret_keys(app.keymap(), app.mode().layer(), math, Platform::current());
     if shown.yielded.as_ref() != Some(&yielded) {
         host.edit(DOC, |mut d| {
             DocumentView::set_yielded_keys(&mut d, yielded.clone())
@@ -1140,8 +1184,10 @@ impl Gui {
             }
         }
         // The theme changed (a key, the palette, or the settings).
-        if !self.fixed_theme && self.app.current_theme().name() != self.palette.name {
-            self.palette = Palette::from_theme(self.app.current_theme());
+        let theme_key = self.app.reading_theme_key();
+        if !self.fixed_theme && theme_key != self.theme_key {
+            self.theme_key = theme_key;
+            self.palette = Palette::from_theme(&self.app.reading_theme());
             let root = ctx.render_root(self.window_id);
             root.set_default_properties(Arc::new(theme::default_properties(&self.palette)));
             apply_palette(root, &self.palette);
@@ -1945,6 +1991,19 @@ impl Gui {
         let Some(chord) = keys::chord(k, Platform::current()) else {
             return;
         };
+        // Exploring a formula (Explore Math): the arrows, Home, End, Space,
+        // Enter, and Escape move through it, as in the terminal; any other
+        // key leaves it and does what it usually does.
+        if self.app.math_exploring() && !self.app.confirmation_pending() {
+            if let Some(mv) = keys::math_move(&chord) {
+                if self.log {
+                    crate::log::line(&format!("math key {chord} -> {mv:?}"));
+                }
+                self.dispatch(ctx, Command::MathStep(mv));
+                return;
+            }
+            self.app.stop_math_exploring();
+        }
         let layer = self.app.mode().layer();
         let action = (!keys::is_native(&chord, Platform::current()))
             .then(|| self.app.keymap().lookup(&chord, layer))
@@ -2009,9 +2068,28 @@ impl Gui {
                 self.app.announce(&said, Priority::Polite);
             }
         }
+        // As in the terminal reader: startup messages follow the opening
+        // message instead of cutting it off (a settings or keymap warning
+        // stays assertive, so it is heard even when reading starts at once).
         for m in &messages {
-            self.app.announce(m, Priority::Assertive);
+            self.app.announce_queued(m, Priority::Assertive);
         }
+        if self.first_run {
+            // The first run: the welcome (the five keys that get a new user
+            // reading), then the language list, the system's first.
+            let welcome = setup::welcome_text(&self.app.catalog(), self.app.keymap());
+            self.app.announce_queued(&welcome, Priority::Polite);
+            effects.extend(self.app.language_list());
+        } else if self.startup_offers
+            && self.app.hybrid_offer_due()
+            && let Some(found) = textweaver_app::a11y::detect::detect()
+        {
+            // A screen reader is running and the mode was never chosen:
+            // ask once whether to use hybrid mode (a yes-or-no dialog).
+            let _ = self.app.offer_hybrid(&found);
+        }
+        // Unsaved work from an earlier run, one snapshot at a time.
+        effects.extend(self.app.offer_recovery());
         self.run_effects(ctx, effects);
         self.refresh(ctx);
         let doc = ctx
@@ -2344,6 +2422,9 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         muted: Rc::clone(&muted),
         log: opts.log,
     };
+    // Automated runs (`--background`) skip the first run's welcome and
+    // language list, which would stand in front of what they check.
+    let first_run = !opts.background && setup::is_first_run(&opts.app);
     let (mut app, mut messages) = setup::build_app(&opts.app, Box::new(announcer));
     app.set_announce_list_focus(opts.experiments.app_list_announcements);
     let mut experiments = opts.experiments;
@@ -2365,8 +2446,9 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
     }
     let palette = match &opts.theme {
         Some(name) => Palette::named(name),
-        None => Palette::from_theme(app.current_theme()),
+        None => Palette::from_theme(&app.reading_theme()),
     };
+    let theme_key = app.reading_theme_key();
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
     let full_passes = Rc::new(Cell::new(0));
     let tree = build_tree(&palette, font, Some(&app), full_passes, experiments);
@@ -2412,6 +2494,8 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         log: opts.log,
         started: false,
         startup: Some((opts.file.clone(), opts.read_on_start, messages)),
+        first_run,
+        startup_offers: !opts.background,
         exit_at: opts.exit_after.map(|d| Instant::now() + d),
         wake_pending: Arc::new(AtomicBool::new(false)),
         tick_ms: Arc::new(AtomicU64::new(
@@ -2425,6 +2509,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         spell_marked: None,
         spell_seen: None,
         fixed_theme: opts.theme.is_some(),
+        theme_key,
         settings_list: experiments.settings_list,
         announce,
         hwnd: 0,

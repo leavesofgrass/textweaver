@@ -281,14 +281,30 @@ pub fn is_function_key(k: &NamedKey) -> bool {
 /// The caret keys the document view leaves to the keymap in the mode whose
 /// layer is `layer`: in Speech Cursor mode, the keys that mode binds itself
 /// (Up and Down read the next and previous line, Page Up and Page Down move
-/// by paragraph), with or without Shift. In browse and edit mode the view
-/// keeps every caret key, as a document window does.
+/// by paragraph), with or without Shift. While a formula is explored
+/// (`math`), the plain arrows, Home, and End, which move through it
+/// ([`math_move`]). In browse and edit mode the view keeps every caret key,
+/// as a document window does.
 pub fn yielded_caret_keys(
     keymap: &textweaver_app::keymap::Keymap,
     layer: textweaver_app::keymap::Layer,
+    math: bool,
     platform: Platform,
 ) -> Vec<KeyChord> {
     use textweaver_app::keymap::Layer;
+    if math {
+        return [
+            TwKey::Left,
+            TwKey::Right,
+            TwKey::Up,
+            TwKey::Down,
+            TwKey::Home,
+            TwKey::End,
+        ]
+        .into_iter()
+        .map(KeyChord::plain)
+        .collect();
+    }
     if layer != Layer::SpeechCursor {
         return Vec::new();
     }
@@ -302,6 +318,29 @@ pub fn yielded_caret_keys(
                 .any(|b| b.layer == Layer::SpeechCursor && b.chord == *c && keymap.is_active(b))
         })
         .collect()
+}
+
+/// The move a key makes while a formula is explored (Explore Math), as in
+/// the terminal: Right and Left to the next and previous part, Down into a
+/// part and Up out of it, Home and End to the first and last, Space or
+/// Enter to hear it again, Escape to leave. Only plain keys: any other key
+/// leaves the formula and does what it usually does.
+pub fn math_move(chord: &KeyChord) -> Option<textweaver_app::MathMove> {
+    use textweaver_app::MathMove as M;
+    if !chord.mods.is_empty() {
+        return None;
+    }
+    Some(match chord.key {
+        TwKey::Right => M::Next,
+        TwKey::Left => M::Previous,
+        TwKey::Down => M::Enter,
+        TwKey::Up => M::Exit,
+        TwKey::Home => M::First,
+        TwKey::End => M::Last,
+        TwKey::Space | TwKey::Enter => M::Repeat,
+        TwKey::Escape => M::Leave,
+        _ => return None,
+    })
 }
 
 /// True for chords the document view keeps on `platform`: its caret keys,
@@ -575,7 +614,7 @@ mod tests {
                         };
                         if same_meaning(a, m)
                             || window_convention(a, m, layer)
-                            || yielded_caret_keys(&map, layer, p).contains(&chord)
+                            || yielded_caret_keys(&map, layer, false, p).contains(&chord)
                             || (p == Platform::MacOs && pending_on_mac.contains(&a))
                         {
                             continue;

@@ -18,7 +18,7 @@ name = "textweaver-xilem"
 path = "src/main.rs"
 
 [features]
-default = ["screenshot", "renderer-vello", "publish"]
+default = ["screenshot", "renderer-vello", "publish", "lint"]
 # The renderer: Vello's GPU compute renderer (the default), or Vello's
 # hybrid renderer (CPU strips, simple GPU shaders), which suits software
 # GPUs such as Mesa's llvmpipe under Xvfb in CI. With both, Vello wins.
@@ -31,6 +31,22 @@ screenshot = ["dep:masonry_testing"]
 # browser preview, from the app (ADR-0033). On by default since edit mode:
 # they are what writing in the window needs.
 publish = ["textweaver-app/publish"]
+# Markdown lint in edit mode (Ctrl+F8 and Ctrl+Shift+F8 find the
+# problems), as in the terminal reader: textweaver's own rules, no
+# dependencies.
+lint = ["textweaver-app/lint"]
+# Grammar checking in edit mode with harper-core, off by default as in the
+# terminal reader (it adds about 10 MB).
+grammar = ["textweaver-app/grammar"]
+# MathCAT math speech and navigation (ADR-0029), as in the terminal reader.
+mathcat = ["textweaver-app/mathcat"]
+# Speech engines that need a system library, passed through to the app's
+# engines as the terminal reader's features are: eSpeak NG, Speech
+# Dispatcher (Linux), and Omnivox. Release packages turn them on where the
+# library is found (`cargo xtask gui-dist`).
+espeak = ["textweaver-app/espeak"]
+speechd = ["textweaver-app/speechd"]
+omnivox = ["textweaver-app/omnivox"]
 
 [dependencies]
 textweaver-app.workspace = true

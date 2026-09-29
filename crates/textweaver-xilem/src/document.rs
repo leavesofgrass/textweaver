@@ -145,6 +145,25 @@ impl DocModel {
     }
 }
 
+/// Something the reader marked or found, drawn over the text (as the
+/// terminal draws them). Each has a shape as well as a color, so no color
+/// carries it alone: a reader's highlight has a solid line under it, a note
+/// a dashed one, a bookmark a bar at its start, a search match a box around
+/// it, and the match at the caret a heavier box.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DocMark {
+    /// A highlight the reader made.
+    Highlight,
+    /// Text with a note.
+    Note,
+    /// A bookmark.
+    Bookmark,
+    /// A search match.
+    FindHit,
+    /// The search match at the caret.
+    CurrentFindHit,
+}
+
 /// The moving state: where the caret and the highlights are.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct DocState {
@@ -284,6 +303,9 @@ pub struct DocumentView {
     /// Misspelled words (edit mode), drawn with a dotted underline. Paint
     /// only: the text, its layout, and its runs do not change.
     misspelled: Vec<CharRange>,
+    /// Notes, bookmarks, the reader's highlights, and search matches
+    /// ([`DocMark`]), drawn only.
+    marks: Vec<(CharRange, DocMark)>,
 
     // Layout.
     layouts: HashMap<usize, ParaLayout>,
@@ -352,6 +374,7 @@ impl DocumentView {
             focused: false,
             label: "Document".to_owned(),
             misspelled: Vec::new(),
+            marks: Vec::new(),
             layouts: HashMap::new(),
             line_starts: Vec::new(),
             column: 0.0,
@@ -744,6 +767,21 @@ impl DocumentView {
             this.widget.misspelled = ranges;
             this.ctx.request_render();
         }
+    }
+
+    /// The notes, bookmarks, highlights, and search matches to mark. Only
+    /// drawn, each with a shape of its own besides its color (see
+    /// [`DocMark`]); a screen reader finds them with their keys and lists.
+    pub fn set_marks(this: &mut WidgetMut<'_, Self>, marks: Vec<(CharRange, DocMark)>) {
+        if this.widget.marks != marks {
+            this.widget.marks = marks;
+            this.ctx.request_render();
+        }
+    }
+
+    /// The marks drawn, for tests.
+    pub fn marks(&self) -> &[(CharRange, DocMark)] {
+        &self.marks
     }
 
     /// The misspelled words marked, for tests.
@@ -1913,6 +1951,61 @@ impl Widget for DocumentView {
                                 theme::color(p.code_background),
                             )
                             .draw();
+                    }
+                }
+            }
+            // The reader's marks and the search matches: a band, and a
+            // shape of their own.
+            for &(r, mark) in &self.marks {
+                if r.end.0 <= para.start.0 || r.start.0 > p_end {
+                    continue;
+                }
+                let fill = match mark {
+                    DocMark::Highlight => p.user_highlight,
+                    DocMark::Note => p.note,
+                    DocMark::Bookmark => p.bookmark,
+                    DocMark::FindHit => p.find_hit.1,
+                    DocMark::CurrentFindHit => p.current_find_hit,
+                };
+                let rects = band(r).unwrap_or_default();
+                for (k, rect) in rects.iter().enumerate() {
+                    painter.fill(*rect, theme::color(fill)).draw();
+                    let line = theme::color(p.text);
+                    match mark {
+                        DocMark::Highlight => {
+                            painter
+                                .fill(Rect::new(rect.x0, rect.y1 - 2.0, rect.x1, rect.y1), line)
+                                .draw();
+                        }
+                        DocMark::Note => {
+                            let mut x = rect.x0;
+                            while x < rect.x1 {
+                                let end = (x + 6.0).min(rect.x1);
+                                painter
+                                    .fill(Rect::new(x, rect.y1 - 2.0, end, rect.y1), line)
+                                    .draw();
+                                x += 10.0;
+                            }
+                        }
+                        DocMark::Bookmark if k == 0 => {
+                            painter
+                                .fill(
+                                    Rect::new(rect.x0 - 4.0, rect.y0, rect.x0 - 1.0, rect.y1),
+                                    line,
+                                )
+                                .draw();
+                        }
+                        DocMark::Bookmark => {}
+                        DocMark::FindHit | DocMark::CurrentFindHit => {
+                            let w = if mark == DocMark::CurrentFindHit {
+                                2.5
+                            } else {
+                                1.0
+                            };
+                            painter
+                                .stroke(rect.inflate(1.0, 0.0), &Stroke::new(w), line)
+                                .draw();
+                        }
                     }
                 }
             }

@@ -16,7 +16,8 @@
 //! - [`runs`]: the document as AccessKit text runs, with stable ids.
 //! - [`window`]: the part of a large document the view holds.
 //! - [`caret`]: caret moves that need no layout.
-//! - [`keys`]: key events as keymap chords.
+//! - [`keys`]: key events as keymap chords, and each platform's caret keys.
+//! - [`parity`]: where each keymap action is handled in the window.
 //! - [`theme`]: textweaver's themes on Masonry's widgets.
 //! - [`fonts`]: the bundled fonts and the reader's font setting.
 //! - [`font_chooser`]: the font chooser's lists, ported from the spike.
@@ -38,6 +39,7 @@ pub mod graphics;
 pub mod gui;
 pub mod keys;
 pub mod log;
+pub mod parity;
 pub mod rsvp;
 pub mod runs;
 #[cfg(feature = "screenshot")]
