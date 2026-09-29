@@ -875,7 +875,7 @@ The plan is `docs/research/wave5-recalibrated.md`. The five branches taken from 
 
 **After Wave 5 (the owner, Monday, September 28, 2026): a second documentation sweep, many agents in parallel.**
 - The README is more concise; the rest of the documentation is more comprehensive.
-- The owner's design decisions leave the repository: `docs/history/` and `docs/research/` (plans, briefs, audits, reviews, the roadmap) move to a local git repository at `D:	extweaver-planning` (never pushed) and a readable copy in the wiki. Agents read their briefs there. `CLAUDE.md` and the guard hook add `D:	extweaver-planning` to the folders agents may use, with a wiki backup of the change.
+- The owner's design decisions leave the repository: `docs/history/` and `docs/research/` (plans, briefs, audits, reviews, the roadmap) move to a local git repository at `D:/textweaver-planning` (never pushed) and a readable copy in the wiki. Agents read their briefs there. `CLAUDE.md` and the guard hook add `D:/textweaver-planning` to the folders agents may use, with a wiki backup of the change.
 - The ADRs stay in `docs/adr`, rewritten in a neutral voice ("we chose", not "the owner decided"), because contributors use them to understand the code.
 - Clean up what does not need to be in the repository.
 - Make the project inviting to contributors: a clear CONTRIBUTING, good first issues, a code of conduct, and friendly issue templates.
