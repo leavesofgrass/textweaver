@@ -219,3 +219,6 @@ pymdownx.superfences = {}
 pymdownx.tasklist.custom_checkbox = false
 textweaver_site_links.repo_blob = "https://github.com/leavesofgrass/textweaver/blob/main/"
 textweaver_site_links.repo_tree = "https://github.com/leavesofgrass/textweaver/tree/main/"
+# Every table gets a caption from the heading above it, visually hidden,
+# so screen readers can name each table (tools/zensical_ext).
+textweaver_site_tables = {}

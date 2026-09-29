@@ -14,8 +14,11 @@
    - The current page in the navigation is marked aria-current="page".
    - The color theme switch starts with the current choice checked.
    - The search box gets a spoken name, its icon buttons get names, the
-     search panel is a named dialog, the result count is announced, and
-     focus is visible inside it. */
+     search panel is a named dialog, the result count is announced, the
+     result the arrow keys highlight is announced, and focus is visible
+     inside it.
+   - A code block or table wider than its box takes focus as a named
+     region, so the arrow keys can scroll it. */
 (function () {
   "use strict";
 
@@ -162,8 +165,8 @@
     root.appendChild(style);
 
     input.setAttribute("aria-label", "Search the documentation");
-    // The arrow keys move a highlight a screen reader cannot hear, so the
-    // box is a plain search box; Tab reaches the results as links.
+    // A plain search box: Tab reaches the results as links. The arrow keys
+    // move the theme's highlight, which is said below.
     input.setAttribute("role", "searchbox");
 
     Array.prototype.forEach.call(root.querySelectorAll("button"), function (button) {
@@ -255,11 +258,40 @@
           count === 0
             ? "No results for " + query + "."
             : count + (count === 1 ? " result" : " results") +
-              " for " + query + ". Press Tab to reach them, or Enter for the first.";
+              " for " + query + ". Down Arrow to hear each, Enter to open, or Tab to reach them.";
       }, 500);
     };
     new MutationObserver(announce).observe(list, { childList: true });
     input.addEventListener("input", announce);
+
+    // Up and Down Arrow move the theme's highlight through the results, and
+    // Enter opens the highlighted one; on screen only, until now. The
+    // highlighted link is the one with a class the others lack (the theme's
+    // class names are minified, so they are not named here). Its title and
+    // place are said: "Installing textweaver, result 2 of 7."
+    var highlighted = function () {
+      var links = list.querySelectorAll(":scope > li > a");
+      var most = -1, found = null, tie = false;
+      Array.prototype.forEach.call(links, function (a, i) {
+        var n = a.classList.length;
+        if (n > most) { most = n; found = { link: a, index: i }; tie = false; }
+        else if (n === most) { tie = true; }
+      });
+      if (!found || tie || links.length < 2) return null;
+      found.count = links.length;
+      return found;
+    };
+    input.addEventListener("keydown", function (event) {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      setTimeout(function () {
+        var h = highlighted();
+        if (!h) return;
+        var title = h.link.querySelector("h2");
+        var name = (title ? title.textContent : h.link.textContent).trim();
+        clearTimeout(timer);
+        status.textContent = name + ", result " + (h.index + 1) + " of " + h.count + ".";
+      }, 60);
+    });
   }
 
   function watchForSearch() {
@@ -299,7 +331,48 @@
     });
   }
 
+  /* A code block or table wider than the page scrolls sideways, but only
+     the mouse could scroll it: it takes no focus. While it is wider than
+     its box it is a named region in the Tab order, so the arrow keys
+     scroll it; when the window is wide enough, it leaves the Tab order. */
+  function fixWideBlocks() {
+    // The theme scrolls a code block's <code>, and a table itself or its
+    // wrapper, whichever is narrower.
+    var blocks = document.querySelectorAll(
+      ".md-typeset pre > code, .md-typeset .md-typeset__scrollwrap, .md-typeset table");
+    var sync = function () {
+      Array.prototype.forEach.call(blocks, function (el) {
+        var wide = el.scrollWidth > el.clientWidth + 1;
+        var ours = el.getAttribute("data-tw-wide") === "1";
+        if (wide && !ours && !el.hasAttribute("tabindex")) {
+          el.setAttribute("tabindex", "0");
+          el.setAttribute("data-tw-wide", "1");
+          // A table keeps its own role and its caption as its name.
+          if (el.tagName === "TABLE") return;
+          var table = el.querySelector("table");
+          var caption = table ? table.querySelector("caption") : null;
+          el.setAttribute("role", "region");
+          el.setAttribute("aria-label",
+            (caption ? caption.textContent.trim() + ", wide table" : table ? "Wide table" : "Wide code block") +
+            ", scrolls sideways with the arrow keys");
+        } else if (!wide && ours) {
+          el.removeAttribute("tabindex");
+          el.removeAttribute("role");
+          el.removeAttribute("aria-label");
+          el.removeAttribute("data-tw-wide");
+        }
+      });
+    };
+    sync();
+    var timer = null;
+    window.addEventListener("resize", function () {
+      clearTimeout(timer);
+      timer = setTimeout(sync, 250);
+    });
+  }
+
   function init() {
+    fixWideBlocks();
     fixCopyButtons();
     fixToggleLabels();
     fixNavLandmarks();
