@@ -302,7 +302,7 @@ You can also convert the document you have open without leaving textweaver. Pres
 
 The file goes next to the document, with the same name: exporting `essay.md` to PDF writes `essay.pdf` in the same folder, replacing an older export. In edit mode the text you are editing is exported, saved or not. Citations are formatted and a References section added, as with `tw convert`: from the bibliography your front matter names, the folder's `references.json`, and your own library.
 
-You hear "Exporting to PDF." and can go on reading or writing while it works. If it takes more than two seconds you hear "Still exporting to PDF, 2 seconds.", and then again every ten seconds, never more often. When it is done you hear where the file went and a question, for example "Exported to PDF: essay.pdf in C:\Users\jon\Essays. Open it? y or n." Press **y** to open it with your computer's program for that kind of file, or **n** to leave it. A warning, such as an image that was not found, is read out before the question.
+You hear "Exporting to PDF." and can go on reading or writing while it works. If it takes more than two seconds you hear "Still exporting to PDF, 2 seconds.", and then again every ten seconds, never more often. When it is done you hear where the file went and a question, for example "Exported to PDF: essay.pdf in C:\Users\ada\Essays. Open it? y or n." Press **y** to open it with your computer's program for that kind of file, or **n** to leave it. A warning, such as an image that was not found, is read out before the question.
 
 A new document that was never saved has no folder yet; its export goes to the folder textweaver was started in, like Save As suggests.
 

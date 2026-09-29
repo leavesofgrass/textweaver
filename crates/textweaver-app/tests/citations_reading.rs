@@ -144,14 +144,14 @@ fn citations_on_are_said_in_words_over_the_whole_citation() {
 #[test]
 fn in_text_citations_and_unknown_keys() {
     let text =
-        "@doe2020 argues this. See [@doe2020; @nobody, p. 4] too. Mail jon@example.com now.\n";
+        "@doe2020 argues this. See [@doe2020; @nobody, p. 4] too. Mail ada@example.com now.\n";
     let mut r = rig(text, CitationReading::Off);
     r.read_all();
     let spoken = r.spoken();
     // Off: an in-text citation keeps its authors, the sentence's subject.
     assert!(spoken.starts_with("Doe and Roe argues this."), "{spoken}");
     assert!(spoken.contains("See too."), "{spoken}");
-    assert!(spoken.contains("jon at example.com"), "{spoken}");
+    assert!(spoken.contains("ada at example.com"), "{spoken}");
     let mut r = rig(text, CitationReading::Words);
     r.read_all();
     let spoken = r.spoken();
