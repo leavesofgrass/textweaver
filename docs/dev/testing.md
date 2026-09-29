@@ -146,6 +146,41 @@ Bulk conversion has its own benchmark:
 cargo run --release -p textweaver-convert --example bench_convert
 ```
 
+## Automated screen-reader checks
+
+The GUI's real test is the owner's listening sessions with NVDA, JAWS, and the Braille display. Between sessions, CI runs these checks ([ADR-0039](../adr/0039-automated-screen-reader-checks.md)). They never replace a session. Every line of their reports starts with a word: Pass, Fail, Warning, Changed, No baseline, or Heard.
+
+**Never run a screen-reader session on your own machine.** The scripts drive NVDA or VoiceOver and refuse to run outside a CI runner, so no one's own screen reader is taken over.
+
+### The accessibility tree, on every GUI change
+
+The GUI workflow (`gui-xilem.yml`) dumps the window's accessibility tree on Windows, macOS, and Linux with accessibility-cli, built from a pinned commit. It opens `fixtures/t/reading.md` in the background with the silent `paced` backend. The run summary compares the tree with main's last successful run:
+
+- **Pass:** the same elements as main.
+- **Changed:** each added and removed line, in words. Check that every change was meant, such as a new button or a renamed setting.
+- **No baseline:** no earlier tree on main to compare with (the first run, or artifacts that expired).
+- **Fail:** no tree was dumped. The raw dump and the GUI's log are in the artifact.
+
+The artifacts are `a11y-tree-windows`, `a11y-tree-macos`, and `a11y-tree-linux`. Each holds `tree.txt` (the normalized tree), `raw.json`, `raw-tree.txt` (accessibility-cli's own text view), and `gui.log`. To compare two trees yourself:
+
+```bash
+python3 tools/a11y/tree_report.py compare --system Linux --current new/tree.txt --baseline old/tree.txt
+```
+
+Running `tree-dump.sh` or `tree-dump.ps1` on your own machine is safe: it opens the GUI in the background, reads nothing aloud, and drives no screen reader. It needs accessibility-cli on the `PATH`, or its path in `A11Y_CLI` (`-Cli` in PowerShell).
+
+### The screen-reader sessions, by hand
+
+Run "Screen-reader checks" (`a11y-tests.yml`) from the Actions tab, and choose a session: `nvda`, `orca`, `voiceover`, or `all`. It also runs when its own files change. Each session opens `fixtures/t/reading.md`, reads about three sentences, pauses, moves to the next heading, opens a dialog, and closes it. What was said is checked against `fixtures/t/expected-phrases.json`.
+
+- **nvda** (Windows): Guidepup starts NVDA and records its spoken phrases. The summary's first line answers "can Guidepup drive NVDA against the textweaver window?" with "Answer: yes" or "Answer: no".
+- **orca** (Ubuntu, under Xvfb): the session is checked through AT-SPI events: the caret, the announcements, the focus. Orca runs beside it, and the report lists what it said at each step.
+- **voiceover** (macOS 14): the same with VoiceOver, if Guidepup can enable it on the runner. If not, the setup log says why.
+
+The sessions are report-only for now: a failure shows in the summary but does not fail the workflow. The phrases NVDA spoke are in the `a11y-nvda` artifact (`phrases.json` and `report.md`): the owner compares them with what they heard in their own session.
+
+Guidepup and its setup tool are locked, with integrity hashes, in `tools/a11y/package-lock.json`. To move to a new version, change `tools/a11y/package.json` and regenerate the lock file with `npm install --package-lock-only --ignore-scripts` in `tools/a11y`, in a container or on a machine with Node. Nothing else in the project needs Node.
+
 ## See also
 
 - [Building](building.md): setting up Rust and each system's libraries.

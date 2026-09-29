@@ -34,7 +34,7 @@ all of the above ← app ← tui, cli
 - `thiserror` in libraries, `anyhow` only in binaries (`tui`, `cli`, `xtask`).
 - Engines and heavy formats behind cargo features, off by default: `textweaver-speech/{espeak, omnivox, speechd, tts-crate}`, `textweaver-formats/{paperback, pandoc}`, `textweaver-a11y/live-region`.
 - Workspace lints: `unsafe_code = "deny"` (the espeak backend's FFI module opts out with `#[allow(unsafe_code)]` and a `// SAFETY:` comment on every block), `missing_docs = "warn"`, clippy `all = "warn"`. CI and `-D warnings` make all of them errors.
-- Edition 2024. Toolchain pinned in `rust-toolchain.toml` to 1.96 so Windows, CI, and the Docker image agree; `rust-version = "1.92"` states the true minimum (raised from 1.85 at Integration 1: `libloading` needs 1.88, `File::try_lock` 1.89; raised to 1.92 on 2026-09-26 because krilla 0.8, the PDF writer, declares 1.92).
+- Edition 2024. Toolchain pinned in `rust-toolchain.toml` to 1.96 so Windows, CI, and the Docker image agree; `rust-version = "1.92"` states the true minimum (raised from 1.85 at Integration 1: `libloading` needs 1.88, `File::try_lock` 1.89; raised to 1.92 on 2026-09-26 because krilla 0.8, the PDF writer, declares 1.92; raised to 1.94 on 2026-09-28 because rten 0.26, which runs Piper, Whisper, and OCR, declares 1.94, and the nightly MSRV check could no longer resolve the lockfile with 1.92).
 
 **Environments.** Native Windows (the owner's machine) and Linux in Docker (`docker/Dockerfile`, `compose.yaml`, see `docs/dev/docker.md`). CI runs fmt, clippy, tests, and rustdoc on Ubuntu, macOS, and Windows; only Ubuntu enables the features that link system libraries.
 

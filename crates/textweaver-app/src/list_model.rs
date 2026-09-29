@@ -11,7 +11,7 @@
 //!   stays in place when the same list is shown again (after a delete).
 //!   The focused item is announced after the list's introduction.
 //! - A frontend sends list keys as [`Command::ListKey`]: arrows, Page Up
-//!   and Down, Home and End move and announce "item, k of n" (or "Top of
+//!   and Down, Home and End move and announce "k of n, item" (or "Top of
 //!   list."); a typed character filters a list that filters as you type,
 //!   chooses by its accelerator (`s`, `d`, `c` in Save, Discard, Cancel),
 //!   or jumps to the next item starting with it; Enter chooses; Escape
@@ -122,7 +122,7 @@ impl ListModel {
     }
 
     /// The focused item as spoken: its text and where it is in the list
-    /// ("Chapter two, 2 of 5").
+    /// ("2 of 5, Chapter two").
     pub fn spoken_item(&self) -> Option<String> {
         self.spoken_item_text(&Catalog::english())
     }
@@ -396,7 +396,7 @@ impl App {
     }
 
     /// Whether the app says a list's focused item when the list is shown,
-    /// after the list's introduction ("Chapter one, 1 of 5"). On by
+    /// after the list's introduction ("1 of 5, Chapter one"). On by
     /// default. A GUI whose native list the screen reader announces when
     /// it opens turns this off, so the item is not heard twice. Moves made
     /// with [`Command::ListKey`] are always said.
@@ -829,7 +829,7 @@ mod tests {
         assert!(!l.step(-1));
         assert!(l.step(5));
         assert_eq!(l.current(), Some("b"));
-        assert_eq!(l.spoken_item().as_deref(), Some("b, 2 of 2"));
+        assert_eq!(l.spoken_item().as_deref(), Some("2 of 2, b"));
         assert_eq!(ListModel::new("t", Vec::new()).spoken_item(), None);
     }
 

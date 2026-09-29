@@ -119,6 +119,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0032: Grammar, lint, highlighting, and clipboard crates](adr/0032-grammar-lint-highlighting-clipboard.md): the authoring extras' crates, and the two held for the owner.
 - [ADR-0033: The GUI after the second session, and edit mode](adr/0033-gui-session-2-and-edit-mode.md): the file chooser, text size and font keys, a key on every button, and edit mode in the window.
 - [ADR-0034: The rope after measurement](adr/0034-rope-after-measurement.md): stay on ropey 1.6; ropey 2 and crop measured, and when to look again.
+- [ADR-0039: Automated screen-reader checks beside the listening sessions](adr/0039-automated-screen-reader-checks.md): the accessibility tree on three systems, and NVDA, Orca, and VoiceOver sessions on CI runners.
 
 ## Interactive pages
 

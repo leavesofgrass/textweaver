@@ -1,0 +1,15 @@
+{
+  "name": "textweaver-a11y-tests",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Automated screen-reader checks for the textweaver window, run on CI runners only (ADR-0039).",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@guidepup/guidepup": "0.34.0",
+    "@guidepup/setup": "0.29.1"
+  }
+}
