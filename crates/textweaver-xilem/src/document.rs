@@ -11,10 +11,11 @@
 //! - **Windowing.** The view holds the window's paragraphs only
 //!   ([`crate::window`]); positions are document-absolute. Only the
 //!   paragraphs on screen are laid out, from a cache.
-//! - **Keys.** Arrows, Home, End, Page Up, and Page Down (with Shift to
-//!   select and Ctrl for words, paragraphs, and the document's ends) move
-//!   the caret here, and the screen reader reads what the caret moved over.
-//!   Every other key goes on to the keymap.
+//! - **Keys.** The platform's caret keys ([`keys::caret_keys`]: arrows,
+//!   Home, End, Page Up, and Page Down, with Ctrl on Windows and Linux or
+//!   Option and Command on macOS for words, paragraphs, and the ends, and
+//!   Shift to select) move the caret here, and the screen reader reads what
+//!   the caret moved over. Every other key goes on to the keymap.
 //! - **Actions.** A user's caret move is reported as [`DocAction`]; the
 //!   driver passes it to the app as `Command::SetCursor`.
 
@@ -40,8 +41,11 @@ use masonry::parley::style::{FontFamily, FontStyle, FontWeight, LineHeight};
 use masonry::parley::{Affinity, Cursor, FontContext, Layout, LayoutContext, Selection};
 use textweaver_app::aids::{RowMark, RulerMode, RulerSettings, TextSpacing, ViewRow, ruler_rows};
 use textweaver_app::core::{CharPos, CharRange};
+use textweaver_app::keymap::KeyChord;
+use textweaver_app::keymap::Platform;
 
 use crate::caret;
+use crate::keys::{self, CaretStep};
 use crate::runs::{Paragraph, Run, RunMark, RunSet};
 use crate::theme::{self, Palette};
 use crate::window::{SpanStyle, StyledSpan};
@@ -268,6 +272,12 @@ pub struct DocumentView {
     edit_role: bool,
     /// Edit mode (ADR-0033): a multi-line edit that takes typing.
     editing: bool,
+    /// Whose caret keys and command modifier the view follows
+    /// ([`keys::caret_keys`]).
+    platform: Platform,
+    /// Caret keys left to the keymap in the app's mode
+    /// ([`keys::yielded_caret_keys`]: Speech Cursor mode's line keys).
+    yielded: Vec<KeyChord>,
     focused: bool,
     /// The node's name, in the interface language ("Document").
     label: String,
@@ -337,6 +347,8 @@ impl DocumentView {
             select_spoken: false,
             edit_role: false,
             editing: false,
+            platform: Platform::current(),
+            yielded: Vec::new(),
             focused: false,
             label: "Document".to_owned(),
             misspelled: Vec::new(),
@@ -366,6 +378,18 @@ impl DocumentView {
     pub fn with_select_spoken(mut self, on: bool) -> Self {
         self.select_spoken = on;
         self
+    }
+
+    /// Follows `platform`'s caret keys and command modifier instead of
+    /// this system's (tests of another platform's keys).
+    pub fn with_platform(mut self, platform: Platform) -> Self {
+        self.platform = platform;
+        self
+    }
+
+    /// Leaves these caret keys to the keymap (the app's mode binds them).
+    pub fn set_yielded_keys(this: &mut WidgetMut<'_, Self>, keys: Vec<KeyChord>) {
+        this.widget.yielded = keys;
     }
 
     /// Names the node for screen readers, in the interface language
@@ -1126,45 +1150,36 @@ impl DocumentView {
         pos
     }
 
-    /// Handles a caret key. Returns true when the key was a caret key.
-    fn caret_key(&mut self, ctx: &mut EventCtx<'_>, key: &Key, shift: bool, ctrl: bool) -> bool {
+    /// Handles a caret key: `chord` as the platform's caret keys read it
+    /// ([`keys::caret_move`]). Returns true when the key was a caret key.
+    fn caret_key(&mut self, ctx: &mut EventCtx<'_>, chord: &KeyChord) -> bool {
+        let Some((m, shift)) = keys::caret_move(chord, self.platform) else {
+            return false;
+        };
         let paras = &self.model.paragraphs;
         let pos = self.state.caret;
         let doc_end = CharPos(self.model.doc_len);
         let (fcx, lcx) = ctx.text_contexts();
-        let new = match key {
-            Key::Named(NamedKey::ArrowLeft) if ctrl => caret::prev_word(paras, pos),
-            Key::Named(NamedKey::ArrowRight) if ctrl => caret::next_word(paras, pos),
-            Key::Named(NamedKey::ArrowLeft) => caret::prev_char(paras, pos),
-            Key::Named(NamedKey::ArrowRight) => caret::next_char(paras, pos),
-            Key::Named(NamedKey::ArrowUp) if ctrl => caret::prev_paragraph(paras, pos),
-            Key::Named(NamedKey::ArrowDown) if ctrl => caret::next_paragraph(paras, pos),
-            Key::Named(NamedKey::ArrowUp) => self.move_lines(-1, fcx, lcx),
-            Key::Named(NamedKey::ArrowDown) => self.move_lines(1, fcx, lcx),
-            Key::Named(NamedKey::Home) if ctrl => CharPos::ZERO,
-            Key::Named(NamedKey::End) if ctrl => doc_end,
-            Key::Named(NamedKey::Home) => self.line_edge(false, fcx, lcx),
-            Key::Named(NamedKey::End) => self.line_edge(true, fcx, lcx),
-            Key::Named(NamedKey::PageUp) => self.page(false, fcx, lcx),
-            Key::Named(NamedKey::PageDown) => self.page(true, fcx, lcx),
-            _ => return false,
+        let new = match (m.step, m.forward) {
+            (CaretStep::Char, false) => caret::prev_char(paras, pos),
+            (CaretStep::Char, true) => caret::next_char(paras, pos),
+            (CaretStep::Word, false) => caret::prev_word(paras, pos),
+            (CaretStep::Word, true) => caret::next_word(paras, pos),
+            (CaretStep::Paragraph, false) => caret::prev_paragraph(paras, pos),
+            (CaretStep::Paragraph, true) => caret::next_paragraph(paras, pos),
+            (CaretStep::Line, forward) => self.move_lines(if forward { 1 } else { -1 }, fcx, lcx),
+            (CaretStep::LineEdge, forward) => self.line_edge(forward, fcx, lcx),
+            (CaretStep::Page, forward) => self.page(forward, fcx, lcx),
+            (CaretStep::DocumentEdge, false) => CharPos::ZERO,
+            (CaretStep::DocumentEdge, true) => doc_end,
         };
-        let vertical = matches!(
-            key,
-            Key::Named(
-                NamedKey::ArrowUp | NamedKey::ArrowDown | NamedKey::PageUp | NamedKey::PageDown
-            )
-        ) && !ctrl;
+        let vertical = matches!(m.step, CaretStep::Line | CaretStep::Page);
         let echo = if shift {
             self.selection_echo(new)
         } else {
-            match key {
-                Key::Named(NamedKey::ArrowLeft | NamedKey::ArrowRight) if ctrl => {
-                    self.word_echo(new)
-                }
-                Key::Named(
-                    NamedKey::ArrowLeft | NamedKey::ArrowRight | NamedKey::Home | NamedKey::End,
-                ) if !ctrl => self.char_echo(new),
+            match m.step {
+                CaretStep::Word => self.word_echo(new),
+                CaretStep::Char | CaretStep::LineEdge => self.char_echo(new),
                 _ => self.line_echo(new),
             }
         };
@@ -1260,7 +1275,9 @@ impl DocumentView {
                     .map(|l| l.text_range())
                     .find(|r| r.contains(&b))
                     .or_else(|| pl.layout.lines().last().map(|l| l.text_range()))
-                    .map_or(p.text.as_str(), |r| &p.text[r])
+                    // An empty paragraph is laid out with a stand-in
+                    // char, so its line can reach past the text.
+                    .map_or(p.text.as_str(), |r| p.text.get(r).unwrap_or(""))
             }
             None => p.text.as_str(),
         };
@@ -1334,7 +1351,8 @@ impl DocumentView {
         k: &masonry::core::keyboard::KeyboardEvent,
     ) -> bool {
         let m = k.modifiers;
-        let command = m.ctrl() || m.alt() || m.meta();
+        // The Windows key types nothing either, though it is no command.
+        let command = keys::is_command(m, self.platform) || m.meta();
         let altgr = m.ctrl() && m.alt() && !m.meta();
         match &k.key {
             Key::Named(NamedKey::Enter) if !command => self.type_text(ctx, "\n"),
@@ -1358,15 +1376,6 @@ impl DocumentView {
             _ => return false,
         }
         true
-    }
-
-    fn copy_selection(&self, ctx: &mut EventCtx<'_>) {
-        if let Some(a) = self.state.anchor {
-            let text = caret::text_between(&self.model.paragraphs, a, self.state.caret);
-            if !text.is_empty() {
-                ctx.set_clipboard(text);
-            }
-        }
     }
 
     fn hit(&mut self, ctx: &mut EventCtx<'_>, pos: Point) -> Option<CharPos> {
@@ -1542,8 +1551,11 @@ impl Widget for DocumentView {
         event: &TextEvent,
     ) {
         if self.editing
-            && let TextEvent::Ime(masonry::core::Ime::Commit(text)) = event
+            && let TextEvent::Ime(masonry::core::Ime::Commit(text))
+            | TextEvent::ClipboardPaste(text) = event
         {
+            // An input method's text, or the system clipboard's (the
+            // window reads it for the platform's paste key).
             let text = text.clone();
             self.type_text(ctx, &text);
             ctx.set_handled();
@@ -1559,21 +1571,13 @@ impl Widget for DocumentView {
             ctx.set_handled();
             return;
         }
-        let m = k.modifiers;
-        let ctrl = if cfg!(target_os = "macos") {
-            m.meta()
-        } else {
-            m.ctrl()
-        };
-        if m.alt() {
-            return;
-        }
-        if ctrl && matches!(&k.key, Key::Character(c) if c.eq_ignore_ascii_case("c")) {
-            self.copy_selection(ctx);
-            ctx.set_handled();
-            return;
-        }
-        if self.caret_key(ctx, &k.key, m.shift(), ctrl) {
+        // The caret keys are the platform's; copying and every other
+        // command go on to the keymap (whose copy puts the app's selection,
+        // which follows the view's, on the clipboard).
+        if let Some(chord) = keys::chord(k, self.platform)
+            && !self.yielded.contains(&chord)
+            && self.caret_key(ctx, &chord)
+        {
             ctx.set_handled();
         }
     }

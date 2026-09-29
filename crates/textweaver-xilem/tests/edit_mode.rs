@@ -84,7 +84,12 @@ fn apply(app: &mut App, action: DocAction) {
         DocAction::Delete { forward: true } => Command::DeleteForward,
         DocAction::Delete { forward: false } => Command::DeleteBack,
         DocAction::Replace { range, text } => Command::ReplaceRange { range, text },
-        DocAction::CaretMoved { caret, .. } => Command::SetCursor(caret),
+        DocAction::CaretMoved {
+            caret, selection, ..
+        } => {
+            let _ = gui::sync_caret(app, caret, selection);
+            return;
+        }
         DocAction::TableCell { forward: true } => Command::Action(ActionId::NextTableCell),
         DocAction::TableCell { forward: false } => Command::Action(ActionId::PreviousTableCell),
     };
@@ -168,12 +173,19 @@ fn keys_type_and_delete_through_the_app_and_undo_restores() {
         text_of(&app)
     );
 
-    // Command keys are not typed: Ctrl+Z goes on to the keymap.
-    h.process_text_event(key(Key::Character("z".into()), Modifiers::CONTROL));
+    // Command keys are not typed: Undo's key (Ctrl+Z, Cmd+Z on macOS, from
+    // the keymap) goes on to the keymap.
+    let platform = textweaver_app::keymap::Platform::current();
+    let undo = app
+        .keymap()
+        .chords_in_mode(ActionId::Undo, app.mode().layer())[0];
+    h.process_text_event(TextEvent::Keyboard(textweaver_xilem::keys::press(
+        &undo, platform,
+    )));
     let (KeyAction(k), _) = h
         .pop_action::<KeyAction>()
-        .expect("Ctrl+Z reaches the keymap, untyped");
-    assert!(k.modifiers.ctrl());
+        .expect("Undo's key reaches the keymap, untyped");
+    assert_eq!(textweaver_xilem::keys::chord(&k, platform), Some(undo));
     // Space types a space in edit mode (it plays in reading).
     h.process_text_event(key(Key::Character(" ".into()), Modifiers::empty()));
     let (action, _) = h.pop_action::<DocAction>().expect("space");
@@ -379,4 +391,66 @@ fn misspelled_words_are_marked_in_edit_mode() {
     let _ = h.redraw();
     assert_eq!(h.get_widget(DOC).inner().misspelled(), ranges.as_slice());
     assert_eq!(doc_node(&h, doc).2, before, "the marks are drawn only");
+}
+
+/// Copy and Cut are the keymap's, as in the terminal: the selection on
+/// screen is the app's too, so they take it, and what they took goes to
+/// the system clipboard. The platform's paste key arrives from the window
+/// as the clipboard's text, which types at the caret.
+#[test]
+fn copy_cut_and_paste_work_on_the_selection_on_screen() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut app, mut h, mut r, _doc) = setup(dir.path());
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let start = NOTES.find("First").unwrap();
+    let platform = textweaver_app::keymap::Platform::current();
+    // The caret at "First", then its select-by-word key (Ctrl+Shift+Right,
+    // Option+Shift+Right on macOS), from the platform's table.
+    let _ = app.dispatch(Command::SetCursor(CharPos(start)));
+    let _ = r.refresh(&app, &mut h);
+    let (word, _) = textweaver_xilem::keys::caret_keys(platform)
+        .into_iter()
+        .find(|(_, m)| {
+            *m == textweaver_xilem::keys::CaretMove {
+                step: textweaver_xilem::keys::CaretStep::Word,
+                forward: true,
+            }
+        })
+        .expect("a word key");
+    let shifted = textweaver_app::keymap::KeyChord::new(
+        word.key,
+        word.mods | textweaver_app::keymap::Modifiers::SHIFT,
+    );
+    h.process_text_event(TextEvent::Keyboard(textweaver_xilem::keys::press(
+        &shifted, platform,
+    )));
+    let (action, _) = h.pop_action::<DocAction>().expect("a selection");
+    let DocAction::CaretMoved {
+        caret, selection, ..
+    } = action
+    else {
+        panic!("not a caret move: {action:?}");
+    };
+    r.caret_moved(&mut app, caret, selection);
+    let selected = app
+        .session()
+        .and_then(|s| s.selection)
+        .expect("the app's too");
+    assert_eq!(selected.start, CharPos(start));
+    // Copy, by its key's action: the app takes the selection for the
+    // clipboard.
+    let _ = app.dispatch(Command::Action(ActionId::Copy));
+    let copied = app.take_clipboard().expect("copied for the clipboard");
+    assert!(copied.starts_with("First"), "{copied:?}");
+    // Cut takes it out, as one undo step.
+    let _ = app.dispatch(Command::Action(ActionId::Cut));
+    assert!(app.take_clipboard().is_some());
+    assert!(!text_of(&app).contains("First"), "{:?}", text_of(&app));
+    // The platform's paste key: the window hands the view the clipboard.
+    let _ = r.refresh(&app, &mut h);
+    h.process_text_event(TextEvent::ClipboardPaste("Second ".into()));
+    let (action, _) = h.pop_action::<DocAction>().expect("pasted");
+    assert_eq!(action, DocAction::Typed("Second ".into()));
 }

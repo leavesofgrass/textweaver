@@ -37,7 +37,7 @@ On Windows the window opens with no console window beside it. Started from a ter
 From top to bottom:
 
 1. **The header,** a banner with the document's title and five buttons: Open, Font, Edit (or Finish editing), Settings, and Commands.
-2. **The document,** one control your screen reader reads as a document. Arrow keys, Home, End, Page Up, and Page Down move the caret, with Shift to select and Ctrl for words, paragraphs, and the document's ends. Ctrl+C copies the selection. Every other key goes to textweaver's keymap, so the browse keys of NVDA and JAWS work here too: `h` for the next heading, `t` for the next table, `k` for the next link, and so on.
+2. **The document,** one control your screen reader reads as a document. The caret keys are your system's own (see [Caret keys](#caret-keys)), with Shift to select. Ctrl+C (Command+C on macOS) copies the selection, and says what it copied. Every other key goes to textweaver's keymap, so the browse keys of NVDA and JAWS work here too: `h` for the next heading, `t` for the next table, `k` for the next link, and so on.
 3. **The RSVP strip,** only while RSVP is on (Alt+Shift+R). It shows one word at a time under the document, so it never covers the text or the caret.
 4. **The toolbar,** named "Reading": Play or Pause, Stop, Previous sentence, Next sentence, Slower, and Faster.
 5. **The status bar:** the last message, then what the terminal's title line shows: the reading state, "line 3 of 40, 7%", the accessibility mode, the rate, and the speech engine.
@@ -60,6 +60,15 @@ To type a path instead, press Ctrl+Shift+G (Open Path): a one-line prompt where 
 - **Ctrl+D**, or the Font button: the font list. The fonts that come with textweaver are first, marked "built in": Atkinson Hyperlegible Next, Atkinson Hyperlegible Mono, and OpenDyslexic. Then your installed fonts. Enter uses the font at once.
 
 Each change is said, for example "Text size 18 points." or "Font: OpenDyslexic.", and saved in `[reading_aids.font]` (see [Settings](settings.md)). The size steps one point at a time around the usual sizes and more quickly above 16 points, from 8 up to 72 points. The Settings dialog changes the same settings, under "Reading aids".
+
+## Caret keys
+
+The document moves its caret with your system's keys, and Shift with any of them selects:
+
+- **Windows and Linux:** Left and Right by character, Up and Down by line, Ctrl+Left and Ctrl+Right by word, Ctrl+Up and Ctrl+Down by paragraph, Home and End to the start and end of the line, Ctrl+Home and Ctrl+End to the start and end of the document, Page Up and Page Down by screen.
+- **macOS:** Left and Right by character, Up and Down by line, Option+Left and Option+Right by word, Option+Up and Option+Down by paragraph, Command+Left and Command+Right to the start and end of the line, Command+Up and Command+Down to the start and end of the document (Home and End too), Page Up and Page Down by screen. No caret key uses Control, so VoiceOver's keys (Control+Option) are never taken.
+
+In browse mode, Home and End go to the ends of the line, as in any document window; in the terminal they go to the ends of the document, which Ctrl+Home and Ctrl+End do here. In Speech Cursor mode (Tab), Up and Down read the next and previous line and Page Up and Page Down move by paragraph, as in the terminal.
 
 ## Keys
 
@@ -93,6 +102,7 @@ In edit mode the document is a multi-line edit, so NVDA and JAWS switch to focus
 
 - **Typing** goes in at the caret, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
 - **Your screen reader echoes** what you type, and reads the caret and the selection as they move. In the self-voicing mode, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the caret moves to, and what a Shift key added to the selection or took from it.
+- **Copy, cut, and paste:** Ctrl+C copies the selection and Ctrl+X cuts it, each saying what it took; Ctrl+V pastes what is on your system's clipboard at the caret (on macOS, Command with each).
 - **Undo** is Ctrl+Z, **redo** Ctrl+Y or Ctrl+Shift+Z, and each says what it undid. The editing keys are the terminal's: Ctrl+B bold, Ctrl+I italic, Ctrl+K a link, Ctrl+Alt+1 a heading, and the rest in the [keyboard reference](keyboard.md). Ctrl+S saves.
 - **Tab** types a tab, or in a table moves to the next cell (Shift+Tab to the previous one), as in the terminal. **Ctrl+Tab** moves the focus out of the document, to the buttons.
 - **Spell check:** Alt+M moves to the next misspelled word and selects it, so your screen reader says it and textweaver spells it. Type to replace it, or press Alt+J for suggestions. Alt+Shift+M goes back. Misspelled words are also marked on screen with a dotted underline, shortly after you stop typing (in documents up to a million characters).

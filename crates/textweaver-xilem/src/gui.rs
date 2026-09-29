@@ -197,6 +197,8 @@ struct Shown {
     editing: bool,
     /// Edit mode, as the Edit button says it.
     edit_button: bool,
+    /// The caret keys the view leaves to the keymap in the app's mode.
+    yielded: Option<Vec<textweaver_app::keymap::KeyChord>>,
 }
 
 /// What the reading aids' spans depend on: bionic reading (and its
@@ -849,6 +851,35 @@ pub fn state_for(app: &App) -> DocState {
     }
 }
 
+/// The view moved its caret (or its selection): the app's cursor and
+/// selection follow, so the keymap's Copy and Cut (and a note or highlight
+/// on the selection) take what is selected on screen. A selection the app
+/// held (from a command) is let go when the view moves the caret without
+/// Shift, so typing goes to the caret. Returns the app's effects, or
+/// `None` when the app already had this caret and selection. The window
+/// mutes the app's announcer meanwhile: a screen reader reads the move.
+pub fn sync_caret(
+    app: &mut App,
+    caret: textweaver_app::core::CharPos,
+    selection: Option<CharRange>,
+) -> Option<Vec<Effect>> {
+    let selection = selection.filter(|r| !r.is_empty());
+    let app_cursor = app.session().map(|s| s.cursor);
+    let app_selection = app
+        .session()
+        .and_then(|s| s.selection)
+        .filter(|r| !r.is_empty());
+    let select = app_selection != selection;
+    if app_cursor == Some(caret) && !select {
+        return None;
+    }
+    if select {
+        let range = selection.unwrap_or(CharRange::new(caret.0, caret.0));
+        let _ = app.dispatch(Command::Select(range));
+    }
+    Some(app.dispatch(Command::SetCursor(caret)))
+}
+
 /// Brings `host` up to date with `app`. Returns the load time in
 /// milliseconds when the document's text (or window) was rebuilt.
 fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -> Option<f64> {
@@ -928,6 +959,14 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
     if editing != shown.editing {
         host.edit(DOC, |mut d| DocumentView::set_editing(&mut d, editing));
         shown.editing = editing;
+    }
+    // Speech Cursor mode's line keys go to the keymap, not the caret.
+    let yielded = keys::yielded_caret_keys(app.keymap(), app.mode().layer(), Platform::current());
+    if shown.yielded.as_ref() != Some(&yielded) {
+        host.edit(DOC, |mut d| {
+            DocumentView::set_yielded_keys(&mut d, yielded.clone())
+        });
+        shown.yielded = Some(yielded);
     }
     // The font and size: the keys, the font list, or the settings dialog.
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
@@ -1029,6 +1068,15 @@ impl Gui {
             // The widget's share is measured in its accessibility pass; the
             // edit itself is recorded here.
             self.timings.highlight_ms.push(0.0);
+        }
+        // Copy and Cut (the keymap's): what the app copied goes on the
+        // system clipboard, as the terminal sends it with OSC 52.
+        if let Some(text) = self.app.take_clipboard() {
+            if self.log {
+                crate::log::line(&format!("clipboard: {} chars", text.chars().count()));
+            }
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(DOC, |mut d| d.ctx.set_clipboard(text));
         }
         let messages: Vec<Message> = self.queue.borrow_mut().drain(..).collect();
         if !messages.is_empty() {
@@ -1887,7 +1935,7 @@ impl Gui {
             return;
         };
         let layer = self.app.mode().layer();
-        let action = (!keys::is_native(&chord))
+        let action = (!keys::is_native(&chord, Platform::current()))
             .then(|| self.app.keymap().lookup(&chord, layer))
             .flatten();
         if self.log {
@@ -1977,33 +2025,25 @@ impl AppDriver for Gui {
         if let Some(KeyAction(k)) = action.downcast_ref::<KeyAction>() {
             let k = k.clone();
             self.on_key(ctx, &k);
-        } else if let Some(DocAction::CaretMoved { caret, echo, .. }) =
-            action.downcast_ref::<DocAction>()
+        } else if let Some(DocAction::CaretMoved {
+            caret,
+            selection,
+            echo,
+        }) = action.downcast_ref::<DocAction>()
         {
-            let caret = *caret;
+            let (caret, selection) = (*caret, *selection);
             let echo = echo.clone();
-            let app_cursor = self.app.session().map(|s| s.cursor);
-            // In edit mode, a selection the app holds (from a command) is
-            // let go when the view moves the caret, so typing goes to the
-            // caret; the view keeps its own selection and sends it with
-            // each edit.
-            let app_selection =
-                self.app.is_editing() && self.app.session().is_some_and(|s| s.selection.is_some());
-            if app_cursor != Some(caret) || app_selection {
+            self.muted.set(true);
+            let synced = sync_caret(&mut self.app, caret, selection);
+            self.muted.set(false);
+            if let Some(effects) = synced {
                 if self.log {
-                    crate::log::line(&format!("caret sync: {caret:?}"));
+                    crate::log::line(&format!("caret sync: {caret:?} {selection:?}"));
                 }
-                self.muted.set(true);
-                if app_selection {
-                    let _ = self
-                        .app
-                        .dispatch(Command::Select(CharRange::new(caret.0, caret.0)));
-                }
-                let effects = self.app.dispatch(Command::SetCursor(caret));
-                self.muted.set(false);
                 self.run_effects(ctx, effects);
-                // The view already shows the caret; keep the window in step.
-                self.shown.state.caret = caret;
+                // The view already shows the caret and the selection; keep
+                // the window in step, so a later change (a Cut) is sent.
+                self.shown.state = state_for(&self.app);
                 self.refresh(ctx);
             }
             if let Some(echo) = echo {
@@ -2441,6 +2481,18 @@ pub struct Refresher {
 }
 
 impl Refresher {
+    /// The view moved its caret or selection, as the window takes it
+    /// ([`sync_caret`]): the app follows, and the view is known to show it.
+    pub fn caret_moved(
+        &mut self,
+        app: &mut App,
+        caret: textweaver_app::core::CharPos,
+        selection: Option<CharRange>,
+    ) {
+        let _ = sync_caret(app, caret, selection);
+        self.shown.state = state_for(app);
+    }
+
     /// Brings `host` up to date with `app`. Returns the document window's
     /// range when the view's text was replaced or slid.
     pub fn refresh(&mut self, app: &App, host: &mut impl Host) -> Option<CharRange> {
