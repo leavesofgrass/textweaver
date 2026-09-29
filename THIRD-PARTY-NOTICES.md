@@ -561,7 +561,7 @@ textweaver is built from these Rust crates. Each licence below lists the crates 
 
 Licences, with the number of crates under each:
 
-- Apache License 2.0: 541
+- Apache License 2.0: 543
 - MIT License: 185
 - Unicode License v3: 27
 - ISC License: 24
@@ -12482,6 +12482,7 @@ Used by:
 - hashbrown 0.15.5, https://github.com/rust-lang/hashbrown
 - hashbrown 0.16.1, https://github.com/rust-lang/hashbrown
 - hashbrown 0.17.1, https://github.com/rust-lang/hashbrown
+- hashify 0.2.9, https://github.com/stalwartlabs/hashify
 - heck 0.5.0, https://github.com/withoutboats/heck
 - html5ever 0.39.0, https://github.com/servo/html5ever
 - httparse 1.10.1, https://github.com/seanmonstar/httparse
@@ -12498,6 +12499,7 @@ Used by:
 - linux-raw-sys 0.4.15, https://github.com/sunfishcode/linux-raw-sys
 - lock_api 0.4.14, https://github.com/Amanieu/parking_lot
 - log 0.4.34, https://github.com/rust-lang/log
+- mail-parser 0.11.9, https://github.com/stalwartlabs/mail-parser
 - maplit 1.0.2, https://github.com/bluss/maplit
 - markup5ever 0.39.0, https://github.com/servo/html5ever
 - matrixmultiply 0.3.11, https://github.com/bluss/matrixmultiply/
