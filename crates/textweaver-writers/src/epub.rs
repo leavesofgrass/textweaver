@@ -34,6 +34,7 @@ use zip::write::SimpleFileOptions;
 
 use crate::model::{self, Block, Facts, Image, Inline, List, Style, Table};
 use crate::resource::{Resource, Resources};
+use crate::template;
 use crate::{
     EpubOptions, Format, WriteError, WriteOptions, WriteReport, Writer, iso8601, timestamp, xml,
 };
@@ -90,8 +91,9 @@ impl Writer for EpubWriter {
             ));
         }
 
+        let cover = options.epub.cover;
         let toc = toc_tree(&index, &chapters, &facts);
-        let nav = nav_document(&facts, &toc, &pages);
+        let nav = nav_document(&facts, &toc, &pages, cover);
         let ncx = ncx_document(&facts, &toc, &identifier(doc, &facts));
         let fonts = EmbeddedFonts::choose(&options.epub, &mut report);
         let opf = package_document(
@@ -123,6 +125,16 @@ impl Writer for EpubWriter {
         zip.start_file("OEBPS/style.css", deflated).map_err(zerr)?;
         zip.write_all(STYLE.as_bytes())?;
         zip.write_all(fonts.css().as_bytes())?;
+        if let Some(t) = options.template {
+            zip.write_all(t.stylesheet().as_bytes())?;
+        }
+        if cover {
+            zip.start_file("OEBPS/cover.xhtml", deflated)
+                .map_err(zerr)?;
+            zip.write_all(cover_document(&facts).as_bytes())?;
+            zip.start_file("OEBPS/cover.svg", deflated).map_err(zerr)?;
+            zip.write_all(template::cover_svg(options.template, &facts).as_bytes())?;
+        }
         for (href, data) in fonts.files() {
             zip.start_file(format!("OEBPS/{href}"), deflated)
                 .map_err(zerr)?;
@@ -283,6 +295,7 @@ figure { margin: 1em 0; }
 img { max-width: 100%; height: auto; }
 aside { margin: 0.5em 0; font-size: 0.95em; }
 hr.section-break { margin: 2em 0; }
+img.cover { display: block; margin: 0 auto; max-height: 95vh; }
 ";
 
 fn chapter_file(n: usize) -> String {
@@ -734,6 +747,17 @@ fn html_root(lang: &str) -> String {
     )
 }
 
+/// The cover page: the cover image, whose alternative text gives the title
+/// and author, marked as the cover (`epub:type="cover"`, `doc-cover`).
+fn cover_document(facts: &Facts) -> String {
+    let mut s = html_root(&facts.language);
+    s.push_str(&format!(
+        "<head>\n<meta charset=\"UTF-8\"/>\n<title>Cover</title>\n<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\"/>\n</head>\n<body>\n<section epub:type=\"cover\">\n<img class=\"cover\" role=\"doc-cover\" src=\"cover.svg\" alt=\"{}\"/>\n</section>\n</body>\n</html>\n",
+        xml::attr(&template::cover_alt(facts))
+    ));
+    s
+}
+
 fn content_document(facts: &Facts, title: &str, body: &str, labelled_by: Option<&str>) -> String {
     let mut s = html_root(&facts.language);
     s.push_str(&format!(
@@ -825,7 +849,7 @@ fn nav_list(nodes: &[TocNode], out: &mut String) {
     out.push_str("</ol>\n");
 }
 
-fn nav_document(facts: &Facts, toc: &[TocNode], pages: &[(String, String)]) -> String {
+fn nav_document(facts: &Facts, toc: &[TocNode], pages: &[(String, String)], cover: bool) -> String {
     let mut s = html_root(&facts.language);
     s.push_str(&format!(
         "<head>\n<meta charset=\"UTF-8\"/>\n<title>{}</title>\n<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\"/>\n</head>\n<body>\n",
@@ -839,7 +863,13 @@ fn nav_document(facts: &Facts, toc: &[TocNode], pages: &[(String, String)]) -> S
     );
     nav_list(toc, &mut s);
     s.push_str("</nav>\n");
-    s.push_str("<nav epub:type=\"landmarks\" id=\"landmarks\" hidden=\"hidden\">\n<h2>Landmarks</h2>\n<ol>\n<li><a epub:type=\"toc\" href=\"nav.xhtml#toc\">Contents</a></li>\n");
+    s.push_str(
+        "<nav epub:type=\"landmarks\" id=\"landmarks\" hidden=\"hidden\">\n<h2>Landmarks</h2>\n<ol>\n",
+    );
+    if cover {
+        s.push_str("<li><a epub:type=\"cover\" href=\"cover.xhtml\">Cover</a></li>\n");
+    }
+    s.push_str("<li><a epub:type=\"toc\" href=\"nav.xhtml#toc\">Contents</a></li>\n");
     s.push_str(&format!(
         "<li><a epub:type=\"bodymatter\" href=\"{}\">Start of content</a></li>\n</ol>\n</nav>\n",
         chapter_file(0)
@@ -935,6 +965,7 @@ fn package_document(
     fonts: &EmbeddedFonts,
     has_pages: bool,
 ) -> String {
+    let cover = options.epub.cover;
     let uid = identifier(doc, facts);
     let modified = iso8601(timestamp(options));
     let mut m = String::new();
@@ -950,7 +981,7 @@ fn package_document(
     m.push_str(&format!(
         "    <meta property=\"dcterms:modified\">{modified}</meta>\n"
     ));
-    let has_images = !images.files.is_empty();
+    let has_images = !images.files.is_empty() || cover;
     let mut meta = |p: &str, v: &str| {
         m.push_str(&format!(
             "    <meta property=\"{p}\">{}</meta>\n",
@@ -990,6 +1021,10 @@ fn package_document(
         "    <item id=\"nav\" href=\"nav.xhtml\" media-type=\"application/xhtml+xml\" properties=\"nav\"/>\n    <item id=\"ncx\" href=\"toc.ncx\" media-type=\"application/x-dtbncx+xml\"/>\n    <item id=\"css\" href=\"style.css\" media-type=\"text/css\"/>\n",
     );
     let mut spine = String::new();
+    if cover {
+        manifest.push_str("    <item id=\"cover\" href=\"cover.xhtml\" media-type=\"application/xhtml+xml\"/>\n    <item id=\"cover-image\" href=\"cover.svg\" media-type=\"image/svg+xml\" properties=\"cover-image\"/>\n");
+        spine.push_str("    <itemref idref=\"cover\"/>\n");
+    }
     for (n, (name, xhtml)) in files.iter().enumerate() {
         // EPUB 3 asks for the mathml property on documents holding MathML.
         let props = if xhtml.contains("<math") {
