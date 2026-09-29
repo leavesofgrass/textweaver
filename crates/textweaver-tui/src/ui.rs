@@ -133,6 +133,7 @@ fn math_move(k: &KeyEvent) -> Option<textweaver_app::MathMove> {
 
 /// The code styles of one window: its document revision, window, and
 /// theme, and the styles.
+#[cfg(feature = "highlight")]
 type CodeFrame = ((u64, CharRange, String), Vec<(CharRange, Style)>);
 
 /// How long the status line stays blank before a repeated message comes

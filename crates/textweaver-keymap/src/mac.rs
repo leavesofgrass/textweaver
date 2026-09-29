@@ -18,12 +18,12 @@
 //!   Cmd+H (hide), Cmd+M (minimize), Cmd+Tab, Cmd+` and more: no default
 //!   key uses them ([`MAC_RESERVED_GUI`], [`MAC_RESERVED_TERMINAL`]).
 //!
-//! The defaults in [`ActionId`](crate::ActionId) are written for Windows
+//! The defaults in [`ActionId`] are written for Windows
 //! and Linux. On macOS the GUI takes each default through
 //! [`translate_gui`] (Ctrl becomes Cmd; Option with a character gains
-//! Cmd), except the commands listed in [`gui_keys`], whose Mac keys are
+//! Cmd), except the commands listed in `gui_keys`, whose Mac keys are
 //! written out. The terminal keeps its keys (a terminal never sends Cmd),
-//! except the few in [`terminal_keys`] that macOS or VoiceOver would take.
+//! except the few in `terminal_keys` that macOS or VoiceOver would take.
 //! Text caret keys in an edit field, which the GUI's document view handles
 //! itself, come from [`text_motion`], so a widget never swaps modifiers on
 //! its own.
@@ -168,7 +168,7 @@ pub const MAC_RESERVED_GUI: &[&str] = &[
 ];
 
 /// Chords the terminal never binds on macOS by default (see
-/// [`terminal_keys`]).
+/// `terminal_keys`).
 pub const MAC_RESERVED_TERMINAL: &[&str] = &[
     "Ctrl+Up",
     "Ctrl+Down",
