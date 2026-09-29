@@ -68,6 +68,8 @@ rfd.workspace = true
 [target.'cfg(windows)'.dependencies]
 windows = { workspace = true, features = [
     "Win32_Foundation",
+    # W6a5: the system's colors in Windows High Contrast (GetSysColor).
+    "Win32_Graphics_Gdi",
     "Win32_System_Com",
     # W4a3: no console window; attach to the terminal it was started from.
     "Win32_System_Console",

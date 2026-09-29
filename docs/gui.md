@@ -161,6 +161,14 @@ The window draws the same [reading aids](reading-aids.md) as the terminal, with 
 
 All of these change only how text looks. Your screen reader reads the same text either way. The RSVP word is hidden from screen readers, so it is never spoken by itself. Beside it is a quiet status ("RSVP paused, word 120 of 900") that you can find with your screen reader's review or object navigation.
 
+## Colors and high contrast
+
+The window starts in the theme your settings choose, and follows your system's light or dark setting as the terminal reader does (`display.follow_os_theme`, on unless you picked a theme). F5 moves to the next theme.
+
+With Windows High Contrast on (Contrast themes in Windows 11), the window draws with your contrast theme's own colors: its page and text, its highlight for the spoken word, the selection, and the focus ring, and its link color. Turning it on or off applies at once. Marks that have a tint of their own in textweaver's themes (the reading ruler's band, notes, bookmarks, search matches) keep their shapes instead: the ruler's bar, the lines and boxes. The focus ring stays visible: when the highlight color is too close to the page, the ring is drawn in the text color. `--theme`, or `follow_os_theme = false` in `[display]`, keeps textweaver's own colors.
+
+On macOS and Linux, the system's increased-contrast setting chooses textweaver's high-contrast theme when the window starts.
+
 ## Settings
 
 Settings (Ctrl+,) opens a dialog: the sections on the left, the chosen section's settings on the right. Every change takes effect and is saved at once. It is built from the same list as the terminal's settings screen, so every setting is in both; [Settings](settings.md) describes each one.

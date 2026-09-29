@@ -22,6 +22,7 @@
 //! - [`fonts`]: the bundled fonts and the reader's font setting.
 //! - [`font_chooser`]: the font chooser's lists, ported from the spike.
 //! - [`setup`]: building the app for the GUI.
+//! - [`system_colors`]: the system's colors in a high contrast mode.
 //! - [`console`]: the terminal the program was started from, on Windows.
 //! - [`graphics`]: which graphics API the window draws with (opt-in).
 //! - `screenshot` (feature `screenshot`): the window drawn to a PNG.
@@ -46,6 +47,7 @@ pub mod runs;
 pub mod screenshot;
 pub mod settings_dialog;
 pub mod setup;
+pub mod system_colors;
 pub mod theme;
 pub mod widgets;
 pub mod window;

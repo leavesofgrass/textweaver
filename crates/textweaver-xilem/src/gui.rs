@@ -296,6 +296,9 @@ pub struct Gui {
     /// The theme and the highlight colors the palette was made from
     /// (`App::reading_theme_key`).
     theme_key: (String, String, Option<String>),
+    /// The system's high contrast colors the palette was made from, when
+    /// the window follows them.
+    system: Option<crate::system_colors::SystemColors>,
     /// `--theme` was given: the saved theme is not followed.
     fixed_theme: bool,
     /// Settings opens the app's list instead of the dialog.
@@ -1210,11 +1213,17 @@ impl Gui {
                 }
             }
         }
-        // The theme changed (a key, the palette, or the settings).
+        // The theme changed (a key, the palette, or the settings), or the
+        // system's high contrast mode was turned on or off.
         let theme_key = self.app.reading_theme_key();
-        if !self.fixed_theme && theme_key != self.theme_key {
+        let system = self.system_colors();
+        if (!self.fixed_theme && theme_key != self.theme_key) || system != self.system {
             self.theme_key = theme_key;
-            self.palette = Palette::from_theme(&self.app.reading_theme());
+            self.system = system;
+            self.palette = match &system {
+                Some(c) => crate::system_colors::palette(c),
+                None => Palette::from_theme(&self.app.reading_theme()),
+            };
             let root = ctx.render_root(self.window_id);
             root.set_default_properties(Arc::new(theme::default_properties(&self.palette)));
             apply_palette(root, &self.palette);
@@ -1911,6 +1920,15 @@ impl Gui {
         self.app.echo(&text);
     }
 
+    /// The system's high contrast colors, when the window follows them:
+    /// with no `--theme`, while `display.follow_os_theme` is on.
+    fn system_colors(&self) -> Option<crate::system_colors::SystemColors> {
+        if self.fixed_theme || !self.app.settings().display.follow_os_theme {
+            return None;
+        }
+        crate::system_colors::high_contrast()
+    }
+
     /// The window took the focus: the document's name and the window's, in
     /// textweaver's own voice only (`App::echo` speaks only in the
     /// self-voicing mode, and not while reading), since a screen reader says
@@ -2503,9 +2521,16 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         // settings ask to follow it (`display.follow_os_theme`).
         let _ = app.apply_startup_theme(textweaver_app::theme::os::probe());
     }
-    let palette = match &opts.theme {
-        Some(name) => Palette::named(name),
-        None => Palette::from_theme(&app.reading_theme()),
+    // Windows High Contrast: the system's own colors, while the settings
+    // follow the system (`display.follow_os_theme`) and no `--theme` was
+    // given.
+    let system = (opts.theme.is_none() && app.settings().display.follow_os_theme)
+        .then(crate::system_colors::high_contrast)
+        .flatten();
+    let palette = match (&opts.theme, &system) {
+        (Some(name), _) => Palette::named(name),
+        (None, Some(c)) => crate::system_colors::palette(c),
+        (None, None) => Palette::from_theme(&app.reading_theme()),
     };
     let theme_key = app.reading_theme_key();
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
@@ -2569,6 +2594,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         spell_seen: None,
         fixed_theme: opts.theme.is_some(),
         theme_key,
+        system,
         settings_list: experiments.settings_list,
         announce,
         held_notices: Vec::new(),
