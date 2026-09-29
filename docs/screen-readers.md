@@ -277,7 +277,7 @@ In Settings Center (**Insert+6**), Braille group. **Every item here: to verify o
 
 - **Tried by the owner:** a 40-cell Mantis Q40 through NVDA and JAWS on Windows, reading the status line, messages, and moving by unit in the terminal reader, before this layout; and, in the GUI, the document control, the settings dialog, and edit mode, in the owner's two sessions. The layout above waits for the checklist.
 - **Not tried:** other cell widths, other display models, Orca's braille on Linux, and VoiceOver's on macOS.
-- **The BRF writer** (`tw convert --to brf`, see [Converting documents](converting.md)) is a separate feature: a grade 1, or grade 2 with the `liblouis` feature, braille file you save and read on a notetaker or emboss, not the live display output above.
+- **The BRF writer** (`tw convert --to brf`, see [Converting documents](converting.md)) is a separate feature: a grade 1, or grade 2 with the `liblouis` feature, braille file you save and read on a notetaker or emboss, not the live display output above. A BRF from a document with math writes the math in Nemeth or UEB mathematics; see [Math in braille files](math.md#math-in-braille-files).
 - If your combination behaves differently from this, add it to the checklist below and let the project know what you found.
 
 ## The GUI
