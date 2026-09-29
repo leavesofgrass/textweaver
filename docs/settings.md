@@ -327,8 +327,8 @@ Audio export. See [Audio export](audio-export.md).
 See [Reading aids](reading-aids.md).
 
 - `bionic`, default `false`: bionic reading, the start of each word in bold. Alt+Shift+B turns it on and off.
-- `syllables`, default `false`: show long words split into syllables, `read·a·bil·i·ty`. Alt+Shift+Z turns it on and off. The terminal reader draws it; the GUI does not yet.
-- `difficult_words`, default `false`: underline rare words (SCOWL sizes above 50), and name them on word moves at high verbosity. Alt+Shift+J turns it on and off. The terminal reader draws it; the GUI does not yet.
+- `syllables`, default `false`: show long words split into syllables, `read·a·bil·i·ty`. Alt+Shift+Z turns it on and off. Both the terminal reader and the GUI draw it.
+- `difficult_words`, default `false`: underline rare words (SCOWL sizes above 50), and name them on word moves at high verbosity. Alt+Shift+J turns it on and off. Both the terminal reader and the GUI draw it.
 
 ### [reading_aids.bionic_options]
 

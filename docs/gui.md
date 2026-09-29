@@ -1,14 +1,18 @@
 # The textweaver window (GUI)
 
-textweaver has two readers: the terminal reader, `textweaver`, and a window, `textweaver-xilem`. They share everything that matters: the documents, the keys, the settings, the notes, and the voices. This page covers what is different about the window.
+textweaver has two readers: the terminal reader, `textweaver`, and a window. They share everything that matters: the documents, the keys, the settings, the notes, and the voices. This page covers what is different about the window.
 
 The window is written entirely in Rust (Xilem's Masonry widgets, Vello drawing, Parley text, and AccessKit for screen readers). It is new in this alpha. It reads, and since this alpha it edits too; see [Editing](#editing).
+
+Its crate and source binary are named `textweaver-xilem`; a downloaded [GUI package](install.md#the-gui) installs it as `textweaver-gui`. This guide uses `textweaver-xilem` for the command, since that is what `cargo build` produces; if you installed a release package, run `textweaver-gui` instead wherever this guide says `textweaver-xilem`.
 
 ## Starting it
 
 ```sh
 textweaver-xilem path/to/document.md
 ```
+
+From a release package: `textweaver-gui path/to/document.md`.
 
 With no document, it opens empty and says which key opens one (Ctrl+O).
 
@@ -152,4 +156,4 @@ Settings (Ctrl+,) opens a dialog: the sections on the left, the chosen section's
 - [Keyboard reference](keyboard.md)
 - [Reading aids](reading-aids.md)
 - [Using textweaver with a screen reader](screen-readers.md)
-- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md), [ADR-0028: the GUI after the first screen reader session](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033: the GUI after the second session, and edit mode](adr/0033-gui-session-2-and-edit-mode.md)
+- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md), [ADR-0028: the Xilem GUI after the first listening session](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033: the GUI after further accessibility testing, and edit mode](adr/0033-gui-session-2-and-edit-mode.md)

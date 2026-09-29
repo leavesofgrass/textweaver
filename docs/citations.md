@@ -499,5 +499,6 @@ A note can name a source with a citation key. This comes from the `cite` field i
 - [The converting guide](converting.md): `tw convert` and its Markdown flavors, including `pandoc`.
 - [The vault guide](vault.md): Obsidian notes, including notes that name a source.
 - [The editing guide](editing.md): writing Markdown in textweaver with speech feedback.
+- [The library guide](library.md#search-by-author-doi-and-isbn): searching your documents by author, DOI, and ISBN, filled in from this reference library when a document does not carry its own.
 - [ADR-0019: Citations](adr/0019-citations.md): the design decision behind this feature.
 - [Documentation index](README.md)

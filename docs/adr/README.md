@@ -32,8 +32,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted, with 3 status updates.
 - [ADR-0013: Dictation through a Whisper program](0013-dictation.md): voice typing with a Whisper subprocess.
   - Status: accepted, with 3 status updates; in part superseded by ADR-0023 (Whisper in-process).
-- [ADR-0014: GUI toolkit (wxDragon)](0014-gui-toolkit.md): the GUI spike's findings. Wave 3 moves the GUI to Xilem, and the spike stays as a fallback.
-  - Status: superseded by [ADR-0027](0027-xilem-gui.md); the wxDragon spike stays as a fallback until the Xilem GUI passes the same checks and the owner's NVDA and JAWS session. It has 3 status updates.
+- [ADR-0014: GUI toolkit (wxDragon)](0014-gui-toolkit.md): the GUI spike's findings. The GUI later moved to Xilem, and the spike stays as a fallback.
+  - Status: superseded by [ADR-0027](0027-xilem-gui.md); the wxDragon spike stays as a fallback until the Xilem GUI passes the same checks and an NVDA and JAWS listening session. It has 3 status updates.
 - [ADR-0015: JSON-RPC server (`tw serve --stdio`)](0015-json-rpc.md): `tw serve --stdio`, its methods, and notifications.
   - Status: accepted, with 2 status updates.
 - [ADR-0016: Rendering and bulk conversion](0016-rendering-and-conversion.md): Markdown to accessible HTML, and fast, incremental conversion.
@@ -60,37 +60,37 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted.
 - [ADR-0027: Xilem GUI](0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, the accessibility checks, and what to send upstream.
   - Status: accepted.
-- [ADR-0028: The Xilem GUI after the owner's session](0028-xilem-gui-after-the-session.md): two ways to announce (a live region, or UI Automation notifications), every list option in the tree, and where the GUI's memory goes.
-  - Status: accepted (the owner's session 1 answers: the live region and the background highlight stay the defaults).
+- [ADR-0028: The Xilem GUI after the first listening session](0028-xilem-gui-after-the-session.md): two ways to announce (a live region, or UI Automation notifications), every list option in the tree, and where the GUI's memory goes.
+  - Status: accepted (the first listening session answered: the live region and the background highlight stay the defaults).
 - [ADR-0029: MathCAT speech](0029-mathcat-speech.md): MathCAT 0.7.6-rc.3 as a second math speech engine on its own thread, EPUB 3 MathML read as math, and braille waiting for MathCAT issue #827.
-  - Status: accepted, behind the `mathcat` feature; the owner approved its two dependency exceptions.
+  - Status: accepted, behind the `mathcat` feature; its two dependency exceptions were approved.
 - [ADR-0030: Interface translations](0030-interface-translations.md): the Fluent-subset catalog extended to every message, Spanish, French, German, Brazilian Portuguese, and Arabic built in, right-to-left display, a voice per language, and never going silent.
   - Status: accepted.
 - [ADR-0031: Native RTF, ODT, and Word revisions](0031-native-rtf-odt-and-word-revisions.md): our own iterative RTF parser, ODT on roxmltree, Word and ODT comments as notes, tracked changes read as the final text or said in place, and limits for zip packages.
   - Status: accepted.
 - [ADR-0032: Grammar, lint, highlighting, and clipboard crates](0032-grammar-lint-highlighting-clipboard.md): our own Markdown lint instead of rumdl, arboard where OSC 52 cannot reach, Unicode math and notes export without new crates, and harper-core and syntect held on one advisory.
   - Status: accepted; grammar is built only with the `grammar` feature, and highlighting is on by default.
-- [ADR-0033: The GUI after the second session, and edit mode](0033-gui-session-2-and-edit-mode.md): no console window, the system's file chooser for Open, text size and font keys, every button naming its key, and edit mode in the document view.
+- [ADR-0033: The GUI after further accessibility testing, and edit mode](0033-gui-session-2-and-edit-mode.md): no console window, the system's file chooser for Open, text size and font keys, every button naming its key, and edit mode in the document view.
   - Status: accepted.
 - [ADR-0034: The rope after measurement: stay on ropey 1.6](0034-rope-after-measurement.md): why ropey 2 and crop wait, measured on edit traces, and when to look again.
   - Status: accepted.
 - [ADR-0035: Native LaTeX subset, and email and web archives](0035-latex-email-and-web-archives.md): our own LaTeX tokenizer and two-pass parser with its limits, email and MHTML through mail-parser, and MathML read as math in every web page.
   - Status: accepted.
 - [ADR-0036: Math braille and navigation on MathCAT](0036-math-braille-and-navigation.md): MathCAT 0.7.6-rc.3 vendored with the fix for issue #827, Nemeth (default) and UEB math in BRF files wrapped to 40 cells, and exploring a formula with MathCAT's navigation and its braille on the status line.
-  - Status: accepted, behind the `mathcat` feature; the status line's order waits for session B1.
+  - Status: accepted, behind the `mathcat` feature; the status line's order waits for a further listening session.
 - [ADR-0037: Offline intelligence, part 1: extractive summaries without a model](0037-extractive-summaries.md): LexRank in-house on TF-IDF, sampled long texts, `tw summarize` and Summarize, difficult-word definitions, the RSVP flash check, and why embeddings stay off.
   - Status: accepted.
-- [ADR-0039: Automated screen-reader checks beside the listening sessions](0039-automated-screen-reader-checks.md): the accessibility tree dumped on three systems and compared with main, and NVDA, Orca, and VoiceOver sessions on CI runners, which never replace the owner's sessions.
+- [ADR-0039: Automated screen-reader checks beside the listening sessions](0039-automated-screen-reader-checks.md): the accessibility tree dumped on three systems and compared with main, and NVDA, Orca, and VoiceOver sessions on CI runners, which never replace a human listening session.
   - Status: proposed; every check reports and none fails a job. Answers so far: NVDA through Guidepup and Orca read the GUI; the tree dump works on Windows and macOS.
 - [ADR-0041: Publishing templates, real Word footnotes, and PDF page labels](0041-publishing-templates.md): APA, AMA, large print, dyslexia-friendly, high contrast, and manuscript templates for EPUB, Word, and PDF, real Word footnotes, an EPUB cover with alternative text, and PDF pages labelled with their print pages.
-  - Status: accepted; the owner's check with Word and JAWS is queued in session 3.
+  - Status: accepted; a check with Word and JAWS is still queued.
 
 ## Writing a new ADR
 
 - Copy the shape of an existing one: `# ADR-NNNN: Title`, then `- Status:` and `- Date:` lines, then Context, Decision, Consequences, and See also.
 - Get the date from the machine, never from memory.
 - Add it to this index and to the [documentation index](../README.md#decisions).
-- Record a bold choice together with its fallback (Wave 3's rule).
+- Record a bold choice together with its fallback.
 
 ## See also
 

@@ -4,7 +4,25 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
-### W5c3: LaTeX, email, web archives, and MathML in web pages
+The fifth alpha. Braille comes first: every status line, list, and prompt puts the meaning in the first 40 cells, and math can be written in Nemeth or UEB braille. LaTeX, email, and web archives open without Pandoc; documents can be summarized with no model; publishing templates make APA and AMA papers with real Word footnotes; and the GUI ships in the release on every system, with syllables, the voice manager, a question dialog, and its labels in six languages.
+
+### Testing
+
+- **Listening check (Tuesday, September 29, 2026):** the owner listened to the `cargo xtask listen` samples from this build. ETI-Eloquence and SAPI 5 (Microsoft David) were clear at the normal, fast, and low settings; the low samples were pitched down as intended. The owner used the GUI and the terminal reader with NVDA and JAWS earlier in the week. DECtalk is not installed on the test machine. The Braille display session, the third GUI session, and the check of documents and summaries are still to come.
+
+### Reading and Braille
+
+- **Meaning first on a 40-cell Braille display.** The title line starts with the position and the reading state ("Line 12 of 400, 3%, Reading"); in screen-reader and hybrid modes it starts at the first cell, and lists cover the window with no border. List items say their place first ("3 of 12, Chapter two, level 2"), in all six languages. A prompt's line keeps its label short, so what you type starts within 40 cells. "Open it?" questions come before the folder or the address.
+- **Pages in a PDF.** Go To takes a page (a plain number is a page in a PDF; `line 12` is still a line; `p iv` goes by the printed label). Say Position starts with the page, the title line shows it, and a PDF with no headings lists its pages in the outline.
+- **`y` and `n` answer "Open it?"** while a list is shown, in the window and over JSON-RPC as in the terminal.
+- **Library search by author, DOI, and ISBN.** The library list (Alt+L, GUI Ctrl+Shift+B) now filters as you type, and it and `tw library --search` match the title, path, author, DOI, ISBN, and text. A DOI or ISBN matches however it is written. The author, DOI, and ISBN come from the document (front matter, Word and EPUB authors, web page meta tags, a DOI or ISBN near the start of the text) and from `tw cite`'s record of the same work.
+- **Star's settings profiles** are imported by `tw migrate-star`, one report line each.
+- **Define word** opens the dictionary file on a helper thread the first time, saying "Dictionary still loading." once; the list opens when it is ready.
+- **The statistics list** stays open on its row when Enter turns statistics on or off.
+- **RSVP and flashing.** A test checks RSVP at 1,500 words a minute against WCAG 2.3.1's three-flashes limit: the terminal box and the window's panel stay under the threshold, and a cap is ready for any frontend that draws much larger words.
+- The screen reader guide's Braille section is written for the HumanWare Mantis Q40, with NVDA and JAWS braille settings to try and a checklist.
+
+### Documents and conversion
 
 - **LaTeX opens without Pandoc,** in the reader and in `tw`: numbered sections as headings, lists, tables with header rows, captions ("Table 1: ..."), math as math, `\ref` numbers and links to sections, `\cite` as citations, footnotes, code, your own `\newcommand` shortcuts, and `\input` files from the document's own folder only. A command textweaver does not know is left out and its text read, and the document's warnings name it ([ADR-0035](docs/adr/0035-latex-email-and-web-archives.md)).
 - **Email (EML):** the subject, then From, To, Cc, and the date with its weekday, then the message, with quoted lines read as a quote; attachments are listed with their sizes, not opened.
@@ -12,56 +30,58 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Math written in MathML in a web page** is read as math, as it already was in EPUB books.
 - A picture's description in a web page no longer runs into the next word.
 - New messages, in all six languages: "it is not a readable LaTeX file", "... email message", and "... web archive", said after "Could not open".
+- **Summaries without a model.** `tw summarize FILE` prints a document's most central sentences, one per line, in document order (`--sentences N`, `--json`). In the reader, Summarize in the command palette lists them for the selection, the chapter at the cursor, or the whole document; Enter goes to a sentence and says it. `[summary] sentences` sets how many, 5 by default. The method is LexRank, written in-house, with no download ([ADR-0037](docs/adr/0037-extractive-summaries.md)).
 
-### W5g: the publishing templates
+### Math
+
+- **Math in braille files.** In a build with MathCAT, `tw convert --to brf` and the reader's `export brf` write math in the Nemeth Code (the default), between the Nemeth switch indicators inside UEB text, or in UEB mathematics with `--math-code ueb` or `[braille] math_code = "ueb"`. Lines stay 40 cells, and an indicator never ends up on a different line from what it belongs to. A formula MathCAT cannot write is written as its spoken words, and the summary says so once. See [docs/math.md](docs/math.md#math-in-braille-files).
+- **Explore math with MathCAT.** With `math_engine = "mathcat"`, Alt+Shift+X moves through a formula with MathCAT's navigation; each step is said once, and the status line shows the braille of the part you reached, for a Braille display. `"builtin"` stays the default and is unchanged.
+- MathCAT 0.7.6-rc.3 is vendored with the fix for its issue #827, which made math braille while exploring impossible in textweaver's builds. The fix is written up for upstream.
+
+### Writing and publishing
 
 - **Publishing templates** for EPUB, Word, and PDF: `tw convert --template apa` (an APA 7 student paper: title page, double spacing, APA headings, page numbers, hanging references), `ama` (an AMA 11 manuscript with a word count), `large-print`, `dyslexia-friendly`, `high-contrast`, and `manuscript`. Headings, lists, tables, and descriptions stay exactly as a screen reader expects; the layout options still apply on top ([ADR-0041](docs/adr/0041-publishing-templates.md)).
 - **Real Word footnotes.** Footnotes in Word documents are Word's own: numbered by Word, at the foot of the page, and announced as footnotes by JAWS and NVDA. textweaver reads them back.
 - **An EPUB cover** with every template: the title and author, described as "Cover: Title, by Author." and listed as the cover.
 - **Print page numbers in PDF.** A PDF made from a document with print pages (a DAISY book, an EPUB page list, a scanned PDF) labels each page with its print page, so "go to page 42" in a PDF reader finds print page 42.
-
-### W5s: summaries and the RSVP check
-
-- **Summaries without a model.** `tw summarize FILE` prints a document's most central sentences, one per line, in document order (`--sentences N`, `--json`). In the reader, Summarize in the command palette lists them for the selection, the chapter at the cursor, or the whole document; Enter goes to a sentence and says it. `[summary] sentences` sets how many, 5 by default. The method is LexRank, written in-house, with no download ([ADR-0037](docs/adr/0037-extractive-summaries.md)).
 - **Difficult-word definitions.** With `[reading_aids] difficult_definitions` on (off by default), difficult words marked, and high verbosity, a word move onto a difficult word also says its first definition from the define-word dictionary.
-- **RSVP and flashing.** A test checks RSVP at 1,500 words a minute against WCAG 2.3.1's three-flashes limit: the terminal box and the window's panel stay under the threshold, and a cap is ready for any frontend that draws much larger words.
 
-### W5r: the rope decision and loading
+### The GUI
 
-- The rope stays ropey 1.6, as measured in Wave 4 ([ADR-0034](docs/adr/0034-rope-after-measurement.md)).
-- Large Markdown files open faster: 10 MB loads in about 275 ms instead of 420, with a sixth of the allocations, because the file is parsed once instead of twice.
-- Reading a whole document from the top plans its speech faster: 10 MB in about 610 ms instead of 770.
-- The formats crate has an `images` feature: the picture and scanned-page loaders without the in-process OCR engine. The fuzz targets use it, so they no longer compile that engine.
-
-### W5p: alpha.5 readiness
-
+- **Parley 0.11.1**, the text layout library, with no loss of speed or memory. `--graphics` (or `[gui] graphics`) picks one graphics interface; Vulkan alone saves about 26 MB.
+- **Syllables are drawn** in the window (Alt+Shift+Z); the text a screen reader gets is unchanged.
+- **The voice manager** works in the window (Ctrl+Shift+V).
+- **Yes-or-no questions** are a dialog with Yes and No, answered with Y, N, or Escape for no.
+- **Every drawn label comes from the catalog,** in all six interface languages, and changes live with the interface language. The settings dialog starts on a plain setting.
+- **Edit mode:** caret and selection moves are spoken in self-voicing mode, Tab types a tab (Ctrl+Tab leaves the document), and misspellings are marked on screen.
 - **The GUI ships in the release:** `textweaver-VERSION-windows-x86_64-gui.zip`, `textweaver-VERSION-macos-aarch64-gui.zip` (`textweaver.app`, Apple silicon), and for Linux x86_64 and aarch64 an AppImage and a tarball whose names end in `-gui`. Supported on Windows; on macOS and Linux built and checked automatically, not yet heard with a screen reader. Each is attested and in `SHA256SUMS.txt`. See [docs/install.md](docs/install.md#the-gui).
 - The GUI package now speaks with every engine the terminal package does: it carries the Eloquence, SAPI 5, and DECtalk engine hosts and the pronunciation dictionaries (Windows and Linux), the define-word dictionary, and every licence file, and on Windows it needs no Visual C++ runtime.
+
+### Speech and dictation
+
+- **Settings:** `[speech.dectalk]`, `[speech.piper]`, `[speech.voice_params]`, and `[editing] author` are typed settings, listed in the settings reference and the settings screen. `[reading_aids.font] fetch_missing`, which never did anything, was removed; an old `settings.toml` line is dropped. The "every setting is used" test now checks the reading aids' own tables too.
+- **Speed presets** (F8) are said preset first: "Study, rate 200."
+- Streaming dictation was measured on the in-process Whisper: for long speech, the first words can be committed about 3 seconds after speaking begins instead of at the end. It is planned for the next alpha.
+
+### Speed
+
+- Large Markdown files open faster: 10 MB loads in about 275 ms instead of 420, with a sixth of the allocations, because the file is parsed once instead of twice.
+- Reading a whole document from the top plans its speech faster: 10 MB in about 610 ms instead of 770.
+
+### Packages, CI, and checks
+
 - The release workflow checks each GUI package before upload: the files, `--version`, and a screenshot drawn without a display; on macOS also a silent reading in a background window.
 - `cargo xtask release VERSION --dry-run` reports an empty changelog section with the other problems instead of stopping.
 - The nightly checks can pass again: the fuzz targets are built for glibc (the prebuilt cargo-fuzz defaulted to musl, where the sanitizer cannot link), the release-mode tests have time to finish, and the minimum Rust version is 1.94, what the dependencies need.
+- The formats crate has an `images` feature: the picture and scanned-page loaders without the in-process OCR engine. The fuzz targets use it, so they no longer compile that engine.
+- **Screen reader checks in CI:** the GUI's accessibility tree is dumped and compared on Windows, macOS, and Linux; NVDA (through Guidepup) and Orca read the GUI in scripted sessions, reported without failing the build ([ADR-0039](docs/adr/0039-automated-screen-reader-checks.md)). VoiceOver cannot yet be started on GitHub's Mac runners.
+- Dependabot no longer proposes upgrades to the pinned GUI stack, MathCAT pre-releases, resvg, or sha1 and sha2 0.11.
+- The rope stays ropey 1.6, as measured in Wave 4 ([ADR-0034](docs/adr/0034-rope-after-measurement.md)).
 
-### W5x: the Braille pass
+### Documentation
 
-- **Meaning first on a 40-cell Braille display.** The title line starts with the position and the reading state ("Line 12 of 400, 3%, Reading"); in screen-reader and hybrid modes it starts at the first cell, and lists cover the window with no border. List items say their place first ("3 of 12, Chapter two, level 2"), in all six languages. A prompt's line keeps its label short, so what you type starts within 40 cells. "Open it?" questions come before the folder or the address.
-- **Pages in a PDF.** Go To takes a page (a plain number is a page in a PDF; `line 12` is still a line; `p iv` goes by the printed label). Say Position starts with the page, the title line shows it, and a PDF with no headings lists its pages in the outline.
-- **`y` and `n` answer "Open it?"** while a list is shown, in the window and over JSON-RPC as in the terminal.
-- The screen reader guide's Braille section is written for the Mantis Q40, with NVDA and JAWS braille settings to try and a checklist.
-
-### Wave 5, W5y: Star leftovers, settings, speed presets
-
-- **Library search by author, DOI, and ISBN.** The library list (Alt+L, GUI Ctrl+Shift+B) now filters as you type, and it and `tw library --search` match the title, path, author, DOI, ISBN, and text. A DOI or ISBN matches however it is written. The author, DOI, and ISBN come from the document (front matter, Word and EPUB authors, web page meta tags, a DOI or ISBN near the start of the text) and from `tw cite`'s record of the same work.
-- **Star's settings profiles** are imported by `tw migrate-star`, one report line each.
-- **Define word** opens the dictionary file on a helper thread the first time, saying "Dictionary still loading." once; the list opens when it is ready.
-- **The statistics list** stays open on its row when Enter turns statistics on or off.
-- **Settings:** `[speech.dectalk]`, `[speech.piper]`, `[speech.voice_params]`, and `[editing] author` are typed settings, listed in the settings reference and the settings screen. `[reading_aids.font] fetch_missing`, which never did anything, was removed; an old `settings.toml` line is dropped. The "every setting is used" test now checks the reading aids' own tables too.
-- **Speed presets** (F8) are said preset first: "Study, rate 200."
-
-### W5c4: math braille and navigation on MathCAT
-
-- **Math in braille files.** In a build with MathCAT, `tw convert --to brf` and the reader's `export brf` write math in the Nemeth Code (the default), between the Nemeth switch indicators inside UEB text, or in UEB mathematics with `--math-code ueb` or `[braille] math_code = "ueb"`. Lines stay 40 cells, and an indicator never ends up on a different line from what it belongs to. A formula MathCAT cannot write is written as its spoken words, and the summary says so once. See [docs/math.md](docs/math.md#math-in-braille-files).
-- **Explore math with MathCAT.** With `math_engine = "mathcat"`, Alt+Shift+X moves through a formula with MathCAT's navigation; each step is said once, and the status line shows the braille of the part you reached, for a Braille display. `"builtin"` stays the default and is unchanged.
-- MathCAT 0.7.6-rc.3 is vendored with the fix for its issue #827, which made math braille while exploring impossible in textweaver's builds. The fix is written up for upstream.
+- The documentation site is built with Zensical and published at https://leavesofgrass.github.io/textweaver/.
+- The README is short and starts with the quick start; the guides are updated for everything above; the design records read in a neutral voice; and there is a path for a first contribution.
 
 ## [0.1.0-alpha.4] - 2026-09-28
 

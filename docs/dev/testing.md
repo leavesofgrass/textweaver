@@ -50,6 +50,45 @@ CI also runs three checks that `dev-check` does not. Run them yourself when you 
 
 The writers' output is also checked by other tools, in `.github/workflows/second-tool.yml`. It runs weekly and on any change to the writers. The Markdown fixtures are converted to EPUB and PDF; each EPUB is checked with epubcheck 5.4.0, and each PDF with veraPDF 1.30.2 against the PDF/UA-1 profile. Both tools come from Maven Central, pinned and checked by SHA-256. Each line of the job summary starts with Pass, Fail, Allowed, or Warning, in words. A known warning that is accepted goes in `tools/second_tool_allowlist.txt`, with its reason.
 
+**Running epubcheck and veraPDF locally.** You do not need Java installed: run both tools inside a throwaway Java container with Docker, the same way CI runs them, but without CI's Maven setup. First build `tw` and convert a fixture:
+
+```bash
+cargo build --release -p textweaver-cli --bin tw
+mkdir -p target/second-tool
+target/release/tw convert fixtures/sample.md --to epub --out target/second-tool --no-pandoc
+target/release/tw convert fixtures/sample.md --to pdf --out target/second-tool --no-pandoc
+```
+
+Then, with Docker, fetch and run epubcheck 5.4.0 (checked against the SHA-256 in `.github/workflows/second-tool.yml`) against the EPUB:
+
+```bash
+docker run --rm -v "$PWD/target/second-tool:/work" -w /work eclipse-temurin:21-jre sh -c '
+  set -eu
+  curl -sSfL -A "textweaver-research (+https://github.com/leavesofgrass/textweaver)" \
+    -o epubcheck.jar https://repo1.maven.org/maven2/org/w3c/epubcheck/5.4.0/epubcheck-5.4.0.jar
+  echo "261cd3ba8f841b4a64ebb6ea9c8aa30ed2801e8764a1000123c66bf38bfe4066  epubcheck.jar" | sha256sum -c -
+  java -jar epubcheck.jar sample.epub
+'
+```
+
+And veraPDF 1.30.2 against the PDF, with the same profile CI uses (`-f ua1`):
+
+```bash
+docker run --rm -v "$PWD/target/second-tool:/work" -w /work eclipse-temurin:21-jre sh -c '
+  set -eu
+  apt-get update -qq && apt-get install -y -qq unzip zip
+  curl -sSfL -A "textweaver-research (+https://github.com/leavesofgrass/textweaver)" \
+    -o verapdf.zip https://repo1.maven.org/maven2/org/verapdf/apps/installer/1.30.2/installer-1.30.2-installer.zip
+  echo "dfe2bab9f6a5cd5b603093c3ede98aa285348dbaa4d2e5e4b4c1428973f6dab0  verapdf.zip" | sha256sum -c -
+  unzip -q verapdf.zip -d verapdf
+  # Installs non-interactively; see .github/workflows/second-tool.yml for the full auto-install.xml.
+  java -jar verapdf/verapdf-greenfield-1.30.2/verapdf-izpack-installer-1.30.2.jar -options-system
+  ./verapdf/app/verapdf -f ua1 --format text sample.pdf
+'
+```
+
+For the exact, always-current versions, checksums, and the full non-interactive install answers, read `.github/workflows/second-tool.yml`, which this is a local equivalent of. `target/second-tool/` is build output; nothing there is tracked.
+
 The features: Linux CI uses `--all-features`, which includes `espeak`, `speechd`, and `omnivox`. Windows and macOS use `--features textweaver-speech/omnivox`.
 
 ## Tests
@@ -81,9 +120,9 @@ The comparison fails when a peak heap or an allocation count grew more than `--m
 
 `cargo xtask soak --minutes N` reads the 10 MB corpus with random navigation, pauses, rate changes, and edits, then from the top to the end, while a second reader's engine host is killed at random. It checks that the highlight only moves forward, reading finishes, memory stays level, and no engine host is left running. The nightly job runs it for 10 minutes.
 
-### Measurements, Wave 4 (Monday, September 28, 2026)
+### Benchmark history: September 28, 2026
 
-Taken by Agent W4b on Windows (x86_64, 64 GB) while other agents were building, so times move by 30 percent or more from run to run; each is a median, repeated, and the spread is given where it matters. Allocation counts do not move once the harness waits for other threads (below).
+Taken on Windows (x86_64, 64 GB) while other builds were running on the same machine, so times move by 30 percent or more from run to run; each is a median, repeated, and the spread is given where it matters. Allocation counts do not move once the harness waits for other threads (below).
 
 **How they were taken.**
 
@@ -94,7 +133,7 @@ Taken by Agent W4b on Windows (x86_64, 64 GB) while other agents were building, 
 
 **Binary size (release profile, bytes).**
 
-- Before Wave 4b (main at c737694): `textweaver.exe` 46,827,520; `tw.exe` 52,799,488.
+- Before (main at c737694): `textweaver.exe` 46,827,520; `tw.exe` 52,799,488.
 - After: `textweaver.exe` 47,332,864 (505,344 more); `tw.exe` 53,294,592 (495,104 more); `textweaver.exe` without `publish` 28,704,256, so export, preview, and citations are 18.6 MB of the reader.
 - What the zip features cost, in a small program that reads and writes one member: deflate alone 549,376; with bzip2 644,096; with LZMA 575,488; with XZ 716,800 (lzma-rust2 0.16, a second copy beside sevenz-rust2's 0.21); with PPMd 590,848; all five 867,840. ICU4X's word and sentence data and code add about 58 KB.
 - The bundled fonts (1.4 MB) are in the reader only with `publish`; the SCOWL list (692 KB) is always in it.
@@ -116,9 +155,9 @@ Taken by Agent W4b on Windows (x86_64, 64 GB) while other agents were building, 
 
 The harness now waits until no thread has allocated for 300 ms before each document, after the first speech, before search, and before leaving edit mode. Before that, background work from opening a document landed in whichever step it overlapped: one step gave 1,267 and 38,773 allocations in two runs of the same code.
 
-### Measurements, Wave 5 (Monday, September 28, 2026)
+### Benchmark history: a later pass, same day
 
-Taken by Agent W5r on the same machine while three other agents were building, so single runs moved by a factor of two or more. After [ADR-0034](../adr/0034-rope-after-measurement.md) kept the rope, W4b's two hot spots were measured part by part: loading a Markdown file, and planning the narration of a whole document.
+Taken on the same machine while three other builds were running, so single runs moved by a factor of two or more. After [ADR-0034](../adr/0034-rope-after-measurement.md) kept the rope, the two hot spots found above were measured part by part: loading a Markdown file, and planning the narration of a whole document.
 
 **How they were taken.**
 
@@ -148,7 +187,7 @@ cargo run --release -p textweaver-convert --example bench_convert
 
 ## Automated screen-reader checks
 
-The GUI's real test is the owner's listening sessions with NVDA, JAWS, and the Braille display. Between sessions, CI runs these checks ([ADR-0039](../adr/0039-automated-screen-reader-checks.md)). They never replace a session. Every line of their reports starts with a word: Pass, Fail, Warning, Changed, No baseline, or Heard.
+The GUI's real test is a human listening session with NVDA, JAWS, and a Braille display. Between sessions, CI runs these checks ([ADR-0039](../adr/0039-automated-screen-reader-checks.md)). They never replace a session. Every line of their reports starts with a word: Pass, Fail, Warning, Changed, No baseline, or Heard.
 
 **Never run a screen-reader session on your own machine.** The scripts drive NVDA or VoiceOver and refuse to run outside a CI runner, so no one's own screen reader is taken over.
 
@@ -177,7 +216,7 @@ Run "Screen-reader checks" (`a11y-tests.yml`) from the Actions tab, and choose a
 - **orca** (Ubuntu, under Xvfb): the session is checked through AT-SPI events: the caret, the announcements, the focus. Orca runs beside it, and the report lists what it said at each step.
 - **voiceover** (macOS 14 and 15): the same with VoiceOver, if Guidepup can start it on the runner. If not, the setup log says why: the system version, System Integrity Protection, and whether AppleScript may drive VoiceOver.
 
-The sessions and the tree dumps are report-only: a failure shows in the summary but does not fail the job, whose result comes from building the GUI and installing the tools. The phrases NVDA spoke are in the `a11y-nvda` artifact (`phrases.json` and `report.md`): the owner compares them with what they heard in their own session.
+The sessions and the tree dumps are report-only: a failure shows in the summary but does not fail the job, whose result comes from building the GUI and installing the tools. The phrases NVDA spoke are in the `a11y-nvda` artifact (`phrases.json` and `report.md`), for comparison with what a listener heard in their own session.
 
 Guidepup and its setup tool are locked, with integrity hashes, in `tools/a11y/package-lock.json`. To move to a new version, change `tools/a11y/package.json` and regenerate the lock file with `npm install --package-lock-only --ignore-scripts` in `tools/a11y`, in a container or on a machine with Node. Nothing else in the project needs Node.
 

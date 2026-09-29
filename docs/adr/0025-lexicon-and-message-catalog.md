@@ -2,11 +2,11 @@
 
 - Status: accepted
 - Date: 2026-09-26
-- Status update (2026-09-28, Wave 4, W4d): the subset was enough for Spanish, French, German, Portuguese, and Arabic, so `fluent-bundle` was not adopted. The whole interface now uses the catalog; see [ADR-0030](0030-interface-translations.md).
+- Status update (2026-09-28): the subset was enough for Spanish, French, German, Portuguese, and Arabic, so `fluent-bundle` was not adopted. The whole interface now uses the catalog; see [ADR-0030](0030-interface-translations.md).
 
 ## Context
 
-Star defined words through nltk's WordNet and CMUdict corpora, which a user had to download with Python tools, and layered a JSON glossary over them (`star/dictionary.py`). It translated its Qt chrome with a small `tr()` over JSON catalogs keyed by the English text (`star/i18n.py`). Wave 3 asked for both in pure Rust (the Wave 3 pure-Rust research, kept outside the repository, "Define word"), offline, with no Python, and for interface translations to start with a message catalog, English complete, a pseudo-locale, and a right-to-left check.
+Star defined words through nltk's WordNet and CMUdict corpora, which a user had to download with Python tools, and layered a JSON glossary over them (`star/dictionary.py`). It translated its Qt chrome with a small `tr()` over JSON catalogs keyed by the English text (`star/i18n.py`). Both were planned in pure Rust (the pure-Rust research, kept outside the repository, "Define word"), offline, with no Python, and interface translations were planned to start with a message catalog, English complete, a pseudo-locale, and a right-to-left check.
 
 ## Decision
 
@@ -38,7 +38,7 @@ The subset: messages, terms, comments, multiline text, variables, message and te
 - `ar-XB` is the right-to-left pseudo-locale: text in right-to-left overrides, values isolated. `bidi_problems` checks that a rendered string closes every direction mark it opens.
 - `[interface] language` chooses the language; `<language>.ftl` in the settings folder's `locales` adds one, falling back to English message by message.
 
-Only the Wave 3 study features' messages are in the catalog so far. Moving the rest of the interface's strings in is Wave 4's work (Agent W4d).
+Only the study features' messages are in the catalog so far. Moving the rest of the interface's strings in is future work.
 
 ## Consequences
 

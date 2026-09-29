@@ -1,6 +1,6 @@
 # ADR-0029: MathCAT speech
 
-- Status: accepted, behind the `mathcat` feature; two dependency checks wait for the owner (see "Dependency checks")
+- Status: accepted, behind the `mathcat` feature; two dependency checks await a decision (see "Dependency checks")
 - Date: 2026-09-27
 
 ## Context
@@ -109,24 +109,24 @@ MathCAT's own dependencies (normal), each with its licence:
 
 ### Dependency checks
 
-Two checks cannot pass with MathCAT 0.7.6-rc.3 as it is, and both need the owner's decision, not an agent's:
+Two checks cannot pass with MathCAT 0.7.6-rc.3 as it is, and both need a project decision:
 
 - **Licence:** libbz2-rs-sys 0.2.5 is under the `bzip2-1.0.6` licence, which is not in the accepted lists of `deny.toml` and `about.toml`. `cargo about generate --offline --locked --all-features --fail` fails on it and on nothing else. The licence is permissive (a BSD-style licence), and it would have to be added to both lists. MathCAT's `zip` dependency asks for `bzip2` itself, so it cannot be turned off from here.
-- **Unmaintained crate:** yaml-rust 0.4.5 is unmaintained (RustSec advisory RUSTSEC-2024-0320), and `deny.toml` reports unmaintained crates for the whole tree. Wave 4's plan expected 0.7.6 to drop it; 0.7.6-rc.3 still depends on it, for reading its rules. It would need an entry in `deny.toml`'s `ignore` list with a reason, or a MathCAT release that moves to a maintained YAML parser.
+- **Unmaintained crate:** yaml-rust 0.4.5 is unmaintained (RustSec advisory RUSTSEC-2024-0320), and `deny.toml` reports unmaintained crates for the whole tree. The plan expected 0.7.6 to drop it; 0.7.6-rc.3 still depends on it, for reading its rules. It would need an entry in `deny.toml`'s `ignore` list with a reason, or a MathCAT release that moves to a maintained YAML parser.
 
 `cargo deny` itself is not installed on the development machine, and installing it is a download that was not approved, so it was not run.
 
-**The owner's decisions (Sunday, September 27, 2026):**
+**Decisions (Sunday, September 27, 2026):**
 - **yaml-rust:** accepted for now. `deny.toml` ignores RUSTSEC-2024-0320 with a reason; the entry goes when MathCAT moves to a maintained YAML parser.
 - **bzip2 licence:** accepted for libbz2-rs-sys only, as a one-crate exception in `deny.toml` and in `about.toml`. The general lists are unchanged.
 - **cargo-deny:** approved for install, and run at integration.
-- **Default engine:** the built-in engine stays the default and is the owner's preference. MathCAT is an option for students who want their screen reader's wording.
+- **Default engine:** the built-in engine stays the default and is the preferred choice. MathCAT is an option for students who want their screen reader's wording.
 
 ## Consequences
 
 - Students can hear math in the wording their screen reader uses, in the document's language, with textweaver's own speech as a safe fallback.
 - The highlight inside a MathCAT formula is the whole formula, not the word. The built-in engine stays word-exact.
-- The feature is off by default, and `math_engine` defaults to `builtin`, the owner's preference. The two dependency checks pass with the exceptions the owner approved.
+- The feature is off by default, and `math_engine` defaults to `builtin`, the preferred choice. The two dependency checks pass with the approved exceptions.
 - MathCAT's panic hook is contained; any future call into MathCAT must go through the thread.
 - Upgrading MathCAT means reading the recorded wording again, and checking whether #827 and the yaml-rust dependency are resolved.
 

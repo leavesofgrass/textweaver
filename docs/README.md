@@ -69,7 +69,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [Releasing](dev/releasing.md): making a release, the Linux AppImage, and what the packages hold.
 - [Third-party data](dev/third-party-data.md): the bundled pronunciation dictionaries, fonts, and word lists, and their licences.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
-- [Roadmap](roadmap.md): Phases 1 and 2 and Wave 3, as planned in September 2026, kept as a record.
+- [Roadmap](roadmap.md): what works today, what is being built next, and what is planned.
 - [Star features not yet planned](star-gaps.md): Star features with their status in textweaver.
 - [CHANGELOG.md](../CHANGELOG.md): what changed in each release.
 
@@ -90,7 +90,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0011: Audio export](adr/0011-audio-export.md): sentence-by-sentence synthesis, exact subtitles, and chapters.
 - [ADR-0012: One engine-host protocol and playback client](adr/0012-engine-host.md): the shared protocol for Eloquence, SAPI5, and DECtalk.
 - [ADR-0013: Dictation through a Whisper program](adr/0013-dictation.md): voice typing with a Whisper subprocess.
-- [ADR-0014: GUI toolkit (wxDragon)](adr/0014-gui-toolkit.md): the GUI spike's findings. Wave 3 moves the GUI to Xilem, and the spike stays as a fallback.
+- [ADR-0014: GUI toolkit (wxDragon)](adr/0014-gui-toolkit.md): the GUI spike's findings. The GUI later moved to Xilem, and the spike stays as a fallback.
 - [ADR-0015: JSON-RPC server](adr/0015-json-rpc.md): `tw serve --stdio`, its methods, and notifications.
 - [ADR-0016: Rendering and bulk conversion](adr/0016-rendering-and-conversion.md): Markdown to accessible HTML, and fast, incremental conversion.
 - [ADR-0017: Native writers](adr/0017-writers.md): EPUB 3, DOCX, BRF braille, and tagged PDF, and their accessibility checks.
@@ -104,12 +104,12 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0025: Define word offline, and the message catalog](adr/0025-lexicon-and-message-catalog.md): Open English WordNet and CMUdict in an fst and zstd file, and a Fluent-subset catalog with pseudo-locales.
 - [ADR-0026: OCR, and formats for students](adr/0026-ocr-and-student-formats.md): OCR of scanned pages (ocrs in process, Tesseract as the fallback), DAISY, PowerPoint, spreadsheets, archives, and web pages.
 - [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, and the accessibility checks.
-- [ADR-0028: The Xilem GUI after the owner's session](adr/0028-xilem-gui-after-the-session.md): two ways to announce, every list option in the tree, and where the GUI's memory goes.
+- [ADR-0028: The Xilem GUI after the first listening session](adr/0028-xilem-gui-after-the-session.md): two ways to announce, every list option in the tree, and where the GUI's memory goes.
 - [ADR-0029: MathCAT speech](adr/0029-mathcat-speech.md): MathCAT as a second math speech engine, EPUB 3 MathML read as math, and what waits for math braille.
 - [ADR-0030: Interface translations](adr/0030-interface-translations.md): every message from the catalog, five built-in languages, right-to-left display, and a voice per language.
 - [ADR-0031: Native RTF, ODT, and Word revisions](adr/0031-native-rtf-odt-and-word-revisions.md): RTF and OpenDocument without Pandoc, comments as notes, tracked changes, and limits for zip packages.
-- [ADR-0032: Grammar, lint, highlighting, and clipboard crates](adr/0032-grammar-lint-highlighting-clipboard.md): the authoring extras' crates, and the two held for the owner.
-- [ADR-0033: The GUI after the second session, and edit mode](adr/0033-gui-session-2-and-edit-mode.md): the file chooser, text size and font keys, a key on every button, and edit mode in the window.
+- [ADR-0032: Grammar, lint, highlighting, and clipboard crates](adr/0032-grammar-lint-highlighting-clipboard.md): the authoring extras' crates, and two held for later review.
+- [ADR-0033: The GUI after further accessibility testing, and edit mode](adr/0033-gui-session-2-and-edit-mode.md): the file chooser, text size and font keys, a key on every button, and edit mode in the window.
 - [ADR-0034: The rope after measurement](adr/0034-rope-after-measurement.md): stay on ropey 1.6; ropey 2 and crop measured, and when to look again.
 - [ADR-0035: Native LaTeX subset, and email and web archives](adr/0035-latex-email-and-web-archives.md): LaTeX, email, and web archives read natively, and MathML in web pages.
 - [ADR-0036: Math braille and navigation on MathCAT](adr/0036-math-braille-and-navigation.md): Nemeth and UEB math in braille files, and exploring a formula with MathCAT and its braille.
