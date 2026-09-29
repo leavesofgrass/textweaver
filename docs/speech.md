@@ -169,7 +169,7 @@ Press **F8** to go through four preset rates, from fastest to slowest:
 - study, 200;
 - slow, 150.
 
-You hear, for example, "Study speed, 200 words per minute." You can change the presets, or add your own, in `[speech.speed_presets]`:
+You hear the preset first, then its rate, for example "Study, rate 200." You can change the presets, or add your own, in `[speech.speed_presets]`:
 
 ```toml
 [speech.speed_presets]

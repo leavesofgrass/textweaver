@@ -1014,7 +1014,7 @@ voice-volume-off = الصوت متوقف.
 voice-volume = مستوى الصوت { $pct } بالمئة.
 voice-no-speed-presets = لا توجد إعدادات سرعة جاهزة.
 # $name is the preset's name from the settings, such as "Study".
-voice-speed-preset = سرعة { $name }، { $wpm } كلمة في الدقيقة.
+voice-speed-preset = { $name }، السرعة { $wpm }.
 voice-line-numbers-on = أرقام الأسطر مفعّلة.
 voice-line-numbers-off = أرقام الأسطر متوقفة.
 

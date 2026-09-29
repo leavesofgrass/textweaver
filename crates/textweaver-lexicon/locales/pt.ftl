@@ -946,7 +946,7 @@ voice-volume-off = Volume desligado.
 voice-volume = Volume { $pct } por cento.
 voice-no-speed-presets = Nenhum preset de velocidade.
 # $name is the preset's name from the settings, such as "Study".
-voice-speed-preset = Velocidade { $name }, { $wpm } palavras por minuto.
+voice-speed-preset = { $name }, velocidade { $wpm }.
 voice-line-numbers-on = Números de linha ligados.
 voice-line-numbers-off = Números de linha desligados.
 

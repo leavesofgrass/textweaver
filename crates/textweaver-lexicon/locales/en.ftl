@@ -935,7 +935,7 @@ voice-volume-off = Volume off.
 voice-volume = Volume { $pct } percent.
 voice-no-speed-presets = No speed presets.
 # $name is the preset's name from the settings, such as "Study".
-voice-speed-preset = { $name } speed, { $wpm } words per minute.
+voice-speed-preset = { $name }, rate { $wpm }.
 voice-line-numbers-on = Line numbers on.
 voice-line-numbers-off = Line numbers off.
 
