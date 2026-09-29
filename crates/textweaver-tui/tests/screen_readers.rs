@@ -126,8 +126,9 @@ fn a_quiet_screen_freezes_the_title_while_reading() {
     s.accessibility.mode = ModeSetting::ScreenReader;
     let mut h = launch(s, 40);
     let first = h.title();
-    assert!(first.contains("line 1 of"), "{first}");
-    assert!(first.contains("screen reader mode"), "{first}");
+    // Forty cells, as on a Braille display: the position comes first
+    // (Wave 5, the Braille pass).
+    assert!(first.starts_with("Line 1 of"), "{first}");
     // Screen say-all (screen-reader mode) is continuous reading.
     h.press(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE));
     assert_eq!(h.tui.app().playback(), Playback::Reading);
@@ -139,10 +140,10 @@ fn a_quiet_screen_freezes_the_title_while_reading() {
         h.draw();
     }
     assert!(h.tui.app().session().unwrap().cursor > CharPos(100));
-    assert!(h.title().contains("line 1 of"), "{}", h.title());
+    assert!(h.title().contains("Line 1 of"), "{}", h.title());
     // Stopping lets it move again.
     h.press(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
-    assert!(!h.title().contains("line 1 of"), "{}", h.title());
+    assert!(!h.title().contains("Line 1 of"), "{}", h.title());
 }
 
 #[test]

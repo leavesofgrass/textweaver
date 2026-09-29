@@ -408,7 +408,7 @@ fn the_library_lists_folder_documents_and_recent_files_and_opens_them() {
             .any("Library, 3 documents. Type to filter, Enter opens one.")
     );
     // Then the focused item (the app's list model, Wave 3).
-    assert!(r.said.last().ends_with("1 of 3"), "{}", r.said.last());
+    assert!(r.said.last().starts_with("1 of 3, "), "{}", r.said.last());
 
     // Enter on the first opens it and puts it on the bookshelf.
     r.app.dispatch(Command::Choose(0));

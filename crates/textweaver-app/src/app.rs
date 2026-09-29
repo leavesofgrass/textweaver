@@ -1082,7 +1082,10 @@ impl App {
 
     pub(crate) fn dispatch_inner(&mut self, cmd: Command) -> Vec<Effect> {
         match cmd {
-            Command::ListKey(key) => self.list_key(key),
+            Command::ListKey(key) => match self.open_question_answer(key) {
+                Some(answer) => self.confirm(answer),
+                None => self.list_key(key),
+            },
             Command::ListFocus(n) => self.list_focus(n),
             Command::PromptKey(key) => self.prompt_key(key),
             Command::ReplaceRange { range, text } => self.replace_range(range, &text),
@@ -1246,7 +1249,12 @@ impl App {
         }
         self.mode = Mode::for_prompt(purpose);
         self.prompt_purpose = purpose;
-        let label = crate::study::prompt_label(&self.study.catalog, purpose);
+        let label = if purpose == PromptPurpose::GoTo && self.has_pages() {
+            // A paged document (a PDF) goes to pages too (crate::pages).
+            self.msg("prompt-go-to-pages")
+        } else {
+            crate::study::prompt_label(&self.study.catalog, purpose)
+        };
         if purpose == PromptPurpose::CommandPalette
             && self.settings.speech.verbosity >= Verbosity::Normal
         {
@@ -1278,10 +1286,19 @@ impl App {
         }
         match mode {
             Mode::Find => self.run_find(&text),
+            Mode::GoTo if self.page_answer(&text).is_some() => {
+                let page = self.page_answer(&text).unwrap_or_default();
+                self.go_to_page(&page);
+            }
             Mode::GoTo => match crate::goto::parse_go_to_in(self.cat(), &text) {
                 Some(t) => self.go_to(t),
                 None => {
-                    let msg = self.msg_args("goto-not-a-target", &args!["text" => text.as_str()]);
+                    let id = if self.has_pages() {
+                        "goto-not-a-target-pages"
+                    } else {
+                        "goto-not-a-target"
+                    };
+                    let msg = self.msg_args(id, &args!["text" => text.as_str()]);
                     self.error(&msg);
                 }
             },

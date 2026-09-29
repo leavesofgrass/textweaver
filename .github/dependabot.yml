@@ -28,16 +28,20 @@ updates:
       # by hand: a single upgrade would link two graphics stacks.
       - dependency-name: 'wgpu*'
       - dependency-name: 'vello*'
-      - dependency-name: 'imaging_vello*'
+      - dependency-name: 'imaging_*'
       - dependency-name: 'masonry*'
       - dependency-name: 'parley'
       - dependency-name: 'accesskit*'
       # MathCAT is pinned to a release candidate on purpose (ADR-0029);
       # its development builds are not wanted.
       - dependency-name: mathcat
-      # sha1 0.11 needs digest 0.11 while sha2 is on 0.10.
+      # sha1 and sha2 0.11 need digest 0.11; they move together, by hand.
       - dependency-name: sha1
         versions: ['>=0.11']
+      - dependency-name: sha2
+        versions: ['>=0.11']
+      # resvg is krilla's renderer (the PDF writer) and moves with krilla.
+      - dependency-name: resvg
     groups:
       # Patch and minor updates of every crate together.
       cargo-minor:

@@ -155,9 +155,8 @@ fn say_status_and_repeat_message_are_heard() {
     let status = heard(&log, "Browse mode").expect("the status");
     assert!(status.starts_with(&position), "{status}");
     for part in [
-        "Essay: Browse mode",
-        "Ready",
-        "line 1 of 1, zero percent",
+        // Position first, for a 40-cell Braille display (Wave 5).
+        "Essay: line 1 of 1, zero percent, Ready, Browse mode",
         "self-voicing",
         "words per minute",
         "test-recording.",
@@ -197,7 +196,7 @@ fn say_status_needs_no_document() {
     tui.handle_key(with(KeyCode::End, KeyModifiers::ALT));
     let status = heard(&log, "No document").expect("the status");
     assert!(
-        status.starts_with("No document: Browse mode, Ready"),
+        status.starts_with("No document: Ready, Browse mode"),
         "{status}"
     );
     log.clear();
@@ -277,7 +276,7 @@ fn a_key_in_a_list_repeats_its_introduction() {
         let again = heard(&log, "Keyboard shortcuts,")
             .unwrap_or_else(|| panic!("{k:?}: {:?}", log.texts()));
         assert!(again.starts_with(&intro), "{again}");
-        assert!(again.ends_with(&format!("3 of {n}.")), "{again}");
+        assert!(again.contains(&format!(" 3 of {n}, ")), "{again}");
         // The list is still open, on the same item.
         assert_eq!(tui.app().list_model().unwrap().selected, 2);
     }

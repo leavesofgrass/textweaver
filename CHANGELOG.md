@@ -12,6 +12,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - `cargo xtask release VERSION --dry-run` reports an empty changelog section with the other problems instead of stopping.
 - The nightly checks can pass again: the fuzz targets are built for glibc (the prebuilt cargo-fuzz defaulted to musl, where the sanitizer cannot link), the release-mode tests have time to finish, and the minimum Rust version is 1.94, what the dependencies need.
 
+### W5x: the Braille pass
+
+- **Meaning first on a 40-cell Braille display.** The title line starts with the position and the reading state ("Line 12 of 400, 3%, Reading"); in screen-reader and hybrid modes it starts at the first cell, and lists cover the window with no border. List items say their place first ("3 of 12, Chapter two, level 2"), in all six languages. A prompt's line keeps its label short, so what you type starts within 40 cells. "Open it?" questions come before the folder or the address.
+- **Pages in a PDF.** Go To takes a page (a plain number is a page in a PDF; `line 12` is still a line; `p iv` goes by the printed label). Say Position starts with the page, the title line shows it, and a PDF with no headings lists its pages in the outline.
+- **`y` and `n` answer "Open it?"** while a list is shown, in the window and over JSON-RPC as in the terminal.
+- The screen reader guide's Braille section is written for the Mantis Q40, with NVDA and JAWS braille settings to try and a checklist.
+
 ### Wave 5, W5y: Star leftovers, settings, speed presets
 
 - **Library search by author, DOI, and ISBN.** The library list (Alt+L, GUI Ctrl+Shift+B) now filters as you type, and it and `tw library --search` match the title, path, author, DOI, ISBN, and text. A DOI or ISBN matches however it is written. The author, DOI, and ISBN come from the document (front matter, Word and EPUB authors, web page meta tags, a DOI or ISBN near the start of the text) and from `tw cite`'s record of the same work.

@@ -1111,7 +1111,7 @@ fn choose_voice_lists_the_voices_and_enter_speaks_a_sample() {
     // The app says the focused item after the introduction (Wave 3: the
     // list model is the app's, for every frontend): the first voice, below
     // the filter rows.
-    assert_eq!(r.said.last(), "Test voice, 3 of 4");
+    assert_eq!(r.said.last(), "3 of 4, Test voice");
     assert_eq!(r.app.list_model().map(|l| l.selected), Some(2));
     r.log.clear();
     r.app.dispatch(Command::Choose(2));
@@ -1171,7 +1171,7 @@ fn voice_manager_filter_rows_cycle() {
     let effects = r.app.dispatch(Command::Choose(1));
     assert!(r.said.any("2 voices: all languages, test-recording."));
     // The focus stays on the filter row, and is said again.
-    assert_eq!(r.said.last(), "Engine: test-recording, 2 of 4");
+    assert_eq!(r.said.last(), "2 of 4, Engine: test-recording");
     assert_eq!(r.app.list_model().map(|l| l.selected), Some(1));
     let Some(Effect::ShowList { items, .. }) = effects.first() else {
         panic!("{effects:?}");

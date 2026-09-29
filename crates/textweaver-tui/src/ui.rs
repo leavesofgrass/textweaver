@@ -729,6 +729,15 @@ impl Tui {
         f.set_cursor_position(cursor.unwrap_or(Position::new(areas.body.x, areas.body.y)));
     }
 
+    /// True when lines are laid out for a screen reader's Braille display
+    /// (screen-reader and hybrid modes): the title line starts with the
+    /// position, with no padding before it, and lists are drawn without
+    /// borders over the whole body, so the first cells of every line
+    /// carry its meaning (the Braille pass, Wave 5).
+    fn braille_first(&self) -> bool {
+        self.app.access_mode().uses_screen_reader()
+    }
+
     /// True when right-to-left text is reordered for display
     /// (`[interface] rtl`; see [`crate::bidi`]).
     fn rtl(&self) -> bool {
@@ -765,12 +774,18 @@ impl Tui {
                 s
             }
         };
-        let left = shown(format!(" {}", c.fmt("tui-title", &args!["title" => title])));
+        let name = c.fmt("tui-title", &args!["title" => title]);
         // Most important first; trailing parts are dropped when narrow.
         // The app gives them ("Ready" until the first reading, then
         // "Stopped"), so Say Status speaks the same parts.
         let mut parts = app.title_parts(position);
         let width = usize::from(area.width);
+        if self.braille_first() {
+            let line = shown(braille_title(&mut parts, &name, width));
+            f.render_widget(Paragraph::new(line).style(theme.title), area);
+            return;
+        }
+        let left = shown(format!(" {name}"));
         let lw = Span::raw(&left).width();
         let mut right = shown(format!("{} ", parts.join(", ")));
         while parts.len() > 1 && lw + Span::raw(&right).width() + 2 > width {
@@ -1181,7 +1196,10 @@ impl Tui {
     /// prompt is open.
     fn draw_bottom(&self, f: &mut Frame<'_>, area: Rect, theme: &Theme) -> Option<Position> {
         if let Some(mb) = self.minibuffer() {
-            let label = format!("{}: ", mb.label);
+            // The full label is said, and shown on the status line, when
+            // the prompt opens; the line drawn here keeps it short so what
+            // is typed starts within 40 cells.
+            let label = format!("{}: ", prompt_line_label(&mb.label));
             let text = mb.text();
             let before: String = text.chars().take(mb.caret()).collect();
             let col = Span::raw(&label).width() + Span::raw(&before).width();
@@ -1295,7 +1313,11 @@ impl Tui {
     /// Draws the list overlay; returns the focused item's position.
     fn draw_list(&self, f: &mut Frame<'_>, body: Rect, theme: &Theme) -> Option<Position> {
         let list = self.list()?;
-        let area = if body.width > 10 && body.height > 4 {
+        let braille = self.braille_first();
+        // For a Braille display the list covers the whole body with no
+        // border: a boxed list inset from the edge put the document's
+        // letters and a border before every item (the Braille pass).
+        let area = if !braille && body.width > 10 && body.height > 4 {
             Rect::new(body.x + 2, body.y + 1, body.width - 4, body.height - 2)
         } else {
             body
@@ -1315,9 +1337,13 @@ impl Tui {
         } else {
             title
         };
-        let block = Block::bordered()
-            .title(format!(" {title} "))
-            .style(theme.list);
+        let block = if braille {
+            Block::new().title(title).style(theme.list)
+        } else {
+            Block::bordered()
+                .title(format!(" {title} "))
+                .style(theme.list)
+        };
         let inner = block.inner(area);
         f.render_widget(block, area);
         let width = usize::from(inner.width.max(1));
@@ -1362,6 +1388,77 @@ impl Tui {
     }
 }
 
+/// Cells of a Braille display line the Braille pass designs for: the
+/// owner's display, a HumanWare Mantis Q40, has 40.
+pub const BRAILLE_CELLS: usize = 40;
+
+/// The most cells a prompt's label takes on the line drawn: with ": "
+/// after it, what is typed starts within [`BRAILLE_CELLS`] with room to
+/// read it.
+pub const PROMPT_LABEL_CELLS: usize = 28;
+
+/// A prompt's label as drawn before what is typed, at most
+/// [`PROMPT_LABEL_CELLS`] cells: the label itself when short, else its
+/// first clause ("Export settings to file, for example ..." becomes
+/// "Export settings to file"), else its first words.
+pub fn prompt_line_label(label: &str) -> String {
+    let width = |s: &str| Span::raw(s).width();
+    let label = label.trim();
+    if width(label) <= PROMPT_LABEL_CELLS {
+        return label.to_owned();
+    }
+    let clause_end = [", ", "; ", "\u{060c} ", "? ", " : "]
+        .iter()
+        .filter_map(|sep| label.find(sep))
+        .min();
+    if let Some(end) = clause_end {
+        let clause = label[..end].trim_end();
+        if !clause.is_empty() && width(clause) <= PROMPT_LABEL_CELLS {
+            return clause.to_owned();
+        }
+    }
+    let mut out = String::new();
+    for word in label.split_whitespace() {
+        let next = if out.is_empty() {
+            word.to_owned()
+        } else {
+            format!("{out} {word}")
+        };
+        if width(&next) > PROMPT_LABEL_CELLS {
+            break;
+        }
+        out = next;
+    }
+    if out.is_empty() {
+        // One long word: its first cells.
+        label.chars().take(PROMPT_LABEL_CELLS).collect()
+    } else {
+        out
+    }
+}
+
+/// The title line for a Braille display, `width` cells: the position and
+/// the reading state from the first cell ("Line 12 of 400, 3%, Reading"),
+/// then the rest of `parts`, then the document's `name`. Trailing parts
+/// are dropped when narrow, keeping the name.
+fn braille_title(parts: &mut Vec<String>, name: &str, width: usize) -> String {
+    let compose = |parts: &[String]| {
+        let mut joined = parts.join(", ");
+        // "line 12" starts the line, so it starts with a capital.
+        if let Some(first) = joined.chars().next() {
+            let upper: String = first.to_uppercase().collect();
+            joined.replace_range(..first.len_utf8(), &upper);
+        }
+        format!("{joined}  {name}")
+    };
+    let mut line = compose(parts);
+    while parts.len() > 1 && Span::raw(&line).width() > width {
+        parts.pop();
+        line = compose(parts);
+    }
+    line
+}
+
 /// The text attributes a reading-ruler mark adds (colours stay the
 /// theme's; the mark never relies on colour).
 fn ruler_modifier(m: RulerStyle) -> Modifier {
@@ -1394,5 +1491,57 @@ mod tests {
         assert_eq!(k(KeyCode::Null, KeyModifiers::NONE), "Ctrl+Space");
         assert_eq!(k(KeyCode::BackTab, KeyModifiers::SHIFT), "Shift+Tab");
         assert_eq!(k(KeyCode::F(2), KeyModifiers::NONE), "F2");
+    }
+
+    /// The 40-cell test, for prompts: every prompt's label in all six
+    /// languages, drawn with ": " and eight typed letters, leaves the
+    /// letters inside a 40-cell Braille line.
+    #[test]
+    fn every_prompt_label_leaves_room_to_type_within_forty_cells() {
+        use textweaver_app::lexicon::i18n::Catalog;
+        let ids: Vec<String> = Catalog::english()
+            .ids()
+            .into_iter()
+            .filter(|id| id.starts_with("prompt-") && *id != "prompt-command-palette-intro")
+            .map(str::to_owned)
+            .collect();
+        assert!(ids.len() > 20, "{ids:?}");
+        for tag in ["en", "es", "fr", "de", "pt", "ar"] {
+            let c = Catalog::builtin(tag).unwrap();
+            for id in &ids {
+                let label = prompt_line_label(&c.tr(id));
+                let line = format!("{label}: abcdefgh");
+                assert!(
+                    Span::raw(&line).width() <= BRAILLE_CELLS,
+                    "{tag} {id}: {line:?}"
+                );
+                assert!(!label.is_empty(), "{tag} {id}");
+            }
+        }
+        assert_eq!(prompt_line_label("Find"), "Find");
+        assert_eq!(
+            prompt_line_label("Export settings to file, for example textweaver-settings.json"),
+            "Export settings to file"
+        );
+        assert_eq!(
+            prompt_line_label("Go to page, or line 12, percent, start, or end"),
+            "Go to page"
+        );
+    }
+
+    #[test]
+    fn the_braille_title_line_starts_with_the_position() {
+        let mut parts = vec![
+            "line 12 of 400, 3%".to_owned(),
+            "Reading".to_owned(),
+            "screen reader mode".to_owned(),
+            "265 wpm".to_owned(),
+            "eSpeak NG".to_owned(),
+        ];
+        let wide = braille_title(&mut parts.clone(), "textweaver: essay", 200);
+        assert!(wide.starts_with("Line 12 of 400, 3%, Reading, "), "{wide}");
+        assert!(wide.ends_with("  textweaver: essay"), "{wide}");
+        let narrow = braille_title(&mut parts, "textweaver: essay", 50);
+        assert_eq!(narrow, "Line 12 of 400, 3%, Reading  textweaver: essay");
     }
 }
