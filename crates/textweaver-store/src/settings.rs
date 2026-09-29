@@ -965,6 +965,10 @@ pub struct ReadingAidsSettings {
     pub difficult_words: bool,
     /// `[reading_aids.syllable_options]`.
     pub syllable_options: crate::reading_aids::SyllableOptions,
+    /// With difficult words marked and high verbosity, a word move onto a
+    /// difficult word also says its first definition from the dictionary
+    /// (off by default; ADR-0037).
+    pub difficult_definitions: bool,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1004,6 +1008,32 @@ impl Default for StatsSettings {
     fn default() -> Self {
         StatsSettings {
             enabled: true,
+            extra: toml::Table::new(),
+        }
+    }
+}
+
+/// `[summary]`: extractive summaries, `tw summarize` and the Summarize
+/// command (ADR-0037).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SummarySettings {
+    /// How many sentences a summary has, 1 to 50 (5 by default).
+    pub sentences: usize,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+impl SummarySettings {
+    /// The most sentences a summary may have.
+    pub const MAX_SENTENCES: usize = 50;
+}
+
+impl Default for SummarySettings {
+    fn default() -> Self {
+        SummarySettings {
+            sentences: 5,
             extra: toml::Table::new(),
         }
     }
@@ -1114,6 +1144,8 @@ pub struct Settings {
     pub lexicon: LexiconSettings,
     /// `[stats]`
     pub stats: StatsSettings,
+    /// `[summary]`
+    pub summary: SummarySettings,
     /// `[interface]`
     pub interface: InterfaceSettings,
     /// `[gui]`
@@ -1272,6 +1304,7 @@ impl Settings {
             preview: lenient_section("preview", table.remove("preview"), &mut w),
             lexicon: lenient_section("lexicon", table.remove("lexicon"), &mut w),
             stats: lenient_section("stats", table.remove("stats"), &mut w),
+            summary: lenient_section("summary", table.remove("summary"), &mut w),
             interface: lenient_section("interface", table.remove("interface"), &mut w),
             gui: lenient_section("gui", table.remove("gui"), &mut w),
             extra: table,
@@ -1427,6 +1460,17 @@ impl Settings {
             );
             self.editing.autosave_interval_secs = 5;
         }
+        let sentences = self.summary.sentences;
+        let max = SummarySettings::MAX_SENTENCES;
+        if !(1..=max).contains(&sentences) {
+            let fixed = sentences.clamp(1, max);
+            fix(
+                "summary.sentences".into(),
+                format!("{sentences} is outside 1 to {max}"),
+                fixed.to_string(),
+            );
+            self.summary.sentences = fixed;
+        }
         w
     }
 
@@ -1458,11 +1502,12 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 28] = [
+pub(crate) const STRUCT_TABLES: [&str; 29] = [
     "keyboard",
     "preview",
     "lexicon",
     "stats",
+    "summary",
     "interface",
     "gui",
     "accessibility",
@@ -2499,6 +2544,36 @@ wrap_navigation = true
         );
         let (_, w) = Settings::from_table("[stats]\nenabled = 3\n".parse().unwrap());
         assert_eq!(w, ["stats.enabled has an invalid value"]);
+    }
+
+    /// `[summary] sentences` and `[reading_aids] difficult_definitions`
+    /// (W5s, ADR-0037): five sentences and no definitions by default, kept
+    /// when set, and a count outside 1 to 50 clamped with a warning.
+    #[test]
+    fn summary_and_difficult_definitions() {
+        let d = Settings::default();
+        assert_eq!(d.summary.sentences, 5);
+        assert!(!d.reading_aids.difficult_definitions);
+        let text = d.to_minimal_toml().unwrap();
+        assert!(!text.contains("[summary]"), "{text}");
+        let (s, w) = Settings::from_table(
+            "[summary]\nsentences = 9\n[reading_aids]\ndifficult_definitions = true\n"
+                .parse()
+                .unwrap(),
+        );
+        assert!(w.is_empty(), "{w:?}");
+        assert_eq!(s.summary.sentences, 9);
+        assert!(s.reading_aids.difficult_definitions);
+        let text = s.to_minimal_toml().unwrap();
+        assert!(
+            text.contains("sentences = 9") && text.contains("difficult_definitions = true"),
+            "{text}"
+        );
+        let (s, w) = Settings::from_table("[summary]\nsentences = 0\n".parse().unwrap());
+        assert_eq!(w, ["summary.sentences 0 is outside 1 to 50; using 1"]);
+        assert_eq!(s.summary.sentences, 1);
+        let (s, _) = Settings::from_table("[summary]\nsentences = 500\n".parse().unwrap());
+        assert_eq!(s.summary.sentences, 50);
     }
 
     /// `[interface] rtl` and `[speech] voices_by_language` (W4d): `auto`

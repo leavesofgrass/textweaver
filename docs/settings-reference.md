@@ -159,6 +159,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `reading_aids.syllable_options.min_word_len`: default 4 letters. Syllable shortest word. Words shorter than this are never split. From 1 to 20 letters, in steps of 1.
 - `reading_aids.syllable_options.skip_urls`: default on (`true`). Syllables skip addresses. Leave web and e-mail addresses alone. On or off: `true` or `false`.
 - `reading_aids.syllable_options.skip_code`: default on (`true`). Syllables skip code. Leave code alone. On or off: `true` or `false`.
+- `reading_aids.difficult_definitions`: default off (`false`). Difficult word definitions. With difficult words marked, at high verbosity also say a difficult word's first definition from the dictionary. On or off: `true` or `false`.
 
 ## Preview: the `[preview]` section
 
@@ -173,6 +174,10 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 ## Reading statistics: the `[stats]` section
 
 - `stats.enabled`: default on (`true`). Reading statistics. Count the time read aloud, the furthest point, and sessions for each document. On or off: `true` or `false`.
+
+## Summaries: the `[summary]` section
+
+- `summary.sentences`: default 5 sentences. Summary sentences. How many sentences Summarize and tw summarize give, 1 to 50. From 1 to 50 sentences, in steps of 1.
 
 ## Interface: the `[interface]` section
 

@@ -68,7 +68,7 @@ pub use settings::{
     OcrEngine, PiperPhonemizer, PiperSettings, PreviewSettings, REMOVED_SETTINGS,
     RESERVED_SETTINGS, ReadingSettings, RememberedVoice, RevisionReading, RtlDisplay, SapiSettings,
     SayAll, Settings, SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, SubtitleFormat,
-    TableMode, drop_removed_settings,
+    SummarySettings, TableMode, drop_removed_settings,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,

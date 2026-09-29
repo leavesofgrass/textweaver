@@ -4,7 +4,7 @@
 //! `search`, `speak`, `voices`, `backends`, `eloquence`, `convert` (with
 //! `convert_layout` for the PDF and EPUB layout flags), `export-audio`,
 //! `library`, `vault`, `dictate`, `marks`, `lint`, `migrate-star`, `cite`,
-//! `settings` (with `profile`), `define`, `stats`, `serve`, and `ocr`. Each module's docs name the ADR and crate it
+//! `settings` (with `profile`), `define`, `stats`, `summarize`, `serve`, and `ocr`. Each module's docs name the ADR and crate it
 //! wraps; the user guides are listed in `docs/README.md`.
 
 use anyhow::Result;
@@ -72,6 +72,8 @@ enum Cmd {
     Define(cmd::define::Args),
     /// Reading statistics: time read aloud, the furthest point, and sessions per document.
     Stats(cmd::stats::Args),
+    /// Summarize a document: its most central sentences, one per line, without a model.
+    Summarize(cmd::summarize::Args),
     /// Serve the app over JSON-RPC 2.0 on stdin and stdout, for editors and other tools.
     Serve(cmd::serve::Args),
     /// Text recognition for scanned pages: engine status, model downloads, and reading a scan.
@@ -103,6 +105,7 @@ fn main() -> Result<()> {
         Cmd::Settings(a) => cmd::settings::run(a),
         Cmd::Define(a) => cmd::define::run(a),
         Cmd::Stats(a) => cmd::stats::run(a),
+        Cmd::Summarize(a) => cmd::summarize::run(a),
         Cmd::Serve(a) => cmd::serve::run(a),
         Cmd::Ocr(a) => cmd::ocr::run(a),
     }

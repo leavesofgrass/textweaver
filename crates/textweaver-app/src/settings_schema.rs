@@ -1063,6 +1063,11 @@ pub const INFO: &[Info] = &[
         "Syllables skip code",
         "Leave code alone.",
     ),
+    toggle(
+        "reading_aids.difficult_definitions",
+        "Difficult word definitions",
+        "With difficult words marked, at high verbosity also say a difficult word's first definition from the dictionary.",
+    ),
     // [preview]
     toggle(
         "preview.auto_reload",
@@ -1090,6 +1095,14 @@ pub const INFO: &[Info] = &[
         "stats.enabled",
         "Reading statistics",
         "Count the time read aloud, the furthest point, and sessions for each document.",
+    ),
+    // [summary] (W5s)
+    number(
+        "summary.sentences",
+        "Summary sentences",
+        "How many sentences Summarize and tw summarize give, 1 to 50.",
+        (1.0, 50.0, 1.0),
+        "sentences",
     ),
     // [interface]
     open_choice(
@@ -1142,6 +1155,7 @@ fn section_title(key: &str) -> &'static str {
         "preview" => "Preview",
         "lexicon" => "Define word",
         "stats" => "Reading statistics",
+        "summary" => "Summaries",
         "interface" => "Interface",
         "gui" => "Window",
         _ => "Other",

@@ -2664,3 +2664,40 @@ setting-speech-voice-params = Rate and pitch per voice
 setting-speech-voice-params-help = The rate and pitch each voice was last used at; choosing a voice again brings them back.
 setting-editing-author = Author
 setting-editing-author-help = The author written into new documents made from a template; empty leaves it blank.
+
+## Wave 5 (W5s): summaries and difficult-word definitions.
+
+action-summarize = Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one
+# The summary list's title: $n sentences of the whole document.
+summary-title =
+    { $n ->
+        [one] Summary, { $n } sentence
+       *[other] Summary, { $n } sentences
+    }
+# The summary of the chapter at the cursor.
+summary-title-chapter =
+    { $n ->
+        [one] Chapter summary, { $n } sentence
+       *[other] Chapter summary, { $n } sentences
+    }
+# The summary of the selection.
+summary-title-selection =
+    { $n ->
+        [one] Selection summary, { $n } sentence
+       *[other] Selection summary, { $n } sentences
+    }
+# Said when the summary list opens; $title is one of the titles above.
+summary-intro = { $title }. Enter goes to the sentence and says it.
+# The same, when a long text was read in samples.
+summary-intro-sampled = { $title }, from samples of this long text. Enter goes to the sentence and says it.
+summary-none = Nothing to summarize: no sentence of four words or more.
+# tw summarize, on standard error, when a long text was read in samples: $read of $total characters.
+summary-sampled-cli = A long text: the summary comes from { $read } of its { $total } characters, read in samples.
+# After a difficult word at high verbosity, with definitions on: its first definition.
+aids-difficult-word-defined = difficult word: { $definition }
+setting-summary-sentences = Summary sentences
+setting-summary-sentences-help = How many sentences Summarize and tw summarize give, 1 to 50.
+setting-reading-aids-difficult-definitions = Difficult word definitions
+setting-reading-aids-difficult-definitions-help = With difficult words marked, at high verbosity also say a difficult word's first definition from the dictionary.
+section-summary = Summaries
+settings-unit-sentences = sentences

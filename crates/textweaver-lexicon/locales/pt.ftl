@@ -2661,3 +2661,40 @@ setting-speech-voice-params = Velocidade e tom por voz
 setting-speech-voice-params-help = A velocidade e o tom com que cada voz foi usada por último; escolher a voz de novo os traz de volta.
 setting-editing-author = Autor
 setting-editing-author-help = O autor escrito nos novos documentos feitos a partir de um modelo; vazio deixa em branco.
+
+## Wave 5 (W5s): summaries and difficult-word definitions.
+
+action-summarize = Resumir a seleção, o capítulo ou o documento: as frases mais centrais numa lista; Enter vai para uma
+# The summary list's title: $n sentences of the whole document.
+summary-title =
+    { $n ->
+        [one] Resumo, { $n } frase
+       *[other] Resumo, { $n } frases
+    }
+# The summary of the chapter at the cursor.
+summary-title-chapter =
+    { $n ->
+        [one] Resumo do capítulo, { $n } frase
+       *[other] Resumo do capítulo, { $n } frases
+    }
+# The summary of the selection.
+summary-title-selection =
+    { $n ->
+        [one] Resumo da seleção, { $n } frase
+       *[other] Resumo da seleção, { $n } frases
+    }
+# Said when the summary list opens; $title is one of the titles above.
+summary-intro = { $title }. Enter vai para a frase e a diz.
+# The same, when a long text was read in samples.
+summary-intro-sampled = { $title }, a partir de amostras deste texto longo. Enter vai para a frase e a diz.
+summary-none = Nada para resumir: nenhuma frase de quatro palavras ou mais.
+# tw summarize, on standard error, when a long text was read in samples: $read of $total characters.
+summary-sampled-cli = Um texto longo: o resumo vem de { $read } dos seus { $total } caracteres, lidos em amostras.
+# After a difficult word at high verbosity, with definitions on: its first definition.
+aids-difficult-word-defined = palavra difícil: { $definition }
+setting-summary-sentences = Frases do resumo
+setting-summary-sentences-help = Quantas frases Resumir e tw summarize dão, de 1 a 50.
+setting-reading-aids-difficult-definitions = Definições de palavras difíceis
+setting-reading-aids-difficult-definitions-help = Com as palavras difíceis marcadas, com verbosidade alta dizer também a primeira definição do dicionário de uma palavra difícil.
+section-summary = Resumos
+settings-unit-sentences = frases
