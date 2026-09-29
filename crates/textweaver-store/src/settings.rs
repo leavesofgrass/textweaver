@@ -1082,6 +1082,32 @@ pub struct GuiSettings {
     pub extra: toml::Table,
 }
 
+/// `[braille] math_code`: the braille code math is written in (ADR-0036).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MathBrailleCode {
+    /// The Nemeth Code, inside UEB text with the Nemeth switch indicators
+    /// (BANA's guidance). The owner's choice and the default.
+    #[default]
+    Nemeth,
+    /// Unified English Braille's own mathematics.
+    Ueb,
+}
+
+/// `[braille]`: braille output: BRF files and math braille on the
+/// display.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BrailleSettings {
+    /// The code math is written in, in BRF files and while exploring a
+    /// formula. Needs a build with MathCAT; otherwise math is written as
+    /// its spoken words in uncontracted braille.
+    pub math_code: MathBrailleCode,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
 /// All settings, one TOML table per group.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -1106,6 +1132,8 @@ pub struct Settings {
     pub accessibility: AccessibilitySettings,
     /// `[export]`
     pub export: ExportSettings,
+    /// `[braille]`
+    pub braille: BrailleSettings,
     /// `[reading_aids]`
     pub reading_aids: ReadingAidsSettings,
     /// `[preview]`
@@ -1268,6 +1296,7 @@ impl Settings {
             keyboard: lenient_section("keyboard", table.remove("keyboard"), &mut w),
             accessibility: lenient_section("accessibility", table.remove("accessibility"), &mut w),
             export: lenient_section("export", table.remove("export"), &mut w),
+            braille: lenient_section("braille", table.remove("braille"), &mut w),
             reading_aids: lenient_section("reading_aids", table.remove("reading_aids"), &mut w),
             preview: lenient_section("preview", table.remove("preview"), &mut w),
             lexicon: lenient_section("lexicon", table.remove("lexicon"), &mut w),
@@ -1458,7 +1487,7 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 28] = [
+pub(crate) const STRUCT_TABLES: [&str; 29] = [
     "keyboard",
     "preview",
     "lexicon",
@@ -1474,6 +1503,7 @@ pub(crate) const STRUCT_TABLES: [&str; 28] = [
     "reading_aids.ruler",
     "reading_aids.syllable_options",
     "export",
+    "braille",
     "normalization.community_lexicon",
     "speech",
     "speech.eci",
@@ -1873,6 +1903,28 @@ wrap_navigation = true
         assert_eq!(s.reading.math_display, MathDisplay::Source);
         assert!(s.reading.wrap_navigation);
         assert!(err.unwrap_or_default().contains("reading.math_display"));
+    }
+
+    /// The math braille code (W5c4): Nemeth by default, stored only when
+    /// changed, and a bad value costs only itself.
+    #[test]
+    fn braille_math_code_default_round_trip_and_bad_value() {
+        let s = Settings::default();
+        assert_eq!(s.braille.math_code, MathBrailleCode::Nemeth);
+        assert!(!s.to_minimal_toml().unwrap().contains("[braille]"));
+        let (_d, store) = store();
+        write(&store, "[braille]\nmath_code = \"ueb\"\n");
+        let (s, err) = store.load();
+        assert!(err.is_none(), "{err:?}");
+        assert_eq!(s.braille.math_code, MathBrailleCode::Ueb);
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("[braille]\nmath_code = \"ueb\""), "{text}");
+        write(&store, "[braille]\nmath_code = \"moon\"\nfuture = 1\n");
+        let (s, err) = store.load();
+        assert_eq!(s.braille.math_code, MathBrailleCode::Nemeth);
+        assert!(s.braille.extra.contains_key("future"));
+        assert!(err.unwrap_or_default().contains("braille.math_code"));
     }
 
     #[test]

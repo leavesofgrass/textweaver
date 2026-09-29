@@ -1,10 +1,12 @@
-//! Math speech through MathCAT (ADR-0029): ClearSpeak and SimpleSpeak, the
-//! wording NVDA and JAWS use, with `textweaver-math` as the fallback.
+//! Math speech, braille, and navigation through MathCAT (ADR-0029,
+//! ADR-0036): ClearSpeak and SimpleSpeak, the wording NVDA and JAWS use,
+//! Nemeth and UEB math braille, and moving through a formula, with
+//! `textweaver-math` as the fallback.
 //!
-//! MathCAT (DAISY; MIT) turns MathML into spoken words. textweaver keeps
-//! its own math tree for everything else (parsing LaTeX and ASCIIMath,
-//! MathML for the renderer, navigation, and the word-by-word offset maps of
-//! ADR-0018), so this crate is a speech engine only:
+//! MathCAT (DAISY; MIT) turns MathML into spoken words and braille.
+//! textweaver keeps its own math tree for everything else (parsing LaTeX
+//! and ASCIIMath, MathML for the renderer, and the word-by-word offset maps
+//! of ADR-0018):
 //!
 //! - [`speak_mathml`] speaks one MathML expression.
 //! - [`speak_text`] is the normalization transform's body: it finds math in
@@ -14,6 +16,10 @@
 //!   formula while any of it is spoken (a span-level map, which ADR-0005
 //!   allows). A formula MathCAT cannot speak, or one the parser had to
 //!   repair, is spoken by `textweaver-math` as before, word by word.
+//! - [`braille_mathml`] writes one expression in Nemeth or UEB, as six-dot
+//!   Unicode braille (the BRF writer turns it into braille ASCII).
+//! - [`navigate_start`] and [`navigate`] move through an expression, each
+//!   step with MathCAT's words and the braille of the part reached.
 //!
 //! # One thread
 //!
@@ -23,6 +29,11 @@
 //! the answer with a timeout. A panic inside MathCAT is caught on that
 //! thread, logged once, and answered with [`Error::Crashed`]; the thread
 //! keeps serving, and the caller falls back to textweaver's own speech.
+//!
+//! Braille and navigation use MathCAT 0.7.6-rc.3 as vendored under
+//! `third_party/mathcat`, with the fix for MathCAT issue #827: the
+//! navigation braille panicked in builds without unsafe code, which is how
+//! this workspace builds it (ADR-0036).
 //!
 //! # Rules
 //!
@@ -265,14 +276,7 @@ pub fn speak_text(
         if !math.diagnostics.is_empty() {
             return None;
         }
-        let mathml = to_mathml(
-            math,
-            &MathMlOptions {
-                display: region.display,
-                alttext: AltText::None,
-                annotation: false,
-            },
-        );
+        let mathml = mathml_for(math, region.display);
         match speak_mathml(&mathml, options) {
             Ok(words) => Some(words),
             Err(e) => {
@@ -281,6 +285,155 @@ pub fn speak_text(
             }
         }
     })
+}
+
+/// The MathML MathCAT is given for one of textweaver's formulas: no
+/// `alttext` and no annotation, so MathCAT reads only the math.
+pub fn mathml_for(math: &textweaver_math::Math, display: bool) -> String {
+    to_mathml(
+        math,
+        &MathMlOptions {
+            display,
+            alttext: AltText::None,
+            annotation: false,
+        },
+    )
+}
+
+/// The blank braille cell (U+2800), which stands for a space in the braille
+/// this crate returns.
+pub const BLANK_CELL: char = '\u{2800}';
+
+/// A math braille code.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum BrailleCode {
+    /// The Nemeth Code for Mathematics and Science Notation (BANA, 2022),
+    /// used in UEB text with the Nemeth switch indicators. The default:
+    /// what most US students read.
+    #[default]
+    Nemeth,
+    /// Unified English Braille's own mathematics (ICEB, Guidelines for
+    /// Technical Material).
+    Ueb,
+}
+
+impl BrailleCode {
+    /// MathCAT's name for the code (the `BrailleCode` preference).
+    pub fn mathcat_name(self) -> &'static str {
+        match self {
+            BrailleCode::Nemeth => "Nemeth",
+            BrailleCode::Ueb => "UEB",
+        }
+    }
+}
+
+impl fmt::Display for BrailleCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.mathcat_name())
+    }
+}
+
+/// How MathCAT writes braille.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct BrailleOptions {
+    /// Nemeth or UEB.
+    pub code: BrailleCode,
+    /// The text around the math is contracted (grade 2). UEB math then
+    /// uses grade 1 indicators where a letter sequence could be read as a
+    /// contraction; in uncontracted text it needs none.
+    pub grade2: bool,
+}
+
+/// Braille for one MathML expression (a `<math>` element), as six-dot
+/// Unicode braille (U+2800 to U+283F), with [`BLANK_CELL`] for a space and
+/// no blank cells at either end.
+///
+/// Runs on the MathCAT thread and waits for the answer. The braille is the
+/// math alone: switch indicators between Nemeth and the text around it are
+/// the caller's to add.
+pub fn braille_mathml(mathml: &str, options: &BrailleOptions) -> Result<String, Error> {
+    check_mathml(mathml)?;
+    let cells = engine::braille(mathml, options)?;
+    if cells.is_empty() {
+        return Err(Error::Rejected("MathCAT gave no braille".into()));
+    }
+    Ok(cells)
+}
+
+/// A step in an expression ([`navigate`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum NavMove {
+    /// The next part at this level.
+    Next,
+    /// The previous part at this level.
+    Previous,
+    /// Into the part (its first child).
+    ZoomIn,
+    /// Out to the part around this one.
+    ZoomOut,
+    /// The first part at this level.
+    Start,
+    /// The last part at this level.
+    End,
+    /// Say the part again; nothing moves.
+    Current,
+}
+
+impl NavMove {
+    /// MathCAT's navigation command for the step.
+    pub fn mathcat_command(self) -> &'static str {
+        match self {
+            NavMove::Next => "MoveNext",
+            NavMove::Previous => "MovePrevious",
+            NavMove::ZoomIn => "ZoomIn",
+            NavMove::ZoomOut => "ZoomOut",
+            NavMove::Start => "MoveStart",
+            NavMove::End => "MoveEnd",
+            NavMove::Current => "ReadCurrent",
+        }
+    }
+
+    /// True for the steps that can change the place.
+    pub fn moves(self) -> bool {
+        self != NavMove::Current
+    }
+}
+
+/// What one navigation step gives.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct NavStep {
+    /// MathCAT's words for the step (the part reached, or why nothing
+    /// moved), cleaned as [`speak_mathml`]'s are.
+    pub speech: String,
+    /// The braille of the part reached, as [`braille_mathml`] returns
+    /// braille.
+    pub braille: String,
+    /// The place changed. False at a boundary and for
+    /// [`NavMove::Current`].
+    pub moved: bool,
+}
+
+/// Starts navigating `mathml` and takes the first step: `NavMove::Current`
+/// says the whole expression. MathCAT's place is kept on its thread until
+/// the next start.
+pub fn navigate_start(
+    mathml: &str,
+    step: NavMove,
+    options: &Options,
+    braille: &BrailleOptions,
+) -> Result<NavStep, Error> {
+    check_mathml(mathml)?;
+    engine::navigate(Some(mathml), step, options, braille)
+}
+
+/// Takes a step in the expression [`navigate_start`] started on. Fails with
+/// [`Error::Rejected`] when nothing was started.
+pub fn navigate(
+    step: NavMove,
+    options: &Options,
+    braille: &BrailleOptions,
+) -> Result<NavStep, Error> {
+    engine::navigate(None, step, options, braille)
 }
 
 #[cfg(test)]

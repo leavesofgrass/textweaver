@@ -271,6 +271,10 @@ impl App {
             ..ConvertOptions::default()
         };
         o.write.resource_dir = Some(src.folder.clone());
+        o.write.braille.math_code = match self.settings.braille.math_code {
+            textweaver_store::MathBrailleCode::Nemeth => textweaver_convert::MathCode::Nemeth,
+            textweaver_store::MathBrailleCode::Ueb => textweaver_convert::MathCode::Ueb,
+        };
         o.citations.user_library = self
             .paths
             .as_ref()

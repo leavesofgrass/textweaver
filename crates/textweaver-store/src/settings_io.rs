@@ -948,6 +948,7 @@ pub fn reset_sections(current: &Settings) -> Vec<String> {
         "keyboard",
         "accessibility",
         "export",
+        "braille",
         "reading_aids",
         "reading_aids.rsvp",
         "reading_aids.bionic_options",

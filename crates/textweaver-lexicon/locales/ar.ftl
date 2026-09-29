@@ -1504,6 +1504,8 @@ mathx-first-term = الحد الأول.
 mathx-no-parts = لا أجزاء بداخله.
 mathx-whole-expression = التعبير كاملًا.
 mathx-nothing-here = لا شيء هنا.
+# $speech is what was said for the step; $code is the math braille code's name (Nemeth or UEB); $braille is the part's braille in Unicode braille cells, for the Braille display.
+mathx-step-braille = { $speech } { $code }: { $braille }
 
 ## أدوات القراءة: العرض السريع، والقراءة البيونية، والمقاطع، والكلمات الصعبة، والمسطرة، ومستوى القراءة.
 
@@ -1837,6 +1839,10 @@ setting-reading-math-engine-help = أي محرك يقرأ الرياضيات ب�
 choice-reading-math-engine-builtin = textweaver
 choice-reading-math-engine-mathcat = MathCAT ClearSpeak
 choice-reading-math-engine-mathcat-simplespeak = MathCAT SimpleSpeak
+setting-braille-math-code = برايل الرياضيات
+setting-braille-math-code-help = رمز برايل للرياضيات في ملفات BRF وعند استكشاف معادلة باستخدام MathCAT: نيميث أو رياضيات UEB. يحتاج إلى نسخة تتضمن MathCAT؛ وإلا تُكتب الرياضيات بكلماتها المنطوقة.
+choice-braille-math-code-nemeth = Nemeth
+choice-braille-math-code-ueb = UEB
 setting-reading-math-display = الرياضيات على الشاشة
 setting-reading-math-display-help = كيف تبدو الرياضيات في عرض القراءة: كمصدرها، مثل x^2، أو بيونيكود، مثل x بأس علوي 2. الكلام ووضع التحرير يستخدمان المصدر دائمًا.
 choice-reading-math-display-source = المصدر
@@ -2073,6 +2079,7 @@ section-library = المكتبة
 section-keyboard = لوحة المفاتيح
 section-accessibility = إمكانية الوصول
 section-export = التصدير
+section-braille = برايل
 section-reading-aids = أدوات القراءة
 section-preview = معاينة
 section-lexicon = تعريف كلمة
