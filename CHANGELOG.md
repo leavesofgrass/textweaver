@@ -4,6 +4,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### W5c3: LaTeX, email, web archives, and MathML in web pages
+
+- **LaTeX opens without Pandoc,** in the reader and in `tw`: numbered sections as headings, lists, tables with header rows, captions ("Table 1: ..."), math as math, `\ref` numbers and links to sections, `\cite` as citations, footnotes, code, your own `\newcommand` shortcuts, and `\input` files from the document's own folder only. A command textweaver does not know is left out and its text read, and the document's warnings name it ([ADR-0035](docs/adr/0035-latex-email-and-web-archives.md)).
+- **Email (EML):** the subject, then From, To, Cc, and the date with its weekday, then the message, with quoted lines read as a quote; attachments are listed with their sizes, not opened.
+- **Web pages saved as one file (MHTML, MHT)** read as the page, with links leading to the pages they named on the web and pictures described by the descriptions saved with them.
+- **Math written in MathML in a web page** is read as math, as it already was in EPUB books.
+- A picture's description in a web page no longer runs into the next word.
+- New messages, in all six languages: "it is not a readable LaTeX file", "... email message", and "... web archive", said after "Could not open".
+
 ### W5r: the rope decision and loading
 
 - The rope stays ropey 1.6, as measured in Wave 4 ([ADR-0034](docs/adr/0034-rope-after-measurement.md)).
