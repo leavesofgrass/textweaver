@@ -6,7 +6,12 @@ Each item says what is wrong, where it was found, and which interface it affects
 
 ## The owner's items
 
-To be added by the owner.
+Given on Monday, September 28, 2026. The owner notes some go beyond interface polish; they are wanted all the same. The owner's wiki (`D:\star\wiki`) has development notes on Star and abax that the planning should read first.
+
+1. **A real menu bar, in the GUI (and a menu in the terminal reader).** File, Edit, View, Reading, Speech, Tools, Help, as in every other application the owner uses. Every feature and option reachable from a menu, and each item showing its shortcut beside it, so the shortcuts are easy to learn. Today there is no menu: the GUI has a toolbar and the command palette, the terminal reader has the palette (F2) and F1 help.
+2. **The command palette, refined.** Start typing a command and either Tab-complete it or see it in context: its category, what it does, and its shortcut. As in Star and the owner's other projects. Today both frontends have a palette (Tab completes, Up and Down list matches); the refinement is the context shown with each match.
+3. **A proper file manager and file chooser, with archives.** Browse folders and archives (zip, tar, 7z) to open reading material or import other formats, as abax did by following the Worker file manager. Today the GUI uses the system's Open dialog (W4a3) with a typed-path fallback, and the terminal reader takes a typed path; archives open through the archive loader (W3d) but cannot be browsed.
+4. **Export speech as WAV or MP3, and a better way than ffmpeg if there is one.** Today `tw export-audio` writes WAV itself and MP3 and M4B audiobooks through ffmpeg, which the user installs; Star also used ffmpeg. To research: encoding MP3 (and M4B's AAC, or Opus) without an outside program, ideally in pure Rust, with its licence and quality; and exporting from inside the reader and the GUI's menus, not only from `tw`.
 
 ## Found so far
 
