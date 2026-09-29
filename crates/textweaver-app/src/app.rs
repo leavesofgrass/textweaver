@@ -272,6 +272,8 @@ pub(crate) enum ListKind {
     Study(crate::study::StudyList),
     /// The settings screen (crate::settings_schema).
     Settings,
+    /// The summary's sentences, by range (crate::summary).
+    Summary(Vec<CharRange>),
     /// The interface languages, by tag (crate::language).
     Languages(Vec<String>),
 }
@@ -1374,6 +1376,7 @@ impl App {
             Some(ListKind::Study(l)) => return self.choose_study(l, n),
             Some(ListKind::Settings) => return self.choose_setting(n),
             Some(ListKind::Languages(tags)) => return self.choose_language(&tags, n),
+            Some(ListKind::Summary(ranges)) => self.choose_summary_sentence(&ranges, n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -1522,6 +1525,7 @@ impl App {
             A::RsvpPositionNext => self.rsvp_position_next(),
             A::ReadingLevel => self.say_reading_level(),
             A::DefineWord => return self.define_word(),
+            A::Summarize => return self.summarize(),
             A::ReadingStatistics => return self.reading_statistics(),
             A::SettingsProfiles => return self.settings_profiles(),
             A::ToggleCitations => self.toggle_citations(),

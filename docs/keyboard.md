@@ -131,6 +131,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Move the RSVP word to the next place on the screen | `Alt+Shift+O` | `Alt+Shift+O` | `rsvp_position_next` |
 | Say the reading level of the document or the selection | `Alt+Shift+G` | `Alt+Shift+G` | `reading_level` |
 | Define the word at the cursor, or the selected words: senses, examples, synonyms, and pronunciation | `Alt+E` | `Ctrl+Shift+D` | `define_word` |
+| Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | palette | palette | `summarize` |
 | Turn citations on or off in continuous reading: off skips them, on says them in words | `Alt+Shift+Q` | `Alt+Shift+Q` | `toggle_citations` |
 | Explore the math at the cursor term by term: arrows move, Down goes into a part, Up comes out, Escape leaves | `Alt+Shift+X` | `Alt+Shift+X` | `explore_math` |
 | Listen to the document as it will render, without leaving edit mode | palette | palette | `listen_rendered` |
@@ -462,6 +463,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 
 | Action | Id |
 |---|---|
+| Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | `summarize` |
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | `export_study_sheet` |
 | Start a new document from a template, with a title, author, date, and References heading | `new_from_template` |
