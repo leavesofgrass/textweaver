@@ -4,6 +4,12 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### W5s: summaries and the RSVP check
+
+- **Summaries without a model.** `tw summarize FILE` prints a document's most central sentences, one per line, in document order (`--sentences N`, `--json`). In the reader, Summarize in the command palette lists them for the selection, the chapter at the cursor, or the whole document; Enter goes to a sentence and says it. `[summary] sentences` sets how many, 5 by default. The method is LexRank, written in-house, with no download ([ADR-0037](docs/adr/0037-extractive-summaries.md)).
+- **Difficult-word definitions.** With `[reading_aids] difficult_definitions` on (off by default), difficult words marked, and high verbosity, a word move onto a difficult word also says its first definition from the define-word dictionary.
+- **RSVP and flashing.** A test checks RSVP at 1,500 words a minute against WCAG 2.3.1's three-flashes limit: the terminal box and the window's panel stay under the threshold, and a cap is ready for any frontend that draws much larger words.
+
 ### W5r: the rope decision and loading
 
 - The rope stays ropey 1.6, as measured in Wave 4 ([ADR-0034](docs/adr/0034-rope-after-measurement.md)).
