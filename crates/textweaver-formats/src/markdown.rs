@@ -185,6 +185,49 @@ pub fn convert_in(
     c.b.finish()
 }
 
+/// Converts Markdown into a builder that already holds text (a notebook's
+/// markdown cells). Footnotes are read in place (`Deferred` becomes
+/// `Inline`), since the part has no end of its own to gather them at.
+pub(crate) fn convert_into(
+    b: Builder,
+    source: &str,
+    options: &LoadOptions,
+    meta: &mut DocumentMeta,
+) -> Builder {
+    run_into(b, source, options, meta, None)
+}
+
+/// [`convert_into`] with the embeds of the note being read.
+fn run_into(
+    b: Builder,
+    source: &str,
+    options: &LoadOptions,
+    meta: &mut DocumentMeta,
+    embeds: Option<Embeds>,
+) -> Builder {
+    let options = LoadOptions {
+        footnotes: match options.footnotes {
+            FootnoteMode::Deferred => FootnoteMode::Inline,
+            other => other,
+        },
+        ..options.clone()
+    };
+    let footnotes = if options.footnotes == FootnoteMode::Inline {
+        collect_footnotes(source)
+    } else {
+        Vec::new()
+    };
+    let mut c = Converter::new(b, &options, meta, footnotes, embeds);
+    for (event, range) in Parser::new_ext(source, parser_options()).into_offset_iter() {
+        c.event_at(event, range, source);
+    }
+    c.end_highlight();
+    while !c.stack.is_empty() {
+        c.pop();
+    }
+    std::mem::take(&mut c.b)
+}
+
 /// Footnote definitions as plain text, in source order: a pass of its own,
 /// for inline footnotes.
 fn collect_footnotes(source: &str) -> Vec<(String, String)> {
@@ -610,30 +653,10 @@ impl<'a> Converter<'a> {
             .open(Self::marker(MarkerKind::Quote).with_label("embed"));
         self.b.text(&format!("Embedded from {shown}"));
         self.b.paragraph_break();
-        let options = LoadOptions {
-            footnotes: match self.options.footnotes {
-                FootnoteMode::Deferred => FootnoteMode::Inline,
-                other => other,
-            },
-            ..self.options.clone()
-        };
-        let footnotes = if options.footnotes == FootnoteMode::Inline {
-            collect_footnotes(&body)
-        } else {
-            Vec::new()
-        };
         let mut scratch = DocumentMeta::default();
         let embeds = self.embeds.as_ref().map(|e| e.child(path));
         let b = std::mem::take(&mut self.b);
-        let mut sub = Converter::new(b, &options, &mut scratch, footnotes, embeds);
-        for (event, range) in Parser::new_ext(&body, parser_options()).into_offset_iter() {
-            sub.event_at(event, range, &body);
-        }
-        sub.end_highlight();
-        while !sub.stack.is_empty() {
-            sub.pop();
-        }
-        self.b = std::mem::take(&mut sub.b);
+        self.b = run_into(b, &body, self.options, &mut scratch, embeds);
         self.b.paragraph_break();
         self.b.text("End of embed");
         self.b.close(quote);

@@ -1,0 +1,16 @@
+{
+  "name": "Ada Example",
+  "role": "Student",
+  "address": {
+    "street": "1 Example Way",
+    "city": "Portland",
+    "zip": "97201"
+  },
+  "courses": [
+    {"code": "BIO 101", "title": "Cells and Growth", "credits": 4},
+    {"code": "MTH 251", "title": "Calculus", "credits": 4}
+  ],
+  "accommodations": ["extended time", "screen reader", "Braille display"],
+  "active": true,
+  "advisor": null
+}
