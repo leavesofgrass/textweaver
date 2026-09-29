@@ -292,7 +292,7 @@ fn atx(line: &str) -> Option<(usize, &str)> {
 /// The part of a note under `heading` (its text, ignoring case, or its
 /// slug), up to the next heading of the same or a higher level; the
 /// heading line itself included.
-pub(crate) fn heading_section<'a>(text: &'a str, heading: &str) -> Option<&'a str> {
+pub fn heading_section<'a>(text: &'a str, heading: &str) -> Option<&'a str> {
     let want = heading.trim();
     let want_slug = textweaver_text::slug::slugify(want);
     let lines = lines_outside_code(text);
@@ -312,7 +312,7 @@ pub(crate) fn heading_section<'a>(text: &'a str, heading: &str) -> Option<&'a st
 /// The block a block id names: the paragraph or list item whose last line
 /// ends `^id`, or the block before a line that is only `^id`. The id itself
 /// is left out.
-pub(crate) fn block_section(text: &str, id: &str) -> Option<String> {
+pub fn block_section(text: &str, id: &str) -> Option<String> {
     let lines = lines_outside_code(text);
     let is_id_line = |l: &str| {
         let t = l.trim_end();
