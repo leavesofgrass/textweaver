@@ -83,6 +83,20 @@ jobs:
               fi
             done
           done
+          # The publishing templates (ADR-0041): the APA paper fixture in
+          # each template, with its cover, stylesheet, and title page.
+          for t in apa ama large-print dyslexia-friendly high-contrast manuscript; do
+            name="g2-apa-paper-$t"
+            cp fixtures/g2/apa-paper.md "$out/src/$name.md"
+            for to in epub pdf; do
+              if target/release/tw convert "$out/src/$name.md" --to "$to" --out "$out/$to" --no-pandoc \
+                   --template "$t" > "$out/reports/convert-$name-$to.log" 2>&1; then
+                echo "Pass: convert $name to $to" >> "$out/reports/conversion.txt"
+              else
+                echo "Fail: convert $name to $to, exit status $?" >> "$out/reports/conversion.txt"
+              fi
+            done
+          done
           cat "$out/reports/conversion.txt"
 
       - name: epubcheck

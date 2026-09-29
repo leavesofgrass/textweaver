@@ -17,10 +17,11 @@ use std::time::Duration;
 
 use anyhow::{Context, bail};
 use textweaver_convert::{
-    CitationOptions, ConvertOptions, Converter, OutputFormat, PdfOptions, Status, WatchOptions,
-    WriteOptions, watch,
+    BrailleOptions, CitationOptions, ConvertOptions, Converter, MathCode, OutputFormat, PdfOptions,
+    Status, WatchOptions, WriteOptions, watch,
 };
 use textweaver_render::{EmbedMode, Engine, Flavor, RenderOptions, TemplateChoice};
+use textweaver_writers::Template;
 
 /// Arguments for `tw convert`.
 #[derive(clap::Args, Debug)]
@@ -42,8 +43,11 @@ pub struct Args {
     /// Markdown flavor: gfm, obsidian, pandoc, or commonmark.
     #[arg(long, default_value = "gfm", value_parser = parse_flavor)]
     pub flavor: Flavor,
-    /// HTML page template: default, print, fragment, a name from
-    /// --templates, or a file path.
+    /// A publishing template for EPUB, Word, and PDF: apa (APA 7 student
+    /// paper), ama (AMA 11 manuscript), large-print, dyslexia-friendly,
+    /// high-contrast, or manuscript; the layout options below still
+    /// override it. For HTML: the page template, default, print,
+    /// fragment, a name from --templates, or a file path.
     #[arg(long, default_value = "default")]
     pub template: String,
     /// Folder of your own templates (HTML files with MiniJinja syntax).
@@ -109,6 +113,10 @@ pub struct Args {
     /// Hyperlegible Next, then an installed font).
     #[arg(long, value_name = "FILE")]
     pub pdf_font: Option<PathBuf>,
+    /// BRF: the braille code for math, nemeth (the default) or ueb. Needs
+    /// a build with MathCAT; otherwise math is written as spoken words.
+    #[arg(long, value_name = "CODE", default_value = "nemeth", value_parser = parse_math_code)]
+    pub math_code: MathCode,
     #[command(flatten)]
     pub layout: super::convert_layout::LayoutArgs,
     /// Watch: seconds a file's size must hold still before converting.
@@ -123,6 +131,24 @@ pub struct Args {
 fn parse_format(s: &str) -> Result<OutputFormat, String> {
     OutputFormat::parse(s)
         .ok_or_else(|| format!("unknown format {s:?}; use md, html, txt, epub, docx, brf, or pdf"))
+}
+
+fn parse_math_code(s: &str) -> Result<MathCode, String> {
+    match s.trim().to_ascii_lowercase().as_str() {
+        "nemeth" => Ok(MathCode::Nemeth),
+        "ueb" => Ok(MathCode::Ueb),
+        _ => Err(format!("unknown math code {s:?}; use nemeth or ueb")),
+    }
+}
+
+/// The line `tw convert` prints after converting to BRF: the math code, or
+/// that this build writes math as words.
+fn math_braille_line(code: MathCode) -> String {
+    if cfg!(feature = "mathcat") {
+        format!("Math braille: {}.", code.name())
+    } else {
+        "Math braille: none in this build; math is written as spoken words.".to_owned()
+    }
 }
 
 fn parse_engine(s: &str) -> Result<Engine, String> {
@@ -142,7 +168,36 @@ fn parse_embeds(s: &str) -> Result<EmbedMode, String> {
     }
 }
 
+/// The options for `args`, with a publishing template applied under the
+/// layout options: the template sets its defaults, then the layout options
+/// given on the command line are applied again on top (applying them is
+/// idempotent), so `--template apa --line-spacing 1.5` keeps 1.5.
 fn options(args: &Args) -> ConvertOptions {
+    let mut o = command_options(args);
+    if let Some(t) = Template::parse(&args.template) {
+        t.apply(&mut o.write);
+        o.write = args.layout.apply(o.write);
+    }
+    o
+}
+
+/// Where a publishing template has no effect, the one sentence saying so.
+fn template_note(args: &Args) -> Option<String> {
+    let t = Template::parse(&args.template)?;
+    match args.to {
+        OutputFormat::Epub | OutputFormat::Docx | OutputFormat::Pdf => None,
+        OutputFormat::Brf => Some(format!(
+            "Template {}: braille keeps its own layout; the template applies to EPUB, Word, and PDF.",
+            t.name()
+        )),
+        _ => Some(format!(
+            "Template {}: applies to EPUB, Word, and PDF; this output uses its usual layout.",
+            t.name()
+        )),
+    }
+}
+
+fn command_options(args: &Args) -> ConvertOptions {
     ConvertOptions {
         to: args.to,
         out_dir: args.out.clone(),
@@ -156,7 +211,10 @@ fn options(args: &Args) -> ConvertOptions {
             embeds: args.embeds,
             ..RenderOptions::default()
         },
-        template: TemplateChoice::parse(&args.template),
+        template: match Template::parse(&args.template) {
+            Some(_) => TemplateChoice::default(),
+            None => TemplateChoice::parse(&args.template),
+        },
         template_dir: args.templates.clone(),
         toc: !args.no_toc,
         jobs: args.jobs,
@@ -179,6 +237,10 @@ fn options(args: &Args) -> ConvertOptions {
                 font: args.pdf_font.clone(),
                 ..PdfOptions::default()
             },
+            braille: BrailleOptions {
+                math_code: args.math_code,
+                ..BrailleOptions::default()
+            },
             ..WriteOptions::default()
         }),
         ..ConvertOptions::default()
@@ -188,6 +250,9 @@ fn options(args: &Args) -> ConvertOptions {
 /// Runs `tw convert`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     let converter = Converter::new(options(&args))?;
+    if let Some(note) = template_note(&args) {
+        eprintln!("{note}");
+    }
     if args.watch {
         return run_watch(&args, &converter);
     }
@@ -215,6 +280,9 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             }
         }
         println!("{}", summary.sentence());
+        if args.to == OutputFormat::Brf && summary.converted > 0 {
+            println!("{}", math_braille_line(args.math_code));
+        }
     }
     if summary.failed > 0 {
         bail!("{} of {} files failed", summary.failed, summary.total());
@@ -267,4 +335,54 @@ fn run_watch(args: &Args, converter: &Converter) -> anyhow::Result<()> {
         }
         Ok(())
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser;
+
+    use super::*;
+
+    #[derive(Parser)]
+    struct Cli {
+        #[command(flatten)]
+        args: Args,
+    }
+
+    fn parse(args: &[&str]) -> Args {
+        Cli::try_parse_from(std::iter::once("tw").chain(args.iter().copied()))
+            .expect("the arguments parse")
+            .args
+    }
+
+    #[test]
+    fn a_publishing_template_goes_to_the_writers_under_the_layout_options() {
+        let args = parse(&[
+            "paper.md",
+            "--to",
+            "docx",
+            "--template",
+            "apa",
+            "--line-spacing",
+            "1.5",
+        ]);
+        let o = options(&args);
+        assert_eq!(o.write.template, Some(Template::ApaStudentPaper));
+        assert!(o.write.pdf.title_page && o.write.epub.cover);
+        // The command line wins over the template's double spacing.
+        assert_eq!(o.write.pdf.line_spacing, 1.5);
+        // The HTML page template stays the default.
+        assert!(matches!(o.template, TemplateChoice::Named(ref n) if n == "default"));
+        assert!(template_note(&args).is_none());
+    }
+
+    #[test]
+    fn html_page_templates_are_unchanged() {
+        let o = options(&parse(&["page.md", "--to", "html", "--template", "print"]));
+        assert_eq!(o.write.template, None);
+        assert!(matches!(o.template, TemplateChoice::Named(ref n) if n == "print"));
+        let args = parse(&["page.md", "--to", "html", "--template", "large-print"]);
+        let note = template_note(&args).expect("a note for HTML");
+        assert!(note.starts_with("Template large-print:"), "{note}");
+    }
 }

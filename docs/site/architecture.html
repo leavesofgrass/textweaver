@@ -500,6 +500,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-keymap",
     "textweaver-lexicon",
     "textweaver-math",
+    "textweaver-mathcat",
     "textweaver-render",
     "textweaver-speech",
     "textweaver-store",
@@ -606,6 +607,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-core",
     "textweaver-fonts",
     "textweaver-math",
+    "textweaver-mathcat",
     "textweaver-text"
    ],
    "description": "Native document writers for textweaver: accessible EPUB 3, DOCX, BRF braille, tagged PDF",
@@ -1399,15 +1401,17 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": false,
    "dependents": [
-    "textweaver-speech"
+    "textweaver-app",
+    "textweaver-speech",
+    "textweaver-writers"
    ],
    "deps": [
     "textweaver-core",
     "textweaver-math"
    ],
-   "description": "textweaver math speech through MathCAT (ClearSpeak and SimpleSpeak), on one dedicated thread, with textweaver-math as the fallback",
+   "description": "textweaver math speech, braille (Nemeth and UEB), and navigation through MathCAT, on one dedicated thread, with textweaver-math as the fallback",
    "dev_deps": [],
-   "job": "Math speech through MathCAT: ClearSpeak and SimpleSpeak, the wording NVDA and JAWS use, with textweaver-math as the fallback.",
+   "job": "Math speech, braille, and navigation through MathCAT: ClearSpeak and SimpleSpeak, the wording NVDA and JAWS use, Nemeth and UEB math braille, and moving through a formula, with textweaver-math as the fallback.",
    "layer": "document",
    "name": "textweaver-mathcat",
    "path": "crates/textweaver-mathcat",

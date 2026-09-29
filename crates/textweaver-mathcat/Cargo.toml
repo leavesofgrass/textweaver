@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-mathcat"
-description = "textweaver math speech through MathCAT (ClearSpeak and SimpleSpeak), on one dedicated thread, with textweaver-math as the fallback"
+description = "textweaver math speech, braille (Nemeth and UEB), and navigation through MathCAT, on one dedicated thread, with textweaver-math as the fallback"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

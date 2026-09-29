@@ -1,0 +1,23 @@
+/* textweaver template: high contrast (ADR-0041).
+   Light text on a black background, well above WCAG's 7 to 1 enhanced
+   contrast (white on black is 21 to 1; the link yellow is 19.6 to 1).
+   Links are underlined as well as colored, so color never carries meaning
+   alone; headings are set apart by size and weight; borders are solid and
+   light. Reading systems with their own night or high contrast mode may
+   override these colors, which is the reader's choice. */
+body {
+  font-family: "Atkinson Hyperlegible Next", Verdana, Arial, sans-serif;
+  font-size: 1.2em;
+  line-height: 1.6;
+  background-color: #000000;
+  color: #ffffff;
+}
+h1, h2, h3, h4, h5, h6 { color: #ffffff; font-weight: bold; }
+a, a:visited { color: #ffff00; text-decoration: underline; }
+th, td { border: 2px solid #ffffff; }
+caption { color: #ffffff; }
+pre, code { background-color: #000000; color: #ffffff; }
+pre { border: 1px solid #ffffff; padding: 0.5em; }
+blockquote { border-left: 4px solid #ffffff; padding-left: 1em; }
+hr { border: 0; border-top: 2px solid #ffffff; }
+img { background-color: #ffffff; }

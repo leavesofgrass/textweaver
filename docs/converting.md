@@ -19,7 +19,7 @@ The formats you can ask for with `--to`:
 - `txt`: plain text, the same text textweaver reads aloud.
 - `epub`: an EPUB 3 book with a table of contents, real headings, and accessibility metadata.
 - `docx`: a Word document with Word's own heading styles, numbered lists, and tables whose header row repeats.
-- `brf`: a braille file for a braille display or embosser, in uncontracted (grade 1) Unified English Braille, 40 cells by 25 lines. Contracted (grade 2) braille needs a textweaver built with the `liblouis` feature and liblouis installed; without them, the file is grade 1 and the summary says so.
+- `brf`: a braille file for a braille display or embosser, in uncontracted (grade 1) Unified English Braille, 40 cells by 25 lines. Contracted (grade 2) braille needs a textweaver built with the `liblouis` feature and liblouis installed; without them, the file is grade 1 and the summary says so. Math is in Nemeth braille, or UEB mathematics with `--math-code ueb`, in a build with MathCAT (see [Math in braille files](math.md#math-in-braille-files)).
 - `pdf`: a tagged PDF that screen readers can move through by heading, list, and table.
 
 Some outputs come with warnings, for example "The image cat.png was not found, so its description was written instead." Each warning is read out with its file name, and the summary says how many files had warnings.
@@ -90,7 +90,7 @@ The other outputs never print the dollar signs and LaTeX commands either:
 - EPUB: MathML, as in a web page. Reading apps draw it, and screen readers read it and let you explore it.
 - Word: Word's own equations. Word draws them, and Narrator, NVDA, and JAWS can read them.
 - PDF: the formula in print form, such as πr² or (a + b)/2, marked as a formula whose description is how it is read aloud, for example "pi r squared".
-- Braille: the formula as it is read aloud, "pi r squared", which grade 1 braille spells out.
+- Braille: math braille, Nemeth by default or UEB mathematics with `--math-code ueb`, in a build with MathCAT; otherwise the formula as it is read aloud, "pi r squared". See [Math in braille files](math.md#math-in-braille-files).
 
 [Math](math.md) explains how math is read aloud and how to write it.
 
@@ -136,6 +136,60 @@ HTML output is a complete web page made from a template. Three are built in; cho
 Use `--no-toc` to leave out the table of contents.
 
 You can write your own templates. They are HTML files with MiniJinja placeholders such as `{{ title }}` and `{{ content }}`. Put them in a folder and pass `--templates FOLDER --template NAME`, where the name is the file name without its extension, or give a file directly with `--template my-page.html`. Your template can start with `{% extends "default" %}` to reuse the built-in page. The placeholders are listed in the rustdoc of `textweaver_render::template`.
+
+## Publishing templates
+
+```bash
+tw convert essay.md --to docx --template apa
+```
+
+A publishing template gives an EPUB book, a Word document, or a PDF the look a kind of document needs. Choose one with `--template`:
+
+- `apa`: an APA 7 student paper. A title page, double spacing, paragraphs with a first-line indent, APA's heading levels, the page number at the top right of every page, and references with hanging indents.
+- `ama`: an AMA 11 manuscript. A title page with the word count, double spacing, and page numbers.
+- `large-print`: 18-point sans-serif text, generous spacing, and bold rather than italic for emphasis.
+- `dyslexia-friendly`: sans-serif text a little larger than usual, wider spacing between letters and lines, bold rather than italic or underline, and a cream page color in Word and EPUB.
+- `high-contrast`: in EPUB, white text on black with yellow, underlined links; in Word and PDF, heavy black text on white, because a page color does not print.
+- `manuscript`: standard manuscript format. A title page with a rounded word count, double spacing, a running head with your surname, the short title, and the page number, and a centered number sign for each scene break.
+
+A template changes how the document looks, never how it is read. Headings stay real headings at their levels, lists stay lists, tables keep their header rows, and images keep their descriptions, so a screen reader moves through a templated paper exactly as through any other. The layout options in the next section still apply on top of a template: `--template apa --line-spacing 1.5` keeps the APA look with one-and-a-half spacing.
+
+For HTML, `--template` still names a page template (see [Templates](#templates)); a publishing template name there uses the default page and says so. Braille keeps its own layout.
+
+### The title page
+
+The APA, AMA, and manuscript templates start with a title page made from the document's front matter:
+
+```yaml
+---
+title: Listening as a Study Skill
+author: Ada Example
+affiliation: Department of Education, Example State University
+course: EDU 501, Learning and Assistive Technology
+instructor: Dr. Grace Placeholder
+date: October 5, 2026
+---
+```
+
+- APA uses the title, author, affiliation, course, instructor, and date, in that order, each on its own line.
+- AMA uses the title, author, and affiliation, then `corresponding:` (the corresponding author) if you give one, and the word count of the running text. The count leaves out headings, tables, footnotes, and the abstract and reference sections.
+- Manuscript uses the title, "by" and the author, and the word count to the nearest hundred.
+
+`institution` or `university` can stand for `affiliation`, `professor` for `instructor`, and `due-date` for `date`. A field you leave out is left off the page. textweaver never guesses the date; `--date "October 5, 2026"` gives one on the command line.
+
+When a paper's only level 1 heading is its title, as in a Markdown file that starts with `# Title`, APA's first heading look goes to the level 2 headings, so your sections look like APA level 1 headings while a screen reader still hears the title as level 1 and each section as level 2.
+
+### Footnotes in Word
+
+Footnotes in a Word document are real Word footnotes, whatever the template. Word numbers them and prints them at the foot of the page; JAWS and NVDA announce the reference as a footnote and can read its text, and Word's footnote pane lists them all. A footnote referenced twice becomes one footnote, with a cross-reference to its number at the second place. A footnote nothing refers to stays where it is in the text. textweaver reads its own Word documents back with the footnotes in place.
+
+### The EPUB cover
+
+Every template adds a cover to an EPUB book: an image with the title and author in the template's colors. Its description is "Cover: " followed by the title and author, the book lists it as the cover in its landmarks, and it is the first thing in the reading order. The book's accessibility metadata says it has an image with a text description.
+
+### Print page numbers in PDF
+
+When a document has print page numbers, as a DAISY book, an EPUB with a page list, or a scanned PDF does, each page of the PDF is labelled with the print page its first line belongs to, the way a printed book numbers its pages. A PDF reader's "go to page" then takes the print page number and opens the page where that print page is under way, and "Page 3 of 20, print page 42" appears at the foot of the page. A title page and table of contents before the first print page are numbered i, ii, and so on.
 
 ## PDF and EPUB layout
 

@@ -260,6 +260,107 @@ pub fn collapse_ws(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+/// True for a heading that starts back matter or an abstract, which
+/// manuscript word counts leave out: "Abstract", "References",
+/// "Bibliography", "Works Cited", "Notes".
+pub fn is_uncounted_heading(title: &str) -> bool {
+    let t = collapse_ws(title).to_lowercase();
+    let t = t.trim_end_matches([':', '.']);
+    matches!(
+        t,
+        "abstract" | "references" | "reference list" | "bibliography" | "works cited" | "notes"
+    )
+}
+
+/// True for a heading that starts a reference list.
+pub fn is_references_heading(title: &str) -> bool {
+    let t = collapse_ws(title).to_lowercase();
+    let t = t.trim_end_matches([':', '.']);
+    matches!(
+        t,
+        "references" | "reference list" | "bibliography" | "works cited"
+    )
+}
+
+/// Words in the running text, as manuscript title pages count them:
+/// paragraphs, list items, and quotes, but not headings, tables, code,
+/// figures, footnotes, or the abstract and reference sections.
+pub fn word_count(blocks: &[Block]) -> usize {
+    fn words(inlines: &[Inline]) -> usize {
+        Inline::plain(inlines)
+            .split_whitespace()
+            .filter(|w| w.chars().any(char::is_alphanumeric))
+            .count()
+    }
+    fn walk(blocks: &[Block], skip: &mut Option<u8>, n: &mut usize) {
+        for b in blocks {
+            match b {
+                Block::Heading { level, content } => {
+                    if skip.is_some_and(|l| *level <= l) {
+                        *skip = None;
+                    }
+                    if skip.is_none() && is_uncounted_heading(&Inline::plain(content)) {
+                        *skip = Some(*level);
+                    }
+                }
+                _ if skip.is_some() => {}
+                Block::Paragraph(content) => *n += words(content),
+                Block::Quote(inner) => walk(inner, skip, n),
+                Block::List(l) => {
+                    for i in &l.items {
+                        walk(&i.blocks, skip, n);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    let mut n = 0;
+    walk(blocks, &mut None, &mut n);
+    n
+}
+
+/// Ids of footnotes referenced from the running text (not from inside
+/// footnote bodies), in order of first reference.
+pub fn footnote_refs(blocks: &[Block]) -> Vec<String> {
+    fn inl(inlines: &[Inline], out: &mut Vec<String>) {
+        for i in inlines {
+            if let Inline::Span(style, children) = i {
+                if let Style::FootnoteRef(id) = style
+                    && !out.contains(id)
+                {
+                    out.push(id.clone());
+                }
+                inl(children, out);
+            }
+        }
+    }
+    fn walk(blocks: &[Block], out: &mut Vec<String>) {
+        for b in blocks {
+            match b {
+                Block::Heading { content, .. } | Block::Paragraph(content) => inl(content, out),
+                Block::List(l) => {
+                    for i in &l.items {
+                        walk(&i.blocks, out);
+                    }
+                }
+                Block::Table(t) => {
+                    for r in &t.rows {
+                        for c in &r.cells {
+                            inl(c, out);
+                        }
+                    }
+                }
+                Block::Quote(inner) => walk(inner, out),
+                _ => {}
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(blocks, &mut out);
+    out
+}
+
 /// Builds the block tree of a document.
 pub fn blocks(doc: &Document) -> Vec<Block> {
     let mut b = TreeBuilder {

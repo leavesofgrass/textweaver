@@ -5268,8 +5268,6 @@ dependencies = [
 [[package]]
 name = "mathcat"
 version = "0.7.6-rc.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e02ae55d13d1cab996bdb0ed0921011d1ba621868cf3d5d05afdd83d910b2bc8"
 dependencies = [
  "anyhow",
  "bitflags 2.13.2",
@@ -9018,6 +9016,7 @@ dependencies = [
  "textweaver-keymap",
  "textweaver-lexicon",
  "textweaver-math",
+ "textweaver-mathcat",
  "textweaver-render",
  "textweaver-speech",
  "textweaver-store",
@@ -9491,6 +9490,7 @@ dependencies = [
  "textweaver-fonts",
  "textweaver-formats",
  "textweaver-math",
+ "textweaver-mathcat",
  "textweaver-text",
  "thiserror 2.0.21",
  "zip 8.6.0",

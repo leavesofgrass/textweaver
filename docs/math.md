@@ -324,9 +324,32 @@ These outputs typeset math from Markdown too, and never print the dollar signs:
 - EPUB: MathML, as in HTML, with the LaTeX as its text alternative.
 - Word (`docx`): Word's own equations (Office Math), with real fractions, scripts, roots, and matrices. Word draws them and can read them aloud.
 - PDF: the formula in print form, such as πr² or (a + b)/2, tagged as a formula whose text alternative is how it is read aloud, for example "pi r squared".
-- Braille (`brf`): the formula as it is read aloud, for example "pi r squared", which grade 1 braille spells out. Nemeth and UEB technical notation are not written yet. They are planned through MathCAT, once a MathCAT release fixes a known problem in its braille (see ADR-0029).
+- Braille (`brf`): math braille, in Nemeth by default or in UEB mathematics, in a build with MathCAT (see "Math in braille files" below). In a build without it, the formula as it is read aloud, for example "pi r squared".
 
 Plain text (`txt`) keeps the LaTeX source with its dollar signs, as textweaver reads it.
+
+### Math in braille files
+
+In a build with MathCAT (see "Build it" above; `tw` needs `--features mathcat` too), braille files show math in a math braille code:
+
+```powershell
+tw convert notes.md --to brf
+tw convert notes.md --to brf --math-code ueb
+```
+
+- **Nemeth** (the default): the Nemeth Code, inside the Unified English Braille text around it. Each formula starts with the opening Nemeth indicator and a space, and ends with a space and the Nemeth terminator, as BANA's guidance for Nemeth in UEB contexts says. A number on its own, such as the 2 in "2 roots", stays in UEB.
+- **UEB**: Unified English Braille's own mathematics, with no switch indicators.
+
+After a braille file is written, `tw convert` says which code it used, for example "Math braille: Nemeth." Exports from the reader (`export brf`) use `math_code` in the `[braille]` section of `settings.toml`:
+
+```toml
+[braille]
+math_code = "ueb"
+```
+
+Lines are 40 cells. A long formula moves to the next line before a comparison sign, such as the equals sign, or before a plus or minus sign, and an indicator always stays on the line with what it belongs to. Try `fixtures/c4/quadratic.md`; `fixtures/c4/quadratic.nemeth.brf` and `quadratic.ueb.brf` are what it should become.
+
+A formula the parser had to repair, or one MathCAT cannot write, is written as its spoken words, in the same braille as the text around it. The summary says so once, for example "1 formula is in spoken words: MathCAT could not write it in Nemeth braille." In a build without MathCAT, every formula is written that way, and the summary says the build has no math braille.
 
 ## Read MathML with your screen reader
 
@@ -428,6 +451,19 @@ Put the cursor on a formula and press **Alt+Shift+X** (or run `explore math` fro
 
 Each step says the part's role and the part, such as "numerator, a plus b" or "superscript, 2", and highlights it on screen; the cursor moves to it, so a magnifier or screen reader follows. At an edge nothing moves and you hear "Last term.", "First term.", "No parts inside.", or "Whole expression." The wording follows `math_verbosity`, as above. It works on `$…$`, `$$…$$`, `\(…\)`, `\[…\]`, and ASCIIMath in backticks, and on Word equations, which textweaver reads as LaTeX.
 
+### Exploring with MathCAT
+
+With `math_engine = "mathcat"` or `"mathcat_simplespeak"`, in a build with MathCAT, **Alt+Shift+X** explores the formula with MathCAT's own navigation, the one NVDA's MathCAT add-on uses. The keys are the same:
+
+- **Right** and **Left**: the next or previous part.
+- **Down** and **Up**: zoom in to the parts inside, and back out.
+- **Home** and **End**: the start and the end.
+- **Space** or **Enter**: say the part again. **Escape** leaves.
+
+Each step is said once, in MathCAT's words. The status line shows those words, then the braille code and the braille of the part you reached: in a fraction's numerator a + b, the words end with `Nemeth: ⠁⠬⠃`. With `cursor = "status"` in `[accessibility]`, a Braille display follows the status line, so you read the part in `math_code`'s braille there. The braille is in Unicode braille cells; whether the display shows them as dots depends on your screen reader's braille table (see [Using textweaver with a screen reader](screen-readers.md)).
+
+At an edge nothing moves: you hear the boundary sound and MathCAT says why. The highlight covers the whole formula while you explore, because MathCAT does not say where each part is in your text. A formula MathCAT cannot read is explored with textweaver's own navigator, as above. The built-in engine (`"builtin"`, the default) explores as before, without braille on the status line.
+
 You can also explore a formula in your screen reader: convert the document to HTML and open it in a web browser (see "Read MathML with your screen reader" above).
 
 ## If something goes wrong
@@ -451,6 +487,7 @@ You can also explore a formula in your screen reader: convert the document to HT
 - [Audio export](audio-export.md): `tw export-audio`, which reads a document with math into an audio file.
 - [Using textweaver with a screen reader](screen-readers.md): JAWS, NVDA, VoiceOver, and Orca.
 - [ADR-0018: Math](adr/0018-math.md): the design decision behind math reading and MathML.
-- [ADR-0029: MathCAT speech](adr/0029-mathcat-speech.md): MathCAT as a second math engine, and what waits for braille.
+- [ADR-0029: MathCAT speech](adr/0029-mathcat-speech.md): MathCAT as a second math engine.
+- [ADR-0036: Math braille and navigation](adr/0036-math-braille-and-navigation.md): Nemeth and UEB in braille files, and exploring with MathCAT.
 - [ADR-0005: Narration and the OffsetMap](adr/0005-narration-and-offset-map.md): how spoken words are mapped back to your text for highlighting.
 - [Documentation index](README.md)
