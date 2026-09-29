@@ -2,7 +2,7 @@
 //! Whisper's 16 kHz with rubato (features `rten` and `mic`).
 
 use rubato::audioadapter_buffers::direct::InterleavedSlice;
-use rubato::{Fft, FixedSync, Resampler};
+use rubato::{Fft, FixedSync, Indexing, Resampler};
 
 use crate::capture::WHISPER_SAMPLE_RATE;
 
@@ -97,18 +97,141 @@ pub fn to_whisper_rate(audio: &MonoAudio) -> Result<Vec<f32>, String> {
 
 /// Resamples mono `samples` from `from` Hz to `to` Hz with rubato's FFT
 /// resampler.
+///
+/// Chunk by chunk, as [`StreamResampler`] does: rubato 5.0.0's
+/// `process_all` moves only as many samples as the filter's delay when it
+/// trims that delay, which garbles the start of its output.
 pub fn resample(samples: &[f32], from: u32, to: u32) -> Result<Vec<f32>, String> {
     if from == to || samples.is_empty() {
         return Ok(samples.to_vec());
     }
-    let mut r = Fft::<f32>::new(from as usize, to as usize, 1024, 1, FixedSync::Input)
-        .map_err(|e| format!("cannot resample {from} Hz audio: {e}"))?;
-    let input = InterleavedSlice::new(samples, 1, samples.len())
-        .map_err(|e| format!("cannot resample: {e}"))?;
-    let out = r
-        .process_all(&input, samples.len(), None)
-        .map_err(|e| format!("cannot resample: {e}"))?;
-    Ok(out.take_data())
+    let mut r = StreamResampler::between(from, to)?;
+    let mut out = r.push(samples)?;
+    out.extend(r.finish()?);
+    Ok(out)
+}
+
+/// One chunk through the resampler: `partial` input samples are real and
+/// the rest silence, when given. Returns what it produced.
+fn run_chunk(r: &mut Fft<f32>, input: &[f32], partial: Option<usize>) -> Result<Vec<f32>, String> {
+    let err = |e: &dyn std::fmt::Display| format!("cannot resample: {e}");
+    let frames = r.output_frames_next();
+    let mut buf = vec![0.0f32; frames];
+    let inp = InterleavedSlice::new(input, 1, input.len()).map_err(|e| err(&e))?;
+    let mut outp = InterleavedSlice::new_mut(&mut buf, 1, frames).map_err(|e| err(&e))?;
+    let indexing = partial.map(|p| Indexing::new().partial_len(p));
+    let (_, produced) = r
+        .process_into_buffer(&inp, &mut outp, indexing.as_ref())
+        .map_err(|e| err(&e))?;
+    buf.truncate(produced);
+    Ok(buf)
+}
+
+/// Resamples audio that arrives in pieces (a microphone's) to 16 kHz,
+/// keeping the filter's state from piece to piece, so the result is the
+/// same whatever the pieces.
+pub struct StreamResampler {
+    /// `None` when the audio is already at 16 kHz.
+    inner: Option<Fft<f32>>,
+    /// Input not yet resampled (less than one chunk).
+    pending: Vec<f32>,
+    /// Output still to drop: the filter's delay.
+    skip: usize,
+    /// Input taken in all.
+    fed: usize,
+    /// Output given in all.
+    produced: usize,
+}
+
+impl std::fmt::Debug for StreamResampler {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StreamResampler")
+            .field("resampling", &self.inner.is_some())
+            .field("fed", &self.fed)
+            .field("produced", &self.produced)
+            .finish_non_exhaustive()
+    }
+}
+
+impl StreamResampler {
+    /// A resampler from `from` Hz to 16 kHz.
+    pub fn new(from: u32) -> Result<Self, String> {
+        StreamResampler::between(from, WHISPER_SAMPLE_RATE)
+    }
+
+    fn between(from: u32, to: u32) -> Result<Self, String> {
+        let inner = if from == to {
+            None
+        } else {
+            Some(
+                Fft::<f32>::new(from as usize, to as usize, 1024, 1, FixedSync::Input)
+                    .map_err(|e| format!("cannot resample {from} Hz audio: {e}"))?,
+            )
+        };
+        let skip = inner.as_ref().map_or(0, |r| r.output_delay());
+        Ok(StreamResampler {
+            inner,
+            pending: Vec::new(),
+            skip,
+            fed: 0,
+            produced: 0,
+        })
+    }
+
+    /// Drops the filter's delay from the front of `out`, and anything
+    /// past `limit` samples in all.
+    fn keep(&mut self, mut out: Vec<f32>, limit: Option<usize>) -> Vec<f32> {
+        let delay = self.skip.min(out.len());
+        out.drain(..delay);
+        self.skip -= delay;
+        if let Some(limit) = limit {
+            out.truncate(limit.saturating_sub(self.produced));
+        }
+        self.produced += out.len();
+        out
+    }
+
+    /// Takes the next piece; returns the 16 kHz audio ready so far.
+    pub fn push(&mut self, samples: &[f32]) -> Result<Vec<f32>, String> {
+        self.fed += samples.len();
+        let Some(r) = self.inner.as_mut() else {
+            self.produced += samples.len();
+            return Ok(samples.to_vec());
+        };
+        self.pending.extend_from_slice(samples);
+        let mut out = Vec::new();
+        loop {
+            let n = r.input_frames_next();
+            if self.pending.len() < n {
+                break;
+            }
+            out.extend(run_chunk(r, &self.pending[..n], None)?);
+            self.pending.drain(..n);
+        }
+        Ok(self.keep(out, None))
+    }
+
+    /// The input has ended: returns the rest.
+    pub fn finish(&mut self) -> Result<Vec<f32>, String> {
+        let Some(r) = self.inner.as_mut() else {
+            return Ok(Vec::new());
+        };
+        let expected = (r.resample_ratio() * self.fed as f64).ceil() as usize;
+        let n = r.input_frames_next();
+        let mut left = std::mem::take(&mut self.pending);
+        let partial = left.len();
+        left.resize(n, 0.0);
+        let mut out = run_chunk(r, &left, Some(partial))?;
+        // Zeros are pumped through until the delayed output is all out.
+        while self.produced + out.len().saturating_sub(self.skip) < expected {
+            let more = run_chunk(r, &left, Some(0))?;
+            if more.is_empty() {
+                break;
+            }
+            out.extend(more);
+        }
+        Ok(self.keep(out, Some(expected)))
+    }
 }
 
 #[cfg(test)]
@@ -180,5 +303,42 @@ mod tests {
             .count();
         assert!((380..=390).contains(&crossings), "{crossings}");
         assert_eq!(resample(&[1.0], 16_000, 16_000).unwrap(), vec![1.0]);
+    }
+
+    #[test]
+    fn resamples_in_pieces_as_it_does_whole() {
+        for rate in [44_100u32, 48_000] {
+            let tone = |i: usize, r: u32| {
+                (i as f32 * 440.0 * std::f32::consts::TAU / r as f32).sin() * 0.5
+            };
+            let input: Vec<f32> = (0..rate as usize + 777).map(|i| tone(i, rate)).collect();
+            let whole = resample(&input, rate, 16_000).unwrap();
+            let expected = (input.len() as f64 * 16_000.0 / f64::from(rate)).ceil() as usize;
+            assert_eq!(whole.len(), expected, "{rate} Hz");
+            // The same tone at 16 kHz, away from the edges.
+            let worst = (100..whole.len() - 100)
+                .map(|i| (whole[i] - tone(i, 16_000)).abs())
+                .fold(0.0f32, f32::max);
+            // A one-sample shift would be off by about 0.086.
+            assert!(worst < 0.03, "{rate} Hz: off the tone by {worst}");
+            for piece in [1usize, 441, 480, 4096] {
+                let mut r = StreamResampler::new(rate).unwrap();
+                let mut out = Vec::new();
+                for p in input.chunks(piece) {
+                    out.extend(r.push(p).unwrap());
+                }
+                out.extend(r.finish().unwrap());
+                assert_eq!(out.len(), whole.len(), "{rate} Hz in pieces of {piece}");
+                let worst = out
+                    .iter()
+                    .zip(&whole)
+                    .map(|(a, b)| (a - b).abs())
+                    .fold(0.0f32, f32::max);
+                assert!(worst < 1e-5, "{rate} Hz in pieces of {piece}: {worst}");
+            }
+        }
+        let mut same = StreamResampler::new(16_000).unwrap();
+        assert_eq!(same.push(&[0.5, 0.25]).unwrap(), vec![0.5, 0.25]);
+        assert!(same.finish().unwrap().is_empty());
     }
 }
