@@ -431,7 +431,15 @@ fn caret_keys_carry_what_the_self_voicing_mode_says() {
     assert_eq!(
         echo(
             &mut h,
-            key_with(Key::Named(NamedKey::ArrowRight), Modifiers::CONTROL)
+            // The word key: Cmd on macOS, Ctrl elsewhere, as the view reads it.
+            key_with(
+                Key::Named(NamedKey::ArrowRight),
+                if cfg!(target_os = "macos") {
+                    Modifiers::META
+                } else {
+                    Modifiers::CONTROL
+                }
+            )
         ),
         Some(CaretEcho::Word("cd".into()))
     );

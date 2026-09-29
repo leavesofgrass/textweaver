@@ -34,8 +34,10 @@ use std::process::Command;
 use anyhow::{Context, bail};
 
 /// Files whose version examples follow the release, relative to the root.
-const EXAMPLE_FILES: [&str; 5] = [
+const EXAMPLE_FILES: [&str; 6] = [
     "README.md",
+    // The crate map shows each crate's version (tools/gen_site_data.py).
+    "docs/site/architecture.html",
     "docs/dev/releasing.md",
     "docs/install.md",
     ".github/workflows/scripts.yml",
