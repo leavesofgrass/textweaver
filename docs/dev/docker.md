@@ -114,7 +114,7 @@ ALSA inside the image is routed to PulseAudio. Point `PULSE_SERVER` at a PulseAu
 
 ## See also
 
-- [CONTRIBUTING.md](../../CONTRIBUTING.md): setting up, the checks, and the agent workflow.
+- [CONTRIBUTING.md](../../CONTRIBUTING.md): how to contribute: setup, the checks, and accessibility.
 - [The Eloquence guide](../eloquence.md): Voxin for users.
 - [ADR-0001: Workspace and dependencies](../adr/0001-workspace-and-dependencies.md): why Linux-only features are tested in the container.
 - [ADR-0007: Eloquence through an ECI host](../adr/0007-eloquence-via-eci-host.md): the Voxin measurements.

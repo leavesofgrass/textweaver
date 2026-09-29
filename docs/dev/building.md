@@ -165,5 +165,5 @@ The script runs Zensical against `zensical.toml`, places the interactive pages f
 - [Docker development container](docker.md): Linux builds and Voxin on any machine.
 - [Architecture](architecture.md): the crates and which way dependencies point.
 - [Third-party data](third-party-data.md): the bundled dictionaries, fonts, and word lists, and their licences.
-- [CONTRIBUTING.md](../../CONTRIBUTING.md): code rules, the agent workflow, commits, and docs.
+- [CONTRIBUTING.md](../../CONTRIBUTING.md): how to contribute: setup, the checks, accessibility, commits, and docs.
 - [Documentation index](../README.md)
