@@ -98,6 +98,34 @@ pub(crate) fn mode_name(c: &Catalog, mode: Mode) -> String {
     c.tr(&format!("mode-{key}"))
 }
 
+/// A whole number with its thousands grouped as the catalog's language
+/// writes them: "12,345" in English, "12.345" in German, "12 345" in
+/// French (W6u: they were grouped the English way in every language).
+pub(crate) fn grouped(c: &Catalog, n: usize) -> String {
+    let sep = c.tr("number-group-separator");
+    let digits = n.to_string();
+    let mut out = String::with_capacity(digits.len() + digits.len() / 3 * sep.len());
+    for (i, ch) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            out.push_str(&sep);
+        }
+        out.push(ch);
+    }
+    out
+}
+
+/// A number with at most one decimal, in the catalog's form: "4.8" in
+/// English, "4,8" in German.
+pub(crate) fn decimal(c: &Catalog, x: f64) -> String {
+    let rounded = (x * 10.0).round() / 10.0;
+    let text = if rounded.fract() == 0.0 {
+        format!("{}", rounded as i64)
+    } else {
+        format!("{rounded:.1}")
+    };
+    text.replace('.', &c.tr("number-decimal-separator"))
+}
+
 /// "on" or "off", in the catalog's language.
 pub(crate) fn on_off(c: &Catalog, on: bool) -> String {
     c.tr(if on { "common-on" } else { "common-off" })

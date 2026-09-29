@@ -172,7 +172,7 @@ pub fn summary_text(c: &Catalog, text: &str, change: &str) -> Option<String> {
         return None;
     }
     let words: Vec<&str> = text.split_whitespace().collect();
-    let count = textweaver_editor::echo::thousands(n);
+    let count = crate::words::grouped(c, n);
     if words.len() <= SUMMARY_WORDS {
         // A few very long tokens (a URL, a base64 blob): the count alone.
         return Some(c.fmt("text-summary", &args!["count" => count, "change" => change]));

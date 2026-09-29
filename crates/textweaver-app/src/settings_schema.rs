@@ -442,15 +442,17 @@ pub const INFO: &[Info] = &[
         (0.5, 1.5, 0.1),
         "times",
     ),
-    text(
+    open_choice(
         "highlight.color",
-        "Word highlight colour",
-        "A colour name or #rrggbb over the theme's word highlight; theme keeps the theme's.",
+        "Word highlight color",
+        "A color name or #rrggbb over the theme's word highlight; theme keeps the theme's.",
+        crate::colors::COLOR_CHOICES,
     ),
-    optional(
+    open_choice(
         "highlight.sentence_color",
-        "Sentence highlight colour",
-        "A colour name or #rrggbb over the theme's sentence highlight; not set keeps the theme's.",
+        "Sentence highlight color",
+        "A color name or #rrggbb over the theme's sentence highlight; not set keeps the theme's.",
+        crate::colors::COLOR_CHOICES,
     ),
     // [normalization]
     toggle(
@@ -624,7 +626,7 @@ pub const INFO: &[Info] = &[
         ],
     ),
     // [display]
-    open_choice("display.theme", "Theme", "The colour theme.", &[]),
+    open_choice("display.theme", "Theme", "The color theme.", &[]),
     toggle(
         "display.follow_os_theme",
         "Follow the system theme",
@@ -772,6 +774,18 @@ pub const INFO: &[Info] = &[
         &[
             ("follow", "follows focus"),
             ("status", "on the status line"),
+        ],
+    ),
+    choice(
+        "accessibility.interface_announcements",
+        "Interface announcements",
+        "How much textweaver says about itself: dialogs, progress, hints, and routine confirmations. Errors and answers to what you asked are always said. Automatic is minimal with a screen reader, normal when self-voicing.",
+        &[
+            ("auto", "automatic"),
+            ("off", "off"),
+            ("minimal", "minimal"),
+            ("normal", "normal"),
+            ("full", "full"),
         ],
     ),
     internal(
@@ -1133,6 +1147,11 @@ pub const INFO: &[Info] = &[
         "Whether the terminal reader reorders right-to-left text for display: automatic leaves it to terminals that do it themselves. Speech and the screen reader always get the text in reading order.",
         &[("auto", "automatic"), ("on", "on"), ("off", "off")],
     ),
+    internal(
+        "interface.recent_settings",
+        "Recently changed settings",
+        "The settings changed last on the settings screen, listed at its top.",
+    ),
     // [gui]
     choice(
         "gui.announce",
@@ -1142,6 +1161,85 @@ pub const INFO: &[Info] = &[
             ("live", "live region"),
             ("uia", "UI Automation notifications"),
         ],
+    ),
+    // [colors] (W6u): open choices, a named color or #rrggbb.
+    open_choice(
+        "colors.ruler",
+        "Reading ruler color",
+        "The band of the reading ruler and the marked current line; the ruler keeps its underline or bold. A color name or #rrggbb; the theme's color by default.",
+        crate::colors::COLOR_CHOICES,
+    ),
+    open_choice(
+        "colors.difficult_words",
+        "Difficult words color",
+        "The underline of difficult words; they stay underlined and are named at high verbosity. A color name or #rrggbb; the theme's color by default.",
+        crate::colors::COLOR_CHOICES,
+    ),
+    open_choice(
+        "colors.syllables",
+        "Syllable marks color",
+        "The middle dots between syllables. A color name or #rrggbb; the theme's color by default.",
+        crate::colors::COLOR_CHOICES,
+    ),
+    open_choice(
+        "colors.misspellings",
+        "Misspellings color",
+        "The underline of misspelled words, in the window; they are also said. A color name or #rrggbb; the theme's color by default.",
+        crate::colors::COLOR_CHOICES,
+    ),
+    open_choice(
+        "colors.lint",
+        "Lint marks color",
+        "The underline of Markdown lint and grammar problems, in the window; they are also said. A color name or #rrggbb; the theme's color by default.",
+        crate::colors::COLOR_CHOICES,
+    ),
+    open_choice(
+        "colors.find_match",
+        "Search match color",
+        "The band behind search matches; they stay underlined. A color name or #rrggbb; the theme's color by default.",
+        crate::colors::COLOR_CHOICES,
+    ),
+    open_choice(
+        "colors.selection",
+        "Selection color",
+        "The band behind selected text. A color name or #rrggbb; the theme's color by default.",
+        crate::colors::COLOR_CHOICES,
+    ),
+    open_choice(
+        "colors.focus",
+        "Focus color",
+        "The focus outline and the focused item of a list; they stay bold. A color name or #rrggbb; the theme's color by default.",
+        crate::colors::COLOR_CHOICES,
+    ),
+    open_choice(
+        "colors.links",
+        "Link color",
+        "The color of links; they stay underlined. A color name or #rrggbb; the theme's color by default.",
+        crate::colors::COLOR_CHOICES,
+    ),
+    open_choice(
+        "colors.headings",
+        "Heading color",
+        "The color of headings; they stay bold. A color name or #rrggbb; the theme's color by default.",
+        crate::colors::COLOR_CHOICES,
+    ),
+    open_choice(
+        "colors.status_bar",
+        "Status bar color",
+        "The band of the status and title bars. A color name or #rrggbb; the theme's color by default.",
+        crate::colors::COLOR_CHOICES,
+    ),
+    open_choice(
+        "colors.notes",
+        "Note color",
+        "The band behind text with a note; it stays italic and underlined. A color name or #rrggbb; the theme's color by default.",
+        crate::colors::COLOR_CHOICES,
+    ),
+    open_choice(
+        "colors.bookmarks",
+        "Bookmark color",
+        "The band behind a bookmarked word; it stays bold and underlined. A color name or #rrggbb; the theme's color by default.",
+        crate::colors::COLOR_CHOICES,
     ),
 ];
 
@@ -1166,6 +1264,7 @@ fn section_title(key: &str) -> &'static str {
         "summary" => "Summaries",
         "interface" => "Interface",
         "gui" => "Window",
+        "colors" => "Colors",
         _ => "Other",
     }
 }
@@ -1414,8 +1513,16 @@ impl Setting {
         lookup(c, &format!("section-{}", slug(top)), self.section)
     }
 
-    /// A choice's label in the catalog's language (`choice-*`).
+    /// A choice's label in the catalog's language (`choice-*`; a color
+    /// setting's named colors are `color-name-*`, shared by all of them).
     pub fn choice_label_in(&self, c: &Catalog, choice: &Choice) -> String {
+        if crate::colors::is_color_setting(&self.path) {
+            return lookup(
+                c,
+                &format!("color-name-{}", slug(&value_key(&choice.value))),
+                &choice.label,
+            );
+        }
         lookup(
             c,
             &format!(
@@ -1662,7 +1769,15 @@ pub(crate) struct SettingsScreen {
     /// The setting whose new value the prompt is asking for, and the list
     /// item it was on (focused again when the list comes back).
     editing: Option<(usize, usize)>,
+    /// A view of some settings only (View, Colors): the paths it shows.
+    scope: Option<fn(&str) -> bool>,
+    /// How many of the first items are the recently changed settings,
+    /// listed again at the top (W6u).
+    recent: usize,
 }
+
+/// Most recently changed settings listed at the top of the screen.
+pub const RECENT_SETTINGS: usize = 5;
 
 impl App {
     /// The settings schema, with this session's theme names as the theme's
@@ -1739,6 +1854,16 @@ impl App {
             said.push(' ');
             said.push_str(&c.tr(extra));
         }
+        if crate::colors::is_color_setting(path) {
+            let note = self.color_change_note(path);
+            if !note.is_empty() {
+                said.push(' ');
+                said.push_str(&note);
+            }
+        }
+        if !setting.internal {
+            self.remember_setting(path);
+        }
         if path == "interface.language" {
             // In the new language: what happened to the voice, then the
             // title line, so the change is heard to have worked.
@@ -1800,22 +1925,97 @@ impl App {
         self.refresh_settings_screen()
     }
 
-    /// The Settings command: the settings screen.
+    /// The Settings command: the settings screen, with the settings changed
+    /// last at the top.
     pub(crate) fn open_settings_screen(&mut self) -> Vec<Effect> {
+        self.open_settings_screen_with(None, "settings-intro")
+    }
+
+    /// The settings screen showing the settings `scope` takes (every one
+    /// for `None`), introduced by message `intro` (with `$n`).
+    pub(crate) fn open_settings_screen_with(
+        &mut self,
+        scope: Option<fn(&str) -> bool>,
+        intro: &str,
+    ) -> Vec<Effect> {
         let schema = self.settings_schema();
-        let shown: Vec<usize> = (0..schema.settings.len())
-            .filter(|&i| !schema.settings[i].internal)
-            .collect();
-        let n = shown.len();
         self.settings_screen = Some(SettingsScreen {
             schema,
-            shown,
+            shown: Vec::new(),
             filter: String::new(),
             editing: None,
+            scope,
+            recent: 0,
         });
-        let msg = self.msg_args("settings-intro", &args!["n" => n]);
-        self.tell(&msg);
+        self.fill_settings_rows();
+        let n = self
+            .settings_screen
+            .as_ref()
+            .map_or(0, |s| s.shown.len() - s.recent);
+        let msg = self.msg_args(intro, &args!["n" => n]);
+        self.say_result(&msg);
         self.show_settings_list()
+    }
+
+    /// Works out the rows of the settings screen: the recently changed
+    /// settings first (without a filter, on the whole screen), then every
+    /// setting the view shows that matches the filter.
+    fn fill_settings_rows(&mut self) {
+        let c = self.catalog();
+        let recent_paths = self.settings.interface.recent_settings.clone();
+        let Some(screen) = self.settings_screen.as_mut() else {
+            return;
+        };
+        let query = screen.filter.clone();
+        let scope = screen.scope;
+        let visible = |s: &Setting| !s.internal && scope.is_none_or(|f| f(&s.path));
+        let mut shown: Vec<usize> = Vec::new();
+        if query.trim().is_empty() && scope.is_none() {
+            for path in recent_paths.iter().take(RECENT_SETTINGS) {
+                if let Some(i) = screen
+                    .schema
+                    .settings
+                    .iter()
+                    .position(|s| &s.path == path && visible(s))
+                {
+                    shown.push(i);
+                }
+            }
+        }
+        screen.recent = shown.len();
+        shown.extend((0..screen.schema.settings.len()).filter(|&i| {
+            let s = &screen.schema.settings[i];
+            let unit = match &s.kind {
+                SettingKind::Number { unit, .. } => unit,
+                _ => "",
+            };
+            // English and the interface's language both match.
+            visible(s)
+                && crate::lists::matches(
+                    &format!(
+                        "{} {} {} {} {unit} {} {} {}",
+                        s.label,
+                        s.section,
+                        s.path,
+                        s.help,
+                        s.label_in(&c),
+                        s.section_in(&c),
+                        s.help_in(&c)
+                    ),
+                    &query,
+                )
+        }));
+        screen.shown = shown;
+    }
+
+    /// Records `path` as the setting changed last (the top of the settings
+    /// screen), saved with the settings.
+    pub(crate) fn remember_setting(&mut self, path: &str) {
+        let recent = &mut self.settings.interface.recent_settings;
+        recent.retain(|p| p != path);
+        recent.insert(0, path.to_owned());
+        recent.truncate(RECENT_SETTINGS);
+        self.settings_dirty = true;
     }
 
     /// The settings list's title and items, for the frontend.
@@ -1828,13 +2028,21 @@ impl App {
         let items: Vec<String> = screen
             .shown
             .iter()
-            .map(|&i| {
+            .enumerate()
+            .map(|(row, &i)| {
                 let s = &screen.schema.settings[i];
                 let v = get(&tree, &s.path).cloned().unwrap_or(Value::Null);
-                c.fmt(
-                    "settings-item",
-                    &args!["label" => s.label_in(c), "value" => s.describe_in(c, &v)],
-                )
+                let (label, value) = (s.label_in(c), s.describe_in(c, &v));
+                let line = if crate::colors::is_color_setting(&s.path) {
+                    self.color_row(c, &label, &value, &s.path)
+                } else {
+                    c.fmt("settings-item", &args!["label" => label, "value" => value])
+                };
+                if row < screen.recent {
+                    c.fmt("settings-item-recent", &args!["item" => line])
+                } else {
+                    line
+                }
             })
             .collect();
         let title = if screen.filter.is_empty() {
@@ -1862,7 +2070,7 @@ impl App {
     pub(crate) fn close_settings_screen(&mut self) {
         self.settings_screen = None;
         let msg = self.msg("settings-closed");
-        self.note(&msg);
+        self.say_dialog(&msg);
     }
 
     /// The filter of the settings screen, when it is showing.
@@ -1879,32 +2087,12 @@ impl App {
         let Some(screen) = self.settings_screen.as_mut() else {
             return vec![Effect::Redraw];
         };
-        screen.shown = (0..screen.schema.settings.len())
-            .filter(|&i| {
-                let s = &screen.schema.settings[i];
-                let unit = match &s.kind {
-                    SettingKind::Number { unit, .. } => unit,
-                    _ => "",
-                };
-                // English and the interface's language both match.
-                !s.internal
-                    && crate::lists::matches(
-                        &format!(
-                            "{} {} {} {} {unit} {} {} {}",
-                            s.label,
-                            s.section,
-                            s.path,
-                            s.help,
-                            s.label_in(&c),
-                            s.section_in(&c),
-                            s.help_in(&c)
-                        ),
-                        &query,
-                    )
-            })
-            .collect();
         screen.filter = query.clone();
-        let n = screen.shown.len();
+        self.fill_settings_rows();
+        let n = self
+            .settings_screen
+            .as_ref()
+            .map_or(0, |s| s.shown.len() - s.recent);
         let msg = if query.trim().is_empty() {
             c.fmt("settings-filter-cleared", &args!["n" => n])
         } else if n == 0 {
@@ -1933,12 +2121,52 @@ impl App {
         match key {
             ListKey::Left | ListKey::Right => Some(self.step_setting(n, key == ListKey::Right)),
             ListKey::Enter => Some(self.choose_setting(n)),
-            ListKey::Delete => {
-                let (_, s) = self.shown_setting(n)?;
-                Some(self.set_setting_command(&s.path, Value::Null))
-            }
+            ListKey::Delete => Some(self.reset_setting(n)),
+            ListKey::Introduce => Some(self.say_setting_help(n)),
             _ => None,
         }
+    }
+
+    /// Delete on item `n`: the setting's default comes back, named
+    /// ("Rate back to its default, 200 words per minute.").
+    fn reset_setting(&mut self, n: usize) -> Vec<Effect> {
+        let Some((_, s)) = self.shown_setting(n) else {
+            return vec![Effect::Redraw];
+        };
+        match self.set_setting(&s.path, Value::Null) {
+            Ok(_) => {
+                let c = self.catalog();
+                let now = self.setting_value(&s.path).unwrap_or(Value::Null);
+                let msg = c.fmt(
+                    "settings-reset",
+                    &args!["label" => s.label_in(&c), "value" => s.describe_in(&c, &now)],
+                );
+                self.tell(&msg);
+            }
+            Err(why) => self.error(&why),
+        }
+        self.pending_list_focus = Some(n);
+        self.refresh_settings_screen()
+    }
+
+    /// F1 on item `n`: the setting's value, its default, and its help.
+    fn say_setting_help(&mut self, n: usize) -> Vec<Effect> {
+        let Some((_, s)) = self.shown_setting(n) else {
+            return self.repeat_list_introduction();
+        };
+        let c = self.catalog();
+        let now = self.setting_value(&s.path).unwrap_or(Value::Null);
+        let msg = c.fmt(
+            "settings-row-help",
+            &args![
+                "label" => s.label_in(&c),
+                "value" => s.describe_in(&c, &now),
+                "default" => s.describe_in(&c, &s.default),
+                "help" => s.help_in(&c)
+            ],
+        );
+        self.tell(&msg);
+        vec![Effect::Redraw]
     }
 
     /// Left or Right on item `n`.

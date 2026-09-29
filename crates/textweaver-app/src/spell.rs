@@ -311,7 +311,7 @@ impl App {
                     } else {
                         "spell-no-earlier"
                     },
-                    &args!["n" => n, "count" => textweaver_editor::echo::thousands(n)],
+                    &args!["n" => n, "count" => crate::words::grouped(self.cat(), n)],
                 )
             };
             self.tell(&msg);
@@ -517,7 +517,7 @@ impl App {
         }
         let summary = self.msg_args(
             "spell-count",
-            &args!["n" => n, "count" => textweaver_editor::echo::thousands(n)],
+            &args!["n" => n, "count" => crate::words::grouped(self.cat(), n)],
         );
         self.announce_queued(&summary, textweaver_a11y::Priority::Polite);
         vec![Effect::Redraw]

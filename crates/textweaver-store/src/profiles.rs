@@ -35,7 +35,7 @@ use crate::{Paths, StoreError, atomic_write};
 
 /// The settings a profile holds, as dotted paths into `settings.toml`. A
 /// path to a table (`highlight`) takes the whole table.
-pub const PROFILE_KEYS: [&str; 15] = [
+pub const PROFILE_KEYS: [&str; 16] = [
     "speech.backend",
     "speech.voice",
     "speech.prefer_voice",
@@ -51,6 +51,7 @@ pub const PROFILE_KEYS: [&str; 15] = [
     "accessibility.mode",
     "accessibility.say_all",
     "accessibility.quiet_screen",
+    "accessibility.interface_announcements",
 ];
 
 /// The format marker of an export, `"textweaver_profiles": 1`.

@@ -527,14 +527,13 @@ fn reading_level_summary(c: &Catalog, level: &ReadingLevel) -> String {
         GradeBand::College => "aids-band-college",
         GradeBand::Graduate => "aids-band-graduate",
     });
-    let thousands = textweaver_editor::echo::thousands;
     let words = c.fmt(
         "aids-level-words",
-        &args!["n" => level.words, "count" => thousands(level.words)],
+        &args!["n" => level.words, "count" => crate::words::grouped(c, level.words)],
     );
     let sentences = c.fmt(
         "aids-level-sentences",
-        &args!["n" => level.sentences, "count" => thousands(level.sentences)],
+        &args!["n" => level.sentences, "count" => crate::words::grouped(c, level.sentences)],
     );
     c.fmt(
         "aids-level-summary",
