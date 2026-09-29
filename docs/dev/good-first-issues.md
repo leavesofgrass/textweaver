@@ -30,7 +30,7 @@ The project writes US English, but some English messages and setting labels use 
 - Where: the message values in `crates/textweaver-lexicon/locales/en.ftl`, and the English labels and help in `crates/textweaver-app/src/settings_schema.rs`.
 - Change only the text people read or hear. Keep every message id (the part before `=`), every setting key, and every Rust identifier as it is, so no one's settings break. Leave the other languages' files alone.
 - Then regenerate the settings reference with `cargo xtask settings-doc`.
-- How to check: `git grep -n -i -E "colour|licence|favourite|grey|catalogue" -- crates/textweaver-lexicon/locales/en.ftl` finds nothing in message values, and `cargo test -p textweaver-app -p textweaver-lexicon` passes.
+- How to check: `git grep -n -i -E "colour|licence|favourite|grey|catalogue" -- crates/textweaver-lexicon/locales/en.ftl` finds these words only in message ids (before the `=`), never in the text after it, and `cargo test -p textweaver-app -p textweaver-lexicon` passes.
 
 ### A fuzz target for plain text
 
