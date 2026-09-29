@@ -131,6 +131,26 @@ pub fn open_failure_reason_in(c: &Catalog, path: &Path, err: &LoadError) -> Stri
             log::warn!("{name}: {detail}");
             c.tr("opening-damaged-mhtml")
         }
+        // W6o: the formats of ADR-0044.
+        LoadError::Parse(detail) => match extension(path).as_str() {
+            "json" | "jsonl" | "ndjson" | "geojson" | "webmanifest" => {
+                log::warn!("{name}: {detail}");
+                c.tr("opening-damaged-json")
+            }
+            "ipynb" => {
+                log::warn!("{name}: {detail}");
+                c.tr("opening-damaged-notebook")
+            }
+            "svg" => {
+                log::warn!("{name}: {detail}");
+                c.tr("opening-damaged-svg")
+            }
+            "mml" | "mathml" => {
+                log::warn!("{name}: {detail}");
+                c.tr("opening-damaged-mathml")
+            }
+            _ => err.to_string(),
+        },
         other => other.to_string(),
     }
 }
@@ -406,6 +426,36 @@ mod tests {
         assert_eq!(
             open_failure_message(Path::new("page.MHT"), &parse()),
             "Could not open page.MHT: it is not a readable web archive; it may be damaged or too large."
+        );
+    }
+
+    #[test]
+    fn damaged_json_notebooks_drawings_and_formulas_are_named_plainly() {
+        let parse = || LoadError::Parse("XML: unexpected end of stream".into());
+        for (file, words) in [
+            ("data.json", "a readable JSON file; it may be too large."),
+            (
+                "growth.ipynb",
+                "a readable Jupyter notebook; it may be damaged or too large.",
+            ),
+            (
+                "chart.SVG",
+                "a readable SVG drawing; it may be damaged or too large.",
+            ),
+            (
+                "f.mml",
+                "a readable MathML formula; it may be damaged or too large.",
+            ),
+        ] {
+            assert_eq!(
+                open_failure_message(Path::new(file), &parse()),
+                format!("Could not open {file}: it is not {words}")
+            );
+        }
+        // Other formats keep the loader's words.
+        assert_eq!(
+            open_failure_message(Path::new("x.weird"), &parse()),
+            "Could not open x.weird: parse error: XML: unexpected end of stream"
         );
     }
 }

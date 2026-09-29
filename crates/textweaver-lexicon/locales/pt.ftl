@@ -2765,3 +2765,10 @@ setting-reading-aids-difficult-definitions = Definições de palavras difíceis
 setting-reading-aids-difficult-definitions-help = Com as palavras difíceis marcadas, com verbosidade alta dizer também a primeira definição do dicionário de uma palavra difícil.
 section-summary = Resumos
 settings-unit-sentences = frases
+
+## Wave 6 (W6o): opening the new formats. Said after "Could not open NAME:", so
+## each starts in lower case.
+opening-damaged-json = não é um arquivo JSON legível; pode ser grande demais.
+opening-damaged-notebook = não é um notebook Jupyter legível; pode estar danificado ou ser grande demais.
+opening-damaged-svg = não é um desenho SVG legível; pode estar danificado ou ser grande demais.
+opening-damaged-mathml = não é uma fórmula MathML legível; pode estar danificada ou ser grande demais.

@@ -3005,3 +3005,10 @@ setting-reading-aids-difficult-definitions = تعريفات الكلمات ال�
 setting-reading-aids-difficult-definitions-help = عند تمييز الكلمات الصعبة، نطق التعريف الأول للكلمة الصعبة من القاموس أيضًا في مستوى التفصيل المرتفع.
 section-summary = الملخصات
 settings-unit-sentences = جمل
+
+## Wave 6 (W6o): opening the new formats. Said after "Could not open NAME:", so
+## each starts in lower case.
+opening-damaged-json = ليس ملف JSON قابلًا للقراءة؛ قد يكون كبيرًا جدًا.
+opening-damaged-notebook = ليس دفتر Jupyter قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
+opening-damaged-svg = ليس رسمًا بصيغة SVG قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
+opening-damaged-mathml = ليست صيغة MathML قابلة للقراءة؛ قد تكون تالفة أو كبيرة جدًا.
