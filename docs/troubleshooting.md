@@ -208,6 +208,19 @@ textweaver refuses a file that is not text, such as a program, an audio file, or
 
 The [converting guide](converting.md) explains `tw convert`.
 
+### "Could not open" a document that has the right file name ending
+
+A file can have the right ending, `.odt`, `.rtf`, `.tex`, `.eml`, or `.mhtml`, and still not be a readable one, for example a `.eml` that is really an export log, or a `.tex` file saved with the wrong encoding. textweaver names the kind of file it expected and says it may be damaged, plainly and without an operating system error code:
+
+- "Could not open notes.odt: it is not a readable OpenDocument text file; it may be damaged."
+- "Could not open report.tex: it is not a readable LaTeX file; it may be damaged."
+- "Could not open message.eml: it is not a readable email message; it may be damaged."
+- "Could not open page.mhtml: it is not a readable web archive; it may be damaged."
+
+1. Open the file in the program that made it (Word, your mail program, your browser's "Save page as") and save it again.
+2. For LaTeX, check that the file is plain text saved as UTF-8, not a binary format such as a compiled `.pdf` renamed to `.tex`.
+3. If the file opens correctly elsewhere, the file itself is fine and this is worth reporting; see [Report a bug](#report-a-bug).
+
 ### Bookmarks and notes for one document are gone, and there is a .bak file
 
 When a document's state file cannot be read, for example after a sync conflict or a hand edit, textweaver does not overwrite it. It renames `<key>.json` to `<key>.corrupt-<time>.bak` in the state folder, where the time is in seconds since 1970, and the document starts with no saved place or marks. This is written to the log, but not announced.
