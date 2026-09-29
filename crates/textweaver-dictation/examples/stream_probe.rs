@@ -32,8 +32,9 @@
 //! step of new audio is there, and each run takes the wall time it really
 //! took on this machine. Owner: Agent W5d.
 
-// Without a feature only the agreement logic and its tests are built.
-#![cfg_attr(not(any(feature = "rten", feature = "mic")), allow(dead_code))]
+// Without `rten` only the agreement logic, its tests, and (with `mic`) the
+// fake recognizer are built.
+#![cfg_attr(not(feature = "rten"), allow(dead_code))]
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -331,7 +332,8 @@ mod la {
         let mut waits = Vec::new();
         let mut clock = 0.0f64;
         for u in utterances {
-            let pause_known = (secs(u.end) + config.pause_after_end).min(secs(total).max(secs(u.end)));
+            let pause_known =
+                (secs(u.end) + config.pause_after_end).min(secs(total).max(secs(u.end)));
             clock = clock.max(pause_known);
             let (segs, cost) = rec.recognize(u.start, u.end);
             clock += cost;
@@ -351,8 +353,8 @@ mod la {
         for (i, row) in d.iter_mut().enumerate() {
             row[0] = i;
         }
-        for j in 0..=m {
-            d[0][j] = j;
+        for (j, v) in d[0].iter_mut().enumerate() {
+            *v = j;
         }
         for i in 1..=n {
             for j in 1..=m {
@@ -450,7 +452,7 @@ mod la {
         let mut s = v.to_vec();
         s.sort_by(f64::total_cmp);
         let mid = s.len() / 2;
-        let median = if s.len() % 2 == 0 {
+        let median = if s.len().is_multiple_of(2) {
             (s[mid - 1] + s[mid]) / 2.0
         } else {
             s[mid]
@@ -494,7 +496,13 @@ mod la {
         fn normalizes_words() {
             assert_eq!(norm("Chapter."), "chapter");
             assert_eq!(norm("don't,"), "don't");
-            assert_eq!(common_prefix(&["a".into(), "B.".into()], &["A".into(), "b".into(), "c".into()]), 2);
+            assert_eq!(
+                common_prefix(
+                    &["a".into(), "B.".into()],
+                    &["A".into(), "b".into(), "c".into()]
+                ),
+                2
+            );
         }
 
         #[test]
@@ -535,7 +543,9 @@ mod la {
         fn a_changed_early_word_keeps_the_rest() {
             let split = |s: &str| s.split(' ').map(String::from).collect::<Vec<_>>();
             let cw = split("open until 9 in the evening and to");
-            let hyp = split("open until 9am in the evening and to add more lamps where people liked to sit");
+            let hyp = split(
+                "open until 9am in the evening and to add more lamps where people liked to sit",
+            );
             assert_eq!(continuation(&cw, &hyp), 8);
             assert_eq!(continuation(&cw[..2], &hyp), 2);
             assert_eq!(continuation(&[], &hyp), 0);
@@ -577,7 +587,8 @@ mod la {
             assert_eq!(with.cancelled_runs, 1);
             assert_eq!(without.cancelled_runs, 0);
             assert!(with.pause_to_final[0] < without.pause_to_final[0]);
-            let text = |r: &StreamResult| r.commits.iter().map(|c| norm(&c.word)).collect::<Vec<_>>();
+            let text =
+                |r: &StreamResult| r.commits.iter().map(|c| norm(&c.word)).collect::<Vec<_>>();
             assert_eq!(text(&with), text(&without));
         }
 
@@ -628,7 +639,10 @@ mod la {
         fn statistics() {
             assert_eq!(median_worst(&[3.0, 1.0, 2.0]), (2.0, 3.0));
             assert_eq!(median_worst(&[1.0, 2.0, 3.0, 4.0]), (2.5, 4.0));
-            assert_eq!(percentile(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0], 90.0), 9.0);
+            assert_eq!(
+                percentile(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0], 90.0),
+                9.0
+            );
         }
     }
 }
@@ -693,7 +707,11 @@ fn windows_process(expr: &str) -> Option<Vec<f64>> {
         .output()
         .ok()?;
     let s = String::from_utf8_lossy(&out.stdout);
-    Some(s.split_whitespace().filter_map(|x| x.parse().ok()).collect())
+    Some(
+        s.split_whitespace()
+            .filter_map(|x| x.parse().ok())
+            .collect(),
+    )
 }
 
 /// Seconds of processor time this process has used, on all threads.
@@ -766,7 +784,10 @@ fn parse_args() -> Result<Opts, String> {
     let value = |args: &mut dyn Iterator<Item = String>, name: &str| {
         args.next().ok_or_else(|| format!("{name} needs a value"))
     };
-    let num = |s: String, name: &str| s.parse::<f64>().map_err(|_| format!("{name}: not a number"));
+    let num = |s: String, name: &str| {
+        s.parse::<f64>()
+            .map_err(|_| format!("{name}: not a number"))
+    };
     while let Some(a) = args.next() {
         match a.as_str() {
             "--model" => o.model = Some(value(&mut args, &a)?.into()),
@@ -832,7 +853,10 @@ fn report_stream(
     println!("  Pause to last word, streaming: median {fin_med:.2} s, worst {fin_worst:.2} s");
     println!("  Pause to text, batch today: median {bat_med:.2} s, worst {bat_worst:.2} s");
     println!("  Rewrites avoided: {} words", r.rewrites_avoided);
-    println!("  Committed words the final run disagreed with: {}", r.late_disagreements);
+    println!(
+        "  Committed words the final run disagreed with: {}",
+        r.late_disagreements
+    );
     println!(
         "  Word error rate: streaming {:.1} percent, batch {:.1} percent, streaming against batch {:.1} percent",
         la::wer(&committed, &ref_words),
@@ -847,11 +871,12 @@ fn report_stream(
     }
 }
 
-/// Loads a fixture: 16 kHz audio, its utterances, and its reference words.
+/// A fixture: 16 kHz audio, its utterances, and its reference words.
+type Fixture = (Vec<f32>, Vec<std::ops::Range<usize>>, Vec<la::RefWord>);
+
+/// Loads a fixture.
 #[cfg(any(feature = "rten", feature = "mic"))]
-fn load_fixture(
-    wav: &Path,
-) -> Result<(Vec<f32>, Vec<std::ops::Range<usize>>, Vec<la::RefWord>), String> {
+fn load_fixture(wav: &Path) -> Result<Fixture, String> {
     use textweaver_dictation::{audio, vad};
     let bytes = std::fs::read(wav).map_err(|e| format!("{}: {e}", wav.display()))?;
     let pcm = audio::to_whisper_rate(&audio::read_wav(&bytes)?)?;
@@ -865,7 +890,9 @@ fn load_fixture(
     let pad = f64::from(config.pad_ms) / 1000.0;
     let mut i = 0;
     for (k, s) in spans.iter().enumerate() {
-        let next = spans.get(k + 1).map_or(f64::INFINITY, |n| n.start as f64 / la::RATE);
+        let next = spans
+            .get(k + 1)
+            .map_or(f64::INFINITY, |n| n.start as f64 / la::RATE);
         let j = i + reference[i..].iter().take_while(|w| w.start < next).count();
         if j > i {
             let (a0, a1) = (reference[i].start, reference[j - 1].end);
@@ -890,7 +917,11 @@ fn run_fake(o: &Opts) -> Result<(), String> {
             "Utterances found: {}",
             spans
                 .iter()
-                .map(|s| format!("{:.2} to {:.2} s", s.start as f64 / la::RATE, s.end as f64 / la::RATE))
+                .map(|s| format!(
+                    "{:.2} to {:.2} s",
+                    s.start as f64 / la::RATE,
+                    s.end as f64 / la::RATE
+                ))
                 .collect::<Vec<_>>()
                 .join(", ")
         );
@@ -913,8 +944,7 @@ mod whisper {
     use std::time::Instant;
 
     use textweaver_dictation::rten_whisper::{
-        HOP, N_FFT, RtenWhisper, RtenWhisperFiles, hann_window, log_mel_spectrogram,
-        mel_filters,
+        HOP, N_FFT, RtenWhisper, RtenWhisperFiles, hann_window, log_mel_spectrogram, mel_filters,
     };
 
     use super::{Opts, la, load_fixture, print_memory, report_stream};
@@ -949,19 +979,22 @@ mod whisper {
             let cancel = AtomicBool::new(false);
             let t = Instant::now();
             self.fixed = 0.0;
-            let segs = match self.w.transcribe(&self.pcm[start..end], None, &cancel, &mut |_| {}) {
+            let segs = match self
+                .w
+                .transcribe(&self.pcm[start..end], None, &cancel, &mut |_| {})
+            {
                 Ok((tr, tm)) => {
                     self.fixed = (tm.features + tm.encode).as_secs_f64();
                     tr
                 }
-                    .segments
-                    .into_iter()
-                    .map(|s| la::Seg {
-                        start: s.start_ms as f64 / 1000.0,
-                        end: s.end_ms as f64 / 1000.0,
-                        text: s.text,
-                    })
-                    .collect(),
+                .segments
+                .into_iter()
+                .map(|s| la::Seg {
+                    start: s.start_ms as f64 / 1000.0,
+                    end: s.end_ms as f64 / 1000.0,
+                    text: s.text,
+                })
+                .collect(),
                 Err(e) => {
                     eprintln!("Whisper failed: {e}");
                     Vec::new()
@@ -985,7 +1018,8 @@ mod whisper {
             let clip = &pcm[..n];
             // One warm-up run, not counted.
             let _ = w.transcribe(clip, None, &cancel, &mut |_| {});
-            let (mut feat, mut enc, mut dec, mut tot) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+            let (mut feat, mut enc, mut dec, mut tot) =
+                (Vec::new(), Vec::new(), Vec::new(), Vec::new());
             let mut text = String::new();
             let cpu0 = super::cpu_seconds();
             for _ in 0..o.runs {
@@ -1026,7 +1060,9 @@ mod whisper {
         let bytes = std::fs::read(&files.encoder).map_err(|e| e.to_string())?;
         let model = rten::Model::load(bytes).map_err(|e| e.to_string())?;
         let input = model.node_id("input_features").map_err(|e| e.to_string())?;
-        let output = model.node_id("last_hidden_state").map_err(|e| e.to_string())?;
+        let output = model
+            .node_id("last_hidden_state")
+            .map_err(|e| e.to_string())?;
         println!("Encoder input shape: {:?}", model.input_shape(0));
         let filters = mel_filters(80, N_FFT, 16_000);
         let window = hann_window(N_FFT);
@@ -1067,7 +1103,11 @@ mod whisper {
                 "Utterances found: {}",
                 spans
                     .iter()
-                    .map(|s| format!("{:.2} to {:.2} s", s.start as f64 / la::RATE, s.end as f64 / la::RATE))
+                    .map(|s| format!(
+                        "{:.2} to {:.2} s",
+                        s.start as f64 / la::RATE,
+                        s.end as f64 / la::RATE
+                    ))
                     .collect::<Vec<_>>()
                     .join(", ")
             );
