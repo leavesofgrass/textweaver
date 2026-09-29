@@ -678,6 +678,69 @@ mod tests {
         assert!(e.contains("encoder_model_int8.onnx"), "{e}");
     }
 
+    /// Live dictation with a real model over the speech fixtures, played
+    /// in at speaking pace (never aloud), against the same audio
+    /// transcribed at once. Needs `TEXTWEAVER_WHISPER_RTEN_MODEL` (a model
+    /// folder) and the fixtures' WAV files (`fixtures/d/README.md`);
+    /// prints what was committed when, and the timings. Run with
+    /// `--release`.
+    #[test]
+    #[ignore = "needs a Whisper model and the fixture recordings"]
+    fn live_on_the_fixtures() {
+        use crate::capture::PacedCapture;
+        let Some(dir) = std::env::var_os("TEXTWEAVER_WHISPER_RTEN_MODEL") else {
+            return;
+        };
+        let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/d");
+        let mut config = RtenConfig::new(PathBuf::from(dir));
+        let mut batch = RtenDictation::new(config.clone()).unwrap();
+        config.live = Some(StreamConfig::default());
+        let mut live = RtenDictation::new(config).unwrap();
+        for name in ["stream-note", "stream-long", "stream-short"] {
+            let wav = fixtures.join(format!("{name}.wav"));
+            let Ok(bytes) = std::fs::read(&wav) else {
+                eprintln!("{name}: no recording, skipped");
+                continue;
+            };
+            batch.start(DictationInput::File(wav)).unwrap();
+            let batch_text = batch
+                .wait()
+                .iter()
+                .find_map(|e| match e {
+                    DictationEvent::Final(t) => Some(t.text()),
+                    _ => None,
+                })
+                .unwrap();
+            let samples = to_whisper_rate(&read_wav(&bytes).unwrap()).unwrap();
+            let seconds = samples.len() as f64 / 16_000.0;
+            let t0 = Instant::now();
+            live.start(DictationInput::Capture(Box::new(PacedCapture::new(
+                samples,
+            ))))
+            .unwrap();
+            let mut text = None;
+            live.wait_each(|e| match e {
+                DictationEvent::Committed { text, at_pause, .. } => eprintln!(
+                    "{name}: at {:.1} s{}: {text}",
+                    t0.elapsed().as_secs_f64(),
+                    if *at_pause { " (pause)" } else { "" }
+                ),
+                DictationEvent::Final(t) => text = Some(t.text()),
+                DictationEvent::Failed { message } => panic!("{message}"),
+                _ => {}
+            });
+            let text = text.unwrap();
+            eprintln!(
+                "{name}: {seconds:.1} s of audio, done at {:.1} s",
+                t0.elapsed().as_secs_f64()
+            );
+            eprintln!("{name}: live:  {text}");
+            eprintln!("{name}: batch: {batch_text}");
+            eprintln!("{name}: {:?}", live.last_timings());
+            assert!(!text.is_empty());
+        }
+    }
+
     /// Transcribes a WAV with a real model. Needs
     /// `TEXTWEAVER_WHISPER_RTEN_MODEL` (a model folder) and
     /// `TEXTWEAVER_WHISPER_RTEN_WAV` (16-bit speech); prints the timings.

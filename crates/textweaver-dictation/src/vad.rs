@@ -151,6 +151,8 @@ pub struct SpanTracker {
     /// padding may still be arriving, or speech may start close enough to
     /// join it.
     ending: Option<Range<usize>>,
+    /// Where the latest speech frame ended.
+    speech_end: Option<usize>,
 }
 
 impl SpanTracker {
@@ -161,7 +163,14 @@ impl SpanTracker {
             frame: 0,
             current: None,
             ending: None,
+            speech_end: None,
         }
+    }
+
+    /// Where the latest frame of speech ended (a sample), if any has been
+    /// heard: how far the speaker has talked, silence after it excluded.
+    pub fn speech_end(&self) -> Option<usize> {
+        self.speech_end
     }
 
     /// The rules in use.
@@ -181,6 +190,7 @@ impl SpanTracker {
         self.frame += 1;
         let pad = self.config.pad_samples();
         if score >= self.config.threshold {
+            self.speech_end = Some((i + 1) * FRAME);
             let c = self.current.get_or_insert(Candidate {
                 first: i,
                 last: i,
@@ -262,6 +272,11 @@ pub trait FindSpeech: Send {
 
     /// The audio has ended: closes whatever is open.
     fn finish(&mut self) -> Vec<SpeechEvent>;
+
+    /// Where the latest speech heard ended (a sample), if known.
+    fn speech_end(&self) -> Option<usize> {
+        None
+    }
 }
 
 /// Frames scored by any function of their samples: for tests, and for
@@ -317,6 +332,10 @@ impl<F: FnMut(&[f32; FRAME]) -> f32 + Send> FindSpeech for ScoredFinder<F> {
         self.tracker.finish(self.seen, &mut out);
         out
     }
+
+    fn speech_end(&self) -> Option<usize> {
+        self.tracker.speech_end()
+    }
 }
 
 /// A frame scorer that can move between threads.
@@ -347,6 +366,10 @@ impl FindSpeech for SpeechFinder {
 
     fn finish(&mut self) -> Vec<SpeechEvent> {
         self.0.finish()
+    }
+
+    fn speech_end(&self) -> Option<usize> {
+        self.0.speech_end()
     }
 }
 
@@ -578,6 +601,10 @@ mod tests {
                 SpeechEvent::Closed(2 * FRAME..9 * FRAME),
             ]
         );
+        let mut f = ScoredFinder::new(config, loud);
+        assert_eq!(f.speech_end(), None);
+        f.push(&audio);
+        assert_eq!(f.speech_end(), Some(8 * FRAME));
     }
 
     #[cfg(any(feature = "rten", feature = "mic"))]

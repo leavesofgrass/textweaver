@@ -20,6 +20,15 @@
 //! - The session loop, on the thread that owns the model: runs over the
 //!   open utterance every [`StreamConfig::step`] of new audio after the
 //!   last run finished, and the last run at each pause.
+//! - The gate, so live dictation is never slower than transcribing each
+//!   utterance at its pause: partial runs only once an utterance is past
+//!   [`StreamConfig::min_utterance`] of speech (about 3 seconds; below
+//!   that little is agreed on before the pause, and a run cancelled at the
+//!   pause delays the last one), only while runs stay under
+//!   [`StreamConfig::max_run`] (about 1.5 seconds), and not once the
+//!   speaker has been quiet for 300 ms (the pause may be coming; its run
+//!   will have those words). After a slow run the utterance waits for its
+//!   pause.
 //!
 //! The loop is written against a feed and a recognizer, so the tests drive
 //! it with a fake recognizer, in virtual time and in real time, without a
@@ -46,17 +55,36 @@ use crate::vad::{FindSpeech, SpeechEvent};
 pub struct StreamConfig {
     /// New audio needed after the last run before the next partial run.
     pub step: Duration,
+    /// Partial runs start only once the utterance has this much speech
+    /// (from its start to the end of the latest speech heard; the silence
+    /// after it does not count).
+    pub min_utterance: Duration,
+    /// A partial run slower than this ends partial runs for the
+    /// utterance: the rest of its words come at its pause.
+    pub max_run: Duration,
 }
 
 impl Default for StreamConfig {
     fn default() -> Self {
         StreamConfig {
             step: Duration::from_millis(700),
+            min_utterance: Duration::from_secs(3),
+            max_run: Duration::from_millis(1500),
         }
     }
 }
 
 impl StreamConfig {
+    /// No partial runs: each utterance is transcribed once, at its pause,
+    /// while recording goes on. The fallback when partial runs cost too
+    /// much.
+    pub fn pauses_only() -> Self {
+        StreamConfig {
+            min_utterance: Duration::MAX,
+            ..StreamConfig::default()
+        }
+    }
+
     fn samples(d: Duration) -> usize {
         usize::try_from(
             d.as_millis()
@@ -241,11 +269,19 @@ impl Signals {
     }
 }
 
+/// Quiet after speech that holds off partial runs: half the pause that
+/// ends an utterance.
+const QUIET: Duration = Duration::from_millis(300);
+
 /// What the listener sends the session loop, in order.
 #[derive(Debug)]
 pub(crate) enum Msg {
-    /// More audio, after everything sent before.
-    Audio(Vec<f32>),
+    /// More audio, after everything sent before, and where the latest
+    /// speech heard so far ends.
+    Audio {
+        samples: Vec<f32>,
+        speech_end: Option<usize>,
+    },
     /// An utterance opened or closed, in the audio sent so far.
     Speech(SpeechEvent),
     /// The audio has ended; every utterance has been closed.
@@ -333,7 +369,11 @@ pub(crate) fn spawn_listener(
                 let (audio, ended) = live.take(Duration::from_millis(50));
                 if !audio.is_empty() {
                     let events = finder.push(&audio);
-                    if tx.send(Msg::Audio(audio)).is_err() {
+                    let audio = Msg::Audio {
+                        samples: audio,
+                        speech_end: finder.speech_end(),
+                    };
+                    if tx.send(audio).is_err() {
                         return;
                     }
                     for e in events {
@@ -378,6 +418,8 @@ pub(crate) struct LiveReport {
     pub ended_at: Option<Duration>,
     /// Session time when the last utterance was finished.
     pub finished_at: Duration,
+    /// The most audio held at once, in samples.
+    pub peak_audio: usize,
 }
 
 /// An utterance the loop is working on.
@@ -388,6 +430,8 @@ struct Utterance {
     start: usize,
     /// The end of the audio its last run heard (its start before any).
     heard: usize,
+    /// A partial run was slow: no more until the pause.
+    slow: bool,
     agreement: Agreement,
 }
 
@@ -410,6 +454,7 @@ pub(crate) fn run_live(
     let mut s = Session {
         audio: Vec::new(),
         base: 0,
+        speech_end: 0,
         open: None,
         closing: VecDeque::new(),
         ended: false,
@@ -418,6 +463,8 @@ pub(crate) fn run_live(
         report: LiveReport::default(),
     };
     let step = StreamConfig::samples(config.step).max(1);
+    let min_utterance = StreamConfig::samples(config.min_utterance);
+    let quiet = StreamConfig::samples(QUIET);
     loop {
         if signals.is_cancelled() {
             return Ok(None);
@@ -443,14 +490,18 @@ pub(crate) fn run_live(
         if s.ended && s.open.is_none() {
             break;
         }
-        let due = s
-            .open
-            .as_ref()
-            .is_some_and(|u| s.seen().saturating_sub(u.heard) >= step);
+        let (seen, speech_end) = (s.seen(), s.speech_end);
+        let due = s.open.as_ref().is_some_and(|u| {
+            !u.slow
+                && speech_end.saturating_sub(u.start) >= min_utterance
+                && seen.saturating_sub(speech_end) < quiet
+                && seen.saturating_sub(u.heard) >= step
+        });
         if due {
-            s.partial_run(rec, feed, signals, emit);
+            s.partial_run(rec, feed, signals, config, emit);
             continue;
         }
+        s.trim();
         match feed.next(true) {
             Next::Msg(m) => s.take(m, feed.now()),
             Next::Empty => {}
@@ -467,6 +518,8 @@ struct Session {
     /// Audio from sample `base` on.
     audio: Vec<f32>,
     base: usize,
+    /// Where the latest speech heard ends.
+    speech_end: usize,
     open: Option<Utterance>,
     /// Utterances closed and waiting for their last run, with their
     /// ranges.
@@ -504,13 +557,23 @@ impl Session {
             index,
             start,
             heard: start,
+            slow: false,
             agreement: Agreement::new(),
         }
     }
 
     fn take(&mut self, m: Msg, now: Duration) {
         match m {
-            Msg::Audio(a) => self.audio.extend_from_slice(&a),
+            Msg::Audio {
+                samples,
+                speech_end,
+            } => {
+                self.audio.extend_from_slice(&samples);
+                self.report.peak_audio = self.report.peak_audio.max(self.audio.len());
+                if let Some(e) = speech_end {
+                    self.speech_end = self.speech_end.max(e);
+                }
+            }
             Msg::Speech(SpeechEvent::Opened { start }) => {
                 let u = self.new_utterance(start);
                 if let Some(old) = self.open.replace(u) {
@@ -551,12 +614,16 @@ impl Session {
 
     /// Drops audio nothing will need again.
     fn trim(&mut self) {
-        let keep_from = match (&self.open, self.closing.front()) {
-            (Some(u), _) => u.start,
-            (None, Some((u, _))) => u.start,
-            (None, None) => self.seen().saturating_sub(StreamConfig::samples(KEEP_IDLE)),
-        };
-        if keep_from > self.base {
+        // The oldest utterance still needing audio: one waiting for its
+        // last run comes before the open one.
+        let keep_from = self
+            .closing
+            .front()
+            .map(|(u, _)| u.start)
+            .or(self.open.as_ref().map(|u| u.start))
+            .unwrap_or_else(|| self.seen().saturating_sub(StreamConfig::samples(KEEP_IDLE)));
+        // Draining moves what is kept: only for a second or more.
+        if keep_from >= self.base + WHISPER_SAMPLE_RATE as usize {
             let n = (keep_from - self.base).min(self.audio.len());
             self.audio.drain(..n);
             self.base += n;
@@ -568,6 +635,7 @@ impl Session {
         rec: &mut dyn Recognizer,
         feed: &mut dyn Feed,
         signals: &Signals,
+        config: &StreamConfig,
         emit: &mut dyn FnMut(DictationEvent),
     ) {
         let end = self.seen();
@@ -584,6 +652,11 @@ impl Session {
             return;
         };
         u.heard = end;
+        if cost > config.max_run {
+            // Runs this slow would make the last run late: the rest of the
+            // utterance waits for its pause.
+            u.slow = true;
+        }
         if flag.load(Ordering::SeqCst) {
             // The pause came while it ran: its last run follows at once.
             self.report.cancelled_runs += 1;
@@ -639,7 +712,10 @@ impl Session {
             });
         }
         let text = u.agreement.committed().join(" ");
-        if !text.is_empty() {
+        if text.is_empty() {
+            // Speech with no words: said, rather than silence.
+            emit(DictationEvent::NoWords { utterance: u.index });
+        } else {
             let ms = |s: usize| s as u64 * 1000 / u64::from(WHISPER_SAMPLE_RATE);
             let segment = Segment {
                 start_ms: ms(range.start),
@@ -835,7 +911,11 @@ pub(crate) mod tests {
             for piece in audio.chunks(FRAME) {
                 t += piece.len() as f64 / 16_000.0;
                 let events = finder.push(piece);
-                msgs.push_back((t, Msg::Audio(piece.to_vec()), false));
+                let audio = Msg::Audio {
+                    samples: piece.to_vec(),
+                    speech_end: finder.speech_end(),
+                };
+                msgs.push_back((t, audio, false));
                 msgs.extend(events.into_iter().map(|e| (t, Msg::Speech(e), false)));
             }
             msgs.extend(
@@ -1023,14 +1103,13 @@ pub(crate) mod tests {
 
     /// Only the last run at each pause: today's behavior, per utterance.
     pub(crate) fn batch() -> StreamConfig {
-        StreamConfig {
-            step: Duration::from_secs(3600),
-        }
+        StreamConfig::pauses_only()
     }
 
-    /// "When the library opened its new reading room." (8 words, 3.2 s)
-    pub(crate) const LONG: &[usize] = &[17, 8, 18, 19, 20, 21, 22, 23];
-    pub(crate) const LONG_TEXT: &str = "When the library opened its new reading room.";
+    /// Twelve words, 4.8 seconds.
+    pub(crate) const LONG: &[usize] = &[17, 8, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3];
+    pub(crate) const LONG_TEXT: &str =
+        "When the library opened its new reading room. The tram was late";
 
     fn full_word(w: &str) -> bool {
         VOCABULARY.contains(&w)
@@ -1056,7 +1135,7 @@ pub(crate) mod tests {
             // Never the half-heard word at the end.
             assert!(words.split(' ').all(full_word), "{commits:?}");
         }
-        assert_eq!(live.report.words, 8);
+        assert_eq!(live.report.words, 12);
         // Committed words add up to the text, in order.
         let joined: Vec<&str> = commits.iter().map(|c| c.1).collect();
         assert_eq!(joined.join(" "), LONG_TEXT);
@@ -1073,19 +1152,23 @@ pub(crate) mod tests {
     #[test]
     fn a_run_going_at_the_pause_is_cancelled() {
         let audio = speak(300, &[(LONG, 1000)]);
-        // Slow runs: one is still going when the pause is found.
-        let s = simulate(&audio, &StreamConfig::default(), 0.5, 0.25, Vec::new());
+        // Runs just under the gate's limit: the second is still going when
+        // the pause is found.
+        let (fixed, per_word) = (1.0, 0.04);
+        let s = simulate(
+            &audio,
+            &StreamConfig::default(),
+            fixed,
+            per_word,
+            Vec::new(),
+        );
         assert!(s.report.cancelled_runs >= 1, "{:?}", s.report);
         assert_eq!(s.text(), LONG_TEXT);
-        // The cancelled run stopped once its fixed part was done (0.5 s
-        // at most after the pause), then the last run took 0.5 s plus
-        // 0.25 s a word.
+        // The cancelled run stopped once its fixed part was done, then the
+        // last run took its own time.
         let last = s.finals()[0];
-        assert!(
-            last <= s.pauses[0] + 0.5 + 0.5 + 0.25 * 8.0 + 1e-6,
-            "{last} {:?}",
-            s.pauses
-        );
+        let bound = s.pauses[0] + fixed + fixed + per_word * 12.0 + 1e-6;
+        assert!(last <= bound, "{last} > {bound}");
     }
 
     #[test]
@@ -1124,6 +1207,88 @@ pub(crate) mod tests {
             .filter(|(_, e)| matches!(e, DictationEvent::Partial(_)))
             .count();
         assert_eq!(partials, 3);
+    }
+
+    #[test]
+    fn partial_runs_wait_for_three_seconds_of_utterance() {
+        let audio = speak(300, &[(LONG, 1000)]);
+        let s = simulate(&audio, &StreamConfig::default(), 0.1, 0.01, Vec::new());
+        // The utterance starts 200 ms before its speech (its padding); two
+        // runs agree at the earliest 3 seconds and one step in.
+        let start = 0.3 - 0.2;
+        let first = s.commits()[0].0;
+        assert!(first >= start + 3.0 + 0.7, "first words at {first}");
+        assert!(s.report.early_words > 0, "{:?}", s.report);
+    }
+
+    #[test]
+    fn a_slow_run_waits_for_the_pause() {
+        let words: Vec<usize> = LONG.iter().chain(LONG).copied().collect();
+        let audio = speak(300, &[(&words, 1000)]);
+        // Every run takes 1.6 seconds, over the 1.5-second limit.
+        let s = simulate(&audio, &StreamConfig::default(), 1.6, 0.0, Vec::new());
+        assert_eq!(s.report.partial_runs, 1, "{:?}", s.report);
+        assert_eq!(s.report.early_words, 0);
+        assert_eq!(s.text(), format!("{LONG_TEXT} {LONG_TEXT}"));
+    }
+
+    /// Short dictation (utterances under three seconds) is never later
+    /// than transcribing each utterance at its pause, however slow the
+    /// recognizer: no partial run happens at all.
+    #[test]
+    fn short_dictation_is_never_later_than_batch() {
+        let script: [(&[usize], usize); 5] = [
+            (&[0, 1, 2, 3], 800),
+            (&[7, 8, 9, 10, 11, 12], 700),
+            (&[4, 5], 1500),
+            (&[13, 14, 15, 16], 650),
+            (&[17, 8, 18], 900),
+        ];
+        let audio = speak(250, &script);
+        for (fixed, per_word) in [(0.05, 0.0), (0.3, 0.02), (0.8, 0.1), (2.5, 0.3)] {
+            let live = simulate(
+                &audio,
+                &StreamConfig::default(),
+                fixed,
+                per_word,
+                Vec::new(),
+            );
+            let batch = simulate(&audio, &batch(), fixed, per_word, Vec::new());
+            assert_eq!(live.text(), batch.text());
+            assert_eq!(live.report.partial_runs, 0, "costs {fixed} + {per_word}");
+            assert_eq!(live.runs, batch.runs);
+            let (l, b) = (live.finals(), batch.finals());
+            assert_eq!(l.len(), 5);
+            for (u, (lt, bt)) in l.iter().zip(&b).enumerate() {
+                assert!(lt <= bt, "utterance {u}: live {lt}, batch {bt}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_phrase_with_no_words_is_said() {
+        // Speech at a level that names no word: heard, not recognized.
+        let mut audio = vec![0.0f32; 16_000 / 4];
+        audio.extend(std::iter::repeat_n(0.27, 16_000));
+        audio.extend(std::iter::repeat_n(0.0, 16_000));
+        let s = simulate(&audio, &StreamConfig::default(), 0.1, 0.0, Vec::new());
+        let said: Vec<&DictationEvent> = s.events.iter().map(|(_, e)| e).collect();
+        assert_eq!(said, [&DictationEvent::NoWords { utterance: 0 }]);
+        assert!(s.report.transcript.is_empty());
+    }
+
+    #[test]
+    fn silence_is_not_kept() {
+        // A minute of silence, then a phrase: only a few seconds of audio
+        // are ever held.
+        let audio = speak(60_000, &[(&[7, 8, 9, 10], 900)]);
+        let s = simulate(&audio, &StreamConfig::default(), 0.1, 0.01, Vec::new());
+        assert_eq!(s.text(), "Open the second chapter");
+        assert!(
+            s.report.peak_audio < 16_000 * 6,
+            "held {} samples",
+            s.report.peak_audio
+        );
     }
 
     #[test]
