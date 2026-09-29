@@ -224,45 +224,36 @@ pub fn speech_registry_for(settings: &Settings) -> BackendRegistry {
 
 /// The Piper backend's options: `[speech.piper]` `voices` (the voices
 /// folder, default `<data>/piper/voices`), `voice` (the voice to start
-/// with), and `phonemizer` (`auto`, `library`, or `rust`), kept as an
-/// unknown section until the store gains a typed one.
+/// with), and `phonemizer` (`auto`, `library`, or `rust`).
 /// `TEXTWEAVER_PIPER_VOICES` names the voices folder for one run.
 pub fn piper_config(settings: &Settings) -> textweaver_piper::PiperConfig {
-    let section = settings.speech.extra.get("piper");
-    let get = |key: &str| {
-        section
-            .and_then(|t| t.get(key))
-            .and_then(|v| v.as_str())
-            .filter(|s| !s.is_empty())
-    };
+    let piper = &settings.speech.piper;
     let data_dir = textweaver_store::Paths::platform()
         .map(|p| p.data_dir)
         .unwrap_or_else(|_| std::env::temp_dir().join("textweaver"));
     let mut config = textweaver_piper::PiperConfig::in_data_dir(&data_dir);
     if let Some(dir) = std::env::var_os("TEXTWEAVER_PIPER_VOICES").filter(|v| !v.is_empty()) {
         config.voices_dir = PathBuf::from(dir);
-    } else if let Some(dir) = get("voices") {
-        config.voices_dir = PathBuf::from(dir);
+    } else if let Some(dir) = piper.voices.as_ref().filter(|d| !d.as_os_str().is_empty()) {
+        config.voices_dir = dir.clone();
     }
-    config.default_voice = get("voice").map(str::to_owned);
-    config.phonemizer = match get("phonemizer") {
-        Some("library") => textweaver_piper::PhonemizerChoice::Library,
-        Some("rust") => textweaver_piper::PhonemizerChoice::Rust,
-        _ => textweaver_piper::PhonemizerChoice::Auto,
+    config.default_voice = piper.voice.clone().filter(|v| !v.is_empty());
+    config.phonemizer = match piper.phonemizer {
+        textweaver_store::PiperPhonemizer::Library => textweaver_piper::PhonemizerChoice::Library,
+        textweaver_store::PiperPhonemizer::Rust => textweaver_piper::PhonemizerChoice::Rust,
+        textweaver_store::PiperPhonemizer::Auto => textweaver_piper::PhonemizerChoice::Auto,
     };
     config
 }
 
-/// The DECtalk backend's options: `library` from `[speech.dectalk]` (kept
-/// as an unknown section until the store gains a typed one).
+/// The DECtalk backend's options: `library` from `[speech.dectalk]`.
 pub fn dectalk_config(settings: &Settings) -> textweaver_dectalk::DectalkConfig {
     let library = settings
         .speech
-        .extra
-        .get("dectalk")
-        .and_then(|t| t.get("library"))
-        .and_then(|v| v.as_str())
-        .map(std::path::PathBuf::from);
+        .dectalk
+        .library
+        .clone()
+        .filter(|p| !p.as_os_str().is_empty());
     textweaver_dectalk::DectalkConfig {
         library,
         ..textweaver_dectalk::DectalkConfig::default()

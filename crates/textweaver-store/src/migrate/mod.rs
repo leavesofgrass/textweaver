@@ -33,10 +33,11 @@ use textweaver_core::{CharPos, CharRange};
 
 use crate::library::{Library, resolve_path};
 use crate::notes::{self, Highlight, Note, Relation};
+use crate::profiles;
 use crate::sync::{self, ConflictPolicy, Prefer, SidecarMap};
 use crate::{
-    Bookmark, DocKey, DocState, Paths, Recent, RecentEntry, SettingsStore, StateStore, StoreError,
-    percent,
+    Bookmark, DocKey, DocState, Paths, Profiles, Recent, RecentEntry, Settings, SettingsStore,
+    StateStore, StoreError, percent,
 };
 
 use self::align::{MapMethod, PositionMapper};
@@ -88,6 +89,8 @@ pub enum ItemKind {
     Library,
     /// A library folder sidecar entry.
     Sidecar,
+    /// A settings profile.
+    Profile,
     /// Anything else (reading statistics, settings with no equivalent).
     Other,
 }
@@ -106,6 +109,7 @@ impl ItemKind {
             ItemKind::Recent => "Recent files",
             ItemKind::Library => "Bookshelf entries",
             ItemKind::Sidecar => "Synced positions",
+            ItemKind::Profile => "Settings profiles",
             ItemKind::Other => "Other",
         }
     }
@@ -299,6 +303,43 @@ fn unusable(key: &str) -> Option<String> {
 
 fn obj(v: Option<&Value>) -> Option<&Map<String, Value>> {
     v.and_then(Value::as_object)
+}
+
+/// Star's profiles, by name: an object of names to settings maps, or a
+/// list of objects with a `name` and their settings (in `settings`,
+/// `values`, or beside the name). A profile whose settings are not an
+/// object is listed with `None`, so it is reported.
+fn star_profiles(v: Option<&Value>) -> Vec<(String, Option<Map<String, Value>>)> {
+    let settings_of = |m: &Map<String, Value>| -> Option<Map<String, Value>> {
+        for inner in ["settings", "values", "preset"] {
+            if let Some(Value::Object(s)) = m.get(inner) {
+                return Some(s.clone());
+            }
+        }
+        let mut rest = m.clone();
+        rest.remove("name");
+        Some(rest)
+    };
+    match v {
+        Some(Value::Object(m)) => m
+            .iter()
+            .map(|(name, p)| (name.clone(), p.as_object().and_then(settings_of)))
+            .collect(),
+        Some(Value::Array(list)) => list
+            .iter()
+            .map(|p| match p.as_object() {
+                Some(m) => (
+                    m.get("name")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_owned(),
+                    settings_of(m),
+                ),
+                None => (String::new(), None),
+            })
+            .collect(),
+        _ => Vec::new(),
+    }
 }
 
 impl Run<'_> {
@@ -780,6 +821,138 @@ impl Run<'_> {
         Ok(())
     }
 
+    /// Star's settings profiles (`profiles` in `settings.json`, saved by
+    /// Star's profile menu in `gui/mixin_presets.py`) into `profiles.toml`,
+    /// one report line per profile. Each profile maps Star's settings keys
+    /// to values; the ones with a textweaver equivalent among the profile
+    /// keys ([`profiles::PROFILE_KEYS`]) are kept. A textweaver profile of
+    /// the same name wins.
+    fn profiles(&mut self, star: &Map<String, Value>) -> Result<(), StoreError> {
+        let found = star_profiles(star.get("profiles"));
+        if found.is_empty() {
+            return Ok(());
+        }
+        let mut stored = match Profiles::load(self.paths) {
+            Ok(p) => p,
+            Err(e) => {
+                self.report.push(
+                    ItemKind::Profile,
+                    "profiles.toml",
+                    Outcome::Skipped,
+                    format!("textweaver's profiles could not be read, so they are left alone: {e}"),
+                );
+                return Ok(());
+            }
+        };
+        let before = stored.clone();
+        for (name, values) in found {
+            let shown = name.split_whitespace().collect::<Vec<_>>().join(" ");
+            if shown.is_empty() {
+                self.report.push(
+                    ItemKind::Profile,
+                    "a profile with no name",
+                    Outcome::Skipped,
+                    "a profile needs a name",
+                );
+                continue;
+            }
+            if stored.profiles.contains_key(&shown) {
+                self.report.push(
+                    ItemKind::Profile,
+                    shown,
+                    Outcome::Unchanged,
+                    "a textweaver profile of that name is kept",
+                );
+                continue;
+            }
+            let Some(values) = values else {
+                self.report.push(
+                    ItemKind::Profile,
+                    shown,
+                    Outcome::Skipped,
+                    "its settings could not be read",
+                );
+                continue;
+            };
+            let mut settings = Settings::default();
+            let applied = star::apply_profile(&values, &mut settings);
+            let captured = profiles::capture(&settings);
+            let mut keys: Vec<&str> = profiles::PROFILE_KEYS
+                .iter()
+                .copied()
+                .filter(|k| {
+                    applied
+                        .set
+                        .iter()
+                        .any(|s| s == k || s.starts_with(&format!("{k}.")))
+                })
+                .collect();
+            keys.dedup();
+            let mut table = toml::Table::new();
+            for k in &keys {
+                if let Some(v) = profiles::get(&captured, k) {
+                    profiles::set(&mut table, k, v.clone());
+                }
+            }
+            let outside: Vec<String> = applied
+                .set
+                .iter()
+                .filter(|s| {
+                    !profiles::PROFILE_KEYS
+                        .iter()
+                        .any(|k| *s == k || s.starts_with(&format!("{k}.")))
+                })
+                .cloned()
+                .collect();
+            let mut left_out = applied.left_out.clone();
+            left_out.extend(outside.iter().map(|s| format!("{s}: not kept in profiles")));
+            let left = if left_out.is_empty() {
+                String::new()
+            } else {
+                format!("; left out: {}", left_out.join(", "))
+            };
+            if table.is_empty() {
+                self.report.push(
+                    ItemKind::Profile,
+                    shown,
+                    Outcome::Skipped,
+                    format!("none of its settings has a textweaver equivalent{left}"),
+                );
+                continue;
+            }
+            // Each setting the profile named, with its value
+            // ("highlight.color yellow", not the whole highlight table).
+            let order = |s: &str| {
+                profiles::PROFILE_KEYS
+                    .iter()
+                    .position(|k| s == *k || s.starts_with(&format!("{k}.")))
+                    .unwrap_or(usize::MAX)
+            };
+            let mut named: Vec<&String> = applied
+                .set
+                .iter()
+                .filter(|s| !outside.contains(s))
+                .collect();
+            named.sort_by_key(|s| order(s));
+            let said: Vec<String> = named
+                .into_iter()
+                .filter_map(|s| profiles::value_text(&table, s).map(|v| format!("{s} {v}")))
+                .collect();
+            self.report.push(
+                ItemKind::Profile,
+                shown.clone(),
+                Outcome::Imported,
+                format!("{}{left}", said.join(", ")),
+            );
+            stored.profiles.insert(shown, table);
+        }
+        if stored != before {
+            let file = self.paths.profiles_file();
+            self.write(&file, || stored.save(self.paths))?;
+        }
+        Ok(())
+    }
+
     fn sidecars(&mut self, star: &Map<String, Value>) -> Result<(), StoreError> {
         let folders: Vec<PathBuf> = star
             .get("library_folders")
@@ -1213,6 +1386,7 @@ pub fn migrate_star(
     run.bookshelf(&star)?;
     run.sidecars(&star)?;
     run.reading_stats(&star)?;
+    run.profiles(&star)?;
     if let Some(presets) = obj(star.get("annotation_filter_presets")).filter(|m| !m.is_empty()) {
         run.report.push(
             ItemKind::Other,

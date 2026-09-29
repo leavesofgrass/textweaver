@@ -16,8 +16,8 @@
 //! | [`DocxLoader`], with comments and tracked changes | `docx`, `docm` | [`NATIVE_PRIORITY`] (10) |
 //! | [`RtfLoader`]: Rich Text Format | `rtf` | [`NATIVE_PRIORITY`] (10) |
 //! | [`OdtLoader`]: OpenDocument text, with comments and tracked changes | `odt`, `ott`, `fodt` | [`NATIVE_PRIORITY`] (10) |
-//! | `PdfLoader` (feature `pdf`, on by default; ADR-0010), with OCR of scanned pages (feature `ocr`; ADR-0026) | `pdf` | [`NATIVE_PRIORITY`] (10) |
-//! | `ImageLoader` (feature `ocr`): OCR of an image file | `png`, `jpg`, `jpeg` | [`NATIVE_PRIORITY`] (10) |
+//! | `PdfLoader` (feature `pdf`, on by default; ADR-0010), with OCR of scanned pages (feature `images`, and `ocr` for the in-process engine; ADR-0026) | `pdf` | [`NATIVE_PRIORITY`] (10) |
+//! | `ImageLoader` (feature `images`; `ocr` adds the in-process engine): OCR of an image file | `png`, `jpg`, `jpeg` | [`NATIVE_PRIORITY`] (10) |
 //! | [`DaisyLoader`]: DAISY 3 books and DTBook files | `opf`, `xml`, `dtbook` | [`NATIVE_PRIORITY`] (10) |
 //! | [`PptxLoader`]: PowerPoint slides and speaker notes | `pptx`, `pptm`, `ppsx` | [`NATIVE_PRIORITY`] (10) |
 //! | [`SheetLoader`]: spreadsheets as tables | `csv`, `tsv`, `tab`, `ods`, and (feature `spreadsheets`) `xlsx`, `xlsm`, `xlsb` | [`NATIVE_PRIORITY`] (10) |
@@ -105,7 +105,7 @@ pub use odt::OdtLoader;
 pub use pandoc::PandocLoader;
 #[cfg(feature = "pdf")]
 pub use pdf::PdfLoader;
-#[cfg(feature = "ocr")]
+#[cfg(feature = "images")]
 pub use pdf::image::ImageLoader;
 pub use pptx::PptxLoader;
 pub use progress::{Progress, ProgressReport};
@@ -422,7 +422,7 @@ impl Registry {
         r.register(Box::new(OdtLoader));
         #[cfg(feature = "pdf")]
         r.register(Box::new(PdfLoader));
-        #[cfg(feature = "ocr")]
+        #[cfg(feature = "images")]
         r.register(Box::new(ImageLoader));
         r.register(Box::new(DaisyLoader));
         r.register(Box::new(PptxLoader));
@@ -546,7 +546,7 @@ pub fn set_cache_dir(dir: Option<PathBuf>) {
 /// textweaver's cache folder, as the store places it (`TEXTWEAVER_HOME`'s
 /// `cache/` when that is set): downloaded web files and OCR results live
 /// under it.
-#[cfg_attr(not(any(feature = "ocr", feature = "url")), allow(dead_code))]
+#[cfg_attr(not(any(feature = "images", feature = "url")), allow(dead_code))]
 pub(crate) fn cache_dir() -> Option<PathBuf> {
     if let Some(dir) = CACHE_DIR.read().unwrap_or_else(|p| p.into_inner()).clone() {
         return Some(dir);
@@ -694,7 +694,7 @@ mod tests {
         if cfg!(feature = "pdf") {
             ids.push("pdf");
         }
-        if cfg!(feature = "ocr") {
+        if cfg!(feature = "images") {
             ids.push("image");
         }
         ids.extend(["daisy", "pptx", "sheet", "archive"]);

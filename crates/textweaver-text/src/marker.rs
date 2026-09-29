@@ -251,6 +251,26 @@ impl<'a> MarkerIndex<'a> {
         self.iter(kind, level).count()
     }
 
+    /// Every marker of `kind` (and `level`) lying within `range` (see
+    /// [`CharRange::contains_range`]), in document order. With index tables
+    /// the first candidate is found by binary search, so this costs the
+    /// markers near `range`, not every marker of the kind before it
+    /// (narration counts a list's items at every list).
+    pub fn iter_within(
+        &self,
+        kind: MarkerKind,
+        level: Option<u8>,
+        range: CharRange,
+    ) -> impl Iterator<Item = &'a Marker> {
+        let ids = self.ids(kind);
+        let markers = self.markers;
+        let first = ids.partition_point(|&i| markers[i as usize].range.start < range.start);
+        (first..ids.len())
+            .map(move |i| &markers[ids[i] as usize])
+            .take_while(move |m| m.range.start <= range.end)
+            .filter(move |m| Self::matches(m, level) && range.contains_range(m.range))
+    }
+
     /// The `n`th marker (0-based) of `kind` (and `level`).
     pub fn nth(&self, kind: MarkerKind, level: Option<u8>, n: usize) -> Option<&'a Marker> {
         self.iter(kind, level).nth(n)
@@ -541,6 +561,32 @@ mod props {
                 let a = fast.enclosing(kind, CharPos(pos)).map(|m| m.range);
                 let b = slow.enclosing(kind, CharPos(pos)).map(|m| m.range);
                 prop_assert_eq!(a, b);
+            }
+        }
+
+        /// `iter_within` returns exactly the markers a filter over every
+        /// marker of the kind returns, in the same order, with and without
+        /// index tables.
+        #[test]
+        fn iter_within_matches_a_full_scan(
+            mut markers in proptest::collection::vec(marker(), 0..30),
+            a in 0usize..62,
+            b in 0usize..62,
+        ) {
+            markers.sort_by_key(Marker::sort_key);
+            let tables = MarkerTables::build(&markers);
+            let range = CharRange::new(a.min(b), a.max(b));
+            for index in [MarkerIndex::with_tables(&markers, &tables), MarkerIndex::new(&markers)] {
+                for kind in [MarkerKind::TableRow, MarkerKind::Code, MarkerKind::List] {
+                    let fast: Vec<CharRange> =
+                        index.iter_within(kind, None, range).map(|m| m.range).collect();
+                    let slow: Vec<CharRange> = index
+                        .iter(kind, None)
+                        .filter(|m| range.contains_range(m.range))
+                        .map(|m| m.range)
+                        .collect();
+                    prop_assert_eq!(fast, slow);
+                }
             }
         }
     }

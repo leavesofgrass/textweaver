@@ -29,18 +29,18 @@
 //! password-protected PDF is refused with a clear message.
 //!
 //! Pages with no text but a picture (scans) are recognized by OCR (feature
-//! `ocr`, ADR-0026; see `ocr`): the recognized words are placed on the page
+//! `images`, with the in-process engine under `ocr`, ADR-0026; see `ocr`): the recognized words are placed on the page
 //! as glyphs and go through the same layout. Without OCR, or when no
 //! engine can run, a PDF with no text layer loads as one sentence saying
 //! so and what is missing.
 
 mod fonts;
-#[cfg(feature = "ocr")]
+#[cfg(feature = "images")]
 pub mod image;
 mod interp;
 mod layout;
 mod metrics;
-#[cfg(feature = "ocr")]
+#[cfg(feature = "images")]
 mod ocr;
 mod structure;
 
@@ -104,13 +104,13 @@ impl Loader for PdfLoader {
 }
 
 /// Converts a loaded PDF to canonical text and markers, recognizing the
-/// text of pages that have none (feature `ocr`); also returns the page
+/// text of pages that have none (feature `images`); also returns the page
 /// count.
 fn convert(
     pdf: &lopdf::Document,
-    #[cfg_attr(not(feature = "ocr"), allow(unused_variables))] bytes: &[u8],
-    #[cfg_attr(not(feature = "ocr"), allow(unused_variables))] options: &LoadOptions,
-    #[cfg_attr(not(feature = "ocr"), allow(unused_variables))] meta: &mut DocumentMeta,
+    #[cfg_attr(not(feature = "images"), allow(unused_variables))] bytes: &[u8],
+    #[cfg_attr(not(feature = "images"), allow(unused_variables))] options: &LoadOptions,
+    #[cfg_attr(not(feature = "images"), allow(unused_variables))] meta: &mut DocumentMeta,
 ) -> (String, Vec<textweaver_text::Marker>, usize) {
     let page_ids: Vec<ObjectId> = pdf.get_pages().into_values().collect();
     let tags = Tags::read(pdf);
@@ -139,9 +139,9 @@ fn convert(
             c.glyphs.is_empty() && (!c.images.is_empty() || c.failed)
         })
         .collect();
-    #[cfg_attr(not(feature = "ocr"), allow(unused_mut))]
+    #[cfg_attr(not(feature = "images"), allow(unused_mut))]
     let mut no_text = NO_TEXT_LAYER.to_owned();
-    #[cfg(feature = "ocr")]
+    #[cfg(feature = "images")]
     if !blank.is_empty() && options.ocr.enabled {
         let lang = meta.language.clone();
         let outcome = ocr::recognize_pages(bytes, &mut contents, &blank, lang.as_deref(), options);

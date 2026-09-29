@@ -213,7 +213,7 @@ fn unterminated_csv_quotes_load() {
 }
 
 /// CRC-32 (IEEE), for hand-made PNG chunks.
-#[cfg(feature = "ocr")]
+#[cfg(feature = "images")]
 fn crc32(bytes: &[u8]) -> u32 {
     let mut crc = 0xFFFF_FFFFu32;
     for &b in bytes {
@@ -229,7 +229,7 @@ fn crc32(bytes: &[u8]) -> u32 {
     !crc
 }
 
-#[cfg(feature = "ocr")]
+#[cfg(feature = "images")]
 #[test]
 fn pictures_claiming_huge_sizes_are_refused() {
     let mut png = b"\x89PNG\r\n\x1a\n".to_vec();

@@ -79,7 +79,10 @@ pub fn from_store(saved: &saved::FontSettings) -> FontSettings {
         family: FontFamily::from(saved.family.as_str()),
         size_pt: saved.size_pt,
         weight: saved.weight,
-        fetch_missing: saved.fetch_missing,
+        // textweaver never downloads fonts; a missing reading font is
+        // named with where to get it (`[reading_aids.font] fetch_missing`
+        // was removed in Wave 5).
+        fetch_missing: true,
     }
 }
 
@@ -89,7 +92,6 @@ pub fn to_store(font: &FontSettings) -> saved::FontSettings {
         family: font.family.key(),
         size_pt: font.size_pt,
         weight: font.weight,
-        fetch_missing: font.fetch_missing,
     }
 }
 
@@ -121,7 +123,7 @@ mod tests {
             family: FontFamily::Reading(ReadingFontId::Lexend),
             size_pt: 18.0,
             weight: 700,
-            fetch_missing: false,
+            fetch_missing: true,
         };
         let saved = to_store(&s);
         assert_eq!(saved.family, "lexend");

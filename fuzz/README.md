@@ -34,6 +34,8 @@ Each target feeds random input to one part of textweaver. A loader may refuse th
 - `vault_import`: the Obsidian vault importer. The bytes are two notes, split at the first NUL. Each is parsed, and its front matter, written back, reads again the same. The two notes are also written to a folder of their own under the system's temporary folder and read as a vault in both import modes.
 - `rpc`: the JSON-RPC server behind `tw serve`. Each line is one message to a server with a small document open in memory, silent speech, and nothing saved. Every reply is a JSON-RPC 2.0 object that encodes and decodes the same, and a request with an id gets exactly one response. Messages naming a method that can open, write, or save a file (`open`, `action`, `answer`, `choose`, `list_key`, `prompt_key`, `set_setting`, `shutdown`, `exit`) are skipped. This target links the app, whose audio output needs the ALSA headers on Linux (`libasound2-dev`), so it builds only with `--features rpc`.
 
+The loaders are built with the formats crate's `images` feature instead of `ocr`: the picture and scanned-page loaders are fuzzed with OCR off, so the in-process OCR engine, which took 45 minutes to compile under the sanitizer, is left out. The `rpc` target links the app, which still brings it.
+
 CI runs every target for 10 minutes each night (`.github/workflows/nightly.yml`) and keeps any crash as an artifact named `fuzz-crash-TARGET`. Download it from the run's page and replay it as below.
 
 ## Run a target

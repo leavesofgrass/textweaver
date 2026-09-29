@@ -76,6 +76,7 @@ The developer documents are in [dev/](dev/), the decision records in [adr/](adr/
 
 - [Tasks and ownership](history/tasks.md): the briefs and status of every agent, wave by wave.
 - [Reservations for the Cloud Agent](history/reservations.md): work reserved for the Cloud Agent's pull requests, so the local waves never duplicate it.
+- [Readiness for 0.1.0-alpha.5](history/alpha5-readiness.md): what stands between `main` and the next release, and its checklists.
 - [Implementation plan](history/plan.md): the original plan and the Phase 0 amendments.
 - [Audit, September 2026](history/audit-2026-09.md): findings, fixes, and benchmark numbers.
 - [Star parity reference](history/star-parity.md): what Star does, in detail.
@@ -118,6 +119,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0031: Native RTF, ODT, and Word revisions](adr/0031-native-rtf-odt-and-word-revisions.md): RTF and OpenDocument without Pandoc, comments as notes, tracked changes, and limits for zip packages.
 - [ADR-0032: Grammar, lint, highlighting, and clipboard crates](adr/0032-grammar-lint-highlighting-clipboard.md): the authoring extras' crates, and the two held for the owner.
 - [ADR-0033: The GUI after the second session, and edit mode](adr/0033-gui-session-2-and-edit-mode.md): the file chooser, text size and font keys, a key on every button, and edit mode in the window.
+- [ADR-0034: The rope after measurement](adr/0034-rope-after-measurement.md): stay on ropey 1.6; ropey 2 and crop measured, and when to look again.
 - [ADR-0039: Automated screen-reader checks beside the listening sessions](adr/0039-automated-screen-reader-checks.md): the accessibility tree on three systems, and NVDA, Orca, and VoiceOver sessions on CI runners.
 
 ## Interactive pages
@@ -146,6 +148,7 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 - [Cloud Agent plan](research/cloud-agent-plan.md): three pull-request tasks for a Claude Cloud Agent beside Wave 4 and Wave 5 (fuzz targets, the generated settings reference and docs check, a second-tool check of the writers), the budget within $125, the pull-request workflow, the effect on Wave 5, the reservation mechanism, and the ready-to-paste brief (September 2026).
 - [Documentation sweep plan](research/docs-sweep-plan.md): the Zensical site on GitHub Pages, a short README, and five agents in parallel (September 2026).
 - [Wave 5, recalibrated](research/wave5-recalibrated.md): Wave 5 after Wave 4 and the Cloud Agent, eleven agents in overlapping batches, streaming dictation research, and the briefs (September 2026).
+- [User interface refinement pass: the list](research/ui-refinement.md): everything to improve in the terminal reader, `tw`, and the GUI, gathered before the pass is planned (September 2026).
 
 ## See also
 

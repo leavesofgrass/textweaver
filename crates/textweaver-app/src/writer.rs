@@ -82,6 +82,8 @@ pub(crate) enum Job {
         path: PathBuf,
         title: String,
         format: String,
+        /// Author, DOI, and ISBN from the document.
+        meta: textweaver_store::library::DocMetadata,
         recent_limit: usize,
     },
     /// Write the library sidecars' pending entries.
@@ -386,14 +388,14 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
             path,
             title,
             format,
+            meta,
             recent_limit,
         } => {
             record_open(
                 &library_file,
                 &recent_file,
                 &path,
-                &title,
-                &format,
+                (&title, &format, &meta),
                 recent_limit,
             );
             None
@@ -487,8 +489,7 @@ fn record_open(
     library_file: &Path,
     recent_file: &Path,
     path: &Path,
-    title: &str,
-    format: &str,
+    (title, format, meta): (&str, &str, &textweaver_store::library::DocMetadata),
     recent_limit: usize,
 ) {
     let mut recent = Recent::load(recent_file);
@@ -499,6 +500,7 @@ fn record_open(
     match Library::load(library_file) {
         Ok(mut lib) => {
             lib.record_open(path, title, format);
+            lib.record_metadata(path, meta);
             if let Err(e) = lib.save(library_file) {
                 log::warn!("cannot save the library: {e}");
             }

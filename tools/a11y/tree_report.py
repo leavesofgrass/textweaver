@@ -128,13 +128,19 @@ def normalize(data):
     roots = [n for n in nodes if id(n) not in referenced]
     lines, seen = [], set()
 
-    def walk(n, depth):
+    def walk(n, depth, parent_role=""):
         if id(n) in seen or depth > 60:
             return
         seen.add(id(n))
+        # macOS lists the system's menu bar under the application (the Apple
+        # menu, "System Settings..., 1 update"): it belongs to the runner's
+        # image, not to textweaver, and changes when the image does.
+        if str(n.get("role", "")).lower() == "menubar" and parent_role.lower() == "application":
+            lines.append("  " * depth + "- menuBar (the system's, left out)")
+            return
         lines.append("  " * depth + "- " + describe(n))
         for c in kids(n):
-            walk(c, depth + 1)
+            walk(c, depth + 1, str(n.get("role", "")))
 
     for r in roots:
         walk(r, 0)

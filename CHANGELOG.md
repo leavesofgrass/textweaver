@@ -4,6 +4,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### W5r: the rope decision and loading
+
+- The rope stays ropey 1.6, as measured in Wave 4 ([ADR-0034](docs/adr/0034-rope-after-measurement.md)).
+- Large Markdown files open faster: 10 MB loads in about 275 ms instead of 420, with a sixth of the allocations, because the file is parsed once instead of twice.
+- Reading a whole document from the top plans its speech faster: 10 MB in about 610 ms instead of 770.
+- The formats crate has an `images` feature: the picture and scanned-page loaders without the in-process OCR engine. The fuzz targets use it, so they no longer compile that engine.
+
 ### W5p: alpha.5 readiness
 
 - **The GUI ships in the release:** `textweaver-VERSION-windows-x86_64-gui.zip`, `textweaver-VERSION-macos-aarch64-gui.zip` (`textweaver.app`, Apple silicon), and for Linux x86_64 and aarch64 an AppImage and a tarball whose names end in `-gui`. Supported on Windows; on macOS and Linux built and checked automatically, not yet heard with a screen reader. Each is attested and in `SHA256SUMS.txt`. See [docs/install.md](docs/install.md#the-gui).
@@ -18,6 +25,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Pages in a PDF.** Go To takes a page (a plain number is a page in a PDF; `line 12` is still a line; `p iv` goes by the printed label). Say Position starts with the page, the title line shows it, and a PDF with no headings lists its pages in the outline.
 - **`y` and `n` answer "Open it?"** while a list is shown, in the window and over JSON-RPC as in the terminal.
 - The screen reader guide's Braille section is written for the Mantis Q40, with NVDA and JAWS braille settings to try and a checklist.
+
+### Wave 5, W5y: Star leftovers, settings, speed presets
+
+- **Library search by author, DOI, and ISBN.** The library list (Alt+L, GUI Ctrl+Shift+B) now filters as you type, and it and `tw library --search` match the title, path, author, DOI, ISBN, and text. A DOI or ISBN matches however it is written. The author, DOI, and ISBN come from the document (front matter, Word and EPUB authors, web page meta tags, a DOI or ISBN near the start of the text) and from `tw cite`'s record of the same work.
+- **Star's settings profiles** are imported by `tw migrate-star`, one report line each.
+- **Define word** opens the dictionary file on a helper thread the first time, saying "Dictionary still loading." once; the list opens when it is ready.
+- **The statistics list** stays open on its row when Enter turns statistics on or off.
+- **Settings:** `[speech.dectalk]`, `[speech.piper]`, `[speech.voice_params]`, and `[editing] author` are typed settings, listed in the settings reference and the settings screen. `[reading_aids.font] fetch_missing`, which never did anything, was removed; an old `settings.toml` line is dropped. The "every setting is used" test now checks the reading aids' own tables too.
+- **Speed presets** (F8) are said preset first: "Study, rate 200."
 
 ## [0.1.0-alpha.4] - 2026-09-28
 
