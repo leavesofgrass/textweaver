@@ -6,12 +6,12 @@
 
 ## Context
 
-Wave 3 asked for neural voices (Piper) and in-process dictation (Whisper), pure Rust where that is viable (the Wave 3 pure-Rust research, kept outside the repository).
+Neural voices (Piper) and in-process dictation (Whisper) were planned pure Rust where that is viable (research kept outside the repository).
 
 - **Piper** voices are VITS models exported to ONNX, one `.onnx` file plus an `.onnx.json`, phonemized with eSpeak NG. tract and candle cannot run the VITS graphs yet. RTen, Robert Knight's pure-Rust ONNX runtime (0.26), can; `rten-examples/src/piper.rs` shows how.
-- **Whisper**: the Wave 3 plan named candle. candle builds the Oniguruma C library through `tokenizers`, so it is not pure Rust. RTen runs Whisper too (`rten-examples/src/whisper.rs`), with onnx-community's int8 exports. The owner approved RTen over candle on Saturday, September 26, 2026.
+- **Whisper**: the original plan named candle. candle builds the Oniguruma C library through `tokenizers`, so it is not pure Rust. RTen runs Whisper too (`rten-examples/src/whisper.rs`), with onnx-community's int8 exports. RTen was chosen over candle on Saturday, September 26, 2026.
 
-One runtime then covers Piper, Whisper, and (for W3d) OCR.
+One runtime then covers Piper, Whisper, and OCR.
 
 ## Decision
 
@@ -26,7 +26,7 @@ One runtime then covers Piper, Whisper, and (for W3d) OCR.
 - **Voices and licences:** the catalogue is `voices.json` from `rhasspy/piper-voices`. Licences differ per voice and are read from each voice's `MODEL_CARD`; the app says the licence before a download. `Licence::may_bundle` refuses non-commercial and unrecognized licences; textweaver bundles no voice.
 - **Downloads** happen only after the user says yes, file by file into a temporary folder, each checked against Hugging Face's published hash (`lfs.oid`, the SHA-256, for the model; the git blob SHA-1 for the small files), and moved into `<data>/piper/voices/<key>/` only when all match. Requests carry a neutral User-Agent and nothing personal.
 - **Fallback:** a voice RTen cannot load is spoken by the `piper` program when one is installed (`TEXTWEAVER_PIPER` or `PATH`), one chunk per run, with estimated timing.
-- **Registry:** `backend_description`, `probe`, and `factory`, like the other engine crates, so the entry moves with the registry into `textweaver-engines` (W3c). Priority 200: below Eloquence, SAPI, and DECtalk; above eSpeak NG.
+- **Registry:** `backend_description`, `probe`, and `factory`, like the other engine crates, so the entry moves with the registry into `textweaver-engines`. Priority 200: below Eloquence, SAPI, and DECtalk; above eSpeak NG.
 
 ### Whisper (`textweaver-dictation`, feature `rten`)
 
@@ -34,14 +34,14 @@ One runtime then covers Piper, Whisper, and (for W3d) OCR.
 - Three things the example did not need:
   - onnx-community's merged decoder declares `use_cache_branch` with one dimension; rten-generate feeds a scalar. We feed it ourselves.
   - Their `tokenizer.json` predates `ignore_merges`, which rten-text requires; it is filled in at load.
-  - **Their int8 weights use all 8 bits.** RTen's int8 kernels on x86-64 without VNNI (AVX2 only: AMD Zen 3, Intel before Ice Lake) use `vpmaddubsw`, which saturates, and Whisper produced nonsense ("s s s s") on the owner's Ryzen 5 5600G. RTen's own quantizer keeps weights to 7 bits for this reason. So at load every int8 weight of a `MatMulInteger` or `ConvInteger` is halved and its scale doubled, in place in the protobuf bytes (`onnx_patch`). Transcription is then correct.
+  - **Their int8 weights use all 8 bits.** RTen's int8 kernels on x86-64 without VNNI (AVX2 only: AMD Zen 3, Intel before Ice Lake) use `vpmaddubsw`, which saturates, and Whisper produced nonsense ("s s s s") on the development machine's Ryzen 5 5600G. RTen's own quantizer keeps weights to 7 bits for this reason. So at load every int8 weight of a `MatMulInteger` or `ConvInteger` is halved and its scale doubled, in place in the protobuf bytes (`onnx_patch`). Transcription is then correct.
 - **Audio:** WAV files are read here (8 to 32-bit PCM, float, extensible headers); resampling to 16 kHz is rubato's FFT resampler; earshot (pure Rust, model built in) finds speech and splits it at pauses of about 600 ms, so silence is skipped and each utterance is transcribed on its own.
 - **Microphone:** rodio's `recording` feature (feature `mic`), on its own thread.
 - **Fallbacks:** the Whisper programs (ADR-0013) stay. **candle was never built** in textweaver, so there is no candle feature to keep; this ADR records the switch from the plan's candle to RTen instead.
 
 ## Measurements
 
-On the owner's desktop (AMD Ryzen 5 5600G, 6 cores), Saturday, September 26, 2026, debug build with RTen at `opt-level = 3`, `en_US-joe-medium`:
+On the development machine (AMD Ryzen 5 5600G, 6 cores), Saturday, September 26, 2026, debug build with RTen at `opt-level = 3`, `en_US-joe-medium`:
 
 - Model load: about 0.1 s (0.5 to 0.8 s while other builds loaded the machine).
 - Real-time factor: 0.13 with libespeak-ng phonemes, 0.18 with the pure-Rust phonemizer, on a quiet machine. Under full load from five other agents' builds it rose to 1.0 and 1.35.

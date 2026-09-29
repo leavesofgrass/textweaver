@@ -5,7 +5,7 @@
 
 ## Context
 
-ADR-0025 gave textweaver a message catalog in a subset of Project Fluent, with English complete for the study features only. Star, the program textweaver replaces, had Spanish, French, German, Portuguese, and Arabic catalogs for its menus (flat JSON keyed by the English text, no plurals). Wave 4 asked for the whole interface in those five languages, right-to-left display, a first-run language choice, a voice per language, a live language change, and a pseudo-locale check in the development checks (the Wave 4 orchestration plan, kept outside the repository, W4d). The lessons from Star were to never go silent, to apply a change at once, and to give every new setting its four places.
+ADR-0025 gave textweaver a message catalog in a subset of Project Fluent, with English complete for the study features only. Star, the program textweaver replaces, had Spanish, French, German, Portuguese, and Arabic catalogs for its menus (flat JSON keyed by the English text, no plurals). This work called for the whole interface in those five languages, right-to-left display, a first-run language choice, a voice per language, a live language change, and a pseudo-locale check in the development checks (the orchestration plan, kept outside the repository). The lessons from Star were to never go silent, to apply a change at once, and to give every new setting its four places.
 
 ## Decision
 
@@ -56,7 +56,7 @@ Direction controls are used by the algorithm and not drawn. The prompt's typing 
 
 - Every new user-facing string needs a catalog id and five translations. The checks say which are missing.
 - The binary carries about 800 KB of catalogs (six languages).
-- Translations were made for this project and have not been reviewed by native speakers; the owner's session checks Spanish and French by ear.
+- Translations were made for this project and have not been reviewed by native speakers; a listening session checks Spanish and French by ear.
 - Numbers keep English thousands separators ("3,412") in every language.
 
 ## See also

@@ -1,13 +1,13 @@
 # ADR-0024: App core for the GUI
 
 - Status: accepted
-- Date: 2026-09-26 (Saturday, September 26, 2026), Wave 3, Agent W3a
+- Date: 2026-09-26 (Saturday, September 26, 2026)
 
 ## Context
 
-The Xilem GUI (Agent W3b, ADR-0027) and JSON-RPC need pieces the terminal reader kept to itself or did not need. The wxDragon spike loaded a whole document into a native control (9.3 s for 10 million characters) and polled speech every 30 ms. The list's focused item, first-letter jumps, the "3 of 12" announcements, and the prompt's text and history lived in `textweaver-tui`. There was no way to describe the settings to a dialog, no edit command a native text control could send, and a few slow jobs still ran on the input thread: opening a large file, writing `settings.toml`, the misspelling count after a save (0.6 s on 10 MB in a release build), and the speech engine's first start.
+The Xilem GUI (ADR-0027) and JSON-RPC need pieces the terminal reader kept to itself or did not need. The wxDragon spike loaded a whole document into a native control (9.3 s for 10 million characters) and polled speech every 30 ms. The list's focused item, first-letter jumps, the "3 of 12" announcements, and the prompt's text and history lived in `textweaver-tui`. There was no way to describe the settings to a dialog, no edit command a native text control could send, and a few slow jobs still ran on the input thread: opening a large file, writing `settings.toml`, the misspelling count after a save (0.6 s on 10 MB in a release build), and the speech engine's first start.
 
-The spirit of Wave 3 is pure Rust first and bold choices with a recorded fallback. These are the choices.
+The spirit of this work is pure Rust first and bold choices with a recorded fallback. These are the choices.
 
 ## Decision
 
@@ -25,7 +25,7 @@ The spirit of Wave 3 is pure Rust first and bold choices with a recorded fallbac
 
 ## Consequences
 
-- W3b builds its document view on `DocWindow` and `Units::Utf8`, its dialogs on `ListModel` and `PromptModel`, its settings dialog on `SettingsSchema`, its event loop on the waker, and edit mode on `ReplaceRange`.
+- The Xilem GUI builds its document view on `DocWindow` and `Units::Utf8`, its dialogs on `ListModel` and `PromptModel`, its settings dialog on `SettingsSchema`, its event loop on the waker, and edit mode on `ReplaceRange`.
 - The app now announces a list's focused item after the list's introduction, for every frontend; before, only the terminal reader did.
 - A new setting in the store needs a line in `INFO` (label, help, range or choices), or the tests say which key is missing.
 - `App::save_settings` and `App::update_settings` return before the file is written; callers that need the file call `App::wait_for_writes`.
