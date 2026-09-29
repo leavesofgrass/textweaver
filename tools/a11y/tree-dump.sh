@@ -35,7 +35,7 @@ esac
 
 dump() {
   mkdir -p "$out"
-  local home gui found=0 deadline
+  local home gui found=0 deadline listener=""
   home="$(mktemp -d)"
   local background=(--background)
   if [[ $platform == linux ]]; then
@@ -43,9 +43,22 @@ dump() {
     export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-$(mktemp -d)}"
     /usr/libexec/at-spi-bus-launcher --launch-immediately >/dev/null 2>&1 &
     sleep 1
-    # The registry daemon, started the way accessibility-cli's own CI starts
-    # it, so the desktop lists applications before anything else asks.
-    /usr/libexec/at-spi2-registryd >/dev/null 2>&1 &
+    # AccessKit's AT-SPI adapter shows the window only while assistive
+    # technology is active. The AT-SPI check turns that on by listening for
+    # events; accessibility-cli only reads, and the second run found no
+    # application on the bus at all, not even through pyatspi. So say that
+    # a screen reader is on, and keep a listener running during the dump.
+    for prop in IsEnabled ScreenReaderEnabled; do
+      dbus-send --session --print-reply --dest=org.a11y.Bus /org/a11y/bus \
+        org.freedesktop.DBus.Properties.Set string:org.a11y.Status "string:$prop" \
+        variant:boolean:true >/dev/null 2>&1 || true
+    done
+    timeout $((wait_seconds + 30)) "$python" - >/dev/null 2>&1 <<'EOF' &
+import pyatspi
+pyatspi.Registry.registerEventListener(lambda e: None, "object:state-changed:focused")
+pyatspi.Registry.start()
+EOF
+    listener=$!
     sleep 1
     # Xvfb is a private display with no one at it, so the window opens as
     # it does in the AT-SPI check, without --background (the first run
@@ -92,6 +105,9 @@ EOF
   fi
   kill "$gui" 2>/dev/null || true
   wait "$gui" 2>/dev/null || true
+  if [[ -n $listener ]]; then
+    kill "$listener" 2>/dev/null || true
+  fi
   if [[ $found == 0 ]]; then
     echo "Fail: no tree with the document in ${wait_seconds} seconds. accessibility-cli said:"
     cat "$out/cli-errors.txt" 2>/dev/null || true

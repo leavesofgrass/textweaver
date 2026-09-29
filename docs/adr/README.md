@@ -73,7 +73,7 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
 - [ADR-0033: The GUI after the second session, and edit mode](0033-gui-session-2-and-edit-mode.md): no console window, the system's file chooser for Open, text size and font keys, every button naming its key, and edit mode in the document view.
   - Status: accepted.
 - [ADR-0039: Automated screen-reader checks beside the listening sessions](0039-automated-screen-reader-checks.md): the accessibility tree dumped on three systems and compared with main, and NVDA, Orca, and VoiceOver sessions on CI runners, which never replace the owner's sessions.
-  - Status: proposed; the tree dump becomes standing once green on main, each session once its first answer is recorded.
+  - Status: proposed; every check reports and none fails a job. Answers so far: NVDA through Guidepup and Orca read the GUI; the tree dump works on Windows and macOS.
 
 ## Writing a new ADR
 
