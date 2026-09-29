@@ -361,9 +361,7 @@ Open the HTML page in a web browser. How you hear the math depends on your scree
 
 A screen reader that does not understand MathML may read the text alternative instead, which is your LaTeX source.
 
-In EPUB books, textweaver reads MathML as math. Each formula becomes LaTeX in the text, as in a Markdown file, and is spoken as math, by MathCAT if you chose it. The book's own TeX is used when the formula carries it. A formula with no math inside, only a text alternative (`alttext`), is read as that text.
-
-In a web page, textweaver does not yet read MathML well. If you open a converted HTML page in textweaver, a formula is read as its symbols run together, followed by its LaTeX, such as "x2x^2" for `x^2`. Open the Markdown source in textweaver instead.
+textweaver reads MathML (`<math>`) as math in every web page it opens, HTML or MHTML, the same as in EPUB books: a formula becomes LaTeX in the text, as in a Markdown file, and is spoken as math, by MathCAT if you chose it. The book's or page's own TeX is used when the formula carries it. A formula with no math inside, only a text alternative (`alttext`), is read as that text; an `epub:switch` in an EPUB book is read once, as its first case that holds MathML, else its default.
 
 ## Write math in Markdown
 

@@ -279,7 +279,7 @@ backend = "auto"
 library = "C:\\Path\\To\\DECtalk.dll"
 ```
 
-- `library`: the DECtalk library to use. It has no default; textweaver searches the usual places. This section is not yet part of textweaver's typed settings, so `tw settings export` does not list it, and `tw settings import` says "speech.dectalk is not a textweaver setting; it is kept." It is still kept and used. The [DECtalk guide](dectalk.md) explains it.
+- `library`: the DECtalk library to use. It has no default; textweaver searches the usual places. `TEXTWEAVER_DECTALK_LIBRARY` overrides it for one run. The [DECtalk guide](dectalk.md) explains it.
 
 ### [speech.piper]: Piper voices
 
@@ -294,7 +294,7 @@ phonemizer = "auto"
 - `voice`: the voice Piper starts with when `[speech] voice` does not name one of its voices. Default: the first English voice.
 - `phonemizer`: `auto` (the installed eSpeak NG, else the built-in one), `library`, or `rust`.
 
-Like `[speech.dectalk]`, this section is not yet part of the typed settings; it is kept and used. So is `[speech.voice_params]`, where each voice's own rate and pitch are kept.
+`[speech.voice_params]` keeps each voice's own rate and pitch, written back whenever you change voices; you do not need to edit it by hand. All three sections, `[speech.dectalk]`, `[speech.piper]`, and `[speech.voice_params]`, are typed settings, so `tw settings export` lists them and `tw settings import` checks their values like any other setting.
 
 ## How text is prepared for speech
 

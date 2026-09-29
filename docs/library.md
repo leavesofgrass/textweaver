@@ -266,5 +266,6 @@ The report says where Star's files were, how many files were written, then a sum
 - [Bookmarks, notes, and highlights](notes.md): what is stored for each document.
 - [Settings](settings.md): where settings live, and how to export and import them.
 - [Obsidian vaults](vault.md): importing a vault's documents into the library.
+- [Citations](citations.md): `tw cite`, the reference library that fills in a document's author, DOI, and ISBN when it has none of its own.
 - [ADR-0002: Text model](adr/0002-text-model.md): how positions work, and how Star's are mapped.
 - [Documentation index](README.md)
