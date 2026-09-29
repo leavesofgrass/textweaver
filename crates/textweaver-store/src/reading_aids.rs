@@ -183,8 +183,6 @@ pub struct FontSettings {
     pub size_pt: f32,
     /// Weight, 100 (thin) to 900 (black); 400 is regular, 700 bold.
     pub weight: u16,
-    /// Offer to download a missing reading font (after asking the reader).
-    pub fetch_missing: bool,
 }
 
 impl Default for FontSettings {
@@ -193,7 +191,6 @@ impl Default for FontSettings {
             family: "sans".into(),
             size_pt: 14.0,
             weight: 400,
-            fetch_missing: true,
         }
     }
 }
@@ -235,7 +232,6 @@ impl FontSettings {
                 FontSettings::default().size_pt
             },
             weight: self.weight.clamp(100, 900),
-            fetch_missing: self.fetch_missing,
         }
     }
 }

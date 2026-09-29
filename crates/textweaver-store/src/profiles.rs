@@ -290,7 +290,7 @@ fn clean_name(name: &str) -> Result<String, ProfileError> {
 }
 
 /// The value at a dotted path.
-fn get<'a>(t: &'a toml::Table, path: &str) -> Option<&'a toml::Value> {
+pub(crate) fn get<'a>(t: &'a toml::Table, path: &str) -> Option<&'a toml::Value> {
     let mut parts = path.split('.');
     let first = parts.next()?;
     let mut v = t.get(first)?;
@@ -301,7 +301,7 @@ fn get<'a>(t: &'a toml::Table, path: &str) -> Option<&'a toml::Value> {
 }
 
 /// Sets the value at a dotted path, making tables on the way.
-fn set(t: &mut toml::Table, path: &str, value: toml::Value) {
+pub(crate) fn set(t: &mut toml::Table, path: &str, value: toml::Value) {
     let mut parts: Vec<&str> = path.split('.').collect();
     let Some(last) = parts.pop() else { return };
     let mut cur = t;

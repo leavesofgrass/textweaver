@@ -403,7 +403,10 @@ fn the_library_lists_folder_documents_and_recent_files_and_opens_them() {
     assert!(items[0].starts_with("alpha, in Readings"), "{items:?}");
     assert!(items[1].starts_with("beta, in Readings"), "{items:?}");
     assert!(items[2].starts_with("loose.txt, recent"), "{items:?}");
-    assert!(r.said.any("Library, 3 documents. Enter opens one."));
+    assert!(
+        r.said
+            .any("Library, 3 documents. Type to filter, Enter opens one.")
+    );
     // Then the focused item (the app's list model, Wave 3).
     assert!(r.said.last().starts_with("1 of 3, "), "{}", r.said.last());
 
@@ -413,6 +416,80 @@ fn the_library_lists_folder_documents_and_recent_files_and_opens_them() {
     let shelf = textweaver_app::store::Library::load(&lib.paths.library_file()).unwrap();
     assert!(shelf.get(&lib.folder.join("alpha.txt")).is_some());
     assert!(shelf.get(&lib.outside).is_some());
+}
+
+/// Wave 5 (W5y): the library list filters as you type, by title, author,
+/// DOI, and ISBN, recorded on the bookshelf when a document opens.
+#[test]
+fn the_library_filters_by_author_doi_and_isbn() {
+    let lib = library();
+    let paper = lib.folder.join("paper.md");
+    std::fs::write(
+        &paper,
+        "---\ntitle: Cell Energy\nauthor: Ada Example\ndoi: 10.1000/XYZ\n---\n\n# Cell Energy\n\nISBN 978-0-306-40615-7\n",
+    )
+    .unwrap();
+    let mut r = launch(
+        lib.settings(ConflictPolicy::Newest),
+        Some(lib.paths.clone()),
+    );
+    r.app.open(&paper).unwrap();
+    assert!(r.app.flush_writes(Duration::from_secs(20)));
+    let shelf = textweaver_app::store::Library::load(&lib.paths.library_file()).unwrap();
+    let entry = shelf.get(&paper).unwrap();
+    assert_eq!(entry.meta.author.as_deref(), Some("Ada Example"));
+    assert_eq!(entry.meta.doi.as_deref(), Some("10.1000/xyz"));
+    assert_eq!(entry.meta.isbn.as_deref(), Some("9780306406157"));
+
+    let effects = r.act(ActionId::OpenLibrary);
+    assert_eq!(items_of(&effects).len(), 3, "{effects:?}");
+    assert_eq!(r.app.list_filter(), Some(""), "the library filters");
+    let filter = |r: &mut Rig, q: &str| -> Vec<String> {
+        r.said.0.lock().unwrap().clear();
+        r.app
+            .dispatch(Command::FilterList(q.into()))
+            .into_iter()
+            .find_map(|e| match e {
+                Effect::ShowList { items, .. } => Some(items),
+                _ => None,
+            })
+            .unwrap_or_default()
+    };
+    for q in [
+        "10.1000/xyz",
+        "doi:10.1000/XYZ",
+        "0306406152",
+        "ada example",
+    ] {
+        let shown = filter(&mut r, q);
+        assert_eq!(shown.len(), 1, "{q}: {shown:?}");
+        assert!(
+            shown[0].starts_with("Cell Energy, by Ada Example"),
+            "{shown:?}"
+        );
+        assert!(
+            r.said.all().iter().any(|s| s == "1 document matches."),
+            "{:?}",
+            r.said.all()
+        );
+    }
+    assert!(filter(&mut r, "grace").is_empty());
+    assert!(
+        r.said.any("No documents match grace."),
+        "{:?}",
+        r.said.all()
+    );
+    assert_eq!(filter(&mut r, "").len(), 3);
+    assert!(
+        r.said.any("Filter cleared, 3 documents."),
+        "{:?}",
+        r.said.all()
+    );
+    // Enter opens the item shown, not the one at that place unfiltered.
+    filter(&mut r, "beta");
+    r.app.dispatch(Command::Choose(0));
+    let title = r.app.session().unwrap().title.to_lowercase();
+    assert!(title.contains("beta"), "{title}");
 }
 
 #[test]

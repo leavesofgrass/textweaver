@@ -61,13 +61,14 @@ pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
     AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, CitationReading,
-    CommunityLexiconSettings, CursorPlacement, DigitRow, DisplaySettings, EciDictionaries,
-    EciSettings, EditingSettings, ExportSettings, FootnoteMode, GuiAnnounce, GuiSettings,
-    HighlightSettings, InterfaceSettings, KeyboardSettings, KeymapOverrides, KeymapPreset,
-    LexiconSettings, LibrarySettings, MathDisplay, MathEngine, NormalizationSettings, OcrEngine,
-    PreviewSettings, RESERVED_SETTINGS, ReadingSettings, RevisionReading, RtlDisplay, SapiSettings,
+    CommunityLexiconSettings, CursorPlacement, DectalkSettings, DigitRow, DisplaySettings,
+    EciDictionaries, EciSettings, EditingSettings, ExportSettings, FootnoteMode, GuiAnnounce,
+    GuiSettings, HighlightSettings, InterfaceSettings, KeyboardSettings, KeymapOverrides,
+    KeymapPreset, LexiconSettings, LibrarySettings, MathDisplay, MathEngine, NormalizationSettings,
+    OcrEngine, PiperPhonemizer, PiperSettings, PreviewSettings, REMOVED_SETTINGS,
+    RESERVED_SETTINGS, ReadingSettings, RememberedVoice, RevisionReading, RtlDisplay, SapiSettings,
     SayAll, Settings, SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, SubtitleFormat,
-    TableMode,
+    TableMode, drop_removed_settings,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,

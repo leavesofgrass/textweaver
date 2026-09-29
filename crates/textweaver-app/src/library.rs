@@ -10,6 +10,13 @@
 //! chosen between by `reading.sync_conflict_policy` (C2's rule: newest,
 //! highest progress, or manual, which keeps this device's position and
 //! says that another device differs).
+//!
+//! The library list **filters as you type** (Wave 5, W5y): each word typed
+//! must be in a document's title, path, author, DOI, or ISBN, or in its
+//! text when `tw library --search` has indexed it. The author, DOI, and
+//! ISBN are recorded on the bookshelf when a document opens
+//! ([`DocMetadata`]); a DOI or ISBN in the indexed text of a document never
+//! opened counts too.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -18,9 +25,10 @@ use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::{Duration, Instant};
 
 use textweaver_lexicon::args;
-use textweaver_store::library::{self, LibraryItem, ResumeSource};
+use textweaver_store::library::{self, DocMetadata, LibraryItem, ResumeSource};
 use textweaver_store::sync::Resolution;
-use textweaver_store::{DocKey, DocState, Library, LibrarySync, Recent};
+use textweaver_store::{DocKey, DocState, Library, LibrarySync, Recent, SimpleIndex};
+use textweaver_text::Document;
 
 use crate::app::{App, ListKind};
 use crate::command::Effect;
@@ -79,6 +87,24 @@ impl App {
     /// Records an opened document on the bookshelf (`library.json`) and the
     /// recent list, on the background writer.
     pub(crate) fn record_library_open(&mut self, path: &Path, title: &str, format: &str) {
+        self.record_library_open_with(path, title, format, DocMetadata::default());
+    }
+
+    /// [`record_library_open`](Self::record_library_open) for a document
+    /// just loaded: its author, DOI, and ISBN go on the bookshelf too, so
+    /// the library can be searched by them.
+    pub(crate) fn record_library_open_doc(&mut self, path: &Path, title: &str, doc: &Document) {
+        let meta = document_metadata(doc);
+        self.record_library_open_with(path, title, &doc.meta.format, meta);
+    }
+
+    fn record_library_open_with(
+        &mut self,
+        path: &Path,
+        title: &str,
+        format: &str,
+        meta: DocMetadata,
+    ) {
         let Some(paths) = &self.paths else {
             return;
         };
@@ -88,6 +114,7 @@ impl App {
             path: path.to_owned(),
             title: title.to_owned(),
             format: format.to_owned(),
+            meta,
             recent_limit: self.settings.library.recent_limit,
         };
         self.writer.send(job);
@@ -121,6 +148,10 @@ impl App {
                 .paths
                 .as_ref()
                 .map(|p| (p.library_file(), p.recent_file(), p.state_dir())),
+            fulltext: self
+                .paths
+                .as_ref()
+                .map(textweaver_store::Paths::fulltext_file),
             sync: self.library_sync.clone(),
         }
     }
@@ -143,7 +174,7 @@ impl App {
         let spawned = std::thread::Builder::new()
             .name("textweaver-library-scan".into())
             .spawn(move || {
-                let items = inputs.items(&|n| counter.store(n, Ordering::Relaxed));
+                let items = inputs.list(&|n| counter.store(n, Ordering::Relaxed));
                 let _ = tx.send(items);
                 wake.wake();
             });
@@ -169,7 +200,7 @@ impl App {
             return Vec::new();
         };
         let items = match scan.items.try_recv() {
-            Ok(items) => items,
+            Ok(list) => list,
             Err(TryRecvError::Empty) => {
                 if scan.shown_at.elapsed() >= PROGRESS_EVERY {
                     scan.shown_at = Instant::now();
@@ -191,9 +222,44 @@ impl App {
         self.show_library(items)
     }
 
+    /// The library list's filter typed so far, while it is shown.
+    pub(crate) fn library_filter(&self) -> Option<&str> {
+        match &self.list {
+            Some(ListKind::Library(l)) => Some(&l.filter),
+            _ => None,
+        }
+    }
+
+    /// The library list's filter changed to `query`: the documents holding
+    /// every word ([`library::item_matches`]) are shown again.
+    pub(crate) fn filter_library(&mut self, query: String) -> Vec<Effect> {
+        let Some(ListKind::Library(mut list)) = self.list.take() else {
+            return vec![Effect::Redraw];
+        };
+        list.apply_filter(&query);
+        let n = list.shown.len();
+        let msg = if query.trim().is_empty() {
+            self.msg_args("library-filter-cleared", &args!["n" => n])
+        } else if n == 0 {
+            self.msg_args("library-filter-none", &args!["query" => query.as_str()])
+        } else {
+            self.msg_args("library-filter-matched", &args!["n" => n])
+        };
+        self.tell(&msg);
+        self.list_library(list)
+    }
+
+    /// Enter on item `n` of the library list: opens the document.
+    pub(crate) fn choose_library(&mut self, list: &LibraryList, n: usize) -> Vec<Effect> {
+        match list.path_at(n) {
+            Some(path) => self.open_command(path.to_owned()),
+            None => vec![Effect::Redraw],
+        }
+    }
+
     /// Shows a scanned library as a list.
-    fn show_library(&mut self, items: Vec<LibraryItem>) -> Vec<Effect> {
-        if items.is_empty() {
+    fn show_library(&mut self, list: LibraryList) -> Vec<Effect> {
+        if list.items.is_empty() {
             let open = self.key(textweaver_keymap::ActionId::Open);
             let msg = self.msg_args(
                 "library-empty",
@@ -202,16 +268,92 @@ impl App {
             self.tell(&msg);
             return vec![Effect::Redraw];
         }
-        let n = items.len();
-        let paths: Vec<PathBuf> = items.iter().map(|i| i.path.clone()).collect();
-        let lines: Vec<String> = items.iter().map(LibraryItem::describe).collect();
-        self.list = Some(ListKind::Library(paths));
-        let msg = self.msg_args("library-intro", &args!["n" => n]);
+        let msg = self.msg_args("library-intro", &args!["n" => list.items.len()]);
         self.tell(&msg);
-        vec![Effect::ShowList {
-            title: self.msg("library-title"),
-            items: lines,
-        }]
+        self.list_library(list)
+    }
+
+    /// The library list as shown: its title (with the filter, when there is
+    /// one) and the documents that pass the filter.
+    fn list_library(&mut self, list: LibraryList) -> Vec<Effect> {
+        let title = if list.filter.trim().is_empty() {
+            self.msg("library-title")
+        } else {
+            self.msg_args(
+                "library-title-filtered",
+                &args![
+                    "shown" => list.shown.len(),
+                    "n" => list.items.len(),
+                    "filter" => list.filter.as_str()
+                ],
+            )
+        };
+        let items = list
+            .shown
+            .iter()
+            .map(|&i| list.items[i].describe())
+            .collect();
+        self.list = Some(ListKind::Library(list));
+        vec![Effect::ShowList { title, items }]
+    }
+}
+
+/// The author, DOI, and ISBN of a loaded document: its own metadata, then
+/// the start of its text ([`DocMetadata::from_document`]).
+pub(crate) fn document_metadata(doc: &Document) -> DocMetadata {
+    let rope = doc.text();
+    let end = rope.len_chars().min(library::METADATA_SCAN_CHARS);
+    let head = rope.slice(..end).to_string();
+    DocMetadata::from_document(doc.meta.author.as_deref(), &doc.meta.properties, &head)
+}
+
+/// The library list: every document, the filter typed, and which
+/// documents pass it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct LibraryList {
+    /// Every document, in the library's order.
+    items: Vec<LibraryItem>,
+    /// Indexed text by document, lowercase (from `tw library --search`'s
+    /// cache), for the filter.
+    texts: Arc<std::collections::BTreeMap<PathBuf, String>>,
+    /// The filter typed so far.
+    pub(crate) filter: String,
+    /// Items shown, as indexes into `items`.
+    shown: Vec<usize>,
+}
+
+impl LibraryList {
+    /// Every item shown, no filter.
+    pub(crate) fn new(
+        items: Vec<LibraryItem>,
+        texts: std::collections::BTreeMap<PathBuf, String>,
+    ) -> Self {
+        LibraryList {
+            shown: (0..items.len()).collect(),
+            items,
+            texts: Arc::new(texts),
+            filter: String::new(),
+        }
+    }
+
+    /// Shows the items matching `query`.
+    pub(crate) fn apply_filter(&mut self, query: &str) {
+        self.filter = query.to_owned();
+        self.shown = (0..self.items.len())
+            .filter(|&i| {
+                let item = &self.items[i];
+                let text = self.texts.get(&item.path).map(String::as_str);
+                library::item_matches(item, query, text)
+            })
+            .collect();
+    }
+
+    /// The document shown as item `n`.
+    pub(crate) fn path_at(&self, n: usize) -> Option<&Path> {
+        self.shown
+            .get(n)
+            .and_then(|&i| self.items.get(i))
+            .map(|item| item.path.as_path())
     }
 }
 
@@ -220,7 +362,7 @@ const PROGRESS_EVERY: Duration = Duration::from_secs(1);
 
 /// A library scan on a background thread.
 pub(crate) struct LibraryScan {
-    items: Receiver<Vec<LibraryItem>>,
+    items: Receiver<LibraryList>,
     found: Arc<AtomicUsize>,
     shown_at: Instant,
 }
@@ -239,6 +381,8 @@ struct LibraryInputs {
     folders: Vec<PathBuf>,
     extensions: Vec<&'static str>,
     files: Option<(PathBuf, PathBuf, PathBuf)>,
+    /// `tw library --search`'s text cache.
+    fulltext: Option<PathBuf>,
     sync: LibrarySync,
 }
 
@@ -246,6 +390,37 @@ impl LibraryInputs {
     /// Scans the folders and builds the list, calling `found` with the
     /// count of documents found so far.
     fn items(&self, found: &dyn Fn(usize)) -> Vec<LibraryItem> {
+        self.list(found).items
+    }
+
+    /// [`items`](Self::items) with the indexed text of each document, for
+    /// the filter. A DOI or ISBN in the text fills what the bookshelf
+    /// lacks.
+    fn list(&self, found: &dyn Fn(usize)) -> LibraryList {
+        let mut items = self.view(found);
+        let index = self
+            .fulltext
+            .as_deref()
+            .map(SimpleIndex::load)
+            .unwrap_or_default();
+        let mut texts = std::collections::BTreeMap::new();
+        for item in &mut items {
+            if let Some(e) = index.entries.get(&item.path) {
+                let head: String = e.text.chars().take(library::METADATA_SCAN_CHARS).collect();
+                item.meta.fill_from(&DocMetadata::from_document(
+                    None,
+                    &Default::default(),
+                    &head,
+                ));
+                texts.insert(item.path.clone(), e.text.to_lowercase());
+            }
+        }
+        LibraryList::new(items, texts)
+    }
+
+    /// The library view: the folders scanned, the bookshelf, the recent
+    /// list, and progress.
+    fn view(&self, found: &dyn Fn(usize)) -> Vec<LibraryItem> {
         let supported = |ext: &str| self.extensions.contains(&ext);
         let scanned = library::scan_library_with(&self.folders, &supported, found);
         let (lib, recent) = match &self.files {
