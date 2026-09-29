@@ -5,7 +5,7 @@
 
 ## Context
 
-ADR-0025 gave textweaver a message catalog in a subset of Project Fluent, with English complete for the study features only. Star, the program textweaver replaces, had Spanish, French, German, Portuguese, and Arabic catalogs for its menus (flat JSON keyed by the English text, no plurals). Wave 4 asked for the whole interface in those five languages, right-to-left display, a first-run language choice, a voice per language, a live language change, and a pseudo-locale check in the development checks (`docs/research/wave4-orchestration.md`, W4d). The lessons from Star were to never go silent, to apply a change at once, and to give every new setting its four places.
+ADR-0025 gave textweaver a message catalog in a subset of Project Fluent, with English complete for the study features only. Star, the program textweaver replaces, had Spanish, French, German, Portuguese, and Arabic catalogs for its menus (flat JSON keyed by the English text, no plurals). Wave 4 asked for the whole interface in those five languages, right-to-left display, a first-run language choice, a voice per language, a live language change, and a pseudo-locale check in the development checks (the Wave 4 orchestration plan, kept outside the repository, W4d). The lessons from Star were to never go silent, to apply a change at once, and to give every new setting its four places.
 
 ## Decision
 

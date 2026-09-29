@@ -6,7 +6,7 @@
 
 ## Context
 
-Wave 3 asked for neural voices (Piper) and in-process dictation (Whisper), pure Rust where that is viable (`docs/research/pure-rust-wave3.md`).
+Wave 3 asked for neural voices (Piper) and in-process dictation (Whisper), pure Rust where that is viable (the Wave 3 pure-Rust research, kept outside the repository).
 
 - **Piper** voices are VITS models exported to ONNX, one `.onnx` file plus an `.onnx.json`, phonemized with eSpeak NG. tract and candle cannot run the VITS graphs yet. RTen, Robert Knight's pure-Rust ONNX runtime (0.26), can; `rten-examples/src/piper.rs` shows how.
 - **Whisper**: the Wave 3 plan named candle. candle builds the Oniguruma C library through `tokenizers`, so it is not pure Rust. RTen runs Whisper too (`rten-examples/src/whisper.rs`), with onnx-community's int8 exports. The owner approved RTen over candle on Saturday, September 26, 2026.
@@ -60,7 +60,6 @@ Whisper base.en int8 on the same machine, under load: 2.3 s of speech ("Please a
 
 ## See also
 
-- [Research: pure-Rust choices for Wave 3](../research/pure-rust-wave3.md)
 - [ADR-0012: the engine host and playback client](0012-engine-host.md)
 - [ADR-0013: dictation through a Whisper program](0013-dictation.md)
 - [Speech engines and voices](../speech.md)

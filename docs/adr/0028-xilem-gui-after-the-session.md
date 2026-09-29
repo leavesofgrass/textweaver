@@ -134,5 +134,3 @@ The "Memory" section proposed three renderer options. W5a4 measured the first tw
 ## See also
 
 - [ADR-0027: Xilem GUI](0027-xilem-gui.md)
-- [Research for Wave 4](../research/wave4.md): announcements on Windows.
-- [Wave 4 orchestration plan](../research/wave4-orchestration.md): W4s's and W4a2's briefs.

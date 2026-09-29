@@ -16,7 +16,7 @@ Sizes:
 
 ## Status (Monday, September 28, 2026)
 
-This roadmap covers Phases 1 and 2 and Wave 3 as they were planned in September 2026, and it is kept as a record. Phases 1 and 2 and Wave 3 are done. Wave 4 is done too, and released as `0.1.0-alpha.4`. The current plans, and the status of every agent, are in [tasks.md](history/tasks.md) and in the research documents: [the 2026 roadmap](research/roadmap-2026.md), [the Wave 5 plan](research/wave5-plan.md), [what is left](research/whats-left.md), and [the Cloud Agent plan](research/cloud-agent-plan.md).
+This roadmap covers Phases 1 and 2 and Wave 3 as they were planned in September 2026, and it is kept as a record. Phases 1 and 2 and Wave 3 are done. Wave 4 is done too, and released as `0.1.0-alpha.4`. The current plans, and the status of every agent, are kept by the maintainer outside the repository.
 
 Each phase below has its own dated status note. Items marked **done** are on `main`; items marked **left** say where they went.
 
@@ -46,7 +46,7 @@ Each of these is under about half a day. Together they remove the known ways to 
 - **left:** pruning merged branches (the `agent/`, `wave2/`, `integration/`, and `phase1/` branches are still there);
 - **left:** merging through pull requests with required checks. Merges are still made locally, after the full checks natively and in Docker.
 
-Who did what: P1a the speech items; P1b saving, settings, authoring, prompts, and the TUI render tests; P1c CI, releases, notices, and dependencies; P1d the loaders and command-line tools. Their status lines in [tasks.md](history/tasks.md) have the details and test counts.
+Who did what: P1a the speech items; P1b saving, settings, authoring, prompts, and the TUI render tests; P1c CI, releases, notices, and dependencies; P1d the loaders and command-line tools. Their status lines in the agent briefs, kept outside the repository, have the details and test counts.
 
 ### Never lose work, never overwrite
 
@@ -232,7 +232,7 @@ Star's lesson: a stored setting must work.
 
 ### Architecture
 
-**Status (Saturday, September 26, 2026): done (P2d and Agent W3c).** The xtask check (`cargo xtask deps --check`, in CI) and one html5ever version came in Phase 2. Wave 3 took store off aids, made one notes model, put font resolution in `textweaver-fonts`, added the `textweaver-engines` crate, and split `docs/` into guides, `dev/`, `adr/`, and `history/`.
+**Status (Saturday, September 26, 2026): done (P2d and Agent W3c).** The xtask check (`cargo xtask deps --check`, in CI) and one html5ever version came in Phase 2. Wave 3 took store off aids, made one notes model, put font resolution in `textweaver-fonts`, added the `textweaver-engines` crate, and split `docs/` into guides, `dev/`, `adr/`, and a history folder (since moved out of the repository).
 
 - **Dependency direction.**
   - Take `store` off `aids`: the settings types move into `store`. ADR-0001's rule is that store depends only on core.
@@ -242,7 +242,7 @@ Star's lesson: a stored setting must work.
   - One place for font resolution: `textweaver-fonts`.
   - Align the two html5ever versions.
 - **Engines.** A `textweaver-engines` crate for the backend registry, shared by the TUI, the CLI, export, and the GUI.
-- **Docs layout.** Split `docs/` into user guides, `docs/dev/` (architecture, building, testing, releasing, Docker), `docs/adr/` with an index, and `docs/history/` (plan, tasks, audits).
+- **Docs layout.** Split `docs/` into user guides, `docs/dev/` (architecture, building, testing, releasing, Docker), `docs/adr/` with an index, and a history folder (plan, tasks, audits; since moved out of the repository).
 
 ### Binary size
 
@@ -277,7 +277,7 @@ Steps:
 
 ## Phase 3: the GUI (Wave 3)
 
-**Status (Saturday, September 26, 2026): planned for Wave 3.** the owner chose Xilem, Linebender's all-Rust toolkit, for the GUI on every platform: Xilem and Masonry for the widgets, Vello for drawing, Parley for text layout, AccessKit for accessibility, and winit for windows. The steps below were written for the wxDragon spike, which stays as a fallback until the Xilem GUI passes the same accessibility checks. In [tasks.md](history/tasks.md):
+**Status (Saturday, September 26, 2026): planned for Wave 3.** the owner chose Xilem, Linebender's all-Rust toolkit, for the GUI on every platform: Xilem and Masonry for the widgets, Vello for drawing, Parley for text layout, AccessKit for accessibility, and winit for windows. The steps below were written for the wxDragon spike, which stays as a fallback until the Xilem GUI passes the same accessibility checks. In the agent briefs:
 
 - **Agent W3a** builds the app-core pieces listed first below: the document window model, list and prompt state in the app, the waker, `Command::ReplaceRange`, the settings schema (with a new terminal settings screen), and opening in the background. It also takes Phase 2's leftovers off the input thread.
 - **Agent W3b** builds the GUI in a new crate, `textweaver-xilem`, and writes ADR-0027, which supersedes ADR-0014: the main window, the dialogs, themes and fonts loaded straight into Parley, accessibility checks on every OS (UI Automation, AT-SPI under Xvfb, and a macOS smoke test), the large-document targets, and packaging with no GTK or wxWidgets.
@@ -303,7 +303,7 @@ Then the GUI steps, in order:
 6. **Reading aids in the GUI:** text spacing, the ruler, and an RSVP panel that never covers the caret. The font chooser already exists.
 7. **Edit mode** on the same control, with incremental updates.
 8. **Packaging.** The Windows zip gets `textweaver-gui.exe`. macOS gets an `.app` with the fonts inside, which likely fixes font registration.
-9. **Linux.** GTK builds in CI, a smoke test under Xvfb, an AT-SPI tree check, and an Orca test by a person. (Superseded, 2026-09-26: GTK 3 does announce through ATK's notification signal, which the `live-region` crate uses; see `docs/research/xilem-gui.md`.)
+9. **Linux.** GTK builds in CI, a smoke test under Xvfb, an AT-SPI tree check, and an Orca test by a person. (Superseded, 2026-09-26: GTK 3 does announce through ATK's notification signal, which the `live-region` crate uses; see the Xilem research, kept outside the repository.)
 10. **VoiceOver** on a real Mac, by a tester.
 11. **Ship it.** Make the GUI a default workspace member and include it in the packages.
 
@@ -354,7 +354,7 @@ These are ranked for students with print disabilities, drawing on Star's history
 
 ## How the work is organised
 
-- **Agents.** Work runs in parallel agents, each in its own git worktree and branch, with briefs in `docs/history/tasks.md`. The orchestrator merges each branch.
+- **Agents.** Work runs in parallel agents, each in its own git worktree and branch, with briefs the maintainer keeps outside the repository. The orchestrator merges each branch.
 - **Checks before main.** Every merge runs the full checks on Windows and Linux before it reaches main:
   - fmt;
   - clippy with `-D warnings`;
@@ -366,11 +366,7 @@ These are ranked for students with print disabilities, drawing on Star's history
 
 ## See also
 
-- [Audit, September 2026](history/audit-2026-09.md)
 - [Star features not yet planned](star-gaps.md)
-- [Star parity reference](history/star-parity.md)
-- [Implementation plan](history/plan.md)
-- [Tasks and agent briefs](history/tasks.md)
 - [Releasing](dev/releasing.md)
 - [Architecture](dev/architecture.md)
 - [Documentation index](README.md)

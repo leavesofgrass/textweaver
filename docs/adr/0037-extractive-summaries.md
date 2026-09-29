@@ -6,7 +6,7 @@
 
 ## Context
 
-Star had a summary command: its `summarize.py` ran sumy's LexRank with an English stemmer and stop words, and printed the top sentences. textweaver had none. The Wave 4 research found no maintained LexRank crate for Rust and judged the method small enough to write in-house (`docs/research/wave4.md`, "Summaries"). The owner's standing decision for Wave 5 is that no machine-learning model is downloaded without the owner's approval, so the first part of "offline intelligence" had to work with no model at all.
+Star had a summary command: its `summarize.py` ran sumy's LexRank with an English stemmer and stop words, and printed the top sentences. textweaver had none. The Wave 4 research found no maintained LexRank crate for Rust and judged the method small enough to write in-house (the Wave 4 research, kept outside the repository, "Summaries"). The owner's standing decision for Wave 5 is that no machine-learning model is downloaded without the owner's approval, so the first part of "offline intelligence" had to work with no model at all.
 
 The same wave carried two small items that touch the reading aids:
 

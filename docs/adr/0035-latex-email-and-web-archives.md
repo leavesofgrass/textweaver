@@ -11,7 +11,7 @@ Students get course notes as LaTeX, instructors' announcements as saved emails, 
 - Email (`.eml`) and web archives (`.mhtml`, `.mht`) did not open at all.
 - MathML in a web page was read as a run of letters ("x2+1"); only EPUB 3 chapters read it as math (ADR-0029).
 
-The research for Wave 4 (`docs/research/wave4.md`) and the Wave 5 plan (`docs/research/wave5-plan.md`, section 2.3) chose: our own LaTeX tokenizer, with mitex's grammar as a design reference only (no release since June 2024), our own math parser for the formulas (ADR-0018), and no tectonic (C libraries) or unicodeit (LPPL); mail-parser for MIME.
+The research for Wave 4 and the Wave 5 plan (section 2.3), both kept outside the repository, chose: our own LaTeX tokenizer, with mitex's grammar as a design reference only (no release since June 2024), our own math parser for the formulas (ADR-0018), and no tectonic (C libraries) or unicodeit (LPPL); mail-parser for MIME.
 
 ## Decision
 

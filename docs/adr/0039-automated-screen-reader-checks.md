@@ -91,4 +91,3 @@ The sessions and the dumps are report-only on the step (`continue-on-error`), so
 - [Testing](../dev/testing.md#automated-screen-reader-checks): how to run the checks and read their reports.
 - [ADR-0027: Xilem GUI](0027-xilem-gui.md): the accessibility checks that existed before.
 - [ADR-0028: The Xilem GUI after the owner's session](0028-xilem-gui-after-the-session.md): the design the expectations follow.
-- [Wave 5, recalibrated](../research/wave5-recalibrated.md): the brief.

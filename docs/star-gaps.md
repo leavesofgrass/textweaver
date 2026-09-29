@@ -1,6 +1,6 @@
 # Star features not yet planned
 
-This inventory was made on Friday, September 25, 2026. It lists Star features (D:\star) that `docs/history/plan.md` and `docs/history/tasks.md` did not cover then. For each one it gives the Star code location, and the test file and count where Star has tests. Priorities are for students with print disabilities.
+This inventory was made on Friday, September 25, 2026. It lists Star features (D:\star) that the implementation plan and the agent briefs did not cover then. For each one it gives the Star code location, and the test file and count where Star has tests. Priorities are for students with print disabilities.
 
 Each item now has a **status**, checked against `main` on Saturday, September 26, 2026:
 
@@ -9,9 +9,9 @@ Each item now has a **status**, checked against `main` on Saturday, September 26
 - **missing**: not done yet. The [roadmap](roadmap.md) says which of these come next.
 - **dropped**: out of scope on purpose.
 
-Updated after Phase 2 on Saturday, September 26, 2026. Items that Wave 3 takes on say which agent; the briefs are in [tasks.md](history/tasks.md). Wave 3 prefers pure-Rust, in-process solutions, so several items below name the Rust crate planned in place of Star's Python or C dependency.
+Updated after Phase 2 on Saturday, September 26, 2026. Items that Wave 3 takes on say which agent; the briefs are kept outside the repository. Wave 3 prefers pure-Rust, in-process solutions, so several items below name the Rust crate planned in place of Star's Python or C dependency.
 
-**Reconciled against `main` on Monday, September 28, 2026** (`0.1.0-alpha.4`), using [what is left](research/whats-left.md#the-star-features-textweaver-still-lacks)'s "done since the gaps list was written" note and the Wave 4 entries in `CHANGELOG.md`. That note lists define word, reading statistics, settings profiles, OCR, DAISY, archives, web addresses, PPTX, spreadsheets, Piper voices, the voice manager in the terminal, in-process dictation, syllables and difficult words in the terminal, and math exploration as done since this list was first written; Wave 4 additionally shipped interface translations, the native clipboard fallback, notes export, Unicode math in the reading view, and syntax highlighting in the terminal. The rows below carry each one forward; `research/whats-left.md` stays the newer, fuller inventory for anything not covered here.
+**Reconciled against `main` on Monday, September 28, 2026** (`0.1.0-alpha.4`), using the "what is left" inventory's "done since the gaps list was written" note and the Wave 4 entries in `CHANGELOG.md`. That note lists define word, reading statistics, settings profiles, OCR, DAISY, archives, web addresses, PPTX, spreadsheets, Piper voices, the voice manager in the terminal, in-process dictation, syllables and difficult words in the terminal, and math exploration as done since this list was first written; Wave 4 additionally shipped interface translations, the native clipboard fallback, notes export, Unicode math in the reading view, and syntax highlighting in the terminal. The rows below carry each one forward; that inventory, kept outside the repository, stays the newer, fuller one for anything not covered here.
 
 ## Covered by Wave 2
 
@@ -91,7 +91,5 @@ These areas were being built when the list was made. All are now on `main`:
 ## See also
 
 - [Roadmap](roadmap.md): what comes next, in order.
-- [Star parity reference](history/star-parity.md): what Star does, in detail.
 - [Features page](site/features.html): what textweaver does today, with its status.
-- [Implementation plan](history/plan.md): the original scope.
 - [Documentation index](README.md)

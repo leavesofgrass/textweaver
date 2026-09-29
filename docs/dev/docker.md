@@ -29,7 +29,7 @@ The container has no sound device, so audio features are tested for building and
 Limits, set in September 2026 after one shared build volume grew to 536 GB and Docker's disk on D: to 626 GB:
 
 - **Per container:** 6 GB of RAM, 4 CPUs and 4 cargo jobs by default. Change them with `TW_MEM`, `TW_CPUS` and `TW_JOBS`.
-- **At most three containers building at once.** Docker's machine has about 31 GB in all. Before a build, at least 26 GB of host RAM must be free, so 20 GB always stays free on the 64 GB host. The budget is in `docs/research/wave4-orchestration.md`.
+- **At most three containers building at once.** Docker's machine has about 31 GB in all. Before a build, at least 26 GB of host RAM must be free, so 20 GB always stays free on the 64 GB host. The budget comes from the Wave 4 orchestration plan (kept outside the repository).
 - **Smaller builds:** `Cargo.toml`'s dev and test profiles keep line tables only for our crates, no debug info for dependencies, and incremental builds off.
 - **Before heavy runs,** check the disk with `powershell -File tools/build-hygiene.ps1`. It reports D:'s free space, Docker's images, volumes, build cache and virtual disk, and each agent volume. Stop if D: is near its 200 GB floor.
 - **After an agent's work is merged,** remove its build volume with `tools/build-hygiene.ps1 -RemoveVolume tw-target-<agent>`. That lists the volume and removes nothing; run it again with `-Apply` to remove exactly that volume. The script refuses any volume not named `tw-target-*`.

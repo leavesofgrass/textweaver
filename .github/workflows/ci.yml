@@ -117,7 +117,7 @@ jobs:
           - os: ubuntu-latest
             features: --all-features
           # Omnivox is a pure-Rust subprocess backend: build and test it
-          # everywhere (docs/history/tasks.md uses it for native Windows checks).
+          # everywhere (the agent briefs use it for native Windows checks).
           - os: macos-latest
             features: --features textweaver-speech/omnivox
           - os: windows-latest

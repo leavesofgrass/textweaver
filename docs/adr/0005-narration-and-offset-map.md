@@ -6,7 +6,7 @@
 
 ## Context
 
-Star builds the spoken text and the displayed text separately and aligns them with Python's `difflib` to find which displayed word is being spoken. Its normalization is a chain of regex substitutions that cannot report where anything came from. The inventory (`docs/history/star-parity.md`, speech section) found the consequences: the TUI expands abbreviations and numbers but maps engine word positions against the unexpanded text, so the highlight and the saved pause position point at the wrong word after the first expansion; the GUI avoids that by never normalizing during playback at all.
+Star builds the spoken text and the displayed text separately and aligns them with Python's `difflib` to find which displayed word is being spoken. Its normalization is a chain of regex substitutions that cannot report where anything came from. The inventory (the Star parity reference, kept outside the repository, speech section) found the consequences: the TUI expands abbreviations and numbers but maps engine word positions against the unexpanded text, so the highlight and the saved pause position point at the wrong word after the first expansion; the GUI avoids that by never normalizing during playback at all.
 
 ## Decision
 

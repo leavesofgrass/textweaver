@@ -105,7 +105,7 @@ See [docs/keyboard.md](docs/keyboard.md#what-changed).
 - "No document is open. Press Control O ..." takes the key from the keymap.
 - `textweaver --help` describes the reader and its first keys instead of "self-voicing ratatui frontend".
 - `tw text big.pdf | head` no longer panics when the pipe closes; `tw define` no longer prints its failure twice; `tw marks` takes `--home` like the other commands.
-- Docs: lists no longer close on `q` (a letter jumps to the next item), and Delete in the notes and highlights lists asks first. The findings and what is left are in [docs/research/usability-terminal.md](docs/research/usability-terminal.md).
+- Docs: lists no longer close on `q` (a letter jumps to the next item), and Delete in the notes and highlights lists asks first. The findings and what is left are in the terminal usability research (kept outside the repository).
 - The title line says "Ready" until something is read, then "Stopped". A screen reader reading it at startup heard "Stopped".
 - Keys named in messages are spoken by name by textweaver's own voice ("Control S", "Alt period"), so they are heard at every punctuation level; the status line and the screen reader keep the written form ("Ctrl+S"). Every key named in a message comes from the keymap.
 - New: **Repeat message** (`'`, or `Alt+'` anywhere) says the last message again. **Say status** (`z`, or `Alt+End` anywhere) says the last message, then the mode, the reading state, the position, the rate, and the speech engine. Both are in the command palette and heard over the reading.

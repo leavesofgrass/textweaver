@@ -8,7 +8,7 @@
 
 ## Context
 
-The owner reads most course material as PDF, and wants to read PDFs as Markdown with text-to-speech. So PDF support must be on by default in `tw` and `textweaver` on Windows, macOS, and Linux, and the loader must recover Markdown-quality structure (headings, paragraphs, lists, tables, reading order in columns, no running headers or page numbers, page navigation), not just a stream of text. Star's column-aware reconstruction (`star/documents/pdf.py`, on pdfminer.six's layout boxes; `docs/history/star-parity.md`) is the quality bar.
+The owner reads most course material as PDF, and wants to read PDFs as Markdown with text-to-speech. So PDF support must be on by default in `tw` and `textweaver` on Windows, macOS, and Linux, and the loader must recover Markdown-quality structure (headings, paragraphs, lists, tables, reading order in columns, no running headers or page numbers, page navigation), not just a stream of text. Star's column-aware reconstruction (`star/documents/pdf.py`, on pdfminer.six's layout boxes; the Star parity reference, kept outside the repository) is the quality bar.
 
 The workspace table offered three crates: `lopdf` (a PDF object model and content-stream parser), `pdf-extract` (text extraction on lopdf), and `pdfium-render` (bindings to Google's PDFium, loaded as a shared library at run time).
 

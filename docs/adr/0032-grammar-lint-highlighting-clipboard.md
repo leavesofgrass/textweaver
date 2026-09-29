@@ -5,7 +5,7 @@
 
 ## Context
 
-Wave 4's authoring extras (Agent W4g) are six small features for a blind author working in the terminal: grammar checking, Markdown lint, code highlighting, a clipboard for terminals without OSC 52, math drawn as Unicode in the reading view, and notes exported as references. Each could bring a new crate. The workspace denies unsafe code, prefers pure Rust, keeps the lean reader (`textweaver-tui --no-default-features`) small, and runs `cargo deny` on every change. The research (docs/research/wave4.md, docs/research/wave4-plan-review.md section 3) named the candidates: harper-core 2.11.0, rumdl 0.2.77, syntect 5.3.0 with two-face 0.5.2, and arboard 3.6.1.
+Wave 4's authoring extras (Agent W4g) are six small features for a blind author working in the terminal: grammar checking, Markdown lint, code highlighting, a clipboard for terminals without OSC 52, math drawn as Unicode in the reading view, and notes exported as references. Each could bring a new crate. The workspace denies unsafe code, prefers pure Rust, keeps the lean reader (`textweaver-tui --no-default-features`) small, and runs `cargo deny` on every change. The research (the Wave 4 research and the Wave 4 plan review, section 3, kept outside the repository) named the candidates: harper-core 2.11.0, rumdl 0.2.77, syntect 5.3.0 with two-face 0.5.2, and arboard 3.6.1.
 
 ## Decision
 
@@ -71,5 +71,4 @@ Building grammar also compiles burn: a clean release build of the reader took 18
 - [Editing](../editing.md): lint and the clipboard (grammar on its branch).
 - [Math](../math.md#see-math-as-unicode): math as Unicode.
 - [Notes](../notes.md): exporting notes as references.
-- [Research for Wave 4](../research/wave4.md)
 - [ADR-0018: Math](0018-math.md)

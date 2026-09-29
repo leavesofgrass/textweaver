@@ -27,9 +27,9 @@ Thank you for helping. textweaver is built first for screen-reader users and stu
 
 ## The agent and worktree workflow
 
-textweaver is built by an orchestrator and parallel agents, each in its own git worktree. [docs/history/tasks.md](docs/history/tasks.md) holds the briefs, the ownership of every path, the acceptance criteria, and each agent's status. The rules:
+textweaver is built by an orchestrator and parallel agents, each in its own git worktree. Each agent gets a brief from the maintainer with the paths it owns, the acceptance criteria, and what to report. The rules:
 
-- **Read first**: the shared preamble in `docs/history/tasks.md`, your brief, [the plan](docs/history/plan.md), and the ADRs your brief names.
+- **Read first**: your brief, [CLAUDE.md](CLAUDE.md), and the ADRs your brief names.
 - **Branch**: work on your own branch, in your own worktree, from `main`. The brief names it: `phase2/<letter>-<topic>` in Phase 2, and `wave3/<letter>-<name>` in Wave 3.
 - **Ownership**: edit only the paths your brief lists. Never edit `crates/textweaver-core`, the root `Cargo.toml`, `rust-toolchain.toml`, `.github/`, `docker/`, `compose.yaml`, or another agent's paths unless your brief says so.
 - **Contract changes**: if a public type in core or in another agent's crate must change, work around it and write the exact change you need under "Contract change requests" in your report. The orchestrator decides at integration.
@@ -41,7 +41,7 @@ textweaver is built by an orchestrator and parallel agents, each in its own git 
 
   From Git Bash on Windows, set `MSYS_NO_PATHCONV=1` first, or Git Bash rewrites `/target/...` into a Windows path.
 - **Git**: commit in small steps. Do not push, merge, rebase onto `main`, or tag; the orchestrator integrates. Never use a bare `git stash` in a worktree, because the stash is shared with every other worktree.
-- **Report**: the format is in `docs/history/tasks.md`: a summary, the files changed, the test results natively and in the container, contract change requests, open issues, and what the next wave should do first. Add one status line under your own heading in `docs/history/tasks.md`; leave the rest of its history alone.
+- **Report**: a summary, the files changed, the test results natively and in the container, contract change requests, open issues, and what the next wave should do first.
 
 ## Commits
 
@@ -64,11 +64,12 @@ textweaver is built by an orchestrator and parallel agents, each in its own git 
 ## Documentation
 
 - Every feature a user can reach has a guide, listed in [docs/README.md](docs/README.md).
+- Design records and plans are kept by the maintainer outside the repository. The ADRs in [docs/adr/](docs/adr/README.md) explain why the code is built as it is.
 - Write for listeners: plain language, short sentences, one idea per sentence, headings and lists. No tables in user guides; reference pages such as `docs/keyboard.md` may have them. Put every command in its own fenced block.
 - Every doc ends with a "See also" section linking related docs and the [documentation index](docs/README.md). Guides link to the ADRs that decided them, and ADRs link back to the guides.
 - Keep links relative. `tools/check_links.py` must pass.
 - ADRs keep their decisions. When later work changes one, add a dated "Status update" line under its date instead of rewriting it.
-- Generated files are never edited by hand: `docs/keyboard.md` (`cargo xtask keyboard`), `docs/history/parity-report.md` (`cargo xtask parity`), and the data in `docs/site/*.html` (`python3 tools/gen_site_data.py`, or `py -3 tools/gen_site_data.py` on Windows).
+- Generated files are never edited by hand: `docs/keyboard.md` (`cargo xtask keyboard`) and the data in `docs/site/*.html` (`python3 tools/gen_site_data.py`, or `py -3 tools/gen_site_data.py` on Windows). `cargo xtask parity` writes its Star parity report to `target/parity-report.md`, or to the path given with `--out`; it is build output and is not tracked.
 - Add a line to `CHANGELOG.md` under "Unreleased" for anything a user would notice.
 
 ## Releases
@@ -98,5 +99,4 @@ The workflows in `.github/workflows/`:
 - [Architecture](docs/dev/architecture.md): the crates, the threads, and the path from a file to a spoken word.
 - [Docker development container](docs/dev/docker.md): Linux builds and Voxin on any machine.
 - [Third-party data](docs/dev/third-party-data.md): the bundled dictionaries, fonts, and word lists, and their licences.
-- [Tasks and ownership](docs/history/tasks.md): the agents' briefs and status.
 - [scripts/README.md](scripts/README.md): dev-check and the other scripts.

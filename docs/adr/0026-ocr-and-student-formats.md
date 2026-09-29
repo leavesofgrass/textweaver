@@ -7,7 +7,7 @@
 
 Students with print disabilities get course material in many shapes: scanned chapters (PDFs with no text layer), photos of handouts, DAISY books from Bookshare, slides, spreadsheets, zip files from a learning platform, and web pages. Before Wave 3, textweaver read a scanned PDF as one sentence saying it could not ("OCR is out of scope", ADR-0010), and refused the rest.
 
-Wave 3's spirit (docs/history/tasks.md) is pure Rust and in process first, with a fallback for each bold choice. The research for this work is `docs/research/pure-rust-wave3.md`.
+Wave 3's spirit (in the agent briefs, kept outside the repository) is pure Rust and in process first, with a fallback for each bold choice. The research for this work is the Wave 3 pure-Rust research, kept outside the repository.
 
 ## Decisions
 
@@ -136,5 +136,4 @@ ocrs is fast and good enough to listen to on clean English scans, and it needs n
 
 - [ADR-0010: PDF loader](0010-pdf-loader.md)
 - [ADR-0024: App core for the GUI](0024-app-core-for-the-gui.md): the background open this uses.
-- [Research: pure-Rust choices for Wave 3](../research/pure-rust-wave3.md)
 - [Converting documents](../converting.md#formats-textweaver-reads)

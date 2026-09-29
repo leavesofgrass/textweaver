@@ -6,7 +6,7 @@
 
 ## Context
 
-Star defined words through nltk's WordNet and CMUdict corpora, which a user had to download with Python tools, and layered a JSON glossary over them (`star/dictionary.py`). It translated its Qt chrome with a small `tr()` over JSON catalogs keyed by the English text (`star/i18n.py`). Wave 3 asked for both in pure Rust (`docs/research/pure-rust-wave3.md`, "Define word"), offline, with no Python, and for interface translations to start with a message catalog, English complete, a pseudo-locale, and a right-to-left check.
+Star defined words through nltk's WordNet and CMUdict corpora, which a user had to download with Python tools, and layered a JSON glossary over them (`star/dictionary.py`). It translated its Qt chrome with a small `tr()` over JSON catalogs keyed by the English text (`star/i18n.py`). Wave 3 asked for both in pure Rust (the Wave 3 pure-Rust research, kept outside the repository, "Define word"), offline, with no Python, and for interface translations to start with a message catalog, English complete, a pseudo-locale, and a right-to-left check.
 
 ## Decision
 
@@ -54,6 +54,5 @@ Only the Wave 3 study features' messages are in the catalog so far. Moving the r
 
 ## See also
 
-- [Research: pure-Rust choices for Wave 3](../research/pure-rust-wave3.md)
 - `third_party/lexicon/README.md`: the sources, sums, and licences.
 - [Reading guide: define a word](../reading.md#define-a-word-ctrlshiftd-or-alte)

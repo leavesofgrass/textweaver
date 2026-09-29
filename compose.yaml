@@ -16,7 +16,7 @@
 # them. Before a build, at least 26 GB of host RAM must be free. The shared
 # compile cache is capped at 30 GB. Build volumes are listed and removed after
 # an agent's work is merged (tools/build-hygiene.ps1). See
-# docs/research/wave4-orchestration.md for the budget.
+# the Wave 4 orchestration plan (kept outside the repository) for the budget.
 services:
   dev:
     build:

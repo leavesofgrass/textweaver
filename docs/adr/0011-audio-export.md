@@ -6,7 +6,7 @@
 
 ## Context
 
-Star exported audio three ways (`docs/history/star-parity.md` Part 2 §5.D, `star/tts/audio.py`, `star/audiobook.py`): the whole normalized text synthesized in one call to a WAV, then converted with ffmpeg (or pydub) to MP3, OGG, or MP4; an M4B audiobook synthesized chapter by chapter, joined by ffmpeg's concat demuxer with chapter metadata; and subtitles (`star/tts/subtitles.py`) built by spreading the whole file's duration over its whitespace tokens by length (`len + 1`), grouped into caption lines of at most 12 words and 90 characters, broken at sentences.
+Star exported audio three ways (the Star parity reference, kept outside the repository, Part 2 §5.D; `star/tts/audio.py`, `star/audiobook.py`): the whole normalized text synthesized in one call to a WAV, then converted with ffmpeg (or pydub) to MP3, OGG, or MP4; an M4B audiobook synthesized chapter by chapter, joined by ffmpeg's concat demuxer with chapter metadata; and subtitles (`star/tts/subtitles.py`) built by spreading the whole file's duration over its whitespace tokens by length (`len + 1`), grouped into caption lines of at most 12 words and 90 characters, broken at sentences.
 
 Three problems follow. Apportioning one duration over a whole document drifts: a long word, a pause, a number read as six words, or a heading announcement pushes every later cue away from its audio, and the error grows to minutes in a book. Engines that know exactly where each word sounds (espeak-ng's `audio_position`, ECI index marks, SAPI word-boundary offsets) had that knowledge thrown away. And export needed a backend-specific path per engine.
 
