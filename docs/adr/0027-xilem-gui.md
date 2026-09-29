@@ -2,7 +2,7 @@
 
 - Status: accepted (first milestone)
 - Date: 2026-09-26
-- Supersedes: [ADR-0014](0014-gui-toolkit.md) (the wxDragon spike), which stays as the fallback described below.
+- Supersedes: [ADR-0014](0014-gui-toolkit.md) (the wxDragon spike); the fallback described below was removed once the condition below was met (see the status update).
 
 ## Context
 
@@ -100,7 +100,7 @@ Measured on Saturday, September 26, 2026, on the development machine (Windows 11
 
 ## The fallback
 
-The wxDragon spike (`crates/textweaver-gui`, ADR-0014) keeps building and passing its own UI Automation report on Windows until this GUI passes the same report and an NVDA and JAWS listening session. Only then is it removed. If Xilem development stops or a screen reader cannot be served, the plan in the research page stands: wxDragon, and on Linux wxWidgets on GTK 3 with the `live-region` crate.
+The wxDragon spike (`crates/textweaver-gui`, ADR-0014) kept building and passing its own UI Automation report on Windows until this GUI passed the same report and an NVDA and JAWS listening session. That happened at the second session ([ADR-0033](0033-gui-session-2-and-edit-mode.md), Monday, September 28, 2026), and the spike was removed the same day. If Xilem development were to stop, or a screen reader could not be served, the plan in the research page stands: wxDragon, and on Linux wxWidgets on GTK 3 with the `live-region` crate.
 
 ## Built on the app core
 
@@ -116,7 +116,7 @@ The GUI started with thin local adapters while the app core pieces (ADR-0024) we
 
 ## Status update: Parley 0.11.1 (Monday, September 28, 2026)
 
-The vendored Parley moved from 0.8.0 to 0.11.1 (August 16, 2026), the newest release. What the brief expected, and what was found:
+The vendored Parley moved from 0.8.0 to 0.11.1 (August 16, 2026), the newest release. What was expected, and what was found:
 
 - **The accessibility bridge did not have to move.** Parley's main branch has removed its `accesskit` feature since 0.11 (its changelog's "Unreleased" section; the integration moved to an example), but 0.11.1 still has it. As with 0.8.0, only its optional AccessKit dependency moved to 0.25.1. Only Masonry's `TextArea` (the prompts' one-line fields) uses that feature. The document view never did: it has built its own text runs, caret, and selection from the start. So ADR-0040, reserved for a changed bridge, is not needed. The next upgrade past 0.11 will need a bridge for `TextArea`.
 - **Ranged styles were already in use.** Bionic reading, difficult words, links, code, and headings are pushed as ranged styles when a paragraph is laid out. The spoken word stays a band painted under the text, with its text drawn again in its own color and clipped to the band. That needs no relayout per word, which a ranged style would.
@@ -127,7 +127,7 @@ The vendored Parley moved from 0.8.0 to 0.11.1 (August 16, 2026), the newest rel
 
 - **Before (Parley 0.8.0, main at 0d049b5):** the view's first layout, runs, and tree for the 10-million-character document's window (120,725 characters) 31.2 ms; a highlight move 0.28 ms median, 0.72 ms worst (the median of the runs' worst moves). Memory: no document 169 MB working set (111 MB private working set, 645 MB private bytes); the sample document, reading, 179 MB (118 MB, 652 MB); the 10-million-character document, reading, 193 MB (133 MB, 665 MB). In the window's `--log`, the 10-million-character document opened in 64 ms (`App::open`).
 - **After (Parley 0.11.1):** 34.2 ms; 0.28 ms median, 0.81 ms worst. Memory: 171 MB (113 MB, 656 MB); 178 MB (117 MB, 654 MB); 194 MB (134 MB, 670 MB). `App::open` 46 to 50 ms.
-- **Verdict: kept.** Opening is 10 percent slower, the worst highlight move 12 percent, and memory within a megabyte or two, all inside the 20 percent the brief allows and inside the noise of a loaded machine. The GUI's tests (79) pass, and so does the UI Automation report (`-Announce live`).
+- **Verdict: kept.** Opening is 10 percent slower, the worst highlight move 12 percent, and memory within a megabyte or two, all inside the 20 percent allowed and inside the noise of a loaded machine. The GUI's tests (79) pass, and so does the UI Automation report (`-Announce live`).
 
 ## Consequences
 

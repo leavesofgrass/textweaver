@@ -1,8 +1,8 @@
-# Agent D fixtures
+# Fixtures for the app and TUI
 
 - `stream-note`, `stream-long`, `stream-short` (`.txt`, `.wav`, `.srt`):
-  speech for the streaming dictation spike (Agent W5d,
-  `crates/textweaver-dictation/examples/stream_probe.rs`). Written with
+  speech for the streaming dictation spike
+  (`crates/textweaver-dictation/examples/stream_probe.rs`). Written with
   textweaver's own audio export and Windows SAPI5, never recorded and
   never played: `tw export-audio stream-note.txt --out stream-note.wav
   --subtitles stream-note.srt --word-level --backend sapi --rate 160`.

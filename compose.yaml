@@ -4,11 +4,10 @@
 #   docker compose run --rm dev cargo test --workspace
 #   docker compose run --rm dev            # interactive shell in /work
 #
-# Agents work inside this container so their shell commands never touch the
-# host. Each agent mounts only its own worktree and sets TW_AGENT so it gets
-# its own build volume:
+# For parallel work in more than one worktree, mount only that worktree and
+# set TW_AGENT so it gets its own build volume:
 #
-#   TW_AGENT=w4b docker compose run --rm -v "<worktree>:/work" dev cargo test
+#   TW_AGENT=alice docker compose run --rm -v "<worktree>:/work" dev cargo test
 #
 # Limits (corrected September 27, 2026): Docker's machine has about 31 GB in
 # all, so at most three containers build at once. Each gets 6 GB of RAM, 4

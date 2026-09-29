@@ -22,7 +22,7 @@ How to set up a machine to build textweaver: Rust, Python, and what each system 
    cargo test --workspace
    ```
 
-`--workspace` builds the default members, which leave out the GUI spike. Build the GUI only when you work on it (see below).
+`--workspace` builds the default members, which leave out the GUI. Build the GUI only when you work on it (see below).
 
 ## Your first contribution
 

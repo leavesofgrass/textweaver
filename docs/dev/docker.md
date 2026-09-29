@@ -6,7 +6,7 @@ textweaver is developed on Windows and tested on Linux in a Docker container. Th
 
 `docker/Dockerfile`, built as `textweaver-dev:latest`:
 
-| Component | Version at Phase 0 | Why |
+| Component | Version | Why |
 |---|---|---|
 | Debian trixie + `rust:1.96` | Rust 1.96.1, rustfmt, clippy | matches `rust-toolchain.toml` |
 | espeak-ng, `libespeak-ng-dev` | 1.52.0 | `textweaver-speech/espeak` |
@@ -69,7 +69,7 @@ docker compose run --rm -T dev cargo run -p textweaver-cli --features espeak -- 
 Each agent works in its own git worktree, and runs its builds, tests and file operations **inside the container**, so shell commands never touch the host or files outside its worktree. From the worktree's root, use a fixed project name and the agent's own build volume:
 
 ```bash
-TW_AGENT=w4b MSYS_NO_PATHCONV=1 docker compose -p textweaver run --rm -T dev cargo test -p textweaver-speech --all-features
+TW_AGENT=alice MSYS_NO_PATHCONV=1 docker compose -p textweaver run --rm -T dev cargo test -p textweaver-speech --all-features
 ```
 
 In Git Bash, `MSYS_NO_PATHCONV=1` stops Git Bash rewriting container paths into Windows paths.

@@ -41,7 +41,7 @@ Names ignore case. Star's older names still work (`obsidian` means Galaxy). If a
 
 They are grouped here by kind. Each is one of Star's palettes.
 
-Not every theme has to meet the WCAG AA contrast level, as long as some do (the owner's decision, September 26, 2026).
+Not every theme has to meet the WCAG AA contrast level, as long as some do.
 
 - **Must meet AA.** Galaxy, Galaxy Light, Contrast, and High Contrast. The two high-contrast themes reach 7 to 1. Where one of Star's colors fell short in these four, it was moved by the smallest change that passes, and the theme file lists every change.
 - **Every other theme** keeps Star's colors exactly. Its theme file says whether it meets AA.

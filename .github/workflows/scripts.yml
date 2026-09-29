@@ -12,7 +12,7 @@ name: Scripts
 
 on:
   push:
-    branches: [main, 'wave2/**']
+    branches: [main]
     paths:
       - 'scripts/**'
       - 'tools/*.sh'

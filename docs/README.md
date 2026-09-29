@@ -90,7 +90,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0011: Audio export](adr/0011-audio-export.md): sentence-by-sentence synthesis, exact subtitles, and chapters.
 - [ADR-0012: One engine-host protocol and playback client](adr/0012-engine-host.md): the shared protocol for Eloquence, SAPI5, and DECtalk.
 - [ADR-0013: Dictation through a Whisper program](adr/0013-dictation.md): voice typing with a Whisper subprocess.
-- [ADR-0014: GUI toolkit (wxDragon)](adr/0014-gui-toolkit.md): the GUI spike's findings. The GUI later moved to Xilem, and the spike stays as a fallback.
+- [ADR-0014: GUI toolkit (wxDragon)](adr/0014-gui-toolkit.md): the GUI spike's findings. The GUI moved to Xilem; the wxDragon spike was removed once the Xilem GUI passed its second screen-reader session.
 - [ADR-0015: JSON-RPC server](adr/0015-json-rpc.md): `tw serve --stdio`, its methods, and notifications.
 - [ADR-0016: Rendering and bulk conversion](adr/0016-rendering-and-conversion.md): Markdown to accessible HTML, and fast, incremental conversion.
 - [ADR-0017: Native writers](adr/0017-writers.md): EPUB 3, DOCX, BRF braille, and tagged PDF, and their accessibility checks.

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, 'agent/**', 'wave*/**', 'phase*/**', 'integration/**']
+    branches: [main]
   pull_request:
 
 # One run per branch or pull request: a newer push cancels the older run.
@@ -117,7 +117,7 @@ jobs:
           - os: ubuntu-latest
             features: --all-features
           # Omnivox is a pure-Rust subprocess backend: build and test it
-          # everywhere (the agent briefs use it for native Windows checks).
+          # everywhere, including native Windows checks.
           - os: macos-latest
             features: --features textweaver-speech/omnivox
           - os: windows-latest

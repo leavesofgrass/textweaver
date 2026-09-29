@@ -76,7 +76,7 @@ The fifth alpha. Braille comes first: every status line, list, and prompt puts t
 - The formats crate has an `images` feature: the picture and scanned-page loaders without the in-process OCR engine. The fuzz targets use it, so they no longer compile that engine.
 - **Screen reader checks in CI:** the GUI's accessibility tree is dumped and compared on Windows, macOS, and Linux; NVDA (through Guidepup) and Orca read the GUI in scripted sessions, reported without failing the build ([ADR-0039](docs/adr/0039-automated-screen-reader-checks.md)). VoiceOver cannot yet be started on GitHub's Mac runners.
 - Dependabot no longer proposes upgrades to the pinned GUI stack, MathCAT pre-releases, resvg, or sha1 and sha2 0.11.
-- The rope stays ropey 1.6, as measured in Wave 4 ([ADR-0034](docs/adr/0034-rope-after-measurement.md)).
+- The rope stays ropey 1.6, after measuring the alternative ([ADR-0034](docs/adr/0034-rope-after-measurement.md)).
 
 ### Documentation
 

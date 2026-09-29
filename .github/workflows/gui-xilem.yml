@@ -14,7 +14,7 @@ name: GUI (Xilem)
 
 on:
   push:
-    branches: [main, 'wave3/b-*']
+    branches: [main]
     paths:
       - 'crates/**'
       - 'third_party/xilem/**'
