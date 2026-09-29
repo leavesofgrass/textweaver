@@ -44,10 +44,17 @@ body:
   - type: input
     id: screen-reader
     attributes:
-      label: Screen reader, magnifier, or braille display, with versions
-      placeholder: NVDA 2026.2 with a Focus 40, JAWS 2026, ZoomText, VoiceOver, Orca 48
+      label: Screen reader or magnifier, with its version
+      description: Or "none", if you use only the keyboard.
+      placeholder: NVDA 2026.2, JAWS 2026, VoiceOver, Orca 48, ZoomText, none
     validations:
       required: true
+  - type: input
+    id: braille
+    attributes:
+      label: Braille display
+      description: Its model and cell count, and the Braille table if it matters. Or "none".
+      placeholder: Focus 40 with UEB grade 2, Mantis Q40, none
   - type: input
     id: os
     attributes:

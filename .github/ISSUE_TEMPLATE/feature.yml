@@ -34,4 +34,5 @@ body:
     id: setup
     attributes:
       label: Your setup (optional)
-      description: Operating system, screen reader, and speech engine.
+      description: Operating system, screen reader, Braille display, and speech engine.
+      placeholder: Windows 11, NVDA 2026.2, Focus 40, Eloquence
