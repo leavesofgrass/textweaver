@@ -34,7 +34,8 @@ use std::process::Command;
 use anyhow::{Context, bail};
 
 /// Files whose version examples follow the release, relative to the root.
-const EXAMPLE_FILES: [&str; 4] = [
+const EXAMPLE_FILES: [&str; 5] = [
+    "README.md",
     "docs/dev/releasing.md",
     "docs/install.md",
     ".github/workflows/scripts.yml",
