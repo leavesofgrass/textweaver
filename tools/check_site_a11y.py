@@ -34,6 +34,7 @@ checked for:
 - landmarks: header, a labelled nav, main, footer;
 - controls and buttons with a name (text, aria-label, or title), images with
   alt, and no duplicate ids;
+- tables with a caption and header cells;
 - scripts, styles, fonts, and images loaded from this site only, so reading
   the site makes no request to another host;
 - relative links and #anchors that lead to a built page and an id on it.
@@ -417,6 +418,12 @@ def check_built_page(path: Path, root: Path) -> list[str]:
     for ident, n in p.ids.items():
         if n > 1:
             problems.append(f"The id {ident!r} is used {n} times.")
+    # tools/zensical_ext/textweaver_site_tables.py captions every table.
+    for t in p.tables:
+        if not t["caption"]:
+            problems.append("A <table> has no <caption>.")
+        if not t["th"]:
+            problems.append("A <table> has no header cells.")
 
     for tag, url in p.resources:
         if _is_external(url):

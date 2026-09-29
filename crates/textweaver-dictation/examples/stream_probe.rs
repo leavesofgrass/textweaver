@@ -76,13 +76,9 @@ mod la {
         pub end: f64,
     }
 
-    /// Lower case, letters, digits and apostrophes only.
-    pub fn norm(w: &str) -> String {
-        w.chars()
-            .filter(|c| c.is_alphanumeric() || *c == '\'')
-            .flat_map(char::to_lowercase)
-            .collect()
-    }
+    /// The commit rule's word comparisons: the crate's own (W6d moved
+    /// the loop into `textweaver_dictation::stream`).
+    pub use textweaver_dictation::stream::{common_prefix, continuation, norm};
 
     /// The words of some segments.
     pub fn words(segs: &[Seg]) -> Vec<String> {
@@ -90,41 +86,6 @@ mod la {
             .flat_map(|s| s.text.split_whitespace().map(str::to_owned))
             .filter(|w| !norm(w).is_empty())
             .collect()
-    }
-
-    /// How many leading words two hypotheses agree on (normalized).
-    pub fn common_prefix(a: &[String], b: &[String]) -> usize {
-        a.iter()
-            .zip(b)
-            .take_while(|(x, y)| norm(x) == norm(y))
-            .count()
-    }
-
-    /// Where a hypothesis goes on after the committed words `cw`: after
-    /// them when it starts with them, otherwise after the last word the
-    /// two share (Whisper sometimes rewrites an early word; the committed
-    /// text is never changed).
-    pub fn continuation(cw: &[String], hyp: &[String]) -> usize {
-        if common_prefix(cw, hyp) == cw.len() {
-            return cw.len().min(hyp.len());
-        }
-        // The prefix of the hypothesis closest to the committed words (the
-        // edit distance of all of `cw` against `hyp[..p]`, least `p` on a
-        // tie is the one nearest `cw.len()`).
-        let c: Vec<String> = cw.iter().map(|w| norm(w)).collect();
-        let h: Vec<String> = hyp.iter().map(|w| norm(w)).collect();
-        let mut prev: Vec<usize> = (0..=h.len()).collect();
-        for (i, cword) in c.iter().enumerate() {
-            let mut row = vec![i + 1; h.len() + 1];
-            for j in 1..=h.len() {
-                let sub = prev[j - 1] + usize::from(*cword != h[j - 1]);
-                row[j] = sub.min(prev[j] + 1).min(row[j - 1] + 1);
-            }
-            prev = row;
-        }
-        (0..=h.len())
-            .min_by_key(|&p| (prev[p], p.abs_diff(c.len())))
-            .unwrap_or(0)
     }
 
     /// A committed word and when it was committed (virtual seconds).

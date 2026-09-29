@@ -13,9 +13,11 @@
 #   ubuntu-22.04-arm runner), built on Ubuntu 22.04's glibc and checked on
 #   Debian and Fedora (and Arch on x86_64) before upload.
 # - The GUI (textweaver-gui, ADR-0027), from `cargo xtask gui-dist` in each
-#   package job: a Windows zip, a macOS .app zip (Apple silicon), and a
-#   Linux AppImage and tarball for x86_64 and aarch64. Each holds the same
-#   engine hosts and dictionaries as the terminal package, and is checked
+#   package job: a Windows zip, a macOS .app zip (universal: Apple silicon
+#   and Intel), and a Linux AppImage and tarball for x86_64 and aarch64.
+#   Each holds the same engine hosts and dictionaries as the terminal
+#   package, is built with the same speech engines where the GUI crate
+#   has them (espeak-ng and speech-dispatcher on Linux), and is checked
 #   (--version, a screenshot drawn on the CPU, and on macOS a silent
 #   reading) before upload. Their names end in -gui, so no pattern for the
 #   terminal packages matches them, including the update information of
@@ -175,16 +177,17 @@ jobs:
           for want in THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/fonts/opendyslexic/OFL.txt; do
             grep -q "/$want\$" <<< "$listing" || { echo "the package lacks $want"; exit 1; }
           done
-      # The GUI's textweaver.app in a zip, for Apple silicon (the runner's
-      # architecture; Intel Macs are not built yet).
+      # The GUI's textweaver.app in a zip, universal (Apple silicon and
+      # Intel, joined with lipo), in the same build folder as the terminal
+      # package.
       - name: Build the GUI package
-        run: cargo xtask gui-dist
+        run: cargo xtask gui-dist --universal
       # --version, a screenshot drawn on the CPU, and a silent reading with
       # the paced backend in a window kept in the background (as
       # gui-xilem.yml's smoke run does), then the window closes itself.
       - name: Check the GUI package
         run: |
-          for zip in target/dist/textweaver-*-macos-aarch64-gui.zip; do
+          for zip in target/dist/textweaver-*-macos-universal-gui.zip; do
             test -f "$zip" || { echo "Fail: no GUI package"; exit 1; }
             listing=$(unzip -Z1 "$zip")
             for want in textweaver.app/Contents/MacOS/textweaver-gui textweaver.app/Contents/Info.plist GUI.md lexicon/lexicon-en.twlex THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/xilem/LICENSE; do
@@ -192,9 +195,13 @@ jobs:
             done
             echo "GUI package: $(basename "$zip"), $(du -m "$zip" | cut -f1) MB" | tee -a "$GITHUB_STEP_SUMMARY"
           done
-          for app in target/dist/textweaver-*-macos-aarch64-gui/textweaver.app; do
+          for app in target/dist/textweaver-*-macos-universal-gui/textweaver.app; do
             codesign --verify --deep --verbose "$app"
             gui="$app/Contents/MacOS/textweaver-gui"
+            lipo -info "$gui"
+            for arch in arm64 x86_64; do
+              lipo "$gui" -verify_arch "$arch" || { echo "Fail: the GUI lacks $arch"; exit 1; }
+            done
             "$gui" --version
             "$gui" --screenshot "$RUNNER_TEMP/gui-check.png" fixtures/sample.md
             test -s "$RUNNER_TEMP/gui-check.png"
@@ -212,13 +219,13 @@ jobs:
         with:
           subject-path: |
             target/dist/textweaver-*-macos-universal.tar.gz
-            target/dist/textweaver-*-macos-aarch64-gui.zip
+            target/dist/textweaver-*-macos-universal-gui.zip
       - name: Upload to the release
         if: env.DRY_RUN != 'true'
         run: |
           tools/release-upload.sh --no-sums "$TAG" \
             target/dist/textweaver-*-macos-universal.tar.gz \
-            target/dist/textweaver-*-macos-aarch64-gui.zip
+            target/dist/textweaver-*-macos-universal-gui.zip
       - name: Keep the packages (dry run)
         if: env.DRY_RUN == 'true'
         uses: actions/upload-artifact@v7
@@ -226,7 +233,7 @@ jobs:
           name: dry-run-macos
           path: |
             target/dist/textweaver-*-macos-universal.tar.gz
-            target/dist/textweaver-*-macos-aarch64-gui.zip
+            target/dist/textweaver-*-macos-universal-gui.zip
 
   linux:
     name: Linux AppImage and tarball, ${{ matrix.arch }}

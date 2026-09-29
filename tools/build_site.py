@@ -39,10 +39,16 @@ announcements the theme leaves out, need a browser. Repeat these by hand
 - Tab from the top: the skip link comes first, then the site name, the
   color theme switch, Search, and the repository link.
 - Search: Enter on the Search button moves focus to a box named "Search the
-  documentation"; typing announces the result count; Tab reaches the
-  filter button and then each result as a link; Escape closes the panel and
-  returns focus to the Search button; while closed, nothing in it can be
-  reached with Tab.
+  documentation"; typing announces the result count; Down and Up Arrow
+  announce each highlighted result's title and place ("result 2 of 10");
+  Tab reaches the filter button and then each result as a link; Escape
+  closes the panel and returns focus to the Search button; while closed,
+  nothing in it can be reached with Tab.
+- Tables: NVDA's T key (JAWS's T) names each table by its caption, the
+  heading above it.
+- Wide code blocks and tables: at a narrow width (or 200 percent zoom), a
+  block wider than the page is a Tab stop named "Wide code block" (or the
+  table's caption), and Right Arrow scrolls it.
 - The color theme switch: Enter moves through system, light, and dark, and
   each choice says its name.
 - The navigation: sections that open and close are buttons with an expanded

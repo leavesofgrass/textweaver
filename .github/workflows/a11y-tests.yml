@@ -8,10 +8,11 @@
 # - voiceover: the same session with VoiceOver on a macOS runner, if the
 #   runner lets Guidepup enable it (tools/a11y/voiceover-session.mjs).
 # Each job's report is in the run summary: every line starts with Pass,
-# Fail, Warning, or Heard, in words. The session steps are report-only
-# (continue-on-error on the step), so a job fails only when the GUI or the
-# tools cannot be built or installed, until ADR-0039 records a session as
-# standing.
+# Fail, Warning, or Heard, in words. The Orca session is standing: a failed
+# must check fails its job (ADR-0039, after three runs in a row passed).
+# The NVDA and VoiceOver session steps are report-only (continue-on-error
+# on the step), so their jobs fail only when the GUI or the tools cannot
+# be built or installed, until ADR-0039 records them as standing.
 #
 # NVDA and VoiceOver are installed and driven on the runners only. The
 # scripts refuse to run anywhere else, so no one's own screen reader is
@@ -150,7 +151,6 @@ jobs:
       - name: Build the GUI (hybrid renderer, which suits Mesa's software GPU)
         run: cargo build --locked -p textweaver-xilem --no-default-features --features screenshot,renderer-hybrid
       - name: AT-SPI reading session, with Orca
-        continue-on-error: true
         run: bash tools/a11y/orca-session.sh orca
       - name: Report in the run summary
         if: always()

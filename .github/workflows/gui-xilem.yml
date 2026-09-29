@@ -83,9 +83,10 @@ jobs:
           name: uia-xilem-report
           path: uia-xilem.md
       # The accessibility tree, dumped with accessibility-cli and compared
-      # with main's last run (ADR-0039). Report-only: every step here has
-      # continue-on-error, so the job's result comes from the build and the
-      # tests alone.
+      # with main's last run (ADR-0039). The dump is standing: a run that
+      # dumps no tree fails the job. The comparison with main stays
+      # report-only (a change is for a person to judge), and so do the
+      # tool's cache steps.
       # Restored and saved as separate steps, so the build (about eight
       # minutes) is kept even when a later step fails or the run is
       # cancelled, which skips actions/cache's end-of-job save.
@@ -118,7 +119,6 @@ jobs:
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
       - name: Accessibility tree dump
         if: ${{ !cancelled() }}
-        continue-on-error: true
         shell: pwsh
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/a11y/tree-dump.ps1 -Out a11y-tree -Cli a11y-cli/bin/accessibility-cli.exe
       - name: Accessibility tree against main
@@ -183,9 +183,10 @@ jobs:
           grep -q "Reading at" gui.log
           grep -q "closed" gui.log
       # The accessibility tree, dumped with accessibility-cli and compared
-      # with main's last run (ADR-0039). Report-only: every step here has
-      # continue-on-error, so the job's result comes from the build and the
-      # tests alone.
+      # with main's last run (ADR-0039). The dump is standing: a run that
+      # dumps no tree fails the job. The comparison with main stays
+      # report-only (a change is for a person to judge), and so do the
+      # tool's cache steps.
       # Restored and saved as separate steps, so the build (about eight
       # minutes) is kept even when a later step fails or the run is
       # cancelled, which skips actions/cache's end-of-job save.
@@ -218,7 +219,6 @@ jobs:
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
       - name: Accessibility tree dump
         if: ${{ !cancelled() }}
-        continue-on-error: true
         env:
           A11Y_CLI: a11y-cli/bin/accessibility-cli
         run: bash tools/a11y/tree-dump.sh a11y-tree
@@ -289,9 +289,10 @@ jobs:
             echo "Fail: the AT-SPI check wrote no report." >> "$GITHUB_STEP_SUMMARY"
           fi
       # The accessibility tree, dumped with accessibility-cli and compared
-      # with main's last run (ADR-0039). Report-only: every step here has
-      # continue-on-error, so the job's result comes from the build and the
-      # tests alone.
+      # with main's last run (ADR-0039). The dump is standing: a run that
+      # dumps no tree fails the job. The comparison with main stays
+      # report-only (a change is for a person to judge), and so do the
+      # tool's cache steps.
       # Restored and saved as separate steps, so the build (about eight
       # minutes) is kept even when a later step fails or the run is
       # cancelled, which skips actions/cache's end-of-job save.
@@ -324,7 +325,6 @@ jobs:
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
       - name: Accessibility tree dump
         if: ${{ !cancelled() }}
-        continue-on-error: true
         env:
           A11Y_CLI: a11y-cli/bin/accessibility-cli
         run: bash tools/a11y/tree-dump.sh a11y-tree

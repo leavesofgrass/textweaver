@@ -37,6 +37,12 @@ jobs:
         with:
           python-version: '3.12'
       - run: rustup toolchain install
+      # Without a cache this job spent 6 to 7 minutes compiling xtask and
+      # the app from scratch on every push.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: docs
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       # Every relative link and anchor in the Markdown docs and docs/site
       # resolves (tools/check_links.py; standard library only, no network).
       - name: Links and anchors
@@ -129,12 +135,14 @@ jobs:
       # espeak-ng is linked through hand-written declarations and
       # speech-dispatcher through its socket, so no clang or bindgen is
       # needed here. The Xilem GUI has its own workflow (gui-xilem.yml).
+      # ffmpeg: the MP3 and M4B export test and the dictation conversion
+      # test skip without it, so without it here they never ran in CI.
       - name: System libraries
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libespeak-ng-dev espeak-ng-data libasound2-dev libspeechd-dev pkg-config
+            libespeak-ng-dev espeak-ng-data libasound2-dev libspeechd-dev pkg-config ffmpeg
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
