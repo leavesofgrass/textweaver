@@ -4,7 +4,7 @@ This guide is for people who use a screen reader, such as JAWS, NVDA, VoiceOver,
 
 textweaver's keys are the same in every mode. See [Reading and moving around](reading.md) and the [keyboard reference](keyboard.md).
 
-What this guide says about textweaver comes from its code. Screen reader and terminal settings are marked **verify on the owner's machine** until they have been tried by ear. Where something is untested, please tell us how it goes (see [Troubleshooting](troubleshooting.md), "Report a bug").
+What this guide says about textweaver comes from its code. Screen reader and terminal settings are marked **not yet verified** until they have been tried by ear. Where something is untested, please tell us how it goes (see [Troubleshooting](troubleshooting.md), "Report a bug").
 
 ## Three modes
 
@@ -68,7 +68,7 @@ If textweaver gets it wrong, set `TEXTWEAVER_SCREEN_READER=0` to say there is no
 
 - **Use hybrid mode** (Alt+Shift+A). textweaver reads; your screen reader speaks the rest.
 - **Use screen-reader mode** for one voice for everything, or with a braille display.
-- **Stay in self-voicing and quiet your screen reader** while you are in textweaver. NVDA's speech modes (**NVDA+S**) include "on demand" in recent versions, which speaks only when you ask, for example to read the current line. JAWS has a way to turn speech off (**Insert+Space**, then **S**) and, in recent versions, a Speech on Demand setting. These belong to your screen reader; check its own documentation. **Verify on the owner's machine.**
+- **Stay in self-voicing and quiet your screen reader** while you are in textweaver. NVDA's speech modes (**NVDA+S**) include "on demand" in recent versions, which speaks only when you ask, for example to read the current line. JAWS has a way to turn speech off (**Insert+Space**, then **S**) and, in recent versions, a Speech on Demand setting. These belong to your screen reader; check its own documentation. **Not yet verified.**
 
 While textweaver reads aloud, the terminal's cursor moves to each word. If your screen reader speaks as the cursor moves, it talks over the reading. Two settings help:
 
@@ -101,7 +101,7 @@ How much textweaver says is set by `[speech] verbosity`. See [Reading and moving
 
 ## Keys like a screen reader's browse mode
 
-textweaver's default keys are the quick navigation keys of NVDA's and JAWS's browse mode (the owner's choice, Saturday, September 26, 2026):
+textweaver's default keys are the quick navigation keys of NVDA's and JAWS's browse mode, so they are already familiar:
 
 - **h** and **Shift+H**: next and previous heading.
 - **1** to **6**: next heading at that level; **Shift** with the digit: the previous one. textweaver matches the digit key itself, on any keyboard layout (on Windows it reads the key from the console; elsewhere it knows the US, UK, German, Spanish, Nordic, and Italian layouts, and French with `digit_row = "azerty"`).
@@ -117,7 +117,7 @@ textweaver's default keys are the quick navigation keys of NVDA's and JAWS's bro
 
 These follow NVDA's letters; where JAWS differs (its `q`, `d`, `r`, and link keys), the [keyboard reference](keyboard.md#quick-navigation-as-in-nvda-and-jaws) says how. Quitting is **Ctrl+Q**, and it still asks first.
 
-The earlier keys are the classic preset. The Phase 2 `screen-reader` preset is now the default, and naming it still works:
+The earlier keys are the classic preset. The `screen-reader` preset is now the default, and naming it still works:
 
 ```toml
 [keyboard]
@@ -128,7 +128,7 @@ Your `keymap.toml` overrides apply on top. The [keyboard reference](keyboard.md#
 
 ## Screen reader settings
 
-These are the settings to look at in NVDA and JAWS for each mode. Names and keys differ between versions. **Every item here: verify on the owner's machine.**
+These are the settings to look at in NVDA and JAWS for each mode. Names and keys differ between versions. **Every item here is not yet verified by ear.**
 
 ### NVDA
 
@@ -166,20 +166,20 @@ textweaver runs in any terminal that sends key presses in the usual way.
 
 textweaver runs in Windows Terminal and in the classic console (conhost, the window `cmd` opens by default).
 
-- Windows Terminal exposes its text through UI Automation, which recent NVDA and JAWS versions use. The classic console is older and well known to screen readers. Try both; which works better with JAWS and NVDA for each mode has not been recorded yet. **Verify on the owner's machine.**
+- Windows Terminal exposes its text through UI Automation, which recent NVDA and JAWS versions use. The classic console is older and well known to screen readers. Try both; which works better with JAWS and NVDA for each mode has not been recorded yet. **Not yet verified.**
 - Paste with **Ctrl+V** in Windows Terminal, or with right-click in either.
 
 ### Windows Terminal keys that clash
 
-Windows Terminal keeps some keys for itself, so textweaver never sees them. These come from Windows Terminal's defaults and the settings file a new installation writes (checked against Windows Terminal 1.24 on this machine):
+Windows Terminal keeps some keys for itself, so textweaver never sees them. These come from Windows Terminal's defaults and the settings file a new installation writes (checked against Windows Terminal 1.24):
 
-- **Alt+Left** and **Alt+Right** move between panes. In textweaver they are history back and forward. Use **Backspace** and **\\** instead (**Shift+H** and **Shift+L** with the classic preset), or unbind them in Windows Terminal. With only one pane open, Windows Terminal may pass them on; **verify on the owner's machine**.
+- **Alt+Left** and **Alt+Right** move between panes. In textweaver they are history back and forward. Use **Backspace** and **\\** instead (**Shift+H** and **Shift+L** with the classic preset), or unbind them in Windows Terminal. With only one pane open, Windows Terminal may pass them on; **not yet verified**.
 - **Alt+Up** and **Alt+Down** move between panes. In textweaver they move by sentence (JAWS's keys). **Alt+.** and **Alt+,** do the same and never clash; or unbind them in Windows Terminal. (With the classic preset they step through notes; **e** and **Shift+E**, or **F12** and **Shift+F12**, do that too.)
 - **Alt+Shift+Up** and **Alt+Shift+Down** resize panes. In textweaver they make RSVP faster and slower; **Alt+Shift+PageUp** and **Alt+Shift+PageDown** do the same and reach textweaver.
 - **F11** and **Alt+Enter** switch full screen. In textweaver **F11** is the next chapter. Use **Alt+PageDown** and **Alt+PageUp** for chapters.
 - **Ctrl+C** copies when text is selected in Windows Terminal; otherwise textweaver gets it and copies. **Ctrl+V** pastes, which textweaver takes as pasted text.
 - **Alt+Shift+D**, **Alt+Shift+minus**, and **Alt+Shift+plus** split the window into panes. So the terminal adds a reference by DOI or ISBN with **Alt+B** (the GUI keeps **Alt+Shift+D**), and "add reference" is in the command palette (**F2**). Pitch is **Alt+=** and **Alt+-**: pressing Shift by mistake splits the window.
-- **Ctrl+Alt+Left** moves to the previous pane in Windows Terminal 1.24 (`Terminal.MoveFocusPrevious` in its defaults). In textweaver it is the previous cell in a table row; with one pane open Windows Terminal may pass it on, **verify on the owner's machine**, or run `table previous column` from the palette or give it another key in `keymap.toml`. The other **Ctrl+Alt** arrows are not bound by Windows Terminal, but some graphics drivers rotate the screen with them, and a screen reader may keep them for its own table commands.
+- **Ctrl+Alt+Left** moves to the previous pane in Windows Terminal 1.24 (`Terminal.MoveFocusPrevious` in its defaults). In textweaver it is the previous cell in a table row; with one pane open Windows Terminal may pass it on, **not yet verified**, or run `table previous column` from the palette or give it another key in `keymap.toml`. The other **Ctrl+Alt** arrows are not bound by Windows Terminal, but some graphics drivers rotate the screen with them, and a screen reader may keep them for its own table commands.
 - textweaver's newer chords were checked against the same list and do not clash: **Alt+Shift+Q** (citations), **Alt+Shift+X** (explore math), **Alt+Shift+Z** (syllables), **Alt+Shift+J** (difficult words), **Alt+B** (add a reference), **F12** and **Shift+F12** (notes), **Ctrl+Down** and **Ctrl+Up** (paragraphs), and **Alt+Shift+PageUp** and **Alt+Shift+PageDown** (RSVP).
 - **Alt+Space** opens the window menu. textweaver does not use it.
 - **Ctrl+Shift** chords (new tab, close pane, find, scroll) and **Ctrl+Alt** with digits (switch tabs) do not clash: terminals cannot send textweaver Ctrl+Shift chords, and textweaver's terminal keys use no Ctrl+Alt digits.
@@ -190,7 +190,7 @@ To unbind a key in Windows Terminal, open its settings (**Ctrl+comma**), choose 
 { "command": "unbound", "keys": "alt+left" }
 ```
 
-**Verify on the owner's machine** which of the two works in his version.
+Not yet verified which of the two works in your version.
 
 ### macOS and Linux
 
@@ -247,7 +247,7 @@ Every status line, title line, list line, and prompt line puts its key fact in t
 
 ### NVDA braille settings to try
 
-In NVDA's Settings, Braille category. **Every item here: to verify on the owner's Mantis Q40.**
+In NVDA's Settings, Braille category. **Every item here is not yet verified on a Mantis Q40.**
 
 - **Tether braille**: "automatically" or "to focus", so the display follows the terminal's cursor, which `cursor = "status"` keeps on the status line. "To review" leaves the display where you moved it. To verify.
 - **Show messages** and **Message timeout**: NVDA's own messages (such as "focus mode") cover the line for a few seconds. "Use timeout" with a short timeout, or "Disabled", keeps textweaver's status line in view. To verify.
@@ -257,7 +257,7 @@ In NVDA's Settings, Braille category. **Every item here: to verify on the owner'
 
 ### JAWS braille settings to try
 
-In Settings Center (**Insert+6**), Braille group. **Every item here: to verify on the owner's Mantis Q40.**
+In Settings Center (**Insert+6**), Braille group. **Every item here is not yet verified on a Mantis Q40.**
 
 - **Braille mode**: Line mode shows the line at the cursor, which is what textweaver's layout is designed for. Structured mode adds control type words. To verify.
 - **Braille follows active cursor**: on, so the display follows the terminal's cursor (the PC cursor), which `cursor = "status"` keeps on the status line. To verify.
@@ -275,14 +275,14 @@ In Settings Center (**Insert+6**), Braille group. **Every item here: to verify o
 
 ### What has been tried
 
-- **Tried by the owner:** a 40-cell Mantis Q40 through NVDA and JAWS on Windows, reading the status line, messages, and moving by unit in the terminal reader, before this layout; and, in the GUI, the document control, the settings dialog, and edit mode, in the owner's two sessions. The layout above waits for the checklist.
+- **Tried in testing:** a 40-cell Mantis Q40 through NVDA and JAWS on Windows, reading the status line, messages, and moving by unit in the terminal reader, before this layout; and, in the GUI, the document control, the settings dialog, and edit mode, across two sessions. The layout above waits for the checklist.
 - **Not tried:** other cell widths, other display models, Orca's braille on Linux, and VoiceOver's on macOS.
 - **The BRF writer** (`tw convert --to brf`, see [Converting documents](converting.md)) is a separate feature: a grade 1, or grade 2 with the `liblouis` feature, braille file you save and read on a notetaker or emboss, not the live display output above. A BRF from a document with math writes the math in Nemeth or UEB mathematics; see [Math in braille files](math.md#math-in-braille-files).
 - If your combination behaves differently from this, add it to the checklist below and let the project know what you found.
 
 ## The GUI
 
-textweaver also has a window, written entirely in Rust with AccessKit for screen readers. It shares documents, keys, settings, notes, and voices with the terminal reader, and the owner has checked it with NVDA, JAWS, and a braille display on Windows. [The GUI guide](gui.md) covers it in full: starting it, the file chooser, edit mode, how messages reach your screen reader (a live region, or UI Automation notifications), and the spoken word's highlight. [ADR-0027](adr/0027-xilem-gui.md), [ADR-0028](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033](adr/0033-gui-session-2-and-edit-mode.md) record what was checked.
+textweaver also has a window, written entirely in Rust with AccessKit for screen readers. It shares documents, keys, settings, notes, and voices with the terminal reader, and it has been checked with NVDA, JAWS, and a braille display on Windows. [The GUI guide](gui.md) covers it in full: starting it, the file chooser, edit mode, how messages reach your screen reader (a live region, or UI Automation notifications), and the spoken word's highlight. [ADR-0027](adr/0027-xilem-gui.md), [ADR-0028](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033](adr/0033-gui-session-2-and-edit-mode.md) record what was checked.
 
 ## Checklist: try each mode with JAWS and NVDA
 

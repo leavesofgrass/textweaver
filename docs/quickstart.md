@@ -87,9 +87,9 @@ textweaver speaks with espeak-ng when the `espeak-ng` package is installed, or t
 
 ## The GUI
 
-textweaver also has a window, `textweaver-gui`: a native, screen-reader-accessible GUI that shares documents, keys, settings, and voices with the terminal reader. It is not in the 0.1.0-alpha.4 release yet; it ships in the next one, as its own download whose package names end in `-gui` (see [Installing textweaver](install.md#the-gui)).
+textweaver also has a window, `textweaver-gui`: a native, screen-reader-accessible GUI that shares documents, keys, settings, and voices with the terminal reader. It is its own download, in packages whose names end in `-gui` (see [Installing textweaver](install.md#the-gui)). It is supported on Windows; the macOS and Linux packages are built and checked automatically, but no one has listened to them with a screen reader yet.
 
-Until then, build it from a copy of the repository:
+You can also build it from a copy of the repository:
 
 ```bash
 cargo build -p textweaver-xilem --release
