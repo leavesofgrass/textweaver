@@ -131,6 +131,10 @@ fn math_move(k: &KeyEvent) -> Option<textweaver_app::MathMove> {
     })
 }
 
+/// The code styles of one window: its document revision, window, and
+/// theme, and the styles.
+type CodeFrame = ((u64, CharRange, String), Vec<(CharRange, Style)>);
+
 /// How long the status line stays blank before a repeated message comes
 /// back, so a screen reader that speaks the status line when it changes
 /// hears the message again ("No next heading." twice in a row).
@@ -182,7 +186,7 @@ pub struct Tui {
     /// The code styles of the window last drawn, by document revision,
     /// window, and theme (W6u: they were worked out again every frame).
     #[cfg(feature = "highlight")]
-    code_frame: std::cell::RefCell<Option<((u64, CharRange, String), Vec<(CharRange, Style)>)>>,
+    code_frame: std::cell::RefCell<Option<CodeFrame>>,
     /// Code block tokens already found ([`crate::highlight`]).
     #[cfg(feature = "highlight")]
     code_cache: std::cell::RefCell<crate::highlight::Cache>,

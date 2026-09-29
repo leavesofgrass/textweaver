@@ -659,7 +659,7 @@ fn mark_access(label: &str, access: Option<char>) -> String {
     let mut out = String::with_capacity(label.len() + 1);
     let mut done = access.is_none();
     for ch in label.chars() {
-        if !done && ch.to_lowercase().eq(access.into_iter()) {
+        if !done && ch.to_lowercase().eq(access) {
             out.push('&');
             done = true;
         }

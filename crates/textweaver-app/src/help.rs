@@ -428,7 +428,7 @@ pub fn palette_matches_in(c: &Catalog, query: &str) -> Vec<ActionId> {
         if !names.contains(&en) {
             names.push(en);
         }
-        let tier = if names.iter().any(|n| *n == q) || id == qid {
+        let tier = if names.contains(&q) || id == qid {
             0
         } else if names.iter().any(|n| n.starts_with(&q)) || id.starts_with(&qid) {
             1

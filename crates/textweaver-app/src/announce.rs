@@ -280,11 +280,7 @@ mod tests {
                     && (t.starts_with("fn ") || t.starts_with("pub") || t.starts_with("async"))
                 {
                     let rest = &t[i..];
-                    current_fn = rest
-                        .split(|c: char| c == '(' || c == '<')
-                        .next()
-                        .unwrap_or_default()
-                        .to_owned();
+                    current_fn = rest.split(['(', '<']).next().unwrap_or_default().to_owned();
                 }
                 if t.starts_with("//") {
                     continue;
