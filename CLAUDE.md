@@ -23,7 +23,7 @@ If an identifier ever leaves the machine, stop, and report it to the orchestrato
 
 On Saturday, September 26, 2026 an agent ran a delete, without thinking and without checking it, meant for a junk folder in this repo whose name held an escaped character. Git Bash read it as the drive-relative path `C:`, the current folder on drive C, and it erased most of the owner's user profile: the Desktop, the Downloads folder with years of work, and the settings of nearly every application, including their screen readers. Nothing could be restored. These rules exist so that never happens again.
 
-**Where you may work.** Work only in `D:\textweaver` and `D:\recovery`.
+**Where you may work.** Work only in `D:\textweaver`, `D:\recovery`, and `D:\textweaver-planning` (the local planning repository, never pushed; added by the owner's decision, Monday, September 28, 2026).
 
 - Never write anything to drive C, the drive that holds the operating system.
 - Anything outside these two folders, even reading, needs the owner's approval first, with one standing exception. **Reading the owner's wiki, `D:\star\wiki`, is expressly permitted,** read-only, to put development in context (the owner's global rule 6). Never write to it from an agent; the orchestrator documents work there.
