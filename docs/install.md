@@ -204,7 +204,7 @@ Each GUI package holds `textweaver-gui`, and on Windows and Linux the same engin
 - **macOS (Apple silicon).** Extract the zip. It holds `textweaver.app`, signed ad hoc and not notarized, so remove the quarantine flag once, with the folder name you extracted:
 
   ```bash
-  xattr -dr com.apple.quarantine textweaver-0.1.0-alpha.5-macos-aarch64-gui
+  xattr -dr com.apple.quarantine textweaver-VERSION-macos-aarch64-gui
   ```
 
   Then open `textweaver.app`. If you skip this step, use "Open Anyway" in System Settings, under Privacy & Security, as for the terminal package. Intel Macs have no GUI package yet.
