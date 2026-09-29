@@ -873,6 +873,14 @@ Wave 4 starts only after this pass is done. It has four steps.
 
 The plan is `docs/research/wave5-recalibrated.md`. The five branches taken from Wave 4's outcomes: the rope stays on ropey 1.6 (W5r writes ADR-0034); W5m is struck (the GUI's memory is the graphics stack); MathCAT #827 is open, so W5c4 vendors and patches 0.7.6-rc.3; W4a3 landed, so W5a4 starts with the Parley upgrade; W4d landed, so every new message is written in all six languages. ADR numbers: 0034 W5r, 0035 W5c3, 0036 W5c4, 0037 W5s, 0038 reserved for W6e, 0039 W5t, 0040 W5a4, 0041 W5g, 0042 reserved for W6d. Batch 1 launched while the docs sweep's reviewer finished (docs only, no overlap with code): W5x, W5y, W5a4 building; W5r writing; W5t and W5p not building here. D: had 780 GB free and 40 GB of memory was free.
 
+**After Wave 5 (the owner, Monday, September 28, 2026): a second documentation sweep, many agents in parallel.**
+- The README is more concise; the rest of the documentation is more comprehensive.
+- The owner's design decisions leave the repository: `docs/history/` and `docs/research/` (plans, briefs, audits, reviews, the roadmap) move to a local git repository at `D:	extweaver-planning` (never pushed) and a readable copy in the wiki. Agents read their briefs there. `CLAUDE.md` and the guard hook add `D:	extweaver-planning` to the folders agents may use, with a wiki backup of the change.
+- The ADRs stay in `docs/adr`, rewritten in a neutral voice ("we chose", not "the owner decided"), because contributors use them to understand the code.
+- Clean up what does not need to be in the repository.
+- Make the project inviting to contributors: a clear CONTRIBUTING, good first issues, a code of conduct, and friendly issue templates.
+- Be honest: files removed from the repository remain in its public git history unless the owner asks for a history rewrite.
+
 **Worktree cleanup (the owner, Monday, September 28, 2026):** once all outstanding work is merged (Wave 5, the docs reviewer, `fix/espeak-tests-silent`, and `claude/focused-dijkstra-a80d82`), remove the old worktrees. First remove, by reference only, the two leftover folders named "C" plus U+F03A inside `agent-a65d64bbd87b3e294` and `focused-dijkstra-a80d82` (found by character code, checked to be inside their worktree, never typed); then remove the worktrees with git, listed first. A branch that cannot be merged is listed for the owner, not deleted. The one in `agent-a3d216cd4cdf260a4` was removed the same way on the owner's approval.
 
 **Wave 5 launch decisions (Monday, September 28, 2026, the defaults in `docs/research/wave5-recalibrated.md`, taken under the owner's standing decisions so nothing waits):**
