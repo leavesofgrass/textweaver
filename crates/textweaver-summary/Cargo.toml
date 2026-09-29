@@ -1,0 +1,22 @@
+[package]
+name = "textweaver-summary"
+description = "Extractive summaries for textweaver without a model: LexRank on TF-IDF cosine similarity"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+textweaver-core.workspace = true
+textweaver-text.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+# The benchmark example loads Markdown: the loaders only, no PDF or OCR.
+textweaver-formats = { path = "../textweaver-formats", default-features = false }
+
+[lints]
+workspace = true

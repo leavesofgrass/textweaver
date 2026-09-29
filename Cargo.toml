@@ -34,6 +34,7 @@ members = [
     "crates/textweaver-piper",
     "crates/textweaver-ocr",
     "crates/textweaver-mathcat",
+    "crates/textweaver-summary",
     "xtask",
 ]
 # The vendored Xilem and Masonry snapshot is its own workspace (ADR-0027);
@@ -71,6 +72,7 @@ default-members = [
     "crates/textweaver-engines",
     "crates/textweaver-piper",
     "crates/textweaver-ocr",
+    "crates/textweaver-summary",
 ]
 
 [workspace.package]
@@ -120,6 +122,7 @@ textweaver-engines = { path = "crates/textweaver-engines" }
 textweaver-piper = { path = "crates/textweaver-piper", default-features = false }
 textweaver-ocr = { path = "crates/textweaver-ocr" }
 textweaver-mathcat = { path = "crates/textweaver-mathcat" }
+textweaver-summary = { path = "crates/textweaver-summary" }
 
 # text and formats
 ropey = "1.6"

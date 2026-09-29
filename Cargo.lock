@@ -8971,6 +8971,7 @@ dependencies = [
  "textweaver-render",
  "textweaver-speech",
  "textweaver-store",
+ "textweaver-summary",
  "textweaver-text",
  "textweaver-theme",
  "thiserror 2.0.21",
@@ -9363,6 +9364,16 @@ dependencies = [
  "textweaver-core",
  "thiserror 2.0.21",
  "toml 1.1.6+spec-1.1.0",
+]
+
+[[package]]
+name = "textweaver-summary"
+version = "0.1.0-alpha.4"
+dependencies = [
+ "proptest",
+ "textweaver-core",
+ "textweaver-formats",
+ "textweaver-text",
 ]
 
 [[package]]
