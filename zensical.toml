@@ -146,6 +146,7 @@ nav = [
     { "ADR-0034: The rope after measurement: stay on ropey 1.6" = "adr/0034-rope-after-measurement.md" },
     { "ADR-0036: Math braille and navigation on MathCAT" = "adr/0036-math-braille-and-navigation.md" },
     { "ADR-0039: Automated screen-reader checks beside the listening sessions" = "adr/0039-automated-screen-reader-checks.md" },
+    { "ADR-0041: Publishing templates and real Word footnotes" = "adr/0041-publishing-templates.md" },
   ] },
   { "Interactive pages" = [
     { "Overview (interactive)" = "site/index.html" },
