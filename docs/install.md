@@ -18,7 +18,7 @@ Every package contains two programs:
 Releases after the fourth alpha also have the GUI, `textweaver-gui`, in packages of its own whose names end in `-gui` (see [The GUI](#the-gui)):
 
 - `textweaver-VERSION-windows-x86_64-gui.zip`
-- `textweaver-VERSION-macos-aarch64-gui.zip`, for Apple silicon Macs
+- `textweaver-VERSION-macos-universal-gui.zip`, for Apple silicon and Intel Macs (0.1.0-alpha.5 had `textweaver-VERSION-macos-aarch64-gui.zip`, for Apple silicon only)
 - `textweaver-VERSION-linux-x86_64-gui.AppImage` and `textweaver-VERSION-linux-x86_64-gui.tar.gz`, and the same for `aarch64`
 
 Download from the [releases page](https://github.com/leavesofgrass/textweaver/releases).
@@ -57,7 +57,13 @@ The scripts are in a copy of the repository. To get one:
 git clone https://github.com/leavesofgrass/textweaver
 ```
 
-Each script also takes `--uninstall`.
+To install the GUI as well, add `--gui` (`-Gui` also works on Windows). It installs the release's GUI package beside the reader and adds a shortcut or menu entry named "textweaver window": on Windows in a `gui` folder inside the install, on macOS as `textweaver.app` in `~/Applications`, and on Linux as `textweaver-gui` in `~/.local/bin` (the same kind of package as the reader, AppImage or tarball). Running the script again, or the update script, keeps the GUI installed; `--no-gui` removes it. On Linux and macOS the GUI comes from release packages only, so `--gui` goes with `--release` on Linux; on Windows it can also be built with `-FromSource`.
+
+```bash
+bash scripts/install-linux.sh --release latest --gui
+```
+
+Each script also takes `--uninstall`, which removes the GUI too.
 
 To update later, run the update script for your system:
 
@@ -198,16 +204,16 @@ To build from source instead, run the install script without `--release`; it wor
 
 The GUI is a window for reading and writing, for people who prefer one to a terminal. Its guide is [docs/gui.md](gui.md), also in the package as `GUI.md`. It is supported on Windows. The macOS and Linux packages are built and checked automatically on every release, but no one has listened to them with a screen reader yet.
 
-Each GUI package holds `textweaver-gui`, and on Windows and Linux the same engine hosts and dictionaries as the terminal package, next to the program. Keep the folder's files together, as for the terminal package. It shares its settings, reading positions, and notes with `textweaver`. The install scripts do not install the GUI yet; extract the package by hand.
+Each GUI package holds `textweaver-gui`, and on Windows and Linux the same engine hosts and dictionaries as the terminal package, next to the program. Keep the folder's files together, as for the terminal package. It shares its settings, reading positions, and notes with `textweaver`. The install scripts install it with `--gui` (see [Install with a script](#install-with-a-script)), or extract the package by hand as below.
 
 - **Windows.** Extract `textweaver-VERSION-windows-x86_64-gui.zip` to a folder of your own, and run `textweaver-gui.exe`. The program is not code-signed, so Windows SmartScreen warns the first time you start it from File Explorer: choose "More info", then "Run anyway".
-- **macOS (Apple silicon).** Extract the zip. It holds `textweaver.app`, signed ad hoc and not notarized, so remove the quarantine flag once, with the folder name you extracted:
+- **macOS.** Extract the zip. It holds `textweaver.app`, signed ad hoc and not notarized, so remove the quarantine flag once, with the folder name you extracted:
 
   ```bash
-  xattr -dr com.apple.quarantine textweaver-VERSION-macos-aarch64-gui
+  xattr -dr com.apple.quarantine textweaver-VERSION-macos-universal-gui
   ```
 
-  Then open `textweaver.app`. If you skip this step, use "Open Anyway" in System Settings, under Privacy & Security, as for the terminal package. Intel Macs have no GUI package yet.
+  Then open `textweaver.app`. If you skip this step, use "Open Anyway" in System Settings, under Privacy & Security, as for the terminal package.
 - **Linux.** Make the AppImage executable and run it, or extract the tarball and run `textweaver-gui` from its folder. It needs a desktop session (Wayland or X11) and, like the reader, the ALSA library. The GUI's AppImage updates only to newer GUI AppImages.
 
 ## Checking a download
