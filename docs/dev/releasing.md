@@ -38,7 +38,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    - stops unless the tree is clean and on `main`, the listening check is recorded for this version, and the changelog is grouped by area (below);
    - sets `version` in `[workspace.package]` in the root `Cargo.toml` and runs `cargo update -w`;
    - turns `## [Unreleased]` in `CHANGELOG.md` into `## [0.1.0-alpha.5] - YYYY-MM-DD`, keeps an empty `[Unreleased]` above it, and adds the release link. The date comes from the machine's clock in local time, and the weekday is computed and printed so you can check it. It is never typed in;
-   - updates the version examples in this guide, `docs/install.md`, and the workflows;
+   - updates the version examples in this guide, `docs/install.md`, the README, the crate map (`docs/site/architecture.html`), and the workflows, and lists every other line that still names the old version, so a file that should follow the release is seen in the dry run (lines that record history stay as they are);
    - runs the checks CI runs: fmt, clippy, the tests, `cargo xtask keyboard --check`, and `cargo xtask deps --check` (`--no-checks` skips them, for a rerun after a failure you have fixed);
    - commits "Release 0.1.0-alpha.5" and makes the annotated tag `v0.1.0-alpha.5`. It pushes nothing.
 

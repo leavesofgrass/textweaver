@@ -18,7 +18,7 @@ Every package contains two programs:
 Releases after the fourth alpha also have the GUI, `textweaver-gui`, in packages of its own whose names end in `-gui` (see [The GUI](#the-gui)):
 
 - `textweaver-VERSION-windows-x86_64-gui.zip`
-- `textweaver-VERSION-macos-universal-gui.zip`, for Apple silicon and Intel Macs (0.1.0-alpha.5 had `textweaver-VERSION-macos-aarch64-gui.zip`, for Apple silicon only)
+- `textweaver-VERSION-macos-universal-gui.zip`, for Apple silicon and Intel Macs (the fifth alpha had `textweaver-VERSION-macos-aarch64-gui.zip`, for Apple silicon only)
 - `textweaver-VERSION-linux-x86_64-gui.AppImage` and `textweaver-VERSION-linux-x86_64-gui.tar.gz`, and the same for `aarch64`
 
 Download from the [releases page](https://github.com/leavesofgrass/textweaver/releases).
