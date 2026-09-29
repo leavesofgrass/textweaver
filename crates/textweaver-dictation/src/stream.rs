@@ -284,8 +284,9 @@ pub(crate) enum Msg {
     },
     /// An utterance opened or closed, in the audio sent so far.
     Speech(SpeechEvent),
-    /// The audio has ended; every utterance has been closed.
-    End,
+    /// The audio has ended (when the listener found it, if known); every
+    /// utterance has been closed.
+    End(Option<Instant>),
 }
 
 /// The next message from a feed.
@@ -305,6 +306,12 @@ pub(crate) trait Feed {
 
     /// The time since the session started.
     fn now(&self) -> Duration;
+
+    /// A moment on this feed's clock (for a message stamped when it was
+    /// sent); now, when the feed cannot tell.
+    fn at(&self, _moment: Instant) -> Duration {
+        self.now()
+    }
 }
 
 /// The listener's messages, in real time.
@@ -341,6 +348,10 @@ impl Feed for ChannelFeed {
 
     fn now(&self) -> Duration {
         self.t0.elapsed()
+    }
+
+    fn at(&self, moment: Instant) -> Duration {
+        moment.saturating_duration_since(self.t0)
     }
 }
 
@@ -389,7 +400,7 @@ pub(crate) fn spawn_listener(
                         }
                     }
                     signals.pause();
-                    let _ = tx.send(Msg::End);
+                    let _ = tx.send(Msg::End(Some(Instant::now())));
                     return;
                 }
             }
@@ -472,7 +483,7 @@ pub(crate) fn run_live(
         // Everything waiting first, so a pause already found is known.
         loop {
             match feed.next(false) {
-                Next::Msg(m) => s.take(m, feed.now()),
+                Next::Msg(m) => s.take(m, &*feed),
                 Next::Empty => break,
                 Next::Gone => {
                     s.gone(feed.now());
@@ -503,7 +514,7 @@ pub(crate) fn run_live(
         }
         s.trim();
         match feed.next(true) {
-            Next::Msg(m) => s.take(m, feed.now()),
+            Next::Msg(m) => s.take(m, &*feed),
             Next::Empty => {}
             Next::Gone => s.gone(feed.now()),
         }
@@ -562,7 +573,7 @@ impl Session {
         }
     }
 
-    fn take(&mut self, m: Msg, now: Duration) {
+    fn take(&mut self, m: Msg, feed: &dyn Feed) {
         match m {
             Msg::Audio {
                 samples,
@@ -591,9 +602,9 @@ impl Session {
                 let range = u.start..range.end.max(u.start);
                 self.closing.push_back((u, range));
             }
-            Msg::End => {
+            Msg::End(at) => {
                 self.pauses += 1;
-                self.gone(now);
+                self.gone(at.map_or_else(|| feed.now(), |t| feed.at(t)));
             }
         }
     }
@@ -898,7 +909,7 @@ pub(crate) mod tests {
     }
 
     fn is_pause(m: &Msg) -> bool {
-        matches!(m, Msg::End | Msg::Speech(SpeechEvent::Closed(_)))
+        matches!(m, Msg::End(_) | Msg::Speech(SpeechEvent::Closed(_)))
     }
 
     impl Timeline {
@@ -924,7 +935,7 @@ pub(crate) mod tests {
                     .into_iter()
                     .map(|e| (t, Msg::Speech(e), false)),
             );
-            msgs.push_back((t, Msg::End, false));
+            msgs.push_back((t, Msg::End(None), false));
             Rc::new(RefCell::new(Timeline {
                 now: 0.0,
                 msgs,
