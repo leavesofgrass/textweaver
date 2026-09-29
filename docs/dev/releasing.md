@@ -27,7 +27,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    cargo xtask release 0.1.0-alpha.4 --dry-run
    ```
 
-   It prints the date it will use, the files it will change, and the checks it will run. Then run it for real:
+   It prints the date it will use, the files it will change, and the checks it will run. Right after a release, `[Unreleased]` in `CHANGELOG.md` is empty; a dry run lists that as a problem, the same way it lists the other things a real release would stop for, instead of stopping itself. Then run it for real:
 
    ```bash
    cargo xtask release 0.1.0-alpha.4
@@ -143,7 +143,7 @@ The names end in `-gui` so that no pattern for the terminal packages matches the
 
 `cargo xtask appimage` stages the Linux package as `cargo xtask dist` does, writes the tarball, and then wraps the same folder in an AppImage with `appimagetool`. The folder sits whole under `usr/lib/textweaver/` inside the AppImage, so the programs find the hosts and dictionaries beside them, as in the tarball. `scripts/linux/AppRun` is the entry point: it starts `textweaver`, or `tw` when started through a link named `tw` or with `--tw` first, and it offers `--install` and `--uninstall`. The AppImage carries `gh-releases-zsync` update information pointing at the newest release or pre-release.
 
-Build on an old glibc, so the packages run on older distributions. The `docker/appimage` image is Ubuntu 22.04 (glibc 2.35), with Rust from rustup and the AppImage tools. `docker/appimage/fetch-tools.sh` downloads appimagetool 1.9.1 and the type 2 runtime 20251108, for x86_64 or aarch64, from their GitHub releases, and checks each against the SHA-256 digest GitHub publishes for it; a changed file stops the build. The image builds for the machine it runs on, so the aarch64 packages are built on an arm64 machine: the release workflow uses GitHub's `ubuntu-22.04-arm` runner. To build locally on any system with Docker:
+Build on an old glibc, so the packages run on older distributions. The `docker/appimage` image is Ubuntu 22.04 (glibc 2.35), with Rust from rustup, the AppImage tools, and, for the GUI build, `libfontconfig1-dev` (`yeslogic-fontconfig-sys` needs its headers). `docker/appimage/fetch-tools.sh` downloads appimagetool 1.9.1 and the type 2 runtime 20251108, for x86_64 or aarch64, from their GitHub releases, and checks each against the SHA-256 digest GitHub publishes for it; a changed file stops the build. The image builds for the machine it runs on, so the aarch64 packages are built on an arm64 machine: the release workflow uses GitHub's `ubuntu-22.04-arm` runner. To build locally on any system with Docker:
 
 ```bash
 cargo xtask appimage --docker

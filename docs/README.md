@@ -76,6 +76,7 @@ The developer documents are in [dev/](dev/), the decision records in [adr/](adr/
 
 - [Tasks and ownership](history/tasks.md): the briefs and status of every agent, wave by wave.
 - [Reservations for the Cloud Agent](history/reservations.md): work reserved for the Cloud Agent's pull requests, so the local waves never duplicate it.
+- [Readiness for 0.1.0-alpha.5](history/alpha5-readiness.md): what stands between `main` and the next release, and its checklists.
 - [Implementation plan](history/plan.md): the original plan and the Phase 0 amendments.
 - [Audit, September 2026](history/audit-2026-09.md): findings, fixes, and benchmark numbers.
 - [Star parity reference](history/star-parity.md): what Star does, in detail.
