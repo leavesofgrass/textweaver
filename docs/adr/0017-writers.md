@@ -3,12 +3,12 @@
 - Status: accepted
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): Implemented with the amendment above. Of the two Consequences lines about fonts, the second is current: PDF output does not need an installed font. MathML in EPUB and DOCX, real Word footnotes, and native grade 2 braille are still to do.
-- Status update (Saturday, September 26, 2026, Phase 1, Agent P1d): math is typeset by every writer: MathML in EPUB, Word equations in DOCX, print form with its spoken description in PDF, and the spoken form in braille. Of the first update's list, real Word footnotes and native grade 2 braille are still to do.
-- Status update (Monday, September 28, 2026, Wave 5, Agent W5g): real Word footnotes and PDF page labels from print page breaks are done, with the publishing templates; see [ADR-0041](0041-publishing-templates.md).
+- Status update (Saturday, September 26, 2026): math is typeset by every writer: MathML in EPUB, Word equations in DOCX, print form with its spoken description in PDF, and the spoken form in braille. Of the first update's list, real Word footnotes and native grade 2 braille are still to do.
+- Status update (Monday, September 28, 2026): real Word footnotes and PDF page labels from print page breaks are done, with the publishing templates; see [ADR-0041](0041-publishing-templates.md).
 
 ## Context
 
-The owner asked for conversion that is fast, native Rust, and memory safe, with EPUB, DOCX, braille (BRF), and PDF outputs beyond Markdown, HTML, and text. Star exported PDF and DOCX through Pandoc or Qt and BRF through its own grade 1 table (`star/braille.py`) or liblouis. Star's grade 1 table has wrong UEB symbols (both parentheses as dots 2-3-5-6, the slash as dots 3-4, straight double quotes always as the opening quote) and drops accented letters it cannot fold. Students with print disabilities use these files with screen readers, braille displays, and embossers, so structure and accessibility metadata matter as much as the text.
+We wanted conversion that is fast, native Rust, and memory safe, with EPUB, DOCX, braille (BRF), and PDF outputs beyond Markdown, HTML, and text. Star exported PDF and DOCX through Pandoc or Qt and BRF through its own grade 1 table (`star/braille.py`) or liblouis. Star's grade 1 table has wrong UEB symbols (both parentheses as dots 2-3-5-6, the slash as dots 3-4, straight double quotes always as the opening quote) and drops accented letters it cannot fold. Students with print disabilities use these files with screen readers, braille displays, and embossers, so structure and accessibility metadata matter as much as the text.
 
 The workspace offers `zip`, `krilla` (PDF with tagging and PDF/UA validation), and `roxmltree`; no XML writer, font, or braille crate.
 
@@ -17,7 +17,7 @@ The workspace offers `zip`, `krilla` (PDF with tagging and PDF/UA validation), a
 `textweaver-writers` writes every format from a `Document` (ADR-0002) in pure Rust:
 
 - **One block tree** (`model::blocks`) turns markers into headings, paragraphs, lists (ordered from item labels), tables (header rows from `HEADER_ROW_LABEL`, cells from `TableCell` markers or the `" | "` separator), code, quotes, figures (a paragraph that is one image), footnote bodies, and section and page breaks, with inline spans for bold, italic, underline, code, links, images, and footnote references. Overlapping inline markers are split so every writer emits well-nested markup. Plain text becomes paragraphs at blank lines with its single line breaks kept.
-- **`Writer` trait**, the contract for Agent L's converter:
+- **`Writer` trait**, the contract for the converter:
 
   ```rust
   pub trait Writer: Send + Sync {
@@ -51,9 +51,9 @@ The workspace offers `zip`, `krilla` (PDF with tagging and PDF/UA validation), a
 
 What krilla's validator does not check, and textweaver does not yet do: a veraPDF or PAC run (neither is installed), `Lang` on spans in another language, `ActualText` for hyphenation (textweaver does not hyphenate), and table header association beyond column scope.
 
-## Amendment: bundled fonts and PDF options (2026-09-25, Agent W)
+## Amendment: bundled fonts and PDF options (2026-09-25)
 
-The owner asked for bundled fonts and quick wins for PDF export.
+Bundled fonts and quick wins for PDF export were wanted.
 
 - **Fonts.** The new `textweaver-fonts` crate embeds Atkinson Hyperlegible Next and Mono and OpenDyslexic (SIL OFL 1.1, `third_party/fonts/`, 1.35 MB) behind the cargo feature `bundled-fonts`, on by default here. PDF text defaults to Atkinson Hyperlegible Next and code to Atkinson Hyperlegible Mono, so PDFs look the same everywhere and never fail for lack of a font. `PdfOptions::font_family` and `code_font_family` choose a bundled or installed family by name (installed fonts are found by scanning the font folders for `name`-table family names), or a font file; a name that is neither is an error, reported once before a batch through `pdf::check_fonts`. Installed fonts still serve as per-character fallbacks for other scripts.
 - **Layout.** `PageSize::parse` (letter, a4, a5, legal, `6x9in`) and `parse_length` (`1in`, `20mm`); margin and line spacing as before; `large_print` (18 points or more, 1.5 or more line spacing, more paragraph space, heading sizes 1.5 to 1 times the text, code at full size), and `PdfOptions::large_print()` as a preset (with 1.6 spacing and three-quarter-inch margins).
@@ -67,9 +67,9 @@ Every PDF in the new tests passes krilla's PDF/UA-1 validator.
 
 ## Consequences
 
-- Agent L's converter calls `writer_for(format).write(...)` or `write_to_vec`; `WriteOptions` deserializes from the converter's settings with defaults for anything missing.
-- The converter uses `Writer` itself (Agent V removed its separate `DocumentWriter`), and calls `pdf::check_fonts(&WriteOptions)` once before a PDF batch so a missing font is one message, not one failure per file.
-- PDF output needs a font on the system. Bundling Atkinson Hyperlegible (SIL Open Font License) in the repository would make PDF output identical everywhere; that is a request to the orchestrator.
+- The converter calls `writer_for(format).write(...)` or `write_to_vec`; `WriteOptions` deserializes from the converter's settings with defaults for anything missing.
+- The converter uses `Writer` itself (its separate `DocumentWriter` was removed), and calls `pdf::check_fonts(&WriteOptions)` once before a PDF batch so a missing font is one message, not one failure per file.
+- PDF output needs a font on the system. Bundling Atkinson Hyperlegible (SIL Open Font License) in the repository would make PDF output identical everywhere; that was requested.
 - PDF output no longer needs a font on the system (see the amendment). Built without `bundled-fonts`, it falls back to the installed families listed above.
 - The HTML loader skips `aside` (Star's rule for web pages), so a future EPUB loader should read `aside epub:type="footnote"` as footnote bodies to round-trip textweaver's own EPUBs.
 - Grade 2 braille depends on liblouis until a native contraction table is written and tested against liblouis's UEB test corpus.
