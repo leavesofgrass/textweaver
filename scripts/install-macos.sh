@@ -19,6 +19,12 @@ TAG=""
 SOURCE_DIR=""
 BREW="ask"
 UNINSTALL=0
+# The GUI (textweaver.app), from the release's -gui package: "ask" keeps
+# what an earlier install chose (the manifest's gui= line), else leaves it
+# out.
+GUI="ask"
+# Where textweaver.app goes: the user's own Applications folder.
+APPSDIR="${TEXTWEAVER_APPS_DIR:-$HOME/Applications}"
 
 usage() {
   cat <<'EOF'
@@ -44,6 +50,11 @@ Options:
   --source DIR      With --from-source, the textweaver checkout to build.
                     Without it, the checkout this script sits in is used, or
                     the repository is cloned to ~/.local/src/textweaver.
+  --gui             Also install the GUI, textweaver.app, from the release's
+                    GUI package into ~/Applications. Running the script
+                    again keeps the GUI installed. Releases only.
+  --no-gui          Do not install the GUI, and remove it if an earlier
+                    run installed it.
   --brew            Install the optional Homebrew packages (ffmpeg, pandoc)
                     without asking, when Homebrew is installed.
   --no-brew         Do not offer the Homebrew packages.
@@ -56,6 +67,7 @@ Options:
 Examples:
   scripts/install-macos.sh
   scripts/install-macos.sh --release v0.1.0-alpha.3
+  scripts/install-macos.sh --gui
   scripts/install-macos.sh --from-source
   scripts/install-macos.sh --uninstall
 EOF
@@ -158,6 +170,8 @@ while [ "$#" -gt 0 ]; do
       shift
       ;;
     --source=*) SOURCE_DIR="${1#*=}" ;;
+    --gui) GUI=1 ;;
+    --no-gui) GUI=0 ;;
     --brew) BREW="yes" ;;
     --no-brew) BREW="no" ;;
     --uninstall) UNINSTALL=1 ;;
@@ -258,6 +272,96 @@ download_release() {
   else
     xattr -dr com.apple.quarantine "$STAGE" 2> /dev/null || true
   fi
+}
+
+# ------------------------------------------------------------------ GUI --
+
+# Decides whether this run installs the GUI: --gui or --no-gui, else what
+# the manifest of an earlier install says.
+decide_gui() {
+  if [ "$GUI" = ask ]; then
+    GUI=0
+    if [ -f "$MANIFEST" ] && grep -q '^gui=' "$MANIFEST"; then
+      GUI=1
+      say "The GUI was installed before, so it is updated too. Use --no-gui to remove it."
+    fi
+  fi
+}
+
+# True when $1 is a textweaver.app this script installed (its bundle
+# identifier is textweaver's), so removing it cannot remove anything else.
+is_our_app() {
+  [ -f "$1/Contents/Info.plist" ] && grep -q 'org.textweaver.gui' "$1/Contents/Info.plist"
+}
+
+remove_gui() {
+  local app="$APPSDIR/textweaver.app"
+  if [ -e "$app" ]; then
+    if is_our_app "$app"; then
+      run rm -rf "$app"
+    else
+      say "Leaving $app: it is not the textweaver GUI this script installs."
+    fi
+  fi
+}
+
+GUI_INSTALLED=""
+# Downloads, checks, and installs textweaver.app. SHA256SUMS.txt is
+# already in $WORK. The universal package is preferred; releases before it
+# had an Apple silicon one only.
+install_gui() {
+  section "GUI"
+  local base="https://github.com/$REPO/releases/download/$TAG"
+  local name="" candidate
+  local arch
+  arch="$(uname -m)"
+  if [ "$DRY_RUN" = 1 ]; then
+    name="textweaver-$VERSION-macos-universal-gui"
+  else
+    for candidate in universal aarch64; do
+      if [ "$candidate" = aarch64 ] && [ "$arch" != arm64 ]; then
+        continue
+      fi
+      if awk -v f="textweaver-$VERSION-macos-$candidate-gui.zip" '$2 == f || $2 == "*" f { found = 1 } END { exit !found }' "$WORK/SHA256SUMS.txt"; then
+        name="textweaver-$VERSION-macos-$candidate-gui"
+        break
+      fi
+    done
+  fi
+  if [ -z "$name" ]; then
+    warn "Release $TAG has no GUI package for this Mac ($arch), so the GUI is not installed."
+    return 0
+  fi
+  say "Downloading $name.zip, the GUI, from release $TAG."
+  run curl -fsSL -o "$WORK/$name.zip" "$base/$name.zip"
+  if [ "$DRY_RUN" = 1 ]; then
+    say "Would run: shasum -a 256 $WORK/$name.zip, and compare it with the line for $name.zip in SHA256SUMS.txt"
+  else
+    local want got
+    want="$(awk -v f="$name.zip" '$2 == f || $2 == "*" f { print $1 }' "$WORK/SHA256SUMS.txt" | head -n 1)"
+    got="$(shasum -a 256 "$WORK/$name.zip" | awk '{ print $1 }')"
+    if [ "$want" != "$got" ]; then
+      die "The GUI's checksum does not match (expected $want, got $got). The download may be damaged. The reader is installed; the GUI is not."
+    fi
+    say "The GUI's checksum matches: $got."
+  fi
+  local app="$APPSDIR/textweaver.app"
+  if [ -e "$app" ] && ! is_our_app "$app" && [ "$DRY_RUN" = 0 ]; then
+    die "$app exists and is not the textweaver GUI. Move it away, then run this script again."
+  fi
+  say "Installing textweaver.app into $APPSDIR."
+  run ditto -x -k "$WORK/$name.zip" "$WORK/gui"
+  if [ "$DRY_RUN" = 1 ]; then
+    say "Would run: xattr -dr com.apple.quarantine $WORK/gui/$name/textweaver.app"
+  else
+    xattr -dr com.apple.quarantine "$WORK/gui/$name/textweaver.app" 2> /dev/null || true
+  fi
+  run mkdir -p "$APPSDIR"
+  if [ -e "$app" ] || [ "$DRY_RUN" = 1 ]; then
+    run rm -rf "$app"
+  fi
+  run ditto "$WORK/gui/$name/textweaver.app" "$app"
+  GUI_INSTALLED="app"
 }
 
 # --------------------------------------------------------------- source --
@@ -412,6 +516,9 @@ install_stage() {
     fi
     say "prefix=$PREFIX"
     say "version=$VERSION"
+    if [ -n "$GUI_INSTALLED" ]; then
+      say "gui=$GUI_INSTALLED"
+    fi
   } | write_file "$MANIFEST"
 }
 
@@ -516,7 +623,7 @@ remove_path_line() {
 }
 
 uninstall() {
-  say "This removes textweaver from $PREFIX: the programs, the guides, and the helper scripts."
+  say "This removes textweaver from $PREFIX: the programs, the guides, and the helper scripts, and textweaver.app from $APPSDIR if this script installed it."
   say "It keeps your settings and reading positions, and it does not remove Rust or Homebrew packages."
   if [ ! -e "$BINDIR/tw" ] && [ ! -e "$DOCDIR" ] && [ ! -e "$DATADIR" ] && [ "$DRY_RUN" = 0 ]; then
     say "textweaver is not installed in $PREFIX, so there is nothing to remove."
@@ -534,6 +641,7 @@ uninstall() {
   for f in "$DOCDIR" "$DATADIR"; do
     if [ -e "$f" ] || [ "$DRY_RUN" = 1 ]; then run rm -rf "$f"; fi
   done
+  remove_gui
   remove_path_line
   say ""
   say "textweaver is removed from $PREFIX."
@@ -550,6 +658,10 @@ if [ "$UNINSTALL" = 1 ]; then
   exit 0
 fi
 
+if [ "$MODE" = source ] && [ "$GUI" = 1 ]; then
+  die "The GUI is installed from release packages: run without --from-source to use --gui. Building it from source is described in docs/gui.md."
+fi
+
 if [ "$MODE" = source ]; then
   say "This script builds textweaver from source and installs it under $PREFIX."
   build_from_source
@@ -557,6 +669,12 @@ else
   say "This script downloads the newest textweaver release for macOS, checks it, and installs it under $PREFIX."
   have curl || [ "$DRY_RUN" = 1 ] || die "curl is needed and is missing."
   download_release
+  decide_gui
+  if [ "$GUI" = 1 ]; then
+    install_gui
+  else
+    remove_gui
+  fi
 fi
 install_stage
 offer_brew
@@ -570,4 +688,7 @@ fi
 say "textweaver $VERSION is installed in $PREFIX."
 say "Check your voices: $BINDIR/tw voices"
 say "Read the quick start aloud: $BINDIR/textweaver $DOCDIR/QUICKSTART.md"
+if [ -n "$GUI_INSTALLED" ]; then
+  say "The GUI is $APPSDIR/textweaver.app. Open it from Finder or Spotlight."
+fi
 say "To remove textweaver, run this script with --uninstall."

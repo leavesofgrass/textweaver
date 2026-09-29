@@ -7,8 +7,9 @@
 #   module under Miri;
 # - asan: the FFI crates' tests (espeak-ng, ECI, DECtalk) under
 #   AddressSanitizer on Linux;
-# - release: the workspace tests in release mode, and the loaders'
-#   property tests with many more cases;
+# - release: the workspace tests in release mode under cargo-nextest
+#   (.config/nextest.toml: retries, and a flaky test named), and the
+#   loaders' property tests with many more cases;
 # - msrv: `cargo check` with Rust 1.94, the rust-version in Cargo.toml;
 # - docker: the development image built from docker/Dockerfile, and the
 #   tests run in it with every feature;
@@ -178,8 +179,25 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: nightly-release
-      - name: Workspace tests (release)
-        run: cargo test --locked --release --workspace --exclude textweaver-xilem --all-features --no-fail-fast
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+      # cargo-nextest with the nightly profile (.config/nextest.toml): each
+      # failing test is retried twice, and one that passes on a retry is
+      # named FLAKY and still fails the job. The engine-host suites run two
+      # at a time.
+      - name: Workspace tests (release, nextest)
+        run: cargo nextest run --locked --cargo-profile release --profile nightly --workspace --exclude textweaver-xilem --all-features
+      # nextest does not run documentation tests.
+      - name: Documentation tests (release)
+        run: cargo test --locked --release --workspace --exclude textweaver-xilem --all-features --doc
+      - name: Keep the test report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nextest-junit
+          path: target/nextest/nightly/junit.xml
+          if-no-files-found: ignore
       - name: Loader property tests, 2,048 cases each
         env:
           PROPTEST_CASES: '2048'
