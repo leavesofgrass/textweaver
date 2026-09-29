@@ -37,6 +37,12 @@ jobs:
         with:
           python-version: '3.12'
       - run: rustup toolchain install
+      # Without a cache this job spent 6 to 7 minutes compiling xtask and
+      # the app from scratch on every push.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: docs
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       # Every relative link and anchor in the Markdown docs and docs/site
       # resolves (tools/check_links.py; standard library only, no network).
       - name: Links and anchors
