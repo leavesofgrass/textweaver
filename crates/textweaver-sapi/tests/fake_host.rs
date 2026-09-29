@@ -201,15 +201,35 @@ fn stop_mid_utterance_cancels_and_nothing_follows() {
 
 #[test]
 fn pause_holds_the_clock_and_resume_continues() {
-    let mut b = backend(4.0);
+    // Real time: the utterance lasts about 1.8 s. At four times real time
+    // (0.45 s) a loaded machine starved the silent output's thread, which
+    // then consumed everything it owed at once, so the whole utterance
+    // could play between two polls (1 in 40 runs under load).
+    let mut b = backend(1.0);
     let mut rec = Rec::default();
     let text = "one two three four five six";
-    let u = utt(text, 1, 0);
-    b.speak(&u, &mut rec).unwrap();
-    pump(&mut b, &mut rec, Duration::from_secs(10), |r| {
-        r.words(u.id).len() >= 2
-    });
-    b.pause().unwrap();
+    // The pause must land while most of the utterance is still to come.
+    // If the machine held the test off until it had mostly played, the
+    // attempt says nothing about pausing, and the test tries again with a
+    // new utterance rather than fail on the machine's load.
+    let mut attempt = 0;
+    let u = loop {
+        attempt += 1;
+        let u = utt(text, attempt, 0);
+        b.speak(&u, &mut rec).unwrap();
+        pump(&mut b, &mut rec, Duration::from_secs(10), |r| {
+            r.words(u.id).len() >= 2
+        });
+        b.pause().unwrap();
+        let early = rec.words(u.id).len() <= 3 && !rec.ended(u.id);
+        if early || attempt == 5 {
+            assert!(early, "five attempts all ended before the pause");
+            break u;
+        }
+        b.resume().unwrap();
+        b.stop();
+        pump(&mut b, &mut rec, Duration::from_secs(10), |r| r.ended(u.id));
+    };
     // Anything already due is delivered; after that the clock holds.
     b.poll(&mut rec);
     let held = rec.words(u.id).len();
@@ -293,29 +313,45 @@ fn a_host_starting_in_poll_takes_stop_and_pause_meanwhile() {
     .unwrap();
     let mut rec = Rec::default();
     let u = utt("stopped while starting", 1, 0);
-    let t = Instant::now();
+    // These checks use the order of events, not the clock, so a loaded
+    // machine cannot fail them: the host is set only when its start
+    // completes in `poll`, two seconds after it began, so a `speak` or a
+    // `stop` that waited for the start would find it up.
     b.speak(&u, &mut rec).unwrap();
     assert!(
-        t.elapsed() < Duration::from_millis(1000),
-        "{:?}",
-        t.elapsed()
+        b.host_path(Arch::X86).is_none(),
+        "speak returned before the host was ready"
     );
-    let t = Instant::now();
     b.stop();
     b.poll(&mut rec);
-    assert!(t.elapsed() < Duration::from_millis(500));
+    assert!(
+        b.host_path(Arch::X86).is_none(),
+        "stop took effect before the host was ready"
+    );
+    // Cancelled, and never Started.
     assert_eq!(rec.of(u.id), [&RawEvent::Cancelled]);
     let p = utt("paused while starting", 2, 0);
     b.speak(&p, &mut rec).unwrap();
     b.pause().unwrap();
-    pump(&mut b, &mut rec, Duration::from_millis(3500), |r| {
+    // Wait for the host (a hang check, not a speed check), then give it
+    // time to synthesize: the paused utterance stays silent.
+    let hang = Instant::now() + Duration::from_secs(20);
+    while b.host_path(Arch::X86).is_none() && Instant::now() < hang {
+        b.poll(&mut rec);
+        std::thread::sleep(Duration::from_millis(3));
+    }
+    assert!(b.host_path(Arch::X86).is_some(), "the host came up");
+    pump(&mut b, &mut rec, Duration::from_millis(1000), |r| {
         r.of(p.id).contains(&&RawEvent::Started)
     });
     assert!(
         !rec.of(p.id).contains(&&RawEvent::Started),
         "paused: silent"
     );
-    assert!(b.host_path(Arch::X86).is_some(), "the host is up by now");
+    assert!(
+        !rec.of(u.id).contains(&&RawEvent::Started),
+        "the stopped one never started"
+    );
     b.resume().unwrap();
     pump(&mut b, &mut rec, Duration::from_secs(10), |r| r.ended(p.id));
     assert_eq!(
