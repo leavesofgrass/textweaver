@@ -31,12 +31,12 @@ A text longer than 600,000 characters is read in 64 windows spread evenly throug
 
 Measured with `cargo run -p textweaver-summary --release --example summary_bench` on the development machine while other agents were building, 40 runs each after one first run (the first also fills the document's own caches, which the reader has filled already):
 
-- generated plain text, 100 KB: median 9 ms;
-- generated plain text, 1 MB (read in samples): median 64 ms;
-- generated plain text, 10 MB: median 72 ms;
-- the benchmark corpus `md-10mb.md` (`cargo xtask bench`): median 93 ms.
+- generated plain text, 100 KB: median 10 ms, worst 25 ms;
+- generated plain text, 1 MB (read in samples): median 68 ms, worst 91 ms;
+- generated plain text, 10 MB: median 70 ms, worst 110 ms, first run 85 ms;
+- the benchmark corpus `md-10mb.md` (`cargo xtask bench`): median 85 ms, worst 123 ms, first run 150 ms.
 
-So a summary of 10 MB stays under the 200 ms the plan asked for. The worst single runs were several times the median, because other builds were running; the reader summarizes on the input thread, which is acceptable at these times.
+So a summary of 10 MB stays under the 200 ms the plan asked for, in every run measured. The reader summarizes on the input thread, which is acceptable at these times.
 
 ### Where it shows
 
