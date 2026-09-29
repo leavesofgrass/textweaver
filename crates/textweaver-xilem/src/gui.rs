@@ -932,6 +932,17 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
                 shown.aid_spans = Some(key);
                 if let Some(model) = model_for(app, w.range()) {
                     host.edit(DOC, |mut d| {
+                        // An edit keeps the paragraphs around the change
+                        // (their layouts and nodes); else a slide or a
+                        // new model.
+                        let model = if edited && !aids_changed {
+                            match DocumentView::edit_model(&mut d, model) {
+                                Ok(()) => return,
+                                Err(model) => *model,
+                            }
+                        } else {
+                            model
+                        };
                         if slide {
                             DocumentView::slide_model(&mut d, model);
                         } else {

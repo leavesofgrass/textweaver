@@ -454,3 +454,94 @@ fn copy_cut_and_paste_work_on_the_selection_on_screen() {
     let (action, _) = h.pop_action::<DocAction>().expect("pasted");
     assert_eq!(action, DocAction::Typed("Second ".into()));
 }
+
+/// A key in edit mode costs one paragraph: the runs of the paragraphs
+/// before and after the edit keep their nodes (the screen reader's place
+/// stays on them) and are not sent again; only the edited paragraph's are.
+/// Across many edits (typing, new lines, deletes that join paragraphs,
+/// undo), the text the screen reader reads stays the document's.
+#[test]
+fn an_edit_sends_only_the_edited_paragraph() {
+    let dir = tempfile::tempdir().unwrap();
+    let notes: String = (1..=30)
+        .map(|i| format!("Paragraph {i} of the notes, with a few words.\n\n"))
+        .collect();
+    let (mut app, mut h, mut r, doc) = setup_with(dir.path(), &notes);
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let ids = |h: &TestHarness<Root>| -> Vec<String> {
+        h.access_node(doc)
+            .expect("the document")
+            .children()
+            .map(|c| format!("{:?}", c.id()))
+            .collect()
+    };
+    let before = ids(&h);
+    let n = before.len();
+    // Type at the end of paragraph 10.
+    let at = notes.find("Paragraph 11").unwrap() - 2;
+    let _ = app.dispatch(Command::SetCursor(CharPos(at)));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let _ = app.dispatch(Command::Insert("!".into()));
+    let _ = r.refresh(&app, &mut h);
+    let (_, update) = h.redraw();
+    let after = ids(&h);
+    assert_eq!(after.len(), n);
+    let changed = before.iter().zip(&after).filter(|(a, b)| a != b).count();
+    assert!(changed <= 1, "{changed} runs got new nodes");
+    // The document node, and the edited paragraph's runs.
+    // Of the document's runs, only the edited paragraph's are sent (the
+    // rest of the update is the window's own containers and status bar).
+    let runs = update
+        .nodes
+        .iter()
+        .filter(|(_, n)| n.role() == Role::TextRun)
+        .count();
+    assert_eq!(runs, 1, "{} nodes sent", update.nodes.len());
+    let (_, _, text) = doc_node(&h, doc);
+    assert_eq!(
+        text.trim_end_matches('\n'),
+        text_of(&app).trim_end_matches('\n')
+    );
+
+    // Many edits: what the screen reader reads is the document every time.
+    let edits: Vec<Command> = vec![
+        Command::Insert("\n".into()),
+        Command::Insert("New words.".into()),
+        Command::DeleteBack,
+        Command::Insert("\n\n# A heading\n\n".into()),
+        Command::DeleteForward,
+        Command::Action(ActionId::Undo),
+        Command::Action(ActionId::Undo),
+        Command::Action(ActionId::Redo),
+    ];
+    for (k, e) in edits.into_iter().enumerate() {
+        let _ = app.dispatch(e);
+        let _ = r.refresh(&app, &mut h);
+        let _ = h.redraw();
+        let (_, _, text) = doc_node(&h, doc);
+        assert_eq!(
+            text.trim_end_matches('\n'),
+            text_of(&app).trim_end_matches('\n'),
+            "after edit {k}"
+        );
+        // Every run's position maps back: the caret is where the app has it.
+        let caret = app.session().map(|s| s.cursor).unwrap();
+        assert_eq!(h.get_widget(DOC).inner().state().caret, caret, "edit {k}");
+    }
+    // Deleting a paragraph break joins two paragraphs.
+    let at = text_of(&app).find("Paragraph 20").unwrap();
+    let _ = app.dispatch(Command::SetCursor(CharPos(at)));
+    for _ in 0..2 {
+        let _ = app.dispatch(Command::DeleteBack);
+        let _ = r.refresh(&app, &mut h);
+        let _ = h.redraw();
+    }
+    let (_, _, text) = doc_node(&h, doc);
+    assert_eq!(
+        text.trim_end_matches('\n'),
+        text_of(&app).trim_end_matches('\n')
+    );
+}

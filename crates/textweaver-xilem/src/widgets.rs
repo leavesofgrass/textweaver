@@ -3,8 +3,8 @@
 //! reader expects, and nothing announced twice.
 //!
 //! - [`Root`]: the window's content. Keys nothing else handled go to the
-//!   keymap from here, and it tells the document view when an
-//!   accessibility pass rebuilds every node.
+//!   keymap from here, and its [`FullPassProbe`] tells the document view
+//!   and the announcer when an accessibility pass rebuilds every node.
 //! - [`Region`]: a panel with a role and a name (toolbar, status bar,
 //!   header), drawn with Masonry's box properties.
 //! - [`ActionButton`]: a button with its own name, keyboard shortcut, and
@@ -40,18 +40,18 @@ pub struct KeyAction(pub KeyboardEvent);
 
 /// The window's content. See the module documentation.
 pub struct Root {
+    probe: WidgetPod<FullPassProbe>,
     main: WidgetPod<Region>,
     dialog: Option<WidgetPod<dyn Widget>>,
-    full_passes: Rc<Cell<u64>>,
 }
 
 impl Root {
     /// Wraps `main`. `full_passes` is shared with the document view.
     pub fn new(main: NewWidget<Region>, full_passes: Rc<Cell<u64>>) -> Self {
         Root {
+            probe: NewWidget::new(FullPassProbe { full_passes }).to_pod(),
             main: main.to_pod(),
             dialog: None,
-            full_passes,
         }
     }
 
@@ -102,6 +102,7 @@ impl Widget for Root {
     }
 
     fn register_children(&mut self, ctx: &mut RegisterCtx<'_>) {
+        ctx.register_child(&mut self.probe);
         ctx.register_child(&mut self.main);
         if let Some(d) = &mut self.dialog {
             ctx.register_child(d);
@@ -120,6 +121,8 @@ impl Widget for Root {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
+        ctx.run_layout(&mut self.probe, Size::ZERO);
+        ctx.place_child(&mut self.probe, Point::ORIGIN);
         ctx.run_layout(&mut self.main, size);
         ctx.place_child(&mut self.main, Point::ORIGIN);
         if let Some(d) = &mut self.dialog {
@@ -141,17 +144,71 @@ impl Widget for Root {
         _props: &PropertiesRef<'_>,
         _node: &mut Node,
     ) {
-        // The root is only rebuilt when the whole tree is (the tree was
-        // enabled, the window was resized): tell the document view.
-        self.full_passes.set(self.full_passes.get().wrapping_add(1));
     }
 
     fn children_ids(&self) -> ChildrenIds {
-        let mut ids = ChildrenIds::from_slice(&[self.main.id()]);
+        let mut ids = ChildrenIds::from_slice(&[self.probe.id(), self.main.id()]);
         if let Some(d) = &self.dialog {
             ids.push(d.id());
         }
         ids
+    }
+}
+
+/// Counts the accessibility passes that rebuild every node (a screen reader
+/// asked for the tree, or asked again after a restart), for the document
+/// view and the announcer, which then send everything they hold again.
+///
+/// It is the root's first child: zero-sized at the origin, it is never laid
+/// out again or moved, so Masonry rebuilds its node only when it rebuilds
+/// them all. The root itself cannot tell: it is laid out again, and its
+/// node rebuilt, whenever anything in the window asks for layout, so every
+/// caret move and every key in edit mode looked like a full pass.
+pub struct FullPassProbe {
+    full_passes: Rc<Cell<u64>>,
+}
+
+impl Widget for FullPassProbe {
+    type Action = NoAction;
+
+    fn accepts_pointer_interaction(&self) -> bool {
+        false
+    }
+
+    fn register_children(&mut self, _ctx: &mut RegisterCtx<'_>) {}
+
+    fn measure(
+        &mut self,
+        _ctx: &mut MeasureCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        _axis: Axis,
+        _len_req: LenReq,
+        _cross_length: Option<Length>,
+    ) -> Length {
+        Length::ZERO
+    }
+
+    fn layout(&mut self, _ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, _size: Size) {}
+
+    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, _p: &mut Painter<'_>) {
+    }
+
+    fn accessibility_role(&self) -> Role {
+        Role::GenericContainer
+    }
+
+    fn accessibility(
+        &mut self,
+        _ctx: &mut AccessCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        node: &mut Node,
+    ) {
+        node.set_hidden();
+        self.full_passes.set(self.full_passes.get().wrapping_add(1));
+    }
+
+    fn children_ids(&self) -> ChildrenIds {
+        ChildrenIds::new()
     }
 }
 

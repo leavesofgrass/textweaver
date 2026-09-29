@@ -460,6 +460,154 @@ impl DocumentView {
         Self::replace_model(this, model, true);
     }
 
+    /// Edit mode: the text changed at the caret (a key, an undo, a
+    /// command). The paragraphs before the change keep everything; those
+    /// after it keep their layouts, their visual lines, and their run nodes,
+    /// only moved by the change's length, so a key costs one paragraph's
+    /// layout and runs instead of the window's, and the screen reader gets
+    /// the edited paragraph's nodes only.
+    ///
+    /// # Errors
+    /// Gives `model` back, changing nothing, when the two models share
+    /// neither a first nor a last paragraph; the caller then replaces or
+    /// slides the model.
+    pub fn edit_model(
+        this: &mut WidgetMut<'_, Self>,
+        model: DocModel,
+    ) -> Result<(), Box<DocModel>> {
+        let w = &mut *this.widget;
+        let old = &w.model;
+        let (n_old, n_new) = (old.paragraphs.len(), model.paragraphs.len());
+        let delta = model.doc_len as isize - old.doc_len as isize;
+        let shift = |p: CharPos| CharPos((p.0 as isize + delta).max(0) as usize);
+        let same_text = |a: &Paragraph, b: &Paragraph| {
+            a.text == b.text && a.heading == b.heading && a.has_break == b.has_break
+        };
+        if model.separator != old.separator {
+            return Err(Box::new(model));
+        }
+        let old_styles = old.styles_by_paragraph();
+        let new_styles = model.styles_by_paragraph();
+        let shifted = |s: &(Vec<StyledSpan>, Vec<CharPos>)| {
+            (
+                s.0.iter()
+                    .map(|x| StyledSpan {
+                        range: CharRange::new(shift(x.range.start).0, shift(x.range.end).0),
+                        style: x.style,
+                    })
+                    .collect::<Vec<_>>(),
+                s.1.iter().map(|&b| shift(b)).collect::<Vec<_>>(),
+            )
+        };
+        let limit = n_old.min(n_new);
+        let mut pre = 0;
+        while pre < limit
+            && old.paragraphs[pre].start == model.paragraphs[pre].start
+            && same_text(&old.paragraphs[pre], &model.paragraphs[pre])
+            && old_styles[pre] == new_styles[pre]
+        {
+            pre += 1;
+        }
+        let mut suf = 0;
+        while suf < limit - pre {
+            let (i, j) = (n_old - 1 - suf, n_new - 1 - suf);
+            let (a, b) = (&old.paragraphs[i], &model.paragraphs[j]);
+            if shift(a.start) != b.start
+                || !same_text(a, b)
+                || shifted(&old_styles[i]) != new_styles[j]
+            {
+                break;
+            }
+            suf += 1;
+        }
+        if pre == 0 && suf == 0 {
+            return Err(Box::new(model));
+        }
+        // Where the old suffix starts: runs at or after it move by `delta`;
+        // runs of the old middle paragraphs are gone.
+        let old_mid = pre..n_old - suf;
+        let suf_start = old.paragraphs.get(n_old - suf).map(|p| p.start);
+        let anchor_pos = old.paragraphs.get(w.top.0).map(|p| p.start);
+
+        let mut layouts = std::mem::take(&mut w.layouts);
+        let old_lines = std::mem::take(&mut w.line_starts);
+        let old_runs = std::mem::take(&mut w.para_runs);
+        let old_ids = std::mem::take(&mut w.para_ids);
+        let old_dirty = std::mem::take(&mut w.dirty_paras);
+        let mut new_layouts = HashMap::new();
+        let mut lines = vec![None; n_new];
+        let mut runs = vec![None; n_new];
+        let mut ids = vec![None; n_new];
+        let mut dirty = vec![true; n_new];
+        let keep = (0..pre)
+            .map(|i| (i, i))
+            .chain((0..suf).map(|k| (n_old - suf + k, n_new - suf + k)));
+        for (i, j) in keep {
+            if let Some(l) = layouts.remove(&i) {
+                new_layouts.insert(j, l);
+            }
+            lines[j] = old_lines.get(i).cloned().flatten();
+            ids[j] = old_ids.get(i).cloned().flatten();
+            dirty[j] = old_dirty.get(i).copied().unwrap_or(true);
+            // The prefix's runs are where they were; the suffix's are
+            // rebuilt from the paragraph when next asked for.
+            if i < pre {
+                runs[j] = old_runs.get(i).cloned().flatten();
+            }
+        }
+        // The ids of runs in the old middle paragraphs are forgotten; the
+        // suffix's ids move with their text.
+        for i in old_mid {
+            for id in old_ids.get(i).cloned().flatten().unwrap_or_default() {
+                if let Some(pos) = w.ids_to_pos.remove(&id) {
+                    w.run_ids.remove(&pos);
+                }
+            }
+        }
+        if let Some(from) = suf_start
+            && delta != 0
+        {
+            let moved: Vec<(NodeId, CharPos)> = w
+                .ids_to_pos
+                .iter()
+                .filter(|(_, p)| **p >= from)
+                .map(|(id, p)| (*id, *p))
+                .collect();
+            for (_, p) in &moved {
+                w.run_ids.remove(p);
+            }
+            for (id, p) in moved {
+                let to = shift(p);
+                w.ids_to_pos.insert(id, to);
+                w.run_ids.insert(to, id);
+            }
+        }
+        w.model = model;
+        w.layouts = new_layouts;
+        w.line_starts = lines;
+        w.para_runs = runs;
+        w.para_ids = ids;
+        w.dirty_paras = dirty;
+        let anchor = anchor_pos.map(|p| {
+            if suf_start.is_some_and(|s| p >= s) {
+                shift(p)
+            } else {
+                p
+            }
+        });
+        w.top = (
+            anchor.map_or(0, |pos| caret::paragraph_at(&w.model.paragraphs, pos)),
+            w.top.1,
+        );
+        w.follow = true;
+        this.ctx.request_layout();
+        // No accessibility request of its own: the root would take it for
+        // a full pass, and every run would be sent again. The layout pass
+        // this asks for brings the accessibility pass with it.
+        this.ctx.request_render();
+        Ok(())
+    }
+
     fn replace_model(this: &mut WidgetMut<'_, Self>, model: DocModel, keep_ids: bool) {
         let w = &mut *this.widget;
         // Keep the scroll anchor on the same text when the window moves.
