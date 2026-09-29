@@ -608,7 +608,14 @@ fn the_voice_manager_is_the_apps_list_with_its_keys() {
     use textweaver_xilem::dialog::DialogAction;
     let dir = tempfile::tempdir().unwrap();
     let mut app = app_with_sample(dir.path());
-    let chord: KeyChord = "Ctrl+Shift+V".parse().expect("chord");
+    // The keymap's command key: Cmd on macOS, Ctrl elsewhere.
+    let chord: KeyChord = if cfg!(target_os = "macos") {
+        "Cmd+Shift+V"
+    } else {
+        "Ctrl+Shift+V"
+    }
+    .parse()
+    .expect("chord");
     assert_eq!(
         app.keymap().lookup(&chord, app.mode().layer()),
         Some(ActionId::ChooseVoice)
