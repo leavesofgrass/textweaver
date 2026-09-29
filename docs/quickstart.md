@@ -85,6 +85,24 @@ If the AppImage says FUSE is missing, the script installs the plain tarball inst
 
 textweaver speaks with espeak-ng when the `espeak-ng` package is installed, or through speech-dispatcher. `tw backends` lists the engines it found.
 
+## The GUI
+
+textweaver also has a window, `textweaver-gui`: a native, screen-reader-accessible GUI that shares documents, keys, settings, and voices with the terminal reader. It is not in the 0.1.0-alpha.4 release yet; it ships in the next one, as its own download whose package names end in `-gui` (see [Installing textweaver](install.md#the-gui)).
+
+Until then, build it from a copy of the repository:
+
+```bash
+cargo build -p textweaver-xilem --release
+```
+
+This produces `textweaver-xilem` (`textweaver-xilem.exe` on Windows) under `target/release/`; a released package renames the same program to `textweaver-gui`. Run it with a file to open:
+
+```bash
+target/release/textweaver-xilem path/to/document.md
+```
+
+[The textweaver window (GUI)](gui.md) covers what is in the window, its keys, and its announcements.
+
 ## Your first 30 seconds
 
 Once the document is open:
@@ -95,10 +113,10 @@ Once the document is open:
 - **p** and **Shift+P** move by paragraph. **h** jumps to the next heading, and **1** to **6** to the next heading at that level, as in NVDA and JAWS.
 - **+** and **-** make the voice faster or slower.
 - **Tab** turns Speech Cursor mode on and off. In it, the Up and Down arrows read one line at a time.
-- **Shift+W** says where you are: the line, the percentage, and the heading.
+- **Shift+W** says where you are: the line, the percentage, the word number, and the heading.
 - **?** lists every key. **F1** opens the help.
 - **Ctrl+Q** quits. textweaver asks "Quit textweaver? y or n". Press **y** to quit, or **n** to stay. With the classic keys (`[keyboard] preset = "classic"`), **q** quits too, after the same question.
-- **'** says the last message again, and **z** says the status: the mode, "Ready" or "Reading", the position, the rate, and the voice.
+- **'** says the last message again. **z** says it too, then the status: the mode, "Ready" or "Reading", the position, the rate, and the voice.
 
 textweaver remembers your place. Open the same file again and it picks up where you left off.
 
