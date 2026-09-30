@@ -3609,7 +3609,7 @@ audio-thread-stopped = توقف تصدير الصوت على نحو غير مت�
 
 ## W6c5: PDF links. Said before the first line of the page a link inside
 ## a PDF goes to, when the page has no heading there (as links-heading-label
-## is for a heading).
-links-page-label = صفحة
+## is for a heading). $page is the page's printed number or label (12, iv).
+links-page-label = صفحة { $page }
 
 ## End of W6c5

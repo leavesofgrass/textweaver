@@ -646,6 +646,14 @@ fn encode_label(label: &str) -> String {
     out
 }
 
+/// Undoes [`encode_label`]; other text is left as it is.
+fn decode_label(label: &str) -> String {
+    label
+        .replace("%20", " ")
+        .replace("%23", "#")
+        .replace("%25", "%")
+}
+
 /// Adds `Link` markers for the links and returns the comments, anchored in
 /// the canonical text.
 pub(super) fn apply(
@@ -742,23 +750,29 @@ pub fn is_page_anchor(anchor: &str) -> bool {
         .starts_with(PAGE_ANCHOR)
 }
 
-/// Where the page an anchor names (`page=12`, by printed page label, as
-/// links inside a PDF are written) starts in `doc`, if it has that page.
-pub fn page_anchor(doc: &Document, anchor: &str) -> Option<CharPos> {
+/// The printed page label a page anchor names (`#page=A%202` names
+/// "A 2"), if `anchor` names a page.
+pub fn page_anchor_label(anchor: &str) -> Option<String> {
     let a = anchor.trim().trim_start_matches('#');
     if !is_page_anchor(a) {
         return None;
     }
-    let want = a[PAGE_ANCHOR.len()..].trim();
-    if want.is_empty() {
-        return None;
-    }
+    // `is_page_anchor` checked the ASCII prefix, so this is a char boundary.
+    let want = decode_label(a[PAGE_ANCHOR.len()..].trim());
+    let want = want.trim();
+    (!want.is_empty()).then(|| want.to_owned())
+}
+
+/// Where the page an anchor names (`page=12`, by printed page label, as
+/// links inside a PDF are written) starts in `doc`, if it has that page.
+pub fn page_anchor(doc: &Document, anchor: &str) -> Option<CharPos> {
+    let want = page_anchor_label(anchor)?;
     doc.marker_index()
         .iter(MarkerKind::PageBreak, None)
         .find(|m| {
             m.label
                 .as_deref()
-                .is_some_and(|l| l.trim().eq_ignore_ascii_case(want))
+                .is_some_and(|l| l.trim().eq_ignore_ascii_case(&want))
         })
         .map(|m| m.range.start)
 }
@@ -824,7 +838,12 @@ mod tests {
         assert!(!is_page_anchor("#methods"));
         assert_eq!(page_anchor(&doc, "#page=IV"), Some(CharPos(0)));
         assert_eq!(page_anchor(&doc, "page=A 2"), Some(CharPos(5)));
+        assert_eq!(page_anchor(&doc, "#page=A%202"), Some(CharPos(5)));
+        assert_eq!(page_anchor_label("#page=A%202").as_deref(), Some("A 2"));
+        assert_eq!(page_anchor_label("#methods"), None);
+        assert_eq!(page_anchor_label("#page= "), None);
         assert_eq!(page_anchor(&doc, "page=9"), None);
         assert_eq!(encode_label("A 2#%"), "A%202%23%25");
+        assert_eq!(decode_label(&encode_label("A 2#%20")), "A 2#%20");
     }
 }

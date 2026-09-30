@@ -64,7 +64,7 @@ mod metrics;
 mod ocr;
 mod structure;
 
-pub use annots::{MAX_ANNOTS, is_page_anchor, page_anchor};
+pub use annots::{MAX_ANNOTS, is_page_anchor, page_anchor, page_anchor_label};
 pub use forms::MAX_FIELDS;
 
 use std::collections::HashMap;

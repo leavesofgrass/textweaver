@@ -201,11 +201,12 @@ impl App {
                         )
                     })
                     .unwrap_or_default();
-                let label = self.msg(if textweaver_formats::pdf::is_page_anchor(anchor) {
-                    "links-page-label"
-                } else {
-                    "links-heading-label"
-                });
+                let label = match textweaver_formats::pdf::page_anchor_label(anchor) {
+                    Some(page) => {
+                        self.msg_args("links-page-label", &args!["page" => page.as_str()])
+                    }
+                    None => self.msg("links-heading-label"),
+                };
                 let msg = self.nav_message(Some(&label), pos, &text);
                 self.jump(pos, true, ReadAfter::Follow, &msg);
             }
