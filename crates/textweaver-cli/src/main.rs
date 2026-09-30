@@ -74,6 +74,8 @@ enum Cmd {
     Stats(cmd::stats::Args),
     /// Summarize a document: its most central sentences, one per line, without a model.
     Summarize(cmd::summarize::Args),
+    /// Sync notes, highlights, bookmarks, and places with your other computers: setup, status, now.
+    Sync(cmd::sync::Args),
     /// Serve the app over JSON-RPC 2.0 on stdin and stdout, for editors and other tools.
     Serve(cmd::serve::Args),
     /// Text recognition for scanned pages: engine status, model downloads, and reading a scan.
@@ -106,6 +108,7 @@ fn main() -> Result<()> {
         Cmd::Define(a) => cmd::define::run(a),
         Cmd::Stats(a) => cmd::stats::run(a),
         Cmd::Summarize(a) => cmd::summarize::run(a),
+        Cmd::Sync(a) => cmd::sync::run(a),
         Cmd::Serve(a) => cmd::serve::run(a),
         Cmd::Ocr(a) => cmd::ocr::run(a),
     }

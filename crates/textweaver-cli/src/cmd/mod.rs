@@ -22,6 +22,7 @@ pub mod settings;
 pub mod speak;
 pub mod stats;
 pub mod summarize;
+pub mod sync;
 pub mod text;
 pub mod vault;
 pub mod voices;
