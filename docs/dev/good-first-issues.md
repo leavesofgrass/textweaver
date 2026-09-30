@@ -1,6 +1,6 @@
 # Good first issues
 
-Small, well-scoped tasks for a first contribution. Each one says what to change, where to look, and how to check it. They were checked against the code on Tuesday, September 29, 2026; if one has been done since, the code will show it.
+Small, well-scoped tasks for a first contribution. Each one says what to change, where to look, and how to check it. They were checked against the code on Wednesday, September 30, 2026; if one has been done since, the code will show it.
 
 Before you start:
 
@@ -43,35 +43,7 @@ Every document loader has a fuzz target except the plain-text loader. That loade
 
 ## Reading documents
 
-### Obsidian callouts of every type
-
-Size: small.
-
-The Markdown loader reads GitHub's five alert types (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`) as a block quote that starts with its label, such as "Note:". Obsidian has more types, such as `[!info]`, `[!example]`, `[!question]`, and `[!quote]`, and a title on the same line (`> [!tip] Remember`). Those are not recognized, so a listener hears the brackets.
-
-- Where: `crates/textweaver-formats/src/markdown.rs`, `alert_label` and the block-quote handling around it. There is a test for alerts near the end of the file; add cases beside it.
-- Say the type in words, then the title, then the text: "Info: Remember. ..." An unknown type reads as its own name, capitalized.
-- How to check: `cargo test -p textweaver-formats markdown`. Then open a note with callouts in the terminal reader (`cargo run -p textweaver-tui -- note.md`) and listen: no brackets or exclamation marks are spoken.
-
-### Pictures drawn inline in HTML
-
-Size: small.
-
-The HTML loader skips every `<svg>` element, so an inline drawing vanishes, even when it has a `<title>` or an `aria-label` that says what it shows. Images (`<img>`) are already read by their alternative text.
-
-- Where: `crates/textweaver-formats/src/html.rs`. `svg` is in the `SKIP` list; the `image` function shows how a picture with a description is read. Read an `<svg>`'s `aria-label`, or else its first `<title>` child, the same way, and keep skipping one that has neither.
-- How to check: add a test beside the existing image test in `html.rs`, and run `cargo test -p textweaver-formats html`. A page with `<svg aria-label="A bar chart">` reads "A bar chart" where the drawing was.
-
-### JSON files as an outline
-
-Size: medium.
-
-A `.json` file opens today as plain text, so a listener hears every brace and quotation mark. A first version could read each top-level key as a heading, with its value below it, so heading navigation (`h`) moves from key to key.
-
-- Where: a new loader in `crates/textweaver-formats/src/`, registered in `Registry::with_builtins` in `lib.rs`. `text.rs` is the smallest loader to learn from. `serde_json` is already in `[workspace.dependencies]`, so using it needs no new dependency.
-- Read values plainly ("name: Ada Example"), and say the size of a nested object or array in words ("address, object, 3 keys") rather than printing it.
-- New loaders get a fuzz target and a test with hostile input (very deep nesting, a huge file); see `crates/textweaver-formats/tests/hostile.rs`.
-- How to check: `cargo test -p textweaver-formats`, then open a JSON file in the terminal reader and move with `h`.
+Obsidian callouts of every type, SVG drawings inline in HTML, and JSON files as an outline were all built in Wave 6 ([ADR-0044](../adr/0044-obsidian-json-svg-and-content-mathml.md)); see [CHANGELOG.md](../../CHANGELOG.md).
 
 ### Subtitle files as transcripts
 
@@ -79,40 +51,13 @@ Size: medium.
 
 textweaver writes SRT and WebVTT subtitles with its audio export, but cannot read them: a `.srt` or `.vtt` file opens as plain text, with every cue number and timestamp read aloud. A lecture's captions are often the only transcript a student has.
 
-- Where: a new loader in `crates/textweaver-formats/src/`, as for JSON above. `crates/textweaver-export/src/cues.rs` writes both formats and shows their shape.
+- Where: a new loader in `crates/textweaver-formats/src/`, registered in `Registry::with_builtins` in `lib.rs`; `crates/textweaver-formats/src/json.rs` is a recent loader to learn the shape from, and `crates/textweaver-export/src/cues.rs` writes both subtitle formats and shows their shape.
 - Read the cue text as paragraphs. Leave out cue numbers, and keep the start time out of the spoken text (a heading every few minutes, such as "5 minutes", is one way to make time navigable).
 - How to check: `cargo test -p textweaver-formats`, with a small fixture in `fixtures/` and a test that the text has no timestamps in it.
 
 ## The command palette and keys
 
-### The category in each palette match
-
-Size: small.
-
-The command palette (F2) reads each match as "id: help. keys". It never says which category a command belongs to, so similar commands are hard to tell apart by ear.
-
-- Where: the message `help-palette-item` in each file in `crates/textweaver-lexicon/locales/`, and `palette_candidates` in `crates/textweaver-app/src/help.rs`, which fills it in. `category_title` in the same file gives a category's name in the current language, so no new translations of category names are needed.
-- Keep the command's name first, because a Braille display shows the start of the line: "open, File: open a document. Ctrl+O".
-- How to check: `cargo test -p textweaver-app`, including `--test pseudo_locale`. Then press F2 in the terminal reader, type a few letters, and listen to the matches.
-
-### Recent commands in an empty palette
-
-Size: medium.
-
-When the palette opens with nothing typed, the commands you used last should come first, marked "recent" in words.
-
-- Where: `palette_candidates` and `palette_matches_in` in `crates/textweaver-app/src/help.rs`. Keep the last eight commands run from the palette. Talk in the issue about whether they are kept only while the program runs or saved with the rest of the reading state (`crates/textweaver-store`).
-- How to check: a test in `help.rs` that runs two commands through the palette and finds them first, and a listen in the terminal reader.
-
-### Say what a key does
-
-Size: medium. It touches the keymap, the app, and the message catalog.
-
-A screen reader's "input help" mode says what a key would do without doing it. textweaver has a list of every key (`?`) but no way to press one key and hear its command.
-
-- Where: a new action in `crates/textweaver-keymap/src/action.rs` (with a default key and help text), handled in `crates/textweaver-app`; the keymap already knows each key's command. While the mode is on, each key press says the command's name and help, and Escape leaves the mode.
-- Run `cargo xtask keyboard` to regenerate [the keyboard reference](../keyboard.md) after adding the action.
-- How to check: `cargo test -p textweaver-keymap -p textweaver-app`, and in the terminal reader, turn the mode on, press Space, and hear its help, "Play or pause reading from the current word", instead of reading starting.
+The category in each palette match, recent commands in an empty palette, and "what does this key do" (Shift+F1) were all built in Wave 6 ([ADR-0043](../adr/0043-menus-and-the-palette-from-one-model.md)); see [CHANGELOG.md](../../CHANGELOG.md) for what to build on next.
 
 ## See also
 
