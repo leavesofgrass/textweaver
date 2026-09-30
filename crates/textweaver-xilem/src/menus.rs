@@ -240,6 +240,24 @@ pub fn commands(tree: &[TopMenu]) -> Vec<ActionId> {
     out
 }
 
+/// The command on row `row` of the list menu, while the app shows the
+/// menus as a list (the terminal's F10 list, and the window's on Linux)
+/// and that row runs a command. The rows are the menu's items without its
+/// separators, as the app lists them. The window runs its own commands
+/// (the text size, the font, the settings and colors dialogs) itself.
+pub fn list_row_command(app: &App, row: usize) -> Option<ActionId> {
+    let menu = *app.menu_path()?.last()?;
+    app.menu_view(menu)
+        .items
+        .into_iter()
+        .filter(|i| i.kind != MenuItemKind::Separator)
+        .nth(row)
+        .and_then(|i| match i.kind {
+            MenuItemKind::Action(a) => Some(a),
+            _ => None,
+        })
+}
+
 /// A menu item was chosen: the item's id ([`Pick::id`]), posted to the
 /// event loop from the native menu's handler.
 #[derive(Debug)]
@@ -624,8 +642,62 @@ mod tests {
 
     use super::*;
 
+    /// An app with the window's keymap for this system, as the GUI builds
+    /// it (`setup::build_app`).
     fn app() -> App {
-        App::new(AppConfig::for_tests())
+        let mut config = AppConfig::for_tests();
+        config.keymap = textweaver_app::keymap::Keymap::defaults(
+            Platform::current(),
+            textweaver_app::keymap::Frontend::Gui,
+        );
+        App::new(config)
+    }
+
+    /// Opens the list menu and walks to the menu holding `a`, as the keys
+    /// would (focus a row, Right); returns `a`'s row there.
+    fn walk_to(app: &mut App, a: ActionId) -> usize {
+        use textweaver_app::{Command, ListKey};
+        let path = textweaver_app::menu::find_path(a).expect("the command is in a menu");
+        let _ = app.dispatch(Command::Action(ActionId::Menu));
+        assert_eq!(app.menu_path(), Some(&[][..]), "the menu key shows the bar");
+        let mut rows: Vec<MenuItemKind> = MenuId::TOP
+            .iter()
+            .map(|m| MenuItemKind::Submenu(*m))
+            .collect();
+        for m in &path {
+            let row = rows
+                .iter()
+                .position(|k| *k == MenuItemKind::Submenu(*m))
+                .expect("the submenu is a row");
+            let _ = app.dispatch(Command::ListFocus(row));
+            let _ = app.dispatch(Command::ListKey(ListKey::Right));
+            rows = app
+                .menu_view(*m)
+                .items
+                .into_iter()
+                .filter(|i| i.kind != MenuItemKind::Separator)
+                .map(|i| i.kind)
+                .collect();
+        }
+        assert_eq!(app.menu_path(), Some(path.as_slice()));
+        rows.iter()
+            .position(|k| *k == MenuItemKind::Action(a))
+            .expect("the command is a row")
+    }
+
+    /// The list menu (Linux, and wherever no native menu attaches): the
+    /// menu key opens it, and the window knows which command a row runs,
+    /// so it runs its own (the font, the text size) itself.
+    #[test]
+    fn the_list_menu_names_the_command_on_each_row() {
+        let mut app = app();
+        assert!(!app.keymap().chords_for(ActionId::Menu).is_empty());
+        for a in [ActionId::ChooseFont, ActionId::TextLarger, ActionId::Open] {
+            let row = walk_to(&mut app, a);
+            assert_eq!(list_row_command(&app, row), Some(a));
+            let _ = app.dispatch(textweaver_app::Command::Cancel);
+        }
+        assert_eq!(list_row_command(&app, 0), None, "no menu shown");
     }
 
     fn items(entries: &[Entry]) -> Vec<&Entry> {

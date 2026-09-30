@@ -1472,17 +1472,7 @@ impl Gui {
     /// menus as a list and that row runs a command (rows are the menu's
     /// items without its separators, as the app lists them).
     fn menu_row_command(&self, row: usize) -> Option<ActionId> {
-        let menu = *self.app.menu_path()?.last()?;
-        self.app
-            .menu_view(menu)
-            .items
-            .into_iter()
-            .filter(|i| i.kind != textweaver_app::menu::MenuItemKind::Separator)
-            .nth(row)
-            .and_then(|i| match i.kind {
-                textweaver_app::menu::MenuItemKind::Action(a) => Some(a),
-                _ => None,
-            })
+        crate::menus::list_row_command(&self.app, row)
     }
 
     /// Closes the open dialog as Escape would.
