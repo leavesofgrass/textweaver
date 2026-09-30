@@ -160,8 +160,30 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 /// A step's error, as one line.
+/// The whole error goes to stderr first, since its later lines (a tool's
+/// own output) may be what explains it.
 fn failed(e: &anyhow::Error) -> Outcome {
-    Outcome::Failed(format!("{e:#}").lines().next().unwrap_or("").to_owned())
+    let text = format!("{e:#}");
+    if text.lines().nth(1).is_some() {
+        eprintln!("{text}");
+    }
+    Outcome::Failed(first_line(&text))
+}
+
+/// An error's first line, without a trailing colon, and a pointer to the
+/// rest when there is more.
+fn first_line(text: &str) -> String {
+    let first = text
+        .lines()
+        .next()
+        .unwrap_or("")
+        .trim_end()
+        .trim_end_matches(':');
+    if text.lines().skip(1).any(|l| !l.trim().is_empty()) {
+        format!("{first}; the details are above")
+    } else {
+        first.to_owned()
+    }
 }
 
 fn notices(root: &Path, mode: Mode) -> Outcome {
@@ -327,6 +349,16 @@ mod tests {
             line("docs", &Outcome::Failed("2 problems".into())),
             "docs: FAIL, 2 problems"
         );
+    }
+
+    #[test]
+    fn errors_become_one_line() {
+        assert_eq!(first_line("reading x: not found"), "reading x: not found");
+        assert_eq!(
+            first_line("cargo about failed (install it):\nERROR something\n"),
+            "cargo about failed (install it); the details are above"
+        );
+        assert_eq!(first_line("stale:\n\n"), "stale");
     }
 
     #[test]

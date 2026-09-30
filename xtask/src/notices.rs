@@ -118,7 +118,14 @@ fn normalized(s: &str) -> String {
 }
 
 /// Runs `cargo about generate` and returns the crates section.
+///
+/// The output goes to a file in the target directory (`-o`), not a pipe:
+/// cargo-about refuses to write to a redirected stdout when it runs under
+/// PowerShell.
 fn cargo_about(root: &Path) -> anyhow::Result<String> {
+    let dir = crate::eci::target_dir(root).join("xtask-notices");
+    fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
+    let file = dir.join("crates.md");
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let out = Command::new(cargo)
         .current_dir(root)
@@ -130,8 +137,10 @@ fn cargo_about(root: &Path) -> anyhow::Result<String> {
             "--fail",
             "-c",
             ABOUT_CONFIG,
-            ABOUT_TEMPLATE,
+            "-o",
         ])
+        .arg(&file)
+        .arg(ABOUT_TEMPLATE)
         .output()
         .context("running cargo about (install it with `cargo install --locked cargo-about`)")?;
     if !out.status.success() {
@@ -140,7 +149,8 @@ fn cargo_about(root: &Path) -> anyhow::Result<String> {
             String::from_utf8_lossy(&out.stderr)
         );
     }
-    let text = String::from_utf8(out.stdout).context("cargo about wrote non-UTF-8 output")?;
+    let text = fs::read(&file).with_context(|| format!("reading {}", file.display()))?;
+    let text = String::from_utf8(text).context("cargo about wrote non-UTF-8 output")?;
     Ok(normalized(&text))
 }
 
