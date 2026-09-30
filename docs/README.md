@@ -62,7 +62,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [Building](dev/building.md): Rust, Python, what each system needs, Docker, the GUI, the lean reader, the helper scripts, and the repository layout.
 - [Testing](dev/testing.md): the checks every change must pass, the tests, and the [benchmarks](dev/testing.md#benchmarks).
 - [Architecture](dev/architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.
-- [The crates](dev/architecture.md#the-crates): what each of the 34 crates does, with its ADRs.
+- [The crates](dev/architecture.md#the-crates): what each of the 35 crates does, with its ADRs.
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
 - [Fuzzing](../fuzz/README.md): the 34 cargo-fuzz targets, run every night: the document loaders (RTF, ODT, Word revisions, LaTeX, Obsidian, JSON, SVG, and email among them), PDF annotations, the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, the sync folder's records, and the engine-host protocol.

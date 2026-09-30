@@ -855,6 +855,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-aids",
     "textweaver-app",
     "textweaver-engines",
+    "textweaver-sync",
     "textweaver-vault"
    ],
    "deps": [
@@ -867,6 +868,30 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "name": "textweaver-store",
    "path": "crates/textweaver-store",
    "short": "store",
+   "tool": false,
+   "version": "0.1.0-alpha.6"
+  },
+  {
+   "adr_note": {
+    "href": "../dev/architecture.md#the-crates",
+    "text": "Architecture guide: the crates"
+   },
+   "adrs": [],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [],
+   "deps": [
+    "textweaver-core",
+    "textweaver-store"
+   ],
+   "description": "textweaver sync: a hybrid logical clock, merge types, one record per document, and the sync folder in which each computer writes only its own files",
+   "dev_deps": [],
+   "job": "Sync between computers through a folder the user chooses: a hybrid clock, merge rules, and one record per document, with no networking.",
+   "layer": "state",
+   "name": "textweaver-sync",
+   "path": "crates/textweaver-sync",
+   "short": "sync",
    "tool": false,
    "version": "0.1.0-alpha.6"
   },
@@ -1534,6 +1559,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-speech",
     "textweaver-store",
     "textweaver-summary",
+    "textweaver-sync",
     "textweaver-text",
     "textweaver-vault",
     "textweaver-writers"
@@ -1596,9 +1622,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "name": "Output and aids"
   },
   {
-   "about": "Settings, saved positions, keys, announcements, and editing.",
+   "about": "Settings, saved positions, sync between computers, keys, announcements, and editing.",
    "crates": [
     "textweaver-store",
+    "textweaver-sync",
     "textweaver-keymap",
     "textweaver-a11y",
     "textweaver-editor"
