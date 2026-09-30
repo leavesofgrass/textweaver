@@ -24,14 +24,16 @@ Runs every check CI runs, so you can see CI's answer before you push:
   test       cargo test --workspace FEATURES
   doc        cargo doc --workspace --no-deps
              FEATURES, with RUSTDOCFLAGS="-D warnings"
-  keyboard   cargo xtask keyboard --check (docs/keyboard.md is current)
   pseudo     cargo test -p textweaver-app --test pseudo_locale (every
              message comes from the catalog: bracketed in en-XA, direction
              marks closed in ar-XB)
+  generated  cargo xtask regen --check (every generated file is current:
+             the notices, the settings reference, docs/keyboard.md, the
+             docs/site data, and the docs indexes and crate counts; one
+             line each; cargo xtask regen rebuilds them). --only keyboard
+             or --only site selects this step.
   links      python3 tools/check_links.py (relative links and anchors in the
              docs resolve)
-  site       python3 tools/gen_site_data.py --check (the data in the
-             docs/site pages is current)
   site-a11y  python3 tools/check_site_a11y.py (static accessibility checks
              of the docs/site pages)
   scripts    shellcheck on scripts/*.sh, when shellcheck is installed
@@ -145,6 +147,12 @@ wanted() {
   case ",$ONLY," in
     *",$1,"*) return 0 ;;
   esac
+  # The keyboard and site checks are part of the generated step now.
+  if [ "$1" = generated ]; then
+    case ",$ONLY," in
+      *",keyboard,"* | *",site,"*) return 0 ;;
+    esac
+  fi
   return 1
 }
 
@@ -202,15 +210,15 @@ step fmt "formatting" cargo fmt --all --check
 step clippy "lints, warnings are errors" cargo clippy --workspace --all-targets ${FEATURES[@]+"${FEATURES[@]}"} -- -D warnings
 step test "tests" cargo test --workspace ${FEATURES[@]+"${FEATURES[@]}"}
 step doc "API documentation, warnings are errors" env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps ${FEATURES[@]+"${FEATURES[@]}"}
-step keyboard "docs/keyboard.md is current" cargo xtask keyboard --check
 step pseudo "the interface in the pseudo-locales en-XA and ar-XB" cargo test -p textweaver-app --test pseudo_locale
+step generated "every generated file is current" cargo xtask regen --check
 PYTHON=""
 if have python3; then
   PYTHON=python3
 elif have python; then
   PYTHON=python
 fi
-for py_step in links site site-a11y; do
+for py_step in links site-a11y; do
   wanted "$py_step" || continue
   if [ -z "$PYTHON" ]; then
     say ""
@@ -221,7 +229,6 @@ for py_step in links site site-a11y; do
   fi
   case $py_step in
     links) step links "links and anchors in the docs resolve" "$PYTHON" tools/check_links.py ;;
-    site) step site "the docs/site data is current" "$PYTHON" tools/gen_site_data.py --check ;;
     site-a11y) step site-a11y "static accessibility checks of docs/site" "$PYTHON" tools/check_site_a11y.py ;;
   esac
 done

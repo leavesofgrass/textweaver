@@ -11,10 +11,14 @@
               --features textweaver-speech/omnivox
     doc       cargo doc --workspace --no-deps
               --features textweaver-speech/omnivox, with RUSTDOCFLAGS=-D warnings
-    keyboard  cargo xtask keyboard --check
     pseudo    cargo test -p textweaver-app --test pseudo_locale (every
               message comes from the catalog: bracketed in en-XA, direction
               marks closed in ar-XB)
+    generated cargo xtask regen --check (every generated file is current:
+              the notices, the settings reference, docs\keyboard.md, the
+              docs\site data, and the docs indexes and crate counts; one
+              line each; cargo xtask regen rebuilds them). -Only keyboard
+              or -Only site selects this step.
     hosts32   cargo build -p textweaver-eci -p textweaver-sapi --bins
               --target i686-pc-windows-msvc (the 32-bit engine hosts)
     scripts   PSScriptAnalyzer on scripts\*.ps1, when the module is installed
@@ -89,10 +93,9 @@ if ($Help) {
     Write-Line 'Usage: scripts\dev-check.ps1 [-Only STEP,...] [-FailFast] [-Docker] [-DryRun] [-Help]'
     Write-Line
     Write-Line 'Runs the checks CI runs: fmt, clippy, test, doc (rustdoc with -D warnings),'
-    Write-Line 'keyboard (cargo xtask keyboard --check), pseudo (the pseudo-locale check),'
-    Write-Line 'hosts32 (the 32-bit engine hosts),'
-    Write-Line 'links (tools\check_links.py: links and anchors in the docs resolve), site'
-    Write-Line '(tools\gen_site_data.py --check: the docs\site data is current), site-a11y'
+    Write-Line 'pseudo (the pseudo-locale check), generated (cargo xtask regen --check:'
+    Write-Line 'every generated file is current), hosts32 (the 32-bit engine hosts),'
+    Write-Line 'links (tools\check_links.py: links and anchors in the docs resolve), site-a11y'
     Write-Line '(tools\check_site_a11y.py: static accessibility checks of docs\site), and'
     Write-Line 'scripts (PSScriptAnalyzer, when installed). Windows uses'
     Write-Line '--features textweaver-speech/omnivox instead of --all-features.'
@@ -133,7 +136,9 @@ $script:failed = @()
 $script:skipped = @()
 
 function Test-Wanted([string] $Name) {
-    return ($Only.Count -eq 0 -or $Only -contains $Name)
+    if ($Only.Count -eq 0 -or $Only -contains $Name) { return $true }
+    # The keyboard and site checks are part of the generated step now.
+    return ($Name -eq 'generated' -and ($Only -contains 'keyboard' -or $Only -contains 'site'))
 }
 
 function Write-Summary {
@@ -186,15 +191,20 @@ Invoke-CheckStep 'fmt' 'formatting' @('cargo', 'fmt', '--all', '--check')
 Invoke-CheckStep 'clippy' 'lints, warnings are errors' (@('cargo', 'clippy', '--workspace', '--all-targets') + $features + @('--', '-D', 'warnings'))
 Invoke-CheckStep 'test' 'tests' (@('cargo', 'test', '--workspace') + $features)
 Invoke-CheckStep 'doc' 'API documentation, warnings are errors' (@('cargo', 'doc', '--workspace', '--no-deps') + $features) @{ RUSTDOCFLAGS = '-D warnings' }
-Invoke-CheckStep 'keyboard' 'docs/keyboard.md is current' @('cargo', 'xtask', 'keyboard', '--check')
 Invoke-CheckStep 'pseudo' 'the interface in the pseudo-locales en-XA and ar-XB' @('cargo', 'test', '-p', 'textweaver-app', '--test', 'pseudo_locale')
-$python = $null
-foreach ($candidate in @('python', 'python3')) {
-    if (Get-Command $candidate -ErrorAction SilentlyContinue) { $python = $candidate; break }
+Invoke-CheckStep 'generated' 'every generated file is current' @('cargo', 'xtask', 'regen', '--check')
+# The py launcher first: python on Windows may be the Microsoft Store stub.
+$python = @()
+if (Get-Command 'py' -ErrorAction SilentlyContinue) {
+    $python = @('py', '-3')
+} else {
+    foreach ($candidate in @('python3', 'python')) {
+        if (Get-Command $candidate -ErrorAction SilentlyContinue) { $python = @($candidate); break }
+    }
 }
-foreach ($pyStep in @('links', 'site', 'site-a11y')) {
+foreach ($pyStep in @('links', 'site-a11y')) {
     if (-not (Test-Wanted $pyStep)) { continue }
-    if (-not $python) {
+    if ($python.Count -eq 0) {
         Write-Line
         Write-Line "== ${pyStep}: skipped =="
         Write-Line "Python 3 is not installed, so the $pyStep check cannot run."
@@ -202,11 +212,9 @@ foreach ($pyStep in @('links', 'site', 'site-a11y')) {
         continue
     }
     if ($pyStep -eq 'links') {
-        Invoke-CheckStep 'links' 'links and anchors in the docs resolve' @($python, 'tools\check_links.py')
-    } elseif ($pyStep -eq 'site') {
-        Invoke-CheckStep 'site' 'the docs\site data is current' @($python, 'tools\gen_site_data.py', '--check')
+        Invoke-CheckStep 'links' 'links and anchors in the docs resolve' ($python + @('tools\check_links.py'))
     } else {
-        Invoke-CheckStep 'site-a11y' 'static accessibility checks of docs\site' @($python, 'tools\check_site_a11y.py')
+        Invoke-CheckStep 'site-a11y' 'static accessibility checks of docs\site' ($python + @('tools\check_site_a11y.py'))
     }
 }
 Invoke-CheckStep 'hosts32' 'the 32-bit engine hosts build' @('cargo', 'build', '-p', 'textweaver-eci', '-p', 'textweaver-sapi', '--bins', '--target', 'i686-pc-windows-msvc')
