@@ -13,6 +13,12 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Screen reader guide:** Orca says every key by default; how to turn that down.
 - **For contributors:** the nightly release-mode tests run under cargo-nextest, and a test that passes only on a retry is named as flaky; a test keeps the nightly fuzz list in step with the fuzz targets; `cargo xtask release` lists every other line still naming the old version; CI's docs job keeps a build cache.
 
+### W6k
+
+- **EPUB, Word, braille, and PDF output of large documents is much faster.** Building the document's structure grew with the square of its size; 10 MB of Markdown now converts to EPUB in about 1 second instead of 25, and a 50,000-item list in under a second instead of 11. The output is the same.
+- **`tw convert` saves a report.** `conversion-report.txt` in the output folder (or the folder converted in place) has the summary sentence, then each failure and warning, the file's name first. Each run replaces it; `--no-report` leaves it out, and a report is never converted as a document.
+- **For contributors:** `Converter::run_plan_with` reports each file as it finishes and stops when asked, never leaving a half-written file; `tests/matrix.rs` converts a fixture for every loader to Markdown and PDF, and a new loader needs one; `cargo run --release -p textweaver-writers --example bench_blocks -- FILE` times the block tree and each writer.
+
 ## [0.1.0-alpha.5] - 2026-09-29
 
 The fifth alpha. Braille comes first: every status line, list, and prompt puts the meaning in the first 40 cells, and math can be written in Nemeth or UEB braille. LaTeX, email, and web archives open without Pandoc; documents can be summarized with no model; publishing templates make APA and AMA papers with real Word footnotes; and the GUI ships in the release on every system, with syllables, the voice manager, a question dialog, and its labels in six languages.
