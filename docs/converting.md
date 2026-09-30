@@ -230,6 +230,7 @@ For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the 
 - `--pdf-font FILE` chooses a font file for the text of PDF output. `--font` does the same by name.
 - `--verbose` reads out every file, not only the failures and the summary.
 - `--json` prints the full result, every file with its status and timing, as JSON for scripts.
+- `--no-report` does not save `conversion-report.txt` (see [When something fails](#when-something-fails)).
 
 ## Formats textweaver reads
 
@@ -399,6 +400,8 @@ While you edit, each save (**Ctrl+S**) writes the preview again and you hear "Pr
 ## When something fails
 
 A file that cannot be converted never stops the others. After the summary, each failure is read out with its reason, for example "Failed: old.rst: no native reader for .rst files, and Pandoc is not installed". When any file fails, `tw convert` ends with exit status 1, so scripts can tell.
+
+The same list is saved as `conversion-report.txt` in the output folder, or in the folder you converted when there is no `--out`. It starts with the summary sentence, then lists each failure and each warning with the file's name first, for example "report.docx: parse error: not a valid DOCX (zip) file", and the file's full path on the next line. Each run replaces the report, so it always describes the last run; a report is never converted as a document. When anything failed or has warnings, `tw convert` says where the report is. `--no-report` leaves it out. Files named on their own, without `--out`, get no report.
 
 Two cases are refused before converting:
 
