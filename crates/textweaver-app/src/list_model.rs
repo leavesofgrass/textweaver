@@ -233,6 +233,9 @@ pub enum PromptKey {
     Down,
     /// Tab: completes a command name or a file path.
     Tab,
+    /// Ctrl+L in the command palette: shows its matches as a list, to hear
+    /// them in context; Enter runs one.
+    ShowMatches,
     /// Enter: answers the prompt with its text.
     Enter,
     /// Escape: cancels the prompt.
@@ -257,6 +260,9 @@ pub struct PromptModel {
     pub candidates: Vec<(ActionId, String)>,
     /// Which candidate Up and Down are on.
     pub candidate: Option<usize>,
+    /// Up and Down started from an empty palette, whose recent commands
+    /// come first and are said as recent.
+    candidate_from_empty: bool,
 }
 
 impl PromptModel {
@@ -270,6 +276,7 @@ impl PromptModel {
             history_index: None,
             candidates: Vec::new(),
             candidate: None,
+            candidate_from_empty: false,
         }
     }
 
@@ -448,12 +455,16 @@ impl App {
                     if let Some(i) = keep.or(self.pending_list_focus.take()) {
                         view.selected = i.min(view.items.len().saturating_sub(1));
                     }
-                    if self.announce_list_focus
-                        && let Some(item) = view.spoken_item_text(self.cat())
-                    {
+                    let item = self
+                        .announce_list_focus
+                        .then(|| view.spoken_item_text(self.cat()))
+                        .flatten();
+                    // Shown first, so a message held for it belongs to it
+                    // (crate::announce drops it if the list closes).
+                    self.list_model = Some(view);
+                    if let Some(item) = item {
                         self.announce_queued(&item, Priority::Polite);
                     }
-                    self.list_model = Some(view);
                 }
                 Effect::Redraw | Effect::Quit => {}
             }
@@ -487,6 +498,9 @@ impl App {
     pub(crate) fn list_key(&mut self, key: ListKey) -> Vec<Effect> {
         if self.list_model.is_none() {
             return vec![Effect::Redraw];
+        }
+        if let Some(effects) = self.menu_list_key(key) {
+            return effects;
         }
         if self.settings_screen.is_some()
             && let Some(effects) = self.settings_list_key(key)
@@ -618,6 +632,7 @@ impl App {
             PromptKey::Char(c) if !c.is_control() => {
                 mb.insert(c);
                 mb.candidate = None;
+                mb.candidate_from_empty = false;
                 echo = Some(c.to_string());
             }
             PromptKey::Char(_) => {}
@@ -649,6 +664,15 @@ impl App {
             PromptKey::End => mb.end(),
             PromptKey::Tab => {
                 self.complete_prompt();
+                return vec![Effect::Redraw];
+            }
+            PromptKey::ShowMatches => {
+                if mb.purpose == PromptPurpose::CommandPalette {
+                    let query = mb.text();
+                    self.prompt_model = None;
+                    self.leave_prompt();
+                    return self.palette_list(&query);
+                }
                 return vec![Effect::Redraw];
             }
             PromptKey::Up => {
@@ -710,8 +734,11 @@ impl App {
             };
             mb.candidate = Some(i);
             let action = mb.candidates[i].0;
+            let recent = mb.text().is_empty() || mb.candidate_from_empty;
+            mb.candidate_from_empty = recent;
             mb.set_text(action.id());
-            let said = self.palette_said(action);
+            let recent = recent && self.recent_commands().contains(&action);
+            let said = self.palette_said(action, recent);
             self.announce(&said, Priority::Assertive);
             return;
         }
@@ -777,7 +804,7 @@ impl App {
                 if let Some(mb) = self.prompt_model.as_mut() {
                     mb.set_text(a.id());
                 }
-                let said = self.palette_said(*a);
+                let said = self.palette_said(*a, false);
                 self.announce(&said, Priority::Assertive);
             }
             many => {
@@ -789,7 +816,11 @@ impl App {
                 {
                     mb.set_text(&prefix);
                 }
-                let first: Vec<String> = ids.iter().take(5).map(|i| i.replace('_', " ")).collect();
+                let first: Vec<String> = many
+                    .iter()
+                    .take(5)
+                    .map(|(a, _)| crate::menu::action_name(self.cat(), *a))
+                    .collect();
                 let msg = self.msg_args(
                     "listmodel-command-matches",
                     &args!["n" => many.len(), "names" => first.join(", ")],

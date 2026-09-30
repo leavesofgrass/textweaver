@@ -23,12 +23,43 @@ fn answer_path(text: &str) -> Option<PathBuf> {
     (!t.is_empty()).then(|| PathBuf::from(t))
 }
 
-/// The question asked before an import.
+/// How many changed settings the import question names.
+const NAMED_CHANGES: usize = 3;
+
+/// The question asked before an import, naming the first changes in the
+/// interface's language: "Import 12 changed settings from home.toml:
+/// Rate, Theme, Link color, and 9 more? y or n" (W6u).
 fn import_question(c: &Catalog, plan: &ImportPlan, name: &str) -> String {
     let n = plan.change_count().max(1);
+    let schema = crate::settings_schema::SettingsSchema::generate();
+    let names: Vec<String> = plan
+        .changes
+        .iter()
+        .take(NAMED_CHANGES)
+        .map(|ch| match ch.area {
+            textweaver_store::ChangeArea::Settings => schema
+                .get(&ch.path)
+                .map_or_else(|| ch.path.clone(), |s| s.label_in(c)),
+            textweaver_store::ChangeArea::Keymap => textweaver_keymap::ActionId::from_id(&ch.path)
+                .map_or_else(|| ch.path.clone(), |a| crate::menu::action_name(c, a)),
+        })
+        .collect();
+    if names.is_empty() {
+        return c.fmt(
+            "settingsio-import-question",
+            &args!["n" => n, "name" => name],
+        );
+    }
+    let mut listed = names.join(", ");
+    if plan.change_count() > names.len() {
+        listed = c.fmt(
+            "settingsio-and-more",
+            &args!["names" => listed, "n" => plan.change_count() - names.len()],
+        );
+    }
     c.fmt(
-        "settingsio-import-question",
-        &args!["n" => n, "name" => name],
+        "settingsio-import-question-names",
+        &args!["n" => n, "name" => name, "names" => listed],
     )
 }
 
@@ -259,13 +290,13 @@ mod tests {
         palette(&mut b, "import_settings", file.to_str().unwrap());
         assert_eq!(
             b.status_text(),
-            "Import 1 changed setting from mine.json? y or n"
+            "Import 1 changed setting from mine.json: Rate? y or n"
         );
         assert!(b.confirmation_pending());
         b.dispatch(Command::Confirm(Confirm::Repeat));
         assert_eq!(
             b.status_text(),
-            "Import 1 changed setting from mine.json? y or n"
+            "Import 1 changed setting from mine.json: Rate? y or n"
         );
         b.dispatch(Command::Confirm(Confirm::Yes));
         assert!(!b.confirmation_pending());

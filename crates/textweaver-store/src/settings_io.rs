@@ -688,6 +688,7 @@ fn check_leaf(section: &str, key: &str, value: toml::Value) -> Result<(), String
         "keyboard" => fits::<KeyboardSettings>(key, value),
         "accessibility" => fits::<crate::AccessibilitySettings>(key, value),
         "export" => fits::<ExportSettings>(key, value),
+        "colors" => fits::<crate::ColorSettings>(key, value),
         _ => Ok(()),
     }
 }
@@ -874,9 +875,23 @@ pub fn plan_import(
     text: &str,
     mode: ImportMode,
 ) -> Result<ImportPlan, SettingsIoError> {
-    let incoming = classify(parse_input(text)?)?;
+    let mut incoming = classify(parse_input(text)?)?;
     let prefix = incoming.prefix;
     let mut warnings = incoming.warnings;
+    // Renamed keys move to their new names first, so their values are
+    // imported, not warned about (crate::settings::RENAMED_SETTINGS).
+    if let Some(map) = incoming.settings.take() {
+        let renamed = json_object_to_toml(&map, "").ok().and_then(|mut t| {
+            (!crate::settings::rename_legacy_settings(&mut t).is_empty()).then_some(t)
+        });
+        incoming.settings = Some(match renamed {
+            Some(t) => match toml_to_json(&toml::Value::Table(t)) {
+                Value::Object(m) => m,
+                _ => map,
+            },
+            None => map,
+        });
+    }
     let mut errors = Vec::new();
     let settings = match &incoming.settings {
         None => current.clone(),
@@ -962,6 +977,7 @@ pub fn reset_sections(current: &Settings) -> Vec<String> {
         "summary",
         "interface",
         "gui",
+        "colors",
         "keymap",
     ]
     .iter()

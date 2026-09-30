@@ -154,17 +154,20 @@ mod authoring;
 mod authoring_state;
 // In-reader export, preview, and citations: the full modules with the
 // `publish` feature, stand-ins that say "not in this build" without it.
+mod announce;
 #[cfg(feature = "publish")]
 mod citations;
 #[cfg(not(feature = "publish"))]
 #[path = "lean/citations.rs"]
 mod citations;
+mod colors;
 mod command;
 pub mod disk;
 mod edit;
 mod export;
 mod extra;
 mod find_scan;
+mod frame_cache;
 mod goto;
 #[cfg(feature = "grammar")]
 mod grammar;
@@ -181,6 +184,7 @@ mod marks;
 mod math_display;
 mod math_explore;
 mod mdline;
+pub mod menu;
 mod nav;
 mod notes;
 pub mod opening;
@@ -232,6 +236,7 @@ pub use access::{
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use authoring::osc52;
 pub use authoring_state::{ClientFactory, Launcher, open_with_system};
+pub use colors::{COLOR_CHOICES, COLOR_SETTINGS, MarkColors, is_color_setting};
 pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpose};
 pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_lookup};

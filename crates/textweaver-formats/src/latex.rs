@@ -36,8 +36,21 @@
 //!   `\verb`, `verbatim`, `lstlisting`, and `minted` as code; accents
 //!   (`\'e`), special characters, and `--`, `---`, and TeX quotes.
 //! - **Macros**: `\newcommand`, `\renewcommand`, `\providecommand`, and
-//!   `\def` without arguments are expanded, in text and in math;
-//!   `\DeclareMathOperator` too. Macros with arguments are not expanded.
+//!   `\def` are expanded, in text and in math, with up to nine arguments
+//!   (`#1` to `#9`, the first optional when it has a default);
+//!   `\DeclareMathOperator` too. `\def` with delimited parameters (`#1.`)
+//!   is not expanded, and is named in the warnings. `\newenvironment`
+//!   environments run their begin code (with its arguments) and end code.
+//! - **Tables**: `\multicolumn` and `\multirow` cells say what they span
+//!   after their text ("Wide (spans 2 columns)").
+//! - **Pictures**: `\includegraphics` is described by its figure's
+//!   caption, else by its `alt` key, else named by its file.
+//! - **Bibliography** (feature `bibliography`): `\bibliography{refs}` and
+//!   biblatex's `\addbibresource` with `\printbibliography` read the
+//!   `.bib` files from the document's folder through `textweaver-cite`,
+//!   and list the cited entries (all of them after `\nocite{*}`) under a
+//!   "References" heading, formatted in the style `\bibliographystyle`
+//!   names (numeric styles as IEEE, the rest as APA).
 //! - **Files**: `\input`, `\include`, `\subfile`, and `\import` read `.tex`
 //!   files from the document's own folder or below it, never outside it.
 //!
@@ -793,6 +806,248 @@ fn to_source(toks: &[Tok]) -> String {
     s.trim().to_owned()
 }
 
+/// Most cited keys remembered for the bibliography.
+const MAX_CITED: usize = 10_000;
+
+/// The formatted entries of a `.bib` file's text: the `cited` keys in
+/// order, or every entry with `all` (`\nocite{*}`), in the style
+/// `\bibliographystyle` names (numeric styles as IEEE, the rest as APA).
+#[cfg(feature = "bibliography")]
+fn bibliography_entries(
+    text: &str,
+    cited: &[String],
+    all: bool,
+    style: Option<&str>,
+) -> Vec<String> {
+    use textweaver_cite::{CitationStyle, Formatter, OutputFormat, Reference, formats};
+    let Ok(refs) = formats::parse(text, formats::Format::BibLatex) else {
+        return Vec::new();
+    };
+    let chosen: Vec<&Reference> = if all {
+        refs.iter().collect()
+    } else {
+        let by_key: HashMap<&str, &Reference> = refs.iter().map(|r| (r.id.as_str(), r)).collect();
+        cited
+            .iter()
+            .filter_map(|k| by_key.get(k.as_str()).copied())
+            .collect()
+    };
+    if chosen.is_empty() {
+        return Vec::new();
+    }
+    let lower = style.map(|s| s.trim().to_ascii_lowercase());
+    let name = match lower.as_deref() {
+        Some("ieeetr" | "ieee" | "ieeetran" | "unsrt" | "plain" | "abbrv" | "alpha" | "siam") => {
+            "ieee"
+        }
+        Some("vancouver" | "ama") => "vancouver",
+        Some("chicago") => "chicago",
+        Some("mla") => "mla",
+        _ => "apa",
+    };
+    let Ok(style) = CitationStyle::builtin(name) else {
+        return Vec::new();
+    };
+    Formatter::new(&style, OutputFormat::Plain)
+        .bibliography(&chosen)
+        .map(|v| v.into_iter().map(|e| e.text).collect())
+        .unwrap_or_default()
+}
+
+#[cfg(not(feature = "bibliography"))]
+fn bibliography_entries(_: &str, _: &[String], _: bool, _: Option<&str>) -> Vec<String> {
+    Vec::new()
+}
+
+/// The value of `key` in a `key=value` list (`alt={A cell}, width=3cm`):
+/// braces around the value dropped, commas inside braces kept.
+fn key_value(list: &str, key: &str) -> Option<String> {
+    let mut depth = 0usize;
+    let mut start = 0;
+    let mut items = Vec::new();
+    for (i, c) in list.char_indices() {
+        match c {
+            '{' => depth += 1,
+            '}' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => {
+                items.push(&list[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    items.push(&list[start..]);
+    items.into_iter().find_map(|item| {
+        let (k, v) = item.split_once('=')?;
+        if k.trim() != key {
+            return None;
+        }
+        let v = v.trim();
+        let v = v
+            .strip_prefix('{')
+            .and_then(|x| x.strip_suffix('}'))
+            .unwrap_or(v);
+        Some(v.split_whitespace().collect::<Vec<_>>().join(" "))
+    })
+}
+
+/// `#1` to `#9` in `s` replaced by `args` (`##` is `#`), stopping at
+/// `limit` bytes.
+fn substitute_str(s: &str, args: &[String], limit: usize) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(i) = rest.find('#') {
+        out.push_str(&rest[..i]);
+        let after = &rest[i + 1..];
+        match after.chars().next() {
+            Some('#') => {
+                out.push('#');
+                rest = &after[1..];
+            }
+            Some(d @ '1'..='9') => {
+                let n = usize::from(d as u8 - b'0');
+                if let Some(a) = args.get(n - 1) {
+                    out.push_str(a);
+                }
+                rest = &after[1..];
+            }
+            _ => {
+                out.push('#');
+                rest = after;
+            }
+        }
+        if out.len() > limit {
+            let mut cut = limit;
+            while !out.is_char_boundary(cut) {
+                cut -= 1;
+            }
+            out.truncate(cut);
+            return out;
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// A macro body with `#1` to `#9` replaced by the arguments' tokens (their
+/// LaTeX inside math), at most `limit` tokens.
+fn substitute(body: &[Tok], args: &[Vec<Tok>], limit: usize) -> Vec<Tok> {
+    let sources: Vec<String> = args.iter().map(|a| to_source(a)).collect();
+    let plains: Vec<String> = args.iter().map(|a| plain(a)).collect();
+    let mut out = Vec::with_capacity(body.len());
+    for t in body {
+        if out.len() > limit {
+            break;
+        }
+        match t {
+            Tok::Text(s) if s.contains('#') => {
+                let mut rest = s.as_str();
+                let mut buf = String::new();
+                while let Some(i) = rest.find('#') {
+                    buf.push_str(&rest[..i]);
+                    let after = &rest[i + 1..];
+                    match after.chars().next() {
+                        Some('#') => {
+                            buf.push('#');
+                            rest = &after[1..];
+                        }
+                        Some(d @ '1'..='9') => {
+                            if !buf.is_empty() {
+                                out.push(Tok::Text(std::mem::take(&mut buf)));
+                            }
+                            let n = usize::from(d as u8 - b'0');
+                            if let Some(a) = args.get(n - 1) {
+                                let room = limit.saturating_sub(out.len());
+                                out.extend(a.iter().take(room).cloned());
+                            }
+                            rest = &after[1..];
+                        }
+                        _ => {
+                            buf.push('#');
+                            rest = after;
+                        }
+                    }
+                }
+                buf.push_str(rest);
+                if !buf.is_empty() {
+                    out.push(Tok::Text(buf));
+                }
+            }
+            Tok::Math { display, body } if body.contains('#') => out.push(Tok::Math {
+                display: *display,
+                body: substitute_str(body, &sources, MAX_MATH_BYTES),
+            }),
+            Tok::MathEnv { name, body } if body.contains('#') => out.push(Tok::MathEnv {
+                name: name.clone(),
+                body: substitute_str(body, &sources, MAX_MATH_BYTES),
+            }),
+            Tok::Raw(s) if s.contains('#') => {
+                out.push(Tok::Raw(substitute_str(s, &plains, MAX_MATH_BYTES)));
+            }
+            other => out.push(other.clone()),
+        }
+    }
+    out
+}
+
+/// The arguments of a macro used in math, read from the source after its
+/// name: an optional `[...]` first when it has a default, then braced
+/// groups or single tokens. The arguments and the bytes they took.
+fn math_args(s: &str, params: usize, default: Option<&str>) -> Option<(Vec<String>, usize)> {
+    let mut args = Vec::with_capacity(params);
+    let mut i = 0;
+    let skip_ws = |i: &mut usize| {
+        while s[*i..].starts_with([' ', '\t', '\n']) {
+            *i += 1;
+        }
+    };
+    let group = |i: &mut usize, open: char, close: char| -> Option<String> {
+        let mut depth = 0usize;
+        for (j, c) in s[*i..].char_indices() {
+            if c == open {
+                depth += 1;
+            } else if c == close {
+                depth = depth.checked_sub(1)?;
+                if depth == 0 {
+                    let inner = s[*i + open.len_utf8()..*i + j].to_owned();
+                    *i += j + close.len_utf8();
+                    return Some(inner);
+                }
+            }
+        }
+        None
+    };
+    let mut from = 0;
+    if let Some(d) = default {
+        skip_ws(&mut i);
+        if s[i..].starts_with('[') {
+            args.push(group(&mut i, '[', ']')?);
+        } else {
+            args.push(d.to_owned());
+        }
+        from = 1;
+    }
+    for _ in from..params {
+        skip_ws(&mut i);
+        let rest = &s[i..];
+        if rest.starts_with('{') {
+            args.push(group(&mut i, '{', '}')?);
+        } else if let Some(cmd) = rest.strip_prefix('\\') {
+            let len = cmd
+                .find(|c: char| !c.is_ascii_alphabetic())
+                .unwrap_or(cmd.len())
+                .max(cmd.chars().next().map_or(0, char::len_utf8));
+            args.push(rest[..=len].to_owned());
+            i += 1 + len;
+        } else {
+            let c = rest.chars().next()?;
+            args.push(c.to_string());
+            i += c.len_utf8();
+        }
+    }
+    Some((args, i))
+}
+
 /// TeX's ligatures in running text: dashes and quotes.
 fn ligatures(s: &str) -> String {
     if !s.contains(['-', '`', '\'']) {
@@ -827,7 +1082,34 @@ struct Knowledge {
     /// Per float, in order: its first picture.
     graphics: Vec<Option<String>>,
     chapters: bool,
+    /// The keys cited, in first-cited order, for the bibliography.
+    cited: Vec<String>,
+    /// `\nocite{*}`: every entry of the bibliography is listed.
+    cite_all: bool,
 }
+
+/// A macro with arguments (`\newcommand\x[2][default]{...#1...#2}`).
+#[derive(Clone, Debug)]
+struct MacroDef {
+    /// How many arguments, 1 to 9.
+    params: usize,
+    /// The first argument's default, which makes it optional.
+    default: Option<Vec<Tok>>,
+    body: Vec<Tok>,
+}
+
+/// An environment made with `\newenvironment`.
+#[derive(Clone, Debug)]
+struct EnvDef {
+    /// Its arguments, as a macro's: the code at `\begin` takes them.
+    begin: MacroDef,
+    /// The code at `\end`.
+    end: Vec<Tok>,
+}
+
+/// The internal command that ends a `\newenvironment` environment after
+/// its end code (the lexer never makes a name with `@`).
+const END_USER_ENV: &str = "textweaver@endenv";
 
 // ---------------------------------------------------------------------
 // The parser
@@ -973,6 +1255,17 @@ struct Parser<'a> {
     unknown_envs: BTreeSet<String>,
     skipped_includes: BTreeSet<String>,
     arg_macros: BTreeSet<String>,
+    /// Macros with arguments, for text and for math.
+    arg_defs: HashMap<String, MacroDef>,
+    math_arg_defs: HashMap<String, (usize, Option<String>, String)>,
+    /// Environments made with `\newenvironment`.
+    env_defs: HashMap<String, EnvDef>,
+    /// Bibliography files named by `\bibliography` or `\addbibresource`.
+    bib_files: Vec<String>,
+    /// `\bibliographystyle`.
+    bib_style: Option<String>,
+    /// Other warnings for the document.
+    extra_warnings: BTreeSet<String>,
 }
 
 impl<'a> Parser<'a> {
@@ -1056,6 +1349,12 @@ impl<'a> Parser<'a> {
             unknown_envs: BTreeSet::new(),
             skipped_includes: BTreeSet::new(),
             arg_macros: BTreeSet::new(),
+            arg_defs: HashMap::new(),
+            math_arg_defs: HashMap::new(),
+            env_defs: HashMap::new(),
+            bib_files: Vec::new(),
+            bib_style: None,
+            extra_warnings: BTreeSet::new(),
         }
     }
 
@@ -1907,6 +2206,21 @@ impl<'a> Parser<'a> {
             self.theorem(&name, &display, &counter, numbered);
             return;
         }
+        if let Some(def) = self.env_defs.get(&name).cloned() {
+            // `\newenvironment`: its begin code, with its arguments.
+            if self.expansions >= MAX_EXPANSIONS {
+                self.cut = true;
+                return;
+            }
+            self.expansions += 1;
+            let code = self.expand_with_args(&def.begin);
+            if self.push_frame(FrameKind::Env(name)) {
+                self.end_para();
+                self.block_break();
+            }
+            self.inject(code);
+            return;
+        }
         match name.as_str() {
             "document" => {
                 self.preamble = false;
@@ -1998,16 +2312,36 @@ impl<'a> Parser<'a> {
 
     fn end_env(&mut self) {
         let name = plain(&self.arg());
+        if let Some(def) = self.env_defs.get(&name)
+            && self.env_frame(&name).is_some()
+        {
+            // The end code first, then the environment ends.
+            let mut seq = def.end.clone();
+            seq.push(Tok::Cmd(END_USER_ENV.into()));
+            seq.push(Tok::Raw(name));
+            self.inject(seq);
+            return;
+        }
+        self.close_env(&name);
+    }
+
+    /// The frame of the innermost open environment `name` inside the
+    /// current argument.
+    fn env_frame(&self, name: &str) -> Option<usize> {
         let stop = self
             .frames
             .iter()
             .rposition(|f| matches!(f.kind, FrameKind::Arg(..)))
             .map_or(0, |i| i + 1);
-        let Some(i) = self.frames[stop..]
+        self.frames[stop..]
             .iter()
-            .rposition(|f| matches!(&f.kind, FrameKind::Env(n) if *n == name))
+            .rposition(|f| matches!(&f.kind, FrameKind::Env(n) if n == name))
             .map(|i| i + stop)
-        else {
+    }
+
+    /// Ends the innermost open environment `name` and all inside it.
+    fn close_env(&mut self, name: &str) {
+        let Some(i) = self.env_frame(name) else {
             if name == "document" {
                 self.done = true;
             }
@@ -2308,9 +2642,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Macros without arguments expanded inside a formula.
+    /// Macros expanded inside a formula: without arguments, and with up to
+    /// nine (read from the formula's source after the name).
     fn expand_math(&mut self, body: &str) -> String {
-        if self.math_macros.is_empty() || !body.contains('\\') {
+        if (self.math_macros.is_empty() && self.math_arg_defs.is_empty()) || !body.contains('\\') {
             return body.to_owned();
         }
         let mut out = body.to_owned();
@@ -2337,6 +2672,28 @@ impl<'a> Parser<'a> {
                         next.push('}');
                         changed = true;
                         rest = &after[len..];
+                    }
+                    None if len > 0
+                        && self.expansions < MAX_EXPANSIONS
+                        && self.math_arg_defs.contains_key(name) =>
+                    {
+                        let (params, default, def) = self.math_arg_defs[name].clone();
+                        match math_args(&after[len..], params, default.as_deref()) {
+                            Some((args, used)) => {
+                                self.expansions += 1;
+                                let room = MAX_MATH_BYTES.saturating_sub(next.len());
+                                next.push('{');
+                                next.push_str(&substitute_str(&def, &args, room));
+                                next.push('}');
+                                changed = true;
+                                rest = &after[len + used..];
+                            }
+                            None => {
+                                next.push('\\');
+                                next.push_str(name);
+                                rest = &after[len..];
+                            }
+                        }
                     }
                     _ => {
                         let take = if len == 0 {
@@ -2464,6 +2821,17 @@ impl<'a> Parser<'a> {
             .map(str::trim)
             .filter(|k| !k.is_empty())
             .collect();
+        if self.learning {
+            for k in &keys {
+                if *k == "*" {
+                    self.learn.cite_all = true;
+                } else if self.learn.cited.len() < MAX_CITED
+                    && !self.learn.cited.iter().any(|c| c == k)
+                {
+                    self.learn.cited.push((*k).to_owned());
+                }
+            }
+        }
         if keys.is_empty() || name == "nocite" {
             return;
         }
@@ -2563,9 +2931,15 @@ impl<'a> Parser<'a> {
         self.inject(seq);
     }
 
+    /// A picture: described by its figure's caption, else by its `alt`
+    /// key (`\includegraphics[alt={A cell dividing}]{cell}`), else named
+    /// by its file.
     fn includegraphics(&mut self) {
         self.star();
-        self.opt(true);
+        let alt = self
+            .opt(true)
+            .and_then(|o| key_value(&to_source(&o), "alt"))
+            .filter(|a| !a.is_empty());
         let file = plain(&self.arg());
         if let Some(f) = self.floats.last() {
             let index = f.index;
@@ -2588,9 +2962,11 @@ impl<'a> Parser<'a> {
         self.text_start();
         let o = self
             .open(Marker::new(MarkerKind::Image, CharRange::empty(0)).with_reference(file.clone()));
-        let name = Path::new(&file)
-            .file_name()
-            .map_or_else(|| file.clone(), |n| n.to_string_lossy().into_owned());
+        let name = alt.unwrap_or_else(|| {
+            Path::new(&file)
+                .file_name()
+                .map_or_else(|| file.clone(), |n| n.to_string_lossy().into_owned())
+        });
         self.b().text(&name);
         self.close(o);
     }
@@ -2606,36 +2982,90 @@ impl<'a> Parser<'a> {
         let args = self.opt(true);
         let default = self.opt(true);
         let body = self.arg();
-        let n = args
-            .map(|a| plain(&a).trim().parse::<u32>().unwrap_or(1))
-            .unwrap_or(0);
-        if n > 0 || default.is_some() {
+        let n = args.map_or(0, |a| plain(&a).trim().parse::<usize>().unwrap_or(0));
+        self.learn_macro(name, n, default, body);
+    }
+
+    /// Records a macro: without arguments it expands as it is; with one to
+    /// nine it takes them (`#1` to `#9`); more, or a malformed count, and
+    /// it is named in the warnings instead.
+    fn learn_macro(
+        &mut self,
+        name: String,
+        params: usize,
+        default: Option<Vec<Tok>>,
+        body: Vec<Tok>,
+    ) {
+        self.macros.remove(&name);
+        self.math_macros.remove(&name);
+        self.arg_defs.remove(&name);
+        self.math_arg_defs.remove(&name);
+        if params == 0 && default.is_none() {
+            self.math_macros.insert(name.clone(), to_source(&body));
+            self.macros.insert(name, body);
+            return;
+        }
+        if !(1..=9).contains(&params) {
             self.arg_macros.insert(name);
             return;
         }
-        self.math_macros.insert(name.clone(), to_source(&body));
-        self.macros.insert(name, body);
+        self.arg_macros.remove(&name);
+        self.math_arg_defs.insert(
+            name.clone(),
+            (params, default.as_deref().map(to_source), to_source(&body)),
+        );
+        self.arg_defs.insert(
+            name,
+            MacroDef {
+                params,
+                default,
+                body,
+            },
+        );
     }
 
     fn def(&mut self) {
         let Some(Tok::Cmd(name)) = self.pop() else {
             return;
         };
-        // Parameters (`#1`) come before the body.
-        if !matches!(self.peek(), Some(Tok::Open)) {
-            while let Some(t) = self.peek() {
-                if matches!(t, Tok::Open) || t.is_sentinel() {
-                    break;
-                }
-                self.pop();
+        // Parameters (`#1#2`) come before the body; only that plain form
+        // is read (not delimited parameters such as `#1.`).
+        let mut params = String::new();
+        let mut plain_params = true;
+        while let Some(t) = self.peek() {
+            if matches!(t, Tok::Open) || t.is_sentinel() {
+                break;
             }
-            self.arg();
+            match self.pop() {
+                Some(Tok::Text(s)) => params.push_str(&s),
+                Some(Tok::Space) => {}
+                _ => plain_params = false,
+            }
+        }
+        let body = self.arg();
+        let n = params.len() / 2;
+        let expected: String = (1..=n).map(|i| format!("#{i}")).collect();
+        if !plain_params || params != expected {
             self.arg_macros.insert(name);
             return;
         }
-        let body = self.arg();
-        self.math_macros.insert(name.clone(), to_source(&body));
-        self.macros.insert(name, body);
+        self.learn_macro(name, n, None, body);
+    }
+
+    /// Expands a macro with arguments: its arguments read (the first from
+    /// `[...]`, else its default, when it has one), then its body with
+    /// `#1` to `#9` replaced, bounded by the token budget.
+    fn expand_with_args(&mut self, def: &MacroDef) -> Vec<Tok> {
+        let mut args: Vec<Vec<Tok>> = Vec::with_capacity(def.params);
+        let mut from = 0;
+        if let Some(default) = &def.default {
+            args.push(self.opt(false).unwrap_or_else(|| default.clone()));
+            from = 1;
+        }
+        for _ in from..def.params {
+            args.push(self.arg());
+        }
+        substitute(&def.body, &args, self.budget.saturating_add(1))
     }
 
     fn math_operator(&mut self) {
@@ -2709,7 +3139,7 @@ impl<'a> Parser<'a> {
         if file.is_empty() {
             return;
         }
-        match self.read_include(&file) {
+        match self.read_include(&file, "tex") {
             Ok(text) => {
                 // An included file brings its own allowance.
                 let extra = text
@@ -2739,8 +3169,66 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// The text of an included file, or why it was not read.
-    fn read_include(&mut self, file: &str) -> Result<String, &'static str> {
+    /// `\bibliography` or `\printbibliography`: a "References" heading and
+    /// the cited entries of the bibliography files, formatted (feature
+    /// `bibliography`, through `textweaver-cite`). Without the feature, or
+    /// when no file can be read, the document says so in its warnings.
+    fn print_bibliography(&mut self) {
+        if self.learning || self.preamble {
+            return;
+        }
+        let files = std::mem::take(&mut self.bib_files);
+        if files.is_empty() {
+            return;
+        }
+        let mut entries = Vec::new();
+        for f in &files {
+            let file = f.trim_end_matches(".bib").to_owned() + ".bib";
+            match self.read_include(&file, "bib") {
+                Ok(text) => {
+                    self.includes += 1;
+                    entries.extend(bibliography_entries(
+                        &text,
+                        &self.known.cited,
+                        self.known.cite_all,
+                        self.bib_style.as_deref(),
+                    ));
+                }
+                Err(why) => {
+                    self.skipped_includes.insert(format!("{file} ({why})"));
+                }
+            }
+        }
+        if !cfg!(feature = "bibliography") {
+            self.extra_warnings
+                .insert("The bibliography is not read in this build of textweaver.".to_owned());
+            return;
+        }
+        if entries.is_empty() {
+            return;
+        }
+        self.end_para();
+        self.block_break();
+        let level = self.section_level();
+        let h = self.open(Marker::new(MarkerKind::Heading, CharRange::empty(0)).with_level(level));
+        self.b().text("References");
+        self.close(h);
+        self.b().paragraph_break();
+        let list = self.open(Marker::new(MarkerKind::List, CharRange::empty(0)).with_level(1));
+        for e in entries {
+            self.b().line_break();
+            let item =
+                self.open(Marker::new(MarkerKind::ListItem, CharRange::empty(0)).with_level(1));
+            self.b().text(&e);
+            self.close(item);
+        }
+        self.close(list);
+        self.b().paragraph_break();
+    }
+
+    /// The text of an included file (with `ext` when it has no extension),
+    /// or why it was not read.
+    fn read_include(&mut self, file: &str, ext: &str) -> Result<String, &'static str> {
         let Some(folder) = self.folder.clone() else {
             return Err("the document has no folder");
         };
@@ -2749,7 +3237,7 @@ impl<'a> Parser<'a> {
         }
         let mut rel = PathBuf::from(file.replace('\\', "/"));
         if rel.extension().is_none() {
-            rel.set_extension("tex");
+            rel.set_extension(ext);
         }
         if !rel.components().all(|c| matches!(c, Component::Normal(_))) {
             return Err("it is outside the document's folder");
@@ -2783,6 +3271,21 @@ impl<'a> Parser<'a> {
         self.text_start();
         let o = self.open(Marker::new(kind, CharRange::empty(0)));
         self.attach(o);
+    }
+
+    /// A spanning cell's text, then "(spans 3 columns)".
+    fn span(&mut self, body: Vec<Tok>, count: &str, what: &str) {
+        let n = count
+            .trim()
+            .trim_start_matches(['-', '+'])
+            .parse::<u32>()
+            .unwrap_or(1);
+        let mut seq = self.arg_seq(Act::Plain, body);
+        if n > 1 {
+            seq.push(Tok::Space);
+            seq.push(Tok::Text(format!("(spans {n} {what}s)")));
+        }
+        self.inject(seq);
     }
 
     fn plain_arg(&mut self) {
@@ -2854,12 +3357,34 @@ impl<'a> Parser<'a> {
             }
             "DeclareMathOperator" => self.math_operator(),
             "newtheorem" => self.newtheorem(),
-            "newenvironment" | "renewenvironment" => {
+            "newenvironment" | "renewenvironment" | "provideenvironment" => {
                 self.star();
-                self.arg();
-                self.opt(true);
-                self.opt(true);
-                self.skip_args(2);
+                let env = plain(&self.arg());
+                let n = self
+                    .opt(true)
+                    .map_or(0, |a| plain(&a).trim().parse::<usize>().unwrap_or(0));
+                let default = self.opt(true);
+                let begin = self.arg();
+                let end = self.arg();
+                if !env.is_empty() && n <= 9 && env.len() <= MAX_NAME {
+                    self.env_defs.insert(
+                        env,
+                        EnvDef {
+                            begin: MacroDef {
+                                params: n,
+                                default,
+                                body: begin,
+                            },
+                            end,
+                        },
+                    );
+                }
+            }
+            END_USER_ENV => {
+                if let Some(Tok::Raw(env)) = self.peek().cloned() {
+                    self.pop();
+                    self.close_env(&env);
+                }
             }
             "usepackage" | "RequirePackage" => self.usepackage(),
             "documentclass" | "documentstyle" => {
@@ -2923,15 +3448,21 @@ impl<'a> Parser<'a> {
                 }
             }
             "includegraphics" => self.includegraphics(),
+            // A cell over several columns or rows says so after its text.
             "multicolumn" => {
-                self.skip_args(2);
-                self.plain_arg();
+                let n = plain(&self.arg());
+                self.arg();
+                let body = self.arg();
+                self.span(body, &n, "column");
             }
             "multirow" => {
-                self.arg();
+                self.opt(true);
+                let n = plain(&self.arg());
                 self.opt(true);
                 self.arg();
-                self.plain_arg();
+                self.opt(true);
+                let body = self.arg();
+                self.span(body, &n, "row");
             }
             "hline" | "toprule" | "midrule" | "bottomrule" | "specialrule" | "hhline" => {
                 if name == "specialrule" {
@@ -3078,8 +3609,7 @@ impl<'a> Parser<'a> {
             | "nobreakspace" => self.b().space(),
             "newblock" => self.b().space(),
             "vspace" | "hspace" | "addvspace" | "phantom" | "hphantom" | "vphantom" | "index"
-            | "glossary" | "pagestyle" | "thispagestyle" | "pagenumbering"
-            | "bibliographystyle" | "bibliography" | "addbibresource" | "graphicspath"
+            | "glossary" | "pagestyle" | "thispagestyle" | "pagenumbering" | "graphicspath"
             | "geometry" | "hypersetup" | "stepcounter" | "refstepcounter" | "newlength"
             | "lstset" | "usetikzlibrary" | "tikzset" | "pgfplotsset" | "setlist"
             | "linespread" | "includeonly" | "color" | "pagecolor" | "newcounter" | "urlstyle"
@@ -3109,17 +3639,39 @@ impl<'a> Parser<'a> {
             | "mainmatter" | "backmatter" | "normalfont" | "rmfamily" | "sffamily" | "upshape"
             | "mdseries" | "scshape" | "normalsize" | "small" | "footnotesize" | "scriptsize"
             | "tiny" | "large" | "Large" | "LARGE" | "huge" | "Huge" | "onehalfspacing"
-            | "doublespacing" | "singlespacing" | "sloppy" | "fussy" | "noalign"
-            | "printbibliography" | "today" | "null" | "hrule" | "vrule" | "hrulefill"
-            | "dotfill" | "leavevmode" | "strut" | "allowbreak" | "nobreak" | "clubpenalty"
-            | "widowpenalty" | "maketitlepage" | "FloatBarrier" | "printindex" | "makeindex"
-            | "rm" | "sf" | "sc" | "footnotesep" | "centerline" => {
+            | "doublespacing" | "singlespacing" | "sloppy" | "fussy" | "noalign" | "today"
+            | "null" | "hrule" | "vrule" | "hrulefill" | "dotfill" | "leavevmode" | "strut"
+            | "allowbreak" | "nobreak" | "clubpenalty" | "widowpenalty" | "maketitlepage"
+            | "FloatBarrier" | "printindex" | "makeindex" | "rm" | "sf" | "sc" | "footnotesep"
+            | "centerline" => {
                 if matches!(name, "pagebreak") {
                     self.opt(false);
                 }
-                if name == "printbibliography" {
-                    self.opt(true);
+            }
+            // The bibliography, read from `.bib` files beside the document.
+            "bibliography" => {
+                let files = plain(&self.arg());
+                self.bib_files.extend(
+                    files
+                        .split(',')
+                        .map(|f| f.trim().to_owned())
+                        .filter(|f| !f.is_empty()),
+                );
+                self.print_bibliography();
+            }
+            "addbibresource" | "addglobalbib" => {
+                self.opt(true);
+                let file = plain(&self.arg());
+                if !file.trim().is_empty() {
+                    self.bib_files.push(file.trim().to_owned());
                 }
+            }
+            "bibliographystyle" => {
+                self.bib_style = Some(plain(&self.arg()));
+            }
+            "printbibliography" => {
+                self.opt(true);
+                self.print_bibliography();
             }
             _ => self.unknown_command(name),
         }
@@ -3142,6 +3694,16 @@ impl<'a> Parser<'a> {
             if self.expansions < MAX_EXPANSIONS {
                 self.expansions += 1;
                 let body = body.clone();
+                self.inject(body);
+            } else {
+                self.cut = true;
+            }
+            return;
+        }
+        if let Some(def) = self.arg_defs.get(name).cloned() {
+            if self.expansions < MAX_EXPANSIONS {
+                self.expansions += 1;
+                let body = self.expand_with_args(&def);
                 self.inject(body);
             } else {
                 self.cut = true;
@@ -3187,6 +3749,9 @@ impl<'a> Parser<'a> {
         }
         if self.flattened || self.overflow > 0 {
             add_warning(meta, crate::NESTING_WARNING);
+        }
+        for w in &self.extra_warnings {
+            add_warning(meta, w);
         }
         let mut unknown: Vec<String> = self.unknown.iter().map(|n| format!("\\{n}")).collect();
         unknown.extend(self.arg_macros.iter().map(|n| format!("\\{n}")));
@@ -3638,15 +4203,79 @@ mod tests {
         );
         let text = d.text().to_string();
         assert!(
-            text.starts_with("In Biology 101, $x \\in {\\mathbb{R}}$. ab"),
+            text.starts_with("In Biology 101, $x \\in {\\mathbb{R}}$. (a,b)"),
             "{text}"
         );
         assert!(
-            crate::warnings(&d.meta)
-                .iter()
-                .any(|w| w.contains("\\pair")),
+            crate::warnings(&d.meta).is_empty(),
             "{:?}",
             crate::warnings(&d.meta)
+        );
+    }
+
+    #[test]
+    fn macros_with_arguments_expand_in_text_and_math() {
+        let d = load(
+            "\\newcommand{\\vect}[1]{\\mathbf{#1}}\\newcommand{\\greet}[2][Hello]{#1, \\textbf{#2}!}\\def\\both#1#2{#2 and #1}\\newcommand\\norm[1]{\\lVert #1 \\rVert}\\def\\odd#1.{x}\n\\greet{Ada} \\greet[Hi]{Bo} \\both{one}{two}. See $\\vect{v} + \\norm{x^2} = \\vect w$. \\odd a.",
+        );
+        let text = d.text().to_string();
+        assert!(
+            text.starts_with("Hello, Ada! Hi, Bo! two and one. See $"),
+            "{text}"
+        );
+        assert!(
+            text.contains("${\\mathbf{v}} + {\\lVert x^2 \\rVert} = {\\mathbf{w}}$"),
+            "{text}"
+        );
+        assert_eq!(kinds(&d, MarkerKind::Bold), ["Ada", "Bo"]);
+        // A delimited parameter is not read; it is named.
+        assert!(
+            crate::warnings(&d.meta).iter().any(|w| w.contains("\\odd")),
+            "{:?}",
+            crate::warnings(&d.meta)
+        );
+        // Endless expansion stops at the budget.
+        let bomb = load("\\newcommand\\a[1]{\\a{#1#1}}\\a{x} after");
+        assert!(crate::warnings(&bomb.meta).iter().any(|w| w == CUT_WARNING));
+    }
+
+    #[test]
+    fn new_environments_spans_and_picture_alt_text() {
+        let d = load(
+            "\\newenvironment{note}[1]{\\begin{quote}\\textbf{#1:}}{\\end{quote}}\n\\begin{note}{Remember} Save often.\\end{note}\n\nAfter.\n\n\\begin{tabular}{lll}\nA & \\multicolumn{2}{c}{Wide} \\\\\n\\multirow{2}{*}{Tall} & b & c \\\\\n\\end{tabular}\n\n\\includegraphics[width=3cm, alt={A cell, dividing}]{img/cell.png}",
+        );
+        let text = d.text().to_string();
+        assert_eq!(kinds(&d, MarkerKind::Quote), ["Remember: Save often."]);
+        assert!(text.contains("After."), "{text}");
+        assert!(text.contains("A | Wide (spans 2 columns)"), "{text}");
+        assert!(text.contains("Tall (spans 2 rows) | b | c"), "{text}");
+        assert_eq!(kinds(&d, MarkerKind::Image), ["A cell, dividing"]);
+    }
+
+    #[cfg(feature = "bibliography")]
+    #[test]
+    fn bibliography_files_are_read_through_the_citation_crate() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("refs.bib"),
+            "@book{doe2020, author = {Doe, Jane}, title = {Reading Machines}, publisher = {Accessible Press}, year = 2020}\n@article{roe2019, author = {Roe, Rick}, title = {Unused}, journal = {J}, year = 2019}",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.path().join("paper.tex"),
+            "\\documentclass{article}\\begin{document}As shown \\cite{doe2020}.\\bibliographystyle{apalike}\\bibliography{refs}\\end{document}",
+        )
+        .unwrap();
+        let d = LatexLoader
+            .load(
+                &Source::Path(dir.path().join("paper.tex")),
+                &LoadOptions::default(),
+            )
+            .unwrap();
+        assert_eq!(kinds(&d, MarkerKind::Heading), ["References"]);
+        assert_eq!(
+            kinds(&d, MarkerKind::ListItem),
+            ["Doe, J. (2020). Reading Machines. Accessible Press."]
         );
     }
 

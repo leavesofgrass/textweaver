@@ -377,7 +377,7 @@ impl App {
                     } else {
                         "lint-no-earlier"
                     },
-                    &args!["n" => n, "count" => textweaver_editor::echo::thousands(n)],
+                    &args!["n" => n, "count" => crate::words::grouped(self.cat(), n)],
                 )
             };
             self.tell(&msg);

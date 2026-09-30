@@ -297,7 +297,14 @@ fn f9_turns_single_keys_off_and_on_and_saves() {
     let paths = Paths::under(home.path());
     let mut r = launch(Settings::default(), Some(paths.clone()));
     let period: KeyChord = ".".parse().unwrap();
-    let alt_period: KeyChord = "Alt+.".parse().unwrap();
+    // The sentence chord this platform binds, from the keymap.
+    let alt_period: KeyChord = r
+        .app
+        .keymap()
+        .chords_for(ActionId::NextSentence)
+        .into_iter()
+        .find(|c| !c.is_text_input())
+        .expect("next sentence has a chord");
     assert_eq!(
         r.app.keymap().lookup(&period, Layer::Browse),
         Some(ActionId::ReadCurrentSentence)

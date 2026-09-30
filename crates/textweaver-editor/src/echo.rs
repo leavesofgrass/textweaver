@@ -157,19 +157,62 @@ pub fn for_edit(policy: &EchoPolicy, before: &Rope, edit: &Edit) -> Vec<EchoEven
     out
 }
 
+/// Most characters of a line said on a cursor move or on entering edit
+/// mode: a longer line is cut at its first sentence end within them, else
+/// at the last space before them (W6u: a 1 MB line was read out whole, and
+/// the first typed character's echo waited 213 to 250 ms behind it).
+pub const LINE_ECHO_MAX: usize = 200;
+
 /// The text of `line` as spoken on a cursor move: without its line ending,
-/// or "blank" when empty or only whitespace.
+/// or "blank" when empty or only whitespace. A line longer than
+/// [`LINE_ECHO_MAX`] characters gives its first sentence, or its first
+/// words up to that many characters ([`line_echo`] also says whether it
+/// was cut).
 pub fn line_for_echo(text: &Rope, line: usize) -> String {
+    line_echo(text, line).0
+}
+
+/// [`line_for_echo`], and whether the line goes on past what is given.
+/// Reads at most [`LINE_ECHO_MAX`] characters of the line, however long.
+pub fn line_echo(text: &Rope, line: usize) -> (String, bool) {
     if line >= text.len_lines() {
-        return BLANK.to_owned();
+        return (BLANK.to_owned(), false);
     }
-    let s = text.line(line).to_string();
-    let s = s.trim_end_matches(['\n', '\r']);
+    let head: String = text.line(line).chars().take(LINE_ECHO_MAX + 2).collect();
+    let (s, cut) = cap_text(head.trim_end_matches(['\n', '\r']));
     if s.trim().is_empty() {
-        BLANK.to_owned()
+        (BLANK.to_owned(), false)
     } else {
-        s.to_owned()
+        (s, cut)
     }
+}
+
+/// `text` cut to at most [`LINE_ECHO_MAX`] characters: its first sentence
+/// when that ends within them, else its first whole words; and whether it
+/// was cut.
+pub fn cap_text(text: &str) -> (String, bool) {
+    if text.chars().count() <= LINE_ECHO_MAX {
+        return (text.to_owned(), false);
+    }
+    let kept: String = text.chars().take(LINE_ECHO_MAX).collect();
+    let sentence_end = kept
+        .char_indices()
+        .find(|&(i, c)| {
+            matches!(c, '.' | '!' | '?')
+                && kept[i + c.len_utf8()..]
+                    .chars()
+                    .next()
+                    .is_some_and(char::is_whitespace)
+        })
+        .map(|(i, c)| i + c.len_utf8());
+    let out = match sentence_end {
+        Some(end) => kept[..end].to_owned(),
+        None => match kept.rfind(char::is_whitespace) {
+            Some(space) if space > 0 => kept[..space].trim_end().to_owned(),
+            _ => kept,
+        },
+    };
+    (out, true)
 }
 
 /// Echo events for a cursor move from `from` to `to`: the new line when the
@@ -332,6 +375,28 @@ mod tests {
             vec![EchoEvent::CursorMoved("first".into())]
         );
         assert_eq!(line_for_echo(&text, 99), "blank");
+    }
+
+    /// A long line gives its first sentence, or its first words, never the
+    /// whole line (W6u).
+    #[test]
+    fn long_lines_are_cut() {
+        let long = "word ".repeat(100_000);
+        let text = Rope::from_str(&long);
+        let (said, cut) = line_echo(&text, 0);
+        assert!(cut);
+        assert!(said.chars().count() <= LINE_ECHO_MAX, "{}", said.len());
+        assert!(said.ends_with("word"), "{said}");
+        let text = Rope::from_str(&format!("A short sentence. {}\n", "then more ".repeat(50)));
+        assert_eq!(line_echo(&text, 0), ("A short sentence.".to_owned(), true));
+        let text = Rope::from_str("A line of its own.\nNext\n");
+        assert_eq!(
+            line_echo(&text, 0),
+            ("A line of its own.".to_owned(), false)
+        );
+        let exact = "x".repeat(LINE_ECHO_MAX);
+        let text = Rope::from_str(&format!("{exact}\n"));
+        assert_eq!(line_echo(&text, 0), (exact, false));
     }
 }
 

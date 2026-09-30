@@ -181,13 +181,29 @@ fn parse_default(s: &str, platform: Platform, frontend: Frontend) -> Option<(Lay
     let (layer, chord) = split_layer(s);
     let mut chord: KeyChord = chord.parse().ok()?;
     if frontend == Frontend::Gui && platform == Platform::MacOs {
-        chord = chord.ctrl_to_meta();
+        // Logical Mac keys, not a Ctrl-to-Cmd swap (crate::mac).
+        chord = crate::mac::translate_gui(chord);
     }
     Some((layer?, chord))
 }
 
-/// Default chord strings for `action` on `frontend`, with layer prefixes.
-pub(crate) fn default_strings(action: ActionId, frontend: Frontend) -> Vec<&'static str> {
+/// Default chord strings for `action` on `frontend` and `platform`, with
+/// layer prefixes: the Windows and Linux keys, or on macOS the ones
+/// [`crate::mac`] writes out for the commands that need them.
+pub(crate) fn default_strings(
+    action: ActionId,
+    platform: Platform,
+    frontend: Frontend,
+) -> Vec<&'static str> {
+    if platform == Platform::MacOs {
+        let mac = match frontend {
+            Frontend::Gui => crate::mac::gui_keys(action),
+            Frontend::Terminal => crate::mac::terminal_keys(action),
+        };
+        if let Some(keys) = mac {
+            return keys.to_vec();
+        }
+    }
     let d = action.defaults();
     let own = match frontend {
         Frontend::Gui => d.gui,
@@ -201,7 +217,7 @@ impl Keymap {
     pub fn defaults(platform: Platform, frontend: Frontend) -> Self {
         let mut bindings = Vec::new();
         for &action in ActionId::ALL {
-            for s in default_strings(action, frontend) {
+            for s in default_strings(action, platform, frontend) {
                 // The tables are static and every entry is checked by a test;
                 // an entry that failed to parse would simply be missing.
                 if let Some((layer, chord)) = parse_default(s, platform, frontend) {
@@ -511,6 +527,39 @@ mod tests {
         s.parse().unwrap()
     }
 
+    /// The key a test written with Windows keys presses on `platform`: the
+    /// Mac's logical key for the same command (crate::mac), or `None` when
+    /// that key means something else on a Mac and the command has its own
+    /// Mac key, tested in crate::mac.
+    fn press(chord: &str, platform: Platform, frontend: Frontend) -> Option<KeyChord> {
+        if platform != Platform::MacOs {
+            return Some(k(chord));
+        }
+        if frontend == Frontend::Terminal {
+            return match chord {
+                "Ctrl+Down" | "Ctrl+Up" => None,
+                "Ctrl+Alt+Down" => Some(k("Ctrl+Shift+Down")),
+                "Ctrl+Alt+Up" => Some(k("Ctrl+Shift+Up")),
+                "Ctrl+Alt+Right" => Some(k("Ctrl+Shift+Right")),
+                "Ctrl+Alt+Left" => Some(k("Ctrl+Shift+Left")),
+                other => Some(k(other)),
+            };
+        }
+        match chord {
+            "Alt+Left" => Some(k("Cmd+[")),
+            "Alt+Right" => Some(k("Cmd+]")),
+            // Option with Up and Down move by paragraph on a Mac.
+            "Alt+Down" | "Alt+Up" => None,
+            "Ctrl+Down" => Some(k("Alt+Down")),
+            "Ctrl+Up" => Some(k("Alt+Up")),
+            "Alt+M" => Some(k("Cmd+;")),
+            "Alt+Shift+Q" => Some(k("Cmd+Alt+Shift+C")),
+            "Ctrl+Delete" => Some(k("Alt+Delete")),
+            "Ctrl+Backspace" => Some(k("Alt+Backspace")),
+            other => Some(crate::mac::translate_gui(k(other))),
+        }
+    }
+
     fn all_maps() -> Vec<(Platform, Frontend, Keymap)> {
         let mut v = Vec::new();
         for platform in Platform::ALL {
@@ -645,10 +694,8 @@ mod tests {
                     ("e", ActionId::NextNote),
                     ("Space", ActionId::PlayPause),
                 ] {
-                    let chord = if frontend == Frontend::Gui && platform == Platform::MacOs {
-                        k(chord).ctrl_to_meta()
-                    } else {
-                        k(chord)
+                    let Some(chord) = press(chord, platform, frontend) else {
+                        continue;
                     };
                     assert_eq!(
                         map.lookup(&chord, Layer::Browse),
@@ -697,10 +744,18 @@ mod tests {
                     ("1", ActionId::NextHeadingLevel1),
                     ("Ctrl+Down", ActionId::NextParagraph),
                 ] {
-                    let chord = if frontend == Frontend::Gui && platform == Platform::MacOs {
-                        k(chord).ctrl_to_meta()
-                    } else {
+                    // On a Mac, classic's Option+Down (next note) takes the
+                    // paragraph key; paragraphs keep p and ].
+                    if platform == Platform::MacOs && chord == "Ctrl+Down" {
+                        continue;
+                    }
+                    let chord = if ["Alt+Down", "Alt+Up"].contains(&chord) {
                         k(chord)
+                    } else {
+                        let Some(c) = press(chord, platform, frontend) else {
+                            continue;
+                        };
+                        c
                     };
                     assert_eq!(
                         map.lookup(&chord, Layer::Browse),
@@ -742,7 +797,10 @@ mod tests {
     fn every_default_string_parses_with_a_layer() {
         for &a in ActionId::ALL {
             for frontend in Frontend::ALL {
-                for s in default_strings(a, frontend) {
+                for s in default_strings(a, Platform::Linux, frontend)
+                    .into_iter()
+                    .chain(default_strings(a, Platform::MacOs, frontend))
+                {
                     assert!(
                         parse_default(s, Platform::Linux, frontend).is_some(),
                         "{a:?}: {s}"
@@ -963,7 +1021,11 @@ mod tests {
             ("F5", ActionId::NextTheme),
             ("F6", ActionId::ToggleLineNumbers),
             ("F8", ActionId::CycleSpeedPreset),
-            ("F10", ActionId::PreviousChapter),
+            // Star's F10 (previous chapter) opens the menus since Wave 6, in
+            // every preset, as F10 does in Windows programs; previous
+            // chapter keeps Alt+PageUp and Shift+D.
+            ("F10", ActionId::Menu),
+            ("Alt+PageUp", ActionId::PreviousChapter),
             ("F11", ActionId::NextChapter),
             ("Tab", ActionId::SpeechCursorToggle),
             ("Ctrl+Space", ActionId::ReadFromCursor),
@@ -1043,6 +1105,8 @@ mod tests {
                         | ActionId::Copy
                         | ActionId::CycleTypingEcho
                         | ActionId::AddReference
+                        // Outside edit mode, dictation offers to enter it.
+                        | ActionId::Dictate
                 ) {
                     continue;
                 }
@@ -1133,12 +1197,10 @@ mod tests {
             }
             assert_eq!(ActionId::next_heading_at(7), None);
             assert_eq!(ActionId::NextSentence.heading_level_jump(), None);
+            let add_note = press("Alt+N", platform, frontend).unwrap();
+            assert_eq!(map.lookup(&add_note, Layer::Edit), Some(ActionId::AddNote));
             assert_eq!(
-                map.lookup(&k("Alt+N"), Layer::Edit),
-                Some(ActionId::AddNote)
-            );
-            assert_eq!(
-                map.lookup(&k("Alt+N"), Layer::Browse),
+                map.lookup(&add_note, Layer::Browse),
                 Some(ActionId::AddNote)
             );
             let ctrl = if platform == Platform::MacOs && frontend == Frontend::Gui {
@@ -1168,11 +1230,17 @@ mod tests {
                 Some(ActionId::CycleTypingEcho)
             );
             assert_eq!(
-                map.lookup(&k("Alt+Shift+K"), Layer::Edit),
+                map.lookup(
+                    &press("Alt+Shift+K", platform, frontend).unwrap(),
+                    Layer::Edit
+                ),
                 Some(ActionId::LinkAddress)
             );
             assert_eq!(
-                map.lookup(&k("Alt+Shift+T"), Layer::Browse),
+                map.lookup(
+                    &press("Alt+Shift+T", platform, frontend).unwrap(),
+                    Layer::Browse
+                ),
                 Some(ActionId::WordCount)
             );
             assert_eq!(
@@ -1180,7 +1248,10 @@ mod tests {
                 Some(ActionId::SayPosition)
             );
             assert_eq!(
-                map.lookup(&k("Alt+Shift+Y"), Layer::Edit),
+                map.lookup(
+                    &press("Alt+Shift+Y", platform, frontend).unwrap(),
+                    Layer::Edit
+                ),
                 Some(ActionId::SayPosition)
             );
         }
@@ -1193,12 +1264,7 @@ mod tests {
     #[test]
     fn phase2_authoring_keys() {
         for (platform, frontend, map) in all_maps() {
-            let ctrl = if platform == Platform::MacOs && frontend == Frontend::Gui {
-                "Cmd"
-            } else {
-                "Ctrl"
-            };
-            let c = |s: &str| k(&s.replace("Ctrl", ctrl));
+            let c = |s: &str| press(s, platform, frontend).unwrap();
             for mode in [Layer::Browse, Layer::SpeechCursor, Layer::Edit] {
                 for (chord, action) in [
                     ("Alt+O", ActionId::Outline),
@@ -1219,6 +1285,14 @@ mod tests {
                     ("Alt+Shift+PageUp", ActionId::RsvpFaster),
                     ("Alt+Shift+PageDown", ActionId::RsvpSlower),
                 ] {
+                    // In a Mac terminal the table keys are Ctrl+Shift with
+                    // the arrows, in reading mode only: in edit mode those
+                    // select by word (crate::mac).
+                    let mac_term = platform == Platform::MacOs && frontend == Frontend::Terminal;
+                    if mac_term && mode == Layer::Edit && chord.starts_with("Ctrl+Alt+") {
+                        assert!(map.chords_in_mode(action, mode).is_empty(), "{action:?}");
+                        continue;
+                    }
                     assert_eq!(
                         map.lookup(&c(chord), mode),
                         Some(action),
@@ -1240,7 +1314,7 @@ mod tests {
             let add_reference = if frontend == Frontend::Terminal {
                 k("Alt+B")
             } else {
-                k("Alt+Shift+D")
+                c("Alt+Shift+D")
             };
             for mode in [Layer::Browse, Layer::Edit] {
                 assert_eq!(
@@ -1526,6 +1600,74 @@ mod tests {
         let map = Keymap::defaults(Platform::MacOs, Frontend::Gui);
         assert_eq!(map.lookup(&k("Cmd+O"), Layer::Browse), Some(ActionId::Open));
         assert_eq!(map.lookup(&k("Ctrl+O"), Layer::Browse), None);
+    }
+
+    /// The menus' access keys in English (File, Edit, View, Reading,
+    /// Speech, Tools, Help; `textweaver-app`'s menu model checks every
+    /// language). No GUI Alt chord with a letter may take one, so Alt+F
+    /// always opens the File menu (W6u).
+    #[test]
+    fn gui_alt_letters_leave_the_menu_keys_free() {
+        const MENU_KEYS: [char; 7] = ['f', 'e', 'v', 'r', 's', 't', 'h'];
+        for platform in [Platform::Windows, Platform::Linux] {
+            let map = Keymap::defaults(platform, Frontend::Gui);
+            for b in map.bindings() {
+                if let crate::Key::Char(ch) = b.chord.key
+                    && b.chord.mods == crate::Modifiers::ALT
+                {
+                    assert!(
+                        !MENU_KEYS.contains(&ch),
+                        "{} takes the menu key {ch} ({:?})",
+                        b.chord,
+                        b.action
+                    );
+                }
+            }
+        }
+    }
+
+    /// Terminal defaults stay clear of Windows Terminal's own keys, except
+    /// the ones kept on purpose, each with a second key (docs/keyboard.md,
+    /// "Terminal notes").
+    #[test]
+    fn terminal_defaults_avoid_windows_terminal_keys() {
+        const WINDOWS_TERMINAL: &[&str] = &[
+            "Alt+Shift+D",
+            // Alt+Shift+Plus and Alt+Shift+Minus, as a terminal sees them.
+            "Alt++",
+            "Alt+_",
+            "Alt+Shift+Up",
+            "Alt+Shift+Down",
+            "Alt+Shift+Left",
+            "Alt+Shift+Right",
+            "Alt+Enter",
+            "F11",
+            "Ctrl+=",
+            "Ctrl+-",
+            "Ctrl+0",
+            "Ctrl+,",
+            "Ctrl+Tab",
+        ];
+        // Kept with a second key: next chapter (Alt+PageDown, d) and RSVP
+        // speed (Alt+Shift+PageUp and PageDown).
+        const KEPT: &[&str] = &["F11", "Alt+Shift+Up", "Alt+Shift+Down"];
+        let map = Keymap::defaults(Platform::Windows, Frontend::Terminal);
+        for b in map.bindings() {
+            let taken = WINDOWS_TERMINAL.iter().any(|s| k(s) == b.chord);
+            let kept = KEPT.iter().any(|s| k(s) == b.chord);
+            assert!(
+                !taken || kept,
+                "{} is Windows Terminal's ({:?})",
+                b.chord,
+                b.action
+            );
+        }
+        // The menu key is free in the terminal.
+        assert_eq!(map.lookup(&k("F10"), Layer::Browse), Some(ActionId::Menu));
+        assert_eq!(
+            map.lookup(&k("Alt+PageUp"), Layer::Browse),
+            Some(ActionId::PreviousChapter)
+        );
     }
 
     #[test]

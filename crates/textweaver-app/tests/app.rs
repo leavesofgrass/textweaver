@@ -650,7 +650,15 @@ fn keyboard_help_and_palette_come_from_the_keymap() {
         .iter()
         .position(|s| s.contains(ActionId::NextSentence.help()))
         .unwrap();
-    assert!(items[i].contains("Alt+."), "{}", items[i]);
+    let sentence = r
+        .app
+        .keymap()
+        .chords_for(ActionId::NextSentence)
+        .into_iter()
+        .find(|c| !c.is_text_input())
+        .expect("next sentence has a chord")
+        .to_string();
+    assert!(items[i].contains(&sentence), "{}", items[i]);
     r.app.dispatch(Command::Choose(i));
     assert_eq!(r.cursor(), at(PROSE, "Eta"));
 

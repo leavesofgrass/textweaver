@@ -21,6 +21,9 @@
 //! Also skipped: elements with the `hidden` attribute or `aria-hidden="true"`,
 //! and images with `role="presentation"`.
 //!
+//! An inline `<svg>` drawing is not dropped with the rest of the skip list:
+//! it is one graphic named by its `aria-label` or its `<title>` (ADR-0044).
+//!
 //! MathML (`<math>`) is read as math, in web pages as in EPUB 3 (W5c3,
 //! ADR-0035): LaTeX with its delimiters under a `Math` marker, as
 //! `mathml.rs` describes.
@@ -376,6 +379,9 @@ impl Walker<'_> {
                 hook(n, self.b);
             }
         }
+        if name == "svg" && !is_hidden(&el) {
+            return self.svg(el);
+        }
         if SKIP.contains(&name) || is_hidden(&el) {
             return;
         }
@@ -622,6 +628,32 @@ impl Walker<'_> {
         self.b.soft_space();
     }
 
+    /// An inline `<svg>` drawing, read as an SVG file is (see
+    /// [`crate::svg`]): a graphic named by its `aria-label` or `<title>`,
+    /// then its description, titled parts, and text. One with nothing to
+    /// read is decorative and produces nothing, as an image without
+    /// alternative text does.
+    fn svg(&mut self, el: ElementRef<'_>) {
+        if el.attr("role").is_some_and(|r| {
+            r.eq_ignore_ascii_case("presentation") || r.eq_ignore_ascii_case("none")
+        }) {
+            return;
+        }
+        let reading = crate::svg::read(&crate::svg::from_html(el));
+        if self.in_cell > 0 {
+            // In a table cell, only the name: a cell stays one line.
+            if let Some(name) = reading.name {
+                self.b.space();
+                let id = self.b.open(marker(MarkerKind::Image));
+                self.b.text(&name);
+                self.b.close(id);
+                self.b.soft_space();
+            }
+            return;
+        }
+        crate::svg::write_inline(&mut *self.b, &reading);
+    }
+
     fn table(&mut self, el: ElementRef<'_>) {
         if self.in_cell > 0 {
             // A nested table reads as running text inside its cell.
@@ -733,6 +765,26 @@ mod tests {
         assert_eq!(d.meta.title.as_deref(), Some("T"));
         assert_eq!(d.meta.language.as_deref(), Some("en"));
         assert_eq!(kinds(&d, MarkerKind::Bold), ["world"]);
+    }
+
+    #[test]
+    fn inline_svg_reads_its_label_or_title() {
+        let d = load(
+            "<p>Before <svg aria-label=\"Sales chart\"><title>ignored</title><text>9</text></svg> after.</p>\
+             <svg><title>Logo of the club</title><circle r=\"3\"/></svg>\
+             <svg><circle r=\"3\"/></svg><svg role=\"presentation\"><title>Deco</title></svg>\
+             <svg aria-hidden=\"true\"><title>Hidden</title></svg><p>End.</p>",
+        );
+        assert_eq!(
+            kinds(&d, MarkerKind::Image),
+            ["Sales chart", "Logo of the club"]
+        );
+        let text = d.text().to_string();
+        // The chart's own text follows its name.
+        assert!(text.contains("Before Sales chart\n\n9\n\nafter."), "{text}");
+        for gone in ["ignored", "Deco", "Hidden"] {
+            assert!(!text.contains(gone), "{gone} in {text}");
+        }
     }
 
     #[test]

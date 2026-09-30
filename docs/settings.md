@@ -15,8 +15,12 @@ Change settings without leaving textweaver: press `Shift+F10` in the terminal re
 - Up and Down move from setting to setting.
 - Left and Right change the value: a smaller or larger number, the previous or next choice, or off and on.
 - Enter turns a switch on or off, takes the next choice, or asks you to type a value, starting from the current one. Enter with the value unchanged, or empty, keeps it, and so does Escape; for a setting that may be left unset, such as the voice, an empty answer unsets it.
-- Delete puts the default back.
+- Delete puts the default back, and says it: "Rate back to its default, 265 words per minute."
+- F1 says the setting's value, its default, and its help.
+- The five settings you changed last are at the top, each said as "recently changed", so a setting you are tuning is one key away.
 - Escape closes the screen.
+
+View, Colors (or `color settings` in the command palette) shows only the colors: the word and sentence highlights, the reading ruler, difficult words, syllable marks, misspellings, lint marks, search matches, the selection, the focus, links, headings, the status bar, notes, and bookmarks. Left and Right go through named colors, blue and orange first (they are told apart by people who confuse red and green); Enter types a name or a `#rrggbb` value; Delete puts the theme's color back. Each row says its contrast, such as "Links: orange, contrast 6.2 to 1, good". A color under 3 to 1 is used and you are told it is hard to see. Every mark keeps its underline, bold, or spoken word whatever its color, so no color carries meaning alone.
 
 Every change is said, such as "Rate, 285 words per minute.", takes effect at once, and is saved. A number outside its range is set to the nearest value that fits, and textweaver says so. A few settings (the speech engine and the keys preset) are used from the next start, or after Restart Speech (`Shift+F8`), and textweaver says which. Tables of names and values, such as pronunciations, are edited in `settings.toml`.
 
@@ -313,6 +317,7 @@ How textweaver shares the work with a screen reader. See [Using textweaver with 
 - `quiet_screen`, default `false`: while textweaver reads aloud, the title line's position stays still and the text being read is not copied to the status line.
 - `cursor`, default `"follow"`: where the terminal's cursor waits. `"follow"` puts it on the spoken word, the caret, or the chosen item; `"status"` puts it on the status line, so your screen reader's "read current line" repeats the last message.
 - `hybrid_offered`, default `false`: set after textweaver has asked, on its first run with a screen reader, whether to use hybrid mode. Set it back to `false` to be asked again.
+- `interface_announcements`, default `"auto"`: how much textweaver says about itself: `"off"`, `"minimal"`, `"normal"`, or `"full"`; `"auto"` is minimal in screen-reader and hybrid modes and normal when self-voicing. Errors, questions, and answers to what you asked are always said. Ctrl+F9 cycles it. See [Interface announcements](reading.md#interface-announcements-ctrlf9).
 
 ### [export]
 

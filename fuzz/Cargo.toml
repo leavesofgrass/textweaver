@@ -261,3 +261,27 @@ path = "fuzz_targets/eml.rs"
 test = false
 doc = false
 bench = false
+
+# W6o: JSON and notebooks, SVG and MathML files, and Obsidian notes
+# (ADR-0044).
+
+[[bin]]
+name = "json"
+path = "fuzz_targets/json.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "svg"
+path = "fuzz_targets/svg.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "obsidian"
+path = "fuzz_targets/obsidian.rs"
+test = false
+doc = false
+bench = false

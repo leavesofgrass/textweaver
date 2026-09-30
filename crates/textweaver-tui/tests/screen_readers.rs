@@ -10,6 +10,7 @@ use ratatui::layout::Position;
 use textweaver_app::a11y::AccessMode;
 use textweaver_app::a11y::detect::Detected;
 use textweaver_app::core::CharPos;
+use textweaver_app::keymap::ActionId;
 use textweaver_app::store::{AccessMode as ModeSetting, CursorPlacement};
 use textweaver_app::store::{DocKey, Settings};
 use textweaver_app::testing::recording_service;
@@ -115,7 +116,7 @@ fn the_cursor_can_wait_on_the_status_line() {
     let status = h.status_area();
     assert_eq!(h.cursor(), Position::new(status.x, status.y));
     // A prompt keeps the cursor at its caret, where typing happens.
-    h.press(KeyEvent::new(KeyCode::Char('f'), KeyModifiers::CONTROL));
+    h.press(h.tui.key_for(ActionId::Find));
     assert_eq!(h.cursor().y, HEIGHT - 1);
 }
 
@@ -149,10 +150,9 @@ fn a_quiet_screen_freezes_the_title_while_reading() {
 #[test]
 fn alt_shift_a_cycles_the_mode() {
     let mut h = launch(Settings::default(), 3);
-    let alt_shift = KeyModifiers::ALT | KeyModifiers::SHIFT;
-    h.press(KeyEvent::new(KeyCode::Char('A'), alt_shift));
+    h.press(h.tui.key_for(ActionId::CycleAccessMode));
     assert_eq!(h.tui.app().access_mode(), AccessMode::Hybrid);
-    h.press(KeyEvent::new(KeyCode::Char('A'), alt_shift));
+    h.press(h.tui.key_for(ActionId::CycleAccessMode));
     assert_eq!(h.tui.app().access_mode(), AccessMode::ScreenReader);
     assert!(h.tui.status_line().starts_with("Screen reader mode."));
 }

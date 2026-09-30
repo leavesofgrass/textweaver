@@ -302,7 +302,8 @@ fn the_first_run_offers_hybrid_once() {
     let a = &r.app.settings().accessibility;
     assert!(a.hybrid_offered);
     assert_eq!(a.mode, ModeSetting::Hybrid);
-    assert!(r.status().contains("Alt+Shift+A"), "{}", r.status());
+    let mode_key = textweaver_app::key_text(r.app.keymap(), ActionId::CycleAccessMode);
+    assert!(r.status().contains(&mode_key), "{}", r.status());
     assert!(!r.app.hybrid_offer_due());
     assert!(!r.app.offer_hybrid(&nvda));
 

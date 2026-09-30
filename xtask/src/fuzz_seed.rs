@@ -34,7 +34,14 @@ const fn seeds(dir: &'static str, extensions: &'static [&'static str], recursive
 /// matrix in `.github/workflows/nightly.yml`.
 const TARGETS: &[(&str, &[Seeds])] = &[
     ("markdown", &[seeds("fixtures", &["md"], false)]),
-    ("html", &[seeds("fixtures", &["html"], false)]),
+    (
+        "html",
+        &[
+            seeds("fixtures", &["html"], false),
+            // Star's empty-document case: an unclosed `<meta charset>`.
+            seeds("fixtures/o", &["html"], false),
+        ],
+    ),
     ("epub", &[seeds("fixtures/a", &["epub"], false)]),
     ("docx", &[seeds("fixtures/a", &["docx"], false)]),
     ("pdf", &[seeds("fixtures/a", &["pdf"], false)]),
@@ -99,6 +106,13 @@ const TARGETS: &[(&str, &[Seeds])] = &[
     // W5c3's documents.
     ("latex", &[seeds("fixtures/c3", &["tex"], false)]),
     ("eml", &[seeds("fixtures/c3", &["eml", "mhtml"], false)]),
+    // W6o's formats (ADR-0044).
+    (
+        "json",
+        &[seeds("fixtures/o", &["json", "jsonl", "ipynb"], false)],
+    ),
+    ("svg", &[seeds("fixtures/o", &["svg", "mml"], false)]),
+    ("obsidian", &[seeds("fixtures/o/vault", &["md"], true)]),
 ];
 
 /// The repository root.

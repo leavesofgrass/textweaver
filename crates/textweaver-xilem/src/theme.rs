@@ -81,6 +81,15 @@ pub struct Palette {
     pub selection: (Rgb, Rgb),
     /// A search match: text and band.
     pub find_hit: (Rgb, Rgb),
+    /// The search match at the caret: its band.
+    pub current_find_hit: Rgb,
+    /// Text with a note: its band.
+    pub note: Rgb,
+    /// A bookmarked word: its band.
+    pub bookmark: Rgb,
+    /// A highlight the reader made: its band (the theme's first highlight
+    /// color, or the selection's).
+    pub user_highlight: Rgb,
     /// The caret.
     pub caret: Rgb,
     /// The reading ruler's band on the reading line (a tint of the focus
@@ -143,6 +152,13 @@ impl Palette {
         let sentence = theme.resolve_style(StyleRole::SpokenSentence);
         let selection = theme.resolve_style(StyleRole::Selection);
         let find = theme.resolve_style(StyleRole::FindHit);
+        let current_find = theme.resolve_style(StyleRole::CurrentFindHit);
+        let note = theme.resolve_style(StyleRole::Note);
+        let bookmark = theme.resolve_style(StyleRole::Bookmark);
+        let user_highlight = theme
+            .user_highlights
+            .first()
+            .map_or(selection.background, |h| theme.resolve(&h.style).background);
         let headings = [1u8, 2, 3, 4, 5, 6].map(|l| {
             ColorRole::heading(l).map_or(text, |r| ensure(theme.color(r), &[background], text_min))
         });
@@ -169,6 +185,10 @@ impl Palette {
             spoken_sentence: sentence.background,
             selection: (selection.foreground, selection.background),
             find_hit: (find.foreground, find.background),
+            current_find_hit: current_find.background,
+            note: note.background,
+            bookmark: bookmark.background,
+            user_highlight,
             caret: text,
             ruler_focus: ensure(background.mix(focus, 0.22), &[text], text_min),
             ruler_band: ensure(background.mix(focus, 0.10), &[text], text_min),

@@ -259,6 +259,26 @@ fn spoken_duration(d: Duration) -> String {
     }
 }
 
+/// Pandoc's readers that take a binary package, not text.
+const BINARY_READERS: &[&str] = &["odt"];
+
+/// The input as Pandoc wants it: Pandoc reads text as UTF-8 only, on every
+/// system, so a text source in another encoding (a Windows-1252 `.rst`
+/// from an older editor, UTF-16 with a byte order mark, XML that declares
+/// Latin-1) is converted to UTF-8 first, as the native loaders decode
+/// (see [`crate::encoding`]). The output side needs nothing: Pandoc
+/// writes UTF-8, and it is read as UTF-8 bytes, never with the Windows
+/// code page (Star's bug).
+fn utf8_input(from: &str, bytes: Vec<u8>) -> Vec<u8> {
+    if BINARY_READERS.contains(&from) || std::str::from_utf8(&bytes).is_ok() {
+        return bytes;
+    }
+    let declared = crate::encoding::sniff_xml_encoding(&bytes);
+    crate::decode_bytes(&bytes, declared.as_deref())
+        .text
+        .into_bytes()
+}
+
 /// Converts `input` from Pandoc reader `from` to standalone HTML.
 fn to_html(from: &str, input: Vec<u8>, timeout: Duration) -> Result<Vec<u8>, LoadError> {
     let out = run(
@@ -309,7 +329,7 @@ impl Loader for PandocLoader {
             .find(|(e, _)| *e == hint)
             .map(|(_, f)| *f)
             .ok_or_else(|| LoadError::Unsupported(format!("pandoc reader for .{hint}")))?;
-        let html = to_html(from, source.read()?, self.timeout)?;
+        let html = to_html(from, utf8_input(from, source.read()?), self.timeout)?;
         let html = String::from_utf8_lossy(&html);
         let mut meta = meta_for(source, self.id());
         meta.properties
@@ -341,6 +361,24 @@ impl Loader for PandocLoader {
 mod tests {
     use super::*;
     use crate::Registry;
+
+    #[test]
+    fn text_input_reaches_pandoc_as_utf8() {
+        // Windows-1252 and UTF-16 text become UTF-8; UTF-8 and packages
+        // pass through untouched.
+        assert_eq!(utf8_input("rst", b"caf\xe9".to_vec()), "café".as_bytes());
+        assert_eq!(
+            utf8_input("org", b"\xff\xfeh\x00\xe9\x00".to_vec()),
+            "hé".as_bytes()
+        );
+        let latin1 = b"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><p>\xe0</p>".to_vec();
+        assert!(String::from_utf8(utf8_input("docbook", latin1)).is_ok_and(|s| s.contains('à')));
+        assert_eq!(utf8_input("rst", "ünïcode".into()), "ünïcode".as_bytes());
+        assert_eq!(
+            utf8_input("odt", b"PK\x03\x04\xe9".to_vec()),
+            b"PK\x03\x04\xe9"
+        );
+    }
 
     /// A shell program and the arguments that run `script` in it.
     #[cfg(windows)]

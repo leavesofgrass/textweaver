@@ -25,6 +25,7 @@ use masonry::layout::{LayoutSize, LenReq, Length};
 use masonry::parley::Layout;
 use masonry::parley::style::{FontFamily, LineHeight};
 use masonry::peniko::Color;
+use textweaver_app::keymap::Platform;
 
 use crate::theme::{self, Palette};
 
@@ -69,6 +70,8 @@ pub struct Modal {
     tab_completes: bool,
     /// A question: typed characters answer it.
     answer_keys: bool,
+    /// Whose command modifier the dialog follows ([`crate::keys`]).
+    platform: Platform,
 }
 
 impl Modal {
@@ -86,7 +89,14 @@ impl Modal {
             max_width: 600.0,
             tab_completes: false,
             answer_keys: false,
+            platform: Platform::current(),
         }
+    }
+
+    /// Follows `platform`'s command modifier instead of this system's.
+    pub fn with_platform(mut self, platform: Platform) -> Self {
+        self.platform = platform;
+        self
     }
 
     /// A yes-or-no question: `y` answers yes, `n` (or `a`) no, and any
@@ -121,7 +131,7 @@ impl Widget for Modal {
         let TextEvent::Keyboard(k) = event else {
             return;
         };
-        if k.state != KeyState::Down || k.modifiers.ctrl() || k.modifiers.alt() {
+        if k.state != KeyState::Down || crate::keys::is_command(k.modifiers, self.platform) {
             return;
         }
         // Keys the dialog's controls left alone.
@@ -254,6 +264,8 @@ pub struct ChoiceList {
     /// Every move is reported ([`DialogAction::Focus`]), for a list whose
     /// focus changes what the dialog shows (the settings' sections).
     focus_actions: bool,
+    /// Whose command modifier the list follows ([`crate::keys`]).
+    platform: Platform,
 }
 
 impl ChoiceList {
@@ -274,7 +286,14 @@ impl ChoiceList {
             width: 0.0,
             app_keys: false,
             focus_actions: false,
+            platform: Platform::current(),
         }
+    }
+
+    /// Follows `platform`'s command modifier instead of this system's.
+    pub fn with_platform(mut self, platform: Platform) -> Self {
+        self.platform = platform;
+        self
     }
 
     /// Sends keys to the app's list model ([`DialogAction::Key`]); the
@@ -399,11 +418,11 @@ impl Widget for ChoiceList {
         if k.state != KeyState::Down {
             return;
         }
-        let command = k.modifiers.ctrl() || k.modifiers.alt();
+        let command = crate::keys::is_command(k.modifiers, self.platform);
         let function = matches!(&k.key, Key::Named(n) if *n != NamedKey::F2 && crate::keys::is_function_key(n));
         if self.app_keys
             && (command || function)
-            && let Some(chord) = crate::keys::chord(k, textweaver_app::keymap::Platform::current())
+            && let Some(chord) = crate::keys::chord(k, self.platform)
         {
             ctx.submit_action::<DialogAction>(DialogAction::Chord(chord));
             ctx.set_handled();

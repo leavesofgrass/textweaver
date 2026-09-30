@@ -540,6 +540,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-convert"
    ],
    "deps": [
+    "textweaver-formats",
     "textweaver-math",
     "textweaver-text"
    ],
@@ -1344,14 +1345,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-app",
     "textweaver-cli",
     "textweaver-convert",
+    "textweaver-render",
     "xtask"
    ],
    "deps": [
+    "textweaver-cite",
     "textweaver-core",
     "textweaver-ocr",
     "textweaver-text"
    ],
-   "description": "textweaver document loaders: loader trait, registry, text, Markdown, HTML, EPUB, DOCX, RTF, ODT, LaTeX, email, web archives, PDF with OCR, DAISY, PowerPoint, spreadsheets, archives, web pages, and Pandoc for other formats",
+   "description": "textweaver document loaders: loader trait, registry, text, Markdown with Obsidian notes, HTML, EPUB, DOCX, RTF, ODT, LaTeX, email, web archives, PDF with OCR, DAISY, PowerPoint, spreadsheets, archives, JSON and notebooks, SVG, MathML, web pages, and Pandoc for other formats",
    "dev_deps": [],
    "job": "Document loaders that turn text, Markdown, HTML, EPUB, DOCX, PDF (with OCR of scans), DAISY, PowerPoint, spreadsheets, archives, and web pages into a document.",
    "layer": "document",
@@ -1471,7 +1474,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "dependents": [
     "textweaver-app",
     "textweaver-cli",
-    "textweaver-convert"
+    "textweaver-convert",
+    "textweaver-formats"
    ],
    "deps": [
     "textweaver-core"

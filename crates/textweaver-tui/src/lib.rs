@@ -71,7 +71,7 @@ use textweaver_app::lexicon::args;
 pub use setup::{Options, build_app, build_app_with};
 pub use textweaver_app::a11y::AccessMode;
 pub use theme::{Theme, theme_help};
-pub use ui::{Tui, chord};
+pub use ui::{REDRAW_AT_LEAST, Tui, chord, key_event};
 
 /// How long the loop waits for a key while reading: a highlight step is
 /// drawn at most this long after its word is heard.
@@ -99,13 +99,23 @@ pub fn input_wait(app: &textweaver_app::App, now: Instant) -> Duration {
 /// the hardware cursor, which screen readers and magnifiers follow, is on
 /// its word) as soon as it arrives, not after the next wait for a key
 /// (the September 2026 audit, finding R3).
+///
+/// It draws only when something could have changed (W6u; the loop drew
+/// every pass, 25 times a second while idle and 100 while reading): a key
+/// or command, speech status or a background job, a resize, a change in
+/// what the screen shows ([`Tui::view_signature`]), a blanked status
+/// message coming back, RSVP playing, and at least once a second.
 pub fn frame<B: Backend>(terminal: &mut Terminal<B>, tui: &mut Tui) -> Result<Duration, B::Error> {
-    tui.tick();
+    let changed = tui.tick();
     // Apple's AVSpeechSynthesizer delivers audio and words through the
     // main thread's run loop (ADR-0008); a no-op on other platforms.
     textweaver_app::apple::pump_main_loop(Duration::ZERO);
-    terminal.draw(|f| tui.draw(f))?;
-    Ok(input_wait(tui.app(), Instant::now()))
+    let now = Instant::now();
+    if tui.wants_draw(changed, now) {
+        terminal.draw(|f| tui.draw(f))?;
+    }
+    let now = Instant::now();
+    Ok(input_wait(tui.app(), now).min(tui.draw_due_in(now).max(Duration::from_millis(1))))
 }
 
 /// Runs the event loop until the user quits or a signal asks it to stop

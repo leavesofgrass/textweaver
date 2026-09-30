@@ -664,14 +664,20 @@ def collect_keys() -> dict:
             in_table = False
             continue
         cells = split_row(line)
-        if cells[:4] == ["Action", "Terminal", "GUI", "Id"]:
+        if cells[:4] == ["Action", "Terminal", "GUI", "Id"] or cells == [
+            "Action", "Terminal", "GUI", "GUI on macOS", "Id"
+        ]:
             in_table = True
             continue
         if not in_table or set(line.replace("|", "").strip()) <= set("-: "):
             continue
-        if len(cells) != 4:
+        if len(cells) == 5:
+            action, term, gui, mac, ident = cells
+        elif len(cells) == 4:
+            action, term, gui, ident = cells
+            mac = None
+        else:
             raise SiteError(f"docs/keyboard.md: cannot read the row {line!r}")
-        action, term, gui, ident = cells
         ident = ident.strip("`")
         if palette_section:
             palette_rows[ident] = {
@@ -687,6 +693,7 @@ def collect_keys() -> dict:
             "action": action,
             "terminal": parse_keys(term),
             "gui": parse_keys(gui),
+            "mac": parse_keys(mac.replace("Option+", "Alt+")) if mac is not None else None,
             "palette_when_off": None,
             "source": "keymap",
         }

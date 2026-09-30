@@ -98,6 +98,9 @@ pub const RSVP: WidgetTag<RsvpView> = WidgetTag::named("tw-rsvp");
 const FIRST_TICK: Duration = Duration::from_millis(250);
 /// Highlight moves slower than this are logged.
 const SLOW_HIGHLIGHT_MS: f64 = 30.0;
+/// How often the window looks again while startup messages wait for a
+/// screen reader to ask for the tree.
+const HOLD_TICK: Duration = Duration::from_millis(200);
 /// Misspelled words are marked once typing pauses this long.
 const SPELL_PAUSE: Duration = Duration::from_millis(500);
 /// Misspelled words are marked in documents up to this many chars (about
@@ -197,6 +200,10 @@ struct Shown {
     editing: bool,
     /// Edit mode, as the Edit button says it.
     edit_button: bool,
+    /// The notes, bookmarks, highlights, and search matches drawn.
+    marks: Vec<(CharRange, crate::document::DocMark)>,
+    /// The caret keys the view leaves to the keymap in the app's mode.
+    yielded: Option<Vec<textweaver_app::keymap::KeyChord>>,
 }
 
 /// What the reading aids' spans depend on: bionic reading (and its
@@ -271,6 +278,12 @@ pub struct Gui {
     log: bool,
     started: bool,
     startup: Option<(Option<PathBuf>, bool, Vec<String>)>,
+    /// No settings, keys, or state existed under the state folder when the
+    /// window started: the welcome and the language list come first.
+    first_run: bool,
+    /// The startup questions (hybrid mode with a screen reader running)
+    /// may be asked: not in automated runs (`--background`).
+    startup_offers: bool,
     exit_at: Option<Instant>,
     /// The app's waker: speech statuses and finished background work post
     /// a tick at once (ADR-0024). Set when a tick is posted and not yet
@@ -280,6 +293,12 @@ pub struct Gui {
     tick_ms: Arc<AtomicU64>,
     /// Installed font families, for the font chooser.
     installed: crate::font_chooser::Installed,
+    /// The theme and the highlight colors the palette was made from
+    /// (`App::reading_theme_key`).
+    theme_key: (String, String, Option<String>, Vec<String>),
+    /// The system's high contrast colors the palette was made from, when
+    /// the window follows them.
+    system: Option<crate::system_colors::SystemColors>,
     /// `--theme` was given: the saved theme is not followed.
     fixed_theme: bool,
     /// Settings opens the app's list instead of the dialog.
@@ -305,8 +324,13 @@ pub struct Gui {
     /// (`[interface] language` changes them live, as in the terminal).
     lang: String,
     closed: bool,
+    /// Where the focus was when the first dialog opened, to go back to.
+    return_focus: Option<WidgetId>,
     /// How announcements reach the screen reader.
     announce: AnnounceMode,
+    /// UI Automation notifications waiting for a screen reader to ask for
+    /// the tree (`--announce uia`).
+    held_notices: Vec<Message>,
     /// The window's Win32 handle, for UI Automation notifications (read
     /// on first use; 0 until then or when there is none).
     hwnd: isize,
@@ -825,6 +849,28 @@ pub fn model_for(app: &App, w: CharRange) -> Option<DocModel> {
     })
 }
 
+/// The notes, bookmarks, the reader's highlights, and the search matches in
+/// `window`, as the document view draws them (the selection and the spoken
+/// word and sentence are its own).
+pub fn marks_in(app: &App, window: CharRange) -> Vec<(CharRange, crate::document::DocMark)> {
+    use crate::document::DocMark;
+    use textweaver_app::HighlightKind as K;
+    app.highlights(window)
+        .into_iter()
+        .filter_map(|h| {
+            let mark = match h.kind {
+                K::UserHighlight => DocMark::Highlight,
+                K::Note => DocMark::Note,
+                K::Bookmark => DocMark::Bookmark,
+                K::FindHit => DocMark::FindHit,
+                K::CurrentFindHit => DocMark::CurrentFindHit,
+                K::Selection | K::SpokenSentence | K::SpokenWord => return None,
+            };
+            Some((h.range, mark))
+        })
+        .collect()
+}
+
 /// The document view's state from the app.
 pub fn state_for(app: &App) -> DocState {
     let Some(s) = app.session() else {
@@ -847,6 +893,35 @@ pub fn state_for(app: &App) -> DocState {
         sentence: s.spoken_sentence,
         reading,
     }
+}
+
+/// The view moved its caret (or its selection): the app's cursor and
+/// selection follow, so the keymap's Copy and Cut (and a note or highlight
+/// on the selection) take what is selected on screen. A selection the app
+/// held (from a command) is let go when the view moves the caret without
+/// Shift, so typing goes to the caret. Returns the app's effects, or
+/// `None` when the app already had this caret and selection. The window
+/// mutes the app's announcer meanwhile: a screen reader reads the move.
+pub fn sync_caret(
+    app: &mut App,
+    caret: textweaver_app::core::CharPos,
+    selection: Option<CharRange>,
+) -> Option<Vec<Effect>> {
+    let selection = selection.filter(|r| !r.is_empty());
+    let app_cursor = app.session().map(|s| s.cursor);
+    let app_selection = app
+        .session()
+        .and_then(|s| s.selection)
+        .filter(|r| !r.is_empty());
+    let select = app_selection != selection;
+    if app_cursor == Some(caret) && !select {
+        return None;
+    }
+    if select {
+        let range = selection.unwrap_or(CharRange::new(caret.0, caret.0));
+        let _ = app.dispatch(Command::Select(range));
+    }
+    Some(app.dispatch(Command::SetCursor(caret)))
 }
 
 /// Brings `host` up to date with `app`. Returns the load time in
@@ -901,6 +976,17 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
                 shown.aid_spans = Some(key);
                 if let Some(model) = model_for(app, w.range()) {
                     host.edit(DOC, |mut d| {
+                        // An edit keeps the paragraphs around the change
+                        // (their layouts and nodes); else a slide or a
+                        // new model.
+                        let model = if edited && !aids_changed {
+                            match DocumentView::edit_model(&mut d, model) {
+                                Ok(()) => return,
+                                Err(model) => *model,
+                            }
+                        } else {
+                            model
+                        };
                         if slide {
                             DocumentView::slide_model(&mut d, model);
                         } else {
@@ -928,6 +1014,25 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
     if editing != shown.editing {
         host.edit(DOC, |mut d| DocumentView::set_editing(&mut d, editing));
         shown.editing = editing;
+    }
+    // The reader's marks and the search matches in the window.
+    let marks = shown
+        .window
+        .map(|w| marks_in(app, w.range()))
+        .unwrap_or_default();
+    if marks != shown.marks {
+        host.edit(DOC, |mut d| DocumentView::set_marks(&mut d, marks.clone()));
+        shown.marks = marks;
+    }
+    // Speech Cursor mode's line keys go to the keymap, not the caret.
+    let math = app.math_exploring() && !app.confirmation_pending();
+    let yielded =
+        keys::yielded_caret_keys(app.keymap(), app.mode().layer(), math, Platform::current());
+    if shown.yielded.as_ref() != Some(&yielded) {
+        host.edit(DOC, |mut d| {
+            DocumentView::set_yielded_keys(&mut d, yielded.clone())
+        });
+        shown.yielded = Some(yielded);
     }
     // The font and size: the keys, the font list, or the settings dialog.
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
@@ -1030,13 +1135,43 @@ impl Gui {
             // edit itself is recorded here.
             self.timings.highlight_ms.push(0.0);
         }
-        let messages: Vec<Message> = self.queue.borrow_mut().drain(..).collect();
-        if !messages.is_empty() {
-            if self.announce == AnnounceMode::Uia {
-                self.notify(ctx, &messages);
+        // Copy and Cut (the keymap's): what the app copied goes on the
+        // system clipboard, as the terminal sends it with OSC 52.
+        if let Some(text) = self.app.take_clipboard() {
+            if self.log {
+                crate::log::line(&format!("clipboard: {} chars", text.chars().count()));
             }
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(DOC, |mut d| d.ctx.set_clipboard(text));
+        }
+        let messages: Vec<Message> = self.queue.borrow_mut().drain(..).collect();
+        let (tree_seen, release_due) = ctx
+            .render_root(self.window_id)
+            .get_widget_with_tag(ANNOUNCER)
+            .map_or((true, false), |a| {
+                (a.inner().tree_seen(), a.inner().release_due())
+            });
+        if self.announce == AnnounceMode::Uia {
+            // Notifications, too, wait for a screen reader to ask for the
+            // tree: raised before, no one hears them.
+            self.held_notices.extend(messages.iter().cloned());
+            if tree_seen && !self.held_notices.is_empty() {
+                let notices = std::mem::take(&mut self.held_notices);
+                self.notify(ctx, &notices);
+            }
+            let excess = self.held_notices.len().saturating_sub(12);
+            self.held_notices.drain(..excess);
+        }
+        if !messages.is_empty() {
             let root = ctx.render_root(self.window_id);
             root.edit_widget_with_tag(ANNOUNCER, |mut a| Announcer::say(&mut a, messages));
+        }
+        if release_due {
+            if self.log {
+                crate::log::line("announcements held until the tree was asked for: released");
+            }
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(ANNOUNCER, |mut a| Announcer::release(&mut a));
         }
         // Single-key shortcuts turned on or off: each button names its key.
         let char_keys = self.app.keymap().character_keys();
@@ -1080,9 +1215,17 @@ impl Gui {
                 }
             }
         }
-        // The theme changed (a key, the palette, or the settings).
-        if !self.fixed_theme && self.app.current_theme().name() != self.palette.name {
-            self.palette = Palette::from_theme(self.app.current_theme());
+        // The theme changed (a key, the palette, or the settings), or the
+        // system's high contrast mode was turned on or off.
+        let theme_key = self.app.reading_theme_key();
+        let system = self.system_colors();
+        if (!self.fixed_theme && theme_key != self.theme_key) || system != self.system {
+            self.theme_key = theme_key;
+            self.system = system;
+            self.palette = match &system {
+                Some(c) => crate::system_colors::palette(c),
+                None => Palette::from_theme(&self.app.reading_theme()),
+            };
             let root = ctx.render_root(self.window_id);
             root.set_default_properties(Arc::new(theme::default_properties(&self.palette)));
             apply_palette(root, &self.palette);
@@ -1295,9 +1438,7 @@ impl Gui {
             Modal::new(card, label_text, p.clone()).with_tab_completion(tab_completes),
         )
         .erased();
-        let root = ctx.render_root(self.window_id);
-        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
-        root.focus_on(Some(field_id));
+        self.show_dialog(ctx, modal, field_id);
     }
 
     /// A key for the app's prompt: the app changes its text (history,
@@ -1325,9 +1466,7 @@ impl Gui {
         let (section, row) = at.unwrap_or_else(|| (0, form.first_plain_row(0)));
         let section = section.min(form.sections.len().saturating_sub(1));
         let d = settings_dialog(&self.palette, &form, &self.app, section, row);
-        let root = ctx.render_root(self.window_id);
-        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(d.modal)));
-        root.focus_on(Some(d.form));
+        self.show_dialog(ctx, d.modal, d.form);
         if self.log {
             crate::log::line(&format!(
                 "dialog: settings, {} sections, section {section}, row {row}",
@@ -1516,9 +1655,7 @@ impl Gui {
         let selected = self.app.list_model().map_or(0, |m| m.selected);
         let c = self.app.catalog();
         let (modal, list_id) = list_dialog(&self.palette, &c, title, items, selected, true);
-        let root = ctx.render_root(self.window_id);
-        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
-        root.focus_on(Some(list_id));
+        self.show_dialog(ctx, modal, list_id);
         self.dialog = Some(OpenDialog::List);
         if self.log {
             crate::log::line(&format!("dialog: list {title:?} with {count} items"));
@@ -1558,9 +1695,7 @@ impl Gui {
             ));
         let card = NewWidget::new(card).with_props(dialog::card_props(p));
         let modal = NewWidget::new(Modal::new(card, label_text, p.clone())).erased();
-        let root = ctx.render_root(self.window_id);
-        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
-        root.focus_on(Some(field_id));
+        self.show_dialog(ctx, modal, field_id);
         self.dialog = Some(OpenDialog::Palette(ids));
         if self.log {
             crate::log::line(&format!("dialog: command palette with {count} commands"));
@@ -1586,9 +1721,7 @@ impl Gui {
             selected,
             false,
         );
-        let root = ctx.render_root(self.window_id);
-        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
-        root.focus_on(Some(list_id));
+        self.show_dialog(ctx, modal, list_id);
         self.dialog = Some(OpenDialog::FontFamily(choices));
         if self.log {
             crate::log::line("dialog: font list");
@@ -1779,6 +1912,34 @@ impl Gui {
         self.app.echo(&text);
     }
 
+    /// The system's high contrast colors, when the window follows them:
+    /// with no `--theme`, while `display.follow_os_theme` is on.
+    fn system_colors(&self) -> Option<crate::system_colors::SystemColors> {
+        if self.fixed_theme || !self.app.settings().display.follow_os_theme {
+            return None;
+        }
+        crate::system_colors::high_contrast()
+    }
+
+    /// The window took the focus: the document's name and the window's, in
+    /// textweaver's own voice only (`App::echo` speaks only in the
+    /// self-voicing mode, and not while reading), since a screen reader says
+    /// the window's title and the focused document itself.
+    fn window_focused(&mut self) {
+        let title = self
+            .app
+            .session()
+            .map_or_else(|| "textweaver".to_owned(), |s| s.title.clone());
+        let said = self
+            .app
+            .catalog()
+            .fmt("gui-window-focused", &args!["title" => title]);
+        if self.log {
+            crate::log::line(&format!("window focused: {said}"));
+        }
+        self.app.echo(&said);
+    }
+
     /// A yes-or-no question from the app shows as a dialog while it is
     /// open (the app has already said it), and goes when it is answered.
     fn sync_question(&mut self, ctx: &mut DriverCtx<'_>) {
@@ -1787,9 +1948,7 @@ impl Gui {
         if pending && !showing {
             let question = self.app.status_text().to_owned();
             let q = question_dialog(&self.palette, &self.app.catalog(), &question);
-            let root = ctx.render_root(self.window_id);
-            root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(q.modal)));
-            root.focus_on(Some(q.yes));
+            self.show_dialog(ctx, q.modal, q.yes);
             self.dialog = Some(OpenDialog::Question {
                 yes: q.yes,
                 no: q.no,
@@ -1816,12 +1975,38 @@ impl Gui {
         self.dispatch(ctx, Command::Confirm(answer));
     }
 
+    /// Shows `modal` over the window with the focus on `focus`. The first
+    /// dialog over the window remembers where the focus was, so closing it
+    /// puts the focus back there (a toolbar button, or the document).
+    fn show_dialog(
+        &mut self,
+        ctx: &mut DriverCtx<'_>,
+        modal: NewWidget<dyn Widget>,
+        focus: WidgetId,
+    ) {
+        let root = ctx.render_root(self.window_id);
+        let open = root
+            .get_widget_with_tag(ROOT)
+            .is_some_and(|r| r.inner().has_dialog());
+        if !open {
+            self.return_focus = root.focused_widget();
+        }
+        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+        root.focus_on(Some(focus));
+    }
+
+    /// Closes the dialog; the focus goes back where it was before the
+    /// dialog opened, or to the document.
     fn close_dialog(&mut self, ctx: &mut DriverCtx<'_>) {
         self.dialog = None;
         let root = ctx.render_root(self.window_id);
         root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, None));
+        let back = self
+            .return_focus
+            .take()
+            .filter(|id| root.get_widget(*id).is_some());
         let doc = root.get_widget_with_tag(DOC).map(|w| w.id());
-        root.focus_on(doc);
+        root.focus_on(back.or(doc));
     }
 
     fn answer(&mut self, ctx: &mut DriverCtx<'_>, cmd: Command) {
@@ -1886,8 +2071,21 @@ impl Gui {
         let Some(chord) = keys::chord(k, Platform::current()) else {
             return;
         };
+        // Exploring a formula (Explore Math): the arrows, Home, End, Space,
+        // Enter, and Escape move through it, as in the terminal; any other
+        // key leaves it and does what it usually does.
+        if self.app.math_exploring() && !self.app.confirmation_pending() {
+            if let Some(mv) = keys::math_move(&chord) {
+                if self.log {
+                    crate::log::line(&format!("math key {chord} -> {mv:?}"));
+                }
+                self.dispatch(ctx, Command::MathStep(mv));
+                return;
+            }
+            self.app.stop_math_exploring();
+        }
         let layer = self.app.mode().layer();
-        let action = (!keys::is_native(&chord))
+        let action = (!keys::is_native(&chord, Platform::current()))
             .then(|| self.app.keymap().lookup(&chord, layer))
             .flatten();
         if self.log {
@@ -1950,9 +2148,28 @@ impl Gui {
                 self.app.announce(&said, Priority::Polite);
             }
         }
+        // As in the terminal reader: startup messages follow the opening
+        // message instead of cutting it off (a settings or keymap warning
+        // stays assertive, so it is heard even when reading starts at once).
         for m in &messages {
-            self.app.announce(m, Priority::Assertive);
+            self.app.announce_queued(m, Priority::Assertive);
         }
+        if self.first_run {
+            // The first run: the welcome (the five keys that get a new user
+            // reading), then the language list, the system's first.
+            let welcome = setup::welcome_text(&self.app.catalog(), self.app.keymap());
+            self.app.announce_queued(&welcome, Priority::Polite);
+            effects.extend(self.app.language_list());
+        } else if self.startup_offers
+            && self.app.hybrid_offer_due()
+            && let Some(found) = textweaver_app::a11y::detect::detect()
+        {
+            // A screen reader is running and the mode was never chosen:
+            // ask once whether to use hybrid mode (a yes-or-no dialog).
+            let _ = self.app.offer_hybrid(&found);
+        }
+        // Unsaved work from an earlier run, one snapshot at a time.
+        effects.extend(self.app.offer_recovery());
         self.run_effects(ctx, effects);
         self.refresh(ctx);
         let doc = ctx
@@ -1977,38 +2194,32 @@ impl AppDriver for Gui {
         if let Some(KeyAction(k)) = action.downcast_ref::<KeyAction>() {
             let k = k.clone();
             self.on_key(ctx, &k);
-        } else if let Some(DocAction::CaretMoved { caret, echo, .. }) =
-            action.downcast_ref::<DocAction>()
+        } else if let Some(DocAction::CaretMoved {
+            caret,
+            selection,
+            echo,
+        }) = action.downcast_ref::<DocAction>()
         {
-            let caret = *caret;
+            let (caret, selection) = (*caret, *selection);
             let echo = echo.clone();
-            let app_cursor = self.app.session().map(|s| s.cursor);
-            // In edit mode, a selection the app holds (from a command) is
-            // let go when the view moves the caret, so typing goes to the
-            // caret; the view keeps its own selection and sends it with
-            // each edit.
-            let app_selection =
-                self.app.is_editing() && self.app.session().is_some_and(|s| s.selection.is_some());
-            if app_cursor != Some(caret) || app_selection {
+            self.muted.set(true);
+            let synced = sync_caret(&mut self.app, caret, selection);
+            self.muted.set(false);
+            if let Some(effects) = synced {
                 if self.log {
-                    crate::log::line(&format!("caret sync: {caret:?}"));
+                    crate::log::line(&format!("caret sync: {caret:?} {selection:?}"));
                 }
-                self.muted.set(true);
-                if app_selection {
-                    let _ = self
-                        .app
-                        .dispatch(Command::Select(CharRange::new(caret.0, caret.0)));
-                }
-                let effects = self.app.dispatch(Command::SetCursor(caret));
-                self.muted.set(false);
                 self.run_effects(ctx, effects);
-                // The view already shows the caret; keep the window in step.
-                self.shown.state.caret = caret;
+                // The view already shows the caret and the selection; keep
+                // the window in step, so a later change (a Cut) is sent.
+                self.shown.state = state_for(&self.app);
                 self.refresh(ctx);
             }
             if let Some(echo) = echo {
                 self.echo_caret(echo);
             }
+        } else if let Some(DocAction::WindowFocused) = action.downcast_ref::<DocAction>() {
+            self.window_focused();
         } else if let Some(DocAction::TableCell { forward }) = action.downcast_ref::<DocAction>() {
             let a = if *forward {
                 ActionId::NextTableCell
@@ -2024,7 +2235,9 @@ impl AppDriver for Gui {
                 DocAction::Delete { forward: true } => Command::DeleteForward,
                 DocAction::Delete { forward: false } => Command::DeleteBack,
                 DocAction::Replace { range, text } => Command::ReplaceRange { range, text },
-                DocAction::CaretMoved { .. } | DocAction::TableCell { .. } => return,
+                DocAction::CaretMoved { .. }
+                | DocAction::TableCell { .. }
+                | DocAction::WindowFocused => return,
             };
             if self.log {
                 crate::log::line(&format!("edit: {cmd:?}"));
@@ -2244,6 +2457,15 @@ impl AppDriver for Gui {
             // Come back when the pause is over, to mark the misspellings.
             wait = wait.min(SPELL_PAUSE / 2);
         }
+        let holding = ctx
+            .render_root(self.window_id)
+            .get_widget_with_tag(ANNOUNCER)
+            .is_some_and(|a| a.inner().holding());
+        if holding {
+            // Messages wait for a screen reader to ask for the tree: come
+            // back soon, to say them once it has.
+            wait = wait.min(HOLD_TICK);
+        }
         self.tick_ms.store(
             u64::try_from(wait.as_millis()).unwrap_or(u64::MAX).max(10),
             Ordering::Relaxed,
@@ -2293,6 +2515,9 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         muted: Rc::clone(&muted),
         log: opts.log,
     };
+    // Automated runs (`--background`) skip the first run's welcome and
+    // language list, which would stand in front of what they check.
+    let first_run = !opts.background && setup::is_first_run(&opts.app);
     let (mut app, mut messages) = setup::build_app(&opts.app, Box::new(announcer));
     app.set_announce_list_focus(opts.experiments.app_list_announcements);
     let mut experiments = opts.experiments;
@@ -2312,10 +2537,18 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         // settings ask to follow it (`display.follow_os_theme`).
         let _ = app.apply_startup_theme(textweaver_app::theme::os::probe());
     }
-    let palette = match &opts.theme {
-        Some(name) => Palette::named(name),
-        None => Palette::from_theme(app.current_theme()),
+    // Windows High Contrast: the system's own colors, while the settings
+    // follow the system (`display.follow_os_theme`) and no `--theme` was
+    // given.
+    let system = (opts.theme.is_none() && app.settings().display.follow_os_theme)
+        .then(crate::system_colors::high_contrast)
+        .flatten();
+    let palette = match (&opts.theme, &system) {
+        (Some(name), _) => Palette::named(name),
+        (None, Some(c)) => crate::system_colors::palette(c),
+        (None, None) => Palette::from_theme(&app.reading_theme()),
     };
+    let theme_key = app.reading_theme_key();
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
     let full_passes = Rc::new(Cell::new(0));
     let tree = build_tree(&palette, font, Some(&app), full_passes, experiments);
@@ -2361,6 +2594,8 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         log: opts.log,
         started: false,
         startup: Some((opts.file.clone(), opts.read_on_start, messages)),
+        first_run,
+        startup_offers: !opts.background,
         exit_at: opts.exit_after.map(|d| Instant::now() + d),
         wake_pending: Arc::new(AtomicBool::new(false)),
         tick_ms: Arc::new(AtomicU64::new(
@@ -2374,8 +2609,12 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         spell_marked: None,
         spell_seen: None,
         fixed_theme: opts.theme.is_some(),
+        theme_key,
+        system,
         settings_list: experiments.settings_list,
         announce,
+        held_notices: Vec::new(),
+        return_focus: None,
         hwnd: 0,
         installed: crate::font_chooser::Installed::scan_in_background(),
         window_title: String::new(),
@@ -2441,6 +2680,18 @@ pub struct Refresher {
 }
 
 impl Refresher {
+    /// The view moved its caret or selection, as the window takes it
+    /// ([`sync_caret`]): the app follows, and the view is known to show it.
+    pub fn caret_moved(
+        &mut self,
+        app: &mut App,
+        caret: textweaver_app::core::CharPos,
+        selection: Option<CharRange>,
+    ) {
+        let _ = sync_caret(app, caret, selection);
+        self.shown.state = state_for(app);
+    }
+
     /// Brings `host` up to date with `app`. Returns the document window's
     /// range when the view's text was replaced or slid.
     pub fn refresh(&mut self, app: &App, host: &mut impl Host) -> Option<CharRange> {

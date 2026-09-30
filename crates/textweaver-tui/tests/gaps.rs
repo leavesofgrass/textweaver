@@ -9,6 +9,7 @@ use ratatui::backend::TestBackend;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::style::Modifier;
 use textweaver_app::core::{CharPos, CharRange};
+use textweaver_app::keymap::ActionId;
 use textweaver_app::store::Settings;
 use textweaver_app::testing::recording_service;
 use textweaver_app::theme::ColorSupport;
@@ -196,10 +197,7 @@ fn syllables_draw_between_chars_and_highlights_stay_exact() {
         "Readability"
     );
     // Hidden again.
-    h.press(KeyEvent::new(
-        KeyCode::Char('Z'),
-        KeyModifiers::ALT | KeyModifiers::SHIFT,
-    ));
+    h.press(h.tui.key_for(ActionId::SyllablesToggle));
     assert!(
         h.status().starts_with("Syllables hidden."),
         "{}",
@@ -214,10 +212,7 @@ fn difficult_words_are_underlined_and_named_at_high_verbosity() {
     s.speech.verbosity = textweaver_app::a11y::Verbosity::High;
     let text = "The cat saw obvious mitochondria today.\n";
     let mut h = launch(s, "d.txt", text);
-    h.press(KeyEvent::new(
-        KeyCode::Char('J'),
-        KeyModifiers::ALT | KeyModifiers::SHIFT,
-    ));
+    h.press(h.tui.key_for(ActionId::DifficultWordsToggle));
     assert!(
         h.status().starts_with("Difficult words underlined."),
         "{}",
@@ -252,10 +247,7 @@ fn math_exploration_keys() {
     h.tui
         .app_mut()
         .set_cursor(CharPos(text.find("frac").unwrap() - 1));
-    h.press(KeyEvent::new(
-        KeyCode::Char('X'),
-        KeyModifiers::ALT | KeyModifiers::SHIFT,
-    ));
+    h.press(h.tui.key_for(ActionId::ExploreMath));
     assert!(h.tui.app().math_exploring(), "{}", h.status());
     h.press(key(KeyCode::Down));
     assert!(h.status().starts_with("numerator"), "{}", h.status());
@@ -268,10 +260,7 @@ fn math_exploration_keys() {
     assert!(!h.tui.app().math_exploring());
     assert!(h.status().starts_with("Left math."), "{}", h.status());
     // Another key leaves at once and does its own work.
-    h.press(KeyEvent::new(
-        KeyCode::Char('X'),
-        KeyModifiers::ALT | KeyModifiers::SHIFT,
-    ));
+    h.press(h.tui.key_for(ActionId::ExploreMath));
     assert!(h.tui.app().math_exploring());
     h.press(ch('j'));
     assert!(!h.tui.app().math_exploring());

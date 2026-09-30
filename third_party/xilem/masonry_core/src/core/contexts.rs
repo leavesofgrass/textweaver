@@ -1624,6 +1624,9 @@ impl_context_method!(
                 }
 
                 global_state.scene_cache.remove(&state.id);
+                // textweaver: a removed widget's tag is free again, so a new
+                // widget can take it (a second dialog with the same tags).
+                global_state.widget_tags.retain(|_, id| *id != state.id);
 
                 if let Some(layers) = global_state.attached_layers.remove(&state.id) {
                     for (_, layer_id) in layers {

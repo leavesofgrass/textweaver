@@ -88,3 +88,68 @@ fn the_loop_waits_briefly_while_reading() {
     assert_eq!(input_wait(&app, now), READING_POLL);
     assert!(READING_POLL <= Duration::from_millis(10));
 }
+
+/// The loop draws only when something could have changed (W6u): after a
+/// command, a key, a message from the app, or a resize; while idle it
+/// draws at most once a second.
+#[test]
+fn the_loop_draws_only_when_something_changed() {
+    use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+    use textweaver_app::a11y::Priority;
+    use textweaver_tui::REDRAW_AT_LEAST;
+    let (speech, _log) = recording_service().unwrap();
+    let mut app = App::new(AppConfig {
+        speech,
+        backend_name: "test-recording".into(),
+        ..AppConfig::for_tests()
+    });
+    app.open_document(
+        Document::from_plain_text(&"One two three. Four five six.\n".repeat(50)),
+        DocKey::untitled(1),
+        "T".into(),
+    );
+    let mut tui = Tui::with_color_support(app, ColorSupport::TrueColor);
+    let mut term = Terminal::new(TestBackend::new(80, 24)).unwrap();
+    frame(&mut term, &mut tui).unwrap();
+    let first = tui.draws();
+    assert_eq!(first, 1, "the first frame draws");
+    // Idle: nothing changes, nothing is drawn.
+    for _ in 0..20 {
+        frame(&mut term, &mut tui).unwrap();
+    }
+    assert_eq!(tui.draws(), first, "idle frames drew");
+    // A command draws once.
+    tui.dispatch(Command::Action(ActionId::NextSentence));
+    frame(&mut term, &mut tui).unwrap();
+    frame(&mut term, &mut tui).unwrap();
+    assert_eq!(tui.draws(), first + 1);
+    // A key event draws.
+    tui.handle_event(&Event::Key(KeyEvent::new(
+        KeyCode::Down,
+        KeyModifiers::NONE,
+    )));
+    frame(&mut term, &mut tui).unwrap();
+    assert_eq!(tui.draws(), first + 2);
+    // A message the app says by itself (not through the terminal reader)
+    // draws: the status line changed.
+    tui.app_mut().announce("Saved at last.", Priority::Polite);
+    frame(&mut term, &mut tui).unwrap();
+    assert_eq!(tui.draws(), first + 3);
+    let buf = term.backend().buffer();
+    let screen: String = (0..buf.area.height)
+        .flat_map(|y| (0..buf.area.width).map(move |x| (x, y)))
+        .map(|(x, y)| buf[(x, y)].symbol().to_owned())
+        .collect();
+    assert!(
+        screen.contains("Saved at last."),
+        "the message is on screen"
+    );
+    // A resize draws.
+    tui.handle_event(&Event::Resize(100, 30));
+    frame(&mut term, &mut tui).unwrap();
+    assert_eq!(tui.draws(), first + 4);
+    // At most a second passes without a draw.
+    let now = Instant::now();
+    assert!(tui.draw_due_in(now) <= REDRAW_AT_LEAST);
+    assert!(tui.wants_draw(false, now + REDRAW_AT_LEAST));
+}

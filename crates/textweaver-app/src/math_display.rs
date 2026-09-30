@@ -29,6 +29,20 @@ impl App {
         let Some(s) = self.session.as_ref() else {
             return Vec::new();
         };
+        let key = crate::frame_cache::MathKey {
+            revision: s.revision,
+            range,
+            asciimath: self.settings.normalization.asciimath_delimiter,
+        };
+        crate::frame_cache::cached(&self.frame_cache.math, key, || self.math_display_now(range))
+    }
+
+    /// [`math_display`](Self::math_display) worked out anew: every math
+    /// marker in `range` whose formula has a Unicode form.
+    fn math_display_now(&self, range: CharRange) -> Vec<(CharRange, String)> {
+        let Some(s) = self.session.as_ref() else {
+            return Vec::new();
+        };
         let opts = DetectOptions {
             asciimath: self.settings.normalization.asciimath_delimiter,
             ..DetectOptions::default()

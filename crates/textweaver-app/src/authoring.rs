@@ -18,7 +18,6 @@
 use textweaver_a11y::Verbosity;
 use textweaver_core::{CharPos, CharRange, Direction, MarkerKind, PunctuationLevel, Unit};
 use textweaver_editor::Selection;
-use textweaver_editor::echo::thousands;
 use textweaver_lexicon::args;
 use textweaver_speech::Earcon;
 use textweaver_text::units::unit_at;
@@ -219,7 +218,10 @@ impl App {
             ),
         };
         let n = count_words(s.doc.text().slice(range.to_range()).chars());
-        let msg = self.msg_args(what, &args!["n" => n, "count" => thousands(n)]);
+        let msg = self.msg_args(
+            what,
+            &args!["n" => n, "count" => crate::words::grouped(self.cat(), n)],
+        );
         self.tell(&msg);
     }
 
@@ -549,7 +551,7 @@ impl App {
         }
         let msg = self.msg_args(
             "authoring-selected-all",
-            &args!["n" => words, "count" => thousands(words)],
+            &args!["n" => words, "count" => crate::words::grouped(self.cat(), words)],
         );
         self.tell(&msg);
     }
@@ -700,7 +702,7 @@ mod tests {
         let said = |n: usize| {
             c.fmt(
                 "authoring-selected-all",
-                &args!["n" => n, "count" => thousands(n)],
+                &args!["n" => n, "count" => crate::words::grouped(&c, n)],
             )
         };
         assert_eq!(said(1), "Selected all, 1 word.");

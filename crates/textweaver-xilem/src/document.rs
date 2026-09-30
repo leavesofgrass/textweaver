@@ -11,10 +11,11 @@
 //! - **Windowing.** The view holds the window's paragraphs only
 //!   ([`crate::window`]); positions are document-absolute. Only the
 //!   paragraphs on screen are laid out, from a cache.
-//! - **Keys.** Arrows, Home, End, Page Up, and Page Down (with Shift to
-//!   select and Ctrl for words, paragraphs, and the document's ends) move
-//!   the caret here, and the screen reader reads what the caret moved over.
-//!   Every other key goes on to the keymap.
+//! - **Keys.** The platform's caret keys ([`keys::caret_keys`]: arrows,
+//!   Home, End, Page Up, and Page Down, with Ctrl on Windows and Linux or
+//!   Option and Command on macOS for words, paragraphs, and the ends, and
+//!   Shift to select) move the caret here, and the screen reader reads what
+//!   the caret moved over. Every other key goes on to the keymap.
 //! - **Actions.** A user's caret move is reported as [`DocAction`]; the
 //!   driver passes it to the app as `Command::SetCursor`.
 
@@ -40,8 +41,11 @@ use masonry::parley::style::{FontFamily, FontStyle, FontWeight, LineHeight};
 use masonry::parley::{Affinity, Cursor, FontContext, Layout, LayoutContext, Selection};
 use textweaver_app::aids::{RowMark, RulerMode, RulerSettings, TextSpacing, ViewRow, ruler_rows};
 use textweaver_app::core::{CharPos, CharRange};
+use textweaver_app::keymap::KeyChord;
+use textweaver_app::keymap::Platform;
 
 use crate::caret;
+use crate::keys::{self, CaretStep};
 use crate::runs::{Paragraph, Run, RunMark, RunSet};
 use crate::theme::{self, Palette};
 use crate::window::{SpanStyle, StyledSpan};
@@ -141,6 +145,25 @@ impl DocModel {
     }
 }
 
+/// Something the reader marked or found, drawn over the text (as the
+/// terminal draws them). Each has a shape as well as a color, so no color
+/// carries it alone: a reader's highlight has a solid line under it, a note
+/// a dashed one, a bookmark a bar at its start, a search match a box around
+/// it, and the match at the caret a heavier box.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DocMark {
+    /// A highlight the reader made.
+    Highlight,
+    /// Text with a note.
+    Note,
+    /// A bookmark.
+    Bookmark,
+    /// A search match.
+    FindHit,
+    /// The search match at the caret.
+    CurrentFindHit,
+}
+
 /// The moving state: where the caret and the highlights are.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct DocState {
@@ -189,6 +212,11 @@ pub enum DocAction {
         /// Delete, not Backspace.
         forward: bool,
     },
+    /// The window took the focus (Alt+Tab, a click) with the document
+    /// focused. The driver says the document's and the window's names in
+    /// textweaver's own voice (the self-voicing mode); a screen reader says
+    /// the window's title and the focused document itself.
+    WindowFocused,
     /// Edit mode: replace `range` with `text`: typing or deleting over a
     /// selection, or a screen reader's or dictation's edit
     /// (`ReplaceSelectedText`, `SetValue`). The driver sends it as
@@ -268,12 +296,21 @@ pub struct DocumentView {
     edit_role: bool,
     /// Edit mode (ADR-0033): a multi-line edit that takes typing.
     editing: bool,
+    /// Whose caret keys and command modifier the view follows
+    /// ([`keys::caret_keys`]).
+    platform: Platform,
+    /// Caret keys left to the keymap in the app's mode
+    /// ([`keys::yielded_caret_keys`]: Speech Cursor mode's line keys).
+    yielded: Vec<KeyChord>,
     focused: bool,
     /// The node's name, in the interface language ("Document").
     label: String,
     /// Misspelled words (edit mode), drawn with a dotted underline. Paint
     /// only: the text, its layout, and its runs do not change.
     misspelled: Vec<CharRange>,
+    /// Notes, bookmarks, the reader's highlights, and search matches
+    /// ([`DocMark`]), drawn only.
+    marks: Vec<(CharRange, DocMark)>,
 
     // Layout.
     layouts: HashMap<usize, ParaLayout>,
@@ -337,9 +374,12 @@ impl DocumentView {
             select_spoken: false,
             edit_role: false,
             editing: false,
+            platform: Platform::current(),
+            yielded: Vec::new(),
             focused: false,
             label: "Document".to_owned(),
             misspelled: Vec::new(),
+            marks: Vec::new(),
             layouts: HashMap::new(),
             line_starts: Vec::new(),
             column: 0.0,
@@ -366,6 +406,18 @@ impl DocumentView {
     pub fn with_select_spoken(mut self, on: bool) -> Self {
         self.select_spoken = on;
         self
+    }
+
+    /// Follows `platform`'s caret keys and command modifier instead of
+    /// this system's (tests of another platform's keys).
+    pub fn with_platform(mut self, platform: Platform) -> Self {
+        self.platform = platform;
+        self
+    }
+
+    /// Leaves these caret keys to the keymap (the app's mode binds them).
+    pub fn set_yielded_keys(this: &mut WidgetMut<'_, Self>, keys: Vec<KeyChord>) {
+        this.widget.yielded = keys;
     }
 
     /// Names the node for screen readers, in the interface language
@@ -434,6 +486,154 @@ impl DocumentView {
     /// caret (the text selection) is sent again with it.
     pub fn slide_model(this: &mut WidgetMut<'_, Self>, model: DocModel) {
         Self::replace_model(this, model, true);
+    }
+
+    /// Edit mode: the text changed at the caret (a key, an undo, a
+    /// command). The paragraphs before the change keep everything; those
+    /// after it keep their layouts, their visual lines, and their run nodes,
+    /// only moved by the change's length, so a key costs one paragraph's
+    /// layout and runs instead of the window's, and the screen reader gets
+    /// the edited paragraph's nodes only.
+    ///
+    /// # Errors
+    /// Gives `model` back, changing nothing, when the two models share
+    /// neither a first nor a last paragraph; the caller then replaces or
+    /// slides the model.
+    pub fn edit_model(
+        this: &mut WidgetMut<'_, Self>,
+        model: DocModel,
+    ) -> Result<(), Box<DocModel>> {
+        let w = &mut *this.widget;
+        let old = &w.model;
+        let (n_old, n_new) = (old.paragraphs.len(), model.paragraphs.len());
+        let delta = model.doc_len as isize - old.doc_len as isize;
+        let shift = |p: CharPos| CharPos((p.0 as isize + delta).max(0) as usize);
+        let same_text = |a: &Paragraph, b: &Paragraph| {
+            a.text == b.text && a.heading == b.heading && a.has_break == b.has_break
+        };
+        if model.separator != old.separator {
+            return Err(Box::new(model));
+        }
+        let old_styles = old.styles_by_paragraph();
+        let new_styles = model.styles_by_paragraph();
+        let shifted = |s: &(Vec<StyledSpan>, Vec<CharPos>)| {
+            (
+                s.0.iter()
+                    .map(|x| StyledSpan {
+                        range: CharRange::new(shift(x.range.start).0, shift(x.range.end).0),
+                        style: x.style,
+                    })
+                    .collect::<Vec<_>>(),
+                s.1.iter().map(|&b| shift(b)).collect::<Vec<_>>(),
+            )
+        };
+        let limit = n_old.min(n_new);
+        let mut pre = 0;
+        while pre < limit
+            && old.paragraphs[pre].start == model.paragraphs[pre].start
+            && same_text(&old.paragraphs[pre], &model.paragraphs[pre])
+            && old_styles[pre] == new_styles[pre]
+        {
+            pre += 1;
+        }
+        let mut suf = 0;
+        while suf < limit - pre {
+            let (i, j) = (n_old - 1 - suf, n_new - 1 - suf);
+            let (a, b) = (&old.paragraphs[i], &model.paragraphs[j]);
+            if shift(a.start) != b.start
+                || !same_text(a, b)
+                || shifted(&old_styles[i]) != new_styles[j]
+            {
+                break;
+            }
+            suf += 1;
+        }
+        if pre == 0 && suf == 0 {
+            return Err(Box::new(model));
+        }
+        // Where the old suffix starts: runs at or after it move by `delta`;
+        // runs of the old middle paragraphs are gone.
+        let old_mid = pre..n_old - suf;
+        let suf_start = old.paragraphs.get(n_old - suf).map(|p| p.start);
+        let anchor_pos = old.paragraphs.get(w.top.0).map(|p| p.start);
+
+        let mut layouts = std::mem::take(&mut w.layouts);
+        let old_lines = std::mem::take(&mut w.line_starts);
+        let old_runs = std::mem::take(&mut w.para_runs);
+        let old_ids = std::mem::take(&mut w.para_ids);
+        let old_dirty = std::mem::take(&mut w.dirty_paras);
+        let mut new_layouts = HashMap::new();
+        let mut lines = vec![None; n_new];
+        let mut runs = vec![None; n_new];
+        let mut ids = vec![None; n_new];
+        let mut dirty = vec![true; n_new];
+        let keep = (0..pre)
+            .map(|i| (i, i))
+            .chain((0..suf).map(|k| (n_old - suf + k, n_new - suf + k)));
+        for (i, j) in keep {
+            if let Some(l) = layouts.remove(&i) {
+                new_layouts.insert(j, l);
+            }
+            lines[j] = old_lines.get(i).cloned().flatten();
+            ids[j] = old_ids.get(i).cloned().flatten();
+            dirty[j] = old_dirty.get(i).copied().unwrap_or(true);
+            // The prefix's runs are where they were; the suffix's are
+            // rebuilt from the paragraph when next asked for.
+            if i < pre {
+                runs[j] = old_runs.get(i).cloned().flatten();
+            }
+        }
+        // The ids of runs in the old middle paragraphs are forgotten; the
+        // suffix's ids move with their text.
+        for i in old_mid {
+            for id in old_ids.get(i).cloned().flatten().unwrap_or_default() {
+                if let Some(pos) = w.ids_to_pos.remove(&id) {
+                    w.run_ids.remove(&pos);
+                }
+            }
+        }
+        if let Some(from) = suf_start
+            && delta != 0
+        {
+            let moved: Vec<(NodeId, CharPos)> = w
+                .ids_to_pos
+                .iter()
+                .filter(|(_, p)| **p >= from)
+                .map(|(id, p)| (*id, *p))
+                .collect();
+            for (_, p) in &moved {
+                w.run_ids.remove(p);
+            }
+            for (id, p) in moved {
+                let to = shift(p);
+                w.ids_to_pos.insert(id, to);
+                w.run_ids.insert(to, id);
+            }
+        }
+        w.model = model;
+        w.layouts = new_layouts;
+        w.line_starts = lines;
+        w.para_runs = runs;
+        w.para_ids = ids;
+        w.dirty_paras = dirty;
+        let anchor = anchor_pos.map(|p| {
+            if suf_start.is_some_and(|s| p >= s) {
+                shift(p)
+            } else {
+                p
+            }
+        });
+        w.top = (
+            anchor.map_or(0, |pos| caret::paragraph_at(&w.model.paragraphs, pos)),
+            w.top.1,
+        );
+        w.follow = true;
+        this.ctx.request_layout();
+        // No accessibility request of its own: the root would take it for
+        // a full pass, and every run would be sent again. The layout pass
+        // this asks for brings the accessibility pass with it.
+        this.ctx.request_render();
+        Ok(())
     }
 
     fn replace_model(this: &mut WidgetMut<'_, Self>, model: DocModel, keep_ids: bool) {
@@ -572,6 +772,21 @@ impl DocumentView {
             this.widget.misspelled = ranges;
             this.ctx.request_render();
         }
+    }
+
+    /// The notes, bookmarks, highlights, and search matches to mark. Only
+    /// drawn, each with a shape of its own besides its color (see
+    /// [`DocMark`]); a screen reader finds them with their keys and lists.
+    pub fn set_marks(this: &mut WidgetMut<'_, Self>, marks: Vec<(CharRange, DocMark)>) {
+        if this.widget.marks != marks {
+            this.widget.marks = marks;
+            this.ctx.request_render();
+        }
+    }
+
+    /// The marks drawn, for tests.
+    pub fn marks(&self) -> &[(CharRange, DocMark)] {
+        &self.marks
     }
 
     /// The misspelled words marked, for tests.
@@ -1126,45 +1341,36 @@ impl DocumentView {
         pos
     }
 
-    /// Handles a caret key. Returns true when the key was a caret key.
-    fn caret_key(&mut self, ctx: &mut EventCtx<'_>, key: &Key, shift: bool, ctrl: bool) -> bool {
+    /// Handles a caret key: `chord` as the platform's caret keys read it
+    /// ([`keys::caret_move`]). Returns true when the key was a caret key.
+    fn caret_key(&mut self, ctx: &mut EventCtx<'_>, chord: &KeyChord) -> bool {
+        let Some((m, shift)) = keys::caret_move(chord, self.platform) else {
+            return false;
+        };
         let paras = &self.model.paragraphs;
         let pos = self.state.caret;
         let doc_end = CharPos(self.model.doc_len);
         let (fcx, lcx) = ctx.text_contexts();
-        let new = match key {
-            Key::Named(NamedKey::ArrowLeft) if ctrl => caret::prev_word(paras, pos),
-            Key::Named(NamedKey::ArrowRight) if ctrl => caret::next_word(paras, pos),
-            Key::Named(NamedKey::ArrowLeft) => caret::prev_char(paras, pos),
-            Key::Named(NamedKey::ArrowRight) => caret::next_char(paras, pos),
-            Key::Named(NamedKey::ArrowUp) if ctrl => caret::prev_paragraph(paras, pos),
-            Key::Named(NamedKey::ArrowDown) if ctrl => caret::next_paragraph(paras, pos),
-            Key::Named(NamedKey::ArrowUp) => self.move_lines(-1, fcx, lcx),
-            Key::Named(NamedKey::ArrowDown) => self.move_lines(1, fcx, lcx),
-            Key::Named(NamedKey::Home) if ctrl => CharPos::ZERO,
-            Key::Named(NamedKey::End) if ctrl => doc_end,
-            Key::Named(NamedKey::Home) => self.line_edge(false, fcx, lcx),
-            Key::Named(NamedKey::End) => self.line_edge(true, fcx, lcx),
-            Key::Named(NamedKey::PageUp) => self.page(false, fcx, lcx),
-            Key::Named(NamedKey::PageDown) => self.page(true, fcx, lcx),
-            _ => return false,
+        let new = match (m.step, m.forward) {
+            (CaretStep::Char, false) => caret::prev_char(paras, pos),
+            (CaretStep::Char, true) => caret::next_char(paras, pos),
+            (CaretStep::Word, false) => caret::prev_word(paras, pos),
+            (CaretStep::Word, true) => caret::next_word(paras, pos),
+            (CaretStep::Paragraph, false) => caret::prev_paragraph(paras, pos),
+            (CaretStep::Paragraph, true) => caret::next_paragraph(paras, pos),
+            (CaretStep::Line, forward) => self.move_lines(if forward { 1 } else { -1 }, fcx, lcx),
+            (CaretStep::LineEdge, forward) => self.line_edge(forward, fcx, lcx),
+            (CaretStep::Page, forward) => self.page(forward, fcx, lcx),
+            (CaretStep::DocumentEdge, false) => CharPos::ZERO,
+            (CaretStep::DocumentEdge, true) => doc_end,
         };
-        let vertical = matches!(
-            key,
-            Key::Named(
-                NamedKey::ArrowUp | NamedKey::ArrowDown | NamedKey::PageUp | NamedKey::PageDown
-            )
-        ) && !ctrl;
+        let vertical = matches!(m.step, CaretStep::Line | CaretStep::Page);
         let echo = if shift {
             self.selection_echo(new)
         } else {
-            match key {
-                Key::Named(NamedKey::ArrowLeft | NamedKey::ArrowRight) if ctrl => {
-                    self.word_echo(new)
-                }
-                Key::Named(
-                    NamedKey::ArrowLeft | NamedKey::ArrowRight | NamedKey::Home | NamedKey::End,
-                ) if !ctrl => self.char_echo(new),
+            match m.step {
+                CaretStep::Word => self.word_echo(new),
+                CaretStep::Char | CaretStep::LineEdge => self.char_echo(new),
                 _ => self.line_echo(new),
             }
         };
@@ -1260,7 +1466,9 @@ impl DocumentView {
                     .map(|l| l.text_range())
                     .find(|r| r.contains(&b))
                     .or_else(|| pl.layout.lines().last().map(|l| l.text_range()))
-                    .map_or(p.text.as_str(), |r| &p.text[r])
+                    // An empty paragraph is laid out with a stand-in
+                    // char, so its line can reach past the text.
+                    .map_or(p.text.as_str(), |r| p.text.get(r).unwrap_or(""))
             }
             None => p.text.as_str(),
         };
@@ -1334,7 +1542,8 @@ impl DocumentView {
         k: &masonry::core::keyboard::KeyboardEvent,
     ) -> bool {
         let m = k.modifiers;
-        let command = m.ctrl() || m.alt() || m.meta();
+        // The Windows key types nothing either, though it is no command.
+        let command = keys::is_command(m, self.platform) || m.meta();
         let altgr = m.ctrl() && m.alt() && !m.meta();
         match &k.key {
             Key::Named(NamedKey::Enter) if !command => self.type_text(ctx, "\n"),
@@ -1358,15 +1567,6 @@ impl DocumentView {
             _ => return false,
         }
         true
-    }
-
-    fn copy_selection(&self, ctx: &mut EventCtx<'_>) {
-        if let Some(a) = self.state.anchor {
-            let text = caret::text_between(&self.model.paragraphs, a, self.state.caret);
-            if !text.is_empty() {
-                ctx.set_clipboard(text);
-            }
-        }
     }
 
     fn hit(&mut self, ctx: &mut EventCtx<'_>, pos: Point) -> Option<CharPos> {
@@ -1542,11 +1742,18 @@ impl Widget for DocumentView {
         event: &TextEvent,
     ) {
         if self.editing
-            && let TextEvent::Ime(masonry::core::Ime::Commit(text)) = event
+            && let TextEvent::Ime(masonry::core::Ime::Commit(text))
+            | TextEvent::ClipboardPaste(text) = event
         {
+            // An input method's text, or the system clipboard's (the
+            // window reads it for the platform's paste key).
             let text = text.clone();
             self.type_text(ctx, &text);
             ctx.set_handled();
+            return;
+        }
+        if let TextEvent::WindowFocusChange(true) = event {
+            ctx.submit_action::<DocAction>(DocAction::WindowFocused);
             return;
         }
         let TextEvent::Keyboard(k) = event else {
@@ -1559,21 +1766,13 @@ impl Widget for DocumentView {
             ctx.set_handled();
             return;
         }
-        let m = k.modifiers;
-        let ctrl = if cfg!(target_os = "macos") {
-            m.meta()
-        } else {
-            m.ctrl()
-        };
-        if m.alt() {
-            return;
-        }
-        if ctrl && matches!(&k.key, Key::Character(c) if c.eq_ignore_ascii_case("c")) {
-            self.copy_selection(ctx);
-            ctx.set_handled();
-            return;
-        }
-        if self.caret_key(ctx, &k.key, m.shift(), ctrl) {
+        // The caret keys are the platform's; copying and every other
+        // command go on to the keymap (whose copy puts the app's selection,
+        // which follows the view's, on the clipboard).
+        if let Some(chord) = keys::chord(k, self.platform)
+            && !self.yielded.contains(&chord)
+            && self.caret_key(ctx, &chord)
+        {
             ctx.set_handled();
         }
     }
@@ -1764,6 +1963,61 @@ impl Widget for DocumentView {
                     }
                 }
             }
+            // The reader's marks and the search matches: a band, and a
+            // shape of their own.
+            for &(r, mark) in &self.marks {
+                if r.end.0 <= para.start.0 || r.start.0 > p_end {
+                    continue;
+                }
+                let fill = match mark {
+                    DocMark::Highlight => p.user_highlight,
+                    DocMark::Note => p.note,
+                    DocMark::Bookmark => p.bookmark,
+                    DocMark::FindHit => p.find_hit.1,
+                    DocMark::CurrentFindHit => p.current_find_hit,
+                };
+                let rects = band(r).unwrap_or_default();
+                for (k, rect) in rects.iter().enumerate() {
+                    painter.fill(*rect, theme::color(fill)).draw();
+                    let line = theme::color(p.text);
+                    match mark {
+                        DocMark::Highlight => {
+                            painter
+                                .fill(Rect::new(rect.x0, rect.y1 - 2.0, rect.x1, rect.y1), line)
+                                .draw();
+                        }
+                        DocMark::Note => {
+                            let mut x = rect.x0;
+                            while x < rect.x1 {
+                                let end = (x + 6.0).min(rect.x1);
+                                painter
+                                    .fill(Rect::new(x, rect.y1 - 2.0, end, rect.y1), line)
+                                    .draw();
+                                x += 10.0;
+                            }
+                        }
+                        DocMark::Bookmark if k == 0 => {
+                            painter
+                                .fill(
+                                    Rect::new(rect.x0 - 4.0, rect.y0, rect.x0 - 1.0, rect.y1),
+                                    line,
+                                )
+                                .draw();
+                        }
+                        DocMark::Bookmark => {}
+                        DocMark::FindHit | DocMark::CurrentFindHit => {
+                            let w = if mark == DocMark::CurrentFindHit {
+                                2.5
+                            } else {
+                                1.0
+                            };
+                            painter
+                                .stroke(rect.inflate(1.0, 0.0), &Stroke::new(w), line)
+                                .draw();
+                        }
+                    }
+                }
+            }
             if let Some(rects) = sentence.and_then(band) {
                 for r in rects {
                     painter.fill(r, theme::color(p.spoken_sentence)).draw();
@@ -1921,7 +2175,10 @@ impl Widget for DocumentView {
     }
 
     fn accessibility_role(&self) -> Role {
-        if self.edit_role || self.editing {
+        // On macOS a Document is an AXGroup, which VoiceOver does not read
+        // as text; a read-only multi-line text input is an AXTextArea, with
+        // the text, the caret, and the reading commands.
+        if self.edit_role || self.editing || self.platform == Platform::MacOs {
             Role::MultilineTextInput
         } else {
             Role::Document

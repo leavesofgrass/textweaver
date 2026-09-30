@@ -342,11 +342,14 @@ impl App {
     /// none when it is off.
     pub fn bionic_ranges(&self, range: CharRange) -> Vec<CharRange> {
         match self.session.as_ref() {
-            Some(s) if self.settings.reading_aids.bionic => bionic_range(
-                &s.doc,
-                range,
-                &BionicOptions::from(&self.settings.reading_aids.bionic_options),
-            ),
+            Some(s) if self.settings.reading_aids.bionic => {
+                let opts = &self.settings.reading_aids.bionic_options;
+                crate::frame_cache::cached(
+                    &self.frame_cache.bionic,
+                    (s.revision, range, opts.clone()),
+                    || bionic_range(&s.doc, range, &BionicOptions::from(opts)),
+                )
+            }
             _ => Vec::new(),
         }
     }
@@ -377,16 +380,27 @@ impl App {
     /// is drawn in `range`: before the char at each position, in order.
     /// Empty when syllables are off.
     pub fn syllable_breaks(&self, range: CharRange) -> Vec<CharPos> {
-        let Some(split) = self.syllable_display(range) else {
+        let a = &self.settings.reading_aids;
+        let Some(s) = self.session.as_ref().filter(|_| a.syllables) else {
             return Vec::new();
         };
-        split
-            .map
-            .spans()
-            .iter()
-            .filter(|sp| sp.kind == SpanKind::Inserted)
-            .map(|sp| sp.source.start)
-            .collect()
+        let key = (s.revision, a.syllable_options.clone());
+        let mut cache = self
+            .frame_cache
+            .syllables
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        cache.get(key, range, || {
+            self.syllable_display(range).map_or_else(Vec::new, |split| {
+                split
+                    .map
+                    .spans()
+                    .iter()
+                    .filter(|sp| sp.kind == SpanKind::Inserted)
+                    .map(|sp| sp.source.start)
+                    .collect()
+            })
+        })
     }
 
     /// What is drawn between syllables (a middle dot by default).
@@ -410,13 +424,17 @@ impl App {
     /// The difficult words in `range`, to underline; none when the setting
     /// is off.
     pub fn difficult_ranges(&self, range: CharRange) -> Vec<CharRange> {
-        let (Some(s), Some(list)) = (self.session.as_ref(), ScowlList::builtin()) else {
-            return Vec::new();
-        };
+        // The setting first: the word list is unpacked and parsed on first
+        // use, which the first frame paid even with the aid off (W6u).
         if !self.settings.reading_aids.difficult_words {
             return Vec::new();
         }
-        difficult_range(&s.doc, range, list, &DifficultOptions::default())
+        let (Some(s), Some(list)) = (self.session.as_ref(), ScowlList::builtin()) else {
+            return Vec::new();
+        };
+        crate::frame_cache::cached(&self.frame_cache.difficult, (s.revision, range), || {
+            difficult_range(&s.doc, range, list, &DifficultOptions::default())
+        })
     }
 
     /// ", difficult word" for a word move onto `word` at high verbosity
@@ -527,14 +545,13 @@ fn reading_level_summary(c: &Catalog, level: &ReadingLevel) -> String {
         GradeBand::College => "aids-band-college",
         GradeBand::Graduate => "aids-band-graduate",
     });
-    let thousands = textweaver_editor::echo::thousands;
     let words = c.fmt(
         "aids-level-words",
-        &args!["n" => level.words, "count" => thousands(level.words)],
+        &args!["n" => level.words, "count" => crate::words::grouped(c, level.words)],
     );
     let sentences = c.fmt(
         "aids-level-sentences",
-        &args!["n" => level.sentences, "count" => thousands(level.sentences)],
+        &args!["n" => level.sentences, "count" => crate::words::grouped(c, level.sentences)],
     );
     c.fmt(
         "aids-level-summary",

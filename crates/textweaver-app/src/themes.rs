@@ -65,18 +65,21 @@ impl App {
             &h.color,
             h.sentence_color.as_deref(),
         );
+        // `[colors]` over the rest (crate::colors).
+        self.apply_color_settings(&mut theme);
         theme
     }
 
-    /// What decides [`reading_theme`](Self::reading_theme): the theme name
-    /// and the two highlight colours. Frontends rebuild their styles when
-    /// it changes.
-    pub fn reading_theme_key(&self) -> (String, String, Option<String>) {
+    /// What decides [`reading_theme`](Self::reading_theme): the theme name,
+    /// the two highlight colors, and `[colors]`. Frontends rebuild their
+    /// styles when it changes.
+    pub fn reading_theme_key(&self) -> (String, String, Option<String>, Vec<String>) {
         let h = &self.settings.highlight;
         (
             self.current_theme().meta.name.clone(),
             h.color.clone(),
             h.sentence_color.clone(),
+            self.color_settings_key(),
         )
     }
 

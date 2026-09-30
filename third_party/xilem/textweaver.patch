@@ -670,3 +670,17 @@ index 1229a32..369abd0 100644
  const fn mask(t: BidiClass) -> u32 {
      1 << (t.to_icu4c_value() as u32)
  }
+diff --git a/masonry_core/src/core/contexts.rs b/masonry_core/src/core/contexts.rs
+index 5fe87d8..0c1ca0d 100644
+--- a/masonry_core/src/core/contexts.rs
++++ b/masonry_core/src/core/contexts.rs
+@@ -1624,6 +1624,9 @@ impl_context_method!(
+                 }
+ 
+                 global_state.scene_cache.remove(&state.id);
++                // textweaver: a removed widget's tag is free again, so a new
++                // widget can take it (a second dialog with the same tags).
++                global_state.widget_tags.retain(|_, id| *id != state.id);
+ 
+                 if let Some(layers) = global_state.attached_layers.remove(&state.id) {
+                     for (_, layer_id) in layers {
