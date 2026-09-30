@@ -106,7 +106,7 @@ The crates in levels, from the bottom up. Each crate depends only on crates in l
 5. eci, sapi, dectalk, and piper;
 6. engines;
 7. app;
-8. tui, gui, xilem, and xtask;
+8. tui, xilem, and xtask;
 9. cli.
 
 ## Threads and processes
