@@ -449,7 +449,8 @@ impl App {
                 settings_ms,
                 force,
             })));
-            return effects;
+            // The open document's merge goes out in the same tick, so
+            // neither waits on the other.
         }
         // The open document is not merged yet (sync just turned on, or it
         // was opened while editing): find it now.
