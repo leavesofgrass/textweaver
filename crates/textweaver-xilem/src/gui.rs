@@ -35,7 +35,7 @@ use masonry_winit::app::{
 };
 use masonry_winit::winit::dpi::{LogicalSize, PhysicalPosition};
 use masonry_winit::winit::window::Window as WinitWindow;
-use textweaver_app::a11y::{Announcer as AppAnnouncer, Priority};
+use textweaver_app::a11y::{Announcer as AppAnnouncer, Importance, Priority};
 use textweaver_app::core::CharRange;
 use textweaver_app::keymap::{ActionId, Platform};
 use textweaver_app::lexicon::args;
@@ -1619,7 +1619,8 @@ impl Gui {
             file_chooser::Outcome::Cancelled => PromptKey::Escape,
             file_chooser::Outcome::Failed => {
                 let said = self.app.catalog().tr("gui-open-no-dialog");
-                self.app.announce(&said, Priority::Assertive);
+                self.app
+                    .announce_as(&said, Priority::Assertive, Importance::Error);
                 self.open_prompt(ctx, &label_text, PromptPurpose::Open);
                 self.refresh(ctx);
                 return;
@@ -1734,9 +1735,10 @@ impl Gui {
                 let c = self.app.catalog();
                 let label = setting.label_in(&c);
                 if matches!(setting.kind, textweaver_app::SettingKind::Table) {
-                    self.app.announce(
+                    self.app.announce_as(
                         &c.fmt("gui-settings-table", &args!["label" => label.as_str()]),
                         Priority::Polite,
+                        Importance::Answer,
                     );
                     self.refresh(ctx);
                     return;
@@ -1809,10 +1811,13 @@ impl Gui {
                 ctx.render_root(self.window_id)
                     .edit_widget_with_tag(FORM, |mut g| SettingsGrid::update_rows(&mut g, rows));
                 if let Some(note) = note {
-                    self.app.announce(&note, Priority::Polite);
+                    self.app
+                        .announce_as(&note, Priority::Polite, Importance::Result);
                 }
             }
-            Err(why) => self.app.announce(&why, Priority::Assertive),
+            Err(why) => self
+                .app
+                .announce_as(&why, Priority::Assertive, Importance::Error),
         }
         self.refresh(ctx);
     }
@@ -1838,7 +1843,8 @@ impl Gui {
         });
         root.edit_widget_with_tag(SECTIONS, |mut l| ChoiceList::select(&mut l, section));
         if say && let Some(item) = item {
-            self.app.announce(&format!("{item}."), Priority::Polite);
+            self.app
+                .announce_as(&format!("{item}."), Priority::Polite, Importance::Answer);
             self.refresh(ctx);
         }
     }
@@ -1861,7 +1867,8 @@ impl Gui {
             DialogAction::Cancel => {
                 self.close_dialog(ctx);
                 let said = self.app.catalog().tr("gui-settings-closed");
-                self.app.announce(&said, Priority::Polite);
+                self.app
+                    .announce_as(&said, Priority::Polite, Importance::Dialog);
                 self.refresh(ctx);
             }
             _ => {}
@@ -1969,7 +1976,8 @@ impl Gui {
             (Some(OpenDialog::FontFamily(_)), DialogAction::Cancel) => {
                 self.close_dialog(ctx);
                 let said = self.app.catalog().tr("gui-font-unchanged");
-                self.app.announce(&said, Priority::Polite);
+                self.app
+                    .announce_as(&said, Priority::Polite, Importance::Routine);
                 self.refresh(ctx);
                 true
             }
@@ -1984,7 +1992,8 @@ impl Gui {
                 );
                 self.save_font(new);
                 let said = crate::font_chooser::font_message(&self.app.catalog(), &family);
-                self.app.announce(&said, Priority::Polite);
+                self.app
+                    .announce_as(&said, Priority::Polite, Importance::Result);
                 self.refresh(ctx);
                 true
             }
@@ -2003,7 +2012,8 @@ impl Gui {
         }
         let said = crate::font_chooser::size_message(&self.app.catalog(), size, limit);
         // Assertive: a held key says only the latest size.
-        self.app.announce(&said, Priority::Assertive);
+        self.app
+            .announce_as(&said, Priority::Assertive, Importance::Result);
         self.refresh(ctx);
     }
 
@@ -2024,7 +2034,9 @@ impl Gui {
             .app
             .catalog()
             .fmt("gui-palette-count", &args!["n" => n]);
-        self.app.announce(&said, Priority::Polite);
+        // The count answers what was typed, as a search's count does.
+        self.app
+            .announce_as(&said, Priority::Polite, Importance::Answer);
         self.refresh(ctx);
     }
 
@@ -2189,7 +2201,10 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("window focused: {said}"));
         }
-        self.app.echo(&said);
+        // A window taking the focus is the interface's own news.
+        if self.app.interface_allows(Importance::Dialog) {
+            self.app.echo(&said);
+        }
     }
 
     /// A yes-or-no question from the app shows as a dialog while it is
@@ -2385,7 +2400,8 @@ impl Gui {
                                 "error" => e.to_string()
                             ],
                         );
-                        self.app.announce(&said, Priority::Assertive);
+                        self.app
+                            .announce_as(&said, Priority::Assertive, Importance::Error);
                     }
                 }
                 if self.log {
@@ -2403,7 +2419,8 @@ impl Gui {
                     .app
                     .catalog()
                     .fmt("gui-no-document", &args!["key" => open.as_str()]);
-                self.app.announce(&said, Priority::Polite);
+                self.app
+                    .announce_as(&said, Priority::Polite, Importance::Tip);
             }
         }
         // As in the terminal reader: startup messages follow the opening
@@ -2416,9 +2433,12 @@ impl Gui {
         }
         if self.first_run {
             // The first run: the welcome (the five keys that get a new user
-            // reading), then the language list, the system's first.
+            // reading), then the language list, the system's first. The
+            // welcome is a tip: heard unless announcements are turned down.
             let welcome = setup::welcome_text(&self.app.catalog(), self.app.keymap());
-            self.app.announce_queued(&welcome, Priority::Polite);
+            if self.app.interface_allows(Importance::Tip) {
+                self.app.announce_queued(&welcome, Priority::Polite);
+            }
             effects.extend(self.app.language_list());
         } else if self.startup_offers
             && self.app.hybrid_offer_due()
@@ -2583,7 +2603,11 @@ impl AppDriver for Gui {
                                 .find(|(a, _)| Some(a) == ids.get(next))
                                 .map(|(_, d)| d);
                             if let Some(said) = said {
-                                self.app.announce(&said, Priority::Assertive);
+                                self.app.announce_as(
+                                    &said,
+                                    Priority::Assertive,
+                                    Importance::Answer,
+                                );
                             }
                             self.refresh(ctx);
                         }
