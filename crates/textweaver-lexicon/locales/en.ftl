@@ -3334,3 +3334,42 @@ batch-start-failed = Could not start converting: { $error }
 batch-thread-stopped = Batch conversion stopped unexpectedly.
 
 ## End of W6k
+
+## W6v: audio export (File, Export audio). Keep the meaning first: a
+## 40-cell Braille display shows the start of the line. $name is a file
+## name (essay.flac); $path a folder or a file's full path; $format a
+## format's name (FLAC, MP3); $voice a voice's or engine's name; $wpm is
+## words per minute; $length a length of time from the duration-*
+## messages; $chapters and $n are numbers; $percent is a multiple of ten;
+## $error is passed on as it is.
+audio-format-title = Export audio as
+audio-format-intro = Export { $name } as audio: choose a format, { $n } choices.
+audio-no-ffmpeg = MP3 and M4B need ffmpeg, which was not found.
+audio-format-flac = FLAC: lossless, about half the size of WAV
+audio-format-wav = WAV: the largest, plays everywhere
+audio-format-mp3 = MP3, through ffmpeg
+audio-format-m4b = M4B audiobook, through ffmpeg
+audio-where-title = Where the audio goes
+audio-where-intro = Where should the audio go?
+audio-where-beside = Beside the document, { $path }
+audio-where-choose = In another folder, chosen next
+audio-choose-folder = Choose the folder for the audio
+audio-no-engine = No speech engine here can write audio files. Install eSpeak NG, or choose another engine in the Speech menu.
+audio-confirm = Export { $name } with { $voice } at { $wpm } words a minute, into { $path }? y or n
+audio-started = Exporting { $name } as { $format }. Escape stops.
+audio-progress = Exporting audio, { $percent } percent.
+audio-busy = Already exporting { $name }. Escape stops.
+audio-stop-question = Stop the export? No file is kept. y or n
+audio-stopping = Stopping the export.
+audio-still-exporting = Still exporting audio.
+audio-stopped = Audio export stopped; no file was written.
+audio-done =
+    Wrote { $name }: { $length }, { $chapters ->
+        [one] 1 chapter
+       *[other] { $chapters } chapters
+    }.
+audio-subtitles = Subtitles in { $name }.
+audio-failed = Could not export audio: { $error }
+audio-thread-stopped = Audio export stopped unexpectedly.
+
+## End of W6v

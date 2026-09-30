@@ -3311,3 +3311,42 @@ batch-start-failed = No se pudo empezar a convertir: { $error }
 batch-thread-stopped = La conversión por lotes se detuvo de forma inesperada.
 
 ## End of W6k
+
+## W6v: audio export (File, Export audio). Keep the meaning first: a
+## 40-cell Braille display shows the start of the line. $name is a file
+## name (essay.flac); $path a folder or a file's full path; $format a
+## format's name (FLAC, MP3); $voice a voice's or engine's name; $wpm is
+## words per minute; $length a length of time from the duration-*
+## messages; $chapters and $n are numbers; $percent is a multiple of ten;
+## $error is passed on as it is.
+audio-format-title = Exportar audio como
+audio-format-intro = Exportar { $name } como audio: elija un formato, { $n } opciones.
+audio-no-ffmpeg = MP3 y M4B necesitan ffmpeg, que no se encontró.
+audio-format-flac = FLAC: sin pérdida, la mitad del tamaño de WAV
+audio-format-wav = WAV: el más grande, se reproduce en todas partes
+audio-format-mp3 = MP3, mediante ffmpeg
+audio-format-m4b = Audiolibro M4B, mediante ffmpeg
+audio-where-title = Dónde va el audio
+audio-where-intro = ¿Dónde debe ir el audio?
+audio-where-beside = Junto al documento, { $path }
+audio-where-choose = En otra carpeta, elegida a continuación
+audio-choose-folder = Elija la carpeta para el audio
+audio-no-engine = Ningún motor de voz de aquí puede escribir archivos de audio. Instale eSpeak NG, o elija otro motor en el menú Voz.
+audio-confirm = ¿Exportar { $name } con { $voice } a { $wpm } palabras por minuto, en { $path }? y o n
+audio-started = Exportando { $name } como { $format }. Escape detiene.
+audio-progress = Exportando audio, { $percent } por ciento.
+audio-busy = Ya se está exportando { $name }. Escape detiene.
+audio-stop-question = ¿Detener la exportación? No se guarda ningún archivo. y o n
+audio-stopping = Deteniendo la exportación.
+audio-still-exporting = Se sigue exportando el audio.
+audio-stopped = Exportación de audio detenida; no se escribió ningún archivo.
+audio-done =
+    { $name } escrito: { $length }, { $chapters ->
+        [one] 1 capítulo
+       *[other] { $chapters } capítulos
+    }.
+audio-subtitles = Subtítulos en { $name }.
+audio-failed = No se pudo exportar el audio: { $error }
+audio-thread-stopped = La exportación de audio se detuvo de forma inesperada.
+
+## End of W6v

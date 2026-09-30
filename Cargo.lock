@@ -9095,6 +9095,7 @@ dependencies = [
  "textweaver-dictation",
  "textweaver-editor",
  "textweaver-engines",
+ "textweaver-export",
  "textweaver-formats",
  "textweaver-keymap",
  "textweaver-lexicon",
