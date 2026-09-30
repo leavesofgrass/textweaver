@@ -10,6 +10,7 @@ use ratatui::backend::TestBackend;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::style::Modifier;
 use textweaver_app::core::CharPos;
+use textweaver_app::keymap::ActionId;
 use textweaver_app::store::{DocKey, Settings};
 use textweaver_app::testing::recording_service;
 use textweaver_app::text::Document;
@@ -46,10 +47,6 @@ fn launch(settings: Settings) -> Harness {
     };
     h.draw();
     h
-}
-
-fn alt_shift(c: char) -> KeyEvent {
-    KeyEvent::new(KeyCode::Char(c), KeyModifiers::ALT | KeyModifiers::SHIFT)
 }
 
 impl Harness {
@@ -92,7 +89,7 @@ impl Harness {
 #[test]
 fn rsvp_shows_one_word_steps_and_closes() {
     let mut h = launch(Settings::default());
-    h.press(alt_shift('R'));
+    h.press(h.tui.key_for(ActionId::RsvpToggle));
     assert!(
         h.status().starts_with("RSVP on. Word 1 of 12"),
         "{}",
@@ -115,7 +112,7 @@ fn rsvp_shows_one_word_steps_and_closes() {
     assert!(h.row(box_row + 1).contains("two"), "next word shown below");
 
     // Play, then time passes: the next word, and the cursor follows.
-    h.press(alt_shift('P'));
+    h.press(h.tui.key_for(ActionId::RsvpPlayPause));
     assert!(h.status().starts_with("RSVP playing."));
     h.tui
         .app_mut()
@@ -124,16 +121,13 @@ fn rsvp_shows_one_word_steps_and_closes() {
     assert_eq!(h.rsvp_word(), "two");
     assert_eq!(h.tui.app().session().unwrap().cursor, CharPos(4));
     assert!(h.screen().contains("two"));
-    h.press(alt_shift('P'));
+    h.press(h.tui.key_for(ActionId::RsvpPlayPause));
     assert!(h.status().starts_with("RSVP paused."));
 
     // The sentence key moves the RSVP word; faster says the rate.
-    h.press(KeyEvent::new(KeyCode::Down, KeyModifiers::ALT));
+    h.press(h.tui.key_for(ActionId::NextSentence));
     assert_eq!(h.rsvp_word(), "Four");
-    h.press(KeyEvent::new(
-        KeyCode::Up,
-        KeyModifiers::ALT | KeyModifiers::SHIFT,
-    ));
+    h.press(h.tui.key_for(ActionId::RsvpFaster));
     assert!(
         h.status().starts_with("RSVP 325 words per minute."),
         "{}",
@@ -156,7 +150,7 @@ fn rsvp_shows_one_word_steps_and_closes() {
 fn bionic_reading_bolds_the_start_of_each_word() {
     let mut h = launch(Settings::default());
     assert!(!h.modifiers(0, 1).contains(Modifier::BOLD));
-    h.press(alt_shift('B'));
+    h.press(h.tui.key_for(ActionId::BionicToggle));
     assert!(h.status().starts_with("Bionic reading on."));
     // "One": 1 of 3 letters bold; "three.": 2 of 5.
     assert!(h.row(1).starts_with("One two three."));
@@ -165,7 +159,7 @@ fn bionic_reading_bolds_the_start_of_each_word() {
     assert!(h.modifiers(8, 1).contains(Modifier::BOLD));
     assert!(h.modifiers(9, 1).contains(Modifier::BOLD));
     assert!(!h.modifiers(10, 1).contains(Modifier::BOLD));
-    h.press(alt_shift('B'));
+    h.press(h.tui.key_for(ActionId::BionicToggle));
     assert!(!h.modifiers(0, 1).contains(Modifier::BOLD));
 }
 
@@ -173,7 +167,7 @@ fn bionic_reading_bolds_the_start_of_each_word() {
 fn the_ruler_marks_the_line_without_colour_alone() {
     let mut h = launch(Settings::default());
     h.press(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
-    h.press(alt_shift('U'));
+    h.press(h.tui.key_for(ActionId::RulerCycle));
     assert!(h.status().starts_with("Current line marked."));
     // A gutter column holds the mark; the text moves right by one.
     assert!(
@@ -186,11 +180,11 @@ fn the_ruler_marks_the_line_without_colour_alone() {
     assert!(!h.modifiers(1, 1).contains(Modifier::UNDERLINED));
     // The hardware cursor still sits on the word.
     assert_eq!(h.term.backend().cursor_position().x, 1);
-    h.press(alt_shift('U'));
+    h.press(h.tui.key_for(ActionId::RulerCycle));
     assert!(h.status().starts_with("Reading ruler on."));
     assert!(h.row(1).starts_with('\u{2502}'), "{:?}", h.row(1));
     assert!(h.row(3).starts_with('\u{2502}'), "{:?}", h.row(3));
-    h.press(alt_shift('U'));
+    h.press(h.tui.key_for(ActionId::RulerCycle));
     assert!(h.row(2).starts_with("Four"), "off again");
 }
 

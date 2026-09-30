@@ -58,8 +58,9 @@ pub(crate) struct Restart {
     /// Messages for the voice are kept in `early` until the first engine
     /// is ready.
     hold: bool,
-    /// Messages said before the first engine was ready, oldest first.
-    early: Vec<String>,
+    /// Messages said before the first engine was ready, oldest first, each
+    /// with the dialog generation it belongs to (crate::announce).
+    early: Vec<(String, Option<u64>)>,
 }
 
 /// Most messages kept while the first engine starts; later ones are only
@@ -178,11 +179,25 @@ impl App {
     pub(crate) fn voice_message(&mut self, spoken: String, mode: SayMode) {
         if self.restart.hold {
             if self.restart.early.len() < EARLY_MESSAGES {
-                self.restart.early.push(spoken);
+                let tag = self.dialog_tag();
+                self.restart.early.push((spoken, tag));
             }
             return;
         }
         self.speech.say(spoken, mode);
+    }
+
+    /// Says the messages held while the first engine started, in order,
+    /// each after the one before ("Opened report." first), so none cuts
+    /// another off. A message about a list or prompt that has closed
+    /// since is dropped (crate::announce).
+    fn say_early_messages(&mut self, early: Vec<(String, Option<u64>)>) {
+        for (m, tag) in early {
+            if tag.is_some_and(|g| g != self.dialog_generation) {
+                continue;
+            }
+            self.speech.say(m, SayMode::Queue);
+        }
     }
 
     /// Starts the new service on a helper thread.
@@ -264,11 +279,7 @@ impl App {
                 // heard; the messages stay on the status line.
                 self.read_from(pos);
             } else if self.self_voicing {
-                // Said in order, each after the one before ("Opened
-                // report." first), so none cuts another off.
-                for m in early {
-                    self.speech.say(m, SayMode::Queue);
-                }
+                self.say_early_messages(early);
             }
             return vec![Effect::Redraw];
         }

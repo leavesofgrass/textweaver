@@ -2,7 +2,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use textweaver_a11y::{
-    AccessMode, Announcer, Channel, LogAnnouncer, Priority, StatusLineAnnouncer, Verbosity,
+    AccessMode, Announcer, Channel, Importance, LogAnnouncer, Priority, StatusLineAnnouncer,
+    Verbosity,
 };
 use textweaver_core::{CharPos, CharRange};
 use textweaver_editor::autosave::RecoverySnapshot;
@@ -276,6 +277,10 @@ pub(crate) enum ListKind {
     Summary(Vec<CharRange>),
     /// The interface languages, by tag (crate::language).
     Languages(Vec<String>),
+    /// The command palette's matches as a list (Ctrl+L; crate::help).
+    Palette(Vec<ActionId>),
+    /// The menus, shown as a list (crate::menu).
+    Menu,
 }
 
 /// The application: the only owner of mutable state.
@@ -410,6 +415,13 @@ pub struct App {
     pub(crate) pending_list_focus: Option<usize>,
     /// Say a list's focused item when the list is shown (crate::list_model).
     pub(crate) announce_list_focus: bool,
+    /// Menu handlers, recent commands, and the menu list (crate::menu).
+    pub(crate) menu: crate::menu::MenuState,
+    /// Moves on when a list, prompt, or menu closes (crate::announce).
+    pub(crate) dialog_generation: u64,
+    /// What frontends ask for every frame, kept per revision
+    /// (crate::frame_cache).
+    pub(crate) frame_cache: crate::frame_cache::FrameCaches,
 }
 
 impl App {
@@ -506,6 +518,9 @@ impl App {
             pending_prompt_text: None,
             pending_list_focus: None,
             announce_list_focus: true,
+            menu: crate::menu::MenuState::default(),
+            dialog_generation: 0,
+            frame_cache: crate::frame_cache::FrameCaches::default(),
         };
         app.apply_voice_settings();
         app.load_themes();
@@ -697,9 +712,25 @@ impl App {
     /// interrupt reading unless assertive. The accessibility mode decides
     /// whether a message is spoken, shown on the status line, or both
     /// ([`Channel::Message`]; with a screen reader it is only shown).
+    /// As an answer to what the user did ([`Importance::Answer`]), which
+    /// the interface announcement level never silences.
     pub(crate) fn say_at(&mut self, text: &str, min: Verbosity, priority: Priority) {
+        self.say_kind(text, min, priority, Importance::Answer);
+    }
+
+    /// [`say_at`](Self::say_at) for a message of kind `importance`: said
+    /// only when `[accessibility] interface_announcements` lets it through
+    /// (crate::announce). Every message reaches the user through here,
+    /// [`announce_queued`](Self::announce_queued), or [`show`](Self::show).
+    pub(crate) fn say_kind(
+        &mut self,
+        text: &str,
+        min: Verbosity,
+        priority: Priority,
+        importance: Importance,
+    ) {
         let current = self.settings.speech.verbosity;
-        if current < min || text.is_empty() {
+        if current < min || text.is_empty() || !self.interface_allows(importance) {
             return;
         }
         self.remember_message(text, false);
@@ -724,22 +755,33 @@ impl App {
         self.say_at(text, Verbosity::Low, Priority::Polite);
     }
 
-    /// Announces a structural or state detail (Normal verbosity).
+    /// Announces a structural or state detail (Normal verbosity), a
+    /// routine confirmation ([`Importance::Routine`]).
     pub(crate) fn note(&mut self, text: &str) {
-        self.say_at(text, Verbosity::Normal, Priority::Polite);
+        self.say_kind(
+            text,
+            Verbosity::Normal,
+            Priority::Polite,
+            Importance::Routine,
+        );
     }
 
-    /// Announces an error.
+    /// Announces an error ([`Importance::Error`], never silenced).
     pub(crate) fn error(&mut self, text: &str) {
-        self.say_at(text, Verbosity::Low, Priority::Assertive);
+        self.say_kind(text, Verbosity::Low, Priority::Assertive, Importance::Error);
     }
 
     /// Asks a yes-or-no question ("Quit textweaver? y or n"). Assertive, so
     /// it is spoken even while textweaver is reading aloud: the next key
     /// press answers it, so the user must hear it (usability pass,
-    /// the terminal usability research).
+    /// the terminal usability research). Never silenced.
     pub(crate) fn ask(&mut self, question: &str) {
-        self.say_at(question, Verbosity::Low, Priority::Assertive);
+        self.say_kind(
+            question,
+            Verbosity::Low,
+            Priority::Assertive,
+            Importance::Question,
+        );
     }
 
     /// Shows `text` on the status line only (used while reading, when the
@@ -1067,10 +1109,12 @@ impl App {
     pub(crate) fn entry(&mut self, f: impl FnOnce(&mut Self) -> Vec<Effect>) -> Vec<Effect> {
         self.depth += 1;
         let said_before = self.messages_said;
+        let dialog_before = self.dialog_key();
         let effects = f(self);
         self.depth -= 1;
         if self.depth == 0 {
             self.adopt(&effects, self.messages_said != said_before);
+            self.track_dialogs(dialog_before);
             return crate::list_model::without_key_marks(effects);
         }
         effects
@@ -1096,7 +1140,9 @@ impl App {
                 self.leave_prompt();
                 self.open_command(path)
             }
+            Command::Action(a) if self.describing_next_key() => self.describe_action(a),
             Command::Action(a) => self.action(a),
+            Command::RunCommand(a) => self.run_command(a),
             Command::Confirm(answer) => self.confirm(answer),
             Command::Insert(text) => self.insert(&text),
             Command::DeleteBack => self.delete(false),
@@ -1376,6 +1422,12 @@ impl App {
             Some(ListKind::Study(l)) => return self.choose_study(l, n),
             Some(ListKind::Settings) => return self.choose_setting(n),
             Some(ListKind::Languages(tags)) => return self.choose_language(&tags, n),
+            Some(ListKind::Menu) => return self.menu_choose(n, true),
+            Some(ListKind::Palette(actions)) => {
+                if let Some(&a) = actions.get(n) {
+                    return self.run_command(a);
+                }
+            }
             Some(ListKind::Summary(ranges)) => self.choose_summary_sentence(&ranges, n),
             Some(ListKind::Info) | None => {}
         }
@@ -1699,6 +1751,14 @@ impl App {
             A::Settings => return self.open_settings_screen(),
             A::KeyboardHelp => return self.keyboard_help(),
             A::Help => return self.help(),
+            A::Menu => return self.open_menu(),
+            A::BrowseFiles | A::BatchConvert | A::ExportAudio | A::Dictate => {
+                return self.run_registered(a);
+            }
+            A::ColorSettings => return self.open_color_settings(),
+            A::CycleInterfaceAnnouncements => self.cycle_interface_announcements(),
+            A::WhatDoesThisKeyDo => return self.what_does_this_key_do(),
+            A::About => self.about(),
             A::ReadDocument => {
                 self.stop_speech();
                 self.read_from(CharPos::ZERO);

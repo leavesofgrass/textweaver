@@ -144,13 +144,16 @@ fn every_button_has_its_key_from_the_keymap() {
             "{name}: {shortcuts:?}"
         );
     }
-    // The platform's own modifier: Command on macOS (the keymap's Mac
-    // layout), Control elsewhere.
-    let open = match textweaver_app::keymap::Platform::current() {
-        textweaver_app::keymap::Platform::MacOs => "Cmd+O",
-        _ => "Ctrl+O",
-    };
-    assert_eq!(shortcuts.get("Open"), Some(&Some(open.to_owned())));
+    // The platform's own key for Open, from the keymap (Command on macOS,
+    // Control elsewhere): never written into the test.
+    let open = app
+        .keymap()
+        .chords_for(ActionId::Open)
+        .into_iter()
+        .find(|c| !c.is_text_input())
+        .expect("Open has a chord")
+        .to_string();
+    assert_eq!(shortcuts.get("Open"), Some(&Some(open)));
     // On screen, the written form; the name is the label alone.
     let b = ActionButton::new("Open…").with_shortcut("Ctrl+O");
     assert_eq!(b.shown_text(), "Open… (Ctrl+O)");
@@ -253,7 +256,6 @@ fn a_list_dialog_is_modal_and_hides_the_window_behind_it() {
 /// (`ListKey::Introduce`), as in the terminal reader. F2 still renames.
 #[test]
 fn help_and_say_status_keys_in_a_list_reach_the_keymap() {
-    use masonry::core::keyboard::Modifiers;
     use textweaver_app::keymap::{ActionId, Layer};
     use textweaver_xilem::dialog::DialogAction;
     let dir = tempfile::tempdir().unwrap();
@@ -286,16 +288,14 @@ fn help_and_say_status_keys_in_a_list_reach_the_keymap() {
         .into_iter()
         .find(|c| !c.is_text_input())
         .expect("Say Status has a chord");
-    assert_eq!(say_status.to_string(), "Alt+End");
-    let mut alt_end = masonry::core::keyboard::KeyboardEvent {
-        key: Key::Named(NamedKey::End),
-        ..Default::default()
-    };
-    alt_end.modifiers = Modifiers::ALT;
-    h.process_text_event(TextEvent::Keyboard(alt_end));
+    let platform = textweaver_app::keymap::Platform::current();
+    h.process_text_event(TextEvent::Keyboard(textweaver_xilem::keys::press(
+        &say_status,
+        platform,
+    )));
     let (a, _) = h
         .pop_action::<DialogAction>()
-        .expect("Alt+End reaches the driver");
+        .expect("the Say Status key reaches the driver");
     assert_eq!(lookup(a), Some(ActionId::SayStatus));
     // F2 is the list's own key.
     h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::F2)));
@@ -518,8 +518,13 @@ fn syllables_are_drawn_and_the_text_stays_the_words() {
         .collect();
     assert_eq!(h.get_widget(DOC).inner().syllable_marks_on_screen(), 0);
 
-    // The key is the same as the terminal's, in the GUI's keymap.
-    let chord: textweaver_app::keymap::KeyChord = "Alt+Shift+Z".parse().expect("chord");
+    // The GUI's keymap has a chord for it on this platform.
+    let chord = app
+        .keymap()
+        .chords_in_mode(ActionId::SyllablesToggle, app.mode().layer())
+        .into_iter()
+        .find(|c| !c.is_text_input())
+        .expect("syllables have a chord");
     assert_eq!(
         app.keymap().lookup(&chord, app.mode().layer()),
         Some(ActionId::SyllablesToggle)
@@ -616,14 +621,14 @@ fn the_voice_manager_is_the_apps_list_with_its_keys() {
     use textweaver_xilem::dialog::DialogAction;
     let dir = tempfile::tempdir().unwrap();
     let mut app = app_with_sample(dir.path());
-    // The keymap's command key for the platform: Cmd on macOS, Ctrl
-    // elsewhere.
-    let chord: KeyChord = match textweaver_app::keymap::Platform::current() {
-        textweaver_app::keymap::Platform::MacOs => "Cmd+Shift+V",
-        _ => "Ctrl+Shift+V",
-    }
-    .parse()
-    .expect("chord");
+    // The keymap's key for the platform (Cmd+Shift+V on macOS,
+    // Ctrl+Shift+V elsewhere), from the keymap itself.
+    let chord: KeyChord = app
+        .keymap()
+        .chords_for(ActionId::ChooseVoice)
+        .into_iter()
+        .find(|c| !c.is_text_input())
+        .expect("Choose Voice has a chord");
     assert_eq!(
         app.keymap().lookup(&chord, app.mode().layer()),
         Some(ActionId::ChooseVoice)

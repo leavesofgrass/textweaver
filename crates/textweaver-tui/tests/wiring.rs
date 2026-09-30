@@ -10,6 +10,7 @@ use ratatui::backend::TestBackend;
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use textweaver_app::a11y::Priority;
 use textweaver_app::core::CharPos;
+use textweaver_app::keymap::ActionId;
 use textweaver_app::store::{Paths, Settings};
 use textweaver_app::testing::recording_service;
 use textweaver_app::theme::ColorSupport;
@@ -107,7 +108,7 @@ fn the_pending_question_stays_on_the_status_line() {
     let mut h = launch(Settings::default(), &dir.path().join("home"));
     h.tui.app_mut().open(&file).unwrap();
     h.draw();
-    h.press(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL));
+    h.press(h.tui.key_for(ActionId::Quit));
     assert!(
         h.status().contains("Quit textweaver? y or n"),
         "{}",
@@ -144,7 +145,7 @@ fn alt_l_lists_the_library_and_enter_opens() {
     let mut h = launch(settings, &dir.path().join("home"));
     h.tui.app_mut().open(&loose).unwrap();
     h.draw();
-    h.press(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::ALT));
+    h.press(h.tui.key_for(ActionId::OpenLibrary));
     // The folders are scanned on a background thread; the list opens on a
     // tick of the event loop.
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
@@ -200,12 +201,12 @@ fn f9_switches_single_keys_off_and_on() {
         "{}",
         h.status()
     );
-    h.press(KeyEvent::new(KeyCode::Char('.'), KeyModifiers::ALT));
+    h.press(h.tui.key_for(ActionId::NextSentence));
     assert_eq!(h.cursor(), CharPos(15));
     // q cannot quit by accident either; Ctrl+Q still asks.
     h.press(ch('q'));
     assert_eq!(h.tui.app().pending_confirmation(), None);
-    h.press(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL));
+    h.press(h.tui.key_for(ActionId::Quit));
     assert!(h.status().contains("Quit textweaver? y or n"));
     h.press(key(KeyCode::Esc));
     h.press(key(KeyCode::F(9)));

@@ -123,6 +123,7 @@ fn everything_changed() -> Settings {
     acc.quiet_screen = true;
     acc.cursor = crate::CursorPlacement::Status;
     acc.hybrid_offered = true;
+    acc.interface_announcements = crate::InterfaceAnnouncements::Full;
     // Agent D3's additions: themes, the community lexicon, audio export,
     // and the reading aids.
     s.display.follow_os_theme = false;
@@ -198,10 +199,25 @@ fn everything_changed() -> Settings {
     s.summary.sentences = 7;
     s.interface.language = "en-XA".into();
     s.interface.rtl = crate::RtlDisplay::Off;
+    s.interface.recent_settings = vec!["speech.rate".into()];
     s.speech
         .voices_by_language
         .insert("es".into(), "espeak:es".into());
     s.gui.announce = crate::GuiAnnounce::Uia;
+    let c = &mut s.colors;
+    c.ruler = "orange".into();
+    c.difficult_words = "blue".into();
+    c.syllables = "#336699".into();
+    c.misspellings = "orange".into();
+    c.lint = "navy".into();
+    c.find_match = "gold".into();
+    c.selection = "skyblue".into();
+    c.focus = "orange".into();
+    c.links = "blue".into();
+    c.headings = "navy".into();
+    c.status_bar = "#202020".into();
+    c.notes = "pink".into();
+    c.bookmarks = "teal".into();
     s.extra.insert("future_key".into(), toml::Value::Integer(1));
     let future: toml::Table = "a = 1\nwhen = 2026-09-25T14:03:07Z\n".parse().unwrap();
     s.extra

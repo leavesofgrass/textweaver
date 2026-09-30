@@ -54,6 +54,22 @@ pub struct Theme {
     pub list_selected: Style,
     /// Code blocks and their tokens.
     pub code: CodeStyles,
+    /// The reader's colors for marks no theme role holds (`[colors]`):
+    /// set with [`with_marks`](Self::with_marks).
+    pub marks: MarkStyles,
+}
+
+/// The reader's own colors for the reading aids' marks (`[colors]`), at
+/// the terminal's color level. With 16 colors or none they are unset, and
+/// the marks keep their attributes alone (an underline, the gutter mark).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MarkStyles {
+    /// The band of the reading ruler and the current line.
+    pub ruler: Option<Color>,
+    /// The underline of difficult words.
+    pub difficult: Option<Color>,
+    /// The middle dots between syllables.
+    pub syllables: Option<Color>,
 }
 
 /// Styles for code blocks (Agent W4g): the theme's code colors, and for
@@ -145,7 +161,23 @@ impl Theme {
             list: panel,
             list_selected: style(t.style(StyleRole::Focus)),
             code: CodeStyles::from_terminal(&t),
+            marks: MarkStyles::default(),
         }
+    }
+
+    /// These styles with the reader's mark colors (`[colors]`), at this
+    /// theme's color level.
+    pub fn with_marks(mut self, marks: &textweaver_app::MarkColors) -> Self {
+        let to = |c: Option<textweaver_theme::Rgb>| {
+            c.and_then(|rgb| textweaver_theme::term_color(rgb, self.support))
+                .map(color)
+        };
+        self.marks = MarkStyles {
+            ruler: to(marks.ruler),
+            difficult: to(marks.difficult_words),
+            syllables: to(marks.syllables),
+        };
+        self
     }
 
     /// The built-in theme with this name (Star's old names accepted), or

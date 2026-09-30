@@ -66,6 +66,41 @@ pub fn chord(k: &KeyEvent) -> Option<KeyChord> {
     Some(KeyChord::new(key, mods))
 }
 
+/// The key press a terminal sends for `chord`: the inverse of [`chord`].
+/// Tests and tools press keys built from the keymap with it, so they never
+/// press a key the running platform does not use for the command.
+pub fn key_event(chord: &KeyChord) -> KeyEvent {
+    let code = match chord.key {
+        Key::Char(c) => KeyCode::Char(c),
+        Key::Space => KeyCode::Char(' '),
+        Key::F(n) => KeyCode::F(n),
+        Key::Enter => KeyCode::Enter,
+        Key::Escape => KeyCode::Esc,
+        Key::Tab if chord.mods.contains(Modifiers::SHIFT) => KeyCode::BackTab,
+        Key::Tab => KeyCode::Tab,
+        Key::Backspace => KeyCode::Backspace,
+        Key::Delete => KeyCode::Delete,
+        Key::Insert => KeyCode::Insert,
+        Key::Home => KeyCode::Home,
+        Key::End => KeyCode::End,
+        Key::PageUp => KeyCode::PageUp,
+        Key::PageDown => KeyCode::PageDown,
+        Key::Up => KeyCode::Up,
+        Key::Down => KeyCode::Down,
+        Key::Left => KeyCode::Left,
+        Key::Right => KeyCode::Right,
+    };
+    let mut mods = KeyModifiers::empty();
+    mods.set(KeyModifiers::CONTROL, chord.mods.contains(Modifiers::CTRL));
+    mods.set(KeyModifiers::ALT, chord.mods.contains(Modifiers::ALT));
+    mods.set(KeyModifiers::SUPER, chord.mods.contains(Modifiers::META));
+    // A shifted letter arrives uppercase with Shift, as terminals send it.
+    let shifted = chord.mods.contains(Modifiers::SHIFT)
+        || matches!(chord.key, Key::Char(c) if c.is_ascii_uppercase());
+    mods.set(KeyModifiers::SHIFT, shifted && code != KeyCode::BackTab);
+    KeyEvent::new(code, mods)
+}
+
 /// The character a key press types, if it types one: a character key
 /// without Control or Alt, or with both when the character is not an ASCII
 /// letter or digit.
@@ -131,10 +166,19 @@ fn math_move(k: &KeyEvent) -> Option<textweaver_app::MathMove> {
     })
 }
 
+/// The code styles of one window: its document revision, window, and
+/// theme, and the styles.
+#[cfg(feature = "highlight")]
+type CodeFrame = ((u64, CharRange, String), Vec<(CharRange, Style)>);
+
 /// How long the status line stays blank before a repeated message comes
 /// back, so a screen reader that speaks the status line when it changes
 /// hears the message again ("No next heading." twice in a row).
 pub const REPEAT_BLANK: std::time::Duration = std::time::Duration::from_millis(150);
+
+/// The longest the screen goes undrawn while nothing seems to change: a
+/// safety net for a change the loop could not see (W6u).
+pub const REDRAW_AT_LEAST: std::time::Duration = std::time::Duration::from_secs(1);
 
 /// The terminal frontend's state around the app.
 pub struct Tui {
@@ -145,7 +189,7 @@ pub struct Tui {
     /// The styles of the theme in effect, rebuilt only when it changes.
     theme: Theme,
     /// The theme name and highlight colours `theme` was built for.
-    theme_key: (String, String, Option<String>),
+    theme_key: (String, String, Option<String>, Vec<String>),
     /// The status announcement last drawn: its sequence number and text.
     status_shown: (u64, String),
     /// While set, the status line is drawn blank until then (a repeated
@@ -165,6 +209,20 @@ pub struct Tui {
     frozen_position: Option<String>,
     /// Physical keys peeked from the Windows console, for the digit row.
     digits: crate::physical::DigitKeys,
+    /// How many times the screen was drawn ([`Tui::draws`]).
+    draws: u64,
+    /// Something happened that the screen must show: a key, a command, a
+    /// resize (W6u: the loop draws only then, not every pass).
+    needs_draw: bool,
+    /// What the screen showed when it was last drawn
+    /// ([`Tui::view_signature`]).
+    drawn_signature: u64,
+    /// When the screen was last drawn.
+    drawn_at: Option<Instant>,
+    /// The code styles of the window last drawn, by document revision,
+    /// window, and theme (W6u: they were worked out again every frame).
+    #[cfg(feature = "highlight")]
+    code_frame: std::cell::RefCell<Option<CodeFrame>>,
     /// Code block tokens already found ([`crate::highlight`]).
     #[cfg(feature = "highlight")]
     code_cache: std::cell::RefCell<crate::highlight::Cache>,
@@ -196,7 +254,7 @@ impl Tui {
     /// [`ColorSupport::detect`] also honors `TEXTWEAVER_COLOR` and
     /// `NO_COLOR`).
     pub fn with_color_support(app: App, support: ColorSupport) -> Self {
-        let theme = Theme::from_theme(&app.reading_theme(), support);
+        let theme = Theme::from_theme(&app.reading_theme(), support).with_marks(&app.mark_colors());
         let theme_key = app.reading_theme_key();
         Tui {
             app,
@@ -212,6 +270,12 @@ impl Tui {
             system_clipboard_said: false,
             frozen_position: None,
             digits: crate::physical::DigitKeys::default(),
+            draws: 0,
+            needs_draw: true,
+            drawn_signature: 0,
+            drawn_at: None,
+            #[cfg(feature = "highlight")]
+            code_frame: std::cell::RefCell::new(None),
             #[cfg(feature = "highlight")]
             code_cache: std::cell::RefCell::default(),
         }
@@ -292,7 +356,8 @@ impl Tui {
     fn refresh_theme(&mut self) {
         let key = self.app.reading_theme_key();
         if key != self.theme_key {
-            self.theme = Theme::from_theme(&self.app.reading_theme(), self.support);
+            self.theme = Theme::from_theme(&self.app.reading_theme(), self.support)
+                .with_marks(&self.app.mark_colors());
             self.theme_key = key;
         }
     }
@@ -322,6 +387,7 @@ impl Tui {
 
     /// Dispatches a command and acts on its effects.
     pub fn dispatch(&mut self, cmd: Command) {
+        self.needs_draw = true;
         let effects = self.app.dispatch(cmd);
         self.apply(effects);
     }
@@ -378,6 +444,9 @@ impl Tui {
     }
 
     fn apply(&mut self, effects: Vec<Effect>) {
+        if !effects.is_empty() {
+            self.needs_draw = true;
+        }
         if let Some(text) = self.app.take_clipboard() {
             self.send_to_clipboard(&text);
         }
@@ -391,6 +460,9 @@ impl Tui {
 
     /// Handles one terminal event.
     pub fn handle_event(&mut self, event: &Event) {
+        // Any event (a key, a paste, a resize, focus) may change the
+        // screen.
+        self.needs_draw = true;
         match event {
             Event::Key(k) if matches!(k.kind, KeyEventKind::Press | KeyEventKind::Repeat) => {
                 self.handle_key(*k);
@@ -543,6 +615,15 @@ impl Tui {
                     self.dispatch(Command::Action(ActionId::RepeatMessage));
                     return;
                 }
+                // F10 closes the menus, or opens them over another list.
+                Some(ActionId::Menu) => {
+                    if self.app.menu_path().is_some() {
+                        self.dispatch(Command::ListKey(ListKey::Escape));
+                    } else {
+                        self.dispatch(Command::Action(ActionId::Menu));
+                    }
+                    return;
+                }
                 _ => {}
             }
         }
@@ -578,6 +659,8 @@ impl Tui {
             KeyCode::Char('u') if ctrl => PromptKey::KillToStart,
             KeyCode::Char('k') if ctrl => PromptKey::KillToEnd,
             KeyCode::Char('w') if ctrl => PromptKey::DeleteWordBack,
+            // The command palette's matches as a list.
+            KeyCode::Char('l') if ctrl => PromptKey::ShowMatches,
             KeyCode::Char(c) if typed_char(&k).is_some() => PromptKey::Char(c),
             KeyCode::Backspace => PromptKey::Backspace,
             KeyCode::Delete => PromptKey::Delete,
@@ -684,9 +767,105 @@ impl Tui {
         self.draw_at(f, Instant::now());
     }
 
+    /// The key press for `action` in the current mode, from the live
+    /// keymap: its first chord with a modifier (it works with single-key
+    /// shortcuts off), else its single key. For tests: they press what the
+    /// running platform binds, never a chord written into the test.
+    ///
+    /// # Panics
+    ///
+    /// When `action` has no key in the current mode.
+    pub fn key_for(&self, action: ActionId) -> KeyEvent {
+        let layer = self.app.mode().layer();
+        let chords = self.app.keymap().chords_in_mode(action, layer);
+        let chord = chords
+            .iter()
+            .find(|c| !c.is_text_input())
+            .or_else(|| chords.first())
+            .unwrap_or_else(|| panic!("{action:?} has no key in {layer:?}"));
+        key_event(chord)
+    }
+
+    /// How many times the screen was drawn since the reader started (for
+    /// tests and the frame bench).
+    pub fn draws(&self) -> u64 {
+        self.draws
+    }
+
+    /// A number that changes whenever what the screen shows could have
+    /// changed: the status message, the text and its revision, the cursor,
+    /// the selection, the spoken word and sentence, the mode, reading,
+    /// the list or prompt, the viewport, and RSVP. Cheap: nothing is
+    /// copied.
+    pub fn view_signature(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        let app = &self.app;
+        app.status().seq.hash(&mut h);
+        app.status().current.as_ref().map(String::len).hash(&mut h);
+        (app.mode() as u8).hash(&mut h);
+        format!("{:?}", app.playback()).hash(&mut h);
+        let vp = app.viewport();
+        (vp.top_line, vp.width, vp.height).hash(&mut h);
+        if let Some(s) = app.session() {
+            s.revision.hash(&mut h);
+            s.cursor.0.hash(&mut h);
+            s.selection.map(|r| (r.start.0, r.end.0)).hash(&mut h);
+            s.spoken.map(|r| (r.start.0, r.end.0)).hash(&mut h);
+            s.spoken_sentence.map(|r| (r.start.0, r.end.0)).hash(&mut h);
+            s.speech_cursor_line.hash(&mut h);
+            s.notes.len().hash(&mut h);
+            s.bookmarks.len().hash(&mut h);
+            s.highlights.len().hash(&mut h);
+        }
+        if let Some(l) = app.list_model() {
+            (l.title.len(), l.items.len(), l.selected).hash(&mut h);
+        }
+        if let Some(p) = app.prompt_model() {
+            (p.label.len(), p.caret(), p.text().len()).hash(&mut h);
+        }
+        if let Some(r) = app.rsvp() {
+            (r.index(), r.is_playing()).hash(&mut h);
+        }
+        app.quiet_screen_active().hash(&mut h);
+        h.finish()
+    }
+
+    /// Whether the loop should draw now: something asked for it
+    /// (`changed`: speech status or a background job arrived), a key or
+    /// command was handled, what the screen shows changed, a blanked
+    /// status message is due, RSVP is playing, or a second has passed (a
+    /// safety net, so nothing stays stale longer).
+    pub fn wants_draw(&self, changed: bool, now: Instant) -> bool {
+        self.needs_draw
+            || changed
+            || self
+                .drawn_at
+                .is_none_or(|t| now.saturating_duration_since(t) >= REDRAW_AT_LEAST)
+            || self.status_blank_until.is_some_and(|t| now >= t)
+            || self.app.rsvp_wait(now).is_some()
+            || self.view_signature() != self.drawn_signature
+    }
+
+    /// How long the loop may wait before it must draw again whatever
+    /// happens: until a blanked status message is shown again, and at most
+    /// [`REDRAW_AT_LEAST`].
+    pub fn draw_due_in(&self, now: Instant) -> std::time::Duration {
+        let heartbeat = self.drawn_at.map_or(std::time::Duration::ZERO, |t| {
+            REDRAW_AT_LEAST.saturating_sub(now.saturating_duration_since(t))
+        });
+        match self.status_blank_until {
+            Some(t) => heartbeat.min(t.saturating_duration_since(now)),
+            None => heartbeat,
+        }
+    }
+
     /// [`draw`](Self::draw) as of `now`, which decides whether a repeated
     /// status message is still blanked (tests pass their own times).
     pub fn draw_at(&mut self, f: &mut Frame<'_>, now: Instant) {
+        self.draws += 1;
+        self.needs_draw = false;
+        self.drawn_at = Some(now);
         self.refresh_theme();
         let theme = self.theme.clone();
         let areas = self.areas(f.area());
@@ -727,6 +906,8 @@ impl Tui {
             cursor
         };
         f.set_cursor_position(cursor.unwrap_or(Position::new(areas.body.x, areas.body.y)));
+        // After drawing: drawing itself may scroll or size the view.
+        self.drawn_signature = self.view_signature();
     }
 
     /// True when lines are laid out for a screen reader's Braille display
@@ -976,8 +1157,17 @@ impl Tui {
             }
             let extra = ruler_modifier(mark);
             if !extra.is_empty() {
+                // The reader's ruler color on the band's rows (never on
+                // the dimmed rows around it); the attributes stay.
+                let band = theme
+                    .marks
+                    .ruler
+                    .filter(|_| mark.bold || mark.underline || mark.reverse);
                 for sp in &mut text {
                     sp.style = sp.style.add_modifier(extra);
+                    if let Some(c) = band {
+                        sp.style = sp.style.bg(c);
+                    }
                 }
             }
             spans.extend(text);
@@ -1022,6 +1212,36 @@ impl Tui {
         theme: &Theme,
     ) -> Vec<(CharRange, Style)> {
         #[cfg(feature = "highlight")]
+        {
+            let key = (
+                self.app.session().map_or(0, |s| s.revision),
+                window,
+                theme.name.clone(),
+            );
+            if let Some((k, v)) = self.code_frame.borrow().as_ref()
+                && *k == key
+            {
+                return v.clone();
+            }
+            let out = self.code_styles_now(doc, window, theme);
+            *self.code_frame.borrow_mut() = Some((key, out.clone()));
+            out
+        }
+        #[cfg(not(feature = "highlight"))]
+        {
+            let _ = (doc, window, theme);
+            Vec::new()
+        }
+    }
+
+    /// [`code_styles`](Self::code_styles) worked out anew.
+    #[cfg(feature = "highlight")]
+    fn code_styles_now(
+        &self,
+        doc: &textweaver_app::text::Document,
+        window: CharRange,
+        theme: &Theme,
+    ) -> Vec<(CharRange, Style)> {
         {
             use crate::highlight::Token;
             use textweaver_app::core::MarkerKind;
@@ -1070,11 +1290,6 @@ impl Tui {
             }
             out.retain(|(r, _)| !r.is_empty());
             out
-        }
-        #[cfg(not(feature = "highlight"))]
-        {
-            let _ = (doc, window, theme);
-            Vec::new()
         }
     }
 
@@ -1168,6 +1383,9 @@ impl Tui {
             }
             if difficult.get(d).is_some_and(|r| r.contains(pos)) {
                 style = style.add_modifier(Modifier::UNDERLINED);
+                if let Some(c) = theme.marks.difficult {
+                    style = style.underline_color(c);
+                }
             }
             if run_style != Some(style) {
                 if let Some(st) = run_style {
@@ -1178,7 +1396,15 @@ impl Tui {
             // A syllable separator takes the style of the char after it,
             // so a highlight over a word covers its separators too.
             if i > 0 && aids.breaks.binary_search(&pos).is_ok() {
-                run.push_str(aids.sep);
+                match theme.marks.syllables {
+                    // The reader's syllable color: the separator is its
+                    // own span, in that color over the same style.
+                    Some(c) => {
+                        spans.push(Span::styled(std::mem::take(&mut run), style));
+                        spans.push(Span::styled(aids.sep.to_owned(), style.fg(c)));
+                    }
+                    None => run.push_str(aids.sep),
+                }
             }
             match layout::shown_at(aids.shown, pos) {
                 Some(Some(text)) => run.push_str(text),

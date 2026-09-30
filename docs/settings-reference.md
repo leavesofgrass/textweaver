@@ -39,8 +39,8 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `highlight.granularity`: default the word (`"word"`). Highlight. What the reading highlight covers. Choices: `"word"` (the word), `"sentence"` (the sentence), `"both"` (the word and the sentence).
 - `highlight.lead_words`: default 1 words. Highlight lead. Draw the highlight this many words ahead of the word heard (1 is the word heard). From -5 to 5 words, in steps of 1.
 - `highlight.speed`: default 1 times. Highlight speed. Speed of the timed highlight for engines that report no words. From 0.5 to 1.5 times, in steps of 0.1.
-- `highlight.color`: default `"theme"`. Word highlight colour. A colour name or #rrggbb over the theme's word highlight; theme keeps the theme's. Text.
-- `highlight.sentence_color`: default not set. Sentence highlight colour. A colour name or #rrggbb over the theme's sentence highlight; not set keeps the theme's. Text; empty means not set.
+- `highlight.color`: default the theme's color (`"theme"`). Word highlight color. A color name or #rrggbb over the theme's word highlight; theme keeps the theme's. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+- `highlight.sentence_color`: default not set. Sentence highlight color. A color name or #rrggbb over the theme's sentence highlight; not set keeps the theme's. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
 
 ## Speaking text: the `[normalization]` section
 
@@ -75,7 +75,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 ## Display: the `[display]` section
 
-- `display.theme`: default `"galaxy"`. Theme. The colour theme. Choices: . Other values may be written too.
+- `display.theme`: default `"galaxy"`. Theme. The color theme. Choices: . Other values may be written too.
 - `display.follow_os_theme`: default on (`true`). Follow the system theme. At startup, use a light, dark, or high-contrast theme like the system, unless you picked one. On or off: `true` or `false`.
 - `display.wrap_width`: default 0 columns. Wrap width. Wrap lines at this many columns; 0 uses the whole width. From 0 to 400 columns, in steps of 10.
 - `display.tab_width`: default 4 columns. Tab width. Columns a tab takes. From 1 to 16 columns, in steps of 1.
@@ -111,6 +111,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `accessibility.say_all`: default on the status line (`"screen"`). Say all with a screen reader. Continuous reading in screen-reader mode: a sentence at a time on the status line, or textweaver's voice. Choices: `"screen"` (on the status line), `"voice"` (with textweaver's voice).
 - `accessibility.quiet_screen`: default off (`false`). Quiet screen while reading. Keep the screen still while textweaver reads aloud. On or off: `true` or `false`.
 - `accessibility.cursor`: default follows focus (`"follow"`). Cursor. Where the terminal's cursor waits: on what you are working on, or on the status line. Choices: `"follow"` (follows focus), `"status"` (on the status line).
+- `accessibility.interface_announcements`: default automatic (`"auto"`). Interface announcements. How much textweaver says about itself: dialogs, progress, hints, and routine confirmations. Errors and answers to what you asked are always said. Automatic is minimal with a screen reader, normal when self-voicing. Choices: `"auto"` (automatic), `"off"`, `"minimal"`, `"normal"`, `"full"`.
 
 ## Export: the `[export]` section
 
@@ -192,12 +193,29 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 - `gui.announce`: default live region (`"live"`). Announcements. How the window's messages reach the screen reader, from the next start: a live region, or UI Automation notifications (Windows only). Choices: `"live"` (live region), `"uia"` (UI Automation notifications).
 
+## Colors: the `[colors]` section
+
+- `colors.ruler`: default the theme's color (`"theme"`). Reading ruler color. The band of the reading ruler and the marked current line; the ruler keeps its underline or bold. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+- `colors.difficult_words`: default the theme's color (`"theme"`). Difficult words color. The underline of difficult words; they stay underlined and are named at high verbosity. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+- `colors.syllables`: default the theme's color (`"theme"`). Syllable marks color. The middle dots between syllables. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+- `colors.misspellings`: default the theme's color (`"theme"`). Misspellings color. The underline of misspelled words, in the window; they are also said. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+- `colors.lint`: default the theme's color (`"theme"`). Lint marks color. The underline of Markdown lint and grammar problems, in the window; they are also said. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+- `colors.find_match`: default the theme's color (`"theme"`). Search match color. The band behind search matches; they stay underlined. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+- `colors.selection`: default the theme's color (`"theme"`). Selection color. The band behind selected text. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+- `colors.focus`: default the theme's color (`"theme"`). Focus color. The focus outline and the focused item of a list; they stay bold. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+- `colors.links`: default the theme's color (`"theme"`). Link color. The color of links; they stay underlined. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+- `colors.headings`: default the theme's color (`"theme"`). Heading color. The color of headings; they stay bold. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+- `colors.status_bar`: default the theme's color (`"theme"`). Status bar color. The band of the status and title bars. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+- `colors.notes`: default the theme's color (`"theme"`). Note color. The band behind text with a note; it stays italic and underlined. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+- `colors.bookmarks`: default the theme's color (`"theme"`). Bookmark color. The band behind a bookmarked word; it stays bold and underlined. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+
 ## Kept by textweaver
 
 textweaver writes these itself, such as a question already asked. They are in the file, but not on the settings screen.
 
 - `display.theme_explicit`: default off (`false`). Theme picked. Set when you pick a theme; it stops following the system. On or off: `true` or `false`.
 - `accessibility.hybrid_offered`: default off (`false`). Hybrid mode offered. Set once textweaver has asked whether to use hybrid mode. On or off: `true` or `false`.
+- `interface.recent_settings`: default an empty list. Recently changed settings. The settings changed last on the settings screen, listed at its top. Text; empty means not set.
 
 ## See also
 

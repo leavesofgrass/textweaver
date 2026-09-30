@@ -407,3 +407,38 @@ fn lists_prompts_and_settings_over_json_rpc() {
     let r = s.result("get_setting", json!({"path": "highlight.granularity"}));
     assert_eq!(r["spoken"], "the word");
 }
+
+/// `insert` types at the caret in edit mode and is refused outside it
+/// (W6u; dictation clients use it).
+#[test]
+fn insert_types_in_edit_mode_only() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("notes.md");
+    std::fs::write(&file, "Hello world.\n").unwrap();
+    let mut s = Session {
+        server: server(&dir.path().join("home")),
+        next_id: 0,
+        notes: Vec::new(),
+    };
+    assert!(
+        s.result("initialize", json!({}))["methods"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("insert"))
+    );
+    assert_eq!(
+        s.error_code("insert", json!({"text": "x"})),
+        codes::NO_DOCUMENT
+    );
+    s.result("open", json!({"path": file.display().to_string()}));
+    assert_eq!(
+        s.error_code("insert", json!({"text": "Dear "})),
+        codes::NOT_EDITING
+    );
+    s.result("action", json!({"id": "toggle_edit_mode"}));
+    let r = s.result("insert", json!({"text": "Dear "}));
+    assert_eq!(r["position"]["char"], 5, "{r}");
+    let t = s.result("text", json!({"start": 0, "end": 17}));
+    assert_eq!(t["text"], "Dear Hello world.");
+    assert_eq!(s.error_code("insert", json!({})), codes::INVALID_PARAMS);
+}

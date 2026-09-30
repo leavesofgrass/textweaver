@@ -27,6 +27,7 @@
 //! | `pause`, `resume`, `stop` | none | `{playback}` |
 //! | `search` | `{pattern, regex?}` | `{matches: [{start, end, line}], current}`; moves to the first match at or after the cursor |
 //! | `text` | `{start?, end?}` (char offsets) | `{text, start, end}` |
+//! | `insert` | `{text}`: typed at the caret in edit mode, as typing is (one undo step, echoed) | `{status, effects, position}`; refused outside edit mode (`NOT_EDITING`) |
 //! | `action` | `{id}`: any keymap action id or notes command name; optional `confirm` (`true` answers yes, `false` no) for an action that asks first (quit, delete note) | `{status, effects, pending}`; `pending` is `{action, question}` while a question waits, else null |
 //! | `answer` | `{text}`: answers the open prompt | `{status, effects}` |
 //! | `choose` | `{index}`: picks from the shown list | `{status, effects}` |
@@ -66,7 +67,7 @@ use crate::text_util;
 pub const PROTOCOL_VERSION: u32 = 1;
 
 /// Every request method.
-pub const METHODS: [&str; 24] = [
+pub const METHODS: [&str; 25] = [
     "initialize",
     "open",
     "status",
@@ -78,6 +79,7 @@ pub const METHODS: [&str; 24] = [
     "stop",
     "search",
     "text",
+    "insert",
     "action",
     "answer",
     "choose",
@@ -119,6 +121,8 @@ pub mod codes {
     pub const OPEN_FAILED: i64 = -32002;
     /// A request arrived after `shutdown`.
     pub const SHUT_DOWN: i64 = -32003;
+    /// The method needs edit mode (`insert`).
+    pub const NOT_EDITING: i64 = -32004;
 }
 
 /// Announcements the app made, waiting to be sent as notifications.
@@ -389,6 +393,7 @@ impl Server {
             }
             "search" => self.search(params),
             "text" => self.text(params),
+            "insert" => self.insert(params),
             "action" => self.action(params),
             "answer" => {
                 let text = str_param(params, "text")?.to_owned();
@@ -498,6 +503,22 @@ impl Server {
 
     /// Runs a command; the result carries the status line and the effects
     /// (as the notifications they became).
+    /// `insert`: text at the caret in edit mode (dictation and other
+    /// clients type through it), refused outside edit mode.
+    fn insert(&mut self, params: &Value) -> RpcResult {
+        self.need_document()?;
+        let text = str_param(params, "text")?.to_owned();
+        if !self.app.is_editing() {
+            return Err(RpcError::new(
+                codes::NOT_EDITING,
+                "insert needs edit mode; run the toggle_edit_mode action first",
+            ));
+        }
+        let mut result = self.run(Command::Insert(text));
+        result["position"] = self.position();
+        Ok(result)
+    }
+
     fn run(&mut self, cmd: Command) -> Value {
         let effects = self.dispatch(cmd);
         json!({

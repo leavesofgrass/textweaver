@@ -48,7 +48,7 @@ pub use model::{
 pub use os::OsScheme;
 pub use registry::{LoadReport, Registry};
 pub use resolve::{Adjustment, Repair};
-pub use terminal::{ColorSupport, TermColor, TermStyle, TerminalTheme};
+pub use terminal::{ColorSupport, TermColor, TermStyle, TerminalTheme, term_color};
 
 /// The theme used when none is chosen or the chosen one is missing.
 pub const DEFAULT_THEME: &str = "galaxy";

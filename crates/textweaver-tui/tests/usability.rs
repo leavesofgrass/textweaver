@@ -44,10 +44,6 @@ fn spoken(log: &SpeechLog, needle: &str) -> bool {
     false
 }
 
-fn ctrl(c: char) -> KeyEvent {
-    KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL)
-}
-
 fn plain(c: char) -> KeyEvent {
     KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE)
 }
@@ -63,7 +59,7 @@ fn a_question_asked_while_reading_is_spoken() {
     tui.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
     assert_eq!(tui.app().playback(), Playback::Reading);
     log.clear();
-    tui.handle_key(ctrl('q'));
+    tui.handle_key(tui.key_for(ActionId::Quit));
     assert!(tui.app().confirmation_pending());
     assert!(
         spoken(&log, "Quit textweaver? y or n"),
@@ -144,8 +140,11 @@ fn the_help_names_the_keys_a_new_user_needs() {
         ),
         "{items:?}"
     );
+    let mode_key = textweaver_app::key_text(tui.app().keymap(), ActionId::CycleAccessMode);
     assert!(
-        has("Alt+Shift+A cycles self-voicing, hybrid, and screen reader mode"),
+        has(&format!(
+            "{mode_key} cycles self-voicing, hybrid, and screen reader mode"
+        )),
         "{items:?}"
     );
     assert!(

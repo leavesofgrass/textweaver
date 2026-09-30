@@ -190,6 +190,18 @@ pub fn xterm_rgb(index: u8) -> Rgb {
     }
 }
 
+/// A color chosen by the reader (a setting, not a theme role) at the
+/// terminal's color level: itself in truecolor, the nearest of indexes 16
+/// to 255 in 256 colors, and `None` with 16 colors or none, where the
+/// reading aids keep their attributes only.
+pub fn term_color(rgb: Rgb, support: ColorSupport) -> Option<TermColor> {
+    match support {
+        ColorSupport::TrueColor => Some(TermColor::Rgb(rgb)),
+        ColorSupport::Ansi256 => Some(TermColor::Indexed(nearest_256(rgb, None, 0.0))),
+        ColorSupport::Ansi16 | ColorSupport::NoColor => None,
+    }
+}
+
 /// The index in 16–255 nearest to `target` whose contrast against
 /// `against` is at least `min`; the nearest overall when none is.
 fn nearest_256(target: Rgb, against: Option<Rgb>, min: f64) -> u8 {

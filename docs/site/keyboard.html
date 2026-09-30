@@ -223,8 +223,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
       <li>F9 turns single-key shortcuts off, so dictation or a switch keyboard never triggers a command by accident.
       Chords with Ctrl or Alt, the arrow and function keys, and the palette keep working.</li>
       <li>The GUI keys shown are for Windows and Linux.
-      On macOS the GUI uses Cmd wherever it shows Ctrl.
-      Choose macOS under Platform to see Cmd in the GUI keys.</li>
+      On macOS the GUI uses the Mac's own keys: Command for commands, Option with the arrows for words and paragraphs, Command with the arrows for the ends.
+      Choose macOS under Platform to see them.</li>
       <li>You can change any key in <code>keymap.toml</code>; see the <a href="../keyboard.md">keyboard reference</a>.</li>
     </ul>
 
@@ -269,7 +269,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
       <fieldset>
         <legend>Platform</legend>
         <div class="check"><input type="radio" name="platform" id="pf-win" value="win" checked><label for="pf-win">Windows and Linux</label></div>
-        <div class="check"><input type="radio" name="platform" id="pf-mac" value="mac"><label for="pf-mac">macOS (Cmd for Ctrl in the GUI)</label></div>
+        <div class="check"><input type="radio" name="platform" id="pf-mac" value="mac"><label for="pf-mac">macOS (the Mac's own keys in the GUI)</label></div>
       </fieldset>
       <div class="field">
         <span aria-hidden="true">&nbsp;</span>
@@ -325,6 +325,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "play_pause",
+   "mac": [
+    {
+     "key": "Cmd+Shift+Space",
+     "layer": "global"
+    },
+    {
+     "key": "Space",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -348,6 +358,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "stop",
+   "mac": [
+    {
+     "key": "Escape",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -375,6 +391,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "read_from_cursor",
+   "mac": [
+    {
+     "key": "Cmd+Enter",
+     "layer": "global"
+    },
+    {
+     "key": "Enter",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -398,6 +424,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "read_document",
+   "mac": [
+    {
+     "key": "Shift+R",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -424,6 +456,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "read_current_character",
+   "mac": [
+    {
+     "key": "Cmd+Shift+C",
+     "layer": "global"
+    },
+    {
+     "key": "c",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -451,6 +493,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "read_current_word",
+   "mac": [
+    {
+     "key": "Cmd+Shift+W",
+     "layer": "global"
+    },
+    {
+     "key": "w",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -478,6 +530,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "read_current_sentence",
+   "mac": [
+    {
+     "key": "Cmd+Shift+E",
+     "layer": "global"
+    },
+    {
+     "key": ".",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -501,6 +563,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "read_current_line",
+   "mac": [
+    {
+     "key": "Cmd+L",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -520,6 +588,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "read_paragraph",
+   "mac": [
+    {
+     "key": ",",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -542,6 +616,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "read_selection",
+   "mac": [
+    {
+     "key": "v",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -568,6 +648,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "say_position",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+Y",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+W",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -595,6 +685,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "say_status",
+   "mac": [
+    {
+     "key": "Alt+End",
+     "layer": "global"
+    },
+    {
+     "key": "z",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -622,6 +722,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "repeat_message",
+   "mac": [
+    {
+     "key": "Cmd+Alt+'",
+     "layer": "global"
+    },
+    {
+     "key": "'",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -645,6 +755,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "word_count",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+T",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -664,6 +780,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "link_address",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+K",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -687,6 +809,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "replay_sentence",
+   "mac": [
+    {
+     "key": "Cmd+Alt+;",
+     "layer": "global"
+    },
+    {
+     "key": ";",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -714,6 +846,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "replay_paragraph",
+   "mac": [
+    {
+     "key": "Cmd+R",
+     "layer": "global"
+    },
+    {
+     "key": "r",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -737,6 +879,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "rsvp_toggle",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+R",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -756,6 +904,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "rsvp_play_pause",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+P",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -779,6 +933,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "rsvp_faster",
+   "mac": [
+    {
+     "key": "Alt+Shift+Up",
+     "layer": "global"
+    },
+    {
+     "key": "Alt+Shift+PageUp",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -806,6 +970,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "rsvp_slower",
+   "mac": [
+    {
+     "key": "Alt+Shift+Down",
+     "layer": "global"
+    },
+    {
+     "key": "Alt+Shift+PageDown",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -829,6 +1003,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "rsvp_position_next",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+O",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -848,6 +1028,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "reading_level",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+G",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -867,6 +1053,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "define_word",
+   "mac": [
+    {
+     "key": "Cmd+Shift+D",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -881,6 +1073,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Reading",
    "gui": [],
    "id": "summarize",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -895,6 +1088,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "toggle_citations",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+C",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -914,6 +1113,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "explore_math",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+X",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -928,6 +1133,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Reading",
    "gui": [],
    "id": "listen_rendered",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -946,6 +1152,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_sentence",
+   "mac": [
+    {
+     "key": "Cmd+Alt+.",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -973,6 +1185,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_sentence",
+   "mac": [
+    {
+     "key": "Cmd+Alt+,",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -1012,6 +1230,24 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_paragraph",
+   "mac": [
+    {
+     "key": "Alt+Down",
+     "layer": "global"
+    },
+    {
+     "key": "p",
+     "layer": "browse"
+    },
+    {
+     "key": "]",
+     "layer": "browse"
+    },
+    {
+     "key": "PageDown",
+     "layer": "speech_cursor"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -1063,6 +1299,24 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_paragraph",
+   "mac": [
+    {
+     "key": "Alt+Up",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+P",
+     "layer": "browse"
+    },
+    {
+     "key": "[",
+     "layer": "browse"
+    },
+    {
+     "key": "PageUp",
+     "layer": "speech_cursor"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -1098,6 +1352,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_heading",
+   "mac": [
+    {
+     "key": "Cmd+Alt+PageDown",
+     "layer": "global"
+    },
+    {
+     "key": ">",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
@@ -1124,6 +1388,20 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_heading",
+   "mac": [
+    {
+     "key": "Cmd+Shift+H",
+     "layer": "global"
+    },
+    {
+     "key": "Cmd+Alt+PageUp",
+     "layer": "global"
+    },
+    {
+     "key": "<",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
@@ -1150,6 +1428,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "skip_next_heading",
+   "mac": [
+    {
+     "key": "h",
+     "layer": "browse"
+    },
+    {
+     "key": "}",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": false
@@ -1184,6 +1472,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "skip_previous_heading",
+   "mac": [
+    {
+     "key": "Shift+H",
+     "layer": "browse"
+    },
+    {
+     "key": "{",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": false
@@ -1214,6 +1512,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "outline",
+   "mac": [
+    {
+     "key": "Cmd+Alt+O",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -1233,6 +1537,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_heading_level_1",
+   "mac": [
+    {
+     "key": "1",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1255,6 +1565,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_heading_level_2",
+   "mac": [
+    {
+     "key": "2",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1277,6 +1593,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_heading_level_3",
+   "mac": [
+    {
+     "key": "3",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1299,6 +1621,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_heading_level_4",
+   "mac": [
+    {
+     "key": "4",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1321,6 +1649,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_heading_level_5",
+   "mac": [
+    {
+     "key": "5",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1343,6 +1677,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_heading_level_6",
+   "mac": [
+    {
+     "key": "6",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1365,6 +1705,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_heading_level_1",
+   "mac": [
+    {
+     "key": "!",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1387,6 +1733,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_heading_level_2",
+   "mac": [
+    {
+     "key": "@",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1409,6 +1761,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_heading_level_3",
+   "mac": [
+    {
+     "key": "#",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1431,6 +1789,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_heading_level_4",
+   "mac": [
+    {
+     "key": "$",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1453,6 +1817,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_heading_level_5",
+   "mac": [
+    {
+     "key": "%",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1475,6 +1845,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_heading_level_6",
+   "mac": [
+    {
+     "key": "^",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1501,6 +1877,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_table",
+   "mac": [
+    {
+     "key": "Cmd+Alt+T",
+     "layer": "global"
+    },
+    {
+     "key": "t",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
@@ -1527,6 +1913,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_table",
+   "mac": [
+    {
+     "key": "Cmd+Shift+T",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+T",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
@@ -1549,6 +1945,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_list",
+   "mac": [
+    {
+     "key": "l",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1571,6 +1973,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_list",
+   "mac": [
+    {
+     "key": "Shift+L",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1593,6 +2001,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_list_item",
+   "mac": [
+    {
+     "key": "i",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1615,6 +2029,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_list_item",
+   "mac": [
+    {
+     "key": "Shift+I",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1641,6 +2061,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_link",
+   "mac": [
+    {
+     "key": "k",
+     "layer": "browse"
+    },
+    {
+     "key": "u",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1671,6 +2101,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_link",
+   "mac": [
+    {
+     "key": "Shift+K",
+     "layer": "browse"
+    },
+    {
+     "key": "Shift+U",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1697,6 +2137,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_block_quote",
+   "mac": [
+    {
+     "key": "q",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1719,6 +2165,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_block_quote",
+   "mac": [
+    {
+     "key": "Shift+Q",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1741,6 +2193,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_separator",
+   "mac": [
+    {
+     "key": "s",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1763,6 +2221,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_separator",
+   "mac": [
+    {
+     "key": "Shift+S",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1785,6 +2249,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_graphic",
+   "mac": [
+    {
+     "key": "g",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1807,6 +2277,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_graphic",
+   "mac": [
+    {
+     "key": "Shift+G",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -1829,6 +2305,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "follow_link",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+F",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -1848,6 +2330,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "table_next_row",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Down",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -1867,6 +2355,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "table_previous_row",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Up",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -1886,6 +2380,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "table_next_column",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Right",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -1905,6 +2405,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "table_previous_column",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Left",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -1928,6 +2434,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_chapter",
+   "mac": [
+    {
+     "key": "Alt+PageDown",
+     "layer": "global"
+    },
+    {
+     "key": "d",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -1959,13 +2475,19 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_chapter",
+   "mac": [
+    {
+     "key": "Alt+PageUp",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+D",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
-    {
-     "key": "F10",
-     "layer": "global"
-    },
     {
      "key": "Alt+PageUp",
      "layer": "global"
@@ -1990,6 +2512,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "history_back",
+   "mac": [
+    {
+     "key": "Cmd+[",
+     "layer": "global"
+    },
+    {
+     "key": "Backspace",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2017,6 +2549,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "history_forward",
+   "mac": [
+    {
+     "key": "Cmd+]",
+     "layer": "global"
+    },
+    {
+     "key": "\\",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2040,6 +2582,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "go_to",
+   "mac": [
+    {
+     "key": "Cmd+G",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2063,6 +2611,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "document_start",
+   "mac": [
+    {
+     "key": "Cmd+Up",
+     "layer": "global"
+    },
+    {
+     "key": "Home",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2090,6 +2648,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "document_end",
+   "mac": [
+    {
+     "key": "Cmd+Down",
+     "layer": "global"
+    },
+    {
+     "key": "End",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2113,6 +2681,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "caret_next_word",
+   "mac": [
+    {
+     "key": "Right",
+     "layer": "browse"
+    },
+    {
+     "key": "Alt+Right",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2132,6 +2710,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "caret_previous_word",
+   "mac": [
+    {
+     "key": "Left",
+     "layer": "browse"
+    },
+    {
+     "key": "Alt+Left",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2151,6 +2739,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "caret_next_line",
+   "mac": [
+    {
+     "key": "Down",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2170,6 +2764,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "caret_previous_line",
+   "mac": [
+    {
+     "key": "Up",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2189,6 +2789,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "select_next_word",
+   "mac": [
+    {
+     "key": "Shift+Right",
+     "layer": "browse"
+    },
+    {
+     "key": "Alt+Shift+Right",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2208,6 +2818,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "select_previous_word",
+   "mac": [
+    {
+     "key": "Shift+Left",
+     "layer": "browse"
+    },
+    {
+     "key": "Alt+Shift+Left",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2227,6 +2847,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "select_next_line",
+   "mac": [
+    {
+     "key": "Shift+Down",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2246,6 +2872,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "select_previous_line",
+   "mac": [
+    {
+     "key": "Shift+Up",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2265,6 +2897,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "page_down",
+   "mac": [
+    {
+     "key": "PageDown",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2284,6 +2922,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "page_up",
+   "mac": [
+    {
+     "key": "PageUp",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2303,6 +2947,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "scroll_down",
+   "mac": [
+    {
+     "key": "j",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -2325,6 +2975,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "scroll_up",
+   "mac": [
+    {
+     "key": "Shift+J",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -2351,6 +3007,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "speech_cursor_toggle",
+   "mac": [
+    {
+     "key": "Tab",
+     "layer": "browse"
+    },
+    {
+     "key": "Tab",
+     "layer": "speech_cursor"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2378,6 +3044,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "speech_cursor_next_line",
+   "mac": [
+    {
+     "key": "Down",
+     "layer": "speech_cursor"
+    },
+    {
+     "key": "j",
+     "layer": "speech_cursor"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2405,6 +3081,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "speech_cursor_previous_line",
+   "mac": [
+    {
+     "key": "Up",
+     "layer": "speech_cursor"
+    },
+    {
+     "key": "k",
+     "layer": "speech_cursor"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2428,6 +3114,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "speech_cursor_reread_line",
+   "mac": [
+    {
+     "key": "r",
+     "layer": "speech_cursor"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -2450,6 +3142,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "speech_cursor_exit_and_read",
+   "mac": [
+    {
+     "key": "Enter",
+     "layer": "speech_cursor"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2477,6 +3175,20 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "rate_up",
+   "mac": [
+    {
+     "key": "Cmd+Alt+]",
+     "layer": "global"
+    },
+    {
+     "key": "+",
+     "layer": "browse"
+    },
+    {
+     "key": "=",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
@@ -2507,6 +3219,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "rate_down",
+   "mac": [
+    {
+     "key": "Cmd+Alt+[",
+     "layer": "global"
+    },
+    {
+     "key": "-",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
@@ -2533,6 +3255,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "pitch_up",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+Up",
+     "layer": "global"
+    },
+    {
+     "key": ")",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2560,6 +3292,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "pitch_down",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+Down",
+     "layer": "global"
+    },
+    {
+     "key": "(",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2587,6 +3329,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "volume_up",
+   "mac": [
+    {
+     "key": "F7",
+     "layer": "global"
+    },
+    {
+     "key": "0",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2614,6 +3366,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "volume_down",
+   "mac": [
+    {
+     "key": "Shift+F7",
+     "layer": "global"
+    },
+    {
+     "key": "9",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2637,6 +3399,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "cycle_speed_preset",
+   "mac": [
+    {
+     "key": "F8",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2656,6 +3424,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "choose_voice",
+   "mac": [
+    {
+     "key": "Cmd+Shift+V",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2675,6 +3449,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "restart_speech",
+   "mac": [
+    {
+     "key": "Shift+F8",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2694,6 +3474,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "cycle_verbosity",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+V",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2713,6 +3499,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "cycle_punctuation",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+N",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2736,6 +3528,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "find",
+   "mac": [
+    {
+     "key": "Cmd+F",
+     "layer": "global"
+    },
+    {
+     "key": "/",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2759,6 +3561,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "find_next",
+   "mac": [
+    {
+     "key": "n",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": false
@@ -2785,6 +3593,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "find_previous",
+   "mac": [
+    {
+     "key": "Shift+N",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": false
@@ -2811,6 +3625,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_misspelling",
+   "mac": [
+    {
+     "key": "Cmd+;",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2830,6 +3650,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_misspelling",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+M",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2849,6 +3675,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "spelling_suggestions",
+   "mac": [
+    {
+     "key": "Cmd+Alt+J",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2868,6 +3700,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_grammar_problem",
+   "mac": [
+    {
+     "key": "Cmd+F7",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2887,6 +3725,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_grammar_problem",
+   "mac": [
+    {
+     "key": "Cmd+Shift+F7",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2906,6 +3750,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_lint_problem",
+   "mac": [
+    {
+     "key": "Cmd+F8",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2925,6 +3775,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_lint_problem",
+   "mac": [
+    {
+     "key": "Cmd+Shift+F8",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -2948,6 +3804,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "add_bookmark",
+   "mac": [
+    {
+     "key": "Cmd+D",
+     "layer": "global"
+    },
+    {
+     "key": "m",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
@@ -2970,6 +3836,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "list_bookmarks",
+   "mac": [
+    {
+     "key": "Shift+M",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -2992,6 +3864,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_bookmark",
+   "mac": [
+    {
+     "key": "b",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -3014,6 +3892,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_bookmark",
+   "mac": [
+    {
+     "key": "Shift+B",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -3040,6 +3924,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "add_note",
+   "mac": [
+    {
+     "key": "Cmd+Alt+N",
+     "layer": "global"
+    },
+    {
+     "key": "a",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3067,6 +3961,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "list_notes",
+   "mac": [
+    {
+     "key": "Cmd+Shift+N",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+A",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
@@ -3093,6 +3997,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_note",
+   "mac": [
+    {
+     "key": "F12",
+     "layer": "global"
+    },
+    {
+     "key": "e",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3120,6 +4034,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_note",
+   "mac": [
+    {
+     "key": "Shift+F12",
+     "layer": "global"
+    },
+    {
+     "key": "Shift+E",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3143,6 +4067,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "delete_note",
+   "mac": [
+    {
+     "key": "Delete",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3162,6 +4092,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "highlight_selection",
+   "mac": [
+    {
+     "key": "y",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": true,
     "terminal": true
@@ -3179,6 +4115,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Bookmarks and notes",
    "gui": [],
    "id": "export_study_sheet",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -3193,6 +4130,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "open",
+   "mac": [
+    {
+     "key": "Cmd+O",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3212,6 +4155,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "open_path",
+   "mac": [
+    {
+     "key": "Cmd+Shift+G",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
@@ -3229,6 +4178,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "open_library",
+   "mac": [
+    {
+     "key": "Cmd+Shift+B",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3248,6 +4203,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "new_document",
+   "mac": [
+    {
+     "key": "Cmd+N",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3267,6 +4228,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "save",
+   "mac": [
+    {
+     "key": "Cmd+S",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3286,6 +4253,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "save_as",
+   "mac": [
+    {
+     "key": "Cmd+Shift+S",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3305,6 +4278,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "export_settings",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+E",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3324,6 +4303,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "import_settings",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+I",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3343,6 +4328,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "reading_statistics",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Y",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3357,6 +4348,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "File",
    "gui": [],
    "id": "new_from_template",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -3366,6 +4358,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "File",
    "gui": [],
    "id": "export_html",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -3375,6 +4368,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "File",
    "gui": [],
    "id": "export_pdf",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -3384,6 +4378,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "File",
    "gui": [],
    "id": "export_docx",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -3393,6 +4388,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "File",
    "gui": [],
    "id": "export_epub",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -3402,6 +4398,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "File",
    "gui": [],
    "id": "export_brf",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -3411,6 +4408,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "File",
    "gui": [],
    "id": "preview_in_browser",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -3420,6 +4418,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "File",
    "gui": [],
    "id": "toggle_preview_auto_reload",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -3429,6 +4428,37 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "File",
    "gui": [],
    "id": "toggle_preview_live",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up",
+   "category": "File",
+   "gui": [],
+   "id": "browse_files",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Convert a folder of documents to another format, in the background",
+   "category": "File",
+   "gui": [],
+   "id": "batch_convert",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Export the document as spoken audio: MP3, FLAC, WAV, or an M4B audiobook",
+   "category": "File",
+   "gui": [],
+   "id": "export_audio",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -3443,6 +4473,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "quit",
+   "mac": [
+    {
+     "key": "Cmd+Q",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3462,6 +4498,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "toggle_edit_mode",
+   "mac": [
+    {
+     "key": "Cmd+E",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3481,6 +4523,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "undo",
+   "mac": [
+    {
+     "key": "Cmd+Z",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3504,6 +4552,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "redo",
+   "mac": [
+    {
+     "key": "Cmd+Y",
+     "layer": "edit"
+    },
+    {
+     "key": "Cmd+Shift+Z",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3523,6 +4581,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "bold",
+   "mac": [
+    {
+     "key": "Cmd+B",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3542,6 +4606,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "italic",
+   "mac": [
+    {
+     "key": "Cmd+I",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3561,6 +4631,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "underline",
+   "mac": [
+    {
+     "key": "Cmd+U",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3580,6 +4656,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "strikethrough",
+   "mac": [
+    {
+     "key": "Cmd+Shift+X",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3599,6 +4681,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "inline_code",
+   "mac": [
+    {
+     "key": "Cmd+Alt+K",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3618,6 +4706,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "code_block",
+   "mac": [
+    {
+     "key": "Cmd+Shift+K",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3637,6 +4731,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "insert_link",
+   "mac": [
+    {
+     "key": "Cmd+K",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3656,6 +4756,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "heading",
+   "mac": [
+    {
+     "key": "Cmd+Alt+1",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3675,6 +4781,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "bullet_list",
+   "mac": [
+    {
+     "key": "Cmd+Shift+L",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3694,6 +4806,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "numbered_list",
+   "mac": [
+    {
+     "key": "Cmd+Shift+O",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3713,6 +4831,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "block_quote",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Q",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3732,6 +4856,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "horizontal_rule",
+   "mac": [
+    {
+     "key": "Cmd+Shift+R",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3751,6 +4881,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "insert_table",
+   "mac": [
+    {
+     "key": "Cmd+Shift+A",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3770,6 +4906,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "add_table_row",
+   "mac": [
+    {
+     "key": "Cmd+Shift+Enter",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3789,6 +4931,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "insert_image",
+   "mac": [
+    {
+     "key": "Cmd+Shift+I",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3808,6 +4956,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "replace",
+   "mac": [
+    {
+     "key": "Cmd+Shift+F",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3827,6 +4981,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "copy",
+   "mac": [
+    {
+     "key": "Cmd+C",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3846,6 +5006,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "cut",
+   "mac": [
+    {
+     "key": "Cmd+X",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3865,6 +5031,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_table_cell",
+   "mac": [
+    {
+     "key": "Tab",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3884,6 +5056,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "previous_table_cell",
+   "mac": [
+    {
+     "key": "Shift+Tab",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3903,6 +5081,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "cycle_typing_echo",
+   "mac": [
+    {
+     "key": "Shift+F9",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3922,6 +5106,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "select_all",
+   "mac": [
+    {
+     "key": "Cmd+A",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3941,6 +5131,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "delete_word_before",
+   "mac": [
+    {
+     "key": "Alt+Backspace",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3960,6 +5156,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "delete_word_after",
+   "mac": [
+    {
+     "key": "Alt+Delete",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3979,6 +5181,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "paste",
+   "mac": [
+    {
+     "key": "Cmd+V",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -3998,6 +5206,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "insert_citation",
+   "mac": [
+    {
+     "key": "Cmd+Alt+C",
+     "layer": "edit"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4017,6 +5231,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "add_reference",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+D",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4031,6 +5251,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Editing",
    "gui": [],
    "id": "insert_bibliography",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -4040,6 +5261,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Editing",
    "gui": [],
    "id": "check_citations",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
@@ -4049,9 +5271,35 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Editing",
    "gui": [],
    "id": "import_references",
+   "mac": [],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": []
+  },
+  {
+   "action": "Start or stop dictation: spoken words are typed at the cursor in edit mode",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+F9",
+     "layer": "global"
+    }
+   ],
+   "id": "dictate",
+   "mac": [
+    {
+     "key": "Cmd+Shift+F9",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+Shift+F9",
+     "layer": "global"
+    }
+   ]
   },
   {
    "action": "Switch to the next color theme",
@@ -4063,6 +5311,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "next_theme",
+   "mac": [
+    {
+     "key": "F5",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4082,6 +5336,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "toggle_line_numbers",
+   "mac": [
+    {
+     "key": "F6",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4101,6 +5361,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "toggle_character_keys",
+   "mac": [
+    {
+     "key": "F9",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4120,6 +5386,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "cycle_access_mode",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+A",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4139,6 +5411,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "settings_profiles",
+   "mac": [
+    {
+     "key": "Cmd+Shift+U",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4158,6 +5436,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "bionic_toggle",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+B",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4177,6 +5461,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "ruler_cycle",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+U",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4196,6 +5486,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "syllables_toggle",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+Z",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4215,6 +5511,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "difficult_words_toggle",
+   "mac": [
+    {
+     "key": "Cmd+Alt+Shift+J",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4234,6 +5536,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "text_larger",
+   "mac": [
+    {
+     "key": "Cmd+=",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
@@ -4251,6 +5559,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "text_smaller",
+   "mac": [
+    {
+     "key": "Cmd+-",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
@@ -4268,6 +5582,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "text_size_reset",
+   "mac": [
+    {
+     "key": "Cmd+0",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
@@ -4285,12 +5605,78 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "choose_font",
+   "mac": [
+    {
+     "key": "Cmd+T",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
    },
    "source": "keymap",
    "terminal": []
+  },
+  {
+   "action": "Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast",
+   "category": "View and help",
+   "gui": [],
+   "id": "color_settings",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Cycle how much textweaver announces about itself: off, minimal, normal, or full; errors and answers are always said",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Ctrl+F9",
+     "layer": "global"
+    }
+   ],
+   "id": "cycle_interface_announcements",
+   "mac": [
+    {
+     "key": "Cmd+F9",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+F9",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Open the menus: File, Edit, View, Reading, Speech, Tools, and Help",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "F10",
+     "layer": "global"
+    }
+   ],
+   "id": "menu",
+   "mac": [
+    {
+     "key": "F10",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "F10",
+     "layer": "global"
+    }
+   ]
   },
   {
    "action": "Run any command by name",
@@ -4306,6 +5692,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "command_palette",
+   "mac": [
+    {
+     "key": "F2",
+     "layer": "global"
+    },
+    {
+     "key": ":",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4333,6 +5729,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "settings",
+   "mac": [
+    {
+     "key": "Cmd+,",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4356,6 +5758,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "keyboard_help",
+   "mac": [
+    {
+     "key": "F3",
+     "layer": "global"
+    },
+    {
+     "key": "?",
+     "layer": "browse"
+    }
+   ],
    "palette_when_off": {
     "gui": false,
     "terminal": true
@@ -4369,6 +5781,41 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ]
   },
   {
+   "action": "Press a key to hear what it does and where it is in the menus, without running it",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Shift+F1",
+     "layer": "global"
+    }
+   ],
+   "id": "what_does_this_key_do",
+   "mac": [
+    {
+     "key": "Shift+F1",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+F1",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Say textweaver's version and license",
+   "category": "View and help",
+   "gui": [],
+   "id": "about",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
    "action": "Open the help",
    "category": "View and help",
    "gui": [
@@ -4378,6 +5825,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "id": "help",
+   "mac": [
+    {
+     "key": "F1",
+     "layer": "global"
+    }
+   ],
    "palette_when_off": null,
    "source": "keymap",
    "terminal": [
@@ -4531,8 +5984,12 @@ window.TW = (function () {
   }
   function radio(name) { return document.querySelector("input[name='" + name + "']:checked").value; }
   function showKey(key, frontend, platform) {
-    if (frontend === "gui" && platform === "mac") { return key.replace(/\bCtrl\+/g, "Cmd+"); }
+    if (frontend === "gui" && platform === "mac") { return key.replace(/\bAlt\+/g, "Option+"); }
     return key;
+  }
+  /* The keys of one frontend: on macOS the GUI has keys of its own. */
+  function keysOf(k, f, platform) {
+    return (f === "gui" && platform === "mac" && k.mac) ? k.mac : k[f];
   }
   function slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
 
@@ -4547,7 +6004,7 @@ window.TW = (function () {
     var whole = q.value.trim().toLowerCase();
     function keyIs(k) {
       return fronts.some(function (f) {
-        return k[f].some(function (key) {
+        return keysOf(k, f, pf).some(function (key) {
           return (!layer || key.layer === layer) &&
             (key.key.toLowerCase() === whole || showKey(key.key, f, pf).toLowerCase() === whole);
         });
@@ -4560,7 +6017,7 @@ window.TW = (function () {
       var shown = {};
       var any = false;
       fronts.forEach(function (f) {
-        shown[f] = k[f].filter(function (key) { return !layer || key.layer === layer; });
+        shown[f] = keysOf(k, f, pf).filter(function (key) { return !layer || key.layer === layer; });
         if (shown[f].length) { any = true; }
       });
       if (!any) { return; }

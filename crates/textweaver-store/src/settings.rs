@@ -328,6 +328,65 @@ pub const REMOVED_SETTINGS: &[(&str, &str)] = &[(
     "textweaver never downloads fonts; a missing reading font is named, and the reading guide says where to get it",
 )];
 
+/// Settings whose key was renamed, as dotted paths: the old key, then the
+/// new one. A `settings.toml` or an import with the old key keeps its
+/// value under the new key, so a rename never loses what a user set
+/// (Star lost such values: its loader dropped a key missing from its
+/// defaults before its migration saw it). Empty until a key is renamed;
+/// [`rename_legacy_settings_with`] is tested with a table of its own.
+pub const RENAMED_SETTINGS: &[(&str, &str)] = &[];
+
+/// Moves the [`RENAMED_SETTINGS`] in a parsed `settings.toml` to their new
+/// keys; returns each rename done. A value already under the new key wins.
+pub fn rename_legacy_settings(table: &mut toml::Table) -> Vec<(&'static str, &'static str)> {
+    rename_legacy_settings_with(table, RENAMED_SETTINGS)
+}
+
+/// [`rename_legacy_settings`] with the renames in `renames`.
+pub fn rename_legacy_settings_with(
+    table: &mut toml::Table,
+    renames: &[(&'static str, &'static str)],
+) -> Vec<(&'static str, &'static str)> {
+    fn take(table: &mut toml::Table, path: &str) -> Option<toml::Value> {
+        let mut parts: Vec<&str> = path.split('.').collect();
+        let last = parts.pop()?;
+        let mut cur = table;
+        for p in parts {
+            cur = cur.get_mut(p)?.as_table_mut()?;
+        }
+        cur.remove(last)
+    }
+    fn put(table: &mut toml::Table, path: &str, value: toml::Value) -> bool {
+        let mut parts: Vec<&str> = path.split('.').collect();
+        let Some(last) = parts.pop() else {
+            return false;
+        };
+        let mut cur = table;
+        for p in parts {
+            let next = cur
+                .entry(p.to_owned())
+                .or_insert_with(|| toml::Value::Table(toml::Table::new()));
+            let Some(t) = next.as_table_mut() else {
+                return false;
+            };
+            cur = t;
+        }
+        if cur.contains_key(last) {
+            return false;
+        }
+        cur.insert(last.to_owned(), value);
+        true
+    }
+    let mut done = Vec::new();
+    for &(old, new) in renames {
+        if let Some(v) = take(table, old) {
+            put(table, new, v);
+            done.push((old, new));
+        }
+    }
+    done
+}
+
 /// Drops the [`REMOVED_SETTINGS`] from a parsed `settings.toml`; returns
 /// the keys that were there.
 pub fn drop_removed_settings(table: &mut toml::Table) -> Vec<&'static str> {
@@ -871,6 +930,27 @@ pub enum AccessMode {
     Hybrid,
 }
 
+/// `[accessibility] interface_announcements`: how much textweaver says
+/// about itself (dialogs, progress, hints, routine confirmations); the app
+/// maps it to `textweaver_a11y::InterfaceLevel`. Errors and answers to the
+/// user's questions are always said.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum InterfaceAnnouncements {
+    /// Follows the accessibility mode: minimal with a screen reader
+    /// (screen-reader and hybrid modes), normal when self-voicing.
+    #[default]
+    Auto,
+    /// Only errors, questions, and answers.
+    Off,
+    /// Also the results of commands.
+    Minimal,
+    /// Also routine confirmations, dialogs, progress, and tips.
+    Normal,
+    /// Also hints and counts.
+    Full,
+}
+
 /// `[accessibility] say_all`: continuous reading in screen-reader mode.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -918,6 +998,9 @@ pub struct AccessibilitySettings {
     /// Set once textweaver has asked, on a run with a screen reader, whether
     /// to use hybrid mode; it asks only once.
     pub hybrid_offered: bool,
+    /// How much textweaver announces about itself: `auto` (follows the
+    /// mode), `off`, `minimal`, `normal`, or `full`.
+    pub interface_announcements: InterfaceAnnouncements,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -931,6 +1014,7 @@ impl Default for AccessibilitySettings {
             quiet_screen: false,
             cursor: CursorPlacement::default(),
             hybrid_offered: false,
+            interface_announcements: InterfaceAnnouncements::default(),
             extra: toml::Table::new(),
         }
     }
@@ -1055,6 +1139,10 @@ pub struct InterfaceSettings {
     /// `on` always, `off` never. The text itself, speech, and the
     /// screen reader always get it in logical order.
     pub rtl: RtlDisplay,
+    /// The settings changed last on the settings screen, newest first (at
+    /// most five, as dotted paths): listed at the top of the screen. Kept
+    /// by textweaver.
+    pub recent_settings: Vec<String>,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1065,6 +1153,7 @@ impl Default for InterfaceSettings {
         InterfaceSettings {
             language: "en".into(),
             rtl: RtlDisplay::Auto,
+            recent_settings: Vec::new(),
             extra: toml::Table::new(),
         }
     }
@@ -1110,6 +1199,68 @@ pub struct GuiSettings {
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
+}
+
+/// `[colors]`: the color of each reading aid and part of the screen, over
+/// the theme's (Wave 6, W6u). Each is a color name (`blue`, `orange`,
+/// `navy`), `#rrggbb`, or `theme` (the default) for the theme's own. The
+/// word and sentence highlights stay in `[highlight]`. Every colored mark
+/// keeps its cue that is not a color (an underline, bold, a symbol, or a
+/// spoken word), whatever color is chosen.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ColorSettings {
+    /// The reading ruler and the current-line band.
+    pub ruler: String,
+    /// The underline of difficult words.
+    pub difficult_words: String,
+    /// The marks between syllables.
+    pub syllables: String,
+    /// The underline of misspelled words.
+    pub misspellings: String,
+    /// The underline of Markdown lint and grammar problems.
+    pub lint: String,
+    /// The band behind search matches.
+    pub find_match: String,
+    /// The band behind selected text.
+    pub selection: String,
+    /// The focus outline and the focused item of a list.
+    pub focus: String,
+    /// Link text (always underlined as well).
+    pub links: String,
+    /// Heading text (always bold as well).
+    pub headings: String,
+    /// The status and title bars.
+    pub status_bar: String,
+    /// The band behind text with a note.
+    pub notes: String,
+    /// The band behind a bookmarked word.
+    pub bookmarks: String,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+impl Default for ColorSettings {
+    fn default() -> Self {
+        let theme = || "theme".to_owned();
+        ColorSettings {
+            ruler: theme(),
+            difficult_words: theme(),
+            syllables: theme(),
+            misspellings: theme(),
+            lint: theme(),
+            find_match: theme(),
+            selection: theme(),
+            focus: theme(),
+            links: theme(),
+            headings: theme(),
+            status_bar: theme(),
+            notes: theme(),
+            bookmarks: theme(),
+            extra: toml::Table::new(),
+        }
+    }
 }
 
 /// `[braille] math_code`: the braille code math is written in (ADR-0036).
@@ -1178,6 +1329,8 @@ pub struct Settings {
     pub interface: InterfaceSettings,
     /// `[gui]`
     pub gui: GuiSettings,
+    /// `[colors]`
+    pub colors: ColorSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1289,6 +1442,9 @@ impl Settings {
     /// values, so an import can report them as errors instead.
     pub(crate) fn from_table_unclamped(mut table: toml::Table) -> (Settings, Vec<String>) {
         let mut w = Vec::new();
+        for (old, new) in rename_legacy_settings(&mut table) {
+            log::info!("settings: {old} is now {new}; its value is kept");
+        }
         for key in drop_removed_settings(&mut table) {
             log::info!("settings: {key} was removed and is dropped");
         }
@@ -1336,6 +1492,7 @@ impl Settings {
             summary: lenient_section("summary", table.remove("summary"), &mut w),
             interface: lenient_section("interface", table.remove("interface"), &mut w),
             gui: lenient_section("gui", table.remove("gui"), &mut w),
+            colors: lenient_section("colors", table.remove("colors"), &mut w),
             extra: table,
         };
         (s, w)
@@ -1531,8 +1688,9 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 30] = [
+pub(crate) const STRUCT_TABLES: [&str; 31] = [
     "keyboard",
+    "colors",
     "preview",
     "lexicon",
     "stats",
@@ -2437,6 +2595,30 @@ wrap_navigation = true
         );
         assert!(t["reading_aids"]["font"].as_table().unwrap().is_empty());
         assert!(drop_removed_settings(&mut t).is_empty());
+    }
+
+    /// A renamed key keeps its value under the new name, in a loaded file
+    /// and in an import; a value already under the new name wins (W6u).
+    #[test]
+    fn renamed_settings_keep_their_values() {
+        const RENAMES: &[(&str, &str)] = &[
+            ("display.colour", "highlight.color"),
+            ("speech.speed", "speech.rate"),
+        ];
+        let mut t: toml::Table =
+            "[display]\ncolour = \"yellow\"\n[speech]\nspeed = 300\nrate = 250\n"
+                .parse()
+                .unwrap();
+        let done = rename_legacy_settings_with(&mut t, RENAMES);
+        assert_eq!(done, RENAMES.to_vec());
+        assert_eq!(t["highlight"]["color"].as_str(), Some("yellow"));
+        assert!(t["display"].as_table().unwrap().get("colour").is_none());
+        assert_eq!(t["speech"]["rate"].as_integer(), Some(250));
+        let (s, _) = Settings::from_table(t);
+        assert_eq!(s.highlight.color, "yellow");
+        // No rename is pending in this version.
+        let mut plain: toml::Table = "[display]\ntheme = \"nord\"\n".parse().unwrap();
+        assert!(rename_legacy_settings(&mut plain).is_empty());
     }
 
     /// `[accessibility]` and `[keyboard] preset` are stored by name, only

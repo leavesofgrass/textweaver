@@ -808,8 +808,8 @@ impl App {
             msg.push_str(&self.msg_args(
                 "nav-position-word",
                 &args![
-                    "word" => textweaver_editor::echo::thousands(word),
-                    "words" => textweaver_editor::echo::thousands(words)
+                    "word" => crate::words::grouped(self.cat(), word),
+                    "words" => crate::words::grouped(self.cat(), words)
                 ],
             ));
         }
