@@ -1,6 +1,6 @@
 # Syncing between computers
 
-This guide covers syncing your notes, highlights, bookmarks, reading places, and reading statistics between computers, through a folder you choose. There is no account, no server, and no network code inside textweaver: textweaver only reads and writes files in the folder, and something else, such as Syncthing or a USB stick you carry, moves them between computers.
+This guide covers syncing your notes, highlights, bookmarks, reading places, reading statistics, settings, profiles, key overrides, word list, glossary, pronunciations, and favorite voices between computers, through a folder you choose. There is no account, no server, and no network code inside textweaver: textweaver only reads and writes files in the folder, and something else, such as Syncthing or a USB stick you carry, moves them between computers.
 
 Documents sync wherever they are on disk, not only inside a library folder: textweaver recognizes the same document on each computer by its contents, even under a different name or path.
 
@@ -13,12 +13,18 @@ Each group has its own switch, so you can turn one off without turning off the r
 - **Highlights.**
 - **Bookmarks.**
 - **Statistics**: each computer's reading time and sessions for each document; the totals are their sum.
+- **Settings**: the portable ones, which are about you as a reader rather than the computer: rate, punctuation, verbosity, capitals, the reading aids, the highlight, the theme and colors, the Braille and math codes, the interface language, speed presets, and the announcement level. The newest change to each setting wins. The [settings reference](settings-reference.md) says for every setting whether it syncs.
+- **Profiles**: each profile's settings. Which profile is in use stays on each computer.
+- **Key overrides**: your `keymap.toml`, each override labeled with the system it was made on. Windows and Linux share their keys, so an override made on one is used on the other. A Mac's overrides are kept but not used on Windows or Linux, and the reverse, so a Mac key never lands on a Windows keyboard.
+- **Word list**: the words you added to the spelling list. Adding a word wins; removing one is recorded, so it does not come back from a computer that had not heard.
+- **Glossary and pronunciations**: your glossary's entries and your pronunciation list, the newest change winning word by word. A glossary written as text keeps its comments and order; a changed term is replaced where it was.
+- **Favorite voices**: a voice you starred on one computer is a favorite on the others. One that is not installed on this computer stays on the list, and Choose voice shows it last as "not on this computer"; Enter on it only says so, and Space takes it off your favorites.
 
-**Coming in this wave: not built yet.** Portable settings (rate, punctuation, verbosity, capitals, reading aids, highlight, theme, Braille and math codes, interface language, speed presets, and the announcement level), profiles, key overrides, your word list, glossary, and pronunciations, favorite voices, and library details (title, author, DOI, ISBN) are planned as groups of their own.
+**Coming in this wave: not built yet.** Library details (title, author, DOI, ISBN) are planned as a group of their own.
 
 Some things never sync, because they are tied to one machine or would expose what you read:
 
-- **Machine settings**: the speech engine, the voice, the access mode, your NVDA or JAWS key preset, and every path.
+- **Machine settings**: the speech engine, the voice, the volume, the access mode, your NVDA or JAWS key preset, the keyboard layout, the wrap width, the author name written into new documents, every path (library folders, the glossary file, engine libraries, the sync folder), and the sync settings themselves.
 - **Recent files.** The paths differ from computer to computer, and the file names themselves would reveal what was read on a shared lab computer.
 - **Navigation history, recovery snapshots and unsaved text, caches, and logs.**
 - **The documents themselves.** Only what you did with them syncs.
@@ -33,14 +39,14 @@ Two things follow from this:
 - If the folder is never in two places at once, for example a USB stick you move by hand, sync still works: each computer picks up what changed the next time it can read the stick. While the stick is out, everything is saved on this computer as usual, and the status says "Sync: folder missing, saving here".
 - textweaver cannot tell a sync service that is paused from one that has finished. If the folder does not look like it is catching up, check the sync service itself, not textweaver.
 
-textweaver looks at the other computers' files for the open document every few seconds, and sends this computer's changes a moment after you make them, when you leave a document, and when you quit.
+textweaver looks at the other computers' files for the open document, and for the settings and word lists, every few seconds, and sends this computer's changes a moment after you make them, when you leave a document, and when you quit.
 
 ## Setting it up
 
 Sync is set up, checked, and driven from **Tools, Sync** in the menus (F10 in the terminal) and from the command palette (F2):
 
-- **Set up sync**: choose the folder in the file browser, name this computer, and choose which groups sync. Enter on a group turns it on or off; "Start syncing" finishes.
-- **Sync status** (Shift+F5): says how sync stands, this computer's name, and the other computers' names.
+- **Set up sync**: choose the folder in the file browser, name this computer, and choose which groups sync: places, notes, highlights, bookmarks, statistics, settings, profiles, key overrides, word list, glossary and pronunciations, and favorite voices. Enter on a group turns it on or off; "Start syncing", after the groups, finishes.
+- **Sync status** (Shift+F5): says how sync stands, this computer's name, and the other computers' names, and how many key overrides from the other kind of system are kept but not used here ("Mac key overrides: 2, kept, not used here.").
 - **Sync now**: sends this computer's changes and takes the other computers' for every document this computer knows, not only the open one.
 - **Go to another computer's place**: lists the other computers' places in this document, such as "lab, 42 percent"; Enter goes there.
 - **Replaced notes**: lists the notes in this document that another computer's newer edit replaced, and the ones another computer deleted; Enter puts one back.
@@ -59,12 +65,18 @@ Set up sync writes these under `[sync]` in `settings.toml`; you can also change 
 - `enabled`: sync on this computer.
 - `folder`: the sync folder.
 - `device_name`: this computer's name; empty uses "Computer 1", "Computer 2", and so on.
-- `places`, `notes`, `highlights`, `bookmarks`, `statistics`: one switch per group, all on by default.
+- `places`, `notes`, `highlights`, `bookmarks`, `statistics`, `settings`, `profiles`, `key_overrides`, `words`, `glossary`, `favorite_voices`: one switch per group, all on by default. Turning one off stops that group only.
 - `position_policy`: which place a document opens at when another computer has one too: `newest` (the default), `furthest`, or `ask`. It replaces `[reading] sync_conflict_policy`; a value you set there moves here on its own (`highest_progress` becomes `furthest`, `manual` becomes `ask`), and it also decides between places in a library folder's old progress file.
 
 ## What you hear
 
 Sync messages go through your interface announcement level (Ctrl+F9; see [reading](reading.md)). A change that arrives is routine; a replaced note, a note that came back, and a place resumed from another computer are results; a folder that cannot be written is an error. Nothing about sync is said while textweaver reads aloud: the messages wait, and are said when reading pauses or stops.
+
+### Settings from another computer
+
+A setting, profile, key override, word, glossary entry, pronunciation, or favorite voice that changes on another computer is taken in quietly, never while textweaver reads aloud: it waits for the pause, so the voice never changes mid-sentence. Then you hear one short summary: "Settings: 3 changes from laptop." The changes take effect at once, and are saved. Taking them in never sends them back out as this computer's own change.
+
+A setting you change on this computer while another computer changed the same one goes to the newer change.
 
 ### A place from another computer
 
@@ -108,9 +120,9 @@ When two library-folder progress files disagree as they are written (the older, 
 
 The same actions are on the command line, each with `--json` for scripts, and `--home DIR` to use another set of files:
 
-- `tw sync setup --folder DIR [--name NAME] [--groups places,notes,highlights,bookmarks,statistics]`
+- `tw sync setup --folder DIR [--name NAME] [--groups places,notes,highlights,bookmarks,statistics,settings,profiles,key_overrides,words,glossary,favorite_voices]`
 - `tw sync status`: the status line, this computer, and the others.
-- `tw sync now`: merges every document this computer knows, and says how many took changes.
+- `tw sync now`: merges every document this computer knows, and the settings and word lists, and says how many documents took changes and how many settings changed (`settings_changes` in `--json`).
 
 ## Privacy
 

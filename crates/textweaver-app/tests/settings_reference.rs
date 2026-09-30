@@ -147,7 +147,22 @@ fn item(out: &mut String, s: &Setting) {
         line.push(' ');
         line.push_str(&values);
     }
+    line.push(' ');
+    line.push_str(sync_text(&s.path));
     let _ = writeln!(out, "{line}");
+}
+
+/// Whether the setting syncs between computers (ADR-0049): portable
+/// settings do, with the settings group or a group of their own; machine
+/// settings never do.
+fn sync_text(path: &str) -> &'static str {
+    match textweaver_app::store::sync_scope::sync_group_of(path) {
+        Some("settings") => "Syncs between computers.",
+        Some("favorite_voices") => "Syncs between computers, with favorite voices.",
+        Some("glossary") => "Syncs between computers, with the glossary.",
+        Some(_) => "Syncs between computers.",
+        None => "Stays on this computer.",
+    }
 }
 
 /// The whole reference.
@@ -157,7 +172,8 @@ fn render(schema: &SettingsSchema) -> String {
         "# Settings reference\n\n\
          Every setting in `settings.toml`, section by section, in the order the settings screen lists them. \
          Each item gives the key, its default, its label on the settings screen, what it does, \
-         and the values it takes. [Settings](settings.md) explains where the file lives, \
+         and the values it takes, then whether it syncs between computers \
+         ([Syncing between computers](sync.md)). [Settings](settings.md) explains where the file lives, \
          and how to export, import, and reset it.\n\n\
          This page is generated from the settings schema by `cargo xtask settings-doc`. \
          Do not edit it by hand; CI checks that it is current.\n",

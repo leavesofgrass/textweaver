@@ -260,7 +260,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `nav_history_size`, default `50`: how many places back and forward history keeps.
 - `wrap_navigation`, default `false`: moving past the end of the document starts again at the beginning.
 - `cursor_follows_speech`, default `true`: the cursor moves with the spoken word.
-- `sync_conflict_policy`, default `"newest"`: when a library folder's sidecar and your own record of a position disagree, which one wins. `"newest"` (the newest time), `"highest_progress"` (the furthest position), or `"manual"` (keep both and ask). See [The library](library.md).
+- `sync_conflict_policy` moved to `[sync] position_policy` (below). A value you set here is moved there on its own.
 - `citations`, default `"off"`: what continuous reading does with a citation such as `[@doe2020, p. 12]`. `"off"` skips it (an in-text citation keeps its authors); `"words"` says it in words from your library, "Doe and Roe, 2020, page 12". Alt+Shift+Q switches it. Word moves say citations in words either way. See [Citations while reading](reading.md#citations-while-reading).
 - `ocr`, default `true`: recognize the text of scanned pages and pictures (OCR). See [Scanned pages](converting.md#scanned-pages-ocr).
 - `ocr_lang`, default `""`: the language of scanned text, as Tesseract codes (`"fra"`, `"deu+eng"`) or language tags (`"fr"`). Empty means the document's own language, else English. English is read by ocrs; other languages need Tesseract.
@@ -459,6 +459,24 @@ The color of each reading aid and part of the screen, over the theme's own (View
 - `notes`: the band behind text with a note.
 - `bookmarks`: the band behind a bookmarked word.
 
+### [sync]
+
+Syncing with your other computers through a folder you choose. Tools, Sync, Set up sync writes these for you; see [Syncing between computers](sync.md). Every switch is on by default, and turning one off stops that group only: this computer neither sends nor takes its items.
+
+- `enabled`, default `false`: sync on this computer.
+- `folder`, not set by default: the sync folder, such as one kept in step by Syncthing or on a USB stick.
+- `device_name`, default `""`: this computer's name in sync messages, such as `"laptop"` or `"lab"`. Empty uses "Computer 1", "Computer 2", and so on, never the computer's own name.
+- `places`, `notes`, `highlights`, `bookmarks`, `statistics`: the document groups.
+- `settings`: the portable settings (below).
+- `profiles`: your profiles' definitions. Which profile is in use stays on each computer.
+- `key_overrides`: your `keymap.toml`. Each override is labeled with the system it was made on. Windows and Linux share their keys; a Mac's overrides are kept but not used on Windows or Linux, and the reverse. Sync status says how many are kept but not used.
+- `words`: your spelling word list, `words.txt`.
+- `glossary`: your glossary's entries and your pronunciations (`[normalization] pronunciations`).
+- `favorite_voices`: your favorite voices. One that is not installed on this computer is kept, and Choose voice lists it as "not on this computer".
+- `position_policy`, default `"newest"`: which place a document opens at when another computer has one too: `"newest"`, `"furthest"`, or `"ask"`. It replaces `[reading] sync_conflict_policy` (`"highest_progress"` reads as `"furthest"`, `"manual"` as `"ask"`), and also decides between places in a library folder's old progress file.
+
+Every setting is either **portable**, which syncs, or **machine**, which never does. Portable settings are about you as a reader: the rate, punctuation, verbosity, capitals, the reading aids, the highlight, the theme and colors, the Braille and math codes, the interface language, speed presets, and the announcement level. Machine settings belong to one computer: the speech engine and voice, the volume, the access mode and what goes with your screen reader, the NVDA or JAWS key preset, the keyboard layout, the wrap width, undo memory, every path (library folders, the glossary file, engine libraries, the sync folder), the author name written into new documents, and the sync settings themselves. The [settings reference](settings-reference.md) says for each setting whether it syncs.
+
 ## Settings profiles
 
 A profile is a named set of the settings you change together: the speech engine, voice, rate, pitch, and volume; the theme; the font and text spacing; bionic reading and the ruler; the highlight; and the access mode. Keep one for studying and one for skimming, or one for each person who shares the computer.
@@ -476,7 +494,7 @@ A profile is a named set of the settings you change together: the speech engine,
   tw settings profile delete "Exam"
   ```
 
-Profiles are kept in `profiles.toml`, beside `settings.toml`, so exporting your settings does not include them. A profile export works in any version of textweaver: settings a version does not know are left out, and it says which.
+Profiles are kept in `profiles.toml`, beside `settings.toml`, so exporting your settings does not include them. A profile export works in any version of textweaver: settings a version does not know are left out, and it says which. With sync on, your profiles travel to your other computers (`[sync] profiles`); which one is in use stays on each.
 
 ## See also
 
