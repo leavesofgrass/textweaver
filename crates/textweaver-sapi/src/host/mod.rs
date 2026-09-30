@@ -16,7 +16,9 @@
 //!   utterance, and the word `__hang__` never returns (tests of host
 //!   death, engine errors, and a stuck voice). `--report-arch`
 //!   makes it claim an architecture, so one test binary can stand in for
-//!   both hosts.
+//!   both hosts. Each voice speaks at a pitch of its own, so the audio
+//!   shows which voice spoke; `--fake-unloadable TEXT` makes every voice
+//!   whose token contains TEXT fail to load, as a real voice can.
 //! - `--list-voices`: write `Ready`, one `Voice` per token of the category,
 //!   and exit. Tokens are read from the registry; no engine is loaded.
 //! - `--category`: the token category to list (`sapi`, the default, is
@@ -103,6 +105,9 @@ struct Args {
     arch: Arch,
     /// Fake engine only (tests): wait this long before starting.
     start_delay_ms: u64,
+    /// Fake engine only (tests): voices whose token contains this fail to
+    /// load.
+    unloadable: Option<String>,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -112,6 +117,7 @@ fn parse_args() -> Result<Args, String> {
         category: CATEGORY_SAPI.to_owned(),
         arch: Arch::native(),
         start_delay_ms: 0,
+        unloadable: None,
     };
     let mut it = std::env::args().skip(1);
     while let Some(arg) = it.next() {
@@ -125,6 +131,9 @@ fn parse_args() -> Result<Args, String> {
             "--start-delay-ms" => {
                 let v = it.next().ok_or("--start-delay-ms needs a number")?;
                 a.start_delay_ms = v.parse().map_err(|_| format!("bad delay {v}"))?;
+            }
+            "--fake-unloadable" => {
+                a.unloadable = Some(it.next().ok_or("--fake-unloadable needs a value")?);
             }
             "--report-arch" => {
                 a.arch = it
@@ -164,6 +173,7 @@ pub fn main() -> ExitCode {
         std::thread::sleep(std::time::Duration::from_millis(args.start_delay_ms));
         Ok(Box::new(FakeEngine {
             arch: args.arch,
+            unloadable: args.unloadable.clone(),
             ..FakeEngine::default()
         }))
     } else {
@@ -394,14 +404,31 @@ struct FakeEngine {
     rate: i8,
     voice: String,
     arch: Arch,
+    unloadable: Option<String>,
 }
 
 /// The fake engine's rate at SAPI rate 0.
 pub const FAKE_WPM_AT_RATE_0: f64 = 200.0;
 
+/// The fake engine's tone for a voice: 220 Hz for the default voice, and a
+/// pitch of its own for each voice token, so tests can tell from the audio
+/// which voice spoke.
+fn fake_tone_hz(voice: &str) -> f64 {
+    if voice.is_empty() {
+        return 220.0;
+    }
+    let sum: u32 = voice.bytes().map(u32::from).sum();
+    240.0 + f64::from(sum % 16) * 20.0
+}
+
 impl Engine for FakeEngine {
     fn set_voice(&mut self, token_id: &str) -> Result<(), String> {
-        if token_id.contains("missing") {
+        if token_id.contains("missing")
+            || self
+                .unloadable
+                .as_deref()
+                .is_some_and(|u| token_id.contains(u))
+        {
             return Err(format!("no such voice: {token_id}"));
         }
         self.voice = token_id.to_owned();
@@ -452,10 +479,11 @@ impl Engine for FakeEngine {
                 len,
                 sample: sent,
             });
+            let hz = fake_tone_hz(&self.voice);
             let samples: Vec<i16> = (0..per_word)
                 .map(|i| {
                     let t = i as f64 / f64::from(SAMPLE_RATE);
-                    ((t * 220.0 * std::f64::consts::TAU).sin() * 1000.0) as i16
+                    ((t * hz * std::f64::consts::TAU).sin() * 1000.0) as i16
                 })
                 .collect();
             // Two frames per word, as a real engine streams.

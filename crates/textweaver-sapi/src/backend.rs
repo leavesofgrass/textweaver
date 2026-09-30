@@ -244,6 +244,10 @@ pub struct SapiBackend {
     /// The selected voice's family was guessed from its id while the list
     /// was loading; the list settles it.
     family_guessed: bool,
+    /// The last voice or rate the host could not apply (its message), so
+    /// synthesis into memory or a file fails instead of silently using the
+    /// host's previous voice.
+    setting_error: Option<String>,
 }
 
 impl std::fmt::Debug for SapiBackend {
@@ -291,6 +295,7 @@ impl SapiBackend {
             details,
             voice_cache,
             family_guessed: false,
+            setting_error: None,
             starting: [None, None],
             pending: [Vec::new(), Vec::new()],
         };
@@ -596,6 +601,7 @@ impl SapiBackend {
                     // A voice that could not be loaded: send it again next
                     // time rather than assuming it is applied.
                     self.applied = [None, None];
+                    self.setting_error = Some(message);
                 } else {
                     self.playback.on_error(token, message);
                 }
@@ -611,8 +617,15 @@ impl SapiBackend {
     }
 
     /// Synthesizes `text` into memory; word offsets are collected only when
-    /// `words` is true.
+    /// `words` is true. If the host could not apply the selected voice or
+    /// rate (it answers `SetVoice` before it reads the `Speak` that
+    /// follows), this fails with the host's reason: an export must not
+    /// quietly use another voice.
     fn capture_text(&mut self, text: &str, words: bool) -> Result<Synthesis, SpeechError> {
+        // Read what the hosts already sent, so an old failure is not taken
+        // for this one's.
+        self.drain_hosts();
+        self.setting_error = None;
         let arch = self.prepare()?;
         let token = self.playback.next_token();
         self.playback
@@ -651,6 +664,11 @@ impl SapiBackend {
             .ok_or_else(|| SpeechError::Engine("synthesis lost".into()))?;
         if let Some(e) = c.failed {
             return Err(SpeechError::Engine(e));
+        }
+        if let Some(e) = self.setting_error.take() {
+            return Err(SpeechError::Engine(format!(
+                "the voice could not be used: {e}"
+            )));
         }
         Ok(Synthesis {
             sample_rate: self.sample_rate(),

@@ -612,7 +612,21 @@ impl Engine for SapiEngine {
                 .map_err(|e| format!("no voice token {token_id}: {e}"))?;
             self.voice
                 .SetVoice(&token)
-                .map_err(|e| format!("cannot load voice {token_id}: {e}"))
+                .map_err(|e| format!("cannot load voice {token_id}: {e}"))?;
+            // SAPI can accept a token and keep another voice; say so rather
+            // than speak with the wrong one.
+            let now = self
+                .voice
+                .GetVoice()
+                .and_then(|t| t.GetId())
+                .map(take_pwstr)
+                .map_err(|e| format!("cannot confirm voice {token_id}: {e}"))?;
+            log_line(&format!("sapi host: voice {now}"));
+            if now.eq_ignore_ascii_case(token_id) {
+                Ok(())
+            } else {
+                Err(format!("SAPI kept {now} instead of {token_id}"))
+            }
         }
     }
 

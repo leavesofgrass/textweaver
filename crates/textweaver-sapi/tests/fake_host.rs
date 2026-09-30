@@ -471,6 +471,79 @@ fn synthesize_utterance_reports_word_timings_on_the_files_clock() {
     assert_eq!(got, [("one", 0), ("naïve", 300), ("three", 600)]);
 }
 
+/// The fake engine's audio for `text` with the voice named `name`, written
+/// by `synthesize_utterance` (the export path).
+fn export_with(b: &mut SapiBackend, name: &str, path: &std::path::Path) -> Vec<u8> {
+    let id = b
+        .voice_details()
+        .unwrap()
+        .into_iter()
+        .find(|v| v.voice.name == name)
+        .unwrap()
+        .voice
+        .id;
+    b.set_params(&VoiceParams {
+        voice: Some(id),
+        ..rate0()
+    })
+    .unwrap();
+    b.synthesize_utterance(&utt("one two", 1, 0), path).unwrap();
+    std::fs::read(path).unwrap()
+}
+
+#[test]
+fn two_voices_give_different_audio_in_an_export() {
+    let mut b = backend(8.0);
+    let dir = tempfile::tempdir().unwrap();
+    let alpha = export_with(&mut b, "Fake Alpha", &dir.path().join("alpha.wav"));
+    let wide = export_with(&mut b, "Fake Wide", &dir.path().join("wide.wav"));
+    let again = export_with(&mut b, "Fake Alpha", &dir.path().join("again.wav"));
+    // Same length (same words and rate), different sound, and the first
+    // voice comes back when chosen again.
+    assert_eq!(alpha.len(), wide.len());
+    assert_ne!(alpha, wide, "the chosen voice did not reach the host");
+    assert_eq!(alpha, again);
+}
+
+#[test]
+fn a_voice_the_host_cannot_load_fails_the_export() {
+    let mut b = backend(8.0);
+    b.set_host_args(vec!["--fake-unloadable".into(), "FAKE_WIDE".into()]);
+    b.reset();
+    let dir = tempfile::tempdir().unwrap();
+    let wide = b
+        .voice_details()
+        .unwrap()
+        .into_iter()
+        .find(|v| v.voice.name == "Fake Wide")
+        .unwrap();
+    b.set_params(&VoiceParams {
+        voice: Some(wide.voice.id),
+        ..rate0()
+    })
+    .unwrap();
+    // Before this was checked, the host's previous (default) voice spoke
+    // and the export looked fine.
+    let e = b
+        .synthesize_utterance(&utt("one two", 1, 0), &dir.path().join("x.wav"))
+        .unwrap_err();
+    assert!(e.to_string().contains("could not be used"), "{e}");
+    // A voice that loads works again afterwards.
+    let alpha = b
+        .voice_details()
+        .unwrap()
+        .into_iter()
+        .find(|v| v.voice.name == "Fake Alpha")
+        .unwrap();
+    b.set_params(&VoiceParams {
+        voice: Some(alpha.voice.id),
+        ..rate0()
+    })
+    .unwrap();
+    b.synthesize_utterance(&utt("one two", 1, 1), &dir.path().join("y.wav"))
+        .unwrap();
+}
+
 #[test]
 fn rate_maps_through_the_calibration_and_reaches_the_host() {
     let mut b = backend(8.0);
