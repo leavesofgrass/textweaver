@@ -58,6 +58,12 @@ Packages also carry the licence files themselves, under `licenses/`.
 
 - Several built-in themes use the colours of published palettes: Catppuccin, Dracula, Everforest, Gruvbox, Kanagawa, Monokai, Nord, One Dark and One Light, Rosé Pine, Solarized, and Tokyo Night. Only colour values are used, taken from Star's themes. The palettes belong to their authors, and most are published under the MIT licence.
 
+### LAME (MP3 export)
+
+- MP3 export uses LAME 3.100, the MP3 encoder by the LAME project (https://lame.sourceforge.io/), through the Rust crates mp3lame-encoder and mp3lame-sys. LAME is compiled from the unchanged source bundled in mp3lame-sys and linked statically into `tw` and the reader.
+- Licence: LAME's own source is under the GNU Library General Public License, version 2 or later (its `COPYING` file); the two Rust crates declare the GNU Lesser General Public License, version 3. Both are listed below with the Rust crates.
+- What that means for you: you may replace LAME with a modified version. Because it is linked statically, you can do this by rebuilding textweaver from its source (the GPL already gives you all of it), with your own copy of LAME in place of the one in mp3lame-sys, for example through a `[patch.crates-io]` entry for mp3lame-sys in `Cargo.toml`. LAME's source is in the mp3lame-sys crate (https://crates.io/crates/mp3lame-sys, version 0.1.11) and at https://lame.sourceforge.io/. A build without MP3 export (the `mp3` feature of textweaver-export turned off) contains no LAME code; MP3 export then uses ffmpeg when it is installed.
+
 ### wxWidgets (the GUI only)
 
 - Licence: the wxWindows Library Licence, version 3.1 (the GNU LGPL, version 2 or later, with an exception that allows distributing binaries under the user's own terms). https://www.wxwidgets.org/about/licence/
