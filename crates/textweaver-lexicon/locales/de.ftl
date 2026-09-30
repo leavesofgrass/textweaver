@@ -3293,3 +3293,57 @@ browse-preview-other = { $name }, { $size }; textweaver kann diese Art von Datei
 browse-preview-path = { $path }
 
 ## End of W6f
+
+## W6k: batch conversion (File, Batch convert). Keep the meaning first.
+batch-choose-source = Wählen Sie den Ordner zum Umwandeln
+batch-choose-output = Wählen Sie den Ordner für die umgewandelten Dateien
+batch-format-title = Umwandeln in
+batch-format-intro = { $name } umwandeln in: Wählen Sie ein Format, { $n } zur Auswahl.
+batch-where-title = Wohin die Dateien kommen
+batch-where-intro = Wohin sollen die umgewandelten Dateien?
+batch-where-converted = In einen Ordner converted, { $path }
+batch-where-beside = Neben jede Datei
+batch-where-choose = In einen anderen Ordner, als Nächstes gewählt
+batch-nothing = In { $path } gibt es keine Dokumente zum Umwandeln.
+batch-confirm =
+    { $n ->
+        [one] 1 Datei
+       *[other] { $n } Dateien
+    } in { $format } umwandeln, nach { $path }? y oder n
+batch-confirm-beside =
+    { $n ->
+        [one] 1 Datei
+       *[other] { $n } Dateien
+    } in { $format } umwandeln, neben jede Datei? y oder n
+batch-started =
+    { $n ->
+        [one] 1 Datei wird
+       *[other] { $n } Dateien werden
+    } in { $format } umgewandelt. Escape hält an.
+batch-progress = { $percent } Prozent umgewandelt, { $done } von { $total } Dateien.
+batch-busy = Umwandlung läuft schon, { $done } von { $total } Dateien. Escape hält an.
+batch-stop-question = Umwandlung anhalten? Fertige Dateien bleiben erhalten. y oder n
+batch-stopping = Hält nach den Dateien an, die gerade geschrieben werden.
+batch-still-converting = Die Umwandlung läuft weiter.
+batch-done =
+    { $converted ->
+        [one] 1 Datei
+       *[other] { $converted } Dateien
+    } in { $format } umgewandelt; { $skipped } aktuell; { $failed } fehlgeschlagen.
+batch-stopped =
+    Angehalten. { $converted ->
+        [one] 1 Datei
+       *[other] { $converted } Dateien
+    } umgewandelt; { $left } nicht umgewandelt; { $failed } fehlgeschlagen.
+batch-report = Die Liste ist in { $path } gespeichert.
+batch-report-failed = Die Liste konnte nicht gespeichert werden: { $error }
+batch-failures-title =
+    { $n ->
+        [one] 1 fehlgeschlagene Datei
+       *[other] { $n } fehlgeschlagene Dateien
+    }
+batch-failure-item = { $name }: { $reason }
+batch-start-failed = Umwandlung konnte nicht beginnen: { $error }
+batch-thread-stopped = Die Stapelumwandlung hat unerwartet angehalten.
+
+## End of W6k

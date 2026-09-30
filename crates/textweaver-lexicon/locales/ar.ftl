@@ -3513,3 +3513,57 @@ browse-preview-other = { $name }، { $size }؛ لا يستطيع textweaver قر
 browse-preview-path = { $path }
 
 ## End of W6f
+
+## W6k: batch conversion (File, Batch convert). Keep the meaning first.
+batch-choose-source = اختر المجلد المراد تحويله
+batch-choose-output = اختر مجلد الملفات المحوّلة
+batch-format-title = التحويل إلى
+batch-format-intro = تحويل { $name } إلى: اختر صيغة، { $n } خيارات.
+batch-where-title = مكان الملفات
+batch-where-intro = أين توضع الملفات المحوّلة؟
+batch-where-converted = في مجلد converted، { $path }
+batch-where-beside = بجانب كل ملف
+batch-where-choose = في مجلد آخر، يُختار بعد ذلك
+batch-nothing = لا توجد مستندات للتحويل في { $path }.
+batch-confirm =
+    تحويل { $n ->
+        [one] ملف واحد
+       *[other] { $n } ملفات
+    } إلى { $format } في { $path }؟ y أو n
+batch-confirm-beside =
+    تحويل { $n ->
+        [one] ملف واحد
+       *[other] { $n } ملفات
+    } إلى { $format } بجانب كل ملف؟ y أو n
+batch-started =
+    جارٍ تحويل { $n ->
+        [one] ملف واحد
+       *[other] { $n } ملفات
+    } إلى { $format }. يوقفه Escape.
+batch-progress = تم تحويل { $percent } بالمئة، { $done } من { $total } ملفات.
+batch-busy = التحويل جارٍ بالفعل، { $done } من { $total } ملفات. يوقفه Escape.
+batch-stop-question = إيقاف التحويل؟ تُحفظ الملفات المنجزة. y أو n
+batch-stopping = سيتوقف بعد الملفات الجاري كتابتها.
+batch-still-converting = التحويل مستمر.
+batch-done =
+    تم تحويل { $converted ->
+        [one] ملف واحد
+       *[other] { $converted } ملفات
+    } إلى { $format }؛ { $skipped } محدّثة؛ { $failed } فشلت.
+batch-stopped =
+    توقف. تم تحويل { $converted ->
+        [one] ملف واحد
+       *[other] { $converted } ملفات
+    }؛ { $left } لم تُحوَّل؛ { $failed } فشلت.
+batch-report = القائمة محفوظة في { $path }.
+batch-report-failed = تعذّر حفظ القائمة: { $error }
+batch-failures-title =
+    { $n ->
+        [one] ملف واحد فشل
+       *[other] { $n } ملفات فشلت
+    }
+batch-failure-item = { $name }: { $reason }
+batch-start-failed = تعذّر بدء التحويل: { $error }
+batch-thread-stopped = توقف التحويل الجماعي على نحو غير متوقع.
+
+## End of W6k

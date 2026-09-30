@@ -3276,3 +3276,61 @@ browse-preview-other = { $name }, { $size }; textweaver cannot read this kind of
 browse-preview-path = { $path }
 
 ## End of W6f
+
+## W6k: batch conversion (File, Batch convert). Keep the meaning first: a
+## 40-cell Braille display shows the start of the line. $n, $done, $total,
+## $converted, $skipped, $failed and $left are numbers of files; $format is
+## a format's name (PDF, Markdown); $path a folder; $name a file or folder
+## name; $reason and $error are passed on as they are.
+batch-choose-source = Choose the folder to convert
+batch-choose-output = Choose the folder for the converted files
+batch-format-title = Convert to
+batch-format-intro = Convert { $name } to: choose a format, { $n } choices.
+batch-where-title = Where the files go
+batch-where-intro = Where should the converted files go?
+batch-where-converted = In a converted folder, { $path }
+batch-where-beside = Beside each file
+batch-where-choose = In another folder, chosen next
+batch-nothing = No documents to convert in { $path }.
+batch-confirm =
+    Convert { $n ->
+        [one] 1 file
+       *[other] { $n } files
+    } to { $format } into { $path }? y or n
+batch-confirm-beside =
+    Convert { $n ->
+        [one] 1 file
+       *[other] { $n } files
+    } to { $format } beside each file? y or n
+batch-started =
+    Converting { $n ->
+        [one] 1 file
+       *[other] { $n } files
+    } to { $format }. Escape stops.
+batch-progress = { $percent } percent converted, { $done } of { $total } files.
+batch-busy = Already converting, { $done } of { $total } files. Escape stops.
+batch-stop-question = Stop converting? Files already done are kept. y or n
+batch-stopping = Stopping after the files being written.
+batch-still-converting = Still converting.
+batch-done =
+    Converted { $converted ->
+        [one] 1 file
+       *[other] { $converted } files
+    } to { $format }; { $skipped } up to date; { $failed } failed.
+batch-stopped =
+    Stopped. Converted { $converted ->
+        [one] 1 file
+       *[other] { $converted } files
+    }; { $left } not converted; { $failed } failed.
+batch-report = The list is saved in { $path }.
+batch-report-failed = The list could not be saved: { $error }
+batch-failures-title =
+    { $n ->
+        [one] 1 failed file
+       *[other] { $n } failed files
+    }
+batch-failure-item = { $name }: { $reason }
+batch-start-failed = Could not start converting: { $error }
+batch-thread-stopped = Batch conversion stopped unexpectedly.
+
+## End of W6k
