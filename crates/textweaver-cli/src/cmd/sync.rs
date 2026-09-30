@@ -466,6 +466,65 @@ mod tests {
         );
     }
 
+    /// `tw sync now` carries the settings and the word list between two
+    /// homes, and `--groups` takes the new groups (sync wave, S5).
+    #[test]
+    fn now_carries_settings_and_words() {
+        let folder = tempfile::tempdir().unwrap();
+        let laptop = tempfile::tempdir().unwrap();
+        let lab = tempfile::tempdir().unwrap();
+        for (home, name, groups) in [
+            (laptop.path(), "laptop", None),
+            (
+                lab.path(),
+                "lab",
+                Some(vec!["settings".into(), "key-overrides".into()]),
+            ),
+        ] {
+            run_in(
+                home,
+                &SyncCommand::Setup {
+                    folder: folder.path().to_owned(),
+                    name: Some(name.into()),
+                    groups,
+                    common: common(false),
+                },
+            );
+        }
+        let lab_settings = SettingsStore::new(Paths::under(lab.path())).load().0;
+        assert!(lab_settings.sync.settings && lab_settings.sync.key_overrides);
+        assert!(!lab_settings.sync.words && !lab_settings.sync.notes);
+
+        let paths = Paths::under(laptop.path());
+        let store = SettingsStore::new(paths.clone());
+        let mut s = store.load().0;
+        s.speech.rate = textweaver_app::core::Rate::Wpm(333);
+        store.save(&s).unwrap();
+        std::fs::create_dir_all(&paths.data_dir).unwrap();
+        std::fs::write(paths.data_dir.join("words.txt"), "mitochondrion\n").unwrap();
+        run_in(
+            laptop.path(),
+            &SyncCommand::Now {
+                common: common(false),
+            },
+        );
+        let json = run_in(
+            lab.path(),
+            &SyncCommand::Now {
+                common: common(true),
+            },
+        );
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["settings_changes"], 1, "{json}");
+        let lab_settings = SettingsStore::new(Paths::under(lab.path())).load().0;
+        assert_eq!(
+            lab_settings.speech.rate,
+            textweaver_app::core::Rate::Wpm(333)
+        );
+        // The lab has the word list off: it does not take the word.
+        assert!(!Paths::under(lab.path()).data_dir.join("words.txt").exists());
+    }
+
     #[test]
     fn bad_groups_and_names_are_refused() {
         assert!(parse_groups(&["notes".into(), "cats".into()]).is_err());
