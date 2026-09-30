@@ -290,7 +290,7 @@ fn gaps_cancellation_and_errors() {
     )
     .unwrap_err();
     assert!(
-        err.to_string().contains("use a .wav, .mp3, or .m4b"),
+        err.to_string().contains("use a .wav, .flac, .mp3, or .m4b"),
         "{err}"
     );
     let err = export(
@@ -370,6 +370,136 @@ fn export_writes_wav_and_subtitles() {
             .starts_with("1\n00:00:00,750 --> 00:00:01,000\nIntro\n")
     );
     assert!(WavData::read(&out).is_ok());
+}
+
+/// FLAC in process, with no ffmpeg: decoded back (a pure-Rust decoder), it
+/// is exactly as long as the timeline, and its Vorbis comments carry the
+/// title and the chapters.
+#[cfg(feature = "flac")]
+#[test]
+fn flac_without_ffmpeg_decodes_back_with_its_chapters() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = dir.path().join("book.flac");
+    let (mut backend, _) = RecordingBackend::new();
+    let report = export(
+        &book(),
+        &mut backend,
+        &out,
+        None,
+        None,
+        &ExportOptions::default(),
+        &mut no_progress,
+    )
+    .unwrap();
+    assert_eq!(report.format, AudioFormat::Flac);
+    assert_eq!(report.ffmpeg, None);
+    let mut flac = claxon::FlacReader::open(&out).unwrap();
+    let info = flac.streaminfo();
+    assert_eq!(info.sample_rate, 16_000);
+    assert_eq!(info.channels, 1);
+    assert_eq!(info.bits_per_sample, 16);
+    let samples = flac.samples().count();
+    assert_eq!(samples as u64 * 1000 / 16_000, report.timeline.duration_ms);
+    assert_eq!(samples, 64_000);
+    let tags: Vec<String> = flac.tags().map(|(k, v)| format!("{k}={v}")).collect();
+    assert_eq!(
+        tags,
+        [
+            "TITLE=Sample Book",
+            "ALBUM=Sample Book",
+            "ARTIST=Ada",
+            "GENRE=Audiobook",
+            "CHAPTER001=00:00:00.000",
+            "CHAPTER001NAME=Intro",
+            "CHAPTER002=00:00:02.500",
+            "CHAPTER002NAME=Next",
+        ]
+    );
+    // Only the output is left: the WAV was temporary.
+    let left: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name())
+        .collect();
+    assert_eq!(left, ["book.flac"]);
+}
+
+/// The FLAC encoder keeps real audio exactly (lossless), for 16-bit and
+/// float engines alike.
+#[cfg(feature = "flac")]
+#[test]
+fn flac_is_lossless_for_pcm_and_rounds_float() {
+    let dir = tempfile::tempdir().unwrap();
+    let pcm: Vec<i16> = (0..5000)
+        .map(|i| ((i as f64 * 0.05).sin() * 12_000.0) as i16)
+        .collect();
+    let mut w = textweaver_export::wav::WavWriter::create(&dir.path().join("a.wav")).unwrap();
+    let mut bytes = Vec::new();
+    for s in &pcm {
+        bytes.extend_from_slice(&s.to_le_bytes());
+    }
+    let piece = WavData {
+        format: textweaver_export::wav::WavFormat::pcm16_mono(22_050),
+        audio: bytes,
+    };
+    w.append(&piece, Path::new("a")).unwrap();
+    w.finish().unwrap();
+    let out = dir.path().join("a.flac");
+    textweaver_export::flac::encode(&dir.path().join("a.wav"), &out, &[]).unwrap();
+    let mut flac = claxon::FlacReader::open(&out).unwrap();
+    let back: Vec<i16> = flac.samples().map(|s| s.unwrap() as i16).collect();
+    assert_eq!(back, pcm);
+}
+
+/// WAV gets its title and chapters as an ID3 tag, which the export's own
+/// WAV reader skips.
+#[cfg(feature = "id3")]
+#[test]
+fn wav_carries_id3_chapters() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = dir.path().join("book.wav");
+    let (mut backend, _) = RecordingBackend::new();
+    export(
+        &book(),
+        &mut backend,
+        &out,
+        None,
+        None,
+        &ExportOptions::default(),
+        &mut no_progress,
+    )
+    .unwrap();
+    use id3::TagLike;
+    let tag = id3::Tag::read_from_path(&out).unwrap();
+    assert_eq!(tag.title(), Some("Sample Book"));
+    assert_eq!(tag.album(), Some("Sample Book"));
+    assert_eq!(tag.artist(), Some("Ada"));
+    assert_eq!(tag.genre(), Some("Audiobook"));
+    let chapters: Vec<(u32, u32, String)> = tag
+        .chapters()
+        .map(|c| {
+            let title = c
+                .frames
+                .iter()
+                .find(|f| f.id() == "TIT2")
+                .and_then(|f| f.content().text())
+                .unwrap_or_default()
+                .to_owned();
+            (c.start_time, c.end_time, title)
+        })
+        .collect();
+    assert_eq!(
+        chapters,
+        [
+            (0, 2500, "Intro".to_owned()),
+            (2500, 4000, "Next".to_owned())
+        ]
+    );
+    let toc: Vec<_> = tag.tables_of_contents().collect();
+    assert_eq!(toc.len(), 1);
+    assert!(toc[0].top_level && toc[0].ordered);
+    assert_eq!(toc[0].elements, ["chp1", "chp2"]);
+    // The audio is untouched.
+    assert_eq!(WavData::read(&out).unwrap().frames(), 64_000);
 }
 
 /// MP3 and M4B through ffmpeg, when it is installed.

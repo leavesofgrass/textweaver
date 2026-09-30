@@ -237,6 +237,47 @@ pub fn spread_ties(words: &mut [(u64, Range<u32>)]) {
     }
 }
 
+/// Word marker offsets as sample frames.
+///
+/// `AVSpeechSynthesisMarker.byteSampleOffset` is documented only as an
+/// offset "into the associated audio buffer"; its unit (bytes or sample
+/// frames) is not stated. A word starts inside the audio, so when the
+/// largest offset is beyond the frames received (`total_frames`), the
+/// offsets are bytes and are divided by `frame_bytes`; otherwise they are
+/// frames already. Offsets are clamped to the audio. `None` when the
+/// offsets go backwards, which would mean they count from the start of each
+/// buffer rather than of the audio: the caller then uses the delegate's
+/// word callbacks instead.
+pub fn marker_samples(raw: &[u64], total_frames: u64, frame_bytes: u32) -> Option<Vec<u64>> {
+    if raw.windows(2).any(|p| p[1] < p[0]) {
+        return None;
+    }
+    let max = raw.iter().copied().max().unwrap_or(0);
+    let divisor = if max > total_frames && frame_bytes > 1 {
+        u64::from(frame_bytes)
+    } else {
+        1
+    };
+    Some(
+        raw.iter()
+            .map(|&r| (r / divisor).min(total_frames))
+            .collect(),
+    )
+}
+
+/// Word times for an exported file, `(byte range, ms)` in order, or none
+/// when they carry no information: two or more words that all share one
+/// time (word callbacks that arrived after the audio, as on macOS 14)
+/// would put every word cue at one moment, so export is better off sharing
+/// the sentence's measured time among the words itself.
+pub fn file_words(words: &[(Range<u32>, u32)]) -> Vec<(Range<u32>, u32)> {
+    let all_tied = words.len() > 1 && words.iter().all(|(_, ms)| *ms == words[0].1);
+    if all_tied {
+        return Vec::new();
+    }
+    words.to_vec()
+}
+
 fn to_u32(n: usize) -> u32 {
     u32::try_from(n).unwrap_or(u32::MAX)
 }
@@ -431,5 +472,31 @@ mod tests {
                 "naïve", "résumé"
             ]
         );
+    }
+
+    #[test]
+    fn marker_offsets_in_frames_or_bytes() {
+        // Frames already: kept as they are.
+        assert_eq!(
+            marker_samples(&[0, 100, 100, 790], 800, 4),
+            Some(vec![0, 100, 100, 790])
+        );
+        // Bytes (float32 mono): beyond the 1000 frames, so divided by 4.
+        assert_eq!(
+            marker_samples(&[0, 400, 3600], 1000, 4),
+            Some(vec![0, 100, 900])
+        );
+        // Offsets that go backwards count from each buffer: not used.
+        assert_eq!(marker_samples(&[0, 300, 20], 1000, 4), None);
+        assert_eq!(marker_samples(&[], 10, 4), Some(vec![]));
+    }
+
+    #[test]
+    fn file_words_drop_times_that_all_tie() {
+        let spread = vec![(0..3, 0), (4..9, 250)];
+        assert_eq!(file_words(&spread), spread);
+        assert!(file_words(&[(0..3, 900), (4..9, 900)]).is_empty());
+        let one = vec![(0..5, 0)];
+        assert_eq!(file_words(&one), one);
     }
 }

@@ -281,6 +281,44 @@ fn onecore_voices_load_through_sapi5() {
     check_words(SENTENCE, &s);
 }
 
+/// The export path (`synthesize_utterance`) with several real voices in one
+/// backend: each chosen voice reaches the host. Measured on Tuesday,
+/// September 29, 2026 (Windows 11): Microsoft David Desktop and Microsoft
+/// David (OneCore) write the same audio, byte for byte, while SAPI reports
+/// the OneCore token as selected; Zira Desktop and Zira (OneCore) differ,
+/// and Mark differs from both Davids. So the two David tokens speak with
+/// the same voice data, and a check that voices differ must not pair them.
+#[test]
+#[ignore = "needs real SAPI voices: TEXTWEAVER_SAPI=1"]
+fn chosen_voices_reach_the_host_in_the_export_path() {
+    if !enabled() {
+        return;
+    }
+    let mut b = SapiBackend::new(config()).unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let mut export = |name: &str| {
+        let v = voice(&b, name);
+        select(&mut b, &v);
+        let path = dir.path().join(format!("{name}.wav"));
+        let u = Utterance::literal(SENTENCE, CharPos(0));
+        let fs = b.synthesize_utterance(&u, &path).unwrap();
+        assert!(!fs.words.is_empty(), "{name}: no word times");
+        std::fs::read(&path).unwrap()
+    };
+    let david = export("Microsoft David Desktop");
+    let zira = export("Microsoft Zira Desktop");
+    let mark = export("Microsoft Mark");
+    let david_again = export("Microsoft David Desktop");
+    // Compared without printing: the files are large.
+    assert!(david != zira, "Zira Desktop spoke as David Desktop");
+    assert!(david != mark, "Mark (OneCore) spoke as David Desktop");
+    assert!(zira != mark, "Mark (OneCore) spoke as Zira Desktop");
+    // A real engine need not repeat itself byte for byte in one process,
+    // so the voice chosen again is checked against the other two.
+    assert!(david_again != mark, "David Desktop stayed Mark");
+    assert!(david_again != zira, "David Desktop stayed Zira");
+}
+
 #[derive(Default)]
 struct Rec(Vec<(UtteranceId, RawEvent)>);
 
