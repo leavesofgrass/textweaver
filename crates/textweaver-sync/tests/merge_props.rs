@@ -15,17 +15,37 @@ fn device(n: u8) -> DeviceId {
 /// One change a computer makes.
 #[derive(Clone, Debug)]
 enum Op {
-    Note { id: u8, text: u8 },
-    DeleteNote { id: u8 },
-    Bookmark { id: u8, pos: u16 },
-    DeleteBookmark { id: u8 },
-    Place { pos: u16 },
-    Read { seconds: u16 },
+    Note {
+        id: u8,
+        text: u8,
+    },
+    DeleteNote {
+        id: u8,
+    },
+    Bookmark {
+        id: u8,
+        pos: u16,
+    },
+    DeleteBookmark {
+        id: u8,
+    },
+    Place {
+        pos: u16,
+    },
+    Read {
+        seconds: u16,
+    },
     /// Publishes content (0), text (1), or library (2) hash number `hash`;
     /// there are more hashes than a record keeps, so trimming is tested.
-    Hash { kind: u8, hash: u8 },
+    Hash {
+        kind: u8,
+        hash: u8,
+    },
     /// Sets the title (0), DOI (1), or ISBN (2).
-    Detail { which: u8, value: u8 },
+    Detail {
+        which: u8,
+        value: u8,
+    },
 }
 
 fn op() -> impl Strategy<Value = Op> {

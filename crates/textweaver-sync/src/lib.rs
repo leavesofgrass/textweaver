@@ -45,12 +45,12 @@ pub mod merge;
 pub mod record;
 
 pub use clock::{AHEAD_LIMIT_MS, Clock, ClockAhead, Stamp, wall_ms};
+pub use docid::{Found, Identify, IdentityIndex, Resolved, Suggestion};
 pub use folder::{DeviceInfo, DocRead, FileKind, Merged, Opened, Problem, ReadOnly, SyncFolder};
 pub use identity::{
     DEFAULT_LABEL_WORD, Identity, IdentityEvent, MARKER_FILE, MAX_LABEL_CHARS, check_label,
     default_label, local_names,
 };
-pub use docid::{Found, IdentityIndex, Identify, Resolved, Suggestion};
 pub use ids::{DeviceId, ID_HEX_DIGITS, InstallToken, LibraryId, SyncId};
 pub use merge::{AddWinsSet, ChangeKind, Counter, Maximum, Register, RegisterMap};
 pub use record::{

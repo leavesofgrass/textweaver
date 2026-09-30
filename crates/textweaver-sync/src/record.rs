@@ -151,8 +151,10 @@ impl RecentHashes {
         if self.0.len() <= RECENT_HASHES {
             return;
         }
-        let mut all: Vec<(Stamp, String)> =
-            std::mem::take(&mut self.0).into_iter().map(|(h, s)| (s, h)).collect();
+        let mut all: Vec<(Stamp, String)> = std::mem::take(&mut self.0)
+            .into_iter()
+            .map(|(h, s)| (s, h))
+            .collect();
         all.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
         all.truncate(RECENT_HASHES);
         self.0 = all.into_iter().map(|(s, h)| (h, s)).collect();

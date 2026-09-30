@@ -155,7 +155,11 @@ fn assert_private(sync: &Path, homes: &[&Home], names: &[&str]) {
     let all = files(sync);
     assert!(!all.is_empty());
     for (path, text) in all {
-        let name = path.strip_prefix(sync).unwrap().to_string_lossy().to_lowercase();
+        let name = path
+            .strip_prefix(sync)
+            .unwrap()
+            .to_string_lossy()
+            .to_lowercase();
         let text = text.to_lowercase();
         for f in &forbidden {
             let f = f.to_lowercase();
@@ -165,7 +169,11 @@ fn assert_private(sync: &Path, homes: &[&Home], names: &[&str]) {
                 path.display()
             );
         }
-        assert!(!text.contains(":\\") && !text.contains(":/"), "a path in {}", path.display());
+        assert!(
+            !text.contains(":\\") && !text.contains(":/"),
+            "a path in {}",
+            path.display()
+        );
         assert!(!text.contains(LIBRARY_ID_FILE));
     }
 }
@@ -213,9 +221,7 @@ fn a_renamed_file_is_found_by_content() {
         library_folders: Vec::new(),
         details: Details::default(),
     };
-    let first = job(&old)
-        .run(None::<[&str; 0]>, None)
-        .unwrap();
+    let first = job(&old).run(None::<[&str; 0]>, None).unwrap();
     assert_eq!(first.found, Found::New);
 
     let new = home.path().join("after.txt");
@@ -241,7 +247,9 @@ fn the_same_text_saved_differently_is_found_by_its_text() {
     let first = laptop.open(&a, &[], Details::default());
 
     // The same words with Windows line endings and wrapped differently.
-    let crlf = text.replace(" word 1", "\r\nword 1").replace(" word 5", "\r\n\r\n  word 5");
+    let crlf = text
+        .replace(" word 1", "\r\nword 1")
+        .replace(" word 5", "\r\n\r\n  word 5");
     assert_ne!(crlf, text);
     let b = lab.put("b.txt", crlf.as_bytes());
     let second = lab.open(&b, &[], Details::default());
@@ -264,7 +272,10 @@ fn a_library_folder_is_one_folder_on_every_computer() {
     // The folder reaches the lab (its id file with it), where the reading
     // was since changed: different bytes, different text, same place.
     let lib_b = lab.root().join("shared").join("shelfbeta");
-    let b = lab.put("shared/shelfbeta/unit/reading.md", b"a quite different second draft");
+    let b = lab.put(
+        "shared/shelfbeta/unit/reading.md",
+        b"a quite different second draft",
+    );
     std::fs::create_dir_all(docid::library_id_file(&lib_b).parent().unwrap()).unwrap();
     std::fs::copy(&id_file, docid::library_id_file(&lib_b)).unwrap();
     assert_eq!(
@@ -315,7 +326,10 @@ fn an_edited_file_keeps_its_id_and_publishes_its_new_hash() {
     // copy by the hash before it.
     let b = lab.put("new.md", edited.as_bytes());
     let by_new = lab.open(&b, &[], Details::default());
-    assert_eq!((by_new.found, by_new.sync_id), (Found::Content, first.sync_id));
+    assert_eq!(
+        (by_new.found, by_new.sync_id),
+        (Found::Content, first.sync_id)
+    );
     let c = lab.put("old.md", original.as_bytes());
     let by_old = lab.open(&c, &[], Details::default());
     assert_eq!(by_old.sync_id, first.sync_id);
@@ -344,7 +358,10 @@ fn two_chapters_with_one_isbn_are_not_matched_without_asking() {
     let b = lab.put("ch2.md", body(100, "chapter two").as_bytes());
     let second = lab.open(&b, &[], two.clone());
     assert_eq!(second.found, Found::New);
-    assert_ne!(second.sync_id, first.sync_id, "never matched on the ISBN alone");
+    assert_ne!(
+        second.sync_id, first.sync_id,
+        "never matched on the ISBN alone"
+    );
     assert_eq!(second.suggestions.len(), 1);
     let s = &second.suggestions[0];
     assert_eq!(s.sync_id, first.sync_id);
@@ -398,7 +415,10 @@ fn a_damaged_library_id_file_is_left_alone() {
     std::fs::create_dir_all(file.parent().unwrap()).unwrap();
     std::fs::write(&file, "{\"format\":1,\"libr").unwrap();
     assert!(docid::library_id(lib.path()).is_err());
-    assert_eq!(std::fs::read_to_string(&file).unwrap(), "{\"format\":1,\"libr");
+    assert_eq!(
+        std::fs::read_to_string(&file).unwrap(),
+        "{\"format\":1,\"libr"
+    );
     // The document is still identified, without a library key.
     let home = tempfile::tempdir().unwrap();
     let doc = lib.path().join("a.md");

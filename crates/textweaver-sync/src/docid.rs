@@ -461,7 +461,11 @@ impl Identify {
     ///
     /// Reads and hashes the whole file when it changed or is new here, so
     /// call it only off the input thread.
-    pub fn run<'a, I>(&self, text: Option<I>, index: Option<&IdentityIndex>) -> Result<Resolved, SyncError>
+    pub fn run<'a, I>(
+        &self,
+        text: Option<I>,
+        index: Option<&IdentityIndex>,
+    ) -> Result<Resolved, SyncError>
     where
         I: IntoIterator<Item = &'a str>,
     {
@@ -484,8 +488,7 @@ impl Identify {
             (Some(e), None) if unchanged => e.text_sha256.clone(),
             (_, None) => None,
         };
-        let library = match textweaver_store::sync::folder_for(&self.library_folders, &self.path)
-        {
+        let library = match textweaver_store::sync::folder_for(&self.library_folders, &self.path) {
             Some((folder, rel)) => match library_id(&folder) {
                 Ok(lib) => Some(library_key(lib, &rel)),
                 Err(e) => {
