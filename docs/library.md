@@ -1,6 +1,6 @@
 # The library
 
-This guide covers textweaver's library: the folders of documents you read from, the list of recent files, searching the text of every document at once, and keeping your reading place in step between computers. It also covers where textweaver keeps its files, and importing your data from Star. It is for anyone with more than a few documents, and for anyone moving from Star.
+This guide covers textweaver's library: the folders of documents you read from, the list of recent files, "Continue reading", searching the text of every document at once, and the older way of keeping your reading place in step between computers through a library folder. It also covers where textweaver keeps its files, and importing your data from Star. It is for anyone with more than a few documents, and for anyone moving from Star. Syncing notes, highlights, bookmarks, places, and library details between your computers has [a guide of its own](sync.md).
 
 ## Open the library in the reader: Alt+L
 
@@ -34,6 +34,7 @@ textweaver learns a document's author, DOI, and ISBN in three ways:
 - **When you open it.** The author comes from the document's own details: Markdown front matter (`author`, `doi`, `isbn`), a Word or EPUB file's author, or a web page's `<meta>` tags (`citation_doi`, `dc.identifier`). A DOI or an ISBN printed near the start of the text counts too, such as a paper's DOI on its first page or a book's ISBN on its copyright page. An ISBN counts only after the word "ISBN". These go on the bookshelf, below.
 - **From its text,** once `tw library --search` has read it, for documents you have not opened yet.
 - **From your reference library.** When `tw cite` has a record of the same work (the same DOI or ISBN, or the same title when it is at least twelve letters long), its authors, DOI, and ISBN fill in what the document lacks. Both your personal `references.json` and each library folder's `references.json` count.
+- **From your other computers,** with [sync](sync.md) on. When another computer opened a document, its title, author, DOI, and ISBN travel with it, so the filter and `tw library --search` find it here by a DOI only that computer knew, even if you never opened it here. textweaver finds the document here when you opened it here before, when it is in a library folder that is itself synced between the computers (its `.textweaver/library-id.json` travels with it), or when `tw library --search` has read its text. When two computers know different details, the newest wins, detail by detail.
 
 Word and EPUB files keep their DOI or ISBN in an identifier field that textweaver does not read yet; a DOI or ISBN printed in the text is found.
 
@@ -78,6 +79,25 @@ recent_limit = 20
 - `folders` (default: none): the library folders. In TOML, a backslash in a path is written twice.
 - `recent_limit` (default `20`): how many recent files to remember.
 
+## Continue reading
+
+**Continue reading** lists the documents on this computer that have a reading place, newest first, whichever computer read them last. It is in the File menu under Library, and in the command palette (F2); it has no key of its own, and you can give it one in `keymap.toml`. You hear how many documents it lists, then each row, meaning first:
+
+"Cells, 42 percent, laptop, 2 hours ago"
+
+That is the title, how far into the document the place is, the computer the place is from, and how long ago it was saved. A place saved on this computer names this computer. Enter opens the document, which resumes by `[sync] position_policy` (see [Syncing between computers](sync.md#a-place-from-another-computer)).
+
+Only documents found on this computer are listed: one you read only on another computer, and do not have here, is left out. The places of your other computers count only with sync on; without it, the list has this computer's own places. With nothing to list you hear "Nothing to continue: no places saved."
+
+From the command line:
+
+```bash
+tw library --continue
+tw library --continue --json
+```
+
+`--continue` prints the same rows, each with its path on the next line. With `--json`, each document has its `path`, `title`, `pct`, the `device` name, `this_computer`, and `when_ms` (when the place was saved, in milliseconds since 1970, UTC).
+
 ## Recent files
 
 Every document you open goes to the front of the recent list, `recent.json` in the data folder. The list keeps `recent_limit` files. A file opened again moves to the front instead of appearing twice. Save As adds the new file too.
@@ -109,11 +129,14 @@ tw library --search mitochondria --json
 
 You can combine options: `--add` and `--search` in one command adds the folder, then searches.
 
-## Sync your place between computers
+## The older place sync through a library folder
 
-A library folder can live in Dropbox, OneDrive, Syncthing, iCloud, or any other synced folder. textweaver then keeps your reading place in step between the computers that use it. A wider sync, of notes, highlights, bookmarks, and settings through a folder of your own, is planned; see [Syncing between computers](sync.md).
+Before [sync](sync.md), a library folder kept in step by Dropbox, OneDrive, Syncthing, or iCloud was how textweaver carried your reading place between computers, and Star did the same. That still works:
 
-### What is synced
+- **With sync off,** textweaver keeps the folder's progress file up to date, as older versions did.
+- **With sync on,** your places go to the sync folder instead, and the progress file is only read. A place an older textweaver, or Star through `tw migrate-star`, wrote there is still honored when a document opens.
+
+### What the progress file holds
 
 Each library folder gets a small file, `.textweaver/progress.json`, inside the folder. For each document in the folder it holds:
 
@@ -122,29 +145,31 @@ Each library folder gets a small file, `.textweaver/progress.json`, inside the f
 
 It also has a `_meta` part with the number of notes each document has.
 
-The notes, highlights, and bookmarks themselves are not synced. They stay on the computer where you made them.
+The notes, highlights, and bookmarks themselves do not travel through this file; [sync](sync.md) carries them.
 
-textweaver writes this file whenever it saves your place, and again when you open another document or quit.
+With sync off, textweaver writes this file whenever it saves your place, and again when you open another document or quit.
 
 ### Which place wins
 
-When you open a document, textweaver compares the place saved on this computer with the place in the folder's `progress.json`. `[reading] sync_conflict_policy` decides:
+When you open a document, textweaver compares the place saved on this computer with the place in the folder's `progress.json`. `[sync] position_policy` decides, the same setting that decides between your computers' places with sync on:
 
 ```toml
-[reading]
-sync_conflict_policy = "newest"
+[sync]
+position_policy = "newest"
 ```
 
 - `"newest"` (the default): the place saved most recently wins, from whichever computer.
-- `"highest_progress"`: the place furthest into the document wins.
-- `"manual"`: this computer's place is always kept.
+- `"furthest"`: the place furthest into the document wins.
+- `"ask"`: this computer's place is kept, and textweaver asks about the other one.
+
+This setting used to be `[reading] sync_conflict_policy`; a value you set there moves to `[sync] position_policy` on its own, with `"highest_progress"` becoming `"furthest"` and `"manual"` becoming `"ask"`.
 
 What you hear when the document opens:
 
 - "Opened", the title, "Resumed at 42 percent, from another device." when the place came from the folder;
-- "Opened", the title, "Resumed at 42 percent. Another device is at a different place; kept this device's." with `"manual"` when the two differ.
+- with `"ask"`, when the two differ: "another computer at 42 percent. Go there? Y or N". Y goes there; N keeps this computer's place.
 
-When two computers write the same `progress.json` at once, the entries are merged document by document with the same policy.
+When two computers write the same `progress.json` at once, the entries are merged document by document with the same policy, and you hear it: "Sync: 2 library places differed."
 
 `tw marks` shows both places for a document:
 
@@ -257,12 +282,14 @@ The report says where Star's files were, how many files were written, then a sum
 
 - **A document is missing from the library.** Check that its folder was added (`tw library`), that textweaver can open its kind of file, and that it is not in a hidden or skipped folder.
 - **"Could not open" from the library.** The file was moved or deleted since it was listed.
-- **The place from another computer is wrong.** Set `[reading] sync_conflict_policy = "manual"` to always keep this computer's place.
+- **The place from another computer is wrong.** Set `[sync] position_policy = "ask"`, and textweaver asks before it goes to another computer's place.
+- **A document read on another computer is not in Continue reading.** It is listed only when the document is on this computer too: opened here before, in a library folder, or among your recent files. Sync must be on for other computers' places.
 - **The library search is slow the first time.** It reads every document once; later searches are fast.
 - **`tw migrate-star` found nothing.** Use `--from` with the folder that holds Star's `settings.json`.
 
 ## See also
 
+- [Syncing between computers](sync.md): notes, highlights, bookmarks, places, library details, and statistics on your other computers.
 - [Bookmarks, notes, and highlights](notes.md): what is stored for each document.
 - [Settings](settings.md): where settings live, and how to export and import them.
 - [Obsidian vaults](vault.md): importing a vault's documents into the library.

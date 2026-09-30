@@ -12,14 +12,16 @@ Each group has its own switch, so you can turn one off without turning off the r
 - **Notes.**
 - **Highlights.**
 - **Bookmarks.**
-- **Statistics**: each computer's reading time and sessions for each document; the totals are their sum.
+- **Statistics**: each computer's reading time and sessions for each document; the totals are their sum, in the statistics list and `tw stats` (below).
 
-**Coming in this wave: not built yet.** Portable settings (rate, punctuation, verbosity, capitals, reading aids, highlight, theme, Braille and math codes, interface language, speed presets, and the announcement level), profiles, key overrides, your word list, glossary, and pronunciations, favorite voices, and library details (title, author, DOI, ISBN) are planned as groups of their own.
+Library details travel with each document, as part of how it is recognized: its title, author, DOI, ISBN, and kind of file, and when it was first added to a library. They have no switch of their own; a title or an author is sent only when the document states it (below).
+
+**Coming in this wave: not built yet.** Portable settings (rate, punctuation, verbosity, capitals, reading aids, highlight, theme, Braille and math codes, interface language, speed presets, and the announcement level), profiles, key overrides, your word list, glossary, and pronunciations, and favorite voices are planned as groups of their own.
 
 Some things never sync, because they are tied to one machine or would expose what you read:
 
 - **Machine settings**: the speech engine, the voice, the access mode, your NVDA or JAWS key preset, and every path.
-- **Recent files.** The paths differ from computer to computer, and the file names themselves would reveal what was read on a shared lab computer.
+- **Recent files.** The paths differ from computer to computer, and the file names themselves would reveal what was read on a shared lab computer. **Continue reading** (below) takes their place: it is built from the synced places, and lists only documents found on this computer.
 - **Navigation history, recovery snapshots and unsaved text, caches, and logs.**
 - **The documents themselves.** Only what you did with them syncs.
 - **The local backup of replaced notes** (below). It stays on the computer that made it.
@@ -104,6 +106,22 @@ Before the first merge, textweaver copies this computer's reading state to a fol
 
 When two library-folder progress files disagree as they are written (the older, library-only place sync), that is said too: "Sync: 2 library places differed."
 
+## Continue reading
+
+**Continue reading**, in the File menu under Library and in the command palette, lists the documents on this computer with a reading place from any computer, newest first, one row each, meaning first: "Cells, 42 percent, laptop, 2 hours ago". Enter opens the document, which resumes by `position_policy`. Only documents found on this computer are listed: opened here before, in a library folder, or among the recent files. A document read only on the laptop, and not on this computer at all, is left out. With the places group off, only this computer's own places are used. [The library guide](library.md#continue-reading) has the details, and `tw library --continue` prints the same list.
+
+## Library details and search
+
+With sync on, the library's filter and `tw library --search` also know what your other computers learned about a document: its title, author, DOI, and ISBN. So a paper opened on the laptop is found on the lab computer by its DOI, even before it is opened there. The document is found here when it was opened here before, when its library folder is itself synced between the computers (its `.textweaver/library-id.json` travels with it), or when `tw library --search` has read its text. When two computers know different details, the newest wins, detail by detail; the date a document was first added keeps the earliest.
+
+## Reading statistics from every computer
+
+With the statistics group on, the statistics list (File, Reading statistics) and `tw stats` add every computer's reading of a document together: the time read aloud and the sessions are summed, and the furthest point is the furthest any computer reached. Each computer only ever adds to its own counts, so nothing is counted twice and nothing conflicts.
+
+To see each computer's share, choose "Each computer: hidden. Enter shows it." near the end of the statistics list; under each document read on more than one computer you then hear a line per computer, such as "laptop: 20 minutes and 5 seconds, 2 sessions". On the command line, `tw stats --by-computer` prints the same lines. A document read only on another computer is listed too, by the title that computer knew.
+
+If the sync folder is slow to read, for example on a network folder, the list does not wait: it shows this computer's reading, and says "Other computers skipped: folder slow."
+
 ## On the command line
 
 The same actions are on the command line, each with `--json` for scripts, and `--home DIR` to use another set of files:
@@ -112,15 +130,23 @@ The same actions are on the command line, each with `--json` for scripts, and `-
 - `tw sync status`: the status line, this computer, and the others.
 - `tw sync now`: merges every document this computer knows, and says how many took changes.
 
+Three other commands read the sync folder too, and change nothing in it:
+
+- `tw library --continue`: Continue reading, newest first.
+- `tw library --search WORDS`: finds documents by what your other computers know about them too.
+- `tw stats --by-computer`: every computer's reading, summed, with a line per computer.
+
 ## Privacy
 
-No name, path, or computer name is ever written to the sync folder. Documents, computers, and records are identified by random ids, never by their titles as file names or the names you gave them on disk; computers are identified only by the name you chose for them ("laptop", "lab"). A document's title travels only when the document states one itself, never one made from its file name. Records do carry short pieces of text: the words around a bookmark or a place, a note's text, and a highlight's text.
+No name, path, or computer name is ever written to the sync folder. Documents, computers, and records are identified by random ids, never by their titles as file names or the names you gave them on disk; computers are identified only by the name you chose for them ("laptop", "lab"). A document's title travels only when the document states one itself, never one made from its file name, and an author only when the document names one that is not this computer's user or computer name (a Word file's author is often the account's name). Records do carry short pieces of text: the words around a bookmark or a place, a note's text, a highlight's text, and a document's title, author, DOI, and ISBN.
 
 The folder is not encrypted, so choose a folder you trust the way you would trust any other place that can hold your notes and highlights in plain text.
 
 ## See also
 
-- [The library](library.md#sync-your-place-between-computers): the older reading-place sync inside a shared library folder, which is still read.
+- [The library](library.md#the-older-place-sync-through-a-library-folder): the older reading-place sync inside a shared library folder, which is still read.
+- [The library: Continue reading](library.md#continue-reading).
+- [Troubleshooting](troubleshooting.md#sync-folder-missing): the sync folder missing, and a folder in a newer format.
 - [Bookmarks, notes, and highlights](notes.md): what a note, highlight, and bookmark hold.
 - [ADR-0049: Sync beyond the place](adr/0049-sync-beyond-the-place.md): the full design, including the folder layout, the merge rules, and what was set aside.
 - [Documentation index](README.md)

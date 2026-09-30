@@ -12,6 +12,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Longer ids.** New notes and highlights get 64-bit ids; older ids stay as they are.
 - State files are now format 2. Every older file, and every Star import, loads unchanged.
 
+### The library across computers
+
+- **Continue reading.** A new command, in the File menu under Library and in the command palette, lists the documents on this computer with a reading place from any computer, newest first: "Cells, 42 percent, laptop, 2 hours ago". Enter opens one. `tw library --continue` prints the same list, with `--json` too.
+- **Search by what your other computers know.** With sync on, a document's title, author, DOI, ISBN, and kind of file travel with it, so the library's filter and `tw library --search` find a document here by a DOI only another computer knew. The newest detail wins; the date it was first added keeps the earliest.
+- **Statistics from every computer.** The statistics list and `tw stats` add every computer's reading of a document together, and show each computer's share on request (`tw stats --by-computer`).
+- **The old progress file is still read.** With sync on, places go to the sync folder, and a library folder's `.textweaver/progress.json` (from an older textweaver, or converted from Star) is only read, so its places are still honored.
+
 ### For contributors
 
 - **`cargo xtask regen` rebuilds every generated file** in one command: the third-party notices, the settings reference, the keyboard reference, the `docs/site` data, and the crate counts in the docs. `cargo xtask regen --check` changes nothing and reports each on one line, such as "keyboard: FAIL, out of date; run cargo xtask regen". `dev-check` runs it, so the settings reference, the docs indexes, and the notices are now checked locally as in CI.

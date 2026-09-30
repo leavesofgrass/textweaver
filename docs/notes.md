@@ -167,7 +167,7 @@ If a state file cannot be read, for example after a sync conflict or a hand edit
 tw marks essay.md
 ```
 
-`tw marks` prints a document's saved reading position, its bookmarks, its notes, and its highlights, each with its percentage, character position, line, and saved time, plus the text of that line. If the document is in a library folder, it also prints the position synced from other computers. It only reads; it never changes anything.
+`tw marks` prints a document's saved reading position, its bookmarks, its notes, and its highlights, each with its percentage, character position, line, and saved time, plus the text of that line. If the document is in a library folder, it also prints the position in the folder's older progress file. It only reads; it never changes anything.
 
 For a program or a script, print JSON instead:
 
@@ -207,7 +207,9 @@ tw vault export C:\Users\me\Vault --document essay.md
 
 ## Sync between computers
 
-When a document is in a library folder, its reading position is copied to a small file in that folder, `.textweaver/progress.json`. If the folder is synced by Dropbox, OneDrive, Syncthing, or iCloud, another computer picks up your place. Only the position and a count of notes travel this way; the notes, highlights, and bookmarks themselves stay on the computer where you made them. [The library guide](library.md) explains sync and how conflicts are settled.
+With sync set up (Tools, Sync, Set up sync), your bookmarks, notes, highlights, and reading places travel to your other computers through a folder you choose, such as one kept in step by Syncthing or a USB stick. A document is recognized by its contents, so it syncs wherever it is on each computer. [Syncing between computers](sync.md) explains it, including what you hear when the same note was edited on two computers: the newest edit wins, and the older text is kept in this computer's backup of replaced notes.
+
+Without sync, a document in a library folder still carries its reading place to other computers through a small file in that folder, `.textweaver/progress.json`, as older versions did; the notes, highlights, and bookmarks stay on the computer where you made them. With sync on, that file is only read. [The library guide](library.md#the-older-place-sync-through-a-library-folder) explains it.
 
 ## If something goes wrong
 
@@ -220,7 +222,8 @@ When a document is in a library folder, its reading position is copied to a smal
 
 - [Reading and moving around](reading.md): selecting text, and the history of jumps.
 - [Writing and editing](editing.md): edit mode, where marks move with your edits.
-- [The library](library.md): library folders, sync, and where the state folder is.
+- [The library](library.md): library folders, "Continue reading", and where the state folder is.
+- [Syncing between computers](sync.md): notes, highlights, bookmarks, and places on your other computers.
 - [Obsidian vaults](vault.md): exporting notes and highlights to Obsidian.
 - [Keyboard reference](keyboard.md): every key in both frontends.
 - [ADR-0002: Text model](adr/0002-text-model.md): how positions and marks move with edits.
