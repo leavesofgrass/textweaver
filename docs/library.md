@@ -111,7 +111,7 @@ You can combine options: `--add` and `--search` in one command adds the folder, 
 
 ## Sync your place between computers
 
-A library folder can live in Dropbox, OneDrive, Syncthing, iCloud, or any other synced folder. textweaver then keeps your reading place in step between the computers that use it.
+A library folder can live in Dropbox, OneDrive, Syncthing, iCloud, or any other synced folder. textweaver then keeps your reading place in step between the computers that use it. A wider sync, of notes, highlights, bookmarks, and settings through a folder of your own, is planned; see [Syncing between computers](sync.md).
 
 ### What is synced
 
