@@ -284,6 +284,12 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up | palette | palette | palette | `browse_files` |
 | Convert a folder of documents to another format, in the background | palette | palette | palette | `batch_convert` |
 | Export the document as spoken audio: MP3, FLAC, WAV, or an M4B audiobook | palette | palette | palette | `export_audio` |
+| Set up sync: choose the sync folder, name this computer, and choose what syncs | palette | palette | palette | `sync_setup` |
+| Say how sync stands (up to date, the folder missing, or a problem) and name the other computers | `Shift+F5` | `Shift+F5` | `Shift+F5` | `sync_status` |
+| Sync now: send this computer's changes and take the other computers' for every document | palette | palette | palette | `sync_now` |
+| List the other computers' places in this document; Enter goes to one | palette | palette | palette | `sync_go_to_place` |
+| List notes replaced by another computer's newer edit; Enter puts one back | palette | palette | palette | `sync_replaced_notes` |
+| Stop syncing on this computer; the sync folder is left as it is | palette | palette | palette | `sync_stop` |
 | Quit, saving the reading position | `Ctrl+Q` | `Ctrl+Q` | `Cmd+Q` | `quit` |
 
 ## Editing
@@ -507,6 +513,11 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up | `browse_files` |
 | Convert a folder of documents to another format, in the background | `batch_convert` |
 | Export the document as spoken audio: MP3, FLAC, WAV, or an M4B audiobook | `export_audio` |
+| Set up sync: choose the sync folder, name this computer, and choose what syncs | `sync_setup` |
+| Sync now: send this computer's changes and take the other computers' for every document | `sync_now` |
+| List the other computers' places in this document; Enter goes to one | `sync_go_to_place` |
+| List notes replaced by another computer's newer edit; Enter puts one back | `sync_replaced_notes` |
+| Stop syncing on this computer; the sync folder is left as it is | `sync_stop` |
 | Insert the bibliography of the works cited, at the cursor | `insert_bibliography` |
 | Check the citations: how many there are, and which keys are not in your library | `check_citations` |
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | `import_references` |

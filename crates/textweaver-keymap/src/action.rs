@@ -491,6 +491,24 @@ actions! {
     ExportAudio = "export_audio", File,
         "Export the document as spoken audio: MP3, FLAC, WAV, or an M4B audiobook",
         gui [], term [], shared [];
+    SyncSetup = "sync_setup", File,
+        "Set up sync: choose the sync folder, name this computer, and choose what syncs",
+        gui [], term [], shared [];
+    SyncStatus = "sync_status", File,
+        "Say how sync stands (up to date, the folder missing, or a problem) and name the other computers",
+        gui ["g:Shift+F5"], term ["g:Shift+F5"], shared [];
+    SyncNow = "sync_now", File,
+        "Sync now: send this computer's changes and take the other computers' for every document",
+        gui [], term [], shared [];
+    SyncGoToPlace = "sync_go_to_place", File,
+        "List the other computers' places in this document; Enter goes to one",
+        gui [], term [], shared [];
+    SyncReplacedNotes = "sync_replaced_notes", File,
+        "List notes replaced by another computer's newer edit; Enter puts one back",
+        gui [], term [], shared [];
+    SyncStop = "sync_stop", File,
+        "Stop syncing on this computer; the sync folder is left as it is",
+        gui [], term [], shared [];
     Quit = "quit", File, "Quit, saving the reading position",
         gui ["g:Ctrl+Q"], term ["g:Ctrl+Q"], shared [];
 
