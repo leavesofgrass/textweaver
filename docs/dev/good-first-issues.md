@@ -114,17 +114,6 @@ A screen reader's "input help" mode says what a key would do without doing it. t
 - Run `cargo xtask keyboard` to regenerate [the keyboard reference](../keyboard.md) after adding the action.
 - How to check: `cargo test -p textweaver-keymap -p textweaver-app`, and in the terminal reader, turn the mode on, press Space, and hear its help, "Play or pause reading from the current word", instead of reading starting.
 
-## Converting documents
-
-### Save the failures of a batch conversion
-
-Size: small.
-
-`tw convert` on a folder prints each failure to the terminal as it happens, then a summary sentence. In a large folder, the failures scroll away before a screen reader user can review them.
-
-- Where: `run` in `crates/textweaver-cli/src/cmd/convert.rs`. `Summary` in `crates/textweaver-convert/src/lib.rs` already has `failures()`. When any file failed, write each failure on its own line, file name first, then the reason, to `conversion-report.txt` in the output folder, and add a sentence that says where the report is.
-- How to check: a test in `crates/textweaver-cli` that converts a folder holding one broken file, then reads the report. Write the report only when something failed, so a clean run leaves no extra file.
-
 ## See also
 
 - [CONTRIBUTING.md](../../CONTRIBUTING.md): setting up, the checks, and how to propose a change.
