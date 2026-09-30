@@ -42,6 +42,10 @@
 //! - edit: entering edit mode, typing one character (per keystroke),
 //!   backspace, an autosave snapshot, and leaving edit mode.
 //! - state: saving the reading position.
+//! - identity (`sync-id-100mb.pdf`, a 100 MB file that starts like a
+//!   PDF): finding a document's sync id (ADR-0049) the first time, when the
+//!   whole file is hashed, and again, when it is unchanged; its time, the
+//!   hashing rate, and peak heap, which stays near the read buffer's size.
 //!
 //! Peak heap is measured with a counting global allocator for each phase.
 //! The speech backend is a silent clock that records when it is asked to
@@ -629,6 +633,40 @@ pub fn one_line_corpus(bytes: usize, seed: u64) -> String {
     }
     out.push('\n');
     out
+}
+
+/// The start of [`pdf_like_corpus`]: enough for a file to look like a PDF
+/// by its first bytes. Hashing it for a sync id reads bytes only.
+const PDF_HEADER: &[u8] = b"%PDF-1.7\n%\xe2\xe3\xcf\xd3\n";
+
+/// `bytes` bytes that start like a PDF and go on as deterministic noise:
+/// the size of a large scanned textbook, for the document identity bench
+/// (ADR-0049). Not a readable PDF; identity hashes the file's bytes.
+pub fn pdf_like_corpus(bytes: usize, seed: u64) -> Vec<u8> {
+    let mut out = Vec::with_capacity(bytes);
+    out.extend_from_slice(&PDF_HEADER[..PDF_HEADER.len().min(bytes)]);
+    let mut r = Lcg(seed);
+    while out.len() < bytes {
+        let v = r.next().to_le_bytes();
+        let n = (bytes - out.len()).min(4);
+        out.extend_from_slice(&v[..n]);
+    }
+    out
+}
+
+/// Writes [`pdf_like_corpus`] to `path` unless a file of that size with
+/// that start is there already (writing 100 MB on every run is slow).
+pub(crate) fn write_pdf_like_corpus(path: &Path, bytes: usize, seed: u64) -> anyhow::Result<()> {
+    let same = std::fs::metadata(path).is_ok_and(|m| m.len() == bytes as u64)
+        && std::fs::File::open(path).is_ok_and(|mut f| {
+            use std::io::Read as _;
+            let mut head = vec![0u8; 4096.min(bytes)];
+            f.read_exact(&mut head).is_ok() && head == pdf_like_corpus(head.len(), seed)
+        });
+    if !same {
+        std::fs::write(path, pdf_like_corpus(bytes, seed))?;
+    }
+    Ok(())
 }
 
 #[cfg(feature = "bench")]
@@ -1337,6 +1375,50 @@ mod inner {
         r
     }
 
+    /// Document identity (ADR-0049) on a large file, as the writer does it
+    /// when a document opens: the first time, when the whole file is
+    /// hashed through a small buffer, and again, when the file is
+    /// unchanged and is not hashed. Peak heap stays near the buffer's size
+    /// whatever the file's.
+    fn bench_identity(name: &str, path: &Path, home: &Path) -> Report {
+        let mut r = Report {
+            name: name.to_owned(),
+            values: Vec::new(),
+        };
+        let bytes = std::fs::metadata(path).map_or(0, |m| m.len());
+        println!("{name} ({:.2} MB, document identity)", mb(bytes as usize));
+        r.values.push(("bytes".into(), json!(bytes)));
+        let job = textweaver_sync::Identify {
+            ids_file: Paths::under(home).sync_ids_file(),
+            path: path.to_owned(),
+            library_folders: Vec::new(),
+            details: textweaver_sync::docid::Details::default(),
+        };
+        for (key, label) in [
+            ("identify_first", "identify, whole file hashed"),
+            ("identify_again", "identify again, file unchanged"),
+        ] {
+            alloc::reset_peak();
+            let t = Instant::now();
+            if let Err(e) = job.run(None::<[&str; 0]>, None) {
+                println!("  cannot identify: {e}");
+                return r;
+            }
+            let d = t.elapsed();
+            r.time(&format!("{key}_ms"), label, d);
+            r.peak(&format!("{key}_peak_mb"), label);
+            if key == "identify_first" && d.as_secs_f64() > 0.0 {
+                let rate = mb(bytes as usize) / d.as_secs_f64();
+                r.put(
+                    "identify_mb_per_s",
+                    json!(rate),
+                    format!("hashing rate: {rate:.0} MB per second"),
+                );
+            }
+        }
+        r
+    }
+
     /// Cost of following speech: word positions applied one at a time.
     fn highlight(r: &mut Report, path: &Path, home: &Path) {
         let Ok((speech, log)) = textweaver_app::testing::recording_service() else {
@@ -1440,6 +1522,22 @@ mod inner {
                 Value::Object(rep.values.into_iter().collect()),
             );
         }
+        // Document identity on a 100 MB file (ADR-0049), with the corpora.
+        let identity = "sync-id-100mb.pdf";
+        if args.files.is_empty() && only.as_ref().is_none_or(|o| identity.contains(o.as_str())) {
+            let p = dir.join(identity);
+            super::write_pdf_like_corpus(&p, 100 << 20, 5)?;
+            if !alloc::wait_quiet(Duration::from_millis(300), Duration::from_secs(30)) {
+                println!("(other threads were still allocating after 30 s)");
+            }
+            let _ = std::fs::remove_dir_all(&home);
+            let rep = bench_identity(identity, &p, &home);
+            println!();
+            all.insert(
+                rep.name.clone(),
+                Value::Object(rep.values.into_iter().collect()),
+            );
+        }
         let _ = std::fs::remove_dir_all(&home);
         if let Some(tw) = &args.tw {
             let corpus = super::startup_corpus()?;
@@ -1463,6 +1561,16 @@ mod inner {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_pdf_like_corpus_is_sized_and_stable() {
+        let a = pdf_like_corpus(10_000, 5);
+        assert_eq!(a.len(), 10_000);
+        assert!(a.starts_with(b"%PDF-1.7"));
+        assert_eq!(a, pdf_like_corpus(10_000, 5));
+        assert_ne!(a, pdf_like_corpus(10_000, 6));
+        assert_eq!(pdf_like_corpus(3, 5), b"%PD");
+    }
 
     #[test]
     fn corpora_have_the_requested_shape() {

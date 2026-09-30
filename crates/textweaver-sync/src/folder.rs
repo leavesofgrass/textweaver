@@ -34,6 +34,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::docid::IdentityIndex;
 use crate::record::{FORMAT, MAX_RECORD_BYTES};
 use crate::{
     Clock, ClockAhead, DeviceId, DocRecord, Identity, InstallToken, MergeReport, SyncError, SyncId,
@@ -521,6 +522,28 @@ impl SyncFolder {
             }
         }
         merged
+    }
+
+    /// What the other computers' records say about every document, for
+    /// recognizing a document opened here ([`crate::docid`]). This
+    /// computer's own records are left out: what it knows is in its
+    /// `sync-ids.json`, and a document counts as known elsewhere only when
+    /// another computer has it. Damaged files are skipped and reported, as
+    /// by [`read_doc`](Self::read_doc).
+    pub fn identity_index(&mut self) -> (IdentityIndex, Vec<Problem>) {
+        let mut index = IdentityIndex::new();
+        let mut problems = Vec::new();
+        for id in self.doc_ids() {
+            let read = self.read_doc(id);
+            problems.extend(read.problems);
+            for (device, record) in &read.records {
+                if *device == self.device {
+                    continue;
+                }
+                index.add(*device, record);
+            }
+        }
+        (index, problems)
     }
 
     /// Writes this computer's merged view of a document, by atomic replace.

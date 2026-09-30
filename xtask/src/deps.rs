@@ -13,8 +13,9 @@
 //!   no exceptions: the reading-aid settings types are store's own.
 //! - `textweaver-sync` (ADR-0049) depends only on `textweaver-core` and
 //!   `textweaver-store` among the workspace crates, and otherwise only on
-//!   serde, serde_json, thiserror, and log: it reads and writes files in a
-//!   folder, with no networking and no other crates.
+//!   serde, serde_json, sha2 (document identity), thiserror, and log: it
+//!   reads and writes files in a folder, with no networking and no other
+//!   crates.
 //! - `textweaver-tui` (the reader, `textweaver`) built without its default
 //!   features never reaches the conversion and citation stack: not the
 //!   convert, render, writers, or cite crates, and not their big
@@ -148,8 +149,9 @@ const STORE_EXTERNAL: [&str; 6] = [
 /// Workspace crates sync may use (ADR-0049).
 const SYNC_INTERNAL: [&str; 2] = [CORE, STORE];
 
-/// Outside crates sync may use: serialization, errors, and logging.
-const SYNC_EXTERNAL: [&str; 4] = ["serde", "serde_json", "thiserror", "log"];
+/// Outside crates sync may use: serialization, errors, logging, and sha2
+/// for document identity (a file's and a text's SHA-256).
+const SYNC_EXTERNAL: [&str; 5] = ["serde", "serde_json", "sha2", "thiserror", "log"];
 
 /// `cargo xtask deps`.
 pub fn run() -> anyhow::Result<()> {

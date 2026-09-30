@@ -325,6 +325,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-app",
     "textweaver-formats",
     "textweaver-keymap",
+    "textweaver-sync",
     "textweaver-text"
    ],
    "description": "textweaver maintenance tasks: keyboard.md generation, Star parity report, engine hosts, benchmarks, release packages",
@@ -506,6 +507,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-speech",
     "textweaver-store",
     "textweaver-summary",
+    "textweaver-sync",
     "textweaver-text",
     "textweaver-theme"
    ],
@@ -886,7 +888,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "bins": [],
    "build_deps": [],
    "default_member": true,
-   "dependents": [],
+   "dependents": [
+    "textweaver-app",
+    "xtask"
+   ],
    "deps": [
     "textweaver-core",
     "textweaver-store"

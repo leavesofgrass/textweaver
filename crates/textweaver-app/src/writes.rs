@@ -176,7 +176,11 @@ impl App {
                 let id = self.writer.next_id();
                 let quitting = then == SaveThen::Leave(AfterLeave::Quit);
                 self.pending_saves.push((id, then));
+                let dest = req.dest.clone();
                 self.writer.send(Job::Save { id, req, expect });
+                // After the save, in order on the writer: the file's new
+                // hash for sync; its id stays (ADR-0049).
+                self.identify_on_writer(&dest, None, textweaver_sync::docid::Details::default());
                 if quitting {
                     let effects = self.wait_for_writes();
                     if !effects.is_empty() {

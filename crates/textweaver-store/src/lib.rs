@@ -21,6 +21,8 @@
 //!   highlights, recents, library, keybindings, and sidecars.
 //! - Folder sidecars (`<folder>/.textweaver/progress.json`) and their merge
 //!   rules, ported from `star/sync.py`, in [`sync`].
+//! - [`sync_ids`]: `sync-ids.json`, each document's sync id for sync
+//!   between computers (ADR-0049), keyed by the local path key.
 //!
 //! - [`reading_aids`]: the saved form of the `[reading_aids]` settings,
 //!   which `textweaver-aids` converts into its working types.
@@ -49,6 +51,7 @@ mod settings;
 pub mod settings_io;
 pub mod stats;
 pub mod sync;
+pub mod sync_ids;
 pub mod time;
 
 pub use atomic::atomic_write;
@@ -81,6 +84,7 @@ pub use settings_io::{
 };
 pub use stats::{DocStats, ReadingStats, StatsDelta};
 pub use sync::{ConflictPolicy, SidecarStore};
+pub use sync_ids::{SyncIdEntry, SyncIds};
 
 /// Persistence failures.
 #[derive(Debug, thiserror::Error)]

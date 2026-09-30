@@ -88,6 +88,183 @@ pub struct DocRecord {
     /// Reading statistics.
     #[serde(default)]
     pub stats: DocStatsRecord,
+    /// What recognizes the document on another computer: its content and
+    /// text hashes, its library key, and its title, DOI, and ISBN (S2).
+    /// Added without raising [`FORMAT`]: an older reader ignores it.
+    #[serde(default, skip_serializing_if = "DocIdentity::is_empty")]
+    pub identity: DocIdentity,
+}
+
+/// How many hashes of each kind a record keeps: the newest, and the ones
+/// before it, so a computer holding an older copy of an edited file still
+/// recognizes it.
+pub const RECENT_HASHES: usize = 8;
+
+/// The most hashes of one kind a record file may hold.
+const MAX_HASHES_READ: usize = 64;
+
+/// SHA-256 hashes (64 lower-case hex digits), each with the stamp it was
+/// last published at. Only the [`RECENT_HASHES`] newest are kept. Merging
+/// keeps each hash's newest stamp, then the newest hashes, so merge order
+/// and repeats never change the result.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct RecentHashes(pub std::collections::BTreeMap<String, Stamp>);
+
+impl RecentHashes {
+    /// No hashes.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Publishes `hash` at `stamp`.
+    pub fn publish(&mut self, hash: &str, stamp: Stamp) {
+        let e = self.0.entry(hash.to_owned()).or_insert(stamp);
+        *e = (*e).max(stamp);
+        self.trim();
+    }
+
+    /// Whether `hash` is held.
+    pub fn contains(&self, hash: &str) -> bool {
+        self.0.contains_key(hash)
+    }
+
+    /// The newest hash.
+    pub fn newest(&self) -> Option<&str> {
+        self.0
+            .iter()
+            .max_by(|a, b| a.1.cmp(b.1).then_with(|| b.0.cmp(a.0)))
+            .map(|(h, _)| h.as_str())
+    }
+
+    /// Merges `other` in.
+    pub fn merge(&mut self, other: &Self) {
+        for (h, s) in &other.0 {
+            let e = self.0.entry(h.clone()).or_insert(*s);
+            *e = (*e).max(*s);
+        }
+        self.trim();
+    }
+
+    /// Keeps the [`RECENT_HASHES`] newest (ties: the smaller hash).
+    fn trim(&mut self) {
+        if self.0.len() <= RECENT_HASHES {
+            return;
+        }
+        let mut all: Vec<(Stamp, String)> = std::mem::take(&mut self.0)
+            .into_iter()
+            .map(|(h, s)| (s, h))
+            .collect();
+        all.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+        all.truncate(RECENT_HASHES);
+        self.0 = all.into_iter().map(|(s, h)| (h, s)).collect();
+    }
+
+    fn validate(&self) -> Result<(), SyncError> {
+        if self.0.len() > MAX_HASHES_READ {
+            return Err(SyncError::Damaged("too many hashes".into()));
+        }
+        if self.0.keys().all(|h| is_sha256(h)) {
+            Ok(())
+        } else {
+            Err(SyncError::Damaged("a hash is not 64 hex digits".into()))
+        }
+    }
+}
+
+/// Whether `s` is 64 lower-case hex digits.
+pub(crate) fn is_sha256(s: &str) -> bool {
+    s.len() == 64 && s.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+}
+
+/// The detail names [`DocIdentity::details`] uses.
+pub mod detail {
+    /// The document's title.
+    pub const TITLE: &str = "title";
+    /// Its DOI, lowercase (`10.1000/xyz`).
+    pub const DOI: &str = "doi";
+    /// Its ISBN, digits only (and a final `X` for an ISBN-10).
+    pub const ISBN: &str = "isbn";
+}
+
+/// The longest detail value read or written, in characters.
+pub const MAX_DETAIL_CHARS: usize = 400;
+
+/// What recognizes a document on another computer (ADR-0049,
+/// "Recognizing the same document"). No path or file name is ever part of
+/// it: the library key is a hash of the library folder's id and the path
+/// inside the folder.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DocIdentity {
+    /// SHA-256 of the file's bytes.
+    #[serde(skip_serializing_if = "RecentHashes::is_empty")]
+    pub content: RecentHashes,
+    /// SHA-256 of the text as textweaver reads it.
+    #[serde(skip_serializing_if = "RecentHashes::is_empty")]
+    pub text: RecentHashes,
+    /// SHA-256 of the library folder's id and the path inside the folder.
+    #[serde(skip_serializing_if = "RecentHashes::is_empty")]
+    pub library: RecentHashes,
+    /// Title, DOI, and ISBN ([`detail`]), newest wins per detail. A DOI or
+    /// an ISBN is only ever a suggestion, never a match on its own.
+    #[serde(skip_serializing_if = "details_empty")]
+    pub details: RegisterMap<String>,
+}
+
+fn details_empty(d: &RegisterMap<String>) -> bool {
+    d.0.is_empty()
+}
+
+impl DocIdentity {
+    /// Nothing recorded.
+    pub fn is_empty(&self) -> bool {
+        self.content.is_empty()
+            && self.text.is_empty()
+            && self.library.is_empty()
+            && self.details.0.is_empty()
+    }
+
+    /// A detail's live value.
+    pub fn detail(&self, name: &str) -> Option<&str> {
+        self.details.get(name).map(String::as_str)
+    }
+
+    /// Merges `other` in.
+    pub fn merge(&mut self, other: &Self) {
+        self.content.merge(&other.content);
+        self.text.merge(&other.text);
+        self.library.merge(&other.library);
+        self.details.merge(&other.details);
+    }
+
+    /// Every stamp held.
+    pub fn stamps(&self) -> impl Iterator<Item = Stamp> + '_ {
+        self.content
+            .0
+            .values()
+            .chain(self.text.0.values())
+            .chain(self.library.0.values())
+            .copied()
+            .chain(self.details.stamps())
+    }
+
+    fn validate(&self) -> Result<(), SyncError> {
+        self.content.validate()?;
+        self.text.validate()?;
+        self.library.validate()?;
+        if self.details.0.len() > 16 {
+            return Err(SyncError::Damaged("too many details".into()));
+        }
+        let long = self
+            .details
+            .live()
+            .any(|(k, v)| k.chars().count() > 32 || v.chars().count() > MAX_DETAIL_CHARS);
+        if long {
+            return Err(SyncError::Damaged("a detail is too long".into()));
+        }
+        Ok(())
+    }
 }
 
 /// The kind of item a [`Change`] is about.
@@ -200,6 +377,7 @@ impl DocRecord {
             notes: RegisterMap::new(),
             highlights: RegisterMap::new(),
             stats: DocStatsRecord::default(),
+            identity: DocIdentity::default(),
         }
     }
 
@@ -232,6 +410,7 @@ impl DocRecord {
             .chain(self.bookmarks.stamps())
             .chain(self.notes.stamps())
             .chain(self.highlights.stamps())
+            .chain(self.identity.stamps())
     }
 
     /// Merges another computer's record for the same document in, and
@@ -262,6 +441,7 @@ impl DocRecord {
             Previous::Highlight,
         ));
         self.stats.merge(&other.stats);
+        self.identity.merge(&other.identity);
         Ok(report)
     }
 
@@ -283,7 +463,7 @@ impl DocRecord {
                 return Err(SyncError::Damaged("an item id is empty or too long".into()));
             }
         }
-        Ok(())
+        self.identity.validate()
     }
 
     /// Reads a record from a file's bytes: JSON in [`FORMAT`] or older, at
@@ -396,6 +576,36 @@ mod tests {
         assert_eq!(here.place_of(A), Some(&p(1)));
         assert_eq!(here.place_of(B), Some(&p(2)));
         assert_eq!(here.places_newest_first()[0].0.device, B);
+    }
+
+    #[test]
+    fn identity_round_trips_and_keeps_the_newest_hashes() {
+        let h = |n: u64| format!("{n:064x}");
+        let mut r = DocRecord::new(DOC);
+        for n in 0..12u64 {
+            r.identity.content.publish(&h(n), Stamp::new(n, A));
+        }
+        assert_eq!(r.identity.content.0.len(), RECENT_HASHES);
+        assert_eq!(r.identity.content.newest(), Some(h(11).as_str()));
+        assert!(!r.identity.content.contains(&h(3)));
+        r.identity
+            .details
+            .set(detail::ISBN, Stamp::new(20, A), "9780306406157".to_owned());
+        assert_eq!(r.identity.detail(detail::ISBN), Some("9780306406157"));
+        assert!(r.stamps().any(|s| s.time == 20));
+        let bytes = r.to_bytes().unwrap();
+        assert_eq!(DocRecord::from_bytes(&bytes).unwrap(), r);
+
+        // A record with no identity writes none (older readers see what
+        // they always saw).
+        let plain = String::from_utf8(DocRecord::new(DOC).to_bytes().unwrap()).unwrap();
+        assert!(!plain.contains("identity"));
+
+        // Only hex digests are read as hashes; a path never is.
+        let bad = format!(
+            "{{\"format\":1,\"sync_id\":\"{DOC}\",\"identity\":{{\"content\":{{\"C:/Users/x.md\":{{\"wall_ms\":1,\"device\":\"{A}\"}}}}}}}}"
+        );
+        assert!(DocRecord::from_bytes(bad.as_bytes()).is_err());
     }
 
     #[test]

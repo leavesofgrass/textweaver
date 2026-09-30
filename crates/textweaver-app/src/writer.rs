@@ -16,6 +16,8 @@
 //!   bookshelf and recent-files updates when a document opens.
 //! - **Reading statistics** (`stats.json`) and **settings profiles**
 //!   (`profiles.toml`), Agent W3e.
+//! - **Document identity** (`sync-ids.json`, ADR-0049): hashing an opened
+//!   or saved file to find its sync id.
 //!
 //! Each job's result comes back as a [`Report`], which the app applies on
 //! its next [`App::tick`](crate::App::tick): "Saved", an error, or a
@@ -87,6 +89,14 @@ pub(crate) enum Job {
         /// Author, DOI, and ISBN from the document.
         meta: textweaver_store::library::DocMetadata,
         recent_limit: usize,
+    },
+    /// Find or make a document's sync id and keep its hashes in
+    /// `sync-ids.json` (ADR-0049). Hashing a file reads all of it, so it is
+    /// done here, never on the input thread.
+    Identify {
+        job: Box<textweaver_sync::Identify>,
+        /// The text as read, for its hash.
+        text: Option<ropey::Rope>,
     },
     /// Write the library sidecars' pending entries.
     SyncFlush(LibrarySync),
@@ -470,6 +480,10 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
                 (&title, &format, &meta),
                 recent_limit,
             );
+            None
+        }
+        Job::Identify { job, text } => {
+            job.run_logged(text.as_ref().map(ropey::Rope::chunks));
             None
         }
         Job::SyncFlush(sync) => {

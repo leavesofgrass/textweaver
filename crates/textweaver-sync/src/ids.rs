@@ -1,5 +1,5 @@
 //! Random 128-bit ids: [`DeviceId`] names a computer, [`SyncId`] names a
-//! document. Both are 32 lower-case hex digits and nothing else, so they are
+//! document, and [`LibraryId`] names a library folder. All are 32 lower-case hex digits and nothing else, so they are
 //! safe as file names in the sync folder and say nothing about the computer,
 //! its user, or the document's path.
 
@@ -113,10 +113,19 @@ hex_id!(
 
 hex_id!(
     /// A document's sync id: random, the same on every computer once the
-    /// document is recognized there. Assigning it is S2's identity module;
-    /// this crate only carries it.
+    /// document is recognized there ([`crate::docid`] finds or makes it).
     SyncId,
     "document id"
+);
+
+hex_id!(
+    /// A library folder's id: random, made the first time a document in
+    /// the folder is identified, and kept in the folder itself
+    /// (`.textweaver/library-id.json`), so the same folder reached as
+    /// `D:\Books` on one computer and `/home/student/Books` on another is
+    /// recognized as one ([`crate::docid`]).
+    LibraryId,
+    "library folder id"
 );
 
 hex_id!(

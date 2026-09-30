@@ -9211,6 +9211,7 @@ dependencies = [
  "textweaver-speech",
  "textweaver-store",
  "textweaver-summary",
+ "textweaver-sync",
  "textweaver-text",
  "textweaver-theme",
  "thiserror 2.0.21",
@@ -9632,6 +9633,7 @@ dependencies = [
  "proptest",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tempfile",
  "textweaver-core",
  "textweaver-store",
@@ -12299,6 +12301,7 @@ dependencies = [
  "textweaver-app",
  "textweaver-formats",
  "textweaver-keymap",
+ "textweaver-sync",
  "textweaver-text",
  "zip 8.6.0",
 ]
