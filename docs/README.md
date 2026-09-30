@@ -122,6 +122,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0045: A file browser on the list model](adr/0045-a-file-browser-on-the-list-model.md): folders and archives browsed as one list, a preview, and choosing folders for other commands; it never changes a file.
 - [ADR-0046: Native menus in the GUI](adr/0046-native-menus-in-the-gui.md): the window's menus from the app's one model, native on Windows and macOS, a list on Linux, with the keys shown and handled by the keymap alone.
 - [ADR-0048: PDF annotations, links and forms](adr/0048-pdf-annotations-links-and-forms.md): PDF comments as notes, links, filled-in forms, captions, and sideways and tabular scans.
+- [ADR-0049: Sync beyond the place](adr/0049-sync-beyond-the-place.md): notes, highlights, bookmarks, places, and portable settings synced through a folder you choose, each computer writing only its own files, with no account or server.
 
 ## Interactive pages
 

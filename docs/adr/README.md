@@ -96,6 +96,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted; waiting for session 4 and for the dialogs of the modules still to merge.
 - [ADR-0048: PDF annotations, links and forms](0048-pdf-annotations-links-and-forms.md): a PDF's comments as notes, as in Word; its links followed to headings and pages, outside addresses said; filled-in form fields read label first, then value; sideways scans turned upright; scanned tables as tables; and captions found by pattern.
   - Status: accepted; the owner's check 6 is still queued.
+- [ADR-0049: Sync beyond the place](0049-sync-beyond-the-place.md): notes, highlights, bookmarks, places, statistics, portable settings, and word lists synced through a folder the owner chooses, each computer writing only its own files, a hybrid logical clock, a merge rule per kind of data (the newest note edit wins, said, with a local backup), documents recognized by content, and no names or paths in the folder.
+  - Status: accepted.
 
 ## Writing a new ADR
 
