@@ -690,6 +690,10 @@ Say ""
 # drive).
 $scratch = Join-Path (Join-Path $repo 'target') ("tw-xuia-" + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Force $scratch | Out-Null
+# The GUI's temporary files go there too: a debug build of Masonry writes
+# a full trace log to the temporary folder on every start.
+$env:TMP = $scratch
+$env:TEMP = $scratch
 $logFile = Join-Path $scratch 'gui.log'
 if ($WindowEdge) {
     # Three GUI windows (120,000 units each) of plain paragraphs, about 240
@@ -716,6 +720,10 @@ $foregroundBefore = [TwXUia]::GetForegroundWindow()
 $guiPid = [TwXUia]::LaunchInactive($Exe, $guiArgs, $repo)
 [TwXUia]::ListenFor($guiPid)
 $failures = New-Object System.Collections.Generic.List[string]
+# Found, not yet fixed, so not failures: the window coming to the front
+# after a button is pressed through UI Automation (W6a6; reproduced on
+# main before the menus existed).
+$warnings = New-Object System.Collections.Generic.List[string]
 $launchedAt = Get-Date
 # Held from the start, so the exit code can still be read if the GUI ends
 # early; reading Handle now keeps the process handle open.
@@ -1012,6 +1020,12 @@ try {
 
     Start-Sleep -Milliseconds 300
     [TwXUia]::StopLivePolling()
+    # The dialogs, the menus, and the list must not have brought the
+    # window forward either.
+    $stoleLater = [TwXUia]::IsForeground($guiPid)
+    Say "- Took the foreground by the end: $stoleLater"
+    Say ""
+    if ($stoleLater -and -not $stoleFocus) { $warnings.Add('the GUI came to the foreground after buttons were pressed through UI Automation') }
     [TwXUia]::Close($frame)
 } catch {
     # The probe stopped early, most often because the GUI exited. Say why,
@@ -1047,6 +1061,72 @@ try {
         Say "(the GUI did not exit when closed and was stopped)"
         $failures.Add('did not exit when closed')
     }
+}
+
+# W6a6: the command palette, in a second, silent run (a dialog closes only
+# with Escape, and the report types no keys, so the first run's font list
+# would stand in front of it). The Commands button opens it; its list is
+# the app's candidates, each read name first with its category ("Open,
+# File: Open a document. Ctrl+O."), and one row is the selected option.
+if (-not $WindowEdge) {
+    Say "### The command palette (a second run, silent; Commands button pressed; its list read with UI Automation)"
+    Say ""
+    $palHome = Join-Path $scratch 'palette'
+    $palLog = Join-Path $scratch 'palette.log'
+    $palArgs = "`"$Document`" --backend null --home `"$palHome`" --background --log-file `"$palLog`" --exit-after 60"
+    $palPid = [TwXUia]::LaunchInactive($Exe, $palArgs, $repo)
+    # Held from the start, so an early exit's code can be read.
+    $palProc = Get-Process -Id $palPid -ErrorAction SilentlyContinue
+    if ($palProc) { $null = $palProc.Handle }
+    try {
+        $pw = [TwXUia]::WaitForWindow($palPid, 30000)
+        if (-not $pw) {
+            $failures.Add('the palette run''s window did not appear')
+            $code = if ($palProc -and $palProc.HasExited) { $palProc.ExitCode } else { '(running)' }
+            Say "- The palette run's window did not appear; exit code: $code; arguments: $palArgs"
+            if (Test-Path -LiteralPath $palLog) { Fence @(Get-Content -LiteralPath $palLog | Select-Object -Last 15) }
+        } else {
+            Start-Sleep -Milliseconds 1200
+            $palFgStart = [TwXUia]::IsForeground($palPid)
+            Say "- Took the foreground on starting: $palFgStart"
+            if ($palFgStart) { $failures.Add('the palette run took the foreground on starting') }
+            if (-not [TwXUia]::PressStartingWith($pw, 'Commands')) {
+                Say "No Commands button."
+                $failures.Add('no Commands button')
+            } else {
+                Start-Sleep -Milliseconds 800
+                $plist = [TwXUia]::Find($pw, [System.Windows.Automation.ControlType]::List, 'Commands')
+                if (-not $plist) {
+                    Say "No list of commands."
+                    $failures.Add('the Commands button opened no list of commands')
+                } else {
+                    Say "- List: $([TwXUia]::Describe($plist))"
+                    $popts = [TwXUia]::Options($plist)
+                    $sample = @()
+                    foreach ($i in @(0, 1, 2, 3)) { if ($i -lt $popts.Count) { $sample += [TwXUia]::OptionLine($popts[$i]) } }
+                    Say "- $($popts.Count) commands; the first, as a screen reader finds them:"
+                    Say ""
+                    Fence $sample
+                    if ($popts.Count -lt 100) { $failures.Add("the palette lists only $($popts.Count) commands") }
+                    $selected = @($popts | Where-Object { [TwXUia]::OptionLine($_) -match ', selected' })
+                    if ($selected.Count -ne 1) { $failures.Add("the palette has $($selected.Count) selected rows, not 1") }
+                    $unnamed = @($popts | Select-Object -First 20 | Where-Object { $_.Current.Name -notmatch '^[^,]+, [^:]+: ' })
+                    if ($unnamed.Count -gt 0) { $failures.Add("a palette row is not name first with its category: $([TwXUia]::Q($unnamed[0].Current.Name))") }
+                }
+            }
+            $palFgEnd = [TwXUia]::IsForeground($palPid)
+            Say "- Took the foreground with the palette open: $palFgEnd"
+            if ($palFgEnd -and -not $palFgStart) { $warnings.Add('the palette run came to the foreground after the Commands button was pressed through UI Automation') }
+            [TwXUia]::Close([IntPtr]$pw.Current.NativeWindowHandle)
+        }
+    } finally {
+        $pp = Get-Process -Id $palPid -ErrorAction SilentlyContinue
+        if ($pp -and -not $pp.WaitForExit(15000)) {
+            Stop-Process -Id $palPid -Force
+            $failures.Add('the palette run did not exit when closed')
+        }
+    }
+    Say ""
 }
 
 Say "### Announcements: message elements (new Text elements, polled every 50 ms, with their live setting) and Notification events"
@@ -1120,6 +1200,7 @@ if ($scratch -and (Split-Path -Leaf $scratch) -like 'tw-xuia-*') {
 Say "### Result"
 Say ""
 if ($failures.Count -eq 0) { Say "PASS: every check passed." } else { Say "FAIL:"; foreach ($f in $failures) { Say "- $f" } }
+if ($warnings.Count -gt 0) { Say ""; Say "Warnings (known, not yet fixed):"; foreach ($w in $warnings) { Say "- $w" } }
 
 try { [System.Windows.Automation.Automation]::RemoveAllEventHandlers() } catch { }
 $text = $report -join "`n"

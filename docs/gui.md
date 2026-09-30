@@ -27,6 +27,7 @@ Useful options:
 - `--announce live` or `--announce uia`: how messages reach your screen reader, for this run (see [Announcements](#announcements)).
 - `--select-spoken`: while reading, select the spoken word instead of only moving the caret to it (see [The spoken word](#the-spoken-word)).
 - `--home FOLDER`: keep settings and reading positions in this folder, as `TEXTWEAVER_HOME` does.
+- `--list-menus`: show the menus as a list inside the window (F10), as on Linux, instead of the system's menu bar.
 - `--graphics API`: draw with one graphics API only: `vulkan`, `dx12` (Windows), `metal` (macOS), or `gl`; `auto`, the default, lets the graphics library use every one it finds. On the development machine `vulkan` used about 26 MB less memory, but this depends on your graphics driver. To keep a choice, put `graphics = "vulkan"` in the `[gui]` section of `settings.toml`.
 - `--log` or `--log-file PATH`: write what the window announces and does, for a bug report.
 
@@ -95,7 +96,7 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **F11** and **Shift+F11**: faster and slower (or **+** and **-** in browse). In the window, Ctrl+= and Ctrl+- size the text instead of the rate.
 - **Ctrl+Shift+V**: the voice manager (see [Voices](#voices)).
 - **Ctrl+,**: settings.
-- **F2**: the command palette, every command by name.
+- **F2**: the command palette, every command by name, each with its category and key ("Export PDF, File: ..."). Type to filter; Up and Down say each match; Tab or Ctrl+L moves to the list of matches, where your screen reader reads each with its place; Enter runs one. With nothing typed, the commands you ran last from the palette or the menus come first, marked "recent".
 - **F1**: help. In a list, F1 repeats the list's introduction.
 - **Alt+End**: say the last message and the status. In a list, it repeats the list's introduction too.
 - **Alt+'**: say the last message again.

@@ -149,6 +149,9 @@ pub struct Experiments {
     /// How announcements reach the screen reader (`--announce`); `None`
     /// follows the `[gui] announce` setting, and then the live region.
     pub announce: Option<AnnounceMode>,
+    /// The menus as a list in the window (F10), as on Linux, instead of the
+    /// system's menu bar (`--list-menus`).
+    pub list_menus: bool,
 }
 
 /// Wakes the event loop.
@@ -310,6 +313,8 @@ pub struct Gui {
     fixed_theme: bool,
     /// Settings opens the app's list instead of the dialog.
     settings_list: bool,
+    /// The menus are the in-window list, not the system's menu bar.
+    list_menus: bool,
     /// The window title last set.
     window_title: String,
     /// The ticker starts once the window exists (in `on_start`).
@@ -1429,7 +1434,7 @@ impl Gui {
     /// the window (Windows and macOS); elsewhere the menu key shows the
     /// list menu.
     fn attach_menus(&mut self, ctx: &mut DriverCtx<'_>) {
-        if !crate::menus::NATIVE {
+        if !crate::menus::NATIVE || self.list_menus {
             return;
         }
         let started = Instant::now();
@@ -2125,7 +2130,8 @@ impl Gui {
                 label(&c.tr("gui-palette-hint"), theme::UI_TEXT, false).accessibility_hidden(true),
             ));
         let card = NewWidget::new(card).with_props(dialog::card_props(p));
-        let modal = NewWidget::new(Modal::new(card, label_text, p.clone())).erased();
+        let modal = NewWidget::new(Modal::new(card, label_text, p.clone()).with_show_matches(true))
+            .erased();
         self.show_dialog(ctx, modal, field_id);
         self.dialog = Some(OpenDialog::Palette(ids));
         if self.log {
@@ -2806,6 +2812,20 @@ impl AppDriver for Gui {
                     }
                     return;
                 }
+                DialogAction::ShowMatches => {
+                    // The palette's matches, in context: the focus moves
+                    // to the list, whose selected row the screen reader
+                    // reads with its place ("3 of 12").
+                    if matches!(self.dialog, Some(OpenDialog::Palette(_))) {
+                        let root = ctx.render_root(self.window_id);
+                        let list = root.get_widget_with_tag(LIST).map(|w| w.id());
+                        root.focus_on(list);
+                        if self.log {
+                            crate::log::line("palette: the list of matches");
+                        }
+                    }
+                    return;
+                }
                 DialogAction::Chord(c) => {
                     let c = *c;
                     self.list_chord(ctx, c);
@@ -2837,7 +2857,8 @@ impl AppDriver for Gui {
                     | DialogAction::Recall(_)
                     | DialogAction::Complete
                     | DialogAction::Chord(_)
-                    | DialogAction::Answer(_),
+                    | DialogAction::Answer(_)
+                    | DialogAction::ShowMatches,
                     _,
                 ) => return,
             };
@@ -3090,6 +3111,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         theme_key,
         system,
         settings_list: experiments.settings_list,
+        list_menus: experiments.list_menus,
         announce,
         held_notices: Vec::new(),
         return_focus: None,

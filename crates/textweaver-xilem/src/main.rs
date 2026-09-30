@@ -84,6 +84,10 @@ struct Args {
     /// it, instead of the settings dialog (for comparison).
     #[arg(long)]
     settings_list: bool,
+    /// Show the menus as a list inside the window (F10), as on Linux,
+    /// instead of the system's menu bar.
+    #[arg(long)]
+    list_menus: bool,
     /// How announcements reach the screen reader: `live` (a live region;
     /// the default) or `uia` (UI Automation Notification events, Windows
     /// only). Overrides the `[gui] announce` setting.
@@ -234,6 +238,7 @@ fn main() {
             edit_role: args.edit_role,
             app_list_announcements: args.app_list_announcements,
             settings_list: args.settings_list,
+            list_menus: args.list_menus,
             announce: args.announce,
         },
         theme: args.theme,
