@@ -612,7 +612,7 @@ fn a_question_is_a_dialog_with_yes_and_no() {
 
 /// The voice manager (Ctrl+Shift+V in the window) is the app's list: the
 /// language and engine filter rows first, then the voices. In its dialog,
-/// Enter, Space (a favourite), and Delete (a downloaded voice) go to the
+/// Enter, Space (a favorite), and Delete (a downloaded voice) go to the
 /// app's list model, as in the terminal.
 #[test]
 fn the_voice_manager_is_the_apps_list_with_its_keys() {

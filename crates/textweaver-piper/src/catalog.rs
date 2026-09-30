@@ -280,7 +280,7 @@ impl Licence {
         )
     }
 
-    /// A sentence to read before downloading: "Licence: CC BY 4.0. Free to
+    /// A sentence to read before downloading: "License: CC BY 4.0. Free to
     /// use; credit the voice's authors."
     pub fn describe(&self) -> String {
         let what = match self.kind {
@@ -293,9 +293,9 @@ impl Licence {
             LicenceKind::Unknown => "Read the licence before using this voice.",
         };
         if self.text.is_empty() {
-            format!("Licence not stated. {what}")
+            format!("License not stated. {what}")
         } else {
-            format!("Licence: {}. {what}", self.text)
+            format!("License: {}. {what}", self.text)
         }
     }
 }
@@ -375,7 +375,7 @@ pub(crate) mod tests {
         assert_eq!(l.text, "CC0");
         assert_eq!(l.kind, LicenceKind::PublicDomain);
         assert!(l.may_bundle());
-        assert_eq!(l.describe(), "Licence: CC0. Free to use for anything.");
+        assert_eq!(l.describe(), "License: CC0. Free to use for anything.");
 
         let cases = [
             ("CC BY 4.0", LicenceKind::Attribution),
@@ -405,7 +405,7 @@ pub(crate) mod tests {
         let none = Licence::from_model_card("# no licence here");
         assert_eq!(none.kind, LicenceKind::Unknown);
         assert!(!none.may_bundle());
-        assert!(none.describe().starts_with("Licence not stated."));
+        assert!(none.describe().starts_with("License not stated."));
     }
 
     #[test]

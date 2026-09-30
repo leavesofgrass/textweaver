@@ -415,7 +415,7 @@ impl VoiceManager {
     }
 }
 
-/// "Joe (medium), en-US, Piper, medium, favourite, current", or for a
+/// "Joe (medium), en-US, Piper, medium, favorite, current", or for a
 /// download "Amy (low), en-US, Piper, download 63 MB, non-commercial".
 /// `engine` names the engine (when the list has several).
 pub fn entry_label(e: &VoiceEntry, engine: bool, favourite: bool, current: bool) -> String {
@@ -626,7 +626,7 @@ mod tests {
                 "Engine: all engines",
                 "Microsoft Zira, en-US, SAPI 5, current",
                 "Microsoft Hedda, de-DE, SAPI 5",
-                "Joe (medium), en-US, Piper, medium, favourite",
+                "Joe (medium), en-US, Piper, medium, favorite",
                 "Amy (low), en-US, Piper, low, download 63 MB, non-commercial",
             ]
         );

@@ -12,7 +12,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `speech.pitch`: default 0 semitones. Pitch. Higher or lower than the voice's own pitch. From -12 to 12 semitones, in steps of 1.
 - `speech.voice`: default not set. Voice. The voice's id; not set picks one automatically. Choose Voice lists them. Text; empty means not set.
 - `speech.prefer_voice`: default `"eloquence"`. Preferred voice. When no voice is set, the first voice whose name contains this, such as eloquence. Text; empty means not set.
-- `speech.favorite_voices`: default an empty list. Favourite voices. Voices listed first in Choose Voice, by id. A list of texts, such as `["a", "b"]`.
+- `speech.favorite_voices`: default an empty list. Favorite voices. Voices listed first in Choose Voice, by id. A list of texts, such as `["a", "b"]`.
 - `speech.punctuation`: default `"some"`. Punctuation. How much punctuation is spoken. Choices: `"none"`, `"some"`, `"all"`.
 - `speech.split_caps`: default off (`false`). Split capitals. Say words joined with capitals, such as TextWeaver, as separate words. On or off: `true` or `false`.
 - `speech.caps`: default a higher pitch (`"pitch"`). Capitals. How a capital letter is marked when characters are spoken and typed. Choices: `"none"` (not marked), `"tone"` (a tone), `"pitch"` (a higher pitch), `"say_cap"` (say cap).
@@ -24,7 +24,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `speech.verbosity`: default `"normal"`. Verbosity. How much textweaver says about what it does. Choices: `"low"`, `"normal"`, `"high"`.
 - `speech.eci.dictionaries`: default on (`true`). Eloquence dictionaries. The community pronunciation dictionaries for Eloquence: on, off, or a folder of your own. Choices: `true` (on), `false` (off). Other values may be written too.
 - `speech.eci.library`: default not set. Eloquence library. The ECI library to load; not set searches the usual places. Text; empty means not set.
-- `speech.eci.code_factory`: default off (`false`). Search Code Factory's Eloquence. Also look for Code Factory's Eloquence for Windows. Its licence may not cover other programs. On or off: `true` or `false`.
+- `speech.eci.code_factory`: default off (`false`). Search Code Factory's Eloquence. Also look for Code Factory's Eloquence for Windows. Its license may not cover other programs. On or off: `true` or `false`.
 - `speech.sapi.onecore`: default on (`true`). OneCore voices. Also list the Windows OneCore voices through SAPI 5. On or off: `true` or `false`.
 - `speech.apple.backend`: default automatic (`"auto"`). Apple speech engine. Which of Apple's speech engines to use on macOS. Choices: `"auto"` (automatic), `"nsspeech"` (NSSpeechSynthesizer), `"avspeech"` (AVSpeechSynthesizer).
 - `speech.dectalk.library`: default not set. DECtalk library. The DECtalk library to load; not set searches the usual places. Text; empty means not set.

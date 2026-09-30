@@ -834,8 +834,8 @@ voices-licence-public-domain = public domain
 voices-licence-attribution = free with credit
 voices-licence-share-alike = free with credit, share alike
 voices-licence-non-commercial = non-commercial
-voices-licence-unknown = licence shown before download
-voices-favourite = favourite
+voices-licence-unknown = license shown before download
+voices-favourite = favorite
 voices-current = current
 
 ## Language names in the voice manager's language filter.
@@ -887,7 +887,7 @@ voice-still-loading = The voices are still loading. The list opens when they are
 voice-list-failed = Could not list the voices: { $error }.
 # $shown is voices-shown ("12 voices: English, all engines."). Enter,
 # Space, Delete and Escape are the list's own keys.
-voice-manager-intro = Voice manager. { $shown } Enter uses a voice and speaks a sample, or downloads one; Space marks a favourite; Delete removes a downloaded voice; Escape closes.
+voice-manager-intro = Voice manager. { $shown } Enter uses a voice and speaks a sample, or downloads one; Space marks a favorite; Delete removes a downloaded voice; Escape closes.
 voice-more-ready = { $n } more voices from other engines are ready. Press Escape and open the voice manager again to see them.
 # $keys names the Choose Voice key.
 voice-ready = The voices are ready. { $keys } lists them.
@@ -899,7 +899,7 @@ voice-download-in-progress = A voice download is already in progress.
 voice-no-data-folder = There is no data folder to keep Piper voices in.
 voice-not-in-list = That voice is not in the Piper voice list any more.
 voice-download-start-failed = Could not start the download.
-voice-reading-licence = Reading the licence of { $voice }.
+voice-reading-licence = Reading the license of { $voice }.
 voice-remove-question = Remove the voice { $voice }? y or n
 voice-only-piper-removable = Only downloaded Piper voices can be removed.
 # $plan describes the download: the voice, its size and licence.
@@ -915,11 +915,11 @@ voice-download-stopped = The download stopped.
 voice-catalog-fetched = The Piper voice list has { $voices } voices in { $languages } languages. Choose Voice lists them.
 voice-catalog-failed = Could not download the voice list: { $error }.
 # $licence describes the voice's licence, in a sentence of its own.
-voice-installed = { $voice } is installed. { $licence } Choose Voice lists it.
+voice-installed = { $voice } is installed. { $license } Choose Voice lists it.
 voice-download-failed = Could not download { $voice }: { $error }.
-voice-only-voice-favourite = Only a voice can be a favourite.
-voice-favourite-added = { $voice } added to favourites.
-voice-favourite-removed = { $voice } removed from favourites.
+voice-only-voice-favourite = Only a voice can be a favorite.
+voice-favourite-added = { $voice } added to favorites.
+voice-favourite-removed = { $voice } removed from favorites.
 voice-chosen = Voice { $voice }.
 voice-chosen-rate = Voice { $voice }, { $wpm } words per minute.
 voice-fastest-rate = Fastest rate.
@@ -1544,7 +1544,7 @@ setting-speech-voice = Voice
 setting-speech-voice-help = The voice's id; not set picks one automatically. Choose Voice lists them.
 setting-speech-prefer-voice = Preferred voice
 setting-speech-prefer-voice-help = When no voice is set, the first voice whose name contains this, such as eloquence.
-setting-speech-favorite-voices = Favourite voices
+setting-speech-favorite-voices = Favorite voices
 setting-speech-favorite-voices-help = Voices listed first in Choose Voice, by id.
 setting-speech-punctuation = Punctuation
 setting-speech-punctuation-help = How much punctuation is spoken.
@@ -1581,7 +1581,7 @@ choice-speech-eci-dictionaries-false = off
 setting-speech-eci-library = Eloquence library
 setting-speech-eci-library-help = The ECI library to load; not set searches the usual places.
 setting-speech-eci-code-factory = Search Code Factory's Eloquence
-setting-speech-eci-code-factory-help = Also look for Code Factory's Eloquence for Windows. Its licence may not cover other programs.
+setting-speech-eci-code-factory-help = Also look for Code Factory's Eloquence for Windows. Its license may not cover other programs.
 setting-speech-sapi-onecore = OneCore voices
 setting-speech-sapi-onecore-help = Also list the Windows OneCore voices through SAPI 5.
 setting-speech-apple-backend = Apple speech engine

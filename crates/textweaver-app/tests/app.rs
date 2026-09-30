@@ -1114,7 +1114,7 @@ fn choose_voice_lists_the_voices_and_enter_speaks_a_sample() {
         ]
     );
     assert!(r.said.any(
-        "Voice manager. 2 voices: all languages, all engines. Enter uses a voice and speaks a sample, or downloads one; Space marks a favourite; Delete removes a downloaded voice; Escape closes."
+        "Voice manager. 2 voices: all languages, all engines. Enter uses a voice and speaks a sample, or downloads one; Space marks a favorite; Delete removes a downloaded voice; Escape closes."
     ));
     // The app says the focused item after the introduction (Wave 3: the
     // list model is the app's, for every frontend): the first voice, below
@@ -1189,23 +1189,23 @@ fn voice_manager_filter_rows_cycle() {
     assert!(r.said.any("2 voices: all languages, all engines."));
 }
 
-/// `speech.favorite_voices` puts favourites first in the voice list, and
+/// `speech.favorite_voices` puts favorites first in the voice list, and
 /// Space in the list adds or removes one (saved at once).
 #[test]
 fn favourite_voices_come_first_and_space_marks_them() {
     let mut r = rig(PROSE);
     r.act(ActionId::ChooseVoice);
     let effects = r.app.dispatch(Command::MarkItem(3));
-    assert!(r.said.any("Second voice added to favourites."));
+    assert!(r.said.any("Second voice added to favorites."));
     let Some(Effect::ShowList { items, .. }) = effects.first() else {
         panic!("{effects:?}");
     };
-    assert_eq!(&items[2..], &["Test voice", "Second voice, favourite"]);
-    // A filter row cannot be a favourite.
+    assert_eq!(&items[2..], &["Test voice", "Second voice, favorite"]);
+    // A filter row cannot be a favorite.
     r.app.dispatch(Command::MarkItem(0));
-    assert!(r.said.any("Only a voice can be a favourite."));
+    assert!(r.said.any("Only a voice can be a favorite."));
     assert_eq!(r.app.settings().speech.favorite_voices, ["second"]);
-    // Next time the favourite is first, and choosing by position follows.
+    // Next time the favorite is first, and choosing by position follows.
     r.app.dispatch(Command::Cancel);
     let effects = r.act(ActionId::ChooseVoice);
     let items = effects
@@ -1215,13 +1215,13 @@ fn favourite_voices_come_first_and_space_marks_them() {
             _ => None,
         })
         .unwrap();
-    assert_eq!(items[2..], ["Second voice, favourite", "Test voice"]);
+    assert_eq!(items[2..], ["Second voice, favorite", "Test voice"]);
     r.app.dispatch(Command::Choose(2));
     assert_eq!(r.app.settings().speech.voice.as_deref(), Some("second"));
     // Space again removes it; other lists say there is nothing to mark.
     r.act(ActionId::ChooseVoice);
     r.app.dispatch(Command::MarkItem(2));
-    assert!(r.said.any("Second voice removed from favourites."));
+    assert!(r.said.any("Second voice removed from favorites."));
     assert!(r.app.settings().speech.favorite_voices.is_empty());
     r.act(ActionId::KeyboardHelp);
     r.app.dispatch(Command::MarkItem(0));

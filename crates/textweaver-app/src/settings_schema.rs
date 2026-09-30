@@ -72,7 +72,7 @@ pub enum SettingKind {
         /// Empty means not set.
         optional: bool,
     },
-    /// A list of texts (favourite voices, library folders), typed as
+    /// A list of texts (favorite voices, library folders), typed as
     /// comma-separated items.
     List,
     /// A table of names and values (pronunciations, abbreviations, speed
@@ -293,7 +293,7 @@ pub const INFO: &[Info] = &[
     ),
     list(
         "speech.favorite_voices",
-        "Favourite voices",
+        "Favorite voices",
         "Voices listed first in Choose Voice, by id.",
     ),
     choice(
@@ -365,7 +365,7 @@ pub const INFO: &[Info] = &[
     toggle(
         "speech.eci.code_factory",
         "Search Code Factory's Eloquence",
-        "Also look for Code Factory's Eloquence for Windows. Its licence may not cover other programs.",
+        "Also look for Code Factory's Eloquence for Windows. Its license may not cover other programs.",
     ),
     toggle(
         "speech.sapi.onecore",
