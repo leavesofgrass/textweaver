@@ -34,7 +34,8 @@
 //! file (same size and modification time) is not hashed again.
 //!
 //! Nothing here writes a path or a file name to the sync folder: records
-//! carry hashes, and the title, DOI, and ISBN the document states.
+//! carry hashes, and the title, DOI, ISBN, author, and format the document
+//! states.
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -209,6 +210,20 @@ pub fn library_id(folder: &Path) -> Result<LibraryId, SyncError> {
     Ok(id)
 }
 
+/// A library folder's id when its id file is there and can be read, without
+/// making one: for looking documents up (the library list, "Continue
+/// reading") where nothing should be written.
+pub fn read_library_id(folder: &Path) -> Option<LibraryId> {
+    let file = library_id_file(folder);
+    if std::fs::metadata(&file).ok()?.len() > MAX_LIBRARY_ID_BYTES {
+        return None;
+    }
+    let bytes = std::fs::read(&file).ok()?;
+    serde_json::from_slice::<LibraryIdFile>(&bytes)
+        .ok()
+        .map(|f| f.library_id)
+}
+
 /// What recognizes one document here: its hashes, and the file's size and
 /// modification time when they were taken.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -225,8 +240,11 @@ pub struct Fingerprint {
     pub modified_ms: Option<u64>,
 }
 
-/// What a document says about itself: its title, DOI, and ISBN (from the
-/// document, as the bookshelf keeps them).
+/// What a document says about itself: its title, DOI, ISBN, author, and
+/// format (from the document, as the bookshelf keeps them), and when it was
+/// first added to the library here. These are the library details the
+/// record carries (ADR-0049): newest wins per detail, and the earliest
+/// "first added" wins.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Details {
     /// The title.
@@ -235,16 +253,44 @@ pub struct Details {
     pub doi: Option<String>,
     /// The ISBN, digits only (and a final `X` for an ISBN-10).
     pub isbn: Option<String>,
+    /// The author or authors.
+    pub author: Option<String>,
+    /// The kind of file, by the loader that reads it (`markdown`, `pdf`).
+    pub format: Option<String>,
+    /// When it was first added to the library on this computer
+    /// (milliseconds since 1970, UTC).
+    pub added_ms: Option<u64>,
 }
 
 impl Details {
-    fn pairs(&self) -> [(&'static str, Option<&str>); 3] {
+    fn pairs(&self) -> [(&'static str, Option<&str>); 5] {
         [
             (detail::TITLE, self.title.as_deref()),
             (detail::DOI, self.doi.as_deref()),
             (detail::ISBN, self.isbn.as_deref()),
+            (detail::AUTHOR, self.author.as_deref()),
+            (detail::FORMAT, self.format.as_deref()),
         ]
     }
+
+    /// Whether publishing these details would change `identity`: a detail
+    /// it lacks or holds differently, or an earlier "first added".
+    pub fn would_change(&self, identity: &DocIdentity) -> bool {
+        let detail_differs = self.pairs().into_iter().any(|(name, value)| {
+            clean_detail(value).is_some_and(|v| identity.detail(name) != Some(v.as_str()))
+        });
+        let earlier = self
+            .added_ms
+            .is_some_and(|a| identity.added.0.is_none_or(|b| a < b));
+        detail_differs || earlier
+    }
+}
+
+/// A detail as published: trimmed, not empty, at most
+/// [`crate::record::MAX_DETAIL_CHARS`] characters.
+fn clean_detail(value: Option<&str>) -> Option<String> {
+    let v = value.map(str::trim).filter(|v| !v.is_empty())?;
+    Some(v.chars().take(crate::record::MAX_DETAIL_CHARS).collect())
 }
 
 /// How a document's sync id was found.
@@ -409,7 +455,8 @@ impl IdentityIndex {
 impl DocRecord {
     /// Publishes a document's hashes and details at `stamp`: the newest
     /// hashes win, and older ones are kept a while
-    /// ([`crate::record::RECENT_HASHES`]).
+    /// ([`crate::record::RECENT_HASHES`]); a detail is set only when it
+    /// differs, and "first added" only ever moves earlier.
     pub fn publish_identity(&mut self, stamp: Stamp, fp: &Fingerprint, details: &Details) {
         let id = &mut self.identity;
         if let Some(h) = &fp.content_sha256 {
@@ -422,13 +469,15 @@ impl DocRecord {
             id.library.publish(h, stamp);
         }
         for (name, value) in details.pairs() {
-            let Some(v) = value.map(str::trim).filter(|v| !v.is_empty()) else {
+            let Some(v) = clean_detail(value) else {
                 continue;
             };
-            let v: String = v.chars().take(crate::record::MAX_DETAIL_CHARS).collect();
             if id.detail(name) != Some(v.as_str()) {
                 id.details.set(name, stamp, v);
             }
+        }
+        if let Some(a) = details.added_ms {
+            id.added.lower(a);
         }
     }
 }

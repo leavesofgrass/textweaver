@@ -345,6 +345,7 @@ fn two_chapters_with_one_isbn_are_not_matched_without_asking() {
         title: Some("Cells".into()),
         doi: None,
         isbn: isbn.clone(),
+        ..Details::default()
     };
     let a = laptop.put("ch1.md", body(100, "chapter one").as_bytes());
     let first = laptop.open(&a, &[], one.clone());
@@ -354,6 +355,7 @@ fn two_chapters_with_one_isbn_are_not_matched_without_asking() {
         title: Some("Tissues".into()),
         doi: None,
         isbn,
+        ..Details::default()
     };
     let b = lab.put("ch2.md", body(100, "chapter two").as_bytes());
     let second = lab.open(&b, &[], two.clone());
@@ -399,6 +401,7 @@ fn a_doi_is_suggested_too() {
         title: Some("Signal pathways".into()),
         doi: Some("10.1000/xyz123".into()),
         isbn: None,
+        ..Details::default()
     };
     let a = laptop.put("paper.md", b"the preprint");
     let first = laptop.open(&a, &[], d.clone());

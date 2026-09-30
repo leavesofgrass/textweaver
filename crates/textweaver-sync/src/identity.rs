@@ -132,6 +132,17 @@ impl Identity {
         Ok((id, event))
     }
 
+    /// This computer's saved id, without making one or writing anything:
+    /// for reading the sync folder (the library, "Continue reading", the
+    /// statistics) where writing is not wanted. `None` when there is no
+    /// marker, it cannot be read, or it was copied from another folder or
+    /// computer (that id belongs to the other computer).
+    pub fn peek(state_dir: &Path) -> Option<DeviceId> {
+        let bytes = std::fs::read(state_dir.join(MARKER_FILE)).ok()?;
+        let m: MarkerFile = serde_json::from_slice(&bytes).ok()?;
+        (m.fingerprint == fingerprint(state_dir)).then_some(m.device)
+    }
+
     /// Takes a fresh id and token and saves them (another installation
     /// holds this id in the sync folder).
     pub fn renew(&mut self) -> Result<(), SyncError> {
@@ -241,6 +252,18 @@ mod tests {
         let (a2, e) = Identity::load_or_create(state.path()).unwrap();
         assert_eq!(e, IdentityEvent::Loaded);
         assert_eq!(a2.device(), a.device());
+        // Peeking reads the id only where it belongs.
+        assert_eq!(Identity::peek(state.path()), Some(a.device()));
+        let copy2 = tempfile::tempdir().unwrap();
+        std::fs::copy(
+            state.path().join(MARKER_FILE),
+            copy2.path().join(MARKER_FILE),
+        )
+        .unwrap();
+        assert_eq!(Identity::peek(copy2.path()), None);
+        let empty = tempfile::tempdir().unwrap();
+        assert_eq!(Identity::peek(empty.path()), None);
+        assert!(!empty.path().join(MARKER_FILE).exists(), "nothing written");
     }
 
     #[test]
