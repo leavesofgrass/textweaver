@@ -526,10 +526,6 @@ mod native {
         for top in tree {
             let sub = Submenu::new(title_text(&top.title), true);
             fill(&sub, &top.entries)?;
-            #[cfg(target_os = "macos")]
-            if top.id == textweaver_app::menu::MenuId::Help {
-                sub.set_as_help_menu_for_nsapp();
-            }
             menu.append(&sub).map_err(|e| e.to_string())?;
         }
         Ok(menu)

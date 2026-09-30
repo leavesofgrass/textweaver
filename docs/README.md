@@ -118,6 +118,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0041: Publishing templates, real Word footnotes, and PDF page labels](adr/0041-publishing-templates.md): APA, AMA, and reading templates for EPUB, Word, and PDF, Word footnotes, the EPUB cover, and print page labels.
 - [ADR-0043: Menus and the palette from one model](adr/0043-menus-and-the-palette-from-one-model.md): menus from one model, the palette's names and ranking, interface announcements, macOS keys, and colors.
 - [ADR-0044: Obsidian, JSON, SVG and content MathML in the reader](adr/0044-obsidian-json-svg-and-content-mathml.md): Obsidian notes, JSON and notebooks, SVG drawings, content MathML, and more LaTeX, read natively.
+- [ADR-0046: Native menus in the GUI](adr/0046-native-menus-in-the-gui.md): the window's menus from the app's one model, native on Windows and macOS, a list on Linux, with the keys shown and handled by the keymap alone.
 
 ## Interactive pages
 
