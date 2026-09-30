@@ -8,6 +8,10 @@
 //!   devices/<device-id>/
 //!     device.json                   label, app version, install token
 //!     docs/<sync-id>.json           this computer's merged view of a document
+//!     settings.json, profiles.json, keymap.json,
+//!     words.json, glossary.json, voices.json
+//!                                   its merged view of each group
+//!                                   (crate::groups)
 //! ```
 //!
 //! The rules (ADR-0049):
@@ -35,6 +39,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::docid::IdentityIndex;
+use crate::groups::{GroupFile, GroupRecord};
 use crate::record::{FORMAT, MAX_RECORD_BYTES};
 use crate::{
     Clock, ClockAhead, DeviceId, DocRecord, Identity, InstallToken, MergeReport, SyncError, SyncId,
@@ -109,6 +114,8 @@ pub enum FileKind {
     Device,
     /// A computer's record of a document.
     Doc(SyncId),
+    /// A computer's file of a group (settings, profiles, and so on).
+    Group(GroupFile),
 }
 
 /// Something found while reading the folder, for the app to report. None
@@ -154,6 +161,7 @@ impl std::fmt::Display for Problem {
                     FileKind::Format => "format file".to_owned(),
                     FileKind::Device => "computer file".to_owned(),
                     FileKind::Doc(id) => format!("document {id}"),
+                    FileKind::Group(g) => format!("group file {}", g.file_name()),
                 };
                 write!(f, "Damaged file skipped: {what}")?;
                 if let Some(d) = device {
@@ -213,6 +221,7 @@ pub struct SyncFolder {
     device: DeviceId,
     read_only: Option<ReadOnly>,
     last_good: HashMap<(DeviceId, SyncId), DocRecord>,
+    last_good_groups: HashMap<(DeviceId, GroupFile), GroupRecord>,
     /// Computers seen this session with stamps more than a day ahead, and
     /// by how much at most.
     ahead: BTreeMap<DeviceId, u64>,
@@ -313,6 +322,7 @@ impl SyncFolder {
             device: identity.device(),
             read_only,
             last_good: HashMap::new(),
+            last_good_groups: HashMap::new(),
             ahead: BTreeMap::new(),
         };
         if folder.read_only.is_none() {
@@ -370,6 +380,10 @@ impl SyncFolder {
         self.device_dir(device)
             .join(DOCS_DIR)
             .join(format!("{sync_id}.json"))
+    }
+
+    fn group_path(&self, device: DeviceId, group: GroupFile) -> PathBuf {
+        self.device_dir(device).join(group.file_name())
     }
 
     fn read_device_at(root: &Path, device: DeviceId) -> Result<DeviceInfo, SyncError> {
@@ -554,6 +568,101 @@ impl SyncFolder {
         }
         let bytes = record.to_bytes()?;
         textweaver_store::atomic_write(&self.doc_path(self.device, record.sync_id), &bytes)?;
+        Ok(())
+    }
+
+    /// Reads every computer's file of `group`, this computer's included. A
+    /// damaged file is skipped and reported, and the last good copy read in
+    /// this session is used instead; a newer one is skipped and reported.
+    pub fn read_group(&mut self, group: GroupFile) -> (Vec<(DeviceId, GroupRecord)>, Vec<Problem>) {
+        let mut records = Vec::new();
+        let mut problems = Vec::new();
+        for d in self.device_ids() {
+            let path = self.group_path(d, group);
+            match read_limited(&path, MAX_RECORD_BYTES).and_then(|b| GroupRecord::from_bytes(&b)) {
+                Ok(record) => {
+                    self.last_good_groups.insert((d, group), record.clone());
+                    records.push((d, record));
+                }
+                Err(e) if not_found(&e) => {}
+                Err(SyncError::NewerFormat { found }) => problems.push(Problem::NewerFormat {
+                    device: d,
+                    file: FileKind::Group(group),
+                    found,
+                }),
+                Err(e) => {
+                    let last = self.last_good_groups.get(&(d, group)).cloned();
+                    log::warn!("sync: skipped a damaged group file ({e})");
+                    problems.push(Problem::Damaged {
+                        device: Some(d),
+                        file: FileKind::Group(group),
+                        reason: e.to_string(),
+                        kept_last_good: last.is_some(),
+                    });
+                    if let Some(record) = last {
+                        records.push((d, record));
+                    }
+                }
+            }
+        }
+        (records, problems)
+    }
+
+    /// Merges every computer's file of `group` into `local`, in order of
+    /// computer id, and lists what changed. `clock` takes in every stamp,
+    /// and a computer far ahead is reported as by
+    /// [`merge_doc`](Self::merge_doc).
+    pub fn merge_group(
+        &mut self,
+        group: GroupFile,
+        local: &mut GroupRecord,
+        clock: &mut Clock,
+    ) -> (Vec<crate::groups::GroupChange>, Vec<Problem>) {
+        let (records, mut problems) = self.read_group(group);
+        let mut changes = Vec::new();
+        for (_, record) in &records {
+            for stamp in record.stamps() {
+                if let Some(w) = clock.observe(stamp) {
+                    let seen = self.ahead.entry(w.device).or_insert(0);
+                    if *seen == 0 {
+                        problems.push(Problem::ClockAhead(w));
+                    }
+                    *seen = (*seen).max(w.ahead_ms);
+                }
+            }
+            changes.extend(local.merge(record));
+        }
+        (changes, problems)
+    }
+
+    /// The size and modification time of every other computer's file of
+    /// `group`, to notice a change without reading it.
+    pub fn group_signature(
+        &self,
+        group: GroupFile,
+    ) -> Vec<(DeviceId, u64, Option<std::time::SystemTime>)> {
+        self.device_ids()
+            .into_iter()
+            .filter(|d| *d != self.device)
+            .map(|d| {
+                let meta = std::fs::metadata(self.group_path(d, group)).ok();
+                (
+                    d,
+                    meta.as_ref().map_or(0, std::fs::Metadata::len),
+                    meta.and_then(|m| m.modified().ok()),
+                )
+            })
+            .collect()
+    }
+
+    /// Writes this computer's merged view of `group`, by atomic replace.
+    /// Refused when sync is read-only.
+    pub fn write_group(&self, group: GroupFile, record: &GroupRecord) -> Result<(), SyncError> {
+        if let Some(r) = self.read_only {
+            return Err(SyncError::ReadOnly(r));
+        }
+        let bytes = record.to_bytes()?;
+        textweaver_store::atomic_write(&self.group_path(self.device, group), &bytes)?;
         Ok(())
     }
 }

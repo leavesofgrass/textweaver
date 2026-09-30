@@ -19,6 +19,9 @@
 //!   its own files, by atomic replace, and never deletes or changes another
 //!   computer's. Damaged files are skipped and reported; a newer format
 //!   makes sync read-only.
+//! - [`groups`]: the groups that are not about one document (portable
+//!   settings, profiles, key overrides, the word list, the glossary and
+//!   pronunciations, favorite voices), one file per group and computer.
 //! - [`docid`]: document identity. Each document gets a random sync id,
 //!   found by the file's SHA-256, then the SHA-256 of its text, then its
 //!   library folder's id and path inside it; a DOI or ISBN is only
@@ -39,6 +42,7 @@
 mod clock;
 pub mod docid;
 pub mod folder;
+pub mod groups;
 mod identity;
 mod ids;
 pub mod merge;
@@ -47,6 +51,7 @@ pub mod record;
 pub use clock::{AHEAD_LIMIT_MS, Clock, ClockAhead, Stamp, wall_ms};
 pub use docid::{Found, Identify, IdentityIndex, Resolved, Suggestion};
 pub use folder::{DeviceInfo, DocRead, FileKind, Merged, Opened, Problem, ReadOnly, SyncFolder};
+pub use groups::{GroupChange, GroupFile, GroupRecord};
 pub use identity::{
     DEFAULT_LABEL_WORD, Identity, IdentityEvent, MARKER_FILE, MAX_LABEL_CHARS, check_label,
     default_label, local_names,

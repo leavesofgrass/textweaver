@@ -581,3 +581,68 @@ fn labels_are_checked_when_opening() {
         Err(SyncError::FolderMissing)
     ));
 }
+
+/// Group files (settings, word lists, and the rest; sync wave S5): each
+/// computer writes only its own, merges everyone's, and a damaged or
+/// newer one is skipped and reported, the last good copy used.
+#[test]
+fn group_files_merge_and_damaged_ones_are_skipped() {
+    use textweaver_sync::{GroupFile, GroupRecord};
+    let mut laptop = Computer::new("laptop");
+    let mut lab = Computer::new("lab");
+    let mut mine = GroupRecord::new();
+    let s = laptop.stamp(wall_ms());
+    mine.set_mut("words").insert("mitochondrion", s);
+    laptop.folder.write_group(GroupFile::Words, &mine).unwrap();
+    let mut theirs = GroupRecord::new();
+    let s = lab.stamp(wall_ms());
+    theirs.set_mut("words").insert("ribosome", s);
+    lab.folder.write_group(GroupFile::Words, &theirs).unwrap();
+    propagate(&[&laptop, &lab]);
+
+    let (changes, problems) =
+        laptop
+            .folder
+            .merge_group(GroupFile::Words, &mut mine, &mut laptop.clock);
+    assert!(problems.is_empty(), "{problems:?}");
+    assert_eq!(changes.len(), 1);
+    assert_eq!(changes[0].by, lab.folder.device());
+    let words: Vec<&str> = mine.set("words").unwrap().items().collect();
+    assert_eq!(words, ["mitochondrion", "ribosome"]);
+
+    // The lab's file arrives cut short, then from a newer textweaver.
+    let path = laptop
+        .sync_dir
+        .join(SYNC_DIR)
+        .join(DEVICES_DIR)
+        .join(lab.folder.device().to_string())
+        .join(GroupFile::Words.file_name());
+    let good = std::fs::read(&path).unwrap();
+    std::fs::write(&path, &good[..good.len() / 2]).unwrap();
+    let (records, problems) = laptop.folder.read_group(GroupFile::Words);
+    assert!(
+        matches!(
+            &problems[..],
+            [Problem::Damaged {
+                file: FileKind::Group(GroupFile::Words),
+                kept_last_good: true,
+                ..
+            }]
+        ),
+        "{problems:?}"
+    );
+    assert_eq!(records.len(), 2, "the last good copy is used");
+    std::fs::write(&path, b"{\"format\": 99}").unwrap();
+    let (_, problems) = laptop.folder.read_group(GroupFile::Words);
+    assert!(
+        matches!(
+            &problems[..],
+            [Problem::NewerFormat {
+                found: 99,
+                file: FileKind::Group(GroupFile::Words),
+                ..
+            }]
+        ),
+        "{problems:?}"
+    );
+}
