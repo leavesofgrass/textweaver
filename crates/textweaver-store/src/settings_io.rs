@@ -975,6 +975,7 @@ pub fn reset_sections(current: &Settings) -> Vec<String> {
         "lexicon",
         "stats",
         "summary",
+        "dictation",
         "interface",
         "gui",
         "colors",

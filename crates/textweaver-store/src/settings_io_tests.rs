@@ -889,3 +889,23 @@ fn export_format_follows_the_file_name() {
     );
     assert_eq!(ExportFormat::for_path(Path::new("a")), ExportFormat::Json);
 }
+
+/// Every section of `Settings` is either compared key by key (and can be
+/// reset alone) or is a map stored whole. A new section missing from
+/// `STRUCT_TABLES` would be saved whole and could not be reset by name.
+#[test]
+fn every_settings_section_is_known() {
+    // Tables that replace their default as a whole (maps, not sections).
+    const WHOLE: [&str; 0] = [];
+    let value = toml::Value::try_from(Settings::default()).unwrap();
+    let table = value.as_table().unwrap();
+    for (key, v) in table {
+        if !v.is_table() || WHOLE.contains(&key.as_str()) {
+            continue;
+        }
+        assert!(
+            STRUCT_TABLES.contains(&key.as_str()),
+            "[{key}] is a settings section missing from STRUCT_TABLES"
+        );
+    }
+}
