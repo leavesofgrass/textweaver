@@ -44,6 +44,10 @@ const FIXTURES: &[(&str, &str, usize)] = &[
     ("pptx", "fixtures/k/lesson.pptx", 1),
     ("sheet", "fixtures/k/grades.csv", 0),
     ("archive", "fixtures/w3d/course.7z", 0),
+    ("json", "fixtures/o/profile.json", 1),
+    ("notebook", "fixtures/o/growth.ipynb", 1),
+    ("mathml", "fixtures/o/growth.mml", 0),
+    ("svg", "fixtures/o/chart.svg", 0),
 ];
 
 fn root() -> PathBuf {
