@@ -880,10 +880,9 @@ pub(super) fn emit(
                 // figure's caption describes its picture, as in the LaTeX
                 // loader, so it is a graphic too (untagged pictures have no
                 // other sign), unless a tagged picture is beside it.
-                let figure =
-                    u.kind == (Kind::Caption { figure: true }) && !beside_picture(i);
-                let image = (u.kind == Kind::Image || figure)
-                    .then(|| b.open(marker(MarkerKind::Image)));
+                let figure = u.kind == (Kind::Caption { figure: true }) && !beside_picture(i);
+                let image =
+                    (u.kind == Kind::Image || figure).then(|| b.open(marker(MarkerKind::Image)));
                 // A paragraph set wholly in italic or bold (a byline, a
                 // caption, a callout) keeps its emphasis.
                 let emphasis: Vec<OpenId> =
