@@ -13,13 +13,13 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
 ## Steps
 
-1. **Listen.** A person listens on real hardware before every release. Tests that fake the engine cannot hear a silent one, and tests never play audio. Go through [the listening checklist](#listening-checklist) below, then record it with the machine's date:
+1. **Listen, if you want to (optional).** A release does not wait for a listening check (the owner's decision, Wednesday, September 30, 2026). Tests that fake the engine cannot hear a silent one, so a listen on real hardware is still worth doing when speech has changed a lot. When you do one, go through [the listening checklist](#listening-checklist) below and record it:
 
    ```bash
    cargo xtask release 0.1.0-alpha.5 --listened
    ```
 
-   This writes today's date and the version on the "Last listening check" line of this guide, and changes nothing else. Commit it. The release in the next step stops unless that line names the version being released and is at most 14 days old.
+   This writes today's date and the version on the "Last listening check" line of this guide, and changes nothing else. The release prints a note when that line is old or for another version, and goes on.
 
 2. **Prepare.** Before you start, run the checks CI runs, locally: `scripts/dev-check.sh` on Linux or macOS (`--docker` for the full Linux set), or `scripts\dev-check.ps1` on Windows. They include the link check and the site data check. Then, on `main`, with a clean tree and CI green, try the release without changing anything:
 
@@ -35,7 +35,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
    This:
 
-   - stops unless the tree is clean and on `main`, the listening check is recorded for this version, and the changelog is grouped by area (below);
+   - stops unless the tree is clean and on `main` and the changelog is grouped by area (below), and notes an old or missing listening check without stopping;
    - sets `version` in `[workspace.package]` in the root `Cargo.toml` and runs `cargo update -w`;
    - turns `## [Unreleased]` in `CHANGELOG.md` into `## [0.1.0-alpha.5] - YYYY-MM-DD`, keeps an empty `[Unreleased]` above it, and adds the release link. The date comes from the machine's clock in local time, and the weekday is computed and printed so you can check it. It is never typed in;
    - updates the version examples in this guide, `docs/install.md`, the README, the crate map (`docs/site/architecture.html`), and the workflows, and lists every other line that still names the old version, so a file that should follow the release is seen in the dry run (lines that record history stay as they are);
@@ -52,7 +52,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    gh workflow run release.yml --ref BRANCH
    ```
 
-   Download the artifacts from the run's page (or `gh run download RUN_ID`), and start each package once: the GUI with a screen reader on Windows, and the terminal reader on each system you use. Do this before every release that changes the packages, and at least once for a release with new packages.
+   Download the artifacts from the run's page (or `gh run download RUN_ID`), and start each package once: the GUI with a screen reader on Windows, and the terminal reader on each system you use. This is optional and never holds a release; it is most useful when the packages change.
 
 4. **Push.** Push the commit, then the tag:
 
@@ -80,7 +80,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 
 ## Listening checklist
 
-Do this before each release, on the machine you use every day, with Eloquence, SAPI 5, and Piper (and DECtalk if it is installed). Then record it with `cargo xtask release VERSION --listened`, which rewrites this line from the machine's clock:
+Optional. When you want to listen, do this on the machine you use every day, with Eloquence, SAPI 5, and Piper (and DECtalk if it is installed). Then record it with `cargo xtask release VERSION --listened`, which rewrites this line from the machine's clock:
 
 **Last listening check:** 2026-09-29 (Tuesday, September 29, 2026), for 0.1.0-alpha.5.
 

@@ -1,10 +1,11 @@
 //! `cargo xtask release X.Y.Z [--dry-run] [--no-checks]`: prepare a release
 //! commit and tag (docs/dev/releasing.md).
 //!
-//! 1. Checks that the working tree is clean and on `main`; that the
-//!    listening checklist in the release guide is dated, for this version,
-//!    within the last 14 days; and that the changelog's `[Unreleased]`
-//!    section is grouped by area, with no agent's heading left in it.
+//! 1. Checks that the working tree is clean and on `main`, and that the
+//!    changelog's `[Unreleased]` section is grouped by area, with no
+//!    agent's heading left in it. A listening check is optional: when the
+//!    release guide's listening line is missing, old, or for another
+//!    version, the release says so as a note and goes on.
 //! 2. Sets `version` in `[workspace.package]` and runs `cargo update -w`.
 //! 3. Turns `## [Unreleased]` in `CHANGELOG.md` into
 //!    `## [X.Y.Z] - YYYY-MM-DD`, dated from this machine's clock in local
@@ -16,13 +17,13 @@
 //! 6. Commits and makes the annotated tag `vX.Y.Z`. Nothing is pushed.
 //!
 //! `--dry-run` changes nothing: it prints what the release would do and the
-//! date it would use, and reports a dirty tree, another branch, or an
-//! undated listening check without stopping.
+//! date it would use, and reports a dirty tree or another branch without
+//! stopping.
 //!
-//! `cargo xtask release X.Y.Z --listened` records the listening check
-//! instead: it writes today's date, from the machine, and the version on
-//! the "Last listening check" line of the release guide, and does nothing
-//! else. Run it after listening, and commit the guide.
+//! `cargo xtask release X.Y.Z --listened` records an optional listening
+//! check instead: it writes today's date, from the machine, and the
+//! version on the "Last listening check" line of the release guide, and
+//! does nothing else.
 //!
 //! The date is never typed in or guessed: it comes from the machine
 //! (`date` or PowerShell's `Get-Date`), and the weekday is computed from it.
@@ -165,8 +166,10 @@ pub fn run() -> anyhow::Result<()> {
         problems.push(format!("the workspace is already at {old}"));
     }
     let guide = fs::read_to_string(root.join(GUIDE)).with_context(|| format!("reading {GUIDE}"))?;
+    // A listening check is optional (the owner's decision, Wednesday,
+    // September 30, 2026): an old or missing one is noted, never a stop.
     if let Err(e) = check_listening(&guide, &args.version, (y, m, d)) {
-        problems.push(e);
+        println!("Note, not a stop: {e}");
     }
     let changelog_path = root.join("CHANGELOG.md");
     let changelog = fs::read_to_string(&changelog_path)?;
