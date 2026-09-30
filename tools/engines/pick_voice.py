@@ -54,8 +54,16 @@ def main() -> int:
         if v["name"].startswith(ALLOWED_PREFIXES) and kind_of(v) == kind
         and not tags(v) & {"eloquence", "openevv"}
     ]
-    # English first: the fixture is English.
-    usable.sort(key=lambda v: not any(lang.lower().startswith("en") for lang in v.get("languages", [])))
+    # English first: the fixture is English. For OneCore, David last:
+    # Microsoft David (OneCore) shares its voice data with David Desktop
+    # (the SAPI 5 pick) and writes the same audio byte for byte, so the
+    # workflow's "two voices give different audio" check needs Mark or Zira.
+    def order(v: dict) -> tuple[bool, bool]:
+        english = any(lang.lower().startswith("en") for lang in v.get("languages", []))
+        david = kind == "onecore" and "david" in v["name"].casefold()
+        return (not english, david)
+
+    usable.sort(key=order)
     if not usable:
         names = ", ".join(v["name"] for v in voices) or "none"
         print(f"Skipped: this runner has no {kind} voice from Microsoft or eSpeak. Voices: {names}.")
