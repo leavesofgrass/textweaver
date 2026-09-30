@@ -184,6 +184,11 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 - `summary.sentences`: default 5 sentences. Summary sentences. How many sentences Summarize and tw summarize give, 1 to 50. From 1 to 50 sentences, in steps of 1.
 
+## Dictation: the `[dictation]` section
+
+- `dictation.speak_while_recording`: default off (`false`). Speak while dictating. Say dictated words as they come. Off, they are shown on the status line and said at each pause, so the microphone does not hear the voice. On or off: `true` or `false`.
+- `dictation.model_dir`: default not set. Dictation model folder. The Whisper model for dictation. Not set uses whisper/rten/base.en in the data folder. Text; empty means not set.
+
 ## Interface: the `[interface]` section
 
 - `interface.language`: default English (`"en"`). Interface language. The language of textweaver's own words, changed at once. The voice follows it when the engine has one for it; otherwise the voice stays. Choices: `"en"` (English), `"es"` (Español), `"fr"` (Français), `"de"` (Deutsch), `"pt"` (Português), `"ar"` (العربية), `"en-XA"` (test: accented), `"ar-XB"` (test: right to left). Other values may be written too.

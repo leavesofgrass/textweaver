@@ -84,10 +84,14 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: proposed; every check reports and none fails a job. Answers so far: NVDA through Guidepup and Orca read the GUI; the tree dump works on Windows and macOS.
 - [ADR-0041: Publishing templates, real Word footnotes, and PDF page labels](0041-publishing-templates.md): APA, AMA, large print, dyslexia-friendly, high contrast, and manuscript templates for EPUB, Word, and PDF, real Word footnotes, an EPUB cover with alternative text, and PDF pages labelled with their print pages.
   - Status: accepted; a check with Word and JAWS is still queued.
+- [ADR-0042: Streaming dictation and dictation in the reader](0042-streaming-dictation.md): speech found as the audio arrives, words committed while the speaker talks when two Whisper runs agree, a gate so short dictation is never slower than before, the Dictate command in edit mode with a 40-cell status line, nothing lost at close, and why the shortened encoder is not used.
+  - Status: accepted; the voice while recording waits for a listening session with a microphone.
 - [ADR-0043: Menus and the palette from one model](0043-menus-and-the-palette-from-one-model.md): the menus of both frontends from one model with catalog labels and live keys, the palette's names and ranking, interface announcements with levels, logical keys on macOS, and colors in the settings.
   - Status: accepted; waiting for the terminal session and the GUI's native menus.
 - [ADR-0044: Obsidian, JSON, SVG and content MathML in the reader](0044-obsidian-json-svg-and-content-mathml.md): Obsidian callouts, embeds, tags, and block ids read natively, with the callout rules shared with the renderer; JSON, JSON Lines, and notebooks; SVG drawings as SVG-AAM exposes them; content MathML; and LaTeX macros with arguments and bibliographies.
   - Status: accepted; the owner's documents check is still queued.
+- [ADR-0045: A file browser on the list model](0045-a-file-browser-on-the-list-model.md): one list that enters and leaves folders and archives, rows that say the name first, members addressed as `course.zip!week1/notes.md` and never extracted, a preview read in the background, folders and files chosen for other commands, and no file ever changed.
+  - Status: accepted; waiting for the terminal session.
 
 ## Writing a new ADR
 

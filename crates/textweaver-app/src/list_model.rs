@@ -61,6 +61,9 @@ pub struct ListModel {
     /// ("Open a document: Ctrl+O") keep both forms (crate::help), so the
     /// voice says "Control O". Empty when no item names a key.
     said: Vec<String>,
+    /// The position is said after the item ("notes.md, Markdown, 3 of
+    /// 40"), so a Braille line starts with the name (the file browser).
+    position_last: bool,
 }
 
 impl ListModel {
@@ -83,7 +86,15 @@ impl ListModel {
             items,
             selected: 0,
             said,
+            position_last: false,
         }
+    }
+
+    /// Says the position after each item instead of before it: "notes.md,
+    /// Markdown, 12 KB, 3 of 40", meaning first on a Braille line.
+    pub fn with_position_last(mut self) -> Self {
+        self.position_last = true;
+        self
     }
 
     /// Moves the focus by `delta`, clamped; returns true when it moved.
@@ -135,8 +146,13 @@ impl ListModel {
             .get(self.selected)
             .map(String::as_str)
             .or_else(|| self.current())?;
+        let id = if self.position_last {
+            "listmodel-item-position-last"
+        } else {
+            "listmodel-item-position"
+        };
         Some(c.fmt(
-            "listmodel-item-position",
+            id,
             &args!["item" => item, "k" => self.selected + 1, "n" => self.items.len()],
         ))
     }
@@ -194,8 +210,19 @@ pub enum ListKey {
     Rename,
     /// Says the list's introduction again (its title, how many items it
     /// has, and the keys it takes), then the focused item. The terminal
-    /// sends it for F1 and the Say Status key.
+    /// sends it for F1.
     Introduce,
+    /// The Say Status key: in the file browser, a preview of the focused
+    /// row (crate::browse); in other lists, as [`Introduce`](Self::Introduce).
+    Details,
+    /// The file browser's Choose Folder key (Ctrl+Enter): the focused
+    /// folder, or the one shown, goes to the command that asked for it.
+    ChooseHere,
+    /// The file browser's Sort key (Ctrl+R): name, date, size.
+    Sort,
+    /// The file browser's Show All key (Ctrl+A): every file, or readable
+    /// ones only.
+    ShowAll,
 }
 
 /// A key pressed in a prompt ([`Command::PromptKey`]).
@@ -452,7 +479,12 @@ impl App {
                         self.list_intro = None;
                     }
                     let mut view = ListModel::new(title.clone(), items.clone());
-                    if let Some(i) = keep.or(self.pending_list_focus.take()) {
+                    if self.list == Some(crate::app::ListKind::Browse) {
+                        view = view.with_position_last();
+                    }
+                    // A focus the app asked for wins over the one kept
+                    // (the file browser keeps its row when sorted).
+                    if let Some(i) = self.pending_list_focus.take().or(keep) {
                         view.selected = i.min(view.items.len().saturating_sub(1));
                     }
                     let item = self
@@ -500,6 +532,9 @@ impl App {
             return vec![Effect::Redraw];
         }
         if let Some(effects) = self.menu_list_key(key) {
+            return effects;
+        }
+        if let Some(effects) = self.browse_list_key(key) {
             return effects;
         }
         if self.settings_screen.is_some()
@@ -557,7 +592,9 @@ impl App {
                 return self.dispatch_inner(Command::Cancel);
             }
             ListKey::Delete => return self.list_item_command(Command::DeleteItem(n)),
-            ListKey::Introduce => return self.repeat_list_introduction(),
+            ListKey::Introduce | ListKey::Details => return self.repeat_list_introduction(),
+            // The file browser's own keys, elsewhere nothing.
+            ListKey::ChooseHere | ListKey::Sort | ListKey::ShowAll => return vec![Effect::Redraw],
             ListKey::Rename => return self.list_item_command(Command::RenameItem(n)),
             ListKey::Up => -1,
             ListKey::Down => 1,

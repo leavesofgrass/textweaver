@@ -20,6 +20,9 @@
 //!   the agreement, commit and announce path can be checked without a
 //!   model.
 //!
+//! `--window SECONDS` (W6d) loads the encoder cut to a shorter window
+//! (`RtenWhisper::load_with_window`), for every command.
+//!
 //! The model folder is `--model DIR`, or `TEXTWEAVER_WHISPER_RTEN`. Run:
 //!
 //! ```text
@@ -713,6 +716,7 @@ struct Opts {
     repeat: usize,
     encode_ms: f64,
     word_ms: f64,
+    window: usize,
     files: Vec<PathBuf>,
 }
 
@@ -739,6 +743,7 @@ fn parse_args() -> Result<Opts, String> {
         repeat: 1,
         encode_ms: 700.0,
         word_ms: 25.0,
+        window: 30,
         files: Vec::new(),
     };
     let mut args = std::env::args().skip(1);
@@ -760,6 +765,7 @@ fn parse_args() -> Result<Opts, String> {
             "--repeat" => o.repeat = (num(value(&mut args, &a)?, &a)? as usize).max(1),
             "--encode-ms" => o.encode_ms = num(value(&mut args, &a)?, &a)?,
             "--word-ms" => o.word_ms = num(value(&mut args, &a)?, &a)?,
+            "--window" => o.window = num(value(&mut args, &a)?, &a)? as usize,
             _ if o.command.is_empty() && !a.starts_with('-') => o.command = a,
             _ if !a.starts_with('-') => o.files.push(a.into()),
             _ => return Err(format!("Unknown option {a}")),
@@ -918,7 +924,8 @@ mod whisper {
         let files = RtenWhisperFiles::in_dir(dir).map_err(|e| e.to_string())?;
         print_memory("before loading");
         let t = Instant::now();
-        let w = RtenWhisper::load(&files).map_err(|e| e.to_string())?;
+        let w = RtenWhisper::load_with_window(&files, o.window).map_err(|e| e.to_string())?;
+        println!("Encoder window: {} s", o.window);
         println!("Model loaded in {:.2} s", t.elapsed().as_secs_f64());
         print_memory("after loading");
         Ok(w)

@@ -43,8 +43,9 @@ pub const BACKGROUND_OPEN_BYTES: u64 = 512 * 1024;
 /// How often a slow open says it is still going.
 pub const PROGRESS_EVERY: Duration = Duration::from_secs(3);
 
-/// What the loading thread sends back.
-type Loaded = Result<(Document, Option<FileStamp>), LoadError>;
+/// What the loading thread sends back: the document, the file's stamp,
+/// and the text's stamp (computed there, off the input thread).
+type Loaded = Result<(Document, Option<FileStamp>, textweaver_store::TextStamp), LoadError>;
 
 /// A document being opened in the background.
 pub(crate) struct Opening {
@@ -258,7 +259,10 @@ impl App {
                 let stamp = FileStamp::of(&owned);
                 let result = Registry::with_builtins()
                     .load(&Source::Path(owned), &options)
-                    .map(|doc| (doc, stamp));
+                    .map(|doc| {
+                        let text = crate::relocate::text_stamp(&doc);
+                        (doc, stamp, text)
+                    });
                 let _ = tx.send(result);
                 wake.wake();
             });
@@ -340,7 +344,7 @@ impl App {
             return Vec::new();
         };
         match result {
-            Ok((doc, stamp)) => self.adopt_loaded(&o.path, doc, stamp),
+            Ok((doc, stamp, text)) => self.adopt_loaded(&o.path, doc, stamp, Some(text)),
             Err(e) => {
                 let msg = open_failure_message_in(self.cat(), &o.path, &e);
                 self.error(&msg);
@@ -389,6 +393,56 @@ fn may_be_slow(path: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Opening never waits for the writer on the input thread (Wave 6,
+    /// W6f, from the performance lessons): with the disk stalled, a
+    /// document opened again finds its position from the queued save, at
+    /// once. Run with `--nocapture` for the numbers.
+    #[test]
+    fn opening_does_not_wait_for_a_slow_disk() {
+        use textweaver_core::CharPos;
+        use textweaver_store::{DocKey, Paths};
+
+        let tmp = tempfile::tempdir().unwrap();
+        let paths = Paths::under(&tmp.path().join("home"));
+        let mut app = App::new(crate::AppConfig {
+            paths: Some(paths),
+            ..crate::AppConfig::for_tests()
+        });
+        let text = "Word after word, sentence after sentence. ".repeat(250_000);
+        let doc = || textweaver_text::Document::from_plain_text(&text);
+        let big = doc();
+        let t = Instant::now();
+        let _ = crate::relocate::text_stamp(&big);
+        let stamp_ms = t.elapsed().as_secs_f64() * 1000.0;
+        let key = DocKey("big".into());
+        app.open_document(big, key.clone(), "Big".into());
+        app.set_cursor(CharPos(12_345));
+        // The disk stalls; leaving the document queues its position.
+        app.writer
+            .send(crate::writer::Job::Stall(Duration::from_millis(1_500)));
+        app.open_document(
+            textweaver_text::Document::from_plain_text("Other."),
+            DocKey("other".into()),
+            "Other".into(),
+        );
+        let t = Instant::now();
+        app.open_document(doc(), key, "Big".into());
+        let open_ms = t.elapsed().as_secs_f64() * 1000.0;
+        let t = Instant::now();
+        let waited = app.writer.flush(Duration::from_secs(2));
+        let old_wait_ms = t.elapsed().as_secs_f64() * 1000.0;
+        println!(
+            "text stamp on {} MB: {stamp_ms:.1} ms; open with the disk stalled: \
+             {open_ms:.1} ms; the wait it replaced: {old_wait_ms:.1} ms",
+            text.len() / 1_000_000
+        );
+        assert!(waited);
+        let at = app.session().unwrap().cursor;
+        assert!(at >= CharPos(12_300) && at <= CharPos(12_345), "{at:?}");
+        // Generous: the stall alone is 1.5 s, and the stamp is part of it.
+        assert!(open_ms < 1_200.0, "{open_ms} ms");
+    }
 
     #[test]
     fn scans_archives_and_web_pages_may_be_slow() {

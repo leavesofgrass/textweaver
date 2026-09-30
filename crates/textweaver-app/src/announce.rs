@@ -264,6 +264,10 @@ mod tests {
             // Messages held while the engine started, said once it is
             // ready, after the staleness check.
             ("restart.rs", "fn say_early_messages"),
+            // Dictated words on the status line while speech is held
+            // (they are said at the pause through announce_as): content
+            // for the Braille display, like the screen say all.
+            ("dictation.rs", "fn show_dictation_line"),
         ];
         let mut bad = Vec::new();
         for entry in std::fs::read_dir(&dir).unwrap() {
