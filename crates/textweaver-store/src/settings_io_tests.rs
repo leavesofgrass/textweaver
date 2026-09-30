@@ -197,6 +197,8 @@ fn everything_changed() -> Settings {
     s.lexicon.data_file = Some("lexicon-en.twlex".into());
     s.stats.enabled = false;
     s.summary.sentences = 7;
+    s.dictation.speak_while_recording = true;
+    s.dictation.model_dir = Some("D:/models/whisper-base.en".into());
     s.interface.language = "en-XA".into();
     s.interface.rtl = crate::RtlDisplay::Off;
     s.interface.recent_settings = vec!["speech.rate".into()];

@@ -1125,6 +1125,17 @@ pub const INFO: &[Info] = &[
         (1.0, 50.0, 1.0),
         "sentences",
     ),
+    // [dictation] (W6d)
+    toggle(
+        "dictation.speak_while_recording",
+        "Speak while dictating",
+        "Say dictated words as they come. Off, they are shown on the status line and said at each pause, so the microphone does not hear the voice.",
+    ),
+    optional(
+        "dictation.model_dir",
+        "Dictation model folder",
+        "The Whisper model for dictation. Not set uses whisper/rten/base.en in the data folder.",
+    ),
     // [interface]
     open_choice(
         "interface.language",
@@ -1262,6 +1273,7 @@ fn section_title(key: &str) -> &'static str {
         "lexicon" => "Define word",
         "stats" => "Reading statistics",
         "summary" => "Summaries",
+        "dictation" => "Dictation",
         "interface" => "Interface",
         "gui" => "Window",
         "colors" => "Colors",

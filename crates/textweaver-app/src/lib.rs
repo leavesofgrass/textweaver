@@ -162,6 +162,7 @@ mod citations;
 mod citations;
 mod colors;
 mod command;
+mod dictation;
 pub mod disk;
 mod edit;
 mod export;
@@ -274,6 +275,8 @@ pub use textweaver_aids as aids;
 #[cfg(feature = "publish")]
 pub use textweaver_cite as cite;
 pub use textweaver_core as core;
+#[cfg(feature = "dictation")]
+pub use textweaver_dictation as voice_typing;
 pub use textweaver_editor as editor;
 pub use textweaver_engines as engines;
 pub use textweaver_engines::apple;
