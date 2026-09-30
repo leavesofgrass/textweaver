@@ -185,9 +185,14 @@ jobs:
       # cargo-nextest with the nightly profile (.config/nextest.toml): each
       # failing test is retried twice, and one that passes on a retry is
       # named FLAKY and still fails the job. The engine-host suites run two
-      # at a time.
+      # at a time. The Apple voice tests (their own main, macOS only) are
+      # left out here: off macOS they print a line instead of a test list,
+      # and nextest stops at it ("creating test list failed", the night of
+      # Wednesday, September 30, 2026). A filterset that always excludes a
+      # binary keeps nextest from running it even to list its tests. The
+      # crate's unit tests still run.
       - name: Workspace tests (release, nextest)
-        run: cargo nextest run --locked --cargo-profile release --profile nightly --workspace --exclude textweaver-xilem --all-features
+        run: cargo nextest run --locked --cargo-profile release --profile nightly --workspace --exclude textweaver-xilem --all-features -E 'not binary_id(textweaver-apple::voices)'
       # nextest does not run documentation tests.
       - name: Documentation tests (release)
         run: cargo test --locked --release --workspace --exclude textweaver-xilem --all-features --doc
