@@ -372,7 +372,6 @@ goto-not-a-target = Not a go-to target: { $text }. Type a line number, a percent
 open-opened = Opened { $title }.
 open-resumed = Opened { $title }. Resumed at { $pct } percent.
 open-resumed-synced = Opened { $title }. Resumed at { $pct } percent, from another device.
-open-resumed-conflict = Opened { $title }. Resumed at { $pct } percent. Another device is at a different place; kept this device's.
 
 ## Prompts: the label is shown and said when the prompt opens.
 
@@ -1649,11 +1648,6 @@ setting-reading-wrap-navigation = Wrap navigation
 setting-reading-wrap-navigation-help = Moving past the end of the document goes on from the start.
 setting-reading-cursor-follows-speech = Cursor follows speech
 setting-reading-cursor-follows-speech-help = The cursor moves with the word being read.
-setting-reading-sync-conflict-policy = Synced positions
-setting-reading-sync-conflict-policy-help = Which position wins when another device read further or later.
-choice-reading-sync-conflict-policy-newest = the newest
-choice-reading-sync-conflict-policy-highest-progress = the furthest
-choice-reading-sync-conflict-policy-manual = ask
 setting-reading-citations = Citations
 setting-reading-citations-help = Citations in continuous reading: skipped, or said in words.
 choice-reading-citations-off = skipped
@@ -3409,3 +3403,159 @@ gui-font-list-intro =
 links-page-label = Page { $page }
 
 ## End of W6c5
+
+## Sync wave, S4: sync in the reader (ADR-0049). $device is a computer's
+## name as the owner gave it ("laptop", "lab", "Computer 2"); $title a
+## document's title; $pct a percentage; $n a count. Meaning first, and
+## within the 40 cells of a Braille line where it can be.
+sync-status-off = Sync: off
+sync-status-not-set-up = Sync: not set up
+sync-status-starting = Sync: starting
+sync-status-folder-missing = Sync: folder missing, saving here
+sync-status-read-only = Sync: newer format, read only
+sync-status-failed = Sync: cannot use the folder
+sync-status-cannot-write = Sync: cannot write, saving here
+sync-status-clock-ahead = Sync: { $device }'s clock is ahead
+sync-status-damaged =
+    { $n ->
+        [one] Sync: 1 damaged file skipped
+       *[other] Sync: { $n } damaged files skipped
+    }
+sync-status-up-to-date = Sync: up to date
+sync-status-this-computer = This computer: { $name }.
+sync-status-no-others = No other computers yet.
+sync-status-others = Other computers: { $names }.
+sync-status-error = Problem: { $error }
+sync-another-computer = another computer
+sync-untitled = a document
+sync-damaged = Sync: damaged file from { $device } skipped.
+sync-newer-file = Sync: newer file from { $device } skipped.
+sync-read-only = Sync: newer format, read only.
+sync-clock-ahead = Sync: { $device }'s clock is { $hours } hours ahead.
+sync-fresh-id = Sync: copied setup; new computer id.
+sync-write-failed = Sync: cannot write. { $error }
+sync-name-refused = Name not allowed. Try one like laptop.
+sync-note-replaced =
+    { $n ->
+        [one] { $title }: a note was replaced by { $device }'s newer edit.
+       *[other] { $title }: { $n } notes were replaced by { $device }'s newer edits.
+    }
+sync-restored-notes =
+    { $n ->
+        [one] { $title }: a deleted note came back, edited on { $device }.
+       *[other] { $title }: { $n } deleted notes came back, edited on { $device }.
+    }
+sync-restored-bookmarks =
+    { $n ->
+        [one] { $title }: a deleted bookmark came back, edited on { $device }.
+       *[other] { $title }: { $n } deleted bookmarks came back, edited on { $device }.
+    }
+sync-restored-highlights =
+    { $n ->
+        [one] { $title }: a deleted highlight came back, edited on { $device }.
+       *[other] { $title }: { $n } deleted highlights came back, edited on { $device }.
+    }
+sync-arrived =
+    { $n ->
+        [one] { $title }: 1 change from { $device }.
+       *[other] { $title }: { $n } changes from { $device }.
+    }
+sync-resumed = { $title }: resumed at { $pct } percent, from { $device }.
+sync-place-arrived = { $device }'s place: { $pct } percent.
+sync-place-question = { $device } at { $pct } percent. Go there? Y or N
+sync-suggestion-question =
+    { $n ->
+        [one] This may be { $title } from { $device }, with 1 note. Use it? Y or N
+       *[other] This may be { $title } from { $device }, with { $n } notes. Use them? Y or N
+    }
+sync-went-to-place = { $device }'s place, { $pct } percent.
+sync-kept-place = Kept this place.
+sync-suggestion-accepted = Using the notes from { $device }.
+sync-suggestion-declined = Kept separate.
+sync-sidecar-differed =
+    { $n ->
+        [one] Sync: 1 library place differed.
+       *[other] Sync: { $n } library places differed.
+    }
+sync-sidecar-failed = Sync: cannot write a library place. { $error }
+sync-no-state = Sync is off in this run: nothing is saved.
+sync-choose-folder = Choose the sync folder
+sync-group-places = Places
+sync-group-notes = Notes
+sync-group-highlights = Highlights
+sync-group-bookmarks = Bookmarks
+sync-group-statistics = Statistics
+sync-group-item = { $name }: { $state }
+sync-start = Start syncing
+sync-groups-title = What syncs
+sync-groups-intro = { $title }, as { $name }. Enter turns one on or off; Start syncing ends.
+sync-started = Sync on, as { $name }. Sync status: { $key }.
+sync-how-to-set-up = To set it up: Tools, Sync, Set up sync.
+sync-now-started = Syncing.
+sync-now-done =
+    { $n ->
+        [one] Sync: up to date, 1 document checked.
+       *[other] Sync: up to date, { $n } documents checked.
+    }
+sync-now-changed =
+    { $n ->
+        [one] Sync: 1 document took changes.
+       *[other] Sync: { $n } documents took changes.
+    }
+sync-no-places = No other computer has a place here.
+sync-place-item = { $device }, { $pct } percent
+sync-places-title =
+    { $n ->
+        [one] 1 other place
+       *[other] { $n } other places
+    }
+sync-no-replaced = No replaced notes in this document.
+sync-replaced-item = { $text }, replaced by { $device }
+sync-replaced-item-deleted = { $text }, deleted by { $device }
+sync-replaced-title =
+    { $n ->
+        [one] 1 replaced note
+       *[other] { $n } replaced notes
+    }
+sync-replaced-intro = { $title }. Enter puts one back.
+sync-note-restored = Note put back: { $text }
+sync-already-off = Sync is already off here.
+sync-stopped = Sync off here. The folder is left as it is.
+prompt-sync-computer-name = Name this computer, Enter keeps it
+menu-sync = Sync
+name-sync-setup = Set up sync
+name-sync-status = Sync status
+name-sync-now = Sync now
+name-sync-go-to-place = Go to another computer's place
+name-sync-replaced-notes = Replaced notes
+name-sync-stop = Stop syncing on this computer
+action-sync-setup = Set up sync: choose the sync folder, name this computer, and choose what syncs
+action-sync-status = Say how sync stands (up to date, the folder missing, or a problem) and name the other computers
+action-sync-now = Sync now: send this computer's changes and take the other computers' for every document
+action-sync-go-to-place = List the other computers' places in this document; Enter goes to one
+action-sync-replaced-notes = List notes replaced by another computer's newer edit; Enter puts one back
+action-sync-stop = Stop syncing on this computer; the sync folder is left as it is
+section-sync = Sync
+setting-sync-enabled = Sync
+setting-sync-enabled-help = Sync notes, highlights, bookmarks, and places with your other computers through the sync folder. Tools, Sync, Set up sync turns it on.
+setting-sync-folder = Sync folder
+setting-sync-folder-help = The folder your computers share: one kept in step by Syncthing, a cloud folder, or a USB stick.
+setting-sync-device-name = Computer name
+setting-sync-device-name-help = This computer's name in sync messages, such as laptop or lab; empty uses Computer 1, Computer 2, and so on.
+setting-sync-places = Sync places
+setting-sync-places-help = Share where you are in each document.
+setting-sync-notes = Sync notes
+setting-sync-notes-help = Share notes.
+setting-sync-highlights = Sync highlights
+setting-sync-highlights-help = Share highlights.
+setting-sync-bookmarks = Sync bookmarks
+setting-sync-bookmarks-help = Share bookmarks.
+setting-sync-statistics = Sync statistics
+setting-sync-statistics-help = Share each computer's reading time and sessions.
+setting-sync-position-policy = Place to resume
+setting-sync-position-policy-help = Which place a document opens at when another computer has one too: the newest, the furthest, or ask.
+choice-sync-position-policy-newest = the newest
+choice-sync-position-policy-furthest = the furthest
+choice-sync-position-policy-ask = ask
+
+## End of S4

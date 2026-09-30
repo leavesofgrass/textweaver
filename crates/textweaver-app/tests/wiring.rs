@@ -370,7 +370,8 @@ impl Library {
     fn settings(&self, policy: ConflictPolicy) -> Settings {
         let mut s = Settings::default();
         s.library.add_folder(&self.folder);
-        s.reading.sync_conflict_policy = policy;
+        s.sync.position_policy =
+            textweaver_app::store::PositionPolicy::from_conflict_policy(policy);
         s
     }
 }
@@ -539,8 +540,9 @@ fn positions_sync_through_the_library_folder() {
     );
     drop(r);
 
-    // Under the manual policy this device's position is kept, and the user
-    // is told the other device differs.
+    // Under the "ask" policy (formerly manual) this device's position is
+    // kept, and the other device's is asked about (ADR-0049, problem 1:
+    // "ask" used to keep this one without asking).
     let local = StateStore::new(lib.paths.state_dir())
         .load(&DocKey::for_path(&doc))
         .unwrap();
@@ -553,11 +555,19 @@ fn positions_sync_through_the_library_folder() {
     r.app.open(&doc).unwrap();
     assert_eq!(r.cursor(), at(PROSE, "Kappa"));
     assert!(
-        r.said
-            .any("Another device is at a different place; kept this device's."),
+        r.said.any("another computer at") && r.said.any("Go there? Y or N"),
         "{:?}",
         r.said.all()
     );
+    assert!(r.app.confirmation_pending());
+    r.app
+        .dispatch(Command::Confirm(textweaver_app::Confirm::Yes));
+    assert_ne!(
+        r.cursor(),
+        at(PROSE, "Kappa"),
+        "yes goes to the other place"
+    );
+    assert!(!r.app.confirmation_pending());
 }
 
 #[test]

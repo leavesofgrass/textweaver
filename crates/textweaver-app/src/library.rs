@@ -7,9 +7,9 @@
 //! (`<folder>/.textweaver/progress.json`, [`LibrarySync`]): the position is
 //! mirrored there whenever it is saved, the sidecars are flushed on
 //! document switch and quit, and on open the local and synced positions are
-//! chosen between by `reading.sync_conflict_policy` (C2's rule: newest,
-//! highest progress, or manual, which keeps this device's position and
-//! says that another device differs).
+//! chosen between by `[sync] position_policy` (newest, furthest, or ask,
+//! which asks, naming the other place's percentage; formerly
+//! `reading.sync_conflict_policy`).
 //!
 //! The library list **filters as you type** (Wave 5, W5y): each word typed
 //! must be in a document's title, path, author, DOI, or ISBN, or in its
@@ -41,8 +41,12 @@ pub(crate) struct ResumePoint {
     /// The position came from another device (the folder's sidecar).
     pub(crate) synced: bool,
     /// Another device's position differs and nothing was chosen (the
-    /// `manual` policy): this device's is used.
+    /// `ask` policy): this device's is used, and the other one is asked
+    /// about.
     pub(crate) unresolved: bool,
+    /// The other device's position, when it differs and nothing was
+    /// chosen.
+    pub(crate) other: Option<textweaver_core::CharPos>,
 }
 
 impl App {
@@ -50,7 +54,7 @@ impl App {
     pub(crate) fn make_library_sync(settings: &textweaver_store::Settings) -> LibrarySync {
         LibrarySync::new(
             &settings.library.folders,
-            settings.reading.sync_conflict_policy,
+            settings.sync.position_policy.conflict_policy(),
         )
     }
 
@@ -74,12 +78,20 @@ impl App {
                 synced: r.source == ResumeSource::Sidecar,
                 unresolved: r
                     .conflict
+                    .as_ref()
                     .is_some_and(|c| c.resolution == Resolution::Unresolved),
+                other: r
+                    .conflict
+                    .as_ref()
+                    .filter(|c| c.resolution == Resolution::Unresolved)
+                    .and_then(|c| textweaver_store::sync::ProgressEntry::from_value(&c.remote))
+                    .map(|e| e.offset),
             }),
             None => local_pos.map(|pos| ResumePoint {
                 pos,
                 synced: false,
                 unresolved: false,
+                other: None,
             }),
         }
     }
@@ -89,23 +101,30 @@ impl App {
     pub(crate) fn record_library_open(&mut self, path: &Path, title: &str, format: &str) {
         self.record_library_open_with(path, title, format, DocMetadata::default());
         let details = textweaver_sync::docid::Details::default();
-        self.identify_on_writer(path, None, details);
+        self.sync_document_opened(path, None, details);
     }
 
     /// [`record_library_open`](Self::record_library_open) for a document
     /// just loaded: its author, DOI, and ISBN go on the bookshelf too, so
-    /// the library can be searched by them.
-    pub(crate) fn record_library_open_doc(&mut self, path: &Path, title: &str, doc: &Document) {
+    /// the library can be searched by them. Returns what the document says
+    /// about itself, for finding its sync id once it is open
+    /// ([`App::sync_document_opened`]).
+    pub(crate) fn record_library_open_doc(
+        &mut self,
+        path: &Path,
+        title: &str,
+        doc: &Document,
+    ) -> textweaver_sync::docid::Details {
         let meta = document_metadata(doc);
         // Only a title the document states: `title` falls back to the file
         // name, which must never reach the sync folder (ADR-0049).
         let details = textweaver_sync::docid::Details {
-            title: doc.meta.title.clone(),
+            title: stated_title(doc),
             doi: meta.doi.clone(),
             isbn: meta.isbn.clone(),
         };
         self.record_library_open_with(path, title, &doc.meta.format, meta);
-        self.identify_on_writer(path, Some(doc.text().clone()), details);
+        details
     }
 
     /// Finds or makes the sync id of the document at `path` and keeps its
@@ -337,6 +356,20 @@ impl App {
         self.list = Some(ListKind::Library(list));
         vec![Effect::ShowList { title, items }]
     }
+}
+
+/// The title a document states itself, for the sync folder: not one a
+/// loader made from the file's name (ADR-0049: no file name ever reaches
+/// the sync folder).
+pub(crate) fn stated_title(doc: &Document) -> Option<String> {
+    let title = doc.meta.title.clone()?;
+    let from_path = doc.meta.path.as_deref().is_some_and(|p| {
+        let t = title.trim().to_lowercase();
+        let name = p.file_name().map(|n| n.to_string_lossy().to_lowercase());
+        let stem = p.file_stem().map(|n| n.to_string_lossy().to_lowercase());
+        name.as_deref() == Some(t.as_str()) || stem.as_deref() == Some(t.as_str())
+    });
+    (!from_path).then_some(title)
 }
 
 /// The author, DOI, and ISBN of a loaded document: its own metadata, then

@@ -244,10 +244,13 @@ impl App {
     /// or an action's confirmation ("Quit textweaver? y or n"). The TUI keeps
     /// it on the status line.
     pub fn pending_question(&self) -> Option<String> {
-        self.pending_hybrid.clone().or_else(|| {
-            self.pending_confirm
-                .and_then(|a| self.confirmation_question(a))
-        })
+        self.pending_hybrid
+            .clone()
+            .or_else(|| {
+                self.pending_confirm
+                    .and_then(|a| self.confirmation_question(a))
+            })
+            .or_else(|| self.sync_pending_question())
     }
 
     /// The answer to the first-run question.

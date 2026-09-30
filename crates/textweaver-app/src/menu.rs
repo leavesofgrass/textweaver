@@ -122,6 +122,8 @@ pub enum MenuId {
     Tables,
     /// Reading, Speech Cursor.
     SpeechCursor,
+    /// Tools, Sync.
+    Sync,
 }
 
 /// One entry of a menu's definition.
@@ -149,7 +151,7 @@ impl MenuId {
     ];
 
     /// Every menu and submenu.
-    pub const ALL: [MenuId; 27] = [
+    pub const ALL: [MenuId; 28] = [
         MenuId::File,
         MenuId::Edit,
         MenuId::View,
@@ -177,6 +179,7 @@ impl MenuId {
         MenuId::Bookmarks,
         MenuId::Tables,
         MenuId::SpeechCursor,
+        MenuId::Sync,
     ];
 
     /// The stable id, used in catalog ids (`menu-export-as`) and JSON-RPC.
@@ -209,6 +212,7 @@ impl MenuId {
             MenuId::Bookmarks => "bookmarks",
             MenuId::Tables => "tables",
             MenuId::SpeechCursor => "speech-cursor",
+            MenuId::Sync => "sync",
         }
     }
 
@@ -536,10 +540,22 @@ impl MenuId {
                 Do(A::ReadingStatistics),
                 Sub(MenuId::Proofing),
                 Sep,
+                Sub(MenuId::Sync),
+                Sep,
                 Do(A::Settings),
                 Do(A::ColorSettings),
                 Do(A::SettingsProfiles),
                 Do(A::RestartSpeech),
+            ],
+            MenuId::Sync => &[
+                Do(A::SyncSetup),
+                Do(A::SyncStatus),
+                Do(A::SyncNow),
+                Sep,
+                Do(A::SyncGoToPlace),
+                Do(A::SyncReplacedNotes),
+                Sep,
+                Do(A::SyncStop),
             ],
             MenuId::Help => &[
                 Do(A::Help),

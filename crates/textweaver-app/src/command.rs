@@ -311,6 +311,9 @@ pub enum PromptPurpose {
     /// Answer is a new value for the setting chosen in the settings list;
     /// empty keeps it.
     SettingValue,
+    /// Answer is this computer's name for sync (Set up sync); empty keeps
+    /// the one suggested.
+    SyncComputerName,
 }
 
 impl PromptPurpose {
@@ -346,6 +349,7 @@ impl PromptPurpose {
             PromptPurpose::ImportProfiles => "Import profiles from file",
             PromptPurpose::ExportProfiles => "Export profiles to file",
             PromptPurpose::SettingValue => "New value, Enter keeps it",
+            PromptPurpose::SyncComputerName => "Name this computer, Enter keeps it",
         }
     }
 }

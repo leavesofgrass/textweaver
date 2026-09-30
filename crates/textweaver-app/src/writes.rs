@@ -112,19 +112,42 @@ impl App {
     /// positions are in the source text; leaving edit mode saves them).
     /// Returns false when there is nothing to save or nowhere to save it.
     pub(crate) fn save_state(&mut self, note: StateNote) -> bool {
-        if self.edit.is_some() {
-            return false;
-        }
-        let Some(pos) = self.reading_position() else {
+        let Some(store) = self.state_store() else {
             return false;
         };
-        let Some(store) = self.state_store() else {
+        let Some(state) = self.state_now() else {
             return false;
         };
         let sync = self.library_sync.clone();
         let Some(s) = self.session.as_mut() else {
             return false;
         };
+        let key = s.key.clone();
+        let path = s.doc.meta.path.clone();
+        let pos = state.position;
+        s.saved = state.clone();
+        self.last_position_save = Some((Instant::now(), pos));
+        self.writer.send(Job::State {
+            store,
+            key,
+            state: Box::new(state),
+            sync: path.map(|p| (sync, p)),
+            note,
+        });
+        // Published to the sync folder soon (crate::sync).
+        self.sync_mark_changed();
+        true
+    }
+
+    /// The open document's state as a save writes it now: reading position,
+    /// history, bookmarks, notes, and highlights. `None` while editing
+    /// (positions are in the source text then) or with no document.
+    pub(crate) fn state_now(&self) -> Option<textweaver_store::DocState> {
+        if self.edit.is_some() {
+            return None;
+        }
+        let pos = self.reading_position()?;
+        let s = self.session.as_ref()?;
         let pos = text_util::word_start(&s.doc, pos);
         let mut state = s.saved.clone();
         state.position = pos;
@@ -142,18 +165,7 @@ impl App {
         // What the text was, so positions can be found again if the file
         // changes outside textweaver (crate::relocate).
         state.text = s.text_stamp.clone();
-        let key = s.key.clone();
-        let path = s.doc.meta.path.clone();
-        s.saved = state.clone();
-        self.last_position_save = Some((Instant::now(), pos));
-        self.writer.send(Job::State {
-            store,
-            key,
-            state: Box::new(state),
-            sync: path.map(|p| (sync, p)),
-            note,
-        });
-        true
+        Some(state)
     }
 
     /// Starts saving the text being edited on the writer; `then` says what
@@ -180,7 +192,7 @@ impl App {
                 self.writer.send(Job::Save { id, req, expect });
                 // After the save, in order on the writer: the file's new
                 // hash for sync; its id stays (ADR-0049).
-                self.identify_on_writer(&dest, None, textweaver_sync::docid::Details::default());
+                self.sync_document_saved(&dest);
                 if quitting {
                     let effects = self.wait_for_writes();
                     if !effects.is_empty() {
@@ -235,6 +247,11 @@ impl App {
                         self.msg_args("settings-save-failed", &args!["error" => e.to_string()]);
                     self.error(&msg);
                 }
+                vec![Effect::Redraw]
+            }
+            Report::Sync(response) => self.sync_response(response),
+            Report::Sidecar(result) => {
+                self.sidecar_reported(result);
                 vec![Effect::Redraw]
             }
         }

@@ -395,7 +395,6 @@ goto-not-a-target = Ce n'est pas une cible valide : { $text }. Tapez un numéro 
 open-opened = { $title } ouvert.
 open-resumed = { $title } ouvert. Reprise à { $pct } pour cent.
 open-resumed-synced = { $title } ouvert. Reprise à { $pct } pour cent, depuis un autre appareil.
-open-resumed-conflict = { $title } ouvert. Reprise à { $pct } pour cent. Un autre appareil est à un autre endroit ; la position de cet appareil a été conservée.
 
 ## Prompts: the label is shown and said when the prompt opens.
 
@@ -1672,11 +1671,6 @@ setting-reading-wrap-navigation = Navigation bouclée
 setting-reading-wrap-navigation-help = Se déplacer au-delà de la fin du document continue depuis le début.
 setting-reading-cursor-follows-speech = Le curseur suit la synthèse vocale
 setting-reading-cursor-follows-speech-help = Le curseur se déplace avec le mot lu.
-setting-reading-sync-conflict-policy = Positions synchronisées
-setting-reading-sync-conflict-policy-help = Quelle position l'emporte quand un autre appareil a lu plus loin ou plus récemment.
-choice-reading-sync-conflict-policy-newest = la plus récente
-choice-reading-sync-conflict-policy-highest-progress = la plus avancée
-choice-reading-sync-conflict-policy-manual = demander
 setting-reading-citations = Citations
 setting-reading-citations-help = Citations en lecture continue : ignorées, ou dites en mots.
 choice-reading-citations-off = ignorées
@@ -3414,3 +3408,156 @@ gui-font-list-intro =
 links-page-label = Page { $page }
 
 ## End of W6c5
+
+## Sync wave, S4: sync in the reader (ADR-0049).
+sync-status-off = Synchro : désactivée
+sync-status-not-set-up = Synchro : non configurée
+sync-status-starting = Synchro : démarrage
+sync-status-folder-missing = Synchro : dossier absent, enregistré ici
+sync-status-read-only = Synchro : format plus récent, lecture seule
+sync-status-failed = Synchro : dossier inutilisable
+sync-status-cannot-write = Synchro : écriture impossible, enregistré ici
+sync-status-clock-ahead = Synchro : l'horloge de { $device } avance
+sync-status-damaged =
+    { $n ->
+        [one] Synchro : 1 fichier endommagé ignoré
+       *[other] Synchro : { $n } fichiers endommagés ignorés
+    }
+sync-status-up-to-date = Synchro : à jour
+sync-status-this-computer = Cet ordinateur : { $name }.
+sync-status-no-others = Pas encore d'autre ordinateur.
+sync-status-others = Autres ordinateurs : { $names }.
+sync-status-error = Problème : { $error }
+sync-another-computer = un autre ordinateur
+sync-untitled = un document
+sync-damaged = Synchro : fichier endommagé de { $device } ignoré.
+sync-newer-file = Synchro : fichier plus récent de { $device } ignoré.
+sync-read-only = Synchro : format plus récent, lecture seule.
+sync-clock-ahead = Synchro : l'horloge de { $device } avance de { $hours } heures.
+sync-fresh-id = Synchro : configuration copiée ; nouvel identifiant.
+sync-write-failed = Synchro : écriture impossible. { $error }
+sync-name-refused = Nom refusé. Essayez par exemple portable.
+sync-note-replaced =
+    { $n ->
+        [one] { $title } : une note a été remplacée par la modification plus récente de { $device }.
+       *[other] { $title } : { $n } notes ont été remplacées par les modifications plus récentes de { $device }.
+    }
+sync-restored-notes =
+    { $n ->
+        [one] { $title } : une note supprimée est revenue, modifiée sur { $device }.
+       *[other] { $title } : { $n } notes supprimées sont revenues, modifiées sur { $device }.
+    }
+sync-restored-bookmarks =
+    { $n ->
+        [one] { $title } : un signet supprimé est revenu, modifié sur { $device }.
+       *[other] { $title } : { $n } signets supprimés sont revenus, modifiés sur { $device }.
+    }
+sync-restored-highlights =
+    { $n ->
+        [one] { $title } : un surlignage supprimé est revenu, modifié sur { $device }.
+       *[other] { $title } : { $n } surlignages supprimés sont revenus, modifiés sur { $device }.
+    }
+sync-arrived =
+    { $n ->
+        [one] { $title } : 1 modification de { $device }.
+       *[other] { $title } : { $n } modifications de { $device }.
+    }
+sync-resumed = { $title } : reprise à { $pct } pour cent, depuis { $device }.
+sync-place-arrived = Position de { $device } : { $pct } pour cent.
+sync-place-question = { $device } à { $pct } pour cent. Y aller ? y ou n
+sync-suggestion-question =
+    { $n ->
+        [one] C'est peut-être { $title } de { $device }, avec 1 note. L'utiliser ? y ou n
+       *[other] C'est peut-être { $title } de { $device }, avec { $n } notes. Les utiliser ? y ou n
+    }
+sync-went-to-place = Position de { $device }, { $pct } pour cent.
+sync-kept-place = Position actuelle conservée.
+sync-suggestion-accepted = Notes de { $device } utilisées.
+sync-suggestion-declined = Laissés séparés.
+sync-sidecar-differed =
+    { $n ->
+        [one] Synchro : 1 position de bibliothèque différait.
+       *[other] Synchro : { $n } positions de bibliothèque différaient.
+    }
+sync-sidecar-failed = Synchro : position de bibliothèque non écrite. { $error }
+sync-no-state = Synchro désactivée pour cette session : rien n'est enregistré.
+sync-choose-folder = Choisir le dossier de synchro
+sync-group-places = Positions
+sync-group-notes = Notes
+sync-group-highlights = Surlignages
+sync-group-bookmarks = Signets
+sync-group-statistics = Statistiques
+sync-group-item = { $name } : { $state }
+sync-start = Démarrer la synchro
+sync-groups-title = Ce qui se synchronise
+sync-groups-intro = { $title }, comme { $name }. Entrée active ou désactive ; Démarrer la synchro termine.
+sync-started = Synchro activée, comme { $name }. État de la synchro : { $key }.
+sync-how-to-set-up = Pour la configurer : Outils, Synchro, Configurer la synchro.
+sync-now-started = Synchronisation.
+sync-now-done =
+    { $n ->
+        [one] Synchro : à jour, 1 document vérifié.
+       *[other] Synchro : à jour, { $n } documents vérifiés.
+    }
+sync-now-changed =
+    { $n ->
+        [one] Synchro : 1 document a reçu des modifications.
+       *[other] Synchro : { $n } documents ont reçu des modifications.
+    }
+sync-no-places = Aucun autre ordinateur n'a de position ici.
+sync-place-item = { $device }, { $pct } pour cent
+sync-places-title =
+    { $n ->
+        [one] 1 autre position
+       *[other] { $n } autres positions
+    }
+sync-no-replaced = Aucune note remplacée dans ce document.
+sync-replaced-item = { $text }, remplacée par { $device }
+sync-replaced-item-deleted = { $text }, supprimée par { $device }
+sync-replaced-title =
+    { $n ->
+        [one] 1 note remplacée
+       *[other] { $n } notes remplacées
+    }
+sync-replaced-intro = { $title }. Entrée en rétablit une.
+sync-note-restored = Note rétablie : { $text }
+sync-already-off = La synchro est déjà désactivée ici.
+sync-stopped = Synchro désactivée ici. Le dossier reste tel quel.
+prompt-sync-computer-name = Nom de cet ordinateur, Entrée le garde
+menu-sync = Synchro
+name-sync-setup = Configurer la synchro
+name-sync-status = État de la synchro
+name-sync-now = Synchroniser maintenant
+name-sync-go-to-place = Position d'un autre ordinateur
+name-sync-replaced-notes = Notes remplacées
+name-sync-stop = Arrêter la synchro sur cet ordinateur
+action-sync-setup = Configurer la synchro : choisir le dossier, nommer cet ordinateur et choisir ce qui se synchronise
+action-sync-status = Dire où en est la synchro (à jour, dossier absent ou un problème) et nommer les autres ordinateurs
+action-sync-now = Synchroniser maintenant : envoyer les modifications de cet ordinateur et prendre celles des autres pour chaque document
+action-sync-go-to-place = Lister les positions des autres ordinateurs dans ce document ; Entrée va à l'une d'elles
+action-sync-replaced-notes = Lister les notes remplacées par la modification plus récente d'un autre ordinateur ; Entrée en rétablit une
+action-sync-stop = Arrêter la synchro sur cet ordinateur ; le dossier de synchro reste tel quel
+section-sync = Synchro
+setting-sync-enabled = Synchro
+setting-sync-enabled-help = Partager notes, surlignages, signets et positions avec vos autres ordinateurs par le dossier de synchro. Outils, Synchro, Configurer la synchro l'active.
+setting-sync-folder = Dossier de synchro
+setting-sync-folder-help = Le dossier que vos ordinateurs partagent : un dossier tenu à jour par Syncthing, un dossier cloud ou une clé USB.
+setting-sync-device-name = Nom de l'ordinateur
+setting-sync-device-name-help = Le nom de cet ordinateur dans les messages de synchro, comme portable ou labo ; vide donne Computer 1, Computer 2, etc.
+setting-sync-places = Synchroniser les positions
+setting-sync-places-help = Partager où vous en êtes dans chaque document.
+setting-sync-notes = Synchroniser les notes
+setting-sync-notes-help = Partager les notes.
+setting-sync-highlights = Synchroniser les surlignages
+setting-sync-highlights-help = Partager les surlignages.
+setting-sync-bookmarks = Synchroniser les signets
+setting-sync-bookmarks-help = Partager les signets.
+setting-sync-statistics = Synchroniser les statistiques
+setting-sync-statistics-help = Partager le temps de lecture et les sessions de chaque ordinateur.
+setting-sync-position-policy = Position de reprise
+setting-sync-position-policy-help = La position où s'ouvre un document quand un autre ordinateur en a une aussi : la plus récente, la plus avancée, ou demander.
+choice-sync-position-policy-newest = la plus récente
+choice-sync-position-policy-furthest = la plus avancée
+choice-sync-position-policy-ask = demander
+
+## End of S4

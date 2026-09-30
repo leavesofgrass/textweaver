@@ -56,7 +56,7 @@ pub fn parse_tags(text: &str) -> Vec<String> {
 
 /// Whitespace collapsed, cut to `max` chars with an ellipsis (for lists
 /// and announcements).
-fn collapse(s: &str, max: usize) -> String {
+pub(crate) fn collapse(s: &str, max: usize) -> String {
     let all = s.split_whitespace().collect::<Vec<_>>().join(" ");
     if all.chars().count() <= max {
         all

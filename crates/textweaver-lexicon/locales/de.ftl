@@ -403,7 +403,6 @@ goto-not-a-target = Kein Sprungziel: { $text }. Geben Sie eine Zeilennummer ein,
 open-opened = { $title } geöffnet.
 open-resumed = { $title } geöffnet. Fortgesetzt bei { $pct } Prozent.
 open-resumed-synced = { $title } geöffnet. Fortgesetzt bei { $pct } Prozent, von einem anderen Gerät.
-open-resumed-conflict = { $title } geöffnet. Fortgesetzt bei { $pct } Prozent. Ein anderes Gerät ist an einer anderen Stelle; die Stelle dieses Geräts wurde beibehalten.
 
 ## Prompts: the label is shown and said when the prompt opens.
 
@@ -1680,11 +1679,6 @@ setting-reading-wrap-navigation = Navigation umbrechen
 setting-reading-wrap-navigation-help = Über das Ende des Dokuments hinaus geht es vom Anfang weiter.
 setting-reading-cursor-follows-speech = Cursor folgt der Sprachausgabe
 setting-reading-cursor-follows-speech-help = Der Cursor bewegt sich mit dem gelesenen Wort.
-setting-reading-sync-conflict-policy = Synchronisierte Positionen
-setting-reading-sync-conflict-policy-help = Welche Position gewinnt, wenn ein anderes Gerät weiter oder später gelesen hat.
-choice-reading-sync-conflict-policy-newest = die neueste
-choice-reading-sync-conflict-policy-highest-progress = die weiteste
-choice-reading-sync-conflict-policy-manual = fragen
 setting-reading-citations = Zitate
 setting-reading-citations-help = Zitate beim fortlaufenden Lesen: übersprungen, oder in Worten gesagt.
 choice-reading-citations-off = übersprungen
@@ -3422,3 +3416,156 @@ gui-font-list-intro =
 links-page-label = Seite { $page }
 
 ## End of W6c5
+
+## Sync wave, S4: sync in the reader (ADR-0049).
+sync-status-off = Sync: aus
+sync-status-not-set-up = Sync: nicht eingerichtet
+sync-status-starting = Sync: startet
+sync-status-folder-missing = Sync: Ordner fehlt, speichert hier
+sync-status-read-only = Sync: neueres Format, nur lesen
+sync-status-failed = Sync: Ordner nicht nutzbar
+sync-status-cannot-write = Sync: Schreiben geht nicht, speichert hier
+sync-status-clock-ahead = Sync: Uhr von { $device } geht vor
+sync-status-damaged =
+    { $n ->
+        [one] Sync: 1 beschädigte Datei übersprungen
+       *[other] Sync: { $n } beschädigte Dateien übersprungen
+    }
+sync-status-up-to-date = Sync: aktuell
+sync-status-this-computer = Dieser Computer: { $name }.
+sync-status-no-others = Noch keine anderen Computer.
+sync-status-others = Andere Computer: { $names }.
+sync-status-error = Problem: { $error }
+sync-another-computer = ein anderer Computer
+sync-untitled = ein Dokument
+sync-damaged = Sync: beschädigte Datei von { $device } übersprungen.
+sync-newer-file = Sync: neuere Datei von { $device } übersprungen.
+sync-read-only = Sync: neueres Format, nur lesen.
+sync-clock-ahead = Sync: Uhr von { $device } geht { $hours } Stunden vor.
+sync-fresh-id = Sync: kopierte Einrichtung; neue Computer-ID.
+sync-write-failed = Sync: Schreiben fehlgeschlagen. { $error }
+sync-name-refused = Name nicht erlaubt. Zum Beispiel: Laptop.
+sync-note-replaced =
+    { $n ->
+        [one] { $title }: eine Notiz wurde durch die neuere Änderung von { $device } ersetzt.
+       *[other] { $title }: { $n } Notizen wurden durch neuere Änderungen von { $device } ersetzt.
+    }
+sync-restored-notes =
+    { $n ->
+        [one] { $title }: eine gelöschte Notiz ist zurück, bearbeitet auf { $device }.
+       *[other] { $title }: { $n } gelöschte Notizen sind zurück, bearbeitet auf { $device }.
+    }
+sync-restored-bookmarks =
+    { $n ->
+        [one] { $title }: ein gelöschtes Lesezeichen ist zurück, bearbeitet auf { $device }.
+       *[other] { $title }: { $n } gelöschte Lesezeichen sind zurück, bearbeitet auf { $device }.
+    }
+sync-restored-highlights =
+    { $n ->
+        [one] { $title }: eine gelöschte Markierung ist zurück, bearbeitet auf { $device }.
+       *[other] { $title }: { $n } gelöschte Markierungen sind zurück, bearbeitet auf { $device }.
+    }
+sync-arrived =
+    { $n ->
+        [one] { $title }: 1 Änderung von { $device }.
+       *[other] { $title }: { $n } Änderungen von { $device }.
+    }
+sync-resumed = { $title }: fortgesetzt bei { $pct } Prozent, von { $device }.
+sync-place-arrived = Stelle von { $device }: { $pct } Prozent.
+sync-place-question = { $device } bei { $pct } Prozent. Dorthin? y oder n
+sync-suggestion-question =
+    { $n ->
+        [one] Das ist vielleicht { $title } von { $device }, mit 1 Notiz. Übernehmen? y oder n
+       *[other] Das ist vielleicht { $title } von { $device }, mit { $n } Notizen. Übernehmen? y oder n
+    }
+sync-went-to-place = Stelle von { $device }, { $pct } Prozent.
+sync-kept-place = Diese Stelle behalten.
+sync-suggestion-accepted = Notizen von { $device } werden verwendet.
+sync-suggestion-declined = Getrennt gelassen.
+sync-sidecar-differed =
+    { $n ->
+        [one] Sync: 1 Bibliotheksstelle wich ab.
+       *[other] Sync: { $n } Bibliotheksstellen wichen ab.
+    }
+sync-sidecar-failed = Sync: Bibliotheksstelle nicht schreibbar. { $error }
+sync-no-state = Sync ist in diesem Lauf aus: nichts wird gespeichert.
+sync-choose-folder = Sync-Ordner wählen
+sync-group-places = Stellen
+sync-group-notes = Notizen
+sync-group-highlights = Markierungen
+sync-group-bookmarks = Lesezeichen
+sync-group-statistics = Statistik
+sync-group-item = { $name }: { $state }
+sync-start = Sync starten
+sync-groups-title = Was synchronisiert wird
+sync-groups-intro = { $title }, als { $name }. Enter schaltet ein oder aus; Sync starten beendet.
+sync-started = Sync an, als { $name }. Sync-Status: { $key }.
+sync-how-to-set-up = Einrichten: Werkzeuge, Sync, Sync einrichten.
+sync-now-started = Synchronisiert.
+sync-now-done =
+    { $n ->
+        [one] Sync: aktuell, 1 Dokument geprüft.
+       *[other] Sync: aktuell, { $n } Dokumente geprüft.
+    }
+sync-now-changed =
+    { $n ->
+        [one] Sync: 1 Dokument hat Änderungen übernommen.
+       *[other] Sync: { $n } Dokumente haben Änderungen übernommen.
+    }
+sync-no-places = Kein anderer Computer hat hier eine Stelle.
+sync-place-item = { $device }, { $pct } Prozent
+sync-places-title =
+    { $n ->
+        [one] 1 andere Stelle
+       *[other] { $n } andere Stellen
+    }
+sync-no-replaced = Keine ersetzten Notizen in diesem Dokument.
+sync-replaced-item = { $text }, ersetzt von { $device }
+sync-replaced-item-deleted = { $text }, gelöscht von { $device }
+sync-replaced-title =
+    { $n ->
+        [one] 1 ersetzte Notiz
+       *[other] { $n } ersetzte Notizen
+    }
+sync-replaced-intro = { $title }. Enter stellt eine wieder her.
+sync-note-restored = Notiz wiederhergestellt: { $text }
+sync-already-off = Sync ist hier schon aus.
+sync-stopped = Sync hier aus. Der Ordner bleibt, wie er ist.
+prompt-sync-computer-name = Name dieses Computers, Enter behält ihn
+menu-sync = Sync
+name-sync-setup = Sync einrichten
+name-sync-status = Sync-Status
+name-sync-now = Jetzt synchronisieren
+name-sync-go-to-place = Zur Stelle eines anderen Computers
+name-sync-replaced-notes = Ersetzte Notizen
+name-sync-stop = Sync auf diesem Computer beenden
+action-sync-setup = Sync einrichten: Sync-Ordner wählen, diesen Computer benennen und wählen, was synchronisiert wird
+action-sync-status = Sagen, wie Sync steht (aktuell, Ordner fehlt oder ein Problem), und die anderen Computer nennen
+action-sync-now = Jetzt synchronisieren: die Änderungen dieses Computers senden und die der anderen für jedes Dokument übernehmen
+action-sync-go-to-place = Die Stellen der anderen Computer in diesem Dokument auflisten; Enter geht zu einer
+action-sync-replaced-notes = Notizen auflisten, die durch neuere Änderungen eines anderen Computers ersetzt wurden; Enter stellt eine wieder her
+action-sync-stop = Sync auf diesem Computer beenden; der Sync-Ordner bleibt, wie er ist
+section-sync = Sync
+setting-sync-enabled = Sync
+setting-sync-enabled-help = Notizen, Markierungen, Lesezeichen und Stellen über den Sync-Ordner mit Ihren anderen Computern teilen. Werkzeuge, Sync, Sync einrichten schaltet es ein.
+setting-sync-folder = Sync-Ordner
+setting-sync-folder-help = Der Ordner, den Ihre Computer teilen: einer, den Syncthing abgleicht, ein Cloud-Ordner oder ein USB-Stick.
+setting-sync-device-name = Computername
+setting-sync-device-name-help = Der Name dieses Computers in Sync-Meldungen, etwa Laptop oder Labor; leer ergibt Computer 1, Computer 2 und so weiter.
+setting-sync-places = Stellen synchronisieren
+setting-sync-places-help = Teilen, wo Sie in jedem Dokument sind.
+setting-sync-notes = Notizen synchronisieren
+setting-sync-notes-help = Notizen teilen.
+setting-sync-highlights = Markierungen synchronisieren
+setting-sync-highlights-help = Markierungen teilen.
+setting-sync-bookmarks = Lesezeichen synchronisieren
+setting-sync-bookmarks-help = Lesezeichen teilen.
+setting-sync-statistics = Statistik synchronisieren
+setting-sync-statistics-help = Lesezeit und Sitzungen jedes Computers teilen.
+setting-sync-position-policy = Stelle zum Fortsetzen
+setting-sync-position-policy-help = Bei welcher Stelle ein Dokument öffnet, wenn ein anderer Computer auch eine hat: die neueste, die weiteste oder fragen.
+choice-sync-position-policy-newest = die neueste
+choice-sync-position-policy-furthest = die weiteste
+choice-sync-position-policy-ask = fragen
+
+## End of S4

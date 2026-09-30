@@ -444,7 +444,6 @@ goto-not-a-target = ليس هدف انتقال: { $text }. اكتب رقم سط�
 open-opened = فُتح { $title }.
 open-resumed = فُتح { $title }. استُؤنفت القراءة عند { $pct } بالمئة.
 open-resumed-synced = فُتح { $title }. استُؤنفت القراءة عند { $pct } بالمئة، من جهاز آخر.
-open-resumed-conflict = فُتح { $title }. استُؤنفت القراءة عند { $pct } بالمئة. جهاز آخر عند موضع مختلف؛ أُبقي على موضع هذا الجهاز.
 
 ## الطلبات: تُعرض التسمية وتُقال عند فتح الطلب.
 
@@ -1811,11 +1810,6 @@ setting-reading-wrap-navigation = التفاف التنقل
 setting-reading-wrap-navigation-help = تجاوز نهاية المستند يتابع من البداية.
 setting-reading-cursor-follows-speech = المؤشر يتبع الكلام
 setting-reading-cursor-follows-speech-help = يتحرك المؤشر مع الكلمة قيد القراءة.
-setting-reading-sync-conflict-policy = المواضع المُزامنة
-setting-reading-sync-conflict-policy-help = أي موضع يُرجَّح عندما يقرأ جهاز آخر أبعد أو لاحقًا.
-choice-reading-sync-conflict-policy-newest = الأحدث
-choice-reading-sync-conflict-policy-highest-progress = الأبعد
-choice-reading-sync-conflict-policy-manual = السؤال
 setting-reading-citations = الاستشهادات
 setting-reading-citations-help = الاستشهادات في القراءة المتواصلة: تُتخطى، أو تُقال بالكلمات.
 choice-reading-citations-off = تُتخطى
@@ -3638,3 +3632,156 @@ gui-font-list-intro =
 links-page-label = صفحة { $page }
 
 ## End of W6c5
+
+## Sync wave, S4: sync in the reader (ADR-0049).
+sync-status-off = المزامنة: متوقفة
+sync-status-not-set-up = المزامنة: غير مُعدّة
+sync-status-starting = المزامنة: تبدأ
+sync-status-folder-missing = المزامنة: المجلد غير موجود، الحفظ هنا
+sync-status-read-only = المزامنة: تنسيق أحدث، قراءة فقط
+sync-status-failed = المزامنة: تعذّر استخدام المجلد
+sync-status-cannot-write = المزامنة: تعذّرت الكتابة، الحفظ هنا
+sync-status-clock-ahead = المزامنة: ساعة { $device } متقدمة
+sync-status-damaged =
+    { $n ->
+        [one] المزامنة: تُخُطّي ملف تالف واحد
+       *[other] المزامنة: تُخُطّيت ملفات تالفة: { $n }
+    }
+sync-status-up-to-date = المزامنة: محدّثة
+sync-status-this-computer = هذا الحاسوب: { $name }.
+sync-status-no-others = لا حواسيب أخرى بعد.
+sync-status-others = الحواسيب الأخرى: { $names }.
+sync-status-error = مشكلة: { $error }
+sync-another-computer = حاسوب آخر
+sync-untitled = مستند
+sync-damaged = المزامنة: تُخُطّي ملف تالف من { $device }.
+sync-newer-file = المزامنة: تُخُطّي ملف أحدث من { $device }.
+sync-read-only = المزامنة: تنسيق أحدث، قراءة فقط.
+sync-clock-ahead = المزامنة: ساعة { $device } متقدمة بمقدار { $hours } ساعة.
+sync-fresh-id = المزامنة: إعداد منسوخ؛ مُعرّف حاسوب جديد.
+sync-write-failed = المزامنة: تعذّرت الكتابة. { $error }
+sync-name-refused = الاسم غير مسموح. جرّب اسمًا مثل laptop.
+sync-note-replaced =
+    { $n ->
+        [one] { $title }: استُبدلت ملاحظة بتعديل أحدث من { $device }.
+       *[other] { $title }: استُبدلت ملاحظات بتعديلات أحدث من { $device }: { $n }.
+    }
+sync-restored-notes =
+    { $n ->
+        [one] { $title }: عادت ملاحظة محذوفة، عُدّلت على { $device }.
+       *[other] { $title }: عادت ملاحظات محذوفة، عُدّلت على { $device }: { $n }.
+    }
+sync-restored-bookmarks =
+    { $n ->
+        [one] { $title }: عادت علامة مرجعية محذوفة، عُدّلت على { $device }.
+       *[other] { $title }: عادت علامات مرجعية محذوفة، عُدّلت على { $device }: { $n }.
+    }
+sync-restored-highlights =
+    { $n ->
+        [one] { $title }: عاد تظليل محذوف، عُدّل على { $device }.
+       *[other] { $title }: عادت تظليلات محذوفة، عُدّلت على { $device }: { $n }.
+    }
+sync-arrived =
+    { $n ->
+        [one] { $title }: تغيير واحد من { $device }.
+       *[other] { $title }: تغييرات من { $device }: { $n }.
+    }
+sync-resumed = { $title }: استُؤنفت القراءة عند { $pct } بالمئة، من { $device }.
+sync-place-arrived = موضع { $device }: { $pct } بالمئة.
+sync-place-question = { $device } عند { $pct } بالمئة. الانتقال إليه؟ y أو n
+sync-suggestion-question =
+    { $n ->
+        [one] قد يكون هذا { $title } من { $device }، مع ملاحظة واحدة. استخدامها؟ y أو n
+       *[other] قد يكون هذا { $title } من { $device }، مع ملاحظات: { $n }. استخدامها؟ y أو n
+    }
+sync-went-to-place = موضع { $device }، { $pct } بالمئة.
+sync-kept-place = أُبقي هذا الموضع.
+sync-suggestion-accepted = تُستخدم ملاحظات { $device }.
+sync-suggestion-declined = أُبقيا منفصلين.
+sync-sidecar-differed =
+    { $n ->
+        [one] المزامنة: اختلف موضع واحد في المكتبة.
+       *[other] المزامنة: اختلفت مواضع في المكتبة: { $n }.
+    }
+sync-sidecar-failed = المزامنة: تعذّرت كتابة موضع في المكتبة. { $error }
+sync-no-state = المزامنة متوقفة في هذا التشغيل: لا يُحفظ شيء.
+sync-choose-folder = اختر مجلد المزامنة
+sync-group-places = المواضع
+sync-group-notes = الملاحظات
+sync-group-highlights = التظليلات
+sync-group-bookmarks = العلامات المرجعية
+sync-group-statistics = الإحصاءات
+sync-group-item = { $name }: { $state }
+sync-start = بدء المزامنة
+sync-groups-title = ما يُزامَن
+sync-groups-intro = { $title }، باسم { $name }. Enter يشغّل أو يوقف؛ بدء المزامنة ينهي.
+sync-started = المزامنة تعمل، باسم { $name }. حالة المزامنة: { $key }.
+sync-how-to-set-up = للإعداد: الأدوات، المزامنة، إعداد المزامنة.
+sync-now-started = جارٍ المزامنة.
+sync-now-done =
+    { $n ->
+        [one] المزامنة: محدّثة، فُحص مستند واحد.
+       *[other] المزامنة: محدّثة، مستندات مفحوصة: { $n }.
+    }
+sync-now-changed =
+    { $n ->
+        [one] المزامنة: تلقّى مستند واحد تغييرات.
+       *[other] المزامنة: مستندات تلقّت تغييرات: { $n }.
+    }
+sync-no-places = لا يملك حاسوب آخر موضعًا هنا.
+sync-place-item = { $device }، { $pct } بالمئة
+sync-places-title =
+    { $n ->
+        [one] موضع آخر واحد
+       *[other] مواضع أخرى: { $n }
+    }
+sync-no-replaced = لا ملاحظات مستبدلة في هذا المستند.
+sync-replaced-item = { $text }، استبدلها { $device }
+sync-replaced-item-deleted = { $text }، حذفها { $device }
+sync-replaced-title =
+    { $n ->
+        [one] ملاحظة مستبدلة واحدة
+       *[other] ملاحظات مستبدلة: { $n }
+    }
+sync-replaced-intro = { $title }. Enter يعيد واحدة.
+sync-note-restored = أُعيدت الملاحظة: { $text }
+sync-already-off = المزامنة متوقفة هنا بالفعل.
+sync-stopped = أُوقفت المزامنة هنا. يبقى المجلد كما هو.
+prompt-sync-computer-name = اسم هذا الحاسوب، Enter يبقيه
+menu-sync = المزامنة
+name-sync-setup = إعداد المزامنة
+name-sync-status = حالة المزامنة
+name-sync-now = المزامنة الآن
+name-sync-go-to-place = الانتقال إلى موضع حاسوب آخر
+name-sync-replaced-notes = الملاحظات المستبدلة
+name-sync-stop = إيقاف المزامنة على هذا الحاسوب
+action-sync-setup = إعداد المزامنة: اختيار مجلد المزامنة، وتسمية هذا الحاسوب، واختيار ما يُزامَن
+action-sync-status = قول حالة المزامنة (محدّثة، أو المجلد غير موجود، أو مشكلة) وتسمية الحواسيب الأخرى
+action-sync-now = المزامنة الآن: إرسال تغييرات هذا الحاسوب وأخذ تغييرات الحواسيب الأخرى لكل مستند
+action-sync-go-to-place = سرد مواضع الحواسيب الأخرى في هذا المستند؛ Enter ينتقل إلى أحدها
+action-sync-replaced-notes = سرد الملاحظات التي استبدلها تعديل أحدث من حاسوب آخر؛ Enter يعيد واحدة
+action-sync-stop = إيقاف المزامنة على هذا الحاسوب؛ يبقى مجلد المزامنة كما هو
+section-sync = المزامنة
+setting-sync-enabled = المزامنة
+setting-sync-enabled-help = مشاركة الملاحظات والتظليلات والعلامات المرجعية والمواضع مع حواسيبك الأخرى عبر مجلد المزامنة. الأدوات، المزامنة، إعداد المزامنة يشغّلها.
+setting-sync-folder = مجلد المزامنة
+setting-sync-folder-help = المجلد الذي تتشاركه حواسيبك: مجلد يحدّثه Syncthing، أو مجلد سحابي، أو ذاكرة USB.
+setting-sync-device-name = اسم الحاسوب
+setting-sync-device-name-help = اسم هذا الحاسوب في رسائل المزامنة، مثل laptop أو lab؛ الفارغ يستخدم Computer 1 وComputer 2 وهكذا.
+setting-sync-places = مزامنة المواضع
+setting-sync-places-help = مشاركة موضعك في كل مستند.
+setting-sync-notes = مزامنة الملاحظات
+setting-sync-notes-help = مشاركة الملاحظات.
+setting-sync-highlights = مزامنة التظليلات
+setting-sync-highlights-help = مشاركة التظليلات.
+setting-sync-bookmarks = مزامنة العلامات المرجعية
+setting-sync-bookmarks-help = مشاركة العلامات المرجعية.
+setting-sync-statistics = مزامنة الإحصاءات
+setting-sync-statistics-help = مشاركة وقت القراءة والجلسات لكل حاسوب.
+setting-sync-position-policy = موضع الاستئناف
+setting-sync-position-policy-help = الموضع الذي يُفتح عنده المستند حين يكون لحاسوب آخر موضع أيضًا: الأحدث، أو الأبعد، أو السؤال.
+choice-sync-position-policy-newest = الأحدث
+choice-sync-position-policy-furthest = الأبعد
+choice-sync-position-policy-ask = السؤال
+
+## End of S4

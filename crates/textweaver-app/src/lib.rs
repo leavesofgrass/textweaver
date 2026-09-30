@@ -92,7 +92,7 @@
 //!   `DocState::highlights`, moved across edits by `DocState::shift`.
 //! - **Library** (`open_library`): folder documents and recent files;
 //!   opening records the bookshelf, and positions sync through library
-//!   folders' sidecars under `reading.sync_conflict_policy`.
+//!   folders' sidecars under `[sync] position_policy`.
 //! - **Settings** reach the engines and the speech service
 //!   ([`speech_registry_for`], [`service_config`]); `[keyboard]
 //!   character_keys` is applied at startup and toggled with F9.
@@ -219,6 +219,8 @@ mod status;
 mod structure;
 mod study;
 mod summary;
+mod sync;
+pub mod sync_engine;
 mod tables;
 mod tasks;
 mod templates;
@@ -292,5 +294,6 @@ pub use textweaver_lexicon as lexicon;
 pub use textweaver_speech as speech;
 pub use textweaver_store as store;
 pub use textweaver_summary as summaries;
+pub use textweaver_sync as sync_folder;
 pub use textweaver_text as text;
 pub use textweaver_theme as theme;

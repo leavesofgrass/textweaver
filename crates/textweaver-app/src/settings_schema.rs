@@ -556,16 +556,6 @@ pub const INFO: &[Info] = &[
         "The cursor moves with the word being read.",
     ),
     choice(
-        "reading.sync_conflict_policy",
-        "Synced positions",
-        "Which position wins when another device read further or later.",
-        &[
-            ("newest", "the newest"),
-            ("highest_progress", "the furthest"),
-            ("manual", "ask"),
-        ],
-    ),
-    choice(
         "reading.citations",
         "Citations",
         "Citations in continuous reading: skipped, or said in words.",
@@ -1262,6 +1252,45 @@ pub const INFO: &[Info] = &[
         "The band behind a bookmarked word; it stays bold and underlined. A color name or #rrggbb; the theme's color by default.",
         crate::colors::COLOR_CHOICES,
     ),
+    // [sync] (ADR-0049)
+    toggle(
+        "sync.enabled",
+        "Sync",
+        "Sync notes, highlights, bookmarks, and places with your other computers through the sync folder. Tools, Sync, Set up sync turns it on.",
+    ),
+    optional(
+        "sync.folder",
+        "Sync folder",
+        "The folder your computers share: one kept in step by Syncthing, a cloud folder, or a USB stick.",
+    ),
+    text(
+        "sync.device_name",
+        "Computer name",
+        "This computer's name in sync messages, such as laptop or lab; empty uses Computer 1, Computer 2, and so on.",
+    ),
+    toggle(
+        "sync.places",
+        "Sync places",
+        "Share where you are in each document.",
+    ),
+    toggle("sync.notes", "Sync notes", "Share notes."),
+    toggle("sync.highlights", "Sync highlights", "Share highlights."),
+    toggle("sync.bookmarks", "Sync bookmarks", "Share bookmarks."),
+    toggle(
+        "sync.statistics",
+        "Sync statistics",
+        "Share each computer's reading time and sessions.",
+    ),
+    choice(
+        "sync.position_policy",
+        "Place to resume",
+        "Which place a document opens at when another computer has one too: the newest, the furthest, or ask.",
+        &[
+            ("newest", "the newest"),
+            ("furthest", "the furthest"),
+            ("ask", "ask"),
+        ],
+    ),
 ];
 
 /// The section title for a top-level key.
@@ -1287,6 +1316,7 @@ fn section_title(key: &str) -> &'static str {
         "interface" => "Interface",
         "gui" => "Window",
         "colors" => "Colors",
+        "sync" => "Sync",
         _ => "Other",
     }
 }
@@ -1932,7 +1962,7 @@ impl App {
             self.apply_interface_language();
         }
         if self.settings.library.folders != old.library.folders
-            || self.settings.reading.sync_conflict_policy != old.reading.sync_conflict_policy
+            || self.settings.sync.position_policy != old.sync.position_policy
         {
             self.library_sync = Self::make_library_sync(&self.settings);
         }

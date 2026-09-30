@@ -292,6 +292,9 @@ pub(crate) enum ListKind {
     Audio(crate::audio_export::AudioList),
     /// A list only a frontend knows (the window's fonts; crate::frontend_list).
     Frontend,
+    /// Set up sync's groups, other computers' places, or replaced notes
+    /// (crate::sync).
+    Sync(crate::sync::SyncList),
 }
 
 /// The application: the only owner of mutable state.
@@ -445,6 +448,8 @@ pub struct App {
     /// What frontends ask for every frame, kept per revision
     /// (crate::frame_cache).
     pub(crate) frame_cache: crate::frame_cache::FrameCaches,
+    /// Sync with other computers (crate::sync, ADR-0049).
+    pub(crate) sync: crate::sync::SyncState,
 }
 
 impl App {
@@ -549,6 +554,7 @@ impl App {
             audio: crate::audio_export::AudioState::default(),
             dialog_generation: 0,
             frame_cache: crate::frame_cache::FrameCaches::default(),
+            sync: crate::sync::SyncState::default(),
         };
         crate::browse::register(&mut app);
         app.apply_voice_settings();
@@ -591,6 +597,7 @@ impl App {
             || self.dictation.question
             || self.batch_question()
             || self.audio_question()
+            || self.sync.question.is_some()
     }
 
     /// Answers a pending confirmation.
@@ -622,6 +629,9 @@ impl App {
         }
         if self.audio_question() {
             return self.confirm_audio(answer);
+        }
+        if self.sync.question.is_some() {
+            return self.confirm_sync(answer);
         }
         if let Some((kind, n)) = self.pending_list_delete.clone() {
             return match answer {
@@ -869,11 +879,14 @@ impl App {
         });
         let key = DocKey::for_path(path);
         // The recent list and the bookshelf, on the writer.
-        self.record_library_open_doc(path, &title, &doc);
+        let details = self.record_library_open_doc(path, &title, &doc);
+        let rope = doc.text().clone();
         let effects = self.open_document_stamped(doc, key, title, text);
         if let Some(s) = self.session.as_mut() {
             s.disk = stamp;
         }
+        // Its sync id, and with sync on, what other computers have of it.
+        self.sync_document_opened(path, Some(rope), details);
         effects
     }
 
@@ -907,6 +920,7 @@ impl App {
             }
             self.flush_library_sync();
             self.stats_flush();
+            self.sync_leave_document();
         }
         self.stop_speech();
         self.rsvp = None;
@@ -956,6 +970,7 @@ impl App {
                     pos,
                     synced: false,
                     unresolved: false,
+                    other: None,
                 }),
         };
         if self.paths.is_some()
@@ -1009,10 +1024,6 @@ impl App {
                 "open-resumed-synced",
                 &args!["title" => title.as_str(), "pct" => p],
             ),
-            Some((p, r)) if r.unresolved => self.msg_args(
-                "open-resumed-conflict",
-                &args!["title" => title.as_str(), "pct" => p],
-            ),
             Some((p, _)) => self.msg_args(
                 "open-resumed",
                 &args!["title" => title.as_str(), "pct" => p],
@@ -1024,6 +1035,14 @@ impl App {
             None => msg,
         };
         self.tell(&msg);
+        // "Ask" asks about the library folder's other place (ADR-0049,
+        // problem 1: it used to keep this computer's without asking).
+        if let Some((_, r)) = resumed
+            && r.unresolved
+            && let Some(other) = r.other
+        {
+            self.sync_ask_sidecar_place(other);
+        }
         if self.settings.speech.auto_play {
             self.read_from_cursor();
         }
@@ -1122,6 +1141,7 @@ impl App {
         }
         self.stats_flush();
         self.flush_library_sync();
+        self.sync_leave_document();
         self.stop_speech();
         self.close_preview();
         self.finish_writes();
@@ -1331,6 +1351,7 @@ impl App {
         effects.extend(self.dictation_tick());
         effects.extend(self.batch_tick(now));
         effects.extend(self.audio_tick(now));
+        effects.extend(self.sync_tick(now));
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
         effects.extend(self.authoring_tick(now));
         if rsvp_moved && effects.is_empty() {
@@ -1463,6 +1484,7 @@ impl App {
             | PromptPurpose::ImportProfiles
             | PromptPurpose::ExportProfiles => return self.answer_study(purpose, text),
             PromptPurpose::SettingValue => return self.answer_setting_value(text),
+            PromptPurpose::SyncComputerName => return self.answer_sync_name(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
                 if let Some(i) = self.pending_item.take() {
@@ -1505,6 +1527,7 @@ impl App {
             Some(ListKind::Batch(l)) => return self.choose_batch(l, n),
             Some(ListKind::Audio(l)) => return self.choose_audio(l, n),
             Some(ListKind::Frontend) => self.choose_frontend_item(n),
+            Some(ListKind::Sync(l)) => return self.choose_sync(l, n),
             Some(ListKind::Palette(actions)) => {
                 if let Some(&a) = actions.get(n) {
                     return self.run_command(a);
@@ -1838,6 +1861,12 @@ impl App {
                 return self.run_registered(a);
             }
             A::ColorSettings => return self.open_color_settings(),
+            A::SyncSetup
+            | A::SyncStatus
+            | A::SyncNow
+            | A::SyncGoToPlace
+            | A::SyncReplacedNotes
+            | A::SyncStop => return self.sync_action(a),
             A::CycleInterfaceAnnouncements => self.cycle_interface_announcements(),
             A::WhatDoesThisKeyDo => return self.what_does_this_key_do(),
             A::About => self.about(),

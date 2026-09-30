@@ -64,7 +64,6 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `reading.nav_history_size`: default 50 places. Back history. How many places Back remembers. From 1 to 1000 places, in steps of 10.
 - `reading.wrap_navigation`: default off (`false`). Wrap navigation. Moving past the end of the document goes on from the start. On or off: `true` or `false`.
 - `reading.cursor_follows_speech`: default on (`true`). Cursor follows speech. The cursor moves with the word being read. On or off: `true` or `false`.
-- `reading.sync_conflict_policy`: default the newest (`"newest"`). Synced positions. Which position wins when another device read further or later. Choices: `"newest"` (the newest), `"highest_progress"` (the furthest), `"manual"` (ask).
 - `reading.citations`: default skipped (`"off"`). Citations. Citations in continuous reading: skipped, or said in words. Choices: `"off"` (skipped), `"words"` (in words).
 - `reading.ocr`: default on (`true`). Recognize scanned pages. Read the text of scanned PDFs and pictures by recognizing it (OCR). On or off: `true` or `false`.
 - `reading.ocr_lang`: default the document's (`""`). Scanned text language. The language of scanned text, as Tesseract codes such as fra or deu+eng; empty means the document's own language, else English. Choices: `""` (the document's), `"eng"` (English), `"fra"` (French), `"deu"` (German), `"spa"` (Spanish). Other values may be written too.
@@ -214,6 +213,18 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `colors.status_bar`: default the theme's color (`"theme"`). Status bar color. The band of the status and title bars. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
 - `colors.notes`: default the theme's color (`"theme"`). Note color. The band behind text with a note; it stays italic and underlined. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
 - `colors.bookmarks`: default the theme's color (`"theme"`). Bookmark color. The band behind a bookmarked word; it stays bold and underlined. A color name or #rrggbb; the theme's color by default. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too.
+
+## Sync: the `[sync]` section
+
+- `sync.enabled`: default off (`false`). Sync. Sync notes, highlights, bookmarks, and places with your other computers through the sync folder. Tools, Sync, Set up sync turns it on. On or off: `true` or `false`.
+- `sync.folder`: default not set. Sync folder. The folder your computers share: one kept in step by Syncthing, a cloud folder, or a USB stick. Text; empty means not set.
+- `sync.device_name`: default empty (`""`). Computer name. This computer's name in sync messages, such as laptop or lab; empty uses Computer 1, Computer 2, and so on. Text.
+- `sync.places`: default on (`true`). Sync places. Share where you are in each document. On or off: `true` or `false`.
+- `sync.notes`: default on (`true`). Sync notes. Share notes. On or off: `true` or `false`.
+- `sync.highlights`: default on (`true`). Sync highlights. Share highlights. On or off: `true` or `false`.
+- `sync.bookmarks`: default on (`true`). Sync bookmarks. Share bookmarks. On or off: `true` or `false`.
+- `sync.statistics`: default on (`true`). Sync statistics. Share each computer's reading time and sessions. On or off: `true` or `false`.
+- `sync.position_policy`: default the newest (`"newest"`). Place to resume. Which place a document opens at when another computer has one too: the newest, the furthest, or ask. Choices: `"newest"` (the newest), `"furthest"` (the furthest), `"ask"`.
 
 ## Kept by textweaver
 

@@ -198,6 +198,7 @@ pub(crate) fn prompt_label(c: &Catalog, purpose: PromptPurpose) -> String {
         P::ImportProfiles => "prompt-profiles-import",
         P::ExportProfiles => "prompt-profiles-export",
         P::SettingValue => "prompt-setting-value",
+        P::SyncComputerName => "prompt-sync-computer-name",
     })
 }
 

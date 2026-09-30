@@ -836,7 +836,8 @@ impl App {
             s.doc.meta.format = edit.session.doc().loader_id.clone();
             s.saved = textweaver_store::DocState::default();
             let format = s.doc.meta.format.clone();
-            // The recent list and the bookshelf, on the writer.
+            // The recent list and the bookshelf, on the writer; and its sync
+            // id, under the new name.
             self.record_library_open(path, &title, &format);
         }
     }
