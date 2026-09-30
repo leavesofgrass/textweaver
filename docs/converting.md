@@ -254,7 +254,7 @@ For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the 
 
 textweaver reads these formats itself:
 
-- Markdown, HTML, plain text, EPUB, Word (DOCX), and PDF.
+- Markdown, HTML, plain text, EPUB, Word (DOCX), and PDF. A PDF's links, comments, and filled-in form fields are read too. See [PDF files](#pdf-files).
 - RTF (Rich Text Format): headings, lists, tables, footnotes, links, pictures' descriptions, and text in older code pages such as Cyrillic and Japanese.
 - OpenDocument text (ODT, OTT, and flat FODT), as LibreOffice and Google Docs save it: headings, numbered and bulleted lists, tables, footnotes, links, and pictures' descriptions.
 - LaTeX (TEX, LATEX, and LTX): sections, lists, tables, math, references, citations, and footnotes, and the files it includes from its own folder. See [LaTeX](#latex).
@@ -354,7 +354,7 @@ A file over 128 megabytes, or a message with more than 10,000 parts or parts nes
 
 ### Comments and tracked changes
 
-Comments in Word and OpenDocument files, with their replies and whether they are resolved, come with the document. When you open it in the reader, each comment becomes a note on the text it is about, tagged `comment`, so reading tells you when you reach it ("Note: Comment by Ada Example: say how salty. Reply by Bo Example: added. Resolved."), and the notes list has them all. A comment you edit or keep stays as you left it when the document opens again.
+Comments in Word, OpenDocument, and PDF files, with their replies and whether they are resolved, come with the document. When you open it in the reader, each comment becomes a note on the text it is about, tagged `comment`, so reading tells you when you reach it ("Note: Comment by Ada Example: say how salty. Reply by Bo Example: added. Resolved."), and the notes list has them all. A comment you edit or keep stays as you left it when the document opens again. In a PDF, a highlight or a struck-out sentence with nothing typed in it is a note too ("Note: Comment by Ada Example: Highlighted"), since the marking is the comment.
 
 Tracked changes in Word, OpenDocument, and RTF files are read as the final text by default: insertions as ordinary text, deletions left out. The reading setting `revisions` changes that:
 
@@ -378,7 +378,16 @@ tw convert essay.rst --to md
 textweaver essay.md
 ```
 
-PDF files are read with column-aware reading order: running headers and page numbers are left out, and headings, lists, and tables are recovered. [ADR-0010](adr/0010-pdf-loader.md) explains how the PDF reader works.
+### PDF files
+
+PDF files are read with column-aware reading order: running headers and page numbers are left out, and headings, lists, and tables are recovered. [ADR-0010](adr/0010-pdf-loader.md) explains how the PDF reader works. What a PDF keeps beside its pages is read as well:
+
+- **Links** are links. A web or email address is said, and offered to open, when you follow it. A link to another part of the PDF goes to the heading there, or else to the page, which is said as "Page" and its printed number, then its first line. Links that would run a program or a script are left out.
+- **Comments** from a PDF viewer, such as sticky notes, highlights, and strike-outs, are notes on the text they mark, as in Word. See [Comments and tracked changes](#comments-and-tracked-changes).
+- **Form fields** are read where they are on the page, the label first and then what was filled in: "Name: Ada Example", "Student ID, required: empty", "I agree to the terms: checked", "Payment: Credit card", "Signature: not signed". The printed label and the line to write on are not read a second time. Buttons such as Submit are left out. A form made in XFA, an older Adobe format, is not read, and a warning says so.
+- **Captions** that start like "Figure 3." or "Table 2:" are found by that pattern. A table's caption becomes the table's name, said when you move to the table. A figure's caption is read as a graphic's description. A caption set large or bold is not taken for a heading.
+
+[ADR-0048](adr/0048-pdf-annotations-links-and-forms.md) explains the choices and the limits.
 
 ### Scanned pages (OCR)
 
@@ -388,6 +397,8 @@ A scanned PDF has pictures of pages instead of text. textweaver recognizes the t
 - **Other languages** are read by Tesseract, a free program you install yourself, with the data for your language. Set the language with `ocr_lang` in the `[reading]` section of the settings, for example `ocr_lang = "fra"` for French, or `"deu+eng"` for German and English. When a PDF names its own language, that is used.
 - `ocr_engine` chooses the engine: `auto` (the default), `ocrs`, `tesseract`, or `paddle` (an experimental in-process engine for accented Latin-script languages; download it with `tw ocr download paddle-latin`). `ocr = false` turns recognition off.
 - `tw ocr read scan.pdf` recognizes a file and prints its text, with progress. Press Control C to stop it.
+- A page scanned sideways or upside down is turned upright before it is read, so its lines come in order. textweaver tells which way is up from the page itself; nothing is downloaded for it.
+- A scanned table is read as a table, with rows and columns you can move through, when its rows and columns line up. A first row of words over rows of numbers is its header row.
 - Recognized pages are remembered, so a book opens instantly the second time.
 - In the reader, a scanned book takes about a second a page to open the first time. Every three seconds you hear which page it is on, such as "Still opening scan.pdf: recognizing text on page 3 (3 of 40)." Escape stops it.
 
@@ -437,4 +448,5 @@ Two cases are refused before converting:
 - [ADR-0016: Rendering and bulk conversion](adr/0016-rendering-and-conversion.md): how conversion works and how fast it is.
 - [ADR-0017: Native writers](adr/0017-writers.md): EPUB, Word, braille, and PDF output, and their accessibility checks.
 - [ADR-0010: PDF loader](adr/0010-pdf-loader.md): how PDFs are read.
+- [ADR-0048: PDF annotations, links and forms](adr/0048-pdf-annotations-links-and-forms.md): PDF comments as notes, links, form fields, captions, and rotated and tabular scans.
 - [Documentation index](README.md)

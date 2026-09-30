@@ -220,6 +220,7 @@ pub(crate) fn parse_tsv(tsv: &str, width: u32, height: u32) -> OcrPage {
         width,
         height,
         lines: Vec::new(),
+        turned: 0,
     };
     let mut current: Option<((u32, u32, u32), OcrLine)> = None;
     for row in tsv.lines().skip(1) {

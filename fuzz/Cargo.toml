@@ -285,3 +285,10 @@ path = "fuzz_targets/obsidian.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "pdf_annots"
+path = "fuzz_targets/pdf_annots.rs"
+test = false
+doc = false
+bench = false

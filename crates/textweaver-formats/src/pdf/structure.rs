@@ -96,6 +96,13 @@ pub(super) enum Kind {
     Code,
     Table(TableRows),
     Image,
+    /// A form field's line: "Label: value".
+    Field,
+    /// A caption found by its pattern ("Figure 3.", "Table 2:") or its
+    /// tag; `figure` when it describes a picture rather than a table.
+    Caption {
+        figure: bool,
+    },
 }
 
 /// Table rows and whether the first is a header.
@@ -233,6 +240,21 @@ fn block_units(block: &Block, page: usize, margin: f32, cx: &Context<'_>, out: &
                 lines: t.rows.len(),
                 mcid: u32::MAX,
                 full: String::new(),
+                top: 0.0,
+                note: false,
+            });
+            return;
+        }
+        Content::Field(text) => {
+            out.push(Unit {
+                kind: Kind::Field,
+                pieces: vec![Piece::new(page, text.clone())],
+                size: 0.0,
+                bold: 0.0,
+                italic: 0.0,
+                lines: 1,
+                mcid: u32::MAX,
+                full: text.clone(),
                 top: 0.0,
                 note: false,
             });
@@ -534,6 +556,16 @@ pub(super) fn units(pages: &[Page], cx: &Context<'_>) -> (Vec<Unit>, Vec<(usize,
             u.kind = Kind::Heading(l);
             let full = u.full.clone();
             u.pieces = vec![Piece::new(u.page(), full)];
+        } else if u.kind == Kind::Paragraph && !u.note {
+            let tagged = cx
+                .roles
+                .get(&(u.page(), u.mcid))
+                .is_some_and(|r| r == "Caption");
+            if let Some(figure) = caption_kind(&u.full, u.lines)
+                .or_else(|| tagged.then(|| !u.full.trim_start().starts_with("Tab")))
+            {
+                u.kind = Kind::Caption { figure };
+            }
         }
         // A paragraph continued on the next page skips the notes at the
         // foot of the page before (they follow it instead).
@@ -592,7 +624,11 @@ fn mark_notes(units: &mut [Unit], body: f32) {
 }
 
 fn heading_reason(u: &Unit, cx: &Context<'_>, outline: Option<u8>) -> Option<Why> {
-    if matches!(u.kind, Kind::Table(_) | Kind::Image | Kind::Code) || u.note {
+    if matches!(
+        u.kind,
+        Kind::Table(_) | Kind::Image | Kind::Code | Kind::Field
+    ) || u.note
+    {
         return None;
     }
     if let Some(role) = cx.roles.get(&(u.page(), u.mcid)) {
@@ -606,6 +642,10 @@ fn heading_reason(u: &Unit, cx: &Context<'_>, outline: Option<u8>) -> Option<Why
         if let Some(l) = level {
             return Some(Why::Tag(l));
         }
+    }
+    // A caption set large or bold ("Table 2: Scores") is still a caption.
+    if u.kind == Kind::Paragraph && caption_kind(&u.full, u.lines).is_some() {
+        return None;
     }
     let t = u.full.trim();
     let chars = t.chars().count();
@@ -664,17 +704,110 @@ fn glue_hyphen(prev: &mut Unit, next: &mut Unit) {
     }
 }
 
+/// Words that start a caption, and whether it describes a picture.
+const CAPTION_WORDS: &[(&str, bool)] = &[
+    ("figure", true),
+    ("fig.", true),
+    ("illustration", true),
+    ("plate", true),
+    ("chart", true),
+    ("diagram", true),
+    ("graph", true),
+    ("map", true),
+    ("photo", true),
+    ("table", false),
+    ("tab.", false),
+];
+
+/// A caption's number: `3`, `2.1`, `A.4`, `3-2`, `4b`, `IV`, `S1`.
+fn caption_number(s: &str) -> bool {
+    let roman = !s.is_empty() && s.len() <= 6 && s.chars().all(|c| "IVXLC".contains(c));
+    let body = s
+        .strip_prefix(|c: char| c.is_ascii_uppercase())
+        .filter(|r| r.starts_with(|c: char| c.is_ascii_digit()))
+        .unwrap_or(s);
+    let body = body.trim_end_matches(|c: char| c.is_ascii_lowercase());
+    let numeric = !body.is_empty()
+        && body.len() <= 9
+        && body
+            .split(['.', '-', '\u{2013}'])
+            .all(|p| !p.is_empty() && p.len() <= 3 && p.chars().all(|c| c.is_ascii_digit()));
+    roman || numeric
+}
+
+/// Whether `text` is a caption, by its pattern: a caption word, a number,
+/// then punctuation ("Figure 3.", "Table 2:", "Fig. 4 -") or a capitalized
+/// title on a short paragraph ("Table 2 Results by year"). Returns whether
+/// it describes a picture. "Figure 3 shows..." is a sentence, not a
+/// caption.
+pub(super) fn caption_kind(text: &str, lines: usize) -> Option<bool> {
+    let mut words = text.split_whitespace();
+    let first = words.next()?;
+    let figure = CAPTION_WORDS
+        .iter()
+        .find(|(w, _)| first.eq_ignore_ascii_case(w))
+        .map(|&(_, f)| f)?;
+    // The word must be written as a word starts: "Figure" or "FIGURE".
+    if !first.starts_with(|c: char| c.is_uppercase()) {
+        return None;
+    }
+    let number = words.next()?;
+    let bare = number.trim_end_matches(['.', ':', '\u{2014}', '\u{2013}', '|', ',']);
+    if !caption_number(bare) {
+        return None;
+    }
+    let punctuated = bare.len() < number.len() && !number.ends_with(',');
+    let next = words.next();
+    if punctuated {
+        return Some(figure);
+    }
+    match next {
+        None => Some(figure),
+        Some("-" | "\u{2013}" | "\u{2014}" | "|" | ":") => Some(figure),
+        Some(w) if w.starts_with(|c: char| c.is_uppercase()) && lines <= 4 => Some(figure),
+        _ => None,
+    }
+}
+
 /// Writes the units into `b`, with `PageBreak` markers per page (label =
 /// the printed page label, `labels[page]`, or the page number) and
-/// `SectionBreak` markers for the outline.
+/// `SectionBreak` markers for the outline. Returns the pages whose
+/// `PageBreak` markers were opened, in order.
 pub(super) fn emit(
     b: &mut Builder,
     units: &[Unit],
     sections: &[(usize, usize)],
     outline: &[(String, usize, u8)],
     labels: &[String],
-) {
+) -> Vec<usize> {
     let marker = |k: MarkerKind| Marker::new(k, CharRange::empty(0));
+    // A table caption labels the table right after it, or else right
+    // before it, on the same page.
+    let mut table_labels: HashMap<usize, String> = HashMap::new();
+    for (i, u) in units.iter().enumerate() {
+        if u.kind != (Kind::Caption { figure: false }) {
+            continue;
+        }
+        let is_table =
+            |k: usize| matches!(units[k].kind, Kind::Table(_)) && units[k].page() == u.page();
+        let target = [i + 1, i.wrapping_sub(1)]
+            .into_iter()
+            .find(|&k| k < units.len() && is_table(k) && !table_labels.contains_key(&k));
+        if let Some(k) = target {
+            table_labels.insert(k, u.text());
+        }
+    }
+    // A figure caption beside a tagged picture on its page is that
+    // picture's caption: the picture is the graphic, so the caption is not
+    // said as a second one.
+    let beside_picture = |i: usize| {
+        [i + 1, i.wrapping_sub(1)].into_iter().any(|k| {
+            units
+                .get(k)
+                .is_some_and(|v| v.kind == Kind::Image && v.page() == units[i].page())
+        })
+    };
+    let opened = std::cell::RefCell::new(Vec::new());
     let mut page: Option<(usize, OpenId)> = None;
     let mut open_sections: Vec<(u8, OpenId)> = Vec::new();
     let mut lists: Vec<(f32, OpenId)> = Vec::new();
@@ -693,6 +826,7 @@ pub(super) fn emit(
             .unwrap_or_else(|| (p + 1).to_string());
         let m = marker(MarkerKind::PageBreak).with_label(label);
         *page = Some((p, b.open(m)));
+        opened.borrow_mut().push(p);
     };
     let close_lists = |b: &mut Builder, lists: &mut Vec<(f32, OpenId)>| {
         while let Some((_, id)) = lists.pop() {
@@ -727,21 +861,34 @@ pub(super) fn emit(
                 b.close(id);
                 b.paragraph_break();
             }
-            Kind::Paragraph | Kind::Image => {
+            Kind::Field => {
+                b.paragraph_break();
+                set_page(b, u.page(), &mut page);
+                let id = b.open(marker(MarkerKind::Paragraph));
+                b.text(&u.text());
+                b.close(id);
+                b.paragraph_break();
+            }
+            Kind::Paragraph | Kind::Image | Kind::Caption { .. } => {
                 b.paragraph_break();
                 set_page(b, u.page(), &mut page);
                 let id = b.open(marker(MarkerKind::Paragraph));
                 let note = u
                     .note
                     .then(|| b.open(marker(MarkerKind::Footnote).with_level(1)));
-                // An image is a paragraph holding its alternate text.
-                let image = (u.kind == Kind::Image).then(|| b.open(marker(MarkerKind::Image)));
+                // An image is a paragraph holding its alternate text; a
+                // figure's caption describes its picture, as in the LaTeX
+                // loader, so it is a graphic too (untagged pictures have no
+                // other sign), unless a tagged picture is beside it.
+                let figure = u.kind == (Kind::Caption { figure: true }) && !beside_picture(i);
+                let image =
+                    (u.kind == Kind::Image || figure).then(|| b.open(marker(MarkerKind::Image)));
                 // A paragraph set wholly in italic or bold (a byline, a
                 // caption, a callout) keeps its emphasis.
                 let emphasis: Vec<OpenId> =
                     [(u.italic, MarkerKind::Italic), (u.bold, MarkerKind::Bold)]
                         .into_iter()
-                        .filter(|(f, _)| *f >= 0.9 && u.kind == Kind::Paragraph)
+                        .filter(|(f, _)| *f >= 0.9 && u.kind != Kind::Image && image.is_none())
                         .map(|(_, k)| b.open(marker(k)))
                         .collect();
                 pieces(b, u, &mut page, &mut set_page);
@@ -795,7 +942,11 @@ pub(super) fn emit(
             Kind::Table(t) => {
                 b.paragraph_break();
                 set_page(b, u.page(), &mut page);
-                let table = b.open(marker(MarkerKind::Table));
+                let mut tm = marker(MarkerKind::Table);
+                if let Some(l) = table_labels.get(&i) {
+                    tm = tm.with_label(l.clone());
+                }
+                let table = b.open(tm);
                 for (r, row) in t.rows.iter().enumerate() {
                     b.line_break();
                     let mut rm = marker(MarkerKind::TableRow);
@@ -819,6 +970,7 @@ pub(super) fn emit(
         }
     }
     close_lists(b, &mut lists);
+    opened.into_inner()
 }
 
 /// Writes a unit's pieces, switching the page marker between them.
@@ -861,6 +1013,25 @@ mod tests {
         assert_eq!(heading_number("1 Introduction"), Some(1));
         assert_eq!(heading_number("Chapter 4"), Some(1));
         assert_eq!(heading_number("12 apples were sold"), None);
+    }
+
+    #[test]
+    fn captions_are_found_by_their_pattern() {
+        assert_eq!(caption_kind("Figure 3. The water cycle", 1), Some(true));
+        assert_eq!(caption_kind("Table 2: Scores by year", 1), Some(false));
+        assert_eq!(caption_kind("Fig. 4 - Map of the valley", 1), Some(true));
+        assert_eq!(caption_kind("FIGURE 1.2: Overview", 2), Some(true));
+        assert_eq!(caption_kind("Table 2 Results by year", 1), Some(false));
+        assert_eq!(caption_kind("Table S1.", 1), Some(false));
+        assert_eq!(caption_kind("Plate IV", 1), Some(true));
+        // Sentences that mention a figure are not captions.
+        assert_eq!(caption_kind("Figure 3 shows the cycle.", 1), None);
+        assert_eq!(caption_kind("Figure 3, which follows, shows it.", 1), None);
+        assert_eq!(caption_kind("Table 2 Results by year and more", 9), None);
+        assert_eq!(caption_kind("table 2: lower case", 1), None);
+        assert_eq!(caption_kind("Tables 2: a list", 1), None);
+        assert_eq!(caption_kind("Figure it out.", 1), None);
+        assert_eq!(caption_kind("Figure", 1), None);
     }
 
     #[test]

@@ -182,6 +182,7 @@ pub(crate) fn recognize(image: &GrayImage) -> Result<OcrPage, OcrError> {
         width: image.width,
         height: image.height,
         lines: Vec::new(),
+        turned: 0,
     };
     for line in &lines {
         let Some(bounds) = line

@@ -94,6 +94,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted; waiting for the terminal session.
 - [ADR-0046: Native menus in the GUI](0046-native-menus-in-the-gui.md): the window's menus from the app's one model, a Win32 menu bar on Windows and the application menu on macOS through muda, the list menu on Linux, keys shown but handled only by the keymap, a fingerprint that keeps the menus current, and the Colors, settings file, and font dialogs they reach.
   - Status: accepted; waiting for session 4 and for the dialogs of the modules still to merge.
+- [ADR-0048: PDF annotations, links and forms](0048-pdf-annotations-links-and-forms.md): a PDF's comments as notes, as in Word; its links followed to headings and pages, outside addresses said; filled-in form fields read label first, then value; sideways scans turned upright; scanned tables as tables; and captions found by pattern.
+  - Status: accepted; the owner's check 6 is still queued.
 
 ## Writing a new ADR
 

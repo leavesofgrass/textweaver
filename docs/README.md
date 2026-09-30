@@ -121,6 +121,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0044: Obsidian, JSON, SVG and content MathML in the reader](adr/0044-obsidian-json-svg-and-content-mathml.md): Obsidian notes, JSON and notebooks, SVG drawings, content MathML, and more LaTeX, read natively.
 - [ADR-0045: A file browser on the list model](adr/0045-a-file-browser-on-the-list-model.md): folders and archives browsed as one list, a preview, and choosing folders for other commands; it never changes a file.
 - [ADR-0046: Native menus in the GUI](adr/0046-native-menus-in-the-gui.md): the window's menus from the app's one model, native on Windows and macOS, a list on Linux, with the keys shown and handled by the keymap alone.
+- [ADR-0048: PDF annotations, links and forms](adr/0048-pdf-annotations-links-and-forms.md): PDF comments as notes, links, filled-in forms, captions, and sideways and tabular scans.
 
 ## Interactive pages
 

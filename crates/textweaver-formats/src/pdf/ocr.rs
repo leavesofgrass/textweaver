@@ -260,6 +260,9 @@ pub(super) fn recognize_cached(
 fn cache_file(image: &textweaver_ocr::GrayImage, plan: &Plan) -> Option<PathBuf> {
     let mut h = crate::cache::fnv1a64(&image.data);
     for part in [
+        // Pages recognized before sideways pages were turned are read
+        // again.
+        "turned",
         plan.engine.name(),
         &plan.langs,
         &image.width.to_string(),
@@ -277,6 +280,9 @@ struct Cached {
     height: u32,
     /// Lines of words: text and box (x0, y0, x1, y1).
     lines: Vec<Vec<(String, [f32; 4])>>,
+    /// Quarter turns the image was read at.
+    #[serde(default)]
+    turned: u8,
 }
 
 fn read_cached(path: &PathBuf) -> Option<OcrPage> {
@@ -286,6 +292,7 @@ fn read_cached(path: &PathBuf) -> Option<OcrPage> {
         width: c.width,
         height: c.height,
         lines: Vec::new(),
+        turned: c.turned % 4,
     };
     for words in c.lines {
         let mut line = OcrLine::default();
@@ -305,6 +312,7 @@ fn write_cached(path: &PathBuf, page: &OcrPage) {
     let c = Cached {
         width: page.width,
         height: page.height,
+        turned: page.turned,
         lines: page
             .lines
             .iter()
@@ -331,9 +339,16 @@ fn write_cached(path: &PathBuf, page: &OcrPage) {
 
 /// Writes a recognized page's words into `content` as glyphs, scaled from
 /// image pixels to the page's points. Returns false when there were none.
+///
+/// A page read turned ([`OcrPage::turned`]: sideways or upside down) is
+/// turned the same way here, so its lines run across and read in order.
 pub(super) fn place(page: &OcrPage, content: &mut PageContent) -> bool {
     if page.width == 0 || page.height == 0 {
         return false;
+    }
+    content.ocr = true;
+    if content.width > 0.0 && content.height > 0.0 {
+        content.turn(page.turned);
     }
     if content.width <= 0.0 || content.height <= 0.0 {
         // A page that could not be interpreted: assume 200 dots per inch.
@@ -420,7 +435,8 @@ mod tests {
         let page = OcrPage {
             width: 1000,
             height: 2000,
-            lines: vec![line],
+            lines: vec![line.clone()],
+            turned: 0,
         };
         let mut content = PageContent {
             width: 500.0,
@@ -428,10 +444,34 @@ mod tests {
             ..PageContent::default()
         };
         assert!(place(&page, &mut content));
+        assert!(content.ocr);
         assert_eq!(content.glyphs.len(), 2);
         assert_eq!(content.glyph_text(&content.glyphs[1]), "world");
         assert!((content.glyphs[0].size - 20.0).abs() < 1e-3);
         assert!((content.glyphs[0].y - 70.0).abs() < 1e-3);
         assert!((content.glyphs[1].x - 110.0).abs() < 1e-3);
+
+        // A sideways scan read a quarter turn clockwise: the page turns
+        // with it (landscape becomes portrait), and so does the way from
+        // the page's own space to the words.
+        let turned = OcrPage {
+            width: 1000,
+            height: 2000,
+            lines: vec![line],
+            turned: 1,
+        };
+        let mut content = PageContent {
+            width: 1000.0,
+            height: 500.0,
+            to_page: Some([1.0, 0.0, 0.0, -1.0, 0.0, 500.0]),
+            ..PageContent::default()
+        };
+        assert!(place(&turned, &mut content));
+        assert_eq!((content.width, content.height), (500.0, 1000.0));
+        assert!((content.glyphs[1].x - 110.0).abs() < 1e-3);
+        // The page's top-left corner (0, 500 in PDF space) is now at the
+        // top right.
+        let (x0, y0, ..) = content.rect_on_page([0.0, 500.0, 0.0, 500.0]).unwrap();
+        assert!((x0 - 500.0).abs() < 1e-3 && y0.abs() < 1e-3, "{x0} {y0}");
     }
 }

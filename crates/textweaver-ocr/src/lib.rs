@@ -27,6 +27,7 @@ pub mod lang;
 pub mod models;
 #[cfg(feature = "ocrs")]
 mod ocrs_engine;
+pub mod orient;
 #[cfg(feature = "ocrs")]
 mod paddle;
 pub mod pdf;
@@ -150,6 +151,11 @@ pub struct OcrPage {
     pub height: u32,
     /// The lines.
     pub lines: Vec<OcrLine>,
+    /// Quarter turns clockwise the image was turned before it was read,
+    /// because its text was sideways or upside down ([`orient`]); 0 when it
+    /// was read as it was. `width`, `height`, and every box are the turned
+    /// image's.
+    pub turned: u8,
 }
 
 impl OcrPage {
@@ -330,9 +336,50 @@ pub const MIN_SIDE_IN_PROCESS: u32 = 1_500;
 /// dots per inch on a letter page).
 pub const MAX_SIDE_TESSERACT: u32 = 3_400;
 
-/// Recognizes one page image with the planned engine. Word boxes are in
-/// `image`'s pixels, whatever size the engine worked at.
+/// Recognizes one page image with the planned engine, turning it upright
+/// first when its text is sideways or upside down ([`orient`]). Word boxes
+/// are in the pixels of the image as read: `image` itself, or `image`
+/// turned [`OcrPage::turned`] quarter turns clockwise.
+///
+/// When the lines clearly run up and down but which way is not clear, both
+/// turns are read and the reading with more real words is kept
+/// ([`orient::word_score`]).
 pub fn recognize(plan: &Plan, image: &GrayImage, cancel: &AtomicBool) -> Result<OcrPage, OcrError> {
+    let candidates = orient::detect(image).candidates();
+    let mut best: Option<(f64, OcrPage)> = None;
+    for &turns in candidates {
+        if cancel.load(std::sync::atomic::Ordering::Relaxed) {
+            return Err(OcrError::Cancelled);
+        }
+        let turned;
+        let source = if turns == 0 {
+            image
+        } else {
+            turned = image.rotate(turns);
+            &turned
+        };
+        let mut page = recognize_upright(plan, source, cancel)?;
+        page.turned = turns;
+        if candidates.len() == 1 {
+            return Ok(page);
+        }
+        let score = orient::word_score(&page);
+        if best.as_ref().is_none_or(|(s, _)| score > *s) {
+            best = Some((score, page));
+        }
+    }
+    match best {
+        Some((_, page)) => Ok(page),
+        None => recognize_upright(plan, image, cancel),
+    }
+}
+
+/// Recognizes an image as it is; boxes in its pixels.
+fn recognize_upright(
+    plan: &Plan,
+    image: &GrayImage,
+    cancel: &AtomicBool,
+) -> Result<OcrPage, OcrError> {
     let max = match plan.engine {
         Engine::Tesseract => MAX_SIDE_TESSERACT,
         _ => MAX_SIDE_IN_PROCESS,
@@ -446,6 +493,7 @@ mod tests {
             width: 100,
             height: 50,
             lines: vec![line],
+            turned: 0,
         };
         let big = scale_page(page, 200, 100);
         assert_eq!(big.lines[0].rect.x1, 40.0);

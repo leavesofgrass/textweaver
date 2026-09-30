@@ -1,0 +1,124 @@
+%PDF-1.7
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /Lang (en) /AcroForm 21 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >> >> >> /Contents 20 0 R /Annots [4 0 R 5 0 R 6 0 R 9 0 R 17 0 R 18 0 R 19 0 R 13 0 R 16 0 R] >>
+endobj
+4 0 obj
+<< /Type /Annot /Subtype /Widget /P 3 0 R /FT /Tx /T (name) /V (Ada Example) /Rect [110 695 300 712] >>
+endobj
+5 0 obj
+<< /Type /Annot /Subtype /Widget /P 3 0 R /FT /Tx /T (student_id) /Ff 2 /Rect [140 665 300 682] >>
+endobj
+6 0 obj
+<< /Type /Annot /Subtype /Widget /P 3 0 R /FT /Tx /T (date) /Rect [100 636 230 652] >>
+endobj
+7 0 obj
+<< /Length 29 /Type /XObject /Subtype /Form /BBox [0 0 10 10] >>
+stream
+0 0 m 10 10 l 0 10 m 10 0 l S
+endstream
+endobj
+8 0 obj
+<< /Length 0 /Type /XObject /Subtype /Form /BBox [0 0 10 10] >>
+stream
+
+endstream
+endobj
+9 0 obj
+<< /Type /Annot /Subtype /Widget /P 3 0 R /FT /Btn /T (agree) /V /Yes /AS /Yes /Rect [72 607 84 619] /AP << /N << /Yes 7 0 R /Off 8 0 R >> >> >>
+endobj
+10 0 obj
+<< /FT /Btn /Ff 49152 /T (payment) /V /Card /Kids [13 0 R 16 0 R] >>
+endobj
+11 0 obj
+<< /Length 29 /Type /XObject /Subtype /Form /BBox [0 0 10 10] >>
+stream
+0 0 m 10 10 l 0 10 m 10 0 l S
+endstream
+endobj
+12 0 obj
+<< /Length 0 /Type /XObject /Subtype /Form /BBox [0 0 10 10] >>
+stream
+
+endstream
+endobj
+13 0 obj
+<< /Type /Annot /Subtype /Widget /P 3 0 R /Parent 10 0 R /AS /Card /Rect [72 557 84 569] /AP << /N << /Card 11 0 R /Off 12 0 R >> >> >>
+endobj
+14 0 obj
+<< /Length 29 /Type /XObject /Subtype /Form /BBox [0 0 10 10] >>
+stream
+0 0 m 10 10 l 0 10 m 10 0 l S
+endstream
+endobj
+15 0 obj
+<< /Length 0 /Type /XObject /Subtype /Form /BBox [0 0 10 10] >>
+stream
+
+endstream
+endobj
+16 0 obj
+<< /Type /Annot /Subtype /Widget /P 3 0 R /Parent 10 0 R /AS /Off /Rect [72 537 84 549] /AP << /N << /Check 14 0 R /Off 15 0 R >> >> >>
+endobj
+17 0 obj
+<< /Type /Annot /Subtype /Widget /P 3 0 R /FT /Ch /T (course) /TU (Course you are taking) /V (bio101) /Opt [[(bio101) (Biology 101)] [(chem110) (Chemistry 110)]] /Rect [130 505 300 522] >>
+endobj
+18 0 obj
+<< /Type /Annot /Subtype /Widget /P 3 0 R /FT /Sig /T (signature) /Rect [140 462 320 482] >>
+endobj
+19 0 obj
+<< /Type /Annot /Subtype /Widget /P 3 0 R /FT /Btn /Ff 65536 /T (submit) /Rect [72 420 150 440] >>
+endobj
+20 0 obj
+<< /Length 530  >>
+stream
+BT /F2 18 Tf 72.00 740.00 Td (Field trip permission form) Tj ET
+BT /F1 11 Tf 72.00 700.00 Td (Name:) Tj ET
+BT /F1 11 Tf 72.00 670.00 Td (Student ID:) Tj ET
+BT /F1 11 Tf 72.00 640.00 Td (Date: ____________________) Tj ET
+BT /F1 11 Tf 92.00 610.00 Td (I agree to the terms of the trip) Tj ET
+BT /F1 11 Tf 72.00 580.00 Td (How will you pay?) Tj ET
+BT /F1 11 Tf 92.00 560.00 Td (Credit card) Tj ET
+BT /F1 11 Tf 92.00 540.00 Td (Check) Tj ET
+BT /F1 11 Tf 72.00 510.00 Td (Course:) Tj ET
+BT /F1 11 Tf 72.00 470.00 Td (Signature:) Tj ET
+
+endstream
+endobj
+21 0 obj
+<< /Fields [4 0 R 5 0 R 6 0 R 9 0 R 17 0 R 18 0 R 19 0 R 10 0 R] >>
+endobj
+xref
+0 22
+0000000000 65535 f 
+0000000009 00000 n 
+0000000086 00000 n 
+0000000143 00000 n 
+0000000506 00000 n 
+0000000625 00000 n 
+0000000739 00000 n 
+0000000841 00000 n 
+0000000968 00000 n 
+0000001065 00000 n 
+0000001225 00000 n 
+0000001310 00000 n 
+0000001438 00000 n 
+0000001536 00000 n 
+0000001688 00000 n 
+0000001816 00000 n 
+0000001914 00000 n 
+0000002066 00000 n 
+0000002271 00000 n 
+0000002380 00000 n 
+0000002495 00000 n 
+0000003078 00000 n 
+trailer
+<< /Size 22 /Root 1 0 R >>
+startxref
+3162
+%%EOF

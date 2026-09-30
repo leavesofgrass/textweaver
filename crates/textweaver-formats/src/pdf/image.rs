@@ -98,7 +98,7 @@ impl Loader for ImageLoader {
             crate::add_warning(&mut meta, c);
         }
         let pages = vec![super::layout::layout(&content, &HashMap::new())];
-        let (text, markers) = super::build(pages, &HashMap::new(), &[], &[]);
+        let (text, markers, _) = super::build(pages, &HashMap::new(), &[], &[]);
         if meta.title.is_none() {
             meta.title = Some("Picture".into());
         }
