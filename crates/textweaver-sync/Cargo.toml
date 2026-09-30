@@ -1,0 +1,25 @@
+[package]
+name = "textweaver-sync"
+description = "textweaver sync: a hybrid logical clock, merge types, one record per document, and the sync folder in which each computer writes only its own files"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+textweaver-core.workspace = true
+textweaver-store.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+log.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

@@ -11,6 +11,10 @@
 //! - `textweaver-store` depends only on `textweaver-core` among the
 //!   workspace crates, and otherwise only on serde-level crates. There are
 //!   no exceptions: the reading-aid settings types are store's own.
+//! - `textweaver-sync` (ADR-0049) depends only on `textweaver-core` and
+//!   `textweaver-store` among the workspace crates, and otherwise only on
+//!   serde, serde_json, thiserror, and log: it reads and writes files in a
+//!   folder, with no networking and no other crates.
 //! - `textweaver-tui` (the reader, `textweaver`) built without its default
 //!   features never reaches the conversion and citation stack: not the
 //!   convert, render, writers, or cite crates, and not their big
@@ -96,6 +100,7 @@ type Graph = BTreeMap<String, Crate>;
 const CORE: &str = "textweaver-core";
 const SPEECH: &str = "textweaver-speech";
 const STORE: &str = "textweaver-store";
+const SYNC: &str = "textweaver-sync";
 
 /// Crates speech must never reach.
 const SPEECH_FORBIDDEN: [&str; 2] = ["textweaver-text", "textweaver-formats"];
@@ -139,6 +144,12 @@ const STORE_EXTERNAL: [&str; 6] = [
     "thiserror",
     "log",
 ];
+
+/// Workspace crates sync may use (ADR-0049).
+const SYNC_INTERNAL: [&str; 2] = [CORE, STORE];
+
+/// Outside crates sync may use: serialization, errors, and logging.
+const SYNC_EXTERNAL: [&str; 4] = ["serde", "serde_json", "thiserror", "log"];
 
 /// `cargo xtask deps`.
 pub fn run() -> anyhow::Result<()> {
@@ -356,7 +367,7 @@ fn violations(graph: &Graph) -> (Vec<String>, Vec<String>) {
     let mut errors = Vec::new();
     let mut notes = Vec::new();
 
-    for must in [CORE, SPEECH, STORE] {
+    for must in [CORE, SPEECH, STORE, SYNC] {
         if !graph.contains_key(must) {
             errors.push(format!(
                 "{must} is not in the workspace; update xtask/src/deps.rs"
@@ -430,6 +441,24 @@ fn violations(graph: &Graph) -> (Vec<String>, Vec<String>) {
             }
         }
     }
+
+    if let Some(sync) = graph.get(SYNC) {
+        for dep in sync.internal() {
+            if !SYNC_INTERNAL.contains(&dep) {
+                errors.push(format!(
+                    "{SYNC} -> {dep} (sync depends only on {CORE} and {STORE} among workspace crates)"
+                ));
+            }
+        }
+        for dep in sync.external() {
+            if !SYNC_EXTERNAL.contains(&dep) {
+                errors.push(format!(
+                    "{SYNC} -> {dep} (sync uses only {})",
+                    SYNC_EXTERNAL.join(", ")
+                ));
+            }
+        }
+    }
     (errors, notes)
 }
 
@@ -471,6 +500,7 @@ mod tests {
         g.insert("textweaver-math".into(), krate(&[CORE], &[]));
         g.insert("textweaver-text".into(), krate(&[CORE], &[]));
         g.insert(STORE.into(), krate(&[CORE], &["serde", "toml"]));
+        g.insert(SYNC.into(), krate(&[CORE, STORE], &["serde_json", "log"]));
         g
     }
 
@@ -592,6 +622,26 @@ mod tests {
         assert_eq!(errors.len(), 1, "{errors:?}");
         assert!(errors[0].contains("textweaver-store -> textweaver-aids"));
         assert!(notes.is_empty());
+    }
+
+    #[test]
+    fn sync_beyond_core_and_store_is_refused() {
+        let mut g = good();
+        add(&mut g, SYNC, dep("textweaver-text", true));
+        add(&mut g, SYNC, dep("ureq", false));
+        let (errors, _) = violations(&g);
+        assert_eq!(errors.len(), 2, "{errors:#?}");
+        assert!(errors[0].contains("textweaver-sync -> textweaver-text"));
+        assert!(errors[1].contains("textweaver-sync -> ureq"));
+        // And it must be in the workspace.
+        let mut g = good();
+        g.remove(SYNC);
+        let (errors, _) = violations(&g);
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("textweaver-sync is not in the workspace"))
+        );
     }
 
     #[test]

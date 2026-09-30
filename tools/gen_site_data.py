@@ -75,6 +75,8 @@ CRATE_ADRS = {
     "ocr": ["0026"],
     "speech": ["0003", "0004", "0005"],
     "store": ["0001"],
+    # ADR-0049 is on the S0 branch; the orchestrator sets ["0049"] when both merge.
+    "sync": [],
     "keymap": ["0006"],
     "a11y": ["0006"],
     "editor": [],  # no ADR; the design is in plan section 6.6
@@ -110,6 +112,7 @@ CRATE_ADRS = {
 # Where to read about a crate that has no ADR: (link text, path from docs/site).
 CRATE_NO_ADR_NOTE = {
     "editor": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
+    "sync": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
 }
 
 # ---------------------------------------------------------------------------
@@ -126,8 +129,8 @@ LAYERS = [
     ("application", "Application", "The application core that every frontend drives.", ["app"]),
     ("output", "Output and aids", "Writing other formats, and what changes how text looks.",
      ["render", "convert", "writers", "fonts", "theme", "aids", "summary", "lexicon", "vault", "dictation"]),
-    ("state", "State and input", "Settings, saved positions, keys, announcements, and editing.",
-     ["store", "keymap", "a11y", "editor"]),
+    ("state", "State and input", "Settings, saved positions, sync between computers, keys, announcements, and editing.",
+     ["store", "sync", "keymap", "a11y", "editor"]),
     ("speech", "Speech", "The speech service, its backends, and audio export.",
      ["speech", "engines", "enginehost", "eci", "sapi", "apple", "dectalk", "piper", "export"]),
     ("document", "Document", "The document model and what loads, speaks, and cites it.",
@@ -166,6 +169,7 @@ JOB_OVERRIDES = {
     "math": "Math: LaTeX and ASCIIMath parsed into one tree, written as MathML, and spoken as natural English.",
     "sapi": "Speaks with Windows SAPI5 voices, each in a host process built for the voice's architecture.",
     "speech": "Speech backends and the speech service, with its own thread, queue, normalization, and word timing.",
+    "sync": "Sync between computers through a folder the user chooses: a hybrid clock, merge rules, and one record per document, with no networking.",
     "store": "Persistence: settings (the reading-aid settings included), key overrides, per-document state with notes and highlights, recent files, and the library.",
     "vault": "Obsidian vault import and export for notes, highlights, and documents.",
     "xtask": "Maintenance tasks run with cargo xtask: keyboard.md, benchmarks and the soak test, engine hosts, release packages and the AppImage, the dependency check, licence notices, and the Star parity report.",

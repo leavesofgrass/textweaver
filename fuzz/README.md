@@ -1,6 +1,6 @@
 # Fuzzing textweaver
 
-This folder holds [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html) targets for the document loaders, the settings and keyboard files, the saved state, the engine-host protocol, and the parsers a student's own writing goes through: math, citations, themes, the lexicon, Obsidian vaults, and JSON-RPC requests. It is its own Cargo workspace, so the main build, `cargo test`, and CI never build it.
+This folder holds [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html) targets for the document loaders, the settings and keyboard files, the saved state, the sync folder's records, the engine-host protocol, and the parsers a student's own writing goes through: math, citations, themes, the lexicon, Obsidian vaults, and JSON-RPC requests. It is its own Cargo workspace, so the main build, `cargo test`, and CI never build it.
 
 Each target feeds random input to one part of textweaver. A loader may refuse the input with an error, but it must never panic, and a document it returns must have every marker inside its text, in order. The checks are in `src/lib.rs`.
 
@@ -39,6 +39,7 @@ Each target feeds random input to one part of textweaver. A loader may refuse th
 - `json`: JSON, JSON Lines, and Jupyter notebooks, on textweaver's own JSON parser with its limits on size, nesting, and values. The bytes are loaded as each of the three, and a value that parses is also read directly.
 - `svg`: SVG drawings and MathML formulas. The bytes are loaded as an `.svg` file, as an `.mml` file (presentation or content MathML), and inside `<svg>` and `<math>` in a web page, where the HTML parser gives the same drawing reader its tree.
 - `obsidian`: Obsidian notes through the Markdown loader (callouts, embeds as links, since the input has no folder, tags, highlights, comments, and block ids), and the parts of a note an embed can name. The first line of the input names the part, by heading or by block id; the rest is the note.
+- `sync_record`: a computer's record of one document in the sync folder (`docs/<sync-id>.json`, ADR-0049). A damaged or cut-short record is refused with an error. A record that reads writes back and reads again the same, and merging it with itself, with an empty record, or into an empty record, in either order, gives it back unchanged.
 
 The loaders are built with the formats crate's `images` feature instead of `ocr`: the picture and scanned-page loaders are fuzzed with OCR off, so the in-process OCR engine, which took 45 minutes to compile under the sanitizer, is left out. The `rpc` target links the app, which still brings it.
 
