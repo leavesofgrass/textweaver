@@ -266,6 +266,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Open a document | `Ctrl+O` | `Ctrl+O` | `Cmd+O` | `open` |
 | Open a document by typing its path | none | `Ctrl+Shift+G` | `Cmd+Shift+G` | `open_path` |
 | Open the library: documents in your library folders and recent files | `Alt+L` | `Ctrl+Shift+B` | `Cmd+Shift+B` | `open_library` |
+| Continue reading: the documents on this computer with a saved place, from any computer, newest first | palette | palette | palette | `continue_reading` |
 | Start a new document in edit mode | `Ctrl+N` | `Ctrl+N` | `Cmd+N` | `new_document` |
 | Save (Markdown and text in place; other formats as Markdown) | `Ctrl+S` | `Ctrl+S` | `Cmd+S` | `save` |
 | Save under a new name | `Alt+S` | `Ctrl+Shift+S` | `Cmd+Shift+S` | `save_as` |
@@ -501,6 +502,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | `summarize` |
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | `export_study_sheet` |
+| Continue reading: the documents on this computer with a saved place, from any computer, newest first | `continue_reading` |
 | Start a new document from a template, with a title, author, date, and References heading | `new_from_template` |
 | Export the document as a web page (HTML) next to it | `export_html` |
 | Export the document as a tagged PDF next to it | `export_pdf` |
