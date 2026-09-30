@@ -50,6 +50,24 @@ tw convert "Biology notes" --to html --out "Biology site" --force
 
 Outputs are written to a temporary file first and then renamed, so stopping a conversion part way never leaves a half-written file behind.
 
+## Convert a folder from the reader
+
+In the reader, File, Batch convert (also in the command palette as "batch convert") converts a folder without leaving textweaver. It asks three short questions, each with its usual answer first:
+
+1. **The folder.** The file browser opens on your places, with the open document's folder first. Choose a folder with the browser's choose key, or with Enter on the "Choose this folder" row inside it.
+2. **The format.** Markdown, PDF, HTML, plain text, EPUB, Word, or braille.
+3. **Where the files go.** In a `converted` folder inside the one you chose (the usual answer), beside each file, or in another folder you then choose in the browser.
+
+Then textweaver says how many files it found and asks, for example, "Convert 48 files to PDF into D:\Notes\converted? y or n". Press `y` to start, `n` or Escape to cancel.
+
+The conversion runs in the background, so you can keep reading. It says when it starts, then how far it has got in tens of percent, for example "40 percent converted, 20 of 48 files", never more often than every ten seconds. Progress follows the interface announcements setting; the final answer and any failure are always said.
+
+To stop, press Escape while nothing else is open. textweaver asks "Stop converting? Files already done are kept. y or n". A file being written when you answer yes is finished whole, no other file is started, and no file is left half-written.
+
+At the end you hear the counts, for example "Converted 42 files to PDF; 4 up to date; 2 failed." When any file failed, the failures are shown as a list, each with the file's name first and then the reason ("report.docx: parse error: not a valid DOCX (zip) file"). Enter on one opens that file. The same summary and list are saved as `conversion-report.txt` in the output folder (in the folder you chose when the files go beside their sources), as `tw convert` saves it.
+
+A file whose output is newer than the file itself is skipped, as with `tw convert`, and counted as up to date.
+
 ## Watch a folder
 
 ```bash

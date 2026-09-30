@@ -1,12 +1,28 @@
 # Exporting audio and subtitles
 
-`tw export-audio` reads a document aloud into an audio file, so you can listen to it later on a phone, a music player, or a book player. It can write a WAV file, an MP3 file, or an M4B audiobook with one chapter for each heading. It can also write subtitles: a caption file that shows each sentence, or each word, at the moment it is spoken. This is for anyone who wants to take a reading with them, for example a student who wants an audiobook of this week's chapters, or a teacher who wants captions that follow the spoken text.
+Export audio, in the reader's File menu, and `tw export-audio`, from a terminal, read a document aloud into an audio file, so you can listen to it later on a phone, a music player, or a book player. It can write a WAV file, a FLAC file, an MP3 file, or an M4B audiobook, each with one chapter for each heading. It can also write subtitles: a caption file that shows each sentence, or each word, at the moment it is spoken. This is for anyone who wants to take a reading with them, for example a student who wants an audiobook of this week's chapters, or a teacher who wants captions that follow the spoken text.
 
-This guide is written to be read with a screen reader. Each task section starts with the command, then explains it.
+This guide is written to be read with a screen reader. Each task section starts with the command, then explains it. [Export audio from the reader](#export-audio-from-the-reader) comes first; the rest of the guide is about `tw export-audio`, whose settings the reader shares.
+
+## Export audio from the reader
+
+In the reader, open the File menu (F10 in the terminal) and choose Export audio, or find "Export audio" in the command palette. A document must be open.
+
+1. **The format.** You hear, for example, "Export essay as audio: choose a format, 2 choices." FLAC comes first: lossless and about half the size of WAV. WAV follows. MP3 and M4B are listed only when ffmpeg is installed; when it is not, you hear "MP3 and M4B need ffmpeg, which was not found." Press Enter on a format.
+2. **Where.** "Where should the audio go?" The first choice puts the file beside the document, with the document's name, such as `essay.flac`. The second opens the file browser to choose another folder: press Ctrl+Enter on the folder, or Enter on its "Choose this folder" row (see [Choosing a folder](reading.md)).
+3. **The question.** "Export essay.flac with Microsoft David at 200 words a minute, into D:\Notes? y or n". It names the voice and the speed the export uses: your current voice and rate. Press y to start, or n to cancel.
+
+The export runs in the background, so you can keep reading. You hear "Exporting audio, 30 percent." in tens, at most every ten seconds; the interface announcements setting can quiet these. Nothing plays through your speakers.
+
+To stop, press Escape with no list or question open. You hear "Stop the export? No file is kept. y or n". Press y, and the export stops after the sentence being read; no file is left behind.
+
+At the end you hear, for example, "Wrote essay.flac: 42 minutes and 5 seconds, 12 chapters. Open it? y or n." Press y to open the file in your default player. If another list or question is open then, you hear the result without the question.
+
+Which engine it uses: your reading engine, when it can write audio files; otherwise the one in your `[speech] backend` setting, when it can; otherwise the best installed engine that can. Engines that can only speak aloud, such as Omnivox, are never used. The export reads the document as it was last opened, so in edit mode save and leave edit mode first to export your changes.
 
 ## Before you start
 
-You need two things: a voice that can write audio files, and, for MP3 and M4B only, the free program ffmpeg.
+You need two things: a voice that can write audio files, and, for MP3 and M4B only, the free program ffmpeg. WAV and FLAC need nothing else.
 
 ### Check that you have a voice that can write files
 
@@ -22,9 +38,12 @@ sapi: Windows SAPI5 voices. Available. Priority 500. Supports word highlighting,
 
 These engines can write files: ETI-Eloquence (`eci`), Windows SAPI5 voices (`sapi`), DECtalk (`dectalk`), eSpeak NG (`espeak`), and the two Apple engines on macOS (`nsspeech` and `avspeech`). Omnivox (`omnivox`) and Speech Dispatcher (`speechd`) can only speak aloud, so they cannot export. The silent engine (`null`) cannot export either.
 
-### WAV always works
+### WAV and FLAC always work
 
-WAV files are written by textweaver itself. You do not need anything else. WAV files are large, but every player can open them.
+WAV and FLAC files are written by textweaver itself. You do not need anything else.
+
+- WAV files are large, but every player can open them.
+- FLAC files are about half the size of WAV, with exactly the same sound (FLAC is lossless). Most music and audiobook players on phones and computers can open them.
 
 ### MP3 and M4B need ffmpeg
 
@@ -96,6 +115,7 @@ The document is read exactly as textweaver would read it to you: with your rate,
 The output format comes from the file name you give with `--out`:
 
 - `.wav`: a WAV file. Always works.
+- `.flac`: a FLAC file. Always works; textweaver writes it itself.
 - `.mp3`: an MP3 file. Needs ffmpeg. It is encoded with the LAME encoder at variable bit rate, quality 2.
 - `.m4b`: an M4B audiobook (AAC audio at 64 kilobits per second). Needs ffmpeg.
 
@@ -140,7 +160,7 @@ The M4B file also carries:
 - The genre "Audiobook".
 - One chapter for each heading, with the heading as its name.
 
-While ffmpeg works, textweaver keeps the full WAV and a small metadata file in a hidden folder next to the output, whose name starts with `.textweaver-export-`. The folder is removed when the export finishes. You need enough free disk space for the full WAV, which is much larger than the finished M4B.
+While ffmpeg works, and while a FLAC file is encoded, textweaver keeps the full WAV (and, for ffmpeg, a small metadata file) in a hidden folder next to the output, whose name starts with `.textweaver-export-`. The folder is removed when the export finishes. You need enough free disk space for the full WAV, which is much larger than the finished M4B.
 
 ### How chapters are chosen
 
@@ -153,15 +173,19 @@ While ffmpeg works, textweaver keeps the full WAV and a small metadata file in a
 
 There is no option yet to choose which heading levels make chapters.
 
-### Chapters in MP3 and WAV files
+### Chapters in FLAC, MP3, and WAV files
 
 ```bash
-tw export-audio "Chapter 3.docx" --out "Chapter 3.mp3"
+tw export-audio "Chapter 3.docx" --out "Chapter 3.flac"
 ```
 
-MP3 files get the same title and chapters as M4B files, as ID3 chapter tags. Players that read ID3 chapters show them. Many simple players ignore them and play the file straight through.
+Every format carries the same title, author, and chapters as the M4B, each in its own kind of tag:
 
-WAV files have no chapters inside them. The result sentence still counts them, and the JSON report lists each chapter's name, start, and end (see [Get a report as JSON](#get-a-report-as-json)).
+- FLAC files: as Vorbis comments. The title is `TITLE` and `ALBUM`, the author is `ARTIST`, and each chapter is a pair, such as `CHAPTER001=00:01:30.250` for its start and `CHAPTER001NAME=Light` for its name. Audiobook players that read FLAC chapters show them.
+- MP3 files: as ID3 chapter tags.
+- WAV files: as ID3 chapter tags too, in an extra part of the file that players without ID3 support skip.
+
+Players that read these chapters show them. Many simple players ignore them and play the file straight through. The JSON report lists each chapter's name, start, and end in every case (see [Get a report as JSON](#get-a-report-as-json)).
 
 ## Add subtitles
 
@@ -176,7 +200,7 @@ This writes the audio and a subtitle file next to it. The format comes from the 
 
 Any other extension is refused with a message, before any audio is made.
 
-Subtitles work with every audio format, so you can combine `--subtitles` with `.wav`, `.mp3`, or `.m4b`. Give the subtitle file the same name as the audio file, with its own extension, and most players load it by themselves.
+Subtitles work with every audio format, so you can combine `--subtitles` with `.wav`, `.flac`, `.mp3`, or `.m4b`. Give the subtitle file the same name as the audio file, with its own extension, and most players load it by themselves.
 
 This is the start of the real SRT file from the example above:
 
@@ -233,8 +257,9 @@ Some engines report the exact moment each word sounds in the file. With them, wo
 - Windows SAPI5 voices (`sapi`), except Code Factory's Eloquence voices through SAPI, which report no word times.
 - DECtalk (`dectalk`).
 - eSpeak NG (`espeak`).
+- Apple's AVSpeechSynthesizer (`avspeech`) on macOS 14 and later, which reports where each word starts in the audio it writes.
 
-The Apple engines (`nsspeech` and `avspeech`) and the SAPI Eloquence voices can write files but do not report word times. With them, word cues are estimated. Each sentence's start and end are still measured. The time between them is shared among its words by length, so longer words get more time. Sentence captions from these engines are just as accurate as from any other engine, because they depend only on the measured sentence times.
+The classic Apple engine (`nsspeech`) and the SAPI Eloquence voices can write files but do not report word times. With them, word cues are estimated. Each sentence's start and end are still measured. The time between them is shared among its words by length, so longer words get more time. Sentence captions from these engines are just as accurate as from any other engine, because they depend only on the measured sentence times.
 
 ## Choose the engine, voice, rate, and pitch
 
@@ -298,7 +323,7 @@ The three settings:
 
 A file named with `--subtitles` always wins over `subtitles_with_audio`. `--word-level` turns word cues on even when `subtitle_word_level` is `false`; there is no option to turn them off for one export when the setting is `true`.
 
-These settings are used by `tw export-audio`. The reader does not have an audio export command yet, so in the reader there is nothing to start and nothing is announced. Use `tw export-audio` from a terminal.
+These settings are used by `tw export-audio` and by Export audio in the reader, which writes subtitles beside the audio when `subtitles_with_audio` is `true`.
 
 ## Get a report as JSON
 
@@ -317,9 +342,9 @@ tw export-audio reading.md --out reading.wav --json
 `export` says what was written:
 
 - `out`: the audio file.
-- `format`: `wav`, `mp3`, or `m4b`.
+- `format`: `wav`, `flac`, `mp3`, or `m4b`.
 - `subtitles`: the subtitle file, or `null`.
-- `ffmpeg`: the ffmpeg program used, or `null` for WAV.
+- `ffmpeg`: the ffmpeg program used, or `null` for WAV and FLAC.
 - `timeline`: everything about the audio.
 
 `timeline` holds:
@@ -350,8 +375,9 @@ tw export-audio reading.md --out reading.wav --home "E:\textweaver"
 
 Every problem is reported as one sentence starting with "Error:". These are the messages you may hear, and what to do.
 
-- "Error: writing MP3 needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .wav". For an M4B file it says "writing M4B". ffmpeg is not installed, or textweaver cannot find it. Install it as described in [Before you start](#before-you-start). If you just installed it, open a new terminal window. If `TEXTWEAVER_FFMPEG` is set, check that it is the full path to the program, including `ffmpeg.exe` on Windows, or remove the variable. Or export to `.wav`, which needs nothing.
-- "Error: cannot write notes.ogg: use a .wav, .mp3, or .m4b file name". Only WAV, MP3, and M4B can be written. OGG is not available yet.
+- "Error: writing MP3 needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac or .wav". For an M4B file it says "writing M4B". This is said before anything is read aloud. ffmpeg is not installed, or textweaver cannot find it. Install it as described in [Before you start](#before-you-start). If you just installed it, open a new terminal window. If `TEXTWEAVER_FFMPEG` is set, check that it is the full path to the program, including `ffmpeg.exe` on Windows, or remove the variable. Or export to `.flac` or `.wav`, which need nothing.
+- "Error: cannot write notes.ogg: use a .wav, .flac, .mp3, or .m4b file name". Only WAV, FLAC, MP3, and M4B can be written. OGG is not available yet.
+- "Error: The voice failed on sentence 1: engine error: the voice could not be used:" followed by the reason. The voice you chose could not be loaded, so nothing was written with another voice by mistake. Run `tw voices --backend sapi` and choose a voice from the list.
 - "Error: Cannot write subtitles to notes.txt: use a .srt or .vtt file name." Give the subtitle file a `.srt` or `.vtt` extension.
 - "Error: no installed voice can write audio files; install espeak-ng, or choose one with --backend". textweaver found no engine that can write files. Run `tw backends` and look for "audio files". On Windows, the SAPI5 voices usually can. On Linux, install eSpeak NG; see [the speech guide](speech.md).
 - "Error: Silent (no audio) cannot write audio files; choose another voice with --backend". The engine chosen cannot write files. The name at the start is the engine's, for example "Omnivox speech server". This also happens when you name an engine with `--backend` that is not installed and the automatic choice falls on an engine that cannot write files. Run `tw backends`, and name an engine that is available and lists "audio files".
@@ -364,7 +390,7 @@ Every problem is reported as one sentence starting with "Error:". These are the 
 
 Other problems:
 
-- The chapters are missing in your player. WAV files have no chapters, and many simple players ignore MP3 chapters. Export to `.m4b` and use an audiobook player.
+- The chapters are missing in your player. Many simple players ignore the chapters in FLAC, MP3, and WAV files. Export to `.m4b` and use an audiobook player.
 - The captions are a little behind the voice at the start of a heading. That is the spoken announcement, such as "heading level 1", which has no caption. Set `[speech] verbosity` to `low` if you do not want headings announced in the audio.
 - Word cues do not match the words exactly. Your engine does not report word times, so they are estimated. See [Which engines time each word exactly](#which-engines-time-each-word-exactly).
 - The voice is not the one you use in the reader. Your `[speech] voice` is used only with the engine in `[speech] backend`. Name the voice with `--voice`.

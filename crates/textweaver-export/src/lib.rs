@@ -14,9 +14,12 @@
 //!    running length gives every sentence its exact start and end, and
 //!    every reported word its time: the [`Timeline`].
 //! 4. Chapters come from headings and section breaks ([`chapters`]).
-//! 5. For `.mp3` and `.m4b`, ffmpeg converts the WAV, with the title and
-//!    chapters in its metadata ([`ffmpeg`]); without ffmpeg those formats
-//!    fail with a clear message and WAV still works.
+//! 5. For `.flac`, the WAV is encoded in process, with the title and
+//!    chapters as Vorbis comments (`flac`, the `flac` feature). For `.mp3`
+//!    and `.m4b`, ffmpeg converts the WAV, with the title and chapters in
+//!    its metadata ([`ffmpeg`]); without ffmpeg those formats fail with a
+//!    clear message and WAV and FLAC still work. A `.wav` gets the title
+//!    and chapters as an ID3 tag (`id3tags`, the `id3` feature).
 //! 6. Subtitles ([`cues`]) are SRT or WebVTT cues from the timeline, by
 //!    caption line (Star's grouping) or by word.
 //!
@@ -26,6 +29,10 @@
 pub mod chapters;
 pub mod cues;
 pub mod ffmpeg;
+#[cfg(feature = "flac")]
+pub mod flac;
+#[cfg(feature = "id3")]
+pub mod id3tags;
 pub mod timeline;
 pub mod wav;
 
@@ -49,8 +56,19 @@ pub enum ExportError {
     #[error("The {0} voice cannot write audio files.")]
     NoFileSynthesis(String),
     /// The output name has no supported extension.
-    #[error("Cannot write {0}: use a .wav, .mp3, or .m4b file name.")]
+    #[error("Cannot write {0}: use a .wav, .flac, .mp3, or .m4b file name.")]
     UnsupportedFormat(PathBuf),
+    /// The FLAC encoder failed.
+    #[error("The FLAC encoder failed: {0}")]
+    Flac(String),
+    /// The tags could not be written into the file.
+    #[error("Cannot write the title and chapters into {path}: {message}")]
+    Tags {
+        /// The audio file.
+        path: PathBuf,
+        /// What went wrong.
+        message: String,
+    },
     /// The subtitle name has no supported extension.
     #[error("Cannot write subtitles to {0}: use a .srt or .vtt file name.")]
     UnsupportedSubtitles(PathBuf),
@@ -273,8 +291,9 @@ pub struct SubtitleRequest {
     pub cues: CueOptions,
 }
 
-/// Exports `doc` to `out` (`.wav`, `.mp3`, or `.m4b`, by extension), with
-/// optional subtitles. `ffmpeg` is the converter to use for MP3 and M4B
+/// Exports `doc` to `out` (`.wav`, `.flac`, `.mp3`, or `.m4b`, by
+/// extension), with optional subtitles and the title and chapters in the
+/// file's own tag format. `ffmpeg` is the converter to use for MP3 and M4B
 /// (usually [`ffmpeg::find`]); `None` makes those formats fail with a clear
 /// message before any synthesis starts.
 pub fn export(
@@ -294,22 +313,26 @@ pub fn export(
                 .ok_or_else(|| ExportError::UnsupportedSubtitles(s.path.clone()))
         })
         .transpose()?;
-    if format != AudioFormat::Wav && ffmpeg.is_none() {
-        return Err(ExportError::NoFfmpeg(format.name()));
-    }
+    let ffmpeg = match (format.needs_ffmpeg(), ffmpeg) {
+        (false, _) => None,
+        (true, Some(ff)) => Some(ff),
+        (true, None) => return Err(ExportError::NoFfmpeg(format.name())),
+    };
+    // Every format but WAV is made from a WAV in a private folder beside
+    // the output (removed when done).
+    let work = |out: &Path| {
+        let dir = out
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or(Path::new("."));
+        tempfile::Builder::new()
+            .prefix(".textweaver-export-")
+            .tempdir_in(dir)
+            .map_err(|e| ExportError::io(dir, e))
+    };
     let (timeline, ffmpeg_used) = match (format, ffmpeg) {
-        (AudioFormat::Wav, _) | (_, None) => {
-            (synthesize_wav(doc, backend, out, opts, progress)?, None)
-        }
         (_, Some(ff)) => {
-            let dir = out
-                .parent()
-                .filter(|p| !p.as_os_str().is_empty())
-                .unwrap_or(Path::new("."));
-            let work = tempfile::Builder::new()
-                .prefix(".textweaver-export-")
-                .tempdir_in(dir)
-                .map_err(|e| ExportError::io(dir, e))?;
+            let work = work(out)?;
             let wav_path = work.path().join("audio.wav");
             let meta_path = work.path().join("metadata.txt");
             let timeline = synthesize_wav(doc, backend, &wav_path, opts, progress)?;
@@ -321,6 +344,33 @@ pub fn export(
             std::fs::write(&meta_path, meta).map_err(|e| ExportError::io(&meta_path, e))?;
             ffmpeg::run(ff, &ffmpeg::args(&wav_path, &meta_path, out, format))?;
             (timeline, Some(ff.to_owned()))
+        }
+        #[cfg(feature = "flac")]
+        (AudioFormat::Flac, None) => {
+            let work = work(out)?;
+            let wav_path = work.path().join("audio.wav");
+            let timeline = synthesize_wav(doc, backend, &wav_path, opts, progress)?;
+            let comments = flac::comments(
+                timeline.title.as_deref(),
+                timeline.author.as_deref(),
+                &timeline.chapters,
+            );
+            if let Err(e) = flac::encode(&wav_path, out, &comments) {
+                let _ = std::fs::remove_file(out);
+                return Err(e);
+            }
+            (timeline, None)
+        }
+        _ => {
+            let timeline = synthesize_wav(doc, backend, out, opts, progress)?;
+            #[cfg(feature = "id3")]
+            id3tags::write_wav(
+                out,
+                timeline.title.as_deref(),
+                timeline.author.as_deref(),
+                &timeline.chapters,
+            )?;
+            (timeline, None)
         }
     };
     let subtitles_path = match (subtitles_to, sub_format) {

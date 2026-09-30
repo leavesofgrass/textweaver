@@ -32,16 +32,18 @@ use std::time::{Duration, Instant};
 use block2::RcBlock;
 use objc2::rc::Retained;
 use objc2::runtime::{NSObject, NSObjectProtocol, ProtocolObject};
-use objc2::{AnyThread, DefinedClass, define_class, msg_send};
+use objc2::{AnyThread, DefinedClass, define_class, msg_send, sel};
 use objc2_avf_audio::{
-    AVAudioBuffer, AVAudioCommonFormat, AVAudioPCMBuffer, AVSpeechBoundary, AVSpeechSynthesisVoice,
+    AVAudioBuffer, AVAudioCommonFormat, AVAudioPCMBuffer, AVSpeechBoundary,
+    AVSpeechSynthesisMarker, AVSpeechSynthesisMarkerMark, AVSpeechSynthesisVoice,
     AVSpeechSynthesisVoiceGender, AVSpeechSynthesizer, AVSpeechSynthesizerDelegate,
     AVSpeechUtterance,
 };
-use objc2_foundation::{NSRange, NSString};
+use objc2_foundation::{NSArray, NSRange, NSString};
 use textweaver_core::{Utterance, UtteranceId};
 use textweaver_speech::{
-    BackendId, Caps, EventSink, RawEvent, SpeechBackend, SpeechError, Voice, VoiceParams,
+    BackendId, Caps, EventSink, FileSynthesis, RawEvent, SpeechBackend, SpeechError, Voice,
+    VoiceParams, WordTiming,
 };
 
 use super::output::{AudioOut, RodioOut, SilentOut};
@@ -153,6 +155,12 @@ struct Shared {
     buffers: usize,
     /// Buffer formats this backend cannot read.
     error: Option<String>,
+    /// Word markers from `writeUtterance:toBufferCallback:toMarkerCallback:`
+    /// (macOS 14 and later): (raw offset, UTF-16 location, UTF-16 length).
+    markers: Vec<(u64, usize, usize)>,
+    /// Bytes per sample frame of the job's buffers, for markers whose
+    /// offsets turn out to be in bytes.
+    frame_bytes: u32,
 }
 
 impl Shared {
@@ -193,8 +201,9 @@ fn lock(shared: &Mutex<Shared>) -> MutexGuard<'_, Shared> {
     shared.lock().unwrap_or_else(|e| e.into_inner())
 }
 
-/// Copies the first channel of a PCM buffer as `f32` samples.
-fn read_samples(pcm: &AVAudioPCMBuffer) -> Result<(Vec<f32>, u32), String> {
+/// Copies the first channel of a PCM buffer as `f32` samples; also returns
+/// the sample rate and the bytes per frame of the buffer's own format.
+fn read_samples(pcm: &AVAudioPCMBuffer) -> Result<(Vec<f32>, u32, u32), String> {
     // SAFETY: plain property reads on a live buffer handed to the callback.
     let (frames, format) = unsafe { (pcm.frameLength() as usize, pcm.format()) };
     // SAFETY: property reads on the buffer's live format.
@@ -208,8 +217,14 @@ fn read_samples(pcm: &AVAudioPCMBuffer) -> Result<(Vec<f32>, u32), String> {
     };
     let step = if interleaved { channels.max(1) } else { 1 };
     let rate = rate.round() as u32;
+    let sample_bytes = if common == AVAudioCommonFormat::PCMFormatInt16 {
+        2
+    } else {
+        4
+    };
+    let frame_bytes = sample_bytes * u32::try_from(step).unwrap_or(1);
     if frames == 0 {
-        return Ok((Vec::new(), rate));
+        return Ok((Vec::new(), rate, frame_bytes));
     }
     let samples = if common == AVAudioCommonFormat::PCMFormatFloat32 {
         // SAFETY: for a float32 buffer `floatChannelData` points to one
@@ -241,7 +256,7 @@ fn read_samples(pcm: &AVAudioPCMBuffer) -> Result<(Vec<f32>, u32), String> {
     } else {
         return Err(format!("unsupported sample format {}", common.0));
     };
-    Ok((samples, rate))
+    Ok((samples, rate, frame_bytes))
 }
 
 /// Instance variables of the delegate.
@@ -324,8 +339,11 @@ impl Synth {
         }
     }
 
-    /// Starts writing `utt` into buffers as job `token`.
-    fn write(&self, utt: &AVSpeechUtterance, token: u64) {
+    /// Starts writing `utt` into buffers as job `token`. With `markers`,
+    /// and where the system has it (macOS 14 and later), the synthesizer
+    /// also reports each word's position in the audio directly
+    /// (`writeUtterance:toBufferCallback:toMarkerCallback:`).
+    fn write(&self, utt: &AVSpeechUtterance, token: u64, markers: bool) {
         {
             let mut s = lock(&self.shared);
             *s = Shared {
@@ -347,13 +365,14 @@ impl Synth {
                 return;
             };
             match read_samples(pcm) {
-                Ok((samples, _)) if samples.is_empty() => s.end_buffers(),
-                Ok((samples, rate)) => {
+                Ok((samples, _, _)) if samples.is_empty() => s.end_buffers(),
+                Ok((samples, rate, frame_bytes)) => {
                     let now = Instant::now();
                     s.first_buffer.get_or_insert(now);
                     s.last_activity = Some(now);
                     s.buffers += 1;
                     s.rate = rate;
+                    s.frame_bytes = frame_bytes;
                     s.samples += samples.len() as u64;
                     s.audio.push(samples);
                 }
@@ -363,12 +382,54 @@ impl Synth {
                 }
             }
         });
-        // SAFETY: the block is a valid buffer callback; the synthesizer
-        // copies it.
-        unsafe {
-            self.synth
-                .writeUtterance_toBufferCallback(utt, RcBlock::as_ptr(&block));
+        if !(markers && self.has_marker_callback()) {
+            // SAFETY: the block is a valid buffer callback; the synthesizer
+            // copies it.
+            unsafe {
+                self.synth
+                    .writeUtterance_toBufferCallback(utt, RcBlock::as_ptr(&block));
+            }
+            return;
         }
+        let shared = self.shared.clone();
+        let marker_block =
+            RcBlock::new(move |markers: NonNull<NSArray<AVSpeechSynthesisMarker>>| {
+                // SAFETY: the synthesizer passes a live array for the
+                // duration of the callback.
+                let markers: &NSArray<AVSpeechSynthesisMarker> = unsafe { markers.as_ref() };
+                let mut s = lock(&shared);
+                if s.job != token {
+                    return;
+                }
+                for m in markers.iter() {
+                    // SAFETY: property reads on a live marker, on the
+                    // thread that delivered it.
+                    let (mark, offset, range) =
+                        unsafe { (m.mark(), m.byteSampleOffset(), m.textRange()) };
+                    if mark == AVSpeechSynthesisMarkerMark::Word {
+                        s.markers
+                            .push((offset as u64, range.location, range.length));
+                    }
+                }
+                s.last_activity = Some(Instant::now());
+            });
+        // SAFETY: both blocks are valid callbacks with the signatures the
+        // method expects, and the synthesizer copies them; the method exists
+        // on this system (checked above).
+        unsafe {
+            self.synth.writeUtterance_toBufferCallback_toMarkerCallback(
+                utt,
+                RcBlock::as_ptr(&block),
+                RcBlock::as_ptr(&marker_block),
+            );
+        }
+    }
+
+    /// Whether this system's synthesizer can report word markers (macOS 14
+    /// and later).
+    fn has_marker_callback(&self) -> bool {
+        self.synth
+            .respondsToSelector(sel!(writeUtterance:toBufferCallback:toMarkerCallback:))
     }
 
     fn speaking(&self) -> bool {
@@ -546,7 +607,7 @@ impl AvSpeechBackend {
             let utt = self.utterance_for(&u.text);
             let empty = u.text.trim().is_empty();
             if !empty {
-                self.synth.write(&utt, token);
+                self.synth.write(&utt, token, false);
             }
             self.jobs.push_back(Job {
                 id: u.id,
@@ -677,12 +738,13 @@ impl AvSpeechBackend {
         let synth = Synth::new();
         let utt = self.utterance_for(text);
         let token = u64::MAX;
-        synth.write(&utt, token);
+        synth.write(&utt, token, true);
         let started = Instant::now();
         let mut tracker = WordTracker::new(text);
         let mut samples = Vec::new();
         let mut words = Vec::new();
-        let (rate, buffers, end) = loop {
+        let mut markers = Vec::new();
+        let (rate, buffers, end, frame_bytes) = loop {
             if runloop::is_main_thread() {
                 runloop::run_current_once(Duration::from_millis(5));
             } else {
@@ -698,11 +760,12 @@ impl AvSpeechBackend {
                     words.push((range, at));
                 }
             }
+            markers.append(&mut s.markers);
             if let Some(e) = s.error.take() {
                 return Err(SpeechError::Engine(e));
             }
             if let Some(end) = s.complete(Instant::now(), speaking, tracker.reached_end(text)) {
-                break (s.rate, s.buffers, end);
+                break (s.rate, s.buffers, end, s.frame_bytes);
             } else if s.first_buffer.is_none() && started.elapsed() >= FIRST_BUFFER_TIMEOUT {
                 drop(s);
                 synth.stop();
@@ -713,8 +776,26 @@ impl AvSpeechBackend {
         if volume < 1.0 {
             samples.iter_mut().for_each(|s| *s *= volume);
         }
-        let mut timed: Vec<(u64, Range<u32>)> =
-            words.into_iter().map(|(range, at)| (at, range)).collect();
+        // Word markers carry each word's own position, so they are right on
+        // macOS 14 too, where the delegate's word callbacks arrive after the
+        // audio. Without usable markers, the delegate's words are used.
+        let raw: Vec<u64> = markers.iter().map(|m| m.0).collect();
+        let from_markers = crate::range::marker_samples(&raw, samples.len() as u64, frame_bytes)
+            .filter(|_| !markers.is_empty());
+        let mut timed: Vec<(u64, Range<u32>)> = match from_markers {
+            Some(offsets) => {
+                log::debug!("avspeech: {} word markers, raw offsets {raw:?}", raw.len());
+                let mut marker_tracker = WordTracker::new(text);
+                markers
+                    .iter()
+                    .zip(offsets)
+                    .filter_map(|(&(_, loc, len), at)| {
+                        marker_tracker.word(text, loc, len).map(|r| (at, r))
+                    })
+                    .collect()
+            }
+            None => words.into_iter().map(|(range, at)| (at, range)).collect(),
+        };
         crate::range::spread_ties(&mut timed);
         let words = timed
             .into_iter()
@@ -852,5 +933,30 @@ impl SpeechBackend for AvSpeechBackend {
     fn synthesize_to_file(&mut self, text: &str, path: &Path) -> Result<(), SpeechError> {
         let synthesis = self.synthesize_words(text)?;
         crate::audio::write_wav(path, &synthesis.pcm).map_err(|e| SpeechError::Io(e.to_string()))
+    }
+
+    /// Writes the utterance as a WAV and reports each word's time in that
+    /// file (ADR-0011): from the synthesizer's word markers on macOS 14 and
+    /// later, else from the delegate's word callbacks counted against the
+    /// samples received. When every word landed on one offset (callbacks
+    /// that came after the audio), no times are reported, and export shares
+    /// the sentence's measured time among its words instead.
+    fn synthesize_utterance(
+        &mut self,
+        utterance: &Utterance,
+        path: &Path,
+    ) -> Result<FileSynthesis, SpeechError> {
+        let synthesis = self.synthesize_words(&utterance.text)?;
+        crate::audio::write_wav(path, &synthesis.pcm)
+            .map_err(|e| SpeechError::Io(format!("{}: {e}", path.display())))?;
+        Ok(FileSynthesis {
+            words: crate::range::file_words(&synthesis.words)
+                .into_iter()
+                .map(|(byte_range, audio_ms)| WordTiming {
+                    byte_range,
+                    audio_ms,
+                })
+                .collect(),
+        })
     }
 }

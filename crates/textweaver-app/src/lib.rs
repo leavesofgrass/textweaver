@@ -150,8 +150,10 @@ mod access;
 mod actions;
 pub mod align;
 mod app;
+mod audio_export;
 mod authoring;
 mod authoring_state;
+mod batch;
 pub mod browse;
 // In-reader export, preview, and citations: the full modules with the
 // `publish` feature, stand-ins that say "not in this build" without it.

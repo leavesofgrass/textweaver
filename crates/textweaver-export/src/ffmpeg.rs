@@ -26,27 +26,42 @@ pub enum AudioFormat {
     Mp3,
     /// An M4B audiobook with chapters through ffmpeg.
     M4b,
+    /// FLAC, written in process (the `flac` feature; through ffmpeg
+    /// without it).
+    Flac,
 }
 
 impl AudioFormat {
-    /// The format for a file name's extension (`wav`, `mp3`, `m4b`; any
-    /// case).
+    /// The format for a file name's extension (`wav`, `flac`, `mp3`,
+    /// `m4b`; any case).
     pub fn from_path(path: &Path) -> Option<Self> {
         let ext = path.extension()?.to_str()?.to_ascii_lowercase();
         match ext.as_str() {
             "wav" => Some(AudioFormat::Wav),
+            "flac" => Some(AudioFormat::Flac),
             "mp3" => Some(AudioFormat::Mp3),
             "m4b" => Some(AudioFormat::M4b),
             _ => None,
         }
     }
 
-    /// The name users see ("WAV", "MP3", "M4B").
+    /// The name users see ("WAV", "FLAC", "MP3", "M4B").
     pub fn name(self) -> &'static str {
         match self {
             AudioFormat::Wav => "WAV",
+            AudioFormat::Flac => "FLAC",
             AudioFormat::Mp3 => "MP3",
             AudioFormat::M4b => "M4B",
+        }
+    }
+
+    /// Whether writing this format needs ffmpeg in this build: MP3 and
+    /// M4B always; FLAC only when built without the `flac` feature.
+    pub fn needs_ffmpeg(self) -> bool {
+        match self {
+            AudioFormat::Wav => false,
+            AudioFormat::Flac => !cfg!(feature = "flac"),
+            AudioFormat::Mp3 | AudioFormat::M4b => true,
         }
     }
 }
@@ -111,6 +126,7 @@ pub fn args(wav: &Path, metadata: &Path, out: &Path, format: AudioFormat) -> Vec
             "-movflags",
             "+faststart",
         ],
+        AudioFormat::Flac => &["-codec:a", "flac"],
         AudioFormat::Wav => &[],
     };
     a.extend(codec.iter().map(OsString::from));
@@ -159,6 +175,13 @@ mod tests {
             AudioFormat::from_path(Path::new("c.wav")),
             Some(AudioFormat::Wav)
         );
+        assert_eq!(
+            AudioFormat::from_path(Path::new("e.Flac")),
+            Some(AudioFormat::Flac)
+        );
+        assert!(!AudioFormat::Wav.needs_ffmpeg());
+        assert!(AudioFormat::M4b.needs_ffmpeg());
+        assert_eq!(AudioFormat::Flac.needs_ffmpeg(), !cfg!(feature = "flac"));
         assert_eq!(AudioFormat::from_path(Path::new("d.ogg")), None);
         assert_eq!(AudioFormat::from_path(Path::new("noext")), None);
     }

@@ -62,9 +62,18 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ### W6k
 
+- **Batch convert from the File menu.** Choose a folder in the file browser, then a format (Markdown first, then PDF, HTML, plain text, EPUB, Word, braille), then where the files go (a `converted` folder, beside each file, or another folder), and answer "Convert 48 files to PDF into ...? y or n". It runs in the background while you read, says its progress in tens of percent at most every ten seconds, and Escape asks before stopping, leaving no half-written file. At the end the counts are said, the failures are listed name first with Enter opening one, and the list is saved as `conversion-report.txt`. New messages in all six languages.
 - **EPUB, Word, braille, and PDF output of large documents is much faster.** Building the document's structure grew with the square of its size; 10 MB of Markdown now converts to EPUB in about 1 second instead of 25, and a 50,000-item list in under a second instead of 11. The output is the same.
 - **`tw convert` saves a report.** `conversion-report.txt` in the output folder (or the folder converted in place) has the summary sentence, then each failure and warning, the file's name first. Each run replaces it; `--no-report` leaves it out, and a report is never converted as a document.
 - **For contributors:** `Converter::run_plan_with` reports each file as it finishes and stops when asked, never leaving a half-written file; `tests/matrix.rs` converts a fixture for every loader to Markdown and PDF, and a new loader needs one; `cargo run --release -p textweaver-writers --example bench_blocks -- FILE` times the block tree and each writer.
+
+### W6v: audio export
+
+- **Export audio from the File menu.** Choose a format (FLAC first, then WAV; MP3 and M4B only when ffmpeg is found, and when it is not, that is said in words), then where the file goes (beside the document, or another folder chosen in the file browser), and answer "Export essay.flac with Microsoft David at 200 words a minute, into ...? y or n", which names the voice and speed used. It runs in the background while you read, says "Exporting audio, 30 percent." at most every ten seconds, and Escape asks before stopping, leaving no file behind. At the end: "Wrote essay.flac: 42 minutes and 5 seconds, 12 chapters. Open it? y or n." Only engines that can write audio files are used. New messages in all six languages.
+- **FLAC without ffmpeg.** `tw export-audio --out book.flac` writes a lossless FLAC file, about half the size of WAV, with nothing else installed. It carries the title, author, and chapters as Vorbis comments (`CHAPTER001`, `CHAPTER001NAME`, and so on).
+- **WAV files have chapters.** The title, author, and chapters go into the WAV as an ID3 tag with chapter frames, as MP3 files have them.
+- **Word times from Apple voices.** Exports with AVSpeech on macOS 14 and later carry each word's time, so word-level subtitles are exact.
+- **A voice that cannot be loaded stops the export** with the reason, instead of the audio quietly using another voice. When ffmpeg is missing for MP3 or M4B, the message now suggests `.flac` or `.wav`.
 
 ### W6o: formats
 

@@ -3257,6 +3257,99 @@ browse-preview-path = { $path }
 
 ## End of W6f
 
+## W6k: batch conversion (File, Batch convert). Keep the meaning first.
+batch-choose-source = Elija la carpeta que desea convertir
+batch-choose-output = Elija la carpeta para los archivos convertidos
+batch-format-title = Convertir a
+batch-format-intro = Convertir { $name } a: elija un formato, { $n } opciones.
+batch-where-title = Dónde van los archivos
+batch-where-intro = ¿Dónde deben ir los archivos convertidos?
+batch-where-converted = En una carpeta converted, { $path }
+batch-where-beside = Junto a cada archivo
+batch-where-choose = En otra carpeta, que elegirá a continuación
+batch-nothing = No hay documentos que convertir en { $path }.
+batch-confirm =
+    ¿Convertir { $n ->
+        [one] 1 archivo
+       *[other] { $n } archivos
+    } a { $format } en { $path }? y o n
+batch-confirm-beside =
+    ¿Convertir { $n ->
+        [one] 1 archivo
+       *[other] { $n } archivos
+    } a { $format } junto a cada archivo? y o n
+batch-started =
+    Convirtiendo { $n ->
+        [one] 1 archivo
+       *[other] { $n } archivos
+    } a { $format }. Escape detiene.
+batch-progress = { $percent } por ciento convertido, { $done } de { $total } archivos.
+batch-busy = Ya se está convirtiendo, { $done } de { $total } archivos. Escape detiene.
+batch-stop-question = ¿Detener la conversión? Los archivos ya hechos se conservan. y o n
+batch-stopping = Se detendrá tras los archivos que se están escribiendo.
+batch-still-converting = La conversión continúa.
+batch-done =
+    { $converted ->
+        [one] 1 archivo convertido
+       *[other] { $converted } archivos convertidos
+    } a { $format }; { $skipped } al día; { $failed } con error.
+batch-stopped =
+    Detenido. { $converted ->
+        [one] 1 archivo convertido
+       *[other] { $converted } archivos convertidos
+    }; { $left } sin convertir; { $failed } con error.
+batch-report = La lista se guardó en { $path }.
+batch-report-failed = No se pudo guardar la lista: { $error }
+batch-failures-title =
+    { $n ->
+        [one] 1 archivo con error
+       *[other] { $n } archivos con error
+    }
+batch-failure-item = { $name }: { $reason }
+batch-start-failed = No se pudo empezar a convertir: { $error }
+batch-thread-stopped = La conversión por lotes se detuvo de forma inesperada.
+
+## End of W6k
+
+## W6v: audio export (File, Export audio). Keep the meaning first: a
+## 40-cell Braille display shows the start of the line. $name is a file
+## name (essay.flac); $path a folder or a file's full path; $format a
+## format's name (FLAC, MP3); $voice a voice's or engine's name; $wpm is
+## words per minute; $length a length of time from the duration-*
+## messages; $chapters and $n are numbers; $percent is a multiple of ten;
+## $error is passed on as it is.
+audio-format-title = Exportar audio como
+audio-format-intro = Exportar { $name } como audio: elija un formato, { $n } opciones.
+audio-no-ffmpeg = MP3 y M4B necesitan ffmpeg, que no se encontró.
+audio-format-flac = FLAC: sin pérdida, la mitad del tamaño de WAV
+audio-format-wav = WAV: el más grande, se reproduce en todas partes
+audio-format-mp3 = MP3, mediante ffmpeg
+audio-format-m4b = Audiolibro M4B, mediante ffmpeg
+audio-where-title = Dónde va el audio
+audio-where-intro = ¿Dónde debe ir el audio?
+audio-where-beside = Junto al documento, { $path }
+audio-where-choose = En otra carpeta, elegida a continuación
+audio-choose-folder = Elija la carpeta para el audio
+audio-no-engine = Ningún motor de voz de aquí puede escribir archivos de audio. Instale eSpeak NG, o elija otro motor en el menú Voz.
+audio-confirm = ¿Exportar { $name } con { $voice } a { $wpm } palabras por minuto, en { $path }? y o n
+audio-started = Exportando { $name } como { $format }. Escape detiene.
+audio-progress = Exportando audio, { $percent } por ciento.
+audio-busy = Ya se está exportando { $name }. Escape detiene.
+audio-stop-question = ¿Detener la exportación? No se guarda ningún archivo. y o n
+audio-stopping = Deteniendo la exportación.
+audio-still-exporting = Se sigue exportando el audio.
+audio-stopped = Exportación de audio detenida; no se escribió ningún archivo.
+audio-done =
+    { $name } escrito: { $length }, { $chapters ->
+        [one] 1 capítulo
+       *[other] { $chapters } capítulos
+    }.
+audio-subtitles = Subtítulos en { $name }.
+audio-failed = No se pudo exportar el audio: { $error }
+audio-thread-stopped = La exportación de audio se detuvo de forma inesperada.
+
+## End of W6v
+
 ## W6a6: the window's menus and dialogs. Settings files chosen with the
 ## system's file chooser, the Colors dialog, and the font list. $ratio is
 ## a contrast ratio such as 4.8; $verdict is good, fair, or low.

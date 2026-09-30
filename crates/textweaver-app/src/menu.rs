@@ -1449,34 +1449,56 @@ mod tests {
         );
     }
 
-    /// With a command still pending: the file browser registers itself
-    /// since W6f, so this uses batch conversion; the agent that registers
-    /// that one picks another.
+    /// Every command a menu shows runs something: a pending one only once
+    /// its module registered a handler. In a full build every pending
+    /// command has registered (browse W6f, batch W6k, audio export W6v,
+    /// dictation W6d), so all of them show.
+    #[test]
+    fn every_visible_menu_command_has_a_handler() {
+        let app = App::new(crate::AppConfig::for_tests());
+        let registered = |a: A| app.menu.handlers.iter().any(|(h, _)| *h == a);
+        for m in MenuId::ALL {
+            for item in app.menu_view(m).items {
+                if let MenuItemKind::Action(a) = item.kind
+                    && PENDING.contains(&a)
+                {
+                    assert!(registered(a), "{a:?} shows in {m:?} with no handler");
+                }
+            }
+        }
+        if cfg!(all(
+            feature = "publish",
+            feature = "dictation",
+            feature = "audio-export"
+        )) {
+            for &a in PENDING {
+                assert!(
+                    registered(a) && app.is_available(a),
+                    "{a:?} is not registered"
+                );
+            }
+        }
+    }
+
+    /// A later registration replaces an earlier one, and the menu runs the
+    /// command registered last.
     #[test]
     fn a_registered_handler_shows_and_runs() {
         fn handler(app: &mut App) -> Vec<Effect> {
-            app.tell("Converting.");
+            app.tell("Exporting.");
             vec![Effect::Redraw]
         }
         let mut app = App::new(crate::AppConfig::for_tests());
-        assert!(!app.is_available(A::BatchConvert));
-        let file = app.menu_view(MenuId::File);
-        assert!(
-            !file
-                .items
-                .iter()
-                .any(|i| i.kind == MenuItemKind::Action(A::BatchConvert))
-        );
-        app.register_handler(A::BatchConvert, handler);
-        assert!(app.is_available(A::BatchConvert));
+        app.register_handler(A::ExportAudio, handler);
+        assert!(app.is_available(A::ExportAudio));
         let file = app.menu_view(MenuId::File);
         assert!(
             file.items
                 .iter()
-                .any(|i| i.kind == MenuItemKind::Action(A::BatchConvert))
+                .any(|i| i.kind == MenuItemKind::Action(A::ExportAudio))
         );
-        app.dispatch(Command::Action(A::BatchConvert));
-        assert_eq!(app.status_text(), "Converting.");
+        app.dispatch(Command::Action(A::ExportAudio));
+        assert_eq!(app.status_text(), "Exporting.");
     }
 
     /// Each menu stays short enough to hear through (about 20 items).

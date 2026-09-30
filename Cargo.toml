@@ -331,6 +331,16 @@ muda = { version = "0.20.0", default-features = false }
 # brings one small proc-macro crate, hashify (Apache-2.0 or MIT).
 mail-parser = { version = "0.11.9", default-features = false, features = ["encoding_rs"] }
 
+# Wave 6, Agent W6v: audio export without ffmpeg (ADR-0011's status
+# update). flacenc is a pure-Rust FLAC encoder (Apache-2.0); it writes no
+# tags itself, so export adds the Vorbis comment block (tags and chapters).
+# id3 (MIT) writes ID3v2 tags with CHAP and CTOC chapter frames into WAV
+# files. claxon (Apache-2.0), a pure-Rust FLAC decoder, only reads exports
+# back in tests.
+flacenc = { version = "=0.5.1", default-features = false }
+id3 = "1.17"
+claxon = "0.4.3"
+
 # tests
 proptest = "1.11"
 insta = { version = "1.48", features = ["json", "yaml"] }
