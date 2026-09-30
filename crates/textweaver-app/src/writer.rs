@@ -18,6 +18,9 @@
 //!   (`profiles.toml`), Agent W3e.
 //! - **Document identity** (`sync-ids.json`, ADR-0049): hashing an opened
 //!   or saved file to find its sync id.
+//! - **Sync** (ADR-0049): every read and write of the sync folder, through
+//!   the sync engine ([`crate::sync_engine`]), so a slow USB stick or a
+//!   sync service's folder never holds up a key press.
 //!
 //! Each job's result comes back as a [`Report`], which the app applies on
 //! its next [`App::tick`](crate::App::tick): "Saved", an error, or a
@@ -27,9 +30,9 @@
 use std::collections::HashMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
@@ -41,6 +44,7 @@ use textweaver_store::{
 };
 
 use crate::disk::FileStamp;
+use crate::sync_engine::{SyncEngine, SyncRequest, SyncResponse};
 use crate::wake::WakeSlot;
 
 /// What a state save was for, so its result can be announced.
@@ -100,6 +104,13 @@ pub(crate) enum Job {
     },
     /// Write the library sidecars' pending entries.
     SyncFlush(LibrarySync),
+    /// Work for the sync engine (ADR-0049).
+    Sync {
+        /// The engine, shared with the app, which never locks it.
+        engine: Arc<Mutex<SyncEngine>>,
+        /// What to do.
+        request: SyncRequest,
+    },
     /// Add reading to `stats.json`.
     Stats {
         paths: Paths,
@@ -161,6 +172,11 @@ pub(crate) enum Report {
     ProfilesFailed(String),
     /// A settings save finished.
     Settings { result: Result<(), String> },
+    /// The sync engine's answer.
+    Sync(SyncResponse),
+    /// Writing a library folder's sidecar found positions that differed
+    /// from another computer's, or failed: the count, or the error.
+    Sidecar(Result<usize, String>),
 }
 
 impl Job {
@@ -173,6 +189,8 @@ impl Job {
                 | Job::Save { .. }
                 | Job::DiskCheck { .. }
                 | Job::Settings { .. }
+                | Job::Sync { .. }
+                | Job::SyncFlush(_)
         )
     }
 }
@@ -486,15 +504,26 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
             job.run_logged(text.as_ref().map(ropey::Rope::chunks));
             None
         }
-        Job::SyncFlush(sync) => {
-            match sync.flush() {
-                Ok(conflicts) if !conflicts.is_empty() => {
-                    log::info!("{} sidecar entries differed on write", conflicts.len());
-                }
-                Ok(_) => {}
-                Err(e) => log::warn!("cannot write the library sidecar: {e}"),
+        // Conflicts found on write are reported, not only logged (ADR-0049,
+        // problem 2).
+        Job::SyncFlush(sync) => match sync.flush() {
+            Ok(conflicts) if !conflicts.is_empty() => {
+                log::info!("{} sidecar entries differed on write", conflicts.len());
+                Some(Report::Sidecar(Ok(conflicts.len())))
             }
-            None
+            Ok(_) => None,
+            Err(e) => {
+                log::warn!("cannot write the library sidecar: {e}");
+                Some(Report::Sidecar(Err(e.to_string())))
+            }
+        },
+        Job::Sync { engine, request } => {
+            // A panic while the engine was held leaves it usable: its state
+            // is rebuilt from the folder on the next merge.
+            let mut engine = engine
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            Some(Report::Sync(engine.handle(request)))
         }
         Job::Stats { paths, deltas } => {
             if let Err(e) = ReadingStats::add_to_file(&paths, &deltas) {
