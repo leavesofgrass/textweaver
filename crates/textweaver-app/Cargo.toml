@@ -55,6 +55,8 @@ textweaver-text.workspace = true
 textweaver-formats.workspace = true
 textweaver-speech.workspace = true
 textweaver-store.workspace = true
+# Document identity for sync (ADR-0049): sync ids found on the writer.
+textweaver-sync.workspace = true
 textweaver-keymap.workspace = true
 textweaver-a11y.workspace = true
 textweaver-editor.workspace = true

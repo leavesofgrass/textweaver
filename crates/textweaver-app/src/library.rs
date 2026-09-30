@@ -88,6 +88,8 @@ impl App {
     /// recent list, on the background writer.
     pub(crate) fn record_library_open(&mut self, path: &Path, title: &str, format: &str) {
         self.record_library_open_with(path, title, format, DocMetadata::default());
+        let details = textweaver_sync::docid::Details::default();
+        self.identify_on_writer(path, None, details);
     }
 
     /// [`record_library_open`](Self::record_library_open) for a document
@@ -95,7 +97,40 @@ impl App {
     /// the library can be searched by them.
     pub(crate) fn record_library_open_doc(&mut self, path: &Path, title: &str, doc: &Document) {
         let meta = document_metadata(doc);
+        // Only a title the document states: `title` falls back to the file
+        // name, which must never reach the sync folder (ADR-0049).
+        let details = textweaver_sync::docid::Details {
+            title: doc.meta.title.clone(),
+            doi: meta.doi.clone(),
+            isbn: meta.isbn.clone(),
+        };
         self.record_library_open_with(path, title, &doc.meta.format, meta);
+        self.identify_on_writer(path, Some(doc.text().clone()), details);
+    }
+
+    /// Finds or makes the sync id of the document at `path` and keeps its
+    /// hashes in `sync-ids.json` (ADR-0049), on the writer: hashing a large
+    /// file must never hold up a key press. `text` is the document's text
+    /// as read (a rope clone costs nothing), when there is one.
+    pub(crate) fn identify_on_writer(
+        &mut self,
+        path: &Path,
+        text: Option<ropey::Rope>,
+        details: textweaver_sync::docid::Details,
+    ) {
+        let Some(paths) = &self.paths else {
+            return;
+        };
+        let job = textweaver_sync::Identify {
+            ids_file: paths.sync_ids_file(),
+            path: path.to_owned(),
+            library_folders: self.settings.library.folders.clone(),
+            details,
+        };
+        self.writer.send(crate::writer::Job::Identify {
+            job: Box::new(job),
+            text,
+        });
     }
 
     fn record_library_open_with(
