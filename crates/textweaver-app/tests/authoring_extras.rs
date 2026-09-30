@@ -40,6 +40,7 @@ impl Rig {
     }
 
     /// The text the editor has selected.
+    #[cfg_attr(not(any(feature = "lint", feature = "grammar")), expect(dead_code))]
     fn selected(&self) -> String {
         let sel = self
             .app
