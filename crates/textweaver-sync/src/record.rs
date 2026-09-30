@@ -428,7 +428,7 @@ mod tests {
             Err(SyncError::NewerFormat { found: 2 })
         ));
         let bad_place = format!(
-            "{{\"format\":1,\"sync_id\":\"{DOC}\",\"places\":{{\"laptop\":{{\"stamp\":{{\"time\":1,\"device\":\"{A}\"}}}}}}}}"
+            "{{\"format\":1,\"sync_id\":\"{DOC}\",\"places\":{{\"laptop\":{{\"stamp\":{{\"wall_ms\":1,\"device\":\"{A}\"}}}}}}}}"
         );
         assert!(DocRecord::from_bytes(bad_place.as_bytes()).is_err());
     }

@@ -27,7 +27,9 @@ pub const AHEAD_LIMIT_MS: u64 = 24 * 60 * 60 * 1000;
 /// counter, then computer id (the field order).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Stamp {
-    /// Milliseconds since 1970-01-01 UTC, by the hybrid clock.
+    /// Milliseconds since 1970-01-01 UTC, by the hybrid clock. Written as
+    /// `wall_ms`, the name the store's deletion records use (S3).
+    #[serde(rename = "wall_ms")]
     pub time: u64,
     /// Ticks within one millisecond; left out of the file when zero.
     #[serde(default, skip_serializing_if = "is_zero")]
