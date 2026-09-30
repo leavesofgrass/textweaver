@@ -34,6 +34,25 @@ fn root() -> PathBuf {
 /// `cargo xtask settings-doc [--check]`.
 pub fn settings_doc() -> anyhow::Result<()> {
     let check = std::env::args().skip(2).any(|a| a == "--check");
+    let ok = run_settings_test(check)?;
+    if check {
+        anyhow::ensure!(
+            ok,
+            "docs/settings-reference.md is out of date; run `cargo xtask settings-doc`"
+        );
+        println!("docs/settings-reference.md is up to date");
+    } else {
+        anyhow::ensure!(ok, "writing docs/settings-reference.md failed");
+        println!("wrote docs/settings-reference.md");
+    }
+    Ok(())
+}
+
+/// Runs the app crate's `settings_reference` test, which checks
+/// `docs/settings-reference.md` or, unless `check`, rewrites it. True when
+/// the test passed. It builds the app crate, so a build failure also reads
+/// as false.
+pub fn run_settings_test(check: bool) -> anyhow::Result<bool> {
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let mut cmd = Command::new(cargo);
     cmd.current_dir(root()).args([
@@ -50,20 +69,40 @@ pub fn settings_doc() -> anyhow::Result<()> {
         cmd.env("TEXTWEAVER_UPDATE_DOCS", "1");
     }
     let status = cmd.status().context("running cargo test")?;
-    if check {
-        anyhow::ensure!(
-            status.success(),
-            "docs/settings-reference.md is out of date; run `cargo xtask settings-doc`"
-        );
-        println!("docs/settings-reference.md is up to date");
-    } else {
-        anyhow::ensure!(
-            status.success(),
-            "writing docs/settings-reference.md failed"
-        );
-        println!("wrote docs/settings-reference.md");
+    Ok(status.success())
+}
+
+/// The files that state the crate count, and the words around the number.
+const CRATE_COUNTS: [(&str, &str, &str); 2] = [
+    ("docs/README.md", "each of the ", " crates"),
+    ("docs/dev/architecture.md", "workspace with ", " crates"),
+];
+
+/// The number of crates in `crates/`.
+fn crate_count(root: &Path) -> anyhow::Result<usize> {
+    Ok(file_names(&root.join("crates"))?
+        .into_iter()
+        .filter(|c| root.join("crates").join(c).join("Cargo.toml").is_file())
+        .count())
+}
+
+/// Rewrites the crate counts in the docs to match `crates/`, and returns
+/// the files it changed. The rest of what `docs --check` checks (the ADR
+/// lists, the See also sections, the index links) is written by hand.
+pub fn write_crate_counts(root: &Path) -> anyhow::Result<Vec<String>> {
+    let crates = crate_count(root)?;
+    let mut changed = Vec::new();
+    for (file, before, after) in CRATE_COUNTS {
+        let path = root.join(file);
+        let text = std::fs::read_to_string(&path).with_context(|| format!("reading {file}"))?;
+        if let Some(new) = replace_number_between(&text, before, after, crates)
+            && new != text
+        {
+            std::fs::write(&path, new).with_context(|| format!("writing {file}"))?;
+            changed.push(file.to_owned());
+        }
     }
-    Ok(())
+    Ok(changed)
 }
 
 /// `cargo xtask docs --check`.
@@ -123,14 +162,8 @@ pub fn check(root: &Path) -> anyhow::Result<Vec<String>> {
     compare_adr_list("docs/README.md, Decisions", &listed, &adrs, &mut problems);
 
     // The crate count.
-    let crates = file_names(&root.join("crates"))?
-        .into_iter()
-        .filter(|c| root.join("crates").join(c).join("Cargo.toml").is_file())
-        .count();
-    for (file, before, after) in [
-        ("docs/README.md", "each of the ", " crates"),
-        ("docs/dev/architecture.md", "workspace with ", " crates"),
-    ] {
+    let crates = crate_count(root)?;
+    for (file, before, after) in CRATE_COUNTS {
         let text = read(file)?;
         match number_between(&text, before, after) {
             Some(n) if n == crates => {}
@@ -260,6 +293,18 @@ fn number_between(text: &str, before: &str, after: &str) -> Option<usize> {
     })
 }
 
+/// `text` with the first number written between `before` and `after`
+/// replaced by `n`, or `None` when there is no such number.
+fn replace_number_between(text: &str, before: &str, after: &str, n: usize) -> Option<String> {
+    text.match_indices(before).find_map(|(i, _)| {
+        let start = i + before.len();
+        let rest = &text[start..];
+        let len = rest.chars().take_while(char::is_ascii_digit).count();
+        (len > 0 && rest[len..].starts_with(after))
+            .then(|| format!("{}{n}{}", &text[..start], &rest[len..]))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -303,6 +348,20 @@ mod tests {
         assert_eq!(
             adr_links("- [ADR-0017: Writers](adr/0017-writers.md): text", "adr/"),
             vec![(17, "0017-writers.md".to_owned())]
+        );
+        assert_eq!(
+            replace_number_between(
+                "each of the 3 things; each of the 33 crates, all 33",
+                "each of the ",
+                " crates",
+                34
+            )
+            .as_deref(),
+            Some("each of the 3 things; each of the 34 crates, all 33")
+        );
+        assert_eq!(
+            replace_number_between("no count", "the ", " crates", 1),
+            None
         );
         assert_eq!(
             section("a\n## Decisions\nx\ny\n## Next\nz", "## Decisions"),

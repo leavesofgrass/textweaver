@@ -69,21 +69,46 @@ pub fn run() -> anyhow::Result<()> {
         _ => bail!("usage: cargo xtask notices [--check]"),
     };
     let root = crate::eci::root();
-    let crates = cargo_about(&root)?;
-    let text = compose(&root, &crates)?;
-    let path = root.join(NOTICES);
     if check {
-        let current =
-            fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
-        if normalized(&current) != text {
+        if !is_current(&root)? {
             bail!("{NOTICES} is out of date; run `cargo xtask notices`");
         }
         println!("{NOTICES} is up to date");
         return Ok(());
     }
+    write(&root)
+}
+
+/// Whether the committed notices match what `cargo about` and the data
+/// licence files give now (line endings aside).
+pub fn is_current(root: &Path) -> anyhow::Result<bool> {
+    let crates = cargo_about(root)?;
+    let text = compose(root, &crates)?;
+    let path = root.join(NOTICES);
+    let current =
+        fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+    Ok(normalized(&current) == text)
+}
+
+/// Writes the notices file.
+pub fn write(root: &Path) -> anyhow::Result<()> {
+    let crates = cargo_about(root)?;
+    let text = compose(root, &crates)?;
+    let path = root.join(NOTICES);
     fs::write(&path, &text).with_context(|| format!("writing {}", path.display()))?;
     println!("wrote {} ({} bytes)", path.display(), text.len());
     Ok(())
+}
+
+/// Whether `cargo about` is installed.
+pub fn cargo_about_installed() -> bool {
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    Command::new(cargo)
+        .args(["about", "--version"])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok_and(|s| s.success())
 }
 
 /// Line endings do not matter (upstream licence files use CR LF, and git

@@ -23,6 +23,10 @@
 //!   `cargo about` (see `notices.rs`).
 //! - `parity`: compare word and sentence segmentation with the Star corpus
 //!   in `fixtures/star-parity/` and write the report (Agent A).
+//! - `regen [--check]`: rebuild every generated file in order (notices,
+//!   settings reference, keyboard reference, site data, docs crate counts),
+//!   or with `--check` report each on one line and fail if any is stale
+//!   (see `regen.rs`).
 //! - `release X.Y.Z [--dry-run] [--no-checks]`: set the version, date the
 //!   changelog, run the checks, commit, and tag (see `release.rs`);
 //!   `release X.Y.Z --listened` records the listening check.
@@ -43,6 +47,7 @@ mod keyboard;
 mod listen;
 mod notices;
 mod parity;
+mod regen;
 mod release;
 mod sapi;
 mod soak;
@@ -71,6 +76,7 @@ fn main() -> anyhow::Result<()> {
         "sapi-host" => sapi::run(),
         "settings-doc" => docs_check::settings_doc(),
         "parity" => parity::run(),
+        "regen" => regen::run(),
         "release" => release::run(),
         "soak" => soak::run(),
         #[cfg(feature = "bench")]
@@ -78,7 +84,7 @@ fn main() -> anyhow::Result<()> {
         "startup" => bench::startup(),
         _ => {
             eprintln!(
-                "usage: cargo xtask <appimage|bench|deps|dist|gui-dist|hosts|eci-host|keyboard|listen|notices|parity|release|sapi-host|soak|startup>"
+                "usage: cargo xtask <appimage|bench|deps|dist|docs|fuzz-seed|gui-dist|hosts|eci-host|keyboard|listen|notices|parity|regen|release|sapi-host|settings-doc|soak|startup>"
             );
             std::process::exit(2);
         }

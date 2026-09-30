@@ -20,20 +20,31 @@ fn normalized(s: &str) -> String {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    let path = target();
-    let text = textweaver_keymap::keyboard_markdown();
     let check = std::env::args().skip(2).any(|a| a == "--check");
     if check {
-        let current = std::fs::read_to_string(&path)
-            .with_context(|| format!("reading {}", path.display()))?;
         anyhow::ensure!(
-            normalized(&current) == text,
+            is_current()?,
             "{} is out of date; run `cargo xtask keyboard`",
-            path.display()
+            target().display()
         );
-        println!("{} is up to date", path.display());
+        println!("{} is up to date", target().display());
         return Ok(());
     }
+    write()
+}
+
+/// Whether the committed `docs/keyboard.md` matches the keymap.
+pub fn is_current() -> anyhow::Result<bool> {
+    let path = target();
+    let current =
+        std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+    Ok(normalized(&current) == textweaver_keymap::keyboard_markdown())
+}
+
+/// Writes `docs/keyboard.md` from the keymap.
+pub fn write() -> anyhow::Result<()> {
+    let path = target();
+    let text = textweaver_keymap::keyboard_markdown();
     std::fs::write(&path, &text).with_context(|| format!("writing {}", path.display()))?;
     println!(
         "wrote {} ({} actions)",
