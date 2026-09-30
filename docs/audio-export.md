@@ -1,8 +1,24 @@
 # Exporting audio and subtitles
 
-`tw export-audio` reads a document aloud into an audio file, so you can listen to it later on a phone, a music player, or a book player. It can write a WAV file, a FLAC file, an MP3 file, or an M4B audiobook, each with one chapter for each heading. It can also write subtitles: a caption file that shows each sentence, or each word, at the moment it is spoken. This is for anyone who wants to take a reading with them, for example a student who wants an audiobook of this week's chapters, or a teacher who wants captions that follow the spoken text.
+Export audio, in the reader's File menu, and `tw export-audio`, from a terminal, read a document aloud into an audio file, so you can listen to it later on a phone, a music player, or a book player. It can write a WAV file, a FLAC file, an MP3 file, or an M4B audiobook, each with one chapter for each heading. It can also write subtitles: a caption file that shows each sentence, or each word, at the moment it is spoken. This is for anyone who wants to take a reading with them, for example a student who wants an audiobook of this week's chapters, or a teacher who wants captions that follow the spoken text.
 
-This guide is written to be read with a screen reader. Each task section starts with the command, then explains it.
+This guide is written to be read with a screen reader. Each task section starts with the command, then explains it. [Export audio from the reader](#export-audio-from-the-reader) comes first; the rest of the guide is about `tw export-audio`, whose settings the reader shares.
+
+## Export audio from the reader
+
+In the reader, open the File menu (F10 in the terminal) and choose Export audio, or find "Export audio" in the command palette. A document must be open.
+
+1. **The format.** You hear, for example, "Export essay as audio: choose a format, 2 choices." FLAC comes first: lossless and about half the size of WAV. WAV follows. MP3 and M4B are listed only when ffmpeg is installed; when it is not, you hear "MP3 and M4B need ffmpeg, which was not found." Press Enter on a format.
+2. **Where.** "Where should the audio go?" The first choice puts the file beside the document, with the document's name, such as `essay.flac`. The second opens the file browser to choose another folder: press Ctrl+Enter on the folder, or Enter on its "Choose this folder" row (see [Choosing a folder](reading.md)).
+3. **The question.** "Export essay.flac with Microsoft David at 200 words a minute, into D:\Notes? y or n". It names the voice and the speed the export uses: your current voice and rate. Press y to start, or n to cancel.
+
+The export runs in the background, so you can keep reading. You hear "Exporting audio, 30 percent." in tens, at most every ten seconds; the interface announcements setting can quiet these. Nothing plays through your speakers.
+
+To stop, press Escape with no list or question open. You hear "Stop the export? No file is kept. y or n". Press y, and the export stops after the sentence being read; no file is left behind.
+
+At the end you hear, for example, "Wrote essay.flac: 42 minutes and 5 seconds, 12 chapters. Open it? y or n." Press y to open the file in your default player. If another list or question is open then, you hear the result without the question.
+
+Which engine it uses: your reading engine, when it can write audio files; otherwise the one in your `[speech] backend` setting, when it can; otherwise the best installed engine that can. Engines that can only speak aloud, such as Omnivox, are never used. The export reads the document as it was last opened, so in edit mode save and leave edit mode first to export your changes.
 
 ## Before you start
 
@@ -307,7 +323,7 @@ The three settings:
 
 A file named with `--subtitles` always wins over `subtitles_with_audio`. `--word-level` turns word cues on even when `subtitle_word_level` is `false`; there is no option to turn them off for one export when the setting is `true`.
 
-These settings are used by `tw export-audio`. The reader does not have an audio export command yet, so in the reader there is nothing to start and nothing is announced. Use `tw export-audio` from a terminal.
+These settings are used by `tw export-audio` and by Export audio in the reader, which writes subtitles beside the audio when `subtitles_with_audio` is `true`.
 
 ## Get a report as JSON
 

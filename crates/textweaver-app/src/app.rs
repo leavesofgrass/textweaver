@@ -287,6 +287,9 @@ pub(crate) enum ListKind {
     /// failures.
     #[cfg_attr(not(feature = "publish"), allow(dead_code))]
     Batch(crate::batch::BatchList),
+    /// An audio export list: the formats, or where the file goes.
+    #[cfg_attr(not(feature = "audio-export"), allow(dead_code))]
+    Audio(crate::audio_export::AudioList),
 }
 
 /// The application: the only owner of mutable state.
@@ -430,6 +433,9 @@ pub struct App {
     /// Batch conversion: its questions and the run (File, Batch convert).
     #[cfg_attr(not(feature = "publish"), allow(dead_code))]
     pub(crate) batch: crate::batch::BatchState,
+    /// Audio export: its questions and the run (File, Export audio).
+    #[cfg_attr(not(feature = "audio-export"), allow(dead_code))]
+    pub(crate) audio: crate::audio_export::AudioState,
     /// Moves on when a list, prompt, or menu closes (crate::announce).
     pub(crate) dialog_generation: u64,
     /// What frontends ask for every frame, kept per revision
@@ -535,6 +541,7 @@ impl App {
             dictation: crate::dictation::DictationSlot::default(),
             browse: crate::browse::BrowseState::new(),
             batch: crate::batch::BatchState::default(),
+            audio: crate::audio_export::AudioState::default(),
             dialog_generation: 0,
             frame_cache: crate::frame_cache::FrameCaches::default(),
         };
@@ -543,6 +550,7 @@ impl App {
         app.load_themes();
         crate::dictation::register(&mut app);
         crate::batch::register(&mut app);
+        crate::audio_export::register(&mut app);
         app
     }
 
@@ -577,6 +585,7 @@ impl App {
             || self.voices.question.is_some()
             || self.dictation.question
             || self.batch_question()
+            || self.audio_question()
     }
 
     /// Answers a pending confirmation.
@@ -605,6 +614,9 @@ impl App {
         }
         if self.batch_question() {
             return self.confirm_batch(answer);
+        }
+        if self.audio_question() {
+            return self.confirm_audio(answer);
         }
         if let Some((kind, n)) = self.pending_list_delete.clone() {
             return match answer {
@@ -1252,6 +1264,10 @@ impl App {
                 if self.batch_running() && !self.mode.is_prompt() && self.list.is_none() {
                     return self.ask_stop_batch();
                 }
+                // The same for an audio export.
+                if self.audio_running() && !self.mode.is_prompt() && self.list.is_none() {
+                    return self.ask_stop_audio();
+                }
                 if self.mode.is_prompt() && self.prompt_purpose == PromptPurpose::SettingValue {
                     self.leave_prompt();
                     return self.cancel_setting_value();
@@ -1309,6 +1325,7 @@ impl App {
         effects.extend(self.voices_tick());
         effects.extend(self.dictation_tick());
         effects.extend(self.batch_tick(now));
+        effects.extend(self.audio_tick(now));
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
         effects.extend(self.authoring_tick(now));
         if rsvp_moved && effects.is_empty() {
@@ -1481,6 +1498,7 @@ impl App {
             Some(ListKind::Menu) => return self.menu_choose(n, true),
             Some(ListKind::Browse) => return self.browse_choose(n),
             Some(ListKind::Batch(l)) => return self.choose_batch(l, n),
+            Some(ListKind::Audio(l)) => return self.choose_audio(l, n),
             Some(ListKind::Palette(actions)) => {
                 if let Some(&a) = actions.get(n) {
                     return self.run_command(a);

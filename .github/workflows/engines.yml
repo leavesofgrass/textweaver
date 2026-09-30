@@ -218,9 +218,10 @@ jobs:
       - name: A voice in the 32-bit host
         if: ${{ !cancelled() }}
         run: bash tools/engines/windows-export.sh sapi32 "SAPI 5, 32-bit host"
-      # Report-only. On the first run the OneCore voice's file matched the
-      # SAPI 5 voice's to the millisecond, which suggests the voice choice
-      # may not reach the engine; this says so on each run until explained.
+      # Report-only. Microsoft David Desktop and David (OneCore) share their
+      # voice data and write the same audio byte for byte, so the OneCore
+      # check uses Mark or Zira (tools/engines/pick_voice.py); matching
+      # files would mean the voice choice did not reach the engine.
       - name: The two voices give different audio
         if: ${{ !cancelled() }}
         run: |
@@ -267,10 +268,9 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Build tw
         run: cargo build --locked -p textweaver-cli --bin tw
-      # The Apple backends do not report word times in exported files (they
-      # keep the export's default, ADR-0011; live speech has them), so the
-      # check warns about that once. When they do, the word-offset lines
-      # show whether AVSpeech's callback-inferred times drift on a new macOS.
+      # AVSpeech reports word times in exported files from the synthesizer's
+      # word markers (macOS 14 and later); the word-offset lines show
+      # whether they drift against the audio on a new macOS.
       - name: AVSpeech writes a WAV file
         run: |
           set -u

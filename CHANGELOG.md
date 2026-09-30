@@ -69,6 +69,7 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ### W6v: audio export
 
+- **Export audio from the File menu.** Choose a format (FLAC first, then WAV; MP3 and M4B only when ffmpeg is found, and when it is not, that is said in words), then where the file goes (beside the document, or another folder chosen in the file browser), and answer "Export essay.flac with Microsoft David at 200 words a minute, into ...? y or n", which names the voice and speed used. It runs in the background while you read, says "Exporting audio, 30 percent." at most every ten seconds, and Escape asks before stopping, leaving no file behind. At the end: "Wrote essay.flac: 42 minutes and 5 seconds, 12 chapters. Open it? y or n." Only engines that can write audio files are used. New messages in all six languages.
 - **FLAC without ffmpeg.** `tw export-audio --out book.flac` writes a lossless FLAC file, about half the size of WAV, with nothing else installed. It carries the title, author, and chapters as Vorbis comments (`CHAPTER001`, `CHAPTER001NAME`, and so on).
 - **WAV files have chapters.** The title, author, and chapters go into the WAV as an ID3 tag with chapter frames, as MP3 files have them.
 - **Word times from Apple voices.** Exports with AVSpeech on macOS 14 and later carry each word's time, so word-level subtitles are exact.
