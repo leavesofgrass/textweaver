@@ -29,7 +29,10 @@
 //!    line where it is on the page, its label then its value ("Name: Ada
 //!    Example", "I agree: checked"), with the printed label taken out of
 //!    the text so it is not heard twice.
-//! 7. **Links and comments** (`annots` and `locate`, after the text is
+//! 7. **Captions** (`structure`): "Figure 3." and "Table 2:" paragraphs,
+//!    by pattern or by a tagged PDF's `Caption`; a table caption labels its
+//!    table, a figure caption is read as a graphic.
+//! 8. **Links and comments** (`annots` and `locate`, after the text is
 //!    built): link annotations become `Link` markers over the words they
 //!    cover (web addresses, `#heading`, or `#page=12`), and comments
 //!    (sticky notes, highlights, strike-outs, with replies and resolved
@@ -42,7 +45,8 @@
 //! Pages with no text but a picture (scans) are recognized by OCR (feature
 //! `images`, with the in-process engine under `ocr`, ADR-0026; see `ocr`),
 //! turned upright first when they were scanned sideways or upside down
-//! (`textweaver_ocr::orient`): the recognized words are placed on the page
+//! (`textweaver_ocr::orient`), and tables on them are matched more loosely
+//! than drawn ones: the recognized words are placed on the page
 //! as glyphs and go through the same layout. Without OCR, or when no
 //! engine can run, a PDF with no text layer loads as one sentence saying
 //! so and what is missing.

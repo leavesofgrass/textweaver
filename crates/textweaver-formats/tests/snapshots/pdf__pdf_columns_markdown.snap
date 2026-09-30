@@ -16,7 +16,7 @@ The right column continues the article. The loader rebuilds structure from the p
 
 It ends with this sentence in the right column.
 
-*Figure 1. A caption that runs across both columns of the page, below the first section.*
+![Figure 1. A caption that runs across both columns of the page, below the first section.]()
 
 Below the band, the left column resumes. Columns are read one after another, top to bottom, so a sentence is never interrupted by the text beside it. Running hea.
 

@@ -355,13 +355,30 @@ fn join_line(head: Span, parts: Vec<Span>) -> Line {
 /// Finds tables among a page's lines: at least two consecutive rows of at
 /// least two narrow cells each whose left edges line up in columns. Returns
 /// the tables as blocks and the lines that are not in a table.
-fn tables(lines: Vec<Line>, page_width: f32) -> (Vec<Block>, Vec<Line>) {
+///
+/// On a recognized page (`ocr`), word boxes wander by a few pixels and a
+/// slightly tilted scan moves a row's baseline across the page, so rows
+/// and columns are matched more loosely, and a first row of words over
+/// rows of numbers is the header (a scan has no bold to tell it by).
+fn tables(lines: Vec<Line>, page_width: f32, ocr: bool) -> (Vec<Block>, Vec<Line>) {
+    let row_tol = if ocr { 0.5 } else { 0.3 };
+    // Scanned tables are often ruled and padded: rows further apart.
+    let pitch = if ocr { 3.5 } else { 2.6 };
     // Rows: lines sharing a baseline.
     let mut rows: Vec<Vec<Line>> = Vec::new();
+    let mut lines = lines;
+    if ocr {
+        lines.sort_by(|a, b| a.y.total_cmp(&b.y).then(a.x0.total_cmp(&b.x0)));
+    }
     for l in lines {
         match rows.last_mut() {
-            Some(r) if (r[0].y - l.y).abs() <= 0.3 * r[0].size.max(l.size) => r.push(l),
+            Some(r) if (r[0].y - l.y).abs() <= row_tol * r[0].size.max(l.size) => r.push(l),
             _ => rows.push(vec![l]),
+        }
+    }
+    if ocr {
+        for r in &mut rows {
+            r.sort_by(|a, b| a.x0.total_cmp(&b.x0));
         }
     }
     let narrow = |r: &Vec<Line>| {
@@ -383,14 +400,14 @@ fn tables(lines: Vec<Line>, page_width: f32) -> (Vec<Block>, Vec<Line>) {
         let mut j = i + 1;
         while j < rows.len()
             && narrow(&rows[j])
-            && rows[j][0].y - rows[j - 1][0].y <= 2.6 * rows[j][0].size
-            && aligned(&rows[i], &rows[j])
+            && rows[j][0].y - rows[j - 1][0].y <= pitch * rows[j][0].size
+            && aligned(&rows[i], &rows[j], ocr)
         {
             j += 1;
         }
         if j - i >= 2 && looks_tabular(&rows, i, j, page_width) {
             let table_rows: Vec<Vec<Line>> = rows[i..j].iter_mut().map(std::mem::take).collect();
-            blocks.push(table_block(table_rows));
+            blocks.push(table_block(table_rows, ocr));
             i = j;
         } else {
             rest.append(&mut rows[i]);
@@ -435,8 +452,9 @@ fn looks_tabular(rows: &[Vec<Line>], i: usize, j: usize, page_width: f32) -> boo
 }
 
 /// True when most cells of `b` start at (or center on) a column of `a`.
-fn aligned(a: &[Line], b: &[Line]) -> bool {
-    let tol = 4.0;
+fn aligned(a: &[Line], b: &[Line], ocr: bool) -> bool {
+    let size = b.iter().map(|l| l.size).fold(0.0, f32::max);
+    let tol = if ocr { (0.8 * size).max(4.0) } else { 4.0 };
     let hits = b
         .iter()
         .filter(|l| {
@@ -450,12 +468,17 @@ fn aligned(a: &[Line], b: &[Line]) -> bool {
     hits * 3 >= b.len() * 2
 }
 
-fn table_block(rows: Vec<Vec<Line>>) -> Block {
+fn table_block(rows: Vec<Vec<Line>>, ocr: bool) -> Block {
     // Columns from the first row's cells; later cells go to the column whose
     // range they overlap most (or the nearest).
     let cols: Vec<(f32, f32)> = rows[0].iter().map(|l| (l.x0, l.x1)).collect();
-    let header =
-        rows[0].iter().all(|l| l.bold >= 0.8) && rows[1..].iter().flatten().any(|l| l.bold < 0.5);
+    let digits = |l: &Line| l.text.chars().any(|c| c.is_ascii_digit());
+    let header = if ocr {
+        let numeric_rows = rows[1..].iter().filter(|r| r.iter().any(digits)).count();
+        !rows[0].iter().any(digits) && numeric_rows * 2 >= rows.len() - 1
+    } else {
+        rows[0].iter().all(|l| l.bold >= 0.8) && rows[1..].iter().flatten().any(|l| l.bold < 0.5)
+    };
     let x0 = rows.iter().flatten().map(|l| l.x0).fold(f32::MAX, f32::min);
     let x1 = rows.iter().flatten().map(|l| l.x1).fold(f32::MIN, f32::max);
     let top = rows[0].iter().map(Line::top).fold(f32::MAX, f32::min);
@@ -562,7 +585,7 @@ pub(super) fn layout(page: &PageContent, image_alts: &HashMap<u32, String>) -> P
             rest.extend(group);
             continue;
         }
-        let (tables, others) = tables(group, page.width);
+        let (tables, others) = tables(group, page.width, page.ocr);
         out.extend(tables);
         rest.extend(rejoin(others));
     }
@@ -931,6 +954,66 @@ mod tests {
             bottom,
             content: Content::Image(text.to_owned()),
         }
+    }
+
+    /// A page of recognized words: one glyph per word, as OCR places them.
+    fn recognized(words: &[(&str, f32, f32)]) -> PageContent {
+        let mut page = PageContent {
+            width: 600.0,
+            height: 800.0,
+            ocr: true,
+            ..PageContent::default()
+        };
+        for &(w, x, y) in words {
+            let start = page.text.len() as u32;
+            page.text.push_str(w);
+            page.glyphs.push(Glyph {
+                x,
+                y,
+                w: w.chars().count() as f32 * 5.5,
+                size: 10.0,
+                start,
+                len: w.len() as u32,
+                style: 0,
+                mcid: NO_MCID,
+            });
+        }
+        page
+    }
+
+    #[test]
+    fn a_recognized_table_keeps_its_rows_and_columns() {
+        // Columns that wander by a few points, rows by a point or two (a
+        // slightly tilted scan), and no bold anywhere.
+        let page = recognized(&[
+            ("Name", 100.0, 200.0),
+            ("Year", 252.0, 201.0),
+            ("Score", 398.0, 202.0),
+            ("Ada", 103.0, 230.0),
+            ("2024", 247.0, 231.5),
+            ("91", 401.0, 232.0),
+            ("Bo", 98.0, 260.0),
+            ("2025", 254.0, 261.0),
+            ("87", 396.0, 262.5),
+            ("Cy", 101.0, 290.0),
+            ("2026", 250.0, 291.0),
+            ("78", 402.0, 292.0),
+        ]);
+        let laid = layout(&page, &HashMap::new());
+        let tables: Vec<&Table> = laid
+            .blocks
+            .iter()
+            .filter_map(|b| match &b.content {
+                Content::Table(t) => Some(t),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(tables.len(), 1, "{:?}", laid.blocks);
+        let t = tables[0];
+        assert!(t.header);
+        assert_eq!(t.rows.len(), 4);
+        assert_eq!(t.rows[0], ["Name", "Year", "Score"]);
+        assert_eq!(t.rows[2], ["Bo", "2025", "87"]);
     }
 
     #[test]
