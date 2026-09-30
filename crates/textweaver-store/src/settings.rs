@@ -1321,10 +1321,13 @@ impl PositionPolicy {
     }
 }
 
-/// `[sync]`: syncing notes, highlights, bookmarks, places, and reading
-/// statistics with other computers through a folder the owner chooses
-/// (ADR-0049). Off until set up. Each group has its own switch; turning
-/// one off stops that group only.
+/// `[sync]`: syncing notes, highlights, bookmarks, places, reading
+/// statistics, portable settings, profiles, key overrides, the word list,
+/// the glossary and pronunciations, and favorite voices with other
+/// computers through a folder the owner chooses (ADR-0049). Off until set
+/// up. Each group has its own switch, all on by default; turning one off
+/// stops that group only. Which settings are portable is
+/// [`crate::sync_scope`]'s list.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SyncSettings {
@@ -1347,6 +1350,21 @@ pub struct SyncSettings {
     pub bookmarks: bool,
     /// Sync reading statistics (each computer's time and sessions).
     pub statistics: bool,
+    /// Sync the portable settings (rate, punctuation, theme, and the rest
+    /// of [`crate::sync_scope`]'s portable list); machine settings never
+    /// sync.
+    pub settings: bool,
+    /// Sync the profiles' definitions (which one is active stays here).
+    pub profiles: bool,
+    /// Sync key overrides (`keymap.toml`), each labeled with its system: a
+    /// Mac's are kept but not used on Windows or Linux, and the reverse.
+    pub key_overrides: bool,
+    /// Sync the personal word list (`words.txt`).
+    pub words: bool,
+    /// Sync the glossary's entries and the pronunciations.
+    pub glossary: bool,
+    /// Sync favorite voices; one not on this computer is listed as such.
+    pub favorite_voices: bool,
     /// Which place a document resumes at: the newest, the furthest, or ask.
     pub position_policy: PositionPolicy,
     /// Unknown keys, preserved.
@@ -1365,6 +1383,12 @@ impl Default for SyncSettings {
             highlights: true,
             bookmarks: true,
             statistics: true,
+            settings: true,
+            profiles: true,
+            key_overrides: true,
+            words: true,
+            glossary: true,
+            favorite_voices: true,
             position_policy: PositionPolicy::Newest,
             extra: toml::Table::new(),
         }
