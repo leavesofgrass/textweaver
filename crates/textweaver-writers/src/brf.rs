@@ -11,8 +11,23 @@
 //! - list items in cell 1 (two cells deeper per nesting level) with
 //!   runovers two cells in; bullets as the UEB bullet (`_4`), numbers as the
 //!   source numbered them;
-//! - table rows one per line, cells separated by semicolons (linear
-//!   format), runovers in cell 3;
+//! - tables in one of three formats ([`BrailleTableFormat`]): linear, one
+//!   row per line with its cells separated by semicolons, runovers in
+//!   cell 3; listed (Braille Formats 11.16), each row a cell-5 heading
+//!   ("first column heading: row heading") after a blank line, then each
+//!   entry on its own line after its column heading and a colon, in 1-3
+//!   margins; or stairstep (11.18), each row's entries in 1-1, 3-3, 5-5
+//!   and 7-7 margins, the column headings in a transcriber's note at the
+//!   same steps, and a table of more than four columns listed instead;
+//!   a blank line before and after a listed or stairstep table, a blank
+//!   entry as three guide dots, and a row kept on one braille page when it
+//!   fits. The listed format's transcriber's note is written once, before
+//!   the first listed table;
+//! - transcriber's notes in 7-5 margins between the transcriber's note
+//!   indicators (`@.<`, `@.>`; UEB Rules 3.27);
+//! - bold, italic and underlined print with the UEB typeform indicators
+//!   ([`ueb`]); a heading wholly in one typeform leaves it out, since its
+//!   placement already shows it (UEB Rules 9.1, the "CHAPTER 6" example);
 //! - code lines as they are, runovers in cell 3; block quotes two cells in;
 //! - a section break starts a new braille page; a print page break writes
 //!   the print page change indicator (a line of dots 3-6 ending in the page
@@ -33,9 +48,12 @@ use std::io::Write;
 use textweaver_text::Document;
 
 use crate::math::{BRAILLE_BREAK, BRAILLE_MATH, BRAILLE_NBSP};
-use crate::model::{self, Block, Inline, List, Table};
-use crate::ueb;
-use crate::{BrailleGrade, BrailleOptions, Format, WriteError, WriteOptions, WriteReport, Writer};
+use crate::model::{self, Block, Inline, List, Style, Table};
+use crate::ueb::{self, BLANK_ENTRY, Typeform};
+use crate::{
+    BrailleGrade, BrailleOptions, BrailleTableFormat, Format, WriteError, WriteOptions,
+    WriteReport, Writer,
+};
 
 /// Writes BRF.
 #[derive(Clone, Copy, Debug, Default)]
@@ -63,7 +81,13 @@ impl Writer for BrfWriter {
             report.warn(summary);
         }
         let mut items = Vec::new();
-        flatten(&blocks, 0, &mut items);
+        let mut flat = Flat {
+            tables: options.braille.table_format,
+            listed_noted: false,
+            out: &mut items,
+            report: &mut report,
+        };
+        flat.blocks(&blocks, 0);
         let texts: Vec<&str> = items.iter().filter_map(Item::text).collect();
         let translated = translate_with_math(&texts, &math, &options.braille, &mut report)?;
         let brf = layout(&items, translated, &options.braille);
@@ -85,7 +109,16 @@ enum Item {
         first: usize,
         runover: usize,
         blank_before: bool,
+        /// Braille written before and after the translated text (the
+        /// transcriber's note indicators).
+        before: &'static str,
+        after: &'static str,
     },
+    /// A blank line.
+    Blank,
+    /// Keep the next this many items (all `Text`) on one braille page when
+    /// they fit on one.
+    Keep(usize),
     /// A new braille page.
     NewPage,
     /// Print page change indicator with the print page label.
@@ -102,7 +135,8 @@ impl Item {
     }
 }
 
-/// Plain text of inlines with line breaks kept as `\n`.
+/// Text of inlines with line breaks kept as `\n`, and bold, italic and
+/// underline marked for the translator ([`Typeform`]).
 fn text_of(inlines: &[Inline]) -> String {
     let mut s = String::new();
     fn walk(v: &[Inline], s: &mut String) {
@@ -110,12 +144,51 @@ fn text_of(inlines: &[Inline]) -> String {
             match i {
                 Inline::Text(t) => s.push_str(t),
                 Inline::LineBreak => s.push('\n'),
-                Inline::Span(_, c) => walk(c, s),
+                Inline::Span(style, c) => match typeform(style) {
+                    Some(form) => {
+                        s.push(form.open());
+                        walk(c, s);
+                        s.push(form.close());
+                    }
+                    None => walk(c, s),
+                },
             }
         }
     }
     walk(inlines, &mut s);
     s
+}
+
+fn typeform(style: &Style) -> Option<Typeform> {
+    match style {
+        Style::Bold => Some(Typeform::Bold),
+        Style::Italic => Some(Typeform::Italic),
+        Style::Underline => Some(Typeform::Underline),
+        _ => None,
+    }
+}
+
+/// Inline text on one line, spaces collapsed, typeforms marked.
+fn line_of(inlines: &[Inline]) -> String {
+    model::collapse_ws(&text_of(inlines))
+}
+
+/// A heading's text. A typeform over the whole heading is left out: the
+/// heading's placement already shows it (UEB Rules 9.1, whose "CHAPTER 6"
+/// example ignores the heading's change of typeform).
+fn heading_of(inlines: &[Inline]) -> String {
+    let mut content = inlines;
+    loop {
+        let visible: Vec<&Inline> = content
+            .iter()
+            .filter(|i| !matches!(i, Inline::Text(t) if t.trim().is_empty()))
+            .collect();
+        match visible.as_slice() {
+            [Inline::Span(style, inner)] if typeform(style).is_some() => content = inner,
+            _ => break,
+        }
+    }
+    line_of(content)
 }
 
 fn text_item(text: String, first: usize, runover: usize) -> Item {
@@ -124,113 +197,282 @@ fn text_item(text: String, first: usize, runover: usize) -> Item {
         first,
         runover,
         blank_before: false,
+        before: "",
+        after: "",
     }
 }
 
-fn flatten(blocks: &[Block], indent: usize, out: &mut Vec<Item>) {
-    for b in blocks {
-        match b {
-            Block::Heading { level, content } => out.push(Item::Heading {
-                level: *level,
-                text: model::collapse_ws(&Inline::plain(content)),
-            }),
-            Block::Paragraph(content) => {
-                // Lines after a line break start in the runover cell.
-                for (n, line) in text_of(content).split('\n').enumerate() {
-                    let first = if n == 0 { indent + 2 } else { indent };
-                    out.push(text_item(line.to_owned(), first, indent));
+/// The transcriber's note indicators (UEB Rules 3.27).
+const NOTE_OPEN: &str = "@.<";
+const NOTE_CLOSE: &str = "@.>";
+
+/// A transcriber's note: lines of print, each with its margins, the
+/// opening indicator before the first and the closing one after the last.
+fn note_items(lines: Vec<(String, usize, usize)>) -> Vec<Item> {
+    let n = lines.len();
+    lines
+        .into_iter()
+        .enumerate()
+        .map(|(k, (text, first, runover))| Item::Text {
+            text,
+            first,
+            runover,
+            blank_before: false,
+            before: if k == 0 { NOTE_OPEN } else { "" },
+            after: if k + 1 == n { NOTE_CLOSE } else { "" },
+        })
+        .collect()
+}
+
+/// Flattens blocks into items to lay out.
+struct Flat<'a> {
+    tables: BrailleTableFormat,
+    /// The listed format's transcriber's note is written.
+    listed_noted: bool,
+    out: &'a mut Vec<Item>,
+    report: &'a mut WriteReport,
+}
+
+impl Flat<'_> {
+    fn push(&mut self, item: Item) {
+        self.out.push(item);
+    }
+
+    fn blocks(&mut self, blocks: &[Block], indent: usize) {
+        for b in blocks {
+            match b {
+                Block::Heading { level, content } => self.push(Item::Heading {
+                    level: *level,
+                    text: heading_of(content),
+                }),
+                Block::Paragraph(content) => {
+                    // Lines after a line break start in the runover cell.
+                    for (n, line) in text_of(content).split('\n').enumerate() {
+                        let first = if n == 0 { indent + 2 } else { indent };
+                        self.push(text_item(line.to_owned(), first, indent));
+                    }
                 }
-            }
-            Block::List(list) => flatten_list(list, indent, out),
-            Block::Table(t) => flatten_table(t, indent, out),
-            Block::Code { text, .. } => {
-                for line in text.split('\n') {
-                    // Keep the code's own indentation (a tab is four cells).
-                    let lead: usize = line
-                        .chars()
-                        .take_while(|c| matches!(c, ' ' | '\t'))
-                        .map(|c| if c == '\t' { 4 } else { 1 })
-                        .sum();
-                    out.push(text_item(
-                        line.trim_start().to_owned(),
-                        indent + lead,
-                        indent + 2,
-                    ));
+                Block::List(list) => self.list(list, indent),
+                Block::Table(t) => self.table(t, indent),
+                Block::Code { text, .. } => {
+                    for line in text.split('\n') {
+                        // Keep the code's own indentation (a tab is four
+                        // cells).
+                        let lead: usize = line
+                            .chars()
+                            .take_while(|c| matches!(c, ' ' | '\t'))
+                            .map(|c| if c == '\t' { 4 } else { 1 })
+                            .sum();
+                        self.push(text_item(
+                            line.trim_start().to_owned(),
+                            indent + lead,
+                            indent + 2,
+                        ));
+                    }
                 }
-            }
-            Block::Quote(inner) => {
-                let start = out.len();
-                flatten(inner, indent + 2, out);
-                if let Some(Item::Text { blank_before, .. }) = out.get_mut(start) {
-                    *blank_before = true;
+                Block::Quote(inner) => {
+                    let start = self.out.len();
+                    self.blocks(inner, indent + 2);
+                    if let Some(Item::Text { blank_before, .. }) = self.out.get_mut(start) {
+                        *blank_before = true;
+                    }
                 }
-            }
-            Block::Figure(img) => {
-                if !img.alt.is_empty() {
-                    out.push(text_item(img.alt.clone(), indent + 2, indent));
+                Block::Figure(img) => {
+                    if !img.alt.is_empty() {
+                        self.push(text_item(img.alt.clone(), indent + 2, indent));
+                    }
                 }
+                Block::Footnote { id, content } => {
+                    let body = line_of(content);
+                    let text = if ueb::strip_marks(&body).starts_with(&format!("[{id}]")) {
+                        body
+                    } else {
+                        format!("[{id}] {body}")
+                    };
+                    self.push(text_item(text, indent, indent + 2));
+                }
+                Block::SectionBreak { .. } => self.push(Item::NewPage),
+                // A horizontal rule: a line of hyphens on its own line.
+                Block::Rule => {
+                    let mut item = text_item("-".repeat(12), indent, indent);
+                    if let Item::Text { blank_before, .. } = &mut item {
+                        *blank_before = true;
+                    }
+                    self.push(item);
+                }
+                Block::PageBreak { label } => self.push(Item::PrintPage(label.clone())),
             }
-            Block::Footnote { id, content } => {
-                let body = model::collapse_ws(&Inline::plain(content));
-                let text = if body.starts_with(&format!("[{id}]")) {
-                    body
-                } else {
-                    format!("[{id}] {body}")
+        }
+    }
+
+    fn list(&mut self, list: &List, indent: usize) {
+        for (n, item) in list.items.iter().enumerate() {
+            let marker = if list.ordered {
+                item.label
+                    .clone()
+                    .unwrap_or_else(|| format!("{}.", list.start + n as u64))
+            } else {
+                "\u{2022}".to_owned()
+            };
+            let mut rest: &[Block] = &item.blocks;
+            let first_text = match rest.first() {
+                Some(Block::Paragraph(content)) => {
+                    rest = &rest[1..];
+                    line_of(content)
+                }
+                _ => String::new(),
+            };
+            let text = if first_text.is_empty() {
+                marker
+            } else {
+                format!("{marker} {first_text}")
+            };
+            self.push(text_item(text, indent, indent + 2));
+            self.blocks(rest, indent + 2);
+        }
+    }
+
+    /// A table in the chosen format (Braille Formats 2016, section 11).
+    fn table(&mut self, table: &Table, indent: usize) {
+        let rows: Vec<Vec<String>> = table
+            .rows
+            .iter()
+            .map(|r| r.cells.iter().map(|c| line_of(c)).collect())
+            .collect();
+        let columns = table.columns().max(1);
+        let mut format = self.tables;
+        if format == BrailleTableFormat::Stairstep && columns > 4 {
+            // 11.18: four columns at most; larger tables are listed.
+            self.report.warn(
+                "A table has more than four columns, so it is in listed format: \
+                 the stairstep format takes four at most.",
+            );
+            format = BrailleTableFormat::Listed;
+        }
+        if format == BrailleTableFormat::Linear {
+            if let Some(c) = &table.caption {
+                self.push(text_item(c.clone(), indent + 2, indent));
+            }
+            for row in &rows {
+                // A row is not divided between braille pages (11.17).
+                self.push(Item::Keep(1));
+                self.push(text_item(row.join("; "), indent, indent + 2));
+            }
+            return;
+        }
+        let (headings, body): (Option<&Vec<String>>, &[Vec<String>]) = if table.has_header() {
+            (rows.first(), &rows[1..])
+        } else {
+            (None, &rows[..])
+        };
+        let blanks = body
+            .iter()
+            .any(|r| (0..columns).any(|j| entry(r, j).starts_with(BLANK_ENTRY)));
+        let guide = if blanks {
+            " Three guide dots mark an empty entry."
+        } else {
+            ""
+        };
+        // A blank line before and after the table (11.16).
+        self.push(Item::Blank);
+        if let Some(c) = &table.caption {
+            self.push(text_item(c.clone(), indent + 2, indent));
+        }
+        if format == BrailleTableFormat::Listed {
+            self.listed(headings, body, columns, indent, guide);
+        } else {
+            self.stairstep(headings, body, columns, indent, guide);
+        }
+        self.push(Item::Blank);
+    }
+
+    /// The listed format (11.16).
+    fn listed(
+        &mut self,
+        headings: Option<&Vec<String>>,
+        body: &[Vec<String>],
+        columns: usize,
+        indent: usize,
+        guide: &str,
+    ) {
+        if !self.listed_noted {
+            // One note for the document: every listed table is laid out
+            // the same way.
+            self.listed_noted = true;
+            let note = format!(
+                "Tables listed: each row starts with its heading in cell 5, \
+                 and each entry follows its column heading and a colon.{guide}"
+            );
+            for item in note_items(vec![(note, indent + 6, indent + 4)]) {
+                self.push(item);
+            }
+        }
+        let heading = |j: usize| -> Option<&str> {
+            headings
+                .and_then(|h| h.get(j))
+                .map(String::as_str)
+                .filter(|h| !ueb::strip_marks(h).trim().is_empty())
+        };
+        for row in body {
+            // A blank line before each row.
+            self.push(Item::Blank);
+            self.push(Item::Keep(columns));
+            for j in 0..columns {
+                let text = match heading(j) {
+                    Some(h) => format!("{h}: {}", entry(row, j)),
+                    None => entry(row, j),
                 };
-                out.push(text_item(text, indent, indent + 2));
+                // The first column heading and the row heading are a
+                // cell-5 heading; each other entry is in 1-3 margins.
+                let (first, runover) = if j == 0 { (4, 4) } else { (0, 2) };
+                self.push(text_item(text, indent + first, indent + runover));
             }
-            Block::SectionBreak { .. } => out.push(Item::NewPage),
-            // A horizontal rule: a line of hyphens on its own line.
-            Block::Rule => {
-                let mut item = text_item("-".repeat(12), indent, indent);
-                if let Item::Text { blank_before, .. } = &mut item {
-                    *blank_before = true;
-                }
-                out.push(item);
+        }
+    }
+
+    /// The stairstep format (11.18).
+    fn stairstep(
+        &mut self,
+        headings: Option<&Vec<String>>,
+        body: &[Vec<String>],
+        columns: usize,
+        indent: usize,
+        guide: &str,
+    ) {
+        let intro = format!(
+            "Table in stairstep format: each entry starts two cells to the right \
+             of the one before it.{guide}{}",
+            if headings.is_some() {
+                " Column headings:"
+            } else {
+                ""
             }
-            Block::PageBreak { label } => out.push(Item::PrintPage(label.clone())),
+        );
+        // The column headings, in the note, at the steps of their entries.
+        let mut note = vec![(intro, indent + 6, indent + 4)];
+        if let Some(h) = headings {
+            for j in 0..columns {
+                note.push((entry(h, j), indent + 2 * j, indent + 2 * j));
+            }
+        }
+        for item in note_items(note) {
+            self.push(item);
+        }
+        for row in body {
+            self.push(Item::Keep(columns));
+            for j in 0..columns {
+                let margin = indent + 2 * j;
+                self.push(text_item(entry(row, j), margin, margin));
+            }
         }
     }
 }
 
-fn flatten_list(list: &List, indent: usize, out: &mut Vec<Item>) {
-    for (n, item) in list.items.iter().enumerate() {
-        let marker = if list.ordered {
-            item.label
-                .clone()
-                .unwrap_or_else(|| format!("{}.", list.start + n as u64))
-        } else {
-            "\u{2022}".to_owned()
-        };
-        let mut rest: &[Block] = &item.blocks;
-        let first_text = match rest.first() {
-            Some(Block::Paragraph(content)) => {
-                rest = &rest[1..];
-                model::collapse_ws(&text_of(content))
-            }
-            _ => String::new(),
-        };
-        let text = if first_text.is_empty() {
-            marker
-        } else {
-            format!("{marker} {first_text}")
-        };
-        out.push(text_item(text, indent, indent + 2));
-        flatten(rest, indent + 2, out);
-    }
-}
-
-fn flatten_table(table: &Table, indent: usize, out: &mut Vec<Item>) {
-    if let Some(c) = &table.caption {
-        out.push(text_item(c.clone(), indent + 2, indent));
-    }
-    for row in &table.rows {
-        let cells: Vec<String> = row
-            .cells
-            .iter()
-            .map(|c| model::collapse_ws(&Inline::plain(c)))
-            .collect();
-        out.push(text_item(cells.join("; "), indent, indent + 2));
+/// A table entry, or three guide dots for a blank one (11.16, 11.18).
+fn entry(row: &[String], j: usize) -> String {
+    match row.get(j) {
+        Some(c) if !ueb::strip_marks(c).trim().is_empty() => c.clone(),
+        _ => BLANK_ENTRY.to_string(),
     }
 }
 
@@ -306,7 +548,7 @@ fn translate_all(
     report: &mut WriteReport,
 ) -> Result<Vec<String>, WriteError> {
     if options.grade == BrailleGrade::Two {
-        match louis::translate(texts, &options.table) {
+        match louis_with_blanks(texts, &options.table) {
             Ok(v) => return Ok(v),
             Err(why) => report.warn(format!(
                 "Contracted braille is not available ({why}), so the file is in uncontracted braille."
@@ -339,6 +581,31 @@ fn translate_all(
         ));
     }
     Ok(v)
+}
+
+/// Grade 2 through liblouis. `lou_translate` knows neither the typeform
+/// marks nor the blank entry, so the marks are left out (no typeform
+/// indicators in grade 2 yet) and each blank entry's guide dots are put
+/// back between the translated pieces around it.
+fn louis_with_blanks(texts: &[&str], table: &str) -> Result<Vec<String>, String> {
+    let mut pieces: Vec<String> = Vec::new();
+    let mut counts = Vec::with_capacity(texts.len());
+    for t in texts {
+        let parts: Vec<String> = t.split(BLANK_ENTRY).map(ueb::strip_marks).collect();
+        counts.push(parts.len());
+        pieces.extend(parts);
+    }
+    let refs: Vec<&str> = pieces.iter().map(String::as_str).collect();
+    let mut done = louis::translate(&refs, table)?.into_iter();
+    Ok(counts
+        .into_iter()
+        .map(|n| {
+            (0..n)
+                .map(|_| done.next().unwrap_or_default())
+                .collect::<Vec<_>>()
+                .join("\"\"\"")
+        })
+        .collect())
 }
 
 /// Braille pages under construction.
@@ -573,9 +840,41 @@ fn wrap(braille: &str, width: usize, first: usize, runover: usize) -> Vec<String
 fn layout(items: &[Item], translated: Vec<String>, options: &BrailleOptions) -> String {
     let mut pages = Pages::new(options);
     let width = pages.width;
+    // The braille of each item with text, for looking ahead.
+    let mut ahead: Vec<Option<String>> = Vec::with_capacity(items.len());
+    {
+        let mut t = translated.iter();
+        for item in items {
+            ahead.push(item.text().map(|_| t.next().cloned().unwrap_or_default()));
+        }
+    }
     let mut texts = translated.into_iter();
-    for item in items {
+    for (at, item) in items.iter().enumerate() {
         match item {
+            Item::Blank => pages.blank(),
+            Item::Keep(n) => {
+                let lines: usize = items[at + 1..]
+                    .iter()
+                    .zip(&ahead[at + 1..])
+                    .take(*n)
+                    .map(|(item, braille)| match (item, braille) {
+                        (
+                            Item::Text {
+                                first,
+                                runover,
+                                before,
+                                after,
+                                ..
+                            },
+                            Some(b),
+                        ) if !b.trim().is_empty() => {
+                            wrap(&format!("{before}{b}{after}"), width, *first, *runover).len()
+                        }
+                        _ => 0,
+                    })
+                    .sum();
+                pages.keep(lines);
+            }
             Item::Heading { level, .. } => {
                 let braille = texts.next().unwrap_or_default();
                 let lines = match level {
@@ -599,6 +898,8 @@ fn layout(items: &[Item], translated: Vec<String>, options: &BrailleOptions) -> 
                 first,
                 runover,
                 blank_before,
+                before,
+                after,
                 ..
             } => {
                 let braille = texts.next().unwrap_or_default();
@@ -608,6 +909,7 @@ fn layout(items: &[Item], translated: Vec<String>, options: &BrailleOptions) -> 
                 if *blank_before {
                     pages.blank();
                 }
+                let braille = format!("{before}{braille}{after}");
                 for l in wrap(&braille, width, *first, *runover) {
                     pages.line(l);
                 }

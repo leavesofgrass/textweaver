@@ -311,6 +311,8 @@ pub struct BrailleOptions {
     pub table: String,
     /// The braille code for math (default Nemeth).
     pub math_code: MathCode,
+    /// How tables are laid out (default linear).
+    pub table_format: BrailleTableFormat,
 }
 
 impl Default for BrailleOptions {
@@ -322,6 +324,37 @@ impl Default for BrailleOptions {
             grade: BrailleGrade::One,
             table: "en-ueb-g2.ctb".to_owned(),
             math_code: MathCode::Nemeth,
+            table_format: BrailleTableFormat::Linear,
+        }
+    }
+}
+
+/// How a BRF file lays out tables: the alternative table formats of BANA's
+/// Braille Formats: Principles of Print-to-Braille Transcription (2016),
+/// section 11, for tables a 40-cell line cannot show in columns.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BrailleTableFormat {
+    /// One line per row, its entries separated by semicolons.
+    #[default]
+    Linear,
+    /// Listed (11.16): each row a cell-5 heading, then each entry on its
+    /// own line after its column heading and a colon.
+    Listed,
+    /// Stairstep (11.18): each row's entries two cells further right, one
+    /// per line; the column headings in a transcriber's note. Four columns
+    /// at most; a wider table is listed.
+    Stairstep,
+}
+
+impl BrailleTableFormat {
+    /// The format's name, as it is said: "linear", "listed" or
+    /// "stairstep".
+    pub fn name(self) -> &'static str {
+        match self {
+            BrailleTableFormat::Linear => "linear",
+            BrailleTableFormat::Listed => "listed",
+            BrailleTableFormat::Stairstep => "stairstep",
         }
     }
 }
