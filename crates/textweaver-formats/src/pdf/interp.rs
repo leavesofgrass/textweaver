@@ -22,7 +22,7 @@ pub(super) type Matrix = [f32; 6];
 const IDENTITY: Matrix = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
 
 /// `m` then `n` (the PDF convention `m × n`).
-fn mul(m: &Matrix, n: &Matrix) -> Matrix {
+pub(super) fn mul(m: &Matrix, n: &Matrix) -> Matrix {
     [
         m[0] * n[0] + m[1] * n[2],
         m[0] * n[1] + m[1] * n[3],
@@ -33,7 +33,7 @@ fn mul(m: &Matrix, n: &Matrix) -> Matrix {
     ]
 }
 
-fn apply(m: &Matrix, x: f32, y: f32) -> (f32, f32) {
+pub(super) fn apply(m: &Matrix, x: f32, y: f32) -> (f32, f32) {
     (m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5])
 }
 
@@ -84,9 +84,51 @@ pub(super) struct PageContent {
     pub images: Vec<ImageBox>,
     /// True when the content stream could not be parsed.
     pub failed: bool,
+    /// From the page's default user space (where annotations and form
+    /// fields are placed) to these coordinates: the `/Rotate` flip, then
+    /// the turn of a recognized page. `None` for a page that could not be
+    /// read.
+    pub to_page: Option<Matrix>,
+    /// True when the glyphs were recognized (OCR), so their positions are
+    /// less exact than drawn text.
+    pub ocr: bool,
 }
 
 impl PageContent {
+    /// A rectangle in default user space (`[llx, lly, urx, ury]`) on the
+    /// page: `(x0, y0, x1, y1)`, y down.
+    pub(super) fn rect_on_page(&self, r: [f32; 4]) -> Option<(f32, f32, f32, f32)> {
+        let m = self.to_page?;
+        let corners =
+            [(r[0], r[1]), (r[2], r[1]), (r[0], r[3]), (r[2], r[3])].map(|(x, y)| apply(&m, x, y));
+        let xs = corners.map(|c| c.0);
+        let ys = corners.map(|c| c.1);
+        let min = |v: [f32; 4]| v.into_iter().fold(f32::MAX, f32::min);
+        let max = |v: [f32; 4]| v.into_iter().fold(f32::MIN, f32::max);
+        let out = (min(xs), min(ys), max(xs), max(ys));
+        [out.0, out.1, out.2, out.3]
+            .iter()
+            .all(|v| v.is_finite())
+            .then_some(out)
+    }
+
+    /// Turns the page `quarter_turns` clockwise (a recognized page read
+    /// upright): its size swaps for odd turns, and [`to_page`](Self::to_page)
+    /// follows.
+    pub(super) fn turn(&mut self, quarter_turns: u8) {
+        let (w, h) = (self.width, self.height);
+        let r: Matrix = match quarter_turns % 4 {
+            1 => [0.0, 1.0, -1.0, 0.0, h, 0.0],
+            2 => [-1.0, 0.0, 0.0, -1.0, w, h],
+            3 => [0.0, -1.0, 1.0, 0.0, 0.0, w],
+            _ => return,
+        };
+        self.to_page = self.to_page.map(|m| mul(&m, &r));
+        if quarter_turns % 2 == 1 {
+            (self.width, self.height) = (h, w);
+        }
+    }
+
     /// The text of a glyph.
     pub(super) fn glyph_text(&self, g: &Glyph) -> &str {
         self.text
@@ -192,6 +234,7 @@ pub(super) fn run_page(doc: &Document, page_id: ObjectId, fonts: &mut FontCache)
     } else {
         (w, h)
     };
+    out.to_page = Some(flip);
     let resources = page_resources(doc, page_id);
     let content = doc.get_page_content(page_id);
     let mut it = Interp {

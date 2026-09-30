@@ -70,6 +70,7 @@ pub(crate) fn recognize(image: &GrayImage) -> Result<OcrPage, OcrError> {
         width: image.width,
         height: image.height,
         lines: Vec::new(),
+        turned: 0,
     };
     for line in recognized.into_iter().flatten() {
         let mut out = OcrLine::default();
