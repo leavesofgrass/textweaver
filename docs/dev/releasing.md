@@ -115,6 +115,8 @@ Do this before each release, on the machine you use every day, with Eloquence, S
 
 6. **Dictation.** With the Whisper model in `<data>/whisper/rten/base.en` ([dictation guide](../dictation.md#whisper-inside-textweaver)), run `tw dictate --timings`, say a sentence, and press Enter. Check the text, and write down the time from Enter to the text.
 
+7. **Braille: pending.** The first session with a Braille display (a 40-cell Mantis Q40 through NVDA and JAWS) has not been held yet. Its items join this list after it. Until then, go through [the checklist for the Mantis Q40](../screen-readers.md#checklist-for-the-mantis-q40) in the screen reader guide, and write down what the display showed.
+
 Write down what you heard in the release notes' testing section, including anything odd.
 
 ## What the packages hold
