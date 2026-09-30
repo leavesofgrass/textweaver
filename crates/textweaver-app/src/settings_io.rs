@@ -7,7 +7,7 @@
 
 use std::path::PathBuf;
 
-use textweaver_keymap::{Frontend, Keymap, Platform};
+use textweaver_keymap::{Keymap, Platform};
 use textweaver_lexicon::args;
 use textweaver_lexicon::i18n::Catalog;
 use textweaver_store::{
@@ -214,9 +214,11 @@ impl App {
         self.apply_voice_settings();
         // apply_voice_settings leaves the voice alone when none is set.
         self.speech.set_voice(self.settings.speech.voice.clone());
+        // The running frontend's keys: the window's keymap stays the
+        // window's (a GUI-only chord keeps working after an import).
         let (mut keymap, key_warnings) = Keymap::with_preset_and_overrides(
             Platform::current(),
-            Frontend::Terminal,
+            self.keymap.frontend(),
             crate::access::keymap_preset(self.settings.keyboard.preset),
             &plan.keymap,
         );
@@ -250,6 +252,7 @@ impl App {
 
 #[cfg(test)]
 mod tests {
+    use textweaver_keymap::Frontend;
     use textweaver_store::Paths;
 
     use super::*;
@@ -306,6 +309,62 @@ mod tests {
             .load()
             .0;
         assert_eq!(saved.speech.rate.wpm(), 320, "and saved");
+    }
+
+    /// A chord bound in `frontend`'s keymap that the other frontend's keymap
+    /// binds differently (or not at all), with its layer and action.
+    fn own_chord(frontend: Frontend) -> (textweaver_keymap::Binding, Keymap) {
+        let platform = Platform::current();
+        let other = match frontend {
+            Frontend::Gui => Frontend::Terminal,
+            Frontend::Terminal => Frontend::Gui,
+        };
+        let own = Keymap::defaults(platform, frontend);
+        let theirs = Keymap::defaults(platform, other);
+        let b = *own
+            .bindings()
+            .iter()
+            .find(|b| {
+                own.lookup(&b.chord, b.layer) == Some(b.action)
+                    && theirs.lookup(&b.chord, b.layer) != Some(b.action)
+            })
+            .expect("each frontend has a chord of its own");
+        (b, own)
+    }
+
+    /// An import rebuilds the keymap for the frontend that is running: the
+    /// window keeps its own chords, and the terminal keeps its own.
+    #[test]
+    fn an_import_keeps_the_running_frontends_keys() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("in.json");
+        std::fs::write(
+            &file,
+            r#"{"textweaver_settings": 1, "settings": {"speech": {"rate": 300}}}"#,
+        )
+        .unwrap();
+        for (i, frontend) in [Frontend::Gui, Frontend::Terminal].into_iter().enumerate() {
+            let (binding, keymap) = own_chord(frontend);
+            let mut config = AppConfig::for_tests();
+            config.paths = Some(Paths::under(&dir.path().join(format!("home{i}"))));
+            config.keymap = keymap;
+            let mut a = App::new(config);
+            palette(&mut a, "import_settings", file.to_str().unwrap());
+            a.dispatch(Command::Confirm(Confirm::Yes));
+            assert_eq!(
+                a.settings().speech.rate.wpm(),
+                300,
+                "{frontend:?}: imported"
+            );
+            assert_eq!(a.keymap().frontend(), frontend);
+            assert_eq!(
+                a.keymap().lookup(&binding.chord, binding.layer),
+                Some(binding.action),
+                "{frontend:?}: {} still runs {:?} after the import",
+                binding.chord,
+                binding.action
+            );
+        }
     }
 
     #[test]

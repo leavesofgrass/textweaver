@@ -104,12 +104,13 @@ impl Platform {
 }
 
 /// Which frontend the keymap is for.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Frontend {
     /// The native GUI (wave 3).
     Gui,
     /// The terminal UI.
+    #[default]
     Terminal,
 }
 
@@ -163,6 +164,9 @@ pub struct Keymap {
     character_keys_off: bool,
     /// The preset the keys started from.
     preset: Preset,
+    /// The frontend the keys were built for, so a keymap rebuilt later (a
+    /// settings import) is built for the same one.
+    frontend: Frontend,
 }
 
 /// Splits `g:Ctrl+P` into its layer and chord text. `:` alone, and strings
@@ -233,7 +237,13 @@ impl Keymap {
             bindings,
             character_keys_off: false,
             preset: Preset::Default,
+            frontend,
         }
+    }
+
+    /// The frontend these keys were built for.
+    pub fn frontend(&self) -> Frontend {
+        self.frontend
     }
 
     /// The default keymap changed by `preset` ([`Preset::changes`]): each
