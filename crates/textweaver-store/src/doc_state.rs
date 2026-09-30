@@ -142,8 +142,19 @@ fn fnv1a(bytes: &[u8]) -> u64 {
 }
 
 /// A named position.
+///
+/// Every bookmark has a stable [`id`](Self::id), so bookmarks from two
+/// computers are matched by id, not by name (two computers can each make a
+/// different `mark1`). A bookmark read from a file written before ids
+/// existed (state format 1) is given one derived from its name, place, and
+/// time, so reading the same file twice gives the same id.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(from = "BookmarkRecord")]
 pub struct Bookmark {
+    /// Stable id: 16 hex digits for a new bookmark ([`notes::new_id`]),
+    /// `bm-` and 16 hex digits for one migrated from an older file
+    /// ([`Bookmark::legacy_id`]).
+    pub id: String,
     /// User-visible name.
     pub name: String,
     /// Position.
@@ -160,6 +171,359 @@ pub struct Bookmark {
     /// until it is set again.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub not_found: bool,
+    /// Unknown fields (from a newer version), preserved.
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
+}
+
+impl Bookmark {
+    /// A new bookmark with a fresh id ([`notes::new_id`]), no anchor, and
+    /// no unknown fields.
+    pub fn new(name: impl Into<String>, pos: CharPos, pct: u8, ts: i64) -> Self {
+        Bookmark {
+            id: notes::new_id(),
+            name: name.into(),
+            pos,
+            pct,
+            ts,
+            anchor: None,
+            not_found: false,
+            extra: serde_json::Map::new(),
+        }
+    }
+
+    /// The id given to a bookmark from an older file that had none: `bm-`
+    /// and 16 hex digits derived from its name, place, and time.
+    pub fn legacy_id(name: &str, pos: CharPos, ts: i64) -> String {
+        notes::stable_id64("bm-", &[name, &pos.0.to_string(), &ts.to_string()])
+    }
+}
+
+/// A bookmark as stored: the id may be missing (state format 1).
+#[derive(Deserialize)]
+struct BookmarkRecord {
+    #[serde(default)]
+    id: String,
+    name: String,
+    pos: CharPos,
+    pct: u8,
+    ts: i64,
+    #[serde(default)]
+    anchor: Option<Anchor>,
+    #[serde(default)]
+    not_found: bool,
+    #[serde(flatten)]
+    extra: serde_json::Map<String, serde_json::Value>,
+}
+
+impl From<BookmarkRecord> for Bookmark {
+    fn from(r: BookmarkRecord) -> Self {
+        let id = if r.id.trim().is_empty() {
+            Bookmark::legacy_id(&r.name, r.pos, r.ts)
+        } else {
+            r.id
+        };
+        Bookmark {
+            id,
+            name: r.name,
+            pos: r.pos,
+            pct: r.pct,
+            ts: r.ts,
+            anchor: r.anchor,
+            not_found: r.not_found,
+            extra: r.extra,
+        }
+    }
+}
+
+/// The state file format this version writes.
+///
+/// - 1: every file written before the sync wave (it has no `format` key):
+///   bookmarks without ids, 8-digit note and highlight ids.
+/// - 2: bookmarks carry ids; deletions of notes, highlights, and bookmarks
+///   are recorded ([`Deletions`]); replaced note text is kept in
+///   [`DocState::note_backups`]; new ids are 16 hex digits.
+///
+/// Every older file loads unchanged: a missing `format` reads as 1, and a
+/// bookmark without an id is given [`Bookmark::legacy_id`]. A file from a
+/// newer version loads too (unknown keys are kept), and keeps its newer
+/// number when written back.
+pub const STATE_FORMAT: u32 = 2;
+
+/// The format of a state file with no `format` key.
+pub const LEGACY_STATE_FORMAT: u32 = 1;
+
+fn legacy_format() -> u32 {
+    LEGACY_STATE_FORMAT
+}
+
+/// Writes at least [`STATE_FORMAT`]: whatever this version writes is in
+/// its own format, or a newer one it preserved.
+fn write_format<S: serde::Serializer>(v: &u32, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_u32((*v).max(STATE_FORMAT))
+}
+
+/// Which kind of mark a deletion record or merge is about.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum MarkKind {
+    /// A note.
+    Note,
+    /// A highlight.
+    Highlight,
+    /// A bookmark.
+    Bookmark,
+}
+
+/// A clock stamp in the shape of the sync wave's hybrid logical clock
+/// (ADR-0049): wall time in milliseconds, a counter, and the device id for
+/// ties. Stamps order by those three fields in that order.
+///
+/// The store makes plain wall-clock stamps ([`ClockStamp::now_local`]);
+/// the sync code passes its own clock's stamps through
+/// [`DocState::record_deletion_at`], so this maps onto its type field by
+/// field.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ClockStamp {
+    /// Wall time, milliseconds since the Unix epoch (UTC).
+    pub wall_ms: i64,
+    /// Counter for changes within one millisecond.
+    pub counter: u32,
+    /// The random device id of the computer that made the change; empty
+    /// for a change made here before sync was set up.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub device: String,
+}
+
+impl ClockStamp {
+    /// A stamp for now from this computer's wall clock, with no device id.
+    pub fn now_local() -> Self {
+        let wall_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX));
+        ClockStamp {
+            wall_ms,
+            counter: 0,
+            device: String::new(),
+        }
+    }
+
+    /// A stamp at the start of second `ts` (Unix seconds), for tests and
+    /// for converting an item's time.
+    pub fn at_secs(ts: i64) -> Self {
+        ClockStamp {
+            wall_ms: ts.saturating_mul(1000),
+            counter: 0,
+            device: String::new(),
+        }
+    }
+
+    /// The stamp's wall time in whole seconds, to compare with an item's
+    /// `ts` (Unix seconds).
+    pub fn secs(&self) -> i64 {
+        self.wall_ms.div_euclid(1000)
+    }
+}
+
+/// The clock stamp an item carries under the key `clock` (written by the
+/// sync code), if any.
+fn item_clock(extra: &serde_json::Map<String, serde_json::Value>) -> Option<ClockStamp> {
+    extra
+        .get("clock")
+        .and_then(|v| serde_json::from_value(v.clone()).ok())
+}
+
+/// A record that a note, highlight, or bookmark was deleted, kept so a
+/// later merge with another computer's copy cannot bring it back. The later
+/// of a deletion and an edit wins ([`Deletion::covers`]).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Deletion {
+    /// The deleted item's id.
+    pub id: String,
+    /// When it was deleted.
+    pub clock: ClockStamp,
+    /// Unknown fields, preserved.
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
+}
+
+impl Deletion {
+    /// True when this deletion wins over a version of the item changed at
+    /// `ts` (Unix seconds), or at `clock` when the item carries a stamp:
+    /// the deletion is at or after the change. With seconds only, a
+    /// deletion in the same second as the change wins.
+    pub fn covers(&self, ts: i64, clock: Option<&ClockStamp>) -> bool {
+        match clock {
+            Some(c) => self.clock >= *c,
+            None => self.clock.secs() >= ts,
+        }
+    }
+}
+
+/// Deletion records, one list per kind of mark. Kept on this computer and
+/// published with the rest of the document's marks.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Deletions {
+    /// Deleted notes.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<Deletion>,
+    /// Deleted highlights.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub highlights: Vec<Deletion>,
+    /// Deleted bookmarks.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub bookmarks: Vec<Deletion>,
+    /// Unknown kinds (from a newer version), preserved.
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
+}
+
+impl Deletions {
+    /// True when nothing was ever deleted.
+    pub fn is_empty(&self) -> bool {
+        self.notes.is_empty()
+            && self.highlights.is_empty()
+            && self.bookmarks.is_empty()
+            && self.extra.is_empty()
+    }
+
+    /// The records of one kind.
+    pub fn of(&self, kind: MarkKind) -> &[Deletion] {
+        match kind {
+            MarkKind::Note => &self.notes,
+            MarkKind::Highlight => &self.highlights,
+            MarkKind::Bookmark => &self.bookmarks,
+        }
+    }
+
+    fn of_mut(&mut self, kind: MarkKind) -> &mut Vec<Deletion> {
+        match kind {
+            MarkKind::Note => &mut self.notes,
+            MarkKind::Highlight => &mut self.highlights,
+            MarkKind::Bookmark => &mut self.bookmarks,
+        }
+    }
+
+    /// The deletion record for the item `id` of `kind`, if it was deleted.
+    pub fn get(&self, kind: MarkKind, id: &str) -> Option<&Deletion> {
+        self.of(kind).iter().find(|d| d.id == id)
+    }
+
+    /// Records that `id` was deleted at `clock`. A record for the same id
+    /// keeps the later stamp. An empty id records nothing.
+    pub fn record(&mut self, kind: MarkKind, id: &str, clock: ClockStamp) {
+        self.absorb(
+            kind,
+            &Deletion {
+                id: id.to_owned(),
+                clock,
+                extra: serde_json::Map::new(),
+            },
+        );
+    }
+
+    /// Adds another computer's record, keeping the later one per id.
+    fn absorb(&mut self, kind: MarkKind, d: &Deletion) {
+        if d.id.is_empty() {
+            return;
+        }
+        let list = self.of_mut(kind);
+        match list.iter_mut().find(|x| x.id == d.id) {
+            Some(x) if d.clock > x.clock => *x = d.clone(),
+            Some(_) => {}
+            None => list.push(d.clone()),
+        }
+    }
+
+    /// Forgets deletion records made before `before` (Unix seconds).
+    /// Returns how many were dropped. A copy of the document on a computer
+    /// that has been away longer than that could bring such an item back,
+    /// so keep this well beyond the longest time a computer stays offline.
+    pub fn prune(&mut self, before: i64) -> usize {
+        let mut dropped = 0;
+        for kind in [MarkKind::Note, MarkKind::Highlight, MarkKind::Bookmark] {
+            let list = self.of_mut(kind);
+            let n = list.len();
+            list.retain(|d| d.clock.secs() >= before);
+            dropped += n - list.len();
+        }
+        dropped
+    }
+}
+
+/// How many replaced notes one document keeps ([`DocState::note_backups`]);
+/// the oldest are dropped first.
+///
+/// The last 20 replaced versions per document are kept, with no time limit
+/// (the default chosen for ADR-0049's open question).
+pub const NOTE_BACKUPS_MAX: usize = 20;
+
+/// An earlier version of a note, kept on this computer when another
+/// computer's newer edit replaced it (the owner's newest-wins rule), or a
+/// later deletion from another computer removed it. Never published: it is
+/// this computer's safety net.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct NoteBackup {
+    /// This backup's own id, for restoring it.
+    pub id: String,
+    /// The note as it was, with its own id, text, tags, and time.
+    pub note: Note,
+    /// When it was replaced (Unix seconds, UTC).
+    pub replaced: i64,
+    /// The name of the computer whose edit replaced it, when known.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub by: String,
+    /// The note was deleted by the other computer, not replaced.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub deleted: bool,
+    /// Unknown fields, preserved.
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
+}
+
+/// What [`DocState::merge_marks`] changed, for the announcement ("a note
+/// was replaced by the laptop's newer edit").
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct MergeReport {
+    /// Ids of notes whose text here was replaced by the other copy's newer
+    /// edit (the old text is in [`DocState::note_backups`]).
+    pub replaced_notes: Vec<String>,
+    /// Ids of notes, highlights, and bookmarks the other copy added.
+    pub added: Vec<(MarkKind, String)>,
+    /// Ids of items removed here because the other copy deleted them later
+    /// than they were last changed.
+    pub deleted: Vec<(MarkKind, String)>,
+    /// Bookmarks from the other copy renamed because a different bookmark
+    /// here has the same name: `(old name, new name)`, such as
+    /// `("mark1", "mark1, lab")`.
+    pub renamed_bookmarks: Vec<(String, String)>,
+}
+
+impl MergeReport {
+    /// True when the merge changed nothing here.
+    pub fn is_empty(&self) -> bool {
+        self.replaced_notes.is_empty()
+            && self.added.is_empty()
+            && self.deleted.is_empty()
+            && self.renamed_bookmarks.is_empty()
+    }
+}
+
+/// True when `a` wins over `b` under newest-wins: the later `ts`, and on a
+/// tie the larger serialized form, so both computers pick the same one.
+fn wins<T: Serialize>(a: &T, a_ts: i64, b: &T, b_ts: i64) -> bool {
+    match a_ts.cmp(&b_ts) {
+        std::cmp::Ordering::Greater => true,
+        std::cmp::Ordering::Less => false,
+        std::cmp::Ordering::Equal => {
+            let a = serde_json::to_string(a).unwrap_or_default();
+            let b = serde_json::to_string(b).unwrap_or_default();
+            a >= b
+        }
+    }
 }
 
 /// Percentage of `pos` through a document of `len` chars, floored, as Star
@@ -170,9 +534,14 @@ pub fn percent(pos: CharPos, len: usize) -> u8 {
 }
 
 /// Everything remembered about one document.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct DocState {
+    /// The format of the file this state was read from ([`STATE_FORMAT`]
+    /// for a new state, [`LEGACY_STATE_FORMAT`] for a file with no
+    /// `format` key). Written as at least [`STATE_FORMAT`].
+    #[serde(default = "legacy_format", serialize_with = "write_format")]
+    pub format: u32,
     /// Char offset of the word being read when the position was saved.
     pub position: CharPos,
     /// Percentage through the document, floored.
@@ -196,9 +565,38 @@ pub struct DocState {
     /// Highlights, in document order.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub highlights: Vec<Highlight>,
+    /// Deleted notes, highlights, and bookmarks ([`Deletions`]), so a
+    /// merge cannot bring them back.
+    #[serde(skip_serializing_if = "Deletions::is_empty")]
+    pub deleted: Deletions,
+    /// Earlier versions of notes replaced by another computer's newer edit
+    /// (at most [`NOTE_BACKUPS_MAX`], oldest dropped first). Local only:
+    /// never published to other computers.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub note_backups: Vec<NoteBackup>,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: serde_json::Map<String, serde_json::Value>,
+}
+
+impl Default for DocState {
+    fn default() -> Self {
+        DocState {
+            format: STATE_FORMAT,
+            position: CharPos::ZERO,
+            pct: 0,
+            ts: 0,
+            anchor: None,
+            text: None,
+            history: Vec::new(),
+            bookmarks: Vec::new(),
+            notes: Vec::new(),
+            highlights: Vec::new(),
+            deleted: Deletions::default(),
+            note_backups: Vec::new(),
+            extra: serde_json::Map::new(),
+        }
+    }
 }
 
 impl DocState {
@@ -249,23 +647,21 @@ impl DocState {
     }
 
     /// Adds a bookmark at `pos`. An empty or missing name gets the first free
-    /// `markN` (Star's rule). A bookmark with the same name is replaced.
-    /// Bookmarks stay sorted by position. Returns the bookmark added.
+    /// `markN` (Star's rule). A bookmark with the same name is moved there:
+    /// it keeps its id and gets a new time. Bookmarks stay sorted by
+    /// position. Returns the bookmark added.
     pub fn add_bookmark(&mut self, name: Option<&str>, pos: CharPos, doc_len: usize) -> Bookmark {
         let name = match name.map(str::trim) {
             Some(n) if !n.is_empty() => n.to_owned(),
             _ => self.next_bookmark_name(),
         };
-        self.bookmarks.retain(|b| b.name != name);
         let pos = pos.clamp_to(doc_len);
-        let mark = Bookmark {
-            name,
-            pos,
-            pct: percent(pos, doc_len),
-            ts: crate::now_ts(),
-            anchor: None,
-            not_found: false,
-        };
+        let mut mark = Bookmark::new(name, pos, percent(pos, doc_len), crate::now_ts());
+        if let Some(i) = self.bookmarks.iter().position(|b| b.name == mark.name) {
+            let old = self.bookmarks.remove(i);
+            mark.id = old.id;
+            mark.extra = old.extra;
+        }
         let at = self.bookmarks.partition_point(|b| b.pos <= pos);
         self.bookmarks.insert(at, mark.clone());
         mark
@@ -276,11 +672,34 @@ impl DocState {
         self.bookmarks.iter().find(|b| b.name == name)
     }
 
-    /// Removes the bookmark called `name`. Returns whether it existed.
+    /// The bookmark with `id`.
+    pub fn bookmark_by_id(&self, id: &str) -> Option<&Bookmark> {
+        self.bookmarks.iter().find(|b| b.id == id)
+    }
+
+    /// Removes the bookmark called `name`, recording the deletion. Returns
+    /// whether it existed.
     pub fn remove_bookmark(&mut self, name: &str) -> bool {
-        let before = self.bookmarks.len();
-        self.bookmarks.retain(|b| b.name != name);
-        self.bookmarks.len() != before
+        let Some(i) = self.bookmarks.iter().position(|b| b.name == name) else {
+            return false;
+        };
+        let b = self.bookmarks.remove(i);
+        self.record_deletion(MarkKind::Bookmark, &b.id);
+        true
+    }
+
+    /// Records, now, that the note, highlight, or bookmark `id` was
+    /// deleted, so a later merge with another computer's copy cannot bring
+    /// it back. The store's own remove functions call this; a frontend that
+    /// removes items from its own lists calls it too. The stamp is this
+    /// computer's wall clock ([`ClockStamp::now_local`]).
+    pub fn record_deletion(&mut self, kind: MarkKind, id: &str) {
+        self.deleted.record(kind, id, ClockStamp::now_local());
+    }
+
+    /// Records that `id` was deleted at `clock` (the sync clock's stamp).
+    pub fn record_deletion_at(&mut self, kind: MarkKind, id: &str, clock: ClockStamp) {
+        self.deleted.record(kind, id, clock);
     }
 
     /// Bookmarks in document order.
@@ -380,11 +799,16 @@ impl DocState {
         true
     }
 
-    /// Removes the note with `id`. Returns whether it existed.
+    /// Removes the note with `id`, recording the deletion. Returns whether
+    /// it existed.
     pub fn remove_note(&mut self, id: &str) -> bool {
         let before = self.notes.len();
         self.notes.retain(|n| n.id != id);
-        self.notes.len() != before
+        let removed = self.notes.len() != before;
+        if removed {
+            self.record_deletion(MarkKind::Note, id);
+        }
+        removed
     }
 
     /// Notes at `pos`: those whose range contains it, and point notes at it.
@@ -410,8 +834,9 @@ impl DocState {
 
     /// Highlights `range` in `color` (a name such as "yellow" or `#rrggbb`).
     /// `text` is the highlighted text. A highlight on exactly the same range
-    /// is replaced, so highlighting again changes the color. An empty range
-    /// highlights nothing and returns `None`.
+    /// is replaced, keeping its id with a new time, so highlighting again
+    /// changes the color. An empty range highlights nothing and returns
+    /// `None`.
     pub fn add_highlight(
         &mut self,
         range: CharRange,
@@ -421,13 +846,17 @@ impl DocState {
         if range.is_empty() {
             return None;
         }
+        let (id, extra) = match self.highlights.iter().find(|x| x.range == range) {
+            Some(old) => (old.id.clone(), old.extra.clone()),
+            None => (self.fresh_id(), serde_json::Map::new()),
+        };
         let h = Highlight {
-            id: self.fresh_id(),
+            id,
             range,
             color: notes::highlight_color(color),
             text: notes::collapse(text, notes::HIGHLIGHT_TEXT_MAX_CHARS),
             ts: crate::now_ts(),
-            extra: serde_json::Map::new(),
+            extra,
         };
         self.insert_highlight(h.clone());
         Some(h)
@@ -458,16 +887,23 @@ impl DocState {
             .collect()
     }
 
-    /// Removes the highlight with `id`. Returns it if it existed.
+    /// Removes the highlight with `id`, recording the deletion. Returns it
+    /// if it existed.
     pub fn remove_highlight(&mut self, id: &str) -> Option<Highlight> {
         let i = self.highlights.iter().position(|h| h.id == id)?;
-        Some(self.highlights.remove(i))
+        let h = self.highlights.remove(i);
+        self.record_deletion(MarkKind::Highlight, &h.id);
+        Some(h)
     }
 
-    /// Removes every highlight (Star's Clear All Highlights). Returns how
-    /// many there were.
+    /// Removes every highlight (Star's Clear All Highlights), recording
+    /// each deletion. Returns how many there were.
     pub fn clear_highlights(&mut self) -> usize {
-        std::mem::take(&mut self.highlights).len()
+        let gone = std::mem::take(&mut self.highlights);
+        for h in &gone {
+            self.record_deletion(MarkKind::Highlight, &h.id);
+        }
+        gone.len()
     }
 
     /// Removes the note or highlight at `pos`: the shortest note at `pos`
@@ -532,8 +968,15 @@ impl DocState {
     /// replacement; a highlight whose text is deleted is dropped, and a note
     /// whose text is deleted stays as a point note (its anchor keeps the old
     /// text).
+    /// Highlights dropped this way are recorded as deleted.
     pub fn shift(&mut self, outcome: &EditOutcome) {
+        let before: Vec<String> = self.highlights.iter().map(|h| h.id.clone()).collect();
         notes::shift(&mut self.notes, &mut self.highlights, outcome);
+        for id in before {
+            if self.highlight(&id).is_none() {
+                self.record_deletion(MarkKind::Highlight, &id);
+            }
+        }
 
         self.position = outcome.map_pos(self.position, Bias::Before);
         for h in &mut self.history {
@@ -544,6 +987,284 @@ impl DocState {
             b.pos = outcome.map_pos(b.pos, Bias::Before);
         }
         self.bookmarks.sort_by_key(|b| b.pos);
+    }
+
+    /// Keeps `old`, a version of a note that is being replaced or removed
+    /// by another computer's change, in [`note_backups`](Self::note_backups).
+    /// `by` names that computer (empty when unknown). The same version is
+    /// kept once; past [`NOTE_BACKUPS_MAX`], the oldest backups go. Returns
+    /// the backup's id.
+    pub fn backup_note(&mut self, old: &Note, by: &str, deleted: bool) -> String {
+        if let Some(b) = self
+            .note_backups
+            .iter()
+            .find(|b| b.note == *old && b.deleted == deleted)
+        {
+            return b.id.clone();
+        }
+        let id = notes::new_id();
+        self.note_backups.push(NoteBackup {
+            id: id.clone(),
+            note: old.clone(),
+            replaced: crate::now_ts(),
+            by: by.to_owned(),
+            deleted,
+            extra: serde_json::Map::new(),
+        });
+        if self.note_backups.len() > NOTE_BACKUPS_MAX {
+            // Oldest first out; the list is in the order they were made.
+            self.note_backups.sort_by_key(|b| b.replaced);
+            let excess = self.note_backups.len() - NOTE_BACKUPS_MAX;
+            self.note_backups.drain(..excess);
+        }
+        id
+    }
+
+    /// The kept versions of replaced notes, newest first.
+    pub fn note_backups_newest_first(&self) -> Vec<&NoteBackup> {
+        let mut v: Vec<&NoteBackup> = self.note_backups.iter().collect();
+        v.sort_by(|a, b| {
+            b.replaced
+                .cmp(&a.replaced)
+                .then_with(|| b.note.ts.cmp(&a.note.ts))
+        });
+        v
+    }
+
+    /// The kept versions of the note `note_id`, newest first.
+    pub fn backups_of_note(&self, note_id: &str) -> Vec<&NoteBackup> {
+        self.note_backups_newest_first()
+            .into_iter()
+            .filter(|b| b.note.id == note_id)
+            .collect()
+    }
+
+    /// Puts a kept version back as the note's current text, as a new edit
+    /// (its time is now, so it wins over the other computers' copies at
+    /// the next merge, and over a deletion). The text it replaces is kept
+    /// in turn, so restoring can be undone. Returns the restored note, or
+    /// `None` when there is no backup `backup_id`.
+    pub fn restore_note_backup(&mut self, backup_id: &str) -> Option<Note> {
+        let i = self.note_backups.iter().position(|b| b.id == backup_id)?;
+        let backup = self.note_backups.remove(i);
+        let mut note = backup.note;
+        if let Some(current) = self.note(&note.id).cloned() {
+            self.backup_note(&current, "", false);
+            // Keep the place the note has now; only the words come back.
+            note.range = current.range;
+        }
+        note.ts = crate::now_ts();
+        self.insert_note(note.clone());
+        Some(note)
+    }
+
+    /// Merges another copy of this document's notes, highlights, and
+    /// bookmarks (another computer's) into this one, item by item, by id:
+    ///
+    /// - the newer version of an item wins (`ts`; on a tie both computers
+    ///   pick the same one);
+    /// - a deletion wins over any version not changed after it, on either
+    ///   side, so a deleted note stays deleted; an edit made after the
+    ///   deletion wins and brings the item back;
+    /// - a note here whose text loses to the other copy's newer edit, or is
+    ///   removed by its later deletion, is kept in
+    ///   [`note_backups`](Self::note_backups) first;
+    /// - an arriving bookmark whose name is taken here by a different
+    ///   bookmark is renamed "name, other_name" ("mark1, lab");
+    /// - the deletion records of both copies are kept (the later per id).
+    ///
+    /// Merging the same copy again changes nothing. Positions, history,
+    /// and backups of the other copy are not touched: places have their own
+    /// rule, and backups stay on the computer that made them.
+    pub fn merge_marks(&mut self, other: &DocState, other_name: &str) -> MergeReport {
+        let mut report = MergeReport::default();
+        for kind in [MarkKind::Note, MarkKind::Highlight, MarkKind::Bookmark] {
+            for d in other.deleted.of(kind) {
+                self.deleted.absorb(kind, d);
+            }
+        }
+        self.merge_notes(other, other_name, &mut report);
+        self.merge_highlights(other, &mut report);
+        self.merge_bookmarks(other, other_name, &mut report);
+        report
+    }
+
+    /// True when a deletion record of `kind` for `id` wins over a version
+    /// changed at `ts` carrying `extra` (which may hold a clock stamp).
+    fn deleted_since(
+        &self,
+        kind: MarkKind,
+        id: &str,
+        ts: i64,
+        extra: &serde_json::Map<String, serde_json::Value>,
+    ) -> bool {
+        self.deleted
+            .get(kind, id)
+            .is_some_and(|d| d.covers(ts, item_clock(extra).as_ref()))
+    }
+
+    fn merge_notes(&mut self, other: &DocState, other_name: &str, report: &mut MergeReport) {
+        for theirs in &other.notes {
+            match self.note(&theirs.id).cloned() {
+                Some(mine) if mine == *theirs => {}
+                Some(mine) => {
+                    if wins(theirs, theirs.ts, &mine, mine.ts) {
+                        if mine.note != theirs.note || mine.tags != theirs.tags {
+                            self.backup_note(&mine, other_name, false);
+                            report.replaced_notes.push(theirs.id.clone());
+                        }
+                        self.insert_note(theirs.clone());
+                    }
+                }
+                None => {
+                    if !self.deleted_since(MarkKind::Note, &theirs.id, theirs.ts, &theirs.extra) {
+                        self.insert_note(theirs.clone());
+                        report.added.push((MarkKind::Note, theirs.id.clone()));
+                    }
+                }
+            }
+        }
+        // Deletions (from either copy) that are later than the note here.
+        let gone: Vec<Note> = self
+            .notes
+            .iter()
+            .filter(|n| self.deleted_since(MarkKind::Note, &n.id, n.ts, &n.extra))
+            .cloned()
+            .collect();
+        for n in gone {
+            if other.deleted.get(MarkKind::Note, &n.id).is_some() {
+                self.backup_note(&n, other_name, true);
+            }
+            self.notes.retain(|x| x.id != n.id);
+            report.deleted.push((MarkKind::Note, n.id));
+        }
+    }
+
+    fn merge_highlights(&mut self, other: &DocState, report: &mut MergeReport) {
+        for theirs in &other.highlights {
+            match self.highlight(&theirs.id).cloned() {
+                Some(mine) if mine == *theirs => {}
+                Some(mine) => {
+                    if wins(theirs, theirs.ts, &mine, mine.ts) {
+                        self.put_highlight(theirs.clone());
+                    }
+                }
+                None => {
+                    if !self.deleted_since(
+                        MarkKind::Highlight,
+                        &theirs.id,
+                        theirs.ts,
+                        &theirs.extra,
+                    ) {
+                        self.put_highlight(theirs.clone());
+                        report.added.push((MarkKind::Highlight, theirs.id.clone()));
+                    }
+                }
+            }
+        }
+        let gone: Vec<String> = self
+            .highlights
+            .iter()
+            .filter(|h| self.deleted_since(MarkKind::Highlight, &h.id, h.ts, &h.extra))
+            .map(|h| h.id.clone())
+            .collect();
+        for id in gone {
+            self.highlights.retain(|h| h.id != id);
+            report.deleted.push((MarkKind::Highlight, id));
+        }
+    }
+
+    /// Inserts a merged highlight. Two highlights on the same range keep
+    /// only the newer (the same choice on every computer).
+    fn put_highlight(&mut self, h: Highlight) {
+        if let Some(same) = self
+            .highlights
+            .iter()
+            .find(|x| x.range == h.range && x.id != h.id)
+            && wins(same, same.ts, &h, h.ts)
+        {
+            return;
+        }
+        self.insert_highlight(h);
+    }
+
+    fn merge_bookmarks(&mut self, other: &DocState, other_name: &str, report: &mut MergeReport) {
+        for theirs in &other.bookmarks {
+            let mut theirs = theirs.clone();
+            let arriving = match self.bookmark_by_id(&theirs.id).cloned() {
+                Some(mine) if mine == theirs => continue,
+                // Renamed here by an earlier merge of this same version.
+                Some(mine)
+                    if mine.name != theirs.name
+                        && Bookmark {
+                            name: mine.name.clone(),
+                            ..theirs.clone()
+                        } == mine
+                        && self
+                            .bookmarks
+                            .iter()
+                            .any(|b| b.name == theirs.name && b.id != theirs.id) =>
+                {
+                    continue;
+                }
+                Some(mine) => {
+                    if !wins(&theirs, theirs.ts, &mine, mine.ts) {
+                        continue;
+                    }
+                    self.bookmarks.retain(|b| b.id != mine.id);
+                    false
+                }
+                None => {
+                    if self.deleted_since(MarkKind::Bookmark, &theirs.id, theirs.ts, &theirs.extra)
+                    {
+                        continue;
+                    }
+                    true
+                }
+            };
+            if self.bookmark(&theirs.name).is_some() {
+                let new = self.free_bookmark_name(&theirs.name, other_name);
+                report
+                    .renamed_bookmarks
+                    .push((theirs.name.clone(), new.clone()));
+                theirs.name = new;
+            }
+            if arriving {
+                report.added.push((MarkKind::Bookmark, theirs.id.clone()));
+            }
+            let at = self.bookmarks.partition_point(|b| b.pos <= theirs.pos);
+            self.bookmarks.insert(at, theirs);
+        }
+        let gone: Vec<String> = self
+            .bookmarks
+            .iter()
+            .filter(|b| self.deleted_since(MarkKind::Bookmark, &b.id, b.ts, &b.extra))
+            .map(|b| b.id.clone())
+            .collect();
+        for id in gone {
+            self.bookmarks.retain(|b| b.id != id);
+            report.deleted.push((MarkKind::Bookmark, id));
+        }
+    }
+
+    /// A bookmark name not in use here, for a bookmark called `name` from
+    /// the computer `other_name`: "mark1, lab", then "mark1, lab 2", and so
+    /// on ("mark1, other computer" when the name is unknown).
+    fn free_bookmark_name(&self, name: &str, other_name: &str) -> String {
+        let other = other_name.trim();
+        let other = if other.is_empty() {
+            "other computer"
+        } else {
+            other
+        };
+        let base = format!("{name}, {other}");
+        if self.bookmark(&base).is_none() {
+            return base;
+        }
+        (2..)
+            .map(|n| format!("{base} {n}"))
+            .find(|n| self.bookmark(n).is_none())
+            .unwrap_or(base)
     }
 }
 
@@ -959,7 +1680,7 @@ mod tests {
         assert_eq!(a.anchor, "second part");
         assert_eq!(a.note, "later");
         assert_eq!(b.tags, vec!["exam", "bio"]);
-        assert!(a.created > 0 && a.id.len() == 8 && a.id != b.id);
+        assert!(a.created > 0 && a.id.len() == 16 && a.id != b.id);
         let order: Vec<&str> = st.notes.iter().map(|n| n.note.as_str()).collect();
         assert_eq!(order, vec!["Check this", "later"], "document order");
         assert_eq!(st.search_notes("#exam").len(), 1);
@@ -1211,3 +1932,7 @@ mod tests {
         assert!(store.load(&key).is_some());
     }
 }
+
+#[cfg(test)]
+#[path = "doc_state_sync_tests.rs"]
+mod sync_tests;

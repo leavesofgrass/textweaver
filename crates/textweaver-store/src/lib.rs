@@ -6,7 +6,9 @@
 //!   set, wrote every default, and dropped unknown keys).
 //! - Per-document [`DocState`] in `state/<doc-key>.json` (position,
 //!   history, bookmarks, [`notes`] and highlights), with position saves
-//!   coalesced by [`StateStore`] and flushed on demand and on drop.
+//!   coalesced by [`StateStore`] and flushed on demand and on drop. Since
+//!   state format 2 ([`STATE_FORMAT`]) bookmarks carry ids, deletions are
+//!   recorded, and notes replaced by another computer's edit are kept.
 //! - [`Recent`] files and the [`library`]: folders, the bookshelf in
 //!   `library.json`, sidecar sync wired to the folders, and search through
 //!   [`fulltext::FullTextIndex`].
@@ -51,7 +53,9 @@ pub mod time;
 
 pub use atomic::atomic_write;
 pub use doc_state::{
-    Anchor, Bookmark, DEFAULT_DEBOUNCE, DocKey, DocState, StateStore, TextStamp, percent,
+    Anchor, Bookmark, ClockStamp, DEFAULT_DEBOUNCE, Deletion, Deletions, DocKey, DocState,
+    LEGACY_STATE_FORMAT, MarkKind, MergeReport, NOTE_BACKUPS_MAX, NoteBackup, STATE_FORMAT,
+    StateStore, TextStamp, percent,
 };
 pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
 pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, ScannedDoc};

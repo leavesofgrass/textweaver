@@ -358,6 +358,35 @@ fn a_second_run_imports_nothing_new() {
     assert!(again.render().contains("Nothing new to write."));
 }
 
+/// State format 2 (the sync wave): a Star import loads unchanged, keeps
+/// Star's note ids, and gives a bookmark the same id on every computer
+/// that imports the same Star data, so the two copies merge as one.
+#[test]
+fn star_imports_load_unchanged_with_the_same_bookmark_ids_everywhere() {
+    let laptop = fixture();
+    let lab = fixture();
+    run(&laptop, false);
+    run(&lab, false);
+    let load = |f: &Fixture| {
+        StateStore::new(f.paths.state_dir())
+            .load(&DocKey::for_path(&f.book))
+            .unwrap()
+    };
+    let a = load(&laptop);
+    let b = load(&lab);
+    assert_eq!(a.format, crate::STATE_FORMAT);
+    let mark = a.bookmark("mark1").unwrap();
+    assert!(mark.id.starts_with("bm-"), "{}", mark.id);
+    assert_eq!(b.bookmark("mark1").unwrap().id, mark.id);
+    assert!(a.note("abc12345").is_some(), "Star's own id is kept");
+    // Loading again gives the same state, and merging the two computers'
+    // imports changes nothing.
+    assert_eq!(load(&laptop), a);
+    let mut merged = a.clone();
+    assert!(merged.merge_marks(&b, "lab").is_empty());
+    assert_eq!(merged, a);
+}
+
 #[test]
 fn newer_textweaver_state_wins() {
     let f = fixture();

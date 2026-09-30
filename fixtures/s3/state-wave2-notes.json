@@ -1,0 +1,50 @@
+{
+  "position": 40,
+  "pct": 8,
+  "ts": 1790100000,
+  "history": [],
+  "bookmarks": [
+    {"name": "mark1", "pos": 40, "pct": 8, "ts": 1790100001}
+  ],
+  "notes": [
+    {
+      "id": "1a2b3c4d",
+      "range": {"start": 10, "end": 20},
+      "anchor": "first part",
+      "note": "Check this",
+      "tags": ["exam", "bio"],
+      "created": 1790100002,
+      "ts": 1790100003,
+      "sr_state": {"interval": 3, "due": "2026-10-01"}
+    },
+    {
+      "id": "star-9f8e7d6c",
+      "range": {"start": 50, "end": 50},
+      "anchor": "",
+      "note": "Imported from Star",
+      "tags": [],
+      "cite": "smith2020",
+      "relations": [
+        {"rel_type": "SUPPORTS", "target_doc": "", "target_id": "1a2b3c4d"}
+      ],
+      "created": 1790000000,
+      "ts": 1790000000
+    }
+  ],
+  "highlights": [
+    {
+      "id": "0badf00d",
+      "range": {"start": 60, "end": 72},
+      "color": "#90ee90",
+      "text": "key idea",
+      "ts": 1790100004
+    },
+    {
+      "id": "star-h-12345678",
+      "range": {"start": 80, "end": 90},
+      "color": "#ffff00",
+      "text": "from Star",
+      "ts": 1790000000
+    }
+  ]
+}

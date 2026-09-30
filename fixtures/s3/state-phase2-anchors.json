@@ -1,0 +1,66 @@
+{
+  "position": 25,
+  "pct": 50,
+  "ts": 1790200000,
+  "anchor": {
+    "context": "powerhouse of the cell, they say.",
+    "hash": "0123456789abcdef"
+  },
+  "text": {
+    "chars": 50,
+    "hash": "fedcba9876543210"
+  },
+  "history": [
+    5,
+    25
+  ],
+  "bookmarks": [
+    {
+      "name": "chapter two",
+      "pos": 25,
+      "pct": 50,
+      "ts": 1790200001,
+      "anchor": {
+        "context": "powerhouse of the cell, they say.",
+        "hash": "0123456789abcdef"
+      }
+    },
+    {
+      "name": "lost",
+      "pos": 40,
+      "pct": 80,
+      "ts": 1790200002,
+      "not_found": true
+    }
+  ],
+  "notes": [
+    {
+      "id": "cafe0123",
+      "range": {
+        "start": 4,
+        "end": 16
+      },
+      "anchor": "mitochondria",
+      "note": "Why?",
+      "tags": [],
+      "color": "#ffa500",
+      "created": 1790200003,
+      "ts": 1790200004
+    }
+  ],
+  "highlights": [
+    {
+      "id": "beef4567",
+      "range": {
+        "start": 20,
+        "end": 30
+      },
+      "color": "#00ffff",
+      "text": "powerhouse",
+      "ts": 1790200005
+    }
+  ],
+  "a_future_key": {
+    "kept": true
+  }
+}
