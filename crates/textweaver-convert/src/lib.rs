@@ -480,7 +480,10 @@ impl Summary {
                 out.push_str(&format!("  {}\n", f.source.display()));
             }
         }
-        out.push_str(&format!("\nReport written {}.\n", watch::iso_utc(written)));
+        let (y, mo, d, h, mi, _) = watch::utc_parts(written);
+        out.push_str(&format!(
+            "\nReport written {y:04}-{mo:02}-{d:02} at {h:02}:{mi:02} UTC.\n"
+        ));
         out
     }
 
@@ -1160,7 +1163,10 @@ mod tests {
             .position(|l| *l == "Warnings, 1 file:")
             .expect("a warnings heading");
         assert_eq!(lines[warned + 1], "b.md: An image could not be embedded.");
-        assert_eq!(lines.last(), Some(&"Report written 1970-01-01T00:00:00Z."));
+        assert_eq!(
+            lines.last(),
+            Some(&"Report written 1970-01-01 at 00:00 UTC.")
+        );
         assert!(!text.contains("a.md:"), "converted files are not listed");
     }
 
