@@ -9,6 +9,8 @@
 //!   extension are treated as earlier outputs, not sources.
 //! - Only files with an extension some loader reads are taken from folders;
 //!   files named explicitly are always tried.
+//! - The report of an earlier run ([`crate::REPORT_FILE`]) is not taken
+//!   from folders.
 //! - A job whose output would overwrite its source, or an output another
 //!   source already claims, is rejected with a reason instead of run.
 
@@ -38,6 +40,19 @@ pub struct Plan {
     pub jobs: Vec<Job>,
     /// Files that cannot be converted as planned, with the reason.
     pub rejected: Vec<FileResult>,
+}
+
+impl Plan {
+    /// Every file the plan covers: the jobs and the rejected files. A run
+    /// reports each of them once, so this is the total for progress.
+    pub fn len(&self) -> usize {
+        self.jobs.len() + self.rejected.len()
+    }
+
+    /// True when the plan covers no file.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 fn is_hidden(name: &std::ffi::OsStr) -> bool {
@@ -100,6 +115,10 @@ pub(crate) fn plan(conv: &Converter, inputs: &[PathBuf]) -> Result<Plan, Convert
                 continue;
             }
             let path = entry.path();
+            // An earlier run's report is not a document to convert.
+            if entry.file_name() == crate::REPORT_FILE {
+                continue;
+            }
             let ext = extension(path);
             if !exts.contains(&ext.as_str()) {
                 continue;

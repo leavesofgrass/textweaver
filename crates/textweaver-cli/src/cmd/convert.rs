@@ -4,7 +4,10 @@
 //! Output is written for listening: one summary sentence at the end, one
 //! line per failure, and per-file lines only with `--verbose`. `--json`
 //! prints the whole summary (every file, its status and timing) instead.
-//! The exit status is 1 when any file failed.
+//! The same summary, with each failure and warning, is saved as
+//! `conversion-report.txt` in the output folder (or the one folder being
+//! converted in place), replacing the last run's; `--no-report` leaves it
+//! out. The exit status is 1 when any file failed.
 //!
 //! Pandoc citations in Markdown (`[@doe2020]`) are formatted in a CSL style
 //! (`--style`, APA by default) with a References section appended, from
@@ -119,6 +122,10 @@ pub struct Args {
     pub math_code: MathCode,
     #[command(flatten)]
     pub layout: super::convert_layout::LayoutArgs,
+    /// Do not save conversion-report.txt (the summary, failures, and
+    /// warnings) in the output folder.
+    #[arg(long)]
+    pub no_report: bool,
     /// Watch: seconds a file's size must hold still before converting.
     #[arg(long, default_value_t = 2.0)]
     pub stable_seconds: f64,
@@ -257,6 +264,20 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         return run_watch(&args, &converter);
     }
     let summary = converter.run(&args.inputs)?;
+    let report = match report_dir(&args) {
+        Some(dir) if !args.no_report => match summary.write_report(&dir) {
+            Ok(path) => Some(path),
+            Err(e) => {
+                eprintln!(
+                    "Warning: cannot save {} in {}: {e}",
+                    textweaver_convert::REPORT_FILE,
+                    dir.display()
+                );
+                None
+            }
+        },
+        _ => None,
+    };
     if args.json {
         println!("{}", serde_json::to_string_pretty(&summary)?);
     } else {
@@ -283,11 +304,25 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         if args.to == OutputFormat::Brf && summary.converted > 0 {
             println!("{}", math_braille_line(args.math_code));
         }
+        if let Some(path) = report.filter(|_| summary.failed > 0 || summary.warned > 0) {
+            println!("Failures and warnings are listed in {}.", path.display());
+        }
     }
     if summary.failed > 0 {
         bail!("{} of {} files failed", summary.failed, summary.total());
     }
     Ok(())
+}
+
+/// Where `tw convert` saves its report: the output folder, or the one
+/// folder being converted in place. Files named on their own, without
+/// `--out`, get no report.
+fn report_dir(args: &Args) -> Option<PathBuf> {
+    match (&args.out, args.inputs.as_slice()) {
+        (Some(out), _) => Some(out.clone()),
+        (None, [only]) if only.is_dir() => Some(only.clone()),
+        _ => None,
+    }
 }
 
 fn run_watch(args: &Args, converter: &Converter) -> anyhow::Result<()> {
@@ -374,6 +409,19 @@ mod tests {
         // The HTML page template stays the default.
         assert!(matches!(o.template, TemplateChoice::Named(ref n) if n == "default"));
         assert!(template_note(&args).is_none());
+    }
+
+    #[test]
+    fn the_report_goes_to_the_output_folder_or_the_one_folder() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let folder = dir.path().to_string_lossy().into_owned();
+        let args = parse(&["a.md", "b.md", "--out", "converted"]);
+        assert_eq!(report_dir(&args), Some(PathBuf::from("converted")));
+        let args = parse(&[&folder]);
+        assert_eq!(report_dir(&args), Some(dir.path().to_owned()));
+        assert_eq!(report_dir(&parse(&["a.md"])), None);
+        assert_eq!(report_dir(&parse(&[&folder, "a.md"])), None);
+        assert!(parse(&[&folder, "--no-report"]).no_report);
     }
 
     #[test]

@@ -352,7 +352,7 @@ fn civil(days: i64) -> (i64, u32, u32) {
     (if m <= 2 { y + 1 } else { y }, m, d)
 }
 
-fn utc_parts(t: SystemTime) -> (i64, u32, u32, u64, u64, u64) {
+pub(crate) fn utc_parts(t: SystemTime) -> (i64, u32, u32, u64, u64, u64) {
     let secs = t
         .duration_since(SystemTime::UNIX_EPOCH)
         .map_or(0, |d| d.as_secs());
