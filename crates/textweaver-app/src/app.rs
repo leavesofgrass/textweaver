@@ -295,6 +295,8 @@ pub(crate) enum ListKind {
     /// Set up sync's groups, other computers' places, or replaced notes
     /// (crate::sync).
     Sync(crate::sync::SyncList),
+    /// "Continue reading": the documents, by row (crate::library, S6).
+    Continue(Vec<std::path::PathBuf>),
 }
 
 /// The application: the only owner of mutable state.
@@ -1528,6 +1530,7 @@ impl App {
             Some(ListKind::Audio(l)) => return self.choose_audio(l, n),
             Some(ListKind::Frontend) => self.choose_frontend_item(n),
             Some(ListKind::Sync(l)) => return self.choose_sync(l, n),
+            Some(ListKind::Continue(paths)) => return self.choose_continue(&paths, n),
             Some(ListKind::Palette(actions)) => {
                 if let Some(&a) = actions.get(n) {
                     return self.run_command(a);
@@ -1836,6 +1839,7 @@ impl App {
             // File
             A::Open | A::OpenPath => return self.prompt(PromptPurpose::Open),
             A::OpenLibrary => return self.open_library(),
+            A::ContinueReading => return self.open_continue_reading(),
             A::ExportSettings => return self.settings_file_prompt(false),
             A::ImportSettings => return self.settings_file_prompt(true),
             // View and help

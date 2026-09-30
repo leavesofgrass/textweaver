@@ -255,12 +255,7 @@ impl App {
         let Some(s) = self.session.as_ref() else {
             return textweaver_sync::docid::Details::default();
         };
-        let meta = crate::library::document_metadata(&s.doc);
-        textweaver_sync::docid::Details {
-            title: crate::library::stated_title(&s.doc),
-            doi: meta.doi,
-            isbn: meta.isbn,
-        }
+        crate::library::sync_details(&s.doc)
     }
 
     /// A document opened: with sync on, its sync id is found and it is

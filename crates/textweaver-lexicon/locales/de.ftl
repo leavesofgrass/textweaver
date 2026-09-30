@@ -189,6 +189,50 @@ stats-clear-question =
 stats-cleared = Lesestatistik entfernt.
 stats-off-cli = Die Lesestatistik ist aus: stats.enabled ist in den Einstellungen false.
 
+## Continue reading and every computer's statistics (the sync wave, S6).
+
+continue-title = Weiterlesen
+# $n is the number of documents listed.
+continue-intro =
+    { $n ->
+        [one] Weiterlesen: 1 Dokument, neuestes zuerst.
+       *[other] Weiterlesen: { $n } Dokumente, neueste zuerst.
+    }
+continue-empty = Nichts zum Weiterlesen: keine Stellen.
+# One row, meaning first: the title, how far in, the computer, and how
+# long ago (continue-ago-*).
+continue-item = { $title }, { $pct } Prozent, { $device }, { $when }
+continue-this-computer = dieser Computer
+continue-ago-now = gerade eben
+continue-ago-minutes =
+    { $n ->
+        [one] vor 1 Minute
+       *[other] vor { $n } Minuten
+    }
+continue-ago-hours =
+    { $n ->
+        [one] vor 1 Stunde
+       *[other] vor { $n } Stunden
+    }
+continue-ago-days =
+    { $n ->
+        [one] vor 1 Tag
+       *[other] vor { $n } Tagen
+    }
+name-continue-reading = Weiterlesen
+action-continue-reading = Weiterlesen: die Dokumente auf diesem Computer mit gespeicherter Stelle, von jedem Computer, neueste zuerst
+# The statistics list could not wait for the sync folder.
+stats-others-slow = Andere Computer fehlen: Ordner langsam.
+stats-untitled = Dokument ohne Titel
+# One computer's share of a document: $device, $time, $sessions.
+stats-computer =
+    { $sessions ->
+        [one] { $device }: { $time }, 1 Sitzung
+       *[other] { $device }: { $time }, { $sessions } Sitzungen
+    }
+stats-by-computer-off = Je Computer: aus. Eingabetaste zeigt.
+stats-by-computer-on = Je Computer: an. Eingabetaste verbirgt.
+
 ## Navigation. $dir is next or previous; $what is a kind-* or unit-*
 ## noun and $unit its key (heading, list-item, sentence), for languages
 ## whose words agree with the noun.

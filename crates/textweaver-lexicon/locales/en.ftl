@@ -193,6 +193,50 @@ stats-clear-question =
 stats-cleared = Reading statistics removed.
 stats-off-cli = Reading statistics are off: stats.enabled is false in the settings.
 
+## Continue reading and every computer's statistics (the sync wave, S6).
+
+continue-title = Continue reading
+# $n is the number of documents listed.
+continue-intro =
+    { $n ->
+        [one] Continue reading: 1 document, newest first.
+       *[other] Continue reading: { $n } documents, newest first.
+    }
+continue-empty = Nothing to continue: no places saved.
+# One row, meaning first: the title, how far in, the computer, and how
+# long ago (continue-ago-*).
+continue-item = { $title }, { $pct } percent, { $device }, { $when }
+continue-this-computer = this computer
+continue-ago-now = just now
+continue-ago-minutes =
+    { $n ->
+        [one] 1 minute ago
+       *[other] { $n } minutes ago
+    }
+continue-ago-hours =
+    { $n ->
+        [one] 1 hour ago
+       *[other] { $n } hours ago
+    }
+continue-ago-days =
+    { $n ->
+        [one] 1 day ago
+       *[other] { $n } days ago
+    }
+name-continue-reading = Continue reading
+action-continue-reading = Continue reading: the documents on this computer with a saved place, from any computer, newest first
+# The statistics list could not wait for the sync folder.
+stats-others-slow = Other computers skipped: folder slow.
+stats-untitled = Untitled document
+# One computer's share of a document: $device, $time, $sessions.
+stats-computer =
+    { $sessions ->
+        [one] { $device }: { $time }, 1 session
+       *[other] { $device }: { $time }, { $sessions } sessions
+    }
+stats-by-computer-off = Each computer: hidden. Enter shows it.
+stats-by-computer-on = Each computer: shown. Enter hides it.
+
 ## Navigation. $dir is next or previous; $what is a kind-* or unit-*
 ## noun and $unit its key (heading, list-item, sentence), for languages
 ## whose words agree with the noun.

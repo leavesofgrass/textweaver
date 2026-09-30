@@ -233,6 +233,7 @@ impl MenuId {
                 Do(A::OpenPath),
                 Do(A::BrowseFiles),
                 Do(A::OpenLibrary),
+                Do(A::ContinueReading),
                 Sub(MenuId::Recent),
                 Sep,
                 Do(A::NewDocument),

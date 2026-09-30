@@ -824,14 +824,25 @@ impl SyncEngine {
             });
             return SyncResponse::Cycle(Box::new(o));
         }
-        let publish = self
-            .slot(resolved.sync_id)
-            .is_some_and(|slot| resolved.changed || slot.mine.identity.is_empty());
+        // The library details (S6): what the document states, and when it
+        // was first added to the bookshelf here (written before this job,
+        // on the same writer).
+        let mut details = identify.details.clone();
+        if details.added_ms.is_none()
+            && let Some(c) = &self.config
+        {
+            details.added_ms = first_added_ms(&c.paths, &identify.path);
+        }
+        let publish = self.slot(resolved.sync_id).is_some_and(|slot| {
+            resolved.changed
+                || slot.mine.identity.is_empty()
+                || details.would_change(&slot.mine.identity)
+        });
         if publish && let Some(clock) = self.clock.as_mut() {
             let stamp = clock.tick();
             if let Some(slot) = self.docs.get_mut(&resolved.sync_id) {
                 slot.mine
-                    .publish_identity(stamp, &resolved.fingerprint, &identify.details);
+                    .publish_identity(stamp, &resolved.fingerprint, &details);
             }
         }
         let mut o = self
@@ -1612,6 +1623,14 @@ fn regs<T: Serialize + Clone + PartialEq>(
         .iter()
         .map(|(id, r)| (id.clone(), r.stamp, r.value.as_ref().map(&wrap)))
         .collect()
+}
+
+/// When the bookshelf here first recorded `path` (milliseconds since 1970),
+/// for the library details' "first added".
+fn first_added_ms(paths: &Paths, path: &Path) -> Option<u64> {
+    let lib = textweaver_store::Library::load(&paths.library_file()).ok()?;
+    let added = lib.get(path)?.added;
+    (added > 0).then(|| secs_to_ms(added))
 }
 
 /// Sets this computer's reading statistics for the document in its record.

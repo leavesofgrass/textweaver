@@ -234,6 +234,65 @@ stats-clear-question =
 stats-cleared = أُزيلت إحصاءات القراءة.
 stats-off-cli = إحصاءات القراءة متوقفة: stats.enabled هو false في الإعدادات.
 
+## Continue reading and every computer's statistics (the sync wave, S6).
+
+continue-title = متابعة القراءة
+# $n is the number of documents listed.
+continue-intro =
+    { $n ->
+        [one] متابعة القراءة: مستند واحد، الأحدث أولًا.
+        [two] متابعة القراءة: مستندان، الأحدث أولًا.
+        [few] متابعة القراءة: { $n } مستندات، الأحدث أولًا.
+        [many] متابعة القراءة: { $n } مستندًا، الأحدث أولًا.
+       *[other] متابعة القراءة: { $n } مستند، الأحدث أولًا.
+    }
+continue-empty = لا شيء للمتابعة: لا مواضع محفوظة.
+# One row, meaning first: the title, how far in, the computer, and how
+# long ago (continue-ago-*).
+continue-item = { $title }، { $pct } بالمئة، { $device }، { $when }
+continue-this-computer = هذا الحاسوب
+continue-ago-now = الآن
+continue-ago-minutes =
+    { $n ->
+        [one] قبل دقيقة
+        [two] قبل دقيقتين
+        [few] قبل { $n } دقائق
+        [many] قبل { $n } دقيقة
+       *[other] قبل { $n } دقيقة
+    }
+continue-ago-hours =
+    { $n ->
+        [one] قبل ساعة
+        [two] قبل ساعتين
+        [few] قبل { $n } ساعات
+        [many] قبل { $n } ساعة
+       *[other] قبل { $n } ساعة
+    }
+continue-ago-days =
+    { $n ->
+        [one] قبل يوم
+        [two] قبل يومين
+        [few] قبل { $n } أيام
+        [many] قبل { $n } يومًا
+       *[other] قبل { $n } يوم
+    }
+name-continue-reading = متابعة القراءة
+action-continue-reading = متابعة القراءة: المستندات على هذا الحاسوب التي لها موضع محفوظ، من أي حاسوب، الأحدث أولًا
+# The statistics list could not wait for the sync folder.
+stats-others-slow = تُركت الحواسيب الأخرى: المجلد بطيء.
+stats-untitled = مستند بلا عنوان
+# One computer's share of a document: $device, $time, $sessions.
+stats-computer =
+    { $sessions ->
+        [one] { $device }: { $time }، جلسة واحدة
+        [two] { $device }: { $time }، جلستان
+        [few] { $device }: { $time }، { $sessions } جلسات
+        [many] { $device }: { $time }، { $sessions } جلسة
+       *[other] { $device }: { $time }، { $sessions } جلسة
+    }
+stats-by-computer-off = كل حاسوب: مخفي. Enter يظهره.
+stats-by-computer-on = كل حاسوب: ظاهر. Enter يخفيه.
+
 ## التنقل. $dir هو next أو previous؛ $what اسم kind-* أو unit-*
 ## و$unit مفتاحه (heading، list-item، sentence)، للغات
 ## التي تحتاج كلماتها إلى مطابقة الاسم.
