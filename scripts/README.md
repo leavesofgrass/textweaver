@@ -141,17 +141,16 @@ Run every check CI runs, so contributors see CI's answer before they push:
 - clippy with warnings as errors;
 - the tests;
 - rustdoc with `-D warnings`;
-- `cargo xtask keyboard --check`;
+- `cargo xtask regen --check`: every generated file is current (the notices, the settings reference, `docs/keyboard.md`, the `docs/site` data, and the docs indexes and crate counts), one line each;
 - `tools/check_links.py`: every relative link and anchor in the docs resolves;
-- `tools/gen_site_data.py --check`: the data in the `docs/site` pages is current;
 - `tools/check_site_a11y.py`: static accessibility checks of the `docs/site` pages;
 - shellcheck or PSScriptAnalyzer on these scripts, when installed.
 
-The two Python steps need Python 3; without it they are skipped and the summary says so.
+The two Python steps need Python 3; without it they are skipped and the summary says so. On Windows the PowerShell script runs them with `py -3` when the launcher is installed.
 
 On Windows it uses `--features textweaver-speech/omnivox` instead of `--all-features`, and it also builds the 32-bit engine hosts. `--only fmt,clippy` runs some of the steps, and `--docker` runs everything in the development container.
 
-Three CI checks are not in dev-check: `cargo xtask deps --check`, `cargo xtask notices --check`, and cargo-deny. [Testing](../docs/dev/testing.md#the-checks) shows how to run them.
+Two CI checks are not in dev-check: `cargo xtask deps --check` and cargo-deny. [Testing](../docs/dev/testing.md#the-checks) shows how to run them.
 
 ### convert-folder.sh and convert-folder.ps1
 

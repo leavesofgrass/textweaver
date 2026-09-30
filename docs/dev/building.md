@@ -119,7 +119,7 @@ The `scripts/` folder has installers and helpers for every system. Each script h
 ## Repository layout
 
 - `crates/`: the Rust crates, one per job. [Architecture](architecture.md) describes each one, how they depend on each other, and how a document becomes speech.
-- `xtask/`: maintenance tasks, run as `cargo xtask bench`, `startup`, `soak`, `dist`, `gui-dist`, `appimage`, `release`, `listen`, `hosts`, `eci-host`, `sapi-host`, `keyboard`, `deps`, `docs`, `settings-doc`, `notices`, `fuzz-seed`, and `parity`.
+- `xtask/`: maintenance tasks, run as `cargo xtask bench`, `startup`, `soak`, `dist`, `gui-dist`, `appimage`, `release`, `listen`, `hosts`, `eci-host`, `sapi-host`, `regen`, `keyboard`, `deps`, `docs`, `settings-doc`, `notices`, `fuzz-seed`, and `parity`.
 - `scripts/`: installers, update, speech check, doctor, dev-check, and folder conversion.
 - `tools/`: helper programs, among them the link checker (`check_links.py`), the site data generator (`gen_site_data.py`), and the engine spikes.
 - `docs/`: user guides, contributor guides, the ADRs, and the interactive pages in `docs/site/`. Start at [the documentation index](../README.md).

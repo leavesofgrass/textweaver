@@ -72,7 +72,7 @@ On Windows:
 powershell -ExecutionPolicy Bypass -File scripts\dev-check.ps1
 ```
 
-It runs formatting, clippy with warnings as errors, the tests, rustdoc, the keyboard reference check, the link checker, and the site checks, and ends with a summary that says, in words, which steps passed and which failed. `--only fmt,clippy` runs some of the steps, and `--docker` runs everything in the Linux container. [Testing](docs/dev/testing.md) describes each check and the few that CI runs but the script does not.
+It runs formatting, clippy with warnings as errors, the tests, rustdoc, the check that every generated file is current (`cargo xtask regen --check`), the link checker, and the site accessibility checks, and ends with a summary that says, in words, which steps passed and which failed. `--only fmt,clippy` runs some of the steps, and `--docker` runs everything in the Linux container. [Testing](docs/dev/testing.md) describes each check and the few that CI runs but the script does not.
 
 If a check fails and you cannot see why, open the pull request anyway and say so. We would rather help than have you stuck.
 
@@ -107,7 +107,7 @@ The [architecture decision records](docs/adr/README.md) (ADRs) explain why the c
 1. For anything beyond a small fix, open an issue first and describe what you want to change.
 2. Fork the repository and make a branch for your change.
 3. Make the change, with a test that fails without it.
-4. Run the checks.
+4. If you changed a key, a setting, a dependency, or a crate, run `cargo xtask regen` to rebuild the generated files, and commit what changed. Then run the checks.
 5. Add a line to `CHANGELOG.md` under "Unreleased" for anything a user would notice.
 6. Open a pull request. The template asks what changed, why, and how you checked it.
 
@@ -137,7 +137,7 @@ A maintainer will review it. Reviews may ask for changes; that is normal, and no
 - Every doc ends with a "See also" section linking related docs and the [documentation index](docs/README.md). Guides link to the ADRs that decided them, and ADRs link back to the guides.
 - Keep links relative. `tools/check_links.py` must pass.
 - ADRs keep their decisions. When later work changes one, add a dated "Status update" line under its date instead of rewriting it.
-- Generated files are never edited by hand: `docs/keyboard.md` (`cargo xtask keyboard`), `docs/settings-reference.md` (`cargo xtask settings-doc`), and the data in `docs/site/*.html` (`py -3 tools/gen_site_data.py` on Windows, `python3 tools/gen_site_data.py` elsewhere).
+- Generated files are never edited by hand: `THIRD-PARTY-NOTICES.md`, `docs/keyboard.md`, `docs/settings-reference.md`, and the data in `docs/site/*.html`. `cargo xtask regen` rebuilds them all, in the right order; `cargo xtask regen --check` says which are out of date.
 
 ## Contributing with AI assistance
 

@@ -12,15 +12,6 @@ Sizes: small is a few hours; medium is about a day.
 
 ## Tooling and docs
 
-### Run the docs checks in dev-check
-
-Size: small. No Rust needed.
-
-CI runs `cargo xtask docs --check` and `cargo xtask settings-doc --check`, but the local check script does not, so a contributor can pass dev-check and still fail CI. [Testing](testing.md#the-checks) marks both "not yet in dev-check".
-
-- Where: `scripts/dev-check.sh` and `scripts/dev-check.ps1`. Copy how the `keyboard` step is written in each. Then update the step lists in [Testing](testing.md#the-checks) and `scripts/README.md`.
-- How to check: `scripts/dev-check.sh --only docs,settings-doc` (and the PowerShell script on Windows) prints both steps and passes. Break a "See also" heading in a guide on purpose, and the `docs` step fails.
-
 ### US English in the English interface
 
 Size: small. No Rust knowledge needed beyond editing strings.

@@ -28,24 +28,28 @@ The steps, in order:
 - **clippy**: `cargo clippy --workspace --all-targets` with the features for your system, and `-D warnings`. Every warning is an error.
 - **test**: `cargo test --workspace` with the same features.
 - **doc**: `cargo doc --workspace --no-deps` with `RUSTDOCFLAGS="-D warnings"`. The usual failures are a redundant link target (write ``[`X`]``, not ``[`X`](crate::X)``), a link to a private item from public docs, and square brackets in prose (put `[mm:ss]` or `[@key]` in backticks).
-- **keyboard**: `cargo xtask keyboard --check`. It fails when [docs/keyboard.md](../keyboard.md) is out of date. Regenerate it with `cargo xtask keyboard`; never edit it by hand.
 - **pseudo**: `cargo test -p textweaver-app --test pseudo_locale`. The interface in the pseudo-locales en-XA and ar-XB: it fails on any message that does not come from the translation catalog ([ADR-0030](../adr/0030-interface-translations.md)). CI runs it in the docs job.
+- **generated**: `cargo xtask regen --check`. Every generated file is current. It runs each check below, even after one fails, and reports each on one line, meaning first, such as "notices: pass" or "site data: FAIL, out of date; run cargo xtask regen". A check whose tool is missing (cargo-about, or Python) is reported as skipped. `--only keyboard` or `--only site` selects this step. The checks, in order:
+  - **notices**: `THIRD-PARTY-NOTICES.md` matches `cargo about` and the license files in `third_party/` (as `cargo xtask notices --check`). It needs `cargo-about`.
+  - **settings reference**: [the settings reference](../settings-reference.md) matches the settings schema (as `cargo xtask settings-doc --check`). It builds the app crate's `settings_reference` test.
+  - **keyboard**: [docs/keyboard.md](../keyboard.md) matches the keymap (as `cargo xtask keyboard --check`).
+  - **site data**: the data embedded in the `docs/site` pages matches `cargo metadata`, the keymap, and the theme files (as `tools/gen_site_data.py --check`, run with `py -3` on Windows and `python3` elsewhere).
+  - **docs**: the ADR index and the Decisions list in [docs/README.md](../README.md#decisions) list every ADR once, in number order; the crate counts match `crates/`; every guide ends with a "See also" section and is linked from the index (as `cargo xtask docs --check`).
+
+  Never edit a generated file by hand. After changing a key, a setting, a dependency, a crate, or the site's sources, run `cargo xtask regen` to rebuild them all, in the right order, and commit what changed. It rewrites the crate counts too, but an ADR list or a See also section it only reports, for you to fix by hand.
+
 The Python checks are written `python3` below. On Windows, run them with `py -3` instead (`py -3 tools/check_links.py`): `python` and `python3` there may be the Microsoft Store stub.
 
 - **links**: `python3 tools/check_links.py`. Every relative link and anchor in the Markdown docs and in `docs/site` must resolve.
-- **site**: `python3 tools/gen_site_data.py --check`. The data embedded in the `docs/site` pages must match `cargo metadata`, the keymap, and the theme files. Regenerate it with `python3 tools/gen_site_data.py`.
 - **site-a11y**: `python3 tools/check_site_a11y.py`. Static accessibility checks of the `docs/site` pages: language, title, one level-1 heading and no skipped levels, the skip link, landmarks, a label for every control, text alternatives, and references that resolve.
-- **docs** (in CI, not yet in dev-check): `cargo xtask docs --check`. The ADR index and the Decisions list in [docs/README.md](../README.md#decisions) list every ADR once, in number order; the crate counts match `crates/`; every guide ends with a "See also" section and is linked from the index.
-- **settings-doc** (in CI, not yet in dev-check): `cargo xtask settings-doc --check`. [The settings reference](../settings-reference.md) matches the settings schema. After adding or changing a setting, regenerate it with `cargo xtask settings-doc`; never edit it by hand.
 - **hosts32** (Windows only): the 32-bit engine hosts build.
 - **scripts**: shellcheck on the shell scripts, or PSScriptAnalyzer on the PowerShell scripts, when installed.
 
 Useful options: `--only fmt,clippy` runs some steps, `--fail-fast` stops at the first failure, and `--dry-run` prints the commands.
 
-CI also runs three checks that `dev-check` does not. Run them yourself when you change dependencies:
+CI also runs two checks that `dev-check` does not. Run them yourself when you change dependencies:
 
 - **deps**: `cargo xtask deps --check`. The dependency direction between the workspace crates ([docs/dev/architecture.md](architecture.md#dependency-direction)), with cargo features resolved: the reader built with `--no-default-features` must not reach the conversion and citation stack.
-- **notices**: `cargo xtask notices --check`. `THIRD-PARTY-NOTICES.md` is current. It needs `cargo-about`.
 - **deny**: `cargo deny check`. Licences, advisories, duplicate versions, and sources, from `deny.toml`.
 
 The writers' output is also checked by other tools, in `.github/workflows/second-tool.yml`. It runs weekly and on any change to the writers. The Markdown fixtures are converted to EPUB and PDF; each EPUB is checked with epubcheck 5.4.0, and each PDF with veraPDF 1.30.2 against the PDF/UA-1 profile. Both tools come from Maven Central, pinned and checked by SHA-256. Each line of the job summary starts with Pass, Fail, Allowed, or Warning, in words. A known warning that is accepted goes in `tools/second_tool_allowlist.txt`, with its reason.
