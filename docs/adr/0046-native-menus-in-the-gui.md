@@ -64,7 +64,7 @@ Every message the window says goes through `App::announce_as` with an `Importanc
 - The UI Automation report checks the menu bar's seven menus and their access keys, and every item's text and key as the window's menu holds them (read back with `GetMenuStringW`). Opening a menu needs the foreground, so `-Menus` (opening the first menu to read its items through UI Automation) is for a test machine.
 - The report also found that pressing a button through UI Automation brings the off-screen `--background` window to the front. It happens with a build from before the menus, so it is older than this work; the report shows it as a warning until it is fixed.
 - A debug build of Masonry writes a full trace log to the system's temporary folder on every start; the report now points the GUI's temporary folder at its own.
-- Browse files, batch conversion, audio export, and dictation appear in the menus as their modules register their handlers; their dialogs are built as each merges.
+- Commands appear in the menus as their modules register their handlers. Browse files (ADR-0045) and dictation (ADR-0042) have: the browser is the app's list in the window's list dialog, with its own keys asked of the app (`App::browse_list_key_for`) and Say Status previewing the focused row, and dictation needed nothing of the window. Batch conversion and audio export join as they merge.
 
 ## See also
 

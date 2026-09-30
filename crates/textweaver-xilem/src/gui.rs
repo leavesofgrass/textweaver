@@ -2256,6 +2256,15 @@ impl Gui {
     /// list's introduction, and the Repeat Message key says the last
     /// message, as in the terminal reader. Other chords do nothing there.
     fn list_chord(&mut self, ctx: &mut DriverCtx<'_>, chord: textweaver_app::keymap::KeyChord) {
+        // The file browser's own keys (choose this folder, sort, show all),
+        // asked of the app so the key and its name stay one (ADR-0045).
+        if let Some(key) = self.app.browse_list_key_for(&chord) {
+            if self.log {
+                crate::log::line(&format!("list chord {chord} -> browser {key:?}"));
+            }
+            self.list_key(ctx, key);
+            return;
+        }
         let action = self
             .app
             .keymap()
@@ -2264,6 +2273,10 @@ impl Gui {
             crate::log::line(&format!("list chord {chord} -> {action:?}"));
         }
         match action {
+            // In the file browser, Say Status previews the focused row.
+            Some(ActionId::SayStatus) if self.app.browse_location().is_some() => {
+                self.list_key(ctx, textweaver_app::ListKey::Details);
+            }
             Some(ActionId::Help | ActionId::SayStatus) => {
                 self.list_key(ctx, textweaver_app::ListKey::Introduce);
             }

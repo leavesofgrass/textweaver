@@ -868,6 +868,25 @@ mod tests {
         }
     }
 
+    /// Commands whose modules have merged appear in the window's menus as
+    /// they register their handlers: browse files (W6f), and dictation
+    /// (W6d) in a build with it. None is ever shown before it works.
+    #[test]
+    fn registered_modules_join_the_menus() {
+        let app = app();
+        let offered = commands(&tree(&app));
+        for &a in textweaver_app::menu::PENDING {
+            assert_eq!(
+                offered.contains(&a),
+                app.is_available(a),
+                "{a:?} is in the menus exactly when it works"
+            );
+        }
+        assert!(app.is_available(ActionId::BrowseFiles), "W6f registers it");
+        let file = &tree(&app)[0];
+        assert!(commands(std::slice::from_ref(file)).contains(&ActionId::BrowseFiles));
+    }
+
     #[test]
     fn picks_round_trip_through_their_ids() {
         for p in [
