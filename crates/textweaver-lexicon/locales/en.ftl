@@ -915,7 +915,7 @@ voice-download-stopped = The download stopped.
 voice-catalog-fetched = The Piper voice list has { $voices } voices in { $languages } languages. Choose Voice lists them.
 voice-catalog-failed = Could not download the voice list: { $error }.
 # $licence describes the voice's licence, in a sentence of its own.
-voice-installed = { $voice } is installed. { $license } Choose Voice lists it.
+voice-installed = { $voice } is installed. { $licence } Choose Voice lists it.
 voice-download-failed = Could not download { $voice }: { $error }.
 voice-only-voice-favourite = Only a voice can be a favorite.
 voice-favourite-added = { $voice } added to favorites.
