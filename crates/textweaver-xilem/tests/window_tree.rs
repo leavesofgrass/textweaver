@@ -888,6 +888,7 @@ fn screenshots_are_written_at_both_scales() {
             settings: false,
             home: Some(dir.path().join("home")),
             aids: false,
+            colors: false,
         };
         textweaver_xilem::screenshot::screenshot(&o).unwrap();
         let bytes = std::fs::read(dir.path().join(name)).unwrap();

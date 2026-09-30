@@ -281,6 +281,8 @@ pub(crate) enum ListKind {
     Palette(Vec<ActionId>),
     /// The menus, shown as a list (crate::menu).
     Menu,
+    /// A list only a frontend knows (the window's fonts; crate::frontend_list).
+    Frontend,
 }
 
 /// The application: the only owner of mutable state.
@@ -335,6 +337,8 @@ pub struct App {
     pub(crate) pending_confirm: Option<ActionId>,
     /// A checked settings import and its file name, waiting for a yes or no.
     pub(crate) pending_import: Option<(textweaver_store::ImportPlan, String)>,
+    /// The item chosen in a frontend's list (crate::frontend_list).
+    pub(crate) frontend_choice: Option<usize>,
     pub(crate) recovery: Vec<(PathBuf, RecoverySnapshot)>,
     pub(crate) untitled: u32,
     pub(crate) last_position_save: Option<(Instant, CharPos)>,
@@ -479,6 +483,7 @@ impl App {
             pending_item: None,
             pending_confirm: None,
             pending_import: None,
+            frontend_choice: None,
             recovery: Vec::new(),
             untitled: 0,
             last_position_save: None,
@@ -1423,6 +1428,7 @@ impl App {
             Some(ListKind::Settings) => return self.choose_setting(n),
             Some(ListKind::Languages(tags)) => return self.choose_language(&tags, n),
             Some(ListKind::Menu) => return self.menu_choose(n, true),
+            Some(ListKind::Frontend) => self.choose_frontend_item(n),
             Some(ListKind::Palette(actions)) => {
                 if let Some(&a) = actions.get(n) {
                     return self.run_command(a);

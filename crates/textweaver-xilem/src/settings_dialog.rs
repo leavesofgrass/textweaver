@@ -82,9 +82,41 @@ pub struct FormRow {
     pub kind: RowKind,
     /// The value as shown and said ("300 words per minute", "Galaxy").
     pub value_text: String,
+    /// A color setting's color, drawn as a sample beside its value (the
+    /// value says the color and its contrast in words, so the sample is
+    /// never the only cue); `None` for the theme's own color and other
+    /// settings.
+    pub swatch: Option<textweaver_app::theme::Rgb>,
+    /// A choice that also takes typed text (a color: a name or
+    /// `#rrggbb`): Enter types instead of stepping.
+    pub typed_choice: bool,
 }
 
 impl FormRow {
+    /// The row for a color setting (W6a6): its named color or `#rrggbb`,
+    /// its contrast where it is drawn as a ratio and a word ("blue,
+    /// contrast 4.8 to 1, good"), and a sample of the color.
+    pub fn for_color(setting: &Setting, value: &Value, app: &App, c: &Catalog) -> Self {
+        let mut row = FormRow::new(setting, value, c);
+        row.typed_choice = true;
+        row.swatch = value.as_str().and_then(|v| {
+            textweaver_app::theme::reading::parse_setting(v)
+                .ok()
+                .flatten()
+        });
+        if let Some((ratio, verdict)) = app.color_contrast(&setting.path) {
+            row.value_text = c.fmt(
+                "gui-colors-value",
+                &args![
+                    "value" => row.value_text.as_str(),
+                    "ratio" => decimal(c, ratio),
+                    "verdict" => verdict
+                ],
+            );
+        }
+        row
+    }
+
     /// The row for `setting` with its current `value`, in the catalog's
     /// language (W4d's labels, help, and values).
     pub fn new(setting: &Setting, value: &Value, c: &Catalog) -> Self {
@@ -106,13 +138,27 @@ impl FormRow {
             help: setting.help_in(c),
             kind,
             value_text: setting.describe_in(c, value),
+            swatch: None,
+            typed_choice: false,
         }
     }
 
     /// What the prompt starts with when this setting is typed (Enter).
     pub fn is_typed(&self) -> bool {
-        matches!(self.kind, RowKind::Number { .. } | RowKind::Text)
+        matches!(self.kind, RowKind::Number { .. } | RowKind::Text) || self.typed_choice
     }
+}
+
+/// A number with at most one decimal, in the catalog's form ("4.8" in
+/// English, "4,8" in German), as the app writes contrast ratios.
+fn decimal(c: &Catalog, x: f64) -> String {
+    let rounded = (x * 10.0).round() / 10.0;
+    let text = if rounded.fract() == 0.0 {
+        format!("{}", rounded as i64)
+    } else {
+        format!("{rounded:.1}")
+    };
+    text.replace('.', &c.tr("number-decimal-separator"))
 }
 
 /// A change asked for in the form.
@@ -134,6 +180,9 @@ pub struct SettingsForm {
     schema: SettingsSchema,
     /// Section titles ("Speech", "Display").
     pub sections: Vec<&'static str>,
+    /// The Colors dialog (View, Colors): one section of every color
+    /// setting, in the app's order (the spoken word first).
+    colors: bool,
 }
 
 impl SettingsForm {
@@ -146,7 +195,27 @@ impl SettingsForm {
                 sections.push(s.section);
             }
         }
-        SettingsForm { schema, sections }
+        SettingsForm {
+            schema,
+            sections,
+            colors: false,
+        }
+    }
+
+    /// The Colors dialog's form (W6a6): every color setting in one
+    /// section, the reading aids' highlights first
+    /// ([`textweaver_app::COLOR_SETTINGS`]).
+    pub fn colors(schema: SettingsSchema) -> Self {
+        SettingsForm {
+            schema,
+            sections: vec!["Colors"],
+            colors: true,
+        }
+    }
+
+    /// True for the Colors dialog's form.
+    pub fn is_colors(&self) -> bool {
+        self.colors
     }
 
     /// The settings in section `i`, in order.
@@ -154,6 +223,12 @@ impl SettingsForm {
         let Some(title) = self.sections.get(i) else {
             return Vec::new();
         };
+        if self.colors {
+            return textweaver_app::COLOR_SETTINGS
+                .iter()
+                .filter_map(|p| self.schema.get(p))
+                .collect();
+        }
         self.schema
             .visible()
             .filter(|s| s.section == *title)
@@ -170,12 +245,22 @@ impl SettingsForm {
         let c = app.catalog();
         self.settings_in(i)
             .into_iter()
-            .map(|s| FormRow::new(s, &app.setting_value(&s.path).unwrap_or(Value::Null), &c))
+            .map(|s| {
+                let value = app.setting_value(&s.path).unwrap_or(Value::Null);
+                if textweaver_app::is_color_setting(&s.path) {
+                    FormRow::for_color(s, &value, app, &c)
+                } else {
+                    FormRow::new(s, &value, &c)
+                }
+            })
             .collect()
     }
 
     /// Section `i`'s title in the catalog's language ("Speech").
     pub fn section_title(&self, i: usize, c: &Catalog) -> String {
+        if self.colors {
+            return c.tr("section-colors");
+        }
         self.settings_in(i).first().map_or_else(
             || self.sections.get(i).copied().unwrap_or_default().to_owned(),
             |s| s.section_in(c),
@@ -441,6 +526,11 @@ impl SettingsGrid {
     fn activate(&self, row: usize) -> Option<FormAction> {
         let r = self.rows.get(row)?;
         Some(match r.kind {
+            // A color: a name or `#rrggbb`, typed.
+            RowKind::Choice if r.typed_choice => FormAction::Edit {
+                row,
+                text: String::new(),
+            },
             RowKind::Toggle(_) | RowKind::Choice => FormAction::Change {
                 row,
                 change: FormChange::Step(true),
@@ -901,6 +991,23 @@ impl Widget for SettingsGrid {
                             paint_chevron(painter, p, Point::new(x - 14.0, mid), false);
                             paint_chevron(painter, p, Point::new(right - 7.0, mid), true);
                         }
+                        if let Some(rgb) = self.rows[i].swatch {
+                            // A sample of the color, outlined in the text
+                            // color so a light or dark one stays visible;
+                            // the value beside it says the color and its
+                            // contrast in words.
+                            let sample = Rect::new(x - 50.0, mid - 11.0, x - 28.0, mid + 11.0);
+                            painter
+                                .fill(RoundedRect::from_rect(sample, 3.0), theme::color(rgb))
+                                .draw();
+                            painter
+                                .stroke(
+                                    RoundedRect::from_rect(sample, 3.0),
+                                    &Stroke::new(1.5),
+                                    theme::color(p.text),
+                                )
+                                .draw();
+                        }
                     }
                 }
             }
@@ -1087,6 +1194,8 @@ mod tests {
             help: String::new(),
             kind: RowKind::Choice,
             value_text: value_text.into(),
+            swatch: None,
+            typed_choice: false,
         }
     }
 

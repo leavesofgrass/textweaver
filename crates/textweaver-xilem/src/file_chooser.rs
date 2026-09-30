@@ -1,5 +1,7 @@
 //! Open with the system's own file chooser (the owner's session 2,
-//! ADR-0033): the common item dialog (`IFileOpenDialog`) on Windows, which
+//! ADR-0033), and choose the file for exporting or importing settings
+//! (W6a6: a save dialog for export, an open dialog for import, both for
+//! TOML and JSON): the common item dialog (`IFileOpenDialog`) on Windows, which
 //! NVDA and JAWS know; the XDG desktop portal on Linux, over D-Bus loaded
 //! at run time (no GTK); the open panel on macOS. Through the `rfd` crate.
 //!
@@ -84,10 +86,31 @@ pub fn start_folder(document_key: Option<&str>) -> Option<PathBuf> {
         .flatten()
 }
 
+/// The filters for a settings file (W6a6): TOML and JSON, the two
+/// `export_settings` writes and `import_settings` reads, then every file.
+pub fn settings_filters(settings_files: &str, all_files: &str) -> Vec<Filter> {
+    vec![
+        Filter {
+            name: settings_files.to_owned(),
+            extensions: vec!["toml".to_owned(), "json".to_owned()],
+        },
+        Filter {
+            name: all_files.to_owned(),
+            extensions: vec!["*".to_owned()],
+        },
+    ]
+}
+
+/// The name an exported settings file is offered under: TOML, which reads
+/// and edits like `settings.toml`.
+pub const SETTINGS_FILE_NAME: &str = "textweaver-settings.toml";
+
 /// The dialog before it is shown: built on the window's thread, where the
 /// window's handle is read, and shown on its own thread.
 pub struct Chooser {
     dialog: rfd::FileDialog,
+    /// A save dialog (a new file's name) instead of an open one.
+    save: bool,
 }
 
 impl Chooser {
@@ -105,16 +128,31 @@ impl Chooser {
         if let Some(folder) = folder {
             dialog = dialog.set_directory(folder);
         }
-        Chooser { dialog }
+        Chooser {
+            dialog,
+            save: false,
+        }
+    }
+
+    /// A save dialog instead (`IFileSaveDialog` on Windows), offering
+    /// `file_name`; the system asks before replacing a file.
+    pub fn saving(mut self, file_name: &str) -> Chooser {
+        self.dialog = self.dialog.set_file_name(file_name);
+        self.save = true;
+        self
     }
 
     /// Shows the dialog on its own thread and calls `done` with the answer
     /// there, once it closes.
     pub fn show(self, done: impl FnOnce(FileChosen) + Send + 'static) {
-        let dialog = self.dialog;
+        let (dialog, save) = (self.dialog, self.save);
         std::thread::spawn(move || {
             let started = Instant::now();
-            let path = dialog.pick_file();
+            let path = if save {
+                dialog.save_file()
+            } else {
+                dialog.pick_file()
+            };
             done(FileChosen {
                 path,
                 elapsed: started.elapsed(),
@@ -147,6 +185,14 @@ mod tests {
         assert_eq!(f[1].extensions, vec!["*"]);
         // With no known formats, only every file.
         assert_eq!(filters(&[], "Documents", "All files").len(), 1);
+    }
+
+    #[test]
+    fn settings_files_are_toml_and_json() {
+        let f = settings_filters("Settings files", "All files");
+        assert_eq!(f[0].extensions, vec!["toml", "json"]);
+        assert_eq!(f[1].extensions, vec!["*"]);
+        assert!(SETTINGS_FILE_NAME.ends_with(".toml"));
     }
 
     #[test]

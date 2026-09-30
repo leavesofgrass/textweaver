@@ -193,6 +193,7 @@ fn main() {
                 settings: false,
                 home: args.home.clone(),
                 aids: false,
+                colors: false,
             };
             if let Err(e) = screenshot(&o) {
                 console::report_error(&e.to_string(), true);

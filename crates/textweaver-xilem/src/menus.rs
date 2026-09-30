@@ -155,6 +155,9 @@ fn entries(app: &App, items: &[MenuItem], depth: usize) -> Vec<Entry> {
             None => item.marked_label(),
         };
         match &item.kind {
+            // A command only the terminal has (line numbers, scrolling by
+            // lines) is left out of the window's menus.
+            MenuItemKind::Action(a) if !in_window(*a) => {}
             MenuItemKind::Action(a) => out.push(Entry::Item {
                 pick: Pick::Command(*a),
                 label: label(),
@@ -181,7 +184,28 @@ fn entries(app: &App, items: &[MenuItem], depth: usize) -> Vec<Entry> {
             MenuItemKind::Empty => out.push(Entry::Note(item.label.clone())),
         }
     }
-    out
+    // No separator first, last, or twice in a row (a command left out can
+    // leave one alone), as the model keeps them.
+    let mut tidy: Vec<Entry> = Vec::with_capacity(out.len());
+    for e in out {
+        if e == Entry::Separator && tidy.last().is_none_or(|l| *l == Entry::Separator) {
+            continue;
+        }
+        tidy.push(e);
+    }
+    if tidy.last() == Some(&Entry::Separator) {
+        tidy.pop();
+    }
+    tidy
+}
+
+/// True when the window runs `a` (every command but the few only the
+/// terminal has, [`crate::parity`]).
+pub fn in_window(a: ActionId) -> bool {
+    !matches!(
+        crate::parity::support(a),
+        crate::parity::Support::TerminalOnly(_)
+    )
 }
 
 /// What the menus show depends on: the settings (toggles, choices, the
@@ -727,7 +751,7 @@ mod tests {
         ours.dedup();
         let mut model: Vec<ActionId> = textweaver_app::menu::actions_in_menus()
             .into_iter()
-            .filter(|a| app.is_available(*a))
+            .filter(|a| app.is_available(*a) && in_window(*a))
             .collect();
         model.sort_by_key(|a| a.id());
         model.dedup();
