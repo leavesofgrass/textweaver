@@ -52,7 +52,7 @@ pub(crate) fn features() -> String {
 pub(crate) const PROFILE: &str = "dist";
 /// Where the licence files of bundled data go in the package: (source,
 /// path in the package). The notices file itself goes at the top.
-const LICENCE_FILES: [(&str, &str); 7] = [
+const LICENCE_FILES: [(&str, &str); 8] = [
     (
         "third_party/fonts/atkinson-hyperlegible-next/OFL.txt",
         "licenses/fonts/atkinson-hyperlegible-next/OFL.txt",
@@ -78,6 +78,7 @@ const LICENCE_FILES: [(&str, &str); 7] = [
         "third_party/lexicon/CMUDICT-LICENSE",
         "licenses/lexicon/CMUDICT-LICENSE",
     ),
+    ("third_party/lame/COPYING", "licenses/lame/COPYING"),
 ];
 /// Data files copied into the package: (source, path in the package). The
 /// define-word dictionary sits in `lexicon/` beside the programs, where

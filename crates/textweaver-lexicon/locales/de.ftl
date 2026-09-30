@@ -3358,13 +3358,17 @@ batch-thread-stopped = Die Stapelumwandlung hat unerwartet angehalten.
 ## format's name (FLAC, MP3); $voice a voice's or engine's name; $wpm is
 ## words per minute; $length a length of time from the duration-*
 ## messages; $chapters and $n are numbers; $percent is a multiple of ten;
-## $error is passed on as it is.
+## $formats lists format names (M4B); $error is passed on as it is.
 audio-format-title = Audio exportieren als
 audio-format-intro = { $name } als Audio exportieren: Format wählen, { $n } Möglichkeiten.
-audio-no-ffmpeg = MP3 und M4B brauchen ffmpeg, das nicht gefunden wurde.
+audio-no-ffmpeg =
+    { $formats } { $n ->
+        [one] braucht
+       *[other] brauchen
+    } ffmpeg, das nicht gefunden wurde.
 audio-format-flac = FLAC: verlustfrei, etwa halb so groß wie WAV
 audio-format-wav = WAV: am größten, läuft überall
-audio-format-mp3 = MP3, über ffmpeg
+audio-format-mp3 = MP3: klein, läuft überall
 audio-format-m4b = M4B-Hörbuch, über ffmpeg
 audio-where-title = Wohin das Audio kommt
 audio-where-intro = Wohin soll das Audio?

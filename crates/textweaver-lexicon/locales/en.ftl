@@ -3345,13 +3345,17 @@ batch-thread-stopped = Batch conversion stopped unexpectedly.
 ## format's name (FLAC, MP3); $voice a voice's or engine's name; $wpm is
 ## words per minute; $length a length of time from the duration-*
 ## messages; $chapters and $n are numbers; $percent is a multiple of ten;
-## $error is passed on as it is.
+## $formats lists format names (M4B); $error is passed on as it is.
 audio-format-title = Export audio as
 audio-format-intro = Export { $name } as audio: choose a format, { $n } choices.
-audio-no-ffmpeg = MP3 and M4B need ffmpeg, which was not found.
+audio-no-ffmpeg =
+    { $formats } { $n ->
+        [one] needs
+       *[other] need
+    } ffmpeg, which was not found.
 audio-format-flac = FLAC: lossless, about half the size of WAV
 audio-format-wav = WAV: the largest, plays everywhere
-audio-format-mp3 = MP3, through ffmpeg
+audio-format-mp3 = MP3: small, plays everywhere
 audio-format-m4b = M4B audiobook, through ffmpeg
 audio-where-title = Where the audio goes
 audio-where-intro = Where should the audio go?

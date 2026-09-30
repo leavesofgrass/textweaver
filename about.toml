@@ -16,6 +16,11 @@ accepted = [
     "CDLA-Permissive-2.0",
     "GPL-3.0-or-later",
     "ISC",
+    # LGPL-3.0: mp3lame-encoder and mp3lame-sys (LAME, built from source and
+    # linked statically, for MP3 export in process). Approved by the owner on
+    # Tuesday, September 29, 2026. It combines with GPL-3.0-or-later;
+    # THIRD-PARTY-NOTICES.md states the relinking obligation.
+    "LGPL-3.0",
     "MIT",
     "MPL-2.0",
     "Unicode-3.0",
