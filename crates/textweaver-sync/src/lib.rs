@@ -19,6 +19,10 @@
 //!   its own files, by atomic replace, and never deletes or changes another
 //!   computer's. Damaged files are skipped and reported; a newer format
 //!   makes sync read-only.
+//! - [`docid`]: document identity. Each document gets a random sync id,
+//!   found by the file's SHA-256, then the SHA-256 of its text, then its
+//!   library folder's id and path inside it; a DOI or ISBN is only
+//!   suggested. The local `sync-ids.json` maps path keys to sync ids.
 //! - [`Identity`]: this computer's random id and install token, in an
 //!   install marker in the local state folder that also catches a copied
 //!   state folder.
@@ -29,9 +33,11 @@
 //! sync folder. Nothing is encrypted (the owner's decision).
 //!
 //! This crate depends only on `textweaver-core` and `textweaver-store`
-//! among the workspace crates (checked by `cargo xtask deps --check`).
+//! among the workspace crates, and on sha2 for hashing (checked by
+//! `cargo xtask deps --check`).
 
 mod clock;
+pub mod docid;
 pub mod folder;
 mod identity;
 mod ids;
@@ -44,10 +50,12 @@ pub use identity::{
     DEFAULT_LABEL_WORD, Identity, IdentityEvent, MARKER_FILE, MAX_LABEL_CHARS, check_label,
     default_label, local_names,
 };
-pub use ids::{DeviceId, ID_HEX_DIGITS, InstallToken, SyncId};
+pub use docid::{Found, IdentityIndex, Identify, Resolved, Suggestion};
+pub use ids::{DeviceId, ID_HEX_DIGITS, InstallToken, LibraryId, SyncId};
 pub use merge::{AddWinsSet, ChangeKind, Counter, Maximum, Register, RegisterMap};
 pub use record::{
-    Change, DocRecord, DocStatsRecord, FORMAT, ItemKind, MergeReport, Place, Previous,
+    Change, DocIdentity, DocRecord, DocStatsRecord, FORMAT, ItemKind, MergeReport, Place, Previous,
+    RecentHashes,
 };
 
 /// Errors from sync.

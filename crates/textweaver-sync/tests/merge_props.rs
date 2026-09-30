@@ -21,6 +21,11 @@ enum Op {
     DeleteBookmark { id: u8 },
     Place { pos: u16 },
     Read { seconds: u16 },
+    /// Publishes content (0), text (1), or library (2) hash number `hash`;
+    /// there are more hashes than a record keeps, so trimming is tested.
+    Hash { kind: u8, hash: u8 },
+    /// Sets the title (0), DOI (1), or ISBN (2).
+    Detail { which: u8, value: u8 },
 }
 
 fn op() -> impl Strategy<Value = Op> {
@@ -31,6 +36,8 @@ fn op() -> impl Strategy<Value = Op> {
         (0..3u8).prop_map(|id| Op::DeleteBookmark { id }),
         any::<u16>().prop_map(|pos| Op::Place { pos }),
         any::<u16>().prop_map(|seconds| Op::Read { seconds }),
+        (0..3u8, 0..12u8).prop_map(|(kind, hash)| Op::Hash { kind, hash }),
+        (0..3u8, 0..3u8).prop_map(|(which, value)| Op::Detail { which, value }),
     ]
 }
 
@@ -88,6 +95,19 @@ fn record(dev: u8, ops: &[(u8, Op)]) -> DocRecord {
                 r.stats.seconds.add(d, u64::from(*seconds));
                 r.stats.sessions.add(d, 1);
                 r.stats.furthest_char.raise(u64::from(*seconds));
+            }
+            Op::Hash { kind, hash } => {
+                let h = format!("{hash:064x}");
+                let set = match kind {
+                    0 => &mut r.identity.content,
+                    1 => &mut r.identity.text,
+                    _ => &mut r.identity.library,
+                };
+                set.publish(&h, s);
+            }
+            Op::Detail { which, value } => {
+                let name = ["title", "doi", "isbn"][usize::from(*which) % 3];
+                r.identity.details.set(name, s, format!("v{value}"));
             }
         }
     }
