@@ -91,7 +91,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'install-windows.ps1 --from-source failed' }
           & powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1 -DryRun -Yes -Uninstall
           if ($LASTEXITCODE -ne 0) { throw 'install-windows.ps1 -Uninstall failed' }
-          $out = & powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1 --dry-run --yes --release v0.1.0-alpha.5 --gui
+          $out = & powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1 --dry-run --yes --release v0.1.0-alpha.6 --gui
           if ($LASTEXITCODE -ne 0) { throw 'install-windows.ps1 --gui failed' }
           $out
           foreach ($want in 'windows-x86_64-gui.zip', 'textweaver window.lnk') {
@@ -138,17 +138,17 @@ jobs:
         shell: bash
         run: |
           bash scripts/install-linux.sh --dry-run --yes --uninstall
-          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.5 | tee release.txt
-          grep -F 'textweaver-0.1.0-alpha.5-linux-x86_64' release.txt
+          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.6 | tee release.txt
+          grep -F 'textweaver-0.1.0-alpha.6-linux-x86_64' release.txt
           grep -F 'SHA256SUMS.txt' release.txt
-          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.5 --appimage | grep -F 'linux-x86_64.AppImage'
+          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.6 --appimage | grep -F 'linux-x86_64.AppImage'
           bash scripts/install-linux.sh --dry-run --yes --release latest | grep -F 'api.github.com'
           # --gui: the GUI package of the same kind, its link, and its menu
           # entry; and never from source.
-          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.5 --tarball --gui | tee gui.txt
-          grep -F 'textweaver-0.1.0-alpha.5-linux-x86_64-gui.tar.gz' gui.txt
+          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.6 --tarball --gui | tee gui.txt
+          grep -F 'textweaver-0.1.0-alpha.6-linux-x86_64-gui.tar.gz' gui.txt
           grep -F 'textweaver-gui.desktop' gui.txt
-          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.5 --appimage --gui | grep -F 'linux-x86_64-gui.AppImage'
+          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.6 --appimage --gui | grep -F 'linux-x86_64-gui.AppImage'
           if bash scripts/install-linux.sh --dry-run --yes --gui > /dev/null 2>&1; then echo 'Fail: --gui without --release should stop'; exit 1; fi
           bash scripts/install-linux.sh --dry-run --yes --uninstall | grep -F 'textweaver-gui'
           bash scripts/doctor.sh --dry-run
@@ -165,8 +165,8 @@ jobs:
         run: |
           /bin/bash --version | head -n 1
           /bin/bash scripts/install-macos.sh --dry-run --yes
-          /bin/bash scripts/install-macos.sh --dry-run --yes --release v0.1.0-alpha.5
-          /bin/bash scripts/install-macos.sh --dry-run --yes --release v0.1.0-alpha.5 --gui | grep -F 'macos-universal-gui.zip'
+          /bin/bash scripts/install-macos.sh --dry-run --yes --release v0.1.0-alpha.6
+          /bin/bash scripts/install-macos.sh --dry-run --yes --release v0.1.0-alpha.6 --gui | grep -F 'macos-universal-gui.zip'
           /bin/bash scripts/install-macos.sh --dry-run --yes --from-source
           /bin/bash scripts/install-macos.sh --dry-run --yes --uninstall
           /bin/bash scripts/doctor.sh

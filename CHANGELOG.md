@@ -4,6 +4,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+## [0.1.0-alpha.6] - 2026-09-30
+
 ### Keys: what changed
 
 - **F10 opens the menus** in the terminal, in every preset, as F10 does in Windows programs. Previous chapter, which had F10, keeps `Alt+PageUp` and `Shift+D` (browse).
@@ -499,6 +501,7 @@ The first release with downloadable packages: Windows (x86_64) and macOS (univer
 - `tw`, the command-line tool: `text`, `info`, `search`, `speak`, `voices`, and `backends`.
 - Speech backends: espeak-ng (Linux), Omnivox, and a silent backend.
 
+[0.1.0-alpha.6]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.6
 [0.1.0-alpha.5]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.5
 [0.1.0-alpha.4]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.4
 [0.1.0-alpha.3]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.3
