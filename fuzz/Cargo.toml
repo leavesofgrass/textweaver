@@ -42,6 +42,8 @@ textweaver-cite = { path = "../crates/textweaver-cite" }
 textweaver-theme = { path = "../crates/textweaver-theme" }
 textweaver-lexicon = { path = "../crates/textweaver-lexicon" }
 textweaver-vault = { path = "../crates/textweaver-vault" }
+# S1: the sync record reader (ADR-0049).
+textweaver-sync = { path = "../crates/textweaver-sync" }
 # The JSON-RPC server, without the conversion and citation stack. It links
 # the audio output, which needs the ALSA headers (libasound2-dev) on Linux,
 # so it is behind the `rpc` feature and the other targets build without it.
@@ -289,6 +291,15 @@ bench = false
 [[bin]]
 name = "pdf_annots"
 path = "fuzz_targets/pdf_annots.rs"
+test = false
+doc = false
+bench = false
+
+# S1: the sync record reader (ADR-0049).
+
+[[bin]]
+name = "sync_record"
+path = "fuzz_targets/sync_record.rs"
 test = false
 doc = false
 bench = false

@@ -262,7 +262,6 @@ impl DocRecord {
             Previous::Highlight,
         ));
         self.stats.merge(&other.stats);
-        self.format = FORMAT;
         Ok(report)
     }
 
@@ -305,9 +304,11 @@ impl DocRecord {
                 found: u32::try_from(format).unwrap_or(u32::MAX),
             });
         }
-        let record: DocRecord =
+        let mut record: DocRecord =
             serde_json::from_value(value).map_err(|e| SyncError::Damaged(e.to_string()))?;
         record.validate()?;
+        // An older record is read as this format; it is written back as one.
+        record.format = FORMAT;
         Ok(record)
     }
 
