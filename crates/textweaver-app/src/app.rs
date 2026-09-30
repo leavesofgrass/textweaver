@@ -283,6 +283,10 @@ pub(crate) enum ListKind {
     Menu,
     /// The file browser; its rows are in `App::browse` (crate::browse).
     Browse,
+    /// A batch conversion list: the formats, where the files go, or the
+    /// failures.
+    #[cfg_attr(not(feature = "publish"), allow(dead_code))]
+    Batch(crate::batch::BatchList),
 }
 
 /// The application: the only owner of mutable state.
@@ -423,6 +427,9 @@ pub struct App {
     pub(crate) dictation: crate::dictation::DictationSlot,
     /// The file browser's place, rows, and preview (crate::browse).
     pub(crate) browse: crate::browse::BrowseState,
+    /// Batch conversion: its questions and the run (File, Batch convert).
+    #[cfg_attr(not(feature = "publish"), allow(dead_code))]
+    pub(crate) batch: crate::batch::BatchState,
     /// Moves on when a list, prompt, or menu closes (crate::announce).
     pub(crate) dialog_generation: u64,
     /// What frontends ask for every frame, kept per revision
@@ -527,6 +534,7 @@ impl App {
             menu: crate::menu::MenuState::default(),
             dictation: crate::dictation::DictationSlot::default(),
             browse: crate::browse::BrowseState::new(),
+            batch: crate::batch::BatchState::default(),
             dialog_generation: 0,
             frame_cache: crate::frame_cache::FrameCaches::default(),
         };
@@ -534,6 +542,7 @@ impl App {
         app.apply_voice_settings();
         app.load_themes();
         crate::dictation::register(&mut app);
+        crate::batch::register(&mut app);
         app
     }
 
@@ -567,6 +576,7 @@ impl App {
             || self.study.question.is_some()
             || self.voices.question.is_some()
             || self.dictation.question
+            || self.batch_question()
     }
 
     /// Answers a pending confirmation.
@@ -592,6 +602,9 @@ impl App {
         }
         if self.dictation.question {
             return self.confirm_dictation(answer);
+        }
+        if self.batch_question() {
+            return self.confirm_batch(answer);
         }
         if let Some((kind, n)) = self.pending_list_delete.clone() {
             return match answer {
@@ -1234,6 +1247,11 @@ impl App {
                 if self.opening.is_some() && !self.mode.is_prompt() && self.list.is_none() {
                     return self.cancel_opening();
                 }
+                // Escape while a batch converts, with nothing else open:
+                // asks before stopping it.
+                if self.batch_running() && !self.mode.is_prompt() && self.list.is_none() {
+                    return self.ask_stop_batch();
+                }
                 if self.mode.is_prompt() && self.prompt_purpose == PromptPurpose::SettingValue {
                     self.leave_prompt();
                     return self.cancel_setting_value();
@@ -1290,6 +1308,7 @@ impl App {
         effects.extend(self.define_tick());
         effects.extend(self.voices_tick());
         effects.extend(self.dictation_tick());
+        effects.extend(self.batch_tick(now));
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
         effects.extend(self.authoring_tick(now));
         if rsvp_moved && effects.is_empty() {
@@ -1461,6 +1480,7 @@ impl App {
             Some(ListKind::Languages(tags)) => return self.choose_language(&tags, n),
             Some(ListKind::Menu) => return self.menu_choose(n, true),
             Some(ListKind::Browse) => return self.browse_choose(n),
+            Some(ListKind::Batch(l)) => return self.choose_batch(l, n),
             Some(ListKind::Palette(actions)) => {
                 if let Some(&a) = actions.get(n) {
                     return self.run_command(a);

@@ -1449,34 +1449,34 @@ mod tests {
         );
     }
 
-    /// With a command still pending: the file browser registers itself
-    /// since W6f, so this uses batch conversion; the agent that registers
-    /// that one picks another.
+    /// With a command still pending: the file browser (W6f) and batch
+    /// conversion (W6k) register themselves, so this uses audio export;
+    /// the agent that registers that one picks another.
     #[test]
     fn a_registered_handler_shows_and_runs() {
         fn handler(app: &mut App) -> Vec<Effect> {
-            app.tell("Converting.");
+            app.tell("Exporting.");
             vec![Effect::Redraw]
         }
         let mut app = App::new(crate::AppConfig::for_tests());
-        assert!(!app.is_available(A::BatchConvert));
+        assert!(!app.is_available(A::ExportAudio));
         let file = app.menu_view(MenuId::File);
         assert!(
             !file
                 .items
                 .iter()
-                .any(|i| i.kind == MenuItemKind::Action(A::BatchConvert))
+                .any(|i| i.kind == MenuItemKind::Action(A::ExportAudio))
         );
-        app.register_handler(A::BatchConvert, handler);
-        assert!(app.is_available(A::BatchConvert));
+        app.register_handler(A::ExportAudio, handler);
+        assert!(app.is_available(A::ExportAudio));
         let file = app.menu_view(MenuId::File);
         assert!(
             file.items
                 .iter()
-                .any(|i| i.kind == MenuItemKind::Action(A::BatchConvert))
+                .any(|i| i.kind == MenuItemKind::Action(A::ExportAudio))
         );
-        app.dispatch(Command::Action(A::BatchConvert));
-        assert_eq!(app.status_text(), "Converting.");
+        app.dispatch(Command::Action(A::ExportAudio));
+        assert_eq!(app.status_text(), "Exporting.");
     }
 
     /// Each menu stays short enough to hear through (about 20 items).

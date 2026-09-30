@@ -3257,3 +3257,57 @@ browse-preview-other = { $name }, { $size }; textweaver no puede leer este tipo 
 browse-preview-path = { $path }
 
 ## End of W6f
+
+## W6k: batch conversion (File, Batch convert). Keep the meaning first.
+batch-choose-source = Elija la carpeta que desea convertir
+batch-choose-output = Elija la carpeta para los archivos convertidos
+batch-format-title = Convertir a
+batch-format-intro = Convertir { $name } a: elija un formato, { $n } opciones.
+batch-where-title = Dónde van los archivos
+batch-where-intro = ¿Dónde deben ir los archivos convertidos?
+batch-where-converted = En una carpeta converted, { $path }
+batch-where-beside = Junto a cada archivo
+batch-where-choose = En otra carpeta, que elegirá a continuación
+batch-nothing = No hay documentos que convertir en { $path }.
+batch-confirm =
+    ¿Convertir { $n ->
+        [one] 1 archivo
+       *[other] { $n } archivos
+    } a { $format } en { $path }? y o n
+batch-confirm-beside =
+    ¿Convertir { $n ->
+        [one] 1 archivo
+       *[other] { $n } archivos
+    } a { $format } junto a cada archivo? y o n
+batch-started =
+    Convirtiendo { $n ->
+        [one] 1 archivo
+       *[other] { $n } archivos
+    } a { $format }. Escape detiene.
+batch-progress = { $percent } por ciento convertido, { $done } de { $total } archivos.
+batch-busy = Ya se está convirtiendo, { $done } de { $total } archivos. Escape detiene.
+batch-stop-question = ¿Detener la conversión? Los archivos ya hechos se conservan. y o n
+batch-stopping = Se detendrá tras los archivos que se están escribiendo.
+batch-still-converting = La conversión continúa.
+batch-done =
+    { $converted ->
+        [one] 1 archivo convertido
+       *[other] { $converted } archivos convertidos
+    } a { $format }; { $skipped } al día; { $failed } con error.
+batch-stopped =
+    Detenido. { $converted ->
+        [one] 1 archivo convertido
+       *[other] { $converted } archivos convertidos
+    }; { $left } sin convertir; { $failed } con error.
+batch-report = La lista se guardó en { $path }.
+batch-report-failed = No se pudo guardar la lista: { $error }
+batch-failures-title =
+    { $n ->
+        [one] 1 archivo con error
+       *[other] { $n } archivos con error
+    }
+batch-failure-item = { $name }: { $reason }
+batch-start-failed = No se pudo empezar a convertir: { $error }
+batch-thread-stopped = La conversión por lotes se detuvo de forma inesperada.
+
+## End of W6k
