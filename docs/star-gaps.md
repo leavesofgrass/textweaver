@@ -19,7 +19,7 @@ Star's reading aids are described in its "Accessibility and WCAG reading aids" n
 - **Reading ruler.** A band that follows the caret line. Status: done.
 - **Text spacing** (WCAG 1.4.12): line height and letter and word spacing. Status: done. The terminal reader approximates it with blank lines and spaces.
 - **Bionic reading:** word starts in bold. Status: done.
-- **Syllable splitting:** `read·a·bil·i·ty`, shown only, by rule rather than dictionary. Status: done in the terminal reader (Alt+Shift+Z); not yet drawn in the GUI.
+- **Syllable splitting:** `read·a·bil·i·ty`, shown only, by rule rather than dictionary. Status: done, in the terminal reader (Alt+Shift+Z) and drawn in the GUI.
 - **Current-line highlight.** Status: done.
 - **Reading fonts:** OpenDyslexic, Atkinson Hyperlegible, and Lexend. Status: partly. OpenDyslexic and Atkinson Hyperlegible Next and Mono are bundled, used for PDF and EPUB output, and loaded directly for the GUI, where a font-choice key cycles them. Lexend must still be installed by hand; downloading it on first choice is not yet planned.
 
@@ -44,10 +44,10 @@ Star's reading aids are described in its "Accessibility and WCAG reading aids" n
 
 ## Medium priority
 
-- **Formats:** spreadsheets (XLSX, CSV, and TSV, as tables) are done. Notebooks and source code as structured documents are not planned; source code still opens as plain text.
+- **Formats:** spreadsheets (XLSX, CSV, and TSV, as tables) are done. Jupyter notebooks open natively, cell by cell ([ADR-0044](adr/0044-obsidian-json-svg-and-content-mathml.md)). Source code as a structured document is not planned; it still opens as plain text.
 - **Summarize:** extractive, with LexRank, no downloaded model. Status: done (`tw summarize`, and Summarize in the command palette; [ADR-0037](adr/0037-extractive-summaries.md)).
 - **Translate a document.** Status: missing.
-- **Difficult-word overlay,** by word frequency. Status: done in the terminal reader (Alt+Shift+J), on SCOWL's word levels; not yet drawn in the GUI.
+- **Difficult-word overlay,** by word frequency. Status: done, in the terminal reader (Alt+Shift+J) and drawn in the GUI, on SCOWL's word levels.
 - **Reading statistics:** time read, progress, and sessions. Status: done: time read aloud, the furthest point, and sessions per document, with a most-read list (Ctrl+Shift+Y or Alt+Y), `tw stats`, an opt-out, and Star's statistics imported ([reading.md](reading.md#reading-statistics-ctrlshifty-or-alty)).
 - **Settings profiles:** named sets of voice, theme, and spacing settings, with import and export. Status: done: named profiles of voice, rate, theme, font, spacing, highlight, and access mode, switched, saved, renamed, deleted, imported, and exported in the reader (Ctrl+Shift+U or Alt+U) and with `tw settings profile` ([settings.md](settings.md#settings-profiles)). `tw migrate-star` imports Star's profiles ([library.md](library.md#import-from-star-tw-migrate-star)).
 - **Piper neural voices,** with a catalog of voices to download, and a voice manager that lists, previews, and marks favorites. Status: done for voices: Piper voices run in process on a pure-Rust ONNX runtime, with word timing read from the model ([ADR-0023](adr/0023-in-process-neural-speech.md)); Choose voice (Alt+V) lists them, speaks a sample, and marks favorites, which are listed first. A voice manager that covers every engine in the GUI is not yet built; the terminal's choose-voice list already covers all engines.
