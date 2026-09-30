@@ -97,7 +97,7 @@ Rate is in words per minute, DECtalk's own unit, from 75 to 600. Pitch raises or
 
 ## About the free DECtalk source
 
-A DECtalk source tree is published on GitHub. Its own licence says the code belongs to Fonix and may be used only under a written licence from them, so textweaver does not include it, build it, or test against it. If you point textweaver at a DECtalk library, that choice, and the licence it needs, are yours.
+A DECtalk source tree is published on GitHub. Its own license says the code belongs to Fonix and may be used only under a written license from them, so textweaver does not include it, build it, or test against it. If you point textweaver at a DECtalk library, that choice, and the license it needs, are yours.
 
 ## See also
 

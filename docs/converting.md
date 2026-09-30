@@ -95,7 +95,7 @@ Only the folder itself is watched, not its subfolders.
 Markdown comes in dialects. Choose yours with `--flavor`:
 
 - `gfm`, the default: GitHub Flavored Markdown. Tables, task lists, strikethrough, web addresses that become links by themselves, footnotes, and alerts such as `> [!NOTE]`.
-- `obsidian`: everything in GFM, plus Obsidian's own syntax. `[[Note]]` links to `Note.html`, `[[Note#Heading]]` links to that heading, and `[[Note|text]]` shows your own link text. `![[picture.png|description]]` shows a picture with that description as its alternative text. `![[Note]]` is a link to the note, or, with `--embeds inline`, the note's text itself. Callouts such as `> [!tip] Remember` become labelled notes; a callout with a minus sign after the type becomes a section you can expand and collapse. `#tags`, `==highlights==`, and block references (`^id`) work too.
+- `obsidian`: everything in GFM, plus Obsidian's own syntax. `[[Note]]` links to `Note.html`, `[[Note#Heading]]` links to that heading, and `[[Note|text]]` shows your own link text. `![[picture.png|description]]` shows a picture with that description as its alternative text. `![[Note]]` is a link to the note, or, with `--embeds inline`, the note's text itself. Callouts such as `> [!tip] Remember` become labeled notes; a callout with a minus sign after the type becomes a section you can expand and collapse. `#tags`, `==highlights==`, and block references (`^id`) work too.
 - `pandoc`: Pandoc's Markdown. Definition lists, fenced divs (`::: warning`), spans with classes (`[text]{.smallcaps}`), heading ids (`# Title {#intro}`), citations such as `[@doe99, p. 33]` (see [Citations](#citations) below), `H~2~O` and `2^10^`, and a title block (`% Title`, `% Author`, `% Date`).
 - `commonmark`: plain CommonMark, with no extensions.
 
@@ -211,7 +211,7 @@ Every template adds a cover to an EPUB book: an image with the title and author 
 
 ### Print page numbers in PDF
 
-When a document has print page numbers, as a DAISY book, an EPUB with a page list, or a scanned PDF does, each page of the PDF is labelled with the print page its first line belongs to, the way a printed book numbers its pages. A PDF reader's "go to page" then takes the print page number and opens the page where that print page is under way, and "Page 3 of 20, print page 42" appears at the foot of the page. A title page and table of contents before the first print page are numbered i, ii, and so on.
+When a document has print page numbers, as a DAISY book, an EPUB with a page list, or a scanned PDF does, each page of the PDF is labeled with the print page its first line belongs to, the way a printed book numbers its pages. A PDF reader's "go to page" then takes the print page number and opens the page where that print page is under way, and "Page 3 of 20, print page 42" appears at the foot of the page. A title page and table of contents before the first print page are numbered i, ii, and so on.
 
 ## PDF and EPUB layout
 
@@ -239,7 +239,7 @@ Links in a PDF work: web and email links open, and links to a heading in the sam
 
 Struck-through text, such as `~~old plan~~` in Markdown, is drawn with a line through it. Screen readers still read the words.
 
-For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the book, with its licence, and make it the book's font. Reading apps may still let you choose another. Fonts installed on your computer cannot be put into a book, because their licences may not allow it.
+For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the book, with its license, and make it the book's font. Reading apps may still let you choose another. Fonts installed on your computer cannot be put into a book, because their licenses may not allow it.
 
 ## Other options
 
@@ -397,7 +397,7 @@ PDF files are read with column-aware reading order: running headers and page num
 
 A scanned PDF has pictures of pages instead of text. textweaver recognizes the text in them (optical character recognition, OCR), and then reads the pages like any other PDF, with headings, paragraphs, and page numbers. Pictures (PNG and JPEG) are read the same way. Recognized text can contain mistakes, so textweaver says when a document was recognized.
 
-- **English** is read inside textweaver, by the ocrs engine. Its models are a one-time download of 12.2 MB, under the CC BY-SA 4.0 licence. Run `tw ocr download`; it says what it will download and asks first. `tw ocr status` says what is ready.
+- **English** is read inside textweaver, by the ocrs engine. Its models are a one-time download of 12.2 MB, under the CC BY-SA 4.0 license. Run `tw ocr download`; it says what it will download and asks first. `tw ocr status` says what is ready.
 - **Other languages** are read by Tesseract, a free program you install yourself, with the data for your language. Set the language with `ocr_lang` in the `[reading]` section of the settings, for example `ocr_lang = "fra"` for French, or `"deu+eng"` for German and English. When a PDF names its own language, that is used.
 - `ocr_engine` chooses the engine: `auto` (the default), `ocrs`, `tesseract`, or `paddle` (an experimental in-process engine for accented Latin-script languages; download it with `tw ocr download paddle-latin`). `ocr = false` turns recognition off.
 - `tw ocr read scan.pdf` recognizes a file and prints its text, with progress. Press Control C to stop it.
@@ -446,7 +446,7 @@ Two cases are refused before converting:
 - [Math](math.md): how LaTeX and ASCIIMath are read aloud and turned into MathML.
 - [Citations](citations.md): the reference library behind Pandoc citations.
 - [Writing and editing](editing.md): listening to the rendered text while you write.
-- [Themes](themes.md): the colours HTML output uses.
+- [Themes](themes.md): the colors HTML output uses.
 - [Audio export](audio-export.md): turning a document into an audiobook instead.
 - [scripts/README.md](../scripts/README.md#convert-foldersh-and-convert-folderps1): the convert-folder helper scripts.
 - [ADR-0016: Rendering and bulk conversion](adr/0016-rendering-and-conversion.md): how conversion works and how fast it is.

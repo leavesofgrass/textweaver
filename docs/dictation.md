@@ -344,7 +344,7 @@ textweaver can run Whisper itself, with no Whisper program, on RTen, a model run
 - `onnx/decoder_model_merged_int8.onnx` (54 MB);
 - `tokenizer.json` (2.4 MB).
 
-The licence is MIT, from OpenAI. textweaver does not download them for you yet.
+The license is MIT, from OpenAI. textweaver does not download them for you yet.
 
 When the folder holds them, `tw dictate` uses them without being asked. `--engine rten` asks for them, and `--model-dir DIR` names another folder (`tw dictate --model-dir D:\Models\whisper-tiny.en`).
 

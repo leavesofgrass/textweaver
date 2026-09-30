@@ -28,11 +28,12 @@ With `"auto"`, textweaver uses the available engine with the highest priority. F
 1. `eci`, 1000;
 2. `sapi`, 500;
 3. `dectalk`, 300;
-4. `nsspeech`, 80, and `avspeech`, 70;
-5. `espeak`, 50;
-6. `speechd`, 45;
-7. `omnivox`, 40;
-8. `null`, last.
+4. `piper`, 200;
+5. `nsspeech`, 80, and `avspeech`, 70;
+6. `espeak`, 50;
+7. `speechd`, 45;
+8. `omnivox`, 40;
+9. `null`, last.
 
 So an installed, licensed Eloquence is always the first choice. On macOS, `[speech.apple] backend` can put `avspeech` above `nsspeech`, or the other way round.
 
@@ -105,7 +106,7 @@ To write a whole document to an audio file with subtitles, use `tw export-audio`
 
 ## Choose a voice in the reader: Alt+V
 
-Press **Alt+V**. The GUI uses **Ctrl+Shift+V**. This opens the voice manager. You hear "Voice manager", how many voices are shown and which language and engine, then "Enter uses a voice and speaks a sample, or downloads one; Space marks a favourite; Delete removes a downloaded voice; Escape closes."
+Press **Alt+V**. The GUI uses **Ctrl+Shift+V**. This opens the voice manager. You hear "Voice manager", how many voices are shown and which language and engine, then "Enter uses a voice and speaks a sample, or downloads one; Space marks a favorite; Delete removes a downloaded voice; Escape closes."
 
 This is the voice for reading documents. textweaver's own words (messages, lists, help, and settings) have a separate choice, the interface language, in six languages: English, Spanish, French, German, Brazilian Portuguese, and Arabic. `[speech.voices_by_language]` picks which voice speaks each interface language, so switching the interface to Spanish can switch to a Spanish voice automatically. See [`[interface] language`](settings.md#interface) in the settings guide for how to choose it and how textweaver falls back when no voice exists for it.
 
@@ -113,14 +114,14 @@ The list holds:
 
 - **Language: all languages.** Press Enter to show only the next language, then the next, and back to all. You hear, for example, "3 voices: English, all engines."
 - **Engine: all engines.** Press Enter to show only one engine's voices, in the same way.
-- **The voices.** Each says its name, language, engine, and tags; a favourite says "favourite", and the one in use says "current". Favourites come first. The list holds the running engine's voices and the Piper voices you have downloaded. Once you have fetched the Piper voice list, it also holds the Piper voices you can download, each with its size and "non-commercial" when its licence says so.
+- **The voices.** Each says its name, language, engine, and tags; a favorite says "favorite", and the one in use says "current". Favorites come first. The list holds the running engine's voices and the Piper voices you have downloaded. Once you have fetched the Piper voice list, it also holds the Piper voices you can download, each with its size and "non-commercial" when its license says so.
 - **Fetch the Piper voice list from the internet.** Press Enter, then y, to download the list of Piper voices (about 250 KB).
 
 Press **Enter** on a voice. You hear "Voice", its name, then a sample: "The quick brown fox jumps over the lazy dog." The choice is saved in `[speech] voice`. A voice of another engine switches engine: you hear "Switching engine", and speech restarts with that voice.
 
 **Each voice keeps its own rate and pitch**, as screen readers do. Change the rate on one voice, choose another, and come back: the first voice has its rate again. They are saved in `[speech.voice_params]`.
 
-Press **Space** on a voice to make it a favourite, or to stop it being one. You hear, for example, "Microsoft Zira added to favourites." Favourites are listed first, in the order you added them, and are saved in `[speech] favorite_voices`.
+Press **Space** on a voice to make it a favorite, or to stop it being one. You hear, for example, "Microsoft Zira added to favorites." Favorites are listed first, in the order you added them, and are saved in `[speech] favorite_voices`.
 
 An engine with no voice list says "This speech engine has no voices to choose from."
 
@@ -137,7 +138,7 @@ Piper voices are neural voices: natural-sounding, and each a file of 20 to 140 M
 3. Press Enter on a voice to download. textweaver reads the voice's details and says, for example: "Download Joe, English (United States), medium quality, 63 MB? Licence: CC0. Free to use for anything. y or n". Answer y. You hear progress at each quarter, then "Joe is installed."
 4. Press Enter on the new voice to use it.
 
-**Licences differ from voice to voice.** Some are free for anything (`joe` is CC0; `kristin`, `norman`, and `cori` are public domain), some ask for credit (`libritts_r` is CC BY), and some are for personal, non-commercial use only (`lessac`, `ryan`, `hfc_female`). textweaver says the licence before every download and does not ship any voice itself.
+**Licenses differ from voice to voice.** Some are free for anything (`joe` is CC0; `kristin`, `norman`, and `cori` are public domain), some ask for credit (`libritts_r` is CC BY), and some are for personal, non-commercial use only (`lessac`, `ryan`, `hfc_female`). textweaver says the license before every download and does not ship any voice itself.
 
 Every file is checked against the hash Hugging Face publishes for it; a file that does not match is deleted and nothing is installed. Voices are kept in `<data>/piper/voices/`. To remove one, press Delete on it in the voice manager and answer y.
 
@@ -228,7 +229,7 @@ verbosity = "normal"
 - `pitch`: semitones, -12 to 12.
 - `voice`: the voice, by id or name. It has no default; it is left out until you choose one.
 - `prefer_voice`: part of a voice name to prefer when no voice is chosen. `""` means no preference.
-- `favorite_voices`: your favourite voices, by id or name, listed first by Choose voice (**Alt+V**).
+- `favorite_voices`: your favorite voices, by id or name, listed first by Choose voice (**Alt+V**).
 - `punctuation`: how much punctuation is spoken. `"none"` speaks none; it only shapes the voice. `"some"` speaks marks that carry meaning in prose, such as `@`, `#`, and `/`. `"all"` speaks every mark. **Alt+Shift+N** cycles it while textweaver runs.
 - `split_caps`: speak the parts of words written in mixed capitals separately: "camelCase" as "camel Case", "XMLHttpRequest" as "XML Http Request".
 - `caps`: how a capital letter is marked when a single character is spoken: `"pitch"`, `"tone"`, `"say_cap"`, or `"none"`. See [Writing and editing](editing.md).
@@ -402,7 +403,7 @@ Speech Dispatcher also reads `SPEECHD_ADDRESS`, as its own programs do.
 
 These are read only by the automated tests, to run them against real engines or test helpers: `TEXTWEAVER_ECI`, `TEXTWEAVER_SAPI`, `TEXTWEAVER_DECTALK`, `TEXTWEAVER_APPLE`, `TEXTWEAVER_SPEECHD`, `TEXTWEAVER_ECI_TEST_HOST`, `TEXTWEAVER_DECTALK_TEST_HOST`, and `TEXTWEAVER_DECTALK_TEST_LIBRARY`.
 
-Other variables textweaver reads: `TEXTWEAVER_HOME` (where its files are; see [the library guide](library.md)), `TEXTWEAVER_LOG` (the log level; see [Troubleshooting](troubleshooting.md)), and `TEXTWEAVER_COLOR` (the colour level; see [Themes](themes.md)).
+Other variables textweaver reads: `TEXTWEAVER_HOME` (where its files are; see [the library guide](library.md)), `TEXTWEAVER_LOG` (the log level; see [Troubleshooting](troubleshooting.md)), and `TEXTWEAVER_COLOR` (the color level; see [Themes](themes.md)).
 
 On Windows, set a variable for good with `setx`, then open a new terminal:
 
