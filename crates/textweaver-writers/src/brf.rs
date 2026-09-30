@@ -19,7 +19,7 @@
 //!   margins; or stairstep (11.18), each row's entries in 1-1, 3-3, 5-5
 //!   and 7-7 margins, the column headings in a transcriber's note at the
 //!   same steps, and a table of more than four columns listed instead;
-//!   a blank line before and after a listed or stairstep table, a blank
+//!   a blank line before and after every table (11.2.5d), a blank
 //!   entry as three guide dots, and a row kept on one braille page when it
 //!   fits. The listed format's transcriber's note is written once, before
 //!   the first listed table;
@@ -349,6 +349,9 @@ impl Flat<'_> {
             );
             format = BrailleTableFormat::Listed;
         }
+        // A blank line before and after a table that is not boxed
+        // (Braille Formats 2016, 11.2.5d).
+        self.push(Item::Blank);
         if format == BrailleTableFormat::Linear {
             if let Some(c) = &table.caption {
                 self.push(text_item(c.clone(), indent + 2, indent));
@@ -358,6 +361,7 @@ impl Flat<'_> {
                 self.push(Item::Keep(1));
                 self.push(text_item(row.join("; "), indent, indent + 2));
             }
+            self.push(Item::Blank);
             return;
         }
         let (headings, body): (Option<&Vec<String>>, &[Vec<String>]) = if table.has_header() {
@@ -373,8 +377,6 @@ impl Flat<'_> {
         } else {
             ""
         };
-        // A blank line before and after the table (11.16).
-        self.push(Item::Blank);
         if let Some(c) = &table.caption {
             self.push(text_item(c.clone(), indent + 2, indent));
         }
@@ -1135,8 +1137,11 @@ mod tests {
         assert_eq!(lines[2], "  ,INTRO TEXT4");
         assert_eq!(lines[3], "#A4 ,FIRST");
         assert_eq!(lines[4], "#B4 ,SECOND");
-        assert_eq!(lines[5], ",A2 ,B");
-        assert_eq!(lines[6], "#A2 #B");
+        // A blank line before and after the table (Braille Formats 11.2.5d).
+        assert_eq!(lines[5], "");
+        assert_eq!(lines[6], ",A2 ,B");
+        assert_eq!(lines[7], "#A2 #B");
+        assert_eq!(lines[8], "");
         assert!(pages[1].starts_with("  ,MORE\r\n"));
     }
 
