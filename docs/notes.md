@@ -1,6 +1,6 @@
 # Bookmarks, notes, and highlights
 
-This guide covers the three ways to mark what you read: bookmarks (named places), notes (your own text attached to a passage), and highlights (passages marked in colour). It is for students and anyone who studies with textweaver. It also covers where they are kept, how to list them from the command line, and how to take them to Obsidian.
+This guide covers the three ways to mark what you read: bookmarks (named places), notes (your own text attached to a passage), and highlights (passages marked in color). It is for students and anyone who studies with textweaver. It also covers where they are kept, how to list them from the command line, and how to take them to Obsidian.
 
 Keys are the terminal defaults. Most are single browse keys, which work while reading. Where the GUI uses a different key, this guide says so. With single-key shortcuts turned off (**F9**), run these commands from the command palette (**F2**) by the names given here.
 
@@ -83,7 +83,7 @@ Exported from textweaver on 2026-09-26.
   Check the method (tags: exam)
 ```
 
-Highlights are listed the same way, with their colour. A new document that was never saved has no folder yet; its study sheet goes to the folder textweaver was started in.
+Highlights are listed the same way, with their color. A new document that was never saved has no folder yet; its study sheet goes to the folder textweaver was started in.
 
 ### List notes: Shift+A
 
@@ -111,15 +111,15 @@ You hear "Highlighted:" and the start of the passage. At high verbosity you also
 
 Press **y** again on a highlighted passage, with nothing selected, to remove the highlight. You hear "Highlight removed:" and the passage.
 
-### Highlight colours
+### Highlight colors
 
-Highlights made in textweaver are yellow. There is no key to choose another colour yet.
+Highlights made in textweaver are yellow. There is no key to choose another color yet.
 
-Highlights imported from Star, or from a synced folder, can have other colours. textweaver knows five by name: yellow, green, cyan, pink, and orange. Other colours are kept and shown by their code. On screen a highlight is marked by the theme's highlight style, which never relies on colour alone.
+Highlights imported from Star, or from a synced folder, can have other colors. textweaver knows five by name: yellow, green, cyan, pink, and orange. Other colors are kept and shown by their code. On screen a highlight is marked by the theme's highlight style, which never relies on color alone.
 
 ### List highlights: Shift+Y
 
-Press **Shift+Y**. You hear "Highlights", the count, then "Enter goes to one, Delete removes it." Each item says the passage, the line, and the colour name.
+Press **Shift+Y**. You hear "Highlights", the count, then "Enter goes to one, Delete removes it." Each item says the passage, the line, and the color name.
 
 In the list, **Enter** goes to the highlight, **Delete** asks "Remove this highlight? y or n" and removes it on **y**, and **Escape** closes the list. In the command palette this command is `list_highlights`.
 
