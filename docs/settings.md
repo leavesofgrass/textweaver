@@ -99,7 +99,7 @@ Return settings to their defaults:
 tw settings reset
 ```
 
-It says how many settings will change and asks you to type `y` first. `--yes` skips the question. To reset only one section, add `--section` and the section name. The sections are `speech`, `speech.eci`, `speech.sapi`, `speech.apple`, `highlight`, `normalization`, `normalization.community_lexicon`, `reading`, `display`, `editing`, `library`, `keyboard`, `accessibility`, `export`, `reading_aids`, `reading_aids.rsvp`, `reading_aids.bionic_options`, `reading_aids.spacing`, `reading_aids.font`, `reading_aids.ruler`, `reading_aids.syllable_options`, and `keymap` (your key overrides). Sections you added yourself, such as `speech.dectalk`, can be reset by name too. A reset is backed up like an import.
+It says how many settings will change and asks you to type `y` first. `--yes` skips the question. To reset only one section, add `--section` and the section name. The sections are `speech`, `speech.eci`, `speech.sapi`, `speech.apple`, `speech.dectalk`, `speech.piper`, `highlight`, `normalization`, `normalization.community_lexicon`, `reading`, `display`, `editing`, `library`, `keyboard`, `accessibility`, `export`, `braille`, `reading_aids`, `reading_aids.rsvp`, `reading_aids.bionic_options`, `reading_aids.spacing`, `reading_aids.font`, `reading_aids.ruler`, `reading_aids.syllable_options`, `preview`, `lexicon`, `stats`, `summary`, `interface`, `gui`, `colors`, and `keymap` (your key overrides). Sections not in this list, added by a newer textweaver or a build with extra features, can be reset by name too. A reset is backed up like an import.
 
 ## Example file
 
@@ -159,7 +159,7 @@ The voice and how it speaks. [Speech engines and voices](speech.md) explains the
 - `volume`, default `100`: a percentage, from 0 to 100.
 - `voice`, not set by default: the voice to use. Unset, textweaver chooses one.
 - `prefer_voice`, default `"eloquence"`: when `voice` is not set, a voice whose name contains this text is preferred. An empty string means no preference.
-- `favorite_voices`, default empty: your favourite voices, by id or name. Choose voice (Alt+V) lists them first, and Space in that list adds or removes one.
+- `favorite_voices`, default empty: your favorite voices, by id or name. Choose voice (Alt+V) lists them first, and Space in that list adds or removes one.
 - `punctuation`, default `"some"`: how much punctuation is spoken. `"none"` speaks none, `"some"` speaks punctuation that carries meaning in prose (such as `@`, `#`, and `/`), and `"all"` speaks every punctuation character. Alt+Shift+N cycles it while textweaver runs, and saves it.
 - `split_caps`, default `false`: speak the parts of words written in mixed capitals separately, such as "Java Script" for "JavaScript".
 - `caps`, default `"pitch"`: how a capital letter is shown when a single character is spoken or echoed. `"none"`, `"tone"` (a short tone first), `"pitch"` (a higher pitch), or `"say_cap"` (the word "cap" first).
@@ -226,7 +226,7 @@ The highlight that follows the reading.
 - `granularity`, default `"word"`: `"word"`, `"sentence"`, or `"both"` (the sentence, and the word inside it).
 - `lead_words`, default `1`: move the drawn highlight ahead (a positive number) or behind (a negative number) by this many words, from -5 to 5. The default of 1 is the word being heard.
 - `speed`, default `1.0`: for engines without word events, a multiplier on the estimated speed of the highlight, from 0.5 to 1.5.
-- `color`, default `"theme"`: the colour of the band behind the word being read, laid over the theme's own. A name (`cyan`, `yellow`, `green`, `pink`, `orange`, `light blue`, and the common web colour names) or `#rrggbb`. `"theme"` keeps the theme's colour. The text in the band is the theme's text or page colour, whichever reads better, and the highlight keeps its bold or underline, so it never depends on colour alone. When the band leaves the text below 4.5 to 1 contrast (7 to 1 in high-contrast themes), textweaver says so at startup and when you change theme.
+- `color`, default `"theme"`: the color of the band behind the word being read, laid over the theme's own. A name (`cyan`, `yellow`, `green`, `pink`, `orange`, `light blue`, and the common web color names) or `#rrggbb`. `"theme"` keeps the theme's color. The text in the band is the theme's text or page color, whichever reads better, and the highlight keeps its bold or underline, so it never depends on color alone. When the band leaves the text below 4.5 to 1 contrast (7 to 1 in high-contrast themes), textweaver says so at startup and when you change theme.
 - `sentence_color`, not set by default: the same for the band behind the sentence being read.
 
 ### [normalization]
@@ -271,7 +271,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 
 ### [display]
 
-- `theme`, default `"galaxy"`: the colour theme. See [Themes](themes.md).
+- `theme`, default `"galaxy"`: the color theme. See [Themes](themes.md).
 - `follow_os_theme`, default `true`: match the system's light, dark, or high-contrast setting at startup, unless you chose a theme.
 - `theme_explicit`, default `false`: set by textweaver when you choose a theme; it stops following the system.
 - `wrap_width`, default `0`: wrap lines at this many columns. 0 means the width of the terminal.
@@ -326,6 +326,13 @@ Audio export. See [Audio export](audio-export.md).
 - `subtitle_format`, default `"srt"`: `"srt"` or `"vtt"`, used when subtitles are written without a file name.
 - `subtitle_word_level`, default `false`: one subtitle cue per word instead of caption lines.
 - `subtitles_with_audio`, default `false`: always write subtitles beside the exported audio.
+
+### [braille]
+
+Braille output: BRF files and math braille on the display. See [Math in braille files](math.md#math-in-braille-files) and [Converting documents](converting.md).
+
+- `math_code`, default `"nemeth"`: the braille code math is written in, in BRF files and while exploring a formula. `"nemeth"` is the Nemeth Code inside UEB text, with the Nemeth switch indicators; `"ueb"` is Unified English Braille's own mathematics. Needs a build with MathCAT; without it, math is written as its spoken words in uncontracted braille.
+- `table_format`, default `"linear"`: how BRF files lay out tables (BANA's Braille Formats, 2016, section 11). `"linear"` is one row per line, entries separated by semicolons; `"listed"` gives each row a cell-5 heading, then each entry on its own line after its column heading; `"stairstep"` sets each row's entries two cells further right than the one before, for tables of up to four columns (a wider table is listed instead, with a warning). `tw convert --table-format` sets it for one conversion.
 
 ### [reading_aids]
 
@@ -410,6 +417,19 @@ Reading statistics (see [the reading guide](reading.md#reading-statistics-ctrlsh
 
 - `enabled`, default `true`: count the time textweaver reads each document aloud, the furthest point, and the sessions, in `stats.json` in the data folder. Off, nothing more is recorded; what was recorded stays until `tw stats --clear`.
 
+### [summary]
+
+Extractive summaries (see [Summaries](reading.md#summaries)).
+
+- `sentences`, default `5`: how many sentences Summarize and `tw summarize` give, from 1 to 50.
+
+### [dictation]
+
+Dictating text, in edit mode, in the terminal reader and the GUI. See [Dictation](dictation.md).
+
+- `speak_while_recording`, default `false`: speak the dictated words with textweaver's own voice while the microphone is open. Off, they are shown on the status line as they come and spoken once, at each pause, so the microphone does not hear textweaver's voice.
+- `model_dir`, not set by default: the folder of the in-process Whisper model (its encoder, decoder, and `tokenizer.json`). Unset, textweaver uses `whisper/rten/base.en` in its data folder.
+
 ### [interface]
 
 - `language`, default `"en"`: the language of textweaver's own words: messages, lists, help, and the settings screen, not your documents. Built in: `"en"` English, `"es"` Spanish, `"fr"` French, `"de"` German, `"pt"` Portuguese (Brazilian), and `"ar"` Arabic. A tag with a region, such as `"es-MX"` or `"pt-BR"`, uses its language. A change on the settings screen takes effect at once: the change is said in the new language, then the title line. The voice follows the language when the speech engine has a voice for it; when it has none, the current voice keeps speaking and textweaver says so. `en-XA` shows every message accented and in `⟦ ⟧` brackets, and `ar-XB` shows them right to left: both are for testing. A `<language>.ftl` file in the `locales` folder of the settings folder adds a language, or goes over a built-in one message by message; messages it lacks come from the built-in translation, then English. `tw settings language` lists the languages, and `tw settings language es` sets one. The first run starts with the list of languages, your system's language first.
@@ -420,6 +440,24 @@ Reading statistics (see [the reading guide](reading.md#reading-statistics-ctrlsh
 Settings only the window (`textweaver-xilem`) reads. In the settings dialog they are under "Window".
 
 - `announce`, default `"live"`: how the window's messages reach the screen reader, from the next start. `"live"` uses a live region, which NVDA and JAWS both speak. `"uia"` raises UI Automation notifications instead (Windows only; elsewhere the live region is used). `--announce live` or `--announce uia` on the command line wins over the setting for one run.
+
+### [colors]
+
+The color of each reading aid and part of the screen, over the theme's own (View, Colors, or File, Settings, Colors; see [The Colors dialog](gui.md#the-colors-dialog)). Each is a color name (`"blue"`, `"orange"`, `"navy"`, `"skyblue"`, `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`), a `"#rrggbb"` value, or `"theme"` (the default), which keeps the theme's own color. The word and sentence highlights are not here; they stay in `[highlight]`. Every colored mark keeps the cue that is not a color, such as an underline, bold, or a spoken word, whatever color is chosen.
+
+- `ruler`: the reading ruler and the current-line band.
+- `difficult_words`: the underline of difficult words.
+- `syllables`: the marks between syllables.
+- `misspellings`: the underline of misspelled words, in the window.
+- `lint`: the underline of Markdown lint and grammar problems, in the window.
+- `find_match`: the band behind search matches.
+- `selection`: the band behind selected text.
+- `focus`: the focus outline and the focused item of a list.
+- `links`: link text.
+- `headings`: heading text.
+- `status_bar`: the status and title bars.
+- `notes`: the band behind text with a note.
+- `bookmarks`: the band behind a bookmarked word.
 
 ## Settings profiles
 
