@@ -417,7 +417,7 @@ mod tests {
         let noise: Vec<u8> = (0..300 * 400)
             .map(|_| {
                 seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12_345);
-                if (seed >> 16) % 10 == 0 { 0 } else { 255 }
+                if (seed >> 16).is_multiple_of(10) { 0 } else { 255 }
             })
             .collect();
         let noise = GrayImage::new(300, 400, noise).unwrap();
