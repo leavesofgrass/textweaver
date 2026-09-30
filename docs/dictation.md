@@ -383,7 +383,41 @@ What to expect:
 tw dictate --file note.wav --timings
 ```
 
-The textweaver reader has no dictation command yet.
+## Dictating in the reader
+
+In edit mode, the **Dictate** command types what you say at the cursor. It is in the Edit menu and the command palette (**F2**, then "dictate"); its key is **Ctrl+Shift+F9**, or whatever the menu shows beside it. Press it again to stop.
+
+1. Open a document and turn on edit mode (**Ctrl+E**). If edit mode is off when you ask to dictate, textweaver asks "Turn on edit mode and dictate? y or n" first.
+2. Choose Dictate. You hear "Dictating. Speak, then press" and the key "to stop." Reading aloud stops, so the microphone does not hear it.
+3. Speak. The status line shows what textweaver is sure of as you talk, starting "Dictating:", with the newest words last and no more than 40 characters, so a 40-cell Braille display shows the latest words without scrolling. Words are never changed once shown.
+4. Pause. At each pause (about half a second of silence) the phrase is typed at the cursor, with spoken commands applied ("new line", "period", "comma", "open quote"; see [Use spoken commands](#use-spoken-commands)). Each phrase is one step for Undo.
+5. Choose Dictate again to stop. The last phrase is typed, and you hear "Dictation done."
+
+**Your voice and textweaver's voice.** By default textweaver does not speak the words while the microphone is open: they appear on the status line as they come and are said once, at each pause. To hear them as they come, for example with headphones, turn on Speak while dictating in the settings (the Dictation section):
+
+```toml
+[dictation]
+speak_while_recording = true
+```
+
+The words are said as ordinary messages, so [interface announcements](reading.md) set to off keeps them to the status line and the Braille display. Problems, such as a missing microphone, are always said.
+
+**The model.** Dictation in the reader uses Whisper inside textweaver, from the same folder as `tw dictate` ([Whisper inside textweaver](#whisper-inside-textweaver)), or the folder in `model_dir`:
+
+```toml
+[dictation]
+model_dir = "D:\\Models\\whisper-base.en"
+```
+
+The first dictation after starting textweaver loads the model, which takes a few seconds; later ones start at once.
+
+**Nothing is lost.** Turning edit mode off, opening another document, starting a new one, or quitting while you dictate first finishes the dictation: recording stops and the last phrase is typed. If Whisper needs more than ten seconds for that, dictation ends and you hear "Dictation stopped before its last words were typed."
+
+What you may hear:
+
+- "No words recognized in that phrase.": textweaver heard speech but could not make out words. Try again, a little closer to the microphone.
+- "Dictation failed:" and the reason, such as "No audio was recorded. Check your microphone."
+- "Dictation needs the Whisper model in" and a folder: the model files are not there.
 
 ## Dictating into the reader with other software
 

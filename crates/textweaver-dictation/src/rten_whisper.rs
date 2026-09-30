@@ -130,6 +130,8 @@ impl Timings {
 
 /// A loaded Whisper model.
 pub struct RtenWhisper {
+    /// Seconds of audio the encoder sees at a time (30 unless shortened).
+    window_seconds: usize,
     encoder: Model,
     decoder: Model,
     tokenizer: Tokenizer,
@@ -159,7 +161,20 @@ impl RtenWhisper {
     /// Loads a model. Files are read into memory (RTen's memory-mapped
     /// loading is `unsafe`, and not used).
     pub fn load(files: &RtenWhisperFiles) -> Result<Self, DictationError> {
-        let load = |p: &Path| {
+        Self::load_with_window(files, CHUNK_SECONDS)
+    }
+
+    /// Loads a model whose encoder sees `seconds` of audio at a time (1 to
+    /// 30) instead of 30, its positional embedding cut to its first rows
+    /// to match; longer audio is taken a window at a time. Whisper was trained on 30-second
+    /// windows, so accuracy must be checked before a shorter one is used.
+    pub fn load_with_window(
+        files: &RtenWhisperFiles,
+        seconds: usize,
+    ) -> Result<Self, DictationError> {
+        let seconds = seconds.clamp(1, CHUNK_SECONDS);
+        let frames = seconds * 50;
+        let load = |p: &Path, shorten: bool| {
             let mut bytes = std::fs::read(p).map_err(|source| DictationError::Io {
                 path: p.to_owned(),
                 source,
@@ -170,10 +185,14 @@ impl RtenWhisper {
                 Some(n) => log::debug!("{}: weights reduced to 7 bits: {n:?}", p.display()),
                 None => log::warn!("{}: could not check the weights' range", p.display()),
             }
+            if shorten {
+                bytes = crate::onnx_patch::shorten_encoder(&bytes, frames)
+                    .ok_or_else(|| model_error(p, "its encoder window could not be shortened"))?;
+            }
             Model::load(bytes).map_err(|e| model_error(p, e))
         };
-        let encoder = load(&files.encoder)?;
-        let decoder = load(&files.decoder)?;
+        let encoder = load(&files.encoder, seconds < CHUNK_SECONDS)?;
+        let decoder = load(&files.decoder, false)?;
         let json =
             std::fs::read_to_string(&files.tokenizer).map_err(|source| DictationError::Io {
                 path: files.tokenizer.clone(),
@@ -186,6 +205,7 @@ impl RtenWhisper {
             _ => 80,
         };
         Ok(RtenWhisper {
+            window_seconds: seconds,
             encoder,
             decoder,
             tokenizer,
@@ -219,7 +239,7 @@ impl RtenWhisper {
         };
         let err =
             |e: &dyn std::fmt::Display| DictationError::Capture(format!("Whisper failed: {e}"));
-        let samples_per_chunk = WHISPER_SAMPLE_RATE as usize * CHUNK_SECONDS;
+        let samples_per_chunk = WHISPER_SAMPLE_RATE as usize * self.window_seconds;
         let sot = self.token("<|startoftranscript|>")?;
         let eot = self.token("<|endoftext|>")?;
         let start_of_prev = self.token("<|startofprev|>")?;

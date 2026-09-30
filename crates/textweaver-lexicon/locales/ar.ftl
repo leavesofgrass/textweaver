@@ -3365,6 +3365,154 @@ settingsio-and-more = { $names } و{ $n } غيرها
 
 ## End of W6u
 
+## W6d: dictation in edit mode (ADR-0042). Keep the meaning first: a
+## 40-cell Braille display shows the start of the line. $words are the
+## dictated words, $key the dictate key, $dir a folder, $error and $text
+## are passed on as they are.
+dictation-status = إملاء: { $words }
+dictation-listening = الإملاء جارٍ. تكلّم، ثم اضغط { $key } للإيقاف.
+dictation-finishing = جارٍ إنهاء الإملاء.
+dictation-done = انتهى الإملاء.
+dictation-busy = الإملاء ينتهي. حاول مرة أخرى بعد لحظة.
+dictation-needs-edit = الإملاء يكتب في وضع التحرير. هل تشغّل وضع التحرير وتملي؟ y أو n
+dictation-no-model = يحتاج الإملاء إلى نموذج Whisper في { $dir }. راجع دليل الكتابة بالصوت.
+dictation-failed = فشل الإملاء: { $error }
+dictation-no-words = لم تُعرف أي كلمات في تلك العبارة.
+dictation-lost = توقف الإملاء قبل كتابة كلماته الأخيرة.
+dictation-not-typed = كلمات مُملاة لم تُكتب، وضع التحرير متوقف: { $text }
+setting-dictation-speak-while-recording = النطق أثناء الإملاء
+setting-dictation-speak-while-recording-help = نطق الكلمات المُملاة عند وصولها. عند الإيقاف تظهر في سطر الحالة وتُنطق عند كل توقف، كي لا يسمع الميكروفون الصوت.
+setting-dictation-model-dir = مجلد نموذج الإملاء
+setting-dictation-model-dir-help = نموذج Whisper للإملاء. عند عدم تعيينه يُستخدم whisper/rten/base.en في مجلد البيانات.
+section-dictation = الإملاء
+
+## End of W6d
+
+## W6f: the file browser. Every row and introduction starts with the name,
+## then the kind, so the first cells of a 40-cell Braille line hold what
+## matters. $name is a file or folder name; $n a number that chooses the
+## plural and $count the same number written with its separators.
+# A list item with its position after it, in the file browser.
+listmodel-item-position-last = { $item }، { $k } من { $n }
+browse-places-title = الأماكن
+browse-places-intro =
+    { $n ->
+        [one] الأماكن، مكان واحد.
+       *[other] الأماكن، { $n } أماكن.
+    }
+# $purpose says what the folder or file is chosen for; $intro follows.
+browse-choosing = { $purpose }. { $intro }
+browse-place-document = { $name }، مجلد المستند
+browse-place-start = { $name }، مجلد البدء
+browse-place-library = { $name }، مجلد المكتبة
+browse-place-disk = { $name }، قرص
+browse-place-removable = { $name }، محرك قابل للإزالة
+browse-place-network = { $name }، محرك شبكة
+browse-place-cd = { $name }، محرك أقراص مضغوطة أو DVD
+browse-place-root = { $name }، المجلد الجذر
+browse-choose-here = اختيار هذا المجلد، { $name }
+browse-row-folder = { $name }، مجلد
+browse-row-folder-items =
+    { $name }، مجلد، { $n ->
+        [one] عنصر واحد
+       *[other] { $count } عناصر
+    }
+# $kind is a kind below ("Markdown"); $size a size below ("12 KB").
+browse-row-file = { $name }، { $kind }، { $size }
+browse-row-kind = { $name }، { $kind }
+browse-row-hidden = { $row }، مخفي
+# $kind is zip, tar, tar.gz, gzip, or 7z.
+browse-kind-archive = أرشيف { $kind }
+browse-kind-file = ملف
+browse-kind-markdown = Markdown
+browse-kind-text = نص
+browse-kind-html = صفحة ويب
+browse-kind-epub = كتاب EPUB
+browse-kind-docx = مستند Word
+browse-kind-rtf = مستند RTF
+browse-kind-odt = نص OpenDocument
+browse-kind-latex = LaTeX
+browse-kind-eml = بريد إلكتروني
+browse-kind-mhtml = أرشيف ويب
+browse-kind-pdf = PDF
+browse-kind-image = صورة
+browse-kind-daisy = كتاب DAISY
+browse-kind-pptx = شرائح PowerPoint
+browse-kind-sheet = جدول بيانات
+browse-kind-json = JSON
+browse-kind-notebook = دفتر Jupyter
+browse-kind-svg = رسم SVG
+browse-kind-mathml = صيغة MathML
+browse-kind-pandoc = مستند مقروء عبر Pandoc
+browse-size-bytes =
+    { $n ->
+        [one] بايت واحد
+       *[other] { $count } بايت
+    }
+# $size is a number, with a decimal under 10 ("3.4").
+browse-size-kb = { $size } كيلوبايت
+browse-size-mb = { $size } ميغابايت
+browse-size-gb = { $size } غيغابايت
+browse-intro =
+    { $name }، { $n ->
+        [one] عنصر واحد.
+       *[other] { $count } عناصر.
+    }
+browse-intro-empty = لا شيء لعرضه في { $name }.
+# $filter is what was typed.
+browse-intro-filtered =
+    { $name }، { $n ->
+        [one] عنصر واحد يطابق
+       *[other] { $count } عناصر تطابق
+    } { $filter }.
+browse-intro-in-archive = { $intro } في { $archive }.
+browse-intro-hidden =
+    { $intro } { $n ->
+        [one] ملف واحد مخفي.
+       *[other] { $count } ملفات مخفية.
+    }
+browse-intro-cut = { $intro } تُعرض أول { $max } فقط.
+# $preview, $choose, $sort, and $all are keys; $item the focused row.
+browse-keys = { $intro } يفتح Enter، ويصعد Backspace، والكتابة تصفّي. { $preview } يعرض معاينة، و{ $choose } يختار مجلدًا، و{ $sort } يرتب، و{ $all } يعرض كل الملفات. { $item }
+browse-sorted-name = مرتبة حسب الاسم.
+browse-sorted-date = مرتبة حسب التاريخ، الأحدث أولًا.
+browse-sorted-size = مرتبة حسب الحجم، الأكبر أولًا.
+browse-showing-all = تُعرض كل الملفات.
+browse-showing-readable = تُعرض الملفات المقروءة فقط.
+browse-closed = أُغلق مستعرض الملفات.
+browse-read-only = مستعرض الملفات يفتح الملفات ويختارها فقط؛ ولا يغيّرها أبدًا.
+# $key is the Choose Folder key.
+browse-choose-a-folder = اختر مجلدًا: يفتح Enter مجلدًا، ويختاره { $key }.
+browse-choose-a-file = اختر ملفًا: يختار Enter ملفًا.
+browse-no-archive-folder = لا يمكن اختيار مجلد داخل أرشيف؛ اختر مجلدًا على القرص.
+browse-nothing-waiting = لا أمر ينتظر مجلدًا؛ يفتحه Enter.
+browse-cannot-read = { $name } ليس نوع ملف يستطيع textweaver قراءته.
+browse-folder-unreadable = تعذّر فتح { $name }: { $reason }
+browse-archive-too-deep = { $name } داخل أرشيفات كثيرة جدًا لفتحه.
+browse-archive-too-large = { $name } كبير جدًا لسرده بأمان.
+browse-archive-unreadable = { $name } ليس أرشيفًا يستطيع textweaver قراءته؛ ربما يكون تالفًا.
+# A document's preview: its title, then its first sentence.
+browse-preview-document = { $title }. { $sentence }
+browse-preview-no-text = { $title }. لا نص فيه.
+browse-preview-failed = تعذّرت معاينة { $name }: { $reason }
+# $names are the first few names inside.
+browse-preview-archive =
+    { $name }: { $n ->
+        [one] ملف واحد
+       *[other] { $count } ملفات
+    }، { $readable } مقروءة. { $names }
+browse-preview-archive-folder =
+    { $name }، مجلد في الأرشيف، { $n ->
+        [one] عنصر واحد.
+       *[other] { $count } عناصر.
+    }
+browse-preview-folder = { $path }: { $names }
+browse-preview-folder-empty = { $path }: لا شيء للقراءة هنا.
+browse-preview-other = { $name }، { $size }؛ لا يستطيع textweaver قراءة هذا النوع من الملفات.
+browse-preview-path = { $path }
+
+## End of W6f
+
 ## W6a6: the window's menus and dialogs. Settings files chosen with the
 ## system's file chooser, the Colors dialog, and the font list. $ratio is
 ## a contrast ratio such as 4.8; $verdict is good, fair, or low.

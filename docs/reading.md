@@ -30,6 +30,36 @@ Press **Ctrl+O**. The bottom line becomes a prompt called "Open file". Type the 
 
 Press **Alt+L** to list the documents in your library folders and the files you opened recently. Use **Up** and **Down** to move, and **Enter** to open one. The GUI uses **Ctrl+Shift+B**. The [library guide](library.md) explains library folders.
 
+### From the file browser: File, Browse files
+
+The file browser walks through folders and archives as one list, and opens what you choose. Open it from the File menu (**F10**, then File, then Browse files) or from the command palette: type `browse` and press **Enter**. It has no key of its own; give `browse_files` one in `keymap.toml` if you use it often. The GUI opens it from its command palette, in its list dialog; the GUI's File menu and its preview key come with the GUI's menus.
+
+It starts on **Places**: the open document's folder (focused), the folder you started textweaver in, your library folders, and your drives on Windows (the root folder on Linux and macOS). Each row says the name first, then what it is, so a Braille display shows the name in its first cells:
+
+- "notes.md, Markdown, 12 KB"
+- "Week 1, folder, 12 items"
+- "course.zip, zip archive, 3.4 MB"
+
+Your screen reader, or textweaver's voice, says where the row is after it: "notes.md, Markdown, 12 KB, 3 of 40".
+
+The keys:
+
+- **Up**, **Down**, **Home**, **End**, **Page Up**, and **Page Down** move.
+- **Enter** opens a document, or goes into a folder or an archive. **Right** goes into a folder or an archive too.
+- **Backspace** or **Left** goes up. Out of a folder or an archive, you land on its row, so Backspace twice from a folder inside `course.zip` brings you back to `course.zip`.
+- Typing filters by name ("f, 1 item matches cour."). **Backspace** takes the filter back one letter at a time before it goes up.
+- **Alt+End**, the Say Status key, says a preview of the focused row: a document's title and first sentence, an archive's count of files and the first names in it, a folder's full path and first names. The document is read in the background, so the keys never wait.
+- **Ctrl+R** sorts: by name, then by date (newest first), then by size (largest first). Folders stay first.
+- **Ctrl+A** shows every file, hidden ones included; press it again for readable files only. The introduction says how many files are hidden ("week1, 3 items. 1 file hidden.").
+- **F1** says where you are and these keys.
+- **Escape** closes the browser, and you are back where you were in your document.
+
+**Archives** (zip, and tar, tar.gz, and 7z) open like folders, and folders and archives inside them open the same way, up to four archives deep. Nothing is unpacked onto your disk. A document inside an archive opens with a path such as `course.zip!week1/notes.md`, and its reading position, bookmarks, and notes are kept under that path, so they are there next time. Files that are never documents, such as `__MACOSX` and `.DS_Store`, are left out. An archive that is damaged, too large, or nested too deeply is not opened; you hear a sentence that says which.
+
+**The browser only opens and chooses files.** It never copies, moves, renames, or deletes anything; **Delete** and **F2** say so.
+
+**Choosing a folder.** Commands that need a folder, such as converting a folder of documents, open the same browser to choose it. They say what the folder is for when the browser opens. **Ctrl+Enter** chooses the focused folder, or the folder you are in. Some terminals cannot send Ctrl+Enter, so the first row of each folder, "Choose this folder", does the same with **Enter**. Folders inside archives cannot be chosen. In the Mac GUI the browser's keys use Cmd instead of Ctrl, and Cmd+Shift+Period shows every file, as in the Mac's own file dialogs.
+
 ### What you hear when a document opens
 
 textweaver says "Opened", then the title. If you read this document before, it goes back to where you stopped and says so, for example "Opened Cells. Resumed at 42 percent." See [Your place is remembered](#your-place-is-remembered).

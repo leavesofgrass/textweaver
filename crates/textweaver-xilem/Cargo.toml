@@ -18,7 +18,9 @@ name = "textweaver-xilem"
 path = "src/main.rs"
 
 [features]
-default = ["screenshot", "renderer-vello", "publish", "lint"]
+default = ["screenshot", "renderer-vello", "publish", "lint", "dictation"]
+# Dictation in edit mode (textweaver-app's `dictation`, ADR-0042).
+dictation = ["textweaver-app/dictation"]
 # The renderer: Vello's GPU compute renderer (the default), or Vello's
 # hybrid renderer (CPU strips, simple GPU shaders), which suits software
 # GPUs such as Mesa's llvmpipe under Xvfb in CI. With both, Vello wins.

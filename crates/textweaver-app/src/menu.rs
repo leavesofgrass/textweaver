@@ -1449,31 +1449,34 @@ mod tests {
         );
     }
 
+    /// With a command still pending: the file browser registers itself
+    /// since W6f, so this uses batch conversion; the agent that registers
+    /// that one picks another.
     #[test]
     fn a_registered_handler_shows_and_runs() {
         fn handler(app: &mut App) -> Vec<Effect> {
-            app.tell("Browsing.");
+            app.tell("Converting.");
             vec![Effect::Redraw]
         }
         let mut app = App::new(crate::AppConfig::for_tests());
-        assert!(!app.is_available(A::BrowseFiles));
+        assert!(!app.is_available(A::BatchConvert));
         let file = app.menu_view(MenuId::File);
         assert!(
             !file
                 .items
                 .iter()
-                .any(|i| i.kind == MenuItemKind::Action(A::BrowseFiles))
+                .any(|i| i.kind == MenuItemKind::Action(A::BatchConvert))
         );
-        app.register_handler(A::BrowseFiles, handler);
-        assert!(app.is_available(A::BrowseFiles));
+        app.register_handler(A::BatchConvert, handler);
+        assert!(app.is_available(A::BatchConvert));
         let file = app.menu_view(MenuId::File);
         assert!(
             file.items
                 .iter()
-                .any(|i| i.kind == MenuItemKind::Action(A::BrowseFiles))
+                .any(|i| i.kind == MenuItemKind::Action(A::BatchConvert))
         );
-        app.dispatch(Command::Action(A::BrowseFiles));
-        assert_eq!(app.status_text(), "Browsing.");
+        app.dispatch(Command::Action(A::BatchConvert));
+        assert_eq!(app.status_text(), "Converting.");
     }
 
     /// Each menu stays short enough to hear through (about 20 items).

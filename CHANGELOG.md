@@ -47,6 +47,19 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Screen reader guide:** Orca says every key by default; how to turn that down.
 - **For contributors:** the nightly release-mode tests run under cargo-nextest, and a test that passes only on a retry is named as flaky; a test keeps the nightly fuzz list in step with the fuzz targets; `cargo xtask release` lists every other line still naming the old version; CI's docs job keeps a build cache.
 
+### W6f: the file browser
+
+- **File, Browse files** walks through folders and archives as one list, from the File menu or the command palette. It starts on Places: the open document's folder, the start folder, the library's folders, and the drives on Windows.
+- **Rows say the name first,** then the kind and size ("notes.md, Markdown, 12 KB"), and the position last ("3 of 40"), so a Braille display shows the name in its first cells.
+- **Archives open like folders:** zip, tar, tar.gz, and 7z, and archives inside them, four deep. Nothing is unpacked; a document inside opens as `course.zip!week1/notes.md`, and its position, bookmarks, and notes stay with that path. `__MACOSX` and `.DS_Store` are left out. A damaged, too large, or too deeply nested archive is refused with a sentence.
+- **Backspace goes up** and lands on the row you left, out of an archive too. Typing filters by name.
+- **Alt+End previews** the focused row: a document's title and first sentence, read in the background.
+- **Readable files only,** with Ctrl+A for every file; Ctrl+R sorts by name, date, or size.
+- **Choosing a folder** for another command: Ctrl+Enter, or the "Choose this folder" row where a terminal cannot send Ctrl+Enter. In the Mac GUI the browser's keys use Cmd.
+- The browser only opens and chooses; it never copies, moves, renames, or deletes a file.
+- **Faster opening:** a document no longer waits for earlier saves to reach the disk before it opens (up to two seconds on a slow disk), and a large document's text check runs while it loads.
+- **For contributors:** `App::choose_folder` and `App::choose_file` hand a chosen path to a command (batch conversion and audio export use them); `ListKey` gains `Details`, `ChooseHere`, `Sort`, and `ShowAll`, and JSON-RPC's `list_key` their names; `archive::list_path` and `archive::is_junk`. ADR-0045.
+
 ### W6k
 
 - **EPUB, Word, braille, and PDF output of large documents is much faster.** Building the document's structure grew with the square of its size; 10 MB of Markdown now converts to EPUB in about 1 second instead of 25, and a 50,000-item list in under a second instead of 11. The output is the same.
@@ -63,6 +76,17 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **LaTeX:** macros with up to nine arguments and `\newenvironment` expand; `\bibliography` and `\printbibliography` list the cited works under "References"; `\multicolumn` and `\multirow` cells say what they span; `\includegraphics[alt=...]` is described by its alt text.
 - Text sent to Pandoc in an older encoding is converted to UTF-8 first.
 - New messages, in all six languages: "it is not a readable JSON file", "... Jupyter notebook", "... SVG drawing", and "... MathML formula", said after "Could not open".
+
+### W6d: dictation
+
+- **Dictate in edit mode** (Edit menu, the palette, or `Ctrl+Shift+F9`): what you say is typed at the cursor, phrase by phrase at each pause, with spoken commands such as "new line" and "period" applied; each phrase is one step for Undo. Outside edit mode it asks whether to turn edit mode on first.
+- **Words while you talk.** The status line shows the words Whisper is sure of as they come, starting "Dictating:", the newest last, within 40 characters for a Braille display; they are never changed once shown. By default they are said once, at each pause, so the microphone does not hear textweaver's voice; `[dictation] speak_while_recording` says them as they come.
+- **Never slower than before.** Short phrases arrive at their pause, as quickly as transcribing each phrase alone; long sentences show their first words about four seconds in. On a busy computer the words wait for the pause.
+- **Nothing is lost.** Leaving edit mode, opening or starting another document, or quitting while dictating types the last phrase first; a phrase with no words recognized says so.
+- `tw dictate --live` prints each group of words as it is committed; `--live --file` plays a recording in at speaking pace.
+- `[dictation] model_dir` names the Whisper model's folder.
+- Fixed: every resampled recording (anything not already at 16 kHz) had a garbled first fraction of a second.
+- New messages, in all six languages: "Dictating:", "Dictating. Speak, then press ... to stop.", "Finishing dictation.", "Dictation done.", "No words recognized in that phrase.", and the dictation errors.
 
 ## [0.1.0-alpha.5] - 2026-09-29
 

@@ -10,7 +10,10 @@ authors.workspace = true
 publish.workspace = true
 
 [features]
-default = ["publish", "lint"]
+default = ["publish", "lint", "dictation"]
+# Dictation in edit mode (Agent W6d, ADR-0042): Whisper in-process on
+# RTen with the microphone. Off, the Dictate command stays hidden.
+dictation = ["dep:textweaver-dictation"]
 # Markdown lint in edit mode (Agent W4g, ADR-0032): textweaver's own
 # rules on the parser the app already uses; no dependencies.
 lint = []
@@ -64,6 +67,8 @@ textweaver-render = { workspace = true, optional = true }
 textweaver-lexicon.workspace = true
 # Agent W5s: summaries without a model (ADR-0037).
 textweaver-summary.workspace = true
+# Agent W6d: dictation in edit mode.
+textweaver-dictation = { workspace = true, optional = true, features = ["rten", "mic"] }
 pulldown-cmark.workspace = true
 harper-core = { workspace = true, optional = true }
 serde.workspace = true
@@ -74,8 +79,9 @@ thiserror.workspace = true
 log.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-# GetLocalTime, for the local date in new documents from templates.
-windows = { workspace = true, features = ["Win32_Foundation", "Win32_Globalization", "Win32_System_SystemInformation"] }
+# GetLocalTime, for the local date in new documents from templates;
+# GetLogicalDrives and GetDriveTypeW, for the file browser's drives (W6f).
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_Globalization", "Win32_Storage_FileSystem", "Win32_System_SystemInformation"] }
 
 # Export, preview, and citations are tested with the feature on.
 [[test]]

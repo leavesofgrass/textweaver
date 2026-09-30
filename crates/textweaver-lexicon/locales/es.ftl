@@ -3109,6 +3109,154 @@ settingsio-and-more = { $names } y { $n } más
 
 ## End of W6u
 
+## W6d: dictation in edit mode (ADR-0042). Keep the meaning first: a
+## 40-cell Braille display shows the start of the line. $words are the
+## dictated words, $key the dictate key, $dir a folder, $error and $text
+## are passed on as they are.
+dictation-status = Dictando: { $words }
+dictation-listening = Dictando. Hable y pulse { $key } para parar.
+dictation-finishing = Terminando el dictado.
+dictation-done = Dictado terminado.
+dictation-busy = El dictado está terminando. Inténtelo de nuevo en un momento.
+dictation-needs-edit = El dictado escribe en modo de edición. ¿Activar el modo de edición y dictar? y o n
+dictation-no-model = El dictado necesita el modelo Whisper en { $dir }. Consulte la guía de escritura por voz.
+dictation-failed = El dictado falló: { $error }
+dictation-no-words = No se reconocieron palabras en esa frase.
+dictation-lost = El dictado se detuvo antes de escribir sus últimas palabras.
+dictation-not-typed = Palabras dictadas sin escribir, el modo de edición está desactivado: { $text }
+setting-dictation-speak-while-recording = Hablar mientras se dicta
+setting-dictation-speak-while-recording-help = Decir las palabras dictadas según llegan. Desactivado, se muestran en la línea de estado y se dicen en cada pausa, para que el micrófono no oiga la voz.
+setting-dictation-model-dir = Carpeta del modelo de dictado
+setting-dictation-model-dir-help = El modelo Whisper para el dictado. Sin valor usa whisper/rten/base.en en la carpeta de datos.
+section-dictation = Dictado
+
+## End of W6d
+
+## W6f: the file browser. Every row and introduction starts with the name,
+## then the kind, so the first cells of a 40-cell Braille line hold what
+## matters. $name is a file or folder name; $n a number that chooses the
+## plural and $count the same number written with its separators.
+# A list item with its position after it, in the file browser.
+listmodel-item-position-last = { $item }, { $k } de { $n }
+browse-places-title = Lugares
+browse-places-intro =
+    { $n ->
+        [one] Lugares, 1 lugar.
+       *[other] Lugares, { $n } lugares.
+    }
+# $purpose says what the folder or file is chosen for; $intro follows.
+browse-choosing = { $purpose }. { $intro }
+browse-place-document = { $name }, la carpeta del documento
+browse-place-start = { $name }, carpeta de inicio
+browse-place-library = { $name }, carpeta de la biblioteca
+browse-place-disk = { $name }, disco
+browse-place-removable = { $name }, unidad extraíble
+browse-place-network = { $name }, unidad de red
+browse-place-cd = { $name }, unidad de CD o DVD
+browse-place-root = { $name }, la carpeta raíz
+browse-choose-here = Elegir esta carpeta, { $name }
+browse-row-folder = { $name }, carpeta
+browse-row-folder-items =
+    { $name }, carpeta, { $n ->
+        [one] 1 elemento
+       *[other] { $count } elementos
+    }
+# $kind is a kind below ("Markdown"); $size a size below ("12 KB").
+browse-row-file = { $name }, { $kind }, { $size }
+browse-row-kind = { $name }, { $kind }
+browse-row-hidden = { $row }, oculto
+# $kind is zip, tar, tar.gz, gzip, or 7z.
+browse-kind-archive = archivo comprimido { $kind }
+browse-kind-file = archivo
+browse-kind-markdown = Markdown
+browse-kind-text = texto
+browse-kind-html = página web
+browse-kind-epub = libro EPUB
+browse-kind-docx = documento de Word
+browse-kind-rtf = documento RTF
+browse-kind-odt = texto OpenDocument
+browse-kind-latex = LaTeX
+browse-kind-eml = correo electrónico
+browse-kind-mhtml = archivo web
+browse-kind-pdf = PDF
+browse-kind-image = imagen
+browse-kind-daisy = libro DAISY
+browse-kind-pptx = diapositivas de PowerPoint
+browse-kind-sheet = hoja de cálculo
+browse-kind-json = JSON
+browse-kind-notebook = cuaderno de Jupyter
+browse-kind-svg = dibujo SVG
+browse-kind-mathml = fórmula MathML
+browse-kind-pandoc = documento leído con Pandoc
+browse-size-bytes =
+    { $n ->
+        [one] 1 byte
+       *[other] { $count } bytes
+    }
+# $size is a number, with a decimal under 10 ("3.4").
+browse-size-kb = { $size } KB
+browse-size-mb = { $size } MB
+browse-size-gb = { $size } GB
+browse-intro =
+    { $name }, { $n ->
+        [one] 1 elemento.
+       *[other] { $count } elementos.
+    }
+browse-intro-empty = { $name } no tiene nada que mostrar.
+# $filter is what was typed.
+browse-intro-filtered =
+    { $name }, { $n ->
+        [one] 1 elemento coincide con
+       *[other] { $count } elementos coinciden con
+    } { $filter }.
+browse-intro-in-archive = { $intro } En { $archive }.
+browse-intro-hidden =
+    { $intro } { $n ->
+        [one] 1 archivo oculto.
+       *[other] { $count } archivos ocultos.
+    }
+browse-intro-cut = { $intro } Solo se muestran los primeros { $max }.
+# $preview, $choose, $sort, and $all are keys; $item the focused row.
+browse-keys = { $intro } Intro abre, Retroceso sube, escribir filtra. { $preview } muestra un avance, { $choose } elige una carpeta, { $sort } ordena, { $all } muestra todos los archivos. { $item }
+browse-sorted-name = Ordenado por nombre.
+browse-sorted-date = Ordenado por fecha, el más reciente primero.
+browse-sorted-size = Ordenado por tamaño, el más grande primero.
+browse-showing-all = Se muestran todos los archivos.
+browse-showing-readable = Solo se muestran los archivos legibles.
+browse-closed = Explorador de archivos cerrado.
+browse-read-only = El explorador de archivos solo abre y elige archivos; nunca los cambia.
+# $key is the Choose Folder key.
+browse-choose-a-folder = Elija una carpeta: Intro abre una, { $key } la elige.
+browse-choose-a-file = Elija un archivo: Intro elige uno.
+browse-no-archive-folder = No se puede elegir una carpeta dentro de un archivo comprimido; elija una carpeta del disco.
+browse-nothing-waiting = Ningún comando espera una carpeta; Intro la abre.
+browse-cannot-read = { $name } no es un tipo de archivo que textweaver pueda leer.
+browse-folder-unreadable = No se pudo abrir { $name }: { $reason }
+browse-archive-too-deep = { $name } está dentro de demasiados archivos comprimidos para abrirlo.
+browse-archive-too-large = { $name } es demasiado grande para listarlo con seguridad.
+browse-archive-unreadable = { $name } no es un archivo comprimido que textweaver pueda leer; puede estar dañado.
+# A document's preview: its title, then its first sentence.
+browse-preview-document = { $title }. { $sentence }
+browse-preview-no-text = { $title }. No tiene texto.
+browse-preview-failed = No se pudo mostrar un avance de { $name }: { $reason }
+# $names are the first few names inside.
+browse-preview-archive =
+    { $name }: { $n ->
+        [one] 1 archivo
+       *[other] { $count } archivos
+    }, { $readable } legibles. { $names }
+browse-preview-archive-folder =
+    { $name }, carpeta del archivo comprimido, { $n ->
+        [one] 1 elemento.
+       *[other] { $count } elementos.
+    }
+browse-preview-folder = { $path }: { $names }
+browse-preview-folder-empty = { $path }: nada que leer aquí.
+browse-preview-other = { $name }, { $size }; textweaver no puede leer este tipo de archivo.
+browse-preview-path = { $path }
+
+## End of W6f
+
 ## W6a6: the window's menus and dialogs. Settings files chosen with the
 ## system's file chooser, the Colors dialog, and the font list. $ratio is
 ## a contrast ratio such as 4.8; $verdict is good, fair, or low.

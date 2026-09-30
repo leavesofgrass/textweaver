@@ -451,6 +451,10 @@ impl Dictation for RtenDictation {
     fn state(&self) -> DictationState {
         self.state
     }
+
+    fn shutdown(&mut self, wait: Duration) -> bool {
+        RtenDictation::shutdown(self, wait)
+    }
 }
 
 /// Said when a recording has no audio at all.

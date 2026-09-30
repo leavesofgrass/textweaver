@@ -152,6 +152,7 @@ pub mod align;
 mod app;
 mod authoring;
 mod authoring_state;
+pub mod browse;
 // In-reader export, preview, and citations: the full modules with the
 // `publish` feature, stand-ins that say "not in this build" without it.
 mod announce;
@@ -162,6 +163,7 @@ mod citations;
 mod citations;
 mod colors;
 mod command;
+mod dictation;
 pub mod disk;
 mod edit;
 mod export;
@@ -275,6 +277,8 @@ pub use textweaver_aids as aids;
 #[cfg(feature = "publish")]
 pub use textweaver_cite as cite;
 pub use textweaver_core as core;
+#[cfg(feature = "dictation")]
+pub use textweaver_dictation as voice_typing;
 pub use textweaver_editor as editor;
 pub use textweaver_engines as engines;
 pub use textweaver_engines::apple;

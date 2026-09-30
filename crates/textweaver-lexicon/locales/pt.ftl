@@ -3125,6 +3125,154 @@ settingsio-and-more = { $names } e mais { $n }
 
 ## End of W6u
 
+## W6d: dictation in edit mode (ADR-0042). Keep the meaning first: a
+## 40-cell Braille display shows the start of the line. $words are the
+## dictated words, $key the dictate key, $dir a folder, $error and $text
+## are passed on as they are.
+dictation-status = Ditando: { $words }
+dictation-listening = Ditando. Fale e pressione { $key } para parar.
+dictation-finishing = Terminando o ditado.
+dictation-done = Ditado concluído.
+dictation-busy = O ditado está terminando. Tente de novo em um momento.
+dictation-needs-edit = O ditado escreve no modo de edição. Ativar o modo de edição e ditar? y ou n
+dictation-no-model = O ditado precisa do modelo Whisper em { $dir }. Veja o guia de digitação por voz.
+dictation-failed = O ditado falhou: { $error }
+dictation-no-words = Nenhuma palavra reconhecida nessa frase.
+dictation-lost = O ditado parou antes de escrever as últimas palavras.
+dictation-not-typed = Palavras ditadas não escritas, o modo de edição está desligado: { $text }
+setting-dictation-speak-while-recording = Falar durante o ditado
+setting-dictation-speak-while-recording-help = Dizer as palavras ditadas à medida que chegam. Desligado, elas aparecem na linha de status e são ditas a cada pausa, para que o microfone não ouça a voz.
+setting-dictation-model-dir = Pasta do modelo de ditado
+setting-dictation-model-dir-help = O modelo Whisper para o ditado. Sem valor usa whisper/rten/base.en na pasta de dados.
+section-dictation = Ditado
+
+## End of W6d
+
+## W6f: the file browser. Every row and introduction starts with the name,
+## then the kind, so the first cells of a 40-cell Braille line hold what
+## matters. $name is a file or folder name; $n a number that chooses the
+## plural and $count the same number written with its separators.
+# A list item with its position after it, in the file browser.
+listmodel-item-position-last = { $item }, { $k } de { $n }
+browse-places-title = Locais
+browse-places-intro =
+    { $n ->
+        [one] Locais, 1 local.
+       *[other] Locais, { $n } locais.
+    }
+# $purpose says what the folder or file is chosen for; $intro follows.
+browse-choosing = { $purpose }. { $intro }
+browse-place-document = { $name }, a pasta do documento
+browse-place-start = { $name }, pasta inicial
+browse-place-library = { $name }, pasta da biblioteca
+browse-place-disk = { $name }, disco
+browse-place-removable = { $name }, unidade removível
+browse-place-network = { $name }, unidade de rede
+browse-place-cd = { $name }, unidade de CD ou DVD
+browse-place-root = { $name }, a pasta raiz
+browse-choose-here = Escolher esta pasta, { $name }
+browse-row-folder = { $name }, pasta
+browse-row-folder-items =
+    { $name }, pasta, { $n ->
+        [one] 1 item
+       *[other] { $count } itens
+    }
+# $kind is a kind below ("Markdown"); $size a size below ("12 KB").
+browse-row-file = { $name }, { $kind }, { $size }
+browse-row-kind = { $name }, { $kind }
+browse-row-hidden = { $row }, oculto
+# $kind is zip, tar, tar.gz, gzip, or 7z.
+browse-kind-archive = arquivo compactado { $kind }
+browse-kind-file = arquivo
+browse-kind-markdown = Markdown
+browse-kind-text = texto
+browse-kind-html = página web
+browse-kind-epub = livro EPUB
+browse-kind-docx = documento do Word
+browse-kind-rtf = documento RTF
+browse-kind-odt = texto OpenDocument
+browse-kind-latex = LaTeX
+browse-kind-eml = e-mail
+browse-kind-mhtml = arquivo da web
+browse-kind-pdf = PDF
+browse-kind-image = imagem
+browse-kind-daisy = livro DAISY
+browse-kind-pptx = slides do PowerPoint
+browse-kind-sheet = planilha
+browse-kind-json = JSON
+browse-kind-notebook = caderno do Jupyter
+browse-kind-svg = desenho SVG
+browse-kind-mathml = fórmula MathML
+browse-kind-pandoc = documento lido com o Pandoc
+browse-size-bytes =
+    { $n ->
+        [one] 1 byte
+       *[other] { $count } bytes
+    }
+# $size is a number, with a decimal under 10 ("3.4").
+browse-size-kb = { $size } KB
+browse-size-mb = { $size } MB
+browse-size-gb = { $size } GB
+browse-intro =
+    { $name }, { $n ->
+        [one] 1 item.
+       *[other] { $count } itens.
+    }
+browse-intro-empty = { $name } não tem nada a mostrar.
+# $filter is what was typed.
+browse-intro-filtered =
+    { $name }, { $n ->
+        [one] 1 item corresponde a
+       *[other] { $count } itens correspondem a
+    } { $filter }.
+browse-intro-in-archive = { $intro } Em { $archive }.
+browse-intro-hidden =
+    { $intro } { $n ->
+        [one] 1 arquivo oculto.
+       *[other] { $count } arquivos ocultos.
+    }
+browse-intro-cut = { $intro } Só os primeiros { $max } são mostrados.
+# $preview, $choose, $sort, and $all are keys; $item the focused row.
+browse-keys = { $intro } Enter abre, Backspace sobe, digitar filtra. { $preview } mostra uma prévia, { $choose } escolhe uma pasta, { $sort } ordena, { $all } mostra todos os arquivos. { $item }
+browse-sorted-name = Ordenado por nome.
+browse-sorted-date = Ordenado por data, o mais recente primeiro.
+browse-sorted-size = Ordenado por tamanho, o maior primeiro.
+browse-showing-all = Mostrando todos os arquivos.
+browse-showing-readable = Mostrando só os arquivos legíveis.
+browse-closed = Navegador de arquivos fechado.
+browse-read-only = O navegador de arquivos só abre e escolhe arquivos; nunca os altera.
+# $key is the Choose Folder key.
+browse-choose-a-folder = Escolha uma pasta: Enter abre uma, { $key } a escolhe.
+browse-choose-a-file = Escolha um arquivo: Enter escolhe um.
+browse-no-archive-folder = Não é possível escolher uma pasta dentro de um arquivo compactado; escolha uma pasta do disco.
+browse-nothing-waiting = Nenhum comando espera uma pasta; Enter a abre.
+browse-cannot-read = { $name } não é um tipo de arquivo que o textweaver consegue ler.
+browse-folder-unreadable = Não foi possível abrir { $name }: { $reason }
+browse-archive-too-deep = { $name } está dentro de arquivos compactados demais para ser aberto.
+browse-archive-too-large = { $name } é grande demais para ser listado com segurança.
+browse-archive-unreadable = { $name } não é um arquivo compactado que o textweaver consegue ler; pode estar danificado.
+# A document's preview: its title, then its first sentence.
+browse-preview-document = { $title }. { $sentence }
+browse-preview-no-text = { $title }. Não tem texto.
+browse-preview-failed = Não foi possível mostrar uma prévia de { $name }: { $reason }
+# $names are the first few names inside.
+browse-preview-archive =
+    { $name }: { $n ->
+        [one] 1 arquivo
+       *[other] { $count } arquivos
+    }, { $readable } legíveis. { $names }
+browse-preview-archive-folder =
+    { $name }, pasta do arquivo compactado, { $n ->
+        [one] 1 item.
+       *[other] { $count } itens.
+    }
+browse-preview-folder = { $path }: { $names }
+browse-preview-folder-empty = { $path }: nada para ler aqui.
+browse-preview-other = { $name }, { $size }; o textweaver não consegue ler este tipo de arquivo.
+browse-preview-path = { $path }
+
+## End of W6f
+
 ## W6a6: the window's menus and dialogs. Settings files chosen with the
 ## system's file chooser, the Colors dialog, and the font list. $ratio is
 ## a contrast ratio such as 4.8; $verdict is good, fair, or low.

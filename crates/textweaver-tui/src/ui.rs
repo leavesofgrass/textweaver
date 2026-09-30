@@ -606,7 +606,18 @@ impl Tui {
         // function keys: plain keys move, filter, and jump in the list, and
         // F2 renames.
         if (!plain || matches!(k.code, KeyCode::F(_))) && k.code != KeyCode::F(2) {
+            // The file browser's own keys (Ctrl+Enter, Ctrl+R, Ctrl+A),
+            // asked of the app so the key and its name stay one.
+            if let Some(key) = chord(&k).and_then(|c| self.app.browse_list_key_for(&c)) {
+                self.dispatch(Command::ListKey(key));
+                return;
+            }
             match chord(&k).and_then(|c| self.app.keymap().lookup(&c, Layer::Global)) {
+                // In the file browser, Say Status previews the focused row.
+                Some(ActionId::SayStatus) if self.app.browse_location().is_some() => {
+                    self.dispatch(Command::ListKey(ListKey::Details));
+                    return;
+                }
                 Some(ActionId::Help | ActionId::SayStatus) => {
                     self.dispatch(Command::ListKey(ListKey::Introduce));
                     return;

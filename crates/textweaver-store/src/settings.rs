@@ -1097,6 +1097,24 @@ impl Default for StatsSettings {
     }
 }
 
+/// `[dictation]`: voice typing in edit mode (ADR-0042).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DictationSettings {
+    /// Speak the dictated words with textweaver's own voice while the
+    /// microphone is open. Off (the default), they are shown on the status
+    /// line as they come and spoken at each pause, so the microphone does
+    /// not hear the voice.
+    pub speak_while_recording: bool,
+    /// The in-process Whisper model's folder (encoder, decoder,
+    /// `tokenizer.json`). Not set: `whisper/rten/base.en` in the data
+    /// folder.
+    pub model_dir: Option<PathBuf>,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
 /// `[summary]`: extractive summaries, `tw summarize` and the Summarize
 /// command (ADR-0037).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -1325,6 +1343,8 @@ pub struct Settings {
     pub stats: StatsSettings,
     /// `[summary]`
     pub summary: SummarySettings,
+    /// `[dictation]`
+    pub dictation: DictationSettings,
     /// `[interface]`
     pub interface: InterfaceSettings,
     /// `[gui]`
@@ -1490,6 +1510,7 @@ impl Settings {
             lexicon: lenient_section("lexicon", table.remove("lexicon"), &mut w),
             stats: lenient_section("stats", table.remove("stats"), &mut w),
             summary: lenient_section("summary", table.remove("summary"), &mut w),
+            dictation: lenient_section("dictation", table.remove("dictation"), &mut w),
             interface: lenient_section("interface", table.remove("interface"), &mut w),
             gui: lenient_section("gui", table.remove("gui"), &mut w),
             colors: lenient_section("colors", table.remove("colors"), &mut w),

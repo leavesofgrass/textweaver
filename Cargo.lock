@@ -9038,6 +9038,7 @@ dependencies = [
  "textweaver-cite",
  "textweaver-convert",
  "textweaver-core",
+ "textweaver-dictation",
  "textweaver-editor",
  "textweaver-engines",
  "textweaver-formats",

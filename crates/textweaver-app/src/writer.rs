@@ -25,6 +25,8 @@
 use std::collections::HashMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -173,6 +175,16 @@ pub(crate) struct Writer {
     next_id: u64,
     /// Reports of jobs done on the caller's thread (no writer thread).
     inline_reports: Vec<Report>,
+    /// Jobs sent so far (barriers aside).
+    sent: u64,
+    /// Jobs the writer has done so far (barriers aside), counted by the
+    /// writer thread.
+    done: Arc<AtomicU64>,
+    /// The newest state queued for each document, with the number of the
+    /// job that writes it: until that job is done, this is what the state
+    /// file will hold, so opening a document reads it from here instead of
+    /// waiting for the disk ([`queued_state`](Self::queued_state)).
+    queued_states: HashMap<(PathBuf, String), (u64, DocState)>,
 }
 
 impl std::fmt::Debug for Writer {
@@ -190,9 +202,11 @@ impl Writer {
     pub(crate) fn spawn(wake: WakeSlot) -> Writer {
         let (tx, jobs) = mpsc::channel::<Job>();
         let (report_tx, rx) = mpsc::channel::<Report>();
+        let done = Arc::new(AtomicU64::new(0));
+        let counted = Arc::clone(&done);
         let thread = std::thread::Builder::new()
             .name("textweaver-writer".into())
-            .spawn(move || run(&jobs, &report_tx, &wake))
+            .spawn(move || run(&jobs, &report_tx, &wake, &counted))
             .map_err(|e| log::error!("cannot start the writer thread: {e}"))
             .ok();
         Writer {
@@ -201,7 +215,29 @@ impl Writer {
             thread,
             next_id: 1,
             inline_reports: Vec::new(),
+            sent: 0,
+            done,
+            queued_states: HashMap::new(),
         }
+    }
+
+    /// The newest state queued for `key` in `store` and not yet written,
+    /// if any. Opening a document reads its saved state from here first:
+    /// the file on disk may still be older, and waiting for the writer on
+    /// the input thread could freeze the keyboard on a slow disk (up to two
+    /// seconds before Wave 6).
+    pub(crate) fn queued_state(&mut self, store: &StateStore, key: &DocKey) -> Option<DocState> {
+        self.forget_written_states();
+        self.queued_states
+            .get(&(store.dir().to_owned(), key.0.clone()))
+            .map(|(_, state)| state.clone())
+    }
+
+    /// Drops queued states whose jobs the writer has done: the files hold
+    /// them now.
+    fn forget_written_states(&mut self) {
+        let done = self.done.load(Ordering::Acquire);
+        self.queued_states.retain(|_, (seq, _)| *seq > done);
     }
 
     /// A fresh id for a save.
@@ -214,6 +250,19 @@ impl Writer {
     /// Queues a job. Without a writer thread (it could not start, or it
     /// died), the job runs here, so nothing is lost.
     pub(crate) fn send(&mut self, job: Job) {
+        if !matches!(job, Job::Barrier(_)) {
+            self.sent += 1;
+        }
+        if let Job::State {
+            store, key, state, ..
+        } = &job
+        {
+            self.forget_written_states();
+            self.queued_states.insert(
+                (store.dir().to_owned(), key.0.clone()),
+                (self.sent, (**state).clone()),
+            );
+        }
         let job = match &self.tx {
             Some(tx) => match tx.send(job) {
                 Ok(()) => return,
@@ -225,9 +274,13 @@ impl Writer {
             },
             None => job,
         };
+        let counts = !matches!(job, Job::Barrier(_));
         let (report_tx, report_rx) = mpsc::channel();
         let mut state = WriterState::default();
         do_job(job, &report_tx, &mut state, false);
+        if counts {
+            self.done.fetch_add(1, Ordering::AcqRel);
+        }
         drop(report_tx);
         self.inline_reports.extend(report_rx.try_iter());
     }
@@ -239,6 +292,17 @@ impl Writer {
             out.push(r);
         }
         out
+    }
+
+    /// A receiver that answers once every job sent so far is done, for a
+    /// helper thread to wait on before it reads what they write (the
+    /// library's scan reads the recent list); `None` when there is no
+    /// writer thread (jobs are then done at once).
+    pub(crate) fn barrier(&self) -> Option<Receiver<()>> {
+        let tx = self.tx.as_ref()?;
+        let (done_tx, done_rx) = mpsc::channel();
+        tx.send(Job::Barrier(done_tx)).ok()?;
+        Some(done_rx)
     }
 
     /// Waits until every job sent so far is done, for at most `timeout`.
@@ -283,7 +347,7 @@ impl Drop for Writer {
 
 /// The writer thread: takes every job waiting, collapses state saves of the
 /// same document into the newest, and does the rest in order.
-fn run(jobs: &Receiver<Job>, reports: &Sender<Report>, wake: &WakeSlot) {
+fn run(jobs: &Receiver<Job>, reports: &Sender<Report>, wake: &WakeSlot, done: &AtomicU64) {
     let mut state = WriterState::default();
     while let Ok(first) = jobs.recv() {
         let mut batch = vec![first];
@@ -310,11 +374,19 @@ fn run(jobs: &Receiver<Job>, reports: &Sender<Report>, wake: &WakeSlot) {
                 Job::Settings { .. } => last_settings != Some(i),
                 _ => false,
             };
+            let counts = !matches!(job, Job::Barrier(_));
             let outcome = catch_unwind(AssertUnwindSafe(|| {
                 do_job(job, reports, &mut state, superseded);
             }));
             if outcome.is_err() {
                 log::error!("a write failed with an internal error; the writer goes on");
+            }
+            // Jobs are done in the order sent, so once the count reaches a
+            // state job's number its state is on disk. A superseded job is
+            // counted too; the app only keeps the newest state per
+            // document, whose number is later.
+            if counts {
+                done.fetch_add(1, Ordering::AcqRel);
             }
         }
         if reported {
@@ -554,6 +626,42 @@ mod tests {
             textweaver_core::CharPos(49)
         );
         assert!(store.writes() <= 50);
+    }
+
+    /// A state queued behind a slow disk is read from the writer, not
+    /// waited for; once written, the file is the source again.
+    #[test]
+    fn queued_states_are_read_without_waiting() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = StateStore::new(dir.path().to_owned());
+        let key = DocKey("doc".into());
+        let mut w = Writer::spawn(WakeSlot::default());
+        w.send(Job::Stall(Duration::from_millis(300)));
+        let state = DocState {
+            position: textweaver_core::CharPos(42),
+            ..DocState::default()
+        };
+        w.send(Job::State {
+            store: store.clone(),
+            key: key.clone(),
+            state: Box::new(state),
+            sync: None,
+            note: StateNote::Quiet,
+        });
+        let took = timed(|| {
+            let queued = w.queued_state(&store, &key).expect("queued");
+            assert_eq!(queued.position, textweaver_core::CharPos(42));
+        });
+        assert!(took < Duration::from_millis(250), "{took:?}");
+        assert!(store.load(&key).is_none(), "not on disk yet");
+        assert!(w.flush(Duration::from_secs(10)));
+        assert!(w.queued_state(&store, &key).is_none());
+        assert_eq!(
+            store.load(&key).unwrap().position,
+            textweaver_core::CharPos(42)
+        );
+        let other = DocKey("other".into());
+        assert!(w.queued_state(&store, &other).is_none());
     }
 
     #[test]
