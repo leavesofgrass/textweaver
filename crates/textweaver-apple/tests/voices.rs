@@ -87,6 +87,7 @@ mod macos {
             av_stop,
         ),
         ("avspeech_synthesizes_reed_to_wav", av_file),
+        ("avspeech_export_reports_word_times", av_export_words),
         ("avspeech_latency_and_offset_accuracy", av_accuracy),
         ("avspeech_rate_calibration", av_calibration),
         (
@@ -852,6 +853,45 @@ mod macos {
             ms(t.elapsed())
         );
         ensure(secs > 2.0 && secs < 15.0, || format!("{secs} s"))
+    }
+
+    /// Export's path (ADR-0011): one utterance to a WAV with each word's
+    /// time in that file. On macOS 14 and later the times come from the
+    /// synthesizer's word markers.
+    fn av_export_words() -> Result<(), String> {
+        let mut b =
+            AvSpeechBackend::new(Output::Silent { realtime: false }).map_err(|e| e.to_string())?;
+        let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
+        let wav = dir.path().join("export.wav");
+        let u = utt(SENTENCE, 1, 0);
+        let s = b
+            .synthesize_utterance(&u, &wav)
+            .map_err(|e| e.to_string())?;
+        let bytes = std::fs::read(&wav).map_err(|e| e.to_string())?;
+        ensure(&bytes[0..4] == b"RIFF", || "not WAV".into())?;
+        let rate = u32::from_le_bytes([bytes[24], bytes[25], bytes[26], bytes[27]]);
+        let file_ms = ((bytes.len() - 44) as u64 * 1000 / 2 / u64::from(rate)) as u32;
+        let times: Vec<u32> = s.words.iter().map(|w| w.audio_ms).collect();
+        println!(
+            "  {} word times in a {file_ms} ms file: {times:?}",
+            s.words.len()
+        );
+        ensure(s.words.len() * 10 >= SENTENCE_WORDS.len() * 8, || {
+            format!(
+                "word times for only {} of {} words",
+                s.words.len(),
+                SENTENCE_WORDS.len()
+            )
+        })?;
+        ensure(times.windows(2).all(|p| p[0] <= p[1]), || {
+            "word times do not rise".into()
+        })?;
+        ensure(times.first().copied() != times.last().copied(), || {
+            "every word has the same time".into()
+        })?;
+        ensure(times.iter().all(|&t| t <= file_ms), || {
+            "a word time falls after the audio".into()
+        })
     }
 
     /// Ends of silent gaps (at least 40 ms below 2% of peak RMS), in ms.

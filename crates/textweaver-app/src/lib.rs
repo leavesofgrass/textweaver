@@ -150,6 +150,7 @@ mod access;
 mod actions;
 pub mod align;
 mod app;
+mod audio_export;
 mod authoring;
 mod authoring_state;
 mod batch;

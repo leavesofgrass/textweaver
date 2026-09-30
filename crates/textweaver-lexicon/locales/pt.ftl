@@ -3328,6 +3328,45 @@ batch-thread-stopped = A conversão em lote parou inesperadamente.
 
 ## End of W6k
 
+## W6v: audio export (File, Export audio). Keep the meaning first: a
+## 40-cell Braille display shows the start of the line. $name is a file
+## name (essay.flac); $path a folder or a file's full path; $format a
+## format's name (FLAC, MP3); $voice a voice's or engine's name; $wpm is
+## words per minute; $length a length of time from the duration-*
+## messages; $chapters and $n are numbers; $percent is a multiple of ten;
+## $error is passed on as it is.
+audio-format-title = Exportar áudio como
+audio-format-intro = Exportar { $name } como áudio: escolha um formato, { $n } opções.
+audio-no-ffmpeg = MP3 e M4B precisam do ffmpeg, que não foi encontrado.
+audio-format-flac = FLAC: sem perdas, cerca de metade do tamanho do WAV
+audio-format-wav = WAV: o maior, toca em qualquer lugar
+audio-format-mp3 = MP3, pelo ffmpeg
+audio-format-m4b = Audiolivro M4B, pelo ffmpeg
+audio-where-title = Onde fica o áudio
+audio-where-intro = Onde o áudio deve ficar?
+audio-where-beside = Ao lado do documento, { $path }
+audio-where-choose = Em outra pasta, escolhida a seguir
+audio-choose-folder = Escolha a pasta para o áudio
+audio-no-engine = Nenhum motor de voz aqui grava arquivos de áudio. Instale o eSpeak NG, ou escolha outro motor no menu Fala.
+audio-confirm = Exportar { $name } com { $voice } a { $wpm } palavras por minuto, em { $path }? y ou n
+audio-started = Exportando { $name } como { $format }. Escape para.
+audio-progress = Exportando áudio, { $percent } por cento.
+audio-busy = Já exportando { $name }. Escape para.
+audio-stop-question = Parar a exportação? Nenhum arquivo é mantido. y ou n
+audio-stopping = Parando a exportação.
+audio-still-exporting = Ainda exportando o áudio.
+audio-stopped = Exportação de áudio parada; nenhum arquivo foi gravado.
+audio-done =
+    { $name } gravado: { $length }, { $chapters ->
+        [one] 1 capítulo
+       *[other] { $chapters } capítulos
+    }.
+audio-subtitles = Legendas em { $name }.
+audio-failed = Não foi possível exportar o áudio: { $error }
+audio-thread-stopped = A exportação de áudio parou inesperadamente.
+
+## End of W6v
+
 ## W6c5: PDF links. Said before the first line of the page a link inside
 ## a PDF goes to, when the page has no heading there (as links-heading-label
 ## is for a heading).
